@@ -1,0 +1,35 @@
+# Game images / copyrighted input
+*.bin
+*.cue
+*.iso
+*.img
+*.ccd
+*.sub
+*.chd
+rom/image/*
+!rom/image/.gitkeep
+
+# Extracted game data
+assets/*
+!assets/.gitkeep
+
+# Build/generated output
+build/
+asm/
+linkers/
+expected/
+.splache
+*.o
+*.elf
+*.map
+*.ninja
+build.ninja
+rules.ninja
+compile_commands.json
+
+# Local tooling/cache
+__pycache__/
+*.pyc
+.venv/
+.env
+.DS_Store

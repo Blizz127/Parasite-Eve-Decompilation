@@ -1,0 +1,8 @@
+# Splat config placeholder — Parasite Eve (USA) Disc 2, SLUS_006.68
+#
+# NOT FUNCTIONAL YET. To be authored in Phase 2 after Phase 1 completes.
+# Disc 2's EXE likely shares most engine code with disc 1 — diff the two
+# extracted EXEs before deciding whether disc 2 needs a full independent
+# split or can reuse disc 1 segmentation with adjusted addresses.
+#
+# See configs/USA/disc1.yaml for the expected schema shape.
