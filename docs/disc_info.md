@@ -24,10 +24,17 @@ All values below were produced by `scripts/extract_us.sh 1` (which runs
 | ISO9660 volume space | 210,685 sectors (equals image sector count) |
 
 **Redump cross-check: PENDING.** redump.org (disc page
-http://redump.org/disc/116/) was unreachable (ECONNREFUSED) on 2026-07-04.
-The hashes above are computed facts about the local dump; whether they match
-redump's Track 1 values is still unverified. Re-check when redump.org is
-reachable and record the result here.
+http://redump.org/disc/116/) was unreachable (ECONNREFUSED) on 2026-07-04,
+retried same day. The hashes above are computed facts about the local dump;
+whether they match redump's Track 1 values is still unverified against
+redump itself.
+
+**Independent corroboration (2026-07-04):** an unrelated third-party catalog
+(GitHub `portforge/portforge-mediaitems`,
+`PS1Rom/Parasite Eve (USA) (Disc 1) · PS1/.mediaitem.json`, found via GitHub
+code search for our SHA-1) lists a redump-named dump with identical size,
+CRC-32, MD5, and SHA-1. This corroborates that our dump matches the commonly
+circulated one, but it is not an authoritative redump verification.
 
 ### Main executable — `SLUS_006.62`
 
@@ -111,7 +118,10 @@ the script.
 | ISO9660 volume space | 275,033 sectors (equals image sector count) |
 
 **Redump cross-check: PENDING.** redump.org still unreachable (ECONNREFUSED)
-on 2026-07-04. Same status as disc 1.
+on 2026-07-04, retried same day. Same status as disc 1, including the
+independent corroboration: the same third-party catalog
+(`PS1Rom/Parasite Eve (USA) (Disc 2) · PS1/.mediaitem.json`) lists identical
+size, CRC-32, MD5, and SHA-1 for a redump-named disc 2 dump.
 
 ### Main executable — `SLUS_006.68`
 
@@ -174,11 +184,16 @@ CRC-32, MD5, SHA-1, and PS-X EXE header (see
 ```
 
 Structural observations (verified from the listings): disc 2 mirrors disc
-1's layout — boot files at the same LBAs, `PE.IMG` with the **same size
-(206,213,120 bytes) at the same LBA (1013)**, then disc-specific FMV streams
-plus a 144 MB `XASTREAM/CREDITS.XA`. Whether the two `PE.IMG` files are
-byte-identical is an open hypothesis (see reverse_engineering_notes.md); do
-not treat it as fact until hashed.
+1's layout — boot files at the same LBAs, `PE.IMG` with the same size
+(206,213,120 bytes) at the same LBA (1013), then disc-specific FMV streams
+plus a 144 MB `XASTREAM/CREDITS.XA`.
+
+**`PE.IMG` is byte-identical across both discs (verified 2026-07-04):**
+extracted from each image with `tools/extract/psxiso.py extract <bin> PE.IMG`
+and hashed with `tools/verify/hashfile.py` — both copies are 206,213,120
+bytes, CRC-32 `678da5c6`, MD5 `e8e714191694ce3516c56c1f0b3999a9`, SHA-1
+`146c0ce7308bf9fdc2ba5a84230e198db0663f3b`. Combined with the byte-identical
+boot EXEs, the two discs differ only in FMV/XA streams and volume metadata.
 
 ## Other releases (out of scope for now)
 

@@ -6,8 +6,9 @@ meaningful change.
 
 ## Current phase
 
-**Phase 1 — disc verification and extraction. Both discs recorded locally;
-redump cross-checks pending.** (Branch: `phase1-fix-extract-and-disc2`.)
+**Phase 1 — disc verification and extraction. Complete locally; only the
+official redump cross-check remains open.** (Branch:
+`phase1-redump-and-peimg`.)
 
 ## What exists right now
 
@@ -37,26 +38,29 @@ redump cross-checks pending.** (Branch: `phase1-fix-extract-and-disc2`.)
   `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` on both) — one EXE target
   covers both discs. Entry with evidence in
   `docs/reverse_engineering_notes.md`.
-- Structural fact: on both discs nearly all game data is inside `PE.IMG`
-  (206,213,120 bytes at LBA 1013 on each). Format unexplored.
+- **`PE.IMG` is byte-identical across both discs** (SHA-1
+  `146c0ce7308bf9fdc2ba5a84230e198db0663f3b`, verified 2026-07-04): the
+  discs differ only in FMV/XA streams and volume metadata. The decomp
+  target is one EXE plus one archive. Archive format unexplored.
+- Both image dumps are corroborated by an independent third-party catalog
+  with identical hashes (GitHub `portforge/portforge-mediaitems`, found
+  via code search for our SHA-1s; recorded in docs/disc_info.md). Not an
+  authoritative redump verification.
 
 ## What is NOT verified
 
-- Whether either dump matches redump (redump.org unreachable again
-  2026-07-04, ECONNREFUSED; disc 1 page is http://redump.org/disc/116/).
-- Whether the two `PE.IMG` copies are byte-identical (same size + LBA on
-  both discs — hypothesis in reverse_engineering_notes.md, not yet
-  hashed).
+- Whether either dump matches redump.org itself (unreachable again on
+  2026-07-04 retry, ECONNREFUSED; disc 1 page is
+  http://redump.org/disc/116/).
 - Anything about the EXE's internals (no disassembly yet — Phase 2+).
 
 ## Next concrete step
 
-1. Re-attempt the redump cross-check for both discs and record it in
-   `docs/disc_info.md`.
-2. Hash both `PE.IMG` copies locally to confirm or refute the
-   identical-archive hypothesis.
-3. Phase 2: author the first splat config for `SLUS_006.62` (one EXE
-   covers both discs).
+1. When redump.org is reachable, record the official cross-check for both
+   discs in `docs/disc_info.md` (last blocker on Phase 1 closure).
+2. Phase 2: author the first splat config for `SLUS_006.62` (one EXE
+   covers both discs) — can start now; the redump check is not a
+   prerequisite for beginning splat work.
 
 ## Open decisions
 
@@ -72,6 +76,9 @@ redump cross-checks pending.** (Branch: `phase1-fix-extract-and-disc2`.)
 
 ## Changelog
 
+- 2026-07-04: Closed the PE.IMG hypothesis — verified byte-identical
+  across discs (SHA-1 146c0ce7...). Redump retry still ECONNREFUSED;
+  recorded independent third-party hash corroboration for both dumps.
 - 2026-07-04: Fixed extract_us.sh fail-loudly blocker (explicit per-step
   error handling + fresh output dir per run; failure paths re-tested).
   Disc 2 verification pass recorded in docs/disc_info.md. First verified

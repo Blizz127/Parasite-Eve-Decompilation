@@ -31,6 +31,21 @@ clearly marked "Hypotheses" section, never mixed with facts.
 - Confidence: **verified** (for the local dumps; redump cross-check of the
   images themselves still pending).
 
+### PE.IMG is byte-identical across both discs (2026-07-04)
+
+- Observation: the 206 MB packed data archive `PE.IMG` is the same file on
+  disc 1 and disc 2 (same LBA 1013, same size, same hashes). Together with
+  the identical boot EXEs, the two discs differ **only** in FMV/XA streams
+  and volume metadata — the decomp target is effectively one EXE plus one
+  archive. The archive also contains no Mode 2 Form 2 sectors (the
+  extractor's Form 2 guard never tripped across all 100,690 sectors).
+- Evidence: `tools/extract/psxiso.py extract "<discN>.bin" PE.IMG
+  build/extracted/discN/PE.IMG` for both discs, then
+  `tools/verify/hashfile.py` on both copies: 206,213,120 bytes, CRC-32
+  `678da5c6`, MD5 `e8e714191694ce3516c56c1f0b3999a9`, SHA-1
+  `146c0ce7308bf9fdc2ba5a84230e198db0663f3b` — identical for both.
+- Confidence: **verified** (local dumps).
+
 ## Known starting points (unverified, to confirm in Phase 1–2)
 - Era/toolchain: 1998 Square PS1 title — expect Psy-Q SDK libraries linked
   into the EXE and a Psy-Q-era gcc for game code. Confirm via library
@@ -47,7 +62,5 @@ clearly marked "Hypotheses" section, never mixed with facts.
 
 ## Hypotheses
 
-- `PE.IMG` may be byte-identical across the two discs: both filesystems
-  place it at LBA 1013 with size 206,213,120 bytes (evidence: the
-  `psxiso.py list` outputs recorded in `docs/disc_info.md`). Verify by
-  hashing both copies in a later pass before relying on it.
+(none currently open — the PE.IMG identity hypothesis was verified
+2026-07-04 and moved to Verified observations above)
