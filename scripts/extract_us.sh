@@ -24,7 +24,7 @@ process_disc() {
 
     cue="$(find "$IMAGE_DIR" -iname "*disc ${n}*.cue" -print -quit)"
     if [[ -z "$cue" ]]; then
-        echo "SKIP: disc $n ($serial): no '*Disc ${n}*.cue' under rom/image/" >&2
+        echo "SKIP: disc $n ($serial): no '*Disc ${n}*.cue' under $IMAGE_DIR" >&2
         return 10
     fi
 
@@ -40,21 +40,31 @@ process_disc() {
         echo "WARNING: cue has multiple tracks; tools assume single data track" >&2
     fi
 
+    # Fresh output dir every run: stale files from a previous run must never
+    # masquerade as this run's results.
     out="$OUT_ROOT/disc$n"
+    rm -rf "$out"
     mkdir -p "$out"
 
+    # NOTE: process_disc is invoked in a tested context (|| in process()),
+    # which suppresses `set -e` inside this function body. Every step below
+    # therefore carries an explicit `|| return 1` — do not remove them.
     echo "--- image hashes (redump-comparable) ---"
-    python3 "$HASHER" "$bin" | tee "$out/image_hashes.txt"
+    python3 "$HASHER" "$bin" | tee "$out/image_hashes.txt" \
+        || { echo "ERROR: hashing failed for $bin" >&2; return 1; }
 
     echo "--- ISO9660 volume info ---"
-    python3 "$PSXISO" info "$bin"
+    python3 "$PSXISO" info "$bin" \
+        || { echo "ERROR: not a readable MODE2/2352 PS1 image: $bin" >&2; return 1; }
 
     echo "--- file listing -> $out/filelist.txt ---"
-    python3 "$PSXISO" list "$bin" > "$out/filelist.txt"
+    python3 "$PSXISO" list "$bin" > "$out/filelist.txt" \
+        || { echo "ERROR: ISO9660 file listing failed for $bin" >&2; return 1; }
     echo "$(wc -l < "$out/filelist.txt") files on disc"
 
     echo "--- SYSTEM.CNF ---"
-    python3 "$PSXISO" extract "$bin" "SYSTEM.CNF" "$out/SYSTEM.CNF" >/dev/null
+    python3 "$PSXISO" extract "$bin" "SYSTEM.CNF" "$out/SYSTEM.CNF" >/dev/null \
+        || { echo "ERROR: SYSTEM.CNF extraction failed from $bin" >&2; return 1; }
     tr -d '\r' < "$out/SYSTEM.CNF"
 
     boot="$(tr -d '\r' < "$out/SYSTEM.CNF" | sed -n 's/^BOOT *= *//p')"
@@ -65,11 +75,14 @@ process_disc() {
     fi
 
     echo "--- extracting $exe ---"
-    python3 "$PSXISO" extract "$bin" "$exe" "$out/$exe"
-    python3 "$HASHER" "$out/$exe" | tee "$out/exe_hashes.txt"
+    python3 "$PSXISO" extract "$bin" "$exe" "$out/$exe" \
+        || { echo "ERROR: extraction of $exe failed" >&2; return 1; }
+    python3 "$HASHER" "$out/$exe" | tee "$out/exe_hashes.txt" \
+        || { echo "ERROR: hashing failed for $out/$exe" >&2; return 1; }
 
     echo "--- PS-X EXE header ---"
-    python3 "$EXEINFO" "$out/$exe"
+    python3 "$EXEINFO" "$out/$exe" \
+        || { echo "ERROR: $out/$exe is not a valid PS-X EXE" >&2; return 1; }
 
     echo "OK: disc $n extracted to $out"
 }
@@ -94,7 +107,7 @@ case "$want" in
 esac
 
 if (( found == 0 )); then
-    echo "ERROR: no requested disc images found under rom/image/" >&2
+    echo "ERROR: no requested disc images found under $IMAGE_DIR" >&2
     exit 1
 fi
 echo "=================================================================="

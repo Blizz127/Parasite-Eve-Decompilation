@@ -3,7 +3,7 @@
 Primary target release. All hashes below marked **TODO** must be filled in
 during Phase 1 from a user-supplied dump and cross-checked against redump.
 
-## Disc 1 — SLUS-00662 (verified 2026-07-04)
+## Disc 1 — SLUS-00662 (recorded 2026-07-04 — redump cross-check pending)
 
 All values below were produced by `scripts/extract_us.sh 1` (which runs
 `tools/verify/hashfile.py`, `tools/extract/psxiso.py`, and
@@ -90,17 +90,95 @@ boot files and FMV streams, **all game data lives in a single 206 MB packed
 archive `PE.IMG`** starting at LBA 1013. Its internal format is a later
 research task (Phase 5+); do not extract or commit its contents.
 
-## Disc 2 — SLUS-00668 (not yet verified)
+## Disc 2 — SLUS-00668 (recorded 2026-07-04 — redump cross-check pending)
+
+All values below were produced by `scripts/extract_us.sh all` (same tools as
+disc 1) against a user-supplied bin+cue dump, after the fail-loudly fix to
+the script.
+
+### Image
 
 | Field | Value |
 | --- | --- |
 | Serial | SLUS-00668 |
 | Region | NTSC-U |
-| Main executable | `SLUS_006.68` |
-| Image SHA-1 (redump) | TODO (Phase 1 — run `scripts/extract_us.sh 2` once the image is under `rom/image/`) |
-| EXE SHA-1 | TODO (Phase 1) |
-| EXE size / load address / entry point | TODO (Phase 1, from PS-X EXE header) |
-| Filesystem listing | TODO (Phase 1) |
+| Cue layout | single track: `TRACK 01 MODE2/2352` |
+| Image size | 646,877,616 bytes (275,033 × 2352-byte sectors) |
+| Image CRC-32 | `226ee2ee` |
+| Image MD5 | `c8e01c1d77baadcb89685eaee839a824` |
+| Image SHA-1 | `6dc5b537527aa0d54bdbbd0c14b458083b0743e4` |
+| ISO9660 system id | `PLAYSTATION` |
+| ISO9660 volume space | 275,033 sectors (equals image sector count) |
+
+**Redump cross-check: PENDING.** redump.org still unreachable (ECONNREFUSED)
+on 2026-07-04. Same status as disc 1.
+
+### Main executable — `SLUS_006.68`
+
+Extracted from LBA 24. `SYSTEM.CNF` (CRLF stripped) confirms it boots:
+
+```text
+BOOT=cdrom:\SLUS_006.68;1
+TCB=4
+EVENT=16
+STACK=801fff00
+```
+
+**`SLUS_006.68` is byte-identical to disc 1's `SLUS_006.62`** — same size,
+CRC-32, MD5, SHA-1, and PS-X EXE header (see
+`docs/reverse_engineering_notes.md` for the entry):
+
+| Field | Value |
+| --- | --- |
+| Size | 2,025,472 bytes |
+| CRC-32 | `7c10c01c` |
+| MD5 | `cb095240a2ba358b8fdcbfd4d4f97f04` |
+| SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` |
+| pc0 / gp0 / t_addr / t_size / s_addr | identical to disc 1 (`0x80072534` / `0x00000000` / `0x80010000` / `0x1EE000` / `0x801FFFF0`) |
+
+### Filesystem (31 files, from `tools/extract/psxiso.py list`)
+
+```text
+    LBA       size  path
+     23         60  SYSTEM.CNF;1
+     24    2025472  SLUS_006.68;1
+   1013  206213120  PE.IMG;1
+ 101705         40  FMV2/PEDISC02.IDF;1
+ 101706   15826944  FMV2/FMV018.STR;1
+ 109434    7487488  FMV2/FMV019.STR;1
+ 113090   11763712  FMV2/FMV020A.STR;1
+ 118834   23068672  FMV2/FMV020B.STR;1
+ 130098    4194304  FMV2/FMV021.STR;1
+ 132146    8306688  FMV2/FMV023A.STR;1
+ 136202   11370496  FMV2/FMV023B.STR;1
+ 141754    1392640  FMV2/FMV024A.STR;1
+ 142434   12320768  FMV2/FMV024B1.STR;1
+ 148450    1064960  FMV2/FMV024B3.STR;1
+ 148970    2703360  FMV2/FMV024C.STR;1
+ 150290    1622016  FMV2/FMV024C2.STR;1
+ 151082    3424256  FMV2/FMV024E.STR;1
+ 152754   13877248  FMV2/FMV024F.STR;1
+ 159530    7684096  FMV2/FMV025.STR;1
+ 163282    6488064  FMV2/FMV026.STR;1
+ 166450   10649600  FMV2/FMV027.STR;1
+ 171650    2523136  FMV2/FMV028.STR;1
+ 172882    9224192  FMV2/FMV029.STR;1
+ 177386    6209536  FMV2/FMV030.STR;1
+ 180418    9732096  FMV2/FMV031.STR;1
+ 185170    4816896  FMV2/FMV032.STR;1
+ 187522    5472256  FMV2/FMV033A.STR;1
+ 190194   10043392  FMV2/FMV033B.STR;1
+ 195098    4491264  FMV2/FMV034.STR;1
+ 197291   14827520  FMV2/FMV035.STR;1
+ 204531  144080896  XASTREAM/CREDITS.XA;1
+```
+
+Structural observations (verified from the listings): disc 2 mirrors disc
+1's layout — boot files at the same LBAs, `PE.IMG` with the **same size
+(206,213,120 bytes) at the same LBA (1013)**, then disc-specific FMV streams
+plus a 144 MB `XASTREAM/CREDITS.XA`. Whether the two `PE.IMG` files are
+byte-identical is an open hypothesis (see reverse_engineering_notes.md); do
+not treat it as fact until hashed.
 
 ## Other releases (out of scope for now)
 
