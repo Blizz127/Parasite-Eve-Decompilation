@@ -6,29 +6,50 @@ meaningful change.
 
 ## Current phase
 
-**Phase 0 — scaffold. COMPLETE as of this commit.**
+**Phase 1 — disc verification and extraction. Disc 1 DONE, disc 2 pending.**
+(Branch: `phase1-disc-verification`.)
 
 ## What exists right now
 
-- Repository scaffold: docs, ignore rules, placeholder configs and scripts.
-- No disc has been verified. No executable has been extracted. No
-  disassembly, symbols, or C exist. All configs/scripts are non-functional
-  placeholders that fail loudly when run.
+- Working extraction pipeline: `scripts/extract_us.sh [1|2|all]` drives
+  three stdlib-only Python tools — `tools/extract/psxiso.py` (ISO9660
+  reader for raw MODE2/2352 images), `tools/analysis/psxexe_info.py`
+  (PS-X EXE header dump), `tools/verify/hashfile.py` (CRC-32/MD5/SHA-1).
+- Disc 1 processed end-to-end; all results recorded in
+  `docs/disc_info.md`. Extracted output lives only under
+  `build/extracted/disc1/` (git-ignored).
+- No disassembly, splat configs, symbols, or C exist. `split_us.sh`,
+  `verify_us.sh`, `setup_env.sh`, and `configs/USA/*.yaml` are still
+  placeholders.
 
 ## What is verified
 
-Nothing. There are no verified facts about the binaries yet. Do not trust
-any claim about PE1 internals that is not recorded with evidence in
-`docs/reverse_engineering_notes.md` or `docs/disc_info.md`.
+- Disc 1 (SLUS-00662) local dump: image and EXE hashes, PS-X EXE header
+  (pc0 `0x80072534`, t_addr `0x80010000`, t_size `0x1EE000`), SYSTEM.CNF
+  boot line, and the full 25-file ISO9660 listing — see
+  `docs/disc_info.md` for values and commands.
+- Structural fact: almost all disc-1 game data is inside one packed
+  archive, `PE.IMG` (206,213,120 bytes at LBA 1013). Format unexplored.
 
-## Next concrete step (Phase 1)
+## What is NOT verified
 
-1. Obtain user-supplied NTSC-U disc images, place under `rom/image/`
-   (git-ignored).
-2. Implement `scripts/extract_us.sh`: verify image hashes against redump,
-   extract `SLUS_006.62` / `SLUS_006.68`, record all hashes and PS-X EXE
-   header fields in `docs/disc_info.md`.
-3. Record the ISO9660 file listing for both discs in `docs/disc_info.md`.
+- Whether the disc 1 dump matches redump (redump.org unreachable
+  2026-07-04, ECONNREFUSED; disc page is http://redump.org/disc/116/).
+- Disc 2: its image is now present under `rom/image/` but its results are
+  deliberately NOT recorded yet (this pass was scoped to disc 1 only). A
+  preliminary local run of `scripts/extract_us.sh 2` suggests
+  `SLUS_006.68` is byte-identical to `SLUS_006.62` — re-run and record
+  formally in the disc 2 pass before treating that as fact.
+- Anything about the EXE's internals (no disassembly yet — Phase 2+).
+
+## Next concrete step
+
+1. Disc 2 pass: run `scripts/extract_us.sh 2`, fill in the disc 2 section
+   of `docs/disc_info.md` (including the identical-EXE check and the
+   disc 2 filesystem listing).
+2. Re-attempt the redump cross-check for both discs and record it.
+3. Only after both discs are recorded: start Phase 2 (splat config for
+   `SLUS_006.62`).
 
 ## Open decisions
 
@@ -44,4 +65,8 @@ any claim about PE1 internals that is not recorded with evidence in
 
 ## Changelog
 
+- 2026-07-04: Phase 1 disc 1 verification: implemented extract_us.sh +
+  psxiso.py/psxexe_info.py/hashfile.py, extracted and hashed SLUS_006.62
+  locally, recorded all disc 1 facts in docs/disc_info.md. Redump
+  cross-check pending (site unreachable). Disc 2 pending.
 - 2026-07-04: Phase 0 scaffold created (structure, docs, placeholders).
