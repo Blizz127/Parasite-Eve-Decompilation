@@ -36,7 +36,9 @@ doing anything**.
 
 ## Current phase
 
-**Phase 0 — scaffold.** Nothing has been extracted, disassembled, or
-verified yet. Placeholder configs and scripts exist but are not functional.
-The next real work is Phase 1: verify user-supplied disc images, extract
-`SLUS_006.62` / `SLUS_006.68`, and record hashes in `docs/disc_info.md`.
+**Phase 2 — initial Splat/spimdisasm infrastructure.** Phase 1 local
+verification (both discs, extraction, hashes) is complete and corroborated;
+the official redump.org cross-check remains open and non-blocking. No
+disassembly output, matching build, decompiled C, or PC port exists yet.
+`docs/ai_context/ACTIVE_HANDOFF.md` has the exact current state and
+`docs/splitting.md` the split target and policy.

@@ -1,21 +1,54 @@
-# Splat config placeholder — Parasite Eve (USA) Disc 1, SLUS_006.62
+# Splat config — Parasite Eve (USA) Disc 1, SLUS_006.62
 #
-# NOT FUNCTIONAL YET. To be authored in Phase 2, after Phase 1 records the
-# extracted EXE's hash, size, load address, and entry point in
-# docs/disc_info.md. Do not run splat against this file.
+# Phase 2: minimal, conservative initial config. Every numeric value below is
+# a verified fact recorded in docs/disc_info.md (produced by
+# scripts/extract_us.sh 1). No text/data/bss boundaries, symbols, or function
+# names are claimed yet — the entire loadable image is one `asm` subsegment,
+# to be refined iteratively from Phase 3 onward.
 #
-# Expected shape (see https://github.com/ethteck/splat for schema):
+# The target file is extracted locally by `scripts/extract_us.sh 1` into
+# build/extracted/ (git-ignored) and is NEVER committed. Run the split via
+# `scripts/split_us.sh`, which checks prerequisites and hashes first.
 #
-# name: Parasite Eve (USA) Disc 1
-# sha1: <SLUS_006.62 sha1 — from Phase 1>
-# options:
-#   basename: SLUS_006.62
-#   target_path: rom/SLUS_006.62
-#   base_path: ..
-#   platform: psx
-#   compiler: GCC
-#   asm_path: asm/disc1
-#   src_path: src
-#   ld_script_path: linkers/disc1.ld
-#   find_file_boundaries: true
-# segments: []   # coarse text/data/bss split first, refine iteratively
+# Verified facts used here (docs/disc_info.md):
+#   file size 2,025,472 bytes = 0x1EE800 (0x800 header + 0x1EE000 t_size)
+#   SHA-1     452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+#   t_addr    0x80010000   (vram of the loadable image)
+#   pc0       0x80072534   (entry point, inside the image)
+#   gp0       0x00000000   (no GP value in the header)
+#
+# Note: `compiler: GCC` is standard splat configuration for PSX targets, not
+# a verified toolchain identification. The actual compiler/flags are to be
+# fingerprinted in Phase 5+ (expect Psy-Q-era gcc; see
+# docs/reverse_engineering_notes.md "Known starting points").
+name: Parasite Eve (USA) Disc 1 (SLUS_006.62)
+sha1: 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+options:
+  platform: psx
+  compiler: GCC
+  basename: SLUS_006.62
+  # Paths are relative to base_path, which is relative to this file:
+  # configs/USA/ -> repo root.
+  base_path: ../..
+  target_path: build/extracted/disc1/SLUS_006.62
+  asm_path: asm/disc1
+  src_path: src
+  asset_path: assets/disc1
+  ld_script_path: linkers/disc1.ld
+  find_file_boundaries: yes
+segments:
+  # 0x000-0x800: PS-X EXE header.
+  - name: header
+    type: header
+    start: 0x0
+  # 0x800-0x1EE800: the entire loadable image as one conservative segment.
+  # Data regions will initially disassemble as (meaningless) instructions;
+  # that is expected at this stage and makes no boundary claims.
+  - name: main
+    type: code
+    start: 0x800
+    vram: 0x80010000
+    subsegments:
+      - [0x800, asm]
+  # End of file: 0x1EE800 = 2,025,472 bytes (verified size).
+  - [0x1EE800]

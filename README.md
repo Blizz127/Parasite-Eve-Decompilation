@@ -11,7 +11,10 @@ Initial target:
 
 ## Project status
 
-**Phase 0 — scaffold.** No disassembly, symbols, or decompiled code exist yet.
+**Current phase: Phase 2 — initial Splat/spimdisasm infrastructure.**
+Phase 1 local verification is complete and corroborated; the official
+redump.org cross-check remains open (non-blocking). No disassembly output,
+matching build, decompiled C, or PC port exists yet.
 See [`docs/project_plan.md`](docs/project_plan.md) for the roadmap and
 [`docs/ai_context/ACTIVE_HANDOFF.md`](docs/ai_context/ACTIVE_HANDOFF.md) for
 the current working state.

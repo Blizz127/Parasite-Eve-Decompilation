@@ -6,9 +6,10 @@ meaningful change.
 
 ## Current phase
 
-**Phase 1 — disc verification and extraction. Complete locally; only the
-official redump cross-check remains open.** (Branch:
-`phase1-redump-and-peimg`.)
+**Phase 2 — initial splat config authored; first split run not yet
+executed (splat not installed).** Phase 1 is complete locally; only the
+official redump cross-check remains open (non-blocking). (Branch:
+`phase2-initial-splat-config`.)
 
 ## What exists right now
 
@@ -25,9 +26,13 @@ official redump cross-check remains open.** (Branch:
   stale results can't masquerade as success. Failure tests re-run
   2026-07-04: garbage image → exit 1 with ERROR (previously exit 0 with
   stale "OK"), missing images → exit 1, cue-without-bin → exit 1.
-- No disassembly, splat configs, symbols, or C exist. `split_us.sh`,
-  `verify_us.sh`, `setup_env.sh`, and `configs/USA/*.yaml` are still
-  placeholders.
+- `configs/USA/disc1.yaml` now contains a conservative minimal initial
+  splat config built from verified Phase 1 values;
+  `configs/USA/disc2.yaml` is a documented byte-identical disc 2
+  pointer/alias, not a separate active config. `scripts/split_us.sh` has
+  tested fail-loudly gates but no split has been run. No generated asm,
+  symbols, C, matching build, or PC-port work exists. `verify_us.sh` and
+  `setup_env.sh` are still placeholders.
 
 ## What is verified
 
@@ -47,20 +52,41 @@ official redump cross-check remains open.** (Branch:
   via code search for our SHA-1s; recorded in docs/disc_info.md). Not an
   authoritative redump verification.
 
+## Phase 2 state (this branch)
+
+- `configs/USA/disc1.yaml` is now a real minimal splat config: header +
+  one conservative `asm` segment covering the whole loadable image
+  (0x800–0x1EE800 at vram 0x80010000). Every number in it is a verified
+  Phase 1 fact; no internal boundaries or symbols are claimed.
+- `configs/USA/disc2.yaml` is a documented pointer to disc 1 (the EXEs
+  are byte-identical), deliberately not a duplicate config.
+- `scripts/split_us.sh` is implemented: checks config, extracted EXE
+  presence, SHA-1 match (refuses unverified input), and splat
+  availability; all four failure gates tested 2026-07-04, all exit
+  nonzero with clear messages. It has NOT successfully run a split yet —
+  splat is not installed on this machine.
+- `docs/splitting.md` documents the canonical target, verified values,
+  unknowns, and the no-matching-claims policy.
+
 ## What is NOT verified
 
 - Whether either dump matches redump.org itself (unreachable again on
   2026-07-04 retry, ECONNREFUSED; disc 1 page is
-  http://redump.org/disc/116/).
-- Anything about the EXE's internals (no disassembly yet — Phase 2+).
+  http://redump.org/disc/116/). Non-blocking.
+- Everything about the EXE's internals: text/data/bss boundaries, symbols,
+  functions, overlays — no split output has been generated or inspected.
+- The toolchain: `compiler: GCC` in the config is splat boilerplate, not a
+  verified compiler identification (Phase 5+ fingerprinting).
 
 ## Next concrete step
 
-1. When redump.org is reachable, record the official cross-check for both
-   discs in `docs/disc_info.md` (last blocker on Phase 1 closure).
-2. Phase 2: author the first splat config for `SLUS_006.62` (one EXE
-   covers both discs) — can start now; the redump check is not a
-   prerequisite for beginning splat work.
+1. Decide the splat version pin (open decision) and install it:
+   `pip install -U 'splat64[mips]'` — ideally via a future
+   `scripts/setup_env.sh` implementation that pins it.
+2. Run `scripts/split_us.sh` (Phase 3 entry) and sanity-check the first
+   disassembly around pc0 `0x80072534` for plausible MIPS prologue code.
+3. When redump.org is reachable, record the official cross-check in
+   `docs/disc_info.md`.
 
 ## Open decisions
 
@@ -76,6 +102,11 @@ official redump cross-check remains open.** (Branch:
 
 ## Changelog
 
+- 2026-07-04: Phase 2 started: authored minimal splat config for
+  SLUS_006.62 (verified values only, single conservative segment),
+  disc2.yaml documented as pointer to disc 1, split_us.sh implemented
+  with tested fail-loudly gates, docs/splitting.md added. No split run
+  yet (splat not installed); no asm generated or committed.
 - 2026-07-04: Closed the PE.IMG hypothesis — verified byte-identical
   across discs (SHA-1 146c0ce7...). Redump retry still ECONNREFUSED;
   recorded independent third-party hash corroboration for both dumps.
