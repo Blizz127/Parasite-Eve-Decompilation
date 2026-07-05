@@ -26,9 +26,13 @@ official redump cross-check remains open (non-blocking). (Branch:
   stale results can't masquerade as success. Failure tests re-run
   2026-07-04: garbage image → exit 1 with ERROR (previously exit 0 with
   stale "OK"), missing images → exit 1, cue-without-bin → exit 1.
-- No disassembly, splat configs, symbols, or C exist. `split_us.sh`,
-  `verify_us.sh`, `setup_env.sh`, and `configs/USA/*.yaml` are still
-  placeholders.
+- `configs/USA/disc1.yaml` now contains a conservative minimal initial
+  splat config built from verified Phase 1 values;
+  `configs/USA/disc2.yaml` is a documented byte-identical disc 2
+  pointer/alias, not a separate active config. `scripts/split_us.sh` has
+  tested fail-loudly gates but no split has been run. No generated asm,
+  symbols, C, matching build, or PC-port work exists. `verify_us.sh` and
+  `setup_env.sh` are still placeholders.
 
 ## What is verified
 
