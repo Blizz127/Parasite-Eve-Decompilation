@@ -19,6 +19,9 @@ asm/
 linkers/
 expected/
 .splache
+# splat's auto-generated symbol/function lists (written to repo root)
+undefined_funcs_auto.txt
+undefined_syms_auto.txt
 *.o
 *.elf
 *.map
