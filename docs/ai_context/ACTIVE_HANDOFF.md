@@ -6,10 +6,11 @@ meaningful change.
 
 ## Current phase
 
-**Phase 2 — initial splat config authored; first split run not yet
-executed (splat not installed).** Phase 1 is complete locally; only the
-official redump cross-check remains open (non-blocking). (Branch:
-`phase2-initial-splat-config`.)
+**Phase 2 — splat config authored, toolchain install + dry-run guardrails
+added; first split run not yet executed (splat not installed on this
+machine).** Phase 1 is complete locally; only the official redump
+cross-check remains open (non-blocking). (Branch:
+`phase2-split-guardrails`.)
 
 ## What exists right now
 
@@ -31,8 +32,9 @@ official redump cross-check remains open (non-blocking). (Branch:
   `configs/USA/disc2.yaml` is a documented byte-identical disc 2
   pointer/alias, not a separate active config. `scripts/split_us.sh` has
   tested fail-loudly gates but no split has been run. No generated asm,
-  symbols, C, matching build, or PC-port work exists. `verify_us.sh` and
-  `setup_env.sh` are still placeholders.
+  symbols, C, matching build, or PC-port work exists. `scripts/setup_env.sh`
+  is now implemented (pinned `.venv/` install); `verify_us.sh` is still a
+  placeholder.
 
 ## What is verified
 
@@ -60,13 +62,25 @@ official redump cross-check remains open (non-blocking). (Branch:
   Phase 1 fact; no internal boundaries or symbols are claimed.
 - `configs/USA/disc2.yaml` is a documented pointer to disc 1 (the EXEs
   are byte-identical), deliberately not a duplicate config.
-- `scripts/split_us.sh` is implemented: checks config, extracted EXE
-  presence, SHA-1 match (refuses unverified input), and splat
-  availability; all four failure gates tested 2026-07-04, all exit
-  nonzero with clear messages. It has NOT successfully run a split yet —
-  splat is not installed on this machine.
+- `scripts/setup_env.sh` is now implemented: creates a git-ignored
+  `.venv/` and installs the pinned `splat64[mips]==0.41.0` (latest PyPI
+  release as of 2026-07-05, when the pin was decided — see "Open
+  decisions" below, now closed). Idempotent; has repo-root and git-repo
+  sanity guards.
+- `scripts/split_us.sh` gained a `--check` dry-run mode (verifies repo
+  root, config, extracted EXE presence + SHA-1, splat availability via
+  `.venv/bin/splat` first then `PATH`, and that every output path is
+  `git check-ignore`d — prints what a real run would generate, invokes
+  nothing). A real run now also diffs `git status` before/after and
+  fails loudly if the split produced anything not git-ignored. Verified
+  2026-07-05: `scripts/split_us.sh --check` correctly exits 1 at the
+  splat-availability gate on this machine (splat still not installed);
+  `bash -n` clean on all four `scripts/*.sh`.
+- `.gitignore` gained `undefined_funcs_auto.txt` / `undefined_syms_auto.txt`
+  (splat's auto-generated symbol/function lists, written to repo root).
 - `docs/splitting.md` documents the canonical target, verified values,
-  unknowns, and the no-matching-claims policy.
+  unknowns, the pinned toolchain, the dry-run workflow, and the
+  no-matching-claims policy.
 
 ## What is NOT verified
 
@@ -80,10 +94,11 @@ official redump cross-check remains open (non-blocking). (Branch:
 
 ## Next concrete step
 
-1. Decide the splat version pin (open decision) and install it:
-   `pip install -U 'splat64[mips]'` — ideally via a future
-   `scripts/setup_env.sh` implementation that pins it.
-2. Run `scripts/split_us.sh` (Phase 3 entry) and sanity-check the first
+1. Run `scripts/setup_env.sh` on a machine with disc images already
+   extracted (`build/extracted/disc1/SLUS_006.62` present — true on at
+   least one known local machine) to install the pinned splat.
+2. Run `scripts/split_us.sh --check` to confirm all gates pass, then
+   `scripts/split_us.sh` for real, and sanity-check the first
    disassembly around pc0 `0x80072534` for plausible MIPS prologue code.
 3. When redump.org is reachable, record the official cross-check in
    `docs/disc_info.md`.
@@ -91,8 +106,9 @@ official redump cross-check remains open (non-blocking). (Branch:
 ## Open decisions
 
 - License for original tooling/docs (see `docs/legal.md`).
-- Exact splat version / Python toolchain pinning (decide in Phase 2;
-  `scripts/setup_env.sh` will own installation).
+- ~~Exact splat version / Python toolchain pinning~~ — decided
+  2026-07-05: `splat64[mips]==0.41.0`, owned by `scripts/setup_env.sh`.
+  Revisit only with a deliberate, recorded reason to bump.
 
 ## Rules reminder (never violate)
 
@@ -102,6 +118,13 @@ official redump cross-check remains open (non-blocking). (Branch:
 
 ## Changelog
 
+- 2026-07-05: Phase 2 guardrails: implemented `scripts/setup_env.sh`
+  (pinned `.venv/` install of `splat64[mips]==0.41.0`); added `--check`
+  dry-run mode plus a post-split `git status` diff check to
+  `scripts/split_us.sh`; added splat's root-level auto-generated symbol
+  list files to `.gitignore`; documented the toolchain and dry-run
+  workflow in `docs/splitting.md`. No split executed (splat still not
+  installed on this machine); no asm/symbols/C generated or committed.
 - 2026-07-04: Phase 2 started: authored minimal splat config for
   SLUS_006.62 (verified values only, single conservative segment),
   disc2.yaml documented as pointer to disc 1, split_us.sh implemented
