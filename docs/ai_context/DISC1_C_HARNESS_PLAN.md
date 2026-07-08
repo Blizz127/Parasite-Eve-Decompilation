@@ -10,8 +10,9 @@ Living plan for the rebuild/matching harness. Updated as each sub-phase lands.
 | 4E | Split-artifact `verify_us.sh` | Done (`730821d`, on `main`) |
 | 4F | Asm-only rebuild/matching script | **Blocked** on host (no mipsel tools); unblocked in container by 4G |
 | 4G | MIPS LE toolchain provisioning | **Done** — Distrobox `pe-mipsel` assembles all five units |
-| 4H | Asm-only link + PS-X EXE pack + compare | **Partial** — `build_us.sh` runs; **NON-MATCH** (~28%); no matching claim |
-| 5 | C leaf (`func_80090C38`) | Blocked until pure-asm rebuild **matches** |
+| 4H | Asm-only link + PS-X EXE pack + compare | **Harness** — `build_us.sh` oracle; was NON-MATCH before 4I |
+| 4I | Section-size drift / parity | **Done** — gas align pad trim; **exact SHA-1 match** |
+| 5 | C leaf (`func_80090C38`) | Unblocked for *retry* only while `build_us.sh` stays green |
 
 **Format note:** the game boot file uses the `.EXE` extension (`SLUS_006.62`) but is a **PS-X EXE** (MIPS little-endian PlayStation executable), **not** a Windows PE `.exe`.
 
@@ -564,12 +565,85 @@ mipsel-linux-gnu-objcopy -O binary -j .header|.main ...
 - C conversion or `func_80090C38`
 - That splat's stock `linkers/disc1.ld` alone is enough for a PS-X EXE match
 
-### Exact next action
+### Exact next action (superseded by Phase 4I)
 
-1. Fix section sizes / alignment (splat or assemble flags / post-process) so
-   prefix rodata is exactly 0x220C and text segments hit original spans.
-2. Emit missing in-image `dlabel`s (or a curated `undefined_syms` for only
-   true externals: scratchpad/kernel), not blanket abs for in-image labels.
-3. Re-run `scripts/build_us.sh` until SHA-1 matches; only then allow Phase 5 C.
-4. Optionally teach splat/config to generate a ROM-order ld script.
+Phase 4I fixed size drift (see below). `build_us.sh` matches.
+
+---
+
+## Phase 4I — section-size drift / parity (2026-07-08)
+
+**Branch:** `phase4i-asm-rebuild-parity-audit` (from `phase4h-asm-only-rebuild`)
+
+### Goal
+
+Explain only:
+
+| Section | Drift |
+| --- | --- |
+| `800.rodata` | **+4** |
+| `2A0C` `.text` | **+12** |
+| `B2AF8` `.text` | **+8** |
+
+Do **not** chase the ~134 missing in-image `D_*` labels first.
+
+### Cause (proven)
+
+GNU `as` (binutils 2.44, `mipsel-linux-gnu-as -EL -mips1 -mabi=32`) emits:
+
+| Section | `sh_addralign` | effect |
+| --- | --- | --- |
+| `.rodata` | **8** | size rounded up with trailing zeros |
+| `.text` | **16** | size rounded up with trailing zeros |
+
+Math:
+
+- `0x220C ≡ 4 (mod 8)` → pad **+4** → `0x2210`
+- `0x7EE94 ≡ 4 (mod 16)` → pad **+12** → `0x7EEA0`
+- `0x13BD08 ≡ 8 (mod 16)` → pad **+8** → `0x13BD10`
+
+Evidence:
+
+- Extra bytes are **only trailing zeros** (not middle inserts).
+- Last real symbols sit **before** the pad (`jtbl_8001213C` @ 0x213c;
+  `func_80091080` @ 0x7ee74; tail labels well before 0x13bd08).
+- `818A0.rodata` size already exact (`0x31258`); header `.data` exact (`0x800`).
+- Unrelocated `.text` still shares a high rate of exact words with original
+  (non-reloc slots); jtbl `.word` labels are zeros until link — expected.
+
+Original PE1 segment edges are **not** 16-byte aligned (text starts at file
+`0x2A0C`). High `sh_addralign` also makes `ld` insert inter-section gaps if
+sizes are left padded.
+
+### Narrow fix
+
+`tools/trim_elf_section_pad.py`:
+
+1. Refuse if bytes beyond target size are non-zero.
+2. Set `sh_size` to the Phase 3 file-span size.
+3. Set `sh_addralign = min(old, 4)`.
+
+`scripts/build_us.sh` runs this after assemble on the three drifting units
+(plus no-op/idempotent trim on exact units).
+
+### Result
+
+```text
+scripts/build_us.sh → exit 0
+orig SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+cand SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+header match: True
+all four image regions mism 0
+```
+
+Matching claim: **YES for asm-only rebuild of the current split** (not a C
+match). Absolute-symbol workarounds and ROM-order ld script remain part of
+the path; they were not the size-drift root cause.
+
+### What was not done
+
+- No C / no `func_80090C38`
+- No broad rebuild rewrite
+- No generated objects committed
+- No systematic fix of missing `dlabel`s (deferred; not required for this match)
 

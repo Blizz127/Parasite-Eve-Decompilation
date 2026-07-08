@@ -137,9 +137,24 @@ for o in "${OBJECTS[@]}"; do
     info "OK $o ($(wc -c <"$o") bytes)"
 done
 
+# Phase 4I: GNU as pads section sizes to sh_addralign with trailing zeros
+# (.text align 16 → +12/+8; .rodata align 8 → +4). Original PE1 file spans are
+# not 16-byte aligned at segment edges (e.g. text at 0x2A0C). Strip proven
+# zero-only tail pad and lower align to 4 so ld does not re-insert gaps.
+# Expected sizes = parked Phase 3 file spans (config subsegment edges).
+step "Trim ELF section alignment padding (Phase 4I)"
+TRIM="$ROOT/tools/trim_elf_section_pad.py"
+[[ -f "$TRIM" ]] || die "missing $TRIM"
+python3 "$TRIM" build/asm/disc1/data/800.rodata.s.o .rodata 0x220C
+python3 "$TRIM" build/asm/disc1/2A0C.s.o .text 0x7EE94
+python3 "$TRIM" build/asm/disc1/B2AF8.s.o .text 0x13BD08
+# 818A0.rodata and header already exact; still force align 4 if needed
+python3 "$TRIM" build/asm/disc1/data/818A0.rodata.s.o .rodata 0x31258 || true
+python3 "$TRIM" build/asm/disc1/header.s.o .data 0x800 || true
+
 if [[ "$MODE" == "assemble" ]]; then
     echo
-    echo "Assemble-only complete. Objects under build/asm/ (git-ignored)."
+    echo "Assemble-only complete (with section-pad trim). Objects under build/asm/ (git-ignored)."
     echo "Matching/rebuild: NOT claimed (link/pack not run)."
     exit 0
 fi
@@ -271,21 +286,21 @@ set -e
 echo
 echo "=== Summary ==="
 echo "Assemble: OK (5/5 objects)"
+echo "Pad trim: OK (Phase 4I — strip gas section-align trailing zeros; align→4)"
 echo "Link:     OK (ROM-order experimental ld script + absolute symbol workarounds)"
 echo "Pack:     OK (build/disc1.candidate.exe, size 0x1EE800)"
 if [[ "$cmp_ec" -eq 0 ]]; then
     echo "Compare:  EXACT SHA-1 MATCH"
-    echo "Matching claim: YES (asm-only rebuild)"
+    echo "Matching claim: YES (asm-only rebuild of current split)"
+    echo "Artifacts (git-ignored): build/asm/**/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 0
 else
     echo "Compare:  NON-MATCH (see details above)"
     echo "Matching claim: NO"
     echo
-    echo "Known non-match causes (Phase 4H):"
-    echo "  - gas/ld section alignment can expand .text/.rodata vs original sizes"
-    echo "  - relocatable .word/.jal need link; layout must match original VRAM map"
-    echo "  - ~134 in-image D_* labels missing from split (absolute fallbacks used)"
-    echo "  - splat linkers/disc1.ld uses C section order (all text then rodata); ROM-order script is experimental"
+    echo "If non-match persists after pad trim, investigate:"
+    echo "  - relocatable .word/.jal / missing in-image dlabels (absolute fallbacks)"
+    echo "  - splat stock linkers/disc1.ld section order (C layout vs ROM order)"
     echo
     echo "Artifacts (git-ignored): build/asm/**/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 1
