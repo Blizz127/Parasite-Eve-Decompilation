@@ -6,15 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 4H — asm-only rebuild attempt** (branch `phase4h-asm-only-rebuild`).
-`scripts/build_us.sh` exists: assembles 5/5 units in Distrobox `pe-mipsel`,
-links (ROM-order experimental script + absolute-symbol workarounds), packs a
-PS-X EXE-sized candidate, compares SHA-1. **Result: NON-MATCH (~28% bytes
-differ). Matching claim: NO.** Header matches; image layout/alignment still
-wrong. See `DISC1_C_HARNESS_PLAN.md` Phase 4H.
+**Phase 4I — asm rebuild parity** (branch `phase4i-asm-rebuild-parity-audit`).
+Root cause of size drift proven: GNU `as` ELF **section alignment padding**
+(trailing zeros): `800.rodata` +4 (align 8), `2A0C` +12 (align 16), `B2AF8`
++8 (align 16). Narrow fix: `tools/trim_elf_section_pad.py` trims zero
+tails to Phase 3 spans and sets align→4. **`scripts/build_us.sh` now exits 0
+with exact SHA-1 match** to `SLUS_006.62`
+(`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`). No C. See harness plan.
 
-**Phase 4G — MIPS LE toolchain provisioning** (on `main`). Distrobox
-`pe-mipsel` (Debian trixie + `binutils-mipsel-linux-gnu` 2.44).
+**Phase 4H — asm-only rebuild harness** (on `phase4h-asm-only-rebuild` /
+merge pending). Introduced `build_us.sh` oracle (exit 0 only on match).
+
+**Phase 4G — MIPS LE toolchain** (on `main`): Distrobox `pe-mipsel`.
 
 **Phase 3 — prefix + mid-image boundaries closed and parked.** Solid state:
 
@@ -182,11 +185,11 @@ Phase 3 boundaries remain parked:
 **Do not** pursue further splits for cleanliness. Continue Phase 3 only on true
 misclassifications or build/linker failures.
 
-1. **Phase 4E** on `main` — `scripts/verify_us.sh` split sanity (exit 0 ≠ matching).
-2. **Phase 4H done (this branch):** `scripts/build_us.sh` runs real assemble+link+pack;
-   compare **fails** (non-match). Next: fix ROM layout / gas alignment / missing
-   in-image `dlabel`s until SHA-1 matches — still **no C**.
-3. Still **no C** and no `func_80090C38` conversion until pure-asm rebuild matches.
+1. **Phase 4E–4I:** split verify + asm-only rebuild **matches** via `build_us.sh`
+   (pad trim + ROM-order link). Keep exit 0 reserved for exact SHA-1 only.
+2. **Merge path:** merge `phase4h` then `phase4i` to `main` (or stack PRs).
+3. **Phase 5** may retry `func_80090C38` only with green `build_us.sh` after any
+   C integration still keeps asm path matching — still no PC-port.
 4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
@@ -505,3 +508,11 @@ pc0/`0xB2AF8` each time.
   Flags: `as -EL -mips1 -mabi=32 -I include`; `ld -EL -m elf32ltsmip
   -nostdlib --no-check-sections`. No C, no `func_80090C38`, no matching claim.
   Commit: "Add asm-only Disc 1 rebuild harness".
+- 2026-07-08: **Phase 4I asm rebuild parity audit + pad fix.** Branch
+  `phase4i-asm-rebuild-parity-audit` from phase4h. Proved section-size drift
+  is **only trailing zero pad from ELF sh_addralign** (not mid-section
+  inserts): 800.rodata +4 (align 8), 2A0C +12 (align 16), B2AF8 +8 (align 16).
+  818A0 and header sizes already exact. Extra bytes all zero after last
+  symbol. Added `tools/trim_elf_section_pad.py`; `build_us.sh` trims
+  after assemble. Re-run: **exact SHA-1 match**, exit 0. No C. No label chase.
+  Commit message for this work: record parity fix.
