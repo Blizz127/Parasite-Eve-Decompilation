@@ -126,20 +126,20 @@ post-split `git status` check.
   http://redump.org/disc/116/). Non-blocking.
 - Text/data/bss boundaries inside the image — **prefix + mid-image island
   closed** (rodata 0x800–0x2A0B, asm 0x2A0C–0x8189F, rodata 0x818A0–0xB2AF7,
-  asm from 0xB2AF8). Mid-image nested audit complete (2026-07-08): no
-  extremely-high-confidence nested split found; prefix rodata still deferred.
-  See Phase 3 boundary audits.
+  asm from 0xB2AF8). Mid-image and prefix nested audits complete (2026-07-08):
+  no extremely-high-confidence nested split found in either region. See Phase 3
+  boundary audits.
 - Real symbol/function names — only splat auto-labels (`func_*`, `D_*`).
 - The toolchain: `compiler: GCC` in the config is splat boilerplate, not a
   verified compiler identification (Phase 5+ fingerprinting).
 
 ## Next concrete step
 
-1. **Phase 3 continued:** refine prefix rodata (`0xEE4`…`0x1E44`) or revisit
-   mid-image tail jtbl alignment (`0xB2928`, `0xB2AA4`) only if a future pass
-   finds a misclassification (current audit: organizational rodata only). One
-   boundary per commit; re-split and re-check pc0 each time. Do not invent
-   symbol names.
+1. **Phase 3 continued:** optional organizational prefix-rodata split starting
+   at `0x1B88` (string→jtbl transition) only if desired for splat jtbl
+   alignment — current audit found no misclassification fix. Mid-image tail
+   jtbl hints (`0xB2928`, `0xB2AA4`) likewise deferred. One boundary per commit;
+   re-split and re-check pc0 each time. Do not invent symbol names.
 2. When redump.org is reachable, record the official cross-check in
    `docs/disc_info.md`.
 
@@ -243,6 +243,52 @@ rodata (no asm/rodata misclassification fix). `0x8D5F4` and `0xB28C8` coincide
 with runtime BSS addresses and must not become ROM boundaries. **No config edit;
 docs-only record.**
 
+### Phase 3 prefix rodata nested audit (2026-07-08)
+
+Read-only audit of file `0x800`–`0x2A0B` / VRAM `0x80010000`–`0x8001220B` inside
+`asm/disc1/data/800.rodata.s` (~2987 lines) plus raw `SLUS_006.62` bytes. Branch
+`phase3-disc1-boundary-audit` at `6ebbedb`. Generated output present locally,
+git-ignored; no config change applied.
+
+**Prefix layout (confirmed):**
+
+| File range | VRAM range | Contents |
+| --- | --- | --- |
+| `0x800`–`0xEE3` | `0x80010000`–`0x800106E3` | Dense jump-table cluster (`jtbl_80010000` … `jtbl_80010690`); ~421/441 words are VRAM pointers |
+| `0xEE4`–`0x2A0B` | `0x800106E4`–`0x8001220B` | Interleaved jtbl blocks, scalar tables, glyph-like data, Psy-Q/CDL strings, tail jtbls through `jtbl_8001213C` |
+
+**Anchors reconfirmed (unchanged):**
+
+- `0x2A0C` / `0x8001220C`: asm starts in `2A0C.s` (`addiu $sp,$sp,-0x28` at
+  `func_8001220C`); last rodata words at `0x2A00`–`0x2A08` are tail jtbl entries.
+- `0xB2AF8` / `0x800C22F8`: asm still resumes in `B2AF8.s` at `func_800C22F8`.
+- pc0 `func_80072534` at file `0x62D34` in `2A0C.s`: unchanged/sane.
+
+**Splat candidate boundary table:**
+
+| File | VRAM | Observed bytes/words | Class | Confidence | Evidence | Action |
+| --- | --- | --- | --- | --- | --- | --- |
+| `0xEE4` | `0x800106E4` | `0x8001F860`, `0x8001F898`, … (`jtbl_800106E4`) | rodata / jtbl | medium-high | Scalar table `D_800106D4` ends with zero at `0xEE0`; new jtbl begins; 4-byte aligned, no `.align 3` | Defer; organizational rodata split only |
+| `0x10F0` | `0x800108F0` | `0x8002AAD8`, `0x8002AB40`, … (`jtbl_800108F0`) | rodata / jtbl | medium-high | `D_800108E4` scalar ends `0x10EC`; `.align 3` before jtbl; 8-byte aligned | Defer; organizational rodata split only |
+| `0x164C` | `0x80010E4C` | `0x80031598`, `0x800315B0`, … (`jtbl_80010E4C`) | rodata / jtbl | medium-high | `D_80010E38` scalar ends with zero at `0x1648`; jtbl follows; `Warning:`/`Fatal Error:` strings at `0x1694` | Defer; organizational rodata split only |
+| `0x1958` | `0x80011158` | `0x8005117C`, `0x80051234`, … (`jtbl_80011158`) | rodata / jtbl | medium | `jtbl_80011144` ends `0x1954`; `.align 3`; another jtbl at `0x1970` follows immediately after `0x196C` zero terminator — mid jtbl stream | Defer |
+| `0x1A5C` | `0x8001125C` | `0x80053DF8` × 9, … (`jtbl_8001125C`) | rodata / jtbl | medium-high | `jtbl_80011218` ends `0x1A58`; new jtbl with repeated targets; 4-byte aligned | Defer; organizational rodata split only |
+| `0x1B88` | `0x80011388` | `0x80069D10`, `0x80069D4C`, … (`jtbl_80011388`) | rodata / jtbl | **high** (content) | `CD: Read error (%d / %d)\n` ends `0x1B84`; `.align 3`; cleanest string→jtbl transition in prefix | Defer for now; best candidate if pursuing organizational split |
+| `0x1E44` | `0x80011644` | `0x80071D60`, `0x8007220C` × N (`jtbl_80011644`) | rodata / jtbl | high (content) | Hex charset `0123456789abcdef` null-terminated at `0x1E40`; jtbl follows; `VSync: timeout\n` at `0x1EFC` | Defer; organizational rodata split only |
+
+**Audit conclusion:** All seven splat hints are **jumptable alignment suggestions
+inside already-correct prefix rodata**. None fix asm/rodata misclassification
+(the outer `[0x2A0C, asm]` boundary remains the only high-confidence
+rodata→text edge). Several candidates (`0xEE4`, `0x1958`, `0x1A5C`) sit
+mid-stream between back-to-back jtbl blocks; splitting them would subdivide
+rodata without improving classification. **No config edit; docs-only record.**
+
+**Recommended next action:** Stop prefix nested splitting unless splat jtbl
+alignment becomes a blocker. If pursued later, try `0x1B88` first (strongest
+string→jtbl content transition, `.align 3`, 8-byte aligned) as a single
+organizational rodata split — one boundary per commit, re-split and re-check
+pc0/`0xB2AF8` each time.
+
 ## Open decisions
 
 - License for original tooling/docs (see `docs/legal.md`).
@@ -258,6 +304,11 @@ docs-only record.**
 
 ## Changelog
 
+- 2026-07-08: **Phase 3 prefix rodata nested audit:** read-only pass over file
+  `0x800`–`0x2A0B`; evaluated all seven splat hints (`0xEE4`…`0x1E44`). All are
+  organizational jtbl-alignment splits inside correct rodata; no
+  extremely-high-confidence boundary. `0x1B88` noted as strongest future
+  candidate. No config change; `0x2A0C`/`0xB2AF8`/pc0 unchanged.
 - 2026-07-08: **Phase 3 mid-image nested audit:** read-only pass over file
   `0x818A0`–`0xB2AF7`; documented island layout (mixed rodata, 149 KB BSS zero
   image, tail strings/jtbls). Rejected `0x93CCC` (false jtbl in zeros); deferred
