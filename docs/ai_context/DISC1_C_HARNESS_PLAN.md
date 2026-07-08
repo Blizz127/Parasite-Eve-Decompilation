@@ -1,4 +1,23 @@
-# Disc 1 C/Matching Harness Design Audit (Phase 4D)
+# Disc 1 C/Matching Harness Plan
+
+Living plan for the rebuild/matching harness. Updated as each sub-phase lands.
+
+## Phase map (honest status)
+
+| Phase | Goal | Status (as of 2026-07-08) |
+| --- | --- | --- |
+| 4D | Design audit | Done (merged to `main` via PR #4) |
+| 4E | Split-artifact `verify_us.sh` | Done (`730821d`, on `main`) |
+| 4F | Asm-only rebuild/matching script | **Blocked** at time of docs (host had no mipsel tools); assemble path now unblocked by 4G — **link/pack/compare still open** |
+| 4G | MIPS LE toolchain provisioning | **Done** on `phase4g-mipsel-toolchain-provisioning` — Distrobox `pe-mipsel` assembles all five units |
+| 4H | Asm-only link + PS-X EXE pack + compare | Not started |
+| 5 | C leaf (`func_80090C38`) | Blocked until pure-asm rebuild path is real |
+
+**Format note:** the game boot file uses the `.EXE` extension (`SLUS_006.62`) but is a **PS-X EXE** (MIPS little-endian PlayStation executable), **not** a Windows PE `.exe`.
+
+---
+
+## Phase 4D design audit (historical, merged)
 
 **Date:** 2026-07-08 (post 5c18fb3 "Record Phase 5 C conversion blocker")
 
@@ -339,3 +358,162 @@ Rules:
 
 Phase 4D = design. Phase 4E = split verify (done). Phase 4F = asm rebuild
 (blocked on missing MIPS cross toolchain).
+
+---
+
+## Phase 4G — MIPS little-endian toolchain (2026-07-08)
+
+### Goal
+
+Provision a **reproducible, containerized** MIPS LE binutils path suitable for
+assembling splat-generated PE1 asm, without host package layering and without
+claiming a full rebuild.
+
+### Environment (chosen path)
+
+| Item | Value |
+| --- | --- |
+| Host | Fedora-family host with Distrobox + Podman (not modified for mipsel packages) |
+| Container name | `pe-mipsel` |
+| Image | `docker.io/library/debian:trixie` |
+| Guest OS | Debian GNU/Linux 13 (trixie), `VERSION_CODENAME=trixie` |
+| Guest arch | x86_64 (cross tools target mipsel) |
+| Package | `binutils-mipsel-linux-gnu` **`2.44-3cross1+nmu1+b1`** (amd64) |
+| Depends | `binutils-common` **`2.44-3`** |
+
+### Create / enter (reproducible commands)
+
+```bash
+# One-time create
+distrobox create --name pe-mipsel --image docker.io/library/debian:trixie --yes
+
+# Enter and install (idempotent enough: apt will no-op if present)
+distrobox enter pe-mipsel -- bash -lc '
+  set -euo pipefail
+  export DEBIAN_FRONTEND=noninteractive
+  sudo apt-get update -qq
+  sudo apt-get install -y -qq binutils-mipsel-linux-gnu
+  for t in as ld objcopy objdump readelf; do
+    command -v mipsel-linux-gnu-$t
+    mipsel-linux-gnu-$t --version | head -1
+  done
+'
+```
+
+Tools live **inside the container only**. Host `PATH` does **not** gain
+`mipsel-linux-gnu-*` unless you deliberately `distrobox-export` (not done;
+prefer calling via `distrobox enter pe-mipsel -- …`).
+
+### Recorded tool versions (2026-07-08 probe)
+
+```text
+GNU assembler (GNU Binutils for Debian) 2.44   # mipsel-linux-gnu-as
+GNU ld (GNU Binutils for Debian) 2.44          # mipsel-linux-gnu-ld
+GNU objcopy (GNU Binutils for Debian) 2.44
+GNU objdump (GNU Binutils for Debian) 2.44
+GNU readelf (GNU Binutils for Debian) 2.44
+```
+
+Paths inside `pe-mipsel`:
+
+```text
+/usr/bin/mipsel-linux-gnu-as
+/usr/bin/mipsel-linux-gnu-ld -> mipsel-linux-gnu-ld.bfd
+/usr/bin/mipsel-linux-gnu-objcopy
+/usr/bin/mipsel-linux-gnu-objdump
+/usr/bin/mipsel-linux-gnu-readelf
+```
+
+### Assembler flags used for probes
+
+```text
+mipsel-linux-gnu-as -EL -mips1 -mabi=32 -I <repo>/include -o <out.o> <in.s>
+```
+
+- `-EL` — little endian  
+- `-mips1` — R3000-class (matches PS1-era code and object flags seen)  
+- `-mabi=32` — o32  
+- `-I include` — resolves `.include "macro.inc"` / GTE macros from splat boilerplate  
+
+Exact flags for a **matching** rebuild may still change after fingerprinting;
+these are the flags that **successfully assembled** current split output.
+
+### Assembly probes (temp only — objects deleted, never committed)
+
+Working tree artifacts used for the probe lived under the provisioned main
+checkout (`asm/disc1/`, `include/`), git-ignored. Objects were written only
+under `/tmp/pe-mipsel-probe.*` and removed after verification.
+
+| Input | Result | Object notes |
+| --- | --- | --- |
+| Synthetic `.set noat` / `.ent` / `addiu` / `jal` | **OK** | ELF32, Machine MIPS R3000, little-endian, o32 mips1 |
+| `asm/disc1/header.s` | **OK** | `.data` starts with `PS-X EXE`; pc0 word little-endian `34 25 07 80` = `0x80072534` |
+| `asm/disc1/data/800.rodata.s` | **OK** | ELF32 mipsel relocatable |
+| `asm/disc1/2A0C.s` | **OK** | `.text` size `0x7eea0`; first insn `addiu $sp,$sp,-40` matches split; `jal` targets relocatable (`jal 0` until link) |
+| `asm/disc1/B2AF8.s` | **OK** | ELF32 mipsel relocatable |
+| `asm/disc1/data/818A0.rodata.s` | **OK** | ELF32 mipsel relocatable |
+
+**All five split units assemble** with the Distrobox toolchain.
+
+Example one-shot command (from host, adjust paths):
+
+```bash
+distrobox enter pe-mipsel -- bash -lc '
+  set -euo pipefail
+  ROOT=/path/to/Parasite-Eve-Decompilation
+  TMP=$(mktemp -d)
+  AS="mipsel-linux-gnu-as -EL -mips1 -mabi=32 -I $ROOT/include"
+  $AS -o "$TMP/header.o"      "$ROOT/asm/disc1/header.s"
+  $AS -o "$TMP/2A0C.o"        "$ROOT/asm/disc1/2A0C.s"
+  $AS -o "$TMP/B2AF8.o"       "$ROOT/asm/disc1/B2AF8.s"
+  $AS -o "$TMP/800.rodata.o"  "$ROOT/asm/disc1/data/800.rodata.s"
+  $AS -o "$TMP/818A0.rodata.o" "$ROOT/asm/disc1/data/818A0.rodata.s"
+  mipsel-linux-gnu-readelf -h "$TMP/2A0C.o" | head -20
+  rm -rf "$TMP"
+'
+```
+
+### What Phase 4G does **not** claim
+
+- No full link with `linkers/disc1.ld`
+- No PS-X EXE packing / `objcopy` to match `SLUS_006.62`
+- No SHA-1 compare / matching claim
+- No `scripts/build_us.sh` (blocked until link+compare is proven)
+- No C, no `func_80090C38` conversion
+- Host packages were **not** layered for mipsel binutils
+
+### Next phase after 4G (asm-only rebuild attempt)
+
+1. Merge `phase5-disc1-first-c-leaf` (4E verify + 4F blocker docs) into the
+   working line if not already present.
+2. From `pe-mipsel`, assemble the five units into **gitignored**
+   `build/asm/disc1/**/*.s.o` paths matching `linkers/disc1.ld`.
+3. Link with `mipsel-linux-gnu-ld` + generated `linkers/disc1.ld` (flags TBD;
+   sibling decomps often use `-nostdlib --no-check-sections` — not proven here).
+4. Produce a candidate binary and compare to
+   `build/extracted/disc1/SLUS_006.62` (SHA-1
+   `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`) only if the compare is real.
+5. Only then add a minimal `scripts/build_us.sh` and optionally extend
+   `verify_us.sh` with an honest rebuild gate.
+
+### Unresolved after 4G
+
+- Linker script compatibility with GNU ld 2.44 (section names, SUBALIGN, AT())
+- Whether undefined symbols / reloc model needs `undefined_syms_auto.txt`
+- EXE header packing and BSS image expectations
+- Whether modern gas output matches original object layout enough for
+  whole-image match (may need maspsx / era tools later for C; pure asm may
+  still byte-match if input asm is complete)
+
+---
+
+
+### Phase 4G vs 4F blocker
+
+Phase 4F correctly blocked on **host** PATH (no mipsel tools). Phase 4G does
+**not** install tools on the host; it provisions Distrobox `pe-mipsel`. The
+4F "missing tools" table remains valid for the **host** shell. Inside
+`pe-mipsel`, assemble of all five split units is verified (see probes above).
+
+Link + pack + SHA-1 compare remain **unimplemented**. No `build_us.sh` yet.
+
