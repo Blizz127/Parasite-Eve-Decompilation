@@ -198,3 +198,41 @@ All evidence for this triage came from:
 No decompilation or C was performed. This is pure triage/survey.
 
 (End of Phase 4C triage.)
+
+---
+
+## Phase 5 First C Conversion Attempt (2026-07-08)
+
+**Branch:** phase5-disc1-first-c-leaf (created after merge simulation of Phase 4C)
+
+**Recommended target selected:** func_80090C38 (per this document)
+
+**Pre-edit verification performed:**
+- Branch: phase5-disc1-first-c-leaf, clean working tree
+- Config boundaries confirmed unchanged (0x800 rodata, 0x2A0C asm, 0x818A0 rodata, 0xB2AF8 asm)
+- `scripts/split_us.sh --check` passed
+- Re-inspected generated asm/disc1/2A0C.s for func_80090C38:
+  - Function label: present (`glabel func_80090C38`)
+  - Size: 0x14 bytes (nonmatching hint), 5 instructions
+  - Leaf: yes (no `jal` inside body; ends with `jr $ra`)
+  - Jump table: no
+  - Indirect call: no (no `jalr`)
+  - Dangerous hardware/system side effects: no (simple `lw` from $a0 + `ori` const + `sw` back; no CD/GPU/SPU/MDEC/BIOS/interrupt patterns)
+  - Anchor role: no (not 1220C, 72534, or C22F8)
+
+**Decision:** Do **not** perform C conversion.
+
+**Missing infrastructure (exact blocker):**
+- `scripts/verify_us.sh`: is a placeholder that prints "ERROR: verify_us.sh is a Phase 0 placeholder and not implemented yet." and exits 1. No rebuild + checksum harness.
+- `src/main/`: only contains an empty `.gitkeep`. No C source files, no types, no scaffolding.
+- `configs/USA/disc1.yaml`: only disassembly segments; `compiler: GCC` is noted as boilerplate. No C subsegments or src integration.
+- No top-level build system (no Makefile for PSX EXE from mixed asm + C objects, no object comparison target).
+- No documented way to compile a single C function into the EXE while preserving the rest of the split.
+
+Per explicit rules and CLAUDE.md ("Until that harness exists, do not add code under `src/` at all"), no C file was created or modified.
+
+**Result:** Phase 5 blocked. One function only (this attempt). No other targets touched.
+
+**Recommended action:** Implement Phase 4 harness (verify_us.sh + build integration) before any C work. Then resume on this target.
+
+(End of Phase 5 blocker report.)

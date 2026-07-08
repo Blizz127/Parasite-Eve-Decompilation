@@ -17,11 +17,11 @@ meaningful change.
 
 pc0 remains sane. No further boundary work unless a real misclassification appears.
 
-**Phase 4 started** (branch `phase4-disc1-function-inventory`): read-only function inventory + call/anchor map + first decomp target triage of the text regions. See `DISC1_FUNCTION_INVENTORY.md`, `DISC1_CALL_ANCHOR_MAP.md`, and `DISC1_FIRST_DECOMP_TARGETS.md`. No C, no renames, no boundary changes.
+**Phase 4 complete** (pushed, ready for merge). Function inventory, call/anchor map, and first decomp target triage done. Recommended first C target: func_80090C38 (small leaf in 2A0C.s).
 
-Branch pushed (history cleaned of duplicate commits for PR). Ready for PR/merge.
+**Phase 5 attempt started** on `phase5-disc1-first-c-leaf` (after simulated merge of Phase 4). Attempted first C conversion for recommended target but infrastructure not ready. See details below and in updated DISC1_FIRST_DECOMP_TARGETS.md if extended.
 
-Phase 1 complete locally; only the official redump cross-check remains open (non-blocking). (Current work branch: `phase4-disc1-function-inventory`)
+Phase 1 complete locally; only the official redump cross-check remains open (non-blocking). (Current work branch: `phase5-disc1-first-c-leaf`)
 
 ## What exists right now
 
@@ -170,8 +170,11 @@ Continue Phase 3 (or later) **only** on true blockers:
 
 1. (Phase 3) Push / PR / merge `phase3-disc1-boundary-audit` (if not already done in real flow). The local `phase4-disc1-function-inventory` was created from the merged Phase 3 state.
 2. Treat `ACTIVE_HANDOFF.md` + `DISC1_FUNCTION_INVENTORY.md` + `DISC1_CALL_ANCHOR_MAP.md` + `DISC1_FIRST_DECOMP_TARGETS.md` as the resume points.
-3. Phase 4C triage complete (7 strong small-leaf candidates shortlisted, recommended first = func_80090C38 cluster). Only proceed to C on one after harness exists.
-4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
+3. Phase 4C triage complete (recommended first = func_80090C38 cluster, manually verified leaf).
+
+4. Phase 5 first C attempt: Tried to convert the recommended target (func_80090C38). All pre-checks passed and asm verified (leaf, no jtbl, no indirect, no anchor, no obvious system side effects). However, C conversion infrastructure is not ready (see blocker details in changelog and DISC1_FIRST_DECOMP_TARGETS.md). Documented missing pieces instead of adding code.
+
+5. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
 
@@ -411,3 +414,19 @@ pc0/`0xB2AF8` each time.
   `docs/ai_context/DISC1_FIRST_DECOMP_TARGETS.md`. 5-7 conservative small-leaf
   candidates (best cluster around func_80090C38/90F54). Strict filters applied;
   recommended first + backups listed with full rationale. Docs-only triage.
+- 2026-07-08: **Phase 5 C conversion attempt (blocker).** Switched to
+  `phase5-disc1-first-c-leaf` after Phase 4 merge simulation. Identified
+  recommended target func_80090C38. Re-verified in asm/disc1/2A0C.s:
+  label present, 0x14 bytes / 5 instructions, leaf (no jal), no jump table,
+  no indirect call (no jalr), no dangerous hardware/system side effects
+  (simple field bit-set on $a0), not an anchor.
+  Pre-checks passed (config, split --check, clean tree).
+  However, no C conversion performed because infrastructure is missing:
+  - verify_us.sh is placeholder (exits with "Phase 0 placeholder", no harness)
+  - src/main/ only contains .gitkeep (no C source structure)
+  - No C segments in splat config
+  - No top-level Makefile or build rules for compiling C into PSX EXE
+  - No object file comparison or rebuild path
+  Per rules, documented blocker instead of faking conversion.
+  Commit: docs-only "Record Phase 5 C conversion blocker".
+  Update ACTIVE_HANDOFF.md with result. One function only.
