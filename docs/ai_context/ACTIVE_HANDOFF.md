@@ -6,10 +6,10 @@ meaningful change.
 
 ## Current phase
 
-**Phase 2 — first real split executed locally; disassembly sanity-checked at
-pc0; guardrails extended for splat `include/` boilerplate.** Phase 1 is
-complete locally; only the official redump cross-check remains open
-(non-blocking). (Branch: `phase2-first-real-split`.)
+**Phase 3 — first rodata/text boundary applied at file offset 0x2A0C (VRAM
+0x8001220C); pc0 still sane after re-split.** Phase 1 complete locally;
+only the official redump cross-check remains open (non-blocking). (Branch:
+`phase3-disc1-boundary-audit`.)
 
 ## What exists right now
 
@@ -124,20 +124,48 @@ post-split `git status` check.
 - Whether either dump matches redump.org itself (unreachable again on
   2026-07-04 retry, ECONNREFUSED; disc 1 page is
   http://redump.org/disc/116/). Non-blocking.
-- Text/data/bss boundaries inside the image — split exists but config still
-  uses one conservative asm segment; internal layout not mapped yet.
+- Text/data/bss boundaries inside the image — **one prefix boundary applied**
+  (rodata 0x800–0x2A0B, asm from 0x2A0C); remainder still monolithic asm.
+  See Phase 3 boundary audit below.
 - Real symbol/function names — only splat auto-labels (`func_*`, `D_*`).
 - The toolchain: `compiler: GCC` in the config is splat boilerplate, not a
   verified compiler identification (Phase 5+ fingerprinting).
 
 ## Next concrete step
 
-1. **Phase 3 config refinement:** identify text vs data/rodata boundaries
-   in `configs/USA/disc1.yaml` from disassembly patterns (jump tables,
-   padding, high-entropy regions) — one boundary at a time, re-split
-   locally, verify pc0 code still sane. Do not invent symbol names.
+1. **Phase 3 continued:** apply splat's suggested sub-splits inside the
+   prefix rodata segment (`0xEE4`, `0x10F0`, `0x164C`, `0x1958`, `0x1A5C`,
+   `0x1B88`, `0x1E44` — emitted by splat 0.41.0 on re-split), OR hunt the
+   next text/data boundary deeper in the image (e.g. where inline `.word`
+   data blobs give way to sustained code). One boundary per commit; re-split
+   and re-check pc0 each time. Do not invent symbol names.
 2. When redump.org is reachable, record the official cross-check in
    `docs/disc_info.md`.
+
+### Phase 3 boundary audit (2026-07-07)
+
+Evidence table for required anchors (from `asm/disc1/800.s` pre-split and
+raw EXE bytes):
+
+| Address | File offset | Location | Evidence | Classification | Confidence | Action |
+| --- | --- | --- | --- | --- | --- | --- |
+| `0x80010000` | `0x800` | `jtbl_80010000` | 62+ pointer words/256 B block; targets in `0x80012xxx` | jump table / rodata | high | Split as rodata (done) |
+| `0x800119CC` | `0x21CC` | after 4 B nop | ASCII `none`, `CdlReadS`, `CdlSeekP`, … (Psy-Q CDL API names) | rodata / strings | high | Include in prefix rodata (done) |
+| `0x80012000` | `0x2800` | mid-prefix | ASCII `file: searching...\n` | rodata / strings | high | Include in prefix rodata (done) |
+| `0x8001211C` | `0x291C` | `jtbl_8001211C` | Trailing pointer table before code | jump table / rodata | high | Include in prefix rodata (done) |
+| `0x8001220C` | `0x2A0C` | `func_8001220C` | First `addiu $sp,$sp,-0x28` prologue in scan; crt0 `jal` target; only prior `glabel` is 4 B `nop` at `0x800119C8` | text | high | **Asm subsegment start (applied)** |
+| `0x80072534` | `0x62D34` | pc0 / `func_80072534` | BSS zero-fill loop, stack init, `$gp` setup, `jal func_800726B4`, `jal func_8001220C`, `break 0,1` | text (crt0) | high (already verified) | Do not split; anchor only |
+| `D_8009CDF8` (`0x8009CDF8`) | `0x8D5F8` | crt0 `lui`/`addiu` | File bytes all zero; label is **runtime BSS zero-fill start**, not a ROM section edge | bss (runtime) | high it's NOT a ROM boundary | **Do not change yet** |
+| `D_800C20C8` (`0x800C20C8`) | `0xB28C8` | crt0 `lui`/`addiu` | File holds `error : service thread…` string data; label is **runtime zero-fill end**, spans RAM not a single ROM section | data + runtime bss span | high it's NOT a ROM boundary | **Do not change yet** |
+| `D_8009CD70` / `D_8009CD74` | `0x8D570` / `0x8D574` | crt0 stack setup | Initialized words/strings in ROM (`m0290i`, …); used as heap/stack bounds at runtime | data | medium | Defer; needs deeper data-map pass |
+
+**Config change applied:** `configs/USA/disc1.yaml` main subsegments now
+`[0x800, rodata]` + `[0x2A0C, asm]`. Re-split 2026-07-07: splat 0.41.0 OK;
+output `asm/disc1/data/800.rodata.s` (~2987 lines, `.section .rodata`) +
+`asm/disc1/2A0C.s` (text). pc0 `func_80072534` unchanged/sane in `2A0C.s`.
+Splat warned prefix rodata has misaligned nested jump tables and suggested
+further file splits at `0xEE4`, `0x10F0`, `0x164C`, `0x1958`, `0x1A5C`,
+`0x1B88`, `0x1E44` — next refinement candidates, not applied yet.
 
 ## Open decisions
 
@@ -154,6 +182,10 @@ post-split `git status` check.
 
 ## Changelog
 
+- 2026-07-07: **Phase 3 boundary audit + first split:** documented anchor
+  evidence table; applied rodata/asm boundary at file `0x2A0C` (VRAM
+  `0x8001220C`); re-split OK, pc0 sane, output git-ignored. No symbols/C
+  committed.
 - 2026-07-07: **First real split:** `scripts/split_us.sh` on
   `phase2-first-real-split` — splat 0.41.0 split 2 MB (100%); pc0
   `0x80072534` sanity OK (crt0-style startup). Fixed guardrail gap:
