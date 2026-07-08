@@ -8,10 +8,10 @@ Living plan for the rebuild/matching harness. Updated as each sub-phase lands.
 | --- | --- | --- |
 | 4D | Design audit | Done (merged to `main` via PR #4) |
 | 4E | Split-artifact `verify_us.sh` | Done (`730821d`, on `main`) |
-| 4F | Asm-only rebuild/matching script | **Blocked** at time of docs (host had no mipsel tools); assemble path now unblocked by 4G — **link/pack/compare still open** |
-| 4G | MIPS LE toolchain provisioning | **Done** on `phase4g-mipsel-toolchain-provisioning` — Distrobox `pe-mipsel` assembles all five units |
-| 4H | Asm-only link + PS-X EXE pack + compare | Not started |
-| 5 | C leaf (`func_80090C38`) | Blocked until pure-asm rebuild path is real |
+| 4F | Asm-only rebuild/matching script | **Blocked** on host (no mipsel tools); unblocked in container by 4G |
+| 4G | MIPS LE toolchain provisioning | **Done** — Distrobox `pe-mipsel` assembles all five units |
+| 4H | Asm-only link + PS-X EXE pack + compare | **Partial** — `build_us.sh` runs; **NON-MATCH** (~28%); no matching claim |
+| 5 | C leaf (`func_80090C38`) | Blocked until pure-asm rebuild **matches** |
 
 **Format note:** the game boot file uses the `.EXE` extension (`SLUS_006.62`) but is a **PS-X EXE** (MIPS little-endian PlayStation executable), **not** a Windows PE `.exe`.
 
@@ -477,36 +477,9 @@ distrobox enter pe-mipsel -- bash -lc '
 
 - No full link with `linkers/disc1.ld`
 - No PS-X EXE packing / `objcopy` to match `SLUS_006.62`
-- No SHA-1 compare / matching claim
-- No `scripts/build_us.sh` (blocked until link+compare is proven)
+- No SHA-1 compare / matching claim at 4G time
 - No C, no `func_80090C38` conversion
 - Host packages were **not** layered for mipsel binutils
-
-### Next phase after 4G (asm-only rebuild attempt)
-
-1. Merge `phase5-disc1-first-c-leaf` (4E verify + 4F blocker docs) into the
-   working line if not already present.
-2. From `pe-mipsel`, assemble the five units into **gitignored**
-   `build/asm/disc1/**/*.s.o` paths matching `linkers/disc1.ld`.
-3. Link with `mipsel-linux-gnu-ld` + generated `linkers/disc1.ld` (flags TBD;
-   sibling decomps often use `-nostdlib --no-check-sections` — not proven here).
-4. Produce a candidate binary and compare to
-   `build/extracted/disc1/SLUS_006.62` (SHA-1
-   `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`) only if the compare is real.
-5. Only then add a minimal `scripts/build_us.sh` and optionally extend
-   `verify_us.sh` with an honest rebuild gate.
-
-### Unresolved after 4G
-
-- Linker script compatibility with GNU ld 2.44 (section names, SUBALIGN, AT())
-- Whether undefined symbols / reloc model needs `undefined_syms_auto.txt`
-- EXE header packing and BSS image expectations
-- Whether modern gas output matches original object layout enough for
-  whole-image match (may need maspsx / era tools later for C; pure asm may
-  still byte-match if input asm is complete)
-
----
-
 
 ### Phase 4G vs 4F blocker
 
@@ -515,5 +488,88 @@ Phase 4F correctly blocked on **host** PATH (no mipsel tools). Phase 4G does
 4F "missing tools" table remains valid for the **host** shell. Inside
 `pe-mipsel`, assemble of all five split units is verified (see probes above).
 
-Link + pack + SHA-1 compare remain **unimplemented**. No `build_us.sh` yet.
+---
+
+## Phase 4H — asm-only rebuild attempt (2026-07-08)
+
+**Branch:** `phase4h-asm-only-rebuild` (from `main` @ `4d2e903`)
+
+### Status table
+
+| Stage | Result | Notes |
+| --- | --- | --- |
+| Assemble | **OK** | All 5 units → `build/asm/disc1/**/*.s.o` (ELF32 mipsel R3000) |
+| Link (splat `linkers/disc1.ld`) | **FAIL** | Undefined `D_*` (scratchpad/kernel + ~134 in-image unlabeled) |
+| Link (ROM-order experimental + abs syms) | **OK** | Produces `build/disc1.elf` |
+| Pack PS-X EXE | **OK** | Header `.data` + `.main` → `build/disc1.candidate.exe` (0x1EE800) |
+| Compare SHA-1 | **NON-MATCH** | ~28% bytes differ; **no matching claim** |
+
+### Flags used (exact)
+
+```text
+mipsel-linux-gnu-as -EL -mips1 -mabi=32 -I include/ -o <obj> <src.s>
+mipsel-linux-gnu-ld -EL -m elf32ltsmip -nostdlib --no-check-sections \
+  -T build/disc1_romorder.ld -T build/abs_syms.ld \
+  -Map build/disc1.map -o build/disc1.elf
+mipsel-linux-gnu-objcopy -O binary -j .header|.main ...
+```
+
+### Deliverable
+
+- **`scripts/build_us.sh`** — real assemble/link/pack/compare; exit **1** on non-match
+  (exit 0 reserved for exact match only). Uses Distrobox `pe-mipsel` when tools
+  are not on host PATH.
+- **`scripts/verify_us.sh`** — still Phase 4E gates; summary now reports honest
+  asm-only rebuild status (candidate SHA-1 / NON-MATCH) without failing the
+  split gates when rebuild is non-matching.
+
+### Evidence (compare)
+
+| Item | Value |
+| --- | --- |
+| Original SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` |
+| Candidate SHA-1 | `3710586a096168a4581fe99143e201e230a0e23a` |
+| Header (0x0–0x7FF) | **exact match** |
+| Image body | non-match (~568002 / 2025472 bytes) |
+| First body mismatch | file `0x800` (jtbl): cand `98…` orig `94…` (labels shifted +4) |
+| Text start `0x2A0C` | cand zeros / wrong offset; orig `d8ffbd27` (`addiu $sp,$sp,-0x28`) |
+
+### Object sizes vs expected file spans
+
+| Unit | Expected size | Assembled section size | Delta |
+| --- | --- | --- | --- |
+| header `.data` | 0x800 | 0x800 | 0 |
+| 800.rodata | 0x220C | 0x2210 | **+4** |
+| 2A0C `.text` | 0x7EE94 | 0x7EEA0 | **+12** |
+| 818A0.rodata | 0x31258 | 0x31258 | 0 |
+| B2AF8 `.text` | 0x13BD08 | 0x13BD10 | **+8** |
+
+### Why non-match (honest)
+
+1. **splat `linkers/disc1.ld` section order** is C-style (all `.text` then `.rodata`);
+   PE1 file order is interleaved. ROM-order experimental script used instead.
+2. **GNU gas alignment** expands some sections vs original (+4/+12/+8), shifting
+   VRAM of later content and jtbl target words.
+3. **~134 in-image `D_*` symbols** referenced in text but never emitted as
+   `dlabel`s — linked via absolute `sym = 0xADDR` workarounds (not ideal for
+   matching).
+4. **Absolute symbols** from `undefined_syms_auto.txt` (scratchpad `0x1F80xxxx`,
+   kernel, uncached) are required for link; plus `.L00000000_main = 0` for null
+   jtbl slots.
+
+### What Phase 4H does **not** claim
+
+- Matching / byte-identical rebuild
+- Correctness of absolute-symbol workarounds for runtime behavior
+- C conversion or `func_80090C38`
+- That splat's stock `linkers/disc1.ld` alone is enough for a PS-X EXE match
+
+### Exact next action
+
+1. Fix section sizes / alignment (splat or assemble flags / post-process) so
+   prefix rodata is exactly 0x220C and text segments hit original spans.
+2. Emit missing in-image `dlabel`s (or a curated `undefined_syms` for only
+   true externals: scratchpad/kernel), not blanket abs for in-image labels.
+3. Re-run `scripts/build_us.sh` until SHA-1 matches; only then allow Phase 5 C.
+4. Optionally teach splat/config to generate a ROM-order ld script.
 

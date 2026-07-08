@@ -9,14 +9,13 @@
 #   - config subsegment boundaries match the parked Phase 3 map
 #   - pinned splat is available (and reports its version)
 #
-# Explicit non-goals (Phase 4F / Phase 5):
-#   - no assembly of .s → .o
-#   - no C compilation
-#   - no linking / rebuild of an EXE
-#   - no matching claims of any kind
+# Status layers reported at the end (honest, separate):
+#   - split verification (this script, gates 1–7)
+#   - asm-only rebuild status (optional presence of build/disc1.candidate.exe)
+#   - C/matching status (always NOT IMPLEMENTED until harness proves it)
 #
 # Exit codes:
-#   0  split artifacts / prerequisites OK (rebuild/matching still NOT done)
+#   0  split artifacts / prerequisites OK (does NOT mean matching works)
 #   1  a real problem was found
 #   2  usage error
 #
@@ -26,7 +25,7 @@ set -euo pipefail
 
 if [[ $# -gt 0 ]]; then
     echo "Usage: $0" >&2
-    echo "Phase 4E minimal verification — no flags yet." >&2
+    echo "Phase 4E/4H verification — no flags yet." >&2
     exit 2
 fi
 
@@ -210,12 +209,38 @@ echo
 # --- summary ---
 echo "=== Summary ==="
 if [[ "$failures" -eq 0 ]]; then
-    echo "Verification (Phase 4E): split artifacts OK."
+    echo "Split verification (Phase 4E): OK."
 else
-    echo "Verification (Phase 4E): FAILED ($failures check(s) failed)."
+    echo "Split verification (Phase 4E): FAILED ($failures check(s) failed)."
 fi
-echo "Rebuild/matching harness: NOT IMPLEMENTED YET (see Phase 4F in docs/ai_context/DISC1_C_HARNESS_PLAN.md)."
-echo "No assembly, C compile, link, or matching claim was attempted."
+
+# Asm-only rebuild status (Phase 4H) — report only; do not fail this script on non-match.
+# Matching is a separate claim; scripts/build_us.sh owns the rebuild exit code.
+echo "Asm-only rebuild status (Phase 4H):"
+if [[ -x "$ROOT/scripts/build_us.sh" ]]; then
+    echo "  scripts/build_us.sh: present"
+    if [[ -f "$ROOT/build/disc1.candidate.exe" ]]; then
+        cand_sha1="$(sha1sum "$ROOT/build/disc1.candidate.exe" | cut -d' ' -f1)"
+        echo "  candidate: build/disc1.candidate.exe SHA-1 $cand_sha1"
+        if [[ -f "$EXE" ]]; then
+            if [[ "$cand_sha1" == "$EXPECTED_SHA1" ]]; then
+                echo "  compare: EXACT MATCH to original (asm-only matching claim possible)"
+            else
+                echo "  compare: NON-MATCH (expected SHA-1 $EXPECTED_SHA1)"
+                echo "  matching claim: NO — run scripts/build_us.sh for details"
+            fi
+        fi
+    else
+        echo "  candidate: not present (run scripts/build_us.sh)"
+        echo "  matching claim: NO"
+    fi
+else
+    echo "  scripts/build_us.sh: not present"
+    echo "  matching claim: NO"
+fi
+
+echo "C conversion / full matching harness: NOT IMPLEMENTED YET"
+echo "  (no C segments; no func_80090C38 conversion; see DISC1_C_HARNESS_PLAN.md)"
 echo
 
 if [[ "$failures" -ne 0 ]]; then

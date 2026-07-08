@@ -6,12 +6,15 @@ meaningful change.
 
 ## Current phase
 
-**Phase 4G — MIPS LE toolchain provisioning** (branch
-`phase4g-mipsel-toolchain-provisioning`, rebased onto `main` after PR #4).
-Distrobox `pe-mipsel` (Debian trixie + `binutils-mipsel-linux-gnu` 2.44)
-can assemble all five current split units to ELF32 mipsel objects.
-**No link, no PS-X EXE pack, no matching claim, no `build_us.sh`.**
-See `DISC1_C_HARNESS_PLAN.md`.
+**Phase 4H — asm-only rebuild attempt** (branch `phase4h-asm-only-rebuild`).
+`scripts/build_us.sh` exists: assembles 5/5 units in Distrobox `pe-mipsel`,
+links (ROM-order experimental script + absolute-symbol workarounds), packs a
+PS-X EXE-sized candidate, compares SHA-1. **Result: NON-MATCH (~28% bytes
+differ). Matching claim: NO.** Header matches; image layout/alignment still
+wrong. See `DISC1_C_HARNESS_PLAN.md` Phase 4H.
+
+**Phase 4G — MIPS LE toolchain provisioning** (on `main`). Distrobox
+`pe-mipsel` (Debian trixie + `binutils-mipsel-linux-gnu` 2.44).
 
 **Phase 3 — prefix + mid-image boundaries closed and parked.** Solid state:
 
@@ -57,9 +60,10 @@ Phase 1 complete locally; only the official redump cross-check remains open (non
   `linkers/disc1.ld`, `include/*.inc`, `undefined_*_auto.txt` (all
   git-ignored, never committed). No matching build, decompiled C, or
   PC-port work exists. `scripts/setup_env.sh` is implemented (pinned
-  `.venv/` install); `verify_us.sh` is Phase 4E (split-artifact sanity only —
-  rebuild/matching still NOT implemented). **MIPS LE assemble path:** Distrobox
-  `pe-mipsel` (Phase 4G; not on host PATH). Link/pack/compare still open (Phase 4H).
+  `.venv/` install); `verify_us.sh` is Phase 4E split-artifact sanity + honest
+  Phase 4H rebuild status report. **`scripts/build_us.sh`:** asm-only
+  assemble/link/pack/compare (non-matching). **MIPS LE path:** Distrobox
+  `pe-mipsel` (Phase 4G; not on host PATH).
 
 ## What is verified
 
@@ -178,11 +182,11 @@ Phase 3 boundaries remain parked:
 **Do not** pursue further splits for cleanliness. Continue Phase 3 only on true
 misclassifications or build/linker failures.
 
-1. **Phase 4E** is on `main` (PR #4) — use `scripts/verify_us.sh` as split sanity gate.
-2. **Phase 4H (next):** asm-only **link + PS-X EXE pack + compare** inside
-   `pe-mipsel` using `linkers/disc1.ld` and the five objects. Only after a real
-   compare works, add `scripts/build_us.sh`.
-3. Still **no C** and no `func_80090C38` conversion until pure-asm rebuild is real.
+1. **Phase 4E** on `main` — `scripts/verify_us.sh` split sanity (exit 0 ≠ matching).
+2. **Phase 4H done (this branch):** `scripts/build_us.sh` runs real assemble+link+pack;
+   compare **fails** (non-match). Next: fix ROM layout / gas alignment / missing
+   in-image `dlabel`s until SHA-1 matches — still **no C**.
+3. Still **no C** and no `func_80090C38` conversion until pure-asm rebuild matches.
 4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
@@ -490,3 +494,14 @@ pc0/`0xB2AF8` each time.
   (ELF32 MIPS R3000 LE). Host PATH unchanged. No `build_us.sh`, no link,
   no C, no matching claim. Note: target image is a **PS-X EXE**, not Windows PE.
   Commit: "Record MIPS toolchain provisioning path".
+- 2026-07-08: **Phase 4H asm-only rebuild attempt.** Branch
+  `phase4h-asm-only-rebuild` from `main` @ 4d2e903. Added
+  `scripts/build_us.sh`: Distrobox `pe-mipsel` assemble (5/5), link with
+  experimental ROM-order ld script + `undefined_syms_auto.txt` / residual
+  absolute `D_*` / `.L00000000_main=0`, pack header+main to
+  `build/disc1.candidate.exe`, SHA-1 compare. **NON-MATCH** (~28% bytes;
+  header exact match; jtbl/text offsets wrong due to gas align + reloc layout).
+  `verify_us.sh` reports split OK + honest rebuild NON-MATCH banner.
+  Flags: `as -EL -mips1 -mabi=32 -I include`; `ld -EL -m elf32ltsmip
+  -nostdlib --no-check-sections`. No C, no `func_80090C38`, no matching claim.
+  Commit: "Add asm-only Disc 1 rebuild harness".
