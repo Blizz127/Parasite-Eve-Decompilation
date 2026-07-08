@@ -6,18 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 4I — asm rebuild parity** (branch `phase4i-asm-rebuild-parity-audit`).
-Root cause of size drift proven: GNU `as` ELF **section alignment padding**
-(trailing zeros): `800.rodata` +4 (align 8), `2A0C` +12 (align 16), `B2AF8`
-+8 (align 16). Narrow fix: `tools/trim_elf_section_pad.py` trims zero
-tails to Phase 3 spans and sets align→4. **`scripts/build_us.sh` now exits 0
-with exact SHA-1 match** to `SLUS_006.62`
-(`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`). No C. See harness plan.
+**Phase 4J — MIPS GCC provisioning + codegen probe** (branch
+`phase4j-mipsel-gcc-provisioning`). Installed **container-only**
+`gcc-mipsel-linux-gnu` (Debian 14.2.0-13 / package 4:14.2.0-1) in Distrobox
+`pe-mipsel`. Scratch `/tmp` compile of the `func_80090C38` leaf at **-O1/-O2/-O3/-Os**
+with PS1-ish flags produces the **exact 5 instruction words** (0x14 bytes) of
+the original function; object `.text` is 0x20 due to align-16 pad (same class
+as 4I). **No production C** in `src/`, no splat/build C integration this pass.
+See `DISC1_C_HARNESS_PLAN.md` Phase 4J.
 
-**Phase 4H — asm-only rebuild harness** (on `phase4h-asm-only-rebuild` /
-merge pending). Introduced `build_us.sh` oracle (exit 0 only on match).
+**Phase 4H–4I on `main`:** asm-only rebuild oracle + gas pad trim → exact SHA-1.
 
-**Phase 4G — MIPS LE toolchain** (on `main`): Distrobox `pe-mipsel`.
+**Phase 4G — MIPS LE binutils** (on `main`): Distrobox `pe-mipsel`.
 
 **Phase 3 — prefix + mid-image boundaries closed and parked.** Solid state:
 
@@ -30,13 +30,8 @@ merge pending). Introduced `build_us.sh` oracle (exit 0 only on match).
 
 pc0 remains sane. No further boundary work unless a real misclassification appears.
 
-**Phase 4 complete** (on `main`). Function inventory, call/anchor map, and first decomp target triage done. Recommended first C target: `func_80090C38` (small leaf in `2A0C.s`).
-
-**Phase 5 attempt blocked** (docs on `main`). Infrastructure was not ready; no C conversion.
-
-**Phase 4D–4F on `main` (PR #4):** design audit, Phase 4E `verify_us.sh` (7-gate split sanity; rebuild/matching NOT IMPLEMENTED banner), Phase 4F asm rebuild blocker (host lacked mipsel tools).
-
-**Phase 4G:** MIPS LE assemble path proven in Distrobox (container-only). Host PATH still has no mipsel tools by design.
+**Phase 4 survey + harness** (on `main`). Recommended first C target:
+`func_80090C38`.
 
 Phase 1 complete locally; only the official redump cross-check remains open (non-blocking).
 
@@ -166,8 +161,9 @@ post-split `git status` check.
   boilerplate, not a verified identification (Phase 5+ fingerprinting).
 - A **modern** MIPS LE assembler/linker path is provisioned (Phase 4G Distrobox
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
-  SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). C compiler
-  path for Phase 5 is still unproven.
+  SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
+  modern GCC 14.2 in `pe-mipsel` can emit the exact 5 words for
+  `func_80090C38` at -O1+ (scratch probe); production C integration still open.
 
 ## Next concrete step
 
@@ -188,21 +184,14 @@ Phase 3 boundaries remain parked:
 [0xB2AF8,   asm]     tail code from func_800C22F8
 ```
 
-1. **Merge order (do not squash 4H+4I together):**  
-   (a) merge `phase4h-asm-only-rebuild` — harness + non-match oracle  
-   (b) merge `phase4i-asm-rebuild-parity-audit` — gas align pad fix → exact match  
-   Story: 4H created the oracle; 4I fixed layout drift and proved match.
-2. **After both on `main`:**  
-   `git switch main && git pull && git switch -c phase5-disc1-first-c-leaf-retry`  
-   Then re-baseline: `split_us.sh --check`, `verify_us.sh`, `build_us.sh` all green.
-3. **Phase 5 C leaf retry gate:**  
-   Phase 5 C leaf retry is allowed only while the asm-only baseline remains
-   exact before the C change, and `build_us.sh` remains the final oracle after
-   the C change.  
-   Target: **only** `func_80090C38`. One function; stop immediately if it matches.  
-   **Caution:** binutils solved assemble/link/pack. C needs a MIPS C compiler
-   (`mipsel-linux-gnu-gcc` or documented equivalent). If missing or non-matching
-   output, stop and document — do **not** hand-write asm and call it C.
+1. **Merge Phase 4J** (`phase4j-mipsel-gcc-provisioning`) to `main` (docs:
+   GCC provisioned + leaf codegen probe).
+2. **Phase 5B (next):** integrate **only** `func_80090C38` into splat +
+   `build_us.sh` as a real C object. Gate: asm-only exact **before** C, and
+   `build_us.sh` exact **after** C. Documented probe flags for this leaf:
+   `-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestanding
+   -fno-builtin -O1` (or -O2/-O3/-Os; same 5 words). Never hand-write asm as C.
+3. Host PATH still has no mipsel tools; C/as/ld stay in Distrobox `pe-mipsel`.
 4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
@@ -529,3 +518,16 @@ pc0/`0xB2AF8` each time.
   symbol. Added `tools/trim_elf_section_pad.py`; `build_us.sh` trims
   after assemble. Re-run: **exact SHA-1 match**, exit 0. No C. No label chase.
   Commit message for this work: record parity fix.
+- 2026-07-08: **Phase 4J MIPS GCC + codegen probe.** Branch
+  `phase4j-mipsel-gcc-provisioning` from `main`. Container-only:
+  `apt install gcc-mipsel-linux-gnu` → `mipsel-linux-gnu-gcc (Debian 14.2.0-13)
+  14.2.0`. Note: `-mips1` requires **`-mfp32`**. Scratch `/tmp` leaf for
+  `func_80090C38` with flags `-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic
+  -mno-abicalls -ffreestanding -fno-builtin` at **-O1/-O2/-O3/-Os** emits:
+  `lw v0,0x38(a0); nop; ori v0,v0,0x10; jr ra; sw v0,0x38(a0)` — **exact
+  0x14-byte match** to original ROM words; `.text` object size 0x20 (align-16
+  pad). O0 has full frame prologue (not useful). `-fno-delayed-branch` puts
+  `sw` before `jr` + nop (wrong for match). `-mips2` drops load-delay nop
+  (wrong). ELF32 mipsel R3000 o32. No `src/` C, no build/splat C integration.
+  Asm-only `build_us.sh` still exact. Commit: "Record MIPS GCC provisioning
+  and C codegen probe".
