@@ -6,10 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 3 — prefix rodata + mid-image data island closed at file 0xB2AF8
-(VRAM 0x800C22F8); pc0 still sane after re-split.** Phase 1 complete
-locally; only the official redump cross-check remains open (non-blocking).
-(Branch: `phase3-disc1-boundary-audit`.)
+**Phase 3 — prefix + mid-image boundaries closed and parked.** Solid state:
+
+```text
+[0x800,     rodata]  prefix jump tables + strings
+[0x2A0C,    asm]     main text from func_8001220C
+[0x818A0,   rodata]  mid-image data island
+[0xB2AF8,   asm]     tail code from func_800C22F8
+```
+
+pc0 remains sane. No further boundary work unless a real misclassification
+appears. Phase 1 complete locally; only the official redump cross-check
+remains open (non-blocking). (Branch: `phase3-disc1-boundary-audit`.)
 
 ## What exists right now
 
@@ -124,23 +132,42 @@ post-split `git status` check.
 - Whether either dump matches redump.org itself (unreachable again on
   2026-07-04 retry, ECONNREFUSED; disc 1 page is
   http://redump.org/disc/116/). Non-blocking.
-- Text/data/bss boundaries inside the image — **prefix + mid-image island
-  closed** (rodata 0x800–0x2A0B, asm 0x2A0C–0x8189F, rodata 0x818A0–0xB2AF7,
-  asm from 0xB2AF8). Mid-image and prefix nested audits complete (2026-07-08):
-  no extremely-high-confidence nested split found in either region. See Phase 3
-  boundary audits.
+- Text/data/bss boundaries inside the image — **prefix + mid-image
+  boundaries closed and parked** (see solid state in Current phase above).
+  Mid-image and prefix nested audits complete (2026-07-08): no
+  extremely-high-confidence nested split found in either region. Phase 3
+  boundary work is parked; only pursue further splits on true misclassifications.
 - Real symbol/function names — only splat auto-labels (`func_*`, `D_*`).
 - The toolchain: `compiler: GCC` in the config is splat boilerplate, not a
   verified compiler identification (Phase 5+ fingerprinting).
 
 ## Next concrete step
 
-1. **Phase 3 continued:** optional organizational prefix-rodata split starting
-   at `0x1B88` (string→jtbl transition) only if desired for splat jtbl
-   alignment — current audit found no misclassification fix. Mid-image tail
-   jtbl hints (`0xB2928`, `0xB2AA4`) likewise deferred. One boundary per commit;
-   re-split and re-check pc0 each time. Do not invent symbol names.
-2. When redump.org is reachable, record the official cross-check in
+**Phase 3 boundary audit is successfully parked.** The critical
+rodata/asm boundaries are fixed without overfitting the config:
+
+```text
+[0x800,     rodata]  prefix jump tables + strings
+[0x2A0C,    asm]     main text from func_8001220C
+[0x818A0,   rodata]  mid-image data island
+[0xB2AF8,   asm]     tail code from func_800C22F8
+```
+
+**Do not** pursue further splits (e.g. at 0x1B88 or 0x1E44) for cleanliness or
+organizational reasons. Splat's internal jtbl/string hints inside the prefix
+rodata are **not** correctness fixes.
+
+Continue Phase 3 (or later) **only** on true blockers:
+- Real code emitted as `.word` inside a rodata segment.
+- Real strings or tables disassembled as instructions.
+- Linker or splat alignment / build failure.
+- A future matching or decompilation step that demonstrably requires a
+  tighter boundary.
+
+1. Push / PR / merge `phase3-disc1-boundary-audit` (if not already done).
+2. Treat `docs/ai_context/ACTIVE_HANDOFF.md` as the single resume point
+   for any future work.
+3. When redump.org is reachable, record the official cross-check in
    `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
@@ -362,3 +389,9 @@ pc0/`0xB2AF8` each time.
   locally, recorded all disc 1 facts in docs/disc_info.md. Redump
   cross-check pending (site unreachable). Disc 2 pending.
 - 2026-07-04: Phase 0 scaffold created (structure, docs, placeholders).
+- 2026-07-08: **Phase 3 boundary audit parked.** No config change from
+  the prefix or mid-image nested audits. Splat's seven prefix hints
+  (`0xEE4`…`0x1E44`) and mid-image hints are organizational only — no
+  misclassifications to fix. Critical boundaries solid; work parked until
+  a true blocker appears (real code-as-data, strings-as-instructions, etc.).
+  Branch ready for merge. Resume from this file.
