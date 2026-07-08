@@ -21,6 +21,8 @@ pc0 remains sane. No further boundary work unless a real misclassification appea
 
 **Phase 5 attempt started** on `phase5-disc1-first-c-leaf` (after simulated merge of Phase 4). Attempted first C conversion for recommended target but infrastructure not ready. See details below and in updated DISC1_FIRST_DECOMP_TARGETS.md if extended.
 
+**Phase 4D harness design audit complete.** Created `DISC1_C_HARNESS_PLAN.md` with concrete Phase 4E (minimal verify) vs 4F (build/matching) distinction. Docs-only. No implementation.
+
 Phase 1 complete locally; only the official redump cross-check remains open (non-blocking). (Current work branch: `phase5-disc1-first-c-leaf`)
 
 ## What exists right now
