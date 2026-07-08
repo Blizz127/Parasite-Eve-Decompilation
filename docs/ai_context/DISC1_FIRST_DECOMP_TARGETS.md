@@ -1,23 +1,26 @@
-# Disc 1 First Decomp Targets Triage (Phase 4C)
+# Disc 1 First Decomp Targets Triage (Phase 4C / Phase 5B update)
 
-Docs-only conservative shortlist of safest initial candidates for future C conversion (Phase 5+). No code was converted, no symbols renamed, no boundaries changed.
+Conservative shortlist of safest initial candidates for C conversion.
+Originally docs-only (Phase 4C). **Phase 5B (2026-07-08):** first target
+`func_80090C38` is now production C with exact SHA-1 match.
 
-This follows the Phase 4 function inventory and Phase 4B call/anchor map. Selection is deliberately strict to minimize risk for the first real C work.
+## Repo state (Phase 5B)
 
-## Repo state
-
-- Branch: `phase4-disc1-function-inventory`
-- HEAD: 27c55ea (includes committed Phase 4B call/anchor map)
-- Working tree: clean
-- Confirmed split map:
+- Branch: `phase5b-integrate-first-c-leaf`
+- First converted C: `src/func_80090C38.c` (only one)
+- Production split map:
   ```
   [0x800,     rodata]  prefix jump tables + strings
-  [0x2A0C,    asm]     main text from func_8001220C
+  [0x2A0C,    asm]     main text through func_80090BCC
+  [0x81438,   c, func_80090C38]  VRAM 0x80090C38, size 0x14
+  [0x8144C,   asm]     resume through func_80091080
   [0x818A0,   rodata]  mid-image data island
   [0xB2AF8,   asm]     tail code from func_800C22F8
   ```
-- `scripts/split_us.sh --check`: passes (dry-run; all outputs git-ignored)
-- Generated output status: `asm/disc1/2A0C.s` and `asm/disc1/B2AF8.s` present locally only, `.gitignore`d, **never committed**. Used purely as evidence (plus raw SLUS bytes for address mapping).
+- Oracle: `scripts/build_us.sh` exit 0, SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`
+- C flags (Phase 4J): `-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestanding -fno-builtin -O1`
+- C object pad: GCC emits `.text` size 0x20; trim to 0x14 (align-16 zeros only)
+- Generated asm/linker/objects: git-ignored, never committed
 
 ## Sources of truth consulted
 - `docs/ai_context/ACTIVE_HANDOFF.md`
@@ -36,7 +39,7 @@ This follows the Phase 4 function inventory and Phase 4B call/anchor map. Select
 
 | Label | VRAM | Region | Size | Callers (direct approx) | Callees | Leaf? | Globals/rodata | CF complexity | Risk notes | Confidence | Suitability as first C target |
 |-------|------|--------|------|-------------------------|---------|-------|----------------|---------------|------------|------------|-------------------------------|
-| func_80090C38 | 0x80090C38 | 2A0C.s (late main) | 0x14 (~5 instr) | low (0 direct seen) | 0 | yes | none (arg + immediate const) | none (linear) | Bit set on struct field @0x38(a0) | high | Excellent: tiniest pure leaf, no calls, no init, trivial |
+| func_80090C38 | 0x80090C38 | **C: src/func_80090C38.c** | 0x14 (~5 instr) | low (0 direct seen) | 0 | yes | none (arg + immediate const) | none (linear) | Bit set on struct field @0x38(a0) | high | **DONE Phase 5B — exact match** |
 | func_80090C4C | 0x80090C4C | 2A0C.s (late main) | 0x14 | low (0 direct) | 0 | yes | none (arg + immediate) | none | Bit clear mask on same field | high | Excellent twin of above; clear/set pair ideal |
 | func_80090C60 | 0x80090C60 | 2A0C.s (late main) | 0x14 | low | 0 | yes | none | none | Bit set (0x20 variant) | high | Same pattern, different bit |
 | func_80090C74 | 0x80090C74 | 2A0C.s (late main) | 0x14 | low | 0 | yes | none | none | Bit clear variant | high | Cluster of trivial accessors; low risk |
@@ -155,26 +158,24 @@ All bodies manually extracted and inspected. No jtbl, no jalr, no internal jal i
 | func_800C2DA0 | Small in tail | Not leaf (more instr, lbu, addiu), refs multiple D_ | More complex than pure leaves |
 | Any with jtbl or jal inside | - | Direct violation of leaf/no-jtbl/no-indirect | Many such |
 
-## Recommended first target
+## First target — DONE (Phase 5B)
 
-**func_80090C38** (or any of the immediate 90Cxx/90F54 siblings).
+**func_80090C38** — converted to `src/func_80090C38.c`.
 
-Reasons:
-- Smallest possible (0x14 bytes, 5 instructions).
-- Pure leaf (jr $ra with no jal anywhere).
-- Trivial linear flow, no branches/loops/tables.
-- Operates only on argument + compile-time constant (no runtime globals/D_ refs visible).
-- Clear start/end labels.
-- Zero direct callers in asm scans (low coupling).
-- Located late in main text, far from anchors (1220C/72534) and boot.
-- No hardware, I/O, init, or system effects visible.
-- Matches "flag/bitfield accessor" pattern that is extremely common safe first target in decomp projects.
+```c
+void func_80090C38(void *arg0) {
+    *(unsigned int *)((unsigned char *)arg0 + 0x38) |= 0x10u;
+}
+```
 
-This is the lowest-risk possible first conversion candidate.
+Evidence: Phase 4J codegen probe + Phase 5B production rebuild exact SHA-1.
+No semantic struct/field name yet. Stop after this one function per session rules.
 
-## Recommended second/backup target
+## Recommended next target
 
-**func_80090F54** (identical pattern, same region) or **func_800C2B40** (if a pure setter is preferred for variety; note its single global table access).
+**func_80090C4C** (bit-clear twin, same size/pattern) or **func_80090F54**
+(identical bit-set pattern nearby). One function only when started.
+Backup with a global: **func_800C2B40** (pure setter; single D_ table).
 
 ## Exact next-step instructions for future Phase 5 first C conversion
 

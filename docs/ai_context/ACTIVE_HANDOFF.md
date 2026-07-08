@@ -6,32 +6,26 @@ meaningful change.
 
 ## Current phase
 
-**Phase 4J — MIPS GCC provisioning + codegen probe** (branch
-`phase4j-mipsel-gcc-provisioning`). Installed **container-only**
-`gcc-mipsel-linux-gnu` (Debian 14.2.0-13 / package 4:14.2.0-1) in Distrobox
-`pe-mipsel`. Scratch `/tmp` compile of the `func_80090C38` leaf at **-O1/-O2/-O3/-Os**
-with PS1-ish flags produces the **exact 5 instruction words** (0x14 bytes) of
-the original function; object `.text` is 0x20 due to align-16 pad (same class
-as 4I). **No production C** in `src/`, no splat/build C integration this pass.
-See `DISC1_C_HARNESS_PLAN.md` Phase 4J.
+**Phase 5B — first C leaf integrated** (branch
+`phase5b-integrate-first-c-leaf`). Production rebuild includes exactly one C
+function: `func_80090C38` (`src/func_80090C38.c`). Oracle
+`scripts/build_us.sh` exits 0 with exact SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
 
-**Phase 4H–4I on `main`:** asm-only rebuild oracle + gas pad trim → exact SHA-1.
-
-**Phase 4G — MIPS LE binutils** (on `main`): Distrobox `pe-mipsel`.
-
-**Phase 3 — prefix + mid-image boundaries closed and parked.** Solid state:
+Solid-state config (`configs/USA/disc1.yaml`):
 
 ```text
 [0x800,     rodata]  prefix jump tables + strings
-[0x2A0C,    asm]     main text from func_8001220C
+[0x2A0C,    asm]     main text through end of func_80090BCC
+[0x81438,   c, func_80090C38]  VRAM 0x80090C38, size 0x14
+[0x8144C,   asm]     resume through func_80091080
 [0x818A0,   rodata]  mid-image data island
 [0xB2AF8,   asm]     tail code from func_800C22F8
 ```
 
-pc0 remains sane. No further boundary work unless a real misclassification appears.
-
-**Phase 4 survey + harness** (on `main`). Recommended first C target:
-`func_80090C38`.
+**Prior on `main`:** Phase 4J (GCC 14.2 + leaf codegen probe), 4H–4I (asm-only
+oracle + pad trim exact match), 4G (`pe-mipsel` binutils), Phase 3 parked
+boundaries (except the single local C cut above).
 
 Phase 1 complete locally; only the official redump cross-check remains open (non-blocking).
 
@@ -162,37 +156,37 @@ post-split `git status` check.
 - A **modern** MIPS LE assembler/linker path is provisioned (Phase 4G Distrobox
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
-  modern GCC 14.2 in `pe-mipsel` can emit the exact 5 words for
-  `func_80090C38` at -O1+ (scratch probe); production C integration still open.
+  modern GCC 14.2 in `pe-mipsel` emits exact words for `func_80090C38` at -O1+.
+  **Phase 5B done:** that leaf is production C; only one function converted.
 
 ## Next concrete step
 
-**Milestone:** asm-only rebuild is exact. Oracle:
+**Milestone:** first matching C leaf is in. Oracle still:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
-verify_us.sh → reports rebuild EXACT MATCH when candidate matches
+verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
 
-Phase 3 boundaries remain parked:
+Production map (Phase 5B):
 
 ```text
-[0x800,     rodata]  prefix jump tables + strings
-[0x2A0C,    asm]     main text from func_8001220C
-[0x818A0,   rodata]  mid-image data island
-[0xB2AF8,   asm]     tail code from func_800C22F8
+[0x800,     rodata]
+[0x2A0C,    asm]
+[0x81438,   c, func_80090C38]   # only C so far
+[0x8144C,   asm]
+[0x818A0,   rodata]
+[0xB2AF8,   asm]
 ```
 
-1. **Merge Phase 4J** (`phase4j-mipsel-gcc-provisioning`) to `main` (docs:
-   GCC provisioned + leaf codegen probe).
-2. **Phase 5B (next):** integrate **only** `func_80090C38` into splat +
-   `build_us.sh` as a real C object. Gate: asm-only exact **before** C, and
-   `build_us.sh` exact **after** C. Documented probe flags for this leaf:
-   `-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestanding
-   -fno-builtin -O1` (or -O2/-O3/-Os; same 5 words). Never hand-write asm as C.
+1. **Merge Phase 5B** (`phase5b-integrate-first-c-leaf`) to `main`.
+2. **Next C candidate (when ready):** sibling leaf `func_80090C4C` (or
+   `func_80090F54`) — same pattern, one function only, same flags, same
+   pad-trim discipline. Do not batch.
 3. Host PATH still has no mipsel tools; C/as/ld stay in Distrobox `pe-mipsel`.
 4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
+5. Do **not** invent struct/field names for the `+0x38` bit yet; keep temporary types.
 
 ### Phase 3 boundary audit (2026-07-07)
 
@@ -531,3 +525,16 @@ pc0/`0xB2AF8` each time.
   (wrong). ELF32 mipsel R3000 o32. No `src/` C, no build/splat C integration.
   Asm-only `build_us.sh` still exact. Commit: "Record MIPS GCC provisioning
   and C codegen probe".
+- 2026-07-08: **Phase 5B first C leaf integrated.** Branch
+  `phase5b-integrate-first-c-leaf` from `main` (after PR #8 / 4J). Converted
+  **only** `func_80090C38`:
+  - `src/func_80090C38.c` — temporary types, bit-set `*(u32*)(arg0+0x38) |= 0x10`
+  - `configs/USA/disc1.yaml` — local cut `[0x81438, c, func_80090C38]` +
+    `[0x8144C, asm]`
+  - `scripts/build_us.sh` — compile with Phase 4J flags; assemble shortened
+    `2A0C.s` + new `8144C.s`; trim C `.text` **0x20→0x14** (align-16 pad);
+    ROM-order link places C between 2A0C and 8144C; pack + SHA-1 compare
+  - `scripts/verify_us.sh` — expected subsegments/artifacts updated
+  Validation: `split_us.sh --check` OK; `build_us.sh` exit 0 **EXACT MATCH**
+  (leaf probe `3800828c00000000100042340800e003380082ac`). No second function.
+  No generated output committed. Commit: "Convert func_80090C38 to C".

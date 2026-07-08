@@ -37,10 +37,12 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Parked Phase 3 solid-state subsegments (file offsets).
+# Current production subsegments (file offsets). Phase 5B inserts one C leaf.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
+    '[0x81438, c, func_80090C38]'
+    '[0x8144C, asm]'
     '[0x818A0, rodata]'
     '[0xB2AF8, asm]'
 )
@@ -49,9 +51,11 @@ EXPECTED_SUBSEGMENTS=(
 EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
+    "asm/disc1/8144C.s"
     "asm/disc1/B2AF8.s"
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
+    "src/func_80090C38.c"
     "linkers/disc1.ld"
 )
 
@@ -214,9 +218,9 @@ else
     echo "Split verification (Phase 4E): FAILED ($failures check(s) failed)."
 fi
 
-# Asm-only rebuild status (Phase 4H) — report only; do not fail this script on non-match.
+# Rebuild status (Phase 4H/5B) — report only; do not fail this script on non-match.
 # Matching is a separate claim; scripts/build_us.sh owns the rebuild exit code.
-echo "Asm-only rebuild status (Phase 4H):"
+echo "Rebuild status (scripts/build_us.sh):"
 if [[ -x "$ROOT/scripts/build_us.sh" ]]; then
     echo "  scripts/build_us.sh: present"
     if [[ -f "$ROOT/build/disc1.candidate.exe" ]]; then
@@ -224,7 +228,7 @@ if [[ -x "$ROOT/scripts/build_us.sh" ]]; then
         echo "  candidate: build/disc1.candidate.exe SHA-1 $cand_sha1"
         if [[ -f "$EXE" ]]; then
             if [[ "$cand_sha1" == "$EXPECTED_SHA1" ]]; then
-                echo "  compare: EXACT MATCH to original (asm-only matching claim possible)"
+                echo "  compare: EXACT MATCH to original"
             else
                 echo "  compare: NON-MATCH (expected SHA-1 $EXPECTED_SHA1)"
                 echo "  matching claim: NO — run scripts/build_us.sh for details"
@@ -239,8 +243,13 @@ else
     echo "  matching claim: NO"
 fi
 
-echo "C conversion / full matching harness: NOT IMPLEMENTED YET"
-echo "  (no C segments; no func_80090C38 conversion; see DISC1_C_HARNESS_PLAN.md)"
+if [[ -f "$ROOT/src/func_80090C38.c" ]]; then
+    echo "C conversion: Phase 5B — func_80090C38 integrated (one leaf only)"
+    echo "  source: src/func_80090C38.c"
+    echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
+else
+    echo "C conversion: NOT IMPLEMENTED (missing src/func_80090C38.c)"
+fi
 echo
 
 if [[ "$failures" -ne 0 ]]; then
