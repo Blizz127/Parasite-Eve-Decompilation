@@ -1,21 +1,24 @@
-# Disc 1 First Decomp Targets Triage (Phase 4C / Phase 5B–5C update)
+# Disc 1 First Decomp Targets Triage (Phase 4C / Phase 5B–5D update)
 
 Conservative shortlist of safest initial candidates for C conversion.
 Originally docs-only (Phase 4C).
 **Phase 5B:** `func_80090C38` production C (exact SHA-1).
 **Phase 5C:** `func_80090C4C` production C (exact SHA-1).
+**Phase 5D:** `func_80090F54` production C (exact SHA-1).
 
-## Repo state (Phase 5C)
+## Repo state (Phase 5D)
 
-- Branch: `phase5c-next-c-leaf`
-- Converted C: `src/func_80090C38.c`, `src/func_80090C4C.c`
+- Branch: `phase5d-next-c-leaf`
+- Converted C: `src/func_80090C38.c`, `src/func_80090C4C.c`, `src/func_80090F54.c`
 - Production split map:
   ```
   [0x800,     rodata]  prefix jump tables + strings
   [0x2A0C,    asm]     main text through func_80090BCC
   [0x81438,   c, func_80090C38]  VRAM 0x80090C38, size 0x14
   [0x8144C,   c, func_80090C4C]  VRAM 0x80090C4C, size 0x14
-  [0x81460,   asm]     resume through func_80091080
+  [0x81460,   asm]     through func_80090E20
+  [0x81754,   c, func_80090F54]  VRAM 0x80090F54, size 0x14
+  [0x81768,   asm]     resume through func_80091080
   [0x818A0,   rodata]  mid-image data island
   [0xB2AF8,   asm]     tail code from func_800C22F8
   ```
@@ -45,7 +48,7 @@ Originally docs-only (Phase 4C).
 | func_80090C4C | 0x80090C4C | **C: src/func_80090C4C.c** | 0x14 | low (0 direct) | 0 | yes | none (arg + immediate) | none | Bit clear mask on same field | high | **DONE Phase 5C — exact match** |
 | func_80090C60 | 0x80090C60 | 2A0C.s (late main) | 0x14 | low | 0 | yes | none | none | Bit set (0x20 variant) | high | Same pattern, different bit |
 | func_80090C74 | 0x80090C74 | 2A0C.s (late main) | 0x14 | low | 0 | yes | none | none | Bit clear variant | high | Cluster of trivial accessors; low risk |
-| func_80090F54 | 0x80090F54 | 2A0C.s (late main, before rodata island) | 0x14 | low (0 direct) | 0 | yes | none (arg + 0x100000 const) | none | Bit set 0x10 on field | high | Strong: same pattern as 90Cxx, isolated at segment end |
+| func_80090F54 | 0x80090F54 | **C: src/func_80090F54.c** | 0x14 | low (0 direct) | 0 | yes | none (arg + 0x100000 const) | none | Bit set 0x100000 on field | high | **DONE Phase 5D — exact match** |
 | func_800C2B40 | 0x800C2B40 | B2AF8.s (tail) | ~0x10-18 | low-medium (~ few) | 0 | yes | 1 (D_800E2248 table) | none | Load global table, sw field, return | medium | Very small leaf setter; global table access is risk but trivial op |
 | func_800C2B10 | 0x800C2B10 | B2AF8.s | 0x18 | ~15 (tail) | 0 | yes | 1 (D_800E2248) | none | Array index calc + return ptr | medium | Small leaf accessor; repeated pattern in tail, note table dep |
 
@@ -160,7 +163,7 @@ All bodies manually extracted and inspected. No jtbl, no jalr, no internal jal i
 | func_800C2DA0 | Small in tail | Not leaf (more instr, lbu, addiu), refs multiple D_ | More complex than pure leaves |
 | Any with jtbl or jal inside | - | Direct violation of leaf/no-jtbl/no-indirect | Many such |
 
-## First targets — DONE (Phase 5B / 5C)
+## First targets — DONE (Phase 5B / 5C / 5D)
 
 **func_80090C38** — `src/func_80090C38.c` (Phase 5B, PR #9):
 
@@ -170,7 +173,7 @@ void func_80090C38(void *arg0) {
 }
 ```
 
-**func_80090C4C** — `src/func_80090C4C.c` (Phase 5C):
+**func_80090C4C** — `src/func_80090C4C.c` (Phase 5C, PR #10):
 
 ```c
 void func_80090C4C(void *arg0) {
@@ -178,12 +181,20 @@ void func_80090C4C(void *arg0) {
 }
 ```
 
-Both exact SHA-1 via `scripts/build_us.sh`. No semantic struct/field names yet.
+**func_80090F54** — `src/func_80090F54.c` (Phase 5D):
+
+```c
+void func_80090F54(void *arg0) {
+    *(unsigned int *)((unsigned char *)arg0 + 0x38) |= 0x100000u;
+}
+```
+
+All exact SHA-1 via `scripts/build_us.sh`. No semantic struct/field names yet.
 
 ## Recommended next target
 
-**func_80090C60** (bit-set 0x20, same cluster) or **func_80090F54**
-(bit-set pattern nearby). One function only when started.
+**func_80090C60** (bit-set 0x20) or **func_80090C74** (bit-clear twin).
+One function only when started.
 Backup with a global: **func_800C2B40** (pure setter; single D_ table).
 
 ## Exact next-step instructions for future Phase 5 first C conversion
