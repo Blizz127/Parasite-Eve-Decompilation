@@ -15,9 +15,19 @@ meaningful change.
 [0xB2AF8,   asm]     tail code from func_800C22F8
 ```
 
-pc0 remains sane. No further boundary work unless a real misclassification
-appears. Phase 1 complete locally; only the official redump cross-check
-remains open (non-blocking). (Branch: `phase3-disc1-boundary-audit`.)
+pc0 remains sane. No further boundary work unless a real misclassification appears.
+
+**Phase 4 complete** (pushed, ready for merge). Function inventory, call/anchor map, and first decomp target triage done. Recommended first C target: func_80090C38 (small leaf in 2A0C.s).
+
+**Phase 5 attempt started** on `phase5-disc1-first-c-leaf` (after simulated merge of Phase 4). Attempted first C conversion for recommended target but infrastructure not ready. See details below and in updated DISC1_FIRST_DECOMP_TARGETS.md if extended.
+
+**Phase 4D harness design audit complete.** Created `DISC1_C_HARNESS_PLAN.md` with concrete Phase 4E (minimal verify) vs 4F (build/matching) distinction.
+
+**Phase 4E minimal verification harness implemented and validated.** `scripts/verify_us.sh` checks split prerequisites/artifacts only and explicitly reports that rebuild/matching is not implemented. On the provisioned main workbench (extract + splat venv + split present) it exits 0 with all 7 gates OK. No C, no assemble, no link.
+
+**Phase 4F asm-only rebuild blocked (documented).** Required MIPS cross-assembler/linker is not installed; host binutils cannot assemble the split. No fake `build_us.sh`. See `DISC1_C_HARNESS_PLAN.md` Phase 4F blocker. Still no C under `src/`.
+
+Phase 1 complete locally; only the official redump cross-check remains open (non-blocking). (Current work branch: `phase5-disc1-first-c-leaf`)
 
 ## What exists right now
 
@@ -42,7 +52,8 @@ remains open (non-blocking). (Branch: `phase3-disc1-boundary-audit`.)
   `linkers/disc1.ld`, `include/*.inc`, `undefined_*_auto.txt` (all
   git-ignored, never committed). No matching build, decompiled C, or
   PC-port work exists. `scripts/setup_env.sh` is implemented (pinned
-  `.venv/` install); `verify_us.sh` is still a placeholder.
+  `.venv/` install); `verify_us.sh` is Phase 4E (split-artifact sanity only —
+  rebuild/matching still NOT implemented; see Phase 4F).
 
 ## What is verified
 
@@ -164,11 +175,26 @@ Continue Phase 3 (or later) **only** on true blockers:
 - A future matching or decompilation step that demonstrably requires a
   tighter boundary.
 
-1. Push / PR / merge `phase3-disc1-boundary-audit` (if not already done).
-2. Treat `docs/ai_context/ACTIVE_HANDOFF.md` as the single resume point
-   for any future work.
-3. When redump.org is reachable, record the official cross-check in
-   `docs/disc_info.md`.
+1. (Phase 3) Push / PR / merge `phase3-disc1-boundary-audit` (if not already done in real flow). The local `phase4-disc1-function-inventory` was created from the merged Phase 3 state.
+2. Treat `ACTIVE_HANDOFF.md` + `DISC1_FUNCTION_INVENTORY.md` + `DISC1_CALL_ANCHOR_MAP.md` + `DISC1_FIRST_DECOMP_TARGETS.md` as the resume points.
+3. Phase 4C triage complete (recommended first = func_80090C38 cluster, manually verified leaf).
+
+4. Phase 5 first C attempt: Tried to convert the recommended target (func_80090C38). All pre-checks passed and asm verified (leaf, no jtbl, no indirect, no anchor, no obvious system side effects). However, C conversion infrastructure is not ready (see blocker details in changelog and DISC1_FIRST_DECOMP_TARGETS.md). Documented missing pieces instead of adding code.
+
+5. **Phase 4E done and validated** on the provisioned workbench
+   (`/var/home/blizz/Projects/Parasite-Eve-Decompilation`): `bash -n` OK,
+   `split_us.sh --check` OK, `verify_us.sh` exit 0, all 7 gates pass, still
+   prints `Rebuild/matching harness: NOT IMPLEMENTED YET`, generated
+   asm/linkers stay gitignored. Branch name is historical (`phase5-…`);
+   actual delivered work is Phase 5 blocker docs + Phase 4E harness.
+
+6. **Phase 4F blocked.** Next is install/document a MIPS little-endian
+   cross toolchain (e.g. `mipsel-linux-gnu-as` / `ld` / `objcopy`, or the
+   project-approved equivalent used by sibling PSX decomps), then attempt
+   asm-only assemble → link → compare. Do **not** add C under `src/` and
+   do **not** convert `func_80090C38` until pure-asm rebuild is real.
+
+7. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
 
@@ -395,3 +421,74 @@ pc0/`0xB2AF8` each time.
   misclassifications to fix. Critical boundaries solid; work parked until
   a true blocker appears (real code-as-data, strings-as-instructions, etc.).
   Branch ready for merge. Resume from this file.
+- 2026-07-08: **Phase 4 initial function inventory started.** Created
+  `docs/ai_context/DISC1_FUNCTION_INVENTORY.md` on `phase4-disc1-function-inventory`
+  (after Phase 3 merge simulation). ~2359 auto-labeled functions mapped across
+  `2A0C.s` + `B2AF8.s`. Anchors (1220C, 72534 pc0, C22F8) documented with
+  high confidence. Conservative survey only; docs-only commit. No C/renames/boundary edits.
+- 2026-07-08: **Phase 4B Disc 1 call/anchor map recorded.** Created
+  `docs/ai_context/DISC1_CALL_ANCHOR_MAP.md`. High-confidence direct `jal`
+  relationships focused on anchors + samples + freq callees (as clusters only).
+  ~7k+ jals scanned conservatively. Docs-only. No inference beyond disassembly.
+- 2026-07-08: **Phase 4C first decomp target triage.** Created
+  `docs/ai_context/DISC1_FIRST_DECOMP_TARGETS.md`. 5-7 conservative small-leaf
+  candidates (best cluster around func_80090C38/90F54). Strict filters applied;
+  recommended first + backups listed with full rationale. Docs-only triage.
+- 2026-07-08: **Phase 5 C conversion attempt (blocker).** Switched to
+  `phase5-disc1-first-c-leaf` after Phase 4 merge simulation. Identified
+  recommended target func_80090C38. Re-verified in asm/disc1/2A0C.s:
+  label present, 0x14 bytes / 5 instructions, leaf (no jal), no jump table,
+  no indirect call (no jalr), no dangerous hardware/system side effects
+  (simple field bit-set on $a0), not an anchor.
+  Pre-checks passed (config, split --check, clean tree).
+  However, no C conversion performed because infrastructure is missing:
+  - verify_us.sh is placeholder (exits with "Phase 0 placeholder", no harness)
+  - src/main/ only contains .gitkeep (no C source structure)
+  - No C segments in splat config
+  - No top-level Makefile or build rules for compiling C into PSX EXE
+  - No object file comparison or rebuild path
+  Per rules, documented blocker instead of faking conversion.
+  Commit: docs-only "Record Phase 5 C conversion blocker".
+  Update ACTIVE_HANDOFF.md with result. One function only.
+- 2026-07-08: **Phase 4D C/matching harness design audit.** Created
+  `docs/ai_context/DISC1_C_HARNESS_PLAN.md`. Full repo audit of scripts,
+  configs, build state, and blocker. Distinguished Phase 4E (minimal
+  verification harness) from Phase 4F (actual build/matching). Docs-only.
+  Commit: "Record Disc 1 C harness plan". No implementation. Ready to resume.
+- 2026-07-08: **Phase 4E minimal verification harness.** Replaced
+  `scripts/verify_us.sh` placeholder with a real split-artifact checker:
+  (1) repo root, (2) disc1.yaml Phase 3 subsegment markers, (3) EXE +
+  SHA-1 `452fb033…`, (4) `scripts/split_us.sh --check`, (5) splat pin
+  0.41.0, (6) expected files `header.s` / `2A0C.s` / `B2AF8.s` /
+  `data/800.rodata.s` / `data/818A0.rodata.s` / `linkers/disc1.ld`,
+  (7) gitignore coverage for split outputs. Always prints that
+  rebuild/matching is NOT IMPLEMENTED (Phase 4F). Exit 0 only when
+  artifacts are sane; exit 1 on real problems. No assemble/link/C/src/
+  config/Makefile changes. Verified: `bash -n` clean; run on this
+  worktree (no extract/venv/split) exits 1 with 9 expected FAILs and
+  coherent report. Commit: "Implement Phase 4E minimal verification harness"
+  (`730821d`).
+- 2026-07-08: **Phase 4E provisioned-workbench validation.** On main
+  checkout with extract/split/venv present, temporary use of the 4E
+  `verify_us.sh` produced exit 0, all 7 gates OK, NOT IMPLEMENTED banner
+  still printed, `git status --short` showed no asm/linker noise (only the
+  temporary script swap, restored afterward). Stripped worktree still
+  fails loudly when local data is missing (correct).
+- 2026-07-08: **Phase 4F asm-only rebuild harness — blocked (docs only).**
+  Inspected generated `linkers/disc1.ld` (expects
+  `build/asm/disc1/{header,2A0C,B2AF8,data/*.rodata}.s.o`), split asm
+  shape (`.include "macro.inc"`, `glabel`/`nonmatching`, MIPS LE), and
+  host tools. Findings:
+  - No `mipsel-linux-gnu-{as,ld,objcopy}` (or equivalent) on PATH.
+  - Host `/usr/bin/as` (binutils 2.46 x86-64) cannot assemble MIPS text
+    (`addiu`/`sw`/`jal` unknown; `.set noat` syntax errors; `.ent` unknown).
+  - Host `as` on `header.s` "succeeds" but emits **x86-64** ELF with
+    truncated 0x800xxxxx values — wrong arch; not a rebuild.
+  - splat 0.41.0 CLI is split-only (`split`/`create_config`/`capy`); no
+    build subcommand.
+  - No `build_us.sh` / Makefile added; `verify_us.sh` still honestly
+    reports rebuild/matching not implemented.
+  Structural reference only: sibling Xenogears decomp uses
+  `target = mips-linux-gnu`, modern gas + maspsx, and era gcc binaries —
+  not copied, not installed here.
+  Commit: "Record asm-only rebuild harness blocker".
