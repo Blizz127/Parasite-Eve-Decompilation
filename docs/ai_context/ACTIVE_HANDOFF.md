@@ -126,18 +126,20 @@ post-split `git status` check.
   http://redump.org/disc/116/). Non-blocking.
 - Text/data/bss boundaries inside the image — **prefix + mid-image island
   closed** (rodata 0x800–0x2A0B, asm 0x2A0C–0x8189F, rodata 0x818A0–0xB2AF7,
-  asm from 0xB2AF8); nested splits inside `818A0` and prefix rodata still
-  deferred. See Phase 3 boundary audit.
+  asm from 0xB2AF8). Mid-image nested audit complete (2026-07-08): no
+  extremely-high-confidence nested split found; prefix rodata still deferred.
+  See Phase 3 boundary audits.
 - Real symbol/function names — only splat auto-labels (`func_*`, `D_*`).
 - The toolchain: `compiler: GCC` in the config is splat boilerplate, not a
   verified compiler identification (Phase 5+ fingerprinting).
 
 ## Next concrete step
 
-1. **Phase 3 continued:** optionally refine prefix rodata (`0xEE4`…`0x1E44`)
-   or nested splits inside `818A0` (`0x93CCC`, `0xB2928`, `0xB2AA4` suggested
-   by splat 0.41.0). One boundary per commit; re-split and re-check pc0 each
-   time. Do not invent symbol names.
+1. **Phase 3 continued:** refine prefix rodata (`0xEE4`…`0x1E44`) or revisit
+   mid-image tail jtbl alignment (`0xB2928`, `0xB2AA4`) only if a future pass
+   finds a misclassification (current audit: organizational rodata only). One
+   boundary per commit; re-split and re-check pc0 each time. Do not invent
+   symbol names.
 2. When redump.org is reachable, record the official cross-check in
    `docs/disc_info.md`.
 
@@ -191,6 +193,56 @@ generated asm). Sustained valid MIPS from `0x8001220C` through
 | `0x800C22F8` | `0xB2AF8` | zeros then `0x27BDFFE8` (`addiu $sp,$sp,-0x18`) | text (code resume) | high | First strong prologue after padding; sustained MIPS follows | **Applied** (`[0xB2AF8, asm]`) |
 | `0x80072534` | `0x62D34` | crt0 startup | text | high (anchor) | pc0; do not use as split start | Anchor only |
 
+### Phase 3 mid-image nested audit (2026-07-08)
+
+Read-only audit of file `0x818A0`–`0xB2AF7` / VRAM `0x800910A0`–`0x800C22F7` inside
+`asm/disc1/data/818A0.rodata.s` plus raw `SLUS_006.62` bytes. Branch
+`phase3-disc1-boundary-audit` at `7886f52`. Generated output present locally,
+git-ignored; no config change applied.
+
+**Island layout (confirmed):**
+
+| File range | VRAM range | Size | Contents |
+| --- | --- | --- | --- |
+| `0x818A0`–`0x8D5F3` | `0x800910A0`–`0x8009CDF3` | ~466 KB | Mixed rodata: func-pointer tables, glyph tiles, Psy-Q strings/tags, scalar tables, 128-word func-pointer block at `0x8D370` |
+| `0x8D5F4`–`0xB28C7` | `0x8009CDF4`–`0x800C20C7` | ~149 KB | ROM zero padding (BSS image); **not** a ROM section edge — crt0 zero-fills `D_8009CDF8`→`D_800C20C8` at runtime |
+| `0xB28C8`–`0xB2AEF` | `0x800C20C8`–`0x800C22EF` | ~2.3 KB | Tail rodata: Psy-Q thread/error strings, two jump-table clusters, scalar descriptor words |
+| `0xB2AF0`–`0xB2AF7` | `0x800C22F0`–`0x800C22F7` | 8 B | Zero padding before code resume |
+
+**Anchors reconfirmed (unchanged):**
+
+- `0xB2AF8` / `0x800C22F8`: asm resumes in `B2AF8.s` (`addiu $sp,$sp,-0x18` at
+  `func_800C22F8`); not folded into `818A0.rodata.s`.
+- pc0 `func_80072534` at file `0x62D34` in `2A0C.s`: BSS zero-fill, stack init,
+  `$gp` setup, `jal func_800726B4`, `jal func_8001220C`, `break 0,1`.
+
+**Candidate nested-boundary table:**
+
+| File offset | VRAM | Observed bytes/words | Class | Confidence | Evidence | Action |
+| --- | --- | --- | --- | --- | --- | --- |
+| `0x818A0` | `0x800910A0` | `0x80017294`, `0x800172BC`, … dense `0x8001xxxx` | rodata / func-pointer table | high | Island start; `D_800910A0` ends `0x81E48`; `lw` xrefs from `2A0C.s` text | Keep as island start (applied) |
+| `0x81C64` | `0x80091464` | `0x2C0F1F17`, `0x4C2C2C2C` (`,,,,L,,,,` glyph-like) | rodata / glyph or bitmap | medium-high | First non-pointer words after `D_800910A0` table tail; abrupt ptr→bitmap transition | Defer; nested rodata only, no misclassification fix |
+| `0x81FE0` | `0x800917E0` | ASCII `>?@Am0295i` (Psy-Q heap tag family) | rodata / heap tags | high (content) | Matches `m0290i`-style tags referenced from crt0 stack setup | Include in island; not a section edge |
+| `0x838B4` | `0x800930B4` | `0123456789abcdefghiklmnoprstuvwy` | rodata / charset | high (content) | Pure ASCII in raw bytes | Include in island; not a section edge |
+| `0x84D8C` | `0x8009458C` | `Library Programs (c) 1993-1997 Sony…` | rodata / SDK string | high (content) | Known Psy-Q copyright string | Include in island; not a section edge |
+| `0x86E6C` | `0x8009666C` | `Error: Can't push matrix,stack(max 20) is full!` | rodata / debug strings | high (content) | ASCII error strings cluster in raw bytes | Include in island; not a section edge |
+| `0x8D370` | `0x8009CB70` | 128 words `0x8008Fxxx`/`0x80090xxx` func pointers | rodata / pointer table | high (content) | Exactly 128 entries through `0x8D56C`; ends with four `func_80091080` words | Defer split; mid-island table, still rodata |
+| `0x8D570` | `0x8009CD70` | `m0290i` heap tags; crt0 `lw` stack bounds | data (initialized) | medium | Used at runtime for stack/heap; **not** a ROM section edge | Do not split |
+| `0x8D5F4` | `0x8009CDF4` | `0x00000400` then all zeros for ~149 KB | padding / BSS image | high NOT ROM edge | Last initialized word before zero span; `0x8009CDF8` is crt0 BSS zero-fill **start** | **Do not split** |
+| `0x93CCC` | `0x800A34CC` | All raw bytes `0x00000000` | padding (false jtbl) | high NOT real | Splat labels `jtbl_800A34CC` → `.L00000000_main` inside zero BSS image; no real pointers | **Reject** splat hint |
+| `0xB28C8` | `0x800C20C8` | `error : service thread not found\n` | rodata strings | high NOT ROM edge | ROM holds strings but address is crt0 BSS zero-fill **end**; spans RAM not one ROM section | **Do not split** |
+| `0xB2928` | `0x800C2128` | `0x800C3270`, `0x800C3288`, … (`jtbl_800C2128`) | rodata / jump table | medium-high | Real aligned jtbl after `Wrong Color Mode\n`; targets in tail asm — but still rodata | Defer; splat alignment hint only |
+| `0xB2AA4` | `0x800C22A4` | `0x800D41FC`, `0x800D4290`, … (`jtbl_800C22A4`) | rodata / jump table | medium-high | Second jtbl cluster before final scalar words; targets in `B2AF8.s` tail code | Defer; splat alignment hint only |
+| `0xB2AF0` | `0x800C22F0` | `0x00000000` × 2 | padding | high | 8-byte zero gap immediately before code prologue | Already bounded by `[0xB2AF8, asm]` |
+| `0xB2AF8` | `0x800C22F8` | `0x27BDFFE8` (`addiu $sp,$sp,-0x18`) | text (code resume) | high | Sustained MIPS follows; emitted in `B2AF8.s` | **Applied** — do not touch |
+
+**Audit conclusion:** No candidate rises to **extremely high confidence** for a
+config change. Splat's `0x93CCC` hint is a false positive in the BSS zero image.
+`0xB2928` and `0xB2AA4` are real jump tables but splitting them only subdivides
+rodata (no asm/rodata misclassification fix). `0x8D5F4` and `0xB28C8` coincide
+with runtime BSS addresses and must not become ROM boundaries. **No config edit;
+docs-only record.**
+
 ## Open decisions
 
 - License for original tooling/docs (see `docs/legal.md`).
@@ -206,6 +258,11 @@ generated asm). Sustained valid MIPS from `0x8001220C` through
 
 ## Changelog
 
+- 2026-07-08: **Phase 3 mid-image nested audit:** read-only pass over file
+  `0x818A0`–`0xB2AF7`; documented island layout (mixed rodata, 149 KB BSS zero
+  image, tail strings/jtbls). Rejected `0x93CCC` (false jtbl in zeros); deferred
+  `0xB2928`/`0xB2AA4` (organizational rodata). No config change; `0xB2AF8` asm
+  resume and pc0 unchanged.
 - 2026-07-08: **Phase 3 resume-asm boundary:** applied `[0xB2AF8, asm]` to
   close mid-image data island opened at `0x818A0`. Re-split OK; `818A0.rodata.s`
   shrinks to ~75k lines (ends at zero padding `D_800C22F0`); new `B2AF8.s`
