@@ -12,7 +12,8 @@ Living plan for the rebuild/matching harness. Updated as each sub-phase lands.
 | 4G | MIPS LE toolchain provisioning | **Done** — Distrobox `pe-mipsel` assembles all five units |
 | 4H | Asm-only link + PS-X EXE pack + compare | **Harness** — `build_us.sh` oracle; was NON-MATCH before 4I |
 | 4I | Section-size drift / parity | **Done** — gas align pad trim; **exact SHA-1 match** |
-| 5 | C leaf (`func_80090C38`) | Unblocked for *retry* only while `build_us.sh` stays green |
+| 4J | MIPS GCC + leaf codegen probe | **Done** — GCC 14.2 in `pe-mipsel`; leaf 0x14 bytes match at -O1+ |
+| 5 / 5B | C leaf (`func_80090C38`) in build | **Ready for integration branch** — compiler plausible for this leaf |
 
 **Format note:** the game boot file uses the `.EXE` extension (`SLUS_006.62`) but is a **PS-X EXE** (MIPS little-endian PlayStation executable), **not** a Windows PE `.exe`.
 
@@ -646,4 +647,92 @@ the path; they were not the size-drift root cause.
 - No broad rebuild rewrite
 - No generated objects committed
 - No systematic fix of missing `dlabel`s (deferred; not required for this match)
+
+---
+
+## Phase 4J — MIPS GCC provisioning + C codegen probe (2026-07-08)
+
+**Branch:** `phase4j-mipsel-gcc-provisioning` (from `main` after 4H+4I)
+
+### Container install (not on Bazzite host)
+
+```text
+distrobox enter pe-mipsel
+sudo apt update
+sudo apt install -y gcc-mipsel-linux-gnu
+which mipsel-linux-gnu-gcc
+# /usr/bin/mipsel-linux-gnu-gcc
+mipsel-linux-gnu-gcc --version
+# mipsel-linux-gnu-gcc (Debian 14.2.0-13) 14.2.0
+# package: gcc-mipsel-linux-gnu 4:14.2.0-1
+# also pulls gcc-14-mipsel-linux-gnu 14.2.0-13cross1
+```
+
+Host PATH still has **no** mipsel gcc (by design).
+
+### Required flag note
+
+`-mips1` alone fails: `cc1: error: '-march=mips1' requires '-mfp32'`.
+Always pair with **`-mfp32`**.
+
+### Probe source (scratch `/tmp` only — not in repo)
+
+```c
+void func_80090C38(void *arg0) {
+    *(unsigned int *)((unsigned char *)arg0 + 0x38) |= 0x10;
+}
+```
+
+### Flag matrix (all with `-c`)
+
+Base (working):  
+`-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestanding -fno-builtin`
+
+| Variant | Result vs required 5-insn leaf |
+| --- | --- |
+| **-O0** | Full frame (`addiu sp`, save `fp`, …) — **not** useful for match |
+| **-O1 / -O2 / -O3 / -Os** | **Exact instruction sequence** (see below) |
+| **-O1/-O2 + `-fno-delayed-branch`** | `sw` then `jr`+`nop` — **wrong** delay-slot shape |
+| **-O2 + `-mips2`** (no mfp32 req) | **Drops load-delay `nop`** — **wrong** (4 insns) |
+
+### Matching instruction stream (-O1 and above with base flags)
+
+```text
+lw   $2, 56($4)      # v0, 0x38(a0)   → 8c820038
+nop                  #               → 00000000
+ori  $2, $2, 0x10    #               → 34420010
+jr   $31             # ra            → 03e00008
+ sw  $2, 56($4)      # delay slot    → ac820038
+```
+
+Original ROM @ file `0x81438` (0x14 bytes):  
+`3800828c00000000100042340800e003380082ac`  
+GCC `-O2` `.text` first 0x14: **identical**.  
+Object `.text` size **0x20** (align 16 trailing zeros) — same class as Phase 4I pad; trim if integrated.
+
+### Checklist answers
+
+| Question | Answer |
+| --- | --- |
+| Compatible register usage? | **Yes** — `$4`/`a0`, `$2`/`v0`, `$31`/`ra` |
+| Load-delay nop? | **Yes** with `-mips1` at -O1+ |
+| Branch delay filled with `sw`? | **Yes** (not with `-fno-delayed-branch`) |
+| Unwanted prologue/epilogue? | **No** at -O1+; **yes** at -O0 |
+| gp / pic / abicalls setup? | **No** with `-fno-pic -mno-abicalls -G0` |
+| ELF32 MIPS LE? | **Yes** — ELF32, little-endian, Machine MIPS R3000, o32 mips1 |
+| Plausible for this one leaf? | **Yes** — modern GCC 14.2 can emit the exact words |
+
+### What was not done
+
+- No `src/**/*.c` committed
+- No splat C subsegment
+- No `build_us.sh` C compile step
+- No production integration of `func_80090C38`
+- No matching claim for a C build (only asm-only remains exact)
+
+### Recommended next (Phase 5B)
+
+Separate branch: integrate **exactly** `func_80090C38` into splat + `build_us.sh`
+(C object, strip from 2A0C.s or `INCLUDE_ASM` / splat c unit). Re-run oracle
+until SHA-1 matches. Stop after one function.
 

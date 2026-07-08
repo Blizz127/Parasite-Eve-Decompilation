@@ -236,3 +236,49 @@ Per explicit rules and CLAUDE.md ("Until that harness exists, do not add code un
 **Recommended action:** Implement Phase 4 harness (verify_us.sh + build integration) before any C work. Then resume on this target.
 
 (End of Phase 5 blocker report.)
+
+---
+
+## Phase 4J — MIPS GCC provisioned; leaf codegen OK (2026-07-08)
+
+**Branch:** `phase4j-mipsel-gcc-provisioning`
+
+### Provisioning (container only)
+
+- Distrobox `pe-mipsel` (Debian trixie): `apt install -y gcc-mipsel-linux-gnu`
+- `mipsel-linux-gnu-gcc (Debian 14.2.0-13) 14.2.0` — package `4:14.2.0-1`
+- Host PATH: still no mipsel gcc
+
+### Codegen probe (scratch `/tmp` only — not in `src/`)
+
+```c
+void func_80090C38(void *arg0) {
+    *(unsigned int *)((unsigned char *)arg0 + 0x38) |= 0x10;
+}
+```
+
+Flags that work (`-mips1` **requires** `-mfp32`):
+
+```text
+-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls \
+-ffreestanding -fno-builtin -O1   # also -O2 -O3 -Os — same 5 words
+```
+
+At **-O1 and above**, GCC emits the **exact** original 0x14 bytes:
+
+```text
+3800828c 00000000 10004234 0800e003 380082ac
+```
+
+| Check | Result |
+| --- | --- |
+| Load-delay nop | yes |
+| `sw` in `jr` delay slot | yes |
+| Prologue at -O1+ | none |
+| gp/pic/abicalls | none |
+| ELF32 mipsel R3000 | yes |
+| Object `.text` size | 0x20 (align-16 pad; first 0x14 exact) |
+
+**Not production-integrated.** Next: Phase **5B** — one function in `build_us.sh` + splat.
+
+(End of Phase 4J.)
