@@ -23,7 +23,9 @@ pc0 remains sane. No further boundary work unless a real misclassification appea
 
 **Phase 4D harness design audit complete.** Created `DISC1_C_HARNESS_PLAN.md` with concrete Phase 4E (minimal verify) vs 4F (build/matching) distinction.
 
-**Phase 4E minimal verification harness implemented.** `scripts/verify_us.sh` is no longer a placeholder: it checks split prerequisites/artifacts only and explicitly reports that rebuild/matching is not implemented. No C, no assemble, no link.
+**Phase 4E minimal verification harness implemented and validated.** `scripts/verify_us.sh` checks split prerequisites/artifacts only and explicitly reports that rebuild/matching is not implemented. On the provisioned main workbench (extract + splat venv + split present) it exits 0 with all 7 gates OK. No C, no assemble, no link.
+
+**Phase 4F asm-only rebuild blocked (documented).** Required MIPS cross-assembler/linker is not installed; host binutils cannot assemble the split. No fake `build_us.sh`. See `DISC1_C_HARNESS_PLAN.md` Phase 4F blocker. Still no C under `src/`.
 
 Phase 1 complete locally; only the official redump cross-check remains open (non-blocking). (Current work branch: `phase5-disc1-first-c-leaf`)
 
@@ -179,13 +181,20 @@ Continue Phase 3 (or later) **only** on true blockers:
 
 4. Phase 5 first C attempt: Tried to convert the recommended target (func_80090C38). All pre-checks passed and asm verified (leaf, no jtbl, no indirect, no anchor, no obvious system side effects). However, C conversion infrastructure is not ready (see blocker details in changelog and DISC1_FIRST_DECOMP_TARGETS.md). Documented missing pieces instead of adding code.
 
-5. **Phase 4E done.** `scripts/verify_us.sh` is the split-state sanity gate.
-   On a machine with extract + setup_env + split already run, it should exit 0
-   with "split artifacts OK" and still print that rebuild/matching is not
-   implemented. **Next:** Phase 4F build/matching harness (only after 4E is
-   useful on a fully provisioned tree). Do **not** add C under `src/` yet.
+5. **Phase 4E done and validated** on the provisioned workbench
+   (`/var/home/blizz/Projects/Parasite-Eve-Decompilation`): `bash -n` OK,
+   `split_us.sh --check` OK, `verify_us.sh` exit 0, all 7 gates pass, still
+   prints `Rebuild/matching harness: NOT IMPLEMENTED YET`, generated
+   asm/linkers stay gitignored. Branch name is historical (`phase5-…`);
+   actual delivered work is Phase 5 blocker docs + Phase 4E harness.
 
-6. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
+6. **Phase 4F blocked.** Next is install/document a MIPS little-endian
+   cross toolchain (e.g. `mipsel-linux-gnu-as` / `ld` / `objcopy`, or the
+   project-approved equivalent used by sibling PSX decomps), then attempt
+   asm-only assemble → link → compare. Do **not** add C under `src/` and
+   do **not** convert `func_80090C38` until pure-asm rebuild is real.
+
+7. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
 
@@ -457,4 +466,29 @@ pc0/`0xB2AF8` each time.
   artifacts are sane; exit 1 on real problems. No assemble/link/C/src/
   config/Makefile changes. Verified: `bash -n` clean; run on this
   worktree (no extract/venv/split) exits 1 with 9 expected FAILs and
-  coherent report. Commit: "Implement Phase 4E minimal verification harness".
+  coherent report. Commit: "Implement Phase 4E minimal verification harness"
+  (`730821d`).
+- 2026-07-08: **Phase 4E provisioned-workbench validation.** On main
+  checkout with extract/split/venv present, temporary use of the 4E
+  `verify_us.sh` produced exit 0, all 7 gates OK, NOT IMPLEMENTED banner
+  still printed, `git status --short` showed no asm/linker noise (only the
+  temporary script swap, restored afterward). Stripped worktree still
+  fails loudly when local data is missing (correct).
+- 2026-07-08: **Phase 4F asm-only rebuild harness — blocked (docs only).**
+  Inspected generated `linkers/disc1.ld` (expects
+  `build/asm/disc1/{header,2A0C,B2AF8,data/*.rodata}.s.o`), split asm
+  shape (`.include "macro.inc"`, `glabel`/`nonmatching`, MIPS LE), and
+  host tools. Findings:
+  - No `mipsel-linux-gnu-{as,ld,objcopy}` (or equivalent) on PATH.
+  - Host `/usr/bin/as` (binutils 2.46 x86-64) cannot assemble MIPS text
+    (`addiu`/`sw`/`jal` unknown; `.set noat` syntax errors; `.ent` unknown).
+  - Host `as` on `header.s` "succeeds" but emits **x86-64** ELF with
+    truncated 0x800xxxxx values — wrong arch; not a rebuild.
+  - splat 0.41.0 CLI is split-only (`split`/`create_config`/`capy`); no
+    build subcommand.
+  - No `build_us.sh` / Makefile added; `verify_us.sh` still honestly
+    reports rebuild/matching not implemented.
+  Structural reference only: sibling Xenogears decomp uses
+  `target = mips-linux-gnu`, modern gas + maspsx, and era gcc binaries —
+  not copied, not installed here.
+  Commit: "Record asm-only rebuild harness blocker".

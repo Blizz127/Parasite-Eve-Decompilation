@@ -163,12 +163,109 @@ No assembly, link, C, or matching logic.
 
 Only after 4E is useful and committed should Phase 4F begin.
 
-**Phase 4F (build/matching) later:**
-- Add assembly step (use splat or `mipsel-linux-gnu-as` on the .s files to produce the .o under build/asm/).
-- Add minimal C compile step (once a toolchain is documented).
-- Extend linker or create a C-aware variant.
-- Add comparison logic in verify (SHA-1 of rebuilt vs original, or better diffs).
-- Support targeting a single function (e.g. via symbol replacement or partial link).
+## Phase 4F status — BLOCKED (2026-07-08)
+
+**Deliverable B (docs-only blocker).** No `scripts/build_us.sh`, no Makefile,
+no assemble/link attempt claimed as success, no C.
+
+### What was inspected
+
+| Path | Present (provisioned workbench) | Role |
+| --- | --- | --- |
+| `asm/disc1/header.s` | yes | PS-X EXE header as `.data` |
+| `asm/disc1/2A0C.s` | yes | main text (includes `macro.inc`) |
+| `asm/disc1/B2AF8.s` | yes | tail text |
+| `asm/disc1/data/800.rodata.s` | yes | prefix rodata |
+| `asm/disc1/data/818A0.rodata.s` | yes | mid-image rodata island |
+| `linkers/disc1.ld` | yes (generated; path is `linkers/disc1.ld`, not `linkers/USA/…`) | expects `build/asm/disc1/*.s.o` |
+
+`linkers/disc1.ld` object map (must exist after a real assemble):
+
+```text
+build/asm/disc1/header.s.o          (.data → .header)
+build/asm/disc1/2A0C.s.o            (.text/.data/.rodata/.bss → .main)
+build/asm/disc1/B2AF8.s.o           (same)
+build/asm/disc1/data/800.rodata.s.o (.rodata)
+build/asm/disc1/data/818A0.rodata.s.o (.rodata)
+```
+
+VRAM for `.main` is `0x80010000` with `AT(main_ROM_START)` ROM placement.
+Header is separate section; `/DISCARD/` drops unlisted inputs.
+
+### Required toolchain (minimum for asm-only)
+
+1. **MIPS little-endian assembler** capable of modern gas + splat macros
+   (`glabel`, `endlabel`, `nonmatching`, `.ent`, `.aent`, GTE macros from
+   `include/gte_macros.inc`). Typical name in PSX decomps:
+   `mipsel-linux-gnu-as` or `mips-linux-gnu-as` with `-EL -mips1` (exact
+   flags TBD when a toolchain is chosen).
+2. **Matching linker** that accepts the splat ld script and ELF objects
+   (`mipsel-linux-gnu-ld` or equivalent; Xenogears uses
+   `-nostdlib --no-check-sections` as a starting point — **not adopted
+   here yet**).
+3. **objcopy / packing step** to turn a linked ELF into a PS-X EXE byte
+   image comparable to `build/extracted/disc1/SLUS_006.62` (not designed
+   yet).
+4. **Include path** so `.include "macro.inc"` resolves under `include/`.
+5. Optional later: **maspsx** / era gcc for C matching (Phase 5+; out of
+   scope for pure asm rebuild).
+
+### What is missing on this machine (evidence)
+
+| Check | Result |
+| --- | --- |
+| `command -v mipsel-linux-gnu-as` | not found |
+| `command -v mipsel-linux-gnu-ld` | not found |
+| `command -v mipsel-linux-gnu-objcopy` | not found |
+| Host `as` / `ld` | present (`GNU binutils 2.46-3.fc44`, **x86-64**) |
+| `splat` build subcommand | none — only `split` / `create_config` / `capy` |
+| Documented PE1 build toolchain in-repo | none (only splat pin in `setup_env.sh`) |
+
+**Host assemble probes (honest negative evidence):**
+
+1. `as asm/disc1/header.s` → exit success **but** warnings truncating
+   `0x80072534` etc., and `file` reports **ELF 64-bit LSB x86-64** — not
+   a MIPS object; unusable for rebuild.
+2. `as -I include` on a `2A0C.s` snippet → hard errors:
+   - `expected comma after "noat"` / `"noreorder"` (MIPS `.set` dialect)
+   - `unknown pseudo-op: .ent` (from `glabel` macro)
+   - `no such instruction: addiu $sp,$sp,-0x28` (and other MIPS ops)
+
+Therefore: **cannot** implement a real asm-only rebuild script yet without
+either installing a cross toolchain or documenting a project-approved way
+to obtain one. Installing packages or vendoring Psy-Q/gcc is outside this
+pass (rules: document only; do not fake a build).
+
+### What is NOT blocked
+
+- Phase 4E `verify_us.sh` (split sanity) — works on provisioned tree.
+- Split config / parked boundaries.
+- Study of asm and first C target triage docs.
+- Designing the future script layout (still: `build_us.sh` + objects under
+  `build/asm/disc1/`, all gitignored).
+
+### Unblock criteria (next honest attempt)
+
+1. A MIPS LE assembler + linker is installed and documented (exact package
+   or bootstrap script; no proprietary SDK commit).
+2. Successful assemble of all five objects listed above into
+   `build/asm/disc1/**/*.s.o` (gitignored).
+3. Successful link via `linkers/disc1.ld` (or a minimal fixed copy if the
+   generated script needs flags).
+4. A reproducible compare step (full EXE SHA-1 and/or section hashes)
+   against `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` — only then may
+   `verify_us.sh` gain a rebuild gate that does **not** print
+   "NOT IMPLEMENTED YET".
+5. Still no C and no `func_80090C38` conversion until (2)–(4) work for
+   pure asm.
+
+### Phase 4F (when unblocked) — still the plan
+
+- Add assembly step (`mipsel-…-as` on the .s files → `build/asm/…`).
+- Link with generated `linkers/disc1.ld`.
+- Compare rebuilt image to original.
+- Only later: minimal C compile for one leaf + single-function mode.
+- Keep `verify_us.sh` honest: never claim matching without a real compare.
 
 ## What NOT to implement yet
 
@@ -193,48 +290,52 @@ Only after 4E is useful and committed should Phase 4F begin.
 
 ## Phase 4E status
 
-**Done (2026-07-08).** Commit message target:
+**Done (2026-07-08).** Commit: `730821d`
 `Implement Phase 4E minimal verification harness`.
 
-Evidence on this worktree (no local extract/venv/split artifacts):
-- `bash -n scripts/verify_us.sh` clean
-- `./scripts/verify_us.sh` exits 1 with 9 expected FAILs (missing EXE,
-  split --check, splat, six artifact paths) and still prints the Phase 4F
-  "NOT IMPLEMENTED" banner
-- Config boundary markers + gitignore gates pass without local data
+Evidence:
+- Stripped worktree (no extract/venv/split): `bash -n` clean; verify exits 1
+  with expected FAILs + NOT IMPLEMENTED banner.
+- Provisioned workbench (`Projects/Parasite-Eve-Decompilation`, same branch
+  family, local extract + split + splat 0.41.0): verify exits **0**, all 7
+  gates OK, still prints rebuild/matching NOT IMPLEMENTED, asm/linkers
+  remain gitignored.
 
-On a fully provisioned machine (extract + setup_env + split), the same
-script should exit 0 with "Verification (Phase 4E): split artifacts OK."
+## Phase 4F attempt status
 
-## Exact proposed next implementation prompt (Phase 4F)
+**Blocked (2026-07-08).** Commit message:
+`Record asm-only rebuild harness blocker`.
+
+No build script. See "Phase 4F status — BLOCKED" above for full evidence
+and unblock criteria.
+
+## Exact proposed next implementation prompt (after toolchain available)
 
 ```
-Parasite Eve decomp Phase 4F: first build/matching harness pieces.
+Parasite Eve decomp Phase 4F retry: asm-only rebuild once MIPS LE toolchain exists.
 
-Start only after Phase 4E is committed and verify_us.sh is the split sanity gate.
+Prerequisites:
+- mipsel-linux-gnu-as (or documented equivalent) on PATH
+- matching ld + objcopy
+- Phase 4E verify_us.sh still green on provisioned tree
 
 Read first:
 - docs/ai_context/ACTIVE_HANDOFF.md
-- docs/ai_context/DISC1_C_HARNESS_PLAN.md
+- docs/ai_context/DISC1_C_HARNESS_PLAN.md (Phase 4F blocker + unblock criteria)
+- linkers/disc1.ld (generated)
 - scripts/verify_us.sh
-- scripts/split_us.sh
-- configs/USA/disc1.yaml
-- linkers/disc1.ld (generated, read-only study)
 
 Goal:
-Add the smallest possible rebuild path that can assemble current split asm
-and (later) one C leaf — without claiming a match until compare logic works.
+Implement scripts/build_us.sh that assembles the five split objects into
+build/asm/disc1/**/*.s.o, links with linkers/disc1.ld, and compares to the
+original EXE only if the compare is real.
 
 Rules:
-1. Do not add C under src/ until assemble+link of pure asm succeeds.
-2. Do not claim matching until SHA-1 (or better object/section diff) is wired.
-3. Keep build outputs under build/ and git-ignored.
-4. Document toolchain requirements; do not vendor proprietary Psy-Q.
-5. Prefer extending verify_us.sh or a new build_us.sh over a sprawling Makefile
-   on day 1 — stay minimal.
-
-Do not jump to Phase 5 C conversion until 4F can rebuild pure-asm and compare.
+1. No C. No func_80090C38 conversion.
+2. Do not claim matching until compare works.
+3. Keep verify_us.sh honest.
+4. Do not commit generated objects or EXEs.
 ```
 
-Phase 4D audit (docs-only design) produced this plan. Phase 4E implements
-the minimal verify path described above. Phase 4F remains unimplemented.
+Phase 4D = design. Phase 4E = split verify (done). Phase 4F = asm rebuild
+(blocked on missing MIPS cross toolchain).
