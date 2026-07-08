@@ -42,8 +42,11 @@ Sources of truth read:
 
 ## Current blocker summary
 
-From the Phase 5 blocker commit and inspections:
-- `scripts/verify_us.sh`: always exits 1 with "Phase 0 placeholder" message. No actual rebuild or comparison logic.
+**Update after Phase 4E:** `scripts/verify_us.sh` is no longer a placeholder
+for *split sanity*. Rebuild/matching remains the open blocker (Phase 4F).
+
+Still open from the Phase 5 attempt:
+- `scripts/verify_us.sh`: Phase 4E only — no assemble/link/compare yet.
 - `src/main/`: only `.gitkeep` (0 bytes of real content).
 - `configs/USA/disc1.yaml`: `src_path: src` is declared but unused. All subsegments are asm/rodata only. `compiler: GCC` is explicitly "standard splat boilerplate" — not a verified PSX C toolchain.
 - No top-level build system (no Makefile, no rules for assembling split asm or compiling C).
@@ -57,7 +60,7 @@ From the Phase 5 blocker commit and inspections:
 - `scripts/extract_us.sh`: Phase 1, solid. Extracts EXE, verifies hashes (via tools), outputs to `build/extracted/` (ignored). Good foundation.
 - `scripts/setup_env.sh`: Creates `.venv/`, pins `splat64[mips]==0.41.0`. Idempotent, root guards. Works.
 - `scripts/split_us.sh`: Excellent. `--check` mode, root/config/EXE-hash/gitignore guards, runs splat, enforces no-committable outputs. Only produces study artifacts.
-- `scripts/verify_us.sh`: **Pure placeholder**. 10 lines. Always fails. Intended for Phase 4 rebuild + SHA-1 compare vs recorded original.
+- `scripts/verify_us.sh`: **Phase 4E implemented** (split-artifact sanity). Rebuild + SHA-1 compare still Phase 4F.
 - `tools/`: Python only (psxiso.py, psxexe_info.py, hashfile.py, etc.). No build tools.
 
 No other scripts under `scripts/`.
@@ -137,19 +140,26 @@ Keep everything under `build/` gitignored. Never commit objects or rebuilt EXEs.
 
 ## Recommended first implementation phase
 
-**Phase 4E (minimal verification harness) — do this first, before any C:**
+**Phase 4E (minimal verification harness) — IMPLEMENTED 2026-07-08.**
 
-1. Rewrite `scripts/verify_us.sh` to:
-   - Run all the checks that `split_us.sh --check` does (or call it).
-   - Verify EXE SHA-1.
-   - Confirm `asm/`, `linkers/`, etc. exist and are gitignored.
-   - Confirm expected files from current split (2A0C.s, B2AF8.s, data/*.rodata.s, header.s, disc1.ld).
-   - Print clear summary:
-     "Verification (Phase 4E): split artifacts OK. Rebuild/matching harness NOT IMPLEMENTED YET."
-   - Exit 0 for "artifacts good", non-zero only for real problems.
-2. Update `ACTIVE_HANDOFF.md` and this plan with results.
-3. Make `verify_us.sh` the single source of "is the split state sane?"
-4. Do **not** attempt to assemble or link anything.
+`scripts/verify_us.sh` now:
+
+1. Checks repo root + git.
+2. Confirms `configs/USA/disc1.yaml` contains the parked Phase 3 markers
+   (`[0x800, rodata]`, `[0x2A0C, asm]`, `[0x818A0, rodata]`, `[0xB2AF8, asm]`).
+3. Verifies EXE presence + SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+4. Runs `scripts/split_us.sh --check` and reports its output.
+5. Confirms pinned splat64 `0.41.0` (prefer `.venv/bin/pip show splat64`).
+6. Confirms expected generated files exist:
+   `asm/disc1/header.s`, `2A0C.s`, `B2AF8.s`, `data/800.rodata.s`,
+   `data/818A0.rodata.s`, `linkers/disc1.ld`.
+7. Confirms split output paths are git-ignored (same set as `split_us.sh`).
+
+Summary always includes:
+`Rebuild/matching harness: NOT IMPLEMENTED YET (see Phase 4F …)`.
+
+Exit 0 iff all checks pass; exit 1 on any real problem; exit 2 on usage.
+No assembly, link, C, or matching logic.
 
 Only after 4E is useful and committed should Phase 4F begin.
 
@@ -181,47 +191,50 @@ Only after 4E is useful and committed should Phase 4F begin.
 - Size of the minimal harness: keep it tiny so one leaf function (func_80090C38, 5 instructions) can be the first real test.
 - Over-engineering risk: do not build a full decomp build system on day 1.
 
-## Exact proposed next implementation prompt
+## Phase 4E status
+
+**Done (2026-07-08).** Commit message target:
+`Implement Phase 4E minimal verification harness`.
+
+Evidence on this worktree (no local extract/venv/split artifacts):
+- `bash -n scripts/verify_us.sh` clean
+- `./scripts/verify_us.sh` exits 1 with 9 expected FAILs (missing EXE,
+  split --check, splat, six artifact paths) and still prints the Phase 4F
+  "NOT IMPLEMENTED" banner
+- Config boundary markers + gitignore gates pass without local data
+
+On a fully provisioned machine (extract + setup_env + split), the same
+script should exit 0 with "Verification (Phase 4E): split artifacts OK."
+
+## Exact proposed next implementation prompt (Phase 4F)
 
 ```
-Parasite Eve decomp Phase 4E: minimal verification harness.
+Parasite Eve decomp Phase 4F: first build/matching harness pieces.
 
-Start only after this plan (DISC1_C_HARNESS_PLAN.md) is committed.
+Start only after Phase 4E is committed and verify_us.sh is the split sanity gate.
 
 Read first:
 - docs/ai_context/ACTIVE_HANDOFF.md
 - docs/ai_context/DISC1_C_HARNESS_PLAN.md
-- scripts/verify_us.sh (current placeholder)
+- scripts/verify_us.sh
 - scripts/split_us.sh
 - configs/USA/disc1.yaml
+- linkers/disc1.ld (generated, read-only study)
 
 Goal:
-Make scripts/verify_us.sh actually useful as a Phase 4E "split artifacts are sane" checker. Do not implement any rebuild, assembly, C compilation, or matching logic yet.
+Add the smallest possible rebuild path that can assemble current split asm
+and (later) one C leaf — without claiming a match until compare logic works.
 
 Rules:
-1. Edit only scripts/verify_us.sh and docs (ACTIVE_HANDOFF.md + this plan if needed).
-2. Do not touch configs, src/, Makefiles, or generated output.
-3. Do not claim any matching or rebuild capability.
-4. Keep it minimal: reuse existing checks from split_us.sh --check where possible.
-5. The script must clearly state that rebuild/matching is not implemented.
-6. No generated asm/linker/assets commits.
+1. Do not add C under src/ until assemble+link of pure asm succeeds.
+2. Do not claim matching until SHA-1 (or better object/section diff) is wired.
+3. Keep build outputs under build/ and git-ignored.
+4. Document toolchain requirements; do not vendor proprietary Psy-Q.
+5. Prefer extending verify_us.sh or a new build_us.sh over a sprawling Makefile
+   on day 1 — stay minimal.
 
-Implementation (minimum):
-- Make verify_us.sh run the equivalent of split_us.sh --check.
-- Verify EXE hash.
-- Verify presence of expected generated files (asm/disc1/2A0C.s, B2AF8.s, data/*.rodata.s, header.s, linkers/disc1.ld).
-- Verify they are gitignored.
-- Verify splat version.
-- Print a clear summary and "Rebuild/matching harness: NOT IMPLEMENTED YET (see Phase 4F)".
-- Exit 0 if artifacts good, 1 on problems.
-- Update handoff with exact behavior.
-
-Deliverable:
-- Working (but limited) verify_us.sh
-- Updated ACTIVE_HANDOFF.md
-- Commit: "Implement Phase 4E minimal verification harness"
-
-After this, a future Phase 4F can add the actual build pieces. Do not jump ahead.
+Do not jump to Phase 5 C conversion until 4F can rebuild pure-asm and compare.
 ```
 
-This plan is the complete output of the Phase 4D audit. All evidence came from direct inspection of scripts, configs, generated artifacts (read-only), source tree, and project docs. No implementation performed.
+Phase 4D audit (docs-only design) produced this plan. Phase 4E implements
+the minimal verify path described above. Phase 4F remains unimplemented.

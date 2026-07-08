@@ -21,7 +21,9 @@ pc0 remains sane. No further boundary work unless a real misclassification appea
 
 **Phase 5 attempt started** on `phase5-disc1-first-c-leaf` (after simulated merge of Phase 4). Attempted first C conversion for recommended target but infrastructure not ready. See details below and in updated DISC1_FIRST_DECOMP_TARGETS.md if extended.
 
-**Phase 4D harness design audit complete.** Created `DISC1_C_HARNESS_PLAN.md` with concrete Phase 4E (minimal verify) vs 4F (build/matching) distinction. Docs-only. No implementation.
+**Phase 4D harness design audit complete.** Created `DISC1_C_HARNESS_PLAN.md` with concrete Phase 4E (minimal verify) vs 4F (build/matching) distinction.
+
+**Phase 4E minimal verification harness implemented.** `scripts/verify_us.sh` is no longer a placeholder: it checks split prerequisites/artifacts only and explicitly reports that rebuild/matching is not implemented. No C, no assemble, no link.
 
 Phase 1 complete locally; only the official redump cross-check remains open (non-blocking). (Current work branch: `phase5-disc1-first-c-leaf`)
 
@@ -48,7 +50,8 @@ Phase 1 complete locally; only the official redump cross-check remains open (non
   `linkers/disc1.ld`, `include/*.inc`, `undefined_*_auto.txt` (all
   git-ignored, never committed). No matching build, decompiled C, or
   PC-port work exists. `scripts/setup_env.sh` is implemented (pinned
-  `.venv/` install); `verify_us.sh` is still a placeholder.
+  `.venv/` install); `verify_us.sh` is Phase 4E (split-artifact sanity only —
+  rebuild/matching still NOT implemented; see Phase 4F).
 
 ## What is verified
 
@@ -176,7 +179,13 @@ Continue Phase 3 (or later) **only** on true blockers:
 
 4. Phase 5 first C attempt: Tried to convert the recommended target (func_80090C38). All pre-checks passed and asm verified (leaf, no jtbl, no indirect, no anchor, no obvious system side effects). However, C conversion infrastructure is not ready (see blocker details in changelog and DISC1_FIRST_DECOMP_TARGETS.md). Documented missing pieces instead of adding code.
 
-5. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
+5. **Phase 4E done.** `scripts/verify_us.sh` is the split-state sanity gate.
+   On a machine with extract + setup_env + split already run, it should exit 0
+   with "split artifacts OK" and still print that rebuild/matching is not
+   implemented. **Next:** Phase 4F build/matching harness (only after 4E is
+   useful on a fully provisioned tree). Do **not** add C under `src/` yet.
+
+6. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
 
@@ -437,3 +446,15 @@ pc0/`0xB2AF8` each time.
   configs, build state, and blocker. Distinguished Phase 4E (minimal
   verification harness) from Phase 4F (actual build/matching). Docs-only.
   Commit: "Record Disc 1 C harness plan". No implementation. Ready to resume.
+- 2026-07-08: **Phase 4E minimal verification harness.** Replaced
+  `scripts/verify_us.sh` placeholder with a real split-artifact checker:
+  (1) repo root, (2) disc1.yaml Phase 3 subsegment markers, (3) EXE +
+  SHA-1 `452fb033…`, (4) `scripts/split_us.sh --check`, (5) splat pin
+  0.41.0, (6) expected files `header.s` / `2A0C.s` / `B2AF8.s` /
+  `data/800.rodata.s` / `data/818A0.rodata.s` / `linkers/disc1.ld`,
+  (7) gitignore coverage for split outputs. Always prints that
+  rebuild/matching is NOT IMPLEMENTED (Phase 4F). Exit 0 only when
+  artifacts are sane; exit 1 on real problems. No assemble/link/C/src/
+  config/Makefile changes. Verified: `bash -n` clean; run on this
+  worktree (no extract/venv/split) exits 1 with 9 expected FAILs and
+  coherent report. Commit: "Implement Phase 4E minimal verification harness".
