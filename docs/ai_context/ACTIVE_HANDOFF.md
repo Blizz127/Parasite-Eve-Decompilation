@@ -6,11 +6,10 @@ meaningful change.
 
 ## Current phase
 
-**Phase 2 — splat config authored, toolchain install + dry-run guardrails
-added; first split run not yet executed (splat not installed on this
-machine).** Phase 1 is complete locally; only the official redump
-cross-check remains open (non-blocking). (Branch:
-`phase2-split-guardrails`.)
+**Phase 2 — splat config authored, toolchain installed locally, dry-run
+guardrails pass; first real split not yet executed.** Phase 1 is complete
+locally; only the official redump cross-check remains open
+(non-blocking). (Branch: `main`.)
 
 ## What exists right now
 
@@ -73,9 +72,10 @@ cross-check remains open (non-blocking). (Branch:
   `git check-ignore`d — prints what a real run would generate, invokes
   nothing). A real run now also diffs `git status` before/after and
   fails loudly if the split produced anything not git-ignored. Verified
-  2026-07-05: `scripts/split_us.sh --check` correctly exits 1 at the
-  splat-availability gate on this machine (splat still not installed);
-  `bash -n` clean on all four `scripts/*.sh`.
+  2026-07-07: `scripts/setup_env.sh` created `.venv/` with splat64
+  0.41.0; `scripts/split_us.sh --check` passes all six gates on this
+  machine (no split invoked, git status clean); `bash -n` clean on all
+  four `scripts/*.sh`.
 - `.gitignore` gained `undefined_funcs_auto.txt` / `undefined_syms_auto.txt`
   (splat's auto-generated symbol/function lists, written to repo root).
 - `docs/splitting.md` documents the canonical target, verified values,
@@ -94,13 +94,10 @@ cross-check remains open (non-blocking). (Branch:
 
 ## Next concrete step
 
-1. Run `scripts/setup_env.sh` on a machine with disc images already
-   extracted (`build/extracted/disc1/SLUS_006.62` present — true on at
-   least one known local machine) to install the pinned splat.
-2. Run `scripts/split_us.sh --check` to confirm all gates pass, then
-   `scripts/split_us.sh` for real, and sanity-check the first
-   disassembly around pc0 `0x80072534` for plausible MIPS prologue code.
-3. When redump.org is reachable, record the official cross-check in
+1. Run `scripts/split_us.sh` for real (all prerequisites verified
+   2026-07-07 via `--check`), then sanity-check the first disassembly
+   around pc0 `0x80072534` for plausible MIPS prologue code.
+2. When redump.org is reachable, record the official cross-check in
    `docs/disc_info.md`.
 
 ## Open decisions
@@ -118,6 +115,11 @@ cross-check remains open (non-blocking). (Branch:
 
 ## Changelog
 
+- 2026-07-07: Phase 2 smoke test: `scripts/setup_env.sh` installed
+  splat64 0.41.0 into `.venv/`; `scripts/split_us.sh --check` passed all
+  gates (repo root, config, EXE SHA-1, splat, gitignore coverage). No
+  split invoked; no asm/symbols/C generated or committed; git status
+  clean.
 - 2026-07-05: Phase 2 guardrails: implemented `scripts/setup_env.sh`
   (pinned `.venv/` install of `splat64[mips]==0.41.0`); added `--check`
   dry-run mode plus a post-split `git status` diff check to
