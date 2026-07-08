@@ -432,3 +432,8 @@ pc0/`0xB2AF8` each time.
   Per rules, documented blocker instead of faking conversion.
   Commit: docs-only "Record Phase 5 C conversion blocker".
   Update ACTIVE_HANDOFF.md with result. One function only.
+- 2026-07-08: **Phase 4D C/matching harness design audit.** Created
+  `docs/ai_context/DISC1_C_HARNESS_PLAN.md`. Full repo audit of scripts,
+  configs, build state, and blocker. Distinguished Phase 4E (minimal
+  verification harness) from Phase 4F (actual build/matching). Docs-only.
+  Commit: "Record Disc 1 C harness plan". No implementation. Ready to resume.
