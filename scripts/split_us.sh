@@ -66,6 +66,10 @@ OUTPUT_PATHS=(
     ".splache"
     "undefined_funcs_auto.txt"
     "undefined_syms_auto.txt"
+    "include/gte_macros.inc"
+    "include/include_asm.h"
+    "include/labels.inc"
+    "include/macro.inc"
 )
 
 # 2. Config present.

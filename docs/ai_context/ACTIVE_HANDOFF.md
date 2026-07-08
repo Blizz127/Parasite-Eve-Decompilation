@@ -6,10 +6,10 @@ meaningful change.
 
 ## Current phase
 
-**Phase 2 — splat config authored, toolchain installed locally, dry-run
-guardrails pass; first real split not yet executed.** Phase 1 is complete
-locally; only the official redump cross-check remains open
-(non-blocking). (Branch: `main`.)
+**Phase 2 — first real split executed locally; disassembly sanity-checked at
+pc0; guardrails extended for splat `include/` boilerplate.** Phase 1 is
+complete locally; only the official redump cross-check remains open
+(non-blocking). (Branch: `phase2-first-real-split`.)
 
 ## What exists right now
 
@@ -29,11 +29,12 @@ locally; only the official redump cross-check remains open
 - `configs/USA/disc1.yaml` now contains a conservative minimal initial
   splat config built from verified Phase 1 values;
   `configs/USA/disc2.yaml` is a documented byte-identical disc 2
-  pointer/alias, not a separate active config. `scripts/split_us.sh` has
-  tested fail-loudly gates but no split has been run. No generated asm,
-  symbols, C, matching build, or PC-port work exists. `scripts/setup_env.sh`
-  is now implemented (pinned `.venv/` install); `verify_us.sh` is still a
-  placeholder.
+  pointer/alias, not a separate active config. **First real split run
+  completed 2026-07-07** — local study artifacts under `asm/disc1/`,
+  `linkers/disc1.ld`, `include/*.inc`, `undefined_*_auto.txt` (all
+  git-ignored, never committed). No matching build, decompiled C, or
+  PC-port work exists. `scripts/setup_env.sh` is implemented (pinned
+  `.venv/` install); `verify_us.sh` is still a placeholder.
 
 ## What is verified
 
@@ -76,27 +77,65 @@ locally; only the official redump cross-check remains open
   0.41.0; `scripts/split_us.sh --check` passes all six gates on this
   machine (no split invoked, git status clean); `bash -n` clean on all
   four `scripts/*.sh`.
-- `.gitignore` gained `undefined_funcs_auto.txt` / `undefined_syms_auto.txt`
-  (splat's auto-generated symbol/function lists, written to repo root).
+- `.gitignore` covers splat output: `asm/`, `linkers/`, `assets/`,
+  `.splache`, `undefined_*_auto.txt`, and splat boilerplate under
+  `include/*.inc` / `include/*.h` (tracked `include/.gitkeep` preserved).
 - `docs/splitting.md` documents the canonical target, verified values,
   unknowns, the pinned toolchain, the dry-run workflow, and the
   no-matching-claims policy.
+
+### First split output (2026-07-07, local only)
+
+Command: `scripts/split_us.sh` on branch `phase2-first-real-split`.
+splat 0.41.0 reported **Split 2 MB (100.00%)** — header 2 KB, main asm
+2 MB. Generated and git-ignored:
+
+| Path | Present | Notes |
+| --- | --- | --- |
+| `asm/disc1/header.s` | yes | PS-X EXE header; pc0 `0x80072534`, t_addr `0x80010000` match Phase 1 |
+| `asm/disc1/800.s` | yes | ~529k lines; single monolithic asm subsegment (expected) |
+| `linkers/disc1.ld` | yes | `.main` at VRAM `0x80010000`; text/data/rodata/bss sections from one object |
+| `undefined_syms_auto.txt` | yes | ~1438 auto data labels (`D_*`) |
+| `undefined_funcs_auto.txt` | yes | ~468 auto func labels; many addresses outside load range (data-as-code noise) |
+| `include/{macro,labels,gte_macros}.inc`, `include_asm.h` | yes | splat boilerplate copied on split |
+| `assets/disc1/` | no | no asset subsegments in config — expected |
+| `.splache` | no | not created by this splat 0.41.0 run — expected |
+
+**pc0 sanity (`0x80072534`, file offset `0x62D34` in `800.s`):** plausible
+Psy-Q-style C runtime startup — zero-fill loop over a RAM range, stack
+pointer loaded from `D_8009CD70`/`D_8009CD74`, `$gp` set, `jal` to
+auto-labeled `func_800726B4` then `func_8001220C`, ending in `break 0,1`.
+Not a bare `j`/`jal` trampoline; consistent with crt0 calling into main.
+**Image start (`0x80010000`):** jump table (`jtbl_80010000` with `.word`
+targets in `0x80012xxx`) — plausible dispatch table, not random opcodes.
+
+**Known limitations (expected, not bugs):** one asm file disassembles the
+entire loadable image; data regions appear as instructions, `nonmatching`
+labels, and out-of-range `func_*` entries in `undefined_funcs_auto.txt`.
+No text/data/bss boundaries or real symbol names claimed.
+
+**Guardrail fix on same date:** first run exited 1 because splat writes
+boilerplate into tracked `include/` (alongside `include/.gitkeep`). Extended
+`.gitignore` and `scripts/split_us.sh` `OUTPUT_PATHS`; re-run passes
+post-split `git status` check.
 
 ## What is NOT verified
 
 - Whether either dump matches redump.org itself (unreachable again on
   2026-07-04 retry, ECONNREFUSED; disc 1 page is
   http://redump.org/disc/116/). Non-blocking.
-- Everything about the EXE's internals: text/data/bss boundaries, symbols,
-  functions, overlays — no split output has been generated or inspected.
+- Text/data/bss boundaries inside the image — split exists but config still
+  uses one conservative asm segment; internal layout not mapped yet.
+- Real symbol/function names — only splat auto-labels (`func_*`, `D_*`).
 - The toolchain: `compiler: GCC` in the config is splat boilerplate, not a
   verified compiler identification (Phase 5+ fingerprinting).
 
 ## Next concrete step
 
-1. Run `scripts/split_us.sh` for real (all prerequisites verified
-   2026-07-07 via `--check`), then sanity-check the first disassembly
-   around pc0 `0x80072534` for plausible MIPS prologue code.
+1. **Phase 3 config refinement:** identify text vs data/rodata boundaries
+   in `configs/USA/disc1.yaml` from disassembly patterns (jump tables,
+   padding, high-entropy regions) — one boundary at a time, re-split
+   locally, verify pc0 code still sane. Do not invent symbol names.
 2. When redump.org is reachable, record the official cross-check in
    `docs/disc_info.md`.
 
@@ -115,6 +154,11 @@ locally; only the official redump cross-check remains open
 
 ## Changelog
 
+- 2026-07-07: **First real split:** `scripts/split_us.sh` on
+  `phase2-first-real-split` — splat 0.41.0 split 2 MB (100%); pc0
+  `0x80072534` sanity OK (crt0-style startup). Fixed guardrail gap:
+  splat `include/*.inc`/`*.h` now git-ignored and in `OUTPUT_PATHS`.
+  Re-run passes post-split git check. No asm/symbols/C committed.
 - 2026-07-07: Phase 2 smoke test: `scripts/setup_env.sh` installed
   splat64 0.41.0 into `.venv/`; `scripts/split_us.sh --check` passed all
   gates (repo root, config, EXE SHA-1, splat, gitignore coverage). No

@@ -36,3 +36,7 @@ __pycache__/
 .venv/
 .env
 .DS_Store
+
+# splat boilerplate copied into include/ on split (keep include/.gitkeep)
+include/*.inc
+include/*.h
