@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Phase 5B: Disc 1 rebuild with one C leaf (func_80090C38).
+# Phase 5C: Disc 1 rebuild with two C leaves (func_80090C38, func_80090C4C).
 #
-# Assembles splat-generated .s → .o with MIPS LE binutils, compiles the single
-# production C unit with documented GCC flags, links in ROM order, packs a
+# Assembles splat-generated .s → .o with MIPS LE binutils, compiles the
+# production C units with documented GCC flags, links in ROM order, packs a
 # PS-X EXE-sized candidate, and compares SHA-1 to the original.
 #
 # Toolchain (documented Phase 4G / 4J):
@@ -54,16 +54,17 @@ ASFLAGS_DEFAULT="-EL -mips1 -mabi=32"
 # Phase 4J: exact 5-instruction match for func_80090C38 with these flags.
 CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestanding -fno-builtin -O1"
 
-# Phase 5B file-span sizes (config subsegment edges; exclusive end).
-# 2A0C: 0x2A0C → 0x81438 = 0x7EA2C
-# C:    0x81438 → 0x8144C = 0x14
-# 8144C:0x8144C → 0x818A0 = 0x454
+# Phase 5C file-span sizes (config subsegment edges; exclusive end).
+# 2A0C:     0x2A0C  → 0x81438 = 0x7EA2C
+# C 90C38:  0x81438 → 0x8144C = 0x14
+# C 90C4C:  0x8144C → 0x81460 = 0x14
+# 81460:    0x81460 → 0x818A0 = 0x440
 # 800.rodata: 0x800 → 0x2A0C = 0x220C
 # B2AF8: 0xB2AF8 → 0x1EE800 = 0x13BD08
 # 818A0.rodata: 0x818A0 → 0xB2AF8 = 0x31258
 SIZE_2A0C=0x7EA2C
 SIZE_C_LEAF=0x14
-SIZE_8144C=0x454
+SIZE_81460=0x440
 SIZE_800_RODATA=0x220C
 SIZE_B2AF8=0x13BD08
 SIZE_818A0_RODATA=0x31258
@@ -74,7 +75,8 @@ OBJECTS=(
     "build/asm/disc1/data/800.rodata.s.o"
     "build/asm/disc1/2A0C.s.o"
     "build/src/func_80090C38.c.o"
-    "build/asm/disc1/8144C.s.o"
+    "build/src/func_80090C4C.c.o"
+    "build/asm/disc1/81460.s.o"
     "build/asm/disc1/data/818A0.rodata.s.o"
     "build/asm/disc1/B2AF8.s.o"
 )
@@ -83,7 +85,8 @@ SOURCES=(
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/2A0C.s"
     "src/func_80090C38.c"
-    "asm/disc1/8144C.s"
+    "src/func_80090C4C.c"
+    "asm/disc1/81460.s"
     "asm/disc1/data/818A0.rodata.s"
     "asm/disc1/B2AF8.s"
 )
@@ -106,7 +109,7 @@ info "OK original EXE SHA-1 $actual_sha1"
 for s in "${SOURCES[@]}"; do
     [[ -f "$ROOT/$s" ]] || die "missing $s — run scripts/split_us.sh"
 done
-info "OK all split sources + C leaf present (${#SOURCES[@]} units)"
+info "OK all split sources + C leaves present (${#SOURCES[@]} units)"
 [[ -f "$ROOT/linkers/disc1.ld" ]] || die "missing linkers/disc1.ld — run scripts/split_us.sh"
 info "OK linkers/disc1.ld present"
 
@@ -162,31 +165,33 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/header.s.o     
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/data/800.rodata.s.o   asm/disc1/data/800.rodata.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/data/818A0.rodata.s.o asm/disc1/data/818A0.rodata.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2A0C.s.o              asm/disc1/2A0C.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/8144C.s.o             asm/disc1/8144C.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/81460.s.o             asm/disc1/81460.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/B2AF8.s.o             asm/disc1/B2AF8.s
 
-# --- compile single C leaf ---
-step "Compile C leaf (func_80090C38 → build/src/func_80090C38.c.o)"
+# --- compile C leaves ---
+step "Compile C leaves (func_80090C38, func_80090C4C)"
 # shellcheck disable=SC2086
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80090C38.c.o src/func_80090C38.c
+run "$CC" $CFLAGS_LEAF -c -o build/src/func_80090C4C.c.o src/func_80090C4C.c
 
 for o in "${OBJECTS[@]}"; do
     [[ -f "$o" ]] || die "build failed: missing $o"
     info "OK $o ($(wc -c <"$o") bytes)"
 done
 
-# Phase 4I / 5B: GNU as / GCC pad section sizes to sh_addralign with trailing
+# Phase 4I / 5B/5C: GNU as / GCC pad section sizes to sh_addralign with trailing
 # zeros (.text align 16 → object may be 0x20 for a 0x14-byte function body).
 # Original PE1 file spans are exact; strip proven zero-only tail pad and lower
 # align to 4 so ld does not re-insert gaps or shift ROM layout.
-step "Trim ELF section alignment padding (Phase 4I/5B)"
+step "Trim ELF section alignment padding (Phase 4I/5B/5C)"
 TRIM="$ROOT/tools/trim_elf_section_pad.py"
 [[ -f "$TRIM" ]] || die "missing $TRIM"
 python3 "$TRIM" build/asm/disc1/data/800.rodata.s.o .rodata "$SIZE_800_RODATA"
 python3 "$TRIM" build/asm/disc1/2A0C.s.o .text "$SIZE_2A0C"
-# Critical: C object .text is typically 0x20 (align-16); real body is 0x14.
+# Critical: each C object .text is typically 0x20 (align-16); real body is 0x14.
 python3 "$TRIM" build/src/func_80090C38.c.o .text "$SIZE_C_LEAF"
-python3 "$TRIM" build/asm/disc1/8144C.s.o .text "$SIZE_8144C"
+python3 "$TRIM" build/src/func_80090C4C.c.o .text "$SIZE_C_LEAF"
+python3 "$TRIM" build/asm/disc1/81460.s.o .text "$SIZE_81460"
 python3 "$TRIM" build/asm/disc1/B2AF8.s.o .text "$SIZE_B2AF8"
 # 818A0.rodata and header already exact; still force align 4 if needed
 python3 "$TRIM" build/asm/disc1/data/818A0.rodata.s.o .rodata "$SIZE_818A0_RODATA" || true
@@ -216,9 +221,9 @@ ABS_LD="build/abs_syms.ld"
 # all .rodata) and is not used for the production pack.
 ROM_ORDER_LD="build/disc1_romorder.ld"
 cat >"$ROM_ORDER_LD" <<'LDEOF'
-/* Phase 5B ROM-order link script (one C leaf).
+/* Phase 5C ROM-order link script (two C leaves).
  * splat's linkers/disc1.ld places all .text then all .rodata (C layout).
- * PE1 image order is interleaved: prefix rodata, main text (with C leaf),
+ * PE1 image order is interleaved: prefix rodata, main text (with C leaves),
  * mid rodata, tail text.
  * This script places inputs in file order for PS-X EXE packing.
  */
@@ -234,20 +239,24 @@ SECTIONS
         build/asm/disc1/data/800.rodata.s.o(.rodata)
         build/asm/disc1/2A0C.s.o(.text)
         build/src/func_80090C38.c.o(.text)
-        build/asm/disc1/8144C.s.o(.text)
+        build/src/func_80090C4C.c.o(.text)
+        build/asm/disc1/81460.s.o(.text)
         build/asm/disc1/data/818A0.rodata.s.o(.rodata)
         build/asm/disc1/B2AF8.s.o(.text)
         build/asm/disc1/2A0C.s.o(.data)
         build/src/func_80090C38.c.o(.data)
-        build/asm/disc1/8144C.s.o(.data)
+        build/src/func_80090C4C.c.o(.data)
+        build/asm/disc1/81460.s.o(.data)
         build/asm/disc1/B2AF8.s.o(.data)
         build/asm/disc1/2A0C.s.o(.rodata)
         build/src/func_80090C38.c.o(.rodata)
-        build/asm/disc1/8144C.s.o(.rodata)
+        build/src/func_80090C4C.c.o(.rodata)
+        build/asm/disc1/81460.s.o(.rodata)
         build/asm/disc1/B2AF8.s.o(.rodata)
         build/asm/disc1/2A0C.s.o(.bss)
         build/src/func_80090C38.c.o(.bss)
-        build/asm/disc1/8144C.s.o(.bss)
+        build/src/func_80090C4C.c.o(.bss)
+        build/asm/disc1/81460.s.o(.bss)
         build/asm/disc1/B2AF8.s.o(.bss)
     }
 
@@ -316,9 +325,11 @@ print(f"  main raw: {len(main)} (0x{len(main):X}); packed body: 0x1EE000")
 print(f"  candidate: {len(cand)} (0x{len(cand):X})")
 print(f"  orig SHA-1: {hashlib.sha1(orig).hexdigest()}")
 print(f"  cand SHA-1: {hashlib.sha1(cand).hexdigest()}")
-# Probe C leaf span (file 0x81438, size 0x14)
-leaf = slice(0x81438, 0x8144C)
-print(f"  probe file 0x81438 (C leaf): cand={cand[leaf].hex()} orig={orig[leaf].hex()}")
+# Probe C leaf spans (file 0x81438 / 0x8144C, size 0x14 each)
+leaf1 = slice(0x81438, 0x8144C)
+leaf2 = slice(0x8144C, 0x81460)
+print(f"  probe file 0x81438 (90C38): cand={cand[leaf1].hex()} orig={orig[leaf1].hex()}")
+print(f"  probe file 0x8144C (90C4C): cand={cand[leaf2].hex()} orig={orig[leaf2].hex()}")
 if cand == orig:
     print("  RESULT: EXACT MATCH")
     sys.exit(0)
@@ -339,13 +350,13 @@ set -e
 echo
 echo "=== Summary ==="
 echo "Assemble: OK (6 asm units)"
-echo "Compile:  OK (func_80090C38.c with Phase 4J flags)"
-echo "Pad trim: OK (incl. C .text 0x20→0x14 align-16 pad strip)"
+echo "Compile:  OK (func_80090C38.c + func_80090C4C.c with Phase 4J flags)"
+echo "Pad trim: OK (incl. C .text 0x20→0x14 align-16 pad strip ×2)"
 echo "Link:     OK (ROM-order ld script + absolute symbol workarounds)"
 echo "Pack:     OK (build/disc1.candidate.exe, size 0x1EE800)"
 if [[ "$cmp_ec" -eq 0 ]]; then
     echo "Compare:  EXACT SHA-1 MATCH"
-    echo "Matching claim: YES (one C leaf: func_80090C38 + remaining asm)"
+    echo "Matching claim: YES (two C leaves: func_80090C38 + func_80090C4C + remaining asm)"
     echo "Artifacts (git-ignored): build/asm/**/*.o build/src/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 0
 else

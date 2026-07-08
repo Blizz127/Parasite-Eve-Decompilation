@@ -6,26 +6,26 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5B — first C leaf integrated** (branch
-`phase5b-integrate-first-c-leaf`). Production rebuild includes exactly one C
-function: `func_80090C38` (`src/func_80090C38.c`). Oracle
-`scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+**Phase 5C — second C leaf integrated** (branch `phase5c-next-c-leaf`).
+Production rebuild includes two matching C functions:
+`func_80090C38` + `func_80090C4C`. Oracle `scripts/build_us.sh` exits 0 with
+exact SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
 ```text
 [0x800,     rodata]  prefix jump tables + strings
 [0x2A0C,    asm]     main text through end of func_80090BCC
-[0x81438,   c, func_80090C38]  VRAM 0x80090C38, size 0x14
-[0x8144C,   asm]     resume through func_80091080
+[0x81438,   c, func_80090C38]  VRAM 0x80090C38, size 0x14 (Phase 5B)
+[0x8144C,   c, func_80090C4C]  VRAM 0x80090C4C, size 0x14 (Phase 5C)
+[0x81460,   asm]     resume through func_80091080
 [0x818A0,   rodata]  mid-image data island
 [0xB2AF8,   asm]     tail code from func_800C22F8
 ```
 
-**Prior on `main`:** Phase 4J (GCC 14.2 + leaf codegen probe), 4H–4I (asm-only
-oracle + pad trim exact match), 4G (`pe-mipsel` binutils), Phase 3 parked
-boundaries (except the single local C cut above).
+**Prior on `main`:** Phase 5B (first C leaf via PR #9), 4J (GCC 14.2 + probe),
+4H–4I (asm-only oracle + pad trim), 4G (`pe-mipsel` binutils), Phase 3 parked
+boundaries (except the local C cuts above).
 
 Phase 1 complete locally; only the official redump cross-check remains open (non-blocking).
 
@@ -156,12 +156,12 @@ post-split `git status` check.
 - A **modern** MIPS LE assembler/linker path is provisioned (Phase 4G Distrobox
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
-  modern GCC 14.2 in `pe-mipsel` emits exact words for `func_80090C38` at -O1+.
-  **Phase 5B done:** that leaf is production C; only one function converted.
+  modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx leaves at -O1+.
+  **Phase 5B+5C done:** `func_80090C38` and `func_80090C4C` are production C.
 
 ## Next concrete step
 
-**Milestone:** first matching C leaf is in. Oracle still:
+**Milestone:** two matching C leaves. Oracle still:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
@@ -169,20 +169,21 @@ verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
 
-Production map (Phase 5B):
+Production map (Phase 5C):
 
 ```text
 [0x800,     rodata]
 [0x2A0C,    asm]
-[0x81438,   c, func_80090C38]   # only C so far
-[0x8144C,   asm]
+[0x81438,   c, func_80090C38]
+[0x8144C,   c, func_80090C4C]
+[0x81460,   asm]
 [0x818A0,   rodata]
 [0xB2AF8,   asm]
 ```
 
-1. **Merge Phase 5B** (`phase5b-integrate-first-c-leaf`) to `main`.
-2. **Next C candidate (when ready):** sibling leaf `func_80090C4C` (or
-   `func_80090F54`) — same pattern, one function only, same flags, same
+1. **Merge Phase 5C** (`phase5c-next-c-leaf`) to `main`.
+2. **Next C candidate (when ready):** `func_80090C60` / `func_80090C74` or
+   `func_80090F54` — same pattern, one function only, same flags, same
    pad-trim discipline. Do not batch.
 3. Host PATH still has no mipsel tools; C/as/ld stay in Distrobox `pe-mipsel`.
 4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
@@ -538,3 +539,13 @@ pc0/`0xB2AF8` each time.
   Validation: `split_us.sh --check` OK; `build_us.sh` exit 0 **EXACT MATCH**
   (leaf probe `3800828c00000000100042340800e003380082ac`). No second function.
   No generated output committed. Commit: "Convert func_80090C38 to C".
+  Merged to `main` as PR #9 (`d624812`).
+- 2026-07-08: **Phase 5C second C leaf integrated.** Branch
+  `phase5c-next-c-leaf` from `main` after PR #9. Converted **only**
+  `func_80090C4C` (bit-clear twin of 90C38):
+  - `src/func_80090C4C.c` — `*(u32*)(arg0+0x38) &= ~0x10`
+  - config: `[0x8144C, c, func_80090C4C]` + `[0x81460, asm]`
+  - build: second C object; both trimmed 0x20→0x14; ROM-order places both
+  Validation: probe codegen exact before integrate; `build_us.sh` exit 0
+  **EXACT MATCH** (both leaf probes match). No third function. Commit:
+  "Convert next Disc 1 leaf function to C".
