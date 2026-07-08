@@ -15,9 +15,11 @@ meaningful change.
 [0xB2AF8,   asm]     tail code from func_800C22F8
 ```
 
-pc0 remains sane. No further boundary work unless a real misclassification
-appears. Phase 1 complete locally; only the official redump cross-check
-remains open (non-blocking). (Branch: `phase3-disc1-boundary-audit`.)
+pc0 remains sane. No further boundary work unless a real misclassification appears.
+
+**Phase 4 started** (branch `phase4-disc1-function-inventory`): read-only function inventory of the text regions in `2A0C.s` + `B2AF8.s`. See `docs/ai_context/DISC1_FUNCTION_INVENTORY.md`. No C, no renames, no boundary changes.
+
+Phase 1 complete locally; only the official redump cross-check remains open (non-blocking). (Current work branch: `phase4-disc1-function-inventory`.)
 
 ## What exists right now
 
@@ -164,11 +166,10 @@ Continue Phase 3 (or later) **only** on true blockers:
 - A future matching or decompilation step that demonstrably requires a
   tighter boundary.
 
-1. Push / PR / merge `phase3-disc1-boundary-audit` (if not already done).
-2. Treat `docs/ai_context/ACTIVE_HANDOFF.md` as the single resume point
-   for any future work.
-3. When redump.org is reachable, record the official cross-check in
-   `docs/disc_info.md`.
+1. (Phase 3) Push / PR / merge `phase3-disc1-boundary-audit` (if not already done in real flow). The local `phase4-disc1-function-inventory` was created from the merged Phase 3 state.
+2. Treat `docs/ai_context/ACTIVE_HANDOFF.md` + `docs/ai_context/DISC1_FUNCTION_INVENTORY.md` as the resume points.
+3. Continue the Phase 4 inventory (conservative function map only) or move to redump cross-check when possible.
+4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
 
@@ -395,3 +396,8 @@ pc0/`0xB2AF8` each time.
   misclassifications to fix. Critical boundaries solid; work parked until
   a true blocker appears (real code-as-data, strings-as-instructions, etc.).
   Branch ready for merge. Resume from this file.
+- 2026-07-08: **Phase 4 initial function inventory started.** Created
+  `docs/ai_context/DISC1_FUNCTION_INVENTORY.md` on `phase4-disc1-function-inventory`
+  (after Phase 3 merge simulation). ~2359 auto-labeled functions mapped across
+  `2A0C.s` + `B2AF8.s`. Anchors (1220C, 72534 pc0, C22F8) documented with
+  high confidence. Conservative survey only; docs-only commit. No C/renames/boundary edits.
