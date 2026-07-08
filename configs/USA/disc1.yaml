@@ -57,5 +57,9 @@ segments:
       # Evidence: clean epilogue at 0x8009109C; D_800910A0 is a func-pointer table
       # (lw from 0x80017230); raw bytes are 0x8001xxxx pointers, not instructions.
       - [0x818A0, rodata]
+      # Phase 3 (2026-07-08): resume asm after mid-image data island.
+      # Evidence: 8-byte zero padding then addiu $sp,$sp,-0x18 prologue at
+      # VRAM 0x800C22F8; sustained valid MIPS follows.
+      - [0xB2AF8, asm]
   # End of file: 0x1EE800 = 2,025,472 bytes (verified size).
   - [0x1EE800]

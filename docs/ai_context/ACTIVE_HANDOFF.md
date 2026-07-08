@@ -6,8 +6,8 @@ meaningful change.
 
 ## Current phase
 
-**Phase 3 — prefix rodata + mid-image data island split at file 0x818A0
-(VRAM 0x800910A0); pc0 still sane after re-split.** Phase 1 complete
+**Phase 3 — prefix rodata + mid-image data island closed at file 0xB2AF8
+(VRAM 0x800C22F8); pc0 still sane after re-split.** Phase 1 complete
 locally; only the official redump cross-check remains open (non-blocking).
 (Branch: `phase3-disc1-boundary-audit`.)
 
@@ -124,23 +124,20 @@ post-split `git status` check.
 - Whether either dump matches redump.org itself (unreachable again on
   2026-07-04 retry, ECONNREFUSED; disc 1 page is
   http://redump.org/disc/116/). Non-blocking.
-- Text/data/bss boundaries inside the image — **prefix + one mid-image boundary
-  applied** (rodata 0x800–0x2A0B, asm 0x2A0C–0x8189F, rodata from 0x818A0);
-  tail code after the data island (from ~0x800C22F8) is still folded into
-  rodata until a resume-asm boundary is added. See Phase 3 boundary audit.
+- Text/data/bss boundaries inside the image — **prefix + mid-image island
+  closed** (rodata 0x800–0x2A0B, asm 0x2A0C–0x8189F, rodata 0x818A0–0xB2AF7,
+  asm from 0xB2AF8); nested splits inside `818A0` and prefix rodata still
+  deferred. See Phase 3 boundary audit.
 - Real symbol/function names — only splat auto-labels (`func_*`, `D_*`).
 - The toolchain: `compiler: GCC` in the config is splat boilerplate, not a
   verified compiler identification (Phase 5+ fingerprinting).
 
 ## Next concrete step
 
-1. **Phase 3 continued:** add the **resume-asm** boundary at file `0xB2AF8`
-   (VRAM `0x800C22F8`) to close the mid-image data island opened at
-   `0x818A0` — evidence: 8-byte zero padding then `addiu $sp,$sp,-0x18`
-   prologue and sustained valid MIPS through `0x800C3xxx`. One boundary per
-   commit; re-split and re-check pc0 each time. Optionally refine prefix
-   rodata (`0xEE4`…`0x1E44`) or nested splits inside `818A0` (`0x93CCC`
-   suggested by splat 0.41.0). Do not invent symbol names.
+1. **Phase 3 continued:** optionally refine prefix rodata (`0xEE4`…`0x1E44`)
+   or nested splits inside `818A0` (`0x93CCC`, `0xB2928`, `0xB2AA4` suggested
+   by splat 0.41.0). One boundary per commit; re-split and re-check pc0 each
+   time. Do not invent symbol names.
 2. When redump.org is reachable, record the official cross-check in
    `docs/disc_info.md`.
 
@@ -162,14 +159,18 @@ raw EXE bytes):
 | `D_8009CD70` / `D_8009CD74` | `0x8D570` / `0x8D574` | crt0 stack setup | Initialized words/strings in ROM (`m0290i`, …); used as heap/stack bounds at runtime | data | medium | Defer; needs deeper data-map pass |
 
 **Config changes applied:** `configs/USA/disc1.yaml` main subsegments now
-`[0x800, rodata]` + `[0x2A0C, asm]` + `[0x818A0, rodata]`. Re-split
-2026-07-08: splat 0.41.0 OK; output `asm/disc1/data/800.rodata.s` (prefix),
-`asm/disc1/2A0C.s` (~149k lines, text through `func_80091080`),
-`asm/disc1/data/818A0.rodata.s` (~412k lines, mid-image data island).
+`[0x800, rodata]` + `[0x2A0C, asm]` + `[0x818A0, rodata]` +
+`[0xB2AF8, asm]`. Re-split 2026-07-08: splat 0.41.0 OK; output
+`asm/disc1/data/800.rodata.s` (prefix), `asm/disc1/2A0C.s` (~149k lines,
+text through `func_80091080`), `asm/disc1/data/818A0.rodata.s` (~75k lines,
+mid-image data island ending at `D_800C22F0` zero padding),
+`asm/disc1/B2AF8.s` (~329k lines, tail code from `func_800C22F8`).
+`818A0.rodata.s` no longer folds `0x800C22F8` prologue as `.word` entries;
+`B2AF8.s` emits `addiu $sp,$sp,-0x18` at VRAM `0x800C22F8` as text.
 pc0 `func_80072534` unchanged/sane in `2A0C.s` (BSS zero-fill, stack init,
 `jal func_800726B4`, `jal func_8001220C`, `break 0,1`). Splat still warns
-prefix rodata nested splits (`0xEE4`…`0x1E44`) and suggests `0x93CCC`
-inside `818A0` — deferred.
+prefix rodata nested splits (`0xEE4`…`0x1E44`) and suggests `0x93CCC`,
+`0xB2928`, `0xB2AA4` inside `818A0` — deferred.
 
 ### Phase 3 next-boundary audit (2026-07-08)
 
@@ -187,7 +188,7 @@ generated asm). Sustained valid MIPS from `0x8001220C` through
 | `0x8009458C` | `0x84D8C` | Sony copyright string | rodata | high | Known Psy-Q SDK string | Included in `818A0` |
 | `0x8009CB70` | `0x8D370` | 128-word pointer table to `0x8008Fxxx` | rodata | high | Dense `0x800xxxxx` pointers; `.word D_800910A0` xref at `0x8009454C` | Included in `818A0` |
 | `0x800C20C8` | `0xB28C8` | `error : service thread not found` | data (also BSS runtime) | high NOT ROM edge | crt0 `lui`/`addiu` zero-fill end; ROM holds string | Do not split |
-| `0x800C22F8` | `0xB2AF8` | zeros then `0x27BDFFE8` (`addiu $sp,$sp,-0x18`) | text (code resume) | high | First strong prologue after padding; sustained MIPS follows | **Next:** `[0xB2AF8, asm]` |
+| `0x800C22F8` | `0xB2AF8` | zeros then `0x27BDFFE8` (`addiu $sp,$sp,-0x18`) | text (code resume) | high | First strong prologue after padding; sustained MIPS follows | **Applied** (`[0xB2AF8, asm]`) |
 | `0x80072534` | `0x62D34` | crt0 startup | text | high (anchor) | pc0; do not use as split start | Anchor only |
 
 ## Open decisions
@@ -205,6 +206,11 @@ generated asm). Sustained valid MIPS from `0x8001220C` through
 
 ## Changelog
 
+- 2026-07-08: **Phase 3 resume-asm boundary:** applied `[0xB2AF8, asm]` to
+  close mid-image data island opened at `0x818A0`. Re-split OK; `818A0.rodata.s`
+  shrinks to ~75k lines (ends at zero padding `D_800C22F0`); new `B2AF8.s`
+  ~329k lines with `func_800C22F8` prologue as text; pc0 sane; output
+  git-ignored.
 - 2026-07-08: **Phase 3 mid-image boundary:** audited `2A0C.s` monolith; applied
   `[0x818A0, rodata]` after `func_80091080` (`D_800910A0` func-pointer table).
   Re-split OK; pc0 sane; `2A0C.s` shrinks to ~149k lines, new
