@@ -6,6 +6,13 @@ meaningful change.
 
 ## Current phase
 
+**Phase 4G — MIPS LE toolchain provisioning** (branch
+`phase4g-mipsel-toolchain-provisioning`, rebased onto `main` after PR #4).
+Distrobox `pe-mipsel` (Debian trixie + `binutils-mipsel-linux-gnu` 2.44)
+can assemble all five current split units to ELF32 mipsel objects.
+**No link, no PS-X EXE pack, no matching claim, no `build_us.sh`.**
+See `DISC1_C_HARNESS_PLAN.md`.
+
 **Phase 3 — prefix + mid-image boundaries closed and parked.** Solid state:
 
 ```text
@@ -17,17 +24,15 @@ meaningful change.
 
 pc0 remains sane. No further boundary work unless a real misclassification appears.
 
-**Phase 4 complete** (pushed, ready for merge). Function inventory, call/anchor map, and first decomp target triage done. Recommended first C target: func_80090C38 (small leaf in 2A0C.s).
+**Phase 4 complete** (on `main`). Function inventory, call/anchor map, and first decomp target triage done. Recommended first C target: `func_80090C38` (small leaf in `2A0C.s`).
 
-**Phase 5 attempt started** on `phase5-disc1-first-c-leaf` (after simulated merge of Phase 4). Attempted first C conversion for recommended target but infrastructure not ready. See details below and in updated DISC1_FIRST_DECOMP_TARGETS.md if extended.
+**Phase 5 attempt blocked** (docs on `main`). Infrastructure was not ready; no C conversion.
 
-**Phase 4D harness design audit complete.** Created `DISC1_C_HARNESS_PLAN.md` with concrete Phase 4E (minimal verify) vs 4F (build/matching) distinction.
+**Phase 4D–4F on `main` (PR #4):** design audit, Phase 4E `verify_us.sh` (7-gate split sanity; rebuild/matching NOT IMPLEMENTED banner), Phase 4F asm rebuild blocker (host lacked mipsel tools).
 
-**Phase 4E minimal verification harness implemented and validated.** `scripts/verify_us.sh` checks split prerequisites/artifacts only and explicitly reports that rebuild/matching is not implemented. On the provisioned main workbench (extract + splat venv + split present) it exits 0 with all 7 gates OK. No C, no assemble, no link.
+**Phase 4G:** MIPS LE assemble path proven in Distrobox (container-only). Host PATH still has no mipsel tools by design.
 
-**Phase 4F asm-only rebuild blocked (documented).** Required MIPS cross-assembler/linker is not installed; host binutils cannot assemble the split. No fake `build_us.sh`. See `DISC1_C_HARNESS_PLAN.md` Phase 4F blocker. Still no C under `src/`.
-
-Phase 1 complete locally; only the official redump cross-check remains open (non-blocking). (Current work branch: `phase5-disc1-first-c-leaf`)
+Phase 1 complete locally; only the official redump cross-check remains open (non-blocking).
 
 ## What exists right now
 
@@ -53,7 +58,8 @@ Phase 1 complete locally; only the official redump cross-check remains open (non
   git-ignored, never committed). No matching build, decompiled C, or
   PC-port work exists. `scripts/setup_env.sh` is implemented (pinned
   `.venv/` install); `verify_us.sh` is Phase 4E (split-artifact sanity only —
-  rebuild/matching still NOT implemented; see Phase 4F).
+  rebuild/matching still NOT implemented). **MIPS LE assemble path:** Distrobox
+  `pe-mipsel` (Phase 4G; not on host PATH). Link/pack/compare still open (Phase 4H).
 
 ## What is verified
 
@@ -149,13 +155,18 @@ post-split `git status` check.
   extremely-high-confidence nested split found in either region. Phase 3
   boundary work is parked; only pursue further splits on true misclassifications.
 - Real symbol/function names — only splat auto-labels (`func_*`, `D_*`).
-- The toolchain: `compiler: GCC` in the config is splat boilerplate, not a
-  verified compiler identification (Phase 5+ fingerprinting).
+- The **original game** compiler: `compiler: GCC` in the config is splat
+  boilerplate, not a verified identification (Phase 5+ fingerprinting).
+- A **modern** MIPS LE assembler path is provisioned (Phase 4G Distrobox
+  `pe-mipsel`, binutils 2.44) and can assemble the split — link/pack/match
+  still unverified.
 
 ## Next concrete step
 
-**Phase 3 boundary audit is successfully parked.** The critical
-rodata/asm boundaries are fixed without overfitting the config:
+**Phase 4G done (docs on this branch):** MIPS LE assemble path is reproducible
+via Distrobox `pe-mipsel`. Commands/versions in `DISC1_C_HARNESS_PLAN.md`.
+
+Phase 3 boundaries remain parked:
 
 ```text
 [0x800,     rodata]  prefix jump tables + strings
@@ -164,37 +175,15 @@ rodata/asm boundaries are fixed without overfitting the config:
 [0xB2AF8,   asm]     tail code from func_800C22F8
 ```
 
-**Do not** pursue further splits (e.g. at 0x1B88 or 0x1E44) for cleanliness or
-organizational reasons. Splat's internal jtbl/string hints inside the prefix
-rodata are **not** correctness fixes.
+**Do not** pursue further splits for cleanliness. Continue Phase 3 only on true
+misclassifications or build/linker failures.
 
-Continue Phase 3 (or later) **only** on true blockers:
-- Real code emitted as `.word` inside a rodata segment.
-- Real strings or tables disassembled as instructions.
-- Linker or splat alignment / build failure.
-- A future matching or decompilation step that demonstrably requires a
-  tighter boundary.
-
-1. (Phase 3) Push / PR / merge `phase3-disc1-boundary-audit` (if not already done in real flow). The local `phase4-disc1-function-inventory` was created from the merged Phase 3 state.
-2. Treat `ACTIVE_HANDOFF.md` + `DISC1_FUNCTION_INVENTORY.md` + `DISC1_CALL_ANCHOR_MAP.md` + `DISC1_FIRST_DECOMP_TARGETS.md` as the resume points.
-3. Phase 4C triage complete (recommended first = func_80090C38 cluster, manually verified leaf).
-
-4. Phase 5 first C attempt: Tried to convert the recommended target (func_80090C38). All pre-checks passed and asm verified (leaf, no jtbl, no indirect, no anchor, no obvious system side effects). However, C conversion infrastructure is not ready (see blocker details in changelog and DISC1_FIRST_DECOMP_TARGETS.md). Documented missing pieces instead of adding code.
-
-5. **Phase 4E done and validated** on the provisioned workbench
-   (`/var/home/blizz/Projects/Parasite-Eve-Decompilation`): `bash -n` OK,
-   `split_us.sh --check` OK, `verify_us.sh` exit 0, all 7 gates pass, still
-   prints `Rebuild/matching harness: NOT IMPLEMENTED YET`, generated
-   asm/linkers stay gitignored. Branch name is historical (`phase5-…`);
-   actual delivered work is Phase 5 blocker docs + Phase 4E harness.
-
-6. **Phase 4F blocked.** Next is install/document a MIPS little-endian
-   cross toolchain (e.g. `mipsel-linux-gnu-as` / `ld` / `objcopy`, or the
-   project-approved equivalent used by sibling PSX decomps), then attempt
-   asm-only assemble → link → compare. Do **not** add C under `src/` and
-   do **not** convert `func_80090C38` until pure-asm rebuild is real.
-
-7. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
+1. **Phase 4E** is on `main` (PR #4) — use `scripts/verify_us.sh` as split sanity gate.
+2. **Phase 4H (next):** asm-only **link + PS-X EXE pack + compare** inside
+   `pe-mipsel` using `linkers/disc1.ld` and the five objects. Only after a real
+   compare works, add `scripts/build_us.sh`.
+3. Still **no C** and no `func_80090C38` conversion until pure-asm rebuild is real.
+4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
 
@@ -492,3 +481,12 @@ pc0/`0xB2AF8` each time.
   `target = mips-linux-gnu`, modern gas + maspsx, and era gcc binaries —
   not copied, not installed here.
   Commit: "Record asm-only rebuild harness blocker".
+- 2026-07-08: **Phase 4G MIPS LE toolchain provisioning.** Branch
+  `phase4g-mipsel-toolchain-provisioning` rebased onto `main` after PR #4
+  (4E/4F). Distrobox `pe-mipsel` (`debian:trixie`) +
+  `binutils-mipsel-linux-gnu` **2.44-3cross1+nmu1+b1**. Tools:
+  `mipsel-linux-gnu-{as,ld,objcopy,objdump,readelf}` GNU Binutils 2.44.
+  Temp-assembled all five split units with `as -EL -mips1 -mabi=32 -I include`
+  (ELF32 MIPS R3000 LE). Host PATH unchanged. No `build_us.sh`, no link,
+  no C, no matching claim. Note: target image is a **PS-X EXE**, not Windows PE.
+  Commit: "Record MIPS toolchain provisioning path".
