@@ -19,7 +19,7 @@ pc0 remains sane. No further boundary work unless a real misclassification appea
 
 **Phase 4 started** (branch `phase4-disc1-function-inventory`): read-only function inventory + call/anchor map + first decomp target triage of the text regions. See `DISC1_FUNCTION_INVENTORY.md`, `DISC1_CALL_ANCHOR_MAP.md`, and `DISC1_FIRST_DECOMP_TARGETS.md`. No C, no renames, no boundary changes.
 
-Pushed to origin. Ready for PR/merge.
+Branch pushed (history cleaned of duplicate commits for PR). Ready for PR/merge.
 
 Phase 1 complete locally; only the official redump cross-check remains open (non-blocking). (Current work branch: `phase4-disc1-function-inventory`)
 
