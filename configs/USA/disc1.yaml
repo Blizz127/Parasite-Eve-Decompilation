@@ -41,14 +41,25 @@ segments:
   - name: header
     type: header
     start: 0x0
-  # 0x800-0x1EE800: the entire loadable image as one conservative segment.
-  # Data regions will initially disassemble as (meaningless) instructions;
-  # that is expected at this stage and makes no boundary claims.
+  # 0x800-0x1EE800: loadable image. Phase 3: split prefix rodata from text.
+  # Evidence (2026-07-07 boundary audit): 0x800-0x2A0B is jump tables plus
+  # Psy-Q CDL/libc strings (ASCII at 0x800119CC, pointer tables throughout);
+  # first MIPS prologue is at 0x8001220C (func_8001220C, crt0 jal target).
+  # Only prior glabel is a 4-byte nop at 0x800119C8. See ACTIVE_HANDOFF.md.
   - name: main
     type: code
     start: 0x800
     vram: 0x80010000
     subsegments:
-      - [0x800, asm]
+      - [0x800, rodata]
+      - [0x2A0C, asm]
+      # Phase 3 (2026-07-08): split mid-image data island after func_80091080.
+      # Evidence: clean epilogue at 0x8009109C; D_800910A0 is a func-pointer table
+      # (lw from 0x80017230); raw bytes are 0x8001xxxx pointers, not instructions.
+      - [0x818A0, rodata]
+      # Phase 3 (2026-07-08): resume asm after mid-image data island.
+      # Evidence: 8-byte zero padding then addiu $sp,$sp,-0x18 prologue at
+      # VRAM 0x800C22F8; sustained valid MIPS follows.
+      - [0xB2AF8, asm]
   # End of file: 0x1EE800 = 2,025,472 bytes (verified size).
   - [0x1EE800]
