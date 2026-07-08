@@ -164,14 +164,20 @@ post-split `git status` check.
 - Real symbol/function names — only splat auto-labels (`func_*`, `D_*`).
 - The **original game** compiler: `compiler: GCC` in the config is splat
   boilerplate, not a verified identification (Phase 5+ fingerprinting).
-- A **modern** MIPS LE assembler path is provisioned (Phase 4G Distrobox
-  `pe-mipsel`, binutils 2.44) and can assemble the split — link/pack/match
-  still unverified.
+- A **modern** MIPS LE assembler/linker path is provisioned (Phase 4G Distrobox
+  `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
+  SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). C compiler
+  path for Phase 5 is still unproven.
 
 ## Next concrete step
 
-**Phase 4G done (docs on this branch):** MIPS LE assemble path is reproducible
-via Distrobox `pe-mipsel`. Commands/versions in `DISC1_C_HARNESS_PLAN.md`.
+**Milestone:** asm-only rebuild is exact. Oracle:
+
+```text
+build_us.sh  → exit 0 only on exact SHA-1 match
+verify_us.sh → reports rebuild EXACT MATCH when candidate matches
+SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+```
 
 Phase 3 boundaries remain parked:
 
@@ -182,14 +188,21 @@ Phase 3 boundaries remain parked:
 [0xB2AF8,   asm]     tail code from func_800C22F8
 ```
 
-**Do not** pursue further splits for cleanliness. Continue Phase 3 only on true
-misclassifications or build/linker failures.
-
-1. **Phase 4E–4I:** split verify + asm-only rebuild **matches** via `build_us.sh`
-   (pad trim + ROM-order link). Keep exit 0 reserved for exact SHA-1 only.
-2. **Merge path:** merge `phase4h` then `phase4i` to `main` (or stack PRs).
-3. **Phase 5** may retry `func_80090C38` only with green `build_us.sh` after any
-   C integration still keeps asm path matching — still no PC-port.
+1. **Merge order (do not squash 4H+4I together):**  
+   (a) merge `phase4h-asm-only-rebuild` — harness + non-match oracle  
+   (b) merge `phase4i-asm-rebuild-parity-audit` — gas align pad fix → exact match  
+   Story: 4H created the oracle; 4I fixed layout drift and proved match.
+2. **After both on `main`:**  
+   `git switch main && git pull && git switch -c phase5-disc1-first-c-leaf-retry`  
+   Then re-baseline: `split_us.sh --check`, `verify_us.sh`, `build_us.sh` all green.
+3. **Phase 5 C leaf retry gate:**  
+   Phase 5 C leaf retry is allowed only while the asm-only baseline remains
+   exact before the C change, and `build_us.sh` remains the final oracle after
+   the C change.  
+   Target: **only** `func_80090C38`. One function; stop immediately if it matches.  
+   **Caution:** binutils solved assemble/link/pack. C needs a MIPS C compiler
+   (`mipsel-linux-gnu-gcc` or documented equivalent). If missing or non-matching
+   output, stop and document — do **not** hand-write asm and call it C.
 4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 
 ### Phase 3 boundary audit (2026-07-07)
