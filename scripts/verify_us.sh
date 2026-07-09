@@ -37,14 +37,15 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5E: four C leaves.
+# Current production subsegments (file offsets). Phase 5F: five C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
     '[0x81438, c, func_80090C38]'
     '[0x8144C, c, func_80090C4C]'
     '[0x81460, c, func_80090C60]'
-    '[0x81474, asm]'
+    '[0x81474, c, func_80090C74]'
+    '[0x81488, asm]'
     '[0x81754, c, func_80090F54]'
     '[0x81768, asm]'
     '[0x818A0, rodata]'
@@ -55,7 +56,7 @@ EXPECTED_SUBSEGMENTS=(
 EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
-    "asm/disc1/81474.s"
+    "asm/disc1/81488.s"
     "asm/disc1/81768.s"
     "asm/disc1/B2AF8.s"
     "asm/disc1/data/800.rodata.s"
@@ -63,6 +64,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80090C38.c"
     "src/func_80090C4C.c"
     "src/func_80090C60.c"
+    "src/func_80090C74.c"
     "src/func_80090F54.c"
     "linkers/disc1.ld"
 )
@@ -251,7 +253,11 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80090C38.c" && -f "$ROOT/src/func_80090C4C.c" && -f "$ROOT/src/func_80090C60.c" && -f "$ROOT/src/func_80090F54.c" ]]; then
+if [[ -f "$ROOT/src/func_80090C38.c" && -f "$ROOT/src/func_80090C4C.c" && -f "$ROOT/src/func_80090C60.c" && -f "$ROOT/src/func_80090C74.c" && -f "$ROOT/src/func_80090F54.c" ]]; then
+    echo "C conversion: Phase 5F — five leaves (90C38, 90C4C, 90C60, 90C74, 90F54)"
+    echo "  sources: src/func_80090C{38,4C,60,74}.c src/func_80090F54.c"
+    echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
+elif [[ -f "$ROOT/src/func_80090C38.c" && -f "$ROOT/src/func_80090C4C.c" && -f "$ROOT/src/func_80090C60.c" && -f "$ROOT/src/func_80090F54.c" ]]; then
     echo "C conversion: Phase 5E — four leaves (90C38, 90C4C, 90C60, 90F54)"
     echo "  sources: src/func_80090C{38,4C,60}.c src/func_80090F54.c"
     echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"

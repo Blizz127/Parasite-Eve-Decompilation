@@ -62,7 +62,10 @@ segments:
       # Phase 5E: C leaf func_80090C60 — VRAM 0x80090C60, size 0x14.
       # File span 0x81460–0x81474 exclusive. Bit-set 0x20 at *(arg0+0x38).
       - [0x81460, c, func_80090C60]
-      - [0x81474, asm]
+      # Phase 5F: C leaf func_80090C74 — VRAM 0x80090C74, size 0x14.
+      # File span 0x81474–0x81488 exclusive. Bit-clear twin of 90C60.
+      - [0x81474, c, func_80090C74]
+      - [0x81488, asm]
       # Phase 5D: C leaf func_80090F54 — VRAM 0x80090F54, size 0x14.
       # File span 0x81754–0x81768 exclusive. Bit-set 0x100000 at *(arg0+0x38).
       - [0x81754, c, func_80090F54]
