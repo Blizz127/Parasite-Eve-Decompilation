@@ -6,18 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5V — `func_800C9EA0` integrated (nineteenth matching C leaf)**
-(branch `phase5v-func-800C9EA0`). Phase 5U merged as PR #28. Phase 5I/5H
-parked. Nineteen matching C leaves on this branch. B3350 tail fully
+**Phase 5W — `func_800CACD4` integrated (twentieth matching C leaf)**
+(branch `phase5w-func-800CACD4`). Phase 5V merged as PR #29. Phase 5I/5H
+parked. Twenty matching C leaves on this branch. B3350 tail fully
 triaged (344 functions, adversarially cross-checked) — see
 `docs/ai_context/B3350_TRIAGE.md`; the 8-strong sb-stub star family is
-parked (GCC 14.2 delay-slot schedule mismatch, 5I class); 6 more empty-stub
+parked (GCC 14.2 delay-slot schedule mismatch, 5I class); 5 more empty-stub
 star candidates remain available (next: see B3350_TRIAGE.md). Parked
 in `80CC4` prefix: `904C4` (globals/branches) and the eight `90574`–`9068C`
 stream-reader twins (reg-alloc).
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (nineteen leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (twenty leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -57,6 +57,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0xB9A68,   asm]
 [0xBA6A0,   c, func_800C9EA0]  VRAM 0x800C9EA0, size 0x8 (Phase 5V)
 [0xBA6A8,   asm]
+[0xBB4D4,   c, func_800CACD4]  VRAM 0x800CACD4, size 0x8 (Phase 5W)
+[0xBB4DC,   asm]
 ```
 
 **Prior on `main`:** Phase 5F (PR #14), 5E–5B, 4J–4G, Phase 3 parked boundaries.
@@ -191,7 +193,7 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5V done:** nineteen production C leaves (incl. mid-region trio
+  **Phase 5B–5W done:** twenty production C leaves (incl. mid-region trio
   `func_8008F694` / `func_8008F868` / `func_8008F880`, stubs `func_8008FCB4` /
   `func_800904A0` / `904AC` / `904B4` / `904BC`, mid-`80CC4` stream+flags
   `func_800906B4`, early 90Cxx `func_80090A0C`, and tail `func_800C2B40` /
@@ -199,8 +201,8 @@ post-split `git status` check.
 
 ## Next concrete step
 
-**Milestone:** nineteen matching C leaves on branch `phase5v-func-800C9EA0`
-(ready for PR). Next candidates: the 6 remaining empty-stub stars in the
+**Milestone:** twenty matching C leaves on branch `phase5w-func-800CACD4`
+(ready for PR). Next candidates: the 5 remaining empty-stub stars in the
 B3350 tail (see `docs/ai_context/B3350_TRIAGE.md`), all ROM-verified
 `jr $ra`/`nop` bodies in the proven-matchable class. Oracle:
 
@@ -209,6 +211,11 @@ build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5W result — `func_800CACD4` (2026-07-09):** VRAM `0x800CACD4` / file
+`0xBB4D4` / size `0x8`. Empty `jr`/`nop` stub, fourth mid-tail carve (from
+`BA6A8.s`): prefix `0xE2C`, C `0x8`, resume `BB4DC.s` `0x133324` (sums to
+prior `0x134158`). Scratch + production **EXACT MATCH**.
 
 **Phase 5V result — `func_800C9EA0` (2026-07-09):** VRAM `0x800C9EA0` / file
 `0xBA6A0` / size `0x8`. Empty `jr`/`nop` stub, third mid-tail carve (from
@@ -515,6 +522,13 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-09: **Phase 5W twentieth C leaf integrated.** Branch
+  `phase5w-func-800CACD4` from `main` (after PR #29 / 5V). Converted
+  `func_800CACD4` (empty stub, file `0xBB4D4`, size `0x8`, from the 5T
+  triage star list; ROM bytes + scratch probe re-verified): config carve
+  `[0xBB4D4, c]` + `[0xBB4DC, asm]`, `src/func_800CACD4.c`, build/verify
+  script updates. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**;
+  `verify_us.sh` exit 0 reporting Phase 5W twenty leaves.
 - 2026-07-09: **Phase 5V nineteenth C leaf integrated.** Branch
   `phase5v-func-800C9EA0` from `main` (after PR #28 / 5U). Converted
   `func_800C9EA0` (empty stub, file `0xBA6A0`, size `0x8`, from the 5T
