@@ -6,18 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5T — `func_800C8268` integrated (seventeenth matching C leaf)**
-(branch `phase5t-func-800C8268`). Phase 5S merged as PR #26. Phase 5I/5H
-parked. Seventeen matching C leaves on this branch. B3350 tail fully
+**Phase 5U — `func_800C9260` integrated (eighteenth matching C leaf)**
+(branch `phase5u-func-800C9260`). Phase 5T merged as PR #27. Phase 5I/5H
+parked. Eighteen matching C leaves on this branch. B3350 tail fully
 triaged (344 functions, adversarially cross-checked) — see
 `docs/ai_context/B3350_TRIAGE.md`; the 8-strong sb-stub star family is
-parked (GCC 14.2 delay-slot schedule mismatch, 5I class); 8 more empty-stub
-star candidates remain available. Parked in `80CC4` prefix: `904C4`
-(globals/branches) and the eight `90574`–`9068C` stream-reader twins
-(reg-alloc).
+parked (GCC 14.2 delay-slot schedule mismatch, 5I class); 7 more empty-stub
+star candidates remain available (next: `func_800C9EA0` @ 0xBA6A0). Parked
+in `80CC4` prefix: `904C4` (globals/branches) and the eight `90574`–`9068C`
+stream-reader twins (reg-alloc).
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (seventeen leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (eighteen leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -53,6 +53,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0xB3350,   asm]
 [0xB8A68,   c, func_800C8268]  VRAM 0x800C8268, size 0x8 (Phase 5T)
 [0xB8A70,   asm]
+[0xB9A60,   c, func_800C9260]  VRAM 0x800C9260, size 0x8 (Phase 5U)
+[0xB9A68,   asm]
 ```
 
 **Prior on `main`:** Phase 5F (PR #14), 5E–5B, 4J–4G, Phase 3 parked boundaries.
@@ -187,17 +189,17 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5T done:** seventeen production C leaves (incl. mid-region trio
+  **Phase 5B–5U done:** eighteen production C leaves (incl. mid-region trio
   `func_8008F694` / `func_8008F868` / `func_8008F880`, stubs `func_8008FCB4` /
   `func_800904A0` / `904AC` / `904B4` / `904BC`, mid-`80CC4` stream+flags
   `func_800906B4`, early 90Cxx `func_80090A0C`, and tail `func_800C2B40` /
-  `func_800C8268`).
+  `func_800C8268` / `func_800C9260`).
 
 ## Next concrete step
 
-**Milestone:** seventeen matching C leaves on branch `phase5t-func-800C8268`
-(ready for PR). Next candidates: the 8 remaining empty-stub stars in the
-B3350 tail (`func_800C9260` @ 0xB9A60 first — see
+**Milestone:** eighteen matching C leaves on branch `phase5u-func-800C9260`
+(ready for PR). Next candidates: the 7 remaining empty-stub stars in the
+B3350 tail (`func_800C9EA0` @ 0xBA6A0 first — see
 `docs/ai_context/B3350_TRIAGE.md`), all ROM-verified `jr $ra`/`nop` bodies
 in the proven-matchable class. Oracle:
 
@@ -206,6 +208,11 @@ build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5U result — `func_800C9260` (2026-07-09):** VRAM `0x800C9260` / file
+`0xB9A60` / size `0x8`. Empty `jr`/`nop` stub, second mid-tail carve (from
+`B8A70.s`): prefix `0xFF0`, C `0x8`, resume `B9A68.s` `0x134D98` (sums to
+prior `0x135D90`). Scratch + production **EXACT MATCH**.
 
 **Phase 5T result — `func_800C8268` (2026-07-09):** VRAM `0x800C8268` / file
 `0xB8A68` / size `0x8`. Empty `jr`/`nop` stub, first mid-`B3350` carve:
@@ -502,6 +509,13 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-09: **Phase 5U eighteenth C leaf integrated.** Branch
+  `phase5u-func-800C9260` from `main` (after PR #27 / 5T). Converted
+  `func_800C9260` (empty stub, file `0xB9A60`, size `0x8`, from the 5T
+  triage star list; ROM bytes + scratch probe re-verified): config carve
+  `[0xB9A60, c]` + `[0xB9A68, asm]`, `src/func_800C9260.c`, build/verify
+  script updates. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**;
+  `verify_us.sh` exit 0 reporting Phase 5U eighteen leaves.
 - 2026-07-09: **Phase 5T seventeenth C leaf integrated.** Branch
   `phase5t-func-800C8268` from `main` (after PR #26 / 5S). Full triage of
   the `B3350.s` tail (344 functions; parser + 344/344 adversarial
