@@ -141,5 +141,9 @@ segments:
       # File span 0xBDAE4–0xBDAEC exclusive. Empty jr/nop stub (CD2DC twin).
       - [0xBDAE4, c, func_800CD2E4]
       - [0xBDAEC, asm]
+      # Phase 5Z: C leaf func_800CD59C — VRAM 0x800CD59C, size 0x8.
+      # File span 0xBDD9C–0xBDDA4 exclusive. Empty jr/nop stub.
+      - [0xBDD9C, c, func_800CD59C]
+      - [0xBDDA4, asm]
   # End of file: 0x1EE800 = 2,025,472 bytes (verified size).
   - [0x1EE800]

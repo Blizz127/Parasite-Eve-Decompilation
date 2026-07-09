@@ -6,14 +6,15 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5Y — `func_800CD2E4` integrated (twenty-second matching C leaf)**
-(branch `phase5x-func-800CD2E4`). Phase 5X merged (includes `func_800CD2DC`).
-Phase 5I/5H parked. Twenty-two matching C leaves on this branch. B3350 tail
-fully triaged — see `docs/ai_context/B3350_TRIAGE.md`; sb-stub family
-parked; 3 more empty-stub star candidates remain (next: see B3350_TRIAGE.md).
+**Phase 5Z — `func_800CD59C` integrated (twenty-third matching C leaf)**
+(branch `phase5z-func-800CD59C`). Phase 5X+Y merged (includes `func_800CD2DC` /
+`func_800CD2E4`). Phase 5I/5H parked. Twenty-three matching C leaves on this
+branch. B3350 tail fully triaged — see `docs/ai_context/B3350_TRIAGE.md`;
+sb-stub family parked; 2 more empty-stub star candidates remain (next: see
+B3350_TRIAGE.md).
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (twenty-two leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (twenty-three leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -58,6 +59,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0xBDADC,   c, func_800CD2DC]  VRAM 0x800CD2DC, size 0x8 (Phase 5X)
 [0xBDAE4,   c, func_800CD2E4]  VRAM 0x800CD2E4, size 0x8 (Phase 5Y)
 [0xBDAEC,   asm]
+[0xBDD9C,   c, func_800CD59C]  VRAM 0x800CD59C, size 0x8 (Phase 5Z)
+[0xBDDA4,   asm]
 ```
 
 **Prior on `main`:** Phase 5F (PR #14), 5E–5B, 4J–4G, Phase 3 parked boundaries.
