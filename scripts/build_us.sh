@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Phase 5W: Disc 1 rebuild with twenty C leaves
-# (8F694, 8F868, 8F880, 8FCB4, 904A0, 904AC, 904B4, 904BC, 906B4, 90A0C, 90C38, 90C4C, 90C60, 90C74, 90F54, C2B40, C8268, C9260, C9EA0, CACD4).
+# Phase 5Y: Disc 1 rebuild with twenty-two C leaves
+# (8F694, 8F868, 8F880, 8FCB4, 904A0, 904AC, 904B4, 904BC, 906B4, 90A0C, 90C38, 90C4C, 90C60, 90C74, 90F54, C2B40, C8268, C9260, C9EA0, CACD4, CD2DC, CD2E4).
 #
 # Assembles splat-generated .s → .o with MIPS LE binutils, compiles the
 # production C units with documented GCC flags, links in ROM order, packs a
@@ -55,7 +55,7 @@ ASFLAGS_DEFAULT="-EL -mips1 -mabi=32"
 # Phase 4J: exact 5-instruction match for func_80090C38 with these flags.
 CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestanding -fno-builtin -O1"
 
-# Phase 5W file-span sizes (config subsegment edges; exclusive end).
+# Phase 5Y file-span sizes (config subsegment edges; exclusive end).
 # 2A0C:     0x2A0C  → 0x7FE94 = 0x7D488
 # C 8F694:  0x7FE94 → 0x7FEA8 = 0x14
 # 7FEA8:    0x7FEA8 → 0x80068 = 0x1C0
@@ -91,7 +91,10 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # C C9EA0:  0xBA6A0 → 0xBA6A8 = 0x8
 # BA6A8:    0xBA6A8 → 0xBB4D4 = 0xE2C
 # C CACD4:  0xBB4D4 → 0xBB4DC = 0x8
-# BB4DC:    0xBB4DC → 0x1EE800 = 0x133324
+# BB4DC:    0xBB4DC → 0xBDADC = 0x2600
+# C CD2DC:  0xBDADC → 0xBDAE4 = 0x8
+# C CD2E4:  0xBDAE4 → 0xBDAEC = 0x8
+# BDAEC:    0xBDAEC → 0x1EE800 = 0x130D14
 # 818A0.rodata: 0x818A0 → 0xB2AF8 = 0x31258
 SIZE_2A0C=0x7D488
 SIZE_7FEA8=0x1C0
@@ -114,6 +117,8 @@ SIZE_C_C8268=0x8
 SIZE_C_C9260=0x8
 SIZE_C_C9EA0=0x8
 SIZE_C_CACD4=0x8
+SIZE_C_CD2DC=0x8
+SIZE_C_CD2E4=0x8
 SIZE_81488=0x2CC
 SIZE_81768=0x138
 SIZE_800_RODATA=0x220C
@@ -122,7 +127,8 @@ SIZE_B3350=0x5718
 SIZE_B8A70=0xFF0
 SIZE_B9A68=0xC38
 SIZE_BA6A8=0xE2C
-SIZE_BB4DC=0x133324
+SIZE_BB4DC=0x2600
+SIZE_BDAEC=0x130D14
 SIZE_818A0_RODATA=0x31258
 
 # Object paths (ROM-order units; splat ld is still C-layout and unused for link).
@@ -165,6 +171,9 @@ OBJECTS=(
     "build/asm/disc1/BA6A8.s.o"
     "build/src/func_800CACD4.c.o"
     "build/asm/disc1/BB4DC.s.o"
+    "build/src/func_800CD2DC.c.o"
+    "build/src/func_800CD2E4.c.o"
+    "build/asm/disc1/BDAEC.s.o"
 )
 SOURCES=(
     "asm/disc1/header.s"
@@ -205,6 +214,9 @@ SOURCES=(
     "asm/disc1/BA6A8.s"
     "src/func_800CACD4.c"
     "asm/disc1/BB4DC.s"
+    "src/func_800CD2DC.c"
+    "src/func_800CD2E4.c"
+    "asm/disc1/BDAEC.s"
 )
 
 die() { echo "ERROR: $*" >&2; exit 1; }
@@ -295,9 +307,10 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/B8A70.s.o      
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/B9A68.s.o             asm/disc1/B9A68.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BA6A8.s.o             asm/disc1/BA6A8.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BB4DC.s.o             asm/disc1/BB4DC.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BDAEC.s.o             asm/disc1/BDAEC.s
 
 # --- compile C leaves ---
-step "Compile C leaves (twenty C leaves total incl. func_800C2B40 / func_800C8268 / func_800C9260 / func_800C9EA0 / func_800CACD4)"
+step "Compile C leaves (twenty-two C leaves total incl. func_800C2B40 / func_800C8268 / func_800C9260 / func_800C9EA0 / func_800CACD4 / func_800CD2DC / func_800CD2E4)"
 # shellcheck disable=SC2086
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8008F694.c.o src/func_8008F694.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8008F868.c.o src/func_8008F868.c
@@ -319,6 +332,8 @@ run "$CC" $CFLAGS_LEAF -c -o build/src/func_800C8268.c.o src/func_800C8268.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800C9260.c.o src/func_800C9260.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800C9EA0.c.o src/func_800C9EA0.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800CACD4.c.o src/func_800CACD4.c
+run "$CC" $CFLAGS_LEAF -c -o build/src/func_800CD2DC.c.o src/func_800CD2DC.c
+run "$CC" $CFLAGS_LEAF -c -o build/src/func_800CD2E4.c.o src/func_800CD2E4.c
 
 for o in "${OBJECTS[@]}"; do
     [[ -f "$o" ]] || die "build failed: missing $o"
@@ -369,6 +384,9 @@ python3 "$TRIM" build/src/func_800C9EA0.c.o .text "$SIZE_C_C9EA0"
 python3 "$TRIM" build/asm/disc1/BA6A8.s.o .text "$SIZE_BA6A8"
 python3 "$TRIM" build/src/func_800CACD4.c.o .text "$SIZE_C_CACD4"
 python3 "$TRIM" build/asm/disc1/BB4DC.s.o .text "$SIZE_BB4DC"
+python3 "$TRIM" build/src/func_800CD2DC.c.o .text "$SIZE_C_CD2DC"
+python3 "$TRIM" build/src/func_800CD2E4.c.o .text "$SIZE_C_CD2E4"
+python3 "$TRIM" build/asm/disc1/BDAEC.s.o .text "$SIZE_BDAEC"
 # 818A0.rodata and header already exact; still force align 4 if needed
 python3 "$TRIM" build/asm/disc1/data/818A0.rodata.s.o .rodata "$SIZE_818A0_RODATA" || true
 python3 "$TRIM" build/asm/disc1/header.s.o .data 0x800 || true
@@ -397,7 +415,7 @@ ABS_LD="build/abs_syms.ld"
 # all .rodata) and is not used for the production pack.
 ROM_ORDER_LD="build/disc1_romorder.ld"
 cat >"$ROM_ORDER_LD" <<'LDEOF'
-/* Phase 5W ROM-order link script (twenty C leaves).
+/* Phase 5Y ROM-order link script (twenty-two C leaves).
  * splat's linkers/disc1.ld places all .text then all .rodata (C layout).
  * PE1 image order is interleaved: prefix rodata, main text (with C leaves),
  * mid rodata, tail text (with C leaf).
@@ -449,6 +467,9 @@ SECTIONS
         build/asm/disc1/BA6A8.s.o(.text)
         build/src/func_800CACD4.c.o(.text)
         build/asm/disc1/BB4DC.s.o(.text)
+        build/src/func_800CD2DC.c.o(.text)
+        build/src/func_800CD2E4.c.o(.text)
+        build/asm/disc1/BDAEC.s.o(.text)
         build/asm/disc1/2A0C.s.o(.data)
         build/src/func_8008F694.c.o(.data)
         build/asm/disc1/7FEA8.s.o(.data)
@@ -484,6 +505,9 @@ SECTIONS
         build/asm/disc1/BA6A8.s.o(.data)
         build/src/func_800CACD4.c.o(.data)
         build/asm/disc1/BB4DC.s.o(.data)
+        build/src/func_800CD2DC.c.o(.data)
+        build/src/func_800CD2E4.c.o(.data)
+        build/asm/disc1/BDAEC.s.o(.data)
         build/asm/disc1/2A0C.s.o(.rodata)
         build/src/func_8008F694.c.o(.rodata)
         build/asm/disc1/7FEA8.s.o(.rodata)
@@ -519,6 +543,9 @@ SECTIONS
         build/asm/disc1/BA6A8.s.o(.rodata)
         build/src/func_800CACD4.c.o(.rodata)
         build/asm/disc1/BB4DC.s.o(.rodata)
+        build/src/func_800CD2DC.c.o(.rodata)
+        build/src/func_800CD2E4.c.o(.rodata)
+        build/asm/disc1/BDAEC.s.o(.rodata)
         build/asm/disc1/2A0C.s.o(.bss)
         build/src/func_8008F694.c.o(.bss)
         build/asm/disc1/7FEA8.s.o(.bss)
@@ -554,6 +581,9 @@ SECTIONS
         build/asm/disc1/BA6A8.s.o(.bss)
         build/src/func_800CACD4.c.o(.bss)
         build/asm/disc1/BB4DC.s.o(.bss)
+        build/src/func_800CD2DC.c.o(.bss)
+        build/src/func_800CD2E4.c.o(.bss)
+        build/asm/disc1/BDAEC.s.o(.bss)
     }
 
     /DISCARD/ : { *(*); }
@@ -662,6 +692,10 @@ leaf9 = slice(0xBA6A0, 0xBA6A8)
 print(f"  probe file 0xBA6A0 (C9EA0): cand={cand[leaf9].hex()} orig={orig[leaf9].hex()}")
 leaf10 = slice(0xBB4D4, 0xBB4DC)
 print(f"  probe file 0xBB4D4 (CACD4): cand={cand[leaf10].hex()} orig={orig[leaf10].hex()}")
+leaf11 = slice(0xBDADC, 0xBDAE4)
+print(f"  probe file 0xBDADC (CD2DC): cand={cand[leaf11].hex()} orig={orig[leaf11].hex()}")
+leaf12 = slice(0xBDAE4, 0xBDAEC)
+print(f"  probe file 0xBDAE4 (CD2E4): cand={cand[leaf12].hex()} orig={orig[leaf12].hex()}")
 if cand == orig:
     print("  RESULT: EXACT MATCH")
     sys.exit(0)
@@ -682,13 +716,13 @@ set -e
 echo
 echo "=== Summary ==="
 echo "Assemble: OK (18 asm units)"
-echo "Compile:  OK (twenty C leaves with Phase 4J flags)"
+echo "Compile:  OK (twenty-two C leaves with Phase 4J flags)"
 echo "Pad trim: OK (incl. C .text pad strip for 0x14/0x18/0x30/0xC/0x8/0x10 bodies)"
 echo "Link:     OK (ROM-order ld script + absolute symbol workarounds)"
 echo "Pack:     OK (build/disc1.candidate.exe, size 0x1EE800)"
 if [[ "$cmp_ec" -eq 0 ]]; then
     echo "Compare:  EXACT SHA-1 MATCH"
-    echo "Matching claim: YES (twenty C leaves + remaining asm)"
+    echo "Matching claim: YES (twenty-two C leaves + remaining asm)"
     echo "Artifacts (git-ignored): build/asm/**/*.o build/src/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 0
 else
