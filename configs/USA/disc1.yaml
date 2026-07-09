@@ -62,6 +62,10 @@ segments:
       # File span 0x41518–0x41520 exclusive. Empty jr/nop stub (second mid-2A0C).
       - [0x41518, c, func_80050D18]
       - [0x41520, asm]
+      # Phase 5AG: C leaf func_800527C0 — VRAM 0x800527C0, size 0x8.
+      # File span 0x42FC0–0x42FC8 exclusive. Empty jr/nop stub.
+      - [0x42FC0, c, func_800527C0]
+      - [0x42FC8, asm]
       # Phase 5K: C leaf func_8008F694 — VRAM 0x8008F694, size 0x14.
       # File span 0x7FE94–0x7FEA8 exclusive. Increment *(unsigned int *)arg0 by 2.
       - [0x7FE94, c, func_8008F694]
