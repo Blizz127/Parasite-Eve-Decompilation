@@ -1,16 +1,16 @@
-# Disc 1 First Decomp Targets Triage (Phase 4C / Phase 5B–5R update)
+# Disc 1 First Decomp Targets Triage (Phase 4C / Phase 5B–5S update)
 
 Conservative shortlist of safest initial candidates for C conversion.
 Originally docs-only (Phase 4C).
-**Phase 5B–5R:** fifteen production C leaves (exact SHA-1 each).
+**Phase 5B–5S:** sixteen production C leaves (exact SHA-1 each).
 
-## Repo state (Phase 5R)
+## Repo state (Phase 5S)
 
-- Branch: `phase5r-func-800904BC`
+- Branch: `phase5s-func-800906B4`
 - Converted C: `src/func_8008F694.c`, `src/func_8008F868.c`,
   `src/func_8008F880.c`, `src/func_8008FCB4.c`, `src/func_800904A0.c`,
   `src/func_800904AC.c`, `src/func_800904B4.c`, `src/func_800904BC.c`,
-  `src/func_80090A0C.c`, `src/func_80090C38.c`, `src/func_80090C4C.c`,
+  `src/func_800906B4.c`, `src/func_80090A0C.c`, `src/func_80090C38.c`, `src/func_80090C4C.c`,
   `src/func_80090C60.c`, `src/func_80090C74.c`, `src/func_80090F54.c`,
   `src/func_800C2B40.c`
 - Production split map:
@@ -28,7 +28,9 @@ Originally docs-only (Phase 4C).
   [0x80CAC,   c, func_800904AC]  VRAM 0x800904AC, size 0x8
   [0x80CB4,   c, func_800904B4]  VRAM 0x800904B4, size 0x8
   [0x80CBC,   c, func_800904BC]  VRAM 0x800904BC, size 0x8
-  [0x80CC4,   asm]     resume through func_800909C0 / 80090xxx cluster
+  [0x80CC4,   asm]     parked 904C4 + 90574–9068C stream twins
+  [0x80EB4,   c, func_800906B4]  VRAM 0x800906B4, size 0x30
+  [0x80EE4,   asm]     resume through func_800909C0 / 80090xxx cluster
   [0x8120C,   c, func_80090A0C]  VRAM 0x80090A0C, size 0x14
   [0x81220,   asm]     resume through func_80090BCC
   [0x81438,   c, func_80090C38]  VRAM 0x80090C38, size 0x14
@@ -73,6 +75,7 @@ Originally docs-only (Phase 4C).
 | func_800904AC | 0x800904AC | **C: src/func_800904AC.c** | 0x8 | low | 0 | yes | none | none | empty `jr`/`nop` stub | high | **DONE Phase 5P — exact match** |
 | func_800904B4 | 0x800904B4 | **C: src/func_800904B4.c** | 0x8 | low | 0 | yes | none | none | empty `jr`/`nop` stub | high | **DONE Phase 5Q — exact match** |
 | func_800904BC | 0x800904BC | **C: src/func_800904BC.c** | 0x8 | low | 0 | yes | none | none | empty `jr`/`nop` stub | high | **DONE Phase 5R — exact match** |
+| func_800906B4 | 0x800906B4 | **C: src/func_800906B4.c** | 0x30 | low | 0 | yes | none | none | stream+OR +0x38/0xF4, store +0x116 | high | **DONE Phase 5S — exact match** |
 | func_80090A0C | 0x80090A0C | **C: src/func_80090A0C.c** | 0x14 | low (0 direct) | 0 | yes | none (arg + immediate) | none | Bit clear 0x8 on field @0x38(a0) | high | **DONE Phase 5J — exact match** |
 | func_80090C38 | 0x80090C38 | **C: src/func_80090C38.c** | 0x14 (~5 instr) | low (0 direct seen) | 0 | yes | none (arg + immediate const) | none (linear) | Bit set on struct field @0x38(a0) | high | **DONE Phase 5B — exact match** |
 | func_80090C4C | 0x80090C4C | **C: src/func_80090C4C.c** | 0x14 | low (0 direct) | 0 | yes | none (arg + immediate) | none | Bit clear mask on same field | high | **DONE Phase 5C — exact match** |
