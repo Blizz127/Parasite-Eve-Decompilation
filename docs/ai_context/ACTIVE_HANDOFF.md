@@ -6,10 +6,14 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5G — sixth C leaf integrated** (branch `phase5g-next-c-leaf`).
-Production rebuild includes six matching C functions: five 90Cxx/90F54 leaves
-plus tail leaf `func_800C2B40`. Oracle `scripts/build_us.sh` exits 0 with exact
-SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+**Phase 5H — `func_800C2B10` blocked (codegen schedule)** (branch
+`phase5h-next-tail-leaf`). Phase 5G is on `main` (PR #15). Six matching C
+leaves remain production. Attempted next tail leaf `func_800C2B10` does **not**
+match under modern GCC 14.2 with Phase 4J flags — instruction schedule differs
+from ROM. No C/config change applied. Sibling `func_800C2B28` **not** started.
+
+Oracle still: `scripts/build_us.sh` exits 0 with exact SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (six leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -165,7 +169,7 @@ post-split `git status` check.
 
 ## Next concrete step
 
-**Milestone:** six matching C leaves. Oracle still:
+**Milestone:** six matching C leaves on `main` (PR #15). Oracle still:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
@@ -173,13 +177,45 @@ verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
 
-1. **Merge Phase 5G** (`phase5g-next-c-leaf`) to `main`.
-2. **Next C candidate:** sibling tail leaf `func_800C2B10` / `func_800C2B28`
-   (same D_800E2248 table) — one function only if still leaf-safe.
-3. Host PATH still has no mipsel tools; C/as/ld stay in Distrobox `pe-mipsel`.
-4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
-5. Do **not** invent semantic names for D_800E2248 / +0x70 yet.
-6. PC port remains out of scope until systems coverage is meaningful.
+### Phase 5H blocker — `func_800C2B10` (2026-07-08)
+
+Target: VRAM `0x800C2B10` / file `0xB3310` / size `0x18` in `asm/disc1/B2AF8.s`.
+Leaf (no `jal`), uses raw extern `D_800E2248`. Original words:
+
+```text
+sll   $a0, $a0, 2
+lui   $v0, %hi(D_800E2248)
+lw    $v0, %lo(D_800E2248)($v0)
+addiu $a0, $a0, 0x8
+jr    $ra
+addu  $v0, $v0, $a0
+```
+
+ROM hex: `802004000e80023c4822428c080084240800e00321104400`
+
+GCC 14.2 (`pe-mipsel`) with Phase 4J flags never emits that schedule. Closest
+0x18-byte bodies (same ops, wrong order):
+
+| Flags | Emitted order |
+| --- | --- |
+| `-O1` / `-O1 -fno-schedule-insns*` | `sll`, `addiu 8`, `lui/lw`, `jr`, `addu` |
+| `-O2` / `-Os` / `-O1 -fschedule-insns*` | `lui/lw`, `sll`, `addiu 8`, `jr`, `addu` |
+
+Tried multiple C shapes (`return D_800E2248 + (arg0<<2) + 8`, staged temps,
+`&base[off+8]`, `volatile`, etc.) and schedule/delay-slot flag variants. No
+exact word match. **Stop.** Do not integrate. Do not auto-switch to
+`func_800C2B28` (same pattern, same risk).
+
+**Decision (2026-07-08):** park the `D_800E2248` accessor siblings
+(`func_800C2B10`, `func_800C2B28`) until era-matching compiler / maspsx is
+tested. Keep momentum with a **different GCC-friendly leaf** outside that
+pattern. One function only; exact SHA-1 or stop.
+
+1. After this docs PR merges: pick next C target outside the accessor cluster.
+2. Host PATH still has no mipsel tools; C/as/ld stay in Distrobox `pe-mipsel`.
+3. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
+4. Do **not** invent semantic names for `D_800E2248` / offsets yet.
+5. PC port remains out of scope until systems coverage is meaningful.
 
 ### Phase 3 boundary audit (2026-07-07)
 
@@ -574,4 +610,13 @@ pc0/`0xB2AF8` each time.
   - first leaf outside the 90Cxx cluster (tail B2AF8)
   - config: `[0xB3340, c, func_800C2B40]` + `[0xB3350, asm]`
   Validation: probe + production **EXACT MATCH**. Commit:
-  "Convert next Disc 1 leaf function to C".
+  "Convert next Disc 1 leaf function to C". Merged as PR #15 (`602087f`).
+- 2026-07-08: **Phase 5H `func_800C2B10` blocked.** Branch
+  `phase5h-next-tail-leaf` from `main` after PR #15. Post-merge
+  `split_us.sh --check` / `verify_us.sh` / `build_us.sh` all OK (exact SHA-1).
+  Probed `func_800C2B10` (0x18, `D_800E2248 + (arg0<<2) + 8`) under GCC 14.2
+  Phase 4J flags: ops match but instruction schedule never matches ROM
+  (`sll→lui/lw→addiu` vs GCC `sll→addiu→lui/lw` or `lui/lw→sll→addiu`).
+  No C/config change. Did **not** start `func_800C2B28`. Docs-only blocker.
+  Explicit decision: park `D_800E2248` accessor siblings; next leaf must be
+  outside that pattern (GCC-friendly) until era toolchain/maspsx.
