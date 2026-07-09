@@ -53,6 +53,10 @@ segments:
     subsegments:
       - [0x800, rodata]
       - [0x2A0C, asm]
+      # Phase 5J: C leaf func_80090A0C — VRAM 0x80090A0C, size 0x14.
+      # File span 0x8120C–0x81220 exclusive. Bit-clear 0x8 at *(arg0+0x38).
+      - [0x8120C, c, func_80090A0C]
+      - [0x81220, asm]
       # Phase 5B: C leaf func_80090C38 — VRAM 0x80090C38, size 0x14.
       # File span 0x81438–0x8144C exclusive. Proven GCC 14.2 match in Phase 4J.
       - [0x81438, c, func_80090C38]

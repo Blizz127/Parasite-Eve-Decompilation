@@ -37,10 +37,12 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5G: six C leaves.
+# Current production subsegments (file offsets). Phase 5J: seven C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
+    '[0x8120C, c, func_80090A0C]'
+    '[0x81220, asm]'
     '[0x81438, c, func_80090C38]'
     '[0x8144C, c, func_80090C4C]'
     '[0x81460, c, func_80090C60]'
@@ -58,12 +60,14 @@ EXPECTED_SUBSEGMENTS=(
 EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
+    "asm/disc1/81220.s"
     "asm/disc1/81488.s"
     "asm/disc1/81768.s"
     "asm/disc1/B2AF8.s"
     "asm/disc1/B3350.s"
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
+    "src/func_80090A0C.c"
     "src/func_80090C38.c"
     "src/func_80090C4C.c"
     "src/func_80090C60.c"
@@ -257,7 +261,11 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+if [[ -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5J — seven leaves (+ func_800C2B40 in tail)"
+    echo "  sources: src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c"
+    echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
+elif [[ -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
     echo "C conversion: Phase 5G — six leaves (+ func_800C2B40 in tail)"
     echo "  sources: src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c"
     echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"

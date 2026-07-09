@@ -6,21 +6,21 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5I — `func_800C7DC4` blocked (delay-slot encoding)** (branch
-`phase5i-next-gcc-friendly-leaf`). Phase 5H parked on `main` (PR #16). Six
-matching C leaves remain production. Attempted GCC-friendly tail leaf
-`func_800C7DC4` (outside `D_800E2248` accessor cluster): probe looked exact,
-but production rebuild differs by **1 byte** at file `0xB85D0` — GCC 14.2 emits
-`move`/`or` in the `jr` delay slot vs ROM `addu`. No C/config change applied.
+**Phase 5J — `func_80090A0C` integrated (seventh matching C leaf)** (branch
+`phase5j-func-80090A0C`). Phase 5I parked on `phase5i-next-gcc-friendly-leaf`
+(delay-slot `addu` vs `move`). Phase 5H parked on `main` (PR #16). Seven
+matching C leaves on this branch.
 
-Oracle still: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (six leaves).
+Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (seven leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
 ```text
 [0x800,     rodata]
 [0x2A0C,    asm]
+[0x8120C,   c, func_80090A0C]  VRAM 0x80090A0C, size 0x14 (Phase 5J)
+[0x81220,   asm]
 [0x81438,   c, func_80090C38]
 [0x8144C,   c, func_80090C4C]
 [0x81460,   c, func_80090C60]
@@ -166,17 +166,25 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5G done:** six production C leaves (incl. tail `func_800C2B40`).
+  **Phase 5B–5J done:** seven production C leaves (incl. early 90Cxx sibling
+  `func_80090A0C` and tail `func_800C2B40`).
 
 ## Next concrete step
 
-**Milestone:** six matching C leaves on `main` (PR #15). Oracle still:
+**Milestone:** seven matching C leaves on branch `phase5j-func-80090A0C`
+(ready for PR). Oracle:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5J result — `func_80090A0C` (2026-07-08):** VRAM `0x80090A0C` / file
+`0x8120C` / size `0x14`. First unconverted 90Cxx sibling (bit-clear `0x8` at
+`*(arg0+0x38)`). Mid-`2A0C.s` cut: asm prefix `0x7E800`, C `0x14`, resume asm
+`81220.s` `0x218`. Scratch + production **EXACT MATCH**. File-span math note:
+`0x8120C - 0x2A0C = 0x7E800` (not `0x7E700`).
 
 ### Phase 5H blocker — `func_800C2B10` (2026-07-08)
 
@@ -650,6 +658,15 @@ pc0/`0xB2AF8` each time.
   No C/config change. Did **not** start `func_800C2B28`. Docs-only blocker.
   Explicit decision: park `D_800E2248` accessor siblings; next leaf must be
   outside that pattern (GCC-friendly) until era toolchain/maspsx.
+- 2026-07-08: **Phase 5J seventh C leaf integrated.** Branch
+  `phase5j-func-80090A0C` from `phase5i-next-gcc-friendly-leaf`. Converted
+  **only** `func_80090A0C` (bit-clear `0x8` at `*(arg0+0x38)`, earliest 90Cxx
+  sibling still in asm on six-leaf `main`):
+  - `src/func_80090A0C.c`
+  - config: `[0x8120C, c, func_80090A0C]` + `[0x81220, asm]`; shortened `2A0C.s`
+  - build: third ROM-order asm unit `81220.s`; spans `0x7E800` + `0x14` + `0x218`
+  Validation: scratch + `build_us.sh` exit 0 **EXACT MATCH** (probe `0x8120C`).
+  Commit: "Convert func_80090A0C to C".
 - 2026-07-08: **Phase 5I `func_800C7DC4` blocked.** Branch
   `phase5i-next-gcc-friendly-leaf` from `main` after PR #16. Post-merge gates
   OK (six leaves, exact SHA-1). Selected `func_800C7DC4` (0x10, no globals,

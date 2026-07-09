@@ -1,18 +1,21 @@
-# Disc 1 First Decomp Targets Triage (Phase 4C / Phase 5B–5F update)
+# Disc 1 First Decomp Targets Triage (Phase 4C / Phase 5B–5J update)
 
 Conservative shortlist of safest initial candidates for C conversion.
 Originally docs-only (Phase 4C).
-**Phase 5B–5F:** five production C leaves (exact SHA-1 each).
+**Phase 5B–5J:** seven production C leaves (exact SHA-1 each).
 
-## Repo state (Phase 5F)
+## Repo state (Phase 5J)
 
-- Branch: `phase5f-next-c-leaf`
-- Converted C: `src/func_80090C38.c`, `src/func_80090C4C.c`,
-  `src/func_80090C60.c`, `src/func_80090C74.c`, `src/func_80090F54.c`
+- Branch: `phase5j-func-80090A0C`
+- Converted C: `src/func_80090A0C.c`, `src/func_80090C38.c`,
+  `src/func_80090C4C.c`, `src/func_80090C60.c`, `src/func_80090C74.c`,
+  `src/func_80090F54.c`, `src/func_800C2B40.c`
 - Production split map:
   ```
   [0x800,     rodata]  prefix jump tables + strings
-  [0x2A0C,    asm]     main text through func_80090BCC
+  [0x2A0C,    asm]     main text through func_800909C0
+  [0x8120C,   c, func_80090A0C]  VRAM 0x80090A0C, size 0x14
+  [0x81220,   asm]     resume through func_80090BCC
   [0x81438,   c, func_80090C38]  VRAM 0x80090C38, size 0x14
   [0x8144C,   c, func_80090C4C]  VRAM 0x80090C4C, size 0x14
   [0x81460,   c, func_80090C60]  VRAM 0x80090C60, size 0x14
@@ -22,6 +25,8 @@ Originally docs-only (Phase 4C).
   [0x81768,   asm]     resume through func_80091080
   [0x818A0,   rodata]  mid-image data island
   [0xB2AF8,   asm]     tail code from func_800C22F8
+  [0xB3340,   c, func_800C2B40]  VRAM 0x800C2B40, size 0x10
+  [0xB3350,   asm]
   ```
 - Oracle: `scripts/build_us.sh` exit 0, SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`
 - C flags (Phase 4J): `-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestanding -fno-builtin -O1`
@@ -45,6 +50,7 @@ Originally docs-only (Phase 4C).
 
 | Label | VRAM | Region | Size | Callers (direct approx) | Callees | Leaf? | Globals/rodata | CF complexity | Risk notes | Confidence | Suitability as first C target |
 |-------|------|--------|------|-------------------------|---------|-------|----------------|---------------|------------|------------|-------------------------------|
+| func_80090A0C | 0x80090A0C | **C: src/func_80090A0C.c** | 0x14 | low (0 direct) | 0 | yes | none (arg + immediate) | none | Bit clear 0x8 on field @0x38(a0) | high | **DONE Phase 5J — exact match** |
 | func_80090C38 | 0x80090C38 | **C: src/func_80090C38.c** | 0x14 (~5 instr) | low (0 direct seen) | 0 | yes | none (arg + immediate const) | none (linear) | Bit set on struct field @0x38(a0) | high | **DONE Phase 5B — exact match** |
 | func_80090C4C | 0x80090C4C | **C: src/func_80090C4C.c** | 0x14 | low (0 direct) | 0 | yes | none (arg + immediate) | none | Bit clear mask on same field | high | **DONE Phase 5C — exact match** |
 | func_80090C60 | 0x80090C60 | **C: src/func_80090C60.c** | 0x14 | low | 0 | yes | none | none | Bit set (0x20 variant) | high | **DONE Phase 5E — exact match** |
