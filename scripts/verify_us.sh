@@ -37,12 +37,14 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5K: eight C leaves.
+# Current production subsegments (file offsets). Phase 5L: nine C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
     '[0x7FE94, c, func_8008F694]'
     '[0x7FEA8, asm]'
+    '[0x80068, c, func_8008F868]'
+    '[0x80080, asm]'
     '[0x8120C, c, func_80090A0C]'
     '[0x81220, asm]'
     '[0x81438, c, func_80090C38]'
@@ -63,6 +65,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
     "asm/disc1/7FEA8.s"
+    "asm/disc1/80080.s"
     "asm/disc1/81220.s"
     "asm/disc1/81488.s"
     "asm/disc1/81768.s"
@@ -71,6 +74,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
     "src/func_8008F694.c"
+    "src/func_8008F868.c"
     "src/func_80090A0C.c"
     "src/func_80090C38.c"
     "src/func_80090C4C.c"
@@ -265,7 +269,11 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+if [[ -f "$ROOT/src/func_8008F868.c" && -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5L — nine leaves (+ func_800C2B40 in tail)"
+    echo "  sources: src/func_8008F694.c src/func_8008F868.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c"
+    echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
+elif [[ -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
     echo "C conversion: Phase 5K — eight leaves (+ func_800C2B40 in tail)"
     echo "  sources: src/func_8008F694.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c"
     echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
