@@ -210,10 +210,12 @@ All exact SHA-1 via `scripts/build_us.sh`. No semantic struct/field names yet.
 
 ## Recommended next target
 
-**Phase 5H blocked:** `func_800C2B10` does not match under GCC 14.2 (instruction
-schedule). Sibling `func_800C2B28` is the same pattern — do **not** auto-start it.
-Pick a different leaf, or revisit with era-matching compiler / maspsx later.
-See `ACTIVE_HANDOFF.md` Phase 5H blocker.
+**Parked:** `D_800E2248` accessor siblings (`func_800C2B10`, `func_800C2B28`).
+Phase 5H proved modern GCC 14.2 will not emit the original schedule — do not
+force. Revisit only with era-matching compiler / maspsx.
+
+**Next:** pick a different small GCC-friendly leaf outside that pattern.
+One function only; exact SHA-1 or stop. See `ACTIVE_HANDOFF.md` Phase 5H.
 
 ## Exact next-step instructions for future Phase 5 first C conversion
 

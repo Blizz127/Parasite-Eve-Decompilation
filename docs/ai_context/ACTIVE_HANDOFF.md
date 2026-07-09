@@ -204,10 +204,14 @@ GCC 14.2 (`pe-mipsel`) with Phase 4J flags never emits that schedule. Closest
 Tried multiple C shapes (`return D_800E2248 + (arg0<<2) + 8`, staged temps,
 `&base[off+8]`, `volatile`, etc.) and schedule/delay-slot flag variants. No
 exact word match. **Stop.** Do not integrate. Do not auto-switch to
-`func_800C2B28` (same pattern, same risk) without an explicit decision.
+`func_800C2B28` (same pattern, same risk).
 
-1. Decide next: park `C2B10`/`C2B28` and pick a different leaf, or revisit with
-   era-matching compiler / maspsx later.
+**Decision (2026-07-08):** park the `D_800E2248` accessor siblings
+(`func_800C2B10`, `func_800C2B28`) until era-matching compiler / maspsx is
+tested. Keep momentum with a **different GCC-friendly leaf** outside that
+pattern. One function only; exact SHA-1 or stop.
+
+1. After this docs PR merges: pick next C target outside the accessor cluster.
 2. Host PATH still has no mipsel tools; C/as/ld stay in Distrobox `pe-mipsel`.
 3. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 4. Do **not** invent semantic names for `D_800E2248` / offsets yet.
@@ -614,3 +618,5 @@ pc0/`0xB2AF8` each time.
   Phase 4J flags: ops match but instruction schedule never matches ROM
   (`sll→lui/lw→addiu` vs GCC `sll→addiu→lui/lw` or `lui/lw→sll→addiu`).
   No C/config change. Did **not** start `func_800C2B28`. Docs-only blocker.
+  Explicit decision: park `D_800E2248` accessor siblings; next leaf must be
+  outside that pattern (GCC-friendly) until era toolchain/maspsx.
