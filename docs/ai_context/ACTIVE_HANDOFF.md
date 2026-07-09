@@ -6,15 +6,15 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5N — `func_8008FCB4` integrated (eleventh matching C leaf)** (branch
-`phase5n-func-8008FCB4`). Phase 5M on `phase5m-func-8008F880`. Phase 5L on
-`phase5l-func-8008F868`. Phase 5K on `phase5k-func-8008F694`. Phase 5J on
-`phase5j-func-80090A0C` (PR #17). Phase 5I parked (delay-slot `addu` vs
-`move`). Phase 5H parked on `main` (PR #16). Eleven matching C leaves on this
-branch.
+**Phase 5O — `func_800904A0` integrated (twelfth matching C leaf)** (branch
+`phase5o-func-800904A0`). Phase 5N on `phase5n-func-8008FCB4`. Phase 5M on
+`phase5m-func-8008F880`. Phase 5L on `phase5l-func-8008F868`. Phase 5K on
+`phase5k-func-8008F694`. Phase 5J on `phase5j-func-80090A0C` (PR #17). Phase
+5I parked (delay-slot `addu` vs `move`). Phase 5H parked on `main` (PR #16).
+Twelve matching C leaves on this branch.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (eleven leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (twelve leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -28,6 +28,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x80098,   asm]
 [0x804B4,   c, func_8008FCB4]  VRAM 0x8008FCB4, size 0x8 (Phase 5N)
 [0x804BC,   asm]
+[0x80CA0,   c, func_800904A0]  VRAM 0x800904A0, size 0xC (Phase 5O)
+[0x80CAC,   asm]
 [0x8120C,   c, func_80090A0C]  VRAM 0x80090A0C, size 0x14 (Phase 5J)
 [0x81220,   asm]
 [0x81438,   c, func_80090C38]
@@ -175,13 +177,13 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5N done:** eleven production C leaves (incl. mid-region trio
-  `func_8008F694` / `func_8008F868` / `func_8008F880`, stub `func_8008FCB4`,
-  early 90Cxx `func_80090A0C`, and tail `func_800C2B40`).
+  **Phase 5B–5O done:** twelve production C leaves (incl. mid-region trio
+  `func_8008F694` / `func_8008F868` / `func_8008F880`, stubs `func_8008FCB4` /
+  `func_800904A0`, early 90Cxx `func_80090A0C`, and tail `func_800C2B40`).
 
 ## Next concrete step
 
-**Milestone:** eleven matching C leaves on branch `phase5n-func-8008FCB4`
+**Milestone:** twelve matching C leaves on branch `phase5o-func-800904A0`
 (ready for PR). Oracle:
 
 ```text
@@ -190,11 +192,17 @@ verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
 
+**Phase 5O result — `func_800904A0` (2026-07-09):** VRAM `0x800904A0` / file
+`0x80CA0` / size `0xC`. Store `1` at halfword `arg0+0x84` (`addiu`/`jr`/`sh`).
+Mid-`804BC.s` cut: prefix `0x7E4`, C `0xC`, resume `80CAC.s` `0x560` (sums to
+prior `0xD50`). Scratch + production **EXACT MATCH**. Next easy candidates:
+empty `jr`/`nop` stubs `func_800904AC` / `904B4` / `904BC` at `80CAC` head.
+
 **Phase 5N result — `func_8008FCB4` (2026-07-08):** VRAM `0x8008FCB4` / file
 `0x804B4` / size `0x8`. Zero halfword at `arg0+0x82` (`jr`/`sh $zero`).
-Mid-`80098.s` cut: prefix `0x41C`, C `0x8`, resume `804BC.s` `0xD50` (sums to
-prior `0x1174`). Scratch + production **EXACT MATCH**. Low semantic value
-stub; chosen after nearby stream-reader leaves failed reg-alloc scratch.
+Mid-`80098.s` cut: prefix `0x41C`, C `0x8`, resume `804BC.s` (later carved by
+5O). Scratch + production **EXACT MATCH**. Low semantic value stub; chosen
+after nearby stream-reader leaves failed reg-alloc scratch.
 
 **Phase 5M result — `func_8008F880` (2026-07-08):** VRAM `0x8008F880` / file
 `0x80080` / size `0x18`. Decrement twin of 5L: `*(u16 *)(arg0+0x7C) =
@@ -693,6 +701,14 @@ pc0/`0xB2AF8` each time.
   No C/config change. Did **not** start `func_800C2B28`. Docs-only blocker.
   Explicit decision: park `D_800E2248` accessor siblings; next leaf must be
   outside that pattern (GCC-friendly) until era toolchain/maspsx.
+- 2026-07-09: **Phase 5O twelfth C leaf integrated.** Branch
+  `phase5o-func-800904A0` from `phase5n-func-8008FCB4`. Converted
+  **only** `func_800904A0` (`*(u16 *)(arg0+0x84) = 1`, size 0xC):
+  - `src/func_800904A0.c`
+  - config: `[0x80CA0, c, func_800904A0]` + `[0x80CAC, asm]`
+  - build: spans `0x7E4` + `0xC` + `0x560` (was `0xD50` 804BC span)
+  Validation: scratch + `build_us.sh` exit 0 **EXACT MATCH** (probe `0x80CA0`).
+  Commit: "Convert func_800904A0 to C (exact leaf match)".
 - 2026-07-08: **Phase 5N eleventh C leaf integrated.** Branch
   `phase5n-func-8008FCB4` from `phase5m-func-8008F880`. Converted
   **only** `func_8008FCB4` (`*(u16 *)(arg0+0x82) = 0`, size 0x8):

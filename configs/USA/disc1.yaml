@@ -68,6 +68,10 @@ segments:
       # File span 0x804B4–0x804BC exclusive. Zero halfword at arg0+0x82.
       - [0x804B4, c, func_8008FCB4]
       - [0x804BC, asm]
+      # Phase 5O: C leaf func_800904A0 — VRAM 0x800904A0, size 0xC.
+      # File span 0x80CA0–0x80CAC exclusive. Store 1 at halfword arg0+0x84.
+      - [0x80CA0, c, func_800904A0]
+      - [0x80CAC, asm]
       # Phase 5J: C leaf func_80090A0C — VRAM 0x80090A0C, size 0x14.
       # File span 0x8120C–0x81220 exclusive. Bit-clear 0x8 at *(arg0+0x38).
       - [0x8120C, c, func_80090A0C]
