@@ -52,8 +52,9 @@ Originally docs-only (Phase 4C).
 | func_80090F54 | 0x80090F54 | **C: src/func_80090F54.c** | 0x14 | low (0 direct) | 0 | yes | none (arg + 0x100000 const) | none | Bit set 0x100000 on field | high | **DONE Phase 5D — exact match** |
 | func_800C2B40 | 0x800C2B40 | **C: src/func_800C2B40.c** | 0x10 | low-medium (~ few) | 0 | yes | 1 (D_800E2248 table) | none | Load global table, sw field, return | medium | **DONE Phase 5G — exact match** |
 | func_800C2B10 | 0x800C2B10 | B2AF8.s | 0x18 | ~15 (tail) | 0 | yes | 1 (D_800E2248) | none | Array index calc + return ptr | medium | **BLOCKED Phase 5H** — GCC 14.2 schedule mismatch (see ACTIVE_HANDOFF) |
+| func_800C7DC4 | 0x800C7DC4 | B3350.s | 0x10 | low | 0 | yes | none | none | Store 4 to *arg0; return 0 | medium | **BLOCKED Phase 5I** — delay-slot `addu` vs `move` |
 
-(These 7 are the strongest matches from scans. The 90Cxx/90F54 cluster stands out as near-ideal due to zero side effects visible, pure leaf nature, and location away from anchors/boot.)
+(These 8 are the strongest matches from scans. The 90Cxx/90F54 cluster stands out as near-ideal due to zero side effects visible, pure leaf nature, and location away from anchors/boot.)
 
 **Direct Evidence Verification (pre-commit, manual)**
 
@@ -210,12 +211,14 @@ All exact SHA-1 via `scripts/build_us.sh`. No semantic struct/field names yet.
 
 ## Recommended next target
 
-**Parked:** `D_800E2248` accessor siblings (`func_800C2B10`, `func_800C2B28`).
-Phase 5H proved modern GCC 14.2 will not emit the original schedule — do not
-force. Revisit only with era-matching compiler / maspsx.
+**Parked clusters:**
+- `D_800E2248` accessors (`func_800C2B10`, `func_800C2B28`) — Phase 5H schedule
+- `func_800C7DC4` byte-store/return-0 pattern (+ duplicates `func_800C8F08`,
+  `func_800C9C00`) — Phase 5I delay-slot `addu` vs `move`
 
-**Next:** pick a different small GCC-friendly leaf outside that pattern.
-One function only; exact SHA-1 or stop. See `ACTIVE_HANDOFF.md` Phase 5H.
+**Next:** pick a different small GCC-friendly leaf outside both parked clusters.
+Probe must match in **production rebuild**, not scratch-only. One function only;
+exact SHA-1 or stop. See `ACTIVE_HANDOFF.md` Phase 5H / 5I blockers.
 
 ## Exact next-step instructions for future Phase 5 first C conversion
 

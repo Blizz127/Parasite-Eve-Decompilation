@@ -6,11 +6,12 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5H — `func_800C2B10` blocked (codegen schedule)** (branch
-`phase5h-next-tail-leaf`). Phase 5G is on `main` (PR #15). Six matching C
-leaves remain production. Attempted next tail leaf `func_800C2B10` does **not**
-match under modern GCC 14.2 with Phase 4J flags — instruction schedule differs
-from ROM. No C/config change applied. Sibling `func_800C2B28` **not** started.
+**Phase 5I — `func_800C7DC4` blocked (delay-slot encoding)** (branch
+`phase5i-next-gcc-friendly-leaf`). Phase 5H parked on `main` (PR #16). Six
+matching C leaves remain production. Attempted GCC-friendly tail leaf
+`func_800C7DC4` (outside `D_800E2248` accessor cluster): probe looked exact,
+but production rebuild differs by **1 byte** at file `0xB85D0` — GCC 14.2 emits
+`move`/`or` in the `jr` delay slot vs ROM `addu`. No C/config change applied.
 
 Oracle still: `scripts/build_us.sh` exits 0 with exact SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (six leaves).
@@ -208,13 +209,42 @@ exact word match. **Stop.** Do not integrate. Do not auto-switch to
 
 **Decision (2026-07-08):** park the `D_800E2248` accessor siblings
 (`func_800C2B10`, `func_800C2B28`) until era-matching compiler / maspsx is
-tested. Keep momentum with a **different GCC-friendly leaf** outside that
-pattern. One function only; exact SHA-1 or stop.
+tested.
 
-1. After this docs PR merges: pick next C target outside the accessor cluster.
+### Phase 5I blocker — `func_800C7DC4` (2026-07-08)
+
+Target: VRAM `0x800C7DC4` / file `0xB85C4` / size `0x10` in `asm/disc1/B3350.s`.
+Leaf (no `jal`), no globals — store `4` to `*arg0`, return `0`. Outside the
+parked accessor cluster. Original words:
+
+```text
+addiu $v0, $zero, 4
+sb    $v0, 0($a0)
+jr    $ra
+addu  $v0, $zero, $zero
+```
+
+ROM hex: `04000224000082a00800e00321100000`
+
+Scratch probe under GCC 14.2 Phase 4J flags (`-O1`) appeared exact on first
+three instructions, but production integration after splat cut produced **1-byte
+NON-MATCH** at file `0xB85D0`:
+
+| Source | Delay-slot word @ `0xB85D0` | Encoding |
+| --- | --- | --- |
+| ROM | `0x21100000` | `addu $v0, $zero, $zero` |
+| GCC 14.2 | `0x00001025` | `move $v0, $zero` (`or` pseudo-op) |
+
+Tried `-O0`–`-Os`, inline asm, `noreorder` asm blocks — GCC still prefers `move`
+in the delay slot or adds prologue/epilogue. **Stop.** No config/C committed.
+Duplicate bodies at `func_800C8F08`, `func_800C9C00` (same 0x10-byte pattern)
+are also parked.
+
+1. Pick another GCC-friendly leaf; avoid delay-slot pseudo-op sensitivity when
+   possible (or accept era toolchain / maspsx for these).
 2. Host PATH still has no mipsel tools; C/as/ld stay in Distrobox `pe-mipsel`.
 3. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
-4. Do **not** invent semantic names for `D_800E2248` / offsets yet.
+4. Do **not** invent semantic names for pointer/field targets yet.
 5. PC port remains out of scope until systems coverage is meaningful.
 
 ### Phase 3 boundary audit (2026-07-07)
@@ -620,3 +650,10 @@ pc0/`0xB2AF8` each time.
   No C/config change. Did **not** start `func_800C2B28`. Docs-only blocker.
   Explicit decision: park `D_800E2248` accessor siblings; next leaf must be
   outside that pattern (GCC-friendly) until era toolchain/maspsx.
+- 2026-07-08: **Phase 5I `func_800C7DC4` blocked.** Branch
+  `phase5i-next-gcc-friendly-leaf` from `main` after PR #16. Post-merge gates
+  OK (six leaves, exact SHA-1). Selected `func_800C7DC4` (0x10, no globals,
+  outside accessor cluster). Scratch probe matched; production rebuild
+  **1-byte NON-MATCH** at file `0xB85D0` (`addu` vs `move` in `jr` delay slot).
+  Reverted config/C/build edits; re-split restored six-leaf state. Docs-only
+  blocker. Duplicates `func_800C8F08` / `func_800C9C00` parked with C7DC4.
