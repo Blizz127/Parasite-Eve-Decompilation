@@ -51,7 +51,7 @@ Originally docs-only (Phase 4C).
 | func_80090C74 | 0x80090C74 | **C: src/func_80090C74.c** | 0x14 | low | 0 | yes | none | none | Bit clear variant | high | **DONE Phase 5F — exact match** |
 | func_80090F54 | 0x80090F54 | **C: src/func_80090F54.c** | 0x14 | low (0 direct) | 0 | yes | none (arg + 0x100000 const) | none | Bit set 0x100000 on field | high | **DONE Phase 5D — exact match** |
 | func_800C2B40 | 0x800C2B40 | **C: src/func_800C2B40.c** | 0x10 | low-medium (~ few) | 0 | yes | 1 (D_800E2248 table) | none | Load global table, sw field, return | medium | **DONE Phase 5G — exact match** |
-| func_800C2B10 | 0x800C2B10 | B2AF8.s | 0x18 | ~15 (tail) | 0 | yes | 1 (D_800E2248) | none | Array index calc + return ptr | medium | Small leaf accessor; repeated pattern in tail, note table dep |
+| func_800C2B10 | 0x800C2B10 | B2AF8.s | 0x18 | ~15 (tail) | 0 | yes | 1 (D_800E2248) | none | Array index calc + return ptr | medium | **BLOCKED Phase 5H** — GCC 14.2 schedule mismatch (see ACTIVE_HANDOFF) |
 
 (These 7 are the strongest matches from scans. The 90Cxx/90F54 cluster stands out as near-ideal due to zero side effects visible, pure leaf nature, and location away from anchors/boot.)
 
@@ -210,8 +210,10 @@ All exact SHA-1 via `scripts/build_us.sh`. No semantic struct/field names yet.
 
 ## Recommended next target
 
-**func_800C2B10** or **func_800C2B28** (same D_800E2248 cluster, small leaves).
-One function only when started.
+**Phase 5H blocked:** `func_800C2B10` does not match under GCC 14.2 (instruction
+schedule). Sibling `func_800C2B28` is the same pattern — do **not** auto-start it.
+Pick a different leaf, or revisit with era-matching compiler / maspsx later.
+See `ACTIVE_HANDOFF.md` Phase 5H blocker.
 
 ## Exact next-step instructions for future Phase 5 first C conversion
 
