@@ -6,30 +6,30 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5F — fifth C leaf integrated** (branch `phase5f-next-c-leaf`).
-Production rebuild includes five matching C functions:
-`func_80090C38` + `func_80090C4C` + `func_80090C60` + `func_80090C74` +
-`func_80090F54`. Oracle `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+**Phase 5G — sixth C leaf integrated** (branch `phase5g-next-c-leaf`).
+Production rebuild includes six matching C functions: five 90Cxx/90F54 leaves
+plus tail leaf `func_800C2B40`. Oracle `scripts/build_us.sh` exits 0 with exact
+SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
 ```text
-[0x800,     rodata]  prefix jump tables + strings
-[0x2A0C,    asm]     main text through end of func_80090BCC
-[0x81438,   c, func_80090C38]  VRAM 0x80090C38, size 0x14 (Phase 5B)
-[0x8144C,   c, func_80090C4C]  VRAM 0x80090C4C, size 0x14 (Phase 5C)
-[0x81460,   c, func_80090C60]  VRAM 0x80090C60, size 0x14 (Phase 5E)
-[0x81474,   c, func_80090C74]  VRAM 0x80090C74, size 0x14 (Phase 5F)
-[0x81488,   asm]     through end of func_80090E20
-[0x81754,   c, func_80090F54]  VRAM 0x80090F54, size 0x14 (Phase 5D)
-[0x81768,   asm]     resume through func_80091080
-[0x818A0,   rodata]  mid-image data island
-[0xB2AF8,   asm]     tail code from func_800C22F8
+[0x800,     rodata]
+[0x2A0C,    asm]
+[0x81438,   c, func_80090C38]
+[0x8144C,   c, func_80090C4C]
+[0x81460,   c, func_80090C60]
+[0x81474,   c, func_80090C74]
+[0x81488,   asm]
+[0x81754,   c, func_80090F54]
+[0x81768,   asm]
+[0x818A0,   rodata]
+[0xB2AF8,   asm]
+[0xB3340,   c, func_800C2B40]  VRAM 0x800C2B40, size 0x10 (Phase 5G)
+[0xB3350,   asm]
 ```
 
-**Prior on `main`:** Phase 5E (PR #13), 5D (PR #12), 5C (PR #10), 5B (PR #9),
-4J–4G, Phase 3 parked boundaries (except the local C cuts above).
+**Prior on `main`:** Phase 5F (PR #14), 5E–5B, 4J–4G, Phase 3 parked boundaries.
 
 Phase 1 complete locally; only the official redump cross-check remains open (non-blocking).
 
@@ -161,11 +161,11 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5F done:** five production C leaves (90C38, 90C4C, 90C60, 90C74, 90F54).
+  **Phase 5B–5G done:** six production C leaves (incl. tail `func_800C2B40`).
 
 ## Next concrete step
 
-**Milestone:** five matching C leaves. Oracle still:
+**Milestone:** six matching C leaves. Oracle still:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
@@ -173,28 +173,12 @@ verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
 
-Production map (Phase 5F):
-
-```text
-[0x800,     rodata]
-[0x2A0C,    asm]
-[0x81438,   c, func_80090C38]
-[0x8144C,   c, func_80090C4C]
-[0x81460,   c, func_80090C60]
-[0x81474,   c, func_80090C74]
-[0x81488,   asm]
-[0x81754,   c, func_80090F54]
-[0x81768,   asm]
-[0x818A0,   rodata]
-[0xB2AF8,   asm]
-```
-
-1. **Merge Phase 5F** (`phase5f-next-c-leaf`) to `main`.
-2. **Next C candidate (when ready):** remaining 90Cxx cluster leaves or next
-   safest target from `DISC1_FIRST_DECOMP_TARGETS.md` — one function only.
+1. **Merge Phase 5G** (`phase5g-next-c-leaf`) to `main`.
+2. **Next C candidate:** sibling tail leaf `func_800C2B10` / `func_800C2B28`
+   (same D_800E2248 table) — one function only if still leaf-safe.
 3. Host PATH still has no mipsel tools; C/as/ld stay in Distrobox `pe-mipsel`.
 4. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
-5. Do **not** invent struct/field names for the `+0x38` bits yet; keep temporary types.
+5. Do **not** invent semantic names for D_800E2248 / +0x70 yet.
 6. PC port remains out of scope until systems coverage is meaningful.
 
 ### Phase 3 boundary audit (2026-07-07)
@@ -583,4 +567,11 @@ pc0/`0xB2AF8` each time.
   - build: fifth C object; all five trimmed 0x20→0x14; ROM-order
   Validation: probe codegen exact; `build_us.sh` exit 0 **EXACT MATCH**
   (five leaf probes). No sixth function. Commit:
+  "Convert next Disc 1 leaf function to C". Merged as PR #14 (`61c4efa`).
+- 2026-07-08: **Phase 5G sixth C leaf integrated.** Branch
+  `phase5g-next-c-leaf` from `main` after PR #14. Converted **only**
+  `func_800C2B40` (store `arg0` to `*(D_800E2248+0x70)`, size 0x10):
+  - first leaf outside the 90Cxx cluster (tail B2AF8)
+  - config: `[0xB3340, c, func_800C2B40]` + `[0xB3350, asm]`
+  Validation: probe + production **EXACT MATCH**. Commit:
   "Convert next Disc 1 leaf function to C".
