@@ -53,6 +53,10 @@ segments:
     subsegments:
       - [0x800, rodata]
       - [0x2A0C, asm]
+      # Phase 5K: C leaf func_8008F694 — VRAM 0x8008F694, size 0x14.
+      # File span 0x7FE94–0x7FEA8 exclusive. Increment *(unsigned int *)arg0 by 2.
+      - [0x7FE94, c, func_8008F694]
+      - [0x7FEA8, asm]
       # Phase 5J: C leaf func_80090A0C — VRAM 0x80090A0C, size 0x14.
       # File span 0x8120C–0x81220 exclusive. Bit-clear 0x8 at *(arg0+0x38).
       - [0x8120C, c, func_80090A0C]
