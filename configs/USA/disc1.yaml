@@ -118,5 +118,9 @@ segments:
       # File span 0xB3340–0xB3350 exclusive. Store arg0 to *(D_800E2248+0x70).
       - [0xB3340, c, func_800C2B40]
       - [0xB3350, asm]
+      # Phase 5T: C leaf func_800C8268 — VRAM 0x800C8268, size 0x8.
+      # File span 0xB8A68–0xB8A70 exclusive. Empty jr/nop stub.
+      - [0xB8A68, c, func_800C8268]
+      - [0xB8A70, asm]
   # End of file: 0x1EE800 = 2,025,472 bytes (verified size).
   - [0x1EE800]

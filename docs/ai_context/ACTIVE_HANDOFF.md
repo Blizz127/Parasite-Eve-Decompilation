@@ -6,14 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5S — `func_800906B4` integrated (sixteenth matching C leaf)** (branch
-`phase5s-func-800906B4`). Phase 5R on `phase5r-func-800904BC`. Stack continues
-through 5J (PR #17). Phase 5I/5H parked. Sixteen matching C leaves on this
-branch. Parked in `80CC4` prefix: `904C4` (globals/branches) and the eight
-`90574`–`9068C` stream-reader twins (reg-alloc).
+**Phase 5T — `func_800C8268` integrated (seventeenth matching C leaf)**
+(branch `phase5t-func-800C8268`). Phase 5S merged as PR #26. Phase 5I/5H
+parked. Seventeen matching C leaves on this branch. B3350 tail fully
+triaged (344 functions, adversarially cross-checked) — see
+`docs/ai_context/B3350_TRIAGE.md`; the 8-strong sb-stub star family is
+parked (GCC 14.2 delay-slot schedule mismatch, 5I class); 8 more empty-stub
+star candidates remain available. Parked in `80CC4` prefix: `904C4`
+(globals/branches) and the eight `90574`–`9068C` stream-reader twins
+(reg-alloc).
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (sixteen leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (seventeen leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -47,6 +51,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0xB2AF8,   asm]
 [0xB3340,   c, func_800C2B40]  VRAM 0x800C2B40, size 0x10 (Phase 5G)
 [0xB3350,   asm]
+[0xB8A68,   c, func_800C8268]  VRAM 0x800C8268, size 0x8 (Phase 5T)
+[0xB8A70,   asm]
 ```
 
 **Prior on `main`:** Phase 5F (PR #14), 5E–5B, 4J–4G, Phase 3 parked boundaries.
@@ -181,22 +187,35 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5S done:** sixteen production C leaves (incl. mid-region trio
+  **Phase 5B–5T done:** seventeen production C leaves (incl. mid-region trio
   `func_8008F694` / `func_8008F868` / `func_8008F880`, stubs `func_8008FCB4` /
   `func_800904A0` / `904AC` / `904B4` / `904BC`, mid-`80CC4` stream+flags
-  `func_800906B4`, early 90Cxx `func_80090A0C`, and tail `func_800C2B40`).
+  `func_800906B4`, early 90Cxx `func_80090A0C`, and tail `func_800C2B40` /
+  `func_800C8268`).
 
 ## Next concrete step
 
-**Milestone:** sixteen matching C leaves on branch `phase5s-func-800906B4`
-(ready for PR). Resume triage at `80EE4.s` head (`func_800906E4`, size 0x38 —
-has global `D_800B290C`). Oracle:
+**Milestone:** seventeen matching C leaves on branch `phase5t-func-800C8268`
+(ready for PR). Next candidates: the 8 remaining empty-stub stars in the
+B3350 tail (`func_800C9260` @ 0xB9A60 first — see
+`docs/ai_context/B3350_TRIAGE.md`), all ROM-verified `jr $ra`/`nop` bodies
+in the proven-matchable class. Oracle:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5T result — `func_800C8268` (2026-07-09):** VRAM `0x800C8268` / file
+`0xB8A68` / size `0x8`. Empty `jr`/`nop` stub, first mid-`B3350` carve:
+prefix `0x5718`, C `0x8`, resume `B8A70.s` `0x135D90` (sums to prior
+`0x13B4B0`). Scratch + production **EXACT MATCH**. Full B3350 tail triage
+(344 functions) recorded in `docs/ai_context/B3350_TRIAGE.md`: 17 star
+candidates (9 empty stubs incl. this one, 8 sb-stubs). **sb-stub family
+parked:** ROM `li/jr/sb-in-delay-slot` (0xC); GCC 14.2 emits `li/sb/jr/li`
+(0x10, duplicates `li` into the delay slot) across a 30-probe shape × flag
+matrix — 5I-class schedule mismatch, revisit with era compiler / maspsx.
 
 **Phase 5S result — `func_800906B4` (2026-07-09):** VRAM `0x800906B4` / file
 `0x80EB4` / size `0x30`. Stream advance + OR `0x200` at `+0x38`, OR `0x4400`
@@ -483,6 +502,17 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-09: **Phase 5T seventeenth C leaf integrated.** Branch
+  `phase5t-func-800C8268` from `main` (after PR #26 / 5S). Full triage of
+  the `B3350.s` tail (344 functions; parser + 344/344 adversarial
+  re-derivation, zero discrepancies; all star spans ROM-byte-verified)
+  recorded in `docs/ai_context/B3350_TRIAGE.md`. Parked the 8-strong
+  sb-stub star family (GCC 14.2 delay-slot schedule mismatch, 30-probe
+  matrix). Converted `func_800C8268` (empty stub, file `0xB8A68`, size
+  `0x8`): config carve `[0xB8A68, c]` + `[0xB8A70, asm]`,
+  `src/func_800C8268.c`, build/verify script updates. Re-split OK;
+  `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0
+  reporting Phase 5T seventeen leaves.
 - 2026-07-08: **Phase 3 prefix rodata nested audit:** read-only pass over file
   `0x800`–`0x2A0B`; evaluated all seven splat hints (`0xEE4`…`0x1E44`). All are
   organizational jtbl-alignment splits inside correct rodata; no
