@@ -56,7 +56,10 @@ segments:
       # Phase 5K: C leaf func_8008F694 — VRAM 0x8008F694, size 0x14.
       # File span 0x7FE94–0x7FEA8 exclusive. Increment *(unsigned int *)arg0 by 2.
       - [0x7FE94, c, func_8008F694]
-      - [0x7FEA8, asm]
+      # Phase 5AC: C leaf func_8008F6A8 — VRAM 0x8008F6A8, size 0x8.
+      # File span 0x7FEA8–0x7FEB0 exclusive. Empty jr/nop stub (head of 7FEA8).
+      - [0x7FEA8, c, func_8008F6A8]
+      - [0x7FEB0, asm]
       # Phase 5L: C leaf func_8008F868 — VRAM 0x8008F868, size 0x18.
       # File span 0x80068–0x80080 exclusive. (*field + 1) & 0xF at arg0+0x7C.
       - [0x80068, c, func_8008F868]

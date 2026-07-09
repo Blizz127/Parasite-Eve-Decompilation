@@ -37,12 +37,13 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5AB: twenty-five C leaves.
+# Current production subsegments (file offsets). Phase 5AC: twenty-six C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
     '[0x7FE94, c, func_8008F694]'
-    '[0x7FEA8, asm]'
+    '[0x7FEA8, c, func_8008F6A8]'
+    '[0x7FEB0, asm]'
     '[0x80068, c, func_8008F868]'
     '[0x80080, c, func_8008F880]'
     '[0x80098, asm]'
@@ -91,7 +92,7 @@ EXPECTED_SUBSEGMENTS=(
 EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
-    "asm/disc1/7FEA8.s"
+    "asm/disc1/7FEB0.s"
     "asm/disc1/80098.s"
     "asm/disc1/804BC.s"
     "asm/disc1/80CC4.s"
@@ -112,6 +113,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
     "src/func_8008F694.c"
+    "src/func_8008F6A8.c"
     "src/func_8008F868.c"
     "src/func_8008F880.c"
     "src/func_8008FCB4.c"
@@ -323,7 +325,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_800CDD04.c" && -f "$ROOT/src/func_800CD59C.c" && -f "$ROOT/src/func_800CD2E4.c" && -f "$ROOT/src/func_800CD2DC.c" && -f "$ROOT/src/func_800CACD4.c" && -f "$ROOT/src/func_800C9EA0.c" && -f "$ROOT/src/func_800C9260.c" && -f "$ROOT/src/func_800C8268.c" && -f "$ROOT/src/func_800906B4.c" && -f "$ROOT/src/func_800904BC.c" && -f "$ROOT/src/func_800904B4.c" && -f "$ROOT/src/func_800904AC.c" && -f "$ROOT/src/func_800904A0.c" && -f "$ROOT/src/func_8008FCB4.c" && -f "$ROOT/src/func_8008F880.c" && -f "$ROOT/src/func_8008F868.c" && -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+if [[ -f "$ROOT/src/func_8008F6A8.c" && -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_800CDD04.c" && -f "$ROOT/src/func_800CD59C.c" && -f "$ROOT/src/func_800CD2E4.c" && -f "$ROOT/src/func_800CD2DC.c" && -f "$ROOT/src/func_800CACD4.c" && -f "$ROOT/src/func_800C9EA0.c" && -f "$ROOT/src/func_800C9260.c" && -f "$ROOT/src/func_800C8268.c" && -f "$ROOT/src/func_800906B4.c" && -f "$ROOT/src/func_800904BC.c" && -f "$ROOT/src/func_800904B4.c" && -f "$ROOT/src/func_800904AC.c" && -f "$ROOT/src/func_800904A0.c" && -f "$ROOT/src/func_8008FCB4.c" && -f "$ROOT/src/func_8008F880.c" && -f "$ROOT/src/func_8008F868.c" && -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5AC — twenty-six leaves (+ func_8008F6A8 at 7FEA8 boundary; tail cluster through func_800CE3AC)"
+    echo "  sources: src/func_8008F694.c src/func_8008F6A8.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"
+elif [[ -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_800CDD04.c" && -f "$ROOT/src/func_800CD59C.c" && -f "$ROOT/src/func_800CD2E4.c" && -f "$ROOT/src/func_800CD2DC.c" && -f "$ROOT/src/func_800CACD4.c" && -f "$ROOT/src/func_800C9EA0.c" && -f "$ROOT/src/func_800C9260.c" && -f "$ROOT/src/func_800C8268.c" && -f "$ROOT/src/func_800906B4.c" && -f "$ROOT/src/func_800904BC.c" && -f "$ROOT/src/func_800904B4.c" && -f "$ROOT/src/func_800904AC.c" && -f "$ROOT/src/func_800904A0.c" && -f "$ROOT/src/func_8008FCB4.c" && -f "$ROOT/src/func_8008F880.c" && -f "$ROOT/src/func_8008F868.c" && -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
     echo "C conversion: Phase 5AB — twenty-five leaves (+ func_800C2B40 / func_800C8268 / func_800C9260 / func_800C9EA0 / func_800CACD4 / func_800CD2DC / func_800CD2E4 / func_800CD59C / func_800CDD04 / func_800CE3AC in tail)"
     echo "  sources: src/func_8008F694.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"
 elif [[ -f "$ROOT/src/func_800CDD04.c" && -f "$ROOT/src/func_800CD59C.c" && -f "$ROOT/src/func_800CD2E4.c" && -f "$ROOT/src/func_800CD2DC.c" && -f "$ROOT/src/func_800CACD4.c" && -f "$ROOT/src/func_800C9EA0.c" && -f "$ROOT/src/func_800C9260.c" && -f "$ROOT/src/func_800C8268.c" && -f "$ROOT/src/func_800906B4.c" && -f "$ROOT/src/func_800904BC.c" && -f "$ROOT/src/func_800904B4.c" && -f "$ROOT/src/func_800904AC.c" && -f "$ROOT/src/func_800904A0.c" && -f "$ROOT/src/func_8008FCB4.c" && -f "$ROOT/src/func_8008F880.c" && -f "$ROOT/src/func_8008F868.c" && -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then

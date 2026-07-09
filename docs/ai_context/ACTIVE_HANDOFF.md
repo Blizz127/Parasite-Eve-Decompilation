@@ -6,15 +6,14 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AB — `func_800CE3AC` integrated (twenty-fifth matching C leaf)**
-(branch `phase5ab-func-800CE3AC`). Phase 5AA merged (includes `func_800CDD04`).
-Phase 5I/5H parked. Twenty-five matching C leaves on this branch. B3350 tail
-fully triaged — see `docs/ai_context/B3350_TRIAGE.md`; **all empty-stub STAR
-candidates in the current mid-tail run are now integrated** (sb-stub family
-and non-leaf functions remain parked).
+**Phase 5AC — `func_8008F6A8` integrated (twenty-sixth matching C leaf)**
+(branch `phase5ac-next-simple-leaf`). Phase 5AB merged on `main`. Phase 5I/5H
+parked. Twenty-six matching C leaves on this branch. B3350 mid-tail empty-stub
+STARs exhausted; first earlier-segment empty stub at the `7FEA8` boundary now
+integrated. sb-stub family and non-leaf functions remain parked.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (twenty-five leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (twenty-six leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -22,7 +21,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x800,     rodata]
 [0x2A0C,    asm]
 [0x7FE94,   c, func_8008F694]  VRAM 0x8008F694, size 0x14 (Phase 5K)
-[0x7FEA8,   asm]
+[0x7FEA8,   c, func_8008F6A8]  VRAM 0x8008F6A8, size 0x8 (Phase 5AC)
+[0x7FEB0,   asm]
 [0x80068,   c, func_8008F868]  VRAM 0x8008F868, size 0x18 (Phase 5L)
 [0x80080,   c, func_8008F880]  VRAM 0x8008F880, size 0x18 (Phase 5M)
 [0x80098,   asm]
@@ -207,15 +207,25 @@ post-split `git status` check.
 
 ## Next concrete step
 
-**Milestone:** twenty-two matching C leaves on branch `phase5x-func-800CD2E4`.
-Next candidates: the 3 remaining empty-stub stars in the B3350 tail (see
-`docs/ai_context/B3350_TRIAGE.md`). Oracle:
+**Milestone:** twenty-six matching C leaves on branch `phase5ac-next-simple-leaf`.
+Next candidates: five empty `jr`/`nop` stubs remain in `2A0C.s` (first:
+`func_8003DFC8` @ 0x2E7C8 — **mid-2A0C carve blocked**, assembled prefix
+0x2BDC0 < file span 0x2E5BC due to ROM holes; defer until hole-aware split).
+Also `func_80050D18` @ 0x41518 and four others in `2A0C.s`. sb-stubs /
+5I-class / parked families unchanged. Oracle:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5AC result — `func_8008F6A8` (2026-07-09):** VRAM `0x8008F6A8` / file
+`0x7FEA8` / size `0x8`. Empty `jr`/`nop` stub at the head of former
+`7FEA8.s` (after 5K `func_8008F694`): zero-byte prefix, C `0x8`, resume
+`7FEB0.s` `0x1B8` (sums to prior `0x1C0`). Scratch + production **EXACT MATCH**.
+Note: `func_8003DFC8` @ `0x2E7C8` was scanned first but mid-`2A0C.s` carve
+failed trim (gas prefix 0x2BDC0 vs file span 0x2E5BC — ROM holes).
 
 **Phase 5Y result — `func_800CD2E4` (2026-07-09):** VRAM `0x800CD2E4` / file
 `0xBDAE4` / size `0x8`. Empty `jr`/`nop` stub (twin of CD2DC), sixth mid-tail
@@ -537,6 +547,14 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-09: **Phase 5AC twenty-sixth C leaf integrated.** Branch
+  `phase5ac-next-simple-leaf` from `main` (25 leaves). Scanned earlier asm
+  segments; selected `func_8008F6A8` (empty stub, file `0x7FEA8`, head of
+  `7FEA8.s` — boundary carve after 5K). Mid-`2A0C.s` candidate
+  `func_8003DFC8` rejected (ROM hole vs gas span mismatch). Config carve
+  `[0x7FEA8, c]` + `[0x7FEB0, asm]`, `src/func_8008F6A8.c`, build/verify
+  updates. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**;
+  `verify_us.sh` exit 0 reporting Phase 5AC twenty-six leaves.
 - 2026-07-09: **Phase 5Y twenty-second C leaf integrated.** Branch
   `phase5x-func-800CD2E4`. Converted `func_800CD2E4` (empty stub twin of
   CD2DC, file `0xBDAE4`, size `0x8`): config carve `[0xBDAE4, c]` +
