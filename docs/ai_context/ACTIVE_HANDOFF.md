@@ -6,20 +6,23 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AC — `func_8008F6A8` integrated (twenty-sixth matching C leaf)**
-(branch `phase5ac-next-simple-leaf`). Phase 5AB merged on `main`. Phase 5I/5H
-parked. Twenty-six matching C leaves on this branch. B3350 mid-tail empty-stub
-STARs exhausted; first earlier-segment empty stub at the `7FEA8` boundary now
-integrated. sb-stub family and non-leaf functions remain parked.
+**Phase 5AF — `func_80050D18` integrated (twenty-eighth matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`). Phase 5AE (`func_8003DFC8`) on same branch.
+Twenty-eight matching C leaves. Second mid-`2A0C` empty stub. sb-stub family
+and non-leaf functions remain parked.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (twenty-six leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (twenty-eight leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
 ```text
 [0x800,     rodata]
 [0x2A0C,    asm]
+[0x2E7C8,   c, func_8003DFC8]  VRAM 0x8003DFC8, size 0x8 (Phase 5AE)
+[0x2E7D0,   asm]
+[0x41518,   c, func_80050D18]  VRAM 0x80050D18, size 0x8 (Phase 5AF)
+[0x41520,   asm]
 [0x7FE94,   c, func_8008F694]  VRAM 0x8008F694, size 0x14 (Phase 5K)
 [0x7FEA8,   c, func_8008F6A8]  VRAM 0x8008F6A8, size 0x8 (Phase 5AC)
 [0x7FEB0,   asm]
@@ -207,12 +210,10 @@ post-split `git status` check.
 
 ## Next concrete step
 
-**Milestone:** twenty-six matching C leaves on branch `phase5ac-next-simple-leaf`.
-Next candidates: five empty `jr`/`nop` stubs remain in `2A0C.s` (first:
-`func_8003DFC8` @ 0x2E7C8 — **mid-2A0C carve blocked**, assembled prefix
-0x2BDC0 < file span 0x2E5BC due to ROM holes; defer until hole-aware split).
-Also `func_80050D18` @ 0x41518 and four others in `2A0C.s`. sb-stubs /
-5I-class / parked families unchanged. Oracle:
+**Milestone:** twenty-eight matching C leaves on branch `phase5ae-2a0c-hole-aware`.
+Next mid-`2A0C` empty stubs: `func_800527C0` @ `0x42FC0`, `func_8005BCA8` @
+`0x4C4A8`, `func_8008CA7C` @ `0x7D27C`. sb-stubs / 5I-class / parked families
+unchanged. Oracle:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
@@ -220,12 +221,23 @@ verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
 
+**Phase 5AF result — `func_80050D18` (2026-07-09):** VRAM `0x80050D18` / file
+`0x41518` / size `0x8`. Empty `jr`/`nop` stub, second mid-`2A0C` carve (from
+`2E7D0.s`): prefix `0x12D48`, C `0x8`, resume `41520.s` `0x3E974` (sums to
+prior `0x516C4`). Scratch + production **EXACT MATCH**.
+
+**Phase 5AE result — `func_8003DFC8` (2026-07-09):** VRAM `0x8003DFC8` / file
+`0x2E7C8` / size `0x8`. Empty `jr`/`nop` stub, first mid-`2A0C.s` carve:
+prefix `0x2BDBC`, C `0x8`, resume `2E7D0.s` `0x516C4` (sums to prior
+`0x7D488`). Prior failure was wrong trim target `0x2E5BC` (off by `0x2800`),
+not ROM holes — instruction stream is contiguous. Scratch + production
+**EXACT MATCH**.
+
 **Phase 5AC result — `func_8008F6A8` (2026-07-09):** VRAM `0x8008F6A8` / file
 `0x7FEA8` / size `0x8`. Empty `jr`/`nop` stub at the head of former
 `7FEA8.s` (after 5K `func_8008F694`): zero-byte prefix, C `0x8`, resume
 `7FEB0.s` `0x1B8` (sums to prior `0x1C0`). Scratch + production **EXACT MATCH**.
-Note: `func_8003DFC8` @ `0x2E7C8` was scanned first but mid-`2A0C.s` carve
-failed trim (gas prefix 0x2BDC0 vs file span 0x2E5BC — ROM holes).
+(Initial mid-`2A0C` attempt for `func_8003DFC8` deferred; later fixed in 5AE.)
 
 **Phase 5Y result — `func_800CD2E4` (2026-07-09):** VRAM `0x800CD2E4` / file
 `0xBDAE4` / size `0x8`. Empty `jr`/`nop` stub (twin of CD2DC), sixth mid-tail
@@ -547,11 +559,25 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-09: **Phase 5AF twenty-eighth C leaf integrated.** Same branch
+  `phase5ae-2a0c-hole-aware`. Converted `func_80050D18` (empty stub, file
+  `0x41518`, second mid-`2A0C`). Config carve `[0x41518, c]` + `[0x41520, asm]`,
+  `src/func_80050D18.c`, build/verify updates. Re-split OK; `build_us.sh`
+  exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AF
+  twenty-eight leaves.
+- 2026-07-09: **Phase 5AE twenty-seventh C leaf integrated.** Branch
+  `phase5ae-2a0c-hole-aware` from `main` (26 leaves). Converted
+  `func_8003DFC8` (empty stub, file `0x2E7C8`, first mid-`2A0C`). Diagnosed
+  prior "ROM hole" as span typo (`0x2E5BC` vs correct `0x2BDBC`); contiguous
+  instruction stream. Config carve `[0x2E7C8, c]` + `[0x2E7D0, asm]`,
+  `src/func_8003DFC8.c`, build/verify updates. Re-split OK; `build_us.sh`
+  exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AE
+  twenty-seven leaves.
 - 2026-07-09: **Phase 5AC twenty-sixth C leaf integrated.** Branch
   `phase5ac-next-simple-leaf` from `main` (25 leaves). Scanned earlier asm
   segments; selected `func_8008F6A8` (empty stub, file `0x7FEA8`, head of
   `7FEA8.s` — boundary carve after 5K). Mid-`2A0C.s` candidate
-  `func_8003DFC8` rejected (ROM hole vs gas span mismatch). Config carve
+  `func_8003DFC8` deferred (later fixed in 5AE). Config carve
   `[0x7FEA8, c]` + `[0x7FEB0, asm]`, `src/func_8008F6A8.c`, build/verify
   updates. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**;
   `verify_us.sh` exit 0 reporting Phase 5AC twenty-six leaves.

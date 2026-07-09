@@ -53,6 +53,15 @@ segments:
     subsegments:
       - [0x800, rodata]
       - [0x2A0C, asm]
+      # Phase 5AE: C leaf func_8003DFC8 — VRAM 0x8003DFC8, size 0x8.
+      # File span 0x2E7C8–0x2E7D0 exclusive. Empty jr/nop stub (first mid-2A0C).
+      # Prefix size 0x2BDBC (= 0x2E7C8 - 0x2A0C); contiguous — no ROM holes.
+      - [0x2E7C8, c, func_8003DFC8]
+      - [0x2E7D0, asm]
+      # Phase 5AF: C leaf func_80050D18 — VRAM 0x80050D18, size 0x8.
+      # File span 0x41518–0x41520 exclusive. Empty jr/nop stub (second mid-2A0C).
+      - [0x41518, c, func_80050D18]
+      - [0x41520, asm]
       # Phase 5K: C leaf func_8008F694 — VRAM 0x8008F694, size 0x14.
       # File span 0x7FE94–0x7FEA8 exclusive. Increment *(unsigned int *)arg0 by 2.
       - [0x7FE94, c, func_8008F694]
