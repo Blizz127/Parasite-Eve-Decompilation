@@ -130,5 +130,9 @@ segments:
       # File span 0xBA6A0–0xBA6A8 exclusive. Empty jr/nop stub.
       - [0xBA6A0, c, func_800C9EA0]
       - [0xBA6A8, asm]
+      # Phase 5W: C leaf func_800CACD4 — VRAM 0x800CACD4, size 0x8.
+      # File span 0xBB4D4–0xBB4DC exclusive. Empty jr/nop stub.
+      - [0xBB4D4, c, func_800CACD4]
+      - [0xBB4DC, asm]
   # End of file: 0x1EE800 = 2,025,472 bytes (verified size).
   - [0x1EE800]
