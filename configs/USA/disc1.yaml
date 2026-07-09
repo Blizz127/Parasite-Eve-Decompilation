@@ -81,6 +81,10 @@ segments:
       # File span 0x80CBC–0x80CC4 exclusive. Empty jr/nop stub.
       - [0x80CBC, c, func_800904BC]
       - [0x80CC4, asm]
+      # Phase 5S: C leaf func_800906B4 — VRAM 0x800906B4, size 0x30.
+      # File span 0x80EB4–0x80EE4 exclusive. Stream byte + flag ORs at +0x38/+0xF4.
+      - [0x80EB4, c, func_800906B4]
+      - [0x80EE4, asm]
       # Phase 5J: C leaf func_80090A0C — VRAM 0x80090A0C, size 0x14.
       # File span 0x8120C–0x81220 exclusive. Bit-clear 0x8 at *(arg0+0x38).
       - [0x8120C, c, func_80090A0C]

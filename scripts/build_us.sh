@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Phase 5R: Disc 1 rebuild with fifteen C leaves
-# (8F694, 8F868, 8F880, 8FCB4, 904A0, 904AC, 904B4, 904BC, 90A0C, 90C38, 90C4C, 90C60, 90C74, 90F54, C2B40).
+# Phase 5S: Disc 1 rebuild with sixteen C leaves
+# (8F694, 8F868, 8F880, 8FCB4, 904A0, 904AC, 904B4, 904BC, 906B4, 90A0C, 90C38, 90C4C, 90C60, 90C74, 90F54, C2B40).
 #
 # Assembles splat-generated .s → .o with MIPS LE binutils, compiles the
 # production C units with documented GCC flags, links in ROM order, packs a
@@ -55,7 +55,7 @@ ASFLAGS_DEFAULT="-EL -mips1 -mabi=32"
 # Phase 4J: exact 5-instruction match for func_80090C38 with these flags.
 CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestanding -fno-builtin -O1"
 
-# Phase 5R file-span sizes (config subsegment edges; exclusive end).
+# Phase 5S file-span sizes (config subsegment edges; exclusive end).
 # 2A0C:     0x2A0C  → 0x7FE94 = 0x7D488
 # C 8F694:  0x7FE94 → 0x7FEA8 = 0x14
 # 7FEA8:    0x7FEA8 → 0x80068 = 0x1C0
@@ -68,7 +68,9 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # C 904AC:  0x80CAC → 0x80CB4 = 0x8
 # C 904B4:  0x80CB4 → 0x80CBC = 0x8
 # C 904BC:  0x80CBC → 0x80CC4 = 0x8
-# 80CC4:    0x80CC4 → 0x8120C = 0x548
+# 80CC4:    0x80CC4 → 0x80EB4 = 0x1F0
+# C 906B4:  0x80EB4 → 0x80EE4 = 0x30
+# 80EE4:    0x80EE4 → 0x8120C = 0x328
 # C 90A0C:  0x8120C → 0x81220 = 0x14
 # 81220:    0x81220 → 0x81438 = 0x218
 # C 90C38:  0x81438 → 0x8144C = 0x14
@@ -87,7 +89,8 @@ SIZE_2A0C=0x7D488
 SIZE_7FEA8=0x1C0
 SIZE_80098=0x41C
 SIZE_804BC=0x7E4
-SIZE_80CC4=0x548
+SIZE_80CC4=0x1F0
+SIZE_80EE4=0x328
 SIZE_81220=0x218
 SIZE_C_LEAF=0x14
 SIZE_C_8F868=0x18
@@ -97,6 +100,7 @@ SIZE_C_904A0=0xC
 SIZE_C_904AC=0x8
 SIZE_C_904B4=0x8
 SIZE_C_904BC=0x8
+SIZE_C_906B4=0x30
 SIZE_C_C2B40=0x10
 SIZE_81488=0x2CC
 SIZE_81768=0x138
@@ -122,6 +126,8 @@ OBJECTS=(
     "build/src/func_800904B4.c.o"
     "build/src/func_800904BC.c.o"
     "build/asm/disc1/80CC4.s.o"
+    "build/src/func_800906B4.c.o"
+    "build/asm/disc1/80EE4.s.o"
     "build/src/func_80090A0C.c.o"
     "build/asm/disc1/81220.s.o"
     "build/src/func_80090C38.c.o"
@@ -152,6 +158,8 @@ SOURCES=(
     "src/func_800904B4.c"
     "src/func_800904BC.c"
     "asm/disc1/80CC4.s"
+    "src/func_800906B4.c"
+    "asm/disc1/80EE4.s"
     "src/func_80090A0C.c"
     "asm/disc1/81220.s"
     "src/func_80090C38.c"
@@ -245,6 +253,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/7FEA8.s.o      
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/80098.s.o             asm/disc1/80098.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/804BC.s.o             asm/disc1/804BC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/80CC4.s.o             asm/disc1/80CC4.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/80EE4.s.o             asm/disc1/80EE4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/81220.s.o             asm/disc1/81220.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/81488.s.o             asm/disc1/81488.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/81768.s.o             asm/disc1/81768.s
@@ -252,7 +261,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/B2AF8.s.o      
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/B3350.s.o             asm/disc1/B3350.s
 
 # --- compile C leaves ---
-step "Compile C leaves (fifteen C leaves total incl. func_800C2B40)"
+step "Compile C leaves (sixteen C leaves total incl. func_800C2B40)"
 # shellcheck disable=SC2086
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8008F694.c.o src/func_8008F694.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8008F868.c.o src/func_8008F868.c
@@ -262,6 +271,7 @@ run "$CC" $CFLAGS_LEAF -c -o build/src/func_800904A0.c.o src/func_800904A0.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800904AC.c.o src/func_800904AC.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800904B4.c.o src/func_800904B4.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800904BC.c.o src/func_800904BC.c
+run "$CC" $CFLAGS_LEAF -c -o build/src/func_800906B4.c.o src/func_800906B4.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80090A0C.c.o src/func_80090A0C.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80090C38.c.o src/func_80090C38.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80090C4C.c.o src/func_80090C4C.c
@@ -279,7 +289,7 @@ done
 # zeros (.text align 16 → object may be 0x20 for a 0x14-byte function body).
 # Original PE1 file spans are exact; strip proven zero-only tail pad and lower
 # align to 4 so ld does not re-insert gaps or shift ROM layout.
-step "Trim ELF section alignment padding (Phase 4I/5B–5R)"
+step "Trim ELF section alignment padding (Phase 4I/5B–5S)"
 TRIM="$ROOT/tools/trim_elf_section_pad.py"
 [[ -f "$TRIM" ]] || die "missing $TRIM"
 python3 "$TRIM" build/asm/disc1/data/800.rodata.s.o .rodata "$SIZE_800_RODATA"
@@ -296,6 +306,8 @@ python3 "$TRIM" build/src/func_800904AC.c.o .text "$SIZE_C_904AC"
 python3 "$TRIM" build/src/func_800904B4.c.o .text "$SIZE_C_904B4"
 python3 "$TRIM" build/src/func_800904BC.c.o .text "$SIZE_C_904BC"
 python3 "$TRIM" build/asm/disc1/80CC4.s.o .text "$SIZE_80CC4"
+python3 "$TRIM" build/src/func_800906B4.c.o .text "$SIZE_C_906B4"
+python3 "$TRIM" build/asm/disc1/80EE4.s.o .text "$SIZE_80EE4"
 python3 "$TRIM" build/src/func_80090A0C.c.o .text "$SIZE_C_LEAF"
 python3 "$TRIM" build/asm/disc1/81220.s.o .text "$SIZE_81220"
 # Critical: each C object .text is typically 0x20 (align-16); real body is 0x14/0x18/0x10/0xC/0x8.
@@ -337,7 +349,7 @@ ABS_LD="build/abs_syms.ld"
 # all .rodata) and is not used for the production pack.
 ROM_ORDER_LD="build/disc1_romorder.ld"
 cat >"$ROM_ORDER_LD" <<'LDEOF'
-/* Phase 5R ROM-order link script (fifteen C leaves).
+/* Phase 5S ROM-order link script (sixteen C leaves).
  * splat's linkers/disc1.ld places all .text then all .rodata (C layout).
  * PE1 image order is interleaved: prefix rodata, main text (with C leaves),
  * mid rodata, tail text (with C leaf).
@@ -366,6 +378,8 @@ SECTIONS
         build/src/func_800904B4.c.o(.text)
         build/src/func_800904BC.c.o(.text)
         build/asm/disc1/80CC4.s.o(.text)
+        build/src/func_800906B4.c.o(.text)
+        build/asm/disc1/80EE4.s.o(.text)
         build/src/func_80090A0C.c.o(.text)
         build/asm/disc1/81220.s.o(.text)
         build/src/func_80090C38.c.o(.text)
@@ -392,6 +406,8 @@ SECTIONS
         build/src/func_800904B4.c.o(.data)
         build/src/func_800904BC.c.o(.data)
         build/asm/disc1/80CC4.s.o(.data)
+        build/src/func_800906B4.c.o(.data)
+        build/asm/disc1/80EE4.s.o(.data)
         build/src/func_80090A0C.c.o(.data)
         build/asm/disc1/81220.s.o(.data)
         build/src/func_80090C38.c.o(.data)
@@ -417,6 +433,8 @@ SECTIONS
         build/src/func_800904B4.c.o(.rodata)
         build/src/func_800904BC.c.o(.rodata)
         build/asm/disc1/80CC4.s.o(.rodata)
+        build/src/func_800906B4.c.o(.rodata)
+        build/asm/disc1/80EE4.s.o(.rodata)
         build/src/func_80090A0C.c.o(.rodata)
         build/asm/disc1/81220.s.o(.rodata)
         build/src/func_80090C38.c.o(.rodata)
@@ -442,6 +460,8 @@ SECTIONS
         build/src/func_800904B4.c.o(.bss)
         build/src/func_800904BC.c.o(.bss)
         build/asm/disc1/80CC4.s.o(.bss)
+        build/src/func_800906B4.c.o(.bss)
+        build/asm/disc1/80EE4.s.o(.bss)
         build/src/func_80090A0C.c.o(.bss)
         build/asm/disc1/81220.s.o(.bss)
         build/src/func_80090C38.c.o(.bss)
@@ -530,6 +550,7 @@ leaf904a0 = slice(0x80CA0, 0x80CAC)
 leaf904ac = slice(0x80CAC, 0x80CB4)
 leaf904b4 = slice(0x80CB4, 0x80CBC)
 leaf904bc = slice(0x80CBC, 0x80CC4)
+leaf906b4 = slice(0x80EB4, 0x80EE4)
 leaf0 = slice(0x8120C, 0x81220)
 leaf1 = slice(0x81438, 0x8144C)
 leaf2 = slice(0x8144C, 0x81460)
@@ -544,6 +565,7 @@ print(f"  probe file 0x80CA0 (904A0): cand={cand[leaf904a0].hex()} orig={orig[le
 print(f"  probe file 0x80CAC (904AC): cand={cand[leaf904ac].hex()} orig={orig[leaf904ac].hex()}")
 print(f"  probe file 0x80CB4 (904B4): cand={cand[leaf904b4].hex()} orig={orig[leaf904b4].hex()}")
 print(f"  probe file 0x80CBC (904BC): cand={cand[leaf904bc].hex()} orig={orig[leaf904bc].hex()}")
+print(f"  probe file 0x80EB4 (906B4): cand={cand[leaf906b4].hex()} orig={orig[leaf906b4].hex()}")
 print(f"  probe file 0x8120C (90A0C): cand={cand[leaf0].hex()} orig={orig[leaf0].hex()}")
 print(f"  probe file 0x81438 (90C38): cand={cand[leaf1].hex()} orig={orig[leaf1].hex()}")
 print(f"  probe file 0x8144C (90C4C): cand={cand[leaf2].hex()} orig={orig[leaf2].hex()}")
@@ -571,14 +593,14 @@ set -e
 
 echo
 echo "=== Summary ==="
-echo "Assemble: OK (13 asm units)"
-echo "Compile:  OK (fifteen C leaves with Phase 4J flags)"
-echo "Pad trim: OK (incl. C .text pad strip for 0x14/0x18/0xC/0x8/0x10 bodies)"
+echo "Assemble: OK (14 asm units)"
+echo "Compile:  OK (sixteen C leaves with Phase 4J flags)"
+echo "Pad trim: OK (incl. C .text pad strip for 0x14/0x18/0x30/0xC/0x8/0x10 bodies)"
 echo "Link:     OK (ROM-order ld script + absolute symbol workarounds)"
 echo "Pack:     OK (build/disc1.candidate.exe, size 0x1EE800)"
 if [[ "$cmp_ec" -eq 0 ]]; then
     echo "Compare:  EXACT SHA-1 MATCH"
-    echo "Matching claim: YES (fifteen C leaves + remaining asm)"
+    echo "Matching claim: YES (sixteen C leaves + remaining asm)"
     echo "Artifacts (git-ignored): build/asm/**/*.o build/src/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 0
 else
