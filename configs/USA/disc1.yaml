@@ -77,7 +77,10 @@ segments:
       # Phase 5Q: C leaf func_800904B4 — VRAM 0x800904B4, size 0x8.
       # File span 0x80CB4–0x80CBC exclusive. Empty jr/nop stub.
       - [0x80CB4, c, func_800904B4]
-      - [0x80CBC, asm]
+      # Phase 5R: C leaf func_800904BC — VRAM 0x800904BC, size 0x8.
+      # File span 0x80CBC–0x80CC4 exclusive. Empty jr/nop stub.
+      - [0x80CBC, c, func_800904BC]
+      - [0x80CC4, asm]
       # Phase 5J: C leaf func_80090A0C — VRAM 0x80090A0C, size 0x14.
       # File span 0x8120C–0x81220 exclusive. Bit-clear 0x8 at *(arg0+0x38).
       - [0x8120C, c, func_80090A0C]

@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5Q: fourteen C leaves.
+# Current production subsegments (file offsets). Phase 5R: fifteen C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
@@ -51,7 +51,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x80CA0, c, func_800904A0]'
     '[0x80CAC, c, func_800904AC]'
     '[0x80CB4, c, func_800904B4]'
-    '[0x80CBC, asm]'
+    '[0x80CBC, c, func_800904BC]'
+    '[0x80CC4, asm]'
     '[0x8120C, c, func_80090A0C]'
     '[0x81220, asm]'
     '[0x81438, c, func_80090C38]'
@@ -74,7 +75,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/7FEA8.s"
     "asm/disc1/80098.s"
     "asm/disc1/804BC.s"
-    "asm/disc1/80CBC.s"
+    "asm/disc1/80CC4.s"
     "asm/disc1/81220.s"
     "asm/disc1/81488.s"
     "asm/disc1/81768.s"
@@ -89,6 +90,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_800904A0.c"
     "src/func_800904AC.c"
     "src/func_800904B4.c"
+    "src/func_800904BC.c"
     "src/func_80090A0C.c"
     "src/func_80090C38.c"
     "src/func_80090C4C.c"
@@ -283,7 +285,11 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800904B4.c" && -f "$ROOT/src/func_800904AC.c" && -f "$ROOT/src/func_800904A0.c" && -f "$ROOT/src/func_8008FCB4.c" && -f "$ROOT/src/func_8008F880.c" && -f "$ROOT/src/func_8008F868.c" && -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+if [[ -f "$ROOT/src/func_800904BC.c" && -f "$ROOT/src/func_800904B4.c" && -f "$ROOT/src/func_800904AC.c" && -f "$ROOT/src/func_800904A0.c" && -f "$ROOT/src/func_8008FCB4.c" && -f "$ROOT/src/func_8008F880.c" && -f "$ROOT/src/func_8008F868.c" && -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5R — fifteen leaves (+ func_800C2B40 in tail)"
+    echo "  sources: src/func_8008F694.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c"
+    echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
+elif [[ -f "$ROOT/src/func_800904B4.c" && -f "$ROOT/src/func_800904AC.c" && -f "$ROOT/src/func_800904A0.c" && -f "$ROOT/src/func_8008FCB4.c" && -f "$ROOT/src/func_8008F880.c" && -f "$ROOT/src/func_8008F868.c" && -f "$ROOT/src/func_8008F694.c" && -f "$ROOT/src/func_80090A0C.c" && -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
     echo "C conversion: Phase 5Q — fourteen leaves (+ func_800C2B40 in tail)"
     echo "  sources: src/func_8008F694.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c"
     echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
