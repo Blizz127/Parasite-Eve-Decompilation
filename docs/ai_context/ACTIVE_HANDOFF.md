@@ -6,13 +6,13 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5P — `func_800904AC` integrated (thirteenth matching C leaf)** (branch
-`phase5p-func-800904AC`). Phase 5O on `phase5o-func-800904A0`. Phase 5N on
-`phase5n-func-8008FCB4`. Stack continues through 5J (PR #17). Phase 5I/5H
-parked. Thirteen matching C leaves on this branch.
+**Phase 5Q — `func_800904B4` integrated (fourteenth matching C leaf)** (branch
+`phase5q-func-800904B4`). Phase 5P on `phase5p-func-800904AC`. Phase 5O on
+`phase5o-func-800904A0`. Stack continues through 5J (PR #17). Phase 5I/5H
+parked. Fourteen matching C leaves on this branch.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirteen leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (fourteen leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -28,7 +28,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x804BC,   asm]
 [0x80CA0,   c, func_800904A0]  VRAM 0x800904A0, size 0xC (Phase 5O)
 [0x80CAC,   c, func_800904AC]  VRAM 0x800904AC, size 0x8 (Phase 5P)
-[0x80CB4,   asm]
+[0x80CB4,   c, func_800904B4]  VRAM 0x800904B4, size 0x8 (Phase 5Q)
+[0x80CBC,   asm]
 [0x8120C,   c, func_80090A0C]  VRAM 0x80090A0C, size 0x14 (Phase 5J)
 [0x81220,   asm]
 [0x81438,   c, func_80090C38]
@@ -176,14 +177,14 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5P done:** thirteen production C leaves (incl. mid-region trio
+  **Phase 5B–5Q done:** fourteen production C leaves (incl. mid-region trio
   `func_8008F694` / `func_8008F868` / `func_8008F880`, stubs `func_8008FCB4` /
-  `func_800904A0` / `func_800904AC`, early 90Cxx `func_80090A0C`, and tail
+  `func_800904A0` / `904AC` / `904B4`, early 90Cxx `func_80090A0C`, and tail
   `func_800C2B40`).
 
 ## Next concrete step
 
-**Milestone:** thirteen matching C leaves on branch `phase5p-func-800904AC`
+**Milestone:** fourteen matching C leaves on branch `phase5q-func-800904B4`
 (ready for PR). Oracle:
 
 ```text
@@ -192,10 +193,14 @@ verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
 
+**Phase 5Q result — `func_800904B4` (2026-07-09):** VRAM `0x800904B4` / file
+`0x80CB4` / size `0x8`. Empty `jr`/`nop` stub. Head of prior `80CB4.s`: C `0x8`,
+resume `80CBC.s` `0x550`. Scratch + production **EXACT MATCH**. Next: twin
+stub `func_800904BC`.
+
 **Phase 5P result — `func_800904AC` (2026-07-09):** VRAM `0x800904AC` / file
 `0x80CAC` / size `0x8`. Empty `jr`/`nop` stub. Head of prior `80CAC.s`: C `0x8`,
-resume `80CB4.s` `0x558` (sums to prior `0x560`). Scratch + production
-**EXACT MATCH**. Next: twin stubs `func_800904B4` / `904BC`.
+resume later carved by 5Q. Scratch + production **EXACT MATCH**.
 
 **Phase 5O result — `func_800904A0` (2026-07-09):** VRAM `0x800904A0` / file
 `0x80CA0` / size `0xC`. Store `1` at halfword `arg0+0x84` (`addiu`/`jr`/`sh`).
@@ -705,6 +710,14 @@ pc0/`0xB2AF8` each time.
   No C/config change. Did **not** start `func_800C2B28`. Docs-only blocker.
   Explicit decision: park `D_800E2248` accessor siblings; next leaf must be
   outside that pattern (GCC-friendly) until era toolchain/maspsx.
+- 2026-07-09: **Phase 5Q fourteenth C leaf integrated.** Branch
+  `phase5q-func-800904B4` from `phase5p-func-800904AC`. Converted
+  **only** `func_800904B4` (empty `jr`/`nop` stub, size 0x8):
+  - `src/func_800904B4.c`
+  - config: `[0x80CB4, c, func_800904B4]` + `[0x80CBC, asm]`
+  - build: spans `0x8` + `0x550` (was `0x558` 80CB4 span)
+  Validation: scratch + `build_us.sh` exit 0 **EXACT MATCH** (probe `0x80CB4`).
+  Commit: "Convert func_800904B4 to C (exact leaf match)".
 - 2026-07-09: **Phase 5P thirteenth C leaf integrated.** Branch
   `phase5p-func-800904AC` from `phase5o-func-800904A0`. Converted
   **only** `func_800904AC` (empty `jr`/`nop` stub, size 0x8):
