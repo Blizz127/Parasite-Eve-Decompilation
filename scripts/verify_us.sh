@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5F: five C leaves.
+# Current production subsegments (file offsets). Phase 5G: six C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
@@ -50,6 +50,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x81768, asm]'
     '[0x818A0, rodata]'
     '[0xB2AF8, asm]'
+    '[0xB3340, c, func_800C2B40]'
+    '[0xB3350, asm]'
 )
 
 # Files a successful current-config split must produce (relative to ROOT).
@@ -59,6 +61,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/81488.s"
     "asm/disc1/81768.s"
     "asm/disc1/B2AF8.s"
+    "asm/disc1/B3350.s"
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
     "src/func_80090C38.c"
@@ -66,6 +69,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80090C60.c"
     "src/func_80090C74.c"
     "src/func_80090F54.c"
+    "src/func_800C2B40.c"
     "linkers/disc1.ld"
 )
 
@@ -253,7 +257,11 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80090C38.c" && -f "$ROOT/src/func_80090C4C.c" && -f "$ROOT/src/func_80090C60.c" && -f "$ROOT/src/func_80090C74.c" && -f "$ROOT/src/func_80090F54.c" ]]; then
+if [[ -f "$ROOT/src/func_800C2B40.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5G — six leaves (+ func_800C2B40 in tail)"
+    echo "  sources: src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c"
+    echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
+elif [[ -f "$ROOT/src/func_80090C38.c" && -f "$ROOT/src/func_80090C4C.c" && -f "$ROOT/src/func_80090C60.c" && -f "$ROOT/src/func_80090C74.c" && -f "$ROOT/src/func_80090F54.c" ]]; then
     echo "C conversion: Phase 5F — five leaves (90C38, 90C4C, 90C60, 90C74, 90F54)"
     echo "  sources: src/func_80090C{38,4C,60,74}.c src/func_80090F54.c"
     echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
@@ -261,17 +269,8 @@ elif [[ -f "$ROOT/src/func_80090C38.c" && -f "$ROOT/src/func_80090C4C.c" && -f "
     echo "C conversion: Phase 5E — four leaves (90C38, 90C4C, 90C60, 90F54)"
     echo "  sources: src/func_80090C{38,4C,60}.c src/func_80090F54.c"
     echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
-elif [[ -f "$ROOT/src/func_80090C38.c" && -f "$ROOT/src/func_80090C4C.c" && -f "$ROOT/src/func_80090F54.c" ]]; then
-    echo "C conversion: Phase 5D — three leaves (90C38, 90C4C, 90F54)"
-    echo "  sources: src/func_80090C38.c src/func_80090C4C.c src/func_80090F54.c"
-    echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
-elif [[ -f "$ROOT/src/func_80090C38.c" && -f "$ROOT/src/func_80090C4C.c" ]]; then
-    echo "C conversion: Phase 5C — func_80090C38 + func_80090C4C (two leaves)"
-    echo "  sources: src/func_80090C38.c src/func_80090C4C.c"
-    echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
 elif [[ -f "$ROOT/src/func_80090C38.c" ]]; then
-    echo "C conversion: Phase 5B — func_80090C38 integrated (one leaf only)"
-    echo "  source: src/func_80090C38.c"
+    echo "C conversion: earlier Phase 5 leaves present (see src/)"
     echo "  oracle: scripts/build_us.sh (exit 0 = exact SHA-1)"
 else
     echo "C conversion: NOT IMPLEMENTED (missing src/func_80090C38.c)"
