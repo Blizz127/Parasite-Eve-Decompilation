@@ -6,17 +6,15 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AL — `func_80019050` integrated (thirty-fourth matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, on top of `657b997` Phase 5AK).
-Thirty-four matching C leaves. Third of the seven
+**Phase 5AN — `func_800190AC` + `func_800190B4` integrated (thirty-seventh matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, on top of Phase 5AM `func_80019058`).
+Thirty-seven matching C leaves. Fifth and sixth of the seven
 byte-identical return-1 twins from the 2026-07-09 read-only triage
-(remaining four: `func_80019058` — head of `9858.s`, zero-prefix carve —
-`func_800190AC`, `func_800190B4` in `9858.s`; `func_8004DA9C` in
-`2E7D0.s` — same scratch-proven shape, not yet carved). sb-stub family
-and non-leaf functions remain parked.
+(remaining one: `func_8004DA9C` in `2E7D0.s` — same scratch-proven shape,
+not yet carved). sb-stub family and non-leaf functions remain parked.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-four leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-seven leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -26,7 +24,11 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x869C,    c, func_80017E9C]  VRAM 0x80017E9C, size 0x8 (Phase 5AK)
 [0x86A4,    asm]
 [0x9850,    c, func_80019050]  VRAM 0x80019050, size 0x8 (Phase 5AL)
-[0x9858,    asm]
+[0x9858,    c, func_80019058]  VRAM 0x80019058, size 0x8 (Phase 5AM)
+[0x9860,    asm]
+[0x98AC,    c, func_800190AC]  VRAM 0x800190AC, size 0x8 (Phase 5AN)
+[0x98B4,    c, func_800190B4]  VRAM 0x800190B4, size 0x8 (Phase 5AN)
+[0x98BC,    asm]
 [0x2E02C,   c, func_8003D82C]  VRAM 0x8003D82C, size 0x8 (Phase 5AJ)
 [0x2E034,   asm]
 [0x2E7C8,   c, func_8003DFC8]  VRAM 0x8003DFC8, size 0x8 (Phase 5AE)
@@ -227,19 +229,32 @@ post-split `git status` check.
 
 ## Next concrete step
 
-**Milestone:** thirty-one matching C leaves on branch
-`phase5ae-2a0c-hole-aware` at commit
-`176ed39761b1de36d23e2ee17a3c64a51151c1dd`. The mid-`2A0C` empty-stub
-batch is complete. Next, perform read-only triage for small call-free,
-global-free, branch-free leaves outside the parked sb-stub / 5I-class
-families; do not retry those scheduling-mismatch families with the current
-compiler. Oracle:
+**Milestone:** thirty-seven matching C leaves on branch
+`phase5ae-2a0c-hole-aware` (Phase 5AN: `func_800190AC` + `func_800190B4`).
+Remaining return-1 twin: `func_8004DA9C` in `2E7D0.s`. Parked: sb-stub /
+5I-class families.
+Oracle:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5AN result — `func_800190AC` + `func_800190B4` (2026-07-10):**
+VRAM `0x800190AC` / `0x800190B4`, files `0x98AC` / `0x98B4`, size `0x8`
+each. Return-1 stubs, fifth and sixth of the seven twins. Mid-`9860.s`
+carve: prefix `0x4C`, two adjacent C leaves, resume `98BC.s` `0x24770`
+(sums to prior `0x247CC`). Shape scratch-proven in 5AJ. Re-split +
+production **EXACT MATCH**; thirty-seven leaves. Last twin:
+`func_8004DA9C` in `2E7D0.s`.
+
+**Phase 5AM result — `func_80019058` (2026-07-10):** VRAM `0x80019058` /
+file `0x9858` / size `0x8`. Return-1 stub, fourth of the seven twins.
+Zero-prefix carve of former `9858.s`: C `0x8`, resume `9860.s` `0x247CC`
+(sums to prior `0x247D4`). Shape scratch-proven in 5AJ (identical bytes).
+Re-split + production **EXACT MATCH**; thirty-five leaves. Remaining twins
+in `9860.s`: `func_800190AC`, `func_800190B4`.
 
 **Phase 5AL result — `func_80019050` (2026-07-09):** VRAM `0x80019050` /
 file `0x9850` / size `0x8`. Return-1 stub, third of the seven twins.

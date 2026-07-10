@@ -64,7 +64,19 @@ segments:
       # third of the seven return-1 twins (shape scratch-proven in 5AJ).
       # Prefix size 0x11AC (= 0x9850 - 0x86A4); contiguous — no ROM holes.
       - [0x9850, c, func_80019050]
-      - [0x9858, asm]
+      # Phase 5AM: C leaf func_80019058 — VRAM 0x80019058, size 0x8.
+      # File span 0x9858–0x9860 exclusive. Return-1 stub (jr; addiu $v0,1),
+      # fourth of the seven return-1 twins (shape scratch-proven in 5AJ).
+      # Zero-prefix carve at head of former 9858.s; resume 9860.s size 0x247CC.
+      - [0x9858, c, func_80019058]
+      - [0x9860, asm]
+      # Phase 5AN: C leaves func_800190AC + func_800190B4 — return-1 twins.
+      # File spans 0x98AC–0x98B4 and 0x98B4–0x98BC exclusive (VRAM +0x80010000).
+      # Fifth and sixth of the seven return-1 twins (shape scratch-proven in 5AJ).
+      # Prefix of 9860.s is 0x4C (= 0x98AC - 0x9860); resume 98BC.s size 0x24770.
+      - [0x98AC, c, func_800190AC]
+      - [0x98B4, c, func_800190B4]
+      - [0x98BC, asm]
       # Phase 5AJ: C leaf func_8003D82C — VRAM 0x8003D82C, size 0x8.
       # File span 0x2E02C–0x2E034 exclusive. Return-1 stub (jr; addiu $v0,1).
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.
