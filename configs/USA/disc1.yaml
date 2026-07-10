@@ -59,6 +59,12 @@ segments:
       # Prefix size 0x5C90 (= 0x869C - 0x2A0C); contiguous — no ROM holes.
       - [0x869C, c, func_80017E9C]
       - [0x86A4, asm]
+      # Phase 5AL: C leaf func_80019050 — VRAM 0x80019050, size 0x8.
+      # File span 0x9850–0x9858 exclusive. Return-1 stub (jr; addiu $v0,1),
+      # third of the seven return-1 twins (shape scratch-proven in 5AJ).
+      # Prefix size 0x11AC (= 0x9850 - 0x86A4); contiguous — no ROM holes.
+      - [0x9850, c, func_80019050]
+      - [0x9858, asm]
       # Phase 5AJ: C leaf func_8003D82C — VRAM 0x8003D82C, size 0x8.
       # File span 0x2E02C–0x2E034 exclusive. Return-1 stub (jr; addiu $v0,1).
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.

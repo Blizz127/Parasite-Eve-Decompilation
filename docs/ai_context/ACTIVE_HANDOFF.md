@@ -6,17 +6,17 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AK — `func_80017E9C` integrated (thirty-third matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, uncommitted on top of `8234ada`,
-Phase 5AJ). Thirty-three matching C leaves. Second of the seven
+**Phase 5AL — `func_80019050` integrated (thirty-fourth matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, on top of `657b997` Phase 5AK).
+Thirty-four matching C leaves. Third of the seven
 byte-identical return-1 twins from the 2026-07-09 read-only triage
-(remaining five: `func_80019050`, `func_80019058`, `func_800190AC`,
-`func_800190B4` in `86A4.s`; `func_8004DA9C` in `2E7D0.s` — same
-scratch-proven shape, not yet carved). sb-stub family and non-leaf
-functions remain parked.
+(remaining four: `func_80019058` — head of `9858.s`, zero-prefix carve —
+`func_800190AC`, `func_800190B4` in `9858.s`; `func_8004DA9C` in
+`2E7D0.s` — same scratch-proven shape, not yet carved). sb-stub family
+and non-leaf functions remain parked.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-three leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-four leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -25,6 +25,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x2A0C,    asm]
 [0x869C,    c, func_80017E9C]  VRAM 0x80017E9C, size 0x8 (Phase 5AK)
 [0x86A4,    asm]
+[0x9850,    c, func_80019050]  VRAM 0x80019050, size 0x8 (Phase 5AL)
+[0x9858,    asm]
 [0x2E02C,   c, func_8003D82C]  VRAM 0x8003D82C, size 0x8 (Phase 5AJ)
 [0x2E034,   asm]
 [0x2E7C8,   c, func_8003DFC8]  VRAM 0x8003DFC8, size 0x8 (Phase 5AE)
@@ -238,6 +240,13 @@ build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5AL result — `func_80019050` (2026-07-09):** VRAM `0x80019050` /
+file `0x9850` / size `0x8`. Return-1 stub, third of the seven twins.
+Mid-`86A4.s` carve: prefix `0x11AC`, C `0x8`, resume `9858.s` `0x247D4`
+(sums to prior `0x25988`). Shape scratch-proven in 5AJ (identical bytes).
+Re-split + production **EXACT MATCH**; thirty-four leaves. Next twin
+`func_80019058` sits at the head of `9858.s` (zero-prefix carve).
 
 **Phase 5AK result — `func_80017E9C` (2026-07-09):** VRAM `0x80017E9C` /
 file `0x869C` / size `0x8`. Return-1 stub, second of the seven twins;
