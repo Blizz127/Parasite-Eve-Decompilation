@@ -6,23 +6,25 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AJ — `func_8003D82C` integrated (thirty-second matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, uncommitted on top of
-`176ed39761b1de36d23e2ee17a3c64a51151c1dd`). Thirty-two matching C leaves.
-First of the seven byte-identical return-1 twins from the 2026-07-09
-read-only triage (remaining six: `func_80017E9C`, `func_80019050`,
-`func_80019058`, `func_800190AC`, `func_800190B4` in `2A0C.s`;
-`func_8004DA9C` in `2E7D0.s` — same scratch-proven shape, not yet carved).
-sb-stub family and non-leaf functions remain parked.
+**Phase 5AK — `func_80017E9C` integrated (thirty-third matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, uncommitted on top of `8234ada`,
+Phase 5AJ). Thirty-three matching C leaves. Second of the seven
+byte-identical return-1 twins from the 2026-07-09 read-only triage
+(remaining five: `func_80019050`, `func_80019058`, `func_800190AC`,
+`func_800190B4` in `86A4.s`; `func_8004DA9C` in `2E7D0.s` — same
+scratch-proven shape, not yet carved). sb-stub family and non-leaf
+functions remain parked.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-two leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-three leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
 ```text
 [0x800,     rodata]
 [0x2A0C,    asm]
+[0x869C,    c, func_80017E9C]  VRAM 0x80017E9C, size 0x8 (Phase 5AK)
+[0x86A4,    asm]
 [0x2E02C,   c, func_8003D82C]  VRAM 0x8003D82C, size 0x8 (Phase 5AJ)
 [0x2E034,   asm]
 [0x2E7C8,   c, func_8003DFC8]  VRAM 0x8003DFC8, size 0x8 (Phase 5AE)
@@ -236,6 +238,13 @@ build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5AK result — `func_80017E9C` (2026-07-09):** VRAM `0x80017E9C` /
+file `0x869C` / size `0x8`. Return-1 stub, second of the seven twins;
+rodata dispatch-table target (`.word func_80017E9C` at file `0x819D0`).
+Mid-`2A0C.s` carve: prefix `0x5C90`, C `0x8`, resume `86A4.s` `0x25988`
+(sums to prior `0x2B620`). Shape scratch-proven in 5AJ (identical bytes).
+Re-split + production **EXACT MATCH**; thirty-three leaves.
 
 **Phase 5AJ result — `func_8003D82C` (2026-07-09):** VRAM `0x8003D82C` /
 file `0x2E02C` / size `0x8`. Return-1 stub (`jr $ra; addiu $v0,$zero,1` —
