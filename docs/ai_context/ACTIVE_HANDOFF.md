@@ -6,23 +6,35 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AF — `func_80050D18` integrated (twenty-eighth matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`). Phase 5AE (`func_8003DFC8`) on same branch.
-Twenty-eight matching C leaves. Second mid-`2A0C` empty stub. sb-stub family
-and non-leaf functions remain parked.
+**Phase 5AJ — `func_8003D82C` integrated (thirty-second matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, uncommitted on top of
+`176ed39761b1de36d23e2ee17a3c64a51151c1dd`). Thirty-two matching C leaves.
+First of the seven byte-identical return-1 twins from the 2026-07-09
+read-only triage (remaining six: `func_80017E9C`, `func_80019050`,
+`func_80019058`, `func_800190AC`, `func_800190B4` in `2A0C.s`;
+`func_8004DA9C` in `2E7D0.s` — same scratch-proven shape, not yet carved).
+sb-stub family and non-leaf functions remain parked.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (twenty-eight leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-two leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
 ```text
 [0x800,     rodata]
 [0x2A0C,    asm]
+[0x2E02C,   c, func_8003D82C]  VRAM 0x8003D82C, size 0x8 (Phase 5AJ)
+[0x2E034,   asm]
 [0x2E7C8,   c, func_8003DFC8]  VRAM 0x8003DFC8, size 0x8 (Phase 5AE)
 [0x2E7D0,   asm]
 [0x41518,   c, func_80050D18]  VRAM 0x80050D18, size 0x8 (Phase 5AF)
 [0x41520,   asm]
+[0x42FC0,   c, func_800527C0]  VRAM 0x800527C0, size 0x8 (Phase 5AG)
+[0x42FC8,   asm]
+[0x4C4A8,   c, func_8005BCA8]  VRAM 0x8005BCA8, size 0x8 (Phase 5AH)
+[0x4C4B0,   asm]
+[0x7D27C,   c, func_8008CA7C]  VRAM 0x8008CA7C, size 0x8 (Phase 5AI)
+[0x7D284,   asm]
 [0x7FE94,   c, func_8008F694]  VRAM 0x8008F694, size 0x14 (Phase 5K)
 [0x7FEA8,   c, func_8008F6A8]  VRAM 0x8008F6A8, size 0x8 (Phase 5AC)
 [0x7FEB0,   asm]
@@ -95,12 +107,12 @@ Phase 1 complete locally; only the official redump cross-check remains open (non
   pointer/alias, not a separate active config. **First real split run
   completed 2026-07-07** — local study artifacts under `asm/disc1/`,
   `linkers/disc1.ld`, `include/*.inc`, `undefined_*_auto.txt` (all
-  git-ignored, never committed). No matching build, decompiled C, or
-  PC-port work exists. `scripts/setup_env.sh` is implemented (pinned
-  `.venv/` install); `verify_us.sh` is Phase 4E split-artifact sanity + honest
-  Phase 4H rebuild status report. **`scripts/build_us.sh`:** asm-only
-  assemble/link/pack/compare (non-matching). **MIPS LE path:** Distrobox
-  `pe-mipsel` (Phase 4G; not on host PATH).
+  git-ignored, never committed). Thirty-one matching C leaves now exist; no
+  PC-port work exists. `scripts/setup_env.sh` is implemented (pinned `.venv/`
+  install); `verify_us.sh` checks split artifacts and reports the current
+  rebuild/C-leaf state. **`scripts/build_us.sh`:** assemble/compile/link/pack/
+  compare oracle, exiting 0 only on an exact SHA-1 match. **MIPS LE path:**
+  Distrobox `pe-mipsel` (Phase 4G; not on host PATH).
 
 ## What is verified
 
@@ -202,24 +214,52 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5Y done:** twenty-two production C leaves (incl. mid-region trio
-  `func_8008F694` / `func_8008F868` / `func_8008F880`, stubs `func_8008FCB4` /
-  `func_800904A0` / `904AC` / `904B4` / `904BC`, mid-`80CC4` stream+flags
-  `func_800906B4`, early 90Cxx `func_80090A0C`, and tail `func_800C2B40` /
-  `func_800C8268` / `func_800C9260`).
+  **Phase 5B–5AI done:** thirty-one production C leaves. The completed
+  mid-`2A0C` empty-stub batch is `func_80050D18` / `func_800527C0` /
+  `func_8005BCA8` / `func_8008CA7C`; the earlier mid-span carve
+  `func_8003DFC8` is also exact. Existing leaves include the mid-region trio
+  `func_8008F694` / `func_8008F868` / `func_8008F880`, the 904xx cluster,
+  `func_800906B4`, early 90Cxx leaves, and the completed tail empty-stub batch.
 
 ## Next concrete step
 
-**Milestone:** twenty-eight matching C leaves on branch `phase5ae-2a0c-hole-aware`.
-Next mid-`2A0C` empty stubs: `func_800527C0` @ `0x42FC0`, `func_8005BCA8` @
-`0x4C4A8`, `func_8008CA7C` @ `0x7D27C`. sb-stubs / 5I-class / parked families
-unchanged. Oracle:
+**Milestone:** thirty-one matching C leaves on branch
+`phase5ae-2a0c-hole-aware` at commit
+`176ed39761b1de36d23e2ee17a3c64a51151c1dd`. The mid-`2A0C` empty-stub
+batch is complete. Next, perform read-only triage for small call-free,
+global-free, branch-free leaves outside the parked sb-stub / 5I-class
+families; do not retry those scheduling-mismatch families with the current
+compiler. Oracle:
 
 ```text
 build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5AJ result — `func_8003D82C` (2026-07-09):** VRAM `0x8003D82C` /
+file `0x2E02C` / size `0x8`. Return-1 stub (`jr $ra; addiu $v0,$zero,1` —
+`li` in delay slot), first of the seven byte-identical return-1 twins from
+the read-only triage. Mid-`2A0C.s` carve: prefix `0x2B620`, C `0x8`, resume
+`2E034.s` `0x794` (sums to prior `0x2BDBC`). Scratch probe
+(`int func(void){return 1;}`, GCC 14.2 Phase 4J flags) emitted the exact
+words `0800E003 01000224`. Re-split + production **EXACT MATCH**; thirty-two
+leaves. Remaining six twins are one-carve-each with the same proven C shape.
+
+**Phase 5AI result — `func_8008CA7C` (2026-07-09):** VRAM `0x8008CA7C` /
+file `0x7D27C` / size `0x8`. Final mid-`2A0C` empty `jr`/`nop` stub carve:
+prefix `4C4B0.s` `0x30DCC`, C `0x8`, resume `7D284.s` `0x2C10` (sums to
+prior `0x339E4`). Re-split + production **EXACT MATCH**; thirty-one leaves.
+
+**Phase 5AH result — `func_8005BCA8` (2026-07-09):** VRAM `0x8005BCA8` /
+file `0x4C4A8` / size `0x8`. Empty `jr`/`nop` stub carve: prefix `42FC8.s`
+`0x94E0`, C `0x8`, resume `4C4B0.s` `0x339E4` (sums to prior `0x3CECC`).
+Re-split + production **EXACT MATCH**; thirty leaves.
+
+**Phase 5AG result — `func_800527C0` (2026-07-09):** VRAM `0x800527C0` /
+file `0x42FC0` / size `0x8`. Empty `jr`/`nop` stub carve: prefix `41520.s`
+`0x1AA0`, C `0x8`, resume `42FC8.s` `0x3CECC` (sums to prior `0x3E974`).
+Re-split + production **EXACT MATCH**; twenty-nine leaves.
 
 **Phase 5AF result — `func_80050D18` (2026-07-09):** VRAM `0x80050D18` / file
 `0x41518` / size `0x8`. Empty `jr`/`nop` stub, second mid-`2A0C` carve (from
@@ -559,6 +599,24 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-09: **Phase 5AI thirty-first C leaf integrated.** Same branch at
+  commit `176ed39761b1de36d23e2ee17a3c64a51151c1dd`. Converted
+  `func_8008CA7C` (empty stub, file `0x7D27C`, final mid-`2A0C` batch leaf).
+  Config carve `[0x7D27C, c]` + `[0x7D284, asm]`, `src/func_8008CA7C.c`,
+  build/verify updates. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1
+  MATCH**; `verify_us.sh` exit 0 reporting Phase 5AI thirty-one leaves.
+- 2026-07-09: **Phase 5AH thirtieth C leaf integrated.** Same branch at
+  commit `b224fa2c6428994218ecaa8b6eb6a49696d13f84`. Converted
+  `func_8005BCA8` (empty stub, file `0x4C4A8`). Config carve
+  `[0x4C4A8, c]` + `[0x4C4B0, asm]`, `src/func_8005BCA8.c`, build/verify
+  updates. Re-split OK; build/verify report **EXACT SHA-1 MATCH** and thirty
+  leaves.
+- 2026-07-09: **Phase 5AG twenty-ninth C leaf integrated.** Same branch at
+  commit `7a27527d70d088ae554d4e8fedbd6c235803eed9`. Converted
+  `func_800527C0` (empty stub, file `0x42FC0`). Config carve
+  `[0x42FC0, c]` + `[0x42FC8, asm]`, `src/func_800527C0.c`, build/verify
+  updates. Re-split OK; build/verify report **EXACT SHA-1 MATCH** and
+  twenty-nine leaves.
 - 2026-07-09: **Phase 5AF twenty-eighth C leaf integrated.** Same branch
   `phase5ae-2a0c-hole-aware`. Converted `func_80050D18` (empty stub, file
   `0x41518`, second mid-`2A0C`). Config carve `[0x41518, c]` + `[0x41520, asm]`,
@@ -956,3 +1014,29 @@ pc0/`0xB2AF8` each time.
   **1-byte NON-MATCH** at file `0xB85D0` (`addu` vs `move` in `jr` delay slot).
   Reverted config/C/build edits; re-split restored six-leaf state. Docs-only
   blocker. Duplicates `func_800C8F08` / `func_800C9C00` parked with C7DC4.
+
+## GitHub Wiki Summary (copy-paste ready)
+
+### Parasite Eve executable decompilation status
+
+The USA Disc 1 executable currently rebuilds byte-for-byte from a mixed
+assembly/C layout. `scripts/build_us.sh` produces the exact target SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and `scripts/verify_us.sh`
+passes the split/config checks and reports Phase 5AI with 31 matching C
+leaves.
+
+- **Current branch:** `phase5ae-2a0c-hole-aware`
+- **Current checkpoint:** `176ed39761b1de36d23e2ee17a3c64a51151c1dd`
+- **Matching C leaves:** 31
+- **Completed batch:** mid-`2A0C` empty stubs `func_80050D18`,
+  `func_800527C0`, `func_8005BCA8`, and `func_8008CA7C`
+- **Confirmed shape for each completed stub:** `jr $ra; nop`
+- **Toolchain:** MIPS little-endian binutils 2.44 and GCC 14.2 in the
+  `pe-mipsel` Distrobox; this is a matching modern toolchain, not a claim
+  about the original game compiler
+- **Repository boundary:** extracted executables, disc images, generated
+  assembly, and game assets remain local and git-ignored
+
+Next work is a read-only triage for additional small, call-free, global-free,
+branch-free leaves. Known sb-stub and 5I-class scheduling-mismatch families
+remain parked until a more suitable compiler or scheduling path is available.
