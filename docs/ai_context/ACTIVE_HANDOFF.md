@@ -6,16 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AP — `func_800428C4` integrated (thirty-ninth matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, at `e6002a9` +1).
-Thirty-nine matching C leaves. Return-1 septuplet batch remains complete;
-**func_800428C4** is first post-septuplet leaf (simple global decrement
-getter, `lui/lw/jr/addiu`). **Parked:** `func_8003DFD0` return-0 stub
+**Phase 5AQ — `func_80051E48` integrated (fortieth matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, at `6dd7343` +1).
+Forty matching C leaves. First **pure address-return** leaf
+(`lui/addiu/jr/nop`, returns `&D_800A1B30`). Its jr delay slot is
+**unfilled** in the ROM, so this one C unit compiles with
+`-fno-delayed-branch` (per-file; the un-filled schedule was characterised
+in the Phase 4J probe). **Parked:** `func_8003DFD0` return-0 stub
 (5I-class `move` vs `addu` in delay slot — GCC 14.2 emits `00001025` not
 `21100000`, same blocker as `800C7DC4`) + sb-stub / accessor families.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-nine leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (forty leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -40,6 +42,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x3E2A4,   asm]
 [0x41518,   c, func_80050D18]  VRAM 0x80050D18, size 0x8 (Phase 5AF)
 [0x41520,   asm]
+[0x42648,   c, func_80051E48]  VRAM 0x80051E48, size 0x10 (Phase 5AQ)
+[0x42658,   asm]
 [0x42FC0,   c, func_800527C0]  VRAM 0x800527C0, size 0x8 (Phase 5AG)
 [0x42FC8,   asm]
 [0x4C4A8,   c, func_8005BCA8]  VRAM 0x8005BCA8, size 0x8 (Phase 5AH)
@@ -225,29 +229,30 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5AP done:** thirty-nine production C leaves. Completed
+  **Phase 5B–5AQ done:** forty production C leaves. Completed
   batches: mid-`2A0C` empty-stub batch `func_80050D18` / `func_800527C0` /
   `func_8005BCA8` / `func_8008CA7C` plus `func_8003DFC8`; **return-1 septuplet
   batch `func_8003D82C` / `func_80017E9C` / `func_80019050` / `func_80019058` /
   `func_800190AC` / `func_800190B4` / `func_8004DA9C`** (identical `jr; li v0,1` —
-  Phase 5AJ–5AO) plus **first post-septuplet leaf `func_800428C4`**
-  (`lui/lw/jr/addiu -1`). Blocked `func_8003DFD0` return-0 (5I-class
+  Phase 5AJ–5AO) plus **post-septuplet leaves `func_800428C4`**
+  (`lui/lw/jr/addiu -1`) **and `func_80051E48`** (pure address return
+  `lui/addiu/jr/nop`, `-fno-delayed-branch`). Blocked `func_8003DFD0` return-0 (5I-class
   `move` vs `addu`). Existing leaves include the mid-region trio
   `func_8008F694` / `func_8008F868` / `func_8008F880`, the 904xx cluster,
   `func_800906B4`, early 90Cxx leaves, and the completed tail empty-stub batch.
 
 ## Next concrete step
 
-**Milestone:** thirty-nine matching C leaves on branch
-`phase5ae-2a0c-hole-aware` (Phase 5AP: `func_800428C4` — simple global
-decrement getter, first leaf after return-1 septuplet). Thirty-nine leaves
-exact SHA-1. Return-1 septuplet (7/7) remains complete. Parked:
-`func_8003DFD0` return-0 (5I move vs addu), sb-stub / 5I-class / accessor
-families.
+**Milestone:** forty matching C leaves on branch
+`phase5ae-2a0c-hole-aware` (Phase 5AQ: `func_80051E48` — first pure
+address-return leaf, `-fno-delayed-branch`). Forty leaves exact SHA-1.
+Return-1 septuplet (7/7) remains complete. Parked: `func_8003DFD0`
+return-0 (5I move vs addu), sb-stub / 5I-class / accessor families.
 
 **Next:** continue one-leaf-at-a-time for remaining small call-free leaves
 outside parked families (e.g., `func_80050020` needs $at vs $v0 — may need
-maspsx, or pick `51E48` / `52514` / `52524` / `3FFAC` etc from triage).
+maspsx, or pick `52514` / `52524` / `3FFAC` etc from triage). Note the
+`-fno-delayed-branch` per-file lever now proven for un-filled jr delay slots.
 Repeat carve → scratch probe → production exact-match flow.
 Oracle:
 
@@ -256,6 +261,16 @@ build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5AQ result — `func_80051E48` (2026-07-10):** VRAM `0x80051E48` /
+file `0x42648` / size `0x10`. First **pure address-return** leaf —
+`lui $v0,%hi(D_800A1B30); addiu $v0,$v0,%lo(D_800A1B30); jr $ra; nop`,
+i.e. `return &D_800A1B30;`. ROM leaves the jr delay slot **unfilled**;
+GCC 14.2 -O1 otherwise fills it (`lui; jr; addiu`), so this one C unit
+compiles with `-fno-delayed-branch` (per-file, `build_us.sh`). `D_800A1B30`
+auto-resolves as an absolute (0x800A1B30) via the probe-link fallback.
+Mid-`41520.s` carve: prefix `0x1128`, C `0x10`, resume `42658.s` `0x968`
+(sums to prior `0x1AA0`). Re-split + production **EXACT MATCH**; forty leaves.
 
 **Phase 5AO result — `func_8004DA9C` (2026-07-10):** VRAM `0x8004DA9C` /
 file `0x3E29C` / size `0x8`. Return-1 stub, seventh/final of the seven twins.
@@ -654,6 +669,7 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-10: **Phase 5AQ fortieth C leaf integrated — first pure address-return leaf.** Branch `phase5ae-2a0c-hole-aware` on top of `6dd7343` (Phase 5AP). Converted `func_80051E48` (file `0x42648`, size `0x10`, VRAM `0x80051E48`, `lui v0,%hi(D_800A1B30); addiu v0,v0,%lo; jr ra; nop` → `return &D_800A1B30;`). ROM's jr delay slot is **unfilled**; GCC 14.2 -O1 otherwise fills it (`lui; jr; addiu`), so this single unit compiles with **`-fno-delayed-branch`** (per-file; the un-filled schedule was characterised in the Phase 4J probe). `D_800A1B30` auto-resolves as absolute `0x800A1B30` via the probe-link undef fallback. Mid-`41520.s` carve `[0x41520, asm]` (`0x1128`) + `[0x42648, c]` + `[0x42658, asm]` (`0x968`), `src/func_80051E48.c`, build/verify updates. Scratch probe with the flag emitted the exact 4 words. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AQ forty leaves.
 - 2026-07-10: **Phase 5AP thirty-ninth C leaf integrated — first post-septuplet leaf.** Branch `phase5ae-2a0c-hole-aware` at commit `379083c`. Converted `func_800428C4` (global decrement getter, file `0x330C4`, size `0x10`, VRAM `0x800428C4`, `lui v0,%hi; lw v0,%lo; jr ra; addiu v0,-1`). Config carve `[0x2E7D0, asm]` (`0x48F4`) + `[0x330C4, c]` + `[0x330D4, asm]` (`0xB1C8`), `src/func_800428C4.c`, build/verify updates. During same session attempted `func_8003DFD0` return-0 (file `0x2E7D0`, `0800E003 21100000`): scratch probe shows GCC 14.2 emits `00001025` (`move $v0,$zero`) vs ROM `21100000` (`addu $v0,$zero,$zero`) in jr delay slot — 5I-class pseudo-op mismatch, same as `func_800C7DC4` blocker. Parked return-0 family. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AP thirty-nine leaves.
 - 2026-07-10: **Phase 5AO thirty-eighth C leaf integrated — return-1 septuplet batch complete.** Branch `phase5ae-2a0c-hole-aware` at commit `e6002a9`. Converted `func_8004DA9C` (return-1 stub, file `0x3E29C`, size `0x8`, seventh/final of the seven byte-identical return-1 twins from 2026-07-09 triage). Config carve `[0x3E29C, c]` + `[0x3E2A4, asm]` (prefix `0xFACC` from `2E7D0.s`, resume `0x3274`), `src/func_8004DA9C.c`, build/verify updates. Shape scratch-proven in 5AJ (`0800E003 01000224`). Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AO thirty-eight leaves. **Return-1 batch (7/7): `func_8003D82C`, `func_80017E9C`, `func_80019050`, `func_80019058`, `func_800190AC`, `func_800190B4`, `func_8004DA9C` — all `return 1` / `jr; addiu v0, zero, 1`.**
 - 2026-07-10: **Phase 5AN thirty-sixth/thirty-seventh C leaves integrated.** Same branch at commit `02176f8` (phase5am+5an). Converted `func_800190AC` (file `0x98AC`, size `0x8`) + `func_800190B4` (file `0x98B4`, size `0x8`), fifth and sixth return-1 twins. Config carve `[0x98AC, c]` + `[0x98B4, c]` + `[0x98BC, asm]` (prefix `0x4C` from `9860.s`, resume `0x24770`). `src/func_800190AC.c` + `src/func_800190B4.c`, build/verify updates. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting thirty-seven leaves.
@@ -1084,13 +1100,14 @@ pc0/`0xB2AF8` each time.
 The USA Disc 1 executable currently rebuilds byte-for-byte from a mixed
 assembly/C layout. `scripts/build_us.sh` produces the exact target SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and `scripts/verify_us.sh`
-passes the split/config checks and reports Phase 5AP with 39 matching C
+passes the split/config checks and reports Phase 5AQ with 40 matching C
 leaves.
 
 - **Current branch:** `phase5ae-2a0c-hole-aware`
-- **Current checkpoint:** `379083c` (Phase 5AP)
-- **Matching C leaves:** 39
-- **Latest leaf:** `func_800428C4` (`lui v0,%hi(D_800A1860); lw v0,%lo; jr ra; addiu v0,-1`) — simple global decrement getter, first post-septuplet
+- **Current checkpoint:** `6dd7343` +1 (Phase 5AQ)
+- **Matching C leaves:** 40
+- **Latest leaf:** `func_80051E48` (`lui v0,%hi(D_800A1B30); addiu v0,v0,%lo; jr ra; nop`) — first pure address-return leaf (`return &D_800A1B30;`), compiled `-fno-delayed-branch` for the un-filled jr delay slot
+- **Prior leaf:** `func_800428C4` (`lui v0,%hi(D_800A1860); lw v0,%lo; jr ra; addiu v0,-1`) — simple global decrement getter, first post-septuplet
 - **Completed batch:** return-1 septuplet — seven byte-identical
   `jr; li v0,1` stubs: `func_8003D82C`, `func_80017E9C`, `func_80019050`,
   `func_80019058`, `func_800190AC`, `func_800190B4`, `func_8004DA9C`

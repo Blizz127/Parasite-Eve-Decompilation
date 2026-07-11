@@ -102,6 +102,14 @@ segments:
       # File span 0x41518–0x41520 exclusive. Empty jr/nop stub (second mid-2A0C).
       - [0x41518, c, func_80050D18]
       - [0x41520, asm]
+      # Phase 5AQ: C leaf func_80051E48 — VRAM 0x80051E48, size 0x10.
+      # File span 0x42648–0x42658 exclusive. Pure address-return leaf:
+      # lui $v0,%hi(D_800A1B30); addiu $v0,$v0,%lo(D_800A1B30); jr $ra; nop.
+      # Unfilled delay slot (addiu before jr) => this one C unit is compiled
+      # with -fno-delayed-branch (per-file; documented Phase 4J behaviour).
+      # Prefix of 41520.s is 0x1128 (= 0x42648 - 0x41520); resume 42658.s 0x968.
+      - [0x42648, c, func_80051E48]
+      - [0x42658, asm]
       # Phase 5AG: C leaf func_800527C0 — VRAM 0x800527C0, size 0x8.
       # File span 0x42FC0–0x42FC8 exclusive. Empty jr/nop stub.
       - [0x42FC0, c, func_800527C0]
