@@ -6,15 +6,16 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AN — `func_800190AC` + `func_800190B4` integrated (thirty-seventh matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, on top of Phase 5AM `func_80019058`).
-Thirty-seven matching C leaves. Fifth and sixth of the seven
-byte-identical return-1 twins from the 2026-07-09 read-only triage
-(remaining one: `func_8004DA9C` in `2E7D0.s` — same scratch-proven shape,
-not yet carved). sb-stub family and non-leaf functions remain parked.
+**Phase 5AO — `func_8004DA9C` integrated (thirty-eighth matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, at `8c1aab5`).
+Thirty-eight matching C leaves. **Return-1 septuplet batch complete** —
+all seven byte-identical return-1 twins from the 2026-07-09 read-only
+triage (`func_8003D82C`, `func_80017E9C`, `func_80019050`, `func_80019058`,
+`func_800190AC`, `func_800190B4`, `func_8004DA9C`) now integrated.
+sb-stub family and non-leaf functions remain parked.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-seven leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (thirty-eight leaves).
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -33,6 +34,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x2E034,   asm]
 [0x2E7C8,   c, func_8003DFC8]  VRAM 0x8003DFC8, size 0x8 (Phase 5AE)
 [0x2E7D0,   asm]
+[0x3E29C,   c, func_8004DA9C]  VRAM 0x8004DA9C, size 0x8 (Phase 5AO)
+[0x3E2A4,   asm]
 [0x41518,   c, func_80050D18]  VRAM 0x80050D18, size 0x8 (Phase 5AF)
 [0x41520,   asm]
 [0x42FC0,   c, func_800527C0]  VRAM 0x800527C0, size 0x8 (Phase 5AG)
@@ -220,19 +223,28 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5AI done:** thirty-one production C leaves. The completed
-  mid-`2A0C` empty-stub batch is `func_80050D18` / `func_800527C0` /
-  `func_8005BCA8` / `func_8008CA7C`; the earlier mid-span carve
-  `func_8003DFC8` is also exact. Existing leaves include the mid-region trio
+  **Phase 5B–5AO done:** thirty-eight production C leaves. Completed
+  batches: mid-`2A0C` empty-stub batch `func_80050D18` / `func_800527C0` /
+  `func_8005BCA8` / `func_8008CA7C` plus `func_8003DFC8`; **return-1 septuplet
+  batch `func_8003D82C` / `func_80017E9C` / `func_80019050` / `func_80019058` /
+  `func_800190AC` / `func_800190B4` / `func_8004DA9C`** (identical `jr; li v0,1` —
+  Phase 5AJ–5AO). Existing leaves include the mid-region trio
   `func_8008F694` / `func_8008F868` / `func_8008F880`, the 904xx cluster,
   `func_800906B4`, early 90Cxx leaves, and the completed tail empty-stub batch.
 
 ## Next concrete step
 
-**Milestone:** thirty-seven matching C leaves on branch
-`phase5ae-2a0c-hole-aware` (Phase 5AN: `func_800190AC` + `func_800190B4`).
-Remaining return-1 twin: `func_8004DA9C` in `2E7D0.s`. Parked: sb-stub /
-5I-class families.
+**Milestone:** thirty-eight matching C leaves on branch
+`phase5ae-2a0c-hole-aware` (Phase 5AO: `func_8004DA9C` — final return-1
+twin). **Return-1 septuplet batch complete** (7/7: `3D82C`, `17E9C`,
+`19050`, `19058`, `190AC`, `190B4`, `4DA9C` — identical `jr; li v0,1`
+shape, GCC 14.2 `return 1` exact). Parked: sb-stub / 5I-class / accessor
+families.
+
+**Next:** read-only triage for additional small call-free leaves outside
+the parked families; then repeat one-leaf-at-a-time carve → scratch probe
+→ production exact-match flow (config + `src/*.c` + `build_us.sh` +
+`verify_us.sh`, re-split OK, `build_us.sh` exit 0 SHA-1 match).
 Oracle:
 
 ```text
@@ -240,6 +252,12 @@ build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5AO result — `func_8004DA9C` (2026-07-10):** VRAM `0x8004DA9C` /
+file `0x3E29C` / size `0x8`. Return-1 stub, seventh/final of the seven twins.
+Mid-`2E7D0.s` carve: prefix `0xFACC`, C `0x8`, resume `3E2A4.s` `0x3274`
+(sums to prior `0x12D48`). Shape scratch-proven in 5AJ. Re-split +
+production **EXACT MATCH**; thirty-eight leaves. Return-1 twin batch done.
 
 **Phase 5AN result — `func_800190AC` + `func_800190B4` (2026-07-10):**
 VRAM `0x800190AC` / `0x800190B4`, files `0x98AC` / `0x98B4`, size `0x8`
@@ -632,6 +650,12 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-10: **Phase 5AO thirty-eighth C leaf integrated — return-1 septuplet batch complete.** Branch `phase5ae-2a0c-hole-aware` at commit `8c1aab5`. Converted `func_8004DA9C` (return-1 stub, file `0x3E29C`, size `0x8`, seventh/final of the seven byte-identical return-1 twins from 2026-07-09 triage). Config carve `[0x3E29C, c]` + `[0x3E2A4, asm]` (prefix `0xFACC` from `2E7D0.s`, resume `0x3274`), `src/func_8004DA9C.c`, build/verify updates. Shape scratch-proven in 5AJ (`0800E003 01000224`). Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AO thirty-eight leaves. **Return-1 batch (7/7): `func_8003D82C`, `func_80017E9C`, `func_80019050`, `func_80019058`, `func_800190AC`, `func_800190B4`, `func_8004DA9C` — all `return 1` / `jr; addiu v0, zero, 1`.**
+- 2026-07-10: **Phase 5AN thirty-sixth/thirty-seventh C leaves integrated.** Same branch at commit `02176f8` (phase5am+5an). Converted `func_800190AC` (file `0x98AC`, size `0x8`) + `func_800190B4` (file `0x98B4`, size `0x8`), fifth and sixth return-1 twins. Config carve `[0x98AC, c]` + `[0x98B4, c]` + `[0x98BC, asm]` (prefix `0x4C` from `9860.s`, resume `0x24770`). `src/func_800190AC.c` + `src/func_800190B4.c`, build/verify updates. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting thirty-seven leaves.
+- 2026-07-10: **Phase 5AM thirty-fifth C leaf integrated.** Same branch at commit `02176f8`. Converted `func_80019058` (return-1 stub, file `0x9858`, zero-prefix carve, fourth twin). Config carve `[0x9858, c]` + `[0x9860, asm]` (resume `0x247CC`). `src/func_80019058.c`, build/verify updates. Re-split OK; **EXACT MATCH** thirty-five leaves.
+- 2026-07-09: **Phase 5AL thirty-fourth C leaf integrated.** Same branch at commit `2384fc5`. Converted `func_80019050` (return-1 stub, file `0x9850`, third twin). Config carve `[0x9850, c]` + `[0x9858, asm]` (prefix `0x11AC` from `86A4.s`, resume `0x247D4`). `src/func_80019050.c`, build/verify updates. Re-split OK; **EXACT MATCH** thirty-four leaves.
+- 2026-07-09: **Phase 5AK thirty-third C leaf integrated.** Same branch at commit `657b997`. Converted `func_80017E9C` (return-1 stub, file `0x869C`, second twin, rodata dispatch-table target). Config carve `[0x869C, c]` + `[0x86A4, asm]` (prefix `0x5C90` from `2A0C.s`, resume `0x25988`). `src/func_80017E9C.c`, build/verify updates. Re-split OK; **EXACT MATCH** thirty-three leaves.
+- 2026-07-09: **Phase 5AJ thirty-second C leaf integrated.** Same branch at commit `8234ada`. Converted `func_8003D82C` (return-1 stub, file `0x2E02C`, first of seven twins). Config carve `[0x2E02C, c]` + `[0x2E034, asm]` (prefix `0x2B620` from `2A0C.s`, resume `0x794`). `src/func_8003D82C.c`, build/verify updates. Shape `int f(void){return 1;}` scratch-proven GCC 14.2 (`0800E003 01000224`). Re-split OK; **EXACT MATCH** thirty-two leaves.
 - 2026-07-09: **Phase 5AI thirty-first C leaf integrated.** Same branch at
   commit `176ed39761b1de36d23e2ee17a3c64a51151c1dd`. Converted
   `func_8008CA7C` (empty stub, file `0x7D27C`, final mid-`2A0C` batch leaf).
@@ -1055,15 +1079,20 @@ pc0/`0xB2AF8` each time.
 The USA Disc 1 executable currently rebuilds byte-for-byte from a mixed
 assembly/C layout. `scripts/build_us.sh` produces the exact target SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and `scripts/verify_us.sh`
-passes the split/config checks and reports Phase 5AI with 31 matching C
+passes the split/config checks and reports Phase 5AO with 38 matching C
 leaves.
 
 - **Current branch:** `phase5ae-2a0c-hole-aware`
-- **Current checkpoint:** `176ed39761b1de36d23e2ee17a3c64a51151c1dd`
-- **Matching C leaves:** 31
-- **Completed batch:** mid-`2A0C` empty stubs `func_80050D18`,
-  `func_800527C0`, `func_8005BCA8`, and `func_8008CA7C`
-- **Confirmed shape for each completed stub:** `jr $ra; nop`
+- **Current checkpoint:** `8c1aab5` (Phase 5AO)
+- **Matching C leaves:** 38
+- **Completed batch:** return-1 septuplet — seven byte-identical
+  `jr; li v0,1` stubs from the 2026-07-09 triage:
+  `func_8003D82C`, `func_80017E9C`, `func_80019050`, `func_80019058`,
+  `func_800190AC`, `func_800190B4`, `func_8004DA9C`
+- **Confirmed shape:** `int f(void){return 1;}` — `jr $ra; addiu $v0,$zero,1`
+  (`0800E003 01000224`), GCC 14.2 Phase 4J flags exact at -O1
+- **Prior completed batch:** mid-`2A0C` empty stubs `func_80050D18`,
+  `func_800527C0`, `func_8005BCA8`, `func_8008CA7C` (`jr; nop`)
 - **Toolchain:** MIPS little-endian binutils 2.44 and GCC 14.2 in the
   `pe-mipsel` Distrobox; this is a matching modern toolchain, not a claim
   about the original game compiler
@@ -1071,5 +1100,4 @@ leaves.
   assembly, and game assets remain local and git-ignored
 
 Next work is a read-only triage for additional small, call-free, global-free,
-branch-free leaves. Known sb-stub and 5I-class scheduling-mismatch families
-remain parked until a more suitable compiler or scheduling path is available.
+branch-free leaves outside the parked sb-stub / 5I-class / accessor families.
