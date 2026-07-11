@@ -108,13 +108,19 @@ segments:
       # Phase 5AF: C leaf func_80050D18 — VRAM 0x80050D18, size 0x8.
       # File span 0x41518–0x41520 exclusive. Empty jr/nop stub (second mid-2A0C).
       - [0x41518, c, func_80050D18]
+      # Phase 5AV: C leaf func_80051834 — VRAM 0x80051834, size 0x18.
+      # File span 0x42034–0x4204C exclusive. Unsigned bit-test getter:
+      # lui/lw/nop/srlv/jr/andi 1 on D_800C0E24. Plain -O1 matches.
+      # Mid-41520 carve: prefix 0xB14, C 0x18, resume 4204C.s 0x5FC.
       - [0x41520, asm]
+      - [0x42034, c, func_80051834]
+      - [0x4204C, asm]
       # Phase 5AQ: C leaf func_80051E48 — VRAM 0x80051E48, size 0x10.
       # File span 0x42648–0x42658 exclusive. Pure address-return leaf:
       # lui $v0,%hi(D_800A1B30); addiu $v0,$v0,%lo(D_800A1B30); jr $ra; nop.
       # Unfilled delay slot (addiu before jr) => this one C unit is compiled
       # with -fno-delayed-branch (per-file; documented Phase 4J behaviour).
-      # Prefix of 41520.s is 0x1128 (= 0x42648 - 0x41520); resume 42658.s 0x968.
+      # Preceding 4204C.s is 0x5FC; resume 42658.s is 0x968.
       - [0x42648, c, func_80051E48]
       - [0x42658, asm]
       # Phase 5AR: C leaf func_80052514 — VRAM 0x80052514, size 0x10.
