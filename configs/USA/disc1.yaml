@@ -137,7 +137,14 @@ segments:
       # Phase 5AH: C leaf func_8005BCA8 — VRAM 0x8005BCA8, size 0x8.
       # File span 0x4C4A8–0x4C4B0 exclusive. Empty jr/nop stub.
       - [0x4C4A8, c, func_8005BCA8]
+      # Phase 5AU: C leaf func_80073DE8 — VRAM 0x80073DE8, size 0x10.
+      # File span 0x645E8–0x645F8 exclusive. 16-bit global getter:
+      # lui $v0,%hi(D_800945E6); lhu $v0,%lo(D_800945E6)($v0); jr $ra; nop.
+      # Same shape as 5AR/5AS; plain -O1 matches (MIPS-I load-delay).
+      # Mid-4C4B0 carve: prefix 0x18138, C 0x10, resume 645F8.s 0x18C84.
       - [0x4C4B0, asm]
+      - [0x645E8, c, func_80073DE8]
+      - [0x645F8, asm]
       # Phase 5AI: C leaf func_8008CA7C — VRAM 0x8008CA7C, size 0x8.
       # File span 0x7D27C–0x7D284 exclusive. Empty jr/nop stub.
       - [0x7D27C, c, func_8008CA7C]

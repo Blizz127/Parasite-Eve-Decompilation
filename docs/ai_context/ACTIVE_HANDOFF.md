@@ -6,18 +6,20 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AT — `func_8003FFBC` integrated (forty-third matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, at `bed30d7` +1).
-Forty-three matching C leaves. First **32-bit global getter** leaf
-(`lui/lw/jr/nop`, returns `D_800A1704`). Same load-return schedule as the
-16-bit twins — **plain -O1 matches**. Setter twin `func_8003FFAC` stays in
-asm (`$at` vs `$v0` regalloc). Mid-`2E7D0.s` carve.
+**Phase 5AU — `func_80073DE8` integrated (forty-fourth matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, base `9bb3099` + uncommitted 5AU only).
+Forty-four matching C leaves. Another **16-bit global getter**
+(`lui/lhu/jr/nop`, returns `D_800945E6` as `unsigned short`) — same shape
+as 5AR/5AS; **plain -O1 matches**. Mid-`4C4B0.s` carve.
 **Parked:** `func_8003DFD0` return-0 stub (5I-class `move` vs `addu` in
 delay slot — GCC 14.2 emits `00001025` not `21100000`, same blocker as
 `800C7DC4`) + sb-stub / accessor families + setter `func_8003FFAC`.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (forty-three leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (forty-four leaves).
+
+Scope reset: accidental broad commit `c62e642` was discarded by resetting to
+its clean parent `9bb3099`; the current work contains only Phase 5AU.
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -53,6 +55,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x42FC8,   asm]
 [0x4C4A8,   c, func_8005BCA8]  VRAM 0x8005BCA8, size 0x8 (Phase 5AH)
 [0x4C4B0,   asm]
+[0x645E8,   c, func_80073DE8]  VRAM 0x80073DE8, size 0x10 (Phase 5AU)
+[0x645F8,   asm]
 [0x7D27C,   c, func_8008CA7C]  VRAM 0x8008CA7C, size 0x8 (Phase 5AI)
 [0x7D284,   asm]
 [0x7FE94,   c, func_8008F694]  VRAM 0x8008F694, size 0x14 (Phase 5K)
@@ -234,7 +238,7 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5AT done:** forty-three production C leaves. Completed
+  **Phase 5B–5AU done:** forty-four production C leaves. Completed
   batches: mid-`2A0C` empty-stub batch `func_80050D18` / `func_800527C0` /
   `func_8005BCA8` / `func_8008CA7C` plus `func_8003DFC8`; **return-1 septuplet
   batch `func_8003D82C` / `func_80017E9C` / `func_80019050` / `func_80019058` /
@@ -242,25 +246,25 @@ post-split `git status` check.
   Phase 5AJ–5AO) plus **post-septuplet leaves `func_800428C4`**
   (`lui/lw/jr/addiu -1`), **`func_80051E48`** (pure address return
   `lui/addiu/jr/nop`, `-fno-delayed-branch`) **and the 16-bit getter twins
-  `func_80052514` / `func_80052524`** (`lui/lhu/jr/nop`, plain -O1) **and `func_8003FFBC`** (`lui/lw/jr/nop`, plain -O1). Blocked `func_8003DFD0` return-0 (5I-class
+  `func_80052514` / `func_80052524` / `func_80073DE8`** (`lui/lhu/jr/nop`,
+  plain -O1) **and `func_8003FFBC`** (`lui/lw/jr/nop`, plain -O1). Blocked `func_8003DFD0` return-0 (5I-class
   `move` vs `addu`). Existing leaves include the mid-region trio
   `func_8008F694` / `func_8008F868` / `func_8008F880`, the 904xx cluster,
   `func_800906B4`, early 90Cxx leaves, and the completed tail empty-stub batch.
 
 ## Next concrete step
 
-**Milestone:** forty-three matching C leaves on branch
-`phase5ae-2a0c-hole-aware` (Phase 5AT: `func_8003FFBC` — 32-bit global
-getter, plain -O1). Forty-three leaves exact SHA-1.
+**Milestone:** forty-four matching C leaves on branch
+`phase5ae-2a0c-hole-aware` (Phase 5AU: `func_80073DE8` — 16-bit global
+getter, plain -O1). Forty-four leaves exact SHA-1.
 Return-1 septuplet (7/7) remains complete. Parked: `func_8003DFD0`
 return-0 (5I move vs addu), setter `func_8003FFAC` ($at vs $v0),
 sb-stub / 5I-class / accessor families.
 
-**Next:** continue one-leaf-at-a-time for remaining small call-free leaves
-outside parked families (e.g. `func_80073DE8` 16-bit getter twin shape).
-Levers proven: `-fno-delayed-branch` per-file for un-filled jr delay slots;
-MIPS-I load-delay naturally leaves loads out of the slot.
-Repeat carve → scratch probe → production exact-match flow.
+**Next:** stop at this target-only checkpoint for review/commit. No next leaf
+is selected; do not add another function to this worktree until Phase 5AU is
+accepted. Continue the established carve → scratch probe → production
+exact-match flow one leaf at a time.
 Oracle:
 
 ```text
@@ -268,6 +272,14 @@ build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Phase 5AU result — `func_80073DE8` (2026-07-11):** VRAM `0x80073DE8` /
+file `0x645E8` / size `0x10`. 16-bit global getter —
+`lui $v0,%hi(D_800945E6); lhu $v0,%lo(D_800945E6)($v0); jr $ra; nop`,
+i.e. `unsigned short func(void){ return D_800945E6; }`. Plain -O1 matches.
+Mid-`4C4B0.s` carve: prefix `0x18138`, C `0x10`, resume `645F8.s`
+`0x18C84` (sums to prior `0x30DCC`). Re-split + production **EXACT MATCH**;
+forty-four leaves. `verify_us.sh` exits 0 and reports Phase 5AU.
 
 **Phase 5AT result — `func_8003FFBC` (2026-07-11):** VRAM `0x8003FFBC` /
 file `0x307BC` / size `0x10`. 32-bit global getter —
@@ -702,6 +714,7 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-11: **Phase 5AU forty-fourth C leaf integrated — 16-bit global getter.** Reset the accidental broad `c62e642` checkpoint to clean parent `9bb3099`, then converted only `func_80073DE8` (file `0x645E8`, size `0x10`, VRAM `0x80073DE8`, `lui v0,%hi(D_800945E6); lhu v0,%lo(D_800945E6)(v0); jr ra; nop` → `unsigned short func(void){ return D_800945E6; }`). Plain -O1 matches. Target-only mid-`4C4B0.s` carve `[0x4C4B0, asm]` (`0x18138`) + `[0x645E8, c]` + `[0x645F8, asm]` (`0x18C84`). Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AU forty-four leaves. No later leaf was retained.
 - 2026-07-11: **Phase 5AT forty-third C leaf integrated — 32-bit global getter.** Branch `phase5ae-2a0c-hole-aware` on top of `bed30d7` (Phase 5AS). Converted `func_8003FFBC` (file `0x307BC`, size `0x10`, VRAM `0x8003FFBC`, `lui v0,%hi(D_800A1704); lw v0,%lo(D_800A1704)(v0); jr ra; nop` → `int func(void){ return D_800A1704; }`). Plain -O1 matches. Mid-`2E7D0.s` carve `[0x2E7D0, asm]` (`0x1FEC`) + `[0x307BC, c]` + `[0x307CC, asm]` (`0x28F8`). Setter twin `func_8003FFAC` parked (`$at` vs `$v0`). Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AT forty-three leaves.
 - 2026-07-10: **Phase 5AS forty-second C leaf integrated — twin 16-bit global getter.** Branch `phase5ae-2a0c-hole-aware` on top of `a7efe09` (Phase 5AR). Converted `func_80052524` (file `0x42D24`, size `0x10`, VRAM `0x80052524`, `lui v0,%hi(D_800C0E32); lhu v0,%lo(D_800C0E32)(v0); jr ra; nop` → `unsigned short func(void){ return D_800C0E32; }`). Identical shape to 5AR; plain -O1 matches. Zero-prefix carve of former `42D24.s`: `[0x42D24, c]` + `[0x42D34, asm]` (`0x28C`), `src/func_80052524.c`, build/verify updates. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AS forty-two leaves.
 - 2026-07-10: **Phase 5AR forty-first C leaf integrated — first 16-bit global getter.** Branch `phase5ae-2a0c-hole-aware` on top of `8284184` (Phase 5AQ). Converted `func_80052514` (file `0x42D14`, size `0x10`, VRAM `0x80052514`, `lui v0,%hi(D_800C0E28); lhu v0,%lo(D_800C0E28)(v0); jr ra; nop` → `unsigned short func(void){ return D_800C0E28; }`). jr delay slot is nop but **plain -O1 already matches**: on MIPS-I a load cannot fill the return delay slot (load-delay hazard), so unlike 5AQ no `-fno-delayed-branch` is needed. `D_800C0E28` auto-resolves absolute `0x800C0E28` via probe-link fallback. Mid-`42658.s` carve `[0x42658, asm]` (`0x6BC`) + `[0x42D14, c]` + `[0x42D24, asm]` (`0x29C`), `src/func_80052514.c`, build/verify updates. Twin `func_80052524` (`D_800C0E32`, same shape) left in asm for now. Scratch probe (plain + -fno-delayed-branch both) emitted the exact 4 words. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AR forty-one leaves.
@@ -1136,13 +1149,14 @@ pc0/`0xB2AF8` each time.
 The USA Disc 1 executable currently rebuilds byte-for-byte from a mixed
 assembly/C layout. `scripts/build_us.sh` produces the exact target SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and `scripts/verify_us.sh`
-passes the split/config checks and reports Phase 5AT with 43 matching C
+passes the split/config checks and reports Phase 5AU with 44 matching C
 leaves.
 
 - **Current branch:** `phase5ae-2a0c-hole-aware`
-- **Current checkpoint:** `bed30d7` +1 (Phase 5AT)
-- **Matching C leaves:** 43
-- **Latest leaf:** `func_8003FFBC` (`lui v0,%hi(D_800A1704); lw v0,%lo(v0); jr ra; nop`) — 32-bit global getter (`int return D_800A1704;`), plain -O1
+- **Current checkpoint:** base `9bb3099` + uncommitted target-only Phase 5AU
+- **Matching C leaves:** 44
+- **Latest leaf:** `func_80073DE8` (`lui v0,%hi(D_800945E6); lhu v0,%lo(v0); jr ra; nop`) — 16-bit global getter (`unsigned short return D_800945E6;`), plain -O1
+- **Prior leaf:** `func_8003FFBC` (`lui v0,%hi(D_800A1704); lw v0,%lo(v0); jr ra; nop`) — 32-bit global getter (`int return D_800A1704;`), plain -O1
 - **Prior leaf:** `func_80052524` (`lui v0,%hi(D_800C0E32); lhu v0,%lo(v0); jr ra; nop`) — twin 16-bit global getter (`unsigned short return D_800C0E32;`), plain -O1
 - **Prior leaf:** `func_80052514` (`lui v0,%hi(D_800C0E28); lhu v0,%lo(v0); jr ra; nop`) — first 16-bit global getter (`unsigned short return D_800C0E28;`), plain -O1 (MIPS-I load-delay leaves the slot unfilled)
 - **Prior leaf:** `func_80051E48` (`lui v0,%hi(D_800A1B30); addiu v0,v0,%lo; jr ra; nop`) — first pure address-return leaf (`return &D_800A1B30;`), compiled `-fno-delayed-branch` for the un-filled jr delay slot
@@ -1159,5 +1173,5 @@ leaves.
 - **Repository boundary:** extracted executables, disc images, generated
   assembly, and game assets remain local and git-ignored
 
-Next work is a read-only triage for additional small, call-free, global-free,
-branch-free leaves outside the parked sb-stub / 5I-class / accessor families.
+Next work is review/commit of the isolated Phase 5AU checkpoint. Select the
+next leaf only after this one is accepted.
