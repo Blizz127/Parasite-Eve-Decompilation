@@ -11,13 +11,16 @@ Initial target:
 
 ## Project status
 
-**Current phase: Phase 2 — initial Splat/spimdisasm infrastructure.**
-Phase 1 local verification is complete and corroborated; the official
-redump.org cross-check remains open (non-blocking). No disassembly output,
-matching build, decompiled C, or PC port exists yet.
+**Current phase: Phase 5AX — 47 matching C leaves** (pending commit on
+branch `phase5ae-2a0c-hole-aware`; last committed checkpoint `7902dd2` /
+Phase 5AW / 46 leaves). Disc 1 EXE rebuilds byte-for-byte via
+`scripts/build_us.sh` (SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`).
+Phase 1 local verification is complete; the official redump.org cross-check
+remains open (non-blocking). PC port is out of scope.
 See [`docs/project_plan.md`](docs/project_plan.md) for the roadmap and
 [`docs/ai_context/ACTIVE_HANDOFF.md`](docs/ai_context/ACTIVE_HANDOFF.md) for
-the current working state.
+the current working state. Public mirror:
+[GitHub Wiki](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki).
 
 ## Goals
 
