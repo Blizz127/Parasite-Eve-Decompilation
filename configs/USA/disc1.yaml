@@ -98,11 +98,17 @@ segments:
       # Phase 5AP: C leaf func_800428C4 — VRAM 0x800428C4, size 0x10.
       # File span 0x330C4–0x330D4 exclusive. Simple global decrement getter.
       - [0x330C4, c, func_800428C4]
+      # Phase 5AW: C leaf func_80042B28 — VRAM 0x80042B28, size 0x10.
+      # File span 0x33328–0x33338 exclusive. 32-bit global getter:
+      # lui/lw/jr/nop on D_800A1838. Plain -O1 matches.
+      # Mid-330D4 carve: prefix 0x254, C 0x10, resume 33338.s 0xAF64.
       - [0x330D4, asm]
+      - [0x33328, c, func_80042B28]
+      - [0x33338, asm]
       # Phase 5AO: C leaf func_8004DA9C — VRAM 0x8004DA9C, size 0x8.
       # File span 0x3E29C–0x3E2A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # seventh/final of the seven return-1 twins (shape scratch-proven in 5AJ).
-      # Prefix of 330D4.s is 0xB7C8 (= 0x3E29C - 0x330D4); resume 3E2A4.s 0x3274.
+      # Preceding 33338.s is 0xAF64; resume 3E2A4.s is 0x3274.
       - [0x3E29C, c, func_8004DA9C]
       - [0x3E2A4, asm]
       # Phase 5AF: C leaf func_80050D18 — VRAM 0x80050D18, size 0x8.
