@@ -114,11 +114,15 @@ segments:
       # File span 0x42D14–0x42D24 exclusive. 16-bit global getter:
       # lui $v0,%hi(D_800C0E28); lhu $v0,%lo(D_800C0E28)($v0); jr $ra; nop.
       # Unfilled delay slot is natural on MIPS-I (load-delay hazard), so plain
-      # -O1 already matches — no -fno-delayed-branch needed. Twin func_80052524
-      # (D_800C0E32) stays in asm for now.
-      # Prefix of 42658.s is 0x6BC (= 0x42D14 - 0x42658); resume 42D24.s 0x29C.
+      # -O1 already matches — no -fno-delayed-branch needed.
+      # Prefix of 42658.s is 0x6BC (= 0x42D14 - 0x42658).
       - [0x42D14, c, func_80052514]
-      - [0x42D24, asm]
+      # Phase 5AS: C leaf func_80052524 — VRAM 0x80052524, size 0x10.
+      # File span 0x42D24–0x42D34 exclusive. Twin of func_80052514:
+      # lui $v0,%hi(D_800C0E32); lhu $v0,%lo(D_800C0E32)($v0); jr $ra; nop.
+      # Zero-prefix carve of former 42D24.s; resume 42D34.s size 0x28C.
+      - [0x42D24, c, func_80052524]
+      - [0x42D34, asm]
       # Phase 5AG: C leaf func_800527C0 — VRAM 0x800527C0, size 0x8.
       # File span 0x42FC0–0x42FC8 exclusive. Empty jr/nop stub.
       - [0x42FC0, c, func_800527C0]

@@ -7,7 +7,7 @@
  * slot, so GCC 14.2 -O1 never schedules the lhu into the return's delay
  * slot — plain Phase 4J flags already emit the exact 4 words (no
  * -fno-delayed-branch needed). Scratch probe confirmed.
- * Twin func_80052524 (D_800C0E32) stays in asm for now.
+ * Twin: func_80052524 (D_800C0E32) — Phase 5AS.
  */
 extern unsigned short D_800C0E28;
 
