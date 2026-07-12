@@ -168,7 +168,13 @@ segments:
       # Mid-65238 carve: prefix 0x9478, C 0x10, resume 6E6C0.s 0xEBBC.
       - [0x65238, asm]
       - [0x6E6B0, c, func_8007DEB0]
+      # Phase 5AZ: C leaf func_8007F778 — VRAM 0x8007F778, size 0x10.
+      # File span 0x6FF78–0x6FF88 exclusive. 32-bit global getter:
+      # lui/lw/jr/nop on D_800A3608. Plain -O1 matches.
+      # Mid-6E6C0 carve: prefix 0x18B8, C 0x10, resume 6FF88.s 0xD2F4.
       - [0x6E6C0, asm]
+      - [0x6FF78, c, func_8007F778]
+      - [0x6FF88, asm]
       # Phase 5AI: C leaf func_8008CA7C — VRAM 0x8008CA7C, size 0x8.
       # File span 0x7D27C–0x7D284 exclusive. Empty jr/nop stub.
       - [0x7D27C, c, func_8008CA7C]
