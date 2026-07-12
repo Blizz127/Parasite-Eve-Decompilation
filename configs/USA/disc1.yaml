@@ -192,7 +192,13 @@ segments:
       # Mid-71150 carve: prefix 0x195C, C 0x10, resume 72ABC.s 0xA7C0.
       - [0x71150, asm]
       - [0x72AAC, c, func_800822AC]
+      # Phase 5BD: C leaf func_800870E0 — VRAM 0x800870E0, size 0x10.
+      # File span 0x778E0–0x778F0 exclusive. 32-bit global getter:
+      # lui/lw/jr/nop on D_8009D24C. Plain -O1 matches.
+      # Mid-72ABC carve: prefix 0x4E24, C 0x10, resume 778F0.s 0x598C.
       - [0x72ABC, asm]
+      - [0x778E0, c, func_800870E0]
+      - [0x778F0, asm]
       # Phase 5AI: C leaf func_8008CA7C — VRAM 0x8008CA7C, size 0x8.
       # File span 0x7D27C–0x7D284 exclusive. Empty jr/nop stub.
       - [0x7D27C, c, func_8008CA7C]
