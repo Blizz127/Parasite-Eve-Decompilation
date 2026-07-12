@@ -6,30 +6,33 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5AX — `func_80074A28` integrated (forty-seventh matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, base `7902dd2` + uncommitted 5AX only).
-Forty-seven matching C leaves. Another **32-bit global getter**
-(`lui/lw/jr/nop`, returns `D_800956EC` as `int`); **plain -O1 matches**.
-Mid-`645F8.s` carve.
+**Phase 5AY — `func_8007DEB0` integrated (forty-eighth matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, base `27a6ba2` + uncommitted 5AY only).
+Forty-eight matching C leaves. Another **32-bit global getter**
+(`lui/lw/jr/nop`, returns `D_8009B4AC` as `int`); **plain -O1 matches**.
+Mid-`65238.s` carve.
 **Parked:** `func_8003DFD0` return-0 stub (5I-class `move` vs `addu` in
 delay slot — GCC 14.2 emits `00001025` not `21100000`, same blocker as
 `800C7DC4`) + sb-stub / accessor families + setter `func_8003FFAC`.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (forty-seven leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (forty-eight leaves).
 
-**Provenance:** clean re-derivation from confirmed-clean commit `7902dd2`
-(Phase 5AW / 46 leaves). A prior unverified 5AX reconstruction was stashed
-(not deleted) as `stash@{0}` after its safety claim
-(`git diff c3a8424 --` empty) was checked and found false. Fresh
-`verify_us.sh` phase-ladder style matches the 5AW precedent in `7902dd2`
-(in-place edit of the current-phase arm; next historical arm remains 5AQ —
-no preserved intermediate `elif`).
+**Provenance:** clean target-only derivation from accepted commit `27a6ba2`
+(Phase 5AX / 47 leaves). The prior comparison stash was dropped after 5AX
+landed, as authorized; `git stash list` is empty. The 5AY scratch-linked
+probe and production probe both match raw ROM bytes at file `0x6E6B0`.
+`verify_us.sh` edits the current-phase arm in place; the next historical arm
+remains 5AQ, matching committed precedent.
 
 Scope reset: accidental broad commit `c62e642` was discarded by resetting to
 its clean parent `9bb3099`; isolated Phase 5AU was then accepted and committed
-as `c3a8424`, Phase 5AV as `7323079`, and Phase 5AW as `7902dd2`. The current
-work contains only Phase 5AX.
+as `c3a8424`, Phase 5AV as `7323079`, Phase 5AW as `7902dd2`, and Phase 5AX
+as `27a6ba2`. The current work contains only Phase 5AY.
+
+`README.md` and `CLAUDE.md` still contain pre-commit Phase 5AX checkpoint
+wording from `27a6ba2`; they are intentionally left untouched in this
+five-file leaf scope. This handoff is authoritative for the live state.
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -73,6 +76,8 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x645F8,   asm]
 [0x65228,   c, func_80074A28]  VRAM 0x80074A28, size 0x10 (Phase 5AX)
 [0x65238,   asm]
+[0x6E6B0,   c, func_8007DEB0]  VRAM 0x8007DEB0, size 0x10 (Phase 5AY)
+[0x6E6C0,   asm]
 [0x7D27C,   c, func_8008CA7C]  VRAM 0x8008CA7C, size 0x8 (Phase 5AI)
 [0x7D284,   asm]
 [0x7FE94,   c, func_8008F694]  VRAM 0x8008F694, size 0x14 (Phase 5K)
@@ -147,7 +152,7 @@ Phase 1 complete locally; only the official redump cross-check remains open (non
   pointer/alias, not a separate active config. **First real split run
   completed 2026-07-07** — local study artifacts under `asm/disc1/`,
   `linkers/disc1.ld`, `include/*.inc`, `undefined_*_auto.txt` (all
-  git-ignored, never committed). Thirty-one matching C leaves now exist; no
+  git-ignored, never committed). Forty-eight matching C leaves now exist; no
   PC-port work exists. `scripts/setup_env.sh` is implemented (pinned `.venv/`
   install); `verify_us.sh` checks split artifacts and reports the current
   rebuild/C-leaf state. **`scripts/build_us.sh`:** assemble/compile/link/pack/
@@ -254,7 +259,7 @@ post-split `git status` check.
   `pe-mipsel`, binutils 2.44). Phase 4H+4I: asm-only rebuild is an **exact
   SHA-1 match** via `scripts/build_us.sh` (exit 0 only on match). Phase 4J:
   modern GCC 14.2 in `pe-mipsel` emits exact words for the 90Cxx/90F54 leaves at -O1+.
-  **Phase 5B–5AX done:** forty-seven production C leaves. Completed
+  **Phase 5B–5AY done:** forty-eight production C leaves. Completed
   batches: mid-`2A0C` empty-stub batch `func_80050D18` / `func_800527C0` /
   `func_8005BCA8` / `func_8008CA7C` plus `func_8003DFC8`; **return-1 septuplet
   batch `func_8003D82C` / `func_80017E9C` / `func_80019050` / `func_80019058` /
@@ -266,7 +271,8 @@ post-split `git status` check.
   plain -O1), **`func_8003FFBC`** (`lui/lw/jr/nop`, plain -O1), **and
   `func_80051834`** (unsigned indexed bit test, `lui/lw/nop/srlv/jr/andi`,
   plain -O1), **`func_80042B28`** (32-bit global getter,
-  `lui/lw/jr/nop`, plain -O1), **and `func_80074A28`** (32-bit global getter,
+  `lui/lw/jr/nop`, plain -O1), **`func_80074A28`** (32-bit global getter,
+  `lui/lw/jr/nop`, plain -O1), **and `func_8007DEB0`** (32-bit global getter,
   `lui/lw/jr/nop`, plain -O1). Blocked `func_8003DFD0` return-0 (5I-class
   `move` vs `addu`). Existing leaves include the mid-region trio
   `func_8008F694` / `func_8008F868` / `func_8008F880`, the 904xx cluster,
@@ -274,15 +280,15 @@ post-split `git status` check.
 
 ## Next concrete step
 
-**Milestone:** forty-seven matching C leaves on branch
-`phase5ae-2a0c-hole-aware` (Phase 5AX: `func_80074A28` — 32-bit global
-getter, plain -O1). Forty-seven leaves exact SHA-1.
+**Milestone:** forty-eight matching C leaves on branch
+`phase5ae-2a0c-hole-aware` (Phase 5AY: `func_8007DEB0` — 32-bit global
+getter, plain -O1). Forty-eight leaves exact SHA-1.
 Return-1 septuplet (7/7) remains complete. Parked: `func_8003DFD0`
 return-0 (5I move vs addu), setter `func_8003FFAC` ($at vs $v0),
 sb-stub / 5I-class / accessor families.
 
 **Next:** stop at this target-only checkpoint for review/commit. No next leaf
-is selected; do not add another function to this worktree until Phase 5AX is
+is selected; do not add another function to this worktree until Phase 5AY is
 accepted. Continue the established carve → scratch probe → production
 exact-match flow one leaf at a time.
 Oracle:
@@ -293,14 +299,23 @@ verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
 
+**Phase 5AY result — `func_8007DEB0` (2026-07-12):** VRAM `0x8007DEB0` /
+file `0x6E6B0` / size `0x10`. 32-bit global getter —
+`lui $v0,%hi(D_8009B4AC); lw $v0,%lo(D_8009B4AC)($v0); jr $ra; nop`,
+i.e. `int func(void){ return D_8009B4AC; }`. Plain -O1 matches. Mid-`65238.s`
+carve: prefix `0x9478`, C `0x10`, resume `6E6C0.s` `0xEBBC` (sums to prior
+`0x18044`). Scratch-linked bytes and the production probe both match raw ROM
+`0a80023c acb4428c 0800e003 00000000`. Re-split + production **EXACT
+MATCH**; forty-eight leaves. `verify_us.sh` exits 0 and reports Phase 5AY.
+
 **Phase 5AX result — `func_80074A28` (2026-07-11):** VRAM `0x80074A28` /
 file `0x65228` / size `0x10`. 32-bit global getter —
 `lui $v0,%hi(D_800956EC); lw $v0,%lo(D_800956EC)($v0); jr $ra; nop`,
 i.e. `int func(void){ return D_800956EC; }`. Plain -O1 matches. Mid-`645F8.s`
 carve: prefix `0xC30`, C `0x10`, resume `65238.s` `0x18044` (sums to prior
 `0x18C84`). Clean re-derivation from `7902dd2` after a prior attempt's
-safety claim was found unverifiable (prior work preserved as `stash@{0}`,
-not deleted). `verify_us.sh` ladder: in-place 5AX arm matching the 5AW
+safety claim was found unverifiable (prior work was preserved for comparison,
+then dropped after accepted commit `27a6ba2`). `verify_us.sh` ladder: in-place 5AX arm matching the 5AW
 precedent in `7902dd2` (no preserved 5AW `elif`). Re-split + production
 **EXACT MATCH**; forty-seven leaves. `verify_us.sh` exits 0 and reports
 Phase 5AX.
@@ -765,6 +780,7 @@ pc0/`0xB2AF8` each time.
 
 ## Changelog
 
+- 2026-07-12: **Phase 5AY forty-eighth C leaf integrated — 32-bit global getter.** From accepted Phase 5AX commit `27a6ba2`, converted only `func_8007DEB0` (file `0x6E6B0`, size `0x10`, VRAM `0x8007DEB0`, `lui v0,%hi(D_8009B4AC); lw v0,%lo(D_8009B4AC)(v0); jr ra; nop` → `int func(void){ return D_8009B4AC; }`). Plain -O1 scratch-linked bytes exactly match raw ROM. Target-only mid-`65238.s` carve `[0x65238, asm]` (`0x9478`) + `[0x6E6B0, c]` + `[0x6E6C0, asm]` (`0xEBBC`), summing to the prior `0x18044`. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AY forty-eight leaves; direct `cmp` exact. The completed 5AX comparison stash was dropped before this work; no stash remains. No other leaf was added.
 - 2026-07-11: **Phase 5AX forty-seventh C leaf integrated — 32-bit global getter (clean re-derivation).** From confirmed-clean Phase 5AW commit `7902dd2`, converted only `func_80074A28` (file `0x65228`, size `0x10`, VRAM `0x80074A28`, `lui v0,%hi(D_800956EC); lw v0,%lo(D_800956EC)(v0); jr ra; nop` → `int func(void){ return D_800956EC; }`). Plain -O1 matches. Target-only mid-`645F8.s` carve `[0x645F8, asm]` (`0xC30`) + `[0x65228, c]` + `[0x65238, asm]` (`0x18044`). Prior unverified 5AX attempt stashed (not deleted) after a false empty-diff safety claim vs wrong baseline `c3a8424`; fresh tree kept; `verify_us.sh` ladder follows `7902dd2` in-place-edit precedent (no extra 5AW `elif`). Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AX forty-seven leaves. No other leaf was added. Uncommitted pending review.
 - 2026-07-11: **Phase 5AW forty-sixth C leaf integrated — 32-bit global getter.** From accepted Phase 5AV commit `7323079`, converted only `func_80042B28` (file `0x33328`, size `0x10`, VRAM `0x80042B28`, `lui v0,%hi(D_800A1838); lw v0,%lo(D_800A1838)(v0); jr ra; nop` → `int func(void){ return D_800A1838; }`). Plain -O1 matches. The current generated container is `330D4.s` within the original `2E7D0.s` family. Target-only carve `[0x330D4, asm]` (`0x254`) + `[0x33328, c]` + `[0x33338, asm]` (`0xAF64`). Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AW forty-six leaves. No other leaf was added.
 - 2026-07-11: **Phase 5AV forty-fifth C leaf integrated — unsigned indexed bit test.** From accepted Phase 5AU commit `c3a8424`, converted only `func_80051834` (file `0x42034`, size `0x18`, VRAM `0x80051834`, `lui/lw/nop/srlv/jr/andi 1` → `int func(int a0){ return (D_800C0E24 >> a0) & 1; }` with `D_800C0E24` declared `unsigned int`). Plain -O1 matches; signed C was rejected because it emits `srav`. Target-only mid-`41520.s` carve `[0x41520, asm]` (`0xB14`) + `[0x42034, c]` + `[0x4204C, asm]` (`0x5FC`). Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5AV forty-five leaves. No other leaf was added.
@@ -1203,14 +1219,15 @@ pc0/`0xB2AF8` each time.
 The USA Disc 1 executable currently rebuilds byte-for-byte from a mixed
 assembly/C layout. `scripts/build_us.sh` produces the exact target SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and `scripts/verify_us.sh`
-passes the split/config checks and reports Phase 5AX with 47 matching C
+passes the split/config checks and reports Phase 5AY with 48 matching C
 leaves.
 
 - **Current branch:** `phase5ae-2a0c-hole-aware`
-- **Current checkpoint:** base `7902dd2` + uncommitted target-only Phase 5AX
-  (clean re-derivation; prior unverified attempt kept as `stash@{0}`)
-- **Matching C leaves:** 47
-- **Latest leaf:** `func_80074A28` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_800956EC;`), plain -O1
+- **Current checkpoint:** accepted `27a6ba2` + uncommitted target-only Phase 5AY
+  (`git stash list` empty)
+- **Matching C leaves:** 48
+- **Latest leaf:** `func_8007DEB0` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_8009B4AC;`), plain -O1
+- **Prior leaf:** `func_80074A28` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_800956EC;`), plain -O1
 - **Prior leaf:** `func_80042B28` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_800A1838;`), plain -O1
 - **Prior leaf:** `func_80051834` (`lui/lw/nop/srlv/jr/andi 1`) — unsigned indexed bit test (`return (D_800C0E24 >> a0) & 1;`), plain -O1
 - **Prior leaf:** `func_80073DE8` (`lui v0,%hi(D_800945E6); lhu v0,%lo(v0); jr ra; nop`) — 16-bit global getter (`unsigned short return D_800945E6;`), plain -O1
@@ -1231,5 +1248,5 @@ leaves.
 - **Repository boundary:** extracted executables, disc images, generated
   assembly, and game assets remain local and git-ignored
 
-Next work is review/commit of the isolated Phase 5AX checkpoint. Select the
+Next work is review/commit of the isolated Phase 5AY checkpoint. Select the
 next leaf only after this one is accepted.
