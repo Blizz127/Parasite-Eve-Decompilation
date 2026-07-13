@@ -39,6 +39,7 @@ EXPECTED_SPLAT_PIN="0.41.0"
 
 # Current production subsegments (file offsets). Phase 5DB: one-hundred-three C leaves.
 EXPECTED_SUBSEGMENTS=(
+    '[0x2E7D0, c, func_8003DFD0]'
     '[0x4370C, c, func_80052F0C]'
     '[0xA3E4, c, func_80019BE4]'
     '[0x40008, c, func_8004F808]'
@@ -107,7 +108,6 @@ EXPECTED_SUBSEGMENTS=(
     '[0x2E02C, c, func_8003D82C]'
     '[0x2E034, asm]'
     '[0x2E7C8, c, func_8003DFC8]'
-    '[0x2E7D0, asm]'
     '[0x307BC, c, func_8003FFBC]'
     '[0x307CC, asm]'
     '[0x330C4, c, func_800428C4]'
@@ -651,7 +651,7 @@ else
 fi
 
 if [[ -f "$ROOT/src/func_8008D820.c" && -f "$ROOT/src/func_80074330.c" && -f "$ROOT/src/func_80077A28.c" && -f "$ROOT/src/func_800CE464.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
-    echo "C conversion: Phase 5DJ — 156 leaves (+ gp !=&global via -fno-tree-ter)"
+    echo "C conversion: Phase 5EA — 157 leaves (+ FIRST era-compiler leaf)"
     echo "  sources: src/func_8008D820.c (+ one-hundred-two prior leaves)"
 elif [[ -f "$ROOT/src/func_800CE464.c" && -f "$ROOT/src/func_800847A0.c" && -f "$ROOT/src/func_80077B64.c" && -f "$ROOT/src/func_80063198.c" && -f "$ROOT/src/func_80073DF8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
     echo "C conversion: Phase 5CW — ninety-eight leaves (+ store/setter batch through func_800CE464)"

@@ -40,3 +40,6 @@ __pycache__/
 # splat boilerplate copied into include/ on split (keep include/.gitkeep)
 include/*.inc
 include/*.h
+
+# Era compiler toolchain (fetched by scripts/setup_era.sh)
+tools/era/

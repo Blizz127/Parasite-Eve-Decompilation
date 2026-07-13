@@ -6,9 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5DI — `$gp`-relative batches integrated (155 matching C leaves)**
-(branch `phase5ae-2a0c-hole-aware`, committed baseline `023c00d` / 5DB / 103;
-all through 5DH pushed to origin `ad8e0ad`). 5DG: +3 complex gp one-offs
+**Phase 5EA — ERA COMPILER integrated; 157 matching C leaves**
+(branch `phase5ae-2a0c-hole-aware`). Retail EXE = Psy-Q `ccpsx` (GCC 2.7.x);
+its fingerprints are unreachable by GCC 14.2 flags, blocking ~290 functions.
+`scripts/setup_era.sh` installs `gcc-2.7.2-psx` + `maspsx` into git-ignored
+`tools/era/`; `build_us.sh` `era_compile` (cpp→cc1→maspsx→as) compiles era leaves
+per-file while the GCC-14.2 leaves stay byte-identical. First era leaf
+`func_8003DFD0` (return-0 `addu`-not-`or`) rebuilds EXACT. **Build-from-clean now
+requires `scripts/setup_era.sh` once (network).** See [[era-compiler-path]]. Next:
+convert the ~290 era-blocked functions (start `move`-vs-`addu` + `$at`-setters).
+5DJ: `52F0C` `!=&global` via `-fno-tree-ter` (clean GCC-14.2 flag, no era needed).
+
+**Prior — Phase 5DI (`$gp`-relative batches, 155 leaves):** 5DG: +3 complex gp one-offs
 (`D1=5;D2=-1` two-const setter, `return D==7` `xori`/`sltiu` bool, `lw;sw;sw`
 save/swap). 5DH: +1 ten-word `sw $zero` clear (func_8004F808). 5DI: +1 or-bit deref (func_80019BE4, `P[4] |= 0x80; return 1`).
 **Parked complex gp** (genuine GCC-vs-retail codegen diffs): indexed `lh` loads

@@ -36,14 +36,18 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5DJ — 156 matching C leaves (`$gp`-relative batches).**
-Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. Base
-commit `023c00d` (5DB / 103 leaves); +53 `$gp`/isel leaves across 5DC–5DJ
-(getters, setters, constant/double/multi-store setters, `!=0` store,
-address-of-into-gp, and complex one-offs: 2-const setter, `==7` bool,
-save/swap), via new small-data infra
-(`_gp = 0x8009CD70` defsym + per-leaf `-G 8`, setters also
-`-fno-delayed-branch`). Phase 1 local verification is complete; redump.org
-cross-check remains open (non-blocking). PC port is out of scope.
+**Phase 5EA — 157 matching C leaves; ERA COMPILER integrated (dual-toolchain build).**
+Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
+EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**, whose fingerprints (`lui;ori`
+consts, `move`→`addu`, `$at` macros, operand order, `$v0`/`$v1` alloc) no GCC 14.2
+flag can reproduce. **`scripts/setup_era.sh`** fetches `gcc-2.7.2-psx` (decompals/
+old-gcc) + `maspsx` into git-ignored `tools/era/`; `build_us.sh`'s `era_compile`
+runs `cpp`→`cc1`→`maspsx`→`as` **per-file**, so the 156 GCC-14.2 leaves stay
+byte-identical while era leaves compile with the old compiler. First era leaf:
+`func_8003DFD0` (return-0 `addu` not `or`) — **exact SHA-1**. ~290 era-blocked
+functions remain to convert. Prior: 5DC–5DJ added 53 `$gp`/isel leaves
+(small-data `_gp`+`-G 8`; `52F0C` via `-fno-tree-ter`). Phase 1 local
+verification is complete; redump.org cross-check remains open (non-blocking).
+PC port is out of scope.
 `docs/ai_context/ACTIVE_HANDOFF.md` has the exact current state and
 `docs/splitting.md` the split target and policy.
