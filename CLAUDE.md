@@ -36,10 +36,10 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5AX — forty-seventh matching C leaf (`func_80074A28`), pending
+**Phase 5CW — ninety-eighth matching C leaf (`func_800CE464`), pending
 commit.** Exact SHA-1 rebuild via `scripts/build_us.sh` /
-`scripts/verify_us.sh`. Base commit `7902dd2` (5AW / 46 leaves). Phase 1
-local verification is complete; redump.org cross-check remains open
-(non-blocking). PC port is out of scope.
-`docs/ai_context/ACTIVE_HANDOFF.md` has the exact current state and
-`docs/splitting.md` the split target and policy.
+`scripts/verify_us.sh`. Base commit `86a62eb` (5BX / 73 leaves); +25
+arg-only store/setter leaves (5BY–5CW). Phase 1 local verification is
+complete; redump.org cross-check remains open (non-blocking). PC port is
+out of scope. `docs/ai_context/ACTIVE_HANDOFF.md` has the exact current
+state and `docs/splitting.md` the split target and policy.

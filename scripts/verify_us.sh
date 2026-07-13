@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5BX: seventy-three C leaves.
+# Current production subsegments (file offsets). Phase 5CW: ninety-eight C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
@@ -82,6 +82,11 @@ EXPECTED_SUBSEGMENTS=(
     '[0x4C4B0, asm]'
     '[0x4F084, c, func_8005E884]'
     '[0x4F094, asm]'
+    '[0x53998, c, func_80063198]'
+    '[0x539AC, c, func_800631AC]'
+    '[0x539C0, asm]'
+    '[0x55420, c, func_80064C20]'
+    '[0x55430, asm]'
     '[0x5F3D4, c, func_8006EBD4]'
     '[0x5F3E4, asm]'
     '[0x645E8, c, func_80073DE8]'
@@ -93,6 +98,24 @@ EXPECTED_SUBSEGMENTS=(
     '[0x654C8, asm]'
     '[0x66B3C, c, func_8007633C]'
     '[0x66B54, asm]'
+    '[0x68364, c, func_80077B64]'
+    '[0x68378, asm]'
+    '[0x68384, c, func_80077B84]'
+    '[0x68398, asm]'
+    '[0x683A4, c, func_80077BA4]'
+    '[0x683B8, asm]'
+    '[0x683C4, c, func_80077BC4]'
+    '[0x683D8, asm]'
+    '[0x683E4, c, func_80077BE4]'
+    '[0x683F8, asm]'
+    '[0x68404, c, func_80077C04]'
+    '[0x68418, asm]'
+    '[0x68424, c, func_80077C24]'
+    '[0x68438, asm]'
+    '[0x68444, c, func_80077C44]'
+    '[0x68458, asm]'
+    '[0x68464, c, func_80077C64]'
+    '[0x68478, asm]'
     '[0x6AB24, c, func_8007A324]'
     '[0x6AB34, c, func_8007A334]'
     '[0x6AB44, c, func_8007A344]'
@@ -115,6 +138,15 @@ EXPECTED_SUBSEGMENTS=(
     '[0x71150, asm]'
     '[0x72AAC, c, func_800822AC]'
     '[0x72ABC, asm]'
+    '[0x73DA4, c, func_800835A4]'
+    '[0x73DB0, c, func_800835B0]'
+    '[0x73DC0, asm]'
+    '[0x74670, c, func_80083E70]'
+    '[0x74684, asm]'
+    '[0x746E4, c, func_80083EE4]'
+    '[0x746F8, asm]'
+    '[0x74FA0, c, func_800847A0]'
+    '[0x74FB0, asm]'
     '[0x778E0, c, func_800870E0]'
     '[0x778F0, asm]'
     '[0x7D27C, c, func_8008CA7C]'
@@ -152,21 +184,36 @@ EXPECTED_SUBSEGMENTS=(
     '[0xB3368, asm]'
     '[0xB8A68, c, func_800C8268]'
     '[0xB8A70, asm]'
+    '[0xB93B4, c, func_800C8BB4]'
+    '[0xB93C0, asm]'
     '[0xB9A60, c, func_800C9260]'
     '[0xB9A68, asm]'
+    '[0xBA168, c, func_800C9968]'
+    '[0xBA174, asm]'
     '[0xBA6A0, c, func_800C9EA0]'
     '[0xBA6A8, asm]'
+    '[0xBACA8, c, func_800CA4A8]'
+    '[0xBACB4, asm]'
     '[0xBB4D4, c, func_800CACD4]'
     '[0xBB4DC, asm]'
+    '[0xBC324, c, func_800CBB24]'
+    '[0xBC330, asm]'
     '[0xBDADC, c, func_800CD2DC]'
     '[0xBDAE4, c, func_800CD2E4]'
     '[0xBDAEC, asm]'
     '[0xBDD9C, c, func_800CD59C]'
-    '[0xBDDA4, asm]'
+    '[0xBDDA4, c, func_800CD5A4]'
+    '[0xBDDB0, asm]'
+    '[0xBDF1C, c, func_800CD71C]'
+    '[0xBDF28, asm]'
     '[0xBE504, c, func_800CDD04]'
     '[0xBE50C, asm]'
+    '[0xBE740, c, func_800CDF40]'
+    '[0xBE74C, asm]'
     '[0xBEBAC, c, func_800CE3AC]'
     '[0xBEBB4, asm]'
+    '[0xBEC64, c, func_800CE464]'
+    '[0xBEC70, asm]'
 )
 
 # Files a successful current-config split must produce (relative to ROOT).
@@ -192,11 +239,22 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/42FC8.s"
     "asm/disc1/4C4B0.s"
     "asm/disc1/4F094.s"
+    "asm/disc1/539C0.s"
+    "asm/disc1/55430.s"
     "asm/disc1/5F3E4.s"
     "asm/disc1/64610.s"
     "asm/disc1/65238.s"
     "asm/disc1/654C8.s"
     "asm/disc1/66B54.s"
+    "asm/disc1/68378.s"
+    "asm/disc1/68398.s"
+    "asm/disc1/683B8.s"
+    "asm/disc1/683D8.s"
+    "asm/disc1/683F8.s"
+    "asm/disc1/68418.s"
+    "asm/disc1/68438.s"
+    "asm/disc1/68458.s"
+    "asm/disc1/68478.s"
     "asm/disc1/6AB60.s"
     "asm/disc1/6E6C0.s"
     "asm/disc1/6FF88.s"
@@ -204,6 +262,10 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/704BC.s"
     "asm/disc1/71150.s"
     "asm/disc1/72ABC.s"
+    "asm/disc1/73DC0.s"
+    "asm/disc1/74684.s"
+    "asm/disc1/746F8.s"
+    "asm/disc1/74FB0.s"
     "asm/disc1/778F0.s"
     "asm/disc1/7D284.s"
     "asm/disc1/7DFD0.s"
@@ -218,13 +280,20 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/B2AF8.s"
     "asm/disc1/B3368.s"
     "asm/disc1/B8A70.s"
+    "asm/disc1/B93C0.s"
     "asm/disc1/B9A68.s"
+    "asm/disc1/BA174.s"
     "asm/disc1/BA6A8.s"
+    "asm/disc1/BACB4.s"
     "asm/disc1/BB4DC.s"
+    "asm/disc1/BC330.s"
     "asm/disc1/BDAEC.s"
-    "asm/disc1/BDDA4.s"
+    "asm/disc1/BDDB0.s"
+    "asm/disc1/BDF28.s"
     "asm/disc1/BE50C.s"
+    "asm/disc1/BE74C.s"
     "asm/disc1/BEBB4.s"
+    "asm/disc1/BEC70.s"
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
     "src/func_80017E9C.c"
@@ -249,12 +318,24 @@ EXPECTED_ARTIFACTS=(
     "src/func_800527C0.c"
     "src/func_8005BCA8.c"
     "src/func_8005E884.c"
+    "src/func_80063198.c"
+    "src/func_800631AC.c"
+    "src/func_80064C20.c"
     "src/func_8006EBD4.c"
     "src/func_80073DE8.c"
     "src/func_80073DF8.c"
     "src/func_80074A28.c"
     "src/func_80074CB8.c"
     "src/func_8007633C.c"
+    "src/func_80077B64.c"
+    "src/func_80077B84.c"
+    "src/func_80077BA4.c"
+    "src/func_80077BC4.c"
+    "src/func_80077BE4.c"
+    "src/func_80077C04.c"
+    "src/func_80077C24.c"
+    "src/func_80077C44.c"
+    "src/func_80077C64.c"
     "src/func_8007A324.c"
     "src/func_8007A334.c"
     "src/func_8007A344.c"
@@ -270,6 +351,11 @@ EXPECTED_ARTIFACTS=(
     "src/func_8007FCAC.c"
     "src/func_80080940.c"
     "src/func_800822AC.c"
+    "src/func_800835A4.c"
+    "src/func_800835B0.c"
+    "src/func_80083E70.c"
+    "src/func_80083EE4.c"
+    "src/func_800847A0.c"
     "src/func_800870E0.c"
     "src/func_8008CA7C.c"
     "src/func_8008D7C0.c"
@@ -292,15 +378,22 @@ EXPECTED_ARTIFACTS=(
     "src/func_800C2B40.c"
     "src/func_800C2B50.c"
     "src/func_800C8268.c"
+    "src/func_800C8BB4.c"
     "src/func_800C9260.c"
+    "src/func_800C9968.c"
     "src/func_800C9EA0.c"
+    "src/func_800CA4A8.c"
     "src/func_800CACD4.c"
+    "src/func_800CBB24.c"
     "src/func_800CD2DC.c"
     "src/func_800CD2E4.c"
     "src/func_800CD59C.c"
+    "src/func_800CD5A4.c"
+    "src/func_800CD71C.c"
     "src/func_800CDD04.c"
+    "src/func_800CDF40.c"
     "src/func_800CE3AC.c"
-    "linkers/disc1.ld"
+    "src/func_800CE464.c"
 )
 
 # Paths that must remain git-ignored (same set as split_us.sh OUTPUT_PATHS).
@@ -487,7 +580,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80073DF8.c" && -f "$ROOT/src/func_800C2B50.c" && -f "$ROOT/src/func_8008D7C0.c" && -f "$ROOT/src/func_8007633C.c" && -f "$ROOT/src/func_8005257C.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+if [[ -f "$ROOT/src/func_800CE464.c" && -f "$ROOT/src/func_800847A0.c" && -f "$ROOT/src/func_80077B64.c" && -f "$ROOT/src/func_80063198.c" && -f "$ROOT/src/func_80073DF8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+    echo "C conversion: Phase 5CW — ninety-eight leaves (+ store/setter batch through func_800CE464)"
+    echo "  sources: src/func_800CE464.c (+ ninety-seven prior leaves)"
+elif [[ -f "$ROOT/src/func_80073DF8.c" && -f "$ROOT/src/func_800C2B50.c" && -f "$ROOT/src/func_8008D7C0.c" && -f "$ROOT/src/func_8007633C.c" && -f "$ROOT/src/func_8005257C.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
     echo "C conversion: Phase 5BX — seventy-three leaves (+ func_80073DF8 / prior through func_800CE3AC)"
     echo "  sources: src/func_80073DF8.c (+ seventy-two prior leaves)"
 elif [[ -f "$ROOT/src/func_800C2B50.c" && -f "$ROOT/src/func_8008D7C0.c" && -f "$ROOT/src/func_8007633C.c" && -f "$ROOT/src/func_8005257C.c" && -f "$ROOT/src/func_8006EBD4.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then

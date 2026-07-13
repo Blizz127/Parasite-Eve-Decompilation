@@ -6,36 +6,31 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5BX — `func_80073DF8` integrated (seventy-third matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, large uncommitted leaf batch atop committed
-Phase 5BD `8bfd099`). Seventy-three matching C leaves. Latest stretch added
-5BQ–5BX: bool/byte getters (`38D0C`, `5E884`, `6EBD4`), bit test `5257C`,
-pointer derefs (`7633C`, `C2B50`, `73DF8`), and store-out `8D7C0`. All plain
-`-O1` except `func_80051E48` (-fno-delayed-branch, unchanged).
+**Phase 5CW — `func_800CE464` integrated (ninety-eighth matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, uncommitted atop committed Phase 5BX
+`86a62eb`). Ninety-eight matching C leaves. Latest stretch (5BY–5CW) added
+**25 arg-only store/setter leaves** after classic getters were exhausted:
+
+- null-checked field stores `63198` / `631AC`; dual `-1` store `64C20`
+- GPU packet header setters `77B64`–`77C64` (9× `a0[3]`/`a0[7]`)
+- struct field stores `835A4` / `835B0` / `83E70` / `83EE4` / `847A0`
+- `a1[1]=2` twins `C8BB4` / `C9968` / `CA4A8` / `CBB24` / `CD5A4` /
+  `CD71C` / `CDF40` / `CE464`
+
+All plain `-O1` except `func_80051E48` (-fno-delayed-branch, unchanged).
 **Parked:** return-0 stubs (`addu $zero` vs GCC `move`/`or`), `$at` setters,
 `func_8007FBF0` indexed-lw schedule, gp-relative getters (`-G0` mismatch),
-bitmask OR/AND helpers that materialize base via `addiu` then `lw 0(base)`.
+bitmask OR/AND helpers (`addiu` base then `lw 0(base)`), `62A20`/`6EC6C`
+addu operand-order mismatches, `77AA4` schedule, GTE/BIOS/syscall stubs.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (seventy-three leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (ninety-eight leaves).
 
-**Provenance:** clean target-only derivation from accepted commit `00f4728`
-(Phase 5BC / 52 leaves). `git stash list` is empty. The complete 16-byte 5BD
-scratch-linked binary and production probe both match raw ROM bytes at file
-`0x778E0`; production trim/link placement is independently exact there.
-`verify_us.sh` edits the current-phase arm in place; the next historical arm
-remains 5AQ, matching committed precedent.
+**Provenance:** from committed `86a62eb` (Phase 5BX / 73 leaves). Scratch
+probes matched ROM prefixes (pad trimmed by `trim_elf_section_pad.py`).
+`git stash list` is empty.
 
-Scope reset: accidental broad commit `c62e642` was discarded by resetting to
-its clean parent `9bb3099`; isolated Phase 5AU was then accepted and committed
-as `c3a8424`, Phase 5AV as `7323079`, Phase 5AW as `7902dd2`, Phase 5AX
-as `27a6ba2`, Phase 5AY as `ffbff11`, and Phase 5AZ as `86e4a48`. The current
-accepted chain continues with Phase 5BA as `79cdc7e`; Phase 5BB is isolated
-and committed as `e9f46c1`, and Phase 5BC as `00f4728`. Phase 5BD is isolated
-to the standard five-file leaf scope.
-
-`README.md` is updated to Phase 5BX / 73 leaves with this commit. `CLAUDE.md`
-may lag; this handoff remains authoritative for the live state.
+`README.md` / this handoff track Phase 5CW / 98 leaves. `CLAUDE.md` may lag.
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -301,16 +296,14 @@ post-split `git status` check.
 
 ## Next concrete step
 
-**Milestone:** fifty-five matching C leaves on branch
-`phase5ae-2a0c-hole-aware` (Phase 5BF: `func_8007FC18` — 8-bit global
-getter twin to 5BE, plain -O1). Fifty-five leaves exact SHA-1.
-Return-1 septuplet (7/7) remains complete. Parked: `func_8003DFD0`
-return-0 (5I move vs addu), setter `func_8003FFAC` ($at vs $v0),
-sb-stub / 5I-class / accessor families.
+**Milestone:** ninety-eight matching C leaves on branch
+`phase5ae-2a0c-hole-aware` (Phase 5CW: store/setter batch through
+`func_800CE464`). Exact SHA-1 verified. Pending commit when requested.
 
-**Next:** continue the `70428.s` byte-getter cluster (`func_8007FC34`,
-`func_8007FC44`, `func_8007FC54` are same `lui/lbu/jr/nop` shape) or run
-fresh triage outside parked families. One leaf at a time.
+**Next:** continue non-trivial probes outside parked families — e.g. more
+arg-only multi-store helpers, IO-port wrappers, or creative flags for
+near-miss shapes (`62A20`/`6EC6C` addu order, `73E10` regalloc). Avoid
+GTE/BIOS/`jr $t2` handwritten stubs and return-0/`$at`/`$gp` families.
 Oracle:
 
 ```text
@@ -884,6 +877,15 @@ Scratch-link byte claims below refer to the extracted function-code slice;
 production builds are the authority for final address placement and full-file
 identity.
 
+- 2026-07-12: **Phase 5BY–5CW ninety-eight C leaves — 25 arg-only store/setters.**
+  From committed 5BX `86a62eb` (73 leaves), integrated null-check stores
+  `63198`/`631AC`, dual `-1` store `64C20`, GPU packet headers `77B64`–`77C64`
+  (9), field stores `835A4`/`835B0`/`83E70`/`83EE4`/`847A0`, and `a1[1]=2`
+  twins (8) through `CE464`. Easy `lui`+load getters were already exhausted;
+  these are plain `-O1` arg-pointer shapes. Yaml mid-asm carves + build/verify
+  regen; `scripts/split_us.sh` OK; `scripts/build_us.sh` exit 0 **EXACT SHA-1
+  MATCH**; `scripts/verify_us.sh` exit 0 reporting Phase 5CW / 98 leaves.
+  Uncommitted pending review.
 - 2026-07-12: **Progress dashboard published (Xenogears-style).** Added
   `tools/progress/generate_progress.py` (yaml → Xenogears-schema
   `progress.json`), `tools/progress/render_dashboard.py` (PE-branded HTML),
@@ -1335,24 +1337,22 @@ identity.
 The USA Disc 1 executable currently rebuilds byte-for-byte from a mixed
 assembly/C layout. `scripts/build_us.sh` produces the exact target SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and `scripts/verify_us.sh`
-passes the split/config checks and reports Phase 5BX with 73 matching C
+passes the split/config checks and reports Phase 5CW with 98 matching C
 leaves.
 
 - **Progress dashboard:** https://blizz127.github.io/parasite-eve-progress/
 - **Current branch:** `phase5ae-2a0c-hole-aware`
-- **Matching C leaves:** 73
-- **Latest leaf:** `func_80073DF8` — halfword pointer deref (`return *D_80095674;`)
-- **Recent batch (5BE–5BX):** byte getters `7FC08`–`7FC54`, addr-of `7FC28` /
-  `7A354`, getters `7A324`–`7A344` / `74CB8` / `5E884` / `6EBD4`, bools
-  `42BC8` / `38D0C`, bit test `5257C`, pointer derefs `7633C` / `C2B50` /
-  `73DF8`, store-out `8D7C0`
+- **Matching C leaves:** 98
+- **Latest leaf:** `func_800CE464` — `a1[1] = 2` store twin
+- **Recent batch (5BY–5CW):** 25 arg-only store/setters (null-check stores,
+  GPU packet headers, struct field stores, `a1[1]=2` twins)
 - **Parked:** return-0 stubs (5I-class `move` vs `addu`), `$at` setters,
   `func_8007FBF0` indexed-lw schedule, gp-relative getters, `addiu`+`lw 0`
-  bitmask helpers
+  bitmask helpers, addu-order near-misses, GTE/BIOS stubs
 - **Toolchain:** MIPS little-endian binutils 2.44 and GCC 14.2 in the
   `pe-mipsel` Distrobox; this is a matching modern toolchain, not a claim
   about the original game compiler
 - **Repository boundary:** extracted executables, disc images, generated
   assembly, and game assets remain local and git-ignored
 
-Next work is fresh read-only triage outside all parked mismatch families.
+Next work is further non-trivial probes outside parked mismatch families.
