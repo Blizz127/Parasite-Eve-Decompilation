@@ -6,12 +6,15 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5DG — `$gp`-relative batches integrated (153 matching C leaves)**
+**Phase 5DH — `$gp`-relative batches integrated (154 matching C leaves)**
 (branch `phase5ae-2a0c-hole-aware`, committed baseline `023c00d` / 5DB / 103;
-5DC–5DF pushed to origin `8244672`). 5DG: +3 complex gp one-offs
+all through 5DH pushed to origin `ad8e0ad`). 5DG: +3 complex gp one-offs
 (`D1=5;D2=-1` two-const setter, `return D==7` `xori`/`sltiu` bool, `lw;sw;sw`
-save/swap). Parked complex gp: indexed `lh` loads (`534CC`/`57D18` — schedule +
-regalloc differ) and `!=&global` (`52F0C` — GCC `subu` vs retail `xor`).
+save/swap). 5DH: +1 ten-word `sw $zero` clear (`func_8004F808`).
+**Parked complex gp** (genuine GCC-vs-retail codegen diffs): indexed `lh` loads
+(`534CC`/`57D18` — schedule + regalloc), `!=&global` (`52F0C` — `subu` vs
+`xor`), accumulator `D+=a` (`5E8A4` — interleave + load-delay nops differ),
+and the ~6 remaining branch-bearing / multi-deref gp leaves.
 5DC: +35 `$gp` leaves (20 getters incl. 2 bool `!=0`, 15 setters). 5DD: +5
 setters (3 `D=1` constant, 2 double `D1=a0;D2=a1`). 5DE: +5 (4×`sh`/3×`sb`
 multi-arg setters, 5×`sb $zero` clear, `sltu` `!=0` store). 5DF: +2
