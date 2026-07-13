@@ -6,11 +6,14 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5DE — `$gp`-relative batches integrated (148 matching C leaves)**
+**Phase 5DF — `$gp`-relative batches integrated (150 matching C leaves)**
 (branch `phase5ae-2a0c-hole-aware`, committed baseline `023c00d` / 5DB / 103).
 5DC: +35 `$gp` leaves (20 getters incl. 2 bool `!=0`, 15 setters). 5DD: +5
-`$gp` setters (3 `D=1` constant, 2 double `D1=a0;D2=a1`). 5DE: +5 more
-(4×`sh`/3×`sb` multi-arg setters, 5×`sb $zero` clear, `sltu` `!=0` store). Via
+setters (3 `D=1` constant, 2 double `D1=a0;D2=a1`). 5DE: +5 (4×`sh`/3×`sb`
+multi-arg setters, 5×`sb $zero` clear, `sltu` `!=0` store). 5DF: +2
+address-of-into-gp (`gp_ptr = &D_800A1AA0`; stored global declared
+`extern int D[]` — incomplete array forces absolute `lui/addiu` under `-G 8`
+while the gp destination stays gp-relative). Via
 newly-built small-data infra: `_gp = 0x8009CD70` defsym + per-leaf `-G 8`
 (getters) / `-G 8 -fno-delayed-branch` (setters) + absolute `D_*` gp-globals
 (auto-resolved from the name). Exact SHA-1 via `scripts/build_us.sh`;

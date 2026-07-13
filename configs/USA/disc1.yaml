@@ -161,6 +161,10 @@ segments:
       # lui/lw/nop/srlv/jr/andi 1 on D_800C0E24. Plain -O1 matches.
       # Mid-41520 carve: prefix 0xB14, C 0x18, resume 4204C.s 0x5FC.
       - [0x41520, asm]
+      - [0x41884, c, func_80051084]
+      - [0x41898, asm]
+      - [0x41A44, c, func_80051244]
+      - [0x41A58, asm]
       - [0x41CF8, c, func_800514F8]
       - [0x41D04, c, func_80051504]
       - [0x41D10, asm]

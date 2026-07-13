@@ -36,11 +36,11 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5DE — 148 matching C leaves (`$gp`-relative batches).**
+**Phase 5DF — 150 matching C leaves (`$gp`-relative batches).**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. Base
-commit `023c00d` (5DB / 103 leaves); +35 `$gp` getter/setter leaves (5DC), +5
-constant/double setters (5DD), +5 multi-store/`!=0` setters (5DE), via new
-small-data infra
+commit `023c00d` (5DB / 103 leaves); +47 `$gp` leaves across 5DC–5DF
+(getters, setters, constant/double/multi-store setters, `!=0` store, and
+address-of-into-gp), via new small-data infra
 (`_gp = 0x8009CD70` defsym + per-leaf `-G 8`, setters also
 `-fno-delayed-branch`). Phase 1 local verification is complete; redump.org
 cross-check remains open (non-blocking). PC port is out of scope.
