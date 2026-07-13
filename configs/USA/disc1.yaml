@@ -77,6 +77,8 @@ segments:
       - [0x98AC, c, func_800190AC]
       - [0x98B4, c, func_800190B4]
       - [0x98BC, asm]
+      - [0xA3E4, c, func_80019BE4]
+      - [0xA404, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
       - [0x24220, c, func_80033A20]

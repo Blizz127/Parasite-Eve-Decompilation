@@ -6,11 +6,11 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5DH — `$gp`-relative batches integrated (154 matching C leaves)**
+**Phase 5DI — `$gp`-relative batches integrated (155 matching C leaves)**
 (branch `phase5ae-2a0c-hole-aware`, committed baseline `023c00d` / 5DB / 103;
 all through 5DH pushed to origin `ad8e0ad`). 5DG: +3 complex gp one-offs
 (`D1=5;D2=-1` two-const setter, `return D==7` `xori`/`sltiu` bool, `lw;sw;sw`
-save/swap). 5DH: +1 ten-word `sw $zero` clear (`func_8004F808`).
+save/swap). 5DH: +1 ten-word `sw $zero` clear (func_8004F808). 5DI: +1 or-bit deref (func_80019BE4, `P[4] |= 0x80; return 1`).
 **Parked complex gp** (genuine GCC-vs-retail codegen diffs): indexed `lh` loads
 (`534CC`/`57D18` — schedule + regalloc), `!=&global` (`52F0C` — `subu` vs
 `xor`), accumulator `D+=a` (`5E8A4` — interleave + load-delay nops differ),

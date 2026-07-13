@@ -36,9 +36,9 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5DH — 154 matching C leaves (`$gp`-relative batches).**
+**Phase 5DI — 155 matching C leaves (`$gp`-relative batches).**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. Base
-commit `023c00d` (5DB / 103 leaves); +51 `$gp` leaves across 5DC–5DH
+commit `023c00d` (5DB / 103 leaves); +52 `$gp` leaves across 5DC–5DI
 (getters, setters, constant/double/multi-store setters, `!=0` store,
 address-of-into-gp, and complex one-offs: 2-const setter, `==7` bool,
 save/swap), via new small-data infra
