@@ -135,7 +135,8 @@ segments:
       - [0x3D824, c, func_8004D024]
       - [0x3D830, asm]
       - [0x3DA7C, c, func_8004D27C]
-      - [0x3DA88, asm]
+      - [0x3DA88, c, func_8004D288]
+      - [0x3DA98, asm]
       # Phase 5AO: C leaf func_8004DA9C — VRAM 0x8004DA9C, size 0x8.
       # File span 0x3E29C–0x3E2A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # seventh/final of the seven return-1 twins (shape scratch-proven in 5AJ).
@@ -188,6 +189,8 @@ segments:
       # File span 0x42FC0–0x42FC8 exclusive. Empty jr/nop stub.
       - [0x42FC0, c, func_800527C0]
       - [0x42FC8, asm]
+      - [0x436B0, c, func_80052EB0]
+      - [0x436C0, asm]
       - [0x44A88, c, func_80054288]
       - [0x44A94, c, func_80054294]
       - [0x44AA0, asm]
@@ -196,6 +199,7 @@ segments:
       - [0x4C090, c, func_8005B890]
       - [0x4C09C, c, func_8005B89C]
       - [0x4C0A8, asm]
+      - [0x4C498, c, func_8005BC98]
       # Phase 5AH: C leaf func_8005BCA8 — VRAM 0x8005BCA8, size 0x8.
       # File span 0x4C4A8–0x4C4B0 exclusive. Empty jr/nop stub.
       - [0x4C4A8, c, func_8005BCA8]
@@ -208,6 +212,8 @@ segments:
       - [0x4C4BC, asm]
       - [0x4C6DC, c, func_8005BEDC]
       - [0x4C6E8, asm]
+      - [0x4CC88, c, func_8005C488]
+      - [0x4CC98, asm]
       - [0x4E914, c, func_8005E114]
       - [0x4E920, c, func_8005E120]
       - [0x4E92C, asm]
@@ -218,7 +224,8 @@ segments:
       # Phase 5BR: C leaf func_8005E884 — VRAM 0x8005E884, size 0x10.
       # Signed-byte global getter on D_800B0DB1; plain -O1 matches.
       - [0x4F084, c, func_8005E884]
-      - [0x4F094, asm]
+      - [0x4F094, c, func_8005E894]
+      - [0x4F0A4, asm]
       - [0x4F358, c, func_8005EB58]
       - [0x4F364, asm]
       - [0x4F6C8, c, func_8005EEC8]

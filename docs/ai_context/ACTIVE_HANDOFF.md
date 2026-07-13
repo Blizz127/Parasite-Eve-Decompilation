@@ -6,15 +6,16 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5DC — `$gp`-relative getter/setter batch integrated (138 matching C
-leaves)** (branch `phase5ae-2a0c-hole-aware`, committed baseline `023c00d` /
-5DB / 103). +35 `$gp`-relative leaves (20 getters incl. 2 bool `!=0`, 15
-setters) via the newly-built small-data infra: `_gp = 0x8009CD70` defsym +
-per-leaf `-G 8` (getters) / `-G 8 -fno-delayed-branch` (setters) + absolute
-`D_*` gp-globals (auto-resolved from the name). Exact SHA-1 via
-`scripts/build_us.sh`; generator at scratchpad `gen_gp.py`. See
-[[gp-relative-leaf-unlock]]. Remaining `$gp` bucket: ~38 more complex gp
-leaves (multi-op, indexed) still parked.
+**Phase 5DD — `$gp`-relative batches integrated (143 matching C leaves)**
+(branch `phase5ae-2a0c-hole-aware`, committed baseline `023c00d` / 5DB / 103).
+5DC: +35 `$gp` leaves (20 getters incl. 2 bool `!=0`, 15 setters). 5DD: +5
+`$gp` setters (3 `D=1` constant, 2 double `D1=a0;D2=a1`, all `0x10`). Via
+newly-built small-data infra: `_gp = 0x8009CD70` defsym + per-leaf `-G 8`
+(getters) / `-G 8 -fno-delayed-branch` (setters) + absolute `D_*` gp-globals
+(auto-resolved from the name). Exact SHA-1 via `scripts/build_us.sh`;
+generators at scratchpad `gen_gp.py` / `gen_gp2.py`. See
+[[gp-relative-leaf-unlock]]. Remaining `$gp` bucket: ~33 more complex gp
+leaves (multi-op, indexed, address-of-into-gp) still open.
 
 Prior **Phase 5DB** (baseline `023c00d`): 103 leaves. Stretch 5CX–5DB added
 **5 countdown memset/memcpy leaves** using `register … asm("$2")` / `$3` to

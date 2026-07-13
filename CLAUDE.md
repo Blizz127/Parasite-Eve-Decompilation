@@ -36,10 +36,11 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5DC — 138 matching C leaves (`$gp`-relative getter/setter batch).**
+**Phase 5DD — 143 matching C leaves (`$gp`-relative batches).**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. Base
-commit `023c00d` (5DB / 103 leaves); +35 `$gp`-relative leaves via new
-small-data infra (`_gp = 0x8009CD70` defsym + per-leaf `-G 8`, setters also
+commit `023c00d` (5DB / 103 leaves); +35 `$gp` getter/setter leaves (5DC) +5
+`$gp` constant/double setters (5DD), via new small-data infra
+(`_gp = 0x8009CD70` defsym + per-leaf `-G 8`, setters also
 `-fno-delayed-branch`). Phase 1 local verification is complete; redump.org
 cross-check remains open (non-blocking). PC port is out of scope.
 `docs/ai_context/ACTIVE_HANDOFF.md` has the exact current state and

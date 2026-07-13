@@ -39,6 +39,11 @@ EXPECTED_SPLAT_PIN="0.41.0"
 
 # Current production subsegments (file offsets). Phase 5DB: one-hundred-three C leaves.
 EXPECTED_SUBSEGMENTS=(
+    '[0x3DA88, c, func_8004D288]'
+    '[0x4C498, c, func_8005BC98]'
+    '[0x4CC88, c, func_8005C488]'
+    '[0x436B0, c, func_80052EB0]'
+    '[0x4F094, c, func_8005E894]'
     '[0x24220, c, func_80033A20]'
     '[0x28064, c, func_80037864]'
     '[0x336D0, c, func_80042ED0]'
@@ -114,7 +119,6 @@ EXPECTED_SUBSEGMENTS=(
     '[0x42FC8, asm]'
     '[0x4C4A8, c, func_8005BCA8]'
     '[0x4F084, c, func_8005E884]'
-    '[0x4F094, asm]'
     '[0x53998, c, func_80063198]'
     '[0x539AC, c, func_800631AC]'
     '[0x539C0, asm]'
@@ -634,7 +638,7 @@ else
 fi
 
 if [[ -f "$ROOT/src/func_8008D820.c" && -f "$ROOT/src/func_80074330.c" && -f "$ROOT/src/func_80077A28.c" && -f "$ROOT/src/func_800CE464.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
-    echo "C conversion: Phase 5DC — 138 leaves (+ gp-relative getter/setter batch)"
+    echo "C conversion: Phase 5DD — 143 leaves (+ gp-relative setter batch)"
     echo "  sources: src/func_8008D820.c (+ one-hundred-two prior leaves)"
 elif [[ -f "$ROOT/src/func_800CE464.c" && -f "$ROOT/src/func_800847A0.c" && -f "$ROOT/src/func_80077B64.c" && -f "$ROOT/src/func_80063198.c" && -f "$ROOT/src/func_80073DF8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
     echo "C conversion: Phase 5CW — ninety-eight leaves (+ store/setter batch through func_800CE464)"
