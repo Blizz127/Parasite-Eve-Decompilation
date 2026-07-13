@@ -210,6 +210,8 @@ segments:
       - [0x42FC8, asm]
       - [0x436B0, c, func_80052EB0]
       - [0x436C0, asm]
+      - [0x4370C, c, func_80052F0C]
+      - [0x43724, asm]
       - [0x44A88, c, func_80054288]
       - [0x44A94, c, func_80054294]
       - [0x44AA0, asm]
