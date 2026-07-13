@@ -39,6 +39,41 @@ EXPECTED_SPLAT_PIN="0.41.0"
 
 # Current production subsegments (file offsets). Phase 5DB: one-hundred-three C leaves.
 EXPECTED_SUBSEGMENTS=(
+    '[0x24220, c, func_80033A20]'
+    '[0x28064, c, func_80037864]'
+    '[0x336D0, c, func_80042ED0]'
+    '[0x340E0, c, func_800438E0]'
+    '[0x3DA7C, c, func_8004D27C]'
+    '[0x3F170, c, func_8004E970]'
+    '[0x41CF8, c, func_800514F8]'
+    '[0x42658, c, func_80051E58]'
+    '[0x42FB4, c, func_800527B4]'
+    '[0x44A88, c, func_80054288]'
+    '[0x44A94, c, func_80054294]'
+    '[0x486CC, c, func_80057ECC]'
+    '[0x4C09C, c, func_8005B89C]'
+    '[0x4C4B0, c, func_8005BCB0]'
+    '[0x4C6DC, c, func_8005BEDC]'
+    '[0x4E920, c, func_8005E120]'
+    '[0x51CA0, c, func_800614A0]'
+    '[0x531B0, c, func_800629B0]'
+    '[0x534C4, c, func_80062CC4]'
+    '[0x55248, c, func_80064A48]'
+    '[0x279A4, c, func_800371A4]'
+    '[0x27DC4, c, func_800375C4]'
+    '[0x334B8, c, func_80042CB8]'
+    '[0x33738, c, func_80042F38]'
+    '[0x33A40, c, func_80043240]'
+    '[0x3D824, c, func_8004D024]'
+    '[0x41D04, c, func_80051504]'
+    '[0x4C090, c, func_8005B890]'
+    '[0x4E914, c, func_8005E114]'
+    '[0x4ED7C, c, func_8005E57C]'
+    '[0x4EEE4, c, func_8005E6E4]'
+    '[0x4F358, c, func_8005EB58]'
+    '[0x4F6C8, c, func_8005EEC8]'
+    '[0x52AB0, c, func_800622B0]'
+    '[0x534B8, c, func_80062CB8]'
     '[0x800, rodata]'
     '[0x2A0C, asm]'
     '[0x869C, c, func_80017E9C]'
@@ -70,7 +105,6 @@ EXPECTED_SUBSEGMENTS=(
     '[0x42034, c, func_80051834]'
     '[0x4204C, asm]'
     '[0x42648, c, func_80051E48]'
-    '[0x42658, asm]'
     '[0x42D14, c, func_80052514]'
     '[0x42D24, c, func_80052524]'
     '[0x42D34, asm]'
@@ -79,7 +113,6 @@ EXPECTED_SUBSEGMENTS=(
     '[0x42FC0, c, func_800527C0]'
     '[0x42FC8, asm]'
     '[0x4C4A8, c, func_8005BCA8]'
-    '[0x4C4B0, asm]'
     '[0x4F084, c, func_8005E884]'
     '[0x4F094, asm]'
     '[0x53998, c, func_80063198]'
@@ -601,7 +634,7 @@ else
 fi
 
 if [[ -f "$ROOT/src/func_8008D820.c" && -f "$ROOT/src/func_80074330.c" && -f "$ROOT/src/func_80077A28.c" && -f "$ROOT/src/func_800CE464.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
-    echo "C conversion: Phase 5DB — one-hundred-three leaves (+ memset/memcpy batch through func_8008D820)"
+    echo "C conversion: Phase 5DC — 138 leaves (+ gp-relative getter/setter batch)"
     echo "  sources: src/func_8008D820.c (+ one-hundred-two prior leaves)"
 elif [[ -f "$ROOT/src/func_800CE464.c" && -f "$ROOT/src/func_800847A0.c" && -f "$ROOT/src/func_80077B64.c" && -f "$ROOT/src/func_80063198.c" && -f "$ROOT/src/func_80073DF8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
     echo "C conversion: Phase 5CW — ninety-eight leaves (+ store/setter batch through func_800CE464)"

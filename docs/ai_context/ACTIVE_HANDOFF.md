@@ -6,10 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5DB — `func_8008D820` integrated (one-hundred-third matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, uncommitted atop `f76c80b` / 5CW).
-One-hundred-three matching C leaves. Latest stretch (5CX–5DB) added **5
-countdown memset/memcpy leaves** using `register … asm("$2")` / `$3` to
+**Phase 5DC — `$gp`-relative getter/setter batch integrated (138 matching C
+leaves)** (branch `phase5ae-2a0c-hole-aware`, committed baseline `023c00d` /
+5DB / 103). +35 `$gp`-relative leaves (20 getters incl. 2 bool `!=0`, 15
+setters) via the newly-built small-data infra: `_gp = 0x8009CD70` defsym +
+per-leaf `-G 8` (getters) / `-G 8 -fno-delayed-branch` (setters) + absolute
+`D_*` gp-globals (auto-resolved from the name). Exact SHA-1 via
+`scripts/build_us.sh`; generator at scratchpad `gen_gp.py`. See
+[[gp-relative-leaf-unlock]]. Remaining `$gp` bucket: ~38 more complex gp
+leaves (multi-op, indexed) still parked.
+
+Prior **Phase 5DB** (baseline `023c00d`): 103 leaves. Stretch 5CX–5DB added
+**5 countdown memset/memcpy leaves** using `register … asm("$2")` / `$3` to
 force retail `$v0`/`$v1` allocation under plain `-O1`:
 
 - word memset twins `74330` / `744A4` / `7474C`
@@ -303,7 +311,7 @@ alignment padding (`nop nop nop`) or branch-bearing. The dominant remaining
 bucket is **73 `$gp`-relative leaves** (~20 pure `lw/lhu/lbu off($gp)` getters,
 ~15 single-store setters, ~38 more complex).
 
-**`$gp`-relative crack — PROVEN VIABLE (scratch, 2026-07-12), not yet integrated:**
+**`$gp`-relative crack — INTEGRATED (Phase 5DC, 35 leaves, 2026-07-12):**
 crt0 sets `$gp = 0x8009CD70` (`lui/addiu %hi/%lo(D_8009CD70)` at file 0x62DB0).
 GCC 14.2 with **`-G 8`** (per-file, like the `-fno-delayed-branch` precedent)
 emits `lw $v0,0($gp)` + `R_MIPS_GPREL16` on the global. Linking with
@@ -312,9 +320,10 @@ emits `lw $v0,0($gp)` + `R_MIPS_GPREL16` on the global. Linking with
 workaround) resolves GPREL16 to `sym - _gp = retail_offset`. Scratch-verified on
 `func_800438E0` (`lw $v0,0x180($gp)`, file 0x340E0): linked `8f820180` →
 bytes `8001828f 0800e003 00000000`, **EXACT MATCH** to ROM (trailing 0x10-align
-pad stripped by existing pad-trim). Integration requires: add `_gp` defsym +
-per-leaf `-G 8` + one absolute symbol per gp-global to `build_us.sh`; then the
-usual carve/C/harness. Awaiting user decision (one-by-one vs batch all 73).
+pad stripped by existing pad-trim). Integrated batch-wise via `_gp` defsym +
+per-leaf `-G 8` (getters) / `-G 8 -fno-delayed-branch` (setters, store else
+fills jr delay slot) + absolute `D_*` gp-globals. The ~38 remaining complex
+`$gp` leaves (multi-op/indexed) are still open.
 
 **Other parked (unchanged):** `move`/`addu` return-0 (`7CE80` beqz delay),
 `$at` setters, stream-reader `$v0`/`$v1` swaps, GTE/BIOS.

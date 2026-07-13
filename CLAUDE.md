@@ -36,10 +36,11 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5DB — one-hundred-third matching C leaf (`func_8008D820`), pending
-commit.** Exact SHA-1 rebuild via `scripts/build_us.sh` /
-`scripts/verify_us.sh`. Base commit `f76c80b` (5CW / 98 leaves); +5
-countdown memset/memcpy leaves (5CX–5DB). Phase 1 local verification is
-complete; redump.org cross-check remains open (non-blocking). PC port is
-out of scope. `docs/ai_context/ACTIVE_HANDOFF.md` has the exact current
-state and `docs/splitting.md` the split target and policy.
+**Phase 5DC — 138 matching C leaves (`$gp`-relative getter/setter batch).**
+Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. Base
+commit `023c00d` (5DB / 103 leaves); +35 `$gp`-relative leaves via new
+small-data infra (`_gp = 0x8009CD70` defsym + per-leaf `-G 8`, setters also
+`-fno-delayed-branch`). Phase 1 local verification is complete; redump.org
+cross-check remains open (non-blocking). PC port is out of scope.
+`docs/ai_context/ACTIVE_HANDOFF.md` has the exact current state and
+`docs/splitting.md` the split target and policy.
