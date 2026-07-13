@@ -11,7 +11,7 @@ Initial target:
 
 ## Project status
 
-**Current phase: Phase 5CW — 98 matching C leaves** on branch
+**Current phase: Phase 5DB — 103 matching C leaves** on branch
 `phase5ae-2a0c-hole-aware`. Disc 1 EXE rebuilds byte-for-byte via
 `scripts/build_us.sh` (SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`).
 Phase 1 local verification is complete; the official redump.org cross-check

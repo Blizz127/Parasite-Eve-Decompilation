@@ -189,6 +189,15 @@ segments:
       # Halfword pointer deref on D_80095674 (lui/lw/nop/lhu0/jr/nop).
       - [0x645F8, c, func_80073DF8]
       - [0x64610, asm]
+      # Phase 5CX: C leaf func_80074330 — file 0x64B30, size 0x24.
+      - [0x64B30, c, func_80074330]
+      - [0x64B54, asm]
+      # Phase 5CY: C leaf func_800744A4 — file 0x64CA4, size 0x24.
+      - [0x64CA4, c, func_800744A4]
+      - [0x64CC8, asm]
+      # Phase 5CZ: C leaf func_8007474C — file 0x64F4C, size 0x24.
+      - [0x64F4C, c, func_8007474C]
+      - [0x64F70, asm]
       # Phase 5AX: C leaf func_80074A28 — VRAM 0x80074A28, size 0x10.
       # File span 0x65228–0x65238 exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_800956EC. Plain -O1 matches.
@@ -207,6 +216,9 @@ segments:
       # Pointer double-deref on D_80095854 (lui/lw/nop/lw0/jr/nop).
       - [0x66B3C, c, func_8007633C]
       - [0x66B54, asm]
+      # Phase 5DA: C leaf func_80077A28 — file 0x68228, size 0x24.
+      - [0x68228, c, func_80077A28]
+      - [0x6824C, asm]
       # Phase 5CB: C leaf func_80077B64 — file 0x68364, size 0x14.
       - [0x68364, c, func_80077B64]
       - [0x68378, asm]
@@ -326,6 +338,9 @@ segments:
       # Store D_8009B3A0 into *a0 (lui/lw/jr/sw).
       - [0x7DFC0, c, func_8008D7C0]
       - [0x7DFD0, asm]
+      # Phase 5DB: C leaf func_8008D820 — file 0x7E020, size 0x24.
+      - [0x7E020, c, func_8008D820]
+      - [0x7E044, asm]
       # Phase 5K: C leaf func_8008F694 — VRAM 0x8008F694, size 0x14.
       # File span 0x7FE94–0x7FEA8 exclusive. Increment *(unsigned int *)arg0 by 2.
       - [0x7FE94, c, func_8008F694]

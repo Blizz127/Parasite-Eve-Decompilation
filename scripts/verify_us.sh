@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5CW: ninety-eight C leaves.
+# Current production subsegments (file offsets). Phase 5DB: one-hundred-three C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
@@ -92,12 +92,20 @@ EXPECTED_SUBSEGMENTS=(
     '[0x645E8, c, func_80073DE8]'
     '[0x645F8, c, func_80073DF8]'
     '[0x64610, asm]'
+    '[0x64B30, c, func_80074330]'
+    '[0x64B54, asm]'
+    '[0x64CA4, c, func_800744A4]'
+    '[0x64CC8, asm]'
+    '[0x64F4C, c, func_8007474C]'
+    '[0x64F70, asm]'
     '[0x65228, c, func_80074A28]'
     '[0x65238, asm]'
     '[0x654B8, c, func_80074CB8]'
     '[0x654C8, asm]'
     '[0x66B3C, c, func_8007633C]'
     '[0x66B54, asm]'
+    '[0x68228, c, func_80077A28]'
+    '[0x6824C, asm]'
     '[0x68364, c, func_80077B64]'
     '[0x68378, asm]'
     '[0x68384, c, func_80077B84]'
@@ -153,6 +161,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x7D284, asm]'
     '[0x7DFC0, c, func_8008D7C0]'
     '[0x7DFD0, asm]'
+    '[0x7E020, c, func_8008D820]'
+    '[0x7E044, asm]'
     '[0x7FE94, c, func_8008F694]'
     '[0x7FEA8, c, func_8008F6A8]'
     '[0x7FEB0, asm]'
@@ -243,9 +253,13 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/55430.s"
     "asm/disc1/5F3E4.s"
     "asm/disc1/64610.s"
+    "asm/disc1/64B54.s"
+    "asm/disc1/64CC8.s"
+    "asm/disc1/64F70.s"
     "asm/disc1/65238.s"
     "asm/disc1/654C8.s"
     "asm/disc1/66B54.s"
+    "asm/disc1/6824C.s"
     "asm/disc1/68378.s"
     "asm/disc1/68398.s"
     "asm/disc1/683B8.s"
@@ -269,6 +283,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/778F0.s"
     "asm/disc1/7D284.s"
     "asm/disc1/7DFD0.s"
+    "asm/disc1/7E044.s"
     "asm/disc1/7FEB0.s"
     "asm/disc1/80098.s"
     "asm/disc1/804BC.s"
@@ -324,9 +339,13 @@ EXPECTED_ARTIFACTS=(
     "src/func_8006EBD4.c"
     "src/func_80073DE8.c"
     "src/func_80073DF8.c"
+    "src/func_80074330.c"
+    "src/func_800744A4.c"
+    "src/func_8007474C.c"
     "src/func_80074A28.c"
     "src/func_80074CB8.c"
     "src/func_8007633C.c"
+    "src/func_80077A28.c"
     "src/func_80077B64.c"
     "src/func_80077B84.c"
     "src/func_80077BA4.c"
@@ -359,6 +378,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_800870E0.c"
     "src/func_8008CA7C.c"
     "src/func_8008D7C0.c"
+    "src/func_8008D820.c"
     "src/func_8008F694.c"
     "src/func_8008F6A8.c"
     "src/func_8008F868.c"
@@ -580,7 +600,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800CE464.c" && -f "$ROOT/src/func_800847A0.c" && -f "$ROOT/src/func_80077B64.c" && -f "$ROOT/src/func_80063198.c" && -f "$ROOT/src/func_80073DF8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+if [[ -f "$ROOT/src/func_8008D820.c" && -f "$ROOT/src/func_80074330.c" && -f "$ROOT/src/func_80077A28.c" && -f "$ROOT/src/func_800CE464.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+    echo "C conversion: Phase 5DB — one-hundred-three leaves (+ memset/memcpy batch through func_8008D820)"
+    echo "  sources: src/func_8008D820.c (+ one-hundred-two prior leaves)"
+elif [[ -f "$ROOT/src/func_800CE464.c" && -f "$ROOT/src/func_800847A0.c" && -f "$ROOT/src/func_80077B64.c" && -f "$ROOT/src/func_80063198.c" && -f "$ROOT/src/func_80073DF8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
     echo "C conversion: Phase 5CW — ninety-eight leaves (+ store/setter batch through func_800CE464)"
     echo "  sources: src/func_800CE464.c (+ ninety-seven prior leaves)"
 elif [[ -f "$ROOT/src/func_80073DF8.c" && -f "$ROOT/src/func_800C2B50.c" && -f "$ROOT/src/func_8008D7C0.c" && -f "$ROOT/src/func_8007633C.c" && -f "$ROOT/src/func_8005257C.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then

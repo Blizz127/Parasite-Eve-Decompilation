@@ -6,31 +6,28 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5CW — `func_800CE464` integrated (ninety-eighth matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, uncommitted atop committed Phase 5BX
-`86a62eb`). Ninety-eight matching C leaves. Latest stretch (5BY–5CW) added
-**25 arg-only store/setter leaves** after classic getters were exhausted:
+**Phase 5DB — `func_8008D820` integrated (one-hundred-third matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, uncommitted atop `f76c80b` / 5CW).
+One-hundred-three matching C leaves. Latest stretch (5CX–5DB) added **5
+countdown memset/memcpy leaves** using `register … asm("$2")` / `$3` to
+force retail `$v0`/`$v1` allocation under plain `-O1`:
 
-- null-checked field stores `63198` / `631AC`; dual `-1` store `64C20`
-- GPU packet header setters `77B64`–`77C64` (9× `a0[3]`/`a0[7]`)
-- struct field stores `835A4` / `835B0` / `83E70` / `83EE4` / `847A0`
-- `a1[1]=2` twins `C8BB4` / `C9968` / `CA4A8` / `CBB24` / `CD5A4` /
-  `CD71C` / `CDF40` / `CE464`
+- word memset twins `74330` / `744A4` / `7474C`
+- byte fill `77A28`
+- word memcpy `8D820` (`a2 >>= 2` countdown)
 
-All plain `-O1` except `func_80051E48` (-fno-delayed-branch, unchanged).
-**Parked:** return-0 stubs (`addu $zero` vs GCC `move`/`or`), `$at` setters,
-`func_8007FBF0` indexed-lw schedule, gp-relative getters (`-G0` mismatch),
-bitmask OR/AND helpers (`addiu` base then `lw 0(base)`), `62A20`/`6EC6C`
-addu operand-order mismatches, `77AA4` schedule, GTE/BIOS/syscall stubs.
+Prior 5BY–5CW: 25 arg-only store/setters. All plain `-O1` except
+`func_80051E48` (-fno-delayed-branch).
+**Parked:** return-0, `$at` setters, `$gp` accessors, `addiu`+`lw 0` bitmasks /
+exchanges, `62A20`/`6EC6C` addu order, stream-reader `$v0`/`$v1` swaps,
+`83E50` schedule, GTE/BIOS stubs.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (ninety-eight leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (103 leaves).
 
-**Provenance:** from committed `86a62eb` (Phase 5BX / 73 leaves). Scratch
-probes matched ROM prefixes (pad trimmed by `trim_elf_section_pad.py`).
-`git stash list` is empty.
+**Provenance:** from committed `f76c80b` (Phase 5CW / 98 leaves).
 
-`README.md` / this handoff track Phase 5CW / 98 leaves. `CLAUDE.md` may lag.
+`README.md` / this handoff track Phase 5DB / 103 leaves.
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -296,14 +293,31 @@ post-split `git status` check.
 
 ## Next concrete step
 
-**Milestone:** ninety-eight matching C leaves on branch
-`phase5ae-2a0c-hole-aware` (Phase 5CW: store/setter batch through
-`func_800CE464`). Exact SHA-1 verified. Pending commit when requested.
+**Milestone:** 103 matching C leaves on branch `phase5ae-2a0c-hole-aware`
+(Phase 5DB: countdown memset/memcpy batch). Exact SHA-1 verified.
+Pending commit when requested.
 
-**Next:** continue non-trivial probes outside parked families — e.g. more
-arg-only multi-store helpers, IO-port wrappers, or creative flags for
-near-miss shapes (`62A20`/`6EC6C` addu order, `73E10` regalloc). Avoid
-GTE/BIOS/`jr $t2` handwritten stubs and return-0/`$at`/`$gp` families.
+**Trivial-leaf well is DRY (verified 2026-07-12, re-split + live-asm scan):**
+every remaining uncarved ≤12-insn leaf outside the parked families is either
+alignment padding (`nop nop nop`) or branch-bearing. The dominant remaining
+bucket is **73 `$gp`-relative leaves** (~20 pure `lw/lhu/lbu off($gp)` getters,
+~15 single-store setters, ~38 more complex).
+
+**`$gp`-relative crack — PROVEN VIABLE (scratch, 2026-07-12), not yet integrated:**
+crt0 sets `$gp = 0x8009CD70` (`lui/addiu %hi/%lo(D_8009CD70)` at file 0x62DB0).
+GCC 14.2 with **`-G 8`** (per-file, like the `-fno-delayed-branch` precedent)
+emits `lw $v0,0($gp)` + `R_MIPS_GPREL16` on the global. Linking with
+`_gp = 0x8009CD70` and the global as an absolute symbol
+(`D_<addr> = gp_base + retail_offset`, reusing the existing absolute-`D_*`
+workaround) resolves GPREL16 to `sym - _gp = retail_offset`. Scratch-verified on
+`func_800438E0` (`lw $v0,0x180($gp)`, file 0x340E0): linked `8f820180` →
+bytes `8001828f 0800e003 00000000`, **EXACT MATCH** to ROM (trailing 0x10-align
+pad stripped by existing pad-trim). Integration requires: add `_gp` defsym +
+per-leaf `-G 8` + one absolute symbol per gp-global to `build_us.sh`; then the
+usual carve/C/harness. Awaiting user decision (one-by-one vs batch all 73).
+
+**Other parked (unchanged):** `move`/`addu` return-0 (`7CE80` beqz delay),
+`$at` setters, stream-reader `$v0`/`$v1` swaps, GTE/BIOS.
 Oracle:
 
 ```text
@@ -877,6 +891,12 @@ Scratch-link byte claims below refer to the extracted function-code slice;
 production builds are the authority for final address placement and full-file
 identity.
 
+- 2026-07-12: **Phase 5CX–5DB one-hundred-three C leaves — countdown
+  memset/memcpy.** From `f76c80b` (5CW/98), matched word memset twins
+  `74330`/`744A4`/`7474C`, byte fill `77A28`, and word memcpy `8D820` using
+  `register … asm("$2")`/`$3` to force retail regalloc. `build_us.sh` /
+  `verify_us.sh` **EXACT MATCH**. Near-miss `7CE80` parked (beqz delay
+  `addu $zero` vs GCC `move`/`or`). Uncommitted pending review.
 - 2026-07-12: **Phase 5BY–5CW ninety-eight C leaves — 25 arg-only store/setters.**
   From committed 5BX `86a62eb` (73 leaves), integrated null-check stores
   `63198`/`631AC`, dual `-1` store `64C20`, GPU packet headers `77B64`–`77C64`
