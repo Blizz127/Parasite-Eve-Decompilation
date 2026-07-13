@@ -134,8 +134,11 @@ segments:
       - [0x334C4, asm]
       - [0x336D0, c, func_80042ED0]
       - [0x336DC, asm]
+      - [0x33720, c, func_80042F20]
       - [0x33738, c, func_80042F38]
       - [0x33744, asm]
+      - [0x33838, c, func_80043038]
+      - [0x3384C, asm]
       - [0x33A40, c, func_80043240]
       - [0x33A4C, asm]
       - [0x340E0, c, func_800438E0]
@@ -250,7 +253,8 @@ segments:
       - [0x531BC, asm]
       - [0x534B8, c, func_80062CB8]
       - [0x534C4, c, func_80062CC4]
-      - [0x534D0, asm]
+      - [0x534D0, c, func_80062CD0]
+      - [0x534E4, asm]
       # Phase 5BY: C leaf func_80063198 — file 0x53998, size 0x14.
       - [0x53998, c, func_80063198]
       # Phase 5BZ: C leaf func_800631AC — file 0x539AC, size 0x14.
