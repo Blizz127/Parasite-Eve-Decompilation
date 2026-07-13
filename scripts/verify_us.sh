@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5BD: fifty-three C leaves.
+# Current production subsegments (file offsets). Phase 5BX: seventy-three C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x800, rodata]'
     '[0x2A0C, asm]'
@@ -49,6 +49,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x98AC, c, func_800190AC]'
     '[0x98B4, c, func_800190B4]'
     '[0x98BC, asm]'
+    '[0x2950C, c, func_80038D0C]'
+    '[0x2951C, asm]'
     '[0x2E02C, c, func_8003D82C]'
     '[0x2E034, asm]'
     '[0x2E7C8, c, func_8003DFC8]'
@@ -59,6 +61,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x330D4, asm]'
     '[0x33328, c, func_80042B28]'
     '[0x33338, asm]'
+    '[0x333C8, c, func_80042BC8]'
+    '[0x333D8, asm]'
     '[0x3E29C, c, func_8004DA9C]'
     '[0x3E2A4, asm]'
     '[0x41518, c, func_80050D18]'
@@ -70,18 +74,41 @@ EXPECTED_SUBSEGMENTS=(
     '[0x42D14, c, func_80052514]'
     '[0x42D24, c, func_80052524]'
     '[0x42D34, asm]'
+    '[0x42D7C, c, func_8005257C]'
+    '[0x42D94, asm]'
     '[0x42FC0, c, func_800527C0]'
     '[0x42FC8, asm]'
     '[0x4C4A8, c, func_8005BCA8]'
     '[0x4C4B0, asm]'
+    '[0x4F084, c, func_8005E884]'
+    '[0x4F094, asm]'
+    '[0x5F3D4, c, func_8006EBD4]'
+    '[0x5F3E4, asm]'
     '[0x645E8, c, func_80073DE8]'
-    '[0x645F8, asm]'
+    '[0x645F8, c, func_80073DF8]'
+    '[0x64610, asm]'
     '[0x65228, c, func_80074A28]'
     '[0x65238, asm]'
+    '[0x654B8, c, func_80074CB8]'
+    '[0x654C8, asm]'
+    '[0x66B3C, c, func_8007633C]'
+    '[0x66B54, asm]'
+    '[0x6AB24, c, func_8007A324]'
+    '[0x6AB34, c, func_8007A334]'
+    '[0x6AB44, c, func_8007A344]'
+    '[0x6AB54, c, func_8007A354]'
+    '[0x6AB60, asm]'
     '[0x6E6B0, c, func_8007DEB0]'
     '[0x6E6C0, asm]'
     '[0x6FF78, c, func_8007F778]'
     '[0x6FF88, asm]'
+    '[0x70408, c, func_8007FC08]'
+    '[0x70418, c, func_8007FC18]'
+    '[0x70428, c, func_8007FC28]'
+    '[0x70434, c, func_8007FC34]'
+    '[0x70444, c, func_8007FC44]'
+    '[0x70454, c, func_8007FC54]'
+    '[0x70464, asm]'
     '[0x704AC, c, func_8007FCAC]'
     '[0x704BC, asm]'
     '[0x71140, c, func_80080940]'
@@ -92,6 +119,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x778F0, asm]'
     '[0x7D27C, c, func_8008CA7C]'
     '[0x7D284, asm]'
+    '[0x7DFC0, c, func_8008D7C0]'
+    '[0x7DFD0, asm]'
     '[0x7FE94, c, func_8008F694]'
     '[0x7FEA8, c, func_8008F6A8]'
     '[0x7FEB0, asm]'
@@ -119,7 +148,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x818A0, rodata]'
     '[0xB2AF8, asm]'
     '[0xB3340, c, func_800C2B40]'
-    '[0xB3350, asm]'
+    '[0xB3350, c, func_800C2B50]'
+    '[0xB3368, asm]'
     '[0xB8A68, c, func_800C8268]'
     '[0xB8A70, asm]'
     '[0xB9A60, c, func_800C9260]'
@@ -146,27 +176,37 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/86A4.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
+    "asm/disc1/2951C.s"
     "asm/disc1/2E034.s"
     "asm/disc1/2E7D0.s"
     "asm/disc1/307CC.s"
     "asm/disc1/330D4.s"
     "asm/disc1/33338.s"
+    "asm/disc1/333D8.s"
     "asm/disc1/3E2A4.s"
     "asm/disc1/41520.s"
     "asm/disc1/4204C.s"
     "asm/disc1/42658.s"
     "asm/disc1/42D34.s"
+    "asm/disc1/42D94.s"
     "asm/disc1/42FC8.s"
     "asm/disc1/4C4B0.s"
-    "asm/disc1/645F8.s"
+    "asm/disc1/4F094.s"
+    "asm/disc1/5F3E4.s"
+    "asm/disc1/64610.s"
     "asm/disc1/65238.s"
+    "asm/disc1/654C8.s"
+    "asm/disc1/66B54.s"
+    "asm/disc1/6AB60.s"
     "asm/disc1/6E6C0.s"
     "asm/disc1/6FF88.s"
+    "asm/disc1/70464.s"
     "asm/disc1/704BC.s"
     "asm/disc1/71150.s"
     "asm/disc1/72ABC.s"
     "asm/disc1/778F0.s"
     "asm/disc1/7D284.s"
+    "asm/disc1/7DFD0.s"
     "asm/disc1/7FEB0.s"
     "asm/disc1/80098.s"
     "asm/disc1/804BC.s"
@@ -176,7 +216,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/81488.s"
     "asm/disc1/81768.s"
     "asm/disc1/B2AF8.s"
-    "asm/disc1/B3350.s"
+    "asm/disc1/B3368.s"
     "asm/disc1/B8A70.s"
     "asm/disc1/B9A68.s"
     "asm/disc1/BA6A8.s"
@@ -192,28 +232,47 @@ EXPECTED_ARTIFACTS=(
     "src/func_80019058.c"
     "src/func_800190AC.c"
     "src/func_800190B4.c"
+    "src/func_80038D0C.c"
     "src/func_8003D82C.c"
     "src/func_8003DFC8.c"
     "src/func_8003FFBC.c"
     "src/func_800428C4.c"
     "src/func_80042B28.c"
+    "src/func_80042BC8.c"
     "src/func_8004DA9C.c"
     "src/func_80050D18.c"
     "src/func_80051834.c"
     "src/func_80051E48.c"
     "src/func_80052514.c"
     "src/func_80052524.c"
+    "src/func_8005257C.c"
     "src/func_800527C0.c"
     "src/func_8005BCA8.c"
+    "src/func_8005E884.c"
+    "src/func_8006EBD4.c"
     "src/func_80073DE8.c"
+    "src/func_80073DF8.c"
     "src/func_80074A28.c"
+    "src/func_80074CB8.c"
+    "src/func_8007633C.c"
+    "src/func_8007A324.c"
+    "src/func_8007A334.c"
+    "src/func_8007A344.c"
+    "src/func_8007A354.c"
     "src/func_8007DEB0.c"
     "src/func_8007F778.c"
+    "src/func_8007FC08.c"
+    "src/func_8007FC18.c"
+    "src/func_8007FC28.c"
+    "src/func_8007FC34.c"
+    "src/func_8007FC44.c"
+    "src/func_8007FC54.c"
     "src/func_8007FCAC.c"
     "src/func_80080940.c"
     "src/func_800822AC.c"
     "src/func_800870E0.c"
     "src/func_8008CA7C.c"
+    "src/func_8008D7C0.c"
     "src/func_8008F694.c"
     "src/func_8008F6A8.c"
     "src/func_8008F868.c"
@@ -231,6 +290,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80090C74.c"
     "src/func_80090F54.c"
     "src/func_800C2B40.c"
+    "src/func_800C2B50.c"
     "src/func_800C8268.c"
     "src/func_800C9260.c"
     "src/func_800C9EA0.c"
@@ -427,9 +487,30 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800870E0.c" && -f "$ROOT/src/func_800822AC.c" && -f "$ROOT/src/func_80080940.c" && -f "$ROOT/src/func_8007FCAC.c" && -f "$ROOT/src/func_8007F778.c" && -f "$ROOT/src/func_8007DEB0.c" && -f "$ROOT/src/func_80074A28.c" && -f "$ROOT/src/func_80042B28.c" && -f "$ROOT/src/func_80051834.c" && -f "$ROOT/src/func_80073DE8.c" && -f "$ROOT/src/func_8003FFBC.c" && -f "$ROOT/src/func_80052524.c" && -f "$ROOT/src/func_80052514.c" && -f "$ROOT/src/func_80051E48.c" && -f "$ROOT/src/func_800428C4.c" && -f "$ROOT/src/func_80017E9C.c" && -f "$ROOT/src/func_80019050.c" && -f "$ROOT/src/func_80019058.c" && -f "$ROOT/src/func_800190AC.c" && -f "$ROOT/src/func_800190B4.c" && -f "$ROOT/src/func_8004DA9C.c" && -f "$ROOT/src/func_8003D82C.c" && -f "$ROOT/src/func_8008CA7C.c" && -f "$ROOT/src/func_8005BCA8.c" && -f "$ROOT/src/func_800527C0.c" && -f "$ROOT/src/func_80050D18.c" && -f "$ROOT/src/func_8003DFC8.c" && -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
-    echo "C conversion: Phase 5BD — fifty-three leaves (+ func_80017E9C / func_80019050 / func_80019058 / func_800190AC / func_800190B4 / func_8003D82C / func_8003DFC8 / func_8003FFBC / func_800428C4 / func_80042B28 / func_8004DA9C / func_80050D18 / func_80051834 / func_80051E48 / func_80052514 / func_80052524 / func_800527C0 / func_8005BCA8 / func_80073DE8 / func_80074A28 / func_8007DEB0 / func_8007F778 / func_8007FCAC / func_80080940 / func_800822AC / func_800870E0 / func_8008CA7C mid-2A0C; func_8008F6A8; tail through func_800CE3AC)"
-    echo "  sources: src/func_80017E9C.c src/func_80019050.c src/func_80019058.c src/func_800190AC.c src/func_800190B4.c src/func_8003D82C.c src/func_8003DFC8.c src/func_8003FFBC.c src/func_800428C4.c src/func_80042B28.c src/func_8004DA9C.c src/func_80050D18.c src/func_80051834.c src/func_80051E48.c src/func_80052514.c src/func_80052524.c src/func_800527C0.c src/func_8005BCA8.c src/func_80073DE8.c src/func_80074A28.c src/func_8007DEB0.c src/func_8007F778.c src/func_8007FCAC.c src/func_80080940.c src/func_800822AC.c src/func_800870E0.c src/func_8008CA7C.c src/func_8008F694.c src/func_8008F6A8.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"
+if [[ -f "$ROOT/src/func_80073DF8.c" && -f "$ROOT/src/func_800C2B50.c" && -f "$ROOT/src/func_8008D7C0.c" && -f "$ROOT/src/func_8007633C.c" && -f "$ROOT/src/func_8005257C.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+    echo "C conversion: Phase 5BX — seventy-three leaves (+ func_80073DF8 / prior through func_800CE3AC)"
+    echo "  sources: src/func_80073DF8.c (+ seventy-two prior leaves)"
+elif [[ -f "$ROOT/src/func_800C2B50.c" && -f "$ROOT/src/func_8008D7C0.c" && -f "$ROOT/src/func_8007633C.c" && -f "$ROOT/src/func_8005257C.c" && -f "$ROOT/src/func_8006EBD4.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+    echo "C conversion: Phase 5BW — seventy-two leaves (+ func_8005257C / func_8007633C / func_8008D7C0 / func_800C2B50 / prior through func_800CE3AC)"
+    echo "  sources: src/func_8005257C.c src/func_8007633C.c src/func_8008D7C0.c src/func_800C2B50.c (+ sixty-eight prior leaves)"
+elif [[ -f "$ROOT/src/func_8006EBD4.c" && -f "$ROOT/src/func_8005E884.c" && -f "$ROOT/src/func_80038D0C.c" && -f "$ROOT/src/func_80042BC8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+    echo "C conversion: Phase 5BS — sixty-eight leaves (+ func_80017E9C / func_80019050 / func_80019058 / func_800190AC / func_800190B4 / func_80038D0C / func_8003D82C / func_8003DFC8 / func_8003FFBC / func_800428C4 / func_80042B28 / func_80042BC8 / func_8004DA9C / func_80050D18 / func_80051834 / func_80051E48 / func_80052514 / func_80052524 / func_800527C0 / func_8005BCA8 / func_8005E884 / func_8006EBD4 / func_80073DE8 / func_80074A28 / func_80074CB8 / func_8007A324 / func_8007A334 / func_8007A344 / func_8007A354 / func_8007DEB0 / func_8007F778 / func_8007FC08 / func_8007FC18 / func_8007FC28 / func_8007FC34 / func_8007FC44 / func_8007FC54 / func_8007FCAC / func_80080940 / func_800822AC / func_800870E0 / func_8008CA7C mid-2A0C; func_8008F6A8; tail through func_800CE3AC)"
+    echo "  sources: src/func_80017E9C.c src/func_80019050.c src/func_80019058.c src/func_800190AC.c src/func_800190B4.c src/func_80038D0C.c src/func_8003D82C.c src/func_8003DFC8.c src/func_8003FFBC.c src/func_800428C4.c src/func_80042B28.c src/func_80042BC8.c src/func_8004DA9C.c src/func_80050D18.c src/func_80051834.c src/func_80051E48.c src/func_80052514.c src/func_80052524.c src/func_800527C0.c src/func_8005BCA8.c src/func_8005E884.c src/func_8006EBD4.c src/func_80073DE8.c src/func_80074A28.c src/func_80074CB8.c src/func_8007A324.c src/func_8007A334.c src/func_8007A344.c src/func_8007A354.c src/func_8007DEB0.c src/func_8007F778.c src/func_8007FC08.c src/func_8007FC18.c src/func_8007FC28.c src/func_8007FC34.c src/func_8007FC44.c src/func_8007FC54.c src/func_8007FCAC.c src/func_80080940.c src/func_800822AC.c src/func_800870E0.c src/func_8008CA7C.c src/func_8008F694.c src/func_8008F6A8.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"
+elif [[ -f "$ROOT/src/func_80042BC8.c" && -f "$ROOT/src/func_80074CB8.c" && -f "$ROOT/src/func_8007A354.c" && -f "$ROOT/src/func_8007A344.c" && -f "$ROOT/src/func_8007A334.c" && -f "$ROOT/src/func_8007A324.c" && -f "$ROOT/src/func_8007FC28.c" && -f "$ROOT/src/func_8007FC54.c" && -f "$ROOT/src/func_8007FC44.c" && -f "$ROOT/src/func_8007FC34.c" && -f "$ROOT/src/func_8007FC18.c" && -f "$ROOT/src/func_8007FC08.c" && -f "$ROOT/src/func_800870E0.c" && -f "$ROOT/src/func_800822AC.c" && -f "$ROOT/src/func_80080940.c" && -f "$ROOT/src/func_8007FCAC.c" && -f "$ROOT/src/func_8007F778.c" && -f "$ROOT/src/func_8007DEB0.c" && -f "$ROOT/src/func_80074A28.c" && -f "$ROOT/src/func_80042B28.c" && -f "$ROOT/src/func_80051834.c" && -f "$ROOT/src/func_80073DE8.c" && -f "$ROOT/src/func_8003FFBC.c" && -f "$ROOT/src/func_80052524.c" && -f "$ROOT/src/func_80052514.c" && -f "$ROOT/src/func_80051E48.c" && -f "$ROOT/src/func_800428C4.c" && -f "$ROOT/src/func_80017E9C.c" && -f "$ROOT/src/func_80019050.c" && -f "$ROOT/src/func_80019058.c" && -f "$ROOT/src/func_800190AC.c" && -f "$ROOT/src/func_800190B4.c" && -f "$ROOT/src/func_8004DA9C.c" && -f "$ROOT/src/func_8003D82C.c" && -f "$ROOT/src/func_8008CA7C.c" && -f "$ROOT/src/func_8005BCA8.c" && -f "$ROOT/src/func_800527C0.c" && -f "$ROOT/src/func_80050D18.c" && -f "$ROOT/src/func_8003DFC8.c" && -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5BP — sixty-five leaves (+ func_80017E9C / func_80019050 / func_80019058 / func_800190AC / func_800190B4 / func_8003D82C / func_8003DFC8 / func_8003FFBC / func_800428C4 / func_80042B28 / func_80042BC8 / func_8004DA9C / func_80050D18 / func_80051834 / func_80051E48 / func_80052514 / func_80052524 / func_800527C0 / func_8005BCA8 / func_80073DE8 / func_80074A28 / func_80074CB8 / func_8007A324 / func_8007A334 / func_8007A344 / func_8007A354 / func_8007DEB0 / func_8007F778 / func_8007FC08 / func_8007FC18 / func_8007FC28 / func_8007FC34 / func_8007FC44 / func_8007FC54 / func_8007FCAC / func_80080940 / func_800822AC / func_800870E0 / func_8008CA7C mid-2A0C; func_8008F6A8; tail through func_800CE3AC)"
+    echo "  sources: src/func_80017E9C.c src/func_80019050.c src/func_80019058.c src/func_800190AC.c src/func_800190B4.c src/func_8003D82C.c src/func_8003DFC8.c src/func_8003FFBC.c src/func_800428C4.c src/func_80042B28.c src/func_80042BC8.c src/func_8004DA9C.c src/func_80050D18.c src/func_80051834.c src/func_80051E48.c src/func_80052514.c src/func_80052524.c src/func_800527C0.c src/func_8005BCA8.c src/func_80073DE8.c src/func_80074A28.c src/func_80074CB8.c src/func_8007A324.c src/func_8007A334.c src/func_8007A344.c src/func_8007A354.c src/func_8007DEB0.c src/func_8007F778.c src/func_8007FC08.c src/func_8007FC18.c src/func_8007FC28.c src/func_8007FC34.c src/func_8007FC44.c src/func_8007FC54.c src/func_8007FCAC.c src/func_80080940.c src/func_800822AC.c src/func_800870E0.c src/func_8008CA7C.c src/func_8008F694.c src/func_8008F6A8.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"
+elif [[ -f "$ROOT/src/func_8007FC28.c" && ! -f "$ROOT/src/func_8007A354.c" && -f "$ROOT/src/func_8007FC54.c" && -f "$ROOT/src/func_8007FC44.c" && -f "$ROOT/src/func_8007FC34.c" && -f "$ROOT/src/func_8007FC18.c" && -f "$ROOT/src/func_8007FC08.c" && -f "$ROOT/src/func_800870E0.c" && -f "$ROOT/src/func_800822AC.c" && -f "$ROOT/src/func_80080940.c" && -f "$ROOT/src/func_8007FCAC.c" && -f "$ROOT/src/func_8007F778.c" && -f "$ROOT/src/func_8007DEB0.c" && -f "$ROOT/src/func_80074A28.c" && -f "$ROOT/src/func_80042B28.c" && -f "$ROOT/src/func_80051834.c" && -f "$ROOT/src/func_80073DE8.c" && -f "$ROOT/src/func_8003FFBC.c" && -f "$ROOT/src/func_80052524.c" && -f "$ROOT/src/func_80052514.c" && -f "$ROOT/src/func_80051E48.c" && -f "$ROOT/src/func_800428C4.c" && -f "$ROOT/src/func_80017E9C.c" && -f "$ROOT/src/func_80019050.c" && -f "$ROOT/src/func_80019058.c" && -f "$ROOT/src/func_800190AC.c" && -f "$ROOT/src/func_800190B4.c" && -f "$ROOT/src/func_8004DA9C.c" && -f "$ROOT/src/func_8003D82C.c" && -f "$ROOT/src/func_8008CA7C.c" && -f "$ROOT/src/func_8005BCA8.c" && -f "$ROOT/src/func_800527C0.c" && -f "$ROOT/src/func_80050D18.c" && -f "$ROOT/src/func_8003DFC8.c" && -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5BJ — fifty-nine leaves (+ func_80017E9C / func_80019050 / func_80019058 / func_800190AC / func_800190B4 / func_8003D82C / func_8003DFC8 / func_8003FFBC / func_800428C4 / func_80042B28 / func_8004DA9C / func_80050D18 / func_80051834 / func_80051E48 / func_80052514 / func_80052524 / func_800527C0 / func_8005BCA8 / func_80073DE8 / func_80074A28 / func_8007DEB0 / func_8007F778 / func_8007FC08 / func_8007FC18 / func_8007FC28 / func_8007FC34 / func_8007FC44 / func_8007FC54 / func_8007FCAC / func_80080940 / func_800822AC / func_800870E0 / func_8008CA7C mid-2A0C; func_8008F6A8; tail through func_800CE3AC)"
+    echo "  sources: src/func_80017E9C.c src/func_80019050.c src/func_80019058.c src/func_800190AC.c src/func_800190B4.c src/func_8003D82C.c src/func_8003DFC8.c src/func_8003FFBC.c src/func_800428C4.c src/func_80042B28.c src/func_8004DA9C.c src/func_80050D18.c src/func_80051834.c src/func_80051E48.c src/func_80052514.c src/func_80052524.c src/func_800527C0.c src/func_8005BCA8.c src/func_80073DE8.c src/func_80074A28.c src/func_8007DEB0.c src/func_8007F778.c src/func_8007FC08.c src/func_8007FC18.c src/func_8007FC28.c src/func_8007FC34.c src/func_8007FC44.c src/func_8007FC54.c src/func_8007FCAC.c src/func_80080940.c src/func_800822AC.c src/func_800870E0.c src/func_8008CA7C.c src/func_8008F694.c src/func_8008F6A8.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"
+elif [[ -f "$ROOT/src/func_8007FC54.c" && ! -f "$ROOT/src/func_8007FC28.c" && -f "$ROOT/src/func_8007FC44.c" && -f "$ROOT/src/func_8007FC34.c" && -f "$ROOT/src/func_8007FC18.c" && -f "$ROOT/src/func_8007FC08.c" && -f "$ROOT/src/func_800870E0.c" && -f "$ROOT/src/func_800822AC.c" && -f "$ROOT/src/func_80080940.c" && -f "$ROOT/src/func_8007FCAC.c" && -f "$ROOT/src/func_8007F778.c" && -f "$ROOT/src/func_8007DEB0.c" && -f "$ROOT/src/func_80074A28.c" && -f "$ROOT/src/func_80042B28.c" && -f "$ROOT/src/func_80051834.c" && -f "$ROOT/src/func_80073DE8.c" && -f "$ROOT/src/func_8003FFBC.c" && -f "$ROOT/src/func_80052524.c" && -f "$ROOT/src/func_80052514.c" && -f "$ROOT/src/func_80051E48.c" && -f "$ROOT/src/func_800428C4.c" && -f "$ROOT/src/func_80017E9C.c" && -f "$ROOT/src/func_80019050.c" && -f "$ROOT/src/func_80019058.c" && -f "$ROOT/src/func_800190AC.c" && -f "$ROOT/src/func_800190B4.c" && -f "$ROOT/src/func_8004DA9C.c" && -f "$ROOT/src/func_8003D82C.c" && -f "$ROOT/src/func_8008CA7C.c" && -f "$ROOT/src/func_8005BCA8.c" && -f "$ROOT/src/func_800527C0.c" && -f "$ROOT/src/func_80050D18.c" && -f "$ROOT/src/func_8003DFC8.c" && -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5BI — fifty-eight leaves (+ func_80017E9C / func_80019050 / func_80019058 / func_800190AC / func_800190B4 / func_8003D82C / func_8003DFC8 / func_8003FFBC / func_800428C4 / func_80042B28 / func_8004DA9C / func_80050D18 / func_80051834 / func_80051E48 / func_80052514 / func_80052524 / func_800527C0 / func_8005BCA8 / func_80073DE8 / func_80074A28 / func_8007DEB0 / func_8007F778 / func_8007FC08 / func_8007FC18 / func_8007FC34 / func_8007FC44 / func_8007FC54 / func_8007FCAC / func_80080940 / func_800822AC / func_800870E0 / func_8008CA7C mid-2A0C; func_8008F6A8; tail through func_800CE3AC)"
+    echo "  sources: src/func_80017E9C.c src/func_80019050.c src/func_80019058.c src/func_800190AC.c src/func_800190B4.c src/func_8003D82C.c src/func_8003DFC8.c src/func_8003FFBC.c src/func_800428C4.c src/func_80042B28.c src/func_8004DA9C.c src/func_80050D18.c src/func_80051834.c src/func_80051E48.c src/func_80052514.c src/func_80052524.c src/func_800527C0.c src/func_8005BCA8.c src/func_80073DE8.c src/func_80074A28.c src/func_8007DEB0.c src/func_8007F778.c src/func_8007FC08.c src/func_8007FC18.c src/func_8007FC34.c src/func_8007FC44.c src/func_8007FC54.c src/func_8007FCAC.c src/func_80080940.c src/func_800822AC.c src/func_800870E0.c src/func_8008CA7C.c src/func_8008F694.c src/func_8008F6A8.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"
+elif [[ -f "$ROOT/src/func_8007FC18.c" && ! -f "$ROOT/src/func_8007FC54.c" && -f "$ROOT/src/func_8007FC08.c" && -f "$ROOT/src/func_800870E0.c" && -f "$ROOT/src/func_800822AC.c" && -f "$ROOT/src/func_80080940.c" && -f "$ROOT/src/func_8007FCAC.c" && -f "$ROOT/src/func_8007F778.c" && -f "$ROOT/src/func_8007DEB0.c" && -f "$ROOT/src/func_80074A28.c" && -f "$ROOT/src/func_80042B28.c" && -f "$ROOT/src/func_80051834.c" && -f "$ROOT/src/func_80073DE8.c" && -f "$ROOT/src/func_8003FFBC.c" && -f "$ROOT/src/func_80052524.c" && -f "$ROOT/src/func_80052514.c" && -f "$ROOT/src/func_80051E48.c" && -f "$ROOT/src/func_800428C4.c" && -f "$ROOT/src/func_80017E9C.c" && -f "$ROOT/src/func_80019050.c" && -f "$ROOT/src/func_80019058.c" && -f "$ROOT/src/func_800190AC.c" && -f "$ROOT/src/func_800190B4.c" && -f "$ROOT/src/func_8004DA9C.c" && -f "$ROOT/src/func_8003D82C.c" && -f "$ROOT/src/func_8008CA7C.c" && -f "$ROOT/src/func_8005BCA8.c" && -f "$ROOT/src/func_800527C0.c" && -f "$ROOT/src/func_80050D18.c" && -f "$ROOT/src/func_8003DFC8.c" && -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5BF — fifty-five leaves (+ func_80017E9C / func_80019050 / func_80019058 / func_800190AC / func_800190B4 / func_8003D82C / func_8003DFC8 / func_8003FFBC / func_800428C4 / func_80042B28 / func_8004DA9C / func_80050D18 / func_80051834 / func_80051E48 / func_80052514 / func_80052524 / func_800527C0 / func_8005BCA8 / func_80073DE8 / func_80074A28 / func_8007DEB0 / func_8007F778 / func_8007FC08 / func_8007FC18 / func_8007FCAC / func_80080940 / func_800822AC / func_800870E0 / func_8008CA7C mid-2A0C; func_8008F6A8; tail through func_800CE3AC)"
+    echo "  sources: src/func_80017E9C.c src/func_80019050.c src/func_80019058.c src/func_800190AC.c src/func_800190B4.c src/func_8003D82C.c src/func_8003DFC8.c src/func_8003FFBC.c src/func_800428C4.c src/func_80042B28.c src/func_8004DA9C.c src/func_80050D18.c src/func_80051834.c src/func_80051E48.c src/func_80052514.c src/func_80052524.c src/func_800527C0.c src/func_8005BCA8.c src/func_80073DE8.c src/func_80074A28.c src/func_8007DEB0.c src/func_8007F778.c src/func_8007FC08.c src/func_8007FC18.c src/func_8007FCAC.c src/func_80080940.c src/func_800822AC.c src/func_800870E0.c src/func_8008CA7C.c src/func_8008F694.c src/func_8008F6A8.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"
+elif [[ -f "$ROOT/src/func_8007FC08.c" && -f "$ROOT/src/func_800870E0.c" && -f "$ROOT/src/func_800822AC.c" && -f "$ROOT/src/func_80080940.c" && -f "$ROOT/src/func_8007FCAC.c" && -f "$ROOT/src/func_8007F778.c" && -f "$ROOT/src/func_8007DEB0.c" && -f "$ROOT/src/func_80074A28.c" && -f "$ROOT/src/func_80042B28.c" && -f "$ROOT/src/func_80051834.c" && -f "$ROOT/src/func_80073DE8.c" && -f "$ROOT/src/func_8003FFBC.c" && -f "$ROOT/src/func_80052524.c" && -f "$ROOT/src/func_80052514.c" && -f "$ROOT/src/func_80051E48.c" && -f "$ROOT/src/func_800428C4.c" && -f "$ROOT/src/func_80017E9C.c" && -f "$ROOT/src/func_80019050.c" && -f "$ROOT/src/func_80019058.c" && -f "$ROOT/src/func_800190AC.c" && -f "$ROOT/src/func_800190B4.c" && -f "$ROOT/src/func_8004DA9C.c" && -f "$ROOT/src/func_8003D82C.c" && -f "$ROOT/src/func_8008CA7C.c" && -f "$ROOT/src/func_8005BCA8.c" && -f "$ROOT/src/func_800527C0.c" && -f "$ROOT/src/func_80050D18.c" && -f "$ROOT/src/func_8003DFC8.c" && -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
+    echo "C conversion: Phase 5BE — fifty-four leaves (+ func_80017E9C / func_80019050 / func_80019058 / func_800190AC / func_800190B4 / func_8003D82C / func_8003DFC8 / func_8003FFBC / func_800428C4 / func_80042B28 / func_8004DA9C / func_80050D18 / func_80051834 / func_80051E48 / func_80052514 / func_80052524 / func_800527C0 / func_8005BCA8 / func_80073DE8 / func_80074A28 / func_8007DEB0 / func_8007F778 / func_8007FC08 / func_8007FCAC / func_80080940 / func_800822AC / func_800870E0 / func_8008CA7C mid-2A0C; func_8008F6A8; tail through func_800CE3AC)"
+    echo "  sources: src/func_80017E9C.c src/func_80019050.c src/func_80019058.c src/func_800190AC.c src/func_800190B4.c src/func_8003D82C.c src/func_8003DFC8.c src/func_8003FFBC.c src/func_800428C4.c src/func_80042B28.c src/func_8004DA9C.c src/func_80050D18.c src/func_80051834.c src/func_80051E48.c src/func_80052514.c src/func_80052524.c src/func_800527C0.c src/func_8005BCA8.c src/func_80073DE8.c src/func_80074A28.c src/func_8007DEB0.c src/func_8007F778.c src/func_8007FC08.c src/func_8007FCAC.c src/func_80080940.c src/func_800822AC.c src/func_800870E0.c src/func_8008CA7C.c src/func_8008F694.c src/func_8008F6A8.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"
 elif [[ -f "$ROOT/src/func_80051E48.c" && -f "$ROOT/src/func_800428C4.c" && -f "$ROOT/src/func_80017E9C.c" && -f "$ROOT/src/func_80019050.c" && -f "$ROOT/src/func_80019058.c" && -f "$ROOT/src/func_800190AC.c" && -f "$ROOT/src/func_800190B4.c" && -f "$ROOT/src/func_8004DA9C.c" && -f "$ROOT/src/func_8003D82C.c" && -f "$ROOT/src/func_8008CA7C.c" && -f "$ROOT/src/func_8005BCA8.c" && -f "$ROOT/src/func_800527C0.c" && -f "$ROOT/src/func_80050D18.c" && -f "$ROOT/src/func_8003DFC8.c" && -f "$ROOT/src/func_800CE3AC.c" && -f "$ROOT/src/func_80090C74.c" ]]; then
     echo "C conversion: Phase 5AQ — forty leaves (+ func_80017E9C / func_80019050 / func_80019058 / func_800190AC / func_800190B4 / func_8003D82C / func_8003DFC8 / func_800428C4 / func_8004DA9C / func_80050D18 / func_80051E48 / func_800527C0 / func_8005BCA8 / func_8008CA7C mid-2A0C; func_8008F6A8; tail through func_800CE3AC)"
     echo "  sources: src/func_80017E9C.c src/func_80019050.c src/func_80019058.c src/func_800190AC.c src/func_800190B4.c src/func_8003D82C.c src/func_8003DFC8.c src/func_800428C4.c src/func_8004DA9C.c src/func_80050D18.c src/func_80051E48.c src/func_800527C0.c src/func_8005BCA8.c src/func_8008CA7C.c src/func_8008F694.c src/func_8008F6A8.c src/func_8008F868.c src/func_8008F880.c src/func_8008FCB4.c src/func_800904A0.c src/func_800904AC.c src/func_800904B4.c src/func_800904BC.c src/func_800906B4.c src/func_80090A0C.c src/func_80090C{38,4C,60,74}.c src/func_80090F54.c src/func_800C2B40.c src/func_800C8268.c src/func_800C9260.c src/func_800C9EA0.c src/func_800CACD4.c src/func_800CD2DC.c src/func_800CD2E4.c src/func_800CD59C.c src/func_800CDD04.c src/func_800CE3AC.c"

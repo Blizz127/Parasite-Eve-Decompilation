@@ -73,10 +73,14 @@ segments:
       # Phase 5AN: C leaves func_800190AC + func_800190B4 — return-1 twins.
       # File spans 0x98AC–0x98B4 and 0x98B4–0x98BC exclusive (VRAM +0x80010000).
       # Fifth and sixth of the seven return-1 twins (shape scratch-proven in 5AJ).
-      # Prefix of 9860.s is 0x4C (= 0x98AC - 0x9860); resume 98BC.s size 0x24770.
+      # Prefix of 9860.s is 0x4C (= 0x98AC - 0x9860); resume 98BC.s size 0x1FC50 (then mid-carve 38D0C).
       - [0x98AC, c, func_800190AC]
       - [0x98B4, c, func_800190B4]
       - [0x98BC, asm]
+      # Phase 5BQ: C leaf func_80038D0C — VRAM 0x80038D0C, size 0x10.
+      # Nonzero test of D_80091A1C (lui/lbu/jr/sltu); plain -O1 matches.
+      - [0x2950C, c, func_80038D0C]
+      - [0x2951C, asm]
       # Phase 5AJ: C leaf func_8003D82C — VRAM 0x8003D82C, size 0x8.
       # File span 0x2E02C–0x2E034 exclusive. Return-1 stub (jr; addiu $v0,1).
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.
@@ -105,6 +109,11 @@ segments:
       - [0x330D4, asm]
       - [0x33328, c, func_80042B28]
       - [0x33338, asm]
+      # Phase 5BP: C leaf func_80042BC8 — VRAM 0x80042BC8, size 0x10.
+      # Nonzero test of D_800A1870 (lui/lw/jr/sltu); plain -O1 matches.
+      # Mid-33338 carve: prefix 0x90, C 0x10, resume 333D8.s 0xAEC4.
+      - [0x333C8, c, func_80042BC8]
+      - [0x333D8, asm]
       # Phase 5AO: C leaf func_8004DA9C — VRAM 0x8004DA9C, size 0x8.
       # File span 0x3E29C–0x3E2A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # seventh/final of the seven return-1 twins (shape scratch-proven in 5AJ).
@@ -142,6 +151,10 @@ segments:
       # Zero-prefix carve of former 42D24.s; resume 42D34.s size 0x28C.
       - [0x42D24, c, func_80052524]
       - [0x42D34, asm]
+      # Phase 5BT: C leaf func_8005257C — VRAM 0x8005257C, size 0x18.
+      # Fixed-shift bit test on D_8009D1A0 (lui/lw/nop/srl/jr/andi).
+      - [0x42D7C, c, func_8005257C]
+      - [0x42D94, asm]
       # Phase 5AG: C leaf func_800527C0 — VRAM 0x800527C0, size 0x8.
       # File span 0x42FC0–0x42FC8 exclusive. Empty jr/nop stub.
       - [0x42FC0, c, func_800527C0]
@@ -153,20 +166,52 @@ segments:
       # File span 0x645E8–0x645F8 exclusive. 16-bit global getter:
       # lui $v0,%hi(D_800945E6); lhu $v0,%lo(D_800945E6)($v0); jr $ra; nop.
       # Same shape as 5AR/5AS; plain -O1 matches (MIPS-I load-delay).
-      # Mid-4C4B0 carve: prefix 0x18138, C 0x10, resume 645F8.s 0x18C84.
+      # Mid-4C4B0 carve: also 5E884 @ 4F084 and 6EBD4 @ 5F3D4 (sizes in build_us.sh).
       - [0x4C4B0, asm]
+      # Phase 5BR: C leaf func_8005E884 — VRAM 0x8005E884, size 0x10.
+      # Signed-byte global getter on D_800B0DB1; plain -O1 matches.
+      - [0x4F084, c, func_8005E884]
+      - [0x4F094, asm]
+      # Phase 5BS: C leaf func_8006EBD4 — VRAM 0x8006EBD4, size 0x10.
+      # Signed-byte global getter on D_800B0DBA; plain -O1 matches.
+      - [0x5F3D4, c, func_8006EBD4]
+      - [0x5F3E4, asm]
       - [0x645E8, c, func_80073DE8]
+      # Phase 5BX: C leaf func_80073DF8 — VRAM 0x80073DF8, size 0x18.
+      # Halfword pointer deref on D_80095674 (lui/lw/nop/lhu0/jr/nop).
+      - [0x645F8, c, func_80073DF8]
+      - [0x64610, asm]
       # Phase 5AX: C leaf func_80074A28 — VRAM 0x80074A28, size 0x10.
       # File span 0x65228–0x65238 exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_800956EC. Plain -O1 matches.
-      # Mid-645F8 carve: prefix 0xC30, C 0x10, resume 65238.s 0x18044.
-      - [0x645F8, asm]
+      # Mid-64610 carve: prefix 0xC18, C 0x10, resume 65238.s.
       - [0x65228, c, func_80074A28]
       # Phase 5AY: C leaf func_8007DEB0 — VRAM 0x8007DEB0, size 0x10.
       # File span 0x6E6B0–0x6E6C0 exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_8009B4AC. Plain -O1 matches.
-      # Mid-65238 carve: prefix 0x9478, C 0x10, resume 6E6C0.s 0xEBBC.
+      # Mid-65238: 74CB8 leaf, then 654C8 asm to 7A324 cluster.
       - [0x65238, asm]
+      # Phase 5BO: C leaf func_80074CB8 — VRAM 0x80074CB8, size 0x10.
+      # Unsigned-byte global getter on D_8009574E; plain -O1 matches.
+      - [0x654B8, c, func_80074CB8]
+      - [0x654C8, asm]
+      # Phase 5BU: C leaf func_8007633C — VRAM 0x8007633C, size 0x18.
+      # Pointer double-deref on D_80095854 (lui/lw/nop/lw0/jr/nop).
+      - [0x66B3C, c, func_8007633C]
+      - [0x66B54, asm]
+      # Phase 5BK: C leaf func_8007A324 — VRAM 0x8007A324, size 0x10.
+      # Unsigned-byte global getter on D_8009AFC4; plain -O1 matches.
+      - [0x6AB24, c, func_8007A324]
+      # Phase 5BL: C leaf func_8007A334 — VRAM 0x8007A334, size 0x10.
+      # Unsigned-byte global getter on D_8009AFD4; plain -O1 matches.
+      - [0x6AB34, c, func_8007A334]
+      # Phase 5BM: C leaf func_8007A344 — VRAM 0x8007A344, size 0x10.
+      # Unsigned-byte global getter on D_8009AFD5; plain -O1 matches.
+      - [0x6AB44, c, func_8007A344]
+      # Phase 5BN: C leaf func_8007A354 — VRAM 0x8007A354, size 0xC.
+      # Address-of D_8009AFD0 (lui/jr/addiu in delay slot); plain -O1 matches.
+      - [0x6AB54, c, func_8007A354]
+      - [0x6AB60, asm]
       - [0x6E6B0, c, func_8007DEB0]
       # Phase 5AZ: C leaf func_8007F778 — VRAM 0x8007F778, size 0x10.
       # File span 0x6FF78–0x6FF88 exclusive. 32-bit global getter:
@@ -174,11 +219,36 @@ segments:
       # Mid-6E6C0 carve: prefix 0x18B8, C 0x10, resume 6FF88.s 0xD2F4.
       - [0x6E6C0, asm]
       - [0x6FF78, c, func_8007F778]
+      # Phase 5BE: C leaf func_8007FC08 — VRAM 0x8007FC08, size 0x10.
+      # File span 0x70408–0x70418 exclusive. Unsigned-byte global getter:
+      # lui/lbu/jr/nop on D_8009B580. Plain -O1 matches.
+      # Mid-6FF88 carve: prefix 0x480, C 0x10, resume 70418.s 0x94.
+      - [0x6FF88, asm]
+      - [0x70408, c, func_8007FC08]
+      # Phase 5BF: C leaf func_8007FC18 — VRAM 0x8007FC18, size 0x10.
+      # File span 0x70418–0x70428 exclusive. Unsigned-byte global getter:
+      # lui/lbu/jr/nop on D_8009B581. Plain -O1 matches.
+      # Mid-70418 carve: prefix 0x0, C 0x10, resume 70428.s 0x84.
+      - [0x70418, c, func_8007FC18]
+      # Phase 5BJ: C leaf func_8007FC28 — VRAM 0x8007FC28, size 0xC.
+      # Address-of D_8009B582 (lui/jr/addiu in delay slot); plain -O1 matches.
+      - [0x70428, c, func_8007FC28]
+      # Phase 5BG: C leaf func_8007FC34 — VRAM 0x8007FC34, size 0x10.
+      # Unsigned-byte global getter on D_8009B586; plain -O1 matches.
+      # Mid-70428 carve: prefix 0xC (func_8007FC28), C 0x10.
+      - [0x70434, c, func_8007FC34]
+      # Phase 5BH: C leaf func_8007FC44 — VRAM 0x8007FC44, size 0x10.
+      # Unsigned-byte global getter on D_8009B587; plain -O1 matches.
+      - [0x70444, c, func_8007FC44]
+      # Phase 5BI: C leaf func_8007FC54 — VRAM 0x8007FC54, size 0x10.
+      # Unsigned-byte global getter on D_8009B56C; plain -O1 matches.
+      # Resume 70464.s 0x48 after third C leaf.
+      - [0x70454, c, func_8007FC54]
+      - [0x70464, asm]
       # Phase 5BA: C leaf func_8007FCAC — VRAM 0x8007FCAC, size 0x10.
       # File span 0x704AC–0x704BC exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_8009B590. Plain -O1 matches.
       # Mid-6FF88 carve: prefix 0x524, C 0x10, resume 704BC.s 0xCDC0.
-      - [0x6FF88, asm]
       - [0x704AC, c, func_8007FCAC]
       # Phase 5BB: C leaf func_80080940 — VRAM 0x80080940, size 0x10.
       # File span 0x71140–0x71150 exclusive. 32-bit global getter:
@@ -203,6 +273,10 @@ segments:
       # File span 0x7D27C–0x7D284 exclusive. Empty jr/nop stub.
       - [0x7D27C, c, func_8008CA7C]
       - [0x7D284, asm]
+      # Phase 5BV: C leaf func_8008D7C0 — VRAM 0x8008D7C0, size 0x10.
+      # Store D_8009B3A0 into *a0 (lui/lw/jr/sw).
+      - [0x7DFC0, c, func_8008D7C0]
+      - [0x7DFD0, asm]
       # Phase 5K: C leaf func_8008F694 — VRAM 0x8008F694, size 0x14.
       # File span 0x7FE94–0x7FEA8 exclusive. Increment *(unsigned int *)arg0 by 2.
       - [0x7FE94, c, func_8008F694]
@@ -270,7 +344,10 @@ segments:
       # Phase 5G: C leaf func_800C2B40 — VRAM 0x800C2B40, size 0x10.
       # File span 0xB3340–0xB3350 exclusive. Store arg0 to *(D_800E2248+0x70).
       - [0xB3340, c, func_800C2B40]
-      - [0xB3350, asm]
+      # Phase 5BW: C leaf func_800C2B50 — VRAM 0x800C2B50, size 0x18.
+      # Pointer field getter D_800E2248[+0x70]; zero-prefix of former B3350.s.
+      - [0xB3350, c, func_800C2B50]
+      - [0xB3368, asm]
       # Phase 5T: C leaf func_800C8268 — VRAM 0x800C8268, size 0x8.
       # File span 0xB8A68–0xB8A70 exclusive. Empty jr/nop stub.
       - [0xB8A68, c, func_800C8268]

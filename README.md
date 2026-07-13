@@ -11,16 +11,26 @@ Initial target:
 
 ## Project status
 
-**Current phase: Phase 5AX — 47 matching C leaves** (pending commit on
-branch `phase5ae-2a0c-hole-aware`; last committed checkpoint `7902dd2` /
-Phase 5AW / 46 leaves). Disc 1 EXE rebuilds byte-for-byte via
+**Current phase: Phase 5BX — 73 matching C leaves** on branch
+`phase5ae-2a0c-hole-aware`. Disc 1 EXE rebuilds byte-for-byte via
 `scripts/build_us.sh` (SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`).
 Phase 1 local verification is complete; the official redump.org cross-check
 remains open (non-blocking). PC port is out of scope.
+
+**Progress dashboard:** https://blizz127.github.io/parasite-eve-progress/
+
 See [`docs/project_plan.md`](docs/project_plan.md) for the roadmap and
 [`docs/ai_context/ACTIVE_HANDOFF.md`](docs/ai_context/ACTIVE_HANDOFF.md) for
 the current working state. Public mirror:
 [GitHub Wiki](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki).
+
+Regenerate/publish the dashboard:
+
+```bash
+python3 tools/progress/generate_progress.py
+python3 tools/progress/render_dashboard.py
+scripts/publish_progress.sh
+```
 
 ## Goals
 

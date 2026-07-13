@@ -6,17 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5BD — `func_800870E0` integrated (fifty-third matching C leaf)**
-(branch `phase5ae-2a0c-hole-aware`, derived from accepted Phase 5BC commit
-`00f4728`). Fifty-three matching C leaves. Another **32-bit global getter**
-(`lui/lw/jr/nop`, returns `D_8009D24C` as `int`); **plain -O1 matches**.
-Mid-`72ABC.s` carve.
-**Parked:** `func_8003DFD0` return-0 stub (5I-class `move` vs `addu` in
-delay slot — GCC 14.2 emits `00001025` not `21100000`, same blocker as
-`800C7DC4`) + sb-stub / accessor families + setter `func_8003FFAC`.
+**Phase 5BX — `func_80073DF8` integrated (seventy-third matching C leaf)**
+(branch `phase5ae-2a0c-hole-aware`, large uncommitted leaf batch atop committed
+Phase 5BD `8bfd099`). Seventy-three matching C leaves. Latest stretch added
+5BQ–5BX: bool/byte getters (`38D0C`, `5E884`, `6EBD4`), bit test `5257C`,
+pointer derefs (`7633C`, `C2B50`, `73DF8`), and store-out `8D7C0`. All plain
+`-O1` except `func_80051E48` (-fno-delayed-branch, unchanged).
+**Parked:** return-0 stubs (`addu $zero` vs GCC `move`/`or`), `$at` setters,
+`func_8007FBF0` indexed-lw schedule, gp-relative getters (`-G0` mismatch),
+bitmask OR/AND helpers that materialize base via `addiu` then `lw 0(base)`.
 
 Oracle: `scripts/build_us.sh` exits 0 with exact SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (fifty-three leaves).
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (seventy-three leaves).
 
 **Provenance:** clean target-only derivation from accepted commit `00f4728`
 (Phase 5BC / 52 leaves). `git stash list` is empty. The complete 16-byte 5BD
@@ -33,9 +34,8 @@ accepted chain continues with Phase 5BA as `79cdc7e`; Phase 5BB is isolated
 and committed as `e9f46c1`, and Phase 5BC as `00f4728`. Phase 5BD is isolated
 to the standard five-file leaf scope.
 
-`README.md` and `CLAUDE.md` still contain pre-commit Phase 5AX checkpoint
-wording from `27a6ba2`; they are intentionally left untouched in this
-five-file leaf scope. This handoff is authoritative for the live state.
+`README.md` is updated to Phase 5BX / 73 leaves with this commit. `CLAUDE.md`
+may lag; this handoff remains authoritative for the live state.
 
 Solid-state config (`configs/USA/disc1.yaml`):
 
@@ -83,6 +83,9 @@ Solid-state config (`configs/USA/disc1.yaml`):
 [0x6E6C0,   asm]
 [0x6FF78,   c, func_8007F778]  VRAM 0x8007F778, size 0x10 (Phase 5AZ)
 [0x6FF88,   asm]
+[0x70408,   c, func_8007FC08]  VRAM 0x8007FC08, size 0x10 (Phase 5BE)
+[0x70418,   c, func_8007FC18]  VRAM 0x8007FC18, size 0x10 (Phase 5BF)
+[0x70428,   asm]
 [0x704AC,   c, func_8007FCAC]  VRAM 0x8007FCAC, size 0x10 (Phase 5BA)
 [0x704BC,   asm]
 [0x71140,   c, func_80080940]  VRAM 0x80080940, size 0x10 (Phase 5BB)
@@ -298,17 +301,16 @@ post-split `git status` check.
 
 ## Next concrete step
 
-**Milestone:** fifty-three matching C leaves on branch
-`phase5ae-2a0c-hole-aware` (Phase 5BD: `func_800870E0` — 32-bit global
-getter, plain -O1). Fifty-three leaves exact SHA-1.
+**Milestone:** fifty-five matching C leaves on branch
+`phase5ae-2a0c-hole-aware` (Phase 5BF: `func_8007FC18` — 8-bit global
+getter twin to 5BE, plain -O1). Fifty-five leaves exact SHA-1.
 Return-1 septuplet (7/7) remains complete. Parked: `func_8003DFD0`
 return-0 (5I move vs addu), setter `func_8003FFAC` ($at vs $v0),
 sb-stub / 5I-class / accessor families.
 
-**Next:** run fresh read-only triage outside the parked return-0, sb-stub,
-accessor, and setter families. The three previously ranked safe getters are
-now exhausted; do not infer another target without new raw-boundary and
-caller evidence. Continue one leaf at a time.
+**Next:** continue the `70428.s` byte-getter cluster (`func_8007FC34`,
+`func_8007FC44`, `func_8007FC54` are same `lui/lbu/jr/nop` shape) or run
+fresh triage outside parked families. One leaf at a time.
 Oracle:
 
 ```text
@@ -316,6 +318,35 @@ build_us.sh  → exit 0 only on exact SHA-1 match
 verify_us.sh → reports rebuild status when candidate present
 SHA-1        → 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 ```
+
+**Progress dashboard:** https://blizz127.github.io/parasite-eve-progress/
+Regenerate from `configs/USA/disc1.yaml` (no objdiff yet):
+
+```text
+python3 tools/progress/generate_progress.py
+python3 tools/progress/render_dashboard.py
+scripts/publish_progress.sh
+```
+
+Published repo: `Blizz127/parasite-eve-progress` (`gh-pages`). v1 metrics:
+matched C leaf bytes vs total asm+c spans; `fuzzy_match_percent` mirrors code
+% until objdiff report is wired in.
+
+**Phase 5BF result — `func_8007FC18` (2026-07-12):** VRAM `0x8007FC18` /
+file `0x70418` / size `0x10`. Unsigned-byte global getter —
+`lui $v0,%hi(D_8009B581); lbu $v0,%lo(D_8009B581)($v0); jr $ra; nop`,
+i.e. `unsigned char func(void){ return D_8009B581; }`. Plain -O1 matches.
+Mid-`70418.s` carve: prefix `0x0`, C `0x10`, resume `70428.s` `0x84`.
+Production probe matches raw ROM `0a80023c 81b54290 0800e003 00000000`.
+Re-split + production **EXACT MATCH**; fifty-five leaves.
+
+**Phase 5BE result — `func_8007FC08` (2026-07-12):** VRAM `0x8007FC08` /
+file `0x70408` / size `0x10`. Unsigned-byte global getter —
+`lui $v0,%hi(D_8009B580); lbu $v0,%lo(D_8009B580)($v0); jr $ra; nop`,
+i.e. `unsigned char func(void){ return D_8009B580; }`. Plain -O1 matches.
+Mid-`6FF88.s` carve: prefix `0x480`, C `0x10`, resume `70418.s` `0x94`.
+Production probe matches raw ROM `0a80023c 80b54290 0800e003 00000000`.
+Re-split + production **EXACT MATCH**; fifty-four leaves.
 
 **Phase 5BD result — `func_800870E0` (2026-07-12):** VRAM `0x800870E0` /
 file `0x778E0` / size `0x10`. 32-bit global getter —
@@ -853,6 +884,13 @@ Scratch-link byte claims below refer to the extracted function-code slice;
 production builds are the authority for final address placement and full-file
 identity.
 
+- 2026-07-12: **Progress dashboard published (Xenogears-style).** Added
+  `tools/progress/generate_progress.py` (yaml → Xenogears-schema
+  `progress.json`), `tools/progress/render_dashboard.py` (PE-branded HTML),
+  and `scripts/publish_progress.sh`. Live site:
+  https://blizz127.github.io/parasite-eve-progress/ (`Blizz127/parasite-eve-progress`,
+  `gh-pages`). v1 metrics: matched C leaf bytes vs total asm+c code spans;
+  `fuzzy_match_percent` mirrors code % until objdiff is wired in.
 - 2026-07-12: **Phase 5BD fifty-third C leaf integrated — 32-bit global getter.** From accepted Phase 5BC commit `00f4728`, converted only `func_800870E0` (file `0x778E0`, size `0x10`, VRAM `0x800870E0`, `lui v0,%hi(D_8009D24C); lw v0,%lo(D_8009D24C)(v0); jr ra; nop` → `int func(void){ return D_8009D24C; }`). Plain -O1 scratch-linked bytes exactly match raw ROM. Target-only mid-`72ABC.s` carve `[0x72ABC, asm]` (`0x4E24`) + `[0x778E0, c]` + `[0x778F0, asm]` (`0x598C`), summing to the prior `0xA7C0`. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5BD fifty-three leaves; direct `cmp` exact. No other leaf was added.
 - 2026-07-12: **Phase 5BC fifty-second C leaf integrated — 32-bit global getter.** From accepted Phase 5BB commit `e9f46c1`, converted only `func_800822AC` (file `0x72AAC`, size `0x10`, VRAM `0x800822AC`, `lui v0,%hi(D_8009B70C); lw v0,%lo(D_8009B70C)(v0); jr ra; nop` → `int func(void){ return D_8009B70C; }`). Plain -O1 scratch-linked code slice exactly matches raw ROM; the scratch binary has four leading linker-alignment bytes. Target-only mid-`71150.s` carve `[0x71150, asm]` (`0x195C`) + `[0x72AAC, c]` + `[0x72ABC, asm]` (`0xA7C0`), summing to the prior `0xC12C`. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5BC fifty-two leaves; direct `cmp` exact. No other leaf was added.
 - 2026-07-12: **Phase 5BB fifty-first C leaf integrated — 32-bit global getter.** From accepted Phase 5BA commit `79cdc7e`, converted only `func_80080940` (file `0x71140`, size `0x10`, VRAM `0x80080940`, `lui v0,%hi(D_8009B554); lw v0,%lo(D_8009B554)(v0); jr ra; nop` → `int func(void){ return D_8009B554; }`). Plain -O1 scratch-linked bytes exactly match raw ROM. Target-only mid-`704BC.s` carve `[0x704BC, asm]` (`0xC84`) + `[0x71140, c]` + `[0x71150, asm]` (`0xC12C`), summing to the prior `0xCDC0`. Re-split OK; `build_us.sh` exit 0 **EXACT SHA-1 MATCH**; `verify_us.sh` exit 0 reporting Phase 5BB fifty-one leaves; direct `cmp` exact. No other leaf was added.
@@ -1297,33 +1335,20 @@ identity.
 The USA Disc 1 executable currently rebuilds byte-for-byte from a mixed
 assembly/C layout. `scripts/build_us.sh` produces the exact target SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and `scripts/verify_us.sh`
-passes the split/config checks and reports Phase 5BD with 53 matching C
+passes the split/config checks and reports Phase 5BX with 73 matching C
 leaves.
 
+- **Progress dashboard:** https://blizz127.github.io/parasite-eve-progress/
 - **Current branch:** `phase5ae-2a0c-hole-aware`
-- **Current checkpoint:** isolated target-only Phase 5BD derived from accepted Phase 5BC commit `00f4728` (`git stash list` empty)
-- **Matching C leaves:** 53
-- **Latest leaf:** `func_800870E0` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_8009D24C;`), plain -O1
-- **Prior leaf:** `func_800822AC` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_8009B70C;`), plain -O1
-- **Prior leaf:** `func_80080940` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_8009B554;`), plain -O1
-- **Prior leaf:** `func_8007FCAC` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_8009B590;`), plain -O1
-- **Prior leaf:** `func_8007F778` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_800A3608;`), plain -O1
-- **Prior leaf:** `func_8007DEB0` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_8009B4AC;`), plain -O1
-- **Prior leaf:** `func_80074A28` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_800956EC;`), plain -O1
-- **Prior leaf:** `func_80042B28` (`lui/lw/jr/nop`) — 32-bit global getter (`return D_800A1838;`), plain -O1
-- **Prior leaf:** `func_80051834` (`lui/lw/nop/srlv/jr/andi 1`) — unsigned indexed bit test (`return (D_800C0E24 >> a0) & 1;`), plain -O1
-- **Prior leaf:** `func_80073DE8` (`lui v0,%hi(D_800945E6); lhu v0,%lo(v0); jr ra; nop`) — 16-bit global getter (`unsigned short return D_800945E6;`), plain -O1
-- **Prior leaf:** `func_8003FFBC` (`lui v0,%hi(D_800A1704); lw v0,%lo(v0); jr ra; nop`) — 32-bit global getter (`int return D_800A1704;`), plain -O1
-- **Prior leaf:** `func_80052524` (`lui v0,%hi(D_800C0E32); lhu v0,%lo(v0); jr ra; nop`) — twin 16-bit global getter (`unsigned short return D_800C0E32;`), plain -O1
-- **Prior leaf:** `func_80052514` (`lui v0,%hi(D_800C0E28); lhu v0,%lo(v0); jr ra; nop`) — first 16-bit global getter (`unsigned short return D_800C0E28;`), plain -O1 (MIPS-I load-delay leaves the slot unfilled)
-- **Prior leaf:** `func_80051E48` (`lui v0,%hi(D_800A1B30); addiu v0,v0,%lo; jr ra; nop`) — first pure address-return leaf (`return &D_800A1B30;`), compiled `-fno-delayed-branch` for the un-filled jr delay slot
-- **Completed batch:** return-1 septuplet — seven byte-identical
-  `jr; li v0,1` stubs: `func_8003D82C`, `func_80017E9C`, `func_80019050`,
-  `func_80019058`, `func_800190AC`, `func_800190B4`, `func_8004DA9C`
-  (shape `return 1`, GCC 14.2 exact)
-- **Parked:** return-0 `func_8003DFD0` (5I-class `move` vs `addu` in delay slot, same as `800C7DC4` blocker)
-- **Prior completed batch:** mid-`2A0C` empty stubs `func_80050D18`,
-  `func_800527C0`, `func_8005BCA8`, `func_8008CA7C` (`jr; nop`)
+- **Matching C leaves:** 73
+- **Latest leaf:** `func_80073DF8` — halfword pointer deref (`return *D_80095674;`)
+- **Recent batch (5BE–5BX):** byte getters `7FC08`–`7FC54`, addr-of `7FC28` /
+  `7A354`, getters `7A324`–`7A344` / `74CB8` / `5E884` / `6EBD4`, bools
+  `42BC8` / `38D0C`, bit test `5257C`, pointer derefs `7633C` / `C2B50` /
+  `73DF8`, store-out `8D7C0`
+- **Parked:** return-0 stubs (5I-class `move` vs `addu`), `$at` setters,
+  `func_8007FBF0` indexed-lw schedule, gp-relative getters, `addiu`+`lw 0`
+  bitmask helpers
 - **Toolchain:** MIPS little-endian binutils 2.44 and GCC 14.2 in the
   `pe-mipsel` Distrobox; this is a matching modern toolchain, not a claim
   about the original game compiler
