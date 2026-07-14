@@ -6,20 +6,18 @@ meaningful change.
 
 ## Current phase
 
-**Phase 5EB — ERA return-0 twins via mid-segment holes; 161 matching C leaves**
-(branch `phase5eb-return0-twins`, cut from `main` @ `376d592`). Retail EXE =
-Psy-Q `ccpsx` (GCC 2.7.x); fingerprints unreachable by GCC 14.2, blocking ~290
-functions. `scripts/setup_era.sh` installs `gcc-2.7.2-psx` + `maspsx` into
-git-ignored `tools/era/`; `build_us.sh` `era_compile` (cpp→cc1→maspsx→as)
-compiles era leaves per-file while GCC-14.2 leaves stay byte-identical.
-**5EB:** mid-hole carves of pure return-0 twins `func_800C7DD4` /
-`func_800C7DDC` (in former `B3368.s`) and `func_800C8F18` / `func_800C8F20`
-(in former `B93C0.s`) — same `jr; addu $v0,$zero,$zero` shape as era proof
-`func_8003DFD0`. Cheap harvest + toolchain smoke; sb+ret0 nine remains the
-first real unlock test (5EC). **Build-from-clean requires `scripts/setup_era.sh`
-once (network); invoke `scripts/build_us.sh </dev/null` under non-TTY
-(maspsx stdin hang — fix parked).** See [[era-compiler-path]].
-5EA: first era leaf `func_8003DFD0`. 5DJ: `52F0C` via `-fno-tree-ter`.
+**Phase 5EC — ERA sb+ret0 rematch of Phase 5I; 163 matching C leaves**
+(branch `phase5ec-sbret0`, cut from `fix-maspsx-stdin` @ `0f7ca18`). Retail EXE =
+Psy-Q `ccpsx` (GCC 2.7.x). `era_compile` uses maspsx `--aspsx-version=2.21`
+`--dont-expand-li` (maspsx `li`→`ori` for positive small consts; ROM wants
+`addiu` — defer expansion to GNU as) plus stdin closed at call site.
+**5EC:** mid-hole carves of sb+ret0 `func_800C7DC4` (0xB85C4) /
+`func_800C8F08` (0xB9708) abutting 5EB return-0 twins — Phase 5I rematch
+(`addu` delay slot + `$v0` reuse + `addiu` const). Remaining seven sb+ret0
+twins stay in asm. Exact SHA-1 via bare `scripts/build_us.sh`. See
+[[era-compiler-path]].
+5EB: return-0 twins harvest. 5EA: first era leaf `func_8003DFD0`. 5DJ: `52F0C`
+via `-fno-tree-ter`.
 
 **Prior — Phase 5DI (`$gp`-relative batches, 155 leaves):** 5DG: +3 complex gp one-offs
 (`D1=5;D2=-1` two-const setter, `return D==7` `xori`/`sltiu` bool, `lw;sw;sw`
