@@ -722,7 +722,7 @@ exact word match. **Stop.** Do not integrate. Do not auto-switch to
 (`func_800C2B10`, `func_800C2B28`) until era-matching compiler / maspsx is
 tested.
 
-### Phase 5I blocker — `func_800C7DC4` (2026-07-08)
+### Phase 5I blocker — `func_800C7DC4` (2026-07-08) — **SOLVED Phase 5EC**
 
 Target: VRAM `0x800C7DC4` / file `0xB85C4` / size `0x10` in `asm/disc1/B3350.s`.
 Leaf (no `jal`), no globals — store `4` to `*arg0`, return `0`. Outside the
@@ -747,12 +747,14 @@ NON-MATCH** at file `0xB85D0`:
 | GCC 14.2 | `0x00001025` | `move $v0, $zero` (`or` pseudo-op) |
 
 Tried `-O0`–`-Os`, inline asm, `noreorder` asm blocks — GCC still prefers `move`
-in the delay slot or adds prologue/epilogue. **Stop.** No config/C committed.
-Duplicate bodies at `func_800C8F08`, `func_800C9C00` (same 0x10-byte pattern)
-are also parked.
+in the delay slot or adds prologue/epilogue. **Parked until era.**
 
-1. Pick another GCC-friendly leaf; avoid delay-slot pseudo-op sensitivity when
-   possible (or accept era toolchain / maspsx for these).
+**Resolved Phase 5EC (2026-07-13):** era + maspsx `--dont-expand-li` at aspsx
+2.21 yields exact body. Delay-slot `addu` and `$v0` reuse were already correct;
+word0 needed GNU-as `li`→`addiu` (maspsx expand forced `ori`). Integrated
+`func_800C7DC4` / `func_800C8F08`; remaining seven twins queued for 5ED.
+
+1. ~~Pick another GCC-friendly leaf~~ — 5I family unblocked via era.
 2. Host PATH still has no mipsel tools; C/as/ld stay in Distrobox `pe-mipsel`.
 3. When redump.org is reachable, record the official cross-check in `docs/disc_info.md`.
 4. Do **not** invent semantic names for pointer/field targets yet.
@@ -1389,22 +1391,19 @@ identity.
 The USA Disc 1 executable currently rebuilds byte-for-byte from a mixed
 assembly/C layout. `scripts/build_us.sh` produces the exact target SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and `scripts/verify_us.sh`
-passes the split/config checks and reports Phase 5CW with 98 matching C
+passes the split/config checks and reports Phase 5EC with 163 matching C
 leaves.
 
 - **Progress dashboard:** https://blizz127.github.io/parasite-eve-progress/
-- **Current branch:** `phase5ae-2a0c-hole-aware`
-- **Matching C leaves:** 98
-- **Latest leaf:** `func_800CE464` — `a1[1] = 2` store twin
-- **Recent batch (5BY–5CW):** 25 arg-only store/setters (null-check stores,
-  GPU packet headers, struct field stores, `a1[1]=2` twins)
-- **Parked:** return-0 stubs (5I-class `move` vs `addu`), `$at` setters,
-  `func_8007FBF0` indexed-lw schedule, gp-relative getters, `addiu`+`lw 0`
-  bitmask helpers, addu-order near-misses, GTE/BIOS stubs
-- **Toolchain:** MIPS little-endian binutils 2.44 and GCC 14.2 in the
-  `pe-mipsel` Distrobox; this is a matching modern toolchain, not a claim
-  about the original game compiler
+- **Current branch:** `phase5ec-sbret0` (`aab1c70`; stacked unpushed with 5EB + maspsx stdin fix)
+- **Matching C leaves:** 163
+- **Latest leaves:** `func_800C7DC4` / `func_800C8F08` — era sb+ret0 (Phase 5I rematch)
+- **Era toolchain:** `gcc-2.7.2-psx` + maspsx `--aspsx-version=2.21 --dont-expand-li`; fingerprints proven: `move`→`addu`, `$v0` reuse, `li`→`addiu`
+- **Next:** 5ED harvest of remaining seven sb+ret0 twins; then `$at`/`lui;ori` probe
+- **Parked (GCC-only walls, not era):** complex `$gp`, GTE/BIOS stubs, some schedule near-misses
 - **Repository boundary:** extracted executables, disc images, generated
   assembly, and game assets remain local and git-ignored
 
-Next work is further non-trivial probes outside parked mismatch families.
+Wiki mirror pages: Home / Current-Status / Phase-Log / Function-Porting-Queue /
+Technical-Details. Progress publish: `scripts/publish_progress.sh`.
+
