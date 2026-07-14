@@ -116,6 +116,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x2E02C, c, func_8003D82C]'
     '[0x2E034, asm]'
     '[0x2E7C8, c, func_8003DFC8]'
+    '[0x307AC, c, func_8003FFAC]'
     '[0x307BC, c, func_8003FFBC]'
     '[0x307CC, asm]'
     '[0x330C4, c, func_800428C4]'
@@ -413,6 +414,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80038D0C.c"
     "src/func_8003D82C.c"
     "src/func_8003DFC8.c"
+    "src/func_8003FFAC.c"
     "src/func_8003FFBC.c"
     "src/func_800428C4.c"
     "src/func_80042B28.c"
@@ -694,7 +696,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800C9C00.c" && -f "$ROOT/src/func_800CA798.c" && -f "$ROOT/src/func_800CBFA4.c" && -f "$ROOT/src/func_800CCF80.c" && -f "$ROOT/src/func_800CD960.c" && -f "$ROOT/src/func_800CE1DC.c" && -f "$ROOT/src/func_800D4850.c" && -f "$ROOT/src/func_800C7DC4.c" && -f "$ROOT/src/func_800C8F08.c" && -f "$ROOT/src/func_8003DFD0.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+if [[ -f "$ROOT/src/func_8003FFAC.c" && -f "$ROOT/src/func_800C9C00.c" && -f "$ROOT/src/func_800CA798.c" && -f "$ROOT/src/func_800CBFA4.c" && -f "$ROOT/src/func_800CCF80.c" && -f "$ROOT/src/func_800CD960.c" && -f "$ROOT/src/func_800CE1DC.c" && -f "$ROOT/src/func_800D4850.c" && -f "$ROOT/src/func_800C7DC4.c" && -f "$ROOT/src/func_800C8F08.c" && -f "$ROOT/src/func_8003DFD0.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+    echo "C conversion: Phase 5EE — 171 leaves (+ integrated-exact \$at absolute-sw pilot member)"
+    echo "  sources: src/func_8003FFAC.c (+ prior through Phase 5ED); two delay-slot pilot shapes remain asm"
+elif [[ -f "$ROOT/src/func_800C9C00.c" && -f "$ROOT/src/func_800CA798.c" && -f "$ROOT/src/func_800CBFA4.c" && -f "$ROOT/src/func_800CCF80.c" && -f "$ROOT/src/func_800CD960.c" && -f "$ROOT/src/func_800CE1DC.c" && -f "$ROOT/src/func_800D4850.c" && -f "$ROOT/src/func_800C7DC4.c" && -f "$ROOT/src/func_800C8F08.c" && -f "$ROOT/src/func_8003DFD0.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
     echo "C conversion: Phase 5ED — 170 leaves (+ sb+ret0 era batch harvest)"
     echo "  sources: src/func_800C9C00.c … src/func_800D4850.c (+ prior through 5EC sb+ret0 / era return-0 twins / func_8003DFD0)"
 elif [[ -f "$ROOT/src/func_800CE464.c" && -f "$ROOT/src/func_800847A0.c" && -f "$ROOT/src/func_80077B64.c" && -f "$ROOT/src/func_80063198.c" && -f "$ROOT/src/func_80073DF8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then

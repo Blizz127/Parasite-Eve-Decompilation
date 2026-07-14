@@ -4,7 +4,7 @@
  * 32-bit global getter (returns D_800A1704).
  * Same load-return schedule as the 16-bit twins (5AR/5AS): plain Phase 4J
  * -O1 matches (MIPS-I load-delay keeps lw out of the jr delay slot).
- * Setter twin func_8003FFAC stays in asm ($at vs $v0 regalloc mismatch).
+ * Setter twin func_8003FFAC joined this getter in Phase 5EE via the era path.
  */
 extern int D_800A1704;
 

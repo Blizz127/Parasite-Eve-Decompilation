@@ -108,14 +108,16 @@ segments:
       # File span 0x2E7C8–0x2E7D0 exclusive. Empty jr/nop stub (first mid-2A0C).
       # Resume size 0x794 (= 0x2E7C8 - 0x2E034); contiguous — no ROM holes.
       - [0x2E7C8, c, func_8003DFC8]
+      # Phase 5EE: $at absolute-sw pilot func_8003FFAC — VRAM 0x8003FFAC,
+      # file 0x307AC, size 0x10. Existing matching getter confirms int global.
       # Phase 5AT: C leaf func_8003FFBC — VRAM 0x8003FFBC, size 0x10.
       # File span 0x307BC–0x307CC exclusive. 32-bit global getter:
       # lui $v0,%hi(D_800A1704); lw $v0,%lo(D_800A1704)($v0); jr $ra; nop.
-      # Plain -O1 matches (MIPS-I load-delay). Setter twin func_8003FFAC
-      # ($at + sw, unfilled delay) stays in asm — GCC uses $v0 not $at.
-      # Mid-2E7D0 carve: prefix 0x1FEC, C 0x10, resume 307CC.s 0x28F8.
+      # Plain -O1 matches (MIPS-I load-delay).
+      # Mid-2E7D8 carve: prefix 0x1FD4, two C leaves, resume 307CC.s 0x28F8.
       - [0x2E7D0, c, func_8003DFD0]
       - [0x2E7D8, asm]
+      - [0x307AC, c, func_8003FFAC]
       - [0x307BC, c, func_8003FFBC]
       - [0x307CC, asm]
       # Phase 5AP: C leaf func_800428C4 — VRAM 0x800428C4, size 0x10.
