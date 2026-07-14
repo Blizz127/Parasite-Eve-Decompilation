@@ -503,14 +503,26 @@ segments:
       # Phase 5BW: C leaf func_800C2B50 — VRAM 0x800C2B50, size 0x18.
       # Pointer field getter D_800E2248[+0x70]; zero-prefix of former B3350.s.
       - [0xB3350, c, func_800C2B50]
+      # Phase 5EB: mid-B3368 hole carve — pure return-0 era twins
+      # (jr; addu $v0,$zero,$zero). sb+ret0 neighbor func_800C7DC4 stays in asm.
+      # Prefix 0x526C (= 0xB85D4 - 0xB3368); resume B85E4.s 0x484 (= 0xB8A68 - 0xB85E4).
       - [0xB3368, asm]
+      - [0xB85D4, c, func_800C7DD4]
+      - [0xB85DC, c, func_800C7DDC]
+      - [0xB85E4, asm]
       # Phase 5T: C leaf func_800C8268 — VRAM 0x800C8268, size 0x8.
       # File span 0xB8A68–0xB8A70 exclusive. Empty jr/nop stub.
       - [0xB8A68, c, func_800C8268]
       - [0xB8A70, asm]
       # Phase 5CP: C leaf func_800C8BB4 — file 0xB93B4, size 0xC.
       - [0xB93B4, c, func_800C8BB4]
+      # Phase 5EB: mid-B93C0 hole carve — pure return-0 era twins.
+      # sb+ret0 neighbor func_800C8F08 stays in asm.
+      # Prefix 0x358 (= 0xB9718 - 0xB93C0); resume B9728.s 0x338 (= 0xB9A60 - 0xB9728).
       - [0xB93C0, asm]
+      - [0xB9718, c, func_800C8F18]
+      - [0xB9720, c, func_800C8F20]
+      - [0xB9728, asm]
       # Phase 5U: C leaf func_800C9260 — VRAM 0x800C9260, size 0x8.
       # File span 0xB9A60–0xB9A68 exclusive. Empty jr/nop stub.
       - [0xB9A60, c, func_800C9260]

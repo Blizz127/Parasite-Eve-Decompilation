@@ -39,6 +39,12 @@ EXPECTED_SPLAT_PIN="0.41.0"
 
 # Current production subsegments (file offsets). Phase 5DB: one-hundred-three C leaves.
 EXPECTED_SUBSEGMENTS=(
+    '[0xB85D4, c, func_800C7DD4]'
+    '[0xB85DC, c, func_800C7DDC]'
+    '[0xB85E4, asm]'
+    '[0xB9718, c, func_800C8F18]'
+    '[0xB9720, c, func_800C8F20]'
+    '[0xB9728, asm]'
     '[0x2E7D0, c, func_8003DFD0]'
     '[0x4370C, c, func_80052F0C]'
     '[0xA3E4, c, func_80019BE4]'
@@ -344,9 +350,15 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/81768.s"
     "asm/disc1/B2AF8.s"
     "asm/disc1/B3368.s"
+    "asm/disc1/B85E4.s"
     "asm/disc1/B8A70.s"
     "asm/disc1/B93C0.s"
+    "asm/disc1/B9728.s"
     "asm/disc1/B9A68.s"
+    "src/func_800C7DD4.c"
+    "src/func_800C7DDC.c"
+    "src/func_800C8F18.c"
+    "src/func_800C8F20.c"
     "asm/disc1/BA174.s"
     "asm/disc1/BA6A8.s"
     "asm/disc1/BACB4.s"
@@ -650,9 +662,9 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8008D820.c" && -f "$ROOT/src/func_80074330.c" && -f "$ROOT/src/func_80077A28.c" && -f "$ROOT/src/func_800CE464.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
-    echo "C conversion: Phase 5EA — 157 leaves (+ FIRST era-compiler leaf)"
-    echo "  sources: src/func_8008D820.c (+ one-hundred-two prior leaves)"
+if [[ -f "$ROOT/src/func_800C7DD4.c" && -f "$ROOT/src/func_800C7DDC.c" && -f "$ROOT/src/func_800C8F18.c" && -f "$ROOT/src/func_800C8F20.c" && -f "$ROOT/src/func_8003DFD0.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+    echo "C conversion: Phase 5EB — 161 leaves (+ return-0 era twins via mid-segment holes)"
+    echo "  sources: src/func_800C7DD4.c src/func_800C7DDC.c src/func_800C8F18.c src/func_800C8F20.c (+ prior through era func_8003DFD0)"
 elif [[ -f "$ROOT/src/func_800CE464.c" && -f "$ROOT/src/func_800847A0.c" && -f "$ROOT/src/func_80077B64.c" && -f "$ROOT/src/func_80063198.c" && -f "$ROOT/src/func_80073DF8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
     echo "C conversion: Phase 5CW — ninety-eight leaves (+ store/setter batch through func_800CE464)"
     echo "  sources: src/func_800CE464.c (+ ninety-seven prior leaves)"
