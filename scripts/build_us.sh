@@ -1169,7 +1169,8 @@ era_compile() {
     local d; d="$(mktemp -d)"
     "$ERA_CPP" "$src" > "$d/x.i" 2>/dev/null
     "$ERA_CC1" -quiet "$@" "$d/x.i" -o "$d/x.s"
-    python3 "$MASPSX" --aspsx-version="$ERA_ASPSX_VER" "$d/x.s" > "$d/xm.s"
+    # Close stdin: maspsx treats non-TTY as pipe mode and can hang on open agent sockets.
+    python3 "$MASPSX" --aspsx-version="$ERA_ASPSX_VER" "$d/x.s" > "$d/xm.s" </dev/null
     run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o "$out" "$d/xm.s"
     rm -rf "$d"
 }
