@@ -7,19 +7,19 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `main` @ `d7dca13` | `git log --oneline -1` |
-| Phase | **5EC** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **163** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **120** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **7** | `grep -c '^era_compile ' scripts/build_us.sh` |
+| Branch / tip | `phase5ed-sbret0-batch` @ `a6036a0` + dirty | `git log --oneline -1` / `git status` |
+| Phase | **5ED** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **170** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **127** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **14** | `grep -c '^era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
-**120 is yaml `asm` segments, not remaining functions.** One segment can hold
+**127 is yaml `asm` segments, not remaining functions.** One segment can hold
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EC / 163. Disc images / `asm/` / `build/` / `tools/era/` are
+reports Phase 5ED / 170. Disc images / `asm/` / `build/` / `tools/era/` are
 git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -51,8 +51,8 @@ contains orphans, stale duplicates, and nop-pads. **Yaml is the source of truth.
 
 | Fingerprint | Status |
 | --- | --- |
-| `move` → `addu` in delay slot | Proven 5EA / 5EB / 5EC |
-| `$v0` / `$v1` allocation | Proven 5EC (sb+ret0 reuse) |
+| `move` → `addu` in delay slot | Proven 5EA / 5EB / 5EC / 5ED |
+| `$v0` / `$v1` allocation | Proven 5EC / 5ED (sb+ret0 reuse) |
 | `li` const materialization (`addiu` not `ori`) | Proven 5EC via `--dont-expand-li` |
 | `lui;ori` / `$at` address macros | **NOT YET PROVEN** — next real test |
 
@@ -62,10 +62,7 @@ inventory. Do not treat it as a countdown.
 
 ## Known-open families
 
-- **sb+ret0 (7 remaining):** `C9C00`, `CA798`, `CBFA4`, `CCF80`, `CD960`,
-  `CE1DC`, `D4850`. Shape proven in 5EC
-  (`04000224 000082a0 0800e003 21100000`). Integration is mechanical.
-  `CBFA4`+`CCF80` share host `BC330.s` (two mid-holes in one asm unit).
+- **sb+ret0:** **done** in 5ED (seven remaining harvested; family closed).
 - **`$at` setters:** raw-grep size often quoted ~113 — **UNVERIFIED** (includes
   orphans/dups if taken from disk). Shape typically
   `lui $at,%hi; …; sw …` — era/`lui;ori` probe still open.
@@ -98,6 +95,7 @@ inventory. Do not treat it as a countdown.
 | 5EA | 157 | Era dual-toolchain; return-0 `addu` |
 | 5EB | 161 | Return-0 twins via mid-segment holes |
 | 5EC | 163 | sb+ret0; `--dont-expand-li`; 5I dead |
+| 5ED | 170 | sb+ret0 batch harvest (family closed) |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

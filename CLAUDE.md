@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EC — 163 matching C leaves; ERA COMPILER integrated (dual-toolchain build).**
+**Phase 5ED — 170 matching C leaves; ERA COMPILER integrated (dual-toolchain build).**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**, whose fingerprints (`lui;ori`
 consts, `move`→`addu`, `$at` macros, operand order, `$v0`/`$v1` alloc) no GCC 14.2
@@ -44,10 +44,10 @@ flag can reproduce. **`scripts/setup_era.sh`** fetches `gcc-2.7.2-psx` (decompal
 old-gcc) + `maspsx` into git-ignored `tools/era/`; `build_us.sh`'s `era_compile`
 runs `cpp`→`cc1`→`maspsx --aspsx-version=2.21 --dont-expand-li`→`as` **per-file**
 (maspsx `li`→`ori` for positive small consts; ROM wants `addiu` — defer to GNU as),
-so GCC-14.2 leaves stay byte-identical. **5EC:** sb+ret0 `func_800C7DC4` /
-`func_800C8F08` — Phase 5I rematch exact. Prior era: `func_8003DFD0` + 5EB
-return-0 twins. ~290 era-blocked functions remain. Prior: 5DC–5DJ added 53
-`$gp`/isel leaves. Phase 1 local verification is complete; redump.org
-cross-check remains open (non-blocking). PC port is out of scope.
-`docs/ai_context/ACTIVE_HANDOFF.md` has the exact current state and
-`docs/splitting.md` the split target and policy.
+so GCC-14.2 leaves stay byte-identical. **5ED:** batch harvest of remaining seven
+sb+ret0 leaves (shape proven in 5EC). Prior era: 5EC `func_800C7DC4` /
+`func_800C8F08`, `func_8003DFD0`, 5EB return-0 twins. ~290 era-blocked functions
+remain (estimate). Prior: 5DC–5DJ added 53 `$gp`/isel leaves. Phase 1 local
+verification is complete; redump.org cross-check remains open (non-blocking).
+PC port is out of scope. `docs/ai_context/ACTIVE_HANDOFF.md` has the exact
+current state and `docs/splitting.md` the split target and policy.

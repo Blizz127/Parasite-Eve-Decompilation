@@ -258,14 +258,22 @@ EXPECTED_SUBSEGMENTS=(
     '[0xB9A68, asm]'
     '[0xBA168, c, func_800C9968]'
     '[0xBA174, asm]'
+    '[0xBA400, c, func_800C9C00]'
+    '[0xBA410, asm]'
     '[0xBA6A0, c, func_800C9EA0]'
     '[0xBA6A8, asm]'
     '[0xBACA8, c, func_800CA4A8]'
     '[0xBACB4, asm]'
+    '[0xBAF98, c, func_800CA798]'
+    '[0xBAFA8, asm]'
     '[0xBB4D4, c, func_800CACD4]'
     '[0xBB4DC, asm]'
     '[0xBC324, c, func_800CBB24]'
     '[0xBC330, asm]'
+    '[0xBC7A4, c, func_800CBFA4]'
+    '[0xBC7B4, asm]'
+    '[0xBD780, c, func_800CCF80]'
+    '[0xBD790, asm]'
     '[0xBDADC, c, func_800CD2DC]'
     '[0xBDAE4, c, func_800CD2E4]'
     '[0xBDAEC, asm]'
@@ -274,14 +282,20 @@ EXPECTED_SUBSEGMENTS=(
     '[0xBDDB0, asm]'
     '[0xBDF1C, c, func_800CD71C]'
     '[0xBDF28, asm]'
+    '[0xBE160, c, func_800CD960]'
+    '[0xBE170, asm]'
     '[0xBE504, c, func_800CDD04]'
     '[0xBE50C, asm]'
     '[0xBE740, c, func_800CDF40]'
     '[0xBE74C, asm]'
+    '[0xBE9DC, c, func_800CE1DC]'
+    '[0xBE9EC, asm]'
     '[0xBEBAC, c, func_800CE3AC]'
     '[0xBEBB4, asm]'
     '[0xBEC64, c, func_800CE464]'
     '[0xBEC70, asm]'
+    '[0xC5050, c, func_800D4850]'
+    '[0xC5060, asm]'
 )
 
 # Files a successful current-config split must produce (relative to ROOT).
@@ -363,18 +377,32 @@ EXPECTED_ARTIFACTS=(
     "src/func_800C8F08.c"
     "src/func_800C8F18.c"
     "src/func_800C8F20.c"
+    "src/func_800C9C00.c"
+    "src/func_800CA798.c"
+    "src/func_800CBFA4.c"
+    "src/func_800CCF80.c"
+    "src/func_800CD960.c"
+    "src/func_800CE1DC.c"
+    "src/func_800D4850.c"
     "asm/disc1/BA174.s"
+    "asm/disc1/BA410.s"
     "asm/disc1/BA6A8.s"
     "asm/disc1/BACB4.s"
+    "asm/disc1/BAFA8.s"
     "asm/disc1/BB4DC.s"
     "asm/disc1/BC330.s"
+    "asm/disc1/BC7B4.s"
+    "asm/disc1/BD790.s"
     "asm/disc1/BDAEC.s"
     "asm/disc1/BDDB0.s"
     "asm/disc1/BDF28.s"
+    "asm/disc1/BE170.s"
     "asm/disc1/BE50C.s"
     "asm/disc1/BE74C.s"
+    "asm/disc1/BE9EC.s"
     "asm/disc1/BEBB4.s"
     "asm/disc1/BEC70.s"
+    "asm/disc1/C5060.s"
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
     "src/func_80017E9C.c"
@@ -666,9 +694,9 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800C7DC4.c" && -f "$ROOT/src/func_800C8F08.c" && -f "$ROOT/src/func_800C7DD4.c" && -f "$ROOT/src/func_800C7DDC.c" && -f "$ROOT/src/func_800C8F18.c" && -f "$ROOT/src/func_800C8F20.c" && -f "$ROOT/src/func_8003DFD0.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
-    echo "C conversion: Phase 5EC — 163 leaves (+ sb+ret0 era rematch of Phase 5I)"
-    echo "  sources: src/func_800C7DC4.c src/func_800C8F08.c (+ prior through era return-0 twins / func_8003DFD0)"
+if [[ -f "$ROOT/src/func_800C9C00.c" && -f "$ROOT/src/func_800CA798.c" && -f "$ROOT/src/func_800CBFA4.c" && -f "$ROOT/src/func_800CCF80.c" && -f "$ROOT/src/func_800CD960.c" && -f "$ROOT/src/func_800CE1DC.c" && -f "$ROOT/src/func_800D4850.c" && -f "$ROOT/src/func_800C7DC4.c" && -f "$ROOT/src/func_800C8F08.c" && -f "$ROOT/src/func_8003DFD0.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
+    echo "C conversion: Phase 5ED — 170 leaves (+ sb+ret0 era batch harvest)"
+    echo "  sources: src/func_800C9C00.c … src/func_800D4850.c (+ prior through 5EC sb+ret0 / era return-0 twins / func_8003DFD0)"
 elif [[ -f "$ROOT/src/func_800CE464.c" && -f "$ROOT/src/func_800847A0.c" && -f "$ROOT/src/func_80077B64.c" && -f "$ROOT/src/func_80063198.c" && -f "$ROOT/src/func_80073DF8.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then
     echo "C conversion: Phase 5CW — ninety-eight leaves (+ store/setter batch through func_800CE464)"
     echo "  sources: src/func_800CE464.c (+ ninety-seven prior leaves)"
