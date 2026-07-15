@@ -15,6 +15,14 @@ Shape split:
 Only yaml-live [offset, asm] units from configs/USA/disc1.yaml are scanned.
 Orphan .s files at nearby offsets are ignored.
 
+Sync invariant (hard fail):
+  asm/-derived totals are only valid when asm/ is current with yaml. Before any
+  SUMMARY/total is printed, this tool requires (1) every yaml ``, asm]`` unit
+  has a matching .s on disk and (2) no yaml ``, c,`` leaf still appears as a
+  glabel inside those scanned units (the stale pre-split 74FB0/func_80085728
+  class). Stale or missing asm/ exits non-zero with no authoritative total —
+  run ``scripts/split_us.sh``.
+
 Usage:
   tools/analysis/at_absolute_store_counter.py
   tools/analysis/at_absolute_store_counter.py --yaml configs/USA/disc1.yaml
@@ -96,6 +104,98 @@ def parse_yaml_c_leaves(yaml_path: Path) -> set[str]:
         if m:
             leaves.add(m.group(2))
     return leaves
+
+
+def parse_yaml_c_entries(yaml_path: Path) -> list[tuple[int, str]]:
+    """Return (file_offset, leaf_name) for every yaml ``, c,`` leaf."""
+    entries: list[tuple[int, str]] = []
+    for line in yaml_path.read_text(encoding="utf-8").splitlines():
+        m = YAML_C_RE.match(line)
+        if m:
+            entries.append((int(m.group(1), 16), m.group(2)))
+    return entries
+
+
+def glabel_names_in_unit(s_path: Path) -> list[str]:
+    """Return glabel function names in order of appearance (no body parse)."""
+    names: list[str] = []
+    try:
+        text = s_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return names
+    for line in text.splitlines():
+        gm = GLABEL_RE.match(line.strip())
+        if gm:
+            names.append(gm.group(1))
+    return names
+
+
+def check_asm_yaml_sync(yaml_path: Path, asm_root: Path) -> list[str]:
+    """Return human-readable problems proving asm/ is not current with yaml.
+
+    Half 1 — missing: yaml lists ``, asm]`` but no corresponding .s on disk.
+    Half 2 — stale: a carved ``, c,`` leaf still appears as a glabel inside a
+    yaml-live asm unit the counter would scan (pre-split 74FB0.s /
+    func_80085728). Orphan .s at C offsets are not scanned and are not checked.
+
+    Empty list means sync is acceptable for producing an authoritative total.
+    There is no split manifest in this repo (no durable hash/timestamp of the
+    last split), so content checks against yaml are the authority.
+    """
+    problems: list[str] = []
+    units = parse_yaml_asm_units(yaml_path)
+    c_names = {name for _, name in parse_yaml_c_entries(yaml_path)}
+
+    if not units:
+        problems.append(f"no yaml asm units in {yaml_path}")
+        return problems
+
+    if not asm_root.is_dir():
+        problems.append(
+            f"asm root missing: {asm_root} (run scripts/split_us.sh)"
+        )
+        return problems
+
+    # Half 1: every yaml asm unit must exist on disk.
+    present: list[tuple[int, str, Path]] = []
+    for unit_off, unit_name in units:
+        s_path = asm_root / f"{unit_name}.s"
+        if not s_path.is_file():
+            problems.append(f"missing asm unit: {unit_name}.s (yaml offset 0x{unit_off:X})")
+        else:
+            present.append((unit_off, unit_name, s_path))
+
+    # Half 2: no yaml C leaf may still appear as a glabel in a scanned asm unit.
+    # This is the real 37→36 bug: old 74FB0.s still held func_80085728 after the
+    # mid-unit carve to C. (Orphan .s files at C offsets are NOT scanned by this
+    # counter — only yaml-live asm units are — so presence of leftover splat
+    # orphans at carved offsets is not a count-validity signal.)
+    for unit_off, unit_name, s_path in present:
+        for gname in glabel_names_in_unit(s_path):
+            if gname in c_names:
+                problems.append(
+                    f"stale glabel in {unit_name}.s: {gname} is a yaml C leaf "
+                    f"(asm/ predates carve — re-run scripts/split_us.sh)"
+                )
+
+    return problems
+
+
+def report_sync_failure(problems: list[str], asm_root: Path) -> None:
+    """Print a loud, non-authoritative failure; caller must exit non-zero."""
+    print("ERROR: asm/ is not in sync with configs/USA/disc1.yaml", file=sys.stderr)
+    print(
+        "       asm/-derived counts are invalid until split is current.",
+        file=sys.stderr,
+    )
+    print(f"       asm_root: {asm_root}", file=sys.stderr)
+    for p in problems:
+        print(f"  - {p}", file=sys.stderr)
+    print("Remedy: scripts/split_us.sh", file=sys.stderr)
+    print(
+        "(No SUMMARY/total printed — refusing a stale or incomplete count.)",
+        file=sys.stderr,
+    )
 
 
 def parse_functions(s_path: Path, unit_off: int) -> list[tuple[str, list[Instr]]]:
@@ -219,17 +319,17 @@ def classify(name: str, instrs: list[Instr], unit: str, unit_off: int) -> Member
 
 
 def scan(yaml_path: Path, asm_root: Path) -> list[Member]:
+    """Scan yaml-live asm units. Caller must run check_asm_yaml_sync first."""
     units = parse_yaml_asm_units(yaml_path)
     if not units:
         raise SystemExit(f"ERROR: no asm units in {yaml_path}")
     members: list[Member] = []
     seen: set[str] = set()
-    missing_units: list[str] = []
 
     for unit_off, unit_name in units:
         s_path = asm_root / f"{unit_name}.s"
+        # Sync check already required presence; defensive skip if raced.
         if not s_path.is_file():
-            missing_units.append(unit_name)
             continue
         for name, instrs in parse_functions(s_path, unit_off):
             m = classify(name, instrs, unit_name, unit_off)
@@ -240,14 +340,6 @@ def scan(yaml_path: Path, asm_root: Path) -> list[Member]:
                 continue
             seen.add(name)
             members.append(m)
-
-    if missing_units:
-        print(
-            f"WARNING: {len(missing_units)} yaml asm unit(s) missing under {asm_root}",
-            file=sys.stderr,
-        )
-        for u in missing_units[:10]:
-            print(f"  missing: {u}.s", file=sys.stderr)
 
     members.sort(key=lambda m: m.file_off)
     return members
@@ -295,12 +387,12 @@ def main(argv: list[str]) -> int:
     if not yaml_path.is_file():
         print(f"ERROR: missing {yaml_path}", file=sys.stderr)
         return 1
-    if not asm_root.is_dir():
-        print(
-            f"ERROR: missing asm root {asm_root} — run scripts/split_us.sh first",
-            file=sys.stderr,
-        )
-        return 1
+
+    # Hard gate: never emit an authoritative total against stale/missing asm/.
+    problems = check_asm_yaml_sync(yaml_path, asm_root)
+    if problems:
+        report_sync_failure(problems, asm_root)
+        return 2
 
     c_leaves = parse_yaml_c_leaves(yaml_path)
     members = scan(yaml_path, asm_root)

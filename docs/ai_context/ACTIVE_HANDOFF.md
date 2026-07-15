@@ -47,6 +47,12 @@ git log --oneline -1
 **Do not** count `asm/disc1/*.s` from disk. That tree is git-ignored and
 contains orphans, stale duplicates, and nop-pads. **Yaml is the source of truth.**
 
+**asm/ sync invariant:** `$at` family totals from
+`tools/analysis/at_absolute_store_counter.py` hard-fail (no SUMMARY) when asm/
+is missing units or still holds glabels for yaml C leaves. Re-split with
+`scripts/split_us.sh` before planning off a family count. Leaf count stays
+yaml-only and still works when asm/ is stale.
+
 ## Proven era fingerprints (evidence, not claims)
 
 | Fingerprint | Status |

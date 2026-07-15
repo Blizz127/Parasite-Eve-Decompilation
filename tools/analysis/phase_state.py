@@ -97,15 +97,31 @@ def leaf_count(root):
 
 
 def family_split(root):
-    """Shell out to the committed $at counter; surface its 3-way split."""
+    """Shell out to the committed $at counter; surface its 3-way split.
+
+    The counter hard-fails when asm/ is out of sync with yaml (missing units
+    or stale C-leaf glabels still in scanned .s). That failure must surface
+    here as FAILED — never as a parsed total. Leaf count is yaml-only and
+    independent of this path.
+    """
     counter = os.path.join(root, COUNTER_REL)
     if not os.path.isfile(counter):
         return None, f"counter not found at {COUNTER_REL} (not yet promoted?)"
     ok, out, err = run(["python3", counter], root)
     if not ok:
-        return None, err or "counter failed to run"
-    # The counter prints a SUMMARY line like:
-    #   SUMMARY pre-jr=18 delay-slot=14 sb-sh=5 excluded=1 total=37
+        # Prefer stderr (sync failures); fall back to stdout; never invent a total.
+        detail = (err or out or "counter failed to run").strip()
+        # Compact multi-line counter noise into one reporter line + key bullets.
+        lines = [ln for ln in detail.splitlines() if ln.strip()]
+        if not lines:
+            return None, "counter failed to run"
+        head = lines[0]
+        bullets = [ln.strip() for ln in lines[1:] if ln.strip().startswith("- ")]
+        if bullets:
+            return None, head + " | " + " ".join(bullets[:6])
+        return None, head
+    # Only parse SUMMARY from a successful counter run.
+    # SUMMARY pre-jr=17 delay-slot=14 sb-sh=5 excluded=1 total=36
     m = re.search(
         r"pre-jr=(\d+)\s+delay-slot=(\d+)\s+sb-sh=(\d+)"
         r"(?:\s+excluded=(\d+))?(?:\s+total=(\d+))?",
@@ -202,12 +218,12 @@ def fmt_text(s):
     else:
         L.append("gate       : not run (pass --gate to verify)")
 
-    # $at family
+    # $at family (asm/-derived; FAILED when counter hard-fails on stale/missing asm)
     L.append("-" * 60)
     if s["family_err"]:
-        L.append(f"$at family : ERROR — {s['family_err']}")
+        L.append(f"$at family : FAILED — {s['family_err']}")
     elif s["family"] and "raw" in s["family"]:
-        L.append("$at family : (counter ran; couldn't parse SUMMARY — raw below)")
+        L.append("$at family : FAILED — counter ran but no parseable SUMMARY (raw below)")
         for ln in s["family"]["raw"].splitlines():
             L.append(f"             {ln}")
     elif s["family"]:
