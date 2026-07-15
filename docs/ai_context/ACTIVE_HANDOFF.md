@@ -7,27 +7,27 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `main` (Phase 5EE) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EE** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **171** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **127** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **15** | `grep -c '^era_compile ' scripts/build_us.sh` |
+| Branch / tip | `main` (Phase 5EG-readers) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EG-readers** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **173** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **128** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **17** | `grep -c '^era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
-**127 is yaml `asm` segments, not remaining functions.** One segment can hold
+**128 is yaml `asm` segments, not remaining functions.** One segment can hold
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EE / 171. Disc images / `asm/` / `build/` / `tools/era/` are
-git-ignored inputs — never commit them.
+reports Phase 5EG-readers / 173. Disc images / `asm/` / `build/` / `tools/era/`
+are git-ignored inputs — never commit them.
 
 **Toolchain**
 
 - Default leaves: GCC 14.2 in Distrobox `pe-mipsel` (Phase 4J flags; selective
   `-G 8` / `-fno-delayed-branch` / `-fno-tree-ter`).
 - Era leaves (opt-in): `scripts/setup_era.sh` → `era_compile` =
-  cpp → cc1 → maspsx → GNU as, typically `-O2 -G0`.
+  cpp → cc1 → maspsx → GNU as, typically `-O2 -G0` (some leaves `-O1 -G0`).
 - Era maspsx: `ERA_ASPSX_VER=2.21` + `--dont-expand-li`. **Why:**
   `expand_load_immediate` turns positive small `li` into `ori`; ROM wants
   `addiu`. Defer `li` expansion to GNU as. Do **not** bump aspsx-version
@@ -63,12 +63,19 @@ inventory. Do not treat it as a countdown.
 
 ## Known-open families
 
-- **sb+ret0:** **done** in 5ED (seven remaining harvested; family closed).
-- **`$at` absolute `sw`:** 5ED YAML baseline had **33** live short members
-  (≤7 instructions). 5EE integrated `func_8003FFAC`; 32 remain. Pilot
-  `func_8007DEA4` / `func_80080930` exposed a separate `sw`-in-return-delay
-  scheduling blocker and remain asm. Most remaining globals lack accepted C
-  declarations. See `PHASE5EE_AT_SETTER_AUDIT.md`.
+- **sb+ret0:** **done** in 5ED (family closed).
+- **`$at` absolute `sw` (pre-jr):** population counter committed
+  (`tools/analysis/at_absolute_store_counter.py`): **18 pre-jr** / 14 delay-slot /
+  5 sb-sh. Weak-int policy **NO**.
+  - **Pinned by 5EG-readers (not setters yet):**
+    - `D_8009D240` = `unsigned short *`, `D_8009D260` = `unsigned char *`
+      via `func_8008AB1C` (era `-O1 -G0`).
+    - `D_800A1870` = `void (*)(void)` via `func_80042B6C` (era `-O2 -G0`);
+      `func_80042BC8` decl corrected (emission unchanged).
+  - **Next harvestable setter:** `func_80085728` (both pointer globals pinned).
+  - **Still blocked:** 15 WIDTH-ONLY/WRITE-ONLY pre-jr setters (incl. write-only
+    `D_800A1868`; `D_800A1874` WIDTH-ONLY co-used by `func_80042B6C` only).
+  - **5EF:** delay-slot `sw` (incl. `func_8007DEA4` / `func_80080930`) separate.
 - **`lui;ori`:** separate family; untested and unqueued.
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not
   inventoried here.
@@ -82,6 +89,9 @@ inventory. Do not treat it as a countdown.
 3. **`asm/` is not a source of truth for counts.** Use `configs/USA/disc1.yaml`.
 4. **Commit messages are not evidence.** A claim is proven when a gate is green
    and the leaf is objdump-probed (not SHA alone on carves).
+5. **No weak-int:** WIDTH-ONLY/WRITE-ONLY globals are not declared from `sw`
+   width alone. Need disambiguating readers, data-section evidence, or an
+   explicit policy change.
 
 ## Resolved blockers
 
@@ -101,6 +111,7 @@ inventory. Do not treat it as a countdown.
 | 5EC | 163 | sb+ret0; `--dont-expand-li`; 5I dead |
 | 5ED | 170 | sb+ret0 batch harvest (family closed) |
 | 5EE | 171 | `$at` absolute-`sw` integrated pilot; delay-slot shapes blocked |
+| 5EG-readers | 173 | Type-pinning readers `func_8008AB1C` / `func_80042B6C`; `D_800A1870` decl fix |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

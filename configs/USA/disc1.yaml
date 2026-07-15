@@ -130,9 +130,13 @@ segments:
       - [0x330D4, asm]
       - [0x33328, c, func_80042B28]
       - [0x33338, asm]
+      # Phase 5EG-readers: func_80042B6C — VRAM 0x80042B6C, size 0x5C.
+      # jalr through D_800A1870 pins it as void (*)(void). Era -O2 -G0.
+      # Mid-33338 carve: prefix 0x34, C 0x5C, then existing 42BC8.
+      - [0x3336C, c, func_80042B6C]
       # Phase 5BP: C leaf func_80042BC8 — VRAM 0x80042BC8, size 0x10.
       # Nonzero test of D_800A1870 (lui/lw/jr/sltu); plain -O1 matches.
-      # Mid-33338 carve: prefix 0x90, C 0x10, resume 333D8.s 0xAEC4.
+      # Type corrected to function pointer (see func_80042B6C).
       - [0x333C8, c, func_80042BC8]
       - [0x333D8, asm]
       - [0x334B8, c, func_80042CB8]
@@ -424,6 +428,12 @@ segments:
       - [0x74FB0, asm]
       - [0x778E0, c, func_800870E0]
       - [0x778F0, asm]
+      # Phase 5EG-readers: func_8008AB1C — VRAM 0x8008AB1C, size 0x80.
+      # Pins D_8009D240 as unsigned short * and D_8009D260 as unsigned char *
+      # via lhu / unscaled addu. Era -O1 -G0.
+      # Mid-778F0 carve: prefix 0x3A2C, C 0x80, resume 7B39C.s 0x1EE0.
+      - [0x7B31C, c, func_8008AB1C]
+      - [0x7B39C, asm]
       # Phase 5AI: C leaf func_8008CA7C — VRAM 0x8008CA7C, size 0x8.
       # File span 0x7D27C–0x7D284 exclusive. Empty jr/nop stub.
       - [0x7D27C, c, func_8008CA7C]
