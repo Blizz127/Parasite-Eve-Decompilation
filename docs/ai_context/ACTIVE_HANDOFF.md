@@ -98,6 +98,11 @@ inventory. Do not treat it as a countdown.
 5. **No weak-int:** WIDTH-ONLY/WRITE-ONLY globals are not declared from `sw`
    width alone. Need disambiguating readers, data-section evidence, or an
    explicit policy change.
+6. **Width-only setters are triaged in `parked_blockers.json`.**
+   `READY-FROM-READER` (src reader already types it), `BLOCKED-ON-READER` (only
+   asm readers; decompile the named reader to type it), or `DECISION-BLOCKED`
+   (write-only; needs a per-item human decision). Re-check after every reader
+   phase. `5EF-delay-slot` / `sb-sh-five` remain tool-blocked.
 
 ## Resolved blockers
 
