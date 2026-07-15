@@ -215,6 +215,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x746F8, asm]'
     '[0x74FA0, c, func_800847A0]'
     '[0x74FB0, asm]'
+    '[0x75F28, c, func_80085728]'
+    '[0x75F44, asm]'
     '[0x778E0, c, func_800870E0]'
     '[0x778F0, asm]'
     '[0x7B31C, c, func_8008AB1C]'
@@ -356,6 +358,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/74684.s"
     "asm/disc1/746F8.s"
     "asm/disc1/74FB0.s"
+    "asm/disc1/75F44.s"
     "asm/disc1/778F0.s"
     "asm/disc1/7B39C.s"
     "asm/disc1/7D284.s"
@@ -476,6 +479,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80083E70.c"
     "src/func_80083EE4.c"
     "src/func_800847A0.c"
+    "src/func_80085728.c"
     "src/func_800870E0.c"
     "src/func_8008AB1C.c"
     "src/func_8008CA7C.c"
@@ -702,7 +706,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8008AB1C.c" && -f "$ROOT/src/func_80042B6C.c" && -f "$ROOT/src/func_8003FFAC.c" ]]; then
+if [[ -f "$ROOT/src/func_80085728.c" && -f "$ROOT/src/func_8008AB1C.c" && -f "$ROOT/src/func_80042B6C.c" ]]; then
+    echo "C conversion: Phase 5EG-setter — 174 leaves (+ func_80085728 dual-store; types from func_8008AB1C)"
+    echo "  sources: src/func_80085728.c (+ prior through 5EG-readers); 15 WIDTH-ONLY pre-jr still parked"
+elif [[ -f "$ROOT/src/func_8008AB1C.c" && -f "$ROOT/src/func_80042B6C.c" && -f "$ROOT/src/func_8003FFAC.c" ]]; then
     echo "C conversion: Phase 5EG-readers — 173 leaves (+ func_8008AB1C / func_80042B6C type-pinning readers; D_800A1870 decl corrected)"
     echo "  sources: src/func_8008AB1C.c src/func_80042B6C.c (+ prior through Phase 5EE); 5EG setters still asm"
 elif [[ -f "$ROOT/src/func_8003FFAC.c" && -f "$ROOT/src/func_800C9C00.c" && -f "$ROOT/src/func_800CA798.c" && -f "$ROOT/src/func_800CBFA4.c" && -f "$ROOT/src/func_800CCF80.c" && -f "$ROOT/src/func_800CD960.c" && -f "$ROOT/src/func_800CE1DC.c" && -f "$ROOT/src/func_800D4850.c" && -f "$ROOT/src/func_800C7DC4.c" && -f "$ROOT/src/func_800C8F08.c" && -f "$ROOT/src/func_8003DFD0.c" && ! -f "$ROOT/src/func_8007FBF0.c" ]]; then

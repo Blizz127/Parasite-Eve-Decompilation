@@ -426,6 +426,12 @@ segments:
       # Phase 5CO: C leaf func_800847A0 — file 0x74FA0, size 0x10.
       - [0x74FA0, c, func_800847A0]
       - [0x74FB0, asm]
+      # Phase 5EG-setter: func_80085728 — VRAM 0x80085728, size 0x1C.
+      # Dual pre-jr $at store of base / base+0x800 into D_8009D240 / D_8009D260.
+      # Types proven by reader func_8008AB1C. Era -O2 -G0.
+      # Mid-74FB0 carve: prefix 0xF78, C 0x1C, resume 75F44.s 0x199C.
+      - [0x75F28, c, func_80085728]
+      - [0x75F44, asm]
       - [0x778E0, c, func_800870E0]
       - [0x778F0, asm]
       # Phase 5EG-readers: func_8008AB1C — VRAM 0x8008AB1C, size 0x80.

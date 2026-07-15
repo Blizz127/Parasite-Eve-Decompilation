@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `main` (Phase 5EG-readers) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EG-readers** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **173** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **128** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **17** | `grep -c '^era_compile ' scripts/build_us.sh` |
+| Branch / tip | `main` (Phase 5EG-setter) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EG-setter** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **174** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **129** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **18** | `grep -c '^era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EG-readers / 173. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5EG-setter / 174. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -72,7 +72,7 @@ inventory. Do not treat it as a countdown.
       via `func_8008AB1C` (era `-O1 -G0`).
     - `D_800A1870` = `void (*)(void)` via `func_80042B6C` (era `-O2 -G0`);
       `func_80042BC8` decl corrected (emission unchanged).
-  - **Next harvestable setter:** `func_80085728` (both pointer globals pinned).
+  - **`func_80085728` integrated** (dual pre-jr store; types from `func_8008AB1C`).
   - **Still blocked:** 15 WIDTH-ONLY/WRITE-ONLY pre-jr setters (incl. write-only
     `D_800A1868`; `D_800A1874` WIDTH-ONLY co-used by `func_80042B6C` only).
   - **5EF:** delay-slot `sw` (incl. `func_8007DEA4` / `func_80080930`) separate.
@@ -112,6 +112,7 @@ inventory. Do not treat it as a countdown.
 | 5ED | 170 | sb+ret0 batch harvest (family closed) |
 | 5EE | 171 | `$at` absolute-`sw` integrated pilot; delay-slot shapes blocked |
 | 5EG-readers | 173 | Type-pinning readers `func_8008AB1C` / `func_80042B6C`; `D_800A1870` decl fix |
+| 5EG-setter | 174 | `func_80085728` dual-store; first reader-recoverable pre-jr setter |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

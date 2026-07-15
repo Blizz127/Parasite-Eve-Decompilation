@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EG-readers — 173 matching C leaves; ERA COMPILER integrated (dual-toolchain build).**
+**Phase 5EG-setter — 174 matching C leaves; ERA COMPILER integrated (dual-toolchain build).**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;
