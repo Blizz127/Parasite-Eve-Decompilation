@@ -1,0 +1,9 @@
+{
+  "blockers": [
+    {"id": "5EF-delay-slot", "status": "PARKED", "note": "13 members; maspsx forces noreorder+nop, won't fill jr slot. Fix=maspsx delay-slot scheduling + full re-gate."},
+    {"id": "weak-int-setters", "status": "PARKED", "note": "15 WIDTH-ONLY/WRITE-ONLY pre-jr setters; user said NO to sw-width->int."},
+    {"id": "D_800A1874-policy", "status": "OPEN", "note": "func_80042B38/50 need a decision on WIDTH-ONLY counter global."},
+    {"id": "sb-sh-five", "status": "PARKED", "note": "likely same delay-slot answer as 5EF."},
+    {"id": "lui-ori", "status": "UNINVENTORIED", "note": "never probed."}
+  ]
+}
