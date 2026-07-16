@@ -59,10 +59,16 @@ segments:
       # Prefix size 0x5C90 (= 0x869C - 0x2A0C); contiguous — no ROM holes.
       - [0x869C, c, func_80017E9C]
       - [0x86A4, asm]
+      # Phase 5EJ: D_8009D28C int-state setters (READY-FROM-READER).
+      # func_80017FDC / func_80017FF0 — set state 5/6, return 1; size 0x14 each.
+      # Mid-86A4 carve: prefix 0x138, C×2, resume 8804.s to 9850.
+      - [0x87DC, c, func_80017FDC]
+      - [0x87F0, c, func_80017FF0]
+      - [0x8804, asm]
       # Phase 5AL: C leaf func_80019050 — VRAM 0x80019050, size 0x8.
       # File span 0x9850–0x9858 exclusive. Return-1 stub (jr; addiu $v0,1),
       # third of the seven return-1 twins (shape scratch-proven in 5AJ).
-      # Prefix size 0x11AC (= 0x9850 - 0x86A4); contiguous — no ROM holes.
+      # Prefix size 0x104C (= 0x9850 - 0x8804); contiguous — no ROM holes.
       - [0x9850, c, func_80019050]
       # Phase 5AM: C leaf func_80019058 — VRAM 0x80019058, size 0x8.
       # File span 0x9858–0x9860 exclusive. Return-1 stub (jr; addiu $v0,1),
@@ -77,6 +83,12 @@ segments:
       - [0x98AC, c, func_800190AC]
       - [0x98B4, c, func_800190B4]
       - [0x98BC, asm]
+      # Phase 5EJ: D_8009D28C int-state setters (READY-FROM-READER).
+      # func_800192B8 / func_800192C8 — set state 0/8, return 1; sizes 0x10 / 0x14.
+      # Mid-98BC carve: prefix 0x1FC, C×2, resume 9ADC.s to A3E4.
+      - [0x9AB8, c, func_800192B8]
+      - [0x9AC8, c, func_800192C8]
+      - [0x9ADC, asm]
       - [0xA3E4, c, func_80019BE4]
       - [0xA404, asm]
       - [0x116FC, c, func_80020EFC]

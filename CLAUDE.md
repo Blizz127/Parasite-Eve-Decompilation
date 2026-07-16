@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EI-ready-from-reader — 185 matching C leaves; ERA COMPILER integrated.**
+**Phase 5EJ-d8009d28c-state — 189 matching C leaves; ERA COMPILER integrated.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;
@@ -48,7 +48,9 @@ runs `cpp`→`cc1`→`maspsx --aspsx-version=2.21 --dont-expand-li`→`as` **per
 so GCC-14.2 leaves stay byte-identical. **Opaque-word ruling:** globals with only
 bare 32-bit `sw`/`lw` use (no arith/pointer/bitwise) type as `unsigned int` —
 not the rejected sh/sb→int cheat. Integrated: 8 A182x setters
-(`func_80042BD8`…`func_80042C64`). `func_800405A4` is a use-site only.
+(`func_80042BD8`…`func_80042C64`). **`D_8009D28C` = `int` state** (READY-FROM-READER;
+equality-tested + word-copied; not opaque-word) — 4 setters
+(`func_80017FDC`/`17FF0`/`192B8`/`192C8`). `func_800405A4` is a use-site only.
 Population counter: `tools/analysis/at_absolute_store_counter.py`.
 PC port is out of scope. `docs/ai_context/ACTIVE_HANDOFF.md` has the exact current
 state and `docs/splitting.md` the split target and policy.

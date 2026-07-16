@@ -50,8 +50,8 @@
     },
     {
       "id": "opaque-word-post5eh-sweep",
-      "status": "READY-OPAQUE-WORD",
-      "rationale": "Stage 0 sweep after 5EH (read-only, tip 2234794): two remaining globals pass the opaque-word bar (no arith/pointer/bitwise/typed-callee on the loaded value; consistent sw). NOT folded from READY-FROM-READER trio. Integration is a separate phase.",
+      "status": "PARTIALLY-INTEGRATED",
+      "rationale": "Stage 0 sweep after 5EH (read-only, tip 2234794): two remaining globals passed the opaque-word bar. D_800A1868 still READY-OPAQUE-WORD (decl via 42910). D_8009D28C reclassified READY-FROM-READER int state and INTEGRATED in 5EJ (not opaque-word — equality-tested state codes).",
       "members": [
         {
           "global": "D_800A1868",
@@ -68,14 +68,16 @@
           "global": "D_8009D28C",
           "address": "0x8009D28C",
           "store": "sw",
-          "type": "unsigned int (u32 opaque-word state)",
+          "type": "int (state value; READY-FROM-READER)",
           "setters": [
             "func_80017FDC",
             "func_80017FF0",
             "func_800192B8",
             "func_800192C8"
           ],
-          "stage0": "stores constants 0/3/4/5/6/8; loads: word-copy sw to *v1 (func_80019154), bne vs 1 (A404) \u2014 no arith/deref-as-base/bitwise",
+          "stage0": "stores constants 0/3/4/5/6/8; loads: word-copy sw to *v1 (func_80019154), bne vs 1 (A404) — no arith/deref-as-base/bitwise",
+          "reclassified": "NOT opaque-word: distinct state codes + equality compare → int; signedness undetermined",
+          "integrated": "5EJ",
           "former_blocker_reader": "func_80019154 / func_8001D340 REMOVED as type-sites (use/copy only)"
         }
       ],

@@ -717,7 +717,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80042910.c" && -f "$ROOT/src/func_80042B38.c" && -f "$ROOT/src/func_80042B50.c" ]]; then
+if [[ -f "$ROOT/src/func_80017FDC.c" && -f "$ROOT/src/func_80017FF0.c" && -f "$ROOT/src/func_800192B8.c" && -f "$ROOT/src/func_800192C8.c" ]]; then
+    echo "C conversion: Phase 5EJ-d8009d28c-state — 189 leaves (+ 4 D_8009D28C int-state setters 17FDC/17FF0/192B8/192C8)"
+    echo "  sources: src/func_80017FDC.c src/func_80017FF0.c src/func_800192B8.c src/func_800192C8.c (+ prior through 5EI)"
+elif [[ -f "$ROOT/src/func_80042910.c" && -f "$ROOT/src/func_80042B38.c" && -f "$ROOT/src/func_80042B50.c" ]]; then
     echo "C conversion: Phase 5EI-ready-from-reader — 185 leaves (+ func_80042910 / 42B38 / 42B50)"
     echo "  sources: src/func_80042910.c src/func_80042B38.c src/func_80042B50.c (+ prior through 5EH)"
 elif [[ -f "$ROOT/src/func_80042BD8.c" && -f "$ROOT/src/func_80042C28.c" && -f "$ROOT/src/func_80042C64.c" ]]; then
