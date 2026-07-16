@@ -3,11 +3,15 @@
 *.cue
 *.iso
 *.img
+*.img.zip
 *.ccd
 *.sub
 *.chd
 rom/image/*
 !rom/image/.gitkeep
+
+# Local editor / agent rule files dropped in the tree by mistake
+decomp.mdc
 
 # Extracted game data
 assets/*
