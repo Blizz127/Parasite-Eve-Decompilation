@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `main` (Phase 5EG-setter) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EG-setter** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **174** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Branch / tip | `main` (Phase 5EH-opaque-word, uncommitted) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EH-opaque-word** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **182** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **129** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **18** | `grep -c '^era_compile ' scripts/build_us.sh` |
+| Era leaf compiles | **26** | `grep -c '^era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -79,8 +79,12 @@ inventory. Do not treat it as a countdown.
     - `D_800A1870` = `void (*)(void)` via `func_80042B6C` (era `-O2 -G0`);
       `func_80042BC8` decl corrected (emission unchanged).
   - **`func_80085728` integrated** (dual pre-jr store; types from `func_8008AB1C`).
-  - **Still blocked:** 15 WIDTH-ONLY/WRITE-ONLY pre-jr setters (incl. write-only
-    `D_800A1868`; `D_800A1874` WIDTH-ONLY co-used by `func_80042B6C` only).
+  - **Opaque-word ruling ACCEPTED + integrated:** bare 32-bit word → `unsigned
+    int` (`u32`). Eight A182x setters (`func_80042BD8`…`func_80042C64`) exact
+    via era. `func_800405A4` use-site only; decoy edge removed.
+  - **Still open:** READY-FROM-READER setters (`D_800A1860`, `D_800A1870`/
+    `D_800A1874`); 2 BLOCKED-ON-READER (`D_8009D28C`, `D_8009D270`); write-only
+    `D_800A1868` (own phase).
   - **5EF:** delay-slot `sw` (incl. `func_8007DEA4` / `func_80080930`) separate.
 - **`lui;ori`:** separate family; untested and unqueued.
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not
@@ -95,14 +99,17 @@ inventory. Do not treat it as a countdown.
 3. **`asm/` is not a source of truth for counts.** Use `configs/USA/disc1.yaml`.
 4. **Commit messages are not evidence.** A claim is proven when a gate is green
    and the leaf is objdump-probed (not SHA alone on carves).
-5. **No weak-int:** WIDTH-ONLY/WRITE-ONLY globals are not declared from `sw`
-   width alone. Need disambiguating readers, data-section evidence, or an
-   explicit policy change.
+5. **No weak-int cheat:** do **not** invent width a narrower store contradicts
+   (e.g. `sh`/`sb` → `int`). Distinct from **opaque-word** typing (consistent
+   32-bit `sw`/`lw` everywhere) — that is a separate lead ruling, currently
+   open under `TYPING-POLICY` in `parked_blockers.json`.
 6. **Width-only setters are triaged in `parked_blockers.json`.**
-   `READY-FROM-READER` (src reader already types it), `BLOCKED-ON-READER` (only
-   asm readers; decompile the named reader to type it), or `DECISION-BLOCKED`
-   (write-only; needs a per-item human decision). Re-check after every reader
-   phase. `5EF-delay-slot` / `sb-sh-five` remain tool-blocked.
+   `READY-FROM-READER` (src reader already *types* it), `BLOCKED-ON-READER`
+   (undecompiled reader not yet proven to be a mere use-site),
+   `TYPING-POLICY` (opaque 32-bit word; use-site found, no narrowing possible),
+   or `DECISION-BLOCKED` (write-only; no reader). A use-site is not a type-site
+   (`func_800405A4` lesson). Re-check after every reader phase.
+   `5EF-delay-slot` / `sb-sh-five` remain tool-blocked.
 
 ## Resolved blockers
 
@@ -124,6 +131,7 @@ inventory. Do not treat it as a countdown.
 | 5EE | 171 | `$at` absolute-`sw` integrated pilot; delay-slot shapes blocked |
 | 5EG-readers | 173 | Type-pinning readers `func_8008AB1C` / `func_80042B6C`; `D_800A1870` decl fix |
 | 5EG-setter | 174 | `func_80085728` dual-store; first reader-recoverable pre-jr setter |
+| 5EH-opaque-word | 182 | u32 opaque-word ruling; 8 A182x setters (`42BD8`…`42C64`) |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

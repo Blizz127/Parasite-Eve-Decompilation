@@ -125,7 +125,15 @@ EXPECTED_SUBSEGMENTS=(
     '[0x33338, asm]'
     '[0x3336C, c, func_80042B6C]'
     '[0x333C8, c, func_80042BC8]'
-    '[0x333D8, asm]'
+    '[0x333D8, c, func_80042BD8]'
+    '[0x333EC, c, func_80042BEC]'
+    '[0x33400, c, func_80042C00]'
+    '[0x33414, c, func_80042C14]'
+    '[0x33428, c, func_80042C28]'
+    '[0x3343C, c, func_80042C3C]'
+    '[0x33450, c, func_80042C50]'
+    '[0x33464, c, func_80042C64]'
+    '[0x33478, asm]'
     '[0x3E29C, c, func_8004DA9C]'
     '[0x3E2A4, asm]'
     '[0x41518, c, func_80050D18]'
@@ -317,7 +325,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/307CC.s"
     "asm/disc1/330D4.s"
     "asm/disc1/33338.s"
-    "asm/disc1/333D8.s"
+    "asm/disc1/33478.s"
     "asm/disc1/3E2A4.s"
     "asm/disc1/41520.s"
     "asm/disc1/4204C.s"
@@ -706,7 +714,13 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80085728.c" && -f "$ROOT/src/func_8008AB1C.c" && -f "$ROOT/src/func_80042B6C.c" ]]; then
+if [[ -f "$ROOT/src/func_80042BD8.c" && -f "$ROOT/src/func_80042C28.c" && -f "$ROOT/src/func_80042C64.c" ]]; then
+    echo "C conversion: Phase 5EH-opaque-word — 182 leaves (+ 8 A182x u32 setters; opaque-word ruling)"
+    echo "  sources: src/func_80042BD8.c … src/func_80042C64.c (+ prior through 5EG-setter)"
+elif [[ -f "$ROOT/src/func_80042C28.c" && -f "$ROOT/src/func_80085728.c" && -f "$ROOT/src/func_8008AB1C.c" ]]; then
+    echo "C conversion: Phase 5EH-opaque-word — 175 leaves (+ func_80042C28 u32 opaque-word pilot)"
+    echo "  sources: src/func_80042C28.c (+ prior through 5EG-setter); A182x batch pending Stage 3"
+elif [[ -f "$ROOT/src/func_80085728.c" && -f "$ROOT/src/func_8008AB1C.c" && -f "$ROOT/src/func_80042B6C.c" ]]; then
     echo "C conversion: Phase 5EG-setter — 174 leaves (+ func_80085728 dual-store; types from func_8008AB1C)"
     echo "  sources: src/func_80085728.c (+ prior through 5EG-readers); 15 WIDTH-ONLY pre-jr still parked"
 elif [[ -f "$ROOT/src/func_8008AB1C.c" && -f "$ROOT/src/func_80042B6C.c" && -f "$ROOT/src/func_8003FFAC.c" ]]; then

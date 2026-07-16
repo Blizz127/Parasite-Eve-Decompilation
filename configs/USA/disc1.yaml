@@ -138,7 +138,18 @@ segments:
       # Nonzero test of D_800A1870 (lui/lw/jr/sltu); plain -O1 matches.
       # Type corrected to function pointer (see func_80042B6C).
       - [0x333C8, c, func_80042BC8]
-      - [0x333D8, asm]
+      # Opaque-word Stage 3 batch (u32 ruling; pilot func_80042C28 matched).
+      # Eight homogeneous setters: store 1 to D_800A182x/183x, return 0; size 0x14 each.
+      # File 0x333D8–0x33478 exclusive; resume asm at func_80042C78.
+      - [0x333D8, c, func_80042BD8]
+      - [0x333EC, c, func_80042BEC]
+      - [0x33400, c, func_80042C00]
+      - [0x33414, c, func_80042C14]
+      - [0x33428, c, func_80042C28]
+      - [0x3343C, c, func_80042C3C]
+      - [0x33450, c, func_80042C50]
+      - [0x33464, c, func_80042C64]
+      - [0x33478, asm]
       - [0x334B8, c, func_80042CB8]
       - [0x334C4, asm]
       - [0x336D0, c, func_80042ED0]

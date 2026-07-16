@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EG-setter — 174 matching C leaves; ERA COMPILER integrated (dual-toolchain build).**
+**Phase 5EH-opaque-word — 182 matching C leaves; ERA COMPILER integrated.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;
@@ -45,13 +45,10 @@ fetches `gcc-2.7.2-psx` (decompals/
 old-gcc) + `maspsx` into git-ignored `tools/era/`; `build_us.sh`'s `era_compile`
 runs `cpp`→`cc1`→`maspsx --aspsx-version=2.21 --dont-expand-li`→`as` **per-file**
 (maspsx `li`→`ori` for positive small consts; ROM wants `addiu` — defer to GNU as),
-so GCC-14.2 leaves stay byte-identical. **5EE:** `func_8003FFAC` first exact
-`$at` absolute-`sw` setter; delay-slot pilot shapes remain asm. **5EG-readers:**
-`func_8008AB1C` / `func_80042B6C` pin pointer / function-pointer types by proof
-(`D_8009D240`/`D_8009D260`/`D_800A1870`); corrected `func_80042BC8` decl without
-emission change. Weak-int policy NO — 15 WIDTH-ONLY/WRITE-ONLY pre-jr setters
-parked. Population counter: `tools/analysis/at_absolute_store_counter.py`.
-~290 era-blocked functions remain (estimate). Phase 1 local verification is
-complete; redump.org cross-check remains open (non-blocking). PC port is out of
-scope. `docs/ai_context/ACTIVE_HANDOFF.md` has the exact current state and
-`docs/splitting.md` the split target and policy.
+so GCC-14.2 leaves stay byte-identical. **Opaque-word ruling:** globals with only
+bare 32-bit `sw`/`lw` use (no arith/pointer/bitwise) type as `unsigned int` —
+not the rejected sh/sb→int cheat. Integrated: 8 A182x setters
+(`func_80042BD8`…`func_80042C64`). `func_800405A4` is a use-site only.
+Population counter: `tools/analysis/at_absolute_store_counter.py`.
+PC port is out of scope. `docs/ai_context/ACTIVE_HANDOFF.md` has the exact current
+state and `docs/splitting.md` the split target and policy.
