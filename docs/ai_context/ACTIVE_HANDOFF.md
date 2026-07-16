@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `main` (Phase 5EH-opaque-word, uncommitted) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EH-opaque-word** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **182** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Branch / tip | `phase5ei-ready-from-reader` (uncommitted) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EI-ready-from-reader** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **185** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **129** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **26** | `grep -c '^era_compile ' scripts/build_us.sh` |
+| Era leaf compiles | **29** | `grep -c '^era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -79,11 +79,11 @@ inventory. Do not treat it as a countdown.
     - `D_800A1870` = `void (*)(void)` via `func_80042B6C` (era `-O2 -G0`);
       `func_80042BC8` decl corrected (emission unchanged).
   - **`func_80085728` integrated** (dual pre-jr store; types from `func_8008AB1C`).
-  - **Opaque-word ruling ACCEPTED + integrated (5EH):** eight A182x setters
-    exact. Post-5EH Stage 0 sweep (docs only, uncommitted): **+2 opaque-word
-    globals** (`D_800A1868`, `D_8009D28C` → 5 setter leaves) pass; `D_8009D270`
-    fails (bitwise flags → READY-FROM-BITWISE, 2 setters); READY-FROM-READER
-    trio stays distinct (`1860`/`1870`/`1874`).
+  - **5EI READY-FROM-READER integrated:** `func_80042B38`/`50` (`D_800A1870`
+    fn-ptr + `D_800A1874` int); `func_80042910` dual clear (`D_800A1860` int +
+    `D_800A1868` u32 decl option a). Fn-ptr type matched cleanly.
+  - **Still open:** opaque-word remaining (`D_8009D28C` four setters);
+    `D_8009D270` bitwise (2 setters); `lui-ori`; 5EF/sb-sh.
   - **5EF:** delay-slot `sw` (incl. `func_8007DEA4` / `func_80080930`) separate.
 - **`lui;ori`:** separate family; untested and unqueued.
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not

@@ -28,8 +28,8 @@ This table supports the `weak-int-*`, `opaque-word-A182x`, and
 
 | Global | Address | Width | Setter(s) | State |
 |---|---|---|---|---|
-| `D_800A1860` | `0x800A1860` | `sw` | `func_80042910` | READY-FROM-READER: `int` (arith `addiu -1` / `func_800428C4`) — **not** opaque |
-| `D_800A1868` | `0x800A1868` | `sw` | `func_80042910` | READY-OPAQUE-WORD → `u32` (write-only; Stage 0 post-5EH) |
+| `D_800A1860` | `0x800A1860` | `sw` | `func_80042910` | INTEGRATED 5EI — `int` (func_80042910 dual) |
+| `D_800A1868` | `0x800A1868` | `sw` | `func_80042910` | READY-OPAQUE-WORD → `u32`; decl+clear via integrated func_80042910; other writers still asm |
 | `D_8009D28C` | `0x8009D28C` | `sw` | `func_80017FDC`, `func_80017FF0`, `func_800192B8`, `func_800192C8` | READY-OPAQUE-WORD → `u32` (state word; Stage 0 post-5EH) |
 | `D_800A1820`…`D_800A1834` | | `sw` | eight setters | **INTEGRATED** (5EH) — `unsigned int` opaque-word |
 | `D_8009D270` | `0x8009D270` | `sw` | `func_80087198`, `func_80087414` | READY-FROM-BITWISE → `unsigned int` flags (`andi` 1/2) — **not** opaque |
@@ -98,8 +98,8 @@ from bitwise evidence; do not claim “bare opaque word.”
 
 | Setter | Global(s) | Width | State |
 |---|---|---|---|
-| `func_80042B38` | `D_800A1870`, `D_800A1874` | `sw` | READY-FROM-READER via `func_80042B6C` |
-| `func_80042B50` | `D_800A1870`, `D_800A1874` | `sw` | READY-FROM-READER via `func_80042B6C` |
+| `func_80042B38` | `D_800A1870`, `D_800A1874` | `sw` | **INTEGRATED 5EI** — `void(*)(void)` + `int` via `func_80042B6C` |
+| `func_80042B50` | `D_800A1870`, `D_800A1874` | `sw` | **INTEGRATED 5EI** — same types; `sw $a0` fn-ptr matched |
 
 ## Search method
 

@@ -121,8 +121,11 @@ EXPECTED_SUBSEGMENTS=(
     '[0x307CC, asm]'
     '[0x330C4, c, func_800428C4]'
     '[0x330D4, asm]'
+    '[0x33110, c, func_80042910]'
+    '[0x33128, asm]'
     '[0x33328, c, func_80042B28]'
-    '[0x33338, asm]'
+    '[0x33338, c, func_80042B38]'
+    '[0x33350, c, func_80042B50]'
     '[0x3336C, c, func_80042B6C]'
     '[0x333C8, c, func_80042BC8]'
     '[0x333D8, c, func_80042BD8]'
@@ -324,7 +327,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/2E7D0.s"
     "asm/disc1/307CC.s"
     "asm/disc1/330D4.s"
-    "asm/disc1/33338.s"
+    "asm/disc1/33128.s"
     "asm/disc1/33478.s"
     "asm/disc1/3E2A4.s"
     "asm/disc1/41520.s"
@@ -714,7 +717,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80042BD8.c" && -f "$ROOT/src/func_80042C28.c" && -f "$ROOT/src/func_80042C64.c" ]]; then
+if [[ -f "$ROOT/src/func_80042910.c" && -f "$ROOT/src/func_80042B38.c" && -f "$ROOT/src/func_80042B50.c" ]]; then
+    echo "C conversion: Phase 5EI-ready-from-reader — 185 leaves (+ func_80042910 / 42B38 / 42B50)"
+    echo "  sources: src/func_80042910.c src/func_80042B38.c src/func_80042B50.c (+ prior through 5EH)"
+elif [[ -f "$ROOT/src/func_80042BD8.c" && -f "$ROOT/src/func_80042C28.c" && -f "$ROOT/src/func_80042C64.c" ]]; then
     echo "C conversion: Phase 5EH-opaque-word — 182 leaves (+ 8 A182x u32 setters; opaque-word ruling)"
     echo "  sources: src/func_80042BD8.c … src/func_80042C64.c (+ prior through 5EG-setter)"
 elif [[ -f "$ROOT/src/func_80042C28.c" && -f "$ROOT/src/func_80085728.c" && -f "$ROOT/src/func_8008AB1C.c" ]]; then

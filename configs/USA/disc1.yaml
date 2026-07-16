@@ -128,8 +128,15 @@ segments:
       # lui/lw/jr/nop on D_800A1838. Plain -O1 matches.
       # Mid-330D4 carve: prefix 0x254, C 0x10, resume 33338.s 0xAF64.
       - [0x330D4, asm]
+      # Phase 5EI: func_80042910 — VRAM 0x80042910, size 0x18.
+      # Dual clear: D_800A1860 (int) + D_800A1868 (u32 opaque decl). Mid-330D4 carve.
+      - [0x33110, c, func_80042910]
+      - [0x33128, asm]
       - [0x33328, c, func_80042B28]
-      - [0x33338, asm]
+      # Phase 5EI: func_80042B38 / func_80042B50 — dual-store D_800A1870/1874.
+      # Replaces former 33338.s unit entirely (0x34 bytes).
+      - [0x33338, c, func_80042B38]
+      - [0x33350, c, func_80042B50]
       # Phase 5EG-readers: func_80042B6C — VRAM 0x80042B6C, size 0x5C.
       # jalr through D_800A1870 pins it as void (*)(void). Era -O2 -G0.
       # Mid-33338 carve: prefix 0x34, C 0x5C, then existing 42BC8.
