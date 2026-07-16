@@ -85,8 +85,8 @@
     },
     {
       "id": "flags-bitwise-D_8009D270",
-      "status": "READY-FROM-BITWISE",
-      "rationale": "Stage 0 FAILED opaque-word bar: every load path does andi/and bit ops. That is narrowing evidence for an unsigned flags word \u2014 NOT bare opaque u32. Distinct bucket so the technique does not become the width-cheat. Type: unsigned int (flags bits 0 and 1 used). Setters unblocked for integration with that type; full reader decomp optional.",
+      "status": "INTEGRATED",
+      "rationale": "Stage 0 FAILED opaque-word bar: every load path does andi/and bit ops. That is narrowing evidence for an unsigned flags word \u2014 NOT bare opaque u32. Distinct bucket so the technique does not become the width-cheat. Type: unsigned int (flags bits 0 and 1 used). 5EK: integrated func_80087198/87414 (store 1/2, return 0; sb+ret0 fingerprint).",
       "members": [
         {
           "global": "D_8009D270",
@@ -97,8 +97,9 @@
             "func_80087198",
             "func_80087414"
           ],
-          "evidence_sites": "func_800871AC, func_80087428 (same unit 778F0.s)",
-          "stage0": "NARROWING BITWISE \u2014 not opaque-word"
+          "evidence_sites": "func_800871AC, func_80087428 (same unit; remain asm)",
+          "stage0": "NARROWING BITWISE \u2014 not opaque-word",
+          "integrated": "5EK"
         }
       ],
       "reference": "docs/ai_context/weak_int_setters.md#stage-0-sweep-post-5eh"

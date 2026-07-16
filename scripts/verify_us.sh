@@ -717,7 +717,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80017FDC.c" && -f "$ROOT/src/func_80017FF0.c" && -f "$ROOT/src/func_800192B8.c" && -f "$ROOT/src/func_800192C8.c" ]]; then
+if [[ -f "$ROOT/src/func_80087198.c" && -f "$ROOT/src/func_80087414.c" ]]; then
+    echo "C conversion: Phase 5EK-d8009d270-bitwise — 191 leaves (+ 2 D_8009D270 unsigned flags setters 87198/87414)"
+    echo "  sources: src/func_80087198.c src/func_80087414.c (+ prior through 5EJ)"
+elif [[ -f "$ROOT/src/func_80017FDC.c" && -f "$ROOT/src/func_80017FF0.c" && -f "$ROOT/src/func_800192B8.c" && -f "$ROOT/src/func_800192C8.c" ]]; then
     echo "C conversion: Phase 5EJ-d8009d28c-state — 189 leaves (+ 4 D_8009D28C int-state setters 17FDC/17FF0/192B8/192C8)"
     echo "  sources: src/func_80017FDC.c src/func_80017FF0.c src/func_800192B8.c src/func_800192C8.c (+ prior through 5EI)"
 elif [[ -f "$ROOT/src/func_80042910.c" && -f "$ROOT/src/func_80042B38.c" && -f "$ROOT/src/func_80042B50.c" ]]; then

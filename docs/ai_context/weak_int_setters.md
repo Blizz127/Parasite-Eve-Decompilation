@@ -32,7 +32,7 @@ This table supports the `weak-int-*`, `opaque-word-A182x`, and
 | `D_800A1868` | `0x800A1868` | `sw` | `func_80042910` | READY-OPAQUE-WORD → `u32`; decl+clear via integrated func_80042910; other writers still asm |
 | `D_8009D28C` | `0x8009D28C` | `sw` | `func_80017FDC`, `func_80017FF0`, `func_800192B8`, `func_800192C8` | **INTEGRATED** (5EJ) — `int` state (READY-FROM-READER; not opaque-word) |
 | `D_800A1820`…`D_800A1834` | | `sw` | eight setters | **INTEGRATED** (5EH) — `unsigned int` opaque-word |
-| `D_8009D270` | `0x8009D270` | `sw` | `func_80087198`, `func_80087414` | READY-FROM-BITWISE → `unsigned int` flags (`andi` 1/2) — **not** opaque |
+| `D_8009D270` | `0x8009D270` | `sw` | `func_80087198`, `func_80087414` | **INTEGRATED** (5EK) — `unsigned int` flags (READY-FROM-BITWISE) |
 
 ## Opaque-word typing policy
 
@@ -96,6 +96,9 @@ in its own bucket.
 Loads do `andi $v0, 0x1` / `andi $v0, 0x2` and `and` with `-2`/`-3` (clear
 bits). That **is** the Stage 0 floor being hit. Type as `unsigned int` flags
 from bitwise evidence; do not claim “bare opaque word.”
+**INTEGRATED 5EK:** two setters (`87198` stores 1, `87414` stores 2, both return
+0 via sb+ret0 `addu` delay slot). Leaf count 189 + 2 = **191**. Readers
+`func_800871AC` / `func_80087428` remain asm.
 
 ## `D_800A1874` / `D_800A1870` (narrowing readers — separate phase)
 

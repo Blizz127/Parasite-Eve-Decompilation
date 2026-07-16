@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5ej-d8009d28c-state` (uncommitted) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EJ-d8009d28c-state** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **189** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **131** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **33** | `grep -c '^era_compile ' scripts/build_us.sh` |
+| Branch / tip | `phase5ek-d8009d270-bitwise` (uncommitted) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EK-d8009d270-bitwise** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **191** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **133** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **35** | `grep -c '^era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EJ / 189. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5EK / 191. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -82,14 +82,15 @@ inventory. Do not treat it as a countdown.
   - **5EI READY-FROM-READER integrated:** `func_80042B38`/`50` (`D_800A1870`
     fn-ptr + `D_800A1874` int); `func_80042910` dual clear (`D_800A1860` int +
     `D_800A1868` u32 decl option a). Fn-ptr type matched cleanly.
-  - **5EJ integrated:** `D_8009D28C` = `int` state (READY-FROM-READER; equality
-    + word-copy; **not** opaque-word). Four setters `17FDC`/`17FF0`/`192B8`/
-    `192C8` (set-state + return 1; delay-slot return-1 schedule). Leaf arithmetic:
-    **185 + 4 = 189**.
-  - **Still open:** `D_8009D270` bitwise (2 setters); `lui-ori`; 5EF/sb-sh;
-    remaining opaque-word (`D_800A1868` other writers).
+  - **5EJ integrated:** `D_8009D28C` = `int` state (READY-FROM-READER). Four
+    setters `17FDC`/`17FF0`/`192B8`/`192C8`. Leaf arithmetic: **185 + 4 = 189**.
+  - **5EK integrated:** `D_8009D270` = `unsigned int` flags (READY-FROM-BITWISE;
+    `andi` 1/2 + clear-bit). Two setters `87198`/`87414` (store 1/2, return 0;
+    sb+ret0). Leaf arithmetic: **189 + 2 = 191**.
+  - **Still open:** `lui-ori` probe; 5EF/sb-sh; remaining opaque-word
+    (`D_800A1868` other writers).
   - **5EF:** delay-slot `sw` (incl. `func_8007DEA4` / `func_80080930`) separate.
-- **`lui;ori`:** separate family; untested and unqueued.
+- **`lui;ori`:** separate family; untested and unqueued — next investigation.
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not
   inventoried here.
 
@@ -137,6 +138,7 @@ inventory. Do not treat it as a countdown.
 | 5EH-opaque-word | 182 | u32 opaque-word ruling; 8 A182x setters (`42BD8`…`42C64`) |
 | 5EI-ready-from-reader | 185 | READY-FROM-READER setters `42910`/`42B38`/`42B50` |
 | 5EJ-d8009d28c-state | 189 | `D_8009D28C` int-state setters `17FDC`/`17FF0`/`192B8`/`192C8` |
+| 5EK-d8009d270-bitwise | 191 | `D_8009D270` unsigned flags setters `87198`/`87414` |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
