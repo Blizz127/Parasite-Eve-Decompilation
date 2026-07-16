@@ -79,12 +79,11 @@ inventory. Do not treat it as a countdown.
     - `D_800A1870` = `void (*)(void)` via `func_80042B6C` (era `-O2 -G0`);
       `func_80042BC8` decl corrected (emission unchanged).
   - **`func_80085728` integrated** (dual pre-jr store; types from `func_8008AB1C`).
-  - **Opaque-word ruling ACCEPTED + integrated:** bare 32-bit word → `unsigned
-    int` (`u32`). Eight A182x setters (`func_80042BD8`…`func_80042C64`) exact
-    via era. `func_800405A4` use-site only; decoy edge removed.
-  - **Still open:** READY-FROM-READER setters (`D_800A1860`, `D_800A1870`/
-    `D_800A1874`); 2 BLOCKED-ON-READER (`D_8009D28C`, `D_8009D270`); write-only
-    `D_800A1868` (own phase).
+  - **Opaque-word ruling ACCEPTED + integrated (5EH):** eight A182x setters
+    exact. Post-5EH Stage 0 sweep (docs only, uncommitted): **+2 opaque-word
+    globals** (`D_800A1868`, `D_8009D28C` → 5 setter leaves) pass; `D_8009D270`
+    fails (bitwise flags → READY-FROM-BITWISE, 2 setters); READY-FROM-READER
+    trio stays distinct (`1860`/`1870`/`1874`).
   - **5EF:** delay-slot `sw` (incl. `func_8007DEA4` / `func_80080930`) separate.
 - **`lui;ori`:** separate family; untested and unqueued.
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not

@@ -28,16 +28,11 @@ This table supports the `weak-int-*`, `opaque-word-A182x`, and
 
 | Global | Address | Width | Setter(s) | State |
 |---|---|---|---|---|
-| `D_800A1860` | `0x800A1860` | `sw` | `func_80042910` | READY-FROM-READER: `func_800428C4` → `int` |
-| `D_800A1868` | `0x800A1868` | `sw` | `func_80042910` | DECISION-BLOCKED: no known reader (own phase) |
-| `D_8009D28C` | `0x8009D28C` | `sw` | `func_80017FDC`, `func_80017FF0`, `func_800192B8`, `func_800192C8` | BLOCKED-ON-READER: `func_80019154` / `func_8001D340` |
-| `D_800A1820` | `0x800A1820` | `sw` | `func_80042BD8` | INTEGRATED — `unsigned int` (opaque-word) |
-| `D_800A1824` | `0x800A1824` | `sw` | `func_80042BEC`, `func_80042C00` | INTEGRATED — `unsigned int` (opaque-word) |
-| `D_800A1828` | `0x800A1828` | `sw` | `func_80042C14` | INTEGRATED — `unsigned int` (opaque-word) |
-| `D_800A182C` | `0x800A182C` | `sw` | `func_80042C28` | INTEGRATED — `unsigned int` (opaque-word; Stage 2 pilot) |
-| `D_800A1830` | `0x800A1830` | `sw` | `func_80042C3C`, `func_80042C50` | INTEGRATED — `unsigned int` (opaque-word) |
-| `D_800A1834` | `0x800A1834` | `sw` | `func_80042C64` | INTEGRATED — `unsigned int` (opaque-word) |
-| `D_8009D270` | `0x8009D270` | `sw` | `func_80087198`, `func_80087414` | BLOCKED-ON-READER: `func_800871AC` / `func_80087428` |
+| `D_800A1860` | `0x800A1860` | `sw` | `func_80042910` | READY-FROM-READER: `int` (arith `addiu -1` / `func_800428C4`) — **not** opaque |
+| `D_800A1868` | `0x800A1868` | `sw` | `func_80042910` | READY-OPAQUE-WORD → `u32` (write-only; Stage 0 post-5EH) |
+| `D_8009D28C` | `0x8009D28C` | `sw` | `func_80017FDC`, `func_80017FF0`, `func_800192B8`, `func_800192C8` | READY-OPAQUE-WORD → `u32` (state word; Stage 0 post-5EH) |
+| `D_800A1820`…`D_800A1834` | | `sw` | eight setters | **INTEGRATED** (5EH) — `unsigned int` opaque-word |
+| `D_8009D270` | `0x8009D270` | `sw` | `func_80087198`, `func_80087414` | READY-FROM-BITWISE → `unsigned int` flags (`andi` 1/2) — **not** opaque |
 
 ## Opaque-word typing policy
 
@@ -65,8 +60,39 @@ func_800405A4` edge **removed**.
 2. Stage 3 batch: remaining seven setters matched exact.
 3. Leaf arithmetic: **174 + 8 setter functions = 182** (not +6 globals).
 
-`D_800A1868` and READY-FROM-READER setters (`D_800A1860` / `D_800A1870` /
-`D_800A1874`) remain **out of scope**.
+## Stage 0 sweep (post-5EH) — what the ruling unlocks
+
+Read-only re-search of remaining weak-int / decision-blocked members on tip
+`2234794`. Floor: *no* arith / pointer-base / bitwise / typed-callee use of the
+loaded value, **searched not assumed**. READY-FROM-READER with real types stays
+in its own bucket.
+
+| Global | Stage 0 result | Unlocks |
+| --- | --- | --- |
+| `D_800A1868` | **PASS** write-only `lui`/`sw`; stores 0 or 1 | `func_80042910` (dual-store w/ `D_800A1860`) |
+| `D_8009D28C` | **PASS** stores 0/3/4/5/6/8; load = word-copy or `bne` vs 1 | 4 setters (`17FDC`…`192C8`) |
+| `D_8009D270` | **FAIL** `andi`/`and` bit ops | 2 setters via **bitwise** path, not opaque |
+| `D_800A1860` | **FAIL** `addiu -1` + src `int` | stays READY-FROM-READER |
+| `D_800A1870` | **FAIL** `jalr` function pointer | stays READY-FROM-READER |
+| `D_800A1874` | **FAIL** `+1` counter `int` | stays READY-FROM-READER |
+
+**Opaque-word unlock this sweep:** 2 globals → **5 setter functions**  
+(`func_80042910` + four `D_8009D28C` setters).  
+**Bitwise unlock (separate):** `D_8009D270` → 2 setters as `unsigned int` flags.  
+**No integration in this pass.**
+
+### `D_8009D28C` detail (why not still BLOCKED-ON-READER)
+
+- `func_80019154`: `lw` global → `sw` to `*a0` — **copies the word**, does not
+  use it as a pointer base or do arith/bits.
+- `A404` load: `bne` against constant 1 — equality test, not narrowing.
+- Former `blocker_reader` edge removed as a type-site.
+
+### `D_8009D270` detail (why not opaque-word)
+
+Loads do `andi $v0, 0x1` / `andi $v0, 0x2` and `and` with `-2`/`-3` (clear
+bits). That **is** the Stage 0 floor being hit. Type as `unsigned int` flags
+from bitwise evidence; do not claim “bare opaque word.”
 
 ## `D_800A1874` / `D_800A1870` (narrowing readers — separate phase)
 

@@ -1,201 +1,27 @@
 {
   "blockers": [
-    {
-      "id": "5EF-delay-slot",
-      "status": "PARKED",
-      "note": "13 members; maspsx forces noreorder+nop, won't fill jr slot. Fix=maspsx delay-slot scheduling + full re-gate."
-    },
-    {
-      "id": "weak-int-ready",
-      "status": "READY-FROM-READER",
-      "rationale": "1 weak-int global is READY-FROM-READER: a decompiled src reader already types it, so integrating the setter is unblocked now. No discretionary human typing decision is required. Re-check after every reader phase.",
-      "members": [
-        {
-          "global": "D_800A1860",
-          "address": "0x800A1860",
-          "store": "sw",
-          "setters": [
-            "func_80042910"
-          ],
-          "typing_reader": "func_800428C4 (int)"
-        }
-      ],
-      "reference": "docs/ai_context/weak_int_setters.md"
-    },
-    {
-      "id": "weak-int-blocked-on-reader",
-      "status": "BLOCKED-ON-READER",
-      "rationale": "2 weak-int globals remain BLOCKED-ON-READER: only undecompiled asm readers reference them, and those readers have not yet been shown to be mere use-sites. Each is blocked on decompiling the named reader so it can produce a typed (or proven-opaque) classification. Re-check after every reader phase.",
-      "members": [
-        {
-          "global": "D_8009D28C",
-          "address": "0x8009D28C",
-          "store": "sw",
-          "setters": [
-            "func_80017FDC",
-            "func_80017FF0",
-            "func_800192B8",
-            "func_800192C8"
-          ],
-          "blocker_reader": "func_80019154, func_8001D340"
-        },
-        {
-          "global": "D_8009D270",
-          "address": "0x8009D270",
-          "store": "sw",
-          "setters": [
-            "func_80087198",
-            "func_80087414"
-          ],
-          "blocker_reader": "func_800871AC, func_80087428"
-        }
-      ],
-      "reference": "docs/ai_context/weak_int_setters.md"
-    },
-    {
-      "id": "opaque-word-A182x",
-      "status": "INTEGRATED",
-      "rationale": "6 globals D_800A1820..D_800A1834 typed unsigned int under opaque-word ruling; 8 setter functions integrated exact (func_80042BD8\u2026func_80042C64) via era -O2 -G0. func_800405A4 use-site only (edge removed). Stage 2 pilot func_80042C28 matched before batch. Provenance: u32 opaque word; refine if narrowing reader appears.",
-      "members": [
-        {
-          "global": "D_800A1820",
-          "address": "0x800A1820",
-          "store": "sw",
-          "type": "unsigned int (u32 opaque-word ruling)",
-          "setters": [
-            "func_80042BD8"
-          ],
-          "use_site": "func_800405A4 (not a type-site)",
-          "integrated_setters": [
-            "func_80042BD8"
-          ]
-        },
-        {
-          "global": "D_800A1824",
-          "address": "0x800A1824",
-          "store": "sw",
-          "type": "unsigned int (u32 opaque-word ruling)",
-          "setters": [
-            "func_80042BEC",
-            "func_80042C00"
-          ],
-          "use_site": "func_800405A4 (not a type-site)",
-          "integrated_setters": [
-            "func_80042BEC",
-            "func_80042C00"
-          ]
-        },
-        {
-          "global": "D_800A1828",
-          "address": "0x800A1828",
-          "store": "sw",
-          "type": "unsigned int (u32 opaque-word ruling)",
-          "setters": [
-            "func_80042C14"
-          ],
-          "use_site": "func_800405A4 (not a type-site)",
-          "integrated_setters": [
-            "func_80042C14"
-          ]
-        },
-        {
-          "global": "D_800A182C",
-          "address": "0x800A182C",
-          "store": "sw",
-          "type": "unsigned int (u32 opaque-word ruling)",
-          "setters": [
-            "func_80042C28"
-          ],
-          "use_site": "func_800405A4 (not a type-site)",
-          "integrated_setters": [
-            "func_80042C28"
-          ]
-        },
-        {
-          "global": "D_800A1830",
-          "address": "0x800A1830",
-          "store": "sw",
-          "type": "unsigned int (u32 opaque-word ruling)",
-          "setters": [
-            "func_80042C3C",
-            "func_80042C50"
-          ],
-          "use_site": "func_800405A4 (not a type-site)",
-          "integrated_setters": [
-            "func_80042C3C",
-            "func_80042C50"
-          ]
-        },
-        {
-          "global": "D_800A1834",
-          "address": "0x800A1834",
-          "store": "sw",
-          "type": "unsigned int (u32 opaque-word ruling)",
-          "setters": [
-            "func_80042C64"
-          ],
-          "use_site": "func_800405A4 (not a type-site)",
-          "integrated_setters": [
-            "func_80042C64"
-          ]
-        }
-      ],
-      "reference": "docs/ai_context/weak_int_setters.md#opaque-word-typing-policy"
-    },
-    {
-      "id": "weak-int-decision",
-      "status": "DECISION-BLOCKED",
-      "rationale": "1 weak-int global is DECISION-BLOCKED: genuinely write-only with no reader anywhere. Same opaque-word policy could apply later but is OUT OF SCOPE for the A182x phase \u2014 do in its own phase. Re-check after every reader phase.",
-      "members": [
-        {
-          "global": "D_800A1868",
-          "address": "0x800A1868",
-          "store": "sw",
-          "setters": [
-            "func_80042910"
-          ],
-          "known_readers": "none"
-        }
-      ],
-      "reference": "docs/ai_context/weak_int_setters.md"
-    },
-    {
-      "id": "D_800A1874-policy",
-      "status": "READY-FROM-READER",
-      "rationale": "The 'policy' framing is obsolete: func_80042B6C already types both globals. D_800A1870 = void (*)(void) and D_800A1874 = int. Both setter leaves (func_80042B38/50) are READY-FROM-READER; integration is a separate leaf decision, not a typing question. OUT OF SCOPE for A182x phase.",
-      "members": [
-        {
-          "global": "D_800A1870",
-          "address": "0x800A1870",
-          "store": "sw",
-          "setters": [
-            "func_80042B38",
-            "func_80042B50"
-          ],
-          "typing_reader": "func_80042B6C (void (*)(void)); func_80042BC8 (nonzero test)"
-        },
-        {
-          "global": "D_800A1874",
-          "address": "0x800A1874",
-          "store": "sw",
-          "setters": [
-            "func_80042B38",
-            "func_80042B50"
-          ],
-          "typing_reader": "func_80042B6C (int)"
-        }
-      ],
-      "reference": "docs/ai_context/weak_int_setters.md#d_800a1874--d_800a1870-was-a-policy-question"
-    },
-    {
-      "id": "sb-sh-five",
-      "status": "PARKED",
-      "note": "likely same delay-slot answer as 5EF."
-    },
-    {
-      "id": "lui-ori",
-      "status": "UNINVENTORIED",
-      "note": "never probed."
-    }
+    {"id": "5EF-delay-slot", "status": "PARKED", "note": "13 members; maspsx forces noreorder+nop, won't fill jr slot. Fix=maspsx delay-slot scheduling + full re-gate."},
+    {"id": "weak-int-ready", "status": "READY-FROM-READER", "rationale": "Narrowing evidence in decompiled src — NOT opaque-word. Do not reclassify as u32-opaque.", "members": [
+      {"global": "D_800A1860", "address": "0x800A1860", "store": "sw", "setters": ["func_80042910"], "typing_reader": "func_800428C4 (int); asm also addiu -1", "stage0": "NARROWING ARITHMETIC — stays READY-FROM-READER"},
+      {"global": "D_800A1870", "address": "0x800A1870", "store": "sw", "setters": ["func_80042B38", "func_80042B50"], "typing_reader": "func_80042B6C (void (*)(void)); jalr proof", "stage0": "NARROWING POINTER — stays READY-FROM-READER"},
+      {"global": "D_800A1874", "address": "0x800A1874", "store": "sw", "setters": ["func_80042B38", "func_80042B50"], "typing_reader": "func_80042B6C (int; +1 counter)", "stage0": "NARROWING ARITHMETIC — stays READY-FROM-READER"}
+    ], "reference": "docs/ai_context/weak_int_setters.md"},
+    {"id": "opaque-word-post5eh-sweep", "status": "READY-OPAQUE-WORD", "rationale": "Stage 0 sweep after 5EH (read-only, tip 2234794): two remaining globals pass the opaque-word bar (no arith/pointer/bitwise/typed-callee on the loaded value; consistent sw). NOT folded from READY-FROM-READER trio. Integration is a separate phase.", "members": [
+      {"global": "D_800A1868", "address": "0x800A1868", "store": "sw", "type": "unsigned int (u32 opaque-word; write-only)", "setters": ["func_80042910"], "stage0": "WRITE-ONLY: lui/sw only; stores 0 or 1; no lw anywhere in src or live asm", "note": "func_80042910 also clears D_800A1860 (int) — dual-store leaf"},
+      {"global": "D_8009D28C", "address": "0x8009D28C", "store": "sw", "type": "unsigned int (u32 opaque-word state)", "setters": ["func_80017FDC", "func_80017FF0", "func_800192B8", "func_800192C8"], "stage0": "stores constants 0/3/4/5/6/8; loads: word-copy sw to *v1 (func_80019154), bne vs 1 (A404) — no arith/deref-as-base/bitwise", "former_blocker_reader": "func_80019154 / func_8001D340 REMOVED as type-sites (use/copy only)"}
+    ], "reference": "docs/ai_context/weak_int_setters.md#stage-0-sweep-post-5eh"},
+    {"id": "flags-bitwise-D_8009D270", "status": "READY-FROM-BITWISE", "rationale": "Stage 0 FAILED opaque-word bar: every load path does andi/and bit ops. That is narrowing evidence for an unsigned flags word — NOT bare opaque u32. Distinct bucket so the technique does not become the width-cheat. Type: unsigned int (flags bits 0 and 1 used). Setters unblocked for integration with that type; full reader decomp optional.", "members": [
+      {"global": "D_8009D270", "address": "0x8009D270", "store": "sw", "type": "unsigned int (flags; andi 1 / andi 2 / and -2 / and -3)", "setters": ["func_80087198", "func_80087414"], "evidence_sites": "func_800871AC, func_80087428 (same unit 778F0.s)", "stage0": "NARROWING BITWISE — not opaque-word"}
+    ], "reference": "docs/ai_context/weak_int_setters.md#stage-0-sweep-post-5eh"},
+    {"id": "opaque-word-A182x", "status": "INTEGRATED", "rationale": "6 globals / 8 setters integrated exact in 5EH (func_80042BD8…func_80042C64). u32 opaque-word ruling proven.", "members": [
+      {"global": "D_800A1820", "address": "0x800A1820", "store": "sw", "type": "unsigned int", "setters": ["func_80042BD8"]},
+      {"global": "D_800A1824", "address": "0x800A1824", "store": "sw", "type": "unsigned int", "setters": ["func_80042BEC", "func_80042C00"]},
+      {"global": "D_800A1828", "address": "0x800A1828", "store": "sw", "type": "unsigned int", "setters": ["func_80042C14"]},
+      {"global": "D_800A182C", "address": "0x800A182C", "store": "sw", "type": "unsigned int", "setters": ["func_80042C28"]},
+      {"global": "D_800A1830", "address": "0x800A1830", "store": "sw", "type": "unsigned int", "setters": ["func_80042C3C", "func_80042C50"]},
+      {"global": "D_800A1834", "address": "0x800A1834", "store": "sw", "type": "unsigned int", "setters": ["func_80042C64"]}
+    ], "reference": "docs/ai_context/weak_int_setters.md"},
+    {"id": "sb-sh-five", "status": "PARKED", "note": "likely same delay-slot answer as 5EF."},
+    {"id": "lui-ori", "status": "UNINVENTORIED", "note": "never probed."}
   ]
 }
