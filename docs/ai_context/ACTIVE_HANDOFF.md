@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `main` @ `d447f21` (docs dirty: lui-ori CAPABILITY-VERIFIED) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EK + lui-ori capability** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **191** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **133** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **35** | `grep -c '^era_compile ' scripts/build_us.sh` |
+| Branch / tip | `phase5ef-pilot-delay-slot-fill` (uncommitted) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EF-pilot (maspsx delay-slot sw fill)** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **192** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **134** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **36** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -34,6 +34,16 @@ are git-ignored inputs — never commit them.
   large-literal `lui;ori` (cc1 emits PSY-Q `li` high + `ori` low natively).
   Do **not** bump aspsx-version casually — that also flips `nop_at_expansion`
   / `addiu_at`.
+- **Vendored maspsx LOCAL PATCH:** `tools/era/maspsx/maspsx/__init__.py` is
+  repo-tracked (`.gitignore` negations; `setup_era.sh` re-clones upstream
+  AROUND it, restores the tracked file from git if absent). Patch 1 =
+  **sw-store delay-slot fill**, opt-in per `era_compile` line via env
+  `MASPSX_FILL_STORE_DELAY_SLOT=1`: an absolute `sw $r,SYM` macro immediately
+  before a bare `j $31` is emitted as `lui $at,%hi` / `j $31` /
+  `sw $r,%lo($at)`. sw only — sb/sh macro stores and multi-store epilogues
+  are ROM-proven to stay pre-jr with a nop slot (e.g. func_8003FFAC vs
+  func_8007FBC0: identical C shape, different ROM scheduling — the original
+  units were assembled with different ASPSX scheduling).
 - Maspsx stdin: closed with `</dev/null` in `era_compile` (non-TTY hang under
   agent sockets). Bare `scripts/build_us.sh` is fine.
 
@@ -42,7 +52,7 @@ are git-ignored inputs — never commit them.
 ```bash
 grep -c ',\s*c,' configs/USA/disc1.yaml            # C leaves
 grep -c ',\s*asm\]' configs/USA/disc1.yaml          # yaml asm segments (NOT fn count)
-grep -c '^era_compile ' scripts/build_us.sh         # era leaf compiles
+grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh  # era leaf compiles
 git log --oneline -1
 ```
 
@@ -79,9 +89,20 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
       via `func_8008AB1C` (era `-O1 -G0`).
     - `D_800A1870` = `void (*)(void)` via `func_80042B6C` (era `-O2 -G0`).
   - **Integrated:** `func_80085728`; 5EI readers-typed trio; 5EJ `D_8009D28C`
-    int-state (4); 5EK `D_8009D270` unsigned flags (2). Leaf count **191**.
-  - **Still open (tool):** 5EF-delay-slot / sb-sh-five — maspsx will not fill
-    the `jr` delay slot (real limitation, not a typing question).
+    int-state (4); 5EK `D_8009D270` unsigned flags (2); **5EF-pilot
+    `func_8007FBC0`** delay-slot sw setter (`D_800A36A0` = `void (*)(void)`,
+    jalr proof in 704BC.s). Leaf count **192**.
+  - **Delay-slot shape: TOOL SOLVED (5EF-pilot).** Vendored maspsx LOCAL PATCH
+    (`MASPSX_FILL_STORE_DELAY_SLOT=1`) fills the `j $31` slot with the trailing
+    absolute `sw`. Pilot gate exact + objdump-probed (`3C01800A 03E00008
+    AC2436A0`). **13 delay-slot members remain** — blocked on per-global
+    typing evidence (same bar as pre-jr members), NOT on the tool.
+  - **sb-sh-five: RECLASSIFIED — never tool-blocked.** ROM words show sb/sh
+    macro stores stay **pre-jr with a nop slot** (func_80033A2C sb,
+    func_800C6ED8/C6EE8 sh, func_800C6EC0 dual-sh; func_8001A374 has a
+    cc1-filled `li` slot). Current maspsx already emits that shape; the patch
+    deliberately does not touch sb/sh. Remaining work is typing + integration,
+    toolchain-independent.
   - **Still open (typing):** remaining opaque-word (`D_800A1868` other writers).
 - **`lui;ori`:** **CAPABILITY-VERIFIED** — not a blocker. Constant-heavy
   computational functions (mult/div/mask, e.g. ÷100 via `0x51EB851F`) are
@@ -109,7 +130,8 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
    `TYPING-POLICY` (opaque 32-bit word; use-site found, no narrowing possible),
    or `DECISION-BLOCKED` (write-only; no reader). A use-site is not a type-site
    (`func_800405A4` lesson). Re-check after every reader phase.
-   `5EF-delay-slot` / `sb-sh-five` remain tool-blocked.
+   `5EF-delay-slot` tool side **SOLVED** (5EF-pilot); `sb-sh-five` reclassified
+   typing-only.
 
 ## Resolved blockers
 
@@ -117,6 +139,11 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 - **Maspsx non-TTY hang:** **SOLVED** (`</dev/null` in `era_compile`).
 - **`lui;ori` large-literal synthesis:** **CAPABILITY-VERIFIED** (scratch probe;
   both sign cases; no flag change).
+- **5EF delay-slot (sw in `j $31` slot):** **SOLVED in 5EF-pilot** by the
+  vendored maspsx LOCAL PATCH (`MASPSX_FILL_STORE_DELAY_SLOT=1`). Key evidence:
+  `func_8003FFAC` vs `func_8007FBC0` — identical C, different ROM scheduling
+  (pre-jr+nop vs in-slot) ⇒ original units assembled under different ASPSX
+  scheduling; behavior is opt-in per leaf. sb/sh never fill (ROM-proven).
 
 ## History (append-only, truncated)
 
@@ -138,6 +165,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 | 5EJ-d8009d28c-state | 189 | `D_8009D28C` int-state setters `17FDC`/`17FF0`/`192B8`/`192C8` |
 | 5EK-d8009d270-bitwise | 191 | `D_8009D270` unsigned flags setters `87198`/`87414` |
 | lui-ori probe | 191 | Large-literal `lui;ori` CAPABILITY-VERIFIED (docs only) |
+| 5EF-pilot | 192 | Vendored maspsx LOCAL PATCH (sw delay-slot fill); `func_8007FBC0` integrated |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

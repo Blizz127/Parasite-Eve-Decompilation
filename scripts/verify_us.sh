@@ -717,7 +717,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80087198.c" && -f "$ROOT/src/func_80087414.c" ]]; then
+if [[ -f "$ROOT/src/func_8007FBC0.c" ]]; then
+    echo "C conversion: Phase 5EF-pilot — 192 leaves (+ delay-slot sw setter 7FBC0; maspsx LOCAL PATCH MASPSX_FILL_STORE_DELAY_SLOT=1)"
+    echo "  sources: src/func_8007FBC0.c (+ prior through 5EK)"
+elif [[ -f "$ROOT/src/func_80087198.c" && -f "$ROOT/src/func_80087414.c" ]]; then
     echo "C conversion: Phase 5EK-d8009d270-bitwise — 191 leaves (+ 2 D_8009D270 unsigned flags setters 87198/87414)"
     echo "  sources: src/func_80087198.c src/func_80087414.c (+ prior through 5EJ)"
 elif [[ -f "$ROOT/src/func_80017FDC.c" && -f "$ROOT/src/func_80017FF0.c" && -f "$ROOT/src/func_800192B8.c" && -f "$ROOT/src/func_800192C8.c" ]]; then

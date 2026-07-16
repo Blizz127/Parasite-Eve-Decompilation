@@ -399,6 +399,13 @@ segments:
       # lui/lbu/jr/nop on D_8009B580. Plain -O1 matches.
       # Mid-6FF88 carve: prefix 0x480, C 0x10, resume 70418.s 0x94.
       - [0x6FF88, asm]
+      # Phase 5EF-pilot: C leaf func_8007FBC0 — VRAM 0x8007FBC0, size 0xC.
+      # Delay-slot $at sw setter: D_800A36A0 = cb (void (*)(void), jalr proof
+      # in 704BC.s). ROM: lui/jr/sw — sw in the return delay slot.
+      # Era -O2 -G0 + MASPSX_FILL_STORE_DELAY_SLOT=1 (maspsx LOCAL PATCH).
+      # Mid-6FF88 carve: prefix 0x438, C 0xC, resume 703CC.s 0x3C.
+      - [0x703C0, c, func_8007FBC0]
+      - [0x703CC, asm]
       - [0x70408, c, func_8007FC08]
       # Phase 5BF: C leaf func_8007FC18 — VRAM 0x8007FC18, size 0x10.
       # File span 0x70418–0x70428 exclusive. Unsigned-byte global getter:

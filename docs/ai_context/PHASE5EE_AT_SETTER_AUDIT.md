@@ -52,7 +52,11 @@ simple setter and stayed out. The other 29 functions remain blocked on
 global-type evidence; matching store width alone does not prove signedness,
 pointer-ness, or the intended declaration.
 
-Batching beyond the one integrated member is blocked on both delay-slot shape
-and global types. Each future member requires declaration evidence and an
-exact integrated rebuild. No standalone probe result is to be called
-integrated.
+Batching beyond the one integrated member was blocked on both delay-slot shape
+and global types. **Update (5EF-pilot):** the delay-slot shape is SOLVED — the
+vendored maspsx LOCAL PATCH (`MASPSX_FILL_STORE_DELAY_SLOT=1`) fills the
+`j $31` slot with the trailing absolute `sw`, and `func_8007FBC0` integrated
+exact (leaf 192). The two negative members above (`func_8007DEA4`,
+`func_80080930`) are now unblockable on the tool side; what remains per member
+is declaration evidence and an exact integrated rebuild, as stated below.
+No standalone probe result is to be called integrated.

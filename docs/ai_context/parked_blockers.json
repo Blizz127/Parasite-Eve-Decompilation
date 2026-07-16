@@ -2,8 +2,8 @@
   "blockers": [
     {
       "id": "5EF-delay-slot",
-      "status": "PARKED",
-      "note": "13 members; maspsx forces noreorder+nop, won't fill jr slot. Fix=maspsx delay-slot scheduling + full re-gate."
+      "status": "TOOL-SOLVED-PILOT-INTEGRATED",
+      "note": "14 members; maspsx forced noreorder+nop, would not fill the jr slot. Fix landed: vendored maspsx LOCAL PATCH (tools/era/maspsx/maspsx/__init__.py, opt-in env MASPSX_FILL_STORE_DELAY_SLOT=1) expands an absolute sw macro before a bare j $31 into lui/j/sw-in-slot. sw only: sb/sh stay pre-jr (ROM-proven). Evidence: func_8003FFAC vs func_8007FBC0 (identical C, different ROM scheduling) => per-leaf opt-in, default OFF. Pilot func_8007FBC0 integrated exact (D_800A36A0 = void (*)(void), jalr proof in 704BC.s; leaf 192). Remaining 13 members are blocked on per-global typing evidence, NOT on the tool."
     },
     {
       "id": "weak-int-ready",
@@ -170,8 +170,8 @@
     },
     {
       "id": "sb-sh-five",
-      "status": "PARKED",
-      "note": "likely same delay-slot answer as 5EF."
+      "status": "RECLASSIFIED-TYPING-ONLY",
+      "note": "ROM words prove sb/sh macro stores stay PRE-JR with a nop slot (func_80033A2C sb; func_800C6ED8/C6EE8 sh; func_800C6EC0 dual-sh; func_8001A374 has a cc1-filled li slot). Never the same delay-slot answer as 5EF: current maspsx already emits the shape; the 5EF patch deliberately skips sb/sh. Remaining work is per-global typing + integration."
     },
     {
       "id": "lui-ori",
