@@ -40,7 +40,9 @@ doing anything**.
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;
-`lui;ori` constant synthesis remains untested and unqueued. **`scripts/setup_era.sh`**
+`lui;ori` large-literal synthesis is **CAPABILITY-VERIFIED** (both bit15 sign
+cases; cc1 emits PSY-Q `li` high + `ori` low natively under 2.21 +
+`--dont-expand-li`). **`scripts/setup_era.sh`**
 fetches `gcc-2.7.2-psx` (decompals/
 old-gcc) + `maspsx` into git-ignored `tools/era/`; `build_us.sh`'s `era_compile`
 runs `cpp`→`cc1`→`maspsx --aspsx-version=2.21 --dont-expand-li`→`as` **per-file**

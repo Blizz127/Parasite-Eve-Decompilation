@@ -175,8 +175,10 @@
     },
     {
       "id": "lui-ori",
-      "status": "UNINVENTORIED",
-      "note": "never probed."
+      "status": "CAPABILITY-VERIFIED",
+      "rationale": "Large 32-bit literal synthesis (lui;ori) verified ROM-exact under era 2.21 + --dont-expand-li, for both bit15-clear and bit15-set low halves. Tested 0xFFF003FF (clear), 0x51EB851F (set, \u00f7100 magic), 0x000FFC00 (set) vs ROM opcode+immediate fields. cc1 emits the PSY-Q li-high + ori-low split natively; GNU as expands high-only li to lui; feared lui;ori-vs-lui;addiu divergence did not occur. No flag change. Not a blocker \u2014 constant-heavy computational functions are approachable as a separate phase.",
+      "evidence": "scratch probe /tmp/lui_ori_probe_* (investigation-only; no leaf integration)",
+      "note": "Capability, not a leaf inventory. Integration of mult/div/mask functions that use these constants is a future phase."
     }
   ]
 }

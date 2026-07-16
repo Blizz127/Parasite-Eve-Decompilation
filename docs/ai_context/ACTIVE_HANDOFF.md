@@ -7,8 +7,8 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5ek-d8009d270-bitwise` (uncommitted) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EK-d8009d270-bitwise** | `scripts/verify_us.sh` summary |
+| Branch / tip | `main` @ `d447f21` (docs dirty: lui-ori CAPABILITY-VERIFIED) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EK + lui-ori capability** | `scripts/verify_us.sh` summary |
 | Matching C leaves | **191** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **133** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
 | Era leaf compiles | **35** | `grep -c '^era_compile ' scripts/build_us.sh` |
@@ -30,8 +30,10 @@ are git-ignored inputs — never commit them.
   cpp → cc1 → maspsx → GNU as, typically `-O2 -G0` (some leaves `-O1 -G0`).
 - Era maspsx: `ERA_ASPSX_VER=2.21` + `--dont-expand-li`. **Why:**
   `expand_load_immediate` turns positive small `li` into `ori`; ROM wants
-  `addiu`. Defer `li` expansion to GNU as. Do **not** bump aspsx-version
-  casually — that also flips `nop_at_expansion` / `addiu_at`.
+  `addiu`. Defer `li` expansion to GNU as. Same config also preserves
+  large-literal `lui;ori` (cc1 emits PSY-Q `li` high + `ori` low natively).
+  Do **not** bump aspsx-version casually — that also flips `nop_at_expansion`
+  / `addiu_at`.
 - Maspsx stdin: closed with `</dev/null` in `era_compile` (non-TTY hang under
   agent sockets). Bare `scripts/build_us.sh` is fine.
 
@@ -61,11 +63,10 @@ yaml-only and still works when asm/ is stale.
 | `$v0` / `$v1` allocation | Proven 5EC / 5ED (sb+ret0 reuse) |
 | `li` const materialization (`addiu` not `ori`) | Proven 5EC via `--dont-expand-li` |
 | `$at` absolute `sw` macro expansion | Proven by scratch probe; integrated exact in 5EE |
-| `lui;ori` constant synthesis | **UNTESTED AND UNQUEUED** — requires its own probe |
+| `lui;ori` large-literal synthesis | **PROVEN** (capability probe): both bit15-clear and bit15-set; cc1 emits PSY-Q `li` high + `ori` low; ROM-exact under 2.21 + `--dont-expand-li` |
 
-The “~290 era-blocked functions” figure from the 5EA commit message is an
-**ESTIMATE**, partially supported by fingerprints above — **not** a verified
-inventory. Do not treat it as a countdown.
+All four fingerprints from the original 5EA era claim are now proven in bytes.
+The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a countdown.
 
 ## Known-open families
 
@@ -73,26 +74,21 @@ inventory. Do not treat it as a countdown.
 - **`$at` absolute `sw` (pre-jr):** population counter committed
   (`tools/analysis/at_absolute_store_counter.py`): **18 pre-jr** / 14 delay-slot /
   5 sb-sh. Weak-int policy **NO**.
-  - **Pinned by 5EG-readers (not setters yet):**
+  - **Pinned by 5EG-readers:**
     - `D_8009D240` = `unsigned short *`, `D_8009D260` = `unsigned char *`
       via `func_8008AB1C` (era `-O1 -G0`).
-    - `D_800A1870` = `void (*)(void)` via `func_80042B6C` (era `-O2 -G0`);
-      `func_80042BC8` decl corrected (emission unchanged).
-  - **`func_80085728` integrated** (dual pre-jr store; types from `func_8008AB1C`).
-  - **5EI READY-FROM-READER integrated:** `func_80042B38`/`50` (`D_800A1870`
-    fn-ptr + `D_800A1874` int); `func_80042910` dual clear (`D_800A1860` int +
-    `D_800A1868` u32 decl option a). Fn-ptr type matched cleanly.
-  - **5EJ integrated:** `D_8009D28C` = `int` state (READY-FROM-READER). Four
-    setters `17FDC`/`17FF0`/`192B8`/`192C8`. Leaf arithmetic: **185 + 4 = 189**.
-  - **5EK integrated:** `D_8009D270` = `unsigned int` flags (READY-FROM-BITWISE;
-    `andi` 1/2 + clear-bit). Two setters `87198`/`87414` (store 1/2, return 0;
-    sb+ret0). Leaf arithmetic: **189 + 2 = 191**.
-  - **Still open:** `lui-ori` probe; 5EF/sb-sh; remaining opaque-word
-    (`D_800A1868` other writers).
-  - **5EF:** delay-slot `sw` (incl. `func_8007DEA4` / `func_80080930`) separate.
-- **`lui;ori`:** separate family; untested and unqueued — next investigation.
+    - `D_800A1870` = `void (*)(void)` via `func_80042B6C` (era `-O2 -G0`).
+  - **Integrated:** `func_80085728`; 5EI readers-typed trio; 5EJ `D_8009D28C`
+    int-state (4); 5EK `D_8009D270` unsigned flags (2). Leaf count **191**.
+  - **Still open (tool):** 5EF-delay-slot / sb-sh-five — maspsx will not fill
+    the `jr` delay slot (real limitation, not a typing question).
+  - **Still open (typing):** remaining opaque-word (`D_800A1868` other writers).
+- **`lui;ori`:** **CAPABILITY-VERIFIED** — not a blocker. Constant-heavy
+  computational functions (mult/div/mask, e.g. ÷100 via `0x51EB851F`) are
+  approachable as a **separate future phase**; synthesis itself is solved.
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not
-  inventoried here.
+  inventoried here. Path forward is matching real logic, not harvesting
+  trivial setters.
 
 ## Standing policy
 
@@ -119,6 +115,8 @@ inventory. Do not treat it as a countdown.
 
 - **Phase 5I** delay-slot (`move`/`or` vs `addu`): **SOLVED in 5EC** by era.
 - **Maspsx non-TTY hang:** **SOLVED** (`</dev/null` in `era_compile`).
+- **`lui;ori` large-literal synthesis:** **CAPABILITY-VERIFIED** (scratch probe;
+  both sign cases; no flag change).
 
 ## History (append-only, truncated)
 
@@ -139,6 +137,7 @@ inventory. Do not treat it as a countdown.
 | 5EI-ready-from-reader | 185 | READY-FROM-READER setters `42910`/`42B38`/`42B50` |
 | 5EJ-d8009d28c-state | 189 | `D_8009D28C` int-state setters `17FDC`/`17FF0`/`192B8`/`192C8` |
 | 5EK-d8009d270-bitwise | 191 | `D_8009D270` unsigned flags setters `87198`/`87414` |
+| lui-ori probe | 191 | Large-literal `lui;ori` CAPABILITY-VERIFIED (docs only) |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
