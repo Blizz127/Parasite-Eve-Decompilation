@@ -45,5 +45,13 @@ __pycache__/
 include/*.inc
 include/*.h
 
-# Era compiler toolchain (fetched by scripts/setup_era.sh)
-tools/era/
+# Era compiler toolchain (fetched by scripts/setup_era.sh) — ignore everything,
+# EXCEPT the maspsx package file(s) that carry local patches. Git cannot
+# re-include files inside an ignored directory, so this is written as
+# per-level negations. setup_era.sh re-clones upstream AROUND the tracked file.
+tools/era/*
+!tools/era/maspsx/
+tools/era/maspsx/*
+!tools/era/maspsx/maspsx/
+tools/era/maspsx/maspsx/*
+!tools/era/maspsx/maspsx/__init__.py

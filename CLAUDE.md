@@ -47,7 +47,13 @@ fetches `gcc-2.7.2-psx` (decompals/
 old-gcc) + `maspsx` into git-ignored `tools/era/`; `build_us.sh`'s `era_compile`
 runs `cpp`→`cc1`→`maspsx --aspsx-version=2.21 --dont-expand-li`→`as` **per-file**
 (maspsx `li`→`ori` for positive small consts; ROM wants `addiu` — defer to GNU as),
-so GCC-14.2 leaves stay byte-identical. **Opaque-word ruling:** globals with only
+so GCC-14.2 leaves stay byte-identical. **Vendored maspsx LOCAL PATCH:**
+`tools/era/maspsx/maspsx/__init__.py` is repo-tracked (`.gitignore` negations;
+`setup_era.sh` re-clones upstream AROUND it). Patch 1 = sw-store delay-slot fill:
+env `MASPSX_FILL_STORE_DELAY_SLOT=1` per `era_compile` line expands an absolute
+`sw $r,SYM` before a bare `j $31` into `lui $at` / `j $31` / `sw $r,%lo($at)`
+(5EF delay-slot family; sb/sh and multi-store epilogues stay pre-jr in ROM).
+**Opaque-word ruling:** globals with only
 bare 32-bit `sw`/`lw` use (no arith/pointer/bitwise) type as `unsigned int` —
 not the rejected sh/sb→int cheat. Integrated: 8 A182x setters
 (`func_80042BD8`…`func_80042C64`). **`D_8009D28C` = `int` state** (READY-FROM-READER;
