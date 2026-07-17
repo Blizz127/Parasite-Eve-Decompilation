@@ -37,7 +37,10 @@ fi
 # tree AROUND these and restores them from git if absent — upstream must never
 # overwrite them, and no .git may be left behind (an embedded repo would make
 # them untrackable by the parent repo).
-MASPSX_TRACKED=("maspsx/__init__.py")
+MASPSX_TRACKED=(
+    "maspsx/__init__.py"
+    "tests/test_fill_store_delay_slot.py"
+)
 
 if [[ -f "$ERA/maspsx/maspsx.py" ]]; then
     echo "OK  maspsx present: $ERA/maspsx"

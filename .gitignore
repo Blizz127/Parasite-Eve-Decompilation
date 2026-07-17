@@ -55,3 +55,6 @@ tools/era/maspsx/*
 !tools/era/maspsx/maspsx/
 tools/era/maspsx/maspsx/*
 !tools/era/maspsx/maspsx/__init__.py
+!tools/era/maspsx/tests/
+tools/era/maspsx/tests/*
+!tools/era/maspsx/tests/test_fill_store_delay_slot.py

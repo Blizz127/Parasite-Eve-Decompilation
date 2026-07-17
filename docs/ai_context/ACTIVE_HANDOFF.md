@@ -7,7 +7,7 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5ef-pilot-delay-slot-fill` (uncommitted) | `git branch --show-current` / `git log --oneline -1` |
+| Branch / tip | `main` @ `89a8457` | `git branch --show-current` / `git log --oneline -1` |
 | Phase | **5EF-pilot (maspsx delay-slot sw fill)** | `scripts/verify_us.sh` summary |
 | Matching C leaves | **192** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **134** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
