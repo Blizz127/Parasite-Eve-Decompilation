@@ -2,8 +2,8 @@
   "blockers": [
     {
       "id": "5EF-delay-slot",
-      "status": "TOOL-SOLVED-PILOT-INTEGRATED",
-      "note": "14 members; maspsx forced noreorder+nop, would not fill the jr slot. Fix landed: vendored maspsx LOCAL PATCH (tools/era/maspsx/maspsx/__init__.py, opt-in env MASPSX_FILL_STORE_DELAY_SLOT=1) expands an absolute sw macro before a bare j $31 into lui/j/sw-in-slot. sw only: sb/sh stay pre-jr (ROM-proven). Evidence: func_8003FFAC vs func_8007FBC0 (identical C, different ROM scheduling) => per-leaf opt-in, default OFF. Pilot func_8007FBC0 integrated exact (D_800A36A0 = void (*)(void), jalr proof in 704BC.s; leaf 192). Remaining 13 members are blocked on per-global typing evidence, NOT on the tool."
+      "status": "INTEGRATED",
+      "note": "Phase 5EF closed all 14 members at leaf 205. Vendored maspsx LOCAL PATCH (tools/era/maspsx/maspsx/__init__.py, opt-in env MASPSX_FILL_STORE_DELAY_SLOT=1) expands an absolute sw macro before a bare j $31 into lui/j/sw-in-slot. sw only: sb/sh stay pre-jr (ROM-proven). Pilot func_8007FBC0 plus the remaining 13 typed members rebuild exact. Types: seven int state/value globals, four callback pointers proven by jalr use, and one write-only unsigned 32-bit opaque word; repeated globals account for 13 leaves. Evidence and leaf map: docs/ai_context/PHASE5EF_TYPING.md."
     },
     {
       "id": "weak-int-ready",

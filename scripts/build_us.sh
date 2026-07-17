@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 5EF-pilot: Disc 1 rebuild with 192 C leaves (delay-slot sw setter + era)
+# Phase 5EF: Disc 1 rebuild with 205 C leaves (delay-slot sw family + era)
 # (prior 98 + 5 memset/memcpy countdown leaves through func_8008D820).
 #
 # Assembles splat-generated .s → .o with MIPS LE binutils, compiles the
@@ -115,7 +115,8 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # 5F3E4:    0x5F3E4 → 0x645E8 = 0x5204
 # C 73DE8:  0x645E8 → 0x645F8 = 0x10
 # C 73DF8:  0x645F8 → 0x64610 = 0x18
-# 64610:    0x64610 → 0x65228 = 0xC18
+# 64610:    0x64610 → 0x64B30 = 0x520
+# C 74A14:  0x65214 → 0x65228 = 0x14
 # C 74A28:  0x65228 → 0x65238 = 0x10
 # 65238:    0x65238 → 0x654B8 = 0x280
 # C 74CB8:  0x654B8 → 0x654C8 = 0x10
@@ -126,13 +127,24 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # C 7A334:  0x6AB34 → 0x6AB44 = 0x10
 # C 7A344:  0x6AB44 → 0x6AB54 = 0x10
 # C 7A354:  0x6AB54 → 0x6AB60 = 0xC
-# 6AB60:    0x6AB60 → 0x6E6B0 = 0x3B50
+# 6AB60:    0x6AB60 → 0x6ABEC = 0x8C
+# C 7A3EC:  0x6ABEC → 0x6AC00 = 0x14
+# 6AC00:    0x6AC00 → 0x6ACA8 = 0xA8
+# C 7A4A8:  0x6ACA8 → 0x6ACBC = 0x14
+# C 7A4BC:  0x6ACBC → 0x6ACD0 = 0x14
+# 6ACD0:    0x6ACD0 → 0x6C930 = 0x1C60
+# C 7C130:  0x6C930 → 0x6C93C = 0xC
+# 6C93C:    0x6C93C → 0x6E6A4 = 0x1D68
+# C 7DEA4:  0x6E6A4 → 0x6E6B0 = 0xC
 # C 7DEB0:  0x6E6B0 → 0x6E6C0 = 0x10
 # 6E6C0:    0x6E6C0 → 0x6FF78 = 0x18B8
 # C 7F778:  0x6FF78 → 0x6FF88 = 0x10
 # 6FF88:    0x6FF88 → 0x703C0 = 0x438
 # C 7FBC0:  0x703C0 → 0x703CC = 0xC
-# 703CC:    0x703CC → 0x70408 = 0x3C
+# C 7FBCC:  0x703CC → 0x703D8 = 0xC
+# C 7FBD8:  0x703D8 → 0x703E4 = 0xC
+# C 7FBE4:  0x703E4 → 0x703F0 = 0xC
+# 703F0:    0x703F0 → 0x70408 = 0x18
 # C 7FC08:  0x70408 → 0x70418 = 0x10
 # C 7FC18:  0x70418 → 0x70428 = 0x10
 # C 7FC28:  0x70428 → 0x70434 = 0xC
@@ -141,11 +153,18 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # C 7FC54:  0x70454 → 0x70464 = 0x10
 # 70464:    0x70464 → 0x704AC = 0x48
 # C 7FCAC:  0x704AC → 0x704BC = 0x10
-# 704BC:    0x704BC → 0x71140 = 0xC84
+# 704BC:    0x704BC → 0x71130 = 0xC74
+# C 80930:  0x71130 → 0x71140 = 0x10
 # C 80940:  0x71140 → 0x71150 = 0x10
-# 71150:    0x71150 → 0x72AAC = 0x195C
+# 71150:    0x71150 → 0x714C8 = 0x378
+# C 80CC8:  0x714C8 → 0x714DC = 0x14
+# 714DC:    0x714DC → 0x71A54 = 0x578
+# C 81254:  0x71A54 → 0x71A68 = 0x14
+# 71A68:    0x71A68 → 0x72AAC = 0x1044
 # C 822AC:  0x72AAC → 0x72ABC = 0x10
-# 72ABC:    0x72ABC → 0x778E0 = 0x4E24
+# 72ABC:    0x72ABC → 0x734DC = 0xA20
+# C 82CDC:  0x734DC → 0x734F0 = 0x14
+# 734F0:    0x734F0 → 0x73DA4 = 0x8B4
 # C 870E0:  0x778E0 → 0x778F0 = 0x10
 # 778F0:    0x778F0 → 0x77998 = 0xA8
 # C 87198:  0x77998 → 0x779AC = 0x14
@@ -385,7 +404,8 @@ SIZE_64B54=0x150
 SIZE_C_744A4=0x24
 SIZE_64CC8=0x284
 SIZE_C_7474C=0x24
-SIZE_64F70=0x2b8
+SIZE_64F70=0x2a4
+SIZE_C_74A14=0x14
 SIZE_C_74A28=0x10
 SIZE_65238=0x280
 SIZE_C_74CB8=0x10
@@ -416,13 +436,24 @@ SIZE_C_7A324=0x10
 SIZE_C_7A334=0x10
 SIZE_C_7A344=0x10
 SIZE_C_7A354=0xc
-SIZE_6AB60=0x3b50
+SIZE_6AB60=0x8c
+SIZE_C_7A3EC=0x14
+SIZE_6AC00=0xa8
+SIZE_C_7A4A8=0x14
+SIZE_C_7A4BC=0x14
+SIZE_6ACD0=0x1c60
+SIZE_C_7C130=0xc
+SIZE_6C93C=0x1d68
+SIZE_C_7DEA4=0xc
 SIZE_C_7DEB0=0x10
 SIZE_6E6C0=0x18b8
 SIZE_C_7F778=0x10
 SIZE_6FF88=0x438
 SIZE_C_7FBC0=0xc
-SIZE_703CC=0x3c
+SIZE_C_7FBCC=0xc
+SIZE_C_7FBD8=0xc
+SIZE_C_7FBE4=0xc
+SIZE_703F0=0x18
 SIZE_C_7FC08=0x10
 SIZE_C_7FC18=0x10
 SIZE_C_7FC28=0xc
@@ -431,11 +462,18 @@ SIZE_C_7FC44=0x10
 SIZE_C_7FC54=0x10
 SIZE_70464=0x48
 SIZE_C_7FCAC=0x10
-SIZE_704BC=0xc84
+SIZE_704BC=0xc74
+SIZE_C_80930=0x10
 SIZE_C_80940=0x10
-SIZE_71150=0x195c
+SIZE_71150=0x378
+SIZE_C_80CC8=0x14
+SIZE_714DC=0x578
+SIZE_C_81254=0x14
+SIZE_71A68=0x1044
 SIZE_C_822AC=0x10
-SIZE_72ABC=0x12e8
+SIZE_72ABC=0xa20
+SIZE_C_82CDC=0x14
+SIZE_734F0=0x8b4
 SIZE_C_835A4=0xc
 SIZE_C_835B0=0x10
 SIZE_73DC0=0x8b0
@@ -776,6 +814,7 @@ OBJECTS=(
     "build/asm/disc1/64CC8.s.o"
     "build/src/func_8007474C.c.o"
     "build/asm/disc1/64F70.s.o"
+    "build/src/func_80074A14.c.o"
     "build/src/func_80074A28.c.o"
     "build/asm/disc1/65238.s.o"
     "build/src/func_80074CB8.c.o"
@@ -807,12 +846,23 @@ OBJECTS=(
     "build/src/func_8007A344.c.o"
     "build/src/func_8007A354.c.o"
     "build/asm/disc1/6AB60.s.o"
+    "build/src/func_8007A3EC.c.o"
+    "build/asm/disc1/6AC00.s.o"
+    "build/src/func_8007A4A8.c.o"
+    "build/src/func_8007A4BC.c.o"
+    "build/asm/disc1/6ACD0.s.o"
+    "build/src/func_8007C130.c.o"
+    "build/asm/disc1/6C93C.s.o"
+    "build/src/func_8007DEA4.c.o"
     "build/src/func_8007DEB0.c.o"
     "build/asm/disc1/6E6C0.s.o"
     "build/src/func_8007F778.c.o"
     "build/asm/disc1/6FF88.s.o"
     "build/src/func_8007FBC0.c.o"
-    "build/asm/disc1/703CC.s.o"
+    "build/src/func_8007FBCC.c.o"
+    "build/src/func_8007FBD8.c.o"
+    "build/src/func_8007FBE4.c.o"
+    "build/asm/disc1/703F0.s.o"
     "build/src/func_8007FC08.c.o"
     "build/src/func_8007FC18.c.o"
     "build/src/func_8007FC28.c.o"
@@ -822,10 +872,17 @@ OBJECTS=(
     "build/asm/disc1/70464.s.o"
     "build/src/func_8007FCAC.c.o"
     "build/asm/disc1/704BC.s.o"
+    "build/src/func_80080930.c.o"
     "build/src/func_80080940.c.o"
     "build/asm/disc1/71150.s.o"
+    "build/src/func_80080CC8.c.o"
+    "build/asm/disc1/714DC.s.o"
+    "build/src/func_80081254.c.o"
+    "build/asm/disc1/71A68.s.o"
     "build/src/func_800822AC.c.o"
     "build/asm/disc1/72ABC.s.o"
+    "build/src/func_80082CDC.c.o"
+    "build/asm/disc1/734F0.s.o"
     "build/src/func_800835A4.c.o"
     "build/src/func_800835B0.c.o"
     "build/asm/disc1/73DC0.s.o"
@@ -1107,6 +1164,7 @@ SOURCES=(
     "asm/disc1/64CC8.s"
     "src/func_8007474C.c"
     "asm/disc1/64F70.s"
+    "src/func_80074A14.c"
     "src/func_80074A28.c"
     "asm/disc1/65238.s"
     "src/func_80074CB8.c"
@@ -1138,12 +1196,23 @@ SOURCES=(
     "src/func_8007A344.c"
     "src/func_8007A354.c"
     "asm/disc1/6AB60.s"
+    "src/func_8007A3EC.c"
+    "asm/disc1/6AC00.s"
+    "src/func_8007A4A8.c"
+    "src/func_8007A4BC.c"
+    "asm/disc1/6ACD0.s"
+    "src/func_8007C130.c"
+    "asm/disc1/6C93C.s"
+    "src/func_8007DEA4.c"
     "src/func_8007DEB0.c"
     "asm/disc1/6E6C0.s"
     "src/func_8007F778.c"
     "asm/disc1/6FF88.s"
     "src/func_8007FBC0.c"
-    "asm/disc1/703CC.s"
+    "src/func_8007FBCC.c"
+    "src/func_8007FBD8.c"
+    "src/func_8007FBE4.c"
+    "asm/disc1/703F0.s"
     "src/func_8007FC08.c"
     "src/func_8007FC18.c"
     "src/func_8007FC28.c"
@@ -1153,10 +1222,17 @@ SOURCES=(
     "asm/disc1/70464.s"
     "src/func_8007FCAC.c"
     "asm/disc1/704BC.s"
+    "src/func_80080930.c"
     "src/func_80080940.c"
     "asm/disc1/71150.s"
+    "src/func_80080CC8.c"
+    "asm/disc1/714DC.s"
+    "src/func_80081254.c"
+    "asm/disc1/71A68.s"
     "src/func_800822AC.c"
     "asm/disc1/72ABC.s"
+    "src/func_80082CDC.c"
+    "asm/disc1/734F0.s"
     "src/func_800835A4.c"
     "src/func_800835B0.c"
     "asm/disc1/73DC0.s"
@@ -1448,13 +1524,19 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/68438.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/68458.s.o asm/disc1/68458.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/68478.s.o asm/disc1/68478.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/6AB60.s.o asm/disc1/6AB60.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/6AC00.s.o asm/disc1/6AC00.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/6ACD0.s.o asm/disc1/6ACD0.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/6C93C.s.o asm/disc1/6C93C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/6E6C0.s.o asm/disc1/6E6C0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/6FF88.s.o asm/disc1/6FF88.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/703CC.s.o asm/disc1/703CC.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/703F0.s.o asm/disc1/703F0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/70464.s.o asm/disc1/70464.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/704BC.s.o asm/disc1/704BC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/71150.s.o asm/disc1/71150.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/714DC.s.o asm/disc1/714DC.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/71A68.s.o asm/disc1/71A68.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/72ABC.s.o asm/disc1/72ABC.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/734F0.s.o asm/disc1/734F0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/73DC0.s.o asm/disc1/73DC0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/74684.s.o asm/disc1/74684.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/746F8.s.o asm/disc1/746F8.s
@@ -1503,7 +1585,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEBB4.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEC70.s.o asm/disc1/BEC70.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/C5060.s.o asm/disc1/C5060.s
 
-step "Compile C leaves (192 C leaves (incl. gp batches + era + 5EF-pilot))"
+step "Compile C leaves (205 C leaves (incl. gp batches + era + 5EF))"
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80017E9C.c.o src/func_80017E9C.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019050.c.o src/func_80019050.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019058.c.o src/func_80019058.c
@@ -1593,7 +1675,20 @@ era_compile src/func_80042C64.c build/src/func_80042C64.c.o -O2 -G0
 # 5EF delay-slot family: maspsx LOCAL PATCH opt-in (sw store fills the j $31
 # delay slot; see tools/era/maspsx/maspsx/__init__.py patch log). Env var flows
 # through era_compile to the maspsx child process.
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_80074A14.c build/src/func_80074A14.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007A3EC.c build/src/func_8007A3EC.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007A4A8.c build/src/func_8007A4A8.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007A4BC.c build/src/func_8007A4BC.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007C130.c build/src/func_8007C130.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007DEA4.c build/src/func_8007DEA4.c.o -O2 -G0
 MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007FBC0.c build/src/func_8007FBC0.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007FBCC.c build/src/func_8007FBCC.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007FBD8.c build/src/func_8007FBD8.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007FBE4.c build/src/func_8007FBE4.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_80080930.c build/src/func_80080930.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_80080CC8.c build/src/func_80080CC8.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_80081254.c build/src/func_80081254.c.o -O2 -G0
+MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_80082CDC.c build/src/func_80082CDC.c.o -O2 -G0
 era_compile src/func_80087198.c build/src/func_80087198.c.o -O2 -G0
 era_compile src/func_80087414.c build/src/func_80087414.c.o -O2 -G0
 era_compile src/func_8008AB1C.c build/src/func_8008AB1C.c.o -O1 -G0
@@ -1877,6 +1972,7 @@ python3 "$TRIM" build/src/func_800744A4.c.o .text "$SIZE_C_744A4"
 python3 "$TRIM" build/asm/disc1/64CC8.s.o .text "$SIZE_64CC8"
 python3 "$TRIM" build/src/func_8007474C.c.o .text "$SIZE_C_7474C"
 python3 "$TRIM" build/asm/disc1/64F70.s.o .text "$SIZE_64F70"
+python3 "$TRIM" build/src/func_80074A14.c.o .text "$SIZE_C_74A14"
 python3 "$TRIM" build/src/func_80074A28.c.o .text "$SIZE_C_74A28"
 python3 "$TRIM" build/asm/disc1/65238.s.o .text "$SIZE_65238"
 python3 "$TRIM" build/src/func_80074CB8.c.o .text "$SIZE_C_74CB8"
@@ -1908,12 +2004,23 @@ python3 "$TRIM" build/src/func_8007A334.c.o .text "$SIZE_C_7A334"
 python3 "$TRIM" build/src/func_8007A344.c.o .text "$SIZE_C_7A344"
 python3 "$TRIM" build/src/func_8007A354.c.o .text "$SIZE_C_7A354"
 python3 "$TRIM" build/asm/disc1/6AB60.s.o .text "$SIZE_6AB60"
+python3 "$TRIM" build/src/func_8007A3EC.c.o .text "$SIZE_C_7A3EC"
+python3 "$TRIM" build/asm/disc1/6AC00.s.o .text "$SIZE_6AC00"
+python3 "$TRIM" build/src/func_8007A4A8.c.o .text "$SIZE_C_7A4A8"
+python3 "$TRIM" build/src/func_8007A4BC.c.o .text "$SIZE_C_7A4BC"
+python3 "$TRIM" build/asm/disc1/6ACD0.s.o .text "$SIZE_6ACD0"
+python3 "$TRIM" build/src/func_8007C130.c.o .text "$SIZE_C_7C130"
+python3 "$TRIM" build/asm/disc1/6C93C.s.o .text "$SIZE_6C93C"
+python3 "$TRIM" build/src/func_8007DEA4.c.o .text "$SIZE_C_7DEA4"
 python3 "$TRIM" build/src/func_8007DEB0.c.o .text "$SIZE_C_7DEB0"
 python3 "$TRIM" build/asm/disc1/6E6C0.s.o .text "$SIZE_6E6C0"
 python3 "$TRIM" build/src/func_8007F778.c.o .text "$SIZE_C_7F778"
 python3 "$TRIM" build/asm/disc1/6FF88.s.o .text "$SIZE_6FF88"
 python3 "$TRIM" build/src/func_8007FBC0.c.o .text "$SIZE_C_7FBC0"
-python3 "$TRIM" build/asm/disc1/703CC.s.o .text "$SIZE_703CC"
+python3 "$TRIM" build/src/func_8007FBCC.c.o .text "$SIZE_C_7FBCC"
+python3 "$TRIM" build/src/func_8007FBD8.c.o .text "$SIZE_C_7FBD8"
+python3 "$TRIM" build/src/func_8007FBE4.c.o .text "$SIZE_C_7FBE4"
+python3 "$TRIM" build/asm/disc1/703F0.s.o .text "$SIZE_703F0"
 python3 "$TRIM" build/src/func_8007FC08.c.o .text "$SIZE_C_7FC08"
 python3 "$TRIM" build/src/func_8007FC18.c.o .text "$SIZE_C_7FC18"
 python3 "$TRIM" build/src/func_8007FC28.c.o .text "$SIZE_C_7FC28"
@@ -1923,10 +2030,17 @@ python3 "$TRIM" build/src/func_8007FC54.c.o .text "$SIZE_C_7FC54"
 python3 "$TRIM" build/asm/disc1/70464.s.o .text "$SIZE_70464"
 python3 "$TRIM" build/src/func_8007FCAC.c.o .text "$SIZE_C_7FCAC"
 python3 "$TRIM" build/asm/disc1/704BC.s.o .text "$SIZE_704BC"
+python3 "$TRIM" build/src/func_80080930.c.o .text "$SIZE_C_80930"
 python3 "$TRIM" build/src/func_80080940.c.o .text "$SIZE_C_80940"
 python3 "$TRIM" build/asm/disc1/71150.s.o .text "$SIZE_71150"
+python3 "$TRIM" build/src/func_80080CC8.c.o .text "$SIZE_C_80CC8"
+python3 "$TRIM" build/asm/disc1/714DC.s.o .text "$SIZE_714DC"
+python3 "$TRIM" build/src/func_80081254.c.o .text "$SIZE_C_81254"
+python3 "$TRIM" build/asm/disc1/71A68.s.o .text "$SIZE_71A68"
 python3 "$TRIM" build/src/func_800822AC.c.o .text "$SIZE_C_822AC"
 python3 "$TRIM" build/asm/disc1/72ABC.s.o .text "$SIZE_72ABC"
+python3 "$TRIM" build/src/func_80082CDC.c.o .text "$SIZE_C_82CDC"
+python3 "$TRIM" build/asm/disc1/734F0.s.o .text "$SIZE_734F0"
 python3 "$TRIM" build/src/func_800835A4.c.o .text "$SIZE_C_835A4"
 python3 "$TRIM" build/src/func_800835B0.c.o .text "$SIZE_C_835B0"
 python3 "$TRIM" build/asm/disc1/73DC0.s.o .text "$SIZE_73DC0"
@@ -2062,7 +2176,7 @@ ABS_LD="build/abs_syms.ld"
 # all .rodata) and is not used for the production pack.
 ROM_ORDER_LD="build/disc1_romorder.ld"
 cat >"$ROM_ORDER_LD" <<'LDEOF'
-/* Phase 5EF-pilot ROM-order link script (192 C leaves (incl. gp batches + era + 5EF-pilot)).
+/* Phase 5EF ROM-order link script (205 C leaves (incl. gp batches + era + 5EF)).
  * splat's linkers/disc1.ld places all .text then all .rodata (C layout).
  * PE1 image order is interleaved: prefix rodata, main text (with C leaves),
  * mid rodata, tail text (with C leaf).
@@ -2247,6 +2361,7 @@ SECTIONS
         build/asm/disc1/64CC8.s.o(.text)
         build/src/func_8007474C.c.o(.text)
         build/asm/disc1/64F70.s.o(.text)
+        build/src/func_80074A14.c.o(.text)
         build/src/func_80074A28.c.o(.text)
         build/asm/disc1/65238.s.o(.text)
         build/src/func_80074CB8.c.o(.text)
@@ -2278,12 +2393,23 @@ SECTIONS
         build/src/func_8007A344.c.o(.text)
         build/src/func_8007A354.c.o(.text)
         build/asm/disc1/6AB60.s.o(.text)
+        build/src/func_8007A3EC.c.o(.text)
+        build/asm/disc1/6AC00.s.o(.text)
+        build/src/func_8007A4A8.c.o(.text)
+        build/src/func_8007A4BC.c.o(.text)
+        build/asm/disc1/6ACD0.s.o(.text)
+        build/src/func_8007C130.c.o(.text)
+        build/asm/disc1/6C93C.s.o(.text)
+        build/src/func_8007DEA4.c.o(.text)
         build/src/func_8007DEB0.c.o(.text)
         build/asm/disc1/6E6C0.s.o(.text)
         build/src/func_8007F778.c.o(.text)
         build/asm/disc1/6FF88.s.o(.text)
         build/src/func_8007FBC0.c.o(.text)
-        build/asm/disc1/703CC.s.o(.text)
+        build/src/func_8007FBCC.c.o(.text)
+        build/src/func_8007FBD8.c.o(.text)
+        build/src/func_8007FBE4.c.o(.text)
+        build/asm/disc1/703F0.s.o(.text)
         build/src/func_8007FC08.c.o(.text)
         build/src/func_8007FC18.c.o(.text)
         build/src/func_8007FC28.c.o(.text)
@@ -2293,10 +2419,17 @@ SECTIONS
         build/asm/disc1/70464.s.o(.text)
         build/src/func_8007FCAC.c.o(.text)
         build/asm/disc1/704BC.s.o(.text)
+        build/src/func_80080930.c.o(.text)
         build/src/func_80080940.c.o(.text)
         build/asm/disc1/71150.s.o(.text)
+        build/src/func_80080CC8.c.o(.text)
+        build/asm/disc1/714DC.s.o(.text)
+        build/src/func_80081254.c.o(.text)
+        build/asm/disc1/71A68.s.o(.text)
         build/src/func_800822AC.c.o(.text)
         build/asm/disc1/72ABC.s.o(.text)
+        build/src/func_80082CDC.c.o(.text)
+        build/asm/disc1/734F0.s.o(.text)
         build/src/func_800835A4.c.o(.text)
         build/src/func_800835B0.c.o(.text)
         build/asm/disc1/73DC0.s.o(.text)
@@ -2574,6 +2707,7 @@ SECTIONS
         build/asm/disc1/64CC8.s.o(.data)
         build/src/func_8007474C.c.o(.data)
         build/asm/disc1/64F70.s.o(.data)
+        build/src/func_80074A14.c.o(.data)
         build/src/func_80074A28.c.o(.data)
         build/asm/disc1/65238.s.o(.data)
         build/src/func_80074CB8.c.o(.data)
@@ -2605,12 +2739,23 @@ SECTIONS
         build/src/func_8007A344.c.o(.data)
         build/src/func_8007A354.c.o(.data)
         build/asm/disc1/6AB60.s.o(.data)
+        build/src/func_8007A3EC.c.o(.data)
+        build/asm/disc1/6AC00.s.o(.data)
+        build/src/func_8007A4A8.c.o(.data)
+        build/src/func_8007A4BC.c.o(.data)
+        build/asm/disc1/6ACD0.s.o(.data)
+        build/src/func_8007C130.c.o(.data)
+        build/asm/disc1/6C93C.s.o(.data)
+        build/src/func_8007DEA4.c.o(.data)
         build/src/func_8007DEB0.c.o(.data)
         build/asm/disc1/6E6C0.s.o(.data)
         build/src/func_8007F778.c.o(.data)
         build/asm/disc1/6FF88.s.o(.data)
         build/src/func_8007FBC0.c.o(.data)
-        build/asm/disc1/703CC.s.o(.data)
+        build/src/func_8007FBCC.c.o(.data)
+        build/src/func_8007FBD8.c.o(.data)
+        build/src/func_8007FBE4.c.o(.data)
+        build/asm/disc1/703F0.s.o(.data)
         build/src/func_8007FC08.c.o(.data)
         build/src/func_8007FC18.c.o(.data)
         build/src/func_8007FC28.c.o(.data)
@@ -2620,10 +2765,17 @@ SECTIONS
         build/asm/disc1/70464.s.o(.data)
         build/src/func_8007FCAC.c.o(.data)
         build/asm/disc1/704BC.s.o(.data)
+        build/src/func_80080930.c.o(.data)
         build/src/func_80080940.c.o(.data)
         build/asm/disc1/71150.s.o(.data)
+        build/src/func_80080CC8.c.o(.data)
+        build/asm/disc1/714DC.s.o(.data)
+        build/src/func_80081254.c.o(.data)
+        build/asm/disc1/71A68.s.o(.data)
         build/src/func_800822AC.c.o(.data)
         build/asm/disc1/72ABC.s.o(.data)
+        build/src/func_80082CDC.c.o(.data)
+        build/asm/disc1/734F0.s.o(.data)
         build/src/func_800835A4.c.o(.data)
         build/src/func_800835B0.c.o(.data)
         build/asm/disc1/73DC0.s.o(.data)
@@ -2900,6 +3052,7 @@ SECTIONS
         build/asm/disc1/64CC8.s.o(.rodata)
         build/src/func_8007474C.c.o(.rodata)
         build/asm/disc1/64F70.s.o(.rodata)
+        build/src/func_80074A14.c.o(.rodata)
         build/src/func_80074A28.c.o(.rodata)
         build/asm/disc1/65238.s.o(.rodata)
         build/src/func_80074CB8.c.o(.rodata)
@@ -2931,12 +3084,23 @@ SECTIONS
         build/src/func_8007A344.c.o(.rodata)
         build/src/func_8007A354.c.o(.rodata)
         build/asm/disc1/6AB60.s.o(.rodata)
+        build/src/func_8007A3EC.c.o(.rodata)
+        build/asm/disc1/6AC00.s.o(.rodata)
+        build/src/func_8007A4A8.c.o(.rodata)
+        build/src/func_8007A4BC.c.o(.rodata)
+        build/asm/disc1/6ACD0.s.o(.rodata)
+        build/src/func_8007C130.c.o(.rodata)
+        build/asm/disc1/6C93C.s.o(.rodata)
+        build/src/func_8007DEA4.c.o(.rodata)
         build/src/func_8007DEB0.c.o(.rodata)
         build/asm/disc1/6E6C0.s.o(.rodata)
         build/src/func_8007F778.c.o(.rodata)
         build/asm/disc1/6FF88.s.o(.rodata)
         build/src/func_8007FBC0.c.o(.rodata)
-        build/asm/disc1/703CC.s.o(.rodata)
+        build/src/func_8007FBCC.c.o(.rodata)
+        build/src/func_8007FBD8.c.o(.rodata)
+        build/src/func_8007FBE4.c.o(.rodata)
+        build/asm/disc1/703F0.s.o(.rodata)
         build/src/func_8007FC08.c.o(.rodata)
         build/src/func_8007FC18.c.o(.rodata)
         build/src/func_8007FC28.c.o(.rodata)
@@ -2946,10 +3110,17 @@ SECTIONS
         build/asm/disc1/70464.s.o(.rodata)
         build/src/func_8007FCAC.c.o(.rodata)
         build/asm/disc1/704BC.s.o(.rodata)
+        build/src/func_80080930.c.o(.rodata)
         build/src/func_80080940.c.o(.rodata)
         build/asm/disc1/71150.s.o(.rodata)
+        build/src/func_80080CC8.c.o(.rodata)
+        build/asm/disc1/714DC.s.o(.rodata)
+        build/src/func_80081254.c.o(.rodata)
+        build/asm/disc1/71A68.s.o(.rodata)
         build/src/func_800822AC.c.o(.rodata)
         build/asm/disc1/72ABC.s.o(.rodata)
+        build/src/func_80082CDC.c.o(.rodata)
+        build/asm/disc1/734F0.s.o(.rodata)
         build/src/func_800835A4.c.o(.rodata)
         build/src/func_800835B0.c.o(.rodata)
         build/asm/disc1/73DC0.s.o(.rodata)
@@ -3226,6 +3397,7 @@ SECTIONS
         build/asm/disc1/64CC8.s.o(.bss)
         build/src/func_8007474C.c.o(.bss)
         build/asm/disc1/64F70.s.o(.bss)
+        build/src/func_80074A14.c.o(.bss)
         build/src/func_80074A28.c.o(.bss)
         build/asm/disc1/65238.s.o(.bss)
         build/src/func_80074CB8.c.o(.bss)
@@ -3257,12 +3429,23 @@ SECTIONS
         build/src/func_8007A344.c.o(.bss)
         build/src/func_8007A354.c.o(.bss)
         build/asm/disc1/6AB60.s.o(.bss)
+        build/src/func_8007A3EC.c.o(.bss)
+        build/asm/disc1/6AC00.s.o(.bss)
+        build/src/func_8007A4A8.c.o(.bss)
+        build/src/func_8007A4BC.c.o(.bss)
+        build/asm/disc1/6ACD0.s.o(.bss)
+        build/src/func_8007C130.c.o(.bss)
+        build/asm/disc1/6C93C.s.o(.bss)
+        build/src/func_8007DEA4.c.o(.bss)
         build/src/func_8007DEB0.c.o(.bss)
         build/asm/disc1/6E6C0.s.o(.bss)
         build/src/func_8007F778.c.o(.bss)
         build/asm/disc1/6FF88.s.o(.bss)
         build/src/func_8007FBC0.c.o(.bss)
-        build/asm/disc1/703CC.s.o(.bss)
+        build/src/func_8007FBCC.c.o(.bss)
+        build/src/func_8007FBD8.c.o(.bss)
+        build/src/func_8007FBE4.c.o(.bss)
+        build/asm/disc1/703F0.s.o(.bss)
         build/src/func_8007FC08.c.o(.bss)
         build/src/func_8007FC18.c.o(.bss)
         build/src/func_8007FC28.c.o(.bss)
@@ -3272,10 +3455,17 @@ SECTIONS
         build/asm/disc1/70464.s.o(.bss)
         build/src/func_8007FCAC.c.o(.bss)
         build/asm/disc1/704BC.s.o(.bss)
+        build/src/func_80080930.c.o(.bss)
         build/src/func_80080940.c.o(.bss)
         build/asm/disc1/71150.s.o(.bss)
+        build/src/func_80080CC8.c.o(.bss)
+        build/asm/disc1/714DC.s.o(.bss)
+        build/src/func_80081254.c.o(.bss)
+        build/asm/disc1/71A68.s.o(.bss)
         build/src/func_800822AC.c.o(.bss)
         build/asm/disc1/72ABC.s.o(.bss)
+        build/src/func_80082CDC.c.o(.bss)
+        build/asm/disc1/734F0.s.o(.bss)
         build/src/func_800835A4.c.o(.bss)
         build/src/func_800835B0.c.o(.bss)
         build/asm/disc1/73DC0.s.o(.bss)
@@ -3479,6 +3669,7 @@ leaf5e884 = slice(0x4F084, 0x4F094)
 leaf6ebd4 = slice(0x5F3D4, 0x5F3E4)
 leaf73de8 = slice(0x645E8, 0x645F8)
 leaf73df8 = slice(0x645F8, 0x64610)
+leaf74a14 = slice(0x65214, 0x65228)
 leaf74a28 = slice(0x65228, 0x65238)
 leaf74cb8 = slice(0x654B8, 0x654C8)
 leaf7633c = slice(0x66B3C, 0x66B54)
@@ -3486,8 +3677,16 @@ leaf7a324 = slice(0x6AB24, 0x6AB34)
 leaf7a334 = slice(0x6AB34, 0x6AB44)
 leaf7a344 = slice(0x6AB44, 0x6AB54)
 leaf7a354 = slice(0x6AB54, 0x6AB60)
+leaf7a3ec = slice(0x6ABEC, 0x6AC00)
+leaf7a4a8 = slice(0x6ACA8, 0x6ACBC)
+leaf7a4bc = slice(0x6ACBC, 0x6ACD0)
+leaf7c130 = slice(0x6C930, 0x6C93C)
+leaf7dea4 = slice(0x6E6A4, 0x6E6B0)
 leaf7deb0 = slice(0x6E6B0, 0x6E6C0)
 leaf7f778 = slice(0x6FF78, 0x6FF88)
+leaf7fbcc = slice(0x703CC, 0x703D8)
+leaf7fbd8 = slice(0x703D8, 0x703E4)
+leaf7fbe4 = slice(0x703E4, 0x703F0)
 leaf7fc08 = slice(0x70408, 0x70418)
 leaf7fc18 = slice(0x70418, 0x70428)
 leaf7fc28 = slice(0x70428, 0x70434)
@@ -3495,8 +3694,12 @@ leaf7fc34 = slice(0x70434, 0x70444)
 leaf7fc44 = slice(0x70444, 0x70454)
 leaf7fc54 = slice(0x70454, 0x70464)
 leaf7fcac = slice(0x704AC, 0x704BC)
+leaf80930 = slice(0x71130, 0x71140)
 leaf80940 = slice(0x71140, 0x71150)
+leaf80cc8 = slice(0x714C8, 0x714DC)
+leaf81254 = slice(0x71A54, 0x71A68)
 leaf822ac = slice(0x72AAC, 0x72ABC)
+leaf82cdc = slice(0x734DC, 0x734F0)
 leaf870e0 = slice(0x778E0, 0x778F0)
 leaf87198 = slice(0x77998, 0x779AC)
 leaf87414 = slice(0x77C14, 0x77C28)
@@ -3573,6 +3776,7 @@ print(f"  probe file 0x4F084 (5E884): cand={cand[leaf5e884].hex()} orig={orig[le
 print(f"  probe file 0x5F3D4 (6EBD4): cand={cand[leaf6ebd4].hex()} orig={orig[leaf6ebd4].hex()}")
 print(f"  probe file 0x645E8 (73DE8): cand={cand[leaf73de8].hex()} orig={orig[leaf73de8].hex()}")
 print(f"  probe file 0x645F8 (73DF8): cand={cand[leaf73df8].hex()} orig={orig[leaf73df8].hex()}")
+print(f"  probe file 0x65214 (74A14): cand={cand[leaf74a14].hex()} orig={orig[leaf74a14].hex()}")
 print(f"  probe file 0x65228 (74A28): cand={cand[leaf74a28].hex()} orig={orig[leaf74a28].hex()}")
 print(f"  probe file 0x654B8 (74CB8): cand={cand[leaf74cb8].hex()} orig={orig[leaf74cb8].hex()}")
 print(f"  probe file 0x66B3C (7633C): cand={cand[leaf7633c].hex()} orig={orig[leaf7633c].hex()}")
@@ -3580,8 +3784,16 @@ print(f"  probe file 0x6AB24 (7A324): cand={cand[leaf7a324].hex()} orig={orig[le
 print(f"  probe file 0x6AB34 (7A334): cand={cand[leaf7a334].hex()} orig={orig[leaf7a334].hex()}")
 print(f"  probe file 0x6AB44 (7A344): cand={cand[leaf7a344].hex()} orig={orig[leaf7a344].hex()}")
 print(f"  probe file 0x6AB54 (7A354): cand={cand[leaf7a354].hex()} orig={orig[leaf7a354].hex()}")
+print(f"  probe file 0x6ABEC (7A3EC): cand={cand[leaf7a3ec].hex()} orig={orig[leaf7a3ec].hex()}")
+print(f"  probe file 0x6ACA8 (7A4A8): cand={cand[leaf7a4a8].hex()} orig={orig[leaf7a4a8].hex()}")
+print(f"  probe file 0x6ACBC (7A4BC): cand={cand[leaf7a4bc].hex()} orig={orig[leaf7a4bc].hex()}")
+print(f"  probe file 0x6C930 (7C130): cand={cand[leaf7c130].hex()} orig={orig[leaf7c130].hex()}")
+print(f"  probe file 0x6E6A4 (7DEA4): cand={cand[leaf7dea4].hex()} orig={orig[leaf7dea4].hex()}")
 print(f"  probe file 0x6E6B0 (7DEB0): cand={cand[leaf7deb0].hex()} orig={orig[leaf7deb0].hex()}")
 print(f"  probe file 0x6FF78 (7F778): cand={cand[leaf7f778].hex()} orig={orig[leaf7f778].hex()}")
+print(f"  probe file 0x703CC (7FBCC): cand={cand[leaf7fbcc].hex()} orig={orig[leaf7fbcc].hex()}")
+print(f"  probe file 0x703D8 (7FBD8): cand={cand[leaf7fbd8].hex()} orig={orig[leaf7fbd8].hex()}")
+print(f"  probe file 0x703E4 (7FBE4): cand={cand[leaf7fbe4].hex()} orig={orig[leaf7fbe4].hex()}")
 print(f"  probe file 0x70408 (7FC08): cand={cand[leaf7fc08].hex()} orig={orig[leaf7fc08].hex()}")
 print(f"  probe file 0x70418 (7FC18): cand={cand[leaf7fc18].hex()} orig={orig[leaf7fc18].hex()}")
 print(f"  probe file 0x70428 (7FC28): cand={cand[leaf7fc28].hex()} orig={orig[leaf7fc28].hex()}")
@@ -3589,8 +3801,12 @@ print(f"  probe file 0x70434 (7FC34): cand={cand[leaf7fc34].hex()} orig={orig[le
 print(f"  probe file 0x70444 (7FC44): cand={cand[leaf7fc44].hex()} orig={orig[leaf7fc44].hex()}")
 print(f"  probe file 0x70454 (7FC54): cand={cand[leaf7fc54].hex()} orig={orig[leaf7fc54].hex()}")
 print(f"  probe file 0x704AC (7FCAC): cand={cand[leaf7fcac].hex()} orig={orig[leaf7fcac].hex()}")
+print(f"  probe file 0x71130 (80930): cand={cand[leaf80930].hex()} orig={orig[leaf80930].hex()}")
 print(f"  probe file 0x71140 (80940): cand={cand[leaf80940].hex()} orig={orig[leaf80940].hex()}")
+print(f"  probe file 0x714C8 (80CC8): cand={cand[leaf80cc8].hex()} orig={orig[leaf80cc8].hex()}")
+print(f"  probe file 0x71A54 (81254): cand={cand[leaf81254].hex()} orig={orig[leaf81254].hex()}")
 print(f"  probe file 0x72AAC (822AC): cand={cand[leaf822ac].hex()} orig={orig[leaf822ac].hex()}")
+print(f"  probe file 0x734DC (82CDC): cand={cand[leaf82cdc].hex()} orig={orig[leaf82cdc].hex()}")
 print(f"  probe file 0x778E0 (870E0): cand={cand[leaf870e0].hex()} orig={orig[leaf870e0].hex()}")
 print(f"  probe file 0x77998 (87198): cand={cand[leaf87198].hex()} orig={orig[leaf87198].hex()}")
 print(f"  probe file 0x77C14 (87414): cand={cand[leaf87414].hex()} orig={orig[leaf87414].hex()}")
@@ -3680,13 +3896,13 @@ set -e
 echo
 echo "=== Summary ==="
 echo "Assemble: OK (asm units + 35 gp carves)"
-echo "Compile:  OK (192 C leaves (incl. gp batches + era + 5EF-pilot) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
+echo "Compile:  OK (205 C leaves (incl. gp batches + era + 5EF) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
 echo "Pad trim: OK (incl. C .text pad strip for 0x14/0x18/0x30/0xC/0x8/0x10 bodies)"
 echo "Link:     OK (ROM-order ld script + absolute symbol workarounds)"
 echo "Pack:     OK (build/disc1.candidate.exe, size 0x1EE800)"
 if [[ "$cmp_ec" -eq 0 ]]; then
     echo "Compare:  EXACT SHA-1 MATCH"
-    echo "Matching claim: YES (192 C leaves (incl. gp batches + era + 5EF-pilot) + remaining asm)"
+    echo "Matching claim: YES (205 C leaves (incl. gp batches + era + 5EF) + remaining asm)"
     echo "Artifacts (git-ignored): build/asm/**/*.o build/src/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 0
 else

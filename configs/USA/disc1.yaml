@@ -326,6 +326,8 @@ segments:
       # Phase 5CZ: C leaf func_8007474C — file 0x64F4C, size 0x24.
       - [0x64F4C, c, func_8007474C]
       - [0x64F70, asm]
+      # Phase 5EF: exchange D_800956EC (int from accepted getter 80074A28).
+      - [0x65214, c, func_80074A14]
       # Phase 5AX: C leaf func_80074A28 — VRAM 0x80074A28, size 0x10.
       # File span 0x65228–0x65238 exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_800956EC. Plain -O1 matches.
@@ -387,6 +389,18 @@ segments:
       # Address-of D_8009AFD0 (lui/jr/addiu in delay slot); plain -O1 matches.
       - [0x6AB54, c, func_8007A354]
       - [0x6AB60, asm]
+      # Phase 5EF: signed state/count exchange; blez/slti prove int.
+      - [0x6ABEC, c, func_8007A3EC]
+      - [0x6AC00, asm]
+      # Phase 5EF: int state exchanges (zero/nonzero reader evidence).
+      - [0x6ACA8, c, func_8007A4A8]
+      - [0x6ACBC, c, func_8007A4BC]
+      - [0x6ACD0, asm]
+      # Phase 5EF: write-only opaque 32-bit setter.
+      - [0x6C930, c, func_8007C130]
+      - [0x6C93C, asm]
+      # Phase 5EF: int setter typed by accepted getter 8007DEB0.
+      - [0x6E6A4, c, func_8007DEA4]
       - [0x6E6B0, c, func_8007DEB0]
       # Phase 5AZ: C leaf func_8007F778 — VRAM 0x8007F778, size 0x10.
       # File span 0x6FF78–0x6FF88 exclusive. 32-bit global getter:
@@ -403,9 +417,13 @@ segments:
       # Delay-slot $at sw setter: D_800A36A0 = cb (void (*)(void), jalr proof
       # in 704BC.s). ROM: lui/jr/sw — sw in the return delay slot.
       # Era -O2 -G0 + MASPSX_FILL_STORE_DELAY_SLOT=1 (maspsx LOCAL PATCH).
-      # Mid-6FF88 carve: prefix 0x438, C 0xC, resume 703CC.s 0x3C.
+      # Mid-6FF88 carve: prefix 0x438, three C leaves, resume 703F0.s.
       - [0x703C0, c, func_8007FBC0]
-      - [0x703CC, asm]
+      # Phase 5EF: two-argument callbacks proven by jalr reader sites.
+      - [0x703CC, c, func_8007FBCC]
+      - [0x703D8, c, func_8007FBD8]
+      - [0x703E4, c, func_8007FBE4]
+      - [0x703F0, asm]
       - [0x70408, c, func_8007FC08]
       # Phase 5BF: C leaf func_8007FC18 — VRAM 0x8007FC18, size 0x10.
       # File span 0x70418–0x70428 exclusive. Unsigned-byte global getter:
@@ -437,18 +455,29 @@ segments:
       # lui/lw/jr/nop on D_8009B554. Plain -O1 matches.
       # Mid-704BC carve: prefix 0xC84, C 0x10, resume 71150.s 0xC12C.
       - [0x704BC, asm]
+      # Phase 5EF: set D_8009B554 int state to one.
+      - [0x71130, c, func_80080930]
       - [0x71140, c, func_80080940]
       # Phase 5BC: C leaf func_800822AC — VRAM 0x800822AC, size 0x10.
       # File span 0x72AAC–0x72ABC exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_8009B70C. Plain -O1 matches.
       # Mid-71150 carve: prefix 0x195C, C 0x10, resume 72ABC.s 0xA7C0.
       - [0x71150, asm]
+      # Phase 5EF: signed state/count exchange; same D_8009AFC0 evidence.
+      - [0x714C8, c, func_80080CC8]
+      - [0x714DC, asm]
+      # Phase 5EF: callback exchange proven by jalr reader sites.
+      - [0x71A54, c, func_80081254]
+      - [0x71A68, asm]
       - [0x72AAC, c, func_800822AC]
       # Phase 5BD: C leaf func_800870E0 — VRAM 0x800870E0, size 0x10.
       # File span 0x778E0–0x778F0 exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_8009D24C. Plain -O1 matches.
       # Mid-72ABC carve: prefix 0x4E24, C 0x10, resume 778F0.s 0x598C.
       - [0x72ABC, asm]
+      # Phase 5EF: return-and-clear int state flag.
+      - [0x734DC, c, func_80082CDC]
+      - [0x734F0, asm]
       # Phase 5CK: C leaf func_800835A4 — file 0x73DA4, size 0xC.
       - [0x73DA4, c, func_800835A4]
       # Phase 5CL: C leaf func_800835B0 — file 0x73DB0, size 0x10.

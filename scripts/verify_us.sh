@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5DB: one-hundred-three C leaves.
+# Current production subsegments (file offsets). Phase 5EF: 205 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0xB85C4, c, func_800C7DC4]'
     '[0xB85D4, c, func_800C7DD4]'
@@ -169,6 +169,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x64CC8, asm]'
     '[0x64F4C, c, func_8007474C]'
     '[0x64F70, asm]'
+    '[0x65214, c, func_80074A14]'
     '[0x65228, c, func_80074A28]'
     '[0x65238, asm]'
     '[0x654B8, c, func_80074CB8]'
@@ -200,10 +201,22 @@ EXPECTED_SUBSEGMENTS=(
     '[0x6AB44, c, func_8007A344]'
     '[0x6AB54, c, func_8007A354]'
     '[0x6AB60, asm]'
+    '[0x6ABEC, c, func_8007A3EC]'
+    '[0x6AC00, asm]'
+    '[0x6ACA8, c, func_8007A4A8]'
+    '[0x6ACBC, c, func_8007A4BC]'
+    '[0x6ACD0, asm]'
+    '[0x6C930, c, func_8007C130]'
+    '[0x6C93C, asm]'
+    '[0x6E6A4, c, func_8007DEA4]'
     '[0x6E6B0, c, func_8007DEB0]'
     '[0x6E6C0, asm]'
     '[0x6FF78, c, func_8007F778]'
     '[0x6FF88, asm]'
+    '[0x703CC, c, func_8007FBCC]'
+    '[0x703D8, c, func_8007FBD8]'
+    '[0x703E4, c, func_8007FBE4]'
+    '[0x703F0, asm]'
     '[0x70408, c, func_8007FC08]'
     '[0x70418, c, func_8007FC18]'
     '[0x70428, c, func_8007FC28]'
@@ -213,10 +226,17 @@ EXPECTED_SUBSEGMENTS=(
     '[0x70464, asm]'
     '[0x704AC, c, func_8007FCAC]'
     '[0x704BC, asm]'
+    '[0x71130, c, func_80080930]'
     '[0x71140, c, func_80080940]'
     '[0x71150, asm]'
+    '[0x714C8, c, func_80080CC8]'
+    '[0x714DC, asm]'
+    '[0x71A54, c, func_80081254]'
+    '[0x71A68, asm]'
     '[0x72AAC, c, func_800822AC]'
     '[0x72ABC, asm]'
+    '[0x734DC, c, func_80082CDC]'
+    '[0x734F0, asm]'
     '[0x73DA4, c, func_800835A4]'
     '[0x73DB0, c, func_800835B0]'
     '[0x73DC0, asm]'
@@ -359,12 +379,19 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/68458.s"
     "asm/disc1/68478.s"
     "asm/disc1/6AB60.s"
+    "asm/disc1/6AC00.s"
+    "asm/disc1/6ACD0.s"
+    "asm/disc1/6C93C.s"
     "asm/disc1/6E6C0.s"
     "asm/disc1/6FF88.s"
+    "asm/disc1/703F0.s"
     "asm/disc1/70464.s"
     "asm/disc1/704BC.s"
     "asm/disc1/71150.s"
+    "asm/disc1/714DC.s"
+    "asm/disc1/71A68.s"
     "asm/disc1/72ABC.s"
+    "asm/disc1/734F0.s"
     "asm/disc1/73DC0.s"
     "asm/disc1/74684.s"
     "asm/disc1/746F8.s"
@@ -457,6 +484,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80074330.c"
     "src/func_800744A4.c"
     "src/func_8007474C.c"
+    "src/func_80074A14.c"
     "src/func_80074A28.c"
     "src/func_80074CB8.c"
     "src/func_8007633C.c"
@@ -474,8 +502,16 @@ EXPECTED_ARTIFACTS=(
     "src/func_8007A334.c"
     "src/func_8007A344.c"
     "src/func_8007A354.c"
+    "src/func_8007A3EC.c"
+    "src/func_8007A4A8.c"
+    "src/func_8007A4BC.c"
+    "src/func_8007C130.c"
+    "src/func_8007DEA4.c"
     "src/func_8007DEB0.c"
     "src/func_8007F778.c"
+    "src/func_8007FBCC.c"
+    "src/func_8007FBD8.c"
+    "src/func_8007FBE4.c"
     "src/func_8007FC08.c"
     "src/func_8007FC18.c"
     "src/func_8007FC28.c"
@@ -483,8 +519,12 @@ EXPECTED_ARTIFACTS=(
     "src/func_8007FC44.c"
     "src/func_8007FC54.c"
     "src/func_8007FCAC.c"
+    "src/func_80080930.c"
     "src/func_80080940.c"
+    "src/func_80080CC8.c"
+    "src/func_80081254.c"
     "src/func_800822AC.c"
+    "src/func_80082CDC.c"
     "src/func_800835A4.c"
     "src/func_800835B0.c"
     "src/func_80083E70.c"
@@ -717,7 +757,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8007FBC0.c" ]]; then
+if [[ -f "$ROOT/src/func_80074A14.c" && -f "$ROOT/src/func_80082CDC.c" ]]; then
+    echo "C conversion: Phase 5EF — 205 leaves (+ remaining 13 delay-slot sw members; 14/14 family integrated)"
+    echo "  sources: src/func_80074A14.c … src/func_80082CDC.c (+ prior 5EF pilot)"
+elif [[ -f "$ROOT/src/func_8007FBC0.c" ]]; then
     echo "C conversion: Phase 5EF-pilot — 192 leaves (+ delay-slot sw setter 7FBC0; maspsx LOCAL PATCH MASPSX_FILL_STORE_DELAY_SLOT=1)"
     echo "  sources: src/func_8007FBC0.c (+ prior through 5EK)"
 elif [[ -f "$ROOT/src/func_80087198.c" && -f "$ROOT/src/func_80087414.c" ]]; then

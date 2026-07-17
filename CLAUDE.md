@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EK-d8009d270-bitwise — 191 matching C leaves; ERA COMPILER integrated.**
+**Phase 5EF — 205 matching C leaves; delay-slot `sw` family closed 14/14.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;
@@ -60,6 +60,9 @@ not the rejected sh/sb→int cheat. Integrated: 8 A182x setters
 equality-tested + word-copied; not opaque-word) — 4 setters
 (`func_80017FDC`/`17FF0`/`192B8`/`192C8`). **`D_8009D270` = `unsigned int` flags**
 (READY-FROM-BITWISE; `andi` 1/2 + clear-bit) — 2 setters (`func_80087198`/`87414`).
+**5EF typing closure:** seven `int` state/value globals, four callback-pointer
+globals proven by `jalr`, and one write-only `unsigned int` opaque word support
+the final 13 delay-slot leaves; see `docs/ai_context/PHASE5EF_TYPING.md`.
 `func_800405A4` is a use-site only.
 Population counter: `tools/analysis/at_absolute_store_counter.py`.
 PC port is out of scope. `docs/ai_context/ACTIVE_HANDOFF.md` has the exact current

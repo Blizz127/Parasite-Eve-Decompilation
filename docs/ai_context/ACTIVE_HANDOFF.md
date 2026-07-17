@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `main` @ `89a8457` | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EF-pilot (maspsx delay-slot sw fill)** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **192** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **134** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **36** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Branch / tip | `main` @ `6a1afaa` | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EF (delay-slot sw family closed)** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **205** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **140** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **49** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EK / 191. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5EF / 205. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -81,22 +81,24 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 ## Known-open families
 
 - **sb+ret0:** **done** in 5ED (family closed).
-- **`$at` absolute `sw` (pre-jr):** population counter committed
-  (`tools/analysis/at_absolute_store_counter.py`): **18 pre-jr** / 14 delay-slot /
-  5 sb-sh. Weak-int policy **NO**.
+- **`$at` absolute-store population:** counter committed
+  (`tools/analysis/at_absolute_store_counter.py`). The historical integration
+  inventory was **18 pre-jr** / 14 delay-slot / 5 sb-sh; the current yaml-live
+  population is **0 pre-jr** / **0 delay-slot** / 5 sb-sh. Weak-int policy **NO**.
   - **Pinned by 5EG-readers:**
     - `D_8009D240` = `unsigned short *`, `D_8009D260` = `unsigned char *`
       via `func_8008AB1C` (era `-O1 -G0`).
     - `D_800A1870` = `void (*)(void)` via `func_80042B6C` (era `-O2 -G0`).
   - **Integrated:** `func_80085728`; 5EI readers-typed trio; 5EJ `D_8009D28C`
-    int-state (4); 5EK `D_8009D270` unsigned flags (2); **5EF-pilot
-    `func_8007FBC0`** delay-slot sw setter (`D_800A36A0` = `void (*)(void)`,
-    jalr proof in 704BC.s). Leaf count **192**.
-  - **Delay-slot shape: TOOL SOLVED (5EF-pilot).** Vendored maspsx LOCAL PATCH
+    int-state (4); 5EK `D_8009D270` unsigned flags (2); **5EF all 14
+    delay-slot `sw` members**. The pilot `func_8007FBC0` plus the remaining 13
+    typed leaves are integrated exact. Leaf count **205**.
+  - **Delay-slot shape: FAMILY CLOSED (5EF).** Vendored maspsx LOCAL PATCH
     (`MASPSX_FILL_STORE_DELAY_SLOT=1`) fills the `j $31` slot with the trailing
     absolute `sw`. Pilot gate exact + objdump-probed (`3C01800A 03E00008
-    AC2436A0`). **13 delay-slot members remain** — blocked on per-global
-    typing evidence (same bar as pre-jr members), NOT on the tool.
+    AC2436A0`). The remaining 13 members now have per-global typing evidence,
+    and all 14 members pass the full exact-match gate; see
+    `docs/ai_context/PHASE5EF_TYPING.md`.
   - **sb-sh-five: RECLASSIFIED — never tool-blocked.** ROM words show sb/sh
     macro stores stay **pre-jr with a nop slot** (func_80033A2C sb,
     func_800C6ED8/C6EE8 sh, func_800C6EC0 dual-sh; func_8001A374 has a
@@ -130,7 +132,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
    `TYPING-POLICY` (opaque 32-bit word; use-site found, no narrowing possible),
    or `DECISION-BLOCKED` (write-only; no reader). A use-site is not a type-site
    (`func_800405A4` lesson). Re-check after every reader phase.
-   `5EF-delay-slot` tool side **SOLVED** (5EF-pilot); `sb-sh-five` reclassified
+   `5EF-delay-slot` **CLOSED** (14/14 integrated); `sb-sh-five` reclassified
    typing-only.
 
 ## Resolved blockers
@@ -139,11 +141,12 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 - **Maspsx non-TTY hang:** **SOLVED** (`</dev/null` in `era_compile`).
 - **`lui;ori` large-literal synthesis:** **CAPABILITY-VERIFIED** (scratch probe;
   both sign cases; no flag change).
-- **5EF delay-slot (sw in `j $31` slot):** **SOLVED in 5EF-pilot** by the
+- **5EF delay-slot (sw in `j $31` slot):** **CLOSED in 5EF** by the
   vendored maspsx LOCAL PATCH (`MASPSX_FILL_STORE_DELAY_SLOT=1`). Key evidence:
   `func_8003FFAC` vs `func_8007FBC0` — identical C, different ROM scheduling
   (pre-jr+nop vs in-slot) ⇒ original units assembled under different ASPSX
-  scheduling; behavior is opt-in per leaf. sb/sh never fill (ROM-proven).
+  scheduling; behavior is opt-in per leaf. All 14 members are integrated exact;
+  sb/sh never fill (ROM-proven).
 
 ## History (append-only, truncated)
 
@@ -166,6 +169,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 | 5EK-d8009d270-bitwise | 191 | `D_8009D270` unsigned flags setters `87198`/`87414` |
 | lui-ori probe | 191 | Large-literal `lui;ori` CAPABILITY-VERIFIED (docs only) |
 | 5EF-pilot | 192 | Vendored maspsx LOCAL PATCH (sw delay-slot fill); `func_8007FBC0` integrated |
+| 5EF | 205 | Remaining 13 delay-slot `sw` members typed and integrated; family closed 14/14 |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
