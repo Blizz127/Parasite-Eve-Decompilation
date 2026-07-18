@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5EJ: 209 C leaves.
+# Current production subsegments (file offsets). Phase 5EK: 210 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x3FC48, c, func_8004F448]'
@@ -55,7 +55,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x9C84, c, func_80019484]'
     '[0x9CB0, asm]'
     '[0x9FD0, c, func_800197D0]'
-    '[0x9FF0, asm]'
+    '[0x9FF0, c, func_800197F0]'
+    '[0xA010, asm]'
     '[0x40008, c, func_8004F808]'
     '[0x33720, c, func_80042F20]'
     '[0x33838, c, func_80043038]'
@@ -763,7 +764,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80019484.c" && -f "$ROOT/src/func_800197D0.c" && -f "$ROOT/src/func_800438C0.c" ]]; then
+if [[ -f "$ROOT/src/func_800197F0.c" && -f "$ROOT/src/func_800197D0.c" && -f "$ROOT/src/func_800375C4.c" ]]; then
+    echo "C conversion: Phase 5EK-volume-197f0 — 210 leaves (+ func_800197F0 twin; era -O2 -G0: frame + jal void(void), teardown in jr slot)"
+    echo "  sources: src/func_800197F0.c (+ prior 5EJ)"
+elif [[ -f "$ROOT/src/func_80019484.c" && -f "$ROOT/src/func_800197D0.c" && -f "$ROOT/src/func_800438C0.c" ]]; then
     echo "C conversion: Phase 5EJ-outgoing-arg — 209 leaves (+ func_80019484; era -O2 -G0: int ** double dereference into outgoing \$a0 + jal)"
     echo "  sources: src/func_80019484.c (+ prior 5EI)"
 elif [[ -f "$ROOT/src/func_800197D0.c" && -f "$ROOT/src/func_800438C0.c" ]]; then

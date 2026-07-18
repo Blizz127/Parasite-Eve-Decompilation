@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EJ — 209 matching C leaves; outgoing-argument convention proven on era `-O2 -G0`: `func_80019484(int **)` reproduces the double-dereference `lw $v0,0($a0); nop; lw $a0,0($v0)`, `jal func_800438C0` + nop, and teardown in the `jr` delay slot word-exact.**
+**Phase 5EK — 210 matching C leaves; first volume-cadence leaf `func_800197F0` matches word-exact on era `-O2 -G0`: the proven frame + `jal` + return-1 + teardown-in-`jr`-slot shape transfers directly to the `func_800375C4` twin with no new primitive.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;

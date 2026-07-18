@@ -99,9 +99,14 @@ segments:
       # First non-leaf: frame (addiu $sp,-0x18 / sw $ra,0x10($sp)) + jal
       # func_800375B4 (already-C void(void)); return 1; teardown addiu $sp,+0x18
       # in the jr delay slot. Era -O2.
-      # Mid-9CB0 carve: prefix 0x320, C 0x20, resume 9FF0.s to A3E4 (19BE4 carve).
+      # Mid-9CB0 carve: prefix 0x320, C 0x20; next carve begins at 9FF0.
       - [0x9FD0, c, func_800197D0]
-      - [0x9FF0, asm]
+      # Phase 5EK-volume-197f0: C func_800197F0 — VRAM 0x800197F0, size 0x20.
+      # Twin frame + jal func_800375C4 (already-C void(void)); return 1;
+      # teardown addiu $sp,+0x18 in the jr delay slot. Era -O2 -G0; no $gp.
+      # Segment-head carve: C 0x20, resume A010.s size 0x3D4 to A3E4.
+      - [0x9FF0, c, func_800197F0]
+      - [0xA010, asm]
       - [0xA3E4, c, func_80019BE4]
       - [0xA404, asm]
       - [0x116FC, c, func_80020EFC]
