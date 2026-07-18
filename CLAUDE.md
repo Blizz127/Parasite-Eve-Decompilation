@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EK — 210 matching C leaves; first volume-cadence leaf `func_800197F0` matches word-exact on era `-O2 -G0`: the proven frame + `jal` + return-1 + teardown-in-`jr`-slot shape transfers directly to the `func_800375C4` twin with no new primitive.**
+**Phase 5EL — 211 matching C leaves; return-forwarding probe `func_8007F7A8` matches word-exact on era `-O2 -G0`: the callee's `$v0` is returned untouched, while retail's per-function epilogue choice (`lw $ra`; teardown before `jr`; nop delay slot) is reproduced instead of the 197D0/F0 teardown-in-slot shape.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;

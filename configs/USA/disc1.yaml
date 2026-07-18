@@ -437,21 +437,28 @@ segments:
       # Mid-6E6C0 carve: prefix 0x18B8, C 0x10, resume 6FF88.s 0xD2F4.
       - [0x6E6C0, asm]
       - [0x6FF78, c, func_8007F778]
-      # Phase 5BE: C leaf func_8007FC08 — VRAM 0x8007FC08, size 0x10.
-      # File span 0x70408–0x70418 exclusive. Unsigned-byte global getter:
-      # lui/lbu/jr/nop on D_8009B580. Plain -O1 matches.
-      # Mid-6FF88 carve: prefix 0x480, C 0x10, resume 70418.s 0x94.
+      # Phase 5EL: C func_8007F7A8 — VRAM 0x8007F7A8, size 0x20.
+      # Return-forwarding call to already-C int func_8007FCAC(void). Retail
+      # epilogue restores $ra, tears down the frame before jr, then uses a nop
+      # jr delay slot. Era -O2 -G0; no arguments or $gp references.
+      # Mid-6FF88 carve: prefix 0x20, C 0x20, resume 6FFC8.s 0x3F8.
       - [0x6FF88, asm]
+      - [0x6FFA8, c, func_8007F7A8]
+      - [0x6FFC8, asm]
       # Phase 5EF-pilot: C leaf func_8007FBC0 — VRAM 0x8007FBC0, size 0xC.
       # Delay-slot $at sw setter: D_800A36A0 = cb (void (*)(void), jalr proof
       # in 704BC.s). ROM: lui/jr/sw — sw in the return delay slot.
       # Era -O2 -G0 + MASPSX_FILL_STORE_DELAY_SLOT=1 (maspsx LOCAL PATCH).
-      # Mid-6FF88 carve: prefix 0x438, three C leaves, resume 703F0.s.
+      # Mid-6FFC8 carve: prefix 0x3F8, three C leaves, resume 703F0.s.
       - [0x703C0, c, func_8007FBC0]
       # Phase 5EF: two-argument callbacks proven by jalr reader sites.
       - [0x703CC, c, func_8007FBCC]
       - [0x703D8, c, func_8007FBD8]
       - [0x703E4, c, func_8007FBE4]
+      # Phase 5BE: C leaf func_8007FC08 — VRAM 0x8007FC08, size 0x10.
+      # File span 0x70408–0x70418 exclusive. Unsigned-byte global getter:
+      # lui/lbu/jr/nop on D_8009B580. Plain -O1 matches.
+      # Mid-703F0 carve: prefix 0x18, C 0x10, resume 70418.s 0x94.
       - [0x703F0, asm]
       - [0x70408, c, func_8007FC08]
       # Phase 5BF: C leaf func_8007FC18 — VRAM 0x8007FC18, size 0x10.
