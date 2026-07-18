@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5eg-first-branch` (uncommitted; base `main` @ `d1e16ba`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EG-first-branch (retail branch delay-slot scheduling proven)** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **206** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Branch / tip | `phase5eh-arg-return` (uncommitted; base `main` @ `46f90f5`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EH-arg-return (era `-O2 -G8`: double store + addu return + gp)** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **207** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **141** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **49** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Era leaf compiles | **50** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EG-first-branch / 206. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5EH-arg-return / 207. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -77,6 +77,7 @@ yaml-only and still works when asm/ is stale.
 | `li` const materialization (`addiu` not `ori`) | Proven 5EC via `--dont-expand-li` |
 | `$at` absolute `sw` macro expansion | Proven by scratch probe; integrated exact in 5EE |
 | Branch delay-slot constant hoist (`beqz` slot) | **PROVEN** (5EG-first-branch): era cc1 `-O1 -G 8` reproduces the retail schedule on `func_8004F448` word-for-word |
+| `$a0`-in/`$v0`-out + redundant double store | **PROVEN** (5EH): era `-O2 -G8` preserves both stores + `addu` return-0 on `func_800438C0`; GCC 14.2 `-O1` merges stores and emits `move` — **era required for value-returning leaves**; era+gp `-G8` first proven here |
 | `lui;ori` large-literal synthesis | **PROVEN** (capability probe): both bit15-clear and bit15-set; cc1 emits PSY-Q `li` high + `ori` low; ROM-exact under 2.21 + `--dont-expand-li` |
 
 All four fingerprints from the original 5EA era claim are now proven in bytes.
@@ -96,7 +97,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   - **Integrated:** `func_80085728`; 5EI readers-typed trio; 5EJ `D_8009D28C`
     int-state (4); 5EK `D_8009D270` unsigned flags (2); **5EF all 14
     delay-slot `sw` members**. The pilot `func_8007FBC0` plus the remaining 13
-    typed leaves are integrated exact. Leaf count **206**.
+    typed leaves are integrated exact. Leaf count **207**.
   - **Delay-slot shape: FAMILY CLOSED (5EF).** Vendored maspsx LOCAL PATCH
     (`MASPSX_FILL_STORE_DELAY_SLOT=1`) fills the `j $31` slot with the trailing
     absolute `sw`. Pilot gate exact + objdump-probed (`3C01800A 03E00008
@@ -175,6 +176,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 | 5EF-pilot | 192 | Vendored maspsx LOCAL PATCH (sw delay-slot fill); `func_8007FBC0` integrated |
 | 5EF | 205 | Remaining 13 delay-slot `sw` members typed and integrated; family closed 14/14 |
 | 5EG-first-branch | 206 | First branchy leaf `func_8004F448`; era cc1 `-O1 -G 8` hoists const into `beqz` delay slot word-exact (branch scheduling capability proven) |
+| 5EH-arg-return | 207 | First value-returning leaf `func_800438C0` on era path: `-O2 -G8` preserves double store, `addu` return-0, era+gp proven; GCC 14.2 store-merge + `move` documented as $CC-path limits |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

@@ -37,8 +37,9 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5EG: 206 C leaves.
+# Current production subsegments (file offsets). Phase 5EH: 207 C leaves.
 EXPECTED_SUBSEGMENTS=(
+    '[0x340C0, c, func_800438C0]'
     '[0x3FC48, c, func_8004F448]'
     '[0xB85C4, c, func_800C7DC4]'
     '[0xB85D4, c, func_800C7DD4]'
@@ -758,7 +759,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8004F448.c" && -f "$ROOT/src/func_80074A14.c" && -f "$ROOT/src/func_80082CDC.c" ]]; then
+if [[ -f "$ROOT/src/func_800438C0.c" && -f "$ROOT/src/func_8004F448.c" ]]; then
+    echo "C conversion: Phase 5EH-arg-return — 207 leaves (+ first arg+return leaf func_800438C0; era -O2 -G8: double store, addu return, gp)"
+    echo "  sources: src/func_800438C0.c (+ prior 5EG)"
+elif [[ -f "$ROOT/src/func_8004F448.c" && -f "$ROOT/src/func_80074A14.c" && -f "$ROOT/src/func_80082CDC.c" ]]; then
     echo "C conversion: Phase 5EG-first-branch — 206 leaves (+ first branchy leaf func_8004F448; era cc1 beqz delay-slot hoist proven)"
     echo "  sources: src/func_8004F448.c (+ prior 5EF family 14/14)"
 elif [[ -f "$ROOT/src/func_80074A14.c" && -f "$ROOT/src/func_80082CDC.c" ]]; then

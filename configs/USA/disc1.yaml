@@ -179,7 +179,12 @@ segments:
       - [0x33838, c, func_80043038]
       - [0x3384C, asm]
       - [0x33A40, c, func_80043240]
+      # Phase 5EH: C leaf func_800438C0 — VRAM 0x800438C0, size 0x20.
+      # File span 0x340C0–0x340E0 exclusive. First arg+return leaf: a0 & 0x1FF
+      # stored to gp global, zero -> re-store 0x1FF, return 0 in jr delay slot.
+      # Mid-33A4C carve: prefix 0x674, C 0x20, ends at existing 438E0 carve (no resume).
       - [0x33A4C, asm]
+      - [0x340C0, c, func_800438C0]
       - [0x340E0, c, func_800438E0]
       - [0x340EC, asm]
       - [0x3D824, c, func_8004D024]
