@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Phase 5EI: Disc 1 rebuild with 208 C leaves (delay-slot sw family + era + first arg+return leaf
-# + first non-leaf func_800197D0: stack frame + jal on era -O2).
+# Phase 5EJ: Disc 1 rebuild with 209 C leaves (delay-slot sw family + era + first arg+return leaf
+# + outgoing-argument non-leaf func_80019484: int ** double dereference + jal on era -O2 -G0).
 # (prior 98 + 5 memset/memcpy countdown leaves through func_8008D820).
 #
 # Assembles splat-generated .s → .o with MIPS LE binutils, compiles the
@@ -71,7 +71,9 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # 98BC:     0x98BC  → 0x9AB8  = 0x1FC
 # C 192B8:  0x9AB8  → 0x9AC8  = 0x10
 # C 192C8:  0x9AC8  → 0x9ADC  = 0x14
-# 9ADC:     0x9ADC  → 0x9FD0  = 0x4F4
+# 9ADC:     0x9ADC  → 0x9C84  = 0x1A8
+# C 19484:  0x9C84  → 0x9CB0  = 0x2C
+# 9CB0:     0x9CB0  → 0x9FD0  = 0x320
 # C 197D0:  0x9FD0  → 0x9FF0  = 0x20
 # 9FF0:     0x9FF0  → 0xA3E4  = 0x3F4
 # C 38D0C:  0x2950C → 0x2951C = 0x10
@@ -253,7 +255,9 @@ SIZE_C_190B4=0x8
 SIZE_98BC=0x1fc
 SIZE_C_192B8=0x10
 SIZE_C_192C8=0x14
-SIZE_9ADC=0x4f4
+SIZE_9ADC=0x1a8
+SIZE_C_19484=0x2c
+SIZE_9CB0=0x320
 SIZE_C_197D0=0x20
 SIZE_9FF0=0x3f4
 SIZE_C_19BE4=0x20
@@ -668,6 +672,8 @@ OBJECTS=(
     "build/src/func_800192B8.c.o"
     "build/src/func_800192C8.c.o"
     "build/asm/disc1/9ADC.s.o"
+    "build/src/func_80019484.c.o"
+    "build/asm/disc1/9CB0.s.o"
     "build/src/func_800197D0.c.o"
     "build/asm/disc1/9FF0.s.o"
     "build/src/func_80019BE4.c.o"
@@ -1023,6 +1029,8 @@ SOURCES=(
     "src/func_800192B8.c"
     "src/func_800192C8.c"
     "asm/disc1/9ADC.s"
+    "src/func_80019484.c"
+    "asm/disc1/9CB0.s"
     "src/func_800197D0.c"
     "asm/disc1/9FF0.s"
     "src/func_80019BE4.c"
@@ -1467,6 +1475,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/8804.s.o asm/di
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/9860.s.o asm/disc1/9860.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/98BC.s.o asm/disc1/98BC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/9ADC.s.o asm/disc1/9ADC.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/9CB0.s.o asm/disc1/9CB0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/9FF0.s.o asm/disc1/9FF0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/A404.s.o asm/disc1/A404.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/11718.s.o asm/disc1/11718.s
@@ -1605,7 +1614,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEBB4.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEC70.s.o asm/disc1/BEC70.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/C5060.s.o asm/disc1/C5060.s
 
-step "Compile C leaves (208 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI))"
+step "Compile C leaves (209 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ))"
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80017E9C.c.o src/func_80017E9C.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019050.c.o src/func_80019050.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019058.c.o src/func_80019058.c
@@ -1727,6 +1736,8 @@ era_compile src/func_800CD960.c build/src/func_800CD960.c.o -O2 -G0
 era_compile src/func_800CE1DC.c build/src/func_800CE1DC.c.o -O2 -G0
 era_compile src/func_800D4850.c build/src/func_800D4850.c.o -O2 -G0
 era_compile src/func_800438C0.c build/src/func_800438C0.c.o -O2 -G8
+# Phase 5EJ: double-dereference int **arg0 into outgoing $a0, jal func_800438C0, return 1.
+era_compile src/func_80019484.c build/src/func_80019484.c.o -O2 -G0
 # Phase 5EI: first non-leaf — frame + jal func_800375B4, return 1; era -O2 (mirrors 5EH).
 era_compile src/func_800197D0.c build/src/func_800197D0.c.o -O2 -G8
 run "$CC" $CFLAGS_LEAF -G 8 -fno-tree-ter -c -o build/src/func_80052F0C.c.o src/func_80052F0C.c
@@ -1842,6 +1853,8 @@ python3 "$TRIM" build/asm/disc1/98BC.s.o .text "$SIZE_98BC"
 python3 "$TRIM" build/src/func_800192B8.c.o .text "$SIZE_C_192B8"
 python3 "$TRIM" build/src/func_800192C8.c.o .text "$SIZE_C_192C8"
 python3 "$TRIM" build/asm/disc1/9ADC.s.o .text "$SIZE_9ADC"
+python3 "$TRIM" build/src/func_80019484.c.o .text "$SIZE_C_19484"
+python3 "$TRIM" build/asm/disc1/9CB0.s.o .text "$SIZE_9CB0"
 python3 "$TRIM" build/src/func_800197D0.c.o .text "$SIZE_C_197D0"
 python3 "$TRIM" build/asm/disc1/9FF0.s.o .text "$SIZE_9FF0"
 python3 "$TRIM" build/src/func_80019BE4.c.o .text "$SIZE_C_19BE4"
@@ -2205,7 +2218,7 @@ ABS_LD="build/abs_syms.ld"
 # all .rodata) and is not used for the production pack.
 ROM_ORDER_LD="build/disc1_romorder.ld"
 cat >"$ROM_ORDER_LD" <<'LDEOF'
-/* Phase 5EF ROM-order link script (208 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI)).
+/* Phase 5EF ROM-order link script (209 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ)).
  * splat's linkers/disc1.ld places all .text then all .rodata (C layout).
  * PE1 image order is interleaved: prefix rodata, main text (with C leaves),
  * mid rodata, tail text (with C leaf).
@@ -2236,6 +2249,8 @@ SECTIONS
         build/src/func_800192B8.c.o(.text)
         build/src/func_800192C8.c.o(.text)
         build/asm/disc1/9ADC.s.o(.text)
+        build/src/func_80019484.c.o(.text)
+        build/asm/disc1/9CB0.s.o(.text)
         build/src/func_800197D0.c.o(.text)
         build/asm/disc1/9FF0.s.o(.text)
         build/src/func_80019BE4.c.o(.text)
@@ -2587,6 +2602,8 @@ SECTIONS
         build/src/func_800192B8.c.o(.data)
         build/src/func_800192C8.c.o(.data)
         build/asm/disc1/9ADC.s.o(.data)
+        build/src/func_80019484.c.o(.data)
+        build/asm/disc1/9CB0.s.o(.data)
         build/src/func_800197D0.c.o(.data)
         build/asm/disc1/9FF0.s.o(.data)
         build/src/func_80019BE4.c.o(.data)
@@ -2937,6 +2954,8 @@ SECTIONS
         build/src/func_800192B8.c.o(.rodata)
         build/src/func_800192C8.c.o(.rodata)
         build/asm/disc1/9ADC.s.o(.rodata)
+        build/src/func_80019484.c.o(.rodata)
+        build/asm/disc1/9CB0.s.o(.rodata)
         build/src/func_800197D0.c.o(.rodata)
         build/asm/disc1/9FF0.s.o(.rodata)
         build/src/func_80019BE4.c.o(.rodata)
@@ -3287,6 +3306,8 @@ SECTIONS
         build/src/func_800192B8.c.o(.bss)
         build/src/func_800192C8.c.o(.bss)
         build/asm/disc1/9ADC.s.o(.bss)
+        build/src/func_80019484.c.o(.bss)
+        build/asm/disc1/9CB0.s.o(.bss)
         build/src/func_800197D0.c.o(.bss)
         build/asm/disc1/9FF0.s.o(.bss)
         build/src/func_80019BE4.c.o(.bss)
@@ -3700,6 +3721,7 @@ leaf190ac = slice(0x98AC, 0x98B4)
 leaf190b4 = slice(0x98B4, 0x98BC)
 leaf192b8 = slice(0x9AB8, 0x9AC8)
 leaf192c8 = slice(0x9AC8, 0x9ADC)
+leaf19484 = slice(0x9C84, 0x9CB0)
 leaf197d0 = slice(0x9FD0, 0x9FF0)
 leaf38d0c = slice(0x2950C, 0x2951C)
 leaf3d82c = slice(0x2E02C, 0x2E034)
@@ -3780,6 +3802,7 @@ print(f"  probe file 0x98AC (190AC): cand={cand[leaf190ac].hex()} orig={orig[lea
 print(f"  probe file 0x98B4 (190B4): cand={cand[leaf190b4].hex()} orig={orig[leaf190b4].hex()}")
 print(f"  probe file 0x9AB8 (192B8): cand={cand[leaf192b8].hex()} orig={orig[leaf192b8].hex()}")
 print(f"  probe file 0x9AC8 (192C8): cand={cand[leaf192c8].hex()} orig={orig[leaf192c8].hex()}")
+print(f"  probe file 0x9C84 (19484): cand={cand[leaf19484].hex()} orig={orig[leaf19484].hex()}")
 print(f"  probe file 0x9FD0 (197D0): cand={cand[leaf197d0].hex()} orig={orig[leaf197d0].hex()}")
 print(f"  probe file 0x2950C (38D0C): cand={cand[leaf38d0c].hex()} orig={orig[leaf38d0c].hex()}")
 print(f"  probe file 0x2E02C (3D82C): cand={cand[leaf3d82c].hex()} orig={orig[leaf3d82c].hex()}")
@@ -3947,13 +3970,13 @@ set -e
 echo
 echo "=== Summary ==="
 echo "Assemble: OK (asm units + 35 gp carves)"
-echo "Compile:  OK (208 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
+echo "Compile:  OK (209 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
 echo "Pad trim: OK (incl. C .text pad strip for 0x14/0x18/0x30/0xC/0x8/0x10 bodies)"
 echo "Link:     OK (ROM-order ld script + absolute symbol workarounds)"
 echo "Pack:     OK (build/disc1.candidate.exe, size 0x1EE800)"
 if [[ "$cmp_ec" -eq 0 ]]; then
     echo "Compare:  EXACT SHA-1 MATCH"
-    echo "Matching claim: YES (208 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI) + remaining asm)"
+    echo "Matching claim: YES (209 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ) + remaining asm)"
     echo "Artifacts (git-ignored): build/asm/**/*.o build/src/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 0
 else

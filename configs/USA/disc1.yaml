@@ -85,15 +85,21 @@ segments:
       - [0x98BC, asm]
       # Phase 5EJ: D_8009D28C int-state setters (READY-FROM-READER).
       # func_800192B8 / func_800192C8 — set state 0/8, return 1; sizes 0x10 / 0x14.
-      # Mid-98BC carve: prefix 0x1FC, C×2, resume 9ADC.s to 9FD0.
+      # Mid-98BC carve: prefix 0x1FC, C×2, resume 9ADC.s to 9C84.
       - [0x9AB8, c, func_800192B8]
       - [0x9AC8, c, func_800192C8]
       - [0x9ADC, asm]
+      # Phase 5EJ-outgoing-arg: C func_80019484 — VRAM 0x80019484, size 0x2C.
+      # Double-dereference int **arg0 into outgoing $a0, then jal the already-C
+      # int func_800438C0(int); return 1. Era -O2 -G0 (no $gp references).
+      # Mid-9ADC carve: prefix 0x1A8, C 0x2C, resume 9CB0.s to 9FD0.
+      - [0x9C84, c, func_80019484]
+      - [0x9CB0, asm]
       # Phase 5EI-first-nonleaf: C func_800197D0 — VRAM 0x800197D0, size 0x20.
       # First non-leaf: frame (addiu $sp,-0x18 / sw $ra,0x10($sp)) + jal
       # func_800375B4 (already-C void(void)); return 1; teardown addiu $sp,+0x18
       # in the jr delay slot. Era -O2.
-      # Mid-9ADC carve: prefix 0x4F4, C 0x20, resume 9FF0.s to A3E4 (19BE4 carve).
+      # Mid-9CB0 carve: prefix 0x320, C 0x20, resume 9FF0.s to A3E4 (19BE4 carve).
       - [0x9FD0, c, func_800197D0]
       - [0x9FF0, asm]
       - [0xA3E4, c, func_80019BE4]

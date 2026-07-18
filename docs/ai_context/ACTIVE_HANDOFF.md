@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5ei-first-nonleaf` (uncommitted; base `main` @ `2cb31a1`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EI-first-nonleaf (era `-O2 -G8`: stack frame + jal; teardown in jr slot)** | `scripts/verify_us.sh` summary |
-| Matching C leaves | **208** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **142** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **51** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Branch / tip | `phase5ej-outgoing-arg` (uncommitted; base `main` @ `c940fc8`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EJ-outgoing-arg (era `-O2 -G0`: `int **` double dereference into outgoing `$a0` + jal)** | `scripts/verify_us.sh` summary |
+| Matching C leaves | **209** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **143** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **52** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EI-first-nonleaf / 208. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5EJ-outgoing-arg / 209. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -79,6 +79,7 @@ yaml-only and still works when asm/ is stale.
 | Branch delay-slot constant hoist (`beqz` slot) | **PROVEN** (5EG-first-branch): era cc1 `-O1 -G 8` reproduces the retail schedule on `func_8004F448` word-for-word |
 | `$a0`-in/`$v0`-out + redundant double store | **PROVEN** (5EH): era `-O2 -G8` preserves both stores + `addu` return-0 on `func_800438C0`; GCC 14.2 `-O1` merges stores and emits `move` — **era required for value-returning leaves**; era+gp `-G8` first proven here |
 | Non-leaf stack frame + `jal` | **PROVEN** (5EI-first-nonleaf): era `-O2 -G8` on `func_800197D0` (calls void(void) `func_800375B4`, returns 1) — `addiu $sp,-0x18` / `sw $ra,0x10($sp)` / `jal`+nop / `lw $ra` / `addiu $v0,1` / `jr $ra` with the `addiu $sp,+0x18` teardown **in the `jr` delay slot**, word-exact vs retail |
+| Outgoing `$a0` + `jal` after double dereference | **PROVEN** (5EJ-outgoing-arg): era `-O2 -G0` on `func_80019484(int **)` emits `lw $v0,0($a0)` / load-delay nop / `lw $a0,0($v0)` / `jal func_800438C0` + nop, then the proven return-1 frame teardown shape; all 11 words exact |
 | `lui;ori` large-literal synthesis | **PROVEN** (capability probe): both bit15-clear and bit15-set; cc1 emits PSY-Q `li` high + `ori` low; ROM-exact under 2.21 + `--dont-expand-li` |
 
 All four fingerprints from the original 5EA era claim are now proven in bytes.
@@ -98,7 +99,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   - **Integrated:** `func_80085728`; 5EI readers-typed trio; 5EJ `D_8009D28C`
     int-state (4); 5EK `D_8009D270` unsigned flags (2); **5EF all 14
     delay-slot `sw` members**. The pilot `func_8007FBC0` plus the remaining 13
-    typed leaves are integrated exact. Leaf count **208**.
+    typed leaves are integrated exact. Leaf count **209**.
   - **Delay-slot shape: FAMILY CLOSED (5EF).** Vendored maspsx LOCAL PATCH
     (`MASPSX_FILL_STORE_DELAY_SLOT=1`) fills the `j $31` slot with the trailing
     absolute `sw`. Pilot gate exact + objdump-probed (`3C01800A 03E00008
@@ -179,6 +180,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 | 5EG-first-branch | 206 | First branchy leaf `func_8004F448`; era cc1 `-O1 -G 8` hoists const into `beqz` delay slot word-exact (branch scheduling capability proven) |
 | 5EH-arg-return | 207 | First value-returning leaf `func_800438C0` on era path: `-O2 -G8` preserves double store, `addu` return-0, era+gp proven; GCC 14.2 store-merge + `move` documented as $CC-path limits |
 | 5EI-first-nonleaf | 208 | First non-leaf `func_800197D0` on era `-O2 -G8`: frame (`addiu $sp,∓0x18`, `sw/lw $ra,0x10($sp)`) + `jal func_800375B4`; teardown `addiu $sp,+0x18` lands **in the `jr` delay slot** word-exact |
+| 5EJ-outgoing-arg | 209 | `func_80019484(int **)` on era `-O2 -G0`: double-dereference load schedule sets outgoing `$a0` before `jal func_800438C0`; load-delay nop, jal nop, frame, and teardown-in-`jr`-slot all word-exact |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
