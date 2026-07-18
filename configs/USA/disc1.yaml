@@ -336,7 +336,13 @@ segments:
       - [0x55254, asm]
       # Phase 5CA: C leaf func_80064C20 — file 0x55420, size 0x10.
       - [0x55420, c, func_80064C20]
+      # Phase 5EM: C leaf func_8006A8D4 — VRAM 0x8006A8D4, size 0x110.
+      # Boot memory-region layout initializer: 19 ordered absolute pointer
+      # stores with byte-address cursor arithmetic. Era -O2 -G0; no $gp.
+      # Mid-55430 carve: prefix 0x5CA4, C 0x110, resume 5B1E4.s 0x41F0.
       - [0x55430, asm]
+      - [0x5B0D4, c, func_8006A8D4]
+      - [0x5B1E4, asm]
       # Phase 5BS: C leaf func_8006EBD4 — VRAM 0x8006EBD4, size 0x10.
       # Signed-byte global getter on D_800B0DBA; plain -O1 matches.
       - [0x5F3D4, c, func_8006EBD4]

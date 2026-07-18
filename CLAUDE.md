@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EL — 211 matching C leaves; return-forwarding probe `func_8007F7A8` matches word-exact on era `-O2 -G0`: the callee's `$v0` is returned untouched, while retail's per-function epilogue choice (`lw $ra`; teardown before `jr`; nop delay slot) is reproduced instead of the 197D0/F0 teardown-in-slot shape.**
+**Phase 5EM — 212 matching C leaves; first Rung-1 boot leaf `func_8006A8D4` matches all 68 words on era `-O2 -G0`: compiler-constrained register-pinned byte-pointer cursors reproduce 19 absolute pointer stores in retail order. Plain-local retries reverse the cursor/constant allocation and sink `D_800B0E28`, so this exact C is target-specific rather than portable natural C.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;
