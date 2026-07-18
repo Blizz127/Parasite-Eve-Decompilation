@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EH — 207 matching C leaves; first arg+return leaf on the era path: `-O2 -G8` preserves the double store, `addu` return-0, gp store word-exact (`func_800438C0`).**
+**Phase 5EI — 208 matching C leaves; first NON-LEAF on the era path: `-O2 -G8` frame (`addiu $sp,∓0x18` + `sw/lw $ra,0x10($sp)`) + `jal` match `func_800197D0` word-exact, with the frame teardown scheduled into the `jr` delay slot as retail does.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;

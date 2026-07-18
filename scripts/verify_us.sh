@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5EH: 207 C leaves.
+# Current production subsegments (file offsets). Phase 5EI: 208 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x3FC48, c, func_8004F448]'
@@ -52,6 +52,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x2E7D0, c, func_8003DFD0]'
     '[0x4370C, c, func_80052F0C]'
     '[0xA3E4, c, func_80019BE4]'
+    '[0x9FD0, c, func_800197D0]'
+    '[0x9FF0, asm]'
     '[0x40008, c, func_8004F808]'
     '[0x33720, c, func_80042F20]'
     '[0x33838, c, func_80043038]'
@@ -759,7 +761,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800438C0.c" && -f "$ROOT/src/func_8004F448.c" ]]; then
+if [[ -f "$ROOT/src/func_800197D0.c" && -f "$ROOT/src/func_800438C0.c" ]]; then
+    echo "C conversion: Phase 5EI-first-nonleaf — 208 leaves (+ first non-leaf func_800197D0; era -O2: frame + jal, teardown in jr slot)"
+    echo "  sources: src/func_800197D0.c (+ prior 5EH)"
+elif [[ -f "$ROOT/src/func_800438C0.c" && -f "$ROOT/src/func_8004F448.c" ]]; then
     echo "C conversion: Phase 5EH-arg-return — 207 leaves (+ first arg+return leaf func_800438C0; era -O2 -G8: double store, addu return, gp)"
     echo "  sources: src/func_800438C0.c (+ prior 5EG)"
 elif [[ -f "$ROOT/src/func_8004F448.c" && -f "$ROOT/src/func_80074A14.c" && -f "$ROOT/src/func_80082CDC.c" ]]; then
