@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EF — 205 matching C leaves; delay-slot `sw` family closed 14/14.**
+**Phase 5EG — 206 matching C leaves; first branchy leaf matched: era cc1 `-O1 -G 8` reproduces the retail `beqz` delay-slot constant hoist word-exact (`func_8004F448`).**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;

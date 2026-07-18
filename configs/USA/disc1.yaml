@@ -194,7 +194,13 @@ segments:
       - [0x3E29C, c, func_8004DA9C]
       - [0x3E2A4, asm]
       - [0x3F170, c, func_8004E970]
+      # Phase 5EG: C leaf func_8004F448 — VRAM 0x8004F448, size 0x1C.
+      # File span 0x3FC48–0x3FC64 exclusive. First branchy leaf: gp read,
+      # beqz with constant hoisted into the delay slot, gp store; void leaf.
+      # Mid-3F17C carve: prefix 0xACC, C 0x1C, resume 3FC64.s 0x3A4.
       - [0x3F17C, asm]
+      - [0x3FC48, c, func_8004F448]
+      - [0x3FC64, asm]
       - [0x40008, c, func_8004F808]
       - [0x40038, asm]
       # Phase 5AF: C leaf func_80050D18 — VRAM 0x80050D18, size 0x8.
