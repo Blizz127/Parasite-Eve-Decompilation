@@ -40,6 +40,7 @@ fi
 MASPSX_TRACKED=(
     "maspsx/__init__.py"
     "tests/test_fill_store_delay_slot.py"
+    "tests/test_three_word_symbol_store.py"
 )
 
 if [[ -f "$ERA/maspsx/maspsx.py" ]]; then

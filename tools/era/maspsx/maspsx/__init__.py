@@ -14,6 +14,11 @@
 #      ROM evidence (Parasite Eve disc1): 14-member sw delay-slot family
 #      (func_8007FBC0 et al) fills; sb/sh macro stores and multi-store
 #      epilogues stay pre-jr with a nop slot. Default OFF: opt-in per leaf.
+#   2. three_word_symbol_store (ctor arg, or env
+#      MASPSX_THREE_WORD_SYMBOL_STORE=1): for standalone indexed symbolic
+#      stores under ASPSX 2.21/addiu_at, select the ASPSX 2.30 three-word
+#      lui/addu/store-%lo form instead of lui/addiu/addu/store-0. Compound
+#      semicolon lines retain the legacy expansion. Default OFF: opt in per leaf.
 import struct
 import os
 import re
@@ -415,6 +420,7 @@ class MaspsxProcessor:
         use_comm_section=False,
         use_comm_for_lcomm=False,
         fill_store_delay_slot=False,
+        three_word_symbol_store=False,
     ):
         self.lines = [x.strip() for x in lines]
 
@@ -441,6 +447,12 @@ class MaspsxProcessor:
         self.fill_store_delay_slot = (
             fill_store_delay_slot
             or os.environ.get("MASPSX_FILL_STORE_DELAY_SLOT") == "1"
+        )
+        # LOCAL PATCH: the env gate keeps the untracked maspsx.py driver
+        # untouched and permits per-leaf selection.
+        self.three_word_symbol_store = (
+            three_word_symbol_store
+            or os.environ.get("MASPSX_THREE_WORD_SYMBOL_STORE") == "1"
         )
 
         self.bss_entries: dict[str, int] = {}
@@ -1089,7 +1101,11 @@ class MaspsxProcessor:
                     res.append(line)
             elif is_addend and r_source:
                 # e.g. sw	$a0,ctlbuf($v0)
-                if self.addiu_at and op != "la":
+                if (
+                    self.addiu_at
+                    and op != "la"
+                    and (not self.three_word_symbol_store or is_macro)
+                ):
                     res.extend(
                         [
                             "# EXPAND_AT START",

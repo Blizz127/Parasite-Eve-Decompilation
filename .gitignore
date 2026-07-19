@@ -58,3 +58,4 @@ tools/era/maspsx/maspsx/*
 !tools/era/maspsx/tests/
 tools/era/maspsx/tests/*
 !tools/era/maspsx/tests/test_fill_store_delay_slot.py
+!tools/era/maspsx/tests/test_three_word_symbol_store.py
