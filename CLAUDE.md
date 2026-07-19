@@ -36,7 +36,12 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EM — 212 matching C leaves; first Rung-1 boot leaf `func_8006A8D4` matches all 68 words on era `-O2 -G0`: compiler-constrained register-pinned byte-pointer cursors reproduce 19 absolute pointer stores in retail order. Plain-local retries reverse the cursor/constant allocation and sink `D_800B0E28`, so this exact C is target-specific rather than portable natural C.**
+**Phase 5EP capability bank — production remains 212 matching C leaves. First
+Rung-1 boot leaf `func_8006A8D4` matches all 68 words on era `-O2 -G0`.
+`func_8006A674` proves pointer-advance in the back-branch delay slot for both
+`bnez` up-counters and `bgez` down-counters, plus store-in-`jr`-slot, so loops
+are volume-eligible. The leaf itself is parked with a 45-word `$v1 = -1`
+shared-constant-hoist residual and is not a 213th match.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;
@@ -53,6 +58,11 @@ so GCC-14.2 leaves stay byte-identical. **Vendored maspsx LOCAL PATCH:**
 env `MASPSX_FILL_STORE_DELAY_SLOT=1` per `era_compile` line expands an absolute
 `sw $r,SYM` before a bare `j $31` into `lui $at` / `j $31` / `sw $r,%lo($at)`
 (5EF delay-slot family; sb/sh and multi-store epilogues stay pre-jr in ROM).
+Patch 2 landed at `f0b9155`: per-leaf
+`MASPSX_THREE_WORD_SYMBOL_STORE=1` selects the three-word ASPSX-2.30-shaped
+`lui` / indexed `addu` / `%lo` store while leaving compound lines and indexed
+loads unchanged; flag-off remains byte-identical and its durable tests survive
+`setup_era.sh` re-clones.
 **Opaque-word ruling:** globals with only
 bare 32-bit `sw`/`lw` use (no arith/pointer/bitwise) type as `unsigned int` —
 not the rejected sh/sb→int cheat. Integrated: 8 A182x setters

@@ -7,8 +7,8 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5em-boot-6a8d4` (uncommitted; base `main` @ `fb744ed`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EM-boot-6a8d4 (era `-O2 -G0`: 68-word boot memory-region pointer layout)** | `scripts/verify_us.sh` summary |
+| Branch / tip | `main` (docs bank atop production/toolchain tip `f0b9155`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EP loop-capability bank; production remains 5EM-boot-6a8d4 / 212 exact leaves** | `scripts/verify_us.sh` summary + parked-probe record below |
 | Matching C leaves | **212** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **145** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
 | Era leaf compiles | **55** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
@@ -44,6 +44,12 @@ are git-ignored inputs — never commit them.
   are ROM-proven to stay pre-jr with a nop slot (e.g. func_8003FFAC vs
   func_8007FBC0: identical C shape, different ROM scheduling — the original
   units were assembled with different ASPSX scheduling).
+- Patch 2 landed at `f0b9155`: **three-word indexed symbolic store**, opt-in
+  per leaf via `MASPSX_THREE_WORD_SYMBOL_STORE=1`. Standalone
+  `store $r,SYMBOL($index)` uses the retail/ASPSX-2.30-shaped
+  `lui $at,%hi` / `addu $at,$at,$index` / `store $r,%lo($at)` sequence;
+  compound semicolon lines retain the 2.21 four-word expansion, and indexed
+  loads are untouched. Flag-off rebuild is the exact 212-leaf retail SHA.
 - Maspsx stdin: closed with `</dev/null` in `era_compile` (non-TTY hang under
   agent sockets). Bare `scripts/build_us.sh` is fine.
 
@@ -82,6 +88,8 @@ yaml-only and still works when asm/ is stale.
 | Outgoing `$a0` + `jal` after double dereference | **PROVEN** (5EJ-outgoing-arg): era `-O2 -G0` on `func_80019484(int **)` emits `lw $v0,0($a0)` / load-delay nop / `lw $a0,0($v0)` / `jal func_800438C0` + nop, then the proven return-1 frame teardown shape; all 11 words exact |
 | Return-forwarded `$v0` + teardown-before-`jr` epilogue | **PROVEN** (5EL-return-forwarding): era `-O2 -G0` on `func_8007F7A8` emits the frame + `jal func_8007FCAC` + nop, forwards `$v0` untouched, then `lw $ra`; `addiu $sp,+0x18`; `jr $ra`; nop. Era reproduces this per-function schedule as well as 197D0/F0's opposite teardown-in-slot schedule |
 | Straight-line boot pointer-layout scheduling | **PROVEN, COMPILER-CONSTRAINED C** (5EM-boot-6a8d4): era `-O2 -G0` matches all 68 words / 19 absolute pointer stores in retail order. Both the initial plain-local source and one retail-order retry allocate cursors to `$a0/$a1`, constants to `$v0/$v1`, and sink `D_800B0E28` past `D_800B0E2C/E30`. The exact fallback therefore uses the established explicit-register convention (`$v0/$v1` cursors, `$a0/$a1` constants); it is target-specific matching C, not portable natural C |
+| Counting-loop back-edge scheduling | **PROVEN; VOLUME-ELIGIBLE** (5EN/5EP `func_8006A674` probe): era `-O2 -G0` puts pointer advances in all five retail back-branch delay slots — `bnez` up-counters (`$a0+4`, `$v1+2`, `$a1+8`) and `bgez` down-counters (`$a3-4`, `$v0-4`) — and preserves the final store in the `jr` delay slot. The leaf remains parked for unrelated constant-hoist scheduling; the loop primitive passed. |
+| Indexed global-array store expansion | **PROVEN, TOOL-SOLVED** (`f0b9155`): per-leaf `MASPSX_THREE_WORD_SYMBOL_STORE=1` reproduces `lui` / indexed `addu` / `%lo` store and removed the extra L3 word in `func_8006A674` (153→152 words). Default off is byte-identical. |
 | `lui;ori` large-literal synthesis | **PROVEN** (capability probe): both bit15-clear and bit15-set; cc1 emits PSY-Q `li` high + `ori` low; ROM-exact under 2.21 + `--dont-expand-li` |
 
 All four fingerprints from the original 5EA era claim are now proven in bytes.
@@ -122,6 +130,25 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   inventoried here. Path forward is matching real logic, not harvesting
   trivial setters.
 
+## Boot Rung 1
+
+```text
+main -> func_8006A64C -> { func_8006A8D4 ✓ exact C,
+                           func_8006A674 parked asm }
+```
+
+- `func_8006A674` is **PARKED, not a 213th leaf**. Loops are proven; L2 store /
+  increment phrasing and the flag/L4 allocation were resolved with semantic
+  `$v0`/`$a3` pins. Exactness still needs control over the repeated pinned
+  `$v1 = -1` / shared-constant hoists: **45 words remain**, in
+  `0x8006A684–0x8006A6A8`, `0x8006A770–0x8006A790`, and
+  `0x8006A7E8–0x8006A84C`. The bounded candidate is recorded by stash message
+  `park phase5ep func_8006A674 bounded pinning pass (45-word scheduler residual)`.
+- Both boot callees are proven `void func(void)`. Therefore
+  `func_8006A64C` may be attempted **now** with `func_8006A674` declared as an
+  external `void(void)` function; the callee does not need to be matched C for
+  the trivial two-call wrapper's signature to be known.
+
 ## Standing policy
 
 1. **PROBE BEFORE GRIND.** The two biggest unblocks (maspsx stdin hang;
@@ -143,6 +170,11 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
    (`func_800405A4` lesson). Re-check after every reader phase.
    `5EF-delay-slot` **CLOSED** (14/14 integrated); `sb-sh-five` reclassified
    typing-only.
+7. **Register pinning is an evidence-backed fallback, not a shortcut.** Use it
+   only after natural C and a retail-order phrasing retry prove that the
+   residual is register **allocation**, not statement order. Pins must have
+   semantic names and a source comment recording the allocation proof
+   (`func_8006A8D4` exact; `func_8006A674` bounded parked example).
 
 ## Resolved blockers
 
@@ -186,6 +218,8 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 | 5EK-volume-197f0 | 210 | First post-probe volume leaf: `func_800197F0` on era `-O2 -G0` transfers the proven 197D0 frame + void `jal` + return-1 + teardown-in-`jr`-slot shape word-exact; no new primitive |
 | 5EL-return-forwarding | 211 | `func_8007F7A8` on era `-O2 -G0` forwards `func_8007FCAC`'s `$v0` untouched and reproduces retail's opposite epilogue schedule: teardown before `jr`, nop in the delay slot; all eight words exact |
 | 5EM-boot-6a8d4 | 212 | First Rung-1 boot leaf: `func_8006A8D4` on era `-O2 -G0` lays out boot memory regions with 19 ordered absolute pointer stores; register-pinned byte cursors reproduce all 68 retail words exactly after two plain-local phrasings fail the retail register allocation/store schedule. Compiler-constrained, target-specific C is documented in source |
+| maspsx indexed-store | 212 | Toolchain patch `f0b9155`: default-off `MASPSX_THREE_WORD_SYMBOL_STORE=1` opt-in adds the three-word symbol+register store form; exact 212-leaf regression, 148 tests, and live re-clone durability passed |
+| 5EN/5EP-loop-probe | 212 | `func_8006A674` proves five `bnez`/`bgez` loop back-edge delay slots plus store-in-`jr`-slot; L2 and late allocation deltas cleared, but the leaf is parked with a 45-word `$v1` constant-hoist residual and no 213 claim |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
