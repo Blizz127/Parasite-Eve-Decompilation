@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `main` (docs bank atop production/toolchain tip `f0b9155`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EP loop-capability bank; production remains 5EM-boot-6a8d4 / 212 exact leaves** | `scripts/verify_us.sh` summary + parked-probe record below |
-| Matching C leaves | **212** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **145** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **55** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Branch / tip | `phase5eq-6a64c` (uncommitted; base `main` @ `1073ae1`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EQ-boot-6a64c / 213 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **213** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **146** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **56** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EM-boot-6a8d4 / 212. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5EQ-boot-6a64c / 213. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -109,7 +109,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   - **Integrated:** `func_80085728`; 5EI readers-typed trio; 5EJ `D_8009D28C`
     int-state (4); 5EK `D_8009D270` unsigned flags (2); **5EF all 14
     delay-slot `sw` members**. The pilot `func_8007FBC0` plus the remaining 13
-    typed leaves are integrated exact. Leaf count **212**.
+    typed leaves are integrated exact. Leaf count **213**.
   - **Delay-slot shape: FAMILY CLOSED (5EF).** Vendored maspsx LOCAL PATCH
     (`MASPSX_FILL_STORE_DELAY_SLOT=1`) fills the `j $31` slot with the trailing
     absolute `sw`. Pilot gate exact + objdump-probed (`3C01800A 03E00008
@@ -133,21 +133,23 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 ## Boot Rung 1
 
 ```text
-main -> func_8006A64C -> { func_8006A8D4 ✓ exact C,
-                           func_8006A674 parked asm }
+main -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
+                                     func_8006A674 parked asm }
 ```
 
-- `func_8006A674` is **PARKED, not a 213th leaf**. Loops are proven; L2 store /
+- `func_8006A674` is **PARKED, not itself matched**; the 213th leaf is the
+  wrapper `func_8006A64C`. Loops are proven; L2 store /
   increment phrasing and the flag/L4 allocation were resolved with semantic
   `$v0`/`$a3` pins. Exactness still needs control over the repeated pinned
   `$v1 = -1` / shared-constant hoists: **45 words remain**, in
   `0x8006A684–0x8006A6A8`, `0x8006A770–0x8006A790`, and
   `0x8006A7E8–0x8006A84C`. The bounded candidate is recorded by stash message
   `park phase5ep func_8006A674 bounded pinning pass (45-word scheduler residual)`.
-- Both boot callees are proven `void func(void)`. Therefore
-  `func_8006A64C` may be attempted **now** with `func_8006A674` declared as an
-  external `void(void)` function; the callee does not need to be matched C for
-  the trivial two-call wrapper's signature to be known.
+- `func_8006A64C` matches all 10 words on era `-O2 -G0`: two sequential
+  `void(void)` calls, teardown before `jr`, and a nop delay slot. Both
+  `R_MIPS_26` relocations resolve at link time, including the call to the live
+  asm symbol `func_8006A674`; matching a caller requires a known callee
+  signature, not that every callee already be C.
 
 ## Standing policy
 
@@ -220,6 +222,7 @@ main -> func_8006A64C -> { func_8006A8D4 ✓ exact C,
 | 5EM-boot-6a8d4 | 212 | First Rung-1 boot leaf: `func_8006A8D4` on era `-O2 -G0` lays out boot memory regions with 19 ordered absolute pointer stores; register-pinned byte cursors reproduce all 68 retail words exactly after two plain-local phrasings fail the retail register allocation/store schedule. Compiler-constrained, target-specific C is documented in source |
 | maspsx indexed-store | 212 | Toolchain patch `f0b9155`: default-off `MASPSX_THREE_WORD_SYMBOL_STORE=1` opt-in adds the three-word symbol+register store form; exact 212-leaf regression, 148 tests, and live re-clone durability passed |
 | 5EN/5EP-loop-probe | 212 | `func_8006A674` proves five `bnez`/`bgez` loop back-edge delay slots plus store-in-`jr`-slot; L2 and late allocation deltas cleared, but the leaf is parked with a 45-word `$v1` constant-hoist residual and no 213 claim |
+| 5EQ-boot-6a64c | 213 | Boot wrapper `func_8006A64C` on era `-O2 -G0`: calls matched-C `func_8006A8D4` then live-asm `func_8006A674`, both proven `void(void)`; both `R_MIPS_26` relocations resolve and teardown-before-`jr` + nop-slot matches all 10 words |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

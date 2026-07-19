@@ -36,12 +36,12 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EP capability bank — production remains 212 matching C leaves. First
-Rung-1 boot leaf `func_8006A8D4` matches all 68 words on era `-O2 -G0`.
-`func_8006A674` proves pointer-advance in the back-branch delay slot for both
-`bnez` up-counters and `bgez` down-counters, plus store-in-`jr`-slot, so loops
-are volume-eligible. The leaf itself is parked with a 45-word `$v1 = -1`
-shared-constant-hoist residual and is not a 213th match.**
+**Phase 5EQ — 213 matching C leaves. Boot wrapper `func_8006A64C` matches all
+10 words on era `-O2 -G0`: it calls `void(void)` callees `func_8006A8D4` and
+live-asm `func_8006A674`, both `R_MIPS_26` relocations resolve, and the epilogue
+keeps teardown before `jr` with a nop slot. `func_8006A674` remains parked with
+a 45-word `$v1 = -1` shared-constant-hoist residual; its loop scheduling is
+proven and volume-eligible, but the function itself is not matched C.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;
