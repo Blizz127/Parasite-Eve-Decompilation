@@ -36,12 +36,14 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EQ — 213 matching C leaves. Boot wrapper `func_8006A64C` matches all
-10 words on era `-O2 -G0`: it calls `void(void)` callees `func_8006A8D4` and
-live-asm `func_8006A674`, both `R_MIPS_26` relocations resolve, and the epilogue
-keeps teardown before `jr` with a nop slot. `func_8006A674` remains parked with
-a 45-word `$v1 = -1` shared-constant-hoist residual; its loop scheduling is
-proven and volume-eligible, but the function itself is not matched C.**
+**Phase 5ER — 215 matching C leaves. Adjacent test-and-clear-return twins
+`func_80038D1C` (byte) and `func_80038D48` (word) each match all 11 words on
+era `-O2 -G0`: explicit pointer reuse preserves the address in `$v1`, with
+return 0 in the `bnez` slot, return `0xFF` in the unconditional-jump slot, and
+`sb`/`sw` clears. Direct-global C emitted a 12-word `beq`/rebuilt-address form;
+one natural phrasing retry matched without pinning. Boot Rung 1 remains through
+matched `func_8006A64C`; `func_8006A674` is still parked with its 45-word
+shared-constant-hoist residual, while its loop scheduling remains proven.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;

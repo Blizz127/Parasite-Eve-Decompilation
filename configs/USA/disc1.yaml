@@ -128,7 +128,11 @@ segments:
       # Phase 5BQ: C leaf func_80038D0C — VRAM 0x80038D0C, size 0x10.
       # Nonzero test of D_80091A1C (lui/lbu/jr/sltu); plain -O1 matches.
       - [0x2950C, c, func_80038D0C]
-      - [0x2951C, asm]
+      # Phase 5ER: adjacent test-and-clear-return twins; era -O2 -G0, no $gp.
+      # D_80091A20 is byte-width (lbu/sb); D_80091A24 is word-width (lw/sw).
+      - [0x2951C, c, func_80038D1C]
+      - [0x29548, c, func_80038D48]
+      - [0x29574, asm]
       # Phase 5AJ: C leaf func_8003D82C — VRAM 0x8003D82C, size 0x8.
       # File span 0x2E02C–0x2E034 exclusive. Return-1 stub (jr; addiu $v0,1).
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.

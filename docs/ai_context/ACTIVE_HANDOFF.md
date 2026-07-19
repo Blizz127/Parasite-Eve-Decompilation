@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5eq-6a64c` (uncommitted; base `main` @ `1073ae1`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EQ-boot-6a64c / 213 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **213** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Branch / tip | `phase5er-d1c-d48` (uncommitted; base `main` @ `b536fc9`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5ER-d1c-d48 / 215 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **215** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **146** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **56** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Era leaf compiles | **58** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EQ-boot-6a64c / 213. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5ER-d1c-d48 / 215. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -83,6 +83,7 @@ yaml-only and still works when asm/ is stale.
 | `li` const materialization (`addiu` not `ori`) | Proven 5EC via `--dont-expand-li` |
 | `$at` absolute `sw` macro expansion | Proven by scratch probe; integrated exact in 5EE |
 | Branch delay-slot constant hoist (`beqz` slot) | **PROVEN** (5EG-first-branch): era cc1 `-O1 -G 8` reproduces the retail schedule on `func_8004F448` word-for-word |
+| Test-and-clear-return if/else (`bnez` + j-over) | **PROVEN, VOLUME** (5ER): era `-O2 -G0` matches the adjacent byte/word twins `func_80038D1C` / `func_80038D48` — shared address in `$v1`, `addu $v0,$zero,$zero` in the `bnez` slot, `addiu $v0,$zero,0xFF` in the unconditional-jump slot, then `sb`/`sw` clear. Direct-global C rebuilt the address and used a 12-word `beq` form; one natural explicit-pointer phrasing retry matched all 11 words without pinning |
 | `$a0`-in/`$v0`-out + redundant double store | **PROVEN** (5EH): era `-O2 -G8` preserves both stores + `addu` return-0 on `func_800438C0`; GCC 14.2 `-O1` merges stores and emits `move` — **era required for value-returning leaves**; era+gp `-G8` first proven here |
 | Non-leaf stack frame + `jal` | **PROVEN** (5EI; repeated as volume in 5EK): era matches the `func_800197D0` / `func_800197F0` void-callee twins — `addiu $sp,-0x18` / `sw $ra,0x10($sp)` / `jal`+nop / `lw $ra` / `addiu $v0,1` / `jr $ra` with the `addiu $sp,+0x18` teardown **in the `jr` delay slot**, word-exact; 197F0 uses `-O2 -G0` and adds no primitive |
 | Outgoing `$a0` + `jal` after double dereference | **PROVEN** (5EJ-outgoing-arg): era `-O2 -G0` on `func_80019484(int **)` emits `lw $v0,0($a0)` / load-delay nop / `lw $a0,0($v0)` / `jal func_800438C0` + nop, then the proven return-1 frame teardown shape; all 11 words exact |
@@ -109,7 +110,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   - **Integrated:** `func_80085728`; 5EI readers-typed trio; 5EJ `D_8009D28C`
     int-state (4); 5EK `D_8009D270` unsigned flags (2); **5EF all 14
     delay-slot `sw` members**. The pilot `func_8007FBC0` plus the remaining 13
-    typed leaves are integrated exact. Leaf count **213**.
+    typed leaves are integrated exact. Leaf count **215**.
   - **Delay-slot shape: FAMILY CLOSED (5EF).** Vendored maspsx LOCAL PATCH
     (`MASPSX_FILL_STORE_DELAY_SLOT=1`) fills the `j $31` slot with the trailing
     absolute `sw`. Pilot gate exact + objdump-probed (`3C01800A 03E00008
@@ -223,6 +224,7 @@ main -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
 | maspsx indexed-store | 212 | Toolchain patch `f0b9155`: default-off `MASPSX_THREE_WORD_SYMBOL_STORE=1` opt-in adds the three-word symbol+register store form; exact 212-leaf regression, 148 tests, and live re-clone durability passed |
 | 5EN/5EP-loop-probe | 212 | `func_8006A674` proves five `bnez`/`bgez` loop back-edge delay slots plus store-in-`jr`-slot; L2 and late allocation deltas cleared, but the leaf is parked with a 45-word `$v1` constant-hoist residual and no 213 claim |
 | 5EQ-boot-6a64c | 213 | Boot wrapper `func_8006A64C` on era `-O2 -G0`: calls matched-C `func_8006A8D4` then live-asm `func_8006A674`, both proven `void(void)`; both `R_MIPS_26` relocations resolve and teardown-before-`jr` + nop-slot matches all 10 words |
+| 5ER-d1c-d48 | 215 | Adjacent byte/word test-and-clear-return twins `func_80038D1C` / `func_80038D48` on era `-O2 -G0`; explicit pointer reuse gives retail `bnez` + j-over delay-slot returns and `sb`/`sw` clears, all 11 words each exact after one natural phrasing retry |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

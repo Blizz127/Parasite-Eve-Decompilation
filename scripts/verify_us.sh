@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5EQ: 213 C leaves.
+# Current production subsegments (file offsets). Phase 5ER: 215 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x3FC48, c, func_8004F448]'
@@ -119,7 +119,9 @@ EXPECTED_SUBSEGMENTS=(
     '[0x98B4, c, func_800190B4]'
     '[0x98BC, asm]'
     '[0x2950C, c, func_80038D0C]'
-    '[0x2951C, asm]'
+    '[0x2951C, c, func_80038D1C]'
+    '[0x29548, c, func_80038D48]'
+    '[0x29574, asm]'
     '[0x2E02C, c, func_8003D82C]'
     '[0x2E034, asm]'
     '[0x2E7C8, c, func_8003DFC8]'
@@ -355,7 +357,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/86A4.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
-    "asm/disc1/2951C.s"
+    "asm/disc1/29574.s"
     "asm/disc1/2E034.s"
     "asm/disc1/2E7D0.s"
     "asm/disc1/307CC.s"
@@ -473,6 +475,8 @@ EXPECTED_ARTIFACTS=(
     "src/func_800190AC.c"
     "src/func_800190B4.c"
     "src/func_80038D0C.c"
+    "src/func_80038D1C.c"
+    "src/func_80038D48.c"
     "src/func_8003D82C.c"
     "src/func_8003DFC8.c"
     "src/func_8003FFAC.c"
@@ -776,7 +780,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8006A64C.c" ]]; then
+if [[ -f "$ROOT/src/func_80038D1C.c" && -f "$ROOT/src/func_80038D48.c" ]]; then
+    echo "C conversion: Phase 5ER-d1c-d48 — 215 leaves (+ byte/word test-and-clear-return twins; era -O2 -G0: bnez + j-over with return values in delay slots)"
+    echo "  sources: src/func_80038D1C.c src/func_80038D48.c (+ prior 5EQ)"
+elif [[ -f "$ROOT/src/func_8006A64C.c" ]]; then
     echo "C conversion: Phase 5EQ-boot-6a64c — 213 leaves (+ func_8006A64C; era -O2 -G0: two sequential void calls, teardown before jr + nop slot)"
     echo "  sources: src/func_8006A64C.c (+ prior 5EM; func_8006A674 remains asm)"
 elif [[ -f "$ROOT/src/func_8006A8D4.c" ]]; then
