@@ -36,13 +36,14 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5ES — 216 matching C leaves. First loop-as-volume leaf
-`func_8004BF08` matches all 14 words on era `-O2 -G0`: natural explicit-init
-pointer locals clear two parallel signed `int[8]` arrays, the first pointer
-advances before the bound test, and the second advances in the backward-`bnez`
-delay slot. The declaration-initialized `for` form allocated the counter and
-pointers differently; one natural `do/while` phrasing retry matched without
-pinning or a maspsx flag. Phase 5ER's pointer-local load/store reuse remains a
+**Phase 5ET — 217 matching C leaves. Loop-as-volume repeats:
+`func_8005186C` matches all 15 words on era `-O2 -G0` on the first natural-C
+try, no pinning or maspsx flag — a pure-register 16-pass bit-serial loop (no
+loads/stores/calls/`$gp`); explicit-init `do/while`; the unconditional
+`result <<= 1` fills the forward `bnez` skip-branch delay slot and the `bgez`
+back-edge keeps a nop slot. Phase 5ES's `func_8004BF08` (natural explicit-init
+pointer walk clearing two parallel `int[8]` arrays, one phrasing retry) remains
+the loop-volume pilot. Phase 5ER's pointer-local load/store reuse remains a
 general phrasing pattern. Boot Rung 1 remains through matched `func_8006A64C`;
 `func_8006A674` is still parked with its 45-word shared-constant-hoist residual,
 while its loop scheduling remains proven.**
