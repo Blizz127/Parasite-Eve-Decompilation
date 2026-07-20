@@ -208,7 +208,11 @@ segments:
       - [0x33A4C, asm]
       - [0x340C0, c, func_800438C0]
       - [0x340E0, c, func_800438E0]
+      # Phase 5ES: first loop-as-volume leaf; era -O2 -G0, no $gp.
+      # Mid-340EC carve: prefix 0x861C, C 0x38 (14 words), resume 3C740.s 0x10E4.
       - [0x340EC, asm]
+      - [0x3C708, c, func_8004BF08]
+      - [0x3C740, asm]
       - [0x3D824, c, func_8004D024]
       - [0x3D830, asm]
       - [0x3DA7C, c, func_8004D27C]

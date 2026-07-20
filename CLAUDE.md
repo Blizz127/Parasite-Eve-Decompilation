@@ -36,14 +36,16 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5ER — 215 matching C leaves. Adjacent test-and-clear-return twins
-`func_80038D1C` (byte) and `func_80038D48` (word) each match all 11 words on
-era `-O2 -G0`: explicit pointer reuse preserves the address in `$v1`, with
-return 0 in the `bnez` slot, return `0xFF` in the unconditional-jump slot, and
-`sb`/`sw` clears. Direct-global C emitted a 12-word `beq`/rebuilt-address form;
-one natural phrasing retry matched without pinning. Boot Rung 1 remains through
-matched `func_8006A64C`; `func_8006A674` is still parked with its 45-word
-shared-constant-hoist residual, while its loop scheduling remains proven.**
+**Phase 5ES — 216 matching C leaves. First loop-as-volume leaf
+`func_8004BF08` matches all 14 words on era `-O2 -G0`: natural explicit-init
+pointer locals clear two parallel signed `int[8]` arrays, the first pointer
+advances before the bound test, and the second advances in the backward-`bnez`
+delay slot. The declaration-initialized `for` form allocated the counter and
+pointers differently; one natural `do/while` phrasing retry matched without
+pinning or a maspsx flag. Phase 5ER's pointer-local load/store reuse remains a
+general phrasing pattern. Boot Rung 1 remains through matched `func_8006A64C`;
+`func_8006A674` is still parked with its 45-word shared-constant-hoist residual,
+while its loop scheduling remains proven.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;
