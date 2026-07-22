@@ -7,7 +7,7 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5eu-gp-loop-55724` (parked; base `main` @ `2aa070f`) | `git branch --show-current` / `git log --oneline -1` |
+| Branch / tip | `main` — 5EU (`55724`) + 5EV (`52BCC`) park docs both landed; base `2aa070f` | `git branch --show-current` / `git log --oneline -1` |
 | Phase | **5ET-loop-5186c / 217 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
 | Matching C leaves | **217** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **148** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
@@ -94,6 +94,8 @@ yaml-only and still works when asm/ is stale.
 | Pure-register bit-serial loop in volume | **PROVEN, VOLUME** (5ET `func_8005186C`): era `-O2 -G0` matches all 15 words on the first natural-C try — no loads/stores, calls, or `$gp`; explicit-init `do/while`; the unconditional `result <<= 1` fills the forward `bnez` skip-branch delay slot, the `bgez` back-edge keeps a nop slot, and the return lands as `addu $v0,$a1,$zero` in the `jr` delay slot |
 | Indexed global-array store expansion | **PROVEN, TOOL-SOLVED** (`f0b9155`): per-leaf `MASPSX_THREE_WORD_SYMBOL_STORE=1` reproduces `lui` / indexed `addu` / `%lo` store and removed the extra L3 word in `func_8006A674` (153→152 words). Default off is byte-identical. |
 | `lui;ori` large-literal synthesis | **PROVEN** (capability probe): both bit15-clear and bit15-set; cc1 emits PSY-Q `li` high + `ori` low; ROM-exact under 2.21 + `--dont-expand-li` |
+| Rotated/peeled loop idiom | **PROVEN SHAPE** (5EV `func_80052BCC`, leaf parked on unrelated allocation): write the first iteration explicitly, then `while (cond) { body }` → era `-O2 -G0` emits the rotated shape: `beq`-exit head, bottom-tested `bne` back-edge, pointer advance in both delay slots |
+| Signed `char` vs 0xFF-range constant | **PROVEN SHAPE** (5EV `func_80052BCC`, same parked leaf): signed `char c` compared against `0xFF` emits the conversion `andi` on the compare path even after `lbu`; `unsigned char` does not. Typing controls the mask |
 
 All four fingerprints from the original 5EA era claim are now proven in bytes.
 The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a countdown.
@@ -139,6 +141,21 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   flipped regs. era `-O1 -G8` output is **byte-identical** to `-O2` for both
   leading phrasings — no per-function `-O` support from this leaf. Residual is
   scheduling, not proven allocation. Detail: `docs/ai_context/parked_blockers.json`.
+- **PARKED-ALLOCATION/SCHEDULING family:** three leaves now park on the same
+  class — cc1 2.7 register allocation/scheduling decisions that natural C
+  cannot steer and `-O` level does not change:
+  - `func_8006A674`: `$v1=-1` shared-constant hoist (45-word residual).
+  - `func_80055724`: p-load hoist covering the count-load delay
+    (`-O1` == `-O2`, byte-identical; branch `phase5eu-gp-loop-55724`).
+  - `func_80052BCC`: `$v0`/`$v1` role swap across a loop-rotation peel
+    boundary + absent const reload (branch `phase5ev-52bcc`).
+  Common shape: the compiler makes a global allocation/scheduling choice
+  retail's build made differently. Pins don't apply (not simple role flips).
+  Phrasing exhausted per-leaf. **OPEN QUESTION:** is there a single
+  cc1/maspsx knob or ccpsx behavior difference that resolves the family —
+  analogous to how the `addiu_at` patch resolved the indexed-store class?
+  Worth a dedicated investigation session before grinding more individual
+  leaves of this shape.
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not
   inventoried here. Path forward is matching real logic, not harvesting
   trivial setters.
@@ -239,6 +256,7 @@ main -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
 | 5ER-d1c-d48 | 215 | Adjacent byte/word test-and-clear-return twins `func_80038D1C` / `func_80038D48` on era `-O2 -G0`; explicit pointer reuse gives retail `bnez` + j-over delay-slot returns and `sb`/`sw` clears, all 11 words each exact after one natural phrasing retry |
 | 5ES-loop-4bf08 | 216 | First loop-as-volume leaf: natural explicit-init pointer walk in `func_8004BF08` clears two parallel `int[8]` arrays; era `-O2 -G0` reproduces all 14 words, including the split pointer advances and backward-`bnez` delay slot, with no pinning or tool flag |
 | 5ET-loop-5186c | 217 | Loop-as-volume repeats: pure-register 16-pass bit-serial loop `func_8005186C` on era `-O2 -G0`, all 15 words on the first natural-C try; unconditional `result <<= 1` fills the forward `bnez` skip slot, nop `bgez` back-edge; mid-4204C carve (prefix 0x20, C 0x3C, resume 420A8.s 0x5A0) |
+| 5EU/5EV parks | 217 | `func_80055724` (p-load hoist; `-O1`≡`-O2`) and `func_80052BCC` (rotated-loop `$v0`/`$v1` role swap, 13/15) parked as the **PARKED-ALLOCATION/SCHEDULING family** (with `6A674`): cc1 global allocation/scheduling choices natural C can't steer. Banked idioms: rotated loop = explicit first iteration + `while`; signed `char` vs `0xFF` emits the `andi`. Docs only, no carve |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
