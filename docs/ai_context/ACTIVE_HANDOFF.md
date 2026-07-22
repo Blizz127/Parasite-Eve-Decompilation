@@ -151,11 +151,27 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
     boundary + absent const reload (branch `phase5ev-52bcc`).
   Common shape: the compiler makes a global allocation/scheduling choice
   retail's build made differently. Pins don't apply (not simple role flips).
-  Phrasing exhausted per-leaf. **OPEN QUESTION:** is there a single
-  cc1/maspsx knob or ccpsx behavior difference that resolves the family —
-  analogous to how the `addiu_at` patch resolved the indexed-store class?
-  Worth a dedicated investigation session before grinding more individual
-  leaves of this shape.
+  **FAMILY INVESTIGATED (read-only, accepted): NO SINGLE KNOB.** All three
+  residuals are present in cc1's **raw** output, pre-maspsx (maspsx does only
+  `move`→`addu`, delay-slot nops, the 2.21 indexed-store expansion — no
+  reordering/renaming), so a maspsx patch cannot fix any of them; the
+  `addiu_at` template does not apply. Pass attribution (flag-probed):
+  - `55724`: pre-reorg RTL emission order (C statement order); NOT
+    `dbr_sched` (`-fno-delayed-branch` doesn't move it), `-O`-invariant.
+    Retail *sank* the p-load below the guard; 2.7.2-psx has no pass that
+    sinks loads past conditional branches. **No lever** — constrained-C or
+    acceptance.
+  - `52BCC`: `-O`-sensitive; the `-O1`→`-O2` flip requires exactly
+    `-fexpensive-optimizations` + `-fschedule-insns2` together
+    (regclass + post-alloc scheduler; bisection-proven minimal pair).
+    `-O1` output already shows retail's loop register roles. **Retry at
+    `-O1`.**
+  - `6A674`: `-O`-sensitive but NOT flag-reachable (hardwired `optimize>1`
+    path; all nine `-O2` flags on `-O1` still ≠ `-O2`). `-O1` shows more
+    per-use `-1` materialization (retail's shape). **Only lever: `-O1`;
+    exactness untested.**
+  Evidence: scratch compiles `/tmp/fam_inv` (session-recorded); no edits, no
+  commits from the investigation itself.
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not
   inventoried here. Path forward is matching real logic, not harvesting
   trivial setters.
@@ -257,6 +273,7 @@ main -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
 | 5ES-loop-4bf08 | 216 | First loop-as-volume leaf: natural explicit-init pointer walk in `func_8004BF08` clears two parallel `int[8]` arrays; era `-O2 -G0` reproduces all 14 words, including the split pointer advances and backward-`bnez` delay slot, with no pinning or tool flag |
 | 5ET-loop-5186c | 217 | Loop-as-volume repeats: pure-register 16-pass bit-serial loop `func_8005186C` on era `-O2 -G0`, all 15 words on the first natural-C try; unconditional `result <<= 1` fills the forward `bnez` skip slot, nop `bgez` back-edge; mid-4204C carve (prefix 0x20, C 0x3C, resume 420A8.s 0x5A0) |
 | 5EU/5EV parks | 217 | `func_80055724` (p-load hoist; `-O1`≡`-O2`) and `func_80052BCC` (rotated-loop `$v0`/`$v1` role swap, 13/15) parked as the **PARKED-ALLOCATION/SCHEDULING family** (with `6A674`): cc1 global allocation/scheduling choices natural C can't steer. Banked idioms: rotated loop = explicit first iteration + `while`; signed `char` vs `0xFF` emits the `andi`. Docs only, no carve |
+| family diagnosis | 217 | Read-only investigation: **NO SINGLE KNOB**. All three residuals are in cc1 raw output (maspsx can't fix any). `55724` = pre-reorg emission order, no lever; `52BCC` = regclass+sched2 pair (`-fexpensive-optimizations`+`-fschedule-insns2`), `-O1` shows retail loop roles — retry at `-O1`; `6A674` = hardwired `optimize>1`, only lever `-O1` (untested). Toolchain-patch hypothesis closed; per-leaf `-O1` is the route |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
