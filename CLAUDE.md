@@ -36,17 +36,20 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5ET — 217 matching C leaves. Loop-as-volume repeats:
-`func_8005186C` matches all 15 words on era `-O2 -G0` on the first natural-C
-try, no pinning or maspsx flag — a pure-register 16-pass bit-serial loop (no
-loads/stores/calls/`$gp`); explicit-init `do/while`; the unconditional
-`result <<= 1` fills the forward `bnez` skip-branch delay slot and the `bgez`
-back-edge keeps a nop slot. Phase 5ES's `func_8004BF08` (natural explicit-init
-pointer walk clearing two parallel `int[8]` arrays, one phrasing retry) remains
-the loop-volume pilot. Phase 5ER's pointer-local load/store reuse remains a
-general phrasing pattern. Boot Rung 1 remains through matched `func_8006A64C`;
-`func_8006A674` is still parked with its 45-word shared-constant-hoist residual,
-while its loop scheduling remains proven.**
+**Phase 5EW — 218 matching C leaves. `func_80052BCC` (rotated
+copy-until-`0xFF` string loop) matches all 15 words on era `-O1 -G0
+-fschedule-insns2` — the first leaf using the post-allocation scheduler,
+which hoists the head `li` into the `lbu` delay slot exactly as retail's
+ccpsx did. The phrasing (two explicit `0xFF` const vars of different modes:
+`unsigned char` head const dies at the guard so the loop re-materializes into
+`$v1`; `int` loop byte gives the mask-free raw `bne`) came out of the
+PARKED-ALLOCATION family diagnosis: `-O1` flips this leaf's allocation to
+retail's register roles (regclass+sched2 pair), and the remaining head
+deltas closed by phrasing. Phase 5ET's `func_8005186C` and 5ES's
+`func_8004BF08` remain the loop-volume pilots. Boot Rung 1 remains through
+matched `func_8006A64C`; `func_8006A674` is still parked with its 45-word
+shared-constant-hoist residual (`-O1` untested), while its loop scheduling
+remains proven.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;

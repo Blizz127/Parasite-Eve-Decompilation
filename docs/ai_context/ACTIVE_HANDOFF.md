@@ -7,9 +7,9 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `main` — 5EU (`55724`) + 5EV (`52BCC`) park docs both landed; base `2aa070f` | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5ET-loop-5186c / 217 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **217** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Branch / tip | `phase5ew-52bcc-o1` (218; base `main` @ `146b2f2`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EW-52bcc-o1 / 218 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **218** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **148** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
 | Era leaf compiles | **60** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
@@ -96,6 +96,7 @@ yaml-only and still works when asm/ is stale.
 | `lui;ori` large-literal synthesis | **PROVEN** (capability probe): both bit15-clear and bit15-set; cc1 emits PSY-Q `li` high + `ori` low; ROM-exact under 2.21 + `--dont-expand-li` |
 | Rotated/peeled loop idiom | **PROVEN SHAPE** (5EV `func_80052BCC`, leaf parked on unrelated allocation): write the first iteration explicitly, then `while (cond) { body }` → era `-O2 -G0` emits the rotated shape: `beq`-exit head, bottom-tested `bne` back-edge, pointer advance in both delay slots |
 | Signed `char` vs 0xFF-range constant | **PROVEN SHAPE** (5EV `func_80052BCC`, same parked leaf): signed `char c` compared against `0xFF` emits the conversion `andi` on the compare path even after `lbu`; `unsigned char` does not. Typing controls the mask |
+| `-fschedule-insns2` load-delay `li` hoist | **PROVEN, FIRST LEAF** (5EW `func_80052BCC`, era `-O1 -G0 -fschedule-insns2`): the post-allocation scheduler hoists an independent `li` above `sb`/`andi` into the `lbu` delay — the exact spot retail's ccpsx scheduled it. At plain `-O1` the same `li` emits after the `andi` (14/15). Paired phrasing: two `0xFF` consts of different modes (u8 head const dies at the guard → loop re-materializes into the freed `$v1`; `int` loop byte → mask-free raw `bne`); comparing the loop byte against a *variable* or both consts sharing a mode cross-jumps/CSE-shares head and loop |
 
 All four fingerprints from the original 5EA era claim are now proven in bytes.
 The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a countdown.
@@ -141,37 +142,31 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   flipped regs. era `-O1 -G8` output is **byte-identical** to `-O2` for both
   leading phrasings — no per-function `-O` support from this leaf. Residual is
   scheduling, not proven allocation. Detail: `docs/ai_context/parked_blockers.json`.
-- **PARKED-ALLOCATION/SCHEDULING family:** three leaves now park on the same
-  class — cc1 2.7 register allocation/scheduling decisions that natural C
-  cannot steer and `-O` level does not change:
-  - `func_8006A674`: `$v1=-1` shared-constant hoist (45-word residual).
-  - `func_80055724`: p-load hoist covering the count-load delay
-    (`-O1` == `-O2`, byte-identical; branch `phase5eu-gp-loop-55724`).
-  - `func_80052BCC`: `$v0`/`$v1` role swap across a loop-rotation peel
-    boundary + absent const reload (branch `phase5ev-52bcc`).
-  Common shape: the compiler makes a global allocation/scheduling choice
-  retail's build made differently. Pins don't apply (not simple role flips).
-  **FAMILY INVESTIGATED (read-only, accepted): NO SINGLE KNOB.** All three
-  residuals are present in cc1's **raw** output, pre-maspsx (maspsx does only
-  `move`→`addu`, delay-slot nops, the 2.21 indexed-store expansion — no
-  reordering/renaming), so a maspsx patch cannot fix any of them; the
-  `addiu_at` template does not apply. Pass attribution (flag-probed):
+- **PARKED-ALLOCATION/SCHEDULING family:** cc1 2.7 register
+  allocation/scheduling decisions that natural C cannot steer and `-O` level
+  does not change. **FAMILY INVESTIGATED (read-only, accepted): NO SINGLE
+  KNOB.** All residuals are present in cc1's **raw** output, pre-maspsx
+  (maspsx does only `move`→`addu`, delay-slot nops, the 2.21 indexed-store
+  expansion — no reordering/renaming), so a maspsx patch cannot fix any of
+  them; the `addiu_at` template does not apply. Pass attribution
+  (flag-probed) and current status:
+  - `52BCC`: **MATCHED (5EW, leaf 218)** — the `-O1`→`-O2` flip required
+    exactly `-fexpensive-optimizations` + `-fschedule-insns2` (regclass +
+    post-alloc scheduler; bisection-proven minimal pair). Retried at era
+    `-O1 -G0 -fschedule-insns2`: two-const-mode phrasing (u8 head const dies
+    at the guard → loop const re-materializes into `$v1`; `int` loop byte →
+    mask-free raw `bne`) + sched2 hoisting the head `li` into the `lbu`
+    delay = all 15 words exact. First `-fschedule-insns2` leaf.
   - `55724`: pre-reorg RTL emission order (C statement order); NOT
     `dbr_sched` (`-fno-delayed-branch` doesn't move it), `-O`-invariant.
     Retail *sank* the p-load below the guard; 2.7.2-psx has no pass that
     sinks loads past conditional branches. **No lever** — constrained-C or
-    acceptance.
-  - `52BCC`: `-O`-sensitive; the `-O1`→`-O2` flip requires exactly
-    `-fexpensive-optimizations` + `-fschedule-insns2` together
-    (regclass + post-alloc scheduler; bisection-proven minimal pair).
-    `-O1` output already shows retail's loop register roles. **Retry at
-    `-O1`.**
+    acceptance. (Still parked; see entry above.)
   - `6A674`: `-O`-sensitive but NOT flag-reachable (hardwired `optimize>1`
     path; all nine `-O2` flags on `-O1` still ≠ `-O2`). `-O1` shows more
     per-use `-1` materialization (retail's shape). **Only lever: `-O1`;
-    exactness untested.**
-  Evidence: scratch compiles `/tmp/fam_inv` (session-recorded); no edits, no
-  commits from the investigation itself.
+    exactness untested** — retry at `-O1` is the open follow-up.
+  Evidence: scratch compiles `/tmp/fam_inv` + `/tmp/o1` (session-recorded).
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not
   inventoried here. Path forward is matching real logic, not harvesting
   trivial setters.
@@ -274,6 +269,7 @@ main -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
 | 5ET-loop-5186c | 217 | Loop-as-volume repeats: pure-register 16-pass bit-serial loop `func_8005186C` on era `-O2 -G0`, all 15 words on the first natural-C try; unconditional `result <<= 1` fills the forward `bnez` skip slot, nop `bgez` back-edge; mid-4204C carve (prefix 0x20, C 0x3C, resume 420A8.s 0x5A0) |
 | 5EU/5EV parks | 217 | `func_80055724` (p-load hoist; `-O1`≡`-O2`) and `func_80052BCC` (rotated-loop `$v0`/`$v1` role swap, 13/15) parked as the **PARKED-ALLOCATION/SCHEDULING family** (with `6A674`): cc1 global allocation/scheduling choices natural C can't steer. Banked idioms: rotated loop = explicit first iteration + `while`; signed `char` vs `0xFF` emits the `andi`. Docs only, no carve |
 | family diagnosis | 217 | Read-only investigation: **NO SINGLE KNOB**. All three residuals are in cc1 raw output (maspsx can't fix any). `55724` = pre-reorg emission order, no lever; `52BCC` = regclass+sched2 pair (`-fexpensive-optimizations`+`-fschedule-insns2`), `-O1` shows retail loop roles — retry at `-O1`; `6A674` = hardwired `optimize>1`, only lever `-O1` (untested). Toolchain-patch hypothesis closed; per-leaf `-O1` is the route |
+| 5EW-52bcc-o1 | 218 | `func_80052BCC` MATCHED: era `-O1 -G0 -fschedule-insns2` (first sched2 leaf) + two-const-mode phrasing (u8 head const dies at guard → loop reload into `$v1`; `int` loop byte → raw `bne`); sched2 hoists head `li` into the `lbu` delay like ccpsx. All 15 words exact; mid-42FC8 carve (prefix 0x404, C 0x3C, resume 43408.s 0x2A8). Also fixed a latent pipefail/SIGPIPE flake in toolchain detection (`grep -q` → `grep … >/dev/null`) |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

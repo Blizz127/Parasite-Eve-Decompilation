@@ -285,7 +285,11 @@ segments:
       # Phase 5AG: C leaf func_800527C0 — VRAM 0x800527C0, size 0x8.
       # File span 0x42FC0–0x42FC8 exclusive. Empty jr/nop stub.
       - [0x42FC0, c, func_800527C0]
+      # Phase 5EW: C leaf func_80052BCC — VRAM 0x80052BCC, size 0x3C (15 words).
+      # Mid-42FC8 carve: prefix 0x404, C 0x3C, resume 43408.s 0x2A8.
       - [0x42FC8, asm]
+      - [0x433CC, c, func_80052BCC]
+      - [0x43408, asm]
       - [0x436B0, c, func_80052EB0]
       - [0x436C0, asm]
       - [0x4370C, c, func_80052F0C]
