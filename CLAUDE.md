@@ -36,20 +36,18 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EW — 218 matching C leaves. `func_80052BCC` (rotated
-copy-until-`0xFF` string loop) matches all 15 words on era `-O1 -G0
--fschedule-insns2` — the first leaf using the post-allocation scheduler,
-which hoists the head `li` into the `lbu` delay slot exactly as retail's
-ccpsx did. The phrasing (two explicit `0xFF` const vars of different modes:
-`unsigned char` head const dies at the guard so the loop re-materializes into
-`$v1`; `int` loop byte gives the mask-free raw `bne`) came out of the
-PARKED-ALLOCATION family diagnosis: `-O1` flips this leaf's allocation to
-retail's register roles (regclass+sched2 pair), and the remaining head
-deltas closed by phrasing. Phase 5ET's `func_8005186C` and 5ES's
-`func_8004BF08` remain the loop-volume pilots. Boot Rung 1 remains through
-matched `func_8006A64C`; `func_8006A674` is still parked with its 45-word
-shared-constant-hoist residual (`-O1` untested), while its loop scheduling
-remains proven.**
+**Phase 5EX — 219 matching C leaves. `func_8006A674` (boot state
+initializer, five counting loops, 152 words) matches byte-exact on era
+`-O1 -G0 -fschedule-insns2` + `MASPSX_THREE_WORD_SYMBOL_STORE=1` — closing
+the second PARKED-ALLOCATION family member and **completing the boot
+subtree** (`main → 6A64C ✓ → {6A8D4 ✓, 6A674 ✓}`). `-O1` gives retail's
+per-use constant materialization (the `-O2` shared-`-1` hoist is a hardwired
+`optimize>1` behavior); `-fschedule-insns2` places every `li`/`addiu` before
+its adjacent store exactly as ccpsx did (21 order swaps fixed, now two
+independent leaves) — **sched2 is established as a general retail scheduling
+fingerprint**. The six semantic register pins from 5EP are load-bearing
+(dropping them degrades to 46 mismatches). Mid-55430 carve fills the
+6A64C/6A8D4 gap exactly (0x260); the three boot C carves are contiguous.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;

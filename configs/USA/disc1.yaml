@@ -354,11 +354,14 @@ segments:
       - [0x55420, c, func_80064C20]
       # Phase 5EQ: C leaf func_8006A64C — VRAM 0x8006A64C, size 0x28.
       # Boot wrapper: two void(void) calls; era -O2 -G0, no $gp.
-      # Interleaved 55430 carve: prefix 0x5A1C, C 0x28, resumed asm 0x260
-      # (contains parked func_8006A674), then the existing func_8006A8D4 C leaf.
+      # Interleaved 55430 carve: prefix 0x5A1C, C 0x28, then 6A674 C below.
       - [0x55430, asm]
       - [0x5AE4C, c, func_8006A64C]
-      - [0x5AE74, asm]
+      # Phase 5EX: C leaf func_8006A674 — VRAM 0x8006A674, size 0x260 (152 words).
+      # Boot state initializer, five counting loops. era -O1 -G0
+      # -fschedule-insns2 + MASPSX_THREE_WORD_SYMBOL_STORE=1 (L3). Fills the
+      # 6A64C/6A8D4 asm gap exactly (0x260) — three contiguous C carves.
+      - [0x5AE74, c, func_8006A674]
       # Phase 5EM: C leaf func_8006A8D4 — VRAM 0x8006A8D4, size 0x110.
       # Boot memory-region layout initializer: 19 ordered absolute pointer
       # stores with byte-address cursor arithmetic. Era -O2 -G0; no $gp.

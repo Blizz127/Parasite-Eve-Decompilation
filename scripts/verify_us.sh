@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5EW: 218 C leaves.
+# Current production subsegments (file offsets). Phase 5EX: 219 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -175,7 +175,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x55420, c, func_80064C20]'
     '[0x55430, asm]'
     '[0x5AE4C, c, func_8006A64C]'
-    '[0x5AE74, asm]'
+    '[0x5AE74, c, func_8006A674]'
     '[0x5B0D4, c, func_8006A8D4]'
     '[0x5B1E4, asm]'
     '[0x5F3D4, c, func_8006EBD4]'
@@ -385,7 +385,6 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/4F094.s"
     "asm/disc1/539C0.s"
     "asm/disc1/55430.s"
-    "asm/disc1/5AE74.s"
     "asm/disc1/5B1E4.s"
     "asm/disc1/5F3E4.s"
     "asm/disc1/64610.s"
@@ -512,6 +511,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_800631AC.c"
     "src/func_80064C20.c"
     "src/func_8006A64C.c"
+    "src/func_8006A674.c"
     "src/func_8006A8D4.c"
     "src/func_8006EBD4.c"
     "src/func_80073DE8.c"
@@ -793,7 +793,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80052BCC.c" ]]; then
+if [[ -f "$ROOT/src/func_8006A674.c" ]]; then
+    echo "C conversion: Phase 5EX-6a674-o1 — 219 leaves (+ boot state initializer func_8006A674; era -O1 -G0 -fschedule-insns2 + MASPSX_THREE_WORD_SYMBOL_STORE=1; boot subtree complete)"
+    echo "  sources: src/func_8006A674.c (+ prior 5EW)"
+elif [[ -f "$ROOT/src/func_80052BCC.c" ]]; then
     echo "C conversion: Phase 5EW-52bcc-o1 — 218 leaves (+ rotated copy-until-0xFF loop func_80052BCC; era -O1 -G0 -fschedule-insns2: first sched2 leaf, u8/int two-const phrasing)"
     echo "  sources: src/func_80052BCC.c (+ prior 5ET)"
 elif [[ -f "$ROOT/src/func_8005186C.c" ]]; then
@@ -807,7 +810,7 @@ elif [[ -f "$ROOT/src/func_80038D1C.c" && -f "$ROOT/src/func_80038D48.c" ]]; the
     echo "  sources: src/func_80038D1C.c src/func_80038D48.c (+ prior 5EQ)"
 elif [[ -f "$ROOT/src/func_8006A64C.c" ]]; then
     echo "C conversion: Phase 5EQ-boot-6a64c — 213 leaves (+ func_8006A64C; era -O2 -G0: two sequential void calls, teardown before jr + nop slot)"
-    echo "  sources: src/func_8006A64C.c (+ prior 5EM; func_8006A674 remains asm)"
+    echo "  sources: src/func_8006A64C.c (+ prior 5EM)"
 elif [[ -f "$ROOT/src/func_8006A8D4.c" ]]; then
     echo "C conversion: Phase 5EM-boot-6a8d4 — 212 leaves (+ func_8006A8D4; era -O2 -G0: ordered boot memory-region pointer layout)"
     echo "  sources: src/func_8006A8D4.c (+ prior 5EL)"

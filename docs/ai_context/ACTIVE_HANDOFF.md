@@ -7,9 +7,9 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5ew-52bcc-o1` (218; base `main` @ `146b2f2`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EW-52bcc-o1 / 218 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **218** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Branch / tip | `phase5ex-6a674-o1` (219; base `main` @ `295f029`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EX-6a674-o1 / 219 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **219** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **148** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
 | Era leaf compiles | **60** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
@@ -162,35 +162,40 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
     Retail *sank* the p-load below the guard; 2.7.2-psx has no pass that
     sinks loads past conditional branches. **No lever** — constrained-C or
     acceptance. (Still parked; see entry above.)
-  - `6A674`: `-O`-sensitive but NOT flag-reachable (hardwired `optimize>1`
-    path; all nine `-O2` flags on `-O1` still ≠ `-O2`). `-O1` shows more
-    per-use `-1` materialization (retail's shape). **Only lever: `-O1`;
-    exactness untested** — retry at `-O1` is the open follow-up.
+  - `6A674`: **MATCHED (5EX, leaf 219)** — the `-O`-sensitive constant
+    materialization runs through a hardwired `optimize>1` path (not
+    flag-reachable), so `-O1` is the only lever; at `-O1 -G0` the residual
+    shrank 45→21 (all pure `li`/`addiu`-before-store order swaps), and
+    `-fschedule-insns2` closed them to **0/152** with the 5EP pins intact.
+  - **`-fschedule-insns2` is a GENERAL RETAIL FINGERPRINT** (two independent
+    leaves, 22 positions): retail's ccpsx ran post-allocation scheduling;
+    our default doesn't. Try sched2 early on future scheduling-position
+    residuals. Hypothesis to test later (carefully; current leaves match
+    without it): sched2 may belong in the era default flag set.
   Evidence: scratch compiles `/tmp/fam_inv` + `/tmp/o1` (session-recorded).
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not
   inventoried here. Path forward is matching real logic, not harvesting
   trivial setters.
 
-## Boot Rung 1
+## Boot Rung 1 — COMPLETE
 
 ```text
 main -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
-                                     func_8006A674 parked asm }
+                                     func_8006A674 ✓ exact C (5EX, leaf 219) }
 ```
 
-- `func_8006A674` is **PARKED, not itself matched**; the 213th leaf is the
-  wrapper `func_8006A64C`. Loops are proven; L2 store /
-  increment phrasing and the flag/L4 allocation were resolved with semantic
-  `$v0`/`$a3` pins. Exactness still needs control over the repeated pinned
-  `$v1 = -1` / shared-constant hoists: **45 words remain**, in
-  `0x8006A684–0x8006A6A8`, `0x8006A770–0x8006A790`, and
-  `0x8006A7E8–0x8006A84C`. The bounded candidate is recorded by stash message
-  `park phase5ep func_8006A674 bounded pinning pass (45-word scheduler residual)`.
+- `func_8006A674` is **MATCHED (5EX)**: era `-O1 -G0 -fschedule-insns2` +
+  `MASPSX_THREE_WORD_SYMBOL_STORE=1`, all 152 words byte-exact. `-O1` gives
+  retail's per-use `-1` materialization (the `-O2` shared hoist is hardwired
+  `optimize>1`, not flag-reachable); sched2 places every `li`/`addiu` before
+  its adjacent store (21 order swaps). The six semantic pins from the 5EP
+  bounded candidate are load-bearing (dropping all six → 46 mismatches).
+  Mid-55430 carve fills the 6A64C/6A8D4 gap exactly (0x260); the three boot
+  C carves are contiguous.
 - `func_8006A64C` matches all 10 words on era `-O2 -G0`: two sequential
   `void(void)` calls, teardown before `jr`, and a nop delay slot. Both
-  `R_MIPS_26` relocations resolve at link time, including the call to the live
-  asm symbol `func_8006A674`; matching a caller requires a known callee
-  signature, not that every callee already be C.
+  `R_MIPS_26` relocations resolve at link time; matching a caller requires a
+  known callee signature, not that every callee already be C.
 
 ## Standing policy
 
@@ -270,6 +275,7 @@ main -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
 | 5EU/5EV parks | 217 | `func_80055724` (p-load hoist; `-O1`≡`-O2`) and `func_80052BCC` (rotated-loop `$v0`/`$v1` role swap, 13/15) parked as the **PARKED-ALLOCATION/SCHEDULING family** (with `6A674`): cc1 global allocation/scheduling choices natural C can't steer. Banked idioms: rotated loop = explicit first iteration + `while`; signed `char` vs `0xFF` emits the `andi`. Docs only, no carve |
 | family diagnosis | 217 | Read-only investigation: **NO SINGLE KNOB**. All three residuals are in cc1 raw output (maspsx can't fix any). `55724` = pre-reorg emission order, no lever; `52BCC` = regclass+sched2 pair (`-fexpensive-optimizations`+`-fschedule-insns2`), `-O1` shows retail loop roles — retry at `-O1`; `6A674` = hardwired `optimize>1`, only lever `-O1` (untested). Toolchain-patch hypothesis closed; per-leaf `-O1` is the route |
 | 5EW-52bcc-o1 | 218 | `func_80052BCC` MATCHED: era `-O1 -G0 -fschedule-insns2` (first sched2 leaf) + two-const-mode phrasing (u8 head const dies at guard → loop reload into `$v1`; `int` loop byte → raw `bne`); sched2 hoists head `li` into the `lbu` delay like ccpsx. All 15 words exact; mid-42FC8 carve (prefix 0x404, C 0x3C, resume 43408.s 0x2A8). Also fixed a latent pipefail/SIGPIPE flake in toolchain detection (`grep -q` → `grep … >/dev/null`) |
+| 5EX-6a674-o1 | 219 | `func_8006A674` MATCHED after three parked attempts: era `-O1 -G0 -fschedule-insns2` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`, all 152 words + relocs exact with the 5EP semantic pins (load-bearing; dropping → 46 mismatches). `-O1` = per-use `-1` materialization; sched2 = `li`/`addiu`-before-store placement (21 fixes) — **sched2 confirmed as a general retail fingerprint**. Boot Rung 1 complete (`main → 6A64C ✓ → {6A8D4 ✓, 6A674 ✓}`); mid-55430 gap filled exactly (0x260), three contiguous C carves |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
