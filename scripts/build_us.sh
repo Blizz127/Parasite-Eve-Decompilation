@@ -1458,7 +1458,7 @@ if command -v mipsel-linux-gnu-as >/dev/null 2>&1 \
     READELF="$(command -v mipsel-linux-gnu-readelf)"
     CC="$(command -v mipsel-linux-gnu-gcc)"
     TOOL_NOTE="host PATH"
-elif command -v distrobox >/dev/null 2>&1 && distrobox list 2>/dev/null | grep -q 'pe-mipsel'; then
+elif command -v distrobox >/dev/null 2>&1 && distrobox list 2>/dev/null | grep 'pe-mipsel' >/dev/null; then
     # Run later steps via distrobox enter
     RUNNER=(distrobox enter pe-mipsel --)
     AS="mipsel-linux-gnu-as"
