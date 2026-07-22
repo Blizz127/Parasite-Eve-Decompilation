@@ -7,7 +7,7 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5et-loop-5186c` (committed; base `main` @ `6b1b0c4`) | `git branch --show-current` / `git log --oneline -1` |
+| Branch / tip | `phase5eu-gp-loop-55724` (parked; base `main` @ `2aa070f`) | `git branch --show-current` / `git log --oneline -1` |
 | Phase | **5ET-loop-5186c / 217 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
 | Matching C leaves | **217** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **148** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
@@ -129,6 +129,16 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
 - **`lui;ori`:** **CAPABILITY-VERIFIED** — not a blocker. Constant-heavy
   computational functions (mult/div/mask, e.g. ÷100 via `0x51EB851F`) are
   approachable as a **separate future phase**; synthesis itself is solved.
+- **gp arena loop `func_80055724`:** **PARKED-SCHEDULING** (branch
+  `phase5eu-gp-loop-55724`; closest candidate stashed as `park phase5eu
+  func_80055724 while-form 13-15`). Empty 8-byte frame **solved** (cc1 2.7.2
+  `vars=8` home slots, natural). Blocker: three-way scheduling tension —
+  while-form keeps frame+regs but hoists the cursor load above the `blez`
+  guard (13/15); if+for keeps frame+regs but duplicates the guard and steals
+  the prologue into its slot; if+do/while gets word order but `vars=0` and
+  flipped regs. era `-O1 -G8` output is **byte-identical** to `-O2` for both
+  leading phrasings — no per-function `-O` support from this leaf. Residual is
+  scheduling, not proven allocation. Detail: `docs/ai_context/parked_blockers.json`.
 - Complex `$gp` / GTE / BIOS / mult-div / large non-leaves: still open; not
   inventoried here. Path forward is matching real logic, not harvesting
   trivial setters.

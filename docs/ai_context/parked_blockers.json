@@ -179,6 +179,12 @@
       "rationale": "Large 32-bit literal synthesis (lui;ori) verified ROM-exact under era 2.21 + --dont-expand-li, for both bit15-clear and bit15-set low halves. Tested 0xFFF003FF (clear), 0x51EB851F (set, \u00f7100 magic), 0x000FFC00 (set) vs ROM opcode+immediate fields. cc1 emits the PSY-Q li-high + ori-low split natively; GNU as expands high-only li to lui; feared lui;ori-vs-lui;addiu divergence did not occur. No flag change. Not a blocker \u2014 constant-heavy computational functions are approachable as a separate phase.",
       "evidence": "scratch probe /tmp/lui_ori_probe_* (investigation-only; no leaf integration)",
       "note": "Capability, not a leaf inventory. Integration of mult/div/mask functions that use these constants is a future phase."
+    },
+    {
+      "id": "gp-loop-55724",
+      "status": "PARKED-SCHEDULING",
+      "note": "func_80055724 (0x45F24, 15 words): gp arena zero-fill loop, era -G8, two new gp globals (D_8009D058 int* cursor @ gp+0x2E8, D_8009D064 int count @ gp+0x2F4; _gp=0x8009CD70). Empty 8-byte frame SOLVED: cc1 2.7.2 emits vars=8 home slots naturally (no dummy local needed). Blocker is a three-way -O2 scheduling tension: while-form keeps frame+regs but hoists the p load above the blez guard (13/15, loses count-delay nop + loop-top nop); if+for keeps frame+regs but duplicates the blez and steals the prologue into guard-1's slot; if+do/while gets word order but vars=0 and i/p regs flipped. era -O1 -G8 output is byte-identical to -O2 for both leading phrasings (no per-function -O support from this leaf). Closest candidate (while-form, 13/15) stashed: 'park phase5eu func_80055724 while-form 13-15 (p-load hoist residual)'. Residual is scheduling, not allocation proven — pins not yet at the 6A8D4 bar.",
+      "evidence": "single-leaf era compiles on branch phase5eu-gp-loop-55724; five -O2 phrasings + two -O1 confirmations, all objdump-recorded in session"
     }
   ]
 }
