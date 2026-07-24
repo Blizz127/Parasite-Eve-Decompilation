@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5EY: 220 C leaves.
+# Current production subsegments (file offsets). Phase 5EZ: 221 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -176,6 +176,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x539C0, asm]'
     '[0x55420, c, func_80064C20]'
     '[0x55430, asm]'
+    '[0x5ADBC, c, func_8006A5BC]'
     '[0x5AE4C, c, func_8006A64C]'
     '[0x5AE74, c, func_8006A674]'
     '[0x5B0D4, c, func_8006A8D4]'
@@ -514,6 +515,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80063198.c"
     "src/func_800631AC.c"
     "src/func_80064C20.c"
+    "src/func_8006A5BC.c"
     "src/func_8006A64C.c"
     "src/func_8006A674.c"
     "src/func_8006A8D4.c"
@@ -797,7 +799,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8003E610.c" ]]; then
+if [[ -f "$ROOT/src/func_8006A5BC.c" ]]; then
+    echo "C conversion: Phase 5EZ-boot-6a5bc — 221 leaves (+ boot init func_8006A5BC, two VSync-polled wait loops; era -O1 -G0 per-use \$s0=1 materialization; four contiguous boot C carves)"
+    echo "  sources: src/func_8006A5BC.c (+ prior 5EY)"
+elif [[ -f "$ROOT/src/func_8003E610.c" ]]; then
     echo "C conversion: Phase 5EY-boot-3e610 — 220 leaves (+ boot display/graphics bring-up func_8003E610; era -O2 -G0 exact first attempt; Boot Rung 1 continues up main's call chain)"
     echo "  sources: src/func_8003E610.c (+ prior 5EX)"
 elif [[ -f "$ROOT/src/func_8006A674.c" ]]; then
