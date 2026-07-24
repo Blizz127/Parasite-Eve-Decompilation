@@ -36,18 +36,22 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EX — 219 matching C leaves. `func_8006A674` (boot state
-initializer, five counting loops, 152 words) matches byte-exact on era
-`-O1 -G0 -fschedule-insns2` + `MASPSX_THREE_WORD_SYMBOL_STORE=1` — closing
-the second PARKED-ALLOCATION family member and **completing the boot
-subtree** (`main → 6A64C ✓ → {6A8D4 ✓, 6A674 ✓}`). `-O1` gives retail's
-per-use constant materialization (the `-O2` shared-`-1` hoist is a hardwired
-`optimize>1` behavior); `-fschedule-insns2` places every `li`/`addiu` before
-its adjacent store exactly as ccpsx did (21 order swaps fixed, now two
-independent leaves) — **sched2 is established as a general retail scheduling
-fingerprint**. The six semantic register pins from 5EP are load-bearing
-(dropping them degrades to 46 mismatches). Mid-55430 carve fills the
-6A64C/6A8D4 gap exactly (0x260); the three boot C carves are contiguous.**
+**Phase 5EY — 220 matching C leaves. `func_8003E610` (boot display/graphics
+bring-up, 28 words) matches byte-exact on era `-O2 -G0` — first attempt, no
+sched2 needed: a straight-line dispatcher of ten calls with immediate args
+(`0x140`/`0xE0` = 320x224 display res), no branches/loops/`$gp`/globals, so
+plain `-O2` reproduces ccpsx's arg-load/delay-slot placement exactly. Boot
+Rung 1 continues up `main`'s call chain (`main → 6A64C ✓ → 3E610 ✓`); all
+ten callees are extern-declared with call-site-determined signatures (every
+arg an immediate, no return used, so callee bodies don't affect codegen —
+one already C: `func_80080CC8`). Mid-2E7D8 carve: prefix `0x638`, C `0x70`,
+resume `2EE80.s` `0x192C`. Prior: 5EX closed the boot subtree
+(`main → 6A64C ✓ → {6A8D4 ✓, 6A674 ✓}`) with `func_8006A674` on era
+`-O1 -G0 -fschedule-insns2` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`, establishing
+**sched2 as a general retail scheduling fingerprint** (two independent
+leaves, 22 instances) and recovering the second PARKED-ALLOCATION family
+member via the family diagnosis (`-O1` per-use constant materialization vs
+`-O2`'s hardwired `optimize>1` shared hoist).**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;

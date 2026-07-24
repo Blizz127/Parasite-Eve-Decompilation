@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5ex-6a674-o1` (219; base `main` @ `295f029`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EX-6a674-o1 / 219 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **219** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **148** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **60** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Branch / tip | `phase5ey-boot-3e610` (220; base `main` @ `8eb79bd`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5EY-boot-3e610 / 220 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **220** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **149** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **63** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5ET-loop-5186c / 217. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5EY-boot-3e610 / 220. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -177,12 +177,26 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   inventoried here. Path forward is matching real logic, not harvesting
   trivial setters.
 
-## Boot Rung 1 — COMPLETE
+## Boot Rung 1 — COMPLETE, climbing `main`'s call chain
 
 ```text
 main -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
                                      func_8006A674 ✓ exact C (5EX, leaf 219) }
+     -> func_8003E610 ✓ exact C (5EY, leaf 220)   # display/graphics bring-up
 ```
+
+- `func_8003E610` is **MATCHED (5EY)**: era `-O2 -G0`, all 28 words byte-exact
+  on the **first** attempt — no sched2, no pins. Straight-line dispatcher of
+  ten calls with immediate args (`0x140`/`0xE0` = 320x224 display res), no
+  branches/loops/`$gp`/globals; plain `-O2` reproduces ccpsx's mixed
+  arg-load/delay-slot placement exactly. All ten callees are extern-declared
+  with call-site-determined signatures (immediate args, no returns used —
+  callee bodies don't affect codegen; one already C: `func_80080CC8`).
+  Mid-2E7D8 carve: prefix `0x638`, C `0x70`, resume `2EE80.s` `0x192C`.
+  Readiness ranking of `main`'s remaining callees (size + callee C/SDK
+  coverage) put it first; next candidates in order: `func_8006A5BC` (42L,
+  two wait loops + one `sh` global), `func_8003E680` (56L, state zeroing +
+  2000-pass poll loop + callback registration).
 
 - `func_8006A674` is **MATCHED (5EX)**: era `-O1 -G0 -fschedule-insns2` +
   `MASPSX_THREE_WORD_SYMBOL_STORE=1`, all 152 words byte-exact. `-O1` gives
@@ -276,6 +290,7 @@ main -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
 | family diagnosis | 217 | Read-only investigation: **NO SINGLE KNOB**. All three residuals are in cc1 raw output (maspsx can't fix any). `55724` = pre-reorg emission order, no lever; `52BCC` = regclass+sched2 pair (`-fexpensive-optimizations`+`-fschedule-insns2`), `-O1` shows retail loop roles — retry at `-O1`; `6A674` = hardwired `optimize>1`, only lever `-O1` (untested). Toolchain-patch hypothesis closed; per-leaf `-O1` is the route |
 | 5EW-52bcc-o1 | 218 | `func_80052BCC` MATCHED: era `-O1 -G0 -fschedule-insns2` (first sched2 leaf) + two-const-mode phrasing (u8 head const dies at guard → loop reload into `$v1`; `int` loop byte → raw `bne`); sched2 hoists head `li` into the `lbu` delay like ccpsx. All 15 words exact; mid-42FC8 carve (prefix 0x404, C 0x3C, resume 43408.s 0x2A8). Also fixed a latent pipefail/SIGPIPE flake in toolchain detection (`grep -q` → `grep … >/dev/null`) |
 | 5EX-6a674-o1 | 219 | `func_8006A674` MATCHED after three parked attempts: era `-O1 -G0 -fschedule-insns2` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`, all 152 words + relocs exact with the 5EP semantic pins (load-bearing; dropping → 46 mismatches). `-O1` = per-use `-1` materialization; sched2 = `li`/`addiu`-before-store placement (21 fixes) — **sched2 confirmed as a general retail fingerprint**. Boot Rung 1 complete (`main → 6A64C ✓ → {6A8D4 ✓, 6A674 ✓}`); mid-55430 gap filled exactly (0x260), three contiguous C carves |
+| 5EY-boot-3e610 | 220 | Boot display/graphics bring-up `func_8003E610` on era `-O2 -G0` — all 28 words exact on the **first** attempt, no sched2/pins: straight-line dispatcher, ten calls with immediate args (`0x140`/`0xE0` = 320x224), callees extern-declared with call-site-determined signatures. Readiness ranking of `main`'s callees (callee C/SDK coverage, not raw size) picked it; next up the chain: `func_8006A5BC`, `func_8003E680`. Mid-2E7D8 carve (prefix 0x638, C 0x70, resume 2EE80.s 0x192C) |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

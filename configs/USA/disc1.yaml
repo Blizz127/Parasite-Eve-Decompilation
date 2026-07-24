@@ -151,6 +151,14 @@ segments:
       # Mid-2E7D8 carve: prefix 0x1FD4, two C leaves, resume 307CC.s 0x28F8.
       - [0x2E7D0, c, func_8003DFD0]
       - [0x2E7D8, asm]
+      # Phase 5EY: C leaf func_8003E610 — VRAM 0x8003E610, size 0x70 (28 words).
+      # Boot display/graphics bring-up (Boot Rung 1, main's callee after
+      # 6A64C): straight-line dispatcher, ten calls with immediate args
+      # (0x140/0xE0 = 320x224 display res); no branches/loops/$gp/globals.
+      # era -O2 -G0 exact on first attempt — no sched2 needed.
+      # Mid-2E7D8 carve: prefix 0x638, C 0x70, resume 2EE80.s 0x192C.
+      - [0x2EE10, c, func_8003E610]
+      - [0x2EE80, asm]
       - [0x307AC, c, func_8003FFAC]
       - [0x307BC, c, func_8003FFBC]
       - [0x307CC, asm]
