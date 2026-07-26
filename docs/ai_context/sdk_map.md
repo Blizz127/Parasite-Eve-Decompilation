@@ -7,6 +7,7 @@ statically linked PsyQ libraries.
 
 | Function | SDK name | Evidence |
 | --- | --- | --- |
+| `func_800749D8` | `SetDefDrawEnv` **(PROBABLE — INFERENCE, not string-proven)** | Position in the libGPU segment just before `ResetGraph` + five-arg call shape `(&env,0,0,320,240)` from `func_8006E834` (5th arg on the stack); the same env pointer is later passed to `PutDispEnv`, so `SetDefDispEnv` is also possible |
 | `func_80074A44` | `ResetGraph` | `"ResetGraph:jtb=%08x,env=%08x\n"` and `"ResetGraph(%d)...\n"` |
 | `func_80074CC8` | `DrawSyncCallback` | `"DrawSyncCallback(%08x)...\n"` |
 | `func_80074D28` | `SetDispMask` | `"SetDispMask(%d)...\n"` |

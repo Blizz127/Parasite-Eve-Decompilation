@@ -7,8 +7,8 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5fb-boot-698d4` (222, PARK-no-carve; base `main` @ `d0c3021`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5FA-boot-3e680 / 222 exact leaves** (5FB: 698D4 parked, no carve) | `scripts/verify_us.sh` summary + exact rebuild |
+| Branch / tip | `phase5fc-boot-6e834` (222, PARK-no-carve; base `main` @ `601bfe0`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5FA-boot-3e680 / 222 exact leaves** (5FB+5FC: 698D4, 6E834 parked, no carve) | `scripts/verify_us.sh` summary + exact rebuild |
 | Matching C leaves | **222** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **149** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
 | Era leaf compiles | **65** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
@@ -101,6 +101,8 @@ yaml-only and still works when asm/ is stale.
 | dbr_sched `$v0`-steal screening rule | **CHARACTERIZED (5FB `func_800698D4`, PARKED)**: a `beqz`/`beq` whose delay-slot steal candidate is a `$v0`-setter gets the fill when the branch target hits a `jal` immediately (kills `$v0`), but retail DECLINES the steal when the target is the return-computation block (`$v0` live to `jr $ra`) — our cc1 steals anyway. Screening rule: nop slot + `$v0`-constant load on fall-through + branch to a RETURN block → expect divergence; same pattern to a `jal`-adjacent block → matches. reorg.c liveness skew (ccpsx vs 2.7.2-psx), not source-expressible |
 | Nested-if defeats range-test collapse | **PROVEN IDIOM (5FB `func_800698D4`)**: `v != 0 && v != -1` folds to `addiu $v0,$v0,1; sltiu $v0,$v0,2; bnez` under era `-O2` (range test, not retail's shape). Two nested `if`s keep the separate `beqz`/`beq` compares. -O1 keeps compares but flattens other structure |
 | Frame-size arithmetic for struct locals | **PROVEN (5FB `func_800698D4`)**: size opaque locals from the frame, not the type's rounded size — DsSearchFile's CdlFILE local is `0x18` (pos 4 + size 4 + name 16): `0x10` args + `0x18` local + `$s0` + `$ra` = frame `0x30`. A `0x20` local emits frame `0x38` and fails at word 0 |
+| Five-arg call (o32 stack arg) | **PROVEN, FIRST LEAF** (5FC `func_8006E834`, PARKED on unrelated residual): the 5th argument emits `sw $v0,0x10($sp)` in the `jal`'s delay slot — plain C `f(a,b,c,d,e)` with an immediate 5th arg, era `-O2 -G0`, worked first try. `sb $v0,0x29($sp)` (struct byte field) also lands in a `jal` slot |
+| Frame decomposition before writing | **PROVEN METHOD (5FB/5FC)**: decompose the frame BEFORE choosing local sizes — `args + locals + saves + pad = frame` must be exact (5FB: CdlFILE `0x18` not `0x20`; 5FC: args `0x18` + env `0x18` + local30 `0x8` + regs `0xC` + pad `0x4` = `0x48`, byte field lands at `env[0x11]` = `0x29($sp)`). Wrong local size fails at word 0 |
 | `-O1` per-use constant materialization — SELECTION RULE | **PREDICTIVE (three leaves)**: if ROM materializes the same constant/address more than once, try `-O1` FIRST. `-O2`'s shared hoist runs through the hardwired `optimize>1` path (not flag-reachable); `-O1` re-materializes per use. 6A674 (discovered: per-use `-1`), 6A5BC (applied: `$s0=1` twice), 3E680 (predicted from five per-store `lui`s with a shared `0x8009` high half retail didn't CSE) |
 | Return-use readiness of asm callees | **VALIDATED (5EZ `func_8006A5BC`)**: a caller may USE a still-asm callee's return and stay matchable when the use is a **raw full-width compare** (`beq $v0,$s0`, no mask/sign-extend) or a **bare store** (`sh $v0`). Both are codegen-determined regardless of the callee's true return type, so `int f(void)` externs suffice. Extends the 5EY rule (immediates-only args, returns ignored) |
 | Fn-ptr arg to still-asm callee | **PROVEN, FIRST LEAF** (5FA `func_8003E680`): `f(func_8003E91C)` emits `lui $a0,%hi(sym)` / `addiu $a0,$a0,%lo(sym)` with R_MIPS_HI16/LO16 relocs against a same-segment TEXT symbol; the linker resolves it exactly like a data symbol. Declare `extern void g(void);` and pass the bare name |
@@ -162,6 +164,27 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   not source-expressible. Banked idioms: nested-if defeats range-test collapse;
   CdlFILE local is `0x18` not `0x20` (frame arithmetic). Detail:
   `docs/ai_context/parked_blockers.json` (`boot-698d4-dbr-sched`).
+- **post-mount loader `func_8006E834`:** **PARKED-ALLOCATION** (branch
+  `phase5fc-boot-6e834`; candidate stashed as `park phase5fc func_8006E834
+  89-91 (call-result register-home residual)`). Post-mount image loader +
+  display env: reads a `D_80093164` lhu offset/size pair from the mounted
+  image base `D_800B0DD8` (written by parked 698D4 — the two are producer/
+  consumer), polls `func_800811E4`, then `VSync(0)`/`SetDispMask(0)`/
+  `func_800749D8(&env,0,0,320,240)` (PROBABLE SetDefDrawEnv)/`PutDispEnv`.
+  89/91 content words at era `-O2 -G0`. PROVEN firsts: five-arg call (5th
+  arg `sw $v0,0x10($sp)` in the `jal` slot); frame decomposition method.
+  Retail FOLDS the `r==0||r==-1` range test in this unit (698D4's did not —
+  per-TU compile-settings datapoint). Residual: poll result homed in `$v0`
+  by retail (two restores) vs `$v1` by ours — call-result register-home skew,
+  not source-expressible. `$v0`-liveness rule NOT exercised (non-event).
+  Detail: `docs/ai_context/parked_blockers.json` (`boot-6e834-register-home`).
+- **ccpsx-vs-2.7.2 SKEW SET — three distinct mechanisms:** (1) the
+  allocation/scheduling family (`6A674`/`55724`/`52BCC`; two recovered via
+  `-O1`), (2) dbr_sched `$v0`-liveness slot-steal (`698D4`), (3) call-result
+  register home (`6E834`). All unreachable from C. OPEN QUESTION for a
+  future session: is a closer-to-ccpsx cc1 build obtainable? That would be
+  the one-layer-up analog of the maspsx patches and could address the whole
+  set. Do not chase mid-leaf.
 - **PARKED-ALLOCATION/SCHEDULING family:** cc1 2.7 register
   allocation/scheduling decisions that natural C cannot steer and `-O` level
   does not change. **FAMILY INVESTIGATED (read-only, accepted): NO SINGLE
@@ -343,6 +366,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | 5EZ-boot-6a5bc | 221 | Boot init `func_8006A5BC` on era `-O1 -G0`, all 36 words exact first attempt: four setup calls, two identical `while (f() != 1) VSync(0);` loops (no cross-jump), `7F7A8()` return → `D_800B0DD4` (`unsigned short` via `lhu` reader). `-O1` per-use `$s0=1` materialization (delay-slot + between-loops re-materialization) — third `-O1`-lever leaf; return-use confirmed codegen-safe (raw `$v0` `beq`, no mask). Mid-55430 carve extends the boot block backward: **four contiguous C carves** (prefix 0x598C, C 0x90, then 6A64C/6A674/6A8D4) |
 | 5FA-boot-3e680 | 222 | Boot subsystem-init dispatcher `func_8003E680` on era `-O1 -G0`, all 53 words exact: zero 5 globals (Stage-0 reader types), 2000-pass poll loop (`i++` in `jal` slot; `unsigned int` counter for ROM `sltiu` — the only phrasing fix), callback registration + ~11 inits. **First fn-ptr-to-asm-callee arg** (`&func_8003E91C` via R_MIPS_HI16/LO16 against a text symbol). `-O1` predicted by the per-use selection rule (five per-store `lui`s, no CSE). Fingerprint table banks: `-O1` selection rule, return-use readiness, sched2 scope narrowing, fn-ptr arg, unsigned loop compare. Segment-head carve of 2EE80 (C 0xD4, resume 2EF54.s 0x1858) |
 | 5FB park | 222 | `func_800698D4` (disc mount, 141 words) PARKED-SCHEDULING at 140/141: nested-if phrasing defeats gcc's range-test collapse (`v!=0 && v!=-1` → `addiu`+`sltiu`+`bnez`), everything exact except one dbr_sched delay-slot steal at search #3's `beqz` — retail declines a `$v0`-setter steal when the branch target is the return block (`$v0` live to `jr`); ours steals. Screening rule + CdlFILE `0x18` frame note banked; candidate stashed; no carve, no leaf claim |
+| 5FC park | 222 | `func_8006E834` (post-mount loader + display env, 91 words) PARKED-ALLOCATION at 89/91: five-arg call PROVEN (5th arg `sw $v0,0x10($sp)` in `jal` slot, first try); frame decomposition method banked; retail folds the range test in this unit (per-TU datapoint vs 698D4). Residual: call-result register home (`$v0`+restores vs `$v1`), not source-expressible. Third ccpsx-vs-2.7.2 skew mechanism recorded; candidate stashed; no carve, no claim |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
