@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5ez-boot-6a5bc` (221; base `main` @ `b61745a`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5EZ-boot-6a5bc / 221 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **221** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Branch / tip | `phase5fa-boot-3e680` (222; base `main` @ `d34612a`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5FA-boot-3e680 / 222 exact leaves** | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **222** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **149** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **64** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Era leaf compiles | **65** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5EZ-boot-6a5bc / 221. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5FA-boot-3e680 / 222. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -97,6 +97,11 @@ yaml-only and still works when asm/ is stale.
 | Rotated/peeled loop idiom | **PROVEN SHAPE** (5EV `func_80052BCC`, leaf parked on unrelated allocation): write the first iteration explicitly, then `while (cond) { body }` → era `-O2 -G0` emits the rotated shape: `beq`-exit head, bottom-tested `bne` back-edge, pointer advance in both delay slots |
 | Signed `char` vs 0xFF-range constant | **PROVEN SHAPE** (5EV `func_80052BCC`, same parked leaf): signed `char c` compared against `0xFF` emits the conversion `andi` on the compare path even after `lbu`; `unsigned char` does not. Typing controls the mask |
 | `-fschedule-insns2` load-delay `li` hoist | **PROVEN, FIRST LEAF** (5EW `func_80052BCC`, era `-O1 -G0 -fschedule-insns2`): the post-allocation scheduler hoists an independent `li` above `sb`/`andi` into the `lbu` delay — the exact spot retail's ccpsx scheduled it. At plain `-O1` the same `li` emits after the `andi` (14/15). Paired phrasing: two `0xFF` consts of different modes (u8 head const dies at the guard → loop re-materializes into the freed `$v1`; `int` loop byte → mask-free raw `bne`); comparing the loop byte against a *variable* or both consts sharing a mode cross-jumps/CSE-shares head and loop |
+| sched2 scope (negative result) | **NARROWED (5EY `func_8003E610`)**: `-fschedule-insns2` is NOT a universal retail fingerprint — it governs **store-adjacent `li`/`addiu` placement and load-delay hoists** only (52BCC head-`li`, 6A674's 21 order swaps). Straight-line `jal`-arg scheduling (`$a0` hoisted + `$a1` in slot for two-arg calls; `$a0` slot-filled single-arg; nop slot no-arg) is already correct at plain `-O2`. Do NOT flip sched2 into the era default |
+| `-O1` per-use constant materialization — SELECTION RULE | **PREDICTIVE (three leaves)**: if ROM materializes the same constant/address more than once, try `-O1` FIRST. `-O2`'s shared hoist runs through the hardwired `optimize>1` path (not flag-reachable); `-O1` re-materializes per use. 6A674 (discovered: per-use `-1`), 6A5BC (applied: `$s0=1` twice), 3E680 (predicted from five per-store `lui`s with a shared `0x8009` high half retail didn't CSE) |
+| Return-use readiness of asm callees | **VALIDATED (5EZ `func_8006A5BC`)**: a caller may USE a still-asm callee's return and stay matchable when the use is a **raw full-width compare** (`beq $v0,$s0`, no mask/sign-extend) or a **bare store** (`sh $v0`). Both are codegen-determined regardless of the callee's true return type, so `int f(void)` externs suffice. Extends the 5EY rule (immediates-only args, returns ignored) |
+| Fn-ptr arg to still-asm callee | **PROVEN, FIRST LEAF** (5FA `func_8003E680`): `f(func_8003E91C)` emits `lui $a0,%hi(sym)` / `addiu $a0,$a0,%lo(sym)` with R_MIPS_HI16/LO16 relocs against a same-segment TEXT symbol; the linker resolves it exactly like a data symbol. Declare `extern void g(void);` and pass the bare name |
+| Unsigned loop-bound compare | **PROVEN (5FA `func_8003E680`)**: ROM `sltiu` (unsigned) vs cc1's `slt` for `int i < const` — declare the counter `unsigned int`. One-word type-driven fix, no flag involvement |
 
 All four fingerprints from the original 5EA era claim are now proven in bytes.
 The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a countdown.
@@ -184,7 +189,20 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
      -> func_8006A64C ✓ exact C -> { func_8006A8D4 ✓ exact C,
                                      func_8006A674 ✓ exact C (5EX, leaf 219) }
      -> func_8003E610 ✓ exact C (5EY, leaf 220)   # display/graphics bring-up
+     -> func_8003E680 ✓ exact C (5FA, leaf 222)   # subsystem-init dispatcher
 ```
+
+- `func_8003E680` is **MATCHED (5FA)**: era `-O1 -G0`, all 53 words exact.
+  Zero five state globals (Stage-0 reader types: D1C4/D280 unsigned compares,
+  D1A0 flags, D250 opaque, CDDC `int` index), 2000-pass poll loop with `i++`
+  in the `jal` delay slot (ROM `sltiu` → `unsigned int` counter — the only
+  phrasing fix needed), callback registration, ~11 subsystem inits. **First
+  fn-ptr-to-asm-callee arg**: `func_80073D24(func_8003E91C)` →
+  `lui $a0,%hi` / `addiu $a0,$a0,%lo` with R_MIPS_HI16/LO16 against the
+  same-segment text symbol; links exactly. `-O1` predicted by the selection
+  rule (five per-store `lui`s, no CSE). Segment-head carve of 2EE80:
+  C `0xD4`, resume `2EF54.s` `0x1858`. Next candidates: `func_800698D4`
+  (159L, disc mount w/ SDK `DsSearchFile`), `func_8003F3C4` (245L).
 
 - `func_8006A5BC` is **MATCHED (5EZ)**: era `-O1 -G0`, all 36 words exact on
   the first attempt. Four setup calls, two structurally identical
@@ -308,6 +326,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | 5EX-6a674-o1 | 219 | `func_8006A674` MATCHED after three parked attempts: era `-O1 -G0 -fschedule-insns2` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`, all 152 words + relocs exact with the 5EP semantic pins (load-bearing; dropping → 46 mismatches). `-O1` = per-use `-1` materialization; sched2 = `li`/`addiu`-before-store placement (21 fixes) — **sched2 confirmed as a general retail fingerprint**. Boot Rung 1 complete (`main → 6A64C ✓ → {6A8D4 ✓, 6A674 ✓}`); mid-55430 gap filled exactly (0x260), three contiguous C carves |
 | 5EY-boot-3e610 | 220 | Boot display/graphics bring-up `func_8003E610` on era `-O2 -G0` — all 28 words exact on the **first** attempt, no sched2/pins: straight-line dispatcher, ten calls with immediate args (`0x140`/`0xE0` = 320x224), callees extern-declared with call-site-determined signatures. Readiness ranking of `main`'s callees (callee C/SDK coverage, not raw size) picked it; next up the chain: `func_8006A5BC`, `func_8003E680`. Mid-2E7D8 carve (prefix 0x638, C 0x70, resume 2EE80.s 0x192C) |
 | 5EZ-boot-6a5bc | 221 | Boot init `func_8006A5BC` on era `-O1 -G0`, all 36 words exact first attempt: four setup calls, two identical `while (f() != 1) VSync(0);` loops (no cross-jump), `7F7A8()` return → `D_800B0DD4` (`unsigned short` via `lhu` reader). `-O1` per-use `$s0=1` materialization (delay-slot + between-loops re-materialization) — third `-O1`-lever leaf; return-use confirmed codegen-safe (raw `$v0` `beq`, no mask). Mid-55430 carve extends the boot block backward: **four contiguous C carves** (prefix 0x598C, C 0x90, then 6A64C/6A674/6A8D4) |
+| 5FA-boot-3e680 | 222 | Boot subsystem-init dispatcher `func_8003E680` on era `-O1 -G0`, all 53 words exact: zero 5 globals (Stage-0 reader types), 2000-pass poll loop (`i++` in `jal` slot; `unsigned int` counter for ROM `sltiu` — the only phrasing fix), callback registration + ~11 inits. **First fn-ptr-to-asm-callee arg** (`&func_8003E91C` via R_MIPS_HI16/LO16 against a text symbol). `-O1` predicted by the per-use selection rule (five per-store `lui`s, no CSE). Fingerprint table banks: `-O1` selection rule, return-use readiness, sched2 scope narrowing, fn-ptr arg, unsigned loop compare. Segment-head carve of 2EE80 (C 0xD4, resume 2EF54.s 0x1858) |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

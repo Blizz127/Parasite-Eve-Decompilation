@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5EZ: 221 C leaves.
+# Current production subsegments (file offsets). Phase 5FA: 222 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -129,7 +129,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x2E034, asm]'
     '[0x2E7C8, c, func_8003DFC8]'
     '[0x2EE10, c, func_8003E610]'
-    '[0x2EE80, asm]'
+    '[0x2EE80, c, func_8003E680]'
+    '[0x2EF54, asm]'
     '[0x307AC, c, func_8003FFAC]'
     '[0x307BC, c, func_8003FFBC]'
     '[0x307CC, asm]'
@@ -370,7 +371,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/29574.s"
     "asm/disc1/2E034.s"
     "asm/disc1/2E7D0.s"
-    "asm/disc1/2EE80.s"
+    "asm/disc1/2EF54.s"
     "asm/disc1/307CC.s"
     "asm/disc1/330D4.s"
     "asm/disc1/33128.s"
@@ -493,6 +494,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_8003D82C.c"
     "src/func_8003DFC8.c"
     "src/func_8003E610.c"
+    "src/func_8003E680.c"
     "src/func_8003FFAC.c"
     "src/func_8003FFBC.c"
     "src/func_800428C4.c"
@@ -799,7 +801,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8006A5BC.c" ]]; then
+if [[ -f "$ROOT/src/func_8003E680.c" ]]; then
+    echo "C conversion: Phase 5FA-boot-3e680 — 222 leaves (+ boot subsystem-init dispatcher func_8003E680; era -O1 -G0 per-store lui; unsigned loop counter; first fn-ptr-to-asm-callee arg)"
+    echo "  sources: src/func_8003E680.c (+ prior 5EZ)"
+elif [[ -f "$ROOT/src/func_8006A5BC.c" ]]; then
     echo "C conversion: Phase 5EZ-boot-6a5bc — 221 leaves (+ boot init func_8006A5BC, two VSync-polled wait loops; era -O1 -G0 per-use \$s0=1 materialization; four contiguous boot C carves)"
     echo "  sources: src/func_8006A5BC.c (+ prior 5EY)"
 elif [[ -f "$ROOT/src/func_8003E610.c" ]]; then

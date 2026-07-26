@@ -36,22 +36,20 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5EZ — 221 matching C leaves. `func_8006A5BC` (boot init with two
-VSync-polled wait loops, 36 words) matches byte-exact on era `-O1 -G0` —
-first attempt. Four setup calls, two structurally identical
-`while (f() != 1) VSync(0);` loops (VSync = `func_80073A44`, SDK; loop
-conditions compare `$v0` raw against `$s0=1`, so asm callees declared
-`int(void)` are codegen-safe), then `func_8007F7A8()`'s return stored as
-`unsigned short` to `D_800B0DD4` (typed by its `lhu` reader, Stage-0
-discipline). `-O1` reproduces retail's per-use `$s0=1` materialization (in
-`func_80086FF8`'s delay slot AND re-materialized between the loops) — the
-6A674 `-O1` lever, third leaf. Cross-jumping did NOT trigger on the two
-identical loop bodies. Extends the boot C block backward: **four contiguous
-C carves** (6A5BC/6A64C/6A674/6A8D4, no asm between). Prior: 5EY matched
-`func_8003E610` (boot display/graphics bring-up) at plain era `-O2 -G0` —
-first attempt, no sched2 — narrowing sched2's scope to store-adjacent
-placement and load-delay hoists (jal-arg scheduling is correct at plain
-`-O2`; a negative result on the sched2-as-default hypothesis).**
+**Phase 5FA — 222 matching C leaves. `func_8003E680` (boot subsystem-init
+dispatcher, 53 words) matches byte-exact on era `-O1 -G0` — zero five state
+globals (types from Stage-0 reader evidence: D1C4/D280 `sltu` unsigned
+compares, D1A0 `andi`-0x2 flags, D250 opaque, CDDC `int` ×36 index), a
+2000-pass hardware-poll loop (`i++` in the `jal` delay slot; ROM `sltiu` →
+`unsigned int` counter), callback registration, then ~11 subsystem inits.
+**First fn-ptr-to-asm-callee arg**: `func_80073D24(func_8003E91C)` emits
+`lui $a0,%hi(func_8003E91C)` / `addiu $a0,$a0,%lo` with R_MIPS_HI16/LO16
+relocs against the same-segment text symbol — links exactly like a data
+symbol. `-O1` chosen predictively by the selection rule (five separate
+`lui $at,%hi` stores, retail didn't CSE the shared `0x8009` high half).
+Prior: 5EZ matched `func_8006A5BC` (two VSync-polled wait loops) at era
+`-O1 -G0` — the first leaf where the `-O1` lever was predicted from ROM
+structure (per-use `$s0=1` materialization) rather than discovered.**
 Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail
 EXE was built with **Psy-Q `ccpsx` (GCC 2.7.x)**. Proven era fingerprints include
 `move`→`addu`, `$at` absolute-`sw` macros, operand order, and `$v0`/`$v1` alloc;

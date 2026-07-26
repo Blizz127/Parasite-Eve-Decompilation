@@ -158,7 +158,13 @@ segments:
       # era -O2 -G0 exact on first attempt — no sched2 needed.
       # Mid-2E7D8 carve: prefix 0x638, C 0x70, resume 2EE80.s 0x192C.
       - [0x2EE10, c, func_8003E610]
-      - [0x2EE80, asm]
+      # Phase 5FA: C leaf func_8003E680 — VRAM 0x8003E680, size 0xD4 (53 words).
+      # Boot subsystem-init dispatcher: zero 5 globals, 2000-pass poll loop,
+      # register func_8003E91C callback (first fn-ptr-to-asm-callee arg), fire
+      # ~11 subsystem inits. era -O1 -G0 (per-store lui, no CSE) + unsigned
+      # loop counter (ROM sltiu). Resume 2EF54.s 0x1858.
+      - [0x2EE80, c, func_8003E680]
+      - [0x2EF54, asm]
       - [0x307AC, c, func_8003FFAC]
       - [0x307BC, c, func_8003FFBC]
       - [0x307CC, asm]
