@@ -7,9 +7,9 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5fd-2f9cc` (223, exact; base `main` @ `cfa1c76`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5FD-table-2f9cc / 223 exact leaves** (5FB+5FC: 698D4, 6E834 parked, no carve) | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **223** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Branch / tip | `phase5fe-2f970` (224; base `main` @ `c5cf0e3`) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5FE-table-2f970 / 224 exact leaves** (5FB+5FC: 698D4, 6E834 parked, no carve) | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **224** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **150** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
 | Era leaf compiles | **66** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
@@ -19,7 +19,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5FD-table-2f9cc / 223. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5FE-table-2f970 / 224. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -326,7 +326,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 
 ## History (append-only, truncated)
 
-| Phase | Leaves | What it proved |
+| Phase | **5FE-table-2f970 / 224 exact leaves** (5FB+5FC: 698D4, 6E834 parked, no carve) | `scripts/verify_us.sh` summary + exact rebuild |
 | --- | --- | --- |
 | 4I–4J | 0→1 path | Exact asm rebuild; GCC 14.2 first leaf |
 | 5B–5CW | →98 | Empty stubs, getters, store/setter batch |
@@ -369,6 +369,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | 5FB park | 222 | `func_800698D4` (disc mount, 141 words) PARKED-SCHEDULING at 140/141: nested-if phrasing defeats gcc's range-test collapse (`v!=0 && v!=-1` → `addiu`+`sltiu`+`bnez`), everything exact except one dbr_sched delay-slot steal at search #3's `beqz` — retail declines a `$v0`-setter steal when the branch target is the return block (`$v0` live to `jr`); ours steals. Screening rule + CdlFILE `0x18` frame note banked; candidate stashed; no carve, no leaf claim |
 | 5FC park | 222 | `func_8006E834` (post-mount loader + display env, 91 words) PARKED-ALLOCATION at 89/91: five-arg call PROVEN (5th arg `sw $v0,0x10($sp)` in `jal` slot, first try); frame decomposition method banked; retail folds the range test in this unit (per-TU datapoint vs 698D4). Residual: call-result register home (`$v0`+restores vs `$v1`), not source-expressible. Third ccpsx-vs-2.7.2 skew mechanism recorded; candidate stashed; no carve, no claim |
 | 5FD-table-2f9cc | 223 | Table clear `func_8002F9CC` (17 words) on era `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`: zero the in-use flag of all 7×220-byte records at `D_800A5D58` (record typed from the `func_8002F7D8` reader; extent `0x604` = 7×220). Key finding: aggregate element type is an addressing-mode lever — `arr[i].field = 0` keeps the symbolic indexed store; flat `arr[i*55] = 0` hoists `la` (flag-invariant). `unsigned char` counter (`andi 0xFF` masks), `sltiu` bound, stride 220B/55W (not 196B/49W). Mid-11718 carve (prefix 0xEAB4, C 0x44, resume 20210.s 0x4010) |
+| 5FE-table-2f970 | 224 | Table twin `func_8002F970` (23 words) on era `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`: pointer-match search-and-clear over the 2F9CC table (`SlotRecord` typing inherited unchanged); `*p == D_800A5D58[i].body` → clear `inUse`, then `*p = 0` with the `sw` in the `jr` delay slot (5EN pattern). `$a3` body-base hoist = the aggregate lever producing (not preventing) a hoist; back-branch slot FILLED vs 2F9CC's nop — slot fill is per-shape, not per-table. One phrasing fix: operand order in the compare (`body == *p`) for `bne $v0,$v1`. Object-level `%lo` difference on the hoisted base (`D_800A5D58+4` vs `D_800A5D5C`) resolves to identical bytes at link. Contiguous carve with 2F9CC (prefix 0xEA58, C 0x5C, C 0x44, resume 20210.s) |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

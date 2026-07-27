@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5FD: 223 C leaves.
+# Current production subsegments (file offsets). Phase 5FE: 224 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -71,6 +71,9 @@ EXPECTED_SUBSEGMENTS=(
     '[0x27DD0, c, func_800375D0]'
     '[0x29140, c, func_80038940]'
     '[0x116FC, c, func_80020EFC]'
+    '[0x20170, c, func_8002F970]'
+    '[0x201CC, c, func_8002F9CC]'
+    '[0x20210, asm]'
     '[0x3DA88, c, func_8004D288]'
     '[0x4C498, c, func_8005BC98]'
     '[0x4CC88, c, func_8005C488]'
@@ -368,6 +371,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/86A4.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
+    "asm/disc1/20210.s"
     "asm/disc1/29574.s"
     "asm/disc1/2E034.s"
     "asm/disc1/2E7D0.s"
@@ -490,6 +494,8 @@ EXPECTED_ARTIFACTS=(
     "src/func_800190B4.c"
     "src/func_80038D0C.c"
     "src/func_80038D1C.c"
+    "src/func_8002F970.c"
+    "src/func_8002F9CC.c"
     "src/func_80038D48.c"
     "src/func_8003D82C.c"
     "src/func_8003DFC8.c"
@@ -801,9 +807,15 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8003E680.c" ]]; then
+if [[ -f "$ROOT/src/func_8002F970.c" ]]; then
+    echo "C conversion: Phase 5FE-table-2f970 — 224 leaves (+ slot-table pointer-match search-and-clear func_8002F970; era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE; table twin of 2F9CC; sw in jr delay slot)"
+    echo "  sources: src/func_8002F970.c (+ prior 5FD)"
+elif [[ -f "$ROOT/src/func_8002F9CC.c" ]]; then
     echo "C conversion: Phase 5FD-table-2f9cc — 223 leaves (+ 7-slot table clear func_8002F9CC; era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE; 220B/55W record stride; unsigned char counter)"
     echo "  sources: src/func_8002F9CC.c (+ prior 5FA)"
+elif [[ -f "$ROOT/src/func_8003E680.c" ]]; then
+    echo "C conversion: Phase 5FA-boot-3e680 — 222 leaves (+ boot subsystem-init dispatcher func_8003E680; era -O1 -G0 per-store lui; unsigned loop counter; first fn-ptr-to-asm-callee arg)"
+    echo "  sources: src/func_8003E680.c (+ prior 5EZ)"
 elif [[ -f "$ROOT/src/func_8006A5BC.c" ]]; then
     echo "C conversion: Phase 5EZ-boot-6a5bc — 221 leaves (+ boot init func_8006A5BC, two VSync-polled wait loops; era -O1 -G0 per-use \$s0=1 materialization; four contiguous boot C carves)"
     echo "  sources: src/func_8006A5BC.c (+ prior 5EY)"

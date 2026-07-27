@@ -36,7 +36,22 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5FD — 223 matching C leaves. `func_8002F9CC` (7-slot table clear, 17
+**Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table
+pointer-match search-and-clear, 23 words) matches byte-exact on era
+`-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1` — the table twin of 2F9CC,
+reusing the exact `SlotRecord` typing (inheritance, no variant layouts).
+Finds the record whose body address equals `*p` (`unsigned char **p`: the
+comparison target is the record body), clears its `inUse` flag, and nulls
+the caller's pointer — the `sw $zero,0($a0)` lands in the `jr` delay slot
+(5EN pattern). The `$a3 = &D_800A5D5C` body base hoists before the loop:
+the aggregate lever working in the OPPOSITE direction from 5FD (there it
+prevented a hoist; here it produces one). Back-branch delay slot is FILLED
+here (`andi`), inverse of 2F9CC's nop — slot fill is not per-table but
+per-shape. Contiguous carve with 2F9CC in 11718: prefix `0xEA58`, C `0x5C`,
+C `0x44`, resume `20210.s`. Prior: 5FD matched `func_8002F9CC` (7-slot
+table clear) — the aggregate-element-type lever (third lever class:
+addressing mode, alongside `-O1` materialization and sched2 placement).**
+Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. The retail `func_8002F9CC` (7-slot table clear, 17
 words) matches byte-exact on era `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`.
 **Element type is an addressing-mode lever, not just typing.** Retail keeps
 symbol+register at the store (`sw $zero,D_800A5D58($v1)` → `lui $at` / `addu` /

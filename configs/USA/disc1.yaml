@@ -111,13 +111,21 @@ segments:
       - [0xA404, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
+      # Phase 5FE: C leaf func_8002F970 — VRAM 0x8002F970, size 0x5C (23 words).
+      # Slot-table pointer-match search and clear (table twin of 2F9CC):
+      # finds the record whose body address equals *p, clears its in-use
+      # flag, nulls the caller's pointer (sw in the jr delay slot). Same
+      # SlotRecord typing; era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1.
+      # Contiguous with 2F9CC: prefix 0xEA58, C 0x5C, then 2F9CC C 0x44.
+      - [0x20170, c, func_8002F970]
       # Phase 5FD: C leaf func_8002F9CC — VRAM 0x8002F9CC, size 0x44 (17 words).
       # Slot-table clear: zero the in-use flag of all 7 220-byte records based
       # at D_800A5D58 (record shape proven by the func_8002F7xx reader; body
       # label D_800A5D5C extends 0x604 = 7*220). Stride is 220B/55W, not
       # 196B/49W. era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 (retail keeps
       # symbol+register at the store: lui $at / addu / sw %lo($at)).
-      # Mid-11718 carve: prefix 0xEAB4, C 0x44, resume 20210.s.
+      # Mid-11718 carve: prefix 0xEA58, two C leaves (2F970 0x5C, 2F9CC 0x44),
+      # resume 20210.s.
       - [0x201CC, c, func_8002F9CC]
       - [0x20210, asm]
       - [0x24220, c, func_80033A20]
