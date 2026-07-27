@@ -36,7 +36,25 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5FA — 222 matching C leaves. `func_8003E680` (boot subsystem-init
+**Phase 5FD — 223 matching C leaves. `func_8002F9CC` (7-slot table clear, 17
+words) matches byte-exact on era `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`.
+**Element type is an addressing-mode lever, not just typing.** Retail keeps
+symbol+register at the store (`sw $zero,D_800A5D58($v1)` → `lui $at` / `addu` /
+`sw %lo($at)`). Writing the clear as a flat `unsigned int[]` with a computed
+index (`D_800A5D58[i*55] = 0`) makes cc1 hoist `la $5,SYM` out of the loop and
+store through the register — a residual **invariant under every flag rung**
+(-O2, -O1, -O1 -fschedule-insns2 were byte-identical), because it is an
+addressing choice, not a scheduling one. Declaring the real 220-byte aggregate
+element (`struct { unsigned int inUse; unsigned char body[216]; }`) makes cc1
+emit the symbol store directly; the three-word knob then picks retail's 3-word
+expansion over GNU as's 4-word one. Stride is **220B/55W** (`4*(8*(8-1)-1)`),
+proven from the `func_8002F7xx` reader (`lw`+`bnez` on word 0 = in-use flag,
+body pointer via `D_800A5D5C`, whose extent `0x604 = 7*220` fixes the count).
+Ladder note: a lone symbol materialization is NOT an `-O1` signal — the `-O1`
+lever is for repeated *constant/address* materialization, and `-O1` did not
+move this hoist.
+
+Prior: **Phase 5FA — 222 matching C leaves. `func_8003E680` (boot subsystem-init
 dispatcher, 53 words) matches byte-exact on era `-O1 -G0` — zero five state
 globals (types from Stage-0 reader evidence: D1C4/D280 `sltu` unsigned
 compares, D1A0 `andi`-0x2 flags, D250 opaque, CDDC `int` ×36 index), a

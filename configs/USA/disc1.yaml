@@ -111,6 +111,15 @@ segments:
       - [0xA404, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
+      # Phase 5FD: C leaf func_8002F9CC — VRAM 0x8002F9CC, size 0x44 (17 words).
+      # Slot-table clear: zero the in-use flag of all 7 220-byte records based
+      # at D_800A5D58 (record shape proven by the func_8002F7xx reader; body
+      # label D_800A5D5C extends 0x604 = 7*220). Stride is 220B/55W, not
+      # 196B/49W. era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 (retail keeps
+      # symbol+register at the store: lui $at / addu / sw %lo($at)).
+      # Mid-11718 carve: prefix 0xEAB4, C 0x44, resume 20210.s.
+      - [0x201CC, c, func_8002F9CC]
+      - [0x20210, asm]
       - [0x24220, c, func_80033A20]
       - [0x2422C, asm]
       - [0x279A4, c, func_800371A4]

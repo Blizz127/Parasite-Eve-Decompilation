@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5FA: 222 C leaves.
+# Current production subsegments (file offsets). Phase 5FD: 223 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -802,8 +802,8 @@ else
 fi
 
 if [[ -f "$ROOT/src/func_8003E680.c" ]]; then
-    echo "C conversion: Phase 5FA-boot-3e680 — 222 leaves (+ boot subsystem-init dispatcher func_8003E680; era -O1 -G0 per-store lui; unsigned loop counter; first fn-ptr-to-asm-callee arg)"
-    echo "  sources: src/func_8003E680.c (+ prior 5EZ)"
+    echo "C conversion: Phase 5FD-table-2f9cc — 223 leaves (+ 7-slot table clear func_8002F9CC; era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE; 220B/55W record stride; unsigned char counter)"
+    echo "  sources: src/func_8002F9CC.c (+ prior 5FA)"
 elif [[ -f "$ROOT/src/func_8006A5BC.c" ]]; then
     echo "C conversion: Phase 5EZ-boot-6a5bc — 221 leaves (+ boot init func_8006A5BC, two VSync-polled wait loops; era -O1 -G0 per-use \$s0=1 materialization; four contiguous boot C carves)"
     echo "  sources: src/func_8006A5BC.c (+ prior 5EY)"
