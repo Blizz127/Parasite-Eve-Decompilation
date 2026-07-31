@@ -130,6 +130,12 @@ segments:
       - [0x20210, asm]
       - [0x24220, c, func_80033A20]
       - [0x2422C, asm]
+      # Phase 5FG: search-and-clear over the 16-entry D_800A7624 table.
+      # era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 (indexed lw AND sw
+      # route through the gate; first leaf exercising the load path).
+      # Mid-2422C carve: prefix 0x29C8, C 0x54, resume 26C48.s.
+      - [0x26BF4, c, func_800363F4]
+      - [0x26C48, asm]
       - [0x279A4, c, func_800371A4]
       - [0x279B0, asm]
       - [0x27C54, c, func_80037454]
