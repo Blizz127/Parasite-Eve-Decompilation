@@ -992,9 +992,12 @@ class MaspsxProcessor:
                 if self.addiu_at:
                     # LOCAL PATCH: three_word_symbol_store gate (extended from
                     # stores to loads) — when enabled and not a compound macro
-                    # line, pass through to GNU as which emits the ASPSX 2.30
-                    # 3-word form (lui/addu/op-%lo). Compound lines retain the
-                    # legacy 4-word expansion.
+                    # line, emit the ASPSX 2.30 3-word form explicitly with $at
+                    # (lui $at,%hi / addu $at,$at,$b / op %lo($at)). NOT a bare
+                    # pass-through: GNU as expands lw $r,SYM($b) with the
+                    # DESTINATION register as temp (lui $r/addu $r,$r,$b/
+                    # lw $r,0($r)), not $at — ROM-proven divergence at
+                    # func_800363F4/80036448. Compound lines retain legacy.
                     if not self.three_word_symbol_store or is_macro:
                         res.extend(
                             [
@@ -1009,7 +1012,17 @@ class MaspsxProcessor:
                             ]
                         )
                     else:
-                        res.append(line)
+                        res.extend(
+                            [
+                                "# EXPAND_AT START",
+                                ".set\tnoat",
+                                f"lui\t$at,%hi({operand})",
+                                f"addu\t$at,$at,{r_source}",
+                                f"{op}\t{r_dest},%lo({operand})($at)",
+                                ".set\tat",
+                                "# EXPAND_AT END",
+                            ]
+                        )
                 else:
                     res.extend(
                         [

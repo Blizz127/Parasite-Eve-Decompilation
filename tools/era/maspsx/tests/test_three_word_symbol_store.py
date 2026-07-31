@@ -73,15 +73,34 @@ class TestThreeWordSymbolStore(unittest.TestCase):
 
         self.assertEqual(expected, self.process([load]))
 
-    def test_indexed_symbolic_load_enabled_selects_three_word_passthrough(self):
-        # Flag ON: loads pass through to GNU as for 3-word ASPSX 2.30 form
+    def test_indexed_symbolic_load_enabled_emits_three_word_at_form(self):
+        # Flag ON: loads emit the explicit 3-word ASPSX 2.30 form with $at
+        # as the address temp (lui $at / addu $at,$at,$b / lw %lo($at)).
+        # NOT a bare pass-through: GNU as expands lw $r,SYM($b) with the
+        # DESTINATION register as temp (lui $r / addu $r,$r,$b / lw $r,0($r))
+        # — ROM-proven divergence (func_800363F4).
         load = "lw\t$3,D_800BCEA8+12($2)"
-        self.assertEqual([load], self.process([load], environment_enabled=True))
+        expected = [
+            ".set\tnoat",
+            "lui\t$at,%hi(D_800BCEA8+12)",
+            "addu\t$at,$at,$2",
+            "lw\t$3,%lo(D_800BCEA8+12)($at)",
+            ".set\tat",
+        ]
+        self.assertEqual(expected, self.process([load], environment_enabled=True))
 
-    def test_indexed_symbolic_load_with_addend_passthrough(self):
-        # Flag ON: lh with addend passes through (ROM-proven for func_80037548)
+    def test_indexed_symbolic_load_with_addend_emits_three_word_at_form(self):
+        # Flag ON: lh with addend emits the explicit 3-word $at form
+        # (ROM-proven shape for func_80037548/800363F4)
         load = "lh\t$2,D_800BCEA8+16($4)"
-        self.assertEqual([load], self.process([load], environment_enabled=True))
+        expected = [
+            ".set\tnoat",
+            "lui\t$at,%hi(D_800BCEA8+16)",
+            "addu\t$at,$at,$4",
+            "lh\t$2,%lo(D_800BCEA8+16)($at)",
+            ".set\tat",
+        ]
+        self.assertEqual(expected, self.process([load], environment_enabled=True))
 
     def test_indexed_symbolic_load_compound_keeps_four_word_expansion(self):
         # Compound lines retain 4-word expansion even with flag ON
@@ -108,14 +127,22 @@ class TestThreeWordSymbolStore(unittest.TestCase):
         self.assertEqual([load], off)
         self.assertEqual(off, on)
 
-    def test_all_load_widths_passthrough_when_enabled(self):
-        # All load mnemonics (lb, lbu, lh, lhu, lw, lwl, lwr) pass through
+    def test_all_load_widths_emit_three_word_at_form_when_enabled(self):
+        # All load mnemonics (lb, lbu, lh, lhu, lw, lwl, lwr) emit the
+        # explicit 3-word $at form when the flag is enabled.
         for op in ["lb", "lbu", "lh", "lhu", "lw", "lwl", "lwr"]:
             load = f"{op}\t$3,D_800BCEA8($2)"
+            expected = [
+                ".set\tnoat",
+                "lui\t$at,%hi(D_800BCEA8)",
+                "addu\t$at,$at,$2",
+                f"{op}\t$3,%lo(D_800BCEA8)($at)",
+                ".set\tat",
+            ]
             self.assertEqual(
-                [load],
+                expected,
                 self.process([load], environment_enabled=True),
-                f"{op} should pass through when flag enabled",
+                f"{op} should emit the 3-word $at form when flag enabled",
             )
 
 
