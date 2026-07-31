@@ -59,7 +59,8 @@ class TestThreeWordSymbolStore(unittest.TestCase):
             self.process([compound], environment_enabled=True),
         )
 
-    def test_indexed_symbolic_load_is_unchanged(self):
+    def test_indexed_symbolic_load_disabled_keeps_four_word_expansion(self):
+        # Flag OFF: loads get the 4-word expansion (lui/addiu/addu/load-0x0)
         load = "lh\t$2,D_8009448C($4)"
         expected = [
             ".set\tnoat",
@@ -71,10 +72,51 @@ class TestThreeWordSymbolStore(unittest.TestCase):
         ]
 
         self.assertEqual(expected, self.process([load]))
-        self.assertEqual(
-            expected,
-            self.process([load], environment_enabled=True),
-        )
+
+    def test_indexed_symbolic_load_enabled_selects_three_word_passthrough(self):
+        # Flag ON: loads pass through to GNU as for 3-word ASPSX 2.30 form
+        load = "lw\t$3,D_800BCEA8+12($2)"
+        self.assertEqual([load], self.process([load], environment_enabled=True))
+
+    def test_indexed_symbolic_load_with_addend_passthrough(self):
+        # Flag ON: lh with addend passes through (ROM-proven for func_80037548)
+        load = "lh\t$2,D_800BCEA8+16($4)"
+        self.assertEqual([load], self.process([load], environment_enabled=True))
+
+    def test_indexed_symbolic_load_compound_keeps_four_word_expansion(self):
+        # Compound lines retain 4-word expansion even with flag ON
+        load = "lw\t$3,D_800BCEA8+12($2)"
+        compound = f"{load};nop"
+        expected = [
+            ".set\tnoat",
+            "lui\t$at,%hi(D_800BCEA8+12)",
+            "addiu\t$at,$at,%lo(D_800BCEA8+12)",
+            "addu\t$at,$at,$2",
+            "lw\t$3,0x0($at)",
+            ".set\tat",
+        ]
+
+        self.assertEqual(expected, self.process([compound]))
+        self.assertEqual(expected, self.process([compound], environment_enabled=True))
+
+    def test_lwc2_stays_outside_gate_flag_on_and_off_identical(self):
+        # lwc2 is not in load_mnemonics, so it never routes through the
+        # three-word gate: output must be byte-identical with flag OFF and ON.
+        load = "lwc2\t$5,D_800BCEA8+12($2)"
+        off = self.process([load])
+        on = self.process([load], environment_enabled=True)
+        self.assertEqual([load], off)
+        self.assertEqual(off, on)
+
+    def test_all_load_widths_passthrough_when_enabled(self):
+        # All load mnemonics (lb, lbu, lh, lhu, lw, lwl, lwr) pass through
+        for op in ["lb", "lbu", "lh", "lhu", "lw", "lwl", "lwr"]:
+            load = f"{op}\t$3,D_800BCEA8($2)"
+            self.assertEqual(
+                [load],
+                self.process([load], environment_enabled=True),
+                f"{op} should pass through when flag enabled",
+            )
 
 
 if __name__ == "__main__":

@@ -16,9 +16,10 @@
 #      epilogues stay pre-jr with a nop slot. Default OFF: opt-in per leaf.
 #   2. three_word_symbol_store (ctor arg, or env
 #      MASPSX_THREE_WORD_SYMBOL_STORE=1): for standalone indexed symbolic
-#      stores under ASPSX 2.21/addiu_at, select the ASPSX 2.30 three-word
-#      lui/addu/store-%lo form instead of lui/addiu/addu/store-0. Compound
-#      semicolon lines retain the legacy expansion. Default OFF: opt in per leaf.
+#      loads AND stores (lw/lh/lb/... and sw/sh/sb/...) under ASPSX
+#      2.21/addiu_at, select the ASPSX 2.30 three-word lui/addu/op-%lo form
+#      instead of lui/addiu/addu/op-0. Compound semicolon lines retain the
+#      legacy expansion. Default OFF: opt in per leaf.
 import struct
 import os
 import re
@@ -989,18 +990,26 @@ class MaspsxProcessor:
             elif is_addend and r_source:
                 # e.g. lw	$2,test_sym($4)
                 if self.addiu_at:
-                    res.extend(
-                        [
-                            "# EXPAND_AT START",
-                            ".set\tnoat",
-                            f"lui\t$at,%hi({operand})",
-                            f"addiu\t$at,$at,%lo({operand})",
-                            f"addu\t$at,$at,{r_source}",
-                            f"{op}\t{r_dest},0x0($at)",
-                            ".set\tat",
-                            "# EXPAND_AT END",
-                        ]
-                    )
+                    # LOCAL PATCH: three_word_symbol_store gate (extended from
+                    # stores to loads) — when enabled and not a compound macro
+                    # line, pass through to GNU as which emits the ASPSX 2.30
+                    # 3-word form (lui/addu/op-%lo). Compound lines retain the
+                    # legacy 4-word expansion.
+                    if not self.three_word_symbol_store or is_macro:
+                        res.extend(
+                            [
+                                "# EXPAND_AT START",
+                                ".set\tnoat",
+                                f"lui\t$at,%hi({operand})",
+                                f"addiu\t$at,$at,%lo({operand})",
+                                f"addu\t$at,$at,{r_source}",
+                                f"{op}\t{r_dest},0x0($at)",
+                                ".set\tat",
+                                "# EXPAND_AT END",
+                            ]
+                        )
+                    else:
+                        res.append(line)
                 else:
                     res.extend(
                         [
