@@ -7,8 +7,8 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5fe-2f970` (224; base `main` @ `c5cf0e3`) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5FE-table-2f970 / 224 exact leaves** (5FB+5FC: 698D4, 6E834 parked, no carve) | `scripts/verify_us.sh` summary + exact rebuild |
+| Branch / tip | `main` @ `439c244` + docs park (224 exact leaves) | `git log --oneline -1` |
+| Phase | **Tools: maspsx 3-word gate extended to loads (439c244) / 224 exact leaves** (parked: 698D4, 6E834, 374E8; no carve) | `scripts/verify_us.sh` summary + exact rebuild |
 | Matching C leaves | **224** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **150** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
 | Era leaf compiles | **66** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
@@ -44,12 +44,15 @@ are git-ignored inputs — never commit them.
   are ROM-proven to stay pre-jr with a nop slot (e.g. func_8003FFAC vs
   func_8007FBC0: identical C shape, different ROM scheduling — the original
   units were assembled with different ASPSX scheduling).
-- Patch 2 landed at `f0b9155`: **three-word indexed symbolic store**, opt-in
-  per leaf via `MASPSX_THREE_WORD_SYMBOL_STORE=1`. Standalone
-  `store $r,SYMBOL($index)` uses the retail/ASPSX-2.30-shaped
-  `lui $at,%hi` / `addu $at,$at,$index` / `store $r,%lo($at)` sequence;
-  compound semicolon lines retain the 2.21 four-word expansion, and indexed
-  loads are untouched. Flag-off rebuild is the exact 212-leaf retail SHA.
+- Patch 2 (`f0b9155`) / Patch 3 (`439c244`): **three-word indexed symbolic
+  store AND load expansion**, opt-in per leaf via `MASPSX_THREE_WORD_SYMBOL_STORE=1`.
+  Standalone `op $r,SYMBOL($index)` uses the retail/ASPSX-2.30-shaped
+  `lui $at,%hi` / `addu $at,$at,$index` / `op $r,%lo($at)` sequence,
+  for stores (2) and standalone indexed symbolic loads (3: lb/lbu/lh/lhu/lw/lwl/lwr;
+  `lwc2` stays outside, durable negative test). Compound semicolon lines retain the
+  2.21 four-word expansion. Flag-off rebuild is the exact leaf-count retail SHA.
+  Full 224-leaf regression (flag OFF and flag ON over the three existing 3W store
+  leaves) both exact; 153 vendored tests; re-clone restore byte-identical.
 - Maspsx stdin: closed with `</dev/null` in `era_compile` (non-TTY hang under
   agent sockets). Bare `scripts/build_us.sh` is fine.
 
@@ -92,7 +95,7 @@ yaml-only and still works when asm/ is stale.
 | Counting-loop back-edge scheduling | **PROVEN; VOLUME-ELIGIBLE** (5EN/5EP `func_8006A674` probe): era `-O2 -G0` puts pointer advances in all five retail back-branch delay slots — `bnez` up-counters (`$a0+4`, `$v1+2`, `$a1+8`) and `bgez` down-counters (`$a3-4`, `$v0-4`) — and preserves the final store in the `jr` delay slot. The leaf remains parked for unrelated constant-hoist scheduling; the loop primitive passed. |
 | Natural counting loop in volume | **PROVEN, VOLUME** (5ES `func_8004BF08`): era `-O2 -G0` matches a natural pointer-walk loop over parallel signed `int[8]` arrays in all 14 words, with no pins or maspsx opt-in. Explicit initialization in retail order (`i`, first pointer, second pointer) plus `do/while` phrasing gives `$a1/$a0/$v1` allocation; the first pointer advances before the bound test and the second pointer advances in the backward `bnez` delay slot. The declaration-initialized `for` form was semantically correct but allocated the three live values differently. |
 | Pure-register bit-serial loop in volume | **PROVEN, VOLUME** (5ET `func_8005186C`): era `-O2 -G0` matches all 15 words on the first natural-C try — no loads/stores, calls, or `$gp`; explicit-init `do/while`; the unconditional `result <<= 1` fills the forward `bnez` skip-branch delay slot, the `bgez` back-edge keeps a nop slot, and the return lands as `addu $v0,$a1,$zero` in the `jr` delay slot |
-| Indexed global-array store expansion | **PROVEN, TOOL-SOLVED** (`f0b9155`): per-leaf `MASPSX_THREE_WORD_SYMBOL_STORE=1` reproduces `lui` / indexed `addu` / `%lo` store and removed the extra L3 word in `func_8006A674` (153→152 words). Default off is byte-identical. |
+| Indexed global-array store/load expansion | **PROVEN, TOOL-SOLVED** (`f0b9155` stores; `439c244` loads): per-leaf `MASPSX_THREE_WORD_SYMBOL_STORE=1` reproduces `lui` / indexed `addu` / op `%lo` and removed the extra L3 word in `func_8006A674` (153→152 words). `439c244` extends the gate to standalone indexed symbolic LOADS (all seven widths; `lwc2` stays outside — durable negative test; compound lines retain the 4-word expansion). Default off is byte-identical. |
 | `lui;ori` large-literal synthesis | **PROVEN** (capability probe): both bit15-clear and bit15-set; cc1 emits PSY-Q `li` high + `ori` low; ROM-exact under 2.21 + `--dont-expand-li` |
 | Rotated/peeled loop idiom | **PROVEN SHAPE** (5EV `func_80052BCC`, leaf parked on unrelated allocation): write the first iteration explicitly, then `while (cond) { body }` → era `-O2 -G0` emits the rotated shape: `beq`-exit head, bottom-tested `bne` back-edge, pointer advance in both delay slots |
 | Signed `char` vs 0xFF-range constant | **PROVEN SHAPE** (5EV `func_80052BCC`, same parked leaf): signed `char c` compared against `0xFF` emits the conversion `andi` on the compare path even after `lbu`; `unsigned char` does not. Typing controls the mask |
@@ -179,13 +182,32 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   by retail (two restores) vs `$v1` by ours — call-result register-home skew,
   not source-expressible. `$v0`-liveness rule NOT exercised (non-event).
   Detail: `docs/ai_context/parked_blockers.json` (`boot-6e834-register-home`).
-- **ccpsx-vs-2.7.2 SKEW SET — three distinct mechanisms:** (1) the
+- **flag-clear loop `func_800374E8`:** **PARKED-ALLOCATION, register COLORING**
+  (branch `phase5ff-374e8`; candidate stashed as `park phase5ff func_800374E8
+  (register-coloring skew; structure correct)`). Flag-clear loop over 4 x 56-byte
+  records at `D_800BCEA8` — **RECORD TYPE ESTABLISHED** (durable deliverable;
+  propagates to `func_80037548`): +0x00 `unsigned char` (lbu/sb), +0x0C
+  `unsigned int` flags (lw/sw; bit 0x02000000 cleared here), +0x10 `signed short`
+  (lh/sh); extent closes EXACTLY at +0xE0 = 4 x 56. **STRUCTURE CORRECT**: 5FD
+  aggregate-subscript rule (no `rec` pointer) + the landed load gate (`439c244`)
+  produce retail's 3-word indexed-symbolic shape (no `la` hoist, correct DAG and
+  scheduling). **RESIDUAL — register coloring only**: era cc1 assigns
+  mask->`$v0`/chain->`$v1`/value->`$v0`; ROM is mask->`$v1`/chain->`$v0`/value->`$v1`.
+  Five phrasings x two loop forms x ladder rungs are ALL byte-identical —
+  invariant under phrasing. Same class as 6E834's call-result home:
+  hard-register-assignment skew. This leaf MOTIVATED the maspsx load-gate patch.
+  Detail: `docs/ai_context/parked_blockers.json` (`register-coloring-374e8`).
+  **WARN: `func_80037548` is the twin — probe its register COLORS before
+  investing; likely the same skew.**
+- **ccpsx-vs-2.7.2 SKEW SET — four distinct mechanisms:** (1) the
   allocation/scheduling family (`6A674`/`55724`/`52BCC`; two recovered via
   `-O1`), (2) dbr_sched `$v0`-liveness slot-steal (`698D4`), (3) call-result
-  register home (`6E834`). All unreachable from C. OPEN QUESTION for a
-  future session: is a closer-to-ccpsx cc1 build obtainable? That would be
-  the one-layer-up analog of the maspsx patches and could address the whole
-  set. Do not chase mid-leaf.
+  register home (`6E834`), (4) register coloring / pseudo-numbering
+  (`374E8`). All unreachable from C. (3)+(4) are both register-ASSIGNMENT
+  skew, strengthening the case that the single highest-value open lever is
+  whether a closer-to-ccpsx cc1 build is obtainable — that would be the
+  one-layer-up analog of the maspsx patches and could address the whole set.
+  Do not chase mid-leaf.
 - **PARKED-ALLOCATION/SCHEDULING family:** cc1 2.7 register
   allocation/scheduling decisions that natural C cannot steer and `-O` level
   does not change. **FAMILY INVESTIGATED (read-only, accepted): NO SINGLE
@@ -326,7 +348,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 
 ## History (append-only, truncated)
 
-| Phase | **5FE-table-2f970 / 224 exact leaves** (5FB+5FC: 698D4, 6E834 parked, no carve) | `scripts/verify_us.sh` summary + exact rebuild |
+| Phase | **224 exact leaves** (tools: maspsx load gate `439c244` on main; parked: 698D4/6E834/374E8) | `scripts/verify_us.sh` summary + exact rebuild |
 | --- | --- | --- |
 | 4I–4J | 0→1 path | Exact asm rebuild; GCC 14.2 first leaf |
 | 5B–5CW | →98 | Empty stubs, getters, store/setter batch |
@@ -370,6 +392,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | 5FC park | 222 | `func_8006E834` (post-mount loader + display env, 91 words) PARKED-ALLOCATION at 89/91: five-arg call PROVEN (5th arg `sw $v0,0x10($sp)` in `jal` slot, first try); frame decomposition method banked; retail folds the range test in this unit (per-TU datapoint vs 698D4). Residual: call-result register home (`$v0`+restores vs `$v1`), not source-expressible. Third ccpsx-vs-2.7.2 skew mechanism recorded; candidate stashed; no carve, no claim |
 | 5FD-table-2f9cc | 223 | Table clear `func_8002F9CC` (17 words) on era `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`: zero the in-use flag of all 7×220-byte records at `D_800A5D58` (record typed from the `func_8002F7D8` reader; extent `0x604` = 7×220). Key finding: aggregate element type is an addressing-mode lever — `arr[i].field = 0` keeps the symbolic indexed store; flat `arr[i*55] = 0` hoists `la` (flag-invariant). `unsigned char` counter (`andi 0xFF` masks), `sltiu` bound, stride 220B/55W (not 196B/49W). Mid-11718 carve (prefix 0xEAB4, C 0x44, resume 20210.s 0x4010) |
 | 5FE-table-2f970 | 224 | Table twin `func_8002F970` (23 words) on era `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`: pointer-match search-and-clear over the 2F9CC table (`SlotRecord` typing inherited unchanged); `*p == D_800A5D58[i].body` → clear `inUse`, then `*p = 0` with the `sw` in the `jr` delay slot (5EN pattern). `$a3` body-base hoist = the aggregate lever producing (not preventing) a hoist; back-branch slot FILLED vs 2F9CC's nop — slot fill is per-shape, not per-table. One phrasing fix: operand order in the compare (`body == *p`) for `bne $v0,$v1`. Object-level `%lo` difference on the hoisted base (`D_800A5D58+4` vs `D_800A5D5C`) resolves to identical bytes at link. Contiguous carve with 2F9CC (prefix 0xEA58, C 0x5C, C 0x44, resume 20210.s) |
+| 5FF-maspsx-loads | 224 | Toolchain patch `439c244`: `MASPSX_THREE_WORD_SYMBOL_STORE` extended from stores to standalone indexed symbolic LOADS (lb/lbu/lh/lhu/lw/lwl/lwr) under addiu_at — pass-through emits the ASPSX 2.30 three-word lui/addu/op-%lo form; compound lines retain legacy; `lwc2` stays outside (durable negative). Store path untouched; one gate, existing name. Full gate: flag-OFF 224 exact SHA; flag-ON 224 exact SHA (6A674/2F9CC/2F970 unchanged under the extended meaning); 153 vendored tests (was 148, +5 load); re-clone restores all three tracked files byte-identical. `func_800374E8` (which motivated the patch) PARKED — register-coloring residual (structure correct; see Known-open families + parked_blockers.json). 224 unchanged, no carve.
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
