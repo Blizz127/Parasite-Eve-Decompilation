@@ -22,4 +22,6 @@ RUN apt-get update && \
 
 WORKDIR /workspace
 
+RUN git config --system --add safe.directory /workspace
+
 CMD ["/bin/bash"]
