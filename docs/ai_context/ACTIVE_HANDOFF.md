@@ -8,7 +8,7 @@ every meaningful change. Prefer shortening over accruing.
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch / tip | `main` @ tip (227, synced) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5FI-62a34 / 227 exact leaves** (main parked with complete candidate v5 at stash; atom byte-proven; cc1 archaeology gates boot-to-black) | `scripts/verify_us.sh` summary + exact rebuild |
+| Phase | **5FI-62a34 / 227 exact leaves** (62CE4 parked loop-layout, sixth skew instance; main v5 + atom at stash; cc1 archaeology gates boot-to-black) | `scripts/verify_us.sh` summary + exact rebuild |
 | Matching C leaves | **227** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **152** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
 | Era leaf compiles | **70** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
@@ -203,6 +203,19 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   LIVE-VALUE-PRESSURE DEPENDENT (374E8: mask+chain+value all live;
   37548: needle/accumulator/index in $a0/$a2/$a1 leave $v0/$v1 free), not
   per-table. Predict skew only when 3+ scratch values compete.
+- **sentinel walk `func_80062CE4`:** **PARKED-SCHEDULING, loop-LAYOUT**
+  (do/while form stashed as `park func_80062CE4 (loop-layout scheduling;
+  do/while lever proven source-invariant)`). Sentinel validate-and-consume
+  over the D_8009D154 list: if D_8009D160 (pending) is still linked, promote
+  it to D_8009D15C (confirmed); clear D_8009D160 either way. 12/18; PROVEN
+  source-invariant — both while-form and do/while produce BYTE-IDENTICAL
+  output; ROM has sentinel-at-top->advance->null-back-edge. cc1
+  canonicalizes loop body order before block layout. SIXTH skew instance.
+  CARVE CORRECTION: spimdisasm 0x5C label OVERSHOOTS — active span 0x48;
+  trailing 5 words are func_80062Fxx prologue. Postmortem: dual gp-four
+  filters could not catch loop-layout skew (no pre-compile tell known).
+  Detail: `docs/ai_context/parked_blockers.json` (`loop-layout-62ce4`).
+
 - **`main` (`func_8001220C`, 187 words):** **PARKED-SCHEDULING, WITH COMPLETE CANDIDATE**
   (candidate preserved at stash; five drafting iterations on scratch /tmp/mainvN.c).
   The boot keystone: init sequence, 20-call-site mount/read/dispatch loop, volume gate,
@@ -229,7 +242,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   skew, strengthening the case that the single highest-value open lever is
   whether a closer-to-ccpsx cc1 build is obtainable — that would be the
   one-layer-up analog of the maspsx patches and could address the whole set.
-  FIVE instances now documented, and THREE are boot-chain functions (`main`,
+  SIX instances now documented (four scheduling, two register-assignment), and THREE are boot-chain functions (`main`,
   `698D4`, `6E834`) — the cc1 question is no longer archaeology for curiosity;
   it directly gates boot-to-black under plan A.
   Do not chase mid-leaf.
