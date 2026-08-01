@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5FE: 224 C leaves.
+# Current production subsegments (file offsets). Phase 5FH: 226 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -807,7 +807,13 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8002F970.c" ]]; then
+if [[ -f "$ROOT/src/func_80037548.c" ]]; then
+    echo "C conversion: Phase 5FH-twin-37548 — 226 leaves (+ record-field lookup twin of 374E8; era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE; short needle -> signed byte0 accumulator+break; 3W gate)"
+    echo "  sources: src/func_80037548.c (+ prior 5FG)"
+elif [[ -f "$ROOT/src/func_800363F4.c" ]]; then
+    echo "C conversion: Phase 5FG-363f4 — 225 leaves (+ 16-entry search-and-clear over D_800A7624; era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE; first leaf exercising the load gate; $at-temp fixed at 5dac87e)"
+    echo "  sources: src/func_800363F4.c (+ prior 5FE)"
+elif [[ -f "$ROOT/src/func_8002F970.c" ]]; then
     echo "C conversion: Phase 5FE-table-2f970 — 224 leaves (+ slot-table pointer-match search-and-clear func_8002F970; era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE; table twin of 2F9CC; sw in jr delay slot)"
     echo "  sources: src/func_8002F970.c (+ prior 5FD)"
 elif [[ -f "$ROOT/src/func_8002F9CC.c" ]]; then

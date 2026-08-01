@@ -140,6 +140,10 @@ segments:
       - [0x279B0, asm]
       - [0x27C54, c, func_80037454]
       - [0x27C6C, asm]
+      # Phase 5FH: record-field lookup twin of 374E8 (short needle ->
+      # signed byte0, break-on-match). era -O2 -G0 + 3W gate. Mid-27C6C
+      # carve: prefix 0xDC, C 0x6C, resume 27DB4 (existing sibling carve).
+      - [0x27D48, c, func_80037548]
       - [0x27DB4, c, func_800375B4]
       - [0x27DC4, c, func_800375C4]
       - [0x27DD0, c, func_800375D0]
