@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5FH: 226 C leaves.
+# Current production subsegments (file offsets). Phase 5FI: 227 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -807,7 +807,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80037548.c" ]]; then
+if [[ -f "$ROOT/src/func_80062A34.c" ]]; then
+    echo "C conversion: Phase 5FI-62a34 — 227 leaves (+ 2-key node-list search over D_8009D154; era -O2 -G8 gp head; && short-circuit matches two-target block layout)"
+    echo "  sources: src/func_80062A34.c (+ prior 5FH)"
+elif [[ -f "$ROOT/src/func_80037548.c" ]]; then
     echo "C conversion: Phase 5FH-twin-37548 — 226 leaves (+ record-field lookup twin of 374E8; era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE; short needle -> signed byte0 accumulator+break; 3W gate)"
     echo "  sources: src/func_80037548.c (+ prior 5FG)"
 elif [[ -f "$ROOT/src/func_800363F4.c" ]]; then

@@ -380,6 +380,11 @@ segments:
       - [0x52ABC, asm]
       - [0x531B0, c, func_800629B0]
       - [0x531BC, asm]
+      # Phase 5FI: 2-key node-list search, head D_8009D154 (gp+0x3E4).
+      # era -O2 -G8 (gp head). Mid-531BC carve: prefix 0x78, C 0x48,
+      # resume 5327C.s 0x23C.
+      - [0x53234, c, func_80062A34]
+      - [0x5327C, asm]
       - [0x534B8, c, func_80062CB8]
       - [0x534C4, c, func_80062CC4]
       - [0x534D0, c, func_80062CD0]

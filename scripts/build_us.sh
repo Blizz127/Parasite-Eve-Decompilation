@@ -437,7 +437,9 @@ SIZE_51CAC=0xe04
 SIZE_C_622B0=0xc
 SIZE_52ABC=0x6f4
 SIZE_C_629B0=0xc
-SIZE_531BC=0x2fc
+SIZE_531BC=0x78
+SIZE_C_62A34=0x48
+SIZE_5327C=0x23c
 SIZE_C_62CB8=0xc
 SIZE_C_62CC4=0xc
 SIZE_C_62CD0=0x14
@@ -879,6 +881,8 @@ OBJECTS=(
     "build/asm/disc1/52ABC.s.o"
     "build/src/func_800629B0.c.o"
     "build/asm/disc1/531BC.s.o"
+    "build/src/func_80062A34.c.o"
+    "build/asm/disc1/5327C.s.o"
     "build/src/func_80062CB8.c.o"
     "build/src/func_80062CC4.c.o"
     "build/src/func_80062CD0.c.o"
@@ -1261,6 +1265,8 @@ SOURCES=(
     "asm/disc1/52ABC.s"
     "src/func_800629B0.c"
     "asm/disc1/531BC.s"
+    "src/func_80062A34.c"
+    "asm/disc1/5327C.s"
     "src/func_80062CB8.c"
     "src/func_80062CC4.c"
     "src/func_80062CD0.c"
@@ -1636,6 +1642,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4F6D4.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/51CAC.s.o asm/disc1/51CAC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/52ABC.s.o asm/disc1/52ABC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/531BC.s.o asm/disc1/531BC.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/5327C.s.o asm/disc1/5327C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/534E4.s.o asm/disc1/534E4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/539C0.s.o asm/disc1/539C0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/55254.s.o asm/disc1/55254.s
@@ -1722,7 +1729,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEBB4.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEC70.s.o asm/disc1/BEC70.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/C5060.s.o asm/disc1/C5060.s
 
-step "Compile C leaves (226 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH))"
+step "Compile C leaves (227 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI))"
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80017E9C.c.o src/func_80017E9C.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019050.c.o src/func_80019050.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019058.c.o src/func_80019058.c
@@ -1883,6 +1890,8 @@ era_compile src/func_8006A64C.c build/src/func_8006A64C.c.o -O2 -G0
 # Phase 5EX: boot state initializer; -O1 for per-use const materialization,
 # sched2 for retail's li/addiu-before-store placement; L3 needs the 3-word store.
 MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_8006A674.c build/src/func_8006A674.c.o -O1 -G0 -fschedule-insns2
+# Phase 5FI: 2-key node-list search over D_8009D154 head; gp -G8.
+era_compile src/func_80062A34.c build/src/func_80062A34.c.o -O2 -G8
 # Phase 5ER: byte/word test-and-clear-return twins; forward if/else scheduling.
 era_compile src/func_80038D1C.c build/src/func_80038D1C.c.o -O2 -G0
 era_compile src/func_80038D48.c build/src/func_80038D48.c.o -O2 -G0
@@ -2163,6 +2172,8 @@ python3 "$TRIM" build/src/func_800622B0.c.o .text "$SIZE_C_622B0"
 python3 "$TRIM" build/asm/disc1/52ABC.s.o .text "$SIZE_52ABC"
 python3 "$TRIM" build/src/func_800629B0.c.o .text "$SIZE_C_629B0"
 python3 "$TRIM" build/asm/disc1/531BC.s.o .text "$SIZE_531BC"
+python3 "$TRIM" build/src/func_80062A34.c.o .text "$SIZE_C_62A34"
+python3 "$TRIM" build/asm/disc1/5327C.s.o .text "$SIZE_5327C"
 python3 "$TRIM" build/src/func_80062CB8.c.o .text "$SIZE_C_62CB8"
 python3 "$TRIM" build/src/func_80062CC4.c.o .text "$SIZE_C_62CC4"
 python3 "$TRIM" build/src/func_80062CD0.c.o .text "$SIZE_C_62CD0"
@@ -2584,6 +2595,8 @@ SECTIONS
         build/asm/disc1/52ABC.s.o(.text)
         build/src/func_800629B0.c.o(.text)
         build/asm/disc1/531BC.s.o(.text)
+        build/src/func_80062A34.c.o(.text)
+        build/asm/disc1/5327C.s.o(.text)
         build/src/func_80062CB8.c.o(.text)
         build/src/func_80062CC4.c.o(.text)
         build/src/func_80062CD0.c.o(.text)
@@ -2960,6 +2973,8 @@ SECTIONS
         build/asm/disc1/52ABC.s.o(.data)
         build/src/func_800629B0.c.o(.data)
         build/asm/disc1/531BC.s.o(.data)
+        build/src/func_80062A34.c.o(.data)
+        build/asm/disc1/5327C.s.o(.data)
         build/src/func_80062CB8.c.o(.data)
         build/src/func_80062CC4.c.o(.data)
         build/src/func_80062CD0.c.o(.data)
@@ -3335,6 +3350,8 @@ SECTIONS
         build/asm/disc1/52ABC.s.o(.rodata)
         build/src/func_800629B0.c.o(.rodata)
         build/asm/disc1/531BC.s.o(.rodata)
+        build/src/func_80062A34.c.o(.rodata)
+        build/asm/disc1/5327C.s.o(.rodata)
         build/src/func_80062CB8.c.o(.rodata)
         build/src/func_80062CC4.c.o(.rodata)
         build/src/func_80062CD0.c.o(.rodata)
@@ -3710,6 +3727,8 @@ SECTIONS
         build/asm/disc1/52ABC.s.o(.bss)
         build/src/func_800629B0.c.o(.bss)
         build/asm/disc1/531BC.s.o(.bss)
+        build/src/func_80062A34.c.o(.bss)
+        build/asm/disc1/5327C.s.o(.bss)
         build/src/func_80062CB8.c.o(.bss)
         build/src/func_80062CC4.c.o(.bss)
         build/src/func_80062CD0.c.o(.bss)
@@ -4270,13 +4289,13 @@ set -e
 echo
 echo "=== Summary ==="
 echo "Assemble: OK (asm units + 35 gp carves)"
-echo "Compile:  OK (226 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
+echo "Compile:  OK (227 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
 echo "Pad trim: OK (incl. C .text pad strip for 0x14/0x18/0x30/0xC/0x8/0x10/0x28/0x2C/0x38/0x3C bodies)"
 echo "Link:     OK (ROM-order ld script + absolute symbol workarounds)"
 echo "Pack:     OK (build/disc1.candidate.exe, size 0x1EE800)"
 if [[ "$cmp_ec" -eq 0 ]]; then
     echo "Compare:  EXACT SHA-1 MATCH"
-    echo "Matching claim: YES (226 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH) + remaining asm)"
+    echo "Matching claim: YES (227 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI) + remaining asm)"
     echo "Artifacts (git-ignored): build/asm/**/*.o build/src/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 0
 else
