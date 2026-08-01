@@ -7,11 +7,11 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5fh-37548` (candidate, uncommitted; base `main` @ `48cc9d7` = 225) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5FH-twin-37548 / 226 exact leaves (candidate)** — 37548 matches 27/27, twin skew falsified; tools: maspsx load gate (439c244) + $at fix (5dac87e) | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **224** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **150** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **66** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Branch / tip | `main` @ tip (227, synced) | `git branch --show-current` / `git log --oneline -1` |
+| Phase | **5FI-62a34 / 227 exact leaves** (main parked with complete candidate v5 at stash; atom byte-proven; cc1 archaeology gates boot-to-black) | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **227** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **152** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **70** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -203,6 +203,24 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   LIVE-VALUE-PRESSURE DEPENDENT (374E8: mask+chain+value all live;
   37548: needle/accumulator/index in $a0/$a2/$a1 leave $v0/$v1 free), not
   per-table. Predict skew only when 3+ scratch values compete.
+- **`main` (`func_8001220C`, 187 words):** **PARKED-SCHEDULING, WITH COMPLETE CANDIDATE**
+  (candidate preserved at stash; five drafting iterations on scratch /tmp/mainvN.c).
+  The boot keystone: init sequence, 20-call-site mount/read/dispatch loop, volume gate,
+  A8-code three-way state switch. ~180 words match at opcode/position. DURABLE DELIVERABLES:
+  the 9-word scratchpad stack handoff (sp → 0x1F8003FC, jal 8019234C, restore) is
+  BYTE-EXACT as fenced inline asm with full caller-saved clobbers — the fenced-exception
+  mechanism (register-pinning precedent) is validated for when main integrates. Role map
+  pinned: $s0 data ptr (D_800B0CD8), $s1 dispatch, $s2 flagbyte (+0xF5), $s3 state_val
+  (0xA9400048), $s4 bitmask (0x100000). All 20 externs typed (69B08 int, 1909B4→6E9A0
+  raw-flow chain). RESIDUAL — ONE mechanism, proven scheduler-driven by an
+  init-placement lever test (draft 4 declared bitmask at top, draft 5 moved init after two
+  calls; cc1 kept the li at the same position and the $s-save interleaving identical —
+  source cannot express the difference): prologue save-batching + invariant-constant
+  placement, cc1 ordering pass vs ccpsx. Fifth scheduling-family instance.
+  NOTE: this park joins 698D4 and 6E834 as the THIRD boot-chain function in the skew set —
+  the cc1 archaeology now directly gates boot-to-black. Detail:
+  `docs/ai_context/parked_blockers.json` (`main-prologue-scheduling`).
+
 - **ccpsx-vs-2.7.2 SKEW SET — four distinct mechanisms:** (1) the
   allocation/scheduling family (`6A674`/`55724`/`52BCC`; two recovered via
   `-O1`), (2) dbr_sched `$v0`-liveness slot-steal (`698D4`), (3) call-result
@@ -211,6 +229,9 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   skew, strengthening the case that the single highest-value open lever is
   whether a closer-to-ccpsx cc1 build is obtainable — that would be the
   one-layer-up analog of the maspsx patches and could address the whole set.
+  FIVE instances now documented, and THREE are boot-chain functions (`main`,
+  `698D4`, `6E834`) — the cc1 question is no longer archaeology for curiosity;
+  it directly gates boot-to-black under plan A.
   Do not chase mid-leaf.
 - **PARKED-ALLOCATION/SCHEDULING family:** cc1 2.7 register
   allocation/scheduling decisions that natural C cannot steer and `-O` level
