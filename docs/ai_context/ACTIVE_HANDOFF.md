@@ -216,6 +216,17 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   filters could not catch loop-layout skew (no pre-compile tell known).
   Detail: `docs/ai_context/parked_blockers.json` (`loop-layout-62ce4`).
 
+- **CC1 PROVENANCE INVESTIGATION — COMPLETE (NULL RESULT):** **no closer community build exists.**
+  Four-phase read-only investigation (Phases 1–4) into the era toolchain's cc1, the retail PE1 compiler
+  (ccpsx), and whether a closer community build is obtainable. Blinded two GCC MIPS-backend mechanisms
+  across the 2.7→2.8 version boundary (loop-body layout via `62CE4`, dbr_sched `$v0`-liveness via `698D4`);
+  both survived REORGED (the `reorg.c` rewrite in 2.8 produced identical steal-vs-decline decisions).
+  The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
+  FORK: (i) cc1 source patch (the maspsx model one layer deeper — the 698D4 liveness check is scoped)
+  or (ii) accept the six residuals as structurally-correct-C with one-word compiler-decision deltas.
+  Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
+  candidate hashes and `git show stash@{N}^3:path` recovery procedure.
+
 - **`main` (`func_8001220C`, 187 words):** **PARKED-SCHEDULING, WITH COMPLETE CANDIDATE**
   (candidate preserved at stash; five drafting iterations on scratch /tmp/mainvN.c).
   The boot keystone: init sequence, 20-call-site mount/read/dispatch loop, volume gate,
