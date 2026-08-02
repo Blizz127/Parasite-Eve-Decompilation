@@ -15,8 +15,18 @@ int  g_stub_bootstrap_invocations = 0;
 StubEntry g_stub_registry[MAX_STUBS];
 int       g_stub_count = 0;
 
+const char *g_stub_order_log[MAX_ORDER_LOG];
+int g_stub_order_count = 0;
+
+void Stub_ResetOrderLog(void) { g_stub_order_count = 0; }
+
 void Stub_Record(const char *symbol, const char *classification)
 {
+    /* Record in ordered log */
+    if (g_stub_order_count < MAX_ORDER_LOG) {
+        g_stub_order_log[g_stub_order_count++] = symbol;
+    }
+
     /* Check if already recorded */
     for (int i = 0; i < g_stub_count; i++) {
         if (strcmp(g_stub_registry[i].symbol, symbol) == 0) {

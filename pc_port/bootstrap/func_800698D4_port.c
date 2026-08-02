@@ -63,7 +63,14 @@ int func_800698D4(void)
 
 /* ── Bootstrap stubs for callees ──────────────────────────────────── */
 
-int func_8007F72C(void) { Stub_Record("func_8007F72C", "BOOTSTRAP_RET"); return g_bootstrap_disc ? 1 : 0; }
+int func_8007F72C(void) {
+    Stub_Record("func_8007F72C", "BOOTSTRAP_RET");
+    if (g_strict_stubs) {
+        fprintf(stderr, "FATAL: strict-stubs — first unresolved provider: func_8007F72C (CdReady)\n");
+        exit(1);
+    }
+    return g_bootstrap_disc ? 1 : 0;
+}
 int func_8007F778(void) { Stub_Record("func_8007F778", "BOOTSTRAP_RET"); return 0; }
 int func_80082314(void) { Stub_Record("func_80082314", "BOOTSTRAP_RET"); return g_bootstrap_disc ? 4 : 0; }
 int func_80081414(void *fp, char *name) { Stub_Record("DsSearchFile", "BOOTSTRAP_RET"); (void)fp; (void)name; return 1; }

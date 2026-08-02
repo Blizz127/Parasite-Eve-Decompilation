@@ -1,68 +1,58 @@
-# Boot to Black — Phase 6A milestone
+# Boot to Black — Phase 6D-R milestone
 
 ## What was achieved
 
-A native Linux executable (`parasite-eve-port`) that compiles and executes
-translated Parasite Eve boot functions natively, reaching the first display
-clear operation through the retail `func_8006E9A0` call chain.
+A native Linux executable (`parasite-eve-port`) routes translated `main`
+(`func_8001220C`) through six real Boot Rung functions and reaches the first
+deterministic native clear frame without an emulator.
+
+The Boot Rung has been verified and hardened in Phase 6D-R:
+- 39 native tests (12 baseline + 27 Boot Rung), all passing
+- 3 deterministic headless runs producing identical framebuffer SHA-256
+- Strict mode correctly exits at first unresolved provider (func_8007F72C)
+- Windowed mode produces framebuffer matching headless
+- Matching repo preserved at SHA `452fb033` (229 C leaves)
 
 No PS1 emulator is involved at runtime. PCSX-Redux is only the retail oracle.
 
-## Boot trace (actual runtime)
+## Boot trace (actual runtime, Phase 6D-R)
 
 ```
 0001 native_executable_start
-0002 host_init_begin
-0003 host_init_end
-0004 bootstrap_disc_mode
-0005 call_func_8006E834
-0006 call_func_8006E9A0        ← translated PE C code
-  → VSync(0)                   ← IMPLEMENTED
-  → SetDispMask(0)             ← IMPLEMENTED
-  → PutDispEnv                 ← HOST_ADAPTED
-  → ClearImage(rect, 0, 0, 1) ← IMPLEMENTED — THE BLACK FRAME
-  → DrawSync(0)                ← IMPLEMENTED
-  → func_8005E588              ← BOOTSTRAP_RET
-  → func_80066B60(2)           ← BOOTSTRAP_RET
-  → ClearOTagR (x1)            ← BOOTSTRAP_RET
-  → func_80068E24              ← BOOTSTRAP_RET
-  → func_80070E54              ← BOOTSTRAP_RET
-  → func_80038D1C              ← BOOTSTRAP_RET
-0007 func_8006E9A0_returned
-0008 first_frame_presented
-0009 boot_complete
-0010 shutdown_begin
-0011 screenshot_written
-0012 shutdown_end
+0002 call_func_8001220C
+  → func_800725DC              ← BOOTSTRAP_RET
+  → func_8003E610              ← REAL TRANSLATED (28 words, 10 call sequence)
+  → func_8006A5BC              ← REAL TRANSLATED (36 words, 2 wait loops)
+  → func_800698D4              ← BOOTSTRAP (disc mount)
+  → func_8006A64C              ← REAL TRANSLATED (10 words, 2-cal child)
+  → func_8003E680              ← REAL TRANSLATED (53 words, 2000 polls + callback)
+  → func_8006A9E4              ← BOOTSTRAP_RET
+  → func_8006AD40              ← BOOTSTRAP_RET
+  → func_8006E834              ← REAL TRANSLATED (91 words, image loader)
+  → func_8006E9A0              ← REAL TRANSLATED (display setup + clear)
+    → ClearImage(0,0,320,240,0,0,1) ← THE BLACK FRAME
+0003 func_8001220C_returned
+0004 shutdown_begin
+0005 shutdown_end
 ```
 
-## ClearImage call
-
-The critical display operation comes from translated PE code:
-
-```c
-rect.x = 0;
-rect.y = 0;
-rect.w = 0x140;   // 320
-rect.h = 0x1C0;   // 448 (clamped to 240 by host framebuffer)
-func_80074F44(&rect, 0, 0, 1);  // ClearImage(r=0, g=0, b=1)
-```
-
-## Framebuffer proof
+## Deterministic framebuffer proof
 
 | Property | Value |
 |----------|-------|
 | Dimensions | 320×240 |
 | Format | RGB 8:8:8 |
-| Requested clear | RGB(0, 0, 1) |
-| Actual pixels | All RGB(0, 0, 1) — exact match |
-| SHA-256 (3 runs) | `fb28dc21...` — identical all 3 runs |
-| Deterministic | ✅ Byte-identical across runs |
+| SHA-256 (headless, 3 runs) | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` |
+| Windowed SHA matches | ✅ |
+| main iterations | 1 (all runs) |
+| VSync count | 2 (all runs) |
+| func_8003E680 poll count | 2000 (all runs) |
+| Unsupported traps | 0 |
 
 ## What this milestone does NOT prove
 
-- Full boot chain correctness (main not yet invoked)
-- Disc I/O (bootstrap disc mode only)
-- MDEC/logo rendering
+- Disc I/O (bootstrap disc mode only — Phase 6E)
+- Real PE.IMG asset loading (Phase 6E)
+- MDEC/logo rendering (Phase 6F+)
 - Any playable game state
 - Audio, input, or save/load

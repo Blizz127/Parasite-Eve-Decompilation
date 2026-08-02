@@ -42,7 +42,7 @@ void func_8003E680(void) {
     func_8003E974();
     func_80036DC8();
     func_80073D24(0);
-    func_80073D24(0); Stub_Record("register_callback_3E91C","BOOTSTRAP_RET");   /* register &func_8003E91C as callback */
+    func_80073D24((int)(uintptr_t)func_8003E91C);   /* register &func_8003E91C as callback */
     func_800371A4(0);
     func_80029388();
     func_8005BCA8();

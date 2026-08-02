@@ -59,16 +59,28 @@ if(BUILD_TESTS)
         tests/test_native.c
         platform/host_framebuffer.c
         bootstrap/stub_registry.c
+        src/pe_globals.c
+        game/boot/func_8003E610_port.c
+        game/boot/func_8003E680_port.c
+        game/boot/func_8006A5BC_port.c
+        game/boot/func_8006A64C_port.c
+        game/boot/func_8006A674_port.c
+        game/boot/func_8006A8D4_port.c
+        bootstrap/func_800698D4_port.c
+        bootstrap/func_8006E834_port.c
+        bootstrap/func_8006E9A0_port.c
     )
     target_include_directories(pe-native-tests PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/platform
         ${CMAKE_SOURCE_DIR}/bootstrap
+        ${CMAKE_SOURCE_DIR}/src
     )
     target_compile_definitions(pe-native-tests PRIVATE
         PE_PORT_HEADLESS=1
         PE_PORT_FB_WIDTH=320
         PE_PORT_FB_HEIGHT=240
     )
+    target_link_libraries(pe-native-tests PRIVATE dl)
     add_test(NAME native-tests COMMAND pe-native-tests)
 endif()

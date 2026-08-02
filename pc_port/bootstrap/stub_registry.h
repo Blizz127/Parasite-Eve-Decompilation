@@ -34,6 +34,12 @@ void Stub_Record(const char *symbol, const char *classification);
 /* Dump summary counts to stdout */
 void Stub_PrintSummary(void);
 
+/* ── Ordered call log (for test verification) ──────────────────────── */
+#define MAX_ORDER_LOG 4096
+extern const char *g_stub_order_log[MAX_ORDER_LOG];
+extern int g_stub_order_count;
+void Stub_ResetOrderLog(void);
+
 /* ── Bootstrap disc mode ───────────────────────────────────────────── */
 extern int g_bootstrap_disc;  /* set by --bootstrap-disc */
 extern int g_strict_stubs;    /* set by --strict-stubs  */
