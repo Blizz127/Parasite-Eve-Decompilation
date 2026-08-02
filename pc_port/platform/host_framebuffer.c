@@ -54,6 +54,8 @@ void HostFB_ClearImage(int x, int y, int w, int h, uint8_t r, uint8_t g, uint8_t
 void HostFB_Present(void)
 {
     fb_presented++;
+    extern int g_port_stop_requested;
+    g_port_stop_requested = 1;
 }
 
 void HostFB_SetDispMask(int mask)

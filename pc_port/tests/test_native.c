@@ -247,3 +247,5 @@ int main(void)
 
     return tests_failed > 0 ? 1 : 0;
 }
+int g_port_stop_requested = 0;
+int g_port_main_iterations = 0;

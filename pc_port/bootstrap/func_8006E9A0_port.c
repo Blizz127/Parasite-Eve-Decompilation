@@ -49,7 +49,7 @@ static unsigned char  D_800BCE80_buf[20];  /* DISP_ENV proxy */
 #define D_800BCE80  D_800BCE80_buf
 
 static unsigned char  D_800BCFEE;           /* poll loop condition byte */
-static unsigned short D_800B0DC6;           /* post-loop store */
+// D_800B0DC6 now in pe_globals.c;           /* post-loop store */
 static unsigned char *arena_lookup[2];      /* for ClearOTagR lookup */
 
 int func_8006E9A0(int arg)

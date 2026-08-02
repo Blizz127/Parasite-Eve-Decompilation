@@ -21,6 +21,9 @@ set(PORT_SRCS
     platform/host_window.c
     bootstrap/stub_registry.c
     bootstrap/func_8006E9A0_port.c
+    bootstrap/func_8006E834_port.c
+    bootstrap/func_800698D4_port.c
+    bootstrap/func_8001220C_port.c
 )
 
 # Include paths
