@@ -40,9 +40,24 @@ target_compile_definitions(parasite-eve-port PRIVATE
     PE_PORT_FB_HEIGHT=240
 )
 
-# Tests (optional)
-option(BUILD_TESTS "Build native port tests" OFF)
+# Tests
+option(BUILD_TESTS "Build native port tests" ON)
 if(BUILD_TESTS)
     enable_testing()
-    add_subdirectory(tests)
+    add_executable(pe-native-tests
+        tests/test_native.c
+        platform/host_framebuffer.c
+        bootstrap/stub_registry.c
+    )
+    target_include_directories(pe-native-tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/platform
+        ${CMAKE_SOURCE_DIR}/bootstrap
+    )
+    target_compile_definitions(pe-native-tests PRIVATE
+        PE_PORT_HEADLESS=1
+        PE_PORT_FB_WIDTH=320
+        PE_PORT_FB_HEIGHT=240
+    )
+    add_test(NAME native-tests COMMAND pe-native-tests)
 endif()
