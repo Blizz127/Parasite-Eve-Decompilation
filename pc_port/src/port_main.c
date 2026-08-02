@@ -159,7 +159,8 @@ int main(int argc, char **argv)
     if (use_window) {
         const char *dpy = getenv("DISPLAY");
         if (!dpy) dpy = ":10.0";
-        if (HostWindow_Open(dpy, PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT) != 0) {
+        /* 2x scale — 640×480 is much more visible on a desktop */
+        if (HostWindow_Open(dpy, PE_PORT_FB_WIDTH * 2, PE_PORT_FB_HEIGHT * 2) != 0) {
             fprintf(stderr, "[WINDOW] Falling back to headless mode\n");
             use_window = 0;
         }
@@ -172,9 +173,9 @@ int main(int argc, char **argv)
     /* Blit framebuffer to window so the user can SEE it */
     if (use_window) {
         TraceEvent("window_blit");
-        HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
-        fprintf(stderr, "[WINDOW] Black frame shown — 4 seconds...\n");
-        HostWindow_Show(4000);
+        HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH * 2, PE_PORT_FB_HEIGHT * 2);
+        fprintf(stderr, "[WINDOW] 640x480 black frame — 8 seconds...\n");
+        HostWindow_Show(8000);
     }
 
     /* Screenshot output */

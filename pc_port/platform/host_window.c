@@ -6,6 +6,7 @@
  * show it, blit framebuffer with XPutImage, sleep, close.
  */
 #include "host_window.h"
+#include "host_framebuffer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -95,7 +96,8 @@ int HostWindow_Open(const char *display, int width, int height)
     int screen = XDefaultScreen(g_dpy);
     Window root = XDefaultRootWindow(g_dpy);
 
-    g_win = XCreateSimpleWindow(g_dpy, root, 100, 100, width, height, 1, 0, 0);
+    g_win = XCreateSimpleWindow(g_dpy, root, 200, 200, width, height,
+                                 4, 0xFFFFFF, 0xFFFFFF);
     XStoreName(g_dpy, g_win, "Parasite Eve (native port) — Phase 6A");
     XMapWindow(g_dpy, g_win);
 
@@ -111,17 +113,31 @@ int HostWindow_Open(const char *display, int width, int height)
     return 0;
 }
 
-void HostWindow_Blit(const uint8_t *rgb, int width, int height)
+void HostWindow_Blit(const uint8_t *rgb, int out_w, int out_h)
 {
     if (!g_ximg || !g_imgbuf) return;
-    /* Convert RGB 8:8:8 → X11 BGRA */
-    for (int i = 0; i < width * height; i++) {
-        g_imgbuf[i * 4 + 0] = rgb[i * 3 + 2];  /* B */
-        g_imgbuf[i * 4 + 1] = rgb[i * 3 + 1];  /* G */
-        g_imgbuf[i * 4 + 2] = rgb[i * 3 + 0];  /* R */
-        g_imgbuf[i * 4 + 3] = 0;               /* A (unused) */
+    /* Nearest-neighbor scale from 320×240 framebuffer to window size.
+     * RGB 8:8:8 input → X11 BGRA output. */
+    int scale_x = out_w / PE_PORT_FB_WIDTH;
+    int scale_y = out_h / PE_PORT_FB_HEIGHT;
+    if (scale_x < 1) scale_x = 1;
+    if (scale_y < 1) scale_y = 1;
+
+    for (int oy = 0; oy < out_h; oy++) {
+        int sy = oy / scale_y;
+        if (sy >= PE_PORT_FB_HEIGHT) sy = PE_PORT_FB_HEIGHT - 1;
+        uint8_t *dst = g_imgbuf + oy * out_w * 4;
+        for (int ox = 0; ox < out_w; ox++) {
+            int sx = ox / scale_x;
+            if (sx >= PE_PORT_FB_WIDTH) sx = PE_PORT_FB_WIDTH - 1;
+            const uint8_t *src = rgb + (sy * PE_PORT_FB_WIDTH + sx) * 3;
+            *dst++ = src[2];  /* B */
+            *dst++ = src[1];  /* G */
+            *dst++ = src[0];  /* R */
+            *dst++ = 0;       /* A */
+        }
     }
-    XPutImage(g_dpy, g_win, g_gc, g_ximg, 0, 0, 0, 0, width, height);
+    XPutImage(g_dpy, g_win, g_gc, g_ximg, 0, 0, 0, 0, out_w, out_h);
     XFlush(g_dpy);
 }
 
