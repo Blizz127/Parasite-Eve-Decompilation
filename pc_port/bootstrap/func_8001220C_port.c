@@ -34,7 +34,7 @@ extern int  func_800698D4(void);
 extern void func_80073A44(int mode);
 extern void func_80074D28(int mask);
 
-extern unsigned int D_800B0CD8;
+/* D_800B0CD8 is a guest-RAM lvalue macro (psx_compat.h) */
 extern unsigned int D_8009D280;
 extern unsigned int D_8009D1C4;
 extern unsigned int D_800A7918;

@@ -5,31 +5,44 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # ---------------------------------------------------------------------------
-# Phase 6A — Native Boot-to-Black Scaffold
-#
-# This is NOT a PS1 emulator.  It compiles translated Parasite Eve C sources
-# as a native Linux executable with software-rendered framebuffer output.
-#
-# No SDL2, no OpenGL, no OpenAL.  Headless-first, PPM output.
+# Phase 6D-S — Native Boot-to-Black Scaffold with host-safe guest memory
 # ---------------------------------------------------------------------------
 
-# Source lists — build incrementally
-set(PORT_SRCS
-    src/port_main.c
-    src/pe_globals.c
+# Sanitizer option
+option(PE_PORT_SANITIZERS "Build with AddressSanitizer and UBSan" OFF)
+
+# Source lists
+set(PLATFORM_SRCS
     platform/host_framebuffer.c
     platform/host_window.c
+    platform/pe_guest_ram.c
+)
+
+set(BOOTSTRAP_SRCS
     bootstrap/stub_registry.c
+    bootstrap/pe_bootstrap.c
     bootstrap/func_8006E9A0_port.c
     bootstrap/func_8006E834_port.c
     bootstrap/func_800698D4_port.c
     bootstrap/func_8001220C_port.c
+)
+
+set(GAME_SRCS
     game/boot/func_8003E610_port.c
     game/boot/func_8003E680_port.c
     game/boot/func_8006A5BC_port.c
     game/boot/func_8006A64C_port.c
     game/boot/func_8006A674_port.c
     game/boot/func_8006A8D4_port.c
+)
+
+set(PORT_SRCS
+    src/port_main.c
+    src/pe_globals.c
+    platform/pe_callback.c
+    ${PLATFORM_SRCS}
+    ${BOOTSTRAP_SRCS}
+    ${GAME_SRCS}
 )
 
 # Include paths
@@ -44,12 +57,21 @@ include_directories(
 add_executable(parasite-eve-port ${PORT_SRCS})
 target_link_libraries(parasite-eve-port PRIVATE dl)
 
-# Headless framebuffer: no external deps, PPM output
 target_compile_definitions(parasite-eve-port PRIVATE
     PE_PORT_HEADLESS=1
     PE_PORT_FB_WIDTH=320
     PE_PORT_FB_HEIGHT=240
 )
+
+if(PE_PORT_SANITIZERS)
+    target_compile_options(parasite-eve-port PRIVATE
+        -fsanitize=address,undefined
+        -fno-omit-frame-pointer
+    )
+    target_link_options(parasite-eve-port PRIVATE
+        -fsanitize=address,undefined
+    )
+endif()
 
 # Tests
 option(BUILD_TESTS "Build native port tests" ON)
@@ -58,14 +80,12 @@ if(BUILD_TESTS)
     add_executable(pe-native-tests
         tests/test_native.c
         platform/host_framebuffer.c
+        platform/pe_guest_ram.c
+        platform/pe_callback.c
         bootstrap/stub_registry.c
+        bootstrap/pe_bootstrap.c
         src/pe_globals.c
-        game/boot/func_8003E610_port.c
-        game/boot/func_8003E680_port.c
-        game/boot/func_8006A5BC_port.c
-        game/boot/func_8006A64C_port.c
-        game/boot/func_8006A674_port.c
-        game/boot/func_8006A8D4_port.c
+        ${GAME_SRCS}
         bootstrap/func_800698D4_port.c
         bootstrap/func_8006E834_port.c
         bootstrap/func_8006E9A0_port.c
@@ -82,5 +102,16 @@ if(BUILD_TESTS)
         PE_PORT_FB_HEIGHT=240
     )
     target_link_libraries(pe-native-tests PRIVATE dl)
+
+    if(PE_PORT_SANITIZERS)
+        target_compile_options(pe-native-tests PRIVATE
+            -fsanitize=address,undefined
+            -fno-omit-frame-pointer
+        )
+        target_link_options(pe-native-tests PRIVATE
+            -fsanitize=address,undefined
+        )
+    endif()
+
     add_test(NAME native-tests COMMAND pe-native-tests)
 endif()

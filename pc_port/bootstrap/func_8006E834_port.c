@@ -1,28 +1,20 @@
 /*
- * Phase 6C — Native adaptation of func_8006E834 (post-mount image loader).
+ * Phase 6D-S — Native adaptation of func_8006E834 (post-mount image loader).
  *
- * PE_PORT from exact matched C (91 words).
- * MIPS register pins and asm barriers removed.
- * Image-load functions routed through bootstrap-disc adapter.
- * Display setup preserved exactly.
+ * All bootstrap stubs now use centralized Bootstrap_ReturnInt/Void.
+ * D_800BCE80 is guest-RAM-backed (defined in psx_compat.h), no local override.
  */
-
 #include "psx_compat.h"
-#include "stub_registry.h"
+#include "pe_bootstrap.h"
 #include <string.h>
 
 /* ── Globals ───────────────────────────────────────────────────────── */
-extern signed char D_800B0DB2, D_800B0DB3, D_800B0DB4, D_800B0DB5, D_800B0DB6, D_800B0DB7;
-extern unsigned int D_800B0CD8;
-extern int D_800B0DD8;
-extern unsigned char *D_80011614;
-extern unsigned short D_80093164[4];     /* offset/size pair table */
-extern unsigned char D_800BCE80_arr[0x18]; /* DISP_ENV proxy */
-#undef  D_800BCE80
-#define D_800BCE80  D_800BCE80_arr
+/* D_800B0DB2-B7, D_800B0CD8, D_800B0DD8 are guest-RAM lvalue macros
+ * (psx_compat.h).  D_80011614 is a pe_addr_t guest address. */
+extern unsigned short D_80093164[4];
 
 extern void func_80086FF8(void);
-extern int  func_8006E6D4(int a0, int a1, unsigned char *a2, int a3);
+extern int  func_8006E6D4(int a0, int a1, pe_addr_t a2, int a3);
 extern int  func_800811E4(void *p);
 extern void func_80072714(void);
 extern void func_800726C4(void);
@@ -32,24 +24,26 @@ extern void func_80074D28(int a);
 extern void func_800749D8(void *env, int x, int y, int w, int h);
 extern void func_800755F0(void *env);
 
-/* ── Bootstrap stubs for callees ──────────────────────────────────── */
-void func_80086FF8(void) { Stub_Record("func_80086FF8", "BOOTSTRAP_RET"); }
-int  func_8006E6D4(int a0, int a1, unsigned char *a2, int a3) {
-    Stub_Record("func_8006E6D4", "BOOTSTRAP_RET");
+/* ── Bootstrap stubs ───────────────────────────────────────────────── */
+void func_80086FF8(void) {
+    Bootstrap_ReturnVoid("func_80086FF8", "func_8006E834");
+}
+int func_8006E6D4(int a0, int a1, pe_addr_t a2, int a3) {
+    /* a2 is the guest destination address (D_80011614); a real
+     * implementation would PE_Translate(a2, a3) and read into guest RAM.
+     * Bootstrap policy does not model the read content yet. */
     (void)a0; (void)a1; (void)a2;
-    /* Return a3 (size) to indicate successful read */
-    return a3;
+    return Bootstrap_ReturnInt("func_8006E6D4", "func_8006E834", a3);
 }
-int  func_800811E4(void *p) {
-    Stub_Record("func_800811E4", "BOOTSTRAP_RET");
+int func_800811E4(void *p) {
     (void)p;
-    return 0;  /* Complete — no error, no retry */
+    return Bootstrap_ReturnInt("func_800811E4", "func_8006E834", 0);
 }
-void func_80072714(void) { Stub_Record("func_80072714", "BOOTSTRAP_RET"); }
-void func_800726C4(void) { Stub_Record("func_800726C4", "BOOTSTRAP_RET"); }
-void func_80072724(void) { Stub_Record("func_80072724", "BOOTSTRAP_RET"); }
+void func_80072714(void) { Bootstrap_ReturnVoid("func_80072714", "func_8006E834"); }
+void func_800726C4(void) { Bootstrap_ReturnVoid("func_800726C4", "func_8006E834"); }
+void func_80072724(void) { Bootstrap_ReturnVoid("func_80072724", "func_8006E834"); }
 void func_800749D8(void *env, int x, int y, int w, int h) {
-    Stub_Record("func_800749D8(SetDefDispEnv)", "BOOTSTRAP_RET");
+    Bootstrap_ReturnVoid("func_800749D8(SetDefDispEnv)", "func_8006E834");
     (void)env; (void)x; (void)y; (void)w; (void)h;
     memset(env, 0, 0x18);
 }
@@ -77,7 +71,6 @@ retry:
         r = func_8006E6D4(D_800B0DD8 + tbl[0], 0, D_80011614, tbl[1] - tbl[0]);
     } while (r == -1);
 
-    /* Completion poll — register pins removed (PE_PORT) */
     for (;;) {
         r = func_800811E4(local30);
         if ((unsigned)(r + 1) < 2) {

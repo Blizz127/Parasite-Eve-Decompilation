@@ -1,12 +1,18 @@
-#include "pe_port_compat.h"
 /*
- * Phase 6C — PS1 SDK compatibility layer (expanded for main call graph).
+ * Phase 6D-S — PS1 SDK compatibility layer.
+ *
+ * All BOOTSTRAP_RET stubs now go through the centralized Bootstrap_ReturnInt /
+ * Bootstrap_ReturnVoid policy, so strict mode is enforced uniformly.
  */
 #ifndef PSX_COMPAT_H
 #define PSX_COMPAT_H
 
 #include "host_framebuffer.h"
 #include "stub_registry.h"
+#include "pe_guest_ram.h"
+#include "pe_callback.h"
+#include "pe_bootstrap.h"
+#include "pe_port_compat.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,18 +22,62 @@
 typedef struct { int x, y, w, h; } RECT;
 typedef struct { uint8_t disp[20]; } DISP_ENV;
 
-/* ── PE globals ───────────────────────────────────────────────────── */
-extern DISP_ENV  D_800BCE80;
-extern uint8_t  *D_80011614;
+/* ── Guest-RAM-resident named globals ─────────────────────────────────
+ *
+ * These symbols name bytes inside the contiguous 2 MiB guest RAM.
+ * Each macro is a typed lvalue over PE_Translate, so reads AND writes
+ * (e.g. `D_800B0CDC = 10;`) land in guest RAM with bounds checking.
+ * Host endianness is little-endian on all supported build targets,
+ * matching the PS1.  Address-of (`&D_800B0CD8`) yields a host pointer
+ * into guest RAM; arithmetic from it stays inside the one allocation. */
+#define PE_GUEST_U8(a)   (*(uint8_t  *)PE_Translate((a), 1))
+#define PE_GUEST_S8(a)   (*(int8_t   *)PE_Translate((a), 1))
+#define PE_GUEST_U16(a)  (*(uint16_t *)PE_Translate((a), 2))
+#define PE_GUEST_S16(a)  (*(int16_t  *)PE_Translate((a), 2))
+#define PE_GUEST_U32(a)  (*(uint32_t *)PE_Translate((a), 4))
+#define PE_GUEST_S32(a)  (*(int32_t  *)PE_Translate((a), 4))
+
+#define D_800BCE80     ((DISP_ENV *)PE_Translate(0x800BCE80u, sizeof(DISP_ENV)))
+
+#define D_800B0CD8     PE_GUEST_U32(0x800B0CD8u)
+#define D_800B0CDC     PE_GUEST_U16(0x800B0CDCu)
+#define D_800B0CDE     PE_GUEST_S16(0x800B0CDEu)
+#define D_800B0CE0     PE_GUEST_S8(0x800B0CE0u)
+#define D_800B0CE1     PE_GUEST_S8(0x800B0CE1u)
+#define D_800B0CE2     PE_GUEST_S8(0x800B0CE2u)
+#define D_800B0CE3     PE_GUEST_S8(0x800B0CE3u)
+#define D_800B0CE4     PE_GUEST_S8(0x800B0CE4u)
+#define D_800B0CE5     PE_GUEST_S8(0x800B0CE5u)
+#define D_800B0CE6     PE_GUEST_S8(0x800B0CE6u)
+#define D_800B0CE7     PE_GUEST_S8(0x800B0CE7u)
+#define D_800B0CE8     PE_GUEST_S8(0x800B0CE8u)
+#define D_800B0CE9     PE_GUEST_S8(0x800B0CE9u)
+#define D_800B0CEA     PE_GUEST_S8(0x800B0CEAu)
+#define D_800B0CEB     PE_GUEST_S8(0x800B0CEBu)
+#define D_800B0DB2     PE_GUEST_S8(0x800B0DB2u)
+#define D_800B0DB3     PE_GUEST_S8(0x800B0DB3u)
+#define D_800B0DB4     PE_GUEST_S8(0x800B0DB4u)
+#define D_800B0DB5     PE_GUEST_S8(0x800B0DB5u)
+#define D_800B0DB6     PE_GUEST_S8(0x800B0DB6u)
+#define D_800B0DB7     PE_GUEST_S8(0x800B0DB7u)
+#define D_800B0DC6     PE_GUEST_U8(0x800B0DC6u)
+#define D_800B0DCD     PE_GUEST_U8(0x800B0DCDu)
+#define D_800B0DD4     PE_GUEST_U16(0x800B0DD4u)
+#define D_800B0DD8     PE_GUEST_S32(0x800B0DD8u)
+#define D_80094488     PE_GUEST_U8(0x80094488u)
+#define D_8009448C     ((uint8_t *)PE_Translate(0x8009448Cu, 64))
+
+/* D_80011614 — retail guest pointer (global at 0x80011614 holding a guest
+ * address).  Stored host-side as pe_addr_t; translated only at real access
+ * sites.  No translated retail writer exists yet; the initial value is
+ * bootstrap policy (see pe_globals.c). */
+extern pe_addr_t D_80011614;
+
+/* ── Host-owned scalar globals (plain data, no pointer arithmetic) ──── */
 extern int       D_8009CDDC;
 extern uint32_t  D_8009D280;
 extern uint32_t  D_8009D1C4;
 extern uint32_t  D_800A7918;
-extern uint32_t  D_800B0CD8;
-extern signed char D_800B0DB2, D_800B0DB3, D_800B0DB4, D_800B0DB5, D_800B0DB6, D_800B0DB7;
-extern int       D_800B0DD8;
-extern unsigned char D_800B0DCD;
-extern unsigned char D_800B0DC6;
 extern unsigned short D_80093164[];
 
 /* ── SDK IMPLEMENTED ──────────────────────────────────────────────── */
@@ -38,26 +88,29 @@ static inline void func_80074F44(RECT *r, uint8_t rv, uint8_t g, uint8_t b) {
     if (r) HostFB_ClearImage(r->x, r->y, r->w, r->h, rv, g, b);
 }
 static inline void func_800755F0(void *e) { (void)e; HostFB_Present(); }
-static inline void func_800752AC(void *o, int n) { Stub_Record("ClearOTagR","BOOTSTRAP_RET"); (void)o;(void)n; }
+static inline void func_800752AC(void *o, int n) {
+    Bootstrap_ReturnVoid("ClearOTagR", "func_8006E9A0");
+    (void)o; (void)n;
+}
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
-static inline void func_800725DC(void)   { Stub_Record("func_800725DC","BOOTSTRAP_RET"); }
-static inline void func_8006A9E4(void)   { Stub_Record("func_8006A9E4","BOOTSTRAP_RET"); }
-static inline void func_8006AD40(void)   { Stub_Record("func_8006AD40","BOOTSTRAP_RET"); }
-static inline void func_8006ECEC(void)   { Stub_Record("func_8006ECEC","BOOTSTRAP_RET"); }
-static inline void func_8006F044(void)   { Stub_Record("func_8006F044","BOOTSTRAP_RET"); }
-static inline void func_80069B08(int d)  { Stub_Record("func_80069B08","BOOTSTRAP_RET"); (void)d; }
-static inline void func_8003F3C4(void)   { Stub_Record("func_8003F3C4","BOOTSTRAP_RET"); }
-static inline void func_801235DC(void)   { Stub_Record("func_801235DC","BOOTSTRAP_RET"); }
-static inline void func_8019234C(void)   { Stub_Record("func_8019234C","BOOTSTRAP_RET"); }
-static inline int  func_801909B4(void)   { Stub_Record("func_801909B4","BOOTSTRAP_RET"); return 0; }
-static inline void func_8005E588(void)   { Stub_Record("func_8005E588","BOOTSTRAP_RET"); }
-static inline void func_80066B60(int a)  { Stub_Record("func_80066B60","BOOTSTRAP_RET"); (void)a; }
-static inline void func_80068E24(void)   { Stub_Record("func_80068E24","BOOTSTRAP_RET"); }
-static inline void func_80070E54(void)   { Stub_Record("func_80070E54","BOOTSTRAP_RET"); }
-static inline int  func_80038D1C(void)   { Stub_Record("func_80038D1C","BOOTSTRAP_RET"); return 0; }
+static inline void func_800725DC(void)   { Bootstrap_ReturnVoid("func_800725DC", "func_8001220C"); }
+static inline void func_8006A9E4(void)   { Bootstrap_ReturnVoid("func_8006A9E4", "func_8001220C"); }
+static inline void func_8006AD40(void)   { Bootstrap_ReturnVoid("func_8006AD40", "func_8001220C"); }
+static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
+static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
+static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
+static inline void func_8003F3C4(void)   { Bootstrap_ReturnVoid("func_8003F3C4", "func_8001220C"); }
+static inline void func_801235DC(void)   { Bootstrap_ReturnVoid("func_801235DC", "func_8001220C"); }
+static inline void func_8019234C(void)   { Bootstrap_ReturnVoid("func_8019234C", "func_8001220C"); }
+static inline int  func_801909B4(void)   { return Bootstrap_ReturnInt("func_801909B4", "func_8001220C", 0); }
+static inline void func_8005E588(void)   { Bootstrap_ReturnVoid("func_8005E588", "func_8006E9A0"); }
+static inline void func_80066B60(int a)  { Bootstrap_ReturnVoid("func_80066B60", "func_8006E9A0"); (void)a; }
+static inline void func_80068E24(void)   { Bootstrap_ReturnVoid("func_80068E24", "func_8006E9A0"); }
+static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
+static inline int  func_80038D1C(void)   { return Bootstrap_ReturnInt("func_80038D1C", "func_8003E680", 0); }
 
-/* ── REAL translated functions (in bootstrap/*_port.c) ────────────── */
+/* ── REAL translated functions ────────────────────────────────────── */
 extern void func_8001220C(void);
 extern int  func_800698D4(void);
 extern int  func_8006E834(void);

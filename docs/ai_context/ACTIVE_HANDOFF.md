@@ -3,7 +3,26 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
-## Current state
+## PC port branch state (this checkout)
+
+| Fact | Value | Derive |
+| --- | --- | --- |
+| Branch | `phase6d-s-guest-memory-safety` | `git branch --show-current` |
+| Port phase | **6D-S — HOST-SAFE BOOT FOUNDATION VERIFIED** | `pc_port/build/pe-native-tests` (81/81) |
+| Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
+| Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
+| Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless runs + windowed identical) | `sha256sum` of `--screenshot` PPM |
+| Strict mode | exit 1, first provider `func_800725DC` | `--headless --strict-stubs` |
+| Sanitizers | `-DPE_PORT_SANITIZERS=ON`: tests + headless run clean | `pc_port/build-san` |
+| Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
+| Next | Phase 6E: real Disc 1 + PE.IMG reads (do not start MDEC/SDL/audio/input) | — |
+
+`D_80011614` is a `pe_addr_t` guest pointer (bootstrap-policy value
+`0x8010BD00`; no translated retail writer yet).  Strict-mode expectation
+changed from 6D-R: the centralized policy aborts at the *first* provider on
+the boot path (`func_800725DC`), not `func_8007F72C`.
+
+## Decomp state (main repo)
 
 | Fact | Value | Derive |
 | --- | --- | --- |

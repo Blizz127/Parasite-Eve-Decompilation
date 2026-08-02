@@ -84,6 +84,13 @@ int main(int argc, char **argv) {
     ParseArgs(argc, argv); TraceInit();
     g_bootstrap_disc = g_opts.bootstrap_disc;
     g_strict_stubs   = g_opts.strict_stubs;
+
+    /* Phase 6D-S: initialize host-safe subsystems */
+    PE_RamInit();
+    PE_Callback_Init();
+    Bootstrap_Init();
+    if (g_strict_stubs) Bootstrap_EnableStrict();
+
     TraceEvent("native_executable_start");
 
     int use_window = !g_opts.headless;
@@ -136,5 +143,6 @@ int main(int argc, char **argv) {
             vs, ds, pr, mk, g_port_main_iterations);
 
     TraceEvent("shutdown_end"); TraceClose();
+    PE_RamDestroy();
     return 0;
 }

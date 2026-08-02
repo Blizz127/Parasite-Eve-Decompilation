@@ -1,14 +1,16 @@
-# Parasite Eve Native PC Port — Phase 6D-R
+# Parasite Eve Native PC Port — Phase 6D-S
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** Translated Boot Rung verified — six real PS1 functions route
-the retail main path through native arena layout, display init, and subsystem init
-to produce a deterministic black framebuffer.
+**Current milestone:** Host-safe guest-memory boot foundation — translated
+Boot Rung runs entirely on a contiguous 2 MiB guest RAM model with typed
+`pe_addr_t` addresses, a full-width callback registry, and a centralized
+bootstrap/strict-mode policy.
 
-**Status:** BOOT RUNG VERIFIED — 6 translated Boot Rung functions proven by 39
-native tests; 3 deterministic headless runs byte-identical; strict mode correctly
-rejects unresolved providers; matching build remains exact at SHA `452fb033`.
+**Status:** HOST-SAFE BOOT FOUNDATION VERIFIED — 81 native tests pass;
+ASan/UBSan clean; 3 deterministic headless runs byte-identical; strict mode
+aborts centrally at the first unresolved provider; windowed SHA matches
+headless; matching build remains exact at SHA `452fb033`.
 
 ## Architecture
 
@@ -16,10 +18,24 @@ rejects unresolved providers; matching build remains exact at SHA `452fb033`.
 - **Backend:** Headless software framebuffer + X11 window via dlopen
 - **Output:** PPM (Portable Pixmap), deterministic byte-identical results
 - **Game entry:** `port_main.c` → `func_8001220C_port.c` → full PE boot chain
-- **Memory strategy:** Typed host globals + 4× 0x8000 arena buffer proxies
+- **Memory strategy:** Contiguous 2 MiB guest RAM (`pe_guest_ram.[ch]`).
+  All guest addresses are `pe_addr_t` (`uint32_t`); translation to host
+  pointers happens only at real access sites via bounds-checked
+  `PE_Translate` / `PE_LoadU8/16/32` / `PE_StoreU8/16/32`.  Named globals
+  that live in guest RAM (the `0x800B0CD8` block, `D_80094488/8C`,
+  `D_800BCE80`) are typed lvalue macros over `PE_Translate` — one store,
+  no split-brain.  `PE_RamInit` allocates + zero-fills; `PE_RamReset`
+  re-zeroes; `PE_RamDestroy` frees.
+- **Callback registry:** `pe_callback.[ch]` — full-width function pointers,
+  no `(int)(uintptr_t)` narrowing.  Reset / Register / Get / Invoke.
+- **Bootstrap policy:** `pe_bootstrap.[ch]` — every `BOOTSTRAP_RET`
+  provider goes through `Bootstrap_ReturnInt/Void`.  Strict mode
+  (`--strict-stubs`) aborts centrally at the first invoked provider.
+  Deterministic provider sequences (`Bootstrap_SetIntSequence`) script
+  per-symbol return values for wait-loop testing.
 - **Disc strategy:** Bootstrap-disc mode (real-disc deferred to Phase 6E)
 
-## Translated Boot Rung functions (Phase 6D/6D-R)
+## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
 | Function | Matching size | Words | Purpose |
 |----------|--------------|-------|---------|
@@ -37,11 +53,15 @@ cd pc_port
 mkdir build && cd build
 cmake ..
 make
+
+# Sanitizer build (ASan + UBSan)
+cmake .. -DPE_PORT_SANITIZERS=ON
+make
 ```
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (39 tests, all pass)
+- `pe-native-tests` — test suite (81 tests, all pass)
 
 ## Running
 
@@ -55,17 +75,17 @@ Produces:
 DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc \
   --stop-after-event first-clear --hold-ms 5000 --debug-overlay
 
-# Strict mode — stops at first unresolved provider
+# Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs \
   --stop-after-event first-clear
-# Expected: exit 1, names func_8007F72C (CdReady)
+# Expected: exit 1, names func_800725DC (first provider on the boot path)
 ```
 
 ## Testing
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 39 tests (12 baseline + 27 Boot Rung)
+./pe-native-tests   # 81 tests (12 baseline + 69 guest-RAM/Boot Rung/policy)
 ```
 
 ## Deterministic framebuffer
@@ -88,6 +108,6 @@ cd pc_port/build
 ## Constraints
 
 - PCSX-Redux is the retail oracle only — never used as runtime
-- Matching decomp remains separate and SHA-exact (229 C leaves, SHA `452fb033`)
+- Matching decomp remains separate and SHA-exact (227 C leaves, SHA `452fb033`)
 - No PS1 emulator in the native executable
 - This is NOT a playable game yet

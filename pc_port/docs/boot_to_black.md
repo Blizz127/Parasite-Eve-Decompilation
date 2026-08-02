@@ -1,21 +1,26 @@
-# Boot to Black — Phase 6D-R milestone
+# Boot to Black — Phase 6D-S milestone
 
 ## What was achieved
 
 A native Linux executable (`parasite-eve-port`) routes translated `main`
 (`func_8001220C`) through six real Boot Rung functions and reaches the first
-deterministic native clear frame without an emulator.
+deterministic native clear frame without an emulator.  Phase 6D-S moves all
+guest-visible state onto a host-safe memory foundation: a contiguous 2 MiB
+guest RAM with `pe_addr_t` typed addresses, bounds-checked translation only
+at real access sites, a full-width callback registry, and a centralized
+bootstrap/strict-mode policy.
 
-The Boot Rung has been verified and hardened in Phase 6D-R:
-- 39 native tests (12 baseline + 27 Boot Rung), all passing
+The Boot Rung has been verified and hardened in Phase 6D-S:
+- 81 native tests (12 baseline + 69 guest-RAM / Boot Rung / policy), all passing
+- ASan + UBSan builds clean (tests and headless run)
 - 3 deterministic headless runs producing identical framebuffer SHA-256
-- Strict mode correctly exits at first unresolved provider (func_8007F72C)
+- Strict mode centrally exits at first unresolved provider (func_800725DC)
 - Windowed mode produces framebuffer matching headless
-- Matching repo preserved at SHA `452fb033` (229 C leaves)
+- Matching repo preserved at SHA `452fb033` (227 C leaves)
 
 No PS1 emulator is involved at runtime. PCSX-Redux is only the retail oracle.
 
-## Boot trace (actual runtime, Phase 6D-R)
+## Boot trace (actual runtime, Phase 6D-S)
 
 ```
 0001 native_executable_start
