@@ -21,6 +21,7 @@ set(PLATFORM_SRCS
 set(BOOTSTRAP_SRCS
     bootstrap/stub_registry.c
     bootstrap/pe_bootstrap.c
+    bootstrap/func_800725DC_port.c
     bootstrap/func_8006E9A0_port.c
     bootstrap/func_8006E834_port.c
     bootstrap/func_800698D4_port.c
@@ -86,6 +87,7 @@ if(BUILD_TESTS)
         bootstrap/pe_bootstrap.c
         src/pe_globals.c
         ${GAME_SRCS}
+        bootstrap/func_800725DC_port.c
         bootstrap/func_800698D4_port.c
         bootstrap/func_8006E834_port.c
         bootstrap/func_8006E9A0_port.c

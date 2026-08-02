@@ -94,7 +94,6 @@ static inline void func_800752AC(void *o, int n) {
 }
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
-static inline void func_800725DC(void)   { Bootstrap_ReturnVoid("func_800725DC", "func_8001220C"); }
 static inline void func_8006A9E4(void)   { Bootstrap_ReturnVoid("func_8006A9E4", "func_8001220C"); }
 static inline void func_8006AD40(void)   { Bootstrap_ReturnVoid("func_8006AD40", "func_8001220C"); }
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
@@ -111,6 +110,7 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
 static inline int  func_80038D1C(void)   { return Bootstrap_ReturnInt("func_80038D1C", "func_8003E680", 0); }
 
 /* ── REAL translated functions ────────────────────────────────────── */
+extern void func_800725DC(void);
 extern void func_8001220C(void);
 extern int  func_800698D4(void);
 extern int  func_8006E834(void);

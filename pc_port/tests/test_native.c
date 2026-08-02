@@ -1167,6 +1167,50 @@ static void test_d11614_arena_anchors_track(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-A — Provider frontier: func_800725DC (crt0 init guard)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_TEST_94538  0x80094538u
+
+static void test_725DC_sets_guard(void) {
+    TEST("725DC_sets_guard");
+    ResetTestState();
+
+    func_800725DC();
+
+    ASSERT(PE_LoadU32(GA_TEST_94538) == 1, "guard not set after first call");
+    PASS();
+}
+
+static void test_725DC_idempotent(void) {
+    TEST("725DC_idempotent");
+    ResetTestState();
+
+    func_800725DC();
+    ASSERT(PE_LoadU32(GA_TEST_94538) == 1, "guard not set after first call");
+    func_800725DC();
+    ASSERT(PE_LoadU32(GA_TEST_94538) == 1, "guard changed on second call");
+
+    /* A non-zero guard must never be rewritten (retail: bnez skip) */
+    PE_StoreU32(GA_TEST_94538, 7);
+    func_800725DC();
+    ASSERT(PE_LoadU32(GA_TEST_94538) == 7, "non-zero guard was rewritten");
+    PASS();
+}
+
+static void test_725DC_not_bootstrap_stub(void) {
+    TEST("725DC_not_bootstrap_stub");
+    ResetTestState();
+
+    func_800725DC();
+
+    /* Translated function: no BOOTSTRAP_RET record, no order-log entry */
+    ASSERT(CountOrderLog("func_800725DC") == 0, "func_800725DC recorded as stub");
+    ASSERT(Bootstrap_InvocationCount() == 0, "bootstrap provider invoked");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
  * Phase 6D-S — func_8006E834 guest-state tests
  * ═══════════════════════════════════════════════════════════════════════ */
 
@@ -1409,6 +1453,11 @@ int main(void)
     /* D_80011614 (2 tests) */
     test_d11614_bootstrap_value();
     test_d11614_arena_anchors_track();
+
+    /* Provider frontier: func_800725DC (3 tests) */
+    test_725DC_sets_guard();
+    test_725DC_idempotent();
+    test_725DC_not_bootstrap_stub();
 
     /* func_8006E834 (2 tests) */
     test_6E834_clears_status_bytes();
