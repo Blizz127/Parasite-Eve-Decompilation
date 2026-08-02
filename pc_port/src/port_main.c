@@ -7,6 +7,7 @@
 
 #include "psx_compat.h"
 #include "host_framebuffer.h"
+#include "host_window.h"
 #include "stub_registry.h"
 #include <stdio.h>
 #include <string.h>
@@ -153,9 +154,28 @@ int main(int argc, char **argv)
 
     TraceEvent("native_executable_start");
 
+    /* Open a window on the desktop (unless --headless) */
+    int use_window = !g_opts.headless;
+    if (use_window) {
+        const char *dpy = getenv("DISPLAY");
+        if (!dpy) dpy = ":10.0";
+        if (HostWindow_Open(dpy, PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT) != 0) {
+            fprintf(stderr, "[WINDOW] Falling back to headless mode\n");
+            use_window = 0;
+        }
+    }
+
     int result = BootToBlack();
 
     TraceEvent("shutdown_begin");
+
+    /* Blit framebuffer to window so the user can SEE it */
+    if (use_window) {
+        TraceEvent("window_blit");
+        HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
+        fprintf(stderr, "[WINDOW] Black frame shown — 4 seconds...\n");
+        HostWindow_Show(4000);
+    }
 
     /* Screenshot output */
     const char *screenshot_path = g_opts.screenshot ? g_opts.screenshot : "/tmp/pe-port-black.ppm";
@@ -175,6 +195,11 @@ int main(int argc, char **argv)
     HostFB_GetState(&vs, &ds, &pr, &mk);
     fprintf(stderr, "[FRAMEBUFFER] vsyncs=%d drawsyncs=%d presents=%d mask=%d\n",
             vs, ds, pr, mk);
+
+    if (use_window) {
+        TraceEvent("window_close");
+        HostWindow_Close();
+    }
 
     TraceEvent("shutdown_end");
     TraceClose();

@@ -18,6 +18,7 @@ set(PORT_SRCS
     src/port_main.c
     src/pe_globals.c
     platform/host_framebuffer.c
+    platform/host_window.c
     bootstrap/stub_registry.c
     bootstrap/func_8006E9A0_port.c
 )
@@ -32,6 +33,7 @@ include_directories(
 
 # Main executable
 add_executable(parasite-eve-port ${PORT_SRCS})
+target_link_libraries(parasite-eve-port PRIVATE dl)
 
 # Headless framebuffer: no external deps, PPM output
 target_compile_definitions(parasite-eve-port PRIVATE
