@@ -24,6 +24,12 @@ set(PORT_SRCS
     bootstrap/func_8006E834_port.c
     bootstrap/func_800698D4_port.c
     bootstrap/func_8001220C_port.c
+    game/boot/func_8003E610_port.c
+    game/boot/func_8003E680_port.c
+    game/boot/func_8006A5BC_port.c
+    game/boot/func_8006A64C_port.c
+    game/boot/func_8006A674_port.c
+    game/boot/func_8006A8D4_port.c
 )
 
 # Include paths

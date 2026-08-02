@@ -24,25 +24,44 @@ static unsigned char D_801ED800_buf[32 * 1024];
 #define D_80120D08  (D_80120D08_buf)
 #define D_801ED800  (D_801ED800_buf)
 
-static unsigned char *D_800B0E24;
-static unsigned char *D_800B0E28;
-static unsigned char *D_800B0E2C;
-static unsigned char *D_800B0E30;
-static unsigned char *D_800B0E34;
-static unsigned char *D_800B0E38;
-static unsigned char *D_800B0E3C;
-static unsigned char *D_800B0E40;
-static unsigned char *D_800B0E44;
-static unsigned char *D_800B0E48;
-static unsigned char *D_800B0E4C;
-static unsigned char *D_800B0E50;
-static unsigned char *D_800B0E54;
-static unsigned char *D_800B0E58;
-static unsigned char *D_800B0E5C;
-static unsigned char *D_800B0E60;
-static unsigned char *D_800B0E64;
-static unsigned char *D_800B0E68;
-static unsigned char *D_800B0E6C;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E24;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E28;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E2C;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E30;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E34;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E38;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E3C;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E40;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E44;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E48;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E4C;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E50;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E54;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E58;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E5C;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E60;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E64;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E68;
+// declared in pe_port_compat.h
+// extern unsigned char *D_800B0E6C;
 
 static unsigned char  D_800BCE80_buf[20];  /* DISP_ENV proxy */
 #undef  D_800BCE80

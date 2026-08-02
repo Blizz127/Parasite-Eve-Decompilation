@@ -1,3 +1,4 @@
+#include "pe_port_compat.h"
 /*
  * Phase 6C — PS1 SDK compatibility layer (expanded for main call graph).
  */
@@ -41,10 +42,6 @@ static inline void func_800752AC(void *o, int n) { Stub_Record("ClearOTagR","BOO
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
 static inline void func_800725DC(void)   { Stub_Record("func_800725DC","BOOTSTRAP_RET"); }
-static inline void func_8003E610(void)   { Stub_Record("func_8003E610","BOOTSTRAP_RET"); }
-static inline void func_8003E680(void)   { Stub_Record("func_8003E680","BOOTSTRAP_RET"); }
-static inline void func_8006A5BC(void)   { Stub_Record("func_8006A5BC","BOOTSTRAP_RET"); }
-static inline void func_8006A64C(void)   { Stub_Record("func_8006A64C","BOOTSTRAP_RET"); }
 static inline void func_8006A9E4(void)   { Stub_Record("func_8006A9E4","BOOTSTRAP_RET"); }
 static inline void func_8006AD40(void)   { Stub_Record("func_8006AD40","BOOTSTRAP_RET"); }
 static inline void func_8006ECEC(void)   { Stub_Record("func_8006ECEC","BOOTSTRAP_RET"); }
