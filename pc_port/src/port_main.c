@@ -1,8 +1,8 @@
 /*
- * Phase 6A — Native Parasite Eve port entry point.
+ * Phase 6B — Native Parasite Eve port with visible X11 window.
  *
- * Headless-first.  No emulator, no SDL2, no OpenGL.
- * Translates PE boot functions via native compilation with PS1 SDK stubs.
+ * Default: windowed on DISPLAY, stays open until Escape or close.
+ * Headless: --headless flag.
  */
 
 #include "psx_compat.h"
@@ -13,197 +13,129 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* ── Forward declarations for translated PE functions ───────────────── */
+extern int  func_8006E9A0(int arg);
+extern void func_8006E834(void);
 
-/* Matched C — compiles natively with PS1 SDK stubs */
-extern int  func_8006E9A0(int arg);   /* clear-frame function */
-extern void func_8006E834(void);      /* called before clear frame */
-extern void func_8001220C(void);      /* main */
-
-/* ── CLI ─────────────────────────────────────────────────────────────── */
+/* ── CLI ────────────────────────────────────────────────────────────── */
 
 static struct {
-    int   headless;
-    int   bootstrap_disc;
-    int   max_frames;
-    const char *screenshot;
-    const char *trace_path;
-    int   strict_stubs;
-    const char *disc1_path;
-    const char *assets_path;
+    int headless, bootstrap_disc, strict_stubs;
+    const char *screenshot, *trace_path;
+    int hold_ms, scale, hold_until_close, debug_overlay;
+    const char *window_title;
 } g_opts = {
-    .headless       = 0,
-    .bootstrap_disc = 0,
-    .max_frames     = 1,
-    .screenshot     = NULL,
-    .trace_path     = NULL,
-    .strict_stubs   = 0,
-    .disc1_path     = NULL,
-    .assets_path    = NULL,
+    .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
+    .screenshot = NULL, .trace_path = NULL,
+    .hold_ms = 0, .scale = 2, .hold_until_close = 1, .debug_overlay = 0,
+    .window_title = "Parasite Eve Native Port",
 };
 
-static void ParseArgs(int argc, char **argv)
-{
+static void ParseArgs(int argc, char **argv) {
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--headless") == 0) {
-            g_opts.headless = 1;
-        } else if (strcmp(argv[i], "--bootstrap-disc") == 0) {
-            g_opts.bootstrap_disc = 1;
-        } else if (strcmp(argv[i], "--strict-stubs") == 0) {
-            g_opts.strict_stubs = 1;
-        } else if (strcmp(argv[i], "--max-frames") == 0 && i + 1 < argc) {
-            g_opts.max_frames = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) {
-            g_opts.screenshot = argv[++i];
-        } else if (strcmp(argv[i], "--trace") == 0 && i + 1 < argc) {
-            g_opts.trace_path = argv[++i];
-        } else if (strcmp(argv[i], "--disc1") == 0 && i + 1 < argc) {
-            g_opts.disc1_path = argv[++i];
-        } else if (strcmp(argv[i], "--assets") == 0 && i + 1 < argc) {
-            g_opts.assets_path = argv[++i];
-        } else {
-            fprintf(stderr, "Usage: %s [--headless] [--bootstrap-disc] [--strict-stubs]\n"
-                    "       [--max-frames N] [--screenshot PATH] [--trace PATH]\n"
-                    "       [--disc1 PATH] [--assets PATH]\n", argv[0]);
-            exit(1);
-        }
+        const char *a = argv[i];
+        if      (!strcmp(a, "--headless"))        g_opts.headless = 1;
+        else if (!strcmp(a, "--bootstrap-disc"))   g_opts.bootstrap_disc = 1;
+        else if (!strcmp(a, "--strict-stubs"))     g_opts.strict_stubs = 1;
+        else if (!strcmp(a, "--windowed"))         g_opts.headless = 0;
+        else if (!strcmp(a, "--hold-until-close")) g_opts.hold_until_close = 1;
+        else if (!strcmp(a, "--debug-overlay"))    g_opts.debug_overlay = 1;
+        else if (i+1<argc && !strcmp(a, "--screenshot"))  g_opts.screenshot = argv[++i];
+        else if (i+1<argc && !strcmp(a, "--trace"))       g_opts.trace_path = argv[++i];
+        else if (i+1<argc && !strcmp(a, "--hold-ms"))     g_opts.hold_ms = atoi(argv[++i]);
+        else if (i+1<argc && !strcmp(a, "--scale"))       g_opts.scale = atoi(argv[++i]);
+        else if (i+1<argc && !strcmp(a, "--window-title")) g_opts.window_title = argv[++i];
+        else { fprintf(stderr, "Unknown: %s\n", a); exit(1); }
     }
+    if (g_opts.hold_ms > 0) g_opts.hold_until_close = 0;
 }
 
-/* ── Boot trace ──────────────────────────────────────────────────────── */
+/* ── Boot trace ─────────────────────────────────────────────────────── */
+static FILE *g_trace_fp = NULL; static int g_trace_seq = 0;
+static void TraceInit(void) { if (g_opts.trace_path) g_trace_fp = fopen(g_opts.trace_path, "w"); }
+static void TraceEvent(const char *e) {
+    if (g_trace_fp) { fprintf(g_trace_fp, "%04d %s\n", ++g_trace_seq, e); fflush(g_trace_fp); }
+    fprintf(stderr, "[TRACE %04d] %s\n", g_trace_seq, e);
+}
+static void TraceClose(void) { if (g_trace_fp) { fclose(g_trace_fp); g_trace_fp = NULL; } }
 
-static FILE *g_trace_fp = NULL;
-static int   g_trace_seq = 0;
-
-static void TraceInit(void)
-{
-    if (g_opts.trace_path) {
-        g_trace_fp = fopen(g_opts.trace_path, "w");
-        if (!g_trace_fp) {
-            fprintf(stderr, "WARNING: cannot open trace file '%s'\n", g_opts.trace_path);
-        }
-    }
+/* ── Title overlay update ───────────────────────────────────────────── */
+static void UpdateTitle(const char *phase, const char *func) {
+    if (!g_opts.debug_overlay || !g_host_window_open) return;
+    char buf[256];
+    int vs, ds, pr, mk;
+    HostFB_GetState(&vs, &ds, &pr, &mk);
+    snprintf(buf, sizeof(buf),
+        "%s | %s | %s | frame %d | vsync %d | dsync %d | stubs %d",
+        g_opts.window_title, phase, func ? func : "-", pr, vs, ds, g_stub_bootstrap_invocations);
+    HostWindow_SetTitle(buf);
 }
 
-static void TraceEvent(const char *event)
-{
-    if (g_trace_fp) {
-        fprintf(g_trace_fp, "%04d %s\n", ++g_trace_seq, event);
-        fflush(g_trace_fp);
-    }
-    fprintf(stderr, "[TRACE %04d] %s\n", g_trace_seq, event);
-}
-
-static void TraceClose(void)
-{
-    if (g_trace_fp) { fclose(g_trace_fp); g_trace_fp = NULL; }
-}
-
-/* ── Boot sequence ───────────────────────────────────────────────────── */
-
-static int BootToBlack(void)
-{
+/* ── Boot ───────────────────────────────────────────────────────────── */
+static int BootToBlack(void) {
     TraceEvent("host_init_begin");
     HostFB_Init();
     TraceEvent("host_init_end");
-
-    if (g_opts.bootstrap_disc) {
-        TraceEvent("bootstrap_disc_mode");
-
-        /* Phase 6A bootstrap path:
-         *   func_8006E834()  → boot setup (BOOTSTRAP_RET stubs inside)
-         *   func_8006E9A0(0) → clear frame (real matched C)
-         *
-         * The clear frame function calls:
-         *   VSync(0)         → HostFB_VSync (IMPLEMENTED)
-         *   SetDispMask(0)   → HostFB_SetDispMask (IMPLEMENTED)
-         *   PutDispEnv(...)  → HostFB_Present (HOST_ADAPTED)
-         *   ClearImage(...)  → HostFB_ClearImage (IMPLEMENTED)
-         *   DrawSync(0)      → HostFB_DrawSync (IMPLEMENTED)
-         */
-
-        TraceEvent("call_func_8006E834");
-        func_8006E834();  /* BOOTSTRAP_RET stubs for boot setup */
-
-        TraceEvent("call_func_8006E9A0");
-        int ret = func_8006E9A0(0);  /* REAL matched C — the clear-frame function */
-        TraceEvent("func_8006E9A0_returned");
-        (void)ret;
-
-        TraceEvent("first_frame_presented");
-    } else {
-        /* Future: real disc mode calls func_8001220C → full boot chain */
-        TraceEvent("real_disc_boot_begin");
-        fprintf(stderr, "Real disc mode not yet implemented. Use --bootstrap-disc.\n");
-        return 1;
+    if (!g_opts.bootstrap_disc) {
+        fprintf(stderr, "Use --bootstrap-disc\n"); return 1;
     }
-
+    TraceEvent("bootstrap_disc_mode");
+    UpdateTitle("Native boot", "func_8006E834");
+    TraceEvent("call_func_8006E834"); func_8006E834();
+    UpdateTitle("Display init", "func_8006E9A0");
+    TraceEvent("call_func_8006E9A0"); func_8006E9A0(0);
+    TraceEvent("func_8006E9A0_returned");
+    UpdateTitle("Clear frame reached", "done");
+    TraceEvent("first_frame_presented");
     TraceEvent("boot_complete");
     return 0;
 }
 
-/* ── main ────────────────────────────────────────────────────────────── */
-
-int main(int argc, char **argv)
-{
-    ParseArgs(argc, argv);
-    TraceInit();
-
+/* ── main ───────────────────────────────────────────────────────────── */
+int main(int argc, char **argv) {
+    ParseArgs(argc, argv); TraceInit();
     g_bootstrap_disc = g_opts.bootstrap_disc;
     g_strict_stubs   = g_opts.strict_stubs;
-
     TraceEvent("native_executable_start");
 
-    /* Open a window on the desktop (unless --headless) */
     int use_window = !g_opts.headless;
     if (use_window) {
-        const char *dpy = getenv("DISPLAY");
-        if (!dpy) dpy = ":10.0";
-        /* 2x scale — 640×480 is much more visible on a desktop */
-        if (HostWindow_Open(dpy, PE_PORT_FB_WIDTH * 2, PE_PORT_FB_HEIGHT * 2) != 0) {
-            fprintf(stderr, "[WINDOW] Falling back to headless mode\n");
-            use_window = 0;
+        const char *dpy = getenv("DISPLAY") ? getenv("DISPLAY") : ":10.0";
+        int w = PE_PORT_FB_WIDTH * g_opts.scale;
+        int h = PE_PORT_FB_HEIGHT * g_opts.scale;
+        if (HostWindow_Open(dpy, w, h, g_opts.window_title, g_opts.scale) != 0) {
+            fprintf(stderr, "[WINDOW] fallback to headless\n"); use_window = 0;
         }
     }
 
     int result = BootToBlack();
-
     TraceEvent("shutdown_begin");
 
-    /* Blit framebuffer to window so the user can SEE it */
     if (use_window) {
         TraceEvent("window_blit");
-        HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH * 2, PE_PORT_FB_HEIGHT * 2);
-        fprintf(stderr, "[WINDOW] 640x480 black frame — 8 seconds...\n");
-        HostWindow_Show(8000);
-    }
-
-    /* Screenshot output */
-    const char *screenshot_path = g_opts.screenshot ? g_opts.screenshot : "/tmp/pe-port-black.ppm";
-    if (HostFB_WritePPM(screenshot_path) == 0) {
-        fprintf(stderr, "[SCREENSHOT] %s (%dx%d PPM)\n", screenshot_path,
-                PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
-        TraceEvent("screenshot_written");
-    } else {
-        fprintf(stderr, "[ERROR] Failed to write screenshot to %s\n", screenshot_path);
-    }
-
-    /* Stub summary */
-    Stub_PrintSummary();
-
-    /* Framebuffer state */
-    int vs, ds, pr, mk;
-    HostFB_GetState(&vs, &ds, &pr, &mk);
-    fprintf(stderr, "[FRAMEBUFFER] vsyncs=%d drawsyncs=%d presents=%d mask=%d\n",
-            vs, ds, pr, mk);
-
-    if (use_window) {
+        HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
+        UpdateTitle("Black frame", "waiting");
+        if (g_opts.hold_until_close) {
+            fprintf(stderr, "[WINDOW] Open until close/Escape...\n");
+            HostWindow_Run(-1);
+        } else if (g_opts.hold_ms > 0) {
+            fprintf(stderr, "[WINDOW] Holding %d ms...\n", g_opts.hold_ms);
+            HostWindow_Run(g_opts.hold_ms);
+        } else {
+            HostWindow_Run(2000);
+        }
         TraceEvent("window_close");
         HostWindow_Close();
     }
 
-    TraceEvent("shutdown_end");
-    TraceClose();
+    const char *sp = g_opts.screenshot ? g_opts.screenshot : "/tmp/pe-port-black.ppm";
+    if (HostFB_WritePPM(sp) == 0) {
+        fprintf(stderr, "[SCREENSHOT] %s (%dx%d)\n", sp, PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
+        TraceEvent("screenshot_written");
+    }
+    Stub_PrintSummary();
+    int vs, ds, pr, mk; HostFB_GetState(&vs, &ds, &pr, &mk);
+    fprintf(stderr, "[FB] vsyncs=%d drawsyncs=%d presents=%d mask=%d\n", vs, ds, pr, mk);
 
+    TraceEvent("shutdown_end"); TraceClose();
     return result;
 }
