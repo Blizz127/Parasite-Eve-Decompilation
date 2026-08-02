@@ -15,7 +15,19 @@ every meaningful change. Prefer shortening over accruing.
 | Strict mode | exit 1, first provider `func_800725DC` | `--headless --strict-stubs` |
 | Sanitizers | `-DPE_PORT_SANITIZERS=ON`: tests + headless run clean | `pc_port/build-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next | Phase 6E: real Disc 1 + PE.IMG reads (do not start MDEC/SDL/audio/input) | — |
+| Next | Phase 6E-A: provider frontier from `func_800725DC` toward real Disc 1 (do not start MDEC/SDL/audio/input) | — |
+
+**Leaf-count reconciliation (227 vs 229).** This checkout's committed yaml at
+base `71114ac` has **227** C leaves (`grep -cE ',[[:space:]]*c,'
+configs/USA/disc1.yaml`) and builds EXACT SHA-1. The **229** figure in the
+Phase 6D-R docs came from the sibling checkout
+`/home/blizz/dev/parasite-eve` (branch `phase5fm-main-barrier-revisit` @
+`7467308`), whose *uncommitted* working tree promotes `func_8006E9A0` (5FJ)
+and `func_8006E834` (5FK) to C leaves; that state also builds EXACT SHA-1
+(docker, "Matching claim: YES (229 C leaves)"). Both are exact because C
+leaves are byte-exact asm replacements — the count is conversion progress,
+not output content. Documentation now reports the count of the checkout it
+lives in.
 
 `D_80011614` is a `pe_addr_t` guest pointer (bootstrap-policy value
 `0x8010BD00`; no translated retail writer yet).  Strict-mode expectation
