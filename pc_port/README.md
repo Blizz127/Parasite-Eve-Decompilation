@@ -1,39 +1,41 @@
-# Parasite Eve Native PC Port — Phase 6E-B13
+# Parasite Eve Native PC Port — Phase 6E-B14
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** func_80034F10 rung — subsystem table clear +
-flag-bit clear, translated as retail logic (classification 1).
-Complete body is 45 retail words / `0xB4` verified against the
-SHA-1-exact executable (VRAM `0x80034F10`–`0x80034FC0`, file `0x25710`;
-live split `asm/disc1/2422C.s`).  Pure fixed-count zero-stores plus one
-read-modify-write: `sw` 0 → `0x8009D2E8`; a 512-word array clear at
-`D_800A77F0` (`0x800A77F0`–`0x800A7FEC`); `D_800B6A80` = 0 (retail
-stores the same word 64× via a delay-slot loop with no pointer advance —
-documented, reproduced as one store with identical end state); a
-14×160-word matrix clear at `D_800BEA90` (row stride `0x280`,
-`0x800BEA90`–`0x800C0D8F`); scalars `sw` 0 → `0x8009D2AC`/`0x8009D20C`/
-`0x8009D2F0`/`0x8009D254`/`0x8009D224` and `sh` 0 → `0x8009D2A6` (ROM
-order 53C, 49C, 580, 536, 4E4, 4B4); and the sole guest read — a final
-`D_800B0CD8 &= ~0x3000` (store in the `jr $ra` delay slot, clearing
-bits 12–13 only).  No SDK/GTE/hardware/callbacks/GPU/allocation work.
-Signature `void func_80034F10(void)` (`$v0`=&`D_800B0CD8`, unconsumed).
-Sole exe call site: `func_8003E680` @`0x8003E728` (nop delay slot,
-between the real func_8001A890 and the func_8006536C stub).
-Idempotent, including after PE_RamReset.  Independent reference:
-45-word exe verification plus the exact canary footprint is complete
-proof for this fixed-count zero-fill + fixed-mask RMW.
+**Current milestone:** func_8006536C rung — subsystem record-table
+clear + index byte clear, translated as retail logic
+(classification 1).  Complete body is 19 retail words / `0x4C`
+verified against the SHA-1-exact executable (VRAM
+`0x8006536C`–`0x800653B4`, file `0x55B6C`; live split
+`asm/disc1/55430.s`).  Pure fixed-count zero-stores, no reads at all:
+a 28×3-word table clear at `D_800A3180` (row stride `0xC` — fully
+contiguous 84 words, span `0x800A3180`–`0x800A32CF`), then `sb` 0 →
+`0x44($gp)` = `0x8009CDB4` (the current-record index byte — the
+immediately following func_800653B8 reads `lbu 0x44($gp)` and indexes
+`D_800A3180` + byte×12, confirming the 28-record×12-byte structure).
+No SDK/GTE/hardware/callbacks/GPU/allocation work.  Signature
+`void func_8006536C(void)` (`$v0`=0, unconsumed).  Sole exe call site
+(exe-wide byte scan for the encoded jal): `func_8003E680`
+@`0x8003E730` (nop delay slot, between the real func_80034F10 and the
+func_80038D1C stub).  Idempotent, including after PE_RamReset.
+Independent reference: 19-word exe verification plus the exact canary
+footprint is complete proof for this fixed-count zero-fill + constant
+byte store.
 
-**Status:** FUNC_80034F10 RUNG VERIFIED — 228 native tests pass;
+**Status:** FUNC_8006536C RUNG VERIFIED — 233 native tests pass;
 ASan/UBSan clean; RNG, LZCR and callback oracle dumps byte-identical to
 their independent interpreters on the retail exe; 3 deterministic
 headless runs (framebuffer `fb28dc21…`); 3 real-disc load traces
 byte-identical; strict mode with `--disc-image` now stops at
-`func_8006536C` (from `func_8003E680`) — the next provider past the
-real `func_80034F10` clear; windowed SHA matches headless;
+`func_80038D1C` (from `func_8003E680`) — the next provider past the
+real `func_8006536C` clear; windowed SHA matches headless;
 matching build remains exact at SHA `452fb033`.
 
-**Previous milestones:** 6E-B12 (func_8001A890 subsystem scalar/array
+**Previous milestones:** 6E-B13 (func_80034F10 subsystem table clear +
+flag-bit clear — 45 retail words: 512-word array at `D_800A77F0`,
+14×160-word matrix at `D_800BEA90` span `..0x800C0D8F`, six scalars,
+`D_800B0CD8 &= ~0x3000`);
+6E-B12 (func_8001A890 subsystem scalar/array
 clear — 34 retail words: `0x8009CE08`–`0x8009CE17`, six stride-4
 halfwords, four words, two halfwords, 20-word array at `D_8009DFB0`);
 6E-B11 (func_800124F8 subsystem table
@@ -323,6 +325,24 @@ in the `jr $ra` delay slot).  No SDK/GTE/hardware/GPU work;
 idempotent, including after `PE_RamReset`.  Write footprint proven by
 a full 2 MiB canary scan; strict mode advances to `func_8006536C`.
 
+## Record-table clear + index byte clear rung (Phase 6E-B14)
+
+| Function | Size | Words | Role |
+|----------|------|-------|------|
+| `func_8006536C` | 0x4C | 19 | Zero-fill 28×3-word record table at `D_800A3180` (stride `0xC`, contiguous 84 words) + index byte `0x8009CDB4` |
+
+All 19 words verified against the retail executable (exe
+`0x8006536C`–`0x800653B4`, file `0x55B6C`; live split `55430.s`).
+Sole call site `func_8003E680` @`0x8003E730` (nop delay slot),
+`void(void)`, `$v0`=0 unconsumed.  ROM order: the nested table clear
+(`0x800A3180`–`0x800A32CF`, row-major) then `sb` 0 → `0x44($gp)` =
+`0x8009CDB4` — the current-record index (func_800653B8 below reads
+`lbu 0x44($gp)` and indexes `D_800A3180` + byte×12, confirming the
+28-record×12-byte structure).  No reads, no SDK/GTE/hardware/GPU
+work; idempotent, including after `PE_RamReset`.  Write footprint
+proven by a full 2 MiB canary scan; strict mode advances to
+`func_80038D1C`.
+
 ## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
 | Function | Matching size | Words | Purpose |
@@ -349,7 +369,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (228 tests, all pass)
+- `pe-native-tests` — test suite (233 tests, all pass)
 
 ## Running
 
@@ -377,7 +397,7 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1, names func_8006536C (from func_8003E680) — the first
+# Expected: exit 1, names func_80038D1C (from func_8003E680) — the first
 # unresolved provider past the translated RNG (70D10/70D6C/70DD0), the
 # subsystem-init pair (func_8003E974 + func_8003EAC8), the timer-record
 # init (func_80036DC8 + leaves), the real func_80073D24 callback
@@ -385,8 +405,9 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # func_80029388 slot-table clear + record init, the real empty
 # func_8005BCA8 stub, the real func_80068D28 display-record init,
 # the real func_800124F8 subsystem table clear, the real
-# func_8001A890 scalar/array clear, and the real func_80034F10
-# subsystem table clear + flag-bit clear
+# func_8001A890 scalar/array clear, the real func_80034F10
+# subsystem table clear + flag-bit clear, and the real func_8006536C
+# record-table clear + index byte clear
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -408,7 +429,7 @@ host adaptation); the boot is not faked.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 228 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 233 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
@@ -444,7 +465,11 @@ cd pc_port/build
                     # + 6E-B13: func_80034F10 exact cleared state, RMW
                     #   mask, 64x redundant store, canary footprint,
                     #   idempotence, 3E680 integration, frontier
-                    #   advance to func_8006536C)
+                    #   advance to func_8006536C
+                    # + 6E-B14: func_8006536C exact table/index state,
+                    #   byte-width proof, canary footprint, idempotence,
+                    #   3E680 integration, frontier advance to
+                    #   func_80038D1C)
 ```
 
 ## Deterministic framebuffer
@@ -459,7 +484,7 @@ cd pc_port/build
 
 ## Next steps
 
-1. **Phase 6E-B continued:** `func_8006536C` rung (next strict-mode
+1. **Phase 6E-B continued:** `func_80038D1C` rung (next strict-mode
    frontier, from `func_8003E680`), then the remaining subsystem inits
    toward the image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)

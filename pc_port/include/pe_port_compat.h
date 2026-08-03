@@ -65,8 +65,10 @@ static inline void func_8003E91C(void)    { Bootstrap_ReturnVoid("func_8003E91C"
  * (34 retail words).
  * func_80034F10 is now a REAL translation too (Phase 6E-B13):
  * game/boot/func_80034F10_port.c — subsystem table clear +
- * D_800B0CD8 flag-bit clear (45 retail words). */
-static inline void func_8006536C(void)    { Bootstrap_ReturnVoid("func_8006536C", "func_8003E680"); }
+ * D_800B0CD8 flag-bit clear (45 retail words).
+ * func_8006536C is now a REAL translation too (Phase 6E-B14):
+ * game/boot/func_8006536C_port.c — 28x3-word record-table clear +
+ * index byte clear (19 retail words). */
 
 /* ── REAL translated Boot Rung functions ────────────────────────────── */
 extern void func_8003E610(void);
@@ -86,6 +88,7 @@ extern void func_80068D28(void);
 extern void func_800124F8(void);
 extern void func_8001A890(void);
 extern void func_80034F10(void);
+extern void func_8006536C(void);
 extern void func_80070D10(void);
 extern unsigned int func_80070D6C(void);
 extern int func_80070DD0(int, int);

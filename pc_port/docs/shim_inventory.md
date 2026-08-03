@@ -168,8 +168,17 @@ All stubs are explicitly classified. No anonymous empty stubs.
   hardware/GPU work; sole call site func_8003E680 @0x8003E728
   (nop delay slot, $v0=&D_800B0CD8 unconsumed); idempotent incl. after
   PE_RamReset; `game/boot/func_80034F10_port.c`
-- `func_8006536C`  ← current strict-mode frontier (from func_8003E680)
-- `func_80038D1C`
+- ~~`func_8006536C(void)`~~ — TRANSLATED (Phase 6E-B14): 19-word
+  subsystem record-table clear + index byte clear (28x3-word table at
+  D_800A3180, row stride 0xC — contiguous 84 words, span
+  0x800A3180..0x800A32CF; sb 0 -> 0x44($gp) = 0x8009CDB4, the
+  current-record index byte — func_800653B8 below reads lbu 0x44($gp)
+  and indexes D_800A3180 + byte*12, confirming the 28x12-byte record
+  structure); all 19 words exe-verified (live split 55430.s); no
+  reads, no SDK/GTE/hardware/GPU work; sole call site func_8003E680
+  @0x8003E730 (nop delay slot, $v0=0 unconsumed); idempotent incl.
+  after PE_RamReset; `game/boot/func_8006536C_port.c`
+- `func_80038D1C`  ← current strict-mode frontier (from func_8003E680)
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
