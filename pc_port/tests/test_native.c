@@ -1435,31 +1435,34 @@ static void test_3E680_subsystem_order(void) {
 
     func_8003E680();
 
-    /* After the poll loop, translated func_8003E974 runs (its 20
-     * func_8003EAC8 registrations are now REAL — Phase 6E-B4 — so they no
-     * longer appear in the stub order log), then the remaining subsystem
-     * inits fire in retail order. */
+    /* After the poll loop, translated func_8003E974 runs (20 real
+     * func_8003EAC8 registrations) and translated func_80036DC8 runs
+     * (6E-B5: timer-record init — also absent from the stub order log),
+     * then the remaining subsystem inits fire in retail order. */
     const char *expected[] = {
-        "func_80036DC8", "func_80073D24", "func_80073D24",
+        "func_80073D24", "func_80073D24",
         "func_800371A4",  "func_80029388", "func_8005BCA8", "func_80068D28",
         "func_800124F8",  "func_8001A890", "func_80034F10", "func_8006536C",
         "func_80038D1C"
     };
     int expected_count = sizeof(expected) / sizeof(expected[0]);
 
-    /* func_8003EAC8 must NOT appear: it is translated, not a provider */
+    /* func_8003EAC8 and func_80036DC8 must NOT appear: translated */
     ASSERT(CountOrderLog("func_8003EAC8") == 0,
            "func_8003EAC8 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_80036DC8") == 0,
+           "func_80036DC8 still routed through bootstrap policy");
 
-    /* Find the position of func_80036DC8 — the first post-3E974 stub */
+    /* Find the position of the first func_80073D24 — the first stub
+     * invoked after the translated 3E974/3EAC8/36DC8 rungs */
     int start_idx = -1;
     for (int i = 0; i < g_stub_order_count; i++) {
-        if (strcmp(g_stub_order_log[i], "func_80036DC8") == 0) {
+        if (strcmp(g_stub_order_log[i], "func_80073D24") == 0) {
             start_idx = i;
             break;
         }
     }
-    ASSERT(start_idx >= 0, "func_80036DC8 not found in order log");
+    ASSERT(start_idx >= 0, "func_80073D24 not found in order log");
 
     for (int j = 0; j < expected_count && (start_idx + j) < g_stub_order_count; j++) {
         if (strcmp(g_stub_order_log[start_idx + j], expected[j]) != 0) {
@@ -2418,6 +2421,160 @@ static void test_3E974_ramreset_reproduces(void) {
                  i, got, k_3e974_final[i]);
         ASSERT(got == k_3e974_final[i], msg);
     }
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B5 — func_80036DC8 timer-record init rung.
+ *
+ * Retail truth (asm/disc1/26C48.s:677-738): dispatcher func_80036DC8
+ * calls func_80036DF8 (record 0), func_80036E34 (record 2),
+ * func_80036E58 (record 1) — 11 word stores total (two dead zero-stores
+ * reproduced verbatim), leaving three 12-byte records:
+ *   0x800A76A0 = { 1, 0, 0x1499700 }
+ *   0x800A76AC = { 1, 0, 0 }
+ *   0x800A76B8 = { 1, 0, 0 }
+ * Sole caller func_8003E680; void(void); idempotent; no deeper calls.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_TEST_A76A0  0x800A76A0u
+
+/* Net state after func_80036DC8: 9 words, retail final values */
+static const uint32_t k_36dc8_final[9] = {
+    1, 0, 0x1499700u,   /* record 0 */
+    1, 0, 0,            /* record 1 */
+    1, 0, 0             /* record 2 */
+};
+
+static void test_36DC8_exact_final_state(void) {
+    TEST("36DC8_exact_final_state");
+    ResetTestState();
+
+    /* Dirty the 9 words plus one-word guards on both sides */
+    for (pe_addr_t a = GA_TEST_A76A0 - 4; a <= GA_TEST_A76A0 + 0x24u; a += 4)
+        PE_StoreU32(a, 0xC0FFEE00u | ((a - GA_TEST_A76A0) & 0xFF));
+
+    func_80036DC8();
+
+    ASSERT(PE_LoadU32(GA_TEST_A76A0 - 4) == (0xC0FFEE00u | 0xFCu),
+           "guard word before records clobbered");
+    ASSERT(PE_LoadU32(GA_TEST_A76A0 + 0x24u) == (0xC0FFEE00u | 0x24u),
+           "guard word after records clobbered");
+    for (int i = 0; i < 9; i++) {
+        char msg[80];
+        uint32_t got = PE_LoadU32(GA_TEST_A76A0 + (unsigned int)i * 4u);
+        snprintf(msg, sizeof msg, "record word %d: got 0x%X want 0x%X",
+                 i, got, k_36dc8_final[i]);
+        ASSERT(got == k_36dc8_final[i], msg);
+    }
+    PASS();
+}
+
+static void test_36DC8_leaf_sequence_state(void) {
+    TEST("36DC8_leaf_sequence_state");
+    ResetTestState();
+
+    /* Guest state visible at each dependency boundary: invoke the three
+     * leaves in retail order and check the progressive write sets. */
+    for (pe_addr_t a = GA_TEST_A76A0; a <= GA_TEST_A76A0 + 0x20u; a += 4)
+        PE_StoreU32(a, 0xD1D1D1D1u);
+
+    func_80036DF8();   /* record 0 only */
+    for (int i = 0; i < 9; i++) {
+        uint32_t want = (i < 3) ? k_36dc8_final[i] : 0xD1D1D1D1u;
+        ASSERT(PE_LoadU32(GA_TEST_A76A0 + (unsigned int)i * 4u) == want,
+               "func_80036DF8 write set wrong (touched records 1/2)");
+    }
+    func_80036E34();   /* record 2 (0x800A76B8..C0) */
+    for (int i = 0; i < 9; i++) {
+        uint32_t want = (i < 3 || i >= 6) ? k_36dc8_final[i] : 0xD1D1D1D1u;
+        ASSERT(PE_LoadU32(GA_TEST_A76A0 + (unsigned int)i * 4u) == want,
+               "func_80036E34 write set wrong");
+    }
+    func_80036E58();   /* record 1 (0x800A76AC..B4) */
+    for (int i = 0; i < 9; i++)
+        ASSERT(PE_LoadU32(GA_TEST_A76A0 + (unsigned int)i * 4u) == k_36dc8_final[i],
+               "final state wrong after all three leaves");
+    PASS();
+}
+
+static void test_36DC8_footprint(void) {
+    TEST("36DC8_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0x3C3C3C3Cu);
+
+    func_80036DC8();
+
+    /* Exactly the 9 record words may differ — min 0x800A76A0, max
+     * 0x800A76C0.  Nothing else in the 2 MiB may be touched. */
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        if (a >= GA_TEST_A76A0 && a <= GA_TEST_A76A0 + 0x20u) {
+            uint32_t want = k_36dc8_final[(a - GA_TEST_A76A0) / 4u];
+            if (PE_LoadU32(a) != want) {
+                printf("FAIL: guest 0x%08X = 0x%08X, want 0x%X\n",
+                       a, PE_LoadU32(a), want);
+                FAIL("record word has wrong final value");
+                return;
+            }
+        } else if (PE_LoadU32(a) != 0x3C3C3C3Cu) {
+            printf("FAIL: guest 0x%08X modified\n", a);
+            FAIL("func_80036DC8 write footprint exceeds its 9 words");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_36DC8_repeated_and_ramreset(void) {
+    TEST("36DC8_repeated_and_ramreset");
+    ResetTestState();
+
+    func_80036DC8();
+    /* Dirty all 9 words, rerun — absolute stores replay the same state */
+    for (int i = 0; i < 9; i++)
+        PE_StoreU32(GA_TEST_A76A0 + (unsigned int)i * 4u, 0xDEADBEEFu);
+    func_80036DC8();
+    for (int i = 0; i < 9; i++)
+        ASSERT(PE_LoadU32(GA_TEST_A76A0 + (unsigned int)i * 4u) == k_36dc8_final[i],
+               "repeat invocation not idempotent");
+
+    PE_RamReset();
+    func_80036DC8();
+    for (int i = 0; i < 9; i++)
+        ASSERT(PE_LoadU32(GA_TEST_A76A0 + (unsigned int)i * 4u) == k_36dc8_final[i],
+               "state wrong after PE_RamReset + invocation");
+    PASS();
+}
+
+static void test_36DC8_not_bootstrap_stub(void) {
+    TEST("36DC8_not_bootstrap_stub");
+    ResetTestState();
+
+    /* Strict mode must no longer stop here */
+    g_strict_stubs = 1;
+    func_80036DC8();
+    g_strict_stubs = 0;
+    ASSERT(CountOrderLog("func_80036DC8") == 0,
+           "func_80036DC8 recorded as stub");
+    ASSERT(PE_LoadU32(GA_TEST_A76A0 + 8u) == 0x1499700u,
+           "record 0 preload missing on the strict-flag path");
+    PASS();
+}
+
+static void test_3E680_36DC8_integration(void) {
+    TEST("3E680_36DC8_integration");
+    ResetTestState();
+    g_bootstrap_disc = 1;
+
+    func_8003E680();
+
+    ASSERT(CountOrderLog("func_80036DC8") == 0,
+           "func_80036DC8 still routed through bootstrap policy");
+    for (int i = 0; i < 9; i++)
+        ASSERT(PE_LoadU32(GA_TEST_A76A0 + (unsigned int)i * 4u) == k_36dc8_final[i],
+               "timer records wrong after func_8003E680");
     PASS();
 }
 
@@ -3398,6 +3555,14 @@ int main(void)
     test_3EAC8_recorder_overflow();
     test_3EAC8_not_bootstrap_stub();
     test_3E974_ramreset_reproduces();
+
+    /* Provider frontier: func_80036DC8 timer-record init (6 tests) */
+    test_36DC8_exact_final_state();
+    test_36DC8_leaf_sequence_state();
+    test_36DC8_footprint();
+    test_36DC8_repeated_and_ramreset();
+    test_36DC8_not_bootstrap_stub();
+    test_3E680_36DC8_integration();
 
     /* func_8006E834 (2 tests) */
     test_6E834_clears_status_bytes();

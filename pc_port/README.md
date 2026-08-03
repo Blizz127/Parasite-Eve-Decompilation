@@ -1,35 +1,31 @@
-# Parasite Eve Native PC Port — Phase 6E-B4
+# Parasite Eve Native PC Port — Phase 6E-B5
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** func_8003EAC8 LZCR registration rung — the GTE
-LZCS/LZCR-indexed registration leaf is translated retail logic, verified
-against an independent oracle (`tools/lzcr_oracle.py`: a tiny MIPS
-interpreter executing the verified retail words — not a reimplementation
-of the port's formula).  Exact edge semantics preserved, never clamped:
-`idx = (a0 == 0x80000000) ? 31 : 31 - LZCR(a0)`; LZCR counts leading
-sign bits (0 → 32, 0xFFFFFFFF → 32), so zero/all-ones inputs write one
-word BELOW the table at `0x800A76EC` (valid guest RAM), positives map to
-the highest SET bit, other negatives to the highest ZERO bit.  The narrow
-helper `PE_GTE_LZCR` lives in `platform/pe_gte.c` — no GTE subsystem.
+**Current milestone:** func_80036DC8 timer-record init rung — a 10-word
+dispatcher calling three audited leaves (func_80036DF8/36E34/36E58) is
+translated retail logic, reproducing all 11 word stores in ROM order
+(including two dead zero-stores) into three 12-byte records at
+`0x800A76A0/AC/B8`: each `{ 1, 0, x }`, record 0 preloaded with
+`0x1499700` (21,600,000).  Consumers read field1[i] via base+i*12 and
+divide by 60 (unsigned /60 magic `0x88888889`), consistent with 60 Hz
+tick counters.  Sole caller func_8003E680; idempotent; no SDK/GTE/
+hardware access, no deeper calls.
 
-**Status:** FUNC_8003EAC8 LZCR REGISTRATION RUNG VERIFIED — 168 native
-tests pass; ASan/UBSan clean; `--lzcr-oracle-dump` byte-identical to
-`tools/lzcr_oracle.py` on the retail exe (RNG oracle likewise identical);
-3 deterministic headless runs (framebuffer `fb28dc21…`); 3 real-disc
-load traces byte-identical; strict mode with `--disc-image` now stops at
-`func_80036DC8` (from `func_8003E680`) — the next subsystem init, past
-the translated `func_8003E974` + `func_8003EAC8`; windowed SHA matches
-headless; matching build remains exact at SHA `452fb033`.
+**Status:** FUNC_80036DC8 RUNG VERIFIED — 174 native tests pass;
+ASan/UBSan clean; RNG and LZCR oracle dumps byte-identical to their
+independent interpreters on the retail exe; 3 deterministic headless runs
+(framebuffer `fb28dc21…`); 3 real-disc load traces byte-identical;
+strict mode with `--disc-image` now stops at `func_80073D24` (from
+`func_8003E680`) — the callback-registration provider, past the
+translated `func_8003E974` + `func_8003EAC8` + `func_80036DC8`; windowed
+SHA matches headless; matching build remains exact at SHA `452fb033`.
 
-**Audit correction:** the 6E-B3 handoff claimed 63 exe-wide call sites
-for `func_8003EAC8`.  The `jal` encoding appears 20 times each in THREE
-overlapping split files covering the same addresses (`2E7D0.s`/`2EE80.s`
-stale, `2EF54.s` live per `configs/USA/disc1.yaml`): the true count is
-**20 distinct call sites, all inside func_8003E974**, all with constant
-arguments (19 one-hot masks + `0x80000000`).
-
-**Previous milestones:** 6E-B3 (func_8003E974 initialization rung —
+**Previous milestones:** 6E-B4 (func_8003EAC8 LZCR registration rung —
+GTE LZCS/LZCR leaf, exact edge semantics incl. the preserved below-table
+write at `0x800A76EC`, oracle-verified; call-site correction: 20 distinct
+sites, not 63);
+6E-B3 (func_8003E974 initialization rung —
 subsystem state clear + the 20-call ROM-ordered registration series);
 6E-B2 (func_80070D6C RNG advance rung — the game's
 lagged-Fibonacci RNG, init/advance/ranged wrapper, byte-exact against an
@@ -126,6 +122,23 @@ Correctness gate: `--lzcr-oracle-dump` is byte-identical to
 `tools/lzcr_oracle.py`, a tiny MIPS interpreter executing the verified
 retail words.
 
+## Translated timer-record init rung (Phase 6E-B5)
+
+| Function | Size | Words | Purpose |
+|----------|------|-------|---------|
+| `func_80036DC8` | 0x28 | 10 | Timer-record init dispatcher (3 calls, retail order) |
+| `func_80036DF8` | 0x3C | 15 | Record 0 init (5 stores incl. 2 dead zero-stores) |
+| `func_80036E34` | 0x24 | 9 | Record 2 init |
+| `func_80036E58` | 0x24 | 9 | Record 1 init |
+
+Net state: three 12-byte records at `0x800A76A0/AC/B8`, each `{ 1, 0, x }`
+with record 0 field2 preloaded to `0x1499700` (21,600,000).  Consumers
+(`func_80019DB8`, `func_80052894/528C4`, and the packed-field writer
+`func_80036E7C`) index field1 via base+i*12 and divide by 60 — consistent
+with 60 Hz tick counters.  Sole caller of the dispatcher is
+`func_8003E680`; the leaves are called only from it.  Idempotent;
+verbatim ROM-order stores, all guest-RAM-backed.
+
 ## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
 | Function | Matching size | Words | Purpose |
@@ -152,7 +165,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (168 tests, all pass)
+- `pe-native-tests` — test suite (174 tests, all pass)
 
 ## Running
 
@@ -180,9 +193,10 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1, names func_80036DC8 (from func_8003E680) — the first
-# unresolved provider past the translated RNG (70D10/70D6C/70DD0) and the
-# translated subsystem-init pair (func_8003E974 + func_8003EAC8)
+# Expected: exit 1, names func_80073D24 (from func_8003E680) — the first
+# unresolved provider past the translated RNG (70D10/70D6C/70DD0), the
+# subsystem-init pair (func_8003E974 + func_8003EAC8), and the
+# timer-record init (func_80036DC8 + leaves)
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -200,7 +214,7 @@ host adaptation); the boot is not faked.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 168 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 174 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
@@ -210,7 +224,9 @@ cd pc_port/build
                     #   call order/args, idempotence, footprints
                     # + 6E-B4: LZCR helper exactness, func_8003EAC8
                     #   edge/one-hot contract, below-table write, recorder
-                    #   semantics, func_8003E974 final registered table)
+                    #   semantics, func_8003E974 final registered table
+                    # + 6E-B5: func_80036DC8 final record state, per-leaf
+                    #   write sets, footprint, idempotence, integration)
 ```
 
 ## Deterministic framebuffer
@@ -225,9 +241,9 @@ cd pc_port/build
 
 ## Next steps
 
-1. **Phase 6E-B continued:** `func_80036DC8` rung (next strict-mode
-   frontier, from `func_8003E680`), then the provider frontier toward the
-   image-load consumers
+1. **Phase 6E-B continued:** `func_80073D24` rung (next strict-mode
+   frontier — callback registration provider, from `func_8003E680`),
+   then the provider frontier toward the image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display
 4. Audio, input, save/load (later phases)

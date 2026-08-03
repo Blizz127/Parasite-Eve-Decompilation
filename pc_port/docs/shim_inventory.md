@@ -96,8 +96,13 @@ All stubs are explicitly classified. No anonymous empty stubs.
   `--lzcr-oracle-dump` ≡ `tools/lzcr_oracle.py`.  Call-site correction:
   20 DISTINCT sites (all in func_8003E974, constant args) — the earlier
   "63" counted overlapping split files
-- `func_80036DC8`  ← current strict-mode frontier (from func_8003E680)
-- `func_80073D24` (×2 — callback register: reset + register)
+- ~~`func_80036DC8`~~ — TRANSLATED (Phase 6E-B5): timer-record init
+  dispatcher + leaves func_80036DF8/36E34/36E58 (11 word stores ROM-order;
+  three 12-byte records at 0x800A76A0/AC/B8 = {1,0,x}, record 0 field2
+  0x1499700; consumers divide field1 by 60 — 60 Hz tick counters),
+  `game/boot/func_80036DC8_port.c`
+- `func_80073D24` (×2 — callback register: reset + register)  ← current
+  strict-mode frontier (from func_8003E680)
 - `func_800371A4(int)`
 - `func_80029388`
 - `func_8005BCA8`

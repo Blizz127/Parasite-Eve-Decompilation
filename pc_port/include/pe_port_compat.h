@@ -39,8 +39,9 @@ extern pe_addr_t D_800B0E24,D_800B0E28,D_800B0E2C,D_800B0E30,D_800B0E34,D_800B0E
  * func_8003E974 is now a REAL translation (Phase 6E-B3):
  * game/boot/func_8003E974_port.c — bit-table init + 20 registrations;
  * func_8003EAC8 is now a REAL translation too (Phase 6E-B4):
- * game/boot/func_8003EAC8_port.c — GTE LZCS/LZCR-indexed table writer. */
-static inline void func_80036DC8(void)    { Bootstrap_ReturnVoid("func_80036DC8", "func_8003E680"); }
+ * game/boot/func_8003EAC8_port.c — GTE LZCS/LZCR-indexed table writer.
+ * func_80036DC8 is now a REAL translation too (Phase 6E-B5):
+ * game/boot/func_80036DC8_port.c — timer-record init dispatcher. */
 static inline void func_8003E91C(void)    { Bootstrap_ReturnVoid("func_8003E91C", "func_8003E680"); }
 
 /* func_80073D24 — callback registration.  Uses the host-safe callback
@@ -68,6 +69,10 @@ extern void func_8003E610(void);
 extern void func_8003E680(void);
 extern void func_8003E974(void);
 extern void func_8003EAC8(int, int);
+extern void func_80036DC8(void);
+extern void func_80036DF8(void);
+extern void func_80036E34(void);
+extern void func_80036E58(void);
 extern void func_80070D10(void);
 extern unsigned int func_80070D6C(void);
 extern int func_80070DD0(int, int);
