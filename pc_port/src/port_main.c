@@ -37,6 +37,7 @@ static struct {
     int disc_load_test;
     int rng_oracle_dump;
     int lzcr_oracle_dump;
+    int callback_oracle_dump;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
     .screenshot = NULL, .trace_path = NULL,
@@ -44,7 +45,7 @@ static struct {
     .window_title = "Parasite Eve Native Port",
     .direct_clear_test = 0, .stop_after_event = NULL, .max_main_iterations = 0,
     .disc_image = NULL, .disc_load_test = 0, .rng_oracle_dump = 0,
-    .lzcr_oracle_dump = 0,
+    .lzcr_oracle_dump = 0, .callback_oracle_dump = 0,
 };
 
 static void ParseArgs(int argc, char **argv) {
@@ -60,6 +61,7 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--disc-load-test"))       g_opts.disc_load_test = 1;
         else if (!strcmp(a, "--rng-oracle-dump"))      g_opts.rng_oracle_dump = 1;
         else if (!strcmp(a, "--lzcr-oracle-dump"))     g_opts.lzcr_oracle_dump = 1;
+        else if (!strcmp(a, "--callback-oracle-dump")) g_opts.callback_oracle_dump = 1;
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--trace"))           g_opts.trace_path = argv[++i];
         else if (i+1<argc && !strcmp(a, "--hold-ms"))         g_opts.hold_ms = atoi(argv[++i]);
@@ -256,6 +258,71 @@ static int RunLzcrOracleDump(void) {
     return 0;
 }
 
+/* ── Callback oracle dump ───────────────────────────────────────────── */
+/* Phase 6E-B6 verification driver (pure guest RAM + host bindings — no
+ * --disc-image required): mirrors the fixed operation script of
+ * pc_port/tools/callback_oracle.py op-for-op through the production
+ * func_80073D24 / PE_Callback_SetSlot / PE_Callback_Dispatch path and
+ * prints byte-identical lines.  The phase gate diffs the two outputs. */
+static pe_addr_t  g_cb_dump_visits[16];
+static int        g_cb_dump_visit_count;
+static void CbDumpVisitA(void) { g_cb_dump_visits[g_cb_dump_visit_count++] = 0x80010000u; }
+static void CbDumpVisitB(void) { g_cb_dump_visits[g_cb_dump_visit_count++] = 0x80010004u; }
+static void CbDumpVisitC(void) { g_cb_dump_visits[g_cb_dump_visit_count++] = 0x80010008u; }
+static void CbDumpVisitD(void) { g_cb_dump_visits[g_cb_dump_visit_count++] = 0x8003E91Cu; }
+
+static void CbDumpWset(pe_addr_t handler) {
+    uint32_t prev = func_80073D24(handler);
+    printf("wset handler=0x%08X prev=0x%08X slot4=0x%08X\n",
+           handler, prev, PE_LoadU32(0x8009569Cu));
+}
+static void CbDumpSset(uint32_t slot, pe_addr_t handler) {
+    uint32_t prev = PE_Callback_SetSlot(slot, handler);
+    printf("sset slot=%u handler=0x%08X prev=0x%08X\n", slot, handler, prev);
+}
+static void CbDumpDispatch(void) {
+    g_cb_dump_visit_count = 0;
+    PE_Callback_Dispatch();
+    printf("dispatch counter=%u visits=",
+           PE_LoadU32(0x800956ACu));
+    if (g_cb_dump_visit_count == 0) {
+        printf("-");
+    } else {
+        for (int i = 0; i < g_cb_dump_visit_count; i++) {
+            printf("%s0x%08X", i ? "," : "", g_cb_dump_visits[i]);
+        }
+    }
+    printf("\n");
+}
+
+static int RunCallbackOracleDump(void) {
+    PE_Callback_Bind(0x80010000u, CbDumpVisitA);
+    PE_Callback_Bind(0x80010004u, CbDumpVisitB);
+    PE_Callback_Bind(0x80010008u, CbDumpVisitC);
+    PE_Callback_Bind(0x8003E91Cu, CbDumpVisitD);
+
+    CbDumpWset(0x00000000u);            /* clear slot 4                    */
+    CbDumpWset(0x8003E91Cu);            /* install boot callback           */
+    CbDumpWset(0x8003E91Cu);            /* repeated install: no store      */
+    CbDumpWset(0x80010000u);            /* replacement                     */
+    CbDumpWset(0x00000000u);            /* removal                         */
+    CbDumpWset(0x00000000u);            /* repeated removal                */
+    CbDumpSset(0, 0x80010000u);
+    CbDumpSset(2, 0x80010004u);
+    CbDumpSset(7, 0x80010008u);
+    CbDumpDispatch();                   /* counter=1, visits slots 0,2,7   */
+    CbDumpWset(0x8003E91Cu);            /* re-install slot 4               */
+    CbDumpDispatch();                   /* counter=2, visits 0,2,4,7       */
+    CbDumpSset(8, 0x11111111u);         /* slot 8 aliases counter (retail) */
+
+    printf("snapshot slots=");
+    for (uint32_t i = 0; i < 8; i++) {
+        printf("%s0x%08X", i ? "," : "", PE_Callback_GetSlot(i));
+    }
+    printf(" counter=0x%08X\n", PE_LoadU32(0x800956ACu));
+    return 0;
+}
+
 /* ── Title overlay ──────────────────────────────────────────────────── */
 static void UpdateTitle(const char *phase, const char *func) {
     if (!g_opts.debug_overlay || !g_host_window_open) return;
@@ -314,6 +381,14 @@ int main(int argc, char **argv) {
 
     if (g_opts.lzcr_oracle_dump) {
         int rc = RunLzcrOracleDump();
+        TraceClose();
+        PE_Disc_Close(disc);
+        PE_RamDestroy();
+        return rc;
+    }
+
+    if (g_opts.callback_oracle_dump) {
+        int rc = RunCallbackOracleDump();
         TraceClose();
         PE_Disc_Close(disc);
         PE_RamDestroy();

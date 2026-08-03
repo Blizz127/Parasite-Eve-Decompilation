@@ -1,9 +1,12 @@
 /*
  * Phase 6D-S — Boot subsystem-init dispatcher.
  *
- * Callback registration now uses PE_Callback_Reset / PE_Callback_Register
- * instead of (int)(uintptr_t).  All BOOTSTRAP_RET callees go through the
- * centralized Bootstrap_* policy.
+ * Phase 6E-B6: callback registration now goes through the REAL
+ * func_80073D24 (guest-backed VBlank slot table, pe_libetc.c).  The
+ * PE_Callback_Bind of guest 0x8003E91C to its host stub is host plumbing
+ * (idempotent), the counterpart of retail passing the guest address.
+ * All remaining BOOTSTRAP_RET callees go through the centralized
+ * Bootstrap_* policy.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -39,14 +42,14 @@ void func_8003E680(void)
     func_8003E974();
     func_80036DC8();
 
-    /* Reset callback, then register func_8003E91C — retail calls
-     * func_80073D24(0) then func_80073D24(&func_8003E91C); the order log
-     * records the retail callee name for both invocations while the real
-     * work goes through the full-width host-safe callback registry. */
-    PE_Callback_Reset();
-    Bootstrap_ReturnVoid("func_80073D24", "func_8003E680");
-    PE_Callback_Register(func_8003E91C);
-    Bootstrap_ReturnVoid("func_80073D24", "func_8003E680");
+    /* func_80073D24(0) then func_80073D24(&func_8003E91C) — real libetc
+     * VBlank callback slot-4 writes (Phase 6E-B6); both returns discarded,
+     * matching retail.  The bind is host plumbing (idempotent): it maps
+     * the guest address 0x8003E91C to its host implementation so the
+     * dispatcher can resolve it. */
+    PE_Callback_Bind(0x8003E91Cu, func_8003E91C);
+    (void)func_80073D24(0u);
+    (void)func_80073D24(0x8003E91Cu);
 
     func_800371A4(0);
     func_80029388();

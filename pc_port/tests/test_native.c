@@ -322,62 +322,93 @@ static void test_ram_translate_contiguous(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * Phase 6D-S — Callback registry tests (25-30)
+ * Phase 6E-B6 — Callback slot model tests (25-30)
  * ═══════════════════════════════════════════════════════════════════════ */
 
 static int g_test_callback_fired = 0;
 static void test_callback_body(void) { g_test_callback_fired = 1; }
 
+#define GA_CB_TABLE    0x8009568Cu   /* D_8009568C: 8 handler slots      */
+#define GA_CB_SLOT4    0x8009569Cu   /* D_8009568C + 4*4                 */
+#define GA_CB_COUNTER  0x800956ACu   /* D_800956AC: dispatch counter     */
+#define GA_TEST_CB     0x80010000u   /* stand-in guest callback address  */
+
 static void test_callback_init_null(void) {
     TEST("callback_init_null");
+    ResetTestState();
     PE_Callback_Init();
-    ASSERT(PE_Callback_Get() == NULL, "callback not NULL after init");
+    /* All retail-visible state is guest RAM: 8 slots + counter zeroed */
+    for (uint32_t i = 0; i < 8; i++) {
+        ASSERT(PE_Callback_GetSlot(i) == 0, "slot not zero after RAM reset");
+    }
+    ASSERT(PE_LoadU32(GA_CB_COUNTER) == 0, "counter not zero after RAM reset");
     PASS();
 }
 
-static void test_callback_register_get(void) {
-    TEST("callback_register_get");
+static void test_callback_bind_resolve(void) {
+    TEST("callback_bind_resolve");
+    ResetTestState();
     PE_Callback_Init();
-    PE_Callback_Register(test_callback_body);
-    ASSERT(PE_Callback_Get() == test_callback_body, "registered callback mismatch");
+    ASSERT(PE_Callback_Bind(GA_TEST_CB, test_callback_body) == 0, "bind failed");
+    ASSERT(PE_Callback_Bind(GA_TEST_CB, test_callback_body) == 0,
+           "identical rebind not idempotent");
+    ASSERT(PE_Callback_ErrorCount() == 0, "bind raised a visible error");
     PASS();
 }
 
 static void test_callback_reset_clears(void) {
     TEST("callback_reset_clears");
+    ResetTestState();
     PE_Callback_Init();
-    PE_Callback_Register(test_callback_body);
-    PE_Callback_Reset();
-    ASSERT(PE_Callback_Get() == NULL, "callback not NULL after reset");
+    PE_Callback_SetSlot(4, GA_TEST_CB);
+    PE_Callback_SetSlot(0, GA_TEST_CB);
+    PE_StoreU32(GA_CB_COUNTER, 7);
+    PE_Callback_ResetTable();
+    for (uint32_t i = 0; i < 8; i++) {
+        ASSERT(PE_Callback_GetSlot(i) == 0, "ResetTable left a slot set");
+    }
+    ASSERT(PE_LoadU32(GA_CB_COUNTER) == 0, "ResetTable left counter set");
     PASS();
 }
 
 static void test_callback_invoke_runs(void) {
     TEST("callback_invoke_runs");
+    ResetTestState();
     PE_Callback_Init();
     g_test_callback_fired = 0;
-    PE_Callback_Register(test_callback_body);
-    PE_Callback_Invoke();
+    PE_Callback_Bind(GA_TEST_CB, test_callback_body);
+    PE_Callback_SetSlot(4, GA_TEST_CB);
+    PE_Callback_Dispatch();
     ASSERT(g_test_callback_fired == 1, "registered callback not invoked");
     PASS();
 }
 
 static void test_callback_invoke_null_safe(void) {
     TEST("callback_invoke_null_safe");
+    ResetTestState();
     PE_Callback_Init();
     g_test_callback_fired = 0;
-    PE_Callback_Invoke();   /* must not crash */
+    PE_Callback_Dispatch();   /* must not crash */
     ASSERT(g_test_callback_fired == 0, "NULL callback should not fire");
+    /* func_8007440C increments the counter even with an empty table */
+    ASSERT(PE_LoadU32(GA_CB_COUNTER) == 1, "dispatch counter not incremented");
     PASS();
 }
 
 static void test_callback_registration_count(void) {
     TEST("callback_registration_count");
+    ResetTestState();
     PE_Callback_Init();
     ASSERT(PE_Callback_RegistrationCount() == 0, "count not 0 after init");
-    PE_Callback_Register(test_callback_body);
-    PE_Callback_Register(test_callback_body);
+    PE_Callback_SetSlot(4, GA_TEST_CB);
+    PE_Callback_SetSlot(0, GA_TEST_CB);
     ASSERT(PE_Callback_RegistrationCount() == 2, "registration count wrong");
+    /* Identical re-install stores nothing and does not count */
+    PE_Callback_SetSlot(4, GA_TEST_CB);
+    ASSERT(PE_Callback_RegistrationCount() == 2, "no-store install counted");
+    /* Removal is not a registration */
+    PE_Callback_SetSlot(4, 0);
+    ASSERT(PE_Callback_RegistrationCount() == 2, "removal counted");
     PASS();
 }
 
@@ -1063,14 +1094,15 @@ static void test_3E610_argument_values(void) {
 static void test_73C94_guard_idempotent(void) {
     TEST("73C94_resetcallback_guard");
     ResetTestState();
-    PE_Callback_Register((PECallback)0xDEADBEEF);   /* sentinel */
+    PE_Callback_SetSlot(4, 0x80012345u);   /* sentinel guest handler */
     func_80073C94();
     ASSERT(PE_LoadU16(0x800945E4u) == 1, "guard not set on first call");
-    ASSERT(PE_Callback_Get() == NULL, "callback not reset on first call");
-    /* Second call: guard short-circuits; callback must NOT be cleared again */
-    PE_Callback_Register((PECallback)0xDEADBEEF);
+    ASSERT(PE_Callback_GetSlot(4) == 0, "slot table not reset on first call");
+    /* Second call: guard short-circuits; slot must NOT be cleared again */
+    PE_Callback_SetSlot(4, 0x80012345u);
     func_80073C94();
-    ASSERT(PE_Callback_Get() != NULL, "guard failed: second call cleared callback");
+    ASSERT(PE_Callback_GetSlot(4) == 0x80012345u,
+           "guard failed: second call cleared slot");
     ASSERT(g_stub_count == 0, "func_80073C94 must not be a bootstrap stub");
     PASS();
 }
@@ -1390,10 +1422,11 @@ static void test_3E680_callback_exactly_once(void) {
 
     func_8003E680();
 
-    /* func_80073D24 is the callback registration function.
-     * It's called twice: first with 0, then with &func_8003E91C. */
-    int count = CountOrderLog("func_80073D24");
-    ASSERT(count == 2, "func_80073D24 should be called exactly 2 times");
+    /* func_80073D24 is now REAL code: it no longer records stub order-log
+     * entries.  Its two retail invocations are proven by the exact slot-4
+     * end state (see 3E680_callback_registered) and the oracle rung. */
+    ASSERT(CountOrderLog("func_80073D24") == 0,
+           "func_80073D24 still routed through bootstrap policy");
     PASS();
 }
 
@@ -1405,11 +1438,16 @@ static void test_3E680_callback_registered(void) {
 
     func_8003E680();
 
-    /* The host-safe registry must hold a non-NULL callback, and it must
-     * NOT have been invoked during registration. */
-    ASSERT(PE_Callback_Get() != NULL, "no callback registered by func_8003E680");
-    ASSERT(PE_Callback_RegistrationCount() == 1, "callback should be registered once");
-    ASSERT(CountOrderLog("func_8003E91C") == 0, "func_8003E91C invoked during registration");
+    /* The guest callback table must hold the retail handler address at
+     * slot 4, and it must NOT have been invoked during registration. */
+    ASSERT(PE_Callback_GetSlot(4) == 0x8003E91Cu,
+           "slot 4 does not hold guest func_8003E91C");
+    ASSERT(PE_LoadU32(GA_CB_SLOT4) == 0x8003E91Cu,
+           "guest word at 0x8009569C != 0x8003E91C");
+    ASSERT(PE_Callback_RegistrationCount() == 1,
+           "callback should be registered once");
+    ASSERT(CountOrderLog("func_8003E91C") == 0,
+           "func_8003E91C invoked during registration");
     PASS();
 }
 
@@ -1421,10 +1459,13 @@ static void test_3E680_callback_invoke(void) {
 
     func_8003E680();
 
-    /* Invoking through the registry runs the registered func_8003E91C
-     * stub body, which records itself in the order log. */
-    PE_Callback_Invoke();
-    ASSERT(CountOrderLog("func_8003E91C") == 1, "registered callback did not run func_8003E91C");
+    /* Dispatching through the retail slot table resolves guest 0x8003E91C
+     * to its host implementation (bound by func_8003E680) and runs it. */
+    PE_Callback_Dispatch();
+    ASSERT(CountOrderLog("func_8003E91C") == 1,
+           "registered callback did not run func_8003E91C");
+    ASSERT(PE_LoadU32(GA_CB_COUNTER) == 1, "dispatch counter != 1");
+    ASSERT(PE_Callback_ErrorCount() == 0, "dispatch raised a visible error");
     PASS();
 }
 
@@ -1436,33 +1477,35 @@ static void test_3E680_subsystem_order(void) {
     func_8003E680();
 
     /* After the poll loop, translated func_8003E974 runs (20 real
-     * func_8003EAC8 registrations) and translated func_80036DC8 runs
-     * (6E-B5: timer-record init — also absent from the stub order log),
+     * func_8003EAC8 registrations), translated func_80036DC8 runs
+     * (6E-B5: timer-record init), and the two real func_80073D24 slot
+     * writes run (6E-B6 — also absent from the stub order log),
      * then the remaining subsystem inits fire in retail order. */
     const char *expected[] = {
-        "func_80073D24", "func_80073D24",
         "func_800371A4",  "func_80029388", "func_8005BCA8", "func_80068D28",
         "func_800124F8",  "func_8001A890", "func_80034F10", "func_8006536C",
         "func_80038D1C"
     };
     int expected_count = sizeof(expected) / sizeof(expected[0]);
 
-    /* func_8003EAC8 and func_80036DC8 must NOT appear: translated */
+    /* func_8003EAC8, func_80036DC8, func_80073D24 must NOT appear: real */
     ASSERT(CountOrderLog("func_8003EAC8") == 0,
            "func_8003EAC8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_80036DC8") == 0,
            "func_80036DC8 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_80073D24") == 0,
+           "func_80073D24 still routed through bootstrap policy");
 
-    /* Find the position of the first func_80073D24 — the first stub
-     * invoked after the translated 3E974/3EAC8/36DC8 rungs */
+    /* Find the position of func_800371A4 — the first stub invoked after
+     * the translated 3E974/3EAC8/36DC8 rungs and the real 73D24 writes */
     int start_idx = -1;
     for (int i = 0; i < g_stub_order_count; i++) {
-        if (strcmp(g_stub_order_log[i], "func_80073D24") == 0) {
+        if (strcmp(g_stub_order_log[i], "func_800371A4") == 0) {
             start_idx = i;
             break;
         }
     }
-    ASSERT(start_idx >= 0, "func_80073D24 not found in order log");
+    ASSERT(start_idx >= 0, "func_800371A4 not found in order log");
 
     for (int j = 0; j < expected_count && (start_idx + j) < g_stub_order_count; j++) {
         if (strcmp(g_stub_order_log[start_idx + j], expected[j]) != 0) {
@@ -1484,6 +1527,219 @@ static void test_3E680_final_call(void) {
     func_8003E680();
 
     ASSERT(CountOrderLog("func_80038D1C") >= 1, "func_80038D1C not called");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B6 — func_80073D24 VBlank callback slot rung
+ *
+ * Contract derived from raw MIPS (see pe_callback.h / callback_oracle.py):
+ *   func_80073D24(h) == func_80074478(4, h):
+ *     prev = D_8009568C[4]; if (h != prev) D_8009568C[4] = h; return prev;
+ *   func_8007440C: D_800956AC++; invoke non-null slots 0..7 in order.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static int  g_cb_visit_count = 0;
+static pe_addr_t g_cb_visits[8];
+static void cb_body_A(void) { g_cb_visits[g_cb_visit_count++] = 0x80010000u; }
+static void cb_body_B(void) { g_cb_visits[g_cb_visit_count++] = 0x80010004u; }
+static void cb_body_C(void) { g_cb_visits[g_cb_visit_count++] = 0x80010008u; }
+static void cb_body_D(void) { g_cb_visits[g_cb_visit_count++] = 0x8003E91Cu; }
+
+static void test_73D24_raw_contract(void) {
+    TEST("73D24_raw_contract");
+    ResetTestState();
+    PE_Callback_Init();
+
+    /* First install: prev 0, guest word written at slot 4 exactly */
+    ASSERT(func_80073D24(0x8003E91Cu) == 0, "first install prev != 0");
+    ASSERT(PE_LoadU32(GA_CB_SLOT4) == 0x8003E91Cu, "slot 4 word wrong");
+    /* Not a bootstrap stub, no order-log entry */
+    ASSERT(g_stub_count == 0, "func_80073D24 recorded as stub");
+    ASSERT(Bootstrap_InvocationCount() == 0, "bootstrap provider invoked");
+    PASS();
+}
+
+static void test_73D24_replace_remove_prevs(void) {
+    TEST("73D24_replace_remove_prevs");
+    ResetTestState();
+    PE_Callback_Init();
+
+    ASSERT(func_80073D24(0x8003E91Cu) == 0, "install prev != 0");
+    ASSERT(func_80073D24(0x80010000u) == 0x8003E91Cu,
+           "replacement did not return previous handler");
+    ASSERT(func_80073D24(0u) == 0x80010000u,
+           "removal did not return replaced handler");
+    ASSERT(func_80073D24(0u) == 0, "repeated removal prev != 0");
+    ASSERT(PE_LoadU32(GA_CB_SLOT4) == 0, "slot 4 not cleared");
+    PASS();
+}
+
+static void test_73D24_same_handler_no_store(void) {
+    TEST("73D24_same_handler_no_store");
+    ResetTestState();
+    PE_Callback_Init();
+
+    ASSERT(func_80073D24(0x8003E91Cu) == 0, "install prev != 0");
+    /* beq a1,v0 skips the store: prev returned, value unchanged, and the
+     * diagnostic registration count does not advance */
+    ASSERT(func_80073D24(0x8003E91Cu) == 0x8003E91Cu,
+           "same-handler prev wrong");
+    ASSERT(PE_LoadU32(GA_CB_SLOT4) == 0x8003E91Cu, "slot 4 changed");
+    ASSERT(PE_Callback_RegistrationCount() == 1, "no-store install counted");
+    PASS();
+}
+
+static void test_73D24_zero_arg_clears(void) {
+    TEST("73D24_zero_arg_clears");
+    ResetTestState();
+    PE_Callback_Init();
+
+    /* Zero is an ordinary handler value (removal), not an error */
+    ASSERT(func_80073D24(0u) == 0, "clear-on-empty prev != 0");
+    ASSERT(func_80073D24(0x8003E91Cu) == 0, "install prev != 0");
+    ASSERT(func_80073D24(0u) == 0x8003E91Cu, "removal prev wrong");
+    ASSERT(PE_Callback_ErrorCount() == 0, "zero arg raised an error");
+    PASS();
+}
+
+static void test_73D24_oracle_equality(void) {
+    TEST("73D24_oracle_equality");
+    ResetTestState();
+    PE_Callback_Init();
+
+    /* Exact expectations generated by the independent MIPS-interpreter
+     * oracle pc_port/tools/callback_oracle.py over the verified retail
+     * exe words (the same script --callback-oracle-dump prints; the phase
+     * gate diffs dump vs oracle byte-for-byte). */
+    PE_Callback_Bind(0x80010000u, cb_body_A);
+    PE_Callback_Bind(0x80010004u, cb_body_B);
+    PE_Callback_Bind(0x80010008u, cb_body_C);
+    PE_Callback_Bind(0x8003E91Cu, cb_body_D);
+
+    ASSERT(func_80073D24(0u) == 0, "oracle step 1");
+    ASSERT(func_80073D24(0x8003E91Cu) == 0, "oracle step 2");
+    ASSERT(func_80073D24(0x8003E91Cu) == 0x8003E91Cu, "oracle step 3");
+    ASSERT(func_80073D24(0x80010000u) == 0x8003E91Cu, "oracle step 4");
+    ASSERT(func_80073D24(0u) == 0x80010000u, "oracle step 5");
+    ASSERT(func_80073D24(0u) == 0, "oracle step 6");
+    ASSERT(PE_Callback_SetSlot(0, 0x80010000u) == 0, "oracle step 7");
+    ASSERT(PE_Callback_SetSlot(2, 0x80010004u) == 0, "oracle step 8");
+    ASSERT(PE_Callback_SetSlot(7, 0x80010008u) == 0, "oracle step 9");
+
+    g_cb_visit_count = 0;
+    PE_Callback_Dispatch();
+    ASSERT(PE_LoadU32(GA_CB_COUNTER) == 1, "oracle counter != 1");
+    ASSERT(g_cb_visit_count == 3, "oracle dispatch 1 visit count");
+    ASSERT(g_cb_visits[0] == 0x80010000u && g_cb_visits[1] == 0x80010004u &&
+           g_cb_visits[2] == 0x80010008u, "oracle dispatch 1 visit order");
+
+    ASSERT(func_80073D24(0x8003E91Cu) == 0, "oracle step 11");
+    g_cb_visit_count = 0;
+    PE_Callback_Dispatch();
+    ASSERT(PE_LoadU32(GA_CB_COUNTER) == 2, "oracle counter != 2");
+    ASSERT(g_cb_visit_count == 4, "oracle dispatch 2 visit count");
+    ASSERT(g_cb_visits[0] == 0x80010000u && g_cb_visits[1] == 0x80010004u &&
+           g_cb_visits[2] == 0x8003E91Cu && g_cb_visits[3] == 0x80010008u,
+           "oracle dispatch 2 visit order");
+
+    /* Slot 8 aliases the dispatch counter @0x800956AC — exact retail
+     * address arithmetic (table + (8 << 2)), preserved, not clamped */
+    ASSERT(PE_Callback_SetSlot(8, 0x11111111u) == 2, "oracle slot-8 prev");
+    ASSERT(PE_LoadU32(GA_CB_COUNTER) == 0x11111111u, "oracle slot-8 alias");
+    PASS();
+}
+
+static void test_73D24_dispatch_unknown_identity(void) {
+    TEST("73D24_dispatch_unknown_identity");
+    ResetTestState();
+    PE_Callback_Init();
+
+    /* A slot holding a guest address with no host binding must surface a
+     * visible error — never a silent skip, never a crash */
+    PE_Callback_SetSlot(4, 0x80015555u);
+    PE_Callback_Dispatch();
+    ASSERT(PE_Callback_ErrorCount() == 1, "unknown identity not reported");
+    ASSERT(PE_LoadU32(GA_CB_COUNTER) == 1, "counter not incremented");
+    PASS();
+}
+
+static void test_73D24_bind_errors(void) {
+    TEST("73D24_bind_errors");
+    ResetTestState();
+    PE_Callback_Init();
+
+    ASSERT(PE_Callback_Bind(0x80010000u, cb_body_A) == 0, "bind failed");
+    /* Conflicting rebind of the same guest address: visible error */
+    ASSERT(PE_Callback_Bind(0x80010000u, cb_body_B) == -1,
+           "conflicting rebind accepted");
+    ASSERT(PE_Callback_ErrorCount() == 1, "conflict not counted");
+    /* Zero guest / NULL host: visible errors */
+    ASSERT(PE_Callback_Bind(0u, cb_body_A) == -1, "zero guest accepted");
+    ASSERT(PE_Callback_Bind(0x80010004u, NULL) == -1, "NULL host accepted");
+    ASSERT(PE_Callback_ErrorCount() == 3, "bind errors not counted");
+    /* The original binding still resolves */
+    PE_Callback_SetSlot(4, 0x80010000u);
+    g_cb_visit_count = 0;
+    PE_Callback_Dispatch();
+    ASSERT(g_cb_visit_count == 1 && g_cb_visits[0] == 0x80010000u,
+           "original binding lost after errors");
+    PASS();
+}
+
+static void test_73D24_write_footprint(void) {
+    TEST("73D24_write_footprint");
+    ResetTestState();
+    PE_Callback_Init();
+
+    /* Canary-fill ALL of guest RAM, run both boot-path calls, then scan:
+     * exactly the slot-4 word may differ — nothing else. */
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    }
+
+    (void)func_80073D24(0u);
+    (void)func_80073D24(0x8003E91Cu);
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        unsigned int got = PE_LoadU32(a);
+        unsigned int want = (a == GA_CB_SLOT4) ? 0x8003E91Cu : 0xA5A5A5A5u;
+        if (got != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
+            FAIL("write footprint exceeds the slot-4 word");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_73D24_ramreset_reinit(void) {
+    TEST("73D24_ramreset_reinit");
+    ResetTestState();
+    PE_Callback_Init();
+
+    (void)func_80073D24(0x8003E91Cu);
+    ASSERT(PE_LoadU32(GA_CB_SLOT4) == 0x8003E91Cu, "install failed");
+    /* Guest-backed state is cleared by PE_RamReset; re-registration
+     * reproduces the identical state (retail reboot behavior) */
+    PE_RamReset();
+    ASSERT(PE_LoadU32(GA_CB_SLOT4) == 0, "slot 4 not cleared by RAM reset");
+    ASSERT(func_80073D24(0x8003E91Cu) == 0, "reinstall prev != 0");
+    ASSERT(PE_LoadU32(GA_CB_SLOT4) == 0x8003E91Cu, "reinstall failed");
+    PASS();
+}
+
+static void test_73D24_strict_not_stub(void) {
+    TEST("73D24_strict_not_stub");
+    ResetTestState();
+    PE_Callback_Init();
+    g_strict_stubs = 1;
+
+    /* Under strict mode the REAL function must execute without tripping
+     * the centralized bootstrap policy */
+    ASSERT(func_80073D24(0x8003E91Cu) == 0, "strict install prev != 0");
+    ASSERT(PE_LoadU32(GA_CB_SLOT4) == 0x8003E91Cu, "strict install failed");
+    g_strict_stubs = 0;
     PASS();
 }
 
@@ -3430,7 +3686,7 @@ int main(void)
 
     /* Callback registry (6 tests) */
     test_callback_init_null();
-    test_callback_register_get();
+    test_callback_bind_resolve();
     test_callback_reset_clears();
     test_callback_invoke_runs();
     test_callback_invoke_null_safe();
@@ -3507,6 +3763,18 @@ int main(void)
     test_3E680_callback_invoke();
     test_3E680_subsystem_order();
     test_3E680_final_call();
+
+    /* Phase 6E-B6 rung */
+    test_73D24_raw_contract();
+    test_73D24_replace_remove_prevs();
+    test_73D24_same_handler_no_store();
+    test_73D24_zero_arg_clears();
+    test_73D24_oracle_equality();
+    test_73D24_dispatch_unknown_identity();
+    test_73D24_bind_errors();
+    test_73D24_write_footprint();
+    test_73D24_ramreset_reinit();
+    test_73D24_strict_not_stub();
 
     /* D_80011614 (2 tests) */
     test_d11614_bootstrap_value();

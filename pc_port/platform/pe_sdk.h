@@ -51,6 +51,7 @@ uint32_t PE_GTE_LZCR(uint32_t v);
 
 /* ── libetc (pc_port/platform/pe_libetc.c) ──────────────────────────── */
 void func_80073C94(void);            /* ResetCallback */
+uint32_t func_80073D24(pe_addr_t handler); /* VBlank callback slot 4 setter */
 int  func_80072714(void);            /* EnterCriticalSection */
 void func_80072724(void);            /* ExitCriticalSection */
 int  PE_Irq_LockDepth(void);         /* diagnostic: current critical depth */

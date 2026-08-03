@@ -44,17 +44,9 @@ extern pe_addr_t D_800B0E24,D_800B0E28,D_800B0E2C,D_800B0E30,D_800B0E34,D_800B0E
  * game/boot/func_80036DC8_port.c — timer-record init dispatcher. */
 static inline void func_8003E91C(void)    { Bootstrap_ReturnVoid("func_8003E91C", "func_8003E680"); }
 
-/* func_80073D24 — callback registration.  Uses the host-safe callback
- * registry (PE_Callback_*) instead of a narrowed (int) cast. */
-static inline void func_80073D24(int a)   {
-    Bootstrap_ReturnVoid("func_80073D24", "func_8003E680");
-    if (a == 0) {
-        PE_Callback_Reset();
-    }
-    /* Non-zero: a host function pointer cannot travel through the narrowed
-     * PS1 int argument, so the translated caller registers via
-     * PE_Callback_Register directly (see func_8003E680_port.c). */
-}
+/* func_80073D24 is now a REAL SDK implementation (Phase 6E-B6):
+ * pe_libetc.c — VBlank callback slot-4 setter with previous-handler
+ * return, guest-table backed (pe_callback.h). */
 static inline void func_800371A4(int a)   { Bootstrap_ReturnVoid("func_800371A4", "func_8003E680"); (void)a; }
 static inline void func_80029388(void)    { Bootstrap_ReturnVoid("func_80029388", "func_8003E680"); }
 static inline void func_8005BCA8(void)    { Bootstrap_ReturnVoid("func_8005BCA8", "func_8003E680"); }

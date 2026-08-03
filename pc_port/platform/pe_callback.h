@@ -1,11 +1,27 @@
 /*
- * Phase 6D-S — Full-width host-safe callback registry.
+ * Phase 6E-B6 — Guest-backed VBlank callback slot model.
  *
- * No (int)(uintptr_t) casts.  Function pointers are stored and invoked at
- * their full native width.  Provides explicit Reset / Register / Get / Invoke.
+ * Replaces the Phase 6D-S single-callback host registry with the retail
+ * callback-queue state machine, derived instruction-by-instruction:
+ *
+ *   func_80073D24(handler)            (asm/disc1/5F3E4.s @ 0x80073D24)
+ *     → jump table D_8009564C field 0x14, forced slot a0 = 4
+ *   field 0x14 installed by ResetCallback (func_80073E28 via func_80073C94)
+ *     → return value of func_800743B4 = func_80074478
+ *   func_80074478(slot, handler)      (asm/disc1/645F8.s @ 0x80074478)
+ *     addr = D_8009568C + (slot << 2); prev = *addr;
+ *     if (handler != prev) *addr = handler; return prev;
+ *   func_8007440C                     (dispatcher, registered on event 0)
+ *     D_800956AC++; for i in 0..7: if (slot[i]) slot[i]();  (no args)
+ *
+ * All retail-visible state lives in guest RAM at its retail addresses.
+ * The host side only keeps a typed guest-address → host-function binding
+ * map (full pointer width, never written to guest memory).
  */
 #ifndef PE_CALLBACK_H
 #define PE_CALLBACK_H
+
+#include "pe_guest_ram.h"   /* pe_addr_t */
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,20 +29,48 @@ extern "C" {
 
 typedef void (*PECallback)(void);
 
+/* Retail guest addresses (rodata/data, zero-initialized in the image) */
+#define PE_CALLBACK_TABLE_ADDR    0x8009568Cu   /* D_8009568C: 8 handler slots */
+#define PE_CALLBACK_COUNTER_ADDR  0x800956ACu   /* D_800956AC: dispatch count  */
+#define PE_CALLBACK_SLOTS         8u
+
 /* ── Lifecycle ──────────────────────────────────────────────────────── */
 
-void PE_Callback_Init(void);        /* one-time init, part of engine startup */
+void PE_Callback_Init(void);        /* clear host bindings + diagnostics */
 
-/* ── Operations ─────────────────────────────────────────────────────── */
+/* ── Host plumbing ──────────────────────────────────────────────────── */
 
-void       PE_Callback_Reset(void);                       /* store NULL   */
-void       PE_Callback_Register(PECallback callback);     /* store pointer */
-PECallback PE_Callback_Get(void);                         /* read pointer  */
-void       PE_Callback_Invoke(void);                      /* call if set   */
+/* Bind a guest function address to its host implementation.
+ * Idempotent for identical (guest, host) pairs.  Returns 0 on success,
+ * -1 on visible error (conflicting rebind, NULL host, zero guest, or a
+ * full binding table). */
+int PE_Callback_Bind(pe_addr_t guest, PECallback host);
 
-/* ── Diagnostic ─────────────────────────────────────────────────────── */
+/* ── Retail operations ──────────────────────────────────────────────── */
 
-int        PE_Callback_RegistrationCount(void);  /* how many times registered */
+/* func_80074478 semantics: read previous handler at table + (slot << 2),
+ * store the new one if different, return the previous value.  The slot
+ * arithmetic is exact 32-bit retail arithmetic; out-of-guest addresses
+ * hit the guest-RAM bounds policy. */
+uint32_t  PE_Callback_SetSlot(uint32_t slot, pe_addr_t handler);
+
+/* Raw read of table + (slot << 2). */
+pe_addr_t PE_Callback_GetSlot(uint32_t slot);
+
+/* func_800743B4 table-init portion: zero all 8 slots and the dispatch
+ * counter (performed by ResetCallback's first, guard-passing call). */
+void      PE_Callback_ResetTable(void);
+
+/* func_8007440C semantics: increment the dispatch counter, then invoke
+ * every non-NULL slot 0..7 in order with no arguments.  A slot holding
+ * a guest address with no host binding is a visible error (logged and
+ * counted), never a silent skip. */
+void      PE_Callback_Dispatch(void);
+
+/* ── Diagnostics ────────────────────────────────────────────────────── */
+
+int PE_Callback_RegistrationCount(void);  /* non-null installs via SetSlot */
+int PE_Callback_ErrorCount(void);         /* bind/dispatch visible errors  */
 
 #ifdef __cplusplus
 }

@@ -13,8 +13,9 @@
  *     registers — host no-ops.
  *   - callback queue-block build, then sh 1 -> D_800945E4, ExitCriticalSection,
  *     returns queue-block pointer (callers on the boot path ignore it).
- * The host callback registry (pe_callback.h, Phase 6D-S) replaces the
- * retail callback queue: reset clears the registered callback.
+ * The guest-backed callback slot model (pe_callback.h, Phase 6E-B6)
+ * replaces the retail callback queue: ResetCallback's first guard-passing
+ * call zeroes the 8 guest slots at D_8009568C and the dispatch counter.
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"
@@ -28,7 +29,21 @@ void func_80073C94(void)
         return;                     /* one-time guard */
     }
     PE_StoreU16(0x800945E4u, 1);
-    PE_Callback_Reset();
+    PE_Callback_ResetTable();
+}
+
+/* Phase 6E-B6 — func_80073D24 (asm/disc1/5F3E4.s @ 0x80073D24, 13 words):
+ * libetc callback-slot wrapper, reached through the jump table D_8009564C
+ * field 0x14 with the slot forced to 4 in the jal delay slot.  Field 0x14
+ * is installed by ResetCallback (func_80073E28) as func_800743B4's return
+ * value = func_80074478 (asm/disc1/645F8.s @ 0x80074478):
+ *   addr = D_8009568C + (slot << 2); prev = *addr;
+ *   if (handler != prev) *addr = handler;  return prev;
+ * Both exe-wide call sites (func_8003E680 @ 0x8003E6E0 / 0x8003E6F0)
+ * discard the return.  Classification: 2 (SDK host implementation). */
+uint32_t func_80073D24(pe_addr_t handler)
+{
+    return PE_Callback_SetSlot(4u, handler);
 }
 
 /* EnterCriticalSection: retail suspends interrupt delivery and returns the

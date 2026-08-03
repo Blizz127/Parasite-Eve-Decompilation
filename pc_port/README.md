@@ -1,27 +1,37 @@
-# Parasite Eve Native PC Port — Phase 6E-B5
+# Parasite Eve Native PC Port — Phase 6E-B6
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** func_80036DC8 timer-record init rung — a 10-word
-dispatcher calling three audited leaves (func_80036DF8/36E34/36E58) is
-translated retail logic, reproducing all 11 word stores in ROM order
-(including two dead zero-stores) into three 12-byte records at
-`0x800A76A0/AC/B8`: each `{ 1, 0, x }`, record 0 preloaded with
-`0x1499700` (21,600,000).  Consumers read field1[i] via base+i*12 and
-divide by 60 (unsigned /60 magic `0x88888889`), consistent with 60 Hz
-tick counters.  Sole caller func_8003E680; idempotent; no SDK/GTE/
-hardware access, no deeper calls.
+**Current milestone:** func_80073D24 VBlank callback registration rung —
+the libetc jump-table wrapper (13 words, forces slot 4 in the jal delay
+slot, forwards the callee return) now executes its instruction-derived
+contract: `prev = D_8009568C[4]; if (h != prev) D_8009568C[4] = h;
+return prev;`.  That is the semantics of func_80074478, the handler
+installed at jump-table field 0x14 by ResetCallback (func_80073E28's
+delay-slot store of func_800743B4's return value — verified against the
+retail exe bytes).  All retail-visible state lives in guest RAM: the
+8-word handler table at `0x8009568C` and the dispatch counter at
+`0x800956AC`, driven by a func_8007440C-faithful dispatcher (counter++,
+non-null slots 0..7 in order, no args).  The host side keeps only a typed
+guest-address → host-function binding map at full pointer width; unknown
+guest identities are visible errors, never silent skips.  Verified by an
+independent MIPS-interpreter oracle (`tools/callback_oracle.py`)
+executing the verified retail words of func_80074478/func_8007440C —
+the port's `--callback-oracle-dump` is byte-identical.
 
-**Status:** FUNC_80036DC8 RUNG VERIFIED — 174 native tests pass;
-ASan/UBSan clean; RNG and LZCR oracle dumps byte-identical to their
-independent interpreters on the retail exe; 3 deterministic headless runs
-(framebuffer `fb28dc21…`); 3 real-disc load traces byte-identical;
-strict mode with `--disc-image` now stops at `func_80073D24` (from
-`func_8003E680`) — the callback-registration provider, past the
-translated `func_8003E974` + `func_8003EAC8` + `func_80036DC8`; windowed
-SHA matches headless; matching build remains exact at SHA `452fb033`.
+**Status:** FUNC_80073D24 CALLBACK RUNG VERIFIED — 184 native tests pass;
+ASan/UBSan clean; RNG, LZCR and callback oracle dumps byte-identical to
+their independent interpreters on the retail exe; 3 deterministic
+headless runs (framebuffer `fb28dc21…`); 3 real-disc load traces
+byte-identical; strict mode with `--disc-image` now stops at
+`func_800371A4` (from `func_8003E680`) — the next provider past the
+real callback slot writes; windowed SHA matches headless; matching build
+remains exact at SHA `452fb033`.
 
-**Previous milestones:** 6E-B4 (func_8003EAC8 LZCR registration rung —
+**Previous milestones:** 6E-B5 (func_80036DC8 timer-record init rung —
+three 12-byte records at `0x800A76A0/AC/B8`, all 11 word stores in ROM
+order);
+6E-B4 (func_8003EAC8 LZCR registration rung —
 GTE LZCS/LZCR leaf, exact edge semantics incl. the preserved below-table
 write at `0x800A76EC`, oracle-verified; call-site correction: 20 distinct
 sites, not 63);
@@ -49,8 +59,12 @@ cycles through 14 retail code words below its table);
   `D_800BCE80`) are typed lvalue macros over `PE_Translate` — one store,
   no split-brain.  `PE_RamInit` allocates + zero-fills; `PE_RamReset`
   re-zeroes; `PE_RamDestroy` frees.
-- **Callback registry:** `pe_callback.[ch]` — full-width function pointers,
-  no `(int)(uintptr_t)` narrowing.  Reset / Register / Get / Invoke.
+- **Callback slot model:** `pe_callback.[ch]` — guest-backed retail
+  callback queue (Phase 6E-B6): 8 handler slots at guest `0x8009568C` +
+  dispatch counter at `0x800956AC`, with func_80074478-faithful
+  set-slot (previous-handler return, no store on identical handler) and
+  func_8007440C-faithful dispatch.  Host side: typed guest-address →
+  host-function bindings, full pointer width, never guest-visible.
 - **Bootstrap policy:** `pe_bootstrap.[ch]` — every `BOOTSTRAP_RET`
   provider goes through `Bootstrap_ReturnInt/Void`.  Strict mode
   (`--strict-stubs`) aborts centrally at the first invoked provider.
@@ -139,6 +153,27 @@ with 60 Hz tick counters.  Sole caller of the dispatcher is
 `func_8003E680`; the leaves are called only from it.  Idempotent;
 verbatim ROM-order stores, all guest-RAM-backed.
 
+## VBlank callback slot rung (Phase 6E-B6)
+
+| Function | Size | Words | Role |
+|----------|------|-------|------|
+| `func_80073D24` | 0x34 | 13 | libetc jump-table wrapper: field 0x14, slot forced to 4, return forwarded |
+| `func_80074478` | 0x2C | 11 | installed setter: `prev = tab[slot]; if (h != prev) tab[slot] = h; return prev` |
+| `func_8007440C` | 0x6C | 26 | dispatcher: counter++, invoke non-null slots 0..7 in order |
+
+Retail state is guest-RAM resident: 8 handler slots at `0x8009568C`
+(D_8009568C, zero-initialized image bytes) and the dispatch counter at
+`0x800956AC` (D_800956AC).  Exact retail address arithmetic is preserved
+— slot 8 aliases the counter.  The host binding map (guest address →
+host function, full width) is plumbing only; dispatch of an unbound
+guest address is a visible error.  Both func_8003E680 call sites
+(`0x8003E6E0` clear, `0x8003E6F0` install of `0x8003E91C`) discard the
+return, matching retail.  ResetCallback's first guard-passing call
+zeroes all 8 slots + counter (func_800743B4 semantics).  Correctness
+gate: `--callback-oracle-dump` is byte-identical to
+`tools/callback_oracle.py`, a MIPS interpreter executing the verified
+retail words.
+
 ## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
 | Function | Matching size | Words | Purpose |
@@ -165,7 +200,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (174 tests, all pass)
+- `pe-native-tests` — test suite (184 tests, all pass)
 
 ## Running
 
@@ -193,10 +228,11 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1, names func_80073D24 (from func_8003E680) — the first
+# Expected: exit 1, names func_800371A4 (from func_8003E680) — the first
 # unresolved provider past the translated RNG (70D10/70D6C/70DD0), the
-# subsystem-init pair (func_8003E974 + func_8003EAC8), and the
-# timer-record init (func_80036DC8 + leaves)
+# subsystem-init pair (func_8003E974 + func_8003EAC8), the timer-record
+# init (func_80036DC8 + leaves), and the real func_80073D24 callback
+# slot writes
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -204,6 +240,10 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # LZCR oracle gate — must equal tools/lzcr_oracle.py on the retail exe
 ./parasite-eve-port --headless --lzcr-oracle-dump
+
+# Callback oracle gate — must equal tools/callback_oracle.py on the
+# retail exe
+./parasite-eve-port --headless --callback-oracle-dump
 ```
 
 `--bootstrap-disc` and `--disc-image` are mutually exclusive.  Without
@@ -214,7 +254,7 @@ host adaptation); the boot is not faked.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 174 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 184 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
@@ -226,7 +266,10 @@ cd pc_port/build
                     #   edge/one-hot contract, below-table write, recorder
                     #   semantics, func_8003E974 final registered table
                     # + 6E-B5: func_80036DC8 final record state, per-leaf
-                    #   write sets, footprint, idempotence, integration)
+                    #   write sets, footprint, idempotence, integration
+                    # + 6E-B6: func_80073D24 slot contract, previous-
+                    #   handler returns, oracle equality, dispatch order,
+                    #   unknown identities, footprint, strict integration)
 ```
 
 ## Deterministic framebuffer
@@ -241,9 +284,9 @@ cd pc_port/build
 
 ## Next steps
 
-1. **Phase 6E-B continued:** `func_80073D24` rung (next strict-mode
-   frontier — callback registration provider, from `func_8003E680`),
-   then the provider frontier toward the image-load consumers
+1. **Phase 6E-B continued:** `func_800371A4` rung (next strict-mode
+   frontier, from `func_8003E680`), then the provider frontier toward
+   the image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display
 4. Audio, input, save/load (later phases)
@@ -251,7 +294,8 @@ cd pc_port/build
 ## Constraints
 
 - PCSX-Redux is the retail oracle only — never used as runtime
-- Matching decomp remains separate and SHA-exact (227 C leaves, SHA `452fb033`)
+- Matching decomp remains separate and SHA-exact (SHA `452fb033`; 229 C
+  leaves in the current matching checkout)
 - No PS1 emulator in the native executable
 - The Disc 1 image is user-supplied and read-only; never commit it or
   any derivative captures

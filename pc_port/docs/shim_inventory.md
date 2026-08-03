@@ -101,9 +101,14 @@ All stubs are explicitly classified. No anonymous empty stubs.
   three 12-byte records at 0x800A76A0/AC/B8 = {1,0,x}, record 0 field2
   0x1499700; consumers divide field1 by 60 — 60 Hz tick counters),
   `game/boot/func_80036DC8_port.c`
-- `func_80073D24` (×2 — callback register: reset + register)  ← current
-  strict-mode frontier (from func_8003E680)
-- `func_800371A4(int)`
+- ~~`func_80073D24`~~ — IMPLEMENTED (Phase 6E-B6): libetc VBlank
+  callback slot setter (jump-table field 0x14 → func_80074478 semantics:
+  prev = D_8009568C[4]; store if different; return prev), guest-backed
+  8-slot table + func_8007440C-faithful dispatcher in
+  `platform/pe_callback.[ch]`, wrapper in `platform/pe_libetc.c`;
+  oracle gate `--callback-oracle-dump` ≡ `tools/callback_oracle.py`.
+  Both func_8003E680 call sites discard the return (retail-matching)
+- `func_800371A4(int)`  ← current strict-mode frontier (from func_8003E680)
 - `func_80029388`
 - `func_8005BCA8`
 - `func_80068D28`
