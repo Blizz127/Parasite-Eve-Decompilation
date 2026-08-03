@@ -155,8 +155,20 @@ All stubs are explicitly classified. No anonymous empty stubs.
   hardware/GPU work; sole call site func_8003E680 @0x8003E720
   (nop delay slot, $v0=0 unconsumed); idempotent incl. after
   PE_RamReset; `game/boot/func_8001A890_port.c`
-- `func_80034F10`  ← current strict-mode frontier (from func_8003E680)
-- `func_8006536C`
+- ~~`func_80034F10(void)`~~ — TRANSLATED (Phase 6E-B13): 45-word
+  subsystem table clear + flag-bit clear (sw 0 -> 0x8009D2E8; 512-word
+  array at D_800A77F0 = 0x800A77F0..0x800A7FEC; D_800B6A80 = 0 — retail
+  stores the same word 64x via a delay-slot loop with no pointer
+  advance, reproduced as one store with identical end state; 14x160-word
+  matrix at D_800BEA90, row stride 0x280, span 0x800BEA90..0x800C0D8F;
+  scalars sw 0 -> 0x8009D2AC/0x8009D20C/0x8009D2F0/0x8009D254/0x8009D224
+  and sh 0 -> 0x8009D2A6, ROM order 53C, 49C, 580, 536, 4E4, 4B4; sole
+  guest read + RMW D_800B0CD8 &= ~0x3000, store in the jr $ra delay
+  slot); all 45 words exe-verified (live split 2422C.s); no SDK/GTE/
+  hardware/GPU work; sole call site func_8003E680 @0x8003E728
+  (nop delay slot, $v0=&D_800B0CD8 unconsumed); idempotent incl. after
+  PE_RamReset; `game/boot/func_80034F10_port.c`
+- `func_8006536C`  ← current strict-mode frontier (from func_8003E680)
 - `func_80038D1C`
 
 ### func_8006E834 callees (9)

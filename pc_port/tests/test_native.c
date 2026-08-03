@@ -1484,17 +1484,16 @@ static void test_3E680_subsystem_order(void) {
      * init runs (6E-B8), the real empty-stub func_8005BCA8 runs
      * (6E-B9), the real func_80068D28 display-record init runs
      * (6E-B10), the real func_800124F8 table clear runs
-     * (6E-B11), and the real func_8001A890 scalar/array clear runs
-     * (6E-B12 — all absent from the stub order log), then the
-     * remaining subsystem inits fire in retail order. */
+     * (6E-B11), the real func_8001A890 scalar/array clear runs
+     * (6E-B12), and the real func_80034F10 table clear + flag-bit
+     * clear runs (6E-B13 — all absent from the stub order log),
+     * then the remaining subsystem inits fire in retail order. */
     const char *expected[] = {
-        "func_80034F10", "func_8006536C", "func_80038D1C"
+        "func_8006536C", "func_80038D1C"
     };
     int expected_count = sizeof(expected) / sizeof(expected[0]);
 
-    /* func_8003EAC8, func_80036DC8, func_80073D24, func_800371A4,
-     * func_80029388, func_8005BCA8, func_80068D28, func_800124F8,
-     * func_8001A890 must NOT appear: real */
+    /* All translated rungs must NOT appear in the stub order log. */
     ASSERT(CountOrderLog("func_8003EAC8") == 0,
            "func_8003EAC8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_80036DC8") == 0,
@@ -1513,18 +1512,19 @@ static void test_3E680_subsystem_order(void) {
            "func_800124F8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_8001A890") == 0,
            "func_8001A890 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_80034F10") == 0,
+           "func_80034F10 still routed through bootstrap policy");
 
-    /* Find the position of func_80034F10 — the first stub invoked after
-     * the real 3E974/3EAC8/36DC8/73D24/371A4/29388/5BCA8/68D28/124F8/
-     * 1A890 rungs */
+    /* Find the position of func_8006536C — the first stub invoked after
+     * the real rungs through 34F10 */
     int start_idx = -1;
     for (int i = 0; i < g_stub_order_count; i++) {
-        if (strcmp(g_stub_order_log[i], "func_80034F10") == 0) {
+        if (strcmp(g_stub_order_log[i], "func_8006536C") == 0) {
             start_idx = i;
             break;
         }
     }
-    ASSERT(start_idx >= 0, "func_80034F10 not found in order log");
+    ASSERT(start_idx >= 0, "func_8006536C not found in order log");
 
     for (int j = 0; j < expected_count && (start_idx + j) < g_stub_order_count; j++) {
         if (strcmp(g_stub_order_log[start_idx + j], expected[j]) != 0) {
@@ -2195,8 +2195,8 @@ static void test_29388_3E680_integration(void) {
      * remains intact.  The exe-rodata sources are zero here (no exe
      * loaded), so the 2F658 destinations deterministically receive
      * zeros — retail behavior.  68D28 is now real too (6E-B10),
-     * 124F8 as well (6E-B11), and 1A890 as well (6E-B12); the next
-     * stub is func_80034F10. */
+     * 124F8 as well (6E-B11), 1A890 as well (6E-B12), and 34F10 as
+     * well (6E-B13); the next stub is func_8006536C. */
     for (int i = 0; i < 7; i++) {
         ASSERT(PE_LoadU32(g_b8_slot_addrs[i]) == 0, "slot word not cleared by 3E680");
     }
@@ -2215,8 +2215,10 @@ static void test_29388_3E680_integration(void) {
            "func_800124F8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_8001A890") == 0,
            "func_8001A890 still routed through bootstrap policy");
-    ASSERT(CountOrderLog("func_80034F10") == 1,
-           "func_80034F10 stub did not follow real func_8001A890");
+    ASSERT(CountOrderLog("func_80034F10") == 0,
+           "func_80034F10 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_8006536C") == 1,
+           "func_8006536C stub did not follow real func_80034F10");
     ASSERT(PE_Callback_GetSlot(4) == 0x8003E91Cu,
            "6E-B6 slot-4 state not visible after func_8003E680");
     ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0,
@@ -2337,8 +2339,8 @@ static void test_5BCA8_3E680_integration(void) {
     func_8003E680();
 
     /* Real empty stub ran after 29388; 68D28 is now real too (6E-B10),
-     * 124F8 as well (6E-B11), and 1A890 as well (6E-B12); next
-     * provider is func_80034F10. */
+     * 124F8 as well (6E-B11), 1A890 as well (6E-B12), and 34F10 as
+     * well (6E-B13); next provider is func_8006536C. */
     ASSERT(CountOrderLog("func_8005BCA8") == 0,
            "func_8005BCA8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_80068D28") == 0,
@@ -2347,8 +2349,10 @@ static void test_5BCA8_3E680_integration(void) {
            "func_800124F8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_8001A890") == 0,
            "func_8001A890 still routed through bootstrap policy");
-    ASSERT(CountOrderLog("func_80034F10") == 1,
-           "func_80034F10 is not the next unresolved provider");
+    ASSERT(CountOrderLog("func_80034F10") == 0,
+           "func_80034F10 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_8006536C") == 1,
+           "func_8006536C is not the next unresolved provider");
     for (int i = 0; i < 7; i++) {
         ASSERT(PE_LoadU32(g_b8_slot_addrs[i]) == 0,
                "prior 29388 slot clear not visible after 5BCA8");
@@ -2359,17 +2363,17 @@ static void test_5BCA8_3E680_integration(void) {
            "6E-B6 slot-4 state not visible after func_8003E680");
     ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0,
            "6E-B7 byte state not visible after func_8003E680");
-    /* Order: real 5BCA8, 68D28, 124F8, and 1A890 are absent; 34F10 is
-     * the first remaining stub. */
+    /* Order: real 5BCA8, 68D28, 124F8, 1A890, and 34F10 are absent;
+     * 6536C is the first remaining stub. */
     {
         int idxNext = -1;
         for (int i = 0; i < g_stub_order_count; i++) {
-            if (strcmp(g_stub_order_log[i], "func_80034F10") == 0) {
+            if (strcmp(g_stub_order_log[i], "func_8006536C") == 0) {
                 idxNext = i;
                 break;
             }
         }
-        ASSERT(idxNext >= 0, "func_80034F10 missing from order log");
+        ASSERT(idxNext >= 0, "func_8006536C missing from order log");
         for (int i = 0; i < idxNext; i++) {
             ASSERT(strcmp(g_stub_order_log[i], "func_8005BCA8") != 0,
                    "func_8005BCA8 appeared before the new frontier");
@@ -2379,6 +2383,8 @@ static void test_5BCA8_3E680_integration(void) {
                    "func_800124F8 appeared before the new frontier");
             ASSERT(strcmp(g_stub_order_log[i], "func_8001A890") != 0,
                    "func_8001A890 appeared before the new frontier");
+            ASSERT(strcmp(g_stub_order_log[i], "func_80034F10") != 0,
+                   "func_80034F10 appeared before the new frontier");
         }
     }
     PASS();
@@ -2401,21 +2407,21 @@ static void test_5BCA8_strict_not_stub(void) {
     PASS();
 }
 
-static void test_1A890_frontier_is_34F10(void) {
-    TEST("1A890_frontier_is_34F10");
+static void test_34F10_frontier_is_6536C(void) {
+    TEST("34F10_frontier_is_6536C");
     ResetTestState();
     PE_Callback_Init();
     g_bootstrap_disc = 1;
 
     /* Before 6E-B9 the first Bootstrap_ReturnVoid hit from func_8003E680
      * was func_8005BCA8; then func_80068D28 (B10), func_800124F8 (B11),
-     * and func_8001A890 (B12) — all verified at their pre-change
-     * strict-mode baselines.  After the 1A890 translation the
-     * production path must leave all four absent from the order log
-     * and record func_80034F10 as the first remaining subsystem
-     * provider.  Full --strict-stubs exit at func_80034F10 is a runtime
-     * gate (Bootstrap_EnableStrict calls exit(1)); this unit test proves
-     * the same call order. */
+     * func_8001A890 (B12), and func_80034F10 (B13) — all verified at
+     * their pre-change strict-mode baselines.  After the 34F10
+     * translation the production path must leave all five absent from
+     * the order log and record func_8006536C as the first remaining
+     * subsystem provider.  Full --strict-stubs exit at func_8006536C
+     * is a runtime gate (Bootstrap_EnableStrict calls exit(1)); this
+     * unit test proves the same call order. */
     func_8003E680();
 
     ASSERT(CountOrderLog("func_8005BCA8") == 0,
@@ -2426,12 +2432,14 @@ static void test_1A890_frontier_is_34F10(void) {
            "func_800124F8 still a bootstrap provider");
     ASSERT(CountOrderLog("func_8001A890") == 0,
            "func_8001A890 still a bootstrap provider");
+    ASSERT(CountOrderLog("func_80034F10") == 0,
+           "func_80034F10 still a bootstrap provider");
     ASSERT(g_stub_order_count >= 1, "no remaining subsystem provider");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80034F10") == 0,
-           "next unresolved provider is not func_80034F10");
-    /* Guard: no later reappearance of 34F10 either. */
-    ASSERT(CountOrderLog("func_80034F10") == 1,
-           "func_80034F10 invoked more than once");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8006536C") == 0,
+           "next unresolved provider is not func_8006536C");
+    /* Guard: no later reappearance of 6536C either. */
+    ASSERT(CountOrderLog("func_8006536C") == 1,
+           "func_8006536C invoked more than once");
     PASS();
 }
 
@@ -2589,8 +2597,10 @@ static void test_68D28_3E680_integration(void) {
            "func_800124F8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_8001A890") == 0,
            "func_8001A890 still routed through bootstrap policy");
-    ASSERT(CountOrderLog("func_80034F10") == 1,
-           "func_80034F10 stub did not follow real func_8001A890");
+    ASSERT(CountOrderLog("func_80034F10") == 0,
+           "func_80034F10 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_8006536C") == 1,
+           "func_8006536C stub did not follow real func_80034F10");
     ASSERT(PE_Callback_GetSlot(4) == 0x8003E91Cu,
            "6E-B6 slot-4 state not visible after func_8003E680");
     ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0,
@@ -2760,8 +2770,10 @@ static void test_124F8_3E680_integration(void) {
            "func_800124F8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_8001A890") == 0,
            "func_8001A890 still routed through bootstrap policy");
-    ASSERT(CountOrderLog("func_80034F10") == 1,
-           "func_80034F10 stub did not follow real func_8001A890");
+    ASSERT(CountOrderLog("func_80034F10") == 0,
+           "func_80034F10 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_8006536C") == 1,
+           "func_8006536C stub did not follow real func_80034F10");
     ASSERT(B10_VerifyState() == 0, "6E-B10 record state lost after 3E680");
     ASSERT(PE_Callback_GetSlot(4) == 0x8003E91Cu,
            "6E-B6 slot-4 state not visible after func_8003E680");
@@ -2973,8 +2985,10 @@ static void test_1A890_3E680_integration(void) {
     ASSERT(B12_VerifyState() == 0, "1A890 state missing after 3E680");
     ASSERT(CountOrderLog("func_8001A890") == 0,
            "func_8001A890 still routed through bootstrap policy");
-    ASSERT(CountOrderLog("func_80034F10") == 1,
-           "func_80034F10 stub did not follow real func_8001A890");
+    ASSERT(CountOrderLog("func_80034F10") == 0,
+           "func_80034F10 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_8006536C") == 1,
+           "func_8006536C stub did not follow real func_80034F10");
     ASSERT(B11_VerifyState() == 0, "6E-B11 cleared state lost after 3E680");
     ASSERT(B10_VerifyState() == 0, "6E-B10 record state lost after 3E680");
     ASSERT(PE_Callback_GetSlot(4) == 0x8003E91Cu,
@@ -2998,6 +3012,218 @@ static void test_1A890_strict_not_stub(void) {
     func_8001A890();
     ASSERT(B12_VerifyState() == 0, "strict-mode state mismatch");
     ASSERT(g_stub_count == 0, "func_8001A890 recorded as stub under strict");
+    ASSERT(Bootstrap_InvocationCount() == 0,
+           "bootstrap provider invoked under strict");
+    g_strict_stubs = 0;
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B13 — func_80034F10 subsystem table clear + flag-bit clear
+ *
+ * Retail contract (see game/boot/func_80034F10_port.c header):
+ *   sw 0 -> 0x8009D2E8; 512-word array clear at D_800A77F0 =
+ *   0x800A77F0..0x800A7FEC; D_800B6A80 = 0 (retail: same word stored
+ *   64x via a delay-slot loop with no pointer advance); 14x160-word
+ *   matrix clear at D_800BEA90 (row stride 0x280) =
+ *   0x800BEA90..0x800C0D8F; scalars sw 0 -> 0x8009D2AC/0x8009D20C/
+ *   0x8009D2F0/0x8009D254/0x8009D224, sh 0 -> 0x8009D2A6 (ROM order
+ *   53C, 49C, 580, 536, 4E4, 4B4); final RMW D_800B0CD8 &= ~0x3000
+ *   (sole guest read; store in the jr delay slot).  Idempotent;
+ *   $v0 = &D_800B0CD8 unconsumed.
+ * Independent reference: 45-word exe verification is complete proof
+ * for this fixed-count zero-fill + fixed-mask RMW.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_T_8009D2E8 0x8009D2E8u
+#define GA_T_800A77F0 0x800A77F0u
+#define GA_T_800A7FF0 0x800A7FF0u   /* first address ABOVE array 1 */
+#define GA_T_800B6A80 0x800B6A80u
+#define GA_T_800BEA90 0x800BEA90u
+#define GA_T_800C0D90 0x800C0D90u   /* first address ABOVE the matrix */
+#define GA_T_8009D2AC 0x8009D2ACu
+#define GA_T_8009D20C 0x8009D20Cu
+#define GA_T_8009D2F0 0x8009D2F0u
+#define GA_T_8009D2A4 0x8009D2A4u   /* word containing the D2A6 half */
+#define GA_T_8009D2A6 0x8009D2A6u
+#define GA_T_8009D254 0x8009D254u
+#define GA_T_8009D224 0x8009D224u
+#define GA_T_800B0CD8 0x800B0CD8u
+
+/* Verify the complete final guest state of one func_80034F10 call
+ * (except D_800B0CD8, whose non-mask bits are caller state). */
+static int B13_VerifyState(void) {
+    if (PE_LoadU32(GA_T_8009D2E8) != 0u) return 1;
+    for (pe_addr_t a = GA_T_800A77F0; a < GA_T_800A7FF0; a += 4) {
+        if (PE_LoadU32(a) != 0u) return 2;
+    }
+    if (PE_LoadU32(GA_T_800B6A80) != 0u) return 3;
+    for (pe_addr_t a = GA_T_800BEA90; a < GA_T_800C0D90; a += 4) {
+        if (PE_LoadU32(a) != 0u) return 4;
+    }
+    if (PE_LoadU32(GA_T_8009D2AC) != 0u) return 5;
+    if (PE_LoadU32(GA_T_8009D20C) != 0u) return 6;
+    if (PE_LoadU32(GA_T_8009D2F0) != 0u) return 7;
+    if (PE_LoadU16(GA_T_8009D2A6) != 0u) return 8;
+    if (PE_LoadU32(GA_T_8009D254) != 0u) return 9;
+    if (PE_LoadU32(GA_T_8009D224) != 0u) return 10;
+    if ((PE_LoadU32(GA_T_800B0CD8) & 0x3000u) != 0u) return 11;
+    return 0;
+}
+
+/* Dirty exactly the bytes the rung may write (except D_800B0CD8,
+ * which tests set explicitly). */
+static void B13_DirtyWritten(unsigned int v) {
+    PE_StoreU32(GA_T_8009D2E8, v);
+    for (pe_addr_t a = GA_T_800A77F0; a < GA_T_800A7FF0; a += 4)
+        PE_StoreU32(a, v);
+    PE_StoreU32(GA_T_800B6A80, v);
+    for (pe_addr_t a = GA_T_800BEA90; a < GA_T_800C0D90; a += 4)
+        PE_StoreU32(a, v);
+    PE_StoreU32(GA_T_8009D2AC, v);
+    PE_StoreU32(GA_T_8009D20C, v);
+    PE_StoreU32(GA_T_8009D2F0, v);
+    PE_StoreU32(GA_T_8009D2A4, v);   /* includes the D2A6 halfword */
+    PE_StoreU32(GA_T_8009D254, v);
+    PE_StoreU32(GA_T_8009D224, v);
+}
+
+static void test_34F10_raw_contract(void) {
+    TEST("34F10_raw_contract");
+    ResetTestState();
+
+    B13_DirtyWritten(0xDEADBEEFu);
+    PE_StoreU32(GA_T_800B0CD8, 0xFFFFFFFFu);
+
+    func_80034F10();
+
+    int rc = B13_VerifyState();
+    if (rc != 0) {
+        printf("FAIL: B13_VerifyState rc=%d\n", rc);
+        FAIL("retail end state mismatch");
+        return;
+    }
+    /* The RMW clears exactly bits 12-13 and preserves all others. */
+    ASSERT(PE_LoadU32(GA_T_800B0CD8) == 0xFFFFCFFFu,
+           "D_800B0CD8 RMW mask wrong");
+    /* Guards around every written region. */
+    ASSERT(PE_LoadU32(GA_T_8009D2E8 - 4u) == 0, "guard below D2E8 modified");
+    ASSERT(PE_LoadU32(GA_T_8009D2E8 + 4u) == 0, "guard above D2E8 modified");
+    ASSERT(PE_LoadU32(GA_T_800A77F0 - 4u) == 0, "guard below array1 modified");
+    ASSERT(PE_LoadU32(GA_T_800A7FF0) == 0, "guard above array1 modified");
+    ASSERT(PE_LoadU32(GA_T_800B6A80 - 4u) == 0, "guard below B6A80 modified");
+    ASSERT(PE_LoadU32(GA_T_800B6A80 + 4u) == 0, "guard above B6A80 modified");
+    ASSERT(PE_LoadU32(GA_T_800BEA90 - 4u) == 0, "guard below matrix modified");
+    ASSERT(PE_LoadU32(GA_T_800C0D90) == 0, "guard above matrix modified");
+    ASSERT(PE_LoadU32(GA_T_800B0CD8 - 4u) == 0, "guard below B0CD8 modified");
+    ASSERT(PE_LoadU32(GA_T_800B0CD8 + 4u) == 0, "guard above B0CD8 modified");
+    /* 0x8009D2A6 is a HALFWORD store: it is the high half of the word
+     * at 0x8009D2A4 (little-endian); the low half keeps dirty bytes. */
+    ASSERT(PE_LoadU32(GA_T_8009D2A4) == 0x0000BEEFu,
+           "halfword store width at 0x8009D2A6 not preserved");
+    ASSERT(g_stub_count == 0, "func_80034F10 recorded as stub");
+    ASSERT(Bootstrap_InvocationCount() == 0, "bootstrap provider invoked");
+    PASS();
+}
+
+static void test_34F10_write_footprint(void) {
+    TEST("34F10_write_footprint");
+    ResetTestState();
+
+    /* Full 2 MiB canary: only the exact retail words/halfword and the
+     * masked bits of D_800B0CD8 may change. */
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    }
+
+    func_80034F10();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        unsigned int got = PE_LoadU32(a);
+        unsigned int want = 0xA5A5A5A5u;
+        if (a == GA_T_8009D2E8 || a == GA_T_800B6A80 ||
+            a == GA_T_8009D2AC || a == GA_T_8009D20C ||
+            a == GA_T_8009D2F0 || a == GA_T_8009D254 ||
+            a == GA_T_8009D224) want = 0x00000000u;
+        else if (a >= GA_T_800A77F0 && a < GA_T_800A7FF0) want = 0x00000000u;
+        else if (a >= GA_T_800BEA90 && a < GA_T_800C0D90) want = 0x00000000u;
+        else if (a == GA_T_8009D2A4) want = 0x0000A5A5u;
+        else if (a == GA_T_800B0CD8) want = 0xA5A585A5u;
+        if (got != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
+            FAIL("write footprint exceeds the retail region");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_34F10_repeated_dirty_and_ramreset(void) {
+    TEST("34F10_repeated_dirty_and_ramreset");
+    ResetTestState();
+
+    func_80034F10();
+    B13_DirtyWritten(0x77777777u);
+    PE_StoreU32(GA_T_800B0CD8, 0xFFFFFFFFu);
+    func_80034F10();
+    func_80034F10();
+    ASSERT(B13_VerifyState() == 0, "repeated calls not idempotent");
+    ASSERT(PE_LoadU32(GA_T_800B0CD8) == 0xFFFFCFFFu,
+           "repeated RMW not idempotent");
+
+    PE_RamReset();
+    ASSERT(PE_LoadU32(GA_T_800A77F0) == 0, "RAM reset did not clear");
+    ASSERT(PE_LoadU32(GA_T_800B0CD8) == 0, "RAM reset did not clear flags");
+    func_80034F10();
+    ASSERT(B13_VerifyState() == 0, "post-reset state mismatch");
+    ASSERT(PE_LoadU32(GA_T_800B0CD8) == 0, "post-reset RMW wrong");
+    PASS();
+}
+
+static void test_34F10_3E680_integration(void) {
+    TEST("34F10_3E680_integration");
+    ResetTestState();
+    PE_Callback_Init();
+    g_bootstrap_disc = 1;
+
+    func_8003E680();
+
+    /* The retail func_80034F10() ran as real code between
+     * func_8001A890 and the func_8006536C stub: complete cleared state
+     * present, no stub record, and all preceding rung state remains
+     * intact. */
+    ASSERT(B13_VerifyState() == 0, "34F10 state missing after 3E680");
+    ASSERT(CountOrderLog("func_80034F10") == 0,
+           "func_80034F10 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_8006536C") == 1,
+           "func_8006536C stub did not follow real func_80034F10");
+    ASSERT(B12_VerifyState() == 0, "6E-B12 cleared state lost after 3E680");
+    ASSERT(B11_VerifyState() == 0, "6E-B11 cleared state lost after 3E680");
+    ASSERT(B10_VerifyState() == 0, "6E-B10 record state lost after 3E680");
+    ASSERT(PE_Callback_GetSlot(4) == 0x8003E91Cu,
+           "6E-B6 slot-4 state not visible after func_8003E680");
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0,
+           "6E-B7 byte state not visible after func_8003E680");
+    ASSERT(PE_LoadU32(g_b8_slot_addrs[0]) == 0,
+           "6E-B8 slot clear not visible after func_8003E680");
+    PASS();
+}
+
+static void test_34F10_strict_not_stub(void) {
+    TEST("34F10_strict_not_stub");
+    ResetTestState();
+    g_strict_stubs = 1;
+
+    /* Under strict mode the REAL function must execute without tripping
+     * the centralized bootstrap policy.  The former frontier
+     * (func_80034F10 as Bootstrap_ReturnVoid) would have aborted here. */
+    B13_DirtyWritten(0xDEADBEEFu);
+    PE_StoreU32(GA_T_800B0CD8, 0xFFFFFFFFu);
+    func_80034F10();
+    ASSERT(B13_VerifyState() == 0, "strict-mode state mismatch");
+    ASSERT(PE_LoadU32(GA_T_800B0CD8) == 0xFFFFCFFFu,
+           "strict-mode RMW mismatch");
+    ASSERT(g_stub_count == 0, "func_80034F10 recorded as stub under strict");
     ASSERT(Bootstrap_InvocationCount() == 0,
            "bootstrap provider invoked under strict");
     g_strict_stubs = 0;
@@ -5079,7 +5305,6 @@ int main(void)
     test_124F8_repeated_dirty_and_ramreset();
     test_124F8_3E680_integration();
     test_124F8_strict_not_stub();
-    test_1A890_frontier_is_34F10();
 
     /* Phase 6E-B12 — func_8001A890 rung */
     test_1A890_raw_contract();
@@ -5087,6 +5312,14 @@ int main(void)
     test_1A890_repeated_dirty_and_ramreset();
     test_1A890_3E680_integration();
     test_1A890_strict_not_stub();
+    test_34F10_frontier_is_6536C();
+
+    /* Phase 6E-B13 — func_80034F10 rung */
+    test_34F10_raw_contract();
+    test_34F10_write_footprint();
+    test_34F10_repeated_dirty_and_ramreset();
+    test_34F10_3E680_integration();
+    test_34F10_strict_not_stub();
 
     /* D_80011614 (2 tests) */
     test_d11614_bootstrap_value();
