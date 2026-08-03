@@ -12,6 +12,7 @@
 #include "game_port.h"
 #include "pe_sdk.h"
 #include "pe_disc.h"
+#include "pe_guest_image.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,6 +20,9 @@
 extern void func_8001220C(void);
 extern int  func_8006E9A0(int);
 extern pe_addr_t D_80011614;
+extern void func_80070D10(void);
+extern unsigned int func_80070D6C(void);
+extern int  func_80070DD0(int, int);
 
 /* ── CLI ────────────────────────────────────────────────────────────── */
 static struct {
@@ -31,13 +35,14 @@ static struct {
     int max_main_iterations;
     const char *disc_image;
     int disc_load_test;
+    int rng_oracle_dump;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
     .screenshot = NULL, .trace_path = NULL,
     .hold_ms = 0, .scale = 2, .hold_until_close = 1, .debug_overlay = 0,
     .window_title = "Parasite Eve Native Port",
     .direct_clear_test = 0, .stop_after_event = NULL, .max_main_iterations = 0,
-    .disc_image = NULL, .disc_load_test = 0,
+    .disc_image = NULL, .disc_load_test = 0, .rng_oracle_dump = 0,
 };
 
 static void ParseArgs(int argc, char **argv) {
@@ -51,6 +56,7 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--debug-overlay"))        g_opts.debug_overlay = 1;
         else if (!strcmp(a, "--direct-clear-test"))    g_opts.direct_clear_test = 1;
         else if (!strcmp(a, "--disc-load-test"))       g_opts.disc_load_test = 1;
+        else if (!strcmp(a, "--rng-oracle-dump"))      g_opts.rng_oracle_dump = 1;
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--trace"))           g_opts.trace_path = argv[++i];
         else if (i+1<argc && !strcmp(a, "--hold-ms"))         g_opts.hold_ms = atoi(argv[++i]);
@@ -68,6 +74,10 @@ static void ParseArgs(int argc, char **argv) {
     }
     if (g_opts.disc_load_test && !g_opts.disc_image) {
         fprintf(stderr, "--disc-load-test requires --disc-image\n");
+        exit(1);
+    }
+    if (g_opts.rng_oracle_dump && !g_opts.disc_image) {
+        fprintf(stderr, "--rng-oracle-dump requires --disc-image\n");
         exit(1);
     }
 }
@@ -146,6 +156,47 @@ static int RunDiscLoadTest(void) {
     return 0;
 }
 
+/* ── RNG oracle dump ────────────────────────────────────────────────── */
+/* Phase 6E-B2 verification driver (requires --disc-image so the retail
+ * exe bytes are in guest RAM): seeds via func_80070D10, runs the 2000-call
+ * warm-up, and prints checkpoints + func_80070DD0 samples to stdout in
+ * exactly the format produced by pc_port/tools/rng_oracle.py.  The phase
+ * gate diffs the two outputs; they must be identical. */
+#define GA_DUMP_INDEX1  0x80070E04u
+#define GA_DUMP_INDEX2  0x80070E08u
+#define GA_DUMP_TABLE   0x80070E0Cu
+
+static int RunRngOracleDump(void) {
+    static const int k_checkpoints[] = { 1, 2, 16, 17, 64, 256, 2000 };
+    static const int k_ranges[][2] = {
+        { 0, 100 }, { 1, 4 }, { 0, 65536 }, { 5, 5 }, { 10, 0 }, { -3, 3 }
+    };
+    func_80070D10();
+    for (int call = 1; call <= 2000; call++) {
+        int pre1 = (int)PE_LoadU32(GA_DUMP_INDEX1);
+        int pre2 = (int)PE_LoadU32(GA_DUMP_INDEX2);
+        unsigned int v0 = func_80070D6C();
+        for (size_t k = 0; k < sizeof(k_checkpoints)/sizeof(k_checkpoints[0]); k++) {
+            if (call == k_checkpoints[k]) {
+                printf("checkpoint call=%5d v0=0x%08X i1=%4d i2=%4d "
+                       "addr1=0x%08X addr2=0x%08X\n",
+                       call, v0,
+                       (int)PE_LoadU32(GA_DUMP_INDEX1),
+                       (int)PE_LoadU32(GA_DUMP_INDEX2),
+                       GA_DUMP_TABLE + (pe_addr_t)pre1,
+                       GA_DUMP_TABLE + (pe_addr_t)pre2);
+            }
+        }
+    }
+    for (size_t k = 0; k < sizeof(k_ranges)/sizeof(k_ranges[0]); k++) {
+        int a0 = k_ranges[k][0], a1 = k_ranges[k][1];
+        int out = func_80070DD0(a0, a1);
+        printf("70DD0(%d,%d) = %u (0x%08X)\n", a0, a1,
+               (unsigned int)out, (unsigned int)out);
+    }
+    return 0;
+}
+
 /* ── Title overlay ──────────────────────────────────────────────────── */
 static void UpdateTitle(const char *phase, const char *func) {
     if (!g_opts.debug_overlay || !g_host_window_open) return;
@@ -185,9 +236,30 @@ int main(int argc, char **argv) {
         PE_Disc_SetActive(disc);
         fprintf(stderr, "[DISC] opened '%s' (%u user sectors)\n",
                 g_opts.disc_image, PE_Disc_UserSectorCount(disc));
+
+        /* Phase 6E-B2: load the retail boot executable into guest RAM —
+         * retail code reads its own text as data (the func_80070D6C RNG
+         * read cursor cycles through 14 code words below its table).
+         * A disc that cannot supply its boot exe is rejected here. */
+        if (PE_GuestImage_LoadExe(disc, err, sizeof(err)) != 0) {
+            fprintf(stderr, "[DISC] boot executable load failed: %s\n", err);
+            TraceClose();
+            PE_Disc_Close(disc);
+            PE_RamDestroy();
+            return 1;
+        }
+        fprintf(stderr, "[DISC] boot executable loaded into guest RAM\n");
     }
 
     TraceEvent("native_executable_start");
+
+    if (g_opts.rng_oracle_dump) {
+        int rc = RunRngOracleDump();
+        TraceClose();
+        PE_Disc_Close(disc);
+        PE_RamDestroy();
+        return rc;
+    }
 
     if (g_opts.disc_load_test) {
         int rc = RunDiscLoadTest();

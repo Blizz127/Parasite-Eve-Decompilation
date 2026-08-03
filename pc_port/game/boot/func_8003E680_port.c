@@ -11,7 +11,7 @@
 extern unsigned int D_8009D1C4, D_8009D280, D_8009D1A0, D_8009D250;
 extern int D_8009CDDC;
 extern void func_80070D10(void);
-extern void func_80070D6C(void);
+extern unsigned int func_80070D6C(void);
 extern void func_8003E974(void);
 extern void func_80036DC8(void);
 extern void func_8003E91C(void);

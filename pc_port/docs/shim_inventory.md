@@ -80,10 +80,12 @@ All stubs are explicitly classified. No anonymous empty stubs.
 ### func_8003E680 callees (2000 + 16)
 - ~~`func_80070D10`~~ — TRANSLATED (Phase 6E-B1): lagged-Fibonacci RNG table
   init, `game/boot/func_80070D10_port.c`
-- `func_80070D6C` (×2000 — RNG warm-up: lagged-Fibonacci advance over the
-  0x80070E04..0x80070E4C block seeded by func_80070D10; no hardware access —
-  instruction-level evidence, previously mislabeled "hardware poll loop")
-- `func_8003E974`
+- ~~`func_80070D6C`~~ (×2000) — TRANSLATED (Phase 6E-B2): lagged-Fibonacci
+  RNG advance, `game/boot/func_80070D6C_port.c`; read cursor cycles through
+  the 2 index words + 14 retail code words below the table (verbatim
+  `|= 0x40` wrap), so retail-exact output needs the exe image in guest RAM
+  (`pe_guest_image`); ranged wrapper `func_80070DD0` also translated
+- `func_8003E974`  ← current strict-mode frontier
 - `func_80036DC8`
 - `func_80073D24` (×2 — callback register: reset + register)
 - `func_800371A4(int)`

@@ -1370,9 +1370,13 @@ static void test_3E680_exactly_2000_polls(void) {
 
     func_8003E680();
 
-    /* func_80070D6C is called 0x7D0 = 2000 times in the polling loop */
-    int poll_count = CountOrderLog("func_80070D6C");
-    ASSERT(poll_count == 2000, "func_80070D6C not called exactly 2000 times");
+    /* 6E-B2: func_80070D6C is translated; the warm-up is 2000 real
+     * advances with zero stub records.  Exact state equality after 2000
+     * advances is verified by 3E680_warmup_real. */
+    ASSERT(CountOrderLog("func_80070D6C") == 0,
+           "func_80070D6C warm-up still routed through bootstrap policy");
+    ASSERT(PE_LoadU32(0x80070E04u) != 0x40 || PE_LoadU32(0x80070E08u) != 0x10,
+           "RNG indices never advanced during warm-up");
     PASS();
 }
 
@@ -1651,13 +1655,294 @@ static void test_3E680_70D10_translated(void) {
 
     func_8003E680();
 
-    /* The RNG init ran as real code: seeded state present, no stub record */
-    ASSERT(RngBlockMatchesRetail(), "RNG table not seeded by func_8003E680");
+    /* The RNG init ran as real code — proven by the ×2000 real warm-up
+     * that follows it having advanced the indices from their 6E-B1 seed
+     * values (exact post-warm-up state is 3E680_warmup_real's gate) */
+    ASSERT(PE_LoadU32(0x80070E04u) != 0x40 || PE_LoadU32(0x80070E08u) != 0x10,
+           "RNG never seeded/advanced inside func_8003E680");
     ASSERT(CountOrderLog("func_80070D10") == 0,
            "func_80070D10 still routed through bootstrap policy");
-    /* The warm-up loop still polls the (still-stubbed) RNG advance ×2000 */
-    ASSERT(CountOrderLog("func_80070D6C") == 2000,
-           "func_80070D6C warm-up count changed");
+    /* 6E-B2: the ×2000 warm-up is now REAL translated code — no stub
+     * records (the real-advance state is verified by 3E680_warmup_real) */
+    ASSERT(CountOrderLog("func_80070D6C") == 0,
+           "func_80070D6C still routed through bootstrap policy");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B2 — Provider frontier: func_80070D6C (RNG advance) + 70DD0
+ *
+ * Independent model of the retail MIPS semantics (asm/disc1/5F3E4.s:
+ * 2468-2515), written from the assembly — the same model validated against
+ * the retail exe by pc_port/tools/rng_oracle.py.  Tests run over a
+ * SYNTHETIC below-table pattern so they need no retail bytes; equality
+ * against the real retail byte stream is the --rng-oracle-dump gate.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_TEST_RNG_LO   0x80070DCCu   /* first below-table word the model
+                                          read cursor can reach            */
+#define RNG_LO_WORDS     16            /* 0x80070DCC..0x80070E08 inclusive */
+
+static unsigned int model_70D6C(void) {
+    int t1 = (int)PE_LoadU32(GA_TEST_RNG_INDEX1);
+    int t2 = (int)PE_LoadU32(GA_TEST_RNG_INDEX2);
+    pe_addr_t a1 = GA_TEST_RNG_TABLE + (pe_addr_t)t1;
+    pe_addr_t a2 = GA_TEST_RNG_TABLE + (pe_addr_t)t2;
+    unsigned int v = PE_LoadU32(a1) + PE_LoadU32(a2);
+    PE_StoreU32(a1, v);
+    t1 -= 4; t2 -= 4;
+    if (t1 < 0) t1 = 0x40;
+    if (t2 < 0) t2 = (int)((unsigned int)t2 | 0x40u);
+    PE_StoreU32(GA_TEST_RNG_INDEX1, (unsigned int)t1);
+    PE_StoreU32(GA_TEST_RNG_INDEX2, (unsigned int)t2);
+    return v;
+}
+
+static int model_70DD0(int a0, int a1) {
+    unsigned int r = model_70D6C() & 0xFFFFu;
+    int diff = (int)((unsigned int)a1 - (unsigned int)a0);
+    long long product = (long long)(int)r * (long long)diff;
+    int scaled = (int)(product >> 16);
+    return (int)((unsigned int)a0 + (unsigned int)scaled);
+}
+
+/* Distinct synthetic pattern below the RNG block: makes every read
+ * address uniquely identifiable in the output stream. */
+static void RngSeedWithPattern(void) {
+    for (int i = 0; i < RNG_LO_WORDS; i++)
+        PE_StoreU32(GA_TEST_RNG_LO + (unsigned int)i * 4,
+                    0xBEEF0000u + (unsigned int)i * 0x1111u);
+    func_80070D10();
+}
+
+static void SnapshotRngBlock(unsigned int out[19]) {
+    out[0] = PE_LoadU32(GA_TEST_RNG_INDEX1);
+    out[1] = PE_LoadU32(GA_TEST_RNG_INDEX2);
+    for (int i = 0; i < RNG_TABLE_WORDS; i++)
+        out[2 + i] = PE_LoadU32(GA_TEST_RNG_TABLE + (unsigned int)i * 4);
+}
+
+static int RngBlockEquals(const unsigned int a[19], const unsigned int b[19]) {
+    for (int i = 0; i < 19; i++)
+        if (a[i] != b[i]) return 0;
+    return 1;
+}
+
+static void test_70D6C_first_16_returns(void) {
+    TEST("70D6C_first_16_returns");
+    ResetTestState();
+    RngSeedWithPattern();
+
+    unsigned int port_out[16], model_out[16];
+    for (int i = 0; i < 16; i++) port_out[i] = func_80070D6C();
+
+    ResetTestState();
+    RngSeedWithPattern();
+    for (int i = 0; i < 16; i++) model_out[i] = model_70D6C();
+
+    for (int i = 0; i < 16; i++) {
+        char msg[64];
+        snprintf(msg, sizeof msg, "return %d mismatch", i + 1);
+        ASSERT(port_out[i] == model_out[i], msg);
+    }
+    PASS();
+}
+
+static void test_70D6C_checkpoints_and_state(void) {
+    TEST("70D6C_checkpoints_and_state");
+    static const int k_cp[] = { 1, 2, 16, 17, 64, 256, 2000 };
+    unsigned int port_v[7], model_v[7];
+    unsigned int port_i1[7], port_i2[7], model_i1[7], model_i2[7];
+    unsigned int port_blk[19], model_blk[19];
+    int n = 0;
+
+    ResetTestState();
+    RngSeedWithPattern();
+    for (int call = 1; call <= 2000; call++) {
+        unsigned int v = func_80070D6C();
+        if (call == k_cp[n] && n < 7) {
+            port_v[n] = v;
+            port_i1[n] = PE_LoadU32(GA_TEST_RNG_INDEX1);
+            port_i2[n] = PE_LoadU32(GA_TEST_RNG_INDEX2);
+            n++;
+        }
+    }
+    SnapshotRngBlock(port_blk);
+
+    n = 0;
+    ResetTestState();
+    RngSeedWithPattern();
+    for (int call = 1; call <= 2000; call++) {
+        unsigned int v = model_70D6C();
+        if (call == k_cp[n] && n < 7) {
+            model_v[n] = v;
+            model_i1[n] = PE_LoadU32(GA_TEST_RNG_INDEX1);
+            model_i2[n] = PE_LoadU32(GA_TEST_RNG_INDEX2);
+            n++;
+        }
+    }
+    SnapshotRngBlock(model_blk);
+
+    for (int i = 0; i < 7; i++) {
+        char msg[80];
+        snprintf(msg, sizeof msg, "checkpoint %d (call %d) mismatch",
+                 i, k_cp[i]);
+        ASSERT(port_v[i] == model_v[i], msg);
+        ASSERT(port_i1[i] == model_i1[i], "index1 checkpoint mismatch");
+        ASSERT(port_i2[i] == model_i2[i], "index2 checkpoint mismatch");
+    }
+    ASSERT(RngBlockEquals(port_blk, model_blk),
+           "full RNG block state differs after 2000 calls");
+    PASS();
+}
+
+static void test_70D6C_index_wrap_exact(void) {
+    TEST("70D6C_index_wrap_exact");
+    ResetTestState();
+    RngSeedWithPattern();
+
+    /* i1 wrap: index1 = 0 → after call must be 0x40 (ori $t1,$zero,0x40) */
+    PE_StoreU32(GA_TEST_RNG_INDEX1, 0);
+    func_80070D6C();
+    ASSERT(PE_LoadU32(GA_TEST_RNG_INDEX1) == 0x40, "index1 wrap != 0x40");
+
+    /* i2 OR-wrap: index2 = -64 → next decrement makes -68 = 0xFFFFFFBC,
+     * bit 6 clear → |= 0x40 yields -4 (0xFFFFFFFC), NOT +0x40 and NOT a
+     * ring reset.  This is the verbatim retail quirk. */
+    PE_StoreU32(GA_TEST_RNG_INDEX2, (unsigned int)-64);
+    func_80070D6C();
+    ASSERT(PE_LoadU32(GA_TEST_RNG_INDEX2) == (unsigned int)-4,
+           "index2 OR-wrap did not produce -4");
+
+    /* i2 ordinary negative: -4 → -8, bit 6 already set, OR is a no-op */
+    PE_StoreU32(GA_TEST_RNG_INDEX2, (unsigned int)-4);
+    func_80070D6C();
+    ASSERT(PE_LoadU32(GA_TEST_RNG_INDEX2) == (unsigned int)-8,
+           "index2 no-op OR path wrong");
+    PASS();
+}
+
+static void test_70D6C_below_table_read_exact(void) {
+    TEST("70D6C_below_table_read_exact");
+    ResetTestState();
+    RngSeedWithPattern();
+
+    /* Aim the read cursor at 0x80070E00 (a code word on retail, pattern
+     * here): i2 = -12 → addr2 = 0x80070E0C - 12 = 0x80070E00. */
+    unsigned int pattern = PE_LoadU32(0x80070E00u);
+    PE_StoreU32(GA_TEST_RNG_INDEX1, 0);
+    PE_StoreU32(GA_TEST_RNG_INDEX2, (unsigned int)-12);
+    unsigned int expect = PE_LoadU32(GA_TEST_RNG_TABLE) + pattern;
+
+    unsigned int v = func_80070D6C();
+    ASSERT(v == expect, "below-table read value not incorporated");
+    ASSERT(pattern == 0xBEEF0000u + 13u * 0x1111u, "pattern assumption broken");
+    PASS();
+}
+
+static void test_70D6C_footprint(void) {
+    TEST("70D6C_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0x5A5A5A5Au);
+
+    func_80070D10();
+    for (int i = 0; i < 40; i++)
+        func_80070D6C();
+
+    /* After canary + seed + 40 advances: only the 19-word RNG block may
+     * differ from the canary. */
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        if (a >= GA_TEST_RNG_INDEX1 && a <= 0x80070E4Cu)
+            continue;
+        if (PE_LoadU32(a) != 0x5A5A5A5Au) {
+            printf("FAIL: guest 0x%08X modified\n", a);
+            FAIL("func_80070D6C write footprint exceeds the RNG block");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_70D6C_reseed_repeats(void) {
+    TEST("70D6C_reseed_repeats");
+    unsigned int s1[64], s2[64];
+
+    ResetTestState();
+    RngSeedWithPattern();
+    for (int i = 0; i < 64; i++) s1[i] = func_80070D6C();
+
+    /* Dirty the whole block, re-seed, rerun: identical sequence */
+    for (pe_addr_t a = GA_TEST_RNG_INDEX1; a <= 0x80070E4Cu; a += 4)
+        PE_StoreU32(a, 0x0BADF00Du);
+    RngSeedWithPattern();
+    for (int i = 0; i < 64; i++) s2[i] = func_80070D6C();
+
+    for (int i = 0; i < 64; i++)
+        ASSERT(s1[i] == s2[i], "re-seeded sequence diverged");
+    PASS();
+}
+
+static void test_70D6C_not_bootstrap_stub(void) {
+    TEST("70D6C_not_bootstrap_stub");
+    ResetTestState();
+    RngSeedWithPattern();
+
+    func_80070D6C();
+
+    ASSERT(CountOrderLog("func_80070D6C") == 0, "func_80070D6C recorded as stub");
+    ASSERT(Bootstrap_InvocationCount() == 0, "bootstrap provider invoked");
+    PASS();
+}
+
+static void test_70DD0_ranges(void) {
+    TEST("70DD0_ranges");
+    static const int k_ranges[][2] = {
+        { 0, 100 }, { 1, 4 }, { 0, 65536 }, { 5, 5 }, { 10, 0 },
+        { -3, 3 }, { 0, 0x7FFFFFFF }, { -100, -1 }
+    };
+    int port_out[8], model_out[8];
+
+    ResetTestState();
+    RngSeedWithPattern();
+    for (int i = 0; i < 8; i++)
+        port_out[i] = func_80070DD0(k_ranges[i][0], k_ranges[i][1]);
+
+    ResetTestState();
+    RngSeedWithPattern();
+    for (int i = 0; i < 8; i++)
+        model_out[i] = model_70DD0(k_ranges[i][0], k_ranges[i][1]);
+
+    for (int i = 0; i < 8; i++) {
+        char msg[80];
+        snprintf(msg, sizeof msg, "70DD0(%d,%d) mismatch",
+                 k_ranges[i][0], k_ranges[i][1]);
+        ASSERT(port_out[i] == model_out[i], msg);
+    }
+    /* Degenerate range a == b must return a exactly (product is 0) */
+    ASSERT(port_out[3] == 5, "70DD0(5,5) != 5");
+    PASS();
+}
+
+static void test_3E680_warmup_real(void) {
+    TEST("3E680_warmup_real");
+    unsigned int port_blk[19], model_blk[19];
+
+    ResetTestState();
+    g_bootstrap_disc = 1;
+    func_8003E680();
+    SnapshotRngBlock(port_blk);
+
+    /* Model: seed (zero below-table bytes in tests), 2000 advances */
+    ResetTestState();
+    func_80070D10();
+    for (int i = 0; i < 2000; i++)
+        model_70D6C();
+    SnapshotRngBlock(model_blk);
+
+    ASSERT(RngBlockEquals(port_blk, model_blk),
+           "func_8003E680 warm-up state != 2000 real advances");
     PASS();
 }
 
@@ -2606,6 +2891,17 @@ int main(void)
     test_70D10_write_footprint();
     test_70D10_not_bootstrap_stub();
     test_3E680_70D10_translated();
+
+    /* Provider frontier: func_80070D6C / func_80070DD0 (8 tests) */
+    test_70D6C_first_16_returns();
+    test_70D6C_checkpoints_and_state();
+    test_70D6C_index_wrap_exact();
+    test_70D6C_below_table_read_exact();
+    test_70D6C_footprint();
+    test_70D6C_reseed_repeats();
+    test_70D6C_not_bootstrap_stub();
+    test_70DD0_ranges();
+    test_3E680_warmup_real();
 
     /* func_8006E834 (2 tests) */
     test_6E834_clears_status_bytes();

@@ -1,23 +1,25 @@
-# Parasite Eve Native PC Port — Phase 6E-B1
+# Parasite Eve Native PC Port — Phase 6E-B2
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** func_80070D10 provider rung — the game's
-lagged-Fibonacci RNG table init is now translated retail logic running over
-bounds-checked guest RAM, and real-disc strict mode has advanced one rung to
-`func_80070D6C` (the RNG advance).
+**Current milestone:** func_80070D6C RNG advance rung — the game's
+lagged-Fibonacci RNG (init, advance, and the handwritten ranged wrapper
+func_80070DD0) is translated retail logic, byte-exact against an
+independent oracle running on the retail executable.  The port now loads
+the retail boot executable (SYSTEM.CNF `BOOT=` → PS-X EXE) from the
+user-supplied disc into guest RAM, because the RNG read cursor provably
+cycles through 14 retail code words below its table.
 
-**Status:** FUNC_80070D10 PROVIDER RUNG VERIFIED — 142 native tests pass;
-ASan/UBSan clean; 3 deterministic headless runs byte-identical
+**Status:** FUNC_80070D6C RNG ADVANCE RUNG VERIFIED — 151 native tests
+pass; ASan/UBSan clean; oracle dump byte-identical to
+`tools/rng_oracle.py` on the retail exe; 3 deterministic headless runs
 (framebuffer `fb28dc21…`); 3 real-disc load traces byte-identical;
-strict mode with `--disc-image` stops at `func_80070D6C` (from
+strict mode with `--disc-image` stops at `func_8003E974` (from
 `func_8003E680`); windowed SHA matches headless;
 matching build remains exact at SHA `452fb033`.
 
-**Previous milestone (Phase 6E-A batch 3):** Real Disc 1 byte path — the
-user-supplied Disc 1 image (BIN/CUE MODE2/2352) is opened read-only, the
-ISO9660 tree is walked for real, and PE.IMG bytes land in guest RAM at the
-retail `D_80011614` destination through bounds-checked `pe_addr_t` access.
+**Previous milestones:** 6E-B1 (func_80070D10 RNG-table init rung);
+6E-A batch 3 (real Disc 1 byte path into guest RAM at `D_80011614`).
 
 ## Architecture
 
@@ -52,6 +54,27 @@ retail `D_80011614` destination through bounds-checked `pe_addr_t` access.
   bounded copy into guest RAM), `func_800811E4` (poll: 0 done / -1
   timeout).  `func_800698D4` runs the verbatim retail mount sequence;
   `--bootstrap-disc` remains as an explicit test fixture only.
+- **Guest exe image:** `pe_guest_image.[ch]` — with `--disc-image`, the
+  retail boot executable named by SYSTEM.CNF `BOOT=` is validated
+  (PS-X EXE header, geometry, guest-RAM bounds) and loaded into guest
+  RAM at its `taddr`.  Retail code reads its own text as data — the
+  func_80070D6C RNG read cursor cycles through 14 code words below its
+  table (`tools/rng_oracle.py`, proven against the retail exe) — so
+  faithful RNG output needs those bytes.  Without an image the words
+  read as zero: a documented fixture-mode divergence that nothing on
+  the boot-to-black path consumes.
+
+## Translated RNG (Phase 6E-B1/B2)
+
+| Function | Size | Purpose |
+|----------|------|---------|
+| `func_80070D10` | 0x5C | Lagged-Fibonacci table init (17 words, 2 index words) |
+| `func_80070D6C` | 0x64 | RNG advance; verbatim `i2 \|= 0x40` wrap (cycles, never clamps) |
+| `func_80070DD0` | 0x34 | Handwritten ranged random: `a + (rand16·(b−a) >> 16)` |
+
+Correctness gate: `--rng-oracle-dump` output is byte-identical to
+`pc_port/tools/rng_oracle.py` running independently on the retail exe
+(SHA-1 `452fb033…`).
 
 ## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
@@ -79,7 +102,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (137 tests, all pass)
+- `pe-native-tests` — test suite (151 tests, all pass)
 
 ## Running
 
@@ -107,8 +130,12 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1, names func_80070D6C (from func_8003E680) — the first
-# unresolved provider past the translated func_80070D10 RNG init
+# Expected: exit 1, names func_8003E974 (from func_8003E680) — the first
+# unresolved provider past the translated RNG (70D10/70D6C/70DD0)
+
+# RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
+./parasite-eve-port --headless \
+  --disc-image "/path/Parasite Eve (USA) (Disc 1).bin" --rng-oracle-dump
 ```
 
 `--bootstrap-disc` and `--disc-image` are mutually exclusive.  Without
@@ -119,10 +146,12 @@ host adaptation); the boot is not faked.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 142 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 151 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
-                    # + 6E-B1: func_80070D10 RNG-init rung)
+                    # + 6E-B1: func_80070D10 RNG-init rung
+                    # + 6E-B2: func_80070D6C/70DD0 RNG model equality,
+                    #   wrap quirk, footprints, warm-up integration)
 ```
 
 ## Deterministic framebuffer
@@ -137,9 +166,9 @@ cd pc_port/build
 
 ## Next steps
 
-1. **Phase 6E-B continued:** provider frontier from `func_80070D6C`
-   (RNG advance, ×2000 warm-up in `func_8003E680`) toward the
-   image-load consumers
+1. **Phase 6E-B continued:** provider frontier from `func_8003E974`
+   (state zeroing + `func_8003EAC8` allocator-style registration calls)
+   toward the image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display
 4. Audio, input, save/load (later phases)
