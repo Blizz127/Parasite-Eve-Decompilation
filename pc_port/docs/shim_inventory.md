@@ -85,7 +85,14 @@ All stubs are explicitly classified. No anonymous empty stubs.
   the 2 index words + 14 retail code words below the table (verbatim
   `|= 0x40` wrap), so retail-exact output needs the exe image in guest RAM
   (`pe_guest_image`); ranged wrapper `func_80070DD0` also translated
-- `func_8003E974`  ← current strict-mode frontier
+- ~~`func_8003E974`~~ — TRANSLATED (Phase 6E-B3): state zeroing
+  (5 $gp-relative globals + 32-word array D_800A76F0) + ordered series of 20
+  `func_8003EAC8(mask,value)` registration calls, `game/boot/func_8003E974_port.c`
+- `func_8003EAC8`  ← current strict-mode frontier (from func_8003E974):
+  GTE LZCS/LZCR highest-set-bit-index leaf (0x80000000 → slot 31 special
+  case), writes D_800A76F0[idx]=a1, return unused; 63 call sites exe-wide;
+  `game/boot/func_8003EAC8_port.c` stays an unresolved provider with bounded
+  test-only call recording (PE_3EAC8_RecordReset/Count/At)
 - `func_80036DC8`
 - `func_80073D24` (×2 — callback register: reset + register)
 - `func_800371A4(int)`

@@ -48,6 +48,7 @@ static void ResetTestState(void) {
     PE_Sdk_ResetState();            /* host-owned GTE/IRQ/event state    */
     Bootstrap_ClearSequences();     /* drop scripted provider sequences   */
     PE_Disc_SetActive(NULL);        /* drop any installed disc fixture    */
+    PE_3EAC8_RecordReset();         /* drop recorded provider arguments   */
     D_80011614 = D_80011614_BOOTSTRAP;
 }
 
@@ -1357,7 +1358,9 @@ static void test_3E680_five_globals_cleared(void) {
 
     ASSERT(D_8009D1C4 == 0, "D_8009D1C4 not cleared");
     ASSERT(D_8009D280 == 0, "D_8009D280 not cleared");
-    ASSERT(D_8009D1A0 == 0, "D_8009D1A0 not cleared");
+    /* 6E-B3: 3E680 clears D_8009D1A0, then translated func_8003E974 sets
+     * bit 0x4000 — the retail end state */
+    ASSERT(D_8009D1A0 == 0x4000, "D_8009D1A0 != 0x4000 (clear + 3E974 |=)");
     ASSERT(D_8009D250 == 0, "D_8009D250 not cleared");
     ASSERT(D_8009CDDC == 0, "D_8009CDDC not cleared");
     PASS();
@@ -1432,24 +1435,31 @@ static void test_3E680_subsystem_order(void) {
 
     func_8003E680();
 
-    /* After poll loop and callback registration, the subsystem inits fire. */
+    /* After the poll loop, translated func_8003E974 issues its 20
+     * func_8003EAC8 registrations (still an unresolved provider), then
+     * the remaining subsystem inits fire in retail order. */
     const char *expected[] = {
-        "func_8003E974",  "func_80036DC8", "func_80073D24", "func_80073D24",
+        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
+        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
+        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
+        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
+        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
+        "func_80036DC8", "func_80073D24", "func_80073D24",
         "func_800371A4",  "func_80029388", "func_8005BCA8", "func_80068D28",
         "func_800124F8",  "func_8001A890", "func_80034F10", "func_8006536C",
         "func_80038D1C"
     };
     int expected_count = sizeof(expected) / sizeof(expected[0]);
 
-    /* Find the position of func_8003E974 in the order log (first after poll) */
+    /* Find the position of the first func_8003EAC8 in the order log */
     int start_idx = -1;
     for (int i = 0; i < g_stub_order_count; i++) {
-        if (strcmp(g_stub_order_log[i], "func_8003E974") == 0) {
+        if (strcmp(g_stub_order_log[i], "func_8003EAC8") == 0) {
             start_idx = i;
             break;
         }
     }
-    ASSERT(start_idx >= 0, "func_8003E974 not found in order log");
+    ASSERT(start_idx >= 0, "func_8003EAC8 not found in order log");
 
     for (int j = 0; j < expected_count && (start_idx + j) < g_stub_order_count; j++) {
         if (strcmp(g_stub_order_log[start_idx + j], expected[j]) != 0) {
@@ -1943,6 +1953,215 @@ static void test_3E680_warmup_real(void) {
 
     ASSERT(RngBlockEquals(port_blk, model_blk),
            "func_8003E680 warm-up state != 2000 real advances");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B3 — Provider frontier: func_8003E974 (bit-table init +
+ * registration sequence); func_8003EAC8 stays an unresolved provider.
+ *
+ * Retail truth (asm/disc1/2E7D0.s:712-799): five $gp-relative word clears
+ * (retail $gp = 0x8009CD70 → 0x8009D1E4/1F4/2D4/238/26C), a 32-word clear
+ * of D_800A76F0 (0x800A76F0..0x800A776C), 20 func_8003EAC8(mask,value)
+ * calls in ROM order, then D_8009D1A0 |= 0x4000 on the host-represented
+ * storage shared with func_8003E680.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_TEST_A76F0  0x800A76F0u
+
+static const struct { int a0, a1; } k_3eac8_expect[20] = {
+    { 0x1, 0x4000 }, { 0x80, 0x1000 }, { 0x100, 0x2000 }, { 0x8, 0x10 },
+    { 0x20, 0x40 }, { 0x40, 0x80 }, { 0x10, 0x20 }, { 0x2, 0x1 },
+    { 0x4, 0x8 }, { 0x200, 0x2000 }, { 0x400, 0x4000 }, { 0x2000, 0x8000 },
+    { 0x1000000, 0x100 }, { 0x2000000, 0x200 }, { 0x4000000, 0x400 },
+    { 0x8000000, 0x800 }, { 0x10000000, 0x1000 }, { 0x20000000, 0x2000 },
+    { 0x40000000, 0x4000 }, { (int)0x80000000, 0x8000 }
+};
+
+static void test_3E974_gp_scalar_clears(void) {
+    TEST("3E974_gp_scalar_clears");
+    static const pe_addr_t k_addrs[5] = {
+        0x8009D1E4u, 0x8009D1F4u, 0x8009D2D4u, 0x8009D238u, 0x8009D26Cu
+    };
+    ResetTestState();
+
+    for (int i = 0; i < 5; i++)
+        PE_StoreU32(k_addrs[i], 0xFFFFFFFFu);
+    func_8003E974();
+    for (int i = 0; i < 5; i++) {
+        char msg[64];
+        snprintf(msg, sizeof msg, "$gp word %d (0x%08X) not cleared",
+                 i, k_addrs[i]);
+        ASSERT(PE_LoadU32(k_addrs[i]) == 0, msg);
+    }
+    PASS();
+}
+
+static void test_3E974_array_clear_exact(void) {
+    TEST("3E974_array_clear_exact");
+    ResetTestState();
+
+    /* Canary the array plus one-word guards on both sides */
+    for (pe_addr_t a = GA_TEST_A76F0 - 4; a <= GA_TEST_A76F0 + 0x80u; a += 4)
+        PE_StoreU32(a, 0xCACA0000u | ((a - GA_TEST_A76F0) & 0xFF));
+
+    func_8003E974();
+
+    /* Guard words must be untouched */
+    ASSERT(PE_LoadU32(GA_TEST_A76F0 - 4) == (0xCACA0000u | 0xFCu),
+           "guard word before array clobbered");
+    ASSERT(PE_LoadU32(GA_TEST_A76F0 + 0x80u) == (0xCACA0000u | 0x80u),
+           "guard word after array clobbered");
+    /* Exactly 32 words cleared: first 0x800A76F0, last 0x800A776C */
+    for (int i = 0; i < 0x20; i++) {
+        char msg[64];
+        snprintf(msg, sizeof msg, "array word %d not cleared", i);
+        ASSERT(PE_LoadU32(GA_TEST_A76F0 + (unsigned int)i * 4u) == 0, msg);
+    }
+    PASS();
+}
+
+static void test_3E974_call_sequence_exact(void) {
+    TEST("3E974_call_sequence_exact");
+    ResetTestState();
+
+    func_8003E974();
+
+    ASSERT(PE_3EAC8_RecordCount() == 20,
+           "func_8003EAC8 not invoked exactly 20 times");
+    for (int i = 0; i < 20; i++) {
+        int a0 = -1, a1 = -1;
+        char msg[80];
+        ASSERT(PE_3EAC8_RecordAt(i, &a0, &a1), "recorded call missing");
+        snprintf(msg, sizeof msg,
+                 "call %d args: got (0x%X,0x%X) want (0x%X,0x%X)",
+                 i, a0, a1, k_3eac8_expect[i].a0, k_3eac8_expect[i].a1);
+        ASSERT(a0 == k_3eac8_expect[i].a0 && a1 == k_3eac8_expect[i].a1, msg);
+    }
+    PASS();
+}
+
+static void test_3E974_d1a0_or_exact(void) {
+    TEST("3E974_d1a0_or_exact");
+    ResetTestState();
+
+    /* RMW on the host-represented storage shared with func_8003E680 */
+    D_8009D1A0 = 0x1234;
+    func_8003E974();
+    ASSERT(D_8009D1A0 == 0x5234, "D_8009D1A0 |= 0x4000 wrong");
+
+    /* Already-set bit: OR is a fixed point (idempotent) */
+    func_8003E974();
+    ASSERT(D_8009D1A0 == 0x5234, "second call changed D_8009D1A0");
+
+    D_8009D1A0 = 0;
+    PASS();
+}
+
+static void test_3E974_footprint(void) {
+    TEST("3E974_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0x3C3C3C3Cu);
+
+    func_8003E974();
+
+    /* Only the 5 $gp-resolved words and the 32-word array may differ
+     * (all become 0).  Nothing else in the 2 MiB may be touched. */
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        int in_array = (a >= GA_TEST_A76F0 && a <= GA_TEST_A76F0 + 0x7Cu);
+        int is_scalar = (a == 0x8009D1E4u || a == 0x8009D1F4u ||
+                         a == 0x8009D2D4u || a == 0x8009D238u ||
+                         a == 0x8009D26Cu);
+        if (in_array || is_scalar) {
+            if (PE_LoadU32(a) != 0) {
+                printf("FAIL: guest 0x%08X = 0x%08X, want 0\n",
+                       a, PE_LoadU32(a));
+                FAIL("cleared word has wrong value");
+                return;
+            }
+        } else if (PE_LoadU32(a) != 0x3C3C3C3Cu) {
+            printf("FAIL: guest 0x%08X modified\n", a);
+            FAIL("func_8003E974 write footprint exceeds its 37 words");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_3E974_repeated_idempotent(void) {
+    TEST("3E974_repeated_idempotent");
+    ResetTestState();
+
+    func_8003E974();
+    unsigned int snap[37];
+    snap[0] = PE_LoadU32(0x8009D1E4u);
+    snap[1] = PE_LoadU32(0x8009D1F4u);
+    snap[2] = PE_LoadU32(0x8009D2D4u);
+    snap[3] = PE_LoadU32(0x8009D238u);
+    snap[4] = PE_LoadU32(0x8009D26Cu);
+    for (int i = 0; i < 0x20; i++)
+        snap[5 + i] = PE_LoadU32(GA_TEST_A76F0 + (unsigned int)i * 4u);
+    unsigned int d1a0 = D_8009D1A0;
+
+    /* Dirty everything the function owns, then rerun */
+    {
+        static const pe_addr_t k_addrs[5] = {
+            0x8009D1E4u, 0x8009D1F4u, 0x8009D2D4u, 0x8009D238u, 0x8009D26Cu
+        };
+        for (int i = 0; i < 5; i++)
+            PE_StoreU32(k_addrs[i], 0xDEAD0000u + (unsigned int)i);
+        for (int i = 0; i < 0x20; i++)
+            PE_StoreU32(GA_TEST_A76F0 + (unsigned int)i * 4u,
+                        0xDEAD1000u + (unsigned int)i);
+    }
+    func_8003E974();
+
+    ASSERT(PE_3EAC8_RecordCount() == 40, "second call did not replay 20 registrations");
+    ASSERT(D_8009D1A0 == d1a0, "D_8009D1A0 changed on repeat");
+    for (int i = 0; i < 5; i++) {
+        static const pe_addr_t k_addrs[5] = {
+            0x8009D1E4u, 0x8009D1F4u, 0x8009D2D4u, 0x8009D238u, 0x8009D26Cu
+        };
+        ASSERT(PE_LoadU32(k_addrs[i]) == snap[i], "scalar clear not idempotent");
+    }
+    for (int i = 0; i < 0x20; i++)
+        ASSERT(PE_LoadU32(GA_TEST_A76F0 + (unsigned int)i * 4u) == snap[5 + i],
+               "array clear not idempotent");
+    PASS();
+}
+
+static void test_3E974_not_bootstrap_stub(void) {
+    TEST("3E974_not_bootstrap_stub");
+    ResetTestState();
+
+    func_8003E974();
+
+    ASSERT(CountOrderLog("func_8003E974") == 0,
+           "func_8003E974 recorded as stub");
+    /* Its unresolved dependency goes through the centralized boundary */
+    ASSERT(CountOrderLog("func_8003EAC8") == 20,
+           "func_8003EAC8 not recorded through provider boundary");
+    PASS();
+}
+
+static void test_3E680_3E974_integration(void) {
+    TEST("3E680_3E974_integration");
+    ResetTestState();
+    g_bootstrap_disc = 1;
+
+    func_8003E680();
+
+    ASSERT(CountOrderLog("func_8003E974") == 0,
+           "func_8003E974 still routed through bootstrap policy");
+    ASSERT(PE_3EAC8_RecordCount() == 20,
+           "registrations missing after func_8003E680");
+    /* func_8003E680 zeroed D_8009D1A0 first, then 3E974 set the bit */
+    ASSERT(D_8009D1A0 == 0x4000, "D_8009D1A0 != 0x4000 after func_8003E680");
+    for (int i = 0; i < 0x20; i++)
+        ASSERT(PE_LoadU32(GA_TEST_A76F0 + (unsigned int)i * 4u) == 0,
+               "D_800A76F0 array not cleared through func_8003E680");
     PASS();
 }
 
@@ -2902,6 +3121,16 @@ int main(void)
     test_70D6C_not_bootstrap_stub();
     test_70DD0_ranges();
     test_3E680_warmup_real();
+
+    /* Provider frontier: func_8003E974 (8 tests) */
+    test_3E974_gp_scalar_clears();
+    test_3E974_array_clear_exact();
+    test_3E974_call_sequence_exact();
+    test_3E974_d1a0_or_exact();
+    test_3E974_footprint();
+    test_3E974_repeated_idempotent();
+    test_3E974_not_bootstrap_stub();
+    test_3E680_3E974_integration();
 
     /* func_8006E834 (2 tests) */
     test_6E834_clears_status_bytes();
