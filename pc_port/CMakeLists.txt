@@ -16,6 +16,13 @@ set(PLATFORM_SRCS
     platform/host_framebuffer.c
     platform/host_window.c
     platform/pe_guest_ram.c
+    platform/pe_gte.c
+    platform/pe_libetc.c
+    platform/pe_libgpu.c
+    platform/pe_libsnd.c
+    platform/pe_libcard.c
+    platform/pe_libcd.c
+    platform/pe_save.c
 )
 
 set(BOOTSTRAP_SRCS
@@ -31,6 +38,8 @@ set(BOOTSTRAP_SRCS
 set(GAME_SRCS
     game/boot/func_8003E610_port.c
     game/boot/func_8003E680_port.c
+    game/boot/func_8003E754_port.c
+    game/boot/func_8003E944_port.c
     game/boot/func_8006A5BC_port.c
     game/boot/func_8006A64C_port.c
     game/boot/func_8006A674_port.c
@@ -83,6 +92,13 @@ if(BUILD_TESTS)
         platform/host_framebuffer.c
         platform/pe_guest_ram.c
         platform/pe_callback.c
+        platform/pe_gte.c
+        platform/pe_libetc.c
+        platform/pe_libgpu.c
+        platform/pe_libsnd.c
+        platform/pe_libcard.c
+        platform/pe_libcd.c
+        platform/pe_save.c
         bootstrap/stub_registry.c
         bootstrap/pe_bootstrap.c
         src/pe_globals.c

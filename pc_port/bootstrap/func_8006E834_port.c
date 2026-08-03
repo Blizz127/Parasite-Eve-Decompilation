@@ -16,13 +16,18 @@ extern unsigned short D_80093164[4];
 extern void func_80086FF8(void);
 extern int  func_8006E6D4(int a0, int a1, pe_addr_t a2, int a3);
 extern int  func_800811E4(void *p);
-extern void func_80072714(void);
 extern void func_800726C4(void);
-extern void func_80072724(void);
 extern void func_80073A44(int a);
 extern void func_80074D28(int a);
-extern void func_800749D8(void *env, int x, int y, int w, int h);
 extern void func_800755F0(void *env);
+/* func_80072714/func_80072724 (pe_libetc.c) and func_800749D8
+ * (pe_libgpu.c) are real implementations (Phase 6E-A) via pe_sdk.h. */
+
+/* Retail builds the DISPENV on the guest stack (sp+0x18).  The host does
+ * not track a guest stack pointer, so the env lives at a fixed scratch
+ * address inside guest RAM; it is local to this call and dead after
+ * PutDispEnv.  All accesses stay bounds-checked pe_addr_t. */
+#define PE_6E834_ENV_ADDR 0x801FFF00u
 
 /* ── Bootstrap stubs ───────────────────────────────────────────────── */
 void func_80086FF8(void) {
@@ -39,19 +44,11 @@ int func_800811E4(void *p) {
     (void)p;
     return Bootstrap_ReturnInt("func_800811E4", "func_8006E834", 0);
 }
-void func_80072714(void) { Bootstrap_ReturnVoid("func_80072714", "func_8006E834"); }
 void func_800726C4(void) { Bootstrap_ReturnVoid("func_800726C4", "func_8006E834"); }
-void func_80072724(void) { Bootstrap_ReturnVoid("func_80072724", "func_8006E834"); }
-void func_800749D8(void *env, int x, int y, int w, int h) {
-    Bootstrap_ReturnVoid("func_800749D8(SetDefDispEnv)", "func_8006E834");
-    (void)env; (void)x; (void)y; (void)w; (void)h;
-    memset(env, 0, 0x18);
-}
 
 /* ── Adapted function ──────────────────────────────────────────────── */
 int func_8006E834(void)
 {
-    char env[0x18];
     char local30[8];
     unsigned short *tbl;
     int r;
@@ -85,8 +82,8 @@ retry:
     func_80072724();
     func_80073A44(0);
     func_80074D28(0);
-    func_800749D8(env, 0, 0, 0x140, 0xF0);
-    env[0x11] = 1;
-    func_800755F0(env);
+    func_800749D8(PE_6E834_ENV_ADDR, 0, 0, 0x140, 0xF0);
+    PE_StoreU8(PE_6E834_ENV_ADDR + 0x11u, 1);   /* isrgb24 = 1 */
+    func_800755F0(PE_Translate(PE_6E834_ENV_ADDR, 0x14));
     return 0;
 }

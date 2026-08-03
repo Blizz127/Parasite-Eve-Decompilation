@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/blizz/dev/parasite-eve-port-black/pc_port/build-san/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

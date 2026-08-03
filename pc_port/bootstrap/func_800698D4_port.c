@@ -42,14 +42,8 @@ int func_800698D4(void)
 }
 
 /* ── Bootstrap stubs ───────────────────────────────────────────────── */
+/* func_8007F72C / func_8007F778 are real (pe_libcd.c, Phase 6E-A). */
 
-int func_8007F72C(void) {
-    return Bootstrap_ReturnInt("func_8007F72C", "func_8006A5BC",
-                               g_bootstrap_disc ? 1 : 0);
-}
-int func_8007F778(void) {
-    return Bootstrap_ReturnInt("func_8007F778", "func_800698D4", 0);
-}
 int func_80082314(void) {
     return Bootstrap_ReturnInt("func_80082314", "func_800698D4",
                                g_bootstrap_disc ? 4 : 0);

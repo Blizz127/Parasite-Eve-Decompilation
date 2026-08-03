@@ -14,23 +14,24 @@ extern unsigned int D_8009D1A0, D_8009D250;
 extern pe_addr_t D_800B0E24,D_800B0E28,D_800B0E2C,D_800B0E30,D_800B0E34,D_800B0E38,D_800B0E3C,D_800B0E40,D_800B0E44,D_800B0E48,D_800B0E4C,D_800B0E50,D_800B0E54,D_800B0E58,D_800B0E5C,D_800B0E60,D_800B0E64,D_800B0E68,D_800B0E6C;
 
 /* ── func_8003E610 callees ─────────────────────────────────────────── */
-static inline void func_80073C94(void)    { Bootstrap_ReturnVoid("func_80073C94", "func_8003E610"); }
-static inline void func_8003E754(int w,int h) { Bootstrap_ReturnVoid("func_8003E754", "func_8003E610"); (void)w;(void)h; }
-static inline void func_8007D054(void)    { Bootstrap_ReturnVoid("func_8007D054", "func_8003E610"); }
-static inline void func_80077F7C(void)    { Bootstrap_ReturnVoid("func_80077F7C", "func_8003E610"); }
-static inline void func_80079004(int a,int b) { Bootstrap_ReturnVoid("func_80079004", "func_8003E610"); (void)a;(void)b; }
-static inline void func_80079024(int a)   { Bootstrap_ReturnVoid("func_80079024", "func_8003E610"); (void)a; }
-static inline void func_800409B4(void)    { Bootstrap_ReturnVoid("func_800409B4", "func_8003E610"); }
-static inline void func_8003E944(void)    { Bootstrap_ReturnVoid("func_8003E944", "func_8003E610"); }
-static inline void func_8007EC14(void)    { Bootstrap_ReturnVoid("func_8007EC14", "func_8003E610"); }
-static inline void func_80080CC8(int a)   { Bootstrap_ReturnVoid("func_80080CC8", "func_8003E610"); (void)a; }
+/* All ten callees are now REAL implementations (Phase 6E-A batch 1):
+ * func_80073C94/func_80072714/func_80072724  — pe_libetc.c
+ * func_80074924/749D8/74A44/74BB8            — pe_libgpu.c
+ * func_8007D054                              — pe_libsnd.c
+ * func_80077F7C/func_80079004/func_80079024  — pe_gte.c
+ * func_800409B4                              — pe_libcard.c
+ * func_800844E4/func_80082534                — pe_save.c
+ * func_8007EC14/func_8007ED58/func_8007F72C/func_8007F778/
+ * func_8007FBF0/func_80080CC8/func_8007F7A8  — pe_libcd.c
+ * func_8003E754/func_8003E944                — game/boot/*.c          */
+#include "pe_sdk.h"
 
 /* ── func_8006A5BC callees ─────────────────────────────────────────── */
+/* func_8007ED58/func_8007F7A8 are real (pe_libcd.c).  The streaming
+ * providers remain bootstrap stubs until Phase 6E-A batch 2. */
 static inline void func_80085644(void)    { Bootstrap_ReturnVoid("func_80085644", "func_8006A5BC"); }
 static inline void func_80087024(void)    { Bootstrap_ReturnVoid("func_80087024", "func_8006A5BC"); }
 static inline void func_8008682C(int a)   { Bootstrap_ReturnVoid("func_8008682C", "func_8006A5BC"); (void)a; }
-static inline int  func_8007ED58(void)    { return Bootstrap_ReturnInt("func_8007ED58", "func_8006A5BC", 1); }
-static inline int  func_8007F7A8(void)    { return Bootstrap_ReturnInt("func_8007F7A8", "func_8006A5BC", 0); }
 
 /* ── func_8003E680 callees ─────────────────────────────────────────── */
 static inline void func_80070D10(void)    { Bootstrap_ReturnVoid("func_80070D10", "func_8003E680"); }

@@ -44,6 +44,7 @@ static void ResetTestState(void) {
     g_bootstrap_disc = 0;
     g_strict_stubs = 0;
     PE_RamReset();                  /* zero-fill guest RAM between tests */
+    PE_Sdk_ResetState();            /* host-owned GTE/IRQ/event state    */
     Bootstrap_ClearSequences();     /* drop scripted provider sequences   */
     D_80011614 = D_80011614_BOOTSTRAP;
 }
@@ -837,12 +838,12 @@ static void test_6A5BC_wait_loop1(void) {
 
     func_8006A5BC();
 
-    /* func_8007ED58 is the condition for wait loop 1.
-     * The bootstrap stub returns 1 immediately, so the loop body
-     * (func_80073A44/VSync) should NOT execute. */
-    ASSERT(VSyncCount() == 0, "wait loop 1 should not call VSync with bootstrap stub");
-    /* func_8007ED58 must be called at least once */
-    ASSERT(CountOrderLog("func_8007ED58") >= 1, "func_8007ED58 never called");
+    /* Phase 6E-A: func_8007ED58 is now real (pe_libcd.c) and returns 1
+     * retail-truth, so wait loop 1's body is provably dead: no VSyncs. */
+    ASSERT(VSyncCount() == 0, "wait loop 1 should not call VSync (7ED58 returns 1)");
+    /* Prove the real 7ED58 ran: it sets D_8009B554=1 and the drive lane */
+    ASSERT(PE_LoadU32(0x8009B554u) == 1, "D_8009B554 should be 1 after func_8007ED58");
+    ASSERT(PE_LoadU32(0x8009B574u) == 1, "drive lane should be idle (1) after reset");
     PASS();
 }
 
@@ -854,44 +855,46 @@ static void test_6A5BC_wait_loop2(void) {
 
     func_8006A5BC();
 
-    /* func_8007F72C is the condition for wait loop 2.
-     * Bootstrap stub returns 1, so no VSync calls from loop 2 either. */
-    ASSERT(CountOrderLog("func_8007F72C") >= 1, "func_8007F72C never called");
+    /* Phase 6E-A: func_8007F72C (CdReady) is real.  After the reset the
+     * lane is idle (1) and the queue (D_800A3608) is 0, so CdReady
+     * returns 1 and loop 2's body is dead too. */
+    ASSERT(PE_LoadU32(0x800A3608u) == 0, "CD queue should be empty after reset");
+    ASSERT(VSyncCount() == 0, "wait loop 2 should not call VSync (CdReady == 1)");
     PASS();
 }
 
-static void test_6A5BC_wait_loop1_body(void) {
-    TEST("6A5BC_wait_loop1_body");
+static void test_7ED58_direct(void) {
+    TEST("7ED58_returns1_clears_state");
     ResetTestState();
-    g_bootstrap_disc = 1;
-    HostFB_Init();
-    /* Script func_8007ED58: not-ready, not-ready, ready → loop 1 body
-     * executes exactly 2 VSyncs.  func_8007F72C default (1) keeps loop 2
-     * at zero body iterations. */
-    int seq[3] = {0, 0, 1};
-    Bootstrap_SetIntSequence("func_8007ED58", seq, 3);
+    /* Seed state the reset must clear */
+    PE_StoreU32(0x800A3608u, 7);
+    PE_StoreU32(0x800B8AB0u, 0xDEADBEEF);
+    PE_StoreU32(0x8009B554u, 1);    /* as left by CdInit */
 
-    func_8006A5BC();
-
-    ASSERT(CountOrderLog("func_8007ED58") == 3, "func_8007ED58 should be polled 3 times");
-    ASSERT(VSyncCount() == 2, "wait loop 1 body should run exactly 2 VSyncs");
+    ASSERT(func_8007ED58() == 1, "func_8007ED58 must return 1 (retail-truth)");
+    ASSERT(PE_LoadU32(0x800A3608u) == 0, "reset must clear D_800A3608");
+    ASSERT(PE_LoadU32(0x800B8AB0u) == 0, "reset must clear D_800B8AB0 block");
+    ASSERT(PE_LoadU32(0x8009B574u) == 1, "drive lane idle after synchronous reset");
+    ASSERT(PE_LoadU32(0x8009B554u) == 1, "D_8009B554 re-set by func_80080930");
+    ASSERT(func_8007ED58() == 1, "func_8007ED58 must return 1 on repeat call");
     PASS();
 }
 
-static void test_6A5BC_wait_loop2_body(void) {
-    TEST("6A5BC_wait_loop2_body");
+static void test_7F72C_contract(void) {
+    TEST("7F72C_cdready_contract");
     ResetTestState();
-    g_bootstrap_disc = 1;
-    HostFB_Init();
-    /* func_8007ED58 default (1) skips loop 1; script func_8007F72C:
-     * 3 not-ready polls then ready → loop 2 body executes 3 VSyncs. */
-    int seq[4] = {0, 0, 0, 1};
-    Bootstrap_SetIntSequence("func_8007F72C", seq, 4);
-
-    func_8006A5BC();
-
-    ASSERT(CountOrderLog("func_8007F72C") == 4, "func_8007F72C should be polled 4 times");
-    ASSERT(VSyncCount() == 3, "wait loop 2 body should run exactly 3 VSyncs");
+    /* lane != 1 -> returned as-is */
+    PE_StoreU32(0x8009B574u, 3);
+    ASSERT(func_8007F72C() == 3, "CdReady should pass through lane 3");
+    PE_StoreU32(0x8009B574u, 0);
+    ASSERT(func_8007F72C() == 0, "CdReady should pass through lane 0");
+    /* lane == 1, queue > 0 -> 2 */
+    PE_StoreU32(0x8009B574u, 1);
+    PE_StoreU32(0x800A3608u, 2);
+    ASSERT(func_8007F72C() == 2, "CdReady should be 2 with nonempty queue");
+    /* lane == 1, queue == 0 -> 1 */
+    PE_StoreU32(0x800A3608u, 0);
+    ASSERT(func_8007F72C() == 1, "CdReady should be 1 when idle");
     PASS();
 }
 
@@ -903,26 +906,21 @@ static void test_6A5BC_both_loops_zero_body(void) {
 
     func_8006A5BC();
 
-    ASSERT(CountOrderLog("func_8007ED58") == 1, "func_8007ED58 should be polled once");
-    ASSERT(CountOrderLog("func_8007F72C") == 1, "func_8007F72C should be polled once");
+    /* Both wait-loop conditions are retail-truth ready at boot, so no
+     * loop body executes.  (The 6D-S scripted-sequence body tests went
+     * away with the stub harness; the loop conditions are now covered by
+     * the 7ED58/7F72C contract tests above.) */
     ASSERT(VSyncCount() == 0, "no wait-loop body should run with ready providers");
     PASS();
 }
 
-static void test_6A5BC_loop1_sequence_fallback(void) {
-    TEST("6A5BC_loop1_sequence_fallback");
+static void test_7F778_getter(void) {
+    TEST("7F778_queue_getter");
     ResetTestState();
-    g_bootstrap_disc = 1;
-    HostFB_Init();
-    /* Sequence of one not-ready poll; the second poll falls back to the
-     * provider default (1) → exactly one body iteration. */
-    int seq[1] = {0};
-    Bootstrap_SetIntSequence("func_8007ED58", seq, 1);
-
-    func_8006A5BC();
-
-    ASSERT(CountOrderLog("func_8007ED58") == 2, "func_8007ED58 should be polled twice");
-    ASSERT(VSyncCount() == 1, "wait loop 1 body should run exactly 1 VSync");
+    PE_StoreU32(0x800A3608u, 0x1234);
+    ASSERT(func_8007F778() == 0x1234, "func_8007F778 must return D_800A3608");
+    PE_StoreU32(0x800A3608u, 0);
+    ASSERT(func_8007F778() == 0, "func_8007F778 must return 0 when queue empty");
     PASS();
 }
 
@@ -932,13 +930,13 @@ static void test_6A5BC_D_800B0DD4_store(void) {
     g_bootstrap_disc = 1;
     D_800B0DD4 = 0xFFFF;
     HostFB_Init();
+    /* func_8007F7A8 is now a real getter of D_8009B590 */
+    PE_StoreU32(0x8009B590u, 0x1234);
 
     func_8006A5BC();
 
-    /* func_8007F7A8 bootstrap stub returns 0; store lands in guest RAM */
-    ASSERT(D_800B0DD4 == 0, "D_800B0DD4 should be 0 from func_8007F7A8 stub");
-    ASSERT(PE_LoadU16(0x800B0DD4u) == 0, "guest u16 at 0x800B0DD4 should be 0");
-    ASSERT(CountOrderLog("func_8007F7A8") >= 1, "func_8007F7A8 never called");
+    ASSERT(D_800B0DD4 == 0x1234, "D_800B0DD4 should receive D_8009B590 via func_8007F7A8");
+    ASSERT(PE_LoadU16(0x800B0DD4u) == 0x1234, "guest u16 at 0x800B0DD4 should be 0x1234");
     PASS();
 }
 
@@ -956,54 +954,269 @@ static void test_6A5BC_strict_mode_rejects(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * Phase 6D-R — func_8003E610 tests: ten calls with arguments
+ * Phase 6E-A — func_8003E610 tests: real provider guest-state effects
+ *
+ * All ten callees are real implementations now, so there is no stub order
+ * log to check.  Instead verify the retail-observable guest state left by
+ * the full sequence, which also proves each provider ran (its signature
+ * state is present).
  * ═══════════════════════════════════════════════════════════════════════ */
 
-static const char *g_expected_3E610_order[10] = {
-    "func_80073C94", "func_8003E754", "func_8007D054", "func_80077F7C",
-    "func_80079004", "func_80079024", "func_800409B4", "func_8003E944",
-    "func_8007EC14", "func_80080CC8"
-};
-
-static void test_3E610_ten_call_order(void) {
-    TEST("3E610_ten_call_order");
+static void test_3E610_guest_state(void) {
+    TEST("3E610_guest_state");
     ResetTestState();
+    HostFB_Init();
 
     func_8003E610();
 
-    ASSERT(g_stub_count >= 10, "3E610: fewer than 10 unique stubs recorded");
+    /* func_80073C94 ResetCallback ran exactly once (guard held through the
+     * ResetGraph/SsInit/CdInit re-entry) */
+    ASSERT(PE_LoadU16(0x800945E4u) == 1, "ResetCallback guard D_800945E4 not set");
 
-    /* Verify exact order in the log */
-    for (int i = 0; i < 10; i++) {
-        if (i >= g_stub_order_count) {
-            char msg[64];
-            snprintf(msg, sizeof(msg), "3E610: missing call %d (%s)", i, g_expected_3E610_order[i]);
-            FAIL(msg);
-            return;
-        }
-        if (strcmp(g_stub_order_log[i], g_expected_3E610_order[i]) != 0) {
-            char msg[128];
-            snprintf(msg, sizeof(msg), "3E610: call %d expected %s got %s",
-                     i, g_expected_3E610_order[i], g_stub_order_log[i]);
-            FAIL(msg);
-            return;
-        }
-    }
+    /* func_8003E754 video init: DISPENV buf0/buf1 + overrides */
+    ASSERT(PE_LoadU16(0x800BCE80u + 0x0) == 0,      "buf0 disp.x");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0x2) == 0xE0,   "buf0 disp.y");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0x4) == 0x140,  "buf0 disp.w");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0x6) == 0xE0,   "buf0 disp.h");
+    ASSERT(PE_LoadU16(0x800BCE94u + 0x2) == 0,      "buf1 disp.y");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0xA) == 8,      "buf0 screen.y == 8");
+    ASSERT(PE_LoadU16(0x800BCE94u + 0xA) == 8,      "buf1 screen.y == 8");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0xE) == 0xE0,   "buf0 screen.h");
+    ASSERT(PE_LoadU8(0x800BCE80u + 0x11) == 0,      "buf0 isrgb24 clobbered back to 0 (retail-truth)");
+    /* DRAWENV buf0/buf1 + overrides */
+    ASSERT(PE_LoadU16(0x800BCDC8u + 0x4) == 0x140,  "drawenv0 clip.w");
+    ASSERT(PE_LoadU16(0x800BCE24u + 0x2) == 0xE0,   "drawenv1 clip.y");
+    ASSERT(PE_LoadU16(0x800BCDC8u + 0x14) == 0,     "drawenv0 tpage overridden to 0");
+    ASSERT(PE_LoadU8(0x800BCDC8u + 0x16) == 1,      "drawenv0 dtd");
+    ASSERT(PE_LoadU8(0x800BCDC8u + 0x17) == 0,      "drawenv0 dfe overridden to 0");
+    ASSERT(PE_LoadU8(0x800BCDC8u + 0x18) == 1,      "drawenv0 isbg overridden to 1");
+    ASSERT(D_8009CDDC == 0, "D_8009CDDC not cleared");
+
+    /* func_8007D054 SsInit: voice defaults + event guard */
+    ASSERT(PE_LoadU16(0x8009B3B8u) == 0xC000, "voice default[0]");
+    ASSERT(PE_LoadU16(0x8009B3E6u) == 0xC000, "voice default[23]");
+    ASSERT(PE_LoadU32(0x8009B3ECu) == 1, "SPU IRQ event guard");
+
+    /* GTE: InitGeom + SetGeomOffset(0xA0,0x70) + SetGeomScreen(0xF0) */
+    ASSERT(g_pe_gte.zsf3 == 0x155 && g_pe_gte.zsf4 == 0x100, "InitGeom zsf");
+    ASSERT(g_pe_gte.dqa == -0x1062 && g_pe_gte.dqb == 0x1400000, "InitGeom dq");
+    ASSERT(g_pe_gte.ofx == (0xA0 << 16) && g_pe_gte.ofy == (0x70 << 16), "SetGeomOffset");
+    ASSERT(g_pe_gte.h == 0xF0, "SetGeomScreen");
+
+    /* func_800409B4 card init: guard + 8 event handles */
+    ASSERT(PE_LoadU32(0x800A1850u) == 1, "card guard D_800A1850");
+    ASSERT(PE_LoadU32(0x800BCDA8u) != 0, "card event handle 0");
+    ASSERT(PE_LoadU32(0x800BCDC4u) != 0, "card event handle 7");
+    ASSERT(PE_LoadU32(0x800BCDA8u) != PE_LoadU32(0x800BCDC4u), "card handles distinct");
+
+    /* func_8003E944 save manager: brought up */
+    ASSERT(PE_LoadU32(0x8009B75Cu) == 1, "save manager not up (D_8009B75C)");
+
+    /* func_8007EC14 CdInit: guard + handler installs */
+    ASSERT(PE_LoadU32(0x8009B554u) == 1, "CdInit guard D_8009B554");
+    ASSERT(PE_LoadU32(0x800A36A0u) == 0x8007F7E8u, "CD handler 0");
+    ASSERT(PE_LoadU32(0x800A36ACu) == 0x8007F960u, "CD handler 3");
+
+    /* func_80080CC8(0): D_8009AFC0 exchanged to 0 */
+    ASSERT(PE_LoadU32(0x8009AFC0u) == 0, "D_8009AFC0 should be 0");
+
+    /* No bootstrap stubs may remain on this path */
+    ASSERT(g_stub_count == 0, "3E610 path recorded bootstrap stubs (frontier regressed)");
     PASS();
 }
 
 static void test_3E610_argument_values(void) {
     TEST("3E610_argument_values");
     ResetTestState();
+    HostFB_Init();
 
     func_8003E610();
 
-    ASSERT(CountOrderLog("func_8003E754") >= 1, "func_8003E754 not called");
-    ASSERT(CountOrderLog("func_80079004") >= 1, "func_80079004 not called");
-    ASSERT(CountOrderLog("func_80079024") >= 1, "func_80079024 not called");
-    ASSERT(CountOrderLog("func_80080CC8") >= 1, "func_80080CC8 not called");
+    /* func_8003E754(0x140, 0xE0): dimensions reach the DISPENV/DRAWENVs */
+    ASSERT(PE_LoadU16(0x800BCE80u + 0x4) == 0x140, "disp.w != 0x140");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0x6) == 0xE0, "disp.h != 0xE0");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0xE) == 0xE0, "screen.h != 0xE0");
+    /* func_80079004(0xA0, 0x70) / func_80079024(0xF0) */
+    ASSERT(g_pe_gte.ofx == (0xA0 << 16), "OFX arg wrong");
+    ASSERT(g_pe_gte.ofy == (0x70 << 16), "OFY arg wrong");
+    ASSERT(g_pe_gte.h == 0xF0, "H arg wrong");
+    /* func_80080CC8(0) */
+    ASSERT(PE_LoadU32(0x8009AFC0u) == 0, "D_8009AFC0 arg effect wrong");
     PASS();
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-A — direct provider-frontier tests (batch 1: 3E610 callees)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void test_73C94_guard_idempotent(void) {
+    TEST("73C94_resetcallback_guard");
+    ResetTestState();
+    PE_Callback_Register((PECallback)0xDEADBEEF);   /* sentinel */
+    func_80073C94();
+    ASSERT(PE_LoadU16(0x800945E4u) == 1, "guard not set on first call");
+    ASSERT(PE_Callback_Get() == NULL, "callback not reset on first call");
+    /* Second call: guard short-circuits; callback must NOT be cleared again */
+    PE_Callback_Register((PECallback)0xDEADBEEF);
+    func_80073C94();
+    ASSERT(PE_Callback_Get() != NULL, "guard failed: second call cleared callback");
+    ASSERT(g_stub_count == 0, "func_80073C94 must not be a bootstrap stub");
+    PASS();
+}
+
+static void test_7D054_ssinit(void) {
+    TEST("7D054_ssinit_state");
+    ResetTestState();
+    func_8007D054();
+    for (int i = 0; i < 24; i++) {
+        if (PE_LoadU16(0x8009B3B8u + (uint32_t)i * 2u) != 0xC000) {
+            FAIL("voice default halfword wrong"); return;
+        }
+    }
+    ASSERT(PE_LoadU32(0x8009B3ECu) == 1, "SPU IRQ event guard not set");
+    ASSERT(PE_LoadU32(0x8009B384u) != 0, "SPU IRQ event handle not stored");
+    ASSERT(PE_LoadU32(0x8009B390u) == 0 && PE_LoadU32(0x8009B394u) == 0, "9B390/94 not zeroed");
+    ASSERT(PE_LoadU32(0x8009B398u) == PE_LoadU32(0x8009B46Cu), "9B398 != D_8009B46C");
+    /* Idempotent IRQ-event guard: second call keeps the same handle */
+    uint32_t h = PE_LoadU32(0x8009B384u);
+    func_8007D054();
+    ASSERT(PE_LoadU32(0x8009B384u) == h, "IRQ event reopened on second SsInit");
+    PASS();
+}
+
+static void test_77F7C_initgeom_constants(void) {
+    TEST("77F7C_initgeom_constants");
+    ResetTestState();
+    g_pe_gte.h = 123;   /* poison */
+    func_80077F7C();
+    ASSERT(g_pe_gte.zsf3 == 0x155, "zsf3");
+    ASSERT(g_pe_gte.zsf4 == 0x100, "zsf4");
+    ASSERT(g_pe_gte.h == 0x3E8, "h");
+    ASSERT(g_pe_gte.dqa == -0x1062, "dqa");
+    ASSERT(g_pe_gte.dqb == 0x1400000, "dqb");
+    ASSERT(g_pe_gte.ofx == 0 && g_pe_gte.ofy == 0, "ofs");
+    PASS();
+}
+
+static void test_79004_79024_setters(void) {
+    TEST("79004_79024_gte_setters");
+    ResetTestState();
+    func_80079004(0xA0, 0x70);
+    ASSERT(g_pe_gte.ofx == 0xA00000, "ofx shift");
+    ASSERT(g_pe_gte.ofy == 0x700000, "ofy shift");
+    func_80079024(0xF0);
+    ASSERT(g_pe_gte.h == 0xF0, "h set");
+    PASS();
+}
+
+static void test_409B4_card_init(void) {
+    TEST("409B4_card_init");
+    ResetTestState();
+    PE_StoreU8(0x800A0ED4u, 0xAA);            /* poison flag bytes */
+    PE_StoreU8(0x800A0ED4u + 0x418u, 0xBB);
+    func_800409B4();
+    ASSERT(PE_LoadU32(0x800A1850u) == 1, "guard not set");
+    uint32_t h0 = PE_LoadU32(0x800BCDA8u);
+    for (int i = 0; i < 8; i++) {
+        if (PE_LoadU32(0x800BCDA8u + (uint32_t)i * 4u) == 0) {
+            FAIL("event handle not stored"); return;
+        }
+        if (i > 0 && PE_LoadU32(0x800BCDA8u + (uint32_t)i * 4u) == h0) {
+            FAIL("event handles not distinct"); return;
+        }
+    }
+    ASSERT(PE_LoadU8(0x800A0ED4u) == 0, "flag byte 0 not cleared");
+    ASSERT(PE_LoadU8(0x800A0ED4u + 0x418u) == 0, "flag byte 418 not cleared");
+    ASSERT(PE_Irq_LockDepth() == 0, "unbalanced Enter/ExitCriticalSection");
+    /* Idempotent: second call skips init, handles unchanged */
+    func_800409B4();
+    ASSERT(PE_LoadU32(0x800BCDA8u) == h0, "second call re-opened events");
+    PASS();
+}
+
+static void test_7EC14_cdinit(void) {
+    TEST("7EC14_cdinit");
+    ResetTestState();
+    ASSERT(func_8007EC14() == 1, "CdInit must return 1");
+    ASSERT(PE_LoadU32(0x8009B554u) == 1, "guard D_8009B554 not set");
+    ASSERT(PE_LoadU32(0x800A3608u) == 0, "queue not cleared");
+    ASSERT(PE_LoadU32(0x800A36A0u) == 0x8007F7E8u, "handler 0");
+    ASSERT(PE_LoadU32(0x800A36A4u) == 0x8007E964u, "handler 1");
+    ASSERT(PE_LoadU32(0x800A36A8u) == 0x8007F88Cu, "handler 2");
+    ASSERT(PE_LoadU32(0x800A36ACu) == 0x8007F960u, "handler 3");
+    ASSERT(PE_LoadU32(0x8009AFB4u) == 0x80080164u, "lowlevel ptr 0");
+    ASSERT(PE_LoadU32(0x8009AFD8u) == 1, "lowlevel flag");
+    /* Guard: second call returns guard value, does not re-run init */
+    PE_StoreU32(0x800A36A0u, 0xAAAAAAAA);
+    ASSERT(func_8007EC14() == 1, "second CdInit must return guard");
+    ASSERT(PE_LoadU32(0x800A36A0u) == 0xAAAAAAAAu, "second CdInit re-ran init");
+    PASS();
+}
+
+static void test_80CC8_exchange(void) {
+    TEST("80CC8_exchange");
+    ResetTestState();
+    PE_StoreU32(0x8009AFC0u, 0x55);
+    ASSERT(func_80080CC8(0xAA) == 0x55, "must return old value");
+    ASSERT(PE_LoadU32(0x8009AFC0u) == 0xAAu, "must store new value");
+    ASSERT(func_80080CC8(0) == (int)0xAA, "second exchange old value");
+    PASS();
+}
+
+static void test_3E754_env_fields(void) {
+    TEST("3E754_env_fields");
+    ResetTestState();
+    HostFB_Init();
+    func_8003E754(0x140, 0xE0);
+    /* DISPENV buf0: disp {0, 0xE0, 0x140, 0xE0}; buf1: y = 0 */
+    ASSERT(PE_LoadU16(0x800BCE80u + 0x2) == 0xE0, "buf0 disp.y");
+    ASSERT(PE_LoadU16(0x800BCE94u + 0x2) == 0, "buf1 disp.y");
+    ASSERT(PE_LoadU16(0x800BCE94u + 0x4) == 0x140, "buf1 disp.w");
+    /* screen overrides: x 0, y 8, h 0xE0, w stays 0 */
+    ASSERT(PE_LoadU16(0x800BCE80u + 0x8) == 0, "buf0 screen.x");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0xA) == 8, "buf0 screen.y");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0xC) == 0, "buf0 screen.w");
+    ASSERT(PE_LoadU16(0x800BCE80u + 0xE) == 0xE0, "buf0 screen.h");
+    /* isrgb24: stored 1 then clobbered to 0 by SetDefDispEnv (retail-truth) */
+    ASSERT(PE_LoadU8(0x800BCE91u) == 0, "isrgb24 final state");
+    /* DRAWENV buf0 clip {0,0,0x140,0xE0}; buf1 clip.y = 0xE0 */
+    ASSERT(PE_LoadU16(0x800BCDC8u + 0x6) == 0xE0, "drawenv0 clip.h");
+    ASSERT(PE_LoadU16(0x800BCE24u + 0x2) == 0xE0, "drawenv1 clip.y");
+    /* DRAWENV overrides */
+    ASSERT(PE_LoadU16(0x800BCDDCu) == 0, "tpage0");
+    ASSERT(PE_LoadU16(0x800BCE38u) == 0, "tpage1");
+    ASSERT(PE_LoadU8(0x800BCDDEu) == 1 && PE_LoadU8(0x800BCE3Au) == 1, "dtd");
+    ASSERT(PE_LoadU8(0x800BCDDFu) == 0 && PE_LoadU8(0x800BCE3Bu) == 0, "dfe");
+    ASSERT(PE_LoadU8(0x800BCDE0u) == 1 && PE_LoadU8(0x800BCE3Cu) == 1, "isbg");
+    ASSERT(D_8009CDDC == 0, "D_8009CDDC");
+    PASS();
+}
+
+static void test_3E944_save_state(void) {
+    TEST("3E944_save_state");
+    ResetTestState();
+    func_8003E944();
+    ASSERT(PE_LoadU32(0x8009B75Cu) == 1, "save manager not up");
+    /* slot base pointers */
+    ASSERT(PE_LoadU32(0x800A5B70u + 0x30u) == 0x800BE9A0u, "slot0 base ptr");
+    ASSERT(PE_LoadU32(0x800A5C60u + 0x30u) == 0x800BE9A0u + 0x22u, "slot1 base ptr");
+    ASSERT(PE_LoadU32(0x800A5B70u + 0x10u) == 0x800A5B70u, "slot0 self ptr");
+    ASSERT(PE_LoadU32(0x800A5C60u + 0x10u) == 0x800A5C60u, "slot1 self ptr");
+    /* base header bytes: *base = 0xFF, base[1] = 0 */
+    ASSERT(PE_LoadU8(0x800BE9A0u) == 0xFF, "base[0]");
+    ASSERT(PE_LoadU8(0x800BE9A1u) == 0, "base[1]");
+    /* installed function pointers (retail addresses) */
+    ASSERT(PE_LoadU32(0x8009B724u) == 0x800846ACu, "fnptr 724");
+    ASSERT(PE_LoadU32(0x8009B73Cu) == 0x80084B78u, "fnptr 73C");
+    ASSERT(PE_LoadU32(0x8009B758u) == 0x800A5B70u, "state base");
+    ASSERT(PE_LoadU32(0x800A5AB4u) == 0x80082B70u, "82ADC ptr");
+    /* func_80082534: name tables 0xFF-filled */
+    ASSERT(PE_LoadU8(0x800A5B70u + 0x5Du) == 0xFF, "slot0 name[0]");
+    ASSERT(PE_LoadU8(0x800A5B70u + 0x62u) == 0xFF, "slot0 name[5]");
+    PASS();
+}
+
+
 
 /* ═══════════════════════════════════════════════════════════════════════
  * Phase 6D-R/S — func_8003E680 tests: poll loop, callback, subsystem
@@ -1430,16 +1643,27 @@ int main(void)
     test_6A5BC_setup_order();
     test_6A5BC_wait_loop1();
     test_6A5BC_wait_loop2();
-    test_6A5BC_wait_loop1_body();
-    test_6A5BC_wait_loop2_body();
+    test_7ED58_direct();
+    test_7F72C_contract();
     test_6A5BC_both_loops_zero_body();
-    test_6A5BC_loop1_sequence_fallback();
+    test_7F778_getter();
     test_6A5BC_D_800B0DD4_store();
     test_6A5BC_strict_mode_rejects();
 
     /* func_8003E610 (2 tests) */
-    test_3E610_ten_call_order();
+    test_3E610_guest_state();
     test_3E610_argument_values();
+
+    /* Phase 6E-A direct provider tests (9 tests) */
+    test_73C94_guard_idempotent();
+    test_7D054_ssinit();
+    test_77F7C_initgeom_constants();
+    test_79004_79024_setters();
+    test_409B4_card_init();
+    test_7EC14_cdinit();
+    test_80CC8_exchange();
+    test_3E754_env_fields();
+    test_3E944_save_state();
 
     /* func_8003E680 (7 tests) */
     test_3E680_five_globals_cleared();
