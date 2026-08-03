@@ -117,7 +117,10 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * func_800527C8 is REAL too (Phase 6E-B17):
  * game/boot/func_800527C8_port.c — multi-subsystem bootstrap
  * dispatcher (49 retail words, 17 calls); unresolved callees route
- * through the centralized bootstrap boundary in retail order. */
+ * through the centralized bootstrap boundary in retail order.
+ * func_800528F0 is REAL too (Phase 6E-B18):
+ * game/boot/func_800528F0_port.c — PRNG table generator
+ * (143 retail words, 521-byte output table at D_800A1B90). */
 
 /* ── REAL translated functions ────────────────────────────────────── */
 extern void func_800725DC(void);
@@ -126,6 +129,7 @@ extern int  func_80038D1C(void);
 extern int  func_800698D4(void);
 extern void func_8006A9E4(void);
 extern void func_800527C8(void);
+extern void func_800528F0(void);
 extern int  func_8006E834(void);
 extern int  func_8006E9A0(int);
 

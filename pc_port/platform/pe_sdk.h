@@ -102,12 +102,13 @@ int       func_8006E6A8(int lba, pe_addr_t dest, int sectors); /* issue */
 int       func_8006E7E8(void);              /* poll + D_800B0CD8 RMW */
 pe_addr_t func_8006E498(pe_addr_t base, uint32_t key); /* archive lookup */
 
-/* ── dispatcher leaves (pc_port/game/boot/, Phase 6E-B17) ─────────── */
+/* ── dispatcher leaves (pc_port/game/boot/, Phase 6E-B17/18) ──────── */
 void func_8005B890(int a0);                 /* D_8009D028 = a0 */
 void func_8005BC98(int a0_ignored);         /* D_8009D218 = 1 */
 void func_8004F808(void);                   /* ten-word clear */
 void func_80042B38(void);                   /* D_800A1870/1874 = 0 */
 void func_80051084(void);                   /* D_8009D014 = 0x800A1AA0 */
+void func_800528F0(void);                   /* PRNG table generator, 521 bytes */
 
 /* ── save manager (pc_port/platform/pe_save.c) ──────────────────────── */
 void func_800844E4(pe_addr_t base, pe_addr_t base2);

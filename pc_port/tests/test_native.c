@@ -5688,19 +5688,53 @@ static void test_6E498_readonly_footprint(void) {
 }
 
 /* Expected unresolved-callee sequence of the translated func_800527C8
- * dispatcher (Phase 6E-B17), in retail ROM order. */
-static const char *const B17_DISP_SEQ[10] = {
-    "func_800528F0", "func_8005E588", "func_80062568", "func_80064964",
+ * dispatcher (Phase 6E-B18, func_800528F0 now translated), in retail
+ * ROM order. */
+static const char *const B18_DISP_SEQ[9] = {
+    "func_8005E588", "func_80062568", "func_80064964",
     "func_8005DE88", "func_80052C6C", "func_8005BCBC", "func_8005D6F4",
     "func_80051CC4", "func_80042C78"
 };
 
-static int B17_CheckDispatcherOrder(int base) {
-    for (int i = 0; i < 10; i++) {
-        if (strcmp(g_stub_order_log[base + i], B17_DISP_SEQ[i]) != 0)
+static int B18_CheckDispatcherOrder(int base) {
+    for (int i = 0; i < 9; i++) {
+        if (strcmp(g_stub_order_log[base + i], B18_DISP_SEQ[i]) != 0)
             return 0;
     }
     return 1;
+}
+
+/* func_800528F0 expected output oracle: computes the byte at a given
+ * offset into the 521-byte D_800A1B90 table, using the same LCG+XorShift
+ * model as the retail MIPS — an independent, non-production reference. */
+static uint8_t B18_ExpectedTableByte(uint32_t off) {
+    uint32_t state, w[521];
+    uint8_t out[521];
+    int i, bit, pass;
+    if (off >= 521) return 0;
+    state = (uint32_t)(((uint64_t)0u * 0x88888889uLL) >> 32) >> 5;
+    for (i = 0; i < 17; i++) {
+        uint32_t word = 0;
+        for (bit = 0; bit < 32; bit++) {
+            state = (uint32_t)((uint64_t)state * 0x5D588B65uLL) + 1u;
+            word = (word >> 1) | (state & 0x80000000u);
+        }
+        w[i] = word;
+    }
+    w[16] = (w[16] << 23) ^ (w[0] >> 9) ^ w[15];
+    for (i = 17; i < 521; i++)
+        w[i] = (w[i - 17] << 23) ^ (w[i - 16] >> 9) ^ w[i - 1];
+    for (i = 0; i < 521; i++)
+        out[i] = (uint8_t)(w[i] & 0xFFu);
+    /* Self-referential XOR: out[0..31] ^= out[489..520],
+     * out[32..520] ^= out[0..488], twice. */
+    for (pass = 0; pass < 2; pass++) {
+        for (i = 0; i < 32; i++)
+            out[i] ^= out[489 + i];
+        for (i = 32; i < 521; i++)
+            out[i] ^= out[i - 32];
+    }
+    return out[off];
 }
 
 /* ── func_8006A9E4: full patterned run ───────────────────────────────── */
@@ -5802,18 +5836,18 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* 7. Dependency boundary (updated Phase 6E-B17): func_800527C8 is
-     * now REAL — its ten unresolved callees appear in retail ROM order,
-     * then func_80087090.  The translated functions never touch the
-     * policy. */
-    ASSERT(g_stub_order_count == 11, "unexpected bootstrap invocations");
-    ASSERT(B17_CheckDispatcherOrder(0),
+    /* 7. Dependency boundary (updated Phase 6E-B18): func_800528F0 is now
+     * REAL too — nine unresolved dispatcher callees appear in retail ROM
+     * order, then func_80087090. */
+    ASSERT(g_stub_order_count == 10, "unexpected bootstrap invocations");
+    ASSERT(B18_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[10], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[9], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 11, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 10, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
+    ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
     ASSERT(CountOrderLog("func_8006E6A8") == 0, "6E6A8 routed via policy");
     ASSERT(CountOrderLog("func_8006E7E8") == 0, "6E7E8 routed via policy");
     ASSERT(CountOrderLog("func_8006E498") == 0, "6E498 routed via policy");
@@ -5849,6 +5883,7 @@ static void test_6A9E4_zero_cycles_footprint(void) {
     D_800B0CD8 = 0xA4A5A5A5u;           /* busy bit 0x01000000 clear */
     D_800B0E6C = B16_STREAM;
     PE_StoreU32(0x800B0E08u, B16_DEST2);
+    PE_StoreU32(0x800A76A4u, 0);           /* timer tick = 0 (retail boot) */
 
     /* Minimal valid archive for the two lookups (count 1, key 1 hit). */
     PE_StoreU32(B16_STREAM + 4, 0x100u);
@@ -5895,6 +5930,19 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x800A1874u) want = 0;
         else if (a == 0x8009D014u) want = 0x800A1AA0u; /* func_80051084 */
         else if (a == 0x8009CE94u) want = 0xA5A5A501u; /* 371A4(1) byte */
+        else if (a == 0x800A76A4u) want = 0;           /* timer tick = 0 */
+        /* Phase 6E-B18: func_800528F0 PRNG table writes */
+        else if (a == 0x8009D038u) want = 0x00000208u; /* counter = 0x208 */
+        else if (a >= 0x800A1B90u && a < 0x800A1B90u + 520u) {
+            uint32_t off = a - 0x800A1B90u;
+            want = (uint32_t)B18_ExpectedTableByte(off)
+                 | ((uint32_t)B18_ExpectedTableByte(off + 1) << 8)
+                 | ((uint32_t)B18_ExpectedTableByte(off + 2) << 16)
+                 | ((uint32_t)B18_ExpectedTableByte(off + 3) << 24);
+        } else if (a == 0x800A1B90u + 520u) {
+            /* Final partial word: byte 520 only, remaining 3 bytes canary */
+            want = (0xA5A5A5u << 8) | (uint32_t)B18_ExpectedTableByte(520);
+        }
         else if (a >= B16_STREAM && a < B16_STREAM + B16_COPY1)
             want = B16_StreamWordPre(a - B16_STREAM);
         else if (a >= B16_ARCH && a < B16_ARCH + B16_COPY1)
@@ -5908,10 +5956,10 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
-    ASSERT(g_stub_order_count == 11, "unexpected bootstrap invocations");
-    ASSERT(B17_CheckDispatcherOrder(0),
+    ASSERT(g_stub_order_count == 10, "unexpected bootstrap invocations");
+    ASSERT(B18_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[10], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[9], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -5946,7 +5994,8 @@ static void test_6A9E4_ramreset_rerun(void) {
     ASSERT(PE_LoadU32(0x800B0E18u) == e18_1, "rerun D_800B0E18 differs");
     ASSERT(PE_LoadU32(0x800B0E1Cu) == e1c_1, "rerun D_800B0E1C differs");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
-    ASSERT(CountOrderLog("func_800528F0") == 2, "frontier count after rerun");
+    ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
+    ASSERT(CountOrderLog("func_8005E588") == 2, "frontier count after rerun");
     ASSERT(CountOrderLog("func_80087090") == 2, "stub count after rerun");
     PASS();
 }
@@ -5970,24 +6019,58 @@ static void test_6A9E4_3E680_integration(void) {
     PE_StoreU32(0x800B0E08u, 0x800F74F8u); /* func_8006A674 arena value */
     func_8006A9E4();
 
-    /* B17: func_800527C8 is translated; its 10 unresolved callees now
-     * occupy the order log before func_80087090. */
-    ASSERT(g_stub_order_count == 11, "unexpected provider count");
-    ASSERT(B17_CheckDispatcherOrder(0),
+    /* B18: func_800528F0 is now also translated; 9 unresolved dispatcher
+     * callees occupy the order log before func_80087090. */
+    ASSERT(g_stub_order_count == 10, "unexpected provider count");
+    ASSERT(B18_CheckDispatcherOrder(0),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[10], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[9], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_800527C8") == 0,
            "func_800527C8 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_800528F0") == 0,
+           "func_800528F0 still routed through bootstrap policy");
     ASSERT(PE_LoadU32(0x800B0E20u) == B16_ARCH, "D_800B0E20 wrong");
     ASSERT(PE_LoadU32(0x800B0E18u) == 0, "count-0 archive must yield 0");
     ASSERT(PE_LoadU32(0x800B0E1Cu) == 0, "count-0 archive must yield 0");
-    /* The full --strict-stubs exit at func_800528F0 (the first unresolved
-     * callee inside func_800527C8) is a runtime gate (check_strict calls
-     * exit(1)) and is covered by the binary strict runs; this test proves
-     * the in-process provider order. */
+    /* The full --strict-stubs exit at func_8005E588 (the first unresolved
+     * callee after func_800528F0 inside func_800527C8) is a runtime gate
+     * (check_strict calls exit(1)) and is covered by the binary strict
+     * runs; this test proves the in-process provider order. */
+    PASS();
+}
+
+/* ── func_800528F0: direct PRNG table test ──────────────────────────── */
+
+static void test_528F0_direct_boot_state(void) {
+    TEST("528F0_direct_boot_state");
+    uint32_t i;
+    ResetTestState();
+    PE_StoreU32(0x800A76A4u, 0);
+
+    func_800528F0();
+
+    {
+        uint32_t w = PE_LoadU32(0x800A1B90u);
+        ASSERT(w == 0x4A96BE57u, "D_800A1B90 first word mismatch");
+    }
+    ASSERT(PE_LoadU32(0x8009D038u) == 0x208u, "D_8009D038 counter mismatch");
+    ASSERT(PE_LoadU8(0x800A1B90u + 0) == 0x57, "byte 0");
+    ASSERT(PE_LoadU8(0x800A1B90u + 1) == 0xBE, "byte 1");
+    ASSERT(PE_LoadU8(0x800A1B90u + 520) == 0x2E, "byte 520");
+
+    /* Verify the full 521-byte table against the independent oracle. */
+    for (i = 0; i < 521; i++) {
+        uint8_t got = PE_LoadU8(0x800A1B90u + i);
+        uint8_t want = B18_ExpectedTableByte(i);
+        if (got != want) {
+            printf("FAIL: D_800A1B90[%u] = 0x%02X, want 0x%02X\n", i, got, want);
+            FAIL("func_800528F0 output byte mismatch");
+            return;
+        }
+    }
     PASS();
 }
 
@@ -6318,6 +6401,9 @@ int main(void)
     test_6A9E4_zero_cycles_footprint();
     test_6A9E4_ramreset_rerun();
     test_6A9E4_3E680_integration();
+
+    /* Phase 6E-B18: func_800528F0 PRNG table generator (1 test) */
+    test_528F0_direct_boot_state();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();
