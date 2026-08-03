@@ -7,17 +7,17 @@ every meaningful change. Prefer shortening over accruing.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch | `phase6d-s-guest-memory-safety` | `git branch --show-current` |
-| Port phase | **6E-A batch 3 — REAL DISC BYTE PATH VERIFIED** | `pc_port/build/pe-native-tests` (137/137) |
+| Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
+| Port phase | **6E-B1 — FUNC_80070D10 PROVIDER RUNG VERIFIED** | `pc_port/build/pe-native-tests` (142/142) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00) | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | with `--disc-image`: exit 1 at `func_80070D10` (from `func_8003E680`) — past the disc boundary; with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` (from `func_800698D4`) | `--headless --strict-stubs --disc-image …` |
-| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 137/137 tests + headless + real-disc load clean | `pc_port/build-san` |
+| Strict mode | with `--disc-image`: exit 1 at `func_80070D6C` (from `func_8003E680`) — RNG advance, past translated `func_80070D10`; with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` (from `func_800698D4`) | `--headless --strict-stubs --disc-image …` |
+| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 142/142 tests + headless + real-disc load clean | `pc_port/build-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next | Phase 6E-A continued: provider frontier from `func_80070D10` (func_8003E680 rung); do not start MDEC/SDL/audio/input | — |
+| Next | Phase 6E-B continued: provider frontier from `func_80070D6C` (lagged-Fibonacci RNG advance, ×2000 warm-up in `func_8003E680`; shares the 0x80070E04..0x80070E4C block with translated `func_80070D10`); do not start MDEC/SDL/audio/input | — |
 
 **Leaf-count reconciliation (227 vs 229).** This checkout's committed yaml at
 base `71114ac` has **227** C leaves (`grep -cE ',[[:space:]]*c,'

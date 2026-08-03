@@ -1,18 +1,23 @@
-# Parasite Eve Native PC Port — Phase 6E-A (batch 3)
+# Parasite Eve Native PC Port — Phase 6E-B1
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** Real Disc 1 byte path — the user-supplied Disc 1
-image (BIN/CUE MODE2/2352) is opened read-only, the ISO9660 tree is walked
-for real, and PE.IMG bytes land in guest RAM at the retail `D_80011614`
-destination through bounds-checked `pe_addr_t` access.
+**Current milestone:** func_80070D10 provider rung — the game's
+lagged-Fibonacci RNG table init is now translated retail logic running over
+bounds-checked guest RAM, and real-disc strict mode has advanced one rung to
+`func_80070D6C` (the RNG advance).
 
-**Status:** REAL DISC BYTE PATH VERIFIED — 137 native tests pass;
+**Status:** FUNC_80070D10 PROVIDER RUNG VERIFIED — 142 native tests pass;
 ASan/UBSan clean; 3 deterministic headless runs byte-identical
 (framebuffer `fb28dc21…`); 3 real-disc load traces byte-identical;
-strict mode with `--disc-image` advances past the disc boundary to
-`func_80070D10` (from `func_8003E680`); windowed SHA matches headless;
+strict mode with `--disc-image` stops at `func_80070D6C` (from
+`func_8003E680`); windowed SHA matches headless;
 matching build remains exact at SHA `452fb033`.
+
+**Previous milestone (Phase 6E-A batch 3):** Real Disc 1 byte path — the
+user-supplied Disc 1 image (BIN/CUE MODE2/2352) is opened read-only, the
+ISO9660 tree is walked for real, and PE.IMG bytes land in guest RAM at the
+retail `D_80011614` destination through bounds-checked `pe_addr_t` access.
 
 ## Architecture
 
@@ -102,8 +107,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1, names func_80070D10 (from func_8003E680) — the first
-# unresolved provider past the real disc boundary
+# Expected: exit 1, names func_80070D6C (from func_8003E680) — the first
+# unresolved provider past the translated func_80070D10 RNG init
 ```
 
 `--bootstrap-disc` and `--disc-image` are mutually exclusive.  Without
@@ -114,9 +119,10 @@ host adaptation); the boot is not faked.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 137 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 142 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
-                    # guest-copy bounds, func_800698D4 sequences)
+                    # guest-copy bounds, func_800698D4 sequences
+                    # + 6E-B1: func_80070D10 RNG-init rung)
 ```
 
 ## Deterministic framebuffer
@@ -131,8 +137,9 @@ cd pc_port/build
 
 ## Next steps
 
-1. **Phase 6E-A continued:** provider frontier from `func_80070D10`
-   (func_8003E680 rung) toward the image-load consumers
+1. **Phase 6E-B continued:** provider frontier from `func_80070D6C`
+   (RNG advance, ×2000 warm-up in `func_8003E680`) toward the
+   image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display
 4. Audio, input, save/load (later phases)

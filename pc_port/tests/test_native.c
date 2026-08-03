@@ -1540,6 +1540,128 @@ static void test_725DC_not_bootstrap_stub(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B1 — Provider frontier: func_80070D10 (RNG table init)
+ *
+ * Retail truth (asm/disc1/5F3E4.s:2439-2464): 17-word descending-Fibonacci
+ * table at 0x80070E0C..0x80070E4C, index words 0x80070E04 = 0x40 and
+ * 0x80070E08 = 0x10.  Sole caller func_8003E680; the block is shared only
+ * with func_80070D6C (RNG advance).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_TEST_RNG_INDEX1  0x80070E04u
+#define GA_TEST_RNG_INDEX2  0x80070E08u
+#define GA_TEST_RNG_TABLE   0x80070E0Cu
+#define RNG_TABLE_WORDS     17
+
+static const unsigned int k_rng_table_expect[RNG_TABLE_WORDS] = {
+    2584, 1597, 987, 610, 377, 233, 144, 89, 55,
+    34, 21, 13, 8, 5, 3, 2, 1
+};
+
+static int RngBlockMatchesRetail(void) {
+    if (PE_LoadU32(GA_TEST_RNG_INDEX1) != 0x40) return 0;
+    if (PE_LoadU32(GA_TEST_RNG_INDEX2) != 0x10) return 0;
+    for (int i = 0; i < RNG_TABLE_WORDS; i++) {
+        if (PE_LoadU32(GA_TEST_RNG_TABLE + (unsigned int)i * 4)
+                != k_rng_table_expect[i])
+            return 0;
+    }
+    return 1;
+}
+
+static void test_70D10_table_exact(void) {
+    TEST("70D10_table_exact");
+    ResetTestState();
+
+    func_80070D10();
+
+    ASSERT(PE_LoadU32(GA_TEST_RNG_INDEX1) == 0x40, "index1 not 0x40");
+    ASSERT(PE_LoadU32(GA_TEST_RNG_INDEX2) == 0x10, "index2 not 0x10");
+    for (int i = 0; i < RNG_TABLE_WORDS; i++) {
+        char msg[64];
+        snprintf(msg, sizeof msg, "table word %d wrong", i);
+        ASSERT(PE_LoadU32(GA_TEST_RNG_TABLE + (unsigned int)i * 4)
+                   == k_rng_table_expect[i], msg);
+    }
+    PASS();
+}
+
+static void test_70D10_reseed_idempotent(void) {
+    TEST("70D10_reseed_idempotent");
+    ResetTestState();
+
+    func_80070D10();
+    ASSERT(RngBlockMatchesRetail(), "table wrong after first call");
+
+    /* Dirty the entire block, then re-seed: retail re-writes every word */
+    for (pe_addr_t a = GA_TEST_RNG_INDEX1; a <= 0x80070E4Cu; a += 4)
+        PE_StoreU32(a, 0xDEADBEEF);
+    func_80070D10();
+    ASSERT(RngBlockMatchesRetail(), "table not restored after dirty + reseed");
+
+    /* Back-to-back calls converge to the same state (deterministic init) */
+    func_80070D10();
+    ASSERT(RngBlockMatchesRetail(), "table changed on repeated call");
+    PASS();
+}
+
+static void test_70D10_write_footprint(void) {
+    TEST("70D10_write_footprint");
+    ResetTestState();
+
+    /* Canary-fill ALL of guest RAM, run, then scan the whole 2 MiB:
+     * exactly the 19 retail words may differ — nothing else. */
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+
+    func_80070D10();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        unsigned int got = PE_LoadU32(a);
+        unsigned int want = 0xA5A5A5A5u;
+        if (a == GA_TEST_RNG_INDEX1) want = 0x40;
+        else if (a == GA_TEST_RNG_INDEX2) want = 0x10;
+        else if (a >= GA_TEST_RNG_TABLE && a <= 0x80070E4Cu)
+            want = k_rng_table_expect[(a - GA_TEST_RNG_TABLE) / 4];
+        if (got != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
+            FAIL("write footprint exceeds the 19 retail words");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_70D10_not_bootstrap_stub(void) {
+    TEST("70D10_not_bootstrap_stub");
+    ResetTestState();
+
+    func_80070D10();
+
+    /* Translated function: no BOOTSTRAP_RET record, no order-log entry */
+    ASSERT(CountOrderLog("func_80070D10") == 0, "func_80070D10 recorded as stub");
+    ASSERT(Bootstrap_InvocationCount() == 0, "bootstrap provider invoked");
+    PASS();
+}
+
+static void test_3E680_70D10_translated(void) {
+    TEST("3E680_70D10_translated");
+    ResetTestState();
+    g_bootstrap_disc = 1;
+
+    func_8003E680();
+
+    /* The RNG init ran as real code: seeded state present, no stub record */
+    ASSERT(RngBlockMatchesRetail(), "RNG table not seeded by func_8003E680");
+    ASSERT(CountOrderLog("func_80070D10") == 0,
+           "func_80070D10 still routed through bootstrap policy");
+    /* The warm-up loop still polls the (still-stubbed) RNG advance ×2000 */
+    ASSERT(CountOrderLog("func_80070D6C") == 2000,
+           "func_80070D6C warm-up count changed");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
  * Phase 6D-S — func_8006E834 guest-state tests
  * ═══════════════════════════════════════════════════════════════════════ */
 
@@ -2477,6 +2599,13 @@ int main(void)
     test_725DC_sets_guard();
     test_725DC_idempotent();
     test_725DC_not_bootstrap_stub();
+
+    /* Provider frontier: func_80070D10 (5 tests) */
+    test_70D10_table_exact();
+    test_70D10_reseed_idempotent();
+    test_70D10_write_footprint();
+    test_70D10_not_bootstrap_stub();
+    test_3E680_70D10_translated();
 
     /* func_8006E834 (2 tests) */
     test_6E834_clears_status_bytes();

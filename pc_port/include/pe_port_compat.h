@@ -32,7 +32,8 @@ extern pe_addr_t D_800B0E24,D_800B0E28,D_800B0E2C,D_800B0E30,D_800B0E34,D_800B0E
  * func_8007ED58/func_8007F72C/func_8007F7A8                     — pe_libcd.c */
 
 /* ── func_8003E680 callees ─────────────────────────────────────────── */
-static inline void func_80070D10(void)    { Bootstrap_ReturnVoid("func_80070D10", "func_8003E680"); }
+/* func_80070D10 is now a REAL translation (Phase 6E-B1):
+ * game/boot/func_80070D10_port.c — lagged-Fibonacci RNG table init. */
 static inline void func_80070D6C(void)    { Bootstrap_ReturnVoid("func_80070D6C", "func_8003E680"); }
 static inline void func_8003E974(void)    { Bootstrap_ReturnVoid("func_8003E974", "func_8003E680"); }
 static inline void func_80036DC8(void)    { Bootstrap_ReturnVoid("func_80036DC8", "func_8003E680"); }
@@ -61,6 +62,7 @@ static inline void func_8006536C(void)    { Bootstrap_ReturnVoid("func_8006536C"
 /* ── REAL translated Boot Rung functions ────────────────────────────── */
 extern void func_8003E610(void);
 extern void func_8003E680(void);
+extern void func_80070D10(void);
 extern void func_8006A5BC(void);
 extern void func_8006A64C(void);
 extern void func_8006A674(void);

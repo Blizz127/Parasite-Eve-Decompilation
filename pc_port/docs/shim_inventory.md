@@ -78,8 +78,11 @@ All stubs are explicitly classified. No anonymous empty stubs.
 - `func_80080C48`
 
 ### func_8003E680 callees (2000 + 16)
-- `func_80070D10`
-- `func_80070D6C` (×2000 — hardware poll loop)
+- ~~`func_80070D10`~~ — TRANSLATED (Phase 6E-B1): lagged-Fibonacci RNG table
+  init, `game/boot/func_80070D10_port.c`
+- `func_80070D6C` (×2000 — RNG warm-up: lagged-Fibonacci advance over the
+  0x80070E04..0x80070E4C block seeded by func_80070D10; no hardware access —
+  instruction-level evidence, previously mislabeled "hardware poll loop")
 - `func_8003E974`
 - `func_80036DC8`
 - `func_80073D24` (×2 — callback register: reset + register)
