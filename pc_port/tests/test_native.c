@@ -6423,6 +6423,42 @@ static void test_62568_full_footprint(void) {
     PASS();
 }
 
+static void test_62568_ramreset_rerun(void) {
+    TEST("62568_ramreset_rerun");
+    pe_addr_t a;
+    ResetTestState();
+    func_80062568();
+    /* Verify initial state. */
+    ASSERT(PE_LoadU32(0x800A22E0u) == 0x800A2370u, "first link");
+    ASSERT(PE_LoadU32(0x800A2FD0u) == 0, "last link");
+    ASSERT(PE_LoadU32(0x8009D158u) == 0x800A22E0u, "head");
+    ASSERT(PE_LoadU32(0x8009D15Cu) == 0, "tail");
+    ASSERT(PE_LoadU32(0x8009D154u) == 0, "aux");
+
+    PE_RamReset();
+    /* Dirty everything with controlled pattern. */
+    for (a = 0x800A22E0u; a < 0x800A3060u; a += 4)
+        PE_StoreU32(a, 0xCAFE0000u | (a & 0xFFFFu));
+    PE_StoreU32(0x8009D158u, 0xBEEF0001u);
+    PE_StoreU32(0x8009D15Cu, 0xBEEF0002u);
+    PE_StoreU32(0x8009D154u, 0xBEEF0003u);
+
+    func_80062568();
+    /* Verify full chain restored. */
+    for (a = 0x800A22E0u; a < 0x800A2FD0u; a += 0x90u)
+        ASSERT(PE_LoadU32(a) == a + 0x90u, "rerun: pool link");
+    ASSERT(PE_LoadU32(0x800A2FD0u) == 0, "rerun: null");
+    ASSERT(PE_LoadU32(0x8009D158u) == 0x800A22E0u, "rerun: head");
+    ASSERT(PE_LoadU32(0x8009D15Cu) == 0, "rerun: tail");
+    ASSERT(PE_LoadU32(0x8009D154u) == 0, "rerun: aux");
+    /* POOL_END untouched. */
+    ASSERT(PE_LoadU32(0x800A3060u) == 0, "rerun: POOL_END untouched");
+    /* Non-link bytes restored to zero by PE_RamReset, then left alone. */
+    ASSERT(PE_LoadU32(0x800A22E4u) == 0xCAFE22E4u, "rerun: non-link preserved");
+    ASSERT(PE_LoadU32(0x800A2FD4u) == 0xCAFE2FD4u, "rerun: non-link last preserved");
+    PASS();
+}
+
 /* ── Required by host_framebuffer.c / func_8001220C_port.c ───────────── */
 int g_port_stop_requested = 0;
 int g_port_main_iterations = 0;
@@ -6767,6 +6803,7 @@ int main(void)
     test_62568_dirty_state();
     test_62568_repeated();
     test_62568_full_footprint();
+    test_62568_ramreset_rerun();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

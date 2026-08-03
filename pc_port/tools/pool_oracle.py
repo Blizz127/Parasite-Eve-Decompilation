@@ -6,6 +6,7 @@ the exact expected write sequence from the independently derived retail
 geometry and verifies against the transcribed MIPS body.
 
 Output: ordered write sequence (ordinal, address, width, value).
+28 ordered store operations across 27 unique addresses (the final slot is written twice: loop stores 0x800A3060, then explicit null overwrite).
 Exit 0 if the implementation under test matches.  Exit 1 if any write
 is missing, extra, or wrong.
 
