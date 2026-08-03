@@ -480,14 +480,22 @@ static void test_bootstrap_invocation_count_unique(void) {
  * Phase 6D-R/S — func_8006A8D4 tests: 19 pointer assignments
  * ═══════════════════════════════════════════════════════════════════════ */
 
-/* Array of all 19 pointer globals in assignment order */
-static pe_addr_t *g_a8d4_ptrs[19] = {
-    &D_800B0E24, &D_800B0E28, &D_800B0E2C, &D_800B0E30,
-    &D_800B0E40, &D_800B0E34, &D_800B0E38, &D_800B0E3C,
-    &D_800B0E44, &D_800B0E4C, &D_800B0E48, &D_800B0E50,
-    &D_800B0E54, &D_800B0E5C, &D_800B0E58, &D_800B0E60,
-    &D_800B0E6C, &D_800B0E64, &D_800B0E68
-};
+/* Array of all 19 pointer globals in assignment order.  Since Phase
+ * 6E-B16 these are guest-RAM lvalue macros (function-call lvalues), so
+ * the array is populated at runtime by PE_A8D4_InitPtrs(). */
+static pe_addr_t *g_a8d4_ptrs[19];
+static void PE_A8D4_InitPtrs(void) {
+    g_a8d4_ptrs[0]  = &D_800B0E24; g_a8d4_ptrs[1]  = &D_800B0E28;
+    g_a8d4_ptrs[2]  = &D_800B0E2C; g_a8d4_ptrs[3]  = &D_800B0E30;
+    g_a8d4_ptrs[4]  = &D_800B0E40; g_a8d4_ptrs[5]  = &D_800B0E34;
+    g_a8d4_ptrs[6]  = &D_800B0E38; g_a8d4_ptrs[7]  = &D_800B0E3C;
+    g_a8d4_ptrs[8]  = &D_800B0E44; g_a8d4_ptrs[9]  = &D_800B0E4C;
+    g_a8d4_ptrs[10] = &D_800B0E48; g_a8d4_ptrs[11] = &D_800B0E50;
+    g_a8d4_ptrs[12] = &D_800B0E54; g_a8d4_ptrs[13] = &D_800B0E5C;
+    g_a8d4_ptrs[14] = &D_800B0E58; g_a8d4_ptrs[15] = &D_800B0E60;
+    g_a8d4_ptrs[16] = &D_800B0E6C; g_a8d4_ptrs[17] = &D_800B0E64;
+    g_a8d4_ptrs[18] = &D_800B0E68;
+}
 
 /* Expected retail values in the same assignment order, computed by hand
  * from the exact-matching source src/func_8006A8D4.c with
@@ -512,6 +520,7 @@ static const pe_addr_t g_a8d4_expected[19] = {
 
 static void test_6A8D4_all_nonnull(void) {
     TEST("6A8D4_all_nonnull");
+    PE_A8D4_InitPtrs();
     ResetTestState();
     func_8006A8D4();
     for (int i = 0; i < 19; i++) {
@@ -527,6 +536,7 @@ static void test_6A8D4_all_nonnull(void) {
 
 static void test_6A8D4_determinism(void) {
     TEST("6A8D4_determinism");
+    PE_A8D4_InitPtrs();
     pe_addr_t snap1[19], snap2[19], snap3[19];
 
     ResetTestState();
@@ -556,6 +566,7 @@ static void test_6A8D4_determinism(void) {
 
 static void test_6A8D4_bounds(void) {
     TEST("6A8D4_bounds");
+    PE_A8D4_InitPtrs();
     ResetTestState();
     func_8006A8D4();
 
@@ -582,6 +593,7 @@ static void test_6A8D4_bounds(void) {
 
 static void test_6A8D4_exact_values(void) {
     TEST("6A8D4_exact_19_values");
+    PE_A8D4_InitPtrs();
     ResetTestState();
     func_8006A8D4();
     for (int i = 0; i < 19; i++) {
@@ -598,6 +610,7 @@ static void test_6A8D4_exact_values(void) {
 
 static void test_6A8D4_assignment_count(void) {
     TEST("6A8D4_19_assignments");
+    PE_A8D4_InitPtrs();
     ResetTestState();
 
     /* Initialize all 19 to zero, verify they become non-zero */
@@ -613,6 +626,7 @@ static void test_6A8D4_assignment_count(void) {
 
 static void test_6A8D4_no_overlap(void) {
     TEST("6A8D4_no_overlap");
+    PE_A8D4_InitPtrs();
     ResetTestState();
     func_8006A8D4();
 
@@ -5440,6 +5454,492 @@ static void test_698D4_bootstrap_fixture(void) {
     PASS();
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B16 — func_8006A9E4 PE.IMG streaming resource load rung
+ * (plus its three translated dependencies: func_8006E6A8 issue wrapper,
+ * func_8006E7E8 completion poll, func_8006E498 archive lookup)
+ *
+ * Guest addresses used by these tests:
+ *   table D_800930DC (halfwords, guest RAM here — no exe is loaded in the
+ *   test process, exactly like the --bootstrap-disc fixture), stream
+ *   buffer 0x80100000, archive copy D_800E2858, copy-2 dest 0x80180000.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define B16_TABLE   0x800930DCu
+#define B16_ADEST   0x800A8028u
+#define B16_STREAM  0x80100000u
+#define B16_ARCH    0x800E2858u
+#define B16_DEST2   0x80180000u
+#define B16_COPY1   0x10A50u
+#define B16_COPY2   0x1400u
+
+/* Fixture PE.IMG byte i, exactly as FxBuild writes it: pattern for
+ * i < FX_PEIMG_SIZE, zero-filled sector tail afterwards. */
+static uint8_t B16_FxByte(uint32_t i) {
+    return (i < FX_PEIMG_SIZE) ? FxPattern(i) : (uint8_t)0;
+}
+
+/* ── func_8006E6A8: sector-count → byte-count wrapper ────────────────── */
+
+static void test_6E6A8_sector_to_byte(void) {
+    TEST("6E6A8_sector_to_byte");
+    DiscFixture fx;
+    uint32_t i;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+
+    /* 2 sectors must arrive as 4096 bytes: the << 11 conversion at the
+     * host-adaptation boundary. */
+    ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, 2) == 1,
+           "2-sector issue must return 1");
+    for (i = 0; i < 4096; i++) {
+        if (PE_LoadU8(B16_STREAM + i) != B16_FxByte(i)) {
+            FAIL("byte mismatch after 2-sector read"); FxFree(&fx); return;
+        }
+    }
+    ASSERT(PE_LoadU8(B16_STREAM + 4096) == 0, "read wrote past 4096 bytes");
+    ASSERT((D_800B0CD8 & 0x01004000u) == 0x01004000u,
+           "provider post-issue bits missing");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B16_STREAM, "dest register wrong");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_6E6A8_guard_zero_and_wrap(void) {
+    TEST("6E6A8_guard_zero_and_wrap");
+    ResetTestState();
+    func_8007ED58();
+
+    /* busy guard passes through the wrapper unchanged */
+    D_800B0CD8 |= 0x01000000u;
+    ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, 1) == -1,
+           "busy guard must return -1");
+    D_800B0CD8 &= ~0x01000000u;
+
+    /* 0 sectors → byte size 0 → trivial success, no bytes written */
+    PE_StoreU8(B16_STREAM, 0xAA);
+    ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, 0) == 1,
+           "zero-sector issue must complete trivially");
+    ASSERT(PE_LoadU8(B16_STREAM) == 0xAA, "zero-size read must not write");
+
+    /* exact << 11 wraparound: -1 → 0xFFFFF800 (negative → rejected),
+     * 0x100000 → 0x80000000 (negative → rejected) */
+    ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, -1) == -1,
+           "-1 sectors must wrap to a negative byte size and fail");
+    ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, 0x100000) == -1,
+           "0x100000 sectors must wrap to a negative byte size and fail");
+    PASS();
+}
+
+/* ── func_8006E7E8: poll + D_800B0CD8 RMW ────────────────────────────── */
+
+static void test_6E7E8_success_rmw(void) {
+    TEST("6E7E8_success_rmw");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+
+    D_800B0CD8 = 0xDEAD0000u;
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, B16_STREAM, 2048) == 1, "read failed");
+    ASSERT(D_800B0CD8 == 0xDFAD4000u, "issue must set 0x01004000");
+    ASSERT(func_8006E7E8() == 0, "poll must report 0 after sync read");
+    /* RMW on st==0: &= 0xFEFFBFFF, every other bit preserved */
+    ASSERT(D_800B0CD8 == 0xDEAD0000u, "RMW after st==0 wrong");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_6E7E8_timeout_rmw(void) {
+    TEST("6E7E8_timeout_rmw");
+    int vs;
+    ResetTestState();
+    HostFB_Init();
+    HostFB_VSync(0);
+    HostFB_VSync(0);
+    HostFB_GetState(&vs, NULL, NULL, NULL);
+    PE_StoreU32(0x8009B6C4u, (uint32_t)(vs - 1300)); /* >1200 vsyncs stale */
+    PE_StoreU32(0x8009B6CCu, 1);
+    D_800B0CD8 = 0xDFAD4000u;
+    ASSERT(func_8006E7E8() == -1, "stale read must time out");
+    ASSERT(D_800B0CD8 == 0xDEAD0000u, "RMW after st==-1 wrong");
+    ASSERT(PE_LoadU32(0x8009B6CCu) == 0, "timeout abort must clear D_8009B6CC");
+    PASS();
+}
+
+static void test_6E7E8_pending_no_rmw(void) {
+    TEST("6E7E8_pending_no_rmw");
+    ResetTestState();
+    HostFB_Init();
+    PE_StoreU32(0x8009B6C4u, 0);  /* fresh timestamp: no timeout at vs=0 */
+    PE_StoreU32(0x8009B6B4u, 1);  /* 1 byte pending → st = 1 */
+    D_800B0CD8 = 0xDFAD4000u;
+    ASSERT(func_8006E7E8() == 1, "pending poll must return 1");
+    /* (uint32_t)(st+1) < 2 is false for st==1: NO RMW */
+    ASSERT(D_800B0CD8 == 0xDFAD4000u, "st==1 must not clear state bits");
+    PASS();
+}
+
+/* ── func_8006E498: archive directory lookup ─────────────────────────── */
+
+static void B16_CraftArchive(pe_addr_t base) {
+    /* lw(base+4) = 0x40 → directory header at base+0x40+8 = base+0x48 */
+    PE_StoreU32(base + 4, 0x40u);
+    /* hdr: count = 2 (top 10 bits), first entry at base+0x80 */
+    PE_StoreU32(base + 0x48, (2u << 22) | 0x80u);
+    /* entry 0 @ base+0x80: offset 0x500, key 0x11111111 */
+    PE_StoreU32(base + 0x84, 0x500u);
+    PE_StoreU32(base + 0x88, 0x11111111u);
+    /* entry 1 @ base+0x8C: offset 0x700, key 0x57D40D84 */
+    PE_StoreU32(base + 0x90, 0x700u);
+    PE_StoreU32(base + 0x94, 0x57D40D84u);
+}
+
+static void test_6E498_hit_exact(void) {
+    TEST("6E498_hit_exact");
+    ResetTestState();
+    B16_CraftArchive(B16_STREAM);
+    /* hit on entry 0 and on entry 1 (loop advance by 0xC) */
+    ASSERT(func_8006E498(B16_STREAM, 0x11111111u) == B16_STREAM + 0x500u,
+           "entry-0 lookup wrong");
+    ASSERT(func_8006E498(B16_STREAM, 0x57D40D84u) == B16_STREAM + 0x700u,
+           "entry-1 lookup wrong");
+    /* repeated invocation with unchanged guest state: same result */
+    ASSERT(func_8006E498(B16_STREAM, 0x57D40D84u) == B16_STREAM + 0x700u,
+           "repeated lookup not stable");
+    PASS();
+}
+
+static void test_6E498_miss_and_empty(void) {
+    TEST("6E498_miss_and_empty");
+    ResetTestState();
+    B16_CraftArchive(B16_STREAM);
+    ASSERT(func_8006E498(B16_STREAM, 0x22222222u) == 0,
+           "absent key must return 0");
+
+    /* count == 0 → immediate 0; the entry table must NOT be read */
+    PE_StoreU32(B16_DEST2 + 4, 0x40u);
+    PE_StoreU32(B16_DEST2 + 0x48, 0x80u); /* count 0, table off 0x80 */
+    PE_StoreU32(B16_DEST2 + 0x84, 0x500u);
+    PE_StoreU32(B16_DEST2 + 0x88, 0x57D40D84u); /* would hit if read */
+    ASSERT(func_8006E498(B16_DEST2, 0x57D40D84u) == 0,
+           "count==0 must return 0 without walking entries");
+    PASS();
+}
+
+static void test_6E498_packed_fields(void) {
+    TEST("6E498_packed_fields");
+    ResetTestState();
+    /* 24-bit offset mask: entry offset 0xFF000800 → base+0x800 */
+    PE_StoreU32(B16_STREAM + 4, 0x40u);
+    PE_StoreU32(B16_STREAM + 0x48, (1u << 22) | 0x80u);
+    PE_StoreU32(B16_STREAM + 0x84, 0xFF000800u);
+    PE_StoreU32(B16_STREAM + 0x88, 0x57D41D84u);
+    ASSERT(func_8006E498(B16_STREAM, 0x57D41D84u) == B16_STREAM + 0x800u,
+           "offset must be masked to 24 bits");
+
+    /* count is exactly the top 10 bits: 0x3FF = 1023 entries.  Put the
+     * key in the LAST entry (index 1022 at base+0x80+1022*0xC) and clear
+     * entry 0: the full walk must reach it. */
+    PE_StoreU32(B16_STREAM + 0x48, (0x3FFu << 22) | 0x80u);
+    PE_StoreU32(B16_STREAM + 0x84, 0u);
+    PE_StoreU32(B16_STREAM + 0x88, 0u);
+    PE_StoreU32(B16_STREAM + 0x80 + 1022u * 0xCu + 4, 0x900u);
+    PE_StoreU32(B16_STREAM + 0x80 + 1022u * 0xCu + 8, 0x57D41D84u);
+    ASSERT(func_8006E498(B16_STREAM, 0x57D41D84u) == B16_STREAM + 0x900u,
+           "1023-entry walk must reach the final entry");
+    ASSERT(func_8006E498(B16_STREAM, 0x57D41D85u) == 0,
+           "1023-entry walk over non-matching keys must miss");
+    PASS();
+}
+
+static void test_6E498_readonly_footprint(void) {
+    TEST("6E498_readonly_footprint");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    B16_CraftArchive(B16_STREAM);
+    ASSERT(func_8006E498(B16_STREAM, 0x57D40D84u) == B16_STREAM + 0x700u,
+           "hit failed");
+    ASSERT(func_8006E498(B16_STREAM, 0x99999999u) == 0, "miss failed");
+    /* pure table walk: the ONLY non-canary words are the ones the test
+     * itself stored */
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        uint32_t want = 0xA5A5A5A5u;
+        pe_addr_t off = a - B16_STREAM;
+        if (off == 4u) want = 0x40u;
+        else if (off == 0x48u) want = (2u << 22) | 0x80u;
+        else if (off == 0x84u) want = 0x500u;
+        else if (off == 0x88u) want = 0x11111111u;
+        else if (off == 0x90u) want = 0x700u;
+        else if (off == 0x94u) want = 0x57D40D84u;
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
+                   a, PE_LoadU32(a), want);
+            FAIL("func_8006E498 wrote guest memory");
+            return;
+        }
+    }
+    PASS();
+}
+
+/* ── func_8006A9E4: full patterned run ───────────────────────────────── */
+
+static void test_6A9E4_full_run_patterned(void) {
+    TEST("6A9E4_full_run_patterned");
+    static uint8_t snap[B16_COPY1]; /* stream snapshot before the run */
+    DiscFixture fx;
+    uint32_t i;
+    const uint8_t *fb;
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+
+    /* Retail-shaped halfword table (guest RAM here; no exe loaded):
+     *   A: off=0  end=1  → lba 30, 1 sector → 0x800A8028
+     *   B: off=1  end=1  → 0 sectors (stream preserved for the archive)
+     *   C: off=1  end=2  → lba 31, 1 sector → stream
+     *   D: off=2  end=3  → lba 32, 1 sector → stream */
+    PE_StoreU16(B16_TABLE + 0, 0);
+    PE_StoreU16(B16_TABLE + 2, 1);
+    PE_StoreU16(B16_TABLE + 4, 1);
+    PE_StoreU16(B16_TABLE + 6, 0x7E77); /* retail-unused slot */
+    PE_StoreU16(B16_TABLE + 8, 1);
+    PE_StoreU16(B16_TABLE + 10, 2);
+    PE_StoreU16(B16_TABLE + 12, 3);
+    D_800B0DD8 = FX_PEIMG_LBA;
+
+    /* Entry contract (retail: func_8006A8D4 / func_8006A674 outputs). */
+    D_800B0E6C = B16_STREAM;
+    PE_StoreU32(0x800B0E08u, B16_DEST2);
+
+    /* Pre-fill the stream buffer, then craft the archive the two
+     * func_8006E498 lookups will walk after copy #1. */
+    for (i = 0; i < B16_COPY1; i++)
+        PE_StoreU8(B16_STREAM + i, (uint8_t)(i * 13u + 5u));
+    PE_StoreU32(B16_STREAM + 4, 0x100u);            /* dir off */
+    PE_StoreU32(B16_STREAM + 0x108, (3u << 22) | 0x180u); /* count 3 */
+    PE_StoreU32(B16_STREAM + 0x184, 0x200u);        /* e0 off */
+    PE_StoreU32(B16_STREAM + 0x188, 0xDEADBEEFu);   /* e0 key (decoy) */
+    PE_StoreU32(B16_STREAM + 0x190, 0xAA000300u);   /* e1 off (dirty hi) */
+    PE_StoreU32(B16_STREAM + 0x194, 0x57D40D84u);   /* e1 key */
+    PE_StoreU32(B16_STREAM + 0x19C, 0xFF000400u);   /* e2 off (dirty hi) */
+    PE_StoreU32(B16_STREAM + 0x1A0, 0x57D41D84u);   /* e2 key */
+    for (i = 0; i < B16_COPY1; i++)
+        snap[i] = PE_LoadU8(B16_STREAM + i);
+
+    func_8006A9E4();
+
+    /* 1. ClearImage({0,0,0x3FF,0x1FF}, 0,0,1) through the REAL host SDK:
+     * clipped to the 320x240 host framebuffer. */
+    fb = HostFB_GetPixels();
+    for (i = 0; i < PE_PORT_FB_WIDTH * PE_PORT_FB_HEIGHT * 3; i += 3) {
+        if (fb[i] != 0 || fb[i+1] != 0 || fb[i+2] != 1) {
+            FAIL("ClearImage pixel wrong"); FxFree(&fx); return;
+        }
+    }
+
+    /* 2. Cycle A bytes + guards. */
+    for (i = 0; i < 2048; i++) {
+        if (PE_LoadU8(B16_ADEST + i) != B16_FxByte(i)) {
+            FAIL("cycle A byte mismatch"); FxFree(&fx); return;
+        }
+    }
+    ASSERT(PE_LoadU32(B16_ADEST - 4) == 0, "guard below cycle A dest hit");
+    ASSERT(PE_LoadU32(B16_ADEST + 2048) == 0, "guard above cycle A dest hit");
+
+    /* 3. Copy #1: exact 0x10A50-byte image of the pre-run stream. */
+    for (i = 0; i < B16_COPY1; i++) {
+        if (PE_LoadU8(B16_ARCH + i) != snap[i]) {
+            FAIL("copy #1 byte mismatch"); FxFree(&fx); return;
+        }
+    }
+    ASSERT(PE_LoadU32(B16_ARCH - 4) == 0, "guard below archive hit");
+    ASSERT(PE_LoadU32(B16_ARCH + B16_COPY1) == 0, "guard above archive hit");
+
+    /* 4. Lookup slots, exact delay-slot store order results. */
+    ASSERT(PE_LoadU32(0x800B0E20u) == B16_ARCH, "D_800B0E20 wrong");
+    ASSERT(PE_LoadU32(0x800B0E18u) == B16_ARCH + 0x300u, "lookup 1 wrong");
+    ASSERT(PE_LoadU32(0x800B0E1Cu) == B16_ARCH + 0x400u, "lookup 2 wrong");
+
+    /* 5. Stream head after cycles C and D (D last: lba 32). */
+    for (i = 0; i < 2048; i++) {
+        if (PE_LoadU8(B16_STREAM + i) != B16_FxByte(4096 + i)) {
+            FAIL("stream head mismatch after cycle D"); FxFree(&fx); return;
+        }
+    }
+    ASSERT(PE_LoadU32(B16_STREAM + B16_COPY1) == 0, "stream guard hit");
+
+    /* 6. Copy #2: 0x1400 bytes of the post-cycle-D stream. */
+    for (i = 0; i < B16_COPY2; i++) {
+        uint8_t want = (i < 2048) ? B16_FxByte(4096 + i) : snap[i];
+        if (PE_LoadU8(B16_DEST2 + i) != want) {
+            FAIL("copy #2 byte mismatch"); FxFree(&fx); return;
+        }
+    }
+    ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
+    ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
+
+    /* 7. Dependency boundary: exactly the two unresolved providers, in
+     * ROM order; the translated functions never touch the policy. */
+    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
+    ASSERT(strcmp(g_stub_order_log[0], "func_800527C8") == 0,
+           "func_800527C8 must be invoked first (cycle B poll)");
+    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
+           "func_80087090 must be invoked second");
+    ASSERT(Bootstrap_InvocationCount() == 2, "wrong provider count");
+    ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
+    ASSERT(CountOrderLog("func_8006E6A8") == 0, "6E6A8 routed via policy");
+    ASSERT(CountOrderLog("func_8006E7E8") == 0, "6E7E8 routed via policy");
+    ASSERT(CountOrderLog("func_8006E498") == 0, "6E498 routed via policy");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ── func_8006A9E4: full 2 MiB canary footprint (zero-size cycles) ───── */
+
+static uint32_t B16_StreamWordPre(uint32_t off) {
+    if (off == 4u)    return 0x100u;
+    if (off == 0x108u) return (1u << 22) | 0x180u;
+    if (off == 0x184u) return 0x300u;
+    if (off == 0x188u) return 0x57D40D84u;
+    return 0xA5A5A5A5u;
+}
+
+static void test_6A9E4_zero_cycles_footprint(void) {
+    TEST("6A9E4_zero_cycles_footprint");
+    pe_addr_t a;
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+
+    /* Canary table → every cycle size is (0xA5A5 - 0xA5A5) = 0, so no
+     * disc is needed and no read bytes land.  Re-establish the provider
+     * guards and the entry contract over the canary. */
+    PE_StoreU32(0x8009B574u, 1);        /* CdReady lane */
+    PE_StoreU32(0x800A3608u, 0);        /* queue empty */
+    D_800B0CD8 = 0xA4A5A5A5u;           /* busy bit 0x01000000 clear */
+    D_800B0E6C = B16_STREAM;
+    PE_StoreU32(0x800B0E08u, B16_DEST2);
+
+    /* Minimal valid archive for the two lookups (count 1, key 1 hit). */
+    PE_StoreU32(B16_STREAM + 4, 0x100u);
+    PE_StoreU32(B16_STREAM + 0x108, (1u << 22) | 0x180u);
+    PE_StoreU32(B16_STREAM + 0x184, 0x300u);
+    PE_StoreU32(B16_STREAM + 0x188, 0x57D40D84u);
+
+    func_8006A9E4();
+
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        uint32_t want = 0xA5A5A5A5u;
+        if (a == 0x800B0CD8u) want = 0xA4A5A5A5u;      /* | then & RMW */
+        else if (a == 0x8009B574u) want = 1;
+        else if (a == 0x800A3608u) want = 0;
+        else if (a == 0x800B0E6Cu) want = B16_STREAM;
+        else if (a == 0x800B0E08u) want = B16_DEST2;
+        else if (a == 0x8009B6ACu) want = 0x200u;      /* post-issue */
+        else if (a == 0x8009B6B0u) want = B16_STREAM;  /* last dest */
+        else if (a == 0x8009B6B4u) want = 0;
+        else if (a == 0x8009B6C4u) want = 0;           /* vs = 0 */
+        else if (a == 0x8009B6D4u) want = 1;
+        else if (a == 0x800B0E20u) want = B16_ARCH;
+        else if (a == 0x800B0E18u) want = B16_ARCH + 0x300u;
+        else if (a == 0x800B0E1Cu) want = 0;           /* key 2 absent */
+        else if (a >= B16_STREAM && a < B16_STREAM + B16_COPY1)
+            want = B16_StreamWordPre(a - B16_STREAM);
+        else if (a >= B16_ARCH && a < B16_ARCH + B16_COPY1)
+            want = B16_StreamWordPre(a - B16_ARCH);
+        else if (a >= B16_DEST2 && a < B16_DEST2 + B16_COPY2)
+            want = B16_StreamWordPre(a - B16_DEST2);
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
+                   a, PE_LoadU32(a), want);
+            FAIL("func_8006A9E4 write footprint wrong");
+            return;
+        }
+    }
+    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
+    PASS();
+}
+
+/* ── func_8006A9E4: PE_RamReset then re-run ──────────────────────────── */
+
+static void test_6A9E4_ramreset_rerun(void) {
+    TEST("6A9E4_ramreset_rerun");
+    uint32_t e18_1, e1c_1, e20_1;
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    /* zeroed table → 0-size cycles; zeroed stream → count-0 archive */
+    D_800B0E6C = B16_STREAM;
+    PE_StoreU32(0x800B0E08u, B16_DEST2);
+    func_8006A9E4();
+    e20_1 = PE_LoadU32(0x800B0E20u);
+    e18_1 = PE_LoadU32(0x800B0E18u);
+    e1c_1 = PE_LoadU32(0x800B0E1Cu);
+    ASSERT(e20_1 == B16_ARCH && e18_1 == 0 && e1c_1 == 0,
+           "first run slot values wrong");
+
+    PE_RamReset();
+    ASSERT(PE_LoadU32(0x800B0E20u) == 0, "RAM reset did not clear slots");
+    /* Re-establish the entry contract (retail: the arena init rungs
+     * re-run on reboot) and the provider lane state. */
+    func_8007ED58();
+    D_800B0E6C = B16_STREAM;
+    PE_StoreU32(0x800B0E08u, B16_DEST2);
+    func_8006A9E4();
+    ASSERT(PE_LoadU32(0x800B0E20u) == e20_1, "rerun D_800B0E20 differs");
+    ASSERT(PE_LoadU32(0x800B0E18u) == e18_1, "rerun D_800B0E18 differs");
+    ASSERT(PE_LoadU32(0x800B0E1Cu) == e1c_1, "rerun D_800B0E1C differs");
+    ASSERT(CountOrderLog("func_800527C8") == 2, "stub count after rerun");
+    ASSERT(CountOrderLog("func_80087090") == 2, "stub count after rerun");
+    PASS();
+}
+
+/* ── func_8006A9E4: placement after the completed func_8003E680 ──────── */
+
+static void test_6A9E4_3E680_integration(void) {
+    TEST("6A9E4_3E680_integration");
+    ResetTestState();
+    PE_Callback_Init();
+    g_bootstrap_disc = 1;
+
+    /* Retail order in func_8001220C: jal func_8003E680 @0x8001227C, then
+     * jal func_8006A9E4 @0x80012284 (nop delay slot).  func_8003E680 is
+     * fully translated — it must contribute zero bootstrap entries. */
+    func_8003E680();
+    ASSERT(g_stub_order_count == 0, "bootstrap providers remain in 3E680");
+
+    func_8007ED58();
+    D_800B0E6C = 0x801ED800u;  /* func_8006A8D4 arena value */
+    PE_StoreU32(0x800B0E08u, 0x800F74F8u); /* func_8006A674 arena value */
+    func_8006A9E4();
+
+    ASSERT(g_stub_order_count == 2, "unexpected provider count");
+    ASSERT(strcmp(g_stub_order_log[0], "func_800527C8") == 0,
+           "first provider after 3E680 must be func_800527C8");
+    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
+           "second provider must be func_80087090");
+    ASSERT(CountOrderLog("func_8006A9E4") == 0,
+           "func_8006A9E4 still routed through bootstrap policy");
+    ASSERT(PE_LoadU32(0x800B0E20u) == B16_ARCH, "D_800B0E20 wrong");
+    ASSERT(PE_LoadU32(0x800B0E18u) == 0, "count-0 archive must yield 0");
+    ASSERT(PE_LoadU32(0x800B0E1Cu) == 0, "count-0 archive must yield 0");
+    /* The full --strict-stubs exit at func_800527C8 is a runtime gate
+     * (check_strict calls exit(1)) and is covered by the binary strict
+     * runs; this test proves the in-process provider order. */
+    PASS();
+}
+
 /* ── Required by host_framebuffer.c / func_8001220C_port.c ───────────── */
 int g_port_stop_requested = 0;
 int g_port_main_iterations = 0;
@@ -5752,6 +6252,21 @@ int main(void)
     test_698D4_second_disc_bits();
     test_698D4_no_disc();
     test_698D4_bootstrap_fixture();
+
+    /* Phase 6E-B16: func_8006A9E4 streaming load rung (13 tests) */
+    test_6E6A8_sector_to_byte();
+    test_6E6A8_guard_zero_and_wrap();
+    test_6E7E8_success_rmw();
+    test_6E7E8_timeout_rmw();
+    test_6E7E8_pending_no_rmw();
+    test_6E498_hit_exact();
+    test_6E498_miss_and_empty();
+    test_6E498_packed_fields();
+    test_6E498_readonly_footprint();
+    test_6A9E4_full_run_patterned();
+    test_6A9E4_zero_cycles_footprint();
+    test_6A9E4_ramreset_rerun();
+    test_6A9E4_3E680_integration();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

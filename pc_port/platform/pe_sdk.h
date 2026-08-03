@@ -97,6 +97,11 @@ int  func_80081414(pe_addr_t fp, const char *name); /* DsSearchFile */
 int  func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int size);
 int  func_800811E4(pe_addr_t fp);    /* read poll: 0 done, -1 timeout */
 
+/* ── streaming wrappers (pc_port/game/boot/, Phase 6E-B16) ────────── */
+int       func_8006E6A8(int lba, pe_addr_t dest, int sectors); /* issue */
+int       func_8006E7E8(void);              /* poll + D_800B0CD8 RMW */
+pe_addr_t func_8006E498(pe_addr_t base, uint32_t key); /* archive lookup */
+
 /* ── save manager (pc_port/platform/pe_save.c) ──────────────────────── */
 void func_800844E4(pe_addr_t base, pe_addr_t base2);
 void func_80082534(void);

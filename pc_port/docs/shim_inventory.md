@@ -38,7 +38,8 @@ All stubs are explicitly classified. No anonymous empty stubs.
 
 ### func_8001220C callees
 - `func_800725DC`
-- `func_8006A9E4`
+- ~~`func_8006A9E4`~~ — TRANSLATED (Phase 6E-B16; see the func_8003E680
+  callees section)
 - `func_8006AD40`
 - `func_8006ECEC`
 - `func_8006F044`
@@ -187,8 +188,24 @@ All stubs are explicitly classified. No anonymous empty stubs.
   func_8003E680 @0x8003E738 (final call, void epilogue follows) and
   func_8006E9A0 @0x8006EB7C; with this leaf func_8003E680 is FULLY
   translated; `game/boot/func_80038D1C_port.c`
-- `func_8006A9E4`  ← current strict-mode frontier (from func_8001220C —
-  past the fully translated func_8003E680)
+- ~~`func_8006A9E4(void)`~~ — TRANSLATED (Phase 6E-B16): 215-word
+  (0x35C, exe 0x8006A9E4–0x8006AD3F, file 0x5B1E4, live split 5B1E4.s)
+  PE.IMG streaming resource load: ClearImage({0,0,0x3FF,0x1FF},0,0,1)
+  via REAL func_80074F44; four sector-read/poll cycles (table
+  D_800930DC..E8, dests D_800A8028 and lw(D_800B0E6C); A/B polls
+  restart-on-(-1), C/D sltu-clamped re-poll); 0x10A50-byte copy to
+  D_800E2858; two archive lookups (keys 0x57D40D84/0x57D41D84, exact
+  delay-slot order D_800B0E20→E18→E1C); 0x1400-byte copy to
+  lw(D_800B0E08); all 215 words exe-verified; sole call site
+  func_8001220C @0x80012284 (nop slot, return ignored);
+  `game/boot/func_8006A9E4_port.c`.  Dependencies translated with it:
+  func_8006E6A8 (11 words, issue wrapper with sector→byte << 11 at the
+  host-adaptation boundary), func_8006E7E8 (19 words, poll + D_800B0CD8
+  &= 0xFEFFBFFF on st∈{-1,0}), func_8006E498 (31 words, archive lookup,
+  guest-address result).  func_800527C8 (once, cycle-B poll) and
+  func_80087090 remain UNRESOLVED via the centralized boundary
+- `func_800527C8`  ← current strict-mode frontier (from func_8006A9E4,
+  invoked once inside the cycle-B poll loop)
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
@@ -210,12 +227,18 @@ All stubs are explicitly classified. No anonymous empty stubs.
 
 ## Remaining bootstrap providers
 
-func_8007F72C (CdReady) is the first unresolved provider in strict mode.
-It gates the transition to Phase 6E (real Disc 1 + PE.IMG reads).
+With `--disc-image`, strict mode stops at `func_800527C8` (from
+`func_8006A9E4`, invoked once inside the cycle-B poll loop) — the first
+unresolved provider past the translated streaming-load rung.  The
+`--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by
+design: the fixture never initializes the drive lane.
 
-Additional unresolved providers required for boot-to-logo:
-- `func_8007F778`, `func_80082314` — disc identity
-- `DsSearchFile`, `func_80080C48` — file search and mount
-- `func_8006E6D4`, `func_800811E4` — image read and completion poll
+Disc-path providers are REAL since Phase 6E-A (host disc model over the
+read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
+`func_80082314` (PVD verify), `DsSearchFile`, `func_80080C48`
+(CdPosToInt), `func_8006E6D4` (image read), `func_800811E4`
+(completion poll).  Remaining unresolved providers for boot-to-logo:
+- `func_800527C8` — subsystem init (current strict frontier)
+- `func_80087090` — SPU upload retry wrapper
 - `func_800749D8` — display environment setup (currently memset stub)
 - `func_800752AC` (ClearOTagR) — ordering table clear

@@ -94,7 +94,6 @@ static inline void func_800752AC(void *o, int n) {
 }
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
-static inline void func_8006A9E4(void)   { Bootstrap_ReturnVoid("func_8006A9E4", "func_8001220C"); }
 static inline void func_8006AD40(void)   { Bootstrap_ReturnVoid("func_8006AD40", "func_8001220C"); }
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
@@ -110,13 +109,18 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
- * status leaf (11 retail words; also a matched decomp C leaf). */
+ * status leaf (11 retail words; also a matched decomp C leaf).
+ * func_8006A9E4 is REAL too (Phase 6E-B16):
+ * game/boot/func_8006A9E4_port.c — PE.IMG streaming resource load
+ * (215 retail words); unresolved callees func_800527C8/func_80087090
+ * route through the centralized bootstrap boundary. */
 
 /* ── REAL translated functions ────────────────────────────────────── */
 extern void func_800725DC(void);
 extern void func_8001220C(void);
 extern int  func_80038D1C(void);
 extern int  func_800698D4(void);
+extern void func_8006A9E4(void);
 extern int  func_8006E834(void);
 extern int  func_8006E9A0(int);
 

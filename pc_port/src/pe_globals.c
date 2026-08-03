@@ -26,10 +26,6 @@ unsigned short D_80093164[4] = {0};
  * func_8006A8D4's layout.  Real access sites translate via PE_Translate. */
 pe_addr_t D_80011614 = 0x8010BD00u;
 
-/* ── Arena pointer globals — pe_addr_t guest addresses ──────────────── */
-
-pe_addr_t D_800B0E24, D_800B0E28, D_800B0E2C, D_800B0E30,
-          D_800B0E34, D_800B0E38, D_800B0E3C, D_800B0E40,
-          D_800B0E44, D_800B0E48, D_800B0E4C, D_800B0E50,
-          D_800B0E54, D_800B0E58, D_800B0E5C, D_800B0E60,
-          D_800B0E64, D_800B0E68, D_800B0E6C;
+/* ── Arena pointer globals ────────────────────────────────────────────
+ * Phase 6E-B16: the 19-slot table is now guest-RAM lvalue macros in
+ * pe_port_compat.h (split-brain fix); no host storage remains. */

@@ -1,39 +1,50 @@
-# Parasite Eve Native PC Port — Phase 6E-B15
+# Parasite Eve Native PC Port — Phase 6E-B16
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** func_80038D1C rung — byte test-and-clear status
-leaf, translated as retail logic (classification 1; ALSO a matched C
-leaf in the matching decomp, `src/func_80038D1C.c`).  Complete body is
-11 retail words / `0x2C` verified against the SHA-1-exact executable
-(VRAM `0x80038D1C`–`0x80038D44`, file `0x2951C`; live split
-`asm/disc1/2951C.s`).  One byte read, one conditional byte write:
-if `D_80091A20 != 0` → `sb` 0 → `D_80091A20`, return 0; else return
-`0xFF` (255 — `addiu $v0, $zero, 0xFF`, NOT -1).  No SDK/GTE/
-hardware/callbacks/GPU/allocation work; no loops.  Signature
-`int func_80038D1C(void)`; exactly TWO exe call sites (exe-wide byte
-scan), both ignoring the return: `func_8003E680` @`0x8003E738` (the
-FINAL call — followed immediately by the `lw $ra`/`lw $s0`/
-`addiu $sp`/`jr $ra` epilogue; func_8003E680 is void and does not
-propagate `$v0`) and `func_8006E9A0` @`0x8006EB7C`.  `D_80091A20` is a
-shared byte flag in the `0x80038D1C..0x80039xxx` subsystem (writers
-at `0x80039334`/`0x80039468`/`0x8003935C`/`0x80039650`; readers at
-`0x80038E04`/`0x800394BC`) — func_80038D1C is its self-contained
-test-and-clear status leaf.  **Milestone: with this leaf translated,
-func_8003E680 is FULLY translated** — strict execution now stops in
-its caller `func_8001220C` at `func_8006A9E4` (retail jal
-@`0x80012284`, immediately after the func_8003E680 jal @`0x8001227C`).
+**Current milestone:** func_8006A9E4 rung — PE.IMG streaming resource
+load, translated as retail logic with two unresolved callees routed
+through the centralized bootstrap boundary (classification 1).  Complete
+body is 215 retail words / `0x35C` verified against the SHA-1-exact
+executable (VRAM `0x8006A9E4`–`0x8006AD3F`, file `0x5B1E4`; live split
+`asm/disc1/5B1E4.s`).  ROM order: `ClearImage({0,0,0x3FF,0x1FF},0,0,1)`
+through the REAL host SDK (func_80074F44), four streaming
+sector-read/poll cycles from PE.IMG (tables at `D_800930DC..E8`,
+destinations `D_800A8028` and the `lw(D_800B0E6C)` stream buffer;
+A/B polls restart the whole cycle on a -1, C/D polls are sltu-clamped so
+the restart branch is dead retail code), a `0x10A50`-byte copy to
+`D_800E2858`, two func_8006E498 archive lookups (keys `0x57D40D84` /
+`0x57D41D84`, exact delay-slot store order `D_800B0E20`→`E18`→`E1C`),
+the unresolved func_80087090 SPU upload, and a `0x1400`-byte copy to
+`lw(D_800B0E08)`.  Sole exe call site `func_8001220C` @`0x80012284`
+(nop delay slot, immediately after the func_8003E680 jal @`0x8001227C`);
+return ignored → `void(void)`.  Three dependencies translated with it:
+func_8006E6A8 (11-word issue wrapper; sector→byte unit conversion at
+the host-adaptation boundary, proven by the 34-sector/67792-byte and
+3-sector/5120-byte cycle/copy pairs), func_8006E7E8 (19-word completion
+poll + `D_800B0CD8 &= 0xFEFFBFFF` RMW on st∈{-1,0}), and func_8006E498
+(31-word pure guest table walk, guest-address result).  The rung also
+fixed a 6D-S-class split-brain defect: `D_800B0E24..D_800B0E6C` are now
+guest-RAM lvalue macros (retail readers load guest RAM) instead of
+duplicate host globals.  **Strict frontier advanced to `func_800527C8`
+(from `func_8006A9E4`, invoked once inside the cycle-B poll).**
 
-**Status:** FUNC_80038D1C RUNG VERIFIED — 238 native tests pass;
-ASan/UBSan clean; RNG, LZCR and callback oracle dumps byte-identical to
-their independent interpreters on the retail exe; 3 deterministic
-headless runs (framebuffer `fb28dc21…`); 3 real-disc load traces
-byte-identical; strict mode with `--disc-image` now stops at
-`func_8006A9E4` (from `func_8001220C`) — the first provider PAST the
-fully translated `func_8003E680`; windowed SHA matches headless;
-matching build remains exact at SHA `452fb033`.
+**Status:** FUNC_8006A9E4 RUNG VERIFIED — 251 native tests pass;
+ASan/UBSan clean (tests + bootstrap + real-disc load + strict runs);
+RNG, LZCR and callback oracle dumps byte-identical to their independent
+interpreters on the retail exe; 3 deterministic headless runs
+(framebuffer `fb28dc21…`, unchanged — the ClearImage is guest-side data
+construction through the real SDK, presented identically by the host);
+3 real-disc load traces byte-identical (FNV-1a-64 `7D860391E1ED6C97`);
+strict mode with `--disc-image` now stops at `func_800527C8` (from
+`func_8006A9E4`); `--bootstrap-disc` fixture still stops at
+`func_8007F72C` by design; windowed SHA matches headless; matching
+build remains exact at SHA `452fb033` (227 C leaves).
 
-**Previous milestones:** 6E-B14 (func_8006536C record-table clear +
+**Previous milestones:** 6E-B15 (func_80038D1C byte test-and-clear —
+11 retail words on `D_80091A20`, both return paths; with it
+func_8003E680 became fully translated);
+6E-B14 (func_8006536C record-table clear +
 index byte clear — 19 retail words: 28×3-word table at `D_800A3180`
 span `..0x800A32CF`, index byte `0x8009CDB4`);
 6E-B13 (func_80034F10 subsystem table clear +
@@ -368,6 +379,38 @@ on BOTH paths (write and no-write).  **Milestone: func_8003E680 is
 now fully translated** — strict mode advances past it to
 `func_8006A9E4` (from `func_8001220C`).
 
+## PE.IMG streaming resource load rung (Phase 6E-B16)
+
+| Function | Size | Words | Role |
+|----------|------|-------|------|
+| `func_8006A9E4` | 0x35C | 215 | ClearImage + four PE.IMG sector-read/poll cycles + two archive copies/lookups + unresolved func_800527C8/func_80087090 boundary calls |
+| `func_8006E6A8` | 0x2C | 11 | Issue wrapper: `func_8006E6D4(lba, 0, dest, sectors << 11)` — sector→byte conversion at the host-adaptation boundary |
+| `func_8006E7E8` | 0x4C | 19 | Completion poll: `func_800811E4` + `D_800B0CD8 &= 0xFEFFBFFF` when st∈{-1,0} |
+| `func_8006E498` | 0x7C | 31 | Archive directory lookup by 32-bit key; pure guest table walk; guest-address result |
+
+All 276 words verified against the retail executable (func_8006A9E4:
+exe `0x8006A9E4`–`0x8006AD3F`, file `0x5B1E4`, live split `5B1E4.s`).
+Sole func_8006A9E4 call site `func_8001220C` @`0x80012284` (nop delay
+slot, return ignored).  The four cycles read `end-off` SECTORS at
+`D_800B0DD8 + off` (proven: cycle B reads 34 sectors = 69632 bytes
+followed by a 67792-byte copy; cycle D reads 3 sectors = 6144 bytes
+followed by a 5120-byte copy).  Polls A/B restart the whole cycle on a
+-1; polls C/D clamp the status with sltu so a -1 re-polls without
+re-issuing.  func_800527C8 is invoked exactly once inside the cycle-B
+poll loop (one-shot flag in the retail body); func_80087090 is called
+with `(lw(D_800B0E6C), 1)` between cycles C and D.  Both are unresolved
+and go through the centralized bootstrap boundary — strict mode stops
+at `func_800527C8`.  The retry/restart loop bodies beyond first-pass
+completion are not externally triggerable in the synchronous host
+model (issue always refreshes the poll timestamp before the poll), so
+their -1 semantics are covered at the provider level instead.  This
+rung also converted `D_800B0E24..D_800B0E6C` from duplicate host
+globals to guest-RAM lvalue macros after the strict run proved retail
+readers load them from guest RAM (6D-S split-brain defect class).
+Write footprint proven by a full 2 MiB canary scan; patterned-fixture
+test verifies every copied byte, both lookup results, the delay-slot
+store order, and the provider invocation order.
+
 ## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
 | Function | Matching size | Words | Purpose |
@@ -394,7 +437,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (238 tests, all pass)
+- `pe-native-tests` — test suite (251 tests, all pass)
 
 ## Running
 
@@ -422,8 +465,9 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1, names func_8006A9E4 (from func_8001220C) — the first
-# unresolved provider PAST the fully translated func_8003E680: the
+# Expected: exit 1, names func_800527C8 (from func_8006A9E4) — the first
+# unresolved provider past the fully translated func_8003E680 AND the
+# translated func_8006A9E4 streaming-load rung: the
 # translated RNG (70D10/70D6C/70DD0), the subsystem-init pair
 # (func_8003E974 + func_8003EAC8), the timer-record init
 # (func_80036DC8 + leaves), the real func_80073D24 callback
@@ -433,8 +477,9 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # the real func_800124F8 subsystem table clear, the real
 # func_8001A890 scalar/array clear, the real func_80034F10
 # subsystem table clear + flag-bit clear, the real func_8006536C
-# record-table clear + index byte clear, and the real func_80038D1C
-# test-and-clear leaf
+# record-table clear + index byte clear, the real func_80038D1C
+# test-and-clear leaf, and the real func_8006A9E4 PE.IMG streaming
+# load (with translated func_8006E6A8/func_8006E7E8/func_8006E498)
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -456,7 +501,7 @@ host adaptation); the boot is not faked.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 238 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 251 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
@@ -500,7 +545,14 @@ cd pc_port/build
                     # + 6E-B15: func_80038D1C both return paths, no-write
                     #   path canary, byte-width proof, 3E680 integration
                     #   (dispatcher fully translated), frontier advance
-                    #   past 3E680 to func_8006A9E4)
+                    #   past 3E680 to func_8006A9E4
+                    # + 6E-B16: func_8006A9E4 rung — 6E6A8 sector→byte
+                    #   conversion/guards/wraparound, 6E7E8 RMW on all
+                    #   three poll outcomes, 6E498 hit/miss/empty/packed
+                    #   fields/read-only footprint, full patterned run
+                    #   (exact bytes, lookup slots, provider order),
+                    #   2 MiB canary footprint, RamReset rerun, 3E680
+                    #   integration; frontier advance to func_800527C8)
 ```
 
 ## Deterministic framebuffer
@@ -515,9 +567,10 @@ cd pc_port/build
 
 ## Next steps
 
-1. **Phase 6E-B continued:** `func_8006A9E4` rung (next strict-mode
-   frontier, from `func_8001220C` — func_8003E680 is now fully
-   translated), then the remaining subsystem inits
+1. **Phase 6E-B continued:** `func_800527C8` rung (next strict-mode
+   frontier, from `func_8006A9E4` — 49-word subsystem init with 17
+   callees, invoked once inside the cycle-B poll; classify by raw MIPS
+   before any implementation), then the remaining subsystem inits
    toward the image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display
@@ -526,8 +579,8 @@ cd pc_port/build
 ## Constraints
 
 - PCSX-Redux is the retail oracle only — never used as runtime
-- Matching decomp remains separate and SHA-exact (SHA `452fb033`; 229 C
-  leaves in the current matching checkout)
+- Matching decomp remains separate and SHA-exact (SHA `452fb033`; 227 C
+  leaves in this repo's matching rebuild)
 - No PS1 emulator in the native executable
 - The Disc 1 image is user-supplied and read-only; never commit it or
   any derivative captures

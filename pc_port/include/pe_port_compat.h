@@ -10,8 +10,32 @@
  * lvalue macros defined in psx_compat.h — no externs here. */
 extern unsigned int D_8009D1A0, D_8009D250;
 
-/* ── Arena pointers — now pe_addr_t guest addresses ───────────────── */
-extern pe_addr_t D_800B0E24,D_800B0E28,D_800B0E2C,D_800B0E30,D_800B0E34,D_800B0E38,D_800B0E3C,D_800B0E40,D_800B0E44,D_800B0E48,D_800B0E4C,D_800B0E50,D_800B0E54,D_800B0E58,D_800B0E5C,D_800B0E60,D_800B0E64,D_800B0E68,D_800B0E6C;
+/* ── Arena pointers — guest-RAM lvalue macros (Phase 6E-B16) ────────
+ * The 19-slot retail arena pointer table lives INSIDE the D_800B0CD8
+ * struct region in guest RAM (0x800B0E24..0x800B0E6C); retail func_8006A8D4
+ * stores to it with sw and retail readers (func_8006A9E4: lw 0x130(s3),
+ * lw 0x194(s3)) load from guest RAM.  6D-S modeled these as host scalar
+ * globals, splitting them from the guest struct — func_8006A9E4 then read
+ * zeros.  They are now guest-RAM lvalue macros like D_800B0CD8. */
+#define D_800B0E24  PE_GUEST_U32(0x800B0E24u)
+#define D_800B0E28  PE_GUEST_U32(0x800B0E28u)
+#define D_800B0E2C  PE_GUEST_U32(0x800B0E2Cu)
+#define D_800B0E30  PE_GUEST_U32(0x800B0E30u)
+#define D_800B0E34  PE_GUEST_U32(0x800B0E34u)
+#define D_800B0E38  PE_GUEST_U32(0x800B0E38u)
+#define D_800B0E3C  PE_GUEST_U32(0x800B0E3Cu)
+#define D_800B0E40  PE_GUEST_U32(0x800B0E40u)
+#define D_800B0E44  PE_GUEST_U32(0x800B0E44u)
+#define D_800B0E48  PE_GUEST_U32(0x800B0E48u)
+#define D_800B0E4C  PE_GUEST_U32(0x800B0E4Cu)
+#define D_800B0E50  PE_GUEST_U32(0x800B0E50u)
+#define D_800B0E54  PE_GUEST_U32(0x800B0E54u)
+#define D_800B0E58  PE_GUEST_U32(0x800B0E58u)
+#define D_800B0E5C  PE_GUEST_U32(0x800B0E5Cu)
+#define D_800B0E60  PE_GUEST_U32(0x800B0E60u)
+#define D_800B0E64  PE_GUEST_U32(0x800B0E64u)
+#define D_800B0E68  PE_GUEST_U32(0x800B0E68u)
+#define D_800B0E6C  PE_GUEST_U32(0x800B0E6Cu)
 
 /* ── func_8003E610 callees ─────────────────────────────────────────── */
 /* All ten callees are now REAL implementations (Phase 6E-A batch 1):
