@@ -1479,18 +1479,19 @@ static void test_3E680_subsystem_order(void) {
     /* After the poll loop, translated func_8003E974 runs (20 real
      * func_8003EAC8 registrations), translated func_80036DC8 runs
      * (6E-B5: timer-record init), the two real func_80073D24 slot
-     * writes run (6E-B6), and the real func_800371A4 byte store runs
-     * (6E-B7 — all absent from the stub order log),
+     * writes run (6E-B6), the real func_800371A4 byte store runs
+     * (6E-B7), and the real func_80029388 slot-table clear + record
+     * init runs (6E-B8 — all absent from the stub order log),
      * then the remaining subsystem inits fire in retail order. */
     const char *expected[] = {
-        "func_80029388", "func_8005BCA8", "func_80068D28",
+        "func_8005BCA8", "func_80068D28",
         "func_800124F8",  "func_8001A890", "func_80034F10", "func_8006536C",
         "func_80038D1C"
     };
     int expected_count = sizeof(expected) / sizeof(expected[0]);
 
-    /* func_8003EAC8, func_80036DC8, func_80073D24, func_800371A4 must
-     * NOT appear: real */
+    /* func_8003EAC8, func_80036DC8, func_80073D24, func_800371A4,
+     * func_80029388 must NOT appear: real */
     ASSERT(CountOrderLog("func_8003EAC8") == 0,
            "func_8003EAC8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_80036DC8") == 0,
@@ -1499,17 +1500,19 @@ static void test_3E680_subsystem_order(void) {
            "func_80073D24 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_800371A4") == 0,
            "func_800371A4 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_80029388") == 0,
+           "func_80029388 still routed through bootstrap policy");
 
-    /* Find the position of func_80029388 — the first stub invoked after
-     * the real 3E974/3EAC8/36DC8/73D24/371A4 rungs */
+    /* Find the position of func_8005BCA8 — the first stub invoked after
+     * the real 3E974/3EAC8/36DC8/73D24/371A4/29388 rungs */
     int start_idx = -1;
     for (int i = 0; i < g_stub_order_count; i++) {
-        if (strcmp(g_stub_order_log[i], "func_80029388") == 0) {
+        if (strcmp(g_stub_order_log[i], "func_8005BCA8") == 0) {
             start_idx = i;
             break;
         }
     }
-    ASSERT(start_idx >= 0, "func_80029388 not found in order log");
+    ASSERT(start_idx >= 0, "func_8005BCA8 not found in order log");
 
     for (int j = 0; j < expected_count && (start_idx + j) < g_stub_order_count; j++) {
         if (strcmp(g_stub_order_log[start_idx + j], expected[j]) != 0) {
@@ -1869,6 +1872,350 @@ static void test_371A4_strict_not_stub(void) {
      * the centralized bootstrap policy */
     func_800371A4(1);
     ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 1, "strict-mode store failed");
+    g_strict_stubs = 0;
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B8 — func_80029388 slot-table clear + default-record init rung
+ *
+ * Retail contract (see game/boot/func_80029388_port.c header):
+ *   func_80029388(): func_8002F658(); clear 7 in-use words at
+ *   D_800A5D58 + i*220 (i=0..6); sb 0 -> D_8009D2A0, D_8009D2EC;
+ *   func_80020EFC().
+ *   func_8002F658(): copy 0x70 bytes D_80010928 -> D_800B8A20, 0x18 bytes
+ *   D_80010998 -> D_800B0CB0, then D_8009D1B0 = 0, D_8009D1B4 = 0.
+ *   func_80020EFC(): sb 0 -> D_8009CE3C, D_8009D1D4, D_8009D1DC,
+ *   D_8009D2D8, D_8009D1F0 (matched decomp leaf, retail source order).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_T_80010928 0x80010928u
+#define GA_T_80010998 0x80010998u
+#define GA_T_800B8A20 0x800B8A20u
+#define GA_T_800B0CB0 0x800B0CB0u
+#define GA_T_8009D1B0 0x8009D1B0u
+#define GA_T_8009D1B4 0x8009D1B4u
+#define GA_T_800A5D58 0x800A5D58u
+#define GA_T_8009D2A0 0x8009D2A0u
+#define GA_T_8009D2EC 0x8009D2ECu
+
+static const pe_addr_t g_b8_slot_addrs[7] = {
+    0x800A5D58u, 0x800A5E34u, 0x800A5F10u, 0x800A5FECu,
+    0x800A60C8u, 0x800A61A4u, 0x800A6280u
+};
+static const pe_addr_t g_b8_20EFC_bytes[5] = {
+    0x8009CE3Cu, 0x8009D1D4u, 0x8009D1DCu, 0x8009D2D8u, 0x8009D1F0u
+};
+
+/* Fill the two rodata source records with a deterministic distinct
+ * pattern (word i of record 1 = 0x10000000+i, word w of record 2 =
+ * 0x20000000+w). */
+static void B8_FillSources(void) {
+    for (unsigned int i = 0; i < 28; i++) {
+        PE_StoreU32(GA_T_80010928 + i * 4u, 0x10000000u + i);
+    }
+    for (unsigned int w = 0; w < 6; w++) {
+        PE_StoreU32(GA_T_80010998 + w * 4u, 0x20000000u + w);
+    }
+}
+
+static void B8_Verify2F658Copies(void) {
+    for (unsigned int i = 0; i < 28; i++) {
+        if (PE_LoadU32(GA_T_800B8A20 + i * 4u) != 0x10000000u + i) {
+            FAIL("D_800B8A20 record word mismatch");
+            return;
+        }
+    }
+    for (unsigned int w = 0; w < 6; w++) {
+        if (PE_LoadU32(GA_T_800B0CB0 + w * 4u) != 0x20000000u + w) {
+            FAIL("D_800B0CB0 record word mismatch");
+            return;
+        }
+    }
+}
+
+static void test_2F658_raw_contract(void) {
+    TEST("2F658_raw_contract");
+    ResetTestState();
+
+    B8_FillSources();
+    for (unsigned int i = 0; i < 28; i++) PE_StoreU32(GA_T_800B8A20 + i * 4u, 0xDEADBEEFu);
+    for (unsigned int w = 0; w < 6; w++) PE_StoreU32(GA_T_800B0CB0 + w * 4u, 0xDEADBEEFu);
+    PE_StoreU32(GA_T_8009D1B0, 0xDEADBEEFu);
+    PE_StoreU32(GA_T_8009D1B4, 0xDEADBEEFu);
+    /* Guard words immediately outside each written region */
+    PE_StoreU32(GA_T_800B8A20 - 4u, 0x11111111u);
+    PE_StoreU32(GA_T_800B8A20 + 0x70u, 0x22222222u);
+    PE_StoreU32(GA_T_800B0CB0 - 4u, 0x33333333u);
+    PE_StoreU32(GA_T_800B0CB0 + 0x18u, 0x44444444u);
+
+    func_8002F658();
+
+    B8_Verify2F658Copies();
+    ASSERT(PE_LoadU32(GA_T_8009D1B0) == 0, "D_8009D1B0 not zeroed");
+    ASSERT(PE_LoadU32(GA_T_8009D1B4) == 0, "D_8009D1B4 not zeroed");
+    ASSERT(PE_LoadU32(GA_T_8009D1B0 - 4u) == 0, "word below D_8009D1B0 modified");
+    ASSERT(PE_LoadU32(GA_T_8009D1B4 + 4u) == 0, "word above D_8009D1B4 modified");
+    ASSERT(PE_LoadU32(GA_T_800B8A20 - 4u) == 0x11111111u, "guard below 0x70 record modified");
+    ASSERT(PE_LoadU32(GA_T_800B8A20 + 0x70u) == 0x22222222u, "guard above 0x70 record modified");
+    ASSERT(PE_LoadU32(GA_T_800B0CB0 - 4u) == 0x33333333u, "guard below 0x18 record modified");
+    ASSERT(PE_LoadU32(GA_T_800B0CB0 + 0x18u) == 0x44444444u, "guard above 0x18 record modified");
+    ASSERT(g_stub_count == 0, "func_8002F658 recorded as stub");
+    ASSERT(Bootstrap_InvocationCount() == 0, "bootstrap provider invoked");
+    PASS();
+}
+
+static void test_2F658_write_footprint(void) {
+    TEST("2F658_write_footprint");
+    ResetTestState();
+
+    /* Canary-fill ALL of guest RAM, run, scan the whole 2 MiB.  The two
+     * record copies move canary onto canary (content equality is proven
+     * by 2F658_raw_contract); only the two zero words may differ. */
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    }
+
+    func_8002F658();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        unsigned int got = PE_LoadU32(a);
+        unsigned int want = (a == GA_T_8009D1B0 || a == GA_T_8009D1B4)
+                                ? 0u : 0xA5A5A5A5u;
+        if (got != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
+            FAIL("write footprint exceeds the retail regions");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_2F658_repeated_and_dirty(void) {
+    TEST("2F658_repeated_and_dirty");
+    ResetTestState();
+
+    B8_FillSources();
+    func_8002F658();
+    /* Dirty the destinations, re-run: fixed-value copies are idempotent */
+    for (unsigned int i = 0; i < 28; i++) PE_StoreU32(GA_T_800B8A20 + i * 4u, 0xEEEEEEEEu);
+    PE_StoreU32(GA_T_8009D1B0, 0xEEEEEEEEu);
+    func_8002F658();
+    func_8002F658();
+    B8_Verify2F658Copies();
+    ASSERT(PE_LoadU32(GA_T_8009D1B0) == 0, "D_8009D1B0 not re-zeroed");
+    ASSERT(PE_LoadU32(GA_T_8009D1B4) == 0, "D_8009D1B4 not re-zeroed");
+    PASS();
+}
+
+static void test_2F658_ramreset_reinit(void) {
+    TEST("2F658_ramreset_reinit");
+    ResetTestState();
+
+    B8_FillSources();
+    func_8002F658();
+    B8_Verify2F658Copies();
+    PE_RamReset();
+    ASSERT(PE_LoadU32(GA_T_800B8A20) == 0, "RAM reset did not clear record");
+    /* Post-reset the exe-rodata sources are also zero: the copy replays
+     * zeros, matching retail behavior after a guest RAM wipe */
+    func_8002F658();
+    ASSERT(PE_LoadU32(GA_T_800B8A20) == 0, "post-reset copy not zero");
+    ASSERT(PE_LoadU32(GA_T_8009D1B0) == 0, "post-reset zero store failed");
+    PASS();
+}
+
+static void test_20EFC_raw_contract(void) {
+    TEST("20EFC_raw_contract");
+    ResetTestState();
+
+    for (int i = 0; i < 5; i++) PE_StoreU8(g_b8_20EFC_bytes[i], 0x77);
+    func_80020EFC();
+    for (int i = 0; i < 5; i++) {
+        ASSERT(PE_LoadU8(g_b8_20EFC_bytes[i]) == 0, "20EFC byte not cleared");
+        ASSERT(PE_LoadU8(g_b8_20EFC_bytes[i] + 1u) == 0, "20EFC neighbor modified");
+    }
+    ASSERT(g_stub_count == 0, "func_80020EFC recorded as stub");
+    ASSERT(Bootstrap_InvocationCount() == 0, "bootstrap provider invoked");
+    PASS();
+}
+
+static void test_20EFC_write_footprint(void) {
+    TEST("20EFC_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    }
+
+    func_80020EFC();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        unsigned int got = PE_LoadU32(a);
+        /* All five bytes are word-aligned (LE byte 0) */
+        unsigned int want = 0xA5A5A5A5u;
+        for (int i = 0; i < 5; i++) {
+            if (a == g_b8_20EFC_bytes[i]) want = 0xA5A5A500u;
+        }
+        if (got != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
+            FAIL("write footprint exceeds the five retail bytes");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_29388_raw_contract(void) {
+    TEST("29388_raw_contract");
+    ResetTestState();
+
+    B8_FillSources();
+    for (int i = 0; i < 7; i++) PE_StoreU32(g_b8_slot_addrs[i], 1u);
+    for (int i = 0; i < 7; i++) PE_StoreU32(g_b8_slot_addrs[i] + 4u, 0xBBBBBBBBu);
+    PE_StoreU8(GA_T_8009D2A0, 0x55);
+    PE_StoreU8(GA_T_8009D2EC, 0x66);
+    for (int i = 0; i < 5; i++) PE_StoreU8(g_b8_20EFC_bytes[i], 0x77);
+    PE_StoreU32(GA_T_800A5D58 - 4u, 0x11111111u);
+    PE_StoreU32(0x800A6360u, 0x22222222u);   /* first word past the 7x220 table */
+
+    func_80029388();
+
+    for (int i = 0; i < 7; i++) {
+        ASSERT(PE_LoadU32(g_b8_slot_addrs[i]) == 0, "slot in-use word not cleared");
+        ASSERT(PE_LoadU32(g_b8_slot_addrs[i] + 4u) == 0xBBBBBBBBu,
+               "slot record body modified");
+    }
+    ASSERT(PE_LoadU32(GA_T_800A5D58 - 4u) == 0x11111111u, "guard below table modified");
+    ASSERT(PE_LoadU32(0x800A6360u) == 0x22222222u, "guard above table modified");
+    ASSERT(PE_LoadU8(GA_T_8009D2A0) == 0, "D_8009D2A0 not cleared");
+    ASSERT(PE_LoadU8(GA_T_8009D2EC) == 0, "D_8009D2EC not cleared");
+    for (int i = 0; i < 5; i++) {
+        ASSERT(PE_LoadU8(g_b8_20EFC_bytes[i]) == 0, "20EFC byte not cleared via 29388");
+    }
+    B8_Verify2F658Copies();
+    ASSERT(PE_LoadU32(GA_T_8009D1B0) == 0, "D_8009D1B0 not zeroed via 29388");
+    ASSERT(PE_LoadU32(GA_T_8009D1B4) == 0, "D_8009D1B4 not zeroed via 29388");
+    ASSERT(g_stub_count == 0, "func_80029388 recorded as stub");
+    ASSERT(Bootstrap_InvocationCount() == 0, "bootstrap provider invoked");
+    PASS();
+}
+
+static void test_29388_write_footprint(void) {
+    TEST("29388_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    }
+
+    func_80029388();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        unsigned int got = PE_LoadU32(a);
+        unsigned int want = 0xA5A5A5A5u;
+        /* word clears */
+        if (a == GA_T_8009D1B0 || a == GA_T_8009D1B4) want = 0u;
+        for (int i = 0; i < 7; i++) {
+            if (a == g_b8_slot_addrs[i]) want = 0u;
+        }
+        /* byte clears — all word-aligned (LE byte 0) */
+        if (a == GA_T_8009D2A0 || a == GA_T_8009D2EC) want = 0xA5A5A500u;
+        for (int i = 0; i < 5; i++) {
+            if (a == g_b8_20EFC_bytes[i]) want = 0xA5A5A500u;
+        }
+        if (got != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
+            FAIL("write footprint exceeds the retail regions");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_29388_repeated_and_ramreset(void) {
+    TEST("29388_repeated_and_ramreset");
+    ResetTestState();
+
+    B8_FillSources();
+    func_80029388();
+    /* Dirty everything the rung writes, then run twice: idempotent */
+    for (int i = 0; i < 7; i++) PE_StoreU32(g_b8_slot_addrs[i], 9u);
+    PE_StoreU8(GA_T_8009D2A0, 0x55);
+    PE_StoreU8(GA_T_8009D2EC, 0x66);
+    for (int i = 0; i < 5; i++) PE_StoreU8(g_b8_20EFC_bytes[i], 0x77);
+    func_80029388();
+    func_80029388();
+    for (int i = 0; i < 7; i++) {
+        ASSERT(PE_LoadU32(g_b8_slot_addrs[i]) == 0, "repeated: slot word not cleared");
+    }
+    ASSERT(PE_LoadU8(GA_T_8009D2A0) == 0, "repeated: D_8009D2A0 not cleared");
+    ASSERT(PE_LoadU8(GA_T_8009D2EC) == 0, "repeated: D_8009D2EC not cleared");
+    for (int i = 0; i < 5; i++) {
+        ASSERT(PE_LoadU8(g_b8_20EFC_bytes[i]) == 0, "repeated: 20EFC byte not cleared");
+    }
+    B8_Verify2F658Copies();
+
+    PE_RamReset();
+    ASSERT(PE_LoadU32(g_b8_slot_addrs[0]) == 0, "RAM reset did not clear table");
+    func_80029388();
+    for (int i = 0; i < 7; i++) {
+        ASSERT(PE_LoadU32(g_b8_slot_addrs[i]) == 0, "post-reset: slot word not cleared");
+    }
+    PASS();
+}
+
+static void test_29388_3E680_integration(void) {
+    TEST("29388_3E680_integration");
+    ResetTestState();
+    PE_Callback_Init();
+    g_bootstrap_disc = 1;
+
+    for (int i = 0; i < 7; i++) PE_StoreU32(g_b8_slot_addrs[i], 1u);
+    PE_StoreU8(GA_T_8009D2A0, 0x55);
+    PE_StoreU8(GA_T_8009D2EC, 0x66);
+
+    func_8003E680();
+
+    /* The retail func_80029388() ran as real code between func_800371A4
+     * and the func_8005BCA8 stub: slot table and both bytes cleared, no
+     * stub record, and the preceding rung state remains intact.  The
+     * exe-rodata sources are zero here (no exe loaded), so the 2F658
+     * destinations deterministically receive zeros — retail behavior. */
+    for (int i = 0; i < 7; i++) {
+        ASSERT(PE_LoadU32(g_b8_slot_addrs[i]) == 0, "slot word not cleared by 3E680");
+    }
+    ASSERT(PE_LoadU8(GA_T_8009D2A0) == 0, "D_8009D2A0 not cleared by 3E680");
+    ASSERT(PE_LoadU8(GA_T_8009D2EC) == 0, "D_8009D2EC not cleared by 3E680");
+    ASSERT(PE_LoadU8(0x8009CE3Cu) == 0, "20EFC byte not cleared by 3E680");
+    ASSERT(PE_LoadU32(GA_T_800B8A20) == 0, "2F658 record not zero via 3E680");
+    ASSERT(PE_LoadU32(GA_T_8009D1B0) == 0, "D_8009D1B0 not zeroed by 3E680");
+    ASSERT(CountOrderLog("func_80029388") == 0,
+           "func_80029388 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_8005BCA8") == 1,
+           "func_8005BCA8 stub did not follow func_80029388");
+    ASSERT(PE_Callback_GetSlot(4) == 0x8003E91Cu,
+           "6E-B6 slot-4 state not visible after func_8003E680");
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0,
+           "6E-B7 byte state not visible after func_8003E680");
+    PASS();
+}
+
+static void test_29388_strict_not_stub(void) {
+    TEST("29388_strict_not_stub");
+    ResetTestState();
+    g_strict_stubs = 1;
+
+    /* Under strict mode the REAL functions must execute without tripping
+     * the centralized bootstrap policy */
+    B8_FillSources();
+    func_8002F658();
+    B8_Verify2F658Copies();
+    func_80020EFC();
+    ASSERT(PE_LoadU8(0x8009CE3Cu) == 0, "strict 20EFC store failed");
+    PE_StoreU32(g_b8_slot_addrs[0], 1u);
+    func_80029388();
+    ASSERT(PE_LoadU32(g_b8_slot_addrs[0]) == 0, "strict 29388 clear failed");
     g_strict_stubs = 0;
     PASS();
 }
@@ -3914,6 +4261,19 @@ int main(void)
     test_371A4_ramreset_reinit();
     test_371A4_3E680_integration();
     test_371A4_strict_not_stub();
+
+    /* Phase 6E-B8 — func_80029388 rung */
+    test_2F658_raw_contract();
+    test_2F658_write_footprint();
+    test_2F658_repeated_and_dirty();
+    test_2F658_ramreset_reinit();
+    test_20EFC_raw_contract();
+    test_20EFC_write_footprint();
+    test_29388_raw_contract();
+    test_29388_write_footprint();
+    test_29388_repeated_and_ramreset();
+    test_29388_3E680_integration();
+    test_29388_strict_not_stub();
 
     /* D_80011614 (2 tests) */
     test_d11614_bootstrap_value();

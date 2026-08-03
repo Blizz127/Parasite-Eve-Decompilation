@@ -112,8 +112,15 @@ All stubs are explicitly classified. No anonymous empty stubs.
   $gp-relative byte setter (`sb $a0, 0x124($gp)` → D_8009CE94 =
   guest 0x8009CE94), exe-verified words; 2 call sites (3E680 arg 0,
   527C8 arg 1), return unused; `game/boot/func_800371A4_port.c`
-- `func_80029388`  ← current strict-mode frontier (from func_8003E680)
-- `func_8005BCA8`
+- ~~`func_80029388(void)`~~ — TRANSLATED (Phase 6E-B8): slot-table clear
+  + default-record init, with leaves func_8002F658 (copy exe-rodata
+  records D_80010928→D_800B8A20 0x70 bytes, D_80010998→D_800B0CB0 0x18
+  bytes; zero D_8009D1B0/D_8009D1B4) and func_80020EFC (matched decomp
+  leaf: 5 $gp-relative byte clears).  7 in-use words at D_800A5D58 +
+  i*220 (same SlotRecord table as the decomp's func_8002F9CC leaf) +
+  bytes D_8009D2A0/D_8009D2EC; sole call site func_8003E680 @0x8003E700
+  (nop delay slot); `game/boot/func_80029388_port.c`
+- `func_8005BCA8`  ← current strict-mode frontier (from func_8003E680)
 - `func_80068D28`
 - `func_800124F8`
 - `func_8001A890`
