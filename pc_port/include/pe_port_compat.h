@@ -59,8 +59,10 @@ static inline void func_8003E91C(void)    { Bootstrap_ReturnVoid("func_8003E91C"
  * data initializer (63 retail words).
  * func_800124F8 is now a REAL translation too (Phase 6E-B11):
  * game/boot/func_800124F8_port.c — subsystem table/array/scalar clear
- * (31 retail words). */
-static inline void func_8001A890(void)    { Bootstrap_ReturnVoid("func_8001A890", "func_8003E680"); }
+ * (31 retail words).
+ * func_8001A890 is now a REAL translation too (Phase 6E-B12):
+ * game/boot/func_8001A890_port.c — subsystem scalar/array clear
+ * (34 retail words). */
 static inline void func_80034F10(void)    { Bootstrap_ReturnVoid("func_80034F10", "func_8003E680"); }
 static inline void func_8006536C(void)    { Bootstrap_ReturnVoid("func_8006536C", "func_8003E680"); }
 
@@ -80,6 +82,7 @@ extern void func_80020EFC(void);
 extern void func_8005BCA8(void);
 extern void func_80068D28(void);
 extern void func_800124F8(void);
+extern void func_8001A890(void);
 extern void func_80070D10(void);
 extern unsigned int func_80070D6C(void);
 extern int func_80070DD0(int, int);
