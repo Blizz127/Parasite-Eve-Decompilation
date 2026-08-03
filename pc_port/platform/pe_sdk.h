@@ -109,6 +109,7 @@ void func_8004F808(void);                   /* ten-word clear */
 void func_80042B38(void);                   /* D_800A1870/1874 = 0 */
 void func_80051084(void);                   /* D_8009D014 = 0x800A1AA0 */
 void func_800528F0(void);                   /* PRNG table generator, 521 bytes */
+void func_8005E588(void);                   /* display environment setup */
 
 /* ── save manager (pc_port/platform/pe_save.c) ──────────────────────── */
 void func_800844E4(pe_addr_t base, pe_addr_t base2);

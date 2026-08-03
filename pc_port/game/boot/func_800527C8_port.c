@@ -24,7 +24,7 @@
  *   4. func_8004F808()           TRANSLATED leaf (B17): ten-word clear
  *   5. func_800528F0()           TRANSLATED (B18): PRNG table generator,
  *                                the previous strict-mode frontier
- *   6. func_8005E588()           UNRESOLVED (also a func_8006E9A0 stub)
+ *   6. func_8005E588()           TRANSLATED (B19): display env setup
  *   7. func_80062568()           UNRESOLVED
  *   8. func_80064964()           UNRESOLVED
  *   9. func_8005DE88()           UNRESOLVED
@@ -75,7 +75,7 @@ void func_800527C8(void)
     PE_StoreU32(GA_D_8009D034, 0u);
     func_8004F808();
     func_800528F0();
-    Bootstrap_ReturnVoid("func_8005E588", "func_800527C8");
+    func_8005E588();
     Bootstrap_ReturnVoid("func_80062568", "func_800527C8");
     Bootstrap_ReturnVoid("func_80064964", "func_800527C8");
     Bootstrap_ReturnVoid("func_8005DE88", "func_800527C8");

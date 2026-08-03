@@ -102,7 +102,6 @@ static inline void func_8003F3C4(void)   { Bootstrap_ReturnVoid("func_8003F3C4",
 static inline void func_801235DC(void)   { Bootstrap_ReturnVoid("func_801235DC", "func_8001220C"); }
 static inline void func_8019234C(void)   { Bootstrap_ReturnVoid("func_8019234C", "func_8001220C"); }
 static inline int  func_801909B4(void)   { return Bootstrap_ReturnInt("func_801909B4", "func_8001220C", 0); }
-static inline void func_8005E588(void)   { Bootstrap_ReturnVoid("func_8005E588", "func_8006E9A0"); }
 static inline void func_80066B60(int a)  { Bootstrap_ReturnVoid("func_80066B60", "func_8006E9A0"); (void)a; }
 static inline void func_80068E24(void)   { Bootstrap_ReturnVoid("func_80068E24", "func_8006E9A0"); }
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
@@ -130,6 +129,7 @@ extern int  func_800698D4(void);
 extern void func_8006A9E4(void);
 extern void func_800527C8(void);
 extern void func_800528F0(void);
+extern void func_8005E588(void);
 extern int  func_8006E834(void);
 extern int  func_8006E9A0(int);
 
