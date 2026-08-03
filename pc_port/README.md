@@ -1,24 +1,37 @@
-# Parasite Eve Native PC Port — Phase 6E-B3
+# Parasite Eve Native PC Port — Phase 6E-B4
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** func_8003E974 initialization rung — the subsystem
-state-clearing wrapper is translated retail logic (5 `$gp`-relative global
-clears, a 32-word clear of `D_800A76F0`, then the complete ROM-ordered series
-of 20 `func_8003EAC8(mask,value)` registration calls, ending with
-`D_8009D1A0 |= 0x4000`).  `func_8003EAC8` itself is audited (a GTE
-LZCS/LZCR highest-set-bit-index table writer, 63 call sites exe-wide) but
-remains the unresolved strict-mode frontier.
+**Current milestone:** func_8003EAC8 LZCR registration rung — the GTE
+LZCS/LZCR-indexed registration leaf is translated retail logic, verified
+against an independent oracle (`tools/lzcr_oracle.py`: a tiny MIPS
+interpreter executing the verified retail words — not a reimplementation
+of the port's formula).  Exact edge semantics preserved, never clamped:
+`idx = (a0 == 0x80000000) ? 31 : 31 - LZCR(a0)`; LZCR counts leading
+sign bits (0 → 32, 0xFFFFFFFF → 32), so zero/all-ones inputs write one
+word BELOW the table at `0x800A76EC` (valid guest RAM), positives map to
+the highest SET bit, other negatives to the highest ZERO bit.  The narrow
+helper `PE_GTE_LZCR` lives in `platform/pe_gte.c` — no GTE subsystem.
 
-**Status:** FUNC_8003E974 INITIALIZATION RUNG VERIFIED — 159 native tests
-pass; ASan/UBSan clean; oracle dump byte-identical to
-`tools/rng_oracle.py` on the retail exe; 3 deterministic headless runs
-(framebuffer `fb28dc21…`); 3 real-disc load traces byte-identical;
-strict mode with `--disc-image` stops at `func_8003EAC8` (from
-`func_8003E974`); windowed SHA matches headless;
-matching build remains exact at SHA `452fb033`.
+**Status:** FUNC_8003EAC8 LZCR REGISTRATION RUNG VERIFIED — 168 native
+tests pass; ASan/UBSan clean; `--lzcr-oracle-dump` byte-identical to
+`tools/lzcr_oracle.py` on the retail exe (RNG oracle likewise identical);
+3 deterministic headless runs (framebuffer `fb28dc21…`); 3 real-disc
+load traces byte-identical; strict mode with `--disc-image` now stops at
+`func_80036DC8` (from `func_8003E680`) — the next subsystem init, past
+the translated `func_8003E974` + `func_8003EAC8`; windowed SHA matches
+headless; matching build remains exact at SHA `452fb033`.
 
-**Previous milestones:** 6E-B2 (func_80070D6C RNG advance rung — the game's
+**Audit correction:** the 6E-B3 handoff claimed 63 exe-wide call sites
+for `func_8003EAC8`.  The `jal` encoding appears 20 times each in THREE
+overlapping split files covering the same addresses (`2E7D0.s`/`2EE80.s`
+stale, `2EF54.s` live per `configs/USA/disc1.yaml`): the true count is
+**20 distinct call sites, all inside func_8003E974**, all with constant
+arguments (19 one-hot masks + `0x80000000`).
+
+**Previous milestones:** 6E-B3 (func_8003E974 initialization rung —
+subsystem state clear + the 20-call ROM-ordered registration series);
+6E-B2 (func_80070D6C RNG advance rung — the game's
 lagged-Fibonacci RNG, init/advance/ranged wrapper, byte-exact against an
 independent oracle on the retail executable, which the port loads into
 guest RAM via SYSTEM.CNF `BOOT=` because the RNG read cursor provably
@@ -81,11 +94,12 @@ Correctness gate: `--rng-oracle-dump` output is byte-identical to
 `pc_port/tools/rng_oracle.py` running independently on the retail exe
 (SHA-1 `452fb033…`).
 
-## Translated subsystem-init rung (Phase 6E-B3)
+## Translated subsystem-init rungs (Phase 6E-B3/B4)
 
 | Function | Size | Words | Purpose |
 |----------|------|-------|---------|
 | `func_8003E974` | 0x154 | 85 | Subsystem state clear + 20 `func_8003EAC8` registration calls |
+| `func_8003EAC8` | 0x3C | 15 | GTE LZCS/LZCR-indexed registration leaf |
 
 `func_8003E974` (retail `$gp` = `0x8009CD70`) clears 5 `$gp`-relative
 globals, clears the 32-word array at `D_800A76F0`, then issues the complete
@@ -95,12 +109,22 @@ ROM-ordered `func_8003EAC8(mask,value)` series
 (0x2000,0x8000) (0x1000000,0x100) (0x2000000,0x200) (0x4000000,0x400)
 (0x8000000,0x800) (0x10000000,0x1000) (0x20000000,0x2000)
 (0x40000000,0x4000) (0x80000000,0x8000)`), ending with
-`D_8009D1A0 |= 0x4000`.  Idempotent.  `func_8003EAC8` is a handwritten GTE
-LZCS/LZCR leaf (highest-set-bit index, `0x80000000` → slot 31) that writes
-`D_800A76F0[idx] = a1`; it has 63 call sites exe-wide and remains the
-unresolved strict-mode frontier — production calls route through
-`Bootstrap_ReturnVoid`, with bounded test-only argument recording
-(`PE_3EAC8_RecordReset/Count/At`).
+`D_8009D1A0 |= 0x4000`.  Idempotent.  Result: 20 slots populated
+(0-10, 13, 24-31), no duplicates; slots 11/12/14-23 stay 0 from the clear.
+
+`func_8003EAC8` is a handwritten GTE LZCS/LZCR leaf:
+`idx = (a0 == 0x80000000) ? 31 : 31 - LZCR(a0)`, then a word store
+`D_800A76F0[idx] = a1` via the `sll`/`addu` chain.  LZCR counts leading
+sign bits, so `idx ∈ [-1, 31]`: zero/all-ones inputs write one word below
+the table at `0x800A76EC` (valid guest RAM — preserved, never clamped),
+positives map to the highest SET bit, other negatives to the highest ZERO
+bit.  20 distinct call sites, all in `func_8003E974`, all constant
+arguments (the earlier "63" counted overlapping split files).  Bounded
+test-only argument recording (`PE_3EAC8_RecordReset/SetEnabled/Count/At`)
+is non-semantic: production stores identically with the recorder off.
+Correctness gate: `--lzcr-oracle-dump` is byte-identical to
+`tools/lzcr_oracle.py`, a tiny MIPS interpreter executing the verified
+retail words.
 
 ## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
@@ -128,7 +152,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (159 tests, all pass)
+- `pe-native-tests` — test suite (168 tests, all pass)
 
 ## Running
 
@@ -156,13 +180,16 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1, names func_8003EAC8 (from func_8003E974) — the first
+# Expected: exit 1, names func_80036DC8 (from func_8003E680) — the first
 # unresolved provider past the translated RNG (70D10/70D6C/70DD0) and the
-# translated subsystem-init wrapper (func_8003E974)
+# translated subsystem-init pair (func_8003E974 + func_8003EAC8)
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
   --disc-image "/path/Parasite Eve (USA) (Disc 1).bin" --rng-oracle-dump
+
+# LZCR oracle gate — must equal tools/lzcr_oracle.py on the retail exe
+./parasite-eve-port --headless --lzcr-oracle-dump
 ```
 
 `--bootstrap-disc` and `--disc-image` are mutually exclusive.  Without
@@ -173,14 +200,17 @@ host adaptation); the boot is not faked.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 159 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 168 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
                     # + 6E-B2: func_80070D6C/70DD0 RNG model equality,
                     #   wrap quirk, footprints, warm-up integration
                     # + 6E-B3: func_8003E974 write map, func_8003EAC8
-                    #   call order/args, idempotence, footprints)
+                    #   call order/args, idempotence, footprints
+                    # + 6E-B4: LZCR helper exactness, func_8003EAC8
+                    #   edge/one-hot contract, below-table write, recorder
+                    #   semantics, func_8003E974 final registered table)
 ```
 
 ## Deterministic framebuffer
@@ -195,9 +225,8 @@ cd pc_port/build
 
 ## Next steps
 
-1. **Phase 6E-B continued:** `func_8003EAC8` rung — host LZCR
-   (highest-set-bit-index) implementation of the GTE LZCS/LZCR
-   registration provider, then the provider frontier toward the
+1. **Phase 6E-B continued:** `func_80036DC8` rung (next strict-mode
+   frontier, from `func_8003E680`), then the provider frontier toward the
    image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display

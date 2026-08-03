@@ -88,12 +88,15 @@ All stubs are explicitly classified. No anonymous empty stubs.
 - ~~`func_8003E974`~~ — TRANSLATED (Phase 6E-B3): state zeroing
   (5 $gp-relative globals + 32-word array D_800A76F0) + ordered series of 20
   `func_8003EAC8(mask,value)` registration calls, `game/boot/func_8003E974_port.c`
-- `func_8003EAC8`  ← current strict-mode frontier (from func_8003E974):
-  GTE LZCS/LZCR highest-set-bit-index leaf (0x80000000 → slot 31 special
-  case), writes D_800A76F0[idx]=a1, return unused; 63 call sites exe-wide;
-  `game/boot/func_8003EAC8_port.c` stays an unresolved provider with bounded
-  test-only call recording (PE_3EAC8_RecordReset/Count/At)
-- `func_80036DC8`
+- ~~`func_8003EAC8`~~ — TRANSLATED (Phase 6E-B4): GTE LZCS/LZCR-indexed
+  registration leaf (idx = (a0 == 0x80000000) ? 31 : 31 - LZCR(a0); word
+  store D_800A76F0[idx]=a1, below-table write at 0x800A76EC for zero/
+  all-ones inputs preserved, never clamped), `game/boot/func_8003EAC8_port.c`
+  + narrow `PE_GTE_LZCR` in `platform/pe_gte.c`; oracle gate
+  `--lzcr-oracle-dump` ≡ `tools/lzcr_oracle.py`.  Call-site correction:
+  20 DISTINCT sites (all in func_8003E974, constant args) — the earlier
+  "63" counted overlapping split files
+- `func_80036DC8`  ← current strict-mode frontier (from func_8003E680)
 - `func_80073D24` (×2 — callback register: reset + register)
 - `func_800371A4(int)`
 - `func_80029388`

@@ -40,3 +40,19 @@ void func_80079024(int a)
 {
     g_pe_gte.h = a;
 }
+
+/* Phase 6E-B4 — exact 32-bit GTE LZCS/LZCR arithmetic (leading-sign-bit
+ * count), factored out of the func_8003EAC8 translation.  No
+ * __builtin_clz(0) undefined behavior, no floating point, no g_pe_gte
+ * state: LZCS/LZCR are data registers with no caller-observable lifetime
+ * past the instruction sequence that uses them. */
+uint32_t PE_GTE_LZCR(uint32_t v)
+{
+    uint32_t sign = v & 0x80000000u;
+    uint32_t n = 0;
+    while (n < 32u && (v & 0x80000000u) == sign) {
+        n++;
+        v <<= 1;
+    }
+    return n;
+}

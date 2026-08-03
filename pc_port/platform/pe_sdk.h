@@ -44,6 +44,11 @@ void func_80077F7C(void);            /* InitGeom */
 void func_80079004(int a, int b);    /* SetGeomOffset: OFX=a<<16, OFY=b<<16 */
 void func_80079024(int a);           /* SetGeomScreen: H=a */
 
+/* Exact 32-bit GTE LZCS/LZCR arithmetic (Phase 6E-B4): count of leading
+ * bits equal to the sign bit.  Defined for every input (0 -> 32,
+ * 0xFFFFFFFF -> 32); pure arithmetic, no g_pe_gte state. */
+uint32_t PE_GTE_LZCR(uint32_t v);
+
 /* ── libetc (pc_port/platform/pe_libetc.c) ──────────────────────────── */
 void func_80073C94(void);            /* ResetCallback */
 int  func_80072714(void);            /* EnterCriticalSection */

@@ -1435,15 +1435,11 @@ static void test_3E680_subsystem_order(void) {
 
     func_8003E680();
 
-    /* After the poll loop, translated func_8003E974 issues its 20
-     * func_8003EAC8 registrations (still an unresolved provider), then
-     * the remaining subsystem inits fire in retail order. */
+    /* After the poll loop, translated func_8003E974 runs (its 20
+     * func_8003EAC8 registrations are now REAL — Phase 6E-B4 — so they no
+     * longer appear in the stub order log), then the remaining subsystem
+     * inits fire in retail order. */
     const char *expected[] = {
-        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
-        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
-        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
-        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
-        "func_8003EAC8", "func_8003EAC8", "func_8003EAC8", "func_8003EAC8",
         "func_80036DC8", "func_80073D24", "func_80073D24",
         "func_800371A4",  "func_80029388", "func_8005BCA8", "func_80068D28",
         "func_800124F8",  "func_8001A890", "func_80034F10", "func_8006536C",
@@ -1451,15 +1447,19 @@ static void test_3E680_subsystem_order(void) {
     };
     int expected_count = sizeof(expected) / sizeof(expected[0]);
 
-    /* Find the position of the first func_8003EAC8 in the order log */
+    /* func_8003EAC8 must NOT appear: it is translated, not a provider */
+    ASSERT(CountOrderLog("func_8003EAC8") == 0,
+           "func_8003EAC8 still routed through bootstrap policy");
+
+    /* Find the position of func_80036DC8 — the first post-3E974 stub */
     int start_idx = -1;
     for (int i = 0; i < g_stub_order_count; i++) {
-        if (strcmp(g_stub_order_log[i], "func_8003EAC8") == 0) {
+        if (strcmp(g_stub_order_log[i], "func_80036DC8") == 0) {
             start_idx = i;
             break;
         }
     }
-    ASSERT(start_idx >= 0, "func_8003EAC8 not found in order log");
+    ASSERT(start_idx >= 0, "func_80036DC8 not found in order log");
 
     for (int j = 0; j < expected_count && (start_idx + j) < g_stub_order_count; j++) {
         if (strcmp(g_stub_order_log[start_idx + j], expected[j]) != 0) {
@@ -1958,9 +1958,10 @@ static void test_3E680_warmup_real(void) {
 
 /* ═══════════════════════════════════════════════════════════════════════
  * Phase 6E-B3 — Provider frontier: func_8003E974 (bit-table init +
- * registration sequence); func_8003EAC8 stays an unresolved provider.
+ * registration sequence).  Phase 6E-B4 made func_8003EAC8 REAL, so the
+ * array expectations below are the final REGISTERED table, not all-zero.
  *
- * Retail truth (asm/disc1/2E7D0.s:712-799): five $gp-relative word clears
+ * Retail truth (asm/disc1/2EF54.s:163-251): five $gp-relative word clears
  * (retail $gp = 0x8009CD70 → 0x8009D1E4/1F4/2D4/238/26C), a 32-word clear
  * of D_800A76F0 (0x800A76F0..0x800A776C), 20 func_8003EAC8(mask,value)
  * calls in ROM order, then D_8009D1A0 |= 0x4000 on the host-represented
@@ -1976,6 +1977,19 @@ static const struct { int a0, a1; } k_3eac8_expect[20] = {
     { 0x1000000, 0x100 }, { 0x2000000, 0x200 }, { 0x4000000, 0x400 },
     { 0x8000000, 0x800 }, { 0x10000000, 0x1000 }, { 0x20000000, 0x2000 },
     { 0x40000000, 0x4000 }, { (int)0x80000000, 0x8000 }
+};
+
+/* Phase 6E-B4: with func_8003EAC8 REAL, func_8003E974 leaves D_800A76F0
+ * holding the registered values — slot = highest-set-bit index of the
+ * mask (0x80000000 -> slot 31).  Populated slots: 0-10, 13, 24-31
+ * (20 calls, no duplicates).  Slots 11, 12, 14-23 stay 0 from the clear.
+ * Independent of the implementation: derived from the ROM-order table
+ * above and the oracle-verified index semantics. */
+static const uint32_t k_3e974_final[32] = {
+    0x4000, 0x1, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1000,   /* slots 0-7   */
+    0x2000, 0x2000, 0x4000, 0, 0, 0x8000, 0, 0,         /* slots 8-15  */
+    0, 0, 0, 0, 0, 0, 0, 0,                             /* slots 16-23 */
+    0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000, 0x8000 /* 24-31 */
 };
 
 static void test_3E974_gp_scalar_clears(void) {
@@ -1997,8 +2011,8 @@ static void test_3E974_gp_scalar_clears(void) {
     PASS();
 }
 
-static void test_3E974_array_clear_exact(void) {
-    TEST("3E974_array_clear_exact");
+static void test_3E974_array_final_table(void) {
+    TEST("3E974_array_final_table");
     ResetTestState();
 
     /* Canary the array plus one-word guards on both sides */
@@ -2007,16 +2021,19 @@ static void test_3E974_array_clear_exact(void) {
 
     func_8003E974();
 
-    /* Guard words must be untouched */
+    /* Guard words must be untouched (registrations land INSIDE the array) */
     ASSERT(PE_LoadU32(GA_TEST_A76F0 - 4) == (0xCACA0000u | 0xFCu),
            "guard word before array clobbered");
     ASSERT(PE_LoadU32(GA_TEST_A76F0 + 0x80u) == (0xCACA0000u | 0x80u),
            "guard word after array clobbered");
-    /* Exactly 32 words cleared: first 0x800A76F0, last 0x800A776C */
+    /* The clear ran (dirtied unregistered slots are 0) and the 20 real
+     * registrations populated their slots: the complete retail end state. */
     for (int i = 0; i < 0x20; i++) {
-        char msg[64];
-        snprintf(msg, sizeof msg, "array word %d not cleared", i);
-        ASSERT(PE_LoadU32(GA_TEST_A76F0 + (unsigned int)i * 4u) == 0, msg);
+        char msg[80];
+        uint32_t got = PE_LoadU32(GA_TEST_A76F0 + (unsigned int)i * 4u);
+        snprintf(msg, sizeof msg,
+                 "array slot %d: got 0x%X want 0x%X", i, got, k_3e974_final[i]);
+        ASSERT(got == k_3e974_final[i], msg);
     }
     PASS();
 }
@@ -2067,14 +2084,24 @@ static void test_3E974_footprint(void) {
 
     func_8003E974();
 
-    /* Only the 5 $gp-resolved words and the 32-word array may differ
-     * (all become 0).  Nothing else in the 2 MiB may be touched. */
+    /* Only the 5 $gp-resolved words and the 32-word array may differ.
+     * Nothing else in the 2 MiB may be touched.  Scalars become 0; array
+     * slots become the 6E-B4 final registered table (clear + 20 real
+     * registrations — all landing inside the same 32 words). */
     for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
         int in_array = (a >= GA_TEST_A76F0 && a <= GA_TEST_A76F0 + 0x7Cu);
         int is_scalar = (a == 0x8009D1E4u || a == 0x8009D1F4u ||
                          a == 0x8009D2D4u || a == 0x8009D238u ||
                          a == 0x8009D26Cu);
-        if (in_array || is_scalar) {
+        if (in_array) {
+            uint32_t want = k_3e974_final[(a - GA_TEST_A76F0) / 4u];
+            if (PE_LoadU32(a) != want) {
+                printf("FAIL: guest 0x%08X = 0x%08X, want 0x%X\n",
+                       a, PE_LoadU32(a), want);
+                FAIL("array word has wrong final value");
+                return;
+            }
+        } else if (is_scalar) {
             if (PE_LoadU32(a) != 0) {
                 printf("FAIL: guest 0x%08X = 0x%08X, want 0\n",
                        a, PE_LoadU32(a));
@@ -2140,9 +2167,13 @@ static void test_3E974_not_bootstrap_stub(void) {
 
     ASSERT(CountOrderLog("func_8003E974") == 0,
            "func_8003E974 recorded as stub");
-    /* Its unresolved dependency goes through the centralized boundary */
-    ASSERT(CountOrderLog("func_8003EAC8") == 20,
-           "func_8003EAC8 not recorded through provider boundary");
+    /* 6E-B4: func_8003EAC8 is translated too — also absent from the stub
+     * order log; its 20 invocations are visible via the non-semantic
+     * argument recorder instead. */
+    ASSERT(CountOrderLog("func_8003EAC8") == 0,
+           "func_8003EAC8 still routed through provider boundary");
+    ASSERT(PE_3EAC8_RecordCount() == 20,
+           "registrations missing from argument recorder");
     PASS();
 }
 
@@ -2159,9 +2190,234 @@ static void test_3E680_3E974_integration(void) {
            "registrations missing after func_8003E680");
     /* func_8003E680 zeroed D_8009D1A0 first, then 3E974 set the bit */
     ASSERT(D_8009D1A0 == 0x4000, "D_8009D1A0 != 0x4000 after func_8003E680");
+    /* 6E-B4: array holds the final registered table (not all-zero — that
+     * was only true while func_8003EAC8 was a recorder stub) */
     for (int i = 0; i < 0x20; i++)
-        ASSERT(PE_LoadU32(GA_TEST_A76F0 + (unsigned int)i * 4u) == 0,
-               "D_800A76F0 array not cleared through func_8003E680");
+        ASSERT(PE_LoadU32(GA_TEST_A76F0 + (unsigned int)i * 4u) == k_3e974_final[i],
+               "D_800A76F0 final table wrong through func_8003E680");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B4 — func_8003EAC8 LZCR registration rung.
+ *
+ * Retail truth (asm/disc1/2EF54.s:255-271, verified against the exe by
+ * tools/lzcr_oracle.py): idx = (a0 == 0x80000000) ? 31 : 31 - LZCR(a0);
+ * LZCR counts leading bits equal to the sign bit (0 -> 32, 0xFFFFFFFF ->
+ * 32); word store D_800A76F0[idx] = a1 with the sll/addu wrap, so idx -1
+ * lands at 0x800A76EC (valid guest RAM, preserved — never clamped).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_TEST_A76EC  0x800A76ECu   /* one word below the table (idx -1) */
+
+/* Oracle-derived expectations (tools/lzcr_oracle.py output, cross-checked
+ * against documented GTE LZCS/LZCR semantics) */
+static const struct { uint32_t a0; uint32_t lzcr; int idx; pe_addr_t dest; }
+    k_lzcr_expect[12] = {
+    { 0x00000000u, 32, -1, 0x800A76ECu },
+    { 0x00000001u, 31,  0, 0x800A76F0u },
+    { 0x00000002u, 30,  1, 0x800A76F4u },
+    { 0x00000003u, 30,  1, 0x800A76F4u },
+    { 0x00000008u, 28,  3, 0x800A76FCu },
+    { 0x00008000u, 16, 15, 0x800A772Cu },
+    { 0x40000000u,  1, 30, 0x800A7768u },
+    { 0x7FFFFFFFu,  1, 30, 0x800A7768u },
+    { 0x80000000u,  1, 31, 0x800A776Cu },
+    { 0x80000001u,  1, 30, 0x800A7768u },
+    { 0xC0000000u,  2, 29, 0x800A7764u },
+    { 0xFFFFFFFFu, 32, -1, 0x800A76ECu },
+};
+
+static void test_LZCR_helper_exact(void) {
+    TEST("LZCR_helper_exact");
+    ResetTestState();
+
+    for (int i = 0; i < 12; i++) {
+        char msg[80];
+        uint32_t got = PE_GTE_LZCR(k_lzcr_expect[i].a0);
+        snprintf(msg, sizeof msg, "LZCR(0x%08X) = %u, want %u",
+                 k_lzcr_expect[i].a0, got, k_lzcr_expect[i].lzcr);
+        ASSERT(got == k_lzcr_expect[i].lzcr, msg);
+    }
+    /* All 32 one-hot masks: bits 0-30 -> 31-k, bit 31 -> 1 */
+    for (int k = 0; k < 32; k++) {
+        char msg[64];
+        uint32_t want = (k == 31) ? 1u : (uint32_t)(31 - k);
+        uint32_t got = PE_GTE_LZCR(1u << k);
+        snprintf(msg, sizeof msg, "LZCR(1<<%d) = %u, want %u", k, got, want);
+        ASSERT(got == want, msg);
+    }
+    PASS();
+}
+
+static void test_3EAC8_contract_edge_inputs(void) {
+    TEST("3EAC8_contract_edge_inputs");
+    ResetTestState();
+
+    for (int i = 0; i < 12; i++) {
+        char msg[96];
+        uint32_t val = 0xEA000000u | (uint32_t)i;
+
+        /* Dirty the destination window plus one-word guards on both ends */
+        for (pe_addr_t a = GA_TEST_A76EC - 4; a <= GA_TEST_A76F0 + 0x84u; a += 4)
+            PE_StoreU32(a, 0xB0B0B0B0u);
+
+        func_8003EAC8((int)k_lzcr_expect[i].a0, (int)val);
+
+        snprintf(msg, sizeof msg, "a0=0x%08X: dest word wrong",
+                 k_lzcr_expect[i].a0);
+        ASSERT(PE_LoadU32(k_lzcr_expect[i].dest) == val, msg);
+        /* Exactly one word may change in the whole window */
+        for (pe_addr_t a = GA_TEST_A76EC - 4; a <= GA_TEST_A76F0 + 0x84u; a += 4) {
+            if (a == k_lzcr_expect[i].dest) continue;
+            if (PE_LoadU32(a) != 0xB0B0B0B0u) {
+                snprintf(msg, sizeof msg,
+                         "a0=0x%08X: collateral write at 0x%08X",
+                         k_lzcr_expect[i].a0, a);
+                FAIL(msg);
+                return;
+            }
+        }
+    }
+    PASS();
+}
+
+static void test_3EAC8_one_hot_all32(void) {
+    TEST("3EAC8_one_hot_all32");
+    ResetTestState();
+
+    for (int k = 0; k < 32; k++) {
+        char msg[96];
+        uint32_t val = 0x0EAC0000u | (uint32_t)k;
+        /* bits 0-30 -> slot k; bit 31 (0x80000000) -> slot 31 special case */
+        pe_addr_t want = GA_TEST_A76F0 + (unsigned int)k * 4u;
+
+        for (pe_addr_t a = GA_TEST_A76EC; a <= GA_TEST_A76F0 + 0x80u; a += 4)
+            PE_StoreU32(a, 0);
+        func_8003EAC8((int)(1u << k), (int)val);
+
+        snprintf(msg, sizeof msg, "one-hot bit %d: wrong destination", k);
+        ASSERT(PE_LoadU32(want) == val, msg);
+        for (pe_addr_t a = GA_TEST_A76EC; a <= GA_TEST_A76F0 + 0x80u; a += 4) {
+            if (a == want) continue;
+            if (PE_LoadU32(a) != 0) {
+                snprintf(msg, sizeof msg,
+                         "one-hot bit %d: collateral write at 0x%08X", k, a);
+                FAIL(msg);
+                return;
+            }
+        }
+    }
+    PASS();
+}
+
+static void test_3EAC8_same_slot_rom_order(void) {
+    TEST("3EAC8_same_slot_rom_order");
+    ResetTestState();
+
+    /* 0x2 and 0x3 both map to slot 1 (highest set bit); the second call
+     * must win, as retail's plain word store dictates. */
+    func_8003EAC8(0x2, 1);
+    ASSERT(PE_LoadU32(GA_TEST_A76F0 + 4) == 1, "slot 1 first write wrong");
+    func_8003EAC8(0x3, 0x99);
+    ASSERT(PE_LoadU32(GA_TEST_A76F0 + 4) == 0x99,
+           "slot 1 second write did not overwrite in call order");
+    PASS();
+}
+
+static void test_3EAC8_footprint(void) {
+    TEST("3EAC8_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0x3C3C3C3Cu);
+
+    func_8003EAC8(0x100, 0x12345678);   /* bit 8 -> slot 8 -> 0x800A7710 */
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        if (a == GA_TEST_A76F0 + 8u * 4u) {
+            if (PE_LoadU32(a) != 0x12345678u) {
+                FAIL("registration word missing");
+                return;
+            }
+        } else if (PE_LoadU32(a) != 0x3C3C3C3Cu) {
+            printf("FAIL: guest 0x%08X modified\n", a);
+            FAIL("func_8003EAC8 write footprint exceeds its single word");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_3EAC8_recorder_disabled(void) {
+    TEST("3EAC8_recorder_disabled");
+    ResetTestState();
+
+    /* Production behavior must be identical with the recorder off */
+    PE_3EAC8_RecordSetEnabled(0);
+    func_8003EAC8(0x80, 0x1000);
+    ASSERT(PE_3EAC8_RecordCount() == 0, "recorder counted while disabled");
+    ASSERT(PE_LoadU32(GA_TEST_A76F0 + 7u * 4u) == 0x1000u,
+           "guest store did not happen with recorder disabled");
+
+    PE_3EAC8_RecordSetEnabled(1);
+    func_8003EAC8(0x80, 0x2000);
+    ASSERT(PE_3EAC8_RecordCount() == 1, "recorder lost calls after re-enable");
+    ASSERT(PE_LoadU32(GA_TEST_A76F0 + 7u * 4u) == 0x2000u,
+           "guest store wrong after re-enable");
+    PASS();
+}
+
+static void test_3EAC8_recorder_overflow(void) {
+    TEST("3EAC8_recorder_overflow");
+    ResetTestState();
+
+    /* 70 calls > 64-entry log: count keeps climbing (visible overflow),
+     * RecordAt stays bounded, and every store still lands. */
+    for (int i = 0; i < 70; i++)
+        func_8003EAC8(1, 0xC000 + i);
+    ASSERT(PE_3EAC8_RecordCount() == 70, "overflow not visible in count");
+    int a0 = -1, a1 = -1;
+    ASSERT(PE_3EAC8_RecordAt(63, &a0, &a1), "record 63 missing");
+    ASSERT(a0 == 1 && a1 == 0xC03F, "record 63 wrong");
+    ASSERT(PE_3EAC8_RecordAt(64, &a0, &a1) == 0,
+           "RecordAt read past the bounded log");
+    ASSERT(PE_LoadU32(GA_TEST_A76F0) == 0xC000u + 69u,
+           "store of final overflowing call wrong");
+    PASS();
+}
+
+static void test_3EAC8_not_bootstrap_stub(void) {
+    TEST("3EAC8_not_bootstrap_stub");
+    ResetTestState();
+
+    /* Strict mode must no longer stop here: translated functions never
+     * touch the centralized boundary, so a strict run sails through. */
+    g_strict_stubs = 1;
+    func_8003EAC8(1, 0x4000);
+    g_strict_stubs = 0;
+    ASSERT(CountOrderLog("func_8003EAC8") == 0,
+           "func_8003EAC8 recorded as stub");
+    ASSERT(PE_LoadU32(GA_TEST_A76F0) == 0x4000u,
+           "store missing on the strict-flag path");
+    PASS();
+}
+
+static void test_3E974_ramreset_reproduces(void) {
+    TEST("3E974_ramreset_reproduces");
+    ResetTestState();
+
+    D_8009D1A0 = 0;
+    PE_RamReset();
+    func_8003E974();
+    ASSERT(D_8009D1A0 == 0x4000, "D_8009D1A0 wrong after PE_RamReset run");
+    for (int i = 0; i < 0x20; i++) {
+        char msg[80];
+        uint32_t got = PE_LoadU32(GA_TEST_A76F0 + (unsigned int)i * 4u);
+        snprintf(msg, sizeof msg, "slot %d after PE_RamReset: 0x%X want 0x%X",
+                 i, got, k_3e974_final[i]);
+        ASSERT(got == k_3e974_final[i], msg);
+    }
     PASS();
 }
 
@@ -3124,13 +3380,24 @@ int main(void)
 
     /* Provider frontier: func_8003E974 (8 tests) */
     test_3E974_gp_scalar_clears();
-    test_3E974_array_clear_exact();
+    test_3E974_array_final_table();
     test_3E974_call_sequence_exact();
     test_3E974_d1a0_or_exact();
     test_3E974_footprint();
     test_3E974_repeated_idempotent();
     test_3E974_not_bootstrap_stub();
     test_3E680_3E974_integration();
+
+    /* Provider frontier: func_8003EAC8 LZCR registration (9 tests) */
+    test_LZCR_helper_exact();
+    test_3EAC8_contract_edge_inputs();
+    test_3EAC8_one_hot_all32();
+    test_3EAC8_same_slot_rom_order();
+    test_3EAC8_footprint();
+    test_3EAC8_recorder_disabled();
+    test_3EAC8_recorder_overflow();
+    test_3EAC8_not_bootstrap_stub();
+    test_3E974_ramreset_reproduces();
 
     /* func_8006E834 (2 tests) */
     test_6E834_clears_status_bytes();

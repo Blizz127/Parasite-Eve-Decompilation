@@ -8,17 +8,18 @@ every meaningful change. Prefer shortening over accruing.
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B3 — FUNC_8003E974 INITIALIZATION RUNG VERIFIED** | `pc_port/build/pe-native-tests` (159/159) |
+| Port phase | **6E-B4 — FUNC_8003EAC8 LZCR REGISTRATION RUNG VERIFIED** | `pc_port/build/pe-native-tests` (168/168) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
 | RNG | func_80070D10/70D6C/70DD0 TRANSLATED (lagged-Fibonacci; verbatim `i2 \|= 0x40` wrap cycles through 14 retail code words below the table); oracle gate `--rng-oracle-dump` ≡ `pc_port/tools/rng_oracle.py` on retail exe | `pc_port/game/boot/func_80070D{10,6C,D0}_port.c` |
+| Subsystem init | func_8003E974 + func_8003EAC8 TRANSLATED (state clear + 20 ROM-ordered registrations; GTE LZCS/LZCR leaf: idx = (a0==0x80000000) ? 31 : 31−LZCR(a0), below-table write at 0x800A76EC preserved, never clamped; 20 distinct call sites, not 63); oracle gate `--lzcr-oracle-dump` ≡ `pc_port/tools/lzcr_oracle.py` | `pc_port/game/boot/func_8003E{974,AC8}_port.c`, `pc_port/platform/pe_gte.c` (`PE_GTE_LZCR`) |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | with `--disc-image`: exit 1 at `func_8003EAC8` (from `func_8003E974`) — GTE LZCS/LZCR highest-set-bit-index table writer (D_800A76F0[idx]=a1), 63 call sites exe-wide, still unresolved; with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` (from `func_800698D4`) | `--headless --strict-stubs --disc-image …` |
-| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 159/159 tests + headless + real-disc load + oracle dump clean | `pc_port/build-san` |
+| Strict mode | with `--disc-image`: exit 1 at `func_80036DC8` (from `func_8003E680`) — next subsystem init past the translated func_8003E974 + func_8003EAC8 (GTE LZCS/LZCR leaf, translated in 6E-B4); with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` (from `func_800698D4`) | `--headless --strict-stubs --disc-image …` |
+| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 168/168 tests + headless + real-disc load + RNG/LZCR oracle dumps clean | `pc_port/build-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next | Phase 6E-B continued: `func_8003EAC8` rung — GTE LZCS/LZCR registration provider (highest-set-bit index, 0x80000000→slot 31 special case, writes D_800A76F0[idx]=a1, no return used); 63 call sites exe-wide; host LZCR implementation needed; not MDEC/GPU/audio/input; do not start MDEC/SDL/audio/input | — |
+| Next | Phase 6E-B continued: `func_80036DC8` rung (next strict frontier, from `func_8003E680`; classification open — audit first, do not assume); not MDEC/GPU/audio/input; do not start MDEC/SDL/audio/input | — |
 
 **Leaf-count reconciliation (227 vs 229).** This checkout's committed yaml at
 base `71114ac` has **227** C leaves (`grep -cE ',[[:space:]]*c,'

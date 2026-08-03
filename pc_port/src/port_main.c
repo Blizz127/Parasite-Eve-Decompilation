@@ -36,6 +36,7 @@ static struct {
     const char *disc_image;
     int disc_load_test;
     int rng_oracle_dump;
+    int lzcr_oracle_dump;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
     .screenshot = NULL, .trace_path = NULL,
@@ -43,6 +44,7 @@ static struct {
     .window_title = "Parasite Eve Native Port",
     .direct_clear_test = 0, .stop_after_event = NULL, .max_main_iterations = 0,
     .disc_image = NULL, .disc_load_test = 0, .rng_oracle_dump = 0,
+    .lzcr_oracle_dump = 0,
 };
 
 static void ParseArgs(int argc, char **argv) {
@@ -57,6 +59,7 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--direct-clear-test"))    g_opts.direct_clear_test = 1;
         else if (!strcmp(a, "--disc-load-test"))       g_opts.disc_load_test = 1;
         else if (!strcmp(a, "--rng-oracle-dump"))      g_opts.rng_oracle_dump = 1;
+        else if (!strcmp(a, "--lzcr-oracle-dump"))     g_opts.lzcr_oracle_dump = 1;
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--trace"))           g_opts.trace_path = argv[++i];
         else if (i+1<argc && !strcmp(a, "--hold-ms"))         g_opts.hold_ms = atoi(argv[++i]);
@@ -197,6 +200,62 @@ static int RunRngOracleDump(void) {
     return 0;
 }
 
+/* ── LZCR oracle dump ───────────────────────────────────────────────── */
+/* Phase 6E-B4 verification driver (pure arithmetic + guest RAM — no
+ * --disc-image required): calls the REAL func_8003EAC8 for the oracle
+ * input set and prints one line per input in exactly the format produced
+ * by pc_port/tools/lzcr_oracle.py (a tiny MIPS interpreter over the
+ * verified retail words).  `lzcr`/`idx` come from PE_GTE_LZCR and the
+ * translated branch; `dest` is found by SCANNING guest RAM for the unique
+ * sentinel — independent of the formula — so an inconsistent store path
+ * cannot hide.  The phase gate diffs the two outputs; must be identical. */
+#define LZCR_DUMP_SCAN_LO  0x800A76E0u   /* 3 words below D_800A76F0-4   */
+#define LZCR_DUMP_SCAN_HI  0x800A7770u   /* 1 word past D_800A76F0+0x7C  */
+
+static int RunLzcrOracleDump(void) {
+    static const uint32_t k_first[] = {
+        0x00000000u, 0x00000001u, 0x00000002u, 0x00000003u,
+        0x00000008u, 0x00008000u, 0x40000000u, 0x7FFFFFFFu,
+        0x80000000u, 0x80000001u, 0xC0000000u, 0xFFFFFFFFu
+    };
+    static const uint32_t k_skip[] = {
+        0x00000001u, 0x00000002u, 0x00000008u,
+        0x00008000u, 0x40000000u, 0x80000000u
+    };
+    uint32_t inputs[12 + 26];
+    int n = 0;
+    for (size_t i = 0; i < sizeof(k_first)/sizeof(k_first[0]); i++)
+        inputs[n++] = k_first[i];
+    for (int k = 0; k < 32; k++) {
+        uint32_t m = 1u << k, skip = 0;
+        for (size_t j = 0; j < sizeof(k_skip)/sizeof(k_skip[0]); j++)
+            if (k_skip[j] == m) skip = 1;
+        if (!skip) inputs[n++] = m;
+    }
+
+    for (int i = 0; i < n; i++) {
+        uint32_t mask = inputs[i];
+        uint32_t sentinel = 0xEAC80000u | (uint32_t)i;
+        pe_addr_t dest = 0;
+        int found = 0;
+        for (pe_addr_t a = LZCR_DUMP_SCAN_LO; a <= LZCR_DUMP_SCAN_HI; a += 4)
+            PE_StoreU32(a, 0);
+        func_8003EAC8((int)mask, (int)sentinel);
+        for (pe_addr_t a = LZCR_DUMP_SCAN_LO; a <= LZCR_DUMP_SCAN_HI; a += 4) {
+            if (PE_LoadU32(a) == sentinel) { dest = a; found++; }
+        }
+        if (found != 1) {
+            printf("EAC8 a0=0x%08X FATAL sentinel found %d times\n", mask, found);
+            return 1;
+        }
+        int32_t idx = (mask == 0x80000000u) ? 31
+                                            : 31 - (int32_t)PE_GTE_LZCR(mask);
+        printf("EAC8 a0=0x%08X lzcr=%u idx=%d dest=0x%08X stored=0x%08X\n",
+               mask, PE_GTE_LZCR(mask), idx, dest, PE_LoadU32(dest));
+    }
+    return 0;
+}
+
 /* ── Title overlay ──────────────────────────────────────────────────── */
 static void UpdateTitle(const char *phase, const char *func) {
     if (!g_opts.debug_overlay || !g_host_window_open) return;
@@ -252,6 +311,14 @@ int main(int argc, char **argv) {
     }
 
     TraceEvent("native_executable_start");
+
+    if (g_opts.lzcr_oracle_dump) {
+        int rc = RunLzcrOracleDump();
+        TraceClose();
+        PE_Disc_Close(disc);
+        PE_RamDestroy();
+        return rc;
+    }
 
     if (g_opts.rng_oracle_dump) {
         int rc = RunRngOracleDump();
