@@ -5690,15 +5690,14 @@ static void test_6E498_readonly_footprint(void) {
 /* Expected unresolved-callee sequence of the translated func_800527C8
  * dispatcher (Phase 6E-B18, func_800528F0 now translated), in retail
  * ROM order. */
-static const char *const B20_DISP_SEQ[7] = {
-    "func_80064964",
+static const char *const B21_DISP_SEQ[6] = {
     "func_8005DE88", "func_80052C6C", "func_8005BCBC", "func_8005D6F4",
     "func_80051CC4", "func_80042C78"
 };
 
-static int B20_CheckDispatcherOrder(int base) {
-    for (int i = 0; i < 7; i++) {
-        if (strcmp(g_stub_order_log[base + i], B20_DISP_SEQ[i]) != 0)
+static int B21_CheckDispatcherOrder(int base) {
+    for (int i = 0; i < 6; i++) {
+        if (strcmp(g_stub_order_log[base + i], B21_DISP_SEQ[i]) != 0)
             return 0;
     }
     return 1;
@@ -5909,7 +5908,7 @@ static void test_6A9E4_full_run_patterned(void) {
      * REAL too — nine unresolved dispatcher callees appear in retail ROM
      * order, then func_80087090. */
     ASSERT(g_stub_order_count == 8, "unexpected bootstrap invocations");
-    ASSERT(B20_CheckDispatcherOrder(0),
+    ASSERT(B21_CheckDispatcherOrder(1),
            "dispatcher callee sequence wrong");
     ASSERT(strcmp(g_stub_order_log[7], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
@@ -6029,6 +6028,15 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             uint32_t exp = B19_DrawEnvExpectedWord(a);
             if (exp != 0xFFFFFFFFu) want = exp;
         }
+        /* Phase 6E-B21: func_80064964 flag bytes */
+        else if (a == 0x800A3078u) want = 0xA5A5A5FFu;
+        else if (a == 0x800A30A0u) want = 0xA5A5A5FFu;
+        else if (a == 0x800A30B0u) want = 0xA5A5A5FFu;
+        else if (a == 0x800A30B8u) want = 0xA5A5A5FFu;
+        else if (a == 0x800A30C0u) want = 0xA5A5A5FFu;
+        else if (a == 0x800A30C4u) want = 0xA5A5A5FFu;
+        else if (a == 0x800A3124u) want = 0xA5A5A5FFu;
+        else if (a == 0x800A3134u) want = 0xA5A5A5FFu;
         /* Phase 6E-B20: func_80062568 free-list + gp stores */
         else if (a == 0x8009D158u) want = 0x800A22E0u;
         else if (a == 0x8009D15Cu) want = 0;
@@ -6051,7 +6059,7 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         }
     }
     ASSERT(g_stub_order_count == 8, "unexpected bootstrap invocations");
-    ASSERT(B20_CheckDispatcherOrder(0),
+    ASSERT(B21_CheckDispatcherOrder(1),
            "dispatcher callee sequence wrong");
     ASSERT(strcmp(g_stub_order_log[7], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
@@ -6089,7 +6097,7 @@ static void test_6A9E4_ramreset_rerun(void) {
     ASSERT(PE_LoadU32(0x800B0E1Cu) == e1c_1, "rerun D_800B0E1C differs");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
-    ASSERT(CountOrderLog("func_80064964") == 2, "frontier count after rerun");
+    ASSERT(CountOrderLog("func_80071A24") == 2, "frontier count after rerun");
     ASSERT(CountOrderLog("func_80087090") == 2, "stub count after rerun");
     PASS();
 }
@@ -6116,7 +6124,7 @@ static void test_6A9E4_3E680_integration(void) {
     /* B18: func_800528F0 is now also translated; 9 unresolved dispatcher
      * callees occupy the order log before func_80087090. */
     ASSERT(g_stub_order_count == 8, "unexpected provider count");
-    ASSERT(B20_CheckDispatcherOrder(0),
+    ASSERT(B21_CheckDispatcherOrder(1),
            "func_800527C8 callee order must match retail ROM order");
     ASSERT(strcmp(g_stub_order_log[7], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
@@ -6129,7 +6137,7 @@ static void test_6A9E4_3E680_integration(void) {
     ASSERT(PE_LoadU32(0x800B0E20u) == B16_ARCH, "D_800B0E20 wrong");
     ASSERT(PE_LoadU32(0x800B0E18u) == 0, "count-0 archive must yield 0");
     ASSERT(PE_LoadU32(0x800B0E1Cu) == 0, "count-0 archive must yield 0");
-    /* The full --strict-stubs exit at func_80064964 (the first unresolved dispatcher callee
+    /* The full --strict-stubs exit at func_8005DE88 (the first unresolved dispatcher callee
      * callee after func_8005E588 inside func_800527C8) is a runtime gate
      * (check_strict calls exit(1)) and is covered by the binary strict
      * runs; this test proves the in-process provider order. */
@@ -6456,6 +6464,21 @@ static void test_62568_ramreset_rerun(void) {
     /* Non-link bytes restored to zero by PE_RamReset, then left alone. */
     ASSERT(PE_LoadU32(0x800A22E4u) == 0xCAFE22E4u, "rerun: non-link preserved");
     ASSERT(PE_LoadU32(0x800A2FD4u) == 0xCAFE2FD4u, "rerun: non-link last preserved");
+    PASS();
+}
+
+static void test_64964_direct_boot_state(void) {
+    TEST("64964_direct_boot_state");
+    ResetTestState();
+    func_80064964();
+    ASSERT(PE_LoadU8(0x800A3078u) == 0xFF, "flag 3078");
+    ASSERT(PE_LoadU8(0x800A30A0u) == 0xFF, "flag 30A0");
+    ASSERT(PE_LoadU8(0x800A30B0u) == 0xFF, "flag 30B0");
+    ASSERT(PE_LoadU8(0x800A30B8u) == 0xFF, "flag 30B8");
+    ASSERT(PE_LoadU8(0x800A30C0u) == 0xFF, "flag 30C0");
+    ASSERT(PE_LoadU8(0x800A30C4u) == 0xFF, "flag 30C4");
+    ASSERT(PE_LoadU8(0x800A3124u) == 0xFF, "flag 3124");
+    ASSERT(PE_LoadU8(0x800A3134u) == 0xFF, "flag 3134");
     PASS();
 }
 
@@ -6804,6 +6827,7 @@ int main(void)
     test_62568_repeated();
     test_62568_full_footprint();
     test_62568_ramreset_rerun();
+    test_64964_direct_boot_state();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

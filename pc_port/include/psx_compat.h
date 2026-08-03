@@ -131,6 +131,7 @@ extern void func_800527C8(void);
 extern void func_800528F0(void);
 extern void func_8005E588(void);
 extern void func_80062568(void);
+extern void func_80064964(void);
 extern void func_8005E968(uint32_t);
 extern void func_8005F844(int);
 extern int  func_8006E834(void);
