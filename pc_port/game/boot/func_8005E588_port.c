@@ -113,14 +113,14 @@ void func_8005E588(void)
     PE_StoreU32(GA_GP_3B4, 0);
     PE_StoreU32(GA_GP_3BC, GA_TABLE_2270);
 
-    /* 7. func_8005E968(0x80808080) — pack color (unresolved). */
-    Bootstrap_ReturnVoid("func_8005E968", "func_8005E588");
+    /* 7. func_8005E968(0x80808080) — pack color (TRANSLATED B19a). */
+    func_8005E968(0x80808080u);
 
     /* 8. D_8009D130 = 0. */
     PE_StoreU32(GA_GP_3C0, 0);
 
-    /* 9. func_8005F844(0) — unresolved. */
-    Bootstrap_ReturnVoid("func_8005F844", "func_8005E588");
+    /* 9. func_8005F844(0) — (TRANSLATED B19b). */
+    func_8005F844(0);
 
     /* 10. D_8009D134 = 0. */
     PE_StoreU32(GA_GP_3C4, 0);

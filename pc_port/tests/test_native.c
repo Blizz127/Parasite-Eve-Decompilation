@@ -5737,6 +5737,75 @@ static uint8_t B18_ExpectedTableByte(uint32_t off) {
     return out[off];
 }
 
+/* Expected word for DRAWENV/DISPENV structure addresses written by
+ * func_8005E588's SetDefDrawEnv/SetDefDispEnv calls.
+ * Returns the expected 32-bit LE word, or 0xFFFFFFFF if addr is not
+ * within a known structure region. */
+static uint32_t B19_DrawEnvExpectedWord(uint32_t addr) {
+    /* DRAWENV_A: 0x800A2180, x=0,y=0,w=320,h=224 */
+    if (addr == 0x800A2180u) return 0x00000000u;
+    if (addr == 0x800A2184u) return 0x00E00140u;
+    if (addr == 0x800A2188u) return 0x00000000u;
+    if (addr == 0x800A218Cu) return 0x00000000u;
+    if (addr == 0x800A2190u) return 0x00000000u;
+    if (addr == 0x800A2194u) return 0x0101000Au;
+    if (addr == 0x800A2198u) return 0x00000001u; /* byte 1 + 3 zeros */
+    /* DRAWENV_C: 0x800A21DC, x=0,y=224,w=320,h=224 */
+    if (addr == 0x800A21DCu) return 0x00E00000u;
+    if (addr == 0x800A21E0u) return 0x00E00140u;
+    if (addr == 0x800A21E4u) return 0x00080000u; /* sh 8 at +6,+8 */
+    if (addr == 0x800A21E8u) return 0x00E00000u;
+    if (addr == 0x800A21ECu) return 0x00000000u;
+    if (addr == 0x800A21F0u) return 0x0101000Au;
+    /* DRAWENV_B: 0x800A21F8, x=0,y=224,w=320,h=224 */
+    if (addr == 0x800A21F8u) return 0x00E00000u;
+    if (addr == 0x800A21FCu) return 0x00E00140u;
+    if (addr == 0x800A2200u) return 0x00E00000u;
+    if (addr == 0x800A2204u) return 0x00000000u;
+    if (addr == 0x800A2208u) return 0x00000000u;
+    if (addr == 0x800A220Cu) return 0x0101000Au;
+    /* Flag bytes around 0x800A2210 */
+    if (addr == 0x800A2210u) return 0x00000001u; /* sb 1 */
+    /* DISPENV: 0x800A2254, x=0,y=0,w=320,h=224 */
+    if (addr == 0x800A2254u) return 0x00000000u;
+    if (addr == 0x800A2258u) return 0x00E00140u;
+    if (addr == 0x800A225Cu) return 0x00080000u; /* sh 8 at +8 */
+    if (addr == 0x800A2260u) return 0x00E00000u; /* sh 0xE0 at +C */
+    if (addr == 0x800A2264u) return 0x00000000u;
+    /* DISPENV continuation + misc */
+    if (addr == 0x800A21F4u) return 0x00000000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    if (addr == 0x800A2260u) return 0x00E00000u;
+    return 0xFFFFFFFFu;  /* not a known display env address */
+}
+
 /* ── func_8006A9E4: full patterned run ───────────────────────────────── */
 
 static void test_6A9E4_full_run_patterned(void) {
@@ -5839,12 +5908,12 @@ static void test_6A9E4_full_run_patterned(void) {
     /* 7. Dependency boundary (updated Phase 6E-B18): func_800528F0 is now
      * REAL too — nine unresolved dispatcher callees appear in retail ROM
      * order, then func_80087090. */
-    ASSERT(g_stub_order_count == 11, "unexpected bootstrap invocations");
-    ASSERT(B19_CheckDispatcherOrder(2),
+    ASSERT(g_stub_order_count == 9, "unexpected bootstrap invocations");
+    ASSERT(B19_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[10], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[8], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 11, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 9, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -5949,7 +6018,17 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x8009D130u) want = 0;
         else if (a == 0x8009D134u) want = 0;
         else if (a == 0x8009D12Cu) want = 0x800A2270u;
-        else if (a >= 0x800A2180u && a <= 0x800A2270u) want = PE_LoadU32(a);
+        /* Phase 6E-B19a/b: func_8005E968 + func_8005F844 writes */
+        else if (a == 0x8009D110u) want = 0x80808080u;
+        else if (a == 0x8009D114u) want = 0x00404040u;
+        else if (a == 0x8009D13Cu) want = 0x0000395Du;
+        else if (a == 0x8009D140u) want = 0x00000084u;
+        else if (a == 0x8009D144u) want = 0x000000A4u;
+        /* DRAWENV/DISPENV structures */
+        else if (a >= 0x800A2180u && a <= 0x800A2270u) {
+            uint32_t exp = B19_DrawEnvExpectedWord(a);
+            if (exp != 0xFFFFFFFFu) want = exp;
+        }
         else if (a >= B16_STREAM && a < B16_STREAM + B16_COPY1)
             want = B16_StreamWordPre(a - B16_STREAM);
         else if (a >= B16_ARCH && a < B16_ARCH + B16_COPY1)
@@ -5963,10 +6042,10 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
-    ASSERT(g_stub_order_count == 11, "unexpected bootstrap invocations");
-    ASSERT(B19_CheckDispatcherOrder(2),
+    ASSERT(g_stub_order_count == 9, "unexpected bootstrap invocations");
+    ASSERT(B19_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[10], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[8], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6002,7 +6081,7 @@ static void test_6A9E4_ramreset_rerun(void) {
     ASSERT(PE_LoadU32(0x800B0E1Cu) == e1c_1, "rerun D_800B0E1C differs");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
-    ASSERT(CountOrderLog("func_8005E968") == 2, "frontier count after rerun");
+    ASSERT(CountOrderLog("func_80062568") == 2, "frontier count after rerun");
     ASSERT(CountOrderLog("func_80087090") == 2, "stub count after rerun");
     PASS();
 }
@@ -6028,21 +6107,21 @@ static void test_6A9E4_3E680_integration(void) {
 
     /* B18: func_800528F0 is now also translated; 9 unresolved dispatcher
      * callees occupy the order log before func_80087090. */
-    ASSERT(g_stub_order_count == 11, "unexpected provider count");
-    ASSERT(B19_CheckDispatcherOrder(2),
+    ASSERT(g_stub_order_count == 9, "unexpected provider count");
+    ASSERT(B19_CheckDispatcherOrder(0),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[10], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[8], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_800527C8") == 0,
            "func_800527C8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_800528F0") == 0,
-           "func_8005E588 still routed through bootstrap policy");
+           "func_8005E588 routed through bootstrap policy");
     ASSERT(PE_LoadU32(0x800B0E20u) == B16_ARCH, "D_800B0E20 wrong");
     ASSERT(PE_LoadU32(0x800B0E18u) == 0, "count-0 archive must yield 0");
     ASSERT(PE_LoadU32(0x800B0E1Cu) == 0, "count-0 archive must yield 0");
-    /* The full --strict-stubs exit at func_80062568 (the first unresolved
+    /* The full --strict-stubs exit at func_80062568 (the first unresolved dispatcher callee
      * callee after func_8005E588 inside func_800527C8) is a runtime gate
      * (check_strict calls exit(1)) and is covered by the binary strict
      * runs; this test proves the in-process provider order. */
