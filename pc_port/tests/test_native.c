@@ -1478,34 +1478,38 @@ static void test_3E680_subsystem_order(void) {
 
     /* After the poll loop, translated func_8003E974 runs (20 real
      * func_8003EAC8 registrations), translated func_80036DC8 runs
-     * (6E-B5: timer-record init), and the two real func_80073D24 slot
-     * writes run (6E-B6 — also absent from the stub order log),
+     * (6E-B5: timer-record init), the two real func_80073D24 slot
+     * writes run (6E-B6), and the real func_800371A4 byte store runs
+     * (6E-B7 — all absent from the stub order log),
      * then the remaining subsystem inits fire in retail order. */
     const char *expected[] = {
-        "func_800371A4",  "func_80029388", "func_8005BCA8", "func_80068D28",
+        "func_80029388", "func_8005BCA8", "func_80068D28",
         "func_800124F8",  "func_8001A890", "func_80034F10", "func_8006536C",
         "func_80038D1C"
     };
     int expected_count = sizeof(expected) / sizeof(expected[0]);
 
-    /* func_8003EAC8, func_80036DC8, func_80073D24 must NOT appear: real */
+    /* func_8003EAC8, func_80036DC8, func_80073D24, func_800371A4 must
+     * NOT appear: real */
     ASSERT(CountOrderLog("func_8003EAC8") == 0,
            "func_8003EAC8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_80036DC8") == 0,
            "func_80036DC8 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_80073D24") == 0,
            "func_80073D24 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_800371A4") == 0,
+           "func_800371A4 still routed through bootstrap policy");
 
-    /* Find the position of func_800371A4 — the first stub invoked after
-     * the translated 3E974/3EAC8/36DC8 rungs and the real 73D24 writes */
+    /* Find the position of func_80029388 — the first stub invoked after
+     * the real 3E974/3EAC8/36DC8/73D24/371A4 rungs */
     int start_idx = -1;
     for (int i = 0; i < g_stub_order_count; i++) {
-        if (strcmp(g_stub_order_log[i], "func_800371A4") == 0) {
+        if (strcmp(g_stub_order_log[i], "func_80029388") == 0) {
             start_idx = i;
             break;
         }
     }
-    ASSERT(start_idx >= 0, "func_800371A4 not found in order log");
+    ASSERT(start_idx >= 0, "func_80029388 not found in order log");
 
     for (int j = 0; j < expected_count && (start_idx + j) < g_stub_order_count; j++) {
         if (strcmp(g_stub_order_log[start_idx + j], expected[j]) != 0) {
@@ -1739,6 +1743,132 @@ static void test_73D24_strict_not_stub(void) {
      * the centralized bootstrap policy */
     ASSERT(func_80073D24(0x8003E91Cu) == 0, "strict install prev != 0");
     ASSERT(PE_LoadU32(GA_CB_SLOT4) == 0x8003E91Cu, "strict install failed");
+    g_strict_stubs = 0;
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B7 — func_800371A4 $gp-relative byte setter rung
+ *
+ * Retail body (3 words, exe-verified): sb $a0, 0x124($gp); jr $ra; nop.
+ * $gp = 0x8009CD70 → destination D_8009CE94 = guest 0x8009CE94.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_D_8009CE94_TEST 0x8009CE94u
+
+static void test_371A4_raw_contract(void) {
+    TEST("371A4_raw_contract");
+    ResetTestState();
+
+    func_800371A4(1);
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 1, "byte store wrong");
+    /* Not a bootstrap stub, no order-log entry */
+    ASSERT(g_stub_count == 0, "func_800371A4 recorded as stub");
+    ASSERT(Bootstrap_InvocationCount() == 0, "bootstrap provider invoked");
+    PASS();
+}
+
+static void test_371A4_byte_width_truncation(void) {
+    TEST("371A4_byte_width_truncation");
+    ResetTestState();
+
+    /* sb stores the low 8 bits of a0 regardless of signedness */
+    func_800371A4(0x123);
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0x23, "0x123 not truncated to 0x23");
+    func_800371A4(-1);
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0xFF, "-1 not stored as 0xFF");
+    func_800371A4(0x100);
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0x00, "0x100 not stored as 0x00");
+    /* Byte width: the three neighboring bytes are untouched */
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST - 1) == 0, "byte below modified");
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST + 1) == 0, "byte above modified");
+    PASS();
+}
+
+static void test_371A4_write_footprint(void) {
+    TEST("371A4_write_footprint");
+    ResetTestState();
+
+    /* Canary-fill ALL of guest RAM, run both retail call-site values,
+     * then scan the whole 2 MiB: only the single byte at 0x8009CE94 may
+     * differ. */
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    }
+
+    func_800371A4(0);
+    func_800371A4(1);
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        unsigned int got = PE_LoadU32(a);
+        /* LE byte 0 of the word at 0x8009CE94 becomes 0x01 */
+        unsigned int want = (a == GA_D_8009CE94_TEST) ? 0xA5A5A501u
+                                                      : 0xA5A5A5A5u;
+        if (got != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
+            FAIL("write footprint exceeds the single retail byte");
+            return;
+        }
+    }
+    PASS();
+}
+
+static void test_371A4_repeated_and_dirty(void) {
+    TEST("371A4_repeated_and_dirty");
+    ResetTestState();
+
+    /* Dirty guest state, then invocation; repeated invocation idempotent */
+    PE_StoreU8(GA_D_8009CE94_TEST, 0x77);
+    func_800371A4(0);
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0, "dirty state not overwritten");
+    func_800371A4(1);
+    func_800371A4(1);
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 1, "repeated call not idempotent");
+    PASS();
+}
+
+static void test_371A4_ramreset_reinit(void) {
+    TEST("371A4_ramreset_reinit");
+    ResetTestState();
+
+    func_800371A4(1);
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 1, "initial store failed");
+    PE_RamReset();
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0, "RAM reset did not clear byte");
+    func_800371A4(1);
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 1, "post-reset store failed");
+    PASS();
+}
+
+static void test_371A4_3E680_integration(void) {
+    TEST("371A4_3E680_integration");
+    ResetTestState();
+    PE_Callback_Init();
+    g_bootstrap_disc = 1;
+
+    func_8003E680();
+
+    /* The retail func_800371A4(0) ran as real code: the byte is cleared,
+     * no stub record exists, and the Phase 6E-B6 callback slot state it
+     * follows is intact (retail order: 73D24 x2 then 371A4). */
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 0,
+           "D_8009CE94 not cleared by func_8003E680");
+    ASSERT(CountOrderLog("func_800371A4") == 0,
+           "func_800371A4 still routed through bootstrap policy");
+    ASSERT(PE_Callback_GetSlot(4) == 0x8003E91Cu,
+           "6E-B6 slot-4 state not visible after func_8003E680");
+    PASS();
+}
+
+static void test_371A4_strict_not_stub(void) {
+    TEST("371A4_strict_not_stub");
+    ResetTestState();
+    g_strict_stubs = 1;
+
+    /* Under strict mode the REAL function must execute without tripping
+     * the centralized bootstrap policy */
+    func_800371A4(1);
+    ASSERT(PE_LoadU8(GA_D_8009CE94_TEST) == 1, "strict-mode store failed");
     g_strict_stubs = 0;
     PASS();
 }
@@ -3775,6 +3905,15 @@ int main(void)
     test_73D24_write_footprint();
     test_73D24_ramreset_reinit();
     test_73D24_strict_not_stub();
+
+    /* Phase 6E-B7 rung */
+    test_371A4_raw_contract();
+    test_371A4_byte_width_truncation();
+    test_371A4_write_footprint();
+    test_371A4_repeated_and_dirty();
+    test_371A4_ramreset_reinit();
+    test_371A4_3E680_integration();
+    test_371A4_strict_not_stub();
 
     /* D_80011614 (2 tests) */
     test_d11614_bootstrap_value();

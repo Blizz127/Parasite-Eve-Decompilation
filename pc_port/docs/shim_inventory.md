@@ -108,8 +108,11 @@ All stubs are explicitly classified. No anonymous empty stubs.
   `platform/pe_callback.[ch]`, wrapper in `platform/pe_libetc.c`;
   oracle gate `--callback-oracle-dump` ≡ `tools/callback_oracle.py`.
   Both func_8003E680 call sites discard the return (retail-matching)
-- `func_800371A4(int)`  ← current strict-mode frontier (from func_8003E680)
-- `func_80029388`
+- ~~`func_800371A4(int)`~~ — TRANSLATED (Phase 6E-B7): 3-word
+  $gp-relative byte setter (`sb $a0, 0x124($gp)` → D_8009CE94 =
+  guest 0x8009CE94), exe-verified words; 2 call sites (3E680 arg 0,
+  527C8 arg 1), return unused; `game/boot/func_800371A4_port.c`
+- `func_80029388`  ← current strict-mode frontier (from func_8003E680)
 - `func_8005BCA8`
 - `func_80068D28`
 - `func_800124F8`

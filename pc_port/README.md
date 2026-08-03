@@ -1,34 +1,32 @@
-# Parasite Eve Native PC Port — Phase 6E-B6
+# Parasite Eve Native PC Port — Phase 6E-B7
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** func_80073D24 VBlank callback registration rung —
-the libetc jump-table wrapper (13 words, forces slot 4 in the jal delay
-slot, forwards the callee return) now executes its instruction-derived
-contract: `prev = D_8009568C[4]; if (h != prev) D_8009568C[4] = h;
-return prev;`.  That is the semantics of func_80074478, the handler
-installed at jump-table field 0x14 by ResetCallback (func_80073E28's
-delay-slot store of func_800743B4's return value — verified against the
-retail exe bytes).  All retail-visible state lives in guest RAM: the
-8-word handler table at `0x8009568C` and the dispatch counter at
-`0x800956AC`, driven by a func_8007440C-faithful dispatcher (counter++,
-non-null slots 0..7 in order, no args).  The host side keeps only a typed
-guest-address → host-function binding map at full pointer width; unknown
-guest identities are visible errors, never silent skips.  Verified by an
-independent MIPS-interpreter oracle (`tools/callback_oracle.py`)
-executing the verified retail words of func_80074478/func_8007440C —
-the port's `--callback-oracle-dump` is byte-identical.
+**Current milestone:** func_800371A4 rung — a 3-word `$gp`-relative byte
+setter (`sb $a0, 0x124($gp); jr $ra; nop`, words verified against the
+retail executable) translated as retail logic: stores `(uint8_t)a0` at
+`D_8009CE94` = guest `0x8009CE94` (retail `$gp` `0x8009CD70` + `0x124`).
+Exactly two exe-wide call sites — `func_8003E680` (boot-time clear,
+arg 0) and `func_800527C8` (later init path, arg 1) — both discard the
+return; the sole reader (`func_80037870`, `lbu` + compare) is not on the
+boot path.  Idempotent; no reads, calls, hardware, or GTE.  Already a
+matching C leaf in the decomp (`src/func_800371A4.c`), which the port
+translation matches statement-for-statement.
 
-**Status:** FUNC_80073D24 CALLBACK RUNG VERIFIED — 184 native tests pass;
+**Status:** FUNC_800371A4 RUNG VERIFIED — 191 native tests pass;
 ASan/UBSan clean; RNG, LZCR and callback oracle dumps byte-identical to
 their independent interpreters on the retail exe; 3 deterministic
 headless runs (framebuffer `fb28dc21…`); 3 real-disc load traces
 byte-identical; strict mode with `--disc-image` now stops at
-`func_800371A4` (from `func_8003E680`) — the next provider past the
-real callback slot writes; windowed SHA matches headless; matching build
-remains exact at SHA `452fb033`.
+`func_80029388` (from `func_8003E680`) — the next provider past the
+real `func_800371A4` byte store; windowed SHA matches headless;
+matching build remains exact at SHA `452fb033`.
 
-**Previous milestones:** 6E-B5 (func_80036DC8 timer-record init rung —
+**Previous milestones:** 6E-B6 (func_80073D24 VBlank callback rung —
+libetc slot-4 wrapper with func_80074478 previous-handler semantics and
+func_8007440C dispatch, guest-backed at `0x8009568C`/`0x800956AC`,
+oracle-verified);
+6E-B5 (func_80036DC8 timer-record init rung —
 three 12-byte records at `0x800A76A0/AC/B8`, all 11 word stores in ROM
 order);
 6E-B4 (func_8003EAC8 LZCR registration rung —
@@ -174,6 +172,19 @@ gate: `--callback-oracle-dump` is byte-identical to
 `tools/callback_oracle.py`, a MIPS interpreter executing the verified
 retail words.
 
+## $gp-relative byte setter rung (Phase 6E-B7)
+
+| Function | Size | Words | Role |
+|----------|------|-------|------|
+| `func_800371A4` | 0xC | 3 | `sb $a0, 0x124($gp)` — `(uint8_t)a0` → `D_8009CE94` (guest `0x8009CE94`) |
+
+Complete body verified word-for-word against the retail executable
+(`0xA3840124 / 0x03E00008 / 0x00000000`).  Two call sites
+(`func_8003E680` arg 0, `func_800527C8` arg 1), both return-discarding;
+sole reader `func_80037870` (`lbu` + compare) is off the boot path.
+Matches the decomp's matching C leaf statement-for-statement.  Single
+byte of write footprint, proven by a full 2 MiB canary scan.
+
 ## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
 | Function | Matching size | Words | Purpose |
@@ -200,7 +211,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (184 tests, all pass)
+- `pe-native-tests` — test suite (191 tests, all pass)
 
 ## Running
 
@@ -228,11 +239,11 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1, names func_800371A4 (from func_8003E680) — the first
+# Expected: exit 1, names func_80029388 (from func_8003E680) — the first
 # unresolved provider past the translated RNG (70D10/70D6C/70DD0), the
 # subsystem-init pair (func_8003E974 + func_8003EAC8), the timer-record
-# init (func_80036DC8 + leaves), and the real func_80073D24 callback
-# slot writes
+# init (func_80036DC8 + leaves), the real func_80073D24 callback
+# slot writes, and the real func_800371A4 byte store
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -254,7 +265,7 @@ host adaptation); the boot is not faked.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 184 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 191 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
@@ -269,7 +280,9 @@ cd pc_port/build
                     #   write sets, footprint, idempotence, integration
                     # + 6E-B6: func_80073D24 slot contract, previous-
                     #   handler returns, oracle equality, dispatch order,
-                    #   unknown identities, footprint, strict integration)
+                    #   unknown identities, footprint, strict integration
+                    # + 6E-B7: func_800371A4 byte-store contract, width
+                    #   truncation, single-byte footprint, integration)
 ```
 
 ## Deterministic framebuffer
@@ -284,7 +297,7 @@ cd pc_port/build
 
 ## Next steps
 
-1. **Phase 6E-B continued:** `func_800371A4` rung (next strict-mode
+1. **Phase 6E-B continued:** `func_80029388` rung (next strict-mode
    frontier, from `func_8003E680`), then the provider frontier toward
    the image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)

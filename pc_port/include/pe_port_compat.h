@@ -46,8 +46,9 @@ static inline void func_8003E91C(void)    { Bootstrap_ReturnVoid("func_8003E91C"
 
 /* func_80073D24 is now a REAL SDK implementation (Phase 6E-B6):
  * pe_libetc.c — VBlank callback slot-4 setter with previous-handler
- * return, guest-table backed (pe_callback.h). */
-static inline void func_800371A4(int a)   { Bootstrap_ReturnVoid("func_800371A4", "func_8003E680"); (void)a; }
+ * return, guest-table backed (pe_callback.h).
+ * func_800371A4 is now a REAL translation (Phase 6E-B7):
+ * game/boot/func_800371A4_port.c — 3-word $gp-relative byte setter. */
 static inline void func_80029388(void)    { Bootstrap_ReturnVoid("func_80029388", "func_8003E680"); }
 static inline void func_8005BCA8(void)    { Bootstrap_ReturnVoid("func_8005BCA8", "func_8003E680"); }
 static inline void func_80068D28(void)    { Bootstrap_ReturnVoid("func_80068D28", "func_8003E680"); }
@@ -65,6 +66,7 @@ extern void func_80036DC8(void);
 extern void func_80036DF8(void);
 extern void func_80036E34(void);
 extern void func_80036E58(void);
+extern void func_800371A4(int);
 extern void func_80070D10(void);
 extern unsigned int func_80070D6C(void);
 extern int func_80070DD0(int, int);
