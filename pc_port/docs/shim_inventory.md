@@ -178,7 +178,17 @@ All stubs are explicitly classified. No anonymous empty stubs.
   reads, no SDK/GTE/hardware/GPU work; sole call site func_8003E680
   @0x8003E730 (nop delay slot, $v0=0 unconsumed); idempotent incl.
   after PE_RamReset; `game/boot/func_8006536C_port.c`
-- `func_80038D1C`  ← current strict-mode frontier (from func_8003E680)
+- ~~`func_80038D1C(void)`~~ — TRANSLATED (Phase 6E-B15): 11-word
+  (0x2C, exe 0x80038D1C–0x80038D44, file 0x2951C) byte test-and-clear
+  status leaf: lbu D_80091A20; if nonzero sb 0 → D_80091A20 and return
+  0, else return 0xFF (255); conditional write only; all 11 words
+  exe-verified (live split 2951C.s); ALSO a matched decomp C leaf
+  (src/func_80038D1C.c); two exe call sites, both return-ignored:
+  func_8003E680 @0x8003E738 (final call, void epilogue follows) and
+  func_8006E9A0 @0x8006EB7C; with this leaf func_8003E680 is FULLY
+  translated; `game/boot/func_80038D1C_port.c`
+- `func_8006A9E4`  ← current strict-mode frontier (from func_8001220C —
+  past the fully translated func_8003E680)
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
@@ -195,7 +205,8 @@ All stubs are explicitly classified. No anonymous empty stubs.
 - `ClearOTagR`
 - `func_80068E24`
 - `func_80070E54`
-- `func_80038D1C` (shared with 3E680)
+- ~~`func_80038D1C`~~ — TRANSLATED (Phase 6E-B15, shared with 3E680;
+  see the func_8003E680 callees section)
 
 ## Remaining bootstrap providers
 

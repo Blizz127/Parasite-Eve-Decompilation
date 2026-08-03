@@ -107,11 +107,15 @@ static inline void func_8005E588(void)   { Bootstrap_ReturnVoid("func_8005E588",
 static inline void func_80066B60(int a)  { Bootstrap_ReturnVoid("func_80066B60", "func_8006E9A0"); (void)a; }
 static inline void func_80068E24(void)   { Bootstrap_ReturnVoid("func_80068E24", "func_8006E9A0"); }
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
-static inline int  func_80038D1C(void)   { return Bootstrap_ReturnInt("func_80038D1C", "func_8003E680", 0); }
+
+/* func_80038D1C is now a REAL translation too (Phase 6E-B15):
+ * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
+ * status leaf (11 retail words; also a matched decomp C leaf). */
 
 /* ── REAL translated functions ────────────────────────────────────── */
 extern void func_800725DC(void);
 extern void func_8001220C(void);
+extern int  func_80038D1C(void);
 extern int  func_800698D4(void);
 extern int  func_8006E834(void);
 extern int  func_8006E9A0(int);
