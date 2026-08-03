@@ -6160,6 +6160,147 @@ static void test_528F0_direct_boot_state(void) {
     PASS();
 }
 
+/* ── Phase 6E-B19 dedicated tests ───────────────────────────────────── */
+
+static void test_5E968_contract(void) {
+    TEST("5E968_contract");
+    ResetTestState();
+    func_8005E968(0x80808080u);
+    ASSERT(PE_LoadU32(0x8009D110u) == 0x80808080u, "orig color");
+    ASSERT(PE_LoadU32(0x8009D114u) == 0x00404040u, "halved color");
+    PASS();
+}
+
+static void test_5E968_boundary_values(void) {
+    /* Exhaustive differential: prove (packed>>1)&0x007F7F7F matches
+     * the MIPS sra+and for all interesting boundary values. */
+    TEST("5E968_boundary_values");
+    static const uint32_t inputs[] = {
+        0x00000000, 0xFFFFFFFF, 0x80808080, 0x7F7F7F7F,
+        0x80000000, 0x00FFFFFF, 0x01010101, 0xFEFEFEFE,
+        0x00000001, 0x80000001, 0x40000000, 0xC0000000,
+    };
+    int n = (int)(sizeof(inputs)/sizeof(inputs[0]));
+    int i;
+    for (i = 0; i < n; i++) {
+        ResetTestState();
+        func_8005E968(inputs[i]);
+        uint32_t orig = PE_LoadU32(0x8009D110u);
+        uint32_t half = PE_LoadU32(0x8009D114u);
+        uint32_t expect_half = (inputs[i] >> 1) & 0x007F7F7Fu;
+        if (orig != inputs[i]) {
+            printf("FAIL: input=0x%08X orig=0x%08X\n", inputs[i], orig);
+            FAIL("5E968 orig mismatch"); return;
+        }
+        if (half != expect_half) {
+            printf("FAIL: input=0x%08X half=0x%08X expect=0x%08X\n",
+                   inputs[i], half, expect_half);
+            FAIL("5E968 halved mismatch"); return;
+        }
+    }
+    PASS();
+}
+
+static void test_5F844_a0_zero(void) {
+    TEST("5F844_a0_zero");
+    ResetTestState();
+    func_8005F844(0);
+    ASSERT(PE_LoadU32(0x8009D13Cu) == 0x395Du, "D_8009D13C a0=0");
+    ASSERT(PE_LoadU32(0x8009D140u) == 0x84u,   "D_8009D140 a0=0");
+    ASSERT(PE_LoadU32(0x8009D144u) == 0xA4u,   "D_8009D144 always");
+    PASS();
+}
+
+static void test_5F844_a0_nonzero(void) {
+    TEST("5F844_a0_nonzero");
+    ResetTestState();
+    func_8005F844(1);
+    ASSERT(PE_LoadU32(0x8009D13Cu) == 0x3A1Cu, "D_8009D13C a0=1");
+    ASSERT(PE_LoadU32(0x8009D140u) == 0xCCu,   "D_8009D140 a0=1");
+    ASSERT(PE_LoadU32(0x8009D144u) == 0xA4u,   "D_8009D144 always");
+    PASS();
+}
+
+static void test_5E588_direct_boot_state(void) {
+    TEST("5E588_direct_boot_state");
+    uint32_t i;
+    ResetTestState();
+    /* Set up known arena pointers. */
+    D_800B0E50 = 0xDEAD0001u;
+    D_800B0E54 = 0xDEAD0002u;
+    D_800B0E38 = 0xDEAD0003u;
+    D_800B0E3C = 0xDEAD0004u;
+
+    func_8005E588();
+
+    /* 1. Pointer propagation.
+     *    D_800A21F4 is written from D_800B0E50 then overwritten by
+     *    DRAWENV_C+0x18 (isbg/r0/g0/b0 = 0) — retail behavior. */
+    ASSERT(PE_LoadU32(0x800A21F4u) == 0x00000000u, "D_800A21F4 (overwritten)");
+    ASSERT(PE_LoadU32(0x800A226Cu) == 0xDEAD0002u, "D_800A226C");
+    ASSERT(PE_LoadU32(0x800A21F0u) == 0x0101000Au, "D_800A21F0");
+    ASSERT(PE_LoadU32(0x800A2268u) == 0xDEAD0004u, "D_800A2268");
+
+    /* 2. Flag bytes. */
+    ASSERT(PE_LoadU8(0x800A2210u) == 1, "flag 2210");
+    ASSERT(PE_LoadU8(0x800A2198u) == 1, "flag 2198");
+    for (i = 0; i < 3; i++) ASSERT(PE_LoadU8(0x800A2199u + i) == 0, "flag 2199+");
+    for (i = 0; i < 3; i++) ASSERT(PE_LoadU8(0x800A2211u + i) == 0, "flag 2211+");
+
+    /* 3. Halfword stores. */
+    ASSERT(PE_LoadU16(0x800A225Eu) == 8,     "hw 225E");
+    ASSERT(PE_LoadU16(0x800A21E6u) == 8,     "hw 21E6");
+    ASSERT(PE_LoadU16(0x800A2262u) == 0xE0,  "hw 2262");
+    ASSERT(PE_LoadU16(0x800A21EAu) == 0xE0,  "hw 21EA");
+
+    /* 4. gp-relative stores. */
+    ASSERT(PE_LoadU32(0x8009D128u) == 0,             "D_8009D128");
+    ASSERT(PE_LoadU32(0x8009D124u) == 0,             "D_8009D124");
+    ASSERT(PE_LoadU32(0x8009D12Cu) == 0x800A2270u,   "D_8009D12C");
+    ASSERT(PE_LoadU32(0x8009D130u) == 0,             "D_8009D130");
+    ASSERT(PE_LoadU32(0x8009D134u) == 0,             "D_8009D134");
+
+    /* 5. Leaf callee results. */
+    ASSERT(PE_LoadU32(0x8009D110u) == 0x80808080u, "5E968 orig");
+    ASSERT(PE_LoadU32(0x8009D114u) == 0x00404040u, "5E968 half");
+    ASSERT(PE_LoadU32(0x8009D13Cu) == 0x395Du,     "5F844 A a0=0");
+    ASSERT(PE_LoadU32(0x8009D140u) == 0x84u,       "5F844 B a0=0");
+    ASSERT(PE_LoadU32(0x8009D144u) == 0xA4u,       "5F844 C");
+
+    /* 6. DRAWENV/DISPENV structures — spot-check one word from each. */
+    ASSERT(PE_LoadU32(0x800A2180u) == 0x00000000u, "DRAWENV_A[0]");
+    ASSERT(PE_LoadU32(0x800A2184u) == 0x00E00140u, "DRAWENV_A[1]");
+    ASSERT(PE_LoadU32(0x800A21F8u) == 0x00E00000u, "DRAWENV_B[0]");
+    ASSERT(PE_LoadU32(0x800A21DCu) == 0x00E00000u, "DRAWENV_C[0]");
+    ASSERT(PE_LoadU32(0x800A2254u) == 0x00000000u, "DISPENV[0]");
+    ASSERT(PE_LoadU32(0x800A2258u) == 0x00E00140u, "DISPENV[1]");
+
+    /* 7. No bootstrap stubs. */
+    ASSERT(g_stub_order_count == 0, "5E588 produced stubs");
+
+    PASS();
+}
+
+static void test_5E588_ramreset_rerun(void) {
+    TEST("5E588_ramreset_rerun");
+    ResetTestState();
+    D_800B0E50 = 0xAAAA0001u;
+    D_800B0E54 = 0xAAAA0002u;
+    D_800B0E38 = 0xAAAA0003u;
+    D_800B0E3C = 0xAAAA0004u;
+    func_8005E588();
+    ASSERT(PE_LoadU32(0x8009D124u) == 0, "first run");
+    PE_RamReset();
+    ASSERT(PE_LoadU32(0x8009D124u) == 0, "reset cleared");
+    D_800B0E50 = 0xBBBB0001u;
+    D_800B0E54 = 0xBBBB0002u;
+    D_800B0E38 = 0xBBBB0003u;
+    D_800B0E3C = 0xBBBB0004u;
+    func_8005E588();
+    ASSERT(PE_LoadU32(0x8009D124u) == 0, "rerun");
+    PASS();
+}
+
 /* ── Required by host_framebuffer.c / func_8001220C_port.c ───────────── */
 int g_port_stop_requested = 0;
 int g_port_main_iterations = 0;
@@ -6490,6 +6631,14 @@ int main(void)
 
     /* Phase 6E-B18: func_800528F0 PRNG table generator (1 test) */
     test_528F0_direct_boot_state();
+
+    /* Phase 6E-B19: func_8005E588 + leaves (6 tests) */
+    test_5E968_contract();
+    test_5E968_boundary_values();
+    test_5F844_a0_zero();
+    test_5F844_a0_nonzero();
+    test_5E588_direct_boot_state();
+    test_5E588_ramreset_rerun();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

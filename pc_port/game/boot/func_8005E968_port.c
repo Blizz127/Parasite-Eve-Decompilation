@@ -31,5 +31,5 @@
 void func_8005E968(uint32_t packed)
 {
     PE_StoreU32(GA_COLOR_ORIG, packed);
-    PE_StoreU32(GA_COLOR_HALF, ((int32_t)packed >> 1) & 0x007F7F7Fu);
+    PE_StoreU32(GA_COLOR_HALF, (packed >> 1) & 0x007F7F7Fu);
 }
