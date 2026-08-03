@@ -11,6 +11,7 @@
 #include "psx_compat.h"
 #include "game_port.h"
 #include "stub_registry.h"
+#include <stdio.h>
 
 /* ── Declarations ──────────────────────────────────────────────────── */
 
@@ -65,6 +66,14 @@ static void PE_Port_ScratchpadCall(void (*overlay)(void))
 
 /* ── Main — adapted from PARKED candidate ──────────────────────────── */
 
+/* Host adaptation: retail waits for a disc indefinitely (the
+ * func_800698D4 wait loop only exits on a successful mount, return 0).
+ * A headless host run without --disc-image/--bootstrap-disc would spin
+ * forever, so the port bounds the wait and then abandons the boot with a
+ * loud diagnostic.  With a disc (real or fixture) the loop behaves
+ * exactly like retail and the bound is never reached. */
+#define PE_PORT_DISC_WAIT_LIMIT 100000
+
 void func_8001220C(void)
 {
     unsigned int *data      = &D_800B0CD8;
@@ -79,12 +88,22 @@ void func_8001220C(void)
     bitmask = 0x00100000u;
 
     for (;;) {
+        int disc_wait = 0;
         g_port_main_iterations++;
         func_8006A5BC();
 
-        while (func_800698D4() == 0) {
+        /* Retail (asm/disc1/2A0C.s:33): loop while func_800698D4() != 0;
+         * proceed when it returns 0 (mount succeeded). */
+        while (func_800698D4() != 0) {
             func_80073A44(0);
             if (g_port_stop_requested) return;
+            if (++disc_wait >= PE_PORT_DISC_WAIT_LIMIT) {
+                fprintf(stderr,
+                        "[PORT] no disc mounted after %d polls "
+                        "(retail waits for disc insertion); aborting boot\n",
+                        PE_PORT_DISC_WAIT_LIMIT);
+                return;
+            }
         }
 
         func_8006A64C();

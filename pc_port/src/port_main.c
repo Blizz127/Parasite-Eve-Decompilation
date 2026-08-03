@@ -10,12 +10,15 @@
 #include "host_window.h"
 #include "stub_registry.h"
 #include "game_port.h"
+#include "pe_sdk.h"
+#include "pe_disc.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
 extern void func_8001220C(void);
 extern int  func_8006E9A0(int);
+extern pe_addr_t D_80011614;
 
 /* ── CLI ────────────────────────────────────────────────────────────── */
 static struct {
@@ -26,12 +29,15 @@ static struct {
     int direct_clear_test;
     const char *stop_after_event;
     int max_main_iterations;
+    const char *disc_image;
+    int disc_load_test;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
     .screenshot = NULL, .trace_path = NULL,
     .hold_ms = 0, .scale = 2, .hold_until_close = 1, .debug_overlay = 0,
     .window_title = "Parasite Eve Native Port",
     .direct_clear_test = 0, .stop_after_event = NULL, .max_main_iterations = 0,
+    .disc_image = NULL, .disc_load_test = 0,
 };
 
 static void ParseArgs(int argc, char **argv) {
@@ -44,6 +50,7 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--hold-until-close"))     g_opts.hold_until_close = 1;
         else if (!strcmp(a, "--debug-overlay"))        g_opts.debug_overlay = 1;
         else if (!strcmp(a, "--direct-clear-test"))    g_opts.direct_clear_test = 1;
+        else if (!strcmp(a, "--disc-load-test"))       g_opts.disc_load_test = 1;
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--trace"))           g_opts.trace_path = argv[++i];
         else if (i+1<argc && !strcmp(a, "--hold-ms"))         g_opts.hold_ms = atoi(argv[++i]);
@@ -51,9 +58,18 @@ static void ParseArgs(int argc, char **argv) {
         else if (i+1<argc && !strcmp(a, "--window-title"))    g_opts.window_title = argv[++i];
         else if (i+1<argc && !strcmp(a, "--stop-after-event")) g_opts.stop_after_event = argv[++i];
         else if (i+1<argc && !strcmp(a, "--max-main-iterations")) g_opts.max_main_iterations = atoi(argv[++i]);
+        else if (i+1<argc && !strcmp(a, "--disc-image"))      g_opts.disc_image = argv[++i];
         else { fprintf(stderr, "Unknown: %s\n", a); exit(1); }
     }
     if (g_opts.hold_ms > 0) g_opts.hold_until_close = 0;
+    if (g_opts.bootstrap_disc && g_opts.disc_image) {
+        fprintf(stderr, "--bootstrap-disc and --disc-image are mutually exclusive\n");
+        exit(1);
+    }
+    if (g_opts.disc_load_test && !g_opts.disc_image) {
+        fprintf(stderr, "--disc-load-test requires --disc-image\n");
+        exit(1);
+    }
 }
 
 /* ── Trace ──────────────────────────────────────────────────────────── */
@@ -65,6 +81,70 @@ static void TraceEvent(const char *e) {
 }
 static void TraceClose(void) { if (g_trace_fp) { fclose(g_trace_fp); g_trace_fp = NULL; } }
 void Trace_Direct(const char *e) { TraceEvent(e); }
+
+/* ── Real-disc load test ────────────────────────────────────────────── */
+/* Explicit verification driver (like --direct-clear-test): runs the real
+ * Phase 6E-A disc byte path against --disc-image — PVD verify, DsSearchFile
+ * "\PE.IMG;1", CdPosToInt, bounded guest-RAM load at the D_80011614
+ * destination, poll — and traces every value.  Deterministic for a given
+ * image; used for the three-run real-disc trace gate. */
+#define PE_LOADTEST_CDLFILE  0x801FFEC0u   /* documented guest scratch */
+#define PE_LOADTEST_MAX      0x8000u       /* 32 KiB load cap          */
+
+static uint64_t PeFnv1a64(const uint8_t *p, size_t n) {
+    uint64_t h = 1469598103934665603ULL;
+    size_t i;
+    for (i = 0; i < n; i++) { h ^= p[i]; h *= 1099511628211ULL; }
+    return h;
+}
+
+static int RunDiscLoadTest(void) {
+    char buf[160];
+    int r;
+    int lba;
+    uint32_t size, load_size;
+    uint64_t h;
+
+    TraceEvent("disc_load_test_begin");
+    /* Drive reset first, as the retail boot path does (CdInit/reset bring
+     * the synchronous drive model to the idle lane before any verify). */
+    func_8007EC14();
+    func_8007ED58();
+    r = func_80082314();
+    snprintf(buf, sizeof(buf), "disc_load_pvd_verify=%d", r);
+    TraceEvent(buf);
+    if (r != 4) { TraceEvent("disc_load_test_fail"); return 1; }
+
+    r = func_80081414(PE_LOADTEST_CDLFILE, "\\PE.IMG;1");
+    snprintf(buf, sizeof(buf), "disc_load_search_pe_img=%d", r);
+    TraceEvent(buf);
+    if (r != 1) { TraceEvent("disc_load_test_fail"); return 1; }
+
+    lba = func_80080C48(PE_LOADTEST_CDLFILE);
+    size = PE_LoadU32(PE_LOADTEST_CDLFILE + 4);
+    load_size = size < PE_LOADTEST_MAX ? size : PE_LOADTEST_MAX;
+    snprintf(buf, sizeof(buf), "disc_load_pe_img_lba=%d_size=%u", lba, size);
+    TraceEvent(buf);
+    if (lba <= 0 || size == 0) { TraceEvent("disc_load_test_fail"); return 1; }
+
+    r = func_8006E6D4(lba, 0, D_80011614, (int)load_size);
+    snprintf(buf, sizeof(buf), "disc_load_issue=%d_dest=0x%08X_len=%u",
+             r, (unsigned)D_80011614, load_size);
+    TraceEvent(buf);
+    if (r != 1) { TraceEvent("disc_load_test_fail"); return 1; }
+
+    r = func_800811E4(PE_LOADTEST_CDLFILE);
+    snprintf(buf, sizeof(buf), "disc_load_poll=%d", r);
+    TraceEvent(buf);
+    if (r != 0) { TraceEvent("disc_load_test_fail"); return 1; }
+
+    h = PeFnv1a64(PE_Translate(D_80011614, load_size), load_size);
+    snprintf(buf, sizeof(buf), "disc_load_fnv1a64=%016llX",
+             (unsigned long long)h);
+    TraceEvent(buf);
+    TraceEvent("disc_load_test_ok");
+    return 0;
+}
 
 /* ── Title overlay ──────────────────────────────────────────────────── */
 static void UpdateTitle(const char *phase, const char *func) {
@@ -91,7 +171,31 @@ int main(int argc, char **argv) {
     Bootstrap_Init();
     if (g_strict_stubs) Bootstrap_EnableStrict();
 
+    /* Phase 6E-A: real Disc 1 image, read-only (never copied or staged). */
+    PE_Disc *disc = NULL;
+    if (g_opts.disc_image) {
+        char err[256];
+        disc = PE_Disc_Open(g_opts.disc_image, err, sizeof(err));
+        if (!disc) {
+            fprintf(stderr, "[DISC] failed to open disc image: %s\n", err);
+            TraceClose();
+            PE_RamDestroy();
+            return 1;
+        }
+        PE_Disc_SetActive(disc);
+        fprintf(stderr, "[DISC] opened '%s' (%u user sectors)\n",
+                g_opts.disc_image, PE_Disc_UserSectorCount(disc));
+    }
+
     TraceEvent("native_executable_start");
+
+    if (g_opts.disc_load_test) {
+        int rc = RunDiscLoadTest();
+        TraceEvent("shutdown_end"); TraceClose();
+        PE_Disc_Close(disc);
+        PE_RamDestroy();
+        return rc;
+    }
 
     int use_window = !g_opts.headless;
     if (use_window) {
@@ -143,6 +247,7 @@ int main(int argc, char **argv) {
             vs, ds, pr, mk, g_port_main_iterations);
 
     TraceEvent("shutdown_end"); TraceClose();
+    PE_Disc_Close(disc);
     PE_RamDestroy();
     return 0;
 }

@@ -8,14 +8,16 @@ every meaningful change. Prefer shortening over accruing.
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6d-s-guest-memory-safety` | `git branch --show-current` |
-| Port phase | **6D-S — HOST-SAFE BOOT FOUNDATION VERIFIED** | `pc_port/build/pe-native-tests` (81/81) |
+| Port phase | **6E-A batch 3 — REAL DISC BYTE PATH VERIFIED** | `pc_port/build/pe-native-tests` (137/137) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
-| Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless runs + windowed identical) | `sha256sum` of `--screenshot` PPM |
-| Strict mode | exit 1, first provider `func_800725DC` | `--headless --strict-stubs` |
-| Sanitizers | `-DPE_PORT_SANITIZERS=ON`: tests + headless run clean | `pc_port/build-san` |
+| Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00) | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c` |
+| Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
+| Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
+| Strict mode | with `--disc-image`: exit 1 at `func_80070D10` (from `func_8003E680`) — past the disc boundary; with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` (from `func_800698D4`) | `--headless --strict-stubs --disc-image …` |
+| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 137/137 tests + headless + real-disc load clean | `pc_port/build-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next | Phase 6E-A: provider frontier from `func_800725DC` toward real Disc 1 (do not start MDEC/SDL/audio/input) | — |
+| Next | Phase 6E-A continued: provider frontier from `func_80070D10` (func_8003E680 rung); do not start MDEC/SDL/audio/input | — |
 
 **Leaf-count reconciliation (227 vs 229).** This checkout's committed yaml at
 base `71114ac` has **227** C leaves (`grep -cE ',[[:space:]]*c,'
@@ -30,9 +32,14 @@ not output content. Documentation now reports the count of the checkout it
 lives in.
 
 `D_80011614` is a `pe_addr_t` guest pointer (bootstrap-policy value
-`0x8010BD00`; no translated retail writer yet).  Strict-mode expectation
-changed from 6D-R: the centralized policy aborts at the *first* provider on
-the boot path (`func_800725DC`), not `func_8007F72C`.
+`0x8010BD00`; no translated retail writer yet).  The boot-time
+`func_8006E6D4(D_800B0DD8 + 0, 0, D_80011614, 0)` from `func_8006E834` is
+degenerate on retail too (D_80093164 is unwritten BSS), so the
+`--disc-load-test` driver is the deterministic proof of the real byte
+path.  `func_8001220C`'s disc-wait loop is retail-corrected
+(`while (func_800698D4() != 0)`; a Phase 6D-S port bug had it inverted);
+without a disc the run ends via the established stop-at-first-present
+adaptation plus a bounded-wait backstop, never a faked mount.
 
 ## Decomp state (main repo)
 

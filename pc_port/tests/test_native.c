@@ -11,6 +11,7 @@
 #include "pe_port_compat.h"
 #include "host_framebuffer.h"
 #include "stub_registry.h"
+#include "pe_disc.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -46,6 +47,7 @@ static void ResetTestState(void) {
     PE_RamReset();                  /* zero-fill guest RAM between tests */
     PE_Sdk_ResetState();            /* host-owned GTE/IRQ/event state    */
     Bootstrap_ClearSequences();     /* drop scripted provider sequences   */
+    PE_Disc_SetActive(NULL);        /* drop any installed disc fixture    */
     D_80011614 = D_80011614_BOOTSTRAP;
 }
 
@@ -1546,6 +1548,7 @@ static void test_6E834_clears_status_bytes(void) {
     ResetTestState();
     g_bootstrap_disc = 1;
     HostFB_Init();
+    func_8007ED58();   /* drive reset → CdReady lane 1 (boot path state) */
 
     func_8006E834();
 
@@ -1563,13 +1566,18 @@ static void test_6E834_masks_state_word(void) {
     ResetTestState();
     g_bootstrap_disc = 1;
     HostFB_Init();
-    D_800B0CD8 = 0xFFFFFFFFu;
+    func_8007ED58();   /* drive reset → CdReady lane 1 (boot path state) */
+    /* Seed without the busy bit 0x01000000: with the real func_8006E6D4
+     * guard that bit means "read already in flight" and the retail retry
+     * loop would (correctly) spin.  0xFEFFFFFF exercises every mask step. */
+    D_800B0CD8 = 0xFEFFFFFFu;
 
     func_8006E834();
 
-    /* & ~0xF0 at entry, then & 0xFEFFBFFF in the completion poll
-     * (func_800811E4 bootstrap stub returns 0 on the first poll):
-     * 0xFFFFFFFF & ~0xF0 & 0xFEFFBFFF = 0xFEFFBF0F */
+    /* & ~0xF0 at entry (0xFEFFFF0F), |= 0x01004000 at read issue
+     * (0xFFFFFF0F), then & 0xFEFFBFFF in the completion poll (real
+     * func_800811E4 returns 0: the synchronous host read leaves
+     * D_8009B6B4 = 0): final 0xFEFFBF0F */
     ASSERT(D_800B0CD8 == 0xFEFFBF0Fu, "D_800B0CD8 mask sequence wrong");
     PASS();
 }
@@ -1668,6 +1676,672 @@ static void test_direct_clear_not_default(void) {
     /* Verify that the default entry is func_8001220C, not func_8006E9A0.
      * This is a static property of port_main.c: the default path calls
      * func_8001220C unless --direct-clear-test is passed. */
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-A batch 3 — real-disc foundation tests
+ *
+ * Synthetic in-memory MODE2/2352 fixtures (no retail data): 64 raw
+ * sectors, PVD at user sector 16, root directory at sector 20 holding
+ * "FMV1" (dir, sector 21) and "PE.IMG;1" (file, sector 30, 5000 bytes of
+ * deterministic pattern).  Optional second fixture adds
+ * "FMV2\PEDISC02.IDF;1".
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define FX_SECTORS     64u
+#define FX_PEIMG_LBA   30u
+#define FX_PEIMG_SIZE  5000u
+#define FX_IDF1_LBA    40u
+#define FX_IDF1_SIZE   100u
+#define FX_IDF2_LBA    41u
+#define FX_IDF2_SIZE   100u
+
+typedef struct {
+    uint8_t  *img;
+    PE_Disc  *disc;
+} DiscFixture;
+
+static uint8_t FxPattern(uint32_t i) { return (uint8_t)(i * 7u + 3u); }
+
+/* Write one ISO9660 directory record; returns its length. */
+static int FxPutDirRec(uint8_t *p, uint32_t extent, uint32_t size,
+                       uint8_t flags, const char *id, int id_len) {
+    int len = 33 + id_len;
+    if (len & 1) len++;
+    memset(p, 0, len);
+    p[0] = (uint8_t)len;
+    /* both-endian extent and size */
+    p[2] = extent & 0xFF; p[3] = (extent >> 8) & 0xFF;
+    p[4] = (extent >> 16) & 0xFF; p[5] = (extent >> 24) & 0xFF;
+    p[6] = (extent >> 24) & 0xFF; p[7] = (extent >> 16) & 0xFF;
+    p[8] = (extent >> 8) & 0xFF; p[9] = extent & 0xFF;
+    p[10] = size & 0xFF; p[11] = (size >> 8) & 0xFF;
+    p[12] = (size >> 16) & 0xFF; p[13] = (size >> 24) & 0xFF;
+    p[14] = (size >> 24) & 0xFF; p[15] = (size >> 16) & 0xFF;
+    p[16] = (size >> 8) & 0xFF; p[17] = size & 0xFF;
+    p[25] = flags;
+    p[32] = (uint8_t)id_len;
+    memcpy(p + 33, id, (size_t)id_len);
+    return len;
+}
+
+static uint8_t *FxUser(uint8_t *img, uint32_t lba) {
+    return img + (size_t)lba * PE_DISC_RAW_SECTOR + PE_DISC_USER_OFFSET;
+}
+
+/* Build a validated in-memory fixture.  Returns 1 on success. */
+static int FxBuild(DiscFixture *fx, int with_fmv2) {
+    uint32_t i;
+    uint8_t *p;
+    int n;
+
+    fx->img = malloc((size_t)FX_SECTORS * PE_DISC_RAW_SECTOR);
+    if (!fx->img) return 0;
+    memset(fx->img, 0, (size_t)FX_SECTORS * PE_DISC_RAW_SECTOR);
+    for (i = 0; i < FX_SECTORS; i++) {
+        uint8_t *raw = fx->img + (size_t)i * PE_DISC_RAW_SECTOR;
+        raw[0] = 0x00;
+        memset(raw + 1, 0xFF, 10);
+        raw[11] = 0x00;
+        raw[15] = 0x02; /* mode 2 */
+    }
+    /* PVD at user sector 16 */
+    p = FxUser(fx->img, 16);
+    p[0] = 1; memcpy(p + 1, "CD001", 5); p[6] = 1;
+    FxPutDirRec(p + 156, 20, 2048, 0x02, "\0", 1);
+    /* root directory at sector 20 */
+    p = FxUser(fx->img, 20);
+    n = FxPutDirRec(p, 20, 2048, 0x02, "\0", 1);
+    n += FxPutDirRec(p + n, 20, 2048, 0x02, "\1", 1);
+    n += FxPutDirRec(p + n, 21, 2048, 0x02, "FMV1", 4);
+    n += FxPutDirRec(p + n, FX_PEIMG_LBA, FX_PEIMG_SIZE, 0x00,
+                     "PE.IMG;1", 8);
+    if (with_fmv2) {
+        n += FxPutDirRec(p + n, 22, 2048, 0x02, "FMV2", 4);
+        /* FMV2 directory at sector 22 */
+        p = FxUser(fx->img, 22);
+        n = FxPutDirRec(p, 22, 2048, 0x02, "\0", 1);
+        n += FxPutDirRec(p + n, 20, 2048, 0x02, "\1", 1);
+        FxPutDirRec(p + n, FX_IDF2_LBA, FX_IDF2_SIZE, 0x00,
+                    "PEDISC02.IDF;1", 14);
+    }
+    /* FMV1 directory at sector 21 */
+    p = FxUser(fx->img, 21);
+    n = FxPutDirRec(p, 21, 2048, 0x02, "\0", 1);
+    n += FxPutDirRec(p + n, 20, 2048, 0x02, "\1", 1);
+    FxPutDirRec(p + n, FX_IDF1_LBA, FX_IDF1_SIZE, 0x00,
+                "PEDISC01.IDF;1", 14);
+    /* PE.IMG content pattern (5000 bytes starting at sector 30).  User
+     * data is not contiguous in a MODE2 image: each 2352-byte raw sector
+     * holds 2048 user bytes, so the pattern is written per sector. */
+    for (i = 0; i < FX_PEIMG_SIZE; i++) {
+        FxUser(fx->img, FX_PEIMG_LBA + i / 2048u)[i % 2048u] = FxPattern(i);
+    }
+    fx->disc = PE_Disc_OpenMemory(fx->img,
+                                  (size_t)FX_SECTORS * PE_DISC_RAW_SECTOR);
+    if (!fx->disc) { free(fx->img); fx->img = NULL; return 0; }
+    return 1;
+}
+
+static void FxFree(DiscFixture *fx) {
+    if (fx->disc) PE_Disc_Close(fx->disc);
+    free(fx->img);
+    fx->img = NULL;
+    fx->disc = NULL;
+}
+
+/* ── pe_disc layer ───────────────────────────────────────────────────── */
+
+static void test_disc_open_rejects_bad_size(void) {
+    TEST("disc_open_rejects_bad_size");
+    uint8_t buf[2352 * 2];
+    memset(buf, 0, sizeof(buf));
+    ResetTestState();
+    ASSERT(PE_Disc_OpenMemory(buf, 1000) == NULL, "accepted non-2352-multiple size");
+    PASS();
+}
+
+static void test_disc_open_rejects_bad_sync(void) {
+    TEST("disc_open_rejects_bad_sync");
+    uint8_t *buf = calloc(17, 2352);
+    ResetTestState();
+    ASSERT(buf != NULL, "alloc");
+    ASSERT(PE_Disc_OpenMemory(buf, 17 * 2352) == NULL, "accepted zeroed image");
+    free(buf);
+    PASS();
+}
+
+static void test_disc_open_rejects_mode1(void) {
+    TEST("disc_open_rejects_mode1");
+    DiscFixture fx;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    fx.img[15] = 0x01; /* mode 1 */
+    ASSERT(PE_Disc_OpenMemory(fx.img, (size_t)FX_SECTORS * PE_DISC_RAW_SECTOR) == NULL,
+           "accepted MODE1 image");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_open_valid_geometry(void) {
+    TEST("disc_open_valid_geometry");
+    DiscFixture fx;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    ASSERT(PE_Disc_UserSectorCount(fx.disc) == FX_SECTORS, "wrong sector count");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_read_sector_bounds(void) {
+    TEST("disc_read_sector_bounds");
+    DiscFixture fx;
+    uint8_t sec[2048];
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    ASSERT(PE_Disc_ReadUserSector(fx.disc, FX_SECTORS - 1, sec), "last sector should read");
+    ASSERT(!PE_Disc_ReadUserSector(fx.disc, FX_SECTORS, sec), "sector past end must fail");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_read_userdata_cross_sector(void) {
+    TEST("disc_read_userdata_cross_sector");
+    DiscFixture fx;
+    uint8_t buf[FX_PEIMG_SIZE];
+    uint32_t i;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    ASSERT(PE_Disc_ReadUserData(fx.disc, FX_PEIMG_LBA, 0, buf, FX_PEIMG_SIZE),
+           "cross-sector read failed");
+    for (i = 0; i < FX_PEIMG_SIZE; i++) {
+        if (buf[i] != FxPattern(i)) { FAIL("pattern mismatch"); FxFree(&fx); return; }
+    }
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_read_userdata_past_end(void) {
+    TEST("disc_read_userdata_past_end");
+    DiscFixture fx;
+    uint8_t buf[2048];
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    ASSERT(PE_Disc_ReadUserData(fx.disc, FX_SECTORS - 1, 0, buf, 2048),
+           "last full sector should read");
+    ASSERT(PE_Disc_ReadUserData(fx.disc, FX_SECTORS - 1, 2047, buf, 1),
+           "final byte of image should read");
+    ASSERT(!PE_Disc_ReadUserData(fx.disc, FX_SECTORS - 1, 2047, buf, 2),
+           "one byte past image end must fail");
+    ASSERT(!PE_Disc_ReadUserData(fx.disc, FX_SECTORS, 0, buf, 2048),
+           "sector past end must fail");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_verify_pvd(void) {
+    TEST("disc_verify_pvd");
+    DiscFixture fx;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    ASSERT(PE_Disc_VerifyPVD(fx.disc), "PVD must verify");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_verify_pvd_corrupt(void) {
+    TEST("disc_verify_pvd_corrupt");
+    DiscFixture fx;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    fx.img[16 * 2352 + 24 + 3] = 'X'; /* "CDx01" */
+    ASSERT(!PE_Disc_VerifyPVD(fx.disc), "corrupted CD001 must not verify");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_findfile_root(void) {
+    TEST("disc_findfile_root");
+    DiscFixture fx;
+    uint32_t lba = 0, size = 0;
+    char name[16];
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    ASSERT(PE_Disc_FindFile(fx.disc, "\\PE.IMG;1", &lba, &size, name, sizeof(name)),
+           "PE.IMG lookup failed");
+    ASSERT(lba == FX_PEIMG_LBA, "wrong extent");
+    ASSERT(size == FX_PEIMG_SIZE, "wrong size");
+    ASSERT(strcmp(name, "PE.IMG;1") == 0, "wrong file id");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_findfile_nested(void) {
+    TEST("disc_findfile_nested");
+    DiscFixture fx;
+    uint32_t lba = 0, size = 0;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    ASSERT(PE_Disc_FindFile(fx.disc, "\\FMV1\\PEDISC01.IDF;1", &lba, &size, NULL, 0),
+           "nested IDF lookup failed");
+    ASSERT(lba == FX_IDF1_LBA && size == FX_IDF1_SIZE, "wrong nested extent/size");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_findfile_missing(void) {
+    TEST("disc_findfile_missing");
+    DiscFixture fx;
+    uint32_t lba, size;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    ASSERT(!PE_Disc_FindFile(fx.disc, "\\NOPE.IMG;1", &lba, &size, NULL, 0),
+           "missing file must not be found");
+    ASSERT(!PE_Disc_FindFile(fx.disc, "\\NOPE\\X;1", &lba, &size, NULL, 0),
+           "missing directory must not be found");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_findfile_no_backslash(void) {
+    TEST("disc_findfile_no_backslash");
+    DiscFixture fx;
+    uint32_t lba, size;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    ASSERT(!PE_Disc_FindFile(fx.disc, "PE.IMG;1", &lba, &size, NULL, 0),
+           "path without leading backslash must be rejected");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_findfile_malformed_record(void) {
+    TEST("disc_findfile_malformed_record");
+    DiscFixture fx;
+    uint32_t lba, size;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    /* Corrupt the FMV1 record length (root dir offset 68): the scan skips
+     * over the PE.IMG record into zero padding → safe not-found. */
+    fx.img[20 * 2352 + 24 + 68] = 0xF0;
+    ASSERT(!PE_Disc_FindFile(fx.disc, "\\PE.IMG;1", &lba, &size, NULL, 0),
+           "malformed record must yield safe not-found");
+    /* corrupt root extent in PVD: out-of-range directory → rejection */
+    fx.img[16 * 2352 + 24 + 156 + 2] = 0xFF;
+    fx.img[16 * 2352 + 24 + 156 + 3] = 0xFF;
+    ASSERT(!PE_Disc_FindFile(fx.disc, "\\PE.IMG;1", &lba, &size, NULL, 0),
+           "out-of-range root extent must be rejected");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ── provider: func_80080C48 CdPosToInt ──────────────────────────────── */
+
+static void test_cdpos_to_int_vectors(void) {
+    TEST("cdpos_to_int_vectors");
+    pe_addr_t fp = 0x801FFEC0u;
+    ResetTestState();
+    PE_StoreU8(fp + 0, 0x00); PE_StoreU8(fp + 1, 0x02); PE_StoreU8(fp + 2, 0x00);
+    ASSERT(func_80080C48(fp) == 0, "00:02:00 must decode to LBA 0");
+    PE_StoreU8(fp + 0, 0x01); PE_StoreU8(fp + 1, 0x00); PE_StoreU8(fp + 2, 0x00);
+    ASSERT(func_80080C48(fp) == 4350, "01:00:00 must decode to LBA 4350");
+    PE_StoreU8(fp + 0, 0x09); PE_StoreU8(fp + 1, 0x59); PE_StoreU8(fp + 2, 0x74);
+    ASSERT(func_80080C48(fp) == 44849, "09:59:74 must decode to LBA 44849");
+    PASS();
+}
+
+/* ── provider: func_80082314 PVD verify ──────────────────────────────── */
+
+static void test_pvd_verify_no_disc(void) {
+    TEST("pvd_verify_no_disc");
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(func_80082314() == 2, "no disc must yield result word 2");
+    ASSERT(PE_LoadU32(0x800B28F8u) == 2, "D_800B28F8 must carry 2");
+    PASS();
+}
+
+static void test_pvd_verify_with_disc(void) {
+    TEST("pvd_verify_with_disc");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_80082314() == 4, "valid disc must yield result word 4");
+    ASSERT(PE_LoadU32(0x800B28F8u) == 4, "D_800B28F8 must carry 4");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_pvd_verify_lane_shortcut(void) {
+    TEST("pvd_verify_lane_shortcut");
+    ResetTestState();
+    PE_StoreU32(0x8009B574u, 2);
+    PE_StoreU32(0x8009B578u, 0x10u);
+    ASSERT(func_80082314() == 0x10, "lane shortcut must return 0x10");
+    PASS();
+}
+
+static void test_pvd_verify_wrong_disc(void) {
+    TEST("pvd_verify_wrong_disc");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    fx.img[16 * 2352 + 24 + 3] = 'X';
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_80082314() == 2, "wrong disc must yield result word 2");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ── provider: func_80081414 DsSearchFile ────────────────────────────── */
+
+static void test_dssearch_no_disc(void) {
+    TEST("dssearch_no_disc");
+    ResetTestState();
+    ASSERT(func_80081414(0x801FFEC0u, "\\PE.IMG;1") == 0,
+           "no disc must yield not-found");
+    PASS();
+}
+
+static void test_dssearch_bad_name(void) {
+    TEST("dssearch_bad_name");
+    DiscFixture fx;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_80081414(0x801FFEC0u, "PE.IMG;1") == 0,
+           "name without leading backslash must yield not-found");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_dssearch_pe_img_cdlfile(void) {
+    TEST("dssearch_pe_img_cdlfile");
+    DiscFixture fx;
+    pe_addr_t fp = 0x801FFEC0u;
+    char name[9];
+    int i;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_80081414(fp, "\\PE.IMG;1") == 1, "PE.IMG must be found");
+    ASSERT(func_80080C48(fp) == (int)FX_PEIMG_LBA,
+           "CdlFILE pos must decode to the PE.IMG extent");
+    ASSERT(PE_LoadU32(fp + 4) == FX_PEIMG_SIZE, "CdlFILE size wrong");
+    for (i = 0; i < 8; i++) name[i] = (char)PE_LoadU8(fp + 8 + (uint32_t)i);
+    name[8] = '\0';
+    ASSERT(strcmp(name, "PE.IMG;1") == 0, "CdlFILE name wrong");
+    ASSERT(PE_LoadU8(fp + 8 + 8) == 0, "CdlFILE name must be NUL-padded");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_dssearch_missing(void) {
+    TEST("dssearch_missing");
+    DiscFixture fx;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_80081414(0x801FFEC0u, "\\NOPE;1") == 0,
+           "missing file must yield not-found");
+    ASSERT(func_80081414(0x801FFEC0u, "\\FMV2\\PEDISC02.IDF;1") == 0,
+           "FMV2 (absent on fixture) must yield not-found");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ── provider: func_8006E6D4 read issue ──────────────────────────────── */
+
+static void test_read_guard_busy(void) {
+    TEST("read_guard_busy");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    D_800B0CD8 |= 0x01000000u;
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 64) == -1,
+           "busy guard must return -1");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_read_guard_not_ready(void) {
+    TEST("read_guard_not_ready");
+    DiscFixture fx;
+    ResetTestState(); /* lane 0: no drive reset */
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 64) == -1,
+           "CdReady != 1 must return -1");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_read_guard_queue(void) {
+    TEST("read_guard_queue");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    PE_StoreU32(0x800A3608u, 1);
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 64) == -1,
+           "nonzero queue must return -1");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_read_happy_guest_bytes(void) {
+    TEST("read_happy_guest_bytes");
+    DiscFixture fx;
+    uint32_t i;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 4096) == 1,
+           "read issue must return 1");
+    for (i = 0; i < 4096; i++) {
+        if (PE_LoadU8(D_80011614 + i) != FxPattern(i)) {
+            FAIL("guest byte mismatch"); FxFree(&fx); return;
+        }
+    }
+    ASSERT((D_800B0CD8 & 0x01004000u) == 0x01004000u, "state bits not set");
+    ASSERT(PE_LoadU32(0x8009B6B4u) == 0, "bytes-pending must be 0 after sync read");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == D_80011614, "dest register wrong");
+    ASSERT(PE_LoadU32(0x8009B6ACu) == 0x200u, "mode register wrong");
+    ASSERT(PE_LoadU32(0x8009B6D4u) == 1, "read-active flag wrong");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_read_exact_end_boundary(void) {
+    TEST("read_exact_end_boundary");
+    DiscFixture fx;
+    pe_addr_t dest = PE_RAM_END - 64;
+    uint32_t i;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, dest, 64) == 1,
+           "exact-end write must succeed");
+    for (i = 0; i < 64; i++) {
+        if (PE_LoadU8(dest + i) != FxPattern(i)) {
+            FAIL("boundary byte mismatch"); FxFree(&fx); return;
+        }
+    }
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_read_one_byte_overflow(void) {
+    TEST("read_one_byte_overflow");
+    DiscFixture fx;
+    pe_addr_t dest = PE_RAM_END - 63; /* 64 bytes would end one past RAM */
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, dest, 64) == -1,
+           "one-byte overflow must be rejected, not written");
+    ASSERT(PE_LoadU8(PE_RAM_END - 1) == 0, "overflow wrote past RAM end");
+    ASSERT(PE_LoadU8(dest) == 0, "failed read must not write any bytes");
+    ASSERT((D_800B0CD8 & 0x01004000u) == 0, "state bits must be cleared on failure");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_read_truncated_source(void) {
+    TEST("read_truncated_source");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    /* lba 63 is the last sector; 4096 bytes runs past the image end */
+    ASSERT(func_8006E6D4(FX_SECTORS - 1, 0, D_80011614, 4096) == -1,
+           "truncated source must be rejected");
+    ASSERT(func_8006E6D4(FX_SECTORS, 0, D_80011614, 2048) == -1,
+           "source past end must be rejected");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_read_zero_size_trivial(void) {
+    TEST("read_zero_size_trivial");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    PE_StoreU8(D_80011614, 0xAA);
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 0) == 1,
+           "zero-size read must complete trivially (retail boot behavior)");
+    ASSERT(PE_LoadU8(D_80011614) == 0xAA, "zero-size read must not write");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_read_repeated_loads(void) {
+    TEST("read_repeated_loads");
+    DiscFixture fx;
+    uint32_t i;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    D_800B0CD8 &= 0xFEFFBFFFu; /* caller clears between reads (retail shape) */
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 2048) == 1, "first read failed");
+    D_800B0CD8 &= 0xFEFFBFFFu;
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 1, D_80011614 + 0x10000u, 2048) == 1,
+           "second read failed");
+    for (i = 0; i < 2048; i++) {
+        if (PE_LoadU8(D_80011614 + i) != FxPattern(i) ||
+            PE_LoadU8(D_80011614 + 0x10000u + i) != FxPattern(2048 + i)) {
+            FAIL("repeated-load byte mismatch"); FxFree(&fx); return;
+        }
+    }
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_read_then_ramreset(void) {
+    TEST("read_then_ramreset");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 2048) == 1, "read failed");
+    ASSERT(PE_LoadU8(D_80011614) == FxPattern(0), "data not loaded");
+    PE_RamReset();
+    ASSERT(PE_LoadU8(D_80011614) == 0, "PE_RamReset must clear loaded bytes");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ── provider: func_800811E4 poll ────────────────────────────────────── */
+
+static void test_poll_after_read(void) {
+    TEST("poll_after_read");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 2048) == 1, "read failed");
+    ASSERT(func_800811E4(0x801FFEE0u) == 0, "poll must report done after sync read");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_poll_timeout(void) {
+    TEST("poll_timeout");
+    int vs;
+    ResetTestState();
+    HostFB_Init();
+    HostFB_VSync(0);
+    HostFB_VSync(0);
+    HostFB_GetState(&vs, NULL, NULL, NULL);
+    /* issue timestamp 1300 vsyncs in the past → >1200 timeout (signed) */
+    PE_StoreU32(0x8009B6C4u, (uint32_t)(vs - 1300));
+    PE_StoreU32(0x8009B6CCu, 1);
+    ASSERT(func_800811E4(0x801FFEE0u) == -1, "stale read must time out");
+    ASSERT(PE_LoadU32(0x8009B6CCu) == 0, "timeout abort must clear D_8009B6CC");
+    PASS();
+}
+
+/* ── func_800698D4 full sequence ─────────────────────────────────────── */
+
+static void test_698D4_real_disc_sequence(void) {
+    TEST("698D4_real_disc_sequence");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_800698D4() == 0, "mount must succeed (0) with a valid disc");
+    ASSERT(D_800B0DCD == 1, "only bit 1 may be set (FMV2 absent, like Disc 1)");
+    ASSERT(D_800B0DD8 == FX_PEIMG_LBA, "D_800B0DD8 must carry the PE.IMG LBA");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_698D4_second_disc_bits(void) {
+    TEST("698D4_second_disc_bits");
+    DiscFixture fx;
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_800698D4() == 0, "mount must succeed with the FMV2 fixture");
+    ASSERT(D_800B0DCD == 3, "both bits must be set when both IDFs exist");
+    ASSERT(D_800B0DD8 == FX_PEIMG_LBA, "D_800B0DD8 must carry the PE.IMG LBA");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_698D4_no_disc(void) {
+    TEST("698D4_no_disc");
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(func_800698D4() == -1, "no disc must return -1 (PVD verify fails)");
+    ASSERT(D_800B0DCD == 0, "no bits may be set without a disc");
+    PASS();
+}
+
+static void test_698D4_bootstrap_fixture(void) {
+    TEST("698D4_bootstrap_fixture");
+    ResetTestState();
+    g_bootstrap_disc = 1;
+    ASSERT(func_800698D4() == 0, "fixture must report the retail mounted value 0");
+    ASSERT(D_800B0DCD == 3, "fixture sets both bits");
     PASS();
 }
 
@@ -1811,6 +2485,47 @@ int main(void)
     /* func_8006E9A0 (2 tests) */
     test_6E9A0_dispatch_arg1();
     test_6E9A0_dispatch_arg3();
+
+    /* Phase 6E-A batch 3: real-disc foundation (41 tests) */
+    test_disc_open_rejects_bad_size();
+    test_disc_open_rejects_bad_sync();
+    test_disc_open_rejects_mode1();
+    test_disc_open_valid_geometry();
+    test_disc_read_sector_bounds();
+    test_disc_read_userdata_cross_sector();
+    test_disc_read_userdata_past_end();
+    test_disc_verify_pvd();
+    test_disc_verify_pvd_corrupt();
+    test_disc_findfile_root();
+    test_disc_findfile_nested();
+    test_disc_findfile_missing();
+    test_disc_findfile_no_backslash();
+    test_disc_findfile_malformed_record();
+    test_cdpos_to_int_vectors();
+    test_pvd_verify_no_disc();
+    test_pvd_verify_with_disc();
+    test_pvd_verify_lane_shortcut();
+    test_pvd_verify_wrong_disc();
+    test_dssearch_no_disc();
+    test_dssearch_bad_name();
+    test_dssearch_pe_img_cdlfile();
+    test_dssearch_missing();
+    test_read_guard_busy();
+    test_read_guard_not_ready();
+    test_read_guard_queue();
+    test_read_happy_guest_bytes();
+    test_read_exact_end_boundary();
+    test_read_one_byte_overflow();
+    test_read_truncated_source();
+    test_read_zero_size_trivial();
+    test_read_repeated_loads();
+    test_read_then_ramreset();
+    test_poll_after_read();
+    test_poll_timeout();
+    test_698D4_real_disc_sequence();
+    test_698D4_second_disc_bits();
+    test_698D4_no_disc();
+    test_698D4_bootstrap_fixture();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

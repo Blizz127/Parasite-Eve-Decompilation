@@ -1,10 +1,20 @@
 /*
- * Phase 6D-S — Native adaptation of func_8006E834 (post-mount image loader).
+ * Phase 6E-A batch 3 — Native adaptation of func_8006E834 (post-mount
+ * image loader), rewired to the real disc providers (pe_libcd.c).
+ *
+ * The boot-time read is degenerate on retail as well: D_80093164 is
+ * zero-filled BSS with no writer in the retail image, so the call is
+ * func_8006E6D4(D_800B0DD8 + 0, 0, D_80011614, 0) — a trivial-length
+ * read that completes immediately; the retry/poll structure is what
+ * matters.  When the table later carries real offsets the same call
+ * shape loads PE.IMG bytes at the D_80011614 destination
+ * (asm/disc1/5B1E4.s:4580).
  *
  * All bootstrap stubs now use centralized Bootstrap_ReturnInt/Void.
  * D_800BCE80 is guest-RAM-backed (defined in psx_compat.h), no local override.
  */
 #include "psx_compat.h"
+#include "pe_sdk.h"
 #include "pe_bootstrap.h"
 #include <string.h>
 
@@ -14,14 +24,13 @@
 extern unsigned short D_80093164[4];
 
 extern void func_80086FF8(void);
-extern int  func_8006E6D4(int a0, int a1, pe_addr_t a2, int a3);
-extern int  func_800811E4(void *p);
 extern void func_800726C4(void);
 extern void func_80073A44(int a);
 extern void func_80074D28(int a);
 extern void func_800755F0(void *env);
-/* func_80072714/func_80072724 (pe_libetc.c) and func_800749D8
- * (pe_libgpu.c) are real implementations (Phase 6E-A) via pe_sdk.h. */
+/* func_80072714/func_80072724 (pe_libetc.c), func_800749D8 (pe_libgpu.c)
+ * and func_8006E6D4/func_800811E4 (pe_libcd.c) are real implementations
+ * (Phase 6E-A) via pe_sdk.h. */
 
 /* Retail builds the DISPENV on the guest stack (sp+0x18).  The host does
  * not track a guest stack pointer, so the env lives at a fixed scratch
@@ -29,25 +38,18 @@ extern void func_800755F0(void *env);
  * PutDispEnv.  All accesses stay bounds-checked pe_addr_t. */
 #define PE_6E834_ENV_ADDR 0x801FFF00u
 
+/* Retail passes a stack pointer (sp+0x30) to func_800811E4, which forwards
+ * it to the collapsed DsDataSync query.  The host uses a fixed guest
+ * scratch address instead of a host stack pointer. */
+#define PE_6E834_SYNC_ADDR 0x801FFEE0u
+
 /* ── Bootstrap stubs ───────────────────────────────────────────────── */
 /* func_80086FF8 is real (pe_stream.c, Phase 6E-A batch 2). */
-int func_8006E6D4(int a0, int a1, pe_addr_t a2, int a3) {
-    /* a2 is the guest destination address (D_80011614); a real
-     * implementation would PE_Translate(a2, a3) and read into guest RAM.
-     * Bootstrap policy does not model the read content yet. */
-    (void)a0; (void)a1; (void)a2;
-    return Bootstrap_ReturnInt("func_8006E6D4", "func_8006E834", a3);
-}
-int func_800811E4(void *p) {
-    (void)p;
-    return Bootstrap_ReturnInt("func_800811E4", "func_8006E834", 0);
-}
 void func_800726C4(void) { Bootstrap_ReturnVoid("func_800726C4", "func_8006E834"); }
 
 /* ── Adapted function ──────────────────────────────────────────────── */
 int func_8006E834(void)
 {
-    char local30[8];
     unsigned short *tbl;
     int r;
 
@@ -67,7 +69,7 @@ retry:
     } while (r == -1);
 
     for (;;) {
-        r = func_800811E4(local30);
+        r = func_800811E4(PE_6E834_SYNC_ADDR);
         if ((unsigned)(r + 1) < 2) {
             D_800B0CD8 &= 0xFEFFBFFF;
         }

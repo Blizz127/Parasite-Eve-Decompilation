@@ -1,16 +1,18 @@
-# Parasite Eve Native PC Port — Phase 6D-S
+# Parasite Eve Native PC Port — Phase 6E-A (batch 3)
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** Host-safe guest-memory boot foundation — translated
-Boot Rung runs entirely on a contiguous 2 MiB guest RAM model with typed
-`pe_addr_t` addresses, a full-width callback registry, and a centralized
-bootstrap/strict-mode policy.
+**Current milestone:** Real Disc 1 byte path — the user-supplied Disc 1
+image (BIN/CUE MODE2/2352) is opened read-only, the ISO9660 tree is walked
+for real, and PE.IMG bytes land in guest RAM at the retail `D_80011614`
+destination through bounds-checked `pe_addr_t` access.
 
-**Status:** HOST-SAFE BOOT FOUNDATION VERIFIED — 81 native tests pass;
-ASan/UBSan clean; 3 deterministic headless runs byte-identical; strict mode
-aborts centrally at the first unresolved provider; windowed SHA matches
-headless; matching build remains exact at SHA `452fb033`.
+**Status:** REAL DISC BYTE PATH VERIFIED — 137 native tests pass;
+ASan/UBSan clean; 3 deterministic headless runs byte-identical
+(framebuffer `fb28dc21…`); 3 real-disc load traces byte-identical;
+strict mode with `--disc-image` advances past the disc boundary to
+`func_80070D10` (from `func_8003E680`); windowed SHA matches headless;
+matching build remains exact at SHA `452fb033`.
 
 ## Architecture
 
@@ -33,7 +35,18 @@ headless; matching build remains exact at SHA `452fb033`.
   (`--strict-stubs`) aborts centrally at the first invoked provider.
   Deterministic provider sequences (`Bootstrap_SetIntSequence`) script
   per-symbol return values for wait-loop testing.
-- **Disc strategy:** Bootstrap-disc mode (real-disc deferred to Phase 6E)
+- **Disc layer:** `pe_disc.[ch]` — read-only host access to the
+  user-supplied Disc 1 image (never embedded, copied, staged, or
+  committed).  Single-track BIN/CUE MODE2/2352: 2048 user bytes at raw
+  sector offset +24, ISO9660 PVD at user sector 16.  All reads
+  bounds-checked; missing/truncated/malformed/wrong-disc inputs rejected
+  safely.  `pe_libcd.c` carries the real disc providers:
+  `func_80082314` (PVD verify, result word `D_800B28F8`),
+  `func_80081414` (DsSearchFile, 24-byte CdlFILE to a guest address),
+  `func_80080C48` (CdPosToInt), `func_8006E6D4` (read issue — synchronous
+  bounded copy into guest RAM), `func_800811E4` (poll: 0 done / -1
+  timeout).  `func_800698D4` runs the verbatim retail mount sequence;
+  `--bootstrap-disc` remains as an explicit test fixture only.
 
 ## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
@@ -54,38 +67,56 @@ mkdir build && cd build
 cmake ..
 make
 
-# Sanitizer build (ASan + UBSan)
+# Sanitizer build (ASan + UBSan, static runtimes)
 cmake .. -DPE_PORT_SANITIZERS=ON
 make
 ```
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (81 tests, all pass)
+- `pe-native-tests` — test suite (137 tests, all pass)
 
 ## Running
 
 ```bash
-# Headless deterministic (CI/validation)
+# Headless deterministic (CI/validation; bootstrap-disc fixture)
 ./parasite-eve-port --headless --bootstrap-disc \
-  --stop-after-event first-clear \
   --screenshot /tmp/pe-black.ppm --trace /tmp/pe-boot.trace
 
+# Real Disc 1 boot (image opened read-only, never copied)
+./parasite-eve-port --headless \
+  --disc-image "/path/Parasite Eve (USA) (Disc 1).bin" \
+  --screenshot /tmp/pe-black.ppm --trace /tmp/pe-boot.trace
+
+# Real-disc byte-path verification driver: PVD verify → DsSearchFile
+# "\PE.IMG;1" → CdPosToInt → bounded guest-RAM load at D_80011614 → poll,
+# tracing every value (deterministic for a given image)
+./parasite-eve-port --headless \
+  --disc-image "/path/Parasite Eve (USA) (Disc 1).bin" \
+  --disc-load-test --trace /tmp/pe-disc.trace
+# Expected trace: pvd_verify=4, PE.IMG lba=1013 size=206213120,
+# issue=1 dest=0x8010BD00 len=32768, poll=0, fnv1a64=7D860391E1ED6C97
+
 # Windowed (requires X11 display)
-DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc \
-  --stop-after-event first-clear --hold-ms 5000 --debug-overlay
+DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overlay
 
 # Strict mode — centralized abort at first unresolved provider
-./parasite-eve-port --headless --strict-stubs \
-  --stop-after-event first-clear
-# Expected: exit 1, names func_800725DC (first provider on the boot path)
+./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
+# Expected: exit 1, names func_80070D10 (from func_8003E680) — the first
+# unresolved provider past the real disc boundary
 ```
+
+`--bootstrap-disc` and `--disc-image` are mutually exclusive.  Without
+either, the retail disc-wait is modeled honestly (bounded by a documented
+host adaptation); the boot is not faked.
 
 ## Testing
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 81 tests (12 baseline + 69 guest-RAM/Boot Rung/policy)
+./pe-native-tests   # 137 tests (baseline + guest-RAM/Boot Rung/policy
+                    # + real-disc: pe_disc fixtures, disc providers,
+                    # guest-copy bounds, func_800698D4 sequences)
 ```
 
 ## Deterministic framebuffer
@@ -94,13 +125,14 @@ cd pc_port/build
 |----------|-------|
 | SHA-256 (headless, 3 runs) | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` |
 | Windowed SHA matches headless | ✅ |
-| main iterations | 1 (consistent across all runs) |
+| Trace SHA-256 (3 runs) | `42c1956e077a40fed5176653b6a18938a8a91e99e35fe9d7044f31581de785af` |
+| Real-disc load trace (3 runs) | `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` |
 | Unsupported traps | 0 |
-| Bootstrap stubs invoked | 51 |
 
 ## Next steps
 
-1. **Phase 6E:** Replace bootstrap-disc with real Disc 1 + PE.IMG reads
+1. **Phase 6E-A continued:** provider frontier from `func_80070D10`
+   (func_8003E680 rung) toward the image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display
 4. Audio, input, save/load (later phases)
@@ -110,4 +142,6 @@ cd pc_port/build
 - PCSX-Redux is the retail oracle only — never used as runtime
 - Matching decomp remains separate and SHA-exact (227 C leaves, SHA `452fb033`)
 - No PS1 emulator in the native executable
+- The Disc 1 image is user-supplied and read-only; never commit it or
+  any derivative captures
 - This is NOT a playable game yet

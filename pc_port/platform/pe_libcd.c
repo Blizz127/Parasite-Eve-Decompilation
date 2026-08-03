@@ -28,9 +28,56 @@
  * pending command the drive is idle — so func_8007ED58 sets the lane to 1
  * when no hardware status has been recorded.  This reproduces the
  * retail-observable state transition; it is not a fabricated return value.
+ *
+ * ── Batch 3: real-disc providers (evidence noted per function) ─────────
+ *   func_80080C48  CdPosToInt (asm/disc1/71150.s): pure BCD math over the
+ *                  CdlLOC bytes at the guest fp.
+ *   func_80082314  PVD verify (asm/disc1/72ABC.s): lane shortcut, CdReady
+ *                  wait, then D_800B28F8 result word {0x10,1,2,4}.
+ *                  Collapsed retail internals: func_800822AC (DS-abort
+ *                  check), func_80081DF8(0x10) (CdFlush), func_80080B44
+ *                  (CdIntToPos of LBA 16), func_8007F0C8 (async 27-sector
+ *                  read issue) and the func_80082400/func_80082444 deferred
+ *                  callback chain.  The callback's guest-observable result
+ *                  is D_800B28F8 = 4 when the sector-16 user data carries
+ *                  "CD001" at offset 1 (strncmp vs D_8001205C, verified
+ *                  "CD001" in the retail EXE), else 2; the host reaches the
+ *                  same word synchronously via PE_Disc_VerifyPVD.
+ *   func_80081414  DsSearchFile (asm/disc1/71A68.s): leading-'\' path
+ *                  required, at most 8 components; on a match copies a
+ *                  24-byte CdlFILE {pos(4), size(4), name(16)} to the guest
+ *                  fp and returns nonzero, else 0.  Collapsed internals:
+ *                  the D_800A36B8 cache table, the D_8009B6E0 timestamp and
+ *                  func_80081714 refresh, the func_800819D8 component walk,
+ *                  func_80081A7C directory read, func_800816F4 name compare
+ *                  and the D_8009AFC0-gated debug printfs.  The host walks
+ *                  the real ISO9660 directory records synchronously with
+ *                  the same guest-visible contract.
+ *   func_8006E6D4  async read issue (asm/disc1/5B1E4.s):
+ *                  (lba_base, lba_off, dest, size).  Guards transcribed
+ *                  verbatim (D_800B0CD8 & 0x1000000, CdReady != 1, queue
+ *                  != 0, mode mismatch vs D_800B0DD4).  The transfer is
+ *                  synchronous on the host: bytes land in guest RAM before
+ *                  return, so D_8009B6B4 (bytes pending) is 0 instead of
+ *                  `size`; all other guest state matches the retail
+ *                  post-issue values (D_8009B6AC=0x200, D_8009B6B0=dest,
+ *                  D_8009B6C4=vsync timestamp, D_8009B6D4=1).
+ *                  Collapsed: func_800719E4(1) (BIOS B(38h) CD mode set —
+ *                  never taken at boot, D_8009B590 == D_800B0DD4 == 0),
+ *                  func_80080B44/func_80080E34/func_8007F0C8 issue layer,
+ *                  and the func_80071A74 failure printf (D_8001136C).
+ *   func_800811E4  read poll (asm/disc1/714DC.s): -1 on timeout
+ *                  (D_8009B6C4 + 1200 vsyncs, signed compare), else the
+ *                  pending-byte count D_8009B6B4.  func_8007F608(fp)
+ *                  (DsDataSync query) is collapsed — retail discards its
+ *                  result.  Timeout abort func_80081268 collapses the CD
+ *                  abort commands; its guest-observable effect
+ *                  (D_8009B6CC = 0) is transcribed.
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"
+#include "pe_disc.h"
+#include "host_framebuffer.h"
 
 /* Identical zeroing block shared by CdInit and func_8007ED58. */
 static void PE_Cd_ClearState(void)
@@ -165,4 +212,137 @@ int func_8007F7A8(void)
 {
     /* func_8007FCAC — src C leaf getter D_8009B590 */
     return (int)PE_LoadU32(0x8009B590u);
+}
+
+/* ── Batch 3: real-disc providers ────────────────────────────────────── */
+
+/* func_80080B44 — CdIntToPos: absolute LBA + 150 → BCD mm/ss/ff at loc.
+ * (Magic-multiply division collapsed to plain C division; identical math.) */
+static void PE_Cd_IntToPos(int lba, pe_addr_t loc)
+{
+    uint32_t t = (uint32_t)(lba + 150);
+    uint32_t m = t / 4500u;
+    uint32_t s = (t % 4500u) / 75u;
+    uint32_t f = t % 75u;
+    PE_StoreU8(loc + 0, (uint8_t)(((m / 10u) << 4) | (m % 10u)));
+    PE_StoreU8(loc + 1, (uint8_t)(((s / 10u) << 4) | (s % 10u)));
+    PE_StoreU8(loc + 2, (uint8_t)(((f / 10u) << 4) | (f % 10u)));
+}
+
+static int PE_Cd_BcdByte(uint8_t b)
+{
+    return ((b >> 4) * 10) + (b & 0x0F);
+}
+
+/* func_80080C48 — CdPosToInt: BCD mm/ss/ff at fp → ((m*60+s)*75+f) - 150. */
+int func_80080C48(pe_addr_t fp)
+{
+    int m = PE_Cd_BcdByte(PE_LoadU8(fp + 0));
+    int s = PE_Cd_BcdByte(PE_LoadU8(fp + 1));
+    int f = PE_Cd_BcdByte(PE_LoadU8(fp + 2));
+    return ((m * 60 + s) * 75 + f) - 150;
+}
+
+/* func_80082314 — PVD verify; see header for the collapsed async layer. */
+int func_80082314(void)
+{
+    PE_Disc *d;
+    uint32_t result;
+
+    if (func_8007FBF0(0) == 2 && func_8007FBF0(1) == 0x10) {
+        return 0x10;
+    }
+    for (;;) {
+        int st = func_8007F72C();
+        if (st == 1) break;
+        if (st == 3) return 1;
+    }
+    PE_StoreU32(0x800B28F8u, 0);
+    d = PE_Disc_GetActive();
+    result = (d && PE_Disc_VerifyPVD(d)) ? 4u : 2u;
+    PE_StoreU32(0x800B28F8u, result);
+    return (int)PE_LoadU32(0x800B28F8u);
+}
+
+/* func_80081414 — DsSearchFile over the real ISO9660 tree.
+ * fp is a guest address receiving the 24-byte CdlFILE. */
+int func_80081414(pe_addr_t fp, const char *name)
+{
+    PE_Disc *d;
+    uint32_t lba, size;
+    char file_id[16];
+    int i;
+
+    if (!name || name[0] != '\\') return 0;
+    d = PE_Disc_GetActive();
+    if (!d) return 0;
+    if (!PE_Disc_FindFile(d, name, &lba, &size, file_id, sizeof(file_id))) {
+        return 0;
+    }
+    /* CdlFILE: CdlLOC pos (BCD mm/ss/ff, track byte 0), u32 size, name[16] */
+    PE_Cd_IntToPos((int)lba, fp);
+    PE_StoreU8(fp + 3, 0);
+    PE_StoreU32(fp + 4, size);
+    for (i = 0; i < 16; i++) {
+        PE_StoreU8(fp + 8 + (uint32_t)i, (uint8_t)file_id[i]);
+    }
+    return 1;
+}
+
+/* func_8006E6D4 — read issue; synchronous on the host. */
+int func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int size)
+{
+    PE_Disc *d;
+    uint32_t lba;
+    int vs, ds, pr, mk;
+
+    if (D_800B0CD8 & 0x01000000u) return -1;
+    if (func_8007F72C() != 1) return -1;
+    if (func_8007F778() != 0) return -1;
+    if (func_8007F7A8() != (int)PE_LoadU16(0x800B0DD4u)) {
+        /* func_800719E4(1) — BIOS B(38h) CD mode set: collapsed no-op. */
+    }
+    D_800B0CD8 |= 0x01004000u;
+    lba = (uint32_t)(lba_base + lba_off);
+    d = PE_Disc_GetActive();
+    if (size < 0 || (size > 0 && (!d ||
+        !PE_RangeIsRam(dest, (size_t)size) ||
+        !PE_Disc_ReadUserData(d, lba, 0,
+                              PE_Translate(dest, (size_t)size),
+                              (uint32_t)size)))) {
+        D_800B0CD8 &= 0xFEFFBFFFu;
+        /* func_80071A74 printf(D_8001136C, lba, size): collapsed. */
+        return -1;
+    }
+    /* size == 0 completes trivially (no data access), matching the retail
+     * boot-time DsRead(0) issued from func_8006E834 when the D_80093164
+     * table is still zero-filled BSS. */
+    /* Retail post-issue state (asm func_80080E34); the transfer is already
+     * complete on the host, so D_8009B6B4 (bytes pending) reads 0. */
+    PE_StoreU32(0x8009B6ACu, 0x200u);
+    PE_StoreU32(0x8009B6B0u, dest);
+    PE_StoreU32(0x8009B6B4u, 0u);
+    HostFB_GetState(&vs, &ds, &pr, &mk);
+    PE_StoreU32(0x8009B6C4u, (uint32_t)vs);
+    PE_StoreU32(0x8009B6D4u, 1u);
+    return 1;
+}
+
+/* func_800811E4 — poll; 0 done, -1 timeout (>1200 vsyncs), else pending. */
+int func_800811E4(pe_addr_t fp)
+{
+    int vs, ds, pr, mk;
+    int32_t result;
+
+    (void)fp; /* func_8007F608(fp) — DsDataSync query: collapsed; retail
+               * discards its result here. */
+    HostFB_GetState(&vs, &ds, &pr, &mk);
+    if ((int32_t)(PE_LoadU32(0x8009B6C4u) + 0x4B0u) < vs) {
+        /* func_80081268 timeout abort; CD abort commands collapsed. */
+        PE_StoreU32(0x8009B6CCu, 0u);
+        result = -1;
+    } else {
+        result = (int32_t)PE_LoadU32(0x8009B6B4u);
+    }
+    return result;
 }

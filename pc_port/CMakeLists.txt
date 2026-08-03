@@ -22,6 +22,7 @@ set(PLATFORM_SRCS
     platform/pe_libsnd.c
     platform/pe_libcard.c
     platform/pe_libcd.c
+    platform/pe_disc.c
     platform/pe_save.c
     platform/pe_stream.c
 )
@@ -79,8 +80,10 @@ if(PE_PORT_SANITIZERS)
         -fsanitize=address,undefined
         -fno-omit-frame-pointer
     )
+    # Static runtimes: the system shared libasan can mismatch the compiler
     target_link_options(parasite-eve-port PRIVATE
         -fsanitize=address,undefined
+        -static-libasan -static-libubsan
     )
 endif()
 
@@ -99,6 +102,7 @@ if(BUILD_TESTS)
         platform/pe_libsnd.c
         platform/pe_libcard.c
         platform/pe_libcd.c
+        platform/pe_disc.c
         platform/pe_save.c
         platform/pe_stream.c
         bootstrap/stub_registry.c
@@ -130,6 +134,7 @@ if(BUILD_TESTS)
         )
         target_link_options(pe-native-tests PRIVATE
             -fsanitize=address,undefined
+            -static-libasan -static-libubsan
         )
     endif()
 
