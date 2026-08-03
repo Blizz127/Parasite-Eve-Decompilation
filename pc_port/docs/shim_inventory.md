@@ -202,10 +202,24 @@ All stubs are explicitly classified. No anonymous empty stubs.
   func_8006E6A8 (11 words, issue wrapper with sector→byte << 11 at the
   host-adaptation boundary), func_8006E7E8 (19 words, poll + D_800B0CD8
   &= 0xFEFFBFFF on st∈{-1,0}), func_8006E498 (31 words, archive lookup,
-  guest-address result).  func_800527C8 (once, cycle-B poll) and
-  func_80087090 remain UNRESOLVED via the centralized boundary
-- `func_800527C8`  ← current strict-mode frontier (from func_8006A9E4,
-  invoked once inside the cycle-B poll loop)
+  guest-address result).  func_80087090 remains UNRESOLVED via the
+  centralized boundary.
+  func_800527C8 is **TRANSLATED** (Phase 6E-B17):
+  49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all exe-verified.
+  Multi-subsystem bootstrap dispatcher: 17 calls (16 distinct callees).
+  7 translated leaves (func_8005B890, func_8005BC98, func_8004F808,
+  func_80042B38, func_80051084, func_800371A4) + 3 direct sw clears;
+  10 unresolved callees in retail ROM order routed through the
+  centralized boundary:
+  func_800528F0, func_8005E588, func_80062568, func_80064964,
+  func_8005DE88, func_80052C6C, func_8005BCBC, func_8005D6F4,
+  func_80051CC4, func_80042C78.
+  Sole call site func_8006A9E4 @0x8006AAD0 ($s1-guarded one-shot in
+  the cycle-B poll loop); void(void), return unconsumed.
+  `game/boot/func_800527C8_port.c`, leaf implementations in
+  `game/boot/func_800{5B890,5BC98,4F808,42B38,51084}_port.c`.
+- `func_800528F0`  ← current strict-mode frontier (first unresolved
+  callee inside the translated func_800527C8 dispatcher)
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
@@ -227,9 +241,11 @@ All stubs are explicitly classified. No anonymous empty stubs.
 
 ## Remaining bootstrap providers
 
-With `--disc-image`, strict mode stops at `func_800527C8` (from
-`func_8006A9E4`, invoked once inside the cycle-B poll loop) — the first
-unresolved provider past the translated streaming-load rung.  The
+With `--disc-image`, strict mode stops at `func_800528F0` (first
+unresolved callee INSIDE the translated `func_800527C8` dispatcher, from
+`func_8006A9E4`) — past the fully translated func_8003E680, func_8006A9E4
+streaming-load rung, AND func_800527C8 dispatcher (7 translated leaves +
+3 direct sw clears committed before the first unresolved callee).  The
 `--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by
 design: the fixture never initializes the drive lane.
 
@@ -238,7 +254,10 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 `func_80082314` (PVD verify), `DsSearchFile`, `func_80080C48`
 (CdPosToInt), `func_8006E6D4` (image read), `func_800811E4`
 (completion poll).  Remaining unresolved providers for boot-to-logo:
-- `func_800527C8` — subsystem init (current strict frontier)
+- `func_800528F0` — first unresolved dispatcher callee (current strict frontier)
+- `func_8005E588`, `func_80062568`, `func_80064964`, `func_8005DE88`,
+  `func_80052C6C`, `func_8005BCBC`, `func_8005D6F4`, `func_80051CC4`,
+  `func_80042C78` — remaining 9 unresolved dispatcher callees
 - `func_80087090` — SPU upload retry wrapper
 - `func_800749D8` — display environment setup (currently memset stub)
 - `func_800752AC` (ClearOTagR) — ordering table clear

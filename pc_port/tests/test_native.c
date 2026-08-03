@@ -5687,6 +5687,22 @@ static void test_6E498_readonly_footprint(void) {
     PASS();
 }
 
+/* Expected unresolved-callee sequence of the translated func_800527C8
+ * dispatcher (Phase 6E-B17), in retail ROM order. */
+static const char *const B17_DISP_SEQ[10] = {
+    "func_800528F0", "func_8005E588", "func_80062568", "func_80064964",
+    "func_8005DE88", "func_80052C6C", "func_8005BCBC", "func_8005D6F4",
+    "func_80051CC4", "func_80042C78"
+};
+
+static int B17_CheckDispatcherOrder(int base) {
+    for (int i = 0; i < 10; i++) {
+        if (strcmp(g_stub_order_log[base + i], B17_DISP_SEQ[i]) != 0)
+            return 0;
+    }
+    return 1;
+}
+
 /* ── func_8006A9E4: full patterned run ───────────────────────────────── */
 
 static void test_6A9E4_full_run_patterned(void) {
@@ -5786,15 +5802,18 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* 7. Dependency boundary: exactly the two unresolved providers, in
-     * ROM order; the translated functions never touch the policy. */
-    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
-    ASSERT(strcmp(g_stub_order_log[0], "func_800527C8") == 0,
-           "func_800527C8 must be invoked first (cycle B poll)");
-    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
-           "func_80087090 must be invoked second");
-    ASSERT(Bootstrap_InvocationCount() == 2, "wrong provider count");
+    /* 7. Dependency boundary (updated Phase 6E-B17): func_800527C8 is
+     * now REAL — its ten unresolved callees appear in retail ROM order,
+     * then func_80087090.  The translated functions never touch the
+     * policy. */
+    ASSERT(g_stub_order_count == 11, "unexpected bootstrap invocations");
+    ASSERT(B17_CheckDispatcherOrder(0),
+           "dispatcher callee sequence wrong");
+    ASSERT(strcmp(g_stub_order_log[10], "func_80087090") == 0,
+           "func_80087090 must follow the dispatcher");
+    ASSERT(Bootstrap_InvocationCount() == 11, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
+    ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_8006E6A8") == 0, "6E6A8 routed via policy");
     ASSERT(CountOrderLog("func_8006E7E8") == 0, "6E7E8 routed via policy");
     ASSERT(CountOrderLog("func_8006E498") == 0, "6E498 routed via policy");
@@ -5841,7 +5860,8 @@ static void test_6A9E4_zero_cycles_footprint(void) {
 
     for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
         uint32_t want = 0xA5A5A5A5u;
-        if (a == 0x800B0CD8u) want = 0xA4A5A5A5u;      /* | then & RMW */
+        if (a == 0x800B0CD8u) want = 0xE4A5A5A5u;      /* | then & RMW,
+                                                * dispatcher |= 0x40000000 */
         else if (a == 0x8009B574u) want = 1;
         else if (a == 0x800A3608u) want = 0;
         else if (a == 0x800B0E6Cu) want = B16_STREAM;
@@ -5854,6 +5874,27 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x800B0E20u) want = B16_ARCH;
         else if (a == 0x800B0E18u) want = B16_ARCH + 0x300u;
         else if (a == 0x800B0E1Cu) want = 0;           /* key 2 absent */
+        /* Phase 6E-B17 dispatcher direct + leaf writes (func_800527C8
+         * is REAL now — it runs during the cycle-B poll): */
+        else if (a == 0x8009D028u) want = 0;           /* func_8005B890(0) */
+        else if (a == 0x8009D218u) want = 1;           /* func_8005BC98 ×2 */
+        else if (a == 0x8009D02Cu) want = 0;
+        else if (a == 0x8009D030u) want = 0;
+        else if (a == 0x8009D034u) want = 0;
+        else if (a == 0x8009CF1Cu) want = 0;           /* func_8004F808 ×10 */
+        else if (a == 0x8009CF30u) want = 0;
+        else if (a == 0x8009CF3Cu) want = 0;
+        else if (a == 0x8009CEFCu) want = 0;
+        else if (a == 0x8009CF00u) want = 0;
+        else if (a == 0x8009CF0Cu) want = 0;
+        else if (a == 0x8009CF34u) want = 0;
+        else if (a == 0x8009CF38u) want = 0;
+        else if (a == 0x8009CFB0u) want = 0;
+        else if (a == 0x8009CFF8u) want = 0;
+        else if (a == 0x800A1870u) want = 0;           /* func_80042B38 */
+        else if (a == 0x800A1874u) want = 0;
+        else if (a == 0x8009D014u) want = 0x800A1AA0u; /* func_80051084 */
+        else if (a == 0x8009CE94u) want = 0xA5A5A501u; /* 371A4(1) byte */
         else if (a >= B16_STREAM && a < B16_STREAM + B16_COPY1)
             want = B16_StreamWordPre(a - B16_STREAM);
         else if (a >= B16_ARCH && a < B16_ARCH + B16_COPY1)
@@ -5867,7 +5908,11 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
-    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
+    ASSERT(g_stub_order_count == 11, "unexpected bootstrap invocations");
+    ASSERT(B17_CheckDispatcherOrder(0),
+           "dispatcher callee sequence wrong");
+    ASSERT(strcmp(g_stub_order_log[10], "func_80087090") == 0,
+           "func_80087090 must follow the dispatcher");
     PASS();
 }
 
@@ -5900,7 +5945,8 @@ static void test_6A9E4_ramreset_rerun(void) {
     ASSERT(PE_LoadU32(0x800B0E20u) == e20_1, "rerun D_800B0E20 differs");
     ASSERT(PE_LoadU32(0x800B0E18u) == e18_1, "rerun D_800B0E18 differs");
     ASSERT(PE_LoadU32(0x800B0E1Cu) == e1c_1, "rerun D_800B0E1C differs");
-    ASSERT(CountOrderLog("func_800527C8") == 2, "stub count after rerun");
+    ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
+    ASSERT(CountOrderLog("func_800528F0") == 2, "frontier count after rerun");
     ASSERT(CountOrderLog("func_80087090") == 2, "stub count after rerun");
     PASS();
 }
@@ -5924,19 +5970,24 @@ static void test_6A9E4_3E680_integration(void) {
     PE_StoreU32(0x800B0E08u, 0x800F74F8u); /* func_8006A674 arena value */
     func_8006A9E4();
 
-    ASSERT(g_stub_order_count == 2, "unexpected provider count");
-    ASSERT(strcmp(g_stub_order_log[0], "func_800527C8") == 0,
-           "first provider after 3E680 must be func_800527C8");
-    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
-           "second provider must be func_80087090");
+    /* B17: func_800527C8 is translated; its 10 unresolved callees now
+     * occupy the order log before func_80087090. */
+    ASSERT(g_stub_order_count == 11, "unexpected provider count");
+    ASSERT(B17_CheckDispatcherOrder(0),
+           "func_800527C8 callee order must match retail ROM order");
+    ASSERT(strcmp(g_stub_order_log[10], "func_80087090") == 0,
+           "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_800527C8") == 0,
+           "func_800527C8 still routed through bootstrap policy");
     ASSERT(PE_LoadU32(0x800B0E20u) == B16_ARCH, "D_800B0E20 wrong");
     ASSERT(PE_LoadU32(0x800B0E18u) == 0, "count-0 archive must yield 0");
     ASSERT(PE_LoadU32(0x800B0E1Cu) == 0, "count-0 archive must yield 0");
-    /* The full --strict-stubs exit at func_800527C8 is a runtime gate
-     * (check_strict calls exit(1)) and is covered by the binary strict
-     * runs; this test proves the in-process provider order. */
+    /* The full --strict-stubs exit at func_800528F0 (the first unresolved
+     * callee inside func_800527C8) is a runtime gate (check_strict calls
+     * exit(1)) and is covered by the binary strict runs; this test proves
+     * the in-process provider order. */
     PASS();
 }
 

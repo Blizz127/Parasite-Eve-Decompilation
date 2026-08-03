@@ -24,7 +24,8 @@
  *      them at the loop top):
  *        A: table D_800930DC (off/end), dest = D_800A8028
  *        B: table D_800930DE (off/end), dest = lw(D_800B0E6C);
- *           calls func_800527C8() exactly once inside the poll loop
+ *           calls func_800527C8() at most once per execution inside the
+ *           poll loop (retail $s1 one-shot flag, survives -1 restarts)
  *        C: table D_800930E4 (off/end), dest = lw(D_800B0E6C)
  *        D: table D_800930E6 (off/end), dest = lw(D_800B0E6C)
  *      Issue: do { r = func_8006E6A8(s2+off, dest, end-off); } while
@@ -61,8 +62,9 @@
  *                  host-adaptation boundary — see func_8006E6A8_port.c)
  *   func_8006E7E8  TRANSLATED this rung (REAL func_800811E4 + RMW)
  *   func_8006E498  TRANSLATED this rung (pure guest table walk)
- *   func_800527C8  UNRESOLVED (49-word subsystem init, 17 callees) →
- *                  Bootstrap_ReturnVoid — this is the strict frontier
+ *   func_800527C8  TRANSLATED (Phase 6E-B17, multi-subsystem bootstrap
+ *                  dispatcher; its own first unresolved callee
+ *                  func_800528F0 is the new strict frontier)
  *   func_80087090  UNRESOLVED (SPU upload retry loop) →
  *                  Bootstrap_ReturnVoid
  *
@@ -145,15 +147,18 @@ static int PE_6A9E4_PollRestartable(void)
     }
 }
 
-/* B poll: identical restart semantics plus the one-shot func_800527C8
- * invocation before the -1 check on every iteration. */
-static int PE_6A9E4_PollRestartable_B(void)
+/* B poll: identical restart semantics plus the func_800527C8
+ * invocation guarded by the caller's $s1 one-shot flag — retail clears
+ * $s1 ONCE per func_8006A9E4 execution and sets it in the call's delay
+ * slot, so the call happens at most once per streaming load even across
+ * poll -1 restarts (the restart branch does not reset $s1). */
+static int PE_6A9E4_PollRestartable_B(int *s1)
 {
-    int st = 1, called = 0;
+    int st = 1;
     for (;;) {
-        if (!called) {
-            Bootstrap_ReturnVoid("func_800527C8", "func_8006A9E4");
-            called = 1;
+        if (!*s1) {
+            func_800527C8();
+            *s1 = 1;
         }
         if (st == -1)
             return 1;
@@ -197,11 +202,15 @@ void func_8006A9E4(void)
     }
 
     /* 3B. Read cycle B: table D_800930DE, dest stream buffer;
-     *     func_800527C8 once inside the poll loop. */
-    for (;;) {
-        PE_6A9E4_Issue(s2_lba, GA_D_800930DC + 2, 1);
-        if (!PE_6A9E4_PollRestartable_B())
-            break;
+     *     func_800527C8 at most once per execution (retail $s1 scope
+     *     covers the whole cycle, including -1 restarts). */
+    {
+        int s1 = 0;
+        for (;;) {
+            PE_6A9E4_Issue(s2_lba, GA_D_800930DC + 2, 1);
+            if (!PE_6A9E4_PollRestartable_B(&s1))
+                break;
+        }
     }
 
     /* 4. Copy #1: stream buffer → D_800E2858, 0x10A50 bytes. */

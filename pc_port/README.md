@@ -1,4 +1,4 @@
-# Parasite Eve Native PC Port — Phase 6E-B16
+# Parasite Eve Native PC Port — Phase 6E-B17
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
@@ -26,19 +26,19 @@ poll + `D_800B0CD8 &= 0xFEFFBFFF` RMW on st∈{-1,0}), and func_8006E498
 (31-word pure guest table walk, guest-address result).  The rung also
 fixed a 6D-S-class split-brain defect: `D_800B0E24..D_800B0E6C` are now
 guest-RAM lvalue macros (retail readers load guest RAM) instead of
-duplicate host globals.  **Strict frontier advanced to `func_800527C8`
-(from `func_8006A9E4`, invoked once inside the cycle-B poll).**
+duplicate host globals.  **Phase 6E-B17 advances the strict frontier to
+`func_800528F0`**: func_800527C8 (the multi-subsystem bootstrap dispatcher,
+49 words, 17 calls) is now fully translated with 7 leaf implementations
+and 10 unresolved callees routed through the centralized bootstrap
+boundary in retail ROM order.  Strict mode with `--disc-image` stops at
+`func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
+`--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** FUNC_8006A9E4 RUNG VERIFIED — 251 native tests pass;
-ASan/UBSan clean (tests + bootstrap + real-disc load + strict runs);
-RNG, LZCR and callback oracle dumps byte-identical to their independent
-interpreters on the retail exe; 3 deterministic headless runs
-(framebuffer `fb28dc21…`, unchanged — the ClearImage is guest-side data
-construction through the real SDK, presented identically by the host);
-3 real-disc load traces byte-identical (FNV-1a-64 `7D860391E1ED6C97`);
-strict mode with `--disc-image` now stops at `func_800527C8` (from
-`func_8006A9E4`); `--bootstrap-disc` fixture still stops at
-`func_8007F72C` by design; windowed SHA matches headless; matching
+**Status:** FUNC_800527C8 RUNG VERIFIED — 251 native tests pass;
+ASan/UBSan clean (tests + headless + strict runs);
+RNG, LZCR, callback, and dispatcher oracle dumps byte-identical to their
+independent interpreters on the retail exe; 3 deterministic test runs
+identical (251/251); windowed framebuffer matches headless; matching
 build remains exact at SHA `452fb033` (227 C leaves).
 
 **Previous milestones:** 6E-B15 (func_80038D1C byte test-and-clear —
@@ -383,7 +383,7 @@ now fully translated** — strict mode advances past it to
 
 | Function | Size | Words | Role |
 |----------|------|-------|------|
-| `func_8006A9E4` | 0x35C | 215 | ClearImage + four PE.IMG sector-read/poll cycles + two archive copies/lookups + unresolved func_800527C8/func_80087090 boundary calls |
+| `func_8006A9E4` | 0x35C | 215 | ClearImage + four PE.IMG sector-read/poll cycles + two archive copies/lookups + translated func_800527C8 dispatcher + unresolved func_80087090 boundary call |
 | `func_8006E6A8` | 0x2C | 11 | Issue wrapper: `func_8006E6D4(lba, 0, dest, sectors << 11)` — sector→byte conversion at the host-adaptation boundary |
 | `func_8006E7E8` | 0x4C | 19 | Completion poll: `func_800811E4` + `D_800B0CD8 &= 0xFEFFBFFF` when st∈{-1,0} |
 | `func_8006E498` | 0x7C | 31 | Archive directory lookup by 32-bit key; pure guest table walk; guest-address result |
@@ -396,11 +396,13 @@ slot, return ignored).  The four cycles read `end-off` SECTORS at
 followed by a 67792-byte copy; cycle D reads 3 sectors = 6144 bytes
 followed by a 5120-byte copy).  Polls A/B restart the whole cycle on a
 -1; polls C/D clamp the status with sltu so a -1 re-polls without
-re-issuing.  func_800527C8 is invoked exactly once inside the cycle-B
-poll loop (one-shot flag in the retail body); func_80087090 is called
-with `(lw(D_800B0E6C), 1)` between cycles C and D.  Both are unresolved
-and go through the centralized bootstrap boundary — strict mode stops
-at `func_800527C8`.  The retry/restart loop bodies beyond first-pass
+re-issuing.  func_800527C8 is now fully translated (Phase 6E-B17):
+invoked exactly once inside the cycle-B poll loop via the retail $s1
+one-shot guard; its 10 unresolved callees appear in retail ROM order
+before the final func_80087090 call.  func_80087090 is still unresolved
+and goes through the centralized bootstrap boundary — strict mode now
+stops at `func_800528F0` (the first unresolved callee inside the
+translated dispatcher).  The retry/restart loop bodies beyond first-pass
 completion are not externally triggerable in the synchronous host
 model (issue always refreshes the poll timestamp before the poll), so
 their -1 semantics are covered at the provider level instead.  This
