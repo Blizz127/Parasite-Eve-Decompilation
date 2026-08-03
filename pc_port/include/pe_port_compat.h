@@ -51,8 +51,9 @@ static inline void func_8003E91C(void)    { Bootstrap_ReturnVoid("func_8003E91C"
  * game/boot/func_800371A4_port.c — 3-word $gp-relative byte setter.
  * func_80029388 is now a REAL translation too (Phase 6E-B8):
  * game/boot/func_80029388_port.c — slot-table clear + default-record
- * init (with leaves func_8002F658 and func_80020EFC). */
-static inline void func_8005BCA8(void)    { Bootstrap_ReturnVoid("func_8005BCA8", "func_8003E680"); }
+ * init (with leaves func_8002F658 and func_80020EFC).
+ * func_8005BCA8 is now a REAL translation too (Phase 6E-B9):
+ * game/boot/func_8005BCA8_port.c — empty jr/nop stub (2 retail words). */
 static inline void func_80068D28(void)    { Bootstrap_ReturnVoid("func_80068D28", "func_8003E680"); }
 static inline void func_800124F8(void)    { Bootstrap_ReturnVoid("func_800124F8", "func_8003E680"); }
 static inline void func_8001A890(void)    { Bootstrap_ReturnVoid("func_8001A890", "func_8003E680"); }
@@ -72,6 +73,7 @@ extern void func_800371A4(int);
 extern void func_80029388(void);
 extern void func_8002F658(void);
 extern void func_80020EFC(void);
+extern void func_8005BCA8(void);
 extern void func_80070D10(void);
 extern unsigned int func_80070D6C(void);
 extern int func_80070DD0(int, int);

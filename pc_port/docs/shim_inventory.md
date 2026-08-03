@@ -120,8 +120,11 @@ All stubs are explicitly classified. No anonymous empty stubs.
   i*220 (same SlotRecord table as the decomp's func_8002F9CC leaf) +
   bytes D_8009D2A0/D_8009D2EC; sole call site func_8003E680 @0x8003E700
   (nop delay slot); `game/boot/func_80029388_port.c`
-- `func_8005BCA8`  ← current strict-mode frontier (from func_8003E680)
-- `func_80068D28`
+- ~~`func_8005BCA8(void)`~~ — TRANSLATED (Phase 6E-B9): empty jr/nop
+  stub (2 words / 0x8 at VRAM 0x8005BCA8, file 0x4C4A8; retail words
+  0x03E00008 / 0x00000000).  Zero guest reads/writes; sole call site
+  func_8003E680 @0x8003E708 (nop delay slot); `game/boot/func_8005BCA8_port.c`
+- `func_80068D28`  ← current strict-mode frontier (from func_8003E680)
 - `func_800124F8`
 - `func_8001A890`
 - `func_80034F10`
