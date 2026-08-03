@@ -1,29 +1,37 @@
-# Parasite Eve Native PC Port — Phase 6E-B9
+# Parasite Eve Native PC Port — Phase 6E-B10
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** func_8005BCA8 rung — empty return stub, translated
-as retail logic (classification 1).  Complete body is two retail words
-verified against the SHA-1-exact executable
-(`0x03E00008 jr $ra` / `0x00000000 nop` at VRAM `0x8005BCA8`, file
-`0x4C4A8`, size `0x8`).  Live split `configs/USA/disc1.yaml`
-`[0x4C4A8, c, func_8005BCA8]` (matching C leaf since Phase 5AH).
-Signature `void func_8005BCA8(void)`: no arguments, return unused, zero
-guest reads/writes, zero callees, no SDK/hardware/GTE.  Sole exe call
-site: `func_8003E680` @`0x8003E708` (nop delay slot); zero data-pointer
-references.  Independent reference: exact retail-word verification is
-sufficient for a trivial straight-line empty stub.
+**Current milestone:** func_80068D28 rung — double-buffered
+display-record data initializer, translated as retail logic
+(classification 1).  Complete body is 63 retail words / `0xFC` verified
+against the SHA-1-exact executable (VRAM `0x80068D28`–`0x80068E20`,
+file `0x59528`; live split `asm/disc1/55430.s`).  It writes only guest
+memory — a scalar block at `D_800BCF88`+`0x60`..`0x70` (`0xFF`
+halfwords, flag bytes 1/2, zero halfwords), then two 16-byte records at
++`0x30`+i*`0x10` (bytes 3,`0xFF`,`0xFF`,`0xFF`,`0x62`; halfwords 0, 0,
+`0x140`=320, `0xE0`=224) and two 8-byte records at +`0x50`+i*8 (byte 1,
+word `0xE1000440` — DATA shaped like a GP0 draw-mode command; no
+hardware is touched) — with the loop's byte values derived by retail
+load-after-store from the just-written scalars.  No SDK/GTE/callbacks/
+allocation.  Signature `void func_80068D28(void)` (`$v0`=0, unconsumed).
+Sole exe call site: `func_8003E680` @`0x8003E710` (nop delay slot).
+Write extent `0x800BCFBB`–`0x800BCFF9`; idempotent, including after
+PE_RamReset.  Independent reference: 63-word exe verification is
+complete proof for this straight-line initializer.
 
-**Status:** FUNC_8005BCA8 RUNG VERIFIED — 208 native tests pass;
+**Status:** FUNC_80068D28 RUNG VERIFIED — 213 native tests pass;
 ASan/UBSan clean; RNG, LZCR and callback oracle dumps byte-identical to
 their independent interpreters on the retail exe; 3 deterministic
 headless runs (framebuffer `fb28dc21…`); 3 real-disc load traces
 byte-identical; strict mode with `--disc-image` now stops at
-`func_80068D28` (from `func_8003E680`) — the next provider past the
-real empty `func_8005BCA8` stub; windowed SHA matches headless;
+`func_800124F8` (from `func_8003E680`) — the next provider past the
+real `func_80068D28` init; windowed SHA matches headless;
 matching build remains exact at SHA `452fb033`.
 
-**Previous milestones:** 6E-B8 (func_80029388 slot-table clear +
+**Previous milestones:** 6E-B9 (func_8005BCA8 empty `jr $ra; nop`
+stub rung — 2 retail words, zero footprint);
+6E-B8 (func_80029388 slot-table clear +
 default-record init — leaves func_8002F658 / func_80020EFC; 7×220
 SlotRecord table at D_800A5D58);
 6E-B7 (func_800371A4 `$gp`-relative byte
@@ -212,6 +220,38 @@ functions; both are reproduced.  Write footprint proven by full 2 MiB
 canary scans; copy content verified word-for-word against deterministic
 source patterns.
 
+## Empty stub rung (Phase 6E-B9)
+
+| Function | Size | Words | Role |
+|----------|------|-------|------|
+| `func_8005BCA8` | 0x8 | 2 | Empty `jr $ra`/`nop` — no guest-memory effect |
+
+Both words verified against the retail executable.  Sole call site
+`func_8003E680`; return value unconsumed.  Zero write footprint proven
+by a full 2 MiB canary scan; dirty state and `PE_RamReset` state pass
+through unchanged.  Translating it advances strict mode past the call.
+
+## Display-record data init rung (Phase 6E-B10)
+
+| Function | Size | Words | Role |
+|----------|------|-------|------|
+| `func_80068D28` | 0xFC | 63 | Double-buffered display-record data init at `D_800BCF88` |
+
+All 63 words verified against the retail executable (exe
+`0x80068D28`–`0x80068E20`, live split `55430.s`).  Sole call site
+`func_8003E680` @0x8003E710 (nop delay slot), `void(void)`, `$v0`=0
+unconsumed.  Writes a scalar block at base+0x60..0x70 (halfwords
+0xFF/0, bytes 1/2, post-loop halfwords 0), then two 16-byte records at
+base+i*0x10 (bytes 3/0xFF×3/0x60→0x62, halfwords 0/0/0x140/0xE0) and
+two 8-byte records at base+i*0x8 (byte 1, word `0xE1000440` — GP0-shaped
+DATA in a guest struct, not a hardware write).  Loop byte values are
+retail load-after-store from the just-written scalars (reproduced via
+`PE_Load`).  Write extent `0x800BCFBB`–`0x800BCFF9`; idempotent,
+including after `PE_RamReset`.  No SDK/GTE/hardware/callback use; no
+oracle needed — the straight-line fixed-value init is fully proven by
+the 63-word executable verification.  Strict mode advances to
+`func_800124F8`.
+
 ## Translated Boot Rung functions (Phase 6D/6D-R/6D-S)
 
 | Function | Matching size | Words | Purpose |
@@ -238,7 +278,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (202 tests, all pass)
+- `pe-native-tests` — test suite (213 tests, all pass)
 
 ## Running
 
@@ -266,13 +306,13 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1, names func_80068D28 (from func_8003E680) — the first
+# Expected: exit 1, names func_800124F8 (from func_8003E680) — the first
 # unresolved provider past the translated RNG (70D10/70D6C/70DD0), the
 # subsystem-init pair (func_8003E974 + func_8003EAC8), the timer-record
 # init (func_80036DC8 + leaves), the real func_80073D24 callback
 # slot writes, the real func_800371A4 byte store, the real
-# func_80029388 slot-table clear + record init, and the real empty
-# func_8005BCA8 stub
+# func_80029388 slot-table clear + record init, the real empty
+# func_8005BCA8 stub, and the real func_80068D28 display-record init
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -294,7 +334,7 @@ host adaptation); the boot is not faked.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 208 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 213 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
@@ -317,7 +357,10 @@ cd pc_port/build
                     #   full-RAM footprints, idempotence, integration
                     # + 6E-B9: func_8005BCA8 empty stub — zero footprint,
                     #   dirty-state preservation, 3E680 integration,
-                    #   frontier advance to func_80068D28)
+                    #   frontier advance to func_80068D28
+                    # + 6E-B10: func_80068D28 exact record state, canary
+                    #   footprint, idempotence, 3E680 integration,
+                    #   frontier advance to func_800124F8)
 ```
 
 ## Deterministic framebuffer
@@ -332,7 +375,7 @@ cd pc_port/build
 
 ## Next steps
 
-1. **Phase 6E-B continued:** `func_80068D28` rung (next strict-mode
+1. **Phase 6E-B continued:** `func_800124F8` rung (next strict-mode
    frontier, from `func_8003E680`), then the remaining subsystem inits
    toward the image-load consumers
 2. Identify the first boot asset (likely MDEC logo data)

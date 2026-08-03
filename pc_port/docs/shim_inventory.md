@@ -124,8 +124,16 @@ All stubs are explicitly classified. No anonymous empty stubs.
   stub (2 words / 0x8 at VRAM 0x8005BCA8, file 0x4C4A8; retail words
   0x03E00008 / 0x00000000).  Zero guest reads/writes; sole call site
   func_8003E680 @0x8003E708 (nop delay slot); `game/boot/func_8005BCA8_port.c`
-- `func_80068D28`  ← current strict-mode frontier (from func_8003E680)
-- `func_800124F8`
+- ~~`func_80068D28(void)`~~ — TRANSLATED (Phase 6E-B10): 63-word
+  double-buffered display-record data initializer at D_800BCF88 (scalar
+  block +0x60..0x70, two 16-byte records +0x30+i*0x10, two 8-byte
+  records +0x50+i*0x8 with 0xE1000440 GP0-shaped data word; loop byte
+  values are retail load-after-store from the just-written scalars;
+  write extent 0x800BCFBB..0x800BCFF9); all 63 words exe-verified
+  (live split 55430.s); sole call site func_8003E680 @0x8003E710
+  (nop delay slot, $v0=0 unconsumed); idempotent incl. after
+  PE_RamReset; `game/boot/func_80068D28_port.c`
+- `func_800124F8`  ← current strict-mode frontier (from func_8003E680)
 - `func_8001A890`
 - `func_80034F10`
 - `func_8006536C`
