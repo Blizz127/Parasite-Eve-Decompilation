@@ -1,5 +1,0 @@
-/home/blizz/dev/parasite-eve-port-black/pc_port/build-san/CMakeFiles/parasite-eve-port.dir
-/home/blizz/dev/parasite-eve-port-black/pc_port/build-san/CMakeFiles/pe-native-tests.dir
-/home/blizz/dev/parasite-eve-port-black/pc_port/build-san/CMakeFiles/test.dir
-/home/blizz/dev/parasite-eve-port-black/pc_port/build-san/CMakeFiles/edit_cache.dir
-/home/blizz/dev/parasite-eve-port-black/pc_port/build-san/CMakeFiles/rebuild_cache.dir

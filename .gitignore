@@ -19,6 +19,7 @@ assets/*
 
 # Build/generated output
 build/
+build-san/
 asm/
 linkers/
 expected/
