@@ -25,7 +25,7 @@
  *   5. func_800528F0()           TRANSLATED (B18): PRNG table generator,
  *                                the previous strict-mode frontier
  *   6. func_8005E588()           TRANSLATED (B19): display env setup
- *   7. func_80062568()           UNRESOLVED
+ *   7. func_80062568()           TRANSLATED (B20): free-list pool init
  *   8. func_80064964()           UNRESOLVED
  *   9. func_8005DE88()           UNRESOLVED
  *  10. func_80042B38()           TRANSLATED leaf (B17): D_800A1870/1874 = 0
@@ -76,7 +76,7 @@ void func_800527C8(void)
     func_8004F808();
     func_800528F0();
     func_8005E588();
-    Bootstrap_ReturnVoid("func_80062568", "func_800527C8");
+    func_80062568();
     Bootstrap_ReturnVoid("func_80064964", "func_800527C8");
     Bootstrap_ReturnVoid("func_8005DE88", "func_800527C8");
     func_80042B38();
