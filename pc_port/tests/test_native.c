@@ -6331,6 +6331,98 @@ static void test_62568_direct_boot_state(void) {
     PASS();
 }
 
+static void test_62568_dirty_state(void) {
+    TEST("62568_dirty_state");
+    pe_addr_t a;
+    ResetTestState();
+    /* Dirty all pool bytes + globals with patterned non-zero data. */
+    for (a = 0x800A22E0u; a < 0x800A3060u; a += 4)
+        PE_StoreU32(a, 0xDEAD0000u | (a & 0xFFFFu));
+    PE_StoreU32(0x8009D158u, 0xBADC0DE0u);
+    PE_StoreU32(0x8009D15Cu, 0xBADC0DE1u);
+    PE_StoreU32(0x8009D154u, 0xBADC0DE2u);
+    /* Also dirty guard bytes around pool and globals. */
+    PE_StoreU32(0x800A22DCu, 0xCAFE0001u);  /* 4 bytes before pool */
+    PE_StoreU32(0x800A3060u, 0xCAFE0002u);  /* at one-past-end */
+    PE_StoreU32(0x8009D150u, 0xCAFE0003u);  /* 4 bytes before gp area */
+    PE_StoreU32(0x8009D160u, 0xCAFE0004u);  /* 4 bytes after gp area */
+
+    func_80062568();
+
+    /* All 24 link words are exact. */
+    for (a = 0x800A22E0u; a < 0x800A2FD0u; a += 0x90u)
+        ASSERT(PE_LoadU32(a) == a + 0x90u, "dirty: pool link");
+    ASSERT(PE_LoadU32(0x800A2FD0u) == 0, "dirty: null terminator");
+    /* Globals exact. */
+    ASSERT(PE_LoadU32(0x8009D158u) == 0x800A22E0u, "dirty: head");
+    ASSERT(PE_LoadU32(0x8009D15Cu) == 0, "dirty: tail");
+    ASSERT(PE_LoadU32(0x8009D154u) == 0, "dirty: aux");
+    /* Non-link bytes within slots untouched. Spot-check 3 slots. */
+    ASSERT(PE_LoadU32(0x800A22E4u) == (0xDEAD0000u | 0x22E4u), "slot0 +4");
+    ASSERT(PE_LoadU32(0x800A22E0u + 0x8Cu) == (0xDEAD0000u | 0x236Cu), "slot0 end");
+    ASSERT(PE_LoadU32(0x800A2374u) == (0xDEAD0000u | 0x2374u), "slot1 +4");
+    ASSERT(PE_LoadU32(0x800A2FD4u) == (0xDEAD0000u | 0x2FD4u), "last slot +4");
+    /* Guards untouched. */
+    ASSERT(PE_LoadU32(0x800A22DCu) == 0xCAFE0001u, "guard before pool");
+    ASSERT(PE_LoadU32(0x800A3060u) == 0xCAFE0002u, "guard at end");
+    ASSERT(PE_LoadU32(0x8009D150u) == 0xCAFE0003u, "guard before gp");
+    ASSERT(PE_LoadU32(0x8009D160u) == 0xCAFE0004u, "guard after gp");
+    PASS();
+}
+
+static void test_62568_repeated(void) {
+    TEST("62568_repeated");
+    pe_addr_t a;
+    ResetTestState();
+    func_80062568();
+    /* Corrupt non-link bytes in several slots. */
+    PE_StoreU32(0x800A22E4u, 0xBAD00001u);
+    PE_StoreU32(0x800A2374u, 0xBAD00002u);
+    PE_StoreU32(0x800A2FD4u, 0xBAD00003u);
+    /* Corrupt a link. */
+    PE_StoreU32(0x800A2400u, 0xDEADBEEFu);
+    /* Re-run. */
+    func_80062568();
+    /* Links restored. */
+    ASSERT(PE_LoadU32(0x800A2400u) == 0x800A2400u + 0x90u, "repeat: link restored");
+    ASSERT(PE_LoadU32(0x800A2FD0u) == 0, "repeat: null restored");
+    /* Non-link bytes unchanged. */
+    ASSERT(PE_LoadU32(0x800A22E4u) == 0xBAD00001u, "repeat: non-link slot0");
+    ASSERT(PE_LoadU32(0x800A2374u) == 0xBAD00002u, "repeat: non-link slot1");
+    ASSERT(PE_LoadU32(0x800A2FD4u) == 0xBAD00003u, "repeat: non-link last");
+    PASS();
+}
+
+static void test_62568_full_footprint(void) {
+    TEST("62568_full_footprint");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    func_80062568();
+
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        uint32_t want = 0xA5A5A5A5u;
+        /* Pool link words: 0x800A22E0..0x800A2FCF step 0x90 */
+        if (a >= 0x800A22E0u && a < 0x800A2FD0u && (a - 0x800A22E0u) % 0x90u == 0)
+            want = a + 0x90u;
+        else if (a == 0x800A2FD0u)
+            want = 0;                    /* null terminator */
+        else if (a == 0x8009D158u)
+            want = 0x800A22E0u;          /* head */
+        else if (a == 0x8009D15Cu)
+            want = 0;                    /* tail */
+        else if (a == 0x8009D154u)
+            want = 0;                    /* aux */
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, PE_LoadU32(a), want);
+            FAIL("func_80062568 write footprint wrong");
+            return;
+        }
+    }
+    PASS();
+}
+
 /* ── Required by host_framebuffer.c / func_8001220C_port.c ───────────── */
 int g_port_stop_requested = 0;
 int g_port_main_iterations = 0;
@@ -6672,6 +6764,9 @@ int main(void)
 
     /* Phase 6E-B20: func_80062568 free-list pool (1 test) */
     test_62568_direct_boot_state();
+    test_62568_dirty_state();
+    test_62568_repeated();
+    test_62568_full_footprint();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();
