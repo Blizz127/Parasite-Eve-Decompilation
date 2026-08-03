@@ -133,8 +133,17 @@ All stubs are explicitly classified. No anonymous empty stubs.
   (live split 55430.s); sole call site func_8003E680 @0x8003E710
   (nop delay slot, $v0=0 unconsumed); idempotent incl. after
   PE_RamReset; `game/boot/func_80068D28_port.c`
-- `func_800124F8`  ← current strict-mode frontier (from func_8003E680)
-- `func_8001A890`
+- ~~`func_800124F8(void)`~~ — TRANSLATED (Phase 6E-B11): 31-word
+  subsystem table clear (sw 0 -> 0x8009D300, sh 0 -> 0x8009D308 with
+  0x8009D304 untouched, sw 0 -> 0x8009CDFC; 72x11-word matrix at
+  D_8009D310, row stride 0x2C, span 0x8009D310..0x8009DF6F; sw 0 ->
+  0x8009CE00; 16-word array at D_8009DF70 = 0x8009DF70..0x8009DFAF,
+  contiguous with the table end; sw 0 -> 0x8009CE04); all 31 words
+  exe-verified (live split 2A0C.s); pure zero-stores, no reads, no
+  SDK/GTE/hardware/GPU work; sole call site func_8003E680 @0x8003E718
+  (nop delay slot, $v0=0 unconsumed); idempotent incl. after
+  PE_RamReset; `game/boot/func_800124F8_port.c`
+- `func_8001A890`  ← current strict-mode frontier (from func_8003E680)
 - `func_80034F10`
 - `func_8006536C`
 - `func_80038D1C`
