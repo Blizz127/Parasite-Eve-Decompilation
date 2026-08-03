@@ -20,8 +20,9 @@
 #include "psx_compat.h"
 #include "pe_sdk.h"
 
-/* func_8007D15C — SPU IRQ event install (verbatim guest-visible effects). */
-static void PE_Spu_IrqEventInit(void)
+/* func_8007D15C — SPU IRQ event install (verbatim guest-visible effects).
+ * Non-static: also called verbatim from func_80085644 (pe_stream.c). */
+void func_8007D15C(void)
 {
     if (PE_LoadU32(0x8009B3ECu) != 0) {
         return;                             /* one-time guard */
@@ -45,7 +46,7 @@ void func_8007D054(void)
     for (i = 0; i < 24; i++) {
         PE_StoreU16(0x8009B3B8u + (uint32_t)i * 2u, 0xC000);
     }
-    PE_Spu_IrqEventInit();                  /* func_8007D15C */
+    func_8007D15C();
     PE_StoreU32(0x8009B390u, 0);
     PE_StoreU32(0x8009B394u, 0);
     /* D_8009B3A0 block: sw 0 @+0x0, sh 0 @+0x4/+0x6, sw 0 @+0x8/+0xC */

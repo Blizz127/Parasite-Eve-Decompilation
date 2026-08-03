@@ -27,11 +27,9 @@ extern pe_addr_t D_800B0E24,D_800B0E28,D_800B0E2C,D_800B0E30,D_800B0E34,D_800B0E
 #include "pe_sdk.h"
 
 /* ── func_8006A5BC callees ─────────────────────────────────────────── */
-/* func_8007ED58/func_8007F7A8 are real (pe_libcd.c).  The streaming
- * providers remain bootstrap stubs until Phase 6E-A batch 2. */
-static inline void func_80085644(void)    { Bootstrap_ReturnVoid("func_80085644", "func_8006A5BC"); }
-static inline void func_80087024(void)    { Bootstrap_ReturnVoid("func_80087024", "func_8006A5BC"); }
-static inline void func_8008682C(int a)   { Bootstrap_ReturnVoid("func_8008682C", "func_8006A5BC"); (void)a; }
+/* All eight callees are now real (Phase 6E-A batches 1-2):
+ * func_80085644/func_80086FF8/func_80087024/func_8008682C — pe_stream.c
+ * func_8007ED58/func_8007F72C/func_8007F7A8                     — pe_libcd.c */
 
 /* ── func_8003E680 callees ─────────────────────────────────────────── */
 static inline void func_80070D10(void)    { Bootstrap_ReturnVoid("func_80070D10", "func_8003E680"); }

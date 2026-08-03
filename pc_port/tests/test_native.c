@@ -812,21 +812,29 @@ static int VSyncCount(void) {
 }
 
 static void test_6A5BC_setup_order(void) {
-    TEST("6A5BC_setup_call_order");
+    TEST("6A5BC_setup_state");
     ResetTestState();
     g_bootstrap_disc = 1;
-
-    /* Reset VSync counter to track wait loop iterations */
     HostFB_Init();
 
     func_8006A5BC();
 
-    /* Four setup calls should be first 4 entries in order log */
-    ASSERT(g_stub_order_count >= 4, "6A5BC: fewer than 4 stub calls");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80085644") == 0, "setup call 1 wrong");
-    ASSERT(strcmp(g_stub_order_log[1], "func_80086FF8") == 0, "setup call 2 wrong");
-    ASSERT(strcmp(g_stub_order_log[2], "func_80087024") == 0, "setup call 3 wrong");
-    ASSERT(strcmp(g_stub_order_log[3], "func_8008682C") == 0, "setup call 4 wrong");
+    /* Phase 6E-A: all four setup calls are real (pe_stream.c).
+     * func_80086FF8 -> ring entry 0xF0, func_80087024 -> 0xF1,
+     * func_8008682C(0) -> command 0x98 -> ring entries 0x9A/0x9C. */
+    ASSERT(PE_LoadU32(0x800BCD80u) == 0x98, "D_800BCD80 should hold last command 0x98");
+    ASSERT(PE_LoadU32(0x8009D2F4u) == 4, "ring should hold 4 entries");
+    ASSERT(PE_LoadU32(0x800B8628u + 0x00u) == 0xF0, "ring[0] cmd");
+    ASSERT(PE_LoadU32(0x800B8628u + 0x24u) == 0xF1, "ring[1] cmd");
+    ASSERT(PE_LoadU32(0x800B8628u + 0x48u) == 0x9A, "ring[2] cmd");
+    ASSERT(PE_LoadU32(0x800B8628u + 0x6Cu) == 0x9C, "ring[3] cmd");
+    /* func_80085644 bring-up effects */
+    ASSERT(PE_LoadU32(0x8009CDE0u) != 0, "stream event handle not stored");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 0, "synchronous SPU transfer should complete");
+    ASSERT(PE_LoadU32(0x800B6958u) == 0x40001010u, "stream config word 0");
+    ASSERT(PE_LoadU32(0x800B6958u + 4u) == 0xEFF0u, "stream config word 1");
+    /* No bootstrap stubs remain on the 6A5BC path */
+    ASSERT(g_stub_count == 0, "6A5BC path recorded bootstrap stubs (frontier regressed)");
     PASS();
 }
 
@@ -1213,6 +1221,112 @@ static void test_3E944_save_state(void) {
     /* func_80082534: name tables 0xFF-filled */
     ASSERT(PE_LoadU8(0x800A5B70u + 0x5Du) == 0xFF, "slot0 name[0]");
     ASSERT(PE_LoadU8(0x800A5B70u + 0x62u) == 0xFF, "slot0 name[5]");
+    PASS();
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-A — direct provider-frontier tests (batch 2: 6A5BC callees)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void test_85644_bringup(void) {
+    TEST("85644_stream_bringup");
+    ResetTestState();
+    func_80085644();
+    ASSERT(PE_LoadU32(0x8009B3ECu) == 1, "SPU IRQ event guard (func_8007D15C)");
+    ASSERT(PE_LoadU32(0x800B6958u) == 0x40001010u, "config word 0");
+    ASSERT(PE_LoadU32(0x800B6958u + 4u) == 0xEFF0u, "config word 1 (0x10000<<0)-0x1010");
+    ASSERT(PE_LoadU32(0x8009B45Cu) == 4, "config arg word");
+    ASSERT(PE_LoadU32(0x8009B464u) == 0x800B6958u, "config ptr");
+    ASSERT(PE_LoadU16(0x8009B414u) == 0x1010, "SPU heap top");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 0, "synchronous transfer must complete");
+    ASSERT(PE_LoadU32(0x8009B434u) == 0, "callback deregistered after completion");
+    /* func_80085290 state init */
+    ASSERT(PE_LoadU32(0x8009D2C8u) == 0x800B6980u, "state base ptr");
+    ASSERT(PE_LoadU32(0x800BCD68u) == 1, "BCD68 flag");
+    ASSERT(PE_LoadU32(0x800BCD64u) == 0x66A80000u, "BCD64 word");
+    ASSERT((PE_LoadU32(0x8009D2C4u) & 0x80u) != 0, "D_8009D2C4 bit 0x80");
+    ASSERT(PE_LoadU32(0x800B6A30u) == 0x7F0000u, "B6A30 word");
+    ASSERT(PE_LoadU32(0x8009D2F4u) == 0, "ring index reset");
+    /* voice-state table entries: first of each loop */
+    ASSERT(PE_LoadU32(0x800B8AC0u + 0x50u + 0xA0u) == 0x18, "voice entry stride marker");
+    ASSERT(PE_LoadU32(0x800BC03Cu + 0xB4u) == 0xC, "channel block index 0xC");
+    ASSERT(PE_LoadU16(0x800BC03Cu + 0x9Cu) == 0x7F00, "channel block volume");
+    /* event handle from the OpenEvent retry loop */
+    ASSERT(PE_LoadU32(0x8009CDE0u) != 0, "stream event handle");
+    ASSERT(g_stub_count == 0, "func_80085644 must not record bootstrap stubs");
+    PASS();
+}
+
+static void test_86FF8_87024_commands(void) {
+    TEST("86FF8_87024_command_issue");
+    ResetTestState();
+    func_80086FF8();
+    ASSERT(PE_LoadU32(0x800BCD80u) == 0xF0, "cmd 0xF0 not issued");
+    ASSERT(PE_LoadU32(0x800B8628u) == 0xF0, "ring[0] cmd");
+    ASSERT(PE_LoadU32(0x8009D2F4u) == 1, "ring index");
+    ASSERT(PE_LoadU32(0x8009D268u) == 0, "dispatch busy flag cleared");
+    func_80087024();
+    ASSERT(PE_LoadU32(0x800BCD80u) == 0xF1, "cmd 0xF1 not issued");
+    ASSERT(PE_LoadU32(0x800B8628u + 0x24u) == 0xF1, "ring[1] cmd");
+    ASSERT(PE_LoadU32(0x8009D2F4u) == 2, "ring index 2");
+    PASS();
+}
+
+static void test_8682C_mode_mapping(void) {
+    TEST("8682C_mode_mapping");
+    ResetTestState();
+    func_8008682C(0);
+    ASSERT(PE_LoadU32(0x800BCD80u) == 0x98, "mode 0 -> 0x98");
+    ASSERT(PE_LoadU32(0x800B8628u) == 0x9A, "0x98 pushes 0x9A");
+    ASSERT(PE_LoadU32(0x800B8628u + 0x24u) == 0x9C, "0x98 pushes 0x9C");
+    ASSERT(PE_LoadU32(0x8009D2F4u) == 2, "ring index after 0x98");
+    ResetTestState();
+    func_8008682C(1);
+    ASSERT(PE_LoadU32(0x800BCD80u) == 0x9A, "mode 1 -> 0x9A");
+    ASSERT(PE_LoadU32(0x800B8628u) == 0x9A, "0x9A default single entry");
+    ASSERT(PE_LoadU32(0x8009D2F4u) == 1, "ring index after 0x9A");
+    ResetTestState();
+    func_8008682C(2);
+    ASSERT(PE_LoadU32(0x800BCD80u) == 0x9C, "mode 2 -> 0x9C");
+    ASSERT(PE_LoadU32(0x800B8628u) == 0x9C, "0x9C default single entry");
+    PASS();
+}
+
+static void test_8CBA8_default_entry_fields(void) {
+    TEST("8CBA8_default_entry_fields");
+    ResetTestState();
+    PE_StoreU32(0x800BCD84u, 0x11111111);
+    PE_StoreU32(0x800BCD88u, 0x22222222);
+    PE_StoreU32(0x800BCD8Cu, 0x33333333);
+    PE_StoreU32(0x800BCD90u, 0x44444444);
+    PE_StoreU32(0x800BCD80u, 0xF0);
+    ASSERT(func_8008CBA8() == 0, "default path returns 0");
+    pe_addr_t e = 0x800B8628u;
+    ASSERT(PE_LoadU32(e + 0x0) == 0xF0, "entry cmd");
+    ASSERT(PE_LoadU32(e + 0x4) == 0x11111111u, "entry arg84");
+    ASSERT(PE_LoadU32(e + 0x8) == 0x22222222u, "entry arg88");
+    ASSERT(PE_LoadU32(e + 0xC) == 0x33333333u, "entry arg8C");
+    ASSERT(PE_LoadU32(e + 0x10) == 0x44444444u, "entry arg90");
+    ASSERT(PE_LoadU32(0x8009D268u) == 0, "busy flag cleared");
+    PASS();
+}
+
+static void test_8CBA8_0x24_index_math(void) {
+    TEST("8CBA8_0x24_index_math");
+    ResetTestState();
+    PE_StoreU32(0x8009CDF0u, 0x405);
+    PE_StoreU32(0x800BCD80u, 0x24);
+    ASSERT(func_8008CBA8() == 0x405, "0x24 path returns old index");
+    ASSERT(PE_LoadU32(0x8009CDF0u) == 0x406, "index advance ((old+1)&0x1FF)+0x400");
+    pe_addr_t e = 0x800B8628u;
+    ASSERT(PE_LoadU32(e + 0x0) == 0x24, "entry cmd");
+    ASSERT(PE_LoadU32(e + 0x14) == 0x405, "entry old index");
+    /* wrap-around: old = 0x5FF -> ((0x600)&0x1FF)+0x400 = 0x400 */
+    PE_StoreU32(0x8009CDF0u, 0x5FF);
+    ASSERT(func_8008CBA8() == 0x5FF, "wrap returns old");
+    ASSERT(PE_LoadU32(0x8009CDF0u) == 0x400, "wrap index math");
     PASS();
 }
 
@@ -1664,6 +1778,13 @@ int main(void)
     test_80CC8_exchange();
     test_3E754_env_fields();
     test_3E944_save_state();
+
+    /* Phase 6E-A batch 2 streaming tests (5 tests) */
+    test_85644_bringup();
+    test_86FF8_87024_commands();
+    test_8682C_mode_mapping();
+    test_8CBA8_default_entry_fields();
+    test_8CBA8_0x24_index_math();
 
     /* func_8003E680 (7 tests) */
     test_3E680_five_globals_cleared();

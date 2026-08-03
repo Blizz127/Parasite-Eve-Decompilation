@@ -23,6 +23,7 @@ set(PLATFORM_SRCS
     platform/pe_libcard.c
     platform/pe_libcd.c
     platform/pe_save.c
+    platform/pe_stream.c
 )
 
 set(BOOTSTRAP_SRCS
@@ -99,6 +100,7 @@ if(BUILD_TESTS)
         platform/pe_libcard.c
         platform/pe_libcd.c
         platform/pe_save.c
+        platform/pe_stream.c
         bootstrap/stub_registry.c
         bootstrap/pe_bootstrap.c
         src/pe_globals.c

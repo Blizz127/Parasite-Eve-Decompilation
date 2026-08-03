@@ -30,9 +30,7 @@ extern void func_800755F0(void *env);
 #define PE_6E834_ENV_ADDR 0x801FFF00u
 
 /* ── Bootstrap stubs ───────────────────────────────────────────────── */
-void func_80086FF8(void) {
-    Bootstrap_ReturnVoid("func_80086FF8", "func_8006E834");
-}
+/* func_80086FF8 is real (pe_stream.c, Phase 6E-A batch 2). */
 int func_8006E6D4(int a0, int a1, pe_addr_t a2, int a3) {
     /* a2 is the guest destination address (D_80011614); a real
      * implementation would PE_Translate(a2, a3) and read into guest RAM.

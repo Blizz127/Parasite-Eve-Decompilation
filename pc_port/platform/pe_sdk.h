@@ -65,6 +65,14 @@ int       func_80074BB8(int level);  /* SetGraphDebug */
 
 /* ── libsnd (pc_port/platform/pe_libsnd.c) ──────────────────────────── */
 void func_8007D054(void);            /* SsInit wrapper (tail-call 7D074(0)) */
+void func_8007D15C(void);            /* SPU IRQ event install */
+
+/* ── streaming (pc_port/platform/pe_stream.c) ───────────────────────── */
+void func_80085644(void);            /* streaming bring-up */
+void func_80086FF8(void);            /* stream command 0xF0 */
+void func_80087024(void);            /* stream command 0xF1 */
+void func_8008682C(int a);           /* stream command select */
+int  func_8008CBA8(void);            /* streaming command dispatcher */
 
 /* ── libcard (pc_port/platform/pe_libcard.c) ────────────────────────── */
 void func_800409B4(void);            /* InitCARD + StartCARD */
