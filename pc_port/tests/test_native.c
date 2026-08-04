@@ -5690,15 +5690,14 @@ static void test_6E498_readonly_footprint(void) {
 }
 
 /* Expected unresolved-callee sequence of the translated func_800527C8
- * dispatcher (Phase 6E-B23, func_80052C6C now translated), in retail
+ * dispatcher (Phase 6E-B24, func_8005BCBC now translated), in retail
  * ROM order. */
-static const char *const B22_DISP_SEQ[4] = {
-    "func_8005BCBC", "func_8005D6F4",
-    "func_80051CC4", "func_80042C78"
+static const char *const B22_DISP_SEQ[3] = {
+    "func_8005D6F4", "func_80051CC4", "func_80042C78"
 };
 
 static int B21_CheckDispatcherOrder(int base) {
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++) {
         if (strcmp(g_stub_order_log[base + i], B22_DISP_SEQ[i]) != 0)
             return 0;
     }
@@ -5906,16 +5905,15 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* 7. Dependency boundary (updated Phase 6E-B21): func_800528F0,
-     * func_8005E588, func_80062568, and func_80064964 are REAL too — six
-     * unresolved dispatcher callees appear in retail ROM
-     * order, then func_80087090. */
-    ASSERT(g_stub_order_count == 5, "unexpected bootstrap invocations");
+    /* 7. Dependency boundary (updated Phase 6E-B24): func_8005BCBC is
+     * REAL too — three unresolved dispatcher callees appear in retail
+     * ROM order, then func_80087090. */
+    ASSERT(g_stub_order_count == 4, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[4], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[3], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 5, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 4, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -6043,6 +6041,15 @@ static void test_6A9E4_zero_cycles_footprint(void) {
                  a == 0x8009D0E8u || a == 0x8009D0ECu ||
                  a == 0x8009D0F0u)
             want = 0;
+        /* Phase 6E-B24: func_8005BCBC resource-state selector.  The
+         * dispatcher passes a0 = 0 and D_8009D218 = 1 (func_8005BC98),
+         * so the a0==0 path selects base 0x800C0DE0 + 0x10. */
+        else if (a == 0x8009D0C8u)
+            want = 0;                /* record pointer slot (a0 = 0) */
+        else if (a == 0x8009D0C0u)
+            want = 0x800C0DF0u;      /* selected buffer base */
+        else if (a == 0x8009D0C4u)
+            want = 8;                /* selected count */
         /* Phase 6E-B23: func_80052C6C resource-table init writes.
          *   - first clear loop: 50 halfwords at 0x800C0E48..0x800C0EAB
          *   - 9-record output table at 0x800A1E64..0x800A1F83: per record,
@@ -6093,10 +6100,10 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
-    ASSERT(g_stub_order_count == 5, "unexpected bootstrap invocations");
+    ASSERT(g_stub_order_count == 4, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[4], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[3], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6155,12 +6162,12 @@ static void test_6A9E4_3E680_integration(void) {
     PE_StoreU32(0x800B0E08u, 0x800F74F8u); /* func_8006A674 arena value */
     func_8006A9E4();
 
-    /* B23: func_80052C6C now translated; 4 unresolved dispatcher
+    /* B24: func_8005BCBC now translated; 3 unresolved dispatcher
      * callees occupy the order log before func_80087090. */
-    ASSERT(g_stub_order_count == 5, "unexpected provider count");
+    ASSERT(g_stub_order_count == 4, "unexpected provider count");
     ASSERT(B21_CheckDispatcherOrder(0),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[4], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[3], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
@@ -6562,6 +6569,212 @@ static void test_5DE88_reset_repeat_footprint(void) {
     ASSERT(PE_LoadU32(0x800A2094u) == 0xCAFE2094u, "5DE88 non-link preserved");
     func_8005DE88();
     ASSERT(PE_LoadU32(0x8009D0DCu) == 0x800A2090u, "5DE88 idempotent head");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B24 — func_8005BCBC: resource-state pointer/count selector
+ * (21 retail words at 0x8005BCBC..0x8005BD0F, live split 4C4BC.s).
+ * Guest-resident state: D_8009D0C8 ($gp+0x358) = a0, D_8009D0C0
+ * ($gp+0x350) = selected buffer base, D_8009D0C4 ($gp+0x354) = 8.
+ * Selection: a0 != 0 → 0x800C20A4 (+0x10 iff byte6(a0) == 9);
+ * a0 == 0 → 0x800C0DE0 (+0x10 iff D_8009D218 != 0).  Returns 8 always.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define B24_GA_C0   0x8009D0C0u   /* $gp+0x350 */
+#define B24_GA_C4   0x8009D0C4u   /* $gp+0x354 */
+#define B24_GA_C8   0x8009D0C8u   /* $gp+0x358 */
+#define B24_GA_FLAG 0x8009D218u   /* $gp+0x4A8 */
+#define B24_REC     0x800A0040u   /* test record (guest pointer arg)  */
+
+/* Every retail return path yields $v0 = 8; none is consumed by either
+ * call site. */
+static void test_5BCBC_all_paths_return_8(void) {
+    TEST("5BCBC_all_paths_return_8");
+    ResetTestState();
+    PE_StoreU32(B24_GA_FLAG, 1u);
+    ASSERT(func_8005BCBC(0u) == 8, "a0=0 flag=1 must return 8");
+    PE_StoreU32(B24_GA_FLAG, 0u);
+    ASSERT(func_8005BCBC(0u) == 8, "a0=0 flag=0 must return 8");
+    PE_StoreU8(B24_REC + 6u, 9u);
+    ASSERT(func_8005BCBC(B24_REC) == 8, "record byte6=9 must return 8");
+    PE_StoreU8(B24_REC + 6u, 0x13u);
+    ASSERT(func_8005BCBC(B24_REC) == 8, "record byte6!=9 must return 8");
+    PASS();
+}
+
+/* Dispatcher path: a0 = 0, D_8009D218 set by the real func_8005BC98
+ * (proves the cross-function guest-RAM dependency: func_8005BCBC reads
+ * the word func_8005BC98 stores). */
+static void test_5BCBC_dispatcher_path(void) {
+    TEST("5BCBC_dispatcher_path");
+    ResetTestState();
+    func_8005BC98(0);                     /* retail: D_8009D218 = 1 */
+    ASSERT(PE_LoadU32(B24_GA_FLAG) == 1u, "5BC98 flag precondition");
+    ASSERT(func_8005BCBC(0u) == 8, "dispatcher path return");
+    ASSERT(PE_LoadU32(B24_GA_C8) == 0u, "C8 = a0 = 0");
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C0DF0u,
+           "flag=1 must select 0x800C0DE0 + 0x10");
+    ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "C4 = 8");
+    /* The flag value drives the selection: clear it, rerun. */
+    PE_StoreU32(B24_GA_FLAG, 0u);
+    func_8005BCBC(0u);
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C0DE0u,
+           "flag=0 must select 0x800C0DE0");
+    ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "C4 = 8 (flag=0)");
+    PASS();
+}
+
+/* Record-pointer paths: the byte at a0+6 is the only guest read and it
+ * alone steers the selection; the incoming guest pointer is preserved
+ * full-width in D_8009D0C8. */
+static void test_5BCBC_record_paths(void) {
+    TEST("5BCBC_record_paths");
+    ResetTestState();
+    PE_StoreU32(B24_GA_FLAG, 1u);         /* must NOT be read on this path */
+    PE_StoreU8(B24_REC + 6u, 9u);
+    ASSERT(func_8005BCBC(B24_REC) == 8, "record byte6=9 return");
+    ASSERT(PE_LoadU32(B24_GA_C8) == B24_REC, "C8 = a0 full width");
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C20B4u,
+           "byte6=9 must select 0x800C20A4 + 0x10");
+    ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "C4 = 8 (record)");
+    PE_StoreU8(B24_REC + 6u, 0x13u);      /* the B23 search tag value */
+    func_8005BCBC(B24_REC);
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C20A4u,
+           "byte6!=9 must select 0x800C20A4");
+    ASSERT(PE_LoadU32(B24_GA_C8) == B24_REC, "C8 preserved (byte6!=9)");
+    PASS();
+}
+
+/* Full 2 MiB canary footprint: exactly three word writes, at the retail
+ * $gp 0x8009CD70 resolutions 0x8009D0C0/C4/C8 — exact widths, exact
+ * guards, no split-brain duplicate anywhere else in guest RAM. */
+static void test_5BCBC_full_ram_canary_and_widths(void) {
+    TEST("5BCBC_full_ram_canary_and_widths");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    PE_StoreU32(B24_GA_FLAG, 1u);
+    func_8005BCBC(0u);
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        uint32_t want = 0xA5A5A5A5u;
+        if (a == B24_GA_FLAG) want = 1u;          /* test seed */
+        else if (a == B24_GA_C8) want = 0u;
+        else if (a == B24_GA_C0) want = 0x800C0DF0u;
+        else if (a == B24_GA_C4) want = 8u;
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
+                   a, PE_LoadU32(a), want);
+            FAIL("5BCBC footprint wrong");
+            return;
+        }
+    }
+    /* Word-width proof: the halfwords bracketing the three-word block
+     * (C0..C8+3 = 0x8009D0C0..0x8009D0CB) are untouched. */
+    ASSERT(PE_LoadU16(0x8009D0BEu) == 0xA5A5u, "guard halfword below");
+    ASSERT(PE_LoadU16(0x8009D0CCu) == 0xA5A5u, "guard halfword above");
+    ASSERT(PE_LoadU8(0x8009D0BFu) == 0xA5u, "guard byte below");
+    ASSERT(PE_LoadU8(0x8009D0CCu) == 0xA5u, "guard byte above");
+    /* Guest-range proof: the stored base is a guest address, never a
+     * host pointer. */
+    ASSERT(PE_LoadU32(B24_GA_C0) >= 0x80000000u &&
+           PE_LoadU32(B24_GA_C0) < 0x80200000u, "C0 outside guest range");
+    PASS();
+}
+
+/* Dirty state is overwritten wholesale; repeated calls are idempotent
+ * (retail recomputes and stores all three words every invocation). */
+static void test_5BCBC_dirty_and_repeated(void) {
+    TEST("5BCBC_dirty_and_repeated");
+    ResetTestState();
+    PE_StoreU32(B24_GA_C0, 0xDEADBEEFu);
+    PE_StoreU32(B24_GA_C4, 0x12345678u);
+    PE_StoreU32(B24_GA_C8, 0xCAFEBABEu);
+    PE_StoreU32(B24_GA_FLAG, 1u);
+    func_8005BCBC(0u);
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C0DF0u, "dirty C0 overwritten");
+    ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "dirty C4 overwritten");
+    ASSERT(PE_LoadU32(B24_GA_C8) == 0u, "dirty C8 overwritten");
+    func_8005BCBC(0u);                    /* second call: no accumulation */
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C0DF0u, "repeat C0 stable");
+    ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "repeat C4 stable");
+    ASSERT(PE_LoadU32(B24_GA_C8) == 0u, "repeat C8 stable");
+    PASS();
+}
+
+/* PE_RamReset restores initial conditions: the flag reads back 0, so a
+ * post-reset a0 = 0 call selects the low NULL buffer base. */
+static void test_5BCBC_ramreset(void) {
+    TEST("5BCBC_ramreset");
+    ResetTestState();
+    PE_StoreU32(B24_GA_FLAG, 1u);
+    func_8005BCBC(0u);
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C0DF0u, "pre-reset selection");
+    PE_RamReset();
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0u, "reset cleared C0");
+    ASSERT(PE_LoadU32(B24_GA_C4) == 0u, "reset cleared C4");
+    ASSERT(PE_LoadU32(B24_GA_C8) == 0u, "reset cleared C8");
+    ASSERT(PE_LoadU32(B24_GA_FLAG) == 0u, "reset cleared the flag");
+    ASSERT(func_8005BCBC(0u) == 8, "post-reset return");
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C0DE0u,
+           "post-reset flag=0 selects 0x800C0DE0");
+    ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "post-reset C4 = 8");
+    PASS();
+}
+
+/* Under strict mode the REAL body executes without tripping the
+ * centralized bootstrap policy (the B23 strict run aborted HERE; that
+ * former-frontier behavior is superseded by this rung). */
+static void test_5BCBC_strict_not_stub(void) {
+    TEST("5BCBC_strict_not_stub");
+    ResetTestState();
+    g_strict_stubs = 1;
+    PE_StoreU32(B24_GA_FLAG, 1u);
+    ASSERT(func_8005BCBC(0u) == 8, "strict-mode call must not abort");
+    ASSERT(g_stub_count == 0, "func_8005BCBC recorded as stub under strict");
+    ASSERT(Bootstrap_InvocationCount() == 0,
+           "bootstrap provider invoked under strict");
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C0DF0u, "strict-mode store failed");
+    g_strict_stubs = 0;
+    PASS();
+}
+
+/* func_800527C8 integration: func_80052C6C (and every earlier callee)
+ * completes BEFORE func_8005BCBC(0) runs, and the three remaining
+ * dispatcher callees follow it in retail ROM order. */
+static void test_5BCBC_dispatcher_integration(void) {
+    TEST("5BCBC_dispatcher_integration");
+    int i;
+    ResetTestState();
+    func_800527C8();
+    ASSERT(g_stub_order_count == 3, "dispatcher must leave 3 providers");
+    ASSERT(B21_CheckDispatcherOrder(0),
+           "post-5BCBC dispatcher order wrong");
+    ASSERT(CountOrderLog("func_8005BCBC") == 0,
+           "func_8005BCBC still routed through bootstrap policy");
+    ASSERT(CountOrderLog("func_80052C6C") == 0,
+           "func_80052C6C routed through bootstrap policy");
+    /* func_8005BCBC(0) contract inside the dispatcher. */
+    ASSERT(PE_LoadU32(B24_GA_FLAG) == 1u, "D_8009D218 = 1 at/after entry");
+    ASSERT(PE_LoadU32(B24_GA_C8) == 0u, "dispatcher C8 = 0");
+    ASSERT(PE_LoadU32(B24_GA_C0) == 0x800C0DF0u, "dispatcher C0");
+    ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "dispatcher C4");
+    /* Proof func_80052C6C completed before entry: its guest-visible
+     * effects are present — the three halfword clear ranges and the
+     * 9-record output-table stores (zero-seed: db44 returns NULL, so
+     * no record bytes are copied, but byte9/hw18 stores still land). */
+    for (i = 0; i < 9; i++) {
+        pe_addr_t r = 0x800A1E64u + (pe_addr_t)i * 32u;
+        ASSERT(PE_LoadU8(r + 9u) == 0u, "52C6C rec byte9 not cleared");
+        ASSERT(PE_LoadU16(r + 18u) == 999u, "52C6C rec hword18 != 999");
+    }
+    ASSERT(PE_LoadU16(0x800C0E48u) == 0u, "52C6C clear loop 1 start");
+    ASSERT(PE_LoadU16(0x800C0EAAu) == 0u, "52C6C clear loop 1 end");
+    ASSERT(PE_LoadU16(0x800C1EB8u) == 0u, "52C6C clear loop 2 start");
+    ASSERT(PE_LoadU16(0x800C1F7Eu) == 0u, "52C6C clear loop 2 end");
+    ASSERT(PE_LoadU16(0x800C1F80u) == 0u, "52C6C clear loop 3 start");
+    ASSERT(PE_LoadU16(0x800C2022u) == 0u, "52C6C clear loop 3 end");
     PASS();
 }
 
@@ -7008,6 +7221,17 @@ int main(void)
     /* Phase 6E-B22: func_8005DE88 resource-list initializer */
     test_5DE88_direct_links_and_state();
     test_5DE88_reset_repeat_footprint();
+
+    /* Phase 6E-B24: func_8005BCBC resource-state selector (8 tests) */
+    test_5BCBC_all_paths_return_8();
+    test_5BCBC_dispatcher_path();
+    test_5BCBC_record_paths();
+    test_5BCBC_full_ram_canary_and_widths();
+    test_5BCBC_dirty_and_repeated();
+    test_5BCBC_ramreset();
+    test_5BCBC_strict_not_stub();
+    test_5BCBC_dispatcher_integration();
+
     test_64964_direct_boot_state();
     test_80071A24_bzero_contract();
     test_80071A24_unaligned_zero_and_repeat();

@@ -119,7 +119,10 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * through the centralized bootstrap boundary in retail order.
  * func_800528F0 is REAL too (Phase 6E-B18):
  * game/boot/func_800528F0_port.c — PRNG table generator
- * (143 retail words, 521-byte output table at D_800A1B90). */
+ * (143 retail words, 521-byte output table at D_800A1B90).
+ * func_8005BCBC is REAL too (Phase 6E-B24):
+ * game/boot/func_8005BCBC_port.c — resource-state pointer/count
+ * selector (21 retail words; guest-resident D_8009D0C0/C4/C8). */
 
 /* ── REAL translated functions ────────────────────────────────────── */
 extern void func_800725DC(void);
@@ -134,6 +137,7 @@ extern void func_80062568(void);
 extern void func_80064964(void);
 extern void func_8005DE88(void);
 extern void func_80052C6C(void);
+extern int  func_8005BCBC(pe_addr_t a0);
 extern pe_addr_t func_80071A24(pe_addr_t dst, uint32_t len);
 extern void func_8005E968(uint32_t);
 extern void func_8005F844(int);
