@@ -89,6 +89,33 @@ populates; the two tools legitimately assert different footprints and must not
 be cross-asserted. The pc_port ctest (271/271) validates the C port contract;
 the B23 oracle validates the retail-word contract.
 
+**B23 oracle corrective (Phase 6E-B26 mandatory pre-audit).** The B26
+interpreter audit proved the committed b23_oracle.py materially
+defective and corrected it in a separate commit (history preserved, no
+amend): (1) two word transcription errors in W_80052C6C, never
+cross-checked against the exe — 0x80052CC8 was byte-swapped residue
+0x06004290, retail word is 0x90420006 (lbu $v0,6($v0), the search
+record-byte load); 0x80052DC8 was 0x14C0FF44 (branch to an
+out-of-function address), retail word is 0x1440FFCB (bne $v0,$zero,-53
+— the main loop's i<9 back-edge; the corrupted word removed the loop);
+(2) interpreter semantics errors: branch conditions evaluated after
+the delay slot, not-taken branches re-executed their delay slot, and
+callees ran on fresh register files without argument propagation.
+Under the corrected words + corrected MIPS-I semantics the scenario
+produces: D_8009D03C = 2 (unchanged), db44 called 11 times (a0
+sequence 0,1 | 1,2,3 ×3), return 0x800C1F7E, and ALL NINE output
+records receive byte[9]=0 and halfword[18]=999 plus the full 32-byte
+record copy from the seeded source records.  The retired "rec0-only"
+assertion was an artifact of the defects.  The corrected oracle
+cross-checks every modeled word against the SHA-verified exe at load
+time, runs seven interpreter self-tests (delay-slot single execution
+taken/not-taken, non-idempotent register and memory slot effects,
+next-PC target/PC+8, jal/jr slots, shared register file), and asserts
+the exact 409-write ROM-order footprint.  The production C port is
+unchanged by this corrective (its 9-iteration main loop already
+matches the retail structure; its db44 literal-address divergence
+remains documented); the ctest suite remains the C-port authority.
+
 **Leaf-count reconciliation (227 vs 229).** This checkout's committed yaml at
 base `71114ac` has **227** C leaves (`grep -cE ',[[:space:]]*c,'
 configs/USA/disc1.yaml`) and builds EXACT SHA-1. The **229** figure in the
@@ -140,8 +167,9 @@ register file; every read/write logged with width and order).  It
 asserts the exact ROM-order footprint and return for all four selection
 paths: (a0=0,flag=1) → C0=0x800C0DF0; (a0=0,flag=0) → C0=0x800C0DE0;
 (record,byte6=9) → C0=0x800C20B4; (record,byte6≠9) → C0=0x800C20A4.
-The corrected B23 oracle remains green (seed-dependent rec0-only
-contract preserved).
+The B23 oracle remains green after the Phase 6E-B26 corrective
+(hardware-faithful contract: all nine records updated under the seed;
+see the corrective note in the B23 audit section).
 
 The strict frontier advances to **func_8005D6F4** from `func_800527C8`
 (three identical captures, exit 1); the dispatcher oracle now reports
