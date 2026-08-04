@@ -132,6 +132,7 @@ extern void func_800528F0(void);
 extern void func_8005E588(void);
 extern void func_80062568(void);
 extern void func_80064964(void);
+extern void func_8005DE88(void);
 extern pe_addr_t func_80071A24(pe_addr_t dst, uint32_t len);
 extern void func_8005E968(uint32_t);
 extern void func_8005F844(int);

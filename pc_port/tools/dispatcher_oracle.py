@@ -48,8 +48,8 @@ _EXPECTED_LE_HEX = [
 EXPECTED_WORDS = [struct.unpack("<I", bytes.fromhex(h))[0]
                   for h in _EXPECTED_LE_HEX]
 
-# Known translated callee addresses through B21.  func_800371A4 is REAL
-# (Phase 6E-B7); B18/B19/B20/B21 rungs are also translated.
+# Known translated callee addresses through B22.  func_800371A4 is REAL
+# (Phase 6E-B7); B18/B19/B20/B21/B22 rungs are also translated.
 TRANSLATED_CALLEES = {
     0x8005B890,   # func_8005B890  (B17 leaf)
     0x8005BC98,   # func_8005BC98  (B17 leaf, called twice)
@@ -58,6 +58,7 @@ TRANSLATED_CALLEES = {
     0x8005E588,   # func_8005E588  (B19)
     0x80062568,   # func_80062568  (B20)
     0x80064964,   # func_80064964  (B21 A(28h) bzero + flags)
+    0x8005DE88,   # func_8005DE88  (B22 resource-list/state initializer)
     0x80042B38,   # func_80042B38  (B17 leaf)
     0x80051084,   # func_80051084  (B17 leaf)
     0x800371A4,   # func_800371A4  (B7, REAL)
@@ -261,22 +262,21 @@ def main():
 
     print()
     print(f"Unresolved callee count: {len(unresolved)}")
-    assert len(unresolved) == 6, \
-        f"expected 6 unresolved callees, got {len(unresolved)}"
+    assert len(unresolved) == 5, \
+        f"expected 5 unresolved callees, got {len(unresolved)}"
 
     expected_unresolved = [
-        0x8005DE88, 0x80052C6C, 0x8005BCBC, 0x8005D6F4, 0x80051CC4,
-        0x80042C78,
+        0x80052C6C, 0x8005BCBC, 0x8005D6F4, 0x80051CC4, 0x80042C78,
     ]
     for i, (got, want) in enumerate(zip(unresolved, expected_unresolved)):
         assert got == want, \
             f"dispatch seq[{i}]: got {addr_name(got)}, want {addr_name(want)}"
 
-    print("Dispatch sequence (6 unresolved, retail order):")
+    print("Dispatch sequence (5 unresolved, retail order):")
     for i, addr in enumerate(unresolved):
         print(f"  [{i}] {addr_name(addr)}")
     print()
-    print("DISPATCHER ORACLE: PASS (17 total, 6 unresolved, order exact)")
+    print("DISPATCHER ORACLE: PASS (17 total, 5 unresolved, order exact)")
 
 
 if __name__ == "__main__":

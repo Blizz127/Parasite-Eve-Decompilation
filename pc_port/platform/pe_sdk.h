@@ -112,6 +112,7 @@ void func_800528F0(void);                   /* PRNG table generator, 521 bytes *
 void func_8005E588(void);                   /* display environment setup */
 void func_80062568(void);                   /* free-list pool init, 24 0x90-byte slots */
 void func_80064964(void);                   /* A(28h) clear + 8 0xFF flag bytes */
+void func_8005DE88(void);                   /* resource-list/state initializer */
 pe_addr_t func_80071A24(pe_addr_t dst, uint32_t len);  /* BIOS A(28h) bzero trampoline */
 void func_8005E968(uint32_t packed);         /* pack-color halver */
 void func_8005F844(int a0);                 /* conditional constant stores */

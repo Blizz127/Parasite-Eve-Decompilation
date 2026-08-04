@@ -237,7 +237,7 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
   the cycle-B poll loop); void(void), return unconsumed.
   `game/boot/func_800527C8_port.c`, leaf implementations in
   `game/boot/func_800{5B890,5BC98,4F808,42B38,51084}_port.c`.
-- `func_800528F0`  ← current strict-mode frontier (first unresolved
+- `func_80052C6C`  ← current strict-mode frontier (first unresolved
   callee inside the translated func_800527C8 dispatcher)
 
 ### func_8006E834 callees (9)
@@ -258,9 +258,18 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 - ~~`func_80038D1C`~~ — TRANSLATED (Phase 6E-B15, shared with 3E680;
   see the func_8003E680 callees section)
 
+### Phase 6E-B22
+
+`func_8005DE88` is translated retail logic: 23 words at executable
+`0x8005DE88..0x8005DEE3`, file offset `0x4E688`, live split `4CC98.s`.
+It has no callees, links 12-byte records from `0x800A2090` through
+`0x800A2174`, then null-terminates the final link and initializes the six
+`$gp` state words at `0x8009D0DC..0x8009D0F0`. Strict real-disc execution now
+reaches `func_80052C6C` from `func_800527C8` (exit 1).
+
 ## Remaining bootstrap providers
 
-With `--disc-image`, strict mode stops at `func_800528F0` (first
+With `--disc-image`, strict mode stops at `func_80052C6C` (first
 unresolved callee INSIDE the translated `func_800527C8` dispatcher, from
 `func_8006A9E4`) — past the fully translated func_8003E680, func_8006A9E4
 streaming-load rung, AND func_800527C8 dispatcher (7 translated leaves +
@@ -273,7 +282,7 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 `func_80082314` (PVD verify), `DsSearchFile`, `func_80080C48`
 (CdPosToInt), `func_8006E6D4` (image read), `func_800811E4`
 (completion poll).  Remaining unresolved providers for boot-to-logo:
-- `func_800528F0` — first unresolved dispatcher callee (current strict frontier)
+- `func_80052C6C` — first unresolved dispatcher callee (current strict frontier)
 - `func_8005E588`, `func_80062568`, `func_80064964`, `func_8005DE88`,
   `func_80052C6C`, `func_8005BCBC`, `func_8005D6F4`, `func_80051CC4`,
   `func_80042C78` — remaining 9 unresolved dispatcher callees

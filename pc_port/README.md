@@ -1,4 +1,4 @@
-# Parasite Eve Native PC Port — Phase 6E-B21
+# Parasite Eve Native PC Port — Phase 6E-B22
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
@@ -41,7 +41,7 @@ boundary in retail ROM order.  Strict mode with `--disc-image` stops at
 `func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
 `--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** B21 BZERO CORRECTIVE AUDIT — 269 native tests expected after
+**Status:** B22 func_8005DE88 RUNG — 271 native tests pass after
 the dedicated A(28h)/func_80064964 tests; the corrective commit preserves
 8e90ac7 and 14ac77b. Independent oracles are
 `tools/b21_bzero_oracle.py` and `tools/b21_order_oracle.py`.
@@ -413,7 +413,7 @@ invoked exactly once inside the cycle-B poll loop via the retail $s1
 one-shot guard; its 10 unresolved callees appear in retail ROM order
 before the final func_80087090 call.  func_80087090 is still unresolved
 and goes through the centralized bootstrap boundary — strict mode now
-stops at `func_800528F0` (the first unresolved callee inside the
+stops at `func_80052C6C` (the first unresolved callee inside the
 translated dispatcher).  The retry/restart loop bodies beyond first-pass
 completion are not externally triggerable in the synchronous host
 model (issue always refreshes the poll timestamp before the poll), so
@@ -593,6 +593,16 @@ cd pc_port/build
 | Trace SHA-256 (3 runs) | `42c1956e077a40fed5176653b6a18938a8a91e99e35fe9d7044f31581de785af` |
 | Real-disc load trace (3 runs) | `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` |
 | Unsupported traps | 0 |
+
+## Phase 6E-B22 correction
+
+`func_8005DE88` is a translated 23-word resource-list/state initializer at
+`0x8005DE88..0x8005DEE3` (file offset `0x4E688`, live split `4CC98.s`). It
+links the 12-byte records at `0x800A2090..0x800A217F`, null-terminates the
+last link at `0x800A2174`, and initializes `$gp+0x36C..0x380` exactly. It has
+no callees and no return value. The strict real-disc frontier is now
+`func_80052C6C` from `func_800527C8`, exit status 1; native tests are 271/271.
+The independent write-order oracle is `tools/b22_5de88_oracle.py`.
 
 ## Next steps
 

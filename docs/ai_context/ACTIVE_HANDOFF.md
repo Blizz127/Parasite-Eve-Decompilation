@@ -5,7 +5,7 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
-## Phase 6E-B21 corrective audit (in progress)
+## Phase 6E-B22 corrective audit (in progress)
 
 The raw retail trampoline at executable `0x80071A24..0x80071A2F` (file
 offset `0x62224`) is exactly `240A00A0 01400008 24090028`: load `$t2=0xA0`,
@@ -21,7 +21,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B21 — A(28h) bzero corrective audit** | `pc_port/build/pe-native-tests` (269/269) |
+| Port phase | **6E-B22 — func_8005DE88 rung** | `pc_port/build/pe-native-tests` (271/271) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -33,7 +33,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | B17 dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 called twice). 7 translated leaves: func_8005B890(0), func_8005BC98(0), 3×sw $zero, func_8004F808, func_80042B38, func_80051084, func_8005BC98(1) + D_800B0CD8 |= 0x40000000 in the delay slot of func_800371A4(1). 10 unresolved callees in retail ROM order: func_800528F0, func_8005E588, func_80062568, func_80064964, func_8005DE88, func_80052C6C, func_8005BCBC, func_8005D6F4, func_80051CC4, func_80042C78 — routed through the centralized bootstrap boundary. Independent oracle: `pc_port/tools/dispatcher_oracle.py` (MIPS interpreter on verified retail words). Sole call site func_8006A9E4 @0x8006AAD0, $s1-guarded one-shot inside the cycle-B poll loop; void(void), return unconsumed | `pc_port/game/boot/func_800527C8_port.c`, `func_8005B890_port.c`, `func_8005BC98_port.c`, `func_8004F808_port.c`, `func_80042B38_port.c`, `func_80051084_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | with `--disc-image`: exit 1 at `func_800528F0` (first unresolved callee from translated `func_800527C8`, from `func_8006A9E4`) — past the fully translated func_8003E680, func_8006A9E4 streaming-load rung, AND func_800527C8 dispatcher (7 translated leaves + 3 direct sw clears + D_800B0CD8 RMW committed, then 10 unresolved callees from the dispatcher in retail ROM order); with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` (from `func_800698D4`) by design | `--headless --strict-stubs --disc-image …` |
+| Strict mode | with `--disc-image`: exit 1 at `func_80052C6C` from `func_800527C8`; with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` by design | `--headless --strict-stubs --disc-image …` |
 | Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 251/251 tests + headless + real-disc load + strict + RNG/LZCR/callback/dispatcher oracle dumps clean | `pc_port/build-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
 | Next | Phase 6E-B continued: `func_800528F0` rung (next strict frontier, first unresolved callee from `func_800527C8` — 0x23C-byte RNG-based shuffle/blend leaf at 0x800528F0; one-rung phase); then remaining 9 unresolved callees from the dispatcher, then `func_80087090`; not MDEC/GPU/audio/input; do not start MDEC/SDL/audio/input | — |
@@ -43,16 +43,17 @@ is white and Expose events are not re-blitted; the port blits once after
 boot returns.  The guest framebuffer remains `fb28dc21…` (near-black).
 Do not report the white window as a retail frame.
 
-### B21 audit override
+### B22 audit override
 
-The current verified strict frontier is `func_8005DE88` (caller
-`func_800527C8`), captured three times on the matching Disc 1 image with
-exit status 1.  The dispatcher oracle now reports six unresolved callees in
-order: `func_8005DE88`, `func_80052C6C`, `func_8005BCBC`, `func_8005D6F4`,
-`func_80051CC4`, `func_80042C78`.  Bootstrap-disc remains intentionally
-stopped at `func_8007F72C`.  The current native and sanitizer test count is
-269; LSAN leak detection requires `LSAN_OPTIONS=detect_leaks=0` in this
-ptrace-restricted environment.
+`func_8005DE88` is translated as a 23-word, no-callee resource-list/state
+initializer. It links the 12-byte records at `0x800A2090..0x800A2174`,
+null-terminates `0x800A2174`, and initializes `$gp+0x36C..0x380`. The current
+strict frontier is `func_80052C6C` from `func_800527C8`, captured with exit
+status 1. The dispatcher oracle now reports five unresolved callees in order:
+`func_80052C6C`, `func_8005BCBC`, `func_8005D6F4`, `func_80051CC4`,
+`func_80042C78`. Bootstrap-disc remains intentionally stopped at
+`func_8007F72C`. Native and sanitizer tests are 271/271; LSAN leak detection
+requires `LSAN_OPTIONS=detect_leaks=0` in this ptrace-restricted environment.
 
 **Leaf-count reconciliation (227 vs 229).** This checkout's committed yaml at
 base `71114ac` has **227** C leaves (`grep -cE ',[[:space:]]*c,'

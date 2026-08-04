@@ -5692,14 +5692,14 @@ static void test_6E498_readonly_footprint(void) {
 /* Expected unresolved-callee sequence of the translated func_800527C8
  * dispatcher (Phase 6E-B18, func_800528F0 now translated), in retail
  * ROM order. */
-static const char *const B21_DISP_SEQ[6] = {
-    "func_8005DE88", "func_80052C6C", "func_8005BCBC", "func_8005D6F4",
+static const char *const B22_DISP_SEQ[5] = {
+    "func_80052C6C", "func_8005BCBC", "func_8005D6F4",
     "func_80051CC4", "func_80042C78"
 };
 
 static int B21_CheckDispatcherOrder(int base) {
-    for (int i = 0; i < 6; i++) {
-        if (strcmp(g_stub_order_log[base + i], B21_DISP_SEQ[i]) != 0)
+    for (int i = 0; i < 5; i++) {
+        if (strcmp(g_stub_order_log[base + i], B22_DISP_SEQ[i]) != 0)
             return 0;
     }
     return 1;
@@ -5910,12 +5910,12 @@ static void test_6A9E4_full_run_patterned(void) {
      * func_8005E588, func_80062568, and func_80064964 are REAL too — six
      * unresolved dispatcher callees appear in retail ROM
      * order, then func_80087090. */
-    ASSERT(g_stub_order_count == 7, "unexpected bootstrap invocations");
+    ASSERT(g_stub_order_count == 6, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[6], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[5], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 7, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 6, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -6031,6 +6031,18 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             uint32_t exp = B19_DrawEnvExpectedWord(a);
             if (exp != 0xFFFFFFFFu) want = exp;
         }
+        /* Phase 6E-B22: func_8005DE88 link chain and state */
+        else if (a >= 0x800A2090u && a < 0x800A2174u
+                 && (a - 0x800A2090u) % 0xCu == 0)
+            want = a + 0xCu;
+        else if (a == 0x800A2174u)
+            want = 0;
+        else if (a == 0x8009D0DCu)
+            want = 0x800A2090u;
+        else if (a == 0x8009D0E0u || a == 0x8009D0E4u ||
+                 a == 0x8009D0E8u || a == 0x8009D0ECu ||
+                 a == 0x8009D0F0u)
+            want = 0;
         /* Phase 6E-B21: func_80071A24 bzero range + 80064964 flags */
         else if (a >= 0x800A3060u && a < 0x800A3180u) {
             want = 0;
@@ -6064,10 +6076,10 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
-    ASSERT(g_stub_order_count == 7, "unexpected bootstrap invocations");
+    ASSERT(g_stub_order_count == 6, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[6], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[5], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6128,10 +6140,10 @@ static void test_6A9E4_3E680_integration(void) {
 
     /* B18: func_800528F0 is now also translated; 9 unresolved dispatcher
      * callees occupy the order log before func_80087090. */
-    ASSERT(g_stub_order_count == 7, "unexpected provider count");
+    ASSERT(g_stub_order_count == 6, "unexpected provider count");
     ASSERT(B21_CheckDispatcherOrder(0),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[6], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[5], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
@@ -6490,6 +6502,50 @@ static void test_64964_direct_boot_state(void) {
     }
     ASSERT(PE_LoadU32(0x800A305Cu) == 0xCAFE0001u, "64964 guard before");
     ASSERT(PE_LoadU32(0x800A3180u) == 0xCAFE0002u, "64964 guard after");
+    PASS();
+}
+
+static void test_5DE88_direct_links_and_state(void) {
+    TEST("5DE88_direct_links_and_state");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    func_8005DE88();
+    for (a = 0x800A2090u; a < 0x800A2174u; a += 0xCu)
+        ASSERT(PE_LoadU32(a) == a + 0xCu, "5DE88 link chain");
+    ASSERT(PE_LoadU32(0x800A2174u) == 0, "5DE88 null terminator");
+    ASSERT(PE_LoadU32(0x800A2174u) == 0, "5DE88 state clear");
+    ASSERT(PE_LoadU32(0x8009D0DCu) == 0x800A2090u, "5DE88 head");
+    ASSERT(PE_LoadU32(0x8009D0E0u) == 0, "5DE88 gp 370");
+    ASSERT(PE_LoadU32(0x8009D0E4u) == 0, "5DE88 gp 374");
+    ASSERT(PE_LoadU32(0x8009D0E8u) == 0, "5DE88 gp 378");
+    ASSERT(PE_LoadU32(0x8009D0ECu) == 0, "5DE88 gp 37c");
+    ASSERT(PE_LoadU32(0x8009D0F0u) == 0, "5DE88 gp 380");
+    ASSERT(PE_LoadU32(0x800A208Cu) == 0xA5A5A5A5u, "5DE88 guard before");
+    ASSERT(PE_LoadU32(0x800A2180u) == 0xA5A5A5A5u, "5DE88 guard after");
+    PASS();
+}
+
+static void test_5DE88_reset_repeat_footprint(void) {
+    TEST("5DE88_reset_repeat_footprint");
+    pe_addr_t a;
+    ResetTestState();
+    func_8005DE88();
+    PE_RamReset();
+    for (a = 0x800A2090u; a < 0x800A2180u; a += 4)
+        PE_StoreU32(a, 0xCAFE0000u | (a & 0xFFFFu));
+    PE_StoreU32(0x800A208Cu, 0xBEEF0001u);
+    PE_StoreU32(0x800A2180u, 0xBEEF0002u);
+    func_8005DE88();
+    for (a = 0x800A2090u; a < 0x800A2174u; a += 0xCu)
+        ASSERT(PE_LoadU32(a) == a + 0xCu, "5DE88 repeat link");
+    ASSERT(PE_LoadU32(0x800A2174u) == 0, "5DE88 repeat null");
+    ASSERT(PE_LoadU32(0x800A208Cu) == 0xBEEF0001u, "5DE88 repeat guard before");
+    ASSERT(PE_LoadU32(0x800A2180u) == 0xBEEF0002u, "5DE88 repeat guard after");
+    ASSERT(PE_LoadU32(0x800A2094u) == 0xCAFE2094u, "5DE88 non-link preserved");
+    func_8005DE88();
+    ASSERT(PE_LoadU32(0x8009D0DCu) == 0x800A2090u, "5DE88 idempotent head");
     PASS();
 }
 
@@ -6927,12 +6983,15 @@ int main(void)
     test_5E588_direct_boot_state();
     test_5E588_ramreset_rerun();
 
-    /* Phase 6E-B20: func_80062568 free-list pool (1 test) */
+    /* Phase 6E-B20: func_80062568 free-list pool */
     test_62568_direct_boot_state();
     test_62568_dirty_state();
     test_62568_repeated();
     test_62568_full_footprint();
     test_62568_ramreset_rerun();
+    /* Phase 6E-B22: func_8005DE88 resource-list initializer */
+    test_5DE88_direct_links_and_state();
+    test_5DE88_reset_repeat_footprint();
     test_64964_direct_boot_state();
     test_80071A24_bzero_contract();
     test_80071A24_unaligned_zero_and_repeat();

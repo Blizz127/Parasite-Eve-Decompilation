@@ -27,7 +27,7 @@
  *   6. func_8005E588()           TRANSLATED (B19): display env setup
  *   7. func_80062568()           TRANSLATED (B20): free-list pool init
  *   8. func_80064964()           TRANSLATED (B21): A(28h) bzero + flags
- *   9. func_8005DE88()           UNRESOLVED
+ *   9. func_8005DE88()           TRANSLATED (B22): resource-list/state init
  *  10. func_80042B38()           TRANSLATED leaf (B17): D_800A1870/1874 = 0
  *  11. func_80051084()           TRANSLATED leaf (B17): D_8009D014 =
  *                                0x800A1AA0 (guest address, not host ptr)
@@ -78,7 +78,7 @@ void func_800527C8(void)
     func_8005E588();
     func_80062568();
     func_80064964();
-    Bootstrap_ReturnVoid("func_8005DE88", "func_800527C8");
+    func_8005DE88();
     func_80042B38();
     func_80051084();
     Bootstrap_ReturnVoid("func_80052C6C", "func_800527C8");
