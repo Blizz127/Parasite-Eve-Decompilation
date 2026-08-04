@@ -4813,7 +4813,55 @@ typedef struct {
     PE_Disc  *disc;
 } DiscFixture;
 
-static uint8_t FxPattern(uint32_t i) { return (uint8_t)(i * 7u + 3u); }
+/* Phase 6E-B26 — the fixture PE.IMG must carry a VALID archive header,
+ * because cycle A of func_8006A9E4 copies its first sector to
+ * 0x800A8028 and the now-translated func_8005DC4C walks that archive
+ * for real (nested relative offsets; see func_8005DC4C_port.c).  The
+ * plain i*7+3 pattern makes mem32[0x800A802C] = 0x342D261F, which sends
+ * the walk to 0xB437A64B — outside guest RAM, and correctly fatal under
+ * checked access.  These overrides reproduce the SHAPE measured in the
+ * real Disc 1 archive (R=0x30, S=0x14, count=120) at the same offsets,
+ * so the fixture models reality instead of defeating the guard.
+ *
+ *   +0x004  u32 R = 0x30      -> ptr = 0x800A8058
+ *   +0x034  u32 S = 0x14      -> tbl = 0x800A806C
+ *   +0x044  u16 count = 120
+ *   +0x082  s16 entry[30] = 0x300 -> record @0x800A836C (file +0x344)
+ *   +0x344  u8  0xFF          -> immediate terminator (1-byte copy)
+ *
+ * Everything else stays the i*7+3 pattern, so every existing byte-exact
+ * cycle assertion still checks a known generator. */
+#define FX_ARCH_R_OFF     0x004u
+#define FX_ARCH_S_OFF     0x034u
+#define FX_ARCH_CNT_OFF   0x044u
+#define FX_ARCH_E30_OFF   0x082u
+#define FX_ARCH_REC_OFF   0x344u
+
+static uint8_t FxPattern(uint32_t i) {
+    switch (i) {
+    case FX_ARCH_R_OFF + 0:   return 0x30;      /* R  = 0x00000030 */
+    case FX_ARCH_R_OFF + 1:   return 0x00;
+    case FX_ARCH_R_OFF + 2:   return 0x00;
+    case FX_ARCH_R_OFF + 3:   return 0x00;
+    case FX_ARCH_S_OFF + 0:   return 0x14;      /* S  = 0x00000014 */
+    case FX_ARCH_S_OFF + 1:   return 0x00;
+    case FX_ARCH_S_OFF + 2:   return 0x00;
+    case FX_ARCH_S_OFF + 3:   return 0x00;
+    case FX_ARCH_CNT_OFF + 0: return 0x78;      /* count = 120 */
+    case FX_ARCH_CNT_OFF + 1: return 0x00;
+    case FX_ARCH_E30_OFF + 0: return 0x00;      /* entry[30] = 0x0300 */
+    case FX_ARCH_E30_OFF + 1: return 0x03;
+    case FX_ARCH_REC_OFF:     return 0xFF;      /* record terminator */
+    default:                  return (uint8_t)(i * 7u + 3u);
+    }
+}
+
+/* The archive the fixture installs, in guest terms. */
+#define FX_ARCH_HDR    0x800A8028u
+#define FX_ARCH_PTR    0x800A8058u
+#define FX_ARCH_TBL    0x800A806Cu
+#define FX_ARCH_COUNT  120u
+#define FX_ARCH_REC30  0x800A836Cu
 
 /* Write one ISO9660 directory record; returns its length. */
 static int FxPutDirRec(uint8_t *p, uint32_t extent, uint32_t size,
@@ -5475,6 +5523,66 @@ static void test_698D4_bootstrap_fixture(void) {
 #define B16_COPY1   0x10A50u
 #define B16_COPY2   0x1400u
 
+/* ── Phase 6E-B26 archive fixture ─────────────────────────────────────
+ * func_8005DC4C is REAL, so func_8005D6F4 now walks a real nested
+ * relative-offset archive at 0x800A8028 instead of consuming a scripted
+ * provider return.  On the real boot that archive arrives from PE.IMG
+ * via cycle A of func_8006A9E4 BEFORE the dispatcher runs; these tests
+ * must therefore establish the same precondition rather than call
+ * func_8005D6F4 against an empty region.  (With the region zeroed the
+ * lookup correctly returns retail's own 0 and the caller's copy loop
+ * dereferences address 0 — proven by test_5DC4C_empty_state below and
+ * deliberately NOT papered over.)
+ *
+ * Shape reproduces the measured Disc 1 USA archive: R = 0x30,
+ * S = 0x14, count = 120.  Record offsets are SIGNED 16-bit relative to
+ * the table, so every record must lie within tbl +/- 32 KiB. */
+#define B26_ARCH_HDR      0x800A8028u
+#define B26_ARCH_R_ADDR   0x800A802Cu   /* HDR+4  */
+#define B26_ARCH_R        0x30u
+#define B26_ARCH_PTR      0x800A8058u   /* HDR + R */
+#define B26_ARCH_S_ADDR   0x800A805Cu   /* PTR+4  */
+#define B26_ARCH_S        0x14u
+#define B26_ARCH_TBL      0x800A806Cu   /* PTR + S */
+#define B26_ARCH_COUNT    120u
+#define B26_ARCH_IDX      30u           /* the index all 3 call sites use */
+#define B26_ARCH_E30_ADDR 0x800A80AAu   /* TBL + 2 + 2*30 */
+/* Default record: a lone 0xFF, so the caller's copy loop transfers one
+ * byte — byte-for-byte the same end state the B25 degenerate source
+ * produced, which keeps every pre-existing B25 assertion meaningful. */
+#define B26_ARCH_REC      0x800A8400u
+#define B26_ARCH_E30      (B26_ARCH_REC - B26_ARCH_TBL)   /* 0x394 */
+
+/* Install the archive; record[30] resolves to `rec`. */
+static void B26_SeedArchive(pe_addr_t rec) {
+    PE_StoreU32(B26_ARCH_R_ADDR, B26_ARCH_R);
+    PE_StoreU32(B26_ARCH_S_ADDR, B26_ARCH_S);
+    PE_StoreU16(B26_ARCH_TBL, (uint16_t)B26_ARCH_COUNT);
+    PE_StoreU16(B26_ARCH_E30_ADDR, (uint16_t)(rec - B26_ARCH_TBL));
+}
+
+/* Install the archive with the default lone-0xFF record. */
+static void B26_SeedArchiveDefault(void) {
+    B26_SeedArchive(B26_ARCH_REC);
+    PE_StoreU8(B26_ARCH_REC, 0xFFu);
+}
+
+
+/* Expected canary word at `a` for the B26 archive fixture laid over a
+ * 0xA5A5A5A5 fill.  Returns 1 and sets *want when `a` is one of the
+ * seeded words; these are INPUTS to the run, never results read back
+ * out of it. */
+static int B26_ArchCanaryWord(pe_addr_t a, uint32_t *want) {
+    if (a == B26_ARCH_R_ADDR)          *want = B26_ARCH_R;
+    else if (a == B26_ARCH_S_ADDR)     *want = B26_ARCH_S;
+    else if (a == B26_ARCH_TBL)        *want = 0xA5A50000u | B26_ARCH_COUNT;
+    else if (a == B26_ARCH_E30_ADDR - 2u)
+                                       *want = (B26_ARCH_E30 << 16) | 0xA5A5u;
+    else if (a == B26_ARCH_REC)        *want = 0xA5A5A500u | 0xFFu;
+    else return 0;
+    return 1;
+}
+
 /* Fixture PE.IMG byte i, exactly as FxBuild writes it: pattern for
  * i < FX_PEIMG_SIZE, zero-filled sector tail afterwards. */
 static uint8_t B16_FxByte(uint32_t i) {
@@ -5906,15 +6014,15 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
     /* 7. Dependency boundary (updated Phase 6E-B25): func_8005D6F4 is
-     * REAL too — its ten boundary callees precede the two remaining
-     * unresolved dispatcher callees in retail ROM order, then
-     * func_80087090. */
-    ASSERT(g_stub_order_count == 13, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(10),
+     * REAL too — after Phase 6E-B26 its SEVEN remaining boundary callees
+     * precede the two remaining unresolved dispatcher callees in retail
+     * ROM order, then func_80087090. */
+    ASSERT(g_stub_order_count == 10, "unexpected bootstrap invocations");
+    ASSERT(B21_CheckDispatcherOrder(7),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[12], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[9], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 11, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 10, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -5960,6 +6068,9 @@ static void test_6A9E4_zero_cycles_footprint(void) {
     PE_StoreU32(B16_STREAM + 0x108, (1u << 22) | 0x180u);
     PE_StoreU32(B16_STREAM + 0x184, 0x300u);
     PE_StoreU32(B16_STREAM + 0x188, 0x57D40D84u);
+    /* B26: cycle A copies nothing here, so the func_8005DC4C archive at
+     * 0x800A8028 must be established explicitly over the canary. */
+    B26_SeedArchiveDefault();
 
     func_8006A9E4();
 
@@ -5971,6 +6082,7 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x800A3608u) want = 0;
         else if (a == 0x800B0E6Cu) want = B16_STREAM;
         else if (a == 0x800B0E08u) want = B16_DEST2;
+        else if (B26_ArchCanaryWord(a, &want)) { /* B26 archive fixture */ }
         else if (a == 0x8009B6ACu) want = 0x200u;      /* post-issue */
         else if (a == 0x8009B6B0u) want = B16_STREAM;  /* last dest */
         else if (a == 0x8009B6B4u) want = 0;
@@ -6124,10 +6236,10 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
-    ASSERT(g_stub_order_count == 13, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(10),
+    ASSERT(g_stub_order_count == 10, "unexpected bootstrap invocations");
+    ASSERT(B21_CheckDispatcherOrder(7),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[12], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[9], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6143,6 +6255,7 @@ static void test_6A9E4_ramreset_rerun(void) {
     /* zeroed table → 0-size cycles; zeroed stream → count-0 archive */
     D_800B0E6C = B16_STREAM;
     PE_StoreU32(0x800B0E08u, B16_DEST2);
+    B26_SeedArchiveDefault();   /* B26: no cycle-A bytes land here */
     func_8006A9E4();
     e20_1 = PE_LoadU32(0x800B0E20u);
     e18_1 = PE_LoadU32(0x800B0E18u);
@@ -6157,6 +6270,11 @@ static void test_6A9E4_ramreset_rerun(void) {
     func_8007ED58();
     D_800B0E6C = B16_STREAM;
     PE_StoreU32(0x800B0E08u, B16_DEST2);
+    /* PE_RamReset cleared the guest-resident archive too; retail's cycle
+     * A re-populates it on a reboot, so the fixture must re-seed it. */
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == 0u,
+           "post-reset archive must be empty (retail 0)");
+    B26_SeedArchiveDefault();
     func_8006A9E4();
     ASSERT(PE_LoadU32(0x800B0E20u) == e20_1, "rerun D_800B0E20 differs");
     ASSERT(PE_LoadU32(0x800B0E18u) == e18_1, "rerun D_800B0E18 differs");
@@ -6184,14 +6302,16 @@ static void test_6A9E4_3E680_integration(void) {
     func_8007ED58();
     D_800B0E6C = 0x801ED800u;  /* func_8006A8D4 arena value */
     PE_StoreU32(0x800B0E08u, 0x800F74F8u); /* func_8006A674 arena value */
+    B26_SeedArchiveDefault();  /* B26: no disc, so seed the archive */
     func_8006A9E4();
 
-    /* B25: func_8005D6F4 now translated — its ten boundary callees
-     * precede the 2 unresolved dispatcher callees before func_80087090. */
-    ASSERT(g_stub_order_count == 13, "unexpected provider count");
-    ASSERT(B21_CheckDispatcherOrder(10),
+    /* B26: func_8005DC4C is translated too — seven boundary callees from
+     * func_8005D6F4 precede the 2 unresolved dispatcher callees before
+     * func_80087090. */
+    ASSERT(g_stub_order_count == 10, "unexpected provider count");
+    ASSERT(B21_CheckDispatcherOrder(7),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[12], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[9], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
@@ -6772,10 +6892,13 @@ static void test_5BCBC_dispatcher_integration(void) {
     TEST("5BCBC_dispatcher_integration");
     int i;
     ResetTestState();
+    B26_SeedArchiveDefault();   /* B26: func_8005D6F4 walks a real archive */
     func_800527C8();
-    ASSERT(g_stub_order_count == 12, "dispatcher must leave 12 providers");
-    ASSERT(B21_CheckDispatcherOrder(10),
+    ASSERT(g_stub_order_count == 9, "dispatcher must leave 9 providers");
+    ASSERT(B21_CheckDispatcherOrder(7),
            "post-5BCBC dispatcher order wrong");
+    ASSERT(CountOrderLog("func_8005DC4C") == 0,
+           "func_8005DC4C routed through bootstrap policy");
     ASSERT(CountOrderLog("func_8005BCBC") == 0,
            "func_8005BCBC still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_80052C6C") == 0,
@@ -6819,17 +6942,19 @@ static void test_5BCBC_dispatcher_integration(void) {
 #define B25_BUF_SEL   0x800C0DF0u
 #define B25_BZERO_LEN 0x12E4u
 
-/* The ten boundary providers func_8005D6F4 must invoke in retail ROM
- * order under non-strict execution (three func_8005DC4C calls first). */
-static const char *const B25_BOUNDARY_SEQ[10] = {
-    "func_8005DC4C", "func_8005DC4C", "func_8005DC4C",
+/* The seven boundary providers func_8005D6F4 must invoke in retail ROM
+ * order under non-strict execution. */
+/* Phase 6E-B26: the three func_8005DC4C invocations left this list when
+ * func_8005DC4C became REAL; the remaining seven callees keep their exact
+ * retail ROM order. */
+static const char *const B25_BOUNDARY_SEQ[7] = {
     "func_80052594", "func_8005CCA4", "func_800614AC",
     "func_8005E884", "func_8005E850", "func_800649D0",
     "func_80052790",
 };
 
 static int B25_CheckBoundaryOrder(void) {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 7; i++) {
         if (strcmp(g_stub_order_log[i], B25_BOUNDARY_SEQ[i]) != 0)
             return 0;
     }
@@ -6842,6 +6967,7 @@ static void test_5D6F4_boot_path_state(void) {
     TEST("5D6F4_boot_path_state");
     int i;
     ResetTestState();
+    B26_SeedArchiveDefault();             /* B26: cycle-A archive present */
     func_8005BC98(0);                     /* retail: D_8009D218 = 1 */
     ASSERT(func_8005D6F4() == 0xFF, "func_8005D6F4 must return 0xFF");
     /* State stores (block-2 values — both blocks write the same). */
@@ -6866,8 +6992,9 @@ static void test_5D6F4_boot_path_state(void) {
     ASSERT(PE_LoadU32(0x800A76C8u) == 0u, "A76C8 not cleared");
     ASSERT(PE_LoadU8(0x800C20A4u) == 0xFFu, "terminator A4 missing");
     ASSERT(PE_LoadU8(0x800C20B4u) == 0xFFu, "terminator B4 missing");
-    /* Boundary order: 10 providers, retail ROM order. */
-    ASSERT(g_stub_order_count == 10, "boundary provider count wrong");
+    /* Boundary order: 7 providers, retail ROM order (B26 removed the
+     * three func_8005DC4C invocations). */
+    ASSERT(g_stub_order_count == 7, "boundary provider count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "boundary ROM order wrong");
     ASSERT(CountOrderLog("func_8005D6F4") == 0,
            "func_8005D6F4 routed through bootstrap policy");
@@ -6883,6 +7010,7 @@ static void test_5D6F4_full_ram_canary(void) {
     ResetTestState();
     for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
         PE_StoreU32(a, 0xA5A5A5A5u);
+    B26_SeedArchiveDefault();
     func_8005D6F4();
     for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
         uint32_t want = 0xA5A5A5A5u;
@@ -6907,6 +7035,8 @@ static void test_5D6F4_full_ram_canary(void) {
         else if (a == 0x800A76A4u || a == 0x800A76B0u ||
                  a == 0x800A76BCu || a == 0x800A76C8u)
             want = 0;
+        /* B26 archive fixture: seeded INPUTS, not results of the run. */
+        else if (B26_ArchCanaryWord(a, &want)) { }
         if (PE_LoadU32(a) != want) {
             printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
                    a, PE_LoadU32(a), want);
@@ -6948,6 +7078,7 @@ static void test_5D6F4_dirty_and_repeated(void) {
     PE_StoreU32(B24_GA_FLAG, 0xA5A5A5A5u);
     for (i = 0; i < 8; i++)
         PE_StoreU8(B25_BUF_SEL + (pe_addr_t)i, 0x11u);
+    B26_SeedArchiveDefault();
     func_8005D6F4();
     ASSERT(PE_LoadU32(B24_GA_C0) == B25_BUF_SEL, "dirty C0 overwritten");
     ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "dirty C4 overwritten");
@@ -6972,6 +7103,7 @@ static void test_5D6F4_ramreset(void) {
     TEST("5D6F4_ramreset");
     int i;
     ResetTestState();
+    B26_SeedArchiveDefault();
     func_8005D6F4();
     PE_RamReset();
     ASSERT(PE_LoadU32(B24_GA_C0) == 0u, "reset cleared C0");
@@ -6982,6 +7114,12 @@ static void test_5D6F4_ramreset(void) {
         ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0u,
                "reset cleared the buffer");
     ASSERT(PE_LoadU16(0x800C1F80u) == 0u, "reset cleared the sh");
+    /* PE_RamReset also cleared the guest-resident archive; on the real
+     * boot cycle A re-populates it before the dispatcher runs. */
+    ASSERT(PE_LoadU32(B26_ARCH_R_ADDR) == 0u, "reset cleared the archive");
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == 0u,
+           "empty archive must yield retail's own 0");
+    B26_SeedArchiveDefault();
     func_8005D6F4();
     ASSERT(PE_LoadU32(B24_GA_C0) == B25_BUF_SEL, "post-reset C0");
     ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "post-reset C4");
@@ -6992,32 +7130,40 @@ static void test_5D6F4_ramreset(void) {
     PASS();
 }
 
-/* Controlled dependency returns: the scripted func_8005DC4C sequence is
- * popped in ROM order (the three calls consume the sequence; the first
- * return steers string copy #1).  The independent b25_oracle.py asserts
- * the exact transferred bytes; here the observable contract is that the
- * run completes cleanly under the scripted returns and the block-2
- * re-fill leaves the buffer in its retail end state. */
+/* Controlled dependency returns (B26 form): func_8005DC4C is REAL, so
+ * the copy source is steered by the ARCHIVE rather than by a scripted
+ * provider return.  Record 30 is aimed at a seeded multi-byte string
+ * outside the bzero range; the run must complete and the block-2 re-fill
+ * must leave the buffer in its retail end state.  The independent
+ * b26_oracle.py asserts the lookup arithmetic itself. */
+#define B26_STR_REC 0x800A8500u     /* within tbl +/- 32 KiB */
+
 static void test_5D6F4_controlled_returns(void) {
     TEST("5D6F4_controlled_returns");
-    static const int seq[3] = {
-        (int)0x800C2100, (int)0x800C0DF0, (int)0x800C0DF0,
-    };
     int i;
     ResetTestState();
     /* Seeded string for copy #1 — OUTSIDE the bzero range. */
-    PE_StoreU8(0x800C2100u, 'P');
-    PE_StoreU8(0x800C2101u, 'E');
-    PE_StoreU8(0x800C2102u, 0xFFu);
-    Bootstrap_SetIntSequence("func_8005DC4C", seq, 3);
+    PE_StoreU8(B26_STR_REC + 0u, 'P');
+    PE_StoreU8(B26_STR_REC + 1u, 'E');
+    PE_StoreU8(B26_STR_REC + 2u, 0xFFu);
+    B26_SeedArchive(B26_STR_REC);
+    /* The lookup must resolve to exactly the seeded record. */
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_STR_REC,
+           "archive lookup must return the seeded record");
     ASSERT(func_8005D6F4() == 0xFF, "controlled run return");
-    /* Block-2 re-fill is the retail end state regardless of copy #1. */
-    for (i = 0; i < 8; i++)
+    /* Retail ROM order: fill #2 overwrites copy #1, and copy #2 then
+     * lands ON TOP of that fill.  So the end state is the copied record
+     * followed by the untouched remainder of the 0xFF fill — with the
+     * B25 degenerate lone-0xFF source this was indistinguishable from a
+     * pure fill; a real multi-byte record makes the copy observable. */
+    ASSERT(PE_LoadU8(B25_BUF_SEL + 0u) == (uint8_t)'P', "copy #2 byte 0");
+    ASSERT(PE_LoadU8(B25_BUF_SEL + 1u) == (uint8_t)'E', "copy #2 byte 1");
+    ASSERT(PE_LoadU8(B25_BUF_SEL + 2u) == 0xFFu, "copy #2 terminator");
+    for (i = 3; i < 8; i++)
         ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0xFFu,
-               "buffer end state wrong under controlled returns");
-    ASSERT(g_stub_order_count == 10, "controlled boundary count wrong");
+               "fill remainder past the copied record");
+    ASSERT(g_stub_order_count == 7, "controlled boundary count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "controlled boundary order wrong");
-    Bootstrap_ClearSequences();
     PASS();
 }
 
@@ -7029,11 +7175,302 @@ static void test_5D6F4_controlled_returns(void) {
 static void test_5D6F4_boundary_wiring(void) {
     TEST("5D6F4_boundary_wiring");
     ResetTestState();
+    B26_SeedArchiveDefault();
     func_8005D6F4();
-    ASSERT(g_stub_order_count == 10, "boundary count wrong");
-    ASSERT(strcmp(g_stub_order_log[0], "func_8005DC4C") == 0,
-           "first boundary callee must be func_8005DC4C");
+    ASSERT(g_stub_order_count == 7, "boundary count wrong");
+    ASSERT(strcmp(g_stub_order_log[0], "func_80052594") == 0,
+           "first boundary callee is now func_80052594 (B26)");
+    ASSERT(CountOrderLog("func_8005DC4C") == 0,
+           "func_8005DC4C must no longer reach the bootstrap boundary");
     ASSERT(B25_CheckBoundaryOrder(), "boundary order wrong");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B26 — func_8005DC4C: PE.IMG message/string-table lookup
+ * (20 retail words at 0x8005DC4C..0x8005DC9B, live split 4CC98.s).
+ * Pure read-only lookup:
+ *     ptr = mem32[0x800A802C] + 0x800A8028
+ *     tbl = ptr + mem32[ptr+4]
+ *     return (idx <u mem16[tbl]) ? tbl + sext16(mem16[tbl+2+2*idx]) : 0
+ * Expected values below are derived from the retail words and the seeded
+ * archive INPUTS, never read back out of a production run.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+/* Independent expectation for the seeded archive, computed from the
+ * fixture constants rather than from the implementation. */
+static pe_addr_t B26_ExpectRecord(uint32_t idx, int16_t entry) {
+    (void)idx;
+    return (pe_addr_t)(B26_ARCH_TBL + (uint32_t)(int32_t)entry);
+}
+
+/* True signature: exactly one consumed argument, and a full 32-bit
+ * guest address out — no truncation, no host pointer. */
+static void test_5DC4C_signature_and_return_width(void) {
+    TEST("5DC4C_signature_and_return_width");
+    pe_addr_t r;
+    ResetTestState();
+    B26_SeedArchive(B26_ARCH_REC);
+    r = func_8005DC4C(B26_ARCH_IDX);
+    ASSERT(r == B26_ARCH_REC, "return must be the exact record address");
+    /* Full width: the KSEG0 high bit survives (no 16/24-bit truncation,
+     * no sign-collapse through int). */
+    ASSERT((r & 0x80000000u) != 0u, "high bit truncated");
+    ASSERT(r >= PE_RAM_BASE && r < PE_RAM_END,
+           "return is a guest address, never a host pointer");
+    ASSERT(sizeof(func_8005DC4C(B26_ARCH_IDX)) == sizeof(pe_addr_t),
+           "return type must be pe_addr_t wide");
+    PASS();
+}
+
+/* Empty source state: the archive region is zero, so ptr = tbl = HDR and
+ * count = 0.  Retail's own failure value is 0 — NOT a sentinel. */
+static void test_5DC4C_empty_state(void) {
+    TEST("5DC4C_empty_state");
+    ResetTestState();
+    ASSERT(PE_LoadU32(B26_ARCH_R_ADDR) == 0u, "precondition: region zero");
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == 0u, "empty archive must return 0");
+    ASSERT(func_8005DC4C(0u) == 0u, "index 0 on an empty archive returns 0");
+    PASS();
+}
+
+/* Populated archive: exact returned guest address for every path. */
+static void test_5DC4C_populated_return(void) {
+    TEST("5DC4C_populated_return");
+    ResetTestState();
+    B26_SeedArchive(B26_ARCH_REC);
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_ARCH_REC, "record 30");
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) ==
+           B26_ExpectRecord(B26_ARCH_IDX, (int16_t)B26_ARCH_E30),
+           "return must equal tbl + sext16(entry)");
+    PASS();
+}
+
+/* Both return paths: in range -> tbl + offset; out of range -> 0.  The
+ * compare is UNSIGNED (sltu), so a huge index is simply out of range. */
+static void test_5DC4C_return_paths(void) {
+    TEST("5DC4C_return_paths");
+    ResetTestState();
+    B26_SeedArchive(B26_ARCH_REC);
+    ASSERT(func_8005DC4C(B26_ARCH_COUNT - 1u) != 0u, "last index in range");
+    ASSERT(func_8005DC4C(B26_ARCH_COUNT) == 0u, "idx == count out of range");
+    ASSERT(func_8005DC4C(B26_ARCH_COUNT + 1u) == 0u, "idx > count");
+    ASSERT(func_8005DC4C(0xFFFFu) == 0u, "0xFFFF out of range");
+    ASSERT(func_8005DC4C(0x80000000u) == 0u,
+           "0x80000000 must be UNSIGNED-compared out of range");
+    PASS();
+}
+
+/* First and last valid entries resolve through the same arithmetic. */
+static void test_5DC4C_first_and_last_entry(void) {
+    TEST("5DC4C_first_and_last_entry");
+    ResetTestState();
+    B26_SeedArchive(B26_ARCH_REC);
+    PE_StoreU16(B26_ARCH_TBL + 2u, (uint16_t)0x0100);              /* [0]   */
+    PE_StoreU16(B26_ARCH_TBL + 2u + 2u * (B26_ARCH_COUNT - 1u),
+                (uint16_t)0x0200);                                 /* [119] */
+    ASSERT(func_8005DC4C(0u) == B26_ARCH_TBL + 0x100u, "entry 0");
+    ASSERT(func_8005DC4C(B26_ARCH_COUNT - 1u) == B26_ARCH_TBL + 0x200u,
+           "entry 119");
+    PASS();
+}
+
+/* Entries are SIGNED 16-bit and the add wraps at exactly 32 bits. */
+static void test_5DC4C_signed_entry_offsets(void) {
+    TEST("5DC4C_signed_entry_offsets");
+    ResetTestState();
+    B26_SeedArchive(B26_ARCH_REC);
+    PE_StoreU16(B26_ARCH_E30_ADDR, (uint16_t)0xFFC0);   /* -64 */
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_ARCH_TBL - 64u,
+           "negative entry must move BELOW the table");
+    PE_StoreU16(B26_ARCH_E30_ADDR, (uint16_t)0x8000);   /* -32768 */
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) ==
+           (pe_addr_t)(B26_ARCH_TBL - 0x8000u), "s16 minimum");
+    PE_StoreU16(B26_ARCH_E30_ADDR, (uint16_t)0x7FFF);   /* +32767 */
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) ==
+           (pe_addr_t)(B26_ARCH_TBL + 0x7FFFu), "s16 maximum");
+    PASS();
+}
+
+/* Exact access widths: count is a 16-bit LHU, the entry a 16-bit signed
+ * LH, and the two header reads are 32-bit LW.  Each check is built so a
+ * wrong width produces a different answer. */
+static void test_5DC4C_access_widths(void) {
+    TEST("5DC4C_access_widths");
+    ResetTestState();
+    B26_SeedArchive(B26_ARCH_REC);
+    /* count: low halfword 20, high halfword 0xFFFF.  A 32-bit read would
+     * see 0xFFFF0014 and put index 30 IN range. */
+    PE_StoreU16(B26_ARCH_TBL, 20u);
+    PE_StoreU16(B26_ARCH_TBL + 2u, 0xFFFFu);
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == 0u,
+           "count must be read as a 16-bit halfword");
+    ASSERT(func_8005DC4C(19u) != 0u, "index 19 is in range for count 20");
+    /* entry: 16-bit signed at tbl+2+2*idx; the neighbouring halfword is
+     * poisoned, so a 32-bit read would give a different address. */
+    PE_StoreU16(B26_ARCH_TBL, (uint16_t)B26_ARCH_COUNT);
+    PE_StoreU16(B26_ARCH_E30_ADDR, (uint16_t)0x0040);
+    PE_StoreU16(B26_ARCH_E30_ADDR + 2u, 0xFFFFu);
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_ARCH_TBL + 0x40u,
+           "entry must be read as a 16-bit halfword");
+    /* header words are 32-bit: poisoning only the upper halfword of R
+     * must change the result. */
+    PE_StoreU32(B26_ARCH_R_ADDR, B26_ARCH_R);
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_ARCH_TBL + 0x40u,
+           "baseline before header poison");
+    PE_StoreU16(B26_ARCH_R_ADDR + 2u, 0x0001u);   /* R = 0x00010030 */
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) != B26_ARCH_TBL + 0x40u,
+           "R must be read as a full 32-bit word");
+    PASS();
+}
+
+/* Read order and exact read set: three reads on the failure path, four
+ * on the success path, and ZERO writes on both. */
+static void test_5DC4C_readonly_full_ram_canary(void) {
+    TEST("5DC4C_readonly_full_ram_canary");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    B26_SeedArchiveDefault();
+    (void)func_8005DC4C(B26_ARCH_IDX);       /* success path  */
+    (void)func_8005DC4C(B26_ARCH_COUNT);     /* failure path  */
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        uint32_t want = 0xA5A5A5A5u;
+        if (B26_ArchCanaryWord(a, &want)) { }
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
+                   a, PE_LoadU32(a), want);
+            FAIL("func_8005DC4C wrote to guest RAM");
+            return;
+        }
+    }
+    /* Guard bytes immediately around every read location are untouched. */
+    ASSERT(PE_LoadU8(B26_ARCH_TBL - 1u) == 0xA5u, "guard below the table");
+    ASSERT(PE_LoadU8(B26_ARCH_REC + 1u) == 0xA5u, "guard above the record");
+    ASSERT(PE_LoadU32(B26_ARCH_R_ADDR + 4u) == 0xA5A5A5A5u,
+           "guard word above the header");
+    PASS();
+}
+
+/* The returned record's contents are irrelevant to the lookup: an
+ * immediate 0xFF terminator is returned by address, never dereferenced. */
+static void test_5DC4C_immediate_terminator(void) {
+    TEST("5DC4C_immediate_terminator");
+    ResetTestState();
+    B26_SeedArchiveDefault();
+    ASSERT(PE_LoadU8(B26_ARCH_REC) == 0xFFu, "precondition: 0xFF record");
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_ARCH_REC,
+           "terminator record still returned by address");
+    /* Same address with a populated (non-terminator) record. */
+    PE_StoreU8(B26_ARCH_REC, 0x10u);
+    PE_StoreU8(B26_ARCH_REC + 1u, 0x48u);
+    PE_StoreU8(B26_ARCH_REC + 2u, 0xFFu);
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_ARCH_REC,
+           "populated record returns the same address");
+    PASS();
+}
+
+/* First and repeated invocation are identical; dirty guest state outside
+ * the archive changes nothing; PE_RamReset returns to the empty case. */
+static void test_5DC4C_repeated_dirty_and_ramreset(void) {
+    TEST("5DC4C_repeated_dirty_and_ramreset");
+    pe_addr_t a, first;
+    int i;
+    ResetTestState();
+    B26_SeedArchive(B26_ARCH_REC);
+    first = func_8005DC4C(B26_ARCH_IDX);
+    for (i = 0; i < 8; i++)
+        ASSERT(func_8005DC4C(B26_ARCH_IDX) == first,
+               "repeated calls must be stable, never advancing");
+    /* Dirty everything except the archive words. */
+    for (a = 0x80100000u; a < 0x80140000u; a += 4)
+        PE_StoreU32(a, 0xDEADBEEFu);
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == first, "dirty state changed it");
+    PE_RamReset();
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == 0u,
+           "PE_RamReset must restore the empty-archive contract");
+    PASS();
+}
+
+/* Storage audit: the archive is guest-RAM resident.  Everything the
+ * lookup consumes is reachable through checked guest accesses at the
+ * numerically resolved retail addresses — no host mirror, no host $gp. */
+static void test_5DC4C_no_split_brain_storage(void) {
+    TEST("5DC4C_no_split_brain_storage");
+    ResetTestState();
+    B26_SeedArchive(B26_ARCH_REC);
+    /* Retail $gp is 0x8009CD70, but this routine uses ABSOLUTE lui/addiu
+     * addressing, so its inputs must live at these exact addresses. */
+    ASSERT(PE_LoadU32(B26_ARCH_R_ADDR) == B26_ARCH_R, "R not guest-resident");
+    ASSERT(PE_LoadU32(B26_ARCH_S_ADDR) == B26_ARCH_S, "S not guest-resident");
+    ASSERT(PE_LoadU16(B26_ARCH_TBL) == B26_ARCH_COUNT,
+           "count not guest-resident");
+    /* Mutating guest RAM alone must change the answer — proof there is no
+     * shadow host copy backing the lookup. */
+    PE_StoreU16(B26_ARCH_TBL, 0u);
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == 0u,
+           "guest-RAM count is the only source of truth");
+    PE_StoreU16(B26_ARCH_TBL, (uint16_t)B26_ARCH_COUNT);
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_ARCH_REC, "restored");
+    /* The sign-extended addressing really is 0x800A80xx, not 0x800B80xx:
+     * writing the 0x800B8028 twin must NOT affect the result. */
+    PE_StoreU32(0x800B802Cu, 0x7FFFFFFFu);
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_ARCH_REC,
+           "0x800B802C must be irrelevant (sign-extended addressing)");
+    PASS();
+}
+
+/* Under --strict-stubs the translated body must run normally: no stub
+ * registration, no bootstrap provider invocation, no abort. */
+static void test_5DC4C_strict_not_stub(void) {
+    TEST("5DC4C_strict_not_stub");
+    ResetTestState();
+    B26_SeedArchive(B26_ARCH_REC);
+    g_strict_stubs = 1;
+    ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_ARCH_REC,
+           "strict-mode call must not abort");
+    ASSERT(g_stub_count == 0, "func_8005DC4C recorded as a stub under strict");
+    ASSERT(Bootstrap_InvocationCount() == 0,
+           "bootstrap provider invoked under strict");
+    g_strict_stubs = 0;
+    PASS();
+}
+
+/* func_8005D6F4 integration: all three retail call sites use index 30,
+ * they are served by the translated lookup (never the boundary), and the
+ * record the archive selects is what the copy loop transfers. */
+static void test_5DC4C_5D6F4_integration(void) {
+    TEST("5DC4C_5D6F4_integration");
+    int i;
+    ResetTestState();
+    /* Distinguishable 4-byte record, inside the s16 window and outside
+     * the func_8005D6F4 bzero range. */
+    PE_StoreU8(B26_STR_REC + 0u, 0xAAu);
+    PE_StoreU8(B26_STR_REC + 1u, 0xBBu);
+    PE_StoreU8(B26_STR_REC + 2u, 0xCCu);
+    PE_StoreU8(B26_STR_REC + 3u, 0xFFu);
+    B26_SeedArchive(B26_STR_REC);
+    ASSERT(func_8005DC4C(30u) == B26_STR_REC, "index 30 selects the record");
+    ASSERT(func_8005D6F4() == 0xFF, "integration run return");
+    /* Copy #2 lands on top of the block-2 fill (retail ROM order). */
+    ASSERT(PE_LoadU8(B25_BUF_SEL + 0u) == 0xAAu, "copied byte 0");
+    ASSERT(PE_LoadU8(B25_BUF_SEL + 1u) == 0xBBu, "copied byte 1");
+    ASSERT(PE_LoadU8(B25_BUF_SEL + 2u) == 0xCCu, "copied byte 2");
+    ASSERT(PE_LoadU8(B25_BUF_SEL + 3u) == 0xFFu, "copied terminator");
+    for (i = 4; i < 8; i++)
+        ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0xFFu,
+               "fill remainder");
+    /* Neither func_8005DC4C nor the dead func_8005DC9C arm reached the
+     * boundary; the seven remaining callees did, in retail ROM order. */
+    ASSERT(CountOrderLog("func_8005DC4C") == 0, "5DC4C on the boundary");
+    ASSERT(CountOrderLog("func_8005DC9C") == 0, "5DC9C arm is dead");
+    ASSERT(g_stub_order_count == 7, "boundary count wrong");
+    ASSERT(B25_CheckBoundaryOrder(), "boundary ROM order wrong");
+    /* The next unresolved dependency is func_80052594 — the actual new
+     * strict frontier proven by the CLI gate. */
+    ASSERT(strcmp(g_stub_order_log[0], "func_80052594") == 0,
+           "next unresolved dependency must be func_80052594");
     PASS();
 }
 
@@ -7498,6 +7935,21 @@ int main(void)
     test_5D6F4_ramreset();
     test_5D6F4_controlled_returns();
     test_5D6F4_boundary_wiring();
+
+    /* Phase 6E-B26: func_8005DC4C message/string-table lookup (12 tests) */
+    test_5DC4C_signature_and_return_width();
+    test_5DC4C_empty_state();
+    test_5DC4C_populated_return();
+    test_5DC4C_return_paths();
+    test_5DC4C_first_and_last_entry();
+    test_5DC4C_signed_entry_offsets();
+    test_5DC4C_access_widths();
+    test_5DC4C_readonly_full_ram_canary();
+    test_5DC4C_immediate_terminator();
+    test_5DC4C_repeated_dirty_and_ramreset();
+    test_5DC4C_no_split_brain_storage();
+    test_5DC4C_strict_not_stub();
+    test_5DC4C_5D6F4_integration();
 
     test_64964_direct_boot_state();
     test_80071A24_bzero_contract();

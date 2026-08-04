@@ -125,10 +125,12 @@
 #define GA_5D6F4_TERM_A4   0x800C20A4u   /* sb 0xFF record base A       */
 #define GA_5D6F4_TERM_B4   0x800C20B4u   /* sb 0xFF record base B       */
 
-/* Degenerate controlled-return source for the unresolved func_8005DC4C:
- * the destination buffer itself, whose first byte is the 0xFF terminator
- * the fill loop just stored.  The retail copy loop runs and transfers
- * only the terminator — no fabricated string content. */
+/* Phase 6E-B26: func_8005DC4C is now REAL (translated message/string-table
+ * lookup, game/boot/func_8005DC4C_port.c).  This degenerate controlled
+ * return survives ONLY for the statically dead func_8005DC9C arm, which
+ * stays on the centralized boundary: the destination buffer itself, whose
+ * first byte is the 0xFF terminator the fill loop just stored, so the
+ * retail copy loop runs and transfers no fabricated content. */
 #define PE_5D6F4_DEGEN_SRC GA_5D6F4_BUF_SEL
 
 /* Retail fill loop: sb 0xFF over [C0, C0+C4) with per-iteration guest
@@ -188,7 +190,10 @@ int func_8005D6F4(void)
 
     /* 5-6. Selection #1: C8 reads back 0 (stored above) → func_8005DC4C.
      * The v0 != 0 arm would call func_8005DC9C(lbu(v0+4)-1) — dead here,
-     * preserved structurally. */
+     * preserved structurally.  Retail @0x8005D78C: jal func_8005DC4C with
+     * `addiu $a0,$zero,30` in the delay slot; $a1 still holds the 0xFF
+     * fill constant, which the callee never reads, and the copy dest is
+     * set only afterwards by `addu $a1,$s0,$zero` @0x8005D794. */
     s0 = PE_LoadU32(GA_5D6F4_C0);
     if (PE_LoadU32(GA_5D6F4_C8) != 0u) {
         pe_addr_t rec = PE_LoadU32(GA_5D6F4_C8);
@@ -197,8 +202,7 @@ int func_8005D6F4(void)
         src = (pe_addr_t)Bootstrap_ReturnInt(
             "func_8005DC9C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
     } else {
-        src = (pe_addr_t)Bootstrap_ReturnInt(
-            "func_8005DC4C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
+        src = func_8005DC4C(30u);
     }
     copy_ff_string(src, s0);
 
@@ -222,16 +226,17 @@ int func_8005D6F4(void)
         src = (pe_addr_t)Bootstrap_ReturnInt(
             "func_8005DC9C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
     } else {
-        src = (pe_addr_t)Bootstrap_ReturnInt(
-            "func_8005DC4C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
+        src = func_8005DC4C(30u);           /* retail @0x8005D84C */
     }
     cursor = copy_ff_string(src, s0);
 
-    /* 10-11. Third func_8005DC4C (a1 = post-copy cursor), then
-     * func_80052594 on its return. */
-    src = (pe_addr_t)Bootstrap_ReturnInt(
-        "func_8005DC4C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
-    (void)cursor;                           /* retail $a1 argument */
+    /* 10-11. Third func_8005DC4C @0x8005D890 (same index 30; $a1 holds the
+     * post-copy cursor, which the callee never reads), then func_80052594
+     * on its return — retail passes it as $a0 via `addu $a0,$v0,$zero` in
+     * the jal delay slot @0x8005D89C. */
+    src = func_8005DC4C(30u);
+    (void)cursor;                           /* retail residual $a1 */
+    (void)src;                              /* retail $a0 to func_80052594 */
     r = Bootstrap_ReturnInt("func_80052594", "func_8005D6F4", 0);
     (void)r;
 

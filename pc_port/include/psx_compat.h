@@ -125,8 +125,13 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * selector (21 retail words; guest-resident D_8009D0C0/C4/C8).
  * func_8005D6F4 is REAL too (Phase 6E-B25):
  * game/boot/func_8005D6F4_port.c — resource-buffer + display-state
- * initializer (147 retail words; nine unresolved callees routed
- * through the centralized bootstrap boundary). */
+ * initializer (147 retail words; eight unresolved callees routed
+ * through the centralized bootstrap boundary after B26).
+ * func_8005DC4C is REAL too (Phase 6E-B26):
+ * game/boot/func_8005DC4C_port.c — PE.IMG message/string-table lookup
+ * (20 retail words; pure read-only lookup, returns the guest address of
+ * a 0xFF-terminated record or retail's own 0 for an out-of-range
+ * index). */
 
 /* ── REAL translated functions ────────────────────────────────────── */
 extern void func_800725DC(void);
@@ -143,6 +148,7 @@ extern void func_8005DE88(void);
 extern void func_80052C6C(void);
 extern int  func_8005BCBC(pe_addr_t a0);
 extern int  func_8005D6F4(void);
+extern pe_addr_t func_8005DC4C(uint32_t idx);
 extern pe_addr_t func_80071A24(pe_addr_t dst, uint32_t len);
 extern void func_8005E968(uint32_t);
 extern void func_8005F844(int);

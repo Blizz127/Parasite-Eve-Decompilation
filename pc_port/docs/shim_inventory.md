@@ -290,32 +290,73 @@ now reaches `func_8005D6F4` from `func_800527C8` (exit 1).
 Resource-buffer + display-state initializer: REAL bzero
 `0x800C0DE0..0x800C20C3` via func_80071A24; two 0xFF fills of
 `0x800C0DF0..0x800C0DF7` (retail reload-per-iteration loops); two
-0xFF-terminated string copies steered by func_8005DC4C returns;
+0xFF-terminated string copies whose sources come from the REAL
+func_8005DC4C (B26);
 `D_8009D0C8/C0/C4` + `D_8009D218` state stores (block-1 order C8, C0,
 C4; block-2 order flag, C4, C8, C0); `sh 0x0203 → 0x800C1F80`,
 `sw 0x00404040 → 0x800C0E44`; timer-tick clears `0x800A76A4/B0/BC/C8`;
 terminator bytes `0x800C20A4/B4`; returns 0xFF (sole call site
-func_800527C8 @0x8005283C, return discarded).  Nine unresolved callees
-route through the centralized bootstrap boundary in retail ROM order:
-func_8005DC4C (three call sites; a1 = 0xFF residual fill register — the
-copy dest is set only AFTER each call returns), func_8005DC9C (dead arm
-— C8 is always 0 at the selection), func_80052594, func_8005CCA4,
-func_800614AC, func_8005E884, func_8005E850, func_800649D0,
-func_80052790.  The consumed func_8005DC4C return defaults to the
-degenerate in-RAM source 0x800C0DF0 (the destination buffer, first byte
-= the just-written 0xFF terminator — no fabricated content).  Strict
-real-disc execution now reaches `func_8005DC4C` from `func_8005D6F4`
-(exit 1, three identical captures).
+func_800527C8 @0x8005283C, return discarded).  After B26, SEVEN
+unresolved callees route through the centralized bootstrap boundary in
+retail ROM order: func_80052594, func_8005CCA4, func_800614AC,
+func_8005E884, func_8005E850, func_800649D0, func_80052790 — plus the
+statically dead func_8005DC9C arm (C8 is always 0 at the selection).
+
+### Phase 6E-B26
+
+`func_8005DC4C` is translated retail logic: 20 words at executable
+`0x8005DC4C..0x8005DC9B` (exclusive end = func_8005DC9C), file offset
+`0x4E44C`, live split `4CC98.s:1779-1802`.  A read-only PE.IMG
+message/string-table lookup over a nested relative-offset archive based
+at the cycle-A streaming destination `0x800A8028`:
+
+```
+ptr = mem32[0x800A802C] + 0x800A8028
+tbl = ptr + mem32[ptr + 4]
+return (idx <u mem16[tbl]) ? tbl + sext16(mem16[tbl + 2 + 2*idx]) : 0
+```
+
+Both header addresses are sign-extended from `lui 0x800B` + a bit-15-set
+immediate, so they are `0x800A80xx`, NOT `0x800B80xx` (same finding as
+B23's func_8005DB44).  Record stride is **2** (`sll $v0,$a0,1`) and the
+entry is a **signed** 16-bit offset (`lh`), so records must lie within
+`tbl ± 32 KiB`.  Zero is retail's own out-of-range return
+(`addu $v0,$zero,$zero`), not an invented sentinel.
+
+Signature: ONE argument.  No instruction in the body reads `$a1`; the
+values retail leaves there at the call sites are residual (in
+func_8005D6F4 the 0xFF fill constant, and at 0x8004685C the jal delay
+slot is `sb $v0,0($s1)` — not argument setup at all).
+
+Three guest reads on the failure path, four on the success path, **zero
+guest writes**, no callees, no SDK/GTE/GPU/MDEC/SPU/disc/input activity,
+cannot block, deterministic from guest state alone, repeated calls
+stable.  39 call sites in 24 distinct callers exe-wide; observed constant
+indices 3..117, all below the measured count of 120; no call site
+compares the return to zero.
+
+Measured against the real Disc 1 USA image: `R = 0x30`, `S = 0x14`,
+`count = 120`, entries `242..1971` (records `0x800A815E..0x800A881F`);
+`min(entry) == 2 + 2*count` exactly.  Index 30 resolves to `0x800A82A9`
+(`10 48 30 FF`).  Independent oracle: `tools/b26_oracle.py`.
+
+The archive is guest-resident and arrives from PE.IMG via cycle A of
+func_8006A9E4 before the dispatcher runs.  With the region zeroed the
+lookup correctly returns 0 and func_8005D6F4's copy loop dereferences
+address 0 — surfaced by the checked-access layer, deliberately not
+masked with a KUSEG mirror, a clamp, or a bypass.  Strict real-disc
+execution now reaches `func_80052594` from `func_8005D6F4` (exit 1,
+three identical captures).
 
 ## Remaining bootstrap providers
 
-With `--disc-image`, strict mode stops at `func_8005DC4C` (first
+With `--disc-image`, strict mode stops at `func_80052594` (first
 unresolved callee INSIDE the translated `func_8005D6F4`, called from
 `func_800527C8` via `func_8006A9E4`) — past the fully translated
 func_8003E680, func_8006A9E4 streaming-load rung, func_800527C8
 dispatcher, func_80052C6C (B23), func_8005BCBC (B24), and the
 translated direct work of func_8005D6F4 (B25: bzero, fills, state
-stores committed before the boundary).  The `--bootstrap-disc` fixture
+stores) and the three translated func_8005DC4C lookups (B26).  The `--bootstrap-disc` fixture
 still stops at `func_8007F72C` (CdReady) by design: the fixture never
 initializes the drive lane.
 
@@ -324,11 +365,13 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 `func_80082314` (PVD verify), `DsSearchFile`, `func_80080C48`
 (CdPosToInt), `func_8006E6D4` (image read), `func_800811E4`
 (completion poll).  Remaining unresolved providers for boot-to-logo:
-- `func_8005DC4C` — first boundary callee inside the translated
-  func_8005D6F4 (current strict frontier, B25); three call sites with
-  a0 = 0x1E
-- `func_8005DC9C` — dead-arm callee of func_8005D6F4 (C8 always 0)
-- `func_80052594`, `func_8005CCA4`, `func_800614AC`, `func_8005E884`,
+- `func_8005DC9C` — dead-arm callee of func_8005D6F4 (C8 always 0);
+  the same lookup as func_8005DC4C but reading `ptr+8` instead of
+  `ptr+4`, i.e. a second table in the same sub-chunk
+- `func_80052594` — current strict frontier (B26), first unresolved
+  callee inside the translated func_8005D6F4; a0 = the third
+  func_8005DC4C lookup result
+- `func_8005CCA4`, `func_800614AC`, `func_8005E884`,
   `func_8005E850`, `func_800649D0`, `func_80052790` — remaining
   func_8005D6F4 callees in retail ROM order
 - `func_80051CC4`, `func_80042C78` — remaining unresolved dispatcher

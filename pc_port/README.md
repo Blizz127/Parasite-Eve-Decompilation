@@ -1,17 +1,49 @@
-# Parasite Eve Native PC Port — Phase 6E-B25
+# Parasite Eve Native PC Port — Phase 6E-B26
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B25 func_8005D6F4 rung — resource-buffer +
+**Current milestone:** B26 func_8005DC4C rung — PE.IMG message/string-table
+lookup (20 words at `0x8005DC4C..0x8005DC9B`, file `0x4E44C`, live split
+`4CC98.s:1779-1802`).  A pure read-only walk of a nested relative-offset
+archive whose base is the cycle-A streaming destination `0x800A8028`:
+
+```
+ptr = mem32[0x800A802C] + 0x800A8028      # both sign-extended from lui 0x800B
+tbl = ptr + mem32[ptr + 4]
+return (idx <u mem16[tbl]) ? tbl + sext16(mem16[tbl + 2 + 2*idx]) : 0
+```
+
+Records are addressed by a **signed 16-bit** offset relative to the table
+(stride 2, not 16), so the whole record pool must live within `tbl ± 32 KiB`.
+Zero is retail's own out-of-range return (`addu $v0,$zero,$zero`), not an
+invented sentinel.  The routine performs three guest reads on the failure
+path and four on the success path, **zero guest writes**, has no callees,
+cannot block, and is deterministic from guest state alone.  Its signature
+takes ONE argument: no instruction in the body reads `$a1`.
+
+Measured against the real Disc 1 USA image: `R = 0x30`, `S = 0x14`,
+`count = 120`, entry values `242..1971`, so records span
+`0x800A815E..0x800A881F`.  `min(entry) == 2 + 2*count` exactly — the record
+pool begins where the offset table ends, independently confirming the
+layout.  Index 30 (the index all three `func_8005D6F4` call sites use)
+resolves to `0x800A82A9`, whose bytes are `10 48 30 FF`.  Independent
+oracle: `tools/b26_oracle.py`.
+
+Exe-wide there are **39 call sites in 24 distinct callers**; observed
+constant indices run 3..117, all below the measured count of 120.  Every
+return consumer is a register move or one `sw $v0,484($gp)`; no call site
+anywhere dereferences `$v0` in place, and none compares it to zero.
+
+Previous milestone: B25 func_8005D6F4 rung — resource-buffer +
 display-state initializer (147 words at `0x8005D6F4..0x8005D93F`, file
 `0x4DEF4`, live split `4CC98.s`).  bzero(`0x800C0DE0`, `0x12E4`) via the
 real BIOS A(28h) trampoline, two `0xFF` buffer fills at `0x800C0DF0`
 with retail reload-per-iteration loops, two 0xFF-terminated string
-copies steered by the (boundary) func_8005DC4C returns, state stores
+copies whose sources now come from the REAL func_8005DC4C, state stores
 `D_8009D0C8/C0/C4` + `D_8009D218`, direct stores `sh 0x0203 →
 0x800C1F80`, `sw 0x00404040 → 0x800C0E44`, timer-tick clears
 `0x800A76A4/B0/BC/C8`, terminator bytes at `0x800C20A4/B4`; returns
-0xFF.  Nine unresolved callees route through the centralized bootstrap
+0xFF.  Seven unresolved callees route through the centralized bootstrap
 boundary in retail ROM order.  Independent oracle:
 `tools/b25_oracle.py`.
 
@@ -62,29 +94,38 @@ boundary in retail ROM order.  Strict mode with `--disc-image` stops at
 `func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
 `--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** B25 func_8005D6F4 RUNG — 285 native tests pass (and 285/285
-sanitized); strict real-disc frontier advanced to `func_8005DC4C` from
-`func_8005D6F4` (exit 1, three identical captures), bootstrap-disc still
-stops at `func_8007F72C` by design.  `func_8005D6F4` (147 retail words)
-is the resource-buffer + display-state initializer: bzero
-`0x800C0DE0..0x800C20C3`, two `0xFF` fills of `0x800C0DF0..0x800C0DF7`,
-two 0xFF-terminated string copies steered by func_8005DC4C returns,
-`D_8009D0C8/C0/C4` + `D_8009D218` state stores, `sh 0x0203 →
-0x800C1F80`, `sw 0x00404040 → 0x800C0E44`, timer-tick clears
-`0x800A76A4/B0/BC/C8`, terminator bytes `0x800C20A4/B4`; returns 0xFF.
-Its nine unresolved callees (func_8005DC4C ×3 call sites,
-func_8005DC9C dead arm, func_80052594, func_8005CCA4, func_800614AC,
-func_8005E884, func_8005E850, func_800649D0, func_80052790) route
-through the centralized boundary; the consumed func_8005DC4C return
-uses a documented degenerate in-RAM default (the destination buffer
-itself, whose first byte is the just-written 0xFF terminator — the copy
-loop executes and transfers no fabricated content).  Independent oracle:
-`tools/b25_oracle.py` (delay-slot-aware MIPS-I interpreter on the
-SHA-1-verified retail words; conditions sampled at issue; every
-read/write logged with width and order; controlled dependency returns
-asserted for a seeded 4-byte string).  Dispatcher oracle now reports 2
-unresolved callees in retail order: `func_80051CC4`, `func_80042C78`.
-Matching build exact at SHA `452fb033` (227 C leaves).
+**Status:** B26 func_8005DC4C RUNG — 298 native tests pass (and 298/298
+sanitized); the strict real-disc frontier advanced from `func_8005DC4C`
+to **`func_80052594` from `func_8005D6F4`** (exit 1, three identical
+captures), bootstrap-disc still stops at `func_8007F72C` by design.
+Note the frontier did NOT move to `func_80051CC4`: `func_8005D6F4` still
+carries seven boundary callees of its own, and `func_80052594` is the
+next one in retail ROM order.  `func_8005DC4C` is translated retail
+logic — a read-only PE.IMG message/string-table lookup; the three
+`func_8005D6F4` call sites all pass index 30 and consume the result as a
+0xFF-terminated string source.  Its six remaining sibling callees
+(`func_8005DC9C` dead arm, `func_80052594`, `func_8005CCA4`,
+`func_800614AC`, `func_8005E884`, `func_8005E850`, `func_800649D0`,
+`func_80052790`) still route through the centralized boundary.
+
+The B25 degenerate in-RAM default for the consumed `func_8005DC4C`
+return is retired: the value now comes from the real archive.  Because
+the archive is guest-resident and arrives from PE.IMG via cycle A of
+`func_8006A9E4` before the dispatcher runs, tests that invoke
+`func_8005D6F4` must establish that precondition (`B26_SeedArchive`) —
+with the region zeroed the lookup correctly returns 0 and the caller
+dereferences address 0, which the checked-access layer surfaces as a
+fatal error rather than masking.  No KUSEG mirror, no clamping, and no
+function-specific bypass was added.
+
+Independent oracle: `tools/b26_oracle.py` (delay-slot-aware MIPS-I
+interpreter on the SHA-1-verified retail words; seven interpreter
+self-tests; conditions sampled at issue; every read/write logged with
+width and order; 36 checks over empty, populated, terminator, failure,
+first/last, repeated, `$a1`-independence, signed/wraparound, dirty,
+reset and return-address boundary scenarios).  Dispatcher oracle still
+reports 2 unresolved callees in retail order: `func_80051CC4`,
+`func_80042C78`.  Matching build exact at SHA `452fb033` (227 C leaves).
 
 Previous status: FUNC_800527C8 RUNG VERIFIED — 251 native tests pass;
 ASan/UBSan clean (tests + headless + strict runs);
