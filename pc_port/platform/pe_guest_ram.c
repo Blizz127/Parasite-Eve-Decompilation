@@ -98,6 +98,14 @@ const void *PE_TranslateConst(pe_addr_t address, size_t size)
     return translate_impl(address, size, "PE_TranslateConst");
 }
 
+void PE_Fill(pe_addr_t address, uint32_t len, uint8_t value)
+{
+    /* Keep the guest length unsigned and validate the complete range before
+     * touching memory.  A zero-length fill follows PE_RangeIsRam policy. */
+    uint8_t *p = translate_impl(address, (size_t)len, "PE_Fill");
+    memset(p, value, (size_t)len);
+}
+
 /* ── Little-endian loads ────────────────────────────────────────────── */
 
 uint8_t PE_LoadU8(pe_addr_t address)

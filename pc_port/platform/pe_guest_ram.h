@@ -47,6 +47,10 @@ bool  PE_AddAddress(pe_addr_t base, uint32_t delta, pe_addr_t *result);
 void       *PE_Translate(pe_addr_t address, size_t size);
 const void *PE_TranslateConst(pe_addr_t address, size_t size);
 
+/* Checked bulk fill over guest RAM.  The range is validated before any
+ * host pointer is obtained; len is an exact unsigned 32-bit guest length. */
+void PE_Fill(pe_addr_t address, uint32_t len, uint8_t value);
+
 /* ── Little-endian guest loads / stores ─────────────────────────────── */
 
 uint8_t  PE_LoadU8 (pe_addr_t address);

@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 static int tests_run = 0;
 static int tests_passed = 0;
@@ -5904,8 +5906,9 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* 7. Dependency boundary (updated Phase 6E-B18): func_800528F0 is now
-     * REAL too — nine unresolved dispatcher callees appear in retail ROM
+    /* 7. Dependency boundary (updated Phase 6E-B21): func_800528F0,
+     * func_8005E588, func_80062568, and func_80064964 are REAL too — six
+     * unresolved dispatcher callees appear in retail ROM
      * order, then func_80087090. */
     ASSERT(g_stub_order_count == 7, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
@@ -6028,15 +6031,18 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             uint32_t exp = B19_DrawEnvExpectedWord(a);
             if (exp != 0xFFFFFFFFu) want = exp;
         }
-        /* Phase 6E-B21: func_80064964 flag bytes */
-        else if (a == 0x800A3078u) want = 0xA5A5A5FFu;
-        else if (a == 0x800A30A0u) want = 0xA5A5A5FFu;
-        else if (a == 0x800A30B0u) want = 0xA5A5A5FFu;
-        else if (a == 0x800A30B8u) want = 0xA5A5A5FFu;
-        else if (a == 0x800A30C0u) want = 0xA5A5A5FFu;
-        else if (a == 0x800A30C4u) want = 0xA5A5A5FFu;
-        else if (a == 0x800A3124u) want = 0xA5A5A5FFu;
-        else if (a == 0x800A3134u) want = 0xA5A5A5FFu;
+        /* Phase 6E-B21: func_80071A24 bzero range + 80064964 flags */
+        else if (a >= 0x800A3060u && a < 0x800A3180u) {
+            want = 0;
+            if (a == 0x800A3078u) want = 0x000000FFu;
+            else if (a == 0x800A30A0u) want = 0x000000FFu;
+            else if (a == 0x800A30B0u) want = 0x000000FFu;
+            else if (a == 0x800A30B8u) want = 0x000000FFu;
+            else if (a == 0x800A30C0u) want = 0x000000FFu;
+            else if (a == 0x800A30C4u) want = 0x000000FFu;
+            else if (a == 0x800A3124u) want = 0x000000FFu;
+            else if (a == 0x800A3134u) want = 0x000000FFu;
+        }
         /* Phase 6E-B20: func_80062568 free-list + gp stores */
         else if (a == 0x8009D158u) want = 0x800A22E0u;
         else if (a == 0x8009D15Cu) want = 0;
@@ -6468,16 +6474,117 @@ static void test_62568_ramreset_rerun(void) {
 
 static void test_64964_direct_boot_state(void) {
     TEST("64964_direct_boot_state");
+    uint32_t i;
     ResetTestState();
+    for (i = 0; i < 0x120; i++) PE_StoreU8(0x800A3060u + i, 0xA5u);
+    PE_StoreU32(0x800A305Cu, 0xCAFE0001u);
+    PE_StoreU32(0x800A3180u, 0xCAFE0002u);
     func_80064964();
-    ASSERT(PE_LoadU8(0x800A3078u) == 0xFF, "flag 3078");
-    ASSERT(PE_LoadU8(0x800A30A0u) == 0xFF, "flag 30A0");
-    ASSERT(PE_LoadU8(0x800A30B0u) == 0xFF, "flag 30B0");
-    ASSERT(PE_LoadU8(0x800A30B8u) == 0xFF, "flag 30B8");
-    ASSERT(PE_LoadU8(0x800A30C0u) == 0xFF, "flag 30C0");
-    ASSERT(PE_LoadU8(0x800A30C4u) == 0xFF, "flag 30C4");
-    ASSERT(PE_LoadU8(0x800A3124u) == 0xFF, "flag 3124");
-    ASSERT(PE_LoadU8(0x800A3134u) == 0xFF, "flag 3134");
+    for (i = 0; i < 0x120; i++) {
+        uint32_t a = 0x800A3060u + i;
+        uint8_t want = (a == 0x800A3078u || a == 0x800A30A0u ||
+                        a == 0x800A30B0u || a == 0x800A30B8u ||
+                        a == 0x800A30C0u || a == 0x800A30C4u ||
+                        a == 0x800A3124u || a == 0x800A3134u) ? 0xFFu : 0;
+        ASSERT(PE_LoadU8(a) == want, "64964 exact final byte state");
+    }
+    ASSERT(PE_LoadU32(0x800A305Cu) == 0xCAFE0001u, "64964 guard before");
+    ASSERT(PE_LoadU32(0x800A3180u) == 0xCAFE0002u, "64964 guard after");
+    PASS();
+}
+
+static void test_80071A24_bzero_contract(void) {
+    TEST("80071A24_bzero_contract");
+    uint32_t i;
+    ResetTestState();
+    for (i = 0; i < 0x120; i += 4)
+        PE_StoreU32(0x800A3060u + i, 0xDEAD0000u | i);
+    PE_StoreU32(0x800A305Cu, 0xCAFE0001u);  /* guard before */
+    PE_StoreU32(0x800A3180u, 0xCAFE0002u);  /* guard after */
+
+    func_80071A24(0x800A3060u, 0x120);
+
+    for (i = 0; i < 0x120; i += 4)
+        ASSERT(PE_LoadU32(0x800A3060u + i) == 0, "bzero: word not zero");
+    ASSERT(PE_LoadU32(0x800A305Cu) == 0xCAFE0001u, "guard before");
+    ASSERT(PE_LoadU32(0x800A3180u) == 0xCAFE0002u, "guard after");
+    ASSERT(func_80071A24(0x800A3060u, 0u) == 0x800A3060u,
+           "bzero return destination");
+    PASS();
+}
+
+static void test_80071A24_unaligned_zero_and_repeat(void) {
+    TEST("80071A24_unaligned_zero_and_repeat");
+    uint32_t i;
+    ResetTestState();
+    for (i = 0; i < 32; i++) PE_StoreU8(0x800A3050u + i, 0xA5u);
+    func_80071A24(0x800A3053u, 7u);
+    for (i = 0; i < 32; i++) {
+        uint8_t want = (i >= 3 && i < 10) ? 0 : 0xA5u;
+        ASSERT(PE_LoadU8(0x800A3050u + i) == want, "unaligned bzero");
+    }
+    func_80071A24(0x800A3053u, 7u);
+    func_80071A24(0x800A3053u, 0u);
+    ASSERT(PE_LoadU8(0x800A3052u) == 0xA5u, "zero-length touched before");
+    ASSERT(PE_LoadU8(0x800A305Au) == 0xA5u, "zero-length touched after");
+    PASS();
+}
+
+static void test_80071A24_full_ram_canary(void) {
+    TEST("80071A24_full_ram_canary");
+    uint32_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) PE_StoreU32(a, 0xA5A5A5A5u);
+    func_80071A24(0x800A3060u, 0x120u);
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+        uint8_t want = (a >= 0x800A3060u && a < 0x800A3180u) ? 0 : 0xA5u;
+        ASSERT(PE_LoadU8(a) == want, "bzero canary footprint");
+    }
+    PASS();
+}
+
+static void test_80071A24_rejects_bad_ranges(void) {
+    TEST("80071A24_rejects_bad_ranges");
+#if defined(__SANITIZE_ADDRESS__)
+    /* ASan/LSan cannot reliably reap aborting children under its tracer;
+     * validate the same checked policy without deliberately aborting. */
+    ASSERT(!PE_RangeIsRam(PE_RAM_END - 1u, 2u), "bad end range policy");
+    ASSERT(!PE_RangeIsRam(PE_RAM_END - 2u, 8u), "bad overflow range policy");
+    ASSERT(!PE_RangeIsRam(0xFFFFFFFFu, 1u), "bad wrapped range policy");
+#else
+    int cases = 0;
+    const pe_addr_t dsts[] = { PE_RAM_END - 1u, PE_RAM_END - 2u, 0xFFFFFFFFu };
+    const uint32_t lens[] = { 2u, 8u, 1u };
+    for (int i = 0; i < 3; i++) {
+        pid_t pid = fork();
+        ASSERT(pid >= 0, "fork failed");
+        if (pid == 0) { func_80071A24(dsts[i], lens[i]); _exit(0); }
+        int status = 0;
+        ASSERT(waitpid(pid, &status, 0) == pid, "waitpid failed");
+        ASSERT(!WIFEXITED(status) || WEXITSTATUS(status) != 0,
+               "bad range was accepted");
+        cases++;
+    }
+    ASSERT(cases == 3, "bad range cases incomplete");
+#endif
+    PASS();
+}
+
+static void test_64964_ramreset_repeat_and_guards(void) {
+    TEST("64964_ramreset_repeat_and_guards");
+    ResetTestState();
+    PE_StoreU32(0x800A305Cu, 0x11112222u);
+    PE_StoreU32(0x800A3180u, 0x33334444u);
+    func_80064964();
+    PE_RamReset();
+    for (uint32_t i = 0; i < 0x120; i++) PE_StoreU8(0x800A3060u + i, 0xA5u);
+    PE_StoreU32(0x800A305Cu, 0x55556666u);
+    PE_StoreU32(0x800A3180u, 0x77778888u);
+    func_80064964();
+    ASSERT(PE_LoadU32(0x800A305Cu) == 0x55556666u, "repeat guard before");
+    ASSERT(PE_LoadU32(0x800A3180u) == 0x77778888u, "repeat guard after");
+    ASSERT(PE_LoadU8(0x800A3060u) == 0 && PE_LoadU8(0x800A317Fu) == 0,
+           "repeat range endpoints");
     PASS();
 }
 
@@ -6827,6 +6934,11 @@ int main(void)
     test_62568_full_footprint();
     test_62568_ramreset_rerun();
     test_64964_direct_boot_state();
+    test_80071A24_bzero_contract();
+    test_80071A24_unaligned_zero_and_repeat();
+    test_80071A24_full_ram_canary();
+    test_80071A24_rejects_bad_ranges();
+    test_64964_ramreset_repeat_and_guards();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

@@ -1,5 +1,5 @@
 /*
- * Phase 6E-B21 — func_80064964: kernel-event region initialization.
+ * Phase 6E-B21 — func_80064964: bzero + flag initialization.
  *
  * Raw body: 27 words / 0x6C, exe 0x80064964–0x800649CF, file 0x55164,
  * live split asm/disc1/539C0.s:1743–1771; all 27 instruction words
@@ -9,10 +9,9 @@
  * return ignored).  Now the B20 strict frontier.
  *
  * Operation (ROM order):
- *   1. Call func_80071A24(0x800A3060, 0x120) — kernel-event trampoline.
+ *   1. Call func_80071A24(0x800A3060, 0x120) — BIOS A(28h) bzero trampoline.
  *      This is a 3-word Psy-Q kernel entry stub (addiu $t2,0xA0;
- *      jr $t2; addiu $t1,0x28) — unresolved; threaded through the
- *      centralized bootstrap boundary.
+ *      jr $t2; addiu $t1,0x28), adapted as a checked guest-memory fill.
  *   2. After the kernel call returns, set 8 byte flags to 0xFF (-1):
  *      D_800A3078, D_800A30A0, D_800A30B0, D_800A30B8,
  *      D_800A30C0, D_800A30C4, D_800A3124, D_800A3134.
@@ -23,13 +22,13 @@
  * for the subsequent sb operations (only the low byte matters).
  *
  * Classification: 1 — translated retail logic with one unresolved SDK
- * dependency (func_80071A24, kernel-event trampoline).
+ * dependency (func_80071A24, BIOS A(28h) bzero trampoline).
  */
 #include "psx_compat.h"
 
 void func_80064964(void)
 {
-    /* 1. BIOS SysEnqIntRP(0x800A3060, 0x120) — REAL (B21a). */
+    /* 1. BIOS A(28h) bzero — REAL (B21a). */
     func_80071A24(0x800A3060u, 0x120);
 
     /* 2. Set 8 flag bytes to 0xFF (retail: addiu $v0,$zero,-1 then sb). */

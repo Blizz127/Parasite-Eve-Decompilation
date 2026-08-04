@@ -26,7 +26,7 @@
  *                                the previous strict-mode frontier
  *   6. func_8005E588()           TRANSLATED (B19): display env setup
  *   7. func_80062568()           TRANSLATED (B20): free-list pool init
- *   8. func_80064964()           TRANSLATED (B21): kernel-event flags
+ *   8. func_80064964()           TRANSLATED (B21): A(28h) bzero + flags
  *   9. func_8005DE88()           UNRESOLVED
  *  10. func_80042B38()           TRANSLATED leaf (B17): D_800A1870/1874 = 0
  *  11. func_80051084()           TRANSLATED leaf (B17): D_8009D014 =

@@ -5,6 +5,25 @@ All stubs are explicitly classified. No anonymous empty stubs.
 
 ## Real translated functions (not stubs)
 
+### Phase 6E-B21 correction
+
+`func_80071A24` is the verified retail BIOS A(28h) trampoline, not
+SysEnqIntRP: raw words are `240A00A0 01400008 24090028` at executable
+`0x80071A24..0x80071A2F` (file offset `0x62224`).  A(28h) is
+`bzero(dst,len)`; the checked host adaptation uses `pe_addr_t` and clears
+exactly the requested guest byte range.  `func_80064964` calls it with
+`dst=0x800A3060`, `len=0x120`, then stores `0xFF` at
+`0x800A3078, 0x800A30A0, 0x800A30B0, 0x800A30B8, 0x800A30C0,
+0x800A30C4, 0x800A3124, 0x800A3134` in that order.  The return value is
+not consumed by this caller.  The general provider returns the incoming
+destination, as documented for the BIOS memset family; an executable-wide
+scan finds 11 call sites (including `0x8005D70C`, `0x80040238`,
+`0x80040BB8` where `$v0` is copied to `$s2`, `0x80040D30`, `0x80042204`,
+`0x80042548`, both `0x80064974/0x800649EC`, `0x80084598`, and
+`0x80084880`).  C(02h) SysEnqIntRP requires vector `0xC0` and is not this
+call.  Independent checks live in `tools/b21_bzero_oracle.py` and
+`tools/b21_order_oracle.py`.
+
 | Function | Size | Words | Port file |
 |----------|------|-------|-----------|
 | `func_8001220C` | - | 187 | `bootstrap/func_8001220C_port.c` |

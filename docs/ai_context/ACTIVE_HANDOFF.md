@@ -5,10 +5,23 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
+## Phase 6E-B21 corrective audit (in progress)
+
+The raw retail trampoline at executable `0x80071A24..0x80071A2F` (file
+offset `0x62224`) is exactly `240A00A0 01400008 24090028`: load `$t2=0xA0`,
+jump through `$t2`, and load `$t1/r9=0x28` in the delay slot.  Authoritative
+BIOS tables identify this as A(28h) `bzero(dst,len)`; C(02h)
+`SysEnqIntRP(priority,struc)` uses vector `0xC0`.  The corrected provider
+uses checked guest-memory `PE_Fill`, and `func_80064964` clears
+`0x800A3060..0x800A317F` before its eight ordered `sb 0xFF` stores.
+Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
+`pc_port/tools/b21_order_oracle.py`.  History remains intact: provisional
+`8e90ac7`, incorrect `14ac77b`, then one corrective commit only after gates.
+
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B17 — FUNC_800527C8 RUNG VERIFIED** | `pc_port/build/pe-native-tests` (251/251) |
+| Port phase | **6E-B21 — A(28h) bzero corrective audit** | `pc_port/build/pe-native-tests` (269/269) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -29,6 +42,17 @@ every meaningful change. Prefer shortening over accruing.
 is white and Expose events are not re-blitted; the port blits once after
 boot returns.  The guest framebuffer remains `fb28dc21…` (near-black).
 Do not report the white window as a retail frame.
+
+### B21 audit override
+
+The current verified strict frontier is `func_8005DE88` (caller
+`func_800527C8`), captured three times on the matching Disc 1 image with
+exit status 1.  The dispatcher oracle now reports six unresolved callees in
+order: `func_8005DE88`, `func_80052C6C`, `func_8005BCBC`, `func_8005D6F4`,
+`func_80051CC4`, `func_80042C78`.  Bootstrap-disc remains intentionally
+stopped at `func_8007F72C`.  The current native and sanitizer test count is
+269; LSAN leak detection requires `LSAN_OPTIONS=detect_leaks=0` in this
+ptrace-restricted environment.
 
 **Leaf-count reconciliation (227 vs 229).** This checkout's committed yaml at
 base `71114ac` has **227** C leaves (`grep -cE ',[[:space:]]*c,'
@@ -497,3 +521,5 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
 PC port remains out of scope. Redump.org cross-check still open (non-blocking).
+junction.  The provider returns the incoming destination per the BIOS
+memset-family convention; `func_80064964` does not consume it.

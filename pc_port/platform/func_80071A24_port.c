@@ -1,35 +1,32 @@
 /*
- * Phase 6E-B21a — func_80071A24: BIOS SysEnqIntRP trampoline.
+ * Phase 6E-B21a — func_80071A24: BIOS A(28h) bzero trampoline.
  *
  * Raw body: 3 words / 0xC, exe 0x80071A24–0x80071A2F, file 0x62224,
  * live split asm/disc1/5F3E4.s:3436–3440; all 3 instruction words
  * verified exact against the SHA-exact retail executable.
  *
  * BIOS operation:
- *   addiu $t2, $zero, 0xA0   → BIOS B0 table vector
- *   jr $t2                    → enter kernel
- *   addiu $t1, $zero, 0x28   → B0(0Ah) = SysEnqIntRP
+ *   addiu $t2, $zero, 0x00A0   → BIOS A-function table vector
+ *   jr $t2                      → enter kernel
+ *   addiu $t1, $zero, 0x0028   → A(28h) = bzero(dst, len)
  *
- * SysEnqIntRP(addr, size) — System Enqueue Interrupt Request Packet.
- * Registers a guest-memory event-packet buffer with the PS1 kernel.
- * Returns 0 on success; writes nothing to guest RAM (kernel-side only).
+ * bzero(dst, len): zeroes len bytes starting at guest address dst and
+ * returns the incoming destination (the A(2Bh) memset-family convention).
  *
- * Host adaptation:
- *   No PS1 kernel is available.  The call returns 0 (success) with no
- *   guest-memory effects.  The eight flag bytes at offsets within the
- *   packet region are set afterward by func_80064964.
+ * B21 call site: func_80064964 @0x80064974 ($a0=0x800A3060,
+ * $a1=0x120, addiu delay slot).  Clears the 288-byte region at
+ * POOL_END before func_80064964 sets eight flag bytes to 0xFF.  The
+ * executable-wide scan has additional calls in unrelated later paths.
  *
- * Sole call site: func_80064964 @0x80064974 ($a0=0x800A3060,
- * $a1=0x120, addiu delay slot).
- *
- * Classification: 2 — known Psy-Q/BIOS behavior (host-adapted as
- * deterministic success return).
+ * Classification: 2 — known BIOS memory operation requiring a
+ * checked guest-memory adaptation.
  */
 #include "psx_compat.h"
 
-int func_80071A24(pe_addr_t addr, int size)
+pe_addr_t func_80071A24(pe_addr_t dst, uint32_t len)
 {
-    (void)addr;
-    (void)size;
-    return 0;   /* SysEnqIntRP returns 0 on success */
+    PE_Fill(dst, len, 0);
+    /* A(28h) is the BIOS memset-family routine: return the incoming dst.
+     * func_80064964 ignores this value, but other retail call sites do not. */
+    return dst;
 }
