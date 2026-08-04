@@ -2,12 +2,12 @@
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** func_80064964 rung — BIOS A(28h) bzero plus flags;
-the corrected provider clears the checked guest range
-`0x800A3060..0x800A317F` (0x120 bytes) before eight ordered byte stores.
-The raw trampoline is 3 words at `0x80071A24`: `addiu $t2,$zero,0xA0`,
-`jr $t2`, delay-slot `addiu $t1,$zero,0x28`.  BIOS A(28h) is bzero;
-SysEnqIntRP is C(02h) through vector `0xC0` and is unrelated.
+**Current milestone:** B22 func_8005DE88 rung — resource-list & state
+initializer (23 words at `0x8005DE88..0x8005DEE3`, file `0x4E688`, live
+split `4CC98.s`).  It links the 20 twelve-byte records beginning at
+`D_800A2090`, null-terminates `D_800A2174`, and initializes the six
+`$gp`-relative state words `D_8009D0DC..D_8009D0F0` exactly.  No callees;
+returns void.  Independent oracle: `tools/b22_5de88_oracle.py`.
 
 Previous milestone: func_8006A9E4 rung — PE.IMG streaming resource
 load, translated as retail logic with two unresolved callees routed
@@ -41,10 +41,15 @@ boundary in retail ROM order.  Strict mode with `--disc-image` stops at
 `func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
 `--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** B22 func_8005DE88 RUNG — 271 native tests pass after
-the dedicated A(28h)/func_80064964 tests; the corrective commit preserves
-8e90ac7 and 14ac77b. Independent oracles are
-`tools/b21_bzero_oracle.py` and `tools/b21_order_oracle.py`.
+**Status:** B22 func_8005DE88 RUNG — 271 native tests pass (and 271/271
+sanitized); strict real-disc frontier advanced to `func_80052C6C` from
+`func_800527C8` (exit 1), bootstrap-disc still stops at `func_8007F72C`
+by design.  Independent oracle: `tools/b22_5de88_oracle.py` (delay-slot
+MIPS interpreter on the SHA-1-verified retail words; 27 writes, order
+exact).  Dispatcher oracle now reports 5 unresolved callees in retail
+order: `func_80052C6C`, `func_8005BCBC`, `func_8005D6F4`,
+`func_80051CC4`, `func_80042C78`.  Matching build exact at SHA
+`452fb033` (227 C leaves).
 
 Previous status: FUNC_800527C8 RUNG VERIFIED — 251 native tests pass;
 ASan/UBSan clean (tests + headless + strict runs);
@@ -479,9 +484,10 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1 at func_8005DE88 from func_800527C8 — the first
-# unresolved provider past the fully translated func_8003E680 AND the
-# translated func_8006A9E4 streaming-load rung: the
+# Expected: exit 1 at func_80052C6C from func_800527C8 — the first
+# unresolved provider past the fully translated func_8003E680, the
+# translated func_8006A9E4 streaming-load rung, and the fully
+# translated func_800527C8 dispatcher: the
 # translated RNG (70D10/70D6C/70DD0), the subsystem-init pair
 # (func_8003E974 + func_8003EAC8), the timer-record init
 # (func_80036DC8 + leaves), the real func_80073D24 callback
@@ -522,15 +528,15 @@ eight ordered `0xFF` bytes.  Independent contracts are
 `tools/b21_bzero_oracle.py` and `tools/b21_order_oracle.py`.
 
 The corrective history preserves provisional `8e90ac7` and incorrect
-`14ac77b`; this audit's strict real-disc frontier is `func_8005DE88` from
+`14ac77b`; the B22 strict real-disc frontier is `func_80052C6C` from
 `func_800527C8` (three identical captures), while bootstrap-disc remains at
-`func_8007F72C` by design.  Native tests: 269/269.
+`func_8007F72C` by design.  Native tests: 271/271.
 
 ## Testing
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 251 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 271 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung

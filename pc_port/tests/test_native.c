@@ -6515,7 +6515,6 @@ static void test_5DE88_direct_links_and_state(void) {
     for (a = 0x800A2090u; a < 0x800A2174u; a += 0xCu)
         ASSERT(PE_LoadU32(a) == a + 0xCu, "5DE88 link chain");
     ASSERT(PE_LoadU32(0x800A2174u) == 0, "5DE88 null terminator");
-    ASSERT(PE_LoadU32(0x800A2174u) == 0, "5DE88 state clear");
     ASSERT(PE_LoadU32(0x8009D0DCu) == 0x800A2090u, "5DE88 head");
     ASSERT(PE_LoadU32(0x8009D0E0u) == 0, "5DE88 gp 370");
     ASSERT(PE_LoadU32(0x8009D0E4u) == 0, "5DE88 gp 374");

@@ -228,10 +228,10 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
   Multi-subsystem bootstrap dispatcher: 17 calls (16 distinct callees).
   7 translated leaves (func_8005B890, func_8005BC98, func_8004F808,
   func_80042B38, func_80051084, func_800371A4) + 3 direct sw clears;
-  10 unresolved callees in retail ROM order routed through the
-  centralized boundary:
-  func_800528F0, func_8005E588, func_80062568, func_80064964,
-  func_8005DE88, func_80052C6C, func_8005BCBC, func_8005D6F4,
+  5 translated (func_800528F0, func_8005E588, func_80062568,
+  func_80064964, func_8005DE88) + 5 unresolved callees in retail ROM
+  order routed through the centralized boundary:
+  func_80052C6C, func_8005BCBC, func_8005D6F4,
   func_80051CC4, func_80042C78.
   Sole call site func_8006A9E4 @0x8006AAD0 ($s1-guarded one-shot in
   the cycle-B poll loop); void(void), return unconsumed.
@@ -283,9 +283,8 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 (CdPosToInt), `func_8006E6D4` (image read), `func_800811E4`
 (completion poll).  Remaining unresolved providers for boot-to-logo:
 - `func_80052C6C` — first unresolved dispatcher callee (current strict frontier)
-- `func_8005E588`, `func_80062568`, `func_80064964`, `func_8005DE88`,
-  `func_80052C6C`, `func_8005BCBC`, `func_8005D6F4`, `func_80051CC4`,
-  `func_80042C78` — remaining 9 unresolved dispatcher callees
+- `func_8005BCBC`, `func_8005D6F4`, `func_80051CC4`,
+  `func_80042C78` — remaining 4 additional unresolved dispatcher callees
 - `func_80087090` — SPU upload retry wrapper
 - `func_800749D8` — display environment setup (currently memset stub)
 - `func_800752AC` (ClearOTagR) — ordering table clear
