@@ -9,13 +9,15 @@ words with a tiny MIPS interpreter (delay slots honored) that tracks every
 jal target in execution order without executing the callees (they return
 immediately via the link register sentinel).
 
-The six unresolved callees are reported as the canonical dispatch sequence
+The unresolved callees are reported as the canonical dispatch sequence
 that the C port must observe through the centralized bootstrap boundary.
+As of B23, func_80052C6C is translated, leaving four unresolved dispatcher
+callees (func_8005BCBC, func_8005D6F4, func_80051CC4, func_80042C78).
 
 Usage:
   dispatcher_oracle.py /path/to/disc1.candidate.exe
 
-Output: one line per jal, then the six-entry unresolved dispatch sequence.
+Output: one line per jal, then the four-entry unresolved dispatch sequence.
 """
 
 import hashlib
@@ -48,8 +50,8 @@ _EXPECTED_LE_HEX = [
 EXPECTED_WORDS = [struct.unpack("<I", bytes.fromhex(h))[0]
                   for h in _EXPECTED_LE_HEX]
 
-# Known translated callee addresses through B22.  func_800371A4 is REAL
-# (Phase 6E-B7); B18/B19/B20/B21/B22 rungs are also translated.
+# Known translated callee addresses through B23.  func_800371A4 is REAL
+# (Phase 6E-B7); B18/B19/B20/B21/B22/B23 rungs are also translated.
 TRANSLATED_CALLEES = {
     0x8005B890,   # func_8005B890  (B17 leaf)
     0x8005BC98,   # func_8005BC98  (B17 leaf, called twice)
@@ -61,6 +63,7 @@ TRANSLATED_CALLEES = {
     0x8005DE88,   # func_8005DE88  (B22 resource-list/state initializer)
     0x80042B38,   # func_80042B38  (B17 leaf)
     0x80051084,   # func_80051084  (B17 leaf)
+    0x80052C6C,   # func_80052C6C  (B23 resource-table search + init, with coupled callees)
     0x800371A4,   # func_800371A4  (B7, REAL)
 }
 
@@ -262,21 +265,21 @@ def main():
 
     print()
     print(f"Unresolved callee count: {len(unresolved)}")
-    assert len(unresolved) == 5, \
-        f"expected 5 unresolved callees, got {len(unresolved)}"
+    assert len(unresolved) == 4, \
+        f"expected 4 unresolved callees, got {len(unresolved)}"
 
     expected_unresolved = [
-        0x80052C6C, 0x8005BCBC, 0x8005D6F4, 0x80051CC4, 0x80042C78,
+        0x8005BCBC, 0x8005D6F4, 0x80051CC4, 0x80042C78,
     ]
     for i, (got, want) in enumerate(zip(unresolved, expected_unresolved)):
         assert got == want, \
             f"dispatch seq[{i}]: got {addr_name(got)}, want {addr_name(want)}"
 
-    print("Dispatch sequence (5 unresolved, retail order):")
+    print("Dispatch sequence (4 unresolved, retail order):")
     for i, addr in enumerate(unresolved):
         print(f"  [{i}] {addr_name(addr)}")
     print()
-    print("DISPATCHER ORACLE: PASS (17 total, 5 unresolved, order exact)")
+    print("DISPATCHER ORACLE: PASS (17 total, 4 unresolved, order exact)")
 
 
 if __name__ == "__main__":

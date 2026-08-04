@@ -237,8 +237,8 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
   the cycle-B poll loop); void(void), return unconsumed.
   `game/boot/func_800527C8_port.c`, leaf implementations in
   `game/boot/func_800{5B890,5BC98,4F808,42B38,51084}_port.c`.
-- `func_80052C6C`  ← current strict-mode frontier (first unresolved
-  callee inside the translated func_800527C8 dispatcher)
+- `func_80052C6C`  ← TRANSLATED (B23: resource-table search + init); the
+  strict-mode frontier now sits at `func_8005BCBC`
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
@@ -269,22 +269,23 @@ reaches `func_80052C6C` from `func_800527C8` (exit 1).
 
 ## Remaining bootstrap providers
 
-With `--disc-image`, strict mode stops at `func_80052C6C` (first
+With `--disc-image`, strict mode stops at `func_8005BCBC` (first
 unresolved callee INSIDE the translated `func_800527C8` dispatcher, from
 `func_8006A9E4`) — past the fully translated func_8003E680, func_8006A9E4
-streaming-load rung, AND func_800527C8 dispatcher (7 translated leaves +
-3 direct sw clears committed before the first unresolved callee).  The
-`--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by
-design: the fixture never initializes the drive lane.
+streaming-load rung, func_800527C8 dispatcher (7 translated leaves +
+3 direct sw clears committed before the first unresolved callee), and the
+now-translated func_80052C6C (B23).  The `--bootstrap-disc` fixture still
+stops at `func_8007F72C` (CdReady) by design: the fixture never initializes
+the drive lane.
 
 Disc-path providers are REAL since Phase 6E-A (host disc model over the
 read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 `func_80082314` (PVD verify), `DsSearchFile`, `func_80080C48`
 (CdPosToInt), `func_8006E6D4` (image read), `func_800811E4`
 (completion poll).  Remaining unresolved providers for boot-to-logo:
-- `func_80052C6C` — first unresolved dispatcher callee (current strict frontier)
-- `func_8005BCBC`, `func_8005D6F4`, `func_80051CC4`,
-  `func_80042C78` — remaining 4 additional unresolved dispatcher callees
+- `func_8005BCBC` — first unresolved dispatcher callee (current strict frontier, B23)
+- `func_8005D6F4`, `func_80051CC4`, `func_80042C78` — remaining 3 additional
+  unresolved dispatcher callees
 - `func_80087090` — SPU upload retry wrapper
 - `func_800749D8` — display environment setup (currently memset stub)
 - `func_800752AC` (ClearOTagR) — ordering table clear

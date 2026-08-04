@@ -31,7 +31,7 @@
  *  10. func_80042B38()           TRANSLATED leaf (B17): D_800A1870/1874 = 0
  *  11. func_80051084()           TRANSLATED leaf (B17): D_8009D014 =
  *                                0x800A1AA0 (guest address, not host ptr)
- *  12. func_80052C6C()           UNRESOLVED
+ *  12. func_80052C6C()           TRANSLATED (B23): resource-table search + init
  *  13. func_8005BCBC(0)          UNRESOLVED (a0=0 in the delay slot)
  *  14. func_8005D6F4()           UNRESOLVED
  *  15. func_80051CC4()           UNRESOLVED
@@ -81,7 +81,7 @@ void func_800527C8(void)
     func_8005DE88();
     func_80042B38();
     func_80051084();
-    Bootstrap_ReturnVoid("func_80052C6C", "func_800527C8");
+    func_80052C6C();
     Bootstrap_ReturnVoid("func_8005BCBC", "func_800527C8"); /* a0=0 */
     Bootstrap_ReturnVoid("func_8005D6F4", "func_800527C8");
     Bootstrap_ReturnVoid("func_80051CC4", "func_800527C8");

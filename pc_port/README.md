@@ -41,14 +41,14 @@ boundary in retail ROM order.  Strict mode with `--disc-image` stops at
 `func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
 `--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** B22 func_8005DE88 RUNG — 271 native tests pass (and 271/271
-sanitized); strict real-disc frontier advanced to `func_80052C6C` from
+**Status:** B23 func_80052C6C RUNG — 271 native tests pass (and 271/271
+sanitized); strict real-disc frontier advanced to `func_8005BCBC` from
 `func_800527C8` (exit 1), bootstrap-disc still stops at `func_8007F72C`
-by design.  Independent oracle: `tools/b22_5de88_oracle.py` (delay-slot
-MIPS interpreter on the SHA-1-verified retail words; 27 writes, order
-exact).  Dispatcher oracle now reports 5 unresolved callees in retail
-order: `func_80052C6C`, `func_8005BCBC`, `func_8005D6F4`,
-`func_80051CC4`, `func_80042C78`.  Matching build exact at SHA
+by design.  Independent oracle: `tools/b23_oracle.py` (delay-slot MIPS
+interpreter on the SHA-1-verified retail words; asserts the full
+func_80052C6C footprint in retail ROM order).  Dispatcher oracle now
+reports 4 unresolved callees in retail order: `func_8005BCBC`,
+`func_8005D6F4`, `func_80051CC4`, `func_80042C78`.  Matching build exact at SHA
 `452fb033` (227 C leaves).
 
 Previous status: FUNC_800527C8 RUNG VERIFIED — 251 native tests pass;
@@ -528,9 +528,9 @@ eight ordered `0xFF` bytes.  Independent contracts are
 `tools/b21_bzero_oracle.py` and `tools/b21_order_oracle.py`.
 
 The corrective history preserves provisional `8e90ac7` and incorrect
-`14ac77b`; the B22 strict real-disc frontier is `func_80052C6C` from
-`func_800527C8` (three identical captures), while bootstrap-disc remains at
-`func_8007F72C` by design.  Native tests: 271/271.
+`14ac77b`; the B22 strict real-disc frontier was `func_80052C6C` from
+`func_800527C8` (three identical captures), now advanced to `func_8005BCBC`
+(B23), while bootstrap-disc remains at `func_8007F72C` by design.  Native tests: 271/271.
 
 ## Testing
 
