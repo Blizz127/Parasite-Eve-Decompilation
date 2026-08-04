@@ -29,8 +29,8 @@
 
 void func_80064964(void)
 {
-    /* 1. Kernel-event trampoline — unresolved. */
-    Bootstrap_ReturnVoid("func_80071A24", "func_80064964");
+    /* 1. BIOS SysEnqIntRP(0x800A3060, 0x120) — REAL (B21a). */
+    func_80071A24(0x800A3060u, 0x120);
 
     /* 2. Set 8 flag bytes to 0xFF (retail: addiu $v0,$zero,-1 then sb). */
     PE_StoreU8(0x800A3078u, 0xFFu);

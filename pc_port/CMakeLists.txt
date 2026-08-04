@@ -25,6 +25,7 @@ set(PLATFORM_SRCS
     platform/pe_disc.c
     platform/pe_save.c
     platform/pe_stream.c
+    platform/func_80071A24_port.c
     platform/pe_guest_image.c
 )
 
@@ -137,6 +138,7 @@ if(BUILD_TESTS)
         platform/pe_disc.c
         platform/pe_save.c
         platform/pe_stream.c
+    platform/func_80071A24_port.c
         platform/pe_guest_image.c
         bootstrap/stub_registry.c
         bootstrap/pe_bootstrap.c

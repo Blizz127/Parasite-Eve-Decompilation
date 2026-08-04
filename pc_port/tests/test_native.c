@@ -5907,12 +5907,12 @@ static void test_6A9E4_full_run_patterned(void) {
     /* 7. Dependency boundary (updated Phase 6E-B18): func_800528F0 is now
      * REAL too — nine unresolved dispatcher callees appear in retail ROM
      * order, then func_80087090. */
-    ASSERT(g_stub_order_count == 8, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(1),
+    ASSERT(g_stub_order_count == 7, "unexpected bootstrap invocations");
+    ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[7], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[6], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 8, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 7, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -6058,10 +6058,10 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
-    ASSERT(g_stub_order_count == 8, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(1),
+    ASSERT(g_stub_order_count == 7, "unexpected bootstrap invocations");
+    ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[7], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[6], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6097,7 +6097,6 @@ static void test_6A9E4_ramreset_rerun(void) {
     ASSERT(PE_LoadU32(0x800B0E1Cu) == e1c_1, "rerun D_800B0E1C differs");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
-    ASSERT(CountOrderLog("func_80071A24") == 2, "frontier count after rerun");
     ASSERT(CountOrderLog("func_80087090") == 2, "stub count after rerun");
     PASS();
 }
@@ -6123,10 +6122,10 @@ static void test_6A9E4_3E680_integration(void) {
 
     /* B18: func_800528F0 is now also translated; 9 unresolved dispatcher
      * callees occupy the order log before func_80087090. */
-    ASSERT(g_stub_order_count == 8, "unexpected provider count");
-    ASSERT(B21_CheckDispatcherOrder(1),
+    ASSERT(g_stub_order_count == 7, "unexpected provider count");
+    ASSERT(B21_CheckDispatcherOrder(0),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[7], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[6], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
