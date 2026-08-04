@@ -193,12 +193,16 @@ class Machine:
                 if take:
                     pc = ((ins_addr + 4 + (simm << 2)) - FUNC_ADDR) // 4
                     continue
+                pc += 2                          # slot already executed
+                continue
             elif op == 0x05:                     # bne
                 take = regs[rs] != regs[rt]
                 do_delay()
                 if take:
                     pc = ((ins_addr + 4 + (simm << 2)) - FUNC_ADDR) // 4
                     continue
+                pc += 2                          # slot already executed
+                continue
             elif op == 0x09:
                 regs[rt] = u32(regs[rs] + simm)
             elif op == 0x0F:

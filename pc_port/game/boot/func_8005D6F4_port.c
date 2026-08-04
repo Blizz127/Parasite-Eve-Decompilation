@@ -1,0 +1,267 @@
+/*
+ * Phase 6E-B25 — func_8005D6F4: resource-buffer + display-state initializer.
+ *
+ * Raw body: 147 words / 0x24C, executable 0x8005D6F4..0x8005D93F, file
+ * offset 0x4DEF4, live split asm/disc1/4CC98.s:1340-1502 (yaml segment
+ * [0x4CC98, asm]).  All 147 words verified exact against the SHA-exact
+ * retail executable (SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b).
+ *
+ * ROM-order operation map (retail $gp = 0x8009CD70):
+ *   prologue  addiu $sp,-0x18; save $s0/$ra
+ *   1. jal func_80071A24(0x800C0DE0, 0x12E4)   REAL BIOS A(28h) bzero,
+ *      a1 = 0x12E4 in the delay slot: zeroes 0x800C0DE0..0x800C20C3.
+ *   2. a0 = 0x800C0DF0 (base + 0x10); sw 1 → 0x4A8($gp) (D_8009D218).
+ *   3. Block-1 state stores (order C8, C0, C4):
+ *        sw 0  → 0x358($gp) (D_8009D0C8)
+ *        sw a0 → 0x350($gp) (D_8009D0C0) = 0x800C0DF0
+ *        sw 8  → 0x354($gp) (D_8009D0C4)
+ *      preceded by the retail sltu guard (a0 < base+0x18), a tautology
+ *      for these constants — preserved structurally.
+ *   4. Fill loop #1: sb 0xFF over [D_8009D0C0, D_8009D0C0+D_8009D0C4)
+ *      = 8 bytes at 0x800C0DF0..0x800C0DF7; retail RELOADS C0/C4 from
+ *      guest RAM every iteration (reproduced via PE_LoadU32).
+ *   5. v0 = lw D_8009D0C8 (always 0 here — stored in step 3);
+ *      s0 = lw D_8009D0C0.  beqz v0 taken:
+ *        jal func_8005DC4C(a0=0x1E delay slot, a1=0xFF residual fill
+ *        register)                               UNRESOLVED (boundary)
+ *      Retail sets $a1 = s0 (the copy destination) only AFTER the call
+ *      returns (addu $a1,$s0 at 0x8005D794 — not a delay slot).
+ *      The not-taken arm (v0 != 0) would pass lbu(v0+4)-1 to
+ *      func_8005DC9C — statically dead inside this function (C8 was
+ *      just stored 0 and only the fill loop runs in between), preserved
+ *      structurally.
+ *   6. String copy #1: from the func_8005DC4C return (source) into
+ *      D_8009D0C0 (dest) byte-by-byte until the copied byte == 0xFF;
+ *      the dest cursor advances once per copied byte INCLUDING the
+ *      terminator (retail delay-slot increments).
+ *   7. Block 2: a0 = 0x800C0DF0 again; state store order differs from
+ *      block 1: sw 1 → D_8009D218, sw 8 → D_8009D0C4, then sltu guard,
+ *      sw 0 → D_8009D0C8, sw a0 → D_8009D0C0.  Fill loop #2 (8 bytes,
+ *      reload-per-iteration).  NOTE: this re-fills the bytes string
+ *      copy #1 just wrote — exact retail behavior, reproduced.
+ *   8. Second selection: lw C8 (0) / lw C0; beqz taken:
+ *        jal func_8005DC4C(a0=0x1E, a1=0xFF)    UNRESOLVED (2nd call)
+ *   9. String copy #2 (same mechanics as #6).
+ *  10. jal func_8005DC4C(0x1E, dest-after-copy-2)   UNRESOLVED (3rd);
+ *      here $a1 genuinely carries the post-copy dest cursor (one past
+ *      the terminator) — no instruction touches $a1 between copy #2
+ *      and this call.
+ *  11. jal func_80052594(ret-of-10)                UNRESOLVED
+ *  12. jal func_8005CCA4()                         UNRESOLVED
+ *  13. sh 0x0203 → 0x800C1F80   (direct halfword store)
+ *      sw 0x00404040 → 0x800C0E44   (direct word store)
+ *  14. jal func_800614AC(0x00404040)               UNRESOLVED
+ *      (a0 built as lui 0x40 / ori 0x4040 in the delay slot)
+ *  15. sw 0 → D_800A76A4, D_800A76B0, D_800A76BC, D_800A76C8
+ *      (the +4 tick fields of the three B5 timer records at
+ *      0x800A76A0/AC/B8 plus the word past them)
+ *  16. jal func_8005E884() → r                     UNRESOLVED
+ *      (retail returns lbu 0x800B0DB1 — unwritten BSS at this point)
+ *  17. jal func_8005E850(0, 8 - r)                 UNRESOLVED
+ *      (a1 = 8 - r formed in the delay slot)
+ *  18. jal func_800649D0(0)                        UNRESOLVED
+ *  19. jal func_80052790(1)                        UNRESOLVED
+ *  20. v0 = 0xFF; sb 0xFF → 0x800C20A4; sb 0xFF → 0x800C20B4
+ *      (terminator bytes at the two record-buffer bases that
+ *      func_8005BCBC selects when a0 != 0)
+ *   epilogue  restore $ra/$s0; jr $ra; returns 0xFF (unconsumed by the
+ *   sole call site).
+ *
+ * Signature: int func_8005D6F4(void).  Sole executable call site (scan
+ * for jal word 0x0C0175BD): func_800527C8 @0x8005283C, nop delay slot
+ * (a0 carries the residual 0 from func_8005BCBC's delay-slot setup —
+ * the body never reads $a0); unconditional; one-shot per dispatcher
+ * invocation; return discarded.
+ *
+ * Dependency boundary (Phase 6E-B25): func_80071A24 is REAL (B21
+ * BIOS A(28h) bzero).  The nine remaining callees are UNRESOLVED and
+ * route through the centralized bootstrap boundary in retail ROM order:
+ * func_8005DC4C (three call sites), func_8005DC9C (dead arm),
+ * func_80052594, func_8005CCA4, func_800614AC, func_8005E884,
+ * func_8005E850, func_800649D0, func_80052790.  None of them is
+ * implemented in this rung; strict mode stops at the first one invoked
+ * (func_8005DC4C on the boot path).
+ *
+ * Controlled dependency returns: the func_8005DC4C return is CONSUMED
+ * (string-copy source).  The compiled-in boundary default is the
+ * degenerate in-RAM source 0x800C0DF0 — the destination buffer itself,
+ * whose first byte is the 0xFF terminator written by the fill loop one
+ * step earlier.  Under the default the retail copy loop executes and
+ * transfers only the terminator (no fabricated content); tests script
+ * real sources via Bootstrap_SetIntSequence.  An out-of-RAM default
+ * would trip the checked PE_LoadU8 and destroy the deterministic
+ * non-strict boot.  func_8005E884's default 0 models the retail guest
+ * state (lbu 0x800B0DB1 reads unwritten BSS during boot).
+ *
+ * State: D_8009D218/D_8009D0C0/C4/C8 are guest-RAM resident (B24
+ * storage audit; shared with func_8005BCBC and the func_8005BD10/BE1C
+ * readers).  The bzero range, the two fill ranges, 0x800C1F80,
+ * 0x800C0E44, 0x800C20A4/B4 and D_800A76A4..C8 are direct guest stores.
+ * Idempotence: NOT idempotent as a whole — the func_8005DC4C boundary
+ * calls pop scripted sequences in ROM order, so repeated invocations
+ * consume sequence entries; with all defaults the body is
+ * state-reproducible (every store unconditionally overwrites).
+ * PE_RamReset restores initial conditions.
+ *
+ * Classification: 1 — translated retail logic with unresolved callees
+ * on the centralized boundary.
+ */
+#include "psx_compat.h"
+#include "pe_sdk.h"
+#include "pe_bootstrap.h"
+
+#define GA_5D6F4_BUF_BASE  0x800C0DE0u   /* bzero dest / buffer base    */
+#define GA_5D6F4_BUF_SEL   0x800C0DF0u   /* base + 0x10 selected buffer */
+#define GA_5D6F4_FLAG      0x8009D218u   /* $gp+0x4A8 (func_8005BC98)   */
+#define GA_5D6F4_C8        0x8009D0C8u   /* $gp+0x358                   */
+#define GA_5D6F4_C0        0x8009D0C0u   /* $gp+0x350                   */
+#define GA_5D6F4_C4        0x8009D0C4u   /* $gp+0x354                   */
+#define GA_5D6F4_HW203     0x800C1F80u   /* sh 0x0203 target            */
+#define GA_5D6F4_W404040   0x800C0E44u   /* sw 0x00404040 target        */
+#define GA_5D6F4_REC_A4    0x800A76A4u
+#define GA_5D6F4_REC_B0    0x800A76B0u
+#define GA_5D6F4_REC_BC    0x800A76BCu
+#define GA_5D6F4_REC_C8    0x800A76C8u
+#define GA_5D6F4_TERM_A4   0x800C20A4u   /* sb 0xFF record base A       */
+#define GA_5D6F4_TERM_B4   0x800C20B4u   /* sb 0xFF record base B       */
+
+/* Degenerate controlled-return source for the unresolved func_8005DC4C:
+ * the destination buffer itself, whose first byte is the 0xFF terminator
+ * the fill loop just stored.  The retail copy loop runs and transfers
+ * only the terminator — no fabricated string content. */
+#define PE_5D6F4_DEGEN_SRC GA_5D6F4_BUF_SEL
+
+/* Retail fill loop: sb 0xFF over [C0, C0+C4) with per-iteration guest
+ * reloads of C0/C4 (retail load-after-store). */
+static void fill_ff(pe_addr_t start)
+{
+    pe_addr_t p = start;
+    for (;;) {
+        PE_StoreU8(p, 0xFFu);
+        {
+            pe_addr_t base = PE_LoadU32(GA_5D6F4_C0);
+            pe_addr_t len  = PE_LoadU32(GA_5D6F4_C4);
+            p += 1u;
+            if (!(p < base + len))
+                break;
+        }
+    }
+}
+
+/* Retail string copy: bytes flow source → dest until the copied byte is
+ * 0xFF; the dest cursor advances once per copied byte including the
+ * terminator (both retail delay-slot increments).  Returns the final
+ * dest cursor (one past the terminator). */
+static pe_addr_t copy_ff_string(pe_addr_t src, pe_addr_t dst)
+{
+    uint8_t b = PE_LoadU8(src);
+    src += 1u;
+    PE_StoreU8(dst, b);
+    dst += 1u;
+    while (b != 0xFFu) {
+        b = PE_LoadU8(src);
+        src += 1u;
+        PE_StoreU8(dst, b);
+        dst += 1u;
+    }
+    return dst;
+}
+
+int func_8005D6F4(void)
+{
+    pe_addr_t a0, s0, cursor;
+    pe_addr_t src;
+    int r;
+
+    /* 1. bzero(0x800C0DE0, 0x12E4) — REAL BIOS A(28h) trampoline. */
+    func_80071A24(GA_5D6F4_BUF_BASE, 0x12E4u);
+
+    /* 2-3. Block 1: flag + state stores (retail order C8, C0, C4). */
+    a0 = GA_5D6F4_BUF_SEL;
+    PE_StoreU32(GA_5D6F4_FLAG, 1u);
+    if (a0 < GA_5D6F4_BUF_BASE + 0x18u) {   /* retail sltu guard (tautology) */
+        PE_StoreU32(GA_5D6F4_C8, 0u);
+        PE_StoreU32(GA_5D6F4_C0, a0);
+        PE_StoreU32(GA_5D6F4_C4, 8u);
+        fill_ff(a0);
+    }
+
+    /* 5-6. Selection #1: C8 reads back 0 (stored above) → func_8005DC4C.
+     * The v0 != 0 arm would call func_8005DC9C(lbu(v0+4)-1) — dead here,
+     * preserved structurally. */
+    s0 = PE_LoadU32(GA_5D6F4_C0);
+    if (PE_LoadU32(GA_5D6F4_C8) != 0u) {
+        pe_addr_t rec = PE_LoadU32(GA_5D6F4_C8);
+        unsigned int idx = (unsigned int)PE_LoadU8(rec + 4u) - 1u;
+        (void)idx;                          /* retail $a0 argument, dead arm */
+        src = (pe_addr_t)Bootstrap_ReturnInt(
+            "func_8005DC9C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
+    } else {
+        src = (pe_addr_t)Bootstrap_ReturnInt(
+            "func_8005DC4C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
+    }
+    copy_ff_string(src, s0);
+
+    /* 7. Block 2: re-select 0x800C0DF0; retail store order flag, C4,
+     * C8, C0 (differs from block 1); re-fill overwrites copy #1. */
+    a0 = GA_5D6F4_BUF_SEL;
+    PE_StoreU32(GA_5D6F4_FLAG, 1u);
+    PE_StoreU32(GA_5D6F4_C4, 8u);
+    if (a0 < a0 + 8u) {                     /* retail sltu guard (tautology) */
+        PE_StoreU32(GA_5D6F4_C8, 0u);
+        PE_StoreU32(GA_5D6F4_C0, a0);
+        fill_ff(a0);
+    }
+
+    /* 8-9. Selection #2 + string copy #2. */
+    s0 = PE_LoadU32(GA_5D6F4_C0);
+    if (PE_LoadU32(GA_5D6F4_C8) != 0u) {
+        pe_addr_t rec = PE_LoadU32(GA_5D6F4_C8);
+        unsigned int idx = (unsigned int)PE_LoadU8(rec + 4u) - 1u;
+        (void)idx;                          /* retail $a0 argument, dead arm */
+        src = (pe_addr_t)Bootstrap_ReturnInt(
+            "func_8005DC9C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
+    } else {
+        src = (pe_addr_t)Bootstrap_ReturnInt(
+            "func_8005DC4C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
+    }
+    cursor = copy_ff_string(src, s0);
+
+    /* 10-11. Third func_8005DC4C (a1 = post-copy cursor), then
+     * func_80052594 on its return. */
+    src = (pe_addr_t)Bootstrap_ReturnInt(
+        "func_8005DC4C", "func_8005D6F4", PE_5D6F4_DEGEN_SRC);
+    (void)cursor;                           /* retail $a1 argument */
+    r = Bootstrap_ReturnInt("func_80052594", "func_8005D6F4", 0);
+    (void)r;
+
+    /* 12. func_8005CCA4() */
+    Bootstrap_ReturnVoid("func_8005CCA4", "func_8005D6F4");
+
+    /* 13. Direct stores: halfword 0x0203, word 0x00404040. */
+    PE_StoreU16(GA_5D6F4_HW203, 0x0203u);
+    PE_StoreU32(GA_5D6F4_W404040, 0x00404040u);
+
+    /* 14. func_800614AC(0x00404040) */
+    Bootstrap_ReturnVoid("func_800614AC", "func_8005D6F4");
+
+    /* 15. Timer-record tick fields + trailing word. */
+    PE_StoreU32(GA_5D6F4_REC_A4, 0u);
+    PE_StoreU32(GA_5D6F4_REC_B0, 0u);
+    PE_StoreU32(GA_5D6F4_REC_BC, 0u);
+    PE_StoreU32(GA_5D6F4_REC_C8, 0u);
+
+    /* 16-19. func_8005E884 → r; func_8005E850(0, 8-r); func_800649D0(0);
+     * func_80052790(1). */
+    r = Bootstrap_ReturnInt("func_8005E884", "func_8005D6F4", 0);
+    Bootstrap_ReturnVoid("func_8005E850", "func_8005D6F4");
+    (void)(8 - r);                          /* retail $a1 argument */
+    Bootstrap_ReturnVoid("func_800649D0", "func_8005D6F4");
+    Bootstrap_ReturnVoid("func_80052790", "func_8005D6F4");
+
+    /* 20. Terminator bytes at the two record-buffer bases. */
+    PE_StoreU8(GA_5D6F4_TERM_A4, 0xFFu);
+    PE_StoreU8(GA_5D6F4_TERM_B4, 0xFFu);
+
+    return 0xFF;
+}

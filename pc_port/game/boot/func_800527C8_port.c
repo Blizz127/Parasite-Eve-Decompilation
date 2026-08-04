@@ -37,7 +37,12 @@
  *                                delay slot; D_8009D218 = 1 at entry →
  *                                D_8009D0C0 = 0x800C0DF0, D_8009D0C4 = 8,
  *                                D_8009D0C8 = 0; return 8 unconsumed)
- *  14. func_8005D6F4()           UNRESOLVED
+ *  14. func_8005D6F4()           TRANSLATED (B25): resource-buffer +
+ *                                display-state initializer (147 words;
+ *                                bzero 0x800C0DE0 len 0x12E4, buffer
+ *                                fills/terminators, nine unresolved
+ *                                callees on the centralized boundary —
+ *                                strict stops INSIDE it at func_8005DC4C)
  *  15. func_80051CC4()           UNRESOLVED
  *  16. func_80042C78()           UNRESOLVED
  *  17. func_8005BC98(a0=1)       TRANSLATED leaf: D_8009D218 = 1 again
@@ -87,7 +92,7 @@ void func_800527C8(void)
     func_80051084();
     func_80052C6C();
     func_8005BCBC(0u);               /* a0=0 in the jal delay slot */
-    Bootstrap_ReturnVoid("func_8005D6F4", "func_800527C8");
+    func_8005D6F4();
     Bootstrap_ReturnVoid("func_80051CC4", "func_800527C8");
     Bootstrap_ReturnVoid("func_80042C78", "func_800527C8");
     func_8005BC98(1);                /* a0 ignored by the retail leaf */

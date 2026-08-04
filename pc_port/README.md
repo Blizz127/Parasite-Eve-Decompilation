@@ -1,8 +1,21 @@
-# Parasite Eve Native PC Port — Phase 6E-B24
+# Parasite Eve Native PC Port — Phase 6E-B25
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B24 func_8005BCBC rung — resource-state
+**Current milestone:** B25 func_8005D6F4 rung — resource-buffer +
+display-state initializer (147 words at `0x8005D6F4..0x8005D93F`, file
+`0x4DEF4`, live split `4CC98.s`).  bzero(`0x800C0DE0`, `0x12E4`) via the
+real BIOS A(28h) trampoline, two `0xFF` buffer fills at `0x800C0DF0`
+with retail reload-per-iteration loops, two 0xFF-terminated string
+copies steered by the (boundary) func_8005DC4C returns, state stores
+`D_8009D0C8/C0/C4` + `D_8009D218`, direct stores `sh 0x0203 →
+0x800C1F80`, `sw 0x00404040 → 0x800C0E44`, timer-tick clears
+`0x800A76A4/B0/BC/C8`, terminator bytes at `0x800C20A4/B4`; returns
+0xFF.  Nine unresolved callees route through the centralized bootstrap
+boundary in retail ROM order.  Independent oracle:
+`tools/b25_oracle.py`.
+
+Previous milestone: B24 func_8005BCBC rung — resource-state
 pointer/count selector (21 words at `0x8005BCBC..0x8005BD0F`, file
 `0x4C4BC`, live split `4C4BC.s`).  Stores the incoming record pointer
 into `D_8009D0C8`, selects a guest buffer base into `D_8009D0C0`
@@ -49,24 +62,29 @@ boundary in retail ROM order.  Strict mode with `--disc-image` stops at
 `func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
 `--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** B24 func_8005BCBC RUNG — 279 native tests pass (and 279/279
-sanitized); strict real-disc frontier advanced to `func_8005D6F4` from
-`func_800527C8` (exit 1), bootstrap-disc still stops at `func_8007F72C`
-by design.  `func_8005BCBC` (21 retail words at `0x8005BCBC..0x8005BD0F`,
-file `0x4C4BC`, live split `4C4BC.s`) is the resource-state
-pointer/count selector: it stores the incoming record pointer into
-`D_8009D0C8` ($gp+0x358), selects one of four guest buffer bases into
-`D_8009D0C0` ($gp+0x350) — a0 != 0 → 0x800C20A4 (+0x10 iff byte6(a0)
-== 9); a0 == 0 → 0x800C0DE0 (+0x10 iff D_8009D218 != 0) — and stores
-count 8 into `D_8009D0C4` ($gp+0x354); returns 8 on every path (both
-call sites discard it).  Independent oracle: `tools/b24_oracle.py`
-(delay-slot MIPS interpreter on the SHA-1-verified retail words; asserts
-every read/write in retail ROM order for all four selection paths).
-Previous rung oracle: `tools/b23_oracle.py` (corrected seed-dependent
-contract — only rec0 receives the 999 halfword under the failing seed).
-Dispatcher oracle now reports 3 unresolved callees in retail order:
-`func_8005D6F4`, `func_80051CC4`, `func_80042C78`.  Matching build exact
-at SHA `452fb033` (227 C leaves).
+**Status:** B25 func_8005D6F4 RUNG — 285 native tests pass (and 285/285
+sanitized); strict real-disc frontier advanced to `func_8005DC4C` from
+`func_8005D6F4` (exit 1, three identical captures), bootstrap-disc still
+stops at `func_8007F72C` by design.  `func_8005D6F4` (147 retail words)
+is the resource-buffer + display-state initializer: bzero
+`0x800C0DE0..0x800C20C3`, two `0xFF` fills of `0x800C0DF0..0x800C0DF7`,
+two 0xFF-terminated string copies steered by func_8005DC4C returns,
+`D_8009D0C8/C0/C4` + `D_8009D218` state stores, `sh 0x0203 →
+0x800C1F80`, `sw 0x00404040 → 0x800C0E44`, timer-tick clears
+`0x800A76A4/B0/BC/C8`, terminator bytes `0x800C20A4/B4`; returns 0xFF.
+Its nine unresolved callees (func_8005DC4C ×3 call sites,
+func_8005DC9C dead arm, func_80052594, func_8005CCA4, func_800614AC,
+func_8005E884, func_8005E850, func_800649D0, func_80052790) route
+through the centralized boundary; the consumed func_8005DC4C return
+uses a documented degenerate in-RAM default (the destination buffer
+itself, whose first byte is the just-written 0xFF terminator — the copy
+loop executes and transfers no fabricated content).  Independent oracle:
+`tools/b25_oracle.py` (delay-slot-aware MIPS-I interpreter on the
+SHA-1-verified retail words; conditions sampled at issue; every
+read/write logged with width and order; controlled dependency returns
+asserted for a seeded 4-byte string).  Dispatcher oracle now reports 2
+unresolved callees in retail order: `func_80051CC4`, `func_80042C78`.
+Matching build exact at SHA `452fb033` (227 C leaves).
 
 Previous status: FUNC_800527C8 RUNG VERIFIED — 251 native tests pass;
 ASan/UBSan clean (tests + headless + strict runs);
@@ -473,7 +491,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (279 tests, all pass)
+- `pe-native-tests` — test suite (285 tests, all pass)
 
 ## Running
 
@@ -501,11 +519,12 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1 at func_8005D6F4 from func_800527C8 — the first
+# Expected: exit 1 at func_8005DC4C from func_8005D6F4 — the first
 # unresolved provider past the fully translated func_8003E680, the
 # translated func_8006A9E4 streaming-load rung, the fully translated
-# func_800527C8 dispatcher, the translated func_80052C6C (B23) and the
-# translated func_8005BCBC (B24): the translated RNG
+# func_800527C8 dispatcher, the translated func_80052C6C (B23),
+# func_8005BCBC (B24), and the translated func_8005D6F4 (B25): the
+# translated RNG
 # (70D10/70D6C/70DD0), the subsystem-init pair
 # (func_8003E974 + func_8003EAC8), the timer-record init
 # (func_80036DC8 + leaves), the real func_80073D24 callback
@@ -548,14 +567,15 @@ eight ordered `0xFF` bytes.  Independent contracts are
 The corrective history preserves provisional `8e90ac7` and incorrect
 `14ac77b`; the B22 strict real-disc frontier was `func_80052C6C` from
 `func_800527C8` (three identical captures), advanced to `func_8005BCBC`
-(B23) and now to `func_8005D6F4` (B24), while bootstrap-disc remains at
-`func_8007F72C` by design.  Native tests: 279/279.
+(B23), to `func_8005D6F4` (B24), and now to `func_8005DC4C` from
+`func_8005D6F4` (B25), while bootstrap-disc remains at `func_8007F72C`
+by design.  Native tests: 285/285.
 
 ## Testing
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 279 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 285 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
@@ -612,7 +632,16 @@ cd pc_port/build
                     #   D_8009D0C0/C4/C8 guest stores, widths/guards,
                     #   dirty/repeat/RamReset, strict-mode advance,
                     #   2 MiB canary footprint, 527C8 integration;
-                    #   frontier advance to func_8005D6F4)
+                    #   frontier advance to func_8005D6F4
+                    # + 6E-B25: func_8005D6F4 rung — return 0xFF, bzero
+                    #   range + just-past guards, buffer fills with
+                    #   reload-per-iteration loops, boundary ROM order
+                    #   (10 providers, three func_8005DC4C first),
+                    #   controlled dependency returns, widths/guards,
+                    #   dirty/repeat/RamReset, full 2 MiB canary,
+                    #   527C8 integration incl. 52C6C→5D6F4 ROM-order
+                    #   proof at 0x800C1F80; frontier advance to
+                    #   func_8005DC4C from func_8005D6F4)
 ```
 
 ## Deterministic framebuffer
@@ -656,15 +685,57 @@ readers/writers span func_8005BD10, func_8005BE1C, and the
 func_8005D6F4 region.  Independent oracle: `tools/b24_oracle.py`
 (delay-slot-aware MIPS-I interpreter over the verified retail words;
 condition sampled at branch issue; asserts the full ROM-order
-read/write footprint and return for all four selection paths).  The
-strict real-disc frontier is now `func_8005D6F4` from `func_800527C8`
-(three identical captures), exit status 1; native tests are 279/279.
+read/write footprint and return for all four selection paths).  At the
+end of B24 the strict real-disc frontier was `func_8005D6F4` from
+`func_800527C8` (three identical captures), exit status 1; native tests
+were 279/279.
+
+## Phase 6E-B25 rung
+
+`func_8005D6F4` is translated retail logic — a resource-buffer +
+display-state initializer: 147 words at executable
+`0x8005D6F4..0x8005D93F` (file offset `0x4DEF4`, live split
+`4CC98.s`), every word verified against the SHA-1-exact executable.
+ROM order: `func_80071A24(0x800C0DE0, 0x12E4)` (REAL BIOS A(28h)
+bzero); flag + `D_8009D0C8/C0/C4` block-1 stores (order C8, C0, C4);
+fill loop #1 writing 0xFF×8 at `0x800C0DF0` with per-iteration guest
+reloads of C0/C4; selection #1 reads C8 (always 0 — stored just above,
+so the func_8005DC9C arm is statically dead) and calls
+func_8005DC4C(0x1E, a1=0xFF residual fill register — retail sets the
+copy dest only AFTER the call returns); string copy #1 from the
+func_8005DC4C return into D_8009D0C0 until the copied byte == 0xFF;
+block 2 re-selects 0x800C0DF0 with store order flag, C4, C8, C0 and
+re-fills the buffer (retail overwrites copy #1's bytes — reproduced);
+selection #2 + string copy #2; third func_8005DC4C call with the
+post-copy-#2 cursor in a1; func_80052594 on its return;
+func_8005CCA4; `sh 0x0203 → 0x800C1F80`; `sw 0x00404040 → 0x800C0E44`;
+func_800614AC(0x00404040); timer-tick clears 0x800A76A4/B0/BC/C8;
+func_8005E884 → r; func_8005E850(0, 8−r); func_800649D0(0);
+func_80052790(1); terminator bytes 0xFF at 0x800C20A4/0x800C20B4;
+returns 0xFF (sole call site func_800527C8 @0x8005283C, nop delay
+slot, return discarded).  func_80071A24 is REAL; the nine remaining
+callees are UNRESOLVED and route through the centralized boundary
+(func_8005DC4C three call sites, func_8005DC9C dead arm,
+func_80052594, func_8005CCA4, func_800614AC, func_8005E884,
+func_8005E850, func_800649D0, func_80052790).  The consumed
+func_8005DC4C return uses the documented degenerate in-RAM default
+0x800C0DF0 (the destination buffer itself — first byte is the
+just-written 0xFF terminator, so the copy loop executes and transfers
+no fabricated content); tests script real returns via
+`Bootstrap_SetIntSequence`.  Independent oracle: `tools/b25_oracle.py`
+(delay-slot-aware MIPS-I interpreter; branch conditions sampled at
+issue; shared register file; every read/write logged with width and
+order; bzero modeled by the proven A(28h) contract; controlled
+dependency returns asserted for both the degenerate boot path and a
+seeded 4-byte string).  The strict real-disc frontier is now
+`func_8005DC4C` from `func_8005D6F4` (three identical captures), exit
+status 1; native tests are 285/285.
 
 ## Next steps
 
-1. **Phase 6E-B continued:** `func_8005D6F4` rung (next strict-mode
-   frontier, from the translated `func_800527C8` dispatcher), then
-   `func_80051CC4` and `func_80042C78`, then the `func_80087090`
+1. **Phase 6E-B continued:** `func_80051CC4` rung (next strict-mode
+   frontier after the func_8005DC4C boundary inside the translated
+   `func_8005D6F4`), then `func_80042C78`, then the `func_80087090`
    SPU-upload boundary in `func_8006A9E4`; classify each by raw MIPS
    before any implementation
 2. Identify the first boot asset (likely MDEC logo data)
