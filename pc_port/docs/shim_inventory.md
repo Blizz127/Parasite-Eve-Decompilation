@@ -348,7 +348,7 @@ masked with a KUSEG mirror, a clamp, or a bypass.  Strict real-disc
 execution now reaches `func_80053D2C` from `func_8005CCA4` (exit 1,
 normal and sanitizer agree).
 
-### Phase 6E-B28
+### Phase 6E-B28 (corrective)
 
 `func_8005CCA4` is translated retail logic: 223 words at executable
 `0x8005CCA4..0x8005D01F`.  A resource-table initializer that: writes 7
@@ -361,11 +361,14 @@ calls func_800438C0(0x3D).  GA_E40 (below the loop) receives a u16 0x3D
 store after the loop; GA_E22 is written 1 unconditionally.
 Coupled callees: func_800438C0 (8 words, masked-state setter),
 func_8005DB8C (8 words, table base), func_8005DBAC (20 words,
-clamped table base).  All verified by B28 oracle
-(`tools/b28_oracle.py`) against retail SHA-1.  Fixture correction:
-FxPattern offsets 0x10-0x17 return 0 (retail BSS state).  Split-brain
-fix: D_8009D018 + 7 globals moved to extern with PE_Sdk_ResetState
-reset.  332/332 tests pass (normal + sanitizer).
+clamped table base).  All 223 words independently transcribed (W_5CCA4)
+and cross-checked against retail SHA-1 by B28 oracle
+(`tools/b28_oracle.py`).  Fixture correction: FxPattern offsets 0x10-0x17
+return 0 (retail BSS state).  Split-brain fix: D_8009D018 + 7 globals
+moved to extern with PE_Sdk_ResetState reset.  Bootstrap-disc fixture
+seeds valid archive at D_800A8028 (R=0x30, S=0x14, count=120,
+entry[30] → 0xFF record) so func_8005DC4C returns a valid pointer.
+335/335 tests pass (normal + sanitizer).
 
 ### Phase 6E-B27
 

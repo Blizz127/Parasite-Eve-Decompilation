@@ -65,7 +65,29 @@ int func_800698D4(void)
 
     if (g_bootstrap_disc) {
         /* Explicit test fixture (not the default definition of successful
-         * real-disc operation).  Returns the retail "mounted" value 0. */
+         * real-disc operation).  Returns the retail "mounted" value 0.
+         *
+         * Seed a minimal valid archive at D_800A8028 so that when
+         * func_8006A9E4 cycle B calls func_800527C8 → func_8005D6F4 →
+         * func_8005DC4C, the lookup returns a valid guest pointer instead
+         * of 0 (which would dereference address 0 and abort).  On real
+         * hardware this data arrives from PE.IMG via cycle A of
+         * func_8006A9E4; the bootstrap-disc fixture establishes the same
+         * precondition directly.
+         *
+         * Layout: R=0x30, S=0x14, count=120, entry[30] → lone 0xFF
+         * record.  Matches the measured Disc 1 USA archive shape and the
+         * B26_SeedArchiveDefault test fixture. */
+        pe_addr_t arch_hdr  = 0x800A8028u;
+        pe_addr_t arch_tbl  = 0x800A806Cu;   /* hdr + R + S */
+        pe_addr_t arch_rec  = 0x800A8400u;
+        PE_StoreU32(arch_hdr + 4u,  0x30u);              /* R  */
+        PE_StoreU32(arch_hdr + 0x34u, 0x14u);            /* S  */
+        PE_StoreU16(arch_tbl, (uint16_t)120u);           /* count */
+        PE_StoreU16(arch_tbl + 2u + 2u * 30u,
+                    (uint16_t)(arch_rec - arch_tbl));    /* entry[30] */
+        PE_StoreU8(arch_rec, 0xFFu);                     /* record  */
+
         D_800B0DCD = 0;
         Bootstrap_ReturnInt("func_8007F72C", "func_800698D4", 1);
         Bootstrap_ReturnInt("func_8007F778", "func_800698D4", 0);

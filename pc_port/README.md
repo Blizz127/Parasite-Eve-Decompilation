@@ -94,15 +94,19 @@ boundary in retail ROM order.  Strict mode with `--disc-image` stops at
 `func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
 `--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** B28 func_8005CCA4 RUNG — 332 native tests pass (and 332/332
-sanitized); the strict real-disc frontier advanced from `func_8005CCA4`
-to **`func_80053D2C` from `func_8005CCA4`** (exit 1, normal and sanitizer
-agree), bootstrap-disc still stops at `func_8007F72C` by design.
-`func_8005CCA4` is translated retail logic — a 223-word resource-table
+**Status:** B28 func_8005CCA4 CORRECTIVE — 335 native tests pass (and 335/335
+sanitized); the strict real-disc frontier is `func_80053D2C` from
+`func_8005CCA4` (exit 1, normal and sanitizer agree), bootstrap-disc stops
+at `func_8007F72C` from `func_800698D4` (exit 1, normal and sanitizer
+agree). `func_8005CCA4` is translated retail logic — a 223-word resource-table
 initializer with a 50-halfword descending zero loop
 (0x800C0E48..0x800C0EAA = D_8009D048 + 0x62); its earlier GA_E24/E28 stores
 sit below 0x800C0E48 and survive, and its four $gp-relative state words are
 the shared host globals D_8009D048/50/58/64 (also used by func_80052C6C).
+The B28 oracle independently transcribes all 223 words (W_5CCA4) and
+cross-checks every word against the SHA-verified exe before executing from
+the transcription.  The bootstrap-disc fixture now seeds a valid minimal
+archive at D_800A8028 so func_8005DC4C returns a valid pointer instead of 0.
 Its six
 remaining boundary callees (`func_80053D2C` x5, `func_80042C78` x1) and
 five sibling callees (`func_800614AC`, `func_8005E884`, `func_8005E850`,

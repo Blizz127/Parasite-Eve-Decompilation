@@ -5523,6 +5523,50 @@ static void test_698D4_bootstrap_fixture(void) {
     PASS();
 }
 
+static void test_698D4_bootstrap_archive_seeded(void) {
+    TEST("698D4_bootstrap_archive_seeded");
+    ResetTestState();
+    g_bootstrap_disc = 1;
+    func_800698D4();
+
+    /* The bootstrap-disc fixture must seed a valid archive at D_800A8028
+     * so func_8005DC4C returns a valid pointer (not 0) when called from
+     * func_8005D6F4 during func_8006A9E4 cycle B. */
+    ASSERT(PE_LoadU32(0x800A802Cu) == 0x30u, "archive R not 0x30");
+    ASSERT(PE_LoadU32(0x800A805Cu) == 0x14u, "archive S not 0x14");
+    ASSERT(PE_LoadU16(0x800A806Cu) == 120u,  "archive count not 120");
+    ASSERT(PE_LoadU8(0x800A8400u) == 0xFFu,  "archive record not 0xFF");
+    PASS();
+}
+
+static void test_698D4_bootstrap_malformed_archive_returns_zero(void) {
+    TEST("698D4_bootstrap_malformed_returns_zero");
+    ResetTestState();
+
+    /* Without the bootstrap-disc fixture, a zeroed archive region means
+     * func_8005DC4C returns 0 for any index — the retail failure path. */
+    ASSERT(func_8005DC4C(30) == 0u, "empty archive must return 0");
+    PASS();
+}
+
+static void test_698D4_bootstrap_disc_reset_isolation(void) {
+    TEST("698D4_bootstrap_disc_reset_isolation");
+    ResetTestState();
+    g_bootstrap_disc = 1;
+    func_800698D4();
+
+    /* Verify archive is seeded */
+    ASSERT(PE_LoadU32(0x800A802Cu) == 0x30u, "archive R before reset");
+
+    /* Reset clears guest RAM; archive must be re-seeded on next call */
+    PE_RamReset();
+    ASSERT(PE_LoadU32(0x800A802Cu) == 0u, "archive R not cleared by reset");
+
+    func_800698D4();
+    ASSERT(PE_LoadU32(0x800A802Cu) == 0x30u, "archive R not re-seeded");
+    PASS();
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
  * Phase 6E-B16 — func_8006A9E4 PE.IMG streaming resource load rung
  * (plus its three translated dependencies: func_8006E6A8 issue wrapper,
@@ -8880,6 +8924,9 @@ int main(void)
     test_698D4_second_disc_bits();
     test_698D4_no_disc();
     test_698D4_bootstrap_fixture();
+    test_698D4_bootstrap_archive_seeded();
+    test_698D4_bootstrap_malformed_archive_returns_zero();
+    test_698D4_bootstrap_disc_reset_isolation();
 
     /* Phase 6E-B16: func_8006A9E4 streaming load rung (13 tests) */
     test_6E6A8_sector_to_byte();

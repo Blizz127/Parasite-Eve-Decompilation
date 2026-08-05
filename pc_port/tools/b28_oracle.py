@@ -119,6 +119,7 @@ class Machine:
                 ("func_8005DB8C", FUNC_5DB8C, N_5DB8C, W_5DB8C),
                 ("func_8005DBAC", FUNC_5DBAC, N_5DBAC, W_5DBAC),
                 ("func_800438C0", FUNC_438C0, N_438C0, W_438C0),
+                ("func_8005CCA4", FUNC_5CCA4, N_5CCA4, W_5CCA4),
             ]:
                 for i, exp in enumerate(words):
                     a = func_addr + i * 4
@@ -460,15 +461,242 @@ def test_438C0(m):
 
 
 # ── func_8005CCA4 full-function verification ───────────────────────────
-# func_8005CCA4 is 223 words (0x8005CCA4..0x8005D01F).  Rather than hand-
-# transcribe 223 words, we execute them DIRECTLY from the SHA-verified exe
-# image with a fetch-decode interpreter that honours delay slots and jal.
-# Leaf callees (func_8005DB8C/DBAC/438C0/52F70/51E58) execute from the exe
-# too; only the genuine unresolved boundary funcs are stubbed (no-op → 0),
-# matching the C port's Bootstrap_ReturnVoid boundary.
+# func_8005CCA4 is 223 words (0x8005CCA4..0x8005D01F), independently
+# transcribed from the SHA-verified retail executable.  Every word is
+# cross-checked against the exe at load time (no runtime generation).
+# The transcribed words are then EXECUTED by a delay-slot-aware MIPS-I
+# interpreter.  Leaf callees (func_8005DB8C/DBAC/438C0/52F70/51E58)
+# execute from the exe too; only the genuine unresolved boundary funcs
+# are stubbed (no-op → 0), matching the C port's Bootstrap_ReturnVoid
+# boundary.
 
 FUNC_5CCA4 = 0x8005CCA4
 N_5CCA4 = 223
+W_5CCA4 = [
+    0x27BDFFD8,  # 0x8005CCA4  addiu $sp, $sp, -0x28
+    0xAFB10014,  # 0x8005CCA8  sw    $s1, 0x14($sp)
+    0x3C11800C,  # 0x8005CCAC  lui   $s1, 0x800C
+    0x26310E28,  # 0x8005CCB0  addiu $s1, $s1, 0x0E28
+    0xAFB00010,  # 0x8005CCB4  sw    $s0, 0x10($sp)
+    0x00008021,  # 0x8005CCB8  addu  $s0, $zero, $zero
+    0xAFBF0020,  # 0x8005CCBC  sw    $ra, 0x20($sp)
+    0xAFB3001C,  # 0x8005CCC0  sw    $s3, 0x1C($sp)
+    0xAFB20018,  # 0x8005CCC4  sw    $s2, 0x18($sp)
+    0x0C0176E3,  # 0x8005CCC8  jal   func_8005DB8C
+    0x02002021,  # 0x8005CCCC  addu  $a0, $s0, $zero
+    0x94420000,  # 0x8005CCD0  lhu   $v0, 0($v0)
+    0x26100001,  # 0x8005CCD4  addiu $s0, $s0, 1
+    0xA6220000,  # 0x8005CCD8  sh    $v0, 0($s1)
+    0x2A020007,  # 0x8005CCDC  slti  $v0, $s0, 7
+    0x1440FFF9,  # 0x8005CCE0  bne   $v0, $zero, loop
+    0x26310002,  # 0x8005CCE4  addiu $s1, $s1, 2
+    0x0C0176EB,  # 0x8005CCE8  jal   func_8005DBAC
+    0x00002021,  # 0x8005CCEC  addu  $a0, $zero, $zero
+    0x00408021,  # 0x8005CCF0  addu  $s0, $v0, $zero
+    0x3C03800C,  # 0x8005CCF4  lui   $v1, 0x800C
+    0x24630E06,  # 0x8005CCF8  addiu $v1, $v1, 0x0E06
+    0x96020000,  # 0x8005CCFC  lhu   $v0, 0($s0)
+    0x24710042,  # 0x8005CD00  addiu $s1, $v1, 0x42
+    0x3C01800C,  # 0x8005CD04  lui   $at, 0x800C
+    0xA4220E08,  # 0x8005CD08  sh    $v0, 0x0E08($at)
+    0xA4620000,  # 0x8005CD0C  sh    $v0, 0($v1)
+    0x92040007,  # 0x8005CD10  lbu   $a0, 7($s0)
+    0x24020001,  # 0x8005CD14  addiu $v0, $zero, 1
+    0x3C01800C,  # 0x8005CD18  lui   $at, 0x800C
+    0xAC220E24,  # 0x8005CD1C  sw    $v0, 0x0E24($at)
+    0x3C01800A,  # 0x8005CD20  lui   $at, 0x800A
+    0xA4201EAE,  # 0x8005CD24  sh    $zero, 0x1EAE($at)
+    0x3C01800A,  # 0x8005CD28  lui   $at, 0x800A
+    0xA4201E8E,  # 0x8005CD2C  sh    $zero, 0x1E8E($at)
+    0x3C01800A,  # 0x8005CD30  lui   $at, 0x800A
+    0xA4201E6E,  # 0x8005CD34  sh    $zero, 0x1E6E($at)
+    0xAF9102D8,  # 0x8005CD38  sw    $s1, 0x02D8($gp)
+    0x3C01800C,  # 0x8005CD3C  lui   $at, 0x800C
+    0xA0240E0C,  # 0x8005CD40  sb    $a0, 0x0E0C($at)
+    0x0C014BDC,  # 0x8005CD44  jal   func_80052F70
+    0x24120002,  # 0x8005CD48  addiu $s2, $zero, 2
+    0x3C13800A,  # 0x8005CD4C  lui   $s3, 0x800A
+    0x2673D05C,  # 0x8005CD50  addiu $s3, $s3, 0xD05C
+    0xAF8202E0,  # 0x8005CD54  sw    $v0, 0x02E0($gp)
+    0xAF9302E8,  # 0x8005CD58  sw    $s3, 0x02E8($gp)
+    0xAF9202F4,  # 0x8005CD5C  sw    $s2, 0x02F4($gp)
+    0x92030007,  # 0x8005CD60  lbu   $v1, 7($s0)
+    0x00000000,  # 0x8005CD64  nop
+    0x28620033,  # 0x8005CD68  slti  $v0, $v1, 0x33
+    0x14400002,  # 0x8005CD6C  bne   $v0, $zero, +8
+    0x00000000,  # 0x8005CD70  nop
+    0x24030032,  # 0x8005CD74  addiu $v1, $zero, 0x32
+    0x8F8202D8,  # 0x8005CD78  lw    $v0, 0x02D8($gp)
+    0x3C01800C,  # 0x8005CD7C  lui   $at, 0x800C
+    0xA0230E0C,  # 0x8005CD80  sb    $v1, 0x0E0C($at)
+    0x14510004,  # 0x8005CD84  bne   $v0, $s1, +16
+    0x00000000,  # 0x8005CD88  nop
+    0x0C014BDC,  # 0x8005CD8C  jal   func_80052F70
+    0x00000000,  # 0x8005CD90  nop
+    0xAF8202E0,  # 0x8005CD94  sw    $v0, 0x02E0($gp)
+    0xAF9102D8,  # 0x8005CD98  sw    $s1, 0x02D8($gp)
+    0x0C014BDC,  # 0x8005CD9C  jal   func_80052F70
+    0x24100031,  # 0x8005CDA0  addiu $s0, $zero, 0x31
+    0x8F8302D8,  # 0x8005CDA4  lw    $v1, 0x02D8($gp)
+    0xAF8202E0,  # 0x8005CDA8  sw    $v0, 0x02E0($gp)
+    0xAF9302E8,  # 0x8005CDAC  sw    $s3, 0x02E8($gp)
+    0xAF9202F4,  # 0x8005CDB0  sw    $s2, 0x02F4($gp)
+    0x24630062,  # 0x8005CDB4  addiu $v1, $v1, 0x62
+    0xA4600000,  # 0x8005CDB8  sh    $zero, 0($v1)
+    0x2610FFFF,  # 0x8005CDBC  addiu $s0, $s0, -1
+    0x0601FFFD,  # 0x8005CDC0  bgez  $s0, loop
+    0x2463FFFE,  # 0x8005CDC4  addiu $v1, $v1, -2
+    0x0C014F4B,  # 0x8005CDC8  jal   func_80053D2C
+    0x24040044,  # 0x8005CDCC  addiu $a0, $zero, 0x44
+    0x0C014F4B,  # 0x8005CDD0  jal   func_80053D2C
+    0x24040096,  # 0x8005CDD4  addiu $a0, $zero, 0x96
+    0x0C014F4B,  # 0x8005CDD8  jal   func_80053D2C
+    0x2404003F,  # 0x8005CDDC  addiu $a0, $zero, 0x3F
+    0x0C014F4B,  # 0x8005CDE0  jal   func_80053D2C
+    0x24040001,  # 0x8005CDE4  addiu $a0, $zero, 1
+    0x0C014F4B,  # 0x8005CDE8  jal   func_80053D2C
+    0x24040006,  # 0x8005CDEC  addiu $a0, $zero, 6
+    0x3C05800C,  # 0x8005CDF0  lui   $a1, 0x800C
+    0x24A50EAC,  # 0x8005CDF4  addiu $a1, $a1, 0x0EAC
+    0x24A31000,  # 0x8005CDF8  addiu $v1, $a1, 0x1000
+    0x00A3102B,  # 0x8005CDFC  sltu  $v0, $a1, $v1
+    0x10400030,  # 0x8005CE00  beq   $v0, $zero, exit1
+    0x00002021,  # 0x8005CE04  addu  $a0, $zero, $zero
+    0x24070009,  # 0x8005CE08  addiu $a3, $zero, 9
+    0x00603021,  # 0x8005CE0C  addu  $a2, $v1, $zero
+    0x24A30005,  # 0x8005CE10  addiu $v1, $a1, 5
+    0x90A20000,  # 0x8005CE14  lbu   $v0, 0($a1)
+    0x00000000,  # 0x8005CE18  nop
+    0x1040000A,  # 0x8005CE1C  beq   $v0, $zero, skip1
+    0x00000000,  # 0x8005CE20  nop
+    0x90620001,  # 0x8005CE24  lbu   $v0, 1($v1)
+    0x00000000,  # 0x8005CE28  nop
+    0x10470006,  # 0x8005CE2C  beq   $v0, $a3, found1
+    0x00000000,  # 0x8005CE30  nop
+    0x90620000,  # 0x8005CE34  lbu   $v0, 0($v1)
+    0x00000000,  # 0x8005CE38  nop
+    0x30420010,  # 0x8005CE3C  andi  $v0, $v0, 0x10
+    0x14400005,  # 0x8005CE40  bne   $v0, $zero, break1
+    0x00000000,  # 0x8005CE44  nop
+    0x24A50020,  # 0x8005CE48  addiu $a1, $a1, 0x20
+    0x00A6102B,  # 0x8005CE4C  sltu  $v0, $a1, $a2
+    0x1440FFF0,  # 0x8005CE50  bne   $v0, $zero, loop1
+    0x24630020,  # 0x8005CE54  addiu $v1, $v1, 0x20
+    0x3C06800C,  # 0x8005CE58  lui   $a2, 0x800C
+    0x24C61EAC,  # 0x8005CE5C  addiu $a2, $a2, 0x1EAC
+    0x00A6102B,  # 0x8005CE60  sltu  $v0, $a1, $a2
+    0x10400017,  # 0x8005CE64  beq   $v0, $zero, exit1
+    0x24C2F000,  # 0x8005CE68  addiu $v0, $a2, -0x1000
+    0x00A21023,  # 0x8005CE6C  subu  $v0, $a1, $v0
+    0x00021143,  # 0x8005CE70  sra   $v0, $v0, 5
+    0x24440100,  # 0x8005CE74  addiu $a0, $v0, 0x100
+    0x24C300D4,  # 0x8005CE78  addiu $v1, $a2, 0xD4
+    0x24C50178,  # 0x8005CE7C  addiu $a1, $a2, 0x178
+    0x0065102B,  # 0x8005CE80  sltu  $v0, $v1, $a1
+    0x1040000F,  # 0x8005CE84  beq   $v0, $zero, found1
+    0x00000000,  # 0x8005CE88  nop
+    0x84620000,  # 0x8005CE8C  lh    $v0, 0($v1)
+    0x00000000,  # 0x8005CE90  nop
+    0x10440005,  # 0x8005CE94  beq   $v0, $a0, clear1
+    0x00000000,  # 0x8005CE98  nop
+    0x24630002,  # 0x8005CE9C  addiu $v1, $v1, 2
+    0x0065102B,  # 0x8005CEA0  sltu  $v0, $v1, $a1
+    0x1440FFF9,  # 0x8005CEA4  bne   $v0, $zero, inner1
+    0x00000000,  # 0x8005CEA8  nop
+    0x3C02800C,  # 0x8005CEAC  lui   $v0, 0x800C
+    0x24422024,  # 0x8005CEB0  addiu $v0, $v0, 0x2024
+    0x0062102B,  # 0x8005CEB4  sltu  $v0, $v1, $v0
+    0x10400003,  # 0x8005CEB8  beq   $v0, $zero, skip1
+    0x00808021,  # 0x8005CEBC  addu  $s0, $a0, $zero
+    0xA4600000,  # 0x8005CEC0  sh    $zero, 0($v1)
+    0x00808021,  # 0x8005CEC4  addu  $s0, $a0, $zero
+    0x12000003,  # 0x8005CEC8  beq   $s0, $zero, skip2
+    0x00000000,  # 0x8005CECC  nop
+    0x0C014F4B,  # 0x8005CED0  jal   func_80053D2C
+    0x00000000,  # 0x8005CED4  nop
+    0x3C05800C,  # 0x8005CED8  lui   $a1, 0x800C
+    0x24A50EAC,  # 0x8005CEDC  addiu $a1, $a1, 0x0EAC
+    0x24A31000,  # 0x8005CEE0  addiu $v1, $a1, 0x1000
+    0x00A3102B,  # 0x8005CEE4  sltu  $v0, $a1, $v1
+    0x10400030,  # 0x8005CEE8  beq   $v0, $zero, exit2
+    0x00002021,  # 0x8005CEEC  addu  $a0, $zero, $zero
+    0x24070009,  # 0x8005CEF0  addiu $a3, $zero, 9
+    0x00603021,  # 0x8005CEF4  addu  $a2, $v1, $zero
+    0x24A30005,  # 0x8005CEF8  addiu $v1, $a1, 5
+    0x90A20000,  # 0x8005CEFC  lbu   $v0, 0($a1)
+    0x00000000,  # 0x8005CF00  nop
+    0x1040000A,  # 0x8005CF04  beq   $v0, $zero, skip3
+    0x00000000,  # 0x8005CF08  nop
+    0x90620001,  # 0x8005CF0C  lbu   $v0, 1($v1)
+    0x00000000,  # 0x8005CF10  nop
+    0x14470006,  # 0x8005CF14  bne   $v0, $a3, found2
+    0x00000000,  # 0x8005CF18  nop
+    0x90620000,  # 0x8005CF1C  lbu   $v0, 0($v1)
+    0x00000000,  # 0x8005CF20  nop
+    0x30420010,  # 0x8005CF24  andi  $v0, $v0, 0x10
+    0x14400005,  # 0x8005CF28  bne   $v0, $zero, break2
+    0x00000000,  # 0x8005CF2C  nop
+    0x24A50020,  # 0x8005CF30  addiu $a1, $a1, 0x20
+    0x00A6102B,  # 0x8005CF34  sltu  $v0, $a1, $a2
+    0x1440FFF0,  # 0x8005CF38  bne   $v0, $zero, loop2
+    0x24630020,  # 0x8005CF3C  addiu $v1, $v1, 0x20
+    0x3C06800C,  # 0x8005CF40  lui   $a2, 0x800C
+    0x24C61EAC,  # 0x8005CF44  addiu $a2, $a2, 0x1EAC
+    0x00A6102B,  # 0x8005CF48  sltu  $v0, $a1, $a2
+    0x10400017,  # 0x8005CF4C  beq   $v0, $zero, exit2
+    0x24C2F000,  # 0x8005CF50  addiu $v0, $a2, -0x1000
+    0x00A21023,  # 0x8005CF54  subu  $v0, $a1, $v0
+    0x00021143,  # 0x8005CF58  sra   $v0, $v0, 5
+    0x24440100,  # 0x8005CF5C  addiu $a0, $v0, 0x100
+    0x24C300D4,  # 0x8005CF60  addiu $v1, $a2, 0xD4
+    0x24C50178,  # 0x8005CF64  addiu $a1, $a2, 0x178
+    0x0065102B,  # 0x8005CF68  sltu  $v0, $v1, $a1
+    0x1040000F,  # 0x8005CF6C  beq   $v0, $zero, found2
+    0x00000000,  # 0x8005CF70  nop
+    0x84620000,  # 0x8005CF74  lh    $v0, 0($v1)
+    0x00000000,  # 0x8005CF78  nop
+    0x10440005,  # 0x8005CF7C  beq   $v0, $a0, clear2
+    0x00000000,  # 0x8005CF80  nop
+    0x24630002,  # 0x8005CF84  addiu $v1, $v1, 2
+    0x0065102B,  # 0x8005CF88  sltu  $v0, $v1, $a1
+    0x1440FFF9,  # 0x8005CF8C  bne   $v0, $zero, inner2
+    0x00000000,  # 0x8005CF90  nop
+    0x3C02800C,  # 0x8005CF94  lui   $v0, 0x800C
+    0x24422024,  # 0x8005CF98  addiu $v0, $v0, 0x2024
+    0x0062102B,  # 0x8005CF9C  sltu  $v0, $v1, $v0
+    0x10400003,  # 0x8005CFA0  beq   $v0, $zero, skip4
+    0x00808021,  # 0x8005CFA4  addu  $s0, $a0, $zero
+    0xA4600000,  # 0x8005CFA8  sh    $zero, 0($v1)
+    0x00808021,  # 0x8005CFAC  addu  $s0, $a0, $zero
+    0x12000004,  # 0x8005CFB0  beq   $s0, $zero, done
+    0x24020001,  # 0x8005CFB4  addiu $v0, $zero, 1
+    0x0C014F4B,  # 0x8005CFB8  jal   func_80053D2C
+    0x00000000,  # 0x8005CFBC  nop
+    0x24020001,  # 0x8005CFC0  addiu $v0, $zero, 1
+    0x3C01800C,  # 0x8005CFC4  lui   $at, 0x800C
+    0xA0220E22,  # 0x8005CFC8  sb    $v0, 0x0E22($at)
+    0x2402003D,  # 0x8005CFCC  addiu $v0, $zero, 0x3D
+    0x3C01800C,  # 0x8005CFD0  lui   $at, 0x800C
+    0xA0200E20,  # 0x8005CFD4  sb    $zero, 0x0E20($at)
+    0x3C01800C,  # 0x8005CFD8  lui   $at, 0x800C
+    0xA4220E40,  # 0x8005CFDC  sh    $v0, 0x0E40($at)
+    0x0C010E30,  # 0x8005CFE0  jal   func_800438C0
+    0x2404003D,  # 0x8005CFE4  addiu $a0, $zero, 0x3D
+    0x3C01800C,  # 0x8005CFE8  lui   $at, 0x800C
+    0xAC200E00,  # 0x8005CFEC  sw    $zero, 0x0E00($at)
+    0x3C01800C,  # 0x8005CFF0  lui   $at, 0x800C
+    0xA0200E0A,  # 0x8005CFF4  sb    $zero, 0x0E0A($at)
+    0x0C010B1E,  # 0x8005CFF8  jal   func_80042C78
+    0x00000000,  # 0x8005CFFC  nop
+    0x8FBF0020,  # 0x8005D000  lw    $ra, 0x20($sp)
+    0x8FB3001C,  # 0x8005D004  lw    $s3, 0x1C($sp)
+    0x8FB20018,  # 0x8005D008  lw    $s2, 0x18($sp)
+    0x8FB10014,  # 0x8005D00C  lw    $s1, 0x14($sp)
+    0x8FB00010,  # 0x8005D010  lw    $s0, 0x10($sp)
+    0x27BD0028,  # 0x8005D014  addiu $sp, $sp, 0x28
+    0x03E00008,  # 0x8005D018  jr    $ra
+    0x00000000,  # 0x8005D01C  nop
+]
 
 BOUNDARY_STUBS = {0x80053D2C, 0x80042C78}
 REAL_CALLS = {0x8005CCA4, 0x8005DB8C, 0x8005DBAC, 0x800438C0,
@@ -476,7 +704,10 @@ REAL_CALLS = {0x8005CCA4, 0x8005DB8C, 0x8005DBAC, 0x800438C0,
 
 
 class ExeMachine(Machine):
-    """Fetch-decode interpreter over the SHA-verified exe image."""
+    """Fetch-decode interpreter over the SHA-verified exe image.
+
+    func_8005CCA4 uses the independently transcribed words (W_5CCA4);
+    all other addresses read from the SHA-verified exe."""
 
     def __init__(self, path):
         with open(path, "rb") as f:
@@ -490,6 +721,10 @@ class ExeMachine(Machine):
         self.reset()
 
     def word(self, a):
+        # Use independently transcribed words for func_8005CCA4
+        if FUNC_5CCA4 <= a < FUNC_5CCA4 + N_5CCA4 * 4:
+            idx = (a - FUNC_5CCA4) // 4
+            return W_5CCA4[idx]
         return struct.unpack_from("<I", self.data, a - self.taddr + 0x800)[0]
 
     def call(self, entry, depth=0):
@@ -587,15 +822,15 @@ def test_5CCA4(path):
     # (0 here only because the BSS source reads 0) are legitimately below
     # 0x800C0E48 and must NOT be treated as zero-loop writes.
 
-    print("func_8005CCA4: ALL PASS")
+    print("func_8005CCA4: ALL PASS (223 words independently cross-checked)")
 
 
 def main():
     if len(sys.argv) < 2:
         print("Usage: b28_oracle.py /path/to/disc1.candidate.exe")
         print("  Verifies func_8005DB8C, func_8005DBAC, func_800438C0,")
-        print("  and func_8005CCA4 (full 223-word execution) against the")
-        print("  retail executable words.")
+        print("  and func_8005CCA4 (all 223 words independently transcribed")
+        print("  and cross-checked) against the retail executable.")
         sys.exit(1)
 
     path = sys.argv[1]
@@ -608,9 +843,10 @@ def main():
 
     print("\n=== B28 ORACLE: ALL FUNCTIONS VERIFIED ===")
     print("The three leaf callees are cross-checked word-by-word and executed")
-    print("instruction-by-instruction.  func_8005CCA4 (223 words) is executed")
-    print("directly from the SHA-verified exe image, with only the genuine")
-    print("boundary funcs (func_80053D2C, func_80042C78) stubbed.")
+    print("instruction-by-instruction.  func_8005CCA4 (223 words) is independently")
+    print("transcribed, cross-checked against the SHA-verified exe, and executed")
+    print("from the transcription with only the genuine boundary funcs")
+    print("(func_80053D2C, func_80042C78) stubbed.")
 
 
 if __name__ == "__main__":

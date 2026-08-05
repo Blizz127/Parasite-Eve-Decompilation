@@ -21,7 +21,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B28 func_8005CCA4 VERIFIED** (223 retail words; resource-table init; zero loop 0x800C0E48..0x800C0EAA = D_8009D048 + 0x62, descending; GA_E24/E28 below it SURVIVE; GA_E40 gets u16 0x3D after; 4 state words are shared host globals D_8009D048/50/58/64) | `pc_port/build/pe-native-tests` (332/332) |
+| Port phase | **6E-B28 func_8005CCA4 VERIFIED + CORRECTIVE** (223 retail words independently transcribed and cross-checked; resource-table init; zero loop 0x800C0E48..0x800C0EAA = D_8009D048 + 0x62, descending; GA_E24/E28 below it SURVIVE; GA_E40 gets u16 0x3D after; 4 state words are shared host globals D_8009D048/50/58/64; bootstrap-disc fixture seeds valid archive) | `pc_port/build/pe-native-tests` (335/335) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -33,8 +33,8 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | B17 dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 called twice). 7 translated leaves: func_8005B890(0), func_8005BC98(0), 3×sw $zero, func_8004F808, func_80042B38, func_80051084, func_8005BC98(1) + D_800B0CD8 |= 0x40000000 in the delay slot of func_800371A4(1). 9 further callees translated (func_800528F0, func_8005E588, func_80062568, func_80064964, func_8005DE88, func_80052C6C, func_8005BCBC, func_8005D6F4, func_80052594); 2 unresolved (func_80051CC4, func_80042C78) — routed through the centralized bootstrap boundary; func_8005D6F4 itself carries 6 boundary callees, strict stops INSIDE it at func_8005CCA4. Independent oracle: `pc_port/tools/dispatcher_oracle.py` (MIPS interpreter on verified retail words). Sole call site func_8006A9E4 @0x8006AAD0, $s1-guarded one-shot inside the cycle-B poll loop; void(void), return unconsumed | `pc_port/game/boot/func_800527C8_port.c`, `func_8005B890_port.c`, `func_8005BC98_port.c`, `func_8004F808_port.c`, `func_80042B38_port.c`, `func_80051084_port.c`, `func_80052C6C_port.c`, `func_8005BCBC_port.c`, `func_8005D6F4_port.c`, `func_80052594_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | with `--disc-image`: exit 1 at `func_80053D2C` from `func_8005CCA4` (normal and sanitizer agree; 3 identical captures each); with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` by design | `--headless --strict-stubs --disc-image …` |
-| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 332/332 tests + headless + real-disc load + strict + all oracle dumps clean | `pc_port/build-san` |
+| Strict mode | with `--disc-image`: exit 1 at `func_80053D2C` from `func_8005CCA4` (normal and sanitizer agree; 3 identical captures each); with `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` (normal and sanitizer agree) | `--headless --strict-stubs --disc-image …` |
+| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 335/332 tests + headless + real-disc load + bootstrap-disc + strict + all oracle dumps clean | `pc_port/build-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
 | Next | Phase 6E-B continued: func_8005CCA4 boundary callees — func_800614AC, func_8005E884, func_8005E850, func_800649D0, func_80052790 — then `func_80051CC4`, `func_80042C78`, then `func_80087090` (SPU-upload boundary); not MDEC/GPU/audio/input | — |
 
@@ -85,15 +85,28 @@ canary, PE_RamReset does not clear them, PE_Sdk_ResetState does).
 delay slot (addu $v1,$zero,$zero) for negative clamping. func_800438C0
 stores before the zero-check branch (sw, bne, addiu, sw).
 
-**Test count:** 332/332 (normal + ASan/UBSan).
+**Test count:** 335/335 (normal + ASan/UBSan).
 
-**B28 oracle:** `pc_port/tools/b28_oracle.py` — cross-checks + executes
-func_8005DB8C/func_8005DBAC/func_800438C0 word-by-word, AND executes
-func_8005CCA4 (all 223 words) directly from the SHA-verified exe
-(452fb033f2eaa4b18aa20a5bca60b8125af3a37b), stubbing only the genuine
-boundary funcs func_80053D2C/func_80042C78; asserts the retail final state
-(zero loop 0x800C0E48..0x800C0EAA, GA_E24=1, GA_E22=1, D_8009D048=0x800C0E48,
-D_8009D058=0x8009D05C, D_8009D064=2, GA_E40=0x003D, D_8009CEF0=0x3D).
+**B28 oracle (CORRECTIVE):** `pc_port/tools/b28_oracle.py` — independently
+transcribes all 223 func_8005CCA4 words (W_5CCA4), cross-checks every word
+against the SHA-verified exe at load time (first mismatch fails with address
+and both values), then executes the transcribed words with a delay-slot-aware
+MIPS-I interpreter. func_8005DB8C/func_8005DBAC/func_800438C0 are also
+cross-checked word-by-word and executed. func_8005CCA4 execution uses the
+transcription (not the exe) for its own words; sub-callees read from the exe.
+Boundary funcs func_80053D2C/func_80042C78 stubbed. Asserts the retail final
+state (zero loop 0x800C0E48..0x800C0EAA, GA_E24=1, GA_E22=1,
+D_8009D048=0x800C0E48, D_8009D058=0x8009D05C, D_8009D064=2, GA_E40=0x003D,
+D_8009CEF0=0x3D).
+
+**Bootstrap-disc fixture (CORRECTIVE):** `func_800698D4_port.c` now seeds a
+minimal valid archive at D_800A8028 in the bootstrap-disc path (R=0x30,
+S=0x14, count=120, entry[30] → lone 0xFF record).  On real hardware this
+data arrives from PE.IMG via cycle A of func_8006A9E4; the fixture
+establishes the same precondition so func_8005DC4C returns a valid pointer
+instead of 0.  Address zero remains invalid; no KUSEG mirror, no clamping,
+no function-specific bypass.  Three new tests verify the fixture seed,
+malformed-archive zero return, and reset isolation.
 
 ### B22 audit complete
 
