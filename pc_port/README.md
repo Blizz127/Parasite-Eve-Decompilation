@@ -1,8 +1,22 @@
-# Parasite Eve Native PC Port — Phase 6E-B26
+# Parasite Eve Native PC Port — Phase 6E-B28
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B26 func_8005DC4C rung — PE.IMG message/string-table
+**Current milestone:** B28 func_8005CCA4 rung — verified and corrective;
+the provisional implementation is commit `a1559ae` and the oracle/bootstrap
+corrective is commit `cd2e375`. The completed B28 body is
+`0x8005CCA4..0x8005D01F` (exclusive end `0x8005D020`, file offset
+`0x4D4A4`, 223 retail words). All 223 words are independently transcribed,
+compared against the SHA-verified executable, and executed by the B28 oracle.
+Final native and ASan/UBSan tests are 335/335. The current real-disc strict
+frontier is `func_80053D2C` from `func_8005CCA4`; strict exit status is 1.
+Bootstrap-disc normally completes with 15 bootstrap stubs invoked, while
+bootstrap strict stops at `func_8007F72C` from `func_800698D4` (exit 1).
+The fixture lookup returns `0x800A8400`; address zero remains invalid, with
+no KUSEG or low-address mirror. Nothing has been pushed and the next rung has
+not started.
+
+**Historical B26 context:** B26 `func_8005DC4C` rung — PE.IMG message/string-table
 lookup (20 words at `0x8005DC4C..0x8005DC9B`, file `0x4E44C`, live split
 `4CC98.s:1779-1802`).  A pure read-only walk of a nested relative-offset
 archive whose base is the cycle-A streaming destination `0x800A8028`:
@@ -86,8 +100,8 @@ poll + `D_800B0CD8 &= 0xFEFFBFFF` RMW on st∈{-1,0}), and func_8006E498
 (31-word pure guest table walk, guest-address result).  The rung also
 fixed a 6D-S-class split-brain defect: `D_800B0E24..D_800B0E6C` are now
 guest-RAM lvalue macros (retail readers load guest RAM) instead of
-duplicate host globals.  **Phase 6E-B17 advances the strict frontier to
-`func_800528F0`**: func_800527C8 (the multi-subsystem bootstrap dispatcher,
+  duplicate host globals.  **Historical B17 context:** Phase 6E-B17 advanced
+the strict frontier to `func_800528F0`: func_800527C8 (the multi-subsystem bootstrap dispatcher,
 49 words, 17 calls) is now fully translated with 7 leaf implementations
 and 10 unresolved callees routed through the centralized bootstrap
 boundary in retail ROM order.  Strict mode with `--disc-image` stops at
@@ -111,7 +125,17 @@ Its six
 remaining boundary callees (`func_80053D2C` x5, `func_80042C78` x1) and
 five sibling callees (`func_800614AC`, `func_8005E884`, `func_8005E850`,
 `func_800649D0`, `func_80052790`) still route through the centralized
-boundary.
+boundary. The bootstrap fixture correction seeds the valid archive lookup
+result `0x800A8400`; malformed `PE_StoreU32(0x800A803C, 0xA49D968F)` leaves
+`func_8005DBAC(0)` returning `0x24A816B7` without dereference. Address zero
+remains invalid and no KUSEG or low-address mirror exists.
+
+Final evidence: framebuffer SHA-256
+`fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb`,
+bootstrap trace `42c1956e…`, real-disc trace `7b8724ac…`, real-disc
+FNV-1a-64 `7D860391E1ED6C97`, and matching executable SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. Nothing has been pushed; the
+next rung has not started.
 
 The B25 degenerate in-RAM default for the consumed `func_8005DC4C`
 return is retired: the value now comes from the real archive.  Because

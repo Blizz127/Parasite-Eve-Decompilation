@@ -351,7 +351,9 @@ normal and sanitizer agree).
 ### Phase 6E-B28 (corrective)
 
 `func_8005CCA4` is translated retail logic: 223 words at executable
-`0x8005CCA4..0x8005D01F`.  A resource-table initializer that: writes 7
+`0x8005CCA4..0x8005D01F` (exclusive end `0x8005D020`, file offset
+`0x4D4A4`).  The provisional B28 implementation is commit `a1559ae`; the
+oracle/bootstrap corrective is commit `cd2e375`. A resource-table initializer that: writes 7
 halfwords via `*(u16*)func_8005DB8C(i)`, reads PE.IMG archive header via
 func_8005DBAC, zeros 50 halfwords descending from **0x800C0EAA** to
 **0x800C0E48** (v1 = D_8009D048 + 0x62) — this range is ABOVE the earlier
@@ -361,16 +363,19 @@ calls func_800438C0(0x3D).  GA_E40 (below the loop) receives a u16 0x3D
 store after the loop; GA_E22 is written 1 unconditionally.
 Coupled callees: func_800438C0 (8 words, masked-state setter),
 func_8005DB8C (8 words, table base), func_8005DBAC (20 words,
-clamped table base).  All 223 words independently transcribed (W_5CCA4)
-and cross-checked against retail SHA-1 by B28 oracle
+clamped table base).  All 223 words are independently transcribed (W_5CCA4),
+compared against the SHA-verified executable, and executed by the B28 oracle
 (`tools/b28_oracle.py`).  Fixture correction: FxPattern offsets 0x10-0x17
 return 0 (retail BSS state).  Split-brain fix: D_8009D018 + 7 globals
 moved to extern with PE_Sdk_ResetState reset.  Bootstrap-disc fixture
 seeds valid archive at D_800A8028 (R=0x30, S=0x14, count=120,
-entry[30] → 0xFF record) so func_8005DC4C returns a valid pointer.
-335/335 tests pass (normal + sanitizer).
+entry[30] → 0xFF record) so func_8005DC4C returns `0x800A8400`.
+`PE_StoreU32(0x800A803C, 0xA49D968F)` makes malformed
+`func_8005DBAC(0)` return `0x24A816B7`, without dereferencing that result.
+Address zero remains invalid; no KUSEG or low-address mirror exists. 335/335
+tests pass (normal + ASan/UBSan).
 
-### Phase 6E-B27
+### Historical Phase 6E-B27
 
 `func_80052594` is translated retail logic: 22 words at executable
 `0x80052594..0x800525EB`, file offset `0x42D94`, live split
@@ -418,8 +423,8 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 - `func_8005DC9C` — dead-arm callee of func_8005D6F4 (C8 always 0);
   the same lookup as func_8005DC4C but reading `ptr+8` instead of
   `ptr+4`, i.e. a second table in the same sub-chunk
-- `func_8005CCA4` — current strict frontier (B27), first unresolved
-  callee inside the translated func_8005D6F4
+- `func_8005CCA4` — completed B28 translated rung; its current first
+  unresolved callee is `func_80053D2C`
 - `func_800614AC`, `func_8005E884`,
   `func_8005E850`, `func_800649D0`, `func_80052790` — remaining
   func_8005D6F4 callees in retail ROM order
