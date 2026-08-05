@@ -5,7 +5,7 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
-## Phase 6E-B27 FUNC_80052594 RUNG VERIFIED
+## Phase 6E-B28 func_8005DB8C + func_8005DBAC PREREQUISITES VERIFIED
 
 The raw retail trampoline at executable `0x80071A24..0x80071A2F` (file
 offset `0x62224`) is exactly `240A00A0 01400008 24090028`: load `$t2=0xA0`,
@@ -21,7 +21,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B27 — func_80052594 rung** | `pc_port/build/pe-native-tests` (309/309) |
+| Port phase | **6E-B28 prerequisites — func_8005DB8C + func_8005DBAC verified** | `pc_port/build/pe-native-tests` (317/317) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -34,7 +34,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
 | Strict mode | with `--disc-image`: exit 1 at `func_8005CCA4` from `func_8005D6F4` (3 identical captures); with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` by design | `--headless --strict-stubs --disc-image …` |
-| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 309/309 tests + headless + real-disc load + strict + RNG/LZCR/callback/dispatcher oracle dumps clean | `pc_port/build-san` |
+| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 317/317 tests + headless + real-disc load + strict + RNG/LZCR/callback/dispatcher oracle dumps clean | `pc_port/build-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
 | Next | Phase 6E-B continued: **`func_8005CCA4` rung** — the ACTUAL next unresolved dependency (strict stops INSIDE translated func_8005D6F4 at func_8005CCA4). func_8005D6F4 still carries six boundary callees of its own, which all precede the dispatcher's remaining two. Order from here: func_8005CCA4, func_800614AC, func_8005E884, func_8005E850, func_800649D0, func_80052790, then `func_80051CC4`, `func_80042C78`, then `func_80087090` (SPU-upload boundary in `func_8006A9E4`); not MDEC/GPU/audio/input; do not start MDEC/SDL/audio/input | — |
 

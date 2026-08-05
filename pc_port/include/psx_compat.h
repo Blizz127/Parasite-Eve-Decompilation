@@ -150,6 +150,8 @@ extern int  func_8005BCBC(pe_addr_t a0);
 extern int  func_8005D6F4(void);
 extern pe_addr_t func_8005DC4C(uint32_t idx);
 extern int  func_80052594(pe_addr_t src);
+extern pe_addr_t func_8005DB8C(int idx);
+extern pe_addr_t func_8005DBAC(int arg);
 extern pe_addr_t func_80071A24(pe_addr_t dst, uint32_t len);
 extern void func_8005E968(uint32_t);
 extern void func_8005F844(int);

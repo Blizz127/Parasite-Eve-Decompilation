@@ -7724,6 +7724,128 @@ static void test_52594_5D6F4_integration(void) {
     PASS();
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B28 prerequisites — func_8005DB8C and func_8005DBAC: table
+ * base computation functions (12 and 20 retail words).
+ *
+ * Both read a pointer from a BSS global (D_800A8038 / D_800A803C),
+ * dereference it, and add a constant offset derived from their argument.
+ * When the BSS global is 0 (typical boot state), the dereference yields
+ * 0 and the result is just the constant offset — a valid KSEG0 address.
+ *
+ * Exact retail formulas (verified from SHA-1 452fb... retail words):
+ *   func_8005DB8C(idx): *D_800A8038 + (idx << 9) + (D_800A8038 - 0x10)
+ *   func_8005DBAC(arg): *D_800A803C + (clamp(arg,0,98) * 24) + (D_800A803C - 0x14)
+ *
+ * Sign-extended addressing: lui 0x800B + addiu 0x8038 → 0x800A8038;
+ *                           lui 0x800B + addiu 0x803C → 0x800A803C.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define B28_DB8C_PTR  0x800A8038u
+#define B28_DBAC_PTR  0x800A803Cu
+
+/* func_8005DB8C: returns *D_800A8038 + (idx << 9) + (D_800A8038 - 0x10).
+ * When D_800A8038 == 0, returns 0x800A8028 + (idx << 9). */
+static void test_5DB8C_null_pointer_returns_const(void) {
+    TEST("5DB8C_null_pointer_returns_const");
+    ResetTestState();
+    /* D_800A8038 is 0 after reset (BSS). */
+    ASSERT(PE_LoadU32(B28_DB8C_PTR) == 0u, "precondition: D_800A8038 is 0");
+    /* Expected: 0 + (0 << 9) + (0x800A8038 - 0x10) = 0x800A8028 */
+    ASSERT(func_8005DB8C(0) == 0x800A8028u, "idx=0 returns 0x800A8028");
+    ASSERT(func_8005DB8C(1) == (0x800A8028u + 0x200u), "idx=1 returns +0x200");
+    ASSERT(func_8005DB8C(6) == (0x800A8028u + 6u * 0x200u), "idx=6");
+    PASS();
+}
+
+static void test_5DB8C_dereferences_pointer(void) {
+    TEST("5DB8C_dereferences_pointer");
+    ResetTestState();
+    /* Seed D_800A8038 with a valid guest pointer. */
+    pe_addr_t fake_base = 0x800C2000u;
+    PE_StoreU32(B28_DB8C_PTR, fake_base);
+    /* Expected: fake_base + (idx << 9) + (B28_DB8C_PTR - 0x10) */
+    pe_addr_t expect = fake_base + 0u + (B28_DB8C_PTR - 0x10u);
+    ASSERT(func_8005DB8C(0) == expect, "idx=0 with pointer");
+    pe_addr_t expect3 = fake_base + (3u << 9) + (B28_DB8C_PTR - 0x10u);
+    ASSERT(func_8005DB8C(3) == expect3, "idx=3 with pointer");
+    PASS();
+}
+
+static void test_5DB8C_signature_and_width(void) {
+    TEST("5DB8C_signature_and_width");
+    ResetTestState();
+    pe_addr_t r = func_8005DB8C(0);
+    ASSERT(r >= PE_RAM_BASE && r < PE_RAM_END, "result in guest RAM range");
+    ASSERT(sizeof(func_8005DB8C(0)) == sizeof(pe_addr_t), "return is pe_addr_t wide");
+    PASS();
+}
+
+/* func_8005DBAC: clamps arg to [0,98], returns *D_800A803C + (clamped*24) + (D_800A803C - 0x14).
+ * When D_800A803C == 0, returns 0x800A8028 + (clamped*24). */
+static void test_5DBAC_null_pointer_returns_const(void) {
+    TEST("5DBAC_null_pointer_returns_const");
+    ResetTestState();
+    ASSERT(PE_LoadU32(B28_DBAC_PTR) == 0u, "precondition: D_800A803C is 0");
+    /* Expected: 0 + (0 * 24) + (0x800A803C - 0x14) = 0x800A8028 */
+    ASSERT(func_8005DBAC(0) == 0x800A8028u, "arg=0 returns 0x800A8028");
+    ASSERT(func_8005DBAC(1) == (0x800A8028u + 24u), "arg=1 returns +24");
+    ASSERT(func_8005DBAC(5) == (0x800A8028u + 5u * 24u), "arg=5");
+    PASS();
+}
+
+static void test_5DBAC_clamp_behavior(void) {
+    TEST("5DBAC_clamp_behavior");
+    ResetTestState();
+    /* Negative → clamped to 0 */
+    ASSERT(func_8005DBAC(-1) == func_8005DBAC(0), "negative clamped to 0");
+    ASSERT(func_8005DBAC(-100) == func_8005DBAC(0), "very negative clamped to 0");
+    /* >= 99 → clamped to 98 (slti 99: arg < 99 keeps arg, else clamp) */
+    ASSERT(func_8005DBAC(99) == func_8005DBAC(98), "99 clamped to same as 98");
+    ASSERT(func_8005DBAC(200) == func_8005DBAC(98), "200 clamped to same as 98");
+    /* Boundary: 98 is kept as-is, 99 is clamped to 98 — same result */
+    ASSERT(func_8005DBAC(97) != func_8005DBAC(98), "97 vs 98 differ");
+    PASS();
+}
+
+static void test_5DBAC_dereferences_pointer(void) {
+    TEST("5DBAC_dereferences_pointer");
+    ResetTestState();
+    pe_addr_t fake_base = 0x800C3000u;
+    PE_StoreU32(B28_DBAC_PTR, fake_base);
+    pe_addr_t expect = fake_base + 0u + (B28_DBAC_PTR - 0x14u);
+    ASSERT(func_8005DBAC(0) == expect, "arg=0 with pointer");
+    pe_addr_t expect7 = fake_base + (7u * 24u) + (B28_DBAC_PTR - 0x14u);
+    ASSERT(func_8005DBAC(7) == expect7, "arg=7 with pointer");
+    PASS();
+}
+
+static void test_5DBAC_signature_and_width(void) {
+    TEST("5DBAC_signature_and_width");
+    ResetTestState();
+    pe_addr_t r = func_8005DBAC(0);
+    ASSERT(r >= PE_RAM_BASE && r < PE_RAM_END, "result in guest RAM range");
+    ASSERT(sizeof(func_8005DBAC(0)) == sizeof(pe_addr_t), "return is pe_addr_t wide");
+    PASS();
+}
+
+/* Both functions are pure computations — no guest writes, deterministic
+ * from inputs.  Repeated calls are idempotent. */
+static void test_5DB8C_5DBAC_no_guest_writes(void) {
+    TEST("5DB8C_5DBAC_no_guest_writes");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    /* Call both functions — they should NOT write to guest RAM. */
+    (void)func_8005DB8C(3);
+    (void)func_8005DBAC(7);
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        ASSERT(PE_LoadU32(a) == 0xA5A5A5A5u, "no guest write from 5DB8C/5DBAC");
+    }
+    PASS();
+}
+
 static void test_80071A24_bzero_contract(void) {
     TEST("80071A24_bzero_contract");
     uint32_t i;
@@ -8213,6 +8335,16 @@ int main(void)
     test_52594_no_split_brain();
     test_52594_strict_not_stub();
     test_52594_5D6F4_integration();
+
+    /* Phase 6E-B28 prerequisites — func_8005DB8C and func_8005DBAC (8 tests) */
+    test_5DB8C_null_pointer_returns_const();
+    test_5DB8C_dereferences_pointer();
+    test_5DB8C_signature_and_width();
+    test_5DBAC_null_pointer_returns_const();
+    test_5DBAC_clamp_behavior();
+    test_5DBAC_dereferences_pointer();
+    test_5DBAC_signature_and_width();
+    test_5DB8C_5DBAC_no_guest_writes();
 
     test_64964_direct_boot_state();
     test_80071A24_bzero_contract();
