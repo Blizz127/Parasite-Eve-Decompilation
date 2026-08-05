@@ -345,8 +345,26 @@ func_8006A9E4 before the dispatcher runs.  With the region zeroed the
 lookup correctly returns 0 and func_8005D6F4's copy loop dereferences
 address 0 — surfaced by the checked-access layer, deliberately not
 masked with a KUSEG mirror, a clamp, or a bypass.  Strict real-disc
-execution now reaches `func_8005CCA4` from `func_8005D6F4` (exit 1,
-three identical captures).
+execution now reaches `func_80053D2C` from `func_8005CCA4` (exit 1,
+normal and sanitizer agree).
+
+### Phase 6E-B28
+
+`func_8005CCA4` is translated retail logic: 223 words at executable
+`0x8005CCA4..0x8005CD2B`.  A resource-table initializer that: writes 7
+halfwords via func_8005DB8C, reads PE.IMG archive header via
+func_8005DBAC, zeros 50 halfwords descending from 0x800C0E48
+(covering 0x800C0DE6..0x800C0E48 — intentionally overwrites earlier
+writes), searches resource tables, sets state globals
+(D_8009D058/60/68/74), and calls func_800438C0(0x3D).  GA_E40
+receives a following u16 store of 0x3D after the zero loop.
+Coupled callees: func_800438C0 (8 words, masked-state setter),
+func_8005DB8C (8 words, table base), func_8005DBAC (20 words,
+clamped table base).  All verified by B28 oracle
+(`tools/b28_oracle.py`) against retail SHA-1.  Fixture correction:
+FxPattern offsets 0x10-0x17 return 0 (retail BSS state).  Split-brain
+fix: D_8009D018 + 7 globals moved to extern with PE_Sdk_ResetState
+reset.  332/332 tests pass (normal + sanitizer).
 
 ### Phase 6E-B27
 
@@ -377,16 +395,16 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With `--disc-image`, strict mode stops at `func_8005CCA4` (first
-unresolved callee INSIDE the translated `func_8005D6F4`, called from
-`func_800527C8` via `func_8006A9E4`) — past the fully translated
-func_8003E680, func_8006A9E4 streaming-load rung, func_800527C8
-dispatcher, func_80052C6C (B23), func_8005BCBC (B24), the
-translated direct work of func_8005D6F4 (B25: bzero, fills, state
-stores), the three translated func_8005DC4C lookups (B26), and the
-translated func_80052594 string copy (B27).  The `--bootstrap-disc` fixture
-still stops at `func_8007F72C` (CdReady) by design: the fixture never
-initializes the drive lane.
+With `--disc-image`, strict mode stops at `func_80053D2C` (first
+unresolved callee of translated `func_8005CCA4`) — past the fully
+translated func_8003E680, func_8006A9E4, func_800527C8, func_80052C6C
+(B23), func_8005BCBC (B24), func_8005D6F4 (B25), func_8005DC4C (B26),
+func_80052594 (B27), and func_8005CCA4 (B28).  Remaining boundary
+callees: func_80053D2C x5, func_80042C78 x1 (from func_8005CCA4),
+func_800614AC, func_8005E884, func_8005E850, func_800649D0,
+func_80052790 (from func_8005D6F4), func_80051CC4, func_80042C78
+(from dispatcher), func_80087090 (SPU upload).  The `--bootstrap-disc`
+fixture still stops at `func_8007F72C` (CdReady) by design.
 
 Disc-path providers are REAL since Phase 6E-A (host disc model over the
 read-only image): `func_8007F72C` (CdReady), `func_8007F778`,

@@ -240,8 +240,8 @@ int func_8005D6F4(void)
     r = func_80052594(src);  /* B27: REAL — copies to D_80091694 */
     (void)r;                 /* retail discards return at this call site */
 
-    /* 12. func_8005CCA4() */
-    Bootstrap_ReturnVoid("func_8005CCA4", "func_8005D6F4");
+    /* 12. func_8005CCA4() — REAL (B28) */
+    func_8005CCA4();
 
     /* 13. Direct stores: halfword 0x0203, word 0x00404040. */
     PE_StoreU16(GA_5D6F4_HW203, 0x0203u);

@@ -22,42 +22,20 @@
 #include "psx_compat.h"
 #include "pe_guest_ram.h"
 
-/* ── gp-relative state globals (host-side, one authoritative storage) ── */
+/* ── gp-relative state globals (host-side, extern for test reset) ── */
+/* These were originally `static` but that creates a host/guest split-brain:
+ * ResetTestState (PE_RamReset) cannot clear them, causing stale values
+ * to leak between tests.  Making them extern allows pe_globals.c to own
+ * the storage and tests to reset via PE_Sdk_ResetState. */
 
-/* D_8009D018 = $gp+0x2A8: read by func_80051E58 (retail C leaf, 2 words).
- * Used by func_80052F70 as a capped resource-ID allocator. */
-static unsigned int D_8009D018;
-
-/* D_8009D03C = $gp+0x2CC: record count / search result index.
- * Written by func_80052C6C (search loop result), read by the main loop
- * and by func_80052F70 (via func_80051E58 → D_8009D018? No, actually
- * func_80052F70 reads D_8009D03C via lw 0x2CC($gp)). */
-static unsigned int D_8009D03C;
-
-/* D_8009D048 = $gp+0x2D8: resource buffer pointer.
- * Written by func_80052E30, read by func_80052F0C. */
-static unsigned int D_8009D048;
-
-/* D_8009D04C = $gp+0x2DC: state flag / previous buffer pointer.
- * Written by func_80052EB0 (setter) and func_80052C6C (zeroed at end).
- * Read by func_80052E30 (a0==0 path check). */
-static unsigned int D_8009D04C;
-
-/* D_8009D050 = $gp+0x2E0: resource count / ID.
- * Written by func_80052E30, used by downstream consumers. */
-static unsigned int D_8009D050;
-
-/* D_8009D054 = $gp+0x2E4: secondary state / buffer pointer.
- * Written by func_80052EB0, read by func_80052E30 (a0!=0 path). */
-static unsigned int D_8009D054;
-
-/* D_8009D058 = $gp+0x2E8: host table pointer.
- * Written by func_80052E30. */
-static unsigned int D_8009D058;
-
-/* D_8009D064 = $gp+0x2F4: type/size indicator.
- * Written by func_80052E30. */
-static unsigned int D_8009D064;
+/* D_8009D018: read by func_80051E58, used by func_80052F70 */
+/* D_8009D03C: record count / search result index */
+/* D_8009D048: resource buffer pointer */
+/* D_8009D04C: state flag / previous buffer pointer */
+/* D_8009D050: resource count / ID */
+/* D_8009D054: secondary state / buffer pointer */
+/* D_8009D058: host table pointer */
+/* D_8009D064: type/size indicator */
 
 /* ── Guest address constants ─────────────────────────────────────────── */
 
@@ -90,7 +68,7 @@ static int func_80051E58(void) {
  * If the capped sum < 51, calls func_80051E58() again (which may have
  * changed since the first call) and adds the byte to the new return.
  * Returns the capped value (0..50). */
-static unsigned int func_80052F70(void) {
+unsigned int func_80052F70(void) {
     unsigned int b = PE_LoadU8(GA_800C0E0C);
     unsigned int v = func_80051E58();
     unsigned int sum = b + v;

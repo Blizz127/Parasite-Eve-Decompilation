@@ -94,18 +94,17 @@ boundary in retail ROM order.  Strict mode with `--disc-image` stops at
 `func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
 `--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** B27 func_80052594 RUNG — 309 native tests pass (and 309/309
-sanitized); the strict real-disc frontier advanced from `func_80052594`
-to **`func_8005CCA4` from `func_8005D6F4`** (exit 1, three identical
-captures), bootstrap-disc still stops at `func_8007F72C` by design.
-Note the frontier did NOT move to `func_80051CC4`: `func_8005D6F4` still
-carries six boundary callees of its own, and `func_8005CCA4` is the
-next one in retail ROM order.  `func_80052594` is translated retail
-logic — a leaf string copy into a fixed 8-byte buffer at `D_80091694`
-with the byte count stored at `D_8009169D`.  Its five remaining sibling callees
-(`func_8005DC9C` dead arm, `func_8005CCA4`,
-`func_800614AC`, `func_8005E884`, `func_8005E850`, `func_800649D0`,
-`func_80052790`) still route through the centralized boundary.
+**Status:** B28 func_8005CCA4 RUNG — 332 native tests pass (and 332/332
+sanitized); the strict real-disc frontier advanced from `func_8005CCA4`
+to **`func_80053D2C` from `func_8005CCA4`** (exit 1, normal and sanitizer
+agree), bootstrap-disc still stops at `func_8007F72C` by design.
+`func_8005CCA4` is translated retail logic — a 223-word resource-table
+initializer with a 50-halfword descending zero loop (0x800C0DE6..0x800C0E48)
+that intentionally overwrites earlier writes in that range.  Its six
+remaining boundary callees (`func_80053D2C` x5, `func_80042C78` x1) and
+five sibling callees (`func_800614AC`, `func_8005E884`, `func_8005E850`,
+`func_800649D0`, `func_80052790`) still route through the centralized
+boundary.
 
 The B25 degenerate in-RAM default for the consumed `func_8005DC4C`
 return is retired: the value now comes from the real archive.  Because

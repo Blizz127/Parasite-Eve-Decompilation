@@ -80,6 +80,16 @@ extern uint32_t  D_8009D1C4;
 extern uint32_t  D_800A7918;
 extern unsigned short D_80093164[];
 
+/* func_80052C6C state globals (host-side, extern for test reset) */
+extern unsigned int D_8009D018;
+extern unsigned int D_8009D03C;
+extern unsigned int D_8009D048;
+extern unsigned int D_8009D04C;
+extern unsigned int D_8009D050;
+extern unsigned int D_8009D054;
+extern unsigned int D_8009D058;
+extern unsigned int D_8009D064;
+
 /* ── SDK IMPLEMENTED ──────────────────────────────────────────────── */
 static inline void func_80073A44(int m)  { HostFB_VSync(m); }
 static inline void func_80074D28(int m)  { HostFB_SetDispMask(m); }
@@ -152,6 +162,8 @@ extern pe_addr_t func_8005DC4C(uint32_t idx);
 extern int  func_80052594(pe_addr_t src);
 extern pe_addr_t func_8005DB8C(int idx);
 extern pe_addr_t func_8005DBAC(int arg);
+extern void func_8005CCA4(void);
+extern int func_800438C0(int arg);
 extern pe_addr_t func_80071A24(pe_addr_t dst, uint32_t len);
 extern void func_8005E968(uint32_t);
 extern void func_8005F844(int);

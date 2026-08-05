@@ -86,4 +86,13 @@ void PE_Sdk_ResetState(void)
     g_pe_gte.h = 0;
     g_pe_gte.dqa = g_pe_gte.dqb = 0;
     g_pe_gte.zsf3 = g_pe_gte.zsf4 = 0;
+    /* func_80052C6C state globals */
+    D_8009D018 = 0;
+    D_8009D03C = 0;
+    D_8009D048 = 0;
+    D_8009D04C = 0;
+    D_8009D050 = 0;
+    D_8009D054 = 0;
+    D_8009D058 = 0;
+    D_8009D064 = 0;
 }
