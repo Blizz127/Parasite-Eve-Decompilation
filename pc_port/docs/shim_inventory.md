@@ -296,9 +296,9 @@ func_8005DC4C (B26);
 C4; block-2 order flag, C4, C8, C0); `sh 0x0203 → 0x800C1F80`,
 `sw 0x00404040 → 0x800C0E44`; timer-tick clears `0x800A76A4/B0/BC/C8`;
 terminator bytes `0x800C20A4/B4`; returns 0xFF (sole call site
-func_800527C8 @0x8005283C, return discarded).  After B26, SEVEN
+func_800527C8 @0x8005283C, return discarded).  After B27, SIX
 unresolved callees route through the centralized bootstrap boundary in
-retail ROM order: func_80052594, func_8005CCA4, func_800614AC,
+retail ROM order: func_8005CCA4, func_800614AC,
 func_8005E884, func_8005E850, func_800649D0, func_80052790 — plus the
 statically dead func_8005DC9C arm (C8 is always 0 at the selection).
 
@@ -345,18 +345,46 @@ func_8006A9E4 before the dispatcher runs.  With the region zeroed the
 lookup correctly returns 0 and func_8005D6F4's copy loop dereferences
 address 0 — surfaced by the checked-access layer, deliberately not
 masked with a KUSEG mirror, a clamp, or a bypass.  Strict real-disc
-execution now reaches `func_80052594` from `func_8005D6F4` (exit 1,
+execution now reaches `func_8005CCA4` from `func_8005D6F4` (exit 1,
 three identical captures).
+
+### Phase 6E-B27
+
+`func_80052594` is translated retail logic: 22 words at executable
+`0x80052594..0x800525EB`, file offset `0x42D94`, live split
+`42D94.s` (yaml segment `[0x42D94, asm]`).  A leaf string-copy function
+that copies bytes from `$a0` (source pointer) into a fixed 8-byte
+buffer at `D_80091694`, stopping at the `0xFF` terminator or buffer
+full, stores the byte count at `D_8009169D`, and returns the count
+(0-8).  The `0xFF` terminator is NOT copied.  No callees, no
+`$gp` usage (all addresses via absolute `lui`/`addiu`), no
+SDK/GTE/GPU/MDEC/SPU/disc/input activity.
+
+Five executable call sites (`jal` word `0x0C014965`):
+`func_8005D6F4` @ `0x8005D898` (delay: `addu $a0,$v0`; return
+discarded), `func_8004DD64` @ `0x8004E28C/0x8004E428/0x8004E6A8`
+(delay: `addu $a0,$v0`; return discarded), and `func_8005C46C` @
+`0x8005C46C` (delay: `nop`; return discarded).  All call sites discard
+the return value.
+
+`D_80091694` (8-byte buffer) and `D_8009169D` (1-byte count) are
+guest-RAM resident.  Exhaustive executable-wide `lui`/`addiu` scan
+found NO readers — these are write-only stores.  Not `$gp`-relative
+(`$gp = 0x8009CD70`, offset would be `-0xB6DC`, outside small-data
+area).
+
+Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With `--disc-image`, strict mode stops at `func_80052594` (first
+With `--disc-image`, strict mode stops at `func_8005CCA4` (first
 unresolved callee INSIDE the translated `func_8005D6F4`, called from
 `func_800527C8` via `func_8006A9E4`) — past the fully translated
 func_8003E680, func_8006A9E4 streaming-load rung, func_800527C8
-dispatcher, func_80052C6C (B23), func_8005BCBC (B24), and the
+dispatcher, func_80052C6C (B23), func_8005BCBC (B24), the
 translated direct work of func_8005D6F4 (B25: bzero, fills, state
-stores) and the three translated func_8005DC4C lookups (B26).  The `--bootstrap-disc` fixture
+stores), the three translated func_8005DC4C lookups (B26), and the
+translated func_80052594 string copy (B27).  The `--bootstrap-disc` fixture
 still stops at `func_8007F72C` (CdReady) by design: the fixture never
 initializes the drive lane.
 
@@ -368,10 +396,9 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 - `func_8005DC9C` — dead-arm callee of func_8005D6F4 (C8 always 0);
   the same lookup as func_8005DC4C but reading `ptr+8` instead of
   `ptr+4`, i.e. a second table in the same sub-chunk
-- `func_80052594` — current strict frontier (B26), first unresolved
-  callee inside the translated func_8005D6F4; a0 = the third
-  func_8005DC4C lookup result
-- `func_8005CCA4`, `func_800614AC`, `func_8005E884`,
+- `func_8005CCA4` — current strict frontier (B27), first unresolved
+  callee inside the translated func_8005D6F4
+- `func_800614AC`, `func_8005E884`,
   `func_8005E850`, `func_800649D0`, `func_80052790` — remaining
   func_8005D6F4 callees in retail ROM order
 - `func_80051CC4`, `func_80042C78` — remaining unresolved dispatcher

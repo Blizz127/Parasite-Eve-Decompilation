@@ -5,7 +5,7 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
-## Phase 6E-B26 FUNC_8005DC4C RUNG VERIFIED
+## Phase 6E-B27 FUNC_80052594 RUNG VERIFIED
 
 The raw retail trampoline at executable `0x80071A24..0x80071A2F` (file
 offset `0x62224`) is exactly `240A00A0 01400008 24090028`: load `$t2=0xA0`,
@@ -21,7 +21,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B26 — func_8005DC4C rung** | `pc_port/build/pe-native-tests` (298/298) |
+| Port phase | **6E-B27 — func_80052594 rung** | `pc_port/build/pe-native-tests` (309/309) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -30,13 +30,13 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | VBlank callbacks | func_80073D24 IMPLEMENTED (libetc jump-table wrapper, slot 4 forced, return forwarded → func_80074478 semantics: prev = D_8009568C[4], store-if-different, return prev); guest-backed 8-slot table at 0x8009568C + dispatch counter at 0x800956AC; func_8007440C-faithful dispatcher; typed guest→host binding map, full pointer width, unknown identities = visible errors; slot 8 aliases the counter (exact retail arithmetic preserved); oracle gate `--callback-oracle-dump` ≡ `pc_port/tools/callback_oracle.py` (MIPS interpreter on the verified retail words) | `pc_port/platform/pe_callback.[ch]`, `pc_port/platform/pe_libetc.c` |
 | Boot globals | func_800371A4 TRANSLATED (3-word $gp-relative byte setter: `sb $a0, 0x124($gp)` → D_8009CE94 = guest 0x8009CE94, exe-verified words; call sites 3E680 arg 0 + 527C8 arg 1, returns unused; sole reader func_80037870 off boot path). func_80029388 TRANSLATED (slot-table clear + record init: 7 in-use words at D_800A5D58 + i*220 — same 7×220 SlotRecord table as decomp leaf func_8002F9CC — plus bytes D_8009D2A0/D_8009D2EC; leaves func_8002F658 = rodata-record copies D_80010928→D_800B8A20 0x70 / D_80010998→D_800B0CB0 0x18 + zero D_8009D1B0/D_8009D1B4, func_80020EFC = matched 5-byte clear; sole 29388 call site 3E680 @0x8003E700, nop slot). func_8005BCA8 TRANSLATED (empty jr/nop stub: 2 words at 0x8005BCA8 / file 0x4C4A8 = `03E00008 00000000`, zero guest effects; sole call site 3E680 @0x8003E708, nop slot; matching decomp C leaf since Phase 5AH). func_80068D28 TRANSLATED (63 words / 0xFC at 0x80068D28, live split 55430.s, all exe-verified: double-buffered display-record data init at D_800BCF88 — scalar block +0x60..0x70, two 16-byte records +0x30+i*0x10, two 8-byte records +0x50+i*0x8 with 0xE1000440 GP0-shaped DATA word, not a hardware write; loop bytes are retail load-after-store from the scalars; write extent 0x800BCFBB..0x800BCFF9; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E710, nop slot, $v0=0 unconsumed). func_800124F8 TRANSLATED (31 words / 0x7C at 0x800124F8, live split 2A0C.s, all exe-verified: subsystem table clear — sw 0 → 0x8009D300, sh 0 → 0x8009D308 with 0x8009D304 untouched, sw 0 → 0x8009CDFC/0x8009CE00/0x8009CE04, 72×11-word matrix at D_8009D310 stride 0x2C span ..0x8009DF6F, contiguous 16-word array at D_8009DF70 span ..0x8009DFAF; pure zero-stores, no reads, no SDK/GTE/hardware/GPU work; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E718, nop slot, $v0=0 unconsumed). func_8001A890 TRANSLATED (34 words / 0x88 at 0x8001A890, live split A404.s, all exe-verified: subsystem scalar/array clear — sw 0 → 0x8009CE08, stride-2 halfword loop 0x8009CE0C..CE13, sw 0 → 0x8009CE14, 20-word array at D_8009DFB0 span ..0x8009DFFC contiguous above 124F8's array, six stride-4 halfwords 0x8009CE18/1C/20/24/28/2C with interleaved upper halves untouched (ROM order A8, B8, B4, B0, AC, BC), words 0x8009D1D8/D1FC/D2F8/D248 (ROM order 468, 48C, 588, 4D8), halfwords 0x8009D264/D1CC (ROM order 4F4, 45C); pure zero-stores, no reads; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E720, nop slot, $v0=0 unconsumed). func_80034F10 TRANSLATED (45 words / 0xB4 at 0x80034F10, live split 2422C.s, all exe-verified: subsystem table clear + flag-bit clear — sw 0 → 0x8009D2E8, 512-word array at D_800A77F0 span ..0x800A7FEC, D_800B6A80 = 0 (retail stores the same word 64× via delay-slot loop with no pointer advance, reproduced as one store), 14×160-word matrix at D_800BEA90 stride 0x280 span ..0x800C0D8F, scalars sw 0 → 0x8009D2AC/D20C/D2F0/D254/D224 + sh 0 → 0x8009D2A6 (ROM order 53C, 49C, 580, 536, 4E4, 4B4), sole guest read + RMW D_800B0CD8 &= ~0x3000 with the store in the jr $ra delay slot; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E728, nop slot, $v0=&D_800B0CD8 unconsumed). func_8006536C TRANSLATED (19 words / 0x4C at 0x8006536C, live split 55430.s, all exe-verified: subsystem record-table clear + index byte clear — 28×3-word table at D_800A3180, row stride 0xC, contiguous 84 words span ..0x800A32CF, sb 0 → 0x44($gp) = 0x8009CDB4 current-record index byte (func_800653B8 below reads lbu 0x44($gp) and indexes D_800A3180 + byte×12, confirming 28×12-byte records); no reads, no SDK/GTE/hardware/GPU work; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E730, nop slot, $v0=0 unconsumed). func_80038D1C TRANSLATED (11 words / 0x2C at 0x80038D1C, live split 2951C.s, all exe-verified + matched decomp C leaf: byte test-and-clear status leaf — lbu D_80091A20, if nonzero sb 0 → D_80091A20 return 0, else return 0xFF; conditional write only; two call sites both return-ignored: 3E680 @0x8003E738 final call + 6E9A0 @0x8006EB7C; with this leaf func_8003E680 FULLY translated) | `pc_port/game/boot/func_800371A4_port.c`, `pc_port/game/boot/func_80029388_port.c`, `pc_port/game/boot/func_8005BCA8_port.c`, `pc_port/game/boot/func_80068D28_port.c`, `pc_port/game/boot/func_800124F8_port.c`, `pc_port/game/boot/func_8001A890_port.c`, `pc_port/game/boot/func_80034F10_port.c`, `pc_port/game/boot/func_8006536C_port.c`, `pc_port/game/boot/func_80038D1C_port.c` |
 | Streaming load | func_8006A9E4 TRANSLATED (215 words / 0x35C at 0x8006A9E4, live split 5B1E4.s, all exe-verified: ClearImage({0,0,0x3FF,0x1FF},0,0,1) via REAL func_80074F44; four PE.IMG sector-read/poll cycles — table D_800930DC..E8, dests D_800A8028 / lw(D_800B0E6C), A/B restart-on-(-1), C/D sltu-clamped re-poll, sector counts proven by the 34-sector/67792-byte and 3-sector/5120-byte cycle/copy pairs; 0x10A50-byte copy to D_800E2858; two func_8006E498 lookups keys 0x57D40D84/0x57D41D84 exact delay-slot order D_800B0E20→E18→E1C; 0x1400-byte copy to lw(D_800B0E08); sole call site func_8001220C @0x80012284, nop slot, return ignored). Dependencies TRANSLATED: func_8006E6A8, func_8006E7E8, func_8006E498, func_800527C8. func_80087090 UNRESOLVED via the centralized boundary | `pc_port/game/boot/func_8006A9E4_port.c`, `func_8006E6A8_port.c`, `func_8006E7E8_port.c`, `func_8006E498_port.c` |
-| B17 dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 called twice). 7 translated leaves: func_8005B890(0), func_8005BC98(0), 3×sw $zero, func_8004F808, func_80042B38, func_80051084, func_8005BC98(1) + D_800B0CD8 |= 0x40000000 in the delay slot of func_800371A4(1). 8 further callees translated (func_800528F0, func_8005E588, func_80062568, func_80064964, func_8005DE88, func_80052C6C, func_8005BCBC, func_8005D6F4); 2 unresolved (func_80051CC4, func_80042C78) — routed through the centralized bootstrap boundary; func_8005D6F4 itself carries 9 boundary callees, strict stops INSIDE it at func_8005DC4C. Independent oracle: `pc_port/tools/dispatcher_oracle.py` (MIPS interpreter on verified retail words). Sole call site func_8006A9E4 @0x8006AAD0, $s1-guarded one-shot inside the cycle-B poll loop; void(void), return unconsumed | `pc_port/game/boot/func_800527C8_port.c`, `func_8005B890_port.c`, `func_8005BC98_port.c`, `func_8004F808_port.c`, `func_80042B38_port.c`, `func_80051084_port.c`, `func_80052C6C_port.c`, `func_8005BCBC_port.c`, `func_8005D6F4_port.c` |
+| B17 dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 called twice). 7 translated leaves: func_8005B890(0), func_8005BC98(0), 3×sw $zero, func_8004F808, func_80042B38, func_80051084, func_8005BC98(1) + D_800B0CD8 |= 0x40000000 in the delay slot of func_800371A4(1). 9 further callees translated (func_800528F0, func_8005E588, func_80062568, func_80064964, func_8005DE88, func_80052C6C, func_8005BCBC, func_8005D6F4, func_80052594); 2 unresolved (func_80051CC4, func_80042C78) — routed through the centralized bootstrap boundary; func_8005D6F4 itself carries 6 boundary callees, strict stops INSIDE it at func_8005CCA4. Independent oracle: `pc_port/tools/dispatcher_oracle.py` (MIPS interpreter on verified retail words). Sole call site func_8006A9E4 @0x8006AAD0, $s1-guarded one-shot inside the cycle-B poll loop; void(void), return unconsumed | `pc_port/game/boot/func_800527C8_port.c`, `func_8005B890_port.c`, `func_8005BC98_port.c`, `func_8004F808_port.c`, `func_80042B38_port.c`, `func_80051084_port.c`, `func_80052C6C_port.c`, `func_8005BCBC_port.c`, `func_8005D6F4_port.c`, `func_80052594_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | with `--disc-image`: exit 1 at `func_80052594` from `func_8005D6F4` (3 identical captures); with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` by design | `--headless --strict-stubs --disc-image …` |
-| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 298/298 tests + headless + real-disc load + strict + RNG/LZCR/callback/dispatcher oracle dumps clean | `pc_port/build-san` |
+| Strict mode | with `--disc-image`: exit 1 at `func_8005CCA4` from `func_8005D6F4` (3 identical captures); with `--bootstrap-disc`: fixture still aborts at `func_8007F72C` by design | `--headless --strict-stubs --disc-image …` |
+| Sanitizers | `-DPE_PORT_SANITIZERS=ON` (static libasan/libubsan): 309/309 tests + headless + real-disc load + strict + RNG/LZCR/callback/dispatcher oracle dumps clean | `pc_port/build-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next | Phase 6E-B continued: **`func_80052594` rung** — the ACTUAL next unresolved dependency (strict stops INSIDE translated func_8005D6F4 at func_80052594, whose a0 is the third func_8005DC4C lookup result). The earlier projection of `func_80051CC4` was wrong: func_8005D6F4 still carries seven boundary callees of its own, which all precede the dispatcher's remaining two. Order from here: func_80052594, func_8005CCA4, func_800614AC, func_8005E884, func_8005E850, func_800649D0, func_80052790, then `func_80051CC4`, `func_80042C78`, then `func_80087090` (SPU-upload boundary in `func_8006A9E4`); not MDEC/GPU/audio/input; do not start MDEC/SDL/audio/input | — |
+| Next | Phase 6E-B continued: **`func_8005CCA4` rung** — the ACTUAL next unresolved dependency (strict stops INSIDE translated func_8005D6F4 at func_8005CCA4). func_8005D6F4 still carries six boundary callees of its own, which all precede the dispatcher's remaining two. Order from here: func_8005CCA4, func_800614AC, func_8005E884, func_8005E850, func_800649D0, func_80052790, then `func_80051CC4`, `func_80042C78`, then `func_80087090` (SPU-upload boundary in `func_8006A9E4`); not MDEC/GPU/audio/input; do not start MDEC/SDL/audio/input | — |
 
 **Window-white is a known host-layer artifact:** the X11 window background
 is white and Expose events are not re-blitted; the port blits once after
@@ -313,6 +313,62 @@ func_8005D6F4 still carries seven boundary callees that all precede the
 dispatcher's remaining two.  The dispatcher oracle still reports two
 unresolved callees in order: func_80051CC4, func_80042C78.  Native and
 sanitizer tests are 298/298.  Framebuffer (`fb28dc21…`), boot trace
+(`42c1956e…`), and real-disc load trace (`7b8724ac…`, FNV
+`7D860391E1ED6C97`) hashes are unchanged; windowed framebuffer matches
+headless.  Docker matching rebuild remains EXACT at
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+
+### B27 audit complete — func_80052594 translated
+
+`func_80052594` (22 words / 0x58 at `0x80052594..0x800525EB`, file
+offset `0x42D94`, live split `42D94.s`, yaml segment `[0x42D94, asm]`)
+is translated as a leaf string-copy function.  All 22 words are
+exe-verified against the SHA-1-verified retail executable.
+
+ROM-order operation map (no `$gp` usage — all addresses via absolute
+`lui`/`addiu`):
+1. `$a1 = D_80091694` (buffer base), `$v1 = $a1 + 8` (buffer end)
+2. `sltu $v0,$a1,$v1` — always true (8-byte buffer); `beqz` → skip
+3. `$a2 = 0xFF` (terminator constant)
+4. Loop: `lbu $v0,0($a0)` / `nop` (load delay) / `beq $v0,$a2 → exit`
+   / `nop` / `sb $v0,0($a1)` / `addiu $a1,1` / `sltu $v0,$a1,$v1`
+   / `bnez → loop` / `addiu $a0,1` (delay slot)
+5. Exit: `$v1 = D_8009169D` / `$v0 = $a1 - D_80091694` = byte count
+6. `jr $ra` / `sb $v0,0($v1)` (delay slot: store count at D_8009169D)
+
+Signature: `int func_80052594(pe_addr_t src)`.  One argument in `$a0`.
+Returns byte count (0-8) in `$v0`.  Side effect: stores count at
+`D_8009169D`.  The `0xFF` terminator byte is NOT copied.
+
+Five executable call sites (`jal` word `0x0C014965`):
+- `func_8005D6F4` @ `0x8005D898` (delay: `addu $a0,$v0`; return discarded)
+- `func_8004DD64` @ `0x8004E28C` (delay: `addu $a0,$v0`; return discarded)
+- `func_8004DD64` @ `0x8004E428` (delay: `addu $a0,$v0`; return discarded)
+- `func_8004DD64` @ `0x8004E6A8` (delay: `addu $a0,$v0`; return discarded)
+- `func_8005C46C` @ `0x8005C46C` (delay: `nop`; return discarded)
+
+All call sites discard the return value.
+
+`D_80091694` (8-byte buffer) and `D_8009169D` (1-byte count) are
+guest-RAM resident.  Exhaustive executable-wide `lui`/`addiu` scan found
+NO readers — these are write-only stores.  Not `$gp`-relative (`$gp` =
+`0x8009CD70`, offset would be `-0xB6DC`, outside small-data area).
+
+Classification: 1 — translated retail logic (leaf, no callees, pure
+guest-memory, deterministic, idempotent for same source).
+
+Independent oracle `pc_port/tools/b27_oracle.py` — delay-slot-aware
+MIPS-I interpreter over the SHA-1-verified retail words; every modeled
+word cross-checked against the exe; every read/write logged with address,
+width, value and order; asserts the exact ROM-order footprint and return
+for terminator-only, partial, full, and boundary scenarios.
+
+The strict frontier advances to **func_8005CCA4** from `func_8005D6F4`
+(three identical captures, exit 1) — NOT to func_80051CC4, because
+func_8005D6F4 still carries six boundary callees that all precede the
+dispatcher's remaining two.  The dispatcher oracle still reports two
+unresolved callees in order: func_80051CC4, func_80042C78.  Native and
+sanitizer tests are 309/309.  Framebuffer (`fb28dc21…`), boot trace
 (`42c1956e…`), and real-disc load trace (`7b8724ac…`, FNV
 `7D860391E1ED6C97`) hashes are unchanged; windowed framebuffer matches
 headless.  Docker matching rebuild remains EXACT at

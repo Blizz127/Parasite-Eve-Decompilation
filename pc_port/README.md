@@ -94,17 +94,16 @@ boundary in retail ROM order.  Strict mode with `--disc-image` stops at
 `func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
 `--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** B26 func_8005DC4C RUNG — 298 native tests pass (and 298/298
-sanitized); the strict real-disc frontier advanced from `func_8005DC4C`
-to **`func_80052594` from `func_8005D6F4`** (exit 1, three identical
+**Status:** B27 func_80052594 RUNG — 309 native tests pass (and 309/309
+sanitized); the strict real-disc frontier advanced from `func_80052594`
+to **`func_8005CCA4` from `func_8005D6F4`** (exit 1, three identical
 captures), bootstrap-disc still stops at `func_8007F72C` by design.
 Note the frontier did NOT move to `func_80051CC4`: `func_8005D6F4` still
-carries seven boundary callees of its own, and `func_80052594` is the
-next one in retail ROM order.  `func_8005DC4C` is translated retail
-logic — a read-only PE.IMG message/string-table lookup; the three
-`func_8005D6F4` call sites all pass index 30 and consume the result as a
-0xFF-terminated string source.  Its six remaining sibling callees
-(`func_8005DC9C` dead arm, `func_80052594`, `func_8005CCA4`,
+carries six boundary callees of its own, and `func_8005CCA4` is the
+next one in retail ROM order.  `func_80052594` is translated retail
+logic — a leaf string copy into a fixed 8-byte buffer at `D_80091694`
+with the byte count stored at `D_8009169D`.  Its five remaining sibling callees
+(`func_8005DC9C` dead arm, `func_8005CCA4`,
 `func_800614AC`, `func_8005E884`, `func_8005E850`, `func_800649D0`,
 `func_80052790`) still route through the centralized boundary.
 

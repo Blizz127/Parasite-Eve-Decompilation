@@ -73,14 +73,15 @@
  * the body never reads $a0); unconditional; one-shot per dispatcher
  * invocation; return discarded.
  *
- * Dependency boundary (Phase 6E-B25): func_80071A24 is REAL (B21
- * BIOS A(28h) bzero).  The nine remaining callees are UNRESOLVED and
- * route through the centralized bootstrap boundary in retail ROM order:
- * func_8005DC4C (three call sites), func_8005DC9C (dead arm),
- * func_80052594, func_8005CCA4, func_800614AC, func_8005E884,
- * func_8005E850, func_800649D0, func_80052790.  None of them is
- * implemented in this rung; strict mode stops at the first one invoked
- * (func_8005DC4C on the boot path).
+ * Dependency boundary (Phase 6E-B27): func_80071A24 is REAL (B21
+ * BIOS A(28h) bzero), func_8005DC4C is REAL (B26 message-table lookup),
+ * func_80052594 is REAL (B27 string copy into fixed 8-byte buffer).
+ * The six remaining callees are UNRESOLVED and route through the
+ * centralized bootstrap boundary in retail ROM order:
+ * func_8005CCA4, func_800614AC, func_8005E884,
+ * func_8005E850, func_800649D0, func_80052790.
+ * func_8005DC9C is a dead arm.  Strict mode stops at the first
+ * unresolved invocation (func_8005CCA4 on the boot path).
  *
  * Controlled dependency returns: the func_8005DC4C return is CONSUMED
  * (string-copy source).  The compiled-in boundary default is the
@@ -236,9 +237,8 @@ int func_8005D6F4(void)
      * the jal delay slot @0x8005D89C. */
     src = func_8005DC4C(30u);
     (void)cursor;                           /* retail residual $a1 */
-    (void)src;                              /* retail $a0 to func_80052594 */
-    r = Bootstrap_ReturnInt("func_80052594", "func_8005D6F4", 0);
-    (void)r;
+    r = func_80052594(src);  /* B27: REAL — copies to D_80091694 */
+    (void)r;                 /* retail discards return at this call site */
 
     /* 12. func_8005CCA4() */
     Bootstrap_ReturnVoid("func_8005CCA4", "func_8005D6F4");

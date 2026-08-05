@@ -6013,16 +6013,16 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* 7. Dependency boundary (updated Phase 6E-B25): func_8005D6F4 is
-     * REAL too — after Phase 6E-B26 its SEVEN remaining boundary callees
+    /* 7. Dependency boundary (updated Phase 6E-B27): func_8005D6F4 is
+     * REAL too — after Phase 6E-B27 its SIX remaining boundary callees
      * precede the two remaining unresolved dispatcher callees in retail
      * ROM order, then func_80087090. */
-    ASSERT(g_stub_order_count == 10, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(7),
+    ASSERT(g_stub_order_count == 9, "unexpected bootstrap invocations");
+    ASSERT(B21_CheckDispatcherOrder(6),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[9], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[8], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 10, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 9, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -6154,6 +6154,11 @@ static void test_6A9E4_zero_cycles_footprint(void) {
                  a == 0x8009D0E8u || a == 0x8009D0ECu ||
                  a == 0x8009D0F0u)
             want = 0;
+        /* Phase 6E-B27: func_80052594 writes count at D_8009169D (byte
+         * offset 1 in the aligned word 0x8009169C).  The degenerate
+         * source (fill bytes = 0xFF) gives count = 0. */
+        else if (a == 0x8009169Cu)
+            want = 0xA5A500A5u;       /* canary with count byte = 0 */
         /* Phase 6E-B24: func_8005BCBC resource-state selector.  The
          * dispatcher passes a0 = 0 and D_8009D218 = 1 (func_8005BC98),
          * so the a0==0 path selects base 0x800C0DE0 + 0x10. */
@@ -6236,10 +6241,10 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
-    ASSERT(g_stub_order_count == 10, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(7),
+    ASSERT(g_stub_order_count == 9, "unexpected bootstrap invocations");
+    ASSERT(B21_CheckDispatcherOrder(6),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[9], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[8], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6305,13 +6310,13 @@ static void test_6A9E4_3E680_integration(void) {
     B26_SeedArchiveDefault();  /* B26: no disc, so seed the archive */
     func_8006A9E4();
 
-    /* B26: func_8005DC4C is translated too — seven boundary callees from
+    /* B27: func_80052594 is translated too — six boundary callees from
      * func_8005D6F4 precede the 2 unresolved dispatcher callees before
      * func_80087090. */
-    ASSERT(g_stub_order_count == 10, "unexpected provider count");
-    ASSERT(B21_CheckDispatcherOrder(7),
+    ASSERT(g_stub_order_count == 9, "unexpected provider count");
+    ASSERT(B21_CheckDispatcherOrder(6),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[9], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[8], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
@@ -6894,8 +6899,8 @@ static void test_5BCBC_dispatcher_integration(void) {
     ResetTestState();
     B26_SeedArchiveDefault();   /* B26: func_8005D6F4 walks a real archive */
     func_800527C8();
-    ASSERT(g_stub_order_count == 9, "dispatcher must leave 9 providers");
-    ASSERT(B21_CheckDispatcherOrder(7),
+    ASSERT(g_stub_order_count == 8, "dispatcher must leave 8 providers");
+    ASSERT(B21_CheckDispatcherOrder(6),
            "post-5BCBC dispatcher order wrong");
     ASSERT(CountOrderLog("func_8005DC4C") == 0,
            "func_8005DC4C routed through bootstrap policy");
@@ -6942,19 +6947,18 @@ static void test_5BCBC_dispatcher_integration(void) {
 #define B25_BUF_SEL   0x800C0DF0u
 #define B25_BZERO_LEN 0x12E4u
 
-/* The seven boundary providers func_8005D6F4 must invoke in retail ROM
+/* The six boundary providers func_8005D6F4 must invoke in retail ROM
  * order under non-strict execution. */
-/* Phase 6E-B26: the three func_8005DC4C invocations left this list when
- * func_8005DC4C became REAL; the remaining seven callees keep their exact
- * retail ROM order. */
-static const char *const B25_BOUNDARY_SEQ[7] = {
-    "func_80052594", "func_8005CCA4", "func_800614AC",
+/* Phase 6E-B27: func_80052594 left this list when it became REAL;
+ * the remaining six callees keep their exact retail ROM order. */
+static const char *const B25_BOUNDARY_SEQ[6] = {
+    "func_8005CCA4", "func_800614AC",
     "func_8005E884", "func_8005E850", "func_800649D0",
     "func_80052790",
 };
 
 static int B25_CheckBoundaryOrder(void) {
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 6; i++) {
         if (strcmp(g_stub_order_log[i], B25_BOUNDARY_SEQ[i]) != 0)
             return 0;
     }
@@ -6994,7 +6998,7 @@ static void test_5D6F4_boot_path_state(void) {
     ASSERT(PE_LoadU8(0x800C20B4u) == 0xFFu, "terminator B4 missing");
     /* Boundary order: 7 providers, retail ROM order (B26 removed the
      * three func_8005DC4C invocations). */
-    ASSERT(g_stub_order_count == 7, "boundary provider count wrong");
+    ASSERT(g_stub_order_count == 6, "boundary provider count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "boundary ROM order wrong");
     ASSERT(CountOrderLog("func_8005D6F4") == 0,
            "func_8005D6F4 routed through bootstrap policy");
@@ -7032,6 +7036,9 @@ static void test_5D6F4_full_ram_canary(void) {
             want = 8;
         else if (a == B24_GA_FLAG)
             want = 1;
+        /* Phase 6E-B27: func_80052594 writes count at D_8009169D. */
+        else if (a == 0x8009169Cu)
+            want = 0xA5A500A5u;       /* canary with count byte = 0 */
         else if (a == 0x800A76A4u || a == 0x800A76B0u ||
                  a == 0x800A76BCu || a == 0x800A76C8u)
             want = 0;
@@ -7162,7 +7169,7 @@ static void test_5D6F4_controlled_returns(void) {
     for (i = 3; i < 8; i++)
         ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0xFFu,
                "fill remainder past the copied record");
-    ASSERT(g_stub_order_count == 7, "controlled boundary count wrong");
+    ASSERT(g_stub_order_count == 6, "controlled boundary count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "controlled boundary order wrong");
     PASS();
 }
@@ -7177,11 +7184,13 @@ static void test_5D6F4_boundary_wiring(void) {
     ResetTestState();
     B26_SeedArchiveDefault();
     func_8005D6F4();
-    ASSERT(g_stub_order_count == 7, "boundary count wrong");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80052594") == 0,
-           "first boundary callee is now func_80052594 (B26)");
+    ASSERT(g_stub_order_count == 6, "boundary count wrong");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005CCA4") == 0,
+           "first boundary callee is now func_8005CCA4 (B27)");
     ASSERT(CountOrderLog("func_8005DC4C") == 0,
            "func_8005DC4C must no longer reach the bootstrap boundary");
+    ASSERT(CountOrderLog("func_80052594") == 0,
+           "func_80052594 must no longer reach the bootstrap boundary (B27)");
     ASSERT(B25_CheckBoundaryOrder(), "boundary order wrong");
     PASS();
 }
@@ -7461,16 +7470,257 @@ static void test_5DC4C_5D6F4_integration(void) {
     for (i = 4; i < 8; i++)
         ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0xFFu,
                "fill remainder");
-    /* Neither func_8005DC4C nor the dead func_8005DC9C arm reached the
-     * boundary; the seven remaining callees did, in retail ROM order. */
+    /* Neither func_8005DC4C, func_80052594, nor the dead func_8005DC9C arm
+     * reached the boundary; the six remaining callees did, in retail ROM
+     * order. */
     ASSERT(CountOrderLog("func_8005DC4C") == 0, "5DC4C on the boundary");
+    ASSERT(CountOrderLog("func_80052594") == 0, "52594 on the boundary");
     ASSERT(CountOrderLog("func_8005DC9C") == 0, "5DC9C arm is dead");
-    ASSERT(g_stub_order_count == 7, "boundary count wrong");
+    ASSERT(g_stub_order_count == 6, "boundary count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "boundary ROM order wrong");
-    /* The next unresolved dependency is func_80052594 — the actual new
+    /* The next unresolved dependency is func_8005CCA4 — the actual new
      * strict frontier proven by the CLI gate. */
-    ASSERT(strcmp(g_stub_order_log[0], "func_80052594") == 0,
-           "next unresolved dependency must be func_80052594");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005CCA4") == 0,
+           "next unresolved dependency must be func_8005CCA4");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B27 — func_80052594: string copy into fixed 8-byte buffer
+ * (22 retail words at 0x80052594..0x800525EB, file offset 0x42D94).
+ * Copies bytes from $a0 to D_80091694 (8 bytes max), stops at 0xFF
+ * terminator or buffer full, stores count at D_8009169D, returns count.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define B27_BUF   0x80091694u
+#define B27_COUNT 0x8009169Du
+#define B27_END   0x8009169Cu
+
+/* Seed a source string at a guest address outside the bzero range. */
+#define B27_SRC   0x800C2100u
+
+static void B27_SeedString(pe_addr_t base, const uint8_t *data, int len) {
+    for (int i = 0; i < len; i++)
+        PE_StoreU8(base + (pe_addr_t)i, data[i]);
+}
+
+/* True signature: one argument ($a0 = source pointer), returns int
+ * (byte count 0-8). */
+static void test_52594_signature(void) {
+    TEST("52594_signature");
+    ResetTestState();
+    /* Terminator-only source: returns 0, writes nothing. */
+    PE_StoreU8(B27_SRC, 0xFFu);
+    ASSERT(func_80052594(B27_SRC) == 0, "terminator-only returns 0");
+    /* 3-byte string (2 data + terminator): returns 2. */
+    PE_StoreU8(B27_SRC + 0u, 0x41u);
+    PE_StoreU8(B27_SRC + 1u, 0x42u);
+    PE_StoreU8(B27_SRC + 2u, 0xFFu);
+    ASSERT(func_80052594(B27_SRC) == 2, "2 data bytes + terminator returns 2");
+    PASS();
+}
+
+/* First byte is 0xFF: copy zero bytes, return 0, buffer untouched. */
+static void test_52594_terminator_at_start(void) {
+    TEST("52594_terminator_at_start");
+    ResetTestState();
+    /* Fill buffer with sentinel to prove it's not written. */
+    for (int i = 0; i < 8; i++)
+        PE_StoreU8(B27_BUF + (pe_addr_t)i, 0xA5u);
+    PE_StoreU8(B27_SRC, 0xFFu);
+    ASSERT(func_80052594(B27_SRC) == 0, "zero bytes copied");
+    ASSERT(PE_LoadU8(B27_COUNT) == 0u, "count = 0");
+    for (int i = 0; i < 8; i++)
+        ASSERT(PE_LoadU8(B27_BUF + (pe_addr_t)i) == 0xA5u,
+               "buffer must not be touched");
+    PASS();
+}
+
+/* Full 8-byte copy: all non-0xFF bytes, returns 8. */
+static void test_52594_full_buffer(void) {
+    TEST("52594_full_buffer");
+    ResetTestState();
+    const uint8_t data[9] = {0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48, 0xFFu};
+    B27_SeedString(B27_SRC, data, 9);
+    ASSERT(func_80052594(B27_SRC) == 8, "full buffer returns 8");
+    ASSERT(PE_LoadU8(B27_COUNT) == 8u, "count = 8");
+    for (int i = 0; i < 8; i++)
+        ASSERT(PE_LoadU8(B27_BUF + (pe_addr_t)i) == data[i],
+               "buffer byte mismatch");
+    PASS();
+}
+
+/* Partial copy: N bytes then 0xFF terminator. */
+static void test_52594_partial_copy(void) {
+    TEST("52594_partial_copy");
+    ResetTestState();
+    const uint8_t data[5] = {0x50, 0x45, 0x31, 0xFFu, 0xA5u};
+    B27_SeedString(B27_SRC, data, 5);
+    ASSERT(func_80052594(B27_SRC) == 3, "3 bytes before terminator");
+    ASSERT(PE_LoadU8(B27_COUNT) == 3u, "count = 3");
+    ASSERT(PE_LoadU8(B27_BUF + 0u) == 0x50u, "byte 0");
+    ASSERT(PE_LoadU8(B27_BUF + 1u) == 0x45u, "byte 1");
+    ASSERT(PE_LoadU8(B27_BUF + 2u) == 0x31u, "byte 2");
+    /* Byte 3 should NOT be 0xFF — the terminator is not copied. */
+    ASSERT(PE_LoadU8(B27_BUF + 3u) != 0xFFu,
+           "terminator must not be stored");
+    PASS();
+}
+
+/* Exactly 7 bytes: buffer has room for one more but terminator stops it. */
+static void test_52594_seven_bytes(void) {
+    TEST("52594_seven_bytes");
+    ResetTestState();
+    uint8_t data[8];
+    for (int i = 0; i < 7; i++) data[i] = (uint8_t)(0x30 + i);
+    data[7] = 0xFFu;
+    B27_SeedString(B27_SRC, data, 8);
+    ASSERT(func_80052594(B27_SRC) == 7, "7 bytes copied");
+    ASSERT(PE_LoadU8(B27_COUNT) == 7u, "count = 7");
+    for (int i = 0; i < 7; i++)
+        ASSERT(PE_LoadU8(B27_BUF + (pe_addr_t)i) == data[i], "byte match");
+    PASS();
+}
+
+/* Count side effect: D_8009169D stores the byte count. */
+static void test_52594_count_stored(void) {
+    TEST("52594_count_stored");
+    ResetTestState();
+    /* 0 bytes */
+    PE_StoreU8(B27_SRC, 0xFFu);
+    func_80052594(B27_SRC);
+    ASSERT(PE_LoadU8(B27_COUNT) == 0u, "count 0");
+    /* 1 data byte + terminator */
+    PE_StoreU8(B27_SRC, 0x41u);
+    PE_StoreU8(B27_SRC + 1u, 0xFFu);
+    func_80052594(B27_SRC);
+    ASSERT(PE_LoadU8(B27_COUNT) == 1u, "count 1");
+    /* 5 data bytes + terminator */
+    for (int i = 0; i < 5; i++) PE_StoreU8(B27_SRC + (pe_addr_t)i, 0x41u);
+    PE_StoreU8(B27_SRC + 5u, 0xFFu);
+    func_80052594(B27_SRC);
+    ASSERT(PE_LoadU8(B27_COUNT) == 5u, "count 5");
+    /* 8 bytes (full) */
+    for (int i = 0; i < 8; i++) PE_StoreU8(B27_SRC + (pe_addr_t)i, 0x41u);
+    PE_StoreU8(B27_SRC + 8u, 0xFFu);
+    func_80052594(B27_SRC);
+    ASSERT(PE_LoadU8(B27_COUNT) == 8u, "count 8");
+    PASS();
+}
+
+/* Idempotence: same source produces same result on repeated calls. */
+static void test_52594_idempotent(void) {
+    TEST("52594_idempotent");
+    ResetTestState();
+    const uint8_t data[4] = {0x41, 0x42, 0x43, 0xFFu};
+    B27_SeedString(B27_SRC, data, 4);
+    int r1 = func_80052594(B27_SRC);
+    int r2 = func_80052594(B27_SRC);
+    int r3 = func_80052594(B27_SRC);
+    ASSERT(r1 == 3 && r2 == 3 && r3 == 3, "repeated calls return same");
+    ASSERT(PE_LoadU8(B27_COUNT) == 3u, "count stable");
+    for (int i = 0; i < 3; i++)
+        ASSERT(PE_LoadU8(B27_BUF + (pe_addr_t)i) == data[i], "byte stable");
+    PASS();
+}
+
+/* Full 2 MiB canary: exact footprint, guards around every written range. */
+static void test_52594_full_ram_canary(void) {
+    TEST("52594_full_ram_canary");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    const uint8_t data[5] = {0x50, 0x45, 0x31, 0xFFu, 0xA5u};
+    B27_SeedString(B27_SRC, data, 5);
+    func_80052594(B27_SRC);
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        uint32_t want = 0xA5A5A5A5u;
+        if (a >= B27_BUF && a < B27_END) {
+            /* Buffer: 3 copied bytes + untouched remainder. */
+            uint32_t word = 0;
+            for (int b = 0; b < 4; b++) {
+                pe_addr_t addr = a + (pe_addr_t)b;
+                if (addr < B27_BUF + 3u)
+                    word |= (uint32_t)data[addr - B27_BUF] << (b * 8);
+                else
+                    word |= 0xA5u << (b * 8);
+            }
+            want = word;
+        } else if (a == (B27_COUNT & ~3u)) {
+            /* Count byte within its aligned word. */
+            int shift = (int)(B27_COUNT & 3u) * 8;
+            want = (0xA5A5A5A5u & ~(0xFFu << shift)) | (3u << shift);
+        } else if (a >= B27_SRC && a < B27_SRC + 5u) {
+            /* Seeded INPUT source data (not a result of the run). */
+            uint32_t word = 0;
+            for (int b = 0; b < 4; b++) {
+                pe_addr_t addr = a + (pe_addr_t)b;
+                if (addr < B27_SRC + 5u)
+                    word |= (uint32_t)data[addr - B27_SRC] << (b * 8);
+                else
+                    word |= 0xA5u << (b * 8);
+            }
+            want = word;
+        }
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
+                   a, PE_LoadU32(a), want);
+            FAIL("52594 footprint wrong");
+            return;
+        }
+    }
+    /* Guard words: untouched.  B27_END (0x8009169C) is the aligned word
+     * containing B27_COUNT (0x8009169D at byte offset 1), so the real
+     * guard above the count is the next word. */
+    ASSERT(PE_LoadU32(B27_BUF - 4u) == 0xA5A5A5A5u, "guard below buffer");
+    ASSERT(PE_LoadU32(B27_COUNT + 4u) == 0xA5A5A5A5u, "guard above count word");
+    ASSERT(PE_LoadU8(B27_COUNT - 1u) == 0xA5u, "guard below count");
+    ASSERT(PE_LoadU8(B27_COUNT + 1u) == 0xA5u, "guard above count");
+    PASS();
+}
+
+/* No split-brain: D_80091694 and D_8009169D are guest-RAM only. */
+static void test_52594_no_split_brain(void) {
+    TEST("52594_no_split_brain");
+    ResetTestState();
+    const uint8_t data[4] = {0x41, 0x42, 0x43, 0xFFu};
+    B27_SeedString(B27_SRC, data, 4);
+    func_80052594(B27_SRC);
+    /* Mutating guest RAM must change the observable result. */
+    PE_StoreU8(B27_BUF, 0x00u);
+    ASSERT(PE_LoadU8(B27_BUF) == 0x00u, "guest mutation visible");
+    /* Re-run restores. */
+    func_80052594(B27_SRC);
+    ASSERT(PE_LoadU8(B27_BUF) == 0x41u, "re-run restores byte 0");
+    PASS();
+}
+
+/* Under --strict-stubs the translated body must run normally. */
+static void test_52594_strict_not_stub(void) {
+    TEST("52594_strict_not_stub");
+    ResetTestState();
+    PE_StoreU8(B27_SRC, 0x41u);
+    PE_StoreU8(B27_SRC + 1u, 0xFFu);
+    g_strict_stubs = 1;
+    ASSERT(func_80052594(B27_SRC) == 1, "strict-mode call must not abort");
+    ASSERT(g_stub_count == 0, "no stub registration under strict");
+    ASSERT(Bootstrap_InvocationCount() == 0, "no bootstrap invocation");
+    g_strict_stubs = 0;
+    PASS();
+}
+
+/* func_8005D6F4 integration: func_80052594 no longer reaches the boundary. */
+static void test_52594_5D6F4_integration(void) {
+    TEST("52594_5D6F4_integration");
+    ResetTestState();
+    B26_SeedArchiveDefault();
+    func_8005D6F4();
+    ASSERT(CountOrderLog("func_80052594") == 0,
+           "func_80052594 must not reach the bootstrap boundary");
+    /* The first boundary callee is now func_8005CCA4. */
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005CCA4") == 0,
+           "first boundary callee must be func_8005CCA4");
     PASS();
 }
 
@@ -7950,6 +8200,19 @@ int main(void)
     test_5DC4C_no_split_brain_storage();
     test_5DC4C_strict_not_stub();
     test_5DC4C_5D6F4_integration();
+
+    /* Phase 6E-B27 — func_80052594 (10 tests) */
+    test_52594_signature();
+    test_52594_terminator_at_start();
+    test_52594_full_buffer();
+    test_52594_partial_copy();
+    test_52594_seven_bytes();
+    test_52594_count_stored();
+    test_52594_idempotent();
+    test_52594_full_ram_canary();
+    test_52594_no_split_brain();
+    test_52594_strict_not_stub();
+    test_52594_5D6F4_integration();
 
     test_64964_direct_boot_state();
     test_80071A24_bzero_contract();
