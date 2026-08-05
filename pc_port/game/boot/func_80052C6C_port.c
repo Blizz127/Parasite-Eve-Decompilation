@@ -241,7 +241,7 @@ static void func_80052E30(unsigned int a0) {
  * will compute the same result as the MIPS.
  */
 
-static pe_addr_t func_8005DB44(unsigned int index) {
+pe_addr_t func_8005DB44(unsigned int index) {
     unsigned int base    = PE_LoadU32(GA_800B8038);
     unsigned int alt_base = PE_LoadU32(GA_800B8034);
     unsigned int count   = (base - alt_base) >> 5u;

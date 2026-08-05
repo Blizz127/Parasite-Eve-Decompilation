@@ -1,6 +1,6 @@
 /*
  * Phase 6E-B28 — func_8005CCA4: resource-table initialization.
- * Full implementation with local Bootstrap_ReturnVoid declaration.
+ * Full implementation; func_80053D2C is translated in its own B29 unit.
  *
  * Executable 0x8005CCA4..0x8005D01F (223 words), all verified against the
  * SHA-exact retail exe (452fb033…) and executed instruction-by-instruction
@@ -20,11 +20,7 @@ extern pe_addr_t func_8005DB8C(int idx);
 extern pe_addr_t func_8005DBAC(int arg);
 extern int func_800438C0(int arg);
 extern void Bootstrap_ReturnVoid(const char *symbol, const char *caller);
-
-static void B28_func_80053D2C(int arg) {
-    (void)arg;
-    Bootstrap_ReturnVoid("func_80053D2C", "func_8005CCA4");
-}
+extern int func_80053D2C(int arg);
 
 /* ── Guest RAM addresses written directly by func_8005CCA4 ─────────────── */
 #define GA_E00    0x800C0E00u
@@ -125,11 +121,11 @@ void func_8005CCA4(void)
     }
 
     /* 8005CDC8..CDEC: 5 boundary calls */
-    B28_func_80053D2C(0x44);
-    B28_func_80053D2C(0x96);
-    B28_func_80053D2C(0x3F);
-    B28_func_80053D2C(1);
-    B28_func_80053D2C(6);
+    (void)func_80053D2C(0x44);
+    (void)func_80053D2C(0x96);
+    (void)func_80053D2C(0x3F);
+    (void)func_80053D2C(1);
+    (void)func_80053D2C(6);
 
     /* 8005CDF0..CEC4: first scan loop (records with byte6 != 9) */
     s0 = 0u;
@@ -169,7 +165,7 @@ void func_8005CCA4(void)
         }
     }
 
-    if (s0 != 0u) B28_func_80053D2C(0);
+    if (s0 != 0u) (void)func_80053D2C(0);
 
     /* 8005CED8..CFAC: second scan loop (records with byte6 == 9) */
     {
@@ -208,7 +204,7 @@ void func_8005CCA4(void)
         }
     }
 
-    if (s0 != 0u) B28_func_80053D2C(0);
+    if (s0 != 0u) (void)func_80053D2C(0);
 
     /* 8005CFB0..CFF4: retail sets v0 = 1 in the beq delay slot AND on the
      * fall-through path, so GA_E22 is written 1 unconditionally. */

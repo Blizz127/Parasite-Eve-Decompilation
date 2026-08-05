@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6D-R
+# Shim Inventory — Phase 6E-B29
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -348,7 +348,31 @@ masked with a KUSEG mirror, a clamp, or a bypass.  Strict real-disc
 execution now reaches `func_80053D2C` from `func_8005CCA4` (exit 1,
 normal and sanitizer agree).
 
-### Phase 6E-B28 (corrective)
+### Phase 6E-B29 (current verified phase)
+
+`func_80053D2C` is translated retail logic: 80 instructions / `0x140` bytes
+at executable `0x80053D2C..0x80053E6B` (exclusive end `0x80053E6C`, file
+offset `0x4452C`). It scans the shared table at `D_8009D048` with count
+`D_8009D050`, calls translated `func_8005DB44`, dispatches record types 1–18,
+and returns the exact retail status. Types 1–9 call unresolved
+`func_80053968` with `a0 = arg`; types 16–18 call unresolved
+`func_80053B48` with no arguments. Both calls use `Bootstrap_ReturnInt` from
+the centralized boundary. Types 10 and 12–15 store `arg` as one halfword at
+the first free table slot; `arg >= 0x100` uses the same store path without a
+record lookup. Missing records, type 11, and unknown types return 0; a full
+table returns 1. The only direct guest write is that exact halfword store;
+there is no blocking, host pointer leakage, low-address mirror, clamping, or
+address-zero fallback.
+
+The independent `tools/b29_oracle.py` transcription contains all 80 words,
+checks every word against executable SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and executes the transcription
+with delay slots, table dispatch, exact writes, return paths, and controlled
+unresolved calls. The final native and ASan/UBSan suites are 337/337. The
+completed B28 provenance remains provisional `a1559ae` plus corrective
+`cd2e375`; no generated or retail artifacts were added.
+
+### Historical Phase 6E-B28 (corrective)
 
 `func_8005CCA4` is translated retail logic: 223 words at executable
 `0x8005CCA4..0x8005D01F` (exclusive end `0x8005D020`, file offset
@@ -404,12 +428,14 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With `--disc-image`, strict mode stops at `func_80053D2C` (first
-unresolved callee of translated `func_8005CCA4`) — past the fully
+With `--disc-image`, strict mode stops at `func_80042C78` from
+`func_8005CCA4` — past the fully
 translated func_8003E680, func_8006A9E4, func_800527C8, func_80052C6C
 (B23), func_8005BCBC (B24), func_8005D6F4 (B25), func_8005DC4C (B26),
-func_80052594 (B27), and func_8005CCA4 (B28).  Remaining boundary
-callees: func_80053D2C x5, func_80042C78 x1 (from func_8005CCA4),
+func_80052594 (B27), and func_8005CCA4 (historical B28). `func_80053D2C`
+is translated in B29; its unresolved callees are func_80053968 and
+func_80053B48. The next boundary is func_80042C78 x1 (from
+func_8005CCA4),
 func_800614AC, func_8005E884, func_8005E850, func_800649D0,
 func_80052790 (from func_8005D6F4), func_80051CC4, func_80042C78
 (from dispatcher), func_80087090 (SPU upload).  The `--bootstrap-disc`
@@ -423,8 +449,10 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 - `func_8005DC9C` — dead-arm callee of func_8005D6F4 (C8 always 0);
   the same lookup as func_8005DC4C but reading `ptr+8` instead of
   `ptr+4`, i.e. a second table in the same sub-chunk
-- `func_8005CCA4` — completed B28 translated rung; its current first
-  unresolved callee is `func_80053D2C`
+- `func_8005CCA4` — completed B28 translated rung; its current next
+  unresolved callee is `func_80042C78`
+- `func_80053D2C` — completed B29 translated rung; its unresolved
+  dependencies are `func_80053968` and `func_80053B48`
 - `func_800614AC`, `func_8005E884`,
   `func_8005E850`, `func_800649D0`, `func_80052790` — remaining
   func_8005D6F4 callees in retail ROM order
