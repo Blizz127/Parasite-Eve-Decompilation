@@ -6064,6 +6064,26 @@ static uint32_t B16_StreamWordPre(uint32_t off) {
     return 0xA5A5A5A5u;
 }
 
+/* func_8005CCA4's non-zero guest writes on top of the func_8005D6F4 bzero'd
+ * 0x800C0DE0.. range, valid-fixture path.  Its halfword loads come from the
+ * canary 0x800A80xx archive region (0xA5A5); GA_E24 and GA_E22 survive the
+ * corrected zero loop (0x800C0E48..0x800C0EAA).  Returns 1 and sets *want
+ * when `a` (word-aligned) is one of them. */
+static int B28_CCA4Word(pe_addr_t a, uint32_t *want) {
+    switch (a) {
+    case 0x800C0E04u: *want = 0xA5A50000u; return 1; /* GA_E06 = 0xA5A5 */
+    case 0x800C0E08u: *want = 0x0000A5A5u; return 1; /* GA_E08=0xA5A5, GA_E0A=0 */
+    case 0x800C0E20u: *want = 0x00010000u; return 1; /* GA_E20=0, GA_E22=1 */
+    case 0x800C0E24u: *want = 0x00000001u; return 1; /* GA_E24 = 1 (survives) */
+    case 0x800C0E28u:
+    case 0x800C0E2Cu:
+    case 0x800C0E30u: *want = 0xA5A5A5A5u; return 1; /* GA_E28..E32 = 0xA5A5 */
+    case 0x800C0E34u: *want = 0x0000A5A5u; return 1; /* GA_E34=0xA5A5, E36=0 */
+    case 0x800C0E40u: *want = 0x0000003Du; return 1; /* GA_E40 = 0x3D */
+    default: return 0;
+    }
+}
+
 static void test_6A9E4_zero_cycles_footprint(void) {
     TEST("6A9E4_zero_cycles_footprint");
     pe_addr_t a;
@@ -6139,13 +6159,11 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x8009CFB0u) want = 0;
         else if (a == 0x8009CFF8u) want = 0;
         else if (a == 0x8009CEF0u) want = 0x0000003Du; /* B28: func_800438C0(0x3D) */
-        /* B28: func_8005CCA4 writes via func_8005D6F4 chain */
+        /* B28: func_8005CCA4's four $gp-relative state words are SHARED host
+         * globals (D_8009D048/50/58/64), not guest RAM — verified as host
+         * variables after the loop below; guest RAM there stays canary. */
         else if (a == 0x800A8038u) want = 0;   /* zeroed pre-call */
         else if (a == 0x800A803Cu) want = 0;   /* zeroed pre-call */
-        else if (a == 0x8009D058u) want = 0x800C0E36u; /* s1 after loop */
-        else if (a == 0x8009D060u) want = 0;   /* func_80052F70() = 0 */
-        else if (a == 0x8009D068u) want = 0x8009D05Cu; /* s3 */
-        else if (a == 0x8009D074u) want = 2u;  /* s2 = 2 */
         else if (a == 0x800A1870u) want = 0;           /* func_80042B38 */
         else if (a == 0x800A1874u) want = 0;
         else if (a == 0x8009D014u) want = 0x800A1AA0u; /* func_80051084 */
@@ -6209,22 +6227,24 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         /* Phase 6E-B25: func_8005D6F4 resource-buffer + display-state
          * init (runs inside the dispatcher under boundary defaults):
          *   - bzero 0x800C0DE0..0x800C20C3 (covers B23 clear ranges 2/3)
-         *   - buffer fill 0x800C0DF0..0x800C0DF7: overwritten by B28
-         *     func_8005CCA4 zero loop (GA_E48 down to GA_DE6)
+         *   - buffer fill 0x800C0DF0..0x800C0DF7 = 0xFF: SURVIVES (the B28
+         *     func_8005CCA4 zero loop is 0x800C0E48..0x800C0EAA, above it)
          *   - sh 0x0203 -> 0x800C1F80, sw 0x00404040 -> 0x800C0E44
-         *     (sw AFTER func_8005CCA4 returns)
          *   - sb 0xFF -> 0x800C20A4 / 0x800C20B4 (record-base markers)
-         *   - sw 0 -> 0x800A76A4/B0/BC/C8 (timer tick fields) */
+         *   - sw 0 -> 0x800A76A4/B0/BC/C8 (timer tick fields)
+         * On top of that, func_8005CCA4's own writes (B28_CCA4Word). */
         else if (a >= 0x800C0DE0u && a < 0x800C20C4u) {
             want = 0;
-            if (a == 0x800C1F80u)
+            if (a >= 0x800C0DF0u && a < 0x800C0DF8u)
+                want = 0xFFFFFFFFu;    /* selected-buffer 0xFF fill survives */
+            else if (a == 0x800C1F80u)
                 want = 0x00000203u;
-            else if (a == 0x800C0E40u)
-                want = 0x0000003Du;    /* B28: sh 0x3D from func_8005CCA4 */
             else if (a == 0x800C0E44u)
                 want = 0x00404040u;    /* sw AFTER func_8005CCA4 */
             else if (a == 0x800C20A4u || a == 0x800C20B4u)
                 want = 0x000000FFu;    /* bzero then sb 0xFF byte 0 */
+            else
+                (void)B28_CCA4Word(a, &want);  /* GA_E06/08/20/22/24/28..34/40 */
         }
         else if (a == 0x800A76B0u || a == 0x800A76BCu ||
                  a == 0x800A76C8u)
@@ -6283,6 +6303,14 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
+    /* B28: func_8005CCA4's four $gp-relative state words are shared host
+     * globals (last written by func_8005CCA4, after func_80052C6C).  Guest
+     * RAM at their addresses stayed canary (checked in the loop above),
+     * proving no duplicate storage.  D_8009D050 is func_80052F70()'s result
+     * and depends on chain state, so only the constant words are pinned. */
+    ASSERT(D_8009D048 == 0x800C0E48u, "6A9E4: host D_8009D048 wrong");
+    ASSERT(D_8009D058 == 0x8009D05Cu, "6A9E4: host D_8009D058 wrong");
+    ASSERT(D_8009D064 == 2u, "6A9E4: host D_8009D064 wrong");
     /* B28: func_8005CCA4 REAL — total stub count = 14
      * (func_80053D2C x5 + func_80042C78 + func_800614AC +
      * func_8005E884 + func_8005E850 + func_800649D0 +
@@ -7033,11 +7061,12 @@ static void test_5D6F4_boot_path_state(void) {
     ASSERT(PE_LoadU8(B25_BUF_BASE) == 0u, "bzero start not clear");
     ASSERT(PE_LoadU8(B25_BUF_BASE + B25_BZERO_LEN - 1u) == 0u,
            "bzero end not clear");
-    /* Selected buffer: fill loops wrote 0xFF but func_8005CCA4's
-     * zero loop (GA_E48..GA_DE6) overwrites with 0. */
+    /* Selected buffer: fill loops wrote 0xFF and it SURVIVES — the B28
+     * func_8005CCA4 zero loop is 0x800C0E48..0x800C0EAA, above 0x800C0DF0.
+     * (Default archive record is a lone 0xFF, so copy leaves all 0xFF.) */
     for (i = 0; i < 8; i++)
-        ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0u,
-               "buffer byte not 0 (B28 zero loop)");
+        ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0xFFu,
+               "buffer 0xFF fill must survive");
     /* Direct display/timer stores. */
     ASSERT(PE_LoadU16(0x800C1F80u) == 0x0203u, "sh 0x0203 missing");
     ASSERT(PE_LoadU32(0x800C0E44u) == 0x00404040u, "0x404040 word missing");
@@ -7077,15 +7106,15 @@ static void test_5D6F4_full_ram_canary(void) {
         if (a >= B25_BUF_BASE && a < B25_BUF_BASE + B25_BZERO_LEN) {
             want = 0;
             if (a >= B25_BUF_SEL && a < B25_BUF_SEL + 8u)
-                want = 0u;             /* fill overwritten by B28 zero loop */
+                want = 0xFFFFFFFFu;    /* 0xFF fill SURVIVES the B28 zero loop */
             else if (a == 0x800C1F80u)
                 want = 0x00000203u;      /* sh 0x0203 */
             else if (a == 0x800C0E44u)
                 want = 0x00404040u;      /* sw 0x00404040 after func_8005CCA4 */
-            else if (a == 0x800C0E40u)
-                want = 0x0000003Du;    /* sh 0x3D from func_8005CCA4 */
             else if (a == 0x800C20A4u || a == 0x800C20B4u)
                 want = 0x000000FFu;      /* bzero then sb 0xFF byte 0 */
+            else
+                (void)B28_CCA4Word(a, &want);  /* GA_E06/08/20/22/24/28..34/40 */
         } else if (a == B24_GA_C8)
             want = 0;
         else if (a == B24_GA_C0)
@@ -7103,13 +7132,11 @@ static void test_5D6F4_full_ram_canary(void) {
         /* B26 archive fixture: seeded INPUTS, not results of the run. */
         else if (B26_ArchCanaryWord(a, &want)) { }
         /* Phase 6E-B28: func_8005CCA4 writes (D_800A8038/D_800A803C zeroed
-         * pre-call; func_8005DB8C/func_8005DBAC return &D_800A8028). */
+         * pre-call; func_8005DB8C/func_8005DBAC return &D_800A8028).  The four
+         * $gp-relative state words are SHARED host globals (asserted after
+         * the loop); guest RAM at 0x8009D048/50/58/64 stays canary. */
         else if (a == 0x800A8038u) want = 0;   /* zeroed pre-call */
         else if (a == 0x800A803Cu) want = 0;   /* zeroed pre-call */
-        else if (a == 0x8009D058u) want = 0x800C0E36u; /* s1 after loop */
-        else if (a == 0x8009D060u) want = 0;   /* func_80052F70() = 0 */
-        else if (a == 0x8009D068u) want = 0x8009D05Cu; /* s3 = 0x8009D05C */
-        else if (a == 0x8009D074u) want = 2u;  /* s2 = 2 */
         else if (a == 0x8009CEF0u) want = 0x0000003Du; /* func_800438C0(0x3D) */
         else if (a == 0x800A1E6Cu) want = 0x0000A5A5u; /* sh 0 at 1E6E */
         else if (a == 0x800A1E8Cu) want = 0x0000A5A5u; /* sh 0 at 1E8E */
@@ -7121,6 +7148,11 @@ static void test_5D6F4_full_ram_canary(void) {
             return;
         }
     }
+    /* B28 shared host state (D_8009D018 = 0 here, so func_80052F70() = 0). */
+    ASSERT(D_8009D048 == 0x800C0E48u, "5D6F4: host D_8009D048 wrong");
+    ASSERT(D_8009D050 == 0u, "5D6F4: host D_8009D050 wrong");
+    ASSERT(D_8009D058 == 0x8009D05Cu, "5D6F4: host D_8009D058 wrong");
+    ASSERT(D_8009D064 == 2u, "5D6F4: host D_8009D064 wrong");
     /* Width proofs inside the bzero range: neighbors of the sh and the
      * terminator words show exactly the retail write widths on top of
      * the zeroed range (any wider store would change these values). */
@@ -7162,8 +7194,8 @@ static void test_5D6F4_dirty_and_repeated(void) {
     ASSERT(PE_LoadU32(B24_GA_C8) == 0u, "dirty C8 overwritten");
     ASSERT(PE_LoadU32(B24_GA_FLAG) == 1u, "dirty flag overwritten");
     for (i = 0; i < 8; i++)
-        ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0u,
-               "dirty buffer byte zeroed by B28 zero loop");
+        ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0xFFu,
+               "dirty buffer overwritten by 0xFF fill (survives B28)");
     /* Second call: identical end state (no accumulation). */
     func_8005D6F4();
     ASSERT(PE_LoadU32(B24_GA_C0) == B25_BUF_SEL, "repeat C0 stable");
@@ -7201,8 +7233,8 @@ static void test_5D6F4_ramreset(void) {
     ASSERT(PE_LoadU32(B24_GA_C0) == B25_BUF_SEL, "post-reset C0");
     ASSERT(PE_LoadU32(B24_GA_C4) == 8u, "post-reset C4");
     for (i = 0; i < 8; i++)
-        ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0u,
-               "post-reset buffer zeroed by B28 zero loop");
+        ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0xFFu,
+               "post-reset buffer 0xFF fill must survive");
     ASSERT(PE_LoadU16(0x800C1F80u) == 0x0203u, "post-reset sh");
     PASS();
 }
@@ -7228,12 +7260,17 @@ static void test_5D6F4_controlled_returns(void) {
     ASSERT(func_8005DC4C(B26_ARCH_IDX) == B26_STR_REC,
            "archive lookup must return the seeded record");
     ASSERT(func_8005D6F4() == 0xFF, "controlled run return");
-    /* Retail ROM order: fill #2 overwrites copy #1, and copy #2 then
-     * lands ON TOP of that fill.  B28: func_8005CCA4's zero loop then
-     * overwrites B25_BUF_SEL with 0. */
-    for (i = 0; i < 8; i++)
-        ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0u,
-               "B28 zero loop overwrites buffer");
+    /* Retail ROM order: fill #2 overwrites copy #1, and copy #2 then lands
+     * ON TOP of that fill — the seeded string "PE\xFF" copies bytes 'P','E',
+     * 0xFF, leaving [50,45,FF,FF,FF,FF,FF,FF].  The B28 func_8005CCA4 zero
+     * loop (0x800C0E48..0x800C0EAA) does NOT reach 0x800C0DF0, so it survives. */
+    {
+        static const uint8_t exp[8] = {0x50u, 0x45u, 0xFFu, 0xFFu,
+                                       0xFFu, 0xFFu, 0xFFu, 0xFFu};
+        for (i = 0; i < 8; i++)
+            ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == exp[i],
+                   "controlled-return buffer end state wrong");
+    }
     ASSERT(g_stub_order_count == 11, "controlled boundary count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "controlled boundary order wrong");
     PASS();
@@ -7527,10 +7564,16 @@ static void test_5DC4C_5D6F4_integration(void) {
     B26_SeedArchive(B26_STR_REC);
     ASSERT(func_8005DC4C(30u) == B26_STR_REC, "index 30 selects the record");
     ASSERT(func_8005D6F4() == 0xFF, "integration run return");
-    /* B28: func_8005CCA4's zero loop overwrites B25_BUF_SEL with 0. */
-    for (i = 0; i < 8; i++)
-        ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == 0u,
-               "B28 zero loop overwrites buffer");
+    /* The archive record "\xAA\xBB\xCC\xFF" is copied into the buffer,
+     * leaving [AA,BB,CC,FF,FF,FF,FF,FF].  B28 func_8005CCA4's zero loop
+     * (0x800C0E48..0x800C0EAA) does NOT reach 0x800C0DF0 — it survives. */
+    {
+        static const uint8_t exp[8] = {0xAAu, 0xBBu, 0xCCu, 0xFFu,
+                                       0xFFu, 0xFFu, 0xFFu, 0xFFu};
+        for (i = 0; i < 8; i++)
+            ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == exp[i],
+                   "integration buffer end state wrong");
+    }
     /* Neither func_8005DC4C, func_80052594, nor the dead func_8005DC9C arm
      * reached the boundary; the six remaining callees did, in retail ROM
      * order. */
@@ -7918,11 +7961,13 @@ static void test_5DB8C_5DBAC_no_guest_writes(void) {
  *   4. State globals: GP_2D8=s1, GP_2E0=func_80052F70(), GP_2E8=s3, GP_2F4=s2
  *   5. u8 load from s0+7, cap at 0x32, store to GA_E0C; conditionally re-call
  *      func_80052F70() if GP_2D8 changed
- *   6. GP_2D8=s1, GP_2E0=func_80052F70(), GP_2E8=s3, GP_2F4=s2
- *   7. Zero 50 halfwords descending from GA_E48 to GA_DE6
+ *      (D_8009D048/50/58/64 = shared host globals, $gp base 0x8009CD70)
+ *   6. D_8009D048=s1, D_8009D050=func_80052F70(), D_8009D058=s3, D_8009D064=s2
+ *   7. Zero 50 halfwords descending from 0x800C0EAA to 0x800C0E48
+ *      (v1 = D_8009D048 + 0x62); GA_E24/E28 below 0x800C0E48 SURVIVE
  *   8. 5× func_80053D2C calls (boundary)
  *   9. Two resource-table search loops
- *   10. GA_E22=s0!=0?1:0, GA_E20=0, GA_E40=0x3D, func_800438C0(0x3D),
+ *   10. GA_E22=1 (unconditional), GA_E20=0, GA_E40=0x3D, func_800438C0(0x3D),
  *       GA_E00=0, GA_E0A=0
  *   11. Bootstrap_ReturnVoid("func_80042C78")
  *
@@ -7943,10 +7988,16 @@ static void test_5DB8C_5DBAC_no_guest_writes(void) {
 #define B28_GA_E20    0x800C0E20u
 #define B28_GA_E40    0x800C0E40u
 #define B28_GA_E48    0x800C0E48u
-#define B28_GP_2D8    0x8009D058u
-#define B28_GP_2E0    0x8009D060u
-#define B28_GP_2E8    0x8009D068u
-#define B28_GP_2F4    0x8009D074u
+/* The four $gp-relative state words are the SHARED authoritative host
+ * globals (also read/written by func_80052C6C): $gp+0x2D8/2E0/2E8/2F4 =
+ * D_8009D048/D_8009D050/D_8009D058/D_8009D064.  gp base = 0x8009CD70.
+ * They are host-side C variables, NOT guest RAM — the guest addresses
+ * below name the SAME 32-bit words purely to prove no duplicate guest
+ * storage is written. */
+#define B28_GP_2D8_GUEST  0x8009D048u
+#define B28_GP_2E0_GUEST  0x8009D050u
+#define B28_GP_2E8_GUEST  0x8009D058u
+#define B28_GP_2F4_GUEST  0x8009D064u
 #define B28_GA_1E6E   0x800A1E6Eu
 #define B28_GA_1E8E   0x800A1E8Eu
 #define B28_GA_1EAE   0x800A1EAEu
@@ -8009,80 +8060,74 @@ static void test_5DBAC_malformed_header_arithmetic(void) {
 
 /* ── func_8005CCA4 direct contract ──────────────────────────────────── */
 
-/* B28 expected state after func_8005CCA4 with D_800A8038=0, D_800A803C=0:
- *   func_8005DB8C(i) returns 0x800A8028 + (i<<9) for i=0..6
- *   The halfword loop stores (0x800A8028 + i*512) & 0xFFFF at GA_E28+i*2
- *   0x800A8028 = 0x800A0000 + 0x8028; low half = 0x8028
- *   0x800A8228: low half = 0x8228
- *   ...etc.
- *   func_8005DBAC(0) = 0x800A8028
- *   PE_LoadU16(0x800A8028) = 0 (BSS / zero guest RAM)
- *   PE_LoadU8(0x800A8028+7) = 0
- *   func_80052F70() = 0 (D_8009D018=0, PE_LoadU8(0x800C0E0C)=0)
- *   s1 after loop = 0x800C0E28 + 7*2 = 0x800C0E36
- *   s3 = 0x8009D05C
- *   s2 = 2 */
+/* B28 retail-derived state after func_8005CCA4 with D_800A8038=0,
+ * D_800A803C=0 (valid-fixture BSS path).  Verified instruction-by-
+ * instruction by pc_port/tools/b28_oracle.py against the SHA-exact exe:
+ *   func_8005DB8C(i) = 0x800A8028 + (i<<9) for i=0..6; the loop stores
+ *     *(u16*)that address (retail lhu 0(v0)) at GA_E28+2*i — all 0 (BSS).
+ *   func_8005DBAC(0) = 0x800A8028; *(u16*)0x800A8028 = 0; u8@+7 = 0.
+ *   func_80052F70() = 0 (D_8009D018=0, u8@0x800C0E0C=0).
+ *   s1 reassigned to 0x800C0E06 + 0x42 = 0x800C0E48 (retail 8005CD00).
+ *   $gp+0x2D8 = D_8009D048 = 0x800C0E48   $gp+0x2E0 = D_8009D050 = 0
+ *   $gp+0x2E8 = D_8009D058 = 0x8009D05C   $gp+0x2F4 = D_8009D064 = 2
+ *   zero loop = 50 halfwords 0x800C0E48..0x800C0EAA (v1 = $gp+0x2D8 + 0x62)
+ *   GA_E24 = 1 and GA_E22 = 1 SURVIVE (both below 0x800C0E48). */
 
 static void test_5CCA4_direct_contract(void) {
     TEST("5CCA4_direct_contract");
-    ResetTestState();
-    /* Precondition: D_800A8038/3C are 0 (BSS), guest RAM is zero.
-     * Zero the bzero range that func_8005D6F4 normally clears, so
-     * func_80052F70 reads 0 from 0x800C0E0C. */
-    func_80071A24(0x800C0DE0u, 0x12E4u);
+    pe_addr_t a;
+    ResetTestState();               /* zeroes guest RAM + host state */
+    /* Seed a 0xFFFF halfword canary across the zero-loop window AND the
+     * (incorrect) 0x800C0DE6..0x800C0E48 range, but NOT the scan region at
+     * 0x800C0EAC (0xFF bytes there would trip the b5&0x10 record search).
+     * This makes the exact loop range observable. */
+    for (a = 0x800C0DE0u; a < 0x800C0EACu; a += 2u)
+        PE_StoreU16(a, 0xFFFFu);
     ASSERT(PE_LoadU32(B28_DB8C_PTR) == 0u, "D_800A8038 not 0");
     ASSERT(PE_LoadU32(B28_DBAC_PTR) == 0u, "D_800A803C not 0");
 
     func_8005CCA4();
 
-    /* 1. The halfword loop writes 7 halfwords at GA_E28, but the
-     * subsequent zero loop (GA_E48 descending to GA_DE6) covers
-     * 0x800C0E48..0x800C0E0C, which INCLUDES GA_E28.  Final state: 0. */
-    ASSERT(PE_LoadU16(B28_GA_E28) == 0u, "GA_E28 not zeroed by zero loop");
-    ASSERT(PE_LoadU16(B28_GA_E28 + 2u) == 0u, "GA_E2A not zeroed");
-    ASSERT(PE_LoadU16(B28_GA_E28 + 12u) == 0u, "GA_E34 not zeroed");
+    /* 1. Zero loop covers EXACTLY 0x800C0E48..0x800C0EAA (50 halfwords). */
+    for (a = B28_GA_E48; a <= 0x800C0EAAu; a += 2u)
+        ASSERT(PE_LoadU16(a) == 0u, "zero loop halfword not cleared");
+    /* 2. The loop must NOT reach below 0x800C0E48: the canary at the bottom
+     * of the incorrect range and in an untouched gap survives.  This is the
+     * regression witness for the +0x62 loop-base fix. */
+    ASSERT(PE_LoadU16(0x800C0DE6u) == 0xFFFFu,
+           "zero loop wrongly reached 0x800C0DE6");
+    ASSERT(PE_LoadU16(0x800C0E1Eu) == 0xFFFFu,
+           "zero loop wrongly reached 0x800C0E1E");
+    ASSERT(PE_LoadU16(0x800C0EACu) == 0u,
+           "canary must stop below the scan region");  /* ResetTestState 0 */
 
-    /* 2. Halfword from s0=0x800A8028: PE_LoadU16(0x800A8028) = 0 */
+    /* 3. First loop: *(u16*)func_8005DB8C(i) = 0 (BSS), NOT re-zeroed. */
+    ASSERT(PE_LoadU16(B28_GA_E28) == 0u, "GA_E28 first-loop value");
+    ASSERT(PE_LoadU16(B28_GA_E28 + 12u) == 0u, "GA_E34 first-loop value");
     ASSERT(PE_LoadU16(B28_GA_E08) == 0u, "GA_E08 not 0");
     ASSERT(PE_LoadU16(B28_GA_E06) == 0u, "GA_E06 not 0");
-
-    /* 3. Byte from s0+7: PE_LoadU8(0x800A802F) = 0 */
     ASSERT(PE_LoadU8(B28_GA_E0C) == 0u, "GA_E0C not 0");
 
-    /* 4. State globals.  GA_E24 is INSIDE the zero loop range
-     * (0x800C0E48..0x800C0E1E) — the store of 1 is overwritten. */
-    ASSERT(PE_LoadU32(B28_GA_E24) == 0u, "GA_E24 zeroed by zero loop");
+    /* 4. GA_E24 = 1 SURVIVES (retail leaves it; the buggy loop zeroed it). */
+    ASSERT(PE_LoadU32(B28_GA_E24) == 1u, "GA_E24 must survive as 1");
     ASSERT(PE_LoadU16(B28_GA_1EAE) == 0u, "1EAE not 0");
     ASSERT(PE_LoadU16(B28_GA_1E8E) == 0u, "1E8E not 0");
     ASSERT(PE_LoadU16(B28_GA_1E6E) == 0u, "1E6E not 0");
-    ASSERT(PE_LoadU32(B28_GP_2D8) == 0x800C0E36u, "GP_2D8 wrong");
-    ASSERT(PE_LoadU32(B28_GP_2E0) == 0u, "GP_2E0 wrong");
-    ASSERT(PE_LoadU32(B28_GP_2E8) == 0x8009D05Cu, "GP_2E8 wrong");
-    ASSERT(PE_LoadU32(B28_GP_2F4) == 2u, "GP_2F4 wrong");
 
-    /* 5-6. Second block: b7=0, capped=0, GP_2D8 unchanged so no re-call */
-    ASSERT(PE_LoadU32(B28_GP_2D8) == 0x800C0E36u, "GP_2D8 after 2nd block");
+    /* 5. Shared authoritative host state ($gp+0x2D8/2E0/2E8/2F4). */
+    ASSERT(D_8009D048 == 0x800C0E48u, "D_8009D048 wrong");
+    ASSERT(D_8009D050 == 0u, "D_8009D050 wrong");
+    ASSERT(D_8009D058 == 0x8009D05Cu, "D_8009D058 wrong");
+    ASSERT(D_8009D064 == 2u, "D_8009D064 wrong");
 
-    /* 7. Zero loop: GA_E48 descending 50 halfwords to 0x800C0E1E.
-     * GA_E40 (0x800C0E40) gets a FOLLOWING u16 store of 0x3D, so
-     * skip it in the zero-check. */
-    for (int i = 0; i < 50; i++) {
-        pe_addr_t addr = B28_GA_E48 - (pe_addr_t)(i * 2);
-        if (addr == B28_GA_E40) continue;  /* u16 0x3D stored after loop */
-        ASSERT(PE_LoadU16(addr) == 0u, "zero loop halfword not 0");
-    }
-
-    /* 10. Final stores */
-    ASSERT(PE_LoadU8(B28_GA_E22) == 0u, "GA_E22 not 0");
+    /* 6. Final stores.  GA_E22 = 1 UNCONDITIONALLY (retail beq delay slot). */
+    ASSERT(PE_LoadU8(B28_GA_E22) == 1u, "GA_E22 must be 1");
     ASSERT(PE_LoadU8(B28_GA_E20) == 0u, "GA_E20 not 0");
     ASSERT(PE_LoadU16(B28_GA_E40) == 0x3Du, "GA_E40 not 0x3D");
     ASSERT(PE_LoadU32(B28_GA_438C0) == 0x3Du, "438C0 state not 0x3D");
     ASSERT(PE_LoadU32(B28_GA_E00) == 0u, "GA_E00 not 0");
     ASSERT(PE_LoadU8(B28_GA_E0A) == 0u, "GA_E0A not 0");
 
-    /* func_8005CCA4 is REAL code.  Its boundary callees (func_80053D2C ×5
-     * and func_80042C78) route through Bootstrap_ReturnVoid — those ARE
-     * expected stub records.  func_8005CCA4 itself is NOT a stub. */
     ASSERT(CountOrderLog("func_8005CCA4") == 0,
            "func_8005CCA4 routed through bootstrap policy");
     ASSERT(Bootstrap_InvocationCount() == 2,
@@ -8098,49 +8143,53 @@ static void test_5CCA4_write_footprint(void) {
         PE_StoreU32(a, 0xA5A5A5A5u);
     PE_StoreU32(B28_DB8C_PTR, 0);
     PE_StoreU32(B28_DBAC_PTR, 0);
-    /* bzero: func_8005D6F4 range + PE.IMG archive header */
+    /* Zero every address the halfword loop reads (func_8005DB8C(i) =
+     * 0x800A8028 + i*0x200 for i=0..6) plus the func_8005DBAC(0) base, so
+     * all loads return 0 and the GA_E28..E34 halfwords are 0. */
+    func_80071A24(0x800A8028u, 0xC18u);
+    /* bzero the func_8005D6F4 clear range = background for func_8005CCA4. */
     func_80071A24(0x800C0DE0u, 0x12E4u);
-    func_80071A24(0x800A8028u, 0x30u);
 
     func_8005CCA4();
 
     for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
         uint32_t got = PE_LoadU32(a);
         uint32_t want = 0xA5A5A5A5u;
-        if (a >= 0x800A8028u && a < 0x800A8058u) {
-            want = 0u;
+        if (a >= 0x800A8028u && a < 0x800A8C40u) {
+            want = 0u;                       /* zeroed load-source region */
         } else if (a >= 0x800C0DE0u && a < 0x800C20C4u) {
-            want = 0u;
-            if (a == B28_GA_E40) want = 0x0000003Du;
-        } else if (a == B28_GA_1E6E) {
-            want = 0xA5A50000u;
-        } else if (a == B28_GA_1E6E - 2u) {
+            want = 0u;                       /* bzero background */
+            if (a == 0x800C0E20u) want = 0x00010000u;  /* GA_E20=0, GA_E22=1 */
+            else if (a == B28_GA_E24) want = 0x00000001u; /* survives, not zeroed */
+            else if (a == B28_GA_E40) want = 0x0000003Du; /* sh 0x3D after loop */
+        } else if (a == B28_GA_1E6E - 2u) {  /* sh 0 at 0x800A1E6E over canary */
             want = 0x0000A5A5u;
-        } else if (a == B28_GA_1E8E) {
-            want = 0xA5A50000u;
-        } else if (a == B28_GA_1E8E - 2u) {
+        } else if (a == B28_GA_1E8E - 2u) {  /* sh 0 at 0x800A1E8E */
             want = 0x0000A5A5u;
-        } else if (a == B28_GA_1EAE) {
-            want = 0xA5A50000u;
-        } else if (a == B28_GA_1EAE - 2u) {
+        } else if (a == B28_GA_1EAE - 2u) {  /* sh 0 at 0x800A1EAE */
             want = 0x0000A5A5u;
-        } else if (a == B28_GP_2D8) {
-            want = 0x800C0E36u;
-        } else if (a == B28_GP_2E0) {
-            want = 0u;
-        } else if (a == B28_GP_2E8) {
-            want = 0x8009D05Cu;
-        } else if (a == B28_GP_2F4) {
-            want = 2u;
-        } else if (a == B28_GA_438C0) {
+        } else if (a == B28_GA_438C0) {      /* func_800438C0(0x3D) */
             want = 0x0000003Du;
         }
+        /* NOTE: the four $gp-relative state words (0x8009D048/50/58/64) are
+         * host globals now — guest RAM there is NOT written and stays
+         * canary.  Verified explicitly below. */
         if (got != want) {
             printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
             FAIL("func_8005CCA4 write footprint wrong");
             return;
         }
     }
+    /* Shared authoritative host state carries the values; no duplicate
+     * guest storage was written. */
+    ASSERT(D_8009D048 == 0x800C0E48u, "host D_8009D048 wrong");
+    ASSERT(D_8009D050 == 0u, "host D_8009D050 wrong");
+    ASSERT(D_8009D058 == 0x8009D05Cu, "host D_8009D058 wrong");
+    ASSERT(D_8009D064 == 2u, "host D_8009D064 wrong");
+    ASSERT(PE_LoadU32(B28_GP_2D8_GUEST) == 0xA5A5A5A5u,
+           "guest 0x8009D048 must stay canary (no duplicate storage)");
+    ASSERT(PE_LoadU32(B28_GP_2E8_GUEST) == 0xA5A5A5A5u,
+           "guest 0x8009D058 must stay canary (no duplicate storage)");
     PASS();
 }
 
@@ -8149,11 +8198,11 @@ static void test_5CCA4_repeated_and_dirty(void) {
     ResetTestState();
 
     func_8005CCA4();
-    /* Dirty every word the rung writes */
-    PE_StoreU32(B28_GP_2D8, 0xDEADBEEFu);
-    PE_StoreU32(B28_GP_2E0, 0xDEADBEEFu);
-    PE_StoreU32(B28_GP_2E8, 0xDEADBEEFu);
-    PE_StoreU32(B28_GP_2F4, 0xDEADBEEFu);
+    /* Dirty every word the rung writes (host state + guest writes). */
+    D_8009D048 = 0xDEADBEEFu;
+    D_8009D050 = 0xDEADBEEFu;
+    D_8009D058 = 0xDEADBEEFu;
+    D_8009D064 = 0xDEADBEEFu;
     PE_StoreU32(B28_GA_E24, 0xDEADBEEFu);
     PE_StoreU32(B28_GA_E00, 0xDEADBEEFu);
     PE_StoreU32(B28_GA_438C0, 0xDEADBEEFu);
@@ -8166,34 +8215,45 @@ static void test_5CCA4_repeated_and_dirty(void) {
     func_8005CCA4();
     func_8005CCA4();
 
-    /* Idempotent: same end state */
-    ASSERT(PE_LoadU32(B28_GP_2D8) == 0x800C0E36u, "repeat GP_2D8 wrong");
-    ASSERT(PE_LoadU32(B28_GP_2E0) == 0u, "repeat GP_2E0 wrong");
-    ASSERT(PE_LoadU32(B28_GP_2E8) == 0x8009D05Cu, "repeat GP_2E8 wrong");
-    ASSERT(PE_LoadU32(B28_GP_2F4) == 2u, "repeat GP_2F4 wrong");
+    /* Idempotent: same end state (retail values). */
+    ASSERT(D_8009D048 == 0x800C0E48u, "repeat D_8009D048 wrong");
+    ASSERT(D_8009D050 == 0u, "repeat D_8009D050 wrong");
+    ASSERT(D_8009D058 == 0x8009D05Cu, "repeat D_8009D058 wrong");
+    ASSERT(D_8009D064 == 2u, "repeat D_8009D064 wrong");
+    ASSERT(PE_LoadU32(B28_GA_E24) == 1u, "repeat GA_E24 wrong");
     ASSERT(PE_LoadU16(B28_GA_E40) == 0x3Du, "repeat GA_E40 wrong");
     ASSERT(PE_LoadU32(B28_GA_438C0) == 0x3Du, "repeat 438C0 state wrong");
     ASSERT(PE_LoadU8(B28_GA_E0C) == 0u, "repeat GA_E0C wrong");
-    ASSERT(PE_LoadU8(B28_GA_E22) == 0u, "repeat GA_E22 wrong");
+    ASSERT(PE_LoadU8(B28_GA_E22) == 1u, "repeat GA_E22 wrong");
     ASSERT(PE_LoadU8(B28_GA_E20) == 0u, "repeat GA_E20 wrong");
     PASS();
 }
 
+/* Split-brain regression: the four state words are HOST globals shared with
+ * func_80052C6C.  They survive PE_RamReset (guest-RAM clear) and are cleared
+ * only by PE_Sdk_ResetState — while the rung's genuine guest writes ARE
+ * cleared by PE_RamReset. */
 static void test_5CCA4_ramreset(void) {
     TEST("5CCA4_ramreset");
     ResetTestState();
 
     func_8005CCA4();
-    ASSERT(PE_LoadU32(B28_GP_2D8) == 0x800C0E36u, "pre-reset GP_2D8");
+    ASSERT(D_8009D048 == 0x800C0E48u, "pre-reset D_8009D048");
     ASSERT(PE_LoadU32(B28_GA_438C0) == 0x3Du, "pre-reset 438C0 state");
+    ASSERT(PE_LoadU32(B28_GA_E24) == 1u, "pre-reset GA_E24");
 
     PE_RamReset();
-    ASSERT(PE_LoadU32(B28_GP_2D8) == 0u, "RAM reset did not clear GP_2D8");
+    /* Guest writes cleared. */
     ASSERT(PE_LoadU32(B28_GA_438C0) == 0u, "RAM reset did not clear 438C0");
     ASSERT(PE_LoadU32(B28_GA_E24) == 0u, "RAM reset did not clear GA_E24");
+    /* Host state survives a guest-RAM-only reset. */
+    ASSERT(D_8009D048 == 0x800C0E48u, "host state must survive PE_RamReset");
+
+    PE_Sdk_ResetState();
+    ASSERT(D_8009D048 == 0u, "PE_Sdk_ResetState must clear host D_8009D048");
 
     func_8005CCA4();
-    ASSERT(PE_LoadU32(B28_GP_2D8) == 0x800C0E36u, "post-reset GP_2D8");
+    ASSERT(D_8009D048 == 0x800C0E48u, "post-reset D_8009D048");
     ASSERT(PE_LoadU32(B28_GA_438C0) == 0x3Du, "post-reset 438C0 state");
     PASS();
 }
@@ -8223,14 +8283,13 @@ static void test_5CCA4_access_widths(void) {
     ResetTestState();
     func_80071A24(0x800C0DE0u, 0x12E4u);
     func_80071A24(0x800A8028u, 0x30u);
-    /* Dirty words at addresses OUTSIDE the zero loop range
-     * (0x800C0DE6..0x800C0E48) to verify u16/u8 store widths.
-     * GA_1E6E/1E8E/1EAE are at 0x800A1Exx — far from the loop. */
+    /* Dirty words to verify u16/u8 store widths.  GA_1E6E/1E8E/1EAE are at
+     * 0x800A1Exx — far from the zero loop (0x800C0E48..0x800C0EAA). */
     PE_StoreU32(B28_GA_1E6E, 0xDEADBEEFu);
     PE_StoreU32(B28_GA_1E8E, 0xDEADBEEFu);
     PE_StoreU32(B28_GA_1EAE, 0xDEADBEEFu);
-    /* Also dirty a word containing GA_E40 (0x800C0E40) — IN the zero
-     * loop range but func_8005CCA4 writes GA_E40 AFTER the loop. */
+    /* Dirty the GA_E40 word (0x800C0E40) — BELOW the zero loop, so its upper
+     * two bytes are NOT touched; the sh 0x3D writes exactly 2 bytes. */
     PE_StoreU32(B28_GA_E40, 0xDEADBEEFu);
 
     func_8005CCA4();
@@ -8242,40 +8301,49 @@ static void test_5CCA4_access_widths(void) {
            "u16 store at 1E8E overwrote upper half");
     ASSERT(PE_LoadU32(B28_GA_1EAE) == 0xDEAD0000u,
            "u16 store at 1EAE overwrote upper half");
-    /* GA_E40: u16 store 0x3D after zero loop clears the dirty word first */
-    ASSERT(PE_LoadU32(B28_GA_E40) == 0x0000003Du, "u16 store at GA_E40 wrong");
-    /* State globals: u32 stores (full word) */
-    ASSERT(PE_LoadU32(B28_GP_2D8) == 0x800C0E36u, "u32 store at GP_2D8 wrong");
+    /* GA_E40: sh 0x3D writes exactly 2 bytes; upper half stays dirty. */
+    ASSERT(PE_LoadU32(B28_GA_E40) == 0xDEAD003Du, "u16 store at GA_E40 wrong");
+    /* Shared host state: full-word values. */
+    ASSERT(D_8009D048 == 0x800C0E48u, "u32 store at D_8009D048 wrong");
     ASSERT(PE_LoadU32(B28_GA_438C0) == 0x3Du, "u32 store at 438C0 wrong");
     PASS();
 }
 
+/* Split-brain regression: the four $gp-relative state words are the SHARED
+ * authoritative host globals also used by func_80052C6C.  func_8005CCA4 must
+ * write ONLY that host storage — never a duplicate copy in guest RAM — and
+ * the host state must be owned by PE_Sdk_ResetState, not PE_RamReset. */
 static void test_5CCA4_no_split_brain(void) {
     TEST("5CCA4_no_split_brain");
+    pe_addr_t a;
     ResetTestState();
+    /* Canary the guest words that ALIAS the four state globals, to prove
+     * func_8005CCA4 does not write a duplicate copy into guest RAM. */
+    for (a = 0x8009D040u; a < 0x8009D070u; a += 4u)
+        PE_StoreU32(a, 0xA5A5A5A5u);
 
     func_8005CCA4();
 
-    /* Every state global must be readable from guest RAM, not just a
-     * host-side variable.  Verify via PE_LoadU32 (guest access). */
-    ASSERT(PE_LoadU32(B28_GP_2D8) == 0x800C0E36u,
-           "GP_2D8 not in guest RAM");
-    ASSERT(PE_LoadU32(B28_GP_2E0) == 0u,
-           "GP_2E0 not in guest RAM");
-    ASSERT(PE_LoadU32(B28_GP_2E8) == 0x8009D05Cu,
-           "GP_2E8 not in guest RAM");
-    ASSERT(PE_LoadU32(B28_GP_2F4) == 2u,
-           "GP_2F4 not in guest RAM");
-    ASSERT(PE_LoadU32(B28_GA_E24) == 0u,
-           "GA_E24 zeroed by zero loop");
-    ASSERT(PE_LoadU32(B28_GA_438C0) == 0x3Du,
-           "438C0 state not in guest RAM");
-
-    /* func_80052F70 reads D_8009D018 from guest RAM (via func_80051E58),
-     * not from a host static.  Verify: after reset, D_8009D018=0,
-     * so func_80052F70 returns PE_LoadU8(0x800C0E0C) + 0 = 0. */
-    ASSERT(PE_LoadU32(B28_GP_2E0) == 0u,
-           "func_80052F70 result not derived from guest RAM");
+    /* Authoritative storage = shared host globals (func_80052C6C reads the
+     * same variables). */
+    ASSERT(D_8009D048 == 0x800C0E48u, "host D_8009D048 wrong");
+    ASSERT(D_8009D050 == 0u, "host D_8009D050 wrong");
+    ASSERT(D_8009D058 == 0x8009D05Cu, "host D_8009D058 wrong");
+    ASSERT(D_8009D064 == 2u, "host D_8009D064 wrong");
+    /* No duplicate guest storage: the aliasing guest words are untouched. */
+    ASSERT(PE_LoadU32(B28_GP_2D8_GUEST) == 0xA5A5A5A5u, "guest D_8009D048 written");
+    ASSERT(PE_LoadU32(B28_GP_2E0_GUEST) == 0xA5A5A5A5u, "guest D_8009D050 written");
+    ASSERT(PE_LoadU32(B28_GP_2E8_GUEST) == 0xA5A5A5A5u, "guest D_8009D058 written");
+    ASSERT(PE_LoadU32(B28_GP_2F4_GUEST) == 0xA5A5A5A5u, "guest D_8009D064 written");
+    /* GA_E24 = 1 survives in guest RAM (below the zero loop). */
+    ASSERT(PE_LoadU32(B28_GA_E24) == 1u, "GA_E24 must survive");
+    ASSERT(PE_LoadU32(B28_GA_438C0) == 0x3Du, "438C0 state (guest) wrong");
+    /* Reset ownership: host state survives PE_RamReset, cleared by ResetState. */
+    PE_RamReset();
+    ASSERT(D_8009D048 == 0x800C0E48u, "host state must survive PE_RamReset");
+    PE_Sdk_ResetState();
+    ASSERT(D_8009D048 == 0u && D_8009D058 == 0u,
+           "PE_Sdk_ResetState must own the shared host state");
     PASS();
 }
 
@@ -8291,17 +8359,20 @@ static void test_5CCA4_guard_preservation(void) {
 
     func_8005CCA4();
 
-    /* Guards outside all written regions.  The zero loop covers
-     * byte range [0x800C0DE6, 0x800C0E49] (50 halfwords from GA_E48
-     * descending).  Guards must be fully outside this range. */
+    /* Guards outside all written regions.  The zero loop covers byte range
+     * [0x800C0E48, 0x800C0EAB] (50 halfwords descending from 0x800C0EAA). */
     ASSERT(PE_LoadU32(0x800C0DE2u) == 0xA5A5A5A5u,
-           "guard below zero loop hit");
-    ASSERT(PE_LoadU32(0x800C0E4Au) == 0xA5A5A5A5u,
+           "guard below func_8005CCA4 writes hit");
+    ASSERT(PE_LoadU16(0x800C0E44u) == 0xA5A5u,
+           "gap between GA_E40 and the zero loop hit");
+    ASSERT(PE_LoadU32(0x800C0EACu) == 0xA5A5A5A5u,
            "guard above zero loop hit");
-    ASSERT(PE_LoadU32(B28_GP_2D8 - 4u) == 0xA5A5A5A5u,
-           "guard below state globals hit");
-    ASSERT(PE_LoadU32(B28_GP_2F4 + 4u) == 0xA5A5A5A5u,
-           "guard above state globals hit");
+    /* The four state words are host globals — their aliasing guest RAM is
+     * never written (stays canary). */
+    ASSERT(PE_LoadU32(B28_GP_2D8_GUEST) == 0xA5A5A5A5u,
+           "guest state-global word written");
+    ASSERT(PE_LoadU32(B28_GP_2F4_GUEST) == 0xA5A5A5A5u,
+           "guest state-global word written");
     ASSERT(PE_LoadU32(B28_GA_1E6E - 4u) == 0xA5A5A5A5u,
            "guard below 1E6E hit");
     PASS();
@@ -8370,9 +8441,11 @@ static void test_5CCA4_5D6F4_integration(void) {
     func_8005D6F4();
 
     /* func_8005CCA4 ran as real code inside func_8005D6F4.
-     * Verify its key state outputs. */
-    ASSERT(PE_LoadU32(B28_GP_2D8) == 0x800C0E36u,
-           "5D6F4 integration: GP_2D8 wrong");
+     * Verify its key state outputs (shared host global + guest writes). */
+    ASSERT(D_8009D048 == 0x800C0E48u,
+           "5D6F4 integration: D_8009D048 wrong");
+    ASSERT(PE_LoadU32(B28_GA_E24) == 1u,
+           "5D6F4 integration: GA_E24 must survive");
     ASSERT(PE_LoadU32(B28_GA_438C0) == 0x3Du,
            "5D6F4 integration: 438C0 state wrong");
     ASSERT(PE_LoadU16(B28_GA_E40) == 0x3Du,

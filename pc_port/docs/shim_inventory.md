@@ -351,13 +351,14 @@ normal and sanitizer agree).
 ### Phase 6E-B28
 
 `func_8005CCA4` is translated retail logic: 223 words at executable
-`0x8005CCA4..0x8005CD2B`.  A resource-table initializer that: writes 7
-halfwords via func_8005DB8C, reads PE.IMG archive header via
-func_8005DBAC, zeros 50 halfwords descending from 0x800C0E48
-(covering 0x800C0DE6..0x800C0E48 — intentionally overwrites earlier
-writes), searches resource tables, sets state globals
-(D_8009D058/60/68/74), and calls func_800438C0(0x3D).  GA_E40
-receives a following u16 store of 0x3D after the zero loop.
+`0x8005CCA4..0x8005D01F`.  A resource-table initializer that: writes 7
+halfwords via `*(u16*)func_8005DB8C(i)`, reads PE.IMG archive header via
+func_8005DBAC, zeros 50 halfwords descending from **0x800C0EAA** to
+**0x800C0E48** (v1 = D_8009D048 + 0x62) — this range is ABOVE the earlier
+GA_E24/E28 stores, which survive — searches resource tables, sets the
+shared host state globals (D_8009D048/50/58/64, $gp base 0x8009CD70), and
+calls func_800438C0(0x3D).  GA_E40 (below the loop) receives a u16 0x3D
+store after the loop; GA_E22 is written 1 unconditionally.
 Coupled callees: func_800438C0 (8 words, masked-state setter),
 func_8005DB8C (8 words, table base), func_8005DBAC (20 words,
 clamped table base).  All verified by B28 oracle

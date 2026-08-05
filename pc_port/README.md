@@ -99,8 +99,11 @@ sanitized); the strict real-disc frontier advanced from `func_8005CCA4`
 to **`func_80053D2C` from `func_8005CCA4`** (exit 1, normal and sanitizer
 agree), bootstrap-disc still stops at `func_8007F72C` by design.
 `func_8005CCA4` is translated retail logic — a 223-word resource-table
-initializer with a 50-halfword descending zero loop (0x800C0DE6..0x800C0E48)
-that intentionally overwrites earlier writes in that range.  Its six
+initializer with a 50-halfword descending zero loop
+(0x800C0E48..0x800C0EAA = D_8009D048 + 0x62); its earlier GA_E24/E28 stores
+sit below 0x800C0E48 and survive, and its four $gp-relative state words are
+the shared host globals D_8009D048/50/58/64 (also used by func_80052C6C).
+Its six
 remaining boundary callees (`func_80053D2C` x5, `func_80042C78` x1) and
 five sibling callees (`func_800614AC`, `func_8005E884`, `func_8005E850`,
 `func_800649D0`, `func_80052790`) still route through the centralized

@@ -21,7 +21,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B28 func_8005CCA4 VERIFIED** (223 retail words; resource-table init; zero loop 0x800C0DE6..0x800C0E48 overwrites earlier writes in that range; GA_E40 subsequently overwritten with u16 0x3D) | `pc_port/build/pe-native-tests` (332/332) |
+| Port phase | **6E-B28 func_8005CCA4 VERIFIED** (223 retail words; resource-table init; zero loop 0x800C0E48..0x800C0EAA = D_8009D048 + 0x62, descending; GA_E24/E28 below it SURVIVE; GA_E40 gets u16 0x3D after; 4 state words are shared host globals D_8009D048/50/58/64) | `pc_port/build/pe-native-tests` (332/332) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -43,41 +43,57 @@ is white and Expose events are not re-blitted; the port blits once after
 boot returns.  The guest framebuffer remains `fb28dc21…` (near-black).
 Do not report the white window as a retail frame.
 
-### B28 func_8005CCA4 verified — key findings
+### B28 func_8005CCA4 verified — key findings (B28 corrective commit)
 
-**Zero loop overlap:** func_8005CCA4's descending zero loop at GA_E48
-(0x800C0E48) writes 50 halfwords covering byte range 0x800C0DE6..0x800C0E48.
-This range includes GA_E06, GA_E08, GA_E0A, GA_E0C, GA_E20, GA_E22, GA_E24,
-GA_E28..GA_E34, and GA_E40. The halfword loop output at GA_E28 is
-intentionally overwritten. GA_E40 receives a following u16 store of 0x3D
-after the zero loop. Final state follows retail ROM write order.
+**Zero loop range (CORRECTED):** retail loads `$gp+0x2D8` (= D_8009D048 =
+0x800C0E48, set by this rung) and adds 0x62 (`addiu v1,v1,0x62`) → the
+descending zero loop writes 50 halfwords covering **0x800C0E48..0x800C0EAA**,
+NOT 0x800C0DE6..0x800C0E48. It does NOT overlap the earlier GA_E06/E08/E0C/
+E24/E28..E34 stores (all below 0x800C0E48) — those SURVIVE. GA_E24 stays 1;
+GA_E22 is written 1 unconditionally (retail `beq` delay slot). GA_E40
+(0x800C0E40, below the loop) receives its u16 0x3D once, after the loop.
+An earlier draft dropped the +0x62 and descended from 0x800C0E48; that
+zeroed the wrong 100-byte region. Now executed word-by-word by the oracle.
 
-**Fixture correction:** FxPattern offsets 0x10-0x17 now return 0 (retail
-BSS state for D_800A8038/D_800A803C). The original fixture wrote canary
-data there, causing func_8005DBAC to dereference a garbage pointer
+**gp base + shared state (CORRECTED):** gp = 0x8009CD70 (proven via
+func_800438C0's 0x180(gp)=D_8009CEF0).  The four state words are
+$gp+0x2D8/2E0/2E8/2F4 = **D_8009D048/D_8009D050/D_8009D058/D_8009D064**
+(an earlier draft used a +0x10-shifted gp).  func_8005CCA4 writes the SAME
+host globals func_80052C6C uses — one authoritative storage, no host/guest
+duplicate.  Values: D_8009D048=0x800C0E48, D_8009D050=func_80052F70(),
+D_8009D058=0x8009D05C, D_8009D064=2.
+
+**First loop (CORRECTED):** stores `*(u16*)func_8005DB8C(i)` (retail
+`lhu 0(v0)`), not the low half of the returned address.
+
+**Fixture correction:** FxPattern offsets 0x10-0x17 return 0 (retail BSS
+state for D_800A8038/D_800A803C). The original fixture wrote canary data
+there, causing func_8005DBAC to dereference a garbage pointer
 (0xA49D968F + 0x800A8028 = 0x24A816B7). The function was correct; the
 fixture was wrong.
 
-**Split-brain fix:** D_8009D018 and 7 other func_80052C6C state globals
-(D_8009D03C/D_8009D048/D_8009D04C/D_8009D050/D_8009D054/D_8009D058/
-D_8009D064) moved from `static` in func_80052C6C_port.c to `extern` in
-psx_compat.h with definitions in pe_globals.c. Reset by PE_Sdk_ResetState.
-Without this, D_8009D018 leaked stale values between tests, causing
-func_80052F70 to return 50 instead of 0.
+**Split-brain:** the 8 func_80052C6C state globals (D_8009D018/D_8009D03C/
+D_8009D048/D_8009D04C/D_8009D050/D_8009D054/D_8009D058/D_8009D064) live in
+pe_globals.c (extern via psx_compat.h), reset by PE_Sdk_ResetState.
+func_8005CCA4 now shares those globals directly (never guest RAM), so the
+four it writes are unified with func_80052C6C — verified by
+test_5CCA4_no_split_brain (host values correct, aliasing guest words stay
+canary, PE_RamReset does not clear them, PE_Sdk_ResetState does).
 
-**Oracle transcription fixes:** func_8005DB8C is 8 words (not 12);
-instruction at 0x8005DB90 is `addiu` (sign-extended 0x8038 → 0x800A8038),
-not `lw`. func_8005DBAC uses `j` delay slot (addu $v1,$zero,$zero) for
-negative clamping, not an explicit bgez/b path. func_800438C0 stores
-before the zero-check branch (sw, bne, addiu, sw pattern).
+**Oracle transcription:** func_8005DB8C is 8 words; 0x8005DB90 is `addiu`
+(sign-extended 0x8038 → 0x800A8038), not `lw`. func_8005DBAC uses the `j`
+delay slot (addu $v1,$zero,$zero) for negative clamping. func_800438C0
+stores before the zero-check branch (sw, bne, addiu, sw).
 
-**Test count:** 332/332 (15 new B28 tests + 317 prior).
+**Test count:** 332/332 (normal + ASan/UBSan).
 
-**B28 oracle:** `pc_port/tools/b28_oracle.py` — MIPS-I interpreter for
-func_8005DB8C (8 words), func_8005DBAC (20 words), func_800438C0 (8 words).
-Verified against retail exe SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
-func_8005CCA4 (223 words) verified by native test suite + 6A9E4 integration
-footprint.
+**B28 oracle:** `pc_port/tools/b28_oracle.py` — cross-checks + executes
+func_8005DB8C/func_8005DBAC/func_800438C0 word-by-word, AND executes
+func_8005CCA4 (all 223 words) directly from the SHA-verified exe
+(452fb033f2eaa4b18aa20a5bca60b8125af3a37b), stubbing only the genuine
+boundary funcs func_80053D2C/func_80042C78; asserts the retail final state
+(zero loop 0x800C0E48..0x800C0EAA, GA_E24=1, GA_E22=1, D_8009D048=0x800C0E48,
+D_8009D058=0x8009D05C, D_8009D064=2, GA_E40=0x003D, D_8009CEF0=0x3D).
 
 ### B22 audit complete
 

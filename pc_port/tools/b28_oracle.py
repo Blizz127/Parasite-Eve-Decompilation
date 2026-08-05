@@ -459,11 +459,143 @@ def test_438C0(m):
     print("func_800438C0: ALL PASS")
 
 
+# ── func_8005CCA4 full-function verification ───────────────────────────
+# func_8005CCA4 is 223 words (0x8005CCA4..0x8005D01F).  Rather than hand-
+# transcribe 223 words, we execute them DIRECTLY from the SHA-verified exe
+# image with a fetch-decode interpreter that honours delay slots and jal.
+# Leaf callees (func_8005DB8C/DBAC/438C0/52F70/51E58) execute from the exe
+# too; only the genuine unresolved boundary funcs are stubbed (no-op → 0),
+# matching the C port's Bootstrap_ReturnVoid boundary.
+
+FUNC_5CCA4 = 0x8005CCA4
+N_5CCA4 = 223
+
+BOUNDARY_STUBS = {0x80053D2C, 0x80042C78}
+REAL_CALLS = {0x8005CCA4, 0x8005DB8C, 0x8005DBAC, 0x800438C0,
+              0x80052F70, 0x80051E58}
+
+
+class ExeMachine(Machine):
+    """Fetch-decode interpreter over the SHA-verified exe image."""
+
+    def __init__(self, path):
+        with open(path, "rb") as f:
+            self.data = f.read()
+        sha1 = hashlib.sha1(self.data).hexdigest()
+        if sha1 != RETAIL_SHA1:
+            raise SystemExit(f"FATAL: SHA-1 {sha1} != retail {RETAIL_SHA1}")
+        if self.data[:8] != b"PS-X EXE":
+            raise SystemExit("FATAL: not a PS-X EXE")
+        self.taddr = struct.unpack_from("<I", self.data, 0x18)[0]
+        self.reset()
+
+    def word(self, a):
+        return struct.unpack_from("<I", self.data, a - self.taddr + 0x800)[0]
+
+    def call(self, entry, depth=0):
+        sentinel = 0xDEAD0000 + depth
+        self.regs[31] = sentinel
+        pc = entry
+        steps = 0
+        while True:
+            steps += 1
+            if steps > 5_000_000:
+                raise SystemExit("execution did not terminate")
+            w = self.word(pc)
+            op = w >> 26
+            rs = (w >> 21) & 0x1F
+            rt = (w >> 16) & 0x1F
+            fn = w & 0x3F
+            imm = w & 0xFFFF
+            simm = imm if imm < 0x8000 else imm - 0x10000
+            af = w & 0x3FFFFFF
+            if op == 0x00 and fn == 0x08:              # jr
+                target = self.regs[rs]
+                self.run_one(self.word(pc + 4), pc + 4)
+                if target == sentinel:
+                    return
+                pc = target
+            elif op == 0x03:                           # jal
+                tgt = (af << 2) | (pc & 0xF0000000)
+                self.run_one(self.word(pc + 4), pc + 4)  # delay slot (args)
+                if tgt in BOUNDARY_STUBS:
+                    self.regs[2] = 0
+                elif tgt in REAL_CALLS:
+                    saved = self.regs[31]
+                    self.call(tgt, depth + 1)
+                    self.regs[31] = saved
+                else:
+                    raise SystemExit(f"unexpected call 0x{tgt:08X} @0x{pc:08X}")
+                pc += 8
+            elif op == 0x02:                           # j
+                tgt = (af << 2) | (pc & 0xF0000000)
+                self.run_one(self.word(pc + 4), pc + 4)
+                pc = tgt
+            elif op in (0x04, 0x05):                   # beq / bne
+                take = (self.regs[rs] == self.regs[rt]) if op == 0x04 \
+                    else (self.regs[rs] != self.regs[rt])
+                self.run_one(self.word(pc + 4), pc + 4)
+                pc = pc + 4 + (simm << 2) if take else pc + 8
+            elif op == 0x01:                           # bgez / bltz
+                take = s32(self.regs[rs]) >= 0 if rt == 1 \
+                    else s32(self.regs[rs]) < 0
+                self.run_one(self.word(pc + 4), pc + 4)
+                pc = pc + 4 + (simm << 2) if take else pc + 8
+            else:
+                self.run_one(w, pc)
+                pc += 4
+
+
+def test_5CCA4(path):
+    """Execute func_8005CCA4 (223 words) from the exe; assert retail state."""
+    print("\n=== func_8005CCA4 (full 223-word execution) ===")
+
+    # Scenario A: all-zero RAM (BSS / valid-fixture degenerate path)
+    m = ExeMachine(path)
+    m.call(FUNC_5CCA4)
+
+    def chk(addr, size, want, name):
+        got = m.load(addr, size)
+        assert got == want, f"{name}: got 0x{got:0{size*2}X}, want 0x{want:0{size*2}X}"
+        print(f"  {name} = 0x{got:0{size*2}X} OK")
+
+    # gp-relative authoritative state ($gp+0x2D8/2E0/2E8/2F4)
+    chk(0x8009D048, 4, 0x800C0E48, "D_8009D048 ($gp+0x2D8)")
+    chk(0x8009D050, 4, 0x00000000, "D_8009D050 ($gp+0x2E0)")
+    chk(0x8009D058, 4, 0x8009D05C, "D_8009D058 ($gp+0x2E8)")
+    chk(0x8009D064, 4, 0x00000002, "D_8009D064 ($gp+0x2F4)")
+    # func_800438C0(0x3D) side effect
+    chk(0x8009CEF0, 4, 0x0000003D, "D_8009CEF0 (func_800438C0)")
+    # final resource-table flags
+    chk(0x800C0E22, 1, 0x01, "GA_E22 (unconditional 1)")
+    chk(0x800C0E24, 4, 0x00000001, "GA_E24 (retained, not zeroed)")
+    chk(0x800C0E40, 2, 0x003D, "GA_E40 (sh 0x3D)")
+    chk(0x800C0E20, 1, 0x00, "GA_E20")
+    chk(0x800C0E00, 4, 0x00000000, "GA_E00")
+    chk(0x800C0E0A, 1, 0x00, "GA_E0A")
+
+    # zero loop must cover EXACTLY 0x800C0E48..0x800C0EAA (50 halfwords)
+    zw = sorted({a for (a, sz, v) in m.writes
+                 if sz == 2 and v == 0 and a >= 0x800C0E48 and a <= 0x800C0EAB})
+    assert zw == list(range(0x800C0E48, 0x800C0EAB, 2)), \
+        f"zero-loop span wrong: 0x{zw[0]:08X}..0x{zw[-1]:08X} ({len(zw)} hw)"
+    print(f"  zero loop: 0x{zw[0]:08X}..0x{zw[-1]:08X} ({len(zw)} halfwords) OK")
+
+    # GA_E24 == 1 is the key witness that the descending loop did NOT reach
+    # below 0x800C0E48 (a buggy 0x800C0DE6..0x800C0E48 loop would zero it).
+    # It is asserted above.  The seven first-loop halfwords at GA_E28..E34
+    # (0 here only because the BSS source reads 0) are legitimately below
+    # 0x800C0E48 and must NOT be treated as zero-loop writes.
+
+    print("func_8005CCA4: ALL PASS")
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: b28_oracle.py /path/to/disc1.candidate.exe")
-        print("  Verifies func_8005DB8C, func_8005DBAC, func_800438C0")
-        print("  against the retail executable words.")
+        print("  Verifies func_8005DB8C, func_8005DBAC, func_800438C0,")
+        print("  and func_8005CCA4 (full 223-word execution) against the")
+        print("  retail executable words.")
         sys.exit(1)
 
     path = sys.argv[1]
@@ -472,12 +604,13 @@ def main():
     test_5DB8c(m)
     test_5DBAC(m)
     test_438C0(m)
+    test_5CCA4(path)
 
     print("\n=== B28 ORACLE: ALL FUNCTIONS VERIFIED ===")
-    print("Note: func_8005CCA4 (223 words) is verified by the native test")
-    print("suite (332 tests) and the 6A9E4 integration footprint.  The")
-    print("MIPS interpreter covers the three leaf callees instruction-by-"
-          "instruction.")
+    print("The three leaf callees are cross-checked word-by-word and executed")
+    print("instruction-by-instruction.  func_8005CCA4 (223 words) is executed")
+    print("directly from the SHA-verified exe image, with only the genuine")
+    print("boundary funcs (func_80053D2C, func_80042C78) stubbed.")
 
 
 if __name__ == "__main__":
