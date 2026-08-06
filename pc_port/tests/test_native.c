@@ -21,6 +21,7 @@
 extern int func_80053D2C(int arg);
 extern void func_80042C78(void);
 extern void func_80042CC4(int a0, int a1);
+extern int func_800614AC(int a0);
 
 static int tests_run = 0;
 static int tests_passed = 0;
@@ -6087,12 +6088,12 @@ static void test_6A9E4_full_run_patterned(void) {
      * so CCA4 reaches func_80042C78×1, then func_8005D6F4
      * chain.  The dispatcher still calls func_80051CC4 + func_80042C78.
      * Total boundary calls: 9. */
-    ASSERT(g_stub_order_count == 7, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(5),
+    ASSERT(g_stub_order_count == 6, "unexpected bootstrap invocations");
+    ASSERT(B21_CheckDispatcherOrder(4),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[6], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[5], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 7, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 6, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -6212,6 +6213,8 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x8009CEE0u) want = 9;           /* B30+B31 +0x170 */
         else if (a == 0x8009CEE4u) want = 0;           /* B30 +0x174 */
         else if (a == 0x8009CEECu) want = 0x48u;      /* B30 +0x17C */
+        else if (a == 0x8009D14Cu) want = 0x00404040u; /* B32 source */
+        else if (a == 0x8009D150u) want = 0x00404040u; /* B32 result */
         else if (a == 0x8009CEF0u) want = 0x0000003Du; /* B28: func_800438C0(0x3D) */
         /* B28: func_8005CCA4's four $gp-relative state words are SHARED host
          * globals (D_8009D048/50/58/64), not guest RAM — verified as host
@@ -6373,10 +6376,10 @@ static void test_6A9E4_zero_cycles_footprint(void) {
      * func_8005E884 + func_8005E850 + func_800649D0 +
      * func_80052790 + func_80051CC4 + func_80042C78 +
      * func_80087090). */
-    ASSERT(g_stub_order_count == 7, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(5),
+    ASSERT(g_stub_order_count == 6, "unexpected bootstrap invocations");
+    ASSERT(B21_CheckDispatcherOrder(4),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[6], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[5], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6443,10 +6446,10 @@ static void test_6A9E4_3E680_integration(void) {
     func_8006A9E4();
 
     /* B28: func_8005CCA4 is REAL — total boundary calls = 14. */
-    ASSERT(g_stub_order_count == 7, "unexpected provider count");
-    ASSERT(B21_CheckDispatcherOrder(5),
+    ASSERT(g_stub_order_count == 6, "unexpected provider count");
+    ASSERT(B21_CheckDispatcherOrder(4),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[6], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[5], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
@@ -7029,8 +7032,8 @@ static void test_5BCBC_dispatcher_integration(void) {
     ResetTestState();
     B26_SeedArchiveDefault();   /* B26: func_8005D6F4 walks a real archive */
     func_800527C8();
-    ASSERT(g_stub_order_count == 6, "dispatcher must leave 6 providers");
-    ASSERT(B21_CheckDispatcherOrder(5),
+    ASSERT(g_stub_order_count == 5, "dispatcher must leave 5 providers");
+    ASSERT(B21_CheckDispatcherOrder(4),
            "post-5BCBC dispatcher order wrong");
     ASSERT(CountOrderLog("func_8005DC4C") == 0,
            "func_8005DC4C routed through bootstrap policy");
@@ -7085,13 +7088,13 @@ static void test_5BCBC_dispatcher_integration(void) {
  * archive has no matching records, so func_80042C78 precedes D6F4's
  * remaining boundary
  * callees. */
-static const char *const B25_BOUNDARY_SEQ[5] = {
-    "func_800614AC", "func_8005E884", "func_8005E850",
+static const char *const B25_BOUNDARY_SEQ[4] = {
+    "func_8005E884", "func_8005E850",
     "func_800649D0", "func_80052790",
 };
 
 static int B25_CheckBoundaryOrder(void) {
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 4; i++) {
         if (strcmp(g_stub_order_log[i], B25_BOUNDARY_SEQ[i]) != 0)
             return 0;
     }
@@ -7133,7 +7136,7 @@ static void test_5D6F4_boot_path_state(void) {
     ASSERT(PE_LoadU8(0x800C20B4u) == 0xFFu, "terminator B4 missing");
     /* Boundary order: 6 providers (B29: CCA4 and 53D2C are real; the
      * default archive reaches CCA4's 42C78 boundary plus five D6F4 callees). */
-    ASSERT(g_stub_order_count == 5, "boundary provider count wrong");
+    ASSERT(g_stub_order_count == 4, "boundary provider count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "boundary ROM order wrong");
     ASSERT(CountOrderLog("func_8005D6F4") == 0,
            "func_8005D6F4 routed through bootstrap policy");
@@ -7198,6 +7201,8 @@ static void test_5D6F4_full_ram_canary(void) {
         else if (a == 0x8009CEE0u) want = 9;   /* B30+B31 +0x170 */
         else if (a == 0x8009CEE4u) want = 0;   /* B30 +0x174 */
         else if (a == 0x8009CEECu) want = 0x48u; /* B30 +0x17C */
+        else if (a == 0x8009D14Cu) want = 0x00404040u; /* B32 source */
+        else if (a == 0x8009D150u) want = 0x00404040u; /* B32 result */
         else if (a == 0x800A1878u) want = 0xEACF9000u;
         else if (a == 0x800A187Cu) want = 0xFEFDFBF6u;
         else if (a == 0x800A1880u) want = 0xA5A5A5FFu;
@@ -7334,7 +7339,7 @@ static void test_5D6F4_controlled_returns(void) {
             ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == exp[i],
                    "controlled-return buffer end state wrong");
     }
-    ASSERT(g_stub_order_count == 5, "controlled boundary count wrong");
+    ASSERT(g_stub_order_count == 4, "controlled boundary count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "controlled boundary order wrong");
     PASS();
 }
@@ -7349,9 +7354,9 @@ static void test_5D6F4_boundary_wiring(void) {
     ResetTestState();
     B26_SeedArchiveDefault();
     func_8005D6F4();
-    ASSERT(g_stub_order_count == 5, "boundary count wrong");
-    ASSERT(strcmp(g_stub_order_log[0], "func_800614AC") == 0,
-           "first boundary callee must be func_800614AC after B31");
+    ASSERT(g_stub_order_count == 4, "boundary count wrong");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005E884") == 0,
+           "first boundary callee must be func_8005E884 after B32");
     ASSERT(CountOrderLog("func_8005DC4C") == 0,
            "func_8005DC4C must no longer reach the bootstrap boundary");
     ASSERT(CountOrderLog("func_80052594") == 0,
@@ -7643,12 +7648,12 @@ static void test_5DC4C_5D6F4_integration(void) {
     ASSERT(CountOrderLog("func_8005DC4C") == 0, "5DC4C on the boundary");
     ASSERT(CountOrderLog("func_80052594") == 0, "52594 on the boundary");
     ASSERT(CountOrderLog("func_8005DC9C") == 0, "5DC9C arm is dead");
-    ASSERT(g_stub_order_count == 5, "boundary count wrong");
+    ASSERT(g_stub_order_count == 4, "boundary count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "boundary ROM order wrong");
     /* func_8005CCA4 is now REAL — the first boundary callee is
      * func_80053D2C (first callee of func_8005CCA4). */
-    ASSERT(strcmp(g_stub_order_log[0], "func_800614AC") == 0,
-           "first boundary callee must be func_800614AC after B31");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005E884") == 0,
+           "first boundary callee must be func_8005E884 after B32");
     PASS();
 }
 
@@ -7887,8 +7892,8 @@ static void test_52594_5D6F4_integration(void) {
            "func_80052594 must not reach the bootstrap boundary");
     /* func_8005CCA4 is now REAL — the first boundary callee is
      * func_80053D2C (first callee of func_8005CCA4). */
-    ASSERT(strcmp(g_stub_order_log[0], "func_800614AC") == 0,
-           "first boundary callee must be func_800614AC after B31");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005E884") == 0,
+           "first boundary callee must be func_8005E884 after B32");
     PASS();
 }
 
@@ -8266,6 +8271,80 @@ static void test_42CC4_full_footprint_dirty_repeat_and_reset(void) {
     ASSERT(PE_LoadU8(0x800A1878u) == 0u &&
            PE_LoadU32(0x8009CEE0u) == 0u,
            "PE_RamReset did not clear B31 state");
+    PASS();
+}
+
+/* ── Phase 6E-B32: func_800614AC packed-color interpolation ────────── */
+
+static void test_614AC_exact_contract_and_return(void) {
+    TEST("614AC_exact_contract_and_return");
+    static const uint32_t cases[][2] = {
+        {0x00404040u, 0x00404040u},
+        {0x00FFFFFFu, 0x00FFFFFFu},
+        {0x00FF0000u, 0x00007F7Fu},
+        {0x00FFFF00u, 0x007F7FFFu},
+        {0x12345678u, 0x00675645u},
+    };
+    unsigned int i;
+    ResetTestState();
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        ASSERT((uint32_t)func_800614AC((int)cases[i][0]) == cases[i][1],
+               "B32 packed-color return wrong");
+        ASSERT(PE_LoadU32(0x8009D14Cu) == (cases[i][0] & 0x00FFFFFFu),
+               "B32 source store wrong");
+        ASSERT(PE_LoadU32(0x8009D150u) == cases[i][1],
+               "B32 result store wrong");
+    }
+    PASS();
+}
+
+static void test_614AC_full_footprint_dirty_repeat_and_reset(void) {
+    TEST("614AC_full_footprint_dirty_repeat_and_reset");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    ASSERT((uint32_t)func_800614AC((int)0x12345678u) == 0x00675645u,
+           "B32 canary call return wrong");
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u) {
+        uint32_t want = 0xA5A5A5A5u;
+        if (a == 0x8009D14Cu) want = 0x00345678u;
+        else if (a == 0x8009D150u) want = 0x00675645u;
+        if (PE_LoadU32(a) != want) {
+            FAIL("B32 changed an address outside its exact word footprint");
+            return;
+        }
+    }
+    PE_StoreU32(0x8009D14Cu, 0xDEADBEEFu);
+    PE_StoreU32(0x8009D150u, 0xCAFEBABEu);
+    ASSERT((uint32_t)func_800614AC((int)0x00404040u) == 0x00404040u,
+           "B32 repeat return wrong");
+    ASSERT(PE_LoadU32(0x8009D14Cu) == 0x00404040u &&
+           PE_LoadU32(0x8009D150u) == 0x00404040u,
+           "B32 repeat stores wrong");
+    PE_RamReset();
+    ASSERT(PE_LoadU32(0x8009D14Cu) == 0u &&
+           PE_LoadU32(0x8009D150u) == 0u,
+           "PE_RamReset did not clear B32 state");
+    PASS();
+}
+
+static void test_614AC_guard_and_d6f4_integration(void) {
+    TEST("614AC_guard_and_d6f4_integration");
+    ResetTestState();
+    PE_StoreU32(0x8009D148u, 0x11111111u);
+    PE_StoreU32(0x8009D154u, 0x22222222u);
+    B26_SeedArchiveDefault();
+    func_8005D6F4();
+    ASSERT(PE_LoadU32(0x8009D14Cu) == 0x00404040u &&
+           PE_LoadU32(0x8009D150u) == 0x00404040u,
+           "D6F4 did not complete translated B32 before its boundary");
+    ASSERT(PE_LoadU32(0x8009D148u) == 0x11111111u &&
+           PE_LoadU32(0x8009D154u) == 0x22222222u,
+           "B32 integration guard changed");
+    ASSERT(g_stub_order_count == 4 &&
+           strcmp(g_stub_order_log[0], "func_8005E884") == 0,
+           "B32 must remove 614AC and expose 5E884 first");
     PASS();
 }
 
@@ -8733,9 +8812,9 @@ static void test_5CCA4_5D6F4_integration(void) {
     ASSERT(PE_LoadU16(B28_GA_E40) == 0x3Du,
            "5D6F4 integration: GA_E40 wrong");
     /* func_8005CCA4 is REAL — boundary count is 11 (5×53D2C + 42C78 + 5 remaining) */
-    ASSERT(g_stub_order_count == 5, "integration boundary count wrong");
-    ASSERT(strcmp(g_stub_order_log[0], "func_800614AC") == 0,
-           "first boundary callee must be func_800614AC after B31");
+    ASSERT(g_stub_order_count == 4, "integration boundary count wrong");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005E884") == 0,
+           "first boundary callee must be func_8005E884 after B32");
     ASSERT(CountOrderLog("func_80042CC4") == 0,
            "translated func_80042CC4 must not reach the boundary");
     PASS();
@@ -9256,6 +9335,9 @@ int main(void)
     test_53D2C_dependency_returns_and_reset();
     test_42CC4_exact_ramp_and_thresholds();
     test_42CC4_full_footprint_dirty_repeat_and_reset();
+    test_614AC_exact_contract_and_return();
+    test_614AC_full_footprint_dirty_repeat_and_reset();
+    test_614AC_guard_and_d6f4_integration();
     test_42C78_prefix_and_footprint();
     test_42C78_dirty_repeat_and_ramreset();
 

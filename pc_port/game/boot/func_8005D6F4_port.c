@@ -50,7 +50,7 @@
  *  12. jal func_8005CCA4()                         UNRESOLVED
  *  13. sh 0x0203 → 0x800C1F80   (direct halfword store)
  *      sw 0x00404040 → 0x800C0E44   (direct word store)
- *  14. jal func_800614AC(0x00404040)               UNRESOLVED
+ *  14. jal func_800614AC(0x00404040)               REAL (B32)
  *      (a0 built as lui 0x40 / ori 0x4040 in the delay slot)
  *  15. sw 0 → D_800A76A4, D_800A76B0, D_800A76BC, D_800A76C8
  *      (the +4 tick fields of the three B5 timer records at
@@ -73,12 +73,12 @@
  * the body never reads $a0); unconditional; one-shot per dispatcher
  * invocation; return discarded.
  *
- * Dependency boundary (Phase 6E-B27): func_80071A24 is REAL (B21
+ * Historical Phase 6E-B27 dependency boundary: func_80071A24 is REAL (B21
  * BIOS A(28h) bzero), func_8005DC4C is REAL (B26 message-table lookup),
  * func_80052594 is REAL (B27 string copy into fixed 8-byte buffer).
- * The six remaining callees are UNRESOLVED and route through the
+ * The four remaining callees are UNRESOLVED and route through the
  * centralized bootstrap boundary in retail ROM order:
- * func_8005CCA4, func_800614AC, func_8005E884,
+ * func_8005E884,
  * func_8005E850, func_800649D0, func_80052790.
  * func_8005DC9C is a dead arm.  Strict mode stops at the first
  * unresolved invocation (func_8005CCA4 on the boot path).
@@ -110,6 +110,8 @@
 #include "psx_compat.h"
 #include "pe_sdk.h"
 #include "pe_bootstrap.h"
+
+extern int func_800614AC(int a0);
 
 #define GA_5D6F4_BUF_BASE  0x800C0DE0u   /* bzero dest / buffer base    */
 #define GA_5D6F4_BUF_SEL   0x800C0DF0u   /* base + 0x10 selected buffer */
@@ -247,8 +249,8 @@ int func_8005D6F4(void)
     PE_StoreU16(GA_5D6F4_HW203, 0x0203u);
     PE_StoreU32(GA_5D6F4_W404040, 0x00404040u);
 
-    /* 14. func_800614AC(0x00404040) */
-    Bootstrap_ReturnVoid("func_800614AC", "func_8005D6F4");
+    /* 14. func_800614AC(0x00404040); return is discarded by retail. */
+    (void)func_800614AC(0x00404040);
 
     /* 15. Timer-record tick fields + trailing word. */
     PE_StoreU32(GA_5D6F4_REC_A4, 0u);

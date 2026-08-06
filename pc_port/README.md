@@ -1,22 +1,40 @@
-# Parasite Eve Native PC Port — Phase 6E-B31
+# Parasite Eve Native PC Port — Phase 6E-B32
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B31 func_80042CC4 rung — verified;
+**Current milestone:** B32 func_800614AC rung — verified;
 B28 is recorded by provisional commit `a1559ae` and corrective commit
 `cd2e375`; B29 is accepted in commit `eedd456`. The completed B28 body is
 `0x8005CCA4..0x8005D01F` (exclusive end `0x8005D020`, file offset
 `0x4D4A4`, 223 retail words). All 223 words are independently transcribed,
 compared against the SHA-verified executable, and executed by the B28 oracle.
 The B29 baseline was 337/337 native and 337/337 ASan/UBSan; the final B30
-suite was 339/339 and the final B31 suite is 341/341 in both configurations.
-The current real-disc strict frontier is `func_800614AC` from
-`func_8005D6F4`; strict exit status is 1.
-Bootstrap-disc normally completes with 14 bootstrap stubs invoked, while
+suite was 339/339, the final B31 suite was 341/341, and the final B32 suite
+is 344/344 in both configurations. The current real-disc strict frontier is
+`func_8005E884` from `func_8005D6F4`; strict exit status is 1.
+Bootstrap-disc normally completes with 15 bootstrap stubs invoked, while
 bootstrap strict stops at `func_8007F72C` from `func_800698D4` (exit 1).
 The B28 fixture lookup returns `0x800A8400`; address zero remains invalid, with
 no KUSEG or low-address mirror. Nothing has been pushed and the next rung has
 not started.
+
+**Current B32 detail:** `func_800614AC` is translated retail logic: 36
+instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`
+(exclusive end `0x8006153C`, file offset `0x51CAC`, live split
+`asm/disc1/51CAC.s`). It stores `a0 & 0x00FFFFFF` at `0x8009D14C`, computes
+the three pairwise byte means with the retail arithmetic and saturation
+branches, stores the packed result at `0x8009D150`, and returns that result.
+It has no guest reads, direct callees, hardware activity, blocking, pointer
+storage, clamping, or fallback. The B32 oracle independently verifies the
+executable SHA-1 and all 36 words, executes delay slots, and checks ordered
+writes and return values. The `func_8005D6F4` call is at `0x8005D8C8`, with
+`a0=0x00404040` formed by the delay-slot `ori`; the return is discarded. Its
+remaining sibling calls are `func_8005E884`, `func_8005E850`,
+`func_800649D0`, and `func_80052790` in raw ROM order. The final B32 suites
+are 344/344 native and 344/344 ASan/UBSan; real-disc strict now stops at
+`func_8005E884` from `func_8005D6F4`, while bootstrap strict remains at
+`func_8007F72C` from `func_800698D4`. Nothing has been pushed and the next
+rung has not started.
 
 **Historical B30 detail:** `func_80042C78` is a translated retail prefix: 16
 instructions / `0x40` bytes at executable `0x80042C78..0x80042CB4`
@@ -30,7 +48,7 @@ or fallbacks. `tools/b30_oracle.py` independently verifies and executes all
 16 words. B31 implements that dependency; real-disc strict now stops at
 `func_800614AC` from `func_8005D6F4`.
 
-**Current B31 detail:** `func_80042CC4` is translated retail logic: 31
+**Historical B31 detail:** `func_80042CC4` is translated retail logic: 31
 instructions / `0x7C` bytes at executable `0x80042CC4..0x80042D3C`
 (exclusive end `0x80042D40`, file offset `0x334C4`, live split
 `asm/disc1/334C4.s`). It is a void leaf with `(a0, a1)` arguments. It clears
@@ -163,9 +181,9 @@ boundary in retail ROM order.  Strict mode with `--disc-image` stops at
 `func_800528F0` (first unresolved callee INSIDE the translated dispatcher);
 `--bootstrap-disc` still stops at `func_8007F72C` by design.**
 
-**Status:** B31 func_80042CC4 VERIFIED — the final suite is 341/341 native
-and 341/341 ASan/UBSan; the strict real-disc frontier is `func_800614AC`
-from `func_8005D6F4` (exit 1, normal and sanitizer agree), bootstrap-disc stops
+**Historical status:** B31 func_80042CC4 VERIFIED — its final suite was
+341/341 native and 341/341 ASan/UBSan; its strict real-disc frontier was
+`func_800614AC` from `func_8005D6F4` (exit 1, normal and sanitizer agreed), bootstrap-disc stopped
 at `func_8007F72C` from `func_800698D4` (exit 1, normal and sanitizer
 agree). `func_8005CCA4` is translated retail logic — a 223-word resource-table
 initializer with a 50-halfword descending zero loop
@@ -176,9 +194,9 @@ The completed B28 oracle independently transcribes all 223 words (W_5CCA4) and
 cross-checks every word against the SHA-verified exe before executing from
 the transcription.  The bootstrap-disc fixture now seeds a valid minimal
 archive at D_800A8028 so func_8005DC4C returns a valid pointer instead of 0.
-The completed B31 boundary was `func_80042CC4`; five sibling callees
-(`func_800614AC`, `func_8005E884`, `func_8005E850`,
-`func_800649D0`, `func_80052790`) still route through the centralized
+The completed B31 boundary was `func_80042CC4`; B32 completed
+`func_800614AC`, leaving four sibling callees (`func_8005E884`,
+`func_8005E850`, `func_800649D0`, `func_80052790`) behind the centralized
 boundary. The bootstrap fixture correction seeds the valid archive lookup
 result `0x800A8400`; malformed `PE_StoreU32(0x800A803C, 0xA49D968F)` leaves
 `func_8005DBAC(0)` returning `0x24A816B7` without dereference. Address zero
@@ -857,7 +875,7 @@ status 1; native tests are 285/285.
 
 ## Next steps
 
-1. **Next rung:** `func_800614AC` from `func_8005D6F4`; classify its raw
+1. **Next rung:** `func_8005E884` from `func_8005D6F4`; classify its raw
    MIPS contract before any implementation
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display

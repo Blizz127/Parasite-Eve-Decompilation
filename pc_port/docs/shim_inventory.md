@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B31
+# Shim Inventory — Phase 6E-B32
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -348,6 +348,25 @@ masked with a KUSEG mirror, a clamp, or a bypass.  Strict real-disc
 execution now reaches `func_80053D2C` from `func_8005CCA4` (exit 1,
 normal and sanitizer agree).
 
+### Current Phase 6E-B32
+
+`func_800614AC` is translated retail logic: 36 instructions / `0x90` bytes
+at executable `0x800614AC..0x8006153B` (exclusive end `0x8006153C`, file
+offset `0x51CAC`, live split `asm/disc1/51CAC.s`). It stores
+`a0 & 0x00FFFFFF` at `0x8009D14C`, computes the three pairwise byte means
+with the retail arithmetic and saturation branches, stores the packed result
+at `0x8009D150`, and returns that result. It has no guest reads, direct
+callees, hardware activity, blocking, pointer storage, clamping, or fallback.
+The `func_8005D6F4` call is at `0x8005D8C8`, with `a0=0x00404040` formed by
+the delay-slot `ori`; its return is discarded. The remaining sibling calls
+are `func_8005E884`, `func_8005E850`, `func_800649D0`, and
+`func_80052790` in raw ROM order. The independent `tools/b32_oracle.py`
+verifies the executable SHA-1 and all 36 words, models delay slots, and
+checks ordered writes and return values. Native and fresh ASan/UBSan suites
+are 344/344. Real-disc strict now stops at `func_8005E884` from
+`func_8005D6F4`; bootstrap strict remains at `func_8007F72C` from
+`func_800698D4`. Nothing has been pushed and the next rung has not started.
+
 ### Historical Phase 6E-B30
 
 `func_80042C78` is translated retail logic through its proven 16-instruction
@@ -367,7 +386,7 @@ arguments, ordered writes, and return state. The final native and ASan/UBSan
 suites were 339/339. B31 supplies the former dependency. No generated or
 retail artifacts were added.
 
-### Phase 6E-B31 (current verified phase)
+### Historical Phase 6E-B31
 
 `func_80042CC4` is translated retail logic: 31 instructions / `0x7C` bytes
 at executable `0x80042CC4..0x80042D3C` (exclusive end `0x80042D40`, file
@@ -469,13 +488,13 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode stops at `func_800614AC` from `func_8005D6F4` — past the fully
+With Disc 1, strict mode stops at `func_8005E884` from `func_8005D6F4` — past the fully
 translated func_8003E680, func_8006A9E4, func_800527C8, func_80052C6C
 (B23), func_8005BCBC (B24), func_8005D6F4 (B25), func_8005DC4C (B26),
 func_80052594 (B27), func_8005CCA4 (historical B28), and
 func_80053D2C (historical B29), `func_80042C78` (B30), and
 `func_80042CC4` (B31).
-func_800614AC, func_8005E884, func_8005E850, func_800649D0,
+func_8005E884, func_8005E850, func_800649D0,
 func_80052790 (from func_8005D6F4), func_80051CC4, func_80042C78
 (from dispatcher), func_80087090 (SPU upload).  The `--bootstrap-disc`
 fixture still stops at `func_8007F72C` (CdReady) by design.
@@ -493,8 +512,7 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
   dependencies are `func_80053968` and `func_80053B48`
 - `func_80042C78` — completed B30 translated prefix; its B31 dependency is
   complete
-- `func_800614AC`, `func_8005E884`,
-  `func_8005E850`, `func_800649D0`, `func_80052790` — remaining
+- `func_8005E884`, `func_8005E850`, `func_800649D0`, `func_80052790` — remaining
   func_8005D6F4 callees in retail ROM order
 - `func_80051CC4` — remaining unresolved dispatcher callee after
   func_8005D6F4

@@ -5,12 +5,13 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
-## Phase 6E-B31 func_80042CC4 VERIFIED
+## Phase 6E-B32 func_800614AC VERIFIED
 
 Current verified handoff: provisional B28 implementation commit `a1559ae`,
 B28 oracle/bootstrap corrective commit `cd2e375`, and accepted B29 commit
-`eedd456`, followed by the completed B30 translation and B31 translation of
-`func_80042CC4`. Nothing has been pushed; no later rung has started.
+`eedd456`, followed by the completed B30 and B31 translations and the B32
+translation of `func_800614AC`. Nothing has been pushed; no later rung has
+started.
 
 The raw retail trampoline at executable `0x80071A24..0x80071A2F` (file
 offset `0x62224`) is exactly `240A00A0 01400008 24090028`: load `$t2=0xA0`,
@@ -26,7 +27,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B31 func_80042CC4 VERIFIED** (31 retail instructions independently transcribed and cross-checked; B30 wrapper now calls the translated leaf; B29 commit `eedd456`; B28 history remains `a1559ae` + corrective `cd2e375`) | `pc_port/build/pe-native-tests` (341/341; ASan/UBSan 341/341) |
+| Port phase | **6E-B32 func_800614AC VERIFIED** (36 retail instructions independently transcribed and cross-checked; B32 completes the D6F4 color-state call; B29 commit `eedd456`; B28 history remains `a1559ae` + corrective `cd2e375`) | `pc_port/build/pe-native-tests` (344/344; ASan/UBSan 344/344) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -38,10 +39,10 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Historical B17 dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 called twice). 7 translated leaves: func_8005B890(0), func_8005BC98(0), 3×sw $zero, func_8004F808, func_80042B38, func_80051084, func_8005BC98(1) + D_800B0CD8 |= 0x40000000 in the delay slot of func_800371A4(1). 9 further callees translated (func_800528F0, func_8005E588, func_80062568, func_80064964, func_8005DE88, func_80052C6C, func_8005BCBC, func_8005D6F4, func_80052594); 2 unresolved (func_80051CC4, func_80042C78) — routed through the centralized bootstrap boundary. Independent oracle: `pc_port/tools/dispatcher_oracle.py` (MIPS interpreter on verified retail words). Sole call site func_8006A9E4 @0x8006AAD0, $s1-guarded one-shot inside the cycle-B poll loop; void(void), return unconsumed | `pc_port/game/boot/func_800527C8_port.c`, `func_8005B890_port.c`, `func_8005BC98_port.c`, `func_8004F808_port.c`, `func_80042B38_port.c`, `func_80051084_port.c`, `func_80052C6C_port.c`, `func_8005BCBC_port.c`, `func_8005D6F4_port.c`, `func_80052594_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | with Disc 1: exit 1 at `func_800614AC` from `func_8005D6F4` (normal and sanitizer agree); with `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` (normal and sanitizer agree) | `--headless --strict-stubs --disc-image …` |
-| Sanitizers | `-DPE_PORT_SANITIZERS=ON`: 341/341 tests + headless + real-disc load + bootstrap-disc + strict clean | `/tmp/pe-b31-san` |
+| Strict mode | with Disc 1: exit 1 at `func_8005E884` from `func_8005D6F4` (normal and sanitizer agree); with `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` (normal and sanitizer agree) | `--headless --strict-stubs --disc-image …` |
+| Sanitizers | `-DPE_PORT_SANITIZERS=ON`: 344/344 tests + headless + real-disc load + bootstrap-disc + strict clean | `/tmp/pe-b32-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next | `func_800614AC` from `func_8005D6F4`; B31 complete and no later rung started | — |
+| Next | `func_8005E884` from `func_8005D6F4`; B32 complete and no later rung started | — |
 
 **Window-white is a known host-layer artifact:** the X11 window background
 is white and Expose events are not re-blitted; the port blits once after
@@ -70,7 +71,7 @@ sanitizer runs. Bootstrap strict remains `func_8007F72C` from
 `func_800698D4`, exit 1. Nothing has been pushed and the next rung has not
 started.
 
-### Phase 6E-B31 func_80042CC4 verified — current findings
+### Historical Phase 6E-B31 func_80042CC4 verified
 
 `func_80042CC4` is translated retail logic: 31 instructions / `0x7C` bytes
 at executable `0x80042CC4..0x80042D3C` (exclusive end `0x80042D40`, file
@@ -92,10 +93,38 @@ a2/a3 are overwritten before use. `pc_port/tools/b31_oracle.py` verifies the
 executable SHA-1, all 31 words, delay slots, ordered writes, threshold paths,
 and count using its independent transcription.
 
-The final native and fresh ASan/UBSan suites are 341/341. Real-disc strict
-now stops at `func_800614AC` from `func_8005D6F4`; bootstrap strict remains at
+The final native and fresh ASan/UBSan suites were 341/341. Real-disc strict
+then stopped at `func_800614AC` from `func_8005D6F4`; bootstrap strict remained at
 `func_8007F72C` from `func_800698D4`. Nothing has been pushed and the next
 rung has not started.
+
+### Phase 6E-B32 func_800614AC verified — current findings
+
+`func_800614AC` is translated retail logic: 36 instructions / `0x90` bytes
+at executable `0x800614AC..0x80061538` (exclusive end `0x8006153C`, file
+offset `0x51CAC`, live split `asm/disc1/51CAC.s`). It masks the input to
+24 bits, stores that word at `0x8009D14C` (`$gp+0x3DC`), computes the three
+pairwise arithmetic means of the packed color bytes with the exact retail
+saturation branches, stores the packed result at `0x8009D150` (`$gp+0x3E0`),
+and returns that result. It has no callees, reads no guest memory, cannot
+block, and has no GPU/SDK/disc/audio/input activity. For D6F4, the call at
+`0x8005D8C8` is unconditional: `$a0` is built as `0x00404040` by the
+`ori` delay slot, the preceding stores are `sh 0x0203 → 0x800C1F80` and
+`sw 0x00404040 → 0x800C0E44`, the return is discarded, and the following
+operations clear `0x800A76A4/B0/BC/C8`. The D6F4 unresolved sibling order
+after B32 is `func_8005E884`, `func_8005E850`, `func_800649D0`,
+`func_80052790`.
+
+The other executable call sites are `func_800434C0 @ 0x80043564` and
+`0x8004358C`, `func_8005C374 @ 0x8005C3C0`, `func_8004B394 @
+0x8004B440`, `0x8004B494`, and `0x8004B504`, and `func_8004FEEC @
+0x8004FF10`; their return values are overwritten or otherwise discarded.
+The B32 oracle independently verifies the executable SHA-1 and all 36 words,
+executes delay slots and branches from its transcription, and checks exact
+ordered stores and returns. Native and fresh ASan/UBSan suites are 344/344.
+Real-disc strict now stops at `func_8005E884` from `func_8005D6F4`; bootstrap
+strict remains at `func_8007F72C` from `func_800698D4`. Nothing has been pushed
+and the next rung has not started.
 
 ### Historical B29 func_80053D2C verified — accepted commit `eedd456`
 
