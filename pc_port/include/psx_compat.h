@@ -156,6 +156,7 @@ extern pe_addr_t func_8005332C(int32_t resource_id);
 extern pe_addr_t func_80053968(int32_t resource_id);
 extern int32_t func_80053B48(pe_addr_t record);
 extern void func_80051CC4(void);
+extern void func_8005218C(void);
 extern void func_800528F0(void);
 extern void func_8005E588(void);
 extern void func_80062568(void);

@@ -66,6 +66,7 @@ static void ResetTestState(void) {
     PE_Sdk_ResetState();            /* host-owned GTE/IRQ/event state    */
     Bootstrap_ClearSequences();     /* drop scripted provider sequences   */
     Bootstrap_ResetArgCallLog();    /* drop unresolved argument evidence */
+    Bootstrap_ResetArg4CallLog();   /* drop four-register boundary log    */
     PE_Disc_SetActive(NULL);        /* drop any installed disc fixture    */
     PE_3EAC8_RecordReset();         /* drop recorded provider arguments   */
     D_80011614 = D_80011614_BOOTSTRAP;
@@ -5873,7 +5874,7 @@ static void test_6E498_readonly_footprint(void) {
 /* Phase 6E-B28: func_8005CCA4 is REAL.  func_80042C78 is called from
  * both func_8005CCA4 AND the dispatcher — the dispatcher still calls it. */
 static const char *const B22_DISP_SEQ[1] = {
-    "func_8005218C"
+    "func_8005B91C"
 };
 
 static int B21_CheckDispatcherOrder(int base) {
@@ -6085,8 +6086,8 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* 7. B40 translates func_8005332C; the later func_8005218C boundary
-     * still precedes func_80087090. */
+    /* B43 exposes func_8005218C's first genuine internal dependency before
+     * the later func_80087090 boundary. */
     ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
@@ -6393,7 +6394,7 @@ static void test_6A9E4_zero_cycles_footprint(void) {
     ASSERT(D_8009D058 == 0x800AD05Cu, "6A9E4: host D_8009D058 wrong");
     ASSERT(D_8009D064 == 2u, "6A9E4: host D_8009D064 wrong");
     ASSERT(D_8009D018 == 0u, "6A9E4: host D_8009D018 wrong");
-    /* B40: only func_8005218C remains inside translated func_80051CC4. */
+    /* B43: func_8005B91C is the prefix-translated B39 internal boundary. */
     ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
@@ -6463,7 +6464,7 @@ static void test_6A9E4_3E680_integration(void) {
     B26_SeedArchiveDefault();  /* B26: no disc, so seed the archive */
     func_8006A9E4();
 
-    /* B40: func_8005218C + func_80087090 remain. */
+    /* B43: func_8005B91C + func_80087090 remain. */
     ASSERT(g_stub_order_count == 2, "unexpected provider count");
     ASSERT(B21_CheckDispatcherOrder(0),
            "func_800527C8 callee order must match retail ROM order");
@@ -7050,7 +7051,7 @@ static void test_5BCBC_dispatcher_integration(void) {
     ResetTestState();
     B26_SeedArchiveDefault();   /* B26: func_8005D6F4 walks a real archive */
     func_800527C8();
-    /* B40: func_8005332C is real; only func_8005218C remains here. */
+    /* B43: func_8005218C is a real prefix; func_8005B91C remains here. */
     ASSERT(g_stub_order_count == 1, "dispatcher must leave one provider");
     ASSERT(B21_CheckDispatcherOrder(0),
            "post-5BCBC dispatcher order wrong");
@@ -10037,8 +10038,8 @@ static void B39_ScriptRecord(pe_addr_t record)
 }
 
 /* True ABI is void(void).  A negative signed source makes the real B40
- * lookup return NULL before any table read, but the later func_8005218C
- * boundary and both trailing buffer-state calls still execute. */
+ * lookup return NULL before any table read, but the later B43 prefix and
+ * both trailing buffer-state calls still execute. */
 static void test_51CC4_null_contract_order_and_argument(void)
 {
     TEST("51CC4_null_contract_order_and_argument");
@@ -10054,8 +10055,8 @@ static void test_51CC4_null_contract_order_and_argument(void)
     entry();
 
     ASSERT(g_stub_order_count == 1, "NULL path dependency count");
-    ASSERT(strcmp(g_stub_order_log[0], "func_8005218C") == 0,
-           "func_8005218C must remain after the real NULL lookup");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005B91C") == 0,
+           "func_8005B91C must be the exact B43 internal boundary");
     ASSERT(g_bootstrap_arg_call_count == 0,
            "translated lookup must not log a boundary argument");
     for (i = 0u; i < 7u; i++)
@@ -10289,8 +10290,8 @@ static void test_51CC4_ramreset_no_split_brain(void)
 }
 
 /* The translated dispatcher reaches B39 after func_8005D6F4 and before
- * func_80042C78.  Only func_8005218C remains unresolved inside B39; all
- * direct state from both neighboring operations is visible on return. */
+ * func_80042C78.  B43 reaches func_8005B91C inside the real 5218C prefix;
+ * all direct state from both neighboring operations is visible on return. */
 static void test_51CC4_527C8_integration(void)
 {
     TEST("51CC4_527C8_integration");
@@ -10311,6 +10312,263 @@ static void test_51CC4_527C8_integration(void)
            "following func_80042C78 operation must execute");
     ASSERT(CountOrderLog("func_80051CC4") == 0,
            "dispatcher must call translated B39 body");
+    PASS();
+}
+
+/* ── Phase 6E-B43: func_8005218C proven prefix boundary ───────────── */
+
+#define B43_TARGET0       0x800C0E28u
+#define B43_STALE_A34     0x800B8034u
+#define B43_STALE_A38     0x800B8038u
+
+static void test_5218C_signature_and_first_boundary(void)
+{
+    TEST("5218C_signature_and_first_boundary");
+    void (*entry)(void) = func_8005218C;
+    ResetTestState();
+    PE_StoreU8(B43_TARGET0 - 1u, 0xA5u);
+    PE_StoreU16(B43_TARGET0, 0x8001u);
+    PE_StoreU8(B43_TARGET0 + 2u, 0x5Au);
+
+    entry();
+
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_8005B91C") == 0,
+           "first retail dependency must be func_8005B91C");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "four-register dependency call not recorded exactly once");
+    ASSERT(strcmp(g_bootstrap_arg4_calls[0].symbol, "func_8005B91C") == 0 &&
+           strcmp(g_bootstrap_arg4_calls[0].caller, "func_8005218C") == 0,
+           "boundary symbol/caller mismatch");
+    ASSERT(g_bootstrap_arg4_calls[0].arg0 == (uintptr_t)0u &&
+           g_bootstrap_arg4_calls[0].arg1 == (uintptr_t)0xFFFF8001u &&
+           g_bootstrap_arg4_calls[0].arg3 == (uintptr_t)0u,
+           "a0/a1/a3 mismatch at first dependency");
+    ASSERT((g_bootstrap_arg4_calls[0].arg2 &
+            (uintptr_t)(_Alignof(int32_t) - 1u)) == 0u,
+           "a2 must designate an aligned native int32_t output word");
+#if UINTPTR_MAX > UINT32_MAX
+    ASSERT(g_bootstrap_arg4_calls[0].arg2 > (uintptr_t)UINT32_MAX,
+           "a2 transient pointer was truncated to retail width");
+#endif
+    ASSERT(PE_LoadU8(B43_TARGET0 - 1u) == 0xA5u &&
+           PE_LoadU16(B43_TARGET0) == 0x8001u &&
+           PE_LoadU8(B43_TARGET0 + 2u) == 0x5Au,
+           "signed halfword read crossed its exact width");
+    PASS();
+}
+
+static void test_5218C_signed_target_values(void)
+{
+    TEST("5218C_signed_target_values");
+    static const struct {
+        uint16_t raw;
+        uintptr_t expected_a1;
+    } cases[] = {
+        { 0x0000u, (uintptr_t)0x00000000u },
+        { 0x0001u, (uintptr_t)0x00000001u },
+        { 0x7FFFu, (uintptr_t)0x00007FFFu },
+        { 0x8000u, (uintptr_t)0xFFFF8000u },
+        { 0xFFFFu, (uintptr_t)0xFFFFFFFFu },
+    };
+    size_t i;
+    for (i = 0u; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        ResetTestState();
+        PE_StoreU16(B43_TARGET0, cases[i].raw);
+        func_8005218C();
+        ASSERT(g_bootstrap_arg4_call_count == 1 &&
+               g_bootstrap_arg4_calls[0].arg1 == cases[i].expected_a1,
+               "retail lh sign extension mismatch");
+        ASSERT(g_bootstrap_arg4_calls[0].arg0 == 0u &&
+               g_bootstrap_arg4_calls[0].arg3 == 0u,
+               "fixed dependency arguments changed with target");
+    }
+    PASS();
+}
+
+/* The B43 oracle independently verifies these five literal executable call
+ * sites and their consumers.  One production invocation per site proves the
+ * common void(void) ABI and boundary behavior without translating callers. */
+static void test_5218C_five_caller_abis(void)
+{
+    TEST("5218C_five_caller_abis");
+    static const pe_addr_t sites[5] = {
+        0x8002F7A0u, 0x800490F4u, 0x8004C2D0u,
+        0x80051DCCu, 0x80052484u,
+    };
+    size_t i;
+    ResetTestState();
+    PE_StoreU16(B43_TARGET0, 0xFFFEu);
+    for (i = 0u; i < sizeof(sites) / sizeof(sites[0]); i++) {
+        ASSERT(sites[i] >= 0x80010000u, "literal caller address lost");
+        func_8005218C();
+        ASSERT(g_bootstrap_arg4_call_count == (int)(i + 1u),
+               "one dependency call required per executable caller");
+        ASSERT(g_bootstrap_arg4_calls[i].arg0 == 0u &&
+               g_bootstrap_arg4_calls[i].arg1 == (uintptr_t)0xFFFFFFFEu &&
+               g_bootstrap_arg4_calls[i].arg3 == 0u,
+               "caller-independent zero-argument contract changed");
+    }
+    ASSERT(g_stub_order_count == 5,
+           "five production caller cases must make five boundary calls");
+    PASS();
+}
+
+static void test_5218C_internal_call_map_contract(void)
+{
+    TEST("5218C_internal_call_map_contract");
+    static const struct {
+        pe_addr_t b91c_site;
+        pe_addr_t dbac_site;
+        uint32_t a0;
+        pe_addr_t target;
+    } calls[7] = {
+        { 0x800521B0u, 0x800521BCu, 0u, 0x800C0E28u },
+        { 0x80052280u, 0x80052298u, 1u, 0x800C0E2Au },
+        { 0x800522B4u, 0x800522CCu, 2u, 0x800C0E2Cu },
+        { 0x800522E8u, 0x800522FCu, 3u, 0x800C0E2Eu },
+        { 0x80052330u, 0x80052348u, 4u, 0x800C0E30u },
+        { 0x80052370u, 0x80052388u, 5u, 0x800C0E32u },
+        { 0x800523A4u, 0x800523B0u, 6u, 0x800C0E34u },
+    };
+    size_t i;
+    for (i = 0u; i < 7u; i++) {
+        ASSERT(calls[i].b91c_site < calls[i].dbac_site,
+               "5B91C output must precede its DBAC consumer");
+        ASSERT(calls[i].a0 == i &&
+               calls[i].target == B43_TARGET0 + (pe_addr_t)(i * 2u),
+               "retail call-index/target derivation mismatch");
+    }
+    ASSERT(calls[6].dbac_site < 0x800523C4u,
+           "func_80052F24 must remain the eighth unresolved call");
+    PASS();
+}
+
+static void test_5218C_dirty_repeat_and_partial_state(void)
+{
+    TEST("5218C_dirty_repeat_and_partial_state");
+    ResetTestState();
+    PE_StoreU16(B43_TARGET0, 0x1234u);
+    PE_StoreU16(0x800C0E06u, 0xA5A5u);
+    PE_StoreU32(0x8009D254u, 0xDEADBEEFu);
+    D_8009D048 = 0x800C1234u;
+    D_8009D050 = 0x11223344u;
+
+    func_8005218C();
+    func_8005218C();
+
+    ASSERT(g_bootstrap_arg4_call_count == 2 && g_stub_order_count == 2,
+           "repeated invocation must repeat the first dependency only");
+    ASSERT(g_bootstrap_arg4_calls[0].arg1 == 0x1234u &&
+           g_bootstrap_arg4_calls[1].arg1 == 0x1234u,
+           "repeated signed target contract changed");
+    ASSERT(PE_LoadU16(0x800C0E06u) == 0xA5A5u &&
+           PE_LoadU32(0x8009D254u) == 0xDEADBEEFu,
+           "prefix crossed into post-dependency persistent state");
+    ASSERT(D_8009D048 == 0x800C1234u && D_8009D050 == 0x11223344u,
+           "prefix changed authoritative resource state");
+    PASS();
+}
+
+static void test_5218C_full_ram_canary_readonly(void)
+{
+    TEST("5218C_full_ram_canary_readonly");
+    uint8_t *snapshot;
+    ResetTestState();
+    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0xA5u);
+    PE_StoreU16(B43_TARGET0, 0x8000u);
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate B43 full-RAM snapshot");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+    func_8005218C();
+    if (memcmp(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
+               PE_RAM_SIZE) != 0) {
+        free(snapshot);
+        FAIL("B43 prefix changed guest RAM before func_8005B91C");
+        return;
+    }
+    free(snapshot);
+    PASS();
+}
+
+static void test_5218C_reset_owners(void)
+{
+    TEST("5218C_reset_owners");
+    ResetTestState();
+    PE_StoreU16(B43_TARGET0, 0xFFFFu);
+    func_8005218C();
+    ASSERT(g_bootstrap_arg4_calls[0].arg1 == (uintptr_t)0xFFFFFFFFu,
+           "pre-reset signed target mismatch");
+    PE_RamReset();
+    Bootstrap_ResetArg4CallLog();
+    func_8005218C();
+    ASSERT(g_bootstrap_arg4_calls[0].arg1 == 0u,
+           "PE_RamReset must clear guest-resident target");
+    PE_StoreU16(B43_TARGET0, 0x7FFFu);
+    PE_Sdk_ResetState();
+    Bootstrap_ResetArg4CallLog();
+    func_8005218C();
+    ASSERT(g_bootstrap_arg4_calls[0].arg1 == 0x7FFFu,
+           "PE_Sdk_ResetState must preserve guest-resident target");
+    PASS();
+}
+
+static void test_5218C_resource_alias_and_pointer_safety(void)
+{
+    TEST("5218C_resource_alias_and_pointer_safety");
+    ResetTestState();
+    PE_StoreU16(B43_TARGET0, 3u);
+    PE_StoreU32(0x800A8034u, 0x11111111u);
+    PE_StoreU32(0x800A8038u, 0x22222222u);
+    PE_StoreU32(B43_STALE_A34, 0x33333333u);
+    PE_StoreU32(B43_STALE_A38, 0x44444444u);
+    func_8005218C();
+    ASSERT(PE_LoadU32(0x800A8034u) == 0x11111111u &&
+           PE_LoadU32(0x800A8038u) == 0x22222222u,
+           "corrected resource lookup inputs changed in B43 prefix");
+    ASSERT(PE_LoadU32(B43_STALE_A34) == 0x33333333u &&
+           PE_LoadU32(B43_STALE_A38) == 0x44444444u,
+           "stale aliases became semantic inputs or outputs");
+    ASSERT(!PE_AddressIsRam(0x000C0E28u),
+           "low-address mirror must remain invalid");
+    PASS();
+}
+
+static void test_5218C_51CC4_prefix_integration(void)
+{
+    TEST("5218C_51CC4_prefix_integration");
+    uint8_t command = 12u;
+    ResetTestState();
+    B39_ScriptRecord(B39_RECORD);
+    B39_SeedRecord(B39_RECORD, &command, 1u);
+    PE_StoreU16(B43_TARGET0, 0xFEDCu);
+    func_80051CC4();
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 4u) == 2u,
+           "B39 command state must be committed before B43 boundary");
+    ASSERT(g_stub_order_count == 1 && B21_CheckDispatcherOrder(0),
+           "B39 must reach the first genuine B43 dependency");
+    ASSERT(g_bootstrap_arg4_call_count == 1 &&
+           g_bootstrap_arg4_calls[0].arg1 == (uintptr_t)0xFFFFFEDCu,
+           "B39/B43 signed dependency contract mismatch");
+    PASS();
+}
+
+static void test_5218C_strict_advances_to_5B91C(void)
+{
+    TEST("5218C_strict_advances_to_5B91C");
+    pid_t pid = fork();
+    int status = 0;
+    ASSERT(pid >= 0, "fork failed for B43 strict boundary");
+    if (pid == 0) {
+        Bootstrap_Init();
+        Bootstrap_EnableStrict();
+        func_8005218C();
+        _exit(99);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid,
+           "waitpid failed for B43 strict boundary");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
+           "strict B43 boundary must exit 1 at func_8005B91C");
     PASS();
 }
 
@@ -10581,7 +10839,7 @@ static void test_5332C_strict_and_51CC4_integration(void)
     ASSERT(PE_LoadU32(B39_PARAM_BASE + 4u) == 2u,
            "B39 did not consume B40's exact returned record");
     ASSERT(g_stub_order_count == 1 && B21_CheckDispatcherOrder(0),
-           "direct B39 path must retain later func_8005218C boundary");
+           "direct B39 path must reach B43's func_8005B91C boundary");
     ASSERT(CountOrderLog("func_8005332C") == 0,
            "B39 still routes func_8005332C through bootstrap policy");
     PASS();
@@ -11184,6 +11442,18 @@ int main(void)
     test_51CC4_top_of_ram_reads_and_widths();
     test_51CC4_ramreset_no_split_brain();
     test_51CC4_527C8_integration();
+
+    /* Phase 6E-B43 — func_8005218C exact prefix boundary (10 tests). */
+    test_5218C_signature_and_first_boundary();
+    test_5218C_signed_target_values();
+    test_5218C_five_caller_abis();
+    test_5218C_internal_call_map_contract();
+    test_5218C_dirty_repeat_and_partial_state();
+    test_5218C_full_ram_canary_readonly();
+    test_5218C_reset_owners();
+    test_5218C_resource_alias_and_pointer_safety();
+    test_5218C_51CC4_prefix_integration();
+    test_5218C_strict_advances_to_5B91C();
 
     /* Phase 6E-B40 — func_8005332C resource-record lookup. */
     test_5332C_signature_and_index_guards();

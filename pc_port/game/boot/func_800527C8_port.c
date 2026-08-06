@@ -44,8 +44,9 @@
  *                                dependency chain is translated through B38)
  *  15. func_80051CC4()           TRANSLATED (B39): resource-command state
  *                                initialization; B40 translates its first
- *                                dependency func_8005332C, while the later
- *                                func_8005218C uses the centralized boundary
+ *                                dependency func_8005332C; B43 translates
+ *                                func_8005218C's prefix through its genuine
+ *                                func_8005B91C centralized boundary
  *  16. func_80042C78()           TRANSLATED (B30 prefix); its
  *                                func_80042CC4 is translated in B31
  *  17. func_8005BC98(a0=1)       TRANSLATED leaf: D_8009D218 = 1 again

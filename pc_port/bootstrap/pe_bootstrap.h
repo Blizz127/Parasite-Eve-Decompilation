@@ -43,6 +43,27 @@ int  Bootstrap_ReturnInt1(const char *symbol, const char *caller, int value,
                           uint32_t arg0);
 void Bootstrap_ResetArgCallLog(void);
 
+/* Four-register variant for unresolved retail calls with a complete MIPS
+ * argument contract.  uintptr_t preserves native transient-pointer width;
+ * these diagnostic records are host-only and are never written to guest
+ * RAM. */
+typedef struct {
+    const char *symbol;
+    const char *caller;
+    uintptr_t arg0;
+    uintptr_t arg1;
+    uintptr_t arg2;
+    uintptr_t arg3;
+} BootstrapArgCall4;
+
+#define BOOTSTRAP_MAX_ARG4_CALLS 256
+extern BootstrapArgCall4 g_bootstrap_arg4_calls[BOOTSTRAP_MAX_ARG4_CALLS];
+extern int g_bootstrap_arg4_call_count;
+void Bootstrap_ReturnVoid4(const char *symbol, const char *caller,
+                           uintptr_t arg0, uintptr_t arg1,
+                           uintptr_t arg2, uintptr_t arg3);
+void Bootstrap_ResetArg4CallLog(void);
+
 /* Same, for void functions.  In strict mode aborts on first call. */
 void Bootstrap_ReturnVoid(const char *symbol, const char *caller);
 

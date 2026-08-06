@@ -36,8 +36,8 @@
  *        15     -> word 0x800A1B34 = 0xFFFFFFFE
  *      All other command values are no-ops.  The loop uses the retail
  *      signed index<count comparison; count is an unsigned byte (0..255).
- *   6. Invoke unresolved func_8005218C() through the centralized void
- *      boundary.  Its 0x26C-byte body and deeper fan-out are not begun.
+ *   6. Invoke prefix-translated func_8005218C().  B43 preserves its first
+ *      unresolved func_8005B91C call as the genuine centralized boundary.
  *   7. func_80052E30(0), then func_80052E30(saved), preserving the retail
  *      resource-buffer restore order and all partial state at a boundary.
  *
@@ -109,7 +109,7 @@ void func_80051CC4(void)
         }
     }
 
-    Bootstrap_ReturnVoid("func_8005218C", "func_80051CC4");
+    func_8005218C();
     func_80052E30(0u);
     func_80052E30(saved_buffer_kind);
 }

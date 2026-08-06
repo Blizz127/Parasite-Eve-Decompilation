@@ -1,26 +1,22 @@
-# Parasite Eve Native PC Port — Phase 6E-B42
+# Parasite Eve Native PC Port — Phase 6E-B43
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B42 `func_80053B48` rung. Its true contract is
-`int32_t func_80053B48(pe_addr_t record)`: 121 retail instructions /
-`0x1E4` bytes at `0x80053B48..0x80053D2B`, file offset `0x44348`, live body
-`asm/disc1/43724.s:940-1082`. Record types 1-7 and 16-18 select one of three
-guest category records. The function ensures ID `0x200..0x202` exists in
-the current authoritative halfword table, then applies the exact signed
-threshold/999-cap rules to the category's 16-bit accumulated field. It
-returns exact status 0 or 1, and a full table still commits the later fixed
-record update. Its two executable callers are `func_80053D2C @ 0x80053E1C`
-and `func_8005833C @ 0x80058408`; both forward every 32-bit return unchanged,
-while the latter clears its source mapping only on zero. The independent
-`tools/b42_oracle.py` verifies and executes all 121 words and both exact
-caller consumers without production C. Normal and fresh ASan/UBSan tests
-pass 407/407; all 27 oracle programs pass. Real-disc strict advances to the
-untouched `func_8005218C` from `func_80051CC4` (exit 1). Bootstrap strict
-remains `func_8007F72C` from `func_800698D4` (exit 1). Address zero remains
-invalid, with no KUSEG or low-address mirror. Full proof is in
-`docs/b42_func_80053B48.md`. Nothing has been pushed, and no later rung has
-started.
+**Current milestone:** B43 prefix-translates `func_8005218C`, whose complete
+retail body is 155 instructions / `0x26C` bytes at
+`0x8005218C..0x800523F7`. All five executable callers are zero-argument and
+discard its residual return. The first of seven `func_8005B91C` calls writes
+a required 32-bit output word through `a2=sp+0x10`; B43 immediately loads
+that word and passes it to translated `func_8005DBAC`. Production therefore
+uses the proven prefix-only architecture and stops honestly at
+`func_8005B91C` without fabricating the output or beginning that dependency.
+The independent `tools/b43_oracle.py` verifies and executes all 155 words,
+five caller contexts, seven controlled `5B91C` calls, seven exact `5DBAC`
+calls, and the final controlled `func_80052F24` call without production C.
+Normal and fresh ASan/UBSan tests pass 417/417; all 28 oracle programs pass.
+Full proof is in
+`docs/b43_func_8005218C.md`. Bootstrap strict remains `func_8007F72C` from
+`func_800698D4`; nothing has been pushed.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36
 instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`
@@ -638,7 +634,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (407 tests, all pass)
+- `pe-native-tests` — test suite (417 tests, all pass)
 
 ## Running
 
@@ -666,8 +662,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected after B42: exit 1 at func_8005218C from func_80051CC4.
-# func_80053B48 is translated; no later dependency is started.
+# Expected after B43: exit 1 at func_8005B91C from func_8005218C.
+# func_8005B91C and func_80052F24 remain untranslated.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -706,7 +702,7 @@ by design.  Native tests: 285/285.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 285 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 417 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
@@ -864,8 +860,8 @@ status 1; native tests are 285/285.
 
 ## Next steps
 
-1. **Next rung:** `func_8005E884` from `func_8005D6F4`; classify its raw
-   MIPS contract before any implementation
+1. **Next rung:** `func_8005B91C` from `func_8005218C`; classify its raw
+   MIPS contract and required `a2` output state before any implementation
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display
 4. Audio, input, save/load (later phases)
