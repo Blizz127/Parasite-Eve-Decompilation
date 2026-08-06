@@ -54,6 +54,7 @@ typedef struct { uint8_t disp[20]; } DISP_ENV;
 #define D_800B0CE9     PE_GUEST_S8(0x800B0CE9u)
 #define D_800B0CEA     PE_GUEST_S8(0x800B0CEAu)
 #define D_800B0CEB     PE_GUEST_S8(0x800B0CEBu)
+#define D_800B0DB0     PE_GUEST_S8(0x800B0DB0u)
 #define D_800B0DB1     PE_GUEST_S8(0x800B0DB1u)
 #define D_800B0DB2     PE_GUEST_S8(0x800B0DB2u)
 #define D_800B0DB3     PE_GUEST_S8(0x800B0DB3u)
@@ -165,6 +166,7 @@ extern pe_addr_t func_8005DB8C(int idx);
 extern pe_addr_t func_8005DBAC(int arg);
 extern void func_8005CCA4(void);
 extern int func_800438C0(int arg);
+extern void func_8005E850(int a0, int a1);
 extern signed char func_8005E884(void);
 extern pe_addr_t func_80071A24(pe_addr_t dst, uint32_t len);
 extern void func_8005E968(uint32_t);

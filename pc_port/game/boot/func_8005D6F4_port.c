@@ -76,10 +76,12 @@
  * Historical Phase 6E-B27 dependency boundary: func_80071A24 is REAL (B21
  * BIOS A(28h) bzero), func_8005DC4C is REAL (B26 message-table lookup),
  * func_80052594 is REAL (B27 string copy into fixed 8-byte buffer),
- * func_8005E884 is REAL (B33 signed-byte alarm-timer query).
- * The three remaining callees are UNRESOLVED and route through the
+ * func_8005E884 is REAL (B33 signed-byte alarm-timer query),
+ * func_8005E850 is REAL (B34 alarm-timer setter wrapper; its callee
+ * func_8006A2E8 routes through the centralized boundary).
+ * The two remaining callees are UNRESOLVED and route through the
  * centralized bootstrap boundary in retail ROM order:
- * func_8005E850, func_800649D0, func_80052790.
+ * func_800649D0, func_80052790.
  * func_8005DC9C is a dead arm.  Strict mode stops at the first
  * unresolved invocation (func_8005CCA4 on the boot path).
  *
@@ -113,6 +115,7 @@
 
 extern int func_800614AC(int a0);
 extern signed char func_8005E884(void);
+extern void func_8005E850(int a0, int a1);
 
 #define GA_5D6F4_BUF_BASE  0x800C0DE0u   /* bzero dest / buffer base    */
 #define GA_5D6F4_BUF_SEL   0x800C0DF0u   /* base + 0x10 selected buffer */
@@ -262,9 +265,11 @@ int func_8005D6F4(void)
     /* 16. func_8005E884() → r — REAL (B33). */
     r = (int)func_8005E884();
 
-    /* 17-19. func_8005E850(0, 8-r); func_800649D0(0); func_80052790(1). */
-    Bootstrap_ReturnVoid("func_8005E850", "func_8005D6F4");
-    (void)(8 - r);                          /* retail $a1 argument */
+    /* 17. func_8005E850(0, 8-r) — REAL (B34).  Internally routes
+     * func_8006A2E8 through the centralized boundary. */
+    func_8005E850(0, 8 - r);
+
+    /* 18-19. func_800649D0(0); func_80052790(1). */
     Bootstrap_ReturnVoid("func_800649D0", "func_8005D6F4");
     Bootstrap_ReturnVoid("func_80052790", "func_8005D6F4");
 

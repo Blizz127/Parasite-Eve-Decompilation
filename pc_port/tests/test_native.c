@@ -7081,10 +7081,10 @@ static void test_5BCBC_dispatcher_integration(void) {
 #define B25_BZERO_LEN 0x12E4u
 
 /* The three remaining boundary providers func_8005D6F4 must invoke in
- * retail ROM order under non-strict execution (B33: func_8005E884 is
- * REAL). */
+ * retail ROM order under non-strict execution (B34: func_8005E850 is
+ * REAL; its callee func_8006A2E8 is the first remaining boundary). */
 static const char *const B25_BOUNDARY_SEQ[3] = {
-    "func_8005E850",
+    "func_8006A2E8",
     "func_800649D0", "func_80052790",
 };
 
@@ -7350,8 +7350,8 @@ static void test_5D6F4_boundary_wiring(void) {
     B26_SeedArchiveDefault();
     func_8005D6F4();
     ASSERT(g_stub_order_count == 3, "boundary count wrong");
-    ASSERT(strcmp(g_stub_order_log[0], "func_8005E850") == 0,
-           "first boundary callee must be func_8005E850 after B33");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8006A2E8") == 0,
+           "first boundary callee must be func_8006A2E8 after B34");
     ASSERT(CountOrderLog("func_8005DC4C") == 0,
            "func_8005DC4C must no longer reach the bootstrap boundary");
     ASSERT(CountOrderLog("func_80052594") == 0,
@@ -7647,8 +7647,8 @@ static void test_5DC4C_5D6F4_integration(void) {
     ASSERT(B25_CheckBoundaryOrder(), "boundary ROM order wrong");
     /* func_8005E884 is now REAL (B33) — the first boundary callee is
      * func_8005E850. */
-    ASSERT(strcmp(g_stub_order_log[0], "func_8005E850") == 0,
-           "first boundary callee must be func_8005E850 after B33");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8006A2E8") == 0,
+           "first boundary callee must be func_8006A2E8 after B34");
     PASS();
 }
 
@@ -7887,8 +7887,8 @@ static void test_52594_5D6F4_integration(void) {
            "func_80052594 must not reach the bootstrap boundary");
     /* func_8005E884 is now REAL (B33) — the first boundary callee is
      * func_8005E850. */
-    ASSERT(strcmp(g_stub_order_log[0], "func_8005E850") == 0,
-           "first boundary callee must be func_8005E850 after B33");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8006A2E8") == 0,
+           "first boundary callee must be func_8006A2E8 after B34");
     PASS();
 }
 
@@ -8338,8 +8338,8 @@ static void test_614AC_guard_and_d6f4_integration(void) {
            PE_LoadU32(0x8009D154u) == 0x22222222u,
            "B32 integration guard changed");
     ASSERT(g_stub_order_count == 3 &&
-           strcmp(g_stub_order_log[0], "func_8005E850") == 0,
-           "B33 must remove 5E884 and expose 5E850 first");
+           strcmp(g_stub_order_log[0], "func_8006A2E8") == 0,
+           "B34 must remove 5E850 and expose 6A2E8 first");
     PASS();
 }
 
@@ -8417,12 +8417,13 @@ static void test_5E884_d6f4_integration(void) {
     PE_StoreU8(0x800B0DB1u, 3);
     func_8005D6F4();
     /* After func_8005D6F4, func_8005E884 returned 3.  The boundary log
-     * should start with func_8005E850 (the first remaining boundary callee).
-     * func_8005E884 is now REAL and does NOT appear in the log. */
+     * should start with func_8006A2E8 (the first remaining boundary callee).
+     * func_8005E884 and func_8005E850 are now REAL and do NOT appear in
+     * the log. */
     ASSERT(g_stub_order_count == 3,
            "5E884 integration: boundary count wrong");
-    ASSERT(strcmp(g_stub_order_log[0], "func_8005E850") == 0,
-           "5E884 integration: first boundary must be func_8005E850");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8006A2E8") == 0,
+           "5E884 integration: first boundary must be func_8006A2E8");
     ASSERT(CountOrderLog("func_8005E884") == 0,
            "5E884 must not reach the bootstrap boundary");
     PASS();
@@ -8438,8 +8439,93 @@ static void test_5E884_strict_advancement(void) {
     /* The first boundary callee must be func_8005E850, proving that
      * func_8005E884 was executed as REAL code and did not hit the boundary. */
     ASSERT(g_stub_order_count >= 1 &&
-           strcmp(g_stub_order_log[0], "func_8005E850") == 0,
-           "strict must advance past 5E884 to 5E850");
+           strcmp(g_stub_order_log[0], "func_8006A2E8") == 0,
+           "strict must advance past 5E850 to 6A2E8");
+    PASS();
+}
+
+/* ── Phase 6E-B34: func_8005E850 alarm-timer setter wrapper ─────────── */
+
+/* Void wrapper: adds D_800B0DB0 (always 0) and D_800B0DB1 to args,
+ * calls func_8006A2E8 through the boundary. */
+static void test_5E850_boundary_invocation(void) {
+    TEST("5E850_boundary_invocation");
+    ResetTestState();
+    /* D_800B0DB0 = 0, D_800B0DB1 = 0 (unwritten BSS). */
+    func_8005E850(0, 8);
+    /* func_8006A2E8 must appear in the boundary log. */
+    ASSERT(g_stub_order_count >= 1 &&
+           strcmp(g_stub_order_log[g_stub_order_count - 1],
+                  "func_8006A2E8") == 0,
+           "5E850 must invoke func_8006A2E8 on the boundary");
+    PASS();
+}
+
+/* With D_800B0DB1 set to a known value, the wrapper still routes
+ * through the boundary (the callee is unresolved, not the wrapper). */
+static void test_5E850_with_seeded_timer(void) {
+    TEST("5E850_with_seeded_timer");
+    ResetTestState();
+    PE_StoreU8(0x800B0DB1u, 5);
+    func_8005E850(0, 3);
+    ASSERT(g_stub_order_count >= 1 &&
+           strcmp(g_stub_order_log[g_stub_order_count - 1],
+                  "func_8006A2E8") == 0,
+           "5E850 with seeded timer must still invoke boundary");
+    PASS();
+}
+
+/* Integration: func_8005D6F4 calls func_8005E850(0, 8-r) as REAL code.
+ * The boundary log starts with func_8006A2E8 (from inside 5E850). */
+static void test_5E850_d6f4_integration(void) {
+    TEST("5E850_d6f4_integration");
+    ResetTestState();
+    B26_SeedArchiveDefault();
+    func_8005D6F4();
+    ASSERT(g_stub_order_count == 3,
+           "5E850 integration: boundary count wrong");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8006A2E8") == 0,
+           "5E850 integration: first boundary must be func_8006A2E8");
+    ASSERT(CountOrderLog("func_8005E850") == 0,
+           "5E850 must not reach the bootstrap boundary");
+    ASSERT(B25_CheckBoundaryOrder(),
+           "5E850 integration: boundary order wrong");
+    PASS();
+}
+
+/* Full 2 MiB canary: func_8005E850 calls func_8006A2E8 through the
+ * boundary (no real side effects).  D_800B0DB0 and D_800B0DB1 are
+ * read-only from the wrapper's perspective. */
+static void test_5E850_full_ram_canary(void) {
+    TEST("5E850_full_ram_canary");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    func_8005E850(0, 8);
+    /* The wrapper itself writes nothing to guest RAM — it only reads
+     * D_800B0DB0 and D_800B0DB1, and the boundary stub writes nothing. */
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u) {
+        uint32_t want = 0xA5A5A5A5u;
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
+                   a, PE_LoadU32(a), want);
+            FAIL("5E850 changed guest RAM");
+            return;
+        }
+    }
+    PASS();
+}
+
+/* PE_RamReset clears D_800B0DB0 and D_800B0DB1. */
+static void test_5E850_ramreset(void) {
+    TEST("5E850_ramreset");
+    ResetTestState();
+    PE_StoreU8(0x800B0DB0u, 99);
+    PE_StoreU8(0x800B0DB1u, 42);
+    PE_RamReset();
+    ASSERT((int)PE_LoadU8(0x800B0DB0u) == 0, "D_800B0DB0 not cleared");
+    ASSERT((int)PE_LoadU8(0x800B0DB1u) == 0, "D_800B0DB1 not cleared");
     PASS();
 }
 
@@ -8908,8 +8994,8 @@ static void test_5CCA4_5D6F4_integration(void) {
            "5D6F4 integration: GA_E40 wrong");
     /* func_8005CCA4 is REAL — boundary count is 11 (5×53D2C + 42C78 + 5 remaining) */
     ASSERT(g_stub_order_count == 3, "integration boundary count wrong");
-    ASSERT(strcmp(g_stub_order_log[0], "func_8005E850") == 0,
-           "first boundary callee must be func_8005E850 after B33");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8006A2E8") == 0,
+           "first boundary callee must be func_8006A2E8 after B34");
     ASSERT(CountOrderLog("func_80042CC4") == 0,
            "translated func_80042CC4 must not reach the boundary");
     PASS();
@@ -9438,6 +9524,11 @@ int main(void)
     test_5E884_dirty_repeat_reset();
     test_5E884_d6f4_integration();
     test_5E884_strict_advancement();
+    test_5E850_boundary_invocation();
+    test_5E850_with_seeded_timer();
+    test_5E850_d6f4_integration();
+    test_5E850_full_ram_canary();
+    test_5E850_ramreset();
     test_42C78_prefix_and_footprint();
     test_42C78_dirty_repeat_and_ramreset();
 
