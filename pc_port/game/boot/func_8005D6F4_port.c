@@ -79,9 +79,12 @@
  * func_8005E884 is REAL (B33 signed-byte alarm-timer query),
  * func_8005E850 is REAL (B34 alarm-timer setter wrapper; its callee
  * func_8006A2E8 routes through the centralized boundary),
- * func_800649D0 is REAL (B35 resource-state reset).
- * The one remaining callee is UNRESOLVED and routes through the
- * centralized bootstrap boundary: func_80052790.
+ * func_800649D0 is REAL (B35 resource-state reset),
+ * func_80052790 is REAL (B36 boolean-state store + notify wrapper;
+ * its callee func_80086728 routes through the centralized boundary).
+ * All D6F4 callees are now translated.  The only remaining bootstrap
+ * boundary calls come from func_800527C8 (func_80051CC4,
+ * func_80042C78) and func_8006A9E4 (func_80087090).
  * func_8005DC9C is a dead arm.  Strict mode stops at the first
  * unresolved invocation (func_8005CCA4 on the boot path).
  *
@@ -116,6 +119,7 @@
 extern int func_800614AC(int a0);
 extern signed char func_8005E884(void);
 extern void func_8005E850(int a0, int a1);
+extern void func_80052790(int a0);
 extern void func_800649D0(int a0);
 
 #define GA_5D6F4_BUF_BASE  0x800C0DE0u   /* bzero dest / buffer base    */
@@ -273,8 +277,9 @@ int func_8005D6F4(void)
     /* 18. func_800649D0(0) — REAL (B35). */
     func_800649D0(0);
 
-    /* 19. func_80052790(1). */
-    Bootstrap_ReturnVoid("func_80052790", "func_8005D6F4");
+    /* 19. func_80052790(1) — REAL (B36).  Internally routes
+     * func_80086728 through the centralized boundary. */
+    func_80052790(1);
 
     /* 20. Terminator bytes at the two record-buffer bases. */
     PE_StoreU8(GA_5D6F4_TERM_A4, 0xFFu);

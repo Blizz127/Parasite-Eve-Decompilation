@@ -6344,6 +6344,8 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         }
         /* Phase 6E-B35: func_800649D0(0) stores 0 at D_8009D16C */
         else if (a == 0x8009D16Cu) want = 0;
+        /* Phase 6E-B36: func_80052790(1) stores 1 at D_8009D020 */
+        else if (a == 0x8009D020u) want = 1;
         /* Phase 6E-B20: func_80062568 free-list + gp stores */
         else if (a == 0x8009D158u) want = 0x800A22E0u;
         else if (a == 0x8009D15Cu) want = 0;
@@ -7080,11 +7082,11 @@ static void test_5BCBC_dispatcher_integration(void) {
 #define B25_BZERO_LEN 0x12E4u
 
 /* The two remaining boundary providers func_8005D6F4 must invoke in
- * retail ROM order under non-strict execution (B35: func_800649D0 is
- * REAL; its callee func_8006A2E8 and func_80052790 remain). */
+ * retail ROM order under non-strict execution (B36: func_80052790 is
+ * REAL; func_8006A2E8 from 5E850 and func_80086728 from 52790 remain). */
 static const char *const B25_BOUNDARY_SEQ[2] = {
     "func_8006A2E8",
-    "func_80052790",
+    "func_80086728",
 };
 
 static int B25_CheckBoundaryOrder(void) {
@@ -7198,6 +7200,7 @@ static void test_5D6F4_full_ram_canary(void) {
         else if (a == 0x8009D14Cu) want = 0x00404040u; /* B32 source */
         else if (a == 0x8009D150u) want = 0x00404040u; /* B32 result */
         else if (a == 0x8009D16Cu) want = 0u;          /* B35 state = 0 */
+        else if (a == 0x8009D020u) want = 1u;          /* B36 state = 1 */
         /* B35: func_800649D0(0) bzeros 0x800A3060..0x800A317F and
          * stores 0xFF to eight specific bytes within that range. */
         else if (a >= 0x800A3060u && a < 0x800A3180u) {
@@ -8638,6 +8641,78 @@ static void test_649D0_d6f4_integration(void) {
     PASS();
 }
 
+/* ── Phase 6E-B36: func_80052790 boolean-state store + notify ──────── */
+
+/* Stores a0 at D_8009D020, calls func_80086728 via boundary. */
+static void test_52790_state_store(void) {
+    TEST("52790_state_store");
+    ResetTestState();
+    func_80052790(0);
+    ASSERT(PE_LoadU32(0x8009D020u) == 0u, "state must be 0");
+    func_80052790(1);
+    ASSERT(PE_LoadU32(0x8009D020u) == 1u, "state must be 1");
+    func_80052790(42);
+    ASSERT(PE_LoadU32(0x8009D020u) == 42u, "state must be 42");
+    /* func_80086728 must appear in the boundary log. */
+    ASSERT(g_stub_order_count >= 1 &&
+           strcmp(g_stub_order_log[g_stub_order_count - 1],
+                  "func_80086728") == 0,
+           "52790 must invoke func_80086728 on the boundary");
+    PASS();
+}
+
+/* Full 2 MiB canary: func_80052790 writes only D_8009D020. */
+static void test_52790_full_ram_canary(void) {
+    TEST("52790_full_ram_canary");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    func_80052790(7);
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u) {
+        uint32_t want = 0xA5A5A5A5u;
+        if (a == 0x8009D020u) want = 7;
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
+                   a, PE_LoadU32(a), want);
+            FAIL("52790 changed an address outside D_8009D020");
+            return;
+        }
+    }
+    PASS();
+}
+
+/* PE_RamReset clears D_8009D020. */
+static void test_52790_ramreset(void) {
+    TEST("52790_ramreset");
+    ResetTestState();
+    func_80052790(99);
+    ASSERT(PE_LoadU32(0x8009D020u) == 99u, "pre-reset state");
+    PE_RamReset();
+    ASSERT(PE_LoadU32(0x8009D020u) == 0u, "post-reset state");
+    PASS();
+}
+
+/* Integration: func_8005D6F4 calls func_80052790(1). */
+static void test_52790_d6f4_integration(void) {
+    TEST("52790_d6f4_integration");
+    ResetTestState();
+    B26_SeedArchiveDefault();
+    func_8005D6F4();
+    ASSERT(PE_LoadU32(0x8009D020u) == 1u, "D6F4 integration: state wrong");
+    /* All D6F4 callees are now REAL — only func_8006A2E8 and
+     * func_80086728 remain as boundary stubs (from 5E850 and 52790). */
+    ASSERT(g_stub_order_count == 2,
+           "52790 integration: boundary count wrong");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8006A2E8") == 0,
+           "52790 integration: first boundary must be func_8006A2E8");
+    ASSERT(strcmp(g_stub_order_log[1], "func_80086728") == 0,
+           "52790 integration: second boundary must be func_80086728");
+    ASSERT(CountOrderLog("func_80052790") == 0,
+           "52790 must not reach the bootstrap boundary");
+    PASS();
+}
+
 static void test_42C78_prefix_and_footprint(void) {
     TEST("42C78_prefix_and_footprint");
     pe_addr_t a;
@@ -9642,6 +9717,10 @@ int main(void)
     test_649D0_nonzero_path();
     test_649D0_repeat_and_reset();
     test_649D0_d6f4_integration();
+    test_52790_state_store();
+    test_52790_full_ram_canary();
+    test_52790_ramreset();
+    test_52790_d6f4_integration();
     test_42C78_prefix_and_footprint();
     test_42C78_dirty_repeat_and_ramreset();
 
