@@ -75,10 +75,10 @@
  *
  * Historical Phase 6E-B27 dependency boundary: func_80071A24 is REAL (B21
  * BIOS A(28h) bzero), func_8005DC4C is REAL (B26 message-table lookup),
- * func_80052594 is REAL (B27 string copy into fixed 8-byte buffer).
- * The four remaining callees are UNRESOLVED and route through the
+ * func_80052594 is REAL (B27 string copy into fixed 8-byte buffer),
+ * func_8005E884 is REAL (B33 signed-byte alarm-timer query).
+ * The three remaining callees are UNRESOLVED and route through the
  * centralized bootstrap boundary in retail ROM order:
- * func_8005E884,
  * func_8005E850, func_800649D0, func_80052790.
  * func_8005DC9C is a dead arm.  Strict mode stops at the first
  * unresolved invocation (func_8005CCA4 on the boot path).
@@ -91,8 +91,8 @@
  * transfers only the terminator (no fabricated content); tests script
  * real sources via Bootstrap_SetIntSequence.  An out-of-RAM default
  * would trip the checked PE_LoadU8 and destroy the deterministic
- * non-strict boot.  func_8005E884's default 0 models the retail guest
- * state (lbu 0x800B0DB1 reads unwritten BSS during boot).
+ * non-strict boot.  func_8005E884 reads D_800B0DB1 directly; during
+ * boot the byte is unwritten BSS (0), matching the old boundary default.
  *
  * State: D_8009D218/D_8009D0C0/C4/C8 are guest-RAM resident (B24
  * storage audit; shared with func_8005BCBC and the func_8005BD10/BE1C
@@ -112,6 +112,7 @@
 #include "pe_bootstrap.h"
 
 extern int func_800614AC(int a0);
+extern signed char func_8005E884(void);
 
 #define GA_5D6F4_BUF_BASE  0x800C0DE0u   /* bzero dest / buffer base    */
 #define GA_5D6F4_BUF_SEL   0x800C0DF0u   /* base + 0x10 selected buffer */
@@ -258,9 +259,10 @@ int func_8005D6F4(void)
     PE_StoreU32(GA_5D6F4_REC_BC, 0u);
     PE_StoreU32(GA_5D6F4_REC_C8, 0u);
 
-    /* 16-19. func_8005E884 → r; func_8005E850(0, 8-r); func_800649D0(0);
-     * func_80052790(1). */
-    r = Bootstrap_ReturnInt("func_8005E884", "func_8005D6F4", 0);
+    /* 16. func_8005E884() → r — REAL (B33). */
+    r = (int)func_8005E884();
+
+    /* 17-19. func_8005E850(0, 8-r); func_800649D0(0); func_80052790(1). */
     Bootstrap_ReturnVoid("func_8005E850", "func_8005D6F4");
     (void)(8 - r);                          /* retail $a1 argument */
     Bootstrap_ReturnVoid("func_800649D0", "func_8005D6F4");
