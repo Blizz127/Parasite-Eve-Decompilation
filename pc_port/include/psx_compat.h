@@ -167,6 +167,7 @@ extern pe_addr_t func_8005DBAC(int arg);
 extern void func_8005CCA4(void);
 extern int func_800438C0(int arg);
 extern void func_8005E850(int a0, int a1);
+extern int func_8006A2E8(int a0, int a1);
 extern void func_80052790(int a0);
 extern void func_800649D0(int a0);
 extern signed char func_8005E884(void);

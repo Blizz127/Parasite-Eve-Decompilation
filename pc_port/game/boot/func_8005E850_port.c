@@ -13,10 +13,8 @@
  * a1 + D_800B0DB1).  Stack frame: addiu $sp,-0x18 / sw $ra,0x10($sp) /
  * lw $ra,0x10($sp) / addiu $sp,+0x18 / jr $ra / nop.
  *
- * func_8006A2E8 is UNRESOLVED — it routes through the centralized
- * bootstrap boundary.  Its return value is void (the `jr $ra` delay
- * slot is `addu $v0,$zero,$zero`, returning 0, but no caller of
- * func_8005E850 ever reads $v0).
+ * func_8006A2E8 is now REAL (B37).  Its return value is discarded by
+ * all callers of func_8005E850.
  *
  * Executable call sites (4):
  *   func_8004B61C @ 0x8004B684  a0=0, a1=1; nop slot; ret discarded
@@ -28,16 +26,15 @@
  * (unwritten BSS until func_8006A2E8 stores to it), so the call
  * degenerates to func_8006A2E8(a0, a1).
  *
- * Classification: 1 — translated retail logic with unresolved callee
- * on the centralized boundary.
+ * Classification: 1 — translated retail logic (all callees now REAL).
  */
 #include "psx_compat.h"
+
+extern int func_8006A2E8(int a0, int a1);
 
 void func_8005E850(int a0, int a1)
 {
     int db0 = (int)D_800B0DB0;
     int db1 = (int)D_800B0DB1;
-    Bootstrap_ReturnVoid("func_8006A2E8", "func_8005E850");
-    (void)(db0 + a0);
-    (void)(db1 + a1);
+    (void)func_8006A2E8(db0 + a0, db1 + a1);
 }

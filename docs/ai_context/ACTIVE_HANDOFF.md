@@ -5,12 +5,13 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
-## Phase 6E-B36 func_80052790 VERIFIED — D6F4 chain complete
+## Phase 6E-B37 func_8006A2E8 VERIFIED
 
 Current verified handoff: provisional B28 implementation commit `a1559ae`,
 B28 oracle/bootstrap corrective commit `cd2e375`, and accepted B29 commit
-`eedd456`, followed by the completed B30–B36 translations.  B36 completes
-the entire func_8005D6F4 dependency chain.  Nothing has been pushed; no
+`eedd456`, followed by the completed B30–B37 translations.  B36 completed
+the func_8005D6F4 dependency chain; B37 translates the first callee
+previously routed through the boundary.  Nothing has been pushed; no
 later rung has started.
 
 The raw retail trampoline at executable `0x80071A24..0x80071A2F` (file
@@ -27,7 +28,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B36 func_80052790 VERIFIED** (9 retail instructions independently transcribed and cross-checked; B36 completes the D6F4 dependency chain; B35 `func_800649D0`; B29 commit `eedd456`; B28 history remains `a1559ae` + corrective `cd2e375`) | `pc_port/build/pe-native-tests` (362/362; ASan/UBSan 362/362) |
+| Port phase | **6E-B37 func_8006A2E8 VERIFIED** (12 retail instructions independently transcribed and cross-checked; B37 translates the conditional alarm-timer setter; B36 `func_80052790`; B29 commit `eedd456`; B28 history remains `a1559ae` + corrective `cd2e375`) | `pc_port/build/pe-native-tests` (367/367; ASan/UBSan 367/367) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -39,10 +40,10 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Historical B17 dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 called twice). 7 translated leaves: func_8005B890(0), func_8005BC98(0), 3×sw $zero, func_8004F808, func_80042B38, func_80051084, func_8005BC98(1) + D_800B0CD8 |= 0x40000000 in the delay slot of func_800371A4(1). 9 further callees translated (func_800528F0, func_8005E588, func_80062568, func_80064964, func_8005DE88, func_80052C6C, func_8005BCBC, func_8005D6F4, func_80052594); 2 unresolved (func_80051CC4, func_80042C78) — routed through the centralized bootstrap boundary. Independent oracle: `pc_port/tools/dispatcher_oracle.py` (MIPS interpreter on verified retail words). Sole call site func_8006A9E4 @0x8006AAD0, $s1-guarded one-shot inside the cycle-B poll loop; void(void), return unconsumed | `pc_port/game/boot/func_800527C8_port.c`, `func_8005B890_port.c`, `func_8005BC98_port.c`, `func_8004F808_port.c`, `func_80042B38_port.c`, `func_80051084_port.c`, `func_80052C6C_port.c`, `func_8005BCBC_port.c`, `func_8005D6F4_port.c`, `func_80052594_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | with Disc 1: D6F4 chain complete — strict advances past D6F4 to the next unresolved provider elsewhere; with `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` (normal and sanitizer agree) | `--headless --strict-stubs --disc-image …` |
-| Sanitizers | `-DPE_PORT_SANITIZERS=ON`: 362/362 tests + headless + bootstrap-disc + strict clean | `/tmp/pe-b36-san` |
+| Strict mode | with Disc 1: strict advances past D6F4 and func_8006A2E8 to the next unresolved provider (func_80086728); with `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` (normal and sanitizer agree) | `--headless --strict-stubs --disc-image …` |
+| Sanitizers | `-DPE_PORT_SANITIZERS=ON`: 367/367 tests + headless + bootstrap-disc + strict clean | `/tmp/pe-b37-san` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next | D6F4 chain complete (B36); next unresolved provider to be identified from real-disc strict mode | — |
+| Next | `func_80086728` from `func_80052790`; B37 complete and no later rung started | — |
 
 ### Phase 6E-B33 func_8005E884 verified — current findings
 
@@ -202,6 +203,37 @@ func_80051CC4, and func_8006A9E4's func_80087090. Native and fresh
 ASan/UBSan suites are 362/362. Framebuffer (`fb28dc21…`), bootstrap
 trace (`42c1956e…`), and real-disc trace hashes are unchanged. Docker
 matching rebuild remains EXACT at
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. Nothing has been pushed and
+the next rung has not started.
+
+### Phase 6E-B37 func_8006A2E8 verified — current findings
+
+`func_8006A2E8` is translated retail logic: 12 instructions / 0x30 bytes
+at executable `0x8006A2E8..0x8006A314` (exclusive end `0x8006A318`, file
+offset `0x5AAE8`). All 12 words exe-verified against SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+
+Conditional setter: if a1 < 16, stores a1 as halfword to 0x800BCE9E
+and 0x800BCE8A, stores a1 as signed byte to D_800B0DB1, and returns 0
+(retail jr delay slot: `addu $v0,$zero,$zero`). If a1 >= 16, returns 0
+without writing. The first argument (a0) is ignored.
+
+Sole call site: func_8005E850 @ 0x8005E86C (delay slot: addu $a1,$v1,$a1;
+return discarded by all callers of 5E850).
+
+Classification: 1 — translated retail logic (conditional leaf).
+
+Independent oracle `pc_port/tools/b37_oracle.py` — delay-slot-aware
+MIPS-I interpreter over the SHA-1-verified retail words; asserts exact
+conditional stores, threshold boundary, return value, and a0-independence
+for six scenarios.
+
+The strict frontier advances past func_8006A2E8 to the next unresolved
+provider. The remaining bootstrap boundary stubs are func_80086728 (from
+func_80052790), func_80051CC4 (from func_800527C8), and func_80087090
+(from func_8006A9E4). Native and fresh ASan/UBSan suites are 367/367.
+Framebuffer (`fb28dc21…`), bootstrap trace (`42c1956e…`), and real-disc
+trace hashes are unchanged. Docker matching rebuild remains EXACT at
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. Nothing has been pushed and
 the next rung has not started.
 
