@@ -1,21 +1,27 @@
-# Parasite Eve Native PC Port — Phase 6E-B39
+# Parasite Eve Native PC Port — Phase 6E-B40
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B39 `func_80051CC4` rung — verified. The true
-contract is `void func_80051CC4(void)`: 77 retail instructions / `0x134`
-bytes at `0x80051CC4..0x80051DF7`, file offset `0x424C4`, live split
-`asm/disc1/420A8.s:314-401`. It clears and rebuilds resource command state,
-preserves translated `func_80052F0C`/`func_80052E30` calls in ROM order, and
-routes only its unresolved `func_8005332C` and `func_8005218C` dependencies
-through the centralized boundary. `tools/b39_oracle.py` contains and verifies
-all 77 body words plus the eight-word jump table and executes them with exact
-MIPS-I delay-slot behavior. Normal and fresh ASan/UBSan suites pass 377/377;
-the B39 oracle and all 23 retained oracles pass. Real-disc strict stops at
-`func_8005332C` from `func_80051CC4` (exit 1); bootstrap strict remains
-`func_8007F72C` from `func_800698D4` (exit 1). Address zero remains invalid,
-with no KUSEG or low-address mirror. Nothing has been pushed, and the next
-rung has not started.
+**Current milestone:** B40 `func_8005332C` rung. Its true contract is
+`pe_addr_t func_8005332C(int32_t resource_id)`: 42 retail instructions /
+`0xA8` bytes at `0x8005332C..0x800533D3`, file offset `0x43B2C`, live body
+`asm/disc1/43724.s:331-378`. It is translated retail resource-record lookup
+logic over the authoritative table pointer/count at `0x8009D048/50`, with
+the exact static-record ranges and the already translated `func_8005DB44`
+delegation preserved. B40 also corrects that leaf's two sign-extended
+`0x800A8034/38` read addresses and retained literal-base arithmetic, both
+already modeled by the B23 oracle. `tools/b40_oracle.py` contains and verifies all 42 body
+words, all 46 direct call sites, and the related callback ABI evidence, then
+executes the body with exact MIPS-I delay-slot behavior. Normal and fresh
+ASan/UBSan suites pass 387/387; the B40 oracle and all 24 retained prior
+oracles pass.
+Real-disc strict now stops at the pre-existing `func_80053968` boundary from
+`func_80053D2C` (exit 1), exposed by the corrected lookup leaf; the later
+`func_8005218C` remains untouched. Bootstrap strict remains `func_8007F72C` from
+`func_800698D4` (exit 1). Address zero remains invalid, with no KUSEG or
+low-address mirror. Full retail proof and caller census are in
+`docs/b40_func_8005332C.md`. Nothing has been pushed, and the next rung has
+not started.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36
 instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`
@@ -660,8 +666,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected after B39: exit 1 at func_8005332C from func_80051CC4.
-# The translated B39 prefix has already committed its resource-state clears.
+# Expected after B40: exit 1 at func_80053968 from func_80053D2C.
+# The corrected shared record lookup exposes this pre-existing B29 boundary.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \

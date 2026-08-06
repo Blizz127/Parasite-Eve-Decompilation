@@ -24,9 +24,8 @@
  *   3. Clear authoritative D_8009D018 ($gp+0x2A8, retail gp 0x8009CD70),
  *      then clear seven words in descending order at
  *      0x800A1B48,44,40,3C,38,34,30.
- *   4. Signed-byte load from 0x800C0E22 and unresolved
- *      func_8005332C(source_id).  The dependency is not translated in B39;
- *      its pe_addr_t result crosses the centralized integer boundary.
+ *   4. Signed-byte load from 0x800C0E22 and translated
+ *      func_8005332C(source_id).  B40 proves its pe_addr_t record lookup.
  *   5. If the result is nonzero and lbu(result+0x14) is nonzero, scan that
  *      many command bytes at result+0x15.  For cmd = byte & 0x1F:
  *        8/9/10 -> D_8009D018 = 1 << (cmd-8)
@@ -52,7 +51,7 @@
  * no direct hardware/SDK calls, callbacks, multiplication, division,
  * unaligned access, host pointers in guest RAM, clamping, fallback pointers,
  * or low-address mirrors.  The body itself does not poll or block, although
- * unresolved dependencies retain their unknown blocking behavior.
+ * the remaining unresolved dependency retains its unknown blocking behavior.
  *
  * Classification: 1 — translated retail resource/table initialization.
  */
@@ -63,14 +62,6 @@
 #define GA_B39_PARAM_BASE  0x800A1B30u
 #define GA_B39_PARAM_LAST  0x800A1B48u
 #define GA_B39_SOURCE_ID   0x800C0E22u
-
-/* The argument is part of the proven retail boundary even though the current
- * centralized provider policy scripts only the 32-bit return value. */
-static pe_addr_t B39_Unresolved5332C(int32_t source_id)
-{
-    return (pe_addr_t)(uint32_t)Bootstrap_ReturnInt1(
-        "func_8005332C", "func_80051CC4", 0, (uint32_t)source_id);
-}
 
 void func_80051CC4(void)
 {
@@ -86,7 +77,8 @@ void func_80051CC4(void)
         PE_StoreU32(GA_B39_PARAM_LAST - i * 4u, 0u);
     }
 
-    record = B39_Unresolved5332C((int32_t)(int8_t)PE_LoadU8(GA_B39_SOURCE_ID));
+    record = func_8005332C(
+        (int32_t)(int8_t)PE_LoadU8(GA_B39_SOURCE_ID));
     if (record != 0u) {
         count = PE_LoadU8(record + 0x14u);
         for (i = 0u; (int32_t)i < (int32_t)count; i++) {

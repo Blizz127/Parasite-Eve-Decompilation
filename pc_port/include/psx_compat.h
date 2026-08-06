@@ -152,6 +152,8 @@ extern int  func_80038D1C(void);
 extern int  func_800698D4(void);
 extern void func_8006A9E4(void);
 extern void func_800527C8(void);
+extern pe_addr_t func_8005332C(int32_t resource_id);
+extern void func_80051CC4(void);
 extern void func_800528F0(void);
 extern void func_8005E588(void);
 extern void func_80062568(void);

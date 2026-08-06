@@ -4869,11 +4869,11 @@ static uint8_t FxPattern(uint32_t i) {
     case FX_ARCH_E30_OFF + 0: return 0x00;      /* entry[30] = 0x0300 */
     case FX_ARCH_E30_OFF + 1: return 0x03;
     case FX_ARCH_REC_OFF:     return 0xFF;      /* record terminator */
-    /* D_800A8038 and D_800A803C sit at archive-header offsets 0x10 and
-     * 0x14 respectively.  In retail these are BSS (zero) when the archive
-     * first arrives via cycle A — func_8005DB8C/func_8005DBAC dereference
-     * them as pointer bases, so the streamed bytes at those offsets must
-     * be 0 (valid degenerate: base = &D_800A8028). */
+    /* D_800A8034/38/3C sit at archive-header offsets 0x0C/0x10/0x14.
+     * Retail lookup helpers read them as base words. Keep this synthetic
+     * fixture at the valid zero/count-zero state rather than feeding its
+     * generic byte pattern into guest-address arithmetic. */
+    case 0x0C: case 0x0D: case 0x0E: case 0x0F:   /* D_800A8034 */
     case 0x10: case 0x11: case 0x12: case 0x13:   /* D_800A8038 */
     case 0x14: case 0x15: case 0x16: case 0x17:   /* D_800A803C */
                                                    return 0;
@@ -5872,13 +5872,12 @@ static void test_6E498_readonly_footprint(void) {
  * ROM order. */
 /* Phase 6E-B28: func_8005CCA4 is REAL.  func_80042C78 is called from
  * both func_8005CCA4 AND the dispatcher — the dispatcher still calls it. */
-static const char *const B22_DISP_SEQ[2] = {
-    "func_8005332C",
+static const char *const B22_DISP_SEQ[1] = {
     "func_8005218C"
 };
 
 static int B21_CheckDispatcherOrder(int base) {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 1; i++) {
         if (strcmp(g_stub_order_log[base + i], B22_DISP_SEQ[i]) != 0)
             return 0;
     }
@@ -6086,14 +6085,14 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* 7. Dependency boundary (Phase 6E-B39): func_80051CC4 is translated;
-     * its two deeper dependencies precede func_80087090. */
-    ASSERT(g_stub_order_count == 3, "unexpected bootstrap invocations");
+    /* 7. B40 translates func_8005332C; the later func_8005218C boundary
+     * still precedes func_80087090. */
+    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[2], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 3, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 2, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -6163,10 +6162,9 @@ static void test_6A9E4_zero_cycles_footprint(void) {
      * 0x800A8028 must be established explicitly over the canary. */
     B26_SeedArchiveDefault();
 
-    /* D_800A8038 / D_800A803C are pointer bases for func_8005DB8C /
-     * func_8005DBAC inside func_8005CCA4.  The canary fill set them to
-     * 0xA5A5A5A5; zero them so the degenerate path (base = &D_800A8028)
-     * is taken — retail BSS state. */
+    /* D_800A8034/38/3C are resource lookup/base words. The canary fill set
+     * them to 0xA5A5A5A5; zero them for the retail empty/count-zero state. */
+    PE_StoreU32(0x800A8034u, 0);
     PE_StoreU32(0x800A8038u, 0);
     PE_StoreU32(0x800A803Cu, 0);
 
@@ -6186,6 +6184,7 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x800B0E6Cu) want = B16_STREAM;
         else if (a == 0x800B0E08u) want = B16_DEST2;
         else if (B26_ArchCanaryWord(a, &want)) { /* B26 archive fixture */ }
+        else if (a == 0x800A8034u) want = 0;  /* B40: DB44 alt zeroed pre-call */
         else if (a == 0x800A8038u) want = 0;  /* B28: D_800A8038 zeroed pre-call */
         else if (a == 0x800A803Cu) want = 0;  /* B28: D_800A803C zeroed pre-call */
         else if (a == 0x8009B6ACu) want = 0x200u;      /* post-issue */
@@ -6231,6 +6230,7 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         /* B28: func_8005CCA4's four $gp-relative state words are SHARED host
          * globals (D_8009D048/50/58/64), not guest RAM — verified as host
          * variables after the loop below; guest RAM there stays canary. */
+        else if (a == 0x800A8034u) want = 0;   /* zeroed pre-call */
         else if (a == 0x800A8038u) want = 0;   /* zeroed pre-call */
         else if (a == 0x800A803Cu) want = 0;   /* zeroed pre-call */
         else if (a == 0x800A1870u) want = 0;           /* func_80042B38 */
@@ -6393,11 +6393,11 @@ static void test_6A9E4_zero_cycles_footprint(void) {
     ASSERT(D_8009D058 == 0x800AD05Cu, "6A9E4: host D_8009D058 wrong");
     ASSERT(D_8009D064 == 2u, "6A9E4: host D_8009D064 wrong");
     ASSERT(D_8009D018 == 0u, "6A9E4: host D_8009D018 wrong");
-    /* B39: func_80051CC4 is translated; two deeper dependencies remain. */
-    ASSERT(g_stub_order_count == 3, "unexpected bootstrap invocations");
+    /* B40: only func_8005218C remains inside translated func_80051CC4. */
+    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[2], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6463,11 +6463,11 @@ static void test_6A9E4_3E680_integration(void) {
     B26_SeedArchiveDefault();  /* B26: no disc, so seed the archive */
     func_8006A9E4();
 
-    /* B39: two func_80051CC4 dependencies + func_80087090 remain. */
-    ASSERT(g_stub_order_count == 3, "unexpected provider count");
+    /* B40: func_8005218C + func_80087090 remain. */
+    ASSERT(g_stub_order_count == 2, "unexpected provider count");
     ASSERT(B21_CheckDispatcherOrder(0),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[2], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
@@ -7050,8 +7050,8 @@ static void test_5BCBC_dispatcher_integration(void) {
     ResetTestState();
     B26_SeedArchiveDefault();   /* B26: func_8005D6F4 walks a real archive */
     func_800527C8();
-    /* B39: func_80051CC4 is real; its two dependencies are the boundary. */
-    ASSERT(g_stub_order_count == 2, "dispatcher must leave 2 providers");
+    /* B40: func_8005332C is real; only func_8005218C remains here. */
+    ASSERT(g_stub_order_count == 1, "dispatcher must leave one provider");
     ASSERT(B21_CheckDispatcherOrder(0),
            "post-5BCBC dispatcher order wrong");
     ASSERT(CountOrderLog("func_8005DC4C") == 0,
@@ -7156,9 +7156,8 @@ static void test_5D6F4_full_ram_canary(void) {
     for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
         PE_StoreU32(a, 0xA5A5A5A5u);
     B26_SeedArchiveDefault();
-    /* B28: D_800A8038/D_800A803C are pointer bases for func_8005DB8C/
-     * func_8005DBAC inside func_8005CCA4.  Zero them so the degenerate
-     * path (base = &D_800A8028) is taken — retail BSS state. */
+    /* Resource lookup/base words: zero for the retail empty state. */
+    PE_StoreU32(0x800A8034u, 0);
     PE_StoreU32(0x800A8038u, 0);
     PE_StoreU32(0x800A803Cu, 0);
     /* B38: func_80086728 translated — zero ring buffer index for RingAlloc. */
@@ -7194,10 +7193,11 @@ static void test_5D6F4_full_ram_canary(void) {
             want = 0;
         /* B26 archive fixture: seeded INPUTS, not results of the run. */
         else if (B26_ArchCanaryWord(a, &want)) { }
-        /* Phase 6E-B28: func_8005CCA4 writes (D_800A8038/D_800A803C zeroed
-         * pre-call; func_8005DB8C/func_8005DBAC return &D_800A8028).  The four
+        /* Phase 6E-B28/B40: resource base words are zeroed pre-call;
+         * func_8005DB8C/func_8005DBAC return &D_800A8028. The four
          * $gp-relative state words are SHARED host globals (asserted after
          * the loop); guest RAM at 0x8009D048/50/58/64 stays canary. */
+        else if (a == 0x800A8034u) want = 0;   /* zeroed pre-call */
         else if (a == 0x800A8038u) want = 0;   /* zeroed pre-call */
         else if (a == 0x800A803Cu) want = 0;   /* zeroed pre-call */
         else if (a == 0x8009CEF0u) want = 0x0000003Du; /* func_800438C0(0x3D) */
@@ -8096,10 +8096,9 @@ static void test_5DB8C_5DBAC_no_guest_writes(void) {
 
 static void test_FxPattern_archive_header_zero(void) {
     TEST("FxPattern_archive_header_zero");
-    /* FxPattern bytes at offsets 0x10..0x17 must be 0 (retail BSS state
-     * when the archive first arrives via cycle A).  These are D_800A8038
-     * and D_800A803C — pointer bases for func_8005DB8C/func_8005DBAC. */
-    for (uint32_t off = 0x10; off <= 0x17; off++) {
+    /* Exact resource-helper base words must be zero in this synthetic
+     * empty-table fixture: D_800A8034, D_800A8038, and D_800A803C. */
+    for (uint32_t off = 0x0C; off <= 0x17; off++) {
         ASSERT(FxPattern(off) == 0, "FxPattern offset not zero");
     }
     PASS();
@@ -8150,15 +8149,15 @@ static void test_5DBAC_malformed_header_arithmetic(void) {
 /* ── func_8005CCA4 direct contract ──────────────────────────────────── */
 
 /* B29 record fixture for func_8005DB44: its proven arithmetic returns
- * alt_base + (index << 5) + base - 16.  For index zero these values resolve
+ * alt_base + (index << 5) + 0x800A8028. For index zero these values resolve
  * to the valid guest record below without introducing a low-address mirror. */
-#define B29_DB44_BASE 0x000A8410u
-#define B29_DB44_ALT  0x80000000u
 #define B29_REC        0x800A8400u
+#define B29_DB44_ALT  (B29_REC - 0x800A8028u)
+#define B29_DB44_BASE (B29_DB44_ALT + 0x20u)
 
 static void B29_SeedRecord(uint8_t type) {
-    PE_StoreU32(0x800B8034u, B29_DB44_ALT);
-    PE_StoreU32(0x800B8038u, B29_DB44_BASE);
+    PE_StoreU32(0x800A8034u, B29_DB44_ALT);
+    PE_StoreU32(0x800A8038u, B29_DB44_BASE);
     PE_StoreU8(B29_REC + 6u, type);
 }
 
@@ -8925,6 +8924,7 @@ static void test_5CCA4_write_footprint(void) {
     ResetTestState();
     for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
         PE_StoreU32(a, 0xA5A5A5A5u);
+    PE_StoreU32(0x800A8034u, 0);
     PE_StoreU32(B28_DB8C_PTR, 0);
     PE_StoreU32(B28_DBAC_PTR, 0);
     /* Zero every address the halfword loop reads (func_8005DB8C(i) =
@@ -9154,6 +9154,7 @@ static void test_5CCA4_guard_preservation(void) {
     /* Canary-fill ALL of guest RAM */
     for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
         PE_StoreU32(a, 0xA5A5A5A5u);
+    PE_StoreU32(0x800A8034u, 0);
     PE_StoreU32(B28_DB8C_PTR, 0);
     PE_StoreU32(B28_DBAC_PTR, 0);
 
@@ -9277,14 +9278,19 @@ static void B39_SeedRecord(pe_addr_t record, const uint8_t *commands,
 
 static void B39_ScriptRecord(pe_addr_t record)
 {
-    int scripted = (int)(uint32_t)record;
-    Bootstrap_SetIntSequence("func_8005332C", &scripted, 1);
+    /* B40's real lookup: source ID zero -> table halfword one ->
+     * func_8005DB44(0). Exact arithmetic returns record when alt_base is
+     * record-0x800A8028; base-alt=32 admits index zero. */
+    PE_StoreU8(B39_SOURCE_ID, 0u);
+    PE_StoreU8(B39_RESOURCE_ID, 1u);
+    PE_StoreU16(0x800C0E48u, 1u);
+    PE_StoreU32(0x800A8034u, record - 0x800A8028u);
+    PE_StoreU32(0x800A8038u, record - 0x800A8028u + 0x20u);
 }
 
-/* True ABI is void(void).  A NULL dependency return takes the only outer
- * early path, but still performs both dependency calls and both trailing
- * buffer-state calls.  The signed-byte dependency argument is logged by the
- * centralized boundary before its controlled return is consumed. */
+/* True ABI is void(void).  A negative signed source makes the real B40
+ * lookup return NULL before any table read, but the later func_8005218C
+ * boundary and both trailing buffer-state calls still execute. */
 static void test_51CC4_null_contract_order_and_argument(void)
 {
     TEST("51CC4_null_contract_order_and_argument");
@@ -9299,17 +9305,11 @@ static void test_51CC4_null_contract_order_and_argument(void)
 
     entry();
 
-    ASSERT(g_stub_order_count == 2, "NULL path dependency count");
-    ASSERT(strcmp(g_stub_order_log[0], "func_8005332C") == 0,
-           "func_8005332C must be first");
-    ASSERT(strcmp(g_stub_order_log[1], "func_8005218C") == 0,
-           "func_8005218C must be second even after NULL");
-    ASSERT(g_bootstrap_arg_call_count == 1, "one argument-bearing call");
-    ASSERT(strcmp(g_bootstrap_arg_calls[0].symbol, "func_8005332C") == 0 &&
-           strcmp(g_bootstrap_arg_calls[0].caller, "func_80051CC4") == 0,
-           "dependency symbol/caller evidence");
-    ASSERT(g_bootstrap_arg_calls[0].arg0 == 0xFFFFFF80u,
-           "source byte must sign-extend to 32 bits");
+    ASSERT(g_stub_order_count == 1, "NULL path dependency count");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005218C") == 0,
+           "func_8005218C must remain after the real NULL lookup");
+    ASSERT(g_bootstrap_arg_call_count == 0,
+           "translated lookup must not log a boundary argument");
     for (i = 0u; i < 7u; i++)
         ASSERT(PE_LoadU32(B39_PARAM_BASE + i * 4u) == 0u,
                "NULL path parameter clear");
@@ -9335,7 +9335,7 @@ static void test_51CC4_zero_count_path(void)
     ASSERT(D_8009D018 == 0u, "count zero must skip command byte");
     ASSERT(PE_LoadU8(B39_RECORD + 0x15u) == 10u,
            "record command input must remain read-only");
-    ASSERT(g_stub_order_count == 2 && B21_CheckDispatcherOrder(0),
+    ASSERT(g_stub_order_count == 1 && B21_CheckDispatcherOrder(0),
            "zero-count dependency order");
     PASS();
 }
@@ -9433,16 +9433,15 @@ static void test_51CC4_three_caller_and_repeat_contract(void)
 {
     TEST("51CC4_three_caller_and_repeat_contract");
     static const uint8_t commands[3] = { 11u, 12u, 13u };
-    int records[3] = { (int)B39_RECORD, (int)B39_RECORD, (int)B39_RECORD };
     uint32_t i;
     ResetTestState();
-    Bootstrap_SetIntSequence("func_8005332C", records, 3);
+    B39_ScriptRecord(B39_RECORD);
     for (i = 0u; i < 3u; i++) {
         B39_SeedRecord(B39_RECORD, &commands[i], 1u);
         func_80051CC4();
-        ASSERT(g_stub_order_count == (int)((i + 1u) * 2u),
-               "two dependencies per invocation");
-        ASSERT(B21_CheckDispatcherOrder((int)(i * 2u)),
+        ASSERT(g_stub_order_count == (int)(i + 1u),
+               "one remaining dependency per invocation");
+        ASSERT(B21_CheckDispatcherOrder((int)i),
                "repeated dependency order");
         ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x00u) == (i == 0u ? 3u : 0u),
                "repeat must clear/reconstruct command 11 word");
@@ -9452,8 +9451,10 @@ static void test_51CC4_three_caller_and_repeat_contract(void)
                (i == 2u ? 0xFFFFFFFEu : 0u),
                "repeat must clear/reconstruct command 13 word");
     }
-    ASSERT(g_bootstrap_arg_call_count == 3,
-           "each caller context must carry one dependency argument");
+    ASSERT(g_bootstrap_arg_call_count == 0,
+           "translated lookup must carry no boundary arguments");
+    ASSERT(CountOrderLog("func_8005332C") == 0,
+           "real lookup must never enter centralized policy");
     PASS();
 }
 
@@ -9507,8 +9508,8 @@ static void test_51CC4_top_of_ram_reads_and_widths(void)
     ASSERT(PE_LoadU8(record + 0x15u) == 0xEBu, "top command byte preserved");
     ASSERT(PE_LoadU8(PE_RAM_END - 3u) == 0xA5u, "one-byte lower guard");
     ASSERT(PE_LoadU32(B39_PARAM_BASE) == 3u, "top record command decoded");
-    ASSERT((uint32_t)g_bootstrap_arg_calls[0].arg0 == 0u,
-           "default source ID remains exact zero");
+    ASSERT(g_bootstrap_arg_call_count == 0,
+           "top record lookup must remain translated");
     PASS();
 }
 
@@ -9540,29 +9541,301 @@ static void test_51CC4_ramreset_no_split_brain(void)
 }
 
 /* The translated dispatcher reaches B39 after func_8005D6F4 and before
- * func_80042C78.  Its only unresolved sequence is now the two dependencies
- * nested inside B39; all direct state from both neighboring operations is
- * visible on return. */
+ * func_80042C78.  Only func_8005218C remains unresolved inside B39; all
+ * direct state from both neighboring operations is visible on return. */
 static void test_51CC4_527C8_integration(void)
 {
     TEST("51CC4_527C8_integration");
-    uint8_t command = 12u;
     ResetTestState();
     B26_SeedArchiveDefault();
-    B39_SeedRecord(B39_RECORD, &command, 1u);
-    B39_ScriptRecord(B39_RECORD);
+    /* Do not install the direct B39 lookup fixture here: func_800527C8's
+     * earlier resource initializers own the same func_8005DB44 header and
+     * table state.  Their reset/default result is a proven NULL lookup. */
     func_800527C8();
-    ASSERT(g_stub_order_count == 2 && B21_CheckDispatcherOrder(0),
+    ASSERT(g_stub_order_count == 1 && B21_CheckDispatcherOrder(0),
            "dispatcher unresolved sequence after B39");
     ASSERT(PE_LoadU16(0x800C1F80u) == 0x0203u,
            "preceding func_8005D6F4 operation must be committed");
-    ASSERT(PE_LoadU32(B39_PARAM_BASE + 4u) == 2u,
-           "B39 command state inside dispatcher");
+    ASSERT(CountOrderLog("func_8005332C") == 0,
+           "B40 lookup inside dispatcher must be translated");
     ASSERT(PE_LoadU32(0x8009CEDCu) == 0x20u &&
            PE_LoadU32(0x8009CEECu) == 0x48u,
            "following func_80042C78 operation must execute");
     ASSERT(CountOrderLog("func_80051CC4") == 0,
            "dispatcher must call translated B39 body");
+    PASS();
+}
+
+/* ── Phase 6E-B40: func_8005332C resource-record lookup ───────────── */
+
+#define B40_TABLE       0x800C1000u
+#define B40_GP_BASE     0x8009CD70u
+#define B40_GP_2D8      (B40_GP_BASE + 0x2D8u)
+#define B40_GP_2E0      (B40_GP_BASE + 0x2E0u)
+#define B40_DB44_ALT    0x80000000u
+
+static void B40_SeedEntry(pe_addr_t table, uint32_t count,
+                          int32_t index, int16_t entry)
+{
+    D_8009D048 = table;
+    D_8009D050 = count;
+    if (index >= 0)
+        PE_StoreU16(table + ((uint32_t)index << 1u), (uint16_t)entry);
+}
+
+/* Solve func_8005DB44's proven wrapped arithmetic for an exact controlled
+ * return: result = alt + 0x800A8028 + (index << 5). */
+static void B40_SeedDelegatedReturn(uint32_t index, pe_addr_t result)
+{
+    uint32_t alt = result - 0x800A8028u - (index << 5u);
+    PE_StoreU32(0x800A8034u, alt);
+    PE_StoreU32(0x800A8038u, alt + ((index + 1u) << 5u));
+}
+
+static void test_5332C_signature_and_index_guards(void)
+{
+    TEST("5332C_signature_and_index_guards");
+    pe_addr_t (*entry)(int32_t) = func_8005332C;
+    ResetTestState();
+
+    /* Both paths must return before loading D_8009D048 or guest RAM.  The
+     * deliberately invalid table address would abort if either guard failed. */
+    D_8009D048 = 0u;
+    D_8009D050 = 0x7FFFFFFFu;
+    ASSERT(entry(-1) == 0u, "negative signed ID must return NULL");
+    ASSERT(entry(INT32_MIN) == 0u, "INT32_MIN must return NULL");
+    D_8009D050 = 0u;
+    ASSERT(entry(0) == 0u, "ID equal to count must return NULL");
+    D_8009D050 = 0x80000000u;
+    ASSERT(entry(0) == 0u, "negative signed count must reject nonnegative ID");
+    ASSERT(D_8009D048 == 0u && D_8009D050 == 0x80000000u,
+           "guard paths changed authoritative globals");
+    PASS();
+}
+
+static void test_5332C_static_return_ranges(void)
+{
+    TEST("5332C_static_return_ranges");
+    static const struct {
+        uint16_t table_value;
+        pe_addr_t expected;
+    } cases[] = {
+        { 0x0100u, 0x800C0EACu },
+        { 0x017Fu, 0x800C1E8Cu },
+        { 0x0200u, 0x800A1E64u },
+        { 0x0208u, 0x800A1F64u },
+    };
+    size_t i;
+    for (i = 0u; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        ResetTestState();
+        PE_StoreU8(B40_TABLE - 1u, 0xA5u);
+        PE_StoreU8(B40_TABLE + 2u, 0x5Au);
+        B40_SeedEntry(B40_TABLE, 1u, 0, (int16_t)cases[i].table_value);
+        ASSERT(func_8005332C(0) == cases[i].expected,
+               "static record return mismatch");
+        ASSERT(PE_LoadU8(B40_TABLE - 1u) == 0xA5u &&
+               PE_LoadU8(B40_TABLE + 2u) == 0x5Au,
+               "halfword lookup crossed exact width guards");
+        ASSERT(Bootstrap_InvocationCount() == 0,
+               "static range crossed a provider boundary");
+    }
+    PASS();
+}
+
+static void test_5332C_delegated_returns_and_arguments(void)
+{
+    TEST("5332C_delegated_returns_and_arguments");
+    ResetTestState();
+    B40_SeedEntry(B40_TABLE, 1u, 0, 1);
+    PE_StoreU32(0x800B8034u, 0x11111111u);
+    PE_StoreU32(0x800B8038u, 0x22222222u);
+    B40_SeedDelegatedReturn(0u, 0x801FFFF0u);
+    ASSERT(func_8005332C(0) == 0x801FFFF0u,
+           "entry one must forward func_8005DB44(0)");
+    ASSERT(PE_LoadU32(0x800B8034u) == 0x11111111u &&
+           PE_LoadU32(0x800B8038u) == 0x22222222u,
+           "dependency must not use old non-sign-extended aliases");
+
+    ResetTestState();
+    B40_SeedEntry(B40_TABLE, 1u, 0, 0x00FF);
+    B40_SeedDelegatedReturn(0xFEu, 0x800A8123u);
+    ASSERT(func_8005332C(0) == 0x800A8123u,
+           "entry 255 must call func_8005DB44(254)");
+
+    ResetTestState();
+    B40_SeedEntry(B40_TABLE, 1u, 0, 1);
+    PE_StoreU32(0x800A8034u, B40_DB44_ALT);
+    PE_StoreU32(0x800A8038u, B40_DB44_ALT); /* dependency count zero */
+    ASSERT(func_8005332C(0) == 0u,
+           "delegated NULL must be forwarded without a fallback pointer");
+    ASSERT(Bootstrap_InvocationCount() == 0,
+           "translated func_8005DB44 must not use centralized policy");
+    PASS();
+}
+
+static void test_5332C_invalid_halfword_classes(void)
+{
+    TEST("5332C_invalid_halfword_classes");
+    static const int16_t values[] = {
+        0, -1, INT16_MIN, 0x0180, 0x01FF, 0x0209, INT16_MAX
+    };
+    size_t i;
+    for (i = 0u; i < sizeof(values) / sizeof(values[0]); i++) {
+        ResetTestState();
+        B40_SeedEntry(B40_TABLE, 1u, 0, values[i]);
+        ASSERT(func_8005332C(0) == 0u,
+               "invalid signed-halfword class must return NULL");
+        ASSERT(Bootstrap_InvocationCount() == 0,
+               "invalid class must not call any provider");
+    }
+    PASS();
+}
+
+static void test_5332C_count_bounds_and_top_of_ram(void)
+{
+    TEST("5332C_count_bounds_and_top_of_ram");
+    ResetTestState();
+    B40_SeedEntry(PE_RAM_END - 2u, 1u, 0, 0x0100);
+    ASSERT(func_8005332C(0) == 0x800C0EACu,
+           "last possible guest halfword lookup failed");
+
+    /* ID == count returns before touching the now-invalid base. */
+    D_8009D048 = 0u;
+    D_8009D050 = 1u;
+    ASSERT(func_8005332C(1) == 0u, "ID==count must return NULL");
+    D_8009D050 = 0x7FFFFFFFu;
+    ASSERT(func_8005332C(INT32_MAX) == 0u,
+           "maximum signed ID equal to maximum count must return NULL");
+    PASS();
+}
+
+/* One production invocation per direct executable call site.  The literal
+ * site addresses are independently checked against the executable by the
+ * B40 oracle; each site shares the same signed-int/pe_addr_t ABI. */
+static void test_5332C_all_46_direct_caller_abis(void)
+{
+    TEST("5332C_all_46_direct_caller_abis");
+    static const pe_addr_t sites[46] = {
+        0x800431A8u, 0x8004338Cu, 0x800444C4u, 0x80044618u,
+        0x80044A80u, 0x80044BC4u, 0x80045224u, 0x80045BC4u,
+        0x80045BF4u, 0x80046054u, 0x8004677Cu, 0x80047948u,
+        0x80047C6Cu, 0x80047EF4u, 0x8004817Cu, 0x800482F4u,
+        0x800484E0u, 0x8004894Cu, 0x800495E8u, 0x800497CCu,
+        0x80049BE0u, 0x8004A1DCu, 0x8004A5E8u, 0x8004A9C4u,
+        0x8004AD04u, 0x8004AD1Cu, 0x8004C738u, 0x8004C76Cu,
+        0x8004C7A8u, 0x8004C87Cu, 0x8004C904u, 0x8004C930u,
+        0x8004C9A0u, 0x8004DF04u, 0x8004F9B8u, 0x8004FAB0u,
+        0x8004FB10u, 0x80050400u, 0x800508FCu, 0x80051574u,
+        0x80051724u, 0x800517E8u, 0x80051914u, 0x800519A0u,
+        0x80051D08u, 0x80051E88u,
+    };
+    uint32_t i;
+    ResetTestState();
+    D_8009D048 = B40_TABLE;
+    D_8009D050 = 46u;
+    for (i = 0u; i < 46u; i++)
+        PE_StoreU16(B40_TABLE + i * 2u, (uint16_t)(0x100u + i));
+    for (i = 0u; i < 46u; i++) {
+        pe_addr_t expected = 0x800BEEACu + ((0x100u + i) << 5u);
+        ASSERT(sites[i] != 0u, "literal caller address lost");
+        ASSERT(func_8005332C((int32_t)i) == expected,
+               "direct caller ABI case returned wrong record");
+    }
+    PASS();
+}
+
+static void test_5332C_dirty_repeat_and_reset_authority(void)
+{
+    TEST("5332C_dirty_repeat_and_reset_authority");
+    ResetTestState();
+    B40_SeedEntry(B40_TABLE, 1u, 0, 0x0101);
+    PE_StoreU32(B40_TABLE + 4u, 0xDEADBEEFu);
+    ASSERT(func_8005332C(0) == 0x800C0ECCu,
+           "first dirty-state lookup wrong");
+    ASSERT(func_8005332C(0) == 0x800C0ECCu,
+           "repeated lookup changed result");
+    ASSERT(PE_LoadU32(B40_TABLE + 4u) == 0xDEADBEEFu,
+           "read-only lookup changed dirty neighbor");
+
+    PE_RamReset();
+    ASSERT(D_8009D048 == B40_TABLE && D_8009D050 == 1u,
+           "PE_RamReset must preserve authoritative host fields");
+    ASSERT(func_8005332C(0) == 0u,
+           "cleared guest table entry must decode as NULL");
+    PE_Sdk_ResetState();
+    ASSERT(D_8009D048 == 0u && D_8009D050 == 0u,
+           "PE_Sdk_ResetState must clear authoritative fields");
+    ASSERT(func_8005332C(0) == 0u,
+           "reset count zero must return NULL");
+    PASS();
+}
+
+static void test_5332C_full_ram_canary_readonly(void)
+{
+    TEST("5332C_full_ram_canary_readonly");
+    uint8_t *snapshot;
+    ResetTestState();
+    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0xA5u);
+    B40_SeedEntry(B40_TABLE, 1u, 0, 1);
+    B40_SeedDelegatedReturn(0u, 0x801FFFE0u);
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate full-RAM snapshot");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+    ASSERT(func_8005332C(0) == 0x801FFFE0u,
+           "full-RAM delegated lookup return wrong");
+    if (memcmp(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
+               PE_RAM_SIZE) != 0) {
+        free(snapshot);
+        FAIL("func_8005332C changed guest RAM");
+        return;
+    }
+    free(snapshot);
+    PASS();
+}
+
+static void test_5332C_no_split_brain_or_low_mirror(void)
+{
+    TEST("5332C_no_split_brain_or_low_mirror");
+    ResetTestState();
+    PE_StoreU32(B40_GP_2D8, 0xDEADBEEFu);
+    PE_StoreU32(B40_GP_2E0, 0xA5A5A5A5u);
+    B40_SeedEntry(B40_TABLE, 1u, 0, 0x0100);
+    ASSERT(func_8005332C(0) == 0x800C0EACu,
+           "lookup used guest alias instead of authoritative host state");
+    ASSERT(PE_LoadU32(B40_GP_2D8) == 0xDEADBEEFu &&
+           PE_LoadU32(B40_GP_2E0) == 0xA5A5A5A5u,
+           "lookup changed non-authoritative guest aliases");
+    ASSERT(!PE_AddressIsRam(0x000C1000u),
+           "low-address mirror must remain invalid");
+    ASSERT(PE_AddressIsRam(func_8005332C(0)),
+           "returned retail value must remain a full-width guest address");
+    PASS();
+}
+
+static void test_5332C_strict_and_51CC4_integration(void)
+{
+    TEST("5332C_strict_and_51CC4_integration");
+    uint8_t command = 12u;
+    ResetTestState();
+    B40_SeedEntry(B40_TABLE, 1u, 0, 0x0100);
+    g_strict_stubs = 1;
+    ASSERT(func_8005332C(0) == 0x800C0EACu,
+           "translated lookup failed under strict mode");
+    g_strict_stubs = 0;
+    ASSERT(Bootstrap_InvocationCount() == 0 &&
+           CountOrderLog("func_8005332C") == 0,
+           "translated direct lookup reached centralized policy");
+
+    ResetTestState();
+    B39_ScriptRecord(B39_RECORD);
+    B39_SeedRecord(B39_RECORD, &command, 1u);
+    func_80051CC4();
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 4u) == 2u,
+           "B39 did not consume B40's exact returned record");
+    ASSERT(g_stub_order_count == 1 && B21_CheckDispatcherOrder(0),
+           "direct B39 path must retain later func_8005218C boundary");
+    ASSERT(CountOrderLog("func_8005332C") == 0,
+           "B39 still routes func_8005332C through bootstrap policy");
     PASS();
 }
 
@@ -10138,6 +10411,18 @@ int main(void)
     test_51CC4_top_of_ram_reads_and_widths();
     test_51CC4_ramreset_no_split_brain();
     test_51CC4_527C8_integration();
+
+    /* Phase 6E-B40 — func_8005332C resource-record lookup. */
+    test_5332C_signature_and_index_guards();
+    test_5332C_static_return_ranges();
+    test_5332C_delegated_returns_and_arguments();
+    test_5332C_invalid_halfword_classes();
+    test_5332C_count_bounds_and_top_of_ram();
+    test_5332C_all_46_direct_caller_abis();
+    test_5332C_dirty_repeat_and_reset_authority();
+    test_5332C_full_ram_canary_readonly();
+    test_5332C_no_split_brain_or_low_mirror();
+    test_5332C_strict_and_51CC4_integration();
 
     test_64964_direct_boot_state();
     test_80071A24_bzero_contract();

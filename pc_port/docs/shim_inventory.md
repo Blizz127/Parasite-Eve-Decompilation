@@ -230,8 +230,8 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
   func_80042B38, func_80051084, func_800371A4) + 3 direct sw clears;
   every direct callee is now translated, including func_80052C6C,
   func_8005BCBC, func_8005D6F4, func_80051CC4 (B39), and func_80042C78.
-  B39 preserves its nested unresolved dependencies in retail order:
-  func_8005332C, then func_8005218C.
+  B40 translates the first B39 nested dependency, func_8005332C; only
+  func_8005218C remains unresolved in that path.
   Sole call site func_8006A9E4 @0x8006AAD0 ($s1-guarded one-shot in
   the cycle-B poll loop); void(void), return unconsumed.
   `game/boot/func_800527C8_port.c`, leaf implementations in
@@ -239,8 +239,10 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 - `func_80052C6C`  ← TRANSLATED (B23: resource-table search + init)
 - `func_8005BCBC`  ← TRANSLATED (B24: resource-state pointer/count selector)
 - `func_80051CC4`  ← TRANSLATED (B39: 77-word resource command-state
-  initializer; independent `tools/b39_oracle.py`); strict now reaches its
-  first dependency, `func_8005332C`
+  initializer; independent `tools/b39_oracle.py`)
+- `func_8005332C`  ← TRANSLATED (B40: 42-word signed-ID resource-record
+  lookup; independent `tools/b40_oracle.py`); its direct B39 path now reaches
+  the later sibling boundary `func_8005218C`
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
@@ -489,9 +491,11 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode stops at `func_8005332C` from translated
-`func_80051CC4` (B39), after the full translated `func_8005D6F4` chain and
-every direct `func_800527C8` callee. The `--bootstrap-disc` fixture still
+With Disc 1, strict mode stops at pre-existing `func_80053968` from
+translated-prefix `func_80053D2C`. B40's correction to the shared
+`func_8005DB44` record lookup makes that dormant B29 boundary reachable
+before the translated `func_80051CC4` path. The later `func_8005218C`
+boundary remains untouched. The `--bootstrap-disc` fixture still
 stops at `func_8007F72C` (CdReady) by design. Normal and fresh sanitizer
 builds agree on both frontiers.
 
@@ -508,8 +512,8 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
   dependencies are `func_80053968` and `func_80053B48`
 - `func_80042C78` — completed B30 translated prefix; its B31 dependency is
   complete
-- `func_80051CC4` — completed B39 translated rung; its unresolved
-  dependencies are `func_8005332C` and `func_8005218C` in retail order
+- `func_80051CC4` — completed B39 translated rung; B40 completed its first
+  nested dependency `func_8005332C`, while `func_8005218C` remains unresolved
 - `func_80087090` — SPU upload retry wrapper
 - `func_800749D8` — display environment setup (currently memset stub)
 - `func_800752AC` (ClearOTagR) — ordering table clear

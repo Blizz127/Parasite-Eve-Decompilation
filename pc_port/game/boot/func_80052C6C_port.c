@@ -52,8 +52,8 @@
 #define GA_800A1E64         0x800A1E64u
 #define GA_800AD05C         0x800AD05Cu
 #define GA_800A1F84         0x800A1F84u
-#define GA_800B8034         0x800B8034u
-#define GA_800B8038         0x800B8038u
+#define GA_800A8034         0x800A8034u
+#define GA_800A8038         0x800A8038u
 
 /* ── func_80051E58 — retail C leaf, 2 words ────────────────────────────
  * lw $v0, 0x2A8($gp) ; jr $ra
@@ -150,109 +150,32 @@ void func_80052E30(uint32_t a0) {
  *
  * pe_addr_t func_8005DB44(unsigned int index)
  *
- * Reads D_800B8038 (base) and D_800B8034 (alt_base) from guest RAM.
- * Computes count = (base - alt_base) / 32.
- * If index >= count, returns 0 (NULL).
- * Otherwise, returns alt_base + ((index * 32) + (base - 32) - alt_base)
- *   = alt_base + (index * 32) + (base - alt_base - 32)
- * Wait, let me re-derive from the MIPS:
- *   v0 = base - alt_base
- *   v0 = srl v0, 5  → v0 = (base - alt_base) / 32 = count
- *   if (index >= count) return 0
- *   v0 = index * 32  (sll by 5 in delay slot)
- *   v1 = base - 16  (addiu $v1, $v1, -16)
- *   v0 = v0 + v1  → v0 = index*32 + base - 16
- *   j 0x8005DB84 (return alt_base + v0)  → alt_base + index*32 + base - 16
- *   return alt_base + v0 (in delay slot)
+ * The raw `lui 0x800B` bases are followed by signed 16-bit immediates
+ * 0x8038/0x8034, so the exact reads are D_800A8038 (base), then
+ * D_800A8034 (alt_base).  The retained B23 oracle already models these
+ * addresses; B40 corrects the prior native constants that treated those
+ * immediates as unsigned.
  *
- * This is: return alt_base + (index * 32) + (base - 16 - alt_base + alt_base)
- *   = base + index*32 - 16 + alt_base - alt_base? No...
+ * The register `$v1` still holds the address 0x800A8038 after the first
+ * load. Thus `addiu $v1,-16` produces the literal 0x800A8028, not
+ * `base-16`. Exact behavior is:
  *
- * Let me re-derive carefully:
- *   v1 = base: lw $v0, 0($v1) where $v1 = D_800B8038
- *   $a1 = alt_base: lw $a1, D_800B8034
- *   v0 = base - alt_base
- *   v0 = srl v0, 5 → v0 = (base - alt_base) >> 5 = count
- *   if (index >= count) return 0
- *   v0 = index << 5 (delay slot)
- *   v1 = base - 16 (addiu $v1, $v1, -16)
- *   v0 = v0 + v1 → v0 = index*32 + base - 16
- *   j 0x8005DB84 → return alt_base + v0
- *   return alt_base + v0 (delay slot)
+ *   count = (base - alt_base) >> 5
+ *   index >= count -> 0
+ *   otherwise -> alt_base + (index << 5) + 0x800A8028
  *
- * So: return alt_base + index*32 + base - 16
- *   = base + alt_base + index*32 - 16
- *
- * Hmm wait, that doesn't make sense. Let me re-check the addresses.
- *
- * 0x8005DB44: lui $v1, 0x800B → $v1 = 0x800B0000
- * 0x8005DB48: addiu $v1, $v1, 0x8038 → $v1 = 0x800B8038
- * 0x8005DB4C: lw $v0, 0($v1) → $v0 = PE_LoadU32(0x800B8038) = base
- * 0x8005DB50: lui $a1, 0x800B → $a1 = 0x800B0000
- * 0x8005DB54: lw $a1, -32716($a1) → $a1 = PE_LoadU32(0x800B0000 - 0x7FCC) = PE_LoadU32(0x800A8034)
- * Wait, -32716 = 0xFFFF8034. So 0x800B0000 + 0xFFFF8034 = 0x800A8034. But the load is from 0x800B8034.
- * 
- * Hmm wait: addiu $a1, $a1, -32716 → $a1 = 0x800B0000 + (-32716) = 0x800B0000 - 0x7FCC = 0x800A8034.
- * But the label says D_800B8034. That's 0x800B8034, not 0x800A8034.
- * 
- * Let me recalculate: 0x800B8034 - 0x800B0000 = 0x8034.
- * addiu $v1, $v1, 8038 → 0x800B0000 + 0x8038 = 0x800B8038. ✓
- * But for the second: 0x800B0000 + (-32716) = 0x800B0000 - 0x7FCC.
- * -32716 = 0xFFFF8034 as a signed 16-bit. But addiu sign-extends!
- * 0x800B0000 + 0xFFFF8034 = 0x800A8034 in 32-bit arithmetic.
- * 
- * That's wrong for D_800B8034. Let me re-check the raw word.
- * 
- * 0x8005DB54: 0x8CA58034
- * op=0x23 (lw), $rt=5 ($a1), $rs=5 ($a1), imm=0x8034
- * But lw is: lw $rt, imm($rs) where imm is sign-extended.
- * 0x8034 = 32820, sign-extended as 16-bit: bit 15 = 0, so it's +32820.
- * So: lw $a1, 0x8034($a1) = lw $a1, 0x8034($a1) where $a1 = 0x800B0000
- * = PE_LoadU32(0x800B0000 + 0x8034) = PE_LoadU32(0x800B8034)
- * 
- * Ah, I was confusing myself. The offset is +0x8034, not -32716. The raw hex 0x8034 in the lw instruction is a signed 16-bit with bit 15 = 0, so it's positive.
- * 
- * So:
- * base = PE_LoadU32(0x800B8038)
- * alt_base = PE_LoadU32(0x800B8034)
- * 
- * v0 = base - alt_base
- * v0 = srl v0, 5 → count = (base - alt_base) >> 5
- * if (index >= count) return 0
- * v0 = index << 5
- * v1 = base - 16
- * v0 = v0 + v1 = index*32 + base - 16
- * return alt_base + v0 = alt_base + index*32 + base - 16
- * 
- * Hmm, that's an unusual formula. Let me think about whether there's a simpler interpretation.
- * 
- * Actually, this is a record table where:
- * - alt_base is the start of the table
- * - base is some pointer PAST the table (or into the table)
- * - count = (base - alt_base) / 32 = number of records
- * 
- * The lookup computes: record = alt_base + index*32 + (base - alt_base - 16)
- *   = alt_base + index*32 + base - alt_base - 16
- *   = base + index*32 - 16
- *
- * Hmm, that's still odd. Let me think about this differently.
- *
- * Maybe base is actually a pointer beyond the table end, and alt_base is the start.
- * The -16 on base adjusts for something. Maybe the table is stored with a 16-byte header?
- * 
- * Actually, let me just transcribe the exact arithmetic and not try to simplify it. The port
- * will compute the same result as the MIPS.
+ * All arithmetic and the count shift are unsigned 32-bit operations.
  */
 
 pe_addr_t func_8005DB44(unsigned int index) {
-    unsigned int base    = PE_LoadU32(GA_800B8038);
-    unsigned int alt_base = PE_LoadU32(GA_800B8034);
+    unsigned int base    = PE_LoadU32(GA_800A8038);
+    unsigned int alt_base = PE_LoadU32(GA_800A8034);
     unsigned int count   = (base - alt_base) >> 5u;
     if (index >= count)
         return 0u;
     unsigned int v0 = index << 5u;          /* index * 32 (delay slot) */
-    unsigned int v1 = base - 16u;           /* addiu $v1, $v1, -16 */
-    v0 = v0 + v1;                            /* v0 = index*32 + base - 16 */
+    unsigned int v1 = GA_800A8038 - 16u;    /* addiu $v1,$v1,-16 */
+    v0 = v0 + v1;                            /* index*32 + 0x800A8028 */
     return alt_base + v0;                   /* delay slot of the j */
 }
 
