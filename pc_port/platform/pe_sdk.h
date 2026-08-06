@@ -108,6 +108,7 @@ void func_8005BC98(int a0_ignored);         /* D_8009D218 = 1 */
 void func_8004F808(void);                   /* ten-word clear */
 void func_80042B38(void);                   /* D_800A1870/1874 = 0 */
 void func_80051084(void);                   /* D_8009D014 = 0x800A1AA0 */
+void func_80051CC4(void);                   /* resource command-state init */
 void func_800528F0(void);                   /* PRNG table generator, 521 bytes */
 void func_8005E588(void);                   /* display environment setup */
 void func_80062568(void);                   /* free-list pool init, 24 0x90-byte slots */
@@ -116,6 +117,8 @@ void func_8005DE88(void);                   /* resource-list/state initializer *
 pe_addr_t func_80071A24(pe_addr_t dst, uint32_t len);  /* BIOS A(28h) bzero trampoline */
 void func_8005E968(uint32_t packed);         /* pack-color halver */
 void func_8005F844(int a0);                 /* conditional constant stores */
+void func_80052E30(uint32_t a0);            /* resource-buffer init/reuse */
+uint32_t func_80052F0C(void);                /* buffer-identity comparison */
 
 /* ── save manager (pc_port/platform/pe_save.c) ──────────────────────── */
 void func_800844E4(pe_addr_t base, pe_addr_t base2);

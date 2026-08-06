@@ -23,7 +23,7 @@
  *   5. v0 = lw D_8009D0C8 (always 0 here — stored in step 3);
  *      s0 = lw D_8009D0C0.  beqz v0 taken:
  *        jal func_8005DC4C(a0=0x1E delay slot, a1=0xFF residual fill
- *        register)                               UNRESOLVED (boundary)
+ *        register)                               REAL (B26)
  *      Retail sets $a1 = s0 (the copy destination) only AFTER the call
  *      returns (addu $a1,$s0 at 0x8005D794 — not a delay slot).
  *      The not-taken arm (v0 != 0) would pass lbu(v0+4)-1 to
@@ -40,14 +40,14 @@
  *      reload-per-iteration).  NOTE: this re-fills the bytes string
  *      copy #1 just wrote — exact retail behavior, reproduced.
  *   8. Second selection: lw C8 (0) / lw C0; beqz taken:
- *        jal func_8005DC4C(a0=0x1E, a1=0xFF)    UNRESOLVED (2nd call)
+ *        jal func_8005DC4C(a0=0x1E, a1=0xFF)    REAL (B26, 2nd call)
  *   9. String copy #2 (same mechanics as #6).
- *  10. jal func_8005DC4C(0x1E, dest-after-copy-2)   UNRESOLVED (3rd);
+ *  10. jal func_8005DC4C(0x1E, dest-after-copy-2)   REAL (B26, 3rd);
  *      here $a1 genuinely carries the post-copy dest cursor (one past
  *      the terminator) — no instruction touches $a1 between copy #2
  *      and this call.
- *  11. jal func_80052594(ret-of-10)                UNRESOLVED
- *  12. jal func_8005CCA4()                         UNRESOLVED
+ *  11. jal func_80052594(ret-of-10)                REAL (B27)
+ *  12. jal func_8005CCA4()                         REAL (B28)
  *  13. sh 0x0203 → 0x800C1F80   (direct halfword store)
  *      sw 0x00404040 → 0x800C0E44   (direct word store)
  *  14. jal func_800614AC(0x00404040)               REAL (B32)
@@ -55,12 +55,12 @@
  *  15. sw 0 → D_800A76A4, D_800A76B0, D_800A76BC, D_800A76C8
  *      (the +4 tick fields of the three B5 timer records at
  *      0x800A76A0/AC/B8 plus the word past them)
- *  16. jal func_8005E884() → r                     UNRESOLVED
+ *  16. jal func_8005E884() → r                     REAL (B33)
  *      (retail returns lbu 0x800B0DB1 — unwritten BSS at this point)
- *  17. jal func_8005E850(0, 8 - r)                 UNRESOLVED
+ *  17. jal func_8005E850(0, 8 - r)                 REAL (B34/B37)
  *      (a1 = 8 - r formed in the delay slot)
- *  18. jal func_800649D0(0)                        UNRESOLVED
- *  19. jal func_80052790(1)                        UNRESOLVED
+ *  18. jal func_800649D0(0)                        REAL (B35)
+ *  19. jal func_80052790(1)                        REAL (B36/B38)
  *  20. v0 = 0xFF; sb 0xFF → 0x800C20A4; sb 0xFF → 0x800C20B4
  *      (terminator bytes at the two record-buffer bases that
  *      func_8005BCBC selects when a0 != 0)
@@ -78,26 +78,19 @@
  * func_80052594 is REAL (B27 string copy into fixed 8-byte buffer),
  * func_8005E884 is REAL (B33 signed-byte alarm-timer query),
  * func_8005E850 is REAL (B34 alarm-timer setter wrapper; its callee
- * func_8006A2E8 routes through the centralized boundary),
+ * func_8006A2E8 is REAL in B37),
  * func_800649D0 is REAL (B35 resource-state reset),
- * func_80052790 is REAL (B36 boolean-state store + notify wrapper;
- * its callee func_80086728 routes through the centralized boundary).
- * All D6F4 callees are now translated.  The only remaining bootstrap
- * boundary calls come from func_800527C8 (func_80051CC4,
- * func_80042C78) and func_8006A9E4 (func_80087090).
- * func_8005DC9C is a dead arm.  Strict mode stops at the first
- * unresolved invocation (func_8005CCA4 on the boot path).
+ * func_80052790 is REAL (B36 boolean-state store + notify wrapper; its
+ * callee func_80086728 is REAL in B38). All D6F4 direct callees are now
+ * translated. func_8005DC9C is a dead arm. After B39, strict mode reaches
+ * func_8005332C from func_80051CC4; func_80087090 remains later in the
+ * non-strict func_8006A9E4 path.
  *
- * Controlled dependency returns: the func_8005DC4C return is CONSUMED
- * (string-copy source).  The compiled-in boundary default is the
- * degenerate in-RAM source 0x800C0DF0 — the destination buffer itself,
- * whose first byte is the 0xFF terminator written by the fill loop one
- * step earlier.  Under the default the retail copy loop executes and
- * transfers only the terminator (no fabricated content); tests script
- * real sources via Bootstrap_SetIntSequence.  An out-of-RAM default
- * would trip the checked PE_LoadU8 and destroy the deterministic
- * non-strict boot.  func_8005E884 reads D_800B0DB1 directly; during
- * boot the byte is unwritten BSS (0), matching the old boundary default.
+ * Consumed dependency return: func_8005DC4C is the real guest archive
+ * lookup, and its result is the string-copy source. Tests invoking D6F4
+ * seed the retail-shaped archive precondition; address zero is never
+ * mirrored or replaced by a fallback. func_8005E884 reads D_800B0DB1
+ * directly; during boot that byte is unwritten BSS (0).
  *
  * State: D_8009D218/D_8009D0C0/C4/C8 are guest-RAM resident (B24
  * storage audit; shared with func_8005BCBC and the func_8005BD10/BE1C
@@ -109,8 +102,8 @@
  * state-reproducible (every store unconditionally overwrites).
  * PE_RamReset restores initial conditions.
  *
- * Classification: 1 — translated retail logic with unresolved callees
- * on the centralized boundary.
+ * Classification: 1 — translated retail logic; every direct callee is
+ * translated.
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"

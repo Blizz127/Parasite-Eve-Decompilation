@@ -9,6 +9,8 @@
 #ifndef PE_BOOTSTRAP_H
 #define PE_BOOTSTRAP_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,6 +26,22 @@ void Bootstrap_Shutdown(void);   /* print summary                      */
  * In strict mode, the FIRST call to this function aborts with a diagnostic.
  * In normal mode, this just records the invocation and returns `value`. */
 int  Bootstrap_ReturnInt(const char *symbol, const char *caller, int value);
+
+/* One-argument variant for unresolved retail calls whose argument is part of
+ * the boundary contract.  The call log is diagnostic/test evidence only; it
+ * does not influence the scripted return value. */
+typedef struct {
+    const char *symbol;
+    const char *caller;
+    uint32_t arg0;
+} BootstrapArgCall;
+
+#define BOOTSTRAP_MAX_ARG_CALLS 256
+extern BootstrapArgCall g_bootstrap_arg_calls[BOOTSTRAP_MAX_ARG_CALLS];
+extern int g_bootstrap_arg_call_count;
+int  Bootstrap_ReturnInt1(const char *symbol, const char *caller, int value,
+                          uint32_t arg0);
+void Bootstrap_ResetArgCallLog(void);
 
 /* Same, for void functions.  In strict mode aborts on first call. */
 void Bootstrap_ReturnVoid(const char *symbol, const char *caller);

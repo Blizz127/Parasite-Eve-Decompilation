@@ -1,24 +1,23 @@
-# Parasite Eve Native PC Port — Phase 6E-B32
+# Parasite Eve Native PC Port — Phase 6E-B39
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B32 func_800614AC rung — verified;
-B28 is recorded by provisional commit `a1559ae` and corrective commit
-`cd2e375`; B29 is accepted in commit `eedd456`. The completed B28 body is
-`0x8005CCA4..0x8005D01F` (exclusive end `0x8005D020`, file offset
-`0x4D4A4`, 223 retail words). All 223 words are independently transcribed,
-compared against the SHA-verified executable, and executed by the B28 oracle.
-The B29 baseline was 337/337 native and 337/337 ASan/UBSan; the final B30
-suite was 339/339, the final B31 suite was 341/341, and the final B32 suite
-is 344/344 in both configurations. The current real-disc strict frontier is
-`func_8005E884` from `func_8005D6F4`; strict exit status is 1.
-Bootstrap-disc normally completes with 15 bootstrap stubs invoked, while
-bootstrap strict stops at `func_8007F72C` from `func_800698D4` (exit 1).
-The B28 fixture lookup returns `0x800A8400`; address zero remains invalid, with
-no KUSEG or low-address mirror. Nothing has been pushed and the next rung has
-not started.
+**Current milestone:** B39 `func_80051CC4` rung — verified. The true
+contract is `void func_80051CC4(void)`: 77 retail instructions / `0x134`
+bytes at `0x80051CC4..0x80051DF7`, file offset `0x424C4`, live split
+`asm/disc1/420A8.s:314-401`. It clears and rebuilds resource command state,
+preserves translated `func_80052F0C`/`func_80052E30` calls in ROM order, and
+routes only its unresolved `func_8005332C` and `func_8005218C` dependencies
+through the centralized boundary. `tools/b39_oracle.py` contains and verifies
+all 77 body words plus the eight-word jump table and executes them with exact
+MIPS-I delay-slot behavior. Normal and fresh ASan/UBSan suites pass 377/377;
+the B39 oracle and all 23 retained oracles pass. Real-disc strict stops at
+`func_8005332C` from `func_80051CC4` (exit 1); bootstrap strict remains
+`func_8007F72C` from `func_800698D4` (exit 1). Address zero remains invalid,
+with no KUSEG or low-address mirror. Nothing has been pushed, and the next
+rung has not started.
 
-**Current B32 detail:** `func_800614AC` is translated retail logic: 36
+**Historical B32 detail:** `func_800614AC` is translated retail logic: 36
 instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`
 (exclusive end `0x8006153C`, file offset `0x51CAC`, live split
 `asm/disc1/51CAC.s`). It stores `a0 & 0x00FFFFFF` at `0x8009D14C`, computes
@@ -661,24 +660,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected: exit 1 at func_8005DC4C from func_8005D6F4 — the first
-# unresolved provider past the fully translated func_8003E680, the
-# translated func_8006A9E4 streaming-load rung, the fully translated
-# func_800527C8 dispatcher, the translated func_80052C6C (B23),
-# func_8005BCBC (B24), and the translated func_8005D6F4 (B25): the
-# translated RNG
-# (70D10/70D6C/70DD0), the subsystem-init pair
-# (func_8003E974 + func_8003EAC8), the timer-record init
-# (func_80036DC8 + leaves), the real func_80073D24 callback
-# slot writes, the real func_800371A4 byte store, the real
-# func_80029388 slot-table clear + record init, the real empty
-# func_8005BCA8 stub, the real func_80068D28 display-record init,
-# the real func_800124F8 subsystem table clear, the real
-# func_8001A890 scalar/array clear, the real func_80034F10
-# subsystem table clear + flag-bit clear, the real func_8006536C
-# record-table clear + index byte clear, the real func_80038D1C
-# test-and-clear leaf, and the real func_8006A9E4 PE.IMG streaming
-# load (with translated func_8006E6A8/func_8006E7E8/func_8006E498)
+# Expected after B39: exit 1 at func_8005332C from func_80051CC4.
+# The translated B39 prefix has already committed its resource-state clears.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \

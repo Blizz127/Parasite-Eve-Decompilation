@@ -10,6 +10,9 @@
 static int g_strict_enabled = 0;
 static int g_strict_triggered = 0;
 
+BootstrapArgCall g_bootstrap_arg_calls[BOOTSTRAP_MAX_ARG_CALLS];
+int g_bootstrap_arg_call_count = 0;
+
 /* ── Provider sequence state ────────────────────────────────────────── */
 
 #define BOOTSTRAP_MAX_PROVIDERS 16
@@ -31,6 +34,7 @@ void Bootstrap_Init(void)
     g_stub_count = 0;
     g_stub_order_count = 0;
     g_stub_bootstrap_invocations = 0;
+    Bootstrap_ResetArgCallLog();
     Bootstrap_ClearSequences();
 }
 
@@ -110,6 +114,24 @@ int Bootstrap_ReturnInt(const char *symbol, const char *caller, int value)
         return scripted;
     }
     return value;
+}
+
+int Bootstrap_ReturnInt1(const char *symbol, const char *caller, int value,
+                         uint32_t arg0)
+{
+    if (g_bootstrap_arg_call_count < BOOTSTRAP_MAX_ARG_CALLS) {
+        BootstrapArgCall *call =
+            &g_bootstrap_arg_calls[g_bootstrap_arg_call_count++];
+        call->symbol = symbol;
+        call->caller = caller;
+        call->arg0 = arg0;
+    }
+    return Bootstrap_ReturnInt(symbol, caller, value);
+}
+
+void Bootstrap_ResetArgCallLog(void)
+{
+    g_bootstrap_arg_call_count = 0;
 }
 
 void Bootstrap_ReturnVoid(const char *symbol, const char *caller)

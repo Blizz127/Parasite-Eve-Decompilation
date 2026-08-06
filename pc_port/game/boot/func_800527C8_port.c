@@ -40,10 +40,12 @@
  *  14. func_8005D6F4()           TRANSLATED (B25): resource-buffer +
  *                                display-state initializer (147 words;
  *                                bzero 0x800C0DE0 len 0x12E4, buffer
- *                                fills/terminators, nine unresolved
- *                                callees on the centralized boundary —
- *                                strict stops INSIDE it at func_8005DC4C)
- *  15. func_80051CC4()           UNRESOLVED
+ *                                fills/terminators; its complete direct
+ *                                dependency chain is translated through B38)
+ *  15. func_80051CC4()           TRANSLATED (B39): resource-command state
+ *                                initialization; its unresolved
+ *                                func_8005332C/func_8005218C dependencies
+ *                                use the centralized boundary
  *  16. func_80042C78()           TRANSLATED (B30 prefix); its
  *                                func_80042CC4 is translated in B31
  *  17. func_8005BC98(a0=1)       TRANSLATED leaf: D_8009D218 = 1 again
@@ -96,7 +98,7 @@ void func_800527C8(void)
     func_80052C6C();
     func_8005BCBC(0u);               /* a0=0 in the jal delay slot */
     func_8005D6F4();
-    Bootstrap_ReturnVoid("func_80051CC4", "func_800527C8");
+    func_80051CC4();
     func_80042C78();
     func_8005BC98(1);                /* a0 ignored by the retail leaf */
     D_800B0CD8 |= 0x40000000u;       /* jal delay slot: before 371A4 */

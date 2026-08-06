@@ -10,9 +10,11 @@
  * 9-row output table at 0x800A1E64, and clears related halfword buffers.
  *
  * Coupled callees translated in this file:
- *   func_80052E30  (31 words) — resource-buffer init / reuse
+ *   func_80052E30  (31 words) — resource-buffer init / reuse (exported in
+ *                               B39 for its other retail caller)
  *   func_80052EB0  ( 3 words) — two-word state setter
- *   func_80052F0C  ( 5 words) — buffer-identity comparison
+ *   func_80052F0C  ( 5 words) — buffer-identity comparison (exported in
+ *                               B39 for its other retail caller)
  *   func_80052F70  (22 words) — capped-add resource ID allocator
  *   func_8005DB44  (17 words) — 32-byte record table lookup
  *
@@ -99,9 +101,10 @@ static void func_80052EB0(unsigned int a0, unsigned int a1) {
  * lui $v1, 0x800C ; addiu $v1, $v1, 0x0E48 → 0x800C0E48
  * xor $v0, $v0, $v1
  * jr $ra
- * Returns 0 if D_8009D048 == 0x800C0E48, non-zero otherwise. */
-static unsigned int func_80052F0C(void) {
-    return D_8009D048 ^ GA_800C0E48;
+ * sltu $v0,$zero,$v0 (delay slot)
+ * Returns exactly 0 if D_8009D048 == 0x800C0E48, otherwise 1. */
+uint32_t func_80052F0C(void) {
+    return D_8009D048 != GA_800C0E48;
 }
 
 /* ── func_80052E30 — resource-buffer init / reuse, 31 words ─────────────
@@ -125,7 +128,7 @@ static unsigned int func_80052F0C(void) {
  *
  * The 0x800C0E48 buffer is cleared by func_80052C6C's first loop
  * BEFORE this function is called. */
-static void func_80052E30(unsigned int a0) {
+void func_80052E30(uint32_t a0) {
     if (a0 == 0u || D_8009D04C == 0u) {
         /* Allocate new path */
         D_8009D048 = GA_800C0E48;

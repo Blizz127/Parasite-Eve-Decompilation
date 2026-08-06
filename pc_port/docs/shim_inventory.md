@@ -228,18 +228,19 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
   Multi-subsystem bootstrap dispatcher: 17 calls (16 distinct callees).
   7 translated leaves (func_8005B890, func_8005BC98, func_8004F808,
   func_80042B38, func_80051084, func_800371A4) + 3 direct sw clears;
-  5 translated (func_800528F0, func_8005E588, func_80062568,
-  func_80064964, func_8005DE88) + 5 unresolved callees in retail ROM
-  order routed through the centralized boundary:
-  func_80052C6C, func_8005BCBC, func_8005D6F4,
-  func_80051CC4, func_80042C78.
+  every direct callee is now translated, including func_80052C6C,
+  func_8005BCBC, func_8005D6F4, func_80051CC4 (B39), and func_80042C78.
+  B39 preserves its nested unresolved dependencies in retail order:
+  func_8005332C, then func_8005218C.
   Sole call site func_8006A9E4 @0x8006AAD0 ($s1-guarded one-shot in
   the cycle-B poll loop); void(void), return unconsumed.
   `game/boot/func_800527C8_port.c`, leaf implementations in
   `game/boot/func_800{5B890,5BC98,4F808,42B38,51084}_port.c`.
 - `func_80052C6C`  ← TRANSLATED (B23: resource-table search + init)
-- `func_8005BCBC`  ← TRANSLATED (B24: resource-state pointer/count
-  selector); the strict-mode frontier now sits at `func_8005D6F4`
+- `func_8005BCBC`  ← TRANSLATED (B24: resource-state pointer/count selector)
+- `func_80051CC4`  ← TRANSLATED (B39: 77-word resource command-state
+  initializer; independent `tools/b39_oracle.py`); strict now reaches its
+  first dependency, `func_8005332C`
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
@@ -488,16 +489,11 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode stops at `func_8005E884` from `func_8005D6F4` — past the fully
-translated func_8003E680, func_8006A9E4, func_800527C8, func_80052C6C
-(B23), func_8005BCBC (B24), func_8005D6F4 (B25), func_8005DC4C (B26),
-func_80052594 (B27), func_8005CCA4 (historical B28), and
-func_80053D2C (historical B29), `func_80042C78` (B30), and
-`func_80042CC4` (B31).
-func_8005E884, func_8005E850, func_800649D0,
-func_80052790 (from func_8005D6F4), func_80051CC4, func_80042C78
-(from dispatcher), func_80087090 (SPU upload).  The `--bootstrap-disc`
-fixture still stops at `func_8007F72C` (CdReady) by design.
+With Disc 1, strict mode stops at `func_8005332C` from translated
+`func_80051CC4` (B39), after the full translated `func_8005D6F4` chain and
+every direct `func_800527C8` callee. The `--bootstrap-disc` fixture still
+stops at `func_8007F72C` (CdReady) by design. Normal and fresh sanitizer
+builds agree on both frontiers.
 
 Disc-path providers are REAL since Phase 6E-A (host disc model over the
 read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
@@ -512,10 +508,8 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
   dependencies are `func_80053968` and `func_80053B48`
 - `func_80042C78` — completed B30 translated prefix; its B31 dependency is
   complete
-- `func_8005E884`, `func_8005E850`, `func_800649D0`, `func_80052790` — remaining
-  func_8005D6F4 callees in retail ROM order
-- `func_80051CC4` — remaining unresolved dispatcher callee after
-  func_8005D6F4
+- `func_80051CC4` — completed B39 translated rung; its unresolved
+  dependencies are `func_8005332C` and `func_8005218C` in retail order
 - `func_80087090` — SPU upload retry wrapper
 - `func_800749D8` — display environment setup (currently memset stub)
 - `func_800752AC` (ClearOTagR) — ordering table clear

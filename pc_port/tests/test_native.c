@@ -22,6 +22,7 @@ extern int func_80053D2C(int arg);
 extern void func_80042C78(void);
 extern void func_80042CC4(int a0, int a1);
 extern int func_800614AC(int a0);
+extern void func_80051CC4(void);
 
 static int tests_run = 0;
 static int tests_passed = 0;
@@ -64,6 +65,7 @@ static void ResetTestState(void) {
     PE_RamReset();                  /* zero-fill guest RAM between tests */
     PE_Sdk_ResetState();            /* host-owned GTE/IRQ/event state    */
     Bootstrap_ClearSequences();     /* drop scripted provider sequences   */
+    Bootstrap_ResetArgCallLog();    /* drop unresolved argument evidence */
     PE_Disc_SetActive(NULL);        /* drop any installed disc fixture    */
     PE_3EAC8_RecordReset();         /* drop recorded provider arguments   */
     D_80011614 = D_80011614_BOOTSTRAP;
@@ -5870,12 +5872,13 @@ static void test_6E498_readonly_footprint(void) {
  * ROM order. */
 /* Phase 6E-B28: func_8005CCA4 is REAL.  func_80042C78 is called from
  * both func_8005CCA4 AND the dispatcher — the dispatcher still calls it. */
-static const char *const B22_DISP_SEQ[1] = {
-    "func_80051CC4"
+static const char *const B22_DISP_SEQ[2] = {
+    "func_8005332C",
+    "func_8005218C"
 };
 
 static int B21_CheckDispatcherOrder(int base) {
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 2; i++) {
         if (strcmp(g_stub_order_log[base + i], B22_DISP_SEQ[i]) != 0)
             return 0;
     }
@@ -6083,15 +6086,14 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* 7. Dependency boundary (Phase 6E-B38): func_80086728 is now
-     * translated; only func_80051CC4 and func_80087090 remain as stubs.
-     * func_80042C78 is also translated. */
-    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
+    /* 7. Dependency boundary (Phase 6E-B39): func_80051CC4 is translated;
+     * its two deeper dependencies precede func_80087090. */
+    ASSERT(g_stub_order_count == 3, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[2], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 2, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 3, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -6360,6 +6362,8 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x800B0DB0u) want = 0xA5A508A5u;
         else if (a == 0x800BCE9Cu) want = 0x0008A5A5u;
         else if (a == 0x800BCE88u) want = 0x0008A5A5u;
+        /* Phase 6E-B39: func_80051CC4 clears seven resource parameter words. */
+        else if (a >= 0x800A1B30u && a < 0x800A1B4Cu) want = 0;
         /* Phase 6E-B20: func_80062568 free-list + gp stores */
         else if (a == 0x8009D158u) want = 0x800A22E0u;
         else if (a == 0x8009D15Cu) want = 0;
@@ -6381,20 +6385,19 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             return;
         }
     }
-    /* B28: func_8005CCA4's four $gp-relative state words are shared host
-     * globals (last written by func_8005CCA4, after func_80052C6C).  Guest
-     * RAM at their addresses stayed canary (checked in the loop above),
-     * proving no duplicate storage.  D_8009D050 is func_80052F70()'s result
-     * and depends on chain state, so only the constant words are pinned. */
+    /* B39 runs after func_8005CCA4 and finishes on func_80052E30(0) under
+     * this default state.  Guest aliases stayed canary (checked above), so
+     * the values below exist only in authoritative host storage. */
     ASSERT(D_8009D048 == 0x800C0E48u, "6A9E4: host D_8009D048 wrong");
-    ASSERT(D_8009D058 == 0x8009D05Cu, "6A9E4: host D_8009D058 wrong");
+    ASSERT(D_8009D050 == 0u, "6A9E4: host D_8009D050 wrong");
+    ASSERT(D_8009D058 == 0x800AD05Cu, "6A9E4: host D_8009D058 wrong");
     ASSERT(D_8009D064 == 2u, "6A9E4: host D_8009D064 wrong");
-    /* B38: func_80086728 is now TRANSLATED.  Remaining stubs:
-     * func_80051CC4 + func_80087090. */
-    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
+    ASSERT(D_8009D018 == 0u, "6A9E4: host D_8009D018 wrong");
+    /* B39: func_80051CC4 is translated; two deeper dependencies remain. */
+    ASSERT(g_stub_order_count == 3, "unexpected bootstrap invocations");
     ASSERT(B21_CheckDispatcherOrder(0),
            "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[2], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6460,11 +6463,11 @@ static void test_6A9E4_3E680_integration(void) {
     B26_SeedArchiveDefault();  /* B26: no disc, so seed the archive */
     func_8006A9E4();
 
-    /* B38: func_80086728 translated — 2 remaining stubs. */
-    ASSERT(g_stub_order_count == 2, "unexpected provider count");
+    /* B39: two func_80051CC4 dependencies + func_80087090 remain. */
+    ASSERT(g_stub_order_count == 3, "unexpected provider count");
     ASSERT(B21_CheckDispatcherOrder(0),
            "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
+    ASSERT(strcmp(g_stub_order_log[2], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
@@ -7047,8 +7050,8 @@ static void test_5BCBC_dispatcher_integration(void) {
     ResetTestState();
     B26_SeedArchiveDefault();   /* B26: func_8005D6F4 walks a real archive */
     func_800527C8();
-    /* B38: func_80086728 translated. Only func_80051CC4 from dispatcher. */
-    ASSERT(g_stub_order_count == 1, "dispatcher must leave 1 provider");
+    /* B39: func_80051CC4 is real; its two dependencies are the boundary. */
+    ASSERT(g_stub_order_count == 2, "dispatcher must leave 2 providers");
     ASSERT(B21_CheckDispatcherOrder(0),
            "post-5BCBC dispatcher order wrong");
     ASSERT(CountOrderLog("func_8005DC4C") == 0,
@@ -7366,7 +7369,7 @@ static void test_5D6F4_controlled_returns(void) {
             ASSERT(PE_LoadU8(B25_BUF_SEL + (pe_addr_t)i) == exp[i],
                    "controlled-return buffer end state wrong");
     }
-    /* B38: func_80086728 translated; stubs: func_80051CC4 + func_80087090. */
+    /* B38 completed func_8005D6F4's direct dependency chain. */
     ASSERT(g_stub_order_count == 0, "controlled boundary count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "controlled boundary order wrong");
     PASS();
@@ -7382,7 +7385,7 @@ static void test_5D6F4_boundary_wiring(void) {
     ResetTestState();
     B26_SeedArchiveDefault();
     func_8005D6F4();
-    /* B38: func_80086728 translated; stubs: func_80051CC4 + func_80087090. */
+    /* B38 completed func_8005D6F4's direct dependency chain. */
     ASSERT(g_stub_order_count == 0, "boundary count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "boundary order wrong");
     PASS();
@@ -7671,7 +7674,7 @@ static void test_5DC4C_5D6F4_integration(void) {
     ASSERT(CountOrderLog("func_8005DC4C") == 0, "5DC4C on the boundary");
     ASSERT(CountOrderLog("func_80052594") == 0, "52594 on the boundary");
     ASSERT(CountOrderLog("func_8005DC9C") == 0, "5DC9C arm is dead");
-    /* B38: func_80086728 translated; stubs: func_80051CC4 + func_80087090. */
+    /* B38 completed func_8005D6F4's direct dependency chain. */
     ASSERT(g_stub_order_count == 0, "boundary count wrong");
     ASSERT(B25_CheckBoundaryOrder(), "boundary ROM order wrong");
     PASS();
@@ -7910,7 +7913,7 @@ static void test_52594_5D6F4_integration(void) {
     func_8005D6F4();
     ASSERT(CountOrderLog("func_80052594") == 0,
            "func_80052594 must not reach the bootstrap boundary");
-    /* B38: func_80086728 translated; stubs: func_80051CC4 + func_80087090. */
+    /* B38 completed func_8005D6F4's direct dependency chain. */
     ASSERT(g_stub_order_count == 0, "boundary count wrong");
     PASS();
 }
@@ -8360,7 +8363,7 @@ static void test_614AC_guard_and_d6f4_integration(void) {
     ASSERT(PE_LoadU32(0x8009D148u) == 0x11111111u &&
            PE_LoadU32(0x8009D154u) == 0x22222222u,
            "B32 integration guard changed");
-    /* B38: func_80086728 translated; stubs: func_80051CC4 + func_80087090. */
+    /* B38 completed func_8005D6F4's direct dependency chain. */
     ASSERT(g_stub_order_count == 0,
            "B38: boundary stubs from D6F4");
     PASS();
@@ -8443,7 +8446,7 @@ static void test_5E884_d6f4_integration(void) {
      * should start with func_8006A2E8 (the first remaining boundary callee).
      * func_8005E884 and func_8005E850 are now REAL and do NOT appear in
      * the log. */
-    /* B38: func_80086728 translated; stubs: func_80051CC4 + func_80087090. */
+    /* B38 completed func_8005D6F4's direct dependency chain. */
     ASSERT(g_stub_order_count == 0,
            "5E884 integration: boundary count wrong");
     ASSERT(CountOrderLog("func_8005E884") == 0,
@@ -8498,7 +8501,7 @@ static void test_5E850_d6f4_integration(void) {
     ResetTestState();
     B26_SeedArchiveDefault();
     func_8005D6F4();
-    /* B38: func_80086728 translated; stubs: func_80051CC4 + func_80087090. */
+    /* B38 completed func_8005D6F4's direct dependency chain. */
     ASSERT(g_stub_order_count == 0,
            "5E850 integration: boundary count wrong");
     ASSERT(CountOrderLog("func_8005E850") == 0,
@@ -8630,7 +8633,7 @@ static void test_649D0_d6f4_integration(void) {
     ASSERT(PE_LoadU32(0x800A3060u) == 0u, "D6F4 integration: bzero start");
     /* 0xFF stores present. */
     ASSERT(PE_LoadU8(0x800A3078u) == 0xFFu, "D6F4 integration: byte0");
-    /* B38: func_80086728 translated; stubs: func_80051CC4 + func_80087090. */
+    /* B38 completed func_8005D6F4's direct dependency chain. */
     ASSERT(g_stub_order_count == 0,
            "649D0 integration: boundary count wrong");
     ASSERT(CountOrderLog("func_800649D0") == 0,
@@ -9247,10 +9250,319 @@ static void test_5CCA4_5D6F4_integration(void) {
            "5D6F4 integration: 438C0 state wrong");
     ASSERT(PE_LoadU16(B28_GA_E40) == 0x3Du,
            "5D6F4 integration: GA_E40 wrong");
-    /* B38: func_80086728 translated; stubs: func_80051CC4 + func_80087090. */
+    /* B38 completed func_8005D6F4's direct dependency chain. */
     ASSERT(g_stub_order_count == 0, "integration boundary count wrong");
     ASSERT(CountOrderLog("func_80042CC4") == 0,
            "translated func_80042CC4 must not reach the boundary");
+    PASS();
+}
+
+/* ── Phase 6E-B39: func_80051CC4 resource-command initializer ──────── */
+
+#define B39_PARAM_BASE   0x800A1B30u
+#define B39_PARAM_LAST   0x800A1B48u
+#define B39_SOURCE_ID    0x800C0E22u
+#define B39_RESOURCE_ID  0x800C0E0Cu
+#define B39_RECORD       0x800A9000u
+#define B39_GP_ALIAS     0x8009D018u
+
+static void B39_SeedRecord(pe_addr_t record, const uint8_t *commands,
+                           uint8_t count)
+{
+    uint32_t i;
+    PE_StoreU8(record + 0x14u, count);
+    for (i = 0u; i < count; i++)
+        PE_StoreU8(record + 0x15u + i, commands[i]);
+}
+
+static void B39_ScriptRecord(pe_addr_t record)
+{
+    int scripted = (int)(uint32_t)record;
+    Bootstrap_SetIntSequence("func_8005332C", &scripted, 1);
+}
+
+/* True ABI is void(void).  A NULL dependency return takes the only outer
+ * early path, but still performs both dependency calls and both trailing
+ * buffer-state calls.  The signed-byte dependency argument is logged by the
+ * centralized boundary before its controlled return is consumed. */
+static void test_51CC4_null_contract_order_and_argument(void)
+{
+    TEST("51CC4_null_contract_order_and_argument");
+    void (*entry)(void) = func_80051CC4;
+    uint32_t i;
+    ResetTestState();
+    for (i = 0u; i < 7u; i++)
+        PE_StoreU32(B39_PARAM_BASE + i * 4u, 0xDEAD0000u + i);
+    PE_StoreU8(B39_SOURCE_ID, 0x80u);
+    PE_StoreU8(B39_RESOURCE_ID, 5u);
+    D_8009D018 = 7u;
+
+    entry();
+
+    ASSERT(g_stub_order_count == 2, "NULL path dependency count");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8005332C") == 0,
+           "func_8005332C must be first");
+    ASSERT(strcmp(g_stub_order_log[1], "func_8005218C") == 0,
+           "func_8005218C must be second even after NULL");
+    ASSERT(g_bootstrap_arg_call_count == 1, "one argument-bearing call");
+    ASSERT(strcmp(g_bootstrap_arg_calls[0].symbol, "func_8005332C") == 0 &&
+           strcmp(g_bootstrap_arg_calls[0].caller, "func_80051CC4") == 0,
+           "dependency symbol/caller evidence");
+    ASSERT(g_bootstrap_arg_calls[0].arg0 == 0xFFFFFF80u,
+           "source byte must sign-extend to 32 bits");
+    for (i = 0u; i < 7u; i++)
+        ASSERT(PE_LoadU32(B39_PARAM_BASE + i * 4u) == 0u,
+               "NULL path parameter clear");
+    ASSERT(D_8009D018 == 0u, "authoritative command mask clear");
+    ASSERT(D_8009D048 == 0x800C0E48u && D_8009D050 == 5u &&
+           D_8009D058 == 0x800AD05Cu && D_8009D064 == 2u,
+           "NULL path final allocation state");
+    ASSERT(CountOrderLog("func_80051CC4") == 0,
+           "translated entry must not be a boundary provider");
+    PASS();
+}
+
+/* The record-return path with count zero must not fetch command bytes.  A
+ * dirty byte at +0x15 therefore survives and cannot affect state. */
+static void test_51CC4_zero_count_path(void)
+{
+    TEST("51CC4_zero_count_path");
+    ResetTestState();
+    PE_StoreU8(B39_RECORD + 0x14u, 0u);
+    PE_StoreU8(B39_RECORD + 0x15u, 10u);
+    B39_ScriptRecord(B39_RECORD);
+    func_80051CC4();
+    ASSERT(D_8009D018 == 0u, "count zero must skip command byte");
+    ASSERT(PE_LoadU8(B39_RECORD + 0x15u) == 10u,
+           "record command input must remain read-only");
+    ASSERT(g_stub_order_count == 2 && B21_CheckDispatcherOrder(0),
+           "zero-count dependency order");
+    PASS();
+}
+
+/* Every jump-table operation, both masked command decoding and default
+ * cases.  Expected values are the literal retail switch effects. */
+static void test_51CC4_command_map(void)
+{
+    TEST("51CC4_command_map");
+    static const uint8_t commands[] = {
+        0u, 7u, 0x28u, 9u, 10u, 11u, 12u, 13u, 14u, 15u, 31u, 0x2Eu
+    };
+    uint8_t maximum[255];
+    ResetTestState();
+    B39_SeedRecord(B39_RECORD, commands, (uint8_t)sizeof(commands));
+    B39_ScriptRecord(B39_RECORD);
+    func_80051CC4();
+    ASSERT(D_8009D018 == 4u, "8/9/10 mask stores must end at 4");
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x00u) == 3u, "command 11");
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x04u) == 0xFFFFFFFEu,
+           "command 15 must follow and overwrite command 12");
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x08u) == 0u, "default remains zero");
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x0Cu) == 0u, "default remains zero 2");
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x10u) == 0u, "command 14 is no-op");
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x14u) == 0xFFFFFFFEu,
+           "command 13");
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x18u) == 0u, "last word clear");
+
+    /* lbu makes the maximum count 255; the signed loop comparison must
+     * visit index 254 exactly once without narrowing or clamping. */
+    memset(maximum, 0, sizeof(maximum));
+    maximum[254] = 10u;
+    ResetTestState();
+    B39_SeedRecord(B39_RECORD, maximum, (uint8_t)sizeof(maximum));
+    B39_ScriptRecord(B39_RECORD);
+    func_80051CC4();
+    ASSERT(D_8009D018 == 4u, "count=255 must reach final command");
+    ASSERT(PE_LoadU8(B39_RECORD + 0x15u + 254u) == 10u,
+           "maximum-count record remains read-only");
+    PASS();
+}
+
+/* The three D_8009D018 command branches are distinct jump-table targets. */
+static void test_51CC4_mask_branches(void)
+{
+    TEST("51CC4_mask_branches");
+    uint8_t command;
+    uint32_t expected;
+    for (command = 8u, expected = 1u; command <= 10u;
+         command++, expected <<= 1u) {
+        ResetTestState();
+        B39_SeedRecord(B39_RECORD, &command, 1u);
+        B39_ScriptRecord(B39_RECORD);
+        func_80051CC4();
+        ASSERT(D_8009D018 == expected, "individual mask branch value");
+    }
+    PASS();
+}
+
+/* func_80052F0C returns an exact boolean, not the old XOR magnitude.  Its
+ * saved value selects the final func_80052E30 allocation/reuse path. */
+static void test_51CC4_buffer_restore_paths(void)
+{
+    TEST("51CC4_buffer_restore_paths");
+    ResetTestState();
+    D_8009D048 = 0x800A4000u;       /* != 0x800C0E48 => saved = 1 */
+    D_8009D04C = 0x800A4000u;
+    D_8009D054 = 0x12345678u;
+    D_8009D018 = 50u;
+    PE_StoreU8(B39_RESOURCE_ID, 3u);
+    func_80051CC4();
+    ASSERT(func_80052F0C() == 1u, "non-base pointer boolean");
+    ASSERT(D_8009D048 == 0x800A4000u && D_8009D050 == 0x12345678u &&
+           D_8009D058 == 0x800A1F84u && D_8009D064 == 4u,
+           "saved=1 must restore reuse state");
+
+    ResetTestState();
+    D_8009D048 = 0x800C0E48u;       /* saved = 0 despite reusable fields */
+    D_8009D04C = 0x800A4000u;
+    D_8009D054 = 0x12345678u;
+    D_8009D018 = 9u;
+    PE_StoreU8(B39_RESOURCE_ID, 5u);
+    ASSERT(func_80052F0C() == 0u, "base pointer boolean");
+    func_80051CC4();
+    ASSERT(D_8009D048 == 0x800C0E48u && D_8009D050 == 5u &&
+           D_8009D058 == 0x800AD05Cu && D_8009D064 == 2u,
+           "saved=0 must finish on allocation state");
+    PASS();
+}
+
+/* All three executable callers issue the identical no-argument ABI call.
+ * Repeated direct invocations stand in for those three call contexts; the
+ * actual translated dispatcher context is exercised separately below. */
+static void test_51CC4_three_caller_and_repeat_contract(void)
+{
+    TEST("51CC4_three_caller_and_repeat_contract");
+    static const uint8_t commands[3] = { 11u, 12u, 13u };
+    int records[3] = { (int)B39_RECORD, (int)B39_RECORD, (int)B39_RECORD };
+    uint32_t i;
+    ResetTestState();
+    Bootstrap_SetIntSequence("func_8005332C", records, 3);
+    for (i = 0u; i < 3u; i++) {
+        B39_SeedRecord(B39_RECORD, &commands[i], 1u);
+        func_80051CC4();
+        ASSERT(g_stub_order_count == (int)((i + 1u) * 2u),
+               "two dependencies per invocation");
+        ASSERT(B21_CheckDispatcherOrder((int)(i * 2u)),
+               "repeated dependency order");
+        ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x00u) == (i == 0u ? 3u : 0u),
+               "repeat must clear/reconstruct command 11 word");
+        ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x04u) == (i == 1u ? 2u : 0u),
+               "repeat must clear/reconstruct command 12 word");
+        ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x14u) ==
+               (i == 2u ? 0xFFFFFFFEu : 0u),
+               "repeat must clear/reconstruct command 13 word");
+    }
+    ASSERT(g_bootstrap_arg_call_count == 3,
+           "each caller context must carry one dependency argument");
+    PASS();
+}
+
+/* Full 2 MiB canary proves the direct seven-word store footprint, exact
+ * widths/guards, no duplicate guest copy of D_8009D018, and no low-address
+ * mirror.  The NULL provider avoids any data-dependent record region. */
+static void test_51CC4_full_ram_canary_and_authority(void)
+{
+    TEST("51CC4_full_ram_canary_and_authority");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    D_8009D018 = 0xDEADBEEFu;
+    func_80051CC4();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u) {
+        uint32_t want = (a >= B39_PARAM_BASE && a <= B39_PARAM_LAST)
+                      ? 0u : 0xA5A5A5A5u;
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
+                   a, PE_LoadU32(a), want);
+            FAIL("func_80051CC4 full-RAM footprint");
+            return;
+        }
+    }
+    ASSERT(PE_LoadU32(B39_PARAM_BASE - 4u) == 0xA5A5A5A5u,
+           "lower write guard");
+    ASSERT(PE_LoadU32(B39_PARAM_LAST + 4u) == 0xA5A5A5A5u,
+           "upper write guard");
+    ASSERT(PE_LoadU32(B39_GP_ALIAS) == 0xA5A5A5A5u,
+           "authoritative host global must not have guest duplicate");
+    ASSERT(D_8009D018 == 0u, "authoritative host mask clear");
+    ASSERT(!PE_AddressIsRam(0x000A1B30u), "no KUSEG/low-address mirror");
+    PASS();
+}
+
+/* A record at the top of guest RAM proves full-width pe_addr_t handling and
+ * one-byte accesses at both final addresses without over-read or pointer
+ * truncation. */
+static void test_51CC4_top_of_ram_reads_and_widths(void)
+{
+    TEST("51CC4_top_of_ram_reads_and_widths");
+    const pe_addr_t record = PE_RAM_END - 0x16u;
+    uint8_t command = 0xEBu;        /* & 0x1F = 11 */
+    ResetTestState();
+    PE_StoreU8(PE_RAM_END - 3u, 0xA5u);
+    B39_SeedRecord(record, &command, 1u);
+    B39_ScriptRecord(record);
+    func_80051CC4();
+    ASSERT(PE_LoadU8(record + 0x14u) == 1u, "top count byte preserved");
+    ASSERT(PE_LoadU8(record + 0x15u) == 0xEBu, "top command byte preserved");
+    ASSERT(PE_LoadU8(PE_RAM_END - 3u) == 0xA5u, "one-byte lower guard");
+    ASSERT(PE_LoadU32(B39_PARAM_BASE) == 3u, "top record command decoded");
+    ASSERT((uint32_t)g_bootstrap_arg_calls[0].arg0 == 0u,
+           "default source ID remains exact zero");
+    PASS();
+}
+
+/* Guest RAM and authoritative host globals have distinct reset owners.
+ * No host pointer is ever stored into either guest RAM or retail-addressed
+ * host state. */
+static void test_51CC4_ramreset_no_split_brain(void)
+{
+    TEST("51CC4_ramreset_no_split_brain");
+    uint8_t command = 8u;
+    ResetTestState();
+    PE_StoreU32(B39_GP_ALIAS, 0xA5A5A5A5u);
+    B39_SeedRecord(B39_RECORD, &command, 1u);
+    B39_ScriptRecord(B39_RECORD);
+    func_80051CC4();
+    ASSERT(D_8009D018 == 1u, "pre-reset authoritative mask");
+    ASSERT(PE_LoadU32(B39_GP_ALIAS) == 0xA5A5A5A5u,
+           "guest alias must remain independent");
+    ASSERT(PE_AddressIsRam(D_8009D048) && PE_AddressIsRam(D_8009D058),
+           "persistent pointer-shaped fields must be guest addresses");
+    PE_RamReset();
+    ASSERT(D_8009D018 == 1u, "PE_RamReset must preserve host authority");
+    ASSERT(PE_LoadU32(B39_GP_ALIAS) == 0u,
+           "PE_RamReset must clear guest alias storage");
+    PE_Sdk_ResetState();
+    ASSERT(D_8009D018 == 0u && D_8009D048 == 0u && D_8009D058 == 0u,
+           "PE_Sdk_ResetState must clear authoritative host fields");
+    PASS();
+}
+
+/* The translated dispatcher reaches B39 after func_8005D6F4 and before
+ * func_80042C78.  Its only unresolved sequence is now the two dependencies
+ * nested inside B39; all direct state from both neighboring operations is
+ * visible on return. */
+static void test_51CC4_527C8_integration(void)
+{
+    TEST("51CC4_527C8_integration");
+    uint8_t command = 12u;
+    ResetTestState();
+    B26_SeedArchiveDefault();
+    B39_SeedRecord(B39_RECORD, &command, 1u);
+    B39_ScriptRecord(B39_RECORD);
+    func_800527C8();
+    ASSERT(g_stub_order_count == 2 && B21_CheckDispatcherOrder(0),
+           "dispatcher unresolved sequence after B39");
+    ASSERT(PE_LoadU16(0x800C1F80u) == 0x0203u,
+           "preceding func_8005D6F4 operation must be committed");
+    ASSERT(PE_LoadU32(B39_PARAM_BASE + 4u) == 2u,
+           "B39 command state inside dispatcher");
+    ASSERT(PE_LoadU32(0x8009CEDCu) == 0x20u &&
+           PE_LoadU32(0x8009CEECu) == 0x48u,
+           "following func_80042C78 operation must execute");
+    ASSERT(CountOrderLog("func_80051CC4") == 0,
+           "dispatcher must call translated B39 body");
     PASS();
 }
 
@@ -9814,6 +10126,18 @@ int main(void)
     test_438C0_direct_contract();
     test_438C0_width_and_footprint();
     test_5CCA4_5D6F4_integration();
+
+    /* Phase 6E-B39 — func_80051CC4 resource-command initializer. */
+    test_51CC4_null_contract_order_and_argument();
+    test_51CC4_zero_count_path();
+    test_51CC4_command_map();
+    test_51CC4_mask_branches();
+    test_51CC4_buffer_restore_paths();
+    test_51CC4_three_caller_and_repeat_contract();
+    test_51CC4_full_ram_canary_and_authority();
+    test_51CC4_top_of_ram_reads_and_widths();
+    test_51CC4_ramreset_no_split_brain();
+    test_51CC4_527C8_integration();
 
     test_64964_direct_boot_state();
     test_80071A24_bzero_contract();
