@@ -8054,7 +8054,7 @@ static void test_5DB8C_5DBAC_no_guest_writes(void) {
  *   6. D_8009D048=s1, D_8009D050=func_80052F70(), D_8009D058=s3, D_8009D064=s2
  *   7. Zero 50 halfwords descending from 0x800C0EAA to 0x800C0E48
  *      (v1 = D_8009D048 + 0x62); GA_E24/E28 below 0x800C0E48 SURVIVE
- *   8. 5× func_80053D2C calls (boundary)
+ *   8. 5× translated func_80053D2C calls
  *   9. Two resource-table search loops
  *   10. GA_E22=1 (unconditional), GA_E20=0, GA_E40=0x3D, func_800438C0(0x3D),
  *       GA_E00=0, GA_E0A=0
@@ -8201,12 +8201,12 @@ static void test_53D2C_dependency_returns_and_reset(void) {
     D_8009D048 = 0x800C0E48u;
     D_8009D050 = 1u;
     B29_SeedRecord(1u);
-    ret = 0;
-    Bootstrap_SetIntSequence("func_80053968", &ret, 1);
+    for (uint32_t slot = 0u; slot < 128u; slot++)
+        PE_StoreU8(0x800C0EACu + slot * 0x20u, 1u);
     ASSERT(func_80053D2C(1) == 1,
-           "types 1..9 invert a zero func_80053968 result");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80053968") == 0,
-           "type 1 dependency symbol wrong");
+           "types 1..9 invert a real zero func_80053968 result");
+    ASSERT(Bootstrap_InvocationCount() == 0,
+           "translated func_80053968 reached provider policy");
 
     ResetTestState();
     D_8009D048 = 0x800C0E48u;
@@ -8224,6 +8224,369 @@ static void test_53D2C_dependency_returns_and_reset(void) {
     PE_RamReset();
     ASSERT(D_8009D048 == 0x800C0E48u && D_8009D050 == 1u,
            "PE_RamReset must preserve host table state");
+    PASS();
+}
+
+/* ── Phase 6E-B41: func_80053968 record materialization ───────────── */
+
+#define B41_RECORD_BASE   0x800C0EACu
+#define B41_RECORD_END    0x800C1EACu
+#define B41_ID_BASE       0x800C0E48u
+#define B41_ACTIVE_BASE   0x800C2000u
+#define B41_SOURCE        0x800A9001u
+
+static void B41_SeedSource(int32_t resource_id, pe_addr_t source)
+{
+    uint32_t index = (uint32_t)resource_id - 1u;
+    uint32_t alt = source - 0x800A8028u - (index << 5u);
+    PE_StoreU32(0x800A8034u, alt);
+    PE_StoreU32(0x800A8038u, alt + ((index + 1u) << 5u));
+}
+
+static uint8_t B41_SourceByte(uint32_t index)
+{
+    return (uint8_t)(index * 9u + 3u);
+}
+
+static void B41_FillSource(pe_addr_t source)
+{
+    uint32_t i;
+    for (i = 0u; i < 32u; i++)
+        PE_StoreU8(source + i, B41_SourceByte(i));
+}
+
+static void B41_SeedActive(uint32_t count, int32_t free_slot)
+{
+    uint32_t i;
+    D_8009D048 = B41_ACTIVE_BASE;
+    D_8009D050 = count;
+    for (i = 0u; i < count; i++) {
+        PE_StoreU16(B41_ACTIVE_BASE + i * 2u,
+                    (int32_t)i == free_slot ? 0u : i + 1u);
+    }
+}
+
+static void test_53968_signature_and_full_paths(void)
+{
+    TEST("53968_signature_and_full_paths");
+    pe_addr_t (*entry)(int32_t) = func_80053968;
+    uint32_t slot;
+
+    ResetTestState();
+    B41_SeedActive(1u, 0);
+    D_8009D058 = 0x11111111u;
+    D_8009D064 = 0x22222222u;
+    for (slot = 0u; slot < 128u; slot++)
+        PE_StoreU8(B41_RECORD_BASE + slot * 0x20u, 1u);
+    ASSERT(entry(1) == 0u, "full destination table must return NULL");
+    ASSERT(D_8009D048 == B41_ACTIVE_BASE && D_8009D050 == 1u &&
+           D_8009D058 == 0x11111111u && D_8009D064 == 0x22222222u,
+           "full destination path changed authoritative state");
+
+    ResetTestState();
+    B41_SeedActive(3u, -1);
+    ASSERT(entry(1) == 0u, "full ID table must return NULL");
+    ASSERT(PE_LoadU8(B41_RECORD_BASE) == 0u,
+           "full ID path changed free destination");
+
+    ResetTestState();
+    D_8009D048 = 0xFFFFFFFEu;
+    D_8009D050 = 1u;                 /* wrapped end == zero */
+    ASSERT(entry(1) == 0u, "wrapped unsigned ID range must return NULL");
+    ASSERT(Bootstrap_InvocationCount() == 0,
+           "failure paths crossed a provider boundary");
+    PASS();
+}
+
+static void test_53968_success_copy_state_and_arguments(void)
+{
+    TEST("53968_success_copy_state_and_arguments");
+    pe_addr_t destination = B41_RECORD_BASE + 0x40u;
+    uint32_t i;
+    ResetTestState();
+    PE_StoreU8(B41_RECORD_BASE, 0x41u);
+    PE_StoreU8(B41_RECORD_BASE + 0x20u, 0x42u);
+    PE_StoreU8(destination - 1u, 0xA5u);
+    PE_StoreU8(destination + 32u, 0x5Au);
+    PE_StoreU8(B41_SOURCE - 1u, 0x6Bu);
+    PE_StoreU8(B41_SOURCE + 32u, 0x7Cu);
+    B41_SeedActive(4u, 1);
+    B41_SeedSource(0x44, B41_SOURCE);
+    B41_FillSource(B41_SOURCE);
+    D_8009D018 = 3u;
+    PE_StoreU8(0x800C0E0Cu, 4u);    /* func_80052F70() = 7 */
+
+    ASSERT(func_80053968(0x44) == destination,
+           "success must return exact destination guest address");
+    for (i = 0u; i < 32u; i++)
+        ASSERT(PE_LoadU8(destination + i) == B41_SourceByte(i),
+               "32-byte archive record copy mismatch");
+    ASSERT(PE_LoadU8(destination - 1u) == 0xA5u &&
+           PE_LoadU8(destination + 32u) == 0x5Au,
+           "destination copy crossed exact guards");
+    ASSERT(PE_LoadU8(B41_SOURCE - 1u) == 0x6Bu &&
+           PE_LoadU8(B41_SOURCE + 32u) == 0x7Cu,
+           "source read crossed exact guards");
+    ASSERT(D_8009D048 == B41_ID_BASE && D_8009D050 == 7u &&
+           D_8009D058 == 0x8009D05Cu && D_8009D064 == 2u,
+           "post-copy authoritative state wrong");
+    ASSERT(PE_LoadU16(B41_ID_BASE + 2u) == 0x0102u,
+           "selected ID slot did not receive 0x100+record_slot");
+    ASSERT(PE_LoadU32(0x800A8038u) - PE_LoadU32(0x800A8034u) ==
+           (0x44u << 5u),
+           "func_8005DB44 argument/count fixture is not exact index 0x43");
+    ASSERT(Bootstrap_InvocationCount() == 0,
+           "translated dependencies reached provider policy");
+    PASS();
+}
+
+static void test_53968_overlap_operation_order(void)
+{
+    TEST("53968_overlap_operation_order");
+    pe_addr_t source = B41_RECORD_BASE - 8u;
+    uint8_t original[32];
+    uint8_t expected[32];
+    uint32_t i;
+    ResetTestState();
+    B41_SeedActive(2u, 0);
+    B41_SeedSource(1, source);
+    D_8009D018 = 0u;
+    PE_StoreU8(0x800C0E0Cu, 2u);
+    for (i = 0u; i < 32u; i++)
+        original[i] = (uint8_t)(0x20u + i);
+    original[8] = 0u;  /* destination byte zero marks record slot zero free */
+    for (i = 0u; i < 32u; i++)
+        PE_StoreU8(source + i, original[i]);
+    for (i = 0u; i < 16u; i++)
+        expected[i] = original[i];
+    for (i = 16u; i < 24u; i++)
+        expected[i] = original[i - 8u];
+    for (i = 24u; i < 32u; i++)
+        expected[i] = original[i];
+
+    ASSERT(func_80053968(1) == B41_RECORD_BASE,
+           "overlap case returned wrong destination");
+    for (i = 0u; i < 32u; i++)
+        ASSERT(PE_LoadU8(B41_RECORD_BASE + i) == expected[i],
+               "two-group retail copy ordering mismatch");
+    PASS();
+}
+
+static void test_53968_first_and_repeated_invocation(void)
+{
+    TEST("53968_first_and_repeated_invocation");
+    uint32_t i;
+    ResetTestState();
+    D_8009D048 = B41_ID_BASE;
+    D_8009D050 = 4u;
+    for (i = 0u; i < 4u; i++)
+        PE_StoreU16(B41_ID_BASE + i * 2u, 0u);
+    B41_SeedSource(1, B41_SOURCE);
+    B41_FillSource(B41_SOURCE);
+    D_8009D018 = 0u;
+    PE_StoreU8(0x800C0E0Cu, 4u);
+
+    ASSERT(func_80053968(1) == B41_RECORD_BASE,
+           "first call did not allocate record slot zero");
+    ASSERT(func_80053968(1) == B41_RECORD_BASE + 0x20u,
+           "repeat did not allocate next record slot");
+    ASSERT(PE_LoadU16(B41_ID_BASE) == 0x0100u &&
+           PE_LoadU16(B41_ID_BASE + 2u) == 0x0101u,
+           "repeat did not allocate successive ID slots");
+    for (i = 0u; i < 32u; i++)
+        ASSERT(PE_LoadU8(B41_SOURCE + i) == B41_SourceByte(i),
+               "repeated call changed archive source");
+    PASS();
+}
+
+static void test_53968_last_record_boundary(void)
+{
+    TEST("53968_last_record_boundary");
+    pe_addr_t destination = B41_RECORD_BASE + 127u * 0x20u;
+    uint32_t slot;
+    ResetTestState();
+    for (slot = 0u; slot < 127u; slot++)
+        PE_StoreU8(B41_RECORD_BASE + slot * 0x20u, 1u);
+    PE_StoreU8(B41_RECORD_END, 0xA5u);
+    D_8009D048 = B41_ID_BASE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B41_ID_BASE, 0u);
+    B41_SeedSource(1, B41_SOURCE);
+    B41_FillSource(B41_SOURCE);
+    PE_StoreU8(0x800C0E0Cu, 1u);
+
+    ASSERT(func_80053968(1) == destination,
+           "last record slot return wrong");
+    ASSERT(PE_LoadU16(B41_ID_BASE) == 0x017Fu,
+           "last record mapping must be 0x17F");
+    ASSERT(PE_LoadU8(destination + 31u) == B41_SourceByte(31u) &&
+           PE_LoadU8(B41_RECORD_END) == 0xA5u,
+           "last record copy crossed exclusive end");
+    PASS();
+}
+
+static void test_53968_53D2C_all_type_call_paths(void)
+{
+    TEST("53968_53D2C_all_type_call_paths");
+    uint32_t type;
+    for (type = 1u; type <= 9u; type++) {
+        ResetTestState();
+        D_8009D048 = B41_ID_BASE;
+        D_8009D050 = 2u;
+        PE_StoreU16(B41_ID_BASE, 0u);
+        PE_StoreU16(B41_ID_BASE + 2u, 0u);
+        B41_SeedSource(1, B41_SOURCE);
+        B41_FillSource(B41_SOURCE);
+        PE_StoreU8(B41_SOURCE + 6u, type);
+        PE_StoreU8(0x800C0E0Cu, 2u);
+        ASSERT(func_80053D2C(1) == 0,
+               "type 1..9 must normalize nonzero materialization to zero");
+        ASSERT(PE_LoadU8(B41_RECORD_BASE + 6u) == type,
+               "func_80053D2C path copied wrong record type");
+        ASSERT(CountOrderLog("func_80053968") == 0,
+               "type path still routes func_80053968 through policy");
+    }
+    PASS();
+}
+
+static void test_53968_53D2C_consumed_return(void)
+{
+    TEST("53968_53D2C_consumed_return");
+    uint32_t slot;
+    ResetTestState();
+    D_8009D048 = B41_ID_BASE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B41_ID_BASE, 0u);
+    B41_SeedSource(1, B41_SOURCE);
+    B41_FillSource(B41_SOURCE);
+    PE_StoreU8(B41_SOURCE + 6u, 1u);
+    for (slot = 0u; slot < 128u; slot++)
+        PE_StoreU8(B41_RECORD_BASE + slot * 0x20u, 1u);
+    ASSERT(func_80053D2C(1) == 1,
+           "caller must convert provider NULL to one");
+
+    ResetTestState();
+    D_8009D048 = B41_ID_BASE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B41_ID_BASE, 0u);
+    B41_SeedSource(1, B41_SOURCE);
+    B41_FillSource(B41_SOURCE);
+    PE_StoreU8(B41_SOURCE + 6u, 1u);
+    PE_StoreU8(0x800C0E0Cu, 1u);
+    ASSERT(func_80053D2C(1) == 0,
+           "caller must convert high-bit nonzero guest pointer to zero");
+    ASSERT(PE_AddressIsRam(B41_RECORD_BASE),
+           "successful provider return must remain a full guest address");
+    PASS();
+}
+
+static void test_53968_full_ram_canary_footprint(void)
+{
+    TEST("53968_full_ram_canary_footprint");
+    uint8_t *snapshot;
+    pe_addr_t address;
+    uint32_t i;
+    ResetTestState();
+    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0xA5u);
+    PE_StoreU8(B41_RECORD_BASE, 0u);
+    D_8009D048 = B41_ACTIVE_BASE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B41_ACTIVE_BASE, 0u);
+    B41_SeedSource(1, B41_SOURCE);
+    B41_FillSource(B41_SOURCE);
+    D_8009D018 = 0u;
+    PE_StoreU8(0x800C0E0Cu, 1u);
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate B41 RAM snapshot");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+
+    ASSERT(func_80053968(1) == B41_RECORD_BASE,
+           "canary success return wrong");
+    for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
+        uint8_t want = snapshot[address - PE_RAM_BASE];
+        if (address >= B41_RECORD_BASE && address < B41_RECORD_BASE + 32u)
+            want = B41_SourceByte(address - B41_RECORD_BASE);
+        else if (address == B41_ID_BASE)
+            want = 0x00u;
+        else if (address == B41_ID_BASE + 1u)
+            want = 0x01u;
+        if (PE_LoadU8(address) != want) {
+            free(snapshot);
+            FAIL("B41 full-RAM direct-write footprint mismatch");
+            return;
+        }
+    }
+    for (i = 0u; i < 32u; i++)
+        ASSERT(PE_LoadU8(B41_SOURCE + i) == B41_SourceByte(i),
+               "canary source changed");
+    free(snapshot);
+    PASS();
+}
+
+static void test_53968_reset_authority_and_no_stale_alias(void)
+{
+    TEST("53968_reset_authority_and_no_stale_alias");
+    ResetTestState();
+    D_8009D048 = B41_ID_BASE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B41_ID_BASE, 0u);
+    PE_StoreU32(0x8009D048u, 0xDEADBEEFu);
+    PE_StoreU32(0x8009D050u, 0xA5A5A5A5u);
+    PE_StoreU32(0x800B8034u, 0x11111111u);
+    PE_StoreU32(0x800B8038u, 0x22222222u);
+    B41_SeedSource(1, B41_SOURCE);
+    B41_FillSource(B41_SOURCE);
+    PE_StoreU8(0x800C0E0Cu, 1u);
+
+    ASSERT(func_80053968(1) == B41_RECORD_BASE,
+           "authoritative-state lookup failed");
+    ASSERT(PE_LoadU32(0x8009D048u) == 0xDEADBEEFu &&
+           PE_LoadU32(0x8009D050u) == 0xA5A5A5A5u,
+           "retail-addressed host globals leaked into guest aliases");
+    ASSERT(PE_LoadU32(0x800B8034u) == 0x11111111u &&
+           PE_LoadU32(0x800B8038u) == 0x22222222u,
+           "stale 0x800B lookup aliases were used or changed");
+    ASSERT(!PE_AddressIsRam(0x000C0EACu),
+           "low-address mirror must remain invalid");
+
+    PE_RamReset();
+    ASSERT(D_8009D048 == B41_ID_BASE && D_8009D050 == 1u &&
+           D_8009D058 == 0x8009D05Cu && D_8009D064 == 2u,
+           "PE_RamReset must preserve B41 authoritative host state");
+    ASSERT(PE_LoadU8(B41_RECORD_BASE) == 0u &&
+           PE_LoadU32(0x800A8034u) == 0u,
+           "PE_RamReset did not clear B41 guest state");
+    PE_Sdk_ResetState();
+    ASSERT(D_8009D048 == 0u && D_8009D050 == 0u &&
+           D_8009D058 == 0u && D_8009D064 == 0u,
+           "PE_Sdk_ResetState did not clear B41 authoritative fields");
+    PASS();
+}
+
+static void test_53968_rejects_null_source_without_fallback(void)
+{
+    TEST("53968_rejects_null_source_without_fallback");
+#if defined(__SANITIZE_ADDRESS__)
+    ASSERT(!PE_RangeIsRam(0u, 4u), "address zero must remain invalid");
+#else
+    pid_t pid;
+    int status = 0;
+    ResetTestState();
+    D_8009D048 = B41_ID_BASE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B41_ID_BASE, 0u);
+    PE_StoreU32(0x800A8034u, 0x80000000u);
+    PE_StoreU32(0x800A8038u, 0x80000000u); /* func_8005DB44 count zero */
+    pid = fork();
+    ASSERT(pid >= 0, "B41 fork failed");
+    if (pid == 0) {
+        (void)func_80053968(1);
+        _exit(0);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid, "B41 waitpid failed");
+    ASSERT(!WIFEXITED(status) || WEXITSTATUS(status) != 0,
+           "NULL archive record received a fabricated fallback");
+#endif
     PASS();
 }
 
@@ -10352,6 +10715,19 @@ int main(void)
     /* Phase 6E-B29 — func_80053D2C table/type/dependency contract. */
     test_53D2C_exact_contract();
     test_53D2C_dependency_returns_and_reset();
+
+    /* Phase 6E-B41 — func_80053968 record materialization (10 tests). */
+    test_53968_signature_and_full_paths();
+    test_53968_success_copy_state_and_arguments();
+    test_53968_overlap_operation_order();
+    test_53968_first_and_repeated_invocation();
+    test_53968_last_record_boundary();
+    test_53968_53D2C_all_type_call_paths();
+    test_53968_53D2C_consumed_return();
+    test_53968_full_ram_canary_footprint();
+    test_53968_reset_authority_and_no_stale_alias();
+    test_53968_rejects_null_source_without_fallback();
+
     test_42CC4_exact_ramp_and_thresholds();
     test_42CC4_full_footprint_dirty_repeat_and_reset();
     test_614AC_exact_contract_and_return();

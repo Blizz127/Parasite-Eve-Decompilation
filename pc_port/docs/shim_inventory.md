@@ -243,6 +243,10 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 - `func_8005332C`  ← TRANSLATED (B40: 42-word signed-ID resource-record
   lookup; independent `tools/b40_oracle.py`); its direct B39 path now reaches
   the later sibling boundary `func_8005218C`
+- `func_80053968`  ← TRANSLATED (B41: 120-word archive-record materializer;
+  exact first-free record/ID scans, two ordered 16-byte copy groups, primary
+  table-state commit, and pointer-or-zero return; independent
+  `tools/b41_oracle.py`)
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
@@ -491,11 +495,10 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode stops at pre-existing `func_80053968` from
-translated-prefix `func_80053D2C`. B40's correction to the shared
-`func_8005DB44` record lookup makes that dormant B29 boundary reachable
-before the translated `func_80051CC4` path. The later `func_8005218C`
-boundary remains untouched. The `--bootstrap-disc` fixture still
+With Disc 1, strict mode stops at `func_80053B48` from translated
+`func_80053D2C`. B41 completes its type-1..9 `func_80053968` dependency and
+leaves the sibling type-16..18 dependency untouched. The later
+`func_8005218C` boundary also remains untouched. The `--bootstrap-disc` fixture still
 stops at `func_8007F72C` (CdReady) by design. Normal and fresh sanitizer
 builds agree on both frontiers.
 
@@ -508,8 +511,8 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
   the same lookup as func_8005DC4C but reading `ptr+8` instead of
   `ptr+4`, i.e. a second table in the same sub-chunk
 - `func_8005CCA4` — completed B28 translated rung
-- `func_80053D2C` — completed B29 translated rung; its unresolved
-  dependencies are `func_80053968` and `func_80053B48`
+- `func_80053D2C` — completed B29 translated rung; B41 completes its
+  `func_80053968` dependency while `func_80053B48` remains unresolved
 - `func_80042C78` — completed B30 translated prefix; its B31 dependency is
   complete
 - `func_80051CC4` — completed B39 translated rung; B40 completed its first

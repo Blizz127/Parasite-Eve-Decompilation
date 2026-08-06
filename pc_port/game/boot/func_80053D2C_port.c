@@ -5,9 +5,9 @@
  * 0x80053E6C), file offset 0x4452C.  The complete body is transcribed and
  * independently checked by tools/b29_oracle.py.
  *
- * The two dispatch callees are not modeled here: their retail bodies are
- * still unresolved.  Their exact call order and arguments therefore pass
- * through the centralized integer bootstrap boundary.
+ * B41 translates the type-1..9 func_80053968 dependency.  The type-16..18
+ * func_80053B48 dependency remains unresolved and continues through the
+ * centralized integer bootstrap boundary.
  */
 #include "psx_compat.h"
 #include "pe_guest_ram.h"
@@ -49,9 +49,8 @@ int func_80053D2C(int arg)
 
         type = PE_LoadU8((pe_addr_t)record + 6u);
         if (type >= 1u && type <= 9u) {
-            int result = Bootstrap_ReturnInt(
-                "func_80053968", "func_80053D2C", 0);
-            status = (result == 0) ? 1 : 0;
+            pe_addr_t result = func_80053968((int32_t)arg);
+            status = (result == 0u) ? 1 : 0;
         } else if (type == 10u || (type >= 12u && type <= 15u)) {
             if (slot < 0) {
                 status = 1;

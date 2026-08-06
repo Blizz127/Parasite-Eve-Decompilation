@@ -117,8 +117,10 @@ class Oracle:
         self.poke(0x8009D050,4,len(table_words))  # only oracle backing for lw gp+2E0
         self.poke(0x8009D048,4,0x800C0E48)
         rec=0x800B8100
-        self.poke(0x800B8034,4,rec+32)
-        self.poke(0x800B8038,4,rec+32)
+        db_index=u32(arg-1)
+        alt=u32(rec-0x800A8028-(db_index<<5))
+        self.poke(0x800A8034,4,alt)
+        self.poke(0x800A8038,4,u32(alt+((db_index+1)<<5)))
         self.poke(rec+6,1,record_type or 0)
         targets = [0x80053DF8]*9 + [0x80053E08, 0x80053E4C]
         targets += [0x80053E08]*4 + [0x80053E1C]*3
@@ -165,7 +167,10 @@ def main():
     assert o.writes[-1] == (0x800C0E4A,2,0x44)
     o=Oracle(sys.argv[1]); o.ret_53968=0; assert o.run(0x44, record_type=1) == 1
     assert o.calls == [("func_8005DB44",0x43),("func_80053968",0x44)]
+    for controlled in (1, 0xFFFFFFFF, 7):
+        o=Oracle(sys.argv[1]); o.ret_53968=controlled
+        assert o.run(0x44, record_type=1) == 0
     o=Oracle(sys.argv[1]); o.ret_53B48=7; assert o.run(0x44, record_type=16) == 7
-    print("PASS: B29 independent transcription, delay slots, table dispatch, writes, returns, and unresolved call boundaries")
+    print("PASS: B29 independent transcription, delay slots, table dispatch, writes, exact 53968 zero/nonzero consumption, returns, and unresolved call boundaries")
 
 if __name__ == "__main__": main()
