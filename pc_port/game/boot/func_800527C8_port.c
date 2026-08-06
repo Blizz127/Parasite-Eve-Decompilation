@@ -45,7 +45,7 @@
  *                                strict stops INSIDE it at func_8005DC4C)
  *  15. func_80051CC4()           UNRESOLVED
  *  16. func_80042C78()           TRANSLATED (B30 prefix); its
- *                                func_80042CC4 dependency remains unresolved
+ *                                func_80042CC4 is translated in B31
  *  17. func_8005BC98(a0=1)       TRANSLATED leaf: D_8009D218 = 1 again
  *      a0=1; v1 = D_800B0CD8 | 0x40000000;
  *      sw $v1 → D_800B0CD8        direct RMW in the jal DELAY SLOT —

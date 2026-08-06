@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B30
+# Shim Inventory — Phase 6E-B31
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -348,12 +348,12 @@ masked with a KUSEG mirror, a clamp, or a bypass.  Strict real-disc
 execution now reaches `func_80053D2C` from `func_8005CCA4` (exit 1,
 normal and sanitizer agree).
 
-### Phase 6E-B30 (current verified phase)
+### Historical Phase 6E-B30
 
 `func_80042C78` is translated retail logic through its proven 16-instruction
 prefix at executable `0x80042C78..0x80042CB4` (exclusive end `0x80042CB8`,
 file offset `0x33478`). With retail `$gp = 0x8009CD70`, it writes zero to
-`$gp+0x168/0x170/0x174`, writes `0x20` to `$gp+0x16C`, calls unresolved
+`$gp+0x168/0x170/0x174`, writes `0x20` to `$gp+0x16C`, calls translated
 `func_80042CC4` with `a0=0x90` and `a1=0xFF` after the delay slot, and writes
 `0x48` to `$gp+0x17C`. The direct guest footprint is exactly
 `0x8009CED8`, `0x8009CEDC`, `0x8009CEE0`, `0x8009CEE4`, and `0x8009CEEC`.
@@ -364,9 +364,30 @@ The two executable callers are `func_8005CCA4` at `0x8005CFF8` and
 checks every word against executable SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and verifies the delayed call
 arguments, ordered writes, and return state. The final native and ASan/UBSan
-suites are 339/339. The next real-disc strict frontier is
-`func_80042CC4` from `func_80042C78`; that dependency remains centralized and
-untranslated. No generated or retail artifacts were added.
+suites were 339/339. B31 supplies the former dependency. No generated or
+retail artifacts were added.
+
+### Phase 6E-B31 (current verified phase)
+
+`func_80042CC4` is translated retail logic: 31 instructions / `0x7C` bytes
+at executable `0x80042CC4..0x80042D3C` (exclusive end `0x80042D40`, file
+offset `0x334C4`, live split `asm/disc1/334C4.s`). It is a void leaf taking
+`(a0, a1)`. It clears `0x800A1878`, executes the initial color-base shift in
+the branch delay slot, fills the termination-dependent byte ramp while signed
+`lbu < a1` holds, and stores `(cursor - 0x800A1878) + 1` at `0x8009CEE0`
+(`$gp+0x170`). The B30 call `(0x90, 0xFF)` produces
+`00 90 CF EA F6 FB FD FE FF` and count 9. Direct writes are the actual
+subset of `0x800A1878..0x800A1887` plus the word at `0x8009CEE0`; it has no
+direct callees or SDK/GPU/disc/audio/input operations. Call sites are
+`func_80042C78 @ 0x80042C98` and `func_8005D2B4 @ 0x8005D5E8`; both discard the void return,
+and incoming a2/a3 are overwritten before use.
+
+Independent oracle `tools/b31_oracle.py` checks executable SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, all 31 words, delay slots,
+ordered writes, threshold paths, and counts. Native and fresh ASan/UBSan
+tests are 341/341. Real-disc strict now stops at `func_800614AC` from
+`func_8005D6F4`; bootstrap strict remains at `func_8007F72C` from
+`func_800698D4`. Nothing has been pushed and the next rung has not started.
 
 ### Historical Phase 6E-B29 (accepted commit `eedd456`)
 
@@ -448,13 +469,12 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With `--disc-image`, strict mode stops at `func_80042CC4` from
-`func_80042C78` — past the fully
+With Disc 1, strict mode stops at `func_800614AC` from `func_8005D6F4` — past the fully
 translated func_8003E680, func_8006A9E4, func_800527C8, func_80052C6C
 (B23), func_8005BCBC (B24), func_8005D6F4 (B25), func_8005DC4C (B26),
 func_80052594 (B27), func_8005CCA4 (historical B28), and
-func_80053D2C (historical B29). `func_80042C78` is translated in B30; its
-unresolved callee is `func_80042CC4`.
+func_80053D2C (historical B29), `func_80042C78` (B30), and
+`func_80042CC4` (B31).
 func_800614AC, func_8005E884, func_8005E850, func_800649D0,
 func_80052790 (from func_8005D6F4), func_80051CC4, func_80042C78
 (from dispatcher), func_80087090 (SPU upload).  The `--bootstrap-disc`
@@ -471,13 +491,13 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 - `func_8005CCA4` — completed B28 translated rung
 - `func_80053D2C` — completed B29 translated rung; its unresolved
   dependencies are `func_80053968` and `func_80053B48`
-- `func_80042C78` — completed B30 translated prefix; its unresolved
-  dependency is `func_80042CC4`
+- `func_80042C78` — completed B30 translated prefix; its B31 dependency is
+  complete
 - `func_800614AC`, `func_8005E884`,
   `func_8005E850`, `func_800649D0`, `func_80052790` — remaining
   func_8005D6F4 callees in retail ROM order
-- `func_80051CC4`, `func_80042C78` — remaining unresolved dispatcher
-  callees after func_8005D6F4
+- `func_80051CC4` — remaining unresolved dispatcher callee after
+  func_8005D6F4
 - `func_80087090` — SPU upload retry wrapper
 - `func_800749D8` — display environment setup (currently memset stub)
 - `func_800752AC` (ClearOTagR) — ordering table clear
