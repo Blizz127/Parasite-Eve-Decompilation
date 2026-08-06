@@ -8,12 +8,12 @@
  *
  * Stores the argument at D_8009D020 ($gp+0x2B0), converts it to a
  * boolean (a0 < 1 → 1, else 0) in the jal delay slot, and calls
- * func_80086728(bool) through the centralized bootstrap boundary.
+ * func_80086728(bool).
  * Stack frame: addiu $sp,-0x18 / sw $ra,0x10($sp) / lw $ra,0x10($sp) /
  * addiu $sp,+0x18 / jr $ra / nop.
  *
- * func_80086728 is UNRESOLVED — it routes through the centralized
- * bootstrap boundary.  No return value is consumed (void wrapper).
+ * func_80086728 is TRANSLATED (Phase 6E-B38).
+ * No return value is consumed (void wrapper).
  *
  * Executable call sites (3):
  *   func_8004AF38 @ 0x8004AFEC  a0=func_80063428 ret; addu slot
@@ -26,9 +26,10 @@
 
 #define GA_52790_STATE 0x8009D020u  /* $gp + 0x2B0 */
 
+extern void func_80086728(int a0);
+
 void func_80052790(int a0)
 {
     PE_StoreU32(GA_52790_STATE, (uint32_t)a0);
-    Bootstrap_ReturnVoid("func_80086728", "func_80052790");
-    (void)((unsigned int)a0 < 1u);  /* retail delay-slot boolean */
+    func_80086728((unsigned int)a0 < 1u ? 1 : 0);
 }
