@@ -247,6 +247,10 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
   exact first-free record/ID scans, two ordered 16-byte copy groups, primary
   table-state commit, and pointer-or-zero return; independent
   `tools/b41_oracle.py`)
+- `func_80053B48`  ← TRANSLATED (B42: 121-word resource category registrar
+  and accumulator; true ABI `int32_t(pe_addr_t record)`, exact ID-table and
+  signed-threshold behavior, two executable callers; independent
+  `tools/b42_oracle.py`)
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
@@ -421,10 +425,10 @@ tests are 341/341. Real-disc strict now stops at `func_800614AC` from
 at executable `0x80053D2C..0x80053E6B` (exclusive end `0x80053E6C`, file
 offset `0x4452C`). It scans the shared table at `D_8009D048` with count
 `D_8009D050`, calls translated `func_8005DB44`, dispatches record types 1–18,
-and returns the exact retail status. Types 1–9 call unresolved
-`func_80053968` with `a0 = arg`; types 16–18 call unresolved
-`func_80053B48` with no arguments. Both calls use `Bootstrap_ReturnInt` from
-the centralized boundary. Types 10 and 12–15 store `arg` as one halfword at
+and returns the exact retail status. B41 completed the types 1–9
+`func_80053968` call with `a0 = arg`. B42 proves that types 16–18 call
+`func_80053B48` with `a0` equal to the selected guest record (not zero
+arguments) and forward its result unchanged. Types 10 and 12–15 store `arg` as one halfword at
 the first free table slot; `arg >= 0x100` uses the same store path without a
 record lookup. Missing records, type 11, and unknown types return 0; a full
 table returns 1. The only direct guest write is that exact halfword store;
@@ -495,10 +499,10 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode stops at `func_80053B48` from translated
-`func_80053D2C`. B41 completes its type-1..9 `func_80053968` dependency and
-leaves the sibling type-16..18 dependency untouched. The later
-`func_8005218C` boundary also remains untouched. The `--bootstrap-disc` fixture still
+With Disc 1, strict mode stops at `func_8005218C` from translated
+`func_80051CC4`. B41 completes the type-1..9 `func_80053968` dependency and
+B42 completes the sibling type-16..18 `func_80053B48` dependency. The
+`func_8005218C` boundary remains untouched. The `--bootstrap-disc` fixture still
 stops at `func_8007F72C` (CdReady) by design. Normal and fresh sanitizer
 builds agree on both frontiers.
 
@@ -512,7 +516,7 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
   `ptr+4`, i.e. a second table in the same sub-chunk
 - `func_8005CCA4` — completed B28 translated rung
 - `func_80053D2C` — completed B29 translated rung; B41 completes its
-  `func_80053968` dependency while `func_80053B48` remains unresolved
+  `func_80053968` dependency and B42 completes `func_80053B48`
 - `func_80042C78` — completed B30 translated prefix; its B31 dependency is
   complete
 - `func_80051CC4` — completed B39 translated rung; B40 completed its first

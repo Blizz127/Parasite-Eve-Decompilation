@@ -1,25 +1,25 @@
-# Parasite Eve Native PC Port — Phase 6E-B41
+# Parasite Eve Native PC Port — Phase 6E-B42
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B41 `func_80053968` rung. Its true contract is
-`pe_addr_t func_80053968(int32_t resource_id)`: 120 retail instructions /
-`0x1E0` bytes at `0x80053968..0x80053B47`, file offset `0x44168`, live body
-`asm/disc1/43724.s:805-936`. It finds the first free 32-byte runtime record
-and ID-table halfword, copies the archive record returned by translated
-`func_8005DB44(resource_id-1)` in retail's two ordered 16-byte groups,
-installs the primary resource-table state, writes `0x100+record_slot`, and
-returns the exact destination guest address or zero. Its sole executable
-caller is `func_80053D2C @ 0x80053DF8`; types 1..9 reach it and the caller
-normalizes zero to 1 and every nonzero 32-bit return to 0. The independent
-`tools/b41_oracle.py` verifies and executes all 120 words, the sole call, and
-the caller jump table/consumed-return sequence without production C. Normal
-and fresh ASan/UBSan tests pass 397/397; all 26 oracle programs pass.
-Real-disc strict advances to untouched `func_80053B48`
-from `func_80053D2C` (exit 1); `func_8005218C` remains untouched. Bootstrap
-strict remains `func_8007F72C` from `func_800698D4` (exit 1). Address zero
-remains invalid, with no KUSEG or low-address mirror. Full proof is in
-`docs/b41_func_80053968.md`. Nothing has been pushed, and no later rung has
+**Current milestone:** B42 `func_80053B48` rung. Its true contract is
+`int32_t func_80053B48(pe_addr_t record)`: 121 retail instructions /
+`0x1E4` bytes at `0x80053B48..0x80053D2B`, file offset `0x44348`, live body
+`asm/disc1/43724.s:940-1082`. Record types 1-7 and 16-18 select one of three
+guest category records. The function ensures ID `0x200..0x202` exists in
+the current authoritative halfword table, then applies the exact signed
+threshold/999-cap rules to the category's 16-bit accumulated field. It
+returns exact status 0 or 1, and a full table still commits the later fixed
+record update. Its two executable callers are `func_80053D2C @ 0x80053E1C`
+and `func_8005833C @ 0x80058408`; both forward every 32-bit return unchanged,
+while the latter clears its source mapping only on zero. The independent
+`tools/b42_oracle.py` verifies and executes all 121 words and both exact
+caller consumers without production C. Normal and fresh ASan/UBSan tests
+pass 407/407; all 27 oracle programs pass. Real-disc strict advances to the
+untouched `func_8005218C` from `func_80051CC4` (exit 1). Bootstrap strict
+remains `func_8007F72C` from `func_800698D4` (exit 1). Address zero remains
+invalid, with no KUSEG or low-address mirror. Full proof is in
+`docs/b42_func_80053B48.md`. Nothing has been pushed, and no later rung has
 started.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36
@@ -76,10 +76,11 @@ instructions / `0x140` bytes at executable `0x80053D2C..0x80053E6B`
 (exclusive end `0x80053E6C`, file offset `0x4452C`). It scans the shared
 `$gp` resource table `D_8009D048/D_8009D050` for the first zero halfword,
 looks up records through translated `func_8005DB44`, dispatches record types
-1–18, and stores exact halfwords without clamping. Types 1–9 call unresolved
+1–18, and stores exact halfwords without clamping. Types 1–9 call translated
 `func_80053968` with the original argument and return the retail
-zero-inversion; types 16–18 call unresolved `func_80053B48` and forward its
-return. Both unresolved calls use the centralized integer provider boundary.
+zero-inversion; types 16–18 call translated `func_80053B48` with the selected
+record pointer and forward its return. These were centralized boundaries at
+B29 and were completed by B41 and B42 respectively.
 The function returns 0 for a missing record/type 11/unknown type, and 1 for
 the full-table failure path. Its only direct guest write is the selected table
 halfword. It does not block and adds no SDK/GPU/disc/audio/input activity,
@@ -637,7 +638,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (397 tests, all pass)
+- `pe-native-tests` — test suite (407 tests, all pass)
 
 ## Running
 
@@ -665,8 +666,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected after B41: exit 1 at func_80053B48 from func_80053D2C.
-# func_80053968 is translated; the sibling type-16..18 dependency is untouched.
+# Expected after B42: exit 1 at func_8005218C from func_80051CC4.
+# func_80053B48 is translated; no later dependency is started.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \

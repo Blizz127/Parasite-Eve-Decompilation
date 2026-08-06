@@ -5,13 +5,12 @@
  * 0x80053E6C), file offset 0x4452C.  The complete body is transcribed and
  * independently checked by tools/b29_oracle.py.
  *
- * B41 translates the type-1..9 func_80053968 dependency.  The type-16..18
- * func_80053B48 dependency remains unresolved and continues through the
- * centralized integer bootstrap boundary.
+ * B41 translates the type-1..9 func_80053968 dependency.  B42 translates
+ * the type-16..18 func_80053B48 dependency and passes the exact record guest
+ * address already held in retail $a0.
  */
 #include "psx_compat.h"
 #include "pe_guest_ram.h"
-#include "pe_bootstrap.h"
 
 extern pe_addr_t func_8005DB44(unsigned int index);
 
@@ -59,8 +58,7 @@ int func_80053D2C(int arg)
                             (uint32_t)arg);
             }
         } else if (type >= 16u && type <= 18u) {
-            status = Bootstrap_ReturnInt(
-                "func_80053B48", "func_80053D2C", 0);
+            status = func_80053B48((pe_addr_t)record);
         }
         /* type 11 and all out-of-range types return the initial zero. */
     } else if (slot >= 0) {

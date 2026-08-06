@@ -67,6 +67,7 @@ class Oracle:
         self.steps = 0
         self.ret_53968 = 0
         self.ret_53B48 = 0
+        self.db44_a1 = 0
 
     def off(self, a, n):
         if not (RAM_BASE <= a and a+n <= RAM_END):
@@ -119,6 +120,7 @@ class Oracle:
         rec=0x800B8100
         db_index=u32(arg-1)
         alt=u32(rec-0x800A8028-(db_index<<5))
+        self.db44_a1 = alt
         self.poke(0x800A8034,4,alt)
         self.poke(0x800A8038,4,u32(alt+((db_index+1)<<5)))
         self.poke(rec+6,1,record_type or 0)
@@ -147,11 +149,13 @@ class Oracle:
                 target=((w&0x3ffffff)<<2)|(addr&0xf0000000) if op==3 else None
                 d()  # a call's delay slot establishes its argument registers
                 if addr==0x80053DB4:
-                    self.calls.append(("func_8005DB44",self.r[4])); self.r[2]=rec
+                    self.calls.append(("func_8005DB44",self.r[4]))
+                    self.r[5]=self.db44_a1; self.r[2]=rec
                 elif addr==0x80053DF8:
                     self.calls.append(("func_80053968",self.r[16])); self.r[2]=self.ret_53968
                 elif addr==0x80053E1C:
-                    self.calls.append(("func_80053B48",)); self.r[2]=self.ret_53B48
+                    self.calls.append(("func_80053B48",tuple(self.r[4:8])))
+                    self.r[2]=self.ret_53B48
                 else: raise SystemExit(f"FATAL: unexpected call @{addr:08X}")
                 self.pc += 2; continue
             self.one(w,addr); self.pc += 1
@@ -170,7 +174,11 @@ def main():
     for controlled in (1, 0xFFFFFFFF, 7):
         o=Oracle(sys.argv[1]); o.ret_53968=controlled
         assert o.run(0x44, record_type=1) == 0
-    o=Oracle(sys.argv[1]); o.ret_53B48=7; assert o.run(0x44, record_type=16) == 7
-    print("PASS: B29 independent transcription, delay slots, table dispatch, writes, exact 53968 zero/nonzero consumption, returns, and unresolved call boundaries")
+    for controlled in (0, 1, 7, 0x7FFFFFFF, 0x80000000, 0xFFFFFFFF):
+        o=Oracle(sys.argv[1]); o.ret_53B48=controlled
+        assert o.run(0x44, record_type=16) == controlled
+        assert o.calls[-1] == (
+            "func_80053B48", (0x800B8100, o.db44_a1, 0, 0))
+    print("PASS: B29 independent transcription, delay slots, table dispatch, writes, exact 53968 zero/nonzero consumption, exact 53B48 argument/return forwarding, and boundaries")
 
 if __name__ == "__main__": main()

@@ -8196,7 +8196,6 @@ static void test_53D2C_exact_contract(void) {
 
 static void test_53D2C_dependency_returns_and_reset(void) {
     TEST("53D2C_dependency_returns_and_reset");
-    int ret;
     ResetTestState();
     D_8009D048 = 0x800C0E48u;
     D_8009D050 = 1u;
@@ -8212,12 +8211,17 @@ static void test_53D2C_dependency_returns_and_reset(void) {
     D_8009D048 = 0x800C0E48u;
     D_8009D050 = 1u;
     B29_SeedRecord(16u);
-    ret = 7;
-    Bootstrap_SetIntSequence("func_80053B48", &ret, 1);
-    ASSERT(func_80053D2C(1) == 7,
-           "types 16..18 must return func_80053B48 result");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80053B48") == 0,
-           "type 16 dependency symbol wrong");
+    PE_StoreU16(0x800C0E48u, 0x0200u);
+    PE_StoreU16(B29_REC + 0x0Au, 2u);
+    PE_StoreU8(0x800A1E6Du, 20u);
+    PE_StoreU16(0x800A1E6Eu, 3u);
+    PE_StoreU16(0x800A1E76u, 0u);
+    ASSERT(func_80053D2C(1) == 0,
+           "types 16..18 must forward translated func_80053B48 result");
+    ASSERT(PE_LoadU16(0x800A1E6Eu) == 5u,
+           "type 16 dependency received wrong record pointer");
+    ASSERT(Bootstrap_InvocationCount() == 0,
+           "translated func_80053B48 reached provider policy");
 
     /* PE_RamReset clears guest records/table bytes but not the authoritative
      * host table globals; a subsequent call must observe the cleared slot. */
@@ -8586,6 +8590,387 @@ static void test_53968_rejects_null_source_without_fallback(void)
     ASSERT(waitpid(pid, &status, 0) == pid, "B41 waitpid failed");
     ASSERT(!WIFEXITED(status) || WEXITSTATUS(status) != 0,
            "NULL archive record received a fabricated fallback");
+#endif
+    PASS();
+}
+
+/* ── Phase 6E-B42: func_80053B48 category registration/accumulation ── */
+
+#define B42_INPUT          0x800A9000u
+#define B42_TABLE          0x800C2000u
+#define B42_CATEGORY_BASE  0x800A1E64u
+
+static pe_addr_t B42_CategoryRecord(uint32_t category)
+{
+    return B42_CATEGORY_BASE + category * 0x20u;
+}
+
+static void B42_SeedInput(uint32_t type, uint32_t amount)
+{
+    PE_StoreU8(B42_INPUT + 6u, type);
+    PE_StoreU16(B42_INPUT + 0x0Au, amount);
+}
+
+static void B42_SeedCategory(uint32_t category, uint32_t accumulated,
+                            uint32_t base, int32_t delta)
+{
+    pe_addr_t record = B42_CategoryRecord(category);
+    PE_StoreU8(record + 9u, base);
+    PE_StoreU16(record + 0x0Au, accumulated);
+    PE_StoreU16(record + 0x12u, (uint32_t)delta);
+}
+
+static void test_53B48_signature_and_complete_type_map(void)
+{
+    TEST("53B48_signature_and_complete_type_map");
+    static const struct { uint8_t type; uint8_t category; } accepted[] = {
+        {1u, 0u}, {2u, 0u}, {3u, 0u}, {4u, 0u}, {5u, 0u},
+        {6u, 1u}, {7u, 2u}, {16u, 0u}, {17u, 1u}, {18u, 2u},
+    };
+    static const uint8_t rejected[] = {0u, 8u, 15u, 19u, 0xFFu};
+    int32_t (*entry)(pe_addr_t) = func_80053B48;
+    size_t i;
+
+    for (i = 0u; i < sizeof(accepted) / sizeof(accepted[0]); i++) {
+        uint32_t category = accepted[i].category;
+        ResetTestState();
+        D_8009D048 = B42_TABLE;
+        D_8009D050 = 1u;
+        PE_StoreU16(B42_TABLE, 0x200u + category);
+        B42_SeedInput(accepted[i].type, 3u);
+        B42_SeedCategory(category, 10u, 20u, 0);
+        ASSERT(entry(B42_INPUT) == 0,
+               "supported record type returned failure");
+        ASSERT(PE_LoadU16(B42_CategoryRecord(category) + 0x0Au) == 13u,
+               "supported record type selected wrong category");
+    }
+
+    for (i = 0u; i < sizeof(rejected) / sizeof(rejected[0]); i++) {
+        ResetTestState();
+        D_8009D048 = 0u;
+        D_8009D050 = 0x80000000u;
+        B42_SeedInput(rejected[i], 0xABCDu);
+        B42_SeedCategory(0u, 0x1234u, 0u, 0);
+        ASSERT(entry(B42_INPUT) == 1,
+               "unsupported record type must return exact one");
+        ASSERT(PE_LoadU16(B42_CategoryRecord(0u) + 0x0Au) == 0x1234u,
+               "unsupported type touched category state");
+    }
+    PASS();
+}
+
+static void test_53B48_existing_mapping_exact_widths(void)
+{
+    TEST("53B48_existing_mapping_exact_widths");
+    ResetTestState();
+    D_8009D048 = B42_TABLE;
+    D_8009D050 = 4u;
+    PE_StoreU8(B42_TABLE - 1u, 0xA5u);
+    PE_StoreU16(B42_TABLE + 0u, 0xFFFFu);
+    PE_StoreU16(B42_TABLE + 2u, 0x0111u);
+    PE_StoreU16(B42_TABLE + 4u, 0x0201u);
+    PE_StoreU16(B42_TABLE + 6u, 0x0222u);
+    PE_StoreU8(B42_TABLE + 8u, 0x5Au);
+    B42_SeedInput(6u, 7u);
+    B42_SeedCategory(1u, 11u, 30u, -4);
+
+    ASSERT(func_80053B48(B42_INPUT) == 0,
+           "existing mapping must return zero");
+    ASSERT(PE_LoadU16(B42_TABLE + 0u) == 0xFFFFu &&
+           PE_LoadU16(B42_TABLE + 2u) == 0x0111u &&
+           PE_LoadU16(B42_TABLE + 4u) == 0x0201u &&
+           PE_LoadU16(B42_TABLE + 6u) == 0x0222u,
+           "existing-ID scan changed table contents");
+    ASSERT(PE_LoadU8(B42_TABLE - 1u) == 0xA5u &&
+           PE_LoadU8(B42_TABLE + 8u) == 0x5Au,
+           "signed-halfword scan crossed table guards");
+    ASSERT(PE_LoadU16(B42_CategoryRecord(1u) + 0x0Au) == 18u,
+           "existing mapping accumulated wrong halfword");
+    PASS();
+}
+
+static void test_53B48_first_and_last_free_mapping(void)
+{
+    TEST("53B48_first_and_last_free_mapping");
+    ResetTestState();
+    D_8009D048 = B42_TABLE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B42_TABLE, 0u);
+    B42_SeedInput(16u, 1u);
+    B42_SeedCategory(0u, 2u, 20u, 0);
+    ASSERT(func_80053B48(B42_INPUT) == 0,
+           "single free slot must succeed");
+    ASSERT(PE_LoadU16(B42_TABLE) == 0x0200u,
+           "single free slot received wrong ID");
+
+    ResetTestState();
+    D_8009D048 = B42_TABLE;
+    D_8009D050 = 4u;
+    PE_StoreU8(B42_TABLE - 1u, 0xA5u);
+    PE_StoreU16(B42_TABLE + 0u, 0x0111u);
+    PE_StoreU16(B42_TABLE + 2u, 0x0222u);
+    PE_StoreU16(B42_TABLE + 4u, 0x0333u);
+    PE_StoreU16(B42_TABLE + 6u, 0u);
+    PE_StoreU8(B42_TABLE + 8u, 0x5Au);
+    B42_SeedInput(18u, 1u);
+    B42_SeedCategory(2u, 2u, 20u, 0);
+    ASSERT(func_80053B48(B42_INPUT) == 0,
+           "last free slot must succeed");
+    ASSERT(PE_LoadU16(B42_TABLE + 6u) == 0x0202u,
+           "last free slot received wrong ID");
+    ASSERT(PE_LoadU8(B42_TABLE - 1u) == 0xA5u &&
+           PE_LoadU8(B42_TABLE + 8u) == 0x5Au,
+           "mapping halfword crossed exact guards");
+
+    ResetTestState();
+    D_8009D048 = 0x801FFFFEu;
+    D_8009D050 = 1u;
+    PE_StoreU16(0x801FFFFEu, 0u);
+    B42_SeedInput(16u, 1u);
+    B42_SeedCategory(0u, 2u, 20u, 0);
+    ASSERT(func_80053B48(B42_INPUT) == 0 &&
+           PE_LoadU16(0x801FFFFEu) == 0x0200u,
+           "maximum checked table halfword was clamped or truncated");
+    PASS();
+}
+
+static void test_53B48_full_or_wrapped_table_preserves_partial_state(void)
+{
+    TEST("53B48_full_or_wrapped_table_preserves_partial_state");
+    ResetTestState();
+    D_8009D048 = B42_TABLE;
+    D_8009D050 = 3u;
+    PE_StoreU16(B42_TABLE + 0u, 0x0111u);
+    PE_StoreU16(B42_TABLE + 2u, 0x0222u);
+    PE_StoreU16(B42_TABLE + 4u, 0x0333u);
+    B42_SeedInput(17u, 5u);
+    B42_SeedCategory(1u, 7u, 20u, 0);
+    ASSERT(func_80053B48(B42_INPUT) == 1,
+           "full table must return exact one");
+    ASSERT(PE_LoadU16(B42_CategoryRecord(1u) + 0x0Au) == 12u,
+           "full table suppressed later retail category update");
+
+    ResetTestState();
+    D_8009D048 = 0u;
+    D_8009D050 = 0u;
+    B42_SeedInput(16u, 4u);
+    B42_SeedCategory(0u, 6u, 20u, 0);
+    ASSERT(func_80053B48(B42_INPUT) == 1,
+           "zero-count table must report full without fallback");
+    ASSERT(PE_LoadU16(B42_CategoryRecord(0u) + 0x0Au) == 10u,
+           "zero-count table suppressed category update");
+
+    ResetTestState();
+    D_8009D048 = 0xFFFFFFFEu;
+    D_8009D050 = 1u; /* wrapped end is zero; both scans are skipped */
+    B42_SeedInput(16u, 4u);
+    B42_SeedCategory(0u, 6u, 20u, 0);
+    ASSERT(func_80053B48(B42_INPUT) == 1,
+           "wrapped unsigned table range must report full");
+    ASSERT(PE_LoadU16(B42_CategoryRecord(0u) + 0x0Au) == 10u,
+           "wrapped range suppressed category update");
+    PASS();
+}
+
+static void test_53B48_threshold_paths_and_halfword_wrap(void)
+{
+    TEST("53B48_threshold_paths_and_halfword_wrap");
+    static const struct {
+        uint16_t old_value;
+        uint16_t amount;
+        uint8_t base;
+        int16_t delta;
+        uint16_t expected;
+    } cases[] = {
+        {7u, 3u, 20u, 0, 10u},       /* threshold >= sum: keep sum */
+        {7u, 3u, 5u, 0, 5u},         /* threshold < sum: overwrite */
+        {996u, 3u, 255u, 745, 999u}, /* threshold 1000, sum 999 */
+        {997u, 3u, 255u, 745, 999u}, /* threshold 1000, sum 1000 */
+        {0u, 0u, 0u, -1, 0xFFFFu},   /* signed negative, no clamp */
+        {0xFFFFu, 2u, 20u, 0, 1u},   /* exact halfword wrap */
+    };
+    size_t i;
+    for (i = 0u; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        ResetTestState();
+        D_8009D048 = B42_TABLE;
+        D_8009D050 = 1u;
+        PE_StoreU16(B42_TABLE, 0x0200u);
+        B42_SeedInput(16u, cases[i].amount);
+        B42_SeedCategory(0u, cases[i].old_value,
+                         cases[i].base, cases[i].delta);
+        ASSERT(func_80053B48(B42_INPUT) == 0,
+               "threshold case changed status");
+        ASSERT(PE_LoadU16(B42_CategoryRecord(0u) + 0x0Au) ==
+               cases[i].expected, "threshold/wrap result mismatch");
+    }
+    PASS();
+}
+
+static void test_53B48_first_and_repeated_invocation(void)
+{
+    TEST("53B48_first_and_repeated_invocation");
+    ResetTestState();
+    D_8009D048 = B42_TABLE;
+    D_8009D050 = 2u;
+    PE_StoreU16(B42_TABLE + 0u, 0u);
+    PE_StoreU16(B42_TABLE + 2u, 0u);
+    B42_SeedInput(16u, 1u);
+    B42_SeedCategory(0u, 100u, 200u, 0);
+
+    ASSERT(func_80053B48(B42_INPUT) == 0,
+           "first category invocation failed");
+    ASSERT(func_80053B48(B42_INPUT) == 0,
+           "repeated category invocation failed");
+    ASSERT(PE_LoadU16(B42_TABLE + 0u) == 0x0200u &&
+           PE_LoadU16(B42_TABLE + 2u) == 0u,
+           "repeat inserted a duplicate category ID");
+    ASSERT(PE_LoadU16(B42_CategoryRecord(0u) + 0x0Au) == 102u,
+           "repeat did not accumulate current guest state");
+    PASS();
+}
+
+static void test_53B48_53D2C_type_paths_and_exact_return(void)
+{
+    TEST("53B48_53D2C_type_paths_and_exact_return");
+    uint32_t type;
+    for (type = 16u; type <= 18u; type++) {
+        uint32_t category = type - 16u;
+        ResetTestState();
+        D_8009D048 = B42_TABLE;
+        D_8009D050 = 1u;
+        PE_StoreU16(B42_TABLE, 0x0200u + category);
+        B41_SeedSource(1, B42_INPUT);
+        B42_SeedInput(type, 2u);
+        B42_SeedCategory(category, 3u, 20u, 0);
+        ASSERT(func_80053D2C(1) == 0,
+               "func_80053D2C changed B42 zero return");
+        ASSERT(PE_LoadU16(B42_CategoryRecord(category) + 0x0Au) == 5u,
+               "func_80053D2C passed wrong record pointer");
+        ASSERT(Bootstrap_InvocationCount() == 0,
+               "translated type 16..18 path reached provider policy");
+    }
+
+    ResetTestState();
+    D_8009D048 = B42_TABLE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B42_TABLE, 0x0111u);
+    B41_SeedSource(1, B42_INPUT);
+    B42_SeedInput(16u, 2u);
+    B42_SeedCategory(0u, 3u, 20u, 0);
+    ASSERT(func_80053D2C(1) == 1,
+           "func_80053D2C normalized or inverted B42 failure return");
+    ASSERT(PE_LoadU16(B42_CategoryRecord(0u) + 0x0Au) == 5u,
+           "forwarded failure lost B42 partial state");
+    PASS();
+}
+
+static void test_53B48_corrected_record_lookup_and_no_stale_alias(void)
+{
+    TEST("53B48_corrected_record_lookup_and_no_stale_alias");
+    ResetTestState();
+    D_8009D048 = B42_TABLE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B42_TABLE, 0x0200u);
+    B41_SeedSource(1, B42_INPUT);
+    B42_SeedInput(16u, 6u);
+    B42_SeedCategory(0u, 0u, 0u, 999);
+    PE_StoreU32(0x800B8034u, 0x11111111u);
+    PE_StoreU32(0x800B8038u, 0x22222222u);
+
+    ASSERT(func_80053D2C(1) == 0,
+           "corrected 0x800A record lookup did not feed B42");
+    ASSERT(PE_LoadU16(B42_CategoryRecord(0u) + 0x0Au) == 6u,
+           "corrected record supplied wrong accumulation input");
+    ASSERT(PE_LoadU32(0x800B8034u) == 0x11111111u &&
+           PE_LoadU32(0x800B8038u) == 0x22222222u,
+           "obsolete 0x800B record aliases affected B42 input");
+    PASS();
+}
+
+static void test_53B48_full_ram_canary_footprint(void)
+{
+    TEST("53B48_full_ram_canary_footprint");
+    uint8_t *snapshot;
+    pe_addr_t address;
+    ResetTestState();
+    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0xA5u);
+    D_8009D048 = B42_TABLE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B42_TABLE, 0u);
+    B42_SeedInput(16u, 3u);
+    B42_SeedCategory(0u, 10u, 20u, 0);
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate B42 RAM snapshot");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+
+    ASSERT(func_80053B48(B42_INPUT) == 0,
+           "B42 canary success return wrong");
+    for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
+        uint8_t want = snapshot[address - PE_RAM_BASE];
+        if (address == B42_TABLE)
+            want = 0x00u;
+        else if (address == B42_TABLE + 1u)
+            want = 0x02u;
+        else if (address == B42_CategoryRecord(0u) + 0x0Au)
+            want = 0x0Du;
+        else if (address == B42_CategoryRecord(0u) + 0x0Bu)
+            want = 0x00u;
+        if (PE_LoadU8(address) != want) {
+            free(snapshot);
+            FAIL("B42 full-RAM direct-write footprint mismatch");
+            return;
+        }
+    }
+    free(snapshot);
+    PASS();
+}
+
+static void test_53B48_reset_authority_and_address_safety(void)
+{
+    TEST("53B48_reset_authority_and_address_safety");
+    ResetTestState();
+    D_8009D048 = B42_TABLE;
+    D_8009D050 = 1u;
+    PE_StoreU16(B42_TABLE, 0x0200u);
+    B42_SeedInput(16u, 1u);
+    B42_SeedCategory(0u, 2u, 20u, 0);
+    PE_StoreU32(0x8009D048u, 0xDEADBEEFu);
+    PE_StoreU32(0x8009D050u, 0xA5A5A5A5u);
+    ASSERT(func_80053B48(B42_INPUT) == 0,
+           "authoritative host-state call failed");
+    ASSERT(PE_LoadU32(0x8009D048u) == 0xDEADBEEFu &&
+           PE_LoadU32(0x8009D050u) == 0xA5A5A5A5u,
+           "authoritative globals leaked into guest aliases");
+    ASSERT(!PE_AddressIsRam(0x000A1E64u),
+           "low-address mirror must remain invalid");
+
+    PE_RamReset();
+    ASSERT(D_8009D048 == B42_TABLE && D_8009D050 == 1u,
+           "PE_RamReset must preserve authoritative host fields");
+    ASSERT(PE_LoadU16(B42_TABLE) == 0u &&
+           PE_LoadU16(B42_CategoryRecord(0u) + 0x0Au) == 0u,
+           "PE_RamReset did not clear B42 guest state");
+    PE_Sdk_ResetState();
+    ASSERT(D_8009D048 == 0u && D_8009D050 == 0u,
+           "PE_Sdk_ResetState did not clear authoritative host fields");
+
+#if defined(__SANITIZE_ADDRESS__)
+    ASSERT(!PE_RangeIsRam(0u, 1u), "address zero must remain invalid");
+#else
+    {
+        pid_t pid;
+        int child_status = 0;
+        pid = fork();
+        ASSERT(pid >= 0, "B42 fork failed");
+        if (pid == 0) {
+            (void)func_80053B48(0u);
+            _exit(0);
+        }
+        ASSERT(waitpid(pid, &child_status, 0) == pid,
+               "B42 waitpid failed");
+        ASSERT(!WIFEXITED(child_status) || WEXITSTATUS(child_status) != 0,
+               "address zero received a fallback record pointer");
+    }
 #endif
     PASS();
 }
@@ -10727,6 +11112,18 @@ int main(void)
     test_53968_full_ram_canary_footprint();
     test_53968_reset_authority_and_no_stale_alias();
     test_53968_rejects_null_source_without_fallback();
+
+    /* Phase 6E-B42 — func_80053B48 category state (10 tests). */
+    test_53B48_signature_and_complete_type_map();
+    test_53B48_existing_mapping_exact_widths();
+    test_53B48_first_and_last_free_mapping();
+    test_53B48_full_or_wrapped_table_preserves_partial_state();
+    test_53B48_threshold_paths_and_halfword_wrap();
+    test_53B48_first_and_repeated_invocation();
+    test_53B48_53D2C_type_paths_and_exact_return();
+    test_53B48_corrected_record_lookup_and_no_stale_alias();
+    test_53B48_full_ram_canary_footprint();
+    test_53B48_reset_authority_and_address_safety();
 
     test_42CC4_exact_ramp_and_thresholds();
     test_42CC4_full_footprint_dirty_repeat_and_reset();
