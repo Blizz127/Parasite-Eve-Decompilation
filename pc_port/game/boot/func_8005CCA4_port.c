@@ -21,6 +21,7 @@ extern pe_addr_t func_8005DBAC(int arg);
 extern int func_800438C0(int arg);
 extern void Bootstrap_ReturnVoid(const char *symbol, const char *caller);
 extern int func_80053D2C(int arg);
+extern void func_80042C78(void);
 
 /* ── Guest RAM addresses written directly by func_8005CCA4 ─────────────── */
 #define GA_E00    0x800C0E00u
@@ -215,5 +216,5 @@ void func_8005CCA4(void)
     PE_StoreU32(GA_E00, 0u);
     PE_StoreU8(GA_E0A, 0u);
 
-    Bootstrap_ReturnVoid("func_80042C78", "func_8005CCA4");
+    func_80042C78();
 }

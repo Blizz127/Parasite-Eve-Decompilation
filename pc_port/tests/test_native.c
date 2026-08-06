@@ -19,6 +19,7 @@
 #include <sys/wait.h>
 
 extern int func_80053D2C(int arg);
+extern void func_80042C78(void);
 
 static int tests_run = 0;
 static int tests_passed = 0;
@@ -5868,7 +5869,7 @@ static void test_6E498_readonly_footprint(void) {
 /* Phase 6E-B28: func_8005CCA4 is REAL.  func_80042C78 is called from
  * both func_8005CCA4 AND the dispatcher — the dispatcher still calls it. */
 static const char *const B22_DISP_SEQ[2] = {
-    "func_80051CC4", "func_80042C78"
+    "func_80051CC4", "func_80042CC4"
 };
 
 static int B21_CheckDispatcherOrder(int base) {
@@ -6205,6 +6206,11 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x8009CF38u) want = 0;
         else if (a == 0x8009CFB0u) want = 0;
         else if (a == 0x8009CFF8u) want = 0;
+        else if (a == 0x8009CED8u) want = 0;           /* B30 +0x168 */
+        else if (a == 0x8009CEDCu) want = 0x20u;      /* B30 +0x16C */
+        else if (a == 0x8009CEE0u) want = 0;           /* B30 +0x170 */
+        else if (a == 0x8009CEE4u) want = 0;           /* B30 +0x174 */
+        else if (a == 0x8009CEECu) want = 0x48u;      /* B30 +0x17C */
         else if (a == 0x8009CEF0u) want = 0x0000003Du; /* B28: func_800438C0(0x3D) */
         /* B28: func_8005CCA4's four $gp-relative state words are SHARED host
          * globals (D_8009D048/50/58/64), not guest RAM — verified as host
@@ -7076,7 +7082,7 @@ static void test_5BCBC_dispatcher_integration(void) {
  * remaining boundary
  * callees. */
 static const char *const B25_BOUNDARY_SEQ[6] = {
-    "func_80042C78",
+    "func_80042CC4",
     "func_800614AC", "func_8005E884", "func_8005E850",
     "func_800649D0", "func_80052790",
 };
@@ -7184,6 +7190,11 @@ static void test_5D6F4_full_ram_canary(void) {
         else if (a == 0x800A8038u) want = 0;   /* zeroed pre-call */
         else if (a == 0x800A803Cu) want = 0;   /* zeroed pre-call */
         else if (a == 0x8009CEF0u) want = 0x0000003Du; /* func_800438C0(0x3D) */
+        else if (a == 0x8009CED8u) want = 0;   /* B30 +0x168 */
+        else if (a == 0x8009CEDCu) want = 0x20u; /* B30 +0x16C */
+        else if (a == 0x8009CEE0u) want = 0;   /* B30 +0x170 */
+        else if (a == 0x8009CEE4u) want = 0;   /* B30 +0x174 */
+        else if (a == 0x8009CEECu) want = 0x48u; /* B30 +0x17C */
         else if (a == 0x800A1E6Cu) want = 0x0000A5A5u; /* sh 0 at 1E6E */
         else if (a == 0x800A1E8Cu) want = 0x0000A5A5u; /* sh 0 at 1E8E */
         else if (a == 0x800A1EACu) want = 0x0000A5A5u; /* sh 0 at 1EAE */
@@ -7333,8 +7344,8 @@ static void test_5D6F4_boundary_wiring(void) {
     B26_SeedArchiveDefault();
     func_8005D6F4();
     ASSERT(g_stub_order_count == 6, "boundary count wrong");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80042C78") == 0,
-           "first boundary callee is now func_80042C78 (B29)");
+    ASSERT(strcmp(g_stub_order_log[0], "func_80042CC4") == 0,
+           "first boundary callee is now func_80042CC4 (B30 dependency)");
     ASSERT(CountOrderLog("func_8005DC4C") == 0,
            "func_8005DC4C must no longer reach the bootstrap boundary");
     ASSERT(CountOrderLog("func_80052594") == 0,
@@ -7630,8 +7641,8 @@ static void test_5DC4C_5D6F4_integration(void) {
     ASSERT(B25_CheckBoundaryOrder(), "boundary ROM order wrong");
     /* func_8005CCA4 is now REAL — the first boundary callee is
      * func_80053D2C (first callee of func_8005CCA4). */
-    ASSERT(strcmp(g_stub_order_log[0], "func_80042C78") == 0,
-           "first boundary callee must be func_80042C78 (B29)");
+    ASSERT(strcmp(g_stub_order_log[0], "func_80042CC4") == 0,
+           "first boundary callee must be func_80042CC4 (B30 dependency)");
     PASS();
 }
 
@@ -7870,8 +7881,8 @@ static void test_52594_5D6F4_integration(void) {
            "func_80052594 must not reach the bootstrap boundary");
     /* func_8005CCA4 is now REAL — the first boundary callee is
      * func_80053D2C (first callee of func_8005CCA4). */
-    ASSERT(strcmp(g_stub_order_log[0], "func_80042C78") == 0,
-           "first boundary callee must be func_80042C78 (B29)");
+    ASSERT(strcmp(g_stub_order_log[0], "func_80042CC4") == 0,
+           "first boundary callee must be func_80042CC4 (B30 dependency)");
     PASS();
 }
 
@@ -8185,6 +8196,57 @@ static void test_53D2C_dependency_returns_and_reset(void) {
     PASS();
 }
 
+static void test_42C78_prefix_and_footprint(void) {
+    TEST("42C78_prefix_and_footprint");
+    pe_addr_t a;
+    ResetTestState();
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+
+    func_80042C78();
+
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u) {
+        uint32_t want = 0xA5A5A5A5u;
+        if (a == 0x8009CED8u || a == 0x8009CEE0u || a == 0x8009CEE4u)
+            want = 0u;
+        else if (a == 0x8009CEDCu)
+            want = 0x20u;
+        else if (a == 0x8009CEECu)
+            want = 0x48u;
+        if (PE_LoadU32(a) != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
+                   a, PE_LoadU32(a), want);
+            FAIL("func_80042C78 footprint wrong");
+            return;
+        }
+    }
+    ASSERT(Bootstrap_InvocationCount() == 1,
+           "B30 must invoke only func_80042CC4");
+    ASSERT(strcmp(g_stub_order_log[0], "func_80042CC4") == 0,
+           "B30 dependency symbol wrong");
+    PASS();
+}
+
+static void test_42C78_dirty_repeat_and_ramreset(void) {
+    TEST("42C78_dirty_repeat_and_ramreset");
+    ResetTestState();
+    PE_StoreU32(0x8009CED8u, 0xDEADBEEFu);
+    PE_StoreU32(0x8009CEDCu, 0xDEADBEEFu);
+    PE_StoreU32(0x8009CEECu, 0xDEADBEEFu);
+    func_80042C78();
+    PE_RamReset();
+    ASSERT(PE_LoadU32(0x8009CED8u) == 0u,
+           "PE_RamReset must clear B30 guest state");
+    ASSERT(PE_LoadU32(0x8009CEDCu) == 0u,
+           "PE_RamReset must clear B30 prefix state");
+    func_80042C78();
+    ASSERT(PE_LoadU32(0x8009CED8u) == 0u &&
+           PE_LoadU32(0x8009CEDCu) == 0x20u &&
+           PE_LoadU32(0x8009CEECu) == 0x48u,
+           "B30 repeated state wrong");
+    PASS();
+}
+
 /* B28 retail-derived state after func_8005CCA4 with D_800A8038=0,
  * D_800A803C=0 (valid-fixture BSS path).  Verified instruction-by-
  * instruction by pc_port/tools/b28_oracle.py against the SHA-exact exe:
@@ -8295,6 +8357,14 @@ static void test_5CCA4_write_footprint(void) {
             want = 0x0000A5A5u;
         } else if (a == B28_GA_438C0) {      /* func_800438C0(0x3D) */
             want = 0x0000003Du;
+        } else if (a == 0x8009CED8u) {
+            want = 0u;
+        } else if (a == 0x8009CEDCu) {
+            want = 0x00000020u;
+        } else if (a == 0x8009CEE0u || a == 0x8009CEE4u) {
+            want = 0u;
+        } else if (a == 0x8009CEECu) {
+            want = 0x00000048u;
         }
         /* NOTE: the four $gp-relative state words (0x8009D048/50/58/64) are
          * host globals now — guest RAM there is NOT written and stays
@@ -8577,11 +8647,11 @@ static void test_5CCA4_5D6F4_integration(void) {
            "5D6F4 integration: GA_E40 wrong");
     /* func_8005CCA4 is REAL — boundary count is 11 (5×53D2C + 42C78 + 5 remaining) */
     ASSERT(g_stub_order_count == 6, "integration boundary count wrong");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80042C78") == 0,
-           "first boundary callee must be func_80042C78");
-    /* func_80042C78 appears once from func_8005CCA4 */
-    ASSERT(CountOrderLog("func_80042C78") == 1,
-           "func_80042C78 must appear once from func_8005CCA4");
+    ASSERT(strcmp(g_stub_order_log[0], "func_80042CC4") == 0,
+           "first boundary callee must be func_80042CC4");
+    /* B30's translated prefix reaches func_80042CC4 once from CCA4. */
+    ASSERT(CountOrderLog("func_80042CC4") == 1,
+           "func_80042CC4 must appear once from func_8005CCA4");
     PASS();
 }
 
@@ -9098,6 +9168,8 @@ int main(void)
     /* Phase 6E-B29 — func_80053D2C table/type/dependency contract. */
     test_53D2C_exact_contract();
     test_53D2C_dependency_returns_and_reset();
+    test_42C78_prefix_and_footprint();
+    test_42C78_dirty_repeat_and_ramreset();
 
     /* Phase 6E-B28 — func_8005CCA4 rung (20 tests) */
     test_FxPattern_archive_header_zero();

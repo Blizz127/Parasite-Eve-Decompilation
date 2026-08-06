@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B29
+# Shim Inventory — Phase 6E-B30
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -348,7 +348,27 @@ masked with a KUSEG mirror, a clamp, or a bypass.  Strict real-disc
 execution now reaches `func_80053D2C` from `func_8005CCA4` (exit 1,
 normal and sanitizer agree).
 
-### Phase 6E-B29 (current verified phase)
+### Phase 6E-B30 (current verified phase)
+
+`func_80042C78` is translated retail logic through its proven 16-instruction
+prefix at executable `0x80042C78..0x80042CB4` (exclusive end `0x80042CB8`,
+file offset `0x33478`). With retail `$gp = 0x8009CD70`, it writes zero to
+`$gp+0x168/0x170/0x174`, writes `0x20` to `$gp+0x16C`, calls unresolved
+`func_80042CC4` with `a0=0x90` and `a1=0xFF` after the delay slot, and writes
+`0x48` to `$gp+0x17C`. The direct guest footprint is exactly
+`0x8009CED8`, `0x8009CEDC`, `0x8009CEE0`, `0x8009CEE4`, and `0x8009CEEC`.
+The two executable callers are `func_8005CCA4` at `0x8005CFF8` and
+`func_800527C8` at `0x8005284C`; both discard the void return.
+
+`tools/b30_oracle.py` independently transcribes and executes all 16 words,
+checks every word against executable SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, and verifies the delayed call
+arguments, ordered writes, and return state. The final native and ASan/UBSan
+suites are 339/339. The next real-disc strict frontier is
+`func_80042CC4` from `func_80042C78`; that dependency remains centralized and
+untranslated. No generated or retail artifacts were added.
+
+### Historical Phase 6E-B29 (accepted commit `eedd456`)
 
 `func_80053D2C` is translated retail logic: 80 instructions / `0x140` bytes
 at executable `0x80053D2C..0x80053E6B` (exclusive end `0x80053E6C`, file
@@ -428,14 +448,13 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With `--disc-image`, strict mode stops at `func_80042C78` from
-`func_8005CCA4` — past the fully
+With `--disc-image`, strict mode stops at `func_80042CC4` from
+`func_80042C78` — past the fully
 translated func_8003E680, func_8006A9E4, func_800527C8, func_80052C6C
 (B23), func_8005BCBC (B24), func_8005D6F4 (B25), func_8005DC4C (B26),
-func_80052594 (B27), and func_8005CCA4 (historical B28). `func_80053D2C`
-is translated in B29; its unresolved callees are func_80053968 and
-func_80053B48. The next boundary is func_80042C78 x1 (from
-func_8005CCA4),
+func_80052594 (B27), func_8005CCA4 (historical B28), and
+func_80053D2C (historical B29). `func_80042C78` is translated in B30; its
+unresolved callee is `func_80042CC4`.
 func_800614AC, func_8005E884, func_8005E850, func_800649D0,
 func_80052790 (from func_8005D6F4), func_80051CC4, func_80042C78
 (from dispatcher), func_80087090 (SPU upload).  The `--bootstrap-disc`
@@ -449,10 +468,11 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 - `func_8005DC9C` — dead-arm callee of func_8005D6F4 (C8 always 0);
   the same lookup as func_8005DC4C but reading `ptr+8` instead of
   `ptr+4`, i.e. a second table in the same sub-chunk
-- `func_8005CCA4` — completed B28 translated rung; its current next
-  unresolved callee is `func_80042C78`
+- `func_8005CCA4` — completed B28 translated rung
 - `func_80053D2C` — completed B29 translated rung; its unresolved
   dependencies are `func_80053968` and `func_80053B48`
+- `func_80042C78` — completed B30 translated prefix; its unresolved
+  dependency is `func_80042CC4`
 - `func_800614AC`, `func_8005E884`,
   `func_8005E850`, `func_800649D0`, `func_80052790` — remaining
   func_8005D6F4 callees in retail ROM order
