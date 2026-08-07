@@ -169,6 +169,11 @@ extern pe_addr_t func_8005DC4C(uint32_t idx);
 extern int  func_80052594(pe_addr_t src);
 extern pe_addr_t func_8005DB8C(int idx);
 extern pe_addr_t func_8005DBAC(int arg);
+extern void func_8005B91C(int32_t table_number, int32_t key,
+                          pe_addr_t index_out, pe_addr_t fraction_out);
+extern void PE_func_8005B91C_HostOut(int32_t table_number, int32_t key,
+                                     int32_t *index_out,
+                                     int32_t *fraction_out);
 extern void func_8005CCA4(void);
 extern int func_800438C0(int arg);
 extern void func_8005E850(int a0, int a1);

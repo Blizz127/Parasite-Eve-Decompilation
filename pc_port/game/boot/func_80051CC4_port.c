@@ -36,8 +36,9 @@
  *        15     -> word 0x800A1B34 = 0xFFFFFFFE
  *      All other command values are no-ops.  The loop uses the retail
  *      signed index<count comparison; count is an unsigned byte (0..255).
- *   6. Invoke prefix-translated func_8005218C().  B43 preserves its first
- *      unresolved func_8005B91C call as the genuine centralized boundary.
+ *   6. Invoke prefix-translated func_8005218C(). B44 translates all seven
+ *      func_8005B91C outputs; its remaining conditional func_80052F24 call
+ *      stays behind the centralized boundary.
  *   7. func_80052E30(0), then func_80052E30(saved), preserving the retail
  *      resource-buffer restore order and all partial state at a boundary.
  *

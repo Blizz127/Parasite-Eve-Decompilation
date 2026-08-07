@@ -41,6 +41,8 @@ extern BootstrapArgCall g_bootstrap_arg_calls[BOOTSTRAP_MAX_ARG_CALLS];
 extern int g_bootstrap_arg_call_count;
 int  Bootstrap_ReturnInt1(const char *symbol, const char *caller, int value,
                           uint32_t arg0);
+void Bootstrap_ReturnVoid1(const char *symbol, const char *caller,
+                           uint32_t arg0);
 void Bootstrap_ResetArgCallLog(void);
 
 /* Four-register variant for unresolved retail calls with a complete MIPS

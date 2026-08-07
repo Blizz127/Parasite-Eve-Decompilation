@@ -132,6 +132,19 @@ int Bootstrap_ReturnInt1(const char *symbol, const char *caller, int value,
     return Bootstrap_ReturnInt(symbol, caller, value);
 }
 
+void Bootstrap_ReturnVoid1(const char *symbol, const char *caller,
+                           uint32_t arg0)
+{
+    if (g_bootstrap_arg_call_count < BOOTSTRAP_MAX_ARG_CALLS) {
+        BootstrapArgCall *call =
+            &g_bootstrap_arg_calls[g_bootstrap_arg_call_count++];
+        call->symbol = symbol;
+        call->caller = caller;
+        call->arg0 = arg0;
+    }
+    Bootstrap_ReturnVoid(symbol, caller);
+}
+
 void Bootstrap_ResetArgCallLog(void)
 {
     g_bootstrap_arg_call_count = 0;

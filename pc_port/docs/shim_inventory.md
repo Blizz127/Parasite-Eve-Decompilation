@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B43
+# Shim Inventory — Phase 6E-B44
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -231,8 +231,8 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
   every direct callee is now translated, including func_80052C6C,
   func_8005BCBC, func_8005D6F4, func_80051CC4 (B39), and func_80042C78.
   B40 translates the first B39 nested dependency, func_8005332C. B43
-  prefix-translates func_8005218C through its exact first internal call;
-  func_8005B91C is now the honest unresolved boundary in that path.
+  prefix-translates func_8005218C; B44 translates all seven exact
+  func_8005B91C output calls, leaving conditional func_80052F24 untouched.
   Sole call site func_8006A9E4 @0x8006AAD0 ($s1-guarded one-shot in
   the cycle-B poll loop); void(void), return unconsumed.
   `game/boot/func_800527C8_port.c`, leaf implementations in
@@ -253,8 +253,12 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
   signed-threshold behavior, two executable callers; independent
   `tools/b42_oracle.py`)
 - `func_8005218C`  ← PREFIX-TRANSLATED (B43: complete 155-word body and all
-  five callers proven; production stops before required `func_8005B91C`
-  output state; independent `tools/b43_oracle.py`)
+  five callers proven; B44 extends production through seven translated
+  `func_8005B91C`/`func_8005DBAC` pairs and stops at conditional
+  `func_80052F24`; independent `tools/b43_oracle.py`)
+- `func_8005B91C`  ← TRANSLATED (B44: complete 87-word signed table-index
+  and interpolation logic, 18 direct call sites, exact nullable word outputs;
+  independent `tools/b44_oracle.py`)
 
 ### func_8006E834 callees (9)
 - `func_80086FF8` (shared with 6A5BC)
@@ -503,9 +507,9 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode stops at `func_8005B91C` from the proven
-`func_8005218C` prefix. B43 does not fabricate its required `a2` output and
-does not begin `func_8005B91C` or the later `func_80052F24`. The
+With Disc 1, strict mode stops at `func_80087090` from `func_8006A9E4`.
+B44 translates `func_8005B91C` exactly; the actual Disc state takes B43's
+null-holder return before its still-untranslated `func_80052F24`. The
 `--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by design.
 Normal and fresh sanitizer builds agree exactly on both frontiers.
 
@@ -523,8 +527,8 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
 - `func_80042C78` — completed B30 translated prefix; its B31 dependency is
   complete
 - `func_80051CC4` — completed B39 translated rung; B40 completed
-  `func_8005332C`; B43 prefix-translated `func_8005218C` and exposed its
-  required-state dependency `func_8005B91C`
+  `func_8005332C`; B43 prefix-translated `func_8005218C`, and B44 translated
+  all seven required-state `func_8005B91C` calls
 - `func_80087090` — SPU upload retry wrapper
 - `func_800749D8` — display environment setup (currently memset stub)
 - `func_800752AC` (ClearOTagR) — ordering table clear

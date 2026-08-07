@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
@@ -5874,7 +5875,7 @@ static void test_6E498_readonly_footprint(void) {
 /* Phase 6E-B28: func_8005CCA4 is REAL.  func_80042C78 is called from
  * both func_8005CCA4 AND the dispatcher — the dispatcher still calls it. */
 static const char *const B22_DISP_SEQ[1] = {
-    "func_8005B91C"
+    "func_80052F24"
 };
 
 static int B21_CheckDispatcherOrder(int base) {
@@ -6086,14 +6087,12 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* B43 exposes func_8005218C's first genuine internal dependency before
-     * the later func_80087090 boundary. */
-    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(0),
-           "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
+    /* This synthetic zeroed holder selects B43's proven early return; the
+     * later func_80087090 boundary is therefore the only provider. */
+    ASSERT(g_stub_order_count == 1, "unexpected bootstrap invocations");
+    ASSERT(strcmp(g_stub_order_log[0], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
-    ASSERT(Bootstrap_InvocationCount() == 2, "wrong provider count");
+    ASSERT(Bootstrap_InvocationCount() == 1, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
@@ -6168,6 +6167,9 @@ static void test_6A9E4_zero_cycles_footprint(void) {
     PE_StoreU32(0x800A8034u, 0);
     PE_StoreU32(0x800A8038u, 0);
     PE_StoreU32(0x800A803Cu, 0);
+    /* B44: the canary record-holder word is not a valid retail pointer.
+     * Zero selects func_8005218C's proven early-return path. */
+    PE_StoreU32(0x8009D254u, 0);
 
     /* B38: func_80086728 is now translated and calls func_8008CBA8 which
      * uses RingAlloc.  Zero the ring buffer index so RingAlloc computes
@@ -6188,6 +6190,7 @@ static void test_6A9E4_zero_cycles_footprint(void) {
         else if (a == 0x800A8034u) want = 0;  /* B40: DB44 alt zeroed pre-call */
         else if (a == 0x800A8038u) want = 0;  /* B28: D_800A8038 zeroed pre-call */
         else if (a == 0x800A803Cu) want = 0;  /* B28: D_800A803C zeroed pre-call */
+        else if (a == 0x8009D254u) want = 0;  /* B43: null record holder */
         else if (a == 0x8009B6ACu) want = 0x200u;      /* post-issue */
         else if (a == 0x8009B6B0u) want = B16_STREAM;  /* last dest */
         else if (a == 0x8009B6B4u) want = 0;
@@ -6394,11 +6397,9 @@ static void test_6A9E4_zero_cycles_footprint(void) {
     ASSERT(D_8009D058 == 0x800AD05Cu, "6A9E4: host D_8009D058 wrong");
     ASSERT(D_8009D064 == 2u, "6A9E4: host D_8009D064 wrong");
     ASSERT(D_8009D018 == 0u, "6A9E4: host D_8009D018 wrong");
-    /* B43: func_8005B91C is the prefix-translated B39 internal boundary. */
-    ASSERT(g_stub_order_count == 2, "unexpected bootstrap invocations");
-    ASSERT(B21_CheckDispatcherOrder(0),
-           "dispatcher callee sequence wrong");
-    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
+    /* Zeroed B43 record holder takes its proven early return. */
+    ASSERT(g_stub_order_count == 1, "unexpected bootstrap invocations");
+    ASSERT(strcmp(g_stub_order_log[0], "func_80087090") == 0,
            "func_80087090 must follow the dispatcher");
     PASS();
 }
@@ -6464,11 +6465,9 @@ static void test_6A9E4_3E680_integration(void) {
     B26_SeedArchiveDefault();  /* B26: no disc, so seed the archive */
     func_8006A9E4();
 
-    /* B43: func_8005B91C + func_80087090 remain. */
-    ASSERT(g_stub_order_count == 2, "unexpected provider count");
-    ASSERT(B21_CheckDispatcherOrder(0),
-           "func_800527C8 callee order must match retail ROM order");
-    ASSERT(strcmp(g_stub_order_log[1], "func_80087090") == 0,
+    /* Zeroed B43 record holder returns before its later dependency. */
+    ASSERT(g_stub_order_count == 1, "unexpected provider count");
+    ASSERT(strcmp(g_stub_order_log[0], "func_80087090") == 0,
            "final provider after dispatcher must be func_80087090");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
@@ -7051,10 +7050,8 @@ static void test_5BCBC_dispatcher_integration(void) {
     ResetTestState();
     B26_SeedArchiveDefault();   /* B26: func_8005D6F4 walks a real archive */
     func_800527C8();
-    /* B43: func_8005218C is a real prefix; func_8005B91C remains here. */
-    ASSERT(g_stub_order_count == 1, "dispatcher must leave one provider");
-    ASSERT(B21_CheckDispatcherOrder(0),
-           "post-5BCBC dispatcher order wrong");
+    /* Zeroed B43 record holder selects its exact early return. */
+    ASSERT(g_stub_order_count == 0, "dispatcher must leave no provider");
     ASSERT(CountOrderLog("func_8005DC4C") == 0,
            "func_8005DC4C routed through bootstrap policy");
     ASSERT(CountOrderLog("func_8005BCBC") == 0,
@@ -10054,9 +10051,7 @@ static void test_51CC4_null_contract_order_and_argument(void)
 
     entry();
 
-    ASSERT(g_stub_order_count == 1, "NULL path dependency count");
-    ASSERT(strcmp(g_stub_order_log[0], "func_8005B91C") == 0,
-           "func_8005B91C must be the exact B43 internal boundary");
+    ASSERT(g_stub_order_count == 0, "NULL path dependency count");
     ASSERT(g_bootstrap_arg_call_count == 0,
            "translated lookup must not log a boundary argument");
     for (i = 0u; i < 7u; i++)
@@ -10084,8 +10079,7 @@ static void test_51CC4_zero_count_path(void)
     ASSERT(D_8009D018 == 0u, "count zero must skip command byte");
     ASSERT(PE_LoadU8(B39_RECORD + 0x15u) == 10u,
            "record command input must remain read-only");
-    ASSERT(g_stub_order_count == 1 && B21_CheckDispatcherOrder(0),
-           "zero-count dependency order");
+    ASSERT(g_stub_order_count == 0, "zero-count dependency order");
     PASS();
 }
 
@@ -10188,10 +10182,8 @@ static void test_51CC4_three_caller_and_repeat_contract(void)
     for (i = 0u; i < 3u; i++) {
         B39_SeedRecord(B39_RECORD, &commands[i], 1u);
         func_80051CC4();
-        ASSERT(g_stub_order_count == (int)(i + 1u),
-               "one remaining dependency per invocation");
-        ASSERT(B21_CheckDispatcherOrder((int)i),
-               "repeated dependency order");
+        ASSERT(g_stub_order_count == 0,
+               "zero-holder repeat must take the proven early return");
         ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x00u) == (i == 0u ? 3u : 0u),
                "repeat must clear/reconstruct command 11 word");
         ASSERT(PE_LoadU32(B39_PARAM_BASE + 0x04u) == (i == 1u ? 2u : 0u),
@@ -10214,21 +10206,36 @@ static void test_51CC4_full_ram_canary_and_authority(void)
 {
     TEST("51CC4_full_ram_canary_and_authority");
     pe_addr_t a;
+    uint32_t i;
+    uint8_t *snapshot;
     ResetTestState();
     for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u)
         PE_StoreU32(a, 0xA5A5A5A5u);
+    /* Supply only the valid shared B44 table input required after B39 and
+     * select B43's null-holder return.  The snapshot is taken after this
+     * fixture, so only production writes are admitted below. */
+    PE_StoreU32(0x800A8038u, 0x800B0000u - 0x800A8028u);
+    for (i = 0u; i <= 128u; i++)
+        PE_StoreU32(0x800B0000u + i * 4u, i * 10u);
+    PE_StoreU32(0x800A803Cu, 0u);
+    PE_StoreU32(0x8009D254u, 0u);
     D_8009D018 = 0xDEADBEEFu;
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate B39/B44 full-RAM snapshot");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
     func_80051CC4();
-    for (a = PE_RAM_BASE; a < PE_RAM_END; a += 4u) {
-        uint32_t want = (a >= B39_PARAM_BASE && a <= B39_PARAM_LAST)
-                      ? 0u : 0xA5A5A5A5u;
-        if (PE_LoadU32(a) != want) {
-            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n",
-                   a, PE_LoadU32(a), want);
+    for (a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+        uint8_t before = snapshot[a - PE_RAM_BASE];
+        uint8_t after = PE_LoadU8(a);
+        int allowed = ((a >= B39_PARAM_BASE && a <= B39_PARAM_LAST + 3u) ||
+                       (a >= 0x800C0E06u && a < 0x800C0E08u));
+        if (before != after && !allowed) {
+            free(snapshot);
             FAIL("func_80051CC4 full-RAM footprint");
             return;
         }
     }
+    free(snapshot);
     ASSERT(PE_LoadU32(B39_PARAM_BASE - 4u) == 0xA5A5A5A5u,
            "lower write guard");
     ASSERT(PE_LoadU32(B39_PARAM_LAST + 4u) == 0xA5A5A5A5u,
@@ -10240,22 +10247,30 @@ static void test_51CC4_full_ram_canary_and_authority(void)
     PASS();
 }
 
-/* A record at the top of guest RAM proves full-width pe_addr_t handling and
- * one-byte accesses at both final addresses without over-read or pointer
- * truncation. */
+/* A record placed immediately below the largest table-0 read footprint proves
+ * full-width pe_addr_t handling while the shared B39/B44 lookup base remains
+ * valid through the final guest byte. */
 static void test_51CC4_top_of_ram_reads_and_widths(void)
 {
     TEST("51CC4_top_of_ram_reads_and_widths");
-    const pe_addr_t record = PE_RAM_END - 0x16u;
+    const pe_addr_t record = PE_RAM_END - 0x224u;
     uint8_t command = 0xEBu;        /* & 0x1F = 11 */
+    uint32_t i;
     ResetTestState();
-    PE_StoreU8(PE_RAM_END - 3u, 0xA5u);
+    PE_StoreU8(record - 1u, 0xA5u);
+    PE_StoreU8(record + 0x16u, 0x5Au);
     B39_SeedRecord(record, &command, 1u);
     B39_ScriptRecord(record);
+    for (i = 0u; i <= 128u; i++)
+        PE_StoreU32(record + 0x20u + i * 4u, i * 10u);
     func_80051CC4();
     ASSERT(PE_LoadU8(record + 0x14u) == 1u, "top count byte preserved");
     ASSERT(PE_LoadU8(record + 0x15u) == 0xEBu, "top command byte preserved");
-    ASSERT(PE_LoadU8(PE_RAM_END - 3u) == 0xA5u, "one-byte lower guard");
+    ASSERT(PE_LoadU8(record - 1u) == 0xA5u &&
+           PE_LoadU8(record + 0x16u) == 0x5Au,
+           "one-byte record guards changed");
+    ASSERT(PE_LoadU32(PE_RAM_END - 4u) == 1280u,
+           "B44 maximum table-0 word must end at guest-RAM top");
     ASSERT(PE_LoadU32(B39_PARAM_BASE) == 3u, "top record command decoded");
     ASSERT(g_bootstrap_arg_call_count == 0,
            "top record lookup must remain translated");
@@ -10290,8 +10305,7 @@ static void test_51CC4_ramreset_no_split_brain(void)
 }
 
 /* The translated dispatcher reaches B39 after func_8005D6F4 and before
- * func_80042C78.  B43 reaches func_8005B91C inside the real 5218C prefix;
- * all direct state from both neighboring operations is visible on return. */
+ * func_80042C78.  Its zeroed B43 holder selects the proven early return. */
 static void test_51CC4_527C8_integration(void)
 {
     TEST("51CC4_527C8_integration");
@@ -10301,8 +10315,8 @@ static void test_51CC4_527C8_integration(void)
      * earlier resource initializers own the same func_8005DB44 header and
      * table state.  Their reset/default result is a proven NULL lookup. */
     func_800527C8();
-    ASSERT(g_stub_order_count == 1 && B21_CheckDispatcherOrder(0),
-           "dispatcher unresolved sequence after B39");
+    ASSERT(g_stub_order_count == 0,
+           "dispatcher zero-holder path must have no unresolved call");
     ASSERT(PE_LoadU16(0x800C1F80u) == 0x0203u,
            "preceding func_8005D6F4 operation must be committed");
     ASSERT(CountOrderLog("func_8005332C") == 0,
@@ -10315,17 +10329,86 @@ static void test_51CC4_527C8_integration(void)
     PASS();
 }
 
-/* ── Phase 6E-B43: func_8005218C proven prefix boundary ───────────── */
+/* ── Phase 6E-B43/B44: func_8005218C extended proven prefix ───────── */
 
 #define B43_TARGET0       0x800C0E28u
 #define B43_STALE_A34     0x800B8034u
 #define B43_STALE_A38     0x800B8038u
+#define B44_TABLE_BASE    0x800B0000u
+#define B44_DBAC_BASE     0x800B2000u
+#define B44_HOLDER        0x800A1000u
+#define B44_RECORD        0x800A1100u
+#define B44_INDEX_OUT     0x80001000u
+#define B44_FRACTION_OUT  0x80001004u
+
+static void B44_SeedLinearTables(pe_addr_t base)
+{
+    uint32_t table;
+    uint32_t index;
+    PE_StoreU32(0x800A8038u, base - 0x800A8028u);
+    for (table = 0u; table < 7u; table++) {
+        for (index = 0u; index <= 128u; index++) {
+            PE_StoreU32(base + table * 0x200u + index * 4u,
+                        index * 10u);
+        }
+    }
+}
+
+static void B44_SeedB43State(pe_addr_t table_base)
+{
+    uint32_t i;
+    B44_SeedLinearTables(table_base);
+    PE_StoreU32(0x800A803Cu, B44_DBAC_BASE - 0x800A8028u);
+    PE_StoreU32(0x800A1B30u, 0u);
+    for (i = 0u; i < 5u; i++)
+        PE_StoreU32(0x800A1B34u + i * 4u, 0u);
+    for (i = 0u; i < 7u; i++)
+        PE_StoreU16(B43_TARGET0 + i * 2u, 0u);
+
+    PE_StoreU16(B44_DBAC_BASE + 0x00u, 10u);
+    PE_StoreU16(B44_DBAC_BASE + 0x02u, 0x1111u);
+    PE_StoreU16(B44_DBAC_BASE + 0x04u, 0x2222u);
+    PE_StoreU8(B44_DBAC_BASE + 0x06u, 0x88u);
+    PE_StoreU8(B44_DBAC_BASE + 0x07u, 0x99u);
+    PE_StoreU32(B44_DBAC_BASE + 0x08u, 0x33333333u);
+    PE_StoreU32(B44_DBAC_BASE + 0x0Cu, 0x44444444u);
+    PE_StoreU32(B44_DBAC_BASE + 0x10u, 0x55555555u);
+    PE_StoreU16(B44_DBAC_BASE + 0x14u, 0x6666u);
+    PE_StoreU16(B44_DBAC_BASE + 0x16u, 0x7777u);
+
+    PE_StoreU32(0x8009D254u, B44_HOLDER);
+    PE_StoreU32(B44_HOLDER, B44_RECORD);
+    PE_StoreU16(B44_RECORD + 0x0Cu, 20u);
+    PE_StoreU16(B44_RECORD + 0x0Eu, 30u);
+    PE_StoreU16(0x800C0E08u, 20u);
+}
+
+static int B44_IsB43Write(pe_addr_t address)
+{
+    static const struct { pe_addr_t address; uint32_t width; } ranges[] = {
+        { 0x800C0E06u, 2u }, { 0x800C0E08u, 2u },
+        { B44_RECORD + 0x0Cu, 2u }, { B44_RECORD + 0x0Eu, 2u },
+        { B44_RECORD + 0x1Cu, 2u }, { B44_RECORD + 0x1Eu, 2u },
+        { B44_RECORD + 0x20u, 2u }, { B44_RECORD + 0x22u, 2u },
+        { B44_RECORD + 0x26u, 2u }, { B44_RECORD + 0x28u, 4u },
+        { B44_RECORD + 0x2Cu, 4u }, { B44_RECORD + 0x30u, 4u },
+        { B44_RECORD + 0x3Cu, 2u }, { B44_RECORD + 0x3Eu, 2u },
+    };
+    size_t i;
+    for (i = 0u; i < sizeof(ranges) / sizeof(ranges[0]); i++) {
+        if (address >= ranges[i].address &&
+            address < ranges[i].address + ranges[i].width)
+            return 1;
+    }
+    return 0;
+}
 
 static void test_5218C_signature_and_first_boundary(void)
 {
     TEST("5218C_signature_and_first_boundary");
     void (*entry)(void) = func_8005218C;
     ResetTestState();
+    B44_SeedB43State(B44_TABLE_BASE);
     PE_StoreU8(B43_TARGET0 - 1u, 0xA5u);
     PE_StoreU16(B43_TARGET0, 0x8001u);
     PE_StoreU8(B43_TARGET0 + 2u, 0x5Au);
@@ -10333,24 +10416,17 @@ static void test_5218C_signature_and_first_boundary(void)
     entry();
 
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8005B91C") == 0,
-           "first retail dependency must be func_8005B91C");
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "four-register dependency call not recorded exactly once");
-    ASSERT(strcmp(g_bootstrap_arg4_calls[0].symbol, "func_8005B91C") == 0 &&
-           strcmp(g_bootstrap_arg4_calls[0].caller, "func_8005218C") == 0,
+           strcmp(g_stub_order_log[0], "func_80052F24") == 0,
+           "next retail dependency must be func_80052F24");
+    ASSERT(g_bootstrap_arg_call_count == 1,
+           "one-argument dependency call not recorded exactly once");
+    ASSERT(strcmp(g_bootstrap_arg_calls[0].symbol, "func_80052F24") == 0 &&
+           strcmp(g_bootstrap_arg_calls[0].caller, "func_8005218C") == 0,
            "boundary symbol/caller mismatch");
-    ASSERT(g_bootstrap_arg4_calls[0].arg0 == (uintptr_t)0u &&
-           g_bootstrap_arg4_calls[0].arg1 == (uintptr_t)0xFFFF8001u &&
-           g_bootstrap_arg4_calls[0].arg3 == (uintptr_t)0u,
-           "a0/a1/a3 mismatch at first dependency");
-    ASSERT((g_bootstrap_arg4_calls[0].arg2 &
-            (uintptr_t)(_Alignof(int32_t) - 1u)) == 0u,
-           "a2 must designate an aligned native int32_t output word");
-#if UINTPTR_MAX > UINT32_MAX
-    ASSERT(g_bootstrap_arg4_calls[0].arg2 > (uintptr_t)UINT32_MAX,
-           "a2 transient pointer was truncated to retail width");
-#endif
+    ASSERT(g_bootstrap_arg_calls[0].arg0 == 0x99u,
+           "func_80052F24 argument must be the exact selected byte");
+    ASSERT(g_bootstrap_arg4_call_count == 0,
+           "translated B44 call must not use unresolved arg4 logging");
     ASSERT(PE_LoadU8(B43_TARGET0 - 1u) == 0xA5u &&
            PE_LoadU16(B43_TARGET0) == 0x8001u &&
            PE_LoadU8(B43_TARGET0 + 2u) == 0x5Au,
@@ -10363,25 +10439,20 @@ static void test_5218C_signed_target_values(void)
     TEST("5218C_signed_target_values");
     static const struct {
         uint16_t raw;
-        uintptr_t expected_a1;
+        int32_t expected_index;
     } cases[] = {
-        { 0x0000u, (uintptr_t)0x00000000u },
-        { 0x0001u, (uintptr_t)0x00000001u },
-        { 0x7FFFu, (uintptr_t)0x00007FFFu },
-        { 0x8000u, (uintptr_t)0xFFFF8000u },
-        { 0xFFFFu, (uintptr_t)0xFFFFFFFFu },
+        { 0x0000u, 0 }, { 0x0001u, 0 }, { 0x7FFFu, 98 },
+        { 0x8000u, 0 }, { 0xFFFFu, 0 },
     };
     size_t i;
     for (i = 0u; i < sizeof(cases) / sizeof(cases[0]); i++) {
         ResetTestState();
-        PE_StoreU16(B43_TARGET0, cases[i].raw);
-        func_8005218C();
-        ASSERT(g_bootstrap_arg4_call_count == 1 &&
-               g_bootstrap_arg4_calls[0].arg1 == cases[i].expected_a1,
-               "retail lh sign extension mismatch");
-        ASSERT(g_bootstrap_arg4_calls[0].arg0 == 0u &&
-               g_bootstrap_arg4_calls[0].arg3 == 0u,
-               "fixed dependency arguments changed with target");
+        B44_SeedLinearTables(B44_TABLE_BASE);
+        int32_t index = -1;
+        PE_func_8005B91C_HostOut(0, (int32_t)(int16_t)cases[i].raw,
+                                 &index, NULL);
+        ASSERT(index == cases[i].expected_index,
+               "retail lh/search result mismatch");
     }
     PASS();
 }
@@ -10398,15 +10469,13 @@ static void test_5218C_five_caller_abis(void)
     };
     size_t i;
     ResetTestState();
-    PE_StoreU16(B43_TARGET0, 0xFFFEu);
+    B44_SeedB43State(B44_TABLE_BASE);
     for (i = 0u; i < sizeof(sites) / sizeof(sites[0]); i++) {
         ASSERT(sites[i] >= 0x80010000u, "literal caller address lost");
         func_8005218C();
-        ASSERT(g_bootstrap_arg4_call_count == (int)(i + 1u),
+        ASSERT(g_bootstrap_arg_call_count == (int)(i + 1u),
                "one dependency call required per executable caller");
-        ASSERT(g_bootstrap_arg4_calls[i].arg0 == 0u &&
-               g_bootstrap_arg4_calls[i].arg1 == (uintptr_t)0xFFFFFFFEu &&
-               g_bootstrap_arg4_calls[i].arg3 == 0u,
+        ASSERT(g_bootstrap_arg_calls[i].arg0 == 0x99u,
                "caller-independent zero-argument contract changed");
     }
     ASSERT(g_stub_order_count == 5,
@@ -10448,23 +10517,22 @@ static void test_5218C_dirty_repeat_and_partial_state(void)
 {
     TEST("5218C_dirty_repeat_and_partial_state");
     ResetTestState();
-    PE_StoreU16(B43_TARGET0, 0x1234u);
+    B44_SeedB43State(B44_TABLE_BASE);
     PE_StoreU16(0x800C0E06u, 0xA5A5u);
-    PE_StoreU32(0x8009D254u, 0xDEADBEEFu);
     D_8009D048 = 0x800C1234u;
     D_8009D050 = 0x11223344u;
 
     func_8005218C();
     func_8005218C();
 
-    ASSERT(g_bootstrap_arg4_call_count == 2 && g_stub_order_count == 2,
-           "repeated invocation must repeat the first dependency only");
-    ASSERT(g_bootstrap_arg4_calls[0].arg1 == 0x1234u &&
-           g_bootstrap_arg4_calls[1].arg1 == 0x1234u,
-           "repeated signed target contract changed");
-    ASSERT(PE_LoadU16(0x800C0E06u) == 0xA5A5u &&
-           PE_LoadU32(0x8009D254u) == 0xDEADBEEFu,
-           "prefix crossed into post-dependency persistent state");
+    ASSERT(g_bootstrap_arg_call_count == 2 && g_stub_order_count == 2,
+           "repeated invocation must repeat the final dependency only");
+    ASSERT(g_bootstrap_arg_calls[0].arg0 == 0x99u &&
+           g_bootstrap_arg_calls[1].arg0 == 0x99u,
+           "repeated selected-byte contract changed");
+    ASSERT(PE_LoadU16(0x800C0E06u) == 10u &&
+           PE_LoadU32(0x8009D254u) == B44_HOLDER,
+           "extended prefix state mismatch");
     ASSERT(D_8009D048 == 0x800C1234u && D_8009D050 == 0x11223344u,
            "prefix changed authoritative resource state");
     PASS();
@@ -10474,18 +10542,21 @@ static void test_5218C_full_ram_canary_readonly(void)
 {
     TEST("5218C_full_ram_canary_readonly");
     uint8_t *snapshot;
+    pe_addr_t address;
     ResetTestState();
-    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0xA5u);
-    PE_StoreU16(B43_TARGET0, 0x8000u);
+    B44_SeedB43State(B44_TABLE_BASE);
     snapshot = malloc(PE_RAM_SIZE);
     ASSERT(snapshot != NULL, "cannot allocate B43 full-RAM snapshot");
     memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
     func_8005218C();
-    if (memcmp(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
-               PE_RAM_SIZE) != 0) {
-        free(snapshot);
-        FAIL("B43 prefix changed guest RAM before func_8005B91C");
-        return;
+    for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
+        uint8_t before = snapshot[address - PE_RAM_BASE];
+        uint8_t after = PE_LoadU8(address);
+        if (before != after && !B44_IsB43Write(address)) {
+            free(snapshot);
+            FAIL("B43 extended prefix wrote outside retail footprint");
+            return;
+        }
     }
     free(snapshot);
     PASS();
@@ -10495,21 +10566,22 @@ static void test_5218C_reset_owners(void)
 {
     TEST("5218C_reset_owners");
     ResetTestState();
-    PE_StoreU16(B43_TARGET0, 0xFFFFu);
+    B44_SeedB43State(B44_TABLE_BASE);
     func_8005218C();
-    ASSERT(g_bootstrap_arg4_calls[0].arg1 == (uintptr_t)0xFFFFFFFFu,
-           "pre-reset signed target mismatch");
+    ASSERT(g_bootstrap_arg_call_count == 1,
+           "pre-reset full prefix did not reach boundary");
     PE_RamReset();
-    Bootstrap_ResetArg4CallLog();
+    Bootstrap_ResetArgCallLog();
     func_8005218C();
-    ASSERT(g_bootstrap_arg4_calls[0].arg1 == 0u,
-           "PE_RamReset must clear guest-resident target");
-    PE_StoreU16(B43_TARGET0, 0x7FFFu);
+    ASSERT(g_bootstrap_arg_call_count == 0 &&
+           PE_LoadU16(0x800C0E06u) == 0u,
+           "PE_RamReset must clear guest state and select early return");
+    B44_SeedB43State(B44_TABLE_BASE);
     PE_Sdk_ResetState();
-    Bootstrap_ResetArg4CallLog();
+    Bootstrap_ResetArgCallLog();
     func_8005218C();
-    ASSERT(g_bootstrap_arg4_calls[0].arg1 == 0x7FFFu,
-           "PE_Sdk_ResetState must preserve guest-resident target");
+    ASSERT(g_bootstrap_arg_call_count == 1,
+           "PE_Sdk_ResetState must preserve guest-resident B43 inputs");
     PASS();
 }
 
@@ -10517,15 +10589,14 @@ static void test_5218C_resource_alias_and_pointer_safety(void)
 {
     TEST("5218C_resource_alias_and_pointer_safety");
     ResetTestState();
-    PE_StoreU16(B43_TARGET0, 3u);
+    B44_SeedLinearTables(B44_TABLE_BASE);
     PE_StoreU32(0x800A8034u, 0x11111111u);
-    PE_StoreU32(0x800A8038u, 0x22222222u);
     PE_StoreU32(B43_STALE_A34, 0x33333333u);
     PE_StoreU32(B43_STALE_A38, 0x44444444u);
-    func_8005218C();
+    func_8005B91C(0, 5, B44_INDEX_OUT, B44_FRACTION_OUT);
     ASSERT(PE_LoadU32(0x800A8034u) == 0x11111111u &&
-           PE_LoadU32(0x800A8038u) == 0x22222222u,
-           "corrected resource lookup inputs changed in B43 prefix");
+           PE_LoadU32(0x800A8038u) == B44_TABLE_BASE - 0x800A8028u,
+           "corrected resource lookup inputs changed in B44");
     ASSERT(PE_LoadU32(B43_STALE_A34) == 0x33333333u &&
            PE_LoadU32(B43_STALE_A38) == 0x44444444u,
            "stale aliases became semantic inputs or outputs");
@@ -10541,26 +10612,27 @@ static void test_5218C_51CC4_prefix_integration(void)
     ResetTestState();
     B39_ScriptRecord(B39_RECORD);
     B39_SeedRecord(B39_RECORD, &command, 1u);
-    PE_StoreU16(B43_TARGET0, 0xFEDCu);
+    B44_SeedB43State(B39_RECORD + 0x20u);
     func_80051CC4();
     ASSERT(PE_LoadU32(B39_PARAM_BASE + 4u) == 2u,
            "B39 command state must be committed before B43 boundary");
     ASSERT(g_stub_order_count == 1 && B21_CheckDispatcherOrder(0),
-           "B39 must reach the first genuine B43 dependency");
-    ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           g_bootstrap_arg4_calls[0].arg1 == (uintptr_t)0xFFFFFEDCu,
-           "B39/B43 signed dependency contract mismatch");
+           "B39 must reach the next genuine B43 dependency");
+    ASSERT(g_bootstrap_arg_call_count == 1 &&
+           g_bootstrap_arg_calls[0].arg0 == 0x99u,
+           "B39/B43 final dependency contract mismatch");
     PASS();
 }
 
-static void test_5218C_strict_advances_to_5B91C(void)
+static void test_5218C_strict_advances_to_52F24(void)
 {
-    TEST("5218C_strict_advances_to_5B91C");
+    TEST("5218C_strict_advances_to_52F24");
     pid_t pid = fork();
     int status = 0;
     ASSERT(pid >= 0, "fork failed for B43 strict boundary");
     if (pid == 0) {
         Bootstrap_Init();
+        B44_SeedB43State(B44_TABLE_BASE);
         Bootstrap_EnableStrict();
         func_8005218C();
         _exit(99);
@@ -10568,7 +10640,229 @@ static void test_5218C_strict_advances_to_5B91C(void)
     ASSERT(waitpid(pid, &status, 0) == pid,
            "waitpid failed for B43 strict boundary");
     ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict B43 boundary must exit 1 at func_8005B91C");
+           "strict B43 boundary must exit 1 at func_80052F24");
+    PASS();
+}
+
+/* ── Phase 6E-B44: func_8005B91C exact translated table lookup ─────── */
+
+static void test_5B91C_signature_and_null_outputs(void)
+{
+    TEST("5B91C_signature_and_null_outputs");
+    void (*entry)(int32_t, int32_t, pe_addr_t, pe_addr_t) = func_8005B91C;
+    ResetTestState();
+    B44_SeedLinearTables(B44_TABLE_BASE);
+    entry(0, 5, 0u, 0u);
+    ASSERT(g_stub_order_count == 0 && Bootstrap_InvocationCount() == 0,
+           "translated B44 must not enter centralized boundary policy");
+    ASSERT(PE_LoadU32(0x800A8038u) == B44_TABLE_BASE - 0x800A8028u,
+           "null outputs must still perform the exact table lookup");
+    PASS();
+}
+
+static void test_5B91C_search_and_fraction_paths(void)
+{
+    TEST("5B91C_search_and_fraction_paths");
+    static const struct { int32_t key, index, fraction; } cases[] = {
+        { -1, 0, -4 }, { 0, 0, 0 }, { 5, 0, 24 },
+        { 10, 1, 0 }, { 15, 1, 24 }, { 2000, 98, 48 },
+    };
+    size_t i;
+    ResetTestState();
+    B44_SeedLinearTables(B44_TABLE_BASE);
+    for (i = 0u; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        PE_StoreU32(B44_INDEX_OUT, 0xA5A5A5A5u);
+        PE_StoreU32(B44_FRACTION_OUT, 0x5A5A5A5Au);
+        func_8005B91C(0, cases[i].key, B44_INDEX_OUT, B44_FRACTION_OUT);
+        ASSERT((int32_t)PE_LoadU32(B44_INDEX_OUT) == cases[i].index,
+               "binary-search index differs from retail oracle");
+        ASSERT((int32_t)PE_LoadU32(B44_FRACTION_OUT) == cases[i].fraction,
+               "interpolation fraction differs from retail oracle");
+    }
+    PASS();
+}
+
+static void test_5B91C_output_alias_and_order(void)
+{
+    TEST("5B91C_output_alias_and_order");
+    ResetTestState();
+    B44_SeedLinearTables(B44_TABLE_BASE);
+    PE_StoreU32(B44_INDEX_OUT - 4u, 0x11223344u);
+    PE_StoreU32(B44_INDEX_OUT + 4u, 0x55667788u);
+    func_8005B91C(0, 15, B44_INDEX_OUT, B44_INDEX_OUT);
+    ASSERT(PE_LoadU32(B44_INDEX_OUT) == 24u,
+           "fraction must overwrite index when retail outputs alias");
+    ASSERT(PE_LoadU32(B44_INDEX_OUT - 4u) == 0x11223344u &&
+           PE_LoadU32(B44_INDEX_OUT + 4u) == 0x55667788u,
+           "word output crossed exact four-byte width");
+    PASS();
+}
+
+static void test_5B91C_signed_division_trap(void)
+{
+    TEST("5B91C_signed_division_trap");
+    pid_t pid;
+    int status = 0;
+    uint32_t i;
+    ResetTestState();
+    B44_SeedLinearTables(B44_TABLE_BASE);
+    PE_StoreU32(B44_TABLE_BASE + 0u, 0u);
+    PE_StoreU32(B44_TABLE_BASE + 4u, 0xFFFFFFFFu);
+    for (i = 2u; i <= 128u; i++)
+        PE_StoreU32(B44_TABLE_BASE + i * 4u, 0u);
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed for B44 signed division trap");
+    if (pid == 0) {
+        func_8005B91C(0, INT32_MIN, 0u, 0u);
+        _exit(99);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid,
+           "waitpid failed for B44 signed division trap");
+    ASSERT(WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT,
+           "retail break 6 must not become C signed-division UB");
+    PASS();
+}
+
+static void test_5B91C_all_18_caller_contracts(void)
+{
+    TEST("5B91C_all_18_caller_contracts");
+    static const pe_addr_t sites[18] = {
+        0x80043AC4u, 0x80043CFCu, 0x80048D00u, 0x8004A948u,
+        0x8004B850u, 0x8004B8A8u, 0x8004BDA4u, 0x8004BDD0u,
+        0x80050D94u, 0x80050EC4u, 0x800521B0u, 0x80052280u,
+        0x800522B4u, 0x800522E8u, 0x80052330u, 0x80052370u,
+        0x800523A4u, 0x80052420u,
+    };
+    size_t i;
+    ResetTestState();
+    B44_SeedLinearTables(B44_TABLE_BASE);
+    for (i = 0u; i < sizeof(sites) / sizeof(sites[0]); i++) {
+        int32_t index = -99;
+        ASSERT(sites[i] >= 0x80010000u, "literal B44 caller lost");
+        PE_func_8005B91C_HostOut((int32_t)(i % 7u), 5,
+                                 &index, NULL);
+        ASSERT(index == 0, "caller-owned output contract mismatch");
+    }
+    ASSERT(g_stub_order_count == 0,
+           "none of the 18 translated calls may log a provider");
+    PASS();
+}
+
+static void test_5B91C_seven_B43_contexts(void)
+{
+    TEST("5B91C_seven_B43_contexts");
+    static const uint32_t offsets[7] = { 0u, 3u, 5u, 7u, 11u, 13u, 0u };
+    static const int32_t expected[7] = { 0, 4, 7, 10, 15, 18, 6 };
+    uint32_t i;
+    ResetTestState();
+    B44_SeedLinearTables(B44_TABLE_BASE);
+    for (i = 0u; i < 7u; i++) {
+        int32_t index = -1;
+        PE_func_8005B91C_HostOut((int32_t)i, (int32_t)i * 10 + 5,
+                                 &index, NULL);
+        ASSERT((int32_t)((uint32_t)index + offsets[i]) == expected[i],
+               "B43 output-to-func_8005DBAC input mismatch");
+    }
+    PASS();
+}
+
+static void test_5B91C_full_ram_canary_footprint(void)
+{
+    TEST("5B91C_full_ram_canary_footprint");
+    uint8_t *snapshot;
+    pe_addr_t address;
+    ResetTestState();
+    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0xA5u);
+    B44_SeedLinearTables(B44_TABLE_BASE);
+    PE_StoreU32(B44_INDEX_OUT, 0xAAAAAAAAu);
+    PE_StoreU32(B44_FRACTION_OUT, 0xBBBBBBBBu);
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate B44 full-RAM snapshot");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+    func_8005B91C(0, 15, B44_INDEX_OUT, B44_FRACTION_OUT);
+    for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
+        uint8_t before = snapshot[address - PE_RAM_BASE];
+        uint8_t after = PE_LoadU8(address);
+        int allowed = ((address >= B44_INDEX_OUT && address < B44_INDEX_OUT + 4u) ||
+                       (address >= B44_FRACTION_OUT &&
+                        address < B44_FRACTION_OUT + 4u));
+        if (before != after && !allowed) {
+            free(snapshot);
+            FAIL("B44 wrote outside its two exact output words");
+            return;
+        }
+    }
+    free(snapshot);
+    PASS();
+}
+
+static void test_5B91C_dirty_repeat_and_reset(void)
+{
+    TEST("5B91C_dirty_repeat_and_reset");
+    ResetTestState();
+    B44_SeedLinearTables(B44_TABLE_BASE);
+    PE_StoreU32(B44_INDEX_OUT, 0xDEADBEEFu);
+    PE_StoreU32(B44_FRACTION_OUT, 0xCAFEBABEu);
+    func_8005B91C(0, 5, B44_INDEX_OUT, B44_FRACTION_OUT);
+    func_8005B91C(0, 5, B44_INDEX_OUT, B44_FRACTION_OUT);
+    ASSERT(PE_LoadU32(B44_INDEX_OUT) == 0u &&
+           PE_LoadU32(B44_FRACTION_OUT) == 24u,
+           "dirty/repeated output must be deterministic");
+    PE_Sdk_ResetState();
+    func_8005B91C(0, 5, B44_INDEX_OUT, B44_FRACTION_OUT);
+    ASSERT(PE_LoadU32(B44_FRACTION_OUT) == 24u,
+           "SDK reset must preserve guest table authority");
+    PE_RamReset();
+    ASSERT(PE_LoadU32(0x800A8038u) == 0u,
+           "RAM reset must clear B44 table authority");
+    PASS();
+}
+
+static void test_5B91C_no_stale_alias_or_host_pointer(void)
+{
+    TEST("5B91C_no_stale_alias_or_host_pointer");
+    int32_t index = -1;
+    int32_t fraction = -1;
+    ResetTestState();
+    B44_SeedLinearTables(B44_TABLE_BASE);
+    PE_StoreU32(B43_STALE_A34, 0x11223344u);
+    PE_StoreU32(B43_STALE_A38, 0x55667788u);
+    PE_func_8005B91C_HostOut(0, 5, &index, &fraction);
+    ASSERT(index == 0 && fraction == 24,
+           "full-width native output adapter mismatch");
+    ASSERT(PE_LoadU32(B43_STALE_A34) == 0x11223344u &&
+           PE_LoadU32(B43_STALE_A38) == 0x55667788u,
+           "stale B-address aliases became semantic B44 inputs");
+    ASSERT(!PE_AddressIsRam(0x000A8038u) &&
+           !PE_AddressIsRam(0x00001000u),
+           "low-address mirror must remain invalid");
+    PASS();
+}
+
+static void test_5B91C_B43_integration_and_strict_advance(void)
+{
+    TEST("5B91C_B43_integration_and_strict_advance");
+    ResetTestState();
+    B44_SeedB43State(B44_TABLE_BASE);
+    func_8005218C();
+    ASSERT(PE_LoadU16(0x800C0E06u) == 10u &&
+           PE_LoadU16(0x800C0E08u) == 10u,
+           "B43 quotient/global writes mismatch");
+    ASSERT(PE_LoadU16(B44_RECORD + 0x1Eu) == 0x1111u &&
+           PE_LoadU16(B44_RECORD + 0x20u) == 0x2222u &&
+           PE_LoadU32(B44_RECORD + 0x28u) == 0x33333333u &&
+           PE_LoadU32(B44_RECORD + 0x30u) == 0x44444444u &&
+           PE_LoadU32(B44_RECORD + 0x2Cu) == 0x55555555u &&
+           PE_LoadU16(B44_RECORD + 0x3Cu) == 0x6666u &&
+           PE_LoadU16(B44_RECORD + 0x3Eu) == 0x7777u &&
+           PE_LoadU16(B44_RECORD + 0x22u) == 0x88u &&
+           PE_LoadU16(B44_RECORD + 0x26u) == 0x99u,
+           "seven B44 outputs did not feed exact B43 record fields");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_80052F24") == 0,
+           "B44 must expose only the genuine next B43 provider");
+    ASSERT(CountOrderLog("func_8005B91C") == 0,
+           "translated B44 must not remain a bootstrap provider");
     PASS();
 }
 
@@ -10838,8 +11132,8 @@ static void test_5332C_strict_and_51CC4_integration(void)
     func_80051CC4();
     ASSERT(PE_LoadU32(B39_PARAM_BASE + 4u) == 2u,
            "B39 did not consume B40's exact returned record");
-    ASSERT(g_stub_order_count == 1 && B21_CheckDispatcherOrder(0),
-           "direct B39 path must reach B43's func_8005B91C boundary");
+    ASSERT(g_stub_order_count == 0,
+           "direct B39 zero-holder path must take the proven early return");
     ASSERT(CountOrderLog("func_8005332C") == 0,
            "B39 still routes func_8005332C through bootstrap policy");
     PASS();
@@ -11453,7 +11747,19 @@ int main(void)
     test_5218C_reset_owners();
     test_5218C_resource_alias_and_pointer_safety();
     test_5218C_51CC4_prefix_integration();
-    test_5218C_strict_advances_to_5B91C();
+    test_5218C_strict_advances_to_52F24();
+
+    /* Phase 6E-B44 — func_8005B91C exact table lookup (10 tests). */
+    test_5B91C_signature_and_null_outputs();
+    test_5B91C_search_and_fraction_paths();
+    test_5B91C_output_alias_and_order();
+    test_5B91C_signed_division_trap();
+    test_5B91C_all_18_caller_contracts();
+    test_5B91C_seven_B43_contexts();
+    test_5B91C_full_ram_canary_footprint();
+    test_5B91C_dirty_repeat_and_reset();
+    test_5B91C_no_stale_alias_or_host_pointer();
+    test_5B91C_B43_integration_and_strict_advance();
 
     /* Phase 6E-B40 — func_8005332C resource-record lookup. */
     test_5332C_signature_and_index_guards();

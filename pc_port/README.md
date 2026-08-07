@@ -1,22 +1,22 @@
-# Parasite Eve Native PC Port — Phase 6E-B43
+# Parasite Eve Native PC Port — Phase 6E-B44
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B43 prefix-translates `func_8005218C`, whose complete
-retail body is 155 instructions / `0x26C` bytes at
-`0x8005218C..0x800523F7`. All five executable callers are zero-argument and
-discard its residual return. The first of seven `func_8005B91C` calls writes
-a required 32-bit output word through `a2=sp+0x10`; B43 immediately loads
-that word and passes it to translated `func_8005DBAC`. Production therefore
-uses the proven prefix-only architecture and stops honestly at
-`func_8005B91C` without fabricating the output or beginning that dependency.
-The independent `tools/b43_oracle.py` verifies and executes all 155 words,
-five caller contexts, seven controlled `5B91C` calls, seven exact `5DBAC`
-calls, and the final controlled `func_80052F24` call without production C.
-Normal and fresh ASan/UBSan tests pass 417/417; all 28 oracle programs pass.
-Full proof is in
-`docs/b43_func_8005218C.md`. Bootstrap strict remains `func_8007F72C` from
-`func_800698D4`; nothing has been pushed.
+**Current milestone:** B44 fully translates `func_8005B91C`, the 87-word
+signed table index/interpolation routine at `0x8005B91C..0x8005BA77`. Its
+true four-argument ABI writes an exact 32-bit index through nullable `a2` and
+an optional fraction through nullable `a3`; all 18 executable call sites are
+verified. A separate full-width host-output adapter safely represents B43's
+retail stack local. The B43 prefix now traverses all seven B44 calls and
+their exact `func_8005DBAC` consumers, stopping at `func_80052F24` only on
+paths that reach it. The actual Disc 1 state takes B43's proven null-holder
+return, so fresh real-disc strict execution next stops at untouched
+`func_80087090` from `func_8006A9E4`. `tools/b44_oracle.py` verifies and
+executes all 87 words, all delay slots, all 18 call sites, and the seven B43
+output contexts without production C. Normal and fresh ASan/UBSan tests pass
+427/427, and all 29 oracle programs pass. Full proof is in
+`docs/b44_func_8005B91C.md`. Bootstrap strict remains
+`func_8007F72C` from `func_800698D4`; nothing has been pushed.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36
 instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`
@@ -634,7 +634,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (417 tests, all pass)
+- `pe-native-tests` — test suite (427 tests, all pass)
 
 ## Running
 
@@ -662,8 +662,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected after B43: exit 1 at func_8005B91C from func_8005218C.
-# func_8005B91C and func_80052F24 remain untranslated.
+# Expected after B44 for Disc 1: exit 1 at func_80087090 from func_8006A9E4.
+# func_80052F24 remains untranslated; B43's actual Disc state returns before it.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -860,8 +860,8 @@ status 1; native tests are 285/285.
 
 ## Next steps
 
-1. **Next rung:** `func_8005B91C` from `func_8005218C`; classify its raw
-   MIPS contract and required `a2` output state before any implementation
+1. **Next rung:** audit the genuine `func_80087090` real-disc frontier;
+   `func_80052F24` remains the separate conditional B43 boundary
 2. Identify the first boot asset (likely MDEC logo data)
 3. Wire MDEC decoding and display
 4. Audio, input, save/load (later phases)
