@@ -271,6 +271,13 @@ void func_80085644(void)
 {
     func_8007D15C();                    /* SPU IRQ event (guard: no-op after SsInit) */
 
+    /* SPU allocation globals (retail SsInit at 0x8007D2A8, collapsed).
+     * Must be set before func_80085EB4 reads them. */
+    PE_StoreU32(0x8009B420u, 2);    /* alignment mode flag */
+    PE_StoreU32(0x8009B424u, 3);    /* SPU address shift (8-byte units) */
+    PE_StoreU32(0x8009B428u, 8);    /* alignment divisor */
+    PE_StoreU32(0x8009B42Cu, 7);    /* alignment mask */
+
     /* func_80085A04(4, &D_800B6958) — stream transfer config */
     PE_StoreU32(0x800B6958u, 0x40001010u);
     PE_StoreU32(0x8009B464u, 0x800B6958u);

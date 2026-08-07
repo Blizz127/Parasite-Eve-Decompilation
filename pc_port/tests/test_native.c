@@ -901,7 +901,7 @@ static void test_6A5BC_setup_order(void) {
     ASSERT(PE_LoadU32(0x8009CDE0u) != 0, "stream event handle not stored");
     ASSERT(PE_LoadU32(0x8009D24Cu) == 0, "synchronous SPU transfer should complete");
     ASSERT(PE_LoadU32(0x800B6958u) == 0x40001010u, "stream config word 0");
-    ASSERT(PE_LoadU32(0x800B6958u + 4u) == 0xEFF0u, "stream config word 1");
+    ASSERT(PE_LoadU32(0x800B6958u + 4u) == 0x7EFF0u, "stream config word 1");
     /* No bootstrap stubs remain on the 6A5BC path */
     ASSERT(g_stub_count == 0, "6A5BC path recorded bootstrap stubs (frontier regressed)");
     PASS();
@@ -1306,7 +1306,7 @@ static void test_85644_bringup(void) {
     func_80085644();
     ASSERT(PE_LoadU32(0x8009B3ECu) == 1, "SPU IRQ event guard (func_8007D15C)");
     ASSERT(PE_LoadU32(0x800B6958u) == 0x40001010u, "config word 0");
-    ASSERT(PE_LoadU32(0x800B6958u + 4u) == 0xEFF0u, "config word 1 (0x10000<<0)-0x1010");
+    ASSERT(PE_LoadU32(0x800B6958u + 4u) == 0x7EFF0u, "config word 1 (0x10000<<3)-0x1010");
     ASSERT(PE_LoadU32(0x8009B45Cu) == 4, "config arg word");
     ASSERT(PE_LoadU32(0x8009B464u) == 0x800B6958u, "config ptr");
     ASSERT(PE_LoadU16(0x8009B414u) == 0x1010, "SPU heap top");
@@ -10907,32 +10907,26 @@ static void test_87090_signature_and_retry(void)
     ASSERT(PE_LoadU32(0x8009D24Cu) != 0,
            "D_8009D24C must be set on error path");
 
-    /* Valid buffer (magic number) → routes through bootstrap boundary */
+    /* Valid buffer (magic number) → deterministic path, returns 0.
+     * B47: func_800851A8 is extended-prefix translated.  The bootstrap
+     * boundary is hit for func_800850F4 (DMA transfer) only. */
     ResetTestState();
     B46_SeedMagic(0x80100000u);
     ret = fn(0x80100000u, 1);
-    ASSERT(ret == 0, "valid buffer must return 0 (bootstrap default)");
-    ASSERT(g_stub_order_count == 1, "must call bootstrap once");
+    ASSERT(ret == 0, "valid buffer must return 0");
+    ASSERT(g_stub_order_count == 1, "must call bootstrap once (DMA transfer)");
     ASSERT(strcmp(g_stub_order_log[0], "func_800851A8") == 0,
-           "must call func_800851A8 via bootstrap");
+           "bootstrap log must show func_800851A8");
 
-    /* Valid buffer with bootstrap sequence: 1 then 0 → two calls */
+    /* func_800851A8 is deterministic — retry via bootstrap sequence
+     * no longer applies.  func_80087090's retry loop (ret == 1) is
+     * dead code in retail: func_800851A8 returns 0 on success, -1 on
+     * error, never 1. */
     ResetTestState();
     B46_SeedMagic(0x80100000u);
-    { int seq[] = { 1, 0 };
-      B45_Set851A8Sequence(seq, 2); }
     ret = fn(0x80100000u, 1);
-    ASSERT(ret == 0, "retry then success must return 0");
-    ASSERT(g_stub_order_count == 2, "must call bootstrap twice");
-
-    /* Valid buffer with negative return: no retry */
-    ResetTestState();
-    B46_SeedMagic(0x80100000u);
-    { int seq[] = { -1 };
-      B45_Set851A8Sequence(seq, 1); }
-    ret = fn(0x80100000u, 1);
-    ASSERT(ret == -1, "negative return must pass through");
-    ASSERT(g_stub_order_count == 1, "no retry on negative");
+    ASSERT(ret == 0, "deterministic success returns 0");
+    ASSERT(g_stub_order_count == 1, "single bootstrap call for DMA");
 
     Bootstrap_ClearSequences();
     PASS();
