@@ -10889,9 +10889,9 @@ static void B45_Set851A8Sequence(const int *vals, int count) {
 }
 
 /* Test 1: func_800851A8 magic number check + error path.
- * B46: func_800851A8 is now a prefix-translated function that checks
- * *buffer + 0xB0BEB4BF.  Returns -1 on failure, routes through
- * bootstrap on success. */
+ * B48: func_800851A8 is fully translated (extended prefix + DMA transfer).
+ * Returns -1 on failure, 0 on success.  No bootstrap boundary on success
+ * path (func_800850F4 is translated). */
 static void test_87090_signature_and_retry(void)
 {
     TEST("87090_signature_and_retry");
@@ -10908,15 +10908,12 @@ static void test_87090_signature_and_retry(void)
            "D_8009D24C must be set on error path");
 
     /* Valid buffer (magic number) → deterministic path, returns 0.
-     * B47: func_800851A8 is extended-prefix translated.  The bootstrap
-     * boundary is hit for func_800850F4 (DMA transfer) only. */
+     * B48: func_800851A8 is fully translated.  No bootstrap boundary. */
     ResetTestState();
     B46_SeedMagic(0x80100000u);
     ret = fn(0x80100000u, 1);
     ASSERT(ret == 0, "valid buffer must return 0");
-    ASSERT(g_stub_order_count == 1, "must call bootstrap once (DMA transfer)");
-    ASSERT(strcmp(g_stub_order_log[0], "func_800851A8") == 0,
-           "bootstrap log must show func_800851A8");
+    ASSERT(g_stub_order_count == 0, "no bootstrap call (fully translated)");
 
     /* func_800851A8 is deterministic — retry via bootstrap sequence
      * no longer applies.  func_80087090's retry loop (ret == 1) is
@@ -10926,55 +10923,51 @@ static void test_87090_signature_and_retry(void)
     B46_SeedMagic(0x80100000u);
     ret = fn(0x80100000u, 1);
     ASSERT(ret == 0, "deterministic success returns 0");
-    ASSERT(g_stub_order_count == 1, "single bootstrap call for DMA");
+    ASSERT(g_stub_order_count == 0, "no bootstrap call (fully translated)");
 
     Bootstrap_ClearSequences();
     PASS();
 }
 
-/* Test 2: func_80087090 and func_800851A8 are translated — not bootstrap stubs. */
+/* Test 2: func_80087090, func_800851A8, and func_800850F4 are translated. */
 static void test_87090_not_bootstrap_stub(void)
 {
     TEST("87090_not_bootstrap_stub");
     ResetTestState();
     B46_SeedMagic(0x80100000u);
     func_80087090(0x80100000u, 0);
-    /* Neither func_80087090 nor func_800851A8 should appear in the
-     * bootstrap log as providers — they are translated.  The bootstrap
-     * boundary is hit for the hardware success path. */
+    /* None of func_80087090, func_800851A8, func_800850F4 should appear
+     * in the bootstrap log — they are all translated. */
     ASSERT(CountOrderLog("func_80087090") == 0,
            "translated func_80087090 must not be a bootstrap provider");
-    /* func_800851A8 hits the bootstrap boundary for the success path */
-    ASSERT(CountOrderLog("func_800851A8") == 1,
-           "success path must route through bootstrap boundary");
+    ASSERT(CountOrderLog("func_800851A8") == 0,
+           "translated func_800851A8 must not be a bootstrap provider");
+    ASSERT(CountOrderLog("func_800850F4") == 0,
+           "translated func_800850F4 must not be a bootstrap provider");
     PASS();
 }
 
-/* Test 3: strict frontier advances past func_80087090 to func_800851A8.
- * B46: func_800851A8 is prefix-translated; strict mode stops at the
- * bootstrap boundary in the success path (magic number must be valid). */
+/* Test 3: strict frontier advances past func_800851A8 to next unresolved.
+ * B48: func_800851A8 and func_800850F4 are fully translated. */
 static void test_87090_strict_advances_to_851A8(void)
 {
     TEST("87090_strict_advances_to_851A8");
     pid_t pid;
     int status = 0;
-    /* Ensure clean RAM state before forking. */
     ResetTestState();
     pid = fork();
-    ASSERT(pid >= 0, "fork failed for B46 strict boundary");
+    ASSERT(pid >= 0, "fork failed for B48 strict boundary");
     if (pid == 0) {
         Bootstrap_Init();
         Bootstrap_EnableStrict();
-        /* Seed magic number so the success path reaches the bootstrap boundary.
-         * Child inherits parent's RAM, so PE_StoreU32 is valid. */
         PE_StoreU32(0x80100000u, B46_MAGIC);
         func_80087090(0x80100000u, 1);
-        _exit(99);
+        _exit(0);
     }
     ASSERT(waitpid(pid, &status, 0) == pid,
-           "waitpid failed for B46 strict boundary");
-    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict B46 boundary must exit 1 at func_800851A8 bootstrap");
+           "waitpid failed for B48 strict boundary");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+           "strict B48 boundary must exit 0 (fully translated path)");
     PASS();
 }
 
@@ -10993,17 +10986,12 @@ static void test_87090_6A9E4_integration(void)
     /* Seed magic number at stream buffer start */
     B46_SeedMagic(0x80100000u);
     func_8006A9E4();
-    /* func_80087090 is translated; func_800851A8 routes through
-     * bootstrap for the success path. */
-    ASSERT(g_stub_order_count == 1, "unexpected provider count");
-    ASSERT(strcmp(g_stub_order_log[0], "func_800851A8") == 0,
-           "func_800851A8 must be the boundary (B46)");
-    /* The arg must be the stream buffer address */
-    ASSERT(g_bootstrap_arg_calls[0].arg0 == 0x80100000u,
-           "func_800851A8 arg0 must be stream buffer");
-    /* No func_80087090 in the log */
+    /* B48: fully translated path, no bootstrap boundary. */
+    ASSERT(g_stub_order_count == 0, "no bootstrap providers (B48)");
     ASSERT(CountOrderLog("func_80087090") == 0,
            "func_80087090 must not be a bootstrap provider");
+    ASSERT(CountOrderLog("func_800851A8") == 0,
+           "func_800851A8 must not be a bootstrap provider");
     PASS();
 }
 
@@ -11023,13 +11011,19 @@ static void test_87090_full_ram_canary(void)
     /* Seed magic number at buffer start so the success path is taken */
     PE_StoreU32(0x80100000u, B46_MAGIC);
     func_80087090(0x80100000u, 1);
-    /* Verify no guest memory was modified except D_8009D24C
-     * (completion flag) and the buffer start (magic number seeded). */
+    /* Verify no guest memory was modified except:
+     * - D_8009D24C (completion flag)
+     * - D_8009B434 (callback pointer, set/cleared by func_800850F4)
+     * - D_8009B430 (callback state, cleared by func_800850F4)
+     * - buffer start (magic number seeded) */
     for (i = 0; i < 0x200000u; i += 4) {
         uint32_t addr = 0x80000000u + i;
         uint32_t v = PE_LoadU32(addr);
         /* D_8009D24C is allowed to change (completion flag) */
         if (addr == 0x8009D24Cu) continue;
+        /* D_8009B434 and D_8009B430 are set/cleared by func_800850F4 */
+        if (addr == 0x8009B434u) continue;
+        if (addr == 0x8009B430u) continue;
         /* Buffer start has magic number seeded */
         if (addr == 0x80100000u) continue;
         if (v != 0xA5A5A5A5u) {
@@ -11043,7 +11037,7 @@ static void test_87090_full_ram_canary(void)
 }
 
 /* Test 6: dirty state + repeat + reset.
- * B46: seed magic number for success path. */
+ * B48: fully translated, no bootstrap boundary. */
 static void test_87090_dirty_repeat_and_reset(void)
 {
     TEST("87090_dirty_repeat_and_reset");
@@ -11054,27 +11048,26 @@ static void test_87090_dirty_repeat_and_reset(void)
     B46_SeedMagic(0x80100000u);
     ret1 = func_80087090(0x80100000u, 1);
     ASSERT(ret1 == 0, "first call must return 0");
-    ASSERT(g_stub_order_count == 1, "first call boundary count");
+    ASSERT(g_stub_order_count == 0, "no bootstrap calls (B48)");
 
-    /* Second call without reset — bootstrap state is dirty.
-     * Seed magic number at different valid guest address. */
+    /* Second call without reset — state is dirty but deterministic. */
     B46_SeedMagic(0x80110000u);
     ret2 = func_80087090(0x80110000u, 0);
     ASSERT(ret2 == 0, "second call must return 0");
-    ASSERT(g_stub_order_count == 2, "cumulative boundary count");
+    ASSERT(g_stub_order_count == 0, "still no bootstrap calls (B48)");
 
     /* Reset and verify clean state */
     ResetTestState();
     B46_SeedMagic(0x80100000u);
     ret1 = func_80087090(0x80100000u, 1);
     ASSERT(ret1 == 0, "post-reset call must return 0");
-    ASSERT(g_stub_order_count == 1, "post-reset boundary count must be 1");
+    ASSERT(g_stub_order_count == 0, "post-reset still no bootstrap");
 
     PASS();
 }
 
 /* Test 7: no low-address mirror — buffer argument must not be truncated.
- * B46: seed magic number for success path. */
+ * B48: fully translated, no bootstrap boundary. */
 static void test_87090_no_low_address_mirror(void)
 {
     TEST("87090_no_low_address_mirror");
@@ -11082,9 +11075,10 @@ static void test_87090_no_low_address_mirror(void)
     /* Use a high guest address that would produce a low address if
      * truncated to 16 bits or similar */
     B46_SeedMagic(0x801ED800u);
-    func_80087090(0x801ED800u, 1);
-    ASSERT(g_bootstrap_arg_calls[0].arg0 == 0x801ED800u,
-           "buffer address must not be truncated");
+    int ret = func_80087090(0x801ED800u, 1);
+    ASSERT(ret == 0, "high address must succeed");
+    /* B48: no bootstrap boundary, so no arg call to check */
+    ASSERT(g_stub_order_count == 0, "no bootstrap calls (B48)");
     PASS();
 }
 

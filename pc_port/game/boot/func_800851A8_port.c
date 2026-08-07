@@ -42,11 +42,9 @@
  *   func_80085174  TRANSLATED (inlined: spin on D_8009D24C)
  *   func_80085084  TRANSLATED (inlined: magic number check)
  *   func_80085EB4  TRANSLATED (SPU address validation)
- *   func_800850F4  UNRESOLVED (DMA transfer) →
- *                  Bootstrap_ReturnInt1 (extended path only)
+ *   func_800850F4  TRANSLATED (DMA transfer, collapsed to synchronous)
  */
 #include "psx_compat.h"
-#include "pe_bootstrap.h"
 
 /* ── Guest globals ──────────────────────────────────────────────────── */
 #define GA_D_8009D24C  0x8009D24Cu   /* transfer completion flag          */
@@ -101,10 +99,10 @@ int func_800851A8(pe_addr_t buffer, int count)
     }
     copy_words = (v0 - param2) << 4;
 
-    /* 4c. DMA transfer (func_800850F4 — HARDWARE, unresolved).
+    /* 4c. DMA transfer (func_800850F4 — translated, collapsed DMA).
      *     Retail calls func_800850F4(s1 + ((v0 - param2) << 6), param1).
-     *     Routed through bootstrap boundary. */
-    Bootstrap_ReturnInt1("func_800851A8", "func_80087090", 0, buffer);
+     *     The DMA is collapsed to synchronous completion in the port. */
+    func_800850F4(s1 + ((v0 - param2) << 6), param1);
 
     /* 4d. Copy payload to D_800B2900.
      *     Retail: v1 = param2 << 6, dest = D_800B2900 + v1.

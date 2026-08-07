@@ -190,5 +190,6 @@ extern int  func_8006E834(void);
 extern int  func_8006E9A0(int);
 extern int  func_80087090(pe_addr_t buffer, int count);
 extern pe_addr_t func_80085EB4(pe_addr_t spu_addr);
+extern void func_800850F4(pe_addr_t src, uint32_t size);
 
 #endif
