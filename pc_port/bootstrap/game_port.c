@@ -112,6 +112,7 @@ const char *PE_Port_StopReasonName(PEPortStopReason reason)
     case PE_PORT_STOP_HOST_QUIT:            return "host-quit";
     case PE_PORT_STOP_FRAME_LIMIT:          return "frame-limit";
     case PE_PORT_STOP_MAIN_ITERATION_LIMIT: return "main-iteration-limit";
+    case PE_PORT_STOP_UNRESOLVED_BOUNDARY:  return "unresolved-boundary";
     }
     return "unknown";
 }

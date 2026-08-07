@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Phase 6E-B50 retail-word oracle for func_8006AD40.
+Phase 6E-B50 retail-word oracle and corrective prefix proof for func_8006AD40.
 
 Verifies:
 - 391 retail words at 0x8006AD40 (streaming subsystem multiplexer)
 - Exact word count against the SHA-exact retail executable
 - Complete ROM-order call census (29 calls to 13 unique targets)
 - Dependency classification
+- Exact 68-word production-prefix cut at the first unresolved call/delay slot
 
-This script does not execute the full streaming I/O model.  Word
-verification and call-census analysis establish the translation boundary.
+This script deliberately does not claim semantic coverage of the 391-word
+suffix or of any unresolved dependency.  Production is prefix-only.  Native
+tests independently verify the computed boundary arguments and prove that
+non-strict execution does not continue past the state-producing boundary.
 """
 
 import hashlib
@@ -17,6 +20,11 @@ import struct
 import sys
 
 SHA1 = "452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
+START = 0x8006AD40
+END = 0x8006B35C
+PREFIX_END = 0x8006AE50
+PREFIX_WORD_COUNT = (PREFIX_END - START) // 4
+FIRST_BOUNDARY_CALL = 0x8006AE48
 
 # func_8006AD40: 391 words at 0x8006AD40 (0x35C = 1564 bytes)
 # exe range: 0x8006AD40–0x8006B35C
@@ -181,14 +189,14 @@ def main():
 
     # Load address
     taddr = struct.unpack_from("<I", data, 0x18)[0]
-    foff = 0x8006AD40 - taddr + 0x800
+    foff = START - taddr + 0x800
 
     # Verify all words
     mismatches = 0
     for i, expected in enumerate(WORDS):
         actual = struct.unpack_from("<I", data, foff + i * 4)[0]
         if actual != expected:
-            addr = 0x8006AD40 + i * 4
+            addr = START + i * 4
             print(f"  MISMATCH at 0x{addr:08X} word {i}: "
                   f"expected 0x{expected:08X}, got 0x{actual:08X}")
             mismatches += 1
@@ -198,7 +206,36 @@ def main():
         sys.exit(1)
 
     print(f"All {len(WORDS)} words verified exact")
-    print(f"Function range: 0x8006AD40–0x8006B35C ({len(WORDS)*4} bytes)")
+    if len(WORDS) != (END - START) // 4:
+        print("B50 ORACLE: FAIL (literal word count does not match range)")
+        sys.exit(1)
+
+    # Corrective production boundary: the prefix includes the first jal and
+    # its architecturally executed delay slot, then returns on the host.
+    call_i = (FIRST_BOUNDARY_CALL - START) // 4
+    if (PREFIX_WORD_COUNT != 68 or
+            WORDS[call_i] != 0x0C01B870 or
+            WORDS[call_i + 1] != 0x02802821):
+        print("B50 ORACLE: FAIL (first-boundary call/delay mismatch)")
+        sys.exit(1)
+
+    # Exact packet-header chain feeding a0 at the boundary:
+    #   s4 = [D_800B0CD8+0x160]
+    #   v0 = [s4+4]
+    #   s3 = s4+v0
+    #   header = [s3+0x28]
+    header_i = (0x8006AE10 - START) // 4
+    expected_header_chain = [
+        0x8EB40160, 0x3C03003F, 0x8E820004, 0x3463FFFF,
+        0x02829821, 0x8E620028,
+    ]
+    if WORDS[header_i:header_i + len(expected_header_chain)] != expected_header_chain:
+        print("B50 ORACLE: FAIL (boundary header indirection mismatch)")
+        sys.exit(1)
+
+    print(f"Function range: 0x{START:08X}–0x{END:08X} ({len(WORDS)*4} bytes)")
+    print(f"Production prefix: 0x{START:08X}–0x{PREFIX_END:08X} "
+          f"({PREFIX_WORD_COUNT} words; call+delay included)")
 
     # Call census
     print(f"\nCall census: {len(CALLS)} calls")

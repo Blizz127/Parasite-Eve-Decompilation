@@ -21,7 +21,7 @@ extern void func_8003E680(void);
 extern void func_8006A5BC(void);
 extern void func_8006A64C(void);
 extern void func_8006A9E4(void);
-extern void func_8006AD40(void);
+extern int func_8006AD40(void);
 extern void func_8006ECEC(void);
 extern void func_8006F044(void);
 extern int  func_8006E834(void);
@@ -117,6 +117,10 @@ void func_8001220C(void)
             }
 
             func_8006AD40();
+            /* A prefix-only callee may request a host stop at an honest
+             * unresolved boundary.  Honor it before running caller code
+             * that could consume state the untranslated suffix produces. */
+            if (PE_Port_ShouldStop()) return;
             v = D_8009D280;
             D_8009D1C4 = v;
 

@@ -14,6 +14,7 @@ typedef enum PEPortStopReason {
     PE_PORT_STOP_HOST_QUIT,
     PE_PORT_STOP_FRAME_LIMIT,
     PE_PORT_STOP_MAIN_ITERATION_LIMIT,
+    PE_PORT_STOP_UNRESOLVED_BOUNDARY,
 } PEPortStopReason;
 
 void PE_Port_RunControlReset(void);

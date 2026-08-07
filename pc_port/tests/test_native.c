@@ -11932,50 +11932,122 @@ static void test_64964_ramreset_repeat_and_guards(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * Phase 6E-B50 — func_8006AD40 streaming multiplexer (5 tests)
+ * Phase 6E-B50 corrective — func_8006AD40 honest prefix (5 tests)
  * ═══════════════════════════════════════════════════════════════════════ */
+
+#define B50_BASE        0x80100000u
+#define B50_METADATA    0x80100100u
+#define B50_FIRST_ENTRY 0x80100200u
+
+static void B50_SeedPrefixState(uint32_t count)
+{
+    PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1u);
+    PE_StoreU32(0x800B0CD8u + 0x160u, B50_BASE);
+    PE_StoreU32(0x800B0CD8u + 0x174u, 0x80110000u);
+
+    /* Retail: metadata = base + lw(base+4), then header = metadata+0x28.
+     * A zero decoy at base+0x28 rejects the provisional direct-load bug. */
+    PE_StoreU32(B50_BASE + 4u, B50_METADATA - B50_BASE);
+    PE_StoreU32(B50_BASE + 0x28u, 0);
+    PE_StoreU32(B50_METADATA + 0x28u,
+                (count << 22) | (B50_FIRST_ENTRY - B50_BASE));
+}
+
+static void B50_StartFixture(DiscFixture *fx, uint32_t count)
+{
+    PE_Disc_SetActive(fx->disc);
+    HostFB_Init();
+    func_8007ED58();
+    HostFB_VSync(0);
+    g_bootstrap_disc = 1;
+    B50_SeedPrefixState(count);
+}
 
 static void test_6AD40_guard_bit0(void)
 {
+    DiscFixture fx;
     TEST("6AD40_guard_bit0");
     ResetTestState();
     HostFB_Init();
     g_bootstrap_disc = 1;
-    /* Bit 0 of D_800B0CD8 is 0 by default after reset — func_8006AD40
-     * should return immediately without calling any stubs. */
-    func_8006AD40();
+    ASSERT(func_8006AD40() == 0, "guard path must return retail zero");
     ASSERT(g_stub_count == 0, "no stubs called when bit 0 clear");
+    ASSERT(g_bootstrap_arg4_call_count == 0,
+           "guard path must not record a dependency call");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "guard path must not request a host stop");
+
+    /* A zero entry count bypasses the conditional retail jal, but the
+     * untranslated suffix still begins at the same static prefix cut. */
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 0);
+    ASSERT(func_8006AD40() == 0, "zero-count prefix return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 0,
+           "zero-count path must not fabricate a callback boundary");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "zero-count suffix cut must remain an honest host stop");
+    FxFree(&fx);
     PASS();
 }
 
-static void test_6AD40_not_bootstrap_stub(void)
+static void test_6AD40_prefix_boundary_args(void)
 {
     DiscFixture fx;
-    TEST("6AD40_not_bootstrap_stub");
+    uint8_t *snapshot;
+    TEST("6AD40_prefix_boundary_args");
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
-    PE_Disc_SetActive(fx.disc);
-    HostFB_Init();
-    func_8007ED58();  /* CD reset — sets drive state */
-    HostFB_VSync(0);  /* advance VSync counter so DMA poll doesn't timeout */
-    g_bootstrap_disc = 1;
-    /* Set bit 0 to enter the function body */
-    PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1);
-    /* Seed descriptor pointers to valid guest addresses */
-    PE_StoreU32(0x800B0CD8u + 0x160, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x174, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x180, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x14C, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x16C, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x188, 0x80100000u);
-    /* Table entries all zero → 0 sectors → issue completes trivially */
-    func_8006AD40();
-    /* func_8006AD40 itself should NOT appear in stub registry */
-    for (int i = 0; i < g_stub_count; i++) {
-        const char *sym = g_stub_registry[i].symbol;
-        ASSERT(strcmp(sym, "func_8006AD40") != 0,
-               "func_8006AD40 must not be a bootstrap stub");
+    B50_StartFixture(&fx, 1);
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate B50 RAM snapshot");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+
+    ASSERT(func_8006AD40() == 0, "prefix boundary must return retail zero");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "prefix must record exactly one unresolved call");
+    ASSERT(strcmp(g_bootstrap_arg4_calls[0].symbol, "func_8006E1C0") == 0 &&
+           strcmp(g_bootstrap_arg4_calls[0].caller, "func_8006AD40") == 0,
+           "wrong B50 boundary identity");
+    ASSERT(g_bootstrap_arg4_calls[0].arg0 == B50_FIRST_ENTRY &&
+           g_bootstrap_arg4_calls[0].arg1 == B50_BASE,
+           "func_8006E1C0 boundary arguments are not retail-exact");
+    ASSERT(g_bootstrap_arg4_calls[0].arg2 == 0 &&
+           g_bootstrap_arg4_calls[0].arg3 == 0,
+           "non-formal diagnostic arguments must be zero");
+    ASSERT(CountOrderLog("func_8006E1C0") == 1,
+           "first unresolved boundary must be invoked once");
+    ASSERT(CountOrderLog("func_800718D0") == 0 &&
+           CountOrderLog("func_80030894") == 0,
+           "prefix must not continue to later dependencies");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "prefix must request an honest unresolved-boundary host stop");
+    /* Channel 1's poll clears the issue bits, then the translated channel-2
+     * issue sets them again and leaves its synchronous host transaction for
+     * the untranslated suffix to poll. */
+    ASSERT(PE_LoadU32(0x800B0CD8u) ==
+           (*(uint32_t *)(snapshot + (0x800B0CD8u - PE_RAM_BASE)) |
+            0x01004000u),
+           "prefix issue/poll state differs from retail");
+    ASSERT(PE_LoadU32(0x8009B6ACu) == 0x200u &&
+           PE_LoadU32(0x8009B6B0u) == 0x80110000u &&
+           PE_LoadU32(0x8009B6B4u) == 0u &&
+           PE_LoadU32(0x8009B6C4u) == 1u &&
+           PE_LoadU32(0x8009B6D4u) == 1u,
+           "prefix channel-2 provider state differs from retail adapter");
+    for (uint32_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+        if ((a >= 0x800B0CD8u && a < 0x800B0CDCu) ||
+            (a >= 0x8009B6ACu && a < 0x8009B6B8u) ||
+            (a >= 0x8009B6C4u && a < 0x8009B6C8u) ||
+            (a >= 0x8009B6D4u && a < 0x8009B6D8u))
+            continue;
+        if (PE_LoadU8(a) != snapshot[a - PE_RAM_BASE]) {
+            free(snapshot);
+            FxFree(&fx);
+            FAIL("proven prefix changed guest RAM outside poll state");
+        }
     }
+    free(snapshot);
     FxFree(&fx);
     PASS();
 }
@@ -11997,16 +12069,7 @@ static void test_6AD40_strict_stops_at_6E1C0(void)
         Bootstrap_EnableStrict();
         func_8007ED58();  /* CD reset — sets drive state after bootstrap init */
         HostFB_VSync(0);  /* advance VSync counter for DMA poll */
-        /* Set up minimal state so func_8006AD40 enters the body */
-        PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1);
-        PE_StoreU32(0x800B0CD8u + 0x160, 0x80100000u);
-        PE_StoreU32(0x800B0CD8u + 0x174, 0x80100000u);
-        PE_StoreU32(0x800B0CD8u + 0x180, 0x80100000u);
-        PE_StoreU32(0x800B0CD8u + 0x14C, 0x80100000u);
-        PE_StoreU32(0x800B0CD8u + 0x16C, 0x80100000u);
-        PE_StoreU32(0x800B0CD8u + 0x188, 0x80100000u);
-        /* Seed GPU packet header at base+0x28: count=1, offset=0 */
-        PE_StoreU32(0x80100028u, (1u << 22) | 0u);
+        B50_SeedPrefixState(1);
         func_8006AD40();
         _exit(0);
     }
@@ -12018,65 +12081,52 @@ static void test_6AD40_strict_stops_at_6E1C0(void)
     PASS();
 }
 
-static void test_6AD40_finalization_calls(void)
+static void test_6AD40_prefix_does_not_finalize(void)
 {
     DiscFixture fx;
-    TEST("6AD40_finalization_calls");
+    TEST("6AD40_prefix_does_not_finalize");
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
-    PE_Disc_SetActive(fx.disc);
-    HostFB_Init();
-    func_8007ED58();
-    HostFB_VSync(0);
-    g_bootstrap_disc = 1;
-    PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1);
-    PE_StoreU32(0x800B0CD8u + 0x160, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x174, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x180, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x14C, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x16C, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x188, 0x80100000u);
-    func_8006AD40();
-    /* Verify finalization effects:
-     * - bit 0 of D_800B0CD8 cleared (end-of-function)
-     * - D_800B0CD8 + 6 written to 0xFFFF (state write)
-     * - D_800B0CD8 + 0xE8 written to 0xFFFF */
-    uint32_t flags = PE_LoadU32(0x800B0CD8u);
-    ASSERT(!(flags & 1), "bit 0 must be cleared at exit");
-    ASSERT(PE_LoadU16(0x800B0CD8u + 6) == 0xFFFF,
-           "D_800B0CD8+6 must be 0xFFFF after finalization");
-    ASSERT(PE_LoadU16(0x800B0CD8u + 0xE8) == 0xFFFF,
-           "D_800B0CD8+0xE8 must be 0xFFFF after finalization");
-    /* Verify bootstrap stubs were logged for unresolved callees */
-    ASSERT(CountOrderLog("func_800718D0") >= 1,
-           "func_800718D0 must be called (bootstrap stub)");
-    ASSERT(CountOrderLog("func_80030894") >= 1,
-           "func_80030894 must be called (bootstrap stub)");
+    B50_StartFixture(&fx, 1);
+    PE_StoreU16(0x800B0CD8u + 6u, 0x1234u);
+    PE_StoreU16(0x800B0CD8u + 0xE8u, 0x5678u);
+    ASSERT(func_8006AD40() == 0, "prefix return wrong");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 1u) != 0,
+           "prefix must not execute suffix bit clear");
+    ASSERT(PE_LoadU16(0x800B0CD8u + 6u) == 0x1234u &&
+           PE_LoadU16(0x800B0CD8u + 0xE8u) == 0x5678u,
+           "prefix must not execute suffix finalization writes");
     FxFree(&fx);
     PASS();
 }
 
-static void test_6AD40_clears_bit0(void)
+static void test_6AD40_prefix_repeat_dirty(void)
 {
     DiscFixture fx;
-    TEST("6AD40_clears_bit0");
+    TEST("6AD40_prefix_repeat_dirty");
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
-    PE_Disc_SetActive(fx.disc);
-    HostFB_Init();
+    B50_StartFixture(&fx, 1);
+    PE_StoreU32(B50_FIRST_ENTRY + 4u, 0xDEADBEEFu);
+    ASSERT(func_8006AD40() == 0, "first dirty prefix return wrong");
+    /* The prefix intentionally stops before channel 2's retail poll.  Poll
+     * the completed host transaction as fixture teardown before exercising
+     * a logically independent second invocation. */
+    ASSERT(func_8006E7E8() == 0,
+           "fixture teardown must complete the pending channel-2 read");
     func_8007ED58();
     HostFB_VSync(0);
-    g_bootstrap_disc = 1;
-    PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1);
-    PE_StoreU32(0x800B0CD8u + 0x160, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x174, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x180, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x14C, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x16C, 0x80100000u);
-    PE_StoreU32(0x800B0CD8u + 0x188, 0x80100000u);
-    func_8006AD40();
-    uint32_t flags = PE_LoadU32(0x800B0CD8u);
-    ASSERT(!(flags & 1), "bit 0 of D_800B0CD8 must be cleared at exit");
+    PE_Port_RunControlReset();
+    ASSERT(func_8006AD40() == 0, "repeated dirty prefix return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "repeated prefix must record two boundaries");
+    for (int i = 0; i < 2; i++) {
+        ASSERT(g_bootstrap_arg4_calls[i].arg0 == B50_FIRST_ENTRY &&
+               g_bootstrap_arg4_calls[i].arg1 == B50_BASE,
+               "dirty/repeated boundary arguments changed");
+    }
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 1u) != 0,
+           "repeated prefix must leave suffix state untouched");
     FxFree(&fx);
     PASS();
 }
@@ -12655,12 +12705,12 @@ int main(void)
     test_80071A24_rejects_bad_ranges();
     test_64964_ramreset_repeat_and_guards();
 
-    /* Phase 6E-B50 — func_8006AD40 streaming multiplexer (5 tests). */
+    /* Phase 6E-B50 corrective — func_8006AD40 honest prefix (5 tests). */
     test_6AD40_guard_bit0();
-    test_6AD40_not_bootstrap_stub();
+    test_6AD40_prefix_boundary_args();
     test_6AD40_strict_stops_at_6E1C0();
-    test_6AD40_finalization_calls();
-    test_6AD40_clears_bit0();
+    test_6AD40_prefix_does_not_finalize();
+    test_6AD40_prefix_repeat_dirty();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

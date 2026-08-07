@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Production Phase 6E-B49 real-disc host-loop acceptance harness."""
+"""Retained Phase 6E-B49 real-disc host-loop acceptance harness.
+
+The frame-budget checks remain B49's.  Frontier assertions track the current
+production rung; B50 corrective is prefix-only and therefore requests an
+explicit unresolved-boundary stop after one non-strict continuation.
+"""
 
 from __future__ import annotations
 
@@ -105,10 +110,14 @@ def main() -> int:
             "--max-frames", "2", timeout=args.timeout,
         )
         require(two.returncode == 0, "two-frame run did not exit 0")
-        require(state(two, "two") == (2, 1),
-                "two-frame run did not stop at exactly frame 2 / iteration 1")
-        require("[STUB:BOOTSTRAP_RET] func_801909B4" in two.stderr,
-                "two-frame run did not execute beyond the obsolete stop")
+        require(state(two, "two") == (1, 1),
+                "prefix run did not stop at frame 1 / iteration 1")
+        require("[HOST] stop_reason=unresolved-boundary" in two.stderr,
+                "prefix run did not report its honest unresolved boundary")
+        require("[STUB:BOOTSTRAP_RET] func_8006E1C0" in two.stderr,
+                "prefix run did not invoke the first unresolved provider")
+        require("[STUB:BOOTSTRAP_RET] func_801909B4" not in two.stderr,
+                "prefix run executed caller continuation past missing state")
         two_hash = sha256(two_ppm)
 
         strict, _, _ = run(
@@ -117,9 +126,9 @@ def main() -> int:
         )
         require(strict.returncode == 1, "continuing strict run did not exit 1")
         require(
-            "first unresolved BOOTSTRAP_RET provider: func_8006AD40" in strict.stderr
-            and "called from: func_8001220C" in strict.stderr,
-            "continuing strict run did not expose func_8006AD40 from func_8001220C",
+            "first unresolved BOOTSTRAP_RET provider: func_8006E1C0" in strict.stderr
+            and "called from: func_8006AD40" in strict.stderr,
+            "continuing strict run did not expose func_8006E1C0 from func_8006AD40",
         )
 
         bootstrap, _, _ = run(
@@ -137,8 +146,9 @@ def main() -> int:
 
         print("B49 host-loop harness: PASS")
         print(f"one-frame sha256={CANONICAL_FRAMEBUFFER} frames=1 iterations=1")
-        print(f"two-frame sha256={two_hash} frames=2 iterations=1")
-        print("strict frontier=func_8006AD40 caller=func_8001220C")
+        print(f"prefix-run sha256={two_hash} frames=1 iterations=1 "
+              "stop=unresolved-boundary")
+        print("strict frontier=func_8006E1C0 caller=func_8006AD40")
         print("bootstrap strict frontier=func_8007F72C caller=func_800698D4")
     return 0
 

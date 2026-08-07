@@ -106,11 +106,8 @@ static inline void func_800752AC(void *o, int n) {
 }
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
-/* func_8006AD40 is now a REAL translation (Phase 6E-B50):
- * game/boot/func_8006AD40_port.c — streaming subsystem multiplexer
- * (391 retail words); four unresolved callees route through the
- * centralized bootstrap boundary: func_8006E1C0, func_8007506C,
- * func_800718D0, func_80030894. */
+/* func_8006AD40 has a proven Phase 6E-B50 prefix through the first
+ * state-producing unresolved call at retail 0x8006AE48. */
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
@@ -121,11 +118,14 @@ static inline int  func_801909B4(void)   { return Bootstrap_ReturnInt("func_8019
 static inline void func_80066B60(int a)  { Bootstrap_ReturnVoid("func_80066B60", "func_8006E9A0"); (void)a; }
 static inline void func_80068E24(void)   { Bootstrap_ReturnVoid("func_80068E24", "func_8006E9A0"); }
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
-/* B50 unresolved callees of func_8006AD40 */
-static inline void func_8006E1C0(pe_addr_t a, pe_addr_t b) { Bootstrap_ReturnVoid("func_8006E1C0", "func_8006AD40"); (void)a; (void)b; }
-static inline void func_8007506C(pe_addr_t a, pe_addr_t b) { Bootstrap_ReturnVoid("func_8007506C", "func_8006AD40"); (void)a; (void)b; }
-static inline void func_800718D0(pe_addr_t a)              { Bootstrap_ReturnVoid("func_800718D0", "func_8006AD40"); (void)a; }
-static inline void func_80030894(void)                     { Bootstrap_ReturnVoid("func_80030894", "func_8006AD40"); }
+/* B50 first unresolved callee.  Retail returns zero; its callers ignore it.
+ * The four-register diagnostic record preserves the two true arguments;
+ * a2/a3 are not formal inputs and func_8006E1C0 never reads them. */
+static inline int func_8006E1C0(pe_addr_t entry, pe_addr_t base) {
+    Bootstrap_ReturnVoid4("func_8006E1C0", "func_8006AD40",
+                          entry, base, 0, 0);
+    return 0;
+}
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
@@ -162,7 +162,7 @@ extern void func_8001220C(void);
 extern int  func_80038D1C(void);
 extern int  func_800698D4(void);
 extern void func_8006A9E4(void);
-extern void func_8006AD40(void);
+extern int  func_8006AD40(void);
 extern void func_800527C8(void);
 extern pe_addr_t func_8005332C(int32_t resource_id);
 extern pe_addr_t func_80053968(int32_t resource_id);
