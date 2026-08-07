@@ -25,27 +25,19 @@
  *   Return: last v0 from func_800851A8 (0 on success, negative on error;
  *   1 is consumed by the retry branch and never returned).
  *
- * Classification: 1 — translated retail logic.  The genuine unresolved
- * hardware provider is func_800851A8 (SPU DMA transfer with completion
- * polling, 0xE8 bytes); this rung translates only the retry wrapper.
- * func_800851A8 is routed through the centralized bootstrap boundary.
+ * Classification: 1 — translated retail logic.  func_800851A8 is
+ * translated (B46 prefix: magic number check + error path; success
+ * path routes through the centralized bootstrap boundary).
  *
- * Dependency boundary:
- *   func_800851A8  UNRESOLVED (SPU DMA upload, 0xE8 bytes) →
- *                  Bootstrap_ReturnInt1
+ * Dependency:
+ *   func_800851A8  TRANSLATED (B46 prefix; hardware success path
+ *                  routes through bootstrap boundary)
  */
 #include "psx_compat.h"
-#include "pe_bootstrap.h"
 
-/* func_800851A8 — SPU DMA upload (0xE8 bytes at 0x800851A8).
- * Returns 0 on success, 1 to request retry, negative on error.
- * a0 = buffer guest address, a1 = transfer count.
- * UNRESOLVED this rung — routed through bootstrap boundary. */
-int func_800851A8(pe_addr_t buffer, int count)
-{
-    return Bootstrap_ReturnInt1("func_800851A8", "func_80087090", 0,
-                                (uint32_t)buffer);
-}
+/* func_800851A8 — SPU DMA upload prefix (B46).
+ * Returns 0 on success (via bootstrap), -1 on magic number failure. */
+extern int func_800851A8(pe_addr_t buffer, int count);
 
 /* ── func_80087090: SPU upload retry wrapper ───────────────────────────── */
 int func_80087090(pe_addr_t buffer, int count)

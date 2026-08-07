@@ -124,8 +124,9 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * func_8006A9E4 is REAL too (Phase 6E-B16):
  * game/boot/func_8006A9E4_port.c — PE.IMG streaming resource load
  * (215 retail words); B45: callee func_80087090 is TRANSLATED (retry
- * wrapper); its inner callee func_800851A8 (SPU DMA upload) routes
- * through the centralized bootstrap boundary.
+ * wrapper); B46: func_800851A8 is TRANSLATED (prefix: magic number
+ * check + error path; hardware success path routes through the
+ * centralized bootstrap boundary).
  * func_800527C8 is REAL too (Phase 6E-B17):
  * game/boot/func_800527C8_port.c — multi-subsystem bootstrap
  * dispatcher (49 retail words, 17 calls); unresolved callees route
