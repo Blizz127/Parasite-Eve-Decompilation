@@ -7,13 +7,13 @@
  *
  *   class 1 — translated game logic (guest-RAM state transcribed verbatim)
  *   class 2 — PsyQ/SDK behavior requiring a host implementation
- *   class 3 — deterministic platform provider (hardware modeled synchronously)
+ *   class 3 — deterministic platform provider with documented ordering
  *
  * Convention: retail guest addresses stay pe_addr_t; all guest-state effects
  * go through the bounds-checked PE_Load / PE_Store / PE_Translate API.
- * Hardware-only effects (SPU/CD/
- * GPU registers, kernel events, DMA) are collapsed to named no-ops and each
- * collapse is enumerated in the implementing file's header comment.  Nothing
+ * Hardware-only effects (SPU/CD/GPU registers, kernel events, DMA) are
+ * represented by narrow named providers or explicitly documented no-ops.
+ * Nothing
  * here returns a fabricated value merely to advance strict mode: state
  * transitions reproduce the retail-observable guest-RAM effects.
  */
@@ -132,7 +132,9 @@ void func_8003E944(void);            /* save-manager bring-up */
 
 /* ── test determinism ───────────────────────────────────────────────── */
 /* Reset every host-owned SDK state block (GTE state, IRQ lock depth,
- * event handle counter).  Guest-RAM state is reset via PE_RamReset. */
+ * event handles, SPU RAM and pending DMA).  It also invalidates the guest
+ * DMA busy/callback/IRQ-handle state owned by those host resources.  Other
+ * guest RAM is reset via PE_RamReset. */
 void PE_Sdk_ResetState(void);
 
 #ifdef __cplusplus

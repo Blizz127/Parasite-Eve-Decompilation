@@ -20,6 +20,7 @@ set(PLATFORM_SRCS
     platform/pe_libetc.c
     platform/pe_libgpu.c
     platform/pe_libsnd.c
+    platform/pe_spu_dma.c
     platform/pe_libcard.c
     platform/pe_libcd.c
     platform/pe_disc.c
@@ -163,6 +164,7 @@ if(BUILD_TESTS)
         platform/pe_libetc.c
         platform/pe_libgpu.c
         platform/pe_libsnd.c
+        platform/pe_spu_dma.c
         platform/pe_libcard.c
         platform/pe_libcd.c
         platform/pe_disc.c

@@ -12,6 +12,7 @@
 #include "host_framebuffer.h"
 #include "stub_registry.h"
 #include "pe_disc.h"
+#include "pe_spu_dma.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -899,7 +900,7 @@ static void test_6A5BC_setup_order(void) {
     ASSERT(PE_LoadU32(0x800B8628u + 0x6Cu) == 0x9C, "ring[3] cmd");
     /* func_80085644 bring-up effects */
     ASSERT(PE_LoadU32(0x8009CDE0u) != 0, "stream event handle not stored");
-    ASSERT(PE_LoadU32(0x8009D24Cu) == 0, "synchronous SPU transfer should complete");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 0, "SPU barrier should complete transfer");
     ASSERT(PE_LoadU32(0x800B6958u) == 0x40001010u, "stream config word 0");
     ASSERT(PE_LoadU32(0x800B6958u + 4u) == 0x7EFF0u, "stream config word 1");
     /* No bootstrap stubs remain on the 6A5BC path */
@@ -1303,6 +1304,8 @@ static void test_3E944_save_state(void) {
 static void test_85644_bringup(void) {
     TEST("85644_stream_bringup");
     ResetTestState();
+    for (uint32_t i = 0; i < 0x40u; i++)
+        PE_StoreU8(0x8009B7FCu + i, (uint8_t)(0x40u + i));
     func_80085644();
     ASSERT(PE_LoadU32(0x8009B3ECu) == 1, "SPU IRQ event guard (func_8007D15C)");
     ASSERT(PE_LoadU32(0x800B6958u) == 0x40001010u, "config word 0");
@@ -1310,8 +1313,11 @@ static void test_85644_bringup(void) {
     ASSERT(PE_LoadU32(0x8009B45Cu) == 4, "config arg word");
     ASSERT(PE_LoadU32(0x8009B464u) == 0x800B6958u, "config ptr");
     ASSERT(PE_LoadU16(0x8009B414u) == 0x1010, "SPU heap top");
-    ASSERT(PE_LoadU32(0x8009D24Cu) == 0, "synchronous transfer must complete");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 0, "stream barrier must complete transfer");
     ASSERT(PE_LoadU32(0x8009B434u) == 0, "callback deregistered after completion");
+    ASSERT(PE_SpuRam_LoadU8(0x8080u) == 0x40u &&
+           PE_SpuRam_LoadU8(0x80BFu) == 0x7Fu,
+           "stream bring-up did not use the central SPU RAM authority");
     /* func_80085290 state init */
     ASSERT(PE_LoadU32(0x8009D2C8u) == 0x800B6980u, "state base ptr");
     ASSERT(PE_LoadU32(0x800BCD68u) == 1, "BCD68 flag");
@@ -10878,6 +10884,13 @@ static void test_5B91C_B43_integration_and_strict_advance(void)
 
 /* B46 helper: seed the magic number at the start of a buffer. */
 static void B46_SeedMagic(pe_addr_t buf) {
+    /* The retail upload is reached only after SsInit installed DMA4's IRQ
+     * handler.  Direct wrapper tests establish that prerequisite without
+     * fabricating a completion event. */
+    PE_SpuDma_InstallIrq(PE_SPU_DMA_IRQ_HANDLER);
+    PE_StoreU32(0x8009B418u, 0); /* func_80085F14(0): DMA mode */
+    PE_StoreU32(0x8009B424u, 3); /* eight-byte SPU address units */
+    PE_StoreU16(0x8009B414u, 0); /* safe destination for zero/default data */
     PE_StoreU32(buf, B46_MAGIC);
 }
 
@@ -10960,7 +10973,7 @@ static void test_87090_strict_advances_to_851A8(void)
     if (pid == 0) {
         Bootstrap_Init();
         Bootstrap_EnableStrict();
-        PE_StoreU32(0x80100000u, B46_MAGIC);
+        B46_SeedMagic(0x80100000u);
         func_80087090(0x80100000u, 1);
         _exit(0);
     }
@@ -11008,8 +11021,9 @@ static void test_87090_full_ram_canary(void)
     /* Poison all 2 MiB */
     for (i = 0; i < 0x200000u; i += 4)
         PE_StoreU32(0x80000000u + i, 0xA5A5A5A5u);
-    /* Seed magic number at buffer start so the success path is taken */
-    PE_StoreU32(0x80100000u, B46_MAGIC);
+    /* Seed magic and the already-installed retail DMA prerequisite after
+     * poisoning guest RAM. */
+    B46_SeedMagic(0x80100000u);
     func_80087090(0x80100000u, 1);
     /* Verify no guest memory was modified except:
      * - D_8009D24C (completion flag)
@@ -11024,6 +11038,12 @@ static void test_87090_full_ram_canary(void)
         /* D_8009B434 and D_8009B430 are set/cleared by func_800850F4 */
         if (addr == 0x8009B434u) continue;
         if (addr == 0x8009B430u) continue;
+        if (addr == 0x8009B414u) continue;
+        if (addr == 0x8009B418u) continue;
+        if (addr == 0x8009B424u) continue;
+        if (addr == 0x8009B44Cu) continue;
+        if (addr == 0x8009B450u) continue;
+        if (addr == 0x8009B454u) continue;
         /* Buffer start has magic number seeded */
         if (addr == 0x80100000u) continue;
         if (v != 0xA5A5A5A5u) {
@@ -11079,6 +11099,309 @@ static void test_87090_no_low_address_mirror(void)
     ASSERT(ret == 0, "high address must succeed");
     /* B48: no bootstrap boundary, so no arg call to check */
     ASSERT(g_stub_order_count == 0, "no bootstrap calls (B48)");
+    PASS();
+}
+
+/* ── Phase 6E-B48A: asynchronous SPU DMA4 lifecycle ───────────────── */
+
+static void B48A_PrepareDma(uint32_t spu_address)
+{
+    func_8007D15C();
+    PE_StoreU32(0x8009B418u, 0);
+    PE_StoreU32(0x8009B420u, 2);
+    PE_StoreU32(0x8009B424u, 3);
+    PE_StoreU32(0x8009B428u, 8);
+    PE_StoreU32(0x8009B42Cu, 7);
+    if (spu_address == 0) {
+        PE_StoreU16(0x8009B414u, 0);
+    } else {
+        ASSERT(func_80085EB4(spu_address) == spu_address,
+               "SPU address setup did not round-trip");
+    }
+}
+
+static void B48A_Fill(pe_addr_t source, uint32_t size, uint8_t seed)
+{
+    for (uint32_t i = 0; i < size; i++) {
+        PE_StoreU8(source + i, (uint8_t)(seed + i));
+    }
+}
+
+static void test_B48A_850F4_async_order_and_abi(void)
+{
+    TEST("B48A_850F4_async_order_and_abi");
+    PeSpuDmaState state;
+    void (*fn)(pe_addr_t, uint32_t) = func_800850F4;
+
+    ResetTestState();
+    B48A_PrepareDma(0x2000u);
+    B48A_Fill(0x80120000u, 0x40u, 0x31u);
+    PE_StoreU32(0x8009B430u, 0xA55AA55Au);
+
+    fn(0x80120000u, 0x20u);
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.pending == 1, "DMA must remain pending after func_800850F4");
+    ASSERT(state.source == 0x80120000u && state.destination == 0x2000u,
+           "DMA source/destination ABI mismatch");
+    ASSERT(state.requested_size == 0x20u && state.dma_size == 0x40u,
+           "DMA4 BCR rounding mismatch");
+    ASSERT(state.callback_at_issue == PE_SPU_DMA_CALLBACK,
+           "callback identity at issue mismatch");
+    ASSERT(PE_LoadU32(0x8009B44Cu) == 0u,
+           "DMA direction bookkeeping mismatch");
+    ASSERT(PE_LoadU32(0x8009B450u) == 0x80120000u,
+           "DMA MADR source mirror mismatch");
+    ASSERT(PE_LoadU32(0x8009B454u) == 1u,
+           "DMA BCR block-count mirror mismatch");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 1u, "busy not set at initiation");
+    ASSERT(PE_LoadU32(0x8009B434u) == PE_SPU_DMA_CALLBACK,
+           "completion callback not registered");
+    ASSERT(PE_LoadU32(0x8009B430u) == 0xA55AA55Au,
+           "85E54 inverted its callback-present branch");
+    ASSERT(PE_SpuRam_LoadU8(0x2000u) == 0,
+           "SPU data became visible before completion event");
+
+    ASSERT(PE_SpuDma_Service() == 1, "completion event not delivered");
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.pending == 0 && state.event_count == 1,
+           "completion did not retire pending DMA");
+    ASSERT(state.data_order != 0 && state.data_order < state.callback_order,
+           "callback did not run after the data transfer");
+    ASSERT(PE_SpuRam_LoadU8(0x2000u) == 0x31u &&
+           PE_SpuRam_LoadU8(0x203Fu) == (uint8_t)(0x31u + 0x3Fu),
+           "rounded DMA block not copied to SPU RAM");
+    ASSERT(PE_LoadU32(0x8009B434u) == 0u, "callback not deregistered");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 0u, "callback did not clear busy");
+    ASSERT(PE_SpuDma_Service() == 0, "event delivered twice");
+    PASS();
+}
+
+static void test_B48A_repeated_and_busy_transfer(void)
+{
+    TEST("B48A_repeated_and_busy_transfer");
+    PeSpuDmaState before, after;
+
+    ResetTestState();
+    B48A_PrepareDma(0x2080u);
+    B48A_Fill(0x80121000u, 0x80u, 0x10u);
+    func_800850F4(0x80121000u, 0x40u);
+    PE_SpuDma_GetState(&before);
+    ASSERT(PE_SpuDma_Begin(0x80121040u, 0x2100u, 0x40u,
+                           PE_SPU_DMA_CALLBACK) == 0,
+           "second DMA was accepted while busy");
+    PE_SpuDma_GetState(&after);
+    ASSERT(after.pending == 1 && after.source == before.source &&
+           after.destination == before.destination,
+           "busy rejection corrupted the in-flight record");
+    ASSERT(PE_SpuDma_Service() == 1, "first DMA did not complete");
+
+    PE_StoreU16(0x8009B414u, (uint16_t)(0x2100u >> 3));
+    func_800850F4(0x80121040u, 0x40u);
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 1u,
+           "repeated DMA was not independently busy");
+    ASSERT(PE_SpuDma_Service() == 1, "repeated DMA did not complete");
+    ASSERT(PE_SpuRam_LoadU8(0x2100u) == (uint8_t)(0x10u + 0x40u),
+           "repeated DMA copied the wrong source");
+    PE_SpuDma_GetState(&after);
+    ASSERT(after.event_count == 2, "repeated event count mismatch");
+    PASS();
+}
+
+static void test_B48A_zero_minimum_and_maximum_sizes(void)
+{
+    TEST("B48A_zero_minimum_and_maximum_sizes");
+    PeSpuDmaState state;
+
+    ResetTestState();
+    B48A_PrepareDma(0x2180u);
+    func_800850F4(0x80122000u, 0);
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.pending == 1 && state.requested_size == 0 &&
+           state.dma_size == 0, "zero-size issue contract mismatch");
+    ASSERT(PE_SpuDma_Service() == 1 && PE_LoadU32(0x8009D24Cu) == 0,
+           "zero-size completion lifecycle mismatch");
+
+    B48A_Fill(0x80122000u, 0x40u, 0x51u);
+    func_800850F4(0x80122000u, 1);
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.requested_size == 1 && state.dma_size == 0x40u,
+           "minimum request was not rounded to one DMA block");
+    PE_SpuDma_Service();
+    ASSERT(PE_SpuRam_LoadU8(0x2180u) == 0x51u,
+           "minimum request data missing");
+
+    ResetTestState();
+    B48A_PrepareDma(0x1010u);
+    PE_StoreU8(0x80010000u, 0x6Au);
+    PE_StoreU8(0x80010000u + 0x7EFEFu, 0xB7u);
+    PE_StoreU8(0x80010000u + 0x7EFF0u, 0xC8u);
+    PE_StoreU8(0x80010000u + 0x7EFFFu, 0xD9u);
+    func_800850F4(0x80010000u, UINT32_MAX);
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.requested_size == 0x7EFF0u,
+           "85E54 hard clamp mismatch");
+    ASSERT(state.dma_size == 0x7F000u,
+           "maximum request DMA block rounding mismatch");
+    PE_SpuDma_Service();
+    ASSERT(PE_SpuRam_LoadU8(0x1010u) == 0x6Au &&
+           PE_SpuRam_LoadU8(0x7FFFFu) == 0xB7u,
+           "maximum requested payload was truncated");
+    ASSERT(PE_SpuRam_LoadU8(0) == 0xC8u &&
+           PE_SpuRam_LoadU8(0xFu) == 0xD9u,
+           "rounded DMA padding did not wrap at the 16-bit TSA boundary");
+    PASS();
+}
+
+static void test_B48A_address_guards_and_failure_state(void)
+{
+    TEST("B48A_address_guards_and_failure_state");
+    PeSpuDmaState state;
+
+    ResetTestState();
+    ASSERT(PE_SpuDma_Begin(0x80100000u, 0, 0x40u,
+                           PE_SPU_DMA_CALLBACK) == 0,
+           "DMA began without installed IRQ");
+    PE_SpuDma_InstallIrq(PE_SPU_DMA_IRQ_HANDLER);
+    ASSERT(PE_SpuDma_Begin(0x80100001u, 0, 0x40u,
+                           PE_SPU_DMA_CALLBACK) == 0,
+           "unaligned DMA4 source accepted");
+    ASSERT(PE_SpuDma_Begin(0x80100000u, 1, 0x40u,
+                           PE_SPU_DMA_CALLBACK) == 0,
+           "unaligned SPU destination accepted");
+    ASSERT(PE_SpuDma_Begin(0x801FFFE0u, 0, 0x40u,
+                           PE_SPU_DMA_CALLBACK) == 0,
+           "rounded guest source overflow accepted");
+    ASSERT(PE_SpuDma_Begin(0x80100000u, 0x80000u, 1,
+                           PE_SPU_DMA_CALLBACK) == 0,
+           "out-of-range SPU destination accepted");
+    ASSERT(PE_SpuDma_Begin(0x80100000u, 0, 0x7EFF1u,
+                           PE_SPU_DMA_CALLBACK) == 0,
+           "request beyond retail clamp accepted by provider");
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.pending == 0 && state.source == 0 && state.destination == 0,
+           "failed issue mutated DMA state");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 0 &&
+           PE_LoadU32(0x8009B434u) == 0,
+           "provider failure leaked guest completion state");
+    PASS();
+}
+
+static void test_B48A_reset_pending_and_callback_lifetime(void)
+{
+    TEST("B48A_reset_pending_and_callback_lifetime");
+    PeSpuDmaState state;
+    pid_t pid;
+    int status;
+
+    ResetTestState();
+    B48A_PrepareDma(0x2200u);
+    B48A_Fill(0x80123000u, 0x40u, 0x71u);
+    func_800850F4(0x80123000u, 0x40u);
+    PE_Sdk_ResetState();
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.pending == 0 && state.irq_installed == 0,
+           "reset retained pending DMA/IRQ state");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 0 &&
+           PE_LoadU32(0x8009B434u) == 0,
+           "reset retained busy/callback state");
+    ASSERT(PE_SpuDma_Service() == 0 && PE_SpuRam_LoadU8(0x2200u) == 0,
+           "stale event or SPU data survived reset");
+
+    B48A_PrepareDma(0x2200u);
+    func_800850F4(0x80123000u, 0x40u);
+    PE_StoreU32(0x8009B434u, 0); /* IRQ handler reads the live slot. */
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed for unresolved event-object boundary");
+    if (pid == 0) {
+        PE_SpuDma_Service();
+        _exit(0);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid,
+           "waitpid failed for unresolved event-object boundary");
+    ASSERT(WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT,
+           "callback-free IRQ did not stop at the unresolved event object");
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.pending == 1 && state.callback_order == 0,
+           "child event delivery mutated or invoked callback in parent");
+    PE_Sdk_ResetState();
+    PASS();
+}
+
+static void test_B48A_guest_address_width_and_no_pointer_leak(void)
+{
+    TEST("B48A_guest_address_width_and_no_pointer_leak");
+    PeSpuDmaState state;
+
+    ResetTestState();
+    B48A_PrepareDma(0x2280u);
+    B48A_Fill(0x801E0000u, 0x40u, 0x81u);
+    func_800850F4(0x801E0000u, 0x40u);
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.source == 0x801E0000u,
+           "guest source was truncated or converted to a host pointer");
+    ASSERT(PE_LoadU32(0x8009B434u) == 0x80085098u,
+           "guest callback slot contains a host identity");
+    PE_SpuDma_Service();
+    ASSERT(PE_SpuRam_LoadU8(0x2280u) == 0x81u,
+           "high guest source translated incorrectly");
+    PASS();
+}
+
+static void B48A_Seed851A8(pe_addr_t buffer)
+{
+    B48A_PrepareDma(0x2500u);
+    PE_StoreU32(buffer, B46_MAGIC);
+    PE_StoreU32(buffer + 0x10u, 0x2500u);
+    PE_StoreU32(buffer + 0x14u, 0x20u);
+    PE_StoreU32(buffer + 0x18u, 0);
+    PE_StoreU32(buffer + 0x1Cu, 1);
+    B48A_Fill(buffer + 0x40u, 0x40u, 0x91u);
+    B48A_Fill(buffer + 0x80u, 0x40u, 0xB1u);
+}
+
+static void test_B48A_851A8_count_zero_integration(void)
+{
+    TEST("B48A_851A8_count_zero_integration");
+    PeSpuDmaState state;
+
+    ResetTestState();
+    B48A_Seed851A8(0x80140000u);
+    ASSERT(func_800851A8(0x80140000u, 0) == 0,
+           "851A8 count-zero integration failed");
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.pending == 1 && state.source == 0x80140080u,
+           "851A8 did not issue its exact DMA source");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 1,
+           "count-zero path did not return busy");
+    ASSERT(PE_SpuRam_LoadU8(0x2500u) == 0,
+           "count-zero path completed before an event");
+    ASSERT(PE_LoadU8(0x800B2900u) == 0x91u,
+           "851A8 CPU payload copy did not precede completion");
+    PE_SpuDma_Service();
+    ASSERT(PE_SpuRam_LoadU8(0x2500u) == 0xB1u &&
+           PE_LoadU32(0x8009D24Cu) == 0,
+           "count-zero explicit completion mismatch");
+    PASS();
+}
+
+static void test_B48A_851A8_barrier_integration(void)
+{
+    TEST("B48A_851A8_barrier_integration");
+    PeSpuDmaState state;
+
+    ResetTestState();
+    B48A_Seed851A8(0x80150000u);
+    ASSERT(func_800851A8(0x80150000u, 1) == 0,
+           "851A8 barrier integration failed");
+    PE_SpuDma_GetState(&state);
+    ASSERT(state.pending == 0 && state.event_count == 1,
+           "851A8 retail barrier did not service exactly one event");
+    ASSERT(state.data_order < state.callback_order,
+           "851A8 barrier violated data/callback order");
+    ASSERT(PE_SpuRam_LoadU8(0x2500u) == 0xB1u &&
+           PE_LoadU32(0x8009D24Cu) == 0 &&
+           PE_LoadU32(0x8009B434u) == 0,
+           "851A8 barrier final state mismatch");
     PASS();
 }
 
@@ -11985,6 +12308,16 @@ int main(void)
     test_87090_full_ram_canary();
     test_87090_dirty_repeat_and_reset();
     test_87090_no_low_address_mirror();
+
+    /* Phase 6E-B48A — asynchronous SPU DMA4 lifecycle (8 tests). */
+    test_B48A_850F4_async_order_and_abi();
+    test_B48A_repeated_and_busy_transfer();
+    test_B48A_zero_minimum_and_maximum_sizes();
+    test_B48A_address_guards_and_failure_state();
+    test_B48A_reset_pending_and_callback_lifetime();
+    test_B48A_guest_address_width_and_no_pointer_leak();
+    test_B48A_851A8_count_zero_integration();
+    test_B48A_851A8_barrier_integration();
 
     /* Phase 6E-B40 — func_8005332C resource-record lookup. */
     test_5332C_signature_and_index_guards();

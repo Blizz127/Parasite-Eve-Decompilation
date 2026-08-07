@@ -12,13 +12,15 @@
  * Collapsed retail effects (hardware-only):
  *   - func_8007D1D4(arg): SPU hardware register init — no-op.
  *   - func_8007DAE0(0xD1, D_8009B46C, 0): SPU register write — no-op.
- *   - func_8007DD14(func_8007D614): kernel SPU callback install — no-op.
+ *   - func_8007DD14(func_8007D614): represented by the native DMA4 event
+ *     model's exact guest-handler identity.
  *   - func_800726E4/func_80072704 (OpenEvent/EnableEvent): host event shims
  *     (pe_libetc.c); kernel Event Control Blocks live outside the guest
  *     window, only the returned handle is guest-visible.
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"
+#include "pe_spu_dma.h"
 
 /* func_8007D15C — SPU IRQ event install (verbatim guest-visible effects).
  * Non-static: also called verbatim from func_80085644 (pe_stream.c). */
@@ -29,6 +31,10 @@ void func_8007D15C(void)
     }
     PE_StoreU32(0x8009B3ECu, 1);
     func_80072714();                        /* EnterCriticalSection */
+    if (!PE_SpuDma_InstallIrq(PE_SPU_DMA_IRQ_HANDLER)) {
+        func_80072724();
+        return;
+    }
     PE_StoreU32(0x8009B384u,
                 (uint32_t)PE_Event_Open(0xF0000009u, 0x20, 0x2000, 0));
     PE_Event_Enable((int)PE_LoadU32(0x8009B384u));

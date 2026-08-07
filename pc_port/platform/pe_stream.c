@@ -12,11 +12,9 @@
  * effects are class 2 collapses enumerated below.
  *
  * Collapsed retail effects (hardware-only or degenerate on host):
- *   - func_8007D9F8 (SPU DMA upload in func_80085E54): hardware transfer.
- *     Completion is applied SYNCHRONOUSLY via the func_80085098 callback
- *     effects (func_80085F44(0) -> D_8009B434=0, D_8009D24C=0), so the
- *     func_80085174 spin terminates immediately — matching the retail
- *     post-completion state.
+ *   - func_8007D9F8 (SPU DMA upload in func_80085E54): B48A records the
+ *     DMA4 issue.  The following retail 85174 barrier supplies the
+ *     controlled completion-event pump.
  *   - func_8007DB24(-1) (SPU heap query in func_80085EB4): host SPU-heap
  *     model starts at 0x1010 after SsInit (deterministic); only the store
  *     to D_8009B414 is guest-visible and the caller discards the return.
@@ -37,6 +35,7 @@
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"
+#include "pe_spu_dma.h"
 #include "stub_registry.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -293,15 +292,9 @@ void func_80085644(void)
      * func_8007DB24(-1) SPU heap query: host model top = 0x1010. */
     PE_StoreU16(0x8009B414u, 0x1010u);
 
-    /* func_800850F4(&D_8009B7FC, 0x20): */
-    PE_StoreU32(0x8009D24Cu, 1);            /* func_800850C0 */
-    PE_StoreU32(0x8009B434u, 0x80085098u);  /* func_80085F44(callback) */
-    /* func_80085E54: func_8007D9F8 SPU DMA upload — collapsed; completion
-     * applied synchronously via the func_80085098 callback effects: */
-    PE_StoreU32(0x8009B434u, 0);            /* func_80085F44(0) */
-    PE_StoreU32(0x8009D24Cu, 0);
-    /* func_80085174 — spin while D_8009D24C == 1 (already complete) */
-    while (PE_LoadU32(0x8009D24Cu) == 1) { }
+    /* func_800850F4(&D_8009B7FC, 0x20), then func_80085174. */
+    func_800850F4(0x8009B7FCu, 0x20u);
+    PE_SpuDma_WaitForCompletion();
 
     PE_Stream_StateInit();                  /* func_80085290 */
 

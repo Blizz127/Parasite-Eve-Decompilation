@@ -19,6 +19,7 @@
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"
+#include "pe_spu_dma.h"
 
 static int      g_irq_lock_depth;
 static uint32_t g_next_event_handle = 0x100;
@@ -82,6 +83,12 @@ void PE_Sdk_ResetState(void)
 {
     g_irq_lock_depth = 0;
     g_next_event_handle = 0x100;
+    PE_SpuDma_Reset();
+    /* Host/platform reset cancels an IRQ that can no longer be delivered. */
+    PE_StoreU32(0x8009D24Cu, 0);
+    PE_StoreU32(0x8009B434u, 0);
+    PE_StoreU32(0x8009B3ECu, 0);
+    PE_StoreU32(0x8009B384u, 0);
     g_pe_gte.ofx = g_pe_gte.ofy = 0;
     g_pe_gte.h = 0;
     g_pe_gte.dqa = g_pe_gte.dqb = 0;

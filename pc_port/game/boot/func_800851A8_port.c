@@ -13,7 +13,6 @@
  *   $s0 = a0 (buffer), $s3 = a1 (count).
  *
  *   1. func_80085174() — completion barrier (spin while D_8009D24C == 1).
- *      Inlined: D_8009D24C is 0 after boot init.
  *
  *   2. func_80085084(buffer) — magic number check (5 instructions):
  *      v0 = *buffer + 0xB0BEB4BF.  Returns 0 if valid.
@@ -35,16 +34,16 @@
  * validation, parameter reads, copy computation, payload copy, and
  * second barrier are all deterministic retail logic.
  * The DMA transfer (func_800850F4 → func_80085E54 → func_8007D9F8)
- * is hardware-dependent and routes through the centralized bootstrap
- * boundary.
+ * routes through the controlled asynchronous DMA4 event provider.
  *
  * Dependency boundary:
  *   func_80085174  TRANSLATED (inlined: spin on D_8009D24C)
  *   func_80085084  TRANSLATED (inlined: magic number check)
  *   func_80085EB4  TRANSLATED (SPU address validation)
- *   func_800850F4  TRANSLATED (DMA transfer, collapsed to synchronous)
+ *   func_800850F4  TRANSLATED (DMA issue; completion is a later event)
  */
 #include "psx_compat.h"
+#include "pe_spu_dma.h"
 
 /* ── Guest globals ──────────────────────────────────────────────────── */
 #define GA_D_8009D24C  0x8009D24Cu   /* transfer completion flag          */
@@ -63,7 +62,7 @@ int func_800851A8(pe_addr_t buffer, int count)
     uint32_t i;
 
     /* 1. func_80085174 — completion barrier. */
-    while (PE_LoadU32(GA_D_8009D24C) == 1) { }
+    PE_SpuDma_WaitForCompletion();
 
     /* 2. func_80085084 — magic number check. */
     check = PE_LoadU32(buffer) + PE_851A8_MAGIC;
@@ -99,9 +98,9 @@ int func_800851A8(pe_addr_t buffer, int count)
     }
     copy_words = (v0 - param2) << 4;
 
-    /* 4c. DMA transfer (func_800850F4 — translated, collapsed DMA).
+    /* 4c. DMA transfer (func_800850F4 — translated DMA issue).
      *     Retail calls func_800850F4(s1 + ((v0 - param2) << 6), param1).
-     *     The DMA is collapsed to synchronous completion in the port. */
+     *     It returns busy; an explicit completion barrier services the IRQ. */
     func_800850F4(s1 + ((v0 - param2) << 6), param1);
 
     /* 4d. Copy payload to D_800B2900.
@@ -116,7 +115,7 @@ int func_800851A8(pe_addr_t buffer, int count)
 
     /* 4e. Second completion barrier if count != 0. */
     if (count != 0) {
-        while (PE_LoadU32(GA_D_8009D24C) == 1) { }
+        PE_SpuDma_WaitForCompletion();
     }
 
     return 0;
