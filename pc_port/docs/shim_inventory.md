@@ -62,11 +62,12 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 - `func_8006AD40` — PREFIX TRANSLATED (Phase 6E-B50 corrective; full retail
   body is 391 words, but production implements only the 68-word prefix
   `0x8006AD40..0x8006AE50`, including the first unresolved call and delay
-  slot). `func_8006E1C0` produces GPU-command-queue state consumed by its
-  second callback and later calls, so non-strict production returns when
-  that centralized boundary returns and requests an `unresolved-boundary`
-  stop at the next host-safe main-loop check. The suffix is not claimed
-  translated.
+  slot). Its callee `func_8006E1C0` is TRANSLATED (Phase 6E-B51); the two
+  `func_8007506C` (PsyQ LoadImage) dispatches inside it remain the
+  centralized boundary — they produce GPU-command-queue state consumed by
+  later suffix calls, so non-strict production returns when the translated
+  callee returns and requests an `unresolved-boundary` stop at the next
+  host-safe main-loop check. The suffix is not claimed translated.
 - `func_8006ECEC`
 - `func_8006F044`
 - `func_80069B08(int)`

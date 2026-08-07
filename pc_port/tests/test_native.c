@@ -12004,19 +12004,26 @@ static void test_6AD40_prefix_boundary_args(void)
     memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
 
     ASSERT(func_8006AD40() == 0, "prefix boundary must return retail zero");
+    /* Phase 6E-B51: func_8006E1C0 is translated; the recorded boundary is
+     * now its first func_8007506C (PsyQ LoadImage) dispatch.  The fixture
+     * entry is all zeros: h substitutes 0x100, entry+0xC is zero, so
+     * exactly one LoadImage call with data = base is retail-exact. */
     ASSERT(g_bootstrap_arg4_call_count == 1,
            "prefix must record exactly one unresolved call");
-    ASSERT(strcmp(g_bootstrap_arg4_calls[0].symbol, "func_8006E1C0") == 0 &&
-           strcmp(g_bootstrap_arg4_calls[0].caller, "func_8006AD40") == 0,
-           "wrong B50 boundary identity");
-    ASSERT(g_bootstrap_arg4_calls[0].arg0 == B50_FIRST_ENTRY &&
-           g_bootstrap_arg4_calls[0].arg1 == B50_BASE,
-           "func_8006E1C0 boundary arguments are not retail-exact");
-    ASSERT(g_bootstrap_arg4_calls[0].arg2 == 0 &&
-           g_bootstrap_arg4_calls[0].arg3 == 0,
-           "non-formal diagnostic arguments must be zero");
-    ASSERT(CountOrderLog("func_8006E1C0") == 1,
+    ASSERT(strcmp(g_bootstrap_arg4_calls[0].symbol, "func_8007506C") == 0 &&
+           strcmp(g_bootstrap_arg4_calls[0].caller, "func_8006E1C0") == 0,
+           "wrong B51 boundary identity");
+    ASSERT(g_bootstrap_arg4_calls[0].arg0 == 0 &&
+           g_bootstrap_arg4_calls[0].arg2 == 0x01000000u,
+           "LoadImage stack-rect words are not retail-exact");
+    ASSERT(g_bootstrap_arg4_calls[0].arg1 == B50_BASE,
+           "LoadImage data address is not retail-exact");
+    ASSERT(g_bootstrap_arg4_calls[0].arg3 == 0,
+           "non-formal diagnostic argument must be zero");
+    ASSERT(CountOrderLog("func_8007506C") == 1,
            "first unresolved boundary must be invoked once");
+    ASSERT(CountOrderLog("func_8006E1C0") == 0,
+           "translated callee must not record a bootstrap boundary");
     ASSERT(CountOrderLog("func_800718D0") == 0 &&
            CountOrderLog("func_80030894") == 0,
            "prefix must not continue to later dependencies");
@@ -12052,16 +12059,18 @@ static void test_6AD40_prefix_boundary_args(void)
     PASS();
 }
 
-static void test_6AD40_strict_stops_at_6E1C0(void)
+static void test_6AD40_strict_stops_at_7506C(void)
 {
     DiscFixture fx;
-    TEST("6AD40_strict_stops_at_6E1C0");
+    /* Phase 6E-B51: the strict frontier advanced through translated
+     * func_8006E1C0 to its first func_8007506C dispatch. */
+    TEST("6AD40_strict_stops_at_7506C");
     pid_t pid;
     int status = 0;
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     pid = fork();
-    ASSERT(pid >= 0, "fork failed for B50 strict boundary");
+    ASSERT(pid >= 0, "fork failed for B51 strict boundary");
     if (pid == 0) {
         PE_Disc_SetActive(fx.disc);
         HostFB_Init();
@@ -12074,9 +12083,9 @@ static void test_6AD40_strict_stops_at_6E1C0(void)
         _exit(0);
     }
     ASSERT(waitpid(pid, &status, 0) == pid,
-           "waitpid failed for B50 strict boundary");
+           "waitpid failed for B51 strict boundary");
     ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict B50 boundary must exit 1 at first unresolved callee");
+           "strict B51 boundary must exit 1 at first unresolved callee");
     FxFree(&fx);
     PASS();
 }
@@ -12108,6 +12117,13 @@ static void test_6AD40_prefix_repeat_dirty(void)
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 1);
     PE_StoreU32(B50_FIRST_ENTRY + 4u, 0xDEADBEEFu);
+    /* B51: the rect fields are fixture bytes, not zero — seed them so the
+     * expected LoadImage diagnostics are retail-decoded constants. */
+    PE_StoreU8(B50_FIRST_ENTRY + 7u, 0u);
+    PE_StoreU32(B50_FIRST_ENTRY + 8u, 0u);
+    PE_StoreU32(B50_FIRST_ENTRY + 0xCu, 0u);
+    PE_StoreU8(B50_FIRST_ENTRY + 0xFu, 0u);
+    PE_StoreU32(B50_FIRST_ENTRY + 0x10u, 0u);
     ASSERT(func_8006AD40() == 0, "first dirty prefix return wrong");
     /* The prefix intentionally stops before channel 2's retail poll.  Poll
      * the completed host transaction as fixture teardown before exercising
@@ -12120,14 +12136,207 @@ static void test_6AD40_prefix_repeat_dirty(void)
     ASSERT(func_8006AD40() == 0, "repeated dirty prefix return wrong");
     ASSERT(g_bootstrap_arg4_call_count == 2,
            "repeated prefix must record two boundaries");
+    /* B51: the dirty entry+4 = 0xDEADBEEF flows through the retail 24-bit
+     * mask into the LoadImage data address; nothing dereferences it. */
     for (int i = 0; i < 2; i++) {
-        ASSERT(g_bootstrap_arg4_calls[i].arg0 == B50_FIRST_ENTRY &&
-               g_bootstrap_arg4_calls[i].arg1 == B50_BASE,
-               "dirty/repeated boundary arguments changed");
+        ASSERT(strcmp(g_bootstrap_arg4_calls[i].symbol, "func_8007506C") == 0,
+               "dirty/repeated boundary identity changed");
+        ASSERT(g_bootstrap_arg4_calls[i].arg1 ==
+               B50_BASE + (0xDEADBEEFu & 0x00FFFFFFu),
+               "dirty/repeated LoadImage data address changed");
+        ASSERT(g_bootstrap_arg4_calls[i].arg0 == 0 &&
+               g_bootstrap_arg4_calls[i].arg2 == 0x01000000u,
+               "dirty/repeated LoadImage rect changed");
     }
     ASSERT((PE_LoadU32(0x800B0CD8u) & 1u) != 0,
            "repeated prefix must leave suffix state untouched");
     FxFree(&fx);
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B51 — func_8006E1C0 full translation (6 tests)
+ *
+ * Retail: 68 words at 0x8006E1C0..0x8006E2CF (file offset 0x5E9C0).
+ * True ABI (a0=entry, a1=base; a2/a3 unread; v0=0 discarded by all eight
+ * executable call sites — func_8006914C@0x8006949C, func_8006AD40@
+ * 0x8006AE48/0x8006B1DC/0x8006B254, func_8006B4F8@0x8006B65C/0x8006B740,
+ * func_8006BECC@0x8006C03C, func_8006C5BC@0x8006C750 — all the same
+ * shape, so direct calls with the B50 site's arguments cover the ABI).
+ * Both func_8007506C (PsyQ LoadImage) dispatches are the centralized
+ * boundary; every expected value below derives from the retail decode of
+ * the seeded entry fields, cross-checked by tools/b51_oracle.py against
+ * the literal retail words — never from post-execution production state.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define B51_BASE        0x80100000u
+#define B51_ENTRY       0x80100200u
+
+static void B51_SeedEntry(uint32_t dims, uint32_t hbyte, uint32_t image_off,
+                          uint32_t clut_off, uint32_t cdims, uint32_t chbyte)
+{
+    PE_StoreU32(B51_ENTRY + 4u, image_off);
+    PE_StoreU8(B51_ENTRY + 7u, hbyte);
+    PE_StoreU32(B51_ENTRY + 8u, dims);
+    PE_StoreU32(B51_ENTRY + 0xCu, clut_off);
+    PE_StoreU8(B51_ENTRY + 0xFu, chbyte);
+    PE_StoreU32(B51_ENTRY + 0x10u, cdims);
+}
+
+static void B51_AssertCall(int i, uint32_t rect0, uint32_t data,
+                           uint32_t rect1)
+{
+    ASSERT(strcmp(g_bootstrap_arg4_calls[i].symbol, "func_8007506C") == 0 &&
+           strcmp(g_bootstrap_arg4_calls[i].caller, "func_8006E1C0") == 0,
+           "wrong B51 boundary identity");
+    ASSERT(g_bootstrap_arg4_calls[i].arg0 == rect0,
+           "LoadImage rect word 0 (x|y<<16) is not retail-exact");
+    ASSERT(g_bootstrap_arg4_calls[i].arg1 == data,
+           "LoadImage data address is not retail-exact");
+    ASSERT(g_bootstrap_arg4_calls[i].arg2 == rect1,
+           "LoadImage rect word 1 (w|h<<16) is not retail-exact");
+    ASSERT(g_bootstrap_arg4_calls[i].arg3 == 0,
+           "non-formal diagnostic argument must be zero");
+}
+
+static void test_6E1C0_single_call_zero_entry(void)
+{
+    uint8_t *snapshot;
+    TEST("6E1C0_single_call_zero_entry");
+    ResetTestState();
+    /* PE_RamReset zeroed the entry: h substitutes 0x100 and the masked
+     * zero CLUT offset suppresses the second dispatch. */
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate B51 RAM snapshot");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+
+    ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0,
+           "must return retail zero");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "zero entry must dispatch exactly one LoadImage");
+    B51_AssertCall(0, 0u, B51_BASE, 0x01000000u);
+    ASSERT(CountOrderLog("func_8007506C") == 1,
+           "boundary must be invoked exactly once");
+
+    /* Full 2 MiB canary: the translation writes no guest RAM at all — the
+     * retail stack rect is transient and visible only to the unresolved
+     * callee, so it has no guest authority. */
+    for (uint32_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+        if (PE_LoadU8(a) != snapshot[a - PE_RAM_BASE]) {
+            free(snapshot);
+            FAIL("func_8006E1C0 changed guest RAM");
+        }
+    }
+    free(snapshot);
+    PASS();
+}
+
+static void test_6E1C0_two_calls_exact_args(void)
+{
+    TEST("6E1C0_two_calls_exact_args");
+    ResetTestState();
+    /* b51_oracle.py scenario B constants (retail decode):
+     *   dims 0xFFFFFFFF -> x=0x7FF y=0x7FF w=0x3FF, h byte 0x40 raw;
+     *   image offset 0xFF123456 -> 24-bit 0x123456;
+     *   cdims 0x12345678 -> x=0x515 y=0x91 w=0x278, CLUT h 0x20 raw;
+     *   CLUT data = image data + 0x100. */
+    B51_SeedEntry(0xFFFFFFFFu, 0x40u, 0xFF123456u, 0x100u, 0x12345678u,
+                  0x20u);
+    ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0,
+           "must return retail zero");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "nonzero CLUT offset must dispatch two LoadImage calls");
+    B51_AssertCall(0, 0x07FF07FFu, B51_BASE + 0x123456u, 0x004003FFu);
+    B51_AssertCall(1, 0x00910515u, B51_BASE + 0x123456u + 0x100u,
+                   0x00200278u);
+    ASSERT(CountOrderLog("func_8007506C") == 2,
+           "both dispatches must be recorded in order");
+    PASS();
+}
+
+static void test_6E1C0_clut_mask_and_height_rules(void)
+{
+    TEST("6E1C0_clut_mask_and_height_rules");
+    ResetTestState();
+    /* Mask-before-test: 0xFF000000 masks to zero — no second call, even
+     * though the raw word is nonzero.  h byte 0xFF stays 0xFF. */
+    B51_SeedEntry(0u, 0xFFu, 0u, 0xFF000000u, 0u, 0u);
+    ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0,
+           "must return retail zero");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "masked-to-zero CLUT offset must not dispatch");
+    B51_AssertCall(0, 0u, B51_BASE, 0x00FF0000u);
+
+    /* b51_oracle.py scenario D: CLUT h byte 0 is stored RAW (the 0x100
+     * substitution applies only to the image rect). */
+    Bootstrap_ResetArg4CallLog();
+    B51_SeedEntry(0x00482B41u, 0x10u, 0x234u, 0x58u, 0x00094A03u, 0u);
+    ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0,
+           "must return retail zero");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "nonzero CLUT offset must dispatch");
+    B51_AssertCall(0, 0x0002020Au, B51_BASE + 0x234u, 0x00100341u);
+    B51_AssertCall(1, 0x00000252u, B51_BASE + 0x234u + 0x58u, 0x00000203u);
+    PASS();
+}
+
+static void test_6E1C0_repeat_dirty_and_reset(void)
+{
+    TEST("6E1C0_repeat_dirty_and_reset");
+    ResetTestState();
+    B51_SeedEntry(0xFFFFFFFFu, 0x40u, 0xFF123456u, 0x100u, 0x12345678u,
+                  0x20u);
+    ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0, "first return wrong");
+    ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0, "repeat return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 4,
+           "dirty repeat must record two dispatches per invocation");
+    for (int i = 0; i < 4; i += 2) {
+        B51_AssertCall(i, 0x07FF07FFu, B51_BASE + 0x123456u, 0x004003FFu);
+        B51_AssertCall(i + 1, 0x00910515u,
+                       B51_BASE + 0x123456u + 0x100u, 0x00200278u);
+    }
+    /* Reset behavior: after PE_RamReset the entry is zero again — the
+     * single-call substitution path must reappear identically. */
+    PE_RamReset();
+    Bootstrap_ResetArg4CallLog();
+    ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0, "post-reset return");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "post-reset call count");
+    B51_AssertCall(0, 0u, B51_BASE, 0x01000000u);
+    PASS();
+}
+
+static void test_6E1C0_data_address_wraparound(void)
+{
+    TEST("6E1C0_data_address_wraparound");
+    ResetTestState();
+    /* 0xFF000001 + 0x00FFFFFF wraps to 0 mod 2^32 (retail addu); the port
+     * must not clamp, and nothing may dereference the result. */
+    B51_SeedEntry(0u, 0u, 0x00FFFFFFu, 0u, 0u, 0u);
+    ASSERT(func_8006E1C0(B51_ENTRY, 0xFF000001u) == 0,
+           "must return retail zero");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "wrap case call count");
+    B51_AssertCall(0, 0u, 0u, 0x01000000u);
+    PASS();
+}
+
+static void test_6E1C0_strict_direct(void)
+{
+    TEST("6E1C0_strict_direct");
+    pid_t pid;
+    int status = 0;
+    ResetTestState();
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed for B51 direct strict boundary");
+    if (pid == 0) {
+        Bootstrap_Init();
+        Bootstrap_EnableStrict();
+        func_8006E1C0(B51_ENTRY, B51_BASE);
+        _exit(0);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid,
+           "waitpid failed for B51 direct strict boundary");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
+           "strict mode must exit 1 at the first LoadImage dispatch");
     PASS();
 }
 
@@ -12708,9 +12917,17 @@ int main(void)
     /* Phase 6E-B50 corrective — func_8006AD40 honest prefix (5 tests). */
     test_6AD40_guard_bit0();
     test_6AD40_prefix_boundary_args();
-    test_6AD40_strict_stops_at_6E1C0();
+    test_6AD40_strict_stops_at_7506C();
     test_6AD40_prefix_does_not_finalize();
     test_6AD40_prefix_repeat_dirty();
+
+    /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
+    test_6E1C0_single_call_zero_entry();
+    test_6E1C0_two_calls_exact_args();
+    test_6E1C0_clut_mask_and_height_rules();
+    test_6E1C0_repeat_dirty_and_reset();
+    test_6E1C0_data_address_wraparound();
+    test_6E1C0_strict_direct();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

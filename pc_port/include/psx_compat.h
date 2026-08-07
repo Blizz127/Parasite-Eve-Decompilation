@@ -118,14 +118,11 @@ static inline int  func_801909B4(void)   { return Bootstrap_ReturnInt("func_8019
 static inline void func_80066B60(int a)  { Bootstrap_ReturnVoid("func_80066B60", "func_8006E9A0"); (void)a; }
 static inline void func_80068E24(void)   { Bootstrap_ReturnVoid("func_80068E24", "func_8006E9A0"); }
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
-/* B50 first unresolved callee.  Retail returns zero; its callers ignore it.
- * The four-register diagnostic record preserves the two true arguments;
- * a2/a3 are not formal inputs and func_8006E1C0 never reads them. */
-static inline int func_8006E1C0(pe_addr_t entry, pe_addr_t base) {
-    Bootstrap_ReturnVoid4("func_8006E1C0", "func_8006AD40",
-                          entry, base, 0, 0);
-    return 0;
-}
+/* func_8006E1C0 is REAL (Phase 6E-B51):
+ * game/boot/func_8006E1C0_port.c — packed texture-entry LoadImage
+ * dispatcher (68 retail words).  Its two func_8007506C (PsyQ LoadImage)
+ * dispatches route through the centralized bootstrap boundary; strict
+ * execution now stops at func_8007506C from func_8006E1C0. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
@@ -163,6 +160,7 @@ extern int  func_80038D1C(void);
 extern int  func_800698D4(void);
 extern void func_8006A9E4(void);
 extern int  func_8006AD40(void);
+extern int  func_8006E1C0(pe_addr_t entry, pe_addr_t base);
 extern void func_800527C8(void);
 extern pe_addr_t func_8005332C(int32_t resource_id);
 extern pe_addr_t func_80053968(int32_t resource_id);

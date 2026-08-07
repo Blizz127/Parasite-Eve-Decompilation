@@ -7,18 +7,19 @@
  *
  * Implemented prefix:
  *   68 words / 272 bytes, exe 0x8006AD40–0x8006AE50 (exclusive).
- *   The final two words are the first unresolved call at 0x8006AE48 and
- *   its delay slot at 0x8006AE4C:
+ *   The final two words are the call at 0x8006AE48 and its delay slot at
+ *   0x8006AE4C:
  *
  *       jal  func_8006E1C0
  *        move a1,s4
  *
- * func_8006E1C0 is state-producing.  On the observed real-Disc-1 path it
- * dispatches two LoadImage operations through func_8007506C; the callback
- * advances the retail GPU command queue and later callbacks consume that
- * state.  Non-strict execution therefore returns from func_8006AD40 as soon
- * as the centralized boundary returns.  It must not execute the remaining
- * retail control flow with those effects missing.
+ * func_8006E1C0 is TRANSLATED (Phase 6E-B51).  Its two func_8007506C
+ * (PsyQ LoadImage) dispatches remain an honest centralized boundary: the
+ * callback advances the retail GPU command queue and later suffix
+ * callbacks consume that state.  Non-strict execution therefore returns
+ * from func_8006AD40 as soon as the translated callee returns.  It must
+ * not execute the remaining retail control flow with those effects
+ * missing.
  *
  * If the entry count is zero, the conditional retail call is bypassed.  The
  * host still returns at the end of the proven static prefix rather than
