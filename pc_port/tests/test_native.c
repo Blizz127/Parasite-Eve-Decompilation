@@ -11931,6 +11931,156 @@ static void test_64964_ramreset_repeat_and_guards(void) {
     PASS();
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B50 — func_8006AD40 streaming multiplexer (5 tests)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void test_6AD40_guard_bit0(void)
+{
+    TEST("6AD40_guard_bit0");
+    ResetTestState();
+    HostFB_Init();
+    g_bootstrap_disc = 1;
+    /* Bit 0 of D_800B0CD8 is 0 by default after reset — func_8006AD40
+     * should return immediately without calling any stubs. */
+    func_8006AD40();
+    ASSERT(g_stub_count == 0, "no stubs called when bit 0 clear");
+    PASS();
+}
+
+static void test_6AD40_not_bootstrap_stub(void)
+{
+    DiscFixture fx;
+    TEST("6AD40_not_bootstrap_stub");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    HostFB_Init();
+    func_8007ED58();  /* CD reset — sets drive state */
+    HostFB_VSync(0);  /* advance VSync counter so DMA poll doesn't timeout */
+    g_bootstrap_disc = 1;
+    /* Set bit 0 to enter the function body */
+    PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1);
+    /* Seed descriptor pointers to valid guest addresses */
+    PE_StoreU32(0x800B0CD8u + 0x160, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x174, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x180, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x14C, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x16C, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x188, 0x80100000u);
+    /* Table entries all zero → 0 sectors → issue completes trivially */
+    func_8006AD40();
+    /* func_8006AD40 itself should NOT appear in stub registry */
+    for (int i = 0; i < g_stub_count; i++) {
+        const char *sym = g_stub_registry[i].symbol;
+        ASSERT(strcmp(sym, "func_8006AD40") != 0,
+               "func_8006AD40 must not be a bootstrap stub");
+    }
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_6AD40_strict_stops_at_6E1C0(void)
+{
+    DiscFixture fx;
+    TEST("6AD40_strict_stops_at_6E1C0");
+    pid_t pid;
+    int status = 0;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed for B50 strict boundary");
+    if (pid == 0) {
+        PE_Disc_SetActive(fx.disc);
+        HostFB_Init();
+        Bootstrap_Init();
+        Bootstrap_EnableStrict();
+        func_8007ED58();  /* CD reset — sets drive state after bootstrap init */
+        HostFB_VSync(0);  /* advance VSync counter for DMA poll */
+        /* Set up minimal state so func_8006AD40 enters the body */
+        PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1);
+        PE_StoreU32(0x800B0CD8u + 0x160, 0x80100000u);
+        PE_StoreU32(0x800B0CD8u + 0x174, 0x80100000u);
+        PE_StoreU32(0x800B0CD8u + 0x180, 0x80100000u);
+        PE_StoreU32(0x800B0CD8u + 0x14C, 0x80100000u);
+        PE_StoreU32(0x800B0CD8u + 0x16C, 0x80100000u);
+        PE_StoreU32(0x800B0CD8u + 0x188, 0x80100000u);
+        /* Seed GPU packet header at base+0x28: count=1, offset=0 */
+        PE_StoreU32(0x80100028u, (1u << 22) | 0u);
+        func_8006AD40();
+        _exit(0);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid,
+           "waitpid failed for B50 strict boundary");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
+           "strict B50 boundary must exit 1 at first unresolved callee");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_6AD40_finalization_calls(void)
+{
+    DiscFixture fx;
+    TEST("6AD40_finalization_calls");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    HostFB_Init();
+    func_8007ED58();
+    HostFB_VSync(0);
+    g_bootstrap_disc = 1;
+    PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1);
+    PE_StoreU32(0x800B0CD8u + 0x160, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x174, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x180, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x14C, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x16C, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x188, 0x80100000u);
+    func_8006AD40();
+    /* Verify finalization effects:
+     * - bit 0 of D_800B0CD8 cleared (end-of-function)
+     * - D_800B0CD8 + 6 written to 0xFFFF (state write)
+     * - D_800B0CD8 + 0xE8 written to 0xFFFF */
+    uint32_t flags = PE_LoadU32(0x800B0CD8u);
+    ASSERT(!(flags & 1), "bit 0 must be cleared at exit");
+    ASSERT(PE_LoadU16(0x800B0CD8u + 6) == 0xFFFF,
+           "D_800B0CD8+6 must be 0xFFFF after finalization");
+    ASSERT(PE_LoadU16(0x800B0CD8u + 0xE8) == 0xFFFF,
+           "D_800B0CD8+0xE8 must be 0xFFFF after finalization");
+    /* Verify bootstrap stubs were logged for unresolved callees */
+    ASSERT(CountOrderLog("func_800718D0") >= 1,
+           "func_800718D0 must be called (bootstrap stub)");
+    ASSERT(CountOrderLog("func_80030894") >= 1,
+           "func_80030894 must be called (bootstrap stub)");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_6AD40_clears_bit0(void)
+{
+    DiscFixture fx;
+    TEST("6AD40_clears_bit0");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    HostFB_Init();
+    func_8007ED58();
+    HostFB_VSync(0);
+    g_bootstrap_disc = 1;
+    PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1);
+    PE_StoreU32(0x800B0CD8u + 0x160, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x174, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x180, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x14C, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x16C, 0x80100000u);
+    PE_StoreU32(0x800B0CD8u + 0x188, 0x80100000u);
+    func_8006AD40();
+    uint32_t flags = PE_LoadU32(0x800B0CD8u);
+    ASSERT(!(flags & 1), "bit 0 of D_800B0CD8 must be cleared at exit");
+    FxFree(&fx);
+    PASS();
+}
+
 /* ── Required by func_8001220C_port.c ────────────────────────────────── */
 void Trace_Direct(const char *event) { (void)event; }
 
@@ -12504,6 +12654,13 @@ int main(void)
     test_80071A24_full_ram_canary();
     test_80071A24_rejects_bad_ranges();
     test_64964_ramreset_repeat_and_guards();
+
+    /* Phase 6E-B50 — func_8006AD40 streaming multiplexer (5 tests). */
+    test_6AD40_guard_bit0();
+    test_6AD40_not_bootstrap_stub();
+    test_6AD40_strict_stops_at_6E1C0();
+    test_6AD40_finalization_calls();
+    test_6AD40_clears_bit0();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

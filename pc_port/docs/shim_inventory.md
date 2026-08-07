@@ -59,7 +59,10 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 - `func_800725DC`
 - ~~`func_8006A9E4`~~ — TRANSLATED (Phase 6E-B16; see the func_8003E680
   callees section)
-- `func_8006AD40`
+- ~~`func_8006AD40`~~ — TRANSLATED (Phase 6E-B50; 391 words, streaming
+  subsystem multiplexer; four unresolved callees route through the
+  centralized bootstrap boundary: func_8006E1C0, func_8007506C,
+  func_800718D0, func_80030894)
 - `func_8006ECEC`
 - `func_8006F044`
 - `func_80069B08(int)`
