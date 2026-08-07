@@ -6087,11 +6087,11 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(PE_LoadU32(B16_DEST2 - 4) == 0, "guard below copy-2 dest hit");
     ASSERT(PE_LoadU32(B16_DEST2 + B16_COPY2) == 0, "guard above copy-2 dest hit");
 
-    /* This synthetic zeroed holder selects B43's proven early return; the
-     * later func_80087090 boundary is therefore the only provider. */
+    /* B45: func_80087090 is translated; its inner callee func_800851A8
+     * (SPU DMA upload) is now the boundary provider. */
     ASSERT(g_stub_order_count == 1, "unexpected bootstrap invocations");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80087090") == 0,
-           "func_80087090 must follow the dispatcher");
+    ASSERT(strcmp(g_stub_order_log[0], "func_800851A8") == 0,
+           "func_800851A8 must follow the dispatcher (B45)");
     ASSERT(Bootstrap_InvocationCount() == 1, "wrong provider count");
     ASSERT(CountOrderLog("func_8006A9E4") == 0, "6A9E4 routed via policy");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
@@ -6099,6 +6099,7 @@ static void test_6A9E4_full_run_patterned(void) {
     ASSERT(CountOrderLog("func_8006E6A8") == 0, "6E6A8 routed via policy");
     ASSERT(CountOrderLog("func_8006E7E8") == 0, "6E7E8 routed via policy");
     ASSERT(CountOrderLog("func_8006E498") == 0, "6E498 routed via policy");
+    ASSERT(CountOrderLog("func_80087090") == 0, "87090 is translated (B45)");
     FxFree(&fx);
     PASS();
 }
@@ -6397,10 +6398,10 @@ static void test_6A9E4_zero_cycles_footprint(void) {
     ASSERT(D_8009D058 == 0x800AD05Cu, "6A9E4: host D_8009D058 wrong");
     ASSERT(D_8009D064 == 2u, "6A9E4: host D_8009D064 wrong");
     ASSERT(D_8009D018 == 0u, "6A9E4: host D_8009D018 wrong");
-    /* Zeroed B43 record holder takes its proven early return. */
+    /* B45: func_80087090 translated; func_800851A8 is the boundary. */
     ASSERT(g_stub_order_count == 1, "unexpected bootstrap invocations");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80087090") == 0,
-           "func_80087090 must follow the dispatcher");
+    ASSERT(strcmp(g_stub_order_log[0], "func_800851A8") == 0,
+           "func_800851A8 must follow the dispatcher (B45)");
     PASS();
 }
 
@@ -6441,7 +6442,8 @@ static void test_6A9E4_ramreset_rerun(void) {
     ASSERT(PE_LoadU32(0x800B0E1Cu) == e1c_1, "rerun D_800B0E1C differs");
     ASSERT(CountOrderLog("func_800527C8") == 0, "527C8 routed via policy");
     ASSERT(CountOrderLog("func_800528F0") == 0, "528F0 routed via policy");
-    ASSERT(CountOrderLog("func_80087090") == 2, "stub count after rerun");
+    /* B45: func_80087090 translated; func_800851A8 is the boundary. */
+    ASSERT(CountOrderLog("func_800851A8") == 2, "stub count after rerun (B45)");
     PASS();
 }
 
@@ -6465,10 +6467,10 @@ static void test_6A9E4_3E680_integration(void) {
     B26_SeedArchiveDefault();  /* B26: no disc, so seed the archive */
     func_8006A9E4();
 
-    /* Zeroed B43 record holder returns before its later dependency. */
+    /* B45: func_80087090 translated; func_800851A8 is the boundary. */
     ASSERT(g_stub_order_count == 1, "unexpected provider count");
-    ASSERT(strcmp(g_stub_order_log[0], "func_80087090") == 0,
-           "final provider after dispatcher must be func_80087090");
+    ASSERT(strcmp(g_stub_order_log[0], "func_800851A8") == 0,
+           "final provider after dispatcher must be func_800851A8 (B45)");
     ASSERT(CountOrderLog("func_8006A9E4") == 0,
            "func_8006A9E4 still routed through bootstrap policy");
     ASSERT(CountOrderLog("func_800527C8") == 0,
@@ -10866,6 +10868,193 @@ static void test_5B91C_B43_integration_and_strict_advance(void)
     PASS();
 }
 
+/* ── Phase 6E-B45: func_80087090 SPU upload retry wrapper ────────────── */
+
+/* B45 helper: set func_800851A8 to return specific values via bootstrap
+ * sequence.  The bootstrap boundary logs each call and returns scripted
+ * values from the sequence. */
+static void B45_Set851A8Sequence(const int *vals, int count) {
+    Bootstrap_SetIntSequence("func_800851A8", vals, count);
+}
+
+/* Test 1: func_80087090 is a real translated function that retries
+ * func_800851A8 while it returns 1 and passes through other values. */
+static void test_87090_signature_and_retry(void)
+{
+    TEST("87090_signature_and_retry");
+    int (*fn)(pe_addr_t, int) = func_80087090;
+    int ret;
+
+    /* Single success: func_800851A8 returns 0 → func_80087090 returns 0 */
+    ResetTestState();
+    ret = fn(0x80100000u, 1);
+    ASSERT(ret == 0, "single success must return 0");
+    ASSERT(g_stub_order_count == 1, "must call func_800851A8 once");
+    ASSERT(strcmp(g_stub_order_log[0], "func_800851A8") == 0,
+           "must call func_800851A8");
+    ASSERT(g_bootstrap_arg_calls[0].arg0 == 0x80100000u,
+           "arg0 must be buffer");
+
+    /* One retry: 1 then 0 → two calls, return 0 */
+    ResetTestState();
+    { int seq[] = { 1, 0 };
+      B45_Set851A8Sequence(seq, 2); }
+    ret = fn(0x80100000u, 1);
+    ASSERT(ret == 0, "retry then success must return 0");
+    ASSERT(g_stub_order_count == 2, "must call func_800851A8 twice");
+    ASSERT(CountOrderLog("func_800851A8") == 2, "log must show 2 calls");
+
+    /* Three retries: 1, 1, 1, 0 → four calls */
+    ResetTestState();
+    { int seq[] = { 1, 1, 1, 0 };
+      B45_Set851A8Sequence(seq, 4); }
+    ret = fn(0x80100000u, 1);
+    ASSERT(ret == 0, "three retries then success must return 0");
+    ASSERT(g_stub_order_count == 4, "must call func_800851A8 four times");
+
+    /* Negative return: no retry */
+    ResetTestState();
+    { int seq[] = { -1 };
+      B45_Set851A8Sequence(seq, 1); }
+    ret = fn(0x80100000u, 1);
+    ASSERT(ret == -1, "negative return must pass through");
+    ASSERT(g_stub_order_count == 1, "no retry on negative");
+
+    /* Return 2: no retry (only 1 triggers retry) */
+    ResetTestState();
+    { int seq[] = { 2 };
+      B45_Set851A8Sequence(seq, 1); }
+    ret = fn(0x80100000u, 1);
+    ASSERT(ret == 2, "return 2 must pass through");
+    ASSERT(g_stub_order_count == 1, "no retry on return 2");
+
+    Bootstrap_ClearSequences();
+    PASS();
+}
+
+/* Test 2: func_80087090 is translated — not a bootstrap stub. */
+static void test_87090_not_bootstrap_stub(void)
+{
+    TEST("87090_not_bootstrap_stub");
+    ResetTestState();
+    func_80087090(0x80100000u, 0);
+    /* func_80087090 itself must NOT appear in the bootstrap log;
+     * only its inner callee func_800851A8 should. */
+    ASSERT(CountOrderLog("func_80087090") == 0,
+           "translated func_80087090 must not be a bootstrap provider");
+    ASSERT(CountOrderLog("func_800851A8") == 1,
+           "inner callee func_800851A8 must be the boundary");
+    PASS();
+}
+
+/* Test 3: strict frontier advances past func_80087090 to func_800851A8. */
+static void test_87090_strict_advances_to_851A8(void)
+{
+    TEST("87090_strict_advances_to_851A8");
+    pid_t pid = fork();
+    int status = 0;
+    ASSERT(pid >= 0, "fork failed for B45 strict boundary");
+    if (pid == 0) {
+        Bootstrap_Init();
+        Bootstrap_EnableStrict();
+        func_80087090(0x80100000u, 1);
+        _exit(99);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid,
+           "waitpid failed for B45 strict boundary");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
+           "strict B45 boundary must exit 1 at func_800851A8");
+    PASS();
+}
+
+/* Test 4: 6A9E4 integration — func_80087090 called with correct args. */
+static void test_87090_6A9E4_integration(void)
+{
+    TEST("87090_6A9E4_integration");
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    D_800B0E6C = 0x80100000u;
+    PE_StoreU32(0x800B0E08u, 0x80180000u);
+    B26_SeedArchiveDefault();
+    func_8006A9E4();
+    /* func_80087090 is translated; its inner callee func_800851A8
+     * is the sole boundary provider. */
+    ASSERT(g_stub_order_count == 1, "unexpected provider count");
+    ASSERT(strcmp(g_stub_order_log[0], "func_800851A8") == 0,
+           "func_800851A8 must be the boundary (B45)");
+    /* The arg must be the stream buffer address */
+    ASSERT(g_bootstrap_arg_calls[0].arg0 == 0x80100000u,
+           "func_800851A8 arg0 must be stream buffer");
+    /* No func_80087090 in the log */
+    ASSERT(CountOrderLog("func_80087090") == 0,
+           "func_80087090 must not be a bootstrap provider");
+    PASS();
+}
+
+/* Test 5: full 2 MiB canary — func_80087090 writes only to stack. */
+static void test_87090_full_ram_canary(void)
+{
+    TEST("87090_full_ram_canary");
+    uint32_t i;
+    ResetTestState();
+    PE_RamReset();
+    /* Poison all 2 MiB */
+    for (i = 0; i < 0x200000u; i += 4)
+        PE_StoreU32(0x80000000u + i, 0xA5A5A5A5u);
+    func_80087090(0x80100000u, 1);
+    /* Verify no guest memory was modified */
+    for (i = 0; i < 0x200000u; i += 4) {
+        uint32_t v = PE_LoadU32(0x80000000u + i);
+        if (v != 0xA5A5A5A5u) {
+            printf("  FAIL: canary corrupted at 0x%08X: 0x%08X\n",
+                   0x80000000u + i, v);
+            FAIL("87090 canary corrupted");
+            return;
+        }
+    }
+    PASS();
+}
+
+/* Test 6: dirty state + repeat + reset. */
+static void test_87090_dirty_repeat_and_reset(void)
+{
+    TEST("87090_dirty_repeat_and_reset");
+    int ret1, ret2;
+
+    /* First call with bootstrap returning 0 */
+    ResetTestState();
+    ret1 = func_80087090(0x80100000u, 1);
+    ASSERT(ret1 == 0, "first call must return 0");
+    ASSERT(g_stub_order_count == 1, "first call boundary count");
+
+    /* Second call without reset — bootstrap state is dirty */
+    ret2 = func_80087090(0x80200000u, 0);
+    ASSERT(ret2 == 0, "second call must return 0");
+    ASSERT(g_stub_order_count == 2, "cumulative boundary count");
+
+    /* Reset and verify clean state */
+    ResetTestState();
+    ret1 = func_80087090(0x80100000u, 1);
+    ASSERT(ret1 == 0, "post-reset call must return 0");
+    ASSERT(g_stub_order_count == 1, "post-reset boundary count must be 1");
+
+    PASS();
+}
+
+/* Test 7: no low-address mirror — buffer argument must not be truncated. */
+static void test_87090_no_low_address_mirror(void)
+{
+    TEST("87090_no_low_address_mirror");
+    ResetTestState();
+    /* Use a high guest address that would produce a low address if
+     * truncated to 16 bits or similar */
+    func_80087090(0x801ED800u, 1);
+    ASSERT(g_bootstrap_arg_calls[0].arg0 == 0x801ED800u,
+           "buffer address must not be truncated");
+    PASS();
+}
+
 /* ── Phase 6E-B40: func_8005332C resource-record lookup ───────────── */
 
 #define B40_TABLE       0x800C1000u
@@ -11760,6 +11949,15 @@ int main(void)
     test_5B91C_dirty_repeat_and_reset();
     test_5B91C_no_stale_alias_or_host_pointer();
     test_5B91C_B43_integration_and_strict_advance();
+
+    /* Phase 6E-B45 — func_80087090 SPU upload retry wrapper (7 tests). */
+    test_87090_signature_and_retry();
+    test_87090_not_bootstrap_stub();
+    test_87090_strict_advances_to_851A8();
+    test_87090_6A9E4_integration();
+    test_87090_full_ram_canary();
+    test_87090_dirty_repeat_and_reset();
+    test_87090_no_low_address_mirror();
 
     /* Phase 6E-B40 — func_8005332C resource-record lookup. */
     test_5332C_signature_and_index_guards();

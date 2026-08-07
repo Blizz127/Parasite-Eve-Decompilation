@@ -65,8 +65,8 @@
  *   func_800527C8  TRANSLATED (Phase 6E-B17, multi-subsystem bootstrap
  *                  dispatcher; its own first unresolved callee
  *                  func_800528F0 is the new strict frontier)
- *   func_80087090  UNRESOLVED (SPU upload retry loop) →
- *                  Bootstrap_ReturnVoid
+ *   func_80087090  TRANSLATED this rung (retry wrapper; its inner
+ *                  callee func_800851A8 remains UNRESOLVED)
  *
  * Guest state visible on entry (all produced by earlier translated
  * rungs): D_800B0DD8 = PE.IMG LBA; D_800B0E6C = arena stream buffer;
@@ -228,9 +228,10 @@ void func_8006A9E4(void)
     PE_6A9E4_Issue(s2_lba, GA_D_800930DC + 8, 1);
     PE_6A9E4_PollClamped();
 
-    /* 6. func_80087090(lw(D_800B0E6C), 1) — SPU upload; unresolved. */
-    (void)PE_LoadU32(GA_D_800B0E6C);   /* retail a0 (boundary log only) */
-    Bootstrap_ReturnVoid("func_80087090", "func_8006A9E4");
+    /* 6. func_80087090(lw(D_800B0E6C), 1) — SPU upload retry wrapper;
+     *    func_80087090 is translated; its inner callee func_800851A8
+     *    (SPU DMA upload) remains unresolved. */
+    func_80087090(PE_LoadU32(GA_D_800B0E6C), 1);
 
     /* 3D. Read cycle D: table D_800930E6, dest stream buffer. */
     PE_6A9E4_Issue(s2_lba, GA_D_800930DC + 10, 1);
