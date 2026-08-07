@@ -40,10 +40,6 @@ extern unsigned int D_8009D280;
 extern unsigned int D_8009D1C4;
 extern unsigned int D_800A7918;
 
-/* Host-owned stop flag — set by platform when first clear is reached */
-int g_port_stop_requested = 0;
-int g_port_main_iterations = 0;
-
 /* ── Scratchpad host adapter ───────────────────────────────────────── */
 
 /*
@@ -89,14 +85,14 @@ void func_8001220C(void)
 
     for (;;) {
         int disc_wait = 0;
-        g_port_main_iterations++;
+        if (!PE_Port_BeginMainIteration()) return;
         func_8006A5BC();
 
         /* Retail (asm/disc1/2A0C.s:33): loop while func_800698D4() != 0;
          * proceed when it returns 0 (mount succeeded). */
         while (func_800698D4() != 0) {
             func_80073A44(0);
-            if (g_port_stop_requested) return;
+            if (PE_Port_ShouldStop()) return;
             if (++disc_wait >= PE_PORT_DISC_WAIT_LIMIT) {
                 fprintf(stderr,
                         "[PORT] no disc mounted after %d polls "
@@ -112,7 +108,7 @@ void func_8001220C(void)
         D_8009D280 = state_val;
 
         while (1) {
-            if (g_port_stop_requested) return;
+            if (PE_Port_ShouldStop()) return;
 
             v = *data;
             if (v & bitmask) {

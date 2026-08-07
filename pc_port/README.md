@@ -634,18 +634,20 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (427 tests, all pass)
+- `pe-native-tests` — test suite (451 tests, all pass)
 
 ## Running
 
 ```bash
 # Headless deterministic (CI/validation; bootstrap-disc fixture)
 ./parasite-eve-port --headless --bootstrap-disc \
+  --max-frames 1 \
   --screenshot /tmp/pe-black.ppm --trace /tmp/pe-boot.trace
 
 # Real Disc 1 boot (image opened read-only, never copied)
 ./parasite-eve-port --headless \
   --disc-image "/path/Parasite Eve (USA) (Disc 1).bin" \
+  --max-frames 1 \
   --screenshot /tmp/pe-black.ppm --trace /tmp/pe-boot.trace
 
 # Real-disc byte-path verification driver: PVD verify → DsSearchFile
@@ -661,9 +663,10 @@ Produces:
 DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overlay
 
 # Strict mode — centralized abort at first unresolved provider
-./parasite-eve-port --headless --strict-stubs --disc-image "/path/disc1.bin"
-# Expected after B44 for Disc 1: exit 1 at func_80087090 from func_8006A9E4.
-# func_80052F24 remains untranslated; B43's actual Disc state returns before it.
+./parasite-eve-port --headless --strict-stubs --max-frames 2 \
+  --disc-image "/path/disc1.bin"
+# Expected after B49 for Disc 1: exit 1 at func_8006AD40 from func_8001220C.
+# This is the first real boundary exposed past the obsolete presentation stop.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -680,6 +683,20 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 `--bootstrap-disc` and `--disc-image` are mutually exclusive.  Without
 either, the retail disc-wait is modeled honestly (bounded by a documented
 host adaptation); the boot is not faked.
+
+Normal interactive execution has no artificial frame limit and continues
+until host quit or retail/fatal termination. Headless tests should use the
+explicit `--max-frames N` budget: exactly N host presentations are admitted,
+then execution stops at the next host-safe continuation check. The existing
+`--max-main-iterations N` option now bounds exact starts of the outer retail
+loop, but cannot bound time spent inside one nested state iteration.
+
+Run the B49 real-disc acceptance harness with:
+
+```bash
+python3 tools/b49_host_loop_test.py ./build/parasite-eve-port \
+  "/path/Parasite Eve (USA) (Disc 1).bin"
+```
 
 ## Phase 6E-B21 correction
 
@@ -702,7 +719,7 @@ by design.  Native tests: 285/285.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 417 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 451 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung

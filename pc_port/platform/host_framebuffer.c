@@ -7,6 +7,7 @@
  */
 
 #include "host_framebuffer.h"
+#include "game_port.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,9 +54,9 @@ void HostFB_ClearImage(int x, int y, int w, int h, uint8_t r, uint8_t g, uint8_t
 
 void HostFB_Present(void)
 {
+    if (!PE_Port_FramePresentationAllowed()) return;
     fb_presented++;
-    extern int g_port_stop_requested;
-    g_port_stop_requested = 1;
+    PE_Port_FramePresented(fb_presented);
 }
 
 void HostFB_SetDispMask(int mask)

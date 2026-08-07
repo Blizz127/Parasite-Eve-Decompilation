@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 extern void func_8001220C(void);
 extern int  func_8006E9A0(int);
@@ -32,7 +33,7 @@ static struct {
     const char *window_title;
     int direct_clear_test;
     const char *stop_after_event;
-    int max_main_iterations;
+    int max_frames, max_main_iterations;
     const char *disc_image;
     int disc_load_test;
     int rng_oracle_dump;
@@ -43,10 +44,21 @@ static struct {
     .screenshot = NULL, .trace_path = NULL,
     .hold_ms = 0, .scale = 2, .hold_until_close = 1, .debug_overlay = 0,
     .window_title = "Parasite Eve Native Port",
-    .direct_clear_test = 0, .stop_after_event = NULL, .max_main_iterations = 0,
+    .direct_clear_test = 0, .stop_after_event = NULL,
+    .max_frames = 0, .max_main_iterations = 0,
     .disc_image = NULL, .disc_load_test = 0, .rng_oracle_dump = 0,
     .lzcr_oracle_dump = 0, .callback_oracle_dump = 0,
 };
+
+static int ParsePositiveLimit(const char *option, const char *value) {
+    char *end = NULL;
+    long parsed = strtol(value, &end, 10);
+    if (!value[0] || !end || *end || parsed < 1 || parsed > INT_MAX) {
+        fprintf(stderr, "%s requires a positive integer\n", option);
+        exit(1);
+    }
+    return (int)parsed;
+}
 
 static void ParseArgs(int argc, char **argv) {
     for (int i = 1; i < argc; i++) {
@@ -68,7 +80,10 @@ static void ParseArgs(int argc, char **argv) {
         else if (i+1<argc && !strcmp(a, "--scale"))           g_opts.scale = atoi(argv[++i]);
         else if (i+1<argc && !strcmp(a, "--window-title"))    g_opts.window_title = argv[++i];
         else if (i+1<argc && !strcmp(a, "--stop-after-event")) g_opts.stop_after_event = argv[++i];
-        else if (i+1<argc && !strcmp(a, "--max-main-iterations")) g_opts.max_main_iterations = atoi(argv[++i]);
+        else if (i+1<argc && !strcmp(a, "--max-frames"))
+            g_opts.max_frames = ParsePositiveLimit(a, argv[++i]);
+        else if (i+1<argc && !strcmp(a, "--max-main-iterations"))
+            g_opts.max_main_iterations = ParsePositiveLimit(a, argv[++i]);
         else if (i+1<argc && !strcmp(a, "--disc-image"))      g_opts.disc_image = argv[++i];
         else { fprintf(stderr, "Unknown: %s\n", a); exit(1); }
     }
@@ -346,6 +361,10 @@ int main(int argc, char **argv) {
     PE_RamInit();
     PE_Callback_Init();
     Bootstrap_Init();
+    HostFB_Init();
+    PE_Port_RunControlReset();
+    PE_Port_SetFrameLimit(g_opts.max_frames);
+    PE_Port_SetMainIterationLimit(g_opts.max_main_iterations);
     if (g_strict_stubs) Bootstrap_EnableStrict();
 
     /* Phase 6E-A: real Disc 1 image, read-only (never copied or staged). */
@@ -418,6 +437,8 @@ int main(int argc, char **argv) {
         int h = PE_PORT_FB_HEIGHT * g_opts.scale;
         if (HostWindow_Open(dpy, w, h, g_opts.window_title, g_opts.scale) != 0)
             use_window = 0;
+        else
+            PE_Port_SetQuitPoll(HostWindow_Poll);
     }
 
     if (g_opts.direct_clear_test) {
@@ -440,7 +461,9 @@ int main(int argc, char **argv) {
         TraceEvent("window_blit");
         HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
         UpdateTitle("Black frame", "waiting");
-        if (g_opts.hold_until_close) {
+        if (PE_Port_GetStopReason() != PE_PORT_STOP_NONE) {
+            /* A quit request or explicit budget already ended execution. */
+        } else if (g_opts.hold_until_close) {
             fprintf(stderr, "[WINDOW] Open until close/Escape...\n");
             HostWindow_Run(-1);
         } else if (g_opts.hold_ms > 0) {
@@ -448,6 +471,7 @@ int main(int argc, char **argv) {
         } else {
             HostWindow_Run(2000);
         }
+        PE_Port_SetQuitPoll(NULL);
         HostWindow_Close();
     }
 
@@ -459,6 +483,8 @@ int main(int argc, char **argv) {
     int vs, ds, pr, mk; HostFB_GetState(&vs, &ds, &pr, &mk);
     fprintf(stderr, "[FB] vsyncs=%d drawsyncs=%d presents=%d mask=%d main_iters=%d\n",
             vs, ds, pr, mk, g_port_main_iterations);
+    fprintf(stderr, "[HOST] stop_reason=%s\n",
+            PE_Port_StopReasonName(PE_Port_GetStopReason()));
 
     TraceEvent("shutdown_end"); TraceClose();
     PE_Disc_Close(disc);

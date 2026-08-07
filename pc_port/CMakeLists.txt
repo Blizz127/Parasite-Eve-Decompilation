@@ -31,6 +31,7 @@ set(PLATFORM_SRCS
 )
 
 set(BOOTSTRAP_SRCS
+    bootstrap/game_port.c
     bootstrap/stub_registry.c
     bootstrap/pe_bootstrap.c
     bootstrap/func_800725DC_port.c
@@ -174,6 +175,7 @@ if(BUILD_TESTS)
         platform/pe_guest_image.c
         bootstrap/stub_registry.c
         bootstrap/pe_bootstrap.c
+        bootstrap/game_port.c
         src/pe_globals.c
         ${GAME_SRCS}
         bootstrap/func_800725DC_port.c

@@ -10,6 +10,7 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 #include "host_framebuffer.h"
+#include "game_port.h"
 #include "stub_registry.h"
 #include "pe_disc.h"
 #include "pe_spu_dma.h"
@@ -64,6 +65,7 @@ static void ResetTestState(void) {
     g_stub_bootstrap_invocations = 0;
     g_bootstrap_disc = 0;
     g_strict_stubs = 0;
+    PE_Port_RunControlReset();
     PE_RamReset();                  /* zero-fill guest RAM between tests */
     PE_Sdk_ResetState();            /* host-owned GTE/IRQ/event state    */
     Bootstrap_ClearSequences();     /* drop scripted provider sequences   */
@@ -215,6 +217,162 @@ static void test_fb_dimensions(void) {
     TEST("fb_dimensions");
     ASSERT(PE_PORT_FB_WIDTH == 320, "width should be 320");
     ASSERT(PE_PORT_FB_HEIGHT == 240, "height should be 240");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B49 host run-control policy
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static int b49_quit_poll_count;
+
+static int B49_QuitPoll(void)
+{
+    b49_quit_poll_count++;
+    return 1;
+}
+
+static void test_B49_present_has_no_implicit_stop(void)
+{
+    int presents = 0;
+    TEST("B49_present_has_no_implicit_stop");
+    PE_Port_RunControlReset();
+    HostFB_Init();
+    HostFB_Present();
+    HostFB_GetState(NULL, NULL, &presents, NULL);
+    ASSERT(presents == 1, "presentation was not counted");
+    ASSERT(g_port_stop_requested == 0, "presentation requested global stop");
+    ASSERT(PE_Port_ShouldStop() == 0, "unbounded policy stopped");
+    PASS();
+}
+
+static void test_B49_explicit_stop(void)
+{
+    TEST("B49_explicit_stop");
+    PE_Port_RunControlReset();
+    PE_Port_RequestStop(PE_PORT_STOP_EXPLICIT);
+    ASSERT(PE_Port_ShouldStop() == 1, "explicit stop was ignored");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_EXPLICIT,
+           "explicit stop reason lost");
+    PASS();
+}
+
+static void test_B49_host_quit_poll_stops(void)
+{
+    TEST("B49_host_quit_poll_stops");
+    PE_Port_RunControlReset();
+    b49_quit_poll_count = 0;
+    PE_Port_SetQuitPoll(B49_QuitPoll);
+    ASSERT(PE_Port_ShouldStop() == 1, "host quit was ignored");
+    ASSERT(b49_quit_poll_count == 1, "host quit poll count");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_HOST_QUIT,
+           "host quit reason lost");
+    PASS();
+}
+
+static void test_B49_one_frame_budget(void)
+{
+    TEST("B49_one_frame_budget");
+    PE_Port_RunControlReset();
+    HostFB_Init();
+    PE_Port_SetFrameLimit(1);
+    HostFB_Present();
+    ASSERT(g_port_stop_requested == 0,
+           "HostFB_Present applied policy directly");
+    ASSERT(PE_Port_ShouldStop() == 1, "one-frame budget did not stop");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
+           "one-frame stop reason");
+    PASS();
+}
+
+static void test_B49_two_frame_budget_continues(void)
+{
+    TEST("B49_two_frame_budget_continues");
+    PE_Port_RunControlReset();
+    HostFB_Init();
+    PE_Port_SetFrameLimit(2);
+    HostFB_Present();
+    ASSERT(PE_Port_ShouldStop() == 0,
+           "two-frame mode stopped at the obsolete first-frame boundary");
+    HostFB_Present();
+    ASSERT(PE_Port_ShouldStop() == 1, "two-frame budget did not stop");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
+           "two-frame stop reason");
+    PASS();
+}
+
+static void test_B49_main_iteration_budget_exact(void)
+{
+    int iterations = 0;
+    TEST("B49_main_iteration_budget_exact");
+    PE_Port_RunControlReset();
+    PE_Port_SetMainIterationLimit(3);
+    while (PE_Port_BeginMainIteration()) {
+        iterations++;
+        ASSERT(iterations < 10, "bounded iteration loop did not terminate");
+    }
+    ASSERT(iterations == 3 && g_port_main_iterations == 3,
+           "main-iteration budget is off by one");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_MAIN_ITERATION_LIMIT,
+           "main-iteration stop reason");
+    PASS();
+}
+
+static void test_B49_run_control_reset(void)
+{
+    TEST("B49_run_control_reset");
+    PE_Port_RunControlReset();
+    HostFB_Init();
+    PE_Port_SetFrameLimit(1);
+    HostFB_Present();
+    ASSERT(PE_Port_ShouldStop() == 1, "setup stop missing");
+    PE_Port_RunControlReset();
+    HostFB_Init();
+    HostFB_Present();
+    ASSERT(g_port_stop_requested == 0 && g_port_main_iterations == 0,
+           "run-control reset left state behind");
+    ASSERT(PE_Port_ShouldStop() == 0,
+           "run-control reset retained a frame budget or quit poll");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "run-control reset retained stop reason");
+    PASS();
+}
+
+static void test_B49_bounded_runs_repeat(void)
+{
+    TEST("B49_bounded_runs_repeat");
+    for (int run = 0; run < 2; run++) {
+        PE_Port_RunControlReset();
+        HostFB_Init();
+        PE_Port_SetFrameLimit(2);
+        HostFB_Present();
+        ASSERT(PE_Port_ShouldStop() == 0, "repeat stopped after frame one");
+        HostFB_Present();
+        ASSERT(PE_Port_ShouldStop() == 1, "repeat missed frame two");
+        ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
+               "repeat stop reason changed");
+    }
+    PASS();
+}
+
+static void test_B49_801909B4_remains_strict_boundary(void)
+{
+    TEST("B49_801909B4_remains_strict_boundary");
+#if defined(__unix__) || defined(__APPLE__)
+    fflush(NULL);
+    pid_t pid = fork();
+    ASSERT(pid >= 0, "fork failed");
+    if (pid == 0) {
+        Bootstrap_Init();
+        Bootstrap_EnableStrict();
+        (void)func_801909B4();
+        _exit(0);
+    }
+    int status = 0;
+    ASSERT(waitpid(pid, &status, 0) == pid, "waitpid failed");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
+           "func_801909B4 did not remain a strict boundary");
+#endif
     PASS();
 }
 
@@ -11773,9 +11931,7 @@ static void test_64964_ramreset_repeat_and_guards(void) {
     PASS();
 }
 
-/* ── Required by host_framebuffer.c / func_8001220C_port.c ───────────── */
-int g_port_stop_requested = 0;
-int g_port_main_iterations = 0;
+/* ── Required by func_8001220C_port.c ────────────────────────────────── */
 void Trace_Direct(const char *event) { (void)event; }
 
 /* ── main ────────────────────────────────────────────────────────────── */
@@ -11807,6 +11963,17 @@ int main(void)
     test_strict_stubs();
     test_bootstrap_disc_flag();
     test_fb_dimensions();
+
+    /* Phase 6E-B49 explicit host run-control policy (9 tests). */
+    test_B49_present_has_no_implicit_stop();
+    test_B49_explicit_stop();
+    test_B49_host_quit_poll_stops();
+    test_B49_one_frame_budget();
+    test_B49_two_frame_budget_continues();
+    test_B49_main_iteration_budget_exact();
+    test_B49_run_control_reset();
+    test_B49_bounded_runs_repeat();
+    test_B49_801909B4_remains_strict_boundary();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();

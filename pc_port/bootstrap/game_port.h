@@ -2,9 +2,31 @@
 #ifndef GAME_PORT_H
 #define GAME_PORT_H
 
-/* Host-owned stop flags for main loop bounding */
+/* Host-owned run-control state. */
 extern int g_port_stop_requested;
 extern int g_port_main_iterations;
+
+typedef int (*PEPortQuitPoll)(void);
+
+typedef enum PEPortStopReason {
+    PE_PORT_STOP_NONE = 0,
+    PE_PORT_STOP_EXPLICIT,
+    PE_PORT_STOP_HOST_QUIT,
+    PE_PORT_STOP_FRAME_LIMIT,
+    PE_PORT_STOP_MAIN_ITERATION_LIMIT,
+} PEPortStopReason;
+
+void PE_Port_RunControlReset(void);
+void PE_Port_SetFrameLimit(int frames);
+void PE_Port_SetMainIterationLimit(int iterations);
+void PE_Port_SetQuitPoll(PEPortQuitPoll poll);
+void PE_Port_RequestStop(PEPortStopReason reason);
+int  PE_Port_BeginMainIteration(void);
+int  PE_Port_ShouldStop(void);
+int  PE_Port_FramePresentationAllowed(void);
+void PE_Port_FramePresented(int presented);
+PEPortStopReason PE_Port_GetStopReason(void);
+const char *PE_Port_StopReasonName(PEPortStopReason reason);
 
 /* Trace helper available to game code */
 void Trace_Direct(const char *event);
