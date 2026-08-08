@@ -69,23 +69,22 @@
  *   centralized boundary therefore preserves all required state.
  *
  * Boundary representation: the retail rect lives at guest sp+0x10 and is
- * visible only to the unresolved callee, so it has no guest authority in
- * the port.  The diagnostic record carries the rect's exact packed words
- * (arg0 = x|y<<16, arg2 = w|h<<16), the true retail a1 data address
- * (arg1), and arg3 = 0.  Nothing is written to guest RAM for it.
+ * visible only to the callee chain, so it has no persistent guest authority
+ * in the port.  B52 uses an eight-byte native RECT with the same four signed
+ * halfwords and snapshots those bytes synchronously at func_80076C34.  No
+ * host pointer is stored in guest RAM or retained beyond the call.
  *
- * Classification: 1 — translated retail logic with an honest centralized
- * LoadImage boundary.  func_8007506C itself is NOT translated (B51 scope
- * limit); strict execution stops at it as the next genuine provider.
+ * Classification: 1 — translated retail logic.  Phase 6E-B52 translates
+ * func_8007506C and its read-only validator; strict execution now stops at
+ * func_80076C34, before any GPU queue/DMA behavior.
  */
 #include "psx_compat.h"
 #include "game_port.h"
 
 int func_8006E1C0(pe_addr_t entry, pe_addr_t base)
 {
+    RECT rc;
     uint32_t dims;
-    uint32_t rect0;
-    uint32_t rect1;
     uint32_t h;
     uint32_t image_off;
     uint32_t clut_off;
@@ -94,11 +93,11 @@ int func_8006E1C0(pe_addr_t entry, pe_addr_t base)
     /* 0x8006E1D8/0x8006E1EC/0x8006E1FC: three separate retail loads of
      * the packed dimension word at entry+8 (reproduced via PE_LoadU32). */
     dims  = PE_LoadU32(entry + 8u);
-    rect0 = (dims >> 10) & 0x7FFu;              /* sh -> sp+0x10: x */
+    rc.x  = (int16_t)((dims >> 10) & 0x7FFu);   /* sh -> sp+0x10: x */
     dims  = PE_LoadU32(entry + 8u);
-    rect0 |= (dims >> 21) << 16;                /* sh -> sp+0x12: y */
+    rc.y  = (int16_t)(dims >> 21);              /* sh -> sp+0x12: y */
     dims  = PE_LoadU32(entry + 8u);
-    rect1 = dims & 0x3FFu;                      /* sh -> sp+0x14: w */
+    rc.w  = (int16_t)(dims & 0x3FFu);           /* sh -> sp+0x14: w */
 
     /* 0x8006E20C-0x8006E21C: lbu entry+7; beqz with delay-slot
      * addiu $v1,0x100; fall-through andi $v1,$v0,0xFF. */
@@ -107,16 +106,16 @@ int func_8006E1C0(pe_addr_t entry, pe_addr_t base)
         h = 0x100u;
     else
         h &= 0xFFu;
-    rect1 |= h << 16;                           /* sh -> sp+0x16: h */
+    rc.h = (int16_t)h;                          /* sh -> sp+0x16: h */
 
     /* 0x8006E22C-0x8006E234: a1 = lw [s0+4] & 0x00FFFFFF. */
     image_off = PE_LoadU32(entry + 4u) & 0x00FFFFFFu;
     data = base + image_off;                    /* delay slot 0x8006E23C */
 
-    /* 0x8006E238: jal func_8007506C (PsyQ LoadImage) — centralized
-     * unresolved boundary, callback #1 (image). */
-    Bootstrap_ReturnVoid4("func_8007506C", "func_8006E1C0",
-                          rect0, data, rect1, 0);
+    /* 0x8006E238: jal func_8007506C (PsyQ LoadImage) — TRANSLATED
+     * (Phase 6E-B52); its jtb[2] dispatch is the centralized GPU
+     * boundary at func_80076C34.  Callback #1 (image). */
+    func_8007506C(&rc, data);
 
     /* 0x8006E240-0x8006E24C: v0 = lw [s0+0xC] & 0x00FFFFFF; beqz. */
     clut_off = PE_LoadU32(entry + 0xCu) & 0x00FFFFFFu;
@@ -124,12 +123,12 @@ int func_8006E1C0(pe_addr_t entry, pe_addr_t base)
         /* 0x8006E254-0x8006E290: CLUT rect from entry+0x10 and the raw
          * byte at entry+0xF (no 0x100 substitution here). */
         dims  = PE_LoadU32(entry + 0x10u);
-        rect0 = (dims >> 10) & 0x7FFu;
+        rc.x  = (int16_t)((dims >> 10) & 0x7FFu);
         dims  = PE_LoadU32(entry + 0x10u);
-        rect0 |= (dims >> 21) << 16;
+        rc.y  = (int16_t)(dims >> 21);
         dims  = PE_LoadU32(entry + 0x10u);
-        rect1 = dims & 0x3FFu;
-        rect1 |= (uint32_t)PE_LoadU8(entry + 0xFu) << 16;
+        rc.w  = (int16_t)(dims & 0x3FFu);
+        rc.h  = (int16_t)PE_LoadU8(entry + 0xFu);
 
         /* 0x8006E294-0x8006E2A4: v0 = (lw [s0+4] & mask) + base;
          * a1 = lw [s0+0xC] & mask; delay slot a1 = v0 + a1. */
@@ -137,8 +136,7 @@ int func_8006E1C0(pe_addr_t entry, pe_addr_t base)
                     + (PE_LoadU32(entry + 0xCu) & 0x00FFFFFFu);
 
         /* 0x8006E2A8: jal func_8007506C — callback #2 (CLUT). */
-        Bootstrap_ReturnVoid4("func_8007506C", "func_8006E1C0",
-                              rect0, data, rect1, 0);
+        func_8007506C(&rc, data);
     }
 
     /* 0x8006E2B0: addu $v0,$zero,$zero — retail zero return. */

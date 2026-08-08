@@ -3,9 +3,9 @@
 
 The frame-budget checks remain B49's.  Frontier assertions track the current
 production rung; B50 corrective is prefix-only and therefore requests an
-explicit unresolved-boundary stop after one non-strict continuation, and B51
-translates func_8006E1C0 so the first unresolved provider is now its
-func_8007506C (PsyQ LoadImage) dispatch.
+explicit unresolved-boundary stop after one non-strict continuation.  B52
+translates func_8007506C and its read-only validator, so the first unresolved
+provider is now the wrapper's func_80076C34 GPU dispatch.
 """
 
 from __future__ import annotations
@@ -116,7 +116,7 @@ def main() -> int:
                 "prefix run did not stop at frame 1 / iteration 1")
         require("[HOST] stop_reason=unresolved-boundary" in two.stderr,
                 "prefix run did not report its honest unresolved boundary")
-        require("[STUB:BOOTSTRAP_RET] func_8007506C" in two.stderr,
+        require("[STUB:BOOTSTRAP_RET] func_80076C34" in two.stderr,
                 "prefix run did not invoke the first unresolved provider")
         require("[STUB:BOOTSTRAP_RET] func_801909B4" not in two.stderr,
                 "prefix run executed caller continuation past missing state")
@@ -128,9 +128,9 @@ def main() -> int:
         )
         require(strict.returncode == 1, "continuing strict run did not exit 1")
         require(
-            "first unresolved BOOTSTRAP_RET provider: func_8007506C" in strict.stderr
-            and "called from: func_8006E1C0" in strict.stderr,
-            "continuing strict run did not expose func_8007506C from func_8006E1C0",
+            "first unresolved BOOTSTRAP_RET provider: func_80076C34" in strict.stderr
+            and "called from: func_8007506C" in strict.stderr,
+            "continuing strict run did not expose func_80076C34 from func_8007506C",
         )
 
         bootstrap, _, _ = run(
@@ -150,7 +150,7 @@ def main() -> int:
         print(f"one-frame sha256={CANONICAL_FRAMEBUFFER} frames=1 iterations=1")
         print(f"prefix-run sha256={two_hash} frames=1 iterations=1 "
               "stop=unresolved-boundary")
-        print("strict frontier=func_8007506C caller=func_8006E1C0")
+        print("strict frontier=func_80076C34 caller=func_8007506C")
         print("bootstrap strict frontier=func_8007F72C caller=func_800698D4")
     return 0
 

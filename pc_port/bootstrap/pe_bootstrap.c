@@ -14,6 +14,8 @@ BootstrapArgCall g_bootstrap_arg_calls[BOOTSTRAP_MAX_ARG_CALLS];
 int g_bootstrap_arg_call_count = 0;
 BootstrapArgCall4 g_bootstrap_arg4_calls[BOOTSTRAP_MAX_ARG4_CALLS];
 int g_bootstrap_arg4_call_count = 0;
+BootstrapArgCall5 g_bootstrap_arg5_calls[BOOTSTRAP_MAX_ARG5_CALLS];
+int g_bootstrap_arg5_call_count = 0;
 
 /* ── Provider sequence state ────────────────────────────────────────── */
 
@@ -38,6 +40,7 @@ void Bootstrap_Init(void)
     g_stub_bootstrap_invocations = 0;
     Bootstrap_ResetArgCallLog();
     Bootstrap_ResetArg4CallLog();
+    Bootstrap_ResetArg5CallLog();
     Bootstrap_ClearSequences();
 }
 
@@ -154,22 +157,95 @@ void Bootstrap_ReturnVoid4(const char *symbol, const char *caller,
                            uintptr_t arg0, uintptr_t arg1,
                            uintptr_t arg2, uintptr_t arg3)
 {
+    Bootstrap_ReturnVoid4Indirect(symbol, caller, 0,
+                                  arg0, arg1, arg2, arg3);
+}
+
+void Bootstrap_ReturnVoid4Indirect(const char *symbol, const char *caller,
+                                   uintptr_t target,
+                                   uintptr_t arg0, uintptr_t arg1,
+                                   uintptr_t arg2, uintptr_t arg3)
+{
     if (g_bootstrap_arg4_call_count < BOOTSTRAP_MAX_ARG4_CALLS) {
         BootstrapArgCall4 *call =
             &g_bootstrap_arg4_calls[g_bootstrap_arg4_call_count++];
         call->symbol = symbol;
         call->caller = caller;
+        call->target = target;
         call->arg0 = arg0;
         call->arg1 = arg1;
         call->arg2 = arg2;
         call->arg3 = arg3;
+        call->payload_size = 0;
     }
     Bootstrap_ReturnVoid(symbol, caller);
+}
+
+int Bootstrap_ReturnInt4Indirect(const char *symbol, const char *caller,
+                                 int value, uintptr_t target,
+                                 uintptr_t arg0, uintptr_t arg1,
+                                 uintptr_t arg2, uintptr_t arg3,
+                                 const void *payload, uint32_t payload_size)
+{
+    if (payload_size > 8u || (payload_size != 0u && payload == NULL)) {
+        fprintf(stderr, "FATAL: Bootstrap_ReturnInt4Indirect: bad payload\n");
+        abort();
+    }
+    if (g_bootstrap_arg4_call_count < BOOTSTRAP_MAX_ARG4_CALLS) {
+        BootstrapArgCall4 *call =
+            &g_bootstrap_arg4_calls[g_bootstrap_arg4_call_count++];
+        call->symbol = symbol;
+        call->caller = caller;
+        call->target = target;
+        call->arg0 = arg0;
+        call->arg1 = arg1;
+        call->arg2 = arg2;
+        call->arg3 = arg3;
+        call->payload_size = payload_size;
+        if (payload_size != 0u)
+            memcpy(call->payload, payload, payload_size);
+    }
+    return Bootstrap_ReturnInt(symbol, caller, value);
 }
 
 void Bootstrap_ResetArg4CallLog(void)
 {
     g_bootstrap_arg4_call_count = 0;
+}
+
+void Bootstrap_ReturnVoid5(const char *symbol, const char *caller,
+                           uintptr_t arg0, uintptr_t arg1,
+                           uintptr_t arg2, uintptr_t arg3,
+                           uintptr_t arg4)
+{
+    Bootstrap_ReturnVoid5Indirect(symbol, caller, 0,
+                                  arg0, arg1, arg2, arg3, arg4);
+}
+
+void Bootstrap_ReturnVoid5Indirect(const char *symbol, const char *caller,
+                                   uintptr_t target,
+                                   uintptr_t arg0, uintptr_t arg1,
+                                   uintptr_t arg2, uintptr_t arg3,
+                                   uintptr_t arg4)
+{
+    if (g_bootstrap_arg5_call_count < BOOTSTRAP_MAX_ARG5_CALLS) {
+        BootstrapArgCall5 *call =
+            &g_bootstrap_arg5_calls[g_bootstrap_arg5_call_count++];
+        call->symbol = symbol;
+        call->caller = caller;
+        call->target = target;
+        call->arg0 = arg0;
+        call->arg1 = arg1;
+        call->arg2 = arg2;
+        call->arg3 = arg3;
+        call->arg4 = arg4;
+    }
+    Bootstrap_ReturnVoid(symbol, caller);
+}
+
+void Bootstrap_ResetArg5CallLog(void)
+{
+    g_bootstrap_arg5_call_count = 0;
 }
 
 void Bootstrap_ReturnVoid(const char *symbol, const char *caller)

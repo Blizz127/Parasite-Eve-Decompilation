@@ -1,22 +1,21 @@
-# Parasite Eve Native PC Port — Phase 6E-B44
+# Parasite Eve Native PC Port — Phase 6E-B52
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B44 fully translates `func_8005B91C`, the 87-word
-signed table index/interpolation routine at `0x8005B91C..0x8005BA77`. Its
-true four-argument ABI writes an exact 32-bit index through nullable `a2` and
-an optional fraction through nullable `a3`; all 18 executable call sites are
-verified. A separate full-width host-output adapter safely represents B43's
-retail stack local. The B43 prefix now traverses all seven B44 calls and
-their exact `func_8005DBAC` consumers, stopping at `func_80052F24` only on
-paths that reach it. The actual Disc 1 state takes B43's proven null-holder
-return, so fresh real-disc strict execution next stops at untouched
-`func_80087090` from `func_8006A9E4`. `tools/b44_oracle.py` verifies and
-executes all 87 words, all delay slots, all 18 call sites, and the seven B43
-output contexts without production C. Normal and fresh ASan/UBSan tests pass
-427/427, and all 29 oracle programs pass. Full proof is in
-`docs/b44_func_8005B91C.md`. Bootstrap strict remains
-`func_8007F72C` from `func_800698D4`; nothing has been pushed.
+**Current milestone:** B52 translates the 24-word Psy-Q `LoadImage` wrapper
+`func_8007506C` and its complete 71-word read-only RECT validator
+`func_80074E28`. The wrapper performs the retail validation and jump-table
+loads, then stops honestly at `jtb[2] = func_80076C34`, with
+`a0 = jtb[8] = func_80076664`, `a1 = RECT *`, `a2 = 8`, and `a3 = data`.
+`func_80076C34` remains unresolved because it owns the GPU command ring,
+GPUSTAT polling, and DMA2 coordination; B52 does not fake or implement any
+of those asynchronous effects. Both B51 `func_8006E1C0` LoadImage contexts
+now reach this internal boundary through an eight-byte transient RECT with
+four signed halfwords. Normal and fresh ASan/UBSan tests pass 468/468; all
+33 retained standalone oracles plus the B50, B51, and B52 oracles pass.
+Normal/sanitizer strict execution agrees on `func_80076C34` from
+`func_8007506C`, while bootstrap strict remains `func_8007F72C` from
+`func_800698D4`. Full proof is in `docs/b52_func_8007506C.md`.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36
 instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`

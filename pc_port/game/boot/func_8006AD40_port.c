@@ -13,9 +13,10 @@
  *       jal  func_8006E1C0
  *        move a1,s4
  *
- * func_8006E1C0 is TRANSLATED (Phase 6E-B51).  Its two func_8007506C
- * (PsyQ LoadImage) dispatches remain an honest centralized boundary: the
- * callback advances the retail GPU command queue and later suffix
+ * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
+ * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
+ * Their func_80076C34 dispatch remains an honest centralized boundary: it
+ * advances the retail GPU command queue and later suffix
  * callbacks consume that state.  Non-strict execution therefore returns
  * from func_8006AD40 as soon as the translated callee returns.  It must
  * not execute the remaining retail control flow with those effects

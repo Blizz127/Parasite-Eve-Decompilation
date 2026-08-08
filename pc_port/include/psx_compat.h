@@ -19,7 +19,7 @@
 #include <string.h>
 
 /* ── Retail PS1 types ─────────────────────────────────────────────── */
-typedef struct { int x, y, w, h; } RECT;
+typedef struct { int16_t x, y, w, h; } RECT;
 typedef struct { uint8_t disp[20]; } DISP_ENV;
 
 /* ── Guest-RAM-resident named globals ─────────────────────────────────
@@ -120,9 +120,9 @@ static inline void func_80068E24(void)   { Bootstrap_ReturnVoid("func_80068E24",
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
 /* func_8006E1C0 is REAL (Phase 6E-B51):
  * game/boot/func_8006E1C0_port.c — packed texture-entry LoadImage
- * dispatcher (68 retail words).  Its two func_8007506C (PsyQ LoadImage)
- * dispatches route through the centralized bootstrap boundary; strict
- * execution now stops at func_8007506C from func_8006E1C0. */
+ * dispatcher (68 retail words).  Phase 6E-B52 translates its two
+ * func_8007506C (PsyQ LoadImage) wrapper calls through the read-only
+ * func_80074E28 validator to the honest func_80076C34 GPU boundary. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
@@ -161,6 +161,8 @@ extern int  func_800698D4(void);
 extern void func_8006A9E4(void);
 extern int  func_8006AD40(void);
 extern int  func_8006E1C0(pe_addr_t entry, pe_addr_t base);
+extern void func_80074E28(pe_addr_t name, const RECT *rect);
+extern int  func_8007506C(const RECT *rect, pe_addr_t data);
 extern void func_800527C8(void);
 extern pe_addr_t func_8005332C(int32_t resource_id);
 extern pe_addr_t func_80053968(int32_t resource_id);

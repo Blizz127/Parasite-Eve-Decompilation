@@ -139,3 +139,22 @@ changed.
 - fresh matching build in the documented MIPS toolchain: exact SHA-1
   `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`;
 - `git diff --check`: pass.
+
+## B52 retained-harness rerun
+
+B52 does not weaken the B49 frame-budget contract. The retained harness was
+rerun against normal and fresh ASan/UBSan builds with identical results:
+
+- deterministic repeated one-frame runs exit cleanly at one frame and one
+  main iteration;
+- the historical framebuffer remains
+  `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb`;
+- the non-strict prefix run stops at the host-safe check with reason
+  `unresolved-boundary` before `func_801909B4`;
+- continuing strict execution exits 1 at `func_80076C34` from
+  `func_8007506C` in both builds;
+- bootstrap strict remains `func_8007F72C` from `func_800698D4`.
+
+The current native and fresh sanitizer suites are 468/468. All 33 retained
+standalone oracles, the corrected B50 oracle, the B51 oracle, and the new B52
+oracle pass.

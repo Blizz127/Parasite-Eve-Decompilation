@@ -52,10 +52,13 @@ void Bootstrap_ResetArgCallLog(void);
 typedef struct {
     const char *symbol;
     const char *caller;
+    uintptr_t target;
     uintptr_t arg0;
     uintptr_t arg1;
     uintptr_t arg2;
     uintptr_t arg3;
+    uint8_t payload[8];
+    uint32_t payload_size;
 } BootstrapArgCall4;
 
 #define BOOTSTRAP_MAX_ARG4_CALLS 256
@@ -64,7 +67,43 @@ extern int g_bootstrap_arg4_call_count;
 void Bootstrap_ReturnVoid4(const char *symbol, const char *caller,
                            uintptr_t arg0, uintptr_t arg1,
                            uintptr_t arg2, uintptr_t arg3);
+void Bootstrap_ReturnVoid4Indirect(const char *symbol, const char *caller,
+                                   uintptr_t target,
+                                   uintptr_t arg0, uintptr_t arg1,
+                                   uintptr_t arg2, uintptr_t arg3);
+int Bootstrap_ReturnInt4Indirect(const char *symbol, const char *caller,
+                                 int value, uintptr_t target,
+                                 uintptr_t arg0, uintptr_t arg1,
+                                 uintptr_t arg2, uintptr_t arg3,
+                                 const void *payload, uint32_t payload_size);
 void Bootstrap_ResetArg4CallLog(void);
+
+/* Five-formal-argument diagnostic boundary.  On MIPS the fifth value is
+ * stack-passed; retaining it separately keeps debug-call evidence exact. */
+typedef struct {
+    const char *symbol;
+    const char *caller;
+    uintptr_t target;
+    uintptr_t arg0;
+    uintptr_t arg1;
+    uintptr_t arg2;
+    uintptr_t arg3;
+    uintptr_t arg4;
+} BootstrapArgCall5;
+
+#define BOOTSTRAP_MAX_ARG5_CALLS 64
+extern BootstrapArgCall5 g_bootstrap_arg5_calls[BOOTSTRAP_MAX_ARG5_CALLS];
+extern int g_bootstrap_arg5_call_count;
+void Bootstrap_ReturnVoid5(const char *symbol, const char *caller,
+                           uintptr_t arg0, uintptr_t arg1,
+                           uintptr_t arg2, uintptr_t arg3,
+                           uintptr_t arg4);
+void Bootstrap_ReturnVoid5Indirect(const char *symbol, const char *caller,
+                                   uintptr_t target,
+                                   uintptr_t arg0, uintptr_t arg1,
+                                   uintptr_t arg2, uintptr_t arg3,
+                                   uintptr_t arg4);
+void Bootstrap_ResetArg5CallLog(void);
 
 /* Same, for void functions.  In strict mode aborts on first call. */
 void Bootstrap_ReturnVoid(const char *symbol, const char *caller);

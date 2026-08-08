@@ -5,19 +5,19 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
-## Phase 6E-B47 func_80085EB4 RUNG VERIFIED
+## Phase 6E-B52 LoadImage wrapper prefix verified
 
-The accepted B46 implementation commit is
-`2e34508606943701567a671e0deec826a758883c`. B47 translates
-`func_80085EB4` (SPU-memory address validation, 23 retail words /
-0x5C bytes) as a deterministic platform provider. The function validates
-SPU RAM addresses, aligns to 8-byte boundary, converts to SPU address
-format (>> D_8009B424), stores to D_8009B414, and returns the byte
-address. B47 also extends `func_800851A8`'s prefix past func_80085EB4
-through the parameter reads, copy computation, and payload copy to
-D_800B2900, stopping at func_800850F4 (DMA transfer, hardware-dependent).
-SPU allocation globals (D_8009B420/24/28/2C) initialized in
-func_80085644 matching retail SsInit values.
+The exact accepted B51 base is
+`9c494f0ac09313681a6a99ebc3a6a04ed88eb7fc`. B52 translates the complete
+Psy-Q LoadImage wrapper `func_8007506C` (24 words, 0x60 bytes,
+`0x8007506C..0x800750CC`) and its complete read-only debug validator
+`func_80074E28` (71 words, 0x11C bytes,
+`0x80074E28..0x80074F44`). The wrapper validates its transient four-signed-
+halfword RECT, reloads `D_80095744`, and dispatches through
+`jtb[2] = func_80076C34` with `a0 = jtb[8] = func_80076664`, `a1 = RECT *`,
+`a2 = 8`, and `a3 = data`. The dispatcher owns the GPU command ring,
+GPUSTAT polling, and DMA2 coordination and remains unresolved. No GPU-ready,
+queue-drain, DMA-completion, or callback-result behavior is fabricated.
 
 The raw retail trampoline at executable `0x80071A24..0x80071A2F` (file
 offset `0x62224`) is exactly `240A00A0 01400008 24090028`: load `$t2=0xA0`,
@@ -33,7 +33,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B47 func_80085EB4 RUNG VERIFIED** (23 retail words / 0x5C bytes; SPU-memory address validation; deterministic platform provider; func_800851A8 extended prefix past func_80085EB4; strict frontier at func_800850F4) | `build-port/pe-native-tests` (434/434 normal; fresh ASan/UBSan 434/434) |
+| Port phase | **6E-B52 LoadImage wrapper prefix verified**; strict frontier `func_80076C34` from `func_8007506C` | `pc_port/build/pe-native-tests` (468/468 normal; fresh ASan/UBSan 468/468) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -45,10 +45,10 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 twice). Every direct callee is translated. Call 15 is real func_80051CC4; B40 translates its first nested dependency func_8005332C, B41/B42 complete the exposed B29 func_80053968/func_80053B48 dependencies, and B43 translates func_8005218C only through its first honest internal boundary at func_8005B91C. Sole call site func_8006A9E4 @0x8006AAD0, `$s1`-guarded one-shot inside cycle B; void return unconsumed. | `pc_port/game/boot/func_800527C8_port.c`, `func_80051CC4_port.c`, `func_8005218C_port.c`, `func_8005332C_port.c`, `func_80053968_port.c`, `func_80053B48_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | with Disc 1: exit 1 at func_800851A8's bootstrap boundary (func_800850F4 DMA transfer) from func_80087090; with `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | `--headless --strict-stubs --disc-image …` |
-| Sanitizers | fresh `-DPE_PORT_SANITIZERS=ON`: 434/434 tests; bootstrap, real-disc boot, and real-disc load pass; strict frontiers agree exactly | `build-port/pe-native-tests` |
+| Strict mode | continuing real data: exit 1 at `func_80076C34` from `func_8007506C`; `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | retained B49 harness, normal + sanitizer |
+| Sanitizers | fresh `-DPE_PORT_SANITIZERS=ON`: 468/468 tests; bootstrap, real-data boot/load, and retained harness pass; strict frontiers agree exactly | `/tmp/pe-b52-san/pe-native-tests` |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | func_800850F4 (DMA transfer issue → func_80085E54 → func_8007D9F8 SPU DMA hardware); also `func_80052F24` from `func_8005218C`, `func_8007F72C` from `func_800698D4` | — |
+| Next frontier | `func_80076C34` GPU queue/GPUSTAT/DMA2 semantics; use GPT-5.6 SOL XHIGH for the next bounded rung | — |
 
 ### Phase 6E-B43 func_8005218C — current findings
 
