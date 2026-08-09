@@ -46,17 +46,28 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 DMA2/DPCR/DICR channel-2 state, tokenized explicit completion, and a manual
 VBlank counter. It contains no retail command ring, callback, worker, or
 queue pump. B53C wires only its inert VSync query to the translated timeout
-initializer; all other hardware semantics remain separate.
+initializer; B53D additionally reads raw DMA2 CHCR and GPUSTAT through it.
+All other hardware semantics remain separate.
 
-### B53C retail dispatcher prefix
+`platform/pe_irq.[ch]` is the B53D single 16-bit I_MASK (0x1F801074)
+authority: get/exchange/reset only. It performs no IRQ dispatch, no I_STAT
+mutation, and no callback invocation. `PE_Sdk_ResetState` is the host reset
+owner; the translated ResetCallback one-time path also writes I_MASK = 0,
+matching retail func_80073E28.
 
-`game/boot/func_80076C34_port.c` translates complete `func_800773D0` and
-the `func_80076C34` prefix through the guest producer/consumer full check.
-The canonical non-full path stops at unresolved `func_80073E10(0)` before
-using any I_MASK result. A full-ring alternate stops at `func_80077404`.
-The prefix writes only timeout deadline/counter state; it does not construct
-or publish a ring entry and does not invoke a worker or pump. The true worker
-and argument identities are `pe_addr_t`, not native function pointers.
+### B53C/B53D retail dispatcher prefix
+
+`game/boot/func_80076C34_port.c` translates complete `func_800773D0`,
+complete `func_80073E10` (via the PE_IRQ authority), and the
+`func_80076C34` prefix through the exchange, saved-mask/marker stores,
+direct-issue decision, and GPUSTAT bit-26 readiness poll. The canonical
+non-full path stops at the unresolved direct worker call (canonical
+identity `func_80076664`); forced enqueue states stop at callback
+registration `func_80073CF4(2, 0x80076EE4)`; a full ring stops at
+`func_80077404`. The prefix writes only timeout deadline/counter state and
+the proven D_8009587C/D_80095754 words; it does not construct or publish a
+ring entry and does not invoke a worker or pump. The true worker and
+argument identities are `pe_addr_t`, not native function pointers.
 
 | Function | PS1 role | Host implementation |
 |----------|----------|---------------------|
@@ -87,12 +98,15 @@ and argument identities are `pe_addr_t`, not native function pointers.
   enters `jtb[2] = func_80076C34` with `a0 = jtb[8] = func_80076664`,
   `a2 = 8`, and `a3 = data`; B53C converts the transient RECT to two words
   by value. The dispatcher initializes its timeout, checks guest ring space,
-  and exposes `func_80073E10` as the canonical centralized boundary.
-  Non-strict production requests an `unresolved-boundary` stop. The B50
-  suffix, I_MASK exchange, queue publication, GPU worker, and pump are not
-  claimed translated.
-  - `func_80073E10` — current canonical nested `BOOTSTRAP_RET` boundary
-    from `func_80076C34`; exact 16-bit I_MASK authority is not implemented.
+  exchanges I_MASK through the translated func_80073E10, publishes the
+  saved mask and marker, and exposes the direct worker `func_80076664` as
+  the canonical centralized boundary. Non-strict production requests an
+  `unresolved-boundary` stop. The B50 suffix, queue publication, GPU
+  worker, and pump are not claimed translated.
+  - `func_80076664` — current canonical nested `BOOTSTRAP_RET` boundary
+    from `func_80076C34`; the LoadImage issue worker is not implemented.
+  - `func_80073CF4` — controlled enqueue-path callback-registration
+    boundary (nonempty ring, DMA2 busy, or DrawSync callback present).
   - `func_80077404` — controlled full-ring alternate boundary.
 - `func_8006ECEC`
 - `func_8006F044`

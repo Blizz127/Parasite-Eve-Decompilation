@@ -1,23 +1,27 @@
-# Parasite Eve Native PC Port — Phase 6E-B53C
+# Parasite Eve Native PC Port — Phase 6E-B53D
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53C adds an honest prefix of retail GPU dispatcher
-`func_80076C34` and the complete 13-word timeout initializer
-`func_800773D0`. The canonical path now initializes
-`D_80095888/D_8009588C`, reads the authoritative guest producer/consumer,
-performs the exact wrapped full check, and stops at the first missing I_MASK
-exchange `func_80073E10`; a controlled full ring stops at `func_80077404`.
-No ring entry is written or published, and no worker, pump, callback, GPU
-poll, or DMA progress is faked. B52 converts its transient RECT to two
-by-value words, so no native pointer enters retained guest state. The
-independent oracle executes all 172 literal dispatcher words and all 13
-helper words with exact delay slots and explicit dependencies. Seven focused
-tests bring normal and fresh ASan/UBSan suites to 490/490 while all 15 B53B
-hardware tests remain green. Canonical Disc 1 strict is now
-`func_80073E10` from `func_80076C34`; bootstrap strict remains
-`func_8007F72C` from `func_800698D4`. LoadImage and the queue pump are not
-claimed implemented. Full proof is in `docs/b53c_func_80076C34.md`.
+**Current milestone:** B53D adds the single 16-bit I_MASK (0x1F801074)
+platform authority `platform/pe_irq.[ch]` and translates the complete
+6-word retail exchange helper `func_80073E10`. The dispatcher prefix now
+consumes the real previous-mask return, publishes `D_8009587C` and the
+`D_80095754` marker in exact retail order, evaluates the direct-issue
+decision, performs the GPUSTAT bit-26 readiness poll, and stops at the
+genuine direct worker call (canonical identity `func_80076664`); forced
+enqueue states stop at callback registration `func_80073CF4(2,
+0x80076EE4)` and a full ring still stops at `func_80077404`. No ring
+entry is written or published, and no worker, pump, callback, IRQ
+dispatch, or I_STAT behavior is faked. `PE_Sdk_ResetState` is the single
+host reset owner; the translated ResetCallback guard-passing path writes
+I_MASK = 0 exactly as retail func_80073E28 does. The independent oracle
+executes all 6 literal exchange words and the literal dispatcher slice
+with exact delay slots. Six focused tests bring normal and fresh
+ASan/UBSan suites to 496/496 while all 15 B53B hardware tests remain
+green. Canonical Disc 1 strict is now `func_80076664` from
+`func_80076C34`; bootstrap strict remains `func_8007F72C` from
+`func_800698D4`. LoadImage issue and the queue pump are not claimed
+implemented. Full proof is in `docs/b53d_func_80073E10_imask.md`.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36
 instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`
