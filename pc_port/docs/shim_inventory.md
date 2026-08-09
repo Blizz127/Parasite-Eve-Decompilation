@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B44
+# Shim Inventory — Phase 6E-B53B
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -38,6 +38,15 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 | `func_8006A8D4` | 0x110 | **68** | `game/boot/func_8006A8D4_port.c` |
 
 ## IMPLEMENTED (real host equivalents)
+
+### Native hardware authority (not a retail-function translation)
+
+`platform/pe_gpu.[ch]` is the B53B deterministic GPU/DMA2 substrate: one
+1024x512x16 VRAM, GPUSTAT bit 26, GP0 A0 parser, bounded GP1 commands,
+DMA2/DPCR/DICR channel-2 state, tokenized explicit completion, and a manual
+VBlank counter. It contains no retail command ring, callback, worker, or
+queue pump and is not wired through the unresolved B52 dispatch. Therefore
+`func_80076C34` remains a `BOOTSTRAP_RET` boundary exactly as listed below.
 
 | Function | PS1 role | Host implementation |
 |----------|----------|---------------------|

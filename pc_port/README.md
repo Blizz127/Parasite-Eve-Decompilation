@@ -1,21 +1,20 @@
-# Parasite Eve Native PC Port — Phase 6E-B52
+# Parasite Eve Native PC Port — Phase 6E-B53B
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B52 translates the 24-word Psy-Q `LoadImage` wrapper
-`func_8007506C` and its complete 71-word read-only RECT validator
-`func_80074E28`. The wrapper performs the retail validation and jump-table
-loads, then stops honestly at `jtb[2] = func_80076C34`, with
-`a0 = jtb[8] = func_80076664`, `a1 = RECT *`, `a2 = 8`, and `a3 = data`.
-`func_80076C34` remains unresolved because it owns the GPU command ring,
-GPUSTAT polling, and DMA2 coordination; B52 does not fake or implement any
-of those asynchronous effects. Both B51 `func_8006E1C0` LoadImage contexts
-now reach this internal boundary through an eight-byte transient RECT with
-four signed halfwords. Normal and fresh ASan/UBSan tests pass 468/468; all
-33 retained standalone oracles plus the B50, B51, and B52 oracles pass.
-Normal/sanitizer strict execution agrees on `func_80076C34` from
-`func_8007506C`, while bootstrap strict remains `func_8007F72C` from
-`func_800698D4`. Full proof is in `docs/b52_func_8007506C.md`.
+**Current milestone:** B53B adds the single bounded deterministic GPU/DMA2
+hardware substrate proven by the B53A audit. `platform/pe_gpu.[ch]` now owns
+one 1024x512x16 PSX VRAM, GPUSTAT ready bit 26, the GP0 A0 image parser, the
+required GP1 subset, raw DMA2/DPCR/DICR channel-2 state, one tokenized pending
+DMA event, and an explicit VBlank counter. CPU-fed image pixels are visible
+immediately; the DMA suffix remains busy and invisible until an explicit
+completion service makes pixels visible before setting DICR completion.
+There is no host retail ring, callback, renderer, automatic event, or HostFB
+alias. The 15 focused tests bring normal and fresh ASan/UBSan suites to
+483/483. All retained oracles and B49 harnesses pass. The B52 wrapper still
+stops honestly at unresolved `func_80076C34` from `func_8007506C`; bootstrap
+strict remains `func_8007F72C` from `func_800698D4`. LoadImage is not claimed
+implemented. Full proof is in `docs/b53b_gpu_dma2_platform.md`.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36
 instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`
@@ -633,7 +632,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (451 tests, all pass)
+- `pe-native-tests` — test suite (483 tests, all pass)
 
 ## Running
 
@@ -664,8 +663,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Expected after B49 for Disc 1: exit 1 at func_8006AD40 from func_8001220C.
-# This is the first real boundary exposed past the obsolete presentation stop.
+# Expected after B53B for Disc 1: exit 1 at func_80076C34 from func_8007506C.
+# B53B installs hardware state only; the retail dispatcher is still unresolved.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \

@@ -5,10 +5,10 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
-## Phase 6E-B52 LoadImage wrapper prefix verified
+## Phase 6E-B53B deterministic GPU/DMA2 substrate verified
 
-The exact accepted B51 base is
-`9c494f0ac09313681a6a99ebc3a6a04ed88eb7fc`. B52 translates the complete
+The exact B53A base is
+`75947f34bbcc7dd1f1f69c6f1725058f014b60ff`. B52 translates the complete
 Psy-Q LoadImage wrapper `func_8007506C` (24 words, 0x60 bytes,
 `0x8007506C..0x800750CC`) and its complete read-only debug validator
 `func_80074E28` (71 words, 0x11C bytes,
@@ -18,6 +18,14 @@ halfword RECT, reloads `D_80095744`, and dispatches through
 `a2 = 8`, and `a3 = data`. The dispatcher owns the GPU command ring,
 GPUSTAT polling, and DMA2 coordination and remains unresolved. No GPU-ready,
 queue-drain, DMA-completion, or callback-result behavior is fabricated.
+
+B53A completely recovered that hardware contract. B53B now implements one
+private native authority in `pc_port/platform/pe_gpu.[ch]`: 1024x512x16
+VRAM, GPUSTAT ready bit 26, GP0 A0 parsing, the proven GP1 subset, DMA2 raw
+registers and tokenized deferred completion, DPCR/DICR channel-2 state, and
+an explicit VBlank counter. It has no retail ring or callback state, does not
+touch HostFB, and is not connected to `func_8007506C`. The retail dispatcher
+remains unresolved by design.
 
 The raw retail trampoline at executable `0x80071A24..0x80071A2F` (file
 offset `0x62224`) is exactly `240A00A0 01400008 24090028`: load `$t2=0xA0`,
@@ -33,7 +41,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B52 LoadImage wrapper prefix verified**; strict frontier `func_80076C34` from `func_8007506C` | `pc_port/build/pe-native-tests` (468/468 normal; fresh ASan/UBSan 468/468) |
+| Port phase | **6E-B53B deterministic GPU/DMA2 substrate verified**; retail strict frontier still `func_80076C34` from `func_8007506C` | fresh normal and ASan/UBSan `pe-native-tests` (483/483) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -46,9 +54,10 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
 | Strict mode | continuing real data: exit 1 at `func_80076C34` from `func_8007506C`; `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | retained B49 harness, normal + sanitizer |
-| Sanitizers | fresh `-DPE_PORT_SANITIZERS=ON`: 468/468 tests; bootstrap, real-data boot/load, and retained harness pass; strict frontiers agree exactly | `/tmp/pe-b52-san/pe-native-tests` |
+| GPU/DMA2 | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank; no retail ring/HostFB/callback alias | `pc_port/platform/pe_gpu.[ch]`, `pc_port/docs/b53b_gpu_dma2_platform.md` |
+| Sanitizers | fresh `-DPE_PORT_SANITIZERS=ON`: 483/483 tests; bootstrap, real-data boot/load, and retained harness pass; strict frontiers agree exactly | B53B isolated sanitizer build |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | `func_80076C34` GPU queue/GPUSTAT/DMA2 semantics; use GPT-5.6 SOL XHIGH for the next bounded rung | — |
+| Next frontier | B53C: translate `func_80076C34` and only the minimum retail guest-ring/pump path against the B53B authority; source-span validation before CPU prefix; strict frontier currently unchanged | — |
 
 ### Phase 6E-B43 func_8005218C — current findings
 

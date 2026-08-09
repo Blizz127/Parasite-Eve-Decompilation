@@ -14,6 +14,7 @@
 #include "stub_registry.h"
 #include "pe_disc.h"
 #include "pe_spu_dma.h"
+#include "pe_gpu.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -12527,6 +12528,645 @@ static void test_7506C_strict_direct(void)
     PASS();
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+ * Phase 6E-B53B — deterministic GPU/DMA2 hardware substrate (15 tests)
+ *
+ * Expected register values and transfer geometry below are literal B53A
+ * vectors.  These tests drive register-level platform operations only;
+ * they do not translate or simulate the retail dispatcher/worker/ring.
+ * ════════════════════════════════════════════════════════════════════ */
+
+static uint16_t B53B_Pixel(uint32_t x, uint32_t y)
+{
+    uint16_t pixel = 0xFFFFu;
+    if (!PE_GPU_ReadVRAM(x, y, &pixel)) return 0xFFFFu;
+    return pixel;
+}
+
+static int B53B_BeginImage(uint32_t position_word, uint32_t size_word)
+{
+    return PE_GPU_WriteGP1(0x04000000u) &&
+           PE_GPU_WriteGP0(0x01000000u) &&
+           PE_GPU_WriteGP0(0xA0000000u) &&
+           PE_GPU_WriteGP0(position_word) &&
+           PE_GPU_WriteGP0(size_word);
+}
+
+static int B53B_ArmDma(pe_addr_t source, uint32_t bcr)
+{
+    if (!PE_GPU_WriteGP1(0x04000002u)) return 0;
+    PE_GPU_EnableDMA2();
+    return PE_GPU_DMA2Issue(source, bcr, 0x01000201u);
+}
+
+static int B53B_IssueOneBlock(pe_addr_t source, uint32_t position_word)
+{
+    return B53B_BeginImage(position_word, 0x00010020u) &&
+           B53B_ArmDma(source, 0x00010010u);
+}
+
+static void test_B53B_reset_dimensions_initial_vram(void)
+{
+    PeGpuState state;
+    uint16_t pixel;
+    TEST("B53B_reset_dimensions_initial_vram");
+    ResetTestState();
+    ASSERT(PE_GPU_VRAM_WIDTH == 1024u && PE_GPU_VRAM_HEIGHT == 512u &&
+           PE_GPU_VRAM_PIXELS == 0x80000u, "VRAM geometry is not 1024x512");
+    ASSERT(PE_GPU_ReadVRAM(0, 0, &pixel) && pixel == 0 &&
+           PE_GPU_ReadVRAM(1023, 511, &pixel) && pixel == 0,
+           "platform initialization did not deterministically clear VRAM");
+    ASSERT(!PE_GPU_ReadVRAM(1024, 0, &pixel) &&
+           !PE_GPU_ReadVRAM(0, 512, &pixel) &&
+           !PE_GPU_ReadVRAM(0, 0, NULL), "VRAM accessor bounds failure");
+
+    ASSERT(B53B_BeginImage(0, 0x00010001u) &&
+           PE_GPU_WriteGP0(0xDEAD1234u), "cannot seed one VRAM pixel");
+    ASSERT(B53B_Pixel(0, 0) == 0x1234u, "CPU-fed seed pixel missing");
+    ASSERT(PE_GPU_WriteGP1(0x04000002u) &&
+           PE_GPU_WriteGP0(0xA0000000u),
+           "cannot prepare non-idle state for GP1 reset");
+    PE_GPU_SetReady(0);
+    ASSERT(PE_GPU_WriteGP1(0x00000000u) &&
+           B53B_Pixel(0, 0) == 0x1234u,
+           "GP1 reset incorrectly cleared VRAM");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp0_state == PE_GPU_GP0_IDLE &&
+           state.gp1_dma_direction == 0 &&
+           state.status == PE_GPU_STATUS_READY_GP0,
+           "GP1 reset did not restore parser/direction/readiness");
+    PE_GPU_Reset();
+    PE_GPU_Reset();
+    PE_GPU_GetState(&state);
+    ASSERT(B53B_Pixel(0, 0) == 0x1234u,
+           "hardware reset incorrectly cleared VRAM");
+    ASSERT(state.status == PE_GPU_STATUS_READY_GP0 &&
+           state.gp0_state == PE_GPU_GP0_IDLE && !state.dma2_active &&
+           state.dma2_chcr == PE_GPU_DMA2_CHCR_IDLE && state.dicr == 0 &&
+           state.vsync_count == 0, "repeated hardware reset state mismatch");
+    PE_GPU_Init();
+    ASSERT(B53B_Pixel(0, 0) == 0, "explicit platform init did not clear VRAM");
+    PASS();
+}
+
+static void test_B53B_gpustat_manual_progress(void)
+{
+    PeGpuState before, after;
+    TEST("B53B_gpustat_manual_progress");
+    ResetTestState();
+    ASSERT((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) != 0,
+           "GPUSTAT ready bit did not initialize set");
+    PE_GPU_SetReady(0);
+    PE_GPU_GetState(&before);
+    for (int i = 0; i < 100; i++) {
+        ASSERT((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) == 0,
+               "GPUSTAT not-ready did not remain stable");
+    }
+    PE_GPU_GetState(&after);
+    ASSERT(before.vsync_count == after.vsync_count &&
+           before.dma_event_count == after.dma_event_count &&
+           before.gp0_state == after.gp0_state &&
+           before.dma2_active == after.dma2_active,
+           "status polling made hardware progress");
+    ASSERT(!PE_GPU_WriteGP0(0xA0000000u),
+           "GP0 command was accepted while not ready");
+    PE_GPU_SetReady(1);
+    ASSERT((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) != 0,
+           "explicit ready transition failed");
+    PASS();
+}
+
+static void test_B53B_gp1_subset_and_parser_reset(void)
+{
+    PeGpuState state;
+    TEST("B53B_gp1_subset_and_parser_reset");
+    ResetTestState();
+    ASSERT(PE_GPU_WriteGP1(0x04000002u), "GP1 DMA direction 2 rejected");
+    ASSERT(PE_GPU_WriteGP0(0x01000000u), "GP0 cache clear rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp1_dma_direction == 2 &&
+           state.gp0_state == PE_GPU_GP0_IDLE,
+           "GP0 cache operation changed GP1 direction/parser");
+    ASSERT(PE_GPU_WriteGP0(0xA0000000u), "A0 command rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp0_state == PE_GPU_GP0_EXPECT_POSITION,
+           "A0 did not enter position state");
+    ASSERT(PE_GPU_WriteGP1(0x01000000u), "GP1 command-buffer reset rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp0_state == PE_GPU_GP0_IDLE &&
+           state.gp1_dma_direction == 2,
+           "GP1 command-buffer reset changed DMA direction");
+    ASSERT(PE_GPU_WriteGP1(0x02000000u), "GP1 IRQ ack rejected");
+    ASSERT(PE_GPU_WriteGP1(0x04000000u), "GP1 DMA-off rejected");
+    ASSERT(PE_GPU_WriteGP1(0x04000002u) &&
+           PE_GPU_WriteGP0(0xA0000000u),
+           "GP1 full-reset non-idle setup failed");
+    PE_GPU_SetReady(0);
+    ASSERT(PE_GPU_WriteGP1(0x00000000u), "GP1 reset rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp1_dma_direction == 0 &&
+           state.gp0_state == PE_GPU_GP0_IDLE &&
+           state.status == PE_GPU_STATUS_READY_GP0,
+           "GP1 reset subset state mismatch");
+    ASSERT(!PE_GPU_WriteGP1(0x03000000u) &&
+           !PE_GPU_WriteGP1(0x04000001u) &&
+           !PE_GPU_WriteGP0(0x20000000u),
+           "unsupported GP0/GP1 command silently succeeded");
+    PASS();
+}
+
+static void test_B53B_gp0_parse_and_pixel_order(void)
+{
+    static const uint32_t invalid_sizes[] = {
+        0x00010000u, /* zero width */
+        0x00000001u, /* zero height */
+        0x00010401u, /* width 1025 */
+        0x02010001u  /* height 513 */
+    };
+    PeGpuState state;
+    TEST("B53B_gp0_parse_and_pixel_order");
+    ResetTestState();
+    ASSERT(PE_GPU_WriteGP0(0x01000000u) &&
+           PE_GPU_WriteGP0(0xA0000000u), "GP0 image prefix rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp0_state == PE_GPU_GP0_EXPECT_POSITION,
+           "parser did not request position");
+    ASSERT(PE_GPU_WriteGP0(0x00070005u), "position rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.image_x == 5 && state.image_y == 7 &&
+           state.gp0_state == PE_GPU_GP0_EXPECT_SIZE,
+           "position parsing mismatch");
+    ASSERT(PE_GPU_WriteGP0(0x00010003u), "size rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.image_width == 3 && state.image_height == 1 &&
+           state.image_remaining_pixels == 3,
+           "size/pixel count parsing mismatch");
+    ASSERT(PE_GPU_WriteGP0(0x22221111u) &&
+           PE_GPU_WriteGP0(0xDEAD3333u), "CPU pixel words rejected");
+    ASSERT(B53B_Pixel(5, 7) == 0x1111u &&
+           B53B_Pixel(6, 7) == 0x2222u &&
+           B53B_Pixel(7, 7) == 0x3333u &&
+           B53B_Pixel(8, 7) == 0,
+           "low/high order or odd-pixel padding mismatch");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp0_state == PE_GPU_GP0_IDLE &&
+           state.image_remaining_pixels == 0,
+           "parser did not finish at exact odd pixel count");
+    for (size_t i = 0; i < sizeof(invalid_sizes) / sizeof(invalid_sizes[0]); i++) {
+        ASSERT(PE_GPU_WriteGP0(0xA0000000u) &&
+               PE_GPU_WriteGP0(0x00070005u),
+               "malformed-size parser setup failed");
+        ASSERT(!PE_GPU_WriteGP0(invalid_sizes[i]),
+               "malformed image size was accepted");
+        PE_GPU_GetState(&state);
+        ASSERT(state.gp0_state == PE_GPU_GP0_IDLE &&
+               state.image_remaining_pixels == 0 &&
+               B53B_Pixel(5, 7) == 0x1111u &&
+               B53B_Pixel(6, 7) == 0x2222u &&
+               B53B_Pixel(7, 7) == 0x3333u,
+               "malformed size did not reset safely without VRAM mutation");
+    }
+    PASS();
+}
+
+static void test_B53B_vram_xy_wrap(void)
+{
+    TEST("B53B_vram_xy_wrap");
+    ResetTestState();
+    ASSERT(B53B_BeginImage(0x000003FFu, 0x00010002u) &&
+           PE_GPU_WriteGP0(0x22221111u), "X-wrap transfer failed");
+    ASSERT(B53B_Pixel(1023, 0) == 0x1111u &&
+           B53B_Pixel(0, 0) == 0x2222u, "X wrap mismatch");
+
+    PE_GPU_Init();
+    ASSERT(B53B_BeginImage(0x01FF0007u, 0x00020001u) &&
+           PE_GPU_WriteGP0(0x44443333u), "Y-wrap transfer failed");
+    ASSERT(B53B_Pixel(7, 511) == 0x3333u &&
+           B53B_Pixel(7, 0) == 0x4444u, "Y wrap mismatch");
+
+    PE_GPU_Init();
+    ASSERT(B53B_BeginImage(0x01FF03FFu, 0x00020002u) &&
+           PE_GPU_WriteGP0(0x22221111u) &&
+           PE_GPU_WriteGP0(0x44443333u), "combined wrap transfer failed");
+    ASSERT(B53B_Pixel(1023, 511) == 0x1111u &&
+           B53B_Pixel(0, 511) == 0x2222u &&
+           B53B_Pixel(1023, 0) == 0x3333u &&
+           B53B_Pixel(0, 0) == 0x4444u, "combined XY wrap mismatch");
+    PASS();
+}
+
+static void test_B53B_cpu_only_and_15word_threshold(void)
+{
+    PeGpuState state;
+    TEST("B53B_cpu_only_and_15word_threshold");
+    ResetTestState();
+    ASSERT(B53B_BeginImage(0, 0x0001001Eu),
+           "30-pixel CPU image header failed");
+    for (uint32_t i = 0; i < 15; i++) {
+        uint32_t low = i * 2u + 1u;
+        uint32_t high = low + 1u;
+        ASSERT(PE_GPU_WriteGP0(low | (high << 16)),
+               "CPU threshold data word rejected");
+    }
+    for (uint32_t i = 0; i < 30; i++) {
+        ASSERT(B53B_Pixel(i, 0) == (uint16_t)(i + 1u),
+               "CPU-only threshold pixel mismatch");
+    }
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp0_state == PE_GPU_GP0_IDLE && !state.dma2_active &&
+           state.dma_event_count == 0,
+           "below-block transfer incorrectly scheduled DMA");
+    PASS();
+}
+
+static void test_B53B_exact_16word_dma_issue(void)
+{
+    PeGpuState state, after_reject;
+    pe_addr_t source = 0x80002000u;
+    TEST("B53B_exact_16word_dma_issue");
+    ResetTestState();
+    for (uint32_t i = 0; i < 16; i++) {
+        PE_StoreU32(source + i * 4u, 0x10001u + i);
+    }
+    ASSERT(B53B_IssueOneBlock(source, 0), "exact one-block issue failed");
+    PE_GPU_GetState(&state);
+    ASSERT(PE_GPU_ReadDMA2MADR() == source &&
+           PE_GPU_ReadDMA2BCR() == 0x00010010u &&
+           PE_GPU_ReadDMA2CHCR() == 0x01000201u,
+           "DMA2 raw registers mismatch");
+    ASSERT(state.dma2_active && state.dma2_source == source &&
+           state.dma2_word_count == 16 && state.dma2_event_token != 0,
+           "pending DMA descriptor mismatch");
+    ASSERT(!PE_GPU_DMA2CompletionPending() &&
+           !PE_GPU_DMA2InterruptAsserted() && B53B_Pixel(0, 0) == 0,
+           "DMA completed or became visible at issue time");
+    ASSERT(PE_GPU_DMA2Pending() && PE_GPU_DMA2Pending(),
+           "repeated pending reads changed busy state");
+    ASSERT(!PE_GPU_DMA2Issue(source + 0x40u, 0x00010010u, 0x01000201u),
+           "second DMA issue was accepted while busy");
+    PE_GPU_GetState(&after_reject);
+    ASSERT(after_reject.dma2_madr == state.dma2_madr &&
+           after_reject.dma2_bcr == state.dma2_bcr &&
+           after_reject.dma2_chcr == state.dma2_chcr &&
+           after_reject.dma2_source == state.dma2_source &&
+           after_reject.dma2_event_token == state.dma2_event_token,
+           "busy rejection partially replaced pending DMA state");
+    PASS();
+}
+
+static void test_B53B_remainder_plus_dma_visibility(void)
+{
+    PeGpuState state;
+    pe_addr_t source = 0x80003000u;
+    uint64_t token;
+    TEST("B53B_remainder_plus_dma_visibility");
+    ResetTestState();
+    PE_StoreU32(source, 0x00020001u);
+    for (uint32_t i = 0; i < 16; i++) {
+        uint32_t low = 3u + i * 2u;
+        PE_StoreU32(source + 4u + i * 4u, low | ((low + 1u) << 16));
+    }
+    ASSERT(B53B_BeginImage(0x0014000Au, 0x00010022u),
+           "34-pixel image header failed");
+    ASSERT(PE_GPU_WriteGP0(PE_LoadU32(source)), "CPU remainder rejected");
+    ASSERT(B53B_Pixel(10, 20) == 1 && B53B_Pixel(11, 20) == 2 &&
+           B53B_Pixel(12, 20) == 0,
+           "CPU prefix visibility mismatch before DMA");
+    ASSERT(B53B_ArmDma(source + 4u, 0x00010010u),
+           "remainder-plus-DMA issue failed");
+    token = PE_GPU_DMA2EventToken();
+    ASSERT(token != 0 && B53B_Pixel(43, 20) == 0 &&
+           !PE_GPU_DMA2CompletionPending(),
+           "DMA suffix became visible/pending before service");
+
+    /* The descriptor retains a guest address, not a copied payload or host
+     * pointer: event-time data must observe this intervening guest write. */
+    PE_StoreU32(source + 4u, 0xBEEFCAFEu);
+    ASSERT(PE_GPU_ServiceDMA2Completion(token), "explicit DMA service failed");
+    ASSERT(B53B_Pixel(12, 20) == 0xCAFEu &&
+           B53B_Pixel(13, 20) == 0xBEEFu &&
+           B53B_Pixel(43, 20) == 34u,
+           "DMA suffix data/order mismatch after service");
+    PE_GPU_GetState(&state);
+    ASSERT(!state.dma2_active && state.dma2_chcr == 0x00000201u &&
+           PE_GPU_DMA2CompletionPending(),
+           "completion did not clear busy then set pending");
+    ASSERT(state.dma_data_order != 0 &&
+           state.dma_data_order < state.dma_completion_order,
+           "VRAM visibility order is not before completion state");
+    ASSERT(!PE_GPU_DMA2InterruptAsserted(),
+           "disabled DMA interrupt was asserted");
+    PASS();
+}
+
+static void test_B53B_dicr_pending_w1c_preservation(void)
+{
+    pe_addr_t source = 0x80004000u;
+    uint32_t configured = 0x00A50055u;
+    uint64_t token;
+    TEST("B53B_dicr_pending_w1c_preservation");
+    ResetTestState();
+    PE_GPU_WriteDICR(0x00210055u);
+    PE_GPU_AcknowledgeDMA2Interrupt();
+    ASSERT(PE_GPU_ReadDICR() == 0x00210055u,
+           "inert acknowledgment changed DICR controls");
+    PE_GPU_SetDMA2InterruptEnabled(1);
+    ASSERT(PE_GPU_ReadDICR() == configured,
+           "channel-2/master enable did not preserve DICR bits");
+    ASSERT(B53B_IssueOneBlock(source, 0), "DICR test issue failed");
+    token = PE_GPU_DMA2EventToken();
+    ASSERT(PE_GPU_ServiceDMA2Completion(token), "DICR completion failed");
+    ASSERT(PE_GPU_ReadDICR() == (configured | 0x04000000u) &&
+           PE_GPU_DMA2CompletionPending() &&
+           PE_GPU_DMA2InterruptAsserted(),
+           "DICR completion flag/assertion mismatch");
+    PE_GPU_AcknowledgeDMA2Interrupt();
+    ASSERT(PE_GPU_ReadDICR() == configured &&
+           !PE_GPU_DMA2CompletionPending() &&
+           !PE_GPU_DMA2InterruptAsserted(),
+           "DICR W1C acknowledgment/preservation mismatch");
+    PASS();
+}
+
+static void test_B53B_dpcr_channel2_preservation(void)
+{
+    TEST("B53B_dpcr_channel2_preservation");
+    ResetTestState();
+    PE_GPU_WriteDPCR(0xA5A50055u);
+    PE_GPU_EnableDMA2();
+    ASSERT(PE_GPU_ReadDPCR() == 0xA5A50855u,
+           "DMA2 enable erased unrelated DPCR bits");
+    PASS();
+}
+
+static void test_B53B_repeated_reset_and_stale_event(void)
+{
+    pe_addr_t source1 = 0x80005000u;
+    pe_addr_t source2 = 0x80005100u;
+    uint64_t old_token, new_token, third_token;
+    TEST("B53B_repeated_reset_and_stale_event");
+    ResetTestState();
+    PE_StoreU32(source1, 0x22221111u);
+    ASSERT(B53B_IssueOneBlock(source1, 0), "first transfer issue failed");
+    old_token = PE_GPU_DMA2EventToken();
+    PE_GPU_Reset();
+    ASSERT(!PE_GPU_DMA2Pending() && !PE_GPU_DMA2CompletionPending() &&
+           PE_GPU_ReadDMA2CHCR() == PE_GPU_DMA2_CHCR_IDLE &&
+           !PE_GPU_ServiceDMA2Completion(old_token) && B53B_Pixel(0, 0) == 0,
+           "reset did not cancel the old DMA event");
+    PE_GPU_Reset();
+
+    PE_StoreU32(source2, 0x44443333u);
+    ASSERT(B53B_IssueOneBlock(source2, 0), "post-reset transfer issue failed");
+    new_token = PE_GPU_DMA2EventToken();
+    ASSERT(new_token != old_token &&
+           !PE_GPU_ServiceDMA2Completion(old_token) && PE_GPU_DMA2Pending() &&
+           B53B_Pixel(0, 0) == 0,
+           "stale token completed a newer transfer");
+    ASSERT(PE_GPU_ServiceDMA2Completion(new_token) &&
+           B53B_Pixel(0, 0) == 0x3333u,
+           "new transfer did not complete with its own token");
+    ASSERT(!PE_GPU_ServiceDMA2Completion(new_token),
+           "same completion event ran twice");
+
+    PE_GPU_AcknowledgeDMA2Interrupt();
+    ASSERT(B53B_IssueOneBlock(source1, 0x00000020u),
+           "sequential transfer issue failed");
+    third_token = PE_GPU_DMA2EventToken();
+    ASSERT(third_token != new_token &&
+           PE_GPU_ServiceDMA2Completion(third_token) &&
+           B53B_Pixel(32, 0) == 0x1111u,
+           "repeated sequential transfer mismatch");
+    PASS();
+}
+
+static void test_B53B_dma_guest_range_and_pointer_safety(void)
+{
+    PeGpuState before, after;
+    TEST("B53B_dma_guest_range_and_pointer_safety");
+    ResetTestState();
+    ASSERT(sizeof(pe_addr_t) == 4 && sizeof(after.dma2_source) == 4,
+           "guest address widened to native pointer width");
+
+    ASSERT(B53B_IssueOneBlock(0x801FFFC0u, 0),
+           "exact guest-RAM-end DMA span rejected");
+    PE_GPU_GetState(&after);
+    ASSERT(after.dma2_source == 0x801FFFC0u,
+           "high guest address was truncated/remapped");
+    PE_GPU_Reset();
+
+#define B53B_PREP_ONE_BLOCK() do { \
+    PE_GPU_Reset(); \
+    ASSERT(B53B_BeginImage(0, 0x00010020u), "range-test parser setup"); \
+    ASSERT(PE_GPU_WriteGP1(0x04000002u), "range-test DMA direction"); \
+    PE_GPU_EnableDMA2(); \
+} while (0)
+
+    PE_GPU_Reset();
+    ASSERT(B53B_BeginImage(0, 0x00010020u) &&
+           PE_GPU_WriteGP1(0x04000002u), "disabled-DPCR parser setup");
+    ASSERT(!PE_GPU_DMA2Issue(0x801F0000u, 0x00010010u, 0x01000201u),
+           "DMA issue ignored disabled DPCR channel 2");
+    PE_GPU_Reset();
+    ASSERT(B53B_BeginImage(0, 0x00010020u),
+           "wrong-direction parser setup");
+    PE_GPU_EnableDMA2();
+    ASSERT(!PE_GPU_DMA2Issue(0x801F0000u, 0x00010010u, 0x01000201u),
+           "DMA issue ignored GP1 direction");
+
+    B53B_PREP_ONE_BLOCK();
+    PE_GPU_GetState(&before);
+    ASSERT(!PE_GPU_DMA2Issue(0x801FFFC4u, 0x00010010u, 0x01000201u),
+           "first aligned out-of-range DMA span accepted");
+    PE_GPU_GetState(&after);
+    ASSERT(!after.dma2_active && after.dma2_madr == before.dma2_madr &&
+           after.dma2_bcr == before.dma2_bcr &&
+           after.dma2_chcr == before.dma2_chcr,
+           "range rejection partially mutated DMA state");
+
+    B53B_PREP_ONE_BLOCK();
+    ASSERT(!PE_GPU_DMA2Issue(0x80100002u, 0x00010010u, 0x01000201u),
+           "unaligned source accepted");
+    B53B_PREP_ONE_BLOCK();
+    ASSERT(!PE_GPU_DMA2Issue(0u, 0x00010010u, 0x01000201u),
+           "address zero accepted");
+    B53B_PREP_ONE_BLOCK();
+    ASSERT(!PE_GPU_DMA2Issue(0xFFFFFFC0u, 0x00010010u, 0x01000201u),
+           "overflow/high-invalid source accepted");
+    B53B_PREP_ONE_BLOCK();
+    ASSERT(!PE_GPU_DMA2Issue(0x801F0000u, 0x00000010u, 0x01000201u) &&
+           !PE_GPU_DMA2Issue(0x801F0000u, 0x00010020u, 0x01000201u) &&
+           !PE_GPU_DMA2Issue(0x801F0000u, 0x00020010u, 0x01000201u) &&
+           !PE_GPU_DMA2Issue(0x801F0000u, 0xFFFF0010u, 0x01000201u) &&
+           !PE_GPU_DMA2Issue(0x801F0000u, 0x00010010u, 0x01000001u),
+           "malformed BCR/CHCR accepted");
+
+    B53B_PREP_ONE_BLOCK();
+    ASSERT(PE_GPU_DMA2Issue(0x801F0000u, 0x00010010u, 0x01000201u),
+           "valid high 32-bit guest source rejected");
+    PE_GPU_GetState(&after);
+    ASSERT(after.dma2_source == 0x801F0000u &&
+           after.dma2_word_count == 16,
+           "valid high source descriptor mismatch");
+#undef B53B_PREP_ONE_BLOCK
+    PASS();
+}
+
+static void test_B53B_vblank_dma_ready_independence(void)
+{
+    pe_addr_t source = 0x80006000u;
+    uint64_t token;
+    TEST("B53B_vblank_dma_ready_independence");
+    ResetTestState();
+    ASSERT(B53B_BeginImage(0, 0x00010020u), "independence parser setup");
+    ASSERT(PE_GPU_WriteGP1(0x04000002u), "independence DMA direction");
+    PE_GPU_EnableDMA2();
+    PE_GPU_SetReady(0);
+    ASSERT(PE_GPU_DMA2Issue(source, 0x00010010u, 0x01000201u),
+           "DMA issue incorrectly depended on later GPU ready state");
+    token = PE_GPU_DMA2EventToken();
+    ASSERT(PE_GPU_VSyncQuery() == 0, "VSync did not initialize at zero");
+    for (int i = 0; i < 20; i++) {
+        ASSERT(PE_GPU_VSyncQuery() == 0 && PE_GPU_DMA2Pending(),
+               "VSync query progressed DMA/time");
+    }
+    PE_GPU_VBlankStep();
+    PE_GPU_VBlankStep();
+    ASSERT(PE_GPU_VSyncQuery() == 2 && PE_GPU_DMA2Pending() &&
+           !PE_GPU_DMA2CompletionPending(),
+           "VBlank step completed DMA");
+    ASSERT((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) == 0,
+           "DMA/VBlank made GPU ready");
+    PE_GPU_SetReady(1);
+    ASSERT((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) != 0 &&
+           PE_GPU_DMA2Pending() &&
+           (PE_GPU_ReadDMA2CHCR() & PE_GPU_DMA2_CHCR_BUSY) != 0 &&
+           !PE_GPU_DMA2CompletionPending(),
+           "GPU ready transition completed pending DMA");
+    PE_GPU_SetReady(0);
+    ASSERT(PE_GPU_DMA2Pending() && !PE_GPU_DMA2CompletionPending(),
+           "clearing GPU ready completed pending DMA");
+    ASSERT(PE_GPU_ServiceDMA2Completion(token), "explicit event failed");
+    ASSERT((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) == 0,
+           "DMA completion made GPU ready");
+    PE_GPU_SetReady(1);
+    ASSERT((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) != 0 &&
+           PE_GPU_DMA2CompletionPending(),
+           "ready transition acknowledged DMA completion");
+    PASS();
+}
+
+static void test_B53B_max_geometry(void)
+{
+    PeGpuState state;
+    pe_addr_t source = 0x80100000u;
+    uint64_t token;
+    TEST("B53B_max_geometry");
+    ResetTestState();
+    PE_StoreU32(source, 0x22221111u);
+    PE_StoreU32(source + 0x000FFFFCu, 0x44443333u);
+    ASSERT(B53B_BeginImage(0, 0x02000400u),
+           "1024x512 A0 geometry rejected");
+    ASSERT(B53B_ArmDma(source, 0x40000010u),
+           "maximum exact-RAM-span DMA issue failed");
+    PE_GPU_GetState(&state);
+    ASSERT(state.image_remaining_pixels == 0x80000u &&
+           state.dma2_word_count == 0x40000u &&
+           state.dma2_madr == source && state.dma2_bcr == 0x40000010u,
+           "maximum geometry/register derivation mismatch");
+    token = PE_GPU_DMA2EventToken();
+    ASSERT(PE_GPU_ServiceDMA2Completion(token),
+           "maximum deterministic DMA completion failed");
+    ASSERT(!PE_GPU_DMA2Pending() &&
+           B53B_Pixel(0, 0) == 0x1111u &&
+           B53B_Pixel(1, 0) == 0x2222u &&
+           B53B_Pixel(1022, 511) == 0x3333u &&
+           B53B_Pixel(1023, 511) == 0x4444u,
+           "maximum transfer final state mismatch");
+    PASS();
+}
+
+static void test_B53B_authority_separation_guard(void)
+{
+    uint8_t *ring_snapshot;
+    uint8_t *fb_snapshot;
+    uint64_t dma_token;
+    int vs0, ds0, pr0, mask0, vs1, ds1, pr1, mask1;
+    int stub_count, order_count, callback_regs, callback_errors;
+    TEST("B53B_authority_separation_guard");
+    ResetTestState();
+    ring_snapshot = malloc(0x1800u);
+    fb_snapshot = malloc(PE_PORT_FB_WIDTH * PE_PORT_FB_HEIGHT * 3u);
+    ASSERT(ring_snapshot && fb_snapshot, "authority snapshots allocation");
+    for (uint32_t i = 0; i < 0x1800u; i++) {
+        PE_StoreU8(0x800BD030u + i, (uint8_t)(i * 37u + 11u));
+    }
+    PE_StoreU32(0x80095874u, 0x12345678u);
+    PE_StoreU32(0x80095878u, 0x9ABCDEF0u);
+    PE_StoreU32(0x80095754u, 0x13579BDFu);
+    PE_StoreU32(0x80095758u, 0x2468ACE0u);
+    PE_StoreU32(0x800956C8u, 0x80016666u); /* retail DMA callback slot 2 */
+    PE_StoreU32(PE_CALLBACK_TABLE_ADDR + 2u * 4u, 0x80015555u);
+    memcpy(ring_snapshot, PE_TranslateConst(0x800BD030u, 0x1800u), 0x1800u);
+
+    HostFB_Init();
+    HostFB_ClearImage(0, 0, PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT, 1, 2, 3);
+    memcpy(fb_snapshot, HostFB_GetPixels(),
+           PE_PORT_FB_WIDTH * PE_PORT_FB_HEIGHT * 3u);
+    HostFB_GetState(&vs0, &ds0, &pr0, &mask0);
+    stub_count = g_stub_count;
+    order_count = g_stub_order_count;
+    callback_regs = PE_Callback_RegistrationCount();
+    callback_errors = PE_Callback_ErrorCount();
+
+    PE_GPU_SetReady(0);
+    PE_GPU_SetReady(1);
+    ASSERT(B53B_BeginImage(0, 0x00010001u) &&
+           PE_GPU_WriteGP0(0xFFFF55AAu), "authority exercise image failed");
+    for (uint32_t i = 0; i < 16; i++) {
+        PE_StoreU32(0x80007000u + i * 4u,
+                    (i * 2u + 1u) | ((i * 2u + 2u) << 16));
+    }
+    ASSERT(B53B_IssueOneBlock(0x80007000u, 0x000A000Au),
+           "authority exercise DMA issue failed");
+    dma_token = PE_GPU_DMA2EventToken();
+    ASSERT(PE_GPU_DMA2Pending() && !PE_GPU_DMA2CompletionPending() &&
+           PE_GPU_ServiceDMA2Completion(dma_token) &&
+           PE_GPU_DMA2CompletionPending(),
+           "authority exercise explicit DMA completion failed");
+    PE_GPU_WriteDPCR(0xA5000055u);
+    PE_GPU_EnableDMA2();
+    PE_GPU_WriteDICR(0x00210055u);
+    PE_GPU_SetDMA2InterruptEnabled(1);
+    PE_GPU_AcknowledgeDMA2Interrupt();
+    PE_GPU_VBlankStep();
+    PE_GPU_Reset();
+    PE_GPU_Init();
+
+    ASSERT(memcmp(ring_snapshot, PE_TranslateConst(0x800BD030u, 0x1800u),
+                  0x1800u) == 0,
+           "GPU authority mutated/duplicated the retail ring");
+    ASSERT(PE_LoadU32(0x80095874u) == 0x12345678u &&
+           PE_LoadU32(0x80095878u) == 0x9ABCDEF0u &&
+           PE_LoadU32(0x80095754u) == 0x13579BDFu &&
+           PE_LoadU32(0x80095758u) == 0x2468ACE0u &&
+           PE_LoadU32(0x800956C8u) == 0x80016666u &&
+           PE_LoadU32(PE_CALLBACK_TABLE_ADDR + 2u * 4u) == 0x80015555u,
+           "GPU authority mutated queue/callback guest state");
+    HostFB_GetState(&vs1, &ds1, &pr1, &mask1);
+    ASSERT(memcmp(fb_snapshot, HostFB_GetPixels(),
+                  PE_PORT_FB_WIDTH * PE_PORT_FB_HEIGHT * 3u) == 0 &&
+           vs0 == vs1 && ds0 == ds1 && pr0 == pr1 && mask0 == mask1,
+           "PSX VRAM authority aliased HostFB");
+    ASSERT(g_stub_count == stub_count && g_stub_order_count == order_count &&
+           PE_Callback_RegistrationCount() == callback_regs &&
+           PE_Callback_ErrorCount() == callback_errors,
+           "GPU substrate invoked a retail/bootstrap callback");
+    free(ring_snapshot);
+    free(fb_snapshot);
+    PASS();
+}
+
 /* ── Required by func_8001220C_port.c ────────────────────────────────── */
 void Trace_Direct(const char *event) { (void)event; }
 
@@ -13123,6 +13763,23 @@ int main(void)
     test_7506C_dispatch_words_and_source_edge();
     test_7506C_repeat_dirty_and_reset();
     test_7506C_strict_direct();
+
+    /* Phase 6E-B53B deterministic GPU/DMA2 substrate (15 tests) */
+    test_B53B_reset_dimensions_initial_vram();
+    test_B53B_gpustat_manual_progress();
+    test_B53B_gp1_subset_and_parser_reset();
+    test_B53B_gp0_parse_and_pixel_order();
+    test_B53B_vram_xy_wrap();
+    test_B53B_cpu_only_and_15word_threshold();
+    test_B53B_exact_16word_dma_issue();
+    test_B53B_remainder_plus_dma_visibility();
+    test_B53B_dicr_pending_w1c_preservation();
+    test_B53B_dpcr_channel2_preservation();
+    test_B53B_repeated_reset_and_stale_event();
+    test_B53B_dma_guest_range_and_pointer_safety();
+    test_B53B_vblank_dma_ready_independence();
+    test_B53B_max_geometry();
+    test_B53B_authority_separation_guard();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

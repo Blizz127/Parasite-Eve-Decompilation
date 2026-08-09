@@ -16,6 +16,7 @@ set(PLATFORM_SRCS
     platform/host_framebuffer.c
     platform/host_window.c
     platform/pe_guest_ram.c
+    platform/pe_gpu.c
     platform/pe_gte.c
     platform/pe_libetc.c
     platform/pe_libgpu.c
@@ -163,6 +164,7 @@ if(BUILD_TESTS)
         tests/test_native.c
         platform/host_framebuffer.c
         platform/pe_guest_ram.c
+        platform/pe_gpu.c
         platform/pe_callback.c
         platform/pe_gte.c
         platform/pe_libetc.c
