@@ -11969,6 +11969,21 @@ static void B52_SeedGpuDispatch(void)
     PE_StoreU32(B52_JTB_PTR + 4u, B52_PRINT_FN);
 }
 
+static int B53E_SeedBusyDma(void)
+{
+    if (!PE_GPU_WriteGP1(0x04000000u) ||
+        !PE_GPU_WriteGP0(0x01000000u) ||
+        !PE_GPU_WriteGP0(0xA0000000u) ||
+        !PE_GPU_WriteGP0(0u) ||
+        !PE_GPU_WriteGP0(0x00010020u) ||
+        !PE_GPU_WriteGP1(0x04000002u)) {
+        return 0;
+    }
+    PE_GPU_EnableDMA2();
+    return PE_GPU_DMA2Issue(
+        0x80180000u, 0x00010010u, 0x01000201u);
+}
+
 static void B52_AssertGpuCall(int i, uint32_t rect0, uint32_t data,
                               uint32_t rect1)
 {
@@ -12061,17 +12076,13 @@ static void test_6AD40_prefix_boundary_args(void)
     ASSERT(func_8006AD40() == 0, "prefix boundary must return retail zero");
     /* B52 advances through func_8007506C to jtb[2]=func_80076C34.  The
      * zero fixture still has image h=0x100 and no CLUT call. */
-    ASSERT(g_bootstrap_arg4_call_count == 2,
-           "prefix must record the dispatch snapshot and worker boundary");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "prefix must record exactly one by-value dispatch snapshot");
     B52_AssertGpuCall(0, 0u, B50_BASE, 0x01000000u);
-    ASSERT(strcmp(g_bootstrap_arg4_calls[1].symbol, "func_80076664") == 0 &&
-           strcmp(g_bootstrap_arg4_calls[1].caller, "func_80076C34") == 0 &&
-           g_bootstrap_arg4_calls[1].target == B52_WORKER,
-           "direct-path boundary is not the canonical LoadImage worker");
     ASSERT(CountOrderLog("func_80076C34") == 0 &&
            CountOrderLog("func_80073E10") == 0 &&
-           CountOrderLog("func_80076664") == 1,
-           "translated I_MASK exchange must reach the worker boundary once");
+           CountOrderLog("func_80076664") == 0,
+           "translated worker remained a bootstrap boundary");
     ASSERT(CountOrderLog("func_8006E1C0") == 0,
            "translated callee must not record a bootstrap boundary");
     ASSERT(CountOrderLog("func_800718D0") == 0 &&
@@ -12113,12 +12124,12 @@ static void test_6AD40_prefix_boundary_args(void)
     PASS();
 }
 
-static void test_6AD40_strict_stops_at_76664(void)
+static void test_6AD40_strict_stops_at_73CF4(void)
 {
     DiscFixture fx;
-    /* B53D advances through the translated I_MASK exchange to the
-     * dispatcher's direct-path worker boundary. */
-    TEST("6AD40_strict_stops_at_76664");
+    /* B53E resolves the worker.  A preexisting DMA selects the dispatcher
+     * enqueue path and exposes callback registration as the next boundary. */
+    TEST("6AD40_strict_stops_at_73CF4");
     pid_t pid;
     int status = 0;
     ResetTestState();
@@ -12133,6 +12144,8 @@ static void test_6AD40_strict_stops_at_76664(void)
         func_8007ED58();  /* CD reset — sets drive state after bootstrap init */
         HostFB_VSync(0);  /* advance VSync counter for DMA poll */
         B50_SeedPrefixState(1);
+        PE_StoreU8(B53D_INIT_BYTE, 1u);
+        if (!B53E_SeedBusyDma()) _exit(2);
         func_8006AD40();
         _exit(0);
     }
@@ -12188,22 +12201,19 @@ static void test_6AD40_prefix_repeat_dirty(void)
     HostFB_VSync(0);
     PE_Port_RunControlReset();
     ASSERT(func_8006AD40() == 0, "repeated dirty prefix return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 4,
-           "repeated prefix must record two snapshot/boundary pairs");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "repeated prefix must record two by-value snapshots");
     /* B51: the dirty entry+4 = 0xDEADBEEF flows through the retail 24-bit
      * mask into the LoadImage data address; nothing dereferences it. */
     for (int i = 0; i < 2; i++) {
-        ASSERT(strcmp(g_bootstrap_arg4_calls[i * 2].symbol,
+        ASSERT(strcmp(g_bootstrap_arg4_calls[i].symbol,
                       "func_80076C34") == 0,
-               "dirty/repeated boundary identity changed");
-        ASSERT(strcmp(g_bootstrap_arg4_calls[i * 2 + 1].symbol,
-                      "func_80076664") == 0,
-               "dirty/repeated worker boundary identity changed");
-        ASSERT(g_bootstrap_arg4_calls[i * 2].arg3 ==
+               "dirty/repeated snapshot identity changed");
+        ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
                B50_BASE + (0xDEADBEEFu & 0x00FFFFFFu),
                "dirty/repeated LoadImage data address changed");
-        ASSERT(g_bootstrap_arg4_calls[i * 2].arg0 == B52_WORKER &&
-               g_bootstrap_arg4_calls[i * 2].arg2 == 8u,
+        ASSERT(g_bootstrap_arg4_calls[i].arg0 == B52_WORKER &&
+               g_bootstrap_arg4_calls[i].arg2 == 8u,
                "dirty/repeated LoadImage rect changed");
     }
     ASSERT((PE_LoadU32(0x800B0CD8u) & 1u) != 0,
@@ -12262,18 +12272,18 @@ static void test_6E1C0_single_call_zero_entry(void)
 
     ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0,
            "must return retail zero");
-    ASSERT(g_bootstrap_arg4_call_count == 2,
-           "zero entry must record the dispatch snapshot and worker boundary");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "zero entry must record one dispatch snapshot");
     B51_AssertCall(0, 0u, B51_BASE, 0x01000000u);
     ASSERT(CountOrderLog("func_80076C34") == 0 &&
            CountOrderLog("func_80073E10") == 0 &&
-           CountOrderLog("func_80076664") == 1,
-           "dispatcher prefix must reach one direct worker boundary");
+           CountOrderLog("func_80076664") == 0,
+           "translated worker remained a boundary");
 
     /* Full 2 MiB canary: only the B53C timeout initializer's two words and
      * the B53D saved-mask/marker words may now differ.  The transient stack
-     * RECT still has no guest pointer authority and no queue entry is
-     * published before the worker boundary. */
+     * RECT still has no guest pointer authority; the zero-sized translated
+     * worker returns without a GPU issue or queue publication. */
     for (uint32_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
         if (a >= B53C_DEADLINE && a < B53C_TIMEOUT_POLLS + 4u) continue;
         if (a >= B53D_WORK_MARKER && a < B53D_WORK_MARKER + 4u) continue;
@@ -12301,15 +12311,15 @@ static void test_6E1C0_two_calls_exact_args(void)
                   0x20u);
     ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0,
            "must return retail zero");
-    ASSERT(g_bootstrap_arg4_call_count == 4,
-           "nonzero CLUT offset must record two snapshot/boundary pairs");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "nonzero CLUT offset must record two snapshots");
     B51_AssertCall(0, 0x07FF07FFu, B51_BASE + 0x123456u, 0x004003FFu);
-    B51_AssertCall(2, 0x00910515u, B51_BASE + 0x123456u + 0x100u,
+    B51_AssertCall(1, 0x00910515u, B51_BASE + 0x123456u + 0x100u,
                    0x00200278u);
     ASSERT(CountOrderLog("func_80076C34") == 0 &&
            CountOrderLog("func_80073E10") == 0 &&
-           CountOrderLog("func_80076664") == 2,
-           "both dispatcher prefixes must reach the worker boundary in order");
+           CountOrderLog("func_80076664") == 0,
+           "translated workers remained boundaries");
     PASS();
 }
 
@@ -12322,7 +12332,7 @@ static void test_6E1C0_clut_mask_and_height_rules(void)
     B51_SeedEntry(0u, 0xFFu, 0u, 0xFF000000u, 0u, 0u);
     ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0,
            "must return retail zero");
-    ASSERT(g_bootstrap_arg4_call_count == 2,
+    ASSERT(g_bootstrap_arg4_call_count == 1,
            "masked-to-zero CLUT offset must not dispatch");
     B51_AssertCall(0, 0u, B51_BASE, 0x00FF0000u);
 
@@ -12332,10 +12342,10 @@ static void test_6E1C0_clut_mask_and_height_rules(void)
     B51_SeedEntry(0x00482B41u, 0x10u, 0x234u, 0x58u, 0x00094A03u, 0u);
     ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0,
            "must return retail zero");
-    ASSERT(g_bootstrap_arg4_call_count == 4,
+    ASSERT(g_bootstrap_arg4_call_count == 2,
            "nonzero CLUT offset must dispatch");
     B51_AssertCall(0, 0x0002020Au, B51_BASE + 0x234u, 0x00100341u);
-    B51_AssertCall(2, 0x00000252u, B51_BASE + 0x234u + 0x58u, 0x00000203u);
+    B51_AssertCall(1, 0x00000252u, B51_BASE + 0x234u + 0x58u, 0x00000203u);
     PASS();
 }
 
@@ -12347,11 +12357,11 @@ static void test_6E1C0_repeat_dirty_and_reset(void)
                   0x20u);
     ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0, "first return wrong");
     ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0, "repeat return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 8,
-           "dirty repeat must record two dispatches per invocation");
-    for (int i = 0; i < 8; i += 4) {
+    ASSERT(g_bootstrap_arg4_call_count == 4,
+           "dirty repeat must record two snapshots per invocation");
+    for (int i = 0; i < 4; i += 2) {
         B51_AssertCall(i, 0x07FF07FFu, B51_BASE + 0x123456u, 0x004003FFu);
-        B51_AssertCall(i + 2, 0x00910515u,
+        B51_AssertCall(i + 1, 0x00910515u,
                        B51_BASE + 0x123456u + 0x100u, 0x00200278u);
     }
     /* Reset behavior: after PE_RamReset the entry is zero again — the
@@ -12360,7 +12370,7 @@ static void test_6E1C0_repeat_dirty_and_reset(void)
     Bootstrap_ResetArg4CallLog();
     B52_SeedGpuDispatch();
     ASSERT(func_8006E1C0(B51_ENTRY, B51_BASE) == 0, "post-reset return");
-    ASSERT(g_bootstrap_arg4_call_count == 2, "post-reset call count");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "post-reset call count");
     B51_AssertCall(0, 0u, B51_BASE, 0x01000000u);
     PASS();
 }
@@ -12374,7 +12384,7 @@ static void test_6E1C0_data_address_wraparound(void)
     B51_SeedEntry(0u, 0u, 0x00FFFFFFu, 0u, 0u, 0u);
     ASSERT(func_8006E1C0(B51_ENTRY, 0xFF000001u) == 0,
            "must return retail zero");
-    ASSERT(g_bootstrap_arg4_call_count == 2, "wrap case call count");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "wrap case call count");
     B51_AssertCall(0, 0u, 0u, 0x01000000u);
     PASS();
 }
@@ -12391,6 +12401,8 @@ static void test_6E1C0_strict_direct(void)
         Bootstrap_Init();
         Bootstrap_EnableStrict();
         B52_SeedGpuDispatch();
+        PE_StoreU8(B53D_INIT_BYTE, 1u);
+        if (!B53E_SeedBusyDma()) _exit(2);
         func_8006E1C0(B51_ENTRY, B51_BASE);
         _exit(0);
     }
@@ -12420,7 +12432,7 @@ static void test_7506C_exact_abi_into_dispatch_prefix(void)
     memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
     ASSERT(func_8007506C(&rc, 0x81234567u) == 0,
            "prefix cut did not return its documented host sentinel");
-    ASSERT(g_bootstrap_arg4_call_count == 2, "wrapper dispatch count");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "wrapper dispatch count");
     B52_AssertGpuCall(0, 0xFFFD000Cu, 0x81234567u, 0x00070140u);
     ASSERT(PE_LoadU32(0x80095888u) == 0xF0u &&
            PE_LoadU32(0x8009588Cu) == 0u,
@@ -12436,9 +12448,9 @@ static void test_7506C_exact_abi_into_dispatch_prefix(void)
         }
     }
     ASSERT(CountOrderLog("func_80073E10") == 0 &&
-           CountOrderLog("func_80076664") == 1 &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "wrapper did not reach the direct worker boundary");
+           CountOrderLog("func_80076664") == 0 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "wrapper retained the translated worker as a boundary");
     free(snapshot);
     PASS();
 }
@@ -12537,9 +12549,9 @@ static void test_7506C_repeat_dirty_and_reset(void)
     ASSERT(func_8007506C(&rc, 0x80000000u) == 0 &&
            func_8007506C(&rc, 0u) == 0,
            "repeated wrapper prefix sentinel changed");
-    ASSERT(g_bootstrap_arg4_call_count == 4 &&
+    ASSERT(g_bootstrap_arg4_call_count == 2 &&
            CountOrderLog("func_80073E10") == 0 &&
-           CountOrderLog("func_80076664") == 2 &&
+           CountOrderLog("func_80076664") == 0 &&
            PE_LoadU32(0x800A0000u) == 0xA5A5A5A5u,
            "repeat changed dirty unrelated state");
     PE_RamReset();
@@ -12547,7 +12559,7 @@ static void test_7506C_repeat_dirty_and_reset(void)
     Bootstrap_ResetArg4CallLog();
     B52_SeedGpuDispatch();
     ASSERT(func_8007506C(&rc, 0u) == 0 &&
-           g_bootstrap_arg4_call_count == 2,
+           g_bootstrap_arg4_call_count == 1,
            "reset/reseed wrapper behavior changed");
     PASS();
 }
@@ -12564,6 +12576,8 @@ static void test_7506C_strict_direct(void)
     if (pid == 0) {
         Bootstrap_Init();
         B52_SeedGpuDispatch();
+        PE_StoreU8(B53D_INIT_BYTE, 1u);
+        if (!B53E_SeedBusyDma()) _exit(2);
         Bootstrap_EnableStrict();
         func_8007506C(&rc, 0xFFFFFFFFu);
         _exit(0);
@@ -12571,19 +12585,18 @@ static void test_7506C_strict_direct(void)
     ASSERT(waitpid(pid, &status, 0) == pid,
            "waitpid failed for B53C strict boundary");
     ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict wrapper must stop at func_80076664");
+           "strict wrapper must stop at func_80073CF4");
     PASS();
 }
 
 /* ═══════════════════════════════════════════════════════════════════
  * Phase 6E-B53C — func_80076C34 prefix + func_800773D0 (7 tests)
  *
- * B53D translates the I_MASK exchange, so the prefix now stops at the
- * direct worker call (func_80076664) or, on forced enqueue states, at the
- * callback registration helper func_80073CF4.  Queue construction,
- * publication, worker issue, and pump returns remain exercised only by
- * the independent literal-word oracles rather than guessed native state.
- * These tests assert the exact persistent state before those boundaries.
+ * B53E translates the direct LoadImage worker.  Forced enqueue states stop
+ * at callback registration helper func_80073CF4; other worker identities
+ * remain boundaries.  Queue construction, publication, and pump returns
+ * remain exercised only by the independent literal-word oracles rather
+ * than guessed native state.  These tests assert exact persistent state.
  * ════════════════════════════════════════════════════════════════════ */
 
 static void test_B53C_timeout_initializer_exact(void)
@@ -12680,7 +12693,8 @@ static void test_B53C_full_detection_and_wrap(void)
     PE_StoreU32(B53C_CONSUMER, 1u);
     (void)func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u);
     ASSERT(CountOrderLog("func_80077404") == 0 &&
-           CountOrderLog("func_80076664") == 1,
+           CountOrderLog("func_80076664") == 0 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
            "producer wrap non-full condition is wrong");
     PASS();
 }
@@ -12724,8 +12738,8 @@ static void test_B53C_inline8_lifetime_and_no_pointer(void)
         (void)func_8007506C(&rc, 0x80123458u);
         rc.x = rc.y = rc.w = rc.h = 0;
     }
-    ASSERT(g_bootstrap_arg4_call_count == 2,
-           "inline adapter did not record the snapshot and worker boundary");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "inline adapter did not retain exactly its by-value snapshot");
     memcpy(&got0, g_bootstrap_arg4_calls[0].payload, sizeof(got0));
     memcpy(&got1, g_bootstrap_arg4_calls[0].payload + 4u, sizeof(got1));
     ASSERT(got0 == 0x01C8FF85u && got1 == 0xFEBF0315u,
@@ -12769,19 +12783,21 @@ static void test_B53C_full_ram_canary_and_ring_authority(void)
     PASS();
 }
 
-static void test_B53C_strict_exposes_worker(void)
+static void test_B53C_strict_exposes_enqueue_callback(void)
 {
     pid_t pid;
     int status = 0;
-    TEST("B53C_strict_exposes_worker");
+    TEST("B53C_strict_exposes_enqueue_callback");
     ResetTestState();
     pid = fork();
     ASSERT(pid >= 0, "fork failed for B53C strict boundary");
     if (pid == 0) {
         Bootstrap_Init();
         Bootstrap_EnableStrict();
+        PE_StoreU8(B53D_INIT_BYTE, 1u);
         PE_StoreU32(B53C_PRODUCER, 0u);
         PE_StoreU32(B53C_CONSUMER, 0u);
+        if (!B53E_SeedBusyDma()) _exit(2);
         (void)func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u);
         _exit(0);
     }
@@ -12894,33 +12910,29 @@ static void test_B53D_reset_owner(void)
     PASS();
 }
 
-static void test_B53D_direct_worker_boundary_integration(void)
+static void test_B53D_direct_worker_continuation_integration(void)
 {
-    TEST("B53D_direct_worker_boundary_integration");
+    TEST("B53D_direct_worker_continuation_integration");
     ResetTestState();
     PE_StoreU8(B53D_INIT_BYTE, 1u);
 
-    /* Canonical shape: initialized, empty ring, idle DMA2, no callback,
-     * GPUSTAT ready -> the direct worker call is the genuine boundary. */
+    /* Canonical direct-path shape with a zero-sized guest RECT: the real
+     * worker returns -1 before GPU MMIO; retail ignores that result, restores
+     * the saved mask, and returns dispatcher zero. */
     ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
            "direct prefix sentinel changed");
-    ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_80076664") == 0 &&
-           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80076C34") == 0 &&
-           g_bootstrap_arg4_calls[0].target == 0x80076664u &&
-           g_bootstrap_arg4_calls[0].arg0 == 0x80100000u &&
-           g_bootstrap_arg4_calls[0].arg1 == 0x80110000u,
-           "direct boundary is not worker(argument, auxiliary)");
+    ASSERT(g_bootstrap_arg4_call_count == 0,
+           "translated direct worker was still exposed as a boundary");
     ASSERT(PE_IRQ_GetMask() == 0u &&
            PE_LoadU32(B53D_SAVED_IMASK) == 0u &&
            PE_LoadU32(B53D_WORK_MARKER) == 1u,
            "exchange/marker state differs from retail");
     ASSERT(CountOrderLog("func_80073E10") == 0 &&
            CountOrderLog("func_80073CF4") == 0 &&
-           CountOrderLog("func_80076664") == 1,
-           "translated exchange recorded or crossed a boundary");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "direct prefix did not request an honest stop");
+           CountOrderLog("func_80076664") == 0,
+           "translated direct path recorded a false boundary");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "translated direct path requested an unexpected stop");
 
     /* A nonzero prior mask is returned and saved exactly, then cleared. */
     Bootstrap_ResetArg4CallLog();
@@ -12929,11 +12941,10 @@ static void test_B53D_direct_worker_boundary_integration(void)
     ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
            "second direct prefix sentinel changed");
     ASSERT(PE_LoadU32(B53D_SAVED_IMASK) == 0xBEEFu &&
-           PE_IRQ_GetMask() == 0u,
-           "previous mask was not saved/cleared exactly");
-    ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_80076664") == 0,
-           "second direct boundary identity changed");
+           PE_IRQ_GetMask() == 0xBEEFu,
+           "previous mask was not saved and restored exactly");
+    ASSERT(g_bootstrap_arg4_call_count == 0,
+           "second translated direct path exposed a boundary");
     PASS();
 }
 
@@ -12948,9 +12959,9 @@ static void test_B53D_uninit_skips_checks(void)
     PE_StoreU32(B53D_DRAWSYNC_CB, 0x80012345u);
     ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
            "uninit direct prefix sentinel changed");
-    ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_80076664") == 0,
-           "uninit path did not skip to the direct worker");
+    ASSERT(g_bootstrap_arg4_call_count == 0 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "uninit translated worker path exposed a false boundary");
     ASSERT(PE_LoadU32(B53C_PRODUCER) == 5u &&
            PE_LoadU32(B53C_CONSUMER) == 1u &&
            PE_LoadU32(B53D_DRAWSYNC_CB) == 0x80012345u &&
@@ -13013,6 +13024,439 @@ static void test_B53D_enqueue_selectors(void)
            g_bootstrap_arg4_calls[0].arg1 == B53D_QUEUE_PUMP &&
            CountOrderLog("func_80076664") == 0,
            "callback path did not stop at callback registration");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Phase 6E-B53E — func_80076664 LoadImage issue worker (10 tests)
+ *
+ * Expected geometry/register values are literal B53A/B53E retail formulas.
+ * Hardware completion remains explicit through the frozen B53B authority.
+ * ════════════════════════════════════════════════════════════════════ */
+
+#define B53E_RECT   0x800A4000u
+#define B53E_SOURCE 0x80180000u
+
+/* Frozen B53B helpers are defined immediately after the B53E block. */
+static uint16_t B53B_Pixel(uint32_t x, uint32_t y);
+static int B53B_BeginImage(uint32_t position_word, uint32_t size_word);
+
+static void B53E_StoreRect(int16_t x, int16_t y, int16_t w, int16_t h)
+{
+    PE_StoreU16(B53E_RECT + 0u, (uint16_t)x);
+    PE_StoreU16(B53E_RECT + 2u, (uint16_t)y);
+    PE_StoreU16(B53E_RECT + 4u, (uint16_t)w);
+    PE_StoreU16(B53E_RECT + 6u, (uint16_t)h);
+}
+
+static void B53E_SetupRetailGpu(void)
+{
+    /* ResetGraph(0) owns the 1024/512 limits and the DPCR enable path. */
+    (void)func_80074A44(0);
+}
+
+static void test_B53E_dpcr_retail_owner_chain(void)
+{
+    TEST("B53E_dpcr_retail_owner_chain");
+    ResetTestState();
+    ASSERT(PE_GPU_ReadDPCR() == 0u, "host reset speculatively enabled DPCR");
+    func_80073C94();
+    ASSERT(PE_GPU_ReadDPCR() == 0x33333333u,
+           "ResetCallback did not write exact retail DPCR baseline");
+    PE_GPU_WriteDPCR(0xA5A50055u);
+    func_80073C94();
+    ASSERT(PE_GPU_ReadDPCR() == 0xA5A50055u,
+           "guarded ResetCallback rewrote DPCR");
+
+    ResetTestState();
+    ASSERT(func_80074A44(0) == 0 &&
+           PE_GPU_ReadDPCR() == 0x33333B33u,
+           "ResetGraph owner chain did not yield 33333B33");
+    PE_GPU_WriteDPCR(0xA5A50055u);
+    ASSERT(func_80074A44(0) == 0 &&
+           PE_GPU_ReadDPCR() == 0xA5A50855u,
+           "func_80077144 owner did not preserve unrelated DPCR bits");
+
+    /* CPU-only issue needs no DMA enable and must not create one. */
+    ResetTestState();
+    PE_StoreU16(0x80095750u, 1024u);
+    PE_StoreU16(0x80095752u, 512u);
+    B53E_StoreRect(0, 0, 1, 1);
+    PE_StoreU32(B53E_SOURCE, 0x22221111u);
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == 0 &&
+           PE_GPU_ReadDPCR() == 0u,
+           "worker opportunistically enabled DMA2");
+    PASS();
+}
+
+static void test_B53E_guest_abi_clamps_and_zero_returns(void)
+{
+    PeGpuState before;
+    PeGpuState after;
+    TEST("B53E_guest_abi_clamps_and_zero_returns");
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    B53E_StoreRect(INT16_MIN, INT16_MAX, -1, 513);
+    PE_GPU_GetState(&before);
+    ASSERT(func_80076664(B53E_RECT, 0xFFFFFFFFu) == -1,
+           "negative width did not produce retail -1");
+    PE_GPU_GetState(&after);
+    ASSERT(PE_LoadU16(B53E_RECT + 0u) == 0x8000u &&
+           PE_LoadU16(B53E_RECT + 2u) == 0x7FFFu,
+           "worker changed signed x/y edge bits");
+    ASSERT(PE_LoadU16(B53E_RECT + 4u) == 0u &&
+           PE_LoadU16(B53E_RECT + 6u) == 512u,
+           "negative/over-limit clamp differs from retail");
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "zero-pixel return touched GPU/DMA state");
+    ASSERT(PE_LoadU32(B53C_DEADLINE) == 0xF0u &&
+           PE_LoadU32(B53C_TIMEOUT_POLLS) == 0u,
+           "worker did not initialize timeout before clamp return");
+
+    B53E_StoreRect(7, -9, 1, -32768);
+    ASSERT(func_80076664(B53E_RECT, 0u) == -1 &&
+           PE_LoadU16(B53E_RECT + 4u) == 1u &&
+           PE_LoadU16(B53E_RECT + 6u) == 0u,
+           "negative height clamp/return differs from retail");
+    ASSERT(func_80076664(0u, B53E_SOURCE) == -1,
+           "invalid guest RECT was not rejected safely");
+    PASS();
+}
+
+static void test_B53E_cpu_only_pixel_order_padding_and_wrap(void)
+{
+    PeGpuState state;
+    TEST("B53E_cpu_only_pixel_order_padding_and_wrap");
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    B53E_StoreRect(1023, 511, 3, 1);
+    PE_StoreU32(B53E_SOURCE + 0u, 0x22221111u);
+    PE_StoreU32(B53E_SOURCE + 4u, 0xDEAD3333u);
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == 0,
+           "three-pixel CPU-only transfer failed");
+    ASSERT(B53B_Pixel(1023, 511) == 0x1111u &&
+           B53B_Pixel(0, 511) == 0x2222u &&
+           B53B_Pixel(1, 511) == 0x3333u &&
+           B53B_Pixel(2, 511) == 0u,
+           "CPU words/padding/X wrap differ from retail order");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp0_state == PE_GPU_GP0_IDLE &&
+           state.gp1_dma_direction == 0u && !state.dma2_active &&
+           !PE_GPU_DMA2CompletionPending(),
+           "CPU-only path fabricated DMA state");
+
+    B53E_StoreRect(7, 8, 2, 1);
+    PE_StoreU32(B53E_SOURCE, 0xBBBBAAAAu);
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == 0 &&
+           B53B_Pixel(7, 8) == 0xAAAAu &&
+           B53B_Pixel(8, 8) == 0xBBBBu &&
+           !PE_GPU_DMA2Pending(),
+           "repeated CPU-only invocation was not deterministic");
+
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    B53E_StoreRect(100, 200, 30, 1); /* 30 pixels = 15 CPU words. */
+    for (uint32_t i = 0; i < 15u; i++) {
+        PE_StoreU32(B53E_SOURCE + i * 4u,
+                    ((0x2000u + i) << 16) | (0x1000u + i));
+    }
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == 0 &&
+           !PE_GPU_DMA2Pending() &&
+           B53B_Pixel(100, 200) == 0x1000u &&
+           B53B_Pixel(129, 200) == 0x200Eu,
+           "15-word threshold did not remain CPU-only");
+    PASS();
+}
+
+static void test_B53E_exact_dma_threshold_async_issue(void)
+{
+    uint64_t token;
+    TEST("B53E_exact_dma_threshold_async_issue");
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    B53E_StoreRect(20, 30, 31, 1); /* ceil(31/2)=16, rem0, one block. */
+    for (uint32_t i = 0; i < 16u; i++) {
+        PE_StoreU32(B53E_SOURCE + i * 4u,
+                    ((0x4000u + i) << 16) | (0x3000u + i));
+    }
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == 0,
+           "exact-threshold worker return is not zero");
+    ASSERT(PE_GPU_ReadDMA2MADR() == B53E_SOURCE &&
+           PE_GPU_ReadDMA2BCR() == 0x00010010u &&
+           PE_GPU_ReadDMA2CHCR() == 0x01000201u,
+           "exact threshold DMA registers differ from retail");
+    ASSERT(PE_GPU_DMA2Pending() && !PE_GPU_DMA2CompletionPending() &&
+           B53B_Pixel(20, 30) == 0u,
+           "DMA issued synchronously or exposed data early");
+    token = PE_GPU_DMA2EventToken();
+    ASSERT(token != 0u && PE_GPU_ServiceDMA2Completion(token) == 1 &&
+           B53B_Pixel(20, 30) == 0x3000u &&
+           B53B_Pixel(50, 30) == 0x300Fu,
+           "explicit exact-threshold completion data is wrong");
+    PASS();
+}
+
+static void test_B53E_remainder_dma_visibility_and_live_source(void)
+{
+    uint8_t ring_before[32];
+    uint64_t token;
+    TEST("B53E_remainder_dma_visibility_and_live_source");
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    PE_Fill(B53C_RING_BASE, sizeof(ring_before), 0xA5u);
+    memcpy(ring_before, PE_TranslateConst(B53C_RING_BASE,
+                                         sizeof(ring_before)),
+           sizeof(ring_before));
+    B53E_StoreRect(0, 10, 34, 1); /* 17 words: one CPU + one DMA block. */
+    for (uint32_t i = 0; i < 17u; i++) {
+        PE_StoreU32(B53E_SOURCE + i * 4u,
+                    ((0x6000u + i) << 16) | (0x5000u + i));
+    }
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == 0,
+           "remainder+DMA worker failed");
+    ASSERT(B53B_Pixel(0, 10) == 0x5000u &&
+           B53B_Pixel(1, 10) == 0x6000u &&
+           B53B_Pixel(2, 10) == 0u &&
+           PE_GPU_ReadDMA2MADR() == B53E_SOURCE + 4u &&
+           PE_GPU_ReadDMA2BCR() == 0x00010010u,
+           "CPU prefix/DMA suffix split is wrong");
+    ASSERT(!PE_GPU_DMA2CompletionPending() && g_stub_count == 0 &&
+           memcmp(ring_before, PE_TranslateConst(B53C_RING_BASE,
+                                                 sizeof(ring_before)),
+                  sizeof(ring_before)) == 0,
+           "issue pumped a ring, callback, or completion");
+    PE_StoreU32(B53E_SOURCE + 4u, 0xBBBB9999u);
+    token = PE_GPU_DMA2EventToken();
+    ASSERT(PE_GPU_ServiceDMA2Completion(token) == 1 &&
+           B53B_Pixel(2, 10) == 0x9999u &&
+           B53B_Pixel(3, 10) == 0xBBBBu &&
+           PE_GPU_DMA2CompletionPending(),
+           "explicit completion did not consume live DMA source");
+    PASS();
+}
+
+static void test_B53E_source_span_validation_before_mutation(void)
+{
+    const pe_addr_t bad[] = {
+        0u, 0x80100002u, 0x801FFFC4u, 0xFFFFFFC0u
+    };
+    uint8_t *snapshot;
+    TEST("B53E_source_span_validation_before_mutation");
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+        PeGpuState before;
+        PeGpuState after;
+        ResetTestState();
+        B53E_SetupRetailGpu();
+        B53E_StoreRect(8, 9, 31, 1); /* exact 64-byte source span */
+        PE_GPU_GetState(&before);
+        ASSERT(func_80076664(B53E_RECT, bad[i]) == -1,
+               "malformed full source span was accepted");
+        PE_GPU_GetState(&after);
+        ASSERT(memcmp(&before, &after, sizeof(before)) == 0 &&
+               B53B_Pixel(8, 9) == 0u,
+               "bad source partially mutated GPU/VRAM");
+    }
+
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    B53E_StoreRect(8, 9, 31, 1);
+    PE_StoreU32(0x801FFFC0u, 0x22221111u);
+    ASSERT(func_80076664(B53E_RECT, 0x801FFFC0u) == 0 &&
+           PE_GPU_ReadDMA2MADR() == 0x801FFFC0u,
+           "exact guest-RAM end span was rejected");
+
+    /* A successful CPU-only issue may change only the two timeout words in
+     * guest RAM; RECT writeback stores the same clamped values and source is
+     * strictly read-only.  Poison/snapshot all 2 MiB to catch aliases. */
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0xA5u);
+    PE_StoreU16(0x80095750u, 1024u);
+    PE_StoreU16(0x80095752u, 512u);
+    B53E_StoreRect(7, 9, 1, 1);
+    PE_StoreU32(B53E_SOURCE, 0x22221111u);
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate B53E guest canary");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == 0,
+           "guest-canary worker issue failed");
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+        if (a >= B53C_DEADLINE && a < B53C_TIMEOUT_POLLS + 4u) continue;
+        if (PE_LoadU8(a) != snapshot[a - PE_RAM_BASE]) {
+            free(snapshot);
+            FAIL("LoadImage worker mutated unexpected guest RAM");
+            return;
+        }
+    }
+    free(snapshot);
+    PASS();
+}
+
+static void test_B53E_platform_preflight_is_mutation_free(void)
+{
+    PeGpuState before;
+    PeGpuState after;
+    TEST("B53E_platform_preflight_is_mutation_free");
+
+    /* DMA-required command with channel 2 disabled. */
+    ResetTestState();
+    PE_StoreU16(0x80095750u, 1024u);
+    PE_StoreU16(0x80095752u, 512u);
+    B53E_StoreRect(0, 0, 31, 1);
+    PE_GPU_GetState(&before);
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == -1,
+           "disabled DPCR prerequisite was accepted");
+    PE_GPU_GetState(&after);
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "disabled DPCR rejection mutated hardware");
+
+    /* A dirty parser must not reinterpret the worker's command words. */
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    ASSERT(PE_GPU_WriteGP0(0xA0000000u) == 1,
+           "cannot seed dirty GP0 parser");
+    B53E_StoreRect(0, 0, 1, 1);
+    PE_StoreU32(B53E_SOURCE, 0x22221111u);
+    PE_GPU_GetState(&before);
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == -1,
+           "dirty parser prerequisite was accepted");
+    PE_GPU_GetState(&after);
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "dirty parser rejection changed GPU state");
+
+    /* An active DMA descriptor must survive an attempted second issue. */
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    ASSERT(B53B_BeginImage(0u, 0x00010020u) &&
+           PE_GPU_WriteGP1(0x04000002u) &&
+           PE_GPU_DMA2Issue(B53E_SOURCE, 0x00010010u, 0x01000201u),
+           "cannot seed active DMA prerequisite");
+    B53E_StoreRect(0, 0, 1, 1);
+    PE_GPU_GetState(&before);
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == -1,
+           "active DMA prerequisite was accepted");
+    PE_GPU_GetState(&after);
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "second issue changed active DMA descriptor");
+    PASS();
+}
+
+static void test_B53E_gpustat_wait_boundary_and_explicit_transition(void)
+{
+    PeGpuState before;
+    PeGpuState after;
+    TEST("B53E_gpustat_wait_boundary_and_explicit_transition");
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    B53E_StoreRect(0, 0, 1, 1);
+    PE_StoreU32(B53E_SOURCE, 0x22221111u);
+    PE_GPU_SetReady(0);
+    PE_GPU_GetState(&before);
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == -1,
+           "held-not-ready prefix did not stop at recovery boundary");
+    PE_GPU_GetState(&after);
+    ASSERT(CountOrderLog("func_80077404") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
+           PE_LoadU32(B53C_TIMEOUT_POLLS) == 0x000F0002u,
+           "GPUSTAT wait did not use exact finite software timeout prefix");
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "GPUSTAT polls made hardware progress");
+
+    PE_Port_RunControlReset();
+    Bootstrap_ClearSequences();
+    Bootstrap_ResetArgCallLog();
+    g_stub_count = 0;
+    g_stub_order_count = 0;
+    PE_GPU_SetReady(1);
+    ASSERT(func_80076664(B53E_RECT, B53E_SOURCE) == 0 &&
+           B53B_Pixel(0, 0) == 0x1111u &&
+           CountOrderLog("func_80077404") == 0,
+           "explicit ready transition did not permit a later issue");
+    PASS();
+}
+
+static void test_B53E_max_geometry_and_pointer_width(void)
+{
+    PeGpuState state;
+    TEST("B53E_max_geometry_and_pointer_width");
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    B53E_StoreRect(-1, -1, 1025, 513);
+    ASSERT(func_80076664(B53E_RECT, 0x80100000u) == 0,
+           "maximum clamped geometry/exact 1MiB span failed");
+    PE_GPU_GetState(&state);
+    ASSERT(PE_LoadU16(B53E_RECT + 0u) == 0xFFFFu &&
+           PE_LoadU16(B53E_RECT + 2u) == 0xFFFFu &&
+           PE_LoadU16(B53E_RECT + 4u) == 1024u &&
+           PE_LoadU16(B53E_RECT + 6u) == 512u,
+           "maximum clamp changed x/y or limits");
+    ASSERT(state.image_x == 0xFFFFu && state.image_y == 0xFFFFu &&
+           state.image_width == 1024u && state.image_height == 512u &&
+           state.dma2_source == 0x80100000u &&
+           state.dma2_word_count == 0x00040000u &&
+           state.dma2_bcr == 0x40000010u && state.dma2_active,
+           "maximum geometry/DMA descriptor lost 32-bit guest values");
+    PASS();
+}
+
+static void test_B53E_dispatcher_and_inline_integration(void)
+{
+    RECT inline_rect = { 4, 5, 1, 1 };
+    uint8_t ring_before[32];
+    TEST("B53E_dispatcher_and_inline_integration");
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    PE_StoreU8(B53D_INIT_BYTE, 1u);
+    B53E_StoreRect(2, 3, 1, 1);
+    PE_StoreU32(B53E_SOURCE, 0x22221111u);
+    PE_Fill(B53C_RING_BASE, sizeof(ring_before), 0xA5u);
+    memcpy(ring_before, PE_TranslateConst(B53C_RING_BASE,
+                                         sizeof(ring_before)),
+           sizeof(ring_before));
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    ASSERT(func_80076C34(0x80076664u, B53E_RECT, 8,
+                         B53E_SOURCE) == 0,
+           "guest dispatcher direct path did not return retail zero");
+    ASSERT(B53B_Pixel(2, 3) == 0x1111u &&
+           PE_IRQ_GetMask() == 0xBEEFu &&
+           PE_LoadU32(B53D_SAVED_IMASK) == 0xBEEFu,
+           "direct worker issue or I_MASK restore is wrong");
+    ASSERT(memcmp(ring_before, PE_TranslateConst(B53C_RING_BASE,
+                                                 sizeof(ring_before)),
+                  sizeof(ring_before)) == 0 && g_stub_count == 0,
+           "direct issue touched the ring or a callback/pump");
+
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    B52_SeedGpuDispatch();
+    PE_StoreU32(B53E_SOURCE, 0x44443333u);
+    ASSERT(func_8007506C(&inline_rect, B53E_SOURCE) == 0 &&
+           g_bootstrap_arg4_call_count == 1,
+           "inline wrapper did not use one by-value dispatcher snapshot");
+    B52_AssertGpuCall(0, 0x00050004u, B53E_SOURCE, 0x00010001u);
+    ASSERT(B53B_Pixel(4, 5) == 0x3333u &&
+           CountOrderLog("func_80076664") == 0,
+           "inline worker remained a boundary or retained a pointer");
+
+    /* Dispatcher retail code is not a host-safe run-control poll.  A frame
+     * budget that has become eligible must not masquerade as a nested worker
+     * boundary and suppress the mandatory I_MASK restore. */
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    PE_StoreU8(B53D_INIT_BYTE, 1u);
+    B53E_StoreRect(6, 7, 1, 1);
+    PE_StoreU32(B53E_SOURCE, 0x66665555u);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    PE_Port_SetFrameLimit(1);
+    PE_Port_FramePresented(1);
+    ASSERT(func_80076C34(0x80076664u, B53E_RECT, 8,
+                         B53E_SOURCE) == 0 &&
+           PE_IRQ_GetMask() == 0xBEEFu &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "host frame policy suppressed the retail I_MASK restore");
+    ASSERT(PE_Port_ShouldStop() &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
+           "host-safe continuation did not consume the pending frame limit");
     PASS();
 }
 
@@ -14232,7 +14676,7 @@ int main(void)
     /* Phase 6E-B50 corrective — func_8006AD40 honest prefix (5 tests). */
     test_6AD40_guard_bit0();
     test_6AD40_prefix_boundary_args();
-    test_6AD40_strict_stops_at_76664();
+    test_6AD40_strict_stops_at_73CF4();
     test_6AD40_prefix_does_not_finalize();
     test_6AD40_prefix_repeat_dirty();
 
@@ -14259,13 +14703,25 @@ int main(void)
     test_B53C_copy_counts_stop_before_ring();
     test_B53C_inline8_lifetime_and_no_pointer();
     test_B53C_full_ram_canary_and_ring_authority();
-    test_B53C_strict_exposes_worker();
+    test_B53C_strict_exposes_enqueue_callback();
     test_B53D_exchange_exact_abi();
     test_B53D_no_istat_callback_gpu_mutation();
     test_B53D_reset_owner();
-    test_B53D_direct_worker_boundary_integration();
+    test_B53D_direct_worker_continuation_integration();
     test_B53D_uninit_skips_checks();
     test_B53D_enqueue_selectors();
+
+    /* Phase 6E-B53E LoadImage issue worker + DPCR owner repair (10 tests) */
+    test_B53E_dpcr_retail_owner_chain();
+    test_B53E_guest_abi_clamps_and_zero_returns();
+    test_B53E_cpu_only_pixel_order_padding_and_wrap();
+    test_B53E_exact_dma_threshold_async_issue();
+    test_B53E_remainder_dma_visibility_and_live_source();
+    test_B53E_source_span_validation_before_mutation();
+    test_B53E_platform_preflight_is_mutation_free();
+    test_B53E_gpustat_wait_boundary_and_explicit_transition();
+    test_B53E_max_geometry_and_pointer_width();
+    test_B53E_dispatcher_and_inline_integration();
 
     /* Phase 6E-B53B deterministic GPU/DMA2 substrate (15 tests) */
     test_B53B_reset_dimensions_initial_vram();

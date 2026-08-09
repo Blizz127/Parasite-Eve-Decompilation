@@ -10,9 +10,10 @@
  * Retail func_80073E28 effects:
  *   - lhu guard D_800945E4: if set, return 0 (idempotent).
  *   - I_MASK = 0 (sh zero at 0x80073E60 through D_80095674): since B53D this
- *     is faithfully written to the single PE_IRQ authority.  The following
- *     lhu readback and I_STAT clear, plus DPCR = 0x33333333, remain host
- *     no-ops: I_STAT semantics and DMA controller reset are outside B53D.
+ *     is faithfully written to the single PE_IRQ authority.  B53E also
+ *     restores the exact DPCR = 0x33333333 write at 0x80073E7C against the
+ *     single B53B GPU/DMA authority.  The intervening I_STAT clear remains a
+ *     host no-op because I_STAT semantics are outside the translated path.
  *   - callback queue-block build, then sh 1 -> D_800945E4, ExitCriticalSection,
  *     returns queue-block pointer (callers on the boot path ignore it).
  * The guest-backed callback slot model (pe_callback.h, Phase 6E-B6)
@@ -34,9 +35,11 @@ void func_80073C94(void)
         return;                     /* one-time guard */
     }
     PE_StoreU16(0x800945E4u, 1);
-    /* Retail func_80073E28 writes I_MASK = 0 on the guard-passing path.
-     * The I_STAT clear and DPCR reset stay host no-ops (B53D scope). */
+    /* Retail func_80073E28 writes I_MASK = 0, reads it back into I_STAT,
+     * then writes DPCR = 0x33333333 on this one guard-passing path.  I_STAT
+     * remains outside the current authority; the DPCR store is exact. */
     (void)PE_IRQ_ExchangeMask(0u);
+    PE_GPU_WriteDPCR(0x33333333u);
     PE_Callback_ResetTable();
 }
 

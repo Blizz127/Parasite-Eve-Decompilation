@@ -1,27 +1,23 @@
-# Parasite Eve Native PC Port — Phase 6E-B53D
+# Parasite Eve Native PC Port — Phase 6E-B53E
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53D adds the single 16-bit I_MASK (0x1F801074)
-platform authority `platform/pe_irq.[ch]` and translates the complete
-6-word retail exchange helper `func_80073E10`. The dispatcher prefix now
-consumes the real previous-mask return, publishes `D_8009587C` and the
-`D_80095754` marker in exact retail order, evaluates the direct-issue
-decision, performs the GPUSTAT bit-26 readiness poll, and stops at the
-genuine direct worker call (canonical identity `func_80076664`); forced
-enqueue states stop at callback registration `func_80073CF4(2,
-0x80076EE4)` and a full ring still stops at `func_80077404`. No ring
-entry is written or published, and no worker, pump, callback, IRQ
-dispatch, or I_STAT behavior is faked. `PE_Sdk_ResetState` is the single
-host reset owner; the translated ResetCallback guard-passing path writes
-I_MASK = 0 exactly as retail func_80073E28 does. The independent oracle
-executes all 6 literal exchange words and the literal dispatcher slice
-with exact delay slots. Six focused tests bring normal and fresh
-ASan/UBSan suites to 496/496 while all 15 B53B hardware tests remain
-green. Canonical Disc 1 strict is now `func_80076664` from
-`func_80076C34`; bootstrap strict remains `func_8007F72C` from
-`func_800698D4`. LoadImage issue and the queue pump are not claimed
-implemented. Full proof is in `docs/b53d_func_80073E10_imask.md`.
+**Current milestone:** B53E translates the 143-word Psy-Q LoadImage issue
+worker `func_80076664` against the single B53B GPU/DMA2 authority. The exact
+GPUSTAT bit-26 wait, GP1/GP0 A0 sequence, CPU-fed remainder, DMA2
+MADR/BCR/CHCR issue, asynchronous return, signed RECT clamps, and complete
+guest source-span safety are preserved. An executable-wide audit proved that
+DMA channel 2 is enabled earlier by ResetGraph's `func_80077144`, not by the
+worker: the native ResetCallback owner now writes retail DPCR `0x33333333`
+and the collapsed GPU-init owner ORs `0x800`, producing canonical
+`0x33333B33`. The worker never force-enables or completes DMA. Its first
+canonical transfer remains busy; the second LoadImage selects enqueue and
+strict execution stops at `func_80073CF4` from `func_80076C34`, before ring
+publication or queue pumping. Bootstrap strict remains `func_8007F72C` from
+`func_800698D4`. Ten focused tests bring normal and fresh ASan/UBSan suites
+to 506/506, all 15 frozen B53B tests remain green, and the independent
+literal oracle passes all 143 words and 25 scenarios. Full proof is in
+`docs/b53e_func_80076664.md`.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36
 instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`

@@ -75,9 +75,9 @@
  * is stored in guest RAM or retained on that path; a deliberately dirty
  * indirect target remains a host-only diagnostic boundary.
  *
- * Classification: 1 — translated retail logic. Phase 6E-B53C now stops at
- * func_80073E10 inside the dispatcher prefix, before queue publication or
- * GPU/DMA issue behavior.
+ * Classification: 1 — translated retail logic. Phase 6E-B53E issues the
+ * first LoadImage DMA through func_80076664, leaves it pending, and stops at
+ * func_80073CF4 on the second request's enqueue path before ring publication.
  */
 #include "psx_compat.h"
 #include "game_port.h"

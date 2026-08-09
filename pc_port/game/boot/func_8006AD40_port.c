@@ -96,9 +96,10 @@ int func_8006AD40(void)
             func_8006E1C0(entry, base);
     }
 
-    /* Prefix boundary: never fabricate the dispatcher I_MASK, queue, or GPU
-     * state needed by the suffix. Ask the host loop to stop at its next safe
-     * continuation check; B53C has not issued a GPU/DMA transaction. */
+    /* Prefix boundary: B53E authentically issues the first LoadImage DMA and
+     * leaves it pending.  The second request therefore selects the retail
+     * enqueue path and stops at func_80073CF4 before queue publication.  Ask
+     * the host loop to honor that already-requested unresolved boundary. */
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }

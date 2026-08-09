@@ -197,6 +197,19 @@ int PE_GPU_WriteGP1(uint32_t value)
     }
 }
 
+int PE_GPU_CanBeginImageLoad(int needs_dma)
+{
+    if (g_gpu.state.gp0_state != PE_GPU_GP0_IDLE ||
+        g_gpu.state.dma2_active) {
+        return 0;
+    }
+    if (needs_dma &&
+        (g_gpu.state.dpcr & PE_GPU_DMA2_DPCR_ENABLE) == 0u) {
+        return 0;
+    }
+    return 1;
+}
+
 int PE_GPU_DMA2Issue(pe_addr_t madr, uint32_t bcr, uint32_t chcr)
 {
     uint32_t blocks;

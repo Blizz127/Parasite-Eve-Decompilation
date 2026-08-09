@@ -122,8 +122,9 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * game/boot/func_8006E1C0_port.c — packed texture-entry LoadImage
  * dispatcher (68 retail words).  Phase 6E-B52 translates its two
  * func_8007506C (PsyQ LoadImage) wrapper calls through the read-only
- * func_80074E28 validator into the B53C/B53D func_80076C34 prefix, whose
- * honest current boundary is the direct-path worker func_80076664. */
+ * func_80074E28 validator into the B53C-E func_80076C34 prefix.  B53E
+ * translates the direct LoadImage worker func_80076664; the next canonical
+ * boundary is callback registration func_80073CF4 on the enqueue path. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
@@ -164,6 +165,10 @@ extern int  func_8006AD40(void);
 extern int  func_8006E1C0(pe_addr_t entry, pe_addr_t base);
 extern void func_80074E28(pe_addr_t name, const RECT *rect);
 extern int  func_8007506C(const RECT *rect, pe_addr_t data);
+extern int  func_80076664(pe_addr_t rect, pe_addr_t source);
+extern int  PE_func_80076664_Inline8(uint32_t rect_word0,
+                                     uint32_t rect_word1,
+                                     pe_addr_t source);
 extern uint32_t func_800773D0(void);
 extern uint16_t func_80073E10(uint16_t new_mask);
 extern int  func_80076C34(pe_addr_t worker, pe_addr_t argument,

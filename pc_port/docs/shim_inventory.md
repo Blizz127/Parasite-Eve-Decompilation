@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53C
+# Shim Inventory — Phase 6E-B53E
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -45,9 +45,10 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 1024x512x16 VRAM, GPUSTAT bit 26, GP0 A0 parser, bounded GP1 commands,
 DMA2/DPCR/DICR channel-2 state, tokenized explicit completion, and a manual
 VBlank counter. It contains no retail command ring, callback, worker, or
-queue pump. B53C wires only its inert VSync query to the translated timeout
-initializer; B53D additionally reads raw DMA2 CHCR and GPUSTAT through it.
-All other hardware semantics remain separate.
+queue pump. B53C wires its inert VSync query, B53D reads raw DMA2
+CHCR/GPUSTAT, and B53E drives its bounded GP1/GP0/DMA2 issue APIs. B53E adds
+one inert image-load preflight query; the hardware authority still owns no
+guest worker identity, RECT pointer, ring, or callback state.
 
 `platform/pe_irq.[ch]` is the B53D single 16-bit I_MASK (0x1F801074)
 authority: get/exchange/reset only. It performs no IRQ dispatch, no I_STAT
@@ -55,19 +56,21 @@ mutation, and no callback invocation. `PE_Sdk_ResetState` is the host reset
 owner; the translated ResetCallback one-time path also writes I_MASK = 0,
 matching retail func_80073E28.
 
-### B53C/B53D retail dispatcher prefix
+### B53C–B53E retail dispatcher and LoadImage issue path
 
 `game/boot/func_80076C34_port.c` translates complete `func_800773D0`,
-complete `func_80073E10` (via the PE_IRQ authority), and the
-`func_80076C34` prefix through the exchange, saved-mask/marker stores,
-direct-issue decision, and GPUSTAT bit-26 readiness poll. The canonical
-non-full path stops at the unresolved direct worker call (canonical
-identity `func_80076664`); forced enqueue states stop at callback
-registration `func_80073CF4(2, 0x80076EE4)`; a full ring stops at
-`func_80077404`. The prefix writes only timeout deadline/counter state and
-the proven D_8009587C/D_80095754 words; it does not construct or publish a
-ring entry and does not invoke a worker or pump. The true worker and
-argument identities are `pe_addr_t`, not native function pointers.
+complete `func_80073E10` (via the PE_IRQ authority), and the dispatcher
+direct path through numeric worker identity `0x80076664`. B53E's new
+`game/boot/func_80076664_port.c` translates the 143-word LoadImage issue
+worker: signed RECT clamps, full guest-source preflight, inert GPUSTAT wait,
+exact GP1/GP0 A0 stream, CPU remainder, and asynchronous DMA2 issue. The
+worker result is discarded, the saved I_MASK is restored, and the direct
+dispatcher returns zero. Canonical first DMA remains busy, so the second
+request stops at `func_80073CF4(2,0x80076EE4)` before ring publication; a
+full ring and worker timeout recovery still expose `func_80077404`. The
+retail ring, producer/consumer ownership, queue pump, callback delivery, and
+DMA completion remain untranslated. All guest identities are `pe_addr_t`,
+never native function pointers.
 
 | Function | PS1 role | Host implementation |
 |----------|----------|---------------------|
@@ -97,16 +100,16 @@ argument identities are `pe_addr_t`, not native function pointers.
   complete read-only `func_80074E28` RECT validator. Their indirect dispatch
   enters `jtb[2] = func_80076C34` with `a0 = jtb[8] = func_80076664`,
   `a2 = 8`, and `a3 = data`; B53C converts the transient RECT to two words
-  by value. The dispatcher initializes its timeout, checks guest ring space,
-  exchanges I_MASK through the translated func_80073E10, publishes the
-  saved mask and marker, and exposes the direct worker `func_80076664` as
-  the canonical centralized boundary. Non-strict production requests an
-  `unresolved-boundary` stop. The B50 suffix, queue publication, GPU
-  worker, and pump are not claimed translated.
-  - `func_80076664` — current canonical nested `BOOTSTRAP_RET` boundary
-    from `func_80076C34`; the LoadImage issue worker is not implemented.
-  - `func_80073CF4` — controlled enqueue-path callback-registration
-    boundary (nonempty ring, DMA2 busy, or DrawSync callback present).
+  by value. B53E translates that exact worker against B53B and restores the
+  saved I_MASK after it returns. The first canonical request issues DMA2
+  asynchronously; the next request observes busy and requests an honest
+  unresolved stop at callback registration before any ring entry exists.
+  The B50 suffix, queue publication, callback installer, and pump are not
+  claimed translated.
+  - `func_80076664` — TRANSLATED direct LoadImage issue worker (B53E), with
+    timeout recovery suffix still exposed at `func_80077404`.
+  - `func_80073CF4` — current canonical enqueue-path callback-registration
+    boundary from `func_80076C34`.
   - `func_80077404` — controlled full-ring alternate boundary.
 - `func_8006ECEC`
 - `func_8006F044`

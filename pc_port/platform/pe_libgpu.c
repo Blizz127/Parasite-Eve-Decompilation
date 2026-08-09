@@ -12,9 +12,10 @@
  * Collapsed retail effects (hardware-only):
  *   - func_80077A54(D_80095744 & 0xFFFFFF): GPU DMA channel init — no-op.
  *   - func_80077144(mode): GPU hardware init + video-standard query.
- *     Modeled as deterministic platform behavior (class 3): the USA disc on
- *     an NTSC host always yields standard 0.  Its return becomes the mode
- *     byte at D_8009574C and indexes the ROM video tables below.
+ *     B53E restores its retail DPCR channel-2 enable RMW at the collapsed
+ *     owner; the USA disc on an NTSC host still deterministically yields
+ *     standard 0.  Its return becomes the mode byte at D_8009574C and
+ *     indexes the ROM video tables below.
  *   - ResetGraph m∈{0,3} version printf via func_80071A74, SetGraphDebug
  *     debug print via fn-ptr D_80095748: debug output only — skipped.
  *   - ResetGraph light path jalr D_80095744->0x34(1): GPU hw call — no-op.
@@ -25,15 +26,25 @@
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"
+#include "pe_gpu.h"
 #include <string.h>
 
 static const uint16_t kResetGraphW[3] = { 0x0400, 0x0400, 0x0400 };
 static const uint16_t kResetGraphH[3] = { 0x0200, 0x0200, 0x0400 };
 
-/* func_80077144 collapsed: NTSC standard 0, deterministic for the USA disc. */
+/* func_80077144 collapsed: modes 0/1/3/5 write DMA2 CHCR=0x401 and perform
+ * DPCR = DPCR | 0x800 before their mode-specific GPU work.  Retain the exact
+ * DPCR RMW here at its retail owner.  The canonical first lifecycle already
+ * has B53B's idle CHCR; exact active-DMA ResetGraph abort semantics remain
+ * outside this narrow prerequisite correction.  NTSC standard 0 is
+ * deterministic for the USA disc. */
 static int PE_Gpu_SetVideoMode(int mode)
 {
-    (void)mode;
+    int m = mode & 7;
+
+    if (m == 0 || m == 1 || m == 3 || m == 5) {
+        PE_GPU_EnableDMA2();
+    }
     return 0;
 }
 

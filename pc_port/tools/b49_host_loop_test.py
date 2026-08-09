@@ -2,10 +2,9 @@
 """Retained Phase 6E-B49 real-disc host-loop acceptance harness.
 
 The frame-budget checks remain B49's.  Frontier assertions track the current
-production rung; B53D translates the I_MASK exchange func_80073E10 and the
-dispatcher prefix through its direct-issue decision, so the first unresolved
-provider is now the direct-path worker func_80076664 from the dispatcher
-itself.
+production rung; B53E issues the first LoadImage through the translated
+func_80076664 worker, leaves DMA2 pending, and reaches func_80073CF4 when the
+second request selects the retail enqueue path in func_80076C34.
 """
 
 from __future__ import annotations
@@ -116,8 +115,10 @@ def main() -> int:
                 "prefix run did not stop at frame 1 / iteration 1")
         require("[HOST] stop_reason=unresolved-boundary" in two.stderr,
                 "prefix run did not report its honest unresolved boundary")
-        require("[STUB:BOOTSTRAP_RET] func_80076664" in two.stderr,
+        require("[STUB:BOOTSTRAP_RET] func_80073CF4" in two.stderr,
                 "prefix run did not invoke the first unresolved provider")
+        require("[STUB:BOOTSTRAP_RET] func_80076664" not in two.stderr,
+                "prefix run still treated the translated worker as a stub")
         require("[STUB:BOOTSTRAP_RET] func_80073E10" not in two.stderr,
                 "prefix run treated the translated I_MASK exchange as a stub")
         require("[STUB:BOOTSTRAP_RET] func_801909B4" not in two.stderr,
@@ -130,9 +131,9 @@ def main() -> int:
         )
         require(strict.returncode == 1, "continuing strict run did not exit 1")
         require(
-            "first unresolved BOOTSTRAP_RET provider: func_80076664" in strict.stderr
+            "first unresolved BOOTSTRAP_RET provider: func_80073CF4" in strict.stderr
             and "called from: func_80076C34" in strict.stderr,
-            "continuing strict run did not expose func_80076664 from func_80076C34",
+            "continuing strict run did not expose func_80073CF4 from func_80076C34",
         )
 
         bootstrap, _, _ = run(
@@ -152,7 +153,7 @@ def main() -> int:
         print(f"one-frame sha256={CANONICAL_FRAMEBUFFER} frames=1 iterations=1")
         print(f"prefix-run sha256={two_hash} frames=1 iterations=1 "
               "stop=unresolved-boundary")
-        print("strict frontier=func_80076664 caller=func_80076C34")
+        print("strict frontier=func_80073CF4 caller=func_80076C34")
         print("bootstrap strict frontier=func_8007F72C caller=func_800698D4")
     return 0
 

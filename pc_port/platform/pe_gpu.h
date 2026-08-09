@@ -83,6 +83,10 @@ void PE_GPU_SetReady(int ready);
 int PE_GPU_WriteGP0(uint32_t value);
 int PE_GPU_WriteGP1(uint32_t value);
 
+/* Native safety preflight for an A0 image-load command.  This is a pure
+ * query: it never changes readiness, parser, DMA, VRAM, or event state. */
+int PE_GPU_CanBeginImageLoad(int needs_dma);
+
 /* LoadImage block/request DMA.  Validation precedes all register/state
  * mutation.  Issue never reads the payload or completes the transfer. */
 int PE_GPU_DMA2Issue(pe_addr_t madr, uint32_t bcr, uint32_t chcr);
