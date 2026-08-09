@@ -15,12 +15,11 @@
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
- * Their func_80076C34 dispatch remains an honest centralized boundary: it
- * advances the retail GPU command queue and later suffix
- * callbacks consume that state.  Non-strict execution therefore returns
- * from func_8006AD40 as soon as the translated callee returns.  It must
- * not execute the remaining retail control flow with those effects
- * missing.
+ * B53C translates the func_80076C34 timeout/full-check prefix and exposes
+ * func_80073E10 as its honest centralized boundary. No queue entry is yet
+ * published, so non-strict execution still returns from func_8006AD40 as
+ * soon as the translated callee returns. It must not execute the remaining
+ * retail control flow with those effects missing.
  *
  * If the entry count is zero, the conditional retail call is bypassed.  The
  * host still returns at the end of the proven static prefix rather than
@@ -97,10 +96,9 @@ int func_8006AD40(void)
             func_8006E1C0(entry, base);
     }
 
-    /* Prefix boundary: never fabricate the state needed by the suffix.  The
-     * issued channel-2 transaction is intentionally still pending here, so
-     * ask the host loop to stop at its next safe continuation check instead
-     * of allowing another invocation to spin on retail's busy guard. */
+    /* Prefix boundary: never fabricate the dispatcher I_MASK, queue, or GPU
+     * state needed by the suffix. Ask the host loop to stop at its next safe
+     * continuation check; B53C has not issued a GPU/DMA transaction. */
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }

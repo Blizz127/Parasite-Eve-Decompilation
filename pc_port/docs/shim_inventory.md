@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53B
+# Shim Inventory — Phase 6E-B53C
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -45,8 +45,18 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 1024x512x16 VRAM, GPUSTAT bit 26, GP0 A0 parser, bounded GP1 commands,
 DMA2/DPCR/DICR channel-2 state, tokenized explicit completion, and a manual
 VBlank counter. It contains no retail command ring, callback, worker, or
-queue pump and is not wired through the unresolved B52 dispatch. Therefore
-`func_80076C34` remains a `BOOTSTRAP_RET` boundary exactly as listed below.
+queue pump. B53C wires only its inert VSync query to the translated timeout
+initializer; all other hardware semantics remain separate.
+
+### B53C retail dispatcher prefix
+
+`game/boot/func_80076C34_port.c` translates complete `func_800773D0` and
+the `func_80076C34` prefix through the guest producer/consumer full check.
+The canonical non-full path stops at unresolved `func_80073E10(0)` before
+using any I_MASK result. A full-ring alternate stops at `func_80077404`.
+The prefix writes only timeout deadline/counter state; it does not construct
+or publish a ring entry and does not invoke a worker or pump. The true worker
+and argument identities are `pe_addr_t`, not native function pointers.
 
 | Function | PS1 role | Host implementation |
 |----------|----------|---------------------|
@@ -74,12 +84,16 @@ queue pump and is not wired through the unresolved B52 dispatch. Therefore
   slot). Its callee `func_8006E1C0` is TRANSLATED (Phase 6E-B51). Phase
   6E-B52 translates both `func_8007506C` (Psy-Q LoadImage) wrappers and the
   complete read-only `func_80074E28` RECT validator. Their indirect dispatch
-  now exposes `jtb[2] = func_80076C34` with `a0 = jtb[8] = func_80076664`,
-  `a1 = RECT *`, `a2 = 8`, and `a3 = data` as the centralized boundary.
-  `func_80076C34` owns GPU queue/GPUSTAT/DMA2 timing behavior and remains
-  unresolved; non-strict production requests an `unresolved-boundary` stop
-  at the next host-safe main-loop check. The B50 suffix and GPU submission
-  are not claimed translated.
+  enters `jtb[2] = func_80076C34` with `a0 = jtb[8] = func_80076664`,
+  `a2 = 8`, and `a3 = data`; B53C converts the transient RECT to two words
+  by value. The dispatcher initializes its timeout, checks guest ring space,
+  and exposes `func_80073E10` as the canonical centralized boundary.
+  Non-strict production requests an `unresolved-boundary` stop. The B50
+  suffix, I_MASK exchange, queue publication, GPU worker, and pump are not
+  claimed translated.
+  - `func_80073E10` — current canonical nested `BOOTSTRAP_RET` boundary
+    from `func_80076C34`; exact 16-bit I_MASK authority is not implemented.
+  - `func_80077404` — controlled full-ring alternate boundary.
 - `func_8006ECEC`
 - `func_8006F044`
 - `func_80069B08(int)`

@@ -66,17 +66,18 @@
  *   are NOT consumed by this function: both returns are discarded, the
  *   stack rect is rebuilt from entry fields between the calls, and every
  *   post-call load reads the caller-supplied entry record.  An honest
- *   centralized boundary therefore preserves all required state.
+ *   centralized prefix boundary therefore preserves all required state.
  *
  * Boundary representation: the retail rect lives at guest sp+0x10 and is
  * visible only to the callee chain, so it has no persistent guest authority
- * in the port.  B52 uses an eight-byte native RECT with the same four signed
- * halfwords and snapshots those bytes synchronously at func_80076C34.  No
- * host pointer is stored in guest RAM or retained beyond the call.
+ * in the port. B53C converts its four signed halfwords to two words by value
+ * before entering the exact canonical func_80076C34 target. No host pointer
+ * is stored in guest RAM or retained on that path; a deliberately dirty
+ * indirect target remains a host-only diagnostic boundary.
  *
- * Classification: 1 — translated retail logic.  Phase 6E-B52 translates
- * func_8007506C and its read-only validator; strict execution now stops at
- * func_80076C34, before any GPU queue/DMA behavior.
+ * Classification: 1 — translated retail logic. Phase 6E-B53C now stops at
+ * func_80073E10 inside the dispatcher prefix, before queue publication or
+ * GPU/DMA issue behavior.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -112,9 +113,9 @@ int func_8006E1C0(pe_addr_t entry, pe_addr_t base)
     image_off = PE_LoadU32(entry + 4u) & 0x00FFFFFFu;
     data = base + image_off;                    /* delay slot 0x8006E23C */
 
-    /* 0x8006E238: jal func_8007506C (PsyQ LoadImage) — TRANSLATED
-     * (Phase 6E-B52); its jtb[2] dispatch is the centralized GPU
-     * boundary at func_80076C34.  Callback #1 (image). */
+    /* 0x8006E238: jal func_8007506C (PsyQ LoadImage) — TRANSLATED;
+     * B53C enters the jtb[2] dispatcher prefix and stops at its I_MASK
+     * dependency. Callback #1 (image). */
     func_8007506C(&rc, data);
 
     /* 0x8006E240-0x8006E24C: v0 = lw [s0+0xC] & 0x00FFFFFF; beqz. */

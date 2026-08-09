@@ -49,7 +49,7 @@
  *       (func_80075B1C target)   [15] 0x80077294 (DrawSync/func_80075358
  *       target)
  *
- * Why the jalr target stays a centralized boundary (read-only audit):
+ * B53A/B53C continuation of the jalr target:
  *   func_80076C34 maintains the GPU command ring at D_800BD030 (96-byte
  *   entries, capacity 64, producer D_80095874, consumer D_80095878),
  *   polls GPUSTAT (0x1F801814, mask 0x04000000) in the direct-transfer
@@ -58,9 +58,9 @@
  *   -1 timeout return.  The worker func_80076664 writes GP0 (0x1F801810:
  *   command 0xA0/0xB0, rect, pixel data), GP1 (0x1F801814: 0x04000000),
  *   and programs DMA2 MADR/BCR/CHCR (0x1F8010A0-A8).  Those are
- *   asynchronous GPU/DMA hardware semantics; they are NOT implemented
- *   here and nothing in this wrapper's own continuation consumes their
- *   effects (the epilogue only forwards $v0).
+ *   asynchronous GPU/DMA hardware semantics. B53C translates only the
+ *   target's timeout initializer and queue-space prefix, stopping at the
+ *   I_MASK exchange before any of those hardware operations.
  *
  * Caller census (14 executable sites): func_80042FE8@0x80043020,
  * func_8005E788@0x8005E824, func_8006914C@0x80069544,
@@ -72,19 +72,14 @@
  * func_800CED3C/func_800CEDA8 sites merely forward $v0 to their own
  * (untranslated) callers.  No translated caller consumes the return.
  *
- * Boundary representation: the retail rect is a caller-stack transient
- * with no guest authority (B51), so this translation takes it as a native
- * RECT with the retail four-signed-halfword layout.  The centralized log
- * records the loaded indirect target and exact func_80076C34 registers:
- * a0=jtb[8], a1=the transient RECT pointer, a2=8, a3=data.  It snapshots
- * the eight RECT bytes synchronously so tests never dereference a dead
- * stack pointer.  The unresolved provider supplies the return value,
- * which this wrapper forwards exactly; no GPU result is fabricated here.
+ * Adapter representation: the retail rect is a caller-stack transient with
+ * no guest authority (B51). For the exact retail target, B53C converts its
+ * four signed halfwords into two retail words by value. The diagnostic log
+ * snapshots those eight bytes with arg1 zero; it retains no native pointer.
+ * Dirty/unknown jtb[2] identities remain centralized indirect boundaries.
  *
- * Classification: 1 for both bodies (translated retail logic); the GPU
- * dispatch itself remains classification 4 (unresolved hardware-dependent)
- * behind the centralized boundary.  Strict execution now stops at
- * func_80076C34 from func_8007506C.
+ * Classification: 1 for both B52 bodies. B53C adds a classification-1
+ * dispatcher prefix and stops at classification-4 func_80073E10.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -98,6 +93,7 @@
 #define GA_GPU_LIMIT_H         0x80095752u   /* env+6: 0x200 after ResetGraph(0) */
 #define GA_GPU_PRINT_FN        0x80095748u   /* -> 0x80071A74 BIOS A(3Fh) */
 #define GA_GPU_JTB_PTR         0x80095744u   /* -> 0x80095704 (immutable) */
+#define GA_GPU_DISPATCH        0x80076C34u
 
 void func_80074E28(pe_addr_t name, const RECT *rect)
 {
@@ -153,7 +149,9 @@ int func_8007506C(const RECT *rect, pe_addr_t data)
 {
     pe_addr_t jtb;
     pe_addr_t target;
-    uint32_t worker;
+    pe_addr_t worker;
+    uint32_t rect_word0;
+    uint32_t rect_word1;
 
     /* 0x8007508C: jal func_80074E28 — read-only validator (delay slot
      * a1 = s0 already accounted for by the host RECT). */
@@ -165,8 +163,19 @@ int func_8007506C(const RECT *rect, pe_addr_t data)
     worker = PE_LoadU32(jtb + 0x20u);       /* a0 = jtb[8] */
     target = PE_LoadU32(jtb + 8u);          /* v0 = jtb[2] -> jalr */
 
-    /* 0x800750B0: jalr jtb[2] with a0 = jtb[8], a1 = rect, a2 = 8,
-     * a3 = data (delay slot) — the centralized GPU boundary. */
+    /* B53C resolves only the exact retail dispatcher identity.  Convert the
+     * transient native RECT to its two retail words by value; no native
+     * pointer crosses into guest-retained state. */
+    if (target == GA_GPU_DISPATCH) {
+        rect_word0 = (uint32_t)(uint16_t)rect->x |
+                     ((uint32_t)(uint16_t)rect->y << 16);
+        rect_word1 = (uint32_t)(uint16_t)rect->w |
+                     ((uint32_t)(uint16_t)rect->h << 16);
+        return PE_func_80076C34_Inline8(
+            worker, rect_word0, rect_word1, data);
+    }
+
+    /* A dirty/unsupported jtb[2] remains an honest indirect boundary. */
     return Bootstrap_ReturnInt4Indirect(
         "func_80076C34", "func_8007506C", 0, target,
         worker, (uintptr_t)rect, 8u, data, rect, sizeof(*rect));

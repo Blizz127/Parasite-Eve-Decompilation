@@ -1,20 +1,23 @@
-# Parasite Eve Native PC Port — Phase 6E-B53B
+# Parasite Eve Native PC Port — Phase 6E-B53C
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53B adds the single bounded deterministic GPU/DMA2
-hardware substrate proven by the B53A audit. `platform/pe_gpu.[ch]` now owns
-one 1024x512x16 PSX VRAM, GPUSTAT ready bit 26, the GP0 A0 image parser, the
-required GP1 subset, raw DMA2/DPCR/DICR channel-2 state, one tokenized pending
-DMA event, and an explicit VBlank counter. CPU-fed image pixels are visible
-immediately; the DMA suffix remains busy and invisible until an explicit
-completion service makes pixels visible before setting DICR completion.
-There is no host retail ring, callback, renderer, automatic event, or HostFB
-alias. The 15 focused tests bring normal and fresh ASan/UBSan suites to
-483/483. All retained oracles and B49 harnesses pass. The B52 wrapper still
-stops honestly at unresolved `func_80076C34` from `func_8007506C`; bootstrap
-strict remains `func_8007F72C` from `func_800698D4`. LoadImage is not claimed
-implemented. Full proof is in `docs/b53b_gpu_dma2_platform.md`.
+**Current milestone:** B53C adds an honest prefix of retail GPU dispatcher
+`func_80076C34` and the complete 13-word timeout initializer
+`func_800773D0`. The canonical path now initializes
+`D_80095888/D_8009588C`, reads the authoritative guest producer/consumer,
+performs the exact wrapped full check, and stops at the first missing I_MASK
+exchange `func_80073E10`; a controlled full ring stops at `func_80077404`.
+No ring entry is written or published, and no worker, pump, callback, GPU
+poll, or DMA progress is faked. B52 converts its transient RECT to two
+by-value words, so no native pointer enters retained guest state. The
+independent oracle executes all 172 literal dispatcher words and all 13
+helper words with exact delay slots and explicit dependencies. Seven focused
+tests bring normal and fresh ASan/UBSan suites to 490/490 while all 15 B53B
+hardware tests remain green. Canonical Disc 1 strict is now
+`func_80073E10` from `func_80076C34`; bootstrap strict remains
+`func_8007F72C` from `func_800698D4`. LoadImage and the queue pump are not
+claimed implemented. Full proof is in `docs/b53c_func_80076C34.md`.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36
 instructions / `0x90` bytes at executable `0x800614AC..0x8006153B`
@@ -632,7 +635,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (483 tests, all pass)
+- `pe-native-tests` — test suite (490 tests, all pass)
 
 ## Running
 
@@ -663,8 +666,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Expected after B53B for Disc 1: exit 1 at func_80076C34 from func_8007506C.
-# B53B installs hardware state only; the retail dispatcher is still unresolved.
+# Expected after B53C for Disc 1: exit 1 at func_80073E10 from func_80076C34.
+# The dispatcher stops before consuming the unresolved I_MASK result.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \

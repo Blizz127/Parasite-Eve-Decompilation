@@ -166,29 +166,20 @@ void Bootstrap_ReturnVoid4Indirect(const char *symbol, const char *caller,
                                    uintptr_t arg0, uintptr_t arg1,
                                    uintptr_t arg2, uintptr_t arg3)
 {
-    if (g_bootstrap_arg4_call_count < BOOTSTRAP_MAX_ARG4_CALLS) {
-        BootstrapArgCall4 *call =
-            &g_bootstrap_arg4_calls[g_bootstrap_arg4_call_count++];
-        call->symbol = symbol;
-        call->caller = caller;
-        call->target = target;
-        call->arg0 = arg0;
-        call->arg1 = arg1;
-        call->arg2 = arg2;
-        call->arg3 = arg3;
-        call->payload_size = 0;
-    }
+    Bootstrap_RecordArg4Indirect(symbol, caller, target,
+                                 arg0, arg1, arg2, arg3, NULL, 0);
     Bootstrap_ReturnVoid(symbol, caller);
 }
 
-int Bootstrap_ReturnInt4Indirect(const char *symbol, const char *caller,
-                                 int value, uintptr_t target,
-                                 uintptr_t arg0, uintptr_t arg1,
-                                 uintptr_t arg2, uintptr_t arg3,
-                                 const void *payload, uint32_t payload_size)
+void Bootstrap_RecordArg4Indirect(const char *symbol, const char *caller,
+                                  uintptr_t target,
+                                  uintptr_t arg0, uintptr_t arg1,
+                                  uintptr_t arg2, uintptr_t arg3,
+                                  const void *payload,
+                                  uint32_t payload_size)
 {
     if (payload_size > 8u || (payload_size != 0u && payload == NULL)) {
-        fprintf(stderr, "FATAL: Bootstrap_ReturnInt4Indirect: bad payload\n");
+        fprintf(stderr, "FATAL: Bootstrap_RecordArg4Indirect: bad payload\n");
         abort();
     }
     if (g_bootstrap_arg4_call_count < BOOTSTRAP_MAX_ARG4_CALLS) {
@@ -205,6 +196,17 @@ int Bootstrap_ReturnInt4Indirect(const char *symbol, const char *caller,
         if (payload_size != 0u)
             memcpy(call->payload, payload, payload_size);
     }
+}
+
+int Bootstrap_ReturnInt4Indirect(const char *symbol, const char *caller,
+                                 int value, uintptr_t target,
+                                 uintptr_t arg0, uintptr_t arg1,
+                                 uintptr_t arg2, uintptr_t arg3,
+                                 const void *payload, uint32_t payload_size)
+{
+    Bootstrap_RecordArg4Indirect(symbol, caller, target,
+                                 arg0, arg1, arg2, arg3,
+                                 payload, payload_size);
     return Bootstrap_ReturnInt(symbol, caller, value);
 }
 

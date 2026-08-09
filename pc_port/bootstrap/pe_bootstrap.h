@@ -76,6 +76,15 @@ int Bootstrap_ReturnInt4Indirect(const char *symbol, const char *caller,
                                  uintptr_t arg0, uintptr_t arg1,
                                  uintptr_t arg2, uintptr_t arg3,
                                  const void *payload, uint32_t payload_size);
+/* Diagnostic-only form for a now-translated indirect call.  It snapshots
+ * the supplied bytes but does not register an unresolved provider, consume
+ * a scripted return, or trigger strict mode. */
+void Bootstrap_RecordArg4Indirect(const char *symbol, const char *caller,
+                                  uintptr_t target,
+                                  uintptr_t arg0, uintptr_t arg1,
+                                  uintptr_t arg2, uintptr_t arg3,
+                                  const void *payload,
+                                  uint32_t payload_size);
 void Bootstrap_ResetArg4CallLog(void);
 
 /* Five-formal-argument diagnostic boundary.  On MIPS the fifth value is
