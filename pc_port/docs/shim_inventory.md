@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53E
+# Shim Inventory — Phase 6E-B53F
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -56,7 +56,7 @@ mutation, and no callback invocation. `PE_Sdk_ResetState` is the host reset
 owner; the translated ResetCallback one-time path also writes I_MASK = 0,
 matching retail func_80073E28.
 
-### B53C–B53E retail dispatcher and LoadImage issue path
+### B53C–B53F retail dispatcher and LoadImage issue path
 
 `game/boot/func_80076C34_port.c` translates complete `func_800773D0`,
 complete `func_80073E10` (via the PE_IRQ authority), and the dispatcher
@@ -66,11 +66,13 @@ worker: signed RECT clamps, full guest-source preflight, inert GPUSTAT wait,
 exact GP1/GP0 A0 stream, CPU remainder, and asynchronous DMA2 issue. The
 worker result is discarded, the saved I_MASK is restored, and the direct
 dispatcher returns zero. Canonical first DMA remains busy, so the second
-request stops at `func_80073CF4(2,0x80076EE4)` before ring publication; a
+request calls the B53F execution-proven installed-target path through
+`func_80073CF4(2,0x80076EE4)` and stops at `func_800746A0` before ring
+publication. A
 full ring and worker timeout recovery still expose `func_80077404`. The
-retail ring, producer/consumer ownership, queue pump, callback delivery, and
-DMA completion remain untranslated. All guest identities are `pe_addr_t`,
-never native function pointers.
+retail ring, producer/consumer ownership, callback setter, queue pump,
+callback delivery, and DMA completion remain untranslated. All guest
+identities are `pe_addr_t`, never native function pointers.
 
 | Function | PS1 role | Host implementation |
 |----------|----------|---------------------|
@@ -102,14 +104,17 @@ never native function pointers.
   `a2 = 8`, and `a3 = data`; B53C converts the transient RECT to two words
   by value. B53E translates that exact worker against B53B and restores the
   saved I_MASK after it returns. The first canonical request issues DMA2
-  asynchronously; the next request observes busy and requests an honest
-  unresolved stop at callback registration before any ring entry exists.
+  asynchronously; the next request observes busy, crosses the translated
+  callback wrapper, and requests an honest unresolved stop at the installed
+  callback setter before any ring entry exists.
   The B50 suffix, queue publication, callback installer, and pump are not
   claimed translated.
   - `func_80076664` — TRANSLATED direct LoadImage issue worker (B53E), with
     timeout recovery suffix still exposed at `func_80077404`.
-  - `func_80073CF4` — current canonical enqueue-path callback-registration
-    boundary from `func_80076C34`.
+  - `func_80073CF4` — PREFIX TRANSLATED through the execution-proven
+    installed-target path (12-word retail wrapper; B53F).
+  - `func_800746A0` — current canonical callback-slot/DICR setter boundary
+    from `func_80073CF4`.
   - `func_80077404` — controlled full-ring alternate boundary.
 - `func_8006ECEC`
 - `func_8006F044`

@@ -5,10 +5,10 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
-## Phase 6E-B53E LoadImage issue worker verified
+## Phase 6E-B53F installed-target wrapper prefix verified
 
-The exact B53D base is
-`da297bea4aafebc734a21e55be2d98bf6d624565`. B52 translates the complete
+The exact B53E base is
+`f7772f014d037209dfcc1a1d56d3c576593648a6`. B52 translates the complete
 Psy-Q LoadImage wrapper `func_8007506C` (24 words, 0x60 bytes,
 `0x8007506C..0x800750CC`) and its complete read-only debug validator
 `func_80074E28` (71 words, 0x11C bytes,
@@ -37,9 +37,12 @@ enable belongs to earlier ResetGraph initialization: guard-passing
 ResetCallback now writes `0x33333333`, collapsed `func_80077144` ORs
 `0x800`, and canonical entry is `0x33333B33`; the worker never force-enables
 the channel. The first canonical request issues DMA and leaves it busy, so
-the second request selects enqueue. Current strict frontier is therefore
-`func_80073CF4` from `func_80076C34`, before ring construction/publication.
-A full ring and the worker timeout-recovery suffix expose `func_80077404`.
+the second request selects enqueue. B53F translates the execution-proven
+installed-target path through the 12-word `func_80073CF4` wrapper without
+adding a callback-table mirror or native function pointer. It now stops at
+the separate `func_800746A0` callback-slot/DICR setter before ring
+construction or publication. A full ring and the worker timeout-recovery
+suffix expose `func_80077404`.
 The B52 transient RECT remains two by-value words with no native pointer
 retained. B53C/D/E oracles independently execute literal words with exact
 delay slots and explicit hardware/dependency inputs.
@@ -58,7 +61,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B53E LoadImage issue worker verified**; retail strict frontier `func_80073CF4` from `func_80076C34` | fresh normal and ASan/UBSan `pe-native-tests` (506/506) |
+| Port phase | **6E-B53F installed-target wrapper prefix verified**; retail strict frontier `func_800746A0` from `func_80073CF4` | fresh normal and ASan/UBSan `pe-native-tests` (510/510 each) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -70,11 +73,11 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 twice). Every direct callee is translated. Call 15 is real func_80051CC4; B40 translates its first nested dependency func_8005332C, B41/B42 complete the exposed B29 func_80053968/func_80053B48 dependencies, and B43 translates func_8005218C only through its first honest internal boundary at func_8005B91C. Sole call site func_8006A9E4 @0x8006AAD0, `$s1`-guarded one-shot inside cycle B; void return unconsumed. | `pc_port/game/boot/func_800527C8_port.c`, `func_80051CC4_port.c`, `func_8005218C_port.c`, `func_8005332C_port.c`, `func_80053968_port.c`, `func_80053B48_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | continuing real data: exit 1 at `func_80073CF4` from `func_80076C34`; `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | retained B49 harness, normal + sanitizer |
+| Strict mode | continuing real data: exit 1 at `func_800746A0` from `func_80073CF4`; `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | fresh normal and ASan/UBSan agree |
 | GPU/DMA2 | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. B53E issues the exact LoadImage CPU prefix/DMA suffix and leaves completion explicit. No retail ring/HostFB/callback alias. I_MASK remains the single 16-bit `pe_irq.[ch]` authority | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/docs/b53e_func_80076664.md` |
-| Sanitizers | fresh `-DPE_PORT_SANITIZERS=ON`: 506/506 tests; bootstrap, real-data boot/load, and retained harness pass; strict frontiers agree exactly | B53E isolated sanitizer build |
+| Sanitizers | B53F fresh ASan/UBSan 510/510; B49, strict/bootstrap, real-disc load, B53F, and frozen B53B gates pass without sanitizer diagnostics | fresh `/tmp` build |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | B53F: recover/translate only callback-registration boundary `func_80073CF4` reached from `func_80076C34`; do not start the queue pump or complete pending DMA merely to advance execution | — |
+| Next frontier | recover/translate only `func_800746A0` from `func_80073CF4`: guest DMA callback-slot store plus exact DICR RMW; do not publish/pump the ring or complete DMA merely to advance | `pc_port/docs/b53f_func_80073CF4.md` |
 
 ### Phase 6E-B43 func_8005218C — current findings
 

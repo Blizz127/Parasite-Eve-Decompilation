@@ -11958,8 +11958,10 @@ static void test_64964_ramreset_repeat_and_guards(void) {
 #define B53D_WORK_MARKER     0x80095754u
 #define B53D_DRAWSYNC_CB     0x80095758u
 #define B53D_SAVED_IMASK     0x8009587Cu
-#define B53D_SET_DMA_CB      0x80073CF4u
 #define B53D_QUEUE_PUMP      0x80076EE4u
+#define B53F_DMA_SETTER      0x800746A0u
+#define B53F_DMA_CB_TABLE    0x800956C0u
+#define B53F_DMA_CB_SLOT2    0x800956C8u
 
 static void B52_SeedGpuDispatch(void)
 {
@@ -12124,12 +12126,12 @@ static void test_6AD40_prefix_boundary_args(void)
     PASS();
 }
 
-static void test_6AD40_strict_stops_at_73CF4(void)
+static void test_6AD40_strict_stops_at_746A0(void)
 {
     DiscFixture fx;
-    /* B53E resolves the worker.  A preexisting DMA selects the dispatcher
-     * enqueue path and exposes callback registration as the next boundary. */
-    TEST("6AD40_strict_stops_at_73CF4");
+    /* B53F resolves the wrapper's execution-proven installed-target path.
+     * A preexisting DMA selects enqueue and exposes the setter backend. */
+    TEST("6AD40_strict_stops_at_746A0");
     pid_t pid;
     int status = 0;
     ResetTestState();
@@ -12585,18 +12587,20 @@ static void test_7506C_strict_direct(void)
     ASSERT(waitpid(pid, &status, 0) == pid,
            "waitpid failed for B53C strict boundary");
     ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict wrapper must stop at func_80073CF4");
+           "strict wrapper must stop at func_800746A0");
     PASS();
 }
 
 /* ═══════════════════════════════════════════════════════════════════
  * Phase 6E-B53C — func_80076C34 prefix + func_800773D0 (7 tests)
  *
- * B53E translates the direct LoadImage worker.  Forced enqueue states stop
- * at callback registration helper func_80073CF4; other worker identities
- * remain boundaries.  Queue construction, publication, and pump returns
- * remain exercised only by the independent literal-word oracles rather
- * than guessed native state.  These tests assert exact persistent state.
+ * B53E translates the direct LoadImage worker.  B53F translates the proven
+ * installed-target path through func_80073CF4, so forced enqueue states stop
+ * at its installed func_800746A0 backend; other worker identities remain
+ * boundaries.  Queue
+ * construction, publication, and pump returns remain exercised only by the
+ * independent literal-word oracles rather than guessed native state.  These
+ * tests assert exact persistent state.
  * ════════════════════════════════════════════════════════════════════ */
 
 static void test_B53C_timeout_initializer_exact(void)
@@ -12639,18 +12643,20 @@ static void test_B53C_guest_abi_enqueue_boundary(void)
     ASSERT(func_80076C34(0xFEDCBA98u, 0xFFFFFFFFu,
                          INT32_MIN, 0x81234567u) == 0,
            "guest ABI prefix sentinel changed");
-    /* A nonempty initialized ring stops at callback registration, before
-     * any ring entry construction; the worker is never invoked. */
+    /* A nonempty initialized ring crosses the wrapper and stops at its
+     * callback setter, before any ring entry construction; the worker is
+     * never invoked. */
     ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_80073CF4") == 0 &&
-           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80076C34") == 0 &&
-           g_bootstrap_arg4_calls[0].target == B53D_SET_DMA_CB &&
+           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_800746A0") == 0 &&
+           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80073CF4") == 0 &&
+           g_bootstrap_arg4_calls[0].target == B53F_DMA_SETTER &&
            g_bootstrap_arg4_calls[0].arg0 == 2u &&
            g_bootstrap_arg4_calls[0].arg1 == B53D_QUEUE_PUMP,
            "nonempty path did not expose exact callback registration");
     ASSERT(CountOrderLog("func_80077404") == 0 &&
            CountOrderLog("func_80073E10") == 0 &&
-           CountOrderLog("func_80073CF4") == 1 &&
+           CountOrderLog("func_80073CF4") == 0 &&
+           CountOrderLog("func_800746A0") == 1 &&
            CountOrderLog("func_80076664") == 0,
            "nonempty path crossed or duplicated its boundary");
     ASSERT(PE_IRQ_GetMask() == 0u &&
@@ -12783,11 +12789,11 @@ static void test_B53C_full_ram_canary_and_ring_authority(void)
     PASS();
 }
 
-static void test_B53C_strict_exposes_enqueue_callback(void)
+static void test_B53C_strict_exposes_dma_setter(void)
 {
     pid_t pid;
     int status = 0;
-    TEST("B53C_strict_exposes_enqueue_callback");
+    TEST("B53C_strict_exposes_dma_setter");
     ResetTestState();
     pid = fork();
     ASSERT(pid >= 0, "fork failed for B53C strict boundary");
@@ -12997,8 +13003,9 @@ static void test_B53D_enqueue_selectors(void)
     ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
            "busy prefix sentinel changed");
     ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_80073CF4") == 0 &&
-           g_bootstrap_arg4_calls[0].target == B53D_SET_DMA_CB &&
+           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_800746A0") == 0 &&
+           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80073CF4") == 0 &&
+           g_bootstrap_arg4_calls[0].target == B53F_DMA_SETTER &&
            g_bootstrap_arg4_calls[0].arg0 == 2u &&
            g_bootstrap_arg4_calls[0].arg1 == B53D_QUEUE_PUMP,
            "DMA-busy path did not stop at callback registration");
@@ -13020,7 +13027,9 @@ static void test_B53D_enqueue_selectors(void)
     ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
            "callback prefix sentinel changed");
     ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_80073CF4") == 0 &&
+           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_800746A0") == 0 &&
+           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80073CF4") == 0 &&
+           g_bootstrap_arg4_calls[0].target == B53F_DMA_SETTER &&
            g_bootstrap_arg4_calls[0].arg1 == B53D_QUEUE_PUMP &&
            CountOrderLog("func_80076664") == 0,
            "callback path did not stop at callback registration");
@@ -13457,6 +13466,160 @@ static void test_B53E_dispatcher_and_inline_integration(void)
     ASSERT(PE_Port_ShouldStop() &&
            PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
            "host-safe continuation did not consume the pending frame limit");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Phase 6E-B53F — func_80073CF4 installed-target wrapper (4 tests)
+ *
+ * The 12-word retail wrapper has no callback or hardware state of its own.
+ * It forwards channel/handler to the ResetCallback-installed func_800746A0
+ * guest identity and forwards that backend's v0.  The backend remains an
+ * honest boundary, so every state assertion below is made before it runs.
+ * ════════════════════════════════════════════════════════════════════ */
+
+static void test_B53F_exact_abi_and_return_forwarding(void)
+{
+    static const uint32_t channels[] = { 2u, 3u, 4u };
+    static const pe_addr_t handlers[] = {
+        B53D_QUEUE_PUMP, 0xFFFFFFFFu, 0x81234567u
+    };
+    static const int scripted[] = {
+        0x12345678, (int)0x89ABCDEFu, -1
+    };
+    static const pe_addr_t expected[] = {
+        0x12345678u, 0x89ABCDEFu, 0xFFFFFFFFu
+    };
+    TEST("B53F_exact_abi_and_return_forwarding");
+    ResetTestState();
+    Bootstrap_SetIntSequence("func_800746A0", scripted, 3);
+
+    for (size_t i = 0; i < 3u; i++) {
+        ASSERT(func_80073CF4(channels[i], handlers[i]) == expected[i],
+               "wrapper did not forward the backend's full 32-bit v0");
+    }
+    ASSERT(g_bootstrap_arg4_call_count == 3,
+           "wrapper did not expose exactly three backend calls");
+    for (size_t i = 0; i < 3u; i++) {
+        const BootstrapArgCall4 *call = &g_bootstrap_arg4_calls[i];
+        ASSERT(strcmp(call->symbol, "func_800746A0") == 0 &&
+               strcmp(call->caller, "func_80073CF4") == 0 &&
+               call->target == B53F_DMA_SETTER &&
+               call->arg0 == channels[i] && call->arg1 == handlers[i] &&
+               call->arg2 == 0u && call->arg3 == 0u &&
+               call->payload_size == 0u,
+               "wrapper lost channel/guest identity or invented a pointer");
+    }
+    ASSERT(CountOrderLog("func_80073CF4") == 0 &&
+           CountOrderLog("func_800746A0") == 3,
+           "translated wrapper remained a stub or duplicated its backend");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "unreturned backend did not request an honest host stop");
+    PASS();
+}
+
+static void test_B53F_boundary_is_state_inert(void)
+{
+    uint8_t *ram_before;
+    PeGpuState gpu_before;
+    PeGpuState gpu_after;
+    TEST("B53F_boundary_is_state_inert");
+    ResetTestState();
+    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0xA5u);
+    for (uint32_t i = 0; i < 8u; i++) {
+        PE_StoreU32(B53F_DMA_CB_TABLE + i * 4u,
+                    0x80010000u + i * 0x100u);
+    }
+    PE_StoreU32(B53C_PRODUCER, 63u);
+    PE_StoreU32(B53C_CONSUMER, 17u);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    PE_GPU_WriteDPCR(0xA5A50855u);
+    PE_GPU_WriteDICR(0x00A5A5A5u);
+    PE_GPU_SetReady(0);
+    ram_before = malloc(PE_RAM_SIZE);
+    ASSERT(ram_before != NULL, "cannot allocate B53F RAM snapshot");
+    memcpy(ram_before, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
+           PE_RAM_SIZE);
+    PE_GPU_GetState(&gpu_before);
+
+    ASSERT(func_80073CF4(2u, B53D_QUEUE_PUMP) == 0u,
+           "default unresolved backend result changed");
+    PE_GPU_GetState(&gpu_after);
+    ASSERT(memcmp(ram_before,
+                  PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
+                  PE_RAM_SIZE) == 0,
+           "wrapper boundary mutated callback/ring/guest state");
+    ASSERT(memcmp(&gpu_before, &gpu_after, sizeof(gpu_before)) == 0 &&
+           PE_IRQ_GetMask() == 0xBEEFu,
+           "wrapper boundary mutated GPU/DMA/DICR/I_MASK state");
+    free(ram_before);
+    PASS();
+}
+
+static void test_B53F_strict_exposes_746A0(void)
+{
+    pid_t pid;
+    int status = 0;
+    TEST("B53F_strict_exposes_746A0");
+    ResetTestState();
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed for B53F strict boundary");
+    if (pid == 0) {
+        Bootstrap_Init();
+        Bootstrap_EnableStrict();
+        (void)func_80073CF4(2u, B53D_QUEUE_PUMP);
+        _exit(0);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid,
+           "waitpid failed for B53F strict boundary");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
+           "strict wrapper did not stop at func_800746A0");
+    PASS();
+}
+
+static void test_B53F_pending_dma_dispatcher_integration(void)
+{
+    uint8_t ring_before[0x70];
+    PeGpuState before;
+    PeGpuState after;
+    TEST("B53F_pending_dma_dispatcher_integration");
+    ResetTestState();
+    PE_StoreU8(B53D_INIT_BYTE, 1u);
+    PE_Fill(B53C_RING_BASE - 8u, sizeof(ring_before), 0xA5u);
+    memcpy(ring_before, PE_TranslateConst(B53C_RING_BASE - 8u,
+                                         sizeof(ring_before)),
+           sizeof(ring_before));
+    PE_StoreU32(B53F_DMA_CB_SLOT2, 0x80016666u);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    ASSERT(B53E_SeedBusyDma(), "cannot seed canonical pending DMA2 state");
+    PE_GPU_GetState(&before);
+
+    ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8,
+                         0x80110000u) == 0,
+           "dispatcher prefix sentinel changed");
+    PE_GPU_GetState(&after);
+    ASSERT(g_bootstrap_arg4_call_count == 1 &&
+           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_800746A0") == 0 &&
+           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80073CF4") == 0 &&
+           g_bootstrap_arg4_calls[0].target == B53F_DMA_SETTER &&
+           g_bootstrap_arg4_calls[0].arg0 == 2u &&
+           g_bootstrap_arg4_calls[0].arg1 == B53D_QUEUE_PUMP,
+           "dispatcher did not reach the exact installed backend boundary");
+    ASSERT(PE_LoadU32(B53F_DMA_CB_SLOT2) == 0x80016666u &&
+           PE_LoadU32(B53C_PRODUCER) == 0u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           memcmp(ring_before,
+                  PE_TranslateConst(B53C_RING_BASE - 8u,
+                                    sizeof(ring_before)),
+                  sizeof(ring_before)) == 0,
+           "boundary installed a callback or published a ring entry");
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0 &&
+           PE_GPU_DMA2Pending() && !PE_GPU_DMA2CompletionPending(),
+           "boundary progressed or completed the pending DMA");
+    ASSERT(PE_LoadU32(B53D_SAVED_IMASK) == 0xBEEFu &&
+           PE_IRQ_GetMask() == 0u &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "dispatcher crossed the unreturned setter or restored I_MASK");
     PASS();
 }
 
@@ -14676,7 +14839,7 @@ int main(void)
     /* Phase 6E-B50 corrective — func_8006AD40 honest prefix (5 tests). */
     test_6AD40_guard_bit0();
     test_6AD40_prefix_boundary_args();
-    test_6AD40_strict_stops_at_73CF4();
+    test_6AD40_strict_stops_at_746A0();
     test_6AD40_prefix_does_not_finalize();
     test_6AD40_prefix_repeat_dirty();
 
@@ -14703,7 +14866,7 @@ int main(void)
     test_B53C_copy_counts_stop_before_ring();
     test_B53C_inline8_lifetime_and_no_pointer();
     test_B53C_full_ram_canary_and_ring_authority();
-    test_B53C_strict_exposes_enqueue_callback();
+    test_B53C_strict_exposes_dma_setter();
     test_B53D_exchange_exact_abi();
     test_B53D_no_istat_callback_gpu_mutation();
     test_B53D_reset_owner();
@@ -14722,6 +14885,12 @@ int main(void)
     test_B53E_gpustat_wait_boundary_and_explicit_transition();
     test_B53E_max_geometry_and_pointer_width();
     test_B53E_dispatcher_and_inline_integration();
+
+    /* Phase 6E-B53F func_80073CF4 installed-target wrapper (4 tests) */
+    test_B53F_exact_abi_and_return_forwarding();
+    test_B53F_boundary_is_state_inert();
+    test_B53F_strict_exposes_746A0();
+    test_B53F_pending_dma_dispatcher_integration();
 
     /* Phase 6E-B53B deterministic GPU/DMA2 substrate (15 tests) */
     test_B53B_reset_dimensions_initial_vram();

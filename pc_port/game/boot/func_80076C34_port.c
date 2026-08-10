@@ -9,10 +9,11 @@
  * B53E resolves the exact canonical worker identity func_80076664 through
  * its translated LoadImage issue body, then restores the saved I_MASK and
  * returns retail zero.  Other worker identities remain honest boundaries.
- * Forced enqueue states still stop at callback registration helper
- * func_80073CF4 (call at 0x80076D60); a full ring still stops at
- * func_80077404 (call at 0x80076C68).  No ring entry is constructed or
- * published and no pump/callback runs.
+ * B53F resolves the execution-proven installed-target path through the
+ * callback-registration wrapper func_80073CF4 at 0x80076D60; the separate
+ * setter func_800746A0 is now the enqueue-path boundary.  A full ring still
+ * stops at func_80077404 (call at 0x80076C68).  No ring entry is constructed
+ * or published and no pump/callback runs.
  *
  * func_800773D0 is the complete 13-word timeout helper at
  * 0x800773D0..0x80077403.  It queries VSync(-1), stores query+240 at
@@ -47,7 +48,6 @@
 
 #define GPU_DMA2_CHCR_BUSY       0x01000000u
 #define GPU_QUEUE_PUMP           0x80076EE4u
-#define GPU_SET_DMA_CALLBACK     0x80073CF4u
 
 uint32_t func_800773D0(void)
 {
@@ -130,14 +130,11 @@ static int func_80076C34_prefix(pe_addr_t worker, pe_addr_t argument,
                 PE_LoadU32(GA_GPU_DRAWSYNC_CALLBACK) == 0u) {
                 goto direct_issue;
             }
-            /* 0x80076D58..0x80076D64: enqueue begins by installing the pump
-             * through func_80073CF4(2, 0x80076EE4).  Callback registration
-             * is the first unresolved dependency on this path; no ring entry
-             * is constructed or published before it. */
-            (void)Bootstrap_ReturnInt4Indirect(
-                "func_80073CF4", "func_80076C34", 0,
-                GPU_SET_DMA_CALLBACK, 2u, GPU_QUEUE_PUMP, 0u, 0u, NULL, 0u);
-            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            /* 0x80076D58..0x80076D64: enqueue begins by calling the proven
+             * installed-target path through func_80073CF4 with
+             * (2, func_80076EE4).  B53F exposes func_800746A0 before any
+             * ring entry is constructed or published. */
+            (void)func_80073CF4(2u, GPU_QUEUE_PUMP);
             return 0; /* host prefix cut; not a claimed retail result */
         }
     }
@@ -203,7 +200,7 @@ int PE_func_80076C34_Inline8(pe_addr_t worker,
         worker, 0u, 8u, auxiliary, payload, sizeof(payload));
     /* No guest argument identity exists for this caller-stack transient.
      * The exact LoadImage direct worker consumes these two words by value
-     * before return; enqueue still stops at func_80073CF4 before any payload
-     * must survive. */
+     * before return; enqueue still stops inside func_80073CF4 at its
+     * func_800746A0 backend before any payload must survive. */
     return func_80076C34_prefix(worker, 0u, 8, auxiliary, payload);
 }

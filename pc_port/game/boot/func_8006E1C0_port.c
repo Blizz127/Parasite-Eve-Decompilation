@@ -76,8 +76,9 @@
  * indirect target remains a host-only diagnostic boundary.
  *
  * Classification: 1 — translated retail logic. Phase 6E-B53E issues the
- * first LoadImage DMA through func_80076664, leaves it pending, and stops at
- * func_80073CF4 on the second request's enqueue path before ring publication.
+ * first LoadImage DMA through func_80076664 and leaves it pending. B53F
+ * crosses func_80073CF4 on the second request's enqueue path and stops at
+ * its func_800746A0 backend before ring publication.
  */
 #include "psx_compat.h"
 #include "game_port.h"
