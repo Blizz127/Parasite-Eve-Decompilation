@@ -1,21 +1,38 @@
-# Parasite Eve Native PC Port — Phase 6E-B53F
+# Parasite Eve Native PC Port — Phase 6E-B53G
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53F translates the execution-proven installed-target
+**Current milestone:** B53G translates the complete 43-word / `0xAC` Psy-Q
+DMA callback-slot setter `func_800746A0`
+(`0x800746A0..0x8007474B`, body SHA-256
+`ac160079410a40d719e5a8668f627d05d36d287d08959adc22fd3e069e4e99dd`). It
+stores the 32-bit guest handler into the guest-backed eight-slot table
+`D_800956C0`, performs the exact DICR read/modify/write through the single
+B53B `pe_gpu` authority, and returns the full previous identity. Retail
+validates no channel, so neither does the port; the enable bit is
+`1 << ((channel + 16) & 31)` and master bit 23 is set on both the install
+and removal paths. DICR bit 31 is read and immediately masked off, never
+tested and never written, so B53B needs no extension. I_MASK is not touched.
+Registration is not delivery: the pending first LoadImage DMA stays active
+and incomplete, and no callback, pump, DrawSync, VRAM, VBlank, or GPU-ready
+change occurs. This completes the B53F wrapper `func_80073CF4`, so the
+canonical enqueue proceeds through retail ring construction and publishes
+the second LoadImage request (worker `0x80076664`, argument = guest address
+of the copied inline RECT, auxiliary `0x8012B8B8`, producer `0`→`1`,
+consumer unmoved) and stops at the untranslated queue pump. Canonical
+strict execution now stops at `func_80076EE4` from `func_80076C34`;
+bootstrap strict remains `func_8007F72C` from `func_800698D4`. Seven new
+tests bring normal and fresh ASan/UBSan suites to 517/517, all 15 frozen
+B53B tests remain green, and the independent B53G oracle verifies all 43
+words, every delay slot, the whole-executable caller census, both DICR RMW
+expressions, and the explicit bit-31 verdict. Full proof is in
+`docs/b53g_func_800746A0.md`.
+
+**Prior milestone:** B53F translated the execution-proven installed-target
 path through the 12-word Psy-Q indirect wrapper `func_80073CF4` after
-ResetCallback. It
-forwards the DMA channel and 32-bit guest handler identity to the installed
-`func_800746A0` backend and forwards that backend's return; no native
-function pointer or duplicate callback table is introduced. The separate
-43-word backend remains unresolved, so B53F does not write `D_800956C0`,
-touch DICR, publish the retail ring, pump it, or complete the pending B53E
-DMA. Canonical strict execution now stops at `func_800746A0` from
-`func_80073CF4`; bootstrap strict remains `func_8007F72C` from
-`func_800698D4`. Four focused tests bring normal and fresh ASan/UBSan suites
-to 510/510, all 15 frozen B53B tests remain green, and the independent B53F
-oracle verifies all 12 words, both delay slots, installed-target proof, and
-32-bit argument/return forwarding. Full proof is in
+ResetCallback, forwarding the DMA channel and 32-bit guest handler identity
+to the installed `func_800746A0` backend without introducing a native
+function pointer or a duplicate callback table. Full proof is in
 `docs/b53f_func_80073CF4.md`.
 
 **Historical B32 detail:** `func_800614AC` is translated retail logic: 36

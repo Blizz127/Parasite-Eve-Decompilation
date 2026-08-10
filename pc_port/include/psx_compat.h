@@ -125,8 +125,9 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * func_80074E28 validator into the B53C-F func_80076C34 prefix.  B53E
  * translates the direct LoadImage worker func_80076664; B53F translates the
  * execution-proven installed-target path through callback wrapper
- * func_80073CF4.  The next canonical boundary is its installed setter
- * func_800746A0. */
+ * func_80073CF4, and B53G completes it by translating the installed setter
+ * func_800746A0.  The next canonical boundary is the queue pump
+ * func_80076EE4. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
@@ -174,6 +175,11 @@ extern int  PE_func_80076664_Inline8(uint32_t rect_word0,
 extern uint32_t func_800773D0(void);
 extern uint16_t func_80073E10(uint16_t new_mask);
 extern pe_addr_t func_80073CF4(uint32_t dma_channel, pe_addr_t handler);
+extern pe_addr_t func_800746A0(uint32_t dma_channel, pe_addr_t handler);
+/* Read-only names for the two retail authorities func_800746A0 uses. */
+extern pe_addr_t PE_DMA_CallbackSlotAddress(uint32_t dma_channel);
+extern pe_addr_t PE_DMA_DicrPointerAddress(void);
+extern uint32_t  PE_DMA_DicrMmioAddress(void);
 extern int  func_80076C34(pe_addr_t worker, pe_addr_t argument,
                           int32_t copy_bytes, uint32_t auxiliary);
 extern int  PE_func_80076C34_Inline8(pe_addr_t worker,

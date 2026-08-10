@@ -5,6 +5,52 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
+## Phase 6E-B53G DMA callback-slot setter verified
+
+The exact B53F base is
+`0650bdbef128b82c44faae5d378acdcbd8bfcf96`. B53G translates the complete
+Psy-Q DMA callback-slot setter `func_800746A0`: 43 words / `0xAC` bytes at
+`0x800746A0..0x8007474B` (exclusive end `0x8007474C`, file offset
+`0x64EA0`, live split `asm/disc1/64CC8.s`), body SHA-256
+`ac160079410a40d719e5a8668f627d05d36d287d08959adc22fd3e069e4e99dd`.
+
+ABI is `pe_addr_t func_800746A0(uint32_t channel, pe_addr_t handler)`. It
+reads the previous 32-bit guest identity from the guest-backed eight-slot
+table `D_800956C0` (`0x800956C0..0x800956DF`, cleared by
+`func_800744D4` → `func_8007474C(&D_800956C0, 8)`), returns immediately if
+the handler is unchanged, otherwise stores the slot and **then** performs
+the DICR RMW, and always returns the previous identity. Retail performs no
+channel validation whatsoever; the enable bit is
+`1 << ((channel + 16) & 31)`. Install is
+`(DICR & 0x00FFFFFF) | bit | 0x00800000`; removal is
+`((DICR & 0x00FFFFFF) | 0x00800000) & ~bit`, so channel 7 — whose enable
+bit *is* master bit 23 — clears master again. The `0x00FFFFFF` mask means
+W1C completion flags 24..30 are never acknowledged.
+
+**Bit-31 verdict B:** read by the `lw`, masked off before writeback, never
+tested, never written as one; B53B is NOT extended (proved by running the
+oracle with and without a synthesized master flag). **I_MASK verdict:** not
+accessed at all; the B53D `pe_irq` authority is unchanged. DICR remains
+solely owned by B53B `pe_gpu` via `PE_GPU_ReadDICR`/`PE_GPU_WriteDICR`; no
+native callback mirror or native function pointer exists.
+
+Caller census from the SHA-exact image: **zero** direct `jal`, zero static
+data words holding `0x800746A0`, and exactly one address materialization at
+`0x80074508` inside `func_800744D4`. ResetCallback stores that identity in
+libetc jump-table field `+0x04`, and `func_80073CF4` is the sole wrapper
+dispatching that field — so B53F's 11 call sites (channels 2/3/4, including
+null-handler removal) are the effective ABI.
+
+`func_80073CF4` is now COMPLETE. The canonical enqueue therefore proceeds:
+callback slot 2 `0` → `0x80076EE4`, DICR `0` → `0x00840000`, setter returns
+`0`, then ring entry 0 is built and published (worker `0x80076664`,
+argument `0x800BD03C` = guest address of the copied inline RECT
+`{256,456,64,1}`, auxiliary `0x8012B8B8`), producer `0`→`1`, consumer
+unmoved, I_MASK exchanged and restored. The pending first LoadImage DMA is
+still active and still incomplete; nothing pumps, completes, or delivers.
+
+Full proof is in `pc_port/docs/b53g_func_800746A0.md`.
+
 ## Phase 6E-B53F installed-target wrapper prefix verified
 
 The exact B53E base is
@@ -61,7 +107,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B53F installed-target wrapper prefix verified**; retail strict frontier `func_800746A0` from `func_80073CF4` | fresh normal and ASan/UBSan `pe-native-tests` (510/510 each) |
+| Port phase | **6E-B53G DMA callback-slot setter verified**; retail strict frontier `func_80076EE4` from `func_80076C34` | fresh normal and ASan/UBSan `pe-native-tests` (517/517 each) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -73,11 +119,11 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 twice). Every direct callee is translated. Call 15 is real func_80051CC4; B40 translates its first nested dependency func_8005332C, B41/B42 complete the exposed B29 func_80053968/func_80053B48 dependencies, and B43 translates func_8005218C only through its first honest internal boundary at func_8005B91C. Sole call site func_8006A9E4 @0x8006AAD0, `$s1`-guarded one-shot inside cycle B; void return unconsumed. | `pc_port/game/boot/func_800527C8_port.c`, `func_80051CC4_port.c`, `func_8005218C_port.c`, `func_8005332C_port.c`, `func_80053968_port.c`, `func_80053B48_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | continuing real data: exit 1 at `func_800746A0` from `func_80073CF4`; `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | fresh normal and ASan/UBSan agree |
-| GPU/DMA2 | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. B53E issues the exact LoadImage CPU prefix/DMA suffix and leaves completion explicit. No retail ring/HostFB/callback alias. I_MASK remains the single 16-bit `pe_irq.[ch]` authority | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/docs/b53e_func_80076664.md` |
-| Sanitizers | B53F fresh ASan/UBSan 510/510; B49, strict/bootstrap, real-disc load, B53F, and frozen B53B gates pass without sanitizer diagnostics | fresh `/tmp` build |
+| Strict mode | continuing real data: exit 1 at `func_80076EE4` from `func_80076C34`; `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | fresh normal and ASan/UBSan agree |
+| GPU/DMA2 | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. B53E issues the exact LoadImage CPU prefix/DMA suffix and leaves completion explicit. B53G's `func_800746A0` performs its DICR RMW through this same authority and adds no register state; DICR bit 31 stays unsynthesized (read-then-masked by retail, never tested). No retail ring/HostFB/callback alias. I_MASK remains the single 16-bit `pe_irq.[ch]` authority, untouched by callback registration | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/docs/b53g_func_800746A0.md` |
+| Sanitizers | B53G fresh ASan/UBSan 517/517; B49, strict/bootstrap, real-disc load, B53G, and frozen B53B gates pass without sanitizer diagnostics | fresh `/tmp` build |
 | Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | recover/translate only `func_800746A0` from `func_80073CF4`: guest DMA callback-slot store plus exact DICR RMW; do not publish/pump the ring or complete DMA merely to advance | `pc_port/docs/b53f_func_80073CF4.md` |
+| Next frontier | recover/translate only `func_80076EE4` from `func_80076C34`: the retail queue pump; do not service the still-active DMA, deliver a DMA IRQ, or dispatch a callback merely to advance | `pc_port/docs/b53g_func_800746A0.md` |
 
 ### Phase 6E-B43 func_8005218C — current findings
 

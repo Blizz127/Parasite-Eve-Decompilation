@@ -12126,12 +12126,12 @@ static void test_6AD40_prefix_boundary_args(void)
     PASS();
 }
 
-static void test_6AD40_strict_stops_at_746A0(void)
+static void test_6AD40_strict_stops_at_frontier(void)
 {
     DiscFixture fx;
     /* B53F resolves the wrapper's execution-proven installed-target path.
      * A preexisting DMA selects enqueue and exposes the setter backend. */
-    TEST("6AD40_strict_stops_at_746A0");
+    TEST("6AD40_strict_stops_at_frontier");
     pid_t pid;
     int status = 0;
     ResetTestState();
@@ -12643,32 +12643,38 @@ static void test_B53C_guest_abi_enqueue_boundary(void)
     ASSERT(func_80076C34(0xFEDCBA98u, 0xFFFFFFFFu,
                          INT32_MIN, 0x81234567u) == 0,
            "guest ABI prefix sentinel changed");
-    /* A nonempty initialized ring crosses the wrapper and stops at its
-     * callback setter, before any ring entry construction; the worker is
-     * never invoked. */
-    ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_800746A0") == 0 &&
-           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80073CF4") == 0 &&
-           g_bootstrap_arg4_calls[0].target == B53F_DMA_SETTER &&
-           g_bootstrap_arg4_calls[0].arg0 == 2u &&
-           g_bootstrap_arg4_calls[0].arg1 == B53D_QUEUE_PUMP,
-           "nonempty path did not expose exact callback registration");
+    /* A nonempty initialized ring registers the real channel-2 callback,
+     * publishes one entry, and stops at the untranslated queue pump.  The
+     * negative byte count copies nothing: 0x80076D80's signed compare
+     * fails immediately, so only the metadata words are written. */
+    ASSERT(g_bootstrap_arg4_call_count == 0 &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP,
+           "nonempty path did not perform the real callback registration");
     ASSERT(CountOrderLog("func_80077404") == 0 &&
            CountOrderLog("func_80073E10") == 0 &&
            CountOrderLog("func_80073CF4") == 0 &&
-           CountOrderLog("func_800746A0") == 1 &&
-           CountOrderLog("func_80076664") == 0,
+           CountOrderLog("func_800746A0") == 0 &&
+           CountOrderLog("func_80076664") == 0 &&
+           CountOrderLog("func_80076EE4") == 1,
            "nonempty path crossed or duplicated its boundary");
     ASSERT(PE_IRQ_GetMask() == 0u &&
            PE_LoadU32(B53D_SAVED_IMASK) == 0u &&
            PE_LoadU32(B53D_WORK_MARKER) == 1u,
            "exchange/marker state differs from retail");
-    ASSERT(PE_LoadU32(B53C_PRODUCER) == 7u &&
+    ASSERT(PE_LoadU32(B53C_RING_BASE + 7u * 96u) == 0xFEDCBA98u &&
+           PE_LoadU32(B53C_RING_BASE + 7u * 96u + 4u)
+               == B53C_RING_BASE + 7u * 96u + 0x0Cu &&
+           PE_LoadU32(B53C_RING_BASE + 7u * 96u + 8u) == 0x81234567u &&
+           PE_LoadU32(B53C_RING_BASE + 7u * 96u + 0x0Cu) == 0u,
+           "negative byte count did not publish metadata only");
+    ASSERT(PE_LoadU32(B53C_PRODUCER) == 8u &&
            PE_LoadU32(B53C_CONSUMER) == 2u,
-           "prefix changed authoritative ring indices");
+           "publication moved the consumer or mispublished the producer");
     PE_GPU_GetState(&after);
-    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
-           "dispatcher prefix progressed GPU hardware");
+    before.dicr = 0x00840000u;
+    ASSERT(after.dicr == 0x00840000u &&
+           memcmp(&before, &after, sizeof(before)) == 0,
+           "dispatcher progressed GPU hardware beyond the DICR RMW");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "dispatcher prefix did not request an honest stop");
     PASS();
@@ -12770,15 +12776,27 @@ static void test_B53C_full_ram_canary_and_ring_authority(void)
     ASSERT(snapshot != NULL, "cannot allocate B53C RAM snapshot");
     memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
 
+    /* copy_bytes 64 from 0xFFFFFFFC is a span this port cannot represent.
+     * Retail would read wild memory; B53G stops at a visible boundary
+     * after the registration that retail had already performed, and
+     * publishes nothing. */
     (void)func_80076C34(0xFFFFFFFFu, 0xFFFFFFFCu, 64,
                         0x81234567u);
     ASSERT(PE_LoadU32(B53C_DEADLINE) == 0xF0u &&
            PE_LoadU32(B53C_TIMEOUT_POLLS) == 0u,
            "full-RAM case lost exact timeout writes");
+    ASSERT(PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
+           CountOrderLog("func_80076C34_enqueue_span") == 1 &&
+           CountOrderLog("func_80076EE4") == 0 &&
+           PE_LoadU32(B53C_PRODUCER) == 9u &&
+           PE_LoadU32(B53C_CONSUMER) == 9u &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "unrepresentable copy source did not stop before publication");
     for (uint32_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
         if (a >= B53C_DEADLINE && a < B53C_TIMEOUT_POLLS + 4u) continue;
         if (a >= B53D_WORK_MARKER && a < B53D_WORK_MARKER + 4u) continue;
         if (a >= B53D_SAVED_IMASK && a < B53D_SAVED_IMASK + 4u) continue;
+        if (a >= B53F_DMA_CB_SLOT2 && a < B53F_DMA_CB_SLOT2 + 4u) continue;
         if (PE_LoadU8(a) != snapshot[a - PE_RAM_BASE]) {
             free(snapshot);
             FAIL("prefix mutated guest RAM outside its accepted words");
@@ -13002,37 +13020,45 @@ static void test_B53D_enqueue_selectors(void)
            sizeof(before));
     ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
            "busy prefix sentinel changed");
-    ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_800746A0") == 0 &&
-           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80073CF4") == 0 &&
-           g_bootstrap_arg4_calls[0].target == B53F_DMA_SETTER &&
-           g_bootstrap_arg4_calls[0].arg0 == 2u &&
-           g_bootstrap_arg4_calls[0].arg1 == B53D_QUEUE_PUMP,
-           "DMA-busy path did not stop at callback registration");
+    ASSERT(g_bootstrap_arg4_call_count == 0 &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
+           PE_GPU_ReadDICR() == 0x00840000u,
+           "DMA-busy path did not perform the real callback registration");
     ASSERT(PE_GPU_DMA2Pending() == 1 &&
            PE_GPU_DMA2CompletionPending() == 0,
            "prefix fabricated DMA2 completion");
-    ASSERT(memcmp(before, PE_TranslateConst(B53C_RING_BASE,
-                                            sizeof(before)),
-                  sizeof(before)) == 0,
-           "DMA-busy path published a ring entry");
+    /* The poisoned ring is overwritten only by this one published entry:
+     * everything outside entry 0's 96 bytes must survive. */
+    ASSERT(memcmp(before + 96u,
+                  (const uint8_t *)PE_TranslateConst(B53C_RING_BASE,
+                                                     sizeof(before)) + 96u,
+                  sizeof(before) - 96u) == 0,
+           "DMA-busy path wrote outside the published ring entry");
+    ASSERT(PE_LoadU32(B53C_RING_BASE) == 0x80076664u &&
+           PE_LoadU32(B53C_RING_BASE + 4u) == B53C_RING_BASE + 0x0Cu &&
+           PE_LoadU32(B53C_RING_BASE + 8u) == 0x80110000u &&
+           PE_LoadU32(B53C_PRODUCER) == 1u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           CountOrderLog("func_80076EE4") == 1,
+           "DMA-busy publication differs from retail");
     ASSERT(PE_IRQ_GetMask() == 0u &&
            PE_LoadU32(B53D_WORK_MARKER) == 1u,
            "DMA-busy path lost exchange/marker state");
 
-    /* DrawSync callback present: same registration boundary, idle DMA. */
+    /* DrawSync callback present: same registration and publication with an
+     * idle DMA channel; the worker is still never invoked. */
     ResetTestState();
     PE_StoreU8(B53D_INIT_BYTE, 1u);
     PE_StoreU32(B53D_DRAWSYNC_CB, 0x80012345u);
     ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
            "callback prefix sentinel changed");
-    ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_800746A0") == 0 &&
-           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80073CF4") == 0 &&
-           g_bootstrap_arg4_calls[0].target == B53F_DMA_SETTER &&
-           g_bootstrap_arg4_calls[0].arg1 == B53D_QUEUE_PUMP &&
-           CountOrderLog("func_80076664") == 0,
-           "callback path did not stop at callback registration");
+    ASSERT(g_bootstrap_arg4_call_count == 0 &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
+           PE_LoadU32(B53C_RING_BASE) == 0x80076664u &&
+           PE_LoadU32(B53C_PRODUCER) == 1u &&
+           CountOrderLog("func_80076664") == 0 &&
+           CountOrderLog("func_80076EE4") == 1,
+           "callback path did not register, publish, and stop at the pump");
     PASS();
 }
 
@@ -13474,8 +13500,9 @@ static void test_B53E_dispatcher_and_inline_integration(void)
  *
  * The 12-word retail wrapper has no callback or hardware state of its own.
  * It forwards channel/handler to the ResetCallback-installed func_800746A0
- * guest identity and forwards that backend's v0.  The backend remains an
- * honest boundary, so every state assertion below is made before it runs.
+ * guest identity and forwards that backend's v0.  B53G translates that
+ * backend completely, so the wrapper is now a complete retail function and
+ * every effect below is the setter's own exact registration effect.
  * ════════════════════════════════════════════════════════════════════ */
 
 static void test_B53F_exact_abi_and_return_forwarding(void)
@@ -13484,46 +13511,40 @@ static void test_B53F_exact_abi_and_return_forwarding(void)
     static const pe_addr_t handlers[] = {
         B53D_QUEUE_PUMP, 0xFFFFFFFFu, 0x81234567u
     };
-    static const int scripted[] = {
-        0x12345678, (int)0x89ABCDEFu, -1
-    };
-    static const pe_addr_t expected[] = {
-        0x12345678u, 0x89ABCDEFu, 0xFFFFFFFFu
+    static const pe_addr_t seeded[] = {
+        0x12345678u, 0x89ABCDEFu, 0xFFFFFFFEu
     };
     TEST("B53F_exact_abi_and_return_forwarding");
     ResetTestState();
-    Bootstrap_SetIntSequence("func_800746A0", scripted, 3);
+    for (size_t i = 0; i < 3u; i++) {
+        PE_StoreU32(B53F_DMA_CB_TABLE + channels[i] * 4u, seeded[i]);
+    }
 
+    /* The wrapper forwards both arguments and the backend's full 32-bit
+     * v0 without truncation, normalisation, or a native pointer. */
     for (size_t i = 0; i < 3u; i++) {
-        ASSERT(func_80073CF4(channels[i], handlers[i]) == expected[i],
+        ASSERT(func_80073CF4(channels[i], handlers[i]) == seeded[i],
                "wrapper did not forward the backend's full 32-bit v0");
+        ASSERT(PE_LoadU32(B53F_DMA_CB_TABLE + channels[i] * 4u)
+               == handlers[i],
+               "wrapper did not reach the exact guest callback slot");
     }
-    ASSERT(g_bootstrap_arg4_call_count == 3,
-           "wrapper did not expose exactly three backend calls");
-    for (size_t i = 0; i < 3u; i++) {
-        const BootstrapArgCall4 *call = &g_bootstrap_arg4_calls[i];
-        ASSERT(strcmp(call->symbol, "func_800746A0") == 0 &&
-               strcmp(call->caller, "func_80073CF4") == 0 &&
-               call->target == B53F_DMA_SETTER &&
-               call->arg0 == channels[i] && call->arg1 == handlers[i] &&
-               call->arg2 == 0u && call->arg3 == 0u &&
-               call->payload_size == 0u,
-               "wrapper lost channel/guest identity or invented a pointer");
-    }
-    ASSERT(CountOrderLog("func_80073CF4") == 0 &&
-           CountOrderLog("func_800746A0") == 3,
-           "translated wrapper remained a stub or duplicated its backend");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "unreturned backend did not request an honest host stop");
+    ASSERT(g_bootstrap_arg4_call_count == 0 &&
+           CountOrderLog("func_80073CF4") == 0 &&
+           CountOrderLog("func_800746A0") == 0,
+           "translated wrapper or setter remained a bootstrap boundary");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "complete wrapper still requested an unresolved-boundary stop");
     PASS();
 }
 
-static void test_B53F_boundary_is_state_inert(void)
+static void test_B53F_touches_only_slot_and_dicr(void)
 {
     uint8_t *ram_before;
+    uint32_t published = B53D_QUEUE_PUMP;
     PeGpuState gpu_before;
     PeGpuState gpu_after;
-    TEST("B53F_boundary_is_state_inert");
+    TEST("B53F_touches_only_slot_and_dicr");
     ResetTestState();
     PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0xA5u);
     for (uint32_t i = 0; i < 8u; i++) {
@@ -13542,84 +13563,408 @@ static void test_B53F_boundary_is_state_inert(void)
            PE_RAM_SIZE);
     PE_GPU_GetState(&gpu_before);
 
-    ASSERT(func_80073CF4(2u, B53D_QUEUE_PUMP) == 0u,
-           "default unresolved backend result changed");
-    PE_GPU_GetState(&gpu_after);
+    ASSERT(func_80073CF4(2u, B53D_QUEUE_PUMP) == 0x80010200u,
+           "wrapper did not return the seeded slot-2 identity");
+
+    /* Exactly one guest word changes: callback slot 2. */
+    memcpy(ram_before + (B53F_DMA_CB_SLOT2 - PE_RAM_BASE), &published, 4u);
     ASSERT(memcmp(ram_before,
                   PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
                   PE_RAM_SIZE) == 0,
-           "wrapper boundary mutated callback/ring/guest state");
+           "wrapper mutated guest state outside callback slot 2");
+
+    /* Exactly one hardware field changes: DICR. */
+    PE_GPU_GetState(&gpu_after);
+    ASSERT(gpu_after.dicr == ((0x00A5A5A5u & 0x00FFFFFFu) |
+                              0x00040000u | 0x00800000u),
+           "wrapper DICR result is not the retail install RMW");
+    gpu_before.dicr = gpu_after.dicr;
     ASSERT(memcmp(&gpu_before, &gpu_after, sizeof(gpu_before)) == 0 &&
            PE_IRQ_GetMask() == 0xBEEFu,
-           "wrapper boundary mutated GPU/DMA/DICR/I_MASK state");
+           "wrapper mutated GPU/DMA/DPCR/I_MASK state beyond DICR");
     free(ram_before);
     PASS();
 }
 
-static void test_B53F_strict_exposes_746A0(void)
+static void test_B53F_strict_wrapper_completes(void)
 {
     pid_t pid;
     int status = 0;
-    TEST("B53F_strict_exposes_746A0");
+    TEST("B53F_strict_wrapper_completes");
     ResetTestState();
     pid = fork();
-    ASSERT(pid >= 0, "fork failed for B53F strict boundary");
+    ASSERT(pid >= 0, "fork failed for B53F strict completion");
     if (pid == 0) {
         Bootstrap_Init();
         Bootstrap_EnableStrict();
-        (void)func_80073CF4(2u, B53D_QUEUE_PUMP);
+        /* B53G removed this boundary: a complete wrapper must not abort
+         * under strict stubs, and must return the retail previous value. */
+        if (func_80073CF4(2u, B53D_QUEUE_PUMP) != 0u) _exit(3);
+        if (PE_LoadU32(B53F_DMA_CB_SLOT2) != B53D_QUEUE_PUMP) _exit(4);
         _exit(0);
     }
     ASSERT(waitpid(pid, &status, 0) == pid,
-           "waitpid failed for B53F strict boundary");
-    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict wrapper did not stop at func_800746A0");
+           "waitpid failed for B53F strict completion");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+           "strict wrapper no longer completes without a boundary");
     PASS();
 }
 
 static void test_B53F_pending_dma_dispatcher_integration(void)
 {
-    uint8_t ring_before[0x70];
     PeGpuState before;
     PeGpuState after;
     TEST("B53F_pending_dma_dispatcher_integration");
     ResetTestState();
     PE_StoreU8(B53D_INIT_BYTE, 1u);
-    PE_Fill(B53C_RING_BASE - 8u, sizeof(ring_before), 0xA5u);
-    memcpy(ring_before, PE_TranslateConst(B53C_RING_BASE - 8u,
-                                         sizeof(ring_before)),
-           sizeof(ring_before));
     PE_StoreU32(B53F_DMA_CB_SLOT2, 0x80016666u);
+    PE_StoreU32(B53E_RECT, 0x11112222u);
+    PE_StoreU32(B53E_RECT + 4u, 0x33334444u);
     (void)PE_IRQ_ExchangeMask(0xBEEFu);
     ASSERT(B53E_SeedBusyDma(), "cannot seed canonical pending DMA2 state");
     PE_GPU_GetState(&before);
 
-    ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8,
+    ASSERT(func_80076C34(0x80076664u, B53E_RECT, 8,
                          0x80110000u) == 0,
            "dispatcher prefix sentinel changed");
     PE_GPU_GetState(&after);
-    ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_800746A0") == 0 &&
-           strcmp(g_bootstrap_arg4_calls[0].caller, "func_80073CF4") == 0 &&
-           g_bootstrap_arg4_calls[0].target == B53F_DMA_SETTER &&
-           g_bootstrap_arg4_calls[0].arg0 == 2u &&
-           g_bootstrap_arg4_calls[0].arg1 == B53D_QUEUE_PUMP,
-           "dispatcher did not reach the exact installed backend boundary");
-    ASSERT(PE_LoadU32(B53F_DMA_CB_SLOT2) == 0x80016666u &&
-           PE_LoadU32(B53C_PRODUCER) == 0u &&
-           PE_LoadU32(B53C_CONSUMER) == 0u &&
-           memcmp(ring_before,
-                  PE_TranslateConst(B53C_RING_BASE - 8u,
-                                    sizeof(ring_before)),
-                  sizeof(ring_before)) == 0,
-           "boundary installed a callback or published a ring entry");
+
+    /* The registration really happened, through the real setter. */
+    ASSERT(g_bootstrap_arg4_call_count == 0 &&
+           CountOrderLog("func_800746A0") == 0 &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP,
+           "dispatcher did not perform the real callback registration");
+    ASSERT(after.dicr == 0x00840000u,
+           "dispatcher registration DICR result is not 0x00840000");
+
+    /* Publication is retail-exact and the pending DMA is untouched. */
+    ASSERT(PE_LoadU32(B53C_RING_BASE) == 0x80076664u &&
+           PE_LoadU32(B53C_RING_BASE + 4u) == B53C_RING_BASE + 0x0Cu &&
+           PE_LoadU32(B53C_RING_BASE + 8u) == 0x80110000u &&
+           PE_LoadU32(B53C_RING_BASE + 0x0Cu) == 0x11112222u &&
+           PE_LoadU32(B53C_RING_BASE + 0x10u) == 0x33334444u,
+           "published ring entry differs from retail");
+    ASSERT(PE_LoadU32(B53C_PRODUCER) == 1u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u,
+           "publication moved the consumer or mispublished the producer");
+    before.dicr = after.dicr;
     ASSERT(memcmp(&before, &after, sizeof(before)) == 0 &&
            PE_GPU_DMA2Pending() && !PE_GPU_DMA2CompletionPending(),
-           "boundary progressed or completed the pending DMA");
+           "dispatcher progressed or completed the pending DMA");
     ASSERT(PE_LoadU32(B53D_SAVED_IMASK) == 0xBEEFu &&
-           PE_IRQ_GetMask() == 0u &&
+           PE_IRQ_GetMask() == 0xBEEFu &&
+           CountOrderLog("func_80076EE4") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "dispatcher crossed the unreturned setter or restored I_MASK");
+           "dispatcher did not restore I_MASK and stop at the pump");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Phase 6E-B53G — func_800746A0 DMA callback-slot setter (7 tests)
+ *
+ * Every expectation below is derived from the 43 literal retail words and
+ * cross-checked by the independent tools/b53g_oracle.py.  The setter is
+ * registration state only: it never delivers an interrupt, services DMA,
+ * pumps the ring, or invokes a callback.
+ * ════════════════════════════════════════════════════════════════════ */
+
+#define B53G_DICR_MASTER   0x00800000u
+#define B53G_DICR_CONTROL  0x00FFFFFFu
+
+static uint32_t B53G_EnableBit(uint32_t channel)
+{
+    return 1u << ((channel + 16u) & 31u);
+}
+
+static void test_B53G_exact_abi_and_caller_contract(void)
+{
+    /* The three channels every executable caller of func_80073CF4 uses. */
+    static const uint32_t channels[] = { 2u, 3u, 4u };
+    static const pe_addr_t handlers[] = {
+        0x80076EE4u, 0x80077A00u, 0xFFFFFFFFu
+    };
+    TEST("B53G_exact_abi_and_caller_contract");
+    ResetTestState();
+
+    for (size_t i = 0; i < 3u; i++) {
+        ASSERT(PE_DMA_CallbackSlotAddress(channels[i])
+               == B53F_DMA_CB_TABLE + channels[i] * 4u,
+               "channel-to-slot mapping is not base + channel*4");
+        ASSERT(func_800746A0(channels[i], handlers[i]) == 0u,
+               "first install did not return the retail zero slot");
+        ASSERT(PE_LoadU32(B53F_DMA_CB_TABLE + channels[i] * 4u)
+               == handlers[i],
+               "install stored a truncated or normalised identity");
+    }
+    /* Full 32-bit guest identities survive; nothing is a native pointer. */
+    ASSERT(func_800746A0(4u, 0x81234567u) == 0xFFFFFFFFu,
+           "previous-handler return lost its high guest bits");
+    ASSERT(PE_LoadU32(B53F_DMA_CB_TABLE + 16u) == 0x81234567u,
+           "replacement did not store the full 32-bit identity");
+    /* The retail authorities are named, not duplicated. */
+    ASSERT(PE_DMA_DicrPointerAddress() == 0x800956BCu &&
+           PE_DMA_DicrMmioAddress() == 0x1F8010F4u,
+           "DICR authority addresses differ from retail");
+    ASSERT(g_bootstrap_arg4_call_count == 0 &&
+           CountOrderLog("func_800746A0") == 0,
+           "translated setter still routed through a bootstrap boundary");
+    PASS();
+}
+
+static void test_B53G_channel_range_contract(void)
+{
+    TEST("B53G_channel_range_contract");
+    ResetTestState();
+
+    /* Retail performs no minimum, maximum, or signedness check: every one
+     * of the eight table slots is reachable and indexed identically. */
+    for (uint32_t channel = 0u; channel < 8u; channel++) {
+        ASSERT(func_800746A0(channel, 0x80020000u + channel) == 0u,
+               "in-range channel did not start from the cleared slot");
+    }
+    for (uint32_t channel = 0u; channel < 8u; channel++) {
+        ASSERT(PE_LoadU32(B53F_DMA_CB_TABLE + channel * 4u)
+               == 0x80020000u + channel,
+               "in-range channel indexed the wrong slot");
+    }
+
+    /* Above range: channel 8 addresses the word after the table, which the
+     * retail image initialises to the DMA0 register-block pointer. */
+    ResetTestState();
+    ASSERT(func_800746A0(8u, 0x80009999u) == 0u,
+           "above-range channel did not read one word past the table");
+    ASSERT(PE_LoadU32(B53F_DMA_CB_TABLE + 32u) == 0x80009999u,
+           "above-range channel did not write one word past the table");
+
+    /* Below range: channel -1 wraps onto the DICR pointer word and its
+     * shift amount lands on bit 15.  Both are exact retail consequences. */
+    ResetTestState();
+    PE_StoreU32(PE_DMA_DicrPointerAddress(), 0x1F8010F4u);
+    ASSERT(func_800746A0(0xFFFFFFFFu, 0x80005555u) == 0x1F8010F4u,
+           "negative channel did not read the DICR pointer word");
+    ASSERT(PE_LoadU32(PE_DMA_DicrPointerAddress()) == 0x80005555u &&
+           PE_GPU_ReadDICR() == (B53G_DICR_MASTER | 0x00008000u),
+           "negative channel was sanitised beyond retail");
+    PASS();
+}
+
+static void test_B53G_handler_lifecycle(void)
+{
+    uint32_t dicr_seed;
+    TEST("B53G_handler_lifecycle");
+
+    /* empty -> install */
+    ResetTestState();
+    ASSERT(func_800746A0(2u, 0x80076EE4u) == 0u &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == 0x80076EE4u &&
+           PE_GPU_ReadDICR() == 0x00840000u,
+           "install into an empty slot differs from retail");
+
+    /* existing -> replace, previous returned */
+    ASSERT(func_800746A0(2u, 0x80077A00u) == 0x80076EE4u &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == 0x80077A00u,
+           "replacement did not return and store the retail identities");
+
+    /* existing -> remove with zero; master stays set, channel clears */
+    ASSERT(func_800746A0(2u, 0u) == 0x80077A00u &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == 0u &&
+           PE_GPU_ReadDICR() == B53G_DICR_MASTER,
+           "removal differs from retail");
+
+    /* zero -> zero is a complete no-op: no slot store, no DICR access */
+    ResetTestState();
+    PE_GPU_WriteDICR(0x00123456u);
+    dicr_seed = PE_GPU_ReadDICR();
+    ASSERT(func_800746A0(2u, 0u) == 0u &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == 0u &&
+           PE_GPU_ReadDICR() == dicr_seed,
+           "zero-to-zero touched the slot or DICR");
+
+    /* same-handler reinstall is equally inert */
+    ResetTestState();
+    PE_StoreU32(B53F_DMA_CB_SLOT2, 0x80076EE4u);
+    PE_GPU_WriteDICR(0x00123456u);
+    dicr_seed = PE_GPU_ReadDICR();
+    ASSERT(func_800746A0(2u, 0x80076EE4u) == 0x80076EE4u &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == 0x80076EE4u &&
+           PE_GPU_ReadDICR() == dicr_seed,
+           "same-handler reinstall performed a redundant DICR write");
+    PASS();
+}
+
+static void test_B53G_dicr_rmw_exact(void)
+{
+    TEST("B53G_dicr_rmw_exact");
+
+    /* Install: unrelated lower control bits are preserved exactly. */
+    ResetTestState();
+    PE_GPU_WriteDICR(0x005A1234u);
+    ASSERT(func_800746A0(2u, 0x80076EE4u) == 0u &&
+           PE_GPU_ReadDICR() ==
+               ((0x005A1234u & B53G_DICR_CONTROL) |
+                B53G_EnableBit(2u) | B53G_DICR_MASTER),
+           "install RMW did not preserve unrelated control bits");
+
+    /* Removal sets master first and clears the channel bit afterwards. */
+    PE_StoreU32(B53F_DMA_CB_SLOT2, 0x80076EE4u);
+    ASSERT(func_800746A0(2u, 0u) == 0x80076EE4u &&
+           PE_GPU_ReadDICR() ==
+               (((0x005A1234u & B53G_DICR_CONTROL) | B53G_DICR_MASTER) &
+                ~B53G_EnableBit(2u)),
+           "removal RMW did not preserve unrelated control bits");
+
+    /* Channel 7's enable bit IS the master bit, so removal clears it. */
+    ResetTestState();
+    PE_StoreU32(B53F_DMA_CB_TABLE + 28u, 0x80001234u);
+    PE_GPU_WriteDICR(B53G_DICR_MASTER);
+    ASSERT(func_800746A0(7u, 0u) == 0x80001234u &&
+           PE_GPU_ReadDICR() == 0u,
+           "channel 7 removal did not clear the master bit it shares");
+    ASSERT(B53G_EnableBit(7u) == B53G_DICR_MASTER,
+           "channel 7 enable bit is not bit 23");
+
+    /* A real pending completion flag is never acknowledged: the written
+     * word carries zeros in bits 24..30, so W1C leaves the flag set. */
+    ResetTestState();
+    ASSERT(B53E_SeedBusyDma(), "cannot seed DMA for the flag test");
+    ASSERT(PE_GPU_ServiceDMA2Completion(PE_GPU_DMA2EventToken()) == 1 &&
+           PE_GPU_DMA2CompletionPending(),
+           "completion flag seeding failed");
+    ASSERT(func_800746A0(2u, 0x80076EE4u) == 0u &&
+           PE_GPU_DMA2CompletionPending() &&
+           PE_GPU_ReadDICR() ==
+               (0x04000000u | B53G_EnableBit(2u) | B53G_DICR_MASTER),
+           "install acknowledged a pending DMA completion flag");
+    PE_StoreU32(B53F_DMA_CB_SLOT2, 0x80076EE4u);
+    ASSERT(func_800746A0(2u, 0u) == 0x80076EE4u &&
+           PE_GPU_DMA2CompletionPending() &&
+           PE_GPU_ReadDICR() == (0x04000000u | B53G_DICR_MASTER),
+           "removal acknowledged a pending DMA completion flag");
+
+    /* Bit-31 verdict: the setter reads the raw word, masks bit 31 off, and
+     * never tests it.  The B53B authority represents no bit 31, and the
+     * results above prove nothing here depends on one. */
+    ASSERT((PE_GPU_ReadDICR() & 0x80000000u) == 0u,
+           "a DICR authority bit 31 appeared without retail evidence");
+    PASS();
+}
+
+static void test_B53G_registration_is_not_delivery(void)
+{
+    uint8_t *ram_before;
+    uint32_t slot = 0x80076EE4u;
+    uint16_t pixel_before[4];
+    uint16_t pixel_after[4];
+    PeGpuState before;
+    PeGpuState after;
+    TEST("B53G_registration_is_not_delivery");
+    ResetTestState();
+    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0x5Au);
+    PE_StoreU32(B53F_DMA_CB_SLOT2, 0u);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    ASSERT(B53E_SeedBusyDma(), "cannot seed the canonical pending DMA");
+    for (uint32_t i = 0; i < 4u; i++) {
+        ASSERT(PE_GPU_ReadVRAM(i, 0u, &pixel_before[i]) == 1,
+               "VRAM sample failed");
+    }
+    ram_before = malloc(PE_RAM_SIZE);
+    ASSERT(ram_before != NULL, "cannot allocate B53G RAM snapshot");
+    memcpy(ram_before, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
+           PE_RAM_SIZE);
+    PE_GPU_GetState(&before);
+
+    ASSERT(func_800746A0(2u, 0x80076EE4u) == 0u,
+           "canonical registration return changed");
+
+    /* Exactly one guest word and exactly one hardware field changed. */
+    memcpy(ram_before + (B53F_DMA_CB_SLOT2 - PE_RAM_BASE), &slot, 4u);
+    ASSERT(memcmp(ram_before,
+                  PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
+                  PE_RAM_SIZE) == 0,
+           "registration mutated guest state outside its callback slot");
+    PE_GPU_GetState(&after);
+    ASSERT(after.dicr == (((before.dicr & B53G_DICR_CONTROL) |
+                           B53G_EnableBit(2u)) | B53G_DICR_MASTER),
+           "registration DICR result is not the retail install RMW");
+    before.dicr = after.dicr;
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "registration changed GPU readiness, DMA, VBlank, or parser");
+
+    /* Registration is not delivery. */
+    ASSERT(PE_GPU_DMA2Pending() == 1 &&
+           PE_GPU_DMA2CompletionPending() == 0 &&
+           PE_GPU_DMA2InterruptAsserted() == 0,
+           "registration completed or asserted the pending DMA");
+    ASSERT(PE_IRQ_GetMask() == 0xBEEFu,
+           "registration touched the single I_MASK authority");
+    ASSERT(g_stub_count == 0 && g_bootstrap_arg4_call_count == 0,
+           "registration invoked a callback, pump, or boundary");
+    for (uint32_t i = 0; i < 4u; i++) {
+        ASSERT(PE_GPU_ReadVRAM(i, 0u, &pixel_after[i]) == 1 &&
+               pixel_after[i] == pixel_before[i],
+               "registration mutated VRAM");
+    }
+    free(ram_before);
+    PASS();
+}
+
+static void test_B53G_reset_lifecycle_and_determinism(void)
+{
+    TEST("B53G_reset_lifecycle_and_determinism");
+
+    /* Repeating the exact canonical registration is idempotent: the second
+     * call takes the equality path and performs no write at all. */
+    ResetTestState();
+    ASSERT(func_800746A0(2u, 0x80076EE4u) == 0u &&
+           PE_GPU_ReadDICR() == 0x00840000u, "first registration changed");
+    PE_GPU_WriteDICR(0x00000000u);
+    ASSERT(func_800746A0(2u, 0x80076EE4u) == 0x80076EE4u &&
+           PE_GPU_ReadDICR() == 0u,
+           "repeated identical registration was not inert");
+
+    /* The table is guest-backed, so a guest RAM reset clears it exactly as
+     * func_800744D4's func_8007474C(&D_800956C0, 8) does. */
+    PE_RamReset();
+    for (uint32_t channel = 0u; channel < 8u; channel++) {
+        ASSERT(PE_LoadU32(B53F_DMA_CB_TABLE + channel * 4u) == 0u,
+               "callback table survived a guest RAM reset");
+    }
+    ASSERT(func_800746A0(2u, 0x80076EE4u) == 0u,
+           "post-reset registration did not start from a cleared slot");
+
+    /* Three identical reset-and-register cycles agree exactly. */
+    for (int i = 0; i < 3; i++) {
+        ResetTestState();
+        ASSERT(func_800746A0(2u, 0x80076EE4u) == 0u &&
+               PE_LoadU32(B53F_DMA_CB_SLOT2) == 0x80076EE4u &&
+               PE_GPU_ReadDICR() == 0x00840000u,
+               "reset-and-register cycles are not deterministic");
+    }
+    PASS();
+}
+
+static void test_B53G_strict_frontier_is_pump(void)
+{
+    pid_t pid;
+    int status = 0;
+    TEST("B53G_strict_frontier_is_pump");
+    ResetTestState();
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed for B53G strict frontier");
+    if (pid == 0) {
+        Bootstrap_Init();
+        PE_StoreU8(B53D_INIT_BYTE, 1u);
+        PE_StoreU32(B53C_PRODUCER, 0u);
+        PE_StoreU32(B53C_CONSUMER, 0u);
+        if (!B53E_SeedBusyDma()) _exit(2);
+        Bootstrap_EnableStrict();
+        (void)func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u);
+        _exit(0);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid,
+           "waitpid failed for B53G strict frontier");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
+           "strict enqueue did not stop at the untranslated queue pump");
     PASS();
 }
 
@@ -14839,7 +15184,7 @@ int main(void)
     /* Phase 6E-B50 corrective — func_8006AD40 honest prefix (5 tests). */
     test_6AD40_guard_bit0();
     test_6AD40_prefix_boundary_args();
-    test_6AD40_strict_stops_at_746A0();
+    test_6AD40_strict_stops_at_frontier();
     test_6AD40_prefix_does_not_finalize();
     test_6AD40_prefix_repeat_dirty();
 
@@ -14888,9 +15233,16 @@ int main(void)
 
     /* Phase 6E-B53F func_80073CF4 installed-target wrapper (4 tests) */
     test_B53F_exact_abi_and_return_forwarding();
-    test_B53F_boundary_is_state_inert();
-    test_B53F_strict_exposes_746A0();
+    test_B53F_touches_only_slot_and_dicr();
+    test_B53F_strict_wrapper_completes();
     test_B53F_pending_dma_dispatcher_integration();
+    test_B53G_exact_abi_and_caller_contract();
+    test_B53G_channel_range_contract();
+    test_B53G_handler_lifecycle();
+    test_B53G_dicr_rmw_exact();
+    test_B53G_registration_is_not_delivery();
+    test_B53G_reset_lifecycle_and_determinism();
+    test_B53G_strict_frontier_is_pump();
 
     /* Phase 6E-B53B deterministic GPU/DMA2 substrate (15 tests) */
     test_B53B_reset_dimensions_initial_vram();

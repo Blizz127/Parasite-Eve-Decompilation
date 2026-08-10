@@ -98,8 +98,9 @@ int func_8006AD40(void)
 
     /* Prefix boundary: B53E authentically issues the first LoadImage DMA and
      * leaves it pending.  The second request therefore selects the retail
-     * enqueue path; B53F crosses func_80073CF4 and stops at its installed
-     * func_800746A0 backend before queue publication.  Ask the host loop to
+     * enqueue path; B53G registers the channel-2 callback through
+     * func_80073CF4/func_800746A0, publishes the ring entry, and stops at
+     * the untranslated queue pump func_80076EE4.  Ask the host loop to
      * honor that already-requested unresolved boundary. */
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;

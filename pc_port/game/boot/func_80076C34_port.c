@@ -10,10 +10,14 @@
  * its translated LoadImage issue body, then restores the saved I_MASK and
  * returns retail zero.  Other worker identities remain honest boundaries.
  * B53F resolves the execution-proven installed-target path through the
- * callback-registration wrapper func_80073CF4 at 0x80076D60; the separate
- * setter func_800746A0 is now the enqueue-path boundary.  A full ring still
- * stops at func_80077404 (call at 0x80076C68).  No ring entry is constructed
- * or published and no pump/callback runs.
+ * callback-registration wrapper func_80073CF4 at 0x80076D60, and B53G
+ * completes it by translating the separate setter func_800746A0.  The
+ * enqueue block 0x80076D68..0x80076EA0 is therefore translated: it copies
+ * the payload, writes the entry metadata, advances the producer, restores
+ * the saved I_MASK, and stops at the untranslated queue pump func_80076EE4
+ * (call at 0x80076EA4).  A full ring still stops at func_80077404 (call at
+ * 0x80076C68).  No pump, callback, consumer movement, or DMA completion
+ * happens here.
  *
  * func_800773D0 is the complete 13-word timeout helper at
  * 0x800773D0..0x80077403.  It queries VSync(-1), stores query+240 at
@@ -81,6 +85,141 @@ static const char *worker_symbol(pe_addr_t worker)
     }
 }
 
+/* Retail command-ring entry geometry, proven by the executable words at
+ * 0x80076D70..0x80076E7C: 64 entries of 96 bytes at D_800BD030, with
+ * +0x00 worker identity, +0x04 argument, +0x08 auxiliary, and the copied
+ * inline payload from +0x0C.  The ring stays authoritative in guest RAM;
+ * no native mirror or host queue exists. */
+#define GA_GPU_RING_BASE         0x800BD030u
+#define GPU_RING_ENTRY_STRIDE    96u
+#define GPU_RING_FIELD_ARGUMENT  0x04u
+#define GPU_RING_FIELD_AUXILIARY 0x08u
+#define GPU_RING_FIELD_PAYLOAD   0x0Cu
+
+/* `sll`+`addu`+`sll` at 0x80076DB0..0x80076DB8 in exact 32-bit guest
+ * arithmetic: entry_offset = producer * 96. */
+static uint32_t ring_entry_offset(uint32_t producer)
+{
+    return (uint32_t)(((producer << 1) + producer) << 5);
+}
+
+/* Preflight for the spans this enqueue would touch.  Retail performs no
+ * check at all; it would simply read or write whatever address its
+ * arithmetic produced.  This port cannot represent an access outside its
+ * 2 MiB guest RAM, so — exactly as B53E does before the LoadImage CPU
+ * prefix — an unrepresentable span becomes a visible honest boundary
+ * instead of a host abort or a silently narrowed copy. */
+static int enqueue_spans_are_ram(pe_addr_t argument, int32_t words,
+                                 uint32_t producer, int has_inline_payload)
+{
+    uint64_t bytes;
+
+    if (!PE_RangeIsRam(GA_GPU_RING_BASE + ring_entry_offset(producer),
+                       GPU_RING_ENTRY_STRIDE)) {
+        return 0;
+    }
+    if (words <= 0) {
+        return 1;
+    }
+    bytes = (uint64_t)(uint32_t)words * 4u;
+    if (bytes > GPU_RING_ENTRY_STRIDE - GPU_RING_FIELD_PAYLOAD) {
+        return 0;   /* retail would overrun the following ring entries */
+    }
+    if (has_inline_payload) {
+        return bytes <= 8u;
+    }
+    return PE_RangeIsRam(argument, (size_t)bytes);
+}
+
+/* 0x80076D68..0x80076EA8 — construct and publish one ring entry, then
+ * expose the retail queue pump.
+ *
+ * Retail reloads D_80095874 before every entry store; that exact read
+ * pattern is preserved because the ring word is authoritative guest state,
+ * not a cached host value.  Producer publication happens in the
+ * 0x80076EA0 delay slot, i.e. strictly before func_80073E10 restores the
+ * saved I_MASK, and no store to the entry happens after it. */
+static int func_80076C34_enqueue(pe_addr_t worker, pe_addr_t argument,
+                                 int32_t copy_bytes, uint32_t auxiliary,
+                                 const uint32_t *inline8)
+{
+    uint32_t producer;
+    uint32_t saved_mask;
+
+    producer = PE_LoadU32(GA_GPU_RING_PRODUCER);
+    if (!enqueue_spans_are_ram(argument, copy_bytes / 4, producer,
+                               inline8 != NULL)) {
+        (void)Bootstrap_ReturnInt(
+            "func_80076C34_enqueue_span", "func_80076C34", 0);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return 0;
+    }
+
+    if (copy_bytes != 0) {
+        /* 0x80076D80..0x80076D8C: the `bgez`/`addiu 3`/`sra 2` idiom is
+         * signed division by four, and 0x80076D90 compares signed, so a
+         * negative byte count copies nothing. */
+        int32_t words = copy_bytes / 4;
+        int32_t index;
+        pe_addr_t source = argument;
+
+        for (index = 0; index < words; index++) {
+            uint32_t value;
+
+            if (inline8 != NULL) {
+                /* B52's caller-stack RECT has no guest address.  Its exact
+                 * eight proven bytes are supplied by value; the preflight
+                 * has already rejected any wider copy, which would read
+                 * retail memory this port cannot name. */
+                value = inline8[index];
+            } else {
+                value = PE_LoadU32(source);
+            }
+            source += 4u;
+
+            producer = PE_LoadU32(GA_GPU_RING_PRODUCER);
+            PE_StoreU32(GA_GPU_RING_BASE + GPU_RING_FIELD_PAYLOAD +
+                        ring_entry_offset(producer) +
+                        (uint32_t)index * 4u, value);
+        }
+
+        /* 0x80076DD0..0x80076E10: the argument field becomes the guest
+         * address of the copied payload, never a native pointer. */
+        producer = PE_LoadU32(GA_GPU_RING_PRODUCER);
+        PE_StoreU32(GA_GPU_RING_BASE + GPU_RING_FIELD_ARGUMENT +
+                    ring_entry_offset(producer),
+                    GA_GPU_RING_BASE + GPU_RING_FIELD_PAYLOAD +
+                    ring_entry_offset(producer));
+    } else {
+        /* 0x80076E14..0x80076E34: with no payload the caller's argument is
+         * stored unchanged. */
+        producer = PE_LoadU32(GA_GPU_RING_PRODUCER);
+        PE_StoreU32(GA_GPU_RING_BASE + GPU_RING_FIELD_ARGUMENT +
+                    ring_entry_offset(producer), argument);
+    }
+
+    /* 0x80076E38..0x80076E58 then 0x80076E5C..0x80076E7C. */
+    producer = PE_LoadU32(GA_GPU_RING_PRODUCER);
+    PE_StoreU32(GA_GPU_RING_BASE + GPU_RING_FIELD_AUXILIARY +
+                ring_entry_offset(producer), auxiliary);
+    producer = PE_LoadU32(GA_GPU_RING_PRODUCER);
+    PE_StoreU32(GA_GPU_RING_BASE + ring_entry_offset(producer), worker);
+
+    /* 0x80076E80..0x80076EA0: the entry is complete before the producer
+     * advances, and the producer advances before the mask restore. */
+    producer = PE_LoadU32(GA_GPU_RING_PRODUCER);
+    saved_mask = PE_LoadU32(GA_GPU_SAVED_IMASK);
+    PE_StoreU32(GA_GPU_RING_PRODUCER, (producer + 1u) & 63u);
+    (void)func_80073E10((uint16_t)saved_mask);
+
+    /* 0x80076EA4: jal func_80076EE4.  The retail queue pump is the next
+     * unresolved retail boundary; B53G does not translate it, service the
+     * still-active DMA, or move the consumer to reach it. */
+    Bootstrap_ReturnVoid("func_80076EE4", "func_80076C34");
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    return 0; /* host prefix cut; not a claimed retail result */
+}
+
 static int func_80076C34_prefix(pe_addr_t worker, pe_addr_t argument,
                                 int32_t copy_bytes, uint32_t auxiliary,
                                 const uint32_t *inline8)
@@ -132,10 +271,12 @@ static int func_80076C34_prefix(pe_addr_t worker, pe_addr_t argument,
             }
             /* 0x80076D58..0x80076D64: enqueue begins by calling the proven
              * installed-target path through func_80073CF4 with
-             * (2, func_80076EE4).  B53F exposes func_800746A0 before any
-             * ring entry is constructed or published. */
+             * (2, func_80076EE4).  B53G translates that setter completely,
+             * so the real registration result is consumed here.  Retail
+             * discards it (B53F caller census), and so does this call. */
             (void)func_80073CF4(2u, GPU_QUEUE_PUMP);
-            return 0; /* host prefix cut; not a claimed retail result */
+            return func_80076C34_enqueue(worker, argument, copy_bytes,
+                                         auxiliary, inline8);
         }
     }
     /* Initialization byte zero: the 0x80076CC0 branch skips every queue,
@@ -200,7 +341,8 @@ int PE_func_80076C34_Inline8(pe_addr_t worker,
         worker, 0u, 8u, auxiliary, payload, sizeof(payload));
     /* No guest argument identity exists for this caller-stack transient.
      * The exact LoadImage direct worker consumes these two words by value
-     * before return; enqueue still stops inside func_80073CF4 at its
-     * func_800746A0 backend before any payload must survive. */
+     * before return; the enqueue path copies them into the ring entry and
+     * stores the entry's own guest payload address, so no native pointer
+     * outlives this call. */
     return func_80076C34_prefix(worker, 0u, 8, auxiliary, payload);
 }
