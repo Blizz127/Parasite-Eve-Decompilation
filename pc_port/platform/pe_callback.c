@@ -22,12 +22,18 @@ static PECallbackBind g_binds[PE_CALLBACK_MAX_BINDS];
 static int            g_bind_count = 0;
 static int            g_reg_count  = 0;
 static int            g_err_count  = 0;
+static PeCallbackResetTrace g_reset_trace;
+static uint64_t       g_reset_order = 0;
 
 void PE_Callback_Init(void)
 {
     g_bind_count = 0;
     g_reg_count  = 0;
     g_err_count  = 0;
+    g_reset_trace.counter_clear_order = 0;
+    g_reset_trace.first_slot_clear_order = 0;
+    g_reset_trace.last_slot_clear_order = 0;
+    g_reset_order = 0;
 }
 
 int PE_Callback_Bind(pe_addr_t guest, PECallback host)
@@ -94,11 +100,29 @@ pe_addr_t PE_Callback_GetSlot(uint32_t slot)
 
 void PE_Callback_ResetTable(void)
 {
-    /* func_800743B4: func_800744A4(D_8009568C, 8) zero-fill + D_800956AC = 0 */
+    /* func_800743B4 writes D_800956AC = 0 at 0x800743D8, then calls
+     * func_800744A4(D_8009568C, 8) at 0x800743DC. */
+    g_reset_order = 0;
+    PE_StoreU32(PE_CALLBACK_COUNTER_ADDR, 0);
+    g_reset_trace.counter_clear_order = ++g_reset_order;
     for (uint32_t i = 0; i < PE_CALLBACK_SLOTS; i++) {
         PE_StoreU32((pe_addr_t)(PE_CALLBACK_TABLE_ADDR + i * 4u), 0);
+        if (i == 0u) {
+            g_reset_trace.first_slot_clear_order = ++g_reset_order;
+        } else {
+            g_reset_order++;
+        }
+        if (i + 1u == PE_CALLBACK_SLOTS) {
+            g_reset_trace.last_slot_clear_order = g_reset_order;
+        }
     }
-    PE_StoreU32(PE_CALLBACK_COUNTER_ADDR, 0);
+}
+
+void PE_Callback_GetResetTrace(PeCallbackResetTrace *out)
+{
+    if (out != NULL) {
+        *out = g_reset_trace;
+    }
 }
 
 void PE_Callback_Dispatch(void)

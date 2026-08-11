@@ -1,8 +1,27 @@
-# Parasite Eve Native PC Port — Phase 6E-B53H
+# Parasite Eve Native PC Port — Phase 6E-B53I-B1
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53H translates the execution-proven busy-DMA fast
+**Current milestone:** B53I-B1 adds the single native 16-bit I_STAT
+authority beside I_MASK in `platform/pe_irq.[ch]`. I_STAT writes are exact
+write-zero-to-clear (`status &= written`); hardware assertions OR pending
+bits independently of I_MASK, and a 64-bit reset generation rejects stale
+future assertions. Raw platform reset leaves I_STAT/I_MASK zero. The
+guard-passing retail ResetCallback path then reproduces the executable's
+`0x41A`-word clear at `D_800945E4`, installs source 0 as guest identity
+`0x8007440C`, performs its B(5Bh)(0) then C(0Ah)(3,0) BIOS control calls
+while I_MASK is temporarily zero, and installs source 3 as guest identity
+`0x80074520`. Final I_MASK and guest registered mask `D_80094614` are both
+`0x0009`; CPU callback slots remain solely guest-backed. There is no IRQ
+service point, DMA completion, DICR edge bridge, `func_80074520` execution,
+DMA callback, queue pump, or ring consumption in this rung. Eight focused
+groups bring the native suite to 533 tests. The independent B1 oracle
+verifies 210 literal words across seven ResetCallback/registration windows
+and models W0C, masked pending, coherent reset, and exact registration order
+without importing production C. Full proof is in
+`docs/b53i_b1_irq_state_registration.md`.
+
+**Prior milestone:** B53H translates the execution-proven busy-DMA fast
 path of the 152-word / `0x260` libgpu queue pump `func_80076EE4`
 (`0x80076EE4..0x80077143`, body SHA-256
 `a124857ab6fd91a3b68ea3e5c2efa5337bf6ed5528ef94ca23bc4a781337a78c`).
@@ -685,7 +704,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (490 tests, all pass)
+- `pe-native-tests` — test suite (533 tests, all pass)
 
 ## Running
 

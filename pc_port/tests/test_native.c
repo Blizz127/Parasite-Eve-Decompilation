@@ -541,6 +541,7 @@ static void test_callback_bind_resolve(void) {
 }
 
 static void test_callback_reset_clears(void) {
+    PeCallbackResetTrace trace;
     TEST("callback_reset_clears");
     ResetTestState();
     PE_Callback_Init();
@@ -552,6 +553,11 @@ static void test_callback_reset_clears(void) {
         ASSERT(PE_Callback_GetSlot(i) == 0, "ResetTable left a slot set");
     }
     ASSERT(PE_LoadU32(GA_CB_COUNTER) == 0, "ResetTable left counter set");
+    PE_Callback_GetResetTrace(&trace);
+    ASSERT(trace.counter_clear_order == 1u &&
+           trace.first_slot_clear_order == 2u &&
+           trace.last_slot_clear_order == 9u,
+           "ResetTable did not clear counter before ascending slots");
     PASS();
 }
 
@@ -12884,9 +12890,9 @@ static void test_B53C_strict_busy_enqueue_completes(void)
  * func_80073E10 is the complete 6-word retail helper at
  * 0x80073E10..0x80073E27: v0 = lhu I_MASK (zero-extended previous mask),
  * then sh a0 -> I_MASK in the jr delay slot.  PE_IRQ is the single 16-bit
- * authority; there is no I_STAT, dispatch, or callback behavior.  Every
- * expected value below is retail-derived from the literal executable words
- * and cross-checked by tools/b53d_oracle.py.
+ * register authority; this helper has no I_STAT access, dispatch, or callback
+ * behavior.  Every expected value below is retail-derived from the literal
+ * executable words and cross-checked by tools/b53d_oracle.py.
  * ════════════════════════════════════════════════════════════════════ */
 
 static void test_B53D_exchange_exact_abi(void)
@@ -12966,13 +12972,14 @@ static void test_B53D_reset_owner(void)
     PE_Sdk_ResetState();
     ASSERT(PE_IRQ_GetMask() == 0u, "repeated host reset not deterministic");
 
-    /* Retail func_80073E28 (ResetCallback one-time path) writes I_MASK=0
-     * exactly once; the guard blocks later writes. */
+    /* Retail func_80073E28 clears I_MASK, then authentic source-0/source-3
+     * registration restores the completed ResetCallback mask to 0x0009.
+     * The guard blocks every effect on later calls. */
     ResetTestState();
     (void)PE_IRQ_ExchangeMask(0xBEEFu);
     func_80073C94();
-    ASSERT(PE_IRQ_GetMask() == 0u,
-           "ResetCallback guard-passing path did not zero I_MASK");
+    ASSERT(PE_IRQ_GetMask() == 0x0009u,
+           "ResetCallback did not restore the authentic source mask");
     (void)PE_IRQ_ExchangeMask(0x4321u);
     func_80073C94();
     ASSERT(PE_IRQ_GetMask() == 0x4321u,
@@ -13107,6 +13114,404 @@ static void test_B53D_enqueue_selectors(void)
            CountOrderLog("func_80076664") == 0 &&
            CountOrderLog("func_80076EE4_idle_pump") == 1,
            "callback path did not register, publish, and stop at the pump");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Phase 6E-B53I-B1 — I_STAT authority + ResetCallback CPU registration
+ *
+ * No test in this block services DMA or dispatches an interrupt.  The
+ * source-0/source-3 callback words remain 32-bit guest identities.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+#define B53I_IRQ_RESET_BLOCK        0x800945E4u
+#define B53I_IRQ_RESET_BLOCK_BYTES  0x00001068u
+#define B53I_IRQ_GUARD              0x800945E4u
+#define B53I_IRQ_DISPATCH_ACTIVE    0x800945E6u
+#define B53I_IRQ_CPU_TABLE          0x800945E8u
+#define B53I_IRQ_REGISTERED_MASK    0x80094614u
+#define B53I_IRQ_SOURCE0_SLOT       0x800945E8u
+#define B53I_IRQ_SOURCE3_SLOT       0x800945F4u
+#define B53I_IRQ_WATCHDOG           0x8009567Cu
+
+static void test_B53I_B1_irq_reset_generation(void)
+{
+    PeIrqGeneration generation0;
+    PeIrqGeneration generation1;
+    PeIrqGeneration generation2;
+    TEST("B53I_B1_irq_reset_generation");
+    ResetTestState();
+
+    generation0 = PE_IRQ_Generation();
+    ASSERT(generation0 != 0u, "initial IRQ generation is reserved zero");
+    PE_IRQ_AssertSources(0x8008u);
+    (void)PE_IRQ_ExchangeMask(0xA55Au);
+    ASSERT(PE_IRQ_Generation() == generation0,
+           "assertion or mask write advanced reset generation");
+
+    PE_IRQ_Reset();
+    generation1 = PE_IRQ_Generation();
+    ASSERT(generation1 != 0u && generation1 != generation0 &&
+           PE_IRQ_ReadStatus() == 0u && PE_IRQ_GetMask() == 0u,
+           "raw IRQ reset did not clear registers/advance generation");
+    ASSERT(PE_IRQ_AssertSourcesForGeneration(0x0008u, generation0) == 0 &&
+           PE_IRQ_ReadStatus() == 0u,
+           "captured pre-reset generation asserted stale status");
+    ASSERT(PE_IRQ_AssertSourcesForGeneration(0x0008u, generation1) == 1 &&
+           PE_IRQ_ReadStatus() == 0x0008u,
+           "current generation assertion was rejected");
+
+    PE_IRQ_Reset();
+    generation2 = PE_IRQ_Generation();
+    ASSERT(generation2 != 0u && generation2 != generation1 &&
+           generation2 != generation0 &&
+           PE_IRQ_ReadStatus() == 0u && PE_IRQ_GetMask() == 0u,
+           "repeated reset was not a new clean generation");
+    ASSERT(PE_IRQ_AssertSourcesForGeneration(0x0009u, generation0) == 0 &&
+           PE_IRQ_AssertSourcesForGeneration(0x0009u, generation1) == 0 &&
+           PE_IRQ_ReadStatus() == 0u,
+           "repeated reset admitted an older generation");
+    PASS();
+}
+
+static void test_B53I_B1_istat_w0c_matrix(void)
+{
+    TEST("B53I_B1_istat_w0c_matrix");
+    ResetTestState();
+
+    PE_IRQ_AssertSources(0x0008u);
+    PE_IRQ_WriteStatus(0xFFF7u);
+    ASSERT(PE_IRQ_ReadStatus() == 0u,
+           "W0C single-source clear used the wrong polarity");
+
+    PE_IRQ_AssertSources(0x0009u);
+    PE_IRQ_WriteStatus(0xFFFEu);
+    ASSERT(PE_IRQ_ReadStatus() == 0x0008u,
+           "W0C did not clear source 0 while preserving source 3");
+    PE_IRQ_WriteStatus(0xFFFEu);
+    ASSERT(PE_IRQ_ReadStatus() == 0x0008u,
+           "repeated W0C changed a retained source");
+
+    PE_IRQ_AssertSources(0xFFFFu);
+    PE_IRQ_WriteStatus(0xFFFFu);
+    ASSERT(PE_IRQ_ReadStatus() == 0xFFFFu,
+           "all-ones W0C write did not retain every source");
+    PE_IRQ_WriteStatus(0x0000u);
+    ASSERT(PE_IRQ_ReadStatus() == 0u,
+           "all-zero W0C write did not clear every source");
+
+    PE_IRQ_AssertSources(0x8421u);
+    PE_IRQ_WriteStatus(0x7BDEu);
+    ASSERT(PE_IRQ_ReadStatus() == 0u,
+           "multi-source W0C clear differs from status & written");
+    PE_IRQ_AssertSources(0x0408u);
+    ASSERT(PE_IRQ_ReadStatus() == 0x0408u,
+           "hardware assertion after acknowledgement did not relatch");
+    PASS();
+}
+
+static void test_B53I_B1_masked_pending_no_dispatch(void)
+{
+    PeGpuState before;
+    PeGpuState after;
+    PeIrqGeneration generation;
+    uint32_t callback_count;
+    TEST("B53I_B1_masked_pending_no_dispatch");
+    ResetTestState();
+    func_80073C94();
+    ASSERT(PE_LoadU32(B53I_IRQ_SOURCE3_SLOT) == 0x80074520u,
+           "source-3 guest identity was not installed");
+
+    generation = PE_IRQ_Generation();
+    callback_count = PE_LoadU32(PE_CALLBACK_COUNTER_ADDR);
+    (void)PE_IRQ_ExchangeMask(0u);
+    PE_GPU_GetState(&before);
+    PE_IRQ_AssertSources(0x0008u);
+    ASSERT(PE_IRQ_ReadStatus() == 0x0008u && PE_IRQ_GetMask() == 0u,
+           "masked hardware source was discarded");
+    (void)PE_IRQ_ExchangeMask(0x0008u);
+    PE_GPU_GetState(&after);
+    ASSERT(PE_IRQ_ReadStatus() == 0x0008u && PE_IRQ_GetMask() == 0x0008u,
+           "unmasking did not retain pending source 3");
+    ASSERT(PE_IRQ_Generation() == generation &&
+           PE_LoadU32(PE_CALLBACK_COUNTER_ADDR) == callback_count &&
+           memcmp(&before, &after, sizeof(before)) == 0,
+           "assert/unmask dispatched a callback or changed hardware");
+    ASSERT(g_stub_count == 0 && g_bootstrap_arg4_call_count == 0,
+           "assert/unmask crossed a retail callback boundary");
+    PASS();
+}
+
+static void test_B53I_B1_resetcallback_exact_state(void)
+{
+    PeIrqSource0BiosState bios_before;
+    PeIrqSource0BiosState bios_after;
+    PeCallbackResetTrace callback_reset;
+    PeIrqGeneration generation;
+    TEST("B53I_B1_resetcallback_exact_state");
+    ResetTestState();
+
+    PE_StoreU32(B53I_IRQ_RESET_BLOCK - 4u, 0xA1B2C3D4u);
+    PE_StoreU32(B53I_IRQ_RESET_BLOCK + B53I_IRQ_RESET_BLOCK_BYTES,
+                0x11223344u);
+    PE_Fill(B53I_IRQ_RESET_BLOCK, B53I_IRQ_RESET_BLOCK_BYTES, 0xA5u);
+    PE_StoreU16(B53I_IRQ_GUARD, 0u);
+    PE_StoreU32(PE_CALLBACK_TABLE_ADDR + 4u * 4u, 0x89ABCDEFu);
+    PE_StoreU32(PE_CALLBACK_COUNTER_ADDR, 0x76543210u);
+    PE_IRQ_AssertSources(0xFFFFu);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    generation = PE_IRQ_Generation();
+
+    func_80073C94();
+
+    ASSERT(PE_LoadU16(B53I_IRQ_GUARD) == 1u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0u,
+           "ResetCallback guard/dispatch-active state differs from B1");
+    for (uint32_t source = 0u; source < 11u; source++) {
+        uint32_t expected = 0u;
+        if (source == 0u) expected = 0x8007440Cu;
+        if (source == 3u) expected = 0x80074520u;
+        ASSERT(PE_LoadU32(B53I_IRQ_CPU_TABLE + source * 4u) == expected,
+               "ResetCallback CPU callback-table state differs from B1");
+    }
+    ASSERT(PE_LoadU32(0x80095000u) == 0u &&
+           PE_LoadU32(0x80095648u) == 0u,
+           "bounded B1 bulk clear left representative stale words");
+    ASSERT(PE_LoadU32(B53I_IRQ_RESET_BLOCK - 4u) == 0xA1B2C3D4u &&
+           PE_LoadU32(B53I_IRQ_RESET_BLOCK + B53I_IRQ_RESET_BLOCK_BYTES) ==
+               0x11223344u,
+           "ResetCallback bulk clear crossed an exclusive boundary");
+    ASSERT(PE_IRQ_ReadStatus() == 0u && PE_IRQ_GetMask() == 0x0009u &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0x0009u &&
+           PE_IRQ_Generation() == generation,
+           "completed ResetCallback controller state is not 0/9/9");
+    ASSERT(PE_LoadU32(PE_CALLBACK_TABLE_ADDR + 4u * 4u) == 0u &&
+           PE_LoadU32(PE_CALLBACK_COUNTER_ADDR) == 0u,
+           "source-0 initializer did not reset the VBlank callback table");
+    PE_Callback_GetResetTrace(&callback_reset);
+    ASSERT(callback_reset.counter_clear_order == 1u &&
+           callback_reset.first_slot_clear_order == 2u &&
+           callback_reset.last_slot_clear_order == 9u,
+           "source-0 initializer did not clear counter before slots");
+    ASSERT(g_stub_count == 0 && g_bootstrap_arg4_call_count == 0,
+           "ResetCallback dispatched or crossed an unresolved provider");
+
+    /* The retail guard precedes I_MASK/I_STAT access.  A repeated call must
+     * therefore preserve even an unmasked pending source and must not start
+     * a new hardware generation or repeat the source-0 BIOS calls. */
+    PE_IRQ_AssertSources(0x8008u);
+    generation = PE_IRQ_Generation();
+    PE_Irq_GetSource0BiosState(&bios_before);
+    func_80073C94();
+    PE_Irq_GetSource0BiosState(&bios_after);
+    ASSERT(PE_IRQ_ReadStatus() == 0x8008u &&
+           PE_IRQ_GetMask() == 0x0009u &&
+           PE_IRQ_Generation() == generation &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0x0009u &&
+           PE_LoadU32(B53I_IRQ_SOURCE0_SLOT) == 0x8007440Cu &&
+           PE_LoadU32(B53I_IRQ_SOURCE3_SLOT) == 0x80074520u &&
+           memcmp(&bios_before, &bios_after, sizeof(bios_before)) == 0,
+           "guarded ResetCallback changed pending/controller/registration state");
+    PASS();
+}
+
+static void test_B53I_B1_source0_bios_order(void)
+{
+    PeIrqSource0BiosState state;
+    uint64_t same_handler_order;
+    TEST("B53I_B1_source0_bios_order");
+    ResetTestState();
+    func_80073C94();
+    PE_Irq_GetSource0BiosState(&state);
+    ASSERT(state.pad_calls == 1u && state.vblank_calls == 1u &&
+           state.pad_argument == 0u && state.vblank_counter == 3u &&
+           state.vblank_argument == 0u,
+           "source-0 install used the wrong BIOS calls/arguments");
+    ASSERT(state.mask_at_pad_call == 0u &&
+           state.mask_at_vblank_call == 0u &&
+           state.source0_slot_at_pad_call == 0x8007440Cu &&
+           state.source0_slot_at_vblank_call == 0x8007440Cu &&
+           state.registered_mask_at_pad_call == 0x0001u &&
+           state.registered_mask_at_vblank_call == 0x0001u &&
+           state.pad_call_order < state.vblank_call_order &&
+           state.vblank_call_order < state.source0_mask_restore_order,
+           "source-0 slot/mask/BIOS/restore ordering differs from retail");
+    ASSERT(state.pad_clear_mode == 0u && state.vblank_clear_mode == 0u,
+           "source-0 non-null install did not select pass-through/no-auto-ack");
+
+    ASSERT(func_80073CC4(0u, 0u) == 0x8007440Cu &&
+           PE_LoadU32(B53I_IRQ_SOURCE0_SLOT) == 0u &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0x0008u &&
+           PE_IRQ_GetMask() == 0x0008u,
+           "source-0 removal did not return/remove the guest identity");
+    PE_Irq_GetSource0BiosState(&state);
+    ASSERT(state.pad_calls == 2u && state.vblank_calls == 2u &&
+           state.pad_argument == 1u && state.vblank_argument == 1u &&
+           state.pad_clear_mode == 1u && state.vblank_clear_mode == 1u &&
+           state.mask_at_pad_call == 0u && state.mask_at_vblank_call == 0u &&
+           state.source0_slot_at_pad_call == 0u &&
+           state.source0_slot_at_vblank_call == 0u &&
+           state.registered_mask_at_pad_call == 0x0008u &&
+           state.registered_mask_at_vblank_call == 0x0008u &&
+           state.pad_call_order < state.vblank_call_order &&
+           state.vblank_call_order < state.source0_mask_restore_order,
+           "source-0 removal BIOS order/arguments differ from retail");
+
+    ASSERT(func_80073CC4(0u, 0x8007440Cu) == 0u,
+           "source-0 reinstall previous-handler return changed");
+    PE_Irq_GetSource0BiosState(&state);
+    same_handler_order = state.source0_mask_restore_order;
+    ASSERT(func_80073CC4(0u, 0x8007440Cu) == 0x8007440Cu,
+           "source-0 same-handler return changed");
+    PE_Irq_GetSource0BiosState(&state);
+    ASSERT(state.pad_calls == 3u && state.vblank_calls == 3u &&
+           state.source0_mask_restore_order == same_handler_order &&
+           PE_IRQ_GetMask() == 0x0009u,
+           "same-handler source-0 path performed side effects");
+    PASS();
+}
+
+static void test_B53I_B1_source3_setter_guest_authority(void)
+{
+    PeIrqSource0BiosState before;
+    PeIrqSource0BiosState after;
+    TEST("B53I_B1_source3_setter_guest_authority");
+    ResetTestState();
+    PE_StoreU16(B53I_IRQ_REGISTERED_MASK - 2u, 0xA55Au);
+    PE_StoreU16(B53I_IRQ_REGISTERED_MASK, 0x4000u);
+    PE_StoreU16(B53I_IRQ_REGISTERED_MASK + 2u, 0x5AA5u);
+    (void)PE_IRQ_ExchangeMask(0x2000u);
+    PE_IRQ_AssertSources(0x0008u);
+
+    /* Guard-zero unequal registration returns previous and mutates nothing. */
+    ASSERT(func_80073CC4(3u, 0xF1234567u) == 0u &&
+           PE_LoadU32(B53I_IRQ_SOURCE3_SLOT) == 0u &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0x4000u &&
+           PE_IRQ_GetMask() == 0x2000u && PE_IRQ_ReadStatus() == 0x0008u,
+           "guard-zero source-3 setter mutated registration state");
+
+    PE_StoreU16(B53I_IRQ_GUARD, 1u);
+    PE_Irq_GetSource0BiosState(&before);
+    ASSERT(func_80073CC4(3u, 0xF1234567u) == 0u &&
+           PE_LoadU32(B53I_IRQ_SOURCE3_SLOT) == 0xF1234567u &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0x4008u &&
+           PE_IRQ_GetMask() == 0x2008u && PE_IRQ_ReadStatus() == 0x0008u,
+           "source-3 install lost high guest bits/masks/pending status");
+    ASSERT(func_80073CC4(3u, 0x81234567u) == 0xF1234567u &&
+           func_80073CC4(3u, 0u) == 0x81234567u &&
+           PE_LoadU32(B53I_IRQ_SOURCE3_SLOT) == 0u &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0x4000u &&
+           PE_IRQ_GetMask() == 0x2000u && PE_IRQ_ReadStatus() == 0x0008u,
+           "source-3 replace/remove previous-handler ABI changed");
+    PE_Irq_GetSource0BiosState(&after);
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "source 3 executed source-0 BIOS side calls");
+    ASSERT(PE_LoadU16(B53I_IRQ_REGISTERED_MASK - 2u) == 0xA55Au &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK + 2u) == 0x5AA5u,
+           "registered-mask halfword write damaged neighbor canaries");
+    PASS();
+}
+
+static void test_B53I_B1_same_handler_reset_recovery(void)
+{
+    PeIrqGeneration generation;
+    PeIrqSource0BiosState bios_before;
+    PeIrqSource0BiosState bios_after;
+    TEST("B53I_B1_same_handler_reset_recovery");
+    ResetTestState();
+    func_80073C94();
+    ASSERT(PE_LoadU32(B53I_IRQ_SOURCE3_SLOT) == 0x80074520u,
+           "precondition source-3 install missing");
+
+    (void)PE_IRQ_ExchangeMask(0u);
+    PE_IRQ_AssertSources(0x0008u);
+    PE_StoreU16(B53I_IRQ_REGISTERED_MASK, 0u);
+    PE_StoreU16(B53I_IRQ_DISPATCH_ACTIVE, 1u);
+    PE_StoreU32(B53I_IRQ_WATCHDOG, 0xDEADBEEFu);
+    PE_StoreU16(B53I_IRQ_REGISTERED_MASK + 2u, 0xA55Au);
+    PE_StoreU32(B53I_IRQ_WATCHDOG - 4u, 0x11223344u);
+    PE_StoreU32(B53I_IRQ_WATCHDOG + 4u, 0x55667788u);
+    generation = PE_IRQ_Generation();
+    PE_Irq_GetSource0BiosState(&bios_before);
+    ASSERT(func_80073CC4(3u, 0x80074520u) == 0x80074520u &&
+           PE_IRQ_Generation() == generation &&
+           PE_IRQ_ReadStatus() == 0x0008u && PE_IRQ_GetMask() == 0u &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0u &&
+           PE_LoadU32(B53I_IRQ_SOURCE3_SLOT) == 0x80074520u,
+           "dirty same-handler source-3 path repaired controller state");
+    PE_Irq_GetSource0BiosState(&bios_after);
+    ASSERT(memcmp(&bios_before, &bios_after, sizeof(bios_before)) == 0,
+           "dirty same-handler source-3 path gained side effects");
+
+    PE_Sdk_ResetState();
+    ASSERT(PE_IRQ_Generation() != generation && PE_IRQ_ReadStatus() == 0u &&
+           PE_IRQ_GetMask() == 0u && PE_LoadU16(B53I_IRQ_GUARD) == 0u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0u &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0u &&
+           PE_LoadU32(B53I_IRQ_WATCHDOG) == 0u,
+           "coherent SDK reset did not clear IRQ controller/software state");
+    ASSERT(PE_LoadU16(B53I_IRQ_REGISTERED_MASK + 2u) == 0xA55Au &&
+           PE_LoadU32(B53I_IRQ_WATCHDOG - 4u) == 0x11223344u &&
+           PE_LoadU32(B53I_IRQ_WATCHDOG + 4u) == 0x55667788u,
+           "coherent SDK reset crossed its targeted guest-state fields");
+    for (uint32_t source = 0u; source < 11u; source++) {
+        ASSERT(PE_LoadU32(B53I_IRQ_CPU_TABLE + source * 4u) == 0u,
+               "CPU source table survived coherent SDK reset");
+    }
+    PE_Irq_GetSource0BiosState(&bios_after);
+    ASSERT(bios_after.pad_calls == 0u && bios_after.vblank_calls == 0u,
+           "SDK reset retained source-0 side-call diagnostics");
+
+    generation = PE_IRQ_Generation();
+    func_80073C94();
+    ASSERT(PE_IRQ_Generation() == generation && PE_IRQ_ReadStatus() == 0u &&
+           PE_IRQ_GetMask() == 0x0009u &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0x0009u &&
+           PE_LoadU32(B53I_IRQ_SOURCE0_SLOT) == 0x8007440Cu &&
+           PE_LoadU32(B53I_IRQ_SOURCE3_SLOT) == 0x80074520u,
+           "post-reset identical handlers did not fully reinstall");
+    PASS();
+}
+
+static void test_B53I_B1_registration_no_dma_progress(void)
+{
+    PeGpuState before;
+    PeGpuState after;
+    uint16_t pixel_before;
+    uint16_t pixel_after;
+    TEST("B53I_B1_registration_no_dma_progress");
+    ResetTestState();
+    PE_StoreU32(B53C_PRODUCER, 1u);
+    PE_StoreU32(B53C_CONSUMER, 0u);
+    PE_StoreU32(B53C_RING_BASE, 0x80076664u);
+    ASSERT(B53E_SeedBusyDma(), "cannot seed live DMA for ResetCallback test");
+    PE_GPU_WriteDICR(0x00840000u);
+    ASSERT(PE_GPU_ReadVRAM(0u, 0u, &pixel_before) == 1,
+           "cannot sample VRAM before registration");
+    PE_GPU_GetState(&before);
+
+    func_80073C94();
+
+    ASSERT(PE_GPU_ReadVRAM(0u, 0u, &pixel_after) == 1 &&
+           pixel_after == pixel_before,
+           "ResetCallback made DMA pixels visible");
+    PE_GPU_GetState(&after);
+    before.dpcr = after.dpcr; /* authentic ResetCallback DPCR write */
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "IRQ registration progressed GPU/DMA/DICR/VBlank state");
+    ASSERT(PE_GPU_DMA2Pending() == 1 &&
+           PE_GPU_DMA2CompletionPending() == 0 &&
+           PE_GPU_ReadDMA2CHCR() == 0x01000201u &&
+           PE_GPU_ReadDICR() == 0x00840000u,
+           "ResetCallback completed or acknowledged live DMA");
+    ASSERT(PE_IRQ_ReadStatus() == 0u &&
+           PE_LoadU32(B53C_PRODUCER) == 1u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           PE_LoadU32(B53C_RING_BASE) == 0x80076664u,
+           "registration asserted source 3 or consumed the queue");
+    ASSERT(g_stub_count == 0 && g_bootstrap_arg4_call_count == 0 &&
+           CountOrderLog("func_80076EE4_idle_pump") == 0,
+           "registration called func_80074520 or the queue pump");
     PASS();
 }
 
@@ -15598,6 +16003,16 @@ int main(void)
     test_B53D_direct_worker_continuation_integration();
     test_B53D_uninit_skips_checks();
     test_B53D_enqueue_selectors();
+
+    /* Phase 6E-B53I-B1 CPU IRQ state/registration (8 tests). */
+    test_B53I_B1_irq_reset_generation();
+    test_B53I_B1_istat_w0c_matrix();
+    test_B53I_B1_masked_pending_no_dispatch();
+    test_B53I_B1_resetcallback_exact_state();
+    test_B53I_B1_source0_bios_order();
+    test_B53I_B1_source3_setter_guest_authority();
+    test_B53I_B1_same_handler_reset_recovery();
+    test_B53I_B1_registration_no_dma_progress();
 
     /* Phase 6E-B53E LoadImage issue worker + DPCR owner repair (10 tests) */
     test_B53E_dpcr_retail_owner_chain();

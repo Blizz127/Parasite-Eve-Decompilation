@@ -51,11 +51,37 @@ uint32_t PE_GTE_LZCR(uint32_t v);
 
 /* ── libetc (pc_port/platform/pe_libetc.c) ──────────────────────────── */
 void func_80073C94(void);            /* ResetCallback */
+pe_addr_t func_80073CC4(uint32_t source, pe_addr_t handler);
+pe_addr_t func_800740D0(uint32_t source, pe_addr_t handler);
 uint32_t func_80073D24(pe_addr_t handler); /* VBlank callback slot 4 setter */
 uint16_t func_80073E10(uint16_t new_mask); /* I_MASK exchange (PE_IRQ authority) */
 int  func_80072714(void);            /* EnterCriticalSection */
 void func_80072724(void);            /* ExitCriticalSection */
 int  PE_Irq_LockDepth(void);         /* diagnostic: current critical depth */
+
+/* B53I-B1 bounded host equivalents of source 0's BIOS auto-ack controls.
+ * This value-only snapshot includes live guest slot/mask observations at
+ * each BIOS call; it is diagnostic state, never a callback authority. */
+typedef struct {
+    uint32_t pad_clear_mode;
+    uint32_t vblank_clear_mode;
+    uint32_t pad_calls;
+    uint32_t vblank_calls;
+    uint32_t pad_argument;
+    uint32_t vblank_counter;
+    uint32_t vblank_argument;
+    uint16_t mask_at_pad_call;
+    uint16_t mask_at_vblank_call;
+    pe_addr_t source0_slot_at_pad_call;
+    pe_addr_t source0_slot_at_vblank_call;
+    uint16_t registered_mask_at_pad_call;
+    uint16_t registered_mask_at_vblank_call;
+    uint64_t pad_call_order;
+    uint64_t vblank_call_order;
+    uint64_t source0_mask_restore_order;
+} PeIrqSource0BiosState;
+
+void PE_Irq_GetSource0BiosState(PeIrqSource0BiosState *out);
 
 /* OpenEvent / EnableEvent host shims (BIOS B(08h)/B(0Ch)).
  * Retail allocates kernel Event Control Blocks outside the 2 MiB guest
@@ -133,9 +159,10 @@ void func_8003E944(void);            /* save-manager bring-up */
 
 /* ── test determinism ───────────────────────────────────────────────── */
 /* Reset every host-owned SDK state block (GTE state, IRQ lock depth,
- * event handles, I_MASK authority, SPU RAM and pending DMA).  It also
+ * event handles, I_STAT/I_MASK authority, SPU RAM and pending DMA).  It also
  * invalidates the guest DMA busy/callback/IRQ-handle state owned by those
- * host resources.  Other guest RAM is reset via PE_RamReset. */
+ * host resources and coherently clears the guest-backed CPU IRQ registration
+ * block.  Other guest RAM is reset via PE_RamReset. */
 void PE_Sdk_ResetState(void);
 
 #ifdef __cplusplus

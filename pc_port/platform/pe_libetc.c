@@ -9,13 +9,13 @@
  *
  * Retail func_80073E28 effects:
  *   - lhu guard D_800945E4: if set, return 0 (idempotent).
- *   - I_MASK = 0 (sh zero at 0x80073E60 through D_80095674): since B53D this
- *     is faithfully written to the single PE_IRQ authority.  B53E also
- *     restores the exact DPCR = 0x33333333 write at 0x80073E7C against the
- *     single B53B GPU/DMA authority.  The intervening I_STAT clear remains a
- *     host no-op because I_STAT semantics are outside the translated path.
- *   - callback queue-block build, then sh 1 -> D_800945E4, ExitCriticalSection,
- *     returns queue-block pointer (callers on the boot path ignore it).
+ *   - I_MASK = 0 at 0x80073E60, its zero readback is written to I_STAT at
+ *     0x80073E6C, and DPCR = 0x33333333 at 0x80073E7C.
+ *   - func_80074330 clears 0x41A words starting at D_800945E4, the exact
+ *     0x1068-byte range ending immediately before D_8009564C.  This includes
+ *     the CPU callback table and registered-source mask.
+ *   - sh 1 -> D_800945E4, then source 0 and source 3 registration in that
+ *     order.  The authentic completed state has I_MASK/registered mask 0x9.
  * The guest-backed callback slot model (pe_callback.h, Phase 6E-B6)
  * replaces the retail callback queue: ResetCallback's first guard-passing
  * call zeroes the 8 guest slots at D_8009568C and the dispatch counter.
@@ -25,22 +25,172 @@
 #include "pe_spu_dma.h"
 #include "pe_gpu.h"
 #include "pe_irq.h"
+#include "game_port.h"
 
 static int      g_irq_lock_depth;
 static uint32_t g_next_event_handle = 0x100;
 
+#define GA_IRQ_RESET_BLOCK          0x800945E4u
+#define GA_IRQ_RESET_BLOCK_BYTES    0x00001068u
+#define GA_IRQ_RESET_GUARD          0x800945E4u
+#define GA_IRQ_DISPATCH_ACTIVE      0x800945E6u
+#define GA_IRQ_CPU_CALLBACK_TABLE   0x800945E8u
+#define GA_IRQ_REGISTERED_MASK      0x80094614u
+#define GA_IRQ_WATCHDOG             0x8009567Cu
+#define PE_IRQ_CPU_SOURCE_COUNT     11u
+
+#define GA_IRQ_SOURCE0_HANDLER      0x8007440Cu
+#define GA_IRQ_SOURCE3_HANDLER      0x80074520u
+
+static PeIrqSource0BiosState g_source0_bios = {
+    .pad_clear_mode = 0u,
+    .vblank_clear_mode = 0u,
+};
+static uint64_t g_source0_setup_order;
+
+static void ResetSource0BiosState(void)
+{
+    memset(&g_source0_bios, 0, sizeof(g_source0_bios));
+    g_source0_setup_order = 0u;
+}
+
+/* Exact B(5Bh) ChangeClearPAD host equivalent needed by source 0.  Value 0
+ * passes VBlank processing to the lower-priority module; value 1 completes
+ * it in the Pad/Card driver.  The retail ABI is void. */
+static void ChangeClearPadB1(uint32_t flag)
+{
+    g_source0_bios.pad_clear_mode = flag;
+    g_source0_bios.pad_calls++;
+    g_source0_bios.pad_argument = flag;
+    g_source0_bios.mask_at_pad_call = PE_IRQ_GetMask();
+    g_source0_bios.source0_slot_at_pad_call =
+        (pe_addr_t)PE_LoadU32(GA_IRQ_CPU_CALLBACK_TABLE);
+    g_source0_bios.registered_mask_at_pad_call =
+        PE_LoadU16(GA_IRQ_REGISTERED_MASK);
+    g_source0_bios.pad_call_order = ++g_source0_setup_order;
+}
+
+/* Exact C(0Ah) ChangeClearRCnt(3, flag) host equivalent needed by source 0.
+ * Counter 3 is the BIOS VBlank lane.  No timer/IRQ service is implemented. */
+static uint32_t ChangeClearVBlankB1(uint32_t counter, uint32_t flag)
+{
+    uint32_t previous = g_source0_bios.vblank_clear_mode;
+    g_source0_bios.vblank_clear_mode = flag;
+    g_source0_bios.vblank_calls++;
+    g_source0_bios.vblank_counter = counter;
+    g_source0_bios.vblank_argument = flag;
+    g_source0_bios.mask_at_vblank_call = PE_IRQ_GetMask();
+    g_source0_bios.source0_slot_at_vblank_call =
+        (pe_addr_t)PE_LoadU32(GA_IRQ_CPU_CALLBACK_TABLE);
+    g_source0_bios.registered_mask_at_vblank_call =
+        PE_LoadU16(GA_IRQ_REGISTERED_MASK);
+    g_source0_bios.vblank_call_order = ++g_source0_setup_order;
+    return previous;
+}
+
+void PE_Irq_GetSource0BiosState(PeIrqSource0BiosState *out)
+{
+    if (out != NULL) {
+        *out = g_source0_bios;
+    }
+}
+
+/* B53I-B1 translates only the execution-proven source-0/source-3 paths of
+ * retail func_800740D0.  Other sources have additional BIOS side effects
+ * (4,5,6) or unchecked table arithmetic and remain an explicit boundary. */
+pe_addr_t func_800740D0(uint32_t source, pe_addr_t handler)
+{
+    pe_addr_t slot;
+    pe_addr_t previous;
+    uint16_t registered;
+    uint16_t restored_mask;
+    uint16_t source_bit;
+
+    if (source != 0u && source != 3u) {
+        pe_addr_t result = (pe_addr_t)Bootstrap_ReturnInt4Indirect(
+            "func_800740D0_source_cut", "func_800740D0", 0,
+            0x800740D0u, source, handler, 0u, 0u, NULL, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return result;
+    }
+
+    slot = (pe_addr_t)(GA_IRQ_CPU_CALLBACK_TABLE + (source << 2));
+    previous = (pe_addr_t)PE_LoadU32(slot);
+
+    /* 0x8007410C: equality returns before the guard or mask is touched. */
+    if (handler == previous) {
+        return previous;
+    }
+
+    /* 0x80074114..1C: registration is unavailable before ResetCallback has
+     * published its guard. */
+    if (PE_LoadU16(GA_IRQ_RESET_GUARD) == 0u) {
+        return previous;
+    }
+
+    restored_mask = PE_IRQ_ExchangeMask(0u);
+    source_bit = (uint16_t)(1u << source);
+
+    if (handler != 0u) {
+        PE_StoreU32(slot, handler);
+        registered = PE_LoadU16(GA_IRQ_REGISTERED_MASK);
+        restored_mask = (uint16_t)(restored_mask | source_bit);
+        registered = (uint16_t)(registered | source_bit);
+    } else {
+        PE_StoreU32(slot, 0u);
+        registered = PE_LoadU16(GA_IRQ_REGISTERED_MASK);
+        restored_mask = (uint16_t)(restored_mask & (uint16_t)~source_bit);
+        registered = (uint16_t)(registered & (uint16_t)~source_bit);
+    }
+    PE_StoreU16(GA_IRQ_REGISTERED_MASK, registered);
+
+    if (source == 0u) {
+        uint32_t removing = handler == 0u;
+        ChangeClearPadB1(removing);
+        (void)ChangeClearVBlankB1(3u, removing);
+    }
+
+    (void)PE_IRQ_ExchangeMask(restored_mask);
+    if (source == 0u) {
+        g_source0_bios.source0_mask_restore_order = ++g_source0_setup_order;
+    }
+    return previous;
+}
+
+/* Complete canonical installed-target behavior of the 12-word wrapper at
+ * 0x80073CC4..0x80073CF3.  As with the already-translated func_80073CF4,
+ * pre-install/dirty SDK jump-table behavior is outside the proven path. */
+pe_addr_t func_80073CC4(uint32_t source, pe_addr_t handler)
+{
+    return func_800740D0(source, handler);
+}
+
 void func_80073C94(void)
 {
-    if (PE_LoadU16(0x800945E4u) != 0) {
+    if (PE_LoadU16(GA_IRQ_RESET_GUARD) != 0) {
         return;                     /* one-time guard */
     }
-    PE_StoreU16(0x800945E4u, 1);
-    /* Retail func_80073E28 writes I_MASK = 0, reads it back into I_STAT,
-     * then writes DPCR = 0x33333333 on this one guard-passing path.  I_STAT
-     * remains outside the current authority; the DPCR store is exact. */
+
+    /* 0x80073E60..7C: controller reset order is I_MASK, I_STAT, DPCR. */
     (void)PE_IRQ_ExchangeMask(0u);
+    PE_IRQ_WriteStatus(PE_IRQ_GetMask());
     PE_GPU_WriteDPCR(0x33333333u);
+
+    /* 0x80073E80: func_80074330(D_800945E4, 0x41A) clears words, not
+     * bytes.  The exclusive end is exactly the SDK jump table D_8009564C. */
+    PE_Fill(GA_IRQ_RESET_BLOCK, GA_IRQ_RESET_BLOCK_BYTES, 0u);
+
+    /* 0x80073EC0 delay slot publishes the guard immediately before the
+     * source-0 initializer. */
+    PE_StoreU16(GA_IRQ_RESET_GUARD, 1u);
     PE_Callback_ResetTable();
+
+    /* func_800743B4 -> func_80073CC4(0, func_8007440C), then
+     * func_800744D4 -> func_80073CC4(3, func_80074520).  This B1 binding
+     * restores CPU registration only; DMA-table/DICR delivery work remains
+     * B2 scope. */
+    (void)func_80073CC4(0u, GA_IRQ_SOURCE0_HANDLER);
+    (void)func_80073CC4(3u, GA_IRQ_SOURCE3_HANDLER);
 }
 
 /* Phase 6E-B53D — func_80073E10 (asm/disc1/64610.s @ file 0x64610, 6 words,
@@ -110,6 +260,20 @@ void PE_Sdk_ResetState(void)
     g_irq_lock_depth = 0;
     g_next_event_handle = 0x100;
     PE_IRQ_Reset();
+    ResetSource0BiosState();
+
+    /* Coherent host reset of the guest-backed CPU registration authority.
+     * This is intentionally narrower than retail func_80074330's 0x1068-byte
+     * initialization block: PE_Sdk_ResetState must not erase unrelated guest
+     * program state.  ResetCallback performs the authentic full clear. */
+    PE_StoreU16(GA_IRQ_RESET_GUARD, 0u);
+    PE_StoreU16(GA_IRQ_DISPATCH_ACTIVE, 0u);
+    for (uint32_t source = 0u; source < PE_IRQ_CPU_SOURCE_COUNT; source++) {
+        PE_StoreU32((pe_addr_t)(GA_IRQ_CPU_CALLBACK_TABLE + source * 4u), 0u);
+    }
+    PE_StoreU16(GA_IRQ_REGISTERED_MASK, 0u);
+    PE_StoreU32(GA_IRQ_WATCHDOG, 0u);
+
     PE_SpuDma_Reset();
     PE_GPU_Init();
     /* Host/platform reset cancels an IRQ that can no longer be delivered. */

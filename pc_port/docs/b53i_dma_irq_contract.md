@@ -548,15 +548,22 @@ On its first guard-passing call it:
 1. writes I_MASK zero;
 2. reads that zero and writes it to I_STAT, clearing all status under W0C;
 3. writes DPCR `0x33333333`;
-4. sets the one-time guard;
-5. invokes `func_800743B4`, which installs
+4. clears `0x41A` words from `D_800945E4` through `0x8009564B`;
+5. sets the one-time guard;
+6. invokes `func_800743B4`, which installs
    `func_80073CC4(0, func_8007440C)`;
-6. invokes `func_800744D4`, which installs
+7. invokes `func_800744D4`, which installs
    `func_80073CC4(3, func_80074520)`.
 
-`func_80073E28` itself does not clear `D_800945E8` or `D_80094614`; those
-bytes are zero in the clean executable image. This distinction matters for a
-host lifecycle reset and for the same-handler fast path described below.
+Direct B53I-B1 recovery corrects one B53I-A audit omission here:
+`func_80073E28` calls `func_80074330(D_800945E4, 0x41A)` at
+`0x80073E80`, with the word count in the delay slot. `func_80074330` clears
+exactly `0x41A` words (`0x1068` bytes), range
+`[0x800945E4,0x8009564C)`. This includes `D_800945E8` and
+`D_80094614`, and ends exactly before the SDK jump table. The callback table
+and registered mask therefore do not merely inherit clean executable zeros:
+ResetCallback actively resets them before installing sources 0 and 3. This
+strengthens, rather than removes, the same-handler/reset requirement below.
 
 Thus clean retail state at full ResetCallback return is:
 

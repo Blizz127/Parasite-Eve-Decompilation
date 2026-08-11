@@ -57,8 +57,8 @@ uint32_t  PE_Callback_SetSlot(uint32_t slot, pe_addr_t handler);
 /* Raw read of table + (slot << 2). */
 pe_addr_t PE_Callback_GetSlot(uint32_t slot);
 
-/* func_800743B4 table-init portion: zero all 8 slots and the dispatch
- * counter (performed by ResetCallback's first, guard-passing call). */
+/* func_800743B4 table-init portion: zero the dispatch counter first, then
+ * zero all 8 slots (performed by ResetCallback's guard-passing call). */
 void      PE_Callback_ResetTable(void);
 
 /* func_8007440C semantics: increment the dispatch counter, then invoke
@@ -71,6 +71,15 @@ void      PE_Callback_Dispatch(void);
 
 int PE_Callback_RegistrationCount(void);  /* non-null installs via SetSlot */
 int PE_Callback_ErrorCount(void);         /* bind/dispatch visible errors  */
+
+/* Value-only mutation-order evidence for the last ResetTable call. */
+typedef struct {
+    uint64_t counter_clear_order;
+    uint64_t first_slot_clear_order;
+    uint64_t last_slot_clear_order;
+} PeCallbackResetTrace;
+
+void PE_Callback_GetResetTrace(PeCallbackResetTrace *out);
 
 #ifdef __cplusplus
 }

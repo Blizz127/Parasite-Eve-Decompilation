@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53H
+# Shim Inventory — Phase 6E-B53I-B1
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -50,13 +50,25 @@ CHCR/GPUSTAT, and B53E drives its bounded GP1/GP0/DMA2 issue APIs. B53E adds
 one inert image-load preflight query; the hardware authority still owns no
 guest worker identity, RECT pointer, ring, or callback state.
 
-`platform/pe_irq.[ch]` is the B53D single 16-bit I_MASK (0x1F801074)
-authority: get/exchange/reset only. It performs no IRQ dispatch, no I_STAT
-mutation, and no callback invocation. `PE_Sdk_ResetState` is the host reset
-owner; the translated ResetCallback one-time path also writes I_MASK = 0,
-matching retail func_80073E28.
+`platform/pe_irq.[ch]` is the B53I-B1 single native authority for 16-bit
+I_STAT (`0x1F801070`) and I_MASK (`0x1F801074`). I_STAT writes use W0C
+`status &= written`; hardware assertion ORs status independently of I_MASK;
+raw reset clears both registers and advances a 64-bit stale-event generation.
+There is no pending-service operation and no callback invocation. CPU source
+identities remain solely in the guest table `D_800945E8`; ResetCallback
+clears the retail `0x41A`-word IRQ block, installs source 0 = `0x8007440C`
+and source 3 = `0x80074520`, and finishes with I_MASK and registered mask
+`D_80094614` both `0x0009`. Source 0 performs B(5Bh)(0), then C(0Ah)(3,0),
+while I_MASK is zero and before restoration. Other source-specific setter
+paths stop at `func_800740D0_source_cut`.
 
-### B53C–B53H retail dispatcher, LoadImage issue path, and queue pump
+| B53I-B1 function | Implemented scope |
+| --- | --- |
+| `func_80073C94` | canonical ResetCallback target: controller clear, exact IRQ-block clear, source 0 then source 3 CPU registration |
+| `func_80073CC4` | canonical SDK jump-table `+8` wrapper target |
+| `func_800740D0` | complete execution-proven source-0/source-3 setter paths; returns previous 32-bit guest identity |
+
+### B53C–B53I-B1 retail dispatcher, IRQ registration, LoadImage issue, and pump
 
 `game/boot/func_80076C34_port.c` translates complete `func_800773D0`,
 complete `func_80073E10` (via the PE_IRQ authority), and the dispatcher

@@ -5,6 +5,61 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
+## Phase 6E-B53I-B1 CPU IRQ state/registration verified
+
+Starting evidence commit is
+`31da8f843241910a70d49cee6e738b4c19bb76fd` (parent
+`a470422d1accdae39a1d8cb4b501df599df9003c`). B53I-B1 adds one native
+16-bit I_STAT beside the existing I_MASK in `pc_port/platform/pe_irq.[ch]`.
+I_STAT write semantics are W0C (`status &= written`); assertion is an OR
+independent of I_MASK; masked pending bits survive later unmasking. Raw IRQ
+reset clears status/mask and advances a nonzero 64-bit generation. A
+generation-checked assertion rejects captured pre-reset work. None of these
+operations dispatches a callback.
+
+Direct retail recovery corrects one B53I-A sentence: at `0x80073E80`,
+`func_80073E28` calls the nine-word `func_80074330` with delay-slot count
+`0x41A`. It clears exactly `0x41A` words / `0x1068` bytes at
+`[0x800945E4,0x8009564C)`, including the guard, dispatch-active flag, all
+eleven CPU callback slots, and `D_80094614`; the exclusive end is exactly
+the SDK jump table. Retail actively removes the same-handler hazard before
+registration.
+
+ResetCallback now installs source 0 then source 3 through bounded
+`func_80073CC4`/`func_800740D0` paths. Source 0 stores guest identity
+`0x8007440C`, updates mask/registered bit 0, calls B(5Bh)(0), then
+C(0Ah)(3,0), both while I_MASK is zero, and restores mask 1 afterward.
+Source 3 stores guest identity `0x80074520` in `D_800945F4`, sets bit 3,
+performs no special BIOS call, and restores final I_MASK `0x0009`.
+`D_80094614` also finishes `0x0009`. All identities remain 32-bit guest
+values in `D_800945E8`; there is no native CPU callback-table mirror or
+function-pointer cast. Unsupported setter sources stop at the named
+`func_800740D0_source_cut`.
+
+This rung has no `PE_IRQ_ServicePending`, DMA completion, DICR/source-3 edge
+bridge, `func_80074520` execution, DMA callback dispatch, idle pump, ring
+consumption, or second DMA issue. A registration-only hardware snapshot
+proves DMA2, DICR, GPUSTAT, VRAM, queue state, and VBlank remain unchanged.
+Eight focused groups expand the native suite to 533 tests. The standalone
+`pc_port/tools/b53i_b1_oracle.py` verifies 210 literal words across seven
+retail windows, exact calls/delay slots, the bulk clear, W0C, masked pending,
+coherent reset, and zero delivery without importing production C. Full
+proof: `pc_port/docs/b53i_b1_irq_state_registration.md`.
+
+Fresh completion gates are 533/533 normal and ASan/UBSan, focused B1 8/8
+each, frozen B53B 15/15 each, retained B53H 8/8 each, the full oracle matrix
+43/43 (retained subset 33/33), and B49 normal/sanitizer PASS. The canonical
+frontiers, framebuffer SHA-256, real-data FNV, and matching executable hashes
+remain unchanged. Four independent review lanes closed with no HIGH or
+MEDIUM finding after corrections.
+
+The next rung is B53I-B2 only: deterministic DMA hardware completion and
+physical DICR bit-31 edge generation; source-3 I_STAT assertion; separately
+invoked CPU pending service; literal `func_80074520` DICR W1C/resampling;
+typed DMA callback binding to `0x80076EE4`; and honest propagation of a
+nested untranslated idle-pump boundary. Hardware completion and callback
+execution must remain separate observable phases.
+
 ## Phase 6E-B53H GPU pump busy-DMA prefix verified
 
 The exact B53G base is
@@ -168,7 +223,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B53H GPU pump busy-DMA prefix verified**; canonical strict frontier advances to the named B50 prefix cut `func_8006AD40_prefix_cut` (exit 1) | fresh normal and ASan/UBSan `pe-native-tests` (525/525 each) |
+| Port phase | **6E-B53I-B1 CPU IRQ state/registration verified**; one I_STAT/I_MASK authority, exact ResetCallback source-0/source-3 registration, and no interrupt delivery; canonical strict frontier remains the named B50 prefix cut `func_8006AD40_prefix_cut` (exit 1) | fresh normal and ASan/UBSan `pe-native-tests` (533/533 each) |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -181,10 +236,10 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
 | Strict mode | continuing real data: **exit 1** at `func_8006AD40_prefix_cut` from `func_8006AD40` (the named B50 prefix cut, and the only BOOTSTRAP_RET provider on the canonical path); `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | fresh normal and ASan/UBSan agree |
-| GPU/DMA2 | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. B53E issues the exact LoadImage CPU prefix/DMA suffix and leaves completion explicit. B53G's `func_800746A0` performs its DICR RMW through this same authority and adds no register state; DICR bit 31 stays unsynthesized (read-then-masked by retail, never tested). No retail ring/HostFB/callback alias. I_MASK remains the single 16-bit `pe_irq.[ch]` authority, untouched by callback registration | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/docs/b53g_func_800746A0.md` |
-| Sanitizers | B53H fresh ASan/UBSan 525/525; B49, strict/bootstrap, real-disc load, B53H, and frozen B53B gates pass without sanitizer diagnostics | fresh `/tmp` build |
-| Matching build | **EXACT SHA-1 MATCH** (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | B53I: DMA2 completion event + source-3 DMA IRQ dispatch integration — a deterministic service opportunity calling `PE_GPU_ServiceDMA2Completion` plus translated `func_80074520` acknowledging DICR channel 2 and invoking callback slot 2; only then may the pump's idle-DMA consumer path be translated | `pc_port/docs/b53h_func_80076EE4.md` |
+| GPU/DMA2 + CPU IRQ | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. B53E issues the exact LoadImage CPU prefix/DMA suffix and leaves completion explicit. B53G's `func_800746A0` performs its DICR RMW through this same authority. B53I-B1 extends the sole `pe_irq.[ch]` owner to 16-bit I_STAT/I_MASK plus reset generation and installs guest-backed CPU source 0/3 identities, but adds no completion edge or interrupt service. No retail ring/HostFB/callback alias; DICR bit 31 remains B2 work | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/docs/b53i_b1_irq_state_registration.md` |
+| Sanitizers | B53I-B1 fresh ASan/UBSan 533/533; focused B1 8/8, frozen B53B 15/15, retained B53H 8/8, B49, strict/bootstrap, and real-disc load pass without sanitizer diagnostics | fresh `/tmp` build |
+| Matching build | **EXACT SHA-1 MATCH** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` / SHA-256 `5d94938ee752e81ef375bd4493c9883850c25a86895f9cb0732cf3622b44351b` (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
+| Next frontier | B53I-B2: keep explicit DMA completion separate from CPU pending service; implement physical DICR bit-31 edge to I_STAT source 3, CPU W0C-before-callback dispatch, literal `func_80074520` DICR W1C/resampling, and typed guest identity `0x80076EE4` delivery while propagating any nested idle-pump boundary | `pc_port/docs/b53i_b1_irq_state_registration.md` |
 
 ### Phase 6E-B43 func_8005218C — current findings
 
