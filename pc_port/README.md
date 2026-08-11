@@ -1,8 +1,42 @@
-# Parasite Eve Native PC Port — Phase 6E-B53G
+# Parasite Eve Native PC Port — Phase 6E-B53H
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53G translates the complete 43-word / `0xAC` Psy-Q
+**Current milestone:** B53H translates the execution-proven busy-DMA fast
+path of the 152-word / `0x260` libgpu queue pump `func_80076EE4`
+(`0x80076EE4..0x80077143`, body SHA-256
+`a124857ab6fd91a3b68ea3e5c2efa5337bf6ed5528ef94ca23bc4a781337a78c`).
+ABI is `int func_80076EE4(void)`. The pump's first state read is DMA2 CHCR
+through the retail pointer `D_80095860` = `0x1F8010A8`; when
+`CHCR & 0x01000000` is set it returns exactly `1` from the branch delay
+slot at `0x80076F0C` and exits through the shared epilogue, having written
+nothing but its own stack frame. That is the canonical path: the first
+LoadImage transfer is still in flight, so the pump performs no I_MASK
+exchange, no queue read, no GPUSTAT read, no callback or DICR change, no
+worker call, and no consumer advance. The remaining 136 words
+(`0x80076F10..0x8007712C`) — the idle-DMA consumer path — are deliberately
+NOT translated, because reaching them would require completing the
+in-flight transfer. They are exposed as a visible boundary instead. With
+the pump returning a real value, `func_80076C34` yields its retail pending
+count `(producer-consumer)&0x3F` and both LoadImage calls complete, so the
+canonical Disc 1 strict frontier advances one rung to the **pre-existing
+B50 prefix cut** in `func_8006AD40`, which B53H names
+`func_8006AD40_prefix_cut` so it stays a visible frontier (exit 1) rather
+than degrading to a silent exit 0; bootstrap strict remains
+`func_8007F72C` from `func_800698D4`. The queued second LoadImage stays
+unconsumed (producer=1, consumer=0, entry byte-identical) and the transfer
+stays pending for a later genuine completion. Boundary signalling is now
+explicit rather than inferred from the sticky-first stop reason: the pump
+reports through an out-parameter and the sibling direct-issue path compares
+a monotonic `PE_Port_StopEpoch()`, so no latched stop can suppress retail's
+unconditional I_MASK restore. Eight new tests bring normal and fresh
+ASan/UBSan suites to 525/525, all 15 frozen B53B tests remain green, and
+the independent B53H oracle verifies all 152 words, the arithmetic branch
+target, the four-site caller census, the dormant jump-table slot, and every
+idle-path scenario without ever completing DMA. Full proof is in
+`docs/b53h_func_80076EE4.md`.
+
+**Prior milestone:** B53G translated the complete 43-word / `0xAC` Psy-Q
 DMA callback-slot setter `func_800746A0`
 (`0x800746A0..0x8007474B`, body SHA-256
 `ac160079410a40d719e5a8668f627d05d36d287d08959adc22fd3e069e4e99dd`). It
@@ -682,8 +716,10 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Expected after B53C for Disc 1: exit 1 at func_80073E10 from func_80076C34.
-# The dispatcher stops before consuming the unresolved I_MASK result.
+# Expected after B53H for Disc 1: exit 1 at func_8006AD40_prefix_cut from
+# func_8006AD40.  Both LoadImage calls now complete; the second stays queued
+# (producer=1, consumer=0) with the first transfer still in flight, and
+# execution stops at the untranslated suffix of func_8006AD40.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \

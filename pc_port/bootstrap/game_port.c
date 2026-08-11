@@ -20,8 +20,15 @@ static int g_port_frame_budget_reached = 0;
 static PEPortQuitPoll g_port_quit_poll = NULL;
 static PEPortStopReason g_port_stop_reason = PE_PORT_STOP_NONE;
 
+/* Monotonic count of stop requests.  PE_Port_RequestStop deliberately keeps
+ * only the FIRST reason, so the reason value cannot tell a caller whether a
+ * specific callee just requested a stop.  Callers that need that must
+ * compare this epoch across the call instead. */
+static unsigned g_port_stop_epoch;
+
 void PE_Port_RunControlReset(void)
 {
+    g_port_stop_epoch = 0;
     g_port_stop_requested = 0;
     g_port_main_iterations = 0;
     g_port_frame_limit = 0;
@@ -53,6 +60,12 @@ void PE_Port_RequestStop(PEPortStopReason reason)
         g_port_stop_reason = reason;
     }
     g_port_stop_requested = 1;
+    g_port_stop_epoch++;
+}
+
+unsigned PE_Port_StopEpoch(void)
+{
+    return g_port_stop_epoch;
 }
 
 int PE_Port_BeginMainIteration(void)

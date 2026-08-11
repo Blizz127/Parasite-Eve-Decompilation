@@ -96,12 +96,17 @@ int func_8006AD40(void)
             func_8006E1C0(entry, base);
     }
 
-    /* Prefix boundary: B53E authentically issues the first LoadImage DMA and
-     * leaves it pending.  The second request therefore selects the retail
-     * enqueue path; B53G registers the channel-2 callback through
-     * func_80073CF4/func_800746A0, publishes the ring entry, and stops at
-     * the untranslated queue pump func_80076EE4.  Ask the host loop to
-     * honor that already-requested unresolved boundary. */
+    /* B50 prefix cut at retail 0x8006AE50: only 68 of this function's 391
+     * words are translated, and retail continues for 323 more.
+     *
+     * Through B53G this stop merely echoed a deeper boundary inside the
+     * LoadImage path.  B53H translates the queue pump's busy-DMA path, so
+     * that whole path now completes and THIS is the canonical run's only
+     * stop.  It is therefore named through the centralized boundary, like
+     * every other unresolved site, so strict mode still reports where
+     * execution stopped instead of exiting silently. */
+    (void)Bootstrap_ReturnInt(
+        "func_8006AD40_prefix_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }

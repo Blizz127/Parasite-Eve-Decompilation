@@ -78,7 +78,11 @@
  * Classification: 1 — translated retail logic. Phase 6E-B53E issues the
  * first LoadImage DMA through func_80076664 and leaves it pending. B53G
  * completes func_80073CF4 and its func_800746A0 setter, so the second
- * request registers, publishes its ring entry, and stops at func_80076EE4.
+ * request registers and publishes its ring entry. B53H translates the
+ * busy-DMA fast path of the pump func_80076EE4, which on this path reads
+ * DMA2 CHCR, finds the first transfer still in flight, and returns 1
+ * without touching the ring — so this dispatcher now completes with the
+ * queued request unconsumed and the transfer still pending.
  */
 #include "psx_compat.h"
 #include "game_port.h"

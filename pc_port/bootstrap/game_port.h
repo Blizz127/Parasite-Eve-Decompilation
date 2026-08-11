@@ -27,6 +27,10 @@ int  PE_Port_ShouldStop(void);
 int  PE_Port_FramePresentationAllowed(void);
 void PE_Port_FramePresented(int presented);
 PEPortStopReason PE_Port_GetStopReason(void);
+/* Monotonic stop-request counter.  Compare it across a call to learn
+ * whether that call requested a stop; PE_Port_GetStopReason cannot answer
+ * that, because only the first reason is retained. */
+unsigned PE_Port_StopEpoch(void);
 const char *PE_Port_StopReasonName(PEPortStopReason reason);
 
 /* Trace helper available to game code */

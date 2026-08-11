@@ -126,8 +126,10 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * translates the direct LoadImage worker func_80076664; B53F translates the
  * execution-proven installed-target path through callback wrapper
  * func_80073CF4, and B53G completes it by translating the installed setter
- * func_800746A0.  The next canonical boundary is the queue pump
- * func_80076EE4. */
+ * func_800746A0.  B53H translates the busy-DMA prefix of the queue pump
+ * func_80076EE4, so this dispatcher now completes on the canonical path;
+ * the next canonical boundary is the B50 prefix cut inside func_8006AD40,
+ * reported as `func_8006AD40_prefix_cut`. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
@@ -180,6 +182,15 @@ extern pe_addr_t func_800746A0(uint32_t dma_channel, pe_addr_t handler);
 extern pe_addr_t PE_DMA_CallbackSlotAddress(uint32_t dma_channel);
 extern pe_addr_t PE_DMA_DicrPointerAddress(void);
 extern uint32_t  PE_DMA_DicrMmioAddress(void);
+extern int  func_80076EE4(void);
+/* Internal pump entry: *retail_returned is 1 only when the translated
+ * busy-DMA path actually returned, 0 when the untranslated idle-DMA
+ * consumer path was reached.  Callers must not infer that from the host
+ * stop reason, which keeps only the first reason requested. */
+extern int  PE_func_80076EE4_Pump(int *retail_returned);
+/* Read-only names for the retail authority the pump prefix uses. */
+extern pe_addr_t PE_Pump_Dma2ChcrPointerAddress(void);
+extern uint32_t  PE_Pump_Dma2ChcrMmioAddress(void);
 extern int  func_80076C34(pe_addr_t worker, pe_addr_t argument,
                           int32_t copy_bytes, uint32_t auxiliary);
 extern int  PE_func_80076C34_Inline8(pe_addr_t worker,

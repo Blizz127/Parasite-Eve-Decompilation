@@ -12129,8 +12129,12 @@ static void test_6AD40_prefix_boundary_args(void)
 static void test_6AD40_strict_stops_at_frontier(void)
 {
     DiscFixture fx;
-    /* B53F resolves the wrapper's execution-proven installed-target path.
-     * A preexisting DMA selects enqueue and exposes the setter backend. */
+    /* B53F resolves the wrapper's execution-proven installed-target path and
+     * B53H resolves the busy-DMA pump, so the whole B50 prefix now runs to
+     * its own cut.  B53H names that cut `func_8006AD40_prefix_cut`, so it is
+     * once again a visible strict frontier rather than a silent return.
+     * Strict therefore exits 1 here, and in normal mode the named provider
+     * is the LAST BOOTSTRAP_RET symbol recorded on this path. */
     TEST("6AD40_strict_stops_at_frontier");
     pid_t pid;
     int status = 0;
@@ -12149,12 +12153,35 @@ static void test_6AD40_strict_stops_at_frontier(void)
         PE_StoreU8(B53D_INIT_BYTE, 1u);
         if (!B53E_SeedBusyDma()) _exit(2);
         func_8006AD40();
-        _exit(0);
+        _exit(3);  /* strict must have aborted before this point */
     }
     ASSERT(waitpid(pid, &status, 0) == pid,
            "waitpid failed for B51 strict boundary");
     ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict B51 boundary must exit 1 at first unresolved callee");
+           "strict B51 path no longer stops at the named B50 prefix cut");
+
+    /* Same path in normal mode: prove the frontier symbol is exactly the
+     * named B50 prefix cut, and that nothing unresolved precedes it. */
+    ResetTestState();
+    PE_Disc_SetActive(fx.disc);
+    HostFB_Init();
+    Bootstrap_Init();
+    func_8007ED58();
+    HostFB_VSync(0);
+    B50_SeedPrefixState(1);
+    PE_StoreU8(B53D_INIT_BYTE, 1u);
+    ASSERT(B53E_SeedBusyDma(), "busy DMA seed failed");
+    Stub_ResetOrderLog();
+    func_8006AD40();
+    ASSERT(g_stub_order_count == 1,
+           "B50 prefix path must reach exactly one BOOTSTRAP_RET provider");
+    ASSERT(strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+           "the B50 prefix cut is no longer the named strict frontier");
+    /* The busy transfer must still be in flight and the queued request
+     * unconsumed: reaching the frontier must not have completed DMA. */
+    ASSERT(PE_GPU_DMA2Pending(), "prefix path completed the pending DMA");
+    ASSERT(!PE_GPU_DMA2CompletionPending(),
+           "prefix path fabricated a DMA completion");
     FxFree(&fx);
     PASS();
 }
@@ -12406,12 +12433,18 @@ static void test_6E1C0_strict_direct(void)
         PE_StoreU8(B53D_INIT_BYTE, 1u);
         if (!B53E_SeedBusyDma()) _exit(2);
         func_8006E1C0(B51_ENTRY, B51_BASE);
+        /* B53H: the busy-DMA pump path is translated, so the dispatcher
+         * completes with no unresolved provider.  The in-flight transfer
+         * and the queued entry must both survive. */
+        if (!PE_GPU_DMA2Pending()) _exit(3);
+        if (PE_GPU_DMA2CompletionPending()) _exit(4);
+        if (PE_LoadU32(B53C_CONSUMER) != 0u) _exit(5);
         _exit(0);
     }
     ASSERT(waitpid(pid, &status, 0) == pid,
            "waitpid failed for B51 direct strict boundary");
-    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict mode must exit 1 at the first LoadImage dispatch");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+           "strict LoadImage dispatch no longer completes without a stub");
     PASS();
 }
 
@@ -12582,12 +12615,16 @@ static void test_7506C_strict_direct(void)
         if (!B53E_SeedBusyDma()) _exit(2);
         Bootstrap_EnableStrict();
         func_8007506C(&rc, 0xFFFFFFFFu);
+        /* B53H: the queued request survives the busy-DMA pump untouched. */
+        if (!PE_GPU_DMA2Pending()) _exit(3);
+        if (PE_LoadU32(B53C_CONSUMER) != 0u) _exit(4);
+        if (PE_LoadU32(B53C_PRODUCER) != 1u) _exit(5);
         _exit(0);
     }
     ASSERT(waitpid(pid, &status, 0) == pid,
            "waitpid failed for B53C strict boundary");
-    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict wrapper must stop at func_800746A0");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+           "strict LoadImage wrapper no longer completes without a stub");
     PASS();
 }
 
@@ -12650,12 +12687,15 @@ static void test_B53C_guest_abi_enqueue_boundary(void)
     ASSERT(g_bootstrap_arg4_call_count == 0 &&
            PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP,
            "nonempty path did not perform the real callback registration");
+    /* DMA2 is idle in this scenario, so the pump takes its untranslated
+     * idle-DMA consumer path and stops there instead of returning 1. */
     ASSERT(CountOrderLog("func_80077404") == 0 &&
            CountOrderLog("func_80073E10") == 0 &&
            CountOrderLog("func_80073CF4") == 0 &&
            CountOrderLog("func_800746A0") == 0 &&
            CountOrderLog("func_80076664") == 0 &&
-           CountOrderLog("func_80076EE4") == 1,
+           CountOrderLog("func_80076EE4") == 0 &&
+           CountOrderLog("func_80076EE4_idle_pump") == 1,
            "nonempty path crossed or duplicated its boundary");
     ASSERT(PE_IRQ_GetMask() == 0u &&
            PE_LoadU32(B53D_SAVED_IMASK) == 0u &&
@@ -12807,11 +12847,11 @@ static void test_B53C_full_ram_canary_and_ring_authority(void)
     PASS();
 }
 
-static void test_B53C_strict_exposes_dma_setter(void)
+static void test_B53C_strict_busy_enqueue_completes(void)
 {
     pid_t pid;
     int status = 0;
-    TEST("B53C_strict_exposes_dma_setter");
+    TEST("B53C_strict_busy_enqueue_completes");
     ResetTestState();
     pid = fork();
     ASSERT(pid >= 0, "fork failed for B53C strict boundary");
@@ -12822,13 +12862,19 @@ static void test_B53C_strict_exposes_dma_setter(void)
         PE_StoreU32(B53C_PRODUCER, 0u);
         PE_StoreU32(B53C_CONSUMER, 0u);
         if (!B53E_SeedBusyDma()) _exit(2);
-        (void)func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u);
+        /* B53H: registration, publication and the busy-DMA pump are all
+         * translated, so the dispatcher returns its real pending count. */
+        if (func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) != 1)
+            _exit(3);
+        if (PE_LoadU32(B53C_PRODUCER) != 1u ||
+            PE_LoadU32(B53C_CONSUMER) != 0u) _exit(4);
+        if (!PE_GPU_DMA2Pending() || PE_GPU_DMA2CompletionPending()) _exit(5);
         _exit(0);
     }
     ASSERT(waitpid(pid, &status, 0) == pid,
            "waitpid failed for B53C strict boundary");
-    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict dispatcher did not stop at first internal dependency");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+           "strict dispatcher no longer completes the busy-DMA enqueue");
     PASS();
 }
 
@@ -13018,8 +13064,8 @@ static void test_B53D_enqueue_selectors(void)
     PE_Fill(B53C_RING_BASE, B53C_RING_SIZE, 0xA5u);
     memcpy(before, PE_TranslateConst(B53C_RING_BASE, sizeof(before)),
            sizeof(before));
-    ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
-           "busy prefix sentinel changed");
+    ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 1,
+           "busy enqueue did not return the retail pending count");
     ASSERT(g_bootstrap_arg4_call_count == 0 &&
            PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
            PE_GPU_ReadDICR() == 0x00840000u,
@@ -13039,7 +13085,7 @@ static void test_B53D_enqueue_selectors(void)
            PE_LoadU32(B53C_RING_BASE + 8u) == 0x80110000u &&
            PE_LoadU32(B53C_PRODUCER) == 1u &&
            PE_LoadU32(B53C_CONSUMER) == 0u &&
-           CountOrderLog("func_80076EE4") == 1,
+           CountOrderLog("func_80076EE4_idle_pump") == 0,
            "DMA-busy publication differs from retail");
     ASSERT(PE_IRQ_GetMask() == 0u &&
            PE_LoadU32(B53D_WORK_MARKER) == 1u,
@@ -13052,12 +13098,14 @@ static void test_B53D_enqueue_selectors(void)
     PE_StoreU32(B53D_DRAWSYNC_CB, 0x80012345u);
     ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
            "callback prefix sentinel changed");
+    /* DMA2 is idle on this selector, so the pump reaches its untranslated
+     * idle-DMA consumer path and the dispatcher keeps the honest prefix. */
     ASSERT(g_bootstrap_arg4_call_count == 0 &&
            PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
            PE_LoadU32(B53C_RING_BASE) == 0x80076664u &&
            PE_LoadU32(B53C_PRODUCER) == 1u &&
            CountOrderLog("func_80076664") == 0 &&
-           CountOrderLog("func_80076EE4") == 1,
+           CountOrderLog("func_80076EE4_idle_pump") == 1,
            "callback path did not register, publish, and stop at the pump");
     PASS();
 }
@@ -13625,8 +13673,8 @@ static void test_B53F_pending_dma_dispatcher_integration(void)
     PE_GPU_GetState(&before);
 
     ASSERT(func_80076C34(0x80076664u, B53E_RECT, 8,
-                         0x80110000u) == 0,
-           "dispatcher prefix sentinel changed");
+                         0x80110000u) == 1,
+           "dispatcher did not return the retail pending count");
     PE_GPU_GetState(&after);
 
     /* The registration really happened, through the real setter. */
@@ -13651,11 +13699,13 @@ static void test_B53F_pending_dma_dispatcher_integration(void)
     ASSERT(memcmp(&before, &after, sizeof(before)) == 0 &&
            PE_GPU_DMA2Pending() && !PE_GPU_DMA2CompletionPending(),
            "dispatcher progressed or completed the pending DMA");
+    /* B53H: the busy-DMA pump really returned 1 and consumed nothing, so
+     * the dispatcher completes with no boundary at all. */
     ASSERT(PE_LoadU32(B53D_SAVED_IMASK) == 0xBEEFu &&
            PE_IRQ_GetMask() == 0xBEEFu &&
-           CountOrderLog("func_80076EE4") == 1 &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "dispatcher did not restore I_MASK and stop at the pump");
+           CountOrderLog("func_80076EE4_idle_pump") == 0 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "dispatcher did not restore I_MASK or fabricated a boundary");
     PASS();
 }
 
@@ -13943,11 +13993,11 @@ static void test_B53G_reset_lifecycle_and_determinism(void)
     PASS();
 }
 
-static void test_B53G_strict_frontier_is_pump(void)
+static void test_B53G_strict_registration_and_publication(void)
 {
     pid_t pid;
     int status = 0;
-    TEST("B53G_strict_frontier_is_pump");
+    TEST("B53G_strict_registration_and_publication");
     ResetTestState();
     pid = fork();
     ASSERT(pid >= 0, "fork failed for B53G strict frontier");
@@ -13959,12 +14009,342 @@ static void test_B53G_strict_frontier_is_pump(void)
         if (!B53E_SeedBusyDma()) _exit(2);
         Bootstrap_EnableStrict();
         (void)func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u);
+        /* B53H: the registration and publication B53G proved must still be
+         * exactly this, under strict stubs, with the pump translated. */
+        if (PE_LoadU32(B53F_DMA_CB_SLOT2) != B53D_QUEUE_PUMP) _exit(3);
+        if (PE_GPU_ReadDICR() != 0x00840000u) _exit(4);
+        if (PE_LoadU32(B53C_PRODUCER) != 1u) _exit(5);
+        if (PE_LoadU32(B53C_CONSUMER) != 0u) _exit(6);
+        if (PE_LoadU32(B53C_RING_BASE) != 0x80076664u) _exit(7);
         _exit(0);
     }
     ASSERT(waitpid(pid, &status, 0) == pid,
            "waitpid failed for B53G strict frontier");
-    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict enqueue did not stop at the untranslated queue pump");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+           "strict enqueue no longer registers and publishes cleanly");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Phase 6E-B53H — func_80076EE4 busy-DMA pump prefix (7 tests)
+ *
+ * Retail 0x80076EE4..0x80077143.  Only the entry busy-DMA fast path is
+ * translated: `*(0x1F8010A8) & 0x01000000` non-zero returns exactly 1 with
+ * no I_MASK exchange, no queue access, no GPUSTAT read, no callback or
+ * DICR change, and no worker invocation.  Expectations below are derived
+ * from the literal retail words and cross-checked by tools/b53h_oracle.py.
+ * ════════════════════════════════════════════════════════════════════ */
+
+#define B53H_RING_ENTRY_BYTES 0x60u
+
+static void test_B53H_busy_abi_and_return(void)
+{
+    TEST("B53H_busy_abi_and_return");
+
+    /* Canonical state: one queued entry, DMA2 still in flight. */
+    ResetTestState();
+    PE_StoreU32(B53C_PRODUCER, 1u);
+    PE_StoreU32(B53C_CONSUMER, 0u);
+    ASSERT(B53E_SeedBusyDma(), "cannot seed the canonical pending DMA");
+    ASSERT((PE_GPU_ReadDMA2CHCR() & 0x01000000u) != 0u,
+           "seeded CHCR does not have the retail busy bit set");
+    ASSERT(func_80076EE4() == 1, "busy pump did not return retail 1");
+
+    /* The retail authority behind the busy test is named, not duplicated. */
+    ASSERT(PE_Pump_Dma2ChcrPointerAddress() == 0x80095860u &&
+           PE_Pump_Dma2ChcrMmioAddress() == 0x1F8010A8u,
+           "DMA2 CHCR authority addresses differ from retail");
+
+    /* Busy is decided by bit 24 alone, independent of the queue: an empty
+     * ring with a busy channel still returns 1. */
+    ResetTestState();
+    PE_StoreU32(B53C_PRODUCER, 0u);
+    PE_StoreU32(B53C_CONSUMER, 0u);
+    ASSERT(B53E_SeedBusyDma(), "cannot seed DMA for the empty-queue case");
+    ASSERT(func_80076EE4() == 1,
+           "busy fast path depends on queue state");
+    ASSERT(g_stub_count == 0,
+           "busy fast path invoked a boundary");
+    PASS();
+}
+
+static void test_B53H_busy_test_is_bit24(void)
+{
+    TEST("B53H_busy_test_is_bit24");
+    ResetTestState();
+    PE_StoreU32(B53C_PRODUCER, 0u);
+    PE_StoreU32(B53C_CONSUMER, 0u);
+    ASSERT(B53E_SeedBusyDma(), "cannot seed pending DMA");
+    ASSERT(PE_GPU_ReadDMA2CHCR() == 0x01000201u,
+           "seeded CHCR is not the retail load value");
+    ASSERT(func_80076EE4() == 1, "busy channel did not return 1");
+
+    /* NOT the canonical path: this test explicitly services completion to
+     * prove the discriminator is CHCR bit 24 and not "CHCR != 0".  After
+     * completion CHCR is 0x00000201, still non-zero, yet the pump must now
+     * take its untranslated idle path instead of returning 1. */
+    ASSERT(PE_GPU_ServiceDMA2Completion(PE_GPU_DMA2EventToken()) == 1,
+           "explicit completion was refused");
+    ASSERT(PE_GPU_ReadDMA2CHCR() == 0x00000201u &&
+           (PE_GPU_ReadDMA2CHCR() & 0x01000000u) == 0u,
+           "completion did not clear only the busy bit");
+    ASSERT(func_80076EE4() == 0 &&
+           CountOrderLog("func_80076EE4_idle_pump") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "idle channel did not reach the honest untranslated boundary");
+    PASS();
+}
+
+static void test_B53H_busy_pump_is_fully_inert(void)
+{
+    uint8_t *ram_before;
+    uint16_t pixel_before[8];
+    uint16_t pixel_after[8];
+    PeGpuState before;
+    PeGpuState after;
+    TEST("B53H_busy_pump_is_fully_inert");
+    ResetTestState();
+    PE_Fill(PE_RAM_BASE, PE_RAM_SIZE, 0x5Au);
+
+    /* Rebuild the exact canonical entry state on top of the poison. */
+    PE_StoreU32(B53C_PRODUCER, 1u);
+    PE_StoreU32(B53C_CONSUMER, 0u);
+    PE_StoreU32(B53C_RING_BASE + 0x00u, 0x80076664u);
+    PE_StoreU32(B53C_RING_BASE + 0x04u, B53C_RING_BASE + 0x0Cu);
+    PE_StoreU32(B53C_RING_BASE + 0x08u, 0x8012B8B8u);
+    PE_StoreU32(B53C_RING_BASE + 0x0Cu, 0x01C80100u);
+    PE_StoreU32(B53C_RING_BASE + 0x10u, 0x00010040u);
+    PE_StoreU32(B53F_DMA_CB_SLOT2, B53D_QUEUE_PUMP);
+    PE_StoreU32(B53D_WORK_MARKER, 1u);
+    PE_StoreU32(B53D_DRAWSYNC_CB, 0u);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    ASSERT(B53E_SeedBusyDma(), "cannot seed the canonical pending DMA");
+    for (uint32_t i = 0; i < 8u; i++) {
+        ASSERT(PE_GPU_ReadVRAM(i, 1u, &pixel_before[i]) == 1,
+               "VRAM sample failed");
+    }
+    ram_before = malloc(PE_RAM_SIZE);
+    ASSERT(ram_before != NULL, "cannot allocate B53H RAM snapshot");
+    memcpy(ram_before, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
+           PE_RAM_SIZE);
+    PE_GPU_GetState(&before);
+
+    ASSERT(func_80076EE4() == 1, "canonical busy pump did not return 1");
+
+    /* Not one guest byte may change — ring, indices, callback slot, work
+     * marker, both saved-I_MASK words, and every unrelated byte. */
+    ASSERT(memcmp(ram_before,
+                  PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE),
+                  PE_RAM_SIZE) == 0,
+           "busy pump mutated guest memory");
+    ASSERT(memcmp(PE_TranslateConst(B53C_RING_BASE, B53H_RING_ENTRY_BYTES),
+                  ram_before + (B53C_RING_BASE - PE_RAM_BASE),
+                  B53H_RING_ENTRY_BYTES) == 0,
+           "busy pump mutated the queued entry");
+
+    /* No hardware field may change either. */
+    PE_GPU_GetState(&after);
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "busy pump progressed GPU/DMA/VBlank/parser state");
+    ASSERT(PE_IRQ_GetMask() == 0xBEEFu,
+           "busy pump touched the single I_MASK authority");
+    ASSERT(PE_GPU_ReadStatus() == before.status &&
+           PE_GPU_VSyncQuery() == before.vsync_count &&
+           PE_GPU_ReadDICR() == before.dicr &&
+           PE_GPU_ReadDPCR() == before.dpcr,
+           "busy pump changed GPUSTAT, VBlank, DICR, or DPCR");
+    for (uint32_t i = 0; i < 8u; i++) {
+        ASSERT(PE_GPU_ReadVRAM(i, 1u, &pixel_after[i]) == 1 &&
+               pixel_after[i] == pixel_before[i],
+               "busy pump mutated VRAM");
+    }
+    ASSERT(g_stub_count == 0 && g_bootstrap_arg4_call_count == 0 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "busy pump invoked a worker, callback, or boundary");
+    free(ram_before);
+    PASS();
+}
+
+static void test_B53H_busy_pump_never_completes_dma(void)
+{
+    TEST("B53H_busy_pump_never_completes_dma");
+    ResetTestState();
+    PE_StoreU32(B53C_PRODUCER, 1u);
+    PE_StoreU32(B53C_CONSUMER, 0u);
+    PE_StoreU32(B53C_RING_BASE, 0x80076664u);
+    ASSERT(B53E_SeedBusyDma(), "cannot seed the canonical pending DMA");
+
+    /* Repeated pumping never makes progress: the transfer stays in flight,
+     * completion never becomes pending, and no interrupt is asserted. */
+    for (int i = 0; i < 8; i++) {
+        ASSERT(func_80076EE4() == 1,
+               "repeated busy pump is not deterministic");
+        ASSERT(PE_GPU_DMA2Pending() == 1 &&
+               PE_GPU_DMA2CompletionPending() == 0 &&
+               PE_GPU_DMA2InterruptAsserted() == 0,
+               "repeated busy pump advanced the transfer");
+        ASSERT(PE_LoadU32(B53C_PRODUCER) == 1u &&
+               PE_LoadU32(B53C_CONSUMER) == 0u &&
+               PE_LoadU32(B53C_RING_BASE) == 0x80076664u,
+               "repeated busy pump consumed the queue");
+    }
+    ASSERT(CountOrderLog("func_80076664") == 0 && g_stub_count == 0,
+           "busy pump invoked the queued worker");
+    ASSERT(PE_GPU_VSyncQuery() == 0u,
+           "busy pump advanced VBlank");
+    PASS();
+}
+
+static void test_B53H_dispatcher_busy_integration(void)
+{
+    PeGpuState before;
+    PeGpuState after;
+    TEST("B53H_dispatcher_busy_integration");
+    ResetTestState();
+    PE_StoreU8(B53D_INIT_BYTE, 1u);
+    PE_StoreU32(B53E_RECT, 0x11112222u);
+    PE_StoreU32(B53E_RECT + 4u, 0x33334444u);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    ASSERT(B53E_SeedBusyDma(), "cannot seed the canonical pending DMA");
+    PE_GPU_GetState(&before);
+
+    /* Registration + publication + a real busy-DMA pump return: the
+     * dispatcher now completes and yields the retail pending count. */
+    ASSERT(func_80076C34(0x80076664u, B53E_RECT, 8, 0x80110000u) == 1,
+           "dispatcher did not return the retail pending count");
+    PE_GPU_GetState(&after);
+
+    ASSERT(PE_LoadU32(B53C_PRODUCER) == 1u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u,
+           "publication moved the consumer or mispublished the producer");
+    ASSERT(PE_LoadU32(B53C_RING_BASE) == 0x80076664u &&
+           PE_LoadU32(B53C_RING_BASE + 4u) == B53C_RING_BASE + 0x0Cu &&
+           PE_LoadU32(B53C_RING_BASE + 8u) == 0x80110000u &&
+           PE_LoadU32(B53C_RING_BASE + 0x0Cu) == 0x11112222u &&
+           PE_LoadU32(B53C_RING_BASE + 0x10u) == 0x33334444u,
+           "published entry differs from retail");
+    ASSERT(PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
+           after.dicr == 0x00840000u,
+           "B53G registration state regressed");
+    ASSERT(PE_IRQ_GetMask() == 0xBEEFu &&
+           PE_LoadU32(B53D_SAVED_IMASK) == 0xBEEFu,
+           "dispatcher lost the I_MASK save/restore around publication");
+    ASSERT(PE_GPU_DMA2Pending() == 1 &&
+           PE_GPU_DMA2CompletionPending() == 0,
+           "dispatcher completed the in-flight transfer");
+    ASSERT(CountOrderLog("func_80076664") == 0 &&
+           CountOrderLog("func_80076EE4_idle_pump") == 0 &&
+           g_stub_count == 0 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "dispatcher invoked a worker or fabricated a boundary");
+    before.dicr = after.dicr;
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "dispatcher progressed hardware beyond the DICR RMW");
+    PASS();
+}
+
+static void test_B53H_boundary_is_not_masked_by_frame_limit(void)
+{
+    TEST("B53H_boundary_is_not_masked_by_frame_limit");
+    ResetTestState();
+    PE_StoreU8(B53D_INIT_BYTE, 1u);
+    PE_StoreU32(B53C_PRODUCER, 4u);
+    PE_StoreU32(B53C_CONSUMER, 1u);
+    PE_StoreU32(B53D_DRAWSYNC_CB, 0x80012345u);
+
+    /* Latch a DIFFERENT stop reason first.  PE_Port_RequestStop keeps the
+     * FIRST reason, so a pump boundary must be reported through its own
+     * explicit signal rather than inferred from the stop reason. */
+    PE_Port_RequestStop(PE_PORT_STOP_FRAME_LIMIT);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
+           "frame-limit stop reason was not latched first");
+
+    /* DMA2 is idle, so the dispatcher's opportunistic pump reaches the
+     * untranslated idle path.  The dispatcher must NOT fabricate a
+     * pending count just because the stop reason did not change. */
+    ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
+           "masked pump boundary produced a fabricated pending count");
+    ASSERT(CountOrderLog("func_80076EE4_idle_pump") == 1,
+           "pump boundary was not reported under a latched stop reason");
+    PASS();
+}
+
+static void test_B53H_strict_advances_past_dispatcher(void)
+{
+    pid_t pid;
+    int status = 0;
+    TEST("B53H_strict_advances_past_dispatcher");
+    ResetTestState();
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed for B53H strict advance");
+    if (pid == 0) {
+        Bootstrap_Init();
+        B52_SeedGpuDispatch();
+        PE_StoreU8(B53D_INIT_BYTE, 1u);
+        if (!B53E_SeedBusyDma()) _exit(2);
+        Bootstrap_EnableStrict();
+        /* Under strict stubs the whole enqueue + busy pump must complete
+         * without invoking any provider, leaving the transfer in flight
+         * and the queued request unconsumed for a later real completion. */
+        if (func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) != 1)
+            _exit(3);
+        if (!PE_GPU_DMA2Pending()) _exit(4);
+        if (PE_GPU_DMA2CompletionPending()) _exit(5);
+        if (PE_LoadU32(B53C_CONSUMER) != 0u) _exit(6);
+        if (PE_LoadU32(B53C_PRODUCER) != 1u) _exit(7);
+        _exit(0);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid,
+           "waitpid failed for B53H strict advance");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+           "strict busy-DMA dispatch no longer completes cleanly");
+    PASS();
+}
+
+static void test_B53H_stop_epoch_distinguishes_latched_stops(void)
+{
+    unsigned epoch;
+    TEST("B53H_stop_epoch_distinguishes_latched_stops");
+    ResetTestState();
+
+    /* The epoch primitive.  PE_Port_RequestStop keeps the FIRST reason, so
+     * the reason alone cannot tell a caller that a *further* stop was just
+     * requested.  The epoch is monotonic and must count every request. */
+    ASSERT(PE_Port_StopEpoch() == 0u, "run-control reset left a stop epoch");
+    PE_Port_RequestStop(PE_PORT_STOP_FRAME_LIMIT);
+    ASSERT(PE_Port_StopEpoch() == 1u, "first stop did not advance the epoch");
+    epoch = PE_Port_StopEpoch();
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
+           "stop reason stopped being sticky-first");
+    ASSERT(PE_Port_StopEpoch() == epoch + 1u,
+           "a second stop was invisible to the epoch as well as the reason");
+
+    /* Integration: an EARLIER unrelated stop must not be mistaken for a
+     * nested worker boundary on the direct-issue path.  Retail
+     * 0x80076D40..0x80076D4C restores the saved I_MASK unconditionally when
+     * the worker returns, so suppressing that restore would fabricate a
+     * retail control-flow cut that never happened. */
+    ResetTestState();
+    B53E_SetupRetailGpu();
+    PE_StoreU8(B53D_INIT_BYTE, 1u);
+    B53E_StoreRect(9, 11, 1, 1);
+    PE_StoreU32(B53E_SOURCE, 0x7777AAAAu);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    /* Same reason a real worker boundary would use — precisely the case the
+     * old stop-reason comparison could not distinguish. */
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    epoch = PE_Port_StopEpoch();
+    ASSERT(epoch > 0u, "pre-latched stop was not recorded");
+    ASSERT(func_80076C34(0x80076664u, B53E_RECT, 8, B53E_SOURCE) == 0,
+           "direct issue under a latched stop did not return retail zero");
+    ASSERT(B53B_Pixel(9, 11) == 0xAAAAu,
+           "direct worker did not run under a latched stop");
+    ASSERT(PE_Port_StopEpoch() == epoch,
+           "direct issue latched a stop it should not have");
+    ASSERT(PE_IRQ_GetMask() == 0xBEEFu &&
+           PE_LoadU32(B53D_SAVED_IMASK) == 0xBEEFu,
+           "a pre-latched stop suppressed the mandatory I_MASK restore");
     PASS();
 }
 
@@ -15211,7 +15591,7 @@ int main(void)
     test_B53C_copy_counts_stop_before_ring();
     test_B53C_inline8_lifetime_and_no_pointer();
     test_B53C_full_ram_canary_and_ring_authority();
-    test_B53C_strict_exposes_dma_setter();
+    test_B53C_strict_busy_enqueue_completes();
     test_B53D_exchange_exact_abi();
     test_B53D_no_istat_callback_gpu_mutation();
     test_B53D_reset_owner();
@@ -15242,7 +15622,15 @@ int main(void)
     test_B53G_dicr_rmw_exact();
     test_B53G_registration_is_not_delivery();
     test_B53G_reset_lifecycle_and_determinism();
-    test_B53G_strict_frontier_is_pump();
+    test_B53G_strict_registration_and_publication();
+    test_B53H_busy_abi_and_return();
+    test_B53H_busy_test_is_bit24();
+    test_B53H_busy_pump_is_fully_inert();
+    test_B53H_busy_pump_never_completes_dma();
+    test_B53H_dispatcher_busy_integration();
+    test_B53H_boundary_is_not_masked_by_frame_limit();
+    test_B53H_strict_advances_past_dispatcher();
+    test_B53H_stop_epoch_distinguishes_latched_stops();
 
     /* Phase 6E-B53B deterministic GPU/DMA2 substrate (15 tests) */
     test_B53B_reset_dimensions_initial_vram();

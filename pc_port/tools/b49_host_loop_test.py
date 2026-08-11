@@ -4,9 +4,15 @@
 The frame-budget checks remain B49's.  Frontier assertions track the current
 production rung; B53E issues the first LoadImage through the translated
 func_80076664 worker and leaves DMA2 pending.  B53G completes the
-func_80073CF4 wrapper and its func_800746A0 callback-slot/DICR setter, so
-the second request registers the channel-2 callback, publishes its ring
-entry, and reaches the untranslated queue pump func_80076EE4.
+func_80073CF4 wrapper and its func_800746A0 callback-slot/DICR setter.
+B53H translates the busy-DMA fast path of the queue pump func_80076EE4,
+which returns 1 and consumes nothing while the transfer is in flight, so
+the whole LoadImage dispatch now completes with no provider of its own.
+Execution then stops at the pre-existing B50 prefix cut inside
+func_8006AD40 (retail 0x8006AE50).  B53H NAMES that cut
+`func_8006AD40_prefix_cut` so it is again a visible BOOTSTRAP_RET frontier
+instead of a silent return; the continuing strict run therefore still
+exits 1, now reporting that name.
 """
 
 from __future__ import annotations
@@ -117,8 +123,15 @@ def main() -> int:
                 "prefix run did not stop at frame 1 / iteration 1")
         require("[HOST] stop_reason=unresolved-boundary" in two.stderr,
                 "prefix run did not report its honest unresolved boundary")
-        require("[STUB:BOOTSTRAP_RET] func_80076EE4" in two.stderr,
-                "prefix run did not invoke the first unresolved provider")
+        # The ONLY provider reached on the canonical path is the named B50
+        # translation prefix cut.  Anything else is a regression.
+        providers = re.findall(r"\[STUB:BOOTSTRAP_RET\] (\S+)", two.stderr)
+        require(providers == ["func_8006AD40_prefix_cut"],
+                f"canonical provider set changed: {providers}")
+        require("[STUB:BOOTSTRAP_RET] func_80076EE4" not in two.stderr,
+                "translated busy-DMA pump prefix remained a provider")
+        require("func_80076EE4_idle_pump" not in two.stderr,
+                "canonical run reached the untranslated idle-DMA pump path")
         require("[STUB:BOOTSTRAP_RET] func_80073CF4" not in two.stderr,
                 "installed-target wrapper prefix remained a provider")
         require("[STUB:BOOTSTRAP_RET] func_800746A0" not in two.stderr,
@@ -135,12 +148,19 @@ def main() -> int:
             executable, disc, work, "strict-two",
             "--strict-stubs", "--max-frames", "2", timeout=args.timeout,
         )
-        require(strict.returncode == 1, "continuing strict run did not exit 1")
+        # B53H: the LoadImage dispatch no longer stops at func_80076EE4.
+        # The frontier moves forward to the named B50 translation prefix cut
+        # inside func_8006AD40, which strict mode still reports and aborts on.
+        require(strict.returncode == 1,
+                "continuing strict run did not exit 1")
         require(
-            "first unresolved BOOTSTRAP_RET provider: func_80076EE4" in strict.stderr
-            and "called from: func_80076C34" in strict.stderr,
-            "continuing strict run did not expose func_80076EE4 from func_80076C34",
+            "first unresolved BOOTSTRAP_RET provider: func_8006AD40_prefix_cut"
+            in strict.stderr
+            and "called from: func_8006AD40" in strict.stderr,
+            "canonical strict frontier changed",
         )
+        require("func_80076EE4" not in strict.stderr,
+                "strict run still reports the queue pump as a frontier")
 
         bootstrap, _, _ = run(
             executable, None, work, "bootstrap-strict",
@@ -159,7 +179,7 @@ def main() -> int:
         print(f"one-frame sha256={CANONICAL_FRAMEBUFFER} frames=1 iterations=1")
         print(f"prefix-run sha256={two_hash} frames=1 iterations=1 "
               "stop=unresolved-boundary")
-        print("strict frontier=func_80076EE4 caller=func_80076C34")
+        print("strict frontier=func_8006AD40_prefix_cut caller=func_8006AD40")
         print("bootstrap strict frontier=func_8007F72C caller=func_800698D4")
     return 0
 

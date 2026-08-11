@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53G
+# Shim Inventory — Phase 6E-B53H
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -56,7 +56,7 @@ mutation, and no callback invocation. `PE_Sdk_ResetState` is the host reset
 owner; the translated ResetCallback one-time path also writes I_MASK = 0,
 matching retail func_80073E28.
 
-### B53C–B53G retail dispatcher and LoadImage issue path
+### B53C–B53H retail dispatcher, LoadImage issue path, and queue pump
 
 `game/boot/func_80076C34_port.c` translates complete `func_800773D0`,
 complete `func_80073E10` (via the PE_IRQ authority), and the dispatcher
@@ -68,9 +68,12 @@ worker result is discarded, the saved I_MASK is restored, and the direct
 dispatcher returns zero. Canonical first DMA remains busy, so the second
 request calls the completed `func_80073CF4(2,0x80076EE4)` wrapper and its
 B53G-translated `func_800746A0` setter, then constructs and publishes the
-retail ring entry and stops at the untranslated queue pump `func_80076EE4`.
-A full ring and worker timeout recovery still expose `func_80077404`. The
-queue pump, callback delivery, DMA IRQ dispatch (`func_80074520`), and DMA
+retail ring entry. B53H translates the busy-DMA fast path of the queue pump
+`func_80076EE4`: with the first transfer still in flight it returns 1 and
+consumes nothing, so the dispatcher completes and returns its retail
+pending count. A full ring and worker timeout recovery still expose
+`func_80077404`. The pump's idle-DMA consumer path, callback delivery, DMA
+IRQ dispatch (`func_80074520`), DrawSync (`func_80077294`), and DMA
 completion remain untranslated. The retail ring and its producer/consumer
 words stay authoritative in guest RAM; the DMA callback table `D_800956C0`
 stays guest-backed and separate from the VBlank table `D_8009568C`; DICR
@@ -109,8 +112,12 @@ never native function pointers.
   saved I_MASK after it returns. The first canonical request issues DMA2
   asynchronously; the next request observes busy, registers the channel-2
   callback through the completed wrapper and setter, publishes its ring
-  entry, restores I_MASK, and requests an honest unresolved stop at the
-  queue pump. The B50 suffix and the pump are not claimed translated.
+  entry, restores I_MASK, and calls the pump, whose busy-DMA path (B53H)
+  returns 1 without consuming anything. The dispatcher then returns its
+  retail pending count, so the whole LoadImage dispatch completes and
+  execution reaches this function's own B50 prefix cut, which B53H names
+  `func_8006AD40_prefix_cut` — now the canonical strict frontier. Only the
+  B50 suffix and the pump's idle-DMA consumer path remain untranslated.
   - `func_80076664` — TRANSLATED direct LoadImage issue worker (B53E), with
     timeout recovery suffix still exposed at `func_80077404`.
   - `func_80073CF4` — TRANSLATED complete 12-word retail wrapper (B53F
@@ -119,8 +126,10 @@ never native function pointers.
     DICR setter (B53G); guest-backed table `D_800956C0`, unchecked channel
     index, enable bit `1 << ((channel+16) & 31)`, master bit 23 set on both
     paths, DICR bit 31 read then masked off, I_MASK untouched.
-  - `func_80076EE4` — current canonical queue-pump boundary from
-    `func_80076C34`.
+  - `func_80076EE4` — BUSY-DMA PREFIX TRANSLATED (B53H): 152-word / `0x260`
+    queue pump; `*(0x1F8010A8) & 0x01000000` non-zero returns 1 with zero
+    guest writes. `func_80076EE4_idle_pump` is the controlled boundary for
+    its untranslated idle-DMA consumer path.
   - `func_80077404` — controlled full-ring alternate boundary.
   - `func_80076C34_enqueue_span` — controlled boundary for a copy source or
     payload width this port cannot represent (retail checks neither).
@@ -571,11 +580,12 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode stops at `func_80087090` from `func_8006A9E4`.
-B44 translates `func_8005B91C` exactly; the actual Disc state takes B43's
-null-holder return before its still-untranslated `func_80052F24`. The
-`--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by design.
-Normal and fresh sanitizer builds agree exactly on both frontiers.
+With Disc 1, strict mode stops at `func_8006AD40_prefix_cut` from
+`func_8006AD40` (B53H) — the named B50 translation prefix cut, reached
+once the whole LoadImage dispatch completes through the busy-DMA queue
+pump. It is the only BOOTSTRAP_RET provider invoked on the canonical path.
+The `--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by
+design. Normal and fresh sanitizer builds agree exactly on both frontiers.
 
 Disc-path providers are REAL since Phase 6E-A (host disc model over the
 read-only image): `func_8007F72C` (CdReady), `func_8007F778`,

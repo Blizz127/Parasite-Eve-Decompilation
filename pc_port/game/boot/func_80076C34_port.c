@@ -10,14 +10,17 @@
  * its translated LoadImage issue body, then restores the saved I_MASK and
  * returns retail zero.  Other worker identities remain honest boundaries.
  * B53F resolves the execution-proven installed-target path through the
- * callback-registration wrapper func_80073CF4 at 0x80076D60, and B53G
- * completes it by translating the separate setter func_800746A0.  The
+ * callback-registration wrapper func_80073CF4 at 0x80076D60, B53G completes
+ * it by translating the separate setter func_800746A0, and B53H translates
+ * the pump's busy-DMA fast path so this dispatcher now returns its real
+ * retail pending count instead of stopping.  The
  * enqueue block 0x80076D68..0x80076EA0 is therefore translated: it copies
  * the payload, writes the entry metadata, advances the producer, restores
- * the saved I_MASK, and stops at the untranslated queue pump func_80076EE4
- * (call at 0x80076EA4).  A full ring still stops at func_80077404 (call at
- * 0x80076C68).  No pump, callback, consumer movement, or DMA completion
- * happens here.
+ * the saved I_MASK, and calls the pump at 0x80076EA4.  While the first
+ * transfer is in flight the pump returns 1 and consumes nothing; only its
+ * untranslated idle-DMA path stops.  A full ring still stops at
+ * func_80077404 (call at 0x80076C68).  No callback delivery, consumer
+ * movement, or DMA completion happens here.
  *
  * func_800773D0 is the complete 13-word timeout helper at
  * 0x800773D0..0x80077403.  It queries VSync(-1), stores query+240 at
@@ -50,7 +53,6 @@
 #define GA_GPU_TIMEOUT_DEADLINE  0x80095888u
 #define GA_GPU_TIMEOUT_POLLS     0x8009588Cu
 
-#define GPU_DMA2_CHCR_BUSY       0x01000000u
 #define GPU_QUEUE_PUMP           0x80076EE4u
 
 uint32_t func_800773D0(void)
@@ -212,12 +214,32 @@ static int func_80076C34_enqueue(pe_addr_t worker, pe_addr_t argument,
     PE_StoreU32(GA_GPU_RING_PRODUCER, (producer + 1u) & 63u);
     (void)func_80073E10((uint16_t)saved_mask);
 
-    /* 0x80076EA4: jal func_80076EE4.  The retail queue pump is the next
-     * unresolved retail boundary; B53G does not translate it, service the
-     * still-active DMA, or move the consumer to reach it. */
-    Bootstrap_ReturnVoid("func_80076EE4", "func_80076C34");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return 0; /* host prefix cut; not a claimed retail result */
+    /* 0x80076EA4: jal func_80076EE4 — the opportunistic pump.  B53H
+     * translates its execution-proven busy-DMA path; the return is
+     * discarded here exactly as retail discards it. */
+    {
+        int pump_returned = 0;
+
+        (void)PE_func_80076EE4_Pump(&pump_returned);
+        if (!pump_returned) {
+            /* The pump reached its untranslated idle-DMA consumer path and
+             * has not returned in retail control flow.  Preserve that
+             * prefix rather than fabricating the pending count.  This is an
+             * explicit signal, not an inference from the stop reason, which
+             * keeps only the first requested reason. */
+            return 0;
+        }
+    }
+
+    /* 0x80076EAC..0x80076EC4: the dispatcher recomputes its own pending
+     * count from the authoritative ring words and returns it.  This is
+     * reachable only when the pump really returned, and the count is
+     * necessarily non-zero here: the space check above rejected
+     * (producer+1)&63 == consumer, nothing between it and publication moves
+     * either index, and the busy-DMA pump advances neither.  So it can
+     * never be confused with the direct-issue path's retail zero. */
+    producer = PE_LoadU32(GA_GPU_RING_PRODUCER);
+    return (int)((producer - PE_LoadU32(GA_GPU_RING_CONSUMER)) & 63u);
 }
 
 static int func_80076C34_prefix(pe_addr_t worker, pe_addr_t argument,
@@ -241,7 +263,10 @@ static int func_80076C34_prefix(pe_addr_t worker, pe_addr_t argument,
 
     if (next == consumer) {
         /* 0x80076C68: the full-ring timeout helper is the first dependency
-         * on this alternate path.  Its result is intentionally not used. */
+         * on this alternate path.  Retail DOES consume its result:
+         * 0x80076C70 `bnez v0` returns -1 from the delay slot, and a zero
+         * result falls through to the pump at 0x80076C78 and re-runs the
+         * space test.  Neither continuation is translated. */
         (void)Bootstrap_ReturnInt(
             "func_80077404", "func_80076C34", 0);
         PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
@@ -265,7 +290,7 @@ static int func_80076C34_prefix(pe_addr_t worker, pe_addr_t argument,
             producer = PE_LoadU32(GA_GPU_RING_PRODUCER);
             consumer = PE_LoadU32(GA_GPU_RING_CONSUMER);
             if (producer == consumer &&
-                (PE_GPU_ReadDMA2CHCR() & GPU_DMA2_CHCR_BUSY) == 0u &&
+                (PE_GPU_ReadDMA2CHCR() & PE_GPU_DMA2_CHCR_BUSY) == 0u &&
                 PE_LoadU32(GA_GPU_DRAWSYNC_CALLBACK) == 0u) {
                 goto direct_issue;
             }
@@ -293,6 +318,8 @@ direct_issue:
      * a0 = argument (s0) and a1 = auxiliary (s2, delay slot).  Resolve only
      * the exact LoadImage identity translated by B53E. */
     if (worker == 0x80076664u) {
+        unsigned stop_epoch = PE_Port_StopEpoch();
+
         if (inline8) {
             (void)PE_func_80076664_Inline8(
                 inline8[0], inline8[1], auxiliary);
@@ -301,8 +328,14 @@ direct_issue:
         }
         /* A nested unresolved timeout/recovery boundary has not returned in
          * retail.  Preserve that exact prefix rather than fabricating the
-         * caller's mask restore. */
-        if (PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY) {
+         * caller's mask restore.
+         *
+         * The test is an epoch comparison, not PE_Port_GetStopReason():
+         * PE_Port_RequestStop keeps only the FIRST reason, so an already
+         * latched stop would otherwise both hide a real boundary here and
+         * make an earlier unrelated boundary skip this mandatory I_MASK
+         * restore (retail 0x80076D40..0x80076D4C restores unconditionally). */
+        if (PE_Port_StopEpoch() != stop_epoch) {
             return 0;
         }
         /* 0x80076D40..0x80076D54: the worker result is deliberately ignored,
