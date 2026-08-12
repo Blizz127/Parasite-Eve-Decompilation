@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53I-C
+# Shim Inventory — Phase 6E-B53I-D
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -80,7 +80,7 @@ stops at a typed indirect-call boundary.
 | `func_80073CC4` | canonical SDK jump-table `+8` wrapper target |
 | `func_800740D0` | complete execution-proven source-0/source-3 setter paths; returns previous 32-bit guest identity |
 
-### B53C–B53I-C retail dispatcher, IRQ delivery, LoadImage issue, and pump
+### B53C–B53I-D retail dispatcher, IRQ delivery, and two DMA completions
 
 `game/boot/func_80076C34_port.c` translates complete `func_800773D0`,
 complete `func_80073E10` (via the PE_IRQ authority), and the dispatcher
@@ -105,7 +105,12 @@ guest-ring decode, typed `0x80076664` worker call, consumer advance only
 after return at `0x80077054`, exact mask restore, and conditional marker /
 DrawSync cleanup. The canonical worker issues the second DMA at
 `0x8012B8B8/0x00020010/0x01000201`; the first checkpoint never recaptures it,
-so it remains active and incomplete with DICR `0x00800000`. DrawSync
+so it remains active and incomplete at the C boundary. B53I-D admits one
+separate later invocation of the same token-capturing checkpoint. It exposes
+all 64 pixels, clears CHCR to `0x00000201`, and leaves DICR `0x00800000`:
+channel-2 enable is already clear, so there is no flag, source-3 service,
+DMA dispatcher, pump, worker, or queue mutation. No new scheduler or callback
+authority is introduced. DrawSync
 (`func_80077294`) itself remains untranslated. The retail ring and its
 producer/consumer words stay authoritative in guest RAM; the DMA callback table `D_800956C0`
 stays guest-backed and separate from the VBlank table `D_8009568C`; DICR
@@ -117,7 +122,7 @@ never native function pointers.
 | `func_80073F00` equivalent | sources 0..10, exact eligibility/ack/live lookup/resample and boundary-preserving active state |
 | `func_80074520` | complete 96-word DMA flag scan, W1C, live table lookup, resampling, diagnostic tail |
 | `PE_IRQ_BridgeDICRRisingEdge` | generation-safe DICR edge to I_STAT source 3 only; no callback |
-| `PE_Port_ServiceDmaIrqCheckpoint` | one captured token, then separate bridge/service; no recapture loop |
+| `PE_Port_ServiceDmaIrqCheckpoint` | one captured token, then separate bridge and eligible-pending CPU service; no recapture loop; B53I-D proves a later disabled-IRQ completion |
 | `func_80076EE4` | complete 152-word pump: B53H busy return plus B53I-C idle consumer and shared epilogue |
 
 | Function | PS1 role | Host implementation |

@@ -1,8 +1,26 @@
-# Parasite Eve Native PC Port — Phase 6E-B53I-C
+# Parasite Eve Native PC Port — Phase 6E-B53I-D
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53I-C completes all 152 words of the libgpu queue
+**Current milestone:** B53I-D admits one separate later checkpoint for the
+second LoadImage DMA token created by B53I-C. The exact 32-word transfer from
+`0x8012B8B8` exposes pixels `0x6000..0x603F` at `(256..319,456)` before
+CHCR clears from `0x01000201` to `0x00000201`. Because the idle pump already
+removed channel-2 callback/enable, stored and physical DICR remain
+`0x00800000`: no flag 26, bit-31 rise, I_STAT source 3, CPU/DMA dispatcher,
+pump, worker, or queue activity occurs. Token 2 is accepted exactly once;
+replay and pre-reset tokens are rejected. Each checkpoint still captures only
+one token and never recaptures; the existing host-safe continuation now makes
+exactly two explicit calls, with the second admitted only after the first
+returns normally, and has no loop or third opportunity. The DICR bridge and
+CPU scanner are entered only for a pending sticky edge and live
+`I_STAT & I_MASK`, respectively, while older pending/unmasked sources remain
+independent of a new DICR edge. Eight focused groups bring
+the suite to 566 tests; the independent D oracle runs 15 explicit scenarios,
+and the full matrix is 46/46. Full proof is in
+`docs/b53i_d_second_dma_completion.md`.
+
+**Prior milestone:** B53I-C completes all 152 words of the libgpu queue
 pump `func_80076EE4` by translating the exact 136-word idle suffix
 `0x80076F10..0x8007712F`. After B53I-B2 completes the first DMA and invokes
 the pump, retail saves/disables I_MASK, removes channel-2 callback identity
@@ -17,8 +35,7 @@ The checkpoint still services only its pre-captured first token, so the
 second DMA stays active, incomplete, and invisible in VRAM with DICR
 `0x00800000` and no new IRQ. Ten focused groups bring the suite to 558
 tests; the independent C oracle verifies all 152 words/delay slots and
-20 state scenarios. Fresh normal and ASan/UBSan suites pass 558/558, the
-complete oracle matrix passes 45/45, and B49 passes in both configurations.
+20 state scenarios. Its complete pump and one-token contracts remain frozen.
 Full proof is in `docs/b53i_c_idle_gpu_pump.md`.
 
 **Prior milestone:** B53I-B2 connects one explicitly captured DMA2 token
@@ -735,7 +752,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (558 tests, all pass)
+- `pe-native-tests` — test suite (566 tests, all pass)
 
 ## Running
 
@@ -767,8 +784,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
 # Current global frontier: exit 1 at func_8006AD40_prefix_cut from
-# func_8006AD40.  The focused B53I-C fixture completes the first DMA,
-# consumes the queued request, and leaves the newly issued second DMA active.
+# func_8006AD40.  Focused B53I-C issues the second DMA; B53I-D admits one
+# separate later checkpoint that completes only that token without an IRQ.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -821,7 +838,7 @@ by design.  Native tests: 285/285.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 558 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 566 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung

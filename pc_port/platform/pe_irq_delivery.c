@@ -59,6 +59,7 @@ void PE_IRQ_GetDeliveryTrace(PeIrqDeliveryTrace *out)
 
 PeIrqEdgeResult PE_IRQ_BridgeDICRRisingEdge(PeIrqGeneration generation)
 {
+    g_trace.edge_bridge_calls++;
     /* Check before consuming: a stale checkpoint must not steal a fresh
      * post-reset edge belonging to the current generation. */
     if (generation != PE_IRQ_Generation()) {
@@ -230,6 +231,8 @@ PeIrqServiceResult PE_IRQ_ServicePendingForGeneration(
     PeIrqGeneration generation)
 {
     uint16_t pending;
+
+    g_trace.cpu_service_calls++;
 
     /* Stale service must be completely inert, including dispatch-active
      * and acknowledgements. */

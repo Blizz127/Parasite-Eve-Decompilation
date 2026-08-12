@@ -108,6 +108,8 @@ void func_8001220C(void)
         D_8009D280 = state_val;
 
         while (1) {
+            PEPortDmaIrqCheckpointResult checkpoint_result;
+
             if (PE_Port_ShouldStop()) return;
 
             v = *data;
@@ -123,9 +125,20 @@ void func_8001220C(void)
              * cleanup cannot be suppressed by a frame-limit or older B50
              * stop.  The checkpoint captures and services at most one DMA
              * token and propagates the nested idle-pump boundary directly. */
-            if (PE_Port_ServiceDmaIrqCheckpoint() ==
-                PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY) {
+            checkpoint_result = PE_Port_ServiceDmaIrqCheckpoint();
+            if (checkpoint_result == PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY) {
                 return;
+            }
+            /* B53I-D deterministic later hardware opportunity.  The first
+             * checkpoint must return normally before this distinct call can
+             * capture the callback-issued second token.  Two explicit calls,
+             * never a loop, prevent service of any third DMA here. */
+            if (checkpoint_result == PE_PORT_DMA_IRQ_CHECKPOINT_RETURNED) {
+                checkpoint_result = PE_Port_ServiceDmaIrqCheckpoint();
+                if (checkpoint_result ==
+                    PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY) {
+                    return;
+                }
             }
             /* A prefix-only callee may request a host stop at an honest
              * unresolved boundary.  Honor it before running caller code

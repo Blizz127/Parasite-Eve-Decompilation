@@ -31,6 +31,8 @@ typedef enum {
 } PeIrqEdgeResult;
 
 typedef struct {
+    uint64_t edge_bridge_calls;
+    uint64_t cpu_service_calls;
     uint64_t edge_assert_order;
     uint64_t cpu_ack_order;
     uint64_t cpu_callback_order;

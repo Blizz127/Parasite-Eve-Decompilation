@@ -2,6 +2,8 @@
 #ifndef GAME_PORT_H
 #define GAME_PORT_H
 
+#include <stdint.h>
+
 /* Host-owned run-control state. */
 extern int g_port_stop_requested;
 extern int g_port_main_iterations;
@@ -23,6 +25,16 @@ typedef enum PEPortDmaIrqCheckpointResult {
     PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY,
     PE_PORT_DMA_IRQ_CHECKPOINT_STALE,
 } PEPortDmaIrqCheckpointResult;
+
+/* Value-only evidence for one-token checkpoint admission.  These counters
+ * do not participate in scheduling or hardware authority. */
+typedef struct PEPortDmaIrqCheckpointTrace {
+    uint64_t checkpoint_calls;
+    uint64_t token_queries;
+    uint64_t service_calls;
+    uint64_t last_captured_token;
+    uint64_t last_serviced_token;
+} PEPortDmaIrqCheckpointTrace;
 
 void PE_Port_RunControlReset(void);
 void PE_Port_SetFrameLimit(int frames);
@@ -46,6 +58,8 @@ const char *PE_Port_StopReasonName(PEPortStopReason reason);
 void PE_Port_SetDmaIrqCheckpointEnabled(int enabled);
 int PE_Port_DmaIrqCheckpointEnabled(void);
 PEPortDmaIrqCheckpointResult PE_Port_ServiceDmaIrqCheckpoint(void);
+void PE_Port_DmaIrqCheckpointTraceReset(void);
+void PE_Port_GetDmaIrqCheckpointTrace(PEPortDmaIrqCheckpointTrace *out);
 
 /* Trace helper available to game code */
 void Trace_Direct(const char *event);

@@ -13,6 +13,7 @@
 #include "pe_irq.h"
 #include "pe_irq_delivery.h"
 #include <stddef.h>
+#include <string.h>
 
 int g_port_stop_requested = 0;
 int g_port_main_iterations = 0;
@@ -23,6 +24,7 @@ static int g_port_frame_budget_reached = 0;
 static PEPortQuitPoll g_port_quit_poll = NULL;
 static PEPortStopReason g_port_stop_reason = PE_PORT_STOP_NONE;
 static int g_port_dma_irq_checkpoint_enabled = 1;
+static PEPortDmaIrqCheckpointTrace g_port_dma_irq_checkpoint_trace;
 
 /* Monotonic count of stop requests.  PE_Port_RequestStop deliberately keeps
  * only the FIRST reason, so the reason value cannot tell a caller whether a
@@ -41,6 +43,8 @@ void PE_Port_RunControlReset(void)
     g_port_quit_poll = NULL;
     g_port_stop_reason = PE_PORT_STOP_NONE;
     g_port_dma_irq_checkpoint_enabled = 1;
+    memset(&g_port_dma_irq_checkpoint_trace, 0,
+           sizeof(g_port_dma_irq_checkpoint_trace));
 }
 
 void PE_Port_SetDmaIrqCheckpointEnabled(int enabled)
@@ -53,14 +57,28 @@ int PE_Port_DmaIrqCheckpointEnabled(void)
     return g_port_dma_irq_checkpoint_enabled;
 }
 
+void PE_Port_DmaIrqCheckpointTraceReset(void)
+{
+    memset(&g_port_dma_irq_checkpoint_trace, 0,
+           sizeof(g_port_dma_irq_checkpoint_trace));
+}
+
+void PE_Port_GetDmaIrqCheckpointTrace(PEPortDmaIrqCheckpointTrace *out)
+{
+    if (out != NULL) {
+        *out = g_port_dma_irq_checkpoint_trace;
+    }
+}
+
 PEPortDmaIrqCheckpointResult PE_Port_ServiceDmaIrqCheckpoint(void)
 {
     uint64_t dma_token;
     PeIrqGeneration irq_generation;
     int completed = 0;
-    PeIrqEdgeResult edge;
+    PeIrqEdgeResult edge = PE_IRQ_EDGE_NONE;
     PeIrqServiceResult service;
 
+    g_port_dma_irq_checkpoint_trace.checkpoint_calls++;
     if (!g_port_dma_irq_checkpoint_enabled) {
         return PE_PORT_DMA_IRQ_CHECKPOINT_IDLE;
     }
@@ -68,18 +86,38 @@ PEPortDmaIrqCheckpointResult PE_Port_ServiceDmaIrqCheckpoint(void)
     /* Capture both authorities before admitting work.  A callback-created
      * DMA receives a different token and cannot be completed here because
      * this checkpoint never loops or recaptures. */
-    dma_token = PE_GPU_DMA2Pending() ? PE_GPU_DMA2EventToken() : 0u;
+    dma_token = 0u;
+    if (PE_GPU_DMA2Pending()) {
+        g_port_dma_irq_checkpoint_trace.token_queries++;
+        dma_token = PE_GPU_DMA2EventToken();
+        g_port_dma_irq_checkpoint_trace.last_captured_token = dma_token;
+    }
     irq_generation = PE_IRQ_Generation();
     if (dma_token != 0u) {
+        g_port_dma_irq_checkpoint_trace.service_calls++;
+        g_port_dma_irq_checkpoint_trace.last_serviced_token = dma_token;
         completed = PE_GPU_ServiceDMA2Completion(dma_token);
     }
 
-    edge = PE_IRQ_BridgeDICRRisingEdge(irq_generation);
+    /* Channel-disabled completion creates no DICR edge, so it must not
+     * enter even the inert edge bridge. */
+    if (PE_GPU_DICRRisingEdgePending()) {
+        edge = PE_IRQ_BridgeDICRRisingEdge(irq_generation);
+    }
     if (edge == PE_IRQ_EDGE_STALE) {
         return PE_PORT_DMA_IRQ_CHECKPOINT_STALE;
     }
 
-    service = PE_IRQ_ServicePendingForGeneration(irq_generation);
+    /* The hardware opportunity is not itself a CPU exception.  Enter the
+     * retail scanner only when live I_STAT/I_MASK says a CPU source is
+     * eligible.  This is deliberately not gated on the just-created DICR
+     * edge: an older pending source that was later unmasked remains eligible.
+     * Canonical B53I-D has no edge and I_STAT is zero, so completing the
+     * interrupt-disabled second DMA does not call the CPU service at all. */
+    service = PE_IRQ_SERVICE_RETURNED;
+    if ((uint16_t)(PE_IRQ_ReadStatus() & PE_IRQ_GetMask()) != 0u) {
+        service = PE_IRQ_ServicePendingForGeneration(irq_generation);
+    }
     if (service == PE_IRQ_SERVICE_BOUNDARY) {
         return PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY;
     }
