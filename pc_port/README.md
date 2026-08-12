@@ -1,8 +1,27 @@
-# Parasite Eve Native PC Port — Phase 6E-B53I-B2
+# Parasite Eve Native PC Port — Phase 6E-B53I-C
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53I-B2 connects one explicitly captured DMA2 token
+**Current milestone:** B53I-C completes all 152 words of the libgpu queue
+pump `func_80076EE4` by translating the exact 136-word idle suffix
+`0x80076F10..0x8007712F`. After B53I-B2 completes the first DMA and invokes
+the pump, retail saves/disables I_MASK, removes channel-2 callback identity
+`0x80076EE4` only for the last/no-DrawSync item, polls the inert GPUSTAT
+ready bit, and dispatches queued guest worker `0x80076664` with argument
+`0x800BD03C` and source `0x8012B8B8`. The worker issues the second DMA at
+`MADR/BCR/CHCR = 0x8012B8B8/0x00020010/0x01000201`; only after it returns
+does the consumer advance at retail `0x80077054`. I_MASK restores to its
+actual saved value (`0x0009` canonically), marker remains 1 because DMA is
+busy, and the enclosing CPU dispatcher normally clears `D_800945E6` to 0.
+The checkpoint still services only its pre-captured first token, so the
+second DMA stays active, incomplete, and invisible in VRAM with DICR
+`0x00800000` and no new IRQ. Ten focused groups bring the suite to 558
+tests; the independent C oracle verifies all 152 words/delay slots and
+20 state scenarios. Fresh normal and ASan/UBSan suites pass 558/558, the
+complete oracle matrix passes 45/45, and B49 passes in both configurations.
+Full proof is in `docs/b53i_c_idle_gpu_pump.md`.
+
+**Prior milestone:** B53I-B2 connects one explicitly captured DMA2 token
 to physical DICR completion state, a separate source-3 edge bridge, the
 bounded retail CPU source scanner, complete 96-word `func_80074520`, and the
 typed DMA channel-2 identity `0x80076EE4`. Stored DICR excludes bit 31;
@@ -12,12 +31,11 @@ completion always publishes VRAM and clears CHCR, but creates flag 26 only
 when channel-2 enable and master are set. CPU I_STAT acknowledgement precedes
 `func_80074520`; DICR W1C precedes the DMA callback. Completion, edge bridge,
 and CPU service remain independently callable, generation-checked phases.
-When completed DMA makes the B53H pump idle, typed non-return propagation
-stops honestly at `func_80076EE4_idle_pump`: dispatch-active remains 1,
-producer/consumer remain 1/0, the queue entry is byte-identical, and no second
-DMA is issued. Actual typed-pump entry telemetry also proves completion and
-edge bridging cannot hide an early call in the silent busy path. Fifteen
-focused groups bring the native suite to 548 tests.
+At that rung, completed DMA made the B53H pump stop at the then-untranslated
+`func_80076EE4_idle_pump`; B53I-C now resolves that boundary while preserving
+all phase separation and acknowledgement ordering. Actual typed-pump entry
+telemetry still proves completion and edge bridging cannot hide an early
+call in the silent busy path. Fifteen B2 focused groups remain retained.
 The independent B2 oracle verifies all 96 DMA words, 53 CPU dispatcher window
 words plus its full-body hash, and 17 explicit state scenarios without
 production imports. Full proof is in `docs/b53i_b2_dma_irq_delivery.md`.
@@ -31,7 +49,7 @@ a 64-bit generation. Retail ResetCallback installs source 0 guest identity
 callback slots remain solely guest-backed. Full proof is in
 `docs/b53i_b1_irq_state_registration.md`.
 
-**Prior milestone:** B53H translates the execution-proven busy-DMA fast
+**Prior milestone:** B53H translated the execution-proven busy-DMA fast
 path of the 152-word / `0x260` libgpu queue pump `func_80076EE4`
 (`0x80076EE4..0x80077143`, body SHA-256
 `a124857ab6fd91a3b68ea3e5c2efa5337bf6ed5528ef94ca23bc4a781337a78c`).
@@ -42,10 +60,10 @@ slot at `0x80076F0C` and exits through the shared epilogue, having written
 nothing but its own stack frame. That is the canonical path: the first
 LoadImage transfer is still in flight, so the pump performs no I_MASK
 exchange, no queue read, no GPUSTAT read, no callback or DICR change, no
-worker call, and no consumer advance. The remaining 136 words
-(`0x80076F10..0x8007712C`) — the idle-DMA consumer path — are deliberately
-NOT translated, because reaching them would require completing the
-in-flight transfer. They are exposed as a visible boundary instead. With
+worker call, and no consumer advance. At B53H, the remaining 136 words
+(`0x80076F10..0x8007712C`) were deliberately left untranslated because
+reaching them required genuine hardware completion; B53I-C now completes
+that suffix. With
 the pump returning a real value, `func_80076C34` yields its retail pending
 count `(producer-consumer)&0x3F` and both LoadImage calls complete, so the
 canonical Disc 1 strict frontier advances one rung to the **pre-existing
@@ -717,7 +735,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (548 tests, all pass)
+- `pe-native-tests` — test suite (558 tests, all pass)
 
 ## Running
 
@@ -749,8 +767,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
 # Current global frontier: exit 1 at func_8006AD40_prefix_cut from
-# func_8006AD40.  The separate focused B53I-B2 fixture completes the first
-# DMA and reaches func_80076EE4_idle_pump with the second request queued.
+# func_8006AD40.  The focused B53I-C fixture completes the first DMA,
+# consumes the queued request, and leaves the newly issued second DMA active.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -803,7 +821,7 @@ by design.  Native tests: 285/285.
 
 ```bash
 cd pc_port/build
-./pe-native-tests   # 451 tests (baseline + guest-RAM/Boot Rung/policy
+./pe-native-tests   # 558 tests (baseline + guest-RAM/Boot Rung/policy
                     # + real-disc: pe_disc fixtures, disc providers,
                     # guest-copy bounds, func_800698D4 sequences
                     # + 6E-B1: func_80070D10 RNG-init rung
@@ -961,9 +979,9 @@ status 1; native tests are 285/285.
 
 ## Next steps
 
-1. **Next rung:** translate only `func_80076EE4_idle_pump`, preserving IRQ
-   masking, callback removal, worker-before-consumer order, and one captured
-   DMA opportunity
+1. **Next rung:** in a later hardware opportunity, complete only the second
+   DMA token and prove channel-2 callback removal suppresses DICR/source-3
+   IRQ delivery while VRAM visibility and CHCR clearing still occur
 2. Continue the named `func_8006AD40_prefix_cut` only in a separate rung
 3. Identify the first boot asset (likely MDEC logo data)
 4. Audio, input, save/load (later phases)

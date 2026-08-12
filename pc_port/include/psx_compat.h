@@ -126,8 +126,11 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * translates the direct LoadImage worker func_80076664; B53F translates the
  * execution-proven installed-target path through callback wrapper
  * func_80073CF4, and B53G completes it by translating the installed setter
- * func_800746A0.  B53H translates the busy-DMA prefix of the queue pump
- * func_80076EE4, so this dispatcher now completes on the canonical path;
+ * func_800746A0. B53H translates the busy-DMA prefix and B53I-C completes
+ * the idle-DMA suffix of queue pump func_80076EE4; a later explicit IRQ
+ * checkpoint now consumes the queued request and issues the second DMA.
+ * The original main execution still completes this dispatcher before that
+ * hardware opportunity, so
  * the next canonical boundary is the B50 prefix cut inside func_8006AD40,
  * reported as `func_8006AD40_prefix_cut`. */
 
@@ -183,19 +186,46 @@ extern pe_addr_t PE_DMA_CallbackSlotAddress(uint32_t dma_channel);
 extern pe_addr_t PE_DMA_DicrPointerAddress(void);
 extern uint32_t  PE_DMA_DicrMmioAddress(void);
 extern int  func_80076EE4(void);
-/* Internal pump entry: *retail_returned is 1 only when the translated
- * busy-DMA path actually returned, 0 when the untranslated idle-DMA
- * consumer path was reached.  Callers must not infer that from the host
- * stop reason, which keeps only the first reason requested. */
+/* Internal pump entry: *retail_returned is 1 only when translated retail
+ * control flow reached the shared epilogue, and 0 when a nested typed
+ * boundary did not return.  Callers must not infer that distinction from
+ * the host stop reason, which keeps only the first reason requested. */
 extern int  PE_func_80076EE4_Pump(int *retail_returned);
 extern void func_80074520(void);
 /* Read-only names for the retail authority the pump prefix uses. */
 extern pe_addr_t PE_Pump_Dma2ChcrPointerAddress(void);
 extern uint32_t  PE_Pump_Dma2ChcrMmioAddress(void);
-/* Value-only evidence for actual typed-pump entry, including the silent
- * busy return.  Neither function participates in retail behavior. */
+typedef struct {
+    uint64_t mask_disable_order;
+    uint64_t callback_removal_order;
+    uint64_t gpustat_ready_order;
+    uint64_t worker_call_order;
+    uint64_t consumer_advance_order;
+    uint64_t mask_restore_order;
+    uint64_t drawsync_clear_order;
+    uint64_t drawsync_call_order;
+    uint64_t worker_calls;
+    uint64_t drawsync_calls;
+    uint64_t gpustat_reads;
+    uint32_t saved_mask;
+    uint32_t restored_mask;
+    pe_addr_t last_worker;
+    pe_addr_t last_argument;
+    uint32_t last_auxiliary;
+    uint32_t consumer_before_worker;
+    uint32_t consumer_after_worker;
+    uint16_t mask_at_worker;
+    uint32_t dma_callback_at_worker;
+    uint32_t dicr_at_worker;
+    uint32_t chcr_at_worker;
+    int worker_returned;
+} PeGpuPumpTrace;
+
+/* Value-only evidence for actual typed-pump execution, including the silent
+ * busy return.  These functions never participate in retail behavior. */
 extern void      PE_Pump_TraceReset(void);
 extern uint64_t  PE_Pump_EntryCount(void);
+extern void      PE_Pump_GetTrace(PeGpuPumpTrace *out);
 extern int  func_80076C34(pe_addr_t worker, pe_addr_t argument,
                           int32_t copy_bytes, uint32_t auxiliary);
 extern int  PE_func_80076C34_Inline8(pe_addr_t worker,

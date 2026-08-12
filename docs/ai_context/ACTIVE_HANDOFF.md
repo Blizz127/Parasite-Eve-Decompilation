@@ -5,6 +5,73 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
+## Phase 6E-B53I-C idle GPU command pump verified
+
+Starting B2 commit is
+`44d05fa06a4461dbb8e37a236bcdee26d44b74b8` (parent
+`76d8cffc48b4a0c38627ff5dfbb771a704880f33`). B53I-C translates the exact
+remaining idle suffix `0x80076F10..0x8007712F` (136 words / `0x220`, SHA-256
+`fed73d363d43e4ce9ada5534224fca37a044bdb2fc590f494d6b1fb413c954c4`).
+Together with B53H's busy prefix and the shared epilogue, all 152 words /
+`0x260` of `func_80076EE4` are now represented. Full-body SHA-256 remains
+`a124857ab6fd91a3b68ea3e5c2efa5337bf6ed5528ef94ca23bc4a781337a78c`;
+semantic ABI is `int func_80076EE4(void)`.
+
+The idle path calls `func_80073E10(0)`, saves the actual prior mask as a
+32-bit word in `D_80095880`, and keeps I_MASK zero through queue mutation.
+It uses the live guest ring at `D_800BD030` (64 × `0x60`; worker/argument/
+auxiliary at `+0/+4/+8`). Only the last queued item with DrawSync callback
+zero removes channel-2 callback `0x80076EE4` through the complete
+`func_80073CF4(2,0)` path, yielding stored DICR `0x00840000 -> 0x00800000`.
+GPUSTAT readiness is a literal inert `0x04000000` tight poll: it cannot
+complete DMA, auto-ready, advance VBlank, or mutate the queue.
+
+The canonical ring entry resolves guest worker `0x80076664` with argument
+`0x800BD03C`, source `0x8012B8B8`, and RECT `{256,456,64,1}`. The worker
+issues DMA2 `MADR/BCR/CHCR = 0x8012B8B8/0x00020010/0x01000201` and returns.
+Only then does the pump store consumer `0 -> 1` at exact retail PC
+`0x80077054`; producer remains 1 and the entire `0x60` entry remains
+byte-identical. It restores the actual saved I_MASK (`0x0009` canonically).
+Because DMA is now busy, marker remains 1 and DrawSync callback remains zero.
+The pump returns zero normally, so the enclosing DMA/CPU scans finish and
+the authentic CPU terminal path clears `D_800945E6` from 1 to 0.
+
+The first checkpoint still captures only the first DMA token before doing
+any work and never loops or recaptures. Consequently the callback-created
+second DMA remains active with completion pending false; its pixels are not
+yet DMA-visible and it cannot raise another source-3 event in the same
+checkpoint. Callback removal precedes issue, so the second transfer starts
+with channel-2 interrupt enable clear and stored DICR `0x00800000`.
+
+Worker identities remain 32-bit guest values. Only `0x80076664` is bound;
+all other values, including zero, stop at typed indirect boundaries before
+consumer advance and mask restoration. Stop-epoch comparison distinguishes
+an actual nested non-return from an older sticky host stop. A DrawSync
+identity is loaded live after mask restoration; marker clears before its
+typed indirect boundary. Invalid raw ring arithmetic stops at
+`func_80076EE4_ring_span` without masking the index or dereferencing a host
+pointer. The adjacent `func_80077144` ResetGraph queue-reset suffix is not
+reached here and remains separate work.
+
+Ten focused C groups expand the suite to 558 tests. The standalone
+`pc_port/tools/b53i_c_oracle.py` rechecks all 152 literal words, full/idle
+hashes, every control-transfer delay slot, and 20 explicit scenarios without
+production imports or autonomous hardware progress. Fresh normal and
+ASan/UBSan suites pass 558/558; the full oracle matrix passes 45/45; B49 and
+real-disc load pass in both configurations. Five independent reviews found
+no HIGH or MEDIUM issue. Full evidence is
+`pc_port/docs/b53i_c_idle_gpu_pump.md`.
+
+The resolved focused path now returns normally instead of stopping at
+`func_80076EE4_idle_pump`. The global continuing frontier remains
+`func_8006AD40_prefix_cut` from `func_8006AD40` at `0x8006AE50`; bootstrap
+strict remains `func_8007F72C` from `func_800698D4`.
+
+The exact next bounded asynchronous rung is a later explicit completion of
+only the second DMA token: copy its pixels, clear CHCR, prove DICR remains
+`0x00800000` with I_STAT zero and no callback/pump, then measure the next
+retail frontier. Do not fold that completion into the first checkpoint.
+
 ## Phase 6E-B53I-B2 DMA completion/IRQ delivery verified
 
 Starting B1 commit is
@@ -53,19 +120,18 @@ DMA and IRQ generations. ResetCallback reproduces the deferred
 `func_800744D4` DMA-table clear and literal DICR zero-control write before
 source-3 installation; zero retains flags by W1C semantics.
 
-Fifteen focused B2 groups expand the normal suite to 548 tests. The
+Fifteen focused B2 groups expanded the then-current suite to 548 tests. The
 standalone `pc_port/tools/b53i_b2_oracle.py` verifies all 96 DMA words, 53
 literal CPU windows plus its full-body hash, and 17 explicit state scenarios
-without production imports. The focused boundary is
-`func_80076EE4_idle_pump`; the separately measured global frontier remains
+without production imports. The focused boundary at that rung was
+`func_80076EE4_idle_pump`; B53I-C now resolves it. The separately measured global frontier remains
 `func_8006AD40_prefix_cut` at retail `0x8006AE50`, and bootstrap strict
 remains `func_8007F72C` from `func_800698D4`. Full proof is
 `pc_port/docs/b53i_b2_dma_irq_delivery.md`.
 
-The next rung is the idle-DMA consumer beginning at `0x80076F10` only. It
-must preserve IRQ masking, channel-2 callback removal, GPUSTAT readiness,
-worker-before-consumer ordering, and the one-captured-token checkpoint. Do
-not combine it with the B50 suffix or recursively complete the second DMA.
+The B2 handoff target was the idle-DMA consumer beginning at `0x80076F10`;
+B53I-C completed it without combining the B50 suffix or recursively
+completing the second DMA.
 
 ## Phase 6E-B53I-B1 CPU IRQ state/registration verified
 
@@ -285,7 +351,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B53I-B2 DMA completion/IRQ delivery verified**; one captured DMA token, derived DICR bit-31 edge, source-3 CPU service, complete `func_80074520`, and typed propagation to the untranslated idle pump; global strict frontier remains the named B50 prefix cut `func_8006AD40_prefix_cut` (exit 1) | fresh normal and ASan/UBSan `pe-native-tests` (548/548 each); focused B2 15/15 |
+| Port phase | **6E-B53I-C idle GPU pump translated**; complete 152-word `func_80076EE4`, exact callback removal and mask lifecycle, guest-ring worker dispatch, consumer advance after return, and a newly issued but uncompleted second DMA; global strict frontier remains the named B50 prefix cut `func_8006AD40_prefix_cut` (exit 1) | fresh normal and ASan/UBSan `pe-native-tests` 558/558 each; focused C 10/10 each; oracle matrix 45/45 |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -298,10 +364,10 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
 | Strict mode | continuing real data: **exit 1** at `func_8006AD40_prefix_cut` from `func_8006AD40` (the named B50 prefix cut, and the only BOOTSTRAP_RET provider on the canonical path); `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | fresh normal and ASan/UBSan agree |
-| GPU/DMA2 + CPU IRQ | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. Stored DICR excludes physical bit31, which is derived on read and sticky-edge evaluated on every transition. Completion flags are enable/master gated. The separate bridge asserts B1's I_STAT source 3, and bounded CPU/DMA dispatch uses two guest-backed identity tables. No retail ring/HostFB/callback alias; idle-pump queue consumption remains untranslated. | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/platform/pe_irq_delivery.[ch]`, `pc_port/docs/b53i_b2_dma_irq_delivery.md` |
-| Sanitizers | B53I-B2 fresh ASan/UBSan 548/548; focused B2 15/15, B1 8/8, corrected B53B 15/15, retained B53H 8/8, B49, strict/bootstrap, and real-disc load pass without sanitizer diagnostics | fresh final B53I-B2 sanitizer build |
-| Matching build | **EXACT SHA-1 MATCH** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` / SHA-256 `5d94938ee752e81ef375bd4493c9883850c25a86895f9cb0732cf3622b44351b` (227 leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | Translate only `func_80076EE4_idle_pump` beginning at `0x80076F10`: IRQ mask exchange, DMA2 callback removal, GPUSTAT-ready queue selection, queued `0x80076664` worker, consumer advance only after worker return, and mask restore. Do not recursively complete the second DMA or absorb the B50 suffix. | `pc_port/docs/b53i_b2_dma_irq_delivery.md` |
+| GPU/DMA2 + CPU IRQ | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. Stored DICR excludes physical bit31, which is derived on read and sticky-edge evaluated on every transition. Completion flags are enable/master gated. The separate bridge asserts B1's I_STAT source 3, bounded CPU/DMA dispatch uses two guest-backed identity tables, and B53I-C consumes the live guest ring without a host queue mirror. | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/platform/pe_irq_delivery.[ch]`, `pc_port/docs/b53i_c_idle_gpu_pump.md` |
+| Sanitizers | B53I-C fresh ASan/UBSan 558/558; focused C 10/10, B2 15/15, B1 8/8, corrected B53B 15/15, retained B53H 8/8, B49, strict/bootstrap, and real-disc load pass without sanitizer diagnostics | fresh final B53I-C sanitizer build |
+| Matching build | **EXACT SHA-1 MATCH** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` / SHA-256 `5d94938ee752e81ef375bd4493c9883850c25a86895f9cb0732cf3622b44351b` (229 C leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
+| Next frontier | At a later, separately admitted hardware checkpoint, complete only the active second DMA token and prove its interrupt-disabled completion: pixels become visible and CHCR clears, but no DMA2 flag, DICR bit-31 edge, source-3 IRQ, or pump callback occurs. Do not absorb DrawSync, general GPU work, or the B50 suffix. | `pc_port/docs/b53i_c_idle_gpu_pump.md` |
 
 ### Phase 6E-B43 func_8005218C — current findings
 

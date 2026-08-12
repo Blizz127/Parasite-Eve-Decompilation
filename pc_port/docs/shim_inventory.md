@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53I-B2
+# Shim Inventory — Phase 6E-B53I-C
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -80,7 +80,7 @@ stops at a typed indirect-call boundary.
 | `func_80073CC4` | canonical SDK jump-table `+8` wrapper target |
 | `func_800740D0` | complete execution-proven source-0/source-3 setter paths; returns previous 32-bit guest identity |
 
-### B53C–B53I-B2 retail dispatcher, IRQ delivery, LoadImage issue, and pump
+### B53C–B53I-C retail dispatcher, IRQ delivery, LoadImage issue, and pump
 
 `game/boot/func_80076C34_port.c` translates complete `func_800773D0`,
 complete `func_80073E10` (via the PE_IRQ authority), and the dispatcher
@@ -98,12 +98,16 @@ consumes nothing, so the dispatcher completes and returns its retail
 pending count. A full ring and worker timeout recovery still expose
 `func_80077404`. B53I-B2 adds explicit first-DMA completion, the DICR
 source-3 edge bridge, the execution-proven CPU IRQ scanner, complete
-96-word `func_80074520`, and typed dispatch to `0x80076EE4`. With DMA idle,
-that callback exposes and immediately propagates the still-untranslated
-`func_80076EE4_idle_pump` boundary. The queue entry is not consumed and no
-second DMA is issued. DrawSync (`func_80077294`) and the pump's idle-DMA
-consumer body remain untranslated. The retail ring and its producer/consumer
-words stay authoritative in guest RAM; the DMA callback table `D_800956C0`
+96-word `func_80074520`, and typed dispatch to `0x80076EE4`. B53I-C now
+completes the pump's exact 136-word idle suffix: save/disable I_MASK,
+last/no-DrawSync channel-2 callback removal, inert GPUSTAT polling, live
+guest-ring decode, typed `0x80076664` worker call, consumer advance only
+after return at `0x80077054`, exact mask restore, and conditional marker /
+DrawSync cleanup. The canonical worker issues the second DMA at
+`0x8012B8B8/0x00020010/0x01000201`; the first checkpoint never recaptures it,
+so it remains active and incomplete with DICR `0x00800000`. DrawSync
+(`func_80077294`) itself remains untranslated. The retail ring and its
+producer/consumer words stay authoritative in guest RAM; the DMA callback table `D_800956C0`
 stays guest-backed and separate from the VBlank table `D_8009568C`; DICR
 stays solely owned by B53B `pe_gpu`. All guest identities are `pe_addr_t`,
 never native function pointers.
@@ -114,6 +118,7 @@ never native function pointers.
 | `func_80074520` | complete 96-word DMA flag scan, W1C, live table lookup, resampling, diagnostic tail |
 | `PE_IRQ_BridgeDICRRisingEdge` | generation-safe DICR edge to I_STAT source 3 only; no callback |
 | `PE_Port_ServiceDmaIrqCheckpoint` | one captured token, then separate bridge/service; no recapture loop |
+| `func_80076EE4` | complete 152-word pump: B53H busy return plus B53I-C idle consumer and shared epilogue |
 
 | Function | PS1 role | Host implementation |
 |----------|----------|---------------------|
@@ -152,7 +157,8 @@ never native function pointers.
   retail pending count, so the whole LoadImage dispatch completes and
   execution reaches this function's own B50 prefix cut, which B53H names
   `func_8006AD40_prefix_cut` — now the canonical strict frontier. Only the
-  B50 suffix and the pump's idle-DMA consumer path remain untranslated.
+  The B50 suffix remains untranslated in this chain; B53I-C completes
+  the pump's idle-DMA consumer.
   - `func_80076664` — TRANSLATED direct LoadImage issue worker (B53E), with
     timeout recovery suffix still exposed at `func_80077404`.
   - `func_80073CF4` — TRANSLATED complete 12-word retail wrapper (B53F
@@ -161,11 +167,11 @@ never native function pointers.
     DICR setter (B53G); guest-backed table `D_800956C0`, unchecked channel
     index, enable bit `1 << ((channel+16) & 31)`, master bit 23 set on both
     paths, DICR bit 31 read then masked off, I_MASK untouched.
-  - `func_80076EE4` — BUSY-DMA PREFIX TRANSLATED (B53H): 152-word / `0x260`
-    queue pump; `*(0x1F8010A8) & 0x01000000` non-zero returns 1 with zero
-    guest writes. B53I-B2 now binds its completed-DMA callback through the
-    typed pump API; `func_80076EE4_idle_pump` remains the controlled boundary
-    for the untranslated idle-DMA consumer path.
+  - `func_80076EE4` — TRANSLATED COMPLETE (B53H + B53I-C): 152-word /
+    `0x260` queue pump. Busy DMA returns 1 with zero guest writes. Idle DMA
+    processes the guest ring with exact mask/callback/readiness/worker/
+    consumer ordering, typed indirect boundaries, and no automatic hardware
+    completion.
   - `func_80074520` — TRANSLATED complete 96-word DMA IRQ dispatcher
     (B53I-B2); channels 0..6, DICR W1C before live guest callback lookup,
     normal-return resampling, and nested non-return propagation.

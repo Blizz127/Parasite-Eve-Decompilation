@@ -76,6 +76,7 @@ static void ResetTestState(void) {
     Bootstrap_ResetArgCallLog();    /* drop unresolved argument evidence */
     Bootstrap_ResetArg4CallLog();   /* drop four-register boundary log    */
     Bootstrap_ResetArg5CallLog();   /* drop stack-fifth-argument log      */
+    PE_Pump_TraceReset();           /* drop value-only GPU-pump evidence  */
     PE_Disc_SetActive(NULL);        /* drop any installed disc fixture    */
     PE_3EAC8_RecordReset();         /* drop recorded provider arguments   */
     D_80011614 = D_80011614_BOOTSTRAP;
@@ -12681,28 +12682,30 @@ static void test_B53C_guest_abi_enqueue_boundary(void)
     PE_StoreU8(B53D_INIT_BYTE, 1u);
     PE_StoreU32(B53C_PRODUCER, 7u);
     PE_StoreU32(B53C_CONSUMER, 2u);
-    PE_GPU_SetReady(0);
+    PE_GPU_SetReady(1);
     PE_GPU_GetState(&before);
 
     ASSERT(func_80076C34(0xFEDCBA98u, 0xFFFFFFFFu,
                          INT32_MIN, 0x81234567u) == 0,
            "guest ABI prefix sentinel changed");
-    /* A nonempty initialized ring registers the real channel-2 callback,
-     * publishes one entry, and stops at the untranslated queue pump.  The
-     * negative byte count copies nothing: 0x80076D80's signed compare
-     * fails immediately, so only the metadata words are written. */
-    ASSERT(g_bootstrap_arg4_call_count == 0 &&
+    /* A nonempty initialized ring registers the real channel-2 callback
+     * and publishes one entry.  The negative byte count copies nothing:
+     * 0x80076D80's signed compare fails immediately, so only metadata is
+     * written.  The complete pump then reaches the pre-existing zero worker
+     * at consumer slot 2 and stops at that exact indirect call. */
+    ASSERT(g_bootstrap_arg4_call_count == 1 &&
+           g_bootstrap_arg4_calls[0].target == 0u &&
            PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP,
            "nonempty path did not perform the real callback registration");
-    /* DMA2 is idle in this scenario, so the pump takes its untranslated
-     * idle-DMA consumer path and stops there instead of returning 1. */
+    /* DMA2 is idle and GPUSTAT ready, so no hardware evolution is needed to
+     * expose the honest zero-identity worker boundary. */
     ASSERT(CountOrderLog("func_80077404") == 0 &&
            CountOrderLog("func_80073E10") == 0 &&
            CountOrderLog("func_80073CF4") == 0 &&
            CountOrderLog("func_800746A0") == 0 &&
            CountOrderLog("func_80076664") == 0 &&
            CountOrderLog("func_80076EE4") == 0 &&
-           CountOrderLog("func_80076EE4_idle_pump") == 1,
+           CountOrderLog("func_00000000") == 1,
            "nonempty path crossed or duplicated its boundary");
     ASSERT(PE_IRQ_GetMask() == 0u &&
            PE_LoadU32(B53D_SAVED_IMASK) == 0u &&
@@ -13100,21 +13103,22 @@ static void test_B53D_enqueue_selectors(void)
            "DMA-busy path lost exchange/marker state");
 
     /* DrawSync callback present: same registration and publication with an
-     * idle DMA channel; the worker is still never invoked. */
+     * idle DMA channel.  An unbound worker gives this selector test an
+     * honest typed cut before consumer movement or DrawSync cleanup. */
     ResetTestState();
     PE_StoreU8(B53D_INIT_BYTE, 1u);
     PE_StoreU32(B53D_DRAWSYNC_CB, 0x80012345u);
-    ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
+    ASSERT(func_80076C34(0xF1234567u, 0x80100000u, 8, 0x80110000u) == 0,
            "callback prefix sentinel changed");
-    /* DMA2 is idle on this selector, so the pump reaches its untranslated
-     * idle-DMA consumer path and the dispatcher keeps the honest prefix. */
-    ASSERT(g_bootstrap_arg4_call_count == 0 &&
+    ASSERT(g_bootstrap_arg4_call_count == 1 &&
+           g_bootstrap_arg4_calls[0].target == 0xF1234567u &&
            PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
-           PE_LoadU32(B53C_RING_BASE) == 0x80076664u &&
+           PE_LoadU32(B53C_RING_BASE) == 0xF1234567u &&
            PE_LoadU32(B53C_PRODUCER) == 1u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u &&
            CountOrderLog("func_80076664") == 0 &&
-           CountOrderLog("func_80076EE4_idle_pump") == 1,
-           "callback path did not register, publish, and stop at the pump");
+           CountOrderLog("func_F1234567") == 1,
+           "callback path did not register, publish, and stop at worker");
     PASS();
 }
 
@@ -14496,17 +14500,18 @@ static void test_B53H_busy_test_is_bit24(void)
 
     /* NOT the canonical path: this test explicitly services completion to
      * prove the discriminator is CHCR bit 24 and not "CHCR != 0".  After
-     * completion CHCR is 0x00000201, still non-zero, yet the pump must now
-     * take its untranslated idle path instead of returning 1. */
+     * completion CHCR is 0x00000201, still non-zero, yet the now-complete
+     * idle path observes the empty ring and returns zero. */
     ASSERT(PE_GPU_ServiceDMA2Completion(PE_GPU_DMA2EventToken()) == 1,
            "explicit completion was refused");
     ASSERT(PE_GPU_ReadDMA2CHCR() == 0x00000201u &&
            (PE_GPU_ReadDMA2CHCR() & 0x01000000u) == 0u,
            "completion did not clear only the busy bit");
     ASSERT(func_80076EE4() == 0 &&
-           CountOrderLog("func_80076EE4_idle_pump") == 1 &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "idle channel did not reach the honest untranslated boundary");
+           PE_IRQ_GetMask() == 0u &&
+           CountOrderLog("func_80076EE4_idle_pump") == 0 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "idle empty-ring path did not return its exact count");
     PASS();
 }
 
@@ -14660,6 +14665,7 @@ static void test_B53H_dispatcher_busy_integration(void)
 
 static void test_B53H_boundary_is_not_masked_by_frame_limit(void)
 {
+    unsigned epoch;
     TEST("B53H_boundary_is_not_masked_by_frame_limit");
     ResetTestState();
     PE_StoreU8(B53D_INIT_BYTE, 1u);
@@ -14674,13 +14680,20 @@ static void test_B53H_boundary_is_not_masked_by_frame_limit(void)
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
            "frame-limit stop reason was not latched first");
 
+    epoch = PE_Port_StopEpoch();
+
     /* DMA2 is idle, so the dispatcher's opportunistic pump reaches the
-     * untranslated idle path.  The dispatcher must NOT fabricate a
-     * pending count just because the stop reason did not change. */
+     * zero worker already present at consumer slot 1.  Retail unconditionally
+     * executes jalr; zero is therefore an honest indirect boundary, not an
+     * empty callback.  The older frame-limit reason must not hide its new
+     * stop epoch. */
     ASSERT(func_80076C34(0x80076664u, 0x80100000u, 8, 0x80110000u) == 0,
            "masked pump boundary produced a fabricated pending count");
-    ASSERT(CountOrderLog("func_80076EE4_idle_pump") == 1,
-           "pump boundary was not reported under a latched stop reason");
+    ASSERT(CountOrderLog("func_00000000") == 1 &&
+           PE_Port_StopEpoch() == epoch + 1u &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT &&
+           PE_IRQ_GetMask() == 0u,
+           "typed worker boundary was hidden under a latched stop reason");
     PASS();
 }
 
@@ -14767,23 +14780,38 @@ static void test_B53H_stop_epoch_distinguishes_latched_stops(void)
  * Phase 6E-B53I-B2 — DMA2 completion edge and retail IRQ delivery
  *
  * The focused fixtures preserve completion, DICR edge bridging, and CPU
- * service as three explicit phases.  The translated idle consumer remains
- * a hard boundary; no test below consumes the queued request or issues a
- * second DMA.
+ * service as three explicit phases.  B53I-C now lets the canonical callback
+ * return through the complete idle consumer; the B2 acknowledgement and
+ * one-token contracts remain independently asserted here.
  * ════════════════════════════════════════════════════════════════════ */
 
 static int B53I_B2_SeedCanonicalChain(uint8_t *entry_snapshot)
 {
     func_80073C94();
+    (void)func_80074A44(0);
     PE_StoreU8(B53D_INIT_BYTE, 1u);
-    for (uint32_t i = 0u; i < 16u; i++) {
-        PE_StoreU32(0x80180000u + i * 4u,
+
+    /* Exact first canonical LoadImage: RECT {704,64,32,64}, 2048 pixels,
+     * 1024 DMA words, and no CPU remainder. */
+    for (uint32_t i = 0u; i < 1024u; i++) {
+        PE_StoreU32(0x8012A8B8u + i * 4u,
                     (0x2000u + i * 2u) |
                     ((0x2001u + i * 2u) << 16));
     }
-    PE_StoreU32(B53E_RECT, 0x11112222u);
-    PE_StoreU32(B53E_RECT + 4u, 0x33334444u);
-    if (!B53E_SeedBusyDma()) return 0;
+    B53E_StoreRect(704, 64, 32, 64);
+    if (func_80076C34(0x80076664u, B53E_RECT, 8,
+                      0x8012A8B8u) != 0) return 0;
+    if (PE_GPU_ReadDMA2MADR() != 0x8012A8B8u ||
+        PE_GPU_ReadDMA2BCR() != 0x00400010u ||
+        PE_GPU_ReadDMA2CHCR() != 0x01000201u) return 0;
+
+    /* Exact queued second LoadImage: RECT {256,456,64,1}, 32 DMA words. */
+    for (uint32_t i = 0u; i < 32u; i++) {
+        PE_StoreU32(0x8012B8B8u + i * 4u,
+                    (0x6000u + i * 2u) |
+                    ((0x6001u + i * 2u) << 16));
+    }
+    B53E_StoreRect(256, 456, 64, 1);
     if (func_80076C34(0x80076664u, B53E_RECT, 8,
                       0x8012B8B8u) != 1) return 0;
     if (PE_LoadU32(B53C_PRODUCER) != 1u ||
@@ -14982,7 +15010,7 @@ static void test_B53I_B2_focused_idle_boundary_chain(void)
            PE_GPU_ReadStoredDICR() == 0x04840000u &&
            PE_GPU_ReadDICR() == 0x84840000u &&
            PE_IRQ_ReadStatus() == 0u &&
-           B53B_Pixel(0u, 0u) == 0x2000u,
+           B53B_Pixel(704u, 64u) == 0x2000u,
            "hardware completion phase is not separately observable");
     ASSERT(PE_Pump_EntryCount() == 0u &&
            CountOrderLog("func_80076EE4_idle_pump") == 0,
@@ -14996,8 +15024,8 @@ static void test_B53I_B2_focused_idle_boundary_chain(void)
            "source-3 edge phase is not separately observable");
     PE_IRQ_AssertSources(0x0020u); /* unrelated, masked pending source */
     ASSERT(PE_IRQ_ServicePendingForGeneration(generation) ==
-               PE_IRQ_SERVICE_BOUNDARY,
-           "canonical service did not propagate the idle-pump boundary");
+               PE_IRQ_SERVICE_RETURNED,
+           "canonical source3/DMA callback did not return normally");
     ASSERT(PE_Pump_EntryCount() == 1u,
            "CPU/DMA service did not enter the pump exactly once");
 
@@ -15022,23 +15050,25 @@ static void test_B53I_B2_focused_idle_boundary_chain(void)
            (trace.dma_callback_istat & 0x0020u) != 0u,
            "DMA callback did not observe idle/acknowledged hardware state");
     ASSERT(PE_IRQ_ReadStatus() == 0x0020u &&
-           PE_GPU_ReadStoredDICR() == 0x00840000u &&
-           PE_GPU_ReadDICR() == 0x00840000u &&
-           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 1u,
-           "nested boundary lost acknowledgements or cleared active state");
+           PE_GPU_ReadStoredDICR() == 0x00800000u &&
+           PE_GPU_ReadDICR() == 0x00800000u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0u,
+           "normal callback return lost acknowledgements or active cleanup");
     ASSERT(PE_LoadU32(B53C_PRODUCER) == 1u &&
-           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           PE_LoadU32(B53C_CONSUMER) == 1u &&
            memcmp(before,
                   PE_TranslateConst(B53C_RING_BASE,
                                     B53H_RING_ENTRY_BYTES),
                   B53H_RING_ENTRY_BYTES) == 0,
-           "B2 boundary consumed or mutated the queued second LoadImage");
-    ASSERT(!PE_GPU_DMA2Pending() &&
-           PE_GPU_ReadDMA2CHCR() == 0x00000201u &&
-           CountOrderLog("func_80076EE4_idle_pump") == 1 &&
+           "idle callback did not consume exactly one byte-stable entry");
+    ASSERT(PE_GPU_DMA2Pending() &&
+           PE_GPU_ReadDMA2CHCR() == 0x01000201u &&
+           PE_GPU_ReadDMA2MADR() == 0x8012B8B8u &&
+           PE_GPU_ReadDMA2BCR() == 0x00020010u &&
+           CountOrderLog("func_80076EE4_idle_pump") == 0 &&
            CountOrderLog("func_80076664") == 0 &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "idle boundary was hidden or a second DMA/worker ran");
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "idle consumer failed to issue exactly the later DMA");
     PASS();
 }
 
@@ -15067,14 +15097,16 @@ static void test_B53I_B2_masked_pending_then_unmask(void)
     (void)PE_IRQ_ExchangeMask(0x0009u);
     ASSERT(PE_IRQ_ReadStatus() == 0x0008u &&
            PE_IRQ_ServicePendingForGeneration(generation) ==
-               PE_IRQ_SERVICE_BOUNDARY &&
+               PE_IRQ_SERVICE_RETURNED &&
            PE_IRQ_ReadStatus() == 0u &&
            !PE_GPU_DMA2CompletionPending() &&
+           PE_LoadU32(B53C_CONSUMER) == 1u &&
+           PE_GPU_DMA2Pending() &&
            memcmp(before,
                   PE_TranslateConst(B53C_RING_BASE,
                                     B53H_RING_ENTRY_BYTES),
                   B53H_RING_ENTRY_BYTES) == 0,
-           "unmask did not retain then deliver the pending source");
+           "unmask did not retain then deliver the pending source normally");
     PASS();
 }
 
@@ -15347,21 +15379,21 @@ static void test_B53I_B2_checkpoint_suppression_and_stop_epoch(void)
     PE_Port_RequestStop(PE_PORT_STOP_FRAME_LIMIT);
     epoch = PE_Port_StopEpoch();
     ASSERT(PE_Port_ServiceDmaIrqCheckpoint() ==
-               PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY &&
+               PE_PORT_DMA_IRQ_CHECKPOINT_RETURNED &&
            PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT &&
-           PE_Port_StopEpoch() == epoch + 1u &&
+           PE_Port_StopEpoch() == epoch &&
            PE_IRQ_ReadStatus() == 0u &&
-           PE_GPU_ReadStoredDICR() == 0x00840000u &&
-           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 1u,
-           "sticky host stop suppressed or hid admitted IRQ cleanup");
-    ASSERT(!PE_GPU_DMA2Pending() &&
+           PE_GPU_ReadStoredDICR() == 0x00800000u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0u,
+           "sticky host stop suppressed admitted IRQ cleanup");
+    ASSERT(PE_GPU_DMA2Pending() &&
            PE_LoadU32(B53C_PRODUCER) == 1u &&
-           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           PE_LoadU32(B53C_CONSUMER) == 1u &&
            memcmp(before,
                   PE_TranslateConst(B53C_RING_BASE,
                                     B53H_RING_ENTRY_BYTES),
                   B53H_RING_ENTRY_BYTES) == 0,
-           "checkpoint completed recursively or crossed the idle boundary");
+           "checkpoint recursively completed the newly issued DMA");
     PASS();
 }
 
@@ -15401,18 +15433,438 @@ static void test_B53I_B2_repeated_chain_determinism(void)
         ASSERT(B53I_B2_SeedCanonicalChain(before),
                "repeat chain seed failed");
         ASSERT(PE_Port_ServiceDmaIrqCheckpoint() ==
-                   PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY &&
-               PE_GPU_ReadDMA2CHCR() == 0x00000201u &&
-               PE_GPU_ReadStoredDICR() == 0x00840000u &&
+                   PE_PORT_DMA_IRQ_CHECKPOINT_RETURNED &&
+               PE_GPU_ReadDMA2CHCR() == 0x01000201u &&
+               PE_GPU_ReadDMA2MADR() == 0x8012B8B8u &&
+               PE_GPU_ReadDMA2BCR() == 0x00020010u &&
+               PE_GPU_ReadStoredDICR() == 0x00800000u &&
                PE_IRQ_ReadStatus() == 0u &&
-               PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 1u &&
+               PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0u &&
                PE_LoadU32(B53C_PRODUCER) == 1u &&
-               PE_LoadU32(B53C_CONSUMER) == 0u &&
+               PE_LoadU32(B53C_CONSUMER) == 1u &&
                memcmp(before,
                       PE_TranslateConst(B53C_RING_BASE,
                                         B53H_RING_ENTRY_BYTES),
                       B53H_RING_ENTRY_BYTES) == 0,
                "repeat chain endpoint was nondeterministic");
+    }
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Phase 6E-B53I-C — complete func_80076EE4 idle-DMA consumer
+ *
+ * The focused fixtures below use the exact retail ring geometry and keep
+ * the second DMA asynchronous.  No fixture services that newly issued
+ * token; the generic B53B substrate already owns later explicit completion.
+ * ════════════════════════════════════════════════════════════════════ */
+
+#define B53I_C_PUMP_SAVED_IMASK 0x80095880u
+#define B53I_C_SECOND_SOURCE    0x8012B8B8u
+#define B53I_C_RECT_WORD0       0x01C80100u
+#define B53I_C_RECT_WORD1       0x00010040u
+
+static pe_addr_t B53I_C_SeedIdleEntry(uint32_t consumer, uint32_t producer,
+                                      pe_addr_t worker, int install_dma_cb,
+                                      pe_addr_t drawsync)
+{
+    pe_addr_t entry = (pe_addr_t)(B53C_RING_BASE + consumer * 0x60u);
+
+    func_80073C94();
+    (void)func_80074A44(0);
+    PE_GPU_SetReady(1);
+    PE_StoreU8(B53D_INIT_BYTE, 1u);
+    PE_StoreU32(B53D_WORK_MARKER, 1u);
+    PE_StoreU32(B53D_DRAWSYNC_CB, drawsync);
+    if (install_dma_cb) {
+        (void)func_80073CF4(2u, B53D_QUEUE_PUMP);
+    }
+    PE_StoreU32(B53C_PRODUCER, producer);
+    PE_StoreU32(B53C_CONSUMER, consumer);
+    PE_Fill(entry, B53H_RING_ENTRY_BYTES, 0u);
+    PE_StoreU32(entry + 0x00u, worker);
+    PE_StoreU32(entry + 0x04u, entry + 0x0Cu);
+    PE_StoreU32(entry + 0x08u, B53I_C_SECOND_SOURCE);
+    PE_StoreU32(entry + 0x0Cu, B53I_C_RECT_WORD0);
+    PE_StoreU32(entry + 0x10u, B53I_C_RECT_WORD1);
+    for (uint32_t i = 0u; i < 32u; i++) {
+        PE_StoreU32(B53I_C_SECOND_SOURCE + i * 4u,
+                    (0x6000u + i * 2u) |
+                    ((0x6001u + i * 2u) << 16));
+    }
+    return entry;
+}
+
+static void test_B53I_C_canonical_checkpoint_endpoint(void)
+{
+    uint8_t entry_before[B53H_RING_ENTRY_BYTES];
+    PeGpuPumpTrace trace;
+    PeGpuState before;
+    PeGpuState after;
+    uint64_t first_token;
+    TEST("B53I_C_canonical_checkpoint_endpoint");
+    ResetTestState();
+    ASSERT(B53I_B2_SeedCanonicalChain(entry_before),
+           "cannot seed exact canonical C chain");
+    PE_StoreU32(B53C_RING_BASE - 4u, 0xA1B2C3D4u);
+    PE_StoreU32(B53C_RING_BASE + B53H_RING_ENTRY_BYTES, 0x5A6B7C8Du);
+    first_token = PE_GPU_DMA2EventToken();
+    PE_GPU_GetState(&before);
+    ASSERT(B53B_Pixel(256u, 456u) == 0u,
+           "second payload was visible before its issue");
+
+    PE_Pump_TraceReset();
+    ASSERT(PE_Port_ServiceDmaIrqCheckpoint() ==
+               PE_PORT_DMA_IRQ_CHECKPOINT_RETURNED,
+           "canonical first-DMA checkpoint did not return normally");
+    PE_Pump_GetTrace(&trace);
+    PE_GPU_GetState(&after);
+
+    ASSERT(PE_Pump_EntryCount() == 1u && trace.worker_calls == 1u &&
+           trace.drawsync_calls == 0u && trace.worker_returned == 1,
+           "canonical callback did not enter one returning worker");
+    ASSERT(trace.saved_mask == 0x0009u && trace.mask_at_worker == 0u &&
+           trace.restored_mask == 0x0009u && PE_IRQ_GetMask() == 0x0009u,
+           "canonical I_MASK save/disable/restore differs from retail");
+    ASSERT(trace.mask_disable_order < trace.callback_removal_order &&
+           trace.callback_removal_order < trace.gpustat_ready_order &&
+           trace.gpustat_ready_order < trace.worker_call_order &&
+           trace.worker_call_order < trace.consumer_advance_order &&
+           trace.consumer_advance_order < trace.mask_restore_order,
+           "idle-pump mutation order differs from retail");
+    ASSERT(trace.last_worker == 0x80076664u &&
+           trace.last_argument == B53C_RING_BASE + 0x0Cu &&
+           trace.last_auxiliary == B53I_C_SECOND_SOURCE &&
+           trace.consumer_before_worker == 0u &&
+           trace.consumer_after_worker == 1u,
+           "queued worker/argument/source or consumer order is wrong");
+    ASSERT(trace.dma_callback_at_worker == 0u &&
+           trace.dicr_at_worker == 0x00800000u &&
+           trace.chcr_at_worker == 0x00000201u,
+           "DMA callback removal did not precede the second worker");
+
+    ASSERT(PE_LoadU32(B53C_PRODUCER) == 1u &&
+           PE_LoadU32(B53C_CONSUMER) == 1u &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == 0u &&
+           PE_LoadU32(B53D_WORK_MARKER) == 1u &&
+           PE_LoadU32(B53D_DRAWSYNC_CB) == 0u,
+           "canonical queue/callback/marker endpoint differs from retail");
+    ASSERT(memcmp(entry_before,
+                  PE_TranslateConst(B53C_RING_BASE,
+                                    B53H_RING_ENTRY_BYTES),
+                  B53H_RING_ENTRY_BYTES) == 0 &&
+           PE_LoadU32(B53C_RING_BASE - 4u) == 0xA1B2C3D4u &&
+           PE_LoadU32(B53C_RING_BASE + B53H_RING_ENTRY_BYTES) ==
+               0x5A6B7C8Du,
+           "consumer advance cleared the entry or crossed ring canaries");
+
+    ASSERT(PE_GPU_ReadStoredDICR() == 0x00800000u &&
+           PE_GPU_ReadDICR() == 0x00800000u &&
+           PE_IRQ_ReadStatus() == 0u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0u,
+           "normal callback unwind left IRQ/DICR/active state wrong");
+    ASSERT(PE_GPU_ReadDMA2MADR() == B53I_C_SECOND_SOURCE &&
+           PE_GPU_ReadDMA2BCR() == 0x00020010u &&
+           PE_GPU_ReadDMA2CHCR() == 0x01000201u &&
+           PE_GPU_DMA2Pending() && !PE_GPU_DMA2CompletionPending(),
+           "second LoadImage DMA registers/activity differ from retail");
+    ASSERT(PE_GPU_DMA2EventToken() != first_token &&
+           after.dma_event_count == before.dma_event_count + 1u &&
+           B53B_Pixel(256u, 456u) == 0u,
+           "second DMA completed recursively in the first checkpoint");
+    ASSERT(PE_GPU_ReadStatus() == PE_GPU_STATUS_READY_GP0 &&
+           PE_GPU_VSyncQuery() == 0u && PE_Port_StopEpoch() == 0u,
+           "pump fabricated GPU readiness/VBlank/stop state");
+    PASS();
+}
+
+static void test_B53I_C_empty_queue_and_exact_mask_restore(void)
+{
+    PeGpuPumpTrace trace;
+    int returned = 0;
+    TEST("B53I_C_empty_queue_and_exact_mask_restore");
+    ResetTestState();
+    func_80073C94();
+    (void)func_80074A44(0);
+    (void)func_80073CF4(2u, B53D_QUEUE_PUMP);
+    PE_StoreU32(B53C_PRODUCER, 7u);
+    PE_StoreU32(B53C_CONSUMER, 7u);
+    PE_StoreU32(B53D_WORK_MARKER, 1u);
+    PE_StoreU32(B53D_DRAWSYNC_CB, 0u);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    PE_Pump_TraceReset();
+
+    ASSERT(PE_func_80076EE4_Pump(&returned) == 0 && returned == 1,
+           "empty idle queue did not return exact pending zero");
+    PE_Pump_GetTrace(&trace);
+    ASSERT(trace.saved_mask == 0xBEEFu && trace.restored_mask == 0xBEEFu &&
+           trace.mask_disable_order < trace.mask_restore_order &&
+           trace.worker_calls == 0u &&
+           trace.callback_removal_order == 0u,
+           "empty queue performed work or lost its alternate mask");
+    ASSERT(PE_IRQ_GetMask() == 0xBEEFu &&
+           PE_LoadU32(B53I_C_PUMP_SAVED_IMASK) == 0xBEEFu &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
+           PE_GPU_ReadStoredDICR() == 0x00840000u &&
+           PE_LoadU32(B53D_WORK_MARKER) == 1u,
+           "empty queue deregistered callback or cleared zero DrawSync");
+    PASS();
+}
+
+static void test_B53I_C_nonlast_entry_keeps_dma_callback(void)
+{
+    PeGpuPumpTrace trace;
+    int returned = 0;
+    pe_addr_t entry;
+    TEST("B53I_C_nonlast_entry_keeps_dma_callback");
+    ResetTestState();
+    entry = B53I_C_SeedIdleEntry(0u, 2u, 0x80076664u, 1, 0u);
+    PE_Pump_TraceReset();
+
+    ASSERT(PE_func_80076EE4_Pump(&returned) == 1 && returned == 1,
+           "non-last entry did not return one pending item");
+    PE_Pump_GetTrace(&trace);
+    ASSERT(trace.callback_removal_order == 0u &&
+           trace.worker_calls == 1u && trace.worker_returned == 1 &&
+           trace.consumer_before_worker == 0u &&
+           trace.consumer_after_worker == 1u,
+           "non-last entry removed callback or misordered consumer");
+    ASSERT(PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
+           PE_GPU_ReadStoredDICR() == 0x00840000u &&
+           PE_LoadU32(B53C_PRODUCER) == 2u &&
+           PE_LoadU32(B53C_CONSUMER) == 1u &&
+           PE_GPU_DMA2Pending() &&
+           PE_LoadU32(entry) == 0x80076664u,
+           "non-last branch state differs from the literal queue loop");
+    PASS();
+}
+
+static void test_B53I_C_unbound_worker_and_ring_span_boundaries(void)
+{
+    PeGpuPumpTrace trace;
+    unsigned epoch;
+    int returned = 1;
+    TEST("B53I_C_unbound_worker_and_ring_span_boundaries");
+    ResetTestState();
+    (void)B53I_C_SeedIdleEntry(0u, 1u, 0xF1234567u, 1, 0u);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    PE_Pump_TraceReset();
+    epoch = PE_Port_StopEpoch();
+
+    ASSERT(PE_func_80076EE4_Pump(&returned) == 0 && returned == 0 &&
+           PE_Port_StopEpoch() == epoch + 1u,
+           "unbound worker fabricated an ordinary return");
+    PE_Pump_GetTrace(&trace);
+    ASSERT(g_bootstrap_arg4_call_count == 1 &&
+           g_bootstrap_arg4_calls[0].target == 0xF1234567u &&
+           g_bootstrap_arg4_calls[0].arg0 == B53C_RING_BASE + 0x0Cu &&
+           g_bootstrap_arg4_calls[0].arg1 == B53I_C_SECOND_SOURCE,
+           "unbound worker lost its guest identity or two-argument ABI");
+    ASSERT(trace.callback_removal_order < trace.worker_call_order &&
+           trace.consumer_advance_order == 0u &&
+           trace.mask_restore_order == 0u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           PE_IRQ_GetMask() == 0u &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == 0u &&
+           PE_GPU_ReadStoredDICR() == 0x00800000u,
+           "worker boundary advanced consumer/restored mask/lost prefix");
+
+    ResetTestState();
+    (void)B53I_C_SeedIdleEntry(0u, 2u, 0x80076664u, 0, 0u);
+    PE_StoreU32(B53C_CONSUMER, 0x00010000u);
+    returned = 1;
+    ASSERT(PE_func_80076EE4_Pump(&returned) == 0 && returned == 0 &&
+           g_bootstrap_arg4_call_count == 1 &&
+           strcmp(g_bootstrap_arg4_calls[0].symbol,
+                  "func_80076EE4_ring_span") == 0 &&
+           PE_LoadU32(B53C_CONSUMER) == 0x00010000u &&
+           PE_IRQ_GetMask() == 0u,
+           "invalid raw consumer was masked, dereferenced, or returned");
+    PASS();
+}
+
+static void test_B53I_C_nested_boundary_propagates_through_irq(void)
+{
+    uint8_t before[B53H_RING_ENTRY_BYTES];
+    TEST("B53I_C_nested_boundary_propagates_through_irq");
+    ResetTestState();
+    ASSERT(B53I_B2_SeedCanonicalChain(NULL),
+           "cannot seed nested-boundary IRQ chain");
+    PE_StoreU32(B53C_RING_BASE, 0xE2345678u);
+    memcpy(before,
+           PE_TranslateConst(B53C_RING_BASE, B53H_RING_ENTRY_BYTES),
+           B53H_RING_ENTRY_BYTES);
+    PE_Pump_TraceReset();
+
+    ASSERT(PE_Port_ServiceDmaIrqCheckpoint() ==
+               PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY &&
+           PE_Pump_EntryCount() == 1u,
+           "nested worker boundary did not propagate through both scans");
+    ASSERT(PE_IRQ_ReadStatus() == 0u &&
+           PE_GPU_ReadStoredDICR() == 0x00800000u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 1u &&
+           PE_IRQ_GetMask() == 0u,
+           "nested boundary lost acknowledgements or cleared active/mask");
+    ASSERT(PE_LoadU32(B53C_PRODUCER) == 1u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           memcmp(before,
+                  PE_TranslateConst(B53C_RING_BASE,
+                                    B53H_RING_ENTRY_BYTES),
+                  B53H_RING_ENTRY_BYTES) == 0 &&
+           !PE_GPU_DMA2Pending(),
+           "nested boundary consumed entry or issued the second DMA");
+    PASS();
+}
+
+static void test_B53I_C_worker_failure_wraps_and_consumes(void)
+{
+    uint8_t before[B53H_RING_ENTRY_BYTES];
+    PeGpuPumpTrace trace;
+    pe_addr_t entry;
+    int returned = 0;
+    TEST("B53I_C_worker_failure_wraps_and_consumes");
+    ResetTestState();
+    entry = B53I_C_SeedIdleEntry(63u, 0u, 0x80076664u, 0, 0u);
+    PE_StoreU32(entry + 4u, 0u); /* translated worker returns -1 normally */
+    memcpy(before, PE_TranslateConst(entry, B53H_RING_ENTRY_BYTES),
+           B53H_RING_ENTRY_BYTES);
+    PE_Pump_TraceReset();
+
+    ASSERT(PE_func_80076EE4_Pump(&returned) == 0 && returned == 1,
+           "ordinary worker failure did not yield retail pending zero");
+    PE_Pump_GetTrace(&trace);
+    ASSERT(trace.worker_returned == 1 &&
+           trace.consumer_before_worker == 63u &&
+           trace.consumer_after_worker == 0u &&
+           trace.worker_call_order < trace.consumer_advance_order &&
+           trace.consumer_advance_order < trace.mask_restore_order,
+           "worker failure did not consume only after ordinary return");
+    ASSERT(PE_LoadU32(B53C_PRODUCER) == 0u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           !PE_GPU_DMA2Pending() &&
+           PE_LoadU32(B53D_WORK_MARKER) == 1u &&
+           memcmp(before, PE_TranslateConst(entry, B53H_RING_ENTRY_BYTES),
+                  B53H_RING_ENTRY_BYTES) == 0,
+           "ring wrap cleared payload, issued DMA, or cleared marker");
+    PASS();
+}
+
+static void test_B53I_C_drawsync_boundary_after_restore(void)
+{
+    PeGpuPumpTrace trace;
+    pe_addr_t entry;
+    int returned = 1;
+    TEST("B53I_C_drawsync_boundary_after_restore");
+    ResetTestState();
+    entry = B53I_C_SeedIdleEntry(0u, 1u, 0x80076664u, 1,
+                                 0xF3456789u);
+    PE_StoreU32(entry + 4u, 0u); /* ordinary -1; no DMA becomes busy */
+    PE_Pump_TraceReset();
+
+    ASSERT(PE_func_80076EE4_Pump(&returned) == 0 && returned == 0,
+           "unbound DrawSync callback fabricated a return");
+    PE_Pump_GetTrace(&trace);
+    ASSERT(trace.callback_removal_order == 0u &&
+           trace.worker_returned == 1 &&
+           trace.worker_call_order < trace.consumer_advance_order &&
+           trace.consumer_advance_order < trace.mask_restore_order &&
+           trace.mask_restore_order < trace.drawsync_clear_order &&
+           trace.drawsync_clear_order < trace.drawsync_call_order,
+           "DrawSync branch ordering differs from retail");
+    ASSERT(PE_LoadU32(B53F_DMA_CB_SLOT2) == B53D_QUEUE_PUMP &&
+           PE_GPU_ReadStoredDICR() == 0x00840000u &&
+           PE_LoadU32(B53C_CONSUMER) == 1u &&
+           PE_LoadU32(B53D_WORK_MARKER) == 0u &&
+           PE_IRQ_GetMask() == 0x0009u &&
+           g_bootstrap_arg4_call_count == 1 &&
+           g_bootstrap_arg4_calls[0].target == 0xF3456789u,
+           "DrawSync boundary lost retained callback/clear/restore state");
+    PASS();
+}
+
+static void test_B53I_C_gpustat_hold_and_explicit_transition(void)
+{
+    pid_t pid;
+    int status = 0;
+    int returned = 1;
+    TEST("B53I_C_gpustat_hold_and_explicit_transition");
+    ResetTestState();
+    (void)B53I_C_SeedIdleEntry(0u, 1u, 0xF1234567u, 1, 0u);
+    PE_GPU_SetReady(0);
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed for held GPUSTAT poll");
+    if (pid == 0) {
+        signal(SIGALRM, SIG_DFL);
+        alarm(1);
+        (void)PE_func_80076EE4_Pump(&returned);
+        _exit(9);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid &&
+           WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM,
+           "GPUSTAT-clear poll returned or auto-readied");
+
+    ASSERT(PE_GPU_ReadStatus() == 0u &&
+           PE_GPU_VSyncQuery() == 0u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u,
+           "held poll evolved readiness/VBlank/parent queue state");
+    PE_GPU_SetReady(1);
+    ASSERT(PE_func_80076EE4_Pump(&returned) == 0 && returned == 0 &&
+           g_bootstrap_arg4_call_count == 1 &&
+           g_bootstrap_arg4_calls[0].target == 0xF1234567u &&
+           PE_GPU_VSyncQuery() == 0u,
+           "explicit ready transition did not reach the queued worker");
+    PASS();
+}
+
+static void test_B53I_C_latched_stop_cannot_suppress_restore(void)
+{
+    PeGpuPumpTrace trace;
+    unsigned epoch;
+    int returned = 0;
+    TEST("B53I_C_latched_stop_cannot_suppress_restore");
+    ResetTestState();
+    (void)B53I_C_SeedIdleEntry(0u, 1u, 0x80076664u, 1, 0u);
+    (void)PE_IRQ_ExchangeMask(0xBEEFu);
+    PE_Port_RequestStop(PE_PORT_STOP_FRAME_LIMIT);
+    epoch = PE_Port_StopEpoch();
+    PE_Pump_TraceReset();
+
+    ASSERT(PE_func_80076EE4_Pump(&returned) == 0 && returned == 1 &&
+           PE_Port_StopEpoch() == epoch &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
+           "pre-latched frame stop fabricated a nested boundary");
+    PE_Pump_GetTrace(&trace);
+    ASSERT(trace.saved_mask == 0xBEEFu && trace.restored_mask == 0xBEEFu &&
+           trace.consumer_advance_order < trace.mask_restore_order &&
+           PE_IRQ_GetMask() == 0xBEEFu &&
+           PE_LoadU32(B53C_CONSUMER) == 1u && PE_GPU_DMA2Pending(),
+           "frame-limit stop suppressed worker cleanup or I_MASK restore");
+    PASS();
+}
+
+static void test_B53I_C_repeated_deterministic_idle_issue(void)
+{
+    TEST("B53I_C_repeated_deterministic_idle_issue");
+    for (int pass = 0; pass < 3; pass++) {
+        PeGpuPumpTrace trace;
+        int returned = 0;
+        ResetTestState();
+        (void)B53I_C_SeedIdleEntry(0u, 1u, 0x80076664u, 1, 0u);
+        PE_Pump_TraceReset();
+        ASSERT(PE_func_80076EE4_Pump(&returned) == 0 && returned == 1,
+               "repeated idle issue did not return zero");
+        PE_Pump_GetTrace(&trace);
+        ASSERT(trace.worker_calls == 1u && trace.worker_returned == 1 &&
+               trace.callback_removal_order < trace.worker_call_order &&
+               trace.worker_call_order < trace.consumer_advance_order &&
+               trace.consumer_advance_order < trace.mask_restore_order &&
+               PE_LoadU32(B53C_CONSUMER) == 1u &&
+               PE_GPU_ReadDMA2MADR() == B53I_C_SECOND_SOURCE &&
+               PE_GPU_ReadDMA2BCR() == 0x00020010u &&
+               PE_GPU_ReadDMA2CHCR() == 0x01000201u &&
+               PE_GPU_ReadStoredDICR() == 0x00800000u &&
+               PE_IRQ_ReadStatus() == 0u,
+               "repeated idle issue endpoint was nondeterministic");
     }
     PASS();
 }
@@ -16731,6 +17183,18 @@ int main(void)
     test_B53I_B2_checkpoint_suppression_and_stop_epoch();
     test_B53I_B2_resetcallback_dicr_zero_semantics();
     test_B53I_B2_repeated_chain_determinism();
+
+    /* Phase 6E-B53I-C complete idle GPU command pump (10 tests). */
+    test_B53I_C_canonical_checkpoint_endpoint();
+    test_B53I_C_empty_queue_and_exact_mask_restore();
+    test_B53I_C_nonlast_entry_keeps_dma_callback();
+    test_B53I_C_unbound_worker_and_ring_span_boundaries();
+    test_B53I_C_nested_boundary_propagates_through_irq();
+    test_B53I_C_worker_failure_wraps_and_consumes();
+    test_B53I_C_drawsync_boundary_after_restore();
+    test_B53I_C_gpustat_hold_and_explicit_transition();
+    test_B53I_C_latched_stop_cannot_suppress_restore();
+    test_B53I_C_repeated_deterministic_idle_issue();
 
     /* Phase 6E-B53B deterministic GPU/DMA2 substrate (15 tests) */
     test_B53B_reset_dimensions_initial_vram();

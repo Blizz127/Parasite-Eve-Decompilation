@@ -14,8 +14,8 @@ func_8006AD40 (retail 0x8006AE50).  B53H NAMES that cut
 instead of a silent return; the continuing strict run therefore still
 exits 1, now reporting that name. B53I-B2 deliberately runs its already-
 admitted one-token hardware checkpoint before honoring the sticky host stop.
-The bounded non-strict run therefore records the B50 cut first and the
-nested `func_80076EE4_idle_pump` boundary second, without consuming the queue.
+B53I-C completes the nested idle pump normally, leaving the B50 cut as the
+only provider while the newly issued second DMA remains active.
 """
 
 from __future__ import annotations
@@ -127,12 +127,10 @@ def main() -> int:
         require("[HOST] stop_reason=unresolved-boundary" in two.stderr,
                 "prefix run did not report its honest unresolved boundary")
         # The first/global frontier remains the named B50 translation prefix
-        # cut. B53I-B2 then admits exactly one cleanup checkpoint before
-        # honoring that sticky stop; its focused chain must expose the idle
-        # pump boundary and nothing else.
+        # cut. B53I-B2 admits exactly one cleanup checkpoint before honoring
+        # that sticky stop, and B53I-C now completes its nested idle pump.
         providers = re.findall(r"\[STUB:BOOTSTRAP_RET\] (\S+)", two.stderr)
-        require(providers == ["func_8006AD40_prefix_cut",
-                              "func_80076EE4_idle_pump"],
+        require(providers == ["func_8006AD40_prefix_cut"],
                 f"canonical provider set changed: {providers}")
         require("func_80076EE4" not in providers,
                 "translated busy-DMA pump prefix remained a provider")
