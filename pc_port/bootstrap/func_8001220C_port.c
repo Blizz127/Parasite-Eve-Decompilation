@@ -117,6 +117,16 @@ void func_8001220C(void)
             }
 
             func_8006AD40();
+            /* B53I-B2 deterministic hardware opportunity.  It deliberately
+             * runs before the sticky host stop is honored: the admitted
+             * retail prefix may have issued one DMA whose hardware/IRQ
+             * cleanup cannot be suppressed by a frame-limit or older B50
+             * stop.  The checkpoint captures and services at most one DMA
+             * token and propagates the nested idle-pump boundary directly. */
+            if (PE_Port_ServiceDmaIrqCheckpoint() ==
+                PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY) {
+                return;
+            }
             /* A prefix-only callee may request a host stop at an honest
              * unresolved boundary.  Honor it before running caller code
              * that could consume state the untranslated suffix produces. */

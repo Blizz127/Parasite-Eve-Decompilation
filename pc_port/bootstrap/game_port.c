@@ -9,6 +9,9 @@
  */
 
 #include "game_port.h"
+#include "pe_gpu.h"
+#include "pe_irq.h"
+#include "pe_irq_delivery.h"
 #include <stddef.h>
 
 int g_port_stop_requested = 0;
@@ -19,6 +22,7 @@ static int g_port_main_iteration_limit = 0;
 static int g_port_frame_budget_reached = 0;
 static PEPortQuitPoll g_port_quit_poll = NULL;
 static PEPortStopReason g_port_stop_reason = PE_PORT_STOP_NONE;
+static int g_port_dma_irq_checkpoint_enabled = 1;
 
 /* Monotonic count of stop requests.  PE_Port_RequestStop deliberately keeps
  * only the FIRST reason, so the reason value cannot tell a caller whether a
@@ -36,6 +40,56 @@ void PE_Port_RunControlReset(void)
     g_port_frame_budget_reached = 0;
     g_port_quit_poll = NULL;
     g_port_stop_reason = PE_PORT_STOP_NONE;
+    g_port_dma_irq_checkpoint_enabled = 1;
+}
+
+void PE_Port_SetDmaIrqCheckpointEnabled(int enabled)
+{
+    g_port_dma_irq_checkpoint_enabled = enabled != 0;
+}
+
+int PE_Port_DmaIrqCheckpointEnabled(void)
+{
+    return g_port_dma_irq_checkpoint_enabled;
+}
+
+PEPortDmaIrqCheckpointResult PE_Port_ServiceDmaIrqCheckpoint(void)
+{
+    uint64_t dma_token;
+    PeIrqGeneration irq_generation;
+    int completed = 0;
+    PeIrqEdgeResult edge;
+    PeIrqServiceResult service;
+
+    if (!g_port_dma_irq_checkpoint_enabled) {
+        return PE_PORT_DMA_IRQ_CHECKPOINT_IDLE;
+    }
+
+    /* Capture both authorities before admitting work.  A callback-created
+     * DMA receives a different token and cannot be completed here because
+     * this checkpoint never loops or recaptures. */
+    dma_token = PE_GPU_DMA2Pending() ? PE_GPU_DMA2EventToken() : 0u;
+    irq_generation = PE_IRQ_Generation();
+    if (dma_token != 0u) {
+        completed = PE_GPU_ServiceDMA2Completion(dma_token);
+    }
+
+    edge = PE_IRQ_BridgeDICRRisingEdge(irq_generation);
+    if (edge == PE_IRQ_EDGE_STALE) {
+        return PE_PORT_DMA_IRQ_CHECKPOINT_STALE;
+    }
+
+    service = PE_IRQ_ServicePendingForGeneration(irq_generation);
+    if (service == PE_IRQ_SERVICE_BOUNDARY) {
+        return PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY;
+    }
+    if (service == PE_IRQ_SERVICE_STALE) {
+        return PE_PORT_DMA_IRQ_CHECKPOINT_STALE;
+    }
+    if (completed || edge == PE_IRQ_EDGE_ASSERTED) {
+        return PE_PORT_DMA_IRQ_CHECKPOINT_RETURNED;
+    }
+    return PE_PORT_DMA_IRQ_CHECKPOINT_IDLE;
 }
 
 void PE_Port_SetFrameLimit(int frames)

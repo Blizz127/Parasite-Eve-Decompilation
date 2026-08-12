@@ -64,6 +64,7 @@ DICR_CONTROL_MASK = 0x00FFFFFF
 DICR_FLAG_MASK = 0x7F000000
 DICR_MASTER_ENABLE = 0x00800000
 DICR_MASTER_FLAG = 0x80000000
+DICR_FORCE = 0x00008000
 
 GPU_RING = 0x800BD030
 GPU_RING_SIZE = 0x1800
@@ -213,11 +214,15 @@ class Dicr:
     def _master_flag(self) -> int:
         if not self.synthesize_master_flag:
             return 0
+        if self.control & DICR_FORCE:
+            return DICR_MASTER_FLAG
         if (self.control & DICR_MASTER_ENABLE) == 0:
             return 0
-        enabled = (self.control >> 16) & 0x7F
         pending = (self.flags >> 24) & 0x7F
-        return DICR_MASTER_FLAG if (enabled & pending) else 0
+        # B53I-A/B2: completion flags are gated when created.  Once a flag
+        # is retained, the physical master flag depends on master + any
+        # retained flag, not the current per-channel enable bits.
+        return DICR_MASTER_FLAG if pending else 0
 
     def read(self) -> int:
         self.reads += 1

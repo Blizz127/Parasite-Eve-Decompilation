@@ -8,11 +8,14 @@ func_80073CF4 wrapper and its func_800746A0 callback-slot/DICR setter.
 B53H translates the busy-DMA fast path of the queue pump func_80076EE4,
 which returns 1 and consumes nothing while the transfer is in flight, so
 the whole LoadImage dispatch now completes with no provider of its own.
-Execution then stops at the pre-existing B50 prefix cut inside
+Execution first requests a stop at the pre-existing B50 prefix cut inside
 func_8006AD40 (retail 0x8006AE50).  B53H NAMES that cut
 `func_8006AD40_prefix_cut` so it is again a visible BOOTSTRAP_RET frontier
 instead of a silent return; the continuing strict run therefore still
-exits 1, now reporting that name.
+exits 1, now reporting that name. B53I-B2 deliberately runs its already-
+admitted one-token hardware checkpoint before honoring the sticky host stop.
+The bounded non-strict run therefore records the B50 cut first and the
+nested `func_80076EE4_idle_pump` boundary second, without consuming the queue.
 """
 
 from __future__ import annotations
@@ -123,15 +126,16 @@ def main() -> int:
                 "prefix run did not stop at frame 1 / iteration 1")
         require("[HOST] stop_reason=unresolved-boundary" in two.stderr,
                 "prefix run did not report its honest unresolved boundary")
-        # The ONLY provider reached on the canonical path is the named B50
-        # translation prefix cut.  Anything else is a regression.
+        # The first/global frontier remains the named B50 translation prefix
+        # cut. B53I-B2 then admits exactly one cleanup checkpoint before
+        # honoring that sticky stop; its focused chain must expose the idle
+        # pump boundary and nothing else.
         providers = re.findall(r"\[STUB:BOOTSTRAP_RET\] (\S+)", two.stderr)
-        require(providers == ["func_8006AD40_prefix_cut"],
+        require(providers == ["func_8006AD40_prefix_cut",
+                              "func_80076EE4_idle_pump"],
                 f"canonical provider set changed: {providers}")
-        require("[STUB:BOOTSTRAP_RET] func_80076EE4" not in two.stderr,
+        require("func_80076EE4" not in providers,
                 "translated busy-DMA pump prefix remained a provider")
-        require("func_80076EE4_idle_pump" not in two.stderr,
-                "canonical run reached the untranslated idle-DMA pump path")
         require("[STUB:BOOTSTRAP_RET] func_80073CF4" not in two.stderr,
                 "installed-target wrapper prefix remained a provider")
         require("[STUB:BOOTSTRAP_RET] func_800746A0" not in two.stderr,

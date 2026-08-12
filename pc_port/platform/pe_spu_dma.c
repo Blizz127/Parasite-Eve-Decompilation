@@ -178,6 +178,11 @@ void PE_SpuDma_GetState(PeSpuDmaState *out)
     if (out) *out = g_dma;
 }
 
+pe_addr_t PE_SpuDma_ReadMADR(void)
+{
+    return g_dma.source;
+}
+
 uint8_t PE_SpuRam_LoadU8(uint32_t address)
 {
     if (address >= PE_SPU_RAM_SIZE) {

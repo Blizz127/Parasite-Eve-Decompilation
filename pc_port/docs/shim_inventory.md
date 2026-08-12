@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53I-B1
+# Shim Inventory — Phase 6E-B53I-B2
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -41,11 +41,15 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 
 ### Native hardware authority (not a retail-function translation)
 
-`platform/pe_gpu.[ch]` is the B53B deterministic GPU/DMA2 substrate: one
+`platform/pe_gpu.[ch]` is the B53B/B53I-B2 deterministic GPU/DMA2 authority: one
 1024x512x16 VRAM, GPUSTAT bit 26, GP0 A0 parser, bounded GP1 commands,
 DMA2/DPCR/DICR channel-2 state, tokenized explicit completion, and a manual
-VBlank counter. It contains no retail command ring, callback, worker, or
-queue pump. B53C wires its inert VSync query, B53D reads raw DMA2
+VBlank counter. Stored DICR excludes bit 31; physical reads derive it as
+force bit 15 or master bit 23 plus any retained flag 24..30. Every DICR
+transition may sticky-latch a separate false-to-true event, and normal DMA
+completion creates a channel flag only when its enable and master are set.
+It contains no retail command ring, callback, worker, or queue pump. B53C
+wires its inert VSync query, B53D reads raw DMA2
 CHCR/GPUSTAT, and B53E drives its bounded GP1/GP0/DMA2 issue APIs. B53E adds
 one inert image-load preflight query; the hardware authority still owns no
 guest worker identity, RECT pointer, ring, or callback state.
@@ -54,7 +58,7 @@ guest worker identity, RECT pointer, ring, or callback state.
 I_STAT (`0x1F801070`) and I_MASK (`0x1F801074`). I_STAT writes use W0C
 `status &= written`; hardware assertion ORs status independently of I_MASK;
 raw reset clears both registers and advances a 64-bit stale-event generation.
-There is no pending-service operation and no callback invocation. CPU source
+Basic register operations contain no pending service and invoke no callback. CPU source
 identities remain solely in the guest table `D_800945E8`; ResetCallback
 clears the retail `0x41A`-word IRQ block, installs source 0 = `0x8007440C`
 and source 3 = `0x80074520`, and finishes with I_MASK and registered mask
@@ -62,13 +66,21 @@ and source 3 = `0x80074520`, and finishes with I_MASK and registered mask
 while I_MASK is zero and before restoration. Other source-specific setter
 paths stop at `func_800740D0_source_cut`.
 
+`platform/pe_irq_delivery.[ch]` is the separate B53I-B2 retail control-flow
+layer. It consumes a latched DICR rise into source-3 I_STAT without running a
+callback, implements the bounded low-to-high CPU scanner from
+`func_80073F00`, and implements complete `func_80074520`. Both CPU and DMA
+callback tables remain live guest identities. Zero is the only absent
+callback; any nonzero unbound identity acknowledges in retail order and then
+stops at a typed indirect-call boundary.
+
 | B53I-B1 function | Implemented scope |
 | --- | --- |
 | `func_80073C94` | canonical ResetCallback target: controller clear, exact IRQ-block clear, source 0 then source 3 CPU registration |
 | `func_80073CC4` | canonical SDK jump-table `+8` wrapper target |
 | `func_800740D0` | complete execution-proven source-0/source-3 setter paths; returns previous 32-bit guest identity |
 
-### B53C–B53I-B1 retail dispatcher, IRQ registration, LoadImage issue, and pump
+### B53C–B53I-B2 retail dispatcher, IRQ delivery, LoadImage issue, and pump
 
 `game/boot/func_80076C34_port.c` translates complete `func_800773D0`,
 complete `func_80073E10` (via the PE_IRQ authority), and the dispatcher
@@ -84,13 +96,24 @@ retail ring entry. B53H translates the busy-DMA fast path of the queue pump
 `func_80076EE4`: with the first transfer still in flight it returns 1 and
 consumes nothing, so the dispatcher completes and returns its retail
 pending count. A full ring and worker timeout recovery still expose
-`func_80077404`. The pump's idle-DMA consumer path, callback delivery, DMA
-IRQ dispatch (`func_80074520`), DrawSync (`func_80077294`), and DMA
-completion remain untranslated. The retail ring and its producer/consumer
+`func_80077404`. B53I-B2 adds explicit first-DMA completion, the DICR
+source-3 edge bridge, the execution-proven CPU IRQ scanner, complete
+96-word `func_80074520`, and typed dispatch to `0x80076EE4`. With DMA idle,
+that callback exposes and immediately propagates the still-untranslated
+`func_80076EE4_idle_pump` boundary. The queue entry is not consumed and no
+second DMA is issued. DrawSync (`func_80077294`) and the pump's idle-DMA
+consumer body remain untranslated. The retail ring and its producer/consumer
 words stay authoritative in guest RAM; the DMA callback table `D_800956C0`
 stays guest-backed and separate from the VBlank table `D_8009568C`; DICR
 stays solely owned by B53B `pe_gpu`. All guest identities are `pe_addr_t`,
 never native function pointers.
+
+| B53I-B2 function/surface | Implemented scope |
+| --- | --- |
+| `func_80073F00` equivalent | sources 0..10, exact eligibility/ack/live lookup/resample and boundary-preserving active state |
+| `func_80074520` | complete 96-word DMA flag scan, W1C, live table lookup, resampling, diagnostic tail |
+| `PE_IRQ_BridgeDICRRisingEdge` | generation-safe DICR edge to I_STAT source 3 only; no callback |
+| `PE_Port_ServiceDmaIrqCheckpoint` | one captured token, then separate bridge/service; no recapture loop |
 
 | Function | PS1 role | Host implementation |
 |----------|----------|---------------------|
@@ -140,8 +163,12 @@ never native function pointers.
     paths, DICR bit 31 read then masked off, I_MASK untouched.
   - `func_80076EE4` — BUSY-DMA PREFIX TRANSLATED (B53H): 152-word / `0x260`
     queue pump; `*(0x1F8010A8) & 0x01000000` non-zero returns 1 with zero
-    guest writes. `func_80076EE4_idle_pump` is the controlled boundary for
-    its untranslated idle-DMA consumer path.
+    guest writes. B53I-B2 now binds its completed-DMA callback through the
+    typed pump API; `func_80076EE4_idle_pump` remains the controlled boundary
+    for the untranslated idle-DMA consumer path.
+  - `func_80074520` — TRANSLATED complete 96-word DMA IRQ dispatcher
+    (B53I-B2); channels 0..6, DICR W1C before live guest callback lookup,
+    normal-return resampling, and nested non-return propagation.
   - `func_80077404` — controlled full-ring alternate boundary.
   - `func_80076C34_enqueue_span` — controlled boundary for a copy source or
     payload width this port cannot represent (retail checks neither).

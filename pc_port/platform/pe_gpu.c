@@ -27,6 +27,30 @@ static PeGpuAuthority g_gpu = {
     }
 };
 
+static int DICRMasterFlag(uint32_t stored)
+{
+    return (stored & PE_GPU_DICR_FORCE) != 0u ||
+           ((stored & PE_GPU_DICR_MASTER) != 0u &&
+            (stored & PE_GPU_DICR_FLAGS) != 0u);
+}
+
+static void CommitStoredDICR(uint32_t stored)
+{
+    int old_level = DICRMasterFlag(g_gpu.state.dicr);
+    int new_level;
+
+    /* Physical/master flag bit 31 is derived and is never stored. */
+    stored &= ~PE_GPU_DICR_MASTER_FLAG;
+    new_level = DICRMasterFlag(stored);
+    g_gpu.state.dicr = stored;
+    if (!old_level && new_level) {
+        /* Sticky until the separate CPU-source bridge consumes it.  A
+         * later falling transition must not erase an already-created IRQ
+         * edge. */
+        g_gpu.state.dicr_rising_edge_pending = 1;
+    }
+}
+
 static void ResetParser(void)
 {
     g_gpu.state.gp0_state = PE_GPU_GP0_IDLE;
@@ -279,9 +303,7 @@ int PE_GPU_DMA2CompletionPending(void)
 
 int PE_GPU_DMA2InterruptAsserted(void)
 {
-    uint32_t need = PE_GPU_DICR_MASTER | PE_GPU_DMA2_DICR_ENABLE |
-                    PE_GPU_DMA2_DICR_FLAG;
-    return (g_gpu.state.dicr & need) == need;
+    return DICRMasterFlag(g_gpu.state.dicr);
 }
 
 uint64_t PE_GPU_DMA2EventToken(void)
@@ -310,7 +332,11 @@ int PE_GPU_ServiceDMA2Completion(uint64_t event_token)
     g_gpu.state.dma_data_order = ++g_gpu.order_counter;
     g_gpu.state.dma2_active = 0;
     g_gpu.state.dma2_chcr &= ~PE_GPU_DMA2_CHCR_BUSY;
-    g_gpu.state.dicr |= PE_GPU_DMA2_DICR_FLAG;
+    if ((g_gpu.state.dicr &
+         (PE_GPU_DICR_MASTER | PE_GPU_DMA2_DICR_ENABLE)) ==
+        (PE_GPU_DICR_MASTER | PE_GPU_DMA2_DICR_ENABLE)) {
+        CommitStoredDICR(g_gpu.state.dicr | PE_GPU_DMA2_DICR_FLAG);
+    }
     g_gpu.state.dma_completion_order = ++g_gpu.order_counter;
     g_gpu.state.dma_event_count++;
     return 1;
@@ -333,30 +359,69 @@ void PE_GPU_EnableDMA2(void)
 
 uint32_t PE_GPU_ReadDICR(void)
 {
+    return g_gpu.state.dicr |
+           (DICRMasterFlag(g_gpu.state.dicr) ?
+            PE_GPU_DICR_MASTER_FLAG : 0u);
+}
+
+uint32_t PE_GPU_ReadStoredDICR(void)
+{
     return g_gpu.state.dicr;
 }
 
 void PE_GPU_WriteDICR(uint32_t value)
 {
-    uint32_t flags = g_gpu.state.dicr & 0x7F000000u;
-    flags &= ~(value & 0x7F000000u);
-    g_gpu.state.dicr = (value & 0x00FFFFFFu) | flags;
+    uint32_t flags = g_gpu.state.dicr & PE_GPU_DICR_FLAGS;
+    flags &= ~(value & PE_GPU_DICR_FLAGS);
+    CommitStoredDICR((value & 0x00FFFFFFu) | flags);
 }
 
 void PE_GPU_SetDMA2InterruptEnabled(int enabled)
 {
+    uint32_t stored = g_gpu.state.dicr;
+
     if (enabled) {
-        g_gpu.state.dicr |= PE_GPU_DICR_MASTER | PE_GPU_DMA2_DICR_ENABLE;
+        stored |= PE_GPU_DICR_MASTER | PE_GPU_DMA2_DICR_ENABLE;
     } else {
-        g_gpu.state.dicr &= ~PE_GPU_DMA2_DICR_ENABLE;
-        g_gpu.state.dicr |= PE_GPU_DICR_MASTER;
+        stored &= ~PE_GPU_DMA2_DICR_ENABLE;
+        stored |= PE_GPU_DICR_MASTER;
     }
+    CommitStoredDICR(stored);
 }
 
 void PE_GPU_AcknowledgeDMA2Interrupt(void)
 {
     PE_GPU_WriteDICR((g_gpu.state.dicr & 0x00FFFFFFu) |
                      PE_GPU_DMA2_DICR_FLAG);
+}
+
+int PE_GPU_DICRRisingEdgePending(void)
+{
+    return g_gpu.state.dicr_rising_edge_pending;
+}
+
+int PE_GPU_TakeDICRRisingEdge(void)
+{
+    int pending = g_gpu.state.dicr_rising_edge_pending;
+    g_gpu.state.dicr_rising_edge_pending = 0;
+    return pending;
+}
+
+int PE_GPU_LatchDMACompletionFlag(uint32_t dma_channel)
+{
+    uint32_t enable_bit;
+    uint32_t flag_bit;
+
+    if (dma_channel >= 7u) {
+        return 0;
+    }
+    enable_bit = 1u << (16u + dma_channel);
+    flag_bit = 1u << (24u + dma_channel);
+    if ((g_gpu.state.dicr & (PE_GPU_DICR_MASTER | enable_bit)) ==
+        (PE_GPU_DICR_MASTER | enable_bit)) {
+        CommitStoredDICR(g_gpu.state.dicr | flag_bit);
+    }
+    return 1;
 }
 
 int PE_GPU_ReadVRAM(uint32_t x, uint32_t y, uint16_t *pixel)

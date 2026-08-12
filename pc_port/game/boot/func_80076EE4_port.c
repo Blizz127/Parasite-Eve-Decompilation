@@ -72,8 +72,14 @@
 #define GA_GPU_DMA2_CHCR_POINTER 0x80095860u
 #define PE_DMA2_CHCR_ADDRESS     0x1F8010A8u
 
+/* Value-only entry telemetry used to prove that hardware completion and the
+ * DICR edge bridge never call the pump, including its otherwise silent busy
+ * fast path.  It is not queue, callback, or run-control authority. */
+static uint64_t g_pump_entry_count;
+
 int PE_func_80076EE4_Pump(int *retail_returned)
 {
+    g_pump_entry_count++;
     if (retail_returned != NULL) {
         *retail_returned = 0;
     }
@@ -132,4 +138,14 @@ pe_addr_t PE_Pump_Dma2ChcrPointerAddress(void)
 uint32_t PE_Pump_Dma2ChcrMmioAddress(void)
 {
     return PE_DMA2_CHCR_ADDRESS;
+}
+
+void PE_Pump_TraceReset(void)
+{
+    g_pump_entry_count = 0u;
+}
+
+uint64_t PE_Pump_EntryCount(void)
+{
+    return g_pump_entry_count;
 }

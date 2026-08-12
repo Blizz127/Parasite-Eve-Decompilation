@@ -1,24 +1,34 @@
-# Parasite Eve Native PC Port — Phase 6E-B53I-B1
+# Parasite Eve Native PC Port — Phase 6E-B53I-B2
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53I-B1 adds the single native 16-bit I_STAT
-authority beside I_MASK in `platform/pe_irq.[ch]`. I_STAT writes are exact
-write-zero-to-clear (`status &= written`); hardware assertions OR pending
-bits independently of I_MASK, and a 64-bit reset generation rejects stale
-future assertions. Raw platform reset leaves I_STAT/I_MASK zero. The
-guard-passing retail ResetCallback path then reproduces the executable's
-`0x41A`-word clear at `D_800945E4`, installs source 0 as guest identity
-`0x8007440C`, performs its B(5Bh)(0) then C(0Ah)(3,0) BIOS control calls
-while I_MASK is temporarily zero, and installs source 3 as guest identity
-`0x80074520`. Final I_MASK and guest registered mask `D_80094614` are both
-`0x0009`; CPU callback slots remain solely guest-backed. There is no IRQ
-service point, DMA completion, DICR edge bridge, `func_80074520` execution,
-DMA callback, queue pump, or ring consumption in this rung. Eight focused
-groups bring the native suite to 533 tests. The independent B1 oracle
-verifies 210 literal words across seven ResetCallback/registration windows
-and models W0C, masked pending, coherent reset, and exact registration order
-without importing production C. Full proof is in
+**Current milestone:** B53I-B2 connects one explicitly captured DMA2 token
+to physical DICR completion state, a separate source-3 edge bridge, the
+bounded retail CPU source scanner, complete 96-word `func_80074520`, and the
+typed DMA channel-2 identity `0x80076EE4`. Stored DICR excludes bit 31;
+physical reads derive it as `force15 || (master23 && any flags24..30)`, and
+every raw transition sticky-latches only a false-to-true edge. Normal DMA
+completion always publishes VRAM and clears CHCR, but creates flag 26 only
+when channel-2 enable and master are set. CPU I_STAT acknowledgement precedes
+`func_80074520`; DICR W1C precedes the DMA callback. Completion, edge bridge,
+and CPU service remain independently callable, generation-checked phases.
+When completed DMA makes the B53H pump idle, typed non-return propagation
+stops honestly at `func_80076EE4_idle_pump`: dispatch-active remains 1,
+producer/consumer remain 1/0, the queue entry is byte-identical, and no second
+DMA is issued. Actual typed-pump entry telemetry also proves completion and
+edge bridging cannot hide an early call in the silent busy path. Fifteen
+focused groups bring the native suite to 548 tests.
+The independent B2 oracle verifies all 96 DMA words, 53 CPU dispatcher window
+words plus its full-body hash, and 17 explicit state scenarios without
+production imports. Full proof is in `docs/b53i_b2_dma_irq_delivery.md`.
+
+**Prior milestone:** B53I-B1 adds the single native 16-bit I_STAT authority
+beside I_MASK in `platform/pe_irq.[ch]`. I_STAT writes are exact W0C
+(`status &= written`), assertions retain masked sources, and reset advances
+a 64-bit generation. Retail ResetCallback installs source 0 guest identity
+`0x8007440C` with its ordered B(5Bh)(0)/C(0Ah)(3,0) control calls, then source
+3 identity `0x80074520`; final I_MASK and `D_80094614` are `0x0009`. CPU
+callback slots remain solely guest-backed. Full proof is in
 `docs/b53i_b1_irq_state_registration.md`.
 
 **Prior milestone:** B53H translates the execution-proven busy-DMA fast
@@ -65,8 +75,11 @@ B53B `pe_gpu` authority, and returns the full previous identity. Retail
 validates no channel, so neither does the port; the enable bit is
 `1 << ((channel + 16) & 31)` and master bit 23 is set on both the install
 and removal paths. DICR bit 31 is read and immediately masked off, never
-tested and never written, so B53B needs no extension. I_MASK is not touched.
-Registration is not delivery: the pending first LoadImage DMA stays active
+tested and never written; I_MASK is not touched. At the B53G setter rung,
+bit 31 required no additional modeling because it was masked before use;
+B53I-B2 later extends the same DICR authority for
+actual physical reads and edge delivery. Registration is not delivery: at
+B53G the pending first LoadImage DMA stays active
 and incomplete, and no callback, pump, DrawSync, VRAM, VBlank, or GPU-ready
 change occurs. This completes the B53F wrapper `func_80073CF4`, so the
 canonical enqueue proceeds through retail ring construction and publishes
@@ -704,7 +717,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (533 tests, all pass)
+- `pe-native-tests` — test suite (548 tests, all pass)
 
 ## Running
 
@@ -735,10 +748,9 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Expected after B53H for Disc 1: exit 1 at func_8006AD40_prefix_cut from
-# func_8006AD40.  Both LoadImage calls now complete; the second stays queued
-# (producer=1, consumer=0) with the first transfer still in flight, and
-# execution stops at the untranslated suffix of func_8006AD40.
+# Current global frontier: exit 1 at func_8006AD40_prefix_cut from
+# func_8006AD40.  The separate focused B53I-B2 fixture completes the first
+# DMA and reaches func_80076EE4_idle_pump with the second request queued.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \
@@ -949,10 +961,11 @@ status 1; native tests are 285/285.
 
 ## Next steps
 
-1. **Next rung:** audit the genuine `func_80087090` real-disc frontier;
-   `func_80052F24` remains the separate conditional B43 boundary
-2. Identify the first boot asset (likely MDEC logo data)
-3. Wire MDEC decoding and display
+1. **Next rung:** translate only `func_80076EE4_idle_pump`, preserving IRQ
+   masking, callback removal, worker-before-consumer order, and one captured
+   DMA opportunity
+2. Continue the named `func_8006AD40_prefix_cut` only in a separate rung
+3. Identify the first boot asset (likely MDEC logo data)
 4. Audio, input, save/load (later phases)
 
 ## Constraints

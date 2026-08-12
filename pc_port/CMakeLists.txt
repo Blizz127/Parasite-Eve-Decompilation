@@ -18,6 +18,7 @@ set(PLATFORM_SRCS
     platform/pe_guest_ram.c
     platform/pe_gpu.c
     platform/pe_irq.c
+    platform/pe_irq_delivery.c
     platform/pe_gte.c
     platform/pe_libetc.c
     platform/pe_libgpu.c
@@ -172,6 +173,7 @@ if(BUILD_TESTS)
         platform/pe_guest_ram.c
         platform/pe_gpu.c
         platform/pe_irq.c
+        platform/pe_irq_delivery.c
         platform/pe_callback.c
         platform/pe_gte.c
         platform/pe_libetc.c

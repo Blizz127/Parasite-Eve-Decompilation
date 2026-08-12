@@ -29,6 +29,9 @@ extern "C" {
 #define PE_GPU_DMA2_DICR_ENABLE 0x00040000u
 #define PE_GPU_DICR_MASTER      0x00800000u
 #define PE_GPU_DMA2_DICR_FLAG   0x04000000u
+#define PE_GPU_DICR_FORCE       0x00008000u
+#define PE_GPU_DICR_FLAGS       0x7F000000u
+#define PE_GPU_DICR_MASTER_FLAG 0x80000000u
 
 typedef enum {
     PE_GPU_GP0_IDLE = 0,
@@ -65,6 +68,7 @@ typedef struct {
     uint64_t dma_event_count;
     uint64_t dma_data_order;
     uint64_t dma_completion_order;
+    int dicr_rising_edge_pending;
 } PeGpuState;
 
 /* Host lifecycle.  Init clears VRAM and hardware.  Reset cancels hardware
@@ -104,9 +108,22 @@ void PE_GPU_WriteDPCR(uint32_t value);
 void PE_GPU_EnableDMA2(void);
 
 uint32_t PE_GPU_ReadDICR(void);
+/* Stored state excludes the read-only, physically derived bit 31. */
+uint32_t PE_GPU_ReadStoredDICR(void);
 void PE_GPU_WriteDICR(uint32_t value);
 void PE_GPU_SetDMA2InterruptEnabled(int enabled);
 void PE_GPU_AcknowledgeDMA2Interrupt(void);
+
+/* Every DICR mutation recomputes physical bit 31.  A false->true
+ * transition latches a one-shot event until this separate bridge consumes
+ * it.  Falling transitions never erase an unconsumed rise. */
+int PE_GPU_DICRRisingEdgePending(void);
+int PE_GPU_TakeDICRRisingEdge(void);
+
+/* Explicit hardware completion-flag input for a represented DMA channel.
+ * It has no data-transfer or callback behavior.  A normal completion flag
+ * is created only when that channel and the DICR master are enabled. */
+int PE_GPU_LatchDMACompletionFlag(uint32_t dma_channel);
 
 /* Safe read-only access to the PSX VRAM authority.  The accessor itself
  * does not wrap; wrapping belongs to the GP0 image-transfer operation. */

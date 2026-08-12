@@ -16,6 +16,7 @@
 #include "pe_spu_dma.h"
 #include "pe_gpu.h"
 #include "pe_irq.h"
+#include "pe_irq_delivery.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -13497,12 +13498,13 @@ static void test_B53I_B1_registration_no_dma_progress(void)
            "ResetCallback made DMA pixels visible");
     PE_GPU_GetState(&after);
     before.dpcr = after.dpcr; /* authentic ResetCallback DPCR write */
+    before.dicr = after.dicr; /* func_800744D4 literal DICR-zero write */
     ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
-           "IRQ registration progressed GPU/DMA/DICR/VBlank state");
+           "IRQ registration progressed GPU/DMA/VBlank state");
     ASSERT(PE_GPU_DMA2Pending() == 1 &&
            PE_GPU_DMA2CompletionPending() == 0 &&
            PE_GPU_ReadDMA2CHCR() == 0x01000201u &&
-           PE_GPU_ReadDICR() == 0x00840000u,
+           PE_GPU_ReadDICR() == 0u,
            "ResetCallback completed or acknowledged live DMA");
     ASSERT(PE_IRQ_ReadStatus() == 0u &&
            PE_LoadU32(B53C_PRODUCER) == 1u &&
@@ -13718,7 +13720,7 @@ static void test_B53E_remainder_dma_visibility_and_live_source(void)
     ASSERT(PE_GPU_ServiceDMA2Completion(token) == 1 &&
            B53B_Pixel(2, 10) == 0x9999u &&
            B53B_Pixel(3, 10) == 0xBBBBu &&
-           PE_GPU_DMA2CompletionPending(),
+           !PE_GPU_DMA2CompletionPending(),
            "explicit completion did not consume live DMA source");
     PASS();
 }
@@ -14028,8 +14030,12 @@ static void test_B53F_touches_only_slot_and_dicr(void)
 
     /* Exactly one hardware field changes: DICR. */
     PE_GPU_GetState(&gpu_after);
-    ASSERT(gpu_after.dicr == ((0x00A5A5A5u & 0x00FFFFFFu) |
-                              0x00040000u | 0x00800000u),
+    ASSERT(PE_GPU_ReadStoredDICR() ==
+               ((0x00A5A5A5u & 0x00FFFFFFu) |
+                0x00040000u | 0x00800000u) &&
+           gpu_after.dicr ==
+               (((0x00A5A5A5u & 0x00FFFFFFu) |
+                 0x00040000u | 0x00800000u) | 0x80000000u),
            "wrapper DICR result is not the retail install RMW");
     gpu_before.dicr = gpu_after.dicr;
     ASSERT(memcmp(&gpu_before, &gpu_after, sizeof(gpu_before)) == 0 &&
@@ -14198,7 +14204,10 @@ static void test_B53G_channel_range_contract(void)
     ASSERT(func_800746A0(0xFFFFFFFFu, 0x80005555u) == 0x1F8010F4u,
            "negative channel did not read the DICR pointer word");
     ASSERT(PE_LoadU32(PE_DMA_DicrPointerAddress()) == 0x80005555u &&
-           PE_GPU_ReadDICR() == (B53G_DICR_MASTER | 0x00008000u),
+           PE_GPU_ReadStoredDICR() ==
+               (B53G_DICR_MASTER | 0x00008000u) &&
+           PE_GPU_ReadDICR() ==
+               (0x80000000u | B53G_DICR_MASTER | 0x00008000u),
            "negative channel was sanitised beyond retail");
     PASS();
 }
@@ -14282,25 +14291,26 @@ static void test_B53G_dicr_rmw_exact(void)
      * word carries zeros in bits 24..30, so W1C leaves the flag set. */
     ResetTestState();
     ASSERT(B53E_SeedBusyDma(), "cannot seed DMA for the flag test");
+    PE_GPU_SetDMA2InterruptEnabled(1);
     ASSERT(PE_GPU_ServiceDMA2Completion(PE_GPU_DMA2EventToken()) == 1 &&
            PE_GPU_DMA2CompletionPending(),
            "completion flag seeding failed");
     ASSERT(func_800746A0(2u, 0x80076EE4u) == 0u &&
            PE_GPU_DMA2CompletionPending() &&
            PE_GPU_ReadDICR() ==
-               (0x04000000u | B53G_EnableBit(2u) | B53G_DICR_MASTER),
+               (0x84000000u | B53G_EnableBit(2u) | B53G_DICR_MASTER),
            "install acknowledged a pending DMA completion flag");
     PE_StoreU32(B53F_DMA_CB_SLOT2, 0x80076EE4u);
     ASSERT(func_800746A0(2u, 0u) == 0x80076EE4u &&
            PE_GPU_DMA2CompletionPending() &&
-           PE_GPU_ReadDICR() == (0x04000000u | B53G_DICR_MASTER),
+           PE_GPU_ReadDICR() == (0x84000000u | B53G_DICR_MASTER),
            "removal acknowledged a pending DMA completion flag");
 
-    /* Bit-31 verdict: the setter reads the raw word, masks bit 31 off, and
-     * never tests it.  The B53B authority represents no bit 31, and the
-     * results above prove nothing here depends on one. */
-    ASSERT((PE_GPU_ReadDICR() & 0x80000000u) == 0u,
-           "a DICR authority bit 31 appeared without retail evidence");
+    /* Bit 31 is physical/derived on reads, never stored.  The setter masks
+     * it away and does not acknowledge the retained completion flag. */
+    ASSERT((PE_GPU_ReadDICR() & 0x80000000u) != 0u &&
+           (PE_GPU_ReadStoredDICR() & 0x80000000u) == 0u,
+           "physical/stored DICR bit-31 separation failed");
     PASS();
 }
 
@@ -14754,6 +14764,660 @@ static void test_B53H_stop_epoch_distinguishes_latched_stops(void)
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+ * Phase 6E-B53I-B2 — DMA2 completion edge and retail IRQ delivery
+ *
+ * The focused fixtures preserve completion, DICR edge bridging, and CPU
+ * service as three explicit phases.  The translated idle consumer remains
+ * a hard boundary; no test below consumes the queued request or issues a
+ * second DMA.
+ * ════════════════════════════════════════════════════════════════════ */
+
+static int B53I_B2_SeedCanonicalChain(uint8_t *entry_snapshot)
+{
+    func_80073C94();
+    PE_StoreU8(B53D_INIT_BYTE, 1u);
+    for (uint32_t i = 0u; i < 16u; i++) {
+        PE_StoreU32(0x80180000u + i * 4u,
+                    (0x2000u + i * 2u) |
+                    ((0x2001u + i * 2u) << 16));
+    }
+    PE_StoreU32(B53E_RECT, 0x11112222u);
+    PE_StoreU32(B53E_RECT + 4u, 0x33334444u);
+    if (!B53E_SeedBusyDma()) return 0;
+    if (func_80076C34(0x80076664u, B53E_RECT, 8,
+                      0x8012B8B8u) != 1) return 0;
+    if (PE_LoadU32(B53C_PRODUCER) != 1u ||
+        PE_LoadU32(B53C_CONSUMER) != 0u ||
+        PE_LoadU32(B53F_DMA_CB_SLOT2) != 0x80076EE4u ||
+        PE_GPU_ReadStoredDICR() != 0x00840000u) return 0;
+    if (entry_snapshot != NULL) {
+        memcpy(entry_snapshot,
+               PE_TranslateConst(B53C_RING_BASE, B53H_RING_ENTRY_BYTES),
+               B53H_RING_ENTRY_BYTES);
+    }
+    return 1;
+}
+
+static void test_B53I_B2_dicr_physical_edges(void)
+{
+    TEST("B53I_B2_dicr_physical_edges");
+    ResetTestState();
+
+    PE_GPU_WriteDICR(0x00840000u);
+    ASSERT(PE_GPU_ReadStoredDICR() == 0x00840000u &&
+           PE_GPU_ReadDICR() == 0x00840000u &&
+           !PE_GPU_DICRRisingEdgePending(),
+           "enable-only DICR state raised physical bit 31");
+    ASSERT(PE_GPU_LatchDMACompletionFlag(2u) &&
+           PE_GPU_ReadStoredDICR() == 0x04840000u &&
+           PE_GPU_ReadDICR() == 0x84840000u &&
+           PE_GPU_DICRRisingEdgePending(),
+           "enabled completion did not create stored flag/derived edge");
+    ASSERT(PE_GPU_TakeDICRRisingEdge() == 1 &&
+           PE_GPU_TakeDICRRisingEdge() == 0,
+           "DICR edge was not a one-shot latch");
+
+    /* Retain the flag while master is low, then re-enable master. */
+    PE_GPU_WriteDICR(0x00040000u);
+    ASSERT(PE_GPU_ReadStoredDICR() == 0x04040000u &&
+           PE_GPU_ReadDICR() == 0x04040000u,
+           "master-off control write lost a retained flag");
+    PE_GPU_WriteDICR(0x00840000u);
+    ASSERT(PE_GPU_ReadDICR() == 0x84840000u &&
+           PE_GPU_TakeDICRRisingEdge() == 1,
+           "master 0->1 with retained flag did not raise an edge");
+    PE_GPU_WriteDICR(0x00800000u);
+    ASSERT(PE_GPU_ReadDICR() == 0x84800000u &&
+           !PE_GPU_DICRRisingEdgePending(),
+           "channel-disable incorrectly lowered/retriggered retained flag");
+    PE_GPU_WriteDICR(0x04800000u);
+    ASSERT(PE_GPU_ReadStoredDICR() == 0x00800000u &&
+           PE_GPU_ReadDICR() == 0x00800000u &&
+           !PE_GPU_DICRRisingEdgePending(),
+           "W1C acknowledgement created a rising edge");
+
+    PE_GPU_WriteDICR(0u);
+    PE_GPU_WriteDICR(PE_GPU_DICR_FORCE);
+    ASSERT(PE_GPU_ReadStoredDICR() == PE_GPU_DICR_FORCE &&
+           PE_GPU_ReadDICR() ==
+               (PE_GPU_DICR_MASTER_FLAG | PE_GPU_DICR_FORCE) &&
+           PE_GPU_TakeDICRRisingEdge() == 1,
+           "force bit did not derive bit31/rising edge");
+    PE_GPU_WriteDICR(PE_GPU_DICR_FORCE);
+    ASSERT(!PE_GPU_DICRRisingEdgePending(),
+           "unchanged-high force bit retriggered");
+    PE_GPU_WriteDICR(0u);
+    PE_GPU_WriteDICR(PE_GPU_DICR_FORCE);
+    ASSERT(PE_GPU_TakeDICRRisingEdge() == 1,
+           "force low->high did not retrigger after a fall");
+    PE_GPU_WriteDICR(PE_GPU_DICR_MASTER_FLAG);
+    ASSERT((PE_GPU_ReadStoredDICR() & PE_GPU_DICR_MASTER_FLAG) == 0u &&
+           PE_GPU_ReadDICR() == 0u,
+           "read-only physical bit31 was stored by software");
+    PASS();
+}
+
+static void test_B53I_B2_sticky_edge_bridge_and_reset(void)
+{
+    PeIrqGeneration generation;
+    TEST("B53I_B2_sticky_edge_bridge_and_reset");
+    ResetTestState();
+    func_80073C94();
+    generation = PE_IRQ_Generation();
+
+    PE_GPU_WriteDICR(0x00840000u);
+    ASSERT(PE_GPU_LatchDMACompletionFlag(2u), "cannot latch completion");
+    PE_GPU_WriteDICR(0x04840000u); /* fall before the bridge */
+    ASSERT(PE_GPU_ReadDICR() == 0x00840000u &&
+           PE_GPU_DICRRisingEdgePending() &&
+           PE_IRQ_ReadStatus() == 0u,
+           "fall erased edge or DICR wrote I_STAT directly");
+    ASSERT(PE_IRQ_BridgeDICRRisingEdge(generation) ==
+               PE_IRQ_EDGE_ASSERTED &&
+           PE_IRQ_ReadStatus() == 0x0008u &&
+           !PE_GPU_DICRRisingEdgePending(),
+           "sticky edge did not bridge exactly once");
+    PE_IRQ_WriteStatus(0xFFF7u);
+    ASSERT(PE_IRQ_BridgeDICRRisingEdge(generation) == PE_IRQ_EDGE_NONE &&
+           PE_IRQ_ReadStatus() == 0u,
+           "low DICR level retriggered source 3");
+
+    /* Exact high-level sequence: acknowledge I_STAT while DICR remains
+     * asserted. The bridge consumes edges, not levels, so it must not
+     * reassert until DICR first falls and rises again. */
+    PE_GPU_WriteDICR(0x00840000u);
+    ASSERT(PE_GPU_LatchDMACompletionFlag(2u) &&
+           PE_IRQ_BridgeDICRRisingEdge(generation) ==
+               PE_IRQ_EDGE_ASSERTED &&
+           PE_GPU_ReadDICR() == 0x84840000u,
+           "cannot seed bridged high-DICR state");
+    PE_IRQ_WriteStatus(0xFFF7u);
+    ASSERT(PE_GPU_ReadDICR() == 0x84840000u &&
+           PE_IRQ_BridgeDICRRisingEdge(generation) == PE_IRQ_EDGE_NONE &&
+           PE_IRQ_ReadStatus() == 0u,
+           "high DICR level retriggered after I_STAT acknowledgement");
+    PE_GPU_WriteDICR(0x04840000u);
+
+    PE_GPU_WriteDICR(PE_GPU_DICR_FORCE);
+    ASSERT(PE_GPU_DICRRisingEdgePending(), "force edge not pending");
+    PE_Sdk_ResetState();
+    PE_GPU_WriteDICR(PE_GPU_DICR_FORCE); /* fresh post-reset edge */
+    ASSERT(PE_IRQ_BridgeDICRRisingEdge(generation) == PE_IRQ_EDGE_STALE &&
+           PE_IRQ_ReadStatus() == 0u &&
+           PE_GPU_DICRRisingEdgePending(),
+           "stale generation consumed a fresh post-reset DICR edge");
+    ASSERT(PE_IRQ_BridgeDICRRisingEdge(PE_IRQ_Generation()) ==
+               PE_IRQ_EDGE_ASSERTED &&
+           PE_IRQ_ReadStatus() == 0x0008u &&
+           !PE_GPU_DICRRisingEdgePending(),
+           "current generation could not consume fresh post-reset edge");
+    PASS();
+}
+
+static void test_B53I_B2_completion_data_and_gating(void)
+{
+    uint64_t token;
+    TEST("B53I_B2_completion_data_and_gating");
+
+    ResetTestState();
+    PE_StoreU32(0x80180000u, 0x56781234u);
+    ASSERT(B53E_SeedBusyDma(), "enabled completion seed failed");
+    PE_GPU_SetDMA2InterruptEnabled(1);
+    token = PE_GPU_DMA2EventToken();
+    ASSERT(PE_GPU_ServiceDMA2Completion(token) &&
+           B53B_Pixel(0u, 0u) == 0x1234u &&
+           PE_GPU_ReadDMA2CHCR() == 0x00000201u &&
+           PE_GPU_ReadStoredDICR() == 0x04840000u &&
+           PE_GPU_ReadDICR() == 0x84840000u &&
+           PE_IRQ_ReadStatus() == 0u,
+           "valid completion did not expose data/CHCR/DICR-only phase");
+
+    ResetTestState();
+    PE_StoreU32(0x80180000u, 0xDEF09ABCu);
+    ASSERT(B53E_SeedBusyDma(), "disabled completion seed failed");
+    PE_GPU_WriteDICR(0x00800000u); /* master on, channel 2 disabled */
+    token = PE_GPU_DMA2EventToken();
+    ASSERT(PE_GPU_ServiceDMA2Completion(token) &&
+           B53B_Pixel(0u, 0u) == 0x9ABCu &&
+           PE_GPU_ReadDMA2CHCR() == 0x00000201u &&
+           PE_GPU_ReadStoredDICR() == 0x00800000u &&
+           !PE_GPU_DICRRisingEdgePending(),
+           "channel-disabled completion created an interrupt flag");
+
+    ResetTestState();
+    PE_StoreU32(0x80180000u, 0x24681357u);
+    ASSERT(B53E_SeedBusyDma(), "master-off completion seed failed");
+    PE_GPU_WriteDICR(0x00040000u); /* channel 2 enabled, master disabled */
+    token = PE_GPU_DMA2EventToken();
+    ASSERT(PE_GPU_ServiceDMA2Completion(token) &&
+           B53B_Pixel(0u, 0u) == 0x1357u &&
+           PE_GPU_ReadStoredDICR() == 0x00040000u &&
+           !PE_GPU_DICRRisingEdgePending(),
+           "master-disabled completion created an interrupt flag");
+    PASS();
+}
+
+static void test_B53I_B2_focused_idle_boundary_chain(void)
+{
+    uint8_t before[B53H_RING_ENTRY_BYTES];
+    PeIrqDeliveryTrace trace;
+    PeIrqGeneration generation;
+    uint64_t token;
+    TEST("B53I_B2_focused_idle_boundary_chain");
+    ResetTestState();
+    ASSERT(B53I_B2_SeedCanonicalChain(before),
+           "cannot seed canonical B2 chain");
+    token = PE_GPU_DMA2EventToken();
+    generation = PE_IRQ_Generation();
+    /* Seeding authentically calls the busy pump once.  Start a focused
+     * actual-entry observation window so an illicit early call cannot hide
+     * in that pump's otherwise silent busy fast path. */
+    PE_Pump_TraceReset();
+    ASSERT(PE_Pump_EntryCount() == 0u,
+           "pump entry evidence did not reset");
+
+    ASSERT(PE_GPU_ServiceDMA2Completion(token) &&
+           !PE_GPU_DMA2Pending() &&
+           PE_GPU_ReadDMA2CHCR() == 0x00000201u &&
+           PE_GPU_ReadStoredDICR() == 0x04840000u &&
+           PE_GPU_ReadDICR() == 0x84840000u &&
+           PE_IRQ_ReadStatus() == 0u &&
+           B53B_Pixel(0u, 0u) == 0x2000u,
+           "hardware completion phase is not separately observable");
+    ASSERT(PE_Pump_EntryCount() == 0u &&
+           CountOrderLog("func_80076EE4_idle_pump") == 0,
+           "hardware completion executed a callback");
+
+    ASSERT(PE_IRQ_BridgeDICRRisingEdge(generation) ==
+               PE_IRQ_EDGE_ASSERTED &&
+           PE_IRQ_ReadStatus() == 0x0008u &&
+           PE_GPU_ReadDICR() == 0x84840000u &&
+           PE_Pump_EntryCount() == 0u,
+           "source-3 edge phase is not separately observable");
+    PE_IRQ_AssertSources(0x0020u); /* unrelated, masked pending source */
+    ASSERT(PE_IRQ_ServicePendingForGeneration(generation) ==
+               PE_IRQ_SERVICE_BOUNDARY,
+           "canonical service did not propagate the idle-pump boundary");
+    ASSERT(PE_Pump_EntryCount() == 1u,
+           "CPU/DMA service did not enter the pump exactly once");
+
+    PE_IRQ_GetDeliveryTrace(&trace);
+    ASSERT(trace.edge_assert_order < trace.cpu_ack_order &&
+           trace.cpu_ack_order < trace.cpu_callback_order &&
+           trace.cpu_callback_order < trace.dma_ack_order &&
+           trace.dma_ack_order < trace.dma_callback_order,
+           "CPU/DMA acknowledgement order differs from retail");
+    ASSERT(trace.cpu_service_entries == 1u &&
+           trace.dma_dispatch_entries == 1u &&
+           trace.cpu_ack_count == 1u && trace.cpu_ack_sources[0] == 3u &&
+           trace.dma_ack_count == 1u && trace.dma_ack_channels[0] == 2u &&
+           trace.last_cpu_ack_write == 0xFFF7u &&
+           trace.last_dma_ack_write == 0x04840000u &&
+           trace.last_cpu_handler == 0x80074520u &&
+           trace.last_dma_handler == 0x80076EE4u,
+           "callback identities or dispatch scan evidence is wrong");
+    ASSERT(trace.dma_callback_chcr == 0x00000201u &&
+           trace.dma_callback_dicr == 0x00840000u &&
+           (trace.dma_callback_istat & 0x0008u) == 0u &&
+           (trace.dma_callback_istat & 0x0020u) != 0u,
+           "DMA callback did not observe idle/acknowledged hardware state");
+    ASSERT(PE_IRQ_ReadStatus() == 0x0020u &&
+           PE_GPU_ReadStoredDICR() == 0x00840000u &&
+           PE_GPU_ReadDICR() == 0x00840000u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 1u,
+           "nested boundary lost acknowledgements or cleared active state");
+    ASSERT(PE_LoadU32(B53C_PRODUCER) == 1u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           memcmp(before,
+                  PE_TranslateConst(B53C_RING_BASE,
+                                    B53H_RING_ENTRY_BYTES),
+                  B53H_RING_ENTRY_BYTES) == 0,
+           "B2 boundary consumed or mutated the queued second LoadImage");
+    ASSERT(!PE_GPU_DMA2Pending() &&
+           PE_GPU_ReadDMA2CHCR() == 0x00000201u &&
+           CountOrderLog("func_80076EE4_idle_pump") == 1 &&
+           CountOrderLog("func_80076664") == 0 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "idle boundary was hidden or a second DMA/worker ran");
+    PASS();
+}
+
+static void test_B53I_B2_masked_pending_then_unmask(void)
+{
+    uint8_t before[B53H_RING_ENTRY_BYTES];
+    PeIrqGeneration generation;
+    TEST("B53I_B2_masked_pending_then_unmask");
+    ResetTestState();
+    ASSERT(B53I_B2_SeedCanonicalChain(before), "cannot seed masked chain");
+    generation = PE_IRQ_Generation();
+    ASSERT(PE_GPU_ServiceDMA2Completion(PE_GPU_DMA2EventToken()),
+           "cannot complete masked chain hardware phase");
+    (void)PE_IRQ_ExchangeMask(0x0001u);
+    ASSERT(
+           PE_IRQ_BridgeDICRRisingEdge(generation) ==
+               PE_IRQ_EDGE_ASSERTED && PE_IRQ_ReadStatus() == 0x0008u,
+           "masked source3 edge was filtered instead of retained");
+    ASSERT(PE_IRQ_ServicePendingForGeneration(generation) ==
+               PE_IRQ_SERVICE_RETURNED &&
+           PE_IRQ_ReadStatus() == 0x0008u &&
+           PE_GPU_DMA2CompletionPending() &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0u &&
+           CountOrderLog("func_80076EE4_idle_pump") == 0,
+           "masked source was acknowledged or dispatched");
+    (void)PE_IRQ_ExchangeMask(0x0009u);
+    ASSERT(PE_IRQ_ReadStatus() == 0x0008u &&
+           PE_IRQ_ServicePendingForGeneration(generation) ==
+               PE_IRQ_SERVICE_BOUNDARY &&
+           PE_IRQ_ReadStatus() == 0u &&
+           !PE_GPU_DMA2CompletionPending() &&
+           memcmp(before,
+                  PE_TranslateConst(B53C_RING_BASE,
+                                    B53H_RING_ENTRY_BYTES),
+                  B53H_RING_ENTRY_BYTES) == 0,
+           "unmask did not retain then deliver the pending source");
+    PASS();
+}
+
+static void test_B53I_B2_cpu_normal_zero_and_scan_order(void)
+{
+    PeIrqDeliveryTrace trace;
+    PeIrqGeneration generation;
+    TEST("B53I_B2_cpu_normal_zero_and_scan_order");
+    ResetTestState();
+    func_80073C94();
+    generation = PE_IRQ_Generation();
+    PE_IRQ_AssertSources(0x0008u);
+    ASSERT(PE_IRQ_ServicePendingForGeneration(generation) ==
+               PE_IRQ_SERVICE_RETURNED &&
+           PE_IRQ_ReadStatus() == 0u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0u,
+           "no-DMA-flags source3 path did not return normally");
+    PE_IRQ_GetDeliveryTrace(&trace);
+    ASSERT(trace.dma_dispatch_entries == 1u && trace.dma_ack_count == 0u,
+           "func_80074520 did not enter/exit the empty-pending path");
+
+    ResetTestState();
+    func_80073C94();
+    generation = PE_IRQ_Generation();
+    PE_StoreU32(B53I_IRQ_SOURCE0_SLOT, 0u);
+    PE_IRQ_AssertSources(0x0009u);
+    ASSERT(PE_IRQ_ServicePendingForGeneration(generation) ==
+               PE_IRQ_SERVICE_RETURNED &&
+           PE_IRQ_ReadStatus() == 0u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0u,
+           "zero CPU slot or normal terminal path failed");
+    PE_IRQ_GetDeliveryTrace(&trace);
+    ASSERT(trace.cpu_ack_count == 2u &&
+           trace.cpu_ack_sources[0] == 0u &&
+           trace.cpu_ack_sources[1] == 3u,
+           "CPU sources did not scan low-to-high 0 then 3");
+    PASS();
+}
+
+static void test_B53I_B2_guard_zero_exception_boundary(void)
+{
+    PeIrqGeneration generation;
+    TEST("B53I_B2_guard_zero_exception_boundary");
+    ResetTestState();
+    generation = PE_IRQ_Generation();
+    PE_StoreU16(B53I_IRQ_GUARD, 0u);
+    PE_StoreU16(B53I_IRQ_DISPATCH_ACTIVE, 0xA55Au);
+    PE_StoreU16(B53I_IRQ_REGISTERED_MASK, 0x0008u);
+    PE_StoreU32(B53I_IRQ_SOURCE3_SLOT, 0x80074520u);
+    PE_StoreU32(B53I_IRQ_WATCHDOG, 0x11223344u);
+    (void)PE_IRQ_ExchangeMask(0x0008u);
+    PE_IRQ_AssertSources(0x0008u);
+
+    ASSERT(PE_IRQ_ServicePendingForGeneration(generation) ==
+               PE_IRQ_SERVICE_BOUNDARY &&
+           PE_IRQ_ReadStatus() == 0x0008u &&
+           PE_IRQ_GetMask() == 0x0008u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 0xA55Au &&
+           PE_LoadU16(B53I_IRQ_REGISTERED_MASK) == 0x0008u &&
+           PE_LoadU32(B53I_IRQ_SOURCE3_SLOT) == 0x80074520u &&
+           PE_LoadU32(B53I_IRQ_WATCHDOG) == 0x11223344u,
+           "guard-zero B(17h) boundary mutated retail scan state");
+    ASSERT(CountOrderLog("func_80074384") == 1 &&
+           CountOrderLog("func_80076EE4_idle_pump") == 0,
+           "guard-zero service fell through into source/DMA dispatch");
+    PASS();
+}
+
+static void test_B53I_B2_dma_zero_callbacks_and_scan_order(void)
+{
+    PeIrqDeliveryTrace trace;
+    TEST("B53I_B2_dma_zero_callbacks_and_scan_order");
+    ResetTestState();
+    PE_GPU_WriteDICR(0x00C50000u); /* master + enables 0,2,6 */
+    ASSERT(PE_GPU_LatchDMACompletionFlag(6u) &&
+           PE_GPU_LatchDMACompletionFlag(2u) &&
+           PE_GPU_LatchDMACompletionFlag(0u),
+           "cannot seed multiple DMA completion flags");
+    (void)PE_GPU_TakeDICRRisingEdge();
+    ASSERT(PE_func_80074520_Dispatch() == PE_IRQ_SERVICE_RETURNED &&
+           PE_GPU_ReadStoredDICR() == 0x00C50000u,
+           "zero DMA slots were not acknowledged/drained");
+    PE_IRQ_GetDeliveryTrace(&trace);
+    ASSERT(trace.dma_ack_count == 3u &&
+           trace.dma_ack_channels[0] == 0u &&
+           trace.dma_ack_channels[1] == 2u &&
+           trace.dma_ack_channels[2] == 6u &&
+           trace.dma_callback_order == 0u,
+           "DMA flags did not scan 0->6 or zero slots invoked callbacks");
+    PASS();
+}
+
+static void test_B53I_B2_dma_diagnostic_live_madrs(void)
+{
+    PeIrqDeliveryTrace trace;
+    TEST("B53I_B2_dma_diagnostic_live_madrs");
+    ResetTestState();
+
+    /* Keep a live represented DMA4 source while triggering the exact
+     * force-bit diagnostic. DMA2's retained MADR is independently seeded. */
+    ASSERT(PE_SpuDma_InstallIrq(PE_SPU_DMA_IRQ_HANDLER) &&
+           PE_SpuDma_Begin(0x80123440u, 0x00002000u, 0x40u,
+                           PE_SPU_DMA_CALLBACK),
+           "cannot seed represented DMA4 MADR");
+    ASSERT(B53E_SeedBusyDma(), "cannot seed represented DMA2 MADR");
+    PE_GPU_WriteDICR(PE_GPU_DICR_FORCE);
+    ASSERT(PE_func_80074520_Dispatch() == PE_IRQ_SERVICE_RETURNED,
+           "force diagnostic did not return normally");
+    PE_IRQ_GetDeliveryTrace(&trace);
+    ASSERT(trace.dma_diagnostic_count == 1u &&
+           trace.dma_diagnostic_dicr ==
+               (PE_GPU_DICR_MASTER_FLAG | PE_GPU_DICR_FORCE) &&
+           trace.dma_diagnostic_madr[0] == 0u &&
+           trace.dma_diagnostic_madr[1] == 0u &&
+           trace.dma_diagnostic_madr[2] == 0x80180000u &&
+           trace.dma_diagnostic_madr[3] == 0u &&
+           trace.dma_diagnostic_madr[4] == 0x80123440u &&
+           trace.dma_diagnostic_madr[5] == 0u &&
+           trace.dma_diagnostic_madr[6] == 0u,
+           "diagnostic tail did not read live channel MADRs in 0->6 order");
+
+    PE_IRQ_DeliveryTraceReset();
+    PE_GPU_WriteDICR(0u);
+    PE_GPU_WriteDICR(0x00848000u);
+    ASSERT(PE_GPU_LatchDMACompletionFlag(2u),
+           "cannot seed physical high-byte diagnostic");
+    ASSERT(PE_func_80074520_Dispatch() == PE_IRQ_SERVICE_RETURNED,
+           "high-byte diagnostic did not return normally");
+    PE_IRQ_GetDeliveryTrace(&trace);
+    ASSERT(trace.dma_diagnostic_count == 1u &&
+           trace.dma_diagnostic_dicr == 0x80848000u &&
+           trace.dma_diagnostic_madr[2] == 0x80180000u &&
+           trace.dma_diagnostic_madr[4] == 0x80123440u,
+           "post-W1C high-byte==0x80 diagnostic lost live MADRs");
+    PASS();
+}
+
+static void test_B53I_B2_unbound_callback_boundaries(void)
+{
+    PeIrqGeneration generation;
+    TEST("B53I_B2_unbound_callback_boundaries");
+    ResetTestState();
+    func_80073C94();
+    generation = PE_IRQ_Generation();
+    PE_StoreU32(B53I_IRQ_SOURCE3_SLOT, 0xF1234567u);
+    PE_IRQ_AssertSources(0x0008u);
+    ASSERT(PE_IRQ_ServicePendingForGeneration(generation) ==
+               PE_IRQ_SERVICE_BOUNDARY &&
+           PE_IRQ_ReadStatus() == 0u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 1u &&
+           g_bootstrap_arg4_call_count == 1 &&
+           g_bootstrap_arg4_calls[0].target == 0xF1234567u,
+           "unbound CPU identity was skipped/cast or ack came too late");
+
+    ResetTestState();
+    PE_GPU_WriteDICR(0x00C40000u); /* enables 2 + 6, master */
+    ASSERT(PE_GPU_LatchDMACompletionFlag(2u) &&
+           PE_GPU_LatchDMACompletionFlag(6u),
+           "cannot seed DMA flags");
+    (void)PE_GPU_TakeDICRRisingEdge();
+    PE_StoreU32(B53F_DMA_CB_SLOT2, 0xE2345678u);
+    ASSERT(PE_func_80074520_Dispatch() == PE_IRQ_SERVICE_BOUNDARY &&
+           !PE_GPU_DMA2CompletionPending() &&
+           (PE_GPU_ReadStoredDICR() & 0x40000000u) != 0u &&
+           PE_LoadU32(B53F_DMA_CB_SLOT2) == 0xE2345678u &&
+           g_bootstrap_arg4_call_count == 1 &&
+           g_bootstrap_arg4_calls[0].target == 0xE2345678u,
+           "unbound DMA identity was skipped/cast or ack came too late");
+    PASS();
+}
+
+static void test_B53I_B2_only_captured_dma_opportunity(void)
+{
+    PeIrqGeneration generation;
+    uint64_t first_token;
+    uint64_t second_token;
+    TEST("B53I_B2_only_captured_dma_opportunity");
+    ResetTestState();
+    func_80073C94();
+    ASSERT(B53E_SeedBusyDma(), "cannot seed first DMA");
+    PE_GPU_SetDMA2InterruptEnabled(1);
+    first_token = PE_GPU_DMA2EventToken();
+    generation = PE_IRQ_Generation();
+
+    /* This is the checkpoint's explicit phase order with an intentionally
+     * issued second transfer between completion and CPU service.  The
+     * captured first token is serviced once; no phase loops over DMA. */
+    ASSERT(PE_GPU_ServiceDMA2Completion(first_token),
+           "captured first token did not complete");
+    ASSERT(PE_GPU_WriteGP0(0xA0000000u) &&
+           PE_GPU_WriteGP0(0x00010040u) &&
+           PE_GPU_WriteGP0(0x00010020u) &&
+           PE_GPU_DMA2Issue(0x80180100u, 0x00010010u,
+                            PE_GPU_DMA2_CHCR_LOAD),
+           "cannot issue hypothetical second DMA between phases");
+    second_token = PE_GPU_DMA2EventToken();
+    ASSERT(second_token != first_token && PE_GPU_DMA2Pending(),
+           "second DMA did not receive a later token");
+    ASSERT(PE_IRQ_BridgeDICRRisingEdge(generation) ==
+               PE_IRQ_EDGE_ASSERTED,
+           "first completion edge did not bridge");
+    PE_StoreU32(B53F_DMA_CB_SLOT2, 0u); /* normal zero-slot return */
+    ASSERT(PE_IRQ_ServicePendingForGeneration(generation) ==
+               PE_IRQ_SERVICE_RETURNED &&
+           PE_GPU_DMA2Pending() &&
+           PE_GPU_DMA2EventToken() == second_token &&
+           PE_GPU_ReadDMA2CHCR() == PE_GPU_DMA2_CHCR_LOAD,
+           "new DMA was recursively completed in the first opportunity");
+    ASSERT(!PE_GPU_ServiceDMA2Completion(first_token) &&
+           PE_GPU_DMA2Pending(),
+           "old captured token completed the newly issued transfer");
+    PASS();
+}
+
+static void test_B53I_B2_reset_and_stale_generations(void)
+{
+    PeIrqGeneration old_generation;
+    uint64_t old_token;
+    TEST("B53I_B2_reset_and_stale_generations");
+    ResetTestState();
+    ASSERT(B53E_SeedBusyDma(), "cannot seed stale DMA token");
+    old_token = PE_GPU_DMA2EventToken();
+    old_generation = PE_IRQ_Generation();
+    PE_Sdk_ResetState();
+    ASSERT(!PE_GPU_ServiceDMA2Completion(old_token) &&
+           PE_IRQ_BridgeDICRRisingEdge(old_generation) ==
+               PE_IRQ_EDGE_STALE &&
+           PE_IRQ_ServicePendingForGeneration(old_generation) ==
+               PE_IRQ_SERVICE_STALE &&
+           PE_IRQ_ReadStatus() == 0u && PE_GPU_ReadDICR() == 0u,
+           "pre-reset DMA/IRQ work survived the generation boundary");
+    for (uint32_t channel = 0u; channel < 8u; channel++) {
+        ASSERT(PE_LoadU32(B53F_DMA_CB_TABLE + channel * 4u) == 0u,
+               "coherent reset retained a DMA callback identity");
+    }
+
+    ResetTestState();
+    ASSERT(B53I_B2_SeedCanonicalChain(NULL),
+           "cannot seed reset-between-phases chain");
+    old_generation = PE_IRQ_Generation();
+    ASSERT(PE_GPU_ServiceDMA2Completion(PE_GPU_DMA2EventToken()) &&
+           PE_IRQ_BridgeDICRRisingEdge(old_generation) ==
+               PE_IRQ_EDGE_ASSERTED &&
+           PE_IRQ_ReadStatus() == 0x0008u,
+           "cannot reach pending CPU source before reset");
+    PE_Sdk_ResetState();
+    ASSERT(PE_IRQ_ServicePendingForGeneration(old_generation) ==
+               PE_IRQ_SERVICE_STALE &&
+           PE_IRQ_ReadStatus() == 0u && PE_GPU_ReadDICR() == 0u &&
+           CountOrderLog("func_80076EE4_idle_pump") == 0,
+           "reset-after-completion delivered a stale callback");
+    PASS();
+}
+
+static void test_B53I_B2_checkpoint_suppression_and_stop_epoch(void)
+{
+    uint8_t before[B53H_RING_ENTRY_BYTES];
+    unsigned epoch;
+    TEST("B53I_B2_checkpoint_suppression_and_stop_epoch");
+    ResetTestState();
+    ASSERT(B53I_B2_SeedCanonicalChain(before),
+           "cannot seed checkpoint chain");
+    PE_Port_SetDmaIrqCheckpointEnabled(0);
+    ASSERT(PE_Port_ServiceDmaIrqCheckpoint() ==
+               PE_PORT_DMA_IRQ_CHECKPOINT_IDLE &&
+           PE_GPU_DMA2Pending() && PE_IRQ_ReadStatus() == 0u,
+           "suppressed checkpoint progressed hardware");
+
+    PE_Port_SetDmaIrqCheckpointEnabled(1);
+    PE_Port_RequestStop(PE_PORT_STOP_FRAME_LIMIT);
+    epoch = PE_Port_StopEpoch();
+    ASSERT(PE_Port_ServiceDmaIrqCheckpoint() ==
+               PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT &&
+           PE_Port_StopEpoch() == epoch + 1u &&
+           PE_IRQ_ReadStatus() == 0u &&
+           PE_GPU_ReadStoredDICR() == 0x00840000u &&
+           PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 1u,
+           "sticky host stop suppressed or hid admitted IRQ cleanup");
+    ASSERT(!PE_GPU_DMA2Pending() &&
+           PE_LoadU32(B53C_PRODUCER) == 1u &&
+           PE_LoadU32(B53C_CONSUMER) == 0u &&
+           memcmp(before,
+                  PE_TranslateConst(B53C_RING_BASE,
+                                    B53H_RING_ENTRY_BYTES),
+                  B53H_RING_ENTRY_BYTES) == 0,
+           "checkpoint completed recursively or crossed the idle boundary");
+    PASS();
+}
+
+static void test_B53I_B2_resetcallback_dicr_zero_semantics(void)
+{
+    TEST("B53I_B2_resetcallback_dicr_zero_semantics");
+    ResetTestState();
+    for (uint32_t channel = 0u; channel < 8u; channel++) {
+        PE_StoreU32(B53F_DMA_CB_TABLE + channel * 4u,
+                    0x80010000u + channel * 4u);
+    }
+    PE_GPU_WriteDICR(0x00840000u);
+    ASSERT(PE_GPU_LatchDMACompletionFlag(2u), "cannot seed retained flag");
+    (void)PE_GPU_TakeDICRRisingEdge();
+    func_80073C94();
+    ASSERT(PE_GPU_ReadStoredDICR() == 0x04000000u &&
+           PE_GPU_ReadDICR() == 0x04000000u &&
+           PE_IRQ_ReadStatus() == 0u && PE_IRQ_GetMask() == 0x0009u,
+           "func_800744D4 zero write cleared a W1C flag or kept controls");
+    for (uint32_t channel = 0u; channel < 8u; channel++) {
+        ASSERT(PE_LoadU32(B53F_DMA_CB_TABLE + channel * 4u) == 0u,
+               "func_800744D4 did not clear the DMA callback table");
+    }
+    PE_Sdk_ResetState();
+    ASSERT(PE_GPU_ReadStoredDICR() == 0u &&
+           !PE_GPU_DICRRisingEdgePending(),
+           "coherent host reset retained DICR flags/edge state");
+    PASS();
+}
+
+static void test_B53I_B2_repeated_chain_determinism(void)
+{
+    TEST("B53I_B2_repeated_chain_determinism");
+    for (int pass = 0; pass < 3; pass++) {
+        uint8_t before[B53H_RING_ENTRY_BYTES];
+        ResetTestState();
+        ASSERT(B53I_B2_SeedCanonicalChain(before),
+               "repeat chain seed failed");
+        ASSERT(PE_Port_ServiceDmaIrqCheckpoint() ==
+                   PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY &&
+               PE_GPU_ReadDMA2CHCR() == 0x00000201u &&
+               PE_GPU_ReadStoredDICR() == 0x00840000u &&
+               PE_IRQ_ReadStatus() == 0u &&
+               PE_LoadU16(B53I_IRQ_DISPATCH_ACTIVE) == 1u &&
+               PE_LoadU32(B53C_PRODUCER) == 1u &&
+               PE_LoadU32(B53C_CONSUMER) == 0u &&
+               memcmp(before,
+                      PE_TranslateConst(B53C_RING_BASE,
+                                        B53H_RING_ENTRY_BYTES),
+                      B53H_RING_ENTRY_BYTES) == 0,
+               "repeat chain endpoint was nondeterministic");
+    }
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
  * Phase 6E-B53B — deterministic GPU/DMA2 hardware substrate (15 tests)
  *
  * Expected register values and transfer geometry below are literal B53A
@@ -15074,8 +15738,8 @@ static void test_B53B_remainder_plus_dma_visibility(void)
            "DMA suffix data/order mismatch after service");
     PE_GPU_GetState(&state);
     ASSERT(!state.dma2_active && state.dma2_chcr == 0x00000201u &&
-           PE_GPU_DMA2CompletionPending(),
-           "completion did not clear busy then set pending");
+           !PE_GPU_DMA2CompletionPending(),
+           "disabled completion did not clear busy without pending");
     ASSERT(state.dma_data_order != 0 &&
            state.dma_data_order < state.dma_completion_order,
            "VRAM visibility order is not before completion state");
@@ -15101,7 +15765,10 @@ static void test_B53B_dicr_pending_w1c_preservation(void)
     ASSERT(B53B_IssueOneBlock(source, 0), "DICR test issue failed");
     token = PE_GPU_DMA2EventToken();
     ASSERT(PE_GPU_ServiceDMA2Completion(token), "DICR completion failed");
-    ASSERT(PE_GPU_ReadDICR() == (configured | 0x04000000u) &&
+    ASSERT(PE_GPU_ReadStoredDICR() ==
+               (configured | 0x04000000u) &&
+           PE_GPU_ReadDICR() ==
+               (0x80000000u | configured | 0x04000000u) &&
            PE_GPU_DMA2CompletionPending() &&
            PE_GPU_DMA2InterruptAsserted(),
            "DICR completion flag/assertion mismatch");
@@ -15276,8 +15943,8 @@ static void test_B53B_vblank_dma_ready_independence(void)
            "DMA completion made GPU ready");
     PE_GPU_SetReady(1);
     ASSERT((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) != 0 &&
-           PE_GPU_DMA2CompletionPending(),
-           "ready transition acknowledged DMA completion");
+           !PE_GPU_DMA2CompletionPending(),
+           "ready transition created a disabled DMA completion flag");
     PASS();
 }
 
@@ -15352,6 +16019,7 @@ static void test_B53B_authority_separation_guard(void)
         PE_StoreU32(0x80007000u + i * 4u,
                     (i * 2u + 1u) | ((i * 2u + 2u) << 16));
     }
+    PE_GPU_SetDMA2InterruptEnabled(1);
     ASSERT(B53B_IssueOneBlock(0x80007000u, 0x000A000Au),
            "authority exercise DMA issue failed");
     dma_token = PE_GPU_DMA2EventToken();
@@ -16046,6 +16714,23 @@ int main(void)
     test_B53H_boundary_is_not_masked_by_frame_limit();
     test_B53H_strict_advances_past_dispatcher();
     test_B53H_stop_epoch_distinguishes_latched_stops();
+
+    /* Phase 6E-B53I-B2 DMA completion/IRQ delivery (15 tests). */
+    test_B53I_B2_dicr_physical_edges();
+    test_B53I_B2_sticky_edge_bridge_and_reset();
+    test_B53I_B2_completion_data_and_gating();
+    test_B53I_B2_focused_idle_boundary_chain();
+    test_B53I_B2_masked_pending_then_unmask();
+    test_B53I_B2_cpu_normal_zero_and_scan_order();
+    test_B53I_B2_guard_zero_exception_boundary();
+    test_B53I_B2_dma_zero_callbacks_and_scan_order();
+    test_B53I_B2_dma_diagnostic_live_madrs();
+    test_B53I_B2_unbound_callback_boundaries();
+    test_B53I_B2_only_captured_dma_opportunity();
+    test_B53I_B2_reset_and_stale_generations();
+    test_B53I_B2_checkpoint_suppression_and_stop_epoch();
+    test_B53I_B2_resetcallback_dicr_zero_semantics();
+    test_B53I_B2_repeated_chain_determinism();
 
     /* Phase 6E-B53B deterministic GPU/DMA2 substrate (15 tests) */
     test_B53B_reset_dimensions_initial_vram();

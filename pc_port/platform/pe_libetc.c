@@ -25,6 +25,7 @@
 #include "pe_spu_dma.h"
 #include "pe_gpu.h"
 #include "pe_irq.h"
+#include "pe_irq_delivery.h"
 #include "game_port.h"
 
 static int      g_irq_lock_depth;
@@ -38,6 +39,8 @@ static uint32_t g_next_event_handle = 0x100;
 #define GA_IRQ_REGISTERED_MASK      0x80094614u
 #define GA_IRQ_WATCHDOG             0x8009567Cu
 #define PE_IRQ_CPU_SOURCE_COUNT     11u
+#define GA_DMA_CALLBACK_TABLE       0x800956C0u
+#define PE_DMA_CALLBACK_SLOTS       8u
 
 #define GA_IRQ_SOURCE0_HANDLER      0x8007440Cu
 #define GA_IRQ_SOURCE3_HANDLER      0x80074520u
@@ -185,11 +188,16 @@ void func_80073C94(void)
     PE_StoreU16(GA_IRQ_RESET_GUARD, 1u);
     PE_Callback_ResetTable();
 
-    /* func_800743B4 -> func_80073CC4(0, func_8007440C), then
-     * func_800744D4 -> func_80073CC4(3, func_80074520).  This B1 binding
-     * restores CPU registration only; DMA-table/DICR delivery work remains
-     * B2 scope. */
+    /* func_800743B4 -> func_80073CC4(0, func_8007440C). */
     (void)func_80073CC4(0u, GA_IRQ_SOURCE0_HANDLER);
+
+    /* func_800744D4 clears all eight guest DMA identities, then writes
+     * literal zero to DICR in the delay slot of the source-3 registration
+     * call.  DICR zero clears controls but W1C-retains existing flags. */
+    for (uint32_t channel = 0u; channel < PE_DMA_CALLBACK_SLOTS; channel++) {
+        PE_StoreU32((pe_addr_t)(GA_DMA_CALLBACK_TABLE + channel * 4u), 0u);
+    }
+    PE_GPU_WriteDICR(0u);
     (void)func_80073CC4(3u, GA_IRQ_SOURCE3_HANDLER);
 }
 
@@ -260,6 +268,7 @@ void PE_Sdk_ResetState(void)
     g_irq_lock_depth = 0;
     g_next_event_handle = 0x100;
     PE_IRQ_Reset();
+    PE_IRQ_DeliveryTraceReset();
     ResetSource0BiosState();
 
     /* Coherent host reset of the guest-backed CPU registration authority.
@@ -273,6 +282,9 @@ void PE_Sdk_ResetState(void)
     }
     PE_StoreU16(GA_IRQ_REGISTERED_MASK, 0u);
     PE_StoreU32(GA_IRQ_WATCHDOG, 0u);
+    for (uint32_t channel = 0u; channel < PE_DMA_CALLBACK_SLOTS; channel++) {
+        PE_StoreU32((pe_addr_t)(GA_DMA_CALLBACK_TABLE + channel * 4u), 0u);
+    }
 
     PE_SpuDma_Reset();
     PE_GPU_Init();

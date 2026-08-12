@@ -61,6 +61,9 @@ int PE_SpuDma_Service(void);
 void PE_SpuDma_WaitForCompletion(void);
 
 void PE_SpuDma_GetState(PeSpuDmaState *out);
+/* Read-only view of the represented DMA4 MADR register.  The diagnostic
+ * DMA dispatcher uses this value without becoming a second DMA4 owner. */
+pe_addr_t PE_SpuDma_ReadMADR(void);
 uint8_t PE_SpuRam_LoadU8(uint32_t address);
 
 #ifdef __cplusplus

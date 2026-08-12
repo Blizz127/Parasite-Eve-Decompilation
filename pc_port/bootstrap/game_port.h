@@ -17,6 +17,13 @@ typedef enum PEPortStopReason {
     PE_PORT_STOP_UNRESOLVED_BOUNDARY,
 } PEPortStopReason;
 
+typedef enum PEPortDmaIrqCheckpointResult {
+    PE_PORT_DMA_IRQ_CHECKPOINT_IDLE = 0,
+    PE_PORT_DMA_IRQ_CHECKPOINT_RETURNED,
+    PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY,
+    PE_PORT_DMA_IRQ_CHECKPOINT_STALE,
+} PEPortDmaIrqCheckpointResult;
+
 void PE_Port_RunControlReset(void);
 void PE_Port_SetFrameLimit(int frames);
 void PE_Port_SetMainIterationLimit(int iterations);
@@ -32,6 +39,13 @@ PEPortStopReason PE_Port_GetStopReason(void);
  * that, because only the first reason is retained. */
 unsigned PE_Port_StopEpoch(void);
 const char *PE_Port_StopReasonName(PEPortStopReason reason);
+
+/* Deterministic B53I-B2 hardware opportunity.  It captures at most one
+ * already-active DMA token, then keeps completion, DICR-edge bridging, and
+ * CPU IRQ service as separately callable phases. */
+void PE_Port_SetDmaIrqCheckpointEnabled(int enabled);
+int PE_Port_DmaIrqCheckpointEnabled(void);
+PEPortDmaIrqCheckpointResult PE_Port_ServiceDmaIrqCheckpoint(void);
 
 /* Trace helper available to game code */
 void Trace_Direct(const char *event);

@@ -188,9 +188,14 @@ extern int  func_80076EE4(void);
  * consumer path was reached.  Callers must not infer that from the host
  * stop reason, which keeps only the first reason requested. */
 extern int  PE_func_80076EE4_Pump(int *retail_returned);
+extern void func_80074520(void);
 /* Read-only names for the retail authority the pump prefix uses. */
 extern pe_addr_t PE_Pump_Dma2ChcrPointerAddress(void);
 extern uint32_t  PE_Pump_Dma2ChcrMmioAddress(void);
+/* Value-only evidence for actual typed-pump entry, including the silent
+ * busy return.  Neither function participates in retail behavior. */
+extern void      PE_Pump_TraceReset(void);
+extern uint64_t  PE_Pump_EntryCount(void);
 extern int  func_80076C34(pe_addr_t worker, pe_addr_t argument,
                           int32_t copy_bytes, uint32_t auxiliary);
 extern int  PE_func_80076C34_Inline8(pe_addr_t worker,
