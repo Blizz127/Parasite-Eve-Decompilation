@@ -5,6 +5,26 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PC port branch state (this checkout)
 
+## Phase 6E-B54A func_8006AD40 suffix audit
+
+Starting D commit is
+`f003e4aa5ecfd17c5b98aa466f8262f44c5d6d37`. B54A is read-only. The live
+frontier remains `func_8006AD40_prefix_cut` at `0x8006AE50`; production C
+is unchanged.
+
+The old B50 cut is mid-loop. Canonical Disc 1 packet count is 13; only
+entry 0 (`func_8006E1C0`) has run. That entry is the accepted two-LoadImage
+pair `{704,64,32,64}` + `{256,456,64,1}`. The suffix's first 12 calls are
+the same already-translated helper. Recommended B54B cut is `.L8006AE68`
+(`0x8006AE68`) after those iterations. First unresolved *function* if the
+later path is taken is 29-word `func_800718D0` at `0x8006AFA8` (only callee
+`func_8007506C`); it is not reached without an explicit CD poll result.
+`D_800B0CD8` still has `0x01004000` at the current cut.
+
+Evidence: `pc_port/docs/b54a_func_8006AD40_suffix_audit.md`.
+Independent contract: `pc_port/tools/b54a_6ad40_suffix_oracle.py`.
+Do not begin B54B in this commit.
+
 ## Phase 6E-B53I-D second LoadImage DMA completion verified
 
 Starting C commit is
@@ -50,10 +70,9 @@ issues, defers, completes through source-3 IRQ and the retail queue pump, then
 issues the second transfer; the second defers and completes at a later
 opportunity without IRQ because its channel enable/callback was removed.
 
-The next task is a fresh read-only audit of the `func_8006AD40` suffix from
-retail PC `0x8006AE50`. Do not begin translation until that post-GPU/IRQ
-state is remeasured and a new bounded split is selected. Bootstrap remains
-`func_8007F72C` from `func_800698D4`.
+That suffix audit is now B54A. The live frontier is unchanged until B54B
+implements only the remaining `func_8006E1C0` loop to `0x8006AE68`.
+Bootstrap remains `func_8007F72C` from `func_800698D4`.
 
 ## Phase 6E-B53I-C idle GPU command pump verified
 
