@@ -8,8 +8,9 @@ func_80073CF4 wrapper and its func_800746A0 callback-slot/DICR setter.
 B53H translates the busy-DMA fast path of the queue pump func_80076EE4,
 which returns 1 and consumes nothing while the transfer is in flight, so
 the whole LoadImage dispatch now completes with no provider of its own.
-Execution first requests a stop at the pre-existing B50 prefix cut inside
-func_8006AD40 (retail 0x8006AE50).  B53H NAMES that cut
+Execution first requests a stop at the current B54D prefix cut inside
+func_8006AD40 (retail 0x8006AF54, before the live CD poll). B53H originally
+named that cut
 `func_8006AD40_prefix_cut` so it is again a visible BOOTSTRAP_RET frontier
 instead of a silent return; the continuing strict run therefore still
 exits 1, now reporting that name. B53I-B2 deliberately runs its already-
@@ -126,7 +127,7 @@ def main() -> int:
                 "prefix run did not stop at frame 1 / iteration 1")
         require("[HOST] stop_reason=unresolved-boundary" in two.stderr,
                 "prefix run did not report its honest unresolved boundary")
-        # The first/global frontier remains the named B50 translation prefix
+        # The first/global frontier remains the named func_8006AD40 prefix
         # cut. B53I-B2 admits exactly one cleanup checkpoint before honoring
         # that sticky stop, and B53I-C now completes its nested idle pump.
         providers = re.findall(r"\[STUB:BOOTSTRAP_RET\] (\S+)", two.stderr)
@@ -151,7 +152,7 @@ def main() -> int:
             "--strict-stubs", "--max-frames", "2", timeout=args.timeout,
         )
         # B53H: the LoadImage dispatch no longer stops at func_80076EE4.
-        # The frontier moves forward to the named B50 translation prefix cut
+        # The frontier is the named B54D translation prefix cut
         # inside func_8006AD40, which strict mode still reports and aborts on.
         require(strict.returncode == 1,
                 "continuing strict run did not exit 1")

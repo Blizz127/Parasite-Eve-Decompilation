@@ -11950,6 +11950,16 @@ static void test_64964_ramreset_repeat_and_guards(void) {
 #define B50_BASE        0x80100000u
 #define B50_METADATA    0x80100100u
 #define B50_FIRST_ENTRY 0x80100200u
+#define B50_DIR_ENTRY   0x80100140u
+#define B50_ARCHIVE     0x80100300u
+
+#define B54D_BASE        0x801229A0u
+#define B54D_METADATA    0x8012DF18u
+#define B54D_DIR_ENTRY   0x8012DF4Cu
+#define B54D_FIRST_ENTRY 0x8012DF58u
+#define B54D_LOOKUP      0x801229A8u
+#define B54D_TERMINATOR  0x8012A8B4u
+#define B54D_KEY         0xABADC06Cu
 
 #define B52_JTB          0x80095704u
 #define B52_JTB_PTR      0x80095744u
@@ -12029,6 +12039,11 @@ static void B50_SeedPrefixState(uint32_t count)
      * A zero decoy at base+0x28 rejects the provisional direct-load bug. */
     PE_StoreU32(B50_BASE + 4u, B50_METADATA - B50_BASE);
     PE_StoreU32(B50_BASE + 0x28u, 0);
+    PE_StoreU32(B50_METADATA + 8u,
+                (1u << 22) | (B50_DIR_ENTRY - B50_BASE));
+    PE_StoreU32(B50_DIR_ENTRY + 4u, B50_ARCHIVE - B50_BASE);
+    PE_StoreU32(B50_DIR_ENTRY + 8u, B54D_KEY);
+    PE_StoreU32(B50_ARCHIVE, 0u);
     PE_StoreU32(B50_METADATA + 0x28u,
                 (count << 22) | (B50_FIRST_ENTRY - B50_BASE));
 }
@@ -12060,6 +12075,55 @@ static void B54B_SeedLoopEntries(uint32_t count)
         PE_StoreU8(entry + 0xFu, 0u);
         PE_StoreU32(entry + 0x10u, 0u);
     }
+}
+
+static void B54D_SeedCanonicalMaterial(uint32_t count)
+{
+    uint32_t i;
+
+    PE_StoreU32(0x800B0CD8u + 0x160u, B54D_BASE);
+    PE_StoreU32(B54D_BASE + 4u, B54D_METADATA - B54D_BASE);
+    PE_StoreU32(B54D_METADATA + 8u,
+                (1u << 22) | (B54D_DIR_ENTRY - B54D_BASE));
+    PE_StoreU32(B54D_DIR_ENTRY + 4u, B54D_LOOKUP - B54D_BASE);
+    PE_StoreU32(B54D_DIR_ENTRY + 8u, B54D_KEY);
+    PE_StoreU32(B54D_METADATA + 0x28u,
+                (count << 22) | (B54D_FIRST_ENTRY - B54D_BASE));
+
+    for (i = 0; i < count; i++) {
+        pe_addr_t entry = B54D_FIRST_ENTRY + i * 0x14u;
+
+        PE_StoreU8(entry + 7u, 1u);
+        PE_StoreU32(entry + 4u, 0x1000u + i * 4u);
+        PE_StoreU32(entry + 8u, 0u);
+        PE_StoreU32(entry + 0xCu, 0u);
+        PE_StoreU8(entry + 0xFu, 0u);
+        PE_StoreU32(entry + 0x10u, 0u);
+    }
+
+    PE_StoreU32(B54D_LOOKUP, 0x00007F0Cu);
+    PE_StoreU16(B54D_LOOKUP + 4u, 448u);
+    PE_StoreU16(B54D_LOOKUP + 6u, 0u);
+    PE_StoreU16(B54D_LOOKUP + 8u, 64u);
+    PE_StoreU16(B54D_LOOKUP + 0xAu, 254u);
+    PE_StoreU32(B54D_TERMINATOR, 0u);
+
+    PE_StoreU16(0x80091648u, 0x0140u);
+    PE_StoreU16(0x8009164Au, 0x0000u);
+    PE_StoreU16(0x8009164Cu, 0x0140u);
+    PE_StoreU16(0x8009164Eu, 0x00FCu);
+    PE_StoreU16(0x80091658u, 0x0180u);
+    PE_StoreU16(0x8009165Au, 0x0000u);
+    PE_StoreU16(0x8009165Cu, 0x0150u);
+    PE_StoreU16(0x8009165Eu, 0x00FCu);
+    PE_StoreU16(0x80091668u, 0x0110u);
+    PE_StoreU16(0x8009166Au, 0x01D4u);
+    PE_StoreU16(0x8009166Cu, 0x0130u);
+    PE_StoreU16(0x8009166Eu, 0x01DEu);
+    PE_StoreU16(0x80091678u, 0x011Cu);
+    PE_StoreU16(0x8009167Au, 0x01D4u);
+    PE_StoreU16(0x8009167Cu, 0x0130u);
+    PE_StoreU16(0x8009167Eu, 0x01DDu);
 }
 
 static void test_6AD40_guard_bit0(void)
@@ -12139,7 +12203,9 @@ static void test_6AD40_prefix_boundary_args(void)
             (a >= 0x8009B6D4u && a < 0x8009B6D8u) ||
             (a >= B53C_DEADLINE && a < B53C_TIMEOUT_POLLS + 4u) ||
             (a >= B53D_WORK_MARKER && a < B53D_WORK_MARKER + 4u) ||
-            (a >= B53D_SAVED_IMASK && a < B53D_SAVED_IMASK + 4u))
+            (a >= B53D_SAVED_IMASK && a < B53D_SAVED_IMASK + 4u) ||
+            (a >= 0x80091670u && a < 0x80091674u) ||
+            (a >= 0x80091680u && a < 0x80091684u))
             continue;
         if (PE_LoadU8(a) != snapshot[a - PE_RAM_BASE]) {
             free(snapshot);
@@ -12308,13 +12374,13 @@ static void test_B54B_6AD40_canonical_counted_loop(void)
            "B54B replayed entry 0");
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "B54B did not stop at the established 0x8006AE68 frontier");
+           "retained B54B path did not reach the current frontier");
     ASSERT(CountOrderLog("func_800718D0") == 0 &&
            CountOrderLog("func_80030894") == 0,
            "B54B entered a later suffix dependency");
     ASSERT(PE_LoadU16(0x80091650u) == 0xA55Au &&
            PE_LoadU16(0x80091652u) == 0x5AA5u,
-           "B54B consumed the later D_80091648 packing loop");
+           "B54D touched records 0/1 while retaining the B54B loop");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54B frontier stop reason changed");
     FxFree(&fx);
@@ -12336,7 +12402,7 @@ static void test_B54B_6AD40_count_edges(void)
            "count zero fabricated a texture helper call");
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "count zero did not reach the 0x8006AE68 frontier");
+           "count zero did not reach the current frontier");
     FxFree(&fx);
 
     /* count=1 is the valid zero-remaining state at 0x8006AE50. */
@@ -12360,6 +12426,91 @@ static void test_B54B_6AD40_count_edges(void)
     ASSERT(g_bootstrap_arg4_calls[0].arg3 == B50_BASE + 0x1000u &&
            g_bootstrap_arg4_calls[1].arg3 == B50_BASE + 0x1004u,
            "count-two entry increment/order changed");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B54D — material prefix to live CD poll at 0x8006AF54 (2 tests)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void test_B54D_6AD40_canonical_material_prefix(void)
+{
+    DiscFixture fx;
+    uint32_t i;
+    TEST("B54D_6AD40_canonical_material_prefix");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 0u);
+    B54D_SeedCanonicalMaterial(13u);
+    PE_StoreU16(0x80091650u, 0xA55Au);
+    PE_StoreU16(0x80091652u, 0x5AA5u);
+    PE_StoreU16(0x80091660u, 0xC33Cu);
+    PE_StoreU16(0x80091662u, 0x3CC3u);
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54D canonical return wrong");
+    ASSERT(PE_LoadU16(0x80091670u) == 0x0034u &&
+           PE_LoadU16(0x80091672u) == 0x7793u,
+           "B54D record 2 packing changed");
+    ASSERT(PE_LoadU16(0x80091680u) == 0x0034u &&
+           PE_LoadU16(0x80091682u) == 0x7753u,
+           "B54D record 3 packing changed");
+    ASSERT(PE_LoadU16(0x80091650u) == 0xA55Au &&
+           PE_LoadU16(0x80091652u) == 0x5AA5u &&
+           PE_LoadU16(0x80091660u) == 0xC33Cu &&
+           PE_LoadU16(0x80091662u) == 0x3CC3u,
+           "B54D packed outside records 2 and 3");
+    ASSERT(g_bootstrap_arg4_call_count == 14,
+           "B54D must retain 13 texture entries plus one material walk");
+    for (i = 0; i < 13u; i++) {
+        ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
+               B54D_BASE + 0x1000u + i * 4u,
+               "B54D changed the retained counted-loop order");
+    }
+    B52_AssertGpuCall(13, 0x000001C0u, 0x801229B4u, 0x00FE0040u);
+    ASSERT(B54D_LOOKUP + (0x00007F0Cu & ~3u) == B54D_TERMINATOR,
+           "B54D canonical terminator address changed");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+           "B54D did not stop before the live CD poll");
+    ASSERT(CountOrderLog("func_800718D0") == 0 &&
+           CountOrderLog("func_80030894") == 0,
+           "B54D entered a forbidden later dependency");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "B54D consumed or fabricated the live CD poll result");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "B54D frontier stop reason changed");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_B54D_6AD40_no_walk_still_stops_before_poll(void)
+{
+    DiscFixture fx;
+    TEST("B54D_6AD40_no_walk_still_stops_before_poll");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 0u);
+    B54D_SeedCanonicalMaterial(0u);
+    PE_StoreU32(B54D_LOOKUP, 0u);
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54D zero-record return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 0,
+           "B54D zero terminator fabricated a LoadImage walk");
+    ASSERT(PE_LoadU16(0x80091670u) == 0x0034u &&
+           PE_LoadU16(0x80091672u) == 0x7793u &&
+           PE_LoadU16(0x80091680u) == 0x0034u &&
+           PE_LoadU16(0x80091682u) == 0x7753u,
+           "B54D packing depended on the archive walk");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+           "B54D zero-record path crossed the AF54 boundary");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "B54D zero-record path polled channel 2");
+    ASSERT(!PE_GPU_DMA2CompletionPending(),
+           "B54D added a DMA completion checkpoint");
     FxFree(&fx);
     PASS();
 }
@@ -17729,6 +17880,10 @@ int main(void)
     /* Phase 6E-B54B counted func_8006E1C0 loop (2 tests). */
     test_B54B_6AD40_canonical_counted_loop();
     test_B54B_6AD40_count_edges();
+
+    /* Phase 6E-B54D material prefix to the live CD poll (2 tests). */
+    test_B54D_6AD40_canonical_material_prefix();
+    test_B54D_6AD40_no_walk_still_stops_before_poll();
 
     /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
     test_6E1C0_single_call_zero_entry();
