@@ -12043,6 +12043,25 @@ static void B50_StartFixture(DiscFixture *fx, uint32_t count)
     B50_SeedPrefixState(count);
 }
 
+static void B54B_SeedLoopEntries(uint32_t count)
+{
+    uint32_t i;
+
+    for (i = 0; i < count; i++) {
+        pe_addr_t entry = B50_FIRST_ENTRY + i * 0x14u;
+
+        /* One zero-width image dispatch per entry and no CLUT dispatch.
+         * Distinct source offsets make iteration order and entry-0 replay
+         * directly observable without inventing any GPU progress. */
+        PE_StoreU8(entry + 7u, 1u);
+        PE_StoreU32(entry + 4u, 0x1000u + i * 4u);
+        PE_StoreU32(entry + 8u, 0u);
+        PE_StoreU32(entry + 0xCu, 0u);
+        PE_StoreU8(entry + 0xFu, 0u);
+        PE_StoreU32(entry + 0x10u, 0u);
+    }
+}
+
 static void test_6AD40_guard_bit0(void)
 {
     DiscFixture fx;
@@ -12255,6 +12274,92 @@ static void test_6AD40_prefix_repeat_dirty(void)
     }
     ASSERT((PE_LoadU32(0x800B0CD8u) & 1u) != 0,
            "repeated prefix must leave suffix state untouched");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B54B — func_8006AD40 counted loop to 0x8006AE68 (2 tests)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void test_B54B_6AD40_canonical_counted_loop(void)
+{
+    DiscFixture fx;
+    uint32_t i;
+    TEST("B54B_6AD40_canonical_counted_loop");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 13u);
+    B54B_SeedLoopEntries(13u);
+    PE_StoreU16(0x80091650u, 0xA55Au);
+    PE_StoreU16(0x80091652u, 0x5AA5u);
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54B canonical return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 13,
+           "count 13 must issue entry 0 once plus 12 remaining entries");
+    for (i = 0; i < 13u; i++) {
+        ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
+               B50_BASE + 0x1000u + i * 4u,
+               "B54B entry order or increment timing changed");
+    }
+    ASSERT(g_bootstrap_arg4_calls[0].arg3 !=
+           g_bootstrap_arg4_calls[1].arg3,
+           "B54B replayed entry 0");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+           "B54B did not stop at the established 0x8006AE68 frontier");
+    ASSERT(CountOrderLog("func_800718D0") == 0 &&
+           CountOrderLog("func_80030894") == 0,
+           "B54B entered a later suffix dependency");
+    ASSERT(PE_LoadU16(0x80091650u) == 0xA55Au &&
+           PE_LoadU16(0x80091652u) == 0x5AA5u,
+           "B54B consumed the later D_80091648 packing loop");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "B54B frontier stop reason changed");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_B54B_6AD40_count_edges(void)
+{
+    DiscFixture fx;
+    TEST("B54B_6AD40_count_edges");
+
+    /* count=0 takes the retail pre-loop branch directly to 0x8006AE68. */
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "count-zero fixture build failed");
+    B50_StartFixture(&fx, 0u);
+    Stub_ResetOrderLog();
+    ASSERT(func_8006AD40() == 0, "count-zero return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 0,
+           "count zero fabricated a texture helper call");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+           "count zero did not reach the 0x8006AE68 frontier");
+    FxFree(&fx);
+
+    /* count=1 is the valid zero-remaining state at 0x8006AE50. */
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "count-one fixture build failed");
+    B50_StartFixture(&fx, 1u);
+    B54B_SeedLoopEntries(1u);
+    ASSERT(func_8006AD40() == 0, "count-one return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "count one repeated the already-completed first entry");
+    FxFree(&fx);
+
+    /* count=2 catches increment-before-compare and the branch delay slot. */
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "count-two fixture build failed");
+    B50_StartFixture(&fx, 2u);
+    B54B_SeedLoopEntries(2u);
+    ASSERT(func_8006AD40() == 0, "count-two return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "count two has an off-by-one helper count");
+    ASSERT(g_bootstrap_arg4_calls[0].arg3 == B50_BASE + 0x1000u &&
+           g_bootstrap_arg4_calls[1].arg3 == B50_BASE + 0x1004u,
+           "count-two entry increment/order changed");
     FxFree(&fx);
     PASS();
 }
@@ -17620,6 +17725,10 @@ int main(void)
     test_6AD40_strict_stops_at_frontier();
     test_6AD40_prefix_does_not_finalize();
     test_6AD40_prefix_repeat_dirty();
+
+    /* Phase 6E-B54B counted func_8006E1C0 loop (2 tests). */
+    test_B54B_6AD40_canonical_counted_loop();
+    test_B54B_6AD40_count_edges();
 
     /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
     test_6E1C0_single_call_zero_entry();

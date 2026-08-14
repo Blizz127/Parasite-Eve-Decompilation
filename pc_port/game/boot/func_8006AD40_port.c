@@ -1,32 +1,28 @@
 /*
- * Phase 6E-B50 corrective — func_8006AD40: proven prefix only.
+ * Phase 6E-B54B — func_8006AD40: proven prefix through counted texture loop.
  *
  * Full retail body:
  *   391 words / 1564 bytes, exe 0x8006AD40–0x8006B35C (exclusive),
  *   file offset 0x5B540.
  *
  * Implemented prefix:
- *   68 words / 272 bytes, exe 0x8006AD40–0x8006AE50 (exclusive).
- *   The final two words are the call at 0x8006AE48 and its delay slot at
- *   0x8006AE4C:
+ *   74 words / 296 bytes, exe 0x8006AD40–0x8006AE68 (exclusive).
+ *   B54B completes the counted func_8006E1C0 loop beginning with the call
+ *   at 0x8006AE48 and ending after the delay slot at 0x8006AE64:
  *
  *       jal  func_8006E1C0
  *        move a1,s4
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
- * B53C translates the func_80076C34 timeout/full-check prefix and exposes
- * func_80073E10 as its honest centralized boundary. No queue entry is yet
- * published, so non-strict execution still returns from func_8006AD40 as
- * soon as the translated callee returns. It must not execute the remaining
- * retail control flow with those effects missing.
- *
- * If the entry count is zero, the conditional retail call is bypassed.  The
- * host still returns at the end of the proven static prefix rather than
- * claiming the untranslated suffix.
+ * B53I-D completes the accepted two-LoadImage lifecycle for entry 0. B54A
+ * proves that 0x8006AE50 is mid-loop rather than a dependency boundary, so
+ * B54B issues the remaining entries through the same translated helper and
+ * stops at the loop exit. If the initial entry count is zero, retail bypasses
+ * the loop and reaches that same 0x8006AE68 boundary directly.
  *
  * Classification: 1 — translated retail prefix with an honest unresolved
- * state-producing boundary.  No dependency is translated here.
+ * boundary. No new dependency or hardware behavior is translated here.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -83,7 +79,7 @@ int func_8006AD40(void)
             (int)(end - start));
     } while (status == -1);
 
-    /* 0x8006AE10–0x8006AE4C: first packet and unresolved boundary.
+    /* 0x8006AE10–0x8006AE64: complete first counted texture-entry loop.
      * The header is at base + lw(base+4) + 0x28, not base + 0x28. */
     {
         pe_addr_t base = PE_LoadU32(GA_D_800B0CD8 + 0x160u);
@@ -91,20 +87,28 @@ int func_8006AD40(void)
         uint32_t header = PE_LoadU32(metadata + 0x28u);
         uint32_t count = header >> 22;
         pe_addr_t entry = base + (header & 0x003FFFFFu);
+        uint32_t issued = 0u;
 
-        if (count != 0u)
-            func_8006E1C0(entry, base);
+        if (count != 0u) {
+            for (;;) {
+                uint32_t continue_loop;
+
+                func_8006E1C0(entry, base);        /* 0x8006AE48 */
+                header = PE_LoadU32(metadata + 0x28u); /* 0x8006AE50 */
+                issued += 1u;                      /* 0x8006AE54 */
+                count = header >> 22;              /* 0x8006AE58 */
+                continue_loop = issued < count;    /* sltu 0x8006AE5C */
+                entry += 0x14u;                    /* delay 0x8006AE64 */
+                if (!continue_loop)
+                    break;
+            }
+        }
     }
 
-    /* B50 prefix cut at retail 0x8006AE50: only 68 of this function's 391
-     * words are translated, and retail continues for 323 more.
-     *
-     * Through B53G this stop merely echoed a deeper boundary inside the
-     * LoadImage path.  B53H translates the queue pump's busy-DMA path, so
-     * that whole path now completes and THIS is the canonical run's only
-     * stop.  It is therefore named through the centralized boundary, like
-     * every other unresolved site, so strict mode still reports where
-     * execution stopped instead of exiting silently. */
+    /* B54B prefix cut at retail 0x8006AE68. The later D_80091648 packing,
+     * archive lookup/table walk, CD poll, and all later suffix dependencies
+     * remain unconsumed. Keep the established provider name so existing
+     * strict/frontier tooling continues to identify this function's cut. */
     (void)Bootstrap_ReturnInt(
         "func_8006AD40_prefix_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);

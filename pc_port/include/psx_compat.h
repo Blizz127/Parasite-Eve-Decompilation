@@ -106,8 +106,8 @@ static inline void func_800752AC(void *o, int n) {
 }
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
-/* func_8006AD40 has a proven Phase 6E-B50 prefix through the first
- * state-producing unresolved call at retail 0x8006AE48. */
+/* func_8006AD40 has a proven Phase 6E-B54B prefix through the complete
+ * first counted func_8006E1C0 loop, stopping at retail 0x8006AE68. */
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
@@ -129,10 +129,10 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * func_800746A0. B53H translates the busy-DMA prefix and B53I-C completes
  * the idle-DMA suffix of queue pump func_80076EE4; a later explicit IRQ
  * checkpoint now consumes the queued request and issues the second DMA.
- * The original main execution still completes this dispatcher before that
- * hardware opportunity, so
- * the next canonical boundary is the B50 prefix cut inside func_8006AD40,
- * reported as `func_8006AD40_prefix_cut`. */
+ * B54B completes the remaining first-packet loop through this translated
+ * helper without adding a hardware opportunity. The canonical boundary is
+ * now the loop exit at 0x8006AE68 inside func_8006AD40, still reported as
+ * the established `func_8006AD40_prefix_cut` provider. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
