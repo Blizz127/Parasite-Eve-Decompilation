@@ -3,6 +3,21 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-VIS1-B — retail actor projection contract (evidence only)
+
+Local evidence commit. No `native/` edit, no PT1 reopen, no push.
+World→screen is GTE `RTPS`/`RTPT` through the 52-byte view MATRIX.
+Y consumed by projection is **SNAPPED** (`func_8001AA78` classic
+`height<<16`), not the `0x0B` authored immediate (RD7-R). Origin
+samples: m0002i cam (−145,224,2475) SXY 142.014141414141 /
+139.785050505050 scale 307/2475; m0003i cam (−16,939,1235) SXY
+156.748178137652 / 302.841295546559 scale 251/1235. Posed idle
+pixel height is 26.09 / 29.71 (VIS-C span; not a target). Native
+`project_camera` IEEE divide is a recorded defect. Background
+stays native 320×224. Contract:
+`docs/evidence/pe-vis1b-retail-projection/`. Scanner:
+`python3 tools/research/pe_vis1b_project.py --exe SLUS --peimg PE.IMG`.
+
 ## PE-DEBT1 — cross-lane fidelity debt registry (evidence only)
 
 Local evidence commit. No repair, no promotion, no push. 33 live
