@@ -3,6 +3,21 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-B54D — func_80030894 audit (evidence only)
+
+Audit only. Production C and the live cut are unchanged:
+`func_8006AD40_prefix_cut` @ `0x8006AF54`. `func_80030894` is
+788 words / `0xC50`, void, one `jr $ra`, no jalr. Sole caller
+is `jal` `0x8006B0AC` in `func_8006AD40`. Twelve direct callees;
+seven unresolved, five matching GPU-header leaves with no native
+port. First jal is unresolved `GetTPage`. AF54 is a wait/reissue
+loop around already-translated `func_8006E7E8`; it is ever 0 on
+this Disc 1 prefix (`1220C` always calls `6AD40`, which has one
+`jr $ra` after `B0AC`; host `D_8009B6B4` collapse is observed,
+not assigned). poll=0 was not assigned. Recommended B54E cut:
+`0x8006AF68` after that live wait. Evidence:
+`docs/evidence/pe-b54d-func-80030894-audit/`.
+
 ## PE-B54C — func_800718D0 font atlas upload
 
 `func_800718D0` (29 words) and the `0x8006AFF8`/`0x8006B02C` packs
