@@ -3,6 +3,16 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-B54B — VRAM upload table (evidence only)
+
+Local evidence commit. Production C not edited. The
+`0x8006AE50..0x8006AE68` counted `func_8006E1C0` loop is already
+live (`c1efff5`). All 13 channel-1 entries decoded from PE.IMG
+`+0x4E800` header `0x0340B5B8`. None is `D_80091644`, the VIS1-E
+player page/CLUT, or a 21×12 font atlas. TXT1 stays blocked.
+Evidence: `docs/evidence/pe-b54b-vram-upload-table/`. Scanner:
+`python3 tools/research/pe_b54b_upload_table.py --peimg PE.IMG`.
+
 ## PE-VIS1-D — SY span reconcile (evidence only)
 
 Local evidence commit. No `native/` edit, no H/SZ/Y/pan change, no
