@@ -3,6 +3,16 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-DEBT1 — cross-lane fidelity debt registry (evidence only)
+
+Local evidence commit. No repair, no promotion, no push. 33 live
+entries across UE0 / RD / AUD / TXT / PST / BTL / this native tree.
+Mailbox is the highest-risk collision (Python payload-byte vs
+native empty `D_800A3180` vs UE0 fail-closed). UE0 lobby view 0
+and RD7-R "auto-apply view 0 without 0x82" are the same question
+(merged). Evidence:
+`docs/evidence/pe-debt1-fidelity-registry/`.
+
 ## PE-RD5-F9 — m0372i 0xF9 close vs RD5-C2 OP_0x22 edge
 
 Local evidence commit. No runtime repair, no trace rewrite, no push.
