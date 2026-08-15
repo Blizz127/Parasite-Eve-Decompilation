@@ -29,7 +29,7 @@ Three live treatments:
 |---|---|---|---|
 | Python RD5-X / RD5-C / RD6-A | `29c095a` / `1e7f0df` / `65446c8`; `pe_rd5c_cutscene.py` `_drain_type2_mailbox`; `pe_rd6a_destination.py` `M0378iStartup` | payload-byte outcomes: 1=noop, 2=clip `0x0A`, `0xFF`=restore+idle, 3=hop | no `D_800A3180` records; no `task+0x08` flags; no sender serial; no re-arm PCs; `+0x05B8` tail abstracted |
 | this checkout native | `func_8006536C_port.c` | boot-clears 28×12-byte `D_800A3180` and index byte `0x8009CDB4` | `func_800653B8` / `65400` / `12700` untranslated; table stays empty |
-| UE0 native VM | `45e6cd8` `pe_vm.cpp` / `VM_OPCODE_SET.csv` | hop m0002i→m0003i via persist[1] + `0x31`; no mailbox opcodes | `0x1C` / `0x1F` fail-closed |
+| UE0 native VM | PE-MBX2 `pe_mailbox.cpp` / `pe_vm.cpp` | 28×12 `D_800A3180` queue; `0x1C` append; `65400` drain before `35558`; `0x1F` reads `task+0x14`; no ACK | re-arm PCs / `+0x05B8` tail not claimed; 29th write / stale bytes / hop persist left unsafe |
 
 They agree on **visible prefix outcomes** (clip 10, restore,
 token) and disagree on **state**. SYS0

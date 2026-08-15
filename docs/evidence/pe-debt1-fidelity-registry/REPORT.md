@@ -202,17 +202,18 @@ docs/evidence/pe-debt1-fidelity-registry/CROSS_LANE_COLLISIONS.md
 ---
 
 ```text
-entry_count=33
+entry_count=36
 nonblocking_fidelity_count=15
 parked_blocker_count=9
 unknown_label_count=9
+retail_faithful_unsafe_count=3
 
-entries_in_native_tree=3
+entries_in_native_tree=6
 cross_lane_collisions=3
 merged_duplicates=1
 
 highest_risk_entry=DEBT-FID1-004
-highest_risk_reason=three live treatments of D_800A3180/func_800653B8; BTL1 mailbox 3/4 is the first Day 1 combat path; SYS0 already names the flip to BLOCKER when battle or save share task state
+highest_risk_reason=Python payload-byte machine vs matching empty table vs native PE-MBX2 queue; BTL1 mailbox 3/4 is the first Day 1 combat path; SYS0 already names the flip to BLOCKER when battle or save share task state
 
 registry_ready=YES
 

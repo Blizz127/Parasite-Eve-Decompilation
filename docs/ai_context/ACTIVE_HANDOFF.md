@@ -14,6 +14,16 @@ PE.IMG `[180,197)`: image `{320,0,64,256}`, CLUT `{320,252,16,1}`.
 store in SLUS. Evidence: `docs/evidence/pe-txt0b-d80091644/`.
 Scanner: `python3 tools/research/pe_txt0b_d80091644.py --peimg PE.IMG`.
 
+## PE-MBX2 — retail mailbox transport in native field
+
+Native field (`feature/pe-ue0-native-field-bootstrap`) now runs
+the PE-MBX1 queue: 28×12 at `D_800A3180`, `0x1C` append, drain
+once per `func_8003F3C4` before `func_80035558`, `0x1F` reads
+`task+0x14`, no ACK. Fail-close removed. Python payload-byte
+shim not rehosted. Oracle `9cefa0bc…` row-for-row. Hazards
+DEBT-FID1-034/035/036 are `RETAIL_FAITHFUL_UNSAFE`. Evidence:
+`docs/evidence/pe-mbx2-native-mailbox/`.
+
 ## PE-MBX1 — mailbox / task-state mechanism (evidence only)
 
 Local evidence commit. No implementation, no DEBT1 promotion, no
@@ -76,7 +86,7 @@ stays native 320×224. Contract:
 
 ## PE-DEBT1 — cross-lane fidelity debt registry (evidence only)
 
-Local evidence commit. No repair, no promotion, no push. 33 live
+Local evidence commit. No repair, no promotion, no push. 36 live
 entries across UE0 / RD / AUD / TXT / PST / BTL / this native tree.
 Mailbox is the highest-risk collision (Python payload-byte vs
 native empty `D_800A3180` vs UE0 fail-closed). UE0 lobby view 0

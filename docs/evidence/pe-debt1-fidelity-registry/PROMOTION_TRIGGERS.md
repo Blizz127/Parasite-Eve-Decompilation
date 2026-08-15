@@ -30,7 +30,10 @@ UNKNOWN_LABEL         ->  named field
 | DEBT-FID1-001 | NONBLOCKING_FIDELITY | fade/display interpolation or hop-gate timing is claimed exact (UE0 past m0003i, or Native/UE Parity for the m0004i north hop) | BLOCKER until `0x85`/`0x9C` match RD6-A's 30-tick + `(D_800BCFEE & 3) < 2` gate |
 | DEBT-FID1-002 | NONBLOCKING_FIDELITY | the camera-select / `0x82`-vs-auto-apply rule is proven, or UE0/RD7-A loads m0377i | BLOCKER if a runtime applies 52-byte view 0 without `0x82` on m0377i; else named exact rule |
 | DEBT-FID1-003 | NONBLOCKING_FIDELITY | a live per-frame camera picker consumes the 16-byte init-table fields | BLOCKER until the entry layout is proven |
-| DEBT-FID1-004 | NONBLOCKING_FIDELITY | **BTL1** implements m0004i mailbox 3/4, **or** save/load serializes task/mailbox/actor state, **or** a later first-play script depends on re-arm / `task+0x08` / sender serial rather than the payload byte | BLOCKER (SYS0 §4) until `func_800653B8` / `65400` / `12700` + `D_800A3180` are `PROVEN_EXACT` |
+| DEBT-FID1-004 | NONBLOCKING_FIDELITY | **BTL1** implements m0004i mailbox 3/4, **or** save/load serializes task/mailbox/actor state, **or** a later first-play script depends on re-arm / `task+0x08` / sender serial rather than the payload byte | BLOCKER (SYS0 §4) until `func_800653B8` / `65400` / `12700` + `D_800A3180` are `PROVEN_EXACT` on every live lane. Native field (PE-MBX2) now has the queue; Python payload-byte machine is the remaining treatment |
+| DEBT-FID1-034 | RETAIL_FAITHFUL_UNSAFE | do not promote a clamp | stays open unless a later EXE site is proven to bound the index |
+| DEBT-FID1-035 | RETAIL_FAITHFUL_UNSAFE | do not promote a wipe | stays open unless a later EXE site is proven to clear the rows |
+| DEBT-FID1-036 | RETAIL_FAITHFUL_UNSAFE | do not promote a hop-clear | stays open unless a later EXE site is proven to scene-clear the queue |
 | DEBT-FID1-005 | UNKNOWN_LABEL | a later arm reads `actor+0x23C/23D/23E` as gameplay | named field, or BLOCKER if that arm is on the Day 1 route |
 | DEBT-FID1-006 | PARKED_BLOCKER | **TXT1** implements retail glyph draw | stays BLOCKER for Day1 text PASS until VRAM rectangle + pixels are hashed |
 | DEBT-FID1-007 | PARKED_BLOCKER | **BTL1** implements return-to-field / the mode-7 store | BLOCKER for any m0005i post-battle script |
