@@ -38,6 +38,33 @@
 extern int func_8006E6A8(int lba, pe_addr_t dest, int sectors);
 extern int func_8006E7E8(void);
 
+/* Shared GetTPage/GetClut pack used by B54D records 2/3 (a1=0x20,0x30)
+ * and by the B54C font sites at 0x8006AFF8 / 0x8006B02C (a1=0,0x10). */
+static void pack_d80091648(uint32_t record_offset)
+{
+    uint32_t src_a = PE_LoadU16(GA_D_80091648 + record_offset);
+    uint32_t src_b = PE_LoadU16(GA_D_80091648 + record_offset + 2u);
+    uint32_t src_c = PE_LoadU16(GA_D_80091648 + record_offset + 4u);
+    uint32_t src_d = PE_LoadU16(GA_D_80091648 + record_offset + 6u);
+    uint32_t packed1 = ((src_a & 0x3FFu) >> 6) | 0x20u;
+    uint32_t packed2;
+
+    packed1 |= (src_b & 0x100u) >> 4;
+    packed1 |= (src_b & 0x200u) << 2;
+    packed2 = (src_d << 6) | ((src_c >> 4) & 0x3Fu);
+    PE_StoreU16(GA_D_80091648 + record_offset + 8u, (uint16_t)packed1);
+    PE_StoreU16(GA_D_80091648 + record_offset + 0xAu, (uint16_t)packed2);
+}
+
+void PE_func_8006AD40_PackFontRecords(void)
+{
+    uint32_t record_offset;
+
+    /* 0x8006AFB0..0x8006B038: a1 = 0, 0x10; a1 < 0x20. */
+    for (record_offset = 0u; record_offset < 0x20u; record_offset += 0x10u)
+        pack_d80091648(record_offset);
+}
+
 int func_8006AD40(void)
 {
     pe_addr_t lba_base;
@@ -113,22 +140,8 @@ int func_8006AD40(void)
         uint32_t record_offset;
 
         for (record_offset = 0x20u; record_offset < 0x40u;
-             record_offset += 0x10u) {
-            uint32_t src_a = PE_LoadU16(GA_D_80091648 + record_offset);
-            uint32_t src_b = PE_LoadU16(GA_D_80091648 + record_offset + 2u);
-            uint32_t src_c = PE_LoadU16(GA_D_80091648 + record_offset + 4u);
-            uint32_t src_d = PE_LoadU16(GA_D_80091648 + record_offset + 6u);
-            uint32_t packed1 = ((src_a & 0x3FFu) >> 6) | 0x20u;
-            uint32_t packed2;
-
-            packed1 |= (src_b & 0x100u) >> 4;
-            packed1 |= (src_b & 0x200u) << 2;
-            packed2 = (src_d << 6) | ((src_c >> 4) & 0x3Fu);
-            PE_StoreU16(GA_D_80091648 + record_offset + 8u,
-                        (uint16_t)packed1);
-            PE_StoreU16(GA_D_80091648 + record_offset + 0xAu,
-                        (uint16_t)packed2);
-        }
+             record_offset += 0x10u)
+            pack_d80091648(record_offset);
     }
 
     /* 0x8006AEF8..0x8006AF50: the existing archive lookup and one-or-more

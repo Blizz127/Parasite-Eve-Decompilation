@@ -12516,6 +12516,136 @@ static void test_B54D_6AD40_no_walk_still_stops_before_poll(void)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B54C — func_800718D0 TIM walker + record-0/1 pack (2 tests)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define B54C_TIM            0x8012F1A0u
+#define B54C_CLUT_BNUM      0x2Cu
+
+static void B54C_StoreRect(pe_addr_t at, int16_t x, int16_t y, int16_t w,
+                           int16_t h)
+{
+    PE_StoreU16(at + 0u, (uint16_t)x);
+    PE_StoreU16(at + 2u, (uint16_t)y);
+    PE_StoreU16(at + 4u, (uint16_t)w);
+    PE_StoreU16(at + 6u, (uint16_t)h);
+}
+
+static void B54C_SeedTim(uint32_t flag, int16_t ix, int16_t iy, int16_t iw,
+                         int16_t ih, int16_t cx, int16_t cy, int16_t cw,
+                         int16_t ch)
+{
+    PE_StoreU32(B54C_TIM + 0u, 0x10u);
+    PE_StoreU32(B54C_TIM + 4u, flag);
+    if ((flag & 8u) != 0u) {
+        pe_addr_t image = B54C_TIM + 8u + B54C_CLUT_BNUM;
+
+        PE_StoreU32(B54C_TIM + 8u, B54C_CLUT_BNUM);
+        B54C_StoreRect(B54C_TIM + 12u, cx, cy, cw, ch);
+        PE_StoreU32(image, 0x20u);
+        B54C_StoreRect(image + 4u, ix, iy, iw, ih);
+    } else {
+        PE_StoreU32(B54C_TIM + 8u, 0x20u);
+        B54C_StoreRect(B54C_TIM + 12u, ix, iy, iw, ih);
+    }
+}
+
+static void B54C_SeedFontRecords(void)
+{
+    PE_StoreU16(0x80091648u, 0x0140u);
+    PE_StoreU16(0x8009164Au, 0x0000u);
+    PE_StoreU16(0x8009164Cu, 0x0140u);
+    PE_StoreU16(0x8009164Eu, 0x00FCu);
+    PE_StoreU16(0x80091658u, 0x0180u);
+    PE_StoreU16(0x8009165Au, 0x0000u);
+    PE_StoreU16(0x8009165Cu, 0x0150u);
+    PE_StoreU16(0x8009165Eu, 0x00FCu);
+    PE_StoreU16(0x80091650u, 0xA55Au);
+    PE_StoreU16(0x80091652u, 0x5AA5u);
+    PE_StoreU16(0x80091660u, 0xC33Cu);
+    PE_StoreU16(0x80091662u, 0x3CC3u);
+}
+
+static void test_B54C_718D0_flag8_image_then_clut(void)
+{
+    pe_addr_t ret;
+    pe_addr_t image;
+
+    TEST("B54C_718D0_flag8_image_then_clut");
+    ResetTestState();
+    B52_SeedGpuDispatch();
+    B54C_SeedTim(8u, 3, 4, 2, 2, 1, 2, 2, 1);
+    image = B54C_TIM + 8u + B54C_CLUT_BNUM;
+
+    ret = func_800718D0(B54C_TIM);
+    ASSERT(ret == image + 12u, "718D0 must return image pixel pointer");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "flag-8 TIM must issue image then CLUT");
+    B52_AssertGpuCall(0, 0x00040003u, image + 12u, 0x00020002u);
+    B52_AssertGpuCall(1, 0x00020001u, B54C_TIM + 20u, 0x00010002u);
+
+    ResetTestState();
+    B52_SeedGpuDispatch();
+    B54C_SeedTim(0u, 5, 6, 1, 1, 0, 0, 0, 0);
+    ret = func_800718D0(B54C_TIM);
+    ASSERT(ret == B54C_TIM + 20u, "flag-0 return is tim+20");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "flag-0 TIM must issue only the image LoadImage");
+    B52_AssertGpuCall(0, 0x00060005u, B54C_TIM + 20u, 0x00010001u);
+    PASS();
+}
+
+static void test_B54C_718D0_atlas_rects_and_record0_pack(void)
+{
+    pe_addr_t image;
+    DiscFixture fx;
+
+    TEST("B54C_718D0_atlas_rects_and_record0_pack");
+    ResetTestState();
+    B52_SeedGpuDispatch();
+    B54C_SeedTim(8u, 320, 0, 64, 256, 320, 252, 16, 1);
+    image = B54C_TIM + 8u + B54C_CLUT_BNUM;
+
+    ASSERT(func_800718D0(B54C_TIM) == image + 12u,
+           "atlas walk return is not image+12");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "atlas TIM must issue two LoadImages");
+    B52_AssertGpuCall(0, 0x00000140u, image + 12u, 0x01000040u);
+    B52_AssertGpuCall(1, 0x00FC0140u, B54C_TIM + 20u, 0x00010010u);
+
+    B54C_SeedFontRecords();
+    PE_func_8006AD40_PackFontRecords();
+    ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
+           PE_LoadU16(0x80091652u) == 0x3F14u,
+           "record 0 pack is not GetTPage(0,1,320,0)/GetClut(320,252)");
+    ASSERT(PE_LoadU16(0x80091660u) == 0x0026u &&
+           PE_LoadU16(0x80091662u) == 0x3F15u,
+           "record 1 pack (a1=0x10) changed");
+
+    /* Live 6AD40 prefix still stops at AF54 and must not invent poll=0. */
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 0u);
+    B54D_SeedCanonicalMaterial(0u);
+    PE_StoreU32(B54D_LOOKUP, 0u);
+    B54C_SeedFontRecords();
+    Bootstrap_ResetArg4CallLog();
+    Stub_ResetOrderLog();
+    ASSERT(func_8006AD40() == 0, "6AD40 prefix return changed");
+    ASSERT(PE_LoadU16(0x80091650u) == 0xA55Au &&
+           PE_LoadU16(0x80091652u) == 0x5AA5u,
+           "6AD40 invented the poll=0 path and packed record 0");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+           "6AD40 cut moved off 0x8006AF54");
+    ASSERT(CountOrderLog("func_80030894") == 0,
+           "6AD40 entered func_80030894");
+    ASSERT(!PE_GPU_DMA2CompletionPending(),
+           "B54C added a third DMA checkpoint on the live prefix");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
  * Phase 6E-B51 — func_8006E1C0 full translation (6 tests)
  *
  * Retail: 68 words at 0x8006E1C0..0x8006E2CF (file offset 0x5E9C0).
@@ -17884,6 +18014,10 @@ int main(void)
     /* Phase 6E-B54D material prefix to the live CD poll (2 tests). */
     test_B54D_6AD40_canonical_material_prefix();
     test_B54D_6AD40_no_walk_still_stops_before_poll();
+
+    /* Phase 6E-B54C func_800718D0 TIM walker + font pack (2 tests). */
+    test_B54C_718D0_flag8_image_then_clut();
+    test_B54C_718D0_atlas_rects_and_record0_pack();
 
     /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
     test_6E1C0_single_call_zero_entry();

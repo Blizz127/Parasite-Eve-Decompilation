@@ -133,7 +133,10 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * B54D then consumes only the proven material packing and already-translated
  * archive/LoadImage walk without polling CD or adding a DMA opportunity.
  * The canonical boundary is the live func_8006E7E8 poll at 0x8006AF54,
- * still reported as the established `func_8006AD40_prefix_cut` provider. */
+ * still reported as the established `func_8006AD40_prefix_cut` provider.
+ * B54C translates func_800718D0 (29-word TIM walker) and the record-0/1
+ * pack sites; those run only when invoked directly. 6AD40 does not invent
+ * poll=0 to reach them. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
@@ -174,6 +177,8 @@ extern int  func_8006AD40(void);
 extern int  func_8006E1C0(pe_addr_t entry, pe_addr_t base);
 extern void func_80074E28(pe_addr_t name, const RECT *rect);
 extern int  func_8007506C(const RECT *rect, pe_addr_t data);
+extern pe_addr_t func_800718D0(pe_addr_t tim);
+extern void PE_func_8006AD40_PackFontRecords(void);
 extern int  func_80076664(pe_addr_t rect, pe_addr_t source);
 extern int  PE_func_80076664_Inline8(uint32_t rect_word0,
                                      uint32_t rect_word1,

@@ -3,6 +3,16 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-B54C — func_800718D0 font atlas upload
+
+`func_800718D0` (29 words) and the `0x8006AFF8`/`0x8006B02C` packs
+are translated. Image then CLUT LoadImage via existing
+`func_8007506C`. Record 0 writes `0x0025`/`0x3F14`. Live
+`func_8006AD40` cut stays `func_8006AD40_prefix_cut` @
+`0x8006AF54` — poll=0 was not invented. Next unresolved function
+is `func_80030894` @ `0x8006B0AC`. Tests 572/572. Evidence:
+`docs/evidence/pe-b54c-func-800718d0/`.
+
 ## PE-TXT0-B — D_80091644 and font atlas (evidence only)
 
 Local evidence commit. No TXT1, no production C, no cut move.
@@ -668,7 +678,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | GPU/DMA2 + CPU IRQ | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. Stored DICR excludes physical bit31, which is derived on read and sticky-edge evaluated on every transition. Completion flags are enable/master gated. The separate bridge asserts B1's I_STAT source 3, bounded CPU/DMA dispatch uses two guest-backed identity tables, B53I-C consumes the live guest ring without a host queue mirror, and B53I-D proves a later interrupt-disabled token completion is hardware-only. | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/platform/pe_irq_delivery.[ch]`, `pc_port/docs/b53i_d_second_dma_completion.md` |
 | Sanitizers | B54D fresh ASan/UBSan 570/570; focused B54D 2/2, retained B54B 2/2, D 8/8, C 10/10, B2 15/15, B1 8/8, corrected B53B 15/15, retained B53H 8/8, and B49 pass without sanitizer diagnostics | fresh GCC 13 container sanitizer build |
 | Matching build | **EXACT SHA-1 MATCH** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` / SHA-256 `5d94938ee752e81ef375bd4493c9883850c25a86895f9cb0732cf3622b44351b` (227 C leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | **PE-6E-B54E-A read-only only:** audit canonical `func_8006E7E8` CD-poll semantics beginning at retail `0x8006AF54`; do not assume the result or reachability of `func_800718D0`. | `pc_port/docs/b54d_func_8006AD40_material_prefix.md` |
+| Next frontier | **PE-6E-B54E-A read-only only:** audit canonical `func_8006E7E8` CD-poll semantics beginning at retail `0x8006AF54`. `func_800718D0` is now translated (PE-B54C) but is not reached without an explicit poll==0. Next unresolved function on that later path is `func_80030894`. | `docs/evidence/pe-b54c-func-800718d0/` |
 
 ### Phase 6E-B43 func_8005218C — current findings
 
