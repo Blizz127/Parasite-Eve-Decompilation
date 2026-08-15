@@ -3,6 +3,16 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-RD5-F9 — m0372i 0xF9 close vs RD5-C2 OP_0x22 edge
+
+Local evidence commit. No runtime repair, no trace rewrite, no push.
+TXT0 `0xF9` auto-closes `MSG_0x14`..`MSG_0x20`. RD5-C2 `1e7f0df`
+applies the newly-pressed `0x100` edge only to m0004i
+`OP_0x22`+`MSG_0x21`..`MSG_0x23`. The m0372i reel still uses
+authored `OP_0x02` waits (`pe_rd4e_cutscene.py` untouched since
+RD4-E). Over-gating is absent; control-restore tick delta is 0.
+Evidence: `docs/evidence/pe-rd5-f9-diff/`.
+
 ## PE-BTL0 — field→battle handoff (evidence only)
 
 Local evidence commit. No battle implementation, no production
