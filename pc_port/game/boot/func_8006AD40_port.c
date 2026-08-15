@@ -1,19 +1,19 @@
 /*
- * Phase 6E-B54D — func_8006AD40: material prefix through the live CD poll.
+ * Phase 6E-B54E — func_8006AD40: consume the AF54 wait/reissue to AF68.
  *
  * Full retail body:
  *   391 words / 1564 bytes, exe 0x8006AD40–0x8006B35C (exclusive),
  *   file offset 0x5B540.
  *
  * Implemented prefix:
- *   133 words / 532 bytes, exe 0x8006AD40–0x8006AF54 (exclusive).
- *   B54D consumes the bounded material-table suffix after B54B: pack
- *   records 2 and 3 of D_80091648, look up archive key 0xABADC06C, and
- *   walk its size-prefixed LoadImage records through the already-translated
- *   func_8007506C. The first excluded instruction is:
+ *   138 words / 552 bytes, exe 0x8006AD40–0x8006AF68 (exclusive).
+ *   B54E consumes only the live wait at 0x8006AF54..0x8006AF68: poll
+ *   already-translated func_8006E7E8, reissue channel 2 on -1 via the
+ *   existing 0x8006ADD8 issue, and stop at the poll==0 fallthrough.
+ *   The first excluded instruction is:
  *
- *       jal  func_8006E7E8              # 0x8006AF54, not consumed
- *        nop
+ *       addu s0, zero, zero             # 0x8006AF68
+ *       ; issue D_800930EE / buf+0x180 — not taken
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
@@ -24,7 +24,10 @@
  * the loop and reaches that same 0x8006AE68 boundary directly.
  *
  * Classification: 1 — translated retail prefix with an honest live CD-poll
- * boundary. No poll result, CD progression, or DMA checkpoint is invented.
+ * wait. The poll result is whatever func_8006E7E8 returns; s2/poll are
+ * never assigned. Host first sample is 0 from the documented D_8009B6B4
+ * issue-time collapse — recorded as a fidelity item, not used as a
+ * retail first-sample constant.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -163,9 +166,31 @@ int func_8006AD40(void)
         }
     }
 
-    /* B54D prefix cut at retail 0x8006AF54, before consuming the live
-     * func_8006E7E8 poll. Keep the established provider name so strict and
-     * frontier tooling retain one stable identity for this function. */
+    /* 0x8006AF44..0x8006AF68: wait/reissue around live func_8006E7E8.
+     * Canonical entry locals are s0=1 (AF44) and s2=1 (AE04). AE08 with
+     * s0!=0 is the wait head, not the texture loop. Do not assign s2. */
+    status = 1;
+    for (;;) {
+        if (status == -1) {
+            /* 0x8006ADD8: reissue the same channel-2 range. */
+            do {
+                uint32_t start = PE_LoadU16(GA_D_800930EC);
+                uint32_t end = PE_LoadU16(GA_D_800930EC + 2u);
+                status = func_8006E6A8(
+                    (int)(lba_base + start),
+                    PE_LoadU32(GA_D_800B0CD8 + 0x174u),
+                    (int)(end - start));
+            } while (status == -1);
+            status = 1; /* 0x8006AE04 */
+        }
+        status = func_8006E7E8(); /* 0x8006AF54 — live result */
+        if (status == 0)
+            break;
+        /* 0x8006AE08: s0==1 branches to 0x8006AF4C. */
+    }
+
+    /* B54E prefix cut at retail 0x8006AF68, the poll==0 fallthrough.
+     * Do not issue D_800930EE, call func_800718D0, or enter func_80030894. */
     (void)Bootstrap_ReturnInt(
         "func_8006AD40_prefix_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);

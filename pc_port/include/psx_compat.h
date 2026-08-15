@@ -106,9 +106,9 @@ static inline void func_800752AC(void *o, int n) {
 }
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
-/* func_8006AD40 has a proven Phase 6E-B54D prefix through material packing,
- * archive lookup, and LoadImage walk, stopping before the live CD poll at
- * retail 0x8006AF54. */
+/* func_8006AD40 has a proven Phase 6E-B54E prefix through material packing,
+ * archive lookup, LoadImage walk, and the live AF54 func_8006E7E8 wait,
+ * stopping at the poll==0 fallthrough 0x8006AF68. */
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
@@ -131,12 +131,10 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * the idle-DMA suffix of queue pump func_80076EE4; a later explicit IRQ
  * checkpoint now consumes the queued request and issues the second DMA.
  * B54D then consumes only the proven material packing and already-translated
- * archive/LoadImage walk without polling CD or adding a DMA opportunity.
- * The canonical boundary is the live func_8006E7E8 poll at 0x8006AF54,
- * still reported as the established `func_8006AD40_prefix_cut` provider.
- * B54C translates func_800718D0 (29-word TIM walker) and the record-0/1
- * pack sites; those run only when invoked directly. 6AD40 does not invent
- * poll=0 to reach them. */
+ * archive/LoadImage walk. B54E consumes the live AF54 func_8006E7E8 wait
+ * and stops at 0x8006AF68; s2/poll are never assigned. The named provider
+ * remains `func_8006AD40_prefix_cut`. B54C translates func_800718D0 and
+ * the record-0/1 pack sites; those run only when invoked directly. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
