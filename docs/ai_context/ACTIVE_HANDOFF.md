@@ -3,6 +3,18 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-B54G — second poll consumed; 6AD40 sequence parked
+
+Live named cut is now `func_8006AD40_prefix_cut` @ `0x8006B060`.
+B54E-shaped wait at `0x8006B04C..0x8006B060` (5 words): live
+`func_8006E7E8`; `poll`/`s2` not assigned. Host first sample is
+0 (`B54E-HOST-POLL-COLLAPSE`). `func_80030894` is not taken.
+**6AD40 sequence is PARKED** here: `30894` is 788 words with no
+translated prefix (first jal unresolved `GetTPage`). PE-GPU1
+ported the five SET leaves; they are not a reason to enter
+`30894`. Tests 579/579. Evidence:
+`docs/evidence/pe-b54g-second-poll-cut/`.
+
 ## PE-GPU1 — GPU packet-header leaves ported (native)
 
 Five matching-C GPU-header leaves now have native ports; four getters are
@@ -48,9 +60,8 @@ Live named cut is now `func_8006AD40_prefix_cut` @ `0x8006B04C`.
 records 0/1. Atlas is on the live prefix (`0x0025`/`0x3F14`,
 `{320,0,64,256}` / `{320,252,16,1}`). Record 1 packs
 `0x0026`/`0x3F15` from EXE `{384,0,336,252}` — not assumed a
-second font. Second poll not consumed. HostFB digest is blind to
-the x=320 atlas; the focused LoadImage/pack assertions are the
-upload gate. Tests 576/576. Evidence:
+second font. That cut is now behind B54G. HostFB digest is blind to
+the x=320 atlas. Evidence:
 `docs/evidence/pe-b54f-d800930ee-issue/`.
 
 ## PE-B54E — AF54 poll-exit cut

@@ -6,13 +6,12 @@
  *   file offset 0x5B540.
  *
  * Implemented prefix:
- *   195 words / 780 bytes, exe 0x8006AD40–0x8006B04C (exclusive).
- *   B54F consumes 0x8006AF68..0x8006B04C: issue D_800930EE through
- *   already-translated func_8006E6A8, walk the previous TIM at
- *   dest+0x174 through func_800718D0, and pack records 0 and 1.
- *   The first excluded instruction is:
+ *   200 words / 800 bytes, exe 0x8006AD40–0x8006B060 (exclusive).
+ *   B54G consumes 0x8006B04C..0x8006B060: the second live
+ *   func_8006E7E8 wait/reissue, B54E-shaped. Exclusive end is the
+ *   poll==0 fallthrough. The first excluded instruction is:
  *
- *       jal  func_8006E7E8              # 0x8006B04C, second poll
+ *       addu  s0, zero, zero            # 0x8006B060
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
@@ -22,10 +21,14 @@
  * stops at the loop exit. If the initial entry count is zero, retail bypasses
  * the loop and reaches that same 0x8006AE68 boundary directly.
  *
- * Classification: 1 — translated retail prefix. The second live poll at
- * 0x8006B04C is not consumed and no poll/s2 constant is assigned.
- * Host D_8009B6B4 collapse at the new issue is the same B54E fidelity
- * item; it is not treated as retail completion of D_800930EE.
+ * Classification: 1 — translated retail prefix. The second poll is
+ * consumed live; poll/s2 are not assigned. Host D_8009B6B4 collapse
+ * at the D_800930EE issue is B54E-HOST-POLL-COLLAPSE, not retail
+ * timing. After this cut the 6AD40 sequence is PARKED: the next
+ * already-translated issue (D_800930F0) sits in front of
+ * func_80030894 (788 words, 7 unresolved callees, no translated
+ * prefix; first jal is unresolved GetTPage). PE-GPU1 ported the
+ * five SET leaves; they do not create a 30894 prefix.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -215,8 +218,31 @@ int func_8006AD40(void)
         (void)s0;
     }
 
-    /* B54F prefix cut at retail 0x8006B04C, before the second live poll.
-     * Do not enter func_80030894. */
+    /* 0x8006B04C..0x8006B060: wait/reissue around live func_8006E7E8
+     * for the D_800930EE issue. Canonical locals are s0=1 (B040) and
+     * s2=1 (AF98). AF9C with s0!=0 is the wait head (B044), not 718D0.
+     * Do not assign s2. Do not issue D_800930F0. */
+    for (;;) {
+        if (status == -1) {
+            /* 0x8006AF6C: reissue the same D_800930EE range. */
+            do {
+                uint32_t start = PE_LoadU16(GA_D_800930EE);
+                uint32_t end = PE_LoadU16(GA_D_800930EE + 2u);
+                status = func_8006E6A8(
+                    (int)(lba_base + start),
+                    PE_LoadU32(GA_D_800B0CD8 + 0x180u),
+                    (int)(end - start));
+            } while (status == -1);
+            status = 1; /* 0x8006AF98 */
+        }
+        status = func_8006E7E8(); /* 0x8006B04C — live result */
+        if (status == 0)
+            break;
+        /* 0x8006AF9C: s0==1 branches to 0x8006B044. */
+    }
+
+    /* B54G prefix cut at retail 0x8006B060, poll==0 fallthrough.
+     * PARK the 6AD40 sequence. Do not enter func_80030894. */
     (void)Bootstrap_ReturnInt(
         "func_8006AD40_prefix_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
