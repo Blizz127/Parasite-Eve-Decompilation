@@ -3,6 +3,17 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-TXT0-B — D_80091644 and font atlas (evidence only)
+
+Local evidence commit. No TXT1, no production C, no cut move.
+`func_80037870` reads tpage/CLUT at `D_80091644+0x0C/+0x0E`.
+Those halfwords are packed at `0x8006AFF8/0x8006B02C` to
+`0x0025` / `0x3F14` after `func_800718D0` LoadImages the TIM at
+PE.IMG `[180,197)`: image `{320,0,64,256}`, CLUT `{320,252,16,1}`.
+`D_80091694` writer is `func_80052594`. `D_800B1628/162C` have no
+store in SLUS. Evidence: `docs/evidence/pe-txt0b-d80091644/`.
+Scanner: `python3 tools/research/pe_txt0b_d80091644.py --peimg PE.IMG`.
+
 ## PE-MBX1 — mailbox / task-state mechanism (evidence only)
 
 Local evidence commit. No implementation, no DEBT1 promotion, no
