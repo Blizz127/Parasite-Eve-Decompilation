@@ -3,6 +3,19 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-TXT0 — retail text / font / window contract (evidence only)
+
+Local evidence commit. No production text runtime, no push. Opcode
+`0x0D` (`0x80017410`) opens a `D_800BCEA8` record (not `0x800CCEA8`)
+via `func_800375E0`; `func_80037870` is the first ID→bytes step
+(`FF/F9 FE <id>` in the slot7 stream bound at `0x120($gp)`). USA boot
+ORs `D_800B0CD8 |= 0x40000000` and selects stream 1 (English,
+`231da625…`). Letters are `code+0x31`; `0x14..0x23` decode from that
+bank. Font UV/width proven; atlas pixels not found.
+`txt1_implementation_ready=NO`. Decoder:
+`python3 tools/research/pe_txt0_decode.py "$PE_DISC1_BIN" --message 0x21`.
+Evidence: `docs/evidence/pe-txt0-retail-text/`.
+
 ## PE-PST0 — retail persist[] provenance (evidence only)
 
 Local evidence commit. No production runtime change, no save

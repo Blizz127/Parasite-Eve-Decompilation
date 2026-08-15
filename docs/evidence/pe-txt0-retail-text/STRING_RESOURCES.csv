@@ -1,0 +1,8 @@
+source,segment,pkg_offset,length,sha256,store_index,role,message_ids,notes
+PE.IMG m0004i chunk2,slot7[0],0x9A618,0x1956,467bf214b60e2b6d2972d0ce8d8cd8898ec2908f70ed65ed63802b11ad88eba1,0,non_usa_stream,0x14-0x23 present,same bytes in m0002i/m0003i/m0372i; not selected when D_800B0CD8 bit 0x40000000 is set
+PE.IMG m0004i chunk2,slot7[1],0x9BF70,0x2A25,231da6258a69d8c44e49509164973ef2236cabf4cd40bcce4c973ce7b91c262a,1,usa_english_stream,0x14-0x23,D_800B162C after boot OR 0x40000000
+PE.IMG m0372i chunk2,slot7[0],0xBB584,0x1956,467bf214b60e2b6d2972d0ce8d8cd8898ec2908f70ed65ed63802b11ad88eba1,0,non_usa_stream,0x14-0x23,byte-identical to m0004i slot7[0]
+PE.IMG m0372i chunk2,slot7[1],0xBCEDC,0x2A25,231da6258a69d8c44e49509164973ef2236cabf4cd40bcce4c973ce7b91c262a,1,usa_english_stream,0x14-0x23,byte-identical to m0004i slot7[1]
+PE.IMG m0002i/m0003i chunk2,slot7[0/1],same relative,same,same shas,0/1,shared_bank,0x14-0x23,IDs are global in this copied bank not per-map
+EXE D_80091694,name_buffer,VA 0x80091694,3+NUL,rom_bytes=10483000,n/a,default_FA_name,FA,ROM default decodes as Aya (10 48 30); runtime may overwrite
+func_8005DC4C archive,boot PE.IMG cycle-A,guest 0x800A8028,120 records,see B26,n/a,NOT_field_dialogue,indices 3..117,0xFF-terminated system/item records; different table

@@ -1,0 +1,18 @@
+byte,kind,ascii_or_token,proof,used_in_slice
+0x0F,space,SPACE,dedicated handler 0x80038704 plus word separators in stream 1,yes
+0x10-0x29,letter,A-Z via code+0x31,every English word in 0x14..0x23,yes
+0x30-0x49,letter,a-z via code+0x31,every English word in 0x14..0x23,yes
+0x2B,punctuation,!,Jesus!! / Go! / NOW!! / here!! unique after letter map,yes
+0x2E,punctuation,',don't unique (d-o-n-?-t),yes
+0x2F,punctuation,.,I... / death... / And... / hers...,yes
+0x4A,punctuation,",",Prince, / Man, / Eva, / King, / [NAME],,yes
+0x4B,UNKNOWN_GLYPH,unmapped,width 4; sits after Father in 0x14; not assigned,yes
+0xF7,control,NEWLINE,handler 0x80037BF0 y+=12 x restore,yes
+0xF8,control,PAGE_WAIT,handler 0x80037C10 wait 0x100 then skip to next F8,not in 0x14-0x23
+0xF9,control,CHAIN_OR_CLOSE,search marker FF/F9 FE id; in body sb state=0,yes
+0xFA,control,DRAW_NAME,handler 0x80037CA8 from D_80091694,0x21 0x23
+0xFB,control,FB_SUB,jump table 0x80010E6C; slice uses FB 07,yes
+0xFC,control,EXT_GLYPH,handler 0x80038484; code+0x34,stream 0 only
+0xFD,control,EXT_GLYPH,handler 0x800385C4; code+0x134,stream 0 only
+0xFE,marker,ID_PREFIX,second byte of FF/F9 FE <id>,yes
+0xFF,control,TERMINAL,stream token; state 1->2 then 0x100 -> 0,0x21 0x22 0x23
