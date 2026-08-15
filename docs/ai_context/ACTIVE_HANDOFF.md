@@ -3,6 +3,36 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-SYS0 Day 1 acceptance contract (documentation only)
+
+Day 1 playable-slice acceptance and fidelity promotion are frozen as
+documentation/evidence. No production implementation, no gameplay
+change, no visual reopen, no push.
+
+```text
+docs/acceptance/PE_DAY1_ACCEPTANCE_CONTRACT.md
+docs/acceptance/FIDELITY_PROMOTION_POLICY.md
+docs/acceptance/DAY1_SYSTEM_GATE_MATRIX.csv
+docs/acceptance/DEBT_REGISTRY_SCHEMA.md
+docs/acceptance/UE_NATIVE_PARITY_POLICY.md
+
+day1_contract_status=DEFINED
+day1_acceptance_ready_now=no
+python_production_fallback_allowed=no
+retail_bytecode_runtime_authority=yes
+largest_current_blocker=day1_combat_boss_and_completion_unproven
+next_system_research_priority=PE-RD7-R_m0377i_first_play_destination_contract
+```
+
+Proven playable prefix remains `m0002i → m0003i → m0372i → m0004i →
+m0378i` (RD5-C2 `1e7f0df`, RD6-A `65446c8`, RD6-B `a0baebc`). Next
+first-play dest is `m0377i` (research pending). PT1 visual freeze
+`3e4c65d` / CAM-B `1bf3832` / VIS-B `ac62411` / VIS-C `cad4598` is
+not reopened. AUD1-D `40b7c3f` is the audio floor.
+
+This checkout's matching/native frontier below is a parallel
+behavior-oracle lane, not the Day 1 playable runtime.
+
 ## PC port branch state (this checkout)
 
 ## Phase 6E-B54D func_8006AD40 material prefix completed
