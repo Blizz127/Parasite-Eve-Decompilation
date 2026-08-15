@@ -127,4 +127,16 @@ extern void func_8006A64C(void);
 extern void func_8006A674(void);
 extern void func_8006A8D4(void);
 
+/* func_80077B64/B A4/BC4/C44/C64 — Phase 6E-PE-GPU1: REAL translated
+ * GPU packet-header setters (SetPolyF3 / SetPolyFT4 / SetPolyG4 / SetTile /
+ * SetSprt).  game/boot/func_80077B{64,BA4,BC4,C44,C64}_port.c — each a
+ * 5-word real outlined header-inline writing the primitive packet's byte
+ * offset 3 (length) and byte offset 7 (code).  Called via jal from
+ * func_80030894; not exercised until that body is ported. */
+extern void func_80077B64(pe_addr_t p);
+extern void func_80077BA4(pe_addr_t p);
+extern void func_80077BC4(pe_addr_t p);
+extern void func_80077C44(pe_addr_t p);
+extern void func_80077C64(pe_addr_t p);
+
 #endif

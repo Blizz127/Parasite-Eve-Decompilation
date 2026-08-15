@@ -3,6 +3,43 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-GPU1 — GPU packet-header leaves ported (native)
+
+Five matching-C GPU-header leaves now have native ports; four getters are
+classified. All nine are REAL outlined ROM functions (each owns a `jr $ra`
+and a distinct `jal` site inside `func_80030894`); none is a pure inline
+expansion folded into the caller. Psy-Q `libgpu.h` defines them as header
+inlines/macros, but the retail compiler outlined each into a standalone 5-word
+(SET leaves) / 7+ word (getters) function.
+
+Ported (native, `pc_port/game/boot/func_80077B{64,BA4,BC4,C44,C64}_port.c`,
+each `void(pe_addr_t p)`, byte-exact two-byte store, order 3-then-7):
+
+| symbol | Psy-Q | ROM @ | byte[3] | byte[7] |
+| --- | --- | --- | --- | --- |
+| func_80077B64 | SetPolyF3 | 0x80077B64 | 4  | 32 (0x20) |
+| func_80077BA4 | SetPolyFT4 | 0x80077BA4 | 9  | 44 (0x2C) |
+| func_80077BC4 | SetPolyG4  | 0x80077BC4 | 8  | 56 (0x38) |
+| func_80077C44 | SetTile    | 0x80077C44 | 3  | 96 (0x60) |
+| func_80077C64 | SetSprt    | 0x80077C64 | 3  | 64 (0x40) |
+
+These block `func_80030894` (788 words, boot GPU-primitive builder) — the SET
+leaves are jal'd at words 41/167/185/298/302/424/464/468/483. Classified only
+(do not necessarily port, per task): func_80077A64 GetTPage, func_80077AA4
+GetClut, func_80077B04 SetSemiTrans, func_80077B34 SetShadeTex — all REAL
+functions (terminate in `jr $ra`; jal'd at words 22/26/74/95/143/161/350/375/
+399/614/710/748). No native implementation added for the four getters; they are
+documented, not ported.
+
+Verification: `pc_port/tools/pe_gpu1_header_leaves_oracle.py` (loads
+SHA-1-exact `build/disc1.candidate.exe`, decodes each ROM word-block, asserts
+the 5 SET leaves' exact (offset3, offset7) store contract and that all nine are
+jal callees of `func_80030894`) passes 18 checks. Native focused test
+`test_PEGPU1_header_leaves_byte_exact` (pc_port/tests/test_native.c) calls each
+native leaf on a scratch guest buffer and asserts the identical two bytes plus
+idempotence; full suite 579/579. `func_80030894` is NOT entered; the 6AD40
+frontier is NOT advanced. Evidence: `pc_port/docs/pe_gpu1_header_leaves.md`.
+
 ## PE-B54F — D_800930EE issue and live font atlas
 
 Live named cut is now `func_8006AD40_prefix_cut` @ `0x8006B04C`.

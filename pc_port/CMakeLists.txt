@@ -123,6 +123,11 @@ set(GAME_SRCS
     game/boot/func_800746A0_port.c
     game/boot/func_80076C34_port.c
     game/boot/func_80076EE4_port.c
+    game/boot/func_80077B64_port.c
+    game/boot/func_80077BA4_port.c
+    game/boot/func_80077BC4_port.c
+    game/boot/func_80077C44_port.c
+    game/boot/func_80077C64_port.c
 )
 
 set(PORT_SRCS
