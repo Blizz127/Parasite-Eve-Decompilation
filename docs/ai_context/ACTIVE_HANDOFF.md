@@ -3,6 +3,17 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL0 — field→battle handoff (evidence only)
+
+Local evidence commit. No battle implementation, no production
+runtime change, no push. Field requests battle with opcode `0x89`
+(`func_80017FF0`, `D_8009D28C = 6`). First Day 1 combat room is
+`m0005i`, reached from m0004i mailbox 3/4 volumes after the concert
+reel. Boss identity remains RESEARCH_REQUIRED. BTL1 may implement
+the handoff only (no ATB). Evidence:
+`docs/evidence/pe-btl0-field-battle-handoff/`. Scanner:
+`python3 tools/research/pe_btl0_scan.py "$PE_DISC1_BIN"`.
+
 ## PE-TXT0 — retail text / font / window contract (evidence only)
 
 Local evidence commit. No production text runtime, no push. Opcode
