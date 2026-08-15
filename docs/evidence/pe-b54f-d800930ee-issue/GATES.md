@@ -40,5 +40,9 @@ Independent oracles that take the executable all passed (50/50).
 `b21_bzero_oracle.py` uses `DST LEN` and is not in that set.
 B54F's own 8/8 is `pc_port/tools/b54f_6ad40_d800930ee_oracle.py`.
 
-Framebuffer is unchanged. Atlas LoadImage targets VRAM x=320,
-off the presented 320-wide display.
+Framebuffer digest is unchanged and **blind to this upload**.
+HostFB is a 320×240 host buffer, not VRAM; the atlas RECT starts
+at x=320, outside that width. Coverage for the atlas is the
+focused B54F LoadImage + pack assertions, plus the HostFB-unchanged
+check in that test. Do not treat `fb28dc21…` as evidence the
+atlas still lands.

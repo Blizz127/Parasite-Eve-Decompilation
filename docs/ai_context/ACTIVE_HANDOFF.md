@@ -11,7 +11,9 @@ Live named cut is now `func_8006AD40_prefix_cut` @ `0x8006B04C`.
 records 0/1. Atlas is on the live prefix (`0x0025`/`0x3F14`,
 `{320,0,64,256}` / `{320,252,16,1}`). Record 1 packs
 `0x0026`/`0x3F15` from EXE `{384,0,336,252}` — not assumed a
-second font. Second poll not consumed. Tests 576/576. Evidence:
+second font. Second poll not consumed. HostFB digest is blind to
+the x=320 atlas; the focused LoadImage/pack assertions are the
+upload gate. Tests 576/576. Evidence:
 `docs/evidence/pe-b54f-d800930ee-issue/`.
 
 ## PE-B54E — AF54 poll-exit cut

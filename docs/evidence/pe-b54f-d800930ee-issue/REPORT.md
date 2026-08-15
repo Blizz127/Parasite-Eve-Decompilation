@@ -39,8 +39,10 @@ Host `D_8009B6B4=0` after the new issue is
 `B54E-HOST-POLL-COLLAPSE`. Busy bits stay set because the
 second poll is not consumed.
 
-Framebuffer digest is unchanged: atlas VRAM x=320 is off the
-presented display.
+Framebuffer digest is unchanged and blind to the atlas: HostFB
+is not VRAM, and RECT.x=320 is outside the 320-wide presented
+width. The focused test's LoadImage + pack assertions (and its
+HostFB-unchanged check) are the upload gate.
 
 ## Frontier
 
@@ -80,7 +82,7 @@ matching_exe=452fb033f2eaa4b18aa20a5bca60b8125af3a37b
 
 hard_blockers=
 unknowns=retail first sample at B04C; record-1 consumer; D_800930EE TIM layout beyond flag/CLUT header
-warnings=host D_8009B6B4=0 after D_800930EE is B54E-HOST-POLL-COLLAPSE not retail completion; record 1 is not assumed to be a second font; atlas VRAM x=320 leaves the presented framebuffer digest unchanged
+warnings=host D_8009B6B4=0 after D_800930EE is B54E-HOST-POLL-COLLAPSE not retail completion; record 1 is not assumed to be a second font; framebuffer digest is blind to the x=320 atlas — focused B54F LoadImage/pack assertions are the upload gate
 
 SUCCESS
 

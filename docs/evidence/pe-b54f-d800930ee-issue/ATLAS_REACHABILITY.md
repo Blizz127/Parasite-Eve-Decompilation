@@ -36,5 +36,22 @@ The new `D_800930EE` issue is a different 3-sector TIM into
 that issue is B54E-HOST-POLL-COLLAPSE, not retail completion.
 Busy bits `0x01004000` stay set because `B04C` is not consumed.
 
-Framebuffer SHA-256 is unchanged. Atlas VRAM x=320 sits off the
-320-wide presented display, so the digest is not a counterproof.
+## Framebuffer digest coverage boundary
+
+The B49/real-disc SHA-256 hashes `HostFB`, a 320×240 host RGB
+buffer (`PE_PORT_FB_WIDTH`). B53B already proves that buffer is
+**not** aliased to PSX VRAM (`test_B53B_authority_separation_guard`).
+So the digest is blind to every `LoadImage`, on- or off-display.
+
+Separately, the atlas RECT starts at VRAM **x=320**. A 320-wide
+retail display starting at x=0 would not show it either. The
+unchanged digest is therefore expected. It cannot confirm the
+atlas landed and cannot detect a regression that stopped the
+issue.
+
+Off-display uploads need their own assertion. That gate is
+`test_B54F_6AD40_live_atlas_and_record_packs`: HostFB bytes stay
+identical across the call, while the two atlas LoadImages
+(`{320,0,64,256}` then `{320,252,16,1}`) and record-0 packs
+must still occur. VRAM pixels are not that gate — this prefix
+adds no DMA checkpoint, so image DMA need not have completed.

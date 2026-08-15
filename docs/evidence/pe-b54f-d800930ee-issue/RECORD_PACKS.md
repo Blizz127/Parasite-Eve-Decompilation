@@ -33,6 +33,13 @@ the newly issued TIM at PE.IMG `[197,200)` (that file is a TIM
 with flag 8; its CLUT header is `{304,504,16,8}`). `37870` does
 not read record 1. No consumer is named this rung.
 
+Adjacency (tpage immediately right of record 0; CLUT at y=252,
+x=336 vs 320) is consistent with a second glyph page or an
+extended-character region. It is not proof. TXT0 decoded 57
+glyphs against a 21-column atlas; if TXT1 cannot place a reel
+glyph — including unmapped `0x4B` — record 1 is the first place
+to look. The consumer settles it.
+
 ```text
 record1_packs=0x0026/0x3F15
 record1_source=EXE D_80091658 {384,0,336,252}

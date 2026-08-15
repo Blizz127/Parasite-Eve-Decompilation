@@ -12753,6 +12753,7 @@ static void test_B54F_6AD40_live_atlas_and_record_packs(void)
     DiscFixture fx;
     pe_addr_t image;
     uint32_t i;
+    uint8_t *fb_before;
     TEST("B54F_6AD40_live_atlas_and_record_packs");
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
@@ -12763,9 +12764,22 @@ static void test_B54F_6AD40_live_atlas_and_record_packs(void)
     B54C_SeedTim(8u, 320, 0, 64, 256, 320, 252, 16, 1);
     B54C_SeedFontRecords();
     image = B54C_TIM + 8u + B54C_CLUT_BNUM;
+    fb_before = malloc(PE_PORT_FB_WIDTH * PE_PORT_FB_HEIGHT * 3u);
+    ASSERT(fb_before != NULL, "cannot allocate HostFB snapshot");
+    memcpy(fb_before, HostFB_GetPixels(),
+           PE_PORT_FB_WIDTH * PE_PORT_FB_HEIGHT * 3u);
     Stub_ResetOrderLog();
 
     ASSERT(func_8006AD40() == 0, "B54F canonical return wrong");
+    /* HostFB is a 320-wide host RGB buffer, not VRAM. Atlas RECT.x=320
+     * is also off a 320-wide retail display. The digest cannot see this
+     * upload; the two LoadImage snapshots below are the coverage. */
+    ASSERT(PE_PORT_FB_WIDTH == 320 && 320 >= PE_PORT_FB_WIDTH,
+           "atlas x=320 is not outside the presented width");
+    ASSERT(memcmp(fb_before, HostFB_GetPixels(),
+                  PE_PORT_FB_WIDTH * PE_PORT_FB_HEIGHT * 3u) == 0,
+           "HostFB digest must stay blind to the off-display atlas issue");
+    free(fb_before);
     ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
            PE_LoadU16(0x80091652u) == 0x3F14u,
            "live path record 0 is not 0x0025/0x3F14");
