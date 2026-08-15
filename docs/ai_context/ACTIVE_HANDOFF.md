@@ -3,6 +3,17 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-MBX1 — mailbox / task-state mechanism (evidence only)
+
+Local evidence commit. No implementation, no DEBT1 promotion, no
+push. `D_800A3180` is a 28-deep append queue; count is
+`0x44($gp)`. `0x1C` (`func_80017764`) is the sole append;
+`func_80065400` drains once per `func_8003F3C4` then zeros count;
+`0x1F` reads `task+0x14` with no ACK. Mailbox 3/4 are payloads
+3/4 on the same path. Battle/save do not touch the table
+(DEBT-FID1-004 stays NONBLOCKING). Evidence:
+`docs/evidence/pe-mbx1-task-state/`.
+
 ## PE-B54B — VRAM upload table (evidence only)
 
 Local evidence commit. Production C not edited. The
