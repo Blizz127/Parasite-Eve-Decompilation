@@ -1,19 +1,18 @@
 /*
- * Phase 6E-B54E — func_8006AD40: consume the AF54 wait/reissue to AF68.
+ * Phase 6E-B54F — func_8006AD40: D_800930EE issue, 718D0, record 0/1.
  *
  * Full retail body:
  *   391 words / 1564 bytes, exe 0x8006AD40–0x8006B35C (exclusive),
  *   file offset 0x5B540.
  *
  * Implemented prefix:
- *   138 words / 552 bytes, exe 0x8006AD40–0x8006AF68 (exclusive).
- *   B54E consumes only the live wait at 0x8006AF54..0x8006AF68: poll
- *   already-translated func_8006E7E8, reissue channel 2 on -1 via the
- *   existing 0x8006ADD8 issue, and stop at the poll==0 fallthrough.
+ *   195 words / 780 bytes, exe 0x8006AD40–0x8006B04C (exclusive).
+ *   B54F consumes 0x8006AF68..0x8006B04C: issue D_800930EE through
+ *   already-translated func_8006E6A8, walk the previous TIM at
+ *   dest+0x174 through func_800718D0, and pack records 0 and 1.
  *   The first excluded instruction is:
  *
- *       addu s0, zero, zero             # 0x8006AF68
- *       ; issue D_800930EE / buf+0x180 — not taken
+ *       jal  func_8006E7E8              # 0x8006B04C, second poll
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
@@ -23,17 +22,17 @@
  * stops at the loop exit. If the initial entry count is zero, retail bypasses
  * the loop and reaches that same 0x8006AE68 boundary directly.
  *
- * Classification: 1 — translated retail prefix with an honest live CD-poll
- * wait. The poll result is whatever func_8006E7E8 returns; s2/poll are
- * never assigned. Host first sample is 0 from the documented D_8009B6B4
- * issue-time collapse — recorded as a fidelity item, not used as a
- * retail first-sample constant.
+ * Classification: 1 — translated retail prefix. The second live poll at
+ * 0x8006B04C is not consumed and no poll/s2 constant is assigned.
+ * Host D_8009B6B4 collapse at the new issue is the same B54E fidelity
+ * item; it is not treated as retail completion of D_800930EE.
  */
 #include "psx_compat.h"
 #include "game_port.h"
 
 #define GA_D_800930EA  0x800930EAu
 #define GA_D_800930EC  0x800930ECu
+#define GA_D_800930EE  0x800930EEu
 #define GA_D_80091648  0x80091648u
 #define GA_D_800B0CD8  0x800B0CD8u
 #define GA_D_800B0DD8  0x800B0DD8u
@@ -189,8 +188,35 @@ int func_8006AD40(void)
         /* 0x8006AE08: s0==1 branches to 0x8006AF4C. */
     }
 
-    /* B54E prefix cut at retail 0x8006AF68, the poll==0 fallthrough.
-     * Do not issue D_800930EE, call func_800718D0, or enter func_80030894. */
+    /* 0x8006AF68..0x8006B04C: issue D_800930EE / dest+0x180, walk the
+     * already-complete TIM at dest+0x174, pack records 0 and 1. Canonical
+     * s0 is 0 here so 718D0 runs. s2 is set to 1 after a successful issue,
+     * so the B044 s2==-1 reissue is not taken. Do not poll at B04C. */
+    {
+        int s0 = 0; /* 0x8006AF68 */
+
+        do {
+            uint32_t start = PE_LoadU16(GA_D_800930EE);
+            uint32_t end = PE_LoadU16(GA_D_800930EE + 2u);
+
+            status = func_8006E6A8(
+                (int)(lba_base + start),
+                PE_LoadU32(GA_D_800B0CD8 + 0x180u),
+                (int)(end - start));
+        } while (status == -1);
+
+        status = 1; /* 0x8006AF98 */
+        if (s0 == 0) {
+            (void)func_800718D0(PE_LoadU32(GA_D_800B0CD8 + 0x174u));
+            PE_func_8006AD40_PackFontRecords();
+            s0 = 1; /* 0x8006B040 */
+        }
+        /* 0x8006B044 beq s2, -1, AF6C — not taken (status == 1). */
+        (void)s0;
+    }
+
+    /* B54F prefix cut at retail 0x8006B04C, before the second live poll.
+     * Do not enter func_80030894. */
     (void)Bootstrap_ReturnInt(
         "func_8006AD40_prefix_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);

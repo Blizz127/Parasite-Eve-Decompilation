@@ -8,8 +8,8 @@ func_80073CF4 wrapper and its func_800746A0 callback-slot/DICR setter.
 B53H translates the busy-DMA fast path of the queue pump func_80076EE4,
 which returns 1 and consumes nothing while the transfer is in flight, so
 the whole LoadImage dispatch now completes with no provider of its own.
-Execution first requests a stop at the current B54E prefix cut inside
-func_8006AD40 (retail 0x8006AF68, after the live AF54 poll==0 fallthrough).
+Execution first requests a stop at the current B54F prefix cut inside
+func_8006AD40 (retail 0x8006B04C, before the second live CD poll).
 B53H originally named that cut
 `func_8006AD40_prefix_cut` so it is again a visible BOOTSTRAP_RET frontier
 instead of a silent return; the continuing strict run therefore still

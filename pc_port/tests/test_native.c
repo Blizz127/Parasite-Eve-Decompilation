@@ -12034,6 +12034,7 @@ static void B50_SeedPrefixState(uint32_t count)
     PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 1u);
     PE_StoreU32(0x800B0CD8u + 0x160u, B50_BASE);
     PE_StoreU32(0x800B0CD8u + 0x174u, 0x80110000u);
+    PE_StoreU32(0x800B0CD8u + 0x180u, 0x80118000u);
 
     /* Retail: metadata = base + lw(base+4), then header = metadata+0x28.
      * A zero decoy at base+0x28 rejects the provisional direct-load bug. */
@@ -12146,8 +12147,8 @@ static void test_6AD40_guard_bit0(void)
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 0);
     ASSERT(func_8006AD40() == 0, "zero-count prefix return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 0,
-           "zero-count path must not fabricate a callback boundary");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "zero-count path must only add the live 718D0 image walk");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "zero-count suffix cut must remain an honest host stop");
     FxFree(&fx);
@@ -12169,9 +12170,10 @@ static void test_6AD40_prefix_boundary_args(void)
     ASSERT(func_8006AD40() == 0, "prefix boundary must return retail zero");
     /* B52 advances through func_8007506C to jtb[2]=func_80076C34.  The
      * zero fixture still has image h=0x100 and no CLUT call. */
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "prefix must record exactly one by-value dispatch snapshot");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "prefix must record the texture dispatch plus the 718D0 image");
     B52_AssertGpuCall(0, 0u, B50_BASE, 0x01000000u);
+    B52_AssertGpuCall(1, 0u, 0x80110000u + 20u, 0u);
     ASSERT(CountOrderLog("func_80076C34") == 0 &&
            CountOrderLog("func_80073E10") == 0 &&
            CountOrderLog("func_80076664") == 0,
@@ -12183,19 +12185,20 @@ static void test_6AD40_prefix_boundary_args(void)
            "prefix must not continue to later dependencies");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "prefix must request an honest unresolved-boundary host stop");
-    /* Channel 1's poll clears the issue bits, channel 2 sets them, then
-     * B54E's live func_8006E7E8 sample of 0 clears 0x01004000 again. */
+    /* Channel 2's poll clears 0x01004000; B54F's D_800930EE issue sets
+     * it again. The second poll is not consumed, so the bits stay live. */
     ASSERT(PE_LoadU32(0x800B0CD8u) ==
-           *(uint32_t *)(snapshot + (0x800B0CD8u - PE_RAM_BASE)),
+           (*(uint32_t *)(snapshot + (0x800B0CD8u - PE_RAM_BASE)) |
+            0x01004000u),
            "prefix issue/poll state differs from retail");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "live AF54 poll must clear channel-2 busy bits via 6E7E8");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "B54F must leave the second issue unpolled");
     ASSERT(PE_LoadU32(0x8009B6ACu) == 0x200u &&
-           PE_LoadU32(0x8009B6B0u) == 0x80110000u &&
+           PE_LoadU32(0x8009B6B0u) == 0x80118000u &&
            PE_LoadU32(0x8009B6B4u) == 0u &&
            PE_LoadU32(0x8009B6C4u) == 1u &&
            PE_LoadU32(0x8009B6D4u) == 1u,
-           "prefix channel-2 provider state differs from retail adapter");
+           "prefix D_800930EE provider state differs from retail adapter");
     for (uint32_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
         if ((a >= 0x800B0CD8u && a < 0x800B0CDCu) ||
             (a >= 0x8009B6ACu && a < 0x8009B6B8u) ||
@@ -12204,6 +12207,8 @@ static void test_6AD40_prefix_boundary_args(void)
             (a >= B53C_DEADLINE && a < B53C_TIMEOUT_POLLS + 4u) ||
             (a >= B53D_WORK_MARKER && a < B53D_WORK_MARKER + 4u) ||
             (a >= B53D_SAVED_IMASK && a < B53D_SAVED_IMASK + 4u) ||
+            (a >= 0x80091650u && a < 0x80091654u) ||
+            (a >= 0x80091660u && a < 0x80091664u) ||
             (a >= 0x80091670u && a < 0x80091674u) ||
             (a >= 0x80091680u && a < 0x80091684u))
             continue;
@@ -12322,19 +12327,21 @@ static void test_6AD40_prefix_repeat_dirty(void)
     HostFB_VSync(0);
     PE_Port_RunControlReset();
     ASSERT(func_8006AD40() == 0, "repeated dirty prefix return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 2,
-           "repeated prefix must record two by-value snapshots");
+    ASSERT(g_bootstrap_arg4_call_count == 4,
+           "repeated prefix must record two texture plus two 718D0 snapshots");
     /* B51: the dirty entry+4 = 0xDEADBEEF flows through the retail 24-bit
-     * mask into the LoadImage data address; nothing dereferences it. */
+     * mask into the LoadImage data address; nothing dereferences it.
+     * Calls 0 and 2 are the texture dispatches; 1 and 3 are 718D0. */
     for (int i = 0; i < 2; i++) {
-        ASSERT(strcmp(g_bootstrap_arg4_calls[i].symbol,
+        int tex = i * 2;
+        ASSERT(strcmp(g_bootstrap_arg4_calls[tex].symbol,
                       "func_80076C34") == 0,
                "dirty/repeated snapshot identity changed");
-        ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
+        ASSERT(g_bootstrap_arg4_calls[tex].arg3 ==
                B50_BASE + (0xDEADBEEFu & 0x00FFFFFFu),
                "dirty/repeated LoadImage data address changed");
-        ASSERT(g_bootstrap_arg4_calls[i].arg0 == B52_WORKER &&
-               g_bootstrap_arg4_calls[i].arg2 == 8u,
+        ASSERT(g_bootstrap_arg4_calls[tex].arg0 == B52_WORKER &&
+               g_bootstrap_arg4_calls[tex].arg2 == 8u,
                "dirty/repeated LoadImage rect changed");
     }
     ASSERT((PE_LoadU32(0x800B0CD8u) & 1u) != 0,
@@ -12361,8 +12368,8 @@ static void test_B54B_6AD40_canonical_counted_loop(void)
     Stub_ResetOrderLog();
 
     ASSERT(func_8006AD40() == 0, "B54B canonical return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 13,
-           "count 13 must issue entry 0 once plus 12 remaining entries");
+    ASSERT(g_bootstrap_arg4_call_count == 14,
+           "count 13 must issue 13 entries plus the live 718D0 image");
     for (i = 0; i < 13u; i++) {
         ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
                B50_BASE + 0x1000u + i * 4u,
@@ -12374,12 +12381,11 @@ static void test_B54B_6AD40_canonical_counted_loop(void)
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
            "retained B54B path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_800718D0") == 0 &&
-           CountOrderLog("func_80030894") == 0,
-           "B54B entered a later suffix dependency");
-    ASSERT(PE_LoadU16(0x80091650u) == 0xA55Au &&
-           PE_LoadU16(0x80091652u) == 0x5AA5u,
-           "B54D touched records 0/1 while retaining the B54B loop");
+    ASSERT(CountOrderLog("func_80030894") == 0,
+           "B54B entered func_80030894");
+    ASSERT(PE_LoadU16(0x80091650u) == 0x0020u &&
+           PE_LoadU16(0x80091652u) == 0u,
+           "B54B path must pack record 0 from unseeded sources");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54B frontier stop reason changed");
     FxFree(&fx);
@@ -12397,8 +12403,8 @@ static void test_B54B_6AD40_count_edges(void)
     B50_StartFixture(&fx, 0u);
     Stub_ResetOrderLog();
     ASSERT(func_8006AD40() == 0, "count-zero return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 0,
-           "count zero fabricated a texture helper call");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "count zero must only add the live 718D0 image walk");
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
            "count zero did not reach the current frontier");
@@ -12410,8 +12416,8 @@ static void test_B54B_6AD40_count_edges(void)
     B50_StartFixture(&fx, 1u);
     B54B_SeedLoopEntries(1u);
     ASSERT(func_8006AD40() == 0, "count-one return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "count one repeated the already-completed first entry");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "count one must keep one texture plus the live 718D0 image");
     FxFree(&fx);
 
     /* count=2 catches increment-before-compare and the branch delay slot. */
@@ -12420,7 +12426,7 @@ static void test_B54B_6AD40_count_edges(void)
     B50_StartFixture(&fx, 2u);
     B54B_SeedLoopEntries(2u);
     ASSERT(func_8006AD40() == 0, "count-two return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 2,
+    ASSERT(g_bootstrap_arg4_call_count == 3,
            "count two has an off-by-one helper count");
     ASSERT(g_bootstrap_arg4_calls[0].arg3 == B50_BASE + 0x1000u &&
            g_bootstrap_arg4_calls[1].arg3 == B50_BASE + 0x1004u,
@@ -12455,13 +12461,13 @@ static void test_B54D_6AD40_canonical_material_prefix(void)
     ASSERT(PE_LoadU16(0x80091680u) == 0x0034u &&
            PE_LoadU16(0x80091682u) == 0x7753u,
            "B54D record 3 packing changed");
-    ASSERT(PE_LoadU16(0x80091650u) == 0xA55Au &&
-           PE_LoadU16(0x80091652u) == 0x5AA5u &&
-           PE_LoadU16(0x80091660u) == 0xC33Cu &&
-           PE_LoadU16(0x80091662u) == 0x3CC3u,
-           "B54D packed outside records 2 and 3");
-    ASSERT(g_bootstrap_arg4_call_count == 14,
-           "B54D must retain 13 texture entries plus one material walk");
+    ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
+           PE_LoadU16(0x80091652u) == 0x3F14u &&
+           PE_LoadU16(0x80091660u) == 0x0026u &&
+           PE_LoadU16(0x80091662u) == 0x3F15u,
+           "retained B54D path must now pack records 0 and 1");
+    ASSERT(g_bootstrap_arg4_call_count == 15,
+           "B54D must retain 13 texture entries, one material walk, and 718D0");
     for (i = 0; i < 13u; i++) {
         ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
                B54D_BASE + 0x1000u + i * 4u,
@@ -12473,11 +12479,10 @@ static void test_B54D_6AD40_canonical_material_prefix(void)
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
            "retained B54D path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_800718D0") == 0 &&
-           CountOrderLog("func_80030894") == 0,
+    ASSERT(CountOrderLog("func_80030894") == 0,
            "B54D entered a forbidden later dependency");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "retained B54D path must now take the live AF54 poll");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "retained B54D path must leave the second poll unconsumed");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54D frontier stop reason changed");
     FxFree(&fx);
@@ -12496,8 +12501,8 @@ static void test_B54D_6AD40_no_walk_still_stops_before_poll(void)
     Stub_ResetOrderLog();
 
     ASSERT(func_8006AD40() == 0, "B54D zero-record return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 0,
-           "B54D zero terminator fabricated a LoadImage walk");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "B54D zero terminator must only add the live 718D0 image walk");
     ASSERT(PE_LoadU16(0x80091670u) == 0x0034u &&
            PE_LoadU16(0x80091672u) == 0x7793u &&
            PE_LoadU16(0x80091680u) == 0x0034u &&
@@ -12506,8 +12511,8 @@ static void test_B54D_6AD40_no_walk_still_stops_before_poll(void)
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
            "B54D zero-record path did not reach the current frontier");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "B54D zero-record path must now take the live AF54 poll");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "B54D zero-record path must leave the second poll unconsumed");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54D added a DMA completion checkpoint");
     FxFree(&fx);
@@ -12621,8 +12626,8 @@ static void test_B54C_718D0_atlas_rects_and_record0_pack(void)
            PE_LoadU16(0x80091662u) == 0x3F15u,
            "record 1 pack (a1=0x10) changed");
 
-    /* Live 6AD40 prefix still stops at AF68 and must not invent poll=0
-     * to reach the record-0 pack / 718D0 / 30894 stretch. */
+    /* B54F reaches 718D0 + record 0/1 packs from the live prefix.
+     * It still must not invent the second poll or enter 30894. */
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 0u);
     B54D_SeedCanonicalMaterial(0u);
@@ -12631,14 +12636,19 @@ static void test_B54C_718D0_atlas_rects_and_record0_pack(void)
     Bootstrap_ResetArg4CallLog();
     Stub_ResetOrderLog();
     ASSERT(func_8006AD40() == 0, "6AD40 prefix return changed");
-    ASSERT(PE_LoadU16(0x80091650u) == 0xA55Au &&
-           PE_LoadU16(0x80091652u) == 0x5AA5u,
-           "6AD40 invented the poll=0 path and packed record 0");
+    ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
+           PE_LoadU16(0x80091652u) == 0x3F14u,
+           "live 6AD40 prefix must now pack record 0");
+    ASSERT(PE_LoadU16(0x80091660u) == 0x0026u &&
+           PE_LoadU16(0x80091662u) == 0x3F15u,
+           "live 6AD40 prefix must now pack record 1");
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
            "6AD40 cut moved off the named prefix_cut provider");
     ASSERT(CountOrderLog("func_80030894") == 0,
            "6AD40 entered func_80030894");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "live prefix consumed the second poll");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54C added a third DMA checkpoint on the live prefix");
     FxFree(&fx);
@@ -12671,30 +12681,27 @@ static void test_B54E_6AD40_canonical_poll_exit(void)
            PE_LoadU16(0x80091680u) == 0x0034u &&
            PE_LoadU16(0x80091682u) == 0x7753u,
            "B54E disturbed retained record 2/3 packing");
-    ASSERT(PE_LoadU16(0x80091650u) == 0xA55Au &&
-           PE_LoadU16(0x80091652u) == 0x5AA5u,
-           "B54E packed record 0 — leaped past AF68");
-    ASSERT(g_bootstrap_arg4_call_count == 14,
-           "B54E must retain 13 texture entries plus one material walk");
+    ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
+           PE_LoadU16(0x80091652u) == 0x3F14u,
+           "retained B54E path must now pack record 0");
+    ASSERT(g_bootstrap_arg4_call_count == 15,
+           "B54E must retain 13 textures, one material walk, and 718D0");
     for (i = 0; i < 13u; i++) {
         ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
                B54D_BASE + 0x1000u + i * 4u,
                "B54E changed the retained counted-loop order");
     }
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "B54E must consume live func_8006E7E8 (bits stay if s2 is assigned)");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "retained B54E path must leave the second poll unconsumed");
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
-           "host first sample at AF54 is the documented pending-byte collapse");
-    ASSERT(PE_LoadU32(0x8009B6B0u) == PE_LoadU32(0x800B0CD8u + 0x174u),
-           "B54E issued D_800930EE / dest+0x180");
-    ASSERT(PE_LoadU32(0x8009B6B0u) != B54E_NEXT_DEST,
-           "B54E consumed the next CD dest");
+           "host pending-byte collapse remains after the D_800930EE issue");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
+           "retained B54E path must now issue D_800930EE / dest+0x180");
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "B54E did not stop at the named AF68 cut");
-    ASSERT(CountOrderLog("func_800718D0") == 0 &&
-           CountOrderLog("func_80030894") == 0,
-           "B54E entered a later suffix dependency");
+           "B54E did not stop at the named prefix_cut");
+    ASSERT(CountOrderLog("func_80030894") == 0,
+           "B54E entered func_80030894");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54E frontier stop reason changed");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
@@ -12717,23 +12724,107 @@ static void test_B54E_6AD40_live_poll_not_assigned(void)
     Stub_ResetOrderLog();
 
     ASSERT(func_8006AD40() == 0, "B54E zero-record return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 0,
-           "B54E zero terminator fabricated a LoadImage walk");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "zero-record path assigned s2=0 instead of calling 6E7E8");
-    ASSERT(PE_LoadU16(0x80091650u) == 0xA55Au &&
-           PE_LoadU16(0x80091652u) == 0x5AA5u &&
-           PE_LoadU16(0x80091660u) == 0xC33Cu &&
-           PE_LoadU16(0x80091662u) == 0x3CC3u,
-           "B54E invented poll=0 and packed records 0/1");
-    ASSERT(PE_LoadU32(0x8009B6B0u) != B54E_NEXT_DEST,
-           "zero-record path issued D_800930EE");
-    ASSERT(CountOrderLog("func_800718D0") == 0 &&
-           CountOrderLog("func_80030894") == 0,
-           "zero-record path entered 718D0 or 30894");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "B54E zero terminator must only add the live 718D0 image walk");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "zero-record path consumed the second poll");
+    ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
+           PE_LoadU16(0x80091652u) == 0x3F14u &&
+           PE_LoadU16(0x80091660u) == 0x0026u &&
+           PE_LoadU16(0x80091662u) == 0x3F15u,
+           "zero-record path must now pack records 0/1");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
+           "zero-record path must now issue D_800930EE");
+    ASSERT(CountOrderLog("func_80030894") == 0,
+           "zero-record path entered 30894");
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "zero-record path left the AF68 cut");
+           "zero-record path left the named prefix_cut");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B54F — D_800930EE issue + live 718D0 atlas / record 0/1
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void test_B54F_6AD40_live_atlas_and_record_packs(void)
+{
+    DiscFixture fx;
+    pe_addr_t image;
+    uint32_t i;
+    TEST("B54F_6AD40_live_atlas_and_record_packs");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 0u);
+    B54D_SeedCanonicalMaterial(13u);
+    PE_StoreU32(0x800B0CD8u + 0x174u, B54C_TIM);
+    PE_StoreU32(0x800B0CD8u + 0x180u, B54E_NEXT_DEST);
+    B54C_SeedTim(8u, 320, 0, 64, 256, 320, 252, 16, 1);
+    B54C_SeedFontRecords();
+    image = B54C_TIM + 8u + B54C_CLUT_BNUM;
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54F canonical return wrong");
+    ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
+           PE_LoadU16(0x80091652u) == 0x3F14u,
+           "live path record 0 is not 0x0025/0x3F14");
+    ASSERT(PE_LoadU16(0x80091660u) == 0x0026u &&
+           PE_LoadU16(0x80091662u) == 0x3F15u,
+           "live path record 1 is not 0x0026/0x3F15");
+    ASSERT(g_bootstrap_arg4_call_count == 16,
+           "B54F must keep 13 textures, one material, and two atlas LoadImages");
+    for (i = 0; i < 13u; i++) {
+        ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
+               B54D_BASE + 0x1000u + i * 4u,
+               "B54F changed the retained counted-loop order");
+    }
+    B52_AssertGpuCall(13, 0x000001C0u, 0x801229B4u, 0x00FE0040u);
+    B52_AssertGpuCall(14, 0x00000140u, image + 12u, 0x01000040u);
+    B52_AssertGpuCall(15, 0x00FC0140u, B54C_TIM + 20u, 0x00010010u);
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
+           "B54F did not issue D_800930EE to dest+0x180");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "B54F consumed or assigned the second poll");
+    ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
+           "host collapse after D_800930EE must stay recorded, not assigned");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+           "B54F did not stop at the named B04C cut");
+    ASSERT(CountOrderLog("func_80030894") == 0,
+           "B54F entered func_80030894");
+    ASSERT(!PE_GPU_DMA2CompletionPending(),
+           "B54F added a DMA completion checkpoint");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_B54F_6AD40_second_poll_not_consumed(void)
+{
+    DiscFixture fx;
+    TEST("B54F_6AD40_second_poll_not_consumed");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 0u);
+    B54D_SeedCanonicalMaterial(0u);
+    PE_StoreU32(B54D_LOOKUP, 0u);
+    PE_StoreU32(0x800B0CD8u + 0x180u, B54E_NEXT_DEST);
+    B54C_SeedFontRecords();
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54F zero-record return wrong");
+    ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
+           PE_LoadU16(0x80091652u) == 0x3F14u,
+           "zero-record live path must pack record 0");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
+           "zero-record live path must issue D_800930EE");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0x01004000u,
+           "zero-record path consumed the second poll");
+    ASSERT(CountOrderLog("func_80030894") == 0,
+           "zero-record path entered 30894");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+           "zero-record path left the B04C cut");
     FxFree(&fx);
     PASS();
 }
@@ -18115,6 +18206,10 @@ int main(void)
     /* Phase 6E-B54E AF54 poll-exit cut at 0x8006AF68 (2 tests). */
     test_B54E_6AD40_canonical_poll_exit();
     test_B54E_6AD40_live_poll_not_assigned();
+
+    /* Phase 6E-B54F D_800930EE issue + live atlas (2 tests). */
+    test_B54F_6AD40_live_atlas_and_record_packs();
+    test_B54F_6AD40_second_poll_not_consumed();
 
     /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
     test_6E1C0_single_call_zero_entry();

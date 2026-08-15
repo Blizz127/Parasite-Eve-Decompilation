@@ -26,7 +26,7 @@
  *
  * Sole callee is the already-faithful B52 func_8007506C. This translation
  * does not invent poll=0, does not enter func_80030894, and does not add
- * a DMA checkpoint. The live func_8006AD40 cut remains 0x8006AF54.
+ * a DMA checkpoint. B54F reaches this walker from the live 6AD40 prefix.
  *
  * Classification: 1 — complete translated retail leaf.
  */
