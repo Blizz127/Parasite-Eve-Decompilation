@@ -3,6 +3,17 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-VIS1-D — SY span reconcile (evidence only)
+
+Local evidence commit. No `native/` edit, no H/SZ/Y/pan change, no
+push. VIS1-A 24.7767 / 57.6353 is the unposed bind mesh. VIS1-C
+26 / 29 is the posed idle mesh through the same camera. Origin SZ,
+H, pan, and snapped Y match across sites (m0003i SZ=1235, H=251,
+Y=−4, pan (0,−144)). Authored Y=0 is not the 57-vs-29 gap.
+correct_figure=BOTH_CONTEXT_DEPENDENT. defect_present=no.
+Evidence: `docs/evidence/pe-vis1d-span-reconcile/`.
+Scanner: `python3 tools/research/pe_vis1d_span_reconcile.py --exe SLUS --peimg PE.IMG`.
+
 ## PE-BTL0-BOSS — Day 1 enemy identity from retail strings
 
 Local evidence commit. No battle implementation, no ATB, no push.

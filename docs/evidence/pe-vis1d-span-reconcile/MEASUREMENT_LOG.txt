@@ -1,0 +1,31 @@
+model verts=468 rawY=[-42,36] raw_span=78 posedY=[-447,-218] posed_span=229 lobby_group_height=-4 sidewalk_group_height=0 kLobbyY_int=-4 kSpawnY_int=0
+=== m0002i spawn ===
+m0002i actor=-127,0,-5377 H=307 pan=0,3 viewport=320x219 clamp=[160,160,107,112] origin_cam=-145,224,2475
+m0002i yaw=0x860
+m0002i_unposed_pan projected=468 y=0 sy=[126.071737,150.848447] span_f=24.776711 sy_i=[126,150] span_i=24 sz=[2415,2601] cy=[92,282] cy_span=190
+m0002i_unposed_nopan projected=468 y=0 sy=[123.071737,147.848447] span_f=24.776711 sy_i=[123,147] span_i=24 sz=[2415,2601] cy=[92,282] cy_span=190
+m0002i_posed_pan projected=468 y=0 sy=[102.091408,128.184049] span_f=26.092641 sy_i=[103,128] span_i=25 sz=[2136,2341] cy=[-92,98] cy_span=190
+m0002i_posed_nopan projected=468 y=0 sy=[99.091408,125.184049] span_f=26.092641 sy_i=[100,125] span_i=25 sz=[2136,2341] cy=[-92,98] cy_span=190
+=== m0003i entry phase=2 ticks=54 ===
+m0003i live_y=-4 pos_y=0xfffc0000 group_height=-4
+m0003i actor=-272,-4,-176 H=251 pan=0,-144 viewport=320x512 clamp=[160,160,112,400] origin_cam=-16,939,1235
+m0003i yaw=0x800
+m0003i_unposed_pan projected=468 y=-4 sy=[123.334373,180.969697] span_f=57.635324 sy_i=[123,180] span_i=57 sz=[1188,1343] cy=[794,1008] cy_span=214
+m0003i_unposed_nopan projected=468 y=-4 sy=[267.334373,324.969697] span_f=57.635324 sy_i=[267,324] span_i=57 sz=[1188,1343] cy=[794,1008] cy_span=214
+m0003i_posed_pan projected=468 y=-4 sy=[154.195510,183.902542] span_f=29.707033 sy_i=[154,183] span_i=29 sz=[846,1069] cy=[685,854] cy_span=169
+m0003i_posed_nopan projected=468 y=-4 sy=[298.195510,327.902542] span_f=29.707033 sy_i=[298,327] span_i=29 sz=[846,1069] cy=[685,854] cy_span=169
+=== m0003i authored Y=0 vs snapped Y=-4 (posed+unposed, pan on) ===
+m0003i_authoredY0 actor=-272,0,-176 H=251 pan=0,-144 viewport=320x512 clamp=[160,160,112,400] origin_cam=-16,942,1238
+m0003i_unposed_authoredY0 projected=468 y=0 sy=[123.241647,180.676174] span_f=57.434527 sy_i=[123,180] span_i=57 sz=[1192,1346] cy=[796,1010] cy_span=214
+m0003i_posed_authoredY0 projected=468 y=0 sy=[154.203169,183.521097] span_f=29.317928 sy_i=[154,183] span_i=29 sz=[849,1073] cy=[687,856] cy_span=169
+m0003i_unposed_snappedY-4 projected=468 y=-4 sy=[123.334373,180.969697] span_f=57.635324 sy_i=[123,180] span_i=57 sz=[1188,1343] cy=[794,1008] cy_span=214
+m0003i_posed_snappedY-4 projected=468 y=-4 sy=[154.195510,183.902542] span_f=29.707033 sy_i=[154,183] span_i=29 sz=[846,1069] cy=[685,854] cy_span=169
+=== H swap (posed, pan on, live Y) ===
+m0003i_H307 actor=-272,-4,-176 H=307 pan=0,-144 viewport=320x512 clamp=[160,160,112,400] origin_cam=-16,939,1235
+m0003i_posed_H307 projected=468 y=-4 sy=[195.737138,232.072034] span_f=36.334896 sy_i=[195,232] span_i=37 sz=[846,1069] cy=[685,854] cy_span=169
+m0003i_unposed_H307 projected=468 y=-4 sy=[157.990647,228.484848] span_f=70.494202 sy_i=[157,228] span_i=71 sz=[1188,1343] cy=[794,1008] cy_span=214
+--- hashes ---
+disc_sha256=7f20fce99a7ff18accebf3156419b24d4c0145c5c0f8168d5e86005ccf28f9c4
+native_head=d867f420b081fe48c1a70eeca3f4160d2525c860
+vis1c_pose=fb20034f3c0d4a5bcccdfc342baf2a66adb0a47e
+vis1a=14c959bb3cc2ee4d128eebf8b5fef6175f267497
