@@ -1,0 +1,8 @@
+system,function,access,evidence
+field_vm,binder mode 2 @ 0x800171BC,read/write word persist[slot],func_80017134 case 2; *D_800A77F0 + slot*4
+field_load,func_80034FC4,none,rebuilds D_800BEA90 actor pool only
+new_game_boot,func_80034F10 via func_8003E680,write zero 512 words,sltiu count 0x200; sw $zero
+save,func_8003F800 via func_80040B80,copy 0x800 bytes out,"addiu $t0, persist, 0x800 memcpy loop"
+load,func_8003FBD8 via func_80042264,copy 0x800 bytes in,"addiu $t0, src, 0x800 memcpy into D_800A77F0"
+inventory_or_menu_flag_sync,func_80053128,read persist[i] for i in table ranges at D_800923D8,lw persist; value-0x100 sltiu 0x80; ori D_800C0EB1 bit 3
+battle,UNKNOWN direct persist consumer,not proven this rung,no other lui/addiu D_800A77F0 sites beyond binder/zero/save/load/53128

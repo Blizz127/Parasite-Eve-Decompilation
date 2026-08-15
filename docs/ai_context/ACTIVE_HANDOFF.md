@@ -3,6 +3,18 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-PST0 — retail persist[] provenance (evidence only)
+
+Local evidence commit. No production runtime change, no save
+implementation, no push. Canonical persist is `D_800A77F0`, 512 words /
+`0x800` bytes, binder mode 2. New-game zero is `func_80034F10`; field
+load does not clear it; save/load memcpy the whole bank via
+`func_8003F800` / `func_8003FBD8`. First-play walker ends at
+`persist[1]=0x17A`, `persist[0x4A]=0x18`. Only `persist[1]` is
+`PROVEN_SEMANTIC` (`entrance_selector`). Evidence:
+`docs/evidence/pe-pst0-persist-provenance/`. Scanner:
+`python3 tools/research/pe_pst0_scan.py "$PE_DISC1_BIN"`.
+
 ## PE-SYS0 Day 1 acceptance contract (documentation only)
 
 Day 1 playable-slice acceptance and fidelity promotion are frozen as
