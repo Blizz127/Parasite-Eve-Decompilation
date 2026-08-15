@@ -3,6 +3,19 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL0-BOSS — Day 1 enemy identity from retail strings
+
+Local evidence commit. No battle implementation, no ATB, no push.
+Enemy names live in the **same USA stream 1** as TXT0
+(`231da625…`, `func_80037870`, letters `code+0x31`). First
+m0005i `0x89` opens speaker **Actress** (ids 46, 50). Later
+same-room lines name **Eve** (54, 56, 132); title id 45
+`Battle VS Eve` is in the bank but not opened on this map.
+Slot fields 1332/1333/1334 are resource halfwords at
+`+0xB2/+0xB0/+0xB4`, not string ids. 49 vs 50 is an unused
+`local[24]` RNG write. Later m0005i `0x89` reuse the same
+slot. Evidence: `docs/evidence/pe-btl0-boss-identity/`.
+
 ## PE-VIS1-B — retail actor projection contract (evidence only)
 
 Local evidence commit. No `native/` edit, no PT1 reopen, no push.
@@ -44,7 +57,8 @@ Local evidence commit. No battle implementation, no production
 runtime change, no push. Field requests battle with opcode `0x89`
 (`func_80017FF0`, `D_8009D28C = 6`). First Day 1 combat room is
 `m0005i`, reached from m0004i mailbox 3/4 volumes after the concert
-reel. Boss identity remains RESEARCH_REQUIRED. BTL1 may implement
+reel. Boss identity is now PE-BTL0-BOSS (Actress first, Eve later,
+same m0005i slot). BTL1 may implement
 the handoff only (no ATB). Evidence:
 `docs/evidence/pe-btl0-field-battle-handoff/`. Scanner:
 `python3 tools/research/pe_btl0_scan.py "$PE_DISC1_BIN"`.
