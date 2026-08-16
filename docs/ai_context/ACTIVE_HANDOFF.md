@@ -3,6 +3,33 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-B54I — all func_80030894 callees now native; wall is the 788-word body
+
+Ported 11 word-exact leaves/wrappers (evidence-first redo; a dead
+context-exhausted session had left nine speculative uncommitted files
+claiming this work — deleted as unverified): GetTPage func_80077A64
+(real Psy-Q ABI tp,abr,x,y — the "a1=Y=16" theory was false; retail call
+(0,1,256,480)→0x34), CLUT variant func_80077AA4 ((y<<6)|((x>>a4)&0x3F)
+→0x7E13 at the retail call), SetSemiTrans func_80077B04 / SetShadeTex
+func_80077B34 (code byte p+7), setSprt func_80077C04 (len 4/code 0x64 —
+its p[7] store IS the jr delay slot at 0x80077C14), DR draw-mode
+func_80077C84 (p[3]=1; word (0xE1000000|(a2?0x200:0))|((a3&0x9FF)|(a1?0x400:0))
+stored at p+4 in the delay slot 0x80077CAC), length-budget append
+func_80077CB4 (len=head[3]+tail[3]+1; cap 17; fail −1 no-stores; success
+zeroes *(u32*)tail), guest lookup func_8005DADC (*(u32*)0x800A8030 +
+0x800A8028 + (a0<<3); final add in delay slot), wrappers func_800370DC
+(sprt twin → compound len 6) / func_80037140 (tile twin via SetTile →
+len 5), and func_800719E4 = 3-word **BIOS B(38h) CD-mode trampoline**
+(NOT a large function; 12 jal sites: 11× a0=−1 fail paths never taken
+with retail data, 1× a0=1 CD set already collapsed in pe_libcd.c).
+**func_80030894 is 100% callee-unblocked.** Tests 580/580 normal +
+ASan/UBSan (toolbox jk2026-dev); exe-arg oracle matrix 52/52; new
+`b54i_gpu_leaves_oracle.py` 30 checks; GPU1 oracle 18 retained.
+Frontier unchanged (B54G in-suite assertions). func_80030894 NOT
+entered. Evidence: `docs/evidence/pe-b54i-gpu-primitive-leaves/`.
+NEXT: PE-B54J read-only prefix audit of the 788-word func_80030894 body
+(register flow, frame, packet destinations) before production C.
+
 ## PE-B54G — second poll consumed; 6AD40 sequence parked
 
 Live named cut is now `func_8006AD40_prefix_cut` @ `0x8006B060`.
@@ -738,7 +765,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B54F D_800930EE + live atlas**; named `func_8006AD40_prefix_cut` is now retail `0x8006B04C`; second poll not consumed | fresh normal and ASan/UBSan `pe-native-tests` 576/576 each; focused B54F 2/2; exe oracles 50/50 |
+| Port phase | **6E-B54I GPU primitive-builder leaves + wrappers**; all func_80030894 callees native; frontier still `func_8006AD40_prefix_cut` @ retail `0x8006B060` | fresh normal and ASan/UBSan `pe-native-tests` 580/580 each; focused B54I 1/1; exe-arg oracles 52/52; b54i oracle 30 checks; GPU1 oracle 18 checks |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -750,11 +777,11 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 twice). Every direct callee is translated. Call 15 is real func_80051CC4; B40 translates its first nested dependency func_8005332C, B41/B42 complete the exposed B29 func_80053968/func_80053B48 dependencies, and B43 translates func_8005218C only through its first honest internal boundary at func_8005B91C. Sole call site func_8006A9E4 @0x8006AAD0, `$s1`-guarded one-shot inside cycle B; void return unconsumed. | `pc_port/game/boot/func_800527C8_port.c`, `func_80051CC4_port.c`, `func_8005218C_port.c`, `func_8005332C_port.c`, `func_80053968_port.c`, `func_80053B48_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | continuing real data: **exit 1** at `func_8006AD40_prefix_cut` from `func_8006AD40`, now at retail PC `0x8006B04C` before the second live poll (the only BOOTSTRAP_RET provider on the canonical path); `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | fresh normal and ASan/UBSan agree |
+| Strict mode | continuing real data: **exit 1** at `func_8006AD40_prefix_cut` from `func_8006AD40`, now at retail PC `0x8006B060` (the only BOOTSTRAP_RET provider on the canonical path); `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` (this disc-less checkout stops earlier at a pre-existing PE_LoadU32(0) FATAL, identical at HEAD — see B54I evidence) | fresh normal and ASan/UBSan agree |
 | GPU/DMA2 + CPU IRQ | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. Stored DICR excludes physical bit31, which is derived on read and sticky-edge evaluated on every transition. Completion flags are enable/master gated. The separate bridge asserts B1's I_STAT source 3, bounded CPU/DMA dispatch uses two guest-backed identity tables, B53I-C consumes the live guest ring without a host queue mirror, and B53I-D proves a later interrupt-disabled token completion is hardware-only. | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/platform/pe_irq_delivery.[ch]`, `pc_port/docs/b53i_d_second_dma_completion.md` |
-| Sanitizers | B54F fresh ASan/UBSan 576/576; focused B54F 2/2, retained B54E/D/C 2/2, D 8/8, C 10/10, B2 15/15, B1 8/8, B53B 15/15, H 8/8, and B49 pass without sanitizer diagnostics | Fedora toolbox `jk2026-dev`, `PE_PORT_SANITIZERS=ON` |
+| Sanitizers | B54I fresh ASan/UBSan 580/580; focused B54I 1/1, retained B54G 2/2, B54F 2/2, B54E 2/2, D 8/8, C 10/10, B2 15/15, B1 8/8, B53B 15/15, H 8/8, and B49 pass without sanitizer diagnostics | Fedora toolbox `jk2026-dev`, `PE_PORT_SANITIZERS=ON` |
 | Matching build | **EXACT SHA-1 MATCH** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` / SHA-256 `5d94938ee752e81ef375bd4493c9883850c25a86895f9cb0732cf3622b44351b` (227 C leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | Second live `func_8006E7E8` poll at `0x8006B04C`. Do not assign poll=0. First unresolved function remains `func_80030894`. | `docs/evidence/pe-b54f-d800930ee-issue/` |
+| Next frontier | Translate `func_80030894` (788 words, sole caller `func_8006AD40` @ `0x8006B0AC`) — every direct callee is now native (PE-GPU1 + B54I). Read-only prefix audit first. | `docs/evidence/pe-b54i-gpu-primitive-leaves/` |
 
 ### Phase 6E-B43 func_8005218C — current findings
 

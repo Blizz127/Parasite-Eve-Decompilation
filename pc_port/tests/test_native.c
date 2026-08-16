@@ -17787,6 +17787,172 @@ static void test_PEGPU1_header_leaves_byte_exact(void)
     PASS();
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B54I — GPU primitive-builder leaves + add/sort wrappers (1 test)
+ *
+ * Retail leaves verified word-exact against the SHA-1-exact executable:
+ *   func_80077A64 GetTPage(tp,abr,x,y), func_80077AA4 CLUT builder,
+ *   func_80077B04/B34 SetSemiTrans/SetShadeTex, func_80077C04 setSprt
+ *   header (len 4, code 0x64), func_80077C84 DR draw-mode word,
+ *   func_80077CB4 length-budget append (cap 17, fail -1),
+ *   func_8005DADC guest table lookup, func_800370DC/37140 add/sort
+ *   wrappers, func_800719E4 BIOS B(38h) trampoline.
+ * These are the remaining direct callees of func_80030894; none of them
+ * may enter that body. */
+#define B54I_SCRATCH 0x801F0100u
+
+static void test_B54I_gpu_leaves_and_wrappers(void)
+{
+    TEST("B54I_gpu_leaves_and_wrappers");
+    ResetTestState();
+
+    /* ── func_80077A64 GetTPage ── */
+    /* Retail call site 0x800308EC: (0, 1, 256, 480) -> 0x34. */
+    ASSERT(func_80077A64(0, 1, 256, 480) == 0x34u,
+           "B54I GetTPage retail vector");
+    ASSERT(func_80077A64(3, 3, 0x3FF, 0x300) ==
+           ((3u << 7) | (3u << 5) | (0x100u >> 4) | (0x3FFu >> 6) |
+            (0x200u << 2)),
+           "B54I GetTPage all fields");
+    ASSERT(func_80077A64(0, 0, 0, 0) == 0u, "B54I GetTPage zero");
+
+    /* ── func_80077AA4 CLUT builder ── */
+    /* Retail call site 0x800308FC: (0x130, 0x1F8) -> 0x7E13. */
+    ASSERT(func_80077AA4(0x130, 0x1F8) == 0x7E13u,
+           "B54I GetClut retail vector");
+    /* x is consumed through a signed sra: -1 >>a 4 stays all-ones. */
+    ASSERT(func_80077AA4(-1, 0) == 0x3Fu, "B54I GetClut signed shift");
+    ASSERT(func_80077AA4(0x40, 0x1FF) == (((0x1FFu << 6) | 4u) & 0xFFFFu),
+           "B54I GetClut mask");
+
+    /* ── func_80077B04 / func_80077B34 code-byte modifiers ── */
+    PE_RamReset();
+    PE_StoreU8(B54I_SCRATCH + 7, 0x60u);
+    func_80077B04(B54I_SCRATCH, 1);
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 7) == 0x62u,
+           "B54I SetSemiTrans(1) sets bit 1");
+    func_80077B04(B54I_SCRATCH, 0);
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 7) == 0x60u,
+           "B54I SetSemiTrans(0) clears bit 1");
+    func_80077B34(B54I_SCRATCH, 1);
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 7) == 0x61u,
+           "B54I SetShadeTex(1) sets bit 0");
+    func_80077B34(B54I_SCRATCH, 0);
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 7) == 0x60u,
+           "B54I SetShadeTex(0) clears bit 0");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 0) == 0 &&
+           PE_LoadU8(B54I_SCRATCH + 6) == 0 &&
+           PE_LoadU8(B54I_SCRATCH + 8) == 0,
+           "B54I semi/shade touched bytes outside p+7");
+
+    /* ── func_80077C04 setSprt header ── */
+    PE_RamReset();
+    func_80077C04(B54I_SCRATCH);
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 3) == 4 &&
+           PE_LoadU8(B54I_SCRATCH + 7) == 0x64u,
+           "B54I setSprt len/code bytes");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 0) == 0 &&
+           PE_LoadU8(B54I_SCRATCH + 2) == 0 &&
+           PE_LoadU8(B54I_SCRATCH + 4) == 0 &&
+           PE_LoadU8(B54I_SCRATCH + 6) == 0,
+           "B54I setSprt wrote outside offsets 3/7");
+
+    /* ── func_80077C84 DR draw-mode word ── */
+    PE_RamReset();
+    ASSERT(func_80077C84(B54I_SCRATCH, 0, 1, 0x34) == 0xE1000234u,
+           "B54I draw-mode wrapper-shape return");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 3) == 1 &&
+           PE_LoadU32(B54I_SCRATCH + 4) == 0xE1000234u,
+           "B54I draw-mode len byte + word store");
+    ASSERT(func_80077C84(B54I_SCRATCH, 1, 0, 0x34) == 0xE1000434u,
+           "B54I draw-mode a1-variant");
+    ASSERT(func_80077C84(B54I_SCRATCH, 1, 1, 0xFFFFFFFFu) == 0xE1000FFFu,
+           "B54I draw-mode both variants + 0x9FF mask");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 0) == 0 &&
+           PE_LoadU8(B54I_SCRATCH + 8) == 0,
+           "B54I draw-mode wrote outside p+3 / p+4..7");
+
+    /* ── func_80077CB4 length-budget append ── */
+    PE_RamReset();
+    PE_StoreU8(B54I_SCRATCH + 3, 1);      /* head len */
+    PE_StoreU32(B54I_SCRATCH + 16, 0x04000064u); /* tail tag: len 4 */
+    ASSERT(func_80077CB4(B54I_SCRATCH, B54I_SCRATCH + 16) == 0,
+           "B54I append success returns 0");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 3) == 6,
+           "B54I append head len = 1+4+1");
+    ASSERT(PE_LoadU32(B54I_SCRATCH + 16) == 0,
+           "B54I append zeroes tail tag word");
+    /* Fail: 12 + 4 + 1 = 17 is not < 17; nothing may be written. */
+    PE_RamReset();
+    PE_StoreU8(B54I_SCRATCH + 3, 12);
+    PE_StoreU32(B54I_SCRATCH + 16, 0x0400BEEFu);
+    ASSERT(func_80077CB4(B54I_SCRATCH, B54I_SCRATCH + 16) == -1,
+           "B54I append budget fail returns -1");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 3) == 12 &&
+           PE_LoadU32(B54I_SCRATCH + 16) == 0x0400BEEFu,
+           "B54I append fail wrote state");
+    /* Last passing edge: 11 + 4 + 1 = 16. */
+    PE_RamReset();
+    PE_StoreU8(B54I_SCRATCH + 3, 11);
+    PE_StoreU32(B54I_SCRATCH + 16, 0x04000000u);
+    ASSERT(func_80077CB4(B54I_SCRATCH, B54I_SCRATCH + 16) == 0,
+           "B54I append edge 16 passes");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 3) == 16,
+           "B54I append edge stores 16");
+
+    /* ── func_8005DADC guest table lookup ── */
+    PE_RamReset();
+    PE_StoreU32(0x800A8030u, 0x80120000u);
+    ASSERT(func_8005DADC(139) ==
+           (pe_addr_t)((0x80120000u + 0x800A8028u + (139u << 3)) & 0xFFFFFFFFu),
+           "B54I lookup retail index 139");
+    ASSERT(func_8005DADC(0) == (pe_addr_t)((0x80120000u + 0x800A8028u) & 0xFFFFFFFFu),
+           "B54I lookup index 0");
+
+    /* ── func_800370DC add/sort wrapper (sprite twin) ── */
+    PE_RamReset();
+    func_800370DC(B54I_SCRATCH, 0x34);
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 3) == 6,
+           "B54I 370DC compound len = 1+4+1");
+    ASSERT(PE_LoadU32(B54I_SCRATCH + 4) == 0xE1000234u,
+           "B54I 370DC draw-mode word");
+    ASSERT(PE_LoadU32(B54I_SCRATCH + 8) == 0,
+           "B54I 370DC tail tag zeroed");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 15) == 0x64,
+           "B54I 370DC tail code byte 0x64");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 0) == 0 &&
+           PE_LoadU8(B54I_SCRATCH + 12) == 0 &&
+           PE_LoadU8(B54I_SCRATCH + 14) == 0 &&
+           PE_LoadU8(B54I_SCRATCH + 16) == 0,
+           "B54I 370DC wrote outside the compound header");
+
+    /* ── func_80037140 add/sort wrapper (tile twin) ── */
+    PE_RamReset();
+    func_80037140(B54I_SCRATCH, 0x34);
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 3) == 5,
+           "B54I 37140 compound len = 1+3+1");
+    ASSERT(PE_LoadU32(B54I_SCRATCH + 4) == 0xE1000234u,
+           "B54I 37140 draw-mode word");
+    ASSERT(PE_LoadU32(B54I_SCRATCH + 8) == 0,
+           "B54I 37140 tail tag zeroed");
+    ASSERT(PE_LoadU8(B54I_SCRATCH + 15) == 0x60,
+           "B54I 37140 tail code byte 0x60 (SetTile)");
+
+    /* ── func_800719E4 BIOS B(38h) trampoline ── */
+    /* Collapsed with recorded justification; both retail argument forms
+     * must be callable and mutate no guest state. */
+    PE_RamReset();
+    ASSERT(func_800719E4((uint32_t)-1) == 0 &&
+           func_800719E4(1u) == 0,
+           "B54I B(38h) boundary returns 0");
+    ASSERT(PE_LoadU32(0x800A8030u) == 0, "B54I B(38h) wrote guest RAM");
+
+    /* None of these leaves may enter func_80030894. */
+    ASSERT(CountOrderLog("func_80030894") == 0,
+           "B54I test entered func_80030894");
+    PASS();
+}
+
 /* ── main ────────────────────────────────────────────────────────────── */
 #include <stdlib.h>
 #include <string.h>
@@ -18387,6 +18553,9 @@ int main(void)
 
     /* Phase 6E-PE-GPU1 GPU packet-header leaves (1 test). */
     test_PEGPU1_header_leaves_byte_exact();
+
+    /* Phase 6E-B54I GPU primitive-builder leaves + wrappers (1 test). */
+    test_B54I_gpu_leaves_and_wrappers();
 
     /* Phase 6E-B54G second live poll at 0x8006B04C (2 tests). */
     test_B54G_6AD40_canonical_second_poll_exit();

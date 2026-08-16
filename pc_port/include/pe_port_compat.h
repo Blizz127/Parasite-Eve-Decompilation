@@ -139,4 +139,34 @@ extern void func_80077BC4(pe_addr_t p);
 extern void func_80077C44(pe_addr_t p);
 extern void func_80077C64(pe_addr_t p);
 
+/* Phase 6E-B54I: GPU primitive-builder leaves of func_80030894 and the
+ * two add/sort wrappers, all REAL translations with full word-decode
+ * headers (game/boot/func_80077*_port.c, func_8005DADC_port.c,
+ * func_80037{0DC,140}_port.c, platform/func_800719E4_port.c):
+ *   func_80077A64  GetTPage(tp, abr, x, y) value builder (pure)
+ *   func_80077AA4  CLUT value builder, (y<<6)|((x>>a4)&0x3F), &0xFFFF
+ *   func_80077B04  SetSemiTrans — code byte bit 1 set/clear
+ *   func_80077B34  SetShadeTex — code byte bit 0 set/clear
+ *   func_80077C04  setSprt header — len 4, code 0x64
+ *   func_80077C84  DR draw-mode word — p[3]=1; p+4 word; returns word
+ *   func_80077CB4  length-budget append — cap 17, fail -1, tail.tag=0
+ *   func_8005DADC  *(u32*)0x800A8030 + 0x800A8028 + (a0<<3)
+ *   func_800370DC  add/sort wrapper (draw-mode + setSprt + append)
+ *   func_80037140  add/sort wrapper (draw-mode + SetTile + append)
+ *   func_800719E4  BIOS B(38h) CD-mode trampoline (fail path; collapsed
+ *                  with recorded justification, pe_libcd.c precedent) */
+extern uint32_t func_80077A64(uint32_t tp, uint32_t abr, uint32_t x,
+                              uint32_t y);
+extern uint32_t func_80077AA4(int32_t x, uint32_t y);
+extern void     func_80077B04(pe_addr_t p, uint32_t abr);
+extern void     func_80077B34(pe_addr_t p, uint32_t st);
+extern void     func_80077C04(pe_addr_t p);
+extern uint32_t func_80077C84(pe_addr_t p, uint32_t a1, uint32_t a2,
+                              uint32_t a3);
+extern int32_t  func_80077CB4(pe_addr_t head, pe_addr_t tail);
+extern pe_addr_t func_8005DADC(uint32_t index);
+extern void     func_800370DC(pe_addr_t p, uint32_t mode);
+extern void     func_80037140(pe_addr_t p, uint32_t mode);
+extern uint32_t func_800719E4(uint32_t mode);
+
 #endif
