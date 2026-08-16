@@ -3,6 +3,31 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-B54J — func_80030894 structural audit (evidence only; implementation next)
+
+Read-only audit of the 788-word boot GPU-primitive builder
+(0x80030894..0x800314E4, file 0x21094, window SHA-256
+`a4dbd2cf…1ed6e2`). **Structure: loop nest, NOT straight-line** —
+11 `bnez` (outer bank loop ×2 on sp+24 [init 0 @0x8003090C, ++ @
+0x80031484, test <2 @0x800314A8] wrapping ten fixed-count group loops
+10/4/5/3/3/10/4/2/13/4-k) + 1 `jr $ra`, no forward branches, one exit.
+The audit caught and corrected three of its own working hypotheses
+(tab-grep missed all bnez; "sp+24 written once" false; `lui 0x800C,
+addiu -5648` = **0x800BE9F0** not 0x800CE9F0). Frame 88B, 10 saves;
+locals sp+16..18 font triple (lb 0x8009CD90), sp+24 outer counter,
+sp+32 = GetClut(304,504)=0x7E13, sp+40 scratch. Sprite array: for
+i<2, j<10, k<4 → wrap_sprt(0x800B01C0 + i*1400 + j*140 + k*28, 0x34)
++ clut `sh` at +0x1D6 (strides instruction-exact @0x80030A18..A6C);
+L11's ×13 matches the B54B VRAM count (material strip). 42 jal, all
+native since B54I/GPU1 — zero new dependencies. s7=128 vertex byte.
+Oracle `pc_port/tools/b54j_30894_audit_oracle.py` = 19 check groups
+(window hash, branch census, loop map, counter protocol, strides,
+frame, call order, boundary, vectors). Tests 580/580 unchanged (no
+production edit). Evidence: `docs/evidence/pe-b54j-30894-structural-audit/`.
+NEXT: **PE-B54K-A** — implement prologue + bank-0 L2/L3 sprite array
+(0x80030894..~0x80030AC8), stop at named `func_80030894_L2L3_cut`;
+then B54K-B (groups L4..L11 + epilogue).
+
 ## PE-B54I — all func_80030894 callees now native; wall is the 788-word body
 
 Ported 11 word-exact leaves/wrappers (evidence-first redo; a dead
@@ -765,7 +790,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B54I GPU primitive-builder leaves + wrappers**; all func_80030894 callees native; frontier still `func_8006AD40_prefix_cut` @ retail `0x8006B060` | fresh normal and ASan/UBSan `pe-native-tests` 580/580 each; focused B54I 1/1; exe-arg oracles 52/52; b54i oracle 30 checks; GPU1 oracle 18 checks |
+| Port phase | **6E-B54J func_80030894 structural audit (evidence only)**; frontier still `func_8006AD40_prefix_cut` @ retail `0x8006B060`; next: B54K-A implement sprite-array prefix | tests 580/580 unchanged; b54j audit oracle 19 groups; b54i oracle 30 checks; exe-arg oracles 52/52 |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -781,7 +806,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | GPU/DMA2 + CPU IRQ | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. Stored DICR excludes physical bit31, which is derived on read and sticky-edge evaluated on every transition. Completion flags are enable/master gated. The separate bridge asserts B1's I_STAT source 3, bounded CPU/DMA dispatch uses two guest-backed identity tables, B53I-C consumes the live guest ring without a host queue mirror, and B53I-D proves a later interrupt-disabled token completion is hardware-only. | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/platform/pe_irq_delivery.[ch]`, `pc_port/docs/b53i_d_second_dma_completion.md` |
 | Sanitizers | B54I fresh ASan/UBSan 580/580; focused B54I 1/1, retained B54G 2/2, B54F 2/2, B54E 2/2, D 8/8, C 10/10, B2 15/15, B1 8/8, B53B 15/15, H 8/8, and B49 pass without sanitizer diagnostics | Fedora toolbox `jk2026-dev`, `PE_PORT_SANITIZERS=ON` |
 | Matching build | **EXACT SHA-1 MATCH** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` / SHA-256 `5d94938ee752e81ef375bd4493c9883850c25a86895f9cb0732cf3622b44351b` (227 C leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | Translate `func_80030894` (788 words, sole caller `func_8006AD40` @ `0x8006B0AC`) — every direct callee is now native (PE-GPU1 + B54I). Read-only prefix audit first. | `docs/evidence/pe-b54i-gpu-primitive-leaves/` |
+| Next frontier | Implement `func_80030894` per the B54J audit: B54K-A = prologue + L2/L3 sprite array (0x80030894..~0x80030AC8, named `func_80030894_L2L3_cut`), B54K-B = groups L4..L11 + epilogue. Zero new callees. | `docs/evidence/pe-b54j-30894-structural-audit/` |
 
 ### Phase 6E-B43 func_8005218C — current findings
 
