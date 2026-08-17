@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -91,6 +91,8 @@
 #define GA_OP1A       0x800176FCu
 #define GA_OP6F       0x80018954u
 #define GA_OP5A       0x80018164u
+#define GA_OPB7       0x80018A48u
+#define GA_OP70       0x8001897Cu
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 
@@ -384,6 +386,49 @@ int func_80018164(pe_addr_t args)
     return 1;
 }
 
+/*
+ * PE-BTL45 — opcode 0xB7 formation wrapper 18A48.
+ *
+ * 21 words 0x80018A48..0x80018A9C, SHA-256 9218163e…d862.
+ * D_800910A0[0xB7]. jal 2FAA4(D2F0, lbu*0, lbu*1, lbu*2,
+ * lbu*3, lhu*4); v0=1. Live (3,0,6,7,cond[1]).
+ */
+int func_80018A48(pe_addr_t args)
+{
+    func_8002FAA4(PE_LoadU32(GA_D_8009D2F0),
+                  PE_LoadU8(PE_LoadU32(args)),
+                  PE_LoadU8(PE_LoadU32(args + 4u)),
+                  PE_LoadU8(PE_LoadU32(args + 8u)),
+                  PE_LoadU8(PE_LoadU32(args + 12u)),
+                  PE_LoadU16(PE_LoadU32(args + 16u)));
+    return 1;
+}
+
+/*
+ * PE-BTL45 — opcode 0x70 formation wrapper 1897C.
+ *
+ * 51 words 0x8001897C..0x80018A48, SHA-256 64cd42b0…0ff3.
+ * D_800910A0[0x70]. jal 2FA10(D2F0, lbu*0..2, lbu*3, lhu*4,
+ * lb*5..8, lbu*9, lbu*10); v0=1.
+ * Live (0,0,8,9,cond[1],5,-1,-1,-1,3,15).
+ */
+int func_8001897C(pe_addr_t args)
+{
+    func_8002FA10(PE_LoadU32(GA_D_8009D2F0),
+                  PE_LoadU8(PE_LoadU32(args)),
+                  PE_LoadU8(PE_LoadU32(args + 4u)),
+                  PE_LoadU8(PE_LoadU32(args + 8u)),
+                  PE_LoadU8(PE_LoadU32(args + 12u)),
+                  PE_LoadU16(PE_LoadU32(args + 16u)),
+                  (int)(int8_t)PE_LoadU8(PE_LoadU32(args + 20u)),
+                  (int)(int8_t)PE_LoadU8(PE_LoadU32(args + 24u)),
+                  (int)(int8_t)PE_LoadU8(PE_LoadU32(args + 28u)),
+                  (int)(int8_t)PE_LoadU8(PE_LoadU32(args + 32u)),
+                  PE_LoadU8(PE_LoadU32(args + 36u)),
+                  PE_LoadU8(PE_LoadU32(args + 40u)));
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == GA_OP0)
@@ -480,6 +525,10 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80018954(args);
     if (fn == GA_OP5A)
         return func_80018164(args);
+    if (fn == GA_OPB7)
+        return func_80018A48(args);
+    if (fn == GA_OP70)
+        return func_8001897C(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }
