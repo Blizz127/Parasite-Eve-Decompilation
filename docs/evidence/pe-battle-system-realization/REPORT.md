@@ -125,7 +125,9 @@ the retail battle runtime, not a one-off script.
 | BTL-T5-0C | type5 scratch-miss +0x128: 0x5E/0x0C/0x09×2/0xD9 | PROVEN | zero poses → ratan2(0,0)=0 |
 | BTL-1784C | 12w 0x24; *arg0=D300+0x18; *arg1=D300+0x1C; v0=1 | PORTED | live type5 local[2]/[3] |
 | BTL-T5-24 | both 0xD9 arms reach +0x2C4 0x24; live cone takes 0x20 first | PROVEN | 12700 does not write +0x18/+0x1C |
-| next_live_va | type5 after 0x24: 0x11 if local[2]==0; type0 `0xAA`; type2 `0x04` | RESEARCH_REQUIRED | do not invent pad bits |
+| BTL-130B4 | 77w 0x11; codes 0/1/2 mask-eq D26C/D1F4/D1E4; v0=1 | PORTED | code 3 COP2 not this cut |
+| BTL-T5-11 | type5 +0x2FC code 1 mask 0x100; live D1F4=0 → +0x6F0 0x20 | PROVEN | do not invent pad; 0x0D is hit-only |
+| next_live_va | type0 second `0xAA` if persist==39; type2 `0x04`; type6 `0x12` | RESEARCH_REQUIRED | do not invent pad / persist / scratch |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -203,14 +205,17 @@ python3 pc_port/tools/pe_btl26_14da0_oracle.py
 python3 pc_port/tools/pe_btl27_15240_oracle.py
 python3 pc_port/tools/pe_btl28_12e7c_d9_oracle.py
 python3 pc_port/tools/pe_btl29_1784c_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=748/748
+python3 pc_port/tools/pe_btl30_130b4_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=750/750
 ```
 
-STOP/NEXT: type-5 is ported through `0x24`. Next
-live word is `0x11` (`130B4`) because `local[2]==0`.
-Type-0 first visit is ported through `0x02` at
-`+0x2E8`. Next type-0 word is `0xAA`. Type-1 after
+STOP/NEXT: type-5 scratch-miss is ported through
+`0x11`; live `D1F4=0` skips to `+0x6F0` `0x20`.
+Do not invent pad for `0x0D`. Type-0 first visit is
+ported through `0x02` at `+0x2E8`. Next type-0 word
+is `0xAA` (skipped unless persist==39). Type-1 after
 the three `0x08`s can spawn type 2 then 4
 (`persist[0x4A]==0`). Type-2 first visit is ported
 through `0x02`; second visit is `0x04`. Type-3
-double-miss wait loop is live. `D2E8` bit 0 stays set.
+double-miss wait loop is live. Type-6 next is `0x12`
+after scratch&4. `D2E8` bit 0 stays set.

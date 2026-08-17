@@ -19,20 +19,19 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: type-5 `0x24`/`1784C` is ported
-(`local[2/3] = D300+0x18/+0x1C`; pool zeros). Next
-live word is `0x11` (`0x800130B4`, 77w, code 1 tests
-`D_8009D1F4 & 0x100`). Type-0 first visit is ported
-through `0x02` at `+0x2E8`. Next type-0 word is
-`0xAA`. Type-1 after three `0x08`s (types 3/0/5) can
-spawn type 2 then 4 while `persist[0x4A]==0`. Type-2
-first visit is ported through `0x02`; second visit
-is `0x04`. Type-3 double-miss wait loop (`+0x3E4`
-`0x02` / goto `+0xC`) is live. Do not force `+0x1B0`
-/ dest+0x24 / `D2E8` / `3999C`. Do not publish
-`B0E70` until `3D050` tail is real. Do not invent
-pad bits. E0060 is EXE list-clear, not M2.
-`matching_native=748/748`. No matching `src/` C.
+STOP/NEXT: type-5 `0x11`/`130B4` is ported (codes
+0/1/2). Live `D1F4=0` skips to `+0x6F0` `0x20`. Do
+not invent pad for `0x0D`. Type-0 first visit is
+ported through `0x02` at `+0x2E8`. Next type-0 word
+is `0xAA` (skipped unless persist==39). Type-1 after
+three `0x08`s can spawn type 2 then 4 while
+`persist[0x4A]==0`. Type-2 first visit is ported
+through `0x02`; second visit is `0x04`. Type-3
+double-miss wait loop is live. Type-6 next is `0x12`
+after scratch&4. Do not force `+0x1B0` / dest+0x24 /
+`D2E8` / `3999C`. Do not publish `B0E70` until
+`3D050` tail is real. E0060 is EXE list-clear, not
+M2. `matching_native=750/750`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
