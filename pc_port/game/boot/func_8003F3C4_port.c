@@ -9,6 +9,8 @@
  * jal, so the 3F3E8 equality holds on entry.
  *
  * This cut is the live mailbox/fade/message sites only:
+ *   3F074 371B0 CE90 once when CE90==0 (not 34FC4/125E0)
+ *   host pad idle / state-2 Cross before 3EB04
  *   jal 3EB04 @ 0x8003F40C
  *   jal 65400 @ 0x8003F4E8
  *   jal 35558 @ 0x8003F4F0
@@ -24,10 +26,77 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 
+#define GA_D_800BE9A2 0x800BE9A2u
+#define GA_D_800BCEA8 0x800BCEA8u
+#define GA_D_8009CE90 0x8009CE90u
+#define GA_D_800B162C 0x800B162Cu
+#define GA_OVERLAY    0x800B0CD8u
+#define REC_STRIDE    56u
+
+static int pe_3f3c4_kseg(pe_addr_t p)
+{
+    return p >= 0x80000000u && p < 0x80200000u;
+}
+
+static int pe_3f3c4_message_state2(void)
+{
+    unsigned int i;
+
+    for (i = 0; i < 4u; i++) {
+        if (PE_LoadU8(GA_D_800BCEA8 + i * REC_STRIDE) == 2u)
+            return 1;
+    }
+    return 0;
+}
+
+/*
+ * 3F074 @ 3F3D4 is the first jal. Full 3F074 also jals 34FC4
+ * (wipes D20C) and 125E0 every call, so this cut is the 3F244
+ * 371B0 site only, and only while CE90 is still 0.
+ * 6B4F8_12574_publish_cut runs first when overlay+0x18C is
+ * already a KSEG chunk2 dest and B162C is still 0.
+ */
+static void pe_3f3c4_ce90_once(void)
+{
+    pe_addr_t chunk;
+    pe_addr_t stream;
+
+    if (PE_LoadU32(GA_D_8009CE90) != 0u)
+        return;
+    chunk = PE_LoadU32(GA_OVERLAY + 0x18Cu);
+    if (pe_3f3c4_kseg(chunk) && PE_LoadU32(GA_D_800B162C) == 0u)
+        func_8006B4F8_12574_publish_cut();
+    stream = func_8003F074_371b0_a0();
+    if (pe_3f3c4_kseg(stream))
+        func_800371B0(stream);
+}
+
+/*
+ * Host pad before 3EB04. Retail idle raw is 0xFFFF. Host RAM
+ * zero after reset is uninitialized, not all-buttons-pressed.
+ * State-2 Cross is deterministic confirm (Watch cursor 0), not
+ * a planted D1F4 for type-5 0x0D.
+ */
+static void pe_3f3c4_host_pad(void)
+{
+    uint16_t raw;
+
+    if (pe_3f3c4_message_state2())
+        raw = 0xBFFFu;
+    else {
+        raw = PE_LoadU16(GA_D_800BE9A2);
+        if (raw == 0u)
+            raw = 0xFFFFu;
+    }
+    PE_StoreU16(GA_D_800BE9A2, raw);
+}
+
 void func_8003F3C4(void)
 {
     uint32_t bits;
 
+    pe_3f3c4_ce90_once();
+    pe_3f3c4_host_pad();
     func_8003EB04();
     func_80065400();
     func_80035558_walk_cut();

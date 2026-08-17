@@ -42,4 +42,8 @@ void HostWindow_Close(void);
 /* Nonzero when a window was successfully opened. */
 extern int g_host_window_open;
 
+/* Active-low Sony digital word from X11 keys. Idle is 0xFFFF.
+ * Cross is XK_Return / XK_space / XK_z / XK_x (raw 0x4000). */
+uint16_t HostWindow_PadRaw(void);
+
 #endif

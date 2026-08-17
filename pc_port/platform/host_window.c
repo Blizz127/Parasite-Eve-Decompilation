@@ -15,6 +15,16 @@
 
 typedef unsigned long KeySym;
 #define XK_Escape 0xFF1B
+#define XK_Return 0xFF0D
+#define XK_space  0x0020
+#define XK_Left   0xFF51
+#define XK_Up     0xFF52
+#define XK_Right  0xFF53
+#define XK_Down   0xFF54
+#define XK_z      0x007A
+#define XK_x      0x0078
+#define XK_Z      0x005A
+#define XK_X      0x0058
 #define KeyPress    2
 #define KeyRelease  3
 #define ButtonPress 4
@@ -78,6 +88,7 @@ static Atom g_wm_delete = 0;
 static int g_close_requested = 0;
 
 int g_host_window_open = 0;
+static uint16_t g_sony_held = 0;
 
 static void *xlib_sym(const char *name) {
     void *p = dlsym(g_xlib, name);
@@ -180,14 +191,37 @@ int HostWindow_Poll(void)
         XNextEvent(g_dpy, &ev);
         if (ev.type == Expose) {
             /* Redraw: blit current framebuffer again (caller does this) */
-        } else if (ev.type == KeyPress) {
+        } else if (ev.type == KeyPress || ev.type == KeyRelease) {
             KeySym ks = XLookupKeysym(&ev.xkey, 0);
+            uint16_t bit = 0;
             if (ks == XK_Escape) { g_close_requested = 1; return 1; }
+            if (ks == XK_Return || ks == XK_space || ks == XK_z ||
+                ks == XK_x || ks == XK_Z || ks == XK_X)
+                bit = 0x4000u;
+            else if (ks == XK_Up)
+                bit = 0x0010u;
+            else if (ks == XK_Right)
+                bit = 0x0020u;
+            else if (ks == XK_Down)
+                bit = 0x0040u;
+            else if (ks == XK_Left)
+                bit = 0x0080u;
+            if (bit != 0u) {
+                if (ev.type == KeyPress)
+                    g_sony_held |= bit;
+                else
+                    g_sony_held &= (uint16_t)~bit;
+            }
         } else if (ev.type == ClientMessage) {
             if ((Atom)ev.xclient.data[0] == g_wm_delete) { g_close_requested = 1; return 1; }
         }
     }
     return g_close_requested ? 1 : 0;
+}
+
+uint16_t HostWindow_PadRaw(void)
+{
+    return (uint16_t)(~g_sony_held);
 }
 
 int HostWindow_Run(int milliseconds)
@@ -215,4 +249,5 @@ void HostWindow_Close(void)
     if (g_dpy) { XCloseDisplay(g_dpy); g_dpy = NULL; }
     if (g_xlib) { dlclose(g_xlib); g_xlib = NULL; }
     g_host_window_open = 0;
+    g_sony_held = 0;
 }
