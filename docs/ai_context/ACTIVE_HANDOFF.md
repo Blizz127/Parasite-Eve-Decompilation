@@ -18,9 +18,9 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x800209F0` — first 29810 jal after 293F4 (still
-bootstrap). Full 0x3A path is prologue + 20EFC + remainder +
-71A64 + 293F4 + after_hp. D_8009D28C=0 is not mode 7. Do not
+STOP/NEXT: `0x800209F0` remainder — jal 6C4C4 needs proven
+D278+0x68 (default 0). Local sb +0x12..+0x19 are ported. Do
+not invent the nested object or 6C4C4 a0. Then 30640. Do not
 stub 6914C(a0=0) mode 7, jalr 0x800E086C, or complete `0x55`.
 No matching `src/` C.
 

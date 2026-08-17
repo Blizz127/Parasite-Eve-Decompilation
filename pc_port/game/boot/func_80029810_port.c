@@ -68,6 +68,27 @@ void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)
                (uint8_t)((PE_LoadU8(resource + 2u) - 1u) & 0xFFu));
 }
 
+/*
+ * 209F0 D278-local stores only (0x80020B3C..0x80020BB8). sb
+ * +0x12=4 .. +0x19=11. Does not deref record+0x68 (default
+ * D_80010928+0x68 is 0), does not jal 6C4C4, does not invent
+ * the nested object or overlay wait.
+ */
+void func_800209F0_cut(void)
+{
+    pe_addr_t record;
+
+    record = PE_LoadU32(GA_RECORD_P);
+    PE_StoreU8(record + 0x12u, 4u);
+    PE_StoreU8(record + 0x13u, 5u);
+    PE_StoreU8(record + 0x14u, 6u);
+    PE_StoreU8(record + 0x17u, 7u);
+    PE_StoreU8(record + 0x15u, 8u);
+    PE_StoreU8(record + 0x18u, 9u);
+    PE_StoreU8(record + 0x16u, 10u);
+    PE_StoreU8(record + 0x19u, 11u);
+}
+
 void func_80029810_after_hp_cut(unsigned int encounter)
 {
     pe_addr_t record;
@@ -76,7 +97,7 @@ void func_80029810_after_hp_cut(unsigned int encounter)
     int value;
     int cap;
 
-    Bootstrap_ReturnVoid("func_800209F0", "func_80029810_after_hp_cut");
+    func_800209F0_cut();
     record = PE_LoadU32(GA_RECORD_P);
     value = (int)PE_LoadU32(record + 0x08u);
     if (value <= 0) {

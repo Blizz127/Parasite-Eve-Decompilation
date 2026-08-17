@@ -49,6 +49,7 @@ the retail battle runtime, not a one-off script.
 | BTL-71A64 | 3w BIOS A(0x30) puts; 29810 `a0=lw D_8009D250` | PORTED | live a0=0 no stores; no invented puts |
 | BTL-29854 | 29810 after 20EFC: D1AC&=~0x300, A7FF0×10 `{0,-1}`, B8A90×7 | PORTED | `pe_btl6_29854_oracle.py`; not `0x800C8A90` |
 | BTL-29810-PFX | 29810 prologue 15w: zeros D1E8/D290/D28C=0 (not 7), D278=lw(*D254) | PORTED | `pe_btl6_29810_oracle.py` sha256 `a8fd26f9…64e8` |
+| BTL-209F0 | 161w; D278 sb +0x12=4..+0x19=11; jal 6C4C4 needs +0x68 | PORTED | local sbs only; default +0x68=0; no invented 6C4C4 |
 | BTL-87414 | 5w `D_8009D270=2` return 0; 6CDA4 state0 a0=3 | PORTED | matching `src/` already; native port |
 | BTL-6CDA4 | 181w +0xF0 SM; live a0=1 sb 7 + table 0x0F; state7 real 6E6D4 | PORTED | -1 → F0=0; ok → F0=8 |
 | BTL-6E7E8 | 19w poll; state8 -1→7 pending→8 0→9; PE.IMG 8C6 AKAO | PORTED | `func_8006CDA4_state8_cut` parks at 9 |
@@ -95,12 +96,12 @@ python3 pc_port/tools/pe_btl6_145f8_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
+python3 pc_port/tools/pe_btl6_209f0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: `0x800209F0` — first 29810 jal after 293F4 (still
-bootstrap in after_hp). Full 0x3A path is one named cut
-(prologue + 20EFC + remainder + 71A64 + 293F4 + after_hp).
-0x3B parks while `+0xE&3`. Do not stub `6914C(a0=0)` mode 7,
-jalr `0x800E086C`, or complete `0x55`. Do not treat D28C=0 as
-mode 7.
+STOP/NEXT: `0x800209F0` remainder — `lw D278+0x68` then jal
+`6C4C4(lh(*+0x68+6))`. Default `D_80010928+0x68` is 0; do not
+invent that pointer or a 6C4C4 a0. Then `0x80030640` (also
+needs +0x68). 0x3B parks while `+0xE&3`. Do not stub
+`6914C(a0=0)` mode 7, jalr `0x800E086C`, or complete `0x55`.
