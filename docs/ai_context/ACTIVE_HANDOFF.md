@@ -19,17 +19,16 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: Type-0 persist!=39 arm is ported
-through `0x65`/`0x82`/`0x9C`/`0xAB`. `0x9C` waits
-on `68E24` (3F3C4 @ `3F588`; CFEE=6 → CFF8++ →
-CFEE=0). Type-6 next is `0x12` after scratch&4.
-Type-3 wait loop is live. Native `3F3C4` is still
-a stub. Do not invent pad / persist==39 / scratch
-/ hit / CFEE. Do not force `+0x1B0` / dest+0x24 /
-`D2E8` / `3999C`. Do not publish `B0E70` until
-`3D050` tail is real. E0060 is EXE list-clear,
-not M2. `matching_native=760/760`. No matching
-`src/` C.
+STOP/NEXT: `68E24` and the `3F3C4` mailbox/fade
+cut are ported (`102f132` + BTL38). Type-0 `0x9C`
+expires when CFF8>=CFF6. After fade: persist[0x4A]=40,
+`0xAB`, +0x608 mailbox poll. Type-3 persist>=40 is
+now reachable. Type-6 next is `0x12` after scratch&4.
+Do not invent pad / persist==39 / scratch / hit.
+Do not force `+0x1B0` / dest+0x24 / `D2E8` / `3999C`.
+Do not publish `B0E70` until `3D050` tail is real.
+E0060 is EXE list-clear, not M2.
+`matching_native=763/763`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
