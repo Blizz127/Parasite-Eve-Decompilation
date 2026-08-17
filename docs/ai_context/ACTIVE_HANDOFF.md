@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL80 — 70E54 jals PutDispEnv
+
+`matching_native=806/806`. `755F0(BCE80+20*CDDC)`.
+Next `70E54` jal is `6EC08`. Type-6 still waits
+while `scratch[0]&4` is clear.
+
 ## PE-BTL79 — 70E54 jals ResetGraph(1)
 
 `matching_native=805/805`. `74A44(1)` is the
