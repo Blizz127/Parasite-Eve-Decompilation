@@ -123,3 +123,99 @@ int func_80013C34(pe_addr_t args)
     PE_StoreU16(task + 8u, (uint16_t)(PE_LoadU16(task + 8u) & 0xFFDFu));
     return 1;
 }
+
+/*
+ * PE-BTL65 — opcode 0xB8 turn-toward-point 13514.
+ *
+ * 107 words 0x80013514..0x800136C0, SHA-256 573a82c6…4ee7.
+ * D_800910A0[0xB8]. jal 79FB4. Zero TEXT callers (jalr only).
+ *
+ * First visit (task+8 bit 0x20 clear): latch *arg0/*arg1/*arg2
+ * into task+0x14/+0x18/+0x1C and set the bit. Later visits
+ * reuse the latch. dx/dz are (actor+0x28/+0x30) minus those
+ * points, then >>16. If both high halves are 0, return 1 and
+ * leave the bit set (no facing write). Else the 0x4B angle
+ * step: desired=(0x1400-ratan2(dZ,dX))&0xFFF. Unfinished
+ * facing rewinds CE00 by 0x14, sets delay 1, and returns 0.
+ * Finished facing clears bit 0x20 and returns 1.
+ *
+ * Live type-0 persist==0x27 +0x478: (0x40D0000, 0xFF670000, 0xB4).
+ */
+int func_80013514(pe_addr_t args)
+{
+    pe_addr_t task;
+    pe_addr_t self;
+    uint16_t flags;
+    int32_t step;
+    int32_t tx;
+    int32_t tz;
+    int32_t dx;
+    int32_t dz;
+    int32_t desired;
+    int32_t current;
+    int32_t heading;
+    int32_t delta;
+
+    task = PE_LoadU32(GA_D_8009D300);
+    flags = PE_LoadU16(task + 8u);
+    if ((flags & 0x20u) == 0u) {
+        tx = (int32_t)PE_LoadU32(PE_LoadU32(args));
+        tz = (int32_t)PE_LoadU32(PE_LoadU32(args + 4u));
+        step = (int32_t)PE_LoadU32(PE_LoadU32(args + 8u));
+        PE_StoreU16(task + 8u, (uint16_t)(flags | 0x20u));
+        PE_StoreU32(task + 0x14u, (uint32_t)tx);
+        PE_StoreU32(task + 0x18u, (uint32_t)tz);
+        PE_StoreU32(task + 0x1Cu, (uint32_t)step);
+    } else {
+        tx = (int32_t)PE_LoadU32(task + 0x14u);
+        tz = (int32_t)PE_LoadU32(task + 0x18u);
+        step = (int32_t)PE_LoadU32(task + 0x1Cu);
+    }
+
+    self = PE_LoadU32(GA_D_8009D2F0);
+    dx = ((int32_t)PE_LoadU32(self + 0x28u) - tx) >> 16;
+    dz = ((int32_t)PE_LoadU32(self + 0x30u) - tz) >> 16;
+    if ((dx | dz) == 0) {
+        return 1;
+    }
+
+    desired = (0x1400 - func_80079FB4(dz, dx)) & 0xFFF;
+    current = (int32_t)(int16_t)PE_LoadU16(self + 0x3Au);
+    heading = desired;
+    if (desired != current) {
+        if (current < desired) {
+            delta = desired - current;
+            if (delta < 0x800) {
+                if (step < delta)
+                    heading = current + step;
+            } else if (step < delta) {
+                heading = current - step;
+                if (heading < 0) {
+                    if ((current + 0x1000 - desired) < step)
+                        heading = desired;
+                }
+            }
+        } else {
+            delta = current - desired;
+            if (delta < 0x800) {
+                if (step < delta)
+                    heading = current - step;
+            } else if (step < delta) {
+                heading = current + step;
+                if (heading >= 0x1001) {
+                    if ((desired + 0x1000 - current) < step)
+                        heading = desired;
+                }
+            }
+        }
+        heading &= 0xFFF;
+        PE_StoreU16(self + 0x3Au, (uint16_t)heading);
+        if (heading != desired) {
+            PE_StoreU32(GA_D_8009CE00, PE_LoadU32(GA_D_8009CE00) - 0x14u);
+            PE_StoreU32(task + 0x10u, 1u);
+            return 0;
+        }
+    }
+    PE_StoreU16(task + 8u, (uint16_t)(PE_LoadU16(task + 8u) & 0xFFDFu));
+    return 1;
+}
