@@ -117,3 +117,143 @@ pe_addr_t func_800749D8(pe_addr_t env, int x, int y, int w, int h)
     PE_StoreU8(env + 0x12, 0);                  /* pad0 */
     return env;
 }
+
+/* PE-BTL88 — DrawOTagEnv software: 75EE0 SetDrawEnv + 71A34 memcpy.
+ * 76C34(76B98) GPU enqueue is not this cut (B53 deferred). */
+
+static uint32_t pe_clip_cmd(uint32_t cmd, int x, int y)
+{
+    int16_t xs = (int16_t)x;
+    int16_t ys = (int16_t)y;
+    int16_t lim_w = (int16_t)PE_LoadU16(0x80095750u);
+    int16_t lim_h = (int16_t)PE_LoadU16(0x80095752u);
+    uint32_t a0 = (uint32_t)x;
+    uint32_t a1 = (uint32_t)y;
+
+    if (xs < 0)
+        a0 = 0u;
+    else if ((int)lim_w - 1 < (int)xs)
+        a0 = (uint32_t)((uint16_t)PE_LoadU16(0x80095750u) - 1u);
+    if (ys < 0)
+        a1 = 0u;
+    else if ((int)lim_h - 1 < (int)ys)
+        a1 = (uint32_t)((uint16_t)PE_LoadU16(0x80095752u) - 1u);
+    return cmd | ((a1 & 0x3FFu) << 10) | (a0 & 0x3FFu);
+}
+
+static uint32_t func_80076150(uint32_t dfe, uint32_t dtd, uint32_t tpage)
+{
+    uint32_t v1 = 0xE1000000u;
+    uint32_t v0;
+
+    if (dtd != 0u)
+        v1 |= 0x200u;
+    v0 = tpage & 0x9FFu;
+    if (dfe != 0u)
+        v0 |= 0x400u;
+    return v1 | v0;
+}
+
+static uint32_t func_800762A0(int x, int y)
+{
+    return 0xE5000000u | (((uint32_t)y & 0x7FFu) << 11) | ((uint32_t)x & 0x7FFu);
+}
+
+static uint32_t func_800762BC(pe_addr_t tw)
+{
+    uint32_t x, y, w, h;
+
+    if (tw == 0u)
+        return 0u;
+    x = (PE_LoadU8(tw) >> 3) << 10;
+    y = (PE_LoadU8(tw + 2u) >> 3) << 15;
+    w = ((uint32_t)(-(int16_t)PE_LoadU16(tw + 4u)) & 0xFFu) >> 3;
+    h = (((uint32_t)(-(int16_t)PE_LoadU16(tw + 6u)) & 0xFFu) >> 3) << 5;
+    return 0xE2000000u | x | y | w | h;
+}
+
+static void func_80075EE0(pe_addr_t dr, pe_addr_t env)
+{
+    int16_t clip_x = (int16_t)PE_LoadU16(env);
+    int16_t clip_y = (int16_t)PE_LoadU16(env + 2u);
+    uint16_t clip_w = PE_LoadU16(env + 4u);
+    uint16_t clip_h = PE_LoadU16(env + 6u);
+    int16_t ofs_x = (int16_t)PE_LoadU16(env + 8u);
+    int16_t ofs_y = (int16_t)PE_LoadU16(env + 0xAu);
+    uint32_t t0 = 7u;
+    uint16_t tx, ty, tw, th;
+    int16_t lim_w;
+    int16_t lim_h;
+    int16_t ws;
+    int16_t hs;
+
+    PE_StoreU32(dr + 4u, pe_clip_cmd(0xE3000000u, clip_x, clip_y));
+    PE_StoreU32(dr + 8u, pe_clip_cmd(0xE4000000u,
+        (int)clip_x + (int)clip_w - 1, (int)clip_y + (int)clip_h - 1));
+    PE_StoreU32(dr + 0xCu, func_800762A0(ofs_x, ofs_y));
+    PE_StoreU32(dr + 0x10u, func_80076150(PE_LoadU8(env + 0x17u),
+        PE_LoadU8(env + 0x16u), PE_LoadU16(env + 0x14u)));
+    PE_StoreU32(dr + 0x14u, func_800762BC(env + 0xCu));
+    PE_StoreU32(dr + 0x18u, 0xE6000000u);
+    if (PE_LoadU8(env + 0x18u) == 0u) {
+        PE_StoreU8(dr + 3u, (uint8_t)(t0 - 1u));
+        return;
+    }
+    tx = (uint16_t)clip_x;
+    ty = (uint16_t)clip_y;
+    tw = clip_w;
+    th = clip_h;
+    lim_w = (int16_t)PE_LoadU16(0x80095750u);
+    lim_h = (int16_t)PE_LoadU16(0x80095752u);
+    ws = (int16_t)tw;
+    if (ws < 0)
+        tw = 0u;
+    else if ((int)lim_w - 1 < (int)ws)
+        tw = (uint16_t)(PE_LoadU16(0x80095750u) - 1u);
+    hs = (int16_t)th;
+    if (hs < 0)
+        th = 0u;
+    else if ((int)lim_h - 1 < (int)hs)
+        th = (uint16_t)(PE_LoadU16(0x80095752u) - 1u);
+    if (((tx & 0x3Fu) != 0u) || ((tw & 0x3Fu) != 0u)) {
+        uint32_t tile = 0x60000000u |
+            ((uint32_t)PE_LoadU8(env + 0x1Bu) << 16) |
+            ((uint32_t)PE_LoadU8(env + 0x1Au) << 8) |
+            (uint32_t)PE_LoadU8(env + 0x19u);
+        int16_t px = (int16_t)tx - ofs_x;
+        int16_t py = (int16_t)ty - ofs_y;
+
+        t0 = 10u;
+        PE_StoreU32(dr + 32u, tile);
+        PE_StoreU32(dr, (uint32_t)(uint16_t)px | ((uint32_t)(uint16_t)py << 16));
+        PE_StoreU32(dr + 36u, (uint32_t)tw | ((uint32_t)th << 16));
+    } else {
+        uint32_t fill = 0x02000000u |
+            ((uint32_t)PE_LoadU8(env + 0x1Bu) << 16) |
+            ((uint32_t)PE_LoadU8(env + 0x1Au) << 8) |
+            (uint32_t)PE_LoadU8(env + 0x19u);
+
+        t0 = 10u;
+        PE_StoreU32(dr + 28u, fill);
+        PE_StoreU32(dr + 32u, (uint32_t)tx | ((uint32_t)ty << 16));
+        PE_StoreU32(dr + 36u, (uint32_t)tw | ((uint32_t)th << 16));
+    }
+    PE_StoreU8(dr + 3u, (uint8_t)(t0 - 1u));
+}
+
+void func_800754E4(pe_addr_t ot, pe_addr_t env)
+{
+    pe_addr_t dr;
+    uint32_t tag;
+
+    if (env == 0u || !PE_RangeIsRam(env, 0x5Cu))
+        return;
+    if (PE_LoadU8(0x8009574Eu) >= 2u)
+        return;
+    dr = env + 0x1Cu;
+    func_80075EE0(dr, env);
+    tag = PE_LoadU32(dr);
+    PE_StoreU32(dr, (tag & 0xFF000000u) | (ot & 0x00FFFFFFu));
+    /* jalr jtb[2](jtb[6], dr, 0x40, 0) is 76C34(76B98). Not this cut. */
+    memcpy(PE_Translate(0x8009575Cu, 0x5Cu), PE_Translate(env, 0x5Cu), 0x5Cu);
+}

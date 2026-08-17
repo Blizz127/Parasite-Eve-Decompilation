@@ -3,6 +3,14 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL88 — 754E4 SetDrawEnv + memcpy
+
+`matching_native=814/814`. Live `70E54` now
+builds the DRAWENV packet (`75EE0`) and copies
+`0x5C` to `9575C`. `76C34(76B98)` GPU enqueue
+stays deferred. Type-6 still waits while
+`scratch[0]&4` is clear. Do not force the bit.
+
 ## PE-BTL87 — 3F3C4 dest-change flag stores
 
 `matching_native=813/813`. Dest-change exit stores

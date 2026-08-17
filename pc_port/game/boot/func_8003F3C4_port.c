@@ -25,9 +25,9 @@
  * 70E54 live prefix @ 3F590: DrawSync(0), 42FE8 out
  * (gp+0x168!=6), VSync(2), ResetGraph(1),
  * PutDispEnv(BCE80+20*CDDC), 6EC08 status.
- * Live 6EC08==0 and B0CD8&0x200==0 flips guest CDDC
- * (70F94 sltiu / 70F98 sw). 754E4 DrawOTagEnv
- * (75EE0/76B98) is not this cut.
+ * Live 6EC08==0 and B0CD8&0x200==0 runs 754E4
+ * software (75EE0 + 71A34 memcpy) then flips
+ * guest CDDC. 76C34(76B98) is not this cut.
  * 3F5EC VSync(2) then 6A0E8 @ 3F640. Live D1A0&0x10
  * early-out. 66C7C/6A25C are not live.
  * 3F684 D1C4==D280 loops to 3EB04 in retail; this cut
@@ -52,6 +52,7 @@ extern void func_80087024(void);
 extern void func_800661A4(void);
 extern void func_800661CC(void);
 extern int func_80074A44(int mode);
+extern void func_800754E4(pe_addr_t ot, pe_addr_t env);
 
 void func_8003DFC8(int a0)
 {
@@ -239,10 +240,11 @@ void func_8003F3C4(void)
         0x800BCE80u + PE_LoadU32(0x8009CDDCu) * 20u, 0x14u));
     if (func_8006EC08() == 0 &&
         (PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u) {
-        /* 754E4 DrawOTagEnv(B0E38[CDDC]+0x3FFC, CDC8+92*CDDC)
-         * is not this cut (75EE0/76B98). The 70F8C epilogue
-         * still flips guest CDDC. */
+        /* 754E4 DrawOTagEnv(B0E38[CDDC]+0x3FFC, BCDC8+92*CDDC).
+         * 76C34 GPU enqueue is not this cut. */
         cddc = PE_LoadU32(0x8009CDDCu);
+        func_800754E4(PE_LoadU32(0x800B0E38u + cddc * 4u) + 0x3FFCu,
+                      0x800BCDC8u + 92u * cddc);
         PE_StoreU32(0x8009CDDCu, cddc == 0u);
     }
     func_80073A44(2);
