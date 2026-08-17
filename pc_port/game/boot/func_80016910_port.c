@@ -10,19 +10,30 @@
  * Live type-1 +0x048 is key 0xB54 = 2900 → 0x80016D00:
  *   D_800B0CD8 |= 0x00400000
  *   v0=1
- * Other keys (including 35038/E00CC/6914C arms) are not this cut.
+ * Live type-0/2 +0x014 is key 0xA29 → 0x80016C78:
+ *   sb *arg1 → *(D2F0)+0x27D
+ *   v0=1
+ * Other keys (35038/E00CC/6914C) are not this cut.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 
 #define GA_D_800B0CD8 0x800B0CD8u
+#define GA_D_8009D2F0 0x8009D2F0u
 
 int func_80016910_key2900_cut(pe_addr_t args)
 {
     uint32_t key;
+    pe_addr_t actor;
 
     key = PE_LoadU32(PE_LoadU32(args));
     if (key == 2900u)
         PE_StoreU32(GA_D_800B0CD8, PE_LoadU32(GA_D_800B0CD8) | 0x00400000u);
+    else if (key == 0xA29u) {
+        actor = PE_LoadU32(GA_D_8009D2F0);
+        if (actor != 0u)
+            PE_StoreU8(actor + 0x27Du,
+                       (uint8_t)PE_LoadU32(PE_LoadU32(args + 4u)));
+    }
     return 1;
 }

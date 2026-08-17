@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL93 — 0xED key 0xA29 actor+0x27D
+
+`matching_native=819/820` local (dirty persist
+gate extra). Live type-0/2 `0xED` `0xA29`
+stores `*arg1` to `actor+0x27D`. Not
+`scratch[0]&4`. `E00CC` arms stay out.
+
 ## PE-BTL92 — 3F3C4 jals E01BC
 
 `matching_native=817/817`. Live `E21A4<=0`
