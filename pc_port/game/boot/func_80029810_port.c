@@ -195,7 +195,62 @@ int func_8006D078(void)
         func_8006D078_state0_cut();
         f3 = 0x28u;
     }
-    if (f3 == 0x28u || f3 == 0x29u || f3 == 0x2Au || f3 == 0x2Bu)
+    if (f3 == 0x28u)
+        return func_8006CDA4(1, 1, 0, GA_OVERLAY + 0x194u, 0x21, 0);
+    if (f3 == 0x29u || f3 == 0x2Au || f3 == 0x2Bu)
         return 1;
     return 0;
+}
+
+#define GA_XA_TABLE  0x8009317Cu
+#define GA_PEIMG_LBA 0x800B0DD8u
+#define GA_GP_400    0x8009D170u
+#define GA_GP_404    0x8009D174u
+#define GA_GP_408    0x8009D178u
+
+/*
+ * func_8006CDA4 is 181 words (0x8006CDA4..0x8006D078). +0xF0 JT
+ * 0x80011428: 0 / 7 / 8 / 9 / 0xA; 1-6 unused. No +0xE store.
+ * Live 6D078 0x28 is a0=1 a1=1: state 0 fills gp+0x400/404/408 from
+ * D_8009317C + D_800B0DD8, skips 87198/87414, sb 7, returns 1.
+ * State 7 jals 6E6D4 and is not stubbed to succeed.
+ */
+void func_8006CDA4_state0_a0eq1_cut(int a1)
+{
+    unsigned int idx;
+    unsigned int half0;
+    unsigned int half6;
+    unsigned int lba;
+
+    idx = ((unsigned int)a1) << 1;
+    half0 = PE_LoadU16(GA_XA_TABLE + 4u + idx);
+    half6 = PE_LoadU16(GA_XA_TABLE + idx + 6u);
+    lba = PE_LoadU32(GA_PEIMG_LBA) + PE_LoadU32(GA_XA_TABLE) + half0;
+    PE_StoreU32(GA_GP_404, half6 - half0);
+    PE_StoreU32(GA_GP_408, half6 - half0);
+    PE_StoreU32(GA_GP_400, lba);
+    PE_StoreU8(GA_OVERLAY + 0xF0u, 7u);
+}
+
+int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
+                  int stack_flag)
+{
+    unsigned int f0;
+
+    (void)a2;
+    (void)a3;
+    (void)stack_len;
+    (void)stack_flag;
+    f0 = PE_LoadU8(GA_OVERLAY + 0xF0u);
+    if (f0 >= 11u)
+        return 1;
+    if (f0 == 0u) {
+        if (a0 == 0 || a0 == 3)
+            return 1;
+        func_8006CDA4_state0_a0eq1_cut(a1);
+        return 1;
+    }
+    if (f0 == 7u || f0 == 8u || f0 == 9u || f0 == 10u)
+        return 1;
+    return 1;
 }
