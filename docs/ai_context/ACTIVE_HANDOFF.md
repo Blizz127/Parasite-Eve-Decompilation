@@ -3,6 +3,17 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL76 — 67A78/67294 and 68CE0 flag outs
+
+`matching_native=802/802`. `68CE0` now jals `67A78`,
+`67B74`, `67D18`. `67A78` writes `+0x38/+0x3A` and
+jals `67294` when rec bit 1 and `+0x24==BCFFD`.
+Live m0005i rec0 matches. `67294` writes `+0x18/+0x1A`;
+OT walk skipped while `+0x30==0` (publisher is
+`3F074→68B94→66F60`, not this 3F3C4 cut).
+`67B74`/`67D18` live early-out. Type-6 still waits
+while `scratch[0]&4` is clear.
+
 ## PE-BTL75 — 67E1C camera-slot interpolate
 
 `matching_native=801/801`. `68CE0` now jals `67E1C`
