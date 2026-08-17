@@ -787,6 +787,41 @@ int func_800144FC_state3A_cut(pe_addr_t arg0)
     return 0;
 }
 
+/*
+ * PE-BTL91 — opcode 0x55 144FC park-rewind wrapper.
+ * Park epilogue 14660: v0=0, CE00-=0xC, delay=1.
+ * Complete 3B takes 14658 v0=1. Type-6 +0xFC8 imm 2.
+ */
+int func_800144FC(pe_addr_t args)
+{
+    uint8_t state;
+    int done;
+    pe_addr_t task;
+
+    state = PE_LoadU8(GA_OVERLAY + 0xF4u);
+    if (state == 0u)
+        done = func_800144FC_state0_cut();
+    else if (state == 0x37u)
+        done = func_800144FC_state37_cut();
+    else if (state == 0x38u)
+        done = func_800144FC_state38_cut();
+    else if (state == 0x39u)
+        done = func_800144FC_state39_cut();
+    else if (state == 0x3Au)
+        done = func_800144FC_state3A_cut(args);
+    else if (state == 0x3Bu)
+        done = func_800144FC_state3B_cut();
+    else
+        done = 0;
+    if (done == 0) {
+        PE_StoreU32(0x8009CE00u, PE_LoadU32(0x8009CE00u) - 0xCu);
+        task = PE_LoadU32(0x8009D300u);
+        if (task != 0u)
+            PE_StoreU32(task + 0x10u, 1u);
+    }
+    return done;
+}
+
 #define GA_GP_5C  0x8009CDCCu
 #define GA_B0E64  0x800B0E64u
 #define GA_D270   0x8009D270u

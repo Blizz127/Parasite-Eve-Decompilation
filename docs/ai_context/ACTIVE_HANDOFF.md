@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL91 — 0x55 144FC park-rewind
+
+`matching_native=816/816`. 17018 now retries
+`0x55` instead of skipping the encounter start.
+Type-6 still waits while `scratch[0]&4` is
+clear. Do not force the bit.
+
 ## PE-BTL89 — 0xC6 command-wait 13300
 
 `matching_native=815/815`. First type-0 unported
