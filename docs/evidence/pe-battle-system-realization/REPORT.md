@@ -76,7 +76,10 @@ the retail battle runtime, not a one-off script.
 | BTL-34FC4 | 29w 14-slot pool at `D_800BEA90`; 3F074@`3F0B0` | PORTED | head → `D_8009D2AC` |
 | BTL-1266C | 37w 72-task pool at `D_8009D310`; 3F074@`3F0B8` | PORTED | sha `34d11f74…`; `12700` pops `gp+0x8C` |
 | BTL-35038-A1 | a1=0 pop/insert/init/`12700`; `+0x1AC==0` OR `0xE0` | PORTED | type0 `2F76C` and `+0x1AC` body not this cut |
-| next_live_va | type0 `2F76C` or overlay `D_800B0E70` / `+0x1AC` | RESEARCH_REQUIRED | first spawned actor is persistent |
+| BTL-35558-WALK | 459w; 3F3C4@`3F4F0`; D20C jalr `+0x190` unless D1A0&4 | PORTED | walk cut only; 29 later jals not this cut |
+| BTL-35E04 | 83w types 1–9 vtable; pose snap + 361F4 | PORTED | live `+0x98` bit1 clear; no motion |
+| BTL-361F4 | 24w `D2F0=actor`; `+0xA0`×3 → `D300`; jal 17018 | PORTED | 17018 VM not this cut |
+| next_live_va | `17018` task VM or type0 `35C84` / `2F76C` | RESEARCH_REQUIRED | first recurring actor walk is live |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -95,6 +98,7 @@ the retail battle runtime, not a one-off script.
 | One 6C5BC per 0x55 tick completes the wait | 6C4C4 re-ORs bit1; only the tight poll lets 0x3B see the clear |
 | `0x800E0060` is loaded overlay / battle entry | EXE tsize `0x1EE000` contains 27w leaf; no jal |
 | `371B0` / DrawSync / mode=6 is M2 | EXE-resident window init + GPU sync; no battle tick |
+| `35558` D20C walk is M2 | Field tick `3F3C4` actor jalr; 29 later jals unported |
 
 ## Verify
 
@@ -127,6 +131,7 @@ python3 pc_port/tools/pe_btl7_6cc68_oracle.py
 python3 pc_port/tools/pe_btl8_1a918_oracle.py
 python3 pc_port/tools/pe_btl9_371b0_oracle.py
 python3 pc_port/tools/pe_btl10_35038_oracle.py
+python3 pc_port/tools/pe_btl11_35558_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
@@ -135,10 +140,7 @@ python3 pc_port/tools/pe_btl6_339a0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: `34FC4`+`1266C` build actor/task pools. `35038`
-a1=0 pop/insert/`12700` is live; `+0x1AC==0` ORs `0xE0`.
-Next: type0 `2F76C` or overlay-published `D_800B0E70`, then
-the first recurring battle tick. `E0060` is EXE list-clear,
-not M2. Do not jalr `0x800E086C`. `0x89` is mode-6 request,
-not battle-over. Code on this path is EXE-resident; overlay
-supplies data only.
+STOP/NEXT: field tick `3F3C4` walks `D_8009D20C` via `35558`
+and jalrs type!=0 `35E04` → `361F4`. Next: `17018` (task VM
+on `+0xA8`) or type0 `35C84`. Not M2. Do not jalr
+`0x800E086C`. `0x89` is mode-6 request, not battle-over.

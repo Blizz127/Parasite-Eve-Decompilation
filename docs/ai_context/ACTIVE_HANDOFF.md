@@ -19,12 +19,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `34FC4`+`1266C` build actor/task pools. `35038`
-a1=0 pop/insert/`12700` is live; `+0x1AC==0` (B0E70 BSS)
-ORs `0xE0` and returns a persistent actor. Next: type0
-`2F76C` or overlay-published `+0x1AC`. Not M2. EXE-resident
-code + loaded data. Do not jalr `0x800E086C`. No matching
-`src/` C.
+STOP/NEXT: `35558` walk cut jalrs type!=0 `35E04` → `361F4`
+(`D2F0=actor`, last `+0xA8` task → `D300`). `17018` VM and
+type0 `35C84` are not this cut. Not M2. EXE-resident code +
+loaded data. Do not jalr `0x800E086C`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
