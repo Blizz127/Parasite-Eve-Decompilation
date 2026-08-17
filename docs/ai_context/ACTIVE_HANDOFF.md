@@ -3,6 +3,14 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL77 — 3F3C4 jals 661A4 then 661CC
+
+`matching_native=803/803`. Same `B0CD8` gate as
+`68CE0`. `661CC` wins OFX/OFY (`160<<16`,`112<<16`).
+`E01BC` overlay between them is not this cut.
+Next `3F3C4` jal is `70E54`. Type-6 still waits
+while `scratch[0]&4` is clear.
+
 ## PE-BTL76 — 67A78/67294 and 68CE0 flag outs
 
 `matching_native=802/802`. `68CE0` now jals `67A78`,

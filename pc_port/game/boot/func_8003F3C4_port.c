@@ -14,15 +14,15 @@
  *   jal 3EB04 @ 0x8003F40C
  *   jal 65400 @ 0x8003F4E8
  *   jal 35558 @ 0x8003F4F0
- *   jal 68CE0 @ 0x8003F560 (66CE8 then 65674 D1A0 out)
- *     jal 37870 @ 0x8003F568 when (B0CD8&0x100)==0 and
- *     (B0CD8&0x200)==0
- *   jal 68E24 @ 0x8003F588 on the same gate
+ *   jal 68CE0 @ 0x8003F560
+ *   jal 37870 @ 0x8003F568
+ *   jal 661A4 @ 0x8003F570 (GTE OFX/OFY from BCF94/96)
+ *   jal 661CC @ 0x8003F580 (SetGeomOffset 160,112)
+ *   jal 68E24 @ 0x8003F588
+ *   when (B0CD8&0x100)==0 and (B0CD8&0x200)==0
  *
- * 3F074, 6EC08, overlay 122040/121A00, 6E60C, 67E1C tail,
- * 661A4, E01BC, 661CC, 70E54, 66C7C, 73A44, 6A25C,
- * 6A0E8, 74F44, 74DC0, 87024, 3DFC8, 696F0 are not this cut.
- * Do not invent those bodies.
+ * E01BC overlay between 661A4 and 661CC is not this cut.
+ * 70E54 and later 3F3C4 jals are not this cut.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -36,6 +36,8 @@
 
 extern unsigned int D_8009D280;
 extern void func_80068CE0(void);
+extern void func_800661A4(void);
+extern void func_800661CC(void);
 
 static uint32_t pe_3f3c4_loaded_dest;
 
@@ -146,5 +148,7 @@ void func_8003F3C4(void)
         return;
     func_80068CE0();
     func_80037870();
+    func_800661A4();
+    func_800661CC();
     func_80068E24();
 }
