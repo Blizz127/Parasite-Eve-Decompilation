@@ -148,6 +148,29 @@ void func_80030640_cut(void)
     Bootstrap_ReturnVoid("func_80071A54", "func_80030640_cut");
 }
 
+/*
+ * 339A0 32w. Copy 16B 0x80010E38 onto $sp, index (a0&0xFF)*4,
+ * sh pair to D_8009CE84 / D_8009CE86, sb a0 to D_8009CE80.
+ * 0 jals. Not ATB/AI/damage.
+ */
+void func_800339A0_cut(unsigned int encounter)
+{
+    static const uint16_t k_pairs[4][2] = {
+        { 0x00DDu, 0x00B1u },
+        { 0x000Fu, 0x00B1u },
+        { 0x000Fu, 0x000Fu },
+        { 0x00DDu, 0x000Fu },
+    };
+    unsigned int idx;
+
+    idx = encounter & 0xFFu;
+    PE_StoreU8(0x8009CE80u, (uint8_t)idx);
+    if (idx < 4u) {
+        PE_StoreU16(0x8009CE84u, k_pairs[idx][0]);
+        PE_StoreU16(0x8009CE86u, k_pairs[idx][1]);
+    }
+}
+
 void func_80029810_after_hp_cut(unsigned int encounter)
 {
     pe_addr_t record;
@@ -175,8 +198,7 @@ void func_80029810_after_hp_cut(unsigned int encounter)
     source = PE_LoadU32(actor + 0x238u);
     PE_StoreU16(GA_VALUE_D27C,
                 (uint16_t)(PE_LoadU32(source + 0x18u) - 100u));
-    Bootstrap_ReturnVoid1("func_800339A0", "func_80029810_after_hp_cut",
-                          encounter & 0xFFu);
+    func_800339A0_cut(encounter);
     record = PE_LoadU32(GA_RECORD_P);
     func_8001A680_command_cut(actor, PE_LoadU8(record + 0x12u));
 }

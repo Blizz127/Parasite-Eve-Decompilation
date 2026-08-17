@@ -18,11 +18,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x800339A0` — last 29810 after_hp bootstrap.
-209F0 null-deref (+0x68=0 → 6C4C4(lh(6))) and 30640 beqz
-skip are ported. Do not invent a +0x68 pointer. Do not stub
-6914C(a0=0) mode 7, jalr 0x800E086C, or complete `0x55`.
-No matching `src/` C.
+STOP/NEXT: `0x80014630` — 144FC 0x3B live park. 29810
+after_hp is fully resolved (209F0/30640/339A0). Do not
+auto-complete `0x55` after EE=13. Do not stub 6914C(a0=0)
+mode 7, jalr 0x800E086C. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
