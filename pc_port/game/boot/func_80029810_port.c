@@ -516,11 +516,38 @@ void func_80071A64(pe_addr_t str)
 }
 
 /*
+ * 29810 remainder 0x80029854..0x800298FF (43 words). After 20EFC:
+ * sb 0 / lw / and 0xFFFFFCFF / sw D_8009D1AC; sw 0 D_8009D1A8;
+ * sb 0 D_8009D1CE / D_8009D235; sw 0 D_8009D304; sh 0 D_8009D21C;
+ * 10 pairs {0,-1} at 0x800A7FF0; 7 words at 0x800B8A90 (lui 0x800C
+ * + signed addiu 0x8A90). Does not write mode 7 or +0xE.
+ */
+void func_80029810_remainder_cut(void)
+{
+    unsigned int word;
+    unsigned int i;
+
+    PE_StoreU8(0x8009D1ACu, 0u);
+    word = PE_LoadU32(0x8009D1ACu);
+    PE_StoreU32(0x8009D1A8u, 0u);
+    PE_StoreU8(0x8009D1CEu, 0u);
+    PE_StoreU8(0x8009D235u, 0u);
+    PE_StoreU32(0x8009D304u, 0u);
+    PE_StoreU16(0x8009D21Cu, 0u);
+    PE_StoreU32(0x8009D1ACu, word & 0xFFFFFCFFu);
+    for (i = 0; i < 10u; i++) {
+        PE_StoreU16(0x800A7FF0u + i * 4u, 0u);
+        PE_StoreU16(0x800A7FF2u + i * 4u, 0xFFFFu);
+    }
+    for (i = 0; i < 7u; i++)
+        PE_StoreU32(0x800B8A90u + i * 4u, 0u);
+}
+
+/*
  * 144FC state 0x3A at 0x800145F8. D1A0 |= 2, a0 = lbu(*overlay),
- * jal 29810, sb F4=0x3B, j 0x80014660 (v0=0). 29810 first jals
- * 20EFC (void; 5-byte clear) then 71A64(D_8009D250), then the
- * already-ported 293F4(0) + after_hp tail. Does not invent 20EFC /
- * 71A64 bodies, mode 7, or 0x55 completion.
+ * jal 29810, sb F4=0x3B, j 0x80014660 (v0=0). 29810: 20EFC, this
+ * remainder, 71A64(D_8009D250), 293F4(0), after_hp tail. Does not
+ * invent 20EFC / 71A64 bodies, mode 7, or 0x55 completion.
  */
 int func_800144FC_state3A_cut(void)
 {
@@ -529,6 +556,7 @@ int func_800144FC_state3A_cut(void)
     D_8009D1A0 |= 2u;
     actor = PE_LoadU32(GA_OVERLAY);
     func_80020EFC();
+    func_80029810_remainder_cut();
     func_80071A64(PE_LoadU32(0x8009D250u));
     func_800293F4_hp_cut();
     func_80029810_after_hp_cut(PE_LoadU8(actor));

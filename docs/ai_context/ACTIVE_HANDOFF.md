@@ -18,11 +18,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x80029854` — 29810 remainder after 20EFC
-(table fills + gp zeros) before 71A64. 20EFC is the matched
-5-byte clear; 71A64 is BIOS A(0x30) puts(D_8009D250), live 0.
-Do not stub 6914C(a0=0) mode 7, jalr 0x800E086C, or complete
-`0x55`. No matching `src/` C.
+STOP/NEXT: `0x80029810` — 29810 prologue before 20EFC
+(zeros D_8009D290 / D_8009D28C=0, not mode 7). 29854 remainder
+is ported (A7FF0×10, B8A90×7). Do not stub 6914C(a0=0) mode 7,
+jalr 0x800E086C, or complete `0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
