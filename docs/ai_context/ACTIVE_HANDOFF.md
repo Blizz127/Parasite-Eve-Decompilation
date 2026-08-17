@@ -3,6 +3,14 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL92 — 3F3C4 jals E01BC
+
+`matching_native=817/817`. Live `E21A4<=0`
+early-outs. `E026C`/`E03A0` are not this cut.
+Type-6 still waits while `scratch[0]&4` is
+clear. Disc scan found no overlay `B6A80`
+writer. Do not force the bit.
+
 ## PE-BTL91 — 0x55 144FC park-rewind
 
 `matching_native=816/816`. 17018 now retries

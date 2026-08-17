@@ -21,7 +21,8 @@
  *   jal 68E24 @ 0x8003F588
  *   when (B0CD8&0x100)==0 and (B0CD8&0x200)==0
  *
- * E01BC overlay between 661A4 and 661CC is not this cut.
+ * jal E01BC @ 3F578. Live E21A4<=0 early-outs. E026C/E03A0
+ * are not this cut.
  * 70E54 live prefix @ 3F590: DrawSync(0), 42FE8 out
  * (gp+0x168!=6), VSync(2), ResetGraph(1),
  * PutDispEnv(BCE80+20*CDDC), 6EC08 status.
@@ -96,6 +97,19 @@ void func_8006A0E8(void)
     /* PutDrawEnv / SetDrawArea body is not this cut. */
 }
 
+/*
+ * PE-BTL92 — func_800E01BC record walk.
+ * 44 words 0x800E01BC..0x800E026C, SHA-256 87f953d4…7cd8.
+ * lh E21A4, lw E2800, blez return. Live count is 0.
+ * E026C/E03A0 are not this cut.
+ */
+void func_800E01BC(void)
+{
+    if ((int16_t)PE_LoadU16(0x800E21A4u) <= 0)
+        return;
+    /* count>0 walk is not this cut. */
+}
+
 int func_8006EC08(void)
 {
     int8_t a;
@@ -156,11 +170,10 @@ static void pe_3f3c4_ce90_once(void)
 }
 
 /*
- * 3F074 @ 3F088 jals 6B4F8(D280) every tick. This cut runs that
- * dest-token load only when D280 changes after the CE90-once
- * publish, and only when the three overlay dest pointers are
- * already KSEG. Dest-change then runs the 3F074 pool
- * rebuild (34FC4 / 1266C / 125E0). Not every tick.
+ * 3F074 @ 3F088 jals 6B4F8(D280) every tick. Host still
+ * change-gates (not a retail skip). Dest-ready is 6B35C +
+ * 6B4F8 + 6BECC==0 + 6C5BC==0 + 125E0. Does not write
+ * mode 7/9/10. Type-1 clip is not manufactured.
  */
 static void pe_3f3c4_dest_change(void)
 {
@@ -178,12 +191,8 @@ static void pe_3f3c4_dest_change(void)
         return;
     if (PE_LoadU32(0x800B0DD8u) == 0u)
         return;
-    if (func_8006B4F8_dest_load_cut(D_8009D280) != 0) {
+    if (func_8003F074_dest_ready_cut(D_8009D280) != 0)
         pe_3f3c4_loaded_dest = D_8009D280;
-        func_80034FC4();
-        func_8001266C();
-        func_800125E0();
-    }
 }
 
 /*
@@ -231,6 +240,7 @@ void func_8003F3C4(void)
     func_80068CE0();
     func_80037870();
     func_800661A4();
+    func_800E01BC();
     func_800661CC();
     func_80068E24();
     func_80074DC0(0);
