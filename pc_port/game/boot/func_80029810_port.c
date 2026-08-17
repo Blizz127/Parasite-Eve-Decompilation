@@ -544,10 +544,44 @@ void func_80029810_remainder_cut(void)
 }
 
 /*
+ * 29810 prologue 0x80029810..0x8002984B (15 words). lw D_8009D254,
+ * lw *actor, sw 0 D_8009D1E8 / D_8009D290 / D_8009D28C (mode 0, not
+ * 7), sb 0 D_8009CE7C / D_8009CE78 / D_8009D288 / D_8009CE74, sw
+ * *actor → D_8009D278. Does not write 7 or +0xE.
+ */
+void func_80029810_prologue_cut(void)
+{
+    pe_addr_t actor;
+
+    actor = PE_LoadU32(GA_ACTOR_P);
+    PE_StoreU32(0x8009D1E8u, 0u);
+    PE_StoreU32(0x8009D290u, 0u);
+    PE_StoreU32(0x8009D28Cu, 0u);
+    PE_StoreU8(0x8009CE7Cu, 0u);
+    PE_StoreU8(0x8009CE78u, 0u);
+    PE_StoreU8(0x8009D288u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    PE_StoreU32(GA_RECORD_P, PE_LoadU32(actor));
+}
+
+/*
+ * 29810 through 293F4: prologue + 20EFC + remainder + 71A64 +
+ * 293F4(0) + after_hp tail. 144FC 0x3A is the sole jal.
+ */
+void func_80029810_cut(unsigned int encounter)
+{
+    func_80029810_prologue_cut();
+    func_80020EFC();
+    func_80029810_remainder_cut();
+    func_80071A64(PE_LoadU32(0x8009D250u));
+    func_800293F4_hp_cut();
+    func_80029810_after_hp_cut(encounter);
+}
+
+/*
  * 144FC state 0x3A at 0x800145F8. D1A0 |= 2, a0 = lbu(*overlay),
- * jal 29810, sb F4=0x3B, j 0x80014660 (v0=0). 29810: 20EFC, this
- * remainder, 71A64(D_8009D250), 293F4(0), after_hp tail. Does not
- * invent 20EFC / 71A64 bodies, mode 7, or 0x55 completion.
+ * jal 29810, sb F4=0x3B, j 0x80014660 (v0=0). Does not invent
+ * 20EFC / 71A64 bodies, mode 7, or 0x55 completion.
  */
 int func_800144FC_state3A_cut(void)
 {
@@ -555,11 +589,7 @@ int func_800144FC_state3A_cut(void)
 
     D_8009D1A0 |= 2u;
     actor = PE_LoadU32(GA_OVERLAY);
-    func_80020EFC();
-    func_80029810_remainder_cut();
-    func_80071A64(PE_LoadU32(0x8009D250u));
-    func_800293F4_hp_cut();
-    func_80029810_after_hp_cut(PE_LoadU8(actor));
+    func_80029810_cut(PE_LoadU8(actor));
     PE_StoreU8(GA_OVERLAY + 0xF4u, 0x3Bu);
     return 0;
 }

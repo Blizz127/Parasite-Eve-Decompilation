@@ -18,10 +18,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x80029810` — 29810 prologue before 20EFC
-(zeros D_8009D290 / D_8009D28C=0, not mode 7). 29854 remainder
-is ported (A7FF0×10, B8A90×7). Do not stub 6914C(a0=0) mode 7,
-jalr 0x800E086C, or complete `0x55`. No matching `src/` C.
+STOP/NEXT: `0x800209F0` — first 29810 jal after 293F4 (still
+bootstrap). Full 0x3A path is prologue + 20EFC + remainder +
+71A64 + 293F4 + after_hp. D_8009D28C=0 is not mode 7. Do not
+stub 6914C(a0=0) mode 7, jalr 0x800E086C, or complete `0x55`.
+No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
