@@ -19,18 +19,17 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: type-1 `0x86`/`18EE0`/`66C7C` is ported
-(live persist!=39; CFEE=6, CFF6=30). After that,
-`0x1C`/`0x02` are already ported. Type-5 miss is
-ported through `+0x6F0` `0x20`. Type-0 skips `0xAA`
-to mailbox tests; `0x04` is mailbox-gated. Type-2
-first visit is ported through `0x02`. Type-3 wait
-loop is live. Type-6 next is `0x12` after scratch&4.
-Do not invent pad / persist==39 / mailbox / hit.
-Do not force `+0x1B0` / dest+0x24 / `D2E8` /
-`3999C`. Do not publish `B0E70` until `3D050` tail
-is real. E0060 is EXE list-clear, not M2.
-`matching_native=752/752`. No matching `src/` C.
+STOP/NEXT: `0x04`/`17988` is ported (walk
+`+0xA0[0..2]`, `+8|=0x10` except D300). Type-1
+`0x1C` `0xFF` plus `65400` deliver is the type-0
+hit arm; native `35558` walk does not yet jal
+`65400`. Next type-0 word on that arm is `0xAA`.
+Type-6 next is `0x12` after scratch&4. Type-3 wait
+loop is live. Do not invent pad / persist==39 /
+scratch / hit. Do not force `+0x1B0` / dest+0x24 /
+`D2E8` / `3999C`. Do not publish `B0E70` until
+`3D050` tail is real. E0060 is EXE list-clear, not
+M2. `matching_native=754/754`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
