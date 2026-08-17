@@ -138,7 +138,9 @@ the retail battle runtime, not a one-off script.
 | BTL-19638 | 8w 0xAB; D_800B0CD8 &= ~0x2000; v0=1 | PORTED | after 0x9C; then +0x608 mailbox poll |
 | BTL-68E24 | 202w fade tick; CFF8++; CFEE=0 when CFF8>=CFF6 and CFEE&4 | PORTED | 3F3C4 @ 3F588; 6E9A0 @ 6EB4C |
 | BTL-3F3C4 | named cut: 65400 + 35558 + 68E24 if B0CD8&0x300==0 | PORTED | 1220C sets D1C4=D280; 0x2000 is not the gate |
-| next_live_va | type0 after fade: persist[0x4A]=40, 0xAB, +0x608 poll | RESEARCH_REQUIRED | type3 persist>=40; type6 0x12; type3 0x85 |
+| BTL-19658 | 9w 0x1E; D2F0+0x98 \|= 0x80; v0=1 | PORTED | type2 after mailbox 0xB |
+| BTL-18BEC | 9w 0x79; D2F0+0x98 \|= 0x20; v0=1 | PORTED | type2 after 0x1E; then 0x0B pose |
+| next_live_va | type2 0x0B pose then mailbox skips; type6 0x12; type3 0x85 | RESEARCH_REQUIRED | scratch&4 / region hit / D1F4 |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -225,13 +227,14 @@ python3 pc_port/tools/pe_btl35_18e58_oracle.py
 python3 pc_port/tools/pe_btl36_19410_oracle.py
 python3 pc_port/tools/pe_btl37_19638_oracle.py
 python3 pc_port/tools/pe_btl38_68e24_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=763/763
+python3 pc_port/tools/pe_btl39_19658_oracle.py
+python3 pc_port/tools/pe_btl40_18bec_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=765/765
 ```
 
-STOP/NEXT: `68E24` and the `3F3C4` mailbox/fade
-cut are ported. Type-0 `0x9C` can expire. After
-fade the script stores persist[0x4A]=40 and
-`0xAB`, then the +0x608 mailbox poll. Type-6
-next is `0x12` after scratch&4. Type-3 persist>=40
-is now reachable. Do not invent pad / persist==39
-/ scratch / hit. `D2E8` bit 0 stays set.
+STOP/NEXT: Type-2 `0x1E`/`0x79` are ported. Live
+`0xB` mailbox then writes type-2 pose through
+`0x0B`. Type-6 next is `0x12` after scratch&4.
+Type-3 `0x85` stays hit-gated. Do not invent pad
+/ persist==39 / scratch / hit. `D2E8` bit 0 stays
+set.
