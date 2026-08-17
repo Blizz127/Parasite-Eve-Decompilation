@@ -55,6 +55,6 @@ python3 pc_port/tools/pe_btl6_3d834_callees_oracle.py
 ./pc_port/build/pe-native-tests   # 676/676
 ```
 
-STOP/NEXT: `0x8003A3B4` — 3A088 non-empty GTE walk after proving
-live `obj+0x18` from the `+0x158` package. Empty 3A088/3B97C cuts
+STOP/NEXT: prove live `+0x158` payload on EE `0→11→12→13` (not
+EE=4). Then `0x8003A3B4` if `obj+0x18>0`. Empty 3A088/3B97C cuts
 and full 3BCE0 are ported. Do not `andi 0xFC`.
