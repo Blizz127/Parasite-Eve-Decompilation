@@ -332,18 +332,57 @@ extern unsigned int D_8009D1A0;
 
 #define GA_930E2  0x800930E2u
 #define GA_930E4  0x800930E4u
+#define GA_942E4  0x800942E4u
+#define GA_942E8  0x800942E8u
+
+/*
+ * 6914C state 0 table prefix at 0x800691D0. Two 11-slot inits:
+ * dest=+0x188 stride 0xA0C, then dest=+0x188+0x6E84 stride 0x10C.
+ * Each slot: sb 0, sb 0xFF ×3, sw 0 at +4, sw 0 at +8. 6A8D4
+ * publishes +0x188=D_800B0E60. jalr D_800942E0 → 0x800E0xxx
+ * overlay leaves are not invented (overlay not loaded).
+ */
+static void func_8006914C_state0_tables(void)
+{
+    pe_addr_t base;
+    pe_addr_t slot;
+    unsigned int i;
+
+    base = PE_LoadU32(GA_OVERLAY + 0x188u);
+    PE_StoreU32(GA_942E4, base);
+    if (base == 0u)
+        return;
+    for (i = 0; i < 11u; i++) {
+        slot = base + i * 0xA0Cu;
+        PE_StoreU8(slot, 0u);
+        PE_StoreU8(slot + 1u, 0xFFu);
+        PE_StoreU8(slot + 2u, 0xFFu);
+        PE_StoreU8(slot + 3u, 0xFFu);
+        PE_StoreU32(slot + 4u, 0u);
+        PE_StoreU32(slot + 8u, 0u);
+    }
+    base = PE_LoadU32(GA_OVERLAY + 0x188u) + 0x6E84u;
+    PE_StoreU32(GA_942E8, base);
+    for (i = 0; i < 11u; i++) {
+        slot = base + i * 0x10Cu;
+        PE_StoreU8(slot, 0u);
+        PE_StoreU8(slot + 1u, 0xFFu);
+        PE_StoreU8(slot + 2u, 0xFFu);
+        PE_StoreU8(slot + 3u, 0xFFu);
+        PE_StoreU32(slot + 4u, 0u);
+        PE_StoreU32(slot + 8u, 0u);
+    }
+}
 
 /*
  * func_8006914C is 274 words (0x8006914C..0x80069594). Dispatch on
- * lbu +0xEF. State 0: if D1A0 bit 0x80 clear, ROM fills two 11-slot
- * tables at +0x188 / +0x188+0x6E84 then jalr D_800942E0 — those
- * dests/callbacks are not invented here. Proven tail: overlay |= 8,
- * D1A0 |= 0x80. a0!=0 && bit 8 → sb 0x34, return 1 (re-dispatch).
- * 0x34 jals real 6E6A8(LBA=+0x100+lhu 930E2, dest=+0x194,
- * sectors=lhu 930E4 - lhu 930E2). -1 stays 0x34 return 1; else
- * sb 0x35 return 1. 0x35 jals real 6E7E8: -1 sb 0x34; pending
- * stay; 0 sb 0x36 return 1 (0x36 body not entered). Does not
- * return 0 on the live a0=1 path, sb 0x3A, or write mode 7.
+ * lbu +0xEF. State 0: if D1A0 bit 0x80 clear, fill the two 11-slot
+ * tables then jalr D_800942E0 (overlay 0x800E0xxx — not invented).
+ * Proven tail: overlay |= 8, D1A0 |= 0x80. a0!=0 && bit 8 → sb 0x34,
+ * return 1. 0x34 jals real 6E6A8(LBA=+0x100+lhu 930E2,
+ * dest=+0x194=6A8D4 D_800B0E6C=0x801ED800, sectors=5). -1 stays
+ * 0x34 return 1; else sb 0x35 return 1. 0x35 jals real 6E7E8.
+ * Does not return 0 on the live a0=1 path, sb 0x3A, or write mode 7.
  */
 int func_8006914C(int a0)
 {
@@ -356,6 +395,7 @@ int func_8006914C(int a0)
     ef = PE_LoadU8(GA_OVERLAY + 0xEFu);
     if (ef == 0u) {
         if ((D_8009D1A0 & 0x80u) == 0u) {
+            func_8006914C_state0_tables();
             word = PE_LoadU32(GA_OVERLAY);
             PE_StoreU32(GA_OVERLAY, word | 8u);
             D_8009D1A0 |= 0x80u;

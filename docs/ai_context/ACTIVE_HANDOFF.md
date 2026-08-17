@@ -18,11 +18,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8006914C` state 0x36 / +0x188 table+jalr.
-144FC 0x38 after 6D60C==0 jals 42F20 (gp+0x168=5,
-gp+0x174=-1) then sb 0x39. 0x39 jals 6914C(1); state 0
-tail sets D1A0|=0x80 overlay|=8 sb EF=0x34 return 1.
-0x34 real 6E6A8 -1 stays 0x34. Do not stub 6914C
+STOP/NEXT: `0x800693F8` — 6914C 0x34 dest `0x801ED800`
+(6A8D4 +0x194) LBA overlay+0x100+0x7E, 5 sectors.
+State 0 fills two 11-slot tables at +0x188; jalr
+0x800E0xxx overlay leaves are not invented. 0x34
+real 6E6A8 -1 stays EF=0x34. Do not stub 6914C
 success, jump to mode 7, or complete `0x55`.
 No matching `src/` C.
 

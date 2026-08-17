@@ -33,7 +33,7 @@ the retail battle runtime, not a one-off script.
 | BTL-3B97C | 217w, 0 jals; empty dest+0 / +0xBA / obj+2==0; lighting RTIR+NCCT at 0x8003BA24 | PORTED | `pe-btl6-3b97c-lighting` |
 | BTL-3BCE0 | 245w, 0 jals; four directory packet walks; keep-byte overlaps sw+4 | PORTED | `pe-btl6-3d834-callees` |
 | BTL-158 | Only `6E6A8` dest `+0x158` is EE=4; first `6C4C4(-1)` sets CE4=1; CE2=11 → PE.IMG `[428,434)` `obj+0x18=2` | PROVEN | `pe-btl6-3d834-callees` |
-| BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PORTED | state 0 tail + 0x34/0x35; table/jalr not entered |
+| BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PORTED | state 0 tables + tail + 0x34/0x35; jalr 0x800E0xxx not entered |
 | BTL-6D60C | `144FC` `0x38` jal `6D60C(1)`; 387w sha256 `14e5794d…`; +0xF2 JT; no `+0xE` | PROVEN | `pe-btl6-6d60c` |
 | BTL-6D078 | 117w `0x8006D078..0x8006D24C`; +0xF3 JT; state0 sb 0x28; 0x28 jals 6CDA4 | PORTED | empty 0x2A → F3=0; bit0x10+half≥2 → 0x2B |
 | BTL-6D79C | 6D60C after 6D078=0; live F2 0x3F→0x2F; 6CDA4(0) → 87198 | PORTED | B0E64=D11614-8 only; NYPD 0x2A empty |
@@ -85,6 +85,7 @@ python3 pc_port/tools/pe_btl6_42f20_oracle.py
 ./pc_port/build/pe-native-tests   # 691/691
 ```
 
-STOP/NEXT: `0x8006914C` state 0x36 / +0x188 table+jalr — 144FC 0x39
-parks while 6E6A8 returns -1. Do not stub `6914C` success, jump to
-mode 7, or complete `0x55`.
+STOP/NEXT: `0x800693F8` — 6914C 0x34 dest `+0x194`=`0x801ED800`
+(6A8D4) LBA `+0x100`+`0x7E` 5 sectors. Overlay jalr `0x800E086C`
+family not loaded. Do not stub `6914C` success, jump to mode 7,
+or complete `0x55`.
