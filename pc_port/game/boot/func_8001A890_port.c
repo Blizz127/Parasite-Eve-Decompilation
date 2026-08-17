@@ -138,3 +138,59 @@ void func_8001A890(void)
     PE_StoreU16(GA_D_8009D264, 0u);
     PE_StoreU16(GA_D_8009D1CC, 0u);
 }
+
+/*
+ * PE-BTL8 — func_8001A918 (56 words, 0x8001A918..0x8001A9F8).
+ * SHA-256 c38eb3c9…6496. Zero jal/jalr. Sole TEXT caller is
+ * 3F074 @ 0x8003F23C after the 6C5BC poll exits.
+ *
+ * Rebases the object at D_800B1620 (overlay+0x948, writer
+ * 0x8006B8E8 / zeroer 0x8006B3F0). If +0x18 <= 0x80000000 the
+ * words at +0x18/+0x1C/+0x24 and nonzero +0x20 are obj-relative
+ * offsets; a table of lhu(+2) words at +0x28 is likewise rebased.
+ * Already-relocated +0x18 takes the short publish of +0x28 and +0x20.
+ * Guest 0 maps through Kuseg 0x80000000 (host exception-vector
+ * area is APPROXIMATION zeros). Sibling of func_8001A890's clears.
+ */
+#define GA_B1620 0x800B1620u
+
+static pe_addr_t pe_1a918_kseg0(pe_addr_t addr)
+{
+    return 0x80000000u | (addr & 0x1FFFFFu);
+}
+
+void func_8001A918(void)
+{
+    pe_addr_t obj;
+    unsigned int off18;
+    unsigned int i;
+    unsigned int count;
+    unsigned int word;
+
+    obj = pe_1a918_kseg0(PE_LoadU32(GA_B1620));
+    off18 = PE_LoadU32(obj + 0x18u);
+    PE_StoreU32(GA_D_8009D1FC, obj);
+
+    if (off18 > 0x80000000u) {
+        PE_StoreU32(GA_D_8009CE08, obj + 0x28u);
+        PE_StoreU32(GA_D_8009D1D8, PE_LoadU32(obj + 0x20u));
+        return;
+    }
+
+    PE_StoreU32(obj + 0x18u, obj + off18);
+    PE_StoreU32(obj + 0x1Cu, obj + PE_LoadU32(obj + 0x1Cu));
+    PE_StoreU32(obj + 0x24u, obj + PE_LoadU32(obj + 0x24u));
+    word = PE_LoadU32(obj + 0x20u);
+    if (word != 0u)
+        PE_StoreU32(obj + 0x20u, obj + word);
+
+    PE_StoreU32(GA_D_8009CE08, obj + 0x28u);
+    PE_StoreU32(GA_D_8009D1D8, PE_LoadU32(obj + 0x20u));
+    PE_StoreU32(GA_D_8009CE14, PE_LoadU32(obj + 0x24u));
+    count = PE_LoadU16(obj + 2u);
+    PE_StoreU16(obj + 8u, (uint16_t)((PE_LoadU16(obj + 8u) >> 5) + 1u));
+    for (i = 0; i < count; i++) {
+        word = PE_LoadU32(obj + 0x28u + i * 4u);
+        PE_StoreU32(obj + 0x28u + i * 4u, obj + word);
+    }
+}

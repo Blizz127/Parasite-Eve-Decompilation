@@ -19,12 +19,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8001A918` (3F074 after 6CC68 v0=0), then
-`0x800E0060` (loaded; do not fake). `6CC68` 79w always
-returns 0; live arm publishes `D_800B0D10=actor+0x1B4`.
-3F074 tight poll then `0x3B` v0=1 is the real `0x55`
-complete into `0x89` (mode 6), not battle-over. Do not
-jalr `0x800E0060`/`0x800E086C`. No matching `src/` C.
+STOP/NEXT: `0x800371B0` (169w, `sw a0, gp+0x120`) then
+`0x800125E0` (35w, `35038` loop). `1A918` rebases
+`D_800B1620` (overlay+0x948). `0x800E0060` is EXE-resident
+27w list clear, not loaded, not M2. `0x55→0x89` mode 6 is
+M1. Do not jalr `0x800E086C`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

@@ -65,7 +65,10 @@ the retail battle runtime, not a one-off script.
 | BTL-ATB | ATB / menus / AI / damage / death / field return | RESEARCH_REQUIRED | do not invent |
 | opcode_0x55_complete | 3F074 poll-until-0 then 0x3B v0=1 (matching+vis3) | RETAIL_DERIVED | not battle-over; next op `0x89` |
 | M1_0x55_real_completion | 0x3B after drained poll | PROVEN | `test_BTL7_3F074_poll_opens_3B` |
-| next_live_va | `0x8001A918` | PROVEN | 3F074 after-poll; then `0x800E0060` loaded |
+| BTL-1A918 | 56w rebase `D_800B1620`; writer `6B8E8` overlay+0x948 | PORTED | `pe_btl8_1a918_oracle.py` |
+| BTL-E0060 | 27w EXE-resident list clear; REJECTED loaded | PORTED | same; sha `cfa139eb…` |
+| M2_battle_overlay_entry | E0060 is not overlay entry | NO | EXE tsize covers 0x800E0060 |
+| next_live_va | `0x800371B0` | PROVEN | then `0x800125E0` |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -82,6 +85,7 @@ the retail battle runtime, not a one-off script.
 | EE=13 return 1 completes `0x55` | 3F074 keeps polling while v0==1; exit is EE=0 → 6CC68 v0=0 |
 | `6CC68` is the EE=13 body | Six jal sites, all before `0x8006C9F8` |
 | One 6C5BC per 0x55 tick completes the wait | 6C4C4 re-ORs bit1; only the tight poll lets 0x3B see the clear |
+| `0x800E0060` is loaded overlay / battle entry | EXE tsize `0x1EE000` contains 27w leaf; no jal |
 
 ## Verify
 
@@ -111,6 +115,7 @@ python3 pc_port/tools/pe_btl6_145f8_oracle.py
 python3 pc_port/tools/pe_btl6_14630_oracle.py
 python3 pc_port/tools/pe_btl7_3f074_poll_oracle.py
 python3 pc_port/tools/pe_btl7_6cc68_oracle.py
+python3 pc_port/tools/pe_btl8_1a918_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
@@ -119,7 +124,6 @@ python3 pc_port/tools/pe_btl6_339a0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: `0x8001A918` (56w) then `0x800E0060` (loaded).
-`3AC90`/`3AF14` are 6CC68 callees not yet cut. Do not fake
-`E0060`/`E086C`. `0x89` is the real next opcode after 0x3B
-v0=1; it is mode-6 request, not battle-over.
+STOP/NEXT: `0x800371B0` then `0x800125E0`. `E0060` is EXE
+list-clear, not M2. Do not jalr `0x800E086C`. `0x89` is
+mode-6 request, not battle-over.

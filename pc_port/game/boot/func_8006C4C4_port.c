@@ -290,3 +290,36 @@ int func_8003F074_poll_cut(void)
     } while (v0 == 1 && guard < 16);
     return v0;
 }
+
+/*
+ * func_800E0060 — 27 words 0x800E0060..0x800E00CC,
+ * SHA-256 cfa139eb…750e. EXE-resident (taddr 0x80010000 tsize
+ * 0x1EE000). Zero jal/jalr. Sole TEXT caller 3F074 @ 0x8003F284.
+ * REJECTED: loaded-overlay identity. Walks 0x14-stride slots
+ * backward from D_800B0E5C-0x14, count D_800E21A4, sb 0 at
+ * slot+0 when nonzero, then sh 0 → D_800E21A4.
+ */
+void func_800E0060(void)
+{
+    pe_addr_t cur;
+    int16_t n;
+    int i;
+
+    cur = PE_LoadU32(0x800B0E5Cu) - 0x14u;
+    n = (int16_t)PE_LoadU16(0x800E21A4u);
+    PE_StoreU32(0x800E2800u, cur);
+    i = 0;
+    if (n > 0) {
+        do {
+            if (PE_LoadU8(cur) != 0u) {
+                PE_StoreU8(cur, 0u);
+                i++;
+            }
+            n = (int16_t)PE_LoadU16(0x800E21A4u);
+            if (i >= n)
+                break;
+            cur -= 0x14u;
+        } while (i < n);
+    }
+    PE_StoreU16(0x800E21A4u, 0u);
+}
