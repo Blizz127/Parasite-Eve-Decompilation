@@ -18,10 +18,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8001459C` / `0x8006D60C` — 144FC state 0x38
-after state 0 (`sb 0x37`) and 0x37 (`jal 42EDC`, `sb 0x38`).
-Do not stub `6D60C`/`6914C`, jump to mode 7, or complete `0x55`.
-No matching `src/` C.
+STOP/NEXT: `0x8006D078` — 6D60C live 0→0x2C→0x2E jal
+(357-word +0xF3 SM). State 0/0x37 and the 6CC2C clearer are
+ported. Do not stub `6D60C`/`6D078`/`6914C`, jump to mode 7,
+or complete `0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
