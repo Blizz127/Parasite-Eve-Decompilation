@@ -24,13 +24,23 @@ overlay `+0xE`. Boot `6A674` zeros `+0xF0`.
 | 0xA | `0x8006CFE8` | `jal 870E0` |
 | 1-6 | `0x8006D03C` | unused → epilogue |
 
-Live 6D078 0x28 is `6CDA4(1,1,0,+0x194,0x21,0)`. Table word
+Live 6D078 0x28 is `6CDA4(1,1,0,lw +0x194,0x21,0)`. Dest is
+the word at overlay+0x194, not the field address. Table word
 `0x8B0`, a1=1 halves `0x16`/`0x25` → gp+0x404/408 = `0x0F`,
-gp+0x400 = `D_800B0DD8+0x8C6`. Then sb 7, return 1. State 7
-is not entered on that tick.
+gp+0x400 = `D_800B0DD8+0x8C6`. a2 stays -1, sb 7, return 1
+(`s0=(flag^1)&1`; live flag=0). State 7 is not entered on
+that tick.
 
 Named cut implements that a0=1 state 0 and parks at F0=7.
 It does not invent 6E6D4 success.
+
+## State 7 (next tick; not entered)
+
+`s6=-1`, dest `$s5=a3`. If gp+0x408==0: sb F0=0, return 0.
+Else `6E6D4(gp+0x400, gp+0x404-gp+0x408, dest, min(0x408, stack_len))`.
+Live: `6E6D4(LBA, 0, dest, 0x0F)`. v0!=-1 → sb 8, return 1.
+v0==-1 → sb 0, return 0. 6D078 leaves 0x28 only when 6CDA4
+returns 1; return 0 + `+0x10<2` sb 0x2A.
 
 ## Next
 
