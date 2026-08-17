@@ -18,10 +18,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: 3D834 live a1==0 callees `3A088` / `3B97C` / `3BCE0`.
-3D050 EE=13 jals are done (`3D94C` skipped, `794C4` first leaf,
-`3C5D8`). `6698C` and `3DFD8` are ported. Do not `andi 0xFC` or
-complete `0x55`. No matching `src/` C.
+STOP/NEXT: `0x8003A3B4` — 3A088 non-empty GTE MVMVA walk, after
+proving live `obj+0x18` from overlay `+0x158`. Named cuts:
+`3A088` mode-0 empty, `3B97C` empty gate, full `3BCE0` (245w).
+3D834 a1==0 is not complete (GTE walks remain). Do not `andi 0xFC`
+or complete `0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

@@ -76,5 +76,5 @@ at dest+0x2C are 0; `D_800966EC[0]=0x10000000` yields the 4096
 identity at dest+0x34. Packed later leaves / `EnterCriticalSection`
 are not this cut.
 
-STOP: 3D834 live a1==0 callees `3A088` / `3B97C` / `3BCE0`.
-Do not `andi 0xFC`.
+STOP: 3D834 a1==0 callees are in `pe-btl6-3d834-callees`.
+Next `0x8003A3B4`. Do not `andi 0xFC`.
