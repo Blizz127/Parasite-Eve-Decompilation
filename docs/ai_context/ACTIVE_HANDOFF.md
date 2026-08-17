@@ -3,6 +3,48 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BATTLE-DATA-PRECOVERY — NYPD contracts (parallel lane)
+
+Evidence only. No UE5 / gameplay edits. Pack:
+`docs/evidence/pe-battle-data-precovery/`. Oracle
+`python3 pc_port/tools/pe_battle_data_precovery_oracle.py`.
+m0005i 125E0 types 1+6; `0x08` adds 3/0/5. hdr+0x0C writes
+`B0E70[2]` and `[5]` only. Type-0 `+0x1AC` is CE2=14 `+0x8`
+via `6C118`, not room hdr+0x0C. `+0x1B4` is an in-actor dest.
+M0367I full package hashed; spawn list not walked yet.
+
+## PE-BTL72 — playable-loop TRACE through actors/HP capture
+
+`matching_native=798/798`. Native composition (not a new leaf):
+m0004i mailbox 3 → `0x31` →
+`0x89` consume → `293F4` HP copy → `3EB04` Up (`BE9A2=0xFFEF`,
+not planted `D26C`) → `35C84` pose Z `0x50000`. TRACE
+`field → mailbox_3 → m0005i_enter → mode6_consumed → hp_copied →
+input_held → actors_captured`. HP hash stable; Circle not held.
+Do not emit `attack_available` / `hp_mutated` / `encounter_complete`.
+Do not invent pad / hit / rec=4 / 4D4 / mode 7. No matching `src/` C.
+Evidence: `docs/evidence/pe-btl72-playable-loop/`.
+
+## PE-BTL73 — Right from 0x0B pose hits type-3 0x77
+
+`matching_native=799/799`. `BE9A2=0xFFDF` (not planted
+`D26C`). 409 Rights from live `0x0B` (16,1345) enter
+rect1 `(0x80A,0x4CD)-(0x994,0x63D)`. `1CAB0` returns 1.
+`0x85` is then the authentic type-3 arm. No wall clip
+in this 35C84 cut. Do not invent pad or a toggle.
+
+## PE-BTL71 — 3EB04 Up via BE9A2
+
+`A76F0[3]=0x10`. `BE9A2=0xFFEF` → `D26C` bit 3 →
+`710A4` → `+0x30 += 0x50000`. Row 22 keeps `710A4`
+after command `0x16`.
+
+## PE-BTL70 — 35C84/35E04 always apply +0x68
+
+`matching_native=796/796`. Bit 1 only adds `+0x88`. BTL11
+skip-all-motion is REJECTED. Pad walk can move type-0 without
+opcode `0x17`. Do not invent pad.
+
 ## PE-BTL69 — 66CE8 walk matrix on the 3F3C4 gate
 
 `matching_native=795/795`. `3F3C4@3F560` jals `68CE0` → `66CE8`
