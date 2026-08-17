@@ -44,6 +44,7 @@ the retail battle runtime, not a one-off script.
 | BTL-145DC | `144FC` 0x39 jal `6914C(1)`; v0==1 parks; no sb 0x3A | PORTED | no-disc 6E6A8 -1 stays 0x34 |
 | BTL-693F8 | 0x34 jal 6E6A8 dest `0x801ED800` LBA PE.IMG+`0x7E` n=5 | PORTED | sha256 `3b2ff0b8…d3c9`; sync poll → EF=0x36 |
 | BTL-69468 | 0x36 jal 6E1C0 ×64 stride `0x14` then 6E498(`+0x18C`, `0x73DECD80`) | PORTED | TIM-like; EF=0 overlay&=~8 v0=0; not overlay |
+| BTL-145F8 | `144FC` 0x3A: D1A0\|=2, `lbu(*overlay)` jal 29810, sb 0x3B, park | PORTED | `pe_btl6_145f8_oracle.py`; 20EFC/71A64 not invented |
 | BTL-87414 | 5w `D_8009D270=2` return 0; 6CDA4 state0 a0=3 | PORTED | matching `src/` already; native port |
 | BTL-6CDA4 | 181w +0xF0 SM; live a0=1 sb 7 + table 0x0F; state7 real 6E6D4 | PORTED | -1 → F0=0; ok → F0=8 |
 | BTL-6E7E8 | 19w poll; state8 -1→7 pending→8 0→9; PE.IMG 8C6 AKAO | PORTED | `func_8006CDA4_state8_cut` parks at 9 |
@@ -86,9 +87,10 @@ python3 pc_port/tools/pe_btl6_86464_oracle.py
 python3 pc_port/tools/pe_btl6_42f20_oracle.py
 python3 pc_port/tools/pe_btl6_693f8_oracle.py
 python3 pc_port/tools/pe_btl6_69468_oracle.py
+python3 pc_port/tools/pe_btl6_145f8_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: `0x800145F8` — 144FC 0x3A after 6914C v0=0 (D1A0\|=2,
-jal 29810, sb 0x3B). Do not stub `6914C(a0=0)` mode 7, jalr
-`0x800E086C`, or complete `0x55`.
+STOP/NEXT: `0x80020EFC` — first 29810 jal before 293F4, now live
+from the second 0x3A. 0x3B parks while `+0xE&3`. Do not stub
+`6914C(a0=0)` mode 7, jalr `0x800E086C`, or complete `0x55`.
