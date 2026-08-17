@@ -19,6 +19,9 @@ the retail battle runtime, not a one-off script.
 | BTL-EE13-PREFIX | EE=13 `lw +0x158` walk → `+0x1C0`; zeros `+0x10`/`+0x134`; D254/D1A0 a1 | PORTED | `func_8006C5BC_ee13_prefix_cut` |
 | BTL-EE13-3D050 | `jal 3D050` (505w) a0=`overlay+0x14` a3=704; then `6698C` live 117w, `3D834` 70w, then `andi 0xFC` | PORTED | `pe-btl6-6cc2c-epilogue` |
 | BTL-6CC2C | EE=13 after jal 3D834: `andi 0xFC` / `sb +0xE` / `sb 0 → +0xEE`; v0=1 | PORTED | `func_8006C5BC_ee13_epilogue_cut` |
+| BTL-14544 | `144FC` state 0: if bits clear sb 0x37; ori actor `0x800000`; v0=0 | PORTED | `func_800144FC_state0_cut` |
+| BTL-14570 | `144FC` state 0x37: jal 42EDC unless overlay bit `0x400000`; sb 0x38 | PORTED | `func_800144FC_state37_cut` |
+| BTL-42EDC | 17w; `lbu D_800BD024` clamp into gp+0x16C; gp+0x168/174=1 | PORTED | `func_80042EDC` |
 | BTL-3D050-PFX | Pointer ladder `+0/4/8/C/10`, `+0x54=a2`, `+0xBA=1` | PORTED | `func_8003D050_prefix_cut` |
 | BTL-3D050-R | ptr14 `+0x14..+0x20`; post-3D94C-skip; epilogue after `3C5D8`; `3D94C` skipped | PORTED | `pe-btl6-3d050-remainder` |
 | BTL-3C5D8 | 24 words; live a1=50 → `+0x8D=50`, `128/50=2` | PORTED | `func_8003C5D8` |
@@ -57,9 +60,10 @@ python3 pc_port/tools/pe_btl6_3d834_callees_oracle.py
 python3 pc_port/tools/pe_btl6_3a088_walk_oracle.py
 python3 pc_port/tools/pe_btl6_3b97c_lighting_oracle.py
 python3 pc_port/tools/pe_btl6_6cc2c_oracle.py
-./pc_port/build/pe-native-tests   # 679/679
+python3 pc_port/tools/pe_btl6_14544_oracle.py
+./pc_port/build/pe-native-tests   # 681/681
 ```
 
-STOP/NEXT: `0x80014544` — 144FC state 0 after 0x3B stores
-`+0xF4=0` (then sb 0x37 if bits stay clear). Do not stub
-`6914C`, jump to mode 7, or complete `0x55`.
+STOP/NEXT: `0x8001459C` / `0x8006D60C` — 144FC state 0x38
+`jal 6D60C(1)` (387 words). Do not stub `6D60C`/`6914C`,
+jump to mode 7, or complete `0x55`.

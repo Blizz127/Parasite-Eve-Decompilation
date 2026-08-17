@@ -114,3 +114,56 @@ int func_800144FC_state3B_cut(void)
     PE_StoreU32(actor, flags);
     return 1;
 }
+
+/*
+ * 144FC state 0 at 0x80014544. After 0x3B stores +0xF4=0 the next
+ * dispatch lands here. If (+0xE & 3)==0, sb 0x37 → +0xF4; always
+ * ori 0x00800000 on *actor ($s1 = a0; native uses overlay word 0
+ * like state 3B). j 0x80014660 returns 0 and rewinds the script PC.
+ * Does not complete 0x55.
+ */
+int func_800144FC_state0_cut(void)
+{
+    pe_addr_t actor;
+
+    if ((PE_LoadU8(GA_OVERLAY + 0x0Eu) & 3u) == 0u)
+        PE_StoreU8(GA_OVERLAY + 0xF4u, 0x37u);
+    actor = PE_LoadU32(GA_OVERLAY);
+    PE_StoreU32(actor, PE_LoadU32(actor) | 0x00800000u);
+    return 0;
+}
+
+/*
+ * 0x80042EDC..0x80042F20 exclusive (17 words). lbu D_800BD024,
+ * sw 1 → gp+0x168 / gp+0x174, sw 0 → gp+0x178, clamp the byte
+ * into gp+0x16C: <0 → 1 (dead after lbu), >=33 → 32. Two TEXT
+ * jals: 144FC 0x37 @ 0x80014588 and 0x8005D5F8.
+ */
+void func_80042EDC(void)
+{
+    unsigned int value;
+
+    value = PE_LoadU8(0x800BD024u);
+    PE_StoreU32(0x8009CED8u, 1u);
+    PE_StoreU32(0x8009CEE4u, 1u);
+    PE_StoreU32(0x8009CEE8u, 0u);
+    if ((int)value < 0)
+        PE_StoreU32(0x8009CEDCu, 1u);
+    else if (value >= 33u)
+        PE_StoreU32(0x8009CEDCu, 32u);
+    else
+        PE_StoreU32(0x8009CEDCu, value);
+}
+
+/*
+ * 144FC state 0x37 at 0x80014570. If overlay word bit 0x400000 is
+ * clear, jal 42EDC; always sb 0x38 → +0xF4 and re-dispatch
+ * (j 0x80014518). Named cut does not enter 0x38 / 6D60C.
+ */
+int func_800144FC_state37_cut(void)
+{
+    if ((PE_LoadU32(GA_OVERLAY) & 0x00400000u) == 0u)
+        func_80042EDC();
+    PE_StoreU8(GA_OVERLAY + 0xF4u, 0x38u);
+    return 0;
+}
