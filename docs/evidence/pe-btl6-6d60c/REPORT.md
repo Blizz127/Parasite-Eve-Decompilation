@@ -32,11 +32,15 @@ State 0x2E @ `0x8006D788`: `jal 0x8006D078`. If that returns 1,
 6D60C returns 1 (0x38 parks). 6D078 is **117 words**
 (`0x8006D078..0x8006D24C`). See `pe-btl6-6d078`. Do not stub it.
 
+State 0x2E after 6D078 returns 0 falls into `0x8006D79C`.
+Live bit4 set / bit40 clear sb F2=0x3F then 0x2F and parks
+at `6CDA4(0,…)`. See `pe-btl6-6d79c`. `D_800B0E64` is only
+`D_80011614-8`; NYPD 0x2A is empty.
+
 ## Next
 
-`0x8006D79C` — 6D60C after 6D078 returns 0. See
-`pe-btl6-6d078`. Do not stub DMA-complete, 6914C, jump
-to mode 7, or complete `0x55`.
+`0x80087198` — 6CDA4 a0=0 from F2=0x2F. Do not stub
+`6914C`, jump to mode 7, or complete `0x55`.
 
 ## Verify
 

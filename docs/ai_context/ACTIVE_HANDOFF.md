@@ -18,9 +18,9 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8006D79C` — 6D60C after 6D078 returns 0.
-0x2A walks `D_800B0E64` (empty → F3=0; bit0x10+half≥2
-→ 0x2B → 6CDA4(3) → 87414). Do not stub DMA-complete,
+STOP/NEXT: `0x80087198` — 6CDA4 a0=0 from 6D60C F2=0x2F.
+D79C live sb 0x3F then 0x2F. `D_800B0E64` is only
+`D_80011614-8`; NYPD 0x2A is empty. Do not stub
 `6914C`, jump to mode 7, or complete `0x55`.
 No matching `src/` C.
 

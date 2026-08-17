@@ -168,6 +168,134 @@ int func_800144FC_state37_cut(void)
     return 0;
 }
 
+extern void func_80087024(void);
+
+#define GA_GP_418 0x8009D188u
+#define GA_GP_41C 0x8009D18Cu
+#define GA_GP_420 0x8009D190u
+#define GA_CDA4   0x8009CDA4u
+
+/*
+ * 6D60C after 6D078 returns 0, at 0x8006D79C. Overlay word bit 0x4
+ * (set by 0x2C) and bit 0x40 select the arm. Live NYPD: bit4 set,
+ * bit40 clear → sb F2=0x3F, re-dispatch. 0x3F with the same bits
+ * sb 0x2F. 0x2F jals 6CDA4(0, lb +0xE1, …); a0==0 parks (87198
+ * not stubbed). 86C5C / 6DF50 / 864CC are not stubbed.
+ */
+void func_8006D60C_after_6d078_cut(void)
+{
+    unsigned int word;
+    int remain;
+
+    word = PE_LoadU32(GA_OVERLAY);
+    if ((word & 4u) != 0u && (word & 0x40u) != 0u) {
+        remain = 60 - ((int)PE_LoadU32(GA_CDA4) - (int)PE_LoadU32(GA_GP_41C));
+        PE_StoreU32(GA_GP_420, (unsigned int)remain);
+        if (remain >= 9)
+            PE_StoreU32(GA_GP_420, 8u);
+        else if (remain < 0)
+            PE_StoreU32(GA_GP_420, 0u);
+    }
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0x3Fu);
+}
+
+int func_8006D60C_state3F_cut(void)
+{
+    unsigned int word;
+    int timer;
+
+    word = PE_LoadU32(GA_OVERLAY);
+    if ((word & 4u) == 0u) {
+        PE_StoreU8(GA_OVERLAY + 0xF2u, 0x30u);
+        return 1;
+    }
+    if ((word & 0x40u) == 0u) {
+        PE_StoreU8(GA_OVERLAY + 0xF2u, 0x2Fu);
+        return 1;
+    }
+    timer = (int)PE_LoadU32(GA_GP_420);
+    if (timer > 0) {
+        PE_StoreU32(GA_GP_420, (unsigned int)(timer - 1));
+        return 1;
+    }
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0x2Fu);
+    return 1;
+}
+
+int func_8006D60C_state2F_cut(void)
+{
+    if (func_8006CDA4(0, (int)(int8_t)PE_LoadU8(GA_OVERLAY + 0xE1u), 0,
+                      PE_LoadU32(GA_OVERLAY + 0x194u), 0x21, 0) == 1)
+        return 1;
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0x30u);
+    return 1;
+}
+
+void func_8006D60C_state0_a0eq1_cut(void)
+{
+    PE_StoreU32(GA_GP_418, 0u);
+    func_80087024();
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0x2Cu);
+}
+
+void func_8006D60C_state2C_cut(void)
+{
+    if ((int8_t)PE_LoadU8(GA_OVERLAY + 0xE0u)
+        != (int8_t)PE_LoadU8(GA_OVERLAY + 0xDCu)) {
+        PE_StoreU32(GA_OVERLAY, PE_LoadU32(GA_OVERLAY) | 4u);
+    }
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0x2Eu);
+}
+
+int func_8006D60C(int a0)
+{
+    unsigned int f2;
+    unsigned int hops;
+
+    f2 = PE_LoadU8(GA_OVERLAY + 0xF2u);
+    if (f2 >= 0x41u)
+        return 0;
+    for (hops = 0; hops < 16u; hops++) {
+        if (f2 == 0u) {
+            if (a0 == 0)
+                return 1;
+            func_8006D60C_state0_a0eq1_cut();
+            f2 = 0x2Cu;
+            continue;
+        }
+        if (f2 == 0x2Cu) {
+            func_8006D60C_state2C_cut();
+            f2 = 0x2Eu;
+            continue;
+        }
+        if (f2 == 0x2Eu) {
+            if (func_8006D078() == 1)
+                return 1;
+            func_8006D60C_after_6d078_cut();
+            f2 = PE_LoadU8(GA_OVERLAY + 0xF2u);
+            continue;
+        }
+        if (f2 == 0x3Fu) {
+            (void)func_8006D60C_state3F_cut();
+            f2 = PE_LoadU8(GA_OVERLAY + 0xF2u);
+            if (f2 == 0x3Fu)
+                return 1;
+            continue;
+        }
+        if (f2 == 0x2Fu)
+            return func_8006D60C_state2F_cut();
+        return 0;
+    }
+    return 1;
+}
+
+int func_800144FC_state38_cut(void)
+{
+    if (func_8006D60C(1) == 1)
+        return 0;
+    return 0;
+}
+
 #define GA_GP_5C  0x8009CDCCu
 #define GA_B0E64  0x800B0E64u
 #define GA_D270   0x8009D270u

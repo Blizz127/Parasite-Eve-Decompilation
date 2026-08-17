@@ -83,6 +83,21 @@ def main() -> int:
     require(jal_target(load_u32(data, STATE2E)) == FN_6D078, "0x2E jal 6D078")
     require(load_u32(data, STATE2E + 8) == 0x24030001, "0x2E li 1")
     require(load_u32(data, STATE2E + 0xC) >> 26 == 4, "0x2E beq v0,1 busy")
+    require(load_u32(data, 0x8006D79C) == 0x8E230000, "D79C lw overlay word")
+    require(load_u32(data, 0x8006D7A4) == 0x30620004, "D79C andi 4")
+    require(load_u32(data, 0x8006D7AC) == 0x30620040, "D79C andi 0x40")
+    require(load_u32(data, 0x8006D814) == 0xA22200F2, "D79C sb F2")
+    require(load_u32(data, 0x8006D80C) == 0x2402003F, "live sb 0x3F")
+    require(load_u32(data, JT + 0x3F * 4) == 0x8006D818, "JT[0x3F]")
+    require(load_u32(data, JT + 0x2F * 4) == 0x8006D860, "JT[0x2F]")
+    require(load_u32(data, 0x8006D858) == 0x0801B58B, "0x3F !bit40 j dispatch")
+    require(load_u32(data, 0x8006D830) == 0x2402002F, "0x3F li 0x2F")
+    require(jal_target(load_u32(data, 0x8006D878)) == 0x8006CDA4, "0x2F jal 6CDA4")
+    require(load_u32(data, 0x8006D860) == 0x00002021, "0x2F a0=0")
+    require(load_u32(data, 0x8006A9D0) == 0xAC220E64, "6A8D4 sw D_800B0E64")
+    require(load_u32(data, 0x8006A9C8) == 0x2462FFF8, "6A8D4 D11614-8")
+    require(load_u32(data, 0x8006EB10) == 0xAC220E64, "6EB10 sw D_800B0E64")
+    require(load_u32(data, 0x8006EB08) == 0x2462FFF8, "6EB10 D11614-8")
 
     store_ops = {0x28: "sb", 0x29: "sh", 0x2B: "sw"}
     for va in range(FN, FN_END, 4):
@@ -110,7 +125,8 @@ def main() -> int:
 
     print(
         "PASS: 6D60C 387w sha256; +0xF2 JT; state0 jal 87024 sb 0x2C; "
-        "0x2C lb +0xE0/+0xDC; 0x2E jal 6D078 (117w, sole site); "
+        "0x2C lb +0xE0/+0xDC; 0x2E jal 6D078; D79C bit4/40 sb 0x3F; "
+        "0x3F !bit40 sb 0x2F; 0x2F 6CDA4 a0=0; B0E64=D11614-8 only; "
         "no +0xE; 0x38 a0=1; default v0=0"
     )
     return 0
