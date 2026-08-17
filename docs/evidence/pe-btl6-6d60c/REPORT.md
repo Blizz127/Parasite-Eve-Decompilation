@@ -34,9 +34,9 @@ State 0x2E @ `0x8006D788`: `jal 0x8006D078`. If that returns 1,
 
 ## Next
 
-`0x8006D178` — 6D078 state 0x2A. See `pe-btl6-870e0`.
-Do not stub DMA-complete, 6914C, jump to mode 7, or
-complete `0x55`.
+`0x8006D79C` — 6D60C after 6D078 returns 0. See
+`pe-btl6-6d078`. Do not stub DMA-complete, 6914C, jump
+to mode 7, or complete `0x55`.
 
 ## Verify
 

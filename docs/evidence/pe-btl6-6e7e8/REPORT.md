@@ -35,7 +35,7 @@ magic `AKAO`, SHA-256
 
 ## Next
 
-`0x8006D178` — 6D078 state 0x2A. See `pe-btl6-870e0`.
+`0x8006D79C` — 6D60C after 6D078 returns 0. See `pe-btl6-6d078`.
 
 ## Verify
 

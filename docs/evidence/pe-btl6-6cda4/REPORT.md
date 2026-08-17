@@ -46,7 +46,7 @@ returns 1; return 0 + `+0x10<2` sb 0x2A (walk not entered).
 
 ## Next
 
-`0x8006D178` — 6D078 state 0x2A. See `pe-btl6-870e0`.
+`0x8006D79C` — 6D60C after 6D078 returns 0. See `pe-btl6-6d078`.
 
 ## Verify
 
