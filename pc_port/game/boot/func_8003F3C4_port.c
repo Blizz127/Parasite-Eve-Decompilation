@@ -33,6 +33,10 @@
 #define GA_OVERLAY    0x800B0CD8u
 #define REC_STRIDE    56u
 
+extern unsigned int D_8009D280;
+
+static uint32_t pe_3f3c4_loaded_dest;
+
 static int pe_3f3c4_kseg(pe_addr_t p)
 {
     return p >= 0x80000000u && p < 0x80200000u;
@@ -69,6 +73,33 @@ static void pe_3f3c4_ce90_once(void)
     stream = func_8003F074_371b0_a0();
     if (pe_3f3c4_kseg(stream))
         func_800371B0(stream);
+    pe_3f3c4_loaded_dest = D_8009D280;
+}
+
+/*
+ * 3F074 @ 3F088 jals 6B4F8(D280) every tick. This cut runs that
+ * dest-token load only when D280 changes after the CE90-once
+ * publish, and only when the three overlay dest pointers are
+ * already KSEG. Do not jal 34FC4/125E0 here.
+ */
+static void pe_3f3c4_dest_change(void)
+{
+    pe_addr_t dest0;
+    pe_addr_t dest1;
+    pe_addr_t dest2;
+
+    if (D_8009D280 == 0u || D_8009D280 == pe_3f3c4_loaded_dest)
+        return;
+    dest0 = PE_LoadU32(GA_OVERLAY + 0x194u);
+    dest1 = PE_LoadU32(GA_OVERLAY + 0x168u);
+    dest2 = PE_LoadU32(GA_OVERLAY + 0x18Cu);
+    if (!pe_3f3c4_kseg(dest0) || !pe_3f3c4_kseg(dest1) ||
+        !pe_3f3c4_kseg(dest2))
+        return;
+    if (PE_LoadU32(0x800B0DD8u) == 0u)
+        return;
+    if (func_8006B4F8_dest_load_cut(D_8009D280) != 0)
+        pe_3f3c4_loaded_dest = D_8009D280;
 }
 
 /*
@@ -96,6 +127,7 @@ void func_8003F3C4(void)
     uint32_t bits;
 
     pe_3f3c4_ce90_once();
+    pe_3f3c4_dest_change();
     pe_3f3c4_host_pad();
     func_8003EB04();
     func_80065400();
