@@ -148,7 +148,10 @@ the retail battle runtime, not a one-off script.
 | BTL-18164 | 26w 0x5A; type0→2FF78 else 30220(D2F0,tag,val) | PORTED | live type2 uses 30220 |
 | BTL-18A48 | 21w 0xB7; jal 2FAA4(D2F0,lbu×4,lhu); v0=1 | PORTED | live (3,0,6,7,cond[1]) |
 | BTL-1897C | 51w 0x70; jal 2FA10 11 unpacked args; v0=1 | PORTED | live (0,0,8,9,cond[1],5,-1×3,3,15) |
-| next_live_va | type2 0x59/2FE78; type6 0x12; type3 0x85 | RESEARCH_REQUIRED | scratch&4 / region hit / D1F4 |
+| BTL-18004 | 31w 0x59; type0→2FE78 else 3010C; *arg1=v0 | PORTED | live type2 tag 44 → local[0xC] |
+| BTL-2FE78 | 64w; *(*D254) tagged read; OOB -1000 | PORTED | type0 path; extra deref vs 2FF78 |
+| BTL-3010C | 69w; slot=*actor; tag-41 JT; tag44 clamp +0x10 | PORTED | live type2; tag 130 destructive |
+| next_live_va | type2 0x12/131E8; type6 0x12; type3 0x85 | RESEARCH_REQUIRED | scratch&4 / region hit / D1F4 |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -242,12 +245,13 @@ python3 pc_port/tools/pe_btl42_1a1f0_oracle.py
 python3 pc_port/tools/pe_btl43_176fc_oracle.py
 python3 pc_port/tools/pe_btl44_18954_18164_oracle.py
 python3 pc_port/tools/pe_btl45_18a48_1897c_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=771/771
+python3 pc_port/tools/pe_btl46_18004_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=772/772
 ```
 
 STOP/NEXT: Type-2 `0xFB` arm is ported through
-`0xB7`/`0x70`. Next is `0x59` (2FE78/3010C).
-Type-3 `0x85` stays hit-gated. Type-6 `0x12`
-waits on scratch[0]&4. Do not invent pad /
+`0x59`. Live skip lands on `0x12`. Type-3
+`0x85` stays hit-gated. Type-6 `0x12` waits
+on scratch[0]&4. Do not invent pad /
 persist==39 / scratch / hit. `D2E8` bit 0 stays
 set.

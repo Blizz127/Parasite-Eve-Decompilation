@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -93,6 +93,7 @@
 #define GA_OP5A       0x80018164u
 #define GA_OPB7       0x80018A48u
 #define GA_OP70       0x8001897Cu
+#define GA_OP59       0x80018004u
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 
@@ -429,6 +430,30 @@ int func_8001897C(pe_addr_t args)
     return 1;
 }
 
+/*
+ * PE-BTL46 — opcode 0x59 tagged-read wrapper 18004.
+ *
+ * 31 words 0x80018004..0x80018080, SHA-256 2993bcdd…f4ac.
+ * D_800910A0[0x59]. If D2F0+0x0C==0: 2FE78(lbu *arg0).
+ * Else 3010C(D2F0, lbu *arg0). *arg1 = v0; v0=1.
+ * Live type-2 tag 44 → local[0xC] via 3010C.
+ */
+int func_80018004(pe_addr_t args)
+{
+    pe_addr_t actor;
+    uint8_t tag;
+    int value;
+
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    tag = PE_LoadU8(PE_LoadU32(args));
+    if (PE_LoadU8(actor + 0x0Cu) == 0u)
+        value = func_8002FE78(tag);
+    else
+        value = func_8003010C(actor, tag);
+    PE_StoreU32(PE_LoadU32(args + 4u), (uint32_t)value);
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == GA_OP0)
@@ -529,6 +554,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80018A48(args);
     if (fn == GA_OP70)
         return func_8001897C(args);
+    if (fn == GA_OP59)
+        return func_80018004(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }
