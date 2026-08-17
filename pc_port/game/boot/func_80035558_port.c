@@ -15,7 +15,9 @@
  *       jalr actor+0x190 (a0=actor)
  *
  * Known jalr targets 0x80035E04 (types 1–9) and 0x80035C84
- * (type 0) are ported below. 35C84 jal 3999C is not this cut.
+ * (type 0) are ported below. PE-BTL67 wires 35C84 jal 3999C
+ * when D2E8 bit 0 is clear (0x3F). 7136C-family jalr is not
+ * this cut.
  * After the walk, this cut also takes the live D1A0&2 jal
  * 299CC @ 0x800355E8 (consume + after-consume idle gate) and
  * the 35B2C jal 69594 event pump. PE-BTL66 adds the post-69594
@@ -43,6 +45,7 @@
 #define GA_D_8009D300 0x8009D300u
 #define GA_D_8009D2E8 0x8009D2E8u
 #define GA_D_800B0CD8 0x800B0CD8u
+#define GA_D_800943C0 0x800943C0u
 #define GA_VT_35E04   0x80035E04u
 #define GA_VT_35C84   0x80035C84u
 
@@ -117,12 +120,53 @@ void func_80035E04(pe_addr_t actor)
     pe_actor_integrate_motion(actor);
 }
 
+/*
+ * PE-BTL67 — func_8003999C pad-table dispatcher.
+ *
+ * 118 words 0x8003999C..0x80039B74, SHA-256 9a5267b0…3f6f.
+ * Sole TEXT caller 35C84 @ 35D14. Zero jal; jalr of record+0xC
+ * (7136C / 710A4 / 71754 / 716A4) is not this cut.
+ *
+ * a0=actor, a1=D_800943C0, a2=&code (actor+0x0E or 0x11).
+ * ROM indexes table[actor+0]. 2F76C stores 0x800B8A20 there;
+ * table only has rows 4/5/16/17/21/22/23. Host returns when
+ * the index is not a 0..63 row (live pointer would fault).
+ * Do not substitute *a2 for actor+0.
+ */
+void func_8003999C(pe_addr_t actor, pe_addr_t table, pe_addr_t codep)
+{
+    uint32_t idx;
+    pe_addr_t list;
+
+    (void)codep;
+    if (actor == 0u || table == 0u)
+        return;
+    idx = PE_LoadU32(actor);
+    if (idx >= 64u)
+        return;
+    list = PE_LoadU32(table + idx * 4u);
+    if (list == 0u)
+        return;
+    /* Mask walk + jalr record+0xC: not this cut. */
+}
+
 void func_80035C84(pe_addr_t actor)
 {
+    uint32_t code;
+    pe_addr_t rec;
+
     pe_actor_snapshot_pose(actor);
     func_800361F4(actor);
     if ((PE_LoadU32(GA_D_8009D2E8) & 1u) == 0u) {
-        /* jal 3999C: 118w pad table, not this cut. */
+        code = PE_LoadU8(actor + 0x0Eu);
+        rec = PE_LoadU32(GA_D_8009D254);
+        if (rec != 0u) {
+            rec = PE_LoadU32(rec);
+            if (rec != 0u && (PE_LoadU32(rec + 0x4Cu) & 0xC0u) == 0x80u)
+                code = 0x11u;
+        }
+        PE_StoreU32(0x80122190u, code);
+        func_8003999C(actor, GA_D_800943C0, 0x80122190u);
     }
     pe_actor_integrate_motion(actor);
 }
