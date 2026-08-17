@@ -35,7 +35,8 @@ the retail battle runtime, not a one-off script.
 | BTL-158 | Only `6E6A8` dest `+0x158` is EE=4; first `6C4C4(-1)` sets CE4=1; CE2=11 → PE.IMG `[428,434)` `obj+0x18=2` | PROVEN | `pe-btl6-3d834-callees` |
 | BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PROVEN | not the 0x3B wait |
 | BTL-6D60C | `144FC` `0x38` jal `6D60C(1)`; 387w sha256 `14e5794d…`; +0xF2 JT; no `+0xE` | PROVEN | `pe-btl6-6d60c` |
-| BTL-6D078 | 6D60C state 0x2E jal; 357w +0xF3 SM; sole site; v0==1 parks 0x38 | RESEARCH_REQUIRED | do not stub |
+| BTL-6D078 | 117w `0x8006D078..0x8006D24C`; +0xF3 JT; state0 sb 0x28; 0x28 jals 6CDA4 | PORTED | `func_8006D078` parks at 6CDA4 |
+| BTL-6CDA4 | 181w +0xF0 SM; no +0xE; 6D078 0x28/29/2B | RESEARCH_REQUIRED | do not stub |
 | BTL-MODE7 | `0x8002CEE0` jal `6914C(0)` then `D_8009D28C=7` | PROVEN | not issued |
 | BTL-ATB | ATB / menus / AI / damage / death / field return | RESEARCH_REQUIRED | do not invent |
 
@@ -63,9 +64,10 @@ python3 pc_port/tools/pe_btl6_3b97c_lighting_oracle.py
 python3 pc_port/tools/pe_btl6_6cc2c_oracle.py
 python3 pc_port/tools/pe_btl6_14544_oracle.py
 python3 pc_port/tools/pe_btl6_6d60c_oracle.py
-./pc_port/build/pe-native-tests   # 681/681
+python3 pc_port/tools/pe_btl6_6d078_oracle.py
+./pc_port/build/pe-native-tests   # 682/682
 ```
 
-STOP/NEXT: `0x8006D078` — 6D60C live 0→0x2C→0x2E jal
-(357-word +0xF3 SM). Do not stub `6D60C`/`6D078`/`6914C`,
-jump to mode 7, or complete `0x55`.
+STOP/NEXT: `0x8006CDA4` — 6D078 state 0x28 jal (181-word
++0xF0 SM). Do not stub `6CDA4`/`6D078`/`6914C`, jump to
+mode 7, or complete `0x55`.

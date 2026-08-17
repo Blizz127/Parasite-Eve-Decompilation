@@ -29,14 +29,13 @@ State 0x2C @ `0x8006D728`: `lb +0xE0` vs `lb +0xDC`. Boot leaves
 overlay word 0 and `sb 0x2E`.
 
 State 0x2E @ `0x8006D788`: `jal 0x8006D078`. If that returns 1,
-6D60C returns 1 (0x38 parks). 6D078 is 357 words
-(`0x8006D078..0x8006D60C`, SHA-256 `300534d3…f04d`), sole TEXT
-jal, another SM on `+0xF3` that jals `6CDA4`. Do not stub it.
+6D60C returns 1 (0x38 parks). 6D078 is **117 words**
+(`0x8006D078..0x8006D24C`). See `pe-btl6-6d078`. Do not stub it.
 
 ## Next
 
-`0x8006D078` — do not stub 6D60C/6D078/6914C success, jump to
-mode 7, or complete `0x55`.
+`0x8006CDA4` — 6D078 state 0x28 jal. Do not stub
+6CDA4/6D078/6914C success, jump to mode 7, or complete `0x55`.
 
 ## Verify
 

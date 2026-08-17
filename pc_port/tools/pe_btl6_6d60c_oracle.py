@@ -22,12 +22,12 @@ STATE2E = 0x8006D788
 DEFAULT = 0x8006DB28
 FN_87024 = 0x80087024
 FN_6D078 = 0x8006D078
-FN_6D078_END = 0x8006D60C
+FN_6D078_END = 0x8006D24C
 WIN_SHA256 = (
     "14e5794d4515e763d20ee26c939500f8764e747e83eddd7ad64b4642d905c3a2"
 )
 WIN_6D078_SHA256 = (
-    "300534d3ad8276005ff47bc717983f3ccc4dfd9f50954d0991a32ed9d2faf04d"
+    "7cf2bb6168b5ccf24db7639f024d093d1925dc90d63cba77ac861c4ffde5b1dd"
 )
 
 
@@ -101,7 +101,7 @@ def main() -> int:
         if struct.unpack_from("<I", data, offset)[0] == jal
     ]
     require(hits == [STATE2E], f"6D078 jals {hits}")
-    require((FN_6D078_END - FN_6D078) // 4 == 357, "6D078 357 words")
+    require((FN_6D078_END - FN_6D078) // 4 == 117, "6D078 117 words")
     require(
         window_sha(data, FN_6D078, FN_6D078_END) == WIN_6D078_SHA256,
         "6D078 sha256",
@@ -110,7 +110,7 @@ def main() -> int:
 
     print(
         "PASS: 6D60C 387w sha256; +0xF2 JT; state0 jal 87024 sb 0x2C; "
-        "0x2C lb +0xE0/+0xDC; 0x2E jal 6D078 (357w, sole site); "
+        "0x2C lb +0xE0/+0xDC; 0x2E jal 6D078 (117w, sole site); "
         "no +0xE; 0x38 a0=1; default v0=0"
     )
     return 0

@@ -167,3 +167,35 @@ int func_800144FC_state37_cut(void)
     PE_StoreU8(GA_OVERLAY + 0xF4u, 0x38u);
     return 0;
 }
+
+#define GA_GP_5C  0x8009CDCCu
+
+/*
+ * func_8006D078 is 117 words (0x8006D078..0x8006D24C), not the
+ * 357-word span to 6D60C (that includes 6D24C and 6D2B8).
+ * +0xF3 JT 0x80011458: 0 / 0x28 / 0x29 / 0x2A / 0x2B; default v0=0.
+ * No +0xE store. State 0: sw 0 → gp+0x5C, sb 0x28, re-dispatch.
+ * State 0x28 jals 6CDA4(1,1,0,+0x194,0x21,0); v0==1 returns 1.
+ * Named cut does not stub 6CDA4/6D60C/6914C success.
+ */
+void func_8006D078_state0_cut(void)
+{
+    PE_StoreU32(GA_GP_5C, 0u);
+    PE_StoreU8(GA_OVERLAY + 0xF3u, 0x28u);
+}
+
+int func_8006D078(void)
+{
+    unsigned int f3;
+
+    f3 = PE_LoadU8(GA_OVERLAY + 0xF3u);
+    if (f3 >= 44u)
+        return 0;
+    if (f3 == 0u) {
+        func_8006D078_state0_cut();
+        f3 = 0x28u;
+    }
+    if (f3 == 0x28u || f3 == 0x29u || f3 == 0x2Au || f3 == 0x2Bu)
+        return 1;
+    return 0;
+}
