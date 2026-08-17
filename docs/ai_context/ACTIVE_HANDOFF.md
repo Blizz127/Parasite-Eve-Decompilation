@@ -18,11 +18,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8003A3B4` — 3A088 GTE MVMVA walk. First
-`6C4C4(-1)` sets CE4=1; EE=4 fills `+0x158` from PE.IMG
-`[428,434)` (`obj+2=2`, `obj+0x18=2`). Empty cuts are not
-live. Do not invent GTE. Do not `andi 0xFC` or complete
-`0x55`. No matching `src/` C.
+STOP/NEXT: `0x8003BA24` — 3B97C lighting GTE. 3A088 walk
+ported (`PE_GTE_MVMVA` RTIR/RTV0, 2-bone fixture). Do not
+invent NCLIP. Do not `andi 0xFC` or complete `0x55`. No
+matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

@@ -37,6 +37,11 @@ typedef struct {
     int32_t dqb;   /* $28 depth cueing offset */
     int32_t zsf3;  /* $29 average-z scale (3 terms) */
     int32_t zsf4;  /* $30 average-z scale (4 terms) */
+    int16_t rt[3][3]; /* C2CTRL 0-4 rotation, 12.12 */
+    int32_t tr[3];    /* C2CTRL 5-7 TRX/TRY/TRZ */
+    int32_t ir[3];    /* C2DR 9-11 IR1-3 */
+    int32_t mac[3];   /* C2DR 25-27 MAC1-3 */
+    int16_t v0[3];    /* C2DR 0-1 VXY0/VZ0 */
 } PeGteState;
 extern PeGteState g_pe_gte;
 
@@ -48,6 +53,13 @@ void func_80079024(int a);           /* SetGeomScreen: H=a */
  * bits equal to the sign bit.  Defined for every input (0 -> 32,
  * 0xFFFFFFFF -> 32); pure arithmetic, no g_pe_gte state. */
 uint32_t PE_GTE_LZCR(uint32_t v);
+
+/* Exact integer MVMVA (psx-spx): no host float.
+ * cmd bits: sf@19, mx@17-18, v@15-16, cv@13-14, lm@10. */
+void PE_GTE_LoadRT(pe_addr_t matrix);
+void PE_GTE_SetIR(int16_t ir1, int16_t ir2, int16_t ir3);
+void PE_GTE_SetV0(int16_t vx, int16_t vy, int16_t vz);
+void PE_GTE_MVMVA(uint32_t cmd);
 
 /* ── libetc (pc_port/platform/pe_libetc.c) ──────────────────────────── */
 void func_80073C94(void);            /* ResetCallback */

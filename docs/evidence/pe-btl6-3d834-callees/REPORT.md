@@ -30,9 +30,14 @@ Join `0x8003A348` zeros scratchpad `0x1F800000` / `+4` (not
 `lhu(obj+0x18); blez` at `0x8003A3AC` returns at `0x8003A684`.
 
 Named cut `func_8003A088_mode0_empty_cut` refuses modes 1/3/4 and
-returns on `obj+0x18<=0`. The non-empty walk at `0x8003A3B4` is
-GTE `cop2 0x049E012` / `0x0480012` (MVMVA) with guest-RAM `sh` /
-`swc2` into dest+0x84 / dest+0x80. Not this cut.
+returns on `obj+0x18<=0`. Live walk `func_8003A088_mode0_walk_cut`
+at `0x8003A3B4` uses integer `PE_GTE_MVMVA`:
+
+- `0x049E012` sf=1 mx=RT v=IR cv=None lm=0 (column RTIR)
+- `0x0480012` sf=1 mx=RT v=V0 cv=TR lm=0 (translation / dest+0x18)
+
+PE.IMG `[428,434)` parents `[0,1]`. Bone 1 rec byte4=1 writes
+`(0,20,-7)` to dest+0x80. Scratchpad parent ±1/±2 is not this cut.
 
 ## `func_8003B97C` — empty early-out cut
 
@@ -75,7 +80,7 @@ field tick chain before EE=13, not skipped.
 CE2=11 (boot) + CE4=1 → `D_800930D8[23..24]` PE.IMG
 `[428,434)`. Section+0xC object at +8: `+2=2`, `+0x18=2`.
 Empty 3A088/3B97C cuts are therefore not the live object.
-Next is the GTE walk at `0x8003A3B4`. Do not invent GTE.
+The 3A088 walk is in `pe-btl6-3a088-walk`.
 
 Do not `andi 0xFC`.
 
@@ -83,10 +88,10 @@ Do not `andi 0xFC`.
 
 ```text
 python3 pc_port/tools/pe_btl6_3d834_callees_oracle.py
+python3 pc_port/tools/pe_btl6_3a088_walk_oracle.py
 PE_TEST_FILTER=BTL6 ./pc_port/build/pe-native-tests
 ./pc_port/build/pe-native-tests
 ```
 
-STOP: `0x8003A3B4` — 3A088 non-empty GTE MVMVA walk
-(`cop2 0x049E012` / `0x0480012`). Live `obj+0x18=2`.
-Do not invent GTE. Do not `andi 0xFC`.
+STOP: `0x8003BA24` — 3B97C lighting GTE (obj+2=2). Do not
+`andi 0xFC`.
