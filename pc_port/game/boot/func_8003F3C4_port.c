@@ -25,7 +25,9 @@
  * 70E54 live prefix @ 3F590: DrawSync(0), 42FE8 out
  * (gp+0x168!=6), VSync(2), ResetGraph(1),
  * PutDispEnv(BCE80+20*CDDC), 6EC08 status.
- * 75424+ is not this cut.
+ * Live 6EC08==0 and B0CD8&0x200==0 flips guest CDDC
+ * (70F94 sltiu / 70F98 sw). 754E4 DrawOTagEnv
+ * (75EE0/76B98) is not this cut.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -156,6 +158,7 @@ static void pe_3f3c4_host_pad(void)
 void func_8003F3C4(void)
 {
     uint32_t bits;
+    uint32_t cddc;
 
     pe_3f3c4_ce90_once();
     pe_3f3c4_dest_change();
@@ -181,5 +184,12 @@ void func_8003F3C4(void)
     func_80074A44(1);
     func_800755F0(PE_Translate(
         0x800BCE80u + PE_LoadU32(0x8009CDDCu) * 20u, 0x14u));
-    (void)func_8006EC08();
+    if (func_8006EC08() == 0 &&
+        (PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u) {
+        /* 754E4 DrawOTagEnv(B0E38[CDDC]+0x3FFC, CDC8+92*CDDC)
+         * is not this cut (75EE0/76B98). The 70F8C epilogue
+         * still flips guest CDDC. */
+        cddc = PE_LoadU32(0x8009CDDCu);
+        PE_StoreU32(0x8009CDDCu, cddc == 0u);
+    }
 }

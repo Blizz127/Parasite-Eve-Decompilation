@@ -3,6 +3,16 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL83 — 70E54 flips guest CDDC
+
+`matching_native=809/809`. Live `6EC08==0` and
+`B0CD8&0x200==0` takes the `754E4` path; this
+cut stores `CDDC=(CDDC==0)`. DrawOTagEnv
+`75EE0`/`76B98` is not this cut. Next executed
+`3F3C4` jal is `6A0E8` (live `D1A0&0x10==0`
+early-out). Type-6 still waits while
+`scratch[0]&4` is clear.
+
 ## PE-BTL81 — 6EC08 two-byte status
 
 `matching_native=807/807`. Returns 0/1/2 from
