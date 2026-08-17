@@ -58,10 +58,15 @@ freelist at `D_800BEA90` stride `0x280`, publishes the head to
 `gp+0x4E4`.
 
 `35038`: 328 words, EXE-resident. First load is that head.
-Empty head returns `v0=0`. That empty cut is ported. Live
-`3F074` runs `34FC4` first, so a later 125E0 with a published
-list will see a nonempty pool. Do not invent the ctor body.
-Next: pop + `a1=0` insert + desc bytes.
+Empty head returns `v0=0`. Live `a1=0` pop/insert/init/`12700`
+is ported. `D_800B0E70[type]` is EXE BSS 0, so `+0x1AC==0` and
+the ctor ORs `0xE0` into `+0x98` and returns the actor. Type 0
+`jal 2F76C` and `+0x1AC!=0` (`1A680`/`362B8`/`3D050`) are not
+this cut.
+
+`1266C`: 37 words, SHA-256 `34d11f74…645d`. Sole caller
+`3F074@0x8003F0B8`. 72 task blocks at `D_8009D310` stride
+`0x2C` → `gp+0x8C`. `12700` pops this list.
 
 ## Architecture
 

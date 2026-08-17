@@ -73,8 +73,10 @@ the retail battle runtime, not a one-off script.
 | BTL-12574 | 27w sole publisher of `gp+0x94`; 6B4F8 @ `0x8006B8BC` | PORTED | sha `bf4a0017…`; overlay+0x944 |
 | BTL-125E0 | 35w DrawSync(0) then `35038(desc+1+i*2,0,1)` | PORTED | sha `7c30399d…`; not battle render |
 | BTL-35038-EMPTY | empty `D_8009D2AC` returns 0; no ctor | PORTED | 328w EXE-resident |
-| BTL-34FC4 | 29w 14-slot pool at `D_800BEA90`; 3F074@`3F0B0` | PORTED | head → `D_8009D2AC`; live 125E0 sees this |
-| next_live_va | `func_80035038` nonempty pop/ctor | RESEARCH_REQUIRED | after-poll chain is wired |
+| BTL-34FC4 | 29w 14-slot pool at `D_800BEA90`; 3F074@`3F0B0` | PORTED | head → `D_8009D2AC` |
+| BTL-1266C | 37w 72-task pool at `D_8009D310`; 3F074@`3F0B8` | PORTED | sha `34d11f74…`; `12700` pops `gp+0x8C` |
+| BTL-35038-A1 | a1=0 pop/insert/init/`12700`; `+0x1AC==0` OR `0xE0` | PORTED | type0 `2F76C` and `+0x1AC` body not this cut |
+| next_live_va | type0 `2F76C` or overlay `D_800B0E70` / `+0x1AC` | RESEARCH_REQUIRED | first spawned actor is persistent |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -124,6 +126,7 @@ python3 pc_port/tools/pe_btl7_3f074_poll_oracle.py
 python3 pc_port/tools/pe_btl7_6cc68_oracle.py
 python3 pc_port/tools/pe_btl8_1a918_oracle.py
 python3 pc_port/tools/pe_btl9_371b0_oracle.py
+python3 pc_port/tools/pe_btl10_35038_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
@@ -132,9 +135,10 @@ python3 pc_port/tools/pe_btl6_339a0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: after-poll 371B0/125E0/E0060 is wired. 35038
-empty-freelist returns 0. Find the `D_8009D2AC` pool filler
-and the first recurring battle tick. `E0060` is EXE
-list-clear, not M2. Do not jalr `0x800E086C`. `0x89` is
-mode-6 request, not battle-over. Code on this path is
-EXE-resident; overlay supplies data only.
+STOP/NEXT: `34FC4`+`1266C` build actor/task pools. `35038`
+a1=0 pop/insert/`12700` is live; `+0x1AC==0` ORs `0xE0`.
+Next: type0 `2F76C` or overlay-published `D_800B0E70`, then
+the first recurring battle tick. `E0060` is EXE list-clear,
+not M2. Do not jalr `0x800E086C`. `0x89` is mode-6 request,
+not battle-over. Code on this path is EXE-resident; overlay
+supplies data only.

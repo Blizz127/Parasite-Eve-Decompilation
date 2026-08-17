@@ -155,6 +155,21 @@ def main() -> int:
     require(load_u32(data, 0x80034FCC) == 0x2442EA90, "34FC4 D_800BEA90")
     require(jal_sites(data, 0x80034FC4) == [0x8003F0B0], "34FC4 callers")
 
+    require((0x80012700 - 0x8001266C) // 4 == 37, "1266C 37 words")
+    require(
+        window_sha(data, 0x8001266C, 0x80012700)
+        == "34d11f74f5167d70c1e204cc11ba59877b0328cf69c13295cb11beebc792645d",
+        "1266C sha",
+    )
+    require(load_u32(data, 0x80012680) == 0xAF82008C, "1266C sw gp+0x8C")
+    require(load_u32(data, 0x80012674) == 0x2442D310, "1266C D_8009D310")
+    require(jal_sites(data, 0x8001266C) == [0x8003F0B8], "1266C callers")
+    require(jal_target(load_u32(data, 0x8003526C)) == 0x80012700, "35038 jal 12700")
+    require(load_u32(data, 0x80035078) == 0x10A0000B, "35038 beq a1,0")
+    require(load_u32(data, 0x80035294) == 0x106000A3, "35038 beq +0x1AC,0")
+    require(load_u32(data, 0x8003552C) == 0x344200E0, "35038 ori +0x98 0xE0")
+    require(load_u32(data, 0x8006B8C4) == 0xAEC20944, "12574 v0 -> +0x944")
+
     print(
         "PASS: 371B0 169w sha 83a0b015… window 320x54 y=170 sw gp+0x120; "
         "3F074 bit 0x40000000 -> 162C; 12574 publishes gp+0x94; "

@@ -19,12 +19,12 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: after-poll `371B0`/`125E0`/`E0060` is wired.
-Live `371B0` a0 is `D_800B162C`. `34FC4` (3F074@`3F0B0`)
-builds the `D_800BEA90` pool into `D_8009D2AC`. Empty-pool
-`35038` returns 0; the live path has a pool, so recover the
-35038 pop/ctor next. Not M2. EXE-resident code + loaded data.
-Do not jalr `0x800E086C`. No matching `src/` C.
+STOP/NEXT: `34FC4`+`1266C` build actor/task pools. `35038`
+a1=0 pop/insert/`12700` is live; `+0x1AC==0` (B0E70 BSS)
+ORs `0xE0` and returns a persistent actor. Next: type0
+`2F76C` or overlay-published `+0x1AC`. Not M2. EXE-resident
+code + loaded data. Do not jalr `0x800E086C`. No matching
+`src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

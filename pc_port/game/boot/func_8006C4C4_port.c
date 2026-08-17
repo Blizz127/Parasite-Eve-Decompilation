@@ -291,6 +291,13 @@ int func_8003F074_poll_cut(void)
     return v0;
 }
 
+/* 3F074 @ 0x8003F0B0 / 0x8003F0B8: actor pool then task pool. */
+void func_8003F074_pool_cut(void)
+{
+    func_80034FC4();
+    func_8001266C();
+}
+
 /* 3F074 @ 0x8003F244: language bit selects 162C else 1628. */
 pe_addr_t func_8003F074_371b0_a0(void)
 {
