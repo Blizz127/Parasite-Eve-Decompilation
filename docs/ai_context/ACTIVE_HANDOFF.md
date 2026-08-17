@@ -19,10 +19,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: type0 `35C84` snap+`361F4`; `2F76C` stores
-`actor+0`. `3999C` and `5218C`/`51980`/`51E64` are not this
-cut. E0060 is EXE list-clear, not loaded overlay, not M2.
-Do not jalr `0x800E086C`. No matching `src/` C.
+STOP/NEXT: live 125E0 desc is type 1+6, not type 0. Type-6
+first op `0xCE`/`181CC` is ported. Next is `0xEA`/`15DAC`
+(729w). `3999C` waits for a type-0 `0x08` spawn. E0060 is
+EXE list-clear, not loaded overlay, not M2. Do not jalr
+`0x800E086C`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

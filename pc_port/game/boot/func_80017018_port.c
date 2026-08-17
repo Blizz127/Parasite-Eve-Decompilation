@@ -23,9 +23,12 @@
  *   kind 4: args[i] = D_800B6A80 + imm[i]*4
  *   jalr table[op](args); v0!=0 re-fetch; v0==0 store PC, walk +0x24
  *
- * Handlers ported here: 0 / 1 / 2 / 0x20. 0x1C and 0x1F are the
- * already-ported mailbox leaves. Other table slots are not this cut
- * (return 0 = advance). Not M2.
+ * v0!=0 re-fetches from gp+0x90 (already advanced, or rewritten
+ * by op 0). v0==0 stores that PC to task+0 and walks +0x24.
+ *
+ * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE. 0x1C and 0x1F
+ * are the already-ported mailbox leaves. Other table slots are
+ * not this cut (return 0 = advance). Not M2.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -44,6 +47,7 @@
 #define GA_OP20       0x800172FCu
 #define GA_OP1C       0x80017764u
 #define GA_OP1F       0x800177ACu
+#define GA_OPCE       0x800181CCu
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 
@@ -105,6 +109,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80017764(args);
     if (fn == GA_OP1F)
         return func_800177AC(args);
+    if (fn == GA_OPCE)
+        return func_800181CC(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }
@@ -132,6 +138,7 @@ void func_80017018(void)
     unsigned int i;
     unsigned int kind;
     int again;
+    int first_fetch;
 
     for (;;) {
         task = PE_LoadU32(GA_D_8009D300);
@@ -166,9 +173,15 @@ void func_80017018(void)
         }
 
         again = 1;
+        first_fetch = 1;
         while (again) {
-            pc = PE_LoadU32(task);
-            PE_StoreU32(GA_D_8009CE00, pc);
+            if (first_fetch) {
+                pc = PE_LoadU32(task);
+                PE_StoreU32(GA_D_8009CE00, pc);
+                first_fetch = 0;
+            } else {
+                pc = PE_LoadU32(GA_D_8009CE00);
+            }
             word = PE_LoadU32(pc);
             word2 = PE_LoadU32(pc + 4u);
             argc = (word >> 13) & 0xFu;

@@ -20,7 +20,8 @@ task+0x10--; if != 0: walk
 fetch; argc=(word>>13)&0xF; op=word&0x1FFF
 decode kinds (word>>17, 3 bits; word+4 after 5 args)
 jalr table[op](sp+16)
-v0!=0 re-fetch; v0==0 store PC, walk +0x24
+v0!=0 re-fetch from gp+0x90 (ROM bne @17248→170F0);
+v0==0 store that PC, walk +0x24
 ```
 
 `12700` sets `+0x10=1`, so the first field tick runs one

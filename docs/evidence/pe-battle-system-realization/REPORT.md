@@ -82,7 +82,13 @@ the retail battle runtime, not a one-off script.
 | BTL-17018 | 159w task VM; jalr `D_800910A0[op]`; first tick `+0x10=1` | PORTED | ops 0/1/2/0x20 + 0x1C/0x1F; other slots advance |
 | BTL-35C84 | 96w type0 vtable; snap + 361F4; D2E8&1 skips 3999C | PORTED | 3999C pad table not this cut |
 | BTL-2F76C | 27w type0 stores actor+0 / B8A88 / B8A8C | PORTED | 5218C/51980/51E64 not this cut |
-| next_live_va | `3999C` or overlay bytecode / `51980` | RESEARCH_REQUIRED | type0 walk is live |
+| BTL-6E2D0 | 26w token→6 chars; 0xA80002C8→M0005I | PORTED | charset D_800930B4 |
+| BTL-6E454 | 17w atoi name[2..4]; M0005I→5 | PORTED | 6B4F8 uses index-1 |
+| BTL-6B4F8-PUB | chunk2 hdr walk; 12574 → +0x944..+0x954 | PORTED | CD/LoadImage not this cut |
+| BTL-M0005I-DESC | 125E0 desc count=2 type 1 then 6 | PROVEN | chunk2 sha 01a64ba3…; no type 0 |
+| BTL-181CC | 53w op 0xCE; 2FF78/30220; v0=1 | PORTED | live type6 first word |
+| BTL-17018-REFETCH | v0!=0 fetches gp+0x90 not *task | PORTED | ROM bne @17248 → 170F0 |
+| next_live_va | type6 next op `0xEA` = `15DAC` (729w) | RESEARCH_REQUIRED | 3999C not on this spawn |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -137,6 +143,7 @@ python3 pc_port/tools/pe_btl10_35038_oracle.py
 python3 pc_port/tools/pe_btl11_35558_oracle.py
 python3 pc_port/tools/pe_btl12_17018_oracle.py
 python3 pc_port/tools/pe_btl13_35c84_oracle.py
+python3 pc_port/tools/pe_btl14_m0005i_publish_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
@@ -145,7 +152,8 @@ python3 pc_port/tools/pe_btl6_339a0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: type0 walk is `35C84` → `361F4` → `17018`. Next:
-`3999C` (pad table) or overlay bytecode. E0060 is EXE
-list-clear, not M2. Do not jalr `0x800E086C`. `0x89` is
-mode-6 request, not battle-over.
+STOP/NEXT: live 125E0 spawns type 6 then type 1 (`35E04` →
+`361F4` → `17018`). Type-6 first op `0xCE` is ported. Next
+is `0xEA`/`15DAC`. `3999C` waits for a type-0 actor (later
+`0x08`). E0060 is EXE list-clear, not M2. `0x89` is mode-6
+request, not battle-over.
