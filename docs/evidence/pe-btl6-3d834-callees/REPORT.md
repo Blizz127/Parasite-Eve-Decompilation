@@ -39,12 +39,12 @@ at `0x8003A3B4` uses integer `PE_GTE_MVMVA`:
 PE.IMG `[428,434)` parents `[0,1]`. Bone 1 rec byte4=1 writes
 `(0,20,-7)` to dest+0x80. Scratchpad parent ±1/±2 is not this cut.
 
-## `func_8003B97C` — empty early-out cut
+## `func_8003B97C` — empty early-out + lighting
 
 Live `jal 3B97C(dest, D_800BEA40)`. Returns when dest+0==0,
 `lh dest+0xBA==0`, or `lbu(obj+2); blez` (zero-extend, so only
-byte 0). Non-empty lighting (NCLIP, scratchpad `0x1F800004`,
-tables `0x800B1638` / `0x800A6360`) is not this cut.
+byte 0). Lighting at `0x8003BA24` is RTIR `0x049E012` then NCCT
+`0x118043F` (not NCLIP). See `pe-btl6-3b97c-lighting`.
 
 ## `func_8003BCE0` — four directory walks (full leaf)
 
@@ -89,9 +89,10 @@ Do not `andi 0xFC`.
 ```text
 python3 pc_port/tools/pe_btl6_3d834_callees_oracle.py
 python3 pc_port/tools/pe_btl6_3a088_walk_oracle.py
+python3 pc_port/tools/pe_btl6_3b97c_lighting_oracle.py
 PE_TEST_FILTER=BTL6 ./pc_port/build/pe-native-tests
 ./pc_port/build/pe-native-tests
 ```
 
-STOP: `0x8003BA24` — 3B97C lighting GTE (obj+2=2). Do not
-`andi 0xFC`.
+STOP: `0x8006CC2C` — `andi 0xFC` after jal 3D834. Do not
+complete `0x55`.

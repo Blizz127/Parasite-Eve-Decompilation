@@ -8,12 +8,12 @@
  * The 215-word window 0x8006698C..0x80066CE8 is four jr leaves.
  * EE=13 jals only the first: 0x8006698C..0x80066B60 exclusive.
  * Fills D_800BEA40 / D_800BEA60 from dest+0x88/89/8A and
- * D_800BD025/26/27. Five trailing mtc2 into C2DR0-4 are GTE data
- * registers (no guest-RAM address; g_pe_gte has control regs only)
- * and are not invented here. Does not andi 0xFC.
+ * D_800BD025/26/27. Trailing five ctc2 words load BEA40+0x20 into
+ * LCM (C2CTRL 16-20). Does not andi 0xFC.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "pe_sdk.h"
 
 #define GA_BEA40  0x800BEA40u
 #define GA_BD025  0x800BD025u
@@ -74,4 +74,5 @@ void func_8006698C(pe_addr_t dest)
     PE_StoreU16(GA_BEA40 + 0x24u, 0u);
     PE_StoreU16(GA_BEA40 + 0x2Au, 0u);
     PE_StoreU16(GA_BEA40 + 0x30u, 0u);
+    PE_GTE_LoadLCM(GA_BEA40 + 0x20u);
 }

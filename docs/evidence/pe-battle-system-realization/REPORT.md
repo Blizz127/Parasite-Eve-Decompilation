@@ -26,7 +26,7 @@ the retail battle runtime, not a one-off script.
 | BTL-3DFD8 | Live copy leaf 51w; `jal 3DFD8(0x800B1638, dest+0x34, 1)` | PORTED | `func_8003DFD8` |
 | BTL-794C4 | First leaf 163w RotMatrix; live zero angles → identity at dest+0x34 | PORTED | `func_800794C4` |
 | BTL-3A088 | 392w; mode-0 empty + live walk; RTIR/RTV0 integer MVMVA; 2-bone `(0,20,-7)` | PORTED | `pe-btl6-3a088-walk` |
-| BTL-3B97C | 217w, 0 jals; empty dest+0 / +0xBA / obj+2==0; lighting GTE not this cut | PORTED | `pe-btl6-3d834-callees` |
+| BTL-3B97C | 217w, 0 jals; empty dest+0 / +0xBA / obj+2==0; lighting RTIR+NCCT at 0x8003BA24 | PORTED | `pe-btl6-3b97c-lighting` |
 | BTL-3BCE0 | 245w, 0 jals; four directory packet walks; keep-byte overlaps sw+4 | PORTED | `pe-btl6-3d834-callees` |
 | BTL-158 | Only `6E6A8` dest `+0x158` is EE=4; first `6C4C4(-1)` sets CE4=1; CE2=11 → PE.IMG `[428,434)` `obj+0x18=2` | PROVEN | `pe-btl6-3d834-callees` |
 | BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PROVEN | not the 0x3B wait |
@@ -54,8 +54,9 @@ python3 pc_port/tools/pe_btl3_29810_tail_oracle.py
 python3 pc_port/tools/pe_btl2_hp_trace_oracle.py
 python3 pc_port/tools/pe_btl6_3d834_callees_oracle.py
 python3 pc_port/tools/pe_btl6_3a088_walk_oracle.py
-./pc_port/build/pe-native-tests   # 677/677
+python3 pc_port/tools/pe_btl6_3b97c_lighting_oracle.py
+./pc_port/build/pe-native-tests   # 678/678
 ```
 
-STOP/NEXT: `0x8003BA24` — 3B97C lighting GTE (`obj+2=2`).
-3A088 walk is ported. Do not invent NCLIP. Do not `andi 0xFC`.
+STOP/NEXT: `0x8006CC2C` — `6C5BC` `andi 0xFC` after jal 3D834
+(3A088/3B97C/3BCE0 live cuts are ported). Do not complete `0x55`.

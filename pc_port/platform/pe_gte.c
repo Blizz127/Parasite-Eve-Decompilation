@@ -57,20 +57,48 @@ uint32_t PE_GTE_LZCR(uint32_t v)
     return n;
 }
 
+static void pe_gte_load_m3(int16_t m[3][3], pe_addr_t matrix)
+{
+    m[0][0] = (int16_t)PE_LoadU16(matrix + 0u);
+    m[0][1] = (int16_t)PE_LoadU16(matrix + 2u);
+    m[0][2] = (int16_t)PE_LoadU16(matrix + 4u);
+    m[1][0] = (int16_t)PE_LoadU16(matrix + 6u);
+    m[1][1] = (int16_t)PE_LoadU16(matrix + 8u);
+    m[1][2] = (int16_t)PE_LoadU16(matrix + 10u);
+    m[2][0] = (int16_t)PE_LoadU16(matrix + 12u);
+    m[2][1] = (int16_t)PE_LoadU16(matrix + 14u);
+    m[2][2] = (int16_t)PE_LoadU16(matrix + 16u);
+}
+
 void PE_GTE_LoadRT(pe_addr_t matrix)
 {
-    g_pe_gte.rt[0][0] = (int16_t)PE_LoadU16(matrix + 0u);
-    g_pe_gte.rt[0][1] = (int16_t)PE_LoadU16(matrix + 2u);
-    g_pe_gte.rt[0][2] = (int16_t)PE_LoadU16(matrix + 4u);
-    g_pe_gte.rt[1][0] = (int16_t)PE_LoadU16(matrix + 6u);
-    g_pe_gte.rt[1][1] = (int16_t)PE_LoadU16(matrix + 8u);
-    g_pe_gte.rt[1][2] = (int16_t)PE_LoadU16(matrix + 10u);
-    g_pe_gte.rt[2][0] = (int16_t)PE_LoadU16(matrix + 12u);
-    g_pe_gte.rt[2][1] = (int16_t)PE_LoadU16(matrix + 14u);
-    g_pe_gte.rt[2][2] = (int16_t)PE_LoadU16(matrix + 16u);
+    pe_gte_load_m3(g_pe_gte.rt, matrix);
     g_pe_gte.tr[0] = (int32_t)PE_LoadU32(matrix + 20u);
     g_pe_gte.tr[1] = (int32_t)PE_LoadU32(matrix + 24u);
     g_pe_gte.tr[2] = (int32_t)PE_LoadU32(matrix + 28u);
+}
+
+void PE_GTE_LoadRT33(pe_addr_t matrix)
+{
+    pe_gte_load_m3(g_pe_gte.rt, matrix);
+}
+
+void PE_GTE_LoadLCM(pe_addr_t matrix)
+{
+    pe_gte_load_m3(g_pe_gte.lcm, matrix);
+}
+
+void PE_GTE_LoadLLM_halfs(const int16_t *halfs)
+{
+    g_pe_gte.llm[0][0] = halfs[0];
+    g_pe_gte.llm[0][1] = halfs[1];
+    g_pe_gte.llm[0][2] = halfs[2];
+    g_pe_gte.llm[1][0] = halfs[3];
+    g_pe_gte.llm[1][1] = halfs[4];
+    g_pe_gte.llm[1][2] = halfs[5];
+    g_pe_gte.llm[2][0] = halfs[6];
+    g_pe_gte.llm[2][1] = halfs[7];
+    g_pe_gte.llm[2][2] = halfs[8];
 }
 
 void PE_GTE_SetIR(int16_t ir1, int16_t ir2, int16_t ir3)
@@ -85,6 +113,32 @@ void PE_GTE_SetV0(int16_t vx, int16_t vy, int16_t vz)
     g_pe_gte.v0[0] = vx;
     g_pe_gte.v0[1] = vy;
     g_pe_gte.v0[2] = vz;
+}
+
+void PE_GTE_SetV1(int16_t vx, int16_t vy, int16_t vz)
+{
+    g_pe_gte.v1[0] = vx;
+    g_pe_gte.v1[1] = vy;
+    g_pe_gte.v1[2] = vz;
+}
+
+void PE_GTE_SetV2(int16_t vx, int16_t vy, int16_t vz)
+{
+    g_pe_gte.v2[0] = vx;
+    g_pe_gte.v2[1] = vy;
+    g_pe_gte.v2[2] = vz;
+}
+
+void PE_GTE_SetRGBC(uint32_t rgbc)
+{
+    g_pe_gte.rgbc = rgbc;
+}
+
+void PE_GTE_SetBK(int32_t rbk, int32_t gbk, int32_t bbk)
+{
+    g_pe_gte.bk[0] = rbk;
+    g_pe_gte.bk[1] = gbk;
+    g_pe_gte.bk[2] = bbk;
 }
 
 static int32_t pe_gte_sat_ir(int64_t mac, int lm)
@@ -155,5 +209,78 @@ void PE_GTE_MVMVA(uint32_t cmd)
             g_pe_gte.mac[row] = (int32_t)mac;
             g_pe_gte.ir[row] = pe_gte_sat_ir(mac, lm);
         }
+    }
+}
+
+static void pe_gte_mul3(const int16_t m[3][3], int32_t tx, int32_t ty,
+                        int32_t tz, int16_t vx, int16_t vy, int16_t vz,
+                        int sf, int lm)
+{
+    const int32_t t[3] = { tx, ty, tz };
+    const int16_t v[3] = { vx, vy, vz };
+    int row;
+    int shift = sf * 12;
+
+    for (row = 0; row < 3; row++) {
+        int64_t mac;
+
+        mac = ((int64_t)t[row] << 12)
+            + (int64_t)m[row][0] * (int64_t)v[0]
+            + (int64_t)m[row][1] * (int64_t)v[1]
+            + (int64_t)m[row][2] * (int64_t)v[2];
+        mac >>= shift;
+        g_pe_gte.mac[row] = (int32_t)mac;
+        g_pe_gte.ir[row] = pe_gte_sat_ir(mac, lm);
+    }
+}
+
+static uint8_t pe_gte_sat8(int32_t mac)
+{
+    int32_t x;
+
+    if (mac < 0)
+        return 0;
+    x = mac >> 4; /* MAC/16 */
+    if (x > 255)
+        return 255;
+    return (uint8_t)x;
+}
+
+void PE_GTE_NCCT(void)
+{
+    const int16_t *vs[3];
+    uint8_t rgb[3];
+    uint8_t code;
+    int n;
+
+    /* ROM word 0x118043F: sf=1 lm=1. Formula is psx-spx NCCT, not NCLIP. */
+    vs[0] = g_pe_gte.v0;
+    vs[1] = g_pe_gte.v1;
+    vs[2] = g_pe_gte.v2;
+    rgb[0] = (uint8_t)(g_pe_gte.rgbc & 0xFFu);
+    rgb[1] = (uint8_t)((g_pe_gte.rgbc >> 8) & 0xFFu);
+    rgb[2] = (uint8_t)((g_pe_gte.rgbc >> 16) & 0xFFu);
+    code = (uint8_t)((g_pe_gte.rgbc >> 24) & 0xFFu);
+
+    for (n = 0; n < 3; n++) {
+        int row;
+
+        pe_gte_mul3(g_pe_gte.llm, 0, 0, 0, vs[n][0], vs[n][1], vs[n][2], 1, 1);
+        pe_gte_mul3(g_pe_gte.lcm, g_pe_gte.bk[0], g_pe_gte.bk[1],
+                    g_pe_gte.bk[2], (int16_t)g_pe_gte.ir[0],
+                    (int16_t)g_pe_gte.ir[1], (int16_t)g_pe_gte.ir[2], 1, 1);
+        for (row = 0; row < 3; row++) {
+            int64_t mac;
+
+            mac = ((int64_t)rgb[row] * (int64_t)g_pe_gte.ir[row]) << 4;
+            mac >>= 12;
+            g_pe_gte.mac[row] = (int32_t)mac;
+            g_pe_gte.ir[row] = pe_gte_sat_ir(mac, 1);
+        }
+        g_pe_gte.rgb_fifo[n] =
+            (uint32_t)pe_gte_sat8(g_pe_gte.mac[0])
+            | ((uint32_t)pe_gte_sat8(g_pe_gte.mac[1]) << 8)
+            | ((uint32_t)pe_gte_sat8(g_pe_gte.mac[2]) << 16)
+            | ((uint32_t)code << 24);
     }
 }

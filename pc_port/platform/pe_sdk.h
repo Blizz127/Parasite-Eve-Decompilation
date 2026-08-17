@@ -39,9 +39,16 @@ typedef struct {
     int32_t zsf4;  /* $30 average-z scale (4 terms) */
     int16_t rt[3][3]; /* C2CTRL 0-4 rotation, 12.12 */
     int32_t tr[3];    /* C2CTRL 5-7 TRX/TRY/TRZ */
+    int16_t llm[3][3]; /* C2CTRL 8-12 light matrix */
+    int16_t lcm[3][3]; /* C2CTRL 16-20 color matrix */
+    int32_t bk[3];    /* C2CTRL 13-15 RBK/GBK/BBK */
     int32_t ir[3];    /* C2DR 9-11 IR1-3 */
     int32_t mac[3];   /* C2DR 25-27 MAC1-3 */
     int16_t v0[3];    /* C2DR 0-1 VXY0/VZ0 */
+    int16_t v1[3];    /* C2DR 2-3 VXY1/VZ1 */
+    int16_t v2[3];    /* C2DR 4-5 VXY2/VZ2 */
+    uint32_t rgbc;    /* C2DR 6 RGBC */
+    uint32_t rgb_fifo[3]; /* C2DR 20-22 RGB0/1/2 */
 } PeGteState;
 extern PeGteState g_pe_gte;
 
@@ -57,9 +64,18 @@ uint32_t PE_GTE_LZCR(uint32_t v);
 /* Exact integer MVMVA (psx-spx): no host float.
  * cmd bits: sf@19, mx@17-18, v@15-16, cv@13-14, lm@10. */
 void PE_GTE_LoadRT(pe_addr_t matrix);
+void PE_GTE_LoadRT33(pe_addr_t matrix);
+void PE_GTE_LoadLCM(pe_addr_t matrix);
+void PE_GTE_LoadLLM_halfs(const int16_t *halfs);
 void PE_GTE_SetIR(int16_t ir1, int16_t ir2, int16_t ir3);
 void PE_GTE_SetV0(int16_t vx, int16_t vy, int16_t vz);
+void PE_GTE_SetV1(int16_t vx, int16_t vy, int16_t vz);
+void PE_GTE_SetV2(int16_t vx, int16_t vy, int16_t vz);
+void PE_GTE_SetRGBC(uint32_t rgbc);
+void PE_GTE_SetBK(int32_t rbk, int32_t gbk, int32_t bbk);
 void PE_GTE_MVMVA(uint32_t cmd);
+/* Exact integer NCCT (psx-spx COP2 0x118043F). No NCLIP. No host float. */
+void PE_GTE_NCCT(void);
 
 /* ── libetc (pc_port/platform/pe_libetc.c) ──────────────────────────── */
 void func_80073C94(void);            /* ResetCallback */

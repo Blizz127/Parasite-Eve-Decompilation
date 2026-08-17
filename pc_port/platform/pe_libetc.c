@@ -299,9 +299,16 @@ void PE_Sdk_ResetState(void)
     g_pe_gte.zsf3 = g_pe_gte.zsf4 = 0;
     memset(g_pe_gte.rt, 0, sizeof(g_pe_gte.rt));
     memset(g_pe_gte.tr, 0, sizeof(g_pe_gte.tr));
+    memset(g_pe_gte.llm, 0, sizeof(g_pe_gte.llm));
+    memset(g_pe_gte.lcm, 0, sizeof(g_pe_gte.lcm));
+    memset(g_pe_gte.bk, 0, sizeof(g_pe_gte.bk));
     memset(g_pe_gte.ir, 0, sizeof(g_pe_gte.ir));
     memset(g_pe_gte.mac, 0, sizeof(g_pe_gte.mac));
     memset(g_pe_gte.v0, 0, sizeof(g_pe_gte.v0));
+    memset(g_pe_gte.v1, 0, sizeof(g_pe_gte.v1));
+    memset(g_pe_gte.v2, 0, sizeof(g_pe_gte.v2));
+    g_pe_gte.rgbc = 0;
+    memset(g_pe_gte.rgb_fifo, 0, sizeof(g_pe_gte.rgb_fifo));
     /* func_80052C6C state globals */
     D_8009D018 = 0;
     D_8009D03C = 0;

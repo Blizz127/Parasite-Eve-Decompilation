@@ -37,4 +37,4 @@ PE_TEST_FILTER=BTL6 ./pc_port/build/pe-native-tests
 ./pc_port/build/pe-native-tests
 ```
 
-STOP: `0x8003BA24` — 3B97C lighting. Do not `andi 0xFC`.
+STOP: 3B97C lighting is in `pe-btl6-3b97c-lighting`. Do not `andi 0xFC`.

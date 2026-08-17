@@ -88,11 +88,13 @@ void func_8003A088_mode0_walk_cut(pe_addr_t dest)
 
         src = src_base + (pe_addr_t)parent * 32u;
         for (col = 0; col < 3u; col++) {
-            PE_GTE_SetIR((int16_t)PE_LoadU16(src + col),
-                         (int16_t)PE_LoadU16(src + 6u + col),
-                         (int16_t)PE_LoadU16(src + 12u + col));
+            unsigned off = col * 2u;
+
+            PE_GTE_SetIR((int16_t)PE_LoadU16(src + off),
+                         (int16_t)PE_LoadU16(src + 6u + off),
+                         (int16_t)PE_LoadU16(src + 12u + off));
             PE_GTE_MVMVA(CMD_RTIR);
-            pe_3a088_store_row(out, col);
+            pe_3a088_store_row(out, off);
         }
 
         if (parent == 0) {

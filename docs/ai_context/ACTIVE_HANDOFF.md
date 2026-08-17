@@ -18,10 +18,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8003BA24` — 3B97C lighting GTE. 3A088 walk
-ported (`PE_GTE_MVMVA` RTIR/RTV0, 2-bone fixture). Do not
-invent NCLIP. Do not `andi 0xFC` or complete `0x55`. No
-matching `src/` C.
+STOP/NEXT: `0x8006CC2C` — `6C5BC` `andi 0xFC` after jal 3D834.
+3B97C lighting is RTIR `0x049E012` + NCCT `0x118043F` (not
+NCLIP). 3BCE0 full leaf already ported. Do not complete `0x55`.
+No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
