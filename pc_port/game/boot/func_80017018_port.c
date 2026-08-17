@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -101,8 +101,12 @@
 #define GA_OP6B       0x800187C0u
 #define GA_OP64       0x800184ECu
 #define GA_OP0E       0x80014228u
+#define GA_OP0D       0x80017410u
+#define GA_OP22       0x800177C8u
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
+/* Host stand-in for 17410's stack s16 = -1. APPROXIMATION. */
+#define GA_375E0_LIST 0x80120F20u
 
 extern unsigned int D_8009D1A0;
 
@@ -520,6 +524,38 @@ int func_800184EC(pe_addr_t args)
     return 1;
 }
 
+/*
+ * PE-BTL54 — opcode 0x0D message-open 17410.
+ *
+ * 13 words 0x80017410..0x80017444, SHA-256
+ * f84d1f42908c9ba5b90a985acaaa36a54538d99d96ad731305bd82571f45518e.
+ * D_800910A0[0x0D]. jal 375E0(lh *arg0, 0, &-1); v0=1.
+ * Live type-0 FF arm +0x920 id 7 (persist[0]&4==0).
+ */
+int func_80017410(pe_addr_t args)
+{
+    PE_StoreU16(GA_375E0_LIST, 0xFFFFu);
+    func_800375E0((int)(int16_t)PE_LoadU16(PE_LoadU32(args)), 0u,
+                  GA_375E0_LIST);
+    return 1;
+}
+
+/*
+ * PE-BTL54 — opcode 0x22 message-poll 177C8.
+ *
+ * 22 words 0x800177C8..0x80017820, SHA-256 from oracle.
+ * D_800910A0[0x22]. jal 37548(lh *arg0). byte0==0 → v0=1.
+ * Else CE00-=0xC, D300+0x10=1, v0=0. Live after 0x0D id 7.
+ */
+int func_800177C8(pe_addr_t args)
+{
+    if (func_80037548((int)(int16_t)PE_LoadU16(PE_LoadU32(args))) == 0)
+        return 1;
+    PE_StoreU32(GA_D_8009CE00, PE_LoadU32(GA_D_8009CE00) - 0xCu);
+    PE_StoreU32(PE_LoadU32(GA_D_8009D300) + 0x10u, 1u);
+    return 0;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == GA_OP0)
@@ -636,6 +672,10 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_800184EC(args);
     if (fn == GA_OP0E)
         return func_80014228(args);
+    if (fn == GA_OP0D)
+        return func_80017410(args);
+    if (fn == GA_OP22)
+        return func_800177C8(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }
