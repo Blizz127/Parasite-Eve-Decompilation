@@ -3,6 +3,15 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL81 — 6EC08 two-byte status
+
+`matching_native=807/807`. Returns 0/1/2 from
+`B0DBA/DBC/DBB`. Live zeros return 0. `3F50C`
+then skips overlay `122040`. `70E54` live 0
+plus `B0CD8&0x200==0` takes `754E4`, not
+`75424`. Type-6 still waits while
+`scratch[0]&4` is clear.
+
 ## PE-BTL80 — 70E54 jals PutDispEnv
 
 `matching_native=806/806`. `755F0(BCE80+20*CDDC)`.

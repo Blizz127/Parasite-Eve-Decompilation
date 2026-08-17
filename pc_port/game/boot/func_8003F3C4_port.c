@@ -24,7 +24,8 @@
  * E01BC overlay between 661A4 and 661CC is not this cut.
  * 70E54 live prefix @ 3F590: DrawSync(0), 42FE8 out
  * (gp+0x168!=6), VSync(2), ResetGraph(1),
- * PutDispEnv(BCE80+20*CDDC). 6EC08+ is not this cut.
+ * PutDispEnv(BCE80+20*CDDC), 6EC08 status.
+ * 75424+ is not this cut.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -41,6 +42,24 @@ extern void func_80068CE0(void);
 extern void func_800661A4(void);
 extern void func_800661CC(void);
 extern int func_80074A44(int mode);
+
+int func_8006EC08(void)
+{
+    int8_t a;
+    int16_t h;
+    int8_t b;
+
+    a = (int8_t)PE_LoadU8(0x800B0DBAu);
+    if (a == 0)
+        return 0;
+    h = (int16_t)PE_LoadU16(0x800B0DBCu);
+    if (h <= 0)
+        return 0;
+    b = (int8_t)PE_LoadU8(0x800B0DBBu);
+    if (b == 0)
+        return 1;
+    return 2;
+}
 
 static uint32_t pe_3f3c4_loaded_dest;
 
@@ -147,6 +166,9 @@ void func_8003F3C4(void)
     bits = PE_LoadU32(0x800B0CD8u);
     if ((bits & 0x100u) != 0u)
         return;
+    /* 3F50C: live 6EC08==0 skips overlay 122040/121A00/6E60C. */
+    (void)func_8006EC08();
+    bits = PE_LoadU32(0x800B0CD8u);
     if ((bits & 0x200u) != 0u)
         return;
     func_80068CE0();
@@ -159,4 +181,5 @@ void func_8003F3C4(void)
     func_80074A44(1);
     func_800755F0(PE_Translate(
         0x800BCE80u + PE_LoadU32(0x8009CDDCu) * 20u, 0x14u));
+    (void)func_8006EC08();
 }
