@@ -17,7 +17,7 @@ overlay `+0xE`. Boot `6A674` zeros `+0xF0`.
 
 | F0 | VA | Effect |
 |---|---|---|
-| 0 | `0x8006CE3C` | table → gp+0x400/404/408; a0==0 jal 87198; a0==3 jal 87414; a0==1 a2 stays -1, sb 7, return 1 |
+| 0 | `0x8006CE3C` | table → gp+0x400/404/408; a0==0 jal 87198 (`D270=1`); a0==3 jal 87414; a0==1 skips both; sb 7, return 1 |
 | 7 | `0x8006CEC4` | `jal 6E6D4` CD issue |
 | 8 | `0x8006CF28` | `jal 6E7E8` poll |
 | 9 | `0x8006CF54` | stream decode by a0 |
@@ -31,10 +31,10 @@ gp+0x400 = `D_800B0DD8+0x8C6`. a2 stays -1, sb 7, return 1
 (`s0=(flag^1)&1`; live flag=0). State 7 is not entered on
 that tick.
 
-Named cut implements a0=1 state 0, state 7 through real
-`func_8006E6D4` (host bytes = sectors<<11), and state 8
-through real `func_8006E7E8`. Poll-complete sb 9 and parks.
-87090 is not entered.
+Named cut implements a0=0/1/3 state 0 (87198 / skip / 87414),
+state 7 through real `func_8006E6D4` (host bytes = sectors<<11),
+and state 8 through real `func_8006E7E8`. Poll-complete sb 9
+and parks. 87090 is not entered.
 
 ## State 7
 
@@ -46,7 +46,7 @@ returns 1; return 0 + `+0x10<2` sb 0x2A (walk not entered).
 
 ## Next
 
-`0x80087198` — 6CDA4 a0=0 from F2=0x2F. See `pe-btl6-6d79c`.
+`0x80086464` — 6D60C F2=0x30 after 0x2F state7 `6E6D4` -1.
 
 ## Verify
 

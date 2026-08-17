@@ -301,6 +301,17 @@ int func_800144FC_state38_cut(void)
 #define GA_D270   0x8009D270u
 
 /*
+ * func_80087198 is 5 words (0x80087198..0x800871AC): D_8009D270=1,
+ * return 0. Twin of 87414. Matching src/ exists; this is the native
+ * port. 6CDA4 state 0 a0==0 jals it after the table fill.
+ */
+int func_80087198(void)
+{
+    PE_StoreU32(GA_D270, 1u);
+    return 0;
+}
+
+/*
  * func_80087414 is 5 words (0x80087414..0x80087428): D_8009D270=2,
  * return 0. Matching src/ exists; this is the native port. 6CDA4
  * state 0 a0==3 jals it after the table fill.
@@ -446,8 +457,9 @@ extern int func_8006E7E8(void);
  * func_8006CDA4 is 181 words (0x8006CDA4..0x8006D078). +0xF0 JT
  * 0x80011428: 0 / 7 / 8 / 9 / 0xA; 1-6 unused. No +0xE store.
  * Live 6D078 0x28 is a0=1 a1=1: state 0 fills gp+0x400/404/408 from
- * D_8009317C + D_800B0DD8, skips 87198, sb 7, returns 1. a0==3
- * calls 87414 (D_8009D270=2) after the same table fill.
+ * D_8009317C + D_800B0DD8, skips 87198, sb 7, returns 1. a0==0
+ * (6D60C F2=0x2F, a1=lb +0xE1=0x0D) calls 87198 (D_8009D270=1)
+ * after the same table fill. a0==3 calls 87414 (D_8009D270=2).
  * Dest is lw overlay+0x194. State 7 jals real 6E6D4 with host
  * byte size (chunk<<11; retail a3 is sectors, proven by state 9
  * sll 11). -1 sb 0 return 0; else sb 8 return 1. State 8 jals
@@ -559,10 +571,10 @@ int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
     if (f0 >= 11u)
         return 1;
     if (f0 == 0u) {
-        if (a0 == 0)
-            return 1;
         func_8006CDA4_state0_a0eq1_cut(a1);
-        if (a0 == 3)
+        if (a0 == 0)
+            (void)func_80087198();
+        else if (a0 == 3)
             (void)func_80087414();
         return 1;
     }

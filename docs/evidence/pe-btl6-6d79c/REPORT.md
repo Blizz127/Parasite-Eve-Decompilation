@@ -26,8 +26,10 @@ the middle row.
 | 0x3F | `0x8006D818` | bit4 set, bit40 clear → sb 0x2F |
 | 0x2F | `0x8006D860` | `jal 6CDA4(0, lb +0xE1, 0, +0x194, 0x21, 0)` |
 
-`6CDA4` a0==0 is `87198`; that leaf is not stubbed, so 0x2F
-parks. 144FC 0x38 stays parked (v0=1). No `0x39` / `6914C`.
+`6CDA4` a0==0 is `87198` (`D_8009D270=1`) after the table fill,
+then sb F0=7. 0x2F parks on that tick (v0==1). Next 0x2F tick
+is state 7 `6E6D4`; host -1 sb F0=0 and 0x2F sb F2=0x30.
+144FC 0x38 stays parked. No `0x39` / `6914C`.
 
 ## D_800B0E64 archive
 
@@ -39,8 +41,8 @@ returns 0 into D79C. No payload hash.
 
 ## Next
 
-`0x80087198` — 6CDA4 state 0 a0=0 from 0x2F. Do not stub
-`6914C`, jump to mode 7, or complete `0x55`.
+`0x80086464` — 6D60C F2=0x30 after 0x2F `6E6D4` -1. Do not
+stub `86464`/`86C1C`/`6914C`, jump to mode 7, or complete `0x55`.
 
 ## Verify
 

@@ -18,11 +18,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x80087198` — 6CDA4 a0=0 from 6D60C F2=0x2F.
-D79C live sb 0x3F then 0x2F. `D_800B0E64` is only
-`D_80011614-8`; NYPD 0x2A is empty. Do not stub
-`6914C`, jump to mode 7, or complete `0x55`.
-No matching `src/` C.
+STOP/NEXT: `0x80086464` — 6D60C F2=0x30 after 0x2F F0=7
+`6E6D4` -1. 87198 (`D_8009D270=1`) is the native port of
+the matching leaf; 6CDA4 a0==0 table-fills then jals it.
+Do not stub `86464`/`86C1C`/`6914C`, jump to mode 7, or
+complete `0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
