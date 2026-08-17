@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL95 — 144FC jtbl[1..0x36] completes
+
+`matching_native=820/820` with BTL95 dirty
+test. Unused states take `14658` `v0=1`.
+`>=0x3C` still parks. Type-6 `0x55` remains
+behind `scratch[0]&4`.
+
 ## PE-BTL93 — 0xED key 0xA29 actor+0x27D
 
 `matching_native=819/820` local (dirty persist

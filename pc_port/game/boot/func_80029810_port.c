@@ -791,6 +791,7 @@ int func_800144FC_state3A_cut(pe_addr_t arg0)
  * PE-BTL91 — opcode 0x55 144FC park-rewind wrapper.
  * Park epilogue 14660: v0=0, CE00-=0xC, delay=1.
  * Complete 3B takes 14658 v0=1. Type-6 +0xFC8 imm 2.
+ * PE-BTL95 — jtbl[1..0x36] is also 14658; state>=0x3C parks.
  */
 int func_800144FC(pe_addr_t args)
 {
@@ -811,8 +812,10 @@ int func_800144FC(pe_addr_t args)
         done = func_800144FC_state3A_cut(args);
     else if (state == 0x3Bu)
         done = func_800144FC_state3B_cut();
+    else if (state < 0x3Cu)
+        done = 1; /* 14658: jtbl[1..0x36] */
     else
-        done = 0;
+        done = 0; /* 14660: sltiu 0x3C fail */
     if (done == 0) {
         PE_StoreU32(0x8009CE00u, PE_LoadU32(0x8009CE00u) - 0xCu);
         task = PE_LoadU32(0x8009D300u);
