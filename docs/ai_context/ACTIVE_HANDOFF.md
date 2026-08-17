@@ -19,21 +19,18 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: type-1 `0x08`/`1735C` spawns type 3 then 0 then
-5 (ids 1/2/3; sibling walk after parent is 5→0→3).
-`1AA78`/`1C614` ported. Empty `B0E70[type]` keeps `+0x98`
-bit 0x80 so `1AA78` no-ops for type 3/0 on host BSS.
-Type 3 first script word is already-ported `0x02` (yield).
-Second visit `0x5E`/`14694` copies D254 pose into locals.
-`0x77`/`14DA0`/`1CAB0` tests that pose against a rectangle
-and misses on the live zeroed type-0 spawn; `0x05` skips to
-`+0xF8` (another `0x5E`/`0x77` pair).
-Type 5 first visit through `0x14` / `0x0B` / `0x41` /
-`0x0A` / `0x09` / `0x05` skip / `0x2E` / `0x4E` / `0x2F` /
-`0x30` yield is ported. Type 0 first is `0x9B`/`15240`.
-`D2E8` bit 0 stays set (`3999C` skip). Do not force `D2E8`.
-E0060 is EXE list-clear, not M2. Do not jalr `0x800E086C`.
-No matching `src/` C.
+STOP/NEXT: type-0 `0x9B`/`15240` is ported on the empty
+`+0x1AC` path (`39B74` a1==0; `3A6A8`→`3E188` via KSEG0
+`0x84`). First visit continues through already-ported
+ops to `0x02` at `+0x2E8`. Next type-0 word is `0xAA`.
+Type-1 after three `0x08`s (types 3/0/5) can spawn type
+2 then 4 while `persist[0x4A]==0`. Type-2 first visit
+is ported through `0x02`; second visit is `0x04`.
+Type-3 double-miss wait loop (`+0x3E4` `0x02` / goto
+`+0xC`) is live. Do not force `+0x1B0` / dest+0x24 /
+`D2E8` / `3999C`. Do not publish `B0E70` until `3D050`
+tail is real. E0060 is EXE list-clear, not M2.
+`matching_native=744/744`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

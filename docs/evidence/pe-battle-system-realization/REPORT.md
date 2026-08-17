@@ -113,7 +113,13 @@ the retail battle runtime, not a one-off script.
 | BTL-14694 | 147w 0x5E D254/walk pose-copy; miss -1 | PORTED | live type3 code 0 type 0 |
 | BTL-14DA0 | 36w 0x77 copies 4 pairs; jal 1CAB0 n=4 | PORTED | live miss on zero pose |
 | BTL-1CAB0 | 60w sra16 edge-cross; v0=toggle | PORTED | same family as 1C614 |
-| next_live_va | type3 +0xF8 next 0x5E/0x77; type0 `0x9B`/`15240` | RESEARCH_REQUIRED | do not stub 39B74/3A6A8 |
+| BTL-15240 | 239w 0x9B; 794C4+empty dest chain; v0=1 on bit 0x10000000 | PORTED | `pe_btl27_15240_oracle.py` sha `fb261fcb…` |
+| BTL-39B74 | 108w; a1==0 early-out; live +0x1B0=0 | PORTED | do not force clip |
+| BTL-362B8 | 79w size-class bank; 35038 only if +0x1AC!=0 | PORTED | sha `c1d94293…` |
+| BTL-3A6A8-E | dest+0==0 jals 3E188; dest+0x24==0 → KSEG0 0x84 | PORTED | named 3E188 cut; no NULL skip |
+| BTL-T0-9B | type0 0x9B→0xED 0xA29→0x14×2→0x0B…→0x02 +0x2E8 | PROVEN | chunk2+0x202C8; next 0xAA |
+| BTL-T3-LOOP | double miss → +0x1E4 persist<40 → +0x3E4 0x02 / goto +0xC | PROVEN | 0x05 is base+(rel<<1) |
+| next_live_va | type0 second visit `0xAA`; type2 second `0x04`; HIT `0x85` | RESEARCH_REQUIRED | do not invent a hit |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -133,6 +139,8 @@ the retail battle runtime, not a one-off script.
 | `0x800E0060` is loaded overlay / battle entry | EXE tsize `0x1EE000` contains 27w leaf; no jal |
 | `371B0` / DrawSync / mode=6 is M2 | EXE-resident window init + GPU sync; no battle tick |
 | `35558` D20C walk is M2 | Field tick `3F3C4` actor jalr; 29 later jals unported |
+| Force dest+0x24 / +0x1B0 on empty +0x1AC | 35038 zeros both; 39B74 early-out and 3E188 KUSEG 0x84 are authentic |
+| Type-3 wait loop is M5 | Recurring 17018, not a battle-specific scheduler |
 
 ## Verify
 
@@ -181,10 +189,18 @@ python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
 python3 pc_port/tools/pe_btl6_209f0_oracle.py
 python3 pc_port/tools/pe_btl6_339a0_oracle.py
-./pc_port/build/pe-native-tests   # matching_native after this rung
+python3 pc_port/tools/pe_btl22_1735c_1aa78_oracle.py
+python3 pc_port/tools/pe_btl23_12c20_oracle.py
+python3 pc_port/tools/pe_btl24_type5_2e_oracle.py
+python3 pc_port/tools/pe_btl25_14694_oracle.py
+python3 pc_port/tools/pe_btl26_14da0_oracle.py
+python3 pc_port/tools/pe_btl27_15240_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=744/744
 ```
 
-STOP/NEXT: type-1 first visit now yields at `0x02`. Next
-visit is `0x08`/`1735C` (35038 spawn type 3, then 0, then
-5). `D2E8` bit 0 is already set (`3999C` skip). E0060 is
-EXE list-clear, not M2.
+STOP/NEXT: type-0 first visit is ported through `0x02`
+at `+0x2E8`. Next type-0 word is `0xAA`. Type-1 after
+the three `0x08`s can spawn type 2 then 4
+(`persist[0x4A]==0`). Type-2 first visit is ported
+through `0x02`; second visit is `0x04`. Type-3
+double-miss wait loop is live. `D2E8` bit 0 stays set.
