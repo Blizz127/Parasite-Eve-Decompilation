@@ -64,6 +64,10 @@ WIN_WRITER_A = (
 )
 LIST_OFF = 0x202A4
 DESC_OFF = 0x25014
+M367_LIST_OFF = 0x1B314
+M367_DESC_OFF = 0x1C6D4
+M367_B0E70_2 = "c55bd4c8c80895452ae3c6d786e4cbfa403311cee384aa87e63360231bf86015"
+M367_B0E70_4 = "acec62834711c862d1abf5e50e1efc39ce5268ec159106487c79c811fac80b24"
 KNOWN_OPS = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x08, 0x09, 0x0A, 0x0B, 0x0C,
     0x0D, 0x0E, 0x11, 0x12, 0x14, 0x1A, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
@@ -489,6 +493,36 @@ class World:
                     "notes": "room package clips; type-0 has no cmd 4 here",
                 }
             )
+        m367_0c = walk12(
+            self.m367_c2,
+            struct.unpack_from("<I", self.m367_c2, self.m367_hdr + 0x0C)[0],
+        )
+        seen.clear()
+        for rec in m367_0c:
+            if rec["sha256"] in seen:
+                continue
+            seen.add(rec["sha256"])
+            idbs = [r["idb"] for r in m367_0c if r["sha256"] == rec["sha256"]]
+            rows.append(
+                {
+                    "package_id": f"m0367i_b0e70_ptr_{rec['ptr']:X}",
+                    "token": f"0x{M0367I_TOKEN:08X}",
+                    "decoded_name": "M0367I",
+                    "table_index": f"idB={','.join(str(x) for x in idbs)}",
+                    "rel": f"0x{rec['ptr']:X}",
+                    "packed": "",
+                    "sectors": "",
+                    "peimg_lba_range": f"m0367i_chunk2+0x{rec['ptr']:X}",
+                    "size": rec["size"],
+                    "sha256": rec["sha256"],
+                    "compression": "none",
+                    "decoded_structure": f"hdr+0x0C resource object b={rec['b0']},{rec['b1']},{rec['b2']}",
+                    "consumer": "func_80035038 +0x1AC",
+                    "writer": "func_8006B4F8 6B804",
+                    "confidence": "PROVEN",
+                    "notes": "not the 125E0 type-1 object; type 1 B0E70 stays empty",
+                }
+            )
         return rows
 
     def publication(self) -> list[dict]:
@@ -688,18 +722,46 @@ class World:
                 "notes": "15240 dest=actor+0x1B4; 6CC68 publishes D254+0x1B4 to D_800B0D10; 362B8/3D050 init only if +0x1AC!=0",
             }
         )
+        m367_0c = walk12(
+            self.m367_c2,
+            struct.unpack_from("<I", self.m367_c2, self.m367_hdr + 0x0C)[0],
+        )
+        for rec in m367_0c:
+            rows.append(
+                {
+                    "object": f"D_800B0E70[{rec['idb']}]",
+                    "field_or_global": "actor+0x1AC",
+                    "writer": "func_8006B4F8 hdr+0x0C @ 0x8006B804",
+                    "writer_va": "0x8006B804",
+                    "source_data": "m0367i_chunk2",
+                    "source_offset": f"0x{rec['ptr']:X}",
+                    "lifetime": "until_next_6B35C",
+                    "publication_order": 12,
+                    "consumer": "func_80035038",
+                    "consumer_va": "0x800351A8",
+                    "actor_type": str(rec["idb"]),
+                    "confidence": "PROVEN",
+                    "notes": f"M0367I idA={rec['ida']} size={rec['size']} sha256={rec['sha256']}",
+                }
+            )
         return rows
 
-    def scripts(self) -> list[dict]:
-        n = struct.unpack_from("<I", self.m5_c2, LIST_OFF + 4)[0]
-        require(n == 7, "12574 list count")
+    def _script_rows(
+        self,
+        blob: bytes,
+        list_off: int,
+        scene: str,
+        source: str,
+        note_for,
+    ) -> list[dict]:
+        n = struct.unpack_from("<I", blob, list_off + 4)[0]
         rows = []
         for typ in range(n):
-            rel = struct.unpack_from("<I", self.m5_c2, LIST_OFF + 8 + typ * 4)[0]
-            base = LIST_OFF + rel
-            insns = walk_script(self.m5_c2, base, 24)
-            require(insns, f"type {typ} empty")
-            window = self.m5_c2[base : base + sum(x["span"] for x in insns)]
+            rel = struct.unpack_from("<I", blob, list_off + 8 + typ * 4)[0]
+            base = list_off + rel
+            insns = walk_script(blob, base, 24)
+            require(insns, f"{scene} type {typ} empty")
+            window = blob[base : base + sum(x["span"] for x in insns)]
             ops = [x["op"] for x in insns]
             known = [f"0x{op:02X}" for op in ops if op in KNOWN_OPS]
             unknown = [f"0x{op:02X}" for op in ops if op not in KNOWN_OPS]
@@ -707,14 +769,16 @@ class World:
             yields = []
             for insn in insns:
                 if insn["op"] in BRANCH_OPS and insn["imms"]:
-                    branches.append(f"+{insn['rel']:X}->+{(insn['imms'][0] << 1) & 0xFFFFFFFF:X}")
+                    branches.append(
+                        f"+{insn['rel']:X}->+{(insn['imms'][0] << 1) & 0xFFFFFFFF:X}"
+                    )
                 if insn["op"] in YIELD_OPS:
                     yields.append(f"+{insn['rel']:X}/0x{insn['op']:02X}")
             rows.append(
                 {
                     "actor_type": typ,
-                    "scene": "m0005i",
-                    "source": "m0005i_chunk2",
+                    "scene": scene,
+                    "source": source,
                     "base_offset": f"0x{base:X}",
                     "window_size": len(window),
                     "sha256": hashlib.sha256(window).hexdigest(),
@@ -726,18 +790,42 @@ class World:
                     "known_opcodes": "|".join(known),
                     "unknown_opcodes": "|".join(unknown),
                     "confidence": "PROVEN",
-                    "notes": (
-                        "17018 word@pc word2@pc+4 imms@pc+8; "
-                        + (
-                            "125E0-spawned"
-                            if typ in (1, 6)
-                            else "0x08-spawned"
-                            if typ in (0, 3, 5)
-                            else "listed_not_125E0_desc"
-                        )
-                    ),
+                    "notes": "17018 word@pc word2@pc+4 imms@pc+8; " + note_for(typ),
                 }
             )
+        return rows
+
+    def scripts(self) -> list[dict]:
+        n = struct.unpack_from("<I", self.m5_c2, LIST_OFF + 4)[0]
+        require(n == 7, "m0005i 12574 list count")
+        rows = self._script_rows(
+            self.m5_c2,
+            LIST_OFF,
+            "m0005i",
+            "m0005i_chunk2",
+            lambda typ: (
+                "125E0-spawned"
+                if typ in (1, 6)
+                else "0x08-spawned"
+                if typ in (0, 3, 5)
+                else "listed_not_125E0_desc"
+            ),
+        )
+        n367 = struct.unpack_from("<I", self.m367_c2, M367_LIST_OFF + 4)[0]
+        require(n367 == 5, "M0367I 12574 list count")
+        list_word0 = struct.unpack_from("<I", self.m367_c2, M367_LIST_OFF)[0]
+        require(M367_LIST_OFF + list_word0 == M367_DESC_OFF, "M0367I desc = list+word0")
+        desc = self.m367_c2[M367_DESC_OFF : M367_DESC_OFF + 4]
+        require(desc[0] == 1 and desc[1] == 1 and desc[2] == 0, "M0367I 125E0 desc")
+        rows.extend(
+            self._script_rows(
+                self.m367_c2,
+                M367_LIST_OFF,
+                "m0367i",
+                "m0367i_chunk2",
+                lambda typ: "125E0-spawned" if typ == 1 else "listed_not_125E0_desc",
+            )
+        )
         return rows
 
     def actors(self) -> list[dict]:
@@ -745,7 +833,7 @@ class World:
         ce_0c = walk12(self.ce214, struct.unpack_from("<I", self.ce214, self.ce_hdr + 0x0C)[0])[0]
         desc = self.m5_c2[DESC_OFF : DESC_OFF + 8]
         require(desc[0] == 2 and desc[1] == 1 and desc[3] == 6, "125E0 desc")
-        scripts = {int(r["actor_type"]): r for r in self.scripts()}
+        scripts = {(r["scene"], int(r["actor_type"])): r for r in self.scripts()}
         vtable = {0: "func_80035C84", **{t: "func_80035E04" for t in range(1, 10)}}
         spawn = {
             0: "type1_0x08_second",
@@ -791,11 +879,11 @@ class World:
                     "scene": "m0005i",
                     "descriptor_source": "m0005i_chunk2+0x25014" if typ in (1, 6) else "type1_0x08_desc",
                     "descriptor_offset": "0x25014" if typ in (1, 6) else "runtime",
-                    "script_source": scripts[typ]["source"],
-                    "script_offset": scripts[typ]["base_offset"],
-                    "script_sha256": scripts[typ]["sha256"],
-                    "first_vm_pc": scripts[typ]["base_offset"],
-                    "first_opcode": scripts[typ]["first_opcode"],
+                    "script_source": scripts[("m0005i", typ)]["source"],
+                    "script_offset": scripts[("m0005i", typ)]["base_offset"],
+                    "script_sha256": scripts[("m0005i", typ)]["sha256"],
+                    "first_vm_pc": scripts[("m0005i", typ)]["base_offset"],
+                    "first_opcode": scripts[("m0005i", typ)]["first_opcode"],
                     "model_resource_source": model_src,
                     "model_offset": model_off,
                     "model_size": model_size,
@@ -808,6 +896,44 @@ class World:
                     "spawn_path": spawn[typ],
                     "confidence": "PROVEN" if typ in (0, 1, 3, 5, 6) else "PROVEN_LISTED_NOT_125E0",
                     "notes": model,
+                }
+            )
+        m367_0c = {
+            r["idb"]: r
+            for r in walk12(
+                self.m367_c2,
+                struct.unpack_from("<I", self.m367_c2, self.m367_hdr + 0x0C)[0],
+            )
+        }
+        require(m367_0c[2]["sha256"] == M367_B0E70_2, "M0367I B0E70[2]")
+        require(m367_0c[4]["sha256"] == M367_B0E70_4, "M0367I B0E70[4]")
+        for typ in range(5):
+            rec = m367_0c.get(typ)
+            rows.append(
+                {
+                    "actor_type": typ,
+                    "scene": "m0367i",
+                    "descriptor_source": "m0367i_chunk2+0x1C6D4"
+                    if typ == 1
+                    else "listed_only",
+                    "descriptor_offset": "0x1C6D4" if typ == 1 else "",
+                    "script_source": scripts[("m0367i", typ)]["source"],
+                    "script_offset": scripts[("m0367i", typ)]["base_offset"],
+                    "script_sha256": scripts[("m0367i", typ)]["sha256"],
+                    "first_vm_pc": scripts[("m0367i", typ)]["base_offset"],
+                    "first_opcode": scripts[("m0367i", typ)]["first_opcode"],
+                    "model_resource_source": "m0367i_chunk2" if rec else "",
+                    "model_offset": f"0x{rec['ptr']:X}" if rec else "",
+                    "model_size": rec["size"] if rec else "",
+                    "model_sha256": rec["sha256"] if rec else "",
+                    "animation_bank": "m0367i Writer A 36 rows",
+                    "publication_global": "D_800B0E70+D_800B0E98+D_800B161C",
+                    "resource_object_writer": "6B35C; 6B4F8 6B804/6B84C",
+                    "update_function": vtable[typ],
+                    "known_field_offsets": "+0x0C type; +0x0D idB; +0x1AC B0E70; +0x1B0 B0E98; +0x1B4 dest",
+                    "spawn_path": "125E0_desc[0]" if typ == 1 else "listed_not_125E0_desc",
+                    "confidence": "PROVEN" if typ == 1 else "PROVEN_LISTED_NOT_125E0",
+                    "notes": f"B0E70[{typ}] via 6B804" if rec else "B0E70 empty on 125E0 type1",
                 }
             )
         return rows
@@ -865,14 +991,14 @@ class World:
                 "notes": "idB 0/1/2/3/7/22/23/28 share one 3796B payload",
             },
             {
-                "id": "m0367i_spawn_list",
-                "needed_by": "next dest after m0005i 0x31",
-                "surface": "M0367I chunk2 hdr+0x14",
-                "what_is_known": "token/table/chunk2 hash; Writer A 36 rows; hdr+0x0C idB 2/3/4",
-                "what_is_missing": "125E0 desc types and script heads",
-                "blocker": "next_checkpoint",
-                "confidence": "PACKAGE_PROVEN_LIST_PENDING",
-                "notes": "pre-recover before runtime hops",
+                "id": "m0367i_type1_B0E70",
+                "needed_by": "M0367I 125E0 type 1",
+                "surface": "D_800B0E70[1]",
+                "what_is_known": "125E0 desc count=1 type=1 idB=0; first op 0x40; hdr+0x0C is idB 2/3/4 only",
+                "what_is_missing": "whether a later 0x08 spawn binds B0E70[2/3/4] on this dest",
+                "blocker": "empty_+0x1AC_authentic_until_spawn",
+                "confidence": "DESC_PROVEN",
+                "notes": "do not infer story meaning from M0367I",
             },
         ]
 
@@ -1033,6 +1159,12 @@ def main() -> int:
     require(type0["first_opcode"] == "0x9B", "type0 first 0x9B")
     require(type6["first_opcode"] == "0xCE", "type6 first 0xCE")
     require(type6["first_word"] == "0x000080CE", "type6 word")
+    m367_t1 = next(
+        r
+        for r in tables["BATTLE_SCRIPTS.csv"][1]
+        if r["scene"] == "m0367i" and r["actor_type"] == 1
+    )
+    require(m367_t1["first_opcode"] == "0x40", "M0367I type1 0x40")
     if write:
         write_tables(tables)
     verify_tables(tables)

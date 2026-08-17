@@ -128,8 +128,22 @@ M0367I chunk2 SHA-256
 
 `6B4F8` is the sole TEXT caller from `3F074@0x8003F088`. `6B35C`
 clears the publish slots before that load. M0367I Writer A has 36
-rows; hdr+0x0C has idB `2,3,4`. Spawn-list types for M0367I are
-not yet walked.
+rows. 12574 list at chunk2 `+0x1B314` has 5 type entries. Word0
+`0x13C0` makes the 125E0 desc at `+0x1C6D4`: **count=1, type=1,
+idB=0**. First type-1 word is `0x00000040` (`D2E8 |= 1`). Types
+0/2/3/4 are listed (`0x14` / `0x9B` / `0x9B` / `0x9B`) but not
+in that desc.
+
+M0367I hdr+0x0C:
+
+| idB | ptr | size | SHA-256 |
+|---:|---|---:|---|
+| 2 | `0x8` | 24248 | `c55bd4c8c80895452ae3c6d786e4cbfa403311cee384aa87e63360231bf86015` |
+| 3 | `0x8` | 24248 | same as idB 2 |
+| 4 | `0x5EC0` | 21524 | `acec62834711c862d1abf5e50e1efc39ce5268ec159106487c79c811fac80b24` |
+
+The 125E0 type-1 actor therefore still takes empty `+0x1AC` unless
+a later `0x08` spawn uses idB 2/3/4.
 
 ## Files
 
@@ -148,5 +162,5 @@ not yet walked.
 - Confirm actor `+0x1B4` stays an in-actor dest, not a PE.IMG pointer.
 - Do not bind slot tags 1332/1333/1334 to a species name.
 
-Next precovery cut: M0367I 12574 list + hdr+0x0C payloads, then
-type-0 stream command immediates against the CE2=14 bank.
+Next precovery cut: type-0 m0005i `0x2E`/`0x2F` immediates against
+the CE2=14 bank, then M0367I Writer A unique clip hashes.
