@@ -123,7 +123,9 @@ the retail battle runtime, not a one-off script.
 | BTL-1A15C | 19w 0xD9; `*arg2 = 79FB4(*arg0,*arg1)`; v0=1 | PORTED | live cond[0],cond[1]→local[1] |
 | BTL-79FB4 | 93w signed ratan2; table D_8009A6EC; both-zero=0 | PORTED | host skips retail div-break |
 | BTL-T5-0C | type5 scratch-miss +0x128: 0x5E/0x0C/0x09×2/0xD9 | PROVEN | zero poses → ratan2(0,0)=0 |
-| next_live_va | type5 after 0xD9 ALU; type0 second `0xAA`; type2 `0x04` | RESEARCH_REQUIRED | do not invent a hit |
+| BTL-1784C | 12w 0x24; *arg0=D300+0x18; *arg1=D300+0x1C; v0=1 | PORTED | live type5 local[2]/[3] |
+| BTL-T5-24 | both 0xD9 arms reach +0x2C4 0x24; live cone takes 0x20 first | PROVEN | 12700 does not write +0x18/+0x1C |
+| next_live_va | type5 after 0x24: 0x11 if local[2]==0; type0 `0xAA`; type2 `0x04` | RESEARCH_REQUIRED | do not invent pad bits |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -200,12 +202,12 @@ python3 pc_port/tools/pe_btl25_14694_oracle.py
 python3 pc_port/tools/pe_btl26_14da0_oracle.py
 python3 pc_port/tools/pe_btl27_15240_oracle.py
 python3 pc_port/tools/pe_btl28_12e7c_d9_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=746/746
+python3 pc_port/tools/pe_btl29_1784c_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=748/748
 ```
 
-STOP/NEXT: type-5 scratch-miss is ported through
-`0xD9`. Next is the already-ported ALU/`0x05` after
-`0xD9`; miss goes to `+0x2C4`, HIT arm is `0x24`.
+STOP/NEXT: type-5 is ported through `0x24`. Next
+live word is `0x11` (`130B4`) because `local[2]==0`.
 Type-0 first visit is ported through `0x02` at
 `+0x2E8`. Next type-0 word is `0xAA`. Type-1 after
 the three `0x08`s can spawn type 2 then 4
