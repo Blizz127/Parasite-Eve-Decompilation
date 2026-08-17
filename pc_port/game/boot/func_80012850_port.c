@@ -242,3 +242,60 @@ int func_80017D9C(pe_addr_t args)
     PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0x40u);
     return 1;
 }
+
+int func_80017AE8(pe_addr_t args)
+{
+    pe_addr_t actor;
+    unsigned int command;
+
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    command = PE_LoadU16(PE_LoadU32(args));
+    func_8001A680_command_cut(actor, command);
+    PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) & ~0x100u);
+    return 1;
+}
+
+int func_80017EC4(pe_addr_t args)
+{
+    pe_addr_t actor;
+    uint32_t imm;
+    uint32_t cur;
+
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    imm = PE_LoadU16(PE_LoadU32(args));
+    cur = PE_LoadU8(actor + 0x0Fu);
+    if (cur < imm)
+        imm = cur;
+    PE_StoreU32(actor + 0x14u, imm << 16);
+    return 1;
+}
+
+int func_80017B34(pe_addr_t args)
+{
+    pe_addr_t actor;
+    uint32_t imm;
+    uint32_t cur;
+
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    imm = PE_LoadU16(PE_LoadU32(args));
+    cur = PE_LoadU8(actor + 0x0Fu);
+    if (cur < imm)
+        imm = cur;
+    PE_StoreU16(actor + 0x12u, (uint16_t)imm);
+    PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0x200u);
+    return 1;
+}
+
+int func_80017B74(pe_addr_t args)
+{
+    pe_addr_t actor;
+    pe_addr_t task;
+
+    (void)args;
+    task = PE_LoadU32(0x8009D300u);
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    PE_StoreU32(task + 0x10u, 1u);
+    if (PE_LoadU16(actor + 0x16u) != PE_LoadU16(actor + 0x12u))
+        PE_StoreU32(0x8009CE00u, PE_LoadU32(0x8009CE00u) - 8u);
+    return 0;
+}

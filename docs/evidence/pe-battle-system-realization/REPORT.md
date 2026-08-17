@@ -106,7 +106,11 @@ the retail battle runtime, not a one-off script.
 | BTL-08-SPAWN | creation 3 then 0 then 5; D254=type0; D2E8 stays 1 | PROVEN | sibling walk after parent is 5→0→3 |
 | BTL-12C20 | 151w 0x0B; 7 codes; code0 jal 1AA78 + snap +0x40 | PORTED | live type5 0 then 5 |
 | BTL-17D9C | 9w 0x41 `+0x98\|=0x40` v0=1 | PORTED | live type5 after 0x0B |
-| next_live_va | type0 `0x9B`/`15240`; type5 `0x2E`/`17AE8` | RESEARCH_REQUIRED | type3 first visit already 0x02 |
+| BTL-17AE8 | 19w 0x2E jal 1A680; +0x98&=~0x100 | PORTED | live cmd 0 |
+| BTL-17EC4 | 14w 0x4E +0x14=min(+0x0F,imm)<<16 | PORTED | live imm 0 |
+| BTL-17B34 | 16w 0x2F +0x12=min; +0x98\|=0x200 | PORTED | live imm 0 |
+| BTL-17B74 | 16w 0x30 v0=0; unequal rewinds CE00 | PORTED | live equal yield |
+| next_live_va | type0 `0x9B`/`15240` | RESEARCH_REQUIRED | type3/type5 first visits yield |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected

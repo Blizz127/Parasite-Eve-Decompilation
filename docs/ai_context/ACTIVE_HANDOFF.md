@@ -24,9 +24,9 @@ STOP/NEXT: type-1 `0x08`/`1735C` spawns type 3 then 0 then
 `1AA78`/`1C614` ported. Empty `B0E70[type]` keeps `+0x98`
 bit 0x80 so `1AA78` no-ops for type 3/0 on host BSS.
 Type 3 first script word is already-ported `0x02` (yield).
-Type 5 first visit through `0x14` / `0x0B` code 0+5 /
-`0x41` (`+0x98|=0x40`) is ported. Next type-5 new op is
-`0x2E`/`17AE8` (jal `1A680`). Type 0 first is `0x9B`/`15240`.
+Type 5 first visit through `0x14` / `0x0B` / `0x41` /
+`0x0A` / `0x09` / `0x05` skip / `0x2E` / `0x4E` / `0x2F` /
+`0x30` yield is ported. Type 0 first is `0x9B`/`15240`.
 `D2E8` bit 0 stays set (`3999C` skip). Do not force `D2E8`.
 E0060 is EXE list-clear, not M2. Do not jalr `0x800E086C`.
 No matching `src/` C.
