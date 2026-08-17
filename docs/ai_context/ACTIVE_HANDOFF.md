@@ -19,10 +19,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: live type-1 `0x40` sets `D2E8` bit 0 (`3999C`
-skip). Next is `0xED`/`16910`. Do not force `D2E8`. E0060
-is EXE list-clear, not M2. Do not jalr `0x800E086C`. No
-matching `src/` C.
+STOP/NEXT: live type-1 `0xED` 2900 ORs `B0CD8` bit
+`0x400000`. Next is `0xE1`/`1A374`. `D2E8` bit 0 is set by
+`0x40` (`3999C` skip). Do not force `D2E8`. E0060 is EXE
+list-clear, not M2. Do not jalr `0x800E086C`. No matching
+`src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
