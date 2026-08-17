@@ -19,12 +19,12 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8006CC68` (3F074 poll-exit after EE=0 idle).
-0x3B `lw/sw 0($s0)` is overlay word 0, not the binder.
-Live `0x55` is not completed. D278 is the 0x6F slot body.
-0x3A a0 is `lbu(*binder)` (`lbu(2)`; host RAM[2]==0 is
-APPROXIMATION). Do not stub 6914C(a0=0), jalr 0x800E086C.
-No matching `src/` C.
+STOP/NEXT: `0x8001A918` (3F074 after 6CC68 v0=0), then
+`0x800E0060` (loaded; do not fake). `6CC68` 79w always
+returns 0; live arm publishes `D_800B0D10=actor+0x1B4`.
+3F074 tight poll then `0x3B` v0=1 is the real `0x55`
+complete into `0x89` (mode 6), not battle-over. Do not
+jalr `0x800E0060`/`0x800E086C`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

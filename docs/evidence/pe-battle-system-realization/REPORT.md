@@ -16,12 +16,12 @@ the retail battle runtime, not a one-off script.
 | BTL-6C5BC-CALL | TEXT jals only `35B24`/`3F22C`/`6C358`; `3F3C4`→`3F074` poll + `35558` | PROVEN | same oracle |
 | BTL-6C5BC-CUT | CE2 `[10,14]`, EE 0/11/12; EE=13 prefix then 6CC2C clearer, return 1 | PORTED | `func_8006C5BC` named cut |
 | BTL-3A-D1A0 | `144FC` `0x3A` `D_8009D1A0 \|= 2` | PORTED | `func_800144FC_state3A_d1a0_cut` |
-| BTL-LIVE-3B | Next tick `6C4C4(CE4)` then `6C5BC` once; TRACE `overlay_wait` | PORTED | tests + TRACE_CONTRACT |
-| BTL-6CC68 | 79 words; EE 0/1-7 jals; after 6CC2C the EE=0 idle jal is the 3F074 poll-exit | PROVEN | `pe_btl6_ee13_oracle.py` |
+| BTL-LIVE-3B | 3F074: one `6C4C4` then poll `6C5BC` to 0; TRACE `overlay_wait` | PORTED | `func_8003F074_poll_cut` |
+| BTL-6CC68 | 79w always v0=0; D10=actor+0x1B4; 661A4/661CC OFX; 3A088 empty | PORTED | `pe_btl7_6cc68_oracle.py` |
 | BTL-EE13-PREFIX | EE=13 `lw +0x158` walk → `+0x1C0`; zeros `+0x10`/`+0x134`; D254/D1A0 a1 | PORTED | `func_8006C5BC_ee13_prefix_cut` |
 | BTL-EE13-3D050 | `jal 3D050` (505w) a0=`overlay+0x14` a3=704; then `6698C` live 117w, `3D834` 70w, then `andi 0xFC` | PORTED | `pe-btl6-6cc2c-epilogue` |
 | BTL-6CC2C | EE=13 after jal 3D834: `andi 0xFC` / `sb +0xE` / `sb 0 → +0xEE`; v0=1 | PORTED | `func_8006C5BC_ee13_epilogue_cut` |
-| BTL-14544 | `144FC` state 0: if bits clear sb 0x37; `*s1 |= 0x800000` (binder); v0=0 | PORTED | `func_800144FC_state0_cut` |
+| BTL-14544 | `144FC` state 0: if bits clear sb 0x37; overlay[0] `|= 0x800000`; v0=0 | PORTED | `func_800144FC_state0_cut` |
 | BTL-14570 | `144FC` state 0x37: jal 42EDC unless overlay bit `0x400000`; sb 0x38 | PORTED | `func_800144FC_state37_cut` |
 | BTL-42EDC | 17w; `lbu D_800BD024` clamp into gp+0x16C; gp+0x168/174=1 | PORTED | `func_80042EDC` |
 | BTL-3D050-PFX | Pointer ladder `+0/4/8/C/10`, `+0x54=a2`, `+0xBA=1` | PORTED | `func_8003D050_prefix_cut` |
@@ -63,9 +63,10 @@ the retail battle runtime, not a one-off script.
 | BTL-870E0 | 4w return D_8009D24C; stateA -1→0 busy stay 0→F0=7 | PORTED | no DMA stub; writers 85098/850C0/851A8 |
 | BTL-MODE7 | `0x8002CEE0` jal `6914C(0)` then `D_8009D28C=7` | PROVEN | not issued |
 | BTL-ATB | ATB / menus / AI / damage / death / field return | RESEARCH_REQUIRED | do not invent |
-| opcode_0x55_complete | Live park remains 0x3B | NO | 3F074 poll not drained |
-| next_live_va | `0x8006CC68` | PROVEN | EE=0 idle after bits clear |
-| func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; deferred for 14630 | REVERIFY_IF_CONSUMED | `8E22` vs `8E02` |
+| opcode_0x55_complete | 3F074 poll-until-0 then 0x3B v0=1 (matching+vis3) | RETAIL_DERIVED | not battle-over; next op `0x89` |
+| M1_0x55_real_completion | 0x3B after drained poll | PROVEN | `test_BTL7_3F074_poll_opens_3B` |
+| next_live_va | `0x8001A918` | PROVEN | 3F074 after-poll; then `0x800E0060` loaded |
+| func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
 
@@ -80,6 +81,7 @@ the retail battle runtime, not a one-off script.
 | State 0 / 0x3B `*s1` is the binder | `8E02` rs=$s0 overlay[0]; `8E22` is 0x3A binder only |
 | EE=13 return 1 completes `0x55` | 3F074 keeps polling while v0==1; exit is EE=0 → 6CC68 v0=0 |
 | `6CC68` is the EE=13 body | Six jal sites, all before `0x8006C9F8` |
+| One 6C5BC per 0x55 tick completes the wait | 6C4C4 re-ORs bit1; only the tight poll lets 0x3B see the clear |
 
 ## Verify
 
@@ -108,6 +110,7 @@ python3 pc_port/tools/pe_btl6_69468_oracle.py
 python3 pc_port/tools/pe_btl6_145f8_oracle.py
 python3 pc_port/tools/pe_btl6_14630_oracle.py
 python3 pc_port/tools/pe_btl7_3f074_poll_oracle.py
+python3 pc_port/tools/pe_btl7_6cc68_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
@@ -116,7 +119,7 @@ python3 pc_port/tools/pe_btl6_339a0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: `0x8006CC68` — EE=0 idle jal after bits clear,
-the 3F074 poll-exit (v0=0). Live `0x55` stays at 0x3B while
-`+0xE&3`. Do not treat EE=13 v0=1 as complete. Do not jump
-`0x89`. Do not stub `6914C(a0=0)` or jalr `0x800E086C`.
+STOP/NEXT: `0x8001A918` (56w) then `0x800E0060` (loaded).
+`3AC90`/`3AF14` are 6CC68 callees not yet cut. Do not fake
+`E0060`/`E086C`. `0x89` is the real next opcode after 0x3B
+v0=1; it is mode-6 request, not battle-over.

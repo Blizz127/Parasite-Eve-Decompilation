@@ -73,9 +73,14 @@ def main() -> int:
     for va in range(0x800144FC, 0x80014694, 4):
         require(load_u32(data, va) != jal_6c5bc, f"144FC jal 6C5BC @{va:#x}")
 
+    require(jal_target(load_u32(data, 0x8003F23C)) == 0x8001A918, "poll-exit jal 1A918")
+    require(jal_target(load_u32(data, 0x8003F284)) == 0x800E0060, "poll-exit jal E0060")
+    require((0x8003F2FC - 0x8003F074) // 4 == 162, "3F074 162 words")
+
     print(
         "PASS: 3F074 s0=1 poll 6C5BC; EE0 bit1→11 redisp; "
-        "EE11/12 return 1; EE0 idle jal 6CC68 v0=0; 144FC no jal"
+        "EE11/12 return 1; EE0 idle jal 6CC68 v0=0; after-poll "
+        "1A918 then E0060 (loaded); 144FC no jal"
     )
     return 0
 

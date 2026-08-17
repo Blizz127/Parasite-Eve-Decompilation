@@ -24,7 +24,9 @@
  * package-walk prefix then the 0x8006CC20..0x8006CC38 epilogue
  * (andi 0xFC / sb +0xE / sb 0 → +0xEE) after jal 3D834 returns.
  * Blanket +0xE&=0xFC from 0x55 without that EE=13 fall-through
- * is still forbidden. 6CC68 is EE 0/1-7 only.
+ * is still forbidden. EE=0 bits-clear jals func_8006CC68 (always
+ * v0=0). 3F074 then continues to 1A918 / 371B0 / 125E0 /
+ * 0x800E0060 (loaded; do not fake).
  *
  * 144FC 0x3A oris D_8009D1A0 bit 1; the next field tick's 3F074
  * jals 6C4C4(CE4) which copies that into +0xE bit 1. Native invokes
@@ -34,6 +36,7 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "pe_sdk.h"
 
 #define GA_OVERLAY  0x800B0CD8u
 #define GA_D2E8     0x8009D2E8u
@@ -163,6 +166,59 @@ void func_800144FC_state3A_d1a0_cut(void)
     D_8009D1A0 |= 2u;
 }
 
+/* 10 words. ctc2 OFX/OFY from D_800BCF94/CF96 (lhu << 16). */
+void func_800661A4(void)
+{
+    g_pe_gte.ofx = (int32_t)((unsigned int)PE_LoadU16(0x800BCF94u) << 16);
+    g_pe_gte.ofy = (int32_t)((unsigned int)PE_LoadU16(0x800BCF96u) << 16);
+}
+
+/* 8 words. SetGeomOffset(0xA0, 0x70); v0=0. */
+void func_800661CC(void)
+{
+    func_80079004(0xA0, 0x70);
+}
+
+/*
+ * func_8006CC68 — 79 words, SHA-256 262dcfc6…a74d.
+ * EE=0 idle jal; every arm returns 0 (cd88 addu v0,0 or delay of
+ * the +0x98-flag skip). Live 0x3A path: overlay[0]&0x000C0000==0,
+ * D254!=0, actor+0x98&0x20000040==0, D1A0 bit1 set → publish
+ * D_800B0D10=actor+0x1B4 / +0x3C=3 / +0x3E=0x12 once, then
+ * 661A4, 3A088(overlay+0x14), 3AC90, 3AF14, 661CC.
+ * 3AC90 (161w) and 3AF14 (140w) are not this cut.
+ */
+int func_8006CC68(void)
+{
+    pe_addr_t actor;
+    unsigned int word;
+
+    word = PE_LoadU32(GA_OVERLAY);
+    if ((word & 0x000C0000u) != 0u)
+        return 0;
+
+    actor = PE_LoadU32(GA_D254);
+    if (actor == 0u)
+        return 0;
+
+    if ((PE_LoadU32(actor + 0x98u) & 0x20000040u) != 0u)
+        return 0;
+
+    if ((D_8009D1A0 & 2u) == 0u && (PE_LoadU32(GA_D2E8) & 2u) != 0u)
+        return 0;
+
+    if (PE_LoadU32(0x800B0D10u) == 0u) {
+        PE_StoreU32(0x800B0D10u, actor + 0x1B4u);
+        PE_StoreU16(0x800B0D14u, 3u);
+        PE_StoreU16(0x800B0D16u, 0x12u);
+    }
+
+    func_800661A4();
+    func_8003A088_mode0_empty_cut(GA_OVERLAY + 0x14u);
+    func_800661CC();
+    return 0;
+}
+
 int func_8006C5BC(void)
 {
     unsigned int ce2;
@@ -187,7 +243,7 @@ int func_8006C5BC(void)
                 PE_StoreU8(GA_OVERLAY + 0xEEu, 11u);
                 continue;
             }
-            return 0;
+            return func_8006CC68();
         }
         if (ee == 11u) {
             status = PE_LoadU8(GA_OVERLAY + 0x0Eu);
@@ -215,4 +271,22 @@ int func_8003F074_6C4C4_6C5BC_cut(void)
     slot = (int)(int8_t)PE_LoadU8(GA_OVERLAY + 0x0Cu);
     (void)func_8006C4C4(slot);
     return func_8006C5BC();
+}
+
+/* 3F074 @ 0x8003F22C: jal 6C5BC / beq v0,s0 until v0==0.
+ * One 6C4C4, then the tight poll. Does not jal 1A918/E0060. */
+int func_8003F074_poll_cut(void)
+{
+    int slot;
+    int v0;
+    int guard;
+
+    slot = (int)(int8_t)PE_LoadU8(GA_OVERLAY + 0x0Cu);
+    (void)func_8006C4C4(slot);
+    guard = 0;
+    do {
+        v0 = func_8006C5BC();
+        guard++;
+    } while (v0 == 1 && guard < 16);
+    return v0;
 }
