@@ -80,7 +80,8 @@ static void pe_3f3c4_ce90_once(void)
  * 3F074 @ 3F088 jals 6B4F8(D280) every tick. This cut runs that
  * dest-token load only when D280 changes after the CE90-once
  * publish, and only when the three overlay dest pointers are
- * already KSEG. Do not jal 34FC4/125E0 here.
+ * already KSEG. Dest-change then runs the 3F074 pool
+ * rebuild (34FC4 / 1266C / 125E0). Not every tick.
  */
 static void pe_3f3c4_dest_change(void)
 {
@@ -98,8 +99,12 @@ static void pe_3f3c4_dest_change(void)
         return;
     if (PE_LoadU32(0x800B0DD8u) == 0u)
         return;
-    if (func_8006B4F8_dest_load_cut(D_8009D280) != 0)
+    if (func_8006B4F8_dest_load_cut(D_8009D280) != 0) {
         pe_3f3c4_loaded_dest = D_8009D280;
+        func_80034FC4();
+        func_8001266C();
+        func_800125E0();
+    }
 }
 
 /*
