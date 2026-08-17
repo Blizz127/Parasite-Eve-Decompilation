@@ -26,7 +26,8 @@ FN_3D050_END = 0x8003D834
 FN_6698C = 0x8006698C
 FN_6698C_END = 0x80066CE8
 FN_3D834 = 0x8003D834
-FN_3D834_END = 0x8003DFD8
+FN_3D834_END = 0x8003D94C
+FN_3D834_THROUGH_3DFD8 = 0x8003DFD8
 SITES_6CC68 = (
     0x8006C660, 0x8006C6B0, 0x8006C704,
     0x8006C7F4, 0x8006C83C, 0x8006C984,
@@ -112,8 +113,12 @@ def main() -> int:
     require(load_u32(data, 0x8003D0C0) == 0xAE110054, "3D050 sw a2,+0x54")
     require(load_u32(data, 0x8003D0CC) == 0xA61800BA, "3D050 sh stack,+0xBA")
     require(load_u32(data, 0x8003D0D0) == 0xAE050010, "3D050 sw +0x10")
-    require((FN_6698C_END - FN_6698C) // 4 == 215, "6698C 215 words")
-    require((FN_3D834_END - FN_3D834) // 4 == 489, "3D834 489 words")
+    require((FN_6698C_END - FN_6698C) // 4 == 215, "6698C 215-word window")
+    require((FN_3D834_END - FN_3D834) // 4 == 70, "3D834 70-word leaf")
+    require((FN_3D834_THROUGH_3DFD8 - FN_3D834) // 4 == 489,
+            "3D834-through-3DFD8 489-word span")
+    require(load_u32(data, 0x8003D944) == 0x03E00008, "3D834 jr")
+    require(load_u32(data, 0x8003D85C) == 0x12400013, "3D834 beq a1==0")
     require(window_sha(data, EE13, FN_6C5BC_END) == EE13_SHA256, "EE13 sha")
     require(window_sha(data, FN_6CC68, FN_6CC68_END) == WIN_6CC68_SHA256,
             "6CC68 sha")

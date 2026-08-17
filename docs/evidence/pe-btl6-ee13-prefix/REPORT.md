@@ -24,8 +24,8 @@ if D_8009D254 == 0:
 if D1A0 bit1: a1 = package + (lw(pkg+(section+0xC))+4 & 0x00FFFFFF)
 else:         a1 = overlay+0x11C
 jal 3D050(overlay+0x14, a1, overlay+0x15C, 704, …)
-jal 6698C(overlay+0x14)          # 215 words, zero callees
-jal 3D834(overlay+0x14, 0, 0, D_800BEA40, D_800B89F8)
+jal 6698C(overlay+0x14)          # live leaf 117w; 215w window is 4 jrs
+jal 3D834(overlay+0x14, 0, 0, D_800BEA40, D_800B89F8)  # 70w, not 489
 andi +0xE, 0xFC; sb 0, +0xEE; return 1
 ```
 
@@ -40,8 +40,8 @@ Zero `+0xE` stores. Callees: `661A4`, `3A088`, `3AC90`, `3AF14`,
 
 `func_8006C5BC_ee13_prefix_cut` ports the walk / zeros / D254-D1A0 a1
 select. `func_8006C5BC` at EE=13 calls that cut and still returns 1.
-`3D050` (505 words, SHA-256 `50b5ff75…`), `6698C`, `3D834`, and the
-clear are not this cut.
+`3D050` remainder cuts, live `6698C`, and `3C5D8` are in
+`pe-btl6-3d050-remainder`. `jal 794C4` and `andi 0xFC` are not this cut.
 
 ## Verify
 
@@ -54,5 +54,5 @@ PE_TEST_FILTER=BTL ./pc_port/build/pe-native-tests
 `func_8003D050_prefix_cut` ports the header pointer ladder. The
 remaining 3D050 body (3 jals) is not this cut.
 
-STOP: rest of `3D050` after `+0x10` so `6698C`/`3D834`/`andi 0xFC`
-can fire without fabrication.
+STOP: `func_800794C4` so 3D050 can finish; then 3D834 callees.
+Do not `andi 0xFC`.
