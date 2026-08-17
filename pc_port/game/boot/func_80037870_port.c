@@ -158,9 +158,33 @@ static void pe_37870_record(pe_addr_t rec)
                 break;
             }
             if (sub == 9u) {
-                PE_StoreU32(rec + 0x0Cu,
-                            PE_LoadU32(rec + 0x0Cu) | 0x00200000u);
-                cursor += 2u;
+                uint32_t fl;
+                uint8_t count;
+                int8_t cur;
+
+                if (!pe_37870_kseg(cursor + 2u))
+                    break;
+                fl = PE_LoadU32(rec + 0x0Cu) | 0x00200000u;
+                count = (uint8_t)(PE_LoadU8(cursor + 2u) & 7u);
+                fl = (fl & 0xFE3FFFFFu) | ((uint32_t)count << 22);
+                PE_StoreU32(rec + 0x0Cu, fl);
+                cur = (int8_t)PE_LoadU8(0x8009CEA0u);
+                if ((pad & 0x20u) != 0u) {
+                    cur = (int8_t)(cur + 1);
+                    if (cur >= (int8_t)count)
+                        cur = (int8_t)(count - 1);
+                    PE_StoreU8(0x8009CEA0u, (uint8_t)cur);
+                }
+                if ((pad & 0x08u) != 0u) {
+                    cur = (int8_t)PE_LoadU8(0x8009CEA0u);
+                    cur = (int8_t)(cur - 1);
+                    if (cur < 0)
+                        cur = 0;
+                    PE_StoreU8(0x8009CEA0u, (uint8_t)cur);
+                }
+                if ((pad & 0x100u) != 0u)
+                    PE_StoreU8(0x8009CEA4u, PE_LoadU8(0x8009CEA0u));
+                cursor += 3u;
                 continue;
             }
             cursor += 2u;

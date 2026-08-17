@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22 / 0x43. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -103,6 +103,7 @@
 #define GA_OP0E       0x80014228u
 #define GA_OP0D       0x80017410u
 #define GA_OP22       0x800177C8u
+#define GA_OP43       0x80017DE4u
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 /* Host stand-in for 17410's stack s16 = -1. APPROXIMATION. */
@@ -556,6 +557,26 @@ int func_800177C8(pe_addr_t args)
     return 0;
 }
 
+/*
+ * PE-BTL57 — opcode 0x43 choice-read 17DE4.
+ *
+ * 15 words 0x80017DE4..0x80017E20, SHA-256
+ * 71be0cb334c6b16f99d7e4e13fd8b3411fd488653645cdec22f87e14c76ac405.
+ * D_800910A0[0x43]. jal 37864; *arg0 = signed byte. v0=1.
+ * 37864 is lb 0x134($gp) = D_8009CEA4. Live type-0 local[5]
+ * after 0x22. 375E0 writes -1; FB 09 copies cursor on 0x100.
+ */
+int func_80037864(void)
+{
+    return (int)(int8_t)PE_LoadU8(0x8009CEA4u);
+}
+
+int func_80017DE4(pe_addr_t args)
+{
+    PE_StoreU32(PE_LoadU32(args), (uint32_t)func_80037864());
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == GA_OP0)
@@ -676,6 +697,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80017410(args);
     if (fn == GA_OP22)
         return func_800177C8(args);
+    if (fn == GA_OP43)
+        return func_80017DE4(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }
