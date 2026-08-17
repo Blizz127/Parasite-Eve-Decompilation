@@ -181,6 +181,9 @@ number − 1). Do not hop the runtime.
 |---|---:|---|---|---:|---|
 | M0005I | 4 | `01a64ba3…` (full in CSV) | 2,5 | 21 | types 1,6 |
 | M0319I | 318 | `fafb08d77f8d9f0c79b44835c8910fdca6fb0a1fe37e82cc406bdc9362995d85` | 2,3,4 | 6 | type 1 |
+
+M0319I Writer A (6 rows) is in `WRITER_A_CLIPS.csv` scene `m0319i`.
+Type 0 cmds `0x18/0x1D/0x1E/0x1F/0x20`; type 2 cmd `0x03` only.
 | M0239I | 238 | `1de117c799dab0d0d04803e89a922ff7bbb027958c7a47d37f6eb516a6d814f8` | 2,3,4 | 66 | type 1 |
 | M0058I | 57 | `be04c5f835c72485c62191b080e02a629e635700d09666f333158293618505d2` | 2,3,4 | 32 | type 1 |
 | M0035I | 34 | `f2f7e7049f1fcd1f99b1cdaf4b3b0fcb2de435baff7b49c4ab3b87b94d31109d` | 2,3,4 | 41 | type 1 |

@@ -592,6 +592,44 @@ class World:
                     "notes": "no type-1 Writer A row; types 2/3 share cmds 0x00-0x0A",
                 }
             )
+        m319_rel = load_u32(self.exe, 0x80093378 + 318 * 8)
+        m319_packed = load_u32(self.exe, 0x80093378 + 318 * 8 + 4)
+        t0, t1, t2 = packed_secs(m319_packed)
+        m319_c2 = read_form1(self.disc, PE_IMG_LBA + m319_rel + t0 + t1, t2)
+        m319_hdr = struct.unpack_from("<I", m319_c2, 4)[0] & 0x3FFFFF
+        m319_dir = walk12(m319_c2, struct.unpack_from("<I", m319_c2, m319_hdr + 0x10)[0])
+        seen.clear()
+        for rec in m319_dir:
+            if rec["sha256"] in seen:
+                continue
+            seen.add(rec["sha256"])
+            keys = [
+                f"t{r['ida']}_c{r['idb']:02X}"
+                for r in m319_dir
+                if r["sha256"] == rec["sha256"]
+            ]
+            rows.append(
+                {
+                    "package_id": f"m0319i_writera_ptr_{rec['ptr']:X}",
+                    "token": "0xA80614C8",
+                    "decoded_name": "M0319I",
+                    "table_index": ",".join(keys),
+                    "rel": f"0x{rec['ptr']:X}",
+                    "packed": "",
+                    "sectors": "",
+                    "peimg_lba_range": f"m0319i_chunk2+0x{rec['ptr']:X}",
+                    "size": rec["size"],
+                    "sha256": rec["sha256"],
+                    "compression": "none",
+                    "decoded_structure": (
+                        f"Writer A payload enc={rec['b0']} bones-1={rec['b1']} frames={rec['b2']}"
+                    ),
+                    "consumer": "func_8001A680 after persist 0x31",
+                    "writer": "func_8006B84C Writer A",
+                    "confidence": "PROVEN",
+                    "notes": "persist-gated dest; do not hop runtime",
+                }
+            )
         return rows
 
     def publication(self) -> list[dict]:
@@ -1258,12 +1296,21 @@ class World:
             ("m0367i", 4, 0x07): "type4 0x2E +0xF0 after 0x9D",
             ("m0367i", 4, 0x01): "type4 0x2E +0x1E8 after 0x9D",
         }
+        m319 = next(r for r in self.dest_hops() if r["decoded_name"] == "M0319I")
+        rel = int(m319["rel"], 16)
+        packed = int(m319["packed"], 16)
+        s0, s1, s2 = packed_secs(packed)
+        m319_c2 = read_form1(self.disc, PE_IMG_LBA + rel + s0 + s1, s2)
+        m319_hdr = struct.unpack_from("<I", m319_c2, 4)[0] & 0x3FFFFF
+        specs = specs + (("m0319i", m319_c2, m319_hdr, None, "m0319i_chunk2"),)
         for scene, blob, hdr, filt, pkg in specs:
             wa = walk12(blob, struct.unpack_from("<I", blob, hdr + 0x10)[0])
             for rec in wa:
                 if filt is not None and (rec["ida"], rec["idb"]) not in filt:
                     continue
-                if scene == "m0367i":
+                if scene == "m0319i":
+                    reach = "m0367i_type1_0x31_persist"
+                elif scene == "m0367i":
                     reach = (
                         "type1_0x08"
                         if rec["ida"] in (2, 3, 4)
@@ -1296,6 +1343,8 @@ class World:
                             (scene, rec["ida"], rec["idb"]),
                             "type1_0x08 spawn; no 0x2E in walked prefix"
                             if scene == "m0367i" and rec["ida"] in (2, 3, 4)
+                            else "M0319I Writer A; persist-gated dest"
+                            if scene == "m0319i"
                             else "listed_stream_0x2E",
                         ),
                         "confidence": "PROVEN",
@@ -1769,6 +1818,8 @@ def main() -> int:
     wa = tables["WRITER_A_CLIPS.csv"][1]
     m367_wa = [r for r in wa if r["scene"] == "m0367i"]
     require(len(m367_wa) == 36, f"M0367I Writer A {len(m367_wa)}")
+    m319_wa = [r for r in wa if r["scene"] == "m0319i"]
+    require(len(m319_wa) == 6, f"M0319I Writer A {len(m319_wa)}")
     require(not any(int(r["ida"]) == 1 for r in m367_wa), "no type1 Writer A")
     t0_18 = next(r for r in m367_wa if int(r["ida"]) == 0 and r["idb"] == "0x18")
     require(t0_18["sha256"] == WA18_SHA, "M0367I type0 cmd 0x18")
