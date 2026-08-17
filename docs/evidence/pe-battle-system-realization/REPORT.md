@@ -161,7 +161,8 @@ the retail battle runtime, not a one-off script.
 | BTL-D4698 | 27w; F32D0=slot; E2368=slot+0xC; jalr rec+0x30 | PORTED | live +0x8C=0 → skip jalr |
 | BTL-184EC | 32w 0x64; jal 2FAF8(D2F0,lbu); CE00-0x10 wait | PORTED | live (3, local[6]) |
 | BTL-2FAF8 | 224w; D1A0&2; JT +0x0E; activate code*16+0x1C | PORTED | wait until rec byte 4 |
-| next_live_va | type2 0x0E after 0x4B; type6 0x12; type3 0x85 | RESEARCH_REQUIRED | scratch&4 / region hit / rec=4 |
+| BTL-14228 | 98w 0x0E; field read; miss -1; codes 0..3 | PORTED | live self +0x0E → local[0xD] |
+| next_live_va | wait producers: rec=4, +0x0E==7, scratch&4, hit | RESEARCH_REQUIRED | do not invent |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -261,12 +262,12 @@ python3 pc_port/tools/pe_btl48_18774_oracle.py
 python3 pc_port/tools/pe_btl49_13c34_143b0_oracle.py
 python3 pc_port/tools/pe_btl50_187c0_oracle.py
 python3 pc_port/tools/pe_btl51_184ec_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=777/777
+python3 pc_port/tools/pe_btl52_14228_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=778/778
 ```
 
-STOP/NEXT: Type-2 `0xFB` arm is ported through
-`0x64` (waits on rec byte 4). Next is `0x0E`.
-Type-3 `0x85` stays hit-gated. Type-6 `0x12`
-waits on scratch[0]&4. Do not invent pad /
-persist==39 / scratch / hit / rec=4.
-`D2E8` bit 0 stays set.
+STOP/NEXT: Type-2 waits on rec byte 4 and
+`+0x0E==7`. Type-3 `0x85` stays hit-gated.
+Type-6 `0x12` waits on scratch[0]&4. Do not
+invent pad / persist==39 / scratch / hit /
+rec=4 / command 7. `D2E8` bit 0 stays set.
