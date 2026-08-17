@@ -18,10 +18,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x800209F0` remainder — jal 6C4C4 needs proven
-D278+0x68 (default 0). Local sb +0x12..+0x19 are ported. Do
-not invent the nested object or 6C4C4 a0. Then 30640. Do not
-stub 6914C(a0=0) mode 7, jalr 0x800E086C, or complete `0x55`.
+STOP/NEXT: `0x800339A0` — last 29810 after_hp bootstrap.
+209F0 null-deref (+0x68=0 → 6C4C4(lh(6))) and 30640 beqz
+skip are ported. Do not invent a +0x68 pointer. Do not stub
+6914C(a0=0) mode 7, jalr 0x800E086C, or complete `0x55`.
 No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table

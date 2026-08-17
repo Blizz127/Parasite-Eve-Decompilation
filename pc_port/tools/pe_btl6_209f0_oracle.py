@@ -63,6 +63,8 @@ def main() -> int:
     require(load_u32(data, 0x80020ADC) == 0x24C606D4, "addiu 0x800106D4")
     require(RODATA_B == 0x800106D4, "rodata B")
     require(load_u32(data, 0x80020B08) == 0x8C820068, "lw record+0x68")
+    require(load_u32(data, 0x80020B0C) == 0, "nop, no beqz")
+    require(load_u32(data, 0x80020B10) == 0x90450006, "lbu 6(obj) no nullcheck")
     require(load_u32(data, 0x80020B3C) == 0xA0820012, "sb +0x12")
     require(load_u32(data, 0x80020B38) == 0x24020004, "li 4")
     require(load_u32(data, 0x80020B54) == 0x24020005, "li 5")
@@ -83,10 +85,29 @@ def main() -> int:
     require(load_u32(data, 0x80020C58) == 0x84440006, "lh *(+0x68)+6")
     require(load_u32(data, REC + 0x68) == 0, "default D278+0x68 is 0")
     require(jal_target(load_u32(data, 0x80029918)) == START, "29810 jal 209F0")
+    require(load_u32(data, 0x8002F664) == 0x24C60928, "2F658 src 10928")
+    require(load_u32(data, 0x8002F668) == 0x24C80070, "2F658 copy 0x70")
+    require(data[exe_off(REC + 0x68) : exe_off(REC + 0x6C)] == b"\x00\x00\x00\x00",
+            "10928+0x68 bytes 0")
+    require(data[exe_off(RODATA_B) : exe_off(RODATA_B) + 9]
+            == bytes([0x00, 0x0A, 0x08, 0x0A, 0x08, 0x08, 0x04, 0x0A, 0x14]),
+            "106D4 scale")
+    zeros = []
+    for va in (0x8001EA10, 0x8001F0A0, 0x80020D28, 0x80020D7C,
+               0x8002BCD0, 0x8002DC78):
+        require(load_u32(data, va) in (0xAC400068, 0xAC800068, 0xAC600068),
+                f"D278-near +0x68 is sw zero at {va:#x}")
+        zeros.append(va)
+    require(len(zeros) == 6, "six proven D278-near zero stores")
+    require(load_u32(data, 0x80030640) == 0x3C04800A, "30640 lui")
+    require(load_u32(data, 0x80030644) == 0x8C84D278, "30640 lw D278")
+    require(load_u32(data, 0x80030654) == 0x8C820068, "30640 lw +0x68")
+    require(load_u32(data, 0x8003065C) == 0x8C420010, "30640 lw obj+0x10")
+    require(load_u32(data, 0x80030668) == 0x10400018, "30640 beqz skip")
 
     print(
-        "PASS: 209F0 161w sha e7766a62…4246; D278 sb 4..11; "
-        "jal 6C4C4 needs +0x68; default +0x68=0; no invented ptr"
+        "PASS: 209F0 161w; no +0x68 writer; null-deref lbu(6); "
+        "jal 6C4C4(lh(6)); 30640 beqz when +0x10 bit clear; no invented ptr"
     )
     return 0
 

@@ -69,16 +69,52 @@ void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)
 }
 
 /*
- * 209F0 D278-local stores only (0x80020B3C..0x80020BB8). sb
- * +0x12=4 .. +0x19=11. Does not deref record+0x68 (default
- * D_80010928+0x68 is 0), does not jal 6C4C4, does not invent
- * the nested object or overlay wait.
+ * Kuseg 2 MiB RAM mirror. 209F0 has no null check on D278+0x68;
+ * default 0 is address 0, which is 0x80000000 on the R3000.
+ * This is the hardware map, not an invented battle pointer.
+ */
+static pe_addr_t pe_kseg0(pe_addr_t addr)
+{
+    return 0x80000000u | (addr & 0x1FFFFFu);
+}
+
+/* EXE 0x800106A4 (9×5) and 0x800106D4 (9). */
+static const uint8_t k_209f0_row[45] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x0A,
+    0x02, 0x05, 0x00, 0x00, 0x0A, 0x04, 0x00, 0x00, 0x00,
+    0x0A, 0x02, 0x0A, 0x07, 0x00, 0x0A, 0x04, 0x00, 0x00,
+    0x05, 0x0F, 0x03, 0x00, 0x00, 0x14, 0x1E, 0x03, 0x00,
+    0x00, 0x05, 0x0A, 0x02, 0x00, 0x00, 0x00, 0x00, 0x05
+};
+static const uint8_t k_209f0_scale[9] = {
+    0x00, 0x0A, 0x08, 0x0A, 0x08, 0x08, 0x04, 0x0A, 0x14
+};
+
+/*
+ * 209F0. D278 sb +0x12=4 .. +0x19=11, sh +0x24 = (lhu+0x22 *
+ * scale[lbu(obj+6)]) / 10, copy 5-byte row to obj+0x14.. and
+ * sw row[4] to obj+8, jal 6C4C4(lh(obj+6)). obj = lw(D278+0x68)
+ * through Kuseg. Default +0x68 is 0: no writer installs a
+ * pointer. 6C4C4(0) with D1A0 bit1 sets +0xE bit1 (ROM, not
+ * invented).
  */
 void func_800209F0_cut(void)
 {
     pe_addr_t record;
+    pe_addr_t obj;
+    unsigned int idx;
+    unsigned int scale;
+    int prod;
+    int hi;
+    const uint8_t *row;
 
     record = PE_LoadU32(GA_RECORD_P);
+    obj = pe_kseg0(PE_LoadU32(record + 0x68u));
+    idx = PE_LoadU8(obj + 6u);
+    scale = (idx < 9u) ? k_209f0_scale[idx] : 0u;
+    row = (idx < 9u) ? &k_209f0_row[idx * 5u] : k_209f0_row;
+    prod = (int)PE_LoadU16(record + 0x22u) * (int)scale;
+    hi = (int)(((long long)prod * 0x66666667LL) >> 32);
     PE_StoreU8(record + 0x12u, 4u);
     PE_StoreU8(record + 0x13u, 5u);
     PE_StoreU8(record + 0x14u, 6u);
@@ -87,6 +123,29 @@ void func_800209F0_cut(void)
     PE_StoreU8(record + 0x18u, 9u);
     PE_StoreU8(record + 0x16u, 10u);
     PE_StoreU8(record + 0x19u, 11u);
+    PE_StoreU16(record + 0x24u, (uint16_t)(hi >> 2));
+    PE_StoreU8(obj + 0x14u, row[0]);
+    PE_StoreU8(obj + 0x15u, row[1]);
+    PE_StoreU8(obj + 0x16u, row[2]);
+    PE_StoreU8(obj + 0x17u, row[3]);
+    PE_StoreU32(obj + 8u, row[4]);
+    (void)func_8006C4C4((int)(int16_t)PE_LoadU16(obj + 6u));
+}
+
+/*
+ * 30640. lw D278+0x68, lw obj+0x10, and 0x10000. Live +0x68=0
+ * and RAM+0x10=0 skip the 71A54 arm. That arm is not invented.
+ */
+void func_80030640_cut(void)
+{
+    pe_addr_t record;
+    pe_addr_t obj;
+
+    record = PE_LoadU32(GA_RECORD_P);
+    obj = pe_kseg0(PE_LoadU32(record + 0x68u));
+    if ((PE_LoadU32(obj + 0x10u) & 0x00010000u) == 0u)
+        return;
+    Bootstrap_ReturnVoid("func_80071A54", "func_80030640_cut");
 }
 
 void func_80029810_after_hp_cut(unsigned int encounter)
@@ -110,7 +169,7 @@ void func_80029810_after_hp_cut(unsigned int encounter)
         }
     }
 
-    Bootstrap_ReturnVoid("func_80030640", "func_80029810_after_hp_cut");
+    func_80030640_cut();
     actor = PE_LoadU32(GA_ACTOR_P);
     PE_StoreU32(actor + 0x194u, CALLBACK_2D268);
     source = PE_LoadU32(actor + 0x238u);

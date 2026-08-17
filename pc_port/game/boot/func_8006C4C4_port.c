@@ -13,7 +13,9 @@
  * func_8006C5BC is the 427-word CD poll (0x8006C5BC..0x8006CC68).
  * Exclusive end is func_8006CC68. TEXT has exactly three jal sites:
  * 3F074@3F22C (field-tick poll), 35558@35B24 (after actor walk),
- * 6C1CC state 6@6C358. 144FC/29810/6914C/6D60C do not jal it.
+ * 6C1CC state 6@6C358. 209F0 @ 0x80020C5C jals it
+ * (lh(*(D278+0x68)+6); live +0x68=0 → a0=lh(6)).
+ * 144FC/29810/6914C/6D60C have no direct jal.
  *
  * Named cut implemented here: CE2 in [10,14], +0xEE JT gates,
  * EE=0 bit0/bit1 advance, EE=11 ori 1, EE=12→13, EE 8/9/10 return 0.
