@@ -3,7 +3,158 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
-## PE-B54J — func_80030894 structural audit (evidence only; implementation next)
+## PE-BTL5 — live 0x3B wait from 3F074 → 6C4C4/6C5BC
+
+NYPD/Eve-intro parks on m0005i `0x55(2)` at module 6 `+0x4140`
+with `D_8009D28C` still 0. Do not auto-complete `0x55`.
+
+`0x3B` is `lbu +0xE; andi 3`, not `6914C`. `0x3A` oris `D1A0` bit 1
+then jals `29810`. Live `+0xE` producers are field-tick `3F3C4` →
+`3F074` (`6C4C4(CE4)` then poll `6C5BC`) and `35558@35B24`. TEXT has
+exactly those two plus `6C1CC` state 6. `6C5BC` is 427 words
+`0x8006C5BC..0x8006CC68` (SHA-256 `d15126b6…`). Native named cut:
+CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
+`encounter_55 → hp_copied → first_command → command_bound →
+overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
+`docs/evidence/pe-battle-system-realization/`.
+
+STOP/NEXT: `func_8003D050` (505 words, SHA-256 `50b5ff75…`) after
+the ported EE=13 prefix (`+0x158` walk → `+0x1C0`). `6CC68` is not
+on the live bit1 path. Do not invent `3D050`/`6698C`/`3D834` or
+`andi 0xFC`. No matching `src/` C.
+
+## PE-BTL3 — first actor command bound from Writer B table
+
+NYPD/Eve-intro parks on m0005i `0x55(2)` at module 6 `+0x4140`
+with `D_8009D28C` still 0. `0x89` is the next opcode (`+0x414C`).
+Do not auto-complete `0x55`.
+
+`0x55` = `func_800144FC` (102 words), JT on `D_800B0CD8+0xF4`.
+State `0x3A` is the sole `jal 0x80029810`; that init `jal`s
+`func_800293F4(0)`. Named cut `func_800293F4_hp_cut` (21 words)
+clamps Aya record `+0x0C` to `+0x1C` and copies `+0x0C` → `+0x0E`.
+Reader `lh +0x0C; blez` at `0x80029350`. Default `D_80010928`
+halfwords `+0x0C/+0x0E/+0x1C = 45`. Oracles
+`pc_port/tools/pe_btl2_144fc_oracle.py`,
+`pe_btl2_293f4_oracle.py`, `pe_btl2_hp_trace_oracle.py`.
+Evidence: `docs/evidence/pe-btl2-hp-layout/`.
+
+The post-HP `29810` tail is pinned 45/45 words. It floors/caps record
+`+0x08`, writes `240` to `+0x34` on the cap arm, installs callback
+`0x8002D268` at actor `+0x194`, writes
+`(*(actor+0x238)+0x18)-100` as `sh D_8009D27C`, calls
+`339A0(encounter)`, then loads record `+0x12` and calls `1A680`.
+The `1A680` prefix is pinned 33/33: command byte `4` → actor `+0x0E`,
+zero `+0x14/+0x18`, resource pointer → `+0x1B0`, clear flag `0x200`,
+resource frames-minus-one → `+0x0F`. Index math is
+`D_800B0E98[type*192 + command*4]`. Type is ctor `desc[0]`:
+`func_80035038` `sb` at actor `+0x0C` and, when that byte is 0,
+publishes the actor to `D_8009D254` (`sw 0x4E4($gp)`). `29810`
+passes `*D_8009D254` to `1A680`. HP `sh +0x0C` is `D_8009D278`, a
+different object. The NYPD row is type 0 / command 4.
+
+Writer A (`0x8006B84C`, room packages, `idA*192+idB*4`) does not
+supply m0005i type-0 `idB=4`. Writer B (`0x8006C140..0x8006C174`
+inside `func_8006BECC` state 6) fills the type-0 row:
+`sw (package+ptr), overlay+0x1C0+idB*4`. `func_8006C1CC(a0=1)` sets
+`CE2=14`; `D_800930D8[22..23]` maps that to PE.IMG `[396,428)`.
+Type-0 `idB=4` there is 1700 bytes, 31 bones, 18 frames. `29810` /
+`144FC` do not jal `6C1CC`/`6BECC`; native runs Writer B as the
+global table producer `1A680` reads. TRACE
+`encounter_55 → hp_copied → first_command → command_bound`. This is a
+clip/animation command, not menu/ATB/damage/PE/AI. Overlay wait bits
+are PE-BTL5; do not invent idle/0x20/idA=2.
+
+## PE-CH2 — Carnegie prefix camera leaves
+
+Goal: EXE-audit/native-port `func_80065954` (`0x75`),
+`func_800659C8` (`0x7B`), and `func_80066800` (`0x82`), then verify
+the real static route sequence without inventing projection/framing.
+
+All three are translated and independently oracle-backed: 18/18,
+12/12, and 99/99 EXE words. Census correction: m0004i contains no
+`0x75`/`0x7B`; the route is m0003i `0x7B`/`0x75`, m0372i+m0004i
+`0x82(1)`, then the existing `0x31` hop to m0005i. Native tests use a
+synthetic record-1 fixture to prove exact stores/copy widths; no retail
+Carnegie framing or playable-field claim. Evidence:
+`docs/evidence/pe-ch2-prefix-camera/`. Full native suite: 651/651;
+all three leaf oracles and the route-trace oracle pass.
+
+Playable follow-through completed in the `pe-vis3-retail-body-prims`
+native worktree: real package slot 6 is bound as the `D_800B1624`
+analogue; `0x75`/`0x7B` mutate the m0003i records; `0x82(1)` applies
+retail m0372i H=307 and m0004i H=577 through the live H/MATRIX
+projection path; packaged PT2 smoke traces seven events through the
+verified m0005i hop. Focused native 36/0 and independent retail-disc
+oracle pass. Evidence lives there at
+`docs/evidence/pe-ch2-playable-camera/`. No synthetic camera data, ATB,
+mode 7, AI, or matching `src/` C.
+
+No matching `src/` C (monolithic split unavailable). Do not extend this
+into `677FC` projection, ATB, mode 7, or AI.
+
+## PE-CH1 — BTL1 TRACE_CONTRACT integration
+
+Goal: m0004i mailbox 3/4 → m0005i → 0x6F/0x5A/0x70/0xB7 → 0x89
+(`D_8009D28C=6`) → consume 6→0 + `gp+0x10C`, with TRACE rows through
+`mode6_consumed`. Persist hash unchanged on the 0x89 row. No ATB,
+mode 7, or AI.
+
+Leaves through `func_800299CC_consume_cut` are native-ported. This
+rung is the handshake: `BTL1_trace_mode6_consumed` +
+`pe_ch1_btl1_trace_oracle.py`. `0x31` now uses the EXE-verified normal
+path of `func_80017BB4` for token `0xA80002C8` (40/40 handler words;
+unrelated `A9400048` special path excluded). `0x1A` now runs translated
+`func_80070DD0(0,100)`, records the corrected 19-word pre-call image,
+and carries variant 49/50 into formation_id. The native integration test
+now runs the complete path independently for mailbox payloads 3 and 4;
+the oracle validates both traces through `mode6_consumed`, including
+6→0 and unchanged persist hashes. Full native suite: 647/647.
+`scripts/verify_us.sh` still cannot take matching C. **PE-B54K-B is not
+on this path. BTL1 is complete; do not extend it into ATB/mode 7/AI.**
+
+## PE-PREFIX-SEWER-AUDIT — dual-lane audit + native m0377i first view
+
+Field playable-prefix work lives in the vis3 native worktree, not this
+matching checkout. Bound: `m0002i` through first stable `m0377i`
+(`sewer_entry`). Matching `pc_port` remains mid-`func_80030894`
+(`func_80030894_L2L3_cut` @ `0x80030AC4`); Carnegie Hall cannot be
+played here. Next matching rung is still **PE-B54K-B**.
+
+Native repairs (vis3): stop auto-applying 52-byte view 0 on
+`SewerEntry` (RD7-R / DEBT-FID1-002); remove `mailbox_boot_clear` from
+prefix scene enters (DEBT-FID1-036); model the proved `m0002i`
+`0x85(30)`/`0x9C` fade gate; restore fixed 320×224 projection center
+plus authored pan; add deterministic boot-to-m0377i trace
+`08811f51…`. RD4 `0xB8` interpolation and the destination `0x3F`
+task-payload first-frame value remain evidence blockers, so
+retail-exact end-to-end timing is not claimed. Evidence:
+`docs/evidence/pe-prefix-sewer-audit/` in
+`pe-vis3-retail-body-prims`. Launch:
+`DISPLAY=:0 python3 tools/ue0/pe_pt2_play.py --scale 3`.
+
+## PE-B54K-A — func_80030894 prologue + bank-0 L2/L3 (named cut)
+
+Translated prefix of the 788-word boot GPU-primitive builder.
+**140 words** `0x80030894..0x80030AC4` (file 0x21094): prologue
+GetTPage(0,1,256,480)→0x34 / GetClut(304,504)→0x7E13, bank-0
+SetPolyFT4 record at `0x800BE9F0` from `func_8005DADC(139)`,
+SetSemiTrans(.,1) (a1 reloaded after GetTPage clobbers it), then
+L2(j<10)×L3(k<4) wrap_sprt array at `0x800B01C0` + j*140 + k*28
+with clut `sh` at packet+0x16. Named `func_80030894_L2L3_cut`.
+First excluded word `move a0,zero` at `0x80030AC4` (L4). Zero new
+callees. To reach 30894, 6AD40 is unparked through
+`0x8006B060..0x8006B0BC` (`D_800930F0` / dest+0x14C, second 718D0
+of dest+0x180, jal 30894) and parks at
+`func_8006AD40_post30894_cut` before the third `func_8006E7E8`.
+Tests 582/582 normal + ASan/UBSan. Oracle 8/8. Real-disc
+`--strict-stubs` exits 1 at `func_80030894_L2L3_cut` from
+`func_80030894`. Evidence:
+`docs/evidence/pe-b54ka-30894-l2l3-prefix/`.
+NEXT: **PE-B54K-B** — groups L4..L11 + bank-1 + epilogue
+(`0x80030AC4..0x800314E4`). Zero new callees.
+
+## PE-B54J — func_80030894 structural audit (evidence only; consumed by B54K-A)
 
 Read-only audit of the 788-word boot GPU-primitive builder
 (0x80030894..0x800314E4, file 0x21094, window SHA-256
@@ -24,9 +175,8 @@ Oracle `pc_port/tools/b54j_30894_audit_oracle.py` = 19 check groups
 (window hash, branch census, loop map, counter protocol, strides,
 frame, call order, boundary, vectors). Tests 580/580 unchanged (no
 production edit). Evidence: `docs/evidence/pe-b54j-30894-structural-audit/`.
-NEXT: **PE-B54K-A** — implement prologue + bank-0 L2/L3 sprite array
-(0x80030894..~0x80030AC8), stop at named `func_80030894_L2L3_cut`;
-then B54K-B (groups L4..L11 + epilogue).
+NEXT: consumed by **PE-B54K-A** (named `func_80030894_L2L3_cut`);
+remaining body is B54K-B (groups L4..L11 + epilogue).
 
 ## PE-B54I — all func_80030894 callees now native; wall is the 788-word body
 
@@ -297,12 +447,13 @@ day1_acceptance_ready_now=no
 python_production_fallback_allowed=no
 retail_bytecode_runtime_authority=yes
 largest_current_blocker=day1_combat_boss_and_completion_unproven
-next_system_research_priority=PE-RD7-R_m0377i_first_play_destination_contract
+next_system_research_priority=PE-RD7-A_post_m0377i_progression
 ```
 
-Proven playable prefix remains `m0002i → m0003i → m0372i → m0004i →
-m0378i` (RD5-C2 `1e7f0df`, RD6-A `65446c8`, RD6-B `a0baebc`). Next
-first-play dest is `m0377i` (research pending). PT1 visual freeze
+Proven playable prefix reaches `m0002i → m0003i → m0372i → m0004i →
+m0378i → m0377i`. RD7-R proves the m0377i identity and first-stable
+authored-2D-layer contract. Post-m0377i progression remains RD7-A
+research. PT1 visual freeze
 `3e4c65d` / CAM-B `1bf3832` / VIS-B `ac62411` / VIS-C `cad4598` is
 not reopened. AUD1-D `40b7c3f` is the audio floor.
 
@@ -790,7 +941,7 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Fact | Value | Derive |
 | --- | --- | --- |
 | Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B54J func_80030894 structural audit (evidence only)**; frontier still `func_8006AD40_prefix_cut` @ retail `0x8006B060`; next: B54K-A implement sprite-array prefix | tests 580/580 unchanged; b54j audit oracle 19 groups; b54i oracle 30 checks; exe-arg oracles 52/52 |
+| Port phase | **6E-B54K-A func_80030894 prologue + bank-0 L2/L3**; named `func_80030894_L2L3_cut` @ retail `0x80030AC4`; 6AD40 parks at `func_8006AD40_post30894_cut` @ `0x8006B0BC`; next: B54K-B groups L4..L11 + epilogue | tests 582/582; b54ka oracle 8/8; b54j audit oracle 19 groups; b54i oracle 30 checks; exe-arg oracles 56/56 |
 | Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
 | Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
 | Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
@@ -802,11 +953,11 @@ Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
 | Dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 twice). Every direct callee is translated. Call 15 is real func_80051CC4; B40 translates its first nested dependency func_8005332C, B41/B42 complete the exposed B29 func_80053968/func_80053B48 dependencies, and B43 translates func_8005218C only through its first honest internal boundary at func_8005B91C. Sole call site func_8006A9E4 @0x8006AAD0, `$s1`-guarded one-shot inside cycle B; void return unconsumed. | `pc_port/game/boot/func_800527C8_port.c`, `func_80051CC4_port.c`, `func_8005218C_port.c`, `func_8005332C_port.c`, `func_80053968_port.c`, `func_80053B48_port.c` |
 | Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
 | Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | continuing real data: **exit 1** at `func_8006AD40_prefix_cut` from `func_8006AD40`, now at retail PC `0x8006B060` (the only BOOTSTRAP_RET provider on the canonical path); `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` (this disc-less checkout stops earlier at a pre-existing PE_LoadU32(0) FATAL, identical at HEAD — see B54I evidence) | fresh normal and ASan/UBSan agree |
+| Strict mode | continuing real data: **exit 1** at `func_80030894_L2L3_cut` from `func_80030894`, retail PC `0x80030AC4` (first BOOTSTRAP_RET on the canonical path; 6AD40 would then name `func_8006AD40_post30894_cut`); `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | fresh normal and ASan/UBSan agree |
 | GPU/DMA2 + CPU IRQ | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. Stored DICR excludes physical bit31, which is derived on read and sticky-edge evaluated on every transition. Completion flags are enable/master gated. The separate bridge asserts B1's I_STAT source 3, bounded CPU/DMA dispatch uses two guest-backed identity tables, B53I-C consumes the live guest ring without a host queue mirror, and B53I-D proves a later interrupt-disabled token completion is hardware-only. | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/platform/pe_irq_delivery.[ch]`, `pc_port/docs/b53i_d_second_dma_completion.md` |
-| Sanitizers | B54I fresh ASan/UBSan 580/580; focused B54I 1/1, retained B54G 2/2, B54F 2/2, B54E 2/2, D 8/8, C 10/10, B2 15/15, B1 8/8, B53B 15/15, H 8/8, and B49 pass without sanitizer diagnostics | Fedora toolbox `jk2026-dev`, `PE_PORT_SANITIZERS=ON` |
+| Sanitizers | B54K-A fresh ASan/UBSan 582/582; focused B54K-A 2/2, retained B54G 2/2, B54I 1/1, PEGPU1 1/1, B54F 2/2, B54E 2/2, D 8/8, C 10/10, B2 15/15, B1 8/8, B53B 15/15, H 8/8, and B49 pass without sanitizer diagnostics | Fedora toolbox `jk2026-dev`, `PE_PORT_SANITIZERS=ON` |
 | Matching build | **EXACT SHA-1 MATCH** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` / SHA-256 `5d94938ee752e81ef375bd4493c9883850c25a86895f9cb0732cf3622b44351b` (227 C leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | Implement `func_80030894` per the B54J audit: B54K-A = prologue + L2/L3 sprite array (0x80030894..~0x80030AC8, named `func_80030894_L2L3_cut`), B54K-B = groups L4..L11 + epilogue. Zero new callees. | `docs/evidence/pe-b54j-30894-structural-audit/` |
+| Next frontier | B54K-B: remaining `func_80030894` groups L4..L11 + bank-1 pass + epilogue (`0x80030AC4..0x800314E4`). Zero new callees. After a complete 30894 the live 6AD40 cut is the third `func_8006E7E8` at `0x8006B0BC`. | `docs/evidence/pe-b54ka-30894-l2l3-prefix/` |
 
 ### Phase 6E-B43 func_8005218C — current findings
 
