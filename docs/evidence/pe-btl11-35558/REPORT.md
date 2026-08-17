@@ -38,9 +38,8 @@ bit clear.
 `func_800361F4` is 24 words, SHA-256 `1ebed0df…cbe5`.
 `sw actor → gp+0x580` (`D_8009D2F0`), then three words at
 `+0xA0` into `D_8009D300`. Nonempty slots jal `17018`
-(159 words, 0 jals, sole caller; task VM; not this cut).
-Live `35038` zeros `+0xA0/+0xA4` and stores the `12700` task
-at `+0xA8`.
+(PE-BTL12). Live `35038` zeros `+0xA0/+0xA4` and stores the
+`12700` task at `+0xA8`.
 
 Type0 `35C84` is not this cut.
 

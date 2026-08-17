@@ -19,10 +19,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `35558` walk cut jalrs type!=0 `35E04` → `361F4`
-(`D2F0=actor`, last `+0xA8` task → `D300`). `17018` VM and
-type0 `35C84` are not this cut. Not M2. EXE-resident code +
-loaded data. Do not jalr `0x800E086C`. No matching `src/` C.
+STOP/NEXT: `361F4` jals `17018`. Opcode 1 ORs `+0x98` bit
+`0x10`. Type0 `35C84` / `2F76C` and overlay bytecode are not
+this cut. Not M2. EXE-resident code + loaded data. Do not
+jalr `0x800E086C`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

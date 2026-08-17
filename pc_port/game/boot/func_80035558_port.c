@@ -25,9 +25,8 @@
  *
  * func_800361F4 — 24 words 0x800361F4..0x80036254. sw actor →
  * gp+0x580 (D_8009D2F0), then three words at +0xA0 into
- * D_8009D300. Nonempty slots jal 17018 (159w VM, sole caller;
- * not this cut). Live 35038 zeros +0xA0/+0xA4 and stores the
- * 12700 task at +0xA8.
+ * D_8009D300. Nonempty slots jal 17018. Live 35038 zeros
+ * +0xA0/+0xA4 and stores the 12700 task at +0xA8.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -49,9 +48,8 @@ void func_800361F4(pe_addr_t actor)
     for (i = 0; i < 3u; i++) {
         slot = PE_LoadU32(actor + 0xA0u + i * 4u);
         PE_StoreU32(GA_D_8009D300, slot);
-        if (slot != 0u) {
-            /* jal 17018: 159w task VM, not this cut. */
-        }
+        if (slot != 0u)
+            func_80017018();
     }
 }
 

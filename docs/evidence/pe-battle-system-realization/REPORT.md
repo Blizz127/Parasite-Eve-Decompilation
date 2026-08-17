@@ -78,8 +78,9 @@ the retail battle runtime, not a one-off script.
 | BTL-35038-A1 | a1=0 pop/insert/init/`12700`; `+0x1AC==0` OR `0xE0` | PORTED | type0 `2F76C` and `+0x1AC` body not this cut |
 | BTL-35558-WALK | 459w; 3F3C4@`3F4F0`; D20C jalr `+0x190` unless D1A0&4 | PORTED | walk cut only; 29 later jals not this cut |
 | BTL-35E04 | 83w types 1–9 vtable; pose snap + 361F4 | PORTED | live `+0x98` bit1 clear; no motion |
-| BTL-361F4 | 24w `D2F0=actor`; `+0xA0`×3 → `D300`; jal 17018 | PORTED | 17018 VM not this cut |
-| next_live_va | `17018` task VM or type0 `35C84` / `2F76C` | RESEARCH_REQUIRED | first recurring actor walk is live |
+| BTL-361F4 | 24w `D2F0=actor`; `+0xA0`×3 → `D300`; jal 17018 | PORTED | now calls 17018 |
+| BTL-17018 | 159w task VM; jalr `D_800910A0[op]`; first tick `+0x10=1` | PORTED | ops 0/1/2/0x20 + 0x1C/0x1F; other slots advance |
+| next_live_va | type0 `35C84` / `2F76C` or overlay bytecode | RESEARCH_REQUIRED | field-tick VM frame is live |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -132,6 +133,7 @@ python3 pc_port/tools/pe_btl8_1a918_oracle.py
 python3 pc_port/tools/pe_btl9_371b0_oracle.py
 python3 pc_port/tools/pe_btl10_35038_oracle.py
 python3 pc_port/tools/pe_btl11_35558_oracle.py
+python3 pc_port/tools/pe_btl12_17018_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
@@ -140,7 +142,7 @@ python3 pc_port/tools/pe_btl6_339a0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: field tick `3F3C4` walks `D_8009D20C` via `35558`
-and jalrs type!=0 `35E04` → `361F4`. Next: `17018` (task VM
-on `+0xA8`) or type0 `35C84`. Not M2. Do not jalr
-`0x800E086C`. `0x89` is mode-6 request, not battle-over.
+STOP/NEXT: field tick walks actors and runs `17018` on
+`+0xA8`. Next: type0 `35C84` / `2F76C` or overlay-published
+bytecode. Not M2. Do not jalr `0x800E086C`. `0x89` is mode-6
+request, not battle-over.
