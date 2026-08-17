@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -80,6 +80,10 @@
 #define GA_OP86       0x80018EE0u
 #define GA_OP4        0x80017988u
 #define GA_OPAA       0x80019618u
+#define GA_OP65       0x8001856Cu
+#define GA_OP82       0x80018E58u
+#define GA_OP9C       0x80019410u
+#define GA_OPAB       0x80019638u
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 
@@ -177,6 +181,75 @@ int func_80017988(pe_addr_t args)
     return 1;
 }
 
+/*
+ * PE-BTL34 — opcode 0x65 pose-group clear 1856C.
+ *
+ * 11 words 0x8001856C..0x80018598, SHA-256 309d956f…c25f.
+ * D_800910A0[0x65]. Zero jal. Always v0=1. argc 0.
+ * Zeros D2F0 +0x68/+0x6C/+0x70 and +0x78/+0x7C/+0x80
+ * (12C20 codes 2 and 3). Live type-0 after 0xAA/0x40.
+ */
+int func_8001856C(pe_addr_t args)
+{
+    pe_addr_t actor;
+
+    (void)args;
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    PE_StoreU32(actor + 0x68u, 0u);
+    PE_StoreU32(actor + 0x6Cu, 0u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU32(actor + 0x78u, 0u);
+    PE_StoreU32(actor + 0x7Cu, 0u);
+    PE_StoreU32(actor + 0x80u, 0u);
+    return 1;
+}
+
+/*
+ * PE-BTL35 — opcode 0x82 view-apply wrapper 18E58.
+ *
+ * 11 words 0x80018E58..0x80018E84, SHA-256 99b34ecf…def3.
+ * D_800910A0[0x82]. jal 66800(*arg0); v0=1.
+ * Live type-0 after 0x65/0x2E: imm 1.
+ */
+int func_80018E58(pe_addr_t args)
+{
+    func_80066800(PE_LoadU32(PE_LoadU32(args)));
+    return 1;
+}
+
+/*
+ * PE-BTL36 — opcode 0x9C fade-wait 19410.
+ *
+ * 16 words 0x80019410..0x80019450, SHA-256 ab0d665b…1ce8.
+ * D_800910A0[0x9C]. Zero jal.
+ * If (CFEE&3) < 2: v0=1 continue.
+ * Else: CE00 -= 8, D300+0x10 = 1, v0=0 yield.
+ * Live type-0 after 0x86 (CFEE=6) waits.
+ */
+int func_80019410(pe_addr_t args)
+{
+    (void)args;
+    if ((PE_LoadU8(0x800BCFEEu) & 3u) < 2u)
+        return 1;
+    PE_StoreU32(GA_D_8009CE00, PE_LoadU32(GA_D_8009CE00) - 8u);
+    PE_StoreU32(PE_LoadU32(GA_D_8009D300) + 0x10u, 1u);
+    return 0;
+}
+
+/*
+ * PE-BTL37 — opcode 0xAB overlay-bit clear 19638.
+ *
+ * 8 words 0x80019638..0x80019658, SHA-256 03ea9775…7afc.
+ * D_800910A0[0xAB]. Zero jal. D_800B0CD8 &= ~0x2000; v0=1.
+ * Inverse of 0xAA. Live type-0 after 0x9C fade-wait.
+ */
+int func_80019638(pe_addr_t args)
+{
+    (void)args;
+    PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) & ~0x2000u);
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == GA_OP0)
@@ -251,6 +324,14 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80017988(args);
     if (fn == GA_OPAA)
         return func_80019618(args);
+    if (fn == GA_OP65)
+        return func_8001856C(args);
+    if (fn == GA_OP82)
+        return func_80018E58(args);
+    if (fn == GA_OP9C)
+        return func_80019410(args);
+    if (fn == GA_OPAB)
+        return func_80019638(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }
