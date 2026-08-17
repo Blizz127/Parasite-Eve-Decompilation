@@ -65,17 +65,17 @@ at +7: the LE word at +4 includes the keep byte.
 `package+(lw(section+0xC)+4 & 0x00FFFFFF)` when D1A0 bit1.
 The CE2=14 command bank is **not** that package.
 
-The only `6C5BC` CD issue into `+0x158` is EE=4
-(`0x8006C77C` `jal 6E6A8`). Live bit1 EE is `0→11→12→13`
-and never visits EE=4/5/6. `6BECC` fills `+0x154` / `+0x194`
-only. So the live `+0x158` payload is still unproven: a prior
-EE=4 bank, another `6E6A8` dest, or an unfilled arena (zeros
-would make `obj+0x18`/`obj+2` empty and the named cuts live).
+The only EXE `6E6A8` dest `+0x158` is EE=4 (`0x8006C77C`).
+`6BECC` fills `+0x154` / `+0x194` only. Boot `CE4=-1`,
+`CE5=1`; first `6C4C4(-1)` copies CE5→CE4 so **CE4=1** and
+`ori 3`. EE=0 then takes bit0 → EE=1…; EE=6 with bit1 set
+jumps to EE=11 (`0x8006C97C`). So `+0x158` is filled on the
+field tick chain before EE=13, not skipped.
 
-If CE4 is boot `-1` or test `0`, the EE=4 PE.IMG windows
-`[526,532)` / `[532,537)` both have section+0xC objects with
-`+2=2` and `+0x18=2`. Do not treat those as live until a
-producer is proven.
+CE2=11 (boot) + CE4=1 → `D_800930D8[23..24]` PE.IMG
+`[428,434)`. Section+0xC object at +8: `+2=2`, `+0x18=2`.
+Empty 3A088/3B97C cuts are therefore not the live object.
+Next is the GTE walk at `0x8003A3B4`. Do not invent GTE.
 
 Do not `andi 0xFC`.
 
@@ -87,5 +87,6 @@ PE_TEST_FILTER=BTL6 ./pc_port/build/pe-native-tests
 ./pc_port/build/pe-native-tests
 ```
 
-STOP: prove live `+0x158` payload on EE `0→11→12→13` (not EE=4).
-Then `0x8003A3B4` if `obj+0x18>0`. Do not invent GTE.
+STOP: `0x8003A3B4` — 3A088 non-empty GTE MVMVA walk
+(`cop2 0x049E012` / `0x0480012`). Live `obj+0x18=2`.
+Do not invent GTE. Do not `andi 0xFC`.

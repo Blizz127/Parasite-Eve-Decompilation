@@ -28,6 +28,7 @@ the retail battle runtime, not a one-off script.
 | BTL-3A088 | 392w; mode-0 empty cut (`+0x28==0`, `obj+0x18<=0`); GTE walk not this cut | PORTED | `pe-btl6-3d834-callees` |
 | BTL-3B97C | 217w, 0 jals; empty dest+0 / +0xBA / obj+2==0; lighting GTE not this cut | PORTED | `pe-btl6-3d834-callees` |
 | BTL-3BCE0 | 245w, 0 jals; four directory packet walks; keep-byte overlaps sw+4 | PORTED | `pe-btl6-3d834-callees` |
+| BTL-158 | Only `6E6A8` dest `+0x158` is EE=4; first `6C4C4(-1)` sets CE4=1; CE2=11 → PE.IMG `[428,434)` `obj+0x18=2` | PROVEN | `pe-btl6-3d834-callees` |
 | BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PROVEN | not the 0x3B wait |
 | BTL-6D60C | `144FC` `0x38` jal `6D60C(1)`; 387 words; no `+0xE` | PROVEN | before 0x39 |
 | BTL-MODE7 | `0x8002CEE0` jal `6914C(0)` then `D_8009D28C=7` | PROVEN | not issued |
@@ -55,6 +56,7 @@ python3 pc_port/tools/pe_btl6_3d834_callees_oracle.py
 ./pc_port/build/pe-native-tests   # 676/676
 ```
 
-STOP/NEXT: prove live `+0x158` payload on EE `0→11→12→13` (not
-EE=4). Then `0x8003A3B4` if `obj+0x18>0`. Empty 3A088/3B97C cuts
-and full 3BCE0 are ported. Do not `andi 0xFC`.
+STOP/NEXT: `0x8003A3B4` — 3A088 GTE MVMVA walk. Live `+0x158`
+object from EE=4 / CE4=1 / CE2=11 PE.IMG `[428,434)` has
+`obj+0x18=2`. Empty cuts are not live. Do not invent GTE.
+Do not `andi 0xFC`.

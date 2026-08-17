@@ -18,11 +18,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: prove live overlay `+0x158` payload on EE `0→11→12→13`
-(EE=4 is the only `6C5BC` CD into that arena and is not visited).
-Then `0x8003A3B4` if `obj+0x18>0`. Named cuts: `3A088` mode-0
-empty, `3B97C` empty gate, full `3BCE0`. Do not `andi 0xFC` or
-complete `0x55`. No matching `src/` C.
+STOP/NEXT: `0x8003A3B4` — 3A088 GTE MVMVA walk. First
+`6C4C4(-1)` sets CE4=1; EE=4 fills `+0x158` from PE.IMG
+`[428,434)` (`obj+2=2`, `obj+0x18=2`). Empty cuts are not
+live. Do not invent GTE. Do not `andi 0xFC` or complete
+`0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
