@@ -49,3 +49,38 @@ int func_80066B60(unsigned int a0)
     PE_StoreU16(GA_D_800BCFF4, s2);
     return 0;
 }
+
+/*
+ * PE-BTL60 — func_80066BD8 RGB fade (translated retail, not
+ * matching src/). 41 words 0x80066BD8..0x80066C7C, SHA-256
+ * ebcd3c1a1457163e25b0a72b07729e8b8bd418bfe342f8e7e3e97174c25930cc.
+ * Sole live jal 18F0C / opcode 0x87. Snapshot CFE8/EA/EC, write
+ * a1/a2/a3 into those three, CFEE=2, CFF6=a0, CFF8=0, snapshot
+ * to CFF0/F2/F4. CFEF = a4 if 0<=a4<4 else 1.
+ * Live type-0 +0x1020: (0x3C, 0xFF, 0xFF, 0xFF, 1).
+ */
+int func_80066BD8(unsigned int a0, unsigned int a1, unsigned int a2,
+                  unsigned int a3, unsigned int a4)
+{
+    uint16_t s0;
+    uint16_t s1;
+    uint16_t s2;
+
+    s0 = PE_LoadU16(GA_D_800BCFE8);
+    s1 = PE_LoadU16(GA_D_800BCFEA);
+    s2 = PE_LoadU16(GA_D_800BCFEC);
+    PE_StoreU16(GA_D_800BCFE8, (uint16_t)a1);
+    PE_StoreU16(GA_D_800BCFEA, (uint16_t)a2);
+    PE_StoreU16(GA_D_800BCFEC, (uint16_t)a3);
+    PE_StoreU8(GA_D_800BCFEE, 2u);
+    PE_StoreU16(GA_D_800BCFF6, (uint16_t)a0);
+    PE_StoreU16(GA_D_800BCFF8, 0u);
+    PE_StoreU16(GA_D_800BCFF0, s0);
+    PE_StoreU16(GA_D_800BCFF2, s1);
+    PE_StoreU16(GA_D_800BCFF4, s2);
+    if (a4 < 4u)
+        PE_StoreU8(GA_D_800BCFEF, (uint8_t)a4);
+    else
+        PE_StoreU8(GA_D_800BCFEF, 1u);
+    return 0;
+}
