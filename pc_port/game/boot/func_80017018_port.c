@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -89,6 +89,8 @@
 #define GA_OP85       0x80018EB4u
 #define GA_OPDC       0x8001A1F0u
 #define GA_OP1A       0x800176FCu
+#define GA_OP6F       0x80018954u
+#define GA_OP5A       0x80018164u
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 
@@ -344,6 +346,44 @@ int func_800176FC(pe_addr_t args)
     return 1;
 }
 
+/*
+ * PE-BTL44 — opcode 0x6F slot-alloc wrapper 18954.
+ *
+ * 10 words 0x80018954..0x8001897C, SHA-256 9dc14475…a5ff.
+ * D_800910A0[0x6F]. jal 2F7D8(*D2F0); v0=1.
+ * Live type-2 after 0x1A. 2F7D8 is already ported (CH1).
+ */
+int func_80018954(pe_addr_t args)
+{
+    (void)args;
+    func_8002F7D8(PE_LoadU32(GA_D_8009D2F0));
+    return 1;
+}
+
+/*
+ * PE-BTL44 — opcode 0x5A tagged-set wrapper 18164.
+ *
+ * 26 words 0x80018164..0x800181CC, SHA-256 b2d7e11c…9c8f.
+ * D_800910A0[0x5A]. If D2F0+0x0C==0: 2FF78(lbu *arg0, *arg1).
+ * Else 30220(D2F0, lbu *arg0, *arg1). v0=1.
+ * Live type-2 is type!=0 so 30220. Callees already ported (CH1).
+ */
+int func_80018164(pe_addr_t args)
+{
+    pe_addr_t actor;
+    uint8_t tag;
+    uint32_t value;
+
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    tag = PE_LoadU8(PE_LoadU32(args));
+    value = PE_LoadU32(PE_LoadU32(args + 4u));
+    if (PE_LoadU8(actor + 0x0Cu) == 0u)
+        func_8002FF78(tag, value);
+    else
+        func_80030220(actor, tag, value);
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == GA_OP0)
@@ -436,6 +476,10 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_8001A1F0(args);
     if (fn == GA_OP1A)
         return func_800176FC(args);
+    if (fn == GA_OP6F)
+        return func_80018954(args);
+    if (fn == GA_OP5A)
+        return func_80018164(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }

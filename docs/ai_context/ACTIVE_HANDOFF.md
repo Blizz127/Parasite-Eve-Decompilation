@@ -20,16 +20,15 @@ overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
 STOP/NEXT: Type-2 mailbox `0xFB` is ported
-through `0xDC` and `0x1A` (70DD0(0,100) →
-local[0x18]). Next on that arm is the
-`local[0x18] < 0x13` branch then `0x6F`/`0x5A`.
-Type-3 `0x85` stays hit-gated. Type-6 `0x12`
-waits on scratch[0]&4. Do not invent pad /
-persist==39 / scratch / hit. Do not force
-`+0x1B0` / dest+0x24 / `D2E8` / `3999C`.
-Do not publish `B0E70` until `3D050` tail is
-real. E0060 is EXE list-clear, not M2.
-`matching_native=769/769`. No matching `src/` C.
+through `0x6F`/`0x5A` (2F7D8/30220). Next
+unported on that arm is `0xB7`. Type-3 `0x85`
+stays hit-gated. Type-6 `0x12` waits on
+scratch[0]&4. Do not invent pad / persist==39 /
+scratch / hit. Do not force `+0x1B0` /
+dest+0x24 / `D2E8` / `3999C`. Do not publish
+`B0E70` until `3D050` tail is real. E0060 is
+EXE list-clear, not M2.
+`matching_native=770/770`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
