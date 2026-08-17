@@ -156,6 +156,19 @@ void func_80042EDC(void)
 }
 
 /*
+ * 0x80042F20..0x80042F38 exclusive (6 words). Twin of 42EDC's two
+ * gp stores only: addiu 5 / sw gp+0x168, addiu -1 / sw gp+0x174,
+ * jr+nop. Next leaf at 0x80042F38 is a different function
+ * (sw $zero, gp+0x168). Two TEXT jals: 144FC 0x38 @ 0x800145C8
+ * and 0x8005D608.
+ */
+void func_80042F20(void)
+{
+    PE_StoreU32(0x8009CED8u, 5u);
+    PE_StoreU32(0x8009CEE4u, 0xFFFFFFFFu);
+}
+
+/*
  * 144FC state 0x37 at 0x80014570. If overlay word bit 0x400000 is
  * clear, jal 42EDC; always sb 0x38 → +0xF4 and re-dispatch
  * (j 0x80014518). Named cut does not enter 0x38 / 6D60C.
@@ -307,6 +320,88 @@ int func_800144FC_state38_cut(void)
 {
     if (func_8006D60C(1) == 1)
         return 0;
+    if ((PE_LoadU32(GA_OVERLAY) & 0x00400000u) == 0u)
+        func_80042F20();
+    PE_StoreU8(GA_OVERLAY + 0xF4u, 0x39u);
+    return 0;
+}
+
+extern int func_8006E6A8(int lba, pe_addr_t dest, int sectors);
+extern int func_8006E7E8(void);
+extern unsigned int D_8009D1A0;
+
+#define GA_930E2  0x800930E2u
+#define GA_930E4  0x800930E4u
+
+/*
+ * func_8006914C is 274 words (0x8006914C..0x80069594). Dispatch on
+ * lbu +0xEF. State 0: if D1A0 bit 0x80 clear, ROM fills two 11-slot
+ * tables at +0x188 / +0x188+0x6E84 then jalr D_800942E0 — those
+ * dests/callbacks are not invented here. Proven tail: overlay |= 8,
+ * D1A0 |= 0x80. a0!=0 && bit 8 → sb 0x34, return 1 (re-dispatch).
+ * 0x34 jals real 6E6A8(LBA=+0x100+lhu 930E2, dest=+0x194,
+ * sectors=lhu 930E4 - lhu 930E2). -1 stays 0x34 return 1; else
+ * sb 0x35 return 1. 0x35 jals real 6E7E8: -1 sb 0x34; pending
+ * stay; 0 sb 0x36 return 1 (0x36 body not entered). Does not
+ * return 0 on the live a0=1 path, sb 0x3A, or write mode 7.
+ */
+int func_8006914C(int a0)
+{
+    unsigned int ef;
+    unsigned int word;
+    int status;
+    unsigned int off;
+    unsigned int end;
+
+    ef = PE_LoadU8(GA_OVERLAY + 0xEFu);
+    if (ef == 0u) {
+        if ((D_8009D1A0 & 0x80u) == 0u) {
+            word = PE_LoadU32(GA_OVERLAY);
+            PE_StoreU32(GA_OVERLAY, word | 8u);
+            D_8009D1A0 |= 0x80u;
+        }
+        if (a0 != 0 && (PE_LoadU32(GA_OVERLAY) & 8u) != 0u) {
+            PE_StoreU8(GA_OVERLAY + 0xEFu, 0x34u);
+            return 1;
+        }
+        PE_StoreU8(GA_OVERLAY + 0xEFu, 0u);
+        return 1;
+    }
+    if (ef == 0x34u) {
+        off = PE_LoadU16(GA_930E2);
+        end = PE_LoadU16(GA_930E4);
+        status = func_8006E6A8(
+            (int)(PE_LoadU32(GA_OVERLAY + 0x100u) + off),
+            PE_LoadU32(GA_OVERLAY + 0x194u),
+            (int)(end - off));
+        if (status != -1)
+            PE_StoreU8(GA_OVERLAY + 0xEFu, 0x35u);
+        return 1;
+    }
+    if (ef == 0x35u) {
+        status = func_8006E7E8();
+        if (status == -1) {
+            PE_StoreU8(GA_OVERLAY + 0xEFu, 0x34u);
+            return 1;
+        }
+        if (status != 0)
+            return 1;
+        PE_StoreU8(GA_OVERLAY + 0xEFu, 0x36u);
+        return 1;
+    }
+    return 1;
+}
+
+/*
+ * 144FC state 0x39 at 0x800145DC. jal 6914C(1); v0==1 parks at
+ * 0x80014660 (v0=0). Else sb 0x3A and re-dispatch. Named cut does
+ * not enter 0x3A / 29810 / mode 7.
+ */
+int func_800144FC_state39_cut(void)
+{
+    if (func_8006914C(1) == 1)
+        return 0;
+    PE_StoreU8(GA_OVERLAY + 0xF4u, 0x3Au);
     return 0;
 }
 

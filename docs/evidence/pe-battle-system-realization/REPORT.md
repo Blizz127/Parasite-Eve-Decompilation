@@ -33,13 +33,15 @@ the retail battle runtime, not a one-off script.
 | BTL-3B97C | 217w, 0 jals; empty dest+0 / +0xBA / obj+2==0; lighting RTIR+NCCT at 0x8003BA24 | PORTED | `pe-btl6-3b97c-lighting` |
 | BTL-3BCE0 | 245w, 0 jals; four directory packet walks; keep-byte overlaps sw+4 | PORTED | `pe-btl6-3d834-callees` |
 | BTL-158 | Only `6E6A8` dest `+0x158` is EE=4; first `6C4C4(-1)` sets CE4=1; CE2=11 → PE.IMG `[428,434)` `obj+0x18=2` | PROVEN | `pe-btl6-3d834-callees` |
-| BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PROVEN | not the 0x3B wait |
+| BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PORTED | state 0 tail + 0x34/0x35; table/jalr not entered |
 | BTL-6D60C | `144FC` `0x38` jal `6D60C(1)`; 387w sha256 `14e5794d…`; +0xF2 JT; no `+0xE` | PROVEN | `pe-btl6-6d60c` |
 | BTL-6D078 | 117w `0x8006D078..0x8006D24C`; +0xF3 JT; state0 sb 0x28; 0x28 jals 6CDA4 | PORTED | empty 0x2A → F3=0; bit0x10+half≥2 → 0x2B |
 | BTL-6D79C | 6D60C after 6D078=0; live F2 0x3F→0x2F; 6CDA4(0) → 87198 | PORTED | B0E64=D11614-8 only; NYPD 0x2A empty |
 | BTL-87198 | 5w `D_8009D270=1` return 0; 6CDA4 state0 a0=0 | PORTED | matching `src/` already; native port |
 | BTL-86464 | 13w `CD80=0x10` `CD84=a0` jal 8CBA8; cmd 0x10 = 85084 fail -1 | PORTED | no stream-complete |
 | BTL-86C1C | 16w `CD80=0xC0` `CD84=a1&7F` `CD90=a0` jal 8CBA8 | PORTED | 0xC0 default ring |
+| BTL-42F20 | 6w `gp+0x168=5` `gp+0x174=-1`; 144FC 0x38 after 6D60C==0 | PORTED | `pe_btl6_42f20_oracle.py` |
+| BTL-145DC | `144FC` 0x39 jal `6914C(1)`; v0==1 parks; no sb 0x3A | PORTED | 6E6A8 -1 stays EF=0x34 |
 | BTL-87414 | 5w `D_8009D270=2` return 0; 6CDA4 state0 a0=3 | PORTED | matching `src/` already; native port |
 | BTL-6CDA4 | 181w +0xF0 SM; live a0=1 sb 7 + table 0x0F; state7 real 6E6D4 | PORTED | -1 → F0=0; ok → F0=8 |
 | BTL-6E7E8 | 19w poll; state8 -1→7 pending→8 0→9; PE.IMG 8C6 AKAO | PORTED | `func_8006CDA4_state8_cut` parks at 9 |
@@ -79,8 +81,10 @@ python3 pc_port/tools/pe_btl6_87090_oracle.py
 python3 pc_port/tools/pe_btl6_870e0_oracle.py
 python3 pc_port/tools/pe_btl6_87198_oracle.py
 python3 pc_port/tools/pe_btl6_86464_oracle.py
-./pc_port/build/pe-native-tests   # 690/690
+python3 pc_port/tools/pe_btl6_42f20_oracle.py
+./pc_port/build/pe-native-tests   # 691/691
 ```
 
-STOP/NEXT: `0x80042F20` — 144FC 0x38 after 6D60C 0x30 returns 0.
-Do not stub `6914C`, jump to mode 7, or complete `0x55`.
+STOP/NEXT: `0x8006914C` state 0x36 / +0x188 table+jalr — 144FC 0x39
+parks while 6E6A8 returns -1. Do not stub `6914C` success, jump to
+mode 7, or complete `0x55`.
