@@ -230,7 +230,9 @@ extern int func_8006E7E8(void);
  * sll 11). -1 sb 0 return 0; else sb 8 return 1. State 8 jals
  * real 6E7E8: -1 sb 7, pending stays 8, 0 sb 9. State 9 live a0=1
  * jals real 87090(dest, 0); -1 sb 0, else sb 0xA and parks.
- * 870E0/851A8 success are not stubbed.
+ * State 0xA jals real 870E0 (return D_8009D24C). -1 sb 0;
+ * busy stays 0xA; 0 subtracts gp+0x40C from remain and sb 7.
+ * 870E0 does not store; DMA-complete is not invented here.
  */
 void func_8006CDA4_state0_a0eq1_cut(int a1)
 {
@@ -303,6 +305,26 @@ int func_8006CDA4_state9_a0eq1_cut(pe_addr_t dest)
     return 1;
 }
 
+int func_8006CDA4_stateA_cut(void)
+{
+    int st;
+    unsigned int remain;
+    unsigned int chunk;
+
+    st = func_800870E0();
+    if (st == -1) {
+        PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
+        return 1;
+    }
+    if (st != 0)
+        return 1;
+    remain = PE_LoadU32(GA_GP_408);
+    chunk = PE_LoadU32(GA_GP_40C);
+    PE_StoreU32(GA_GP_408, remain - chunk);
+    PE_StoreU8(GA_OVERLAY + 0xF0u, 7u);
+    return 1;
+}
+
 int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
                   int stack_flag)
 {
@@ -329,6 +351,6 @@ int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
         return 1;
     }
     if (f0 == 10u)
-        return 1;
+        return func_8006CDA4_stateA_cut();
     return 1;
 }

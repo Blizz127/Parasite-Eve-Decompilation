@@ -36,9 +36,9 @@ cut without a planted dest.
 
 ## Next
 
-`0x800870E0` — 6CDA4 state 0xA, 4 words,
-`return D_8009D24C`. Do not stub DMA-complete, jump to
-mode 7, or complete `0x55`.
+`0x8006D178` — 6D078 state 0x2A after 6CDA4 returns 0.
+See `pe-btl6-870e0`. Do not stub `6914C`, jump to mode 7,
+or complete `0x55`.
 
 ## Verify
 
