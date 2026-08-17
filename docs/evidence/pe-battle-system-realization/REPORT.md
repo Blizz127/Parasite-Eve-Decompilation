@@ -156,7 +156,10 @@ the retail battle runtime, not a one-off script.
 | BTL-6F39C | 206w; 6914C; remap ≥0x55; slot 0xA0C; jalr D4620 | PORTED | CE49C extra 0x20 is empty |
 | BTL-13C34 | 148w 0x4B; ratan2 turn toward D254; CE00-0x14 retry | PORTED | live fork 0x6B0 step 0x400 |
 | BTL-143B0 | 83w 0x54; abs dX+dY+dZ vs D254; miss -1 | PORTED | live fork 0x6FE → local[0x11] |
-| next_live_va | type2 0x6B/6F6D4 and 0x0E; type6 0x12; type3 0x85 | RESEARCH_REQUIRED | scratch&4 / region hit / D1F4 |
+| BTL-187C0 | 22w 0x6B; jal 6F6D4(*arg0,0,*arg1..*arg4); v0=1 | PORTED | live (local[7],1,0,0,0) |
+| BTL-6F6D4 | 83w; index<0x16; remap ≥0x55; jalr entry+8 | PORTED | table[0x55]+8 = D4698 |
+| BTL-D4698 | 27w; F32D0=slot; E2368=slot+0xC; jalr rec+0x30 | PORTED | live +0x8C=0 → skip jalr |
+| next_live_va | type2 0x0E after 0x4B; after 0x6B; type6 0x12; type3 0x85 | RESEARCH_REQUIRED | scratch&4 / region hit / D1F4 |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -254,12 +257,13 @@ python3 pc_port/tools/pe_btl46_18004_oracle.py
 python3 pc_port/tools/pe_btl47_131e8_oracle.py
 python3 pc_port/tools/pe_btl48_18774_oracle.py
 python3 pc_port/tools/pe_btl49_13c34_143b0_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=775/775
+python3 pc_port/tools/pe_btl50_187c0_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=776/776
 ```
 
 STOP/NEXT: Type-2 `0xFB` arm is ported through
-`0x4B`/`0x54`. Next is `0x6B` / `0x0E`. Type-3
-`0x85` stays hit-gated. Type-6 `0x12` waits
-on scratch[0]&4. Do not invent pad /
-persist==39 / scratch / hit. `D2E8` bit 0 stays
-set.
+`0x6B`. Next is `0x0E` and the opcode after
+live `0x6B`. Type-3 `0x85` stays hit-gated.
+Type-6 `0x12` waits on scratch[0]&4. Do not
+invent pad / persist==39 / scratch / hit.
+`D2E8` bit 0 stays set.
