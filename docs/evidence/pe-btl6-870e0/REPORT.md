@@ -42,9 +42,8 @@ issue path leaves D24C=1, so the next tick parks at 0xA until
 
 ## Next
 
-`0x8006D79C` — 6D60C after 6D078 returns 0. See
-`pe-btl6-6d078`. Do not stub `6914C`, jump to mode 7,
-or complete `0x55`.
+`0x80087198` — 6CDA4 a0=0 from F2=0x2F. See `pe-btl6-6d79c`.
+Do not stub `6914C`, jump to mode 7, or complete `0x55`.
 
 ## Verify
 

@@ -36,9 +36,8 @@ tick. 0x2B a0=3 runs the table fill then `87414`
 
 ## Next
 
-`0x8006D79C` — 6D60C after 6D078 returns 0. Live 0x2A
-needs the `D_800B0E64` archive. Do not stub `6914C`,
-jump to mode 7, or complete `0x55`.
+`0x80087198` — 6CDA4 a0=0 from F2=0x2F. See `pe-btl6-6d79c`.
+Do not stub `6914C`, jump to mode 7, or complete `0x55`.
 
 ## Verify
 
