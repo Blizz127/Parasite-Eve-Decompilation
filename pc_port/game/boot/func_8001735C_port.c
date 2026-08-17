@@ -67,6 +67,7 @@
 
 #define GA_D_8009D2F0 0x8009D2F0u
 #define GA_D_8009D254 0x8009D254u
+#define GA_D_8009D20C 0x8009D20Cu
 #define GA_D_8009D1FC 0x8009D1FCu
 #define GA_D_8009D1D8 0x8009D1D8u
 #define GA_D_8009CE08 0x8009CE08u
@@ -325,5 +326,96 @@ int func_80012C20(pe_addr_t args)
     PE_StoreU32(actor + 0x58u, a);
     PE_StoreU32(actor + 0x5Cu, b);
     PE_StoreU32(actor + 0x60u, c);
+    return 1;
+}
+
+/*
+ * PE-BTL25 — opcode 0x5E pose-copy 14694.
+ *
+ * 147 words 0x80014694..0x800148E0, SHA-256 97c3ff9a…059e.
+ * D_800910A0[0x5E]. Zero jal. Always v0=1.
+ * jtbl_80010190 codes 0-6 are the 12C20 pose groups.
+ *
+ * *arg1==0 → D_8009D254 (no +0x98&0x10 test).
+ * *arg1!=0 → walk D_8009D20C via +4; match type/idB and
+ * !(+0x98&0x10). Miss stores *arg6=-1.
+ * Live type-3 +0x00C: code 0, type 0, idB 0, locals 0..3.
+ */
+int func_80014694(pe_addr_t args)
+{
+    pe_addr_t found;
+    uint32_t type;
+    uint32_t code;
+    uint32_t idb;
+
+    type = PE_LoadU32(PE_LoadU32(args + 4u));
+    if (type == 0u) {
+        found = PE_LoadU32(GA_D_8009D254);
+        if (found == 0u) {
+            PE_StoreU32(PE_LoadU32(args + 24u), 0xFFFFFFFFu);
+            return 1;
+        }
+    } else {
+        idb = PE_LoadU32(PE_LoadU32(args + 8u));
+        found = PE_LoadU32(GA_D_8009D20C);
+        while (found != 0u) {
+            if (PE_LoadU8(found + 0x0Cu) == (uint8_t)type &&
+                PE_LoadU8(found + 0x0Du) == (uint8_t)idb &&
+                (PE_LoadU32(found + 0x98u) & 0x10u) == 0u)
+                break;
+            found = PE_LoadU32(found + 4u);
+        }
+        if (found == 0u) {
+            PE_StoreU32(PE_LoadU32(args + 24u), 0xFFFFFFFFu);
+            return 1;
+        }
+    }
+
+    PE_StoreU32(PE_LoadU32(args + 24u), 1u);
+    code = PE_LoadU32(PE_LoadU32(args));
+    if (code >= 7u)
+        return 1;
+    if (code == 0u) {
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(found + 0x28u));
+        PE_StoreU32(PE_LoadU32(args + 16u), PE_LoadU32(found + 0x2Cu));
+        PE_StoreU32(PE_LoadU32(args + 20u), PE_LoadU32(found + 0x30u));
+        return 1;
+    }
+    if (code == 1u) {
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(found + 0x40u));
+        PE_StoreU32(PE_LoadU32(args + 16u), PE_LoadU32(found + 0x44u));
+        PE_StoreU32(PE_LoadU32(args + 20u), PE_LoadU32(found + 0x48u));
+        return 1;
+    }
+    if (code == 2u) {
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(found + 0x68u));
+        PE_StoreU32(PE_LoadU32(args + 16u), PE_LoadU32(found + 0x6Cu));
+        PE_StoreU32(PE_LoadU32(args + 20u), PE_LoadU32(found + 0x70u));
+        return 1;
+    }
+    if (code == 3u) {
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(found + 0x78u));
+        PE_StoreU32(PE_LoadU32(args + 16u), PE_LoadU32(found + 0x7Cu));
+        PE_StoreU32(PE_LoadU32(args + 20u), PE_LoadU32(found + 0x80u));
+        return 1;
+    }
+    if (code == 4u) {
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(found + 0x88u));
+        PE_StoreU32(PE_LoadU32(args + 16u), PE_LoadU32(found + 0x8Cu));
+        PE_StoreU32(PE_LoadU32(args + 20u), PE_LoadU32(found + 0x90u));
+        return 1;
+    }
+    if (code == 5u) {
+        PE_StoreU32(PE_LoadU32(args + 12u),
+                    (uint32_t)(int32_t)(int16_t)PE_LoadU16(found + 0x38u));
+        PE_StoreU32(PE_LoadU32(args + 16u),
+                    (uint32_t)(int32_t)(int16_t)PE_LoadU16(found + 0x3Au));
+        PE_StoreU32(PE_LoadU32(args + 20u),
+                    (uint32_t)(int32_t)(int16_t)PE_LoadU16(found + 0x3Cu));
+        return 1;
+    }
+    PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(found + 0x58u));
+    PE_StoreU32(PE_LoadU32(args + 16u), PE_LoadU32(found + 0x5Cu));
+    PE_StoreU32(PE_LoadU32(args + 20u), PE_LoadU32(found + 0x60u));
     return 1;
 }
