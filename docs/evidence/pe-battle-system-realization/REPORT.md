@@ -97,7 +97,10 @@ the retail battle runtime, not a one-off script.
 | BTL-15DAC-190 | 34w search + 15w match; B0DFC=ov+0x2E838 | PORTED | live key 0x28 row2 |
 | BTL-17D7C | 8w op 0x40 `D2E8\|=1`; 3999C skip setter | PORTED | live type1 +0x040 |
 | BTL-16910-2900 | 314w 0xED; live 2900 `B0CD8\|=0x400000` | PORTED | other keys not this cut |
-| next_live_va | type1 op `0xE1` = `1A374` | RESEARCH_REQUIRED | then 0x84/0x88/0x14/0x02/0x08 |
+| BTL-1A374 | 7w 0xE1 sb → BCFFC | PORTED | live 0x54 |
+| BTL-18E84 | 12w 0x84 sh D020/D022 | PORTED | live 0x800,0x800 |
+| BTL-18F54 | 8w 0x88 BCFEE&=~0x40 | PORTED | argc 0 |
+| next_live_va | type1 next visit `0x08`/`1735C` spawn | RESEARCH_REQUIRED | 35038 type 3 then 0 then 5 |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -159,6 +162,7 @@ python3 pc_port/tools/pe_btl17_17588_oracle.py
 python3 pc_port/tools/pe_btl18_15dac_190_oracle.py
 python3 pc_port/tools/pe_btl19_17d7c_oracle.py
 python3 pc_port/tools/pe_btl20_16910_oracle.py
+python3 pc_port/tools/pe_btl21_e1_84_88_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
@@ -167,7 +171,7 @@ python3 pc_port/tools/pe_btl6_339a0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: live type-1 `0xED` 2900 ORs overlay bit
-`0x400000`. Next is `0xE1`/`1A374`. `0x40` already set
-`D2E8` bit 0 (`3999C` skip). E0060 is EXE list-clear, not
-M2.
+STOP/NEXT: type-1 first visit now yields at `0x02`. Next
+visit is `0x08`/`1735C` (35038 spawn type 3, then 0, then
+5). `D2E8` bit 0 is already set (`3999C` skip). E0060 is
+EXE list-clear, not M2.
