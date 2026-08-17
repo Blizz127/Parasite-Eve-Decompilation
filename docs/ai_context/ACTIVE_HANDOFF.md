@@ -3,6 +3,21 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL68 — 3999C `*codep` walk + digital 710A4/7136C
+
+`matching_native=794/794`. HEAD after this rung: BTL68. No matching
+`src/` C. No push. Shared dirty files stay unstaged.
+
+BTL67 indexed `table[actor+0]`. **REJECTED.** ROM `399C0` is
+`lw 0(s2)` / `s2=a2`: `table[*codep]`. Live `0x2E(0x15)` → row 21.
+`D26C=0` jalrs nothing. `D26C&0x78` → `710A4` (cmd `0x16`).
+`D26C&1` plus `0x78` → `7136C` (cmd `0x17`). `3EB04` bit0=Circle,
+bits 3–6=Up/Right/Down/Left. Do not invent pad.
+
+`78934` applies `D_800BD000`. Publisher is `66CE8` (jal from
+`68CE8`); not this cut. `+0x98` bit 1 still gates 35C84 integrate.
+Type-6 scratch/`D28C` and type-3 `0x85` stay authentic-gated.
+
 ## PE-BTL5 — live 0x3B wait from 3F074 → 6C4C4/6C5BC
 
 NYPD/Eve-intro parks on m0005i `0x55(2)` at module 6 `+0x4140`

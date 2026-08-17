@@ -16,8 +16,8 @@
  *
  * Known jalr targets 0x80035E04 (types 1–9) and 0x80035C84
  * (type 0) are ported below. PE-BTL67 wires 35C84 jal 3999C
- * when D2E8 bit 0 is clear (0x3F). 7136C-family jalr is not
- * this cut.
+ * when D2E8 bit 0 is clear (0x3F). PE-BTL68 indexes
+ * table[*codep] (not actor+0) and jalrs 710A4/7136C.
  * After the walk, this cut also takes the live D1A0&2 jal
  * 299CC @ 0x800355E8 (consume + after-consume idle gate) and
  * the 35B2C jal 69594 event pump. PE-BTL66 adds the post-69594
@@ -38,16 +38,28 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "pe_sdk.h"
 
 #define GA_D_8009D20C 0x8009D20Cu
 #define GA_D_8009D254 0x8009D254u
 #define GA_D_8009D2F0 0x8009D2F0u
 #define GA_D_8009D300 0x8009D300u
 #define GA_D_8009D2E8 0x8009D2E8u
+#define GA_D_8009D26C 0x8009D26Cu
+#define GA_D_8009D1F4 0x8009D1F4u
+#define GA_D_8009D1E4 0x8009D1E4u
 #define GA_D_800B0CD8 0x800B0CD8u
 #define GA_D_800943C0 0x800943C0u
+#define GA_D_800BD000 0x800BD000u
+#define GA_D_800BD020 0x800BD020u
+#define GA_D_800BE9A0 0x800BE9A0u
 #define GA_VT_35E04   0x80035E04u
 #define GA_VT_35C84   0x80035C84u
+#define GA_FN_7136C   0x8007136Cu
+#define GA_FN_710A4   0x800710A4u
+#define GA_WALK_VEL   0x801221A0u
+#define CMD_RTIR_SF0  0x041E012u
+#define CMD_RTIR_SF1  0x049E012u
 
 extern void func_8001A4AC(pe_addr_t actor);
 
@@ -121,33 +133,279 @@ void func_80035E04(pe_addr_t actor)
 }
 
 /*
- * PE-BTL67 — func_8003999C pad-table dispatcher.
+ * PE-BTL68 — 78934 GTE large-vector RT*IR (88w 0x80078934..0x80078A94).
+ * Loads 5-word MATRIX at a0, splits each a1 word into >>15 / &0x7FFF,
+ * MVMVA sf=0 then sf=1, adds (hi_mac<<3)+lo_mac into a2[0..2].
+ */
+void func_80078934(pe_addr_t matrix, pe_addr_t src, pe_addr_t dst)
+{
+    int i;
+    int32_t hi[3];
+    int32_t lo[3];
+
+    PE_GTE_LoadRT33(matrix);
+    for (i = 0; i < 3; i++) {
+        int32_t v = (int32_t)PE_LoadU32(src + (unsigned)i * 4u);
+        int32_t a = v;
+
+        if (a < 0)
+            a = -a;
+        hi[i] = a >> 15;
+        lo[i] = a & 0x7FFF;
+        if (v < 0) {
+            hi[i] = -hi[i];
+            lo[i] = -lo[i];
+        }
+    }
+    PE_GTE_SetIR((int16_t)hi[0], (int16_t)hi[1], (int16_t)hi[2]);
+    PE_GTE_MVMVA(CMD_RTIR_SF0);
+    hi[0] = g_pe_gte.mac[0];
+    hi[1] = g_pe_gte.mac[1];
+    hi[2] = g_pe_gte.mac[2];
+    PE_GTE_SetIR((int16_t)lo[0], (int16_t)lo[1], (int16_t)lo[2]);
+    PE_GTE_MVMVA(CMD_RTIR_SF1);
+    for (i = 0; i < 3; i++) {
+        int32_t h = hi[i];
+
+        if (h < 0)
+            h = -((-h) << 3);
+        else
+            h <<= 3;
+        PE_StoreU32(dst + (unsigned)i * 4u,
+                    (uint32_t)(g_pe_gte.mac[i] + h));
+    }
+}
+
+static void pe_walk_digital_apply(pe_addr_t actor, uint32_t speed)
+{
+    uint32_t bits;
+    uint16_t yaw;
+    uint16_t facing;
+    uint32_t diag;
+    uint32_t vx;
+    uint32_t vy;
+    uint32_t vz;
+    pe_addr_t rec;
+
+    if ((PE_LoadU16(GA_D_800BE9A0) & 0xF000u) == 0x7000u)
+        return;
+
+    diag = func_8003708C(speed, 0xB504u);
+    bits = PE_LoadU32(GA_D_8009D26C);
+    yaw = PE_LoadU16(GA_D_800BD020);
+    facing = yaw;
+    vx = 0u;
+    vy = 0u;
+    vz = 0u;
+    if ((bits & 8u) != 0u) {
+        if ((bits & 0x40u) != 0u) {
+            facing = (uint16_t)(yaw + 0x600u);
+            vx = (uint32_t)-(int32_t)diag;
+            vz = diag;
+        } else if ((bits & 0x10u) != 0u) {
+            facing = (uint16_t)(yaw + 0xA00u);
+            vx = diag;
+            vz = diag;
+        } else {
+            facing = (uint16_t)(yaw + 0x800u);
+            vz = speed;
+        }
+    } else if ((bits & 0x20u) != 0u) {
+        if ((bits & 0x40u) != 0u) {
+            facing = (uint16_t)(yaw + 0x200u);
+            vx = (uint32_t)-(int32_t)diag;
+            vz = (uint32_t)-(int32_t)diag;
+        } else if ((bits & 0x10u) != 0u) {
+            facing = (uint16_t)(yaw + 0xE00u);
+            vx = diag;
+            vz = (uint32_t)-(int32_t)diag;
+        } else {
+            facing = yaw;
+            vz = (uint32_t)-(int32_t)speed;
+        }
+    } else if ((bits & 0x40u) != 0u) {
+        facing = (uint16_t)(yaw + 0x400u);
+        vx = (uint32_t)-(int32_t)speed;
+    } else if ((bits & 0x10u) != 0u) {
+        facing = (uint16_t)(yaw + 0xC00u);
+        vx = speed;
+    }
+
+    rec = PE_LoadU32(GA_D_8009D254);
+    if (rec != 0u && (PE_LoadU32(GA_D_8009D2E8) & 0x10u) != 0u) {
+        rec = PE_LoadU32(rec);
+        facing = (uint16_t)(facing + 0x800u);
+        if (rec != 0u)
+            facing = (uint16_t)(facing
+                                + ((PE_LoadU32(rec + 0x4Cu) >> 7) & 0xC00u));
+    }
+    facing &= 0xFFFu;
+    PE_StoreU32(GA_WALK_VEL, vx);
+    PE_StoreU32(GA_WALK_VEL + 4u, vy);
+    PE_StoreU32(GA_WALK_VEL + 8u, vz);
+    PE_StoreU16(actor + 0x3Au, facing);
+    func_80078934(GA_D_800BD000, GA_WALK_VEL, actor + 0x68u);
+    if ((PE_LoadU32(GA_D_8009D2E8) & 0x10u) != 0u) {
+        PE_StoreU16(actor + 0x3Au,
+                    (uint16_t)((0x1000u - PE_LoadU16(actor + 0x3Au))
+                               & 0xFFFu));
+        PE_StoreU32(actor + 0x68u,
+                    (uint32_t)-(int32_t)PE_LoadU32(actor + 0x68u));
+    }
+}
+
+/*
+ * PE-BTL68 — func_8007136C walk core.
+ * 206 words 0x8007136C..0x800716A4, SHA-256 below in oracle.
+ * Analog (BE9A0&0xF000==0x7000) is not this cut.
+ */
+void func_8007136C(pe_addr_t actor, pe_addr_t codep)
+{
+    uint32_t speed;
+    uint32_t scaled;
+    pe_addr_t rec;
+    uint32_t word;
+    uint32_t code;
+
+    speed = 0x168000u;
+    if ((D_8009D1A0 & 2u) != 0u) {
+        rec = PE_LoadU32(actor);
+        word = PE_LoadU32(rec + 0x4Cu);
+        if ((word & 0xC0u) == 0x40u)
+            speed = 0xB4000u;
+        else if ((word & 0x100u) != 0u)
+            speed = 0x21C000u;
+        code = PE_LoadU8(rec + 0x13u);
+        if (PE_LoadU32(codep) != code) {
+            func_8001A680_command_cut(actor, code);
+            PE_StoreU32(codep, code);
+        }
+    } else {
+        code = PE_LoadU32(codep);
+        if (code != 0x17u) {
+            func_8001A680_command_cut(actor, 0x17u);
+            PE_StoreU32(codep, 0x17u);
+        }
+    }
+    scaled = func_8003708C(speed, PE_LoadU32(actor + 0x20u));
+    scaled = func_8003708C(scaled,
+                           (uint32_t)PE_LoadU16(actor + 0x26u) << 4);
+    pe_walk_digital_apply(actor, scaled);
+}
+
+/*
+ * PE-BTL68 — func_800710A4 d-pad walk (no Circle).
+ * 178 words 0x800710A4..0x8007136C. D1A0&2 jals 7136C.
+ */
+void func_800710A4(pe_addr_t actor, pe_addr_t codep)
+{
+    uint32_t scaled;
+
+    if ((D_8009D1A0 & 2u) != 0u) {
+        func_8007136C(actor, codep);
+        return;
+    }
+    if (PE_LoadU32(codep) != 0x16u) {
+        func_8001A680_command_cut(actor, 0x16u);
+        PE_StoreU32(codep, 0x16u);
+    }
+    scaled = func_8003708C(0x50000u, PE_LoadU32(actor + 0x20u));
+    scaled = func_8003708C(scaled,
+                           (uint32_t)PE_LoadU16(actor + 0x26u) << 4);
+    pe_walk_digital_apply(actor, scaled);
+}
+
+static void pe_3999c_jalr(uint32_t fn, pe_addr_t actor, pe_addr_t codep)
+{
+    if (fn == GA_FN_7136C)
+        func_8007136C(actor, codep);
+    else if (fn == GA_FN_710A4)
+        func_800710A4(actor, codep);
+}
+
+/*
+ * PE-BTL67/68 — func_8003999C pad-table dispatcher.
  *
  * 118 words 0x8003999C..0x80039B74, SHA-256 9a5267b0…3f6f.
- * Sole TEXT caller 35C84 @ 35D14. Zero jal; jalr of record+0xC
- * (7136C / 710A4 / 71754 / 716A4) is not this cut.
- *
- * a0=actor, a1=D_800943C0, a2=&code (actor+0x0E or 0x11).
- * ROM indexes table[actor+0]. 2F76C stores 0x800B8A20 there;
- * table only has rows 4/5/16/17/21/22/23. Host returns when
- * the index is not a 0..63 row (live pointer would fault).
- * Do not substitute *a2 for actor+0.
+ * Sole TEXT caller 35C84 @ 35D14. Indexes table[*a2], not actor+0
+ * (399C0 is lw 0(s2); s2=a2). BTL67 host-guard on actor+0 is
+ * REJECTED. Record+0xC jalr of 710A4/7136C is this cut;
+ * 71034/716A4/71754 are not.
  */
 void func_8003999C(pe_addr_t actor, pe_addr_t table, pe_addr_t codep)
 {
     uint32_t idx;
     pe_addr_t list;
+    pe_addr_t rec;
+    uint32_t flags;
+    uint32_t fn;
+    uint32_t mask1;
+    uint32_t mask2;
+    uint32_t matched;
+    int take;
 
-    (void)codep;
-    if (actor == 0u || table == 0u)
+    if (actor == 0u || table == 0u || codep == 0u)
         return;
-    idx = PE_LoadU32(actor);
+    idx = PE_LoadU32(codep);
     if (idx >= 64u)
         return;
     list = PE_LoadU32(table + idx * 4u);
-    if (list == 0u)
+    rec = list;
+    flags = (list != 0u) ? PE_LoadU32(list) : 0u;
+    if (flags == 0u)
+        goto end_default;
+
+    matched = 0u;
+    while (flags != 0u) {
+        fn = PE_LoadU32(rec + 0xCu);
+        if (fn == 0u)
+            return;
+        mask1 = PE_LoadU32(rec + 4u);
+        mask2 = PE_LoadU32(rec + 8u);
+        take = 0;
+        if ((flags & 0x20u) != 0u) {
+            take = 1;
+        } else if ((flags & 1u) != 0u) {
+            if ((PE_LoadU32(GA_D_8009D26C) & mask1) == mask1) {
+                if ((flags & 4u) != 0u)
+                    take = (PE_LoadU32(GA_D_8009D1F4) & mask2) != 0u;
+                else if ((flags & 8u) != 0u)
+                    take = (PE_LoadU32(GA_D_8009D1E4) & mask2) != 0u;
+                else if ((flags & 2u) == 0u)
+                    take = 1;
+                else
+                    take = (PE_LoadU32(GA_D_8009D26C) & mask2) != 0u;
+            }
+        } else if ((flags & 2u) != 0u) {
+            if ((PE_LoadU32(GA_D_8009D26C) & mask2) != 0u) {
+                if ((flags & 4u) != 0u)
+                    take = (PE_LoadU32(GA_D_8009D1F4) & mask2) != 0u;
+                else if ((flags & 8u) != 0u)
+                    take = (PE_LoadU32(GA_D_8009D1E4) & mask2) != 0u;
+                else
+                    take = 1;
+            }
+        } else if ((flags & 4u) != 0u) {
+            take = (PE_LoadU32(GA_D_8009D1F4) & mask2) != 0u;
+        } else if ((flags & 8u) != 0u) {
+            take = (PE_LoadU32(GA_D_8009D1E4) & mask2) != 0u;
+        }
+        if (take) {
+            pe_3999c_jalr(fn, actor, codep);
+            matched = 1u;
+        }
+        if ((flags & 0x10u) == 0u && matched != 0u)
+            return;
+        rec += 16u;
+        flags = PE_LoadU32(rec);
+    }
+
+end_default:
+    if (rec == 0u)
         return;
-    /* Mask walk + jalr record+0xC: not this cut. */
+    fn = PE_LoadU32(rec + 0xCu);
+    if (fn != 0u)
+        pe_3999c_jalr(fn, actor, codep);
 }
 
 void func_80035C84(pe_addr_t actor)
