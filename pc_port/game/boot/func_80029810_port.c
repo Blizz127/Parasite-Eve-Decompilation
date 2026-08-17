@@ -175,8 +175,8 @@ int func_800144FC_state37_cut(void)
  * 357-word span to 6D60C (that includes 6D24C and 6D2B8).
  * +0xF3 JT 0x80011458: 0 / 0x28 / 0x29 / 0x2A / 0x2B; default v0=0.
  * No +0xE store. State 0: sw 0 → gp+0x5C, sb 0x28, re-dispatch.
- * State 0x28 jals 6CDA4(1,1,0,+0x194,0x21,0); v0==1 returns 1.
- * Named cut does not stub 6CDA4/6D60C/6914C success.
+ * State 0x28 jals 6CDA4(1,1,0,lw +0x194,0x21,0); v0==1 returns 1.
+ * v0!=1 && +0x10<2 sb 0x2A. 0x2A walk / 6E7E8 are not stubbed.
  */
 void func_8006D078_state0_cut(void)
 {
@@ -195,8 +195,16 @@ int func_8006D078(void)
         func_8006D078_state0_cut();
         f3 = 0x28u;
     }
-    if (f3 == 0x28u)
-        return func_8006CDA4(1, 1, 0, GA_OVERLAY + 0x194u, 0x21, 0);
+    if (f3 == 0x28u) {
+        if (func_8006CDA4(1, 1, 0, PE_LoadU32(GA_OVERLAY + 0x194u), 0x21, 0) == 1)
+            return 1;
+        if (PE_LoadU8(GA_OVERLAY + 0x10u) >= 2u) {
+            PE_StoreU8(GA_OVERLAY + 0xF3u, 0x29u);
+            return 1;
+        }
+        PE_StoreU8(GA_OVERLAY + 0xF3u, 0x2Au);
+        return 1;
+    }
     if (f3 == 0x29u || f3 == 0x2Au || f3 == 0x2Bu)
         return 1;
     return 0;
@@ -207,13 +215,17 @@ int func_8006D078(void)
 #define GA_GP_400    0x8009D170u
 #define GA_GP_404    0x8009D174u
 #define GA_GP_408    0x8009D178u
+#define GA_GP_40C    0x8009D17Cu
+
+extern int func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int size);
 
 /*
  * func_8006CDA4 is 181 words (0x8006CDA4..0x8006D078). +0xF0 JT
  * 0x80011428: 0 / 7 / 8 / 9 / 0xA; 1-6 unused. No +0xE store.
  * Live 6D078 0x28 is a0=1 a1=1: state 0 fills gp+0x400/404/408 from
  * D_8009317C + D_800B0DD8, skips 87198/87414, sb 7, returns 1.
- * State 7 jals 6E6D4 and is not stubbed to succeed.
+ * Dest is lw overlay+0x194. State 7 jals real 6E6D4; -1 sb 0
+ * return 0; else sb 8 return 1. 6E7E8/state 9 are not stubbed.
  */
 void func_8006CDA4_state0_a0eq1_cut(int a1)
 {
@@ -232,14 +244,38 @@ void func_8006CDA4_state0_a0eq1_cut(int a1)
     PE_StoreU8(GA_OVERLAY + 0xF0u, 7u);
 }
 
+int func_8006CDA4_state7_cut(pe_addr_t dest, int stack_len)
+{
+    unsigned int remain;
+    unsigned int chunk;
+    int issued;
+
+    remain = PE_LoadU32(GA_GP_408);
+    if (remain == 0u) {
+        PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
+        return 0;
+    }
+    chunk = remain;
+    if ((unsigned int)stack_len < remain)
+        chunk = (unsigned int)stack_len;
+    PE_StoreU32(GA_GP_40C, chunk);
+    issued = func_8006E6D4((int)PE_LoadU32(GA_GP_400),
+                           (int)(PE_LoadU32(GA_GP_404) - remain), dest,
+                           (int)chunk);
+    if (issued == -1) {
+        PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
+        return 0;
+    }
+    PE_StoreU8(GA_OVERLAY + 0xF0u, 8u);
+    return 1;
+}
+
 int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
                   int stack_flag)
 {
     unsigned int f0;
 
     (void)a2;
-    (void)a3;
-    (void)stack_len;
     (void)stack_flag;
     f0 = PE_LoadU8(GA_OVERLAY + 0xF0u);
     if (f0 >= 11u)
@@ -250,7 +286,9 @@ int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
         func_8006CDA4_state0_a0eq1_cut(a1);
         return 1;
     }
-    if (f0 == 7u || f0 == 8u || f0 == 9u || f0 == 10u)
+    if (f0 == 7u)
+        return func_8006CDA4_state7_cut(a3, stack_len);
+    if (f0 == 8u || f0 == 9u || f0 == 10u)
         return 1;
     return 1;
 }

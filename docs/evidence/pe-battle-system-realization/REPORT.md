@@ -36,7 +36,7 @@ the retail battle runtime, not a one-off script.
 | BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PROVEN | not the 0x3B wait |
 | BTL-6D60C | `144FC` `0x38` jal `6D60C(1)`; 387w sha256 `14e5794d…`; +0xF2 JT; no `+0xE` | PROVEN | `pe-btl6-6d60c` |
 | BTL-6D078 | 117w `0x8006D078..0x8006D24C`; +0xF3 JT; state0 sb 0x28; 0x28 jals 6CDA4 | PORTED | `func_8006D078` parks at 6CDA4 |
-| BTL-6CDA4 | 181w +0xF0 SM; live a0=1 sb 7 + table 0x0F; state7 jal 6E6D4 | PORTED | `func_8006CDA4` parks at F0=7 |
+| BTL-6CDA4 | 181w +0xF0 SM; live a0=1 sb 7 + table 0x0F; state7 real 6E6D4 | PORTED | -1 → F0=0; ok → F0=8 |
 | BTL-MODE7 | `0x8002CEE0` jal `6914C(0)` then `D_8009D28C=7` | PROVEN | not issued |
 | BTL-ATB | ATB / menus / AI / damage / death / field return | RESEARCH_REQUIRED | do not invent |
 
@@ -69,6 +69,6 @@ python3 pc_port/tools/pe_btl6_6cda4_oracle.py
 ./pc_port/build/pe-native-tests   # 683/683
 ```
 
-STOP/NEXT: `0x8006E6D4` — 6CDA4 state 7 jal (CD issue).
-Do not stub a complete read, `6914C`, jump to mode 7, or
-complete `0x55`.
+STOP/NEXT: `0x8006E7E8` — 6CDA4 state 8 poll after a real
+6E6D4!=-1. Do not stub poll-complete, `6914C`, jump to
+mode 7, or complete `0x55`.

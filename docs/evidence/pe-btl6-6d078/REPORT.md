@@ -26,13 +26,14 @@ Sole TEXT jal: 6D60C state 0x2E @ `0x8006D788`.
 | 0x2B | `0x8006D1DC` | `jal 6CDA4(3, …)`; v0==1 → return 1 |
 | other <44 | `0x8006D22C` | v0=0 |
 
-Named cut runs state 0 then jals 6CDA4 at 0x28. Live a0=1
-sb 7 and parks. It does not invent 6CDA4/6E6D4 success.
+Named cut runs state 0 then jals 6CDA4 at 0x28. A 6E6D4
+-1 with `+0x10<2` sb 0x2A and returns 1. The 0x2A walk is
+not entered.
 
 ## Next
 
-`0x8006E6D4` — 6CDA4 live a0=1 now sb 7 and parks. State 7
-jals the CD issue. See `pe-btl6-6cda4`. Do not stub it.
+`0x8006E7E8` — 6CDA4 state 8 poll. State 7 now calls real
+6E6D4; -1 + `+0x10<2` sb 0x2A. See `pe-btl6-6cda4`.
 
 ## Verify
 

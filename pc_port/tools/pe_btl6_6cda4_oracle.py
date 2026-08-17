@@ -92,10 +92,17 @@ def main() -> int:
     require(jal_target(load_u32(data, 0x8006D10C)) == FN, "6D078 0x28 jal 6CDA4")
     require(load_u32(data, 0x8006D0F4) == 0x24040001, "0x28 a0=1")
     require(load_u32(data, 0x8006D0F8) == 0x24050001, "0x28 a1=1")
+    require(load_u32(data, 0x8006D100) == 0x8E070194, "0x28 lw dest +0x194")
+    require(load_u32(data, 0x8006CE04) == 0x2416FFFF, "s6=-1")
+    require(load_u32(data, 0x8006CEEC) == 0x8F840400, "state7 a0 gp+0x400")
+    require(load_u32(data, 0x8006CEF0) == 0x8F850404, "state7 a1 gp+0x404")
+    require(load_u32(data, 0x8006CF00) == 0x00A32823, "state7 a1 -= remain")
+    require(load_u32(data, 0x8006CF18) == 0xA24000F0, "state7 -1 sb F0=0")
+    require(load_u32(data, 0x8006CF14) == 0xA24200F0, "state7 ok sb F0")
 
     print(
         "PASS: 6CDA4 181w sha256; +0xF0 JT 0/7/8/9/A; live a0=1 sb 7 "
-        "skips 87198/87414; state7 jal 6E6D4; table 8B0/16/25; no +0xE"
+        "skips 87198/87414; state7 6E6D4(LBA,0,lw+0x194,0x0F); no +0xE"
     )
     return 0
 

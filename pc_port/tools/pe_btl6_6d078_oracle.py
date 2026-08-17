@@ -90,7 +90,9 @@ def main() -> int:
     require(load_u32(data, 0x8006D0F4) == 0x24040001, "0x28 a0=1")
     require(load_u32(data, 0x8006D0F8) == 0x24050001, "0x28 a1=1")
     require(load_u32(data, 0x8006D0FC) == 0x00003021, "0x28 a2=0")
+    require(load_u32(data, 0x8006D100) == 0x8E070194, "0x28 lw dest +0x194")
     require(load_u32(data, 0x8006D104) == 0x24020021, "0x28 stack 0x21")
+    require(load_u32(data, 0x8006D128) == 0x2C420002, "0x28 +0x10 sltiu 2")
     require(jal_target(load_u32(data, 0x8006D158)) == FN_6CDA4, "0x29 jal 6CDA4")
     require(jal_target(load_u32(data, 0x8006D200)) == FN_6CDA4, "0x2B jal 6CDA4")
 

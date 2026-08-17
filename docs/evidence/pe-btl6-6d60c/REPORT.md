@@ -34,8 +34,8 @@ State 0x2E @ `0x8006D788`: `jal 0x8006D078`. If that returns 1,
 
 ## Next
 
-`0x8006E6D4` — 6CDA4 state 7 jal. Do not stub a complete
-CD read, 6914C, jump to mode 7, or complete `0x55`.
+`0x8006E7E8` — 6CDA4 state 8 poll. Do not stub
+poll-complete, 6914C, jump to mode 7, or complete `0x55`.
 
 ## Verify
 
