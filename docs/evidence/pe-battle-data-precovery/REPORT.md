@@ -110,9 +110,81 @@ SHA-256, branch rels (`0`/`5`/`0x12` as `imm<<1`), and yield ops
 Upcoming / still-open on the live streams (do not implement here):
 
 - type 0 after `0x9B`: `0xED` `0xA29`, then `0x14`×2, `0x0B`…
-- type 1 prefix `0xEA` then three `0x08` spawns
+- type 1 prefix `0xEA` then `0x08` types 3, 0, 5 (later listed 2, 4)
 - type 3 after first `0x02`: `0x5E` / `0x77` (pose copy + edge test)
 - type 6 after `0xCE`: `0xEA` (AKAO-adjacent; not named here)
+- M0367I spawned type 2/3 first visit: `0x9B`/`0xED`/`0x1E`/`0x79` then `0xC1` (`D_800910A0[0xC1]=0x80019AC0`)
+- M0367I type 4: same head then `0x9D` (`0x80019450`)
+
+## Type-0 `0x2E` / `0x2F` (m0005i)
+
+`D_800910A0[0x2E]=0x80017AE8` → `1A680(actor, lhu *arg0)`.
+`D_800910A0[0x2F]=0x80017B34` writes `actor+0x12 = min(+0x0F, imm)`.
+`0x2F` is a frame **cap**, not a command ID.
+
+First live type-0 bind after `29810` cmd 4: script `+0x31C`
+`0xAA` → `0x40` → `0x65` → **`0x2E(0x15)`** → `0x82(1)`.
+
+Unique type-0 `0x2E` command IDs: `0x15`, `0x1C`, `0x1E`, `0x1F`, `0x20`.
+
+| cmd | bank | idB | ptr | size | frames | SHA-256 |
+|---|---|---:|---|---:|---:|---|
+| `0x15` | CE2=14 Writer B | 21 | `0xEF28` | 2776 | 34 | `194a37c66679857b8a4ca3e8df72b3812cb5fafb2e03dbeb45c9e79b3fda1537` |
+| `0x1C` | CE2=14 Writer B | 28 | `0x5D40` | 3796 | 69 | `cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e` |
+| `0x1E` | m0005i Writer A | 30 | `0x10F40` | 10796 | 105 | `85170bf01e1bd9419fd9a1d5ab91837a975cb2c3320b02792cb926cc70111832` |
+| `0x1F` | m0005i Writer A | 31 | `0x1396C` | 4716 | 40 | `77343a19f342efda44e564306c077ce8cf53667ae3264f460fcdf6b91c64287f` |
+| `0x20` | m0005i Writer A | 32 | `0x14BD8` | 1344 | 22 | `51e84dd712d7a9869459edd14080efec19316365fd8e15b9e15480143175660f` |
+
+`0x1C` shares the CE2=14 3796B payload with idB `0/1/2/3/7/22/23`.
+Do **not** treat every type-0 `0x2E` as CE2=14.
+
+Type-2 listed stream `0x2E` cmds `0x02/0x06/0x13/0x14/0x15/0x16/0x17`
+resolve to **m0005i Writer A type 2**, not CE2=14. Type-5
+`0x08`-spawned stream uses Writer A cmds `0x00` and `0x02` (60B).
+
+## M0367I Writer A
+
+36 rows, 25 unique payloads, writer `0x8006B84C`.
+No type-1 row. Type 0 is cmd `0x18` only (1272B, 30 frames,
+SHA-256 `03f7338305ade7941ff5115bbacc5dd83481dc3cdc4058f5ea043a65617fd24c`,
+same hash as m0005i type-0 cmd `0x18`). Types 2 and 3 share
+cmds `0x00–0x0A` (22-bone clips). Type 4 has cmds `0x00–0x0C`.
+
+`6B35C` zeros `D_800B0E98` on dest enter. Writer A then writes
+the 36 room rows (type 0 cmd `0x18` only). `6BECC` is still
+jal'd every `3F074` tick at `0x8003F20C`; whether its state-6
+Writer B loop republishes CE2=14 after that clear is not
+proven here. Listed M0367I type-0 `0x2E(0x15)` has no Writer A
+row.
+
+After `0xC1` (`19AC0`: `actor+0x98 |= 0x400`, return 1), spawned
+type 2/3 issue `0x2E(0x09)` (300B, 1 frame, SHA-256
+`6bd22d6ce60cab2b0d70ec11433cd51d321394b9f9d1533da14ec8b02e970eb3`).
+Type 4 after `0x9D` issues `0x2E(0x07)` then `0x2E(0x01)`.
+
+## M0367I type-1 first visit / `0x08`
+
+Prefix: `0x40` → `0x84(0,0x450)` → `0x88` → `0x02(1)` → persist
+`0x09` tag 74 / `0x05` → `0x08`. Type-1 itself has no `0x2E`.
+
+First eight `0x08` descriptors (all idB=0, pose 0): types
+`2,2,4,3,4,2,3,4`. Those actors take `B0E70[2/3/4]` from
+hdr+0x0C. Later `0x08` repeats types 2/3/4. Persist-gated;
+do not claim every spawn always fires.
+
+## M0367I type-1 `0x31` dest tokens
+
+Persist-gated hops (token → `D_8009D280`; table index = name
+number − 1). Do not hop the runtime.
+
+| name | table | chunk2 SHA-256 | hdr+0x0C idB | Writer A | 125E0 |
+|---|---:|---|---|---:|---|
+| M0005I | 4 | `01a64ba3…` (full in CSV) | 2,5 | 21 | types 1,6 |
+| M0319I | 318 | `fafb08d77f8d9f0c79b44835c8910fdca6fb0a1fe37e82cc406bdc9362995d85` | 2,3,4 | 6 | type 1 |
+| M0239I | 238 | `1de117c799dab0d0d04803e89a922ff7bbb027958c7a47d37f6eb516a6d814f8` | 2,3,4 | 66 | type 1 |
+| M0058I | 57 | `be04c5f835c72485c62191b080e02a629e635700d09666f333158293618505d2` | 2,3,4 | 32 | type 1 |
+| M0035I | 34 | `f2f7e7049f1fcd1f99b1cdaf4b3b0fcb2de435baff7b49c4ab3b87b94d31109d` | 2,3,4 | 41 | type 1 |
+| M0136I | 135 | `6fa9dee4763af16cbed129b8d1f799067ede252a44b84f2aed1b469e33d08a72` | none | 12 | type 1 |
 
 ## Destination / reload
 
@@ -142,25 +214,45 @@ M0367I hdr+0x0C:
 | 3 | `0x8` | 24248 | same as idB 2 |
 | 4 | `0x5EC0` | 21524 | `acec62834711c862d1abf5e50e1efc39ce5268ec159106487c79c811fac80b24` |
 
-The 125E0 type-1 actor therefore still takes empty `+0x1AC` unless
-a later `0x08` spawn uses idB 2/3/4.
+The 125E0 type-1 actor therefore still takes empty `+0x1AC`.
+Later `0x08` constructs types 2/3/4, which bind `B0E70[2/3/4]`.
 
 ## Files
 
 | file | contents |
 |---|---|
-| `ACTOR_RESOURCES.csv` | 7 listed types: script, model, writers, vtable |
+| `ACTOR_RESOURCES.csv` | listed types: script, model, writers, vtable |
 | `BATTLE_SCRIPTS.csv` | 17018-decoded prefix per type |
 | `RESOURCE_PUBLICATION.csv` | 6B35C → 6B4F8 → 6C118 order |
 | `PEIMG_PACKAGES.csv` | dest packages + unique clip payloads |
-| `UNKNOWN_DEPENDENCIES.csv` | 3D050-gated body, +0x1B4 init, absent B0E70 rows |
+| `UNKNOWN_DEPENDENCIES.csv` | 3D050-gated body, +0x1B4 init, dest-enter CE2 clear |
+| `COMMAND_BINDS.csv` | every walked `0x2E`/`0x2F` site |
+| `WRITER_A_CLIPS.csv` | M0367I 36 rows + m0005i `0x2E`-used rows |
+| `SPAWN_DESCRIPTORS.csv` | type-1 `0x08` argc-5 descriptors |
+| `DEST_HOPS.csv` | M0367I type-1 `0x31` tokens |
+| `DEST_PACKAGE_HEADS.csv` | chunk2 / 125E0 / Writer A counts for those dests |
 
-## HUMAN_VERIFY
+## RUNTIME_HANDOFF
 
-- Confirm CE2=14 `6C118` object at `+0x8` is the type-0 `+0x1AC`
-  payload the main lane should consume, not m0005i hdr+0x0C.
-- Confirm actor `+0x1B4` stays an in-actor dest, not a PE.IMG pointer.
-- Do not bind slot tags 1332/1333/1334 to a species name.
-
-Next precovery cut: type-0 m0005i `0x2E`/`0x2F` immediates against
-the CE2=14 bank, then M0367I Writer A unique clip hashes.
+```
+type0_1AC_source=CE2_14_plus_8
+writer=func_8006C118
+actor_1B4=in_actor_dest
+do_not_use_room_hdr_plus_0C_for_type0=YES
+type0_2E_ce214_cmds=0x15,0x1C
+type0_2E_writera_cmds=0x1E,0x1F,0x20
+type0_2F_is_command_id=NO
+type0_2F_dest=actor+0x12
+first_live_type0_2E=script+0x334_cmd_0x15
+cmd_0x15_ptr=0xEF28_size=2776_frames=34
+cmd_0x15_sha256=194a37c66679857b8a4ca3e8df72b3812cb5fafb2e03dbeb45c9e79b3fda1537
+m0367i_6B35C_clears_CE214=YES
+m0367i_writera_type0_cmd=0x18_only
+m0367i_type1_2E=NONE
+m0367i_type1_08_first8=2,2,4,3,4,2,3,4
+m0005i_type1_08=3,0,5,2,4
+m0367i_type2_2E=0x09_writera
+m0367i_type3_2E=0x09_writera
+m0367i_type4_2E=0x07,0x01_writera
+op_0xC1=actor_plus_98_OR_0x400
+```

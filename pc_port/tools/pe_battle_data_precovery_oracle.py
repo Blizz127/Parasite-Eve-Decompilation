@@ -10,6 +10,11 @@ SHA-1-exact EXE and Disc 1 PE.IMG. Writes or verifies:
     RESOURCE_PUBLICATION.csv
     PEIMG_PACKAGES.csv
     UNKNOWN_DEPENDENCIES.csv
+    COMMAND_BINDS.csv
+    WRITER_A_CLIPS.csv
+    SPAWN_DESCRIPTORS.csv
+    DEST_HOPS.csv
+    DEST_PACKAGE_HEADS.csv
     REPORT.md
 
 Does not import production C. Does not modify UE5. Does not name
@@ -75,7 +80,8 @@ KNOWN_OPS = {
     0x4B, 0x4E, 0x52, 0x53, 0x54, 0x59, 0x5A, 0x5E, 0x64, 0x65, 0x6A,
     0x6B, 0x6F, 0x70, 0x77, 0x79, 0x82, 0x84, 0x85, 0x86, 0x87, 0x88,
     0x89, 0x8B, 0x94, 0x9B, 0x9C, 0xA6, 0xAA, 0xAB, 0xAD, 0xB7, 0xB8,
-    0xC7, 0xCE, 0xD9, 0xDC, 0xE1, 0xEA, 0xED,
+    0xC1, 0xC7, 0xCE, 0xD9, 0xDC, 0xE1, 0xEA, 0xED,
+    0x9D,
 }
 YIELD_OPS = {0x01, 0x02, 0x1F, 0x20, 0x30, 0x64, 0x9C}
 BRANCH_OPS = {0x00, 0x05, 0x12}
@@ -87,7 +93,17 @@ CSV_NAMES = (
     "RESOURCE_PUBLICATION.csv",
     "PEIMG_PACKAGES.csv",
     "UNKNOWN_DEPENDENCIES.csv",
+    "COMMAND_BINDS.csv",
+    "WRITER_A_CLIPS.csv",
+    "SPAWN_DESCRIPTORS.csv",
+    "DEST_HOPS.csv",
+    "DEST_PACKAGE_HEADS.csv",
 )
+CMD15_SHA = "194a37c66679857b8a4ca3e8df72b3812cb5fafb2e03dbeb45c9e79b3fda1537"
+CMD1C_SHA = "cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e"
+WA18_SHA = "03f7338305ade7941ff5115bbacc5dd83481dc3cdc4058f5ea043a65617fd24c"
+M367_FIRST8_08 = (2, 2, 4, 3, 4, 2, 3, 4)
+TYPE0_2E_CMDS = (0x15, 0x1C, 0x1E, 0x1F, 0x20)
 
 
 def require(cond: bool, msg: str) -> None:
@@ -219,6 +235,17 @@ def walk_script(blob: bytes, base: int, limit: int = 32) -> list[dict]:
     return rows
 
 
+def script_base(blob: bytes, list_off: int, typ: int) -> int:
+    rel = struct.unpack_from("<I", blob, list_off + 8 + typ * 4)[0]
+    return list_off + rel
+
+
+def token_table_index(name: str) -> int:
+    digits = "".join(ch for ch in name if ch.isdigit())
+    require(digits != "", f"token name {name}")
+    return int(digits) - 1
+
+
 def csv_write(path: pathlib.Path, fieldnames: list[str], rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="\n", encoding="utf-8") as fh:
@@ -295,6 +322,12 @@ class World:
         require(load_u32(self.exe, 0x800910A0 + 0xCE * 4) == 0x800181CC, "table[0xCE]")
         require(load_u32(self.exe, 0x800910A0 + 0x9B * 4) == 0x80015240, "table[0x9B]")
         require(load_u32(self.exe, 0x800910A0 + 0x08 * 4) == 0x8001735C, "table[0x08]")
+        require(load_u32(self.exe, 0x800910A0 + 0x2E * 4) == 0x80017AE8, "table[0x2E]")
+        require(load_u32(self.exe, 0x800910A0 + 0x2F * 4) == 0x80017B34, "table[0x2F]")
+        require(load_u32(self.exe, 0x800910A0 + 0xC1 * 4) == 0x80019AC0, "table[0xC1]")
+        require(load_u32(self.exe, 0x800910A0 + 0x9D * 4) == 0x80019450, "table[0x9D]")
+        require(load_u32(self.exe, 0x80019AD4) == 0x34420400, "0xC1 ori +0x98 0x400")
+        require(load_u32(self.exe, 0x80017B60) == 0xA4830012, "0x2F sh +0x12")
         require(load_u32(self.exe, 0x8006B8C4) == 0xAEC20944, "sw +0x944")
         require(load_u32(self.exe, 0x8006B8E8) == 0xAEC20948, "sw +0x948")
         require(load_u32(self.exe, 0x8006B90C) == 0xAEC2094C, "sw +0x94C")
@@ -523,6 +556,42 @@ class World:
                     "notes": "not the 125E0 type-1 object; type 1 B0E70 stays empty",
                 }
             )
+        m367_dir = walk12(
+            self.m367_c2,
+            struct.unpack_from("<I", self.m367_c2, self.m367_hdr + 0x10)[0],
+        )
+        seen.clear()
+        for rec in m367_dir:
+            if rec["sha256"] in seen:
+                continue
+            seen.add(rec["sha256"])
+            keys = [
+                f"t{r['ida']}_c{r['idb']:02X}"
+                for r in m367_dir
+                if r["sha256"] == rec["sha256"]
+            ]
+            rows.append(
+                {
+                    "package_id": f"m0367i_writera_ptr_{rec['ptr']:X}",
+                    "token": f"0x{M0367I_TOKEN:08X}",
+                    "decoded_name": "M0367I",
+                    "table_index": ",".join(keys),
+                    "rel": f"0x{rec['ptr']:X}",
+                    "packed": "",
+                    "sectors": "",
+                    "peimg_lba_range": f"m0367i_chunk2+0x{rec['ptr']:X}",
+                    "size": rec["size"],
+                    "sha256": rec["sha256"],
+                    "compression": "none",
+                    "decoded_structure": (
+                        f"Writer A payload enc={rec['b0']} bones-1={rec['b1']} frames={rec['b2']}"
+                    ),
+                    "consumer": "func_8001A680 +0x1B0 after type1 0x08",
+                    "writer": "func_8006B84C Writer A",
+                    "confidence": "PROVEN",
+                    "notes": "no type-1 Writer A row; types 2/3 share cmds 0x00-0x0A",
+                }
+            )
         return rows
 
     def publication(self) -> list[dict]:
@@ -744,6 +813,23 @@ class World:
                     "notes": f"M0367I idA={rec['ida']} size={rec['size']} sha256={rec['sha256']}",
                 }
             )
+        rows.append(
+            {
+                "object": "D_800B0E98 M0367I Writer A",
+                "field_or_global": "overlay+0x1C0+type*192+cmd*4",
+                "writer": "func_8006B4F8 hdr+0x10 Writer A @ 0x8006B84C",
+                "writer_va": "0x8006B84C",
+                "source_data": "m0367i_chunk2",
+                "source_offset": "hdr+0x10",
+                "lifetime": "until_next_6B35C",
+                "publication_order": 13,
+                "consumer": "func_8001A680 after type1 0x08 types 2/3/4",
+                "consumer_va": "0x8001A6C8",
+                "actor_type": "0,2,3,4",
+                "confidence": "PROVEN",
+                "notes": "36 rows; type0 cmd 0x18 only; no type1 row; 6B35C clears CE2=14 first",
+            }
+        )
         return rows
 
     def _script_rows(
@@ -931,8 +1017,14 @@ class World:
                     "resource_object_writer": "6B35C; 6B4F8 6B804/6B84C",
                     "update_function": vtable[typ],
                     "known_field_offsets": "+0x0C type; +0x0D idB; +0x1AC B0E70; +0x1B0 B0E98; +0x1B4 dest",
-                    "spawn_path": "125E0_desc[0]" if typ == 1 else "listed_not_125E0_desc",
-                    "confidence": "PROVEN" if typ == 1 else "PROVEN_LISTED_NOT_125E0",
+                    "spawn_path": (
+                        "125E0_desc[0]"
+                        if typ == 1
+                        else "type1_0x08"
+                        if typ in (2, 3, 4)
+                        else "listed_not_125E0_desc"
+                    ),
+                    "confidence": "PROVEN" if typ in (1, 2, 3, 4) else "PROVEN_LISTED_NOT_125E0",
                     "notes": f"B0E70[{typ}] via 6B804" if rec else "B0E70 empty on 125E0 type1",
                 }
             )
@@ -985,22 +1077,408 @@ class World:
                 "needed_by": "1A680 / 1A4AC ticker",
                 "surface": "CE2=14 idB 0-23,28",
                 "what_is_known": "sizes/frames/hashes; cmd4 is first 29810 bind",
-                "what_is_missing": "which later cmds the type-0 stream issues",
-                "blocker": "index_type0_stream_0x2E/0x2F",
+                "what_is_missing": "clip meaning; do not name from appearance",
+                "blocker": "semantics_out_of_scope",
                 "confidence": "BANK_PROVEN",
-                "notes": "idB 0/1/2/3/7/22/23/28 share one 3796B payload",
+                "notes": "type0 0x2E uses 0x15/0x1C here; 0x1E/0x1F/0x20 are Writer A",
+            },
+            {
+                "id": "m0367i_type0_2e_15_after_dest",
+                "needed_by": "M0367I listed type-0 0x2E(0x15)",
+                "surface": "D_800B0E98[21]",
+                "what_is_known": "6B35C zeros B0E98 on dest enter; M0367I Writer A type0 is cmd 0x18 only",
+                "what_is_missing": "whether 6BECC/Writer B republishes CE2=14 after M0367I load",
+                "blocker": "slot_empty_unless_Writer_B_reruns",
+                "confidence": "PROVEN_GAP",
+                "notes": "m0005i 0x2E(0x15) is CE2=14 idB=21; that row does not survive 6B35C",
+            },
+            {
+                "id": "m0367i_type2_3_op_c1",
+                "needed_by": "M0367I spawned type 2/3/4 first visit",
+                "surface": "0xC1 / 0x9D then 0x2E",
+                "what_is_known": "0xC1=19AC0 actor+0x98|=0x400 ret1; type2/3 then 0x2E(0x09); type4 0x9D then 0x2E(0x07/0x01)",
+                "what_is_missing": "0x9D field write (lh +0x224 / sh +0x14); type4 later 0x44 at 0x800136C0",
+                "blocker": "0x9D/0x44_not_this_lane",
+                "confidence": "HANDLER_AND_BIND_PROVEN",
+                "notes": "do not implement the VM here",
             },
             {
                 "id": "m0367i_type1_B0E70",
                 "needed_by": "M0367I 125E0 type 1",
                 "surface": "D_800B0E70[1]",
-                "what_is_known": "125E0 desc count=1 type=1 idB=0; first op 0x40; hdr+0x0C is idB 2/3/4 only",
-                "what_is_missing": "whether a later 0x08 spawn binds B0E70[2/3/4] on this dest",
+                "what_is_known": "125E0 desc count=1 type=1 idB=0; first op 0x40; hdr+0x0C is idB 2/3/4 only; type1 0x08 first8 types 2,2,4,3,4,2,3,4 idB=0",
+                "what_is_missing": "persist 0x09 tag 74 gate on first visit; type1 itself has no Writer A / no 0x2E",
                 "blocker": "empty_+0x1AC_authentic_until_spawn",
-                "confidence": "DESC_PROVEN",
+                "confidence": "DESC_AND_08_PROVEN",
                 "notes": "do not infer story meaning from M0367I",
             },
+            {
+                "id": "m0367i_hdr20_rec1",
+                "needed_by": "6B4F8 overlay+0x950 second record",
+                "surface": "hdr+0x20 rec[1]",
+                "what_is_known": "count=2; rec[0] is 6486B sha 467bf214… shared with m0005i",
+                "what_is_missing": "rec[1] size 16921664 is not a payload; encoding",
+                "blocker": "sentinel_or_packed_not_a_blob",
+                "confidence": "PROVEN_GAP",
+                "notes": "m0005i rec[1] is the same shape (size ~16MB, empty hash)",
+            },
         ]
+
+    def _wa_ce(self, scene: str) -> tuple[bytes, list[dict], list[dict] | None]:
+        if scene == "m0005i":
+            blob = self.m5_c2
+            wa = walk12(blob, struct.unpack_from("<I", blob, self.m5_hdr + 0x10)[0])
+            ce = walk12(self.ce214, struct.unpack_from("<I", self.ce214, self.ce_hdr + 0x10)[0])
+            return blob, wa, ce
+        blob = self.m367_c2
+        wa = walk12(blob, struct.unpack_from("<I", blob, self.m367_hdr + 0x10)[0])
+        ce = walk12(self.ce214, struct.unpack_from("<I", self.ce214, self.ce_hdr + 0x10)[0])
+        return blob, wa, ce
+
+    def _resolve_cmd(self, typ: int, cmd: int, wa: list[dict], ce: list[dict] | None, scene: str):
+        rec = next((r for r in wa if r["ida"] == typ and r["idb"] == cmd), None)
+        if rec is not None:
+            return "WriterA", rec, "room_hdr+0x10", "0x8006B84C"
+        if typ == 0 and ce is not None:
+            rec = next((r for r in ce if r["ida"] == 0 and r["idb"] == cmd), None)
+            if rec is not None:
+                bank = "CE2=14"
+                if scene == "m0367i":
+                    bank = "CE2=14_cleared_by_6B35C"
+                return bank, rec, "ce2_14_clip_bank", "0x8006C158"
+        return "UNRESOLVED", None, "", ""
+
+    def command_binds(self) -> list[dict]:
+        rows = []
+        jobs = (
+            ("m0005i", self.m5_c2, LIST_OFF, 7),
+            ("m0367i", self.m367_c2, M367_LIST_OFF, 5),
+        )
+        for scene, blob, list_off, ntyp in jobs:
+            _, wa, ce = self._wa_ce(scene)
+            for typ in range(ntyp):
+                base = script_base(blob, list_off, typ)
+                insns = walk_script(blob, base, 800)
+                last_cmd = ""
+                last_bank = ""
+                for insn in insns:
+                    if insn["op"] not in (0x2E, 0x2F):
+                        continue
+                    imm = insn["imms"][0] if insn["imms"] else 0
+                    if insn["op"] == 0x2E:
+                        bank, rec, pkg, writer_va = self._resolve_cmd(typ, imm, wa, ce, scene)
+                        last_cmd = f"0x{imm:02X}"
+                        last_bank = bank
+                        dest_field = "actor+0x1B0"
+                        dest_slot = f"D_800B0E98[{typ}*192+{imm}*4]"
+                        consumer = "func_80017AE8 -> func_8001A680"
+                        path = (
+                            "6C140 Writer B"
+                            if bank.startswith("CE2=14")
+                            else "6B84C Writer A"
+                            if bank == "WriterA"
+                            else ""
+                        )
+                        rows.append(
+                            {
+                                "scene": scene,
+                                "actor_type": typ,
+                                "script_rel": f"0x{insn['rel']:X}",
+                                "opcode": "0x2E",
+                                "imm": f"0x{imm:02X}",
+                                "bank": bank,
+                                "package": pkg if rec else "",
+                                "ida": rec["ida"] if rec else "",
+                                "idb": rec["idb"] if rec else imm,
+                                "source_offset": f"0x{rec['ptr']:X}" if rec else "",
+                                "size": rec["size"] if rec else "",
+                                "frames": rec["b2"] if rec else "",
+                                "sha256": rec["sha256"] if rec else "",
+                                "dest_slot": dest_slot,
+                                "dest_field": dest_field,
+                                "writer": "func_8006C140" if bank.startswith("CE2=14") else "func_8006B84C" if bank == "WriterA" else "",
+                                "writer_va": writer_va,
+                                "first_consumer": consumer,
+                                "publication_path": path,
+                                "confidence": "PROVEN_GAP" if "cleared" in bank else "PROVEN",
+                                "notes": (
+                                    "first live type0 bind after 0xAA/0x40/0x65"
+                                    if scene == "m0005i" and typ == 0 and insn["rel"] == 0x334
+                                    else "0x2F is a frame cap, not a command"
+                                    if False
+                                    else "do not name clip from appearance"
+                                ),
+                            }
+                        )
+                    else:
+                        rows.append(
+                            {
+                                "scene": scene,
+                                "actor_type": typ,
+                                "script_rel": f"0x{insn['rel']:X}",
+                                "opcode": "0x2F",
+                                "imm": f"0x{imm:X}",
+                                "bank": "frame_cap",
+                                "package": "",
+                                "ida": typ,
+                                "idb": last_cmd,
+                                "source_offset": "",
+                                "size": "",
+                                "frames": imm,
+                                "sha256": "",
+                                "dest_slot": "",
+                                "dest_field": "actor+0x12",
+                                "writer": "func_80017B34",
+                                "writer_va": "0x80017B34",
+                                "first_consumer": "func_80017B34 min(+0x0F, imm)",
+                                "publication_path": f"after_0x2E {last_cmd} {last_bank}",
+                                "confidence": "PROVEN",
+                                "notes": "cap vs +0x0F=frames-1; not a command ID",
+                            }
+                        )
+        return rows
+
+    def writer_a_clips(self) -> list[dict]:
+        rows = []
+        used_m5 = {(0, 0x1E), (0, 0x1F), (0, 0x20), (2, 0x02), (2, 0x06), (2, 0x13), (2, 0x14), (2, 0x15), (2, 0x16), (2, 0x17), (5, 0x00), (5, 0x02)}
+        specs = (
+            ("m0005i", self.m5_c2, self.m5_hdr, used_m5, "m0005i_chunk2"),
+            ("m0367i", self.m367_c2, self.m367_hdr, None, "m0367i_chunk2"),
+        )
+        first_cons = {
+            ("m0005i", 0, 0x1E): "type0 0x2E +0x3B0",
+            ("m0005i", 0, 0x1F): "type0 0x2E +0x498",
+            ("m0005i", 0, 0x20): "type0 0x2E +0xC4C",
+            ("m0005i", 2, 0x06): "listed type2 0x2E +0xE4",
+            ("m0005i", 5, 0x02): "type5 0x2E +0x80 after type1 0x08",
+            ("m0005i", 5, 0x00): "type5 0x2E +0xB8 after type1 0x08",
+            ("m0367i", 0, 0x18): "listed type0; no 0x2E of 0x18 in prefix",
+            ("m0367i", 2, 0x09): "type2 0x2E +0x94 after 0xC1",
+            ("m0367i", 3, 0x09): "type3 0x2E +0x84 after 0xC1",
+            ("m0367i", 4, 0x07): "type4 0x2E +0xF0 after 0x9D",
+            ("m0367i", 4, 0x01): "type4 0x2E +0x1E8 after 0x9D",
+        }
+        for scene, blob, hdr, filt, pkg in specs:
+            wa = walk12(blob, struct.unpack_from("<I", blob, hdr + 0x10)[0])
+            for rec in wa:
+                if filt is not None and (rec["ida"], rec["idb"]) not in filt:
+                    continue
+                if scene == "m0367i":
+                    reach = (
+                        "type1_0x08"
+                        if rec["ida"] in (2, 3, 4)
+                        else "listed_type0"
+                        if rec["ida"] == 0
+                        else "unreferenced"
+                    )
+                elif rec["ida"] == 0:
+                    reach = "type0_0x2E"
+                elif rec["ida"] == 2:
+                    reach = "listed_type2_0x2E"
+                else:
+                    reach = "type1_0x08_type5_0x2E"
+                rows.append(
+                    {
+                        "scene": scene,
+                        "ida": rec["ida"],
+                        "idb": f"0x{rec['idb']:02X}",
+                        "source_package": pkg,
+                        "source_offset": f"0x{rec['ptr']:X}",
+                        "size": rec["size"],
+                        "sha256": rec["sha256"],
+                        "frames": rec["b2"],
+                        "enc": rec["b0"],
+                        "bones_minus_1": rec["b1"],
+                        "dest_slot": f"D_800B0E98[{rec['ida']}*192+{rec['idb']}*4]",
+                        "writer_pc": "0x8006B84C",
+                        "reachable_via": reach,
+                        "first_known_consumer": first_cons.get(
+                            (scene, rec["ida"], rec["idb"]),
+                            "type1_0x08 spawn; no 0x2E in walked prefix"
+                            if scene == "m0367i" and rec["ida"] in (2, 3, 4)
+                            else "listed_stream_0x2E",
+                        ),
+                        "confidence": "PROVEN",
+                        "notes": "do not name clip from appearance",
+                    }
+                )
+        return rows
+
+    def spawn_descriptors(self) -> list[dict]:
+        rows = []
+        jobs = (
+            ("m0005i", self.m5_c2, LIST_OFF, 1),
+            ("m0367i", self.m367_c2, M367_LIST_OFF, 1),
+        )
+        models = {
+            "m0005i": {
+                r["idb"]: r
+                for r in walk12(
+                    self.m5_c2,
+                    struct.unpack_from("<I", self.m5_c2, self.m5_hdr + 0x0C)[0],
+                )
+            },
+            "m0367i": {
+                r["idb"]: r
+                for r in walk12(
+                    self.m367_c2,
+                    struct.unpack_from("<I", self.m367_c2, self.m367_hdr + 0x0C)[0],
+                )
+            },
+        }
+        scripts = {(r["scene"], int(r["actor_type"])): r for r in self.scripts()}
+        for scene, blob, list_off, parent in jobs:
+            base = script_base(blob, list_off, parent)
+            insns = walk_script(blob, base, 400)
+            order = 0
+            for insn in insns:
+                if insn["op"] != 0x08 or len(insn["imms"]) < 5:
+                    continue
+                order += 1
+                typ, idb, x, y, z = insn["imms"][:5]
+                rec = models[scene].get(typ)
+                if scene == "m0005i" and typ == 0:
+                    src = "ce2_14_plus_8_via_6C118"
+                    sha = ""
+                elif rec:
+                    src = f"B0E70[{typ}]"
+                    sha = rec["sha256"]
+                else:
+                    src = "B0E70 empty"
+                    sha = ""
+                rows.append(
+                    {
+                        "scene": scene,
+                        "parent_type": parent,
+                        "script_rel": f"0x{insn['rel']:X}",
+                        "spawn_order": order,
+                        "actor_type": typ,
+                        "idb": idb,
+                        "pose_x": f"0x{x:X}",
+                        "pose_y": f"0x{y:X}",
+                        "pose_z": f"0x{z:X}",
+                        "model_source": src,
+                        "model_sha256": sha,
+                        "first_opcode": scripts.get((scene, typ), {}).get("first_opcode", ""),
+                        "confidence": "PROVEN",
+                        "notes": (
+                            "1735C argc5; persist 0x09 tag 74"
+                            if scene == "m0367i"
+                            else "1735C argc5; first three match BTL22, then types 2 and 4"
+                        ),
+                    }
+                )
+        return rows
+
+    def dest_hops(self) -> list[dict]:
+        rows = []
+        base = script_base(self.m367_c2, M367_LIST_OFF, 1)
+        insns = walk_script(self.m367_c2, base, 400)
+        seen: set[int] = set()
+        for insn in insns:
+            if insn["op"] != 0x31 or not insn["imms"]:
+                continue
+            token = insn["imms"][0]
+            name = decode_token(self.exe, token)
+            idx = token_table_index(name)
+            rel = load_u32(self.exe, 0x80093378 + idx * 8)
+            packed = load_u32(self.exe, 0x80093378 + idx * 8 + 4)
+            s0, s1, s2 = packed_secs(packed)
+            sectors = s0 + s1 + s2
+            key = token
+            sha = ""
+            size = sectors * FORM1_USER
+            if key not in seen:
+                seen.add(key)
+                if token == M0005I_TOKEN:
+                    sha = hashlib.sha256(self.m5_full).hexdigest()
+                    size = len(self.m5_full)
+                elif token == M0367I_TOKEN:
+                    sha = hashlib.sha256(self.m367_full).hexdigest()
+                    size = len(self.m367_full)
+                else:
+                    blob = read_form1(self.disc, PE_IMG_LBA + rel, sectors)
+                    sha = hashlib.sha256(blob).hexdigest()
+                    size = len(blob)
+            rows.append(
+                {
+                    "scene": "m0367i",
+                    "parent_type": 1,
+                    "script_rel": f"0x{insn['rel']:X}",
+                    "token": f"0x{token:08X}",
+                    "decoded_name": name,
+                    "table_index": idx,
+                    "rel": f"0x{rel:X}",
+                    "packed": f"0x{packed:08X}",
+                    "sectors": f"{s0}+{s1}+{s2}",
+                    "size": size if key in seen else "",
+                    "sha256": sha,
+                    "confidence": "PROVEN",
+                    "notes": "0x31 stores D_8009D280; persist-gated; do not hop the runtime",
+                }
+            )
+        # fill sha on later duplicate tokens
+        by_tok = {r["token"]: r for r in rows if r["sha256"]}
+        for r in rows:
+            if not r["sha256"] and r["token"] in by_tok:
+                r["sha256"] = by_tok[r["token"]]["sha256"]
+                r["size"] = by_tok[r["token"]]["size"]
+        return rows
+
+    def dest_package_heads(self) -> list[dict]:
+        rows = []
+        seen: set[str] = set()
+        for hop in self.dest_hops():
+            name = hop["decoded_name"]
+            if name in seen:
+                continue
+            seen.add(name)
+            idx = int(hop["table_index"])
+            rel = int(hop["rel"], 16)
+            packed = int(hop["packed"], 16)
+            s0, s1, s2 = packed_secs(packed)
+            if name == "M0005I":
+                c2 = self.m5_c2
+                hdr = self.m5_hdr
+            elif name == "M0367I":
+                c2 = self.m367_c2
+                hdr = self.m367_hdr
+            else:
+                c2 = read_form1(self.disc, PE_IMG_LBA + rel + s0 + s1, s2)
+                hdr = struct.unpack_from("<I", c2, 4)[0] & 0x3FFFFF
+            recs0c = walk12(c2, struct.unpack_from("<I", c2, hdr + 0x0C)[0])
+            recs10 = walk12(c2, struct.unpack_from("<I", c2, hdr + 0x10)[0])
+            recs14 = walk12(c2, struct.unpack_from("<I", c2, hdr + 0x14)[0])
+            list_off = recs14[0]["ptr"] if recs14 else 0
+            nlist = struct.unpack_from("<I", c2, list_off + 4)[0] if list_off else 0
+            word0 = struct.unpack_from("<I", c2, list_off)[0] if list_off else 0
+            desc = list_off + word0 if list_off else 0
+            desc_n = c2[desc] if desc and desc < len(c2) else 0
+            desc_types = [c2[desc + 1 + i * 2] for i in range(desc_n)] if desc_n else []
+            t1_op = ""
+            if nlist > 1:
+                base = list_off + struct.unpack_from("<I", c2, list_off + 12)[0]
+                ins = walk_script(c2, base, 1)
+                if ins:
+                    t1_op = f"0x{ins[0]['op']:02X}"
+            rows.append(
+                {
+                    "decoded_name": name,
+                    "token": hop["token"],
+                    "table_index": idx,
+                    "chunk2_size": len(c2),
+                    "chunk2_sha256": hashlib.sha256(c2).hexdigest(),
+                    "hdr_0c_idbs": ",".join(str(r["idb"]) for r in recs0c),
+                    "writera_count": len(recs10),
+                    "list_count": nlist,
+                    "desc_count": desc_n,
+                    "desc_types": ",".join(str(x) for x in desc_types),
+                    "type1_first_opcode": t1_op,
+                    "confidence": "PROVEN",
+                    "notes": "persist-gated 0x31 from M0367I type1; do not hop runtime",
+                }
+            )
+        return rows
 
 
 def build() -> tuple[World, dict[str, tuple[list[str], list[dict]]]]:
@@ -1105,6 +1583,108 @@ def build() -> tuple[World, dict[str, tuple[list[str], list[dict]]]]:
             ],
             world.unknowns(),
         ),
+        "COMMAND_BINDS.csv": (
+            [
+                "scene",
+                "actor_type",
+                "script_rel",
+                "opcode",
+                "imm",
+                "bank",
+                "package",
+                "ida",
+                "idb",
+                "source_offset",
+                "size",
+                "frames",
+                "sha256",
+                "dest_slot",
+                "dest_field",
+                "writer",
+                "writer_va",
+                "first_consumer",
+                "publication_path",
+                "confidence",
+                "notes",
+            ],
+            world.command_binds(),
+        ),
+        "WRITER_A_CLIPS.csv": (
+            [
+                "scene",
+                "ida",
+                "idb",
+                "source_package",
+                "source_offset",
+                "size",
+                "sha256",
+                "frames",
+                "enc",
+                "bones_minus_1",
+                "dest_slot",
+                "writer_pc",
+                "reachable_via",
+                "first_known_consumer",
+                "confidence",
+                "notes",
+            ],
+            world.writer_a_clips(),
+        ),
+        "SPAWN_DESCRIPTORS.csv": (
+            [
+                "scene",
+                "parent_type",
+                "script_rel",
+                "spawn_order",
+                "actor_type",
+                "idb",
+                "pose_x",
+                "pose_y",
+                "pose_z",
+                "model_source",
+                "model_sha256",
+                "first_opcode",
+                "confidence",
+                "notes",
+            ],
+            world.spawn_descriptors(),
+        ),
+        "DEST_HOPS.csv": (
+            [
+                "scene",
+                "parent_type",
+                "script_rel",
+                "token",
+                "decoded_name",
+                "table_index",
+                "rel",
+                "packed",
+                "sectors",
+                "size",
+                "sha256",
+                "confidence",
+                "notes",
+            ],
+            world.dest_hops(),
+        ),
+        "DEST_PACKAGE_HEADS.csv": (
+            [
+                "decoded_name",
+                "token",
+                "table_index",
+                "chunk2_size",
+                "chunk2_sha256",
+                "hdr_0c_idbs",
+                "writera_count",
+                "list_count",
+                "desc_count",
+                "desc_types",
+                "type1_first_opcode",
+                "confidence",
+                "notes",
+            ],
+            world.dest_package_heads(),
+        ),
     }
     return world, tables
 
@@ -1143,7 +1723,12 @@ def verify_report(tables: dict[str, tuple[list[str], list[dict]]]) -> None:
         "D_800B0E98",
         "func_8006B35C",
         "func_8006C118",
-        "HUMAN_VERIFY",
+        "RUNTIME_HANDOFF",
+        "0x2E",
+        "0x2F",
+        CMD15_SHA,
+        CMD1C_SHA,
+        "fafb08d77f8d9f0c79b44835c8910fdca6fb0a1fe37e82cc406bdc9362995d85",
     ):
         require(needle in text, f"REPORT missing {needle}")
     pkgs = {r["package_id"]: r for r in tables["PEIMG_PACKAGES.csv"][1]}
@@ -1165,6 +1750,48 @@ def main() -> int:
         if r["scene"] == "m0367i" and r["actor_type"] == 1
     )
     require(m367_t1["first_opcode"] == "0x40", "M0367I type1 0x40")
+    binds = tables["COMMAND_BINDS.csv"][1]
+    t0_2e = [
+        r
+        for r in binds
+        if r["scene"] == "m0005i" and int(r["actor_type"]) == 0 and r["opcode"] == "0x2E"
+    ]
+    cmds = tuple(sorted({int(r["imm"], 16) for r in t0_2e}))
+    require(cmds == TYPE0_2E_CMDS, f"type0 0x2E cmds {cmds}")
+    first = next(r for r in t0_2e if r["script_rel"] == "0x334")
+    require(first["imm"] == "0x15" and first["sha256"] == CMD15_SHA, "first 0x2E 0x15")
+    require(first["bank"] == "CE2=14", "first 0x2E bank")
+    cmd1c = next(r for r in t0_2e if r["imm"] == "0x1C")
+    require(cmd1c["sha256"] == CMD1C_SHA and cmd1c["bank"] == "CE2=14", "0x2E 0x1C")
+    for imm, bank in (("0x1E", "WriterA"), ("0x1F", "WriterA"), ("0x20", "WriterA")):
+        row = next(r for r in t0_2e if r["imm"] == imm)
+        require(row["bank"] == bank, f"type0 {imm} bank")
+    wa = tables["WRITER_A_CLIPS.csv"][1]
+    m367_wa = [r for r in wa if r["scene"] == "m0367i"]
+    require(len(m367_wa) == 36, f"M0367I Writer A {len(m367_wa)}")
+    require(not any(int(r["ida"]) == 1 for r in m367_wa), "no type1 Writer A")
+    t0_18 = next(r for r in m367_wa if int(r["ida"]) == 0 and r["idb"] == "0x18")
+    require(t0_18["sha256"] == WA18_SHA, "M0367I type0 cmd 0x18")
+    spawns = [
+        r
+        for r in tables["SPAWN_DESCRIPTORS.csv"][1]
+        if r["scene"] == "m0367i"
+    ]
+    first8 = tuple(int(r["actor_type"]) for r in spawns[:8])
+    require(first8 == M367_FIRST8_08, f"M0367I first8 0x08 {first8}")
+    hops = tables["DEST_HOPS.csv"][1]
+    require(any(r["decoded_name"] == "M0319I" for r in hops), "M0319I hop")
+    m367_t2_2e = next(
+        r
+        for r in binds
+        if r["scene"] == "m0367i" and int(r["actor_type"]) == 2 and r["opcode"] == "0x2E"
+    )
+    require(m367_t2_2e["imm"] == "0x09" and m367_t2_2e["bank"] == "WriterA", "M0367I t2 0x2E")
+    heads = tables["DEST_PACKAGE_HEADS.csv"][1]
+    m319 = next(r for r in heads if r["decoded_name"] == "M0319I")
+    require(m319["desc_types"] == "1" and int(m319["writera_count"]) == 6, "M0319I head")
+    m5head = next(r for r in heads if r["decoded_name"] == "M0005I")
+    require(m5head["desc_types"] == "1,6", "M0005I desc types")
     if write:
         write_tables(tables)
     verify_tables(tables)
@@ -1173,7 +1800,8 @@ def main() -> int:
         "PASS: battle-data precovery; "
         f"m0005i {len(world.m5_full)}B; CE2=14 25 clips; "
         f"B0E70 idB {sorted(r['idb'] for r in walk12(world.m5_c2, struct.unpack_from('<I', world.m5_c2, world.m5_hdr + 0x0C)[0]))}; "
-        "scripts 0-6; 6B35C/6B804/6C118 pinned"
+        "scripts 0-6; 6B35C/6B804/6C118 pinned; "
+        f"type0 0x2E {len(t0_2e)}; M0367I WA {len(m367_wa)}"
     )
     return 0
 
