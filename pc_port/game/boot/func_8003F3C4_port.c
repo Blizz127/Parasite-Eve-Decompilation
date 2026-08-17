@@ -22,7 +22,8 @@
  *   when (B0CD8&0x100)==0 and (B0CD8&0x200)==0
  *
  * E01BC overlay between 661A4 and 661CC is not this cut.
- * 70E54 and later 3F3C4 jals are not this cut.
+ * 70E54 live prefix @ 3F590: DrawSync(0), 42FE8 out
+ * (gp+0x168!=6), VSync(2). 74A44+ is not this cut.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -151,4 +152,6 @@ void func_8003F3C4(void)
     func_800661A4();
     func_800661CC();
     func_80068E24();
+    func_80074DC0(0);
+    func_80073A44(2);
 }

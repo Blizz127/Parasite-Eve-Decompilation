@@ -3,6 +3,14 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL78 — 70E54 DrawSync + VSync(2) prefix
+
+`matching_native=804/804`. Live `B0CD8&0x200`
+is already clear, so `70E54` takes VSync(2).
+`42FE8` is a no-op (`CED8!=6`). `74A44` is the
+next `70E54` tail. Type-6 still waits while
+`scratch[0]&4` is clear.
+
 ## PE-BTL77 — 3F3C4 jals 661A4 then 661CC
 
 `matching_native=803/803`. Same `B0CD8` gate as
