@@ -3,6 +3,15 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL89 — 0xC6 command-wait 13300
+
+`matching_native=815/815`. First type-0 unported
+after the 0x20 sleep. `1A680` then waits on
+`+0x0F` / `+0x14/+0x18`. Type-0 still parks on
+`task+8` bit `0x10`; the EXE has no `andi 0xFFEF`
+of that halfword. Type-6 still waits while
+`scratch[0]&4` is clear. Do not force either bit.
+
 ## PE-BTL88 — 754E4 SetDrawEnv + memcpy
 
 `matching_native=814/814`. Live `70E54` now
