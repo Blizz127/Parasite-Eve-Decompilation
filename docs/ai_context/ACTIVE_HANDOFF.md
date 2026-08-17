@@ -18,11 +18,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x80020EFC` — first 29810 jal before 293F4,
-now live from 144FC 0x3A (D1A0|=2, lbu(*overlay), sb 0x3B
-park). 0x36 TIM-like dest is not the overlay. Do not stub
-6914C(a0=0) mode 7, jalr 0x800E086C, or complete `0x55`.
-No matching `src/` C.
+STOP/NEXT: `0x80029854` — 29810 remainder after 20EFC
+(table fills + gp zeros) before 71A64. 20EFC is the matched
+5-byte clear; 71A64 is BIOS A(0x30) puts(D_8009D250), live 0.
+Do not stub 6914C(a0=0) mode 7, jalr 0x800E086C, or complete
+`0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

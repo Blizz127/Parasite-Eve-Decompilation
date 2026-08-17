@@ -503,10 +503,24 @@ int func_800144FC_state39_cut(void)
 }
 
 /*
+ * BIOS A(0x30) std_out_puts trampoline (3 words at 0x80071A64).
+ * 29810 passes lw D_8009D250. Live boot value is 0; puts(0) has no
+ * guest stores. Nonzero a0 stays an honest boundary — no invented
+ * console/battle state.
+ */
+void func_80071A64(pe_addr_t str)
+{
+    if (str == 0u)
+        return;
+    Bootstrap_ReturnVoid1("func_80071A64", "func_80029810", str);
+}
+
+/*
  * 144FC state 0x3A at 0x800145F8. D1A0 |= 2, a0 = lbu(*overlay),
- * jal 29810, sb F4=0x3B, j 0x80014660 (v0=0). Named cut runs the
+ * jal 29810, sb F4=0x3B, j 0x80014660 (v0=0). 29810 first jals
+ * 20EFC (void; 5-byte clear) then 71A64(D_8009D250), then the
  * already-ported 293F4(0) + after_hp tail. Does not invent 20EFC /
- * 71A64, mode 7, or 0x55 completion.
+ * 71A64 bodies, mode 7, or 0x55 completion.
  */
 int func_800144FC_state3A_cut(void)
 {
@@ -514,6 +528,8 @@ int func_800144FC_state3A_cut(void)
 
     D_8009D1A0 |= 2u;
     actor = PE_LoadU32(GA_OVERLAY);
+    func_80020EFC();
+    func_80071A64(PE_LoadU32(0x8009D250u));
     func_800293F4_hp_cut();
     func_80029810_after_hp_cut(PE_LoadU8(actor));
     PE_StoreU8(GA_OVERLAY + 0xF4u, 0x3Bu);
