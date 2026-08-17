@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -87,6 +87,8 @@
 #define GA_OP1E       0x80019658u
 #define GA_OP79       0x80018BECu
 #define GA_OP85       0x80018EB4u
+#define GA_OPDC       0x8001A1F0u
+#define GA_OP1A       0x800176FCu
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 
@@ -301,6 +303,47 @@ int func_80018EB4(pe_addr_t args)
     return 1;
 }
 
+/*
+ * PE-BTL42 — opcode 0xDC actor-flag 1A1F0.
+ *
+ * 9 words 0x8001A1F0..0x8001A214, SHA-256 65cffdf8…d872.
+ * D_800910A0[0xDC]. Zero jal. D2F0+0x98 |= 0x01000000; v0=1.
+ * Live type-2 after mailbox 0xFB → 0x0B pose pair.
+ */
+int func_8001A1F0(pe_addr_t args)
+{
+    pe_addr_t actor;
+
+    (void)args;
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0x01000000u);
+    return 1;
+}
+
+/*
+ * PE-BTL43 — opcode 0x1A RNG write 176FC.
+ *
+ * 26 words 0x800176FC..0x80017764, SHA-256 ae4816ac…2ab2.
+ * D_800910A0[0x1A]. jal 70D6C when *arg1==*arg2, else
+ * jal 70DD0(*arg1,*arg2). *arg0 = v0; v0=1.
+ * Live type-2 after 0xDC: dest local[0x18], 70DD0(0,0x64).
+ */
+int func_800176FC(pe_addr_t args)
+{
+    int32_t lo;
+    int32_t hi;
+    uint32_t result;
+
+    lo = (int32_t)PE_LoadU32(PE_LoadU32(args + 4u));
+    hi = (int32_t)PE_LoadU32(PE_LoadU32(args + 8u));
+    if (lo == hi)
+        result = func_80070D6C();
+    else
+        result = (uint32_t)func_80070DD0(lo, hi);
+    PE_StoreU32(PE_LoadU32(args), result);
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == GA_OP0)
@@ -389,6 +432,10 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80018BEC(args);
     if (fn == GA_OP85)
         return func_80018EB4(args);
+    if (fn == GA_OPDC)
+        return func_8001A1F0(args);
+    if (fn == GA_OP1A)
+        return func_800176FC(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }
