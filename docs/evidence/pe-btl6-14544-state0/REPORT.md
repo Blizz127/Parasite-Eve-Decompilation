@@ -39,10 +39,9 @@ TEXT jals: `0x80014588` (this state) and `0x8005D5F8`.
 
 ## Next
 
-`0x8001459C` state 0x38: `jal 0x8006D60C(1)` (387 words,
-`0x8006D60C..0x8006DC18`). If v0==1, rewind/return 0. Else
-`jal 0x80042F20` and sb 0x39. Do not stub `6D60C`/`6914C`,
-jump to mode 7, or complete `0x55`.
+`0x8006D078` — 6D60C live 0→0x2C→0x2E jal (357-word +0xF3 SM).
+Do not stub `6D60C`/`6D078`/`6914C`, jump to mode 7, or complete
+`0x55`. See `pe-btl6-6d60c`.
 
 ## Verify
 
