@@ -171,3 +171,30 @@ void func_80066CE8(void)
     PE_StoreU32(GA_D_800BD000 + 0x18u, 0u);
     PE_StoreU32(GA_D_800BD000 + 0x1Cu, 0u);
 }
+
+extern unsigned int D_8009D1A0;
+
+/*
+ * PE-BTL74 — 65674 / 68CE0.
+ *
+ * 65674 — 166 words 0x80065674..0x8006590C, SHA-256
+ * 9b325f33… . Zero jal. First lw is D1A0; bne skips the
+ * body. Live 3E974 leaves D1A0|=0x4000, so this cut is
+ * the early-out. The B1624 walk is not this cut.
+ *
+ * 68CE0 — 18 words 0x80068CE0..0x80068D28, SHA-256 below.
+ * 3F3C4 @ 3F560. jal 66CE8, 65674, 67E1C, 67A78, 67B74,
+ * 67D18; v0=0. 67E1C is the next live tail
+ * ((D1A0&0x104)==0). Not this cut.
+ */
+void func_80065674(void)
+{
+    if (D_8009D1A0 != 0u)
+        return;
+}
+
+void func_80068CE0(void)
+{
+    func_80066CE8();
+    func_80065674();
+}

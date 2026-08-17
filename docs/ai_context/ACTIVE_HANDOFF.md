@@ -11,19 +11,33 @@ Evidence only. No UE5 / gameplay edits. Pack:
 m0005i 125E0 types 1+6; `0x08` adds 3/0/5. hdr+0x0C writes
 `B0E70[2]` and `[5]` only. Type-0 `+0x1AC` is CE2=14 `+0x8`
 via `6C118`, not room hdr+0x0C. `+0x1B4` is an in-actor dest.
-M0367I full package hashed; spawn list not walked yet.
+M0367I 125E0 desc is type 1 only; hdr+0x0C is idB 2/3/4.
+Type-0 `0x2E` cmds: CE2=14 `0x15`/`0x1C`, Writer A `0x1E`/`0x1F`/`0x20`.
+`0x2F` is a frame cap to `+0x12`, not a command ID. M0367I Writer A
+is 36 rows, no type 1; type-1 `0x08` first8 types 2,2,4,3,4,2,3,4.
 
 ## PE-BTL72 — playable-loop TRACE through actors/HP capture
 
-`matching_native=798/798`. Native composition (not a new leaf):
+`matching_native=799/799`. Native composition (not a new leaf):
 m0004i mailbox 3 → `0x31` →
 `0x89` consume → `293F4` HP copy → `3EB04` Up (`BE9A2=0xFFEF`,
 not planted `D26C`) → `35C84` pose Z `0x50000`. TRACE
 `field → mailbox_3 → m0005i_enter → mode6_consumed → hp_copied →
-input_held → actors_captured`. HP hash stable; Circle not held.
-Do not emit `attack_available` / `hp_mutated` / `encounter_complete`.
-Do not invent pad / hit / rec=4 / 4D4 / mode 7. No matching `src/` C.
+input_held → actors_captured → attack_available`. HP hash stable.
+`attack_available` is type-3 `0x85` after BTL73's 409 Right ticks
+into rect1, not ATB/damage. Do not emit `hp_mutated` /
+`encounter_complete`. Do not invent pad / rec=4 / 4D4 / mode 7.
+No matching `src/` C.
 Evidence: `docs/evidence/pe-btl72-playable-loop/`.
+
+## PE-BTL74 — 68CE0 + 65674 D1A0 out
+
+`matching_native=800/800`. `3F3C4` now jals `68CE0`
+(`66CE8` then `65674`). Live `D1A0|=0x4000` makes
+`65674` a no-op. Next live tail is `67E1C`. Type-6
+waits while `scratch[0]&4` is clear; only setter is
+`+0x1850` after `0xAE`. Type-3 `0x85` hops M0004I /
+M0009I. Do not force the bit or those exits.
 
 ## PE-BTL73 — Right from 0x0B pose hits type-3 0x77
 
