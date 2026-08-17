@@ -9,13 +9,14 @@
  * jal, so the 3F3E8 equality holds on entry.
  *
  * This cut is the live mailbox/fade/message sites only:
+ *   jal 3EB04 @ 0x8003F40C
  *   jal 65400 @ 0x8003F4E8
  *   jal 35558 @ 0x8003F4F0
  *   jal 37870 @ 0x8003F568 when (B0CD8&0x100)==0 and
  *     (B0CD8&0x200)==0
  *   jal 68E24 @ 0x8003F588 on the same gate
  *
- * 3F074, 3EB04, 6EC08, overlay 122040/121A00, 6E60C, 68CE0,
+ * 3F074, 6EC08, overlay 122040/121A00, 6E60C, 68CE0,
  * 661A4, E01BC, 661CC, 70E54, 66C7C, 73A44, 6A25C,
  * 6A0E8, 74F44, 74DC0, 87024, 3DFC8, 696F0 are not this cut.
  * Do not invent those bodies.
@@ -27,6 +28,7 @@ void func_8003F3C4(void)
 {
     uint32_t bits;
 
+    func_8003EB04();
     func_80065400();
     func_80035558_walk_cut();
     bits = PE_LoadU32(0x800B0CD8u);
