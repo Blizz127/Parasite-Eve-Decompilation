@@ -119,7 +119,11 @@ the retail battle runtime, not a one-off script.
 | BTL-3A6A8-E | dest+0==0 jals 3E188; dest+0x24==0 → KSEG0 0x84 | PORTED | named 3E188 cut; no NULL skip |
 | BTL-T0-9B | type0 0x9B→0xED 0xA29→0x14×2→0x0B…→0x02 +0x2E8 | PROVEN | chunk2+0x202C8; next 0xAA |
 | BTL-T3-LOOP | double miss → +0x1E4 persist<40 → +0x3E4 0x02 / goto +0xC | PROVEN | 0x05 is base+(rel<<1) |
-| next_live_va | type0 second visit `0xAA`; type2 second `0x04`; HIT `0x85` | RESEARCH_REQUIRED | do not invent a hit |
+| BTL-12E7C | 142w 0x0C; 7 codes; read twin of 12C20; code5 lh | PORTED | live type5 +0x14C code 0 |
+| BTL-1A15C | 19w 0xD9; `*arg2 = 79FB4(*arg0,*arg1)`; v0=1 | PORTED | live cond[0],cond[1]→local[1] |
+| BTL-79FB4 | 93w signed ratan2; table D_8009A6EC; both-zero=0 | PORTED | host skips retail div-break |
+| BTL-T5-0C | type5 scratch-miss +0x128: 0x5E/0x0C/0x09×2/0xD9 | PROVEN | zero poses → ratan2(0,0)=0 |
+| next_live_va | type5 after 0xD9 ALU; type0 second `0xAA`; type2 `0x04` | RESEARCH_REQUIRED | do not invent a hit |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -195,11 +199,15 @@ python3 pc_port/tools/pe_btl24_type5_2e_oracle.py
 python3 pc_port/tools/pe_btl25_14694_oracle.py
 python3 pc_port/tools/pe_btl26_14da0_oracle.py
 python3 pc_port/tools/pe_btl27_15240_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=744/744
+python3 pc_port/tools/pe_btl28_12e7c_d9_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=746/746
 ```
 
-STOP/NEXT: type-0 first visit is ported through `0x02`
-at `+0x2E8`. Next type-0 word is `0xAA`. Type-1 after
+STOP/NEXT: type-5 scratch-miss is ported through
+`0xD9`. Next is the already-ported ALU/`0x05` after
+`0xD9`; miss goes to `+0x2C4`, HIT arm is `0x24`.
+Type-0 first visit is ported through `0x02` at
+`+0x2E8`. Next type-0 word is `0xAA`. Type-1 after
 the three `0x08`s can spawn type 2 then 4
 (`persist[0x4A]==0`). Type-2 first visit is ported
 through `0x02`; second visit is `0x04`. Type-3

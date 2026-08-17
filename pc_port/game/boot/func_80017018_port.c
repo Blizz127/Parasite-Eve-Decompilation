@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -73,6 +73,8 @@
 #define GA_OP5E       0x80014694u
 #define GA_OP77       0x80014DA0u
 #define GA_OP9B       0x80015240u
+#define GA_OPC        0x80012E7Cu
+#define GA_OPD9       0x8001A15Cu
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 
@@ -180,6 +182,10 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80014DA0(args);
     if (fn == GA_OP9B)
         return func_80015240(args);
+    if (fn == GA_OPC)
+        return func_80012E7C(args);
+    if (fn == GA_OPD9)
+        return func_8001A15C(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }

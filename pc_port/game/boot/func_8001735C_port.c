@@ -332,6 +332,70 @@ int func_80012C20(pe_addr_t args)
 }
 
 /*
+ * PE-BTL28 — opcode 0x0C pose-read 12E7C.
+ *
+ * 142 words 0x80012E7C..0x800130B4, SHA-256 76d82640…3dc8.
+ * D_800910A0[0x0C]. Zero jal. Always v0=1.
+ * jtbl_80010080 codes 0-6 are the 12C20 groups, read
+ * from D2F0 into *arg1/*arg2/*arg3. Code 5 is lh.
+ * Live type-5 +0x14C: code 0 → local[0x0D/0x0F/0x0E].
+ */
+int func_80012E7C(pe_addr_t args)
+{
+    uint32_t code;
+    pe_addr_t actor;
+
+    code = PE_LoadU32(PE_LoadU32(args));
+    if (code >= 7u)
+        return 1;
+
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    if (code == 0u) {
+        PE_StoreU32(PE_LoadU32(args + 4u), PE_LoadU32(actor + 0x28u));
+        PE_StoreU32(PE_LoadU32(args + 8u), PE_LoadU32(actor + 0x2Cu));
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(actor + 0x30u));
+        return 1;
+    }
+    if (code == 1u) {
+        PE_StoreU32(PE_LoadU32(args + 4u), PE_LoadU32(actor + 0x40u));
+        PE_StoreU32(PE_LoadU32(args + 8u), PE_LoadU32(actor + 0x44u));
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(actor + 0x48u));
+        return 1;
+    }
+    if (code == 2u) {
+        PE_StoreU32(PE_LoadU32(args + 4u), PE_LoadU32(actor + 0x68u));
+        PE_StoreU32(PE_LoadU32(args + 8u), PE_LoadU32(actor + 0x6Cu));
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(actor + 0x70u));
+        return 1;
+    }
+    if (code == 3u) {
+        PE_StoreU32(PE_LoadU32(args + 4u), PE_LoadU32(actor + 0x78u));
+        PE_StoreU32(PE_LoadU32(args + 8u), PE_LoadU32(actor + 0x7Cu));
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(actor + 0x80u));
+        return 1;
+    }
+    if (code == 4u) {
+        PE_StoreU32(PE_LoadU32(args + 4u), PE_LoadU32(actor + 0x88u));
+        PE_StoreU32(PE_LoadU32(args + 8u), PE_LoadU32(actor + 0x8Cu));
+        PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(actor + 0x90u));
+        return 1;
+    }
+    if (code == 5u) {
+        PE_StoreU32(PE_LoadU32(args + 4u),
+                    (uint32_t)(int32_t)(int16_t)PE_LoadU16(actor + 0x38u));
+        PE_StoreU32(PE_LoadU32(args + 8u),
+                    (uint32_t)(int32_t)(int16_t)PE_LoadU16(actor + 0x3Au));
+        PE_StoreU32(PE_LoadU32(args + 12u),
+                    (uint32_t)(int32_t)(int16_t)PE_LoadU16(actor + 0x3Cu));
+        return 1;
+    }
+    PE_StoreU32(PE_LoadU32(args + 4u), PE_LoadU32(actor + 0x58u));
+    PE_StoreU32(PE_LoadU32(args + 8u), PE_LoadU32(actor + 0x5Cu));
+    PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(actor + 0x60u));
+    return 1;
+}
+
+/*
  * PE-BTL25 — opcode 0x5E pose-copy 14694.
  *
  * 147 words 0x80014694..0x800148E0, SHA-256 97c3ff9a…059e.
