@@ -84,9 +84,14 @@ int func_800661EC(int a0, int a1, unsigned int a2, unsigned int a3)
 #define GA_D_800BD000 0x800BD000u
 #define GA_D_800BD020 0x800BD020u
 #define GA_D_800BD022 0x800BD022u
+#define GA_D_800BD028 0x800BD028u
 #define GA_D_800BE9A0 0x800BE9A0u
 #define GA_D_8009D254 0x8009D254u
 #define GA_D_8009D2E8 0x8009D2E8u
+#define GA_D_800BCF8C 0x800BCF8Cu
+#define GA_D_800BCF8E 0x800BCF8Eu
+#define GA_D_800BCF90 0x800BCF90u
+#define GA_D_800BCF92 0x800BCF92u
 
 static int32_t pe_rsin_77d30(uint32_t a0)
 {
@@ -133,8 +138,7 @@ int32_t func_80077DC4(int32_t angle)
  * @ 68CE8; 68CE0 is 3F3C4 @ 3F560 (same gate as 37870).
  * Digital yaw is BD020; analog BD022 is not this cut.
  * rsin/rcos build Ry; GTE column-extract writes BD000 and
- * zeros BD014/18/1C. 65674/67E1C/67A78/67B74/67D18 are not
- * this cut.
+ * zeros BD014/18/1C. 67A78/67B74/67D18 are not this cut.
  */
 void func_80066CE8(void)
 {
@@ -184,8 +188,7 @@ extern unsigned int D_8009D1A0;
  *
  * 68CE0 — 18 words 0x80068CE0..0x80068D28, SHA-256 below.
  * 3F3C4 @ 3F560. jal 66CE8, 65674, 67E1C, 67A78, 67B74,
- * 67D18; v0=0. 67E1C is the next live tail
- * ((D1A0&0x104)==0). Not this cut.
+ * 67D18; v0=0.
  */
 void func_80065674(void)
 {
@@ -193,8 +196,94 @@ void func_80065674(void)
         return;
 }
 
+/*
+ * PE-BTL75 — func_80067E1C camera-slot interpolate.
+ *
+ * 126 words 0x80067E1C..0x80068014, SHA-256
+ * 99f90f7f78d13d6ac4ff441b07eaf674192eee1c5a94f7d743107aae93c83d6f.
+ * Zero jal. Sole TEXT jal from 68CE0 @ 68CF8.
+ * Runs when (D1A0&0x104)==0 (live 0x4000 passes).
+ * Walks B1624 +0x14 records, stride 56, count at +6.
+ * Bit 4: 8.8 step + remainder into +0xC/+0x20.
+ * Bit 8: pull toward BCF8C vs BD028.
+ * If BCF88&0x80: clear that bit and copy BCF8C/8E to BCF90/92.
+ * Unpublished B1624==0 skips the walk (host; retail 6B4F8
+ * publishes before 68CE0). 67A78 is the next 68CE0 tail.
+ */
+static int32_t pe_mips_div_hi(int32_t num, int32_t den)
+{
+    if (den == 0)
+        return 0;
+    if (den == -1 && num == (int32_t)0x80000000)
+        return 0;
+    return num % den;
+}
+
+void func_80067E1C(void)
+{
+    pe_addr_t container;
+    pe_addr_t rec;
+    uint16_t count;
+    uint16_t i;
+    uint32_t flags;
+
+    if ((D_8009D1A0 & 0x104u) != 0u)
+        return;
+    container = PE_LoadU32(GA_D_800B1624);
+    if (container == 0u)
+        goto snapshot;
+    count = PE_LoadU16(container + 6u);
+    rec = container + PE_LoadU32(container + 0x14u);
+    for (i = 0; i < count; i++, rec += 56u) {
+        if ((PE_LoadU8(rec) & 4u) != 0u) {
+            int32_t acc;
+            int32_t den;
+
+            acc = (((int32_t)(int16_t)PE_LoadU16(rec + 0xCu) << 8)
+                   | (int32_t)PE_LoadU8(rec + 0x20u))
+                  + (int32_t)(int16_t)PE_LoadU16(rec + 0x1Cu);
+            den = (int32_t)PE_LoadU16(rec + 4u);
+            PE_StoreU16(rec + 0x20u, (uint16_t)(acc & 0xFF));
+            PE_StoreU16(rec + 0xCu,
+                        (uint16_t)pe_mips_div_hi(acc >> 8, den));
+            acc = (((int32_t)(int16_t)PE_LoadU16(rec + 0xEu) << 8)
+                   | (int32_t)PE_LoadU8(rec + 0x22u))
+                  + (int32_t)(int16_t)PE_LoadU16(rec + 0x1Eu);
+            den = (int32_t)PE_LoadU16(rec + 6u);
+            PE_StoreU16(rec + 0x22u, (uint16_t)(acc & 0xFF));
+            PE_StoreU16(rec + 0xEu,
+                        (uint16_t)pe_mips_div_hi(acc >> 8, den));
+        }
+        if ((PE_LoadU8(rec) & 8u) != 0u) {
+            int32_t acc;
+            int32_t delta;
+
+            delta = (int32_t)(int16_t)PE_LoadU16(GA_D_800BCF8C)
+                    - (int32_t)(int16_t)PE_LoadU16(GA_D_800BD028);
+            acc = ((int32_t)(int16_t)PE_LoadU16(rec + 8u) << 8)
+                  + delta * (int32_t)(int16_t)PE_LoadU16(rec + 0x1Cu);
+            PE_StoreU16(rec + 0xCu, (uint16_t)(acc >> 8));
+            PE_StoreU16(rec + 0x20u, (uint16_t)(acc & 0xFF));
+            delta = (int32_t)(int16_t)PE_LoadU16(GA_D_800BCF8E)
+                    - (int32_t)(int16_t)PE_LoadU16(GA_D_800BD028 + 2u);
+            acc = ((int32_t)(int16_t)PE_LoadU16(rec + 0xAu) << 8)
+                  + delta * (int32_t)(int16_t)PE_LoadU16(rec + 0x1Eu);
+            PE_StoreU16(rec + 0xEu, (uint16_t)(acc >> 8));
+            PE_StoreU16(rec + 0x22u, (uint16_t)(acc & 0xFF));
+        }
+    }
+snapshot:
+    flags = PE_LoadU32(GA_D_800BCF88);
+    if ((flags & 0x80u) != 0u) {
+        PE_StoreU32(GA_D_800BCF88, flags & ~0x80u);
+        PE_StoreU16(GA_D_800BCF90, PE_LoadU16(GA_D_800BCF8C));
+        PE_StoreU16(GA_D_800BCF92, PE_LoadU16(GA_D_800BCF8E));
+    }
+}
+
 void func_80068CE0(void)
 {
     func_80066CE8();
     func_80065674();
+    func_80067E1C();
 }

@@ -3,6 +3,17 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL75 — 67E1C camera-slot interpolate
+
+`matching_native=801/801`. `68CE0` now jals `67E1C`
+after `65674`. `(D1A0&0x104)==0` walks `B1624+0x14`
+stride-56 records. Bit 4 is 8.8 rem; bit 8 pulls
+`BCF8C` vs `BD028`. `BCF88&0x80` snapshots to
+`BCF90/92` (setter is `66800`). Next `68CE0` tail
+is `67A78` (jal `67294` when rec bit 1 and
+`+0x24==BCFFD`). Type-6 still waits while
+`scratch[0]&4` is clear. Do not force the bit.
+
 ## PE-BATTLE-DATA-PRECOVERY — NYPD contracts (parallel lane)
 
 Evidence only. No UE5 / gameplay edits. Pack:
