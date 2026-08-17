@@ -218,14 +218,18 @@ int func_8006D078(void)
 #define GA_GP_40C    0x8009D17Cu
 
 extern int func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int size);
+extern int func_8006E7E8(void);
 
 /*
  * func_8006CDA4 is 181 words (0x8006CDA4..0x8006D078). +0xF0 JT
  * 0x80011428: 0 / 7 / 8 / 9 / 0xA; 1-6 unused. No +0xE store.
  * Live 6D078 0x28 is a0=1 a1=1: state 0 fills gp+0x400/404/408 from
  * D_8009317C + D_800B0DD8, skips 87198/87414, sb 7, returns 1.
- * Dest is lw overlay+0x194. State 7 jals real 6E6D4; -1 sb 0
- * return 0; else sb 8 return 1. 6E7E8/state 9 are not stubbed.
+ * Dest is lw overlay+0x194. State 7 jals real 6E6D4 with host
+ * byte size (chunk<<11; retail a3 is sectors, proven by state 9
+ * sll 11). -1 sb 0 return 0; else sb 8 return 1. State 8 jals
+ * real 6E7E8: -1 sb 7, pending stays 8, 0 sb 9 and parks.
+ * 87090/state 9 are not stubbed.
  */
 void func_8006CDA4_state0_a0eq1_cut(int a1)
 {
@@ -261,12 +265,27 @@ int func_8006CDA4_state7_cut(pe_addr_t dest, int stack_len)
     PE_StoreU32(GA_GP_40C, chunk);
     issued = func_8006E6D4((int)PE_LoadU32(GA_GP_400),
                            (int)(PE_LoadU32(GA_GP_404) - remain), dest,
-                           (int)chunk);
+                           (int)(chunk << 11));
     if (issued == -1) {
         PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
         return 0;
     }
     PE_StoreU8(GA_OVERLAY + 0xF0u, 8u);
+    return 1;
+}
+
+int func_8006CDA4_state8_cut(void)
+{
+    int st;
+
+    st = func_8006E7E8();
+    if (st == -1) {
+        PE_StoreU8(GA_OVERLAY + 0xF0u, 7u);
+        return 1;
+    }
+    if (st != 0)
+        return 1;
+    PE_StoreU8(GA_OVERLAY + 0xF0u, 9u);
     return 1;
 }
 
@@ -288,7 +307,9 @@ int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
     }
     if (f0 == 7u)
         return func_8006CDA4_state7_cut(a3, stack_len);
-    if (f0 == 8u || f0 == 9u || f0 == 10u)
+    if (f0 == 8u)
+        return func_8006CDA4_state8_cut();
+    if (f0 == 9u || f0 == 10u)
         return 1;
     return 1;
 }

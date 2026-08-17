@@ -31,22 +31,23 @@ gp+0x400 = `D_800B0DD8+0x8C6`. a2 stays -1, sb 7, return 1
 (`s0=(flag^1)&1`; live flag=0). State 7 is not entered on
 that tick.
 
-Named cut implements a0=1 state 0 then, on the next call,
-state 7 through the real `func_8006E6D4`. It does not invent
-a successful read or enter 6E7E8/state 9.
+Named cut implements a0=1 state 0, state 7 through real
+`func_8006E6D4` (host bytes = sectors<<11), and state 8
+through real `func_8006E7E8`. Poll-complete sb 9 and parks.
+87090 is not entered.
 
 ## State 7
 
 `s6=-1`, dest `$s5=a3`. If gp+0x408==0: sb F0=0, return 0.
-Else `6E6D4(gp+0x400, gp+0x404-gp+0x408, dest, min(0x408, stack_len))`.
-Live: `6E6D4(LBA, 0, dest, 0x0F)`. v0!=-1 → sb 8, return 1.
+Else retail `6E6D4(LBA, 0, dest, min(0x408, stack_len))` sectors.
+Host bytes = that count `<< 11`. v0!=-1 → sb 8, return 1.
 v0==-1 → sb 0, return 0. 6D078 leaves 0x28 only when 6CDA4
 returns 1; return 0 + `+0x10<2` sb 0x2A (walk not entered).
 
 ## Next
 
-`0x8006E7E8` — 6CDA4 state 8 poll after a real 6E6D4!=-1.
-Do not stub poll-complete, jump to mode 7, or complete `0x55`.
+`0x80087090` — 6CDA4 state 9 live a0=1. See `pe-btl6-6e7e8`.
+Do not stub stream-open, jump to mode 7, or complete `0x55`.
 
 ## Verify
 

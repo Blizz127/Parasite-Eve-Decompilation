@@ -32,8 +32,8 @@ not entered.
 
 ## Next
 
-`0x8006E7E8` — 6CDA4 state 8 poll. State 7 now calls real
-6E6D4; -1 + `+0x10<2` sb 0x2A. See `pe-btl6-6cda4`.
+`0x80087090` — 6CDA4 state 9 after a real 6E7E8==0.
+See `pe-btl6-6e7e8`.
 
 ## Verify
 

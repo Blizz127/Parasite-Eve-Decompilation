@@ -18,10 +18,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8006E7E8` — 6CDA4 state 8 after a real
-6E6D4!=-1. State 7 calls the host issue; -1 sb F0=0.
-Do not stub poll-complete, `6914C`, jump to mode 7, or
-complete `0x55`. No matching `src/` C.
+STOP/NEXT: `0x80087090` — 6CDA4 state 9 live a0=1 after
+a real 6E7E8==0. State 8 parks at F0=9. Do not stub
+stream-open, `6914C`, jump to mode 7, or complete `0x55`.
+No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
