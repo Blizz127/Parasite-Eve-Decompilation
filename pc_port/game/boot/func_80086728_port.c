@@ -50,3 +50,32 @@ void func_80086728(int a0)
     PE_StoreU32(GA_D_800BCD80, cmd);
     func_8008CBA8();
 }
+
+#define GA_D_800BCD84 0x800BCD84u
+#define GA_D_800BCD90 0x800BCD90u
+
+/*
+ * func_80086464 is 13 words (0x80086464..0x80086498):
+ * D_800BCD80=0x10, D_800BCD84=a0, jal 8CBA8. Cmd 0x10 is
+ * 85084(*CD84); magic fail returns -1. Stream-complete is
+ * not invented.
+ */
+void func_80086464(pe_addr_t a0)
+{
+    PE_StoreU32(GA_D_800BCD80, 0x10u);
+    PE_StoreU32(GA_D_800BCD84, a0);
+    (void)func_8008CBA8();
+}
+
+/*
+ * func_80086C1C is 16 words (0x80086C1C..0x80086C5C):
+ * D_800BCD80=0xC0, D_800BCD84=a1&0x7F, D_800BCD90=a0, jal 8CBA8.
+ * 0xC0 is the default ring-enqueue path.
+ */
+void func_80086C1C(int a0, int a1)
+{
+    PE_StoreU32(GA_D_800BCD80, 0xC0u);
+    PE_StoreU32(GA_D_800BCD84, (unsigned int)a1 & 0x7Fu);
+    PE_StoreU32(GA_D_800BCD90, (unsigned int)a0);
+    (void)func_8008CBA8();
+}

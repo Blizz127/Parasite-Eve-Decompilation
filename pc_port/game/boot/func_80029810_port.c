@@ -228,7 +228,15 @@ int func_8006D60C_state2F_cut(void)
                       PE_LoadU32(GA_OVERLAY + 0x194u), 0x21, 0) == 1)
         return 1;
     PE_StoreU8(GA_OVERLAY + 0xF2u, 0x30u);
-    return 1;
+    return 0;
+}
+
+int func_8006D60C_state30_cut(void)
+{
+    func_80086464(PE_LoadU32(GA_OVERLAY + 0x124u));
+    func_80086C1C(0, 0x7F);
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0u);
+    return 0;
 }
 
 void func_8006D60C_state0_a0eq1_cut(void)
@@ -282,8 +290,14 @@ int func_8006D60C(int a0)
                 return 1;
             continue;
         }
-        if (f2 == 0x2Fu)
-            return func_8006D60C_state2F_cut();
+        if (f2 == 0x2Fu) {
+            if (func_8006D60C_state2F_cut() == 1)
+                return 1;
+            f2 = PE_LoadU8(GA_OVERLAY + 0xF2u);
+            continue;
+        }
+        if (f2 == 0x30u)
+            return func_8006D60C_state30_cut();
         return 0;
     }
     return 1;

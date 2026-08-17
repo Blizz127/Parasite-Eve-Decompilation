@@ -52,6 +52,15 @@
 /* Magic number constant for buffer validation. */
 #define PE_851A8_MAGIC  0xB0BEB4BFu
 
+/*
+ * func_80085084 is 5 words (0x80085084..0x80085098):
+ * return *buffer + 0xB0BEB4BF. 0 means AKAO magic. No store.
+ */
+int func_80085084(pe_addr_t buffer)
+{
+    return (int)(PE_LoadU32(buffer) + PE_851A8_MAGIC);
+}
+
 /* ── func_800851A8: SPU DMA upload (extended prefix) ─────────────────── */
 int func_800851A8(pe_addr_t buffer, int count)
 {

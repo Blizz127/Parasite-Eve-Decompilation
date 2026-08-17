@@ -41,8 +41,8 @@ returns 0 into D79C. No payload hash.
 
 ## Next
 
-`0x80086464` — 6D60C F2=0x30 after 0x2F `6E6D4` -1. Do not
-stub `86464`/`86C1C`/`6914C`, jump to mode 7, or complete `0x55`.
+`0x80042F20` — 144FC 0x38 after 0x30 returns 0. Do not stub
+`6914C`, jump to mode 7, or complete `0x55`.
 
 ## Verify
 

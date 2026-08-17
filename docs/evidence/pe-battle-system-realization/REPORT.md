@@ -38,6 +38,8 @@ the retail battle runtime, not a one-off script.
 | BTL-6D078 | 117w `0x8006D078..0x8006D24C`; +0xF3 JT; state0 sb 0x28; 0x28 jals 6CDA4 | PORTED | empty 0x2A → F3=0; bit0x10+half≥2 → 0x2B |
 | BTL-6D79C | 6D60C after 6D078=0; live F2 0x3F→0x2F; 6CDA4(0) → 87198 | PORTED | B0E64=D11614-8 only; NYPD 0x2A empty |
 | BTL-87198 | 5w `D_8009D270=1` return 0; 6CDA4 state0 a0=0 | PORTED | matching `src/` already; native port |
+| BTL-86464 | 13w `CD80=0x10` `CD84=a0` jal 8CBA8; cmd 0x10 = 85084 fail -1 | PORTED | no stream-complete |
+| BTL-86C1C | 16w `CD80=0xC0` `CD84=a1&7F` `CD90=a0` jal 8CBA8 | PORTED | 0xC0 default ring |
 | BTL-87414 | 5w `D_8009D270=2` return 0; 6CDA4 state0 a0=3 | PORTED | matching `src/` already; native port |
 | BTL-6CDA4 | 181w +0xF0 SM; live a0=1 sb 7 + table 0x0F; state7 real 6E6D4 | PORTED | -1 → F0=0; ok → F0=8 |
 | BTL-6E7E8 | 19w poll; state8 -1→7 pending→8 0→9; PE.IMG 8C6 AKAO | PORTED | `func_8006CDA4_state8_cut` parks at 9 |
@@ -76,8 +78,9 @@ python3 pc_port/tools/pe_btl6_6e7e8_oracle.py
 python3 pc_port/tools/pe_btl6_87090_oracle.py
 python3 pc_port/tools/pe_btl6_870e0_oracle.py
 python3 pc_port/tools/pe_btl6_87198_oracle.py
-./pc_port/build/pe-native-tests   # 689/689
+python3 pc_port/tools/pe_btl6_86464_oracle.py
+./pc_port/build/pe-native-tests   # 690/690
 ```
 
-STOP/NEXT: `0x80086464` — 6D60C F2=0x30 after 0x2F F0=7 `6E6D4` -1.
-Do not stub `86464`/`86C1C`/`6914C`, jump to mode 7, or complete `0x55`.
+STOP/NEXT: `0x80042F20` — 144FC 0x38 after 6D60C 0x30 returns 0.
+Do not stub `6914C`, jump to mode 7, or complete `0x55`.

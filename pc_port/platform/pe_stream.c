@@ -223,13 +223,11 @@ int func_8008CBA8(void)
     case 0x10:
     case 0x12:
     case 0x19:
-        /* Streaming read path (func_80085084): not exercised at boot.
-         * Trap loudly rather than fake a result. */
-        Stub_Record("func_8008CBA8(read-path)", "UNSUPPORTED");
-        fprintf(stderr,
-                "FATAL: func_8008CBA8 streaming read path (cmd 0x%02X) reached\n",
-                (unsigned)cmd);
-        abort();
+        /* ROM 8CC68: jal 85084(*CD84). v0!=0 → s1=-1, epilogue.
+         * v0==0 continues to 8CB54/8CB08 ring fill — not invented. */
+        if (func_80085084(a84) != 0)
+            s1 = -1;
+        break;
     default:                        /* includes 0xF0 / 0xF1 */
         e = PE_Stream_RingAlloc();
         PE_StoreU32(e + 0x4u, a84);
