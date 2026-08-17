@@ -12,12 +12,13 @@ the retail battle runtime, not a one-off script.
 | BTL-6C4C4 | Setter `ori 1/2/3`, 62/62 | PORTED | `func_8006C4C4_port.c` |
 | BTL-6C5BC-WIN | `0x8006C5BC..0x8006CC68` 427 words, SHA-256 `d15126b6…686a` | PROVEN | `pe_btl5_overlay_wait_oracle.py` |
 | BTL-6C5BC-CALL | TEXT jals only `35B24`/`3F22C`/`6C358`; `3F3C4`→`3F074` poll + `35558` | PROVEN | same oracle |
-| BTL-6C5BC-CUT | CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE 1-7/13 return 1 | PORTED | `func_8006C5BC` named cut |
+| BTL-6C5BC-CUT | CE2 `[10,14]`, EE 0/11/12; EE=13 prefix then 6CC2C clearer, return 1 | PORTED | `func_8006C5BC` named cut |
 | BTL-3A-D1A0 | `144FC` `0x3A` `D_8009D1A0 \|= 2` | PORTED | `func_800144FC_state3A_d1a0_cut` |
 | BTL-LIVE-3B | Next tick `6C4C4(CE4)` then `6C5BC` once; TRACE `overlay_wait` | PORTED | tests + TRACE_CONTRACT |
 | BTL-6CC68 | 79 words; six TEXT sites all in EE 0/1-7; **not** on live bit1→EE13 | PROVEN | `pe_btl6_ee13_oracle.py` |
 | BTL-EE13-PREFIX | EE=13 `lw +0x158` walk → `+0x1C0`; zeros `+0x10`/`+0x134`; D254/D1A0 a1 | PORTED | `func_8006C5BC_ee13_prefix_cut` |
-| BTL-EE13-3D050 | `jal 3D050` (505w) a0=`overlay+0x14` a3=704; then `6698C` live 117w, `3D834` 70w, then `andi 0xFC` | RESEARCH_REQUIRED | 3A088 GTE walk / `andi 0xFC` |
+| BTL-EE13-3D050 | `jal 3D050` (505w) a0=`overlay+0x14` a3=704; then `6698C` live 117w, `3D834` 70w, then `andi 0xFC` | PORTED | `pe-btl6-6cc2c-epilogue` |
+| BTL-6CC2C | EE=13 after jal 3D834: `andi 0xFC` / `sb +0xE` / `sb 0 → +0xEE`; v0=1 | PORTED | `func_8006C5BC_ee13_epilogue_cut` |
 | BTL-3D050-PFX | Pointer ladder `+0/4/8/C/10`, `+0x54=a2`, `+0xBA=1` | PORTED | `func_8003D050_prefix_cut` |
 | BTL-3D050-R | ptr14 `+0x14..+0x20`; post-3D94C-skip; epilogue after `3C5D8`; `3D94C` skipped | PORTED | `pe-btl6-3d050-remainder` |
 | BTL-3C5D8 | 24 words; live a1=50 → `+0x8D=50`, `128/50=2` | PORTED | `func_8003C5D8` |
@@ -55,8 +56,10 @@ python3 pc_port/tools/pe_btl2_hp_trace_oracle.py
 python3 pc_port/tools/pe_btl6_3d834_callees_oracle.py
 python3 pc_port/tools/pe_btl6_3a088_walk_oracle.py
 python3 pc_port/tools/pe_btl6_3b97c_lighting_oracle.py
-./pc_port/build/pe-native-tests   # 678/678
+python3 pc_port/tools/pe_btl6_6cc2c_oracle.py
+./pc_port/build/pe-native-tests   # 679/679
 ```
 
-STOP/NEXT: `0x8006CC2C` — `6C5BC` `andi 0xFC` after jal 3D834
-(3A088/3B97C/3BCE0 live cuts are ported). Do not complete `0x55`.
+STOP/NEXT: `0x80014544` — 144FC state 0 after 0x3B stores
+`+0xF4=0` (then sb 0x37 if bits stay clear). Do not stub
+`6914C`, jump to mode 7, or complete `0x55`.

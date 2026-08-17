@@ -18,9 +18,10 @@
  * Named cut implemented here: CE2 in [10,14], +0xEE JT gates,
  * EE=0 bit0/bit1 advance, EE=11 ori 1, EE=12→13, EE 8/9/10 return 0.
  * EE 1-7 return 1 without clearing +0xE. EE=13 runs the proven
- * package-walk prefix (overlay+0x158 → +0x1C0, zeros, D254 gate)
- * and still returns 1; jal 3D050/6698C/3D834 and andi 0xFC are
- * not this cut. 6CC68 is EE 0/1-7 only — not on the live bit1 path.
+ * package-walk prefix then the 0x8006CC20..0x8006CC38 epilogue
+ * (andi 0xFC / sb +0xE / sb 0 → +0xEE) after jal 3D834 returns.
+ * Blanket +0xE&=0xFC from 0x55 without that EE=13 fall-through
+ * is still forbidden. 6CC68 is EE 0/1-7 only.
  *
  * 144FC 0x3A oris D_8009D1A0 bit 1; the next field tick's 3F074
  * jals 6C4C4(CE4) which copies that into +0xE bit 1. Native invokes
@@ -77,13 +78,20 @@ int func_8006C4C4(int a0)
     return 0;
 }
 
-void func_8006C5BC_clear_wait_cut(void)
+void func_8006C5BC_ee13_epilogue_cut(void)
 {
     uint8_t status;
 
+    /* 0x8006CC20..0x8006CC38 exclusive: after jal 3D834 @ 0x8006CC18.
+     * v0=1 is the EE=13 return; the j 0x8006CC3C skips the v0=0 join. */
     status = PE_LoadU8(GA_OVERLAY + 0x0Eu);
     PE_StoreU8(GA_OVERLAY + 0xEEu, 0u);
     PE_StoreU8(GA_OVERLAY + 0x0Eu, (uint8_t)(status & 0xFCu));
+}
+
+void func_8006C5BC_clear_wait_cut(void)
+{
+    func_8006C5BC_ee13_epilogue_cut();
 }
 
 /*
@@ -190,6 +198,7 @@ int func_8006C5BC(void)
         }
         if (ee == 13u) {
             (void)func_8006C5BC_ee13_prefix_cut();
+            func_8006C5BC_ee13_epilogue_cut();
             return 1;
         }
         return 1;

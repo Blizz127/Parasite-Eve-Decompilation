@@ -18,9 +18,9 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8006CC2C` — `6C5BC` `andi 0xFC` after jal 3D834.
-3B97C lighting is RTIR `0x049E012` + NCCT `0x118043F` (not
-NCLIP). 3BCE0 full leaf already ported. Do not complete `0x55`.
+STOP/NEXT: `0x80014544` — 144FC state 0 after 0x3B. EE=13
+`andi 0xFC` at `0x8006CC2C` is the retail clearer after jal
+3D834. Do not stub `6914C`, jump to mode 7, or complete `0x55`.
 No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table

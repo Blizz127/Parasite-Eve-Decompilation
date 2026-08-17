@@ -94,5 +94,5 @@ PE_TEST_FILTER=BTL6 ./pc_port/build/pe-native-tests
 ./pc_port/build/pe-native-tests
 ```
 
-STOP: `0x8006CC2C` — `andi 0xFC` after jal 3D834. Do not
-complete `0x55`.
+STOP: 6CC2C epilogue is in `pe-btl6-6cc2c-epilogue`. Next
+`0x80014544`. Do not complete `0x55`.

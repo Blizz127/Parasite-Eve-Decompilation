@@ -25,7 +25,7 @@ battle_tick
 | `field_scene` | packed name | `m0004i` then `m0005i` |
 | `field_script_pc` | current module offset | e.g. `mod4+0x1040`, `mod6+0x350C` |
 | `encounter_id` | first request id | `m0005i_mod6_350C` until a better retail id exists |
-| `transition_state` | enum | `field` `mailbox_3` `mailbox_4` `m0005i_enter` `rng_selected` `slots_ready` `mode6_request` `mode6_consumed` `wait_mode7` `encounter_55` `hp_copied` `first_command` `command_bound` `overlay_wait` `post_return` |
+| `transition_state` | enum | `field` `mailbox_3` `mailbox_4` `m0005i_enter` `rng_selected` `slots_ready` `mode6_request` `mode6_consumed` `wait_mode7` `encounter_55` `hp_copied` `first_command` `command_bound` `overlay_wait` `overlay_cleared` `post_return` |
 
 `first_command` is legal only after the ROM-verified post-`293F4` tail:
 `0x800299AC` loads record `+0x12` (the preceding HP cut stored byte `4`),
@@ -47,9 +47,10 @@ field tick's `func_8003F074` (first jal of `3F3C4`) jals `6C4C4(CE4)`
 then polls `6C5BC` until `v0!=1`. `35558` also jals `6C5BC` once after
 the actor walk. Those are the live callers; `144FC`/`29810` do not jal
 `6C5BC`. `6914C` never stores `+0xE`. Native emits `overlay_wait` after
-`command_bound` when that 3F074 tail sets bits 0-1. It does not emit
-`post_return`, auto-clear `+0xE`, stub `6914C`, or store mode 7. EE=13
-CD/`6CC68`/`3D834` are not this cut.
+`command_bound` when that 3F074 tail sets bits 0-1. `overlay_cleared`
+is legal only after the EE=13 epilogue at `0x8006CC2C` (`andi 0xFC`
+immediately after `jal 3D834`) makes `(+0xE & 3)==0`. It does not
+emit `post_return`, stub `6914C`, or store mode 7.
 | `battle_mode` | `D_8009D28C` raw | 0/3/4/5/6/7/8 |
 | `formation_id` | `49` or `50` plus `1332/1333/1334` | write as `49;1332,1333,1334` |
 | `player_state_hash` | SHA-256 of Aya actor bytes that battle actually touches | BTL2: SHA-256 of record `+0x0C/+0x0E/+0x1C` (HP triple, `func_800293F4_hp_cut`). BTL1 rows stay `partial` |
