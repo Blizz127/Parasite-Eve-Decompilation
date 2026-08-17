@@ -26,7 +26,7 @@
  * Blanket +0xE&=0xFC from 0x55 without that EE=13 fall-through
  * is still forbidden. EE=0 bits-clear jals func_8006CC68 (always
  * v0=0). 3F074 then continues to 1A918 / 371B0 / 125E0 /
- * 0x800E0060 (loaded; do not fake).
+ * EXE-resident 0x800E0060 (not loaded, not M2).
  *
  * 144FC 0x3A oris D_8009D1A0 bit 1; the next field tick's 3F074
  * jals 6C4C4(CE4) which copies that into +0xE bit 1. Native invokes
@@ -289,6 +289,37 @@ int func_8003F074_poll_cut(void)
         guard++;
     } while (v0 == 1 && guard < 16);
     return v0;
+}
+
+/* 3F074 @ 0x8003F244: language bit selects 162C else 1628. */
+pe_addr_t func_8003F074_371b0_a0(void)
+{
+    if ((PE_LoadU32(GA_OVERLAY) & 0x40000000u) != 0u)
+        return PE_LoadU32(0x800B162Cu);
+    return PE_LoadU32(0x800B1628u);
+}
+
+/* 3F074 after v0=0: 1A918, 371B0(selected a0), 125E0, E0060,
+ * gp+0x34=0, sh 0 → D_800942EC, DrawSync(0), SetDispMask(1),
+ * D1A0 &= ~0x40, D2E8 &= ~0xC, overlay[0] &= ~0x00000402.
+ * Not M2. */
+void func_8003F074_after_poll_cut(void)
+{
+    uint32_t word;
+
+    func_8001A918();
+    func_800371B0(func_8003F074_371b0_a0());
+    func_800125E0();
+    func_800E0060();
+    PE_StoreU32(0x8009CDA4u, 0u);
+    PE_StoreU16(0x800942ECu, 0u);
+    func_80074DC0(0);
+    func_80074D28(1);
+    D_8009D1A0 &= ~0x40u;
+    word = PE_LoadU32(GA_D2E8) & ~0xCu;
+    PE_StoreU32(GA_D2E8, word);
+    word = PE_LoadU32(GA_OVERLAY) & ~0x402u;
+    PE_StoreU32(GA_OVERLAY, word);
 }
 
 /*

@@ -125,3 +125,34 @@ void func_80034F10(void)
      * slot). */
     PE_StoreU32(GA_D_800B0CD8, PE_LoadU32(GA_D_800B0CD8) & ~0x3000u);
 }
+
+/*
+ * PE-BTL9 — func_80034FC4: 14-slot actor freelist at D_800BEA90.
+ * 29 words 0x80034FC4..0x80035038. Sole TEXT caller 3F074 @
+ * 0x8003F0B0 (before the 6C5BC poll). Links 13 next-pointers at
+ * +4, stride 0x280, nulls the 14th +4, publishes the head to
+ * gp+0x53C (D_8009D2AC), clears gp+0x536 / gp+0x49C / gp+0x4E4,
+ * and zeros 16 qwords at D_800A7624. This is the pool 35038 pops.
+ */
+#define GA_D_800A7624 0x800A7624u
+#define GA_D_800C0B14 0x800C0B14u
+#define SLOT_STRIDE   0x280u
+
+void func_80034FC4(void)
+{
+    unsigned int i;
+    pe_addr_t next;
+
+    PE_StoreU16(GA_D_8009D2A6, 0u);
+    PE_StoreU32(GA_D_8009D20C, 0u);
+    PE_StoreU32(GA_D_8009D2AC, GA_D_800BEA90);
+    next = GA_D_800BEA90 + SLOT_STRIDE;
+    for (i = 0; i < 13u; i++) {
+        PE_StoreU32(GA_D_800BEA90 + 4u + i * SLOT_STRIDE, next);
+        next += SLOT_STRIDE;
+    }
+    PE_StoreU32(GA_D_800C0B14, 0u);
+    for (i = 0; i < 16u; i++)
+        PE_StoreU32(GA_D_800A7624 + i * 8u, 0u);
+    PE_StoreU32(GA_D_8009D254, 0u);
+}
