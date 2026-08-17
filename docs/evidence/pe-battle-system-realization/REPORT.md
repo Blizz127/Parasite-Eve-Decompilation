@@ -24,7 +24,7 @@ the retail battle runtime, not a one-off script.
 | BTL-6698C | Live first leaf 117w; `D_800BEA40` fill; 215w window is four `jr`s | PORTED | `func_8006698C` |
 | BTL-3D834 | 70 words to `0x8003D94C`, not 489; a1==0 skips first 3 jals | PROVEN | remainder oracle |
 | BTL-3DFD8 | Live copy leaf 51w; `jal 3DFD8(0x800B1638, dest+0x34, 1)` | PORTED | `func_8003DFD8` |
-| BTL-794C4 | 888 words, 5 jals; live after 3D050 zeros `+0x2C` | RESEARCH_REQUIRED | do not invent |
+| BTL-794C4 | First leaf 163w RotMatrix; live zero angles → identity at dest+0x34 | PORTED | `func_800794C4` |
 | BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PROVEN | not the 0x3B wait |
 | BTL-6D60C | `144FC` `0x38` jal `6D60C(1)`; 387 words; no `+0xE` | PROVEN | before 0x39 |
 | BTL-MODE7 | `0x8002CEE0` jal `6914C(0)` then `D_8009D28C=7` | PROVEN | not issued |
@@ -48,8 +48,8 @@ python3 pc_port/tools/pe_btl6_ee13_oracle.py
 python3 pc_port/tools/pe_btl6_3d050_remainder_oracle.py
 python3 pc_port/tools/pe_btl3_29810_tail_oracle.py
 python3 pc_port/tools/pe_btl2_hp_trace_oracle.py
-./pc_port/build/pe-native-tests   # 672/672
+./pc_port/build/pe-native-tests   # 673/673
 ```
 
-STOP/NEXT: `func_800794C4` (888 words) so 3D050 can finish, then
-3D834 callees `3A088` / `3B97C` / `3BCE0`. Do not `andi 0xFC`.
+STOP/NEXT: 3D834 live a1==0 callees `3A088` (392w) / `3B97C` (217w, 0 jals)
+/ `3BCE0` (245w, 0 jals). `3DFD8` is ported. Do not `andi 0xFC`.

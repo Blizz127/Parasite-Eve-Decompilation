@@ -18,11 +18,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `func_800794C4` (888 words, live after 3D050 zeros
-`+0x2C/+0x34`) so 3D050 can finish, then 3D834 callees `3A088` /
-`3B97C` / `3BCE0`. `3D94C` is skipped on EE=13. `3C5D8`, live
-`6698C` (117w), and `3DFD8` (51w) are ported. Do not `andi 0xFC`
-or complete `0x55`. No matching `src/` C.
+STOP/NEXT: 3D834 live a1==0 callees `3A088` / `3B97C` / `3BCE0`.
+3D050 EE=13 jals are done (`3D94C` skipped, `794C4` first leaf,
+`3C5D8`). `6698C` and `3DFD8` are ported. Do not `andi 0xFC` or
+complete `0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

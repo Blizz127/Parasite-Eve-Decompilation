@@ -69,5 +69,12 @@ Exclusive `0x8003DFD8..0x8003E0A4` (first jr). Live 3D834 a1==0:
 `jal 3DFD8(0x800B1638, dest+0x34, 1)`. Copies `count` records:
 halfwords `+0..+16`, words `+0x14/+0x18/+0x1C`; `+0x12` untouched.
 
-STOP: `func_800794C4` (888 words) so 3D050 can finish, then 3D834
-callees `3A088` / `3B97C` / `3BCE0`. Do not `andi 0xFC`.
+## `func_800794C4` first leaf — 163 words, SHA-256 `19a788c4…`
+
+Exclusive `0x800794C4..0x80079750`. Zero callees. Live EE=13 angles
+at dest+0x2C are 0; `D_800966EC[0]=0x10000000` yields the 4096
+identity at dest+0x34. Packed later leaves / `EnterCriticalSection`
+are not this cut.
+
+STOP: 3D834 live a1==0 callees `3A088` / `3B97C` / `3BCE0`.
+Do not `andi 0xFC`.

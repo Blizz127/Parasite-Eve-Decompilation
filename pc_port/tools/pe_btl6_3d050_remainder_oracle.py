@@ -43,6 +43,9 @@ WIN_6698C_LIVE = "71478d80954afcad2616494a803d5cc26d677eccafcdfd0e5bf085b060f11a
 WIN_6698C_WIN = "3c24408d3f33c94fc1f554c15ec0df6a06fb98091c0be666844bf22095e434e7"
 WIN_3D834 = "520529b07ee5f4234242a5911c06895083fbf2955c6c58a54ae5a7d8a317f7ad"
 WIN_3DFD8_LIVE = "c30623182ab2e16e2bcb5de7a82d8ccf7dd39446c84a82e117960e2f37d9e881"
+FN_794C4 = 0x800794C4
+FN_794C4_LEAF_END = 0x80079750
+WIN_794C4_LEAF = "19a788c448e9f29638e673adaa9be46de34a81b53a99fbb389b4833a7a77ac7c"
 
 
 def require(cond: bool, msg: str) -> None:
@@ -169,10 +172,23 @@ def main() -> int:
             dfd8_jals.append(jal_target(word))
     require(dfd8_jals == [], f"3DFD8 live jals {dfd8_jals}")
 
+    require((FN_794C4_LEAF_END - FN_794C4) // 4 == 163, "794C4 leaf 163")
+    require(window_sha(data, FN_794C4, FN_794C4_LEAF_END) == WIN_794C4_LEAF,
+            "794C4 leaf sha")
+    require(load_u32(data, FN_794C4) == 0x848F0000, "794C4 lh a0")
+    require(load_u32(data, 0x800794EC) == 0x8F3966EC, "794C4 lw sincos")
+    require(load_u32(data, 0x80079748) == 0x03E00008, "794C4 first jr")
+    leaf_jals = []
+    for va in range(FN_794C4, FN_794C4_LEAF_END, 4):
+        word = load_u32(data, va)
+        if word >> 26 == 3:
+            leaf_jals.append(jal_target(word))
+    require(leaf_jals == [], f"794C4 leaf jals {leaf_jals}")
+
     print(
         "PASS: 3D050 ptr14/post-3D94C-skip/epilogue exclusive cuts; "
         "3C5D8 24w; 6698C live 117w first jr; 3D834 70w a1==0; "
-        "3DFD8 live 51w copy; 794C4 still live unresolved"
+        "3DFD8 live 51w copy; 794C4 first leaf 163w RotMatrix"
     )
     return 0
 
