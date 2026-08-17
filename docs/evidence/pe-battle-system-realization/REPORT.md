@@ -80,7 +80,9 @@ the retail battle runtime, not a one-off script.
 | BTL-35E04 | 83w types 1–9 vtable; pose snap + 361F4 | PORTED | live `+0x98` bit1 clear; no motion |
 | BTL-361F4 | 24w `D2F0=actor`; `+0xA0`×3 → `D300`; jal 17018 | PORTED | now calls 17018 |
 | BTL-17018 | 159w task VM; jalr `D_800910A0[op]`; first tick `+0x10=1` | PORTED | ops 0/1/2/0x20 + 0x1C/0x1F; other slots advance |
-| next_live_va | type0 `35C84` / `2F76C` or overlay bytecode | RESEARCH_REQUIRED | field-tick VM frame is live |
+| BTL-35C84 | 96w type0 vtable; snap + 361F4; D2E8&1 skips 3999C | PORTED | 3999C pad table not this cut |
+| BTL-2F76C | 27w type0 stores actor+0 / B8A88 / B8A8C | PORTED | 5218C/51980/51E64 not this cut |
+| next_live_va | `3999C` or overlay bytecode / `51980` | RESEARCH_REQUIRED | type0 walk is live |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -134,6 +136,7 @@ python3 pc_port/tools/pe_btl9_371b0_oracle.py
 python3 pc_port/tools/pe_btl10_35038_oracle.py
 python3 pc_port/tools/pe_btl11_35558_oracle.py
 python3 pc_port/tools/pe_btl12_17018_oracle.py
+python3 pc_port/tools/pe_btl13_35c84_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
@@ -142,7 +145,7 @@ python3 pc_port/tools/pe_btl6_339a0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: field tick walks actors and runs `17018` on
-`+0xA8`. Next: type0 `35C84` / `2F76C` or overlay-published
-bytecode. Not M2. Do not jalr `0x800E086C`. `0x89` is mode-6
-request, not battle-over.
+STOP/NEXT: type0 walk is `35C84` → `361F4` → `17018`. Next:
+`3999C` (pad table) or overlay bytecode. E0060 is EXE
+list-clear, not M2. Do not jalr `0x800E086C`. `0x89` is
+mode-6 request, not battle-over.

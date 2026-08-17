@@ -14,9 +14,10 @@
  *   for actor in D_8009D20C via +4:
  *       jalr actor+0x190 (a0=actor)
  *
- * Known jalr target 0x80035E04 (types 1–9) is ported below.
- * Type0 0x80035C84 and the remaining 29 jals (including 6C5BC)
- * are not this cut. Not M2: this is the field-tick actor walk.
+ * Known jalr targets 0x80035E04 (types 1–9) and 0x80035C84
+ * (type 0) are ported below. 35C84 jal 3999C is not this cut.
+ * The remaining 29 jals in 35558 (including 6C5BC) are not this
+ * cut. Not M2: this is the field-tick actor walk.
  *
  * func_80035E04 — 83 words 0x80035E04..0x80035F50. If D1A0 bit
  * 0x100, only 361F4. Else snapshot +0x28/+0x38 into +0x40/+0x50,
@@ -34,40 +35,22 @@
 #define GA_D_8009D20C 0x8009D20Cu
 #define GA_D_8009D2F0 0x8009D2F0u
 #define GA_D_8009D300 0x8009D300u
+#define GA_D_8009D2E8 0x8009D2E8u
 #define GA_VT_35E04   0x80035E04u
 #define GA_VT_35C84   0x80035C84u
 
-extern unsigned int D_8009D1A0;
-
-void func_800361F4(pe_addr_t actor)
+static void pe_actor_snapshot_pose(pe_addr_t actor)
 {
-    unsigned int i;
-    uint32_t slot;
-
-    PE_StoreU32(GA_D_8009D2F0, actor);
-    for (i = 0; i < 3u; i++) {
-        slot = PE_LoadU32(actor + 0xA0u + i * 4u);
-        PE_StoreU32(GA_D_8009D300, slot);
-        if (slot != 0u)
-            func_80017018();
-    }
-}
-
-void func_80035E04(pe_addr_t actor)
-{
-    if (D_8009D1A0 & 0x100u) {
-        func_800361F4(actor);
-        return;
-    }
-
     PE_StoreU32(actor + 0x40u, PE_LoadU32(actor + 0x28u));
     PE_StoreU32(actor + 0x44u, PE_LoadU32(actor + 0x2Cu));
     PE_StoreU32(actor + 0x48u, PE_LoadU32(actor + 0x30u));
     PE_StoreU16(actor + 0x50u, PE_LoadU16(actor + 0x38u));
     PE_StoreU16(actor + 0x52u, PE_LoadU16(actor + 0x3Au));
     PE_StoreU16(actor + 0x54u, PE_LoadU16(actor + 0x3Cu));
-    func_800361F4(actor);
+}
 
+static void pe_actor_integrate_motion(pe_addr_t actor)
+{
     if ((PE_LoadU32(actor + 0x98u) & 2u) == 0u)
         return;
 
@@ -97,6 +80,44 @@ void func_80035E04(pe_addr_t actor)
                 PE_LoadU32(actor + 0x30u) + PE_LoadU32(actor + 0x60u));
 }
 
+extern unsigned int D_8009D1A0;
+
+void func_800361F4(pe_addr_t actor)
+{
+    unsigned int i;
+    uint32_t slot;
+
+    PE_StoreU32(GA_D_8009D2F0, actor);
+    for (i = 0; i < 3u; i++) {
+        slot = PE_LoadU32(actor + 0xA0u + i * 4u);
+        PE_StoreU32(GA_D_8009D300, slot);
+        if (slot != 0u)
+            func_80017018();
+    }
+}
+
+void func_80035E04(pe_addr_t actor)
+{
+    if (D_8009D1A0 & 0x100u) {
+        func_800361F4(actor);
+        return;
+    }
+
+    pe_actor_snapshot_pose(actor);
+    func_800361F4(actor);
+    pe_actor_integrate_motion(actor);
+}
+
+void func_80035C84(pe_addr_t actor)
+{
+    pe_actor_snapshot_pose(actor);
+    func_800361F4(actor);
+    if ((PE_LoadU32(GA_D_8009D2E8) & 1u) == 0u) {
+        /* jal 3999C: 118w pad table, not this cut. */
+    }
+    pe_actor_integrate_motion(actor);
+}
+
 void func_80035558_walk_cut(void)
 {
     pe_addr_t actor;
@@ -110,7 +131,8 @@ void func_80035558_walk_cut(void)
         fn = PE_LoadU32(actor + 0x190u);
         if (fn == GA_VT_35E04)
             func_80035E04(actor);
-        (void)GA_VT_35C84;
+        else if (fn == GA_VT_35C84)
+            func_80035C84(actor);
         actor = PE_LoadU32(actor + 4u);
     }
 }

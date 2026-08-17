@@ -39,9 +39,9 @@
  * at +0x0C/+0x0D, +0x1AC = D_800B0E70[type] when type<10 (EXE BSS
  * 0 unless overlay published), jal 12700(entry from *D_800B161C +
  * type*4 + 8). If +0x1AC==0, OR 0xE0 into +0x98 and return the
- * actor. Type 0 publishes D254 and sets +0x20=0x10000; jal 2F76C
- * (5218C/51980/51E64) is not this cut. +0x1AC!=0 (1A680/362B8/
- * 3D050) is not this cut.
+ * actor. Type 0 publishes D254, sets +0x20=0x10000, and jals
+ * 2F76C stores (actor+0 / B8A88 / B8A8C). 5218C/51980/51E64
+ * are not this cut. +0x1AC!=0 is not this cut.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -62,6 +62,19 @@
 #define GA_D_800B161C 0x800B161Cu
 #define TASK_STRIDE   0x2Cu
 #define TASK_COUNT    0x47u
+#define GA_D_800B8A20 0x800B8A20u
+#define GA_D_800B0CB0 0x800B0CB0u
+#define GA_D_8009D1B0 0x8009D1B0u
+#define GA_D_800B8A88 0x800B8A88u
+#define GA_D_800B8A8C 0x800B8A8Cu
+
+void func_8002F76C(pe_addr_t actor)
+{
+    PE_StoreU32(actor, GA_D_800B8A20);
+    PE_StoreU32(GA_D_800B8A88, GA_D_800B0CB0);
+    PE_StoreU32(GA_D_800B8A8C, GA_D_8009D1B0);
+    /* jal 5218C / 51980 / 51E64: not this cut. */
+}
 
 static pe_addr_t pe_kseg0(pe_addr_t addr)
 {
@@ -160,7 +173,7 @@ pe_addr_t func_80035038(pe_addr_t desc, pe_addr_t parent, unsigned int a2)
     if (type == 0u) {
         PE_StoreU32(GA_D_8009D254, actor);
         PE_StoreU32(actor + 0x20u, 0x10000u);
-        /* jal 2F76C: 5218C/51980/51E64 not this cut. */
+        func_8002F76C(actor);
     } else {
         PE_StoreU32(actor + 0x20u, 0x50000u);
         PE_StoreU32(actor, 0u);
