@@ -3,6 +3,16 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL84 — 6A0E8 D1A0&0x10 early-out
+
+`matching_native=810/810`. Sole jal `3F640`.
+Live `D1A0=0x4000` skips the PutDrawEnv body.
+`3F5EC` VSync(2) is live. The `3F684`
+`D1C4==D280` back-branch to `3EB04` is the
+retail inner frame loop; this cut keeps one
+pass per `1220C` tick. Type-6 still waits
+while `scratch[0]&4` is clear.
+
 ## PE-BTL83 — 70E54 flips guest CDDC
 
 `matching_native=809/809`. Live `6EC08==0` and

@@ -28,6 +28,8 @@
  * Live 6EC08==0 and B0CD8&0x200==0 flips guest CDDC
  * (70F94 sltiu / 70F98 sw). 754E4 DrawOTagEnv
  * (75EE0/76B98) is not this cut.
+ * 3F5EC VSync(2) then 6A0E8 @ 3F640. Live D1A0&0x10
+ * early-out. 66C7C/6A25C are not live.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -44,6 +46,17 @@ extern void func_80068CE0(void);
 extern void func_800661A4(void);
 extern void func_800661CC(void);
 extern int func_80074A44(int mode);
+
+extern unsigned int D_8009D1A0;
+
+void func_8006A0E8(void)
+{
+    if ((PE_LoadU32(0x800B0CD8u) & 0x200u) != 0u)
+        return;
+    if ((D_8009D1A0 & 0x10u) == 0u)
+        return;
+    /* PutDrawEnv / SetDrawArea body is not this cut. */
+}
 
 int func_8006EC08(void)
 {
@@ -192,4 +205,6 @@ void func_8003F3C4(void)
         cddc = PE_LoadU32(0x8009CDDCu);
         PE_StoreU32(0x8009CDDCu, cddc == 0u);
     }
+    func_80073A44(2);
+    func_8006A0E8();
 }
