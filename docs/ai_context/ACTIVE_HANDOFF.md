@@ -18,12 +18,12 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x80069468` — 6914C EF=0x36 jal `6E1C0`
-then `6E498` over dest `0x801ED800`. 0x34 real 6E6A8
-issues PE.IMG+0x7E / 5 sectors (sha256 `3b2ff0b8…`);
-host-sync 0x35 poll sb 0x36 return 1. Do not stub
-6914C return 0, jalr 0x800E086C, jump to mode 7,
-or complete `0x55`. No matching `src/` C.
+STOP/NEXT: `0x800145F8` — 144FC 0x3A after 0x36 done
+(6914C v0=0). 0x36 jals 6E1C0 ×64 (LoadImage from
+PE.IMG+0x7E TIM-like buffer; does not write it) then
+6E498(+0x18C, 0x73DECD80); miss sb EF=0 overlay&=~8.
+Do not stub 6914C(a0=0) mode 7, jalr 0x800E086C, or
+complete `0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

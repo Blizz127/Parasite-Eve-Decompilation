@@ -328,6 +328,7 @@ int func_800144FC_state38_cut(void)
 
 extern int func_8006E6A8(int lba, pe_addr_t dest, int sectors);
 extern int func_8006E7E8(void);
+extern pe_addr_t func_8006E498(pe_addr_t base, uint32_t key);
 extern unsigned int D_8009D1A0;
 
 #define GA_930E2  0x800930E2u
@@ -381,8 +382,12 @@ static void func_8006914C_state0_tables(void)
  * Proven tail: overlay |= 8, D1A0 |= 0x80. a0!=0 && bit 8 → sb 0x34,
  * return 1. 0x34 jals real 6E6A8(LBA=+0x100+lhu 930E2,
  * dest=+0x194=6A8D4 D_800B0E6C=0x801ED800, sectors=5). -1 stays
- * 0x34 return 1; else sb 0x35 return 1. 0x35 jals real 6E7E8.
- * Does not return 0 on the live a0=1 path, sb 0x3A, or write mode 7.
+ * 0x34 return 1; else sb 0x35 return 1. 0x35 jals real 6E7E8;
+ * host-sync → sb 0x36 return 1. 0x36 jals 6E1C0 × count (LoadImage
+ * over the 10240B TIM-like dest; does not write it) then 6E498
+ * (+0x18C, key 0x73DECD80). Done: sb EF=0, overlay&=~8, v0=0.
+ * Next 6914C(1) at EF=0 with bit8 clear returns 0 (not a stub).
+ * a0==0 returns 1 (does not write mode 7). Does not sb 0x3A.
  */
 int func_8006914C(int a0)
 {
@@ -400,12 +405,14 @@ int func_8006914C(int a0)
             PE_StoreU32(GA_OVERLAY, word | 8u);
             D_8009D1A0 |= 0x80u;
         }
-        if (a0 != 0 && (PE_LoadU32(GA_OVERLAY) & 8u) != 0u) {
+        if (a0 == 0)
+            return 1;
+        if ((PE_LoadU32(GA_OVERLAY) & 8u) != 0u) {
             PE_StoreU8(GA_OVERLAY + 0xEFu, 0x34u);
             return 1;
         }
         PE_StoreU8(GA_OVERLAY + 0xEFu, 0u);
-        return 1;
+        return 0;
     }
     if (ef == 0x34u) {
         off = PE_LoadU16(GA_930E2);
@@ -428,6 +435,56 @@ int func_8006914C(int a0)
             return 1;
         PE_StoreU8(GA_OVERLAY + 0xEFu, 0x36u);
         return 1;
+    }
+    if (ef == 0x36u) {
+        pe_addr_t dest;
+        pe_addr_t block;
+        pe_addr_t entry;
+        pe_addr_t arch;
+        pe_addr_t found;
+        unsigned int word;
+        int count;
+        int i;
+        uint32_t key;
+        RECT rc;
+        uint32_t dims;
+        uint32_t h;
+        uint32_t off;
+
+        dest = PE_LoadU32(GA_OVERLAY + 0x194u);
+        block = dest + PE_LoadU32(dest + 4u);
+        word = PE_LoadU32(block + 0x28u);
+        count = (int)(word >> 16);
+        if (count > 0) {
+            entry = dest + (word & 0xFFFFu);
+            for (i = 0; i < count; i++) {
+                (void)func_8006E1C0(entry, dest);
+                entry += 0x14u;
+            }
+        }
+        arch = PE_LoadU32(GA_OVERLAY + 0x18Cu);
+        key = 0x73DECD80u;
+        while (arch != 0u) {
+            found = func_8006E498(arch, key);
+            if (found == 0u)
+                break;
+            dims = PE_LoadU32(found + 8u);
+            rc.x = (int16_t)((dims >> 10) & 0x7FFu);
+            rc.y = (int16_t)(dims >> 21);
+            rc.w = (int16_t)(dims & 0x3FFu);
+            h = PE_LoadU8(found + 7u);
+            if (h == 0u)
+                h = 0x100u;
+            else
+                h &= 0xFFu;
+            rc.h = (int16_t)h;
+            off = PE_LoadU32(found + 4u) & 0x00FFFFFFu;
+            func_8007506C(&rc, found + off);
+            key += 4u;
+        }
+        PE_StoreU8(GA_OVERLAY + 0xEFu, 0u);
+        PE_StoreU32(GA_OVERLAY, PE_LoadU32(GA_OVERLAY) & 0xFFFFFFF7u);
+        return 0;
     }
     return 1;
 }
