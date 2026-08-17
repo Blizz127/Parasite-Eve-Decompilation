@@ -76,3 +76,98 @@ int func_800661EC(int a0, int a1, unsigned int a2, unsigned int a3)
     PE_StoreU32(GA_D_800BCF88, (flags & 0xFFF0u) | low);
     return 0;
 }
+
+#define GA_RSIN_589C  0x8009589Cu
+#define GA_RSIN_509C  0x8009509Cu
+#define GA_RSIN_489C  0x8009489Cu
+#define GA_RSIN_409C  0x8009409Cu
+#define GA_D_800BD000 0x800BD000u
+#define GA_D_800BD020 0x800BD020u
+#define GA_D_800BD022 0x800BD022u
+#define GA_D_800BE9A0 0x800BE9A0u
+#define GA_D_8009D254 0x8009D254u
+#define GA_D_8009D2E8 0x8009D2E8u
+
+static int32_t pe_rsin_77d30(uint32_t a0)
+{
+    if (a0 < 0x401u)
+        return (int16_t)PE_LoadU16(GA_RSIN_589C + a0 * 2u);
+    if (a0 < 0x801u)
+        return (int16_t)PE_LoadU16(GA_RSIN_589C + (0x800u - a0) * 2u);
+    if (a0 < 0xC01u)
+        return -(int16_t)PE_LoadU16(GA_RSIN_589C + (0x1000u - a0) * 2u);
+    return -(int16_t)PE_LoadU16(GA_RSIN_489C + a0 * 2u);
+}
+
+int32_t func_80077CF4(int32_t angle)
+{
+    int32_t s;
+
+    if (angle < 0) {
+        s = pe_rsin_77d30((uint32_t)(-angle) & 0xFFFu);
+        return -s;
+    }
+    return pe_rsin_77d30((uint32_t)angle & 0xFFFu);
+}
+
+int32_t func_80077DC4(int32_t angle)
+{
+    uint32_t a0;
+
+    if (angle < 0)
+        angle = -angle;
+    a0 = (uint32_t)angle & 0xFFFu;
+    if (a0 < 0x401u)
+        return (int16_t)PE_LoadU16(GA_RSIN_589C + (0x400u - a0) * 2u);
+    if (a0 < 0x801u)
+        return -(int16_t)PE_LoadU16(GA_RSIN_509C + a0 * 2u);
+    if (a0 < 0xC01u)
+        return (int16_t)PE_LoadU16(GA_RSIN_409C + a0 * 2u);
+    return -(int16_t)PE_LoadU16(GA_RSIN_589C + (0xC00u - a0) * 2u);
+}
+
+/*
+ * PE-BTL69 — func_80066CE8 walk heading matrix.
+ *
+ * 158 words 0x80066CE8..0x80066F60. Sole TEXT jal from 68CE0
+ * @ 68CE8; 68CE0 is 3F3C4 @ 3F560 (same gate as 37870).
+ * Digital yaw is BD020; analog BD022 is not this cut.
+ * rsin/rcos build Ry; GTE column-extract writes BD000 and
+ * zeros BD014/18/1C. 65674/67E1C/67A78/67B74/67D18 are not
+ * this cut.
+ */
+void func_80066CE8(void)
+{
+    uint16_t yaw;
+    int32_t s;
+    int32_t c;
+    pe_addr_t rec;
+
+    if ((PE_LoadU16(GA_D_800BE9A0) & 0xF000u) == 0x7000u)
+        yaw = PE_LoadU16(GA_D_800BD022);
+    else
+        yaw = PE_LoadU16(GA_D_800BD020);
+    rec = PE_LoadU32(GA_D_8009D254);
+    if (rec != 0u && (PE_LoadU32(GA_D_8009D2E8) & 0x10u) != 0u) {
+        rec = PE_LoadU32(rec);
+        yaw = (uint16_t)(yaw + 0x800u);
+        if (rec != 0u)
+            yaw = (uint16_t)(yaw
+                             + ((PE_LoadU32(rec + 0x4Cu) >> 7) & 0xC00u));
+    }
+    yaw &= 0xFFFu;
+    c = func_80077DC4((int32_t)yaw);
+    s = func_80077CF4((int32_t)yaw);
+    PE_StoreU16(GA_D_800BD000, (uint16_t)c);
+    PE_StoreU16(GA_D_800BD000 + 2u, 0u);
+    PE_StoreU16(GA_D_800BD000 + 4u, (uint16_t)s);
+    PE_StoreU16(GA_D_800BD000 + 6u, 0u);
+    PE_StoreU16(GA_D_800BD000 + 8u, 0x1000u);
+    PE_StoreU16(GA_D_800BD000 + 10u, 0u);
+    PE_StoreU16(GA_D_800BD000 + 12u, (uint16_t)-s);
+    PE_StoreU16(GA_D_800BD000 + 14u, 0u);
+    PE_StoreU16(GA_D_800BD000 + 16u, (uint16_t)c);
+    PE_StoreU32(GA_D_800BD000 + 0x14u, 0u);
+    PE_StoreU32(GA_D_800BD000 + 0x18u, 0u);
+    PE_StoreU32(GA_D_800BD000 + 0x1Cu, 0u);
+}

@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL69 — 66CE8 walk matrix on the 3F3C4 gate
+
+`matching_native=795/795`. `3F3C4@3F560` jals `68CE0` → `66CE8`
+before `37870`. Digital `BD020` + `77DC4`/`77CF4` write Ry to
+`BD000`. `68CE0` tail is not this cut. Do not invent pad.
+
 ## PE-BTL68 — 3999C `*codep` walk + digital 710A4/7136C
 
 `matching_native=794/794`. HEAD after this rung: BTL68. No matching

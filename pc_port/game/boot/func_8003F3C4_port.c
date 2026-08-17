@@ -14,11 +14,12 @@
  *   jal 3EB04 @ 0x8003F40C
  *   jal 65400 @ 0x8003F4E8
  *   jal 35558 @ 0x8003F4F0
- *   jal 37870 @ 0x8003F568 when (B0CD8&0x100)==0 and
+ *   jal 68CE0 @ 0x8003F560 (66CE8 walk matrix) then
+ *     jal 37870 @ 0x8003F568 when (B0CD8&0x100)==0 and
  *     (B0CD8&0x200)==0
  *   jal 68E24 @ 0x8003F588 on the same gate
  *
- * 3F074, 6EC08, overlay 122040/121A00, 6E60C, 68CE0,
+ * 3F074, 6EC08, overlay 122040/121A00, 6E60C, 68CE0 tail,
  * 661A4, E01BC, 661CC, 70E54, 66C7C, 73A44, 6A25C,
  * 6A0E8, 74F44, 74DC0, 87024, 3DFC8, 696F0 are not this cut.
  * Do not invent those bodies.
@@ -142,6 +143,7 @@ void func_8003F3C4(void)
         return;
     if ((bits & 0x200u) != 0u)
         return;
+    func_80066CE8();
     func_80037870();
     func_80068E24();
 }
