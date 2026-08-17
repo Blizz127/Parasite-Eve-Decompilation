@@ -18,8 +18,11 @@
  * (type 0) are ported below. 35C84 jal 3999C is not this cut.
  * After the walk, this cut also takes the live D1A0&2 jal
  * 299CC @ 0x800355E8 (consume + after-consume idle gate) and
- * the 35B2C jal 69594 event pump. 6C5BC @ 35B24 and the
- * 355B4–35B20 mid-body are not this cut. Not M2.
+ * the 35B2C jal 69594 event pump. PE-BTL66 adds the post-69594
+ * 1A4AC clip ticks @ 35B84 (D254 when D1A0&0x100) and 35BEC
+ * (D20C walk when that bit is clear; skip +0x98 & 0x800040).
+ * 6C5BC @ 35B24, 661CC @ 35B34, and the 355B4–35B20 mid-body
+ * are not this cut. Not M2.
  *
  * func_80035E04 — 83 words 0x80035E04..0x80035F50. If D1A0 bit
  * 0x100, only 361F4. Else snapshot +0x28/+0x38 into +0x40/+0x50,
@@ -35,11 +38,15 @@
 #include "pe_port_compat.h"
 
 #define GA_D_8009D20C 0x8009D20Cu
+#define GA_D_8009D254 0x8009D254u
 #define GA_D_8009D2F0 0x8009D2F0u
 #define GA_D_8009D300 0x8009D300u
 #define GA_D_8009D2E8 0x8009D2E8u
+#define GA_D_800B0CD8 0x800B0CD8u
 #define GA_VT_35E04   0x80035E04u
 #define GA_VT_35C84   0x80035C84u
+
+extern void func_8001A4AC(pe_addr_t actor);
 
 static void pe_actor_snapshot_pose(pe_addr_t actor)
 {
@@ -143,4 +150,24 @@ void func_80035558_walk_cut(void)
         func_800299CC_after_consume_cut();
     }
     func_80069594();
+
+    /* ROM 0x80035B44: D1A0&4 skips both 1A4AC sites. */
+    if (D_8009D1A0 & 4u)
+        return;
+    if (D_8009D1A0 & 0x100u) {
+        if ((PE_LoadU32(GA_D_800B0CD8) & 0x40000u) == 0u) {
+            actor = PE_LoadU32(GA_D_8009D254);
+            if (actor != 0u)
+                func_8001A4AC(actor);
+        }
+        return;
+    }
+    actor = PE_LoadU32(GA_D_8009D20C);
+    while (actor != 0u) {
+        if (!(actor == PE_LoadU32(GA_D_8009D254)
+              && (PE_LoadU32(GA_D_800B0CD8) & 0x40000u) != 0u)
+            && (PE_LoadU32(actor + 0x98u) & 0x800040u) == 0u)
+            func_8001A4AC(actor);
+        actor = PE_LoadU32(actor + 4u);
+    }
 }

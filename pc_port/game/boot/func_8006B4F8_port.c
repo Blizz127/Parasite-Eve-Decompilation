@@ -25,10 +25,20 @@
  *
  * func_8006B4F8_12574_publish_cut — ROM 0x8006B79C..0x8006B94C
  * after the three PE.IMG loads. s4 = overlay+0x18C dest.
- * s5 = s4 + (lw(s4+4) & 0x003FFFFF). 12574(s4 + (lw(s4 +
- * (hdr+0x14 & 0x3FFFFF))+4 & 0x00FFFFFF)) → overlay+0x944.
- * Sibling stores +0x948/+0x94C from hdr+0x18/+0x1C, and the
- * hdr+0x20 count loop writes overlay+0x950+id*4.
+ * s5 = s4 + (lw(s4+4) & 0x003FFFFF).
+ *
+ * PE-BTL66 — hdr+0x10 Writer A @ 0x8006B828..0x8006B894 before
+ * the 12574 stores. count = word>>22, rec = s4+(word&0x3FFFFF),
+ * 12-byte records: lbu type rec+0x0B, lbu cmd rec+7, ptr =
+ * rec+4 & 0x00FFFFFF. Stores chunk2+ptr at overlay+0x1C0 +
+ * type*192 + cmd*4 (D_800B0E98). Live m0005i type-2 cmd 0x17
+ * byte+2 = 51 so 1A680 sets +0x0F = 50. hdr+0x0C B0E70 bind
+ * @ 0x8006B7C8 is still not this cut (3D050 tail gate).
+ *
+ * Then 12574(s4 + (lw(s4 + (hdr+0x14 & 0x3FFFFF))+4 &
+ * 0x00FFFFFF)) → overlay+0x944. Sibling stores +0x948/+0x94C
+ * from hdr+0x18/+0x1C, and the hdr+0x20 count loop writes
+ * overlay+0x950+id*4.
  *
  * Live m0005i 12574 list: count=7 type entries; 125E0 desc
  * lbu=2, actors type 1 then type 6. No type 0 in that desc.
@@ -100,6 +110,23 @@ void func_8006B4F8_12574_publish_cut(void)
 
     s4 = PE_LoadU32(GA_OVERLAY + 0x18Cu);
     s5 = s4 + (PE_LoadU32(s4 + 4u) & MASK_22);
+
+    /* Writer A — ROM 0x8006B828. Do not add hdr+0x0C B0E70. */
+    word = PE_LoadU32(s5 + 0x10u);
+    count = word >> 22;
+    rec = s4 + (word & MASK_22);
+    for (i = 0; i < count; i++) {
+        uint8_t type;
+        uint8_t cmd;
+
+        type = PE_LoadU8(rec + 0x0Bu);
+        cmd = PE_LoadU8(rec + 7u);
+        PE_StoreU32(GA_OVERLAY + 0x1C0u
+                        + (uint32_t)type * 192u
+                        + (uint32_t)cmd * 4u,
+                    s4 + (PE_LoadU32(rec + 4u) & MASK_24));
+        rec += 12u;
+    }
 
     PE_StoreU32(GA_OVERLAY + 0x944u,
                 func_80012574(pe_6b4f8_rel(s4, PE_LoadU32(s5 + 0x14u))));

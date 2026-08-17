@@ -69,6 +69,88 @@ void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)
 }
 
 /*
+ * PE-BTL66 — func_8001A4AC clip ticker.
+ *
+ * 117 words 0x8001A4AC..0x8001A680, SHA-256 53d93b57…2174.
+ * Callers: self @ 1A4E4, 35558 @ 35B84 (D254) and 35BEC (D20C).
+ * Jals 6A318 and 1A784 only when actor+0x18C != 0; 125E0 zeros
+ * that pointer, so those callees are not this cut.
+ *
+ * Clears +0x98 bit 3, sets bit 0x800000, copies +0x14 → +0x18.
+ * Bit 0x100 returns. Bit 0x200 and +0x16==+0x12 returns.
+ * Else +0x14 += +0x1C (125E0 plants 0x10000) and clamps to
+ * +0x12<<16. +0x0F wrap / bit 8 is the no-0x200 path.
+ */
+void func_8001A4AC(pe_addr_t actor)
+{
+    pe_addr_t child;
+    uint32_t flags;
+    uint32_t cur;
+    uint32_t speed;
+    uint32_t next;
+    uint32_t target;
+    uint32_t dest;
+    uint32_t cap;
+    int32_t scur;
+    int32_t snext;
+    int32_t starget;
+
+    if (actor == 0u)
+        return;
+    child = PE_LoadU32(actor + 0x18Cu);
+    if (child != 0u) {
+        if ((PE_LoadU32(child + 0x98u) & 0x800000u) == 0u)
+            func_8001A4AC(child);
+        /* jal 6A318 not this cut. */
+    }
+    flags = (PE_LoadU32(actor + 0x98u) & ~8u) | 0x800000u;
+    PE_StoreU32(actor + 0x98u, flags);
+    cur = PE_LoadU32(actor + 0x14u);
+    PE_StoreU32(actor + 0x18u, cur);
+    if (flags & 0x100u)
+        return;
+    dest = PE_LoadU16(actor + 0x12u);
+    if ((flags & 0x200u) != 0u && (cur >> 16) == dest)
+        return;
+    if (flags & 0x200000u) {
+        /* jal 1A784; copy child+0x14. Not this cut. */
+        return;
+    }
+    speed = PE_LoadU32(actor + 0x1Cu);
+    next = cur + speed;
+    target = dest << 16;
+    cap = PE_LoadU8(actor + 0x0Fu);
+    if ((int32_t)next >> 16 > (int32_t)cap) {
+        uint32_t denom;
+
+        denom = cap + 1u;
+        if (denom == 0u)
+            return;
+        next = (((int32_t)next >> 16) / (int32_t)denom) << 16;
+        cur = 0u;
+        flags |= 8u;
+        PE_StoreU32(actor + 0x98u, flags);
+    } else if ((int32_t)next < 0) {
+        next += (cap + 1u) << 16;
+        flags |= 8u;
+        PE_StoreU32(actor + 0x98u, flags);
+    }
+    flags = PE_LoadU32(actor + 0x98u);
+    if ((flags & 0x200u) == 0u) {
+        PE_StoreU32(actor + 0x14u, next);
+        return;
+    }
+    scur = (int32_t)cur;
+    snext = (int32_t)next;
+    starget = (int32_t)target;
+    if ((scur < starget && starget < snext)
+        || (starget < scur && snext < starget))
+        PE_StoreU32(actor + 0x14u, target);
+    else
+        PE_StoreU32(actor + 0x14u, next);
+}
+
+/*
  * R3000 Kuseg/KSEG0 2 MiB RAM mirror. 209F0 has no null check on
  * D278+0x68. After 29810, D278 is *D254 = slot body (0x6F / 2F7D8
  * copies D_800109B0). That template +0x68 is 0; TEXT has no non-zero
