@@ -46,8 +46,7 @@ returns 1; return 0 + `+0x10<2` sb 0x2A (walk not entered).
 
 ## Next
 
-`0x80087090` — 6CDA4 state 9 live a0=1. See `pe-btl6-6e7e8`.
-Do not stub stream-open, jump to mode 7, or complete `0x55`.
+`0x800870E0` — 6CDA4 state 0xA. See `pe-btl6-87090`.
 
 ## Verify
 

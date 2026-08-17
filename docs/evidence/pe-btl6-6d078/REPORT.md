@@ -32,8 +32,7 @@ not entered.
 
 ## Next
 
-`0x80087090` — 6CDA4 state 9 after a real 6E7E8==0.
-See `pe-btl6-6e7e8`.
+`0x800870E0` — 6CDA4 state 0xA. See `pe-btl6-87090`.
 
 ## Verify
 

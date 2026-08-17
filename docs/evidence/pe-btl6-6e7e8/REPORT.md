@@ -35,8 +35,7 @@ magic `AKAO`, SHA-256
 
 ## Next
 
-`0x80087090` — 6CDA4 state 9 live a0=1. Do not stub
-stream-open, jump to mode 7, or complete `0x55`.
+`0x800870E0` — 6CDA4 state 0xA. See `pe-btl6-87090`.
 
 ## Verify
 

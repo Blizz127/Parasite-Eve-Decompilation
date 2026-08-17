@@ -38,6 +38,7 @@ the retail battle runtime, not a one-off script.
 | BTL-6D078 | 117w `0x8006D078..0x8006D24C`; +0xF3 JT; state0 sb 0x28; 0x28 jals 6CDA4 | PORTED | `func_8006D078` parks at 6CDA4 |
 | BTL-6CDA4 | 181w +0xF0 SM; live a0=1 sb 7 + table 0x0F; state7 real 6E6D4 | PORTED | -1 → F0=0; ok → F0=8 |
 | BTL-6E7E8 | 19w poll; state8 -1→7 pending→8 0→9; PE.IMG 8C6 AKAO | PORTED | `func_8006CDA4_state8_cut` parks at 9 |
+| BTL-87090 | 20w jal 851A8; state9 a0=1 dest,0; AKAO magic-check 0 | PORTED | -1 → F0=0; ok → F0=0xA |
 | BTL-MODE7 | `0x8002CEE0` jal `6914C(0)` then `D_8009D28C=7` | PROVEN | not issued |
 | BTL-ATB | ATB / menus / AI / damage / death / field return | RESEARCH_REQUIRED | do not invent |
 
@@ -68,9 +69,10 @@ python3 pc_port/tools/pe_btl6_6d60c_oracle.py
 python3 pc_port/tools/pe_btl6_6d078_oracle.py
 python3 pc_port/tools/pe_btl6_6cda4_oracle.py
 python3 pc_port/tools/pe_btl6_6e7e8_oracle.py
-./pc_port/build/pe-native-tests   # 684/684
+python3 pc_port/tools/pe_btl6_87090_oracle.py
+./pc_port/build/pe-native-tests   # 685/685
 ```
 
-STOP/NEXT: `0x80087090` — 6CDA4 state 9 live a0=1.
-Do not stub stream-open, `6914C`, jump to mode 7, or
+STOP/NEXT: `0x800870E0` — 6CDA4 state 0xA (`D_8009D24C`).
+Do not stub DMA-complete, `6914C`, jump to mode 7, or
 complete `0x55`.

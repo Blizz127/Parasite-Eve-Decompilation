@@ -228,8 +228,9 @@ extern int func_8006E7E8(void);
  * Dest is lw overlay+0x194. State 7 jals real 6E6D4 with host
  * byte size (chunk<<11; retail a3 is sectors, proven by state 9
  * sll 11). -1 sb 0 return 0; else sb 8 return 1. State 8 jals
- * real 6E7E8: -1 sb 7, pending stays 8, 0 sb 9 and parks.
- * 87090/state 9 are not stubbed.
+ * real 6E7E8: -1 sb 7, pending stays 8, 0 sb 9. State 9 live a0=1
+ * jals real 87090(dest, 0); -1 sb 0, else sb 0xA and parks.
+ * 870E0/851A8 success are not stubbed.
  */
 void func_8006CDA4_state0_a0eq1_cut(int a1)
 {
@@ -289,6 +290,19 @@ int func_8006CDA4_state8_cut(void)
     return 1;
 }
 
+int func_8006CDA4_state9_a0eq1_cut(pe_addr_t dest)
+{
+    int uploaded;
+
+    uploaded = func_80087090(dest, 0);
+    if (uploaded == -1) {
+        PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
+        return 1;
+    }
+    PE_StoreU8(GA_OVERLAY + 0xF0u, 0xAu);
+    return 1;
+}
+
 int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
                   int stack_flag)
 {
@@ -309,7 +323,12 @@ int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
         return func_8006CDA4_state7_cut(a3, stack_len);
     if (f0 == 8u)
         return func_8006CDA4_state8_cut();
-    if (f0 == 9u || f0 == 10u)
+    if (f0 == 9u) {
+        if (a0 == 1)
+            return func_8006CDA4_state9_a0eq1_cut(a3);
+        return 1;
+    }
+    if (f0 == 10u)
         return 1;
     return 1;
 }
