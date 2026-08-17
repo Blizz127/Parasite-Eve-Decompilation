@@ -100,7 +100,11 @@ the retail battle runtime, not a one-off script.
 | BTL-1A374 | 7w 0xE1 sb → BCFFC | PORTED | live 0x54 |
 | BTL-18E84 | 12w 0x84 sh D020/D022 | PORTED | live 0x800,0x800 |
 | BTL-18F54 | 8w 0x88 BCFEE&=~0x40 | PORTED | argc 0 |
-| next_live_va | type1 next visit `0x08`/`1735C` spawn | RESEARCH_REQUIRED | 35038 type 3 then 0 then 5 |
+| BTL-1735C | 38w 0x08; 35038(D2F0,1); +0x28/2C/30; jal 1AA78; v0=1 | PORTED | live type3/0/5; desc at host 0x80120F70 APPROXIMATION |
+| BTL-1AA78 | 154w; +0x98&0x80 / D1FC+2 / D1D8 arms; jal 1C614/3708C | PORTED | empty +0x1AC no-ops via 0x80 |
+| BTL-1C614 | 114w 3-edge crossing; v0=t0 | PORTED | live D1D8!=0 when 1A918 +0x20 set |
+| BTL-08-SPAWN | creation 3 then 0 then 5; D254=type0; D2E8 stays 1 | PROVEN | sibling walk after parent is 5→0→3 |
+| next_live_va | type0 `0x9B`/`15240`; type5 `0x0B`/`12C20` | RESEARCH_REQUIRED | type3 first visit already 0x02 |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected

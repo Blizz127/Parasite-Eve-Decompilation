@@ -1,0 +1,255 @@
+/*
+ * PE-BTL22 — opcode 0x08 spawn wrapper 1735C, post-ctor 1AA78,
+ * and hit-test 1C614 (translated retail, not matching src/).
+ *
+ * Authority: build/disc1.candidate.exe SHA-1
+ * 452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+ *
+ * func_8001735C — 38 words 0x8001735C..0x800173F4, SHA-256
+ * a367c31f…9af8. D_800910A0[0x08]. Zero TEXT jal sites (jalr
+ * from 17018). Always v0=1 (re-fetch).
+ *
+ *   desc[0] = (u8)*arg0          # type
+ *   desc[1] = (u8)*arg1          # idB
+ *   actor = 35038(&desc, *D_8009D2F0, 1)
+ *   actor+0x28 = *arg2
+ *   actor+0x2C = *arg3
+ *   actor+0x30 = *arg4           # delay of jal 1AA78
+ *   1AA78(actor)
+ *   return 1
+ *
+ * Live type-1 second visit: three 0x08s, kinds 0, argc 5:
+ *   type 3, idB 0, +0x28=0x20000, +0x2C=0xFBC80000, +0x30=0x2710000
+ *   type 0, idB 0, all zeros
+ *   type 5, idB 0, type imm 5, rest zeros
+ * Parent is the current type-1 actor (D2F0), not 0, so 35038
+ * inserts as sibling after the parent. 17018 already advanced
+ * CE00 past the insn before jalr; v0=1 re-fetches the next 0x08.
+ *
+ * Descriptor lives at ROM sp+16. Native has no guest $sp:
+ * GA_DESC 0x80120F70 is the same class of APPROXIMATION as the
+ * 17018 arg frame. ROM has no null check on 35038's return.
+ *
+ * func_8001AA78 — 154 words 0x8001AA78..0x8001ACE0, SHA-256
+ * eaf36cc4…a935. Callers 12C9C and 1735C@173D4. Void.
+ * Direct jals: 1C614 (twice) and already-ported 3708C (three).
+ *
+ *   if actor+0x98 & 0x80: return
+ *   if lhu(*D_8009D1FC + 2) == 0: return
+ *   D_8009D1D8 == 0: walk *(D_8009CE08 + i*4), count=lhu(+2),
+ *     indices at +4, stride 22 from *(D1FC+0x1C); 1C614;
+ *     match stores +0x1A4/+0x1A8 and, if !(+0x98&2),
+ *     +0x2C = (s16)entry[0] << 16
+ *   D_8009D1D8 != 0: count=lhu(+4), indices at +6, stride 28;
+ *     match then three 3708C 16.16 muls into +0x2C
+ *
+ * 35038 ORs +0x98 with 0xE0 when +0x1AC==0, so the 0x80 gate
+ * fires for empty-B0E70 types. Live m0005i 6B4F8 hdr+0x0C
+ * writes B0E70[idB] for idB 2 and 5 only; type 3 stays 0.
+ * Type 0's B0E70[0] is the later 6C118 package bind (not this
+ * cut). 1A918 live obj lhu(+2)=1 and +0x20!=0, so a nonempty
+ * +0x1AC actor takes the D1D8!=0 arm.
+ *
+ * func_8001C614 — 114 words 0x8001C614..0x8001C7DC, SHA-256
+ * 53432d0c…942d. Zero jal. a0=record, a1/a2 are the already
+ * sign-extended actor+0x2A / +0x32. Three-edge crossing test
+ * against *(D1FC+0x18) pairs. Returns t0 (0 or 1).
+ */
+#include "psx_compat.h"
+#include "pe_port_compat.h"
+
+#define GA_D_8009D2F0 0x8009D2F0u
+#define GA_D_8009D1FC 0x8009D1FCu
+#define GA_D_8009D1D8 0x8009D1D8u
+#define GA_D_8009CE08 0x8009CE08u
+/* Host stand-in for ROM 1735C sp+16. APPROXIMATION: no guest $sp. */
+#define GA_DESC       0x80120F70u
+
+static int32_t pe_mult_lo(int32_t a, int32_t b)
+{
+    return (int32_t)((int64_t)a * (int64_t)b);
+}
+
+int func_8001C614(pe_addr_t rec, int a1, int a2)
+{
+    pe_addr_t t3;
+    pe_addr_t t6;
+    pe_addr_t row;
+    uint32_t t0;
+    uint32_t t5;
+    uint32_t t1;
+    uint32_t a3;
+    uint32_t a0_saved;
+    uint32_t a2_saved;
+    int32_t t4;
+    int32_t t2;
+    uint32_t idx;
+
+    t3 = rec;
+    if (PE_LoadU32(GA_D_8009D1D8) != 0u) {
+        idx = PE_LoadU16(t3 + 0xCu);
+        row = PE_LoadU32(PE_LoadU32(GA_D_8009D1FC) + 0x18u) + idx * 6u;
+        t1 = PE_LoadU16(row + 4u);
+        a3 = PE_LoadU16(row);
+    } else {
+        idx = PE_LoadU16(t3 + 6u);
+        row = PE_LoadU32(PE_LoadU32(GA_D_8009D1FC) + 0x18u) + idx * 4u;
+        t1 = PE_LoadU16(row + 2u);
+        a3 = PE_LoadU16(row);
+    }
+
+    t0 = 0u;
+    t5 = 0u;
+    t6 = PE_LoadU32(GA_D_8009D1FC);
+    t4 = (int32_t)(int16_t)a2;
+    t2 = (int32_t)(int16_t)a1;
+
+    do {
+        a2_saved = a3;
+        a0_saved = t1;
+        if (PE_LoadU32(GA_D_8009D1D8) != 0u) {
+            idx = PE_LoadU16(t3 + 8u);
+            row = PE_LoadU32(t6 + 0x18u) + idx * 6u;
+            t1 = PE_LoadU16(row + 4u);
+            a3 = PE_LoadU16(row);
+        } else {
+            idx = PE_LoadU16(t3 + 2u);
+            row = PE_LoadU32(t6 + 0x18u) + idx * 4u;
+            t1 = PE_LoadU16(row + 2u);
+            a3 = PE_LoadU16(row);
+        }
+
+        {
+            int32_t y2 = (int32_t)(int16_t)t1;
+            int32_t y1 = (int32_t)(int16_t)a0_saved;
+            int32_t x2 = (int32_t)(int16_t)a3;
+            int32_t x1 = (int32_t)(int16_t)a2_saved;
+            int y_lt = t4 < y2;
+            int x_cross = 0;
+
+            if (y_lt) {
+                if (t4 < y1)
+                    goto next;
+            } else if (!(t4 < y1)) {
+                goto next;
+            }
+
+            if (t2 < x2) {
+                if (t2 < x1)
+                    goto toggle;
+                x_cross = 1;
+            } else if (t2 < x1) {
+                x_cross = 1;
+            } else {
+                goto next;
+            }
+
+            if (x_cross) {
+                int32_t dy = y1 - y2;
+                int32_t dx = x1 - x2;
+                int32_t lhs = pe_mult_lo(dx, t4 - y2);
+                int32_t rhs = pe_mult_lo(dy, t2 - x2);
+                int pass;
+
+                if (dy < 0)
+                    pass = lhs < rhs;
+                else
+                    pass = rhs < lhs;
+                if (!pass)
+                    goto next;
+            }
+        }
+    toggle:
+        t0 = t0 < 1u;
+    next:
+        t5 += 1u;
+        t3 += 2u;
+    } while (t5 < 3u);
+
+    return (int)t0;
+}
+
+void func_8001AA78(pe_addr_t actor)
+{
+    pe_addr_t obj;
+    unsigned int ntbl;
+    unsigned int i;
+    unsigned int j;
+    unsigned int count;
+    int16_t sx;
+    int16_t sz;
+    pe_addr_t entry;
+    pe_addr_t rec;
+    uint32_t idx;
+    uint32_t base;
+
+    if ((PE_LoadU32(actor + 0x98u) & 0x80u) != 0u)
+        return;
+
+    obj = PE_LoadU32(GA_D_8009D1FC);
+    sx = (int16_t)PE_LoadU16(actor + 0x2Au);
+    ntbl = PE_LoadU16(obj + 2u);
+    sz = (int16_t)PE_LoadU16(actor + 0x32u);
+    if (ntbl == 0u)
+        return;
+
+    for (i = 0u; i < ntbl; i++) {
+        entry = PE_LoadU32(PE_LoadU32(GA_D_8009CE08) + i * 4u);
+        if (PE_LoadU32(GA_D_8009D1D8) == 0u) {
+            count = PE_LoadU16(entry + 2u);
+            for (j = 0u; j < count; j++) {
+                idx = PE_LoadU16(entry + 4u + j * 2u);
+                rec = PE_LoadU32(obj + 0x1Cu) + idx * 22u;
+                if (func_8001C614(rec, sx, sz) != 0) {
+                    PE_StoreU32(actor + 0x1A4u, rec);
+                    PE_StoreU32(actor + 0x1A8u, rec);
+                    if ((PE_LoadU32(actor + 0x98u) & 2u) == 0u)
+                        PE_StoreU32(actor + 0x2Cu,
+                                    (uint32_t)(int32_t)(int16_t)
+                                        PE_LoadU16(entry) << 16);
+                    return;
+                }
+            }
+        } else {
+            count = PE_LoadU16(entry + 4u);
+            for (j = 0u; j < count; j++) {
+                idx = PE_LoadU16(entry + 6u + j * 2u);
+                rec = PE_LoadU32(obj + 0x1Cu) + idx * 28u;
+                if (func_8001C614(rec, sx, sz) != 0) {
+                    uint32_t r0;
+                    uint32_t r1;
+                    uint32_t row;
+
+                    PE_StoreU32(actor + 0x1A4u, rec);
+                    PE_StoreU32(actor + 0x1A8u, rec);
+                    if ((PE_LoadU32(actor + 0x98u) & 2u) != 0u)
+                        return;
+                    row = PE_LoadU16(rec + 2u) * 12u;
+                    base = PE_LoadU32(GA_D_8009D1D8);
+                    r0 = func_8003708C(PE_LoadU32(base + row),
+                                       PE_LoadU32(actor + 0x28u));
+                    r1 = func_8003708C(PE_LoadU32(base + row + 8u),
+                                       PE_LoadU32(actor + 0x30u));
+                    PE_StoreU32(actor + 0x2Cu,
+                                func_8003708C(PE_LoadU32(rec + 4u) - r0 - r1,
+                                              PE_LoadU32(base + row + 4u)));
+                    return;
+                }
+            }
+        }
+    }
+}
+
+int func_8001735C(pe_addr_t args)
+{
+    pe_addr_t actor;
+
+    PE_StoreU8(GA_DESC, (uint8_t)PE_LoadU32(PE_LoadU32(args)));
+    PE_StoreU8(GA_DESC + 1u, (uint8_t)PE_LoadU32(PE_LoadU32(args + 4u)));
+    actor = func_80035038(GA_DESC, PE_LoadU32(GA_D_8009D2F0), 1u);
+    PE_StoreU32(actor + 0x28u, PE_LoadU32(PE_LoadU32(args + 8u)));
+    PE_StoreU32(actor + 0x2Cu, PE_LoadU32(PE_LoadU32(args + 12u)));
+    PE_StoreU32(actor + 0x30u, PE_LoadU32(PE_LoadU32(args + 16u)));
+    func_8001AA78(actor);
+    return 1;
+}

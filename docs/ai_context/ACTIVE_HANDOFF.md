@@ -19,9 +19,14 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: type-1 first visit yields at `0x02`. Next visit
-is `0x08`/`1735C` (35038 type 3/0/5). `D2E8` bit 0 is set
-(`3999C` skip). Do not force `D2E8`. E0060 is EXE
+STOP/NEXT: type-1 `0x08`/`1735C` spawns type 3 then 0 then
+5 (ids 1/2/3; sibling walk after parent is 5→0→3).
+`1AA78`/`1C614` ported. Empty `B0E70[type]` keeps `+0x98`
+bit 0x80 so `1AA78` no-ops for type 3/0 on host BSS.
+Type 3 first script word is already-ported `0x02` (yield).
+Type 0 first is `0x9B`/`15240`. Type 5 first is `0x14`
+then `0x0B`/`12C20` (jals `1AA78`). `D2E8` bit 0 stays
+set (`3999C` skip). Do not force `D2E8`. E0060 is EXE
 list-clear, not M2. Do not jalr `0x800E086C`. No matching
 `src/` C.
 
