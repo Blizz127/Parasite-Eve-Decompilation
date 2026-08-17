@@ -18,13 +18,12 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x800693F8` — 6914C 0x34 dest `0x801ED800`
-(6A8D4 +0x194) LBA overlay+0x100+0x7E, 5 sectors.
-State 0 fills two 11-slot tables at +0x188; jalr
-0x800E0xxx overlay leaves are not invented. 0x34
-real 6E6A8 -1 stays EF=0x34. Do not stub 6914C
-success, jump to mode 7, or complete `0x55`.
-No matching `src/` C.
+STOP/NEXT: `0x80069468` — 6914C EF=0x36 jal `6E1C0`
+then `6E498` over dest `0x801ED800`. 0x34 real 6E6A8
+issues PE.IMG+0x7E / 5 sectors (sha256 `3b2ff0b8…`);
+host-sync 0x35 poll sb 0x36 return 1. Do not stub
+6914C return 0, jalr 0x800E086C, jump to mode 7,
+or complete `0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
