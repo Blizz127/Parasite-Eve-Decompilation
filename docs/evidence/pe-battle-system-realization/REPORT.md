@@ -35,7 +35,8 @@ the retail battle runtime, not a one-off script.
 | BTL-158 | Only `6E6A8` dest `+0x158` is EE=4; first `6C4C4(-1)` sets CE4=1; CE2=11 → PE.IMG `[428,434)` `obj+0x18=2` | PROVEN | `pe-btl6-3d834-callees` |
 | BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PROVEN | not the 0x3B wait |
 | BTL-6D60C | `144FC` `0x38` jal `6D60C(1)`; 387w sha256 `14e5794d…`; +0xF2 JT; no `+0xE` | PROVEN | `pe-btl6-6d60c` |
-| BTL-6D078 | 117w `0x8006D078..0x8006D24C`; +0xF3 JT; state0 sb 0x28; 0x28 jals 6CDA4 | PORTED | `func_8006D078` parks at 6CDA4 |
+| BTL-6D078 | 117w `0x8006D078..0x8006D24C`; +0xF3 JT; state0 sb 0x28; 0x28 jals 6CDA4 | PORTED | empty 0x2A → F3=0; bit0x10+half≥2 → 0x2B |
+| BTL-87414 | 5w `D_8009D270=2` return 0; 6CDA4 state0 a0=3 | PORTED | matching `src/` already; native port |
 | BTL-6CDA4 | 181w +0xF0 SM; live a0=1 sb 7 + table 0x0F; state7 real 6E6D4 | PORTED | -1 → F0=0; ok → F0=8 |
 | BTL-6E7E8 | 19w poll; state8 -1→7 pending→8 0→9; PE.IMG 8C6 AKAO | PORTED | `func_8006CDA4_state8_cut` parks at 9 |
 | BTL-87090 | 20w jal 851A8; state9 a0=1 dest,0; AKAO magic-check 0 | PORTED | -1 → F0=0; ok → F0=0xA |
@@ -72,9 +73,9 @@ python3 pc_port/tools/pe_btl6_6cda4_oracle.py
 python3 pc_port/tools/pe_btl6_6e7e8_oracle.py
 python3 pc_port/tools/pe_btl6_87090_oracle.py
 python3 pc_port/tools/pe_btl6_870e0_oracle.py
-./pc_port/build/pe-native-tests   # 686/686
+./pc_port/build/pe-native-tests   # 687/687
 ```
 
-STOP/NEXT: `0x8006D178` — 6D078 state 0x2A table walk
-(after 6CDA4 returns 0 and `+0x10<2`). Do not stub
+STOP/NEXT: `0x8006D79C` — 6D60C after 6D078 returns 0.
+Live 0x2A needs the `D_800B0E64` archive. Do not stub
 DMA-complete, `6914C`, jump to mode 7, or complete `0x55`.

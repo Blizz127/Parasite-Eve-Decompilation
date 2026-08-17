@@ -95,6 +95,25 @@ def main() -> int:
     require(load_u32(data, 0x8006D128) == 0x2C420002, "0x28 +0x10 sltiu 2")
     require(jal_target(load_u32(data, 0x8006D158)) == FN_6CDA4, "0x29 jal 6CDA4")
     require(jal_target(load_u32(data, 0x8006D200)) == FN_6CDA4, "0x2B jal 6CDA4")
+    require(load_u32(data, 0x8006D178) == 0x8E420024, "0x2A lw +0x24")
+    require(load_u32(data, 0x8006D180) == 0x00021582, "0x2A srl 16")
+    require(load_u32(data, 0x8006D184) == 0x0062102A, "0x2A slt index,count")
+    require(load_u32(data, 0x8006D19C) == 0x30420010, "0x2A andi 0x10")
+    require(load_u32(data, 0x8006D1A8) == 0x94820004, "0x2A lhu +4")
+    require(load_u32(data, 0x8006D1C8) == 0x2402002B, "0x2A li 0x2B")
+    require(load_u32(data, 0x8006D1D8) == 0xA20000F3, "exhaust sb F3=0")
+    require(load_u32(data, 0x8006D1DC) == 0x24040003, "0x2B a0=3")
+    require(load_u32(data, 0x8006CE9C) == 0x0C021D05, "state0 a0=3 jal 87414")
+    require((0x80087428 - 0x80087414) // 4 == 5, "87414 5 words")
+    require(load_u32(data, 0x80087414) == 0x24020002, "87414 v0=2")
+    require(load_u32(data, 0x8008741C) == 0xAC22D270, "87414 sw D_8009D270")
+    require(load_u32(data, 0x80087420) == 0x03E00008, "87414 jr")
+    require(load_u32(data, 0x80087424) == 0x00001021, "87414 v0=0")
+    require(
+        window_sha(data, 0x80087414, 0x80087428)
+        == "acf05be3c1bbedd3bb0be1938bc0203ea8f6e5a4bedf4134b31d4443e8342ab3",
+        "87414 sha256",
+    )
 
     for va in range(FN, FN_END, 4):
         word = load_u32(data, va)
@@ -122,7 +141,8 @@ def main() -> int:
 
     print(
         "PASS: 6D078 117w sha256; +0xF3 JT 0/28/29/2A/2B; state0 sb 0x28; "
-        "0x28/29/2B jal 6CDA4(181w +0xF0); no +0xE; sole jal from 6D60C 0x2E"
+        "0x2A srl16/andi10/lhu+4; 0x2B a0=3; 87414 D270=2 ret0; "
+        "0x28/29/2B jal 6CDA4; no +0xE; sole jal from 6D60C 0x2E"
     )
     return 0
 

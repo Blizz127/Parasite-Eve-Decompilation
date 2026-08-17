@@ -23,16 +23,22 @@ Sole TEXT jal: 6D60C state 0x2E @ `0x8006D788`.
 | 0x28 | `0x8006D0F4` | `jal 6CDA4(1,1,0,+0x194,0x21,0)`; v0==1 → return 1; else +0x10>=2 → sb 0x29 return 1; else sb 0x2A |
 | 0x29 | `0x8006D140` | `jal 6CDA4(1,+0x10,0,+0x194,0x21,0)`; v0==1 → return 1; else sb 0x2A |
 | 0x2A | `0x8006D178` | walk `D_800B0E64` records via gp+0x5C; sb 0x2B or sb 0 and return 0 |
-| 0x2B | `0x8006D1DC` | `jal 6CDA4(3, …)`; v0==1 → return 1 |
+| 0x2B | `0x8006D1DC` | `jal 6CDA4(3, lhu+4, lhu+6, +0x194, 0x21, 0)`; v0==1 → return 1 |
 | other <44 | `0x8006D22C` | v0=0 |
 
-Named cut runs state 0 then jals 6CDA4 at 0x28. A 6E6D4
--1 with `+0x10<2` sb 0x2A and returns 1. The 0x2A walk is
-not entered.
+0x2A: `s2 = base+lw(base+4)`; count = `lw(s2+0x24)>>16`;
+records at `base+(word24&0x3FFFFF)`, 8 bytes. Count
+`<<16` overlaps the 22-bit offset (count=1 → `+0x10000`). Skip unless
+byte+3 bit `0x10` and `lhu+4>=2`. Empty/`D_800B0E64==0`
+→ sb F3=0 return 0. 0x28 re-dispatches 0x2A on the same
+tick. 0x2B a0=3 runs the table fill then `87414`
+(`D_8009D270=2`, return 0) and sb F0=7.
 
 ## Next
 
-`0x8006D178` — 6D078 state 0x2A. See `pe-btl6-870e0`.
+`0x8006D79C` — 6D60C after 6D078 returns 0. Live 0x2A
+needs the `D_800B0E64` archive. Do not stub `6914C`,
+jump to mode 7, or complete `0x55`.
 
 ## Verify
 

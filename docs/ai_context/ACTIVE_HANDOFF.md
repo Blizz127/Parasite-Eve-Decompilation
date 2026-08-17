@@ -18,11 +18,11 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x8006D178` — 6D078 state 0x2A table walk
-after 6CDA4 returns 0. State 0xA calls real 870E0
-(`return D_8009D24C`); busy stays 0xA, 0 subtracts the
-chunk and sb F0=7. Do not stub DMA-complete, `6914C`,
-jump to mode 7, or complete `0x55`. No matching `src/` C.
+STOP/NEXT: `0x8006D79C` — 6D60C after 6D078 returns 0.
+0x2A walks `D_800B0E64` (empty → F3=0; bit0x10+half≥2
+→ 0x2B → 6CDA4(3) → 87414). Do not stub DMA-complete,
+`6914C`, jump to mode 7, or complete `0x55`.
+No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
