@@ -26,9 +26,10 @@
  * v0!=0 re-fetches from gp+0x90 (already advanced, or rewritten
  * by op 0). v0==0 stores that PC to task+0 and walks +0x24.
  *
- * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE. 0x1C and 0x1F
- * are the already-ported mailbox leaves. Other table slots are
- * not this cut (return 0 = advance). Not M2.
+ * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
+ * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40. 0x1C and 0x1F are
+ * the already-ported mailbox leaves. Other table slots are not
+ * this cut (return 0 = advance). Not M2.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -48,6 +49,14 @@
 #define GA_OP1C       0x80017764u
 #define GA_OP1F       0x800177ACu
 #define GA_OPCE       0x800181CCu
+#define GA_OPEA       0x80015DACu
+#define GA_OPA        0x800173F4u
+#define GA_OP1D       0x80017E20u
+#define GA_OP9        0x80012850u
+#define GA_OP5        0x8001731Cu
+#define GA_OP14       0x80017588u
+#define GA_OP40       0x80017D7Cu
+#define GA_OP3F       0x80017D5Cu
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 
@@ -111,6 +120,22 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_800177AC(args);
     if (fn == GA_OPCE)
         return func_800181CC(args);
+    if (fn == GA_OPEA)
+        return func_80015DAC_default_cut(args);
+    if (fn == GA_OPA)
+        return func_800173F4(args);
+    if (fn == GA_OP1D)
+        return func_80017E20(args);
+    if (fn == GA_OP9)
+        return func_80012850(args);
+    if (fn == GA_OP5)
+        return func_8001731C(args);
+    if (fn == GA_OP14)
+        return func_80017588(args);
+    if (fn == GA_OP40)
+        return func_80017D7C(args);
+    if (fn == GA_OP3F)
+        return func_80017D5C(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }
