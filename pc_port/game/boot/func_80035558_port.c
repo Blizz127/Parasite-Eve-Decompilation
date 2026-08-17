@@ -28,8 +28,8 @@
  *
  * func_80035E04 — 83 words 0x80035E04..0x80035F50. If D1A0 bit
  * 0x100, only 361F4. Else snapshot +0x28/+0x38 into +0x40/+0x50,
- * jal 361F4, then if +0x98 bit 1 integrate motion. Live 35038
- * empty-+0x1AC leaves +0x98 bit 1 clear.
+ * jal 361F4, then integrate +0x68/+0x78/+0x58 into pose.
+ * +0x98 bit 1 only adds +0x88 first; it does not skip pose.
  *
  * func_800361F4 — 24 words 0x800361F4..0x80036254. sw actor →
  * gp+0x580 (D_8009D2F0), then three words at +0xA0 into
@@ -75,15 +75,16 @@ static void pe_actor_snapshot_pose(pe_addr_t actor)
 
 static void pe_actor_integrate_motion(pe_addr_t actor)
 {
-    if ((PE_LoadU32(actor + 0x98u) & 2u) == 0u)
-        return;
-
-    PE_StoreU32(actor + 0x68u,
-                PE_LoadU32(actor + 0x68u) + PE_LoadU32(actor + 0x88u));
-    PE_StoreU32(actor + 0x6Cu,
-                PE_LoadU32(actor + 0x6Cu) + PE_LoadU32(actor + 0x8Cu));
-    PE_StoreU32(actor + 0x70u,
-                PE_LoadU32(actor + 0x70u) + PE_LoadU32(actor + 0x90u));
+    /* ROM 35C84/35E04: bit 1 only adds +0x88/+0x8C/+0x90.
+     * Pose += +0x68/+0x78/+0x58 always. BTL11 skip-all is REJECTED. */
+    if ((PE_LoadU32(actor + 0x98u) & 2u) != 0u) {
+        PE_StoreU32(actor + 0x68u,
+                    PE_LoadU32(actor + 0x68u) + PE_LoadU32(actor + 0x88u));
+        PE_StoreU32(actor + 0x6Cu,
+                    PE_LoadU32(actor + 0x6Cu) + PE_LoadU32(actor + 0x8Cu));
+        PE_StoreU32(actor + 0x70u,
+                    PE_LoadU32(actor + 0x70u) + PE_LoadU32(actor + 0x90u));
+    }
     PE_StoreU32(actor + 0x68u,
                 PE_LoadU32(actor + 0x68u) + PE_LoadU32(actor + 0x78u));
     PE_StoreU32(actor + 0x6Cu,
