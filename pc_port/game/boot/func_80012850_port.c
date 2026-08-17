@@ -232,3 +232,13 @@ int func_80017D7C(pe_addr_t args)
     PE_StoreU32(0x8009D2E8u, PE_LoadU32(0x8009D2E8u) | 1u);
     return 1;
 }
+
+int func_80017D9C(pe_addr_t args)
+{
+    pe_addr_t actor;
+
+    (void)args;
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0x40u);
+    return 1;
+}

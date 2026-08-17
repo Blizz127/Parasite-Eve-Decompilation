@@ -54,14 +54,23 @@
  * 53432d0c…942d. Zero jal. a0=record, a1/a2 are the already
  * sign-extended actor+0x2A / +0x32. Three-edge crossing test
  * against *(D1FC+0x18) pairs. Returns t0 (0 or 1).
+ *
+ * func_80012C20 — 151 words 0x80012C20..0x80012E7C, SHA-256
+ * 18e047de…22a8. D_800910A0[0x0B]. sltiu *arg0, 7 then
+ * jtbl_80010060. Always v0=1. OOR stores nothing. Code 0
+ * writes +0x28/2C/30, jals 1AA78, snapshots +0x40/44/48,
+ * and if actor==D254 ORs 0x80 into D_800BCF88. Live type-5
+ * first visit is code 0 then code 5 (sh +0x38/3A/3C).
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 
 #define GA_D_8009D2F0 0x8009D2F0u
+#define GA_D_8009D254 0x8009D254u
 #define GA_D_8009D1FC 0x8009D1FCu
 #define GA_D_8009D1D8 0x8009D1D8u
 #define GA_D_8009CE08 0x8009CE08u
+#define GA_D_800BCF88 0x800BCF88u
 /* Host stand-in for ROM 1735C sp+16. APPROXIMATION: no guest $sp. */
 #define GA_DESC       0x80120F70u
 
@@ -251,5 +260,70 @@ int func_8001735C(pe_addr_t args)
     PE_StoreU32(actor + 0x2Cu, PE_LoadU32(PE_LoadU32(args + 12u)));
     PE_StoreU32(actor + 0x30u, PE_LoadU32(PE_LoadU32(args + 16u)));
     func_8001AA78(actor);
+    return 1;
+}
+
+int func_80012C20(pe_addr_t args)
+{
+    uint32_t code;
+    pe_addr_t actor;
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+
+    code = PE_LoadU32(PE_LoadU32(args));
+    if (code >= 7u)
+        return 1;
+
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    a = PE_LoadU32(PE_LoadU32(args + 4u));
+    b = PE_LoadU32(PE_LoadU32(args + 8u));
+    c = PE_LoadU32(PE_LoadU32(args + 12u));
+
+    if (code == 0u) {
+        PE_StoreU32(actor + 0x28u, a);
+        PE_StoreU32(actor + 0x2Cu, b);
+        PE_StoreU32(actor + 0x30u, c);
+        func_8001AA78(actor);
+        PE_StoreU32(actor + 0x40u, PE_LoadU32(actor + 0x28u));
+        PE_StoreU32(actor + 0x44u, PE_LoadU32(actor + 0x2Cu));
+        PE_StoreU32(actor + 0x48u, PE_LoadU32(actor + 0x30u));
+        if (actor == PE_LoadU32(GA_D_8009D254))
+            PE_StoreU32(GA_D_800BCF88, PE_LoadU32(GA_D_800BCF88) | 0x80u);
+        return 1;
+    }
+    if (code == 1u) {
+        PE_StoreU32(actor + 0x40u, a);
+        PE_StoreU32(actor + 0x44u, b);
+        PE_StoreU32(actor + 0x48u, c);
+        return 1;
+    }
+    if (code == 2u) {
+        PE_StoreU32(actor + 0x68u, a);
+        PE_StoreU32(actor + 0x6Cu, b);
+        PE_StoreU32(actor + 0x70u, c);
+        return 1;
+    }
+    if (code == 3u) {
+        PE_StoreU32(actor + 0x78u, a);
+        PE_StoreU32(actor + 0x7Cu, b);
+        PE_StoreU32(actor + 0x80u, c);
+        return 1;
+    }
+    if (code == 4u) {
+        PE_StoreU32(actor + 0x88u, a);
+        PE_StoreU32(actor + 0x8Cu, b);
+        PE_StoreU32(actor + 0x90u, c);
+        return 1;
+    }
+    if (code == 5u) {
+        PE_StoreU16(actor + 0x38u, (uint16_t)a);
+        PE_StoreU16(actor + 0x3Au, (uint16_t)b);
+        PE_StoreU16(actor + 0x3Cu, (uint16_t)c);
+        return 1;
+    }
+    PE_StoreU32(actor + 0x58u, a);
+    PE_StoreU32(actor + 0x5Cu, b);
+    PE_StoreU32(actor + 0x60u, c);
     return 1;
 }

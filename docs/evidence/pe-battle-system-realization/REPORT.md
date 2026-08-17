@@ -104,7 +104,9 @@ the retail battle runtime, not a one-off script.
 | BTL-1AA78 | 154w; +0x98&0x80 / D1FC+2 / D1D8 arms; jal 1C614/3708C | PORTED | empty +0x1AC no-ops via 0x80 |
 | BTL-1C614 | 114w 3-edge crossing; v0=t0 | PORTED | live D1D8!=0 when 1A918 +0x20 set |
 | BTL-08-SPAWN | creation 3 then 0 then 5; D254=type0; D2E8 stays 1 | PROVEN | sibling walk after parent is 5→0→3 |
-| next_live_va | type0 `0x9B`/`15240`; type5 `0x0B`/`12C20` | RESEARCH_REQUIRED | type3 first visit already 0x02 |
+| BTL-12C20 | 151w 0x0B; 7 codes; code0 jal 1AA78 + snap +0x40 | PORTED | live type5 0 then 5 |
+| BTL-17D9C | 9w 0x41 `+0x98\|=0x40` v0=1 | PORTED | live type5 after 0x0B |
+| next_live_va | type0 `0x9B`/`15240`; type5 `0x2E`/`17AE8` | RESEARCH_REQUIRED | type3 first visit already 0x02 |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
