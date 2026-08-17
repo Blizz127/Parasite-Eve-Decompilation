@@ -32,7 +32,8 @@
  * early-out. 66C7C/6A25C are not live.
  * 3F684 D1C4==D280 loops to 3EB04 in retail; this cut
  * is one pass per 1220C tick. Dest-change (D1C4!=D280)
- * takes 74DC0 / 87024 / 3DFC8(1) / 696F0 live tail.
+ * takes 74DC0 / 87024 / 3DFC8(1) / 696F0 live tail
+ * then D1A0|=0x40 / B0CD8|=2.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -209,6 +210,7 @@ void func_8003F3C4(void)
     uint32_t bits;
     uint32_t cddc;
     uint32_t dest0;
+    uint32_t d1a0;
 
     dest0 = D_8009D280;
     pe_3f3c4_ce90_once();
@@ -253,6 +255,13 @@ void func_8003F3C4(void)
         func_80087024();
         func_8003DFC8(1);
         func_800696F0();
-        /* B0CD8/D1A0 epilogue stores are not this cut. */
+        /* 3F6F0: D1A0 = (D1A0|0x40) & ~0x3800; B0CD8 |= 2, &=~0x800. */
+        d1a0 = (D_8009D1A0 | 0x40u) & ~0x3800u;
+        D_8009D1A0 = d1a0;
+        PE_StoreU32(0x8009D1A0u, d1a0);
+        bits = (PE_LoadU32(0x800B0CD8u) | 2u) & ~0x800u;
+        PE_StoreU32(0x800B0CD8u, bits);
+        if ((bits & 0x200u) != 0u)
+            PE_StoreU32(0x800B0CD8u, (bits | 2u) & 0xFFFF7DFFu);
     }
 }

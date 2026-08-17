@@ -3,6 +3,16 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL87 — 3F3C4 dest-change flag stores
+
+`matching_native=813/813`. Dest-change exit stores
+`D1A0=(D1A0|0x40)&~0x3800` and `B0CD8|=2,&~0x800`.
+Stable dest leaves both unchanged. Next live
+`3F3C4` body is `754E4` DrawOTagEnv software
+(`75EE0`/`71A34`); `76C34` GPU enqueue stays
+deferred. Type-6 still waits while
+`scratch[0]&4` is clear. Do not force the bit.
+
 ## PE-BTL86 — 696F0 dest-change tail
 
 `matching_native=812/812`. Live `D1A0&0x80==0`
