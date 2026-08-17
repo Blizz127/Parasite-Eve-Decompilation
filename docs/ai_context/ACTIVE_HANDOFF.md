@@ -3,6 +3,15 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL86 — 696F0 dest-change tail
+
+`matching_native=812/812`. Live `D1A0&0x80==0`
+skips the jalr half and still nulls
+`*942E0[8..0x54]` and `E10BC[0x1E..0x67]`.
+Next `3F3C4` exit stores are `D1A0|=0x40` and
+`B0CD8|=2`. Type-6 still waits while
+`scratch[0]&4` is clear. Do not force the bit.
+
 ## PE-BTL85 — 3DFC8 dest-change nop
 
 `matching_native=811/811`. `3DFC8` is `jr ra`.

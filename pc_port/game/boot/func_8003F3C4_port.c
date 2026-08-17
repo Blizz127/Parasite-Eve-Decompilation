@@ -32,7 +32,7 @@
  * early-out. 66C7C/6A25C are not live.
  * 3F684 D1C4==D280 loops to 3EB04 in retail; this cut
  * is one pass per 1220C tick. Dest-change (D1C4!=D280)
- * takes 74DC0 / 87024 / 3DFC8(1). 696F0 is not this cut.
+ * takes 74DC0 / 87024 / 3DFC8(1) / 696F0 live tail.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -55,6 +55,34 @@ extern int func_80074A44(int mode);
 void func_8003DFC8(int a0)
 {
     (void)a0;
+}
+
+void func_800696F0(void)
+{
+    unsigned int i;
+    pe_addr_t table;
+    pe_addr_t slot;
+    pe_addr_t p;
+
+    /* D1A0&0x80 first-half jalr walk is not this cut.
+     * Live 0x4000 skips it and still runs the 6984C tail. */
+    table = PE_LoadU32(0x800942E0u);
+    if (table != 0u && PE_RangeIsRam(table, 0x55u * 4u)) {
+        for (i = 8u; i < 0x55u; i++) {
+            slot = PE_LoadU32(table + i * 4u);
+            if (slot != 0u)
+                PE_StoreU32(slot, 0u);
+        }
+    }
+    p = 0x800E10BCu;
+    if (PE_RangeIsRam(p, (0x68u - 0x1Eu) * 4u)) {
+        for (i = 0x1Eu; i < 0x68u; i++) {
+            slot = PE_LoadU32(p);
+            if (slot != 0u)
+                PE_StoreU32(slot, 0u);
+            p += 4u;
+        }
+    }
 }
 
 void func_8006A0E8(void)
@@ -224,6 +252,7 @@ void func_8003F3C4(void)
         func_80074DC0(0);
         func_80087024();
         func_8003DFC8(1);
-        /* 696F0 table walk and B0CD8/D1A0 stores are not this cut. */
+        func_800696F0();
+        /* B0CD8/D1A0 epilogue stores are not this cut. */
     }
 }
