@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL79 — 70E54 jals ResetGraph(1)
+
+`matching_native=805/805`. `74A44(1)` is the
+already-ported light path. Next `70E54` jal is
+`755F0`. Type-6 still waits while `scratch[0]&4`
+is clear.
+
 ## PE-BTL78 — 70E54 DrawSync + VSync(2) prefix
 
 `matching_native=804/804`. Live `B0CD8&0x200`
@@ -41,18 +48,18 @@ is `67A78` (jal `67294` when rec bit 1 and
 `+0x24==BCFFD`). Type-6 still waits while
 `scratch[0]&4` is clear. Do not force the bit.
 
-## PE-BATTLE-DATA-PRECOVERY — NYPD contracts (parallel lane)
+## PE-BATTLE-DATA-PRECOVERY — dest lifecycle (parallel lane)
 
 Evidence only. No UE5 / gameplay edits. Pack:
 `docs/evidence/pe-battle-data-precovery/`. Oracle
-`python3 pc_port/tools/pe_battle_data_precovery_oracle.py`.
-m0005i 125E0 types 1+6; `0x08` adds 3/0/5. hdr+0x0C writes
-`B0E70[2]` and `[5]` only. Type-0 `+0x1AC` is CE2=14 `+0x8`
-via `6C118`, not room hdr+0x0C. `+0x1B4` is an in-actor dest.
-M0367I 125E0 desc is type 1 only; hdr+0x0C is idB 2/3/4.
-Type-0 `0x2E` cmds: CE2=14 `0x15`/`0x1C`, Writer A `0x1E`/`0x1F`/`0x20`.
-`0x2F` is a frame cap to `+0x12`, not a command ID. M0367I Writer A
-is 36 rows, no type 1; type-1 `0x08` first8 types 2,2,4,3,4,2,3,4.
+`python3 pc_port/tools/pe_battle_data_precovery_oracle.py` PASS.
+M0367I enter: `6B35C` clear → `6B4F8` (CE2=hdr+1=10) →
+Writer A @ `0x8006B84C` → `6BECC` state6 Writer B **CE2=10**
+(not CE2=14) → `125E0` type1 with `+0x1AC=0` `+0x1B0=0`
+(no clip). First eight `0x08` types 2,2,4,3,4,2,3,4 use
+Writer A `0x09` / `0x07` then `0x01`. Mode 7/9/10 unique
+stores `2CF24`/`2B278`/`2BC74` are battle-path only.
+`D280` change does not gate `6B4F8`. Do not wire CE2+0x8.
 
 ## PE-BTL72 — playable-loop TRACE through actors/HP capture
 

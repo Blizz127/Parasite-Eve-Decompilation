@@ -23,7 +23,8 @@
  *
  * E01BC overlay between 661A4 and 661CC is not this cut.
  * 70E54 live prefix @ 3F590: DrawSync(0), 42FE8 out
- * (gp+0x168!=6), VSync(2). 74A44+ is not this cut.
+ * (gp+0x168!=6), VSync(2), ResetGraph(1). 755F0+ is
+ * not this cut.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -39,6 +40,7 @@ extern unsigned int D_8009D280;
 extern void func_80068CE0(void);
 extern void func_800661A4(void);
 extern void func_800661CC(void);
+extern int func_80074A44(int mode);
 
 static uint32_t pe_3f3c4_loaded_dest;
 
@@ -154,4 +156,5 @@ void func_8003F3C4(void)
     func_80068E24();
     func_80074DC0(0);
     func_80073A44(2);
+    func_80074A44(1);
 }
