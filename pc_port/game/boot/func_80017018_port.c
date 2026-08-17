@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -86,6 +86,7 @@
 #define GA_OPAB       0x80019638u
 #define GA_OP1E       0x80019658u
 #define GA_OP79       0x80018BECu
+#define GA_OP85       0x80018EB4u
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 
@@ -286,6 +287,20 @@ int func_80018BEC(pe_addr_t args)
     return 1;
 }
 
+/*
+ * PE-BTL41 — opcode 0x85 fade-in 18EB4.
+ *
+ * 11 words 0x80018EB4..0x80018EE0, SHA-256 1a18600c…9d43.
+ * D_800910A0[0x85]. jal 66B60(lhu *arg0); v0=1.
+ * Type-3 HIT imm 0x1E. Do not invent a region hit.
+ * Boot 6E9A0 already jals 66B60(2).
+ */
+int func_80018EB4(pe_addr_t args)
+{
+    func_80066B60(PE_LoadU16(PE_LoadU32(args)));
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == GA_OP0)
@@ -372,6 +387,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80019658(args);
     if (fn == GA_OP79)
         return func_80018BEC(args);
+    if (fn == GA_OP85)
+        return func_80018EB4(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }

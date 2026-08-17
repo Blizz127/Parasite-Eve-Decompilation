@@ -140,7 +140,9 @@ the retail battle runtime, not a one-off script.
 | BTL-3F3C4 | named cut: 65400 + 35558 + 68E24 if B0CD8&0x300==0 | PORTED | 1220C sets D1C4=D280; 0x2000 is not the gate |
 | BTL-19658 | 9w 0x1E; D2F0+0x98 \|= 0x80; v0=1 | PORTED | type2 after mailbox 0xB |
 | BTL-18BEC | 9w 0x79; D2F0+0x98 \|= 0x20; v0=1 | PORTED | type2 after 0x1E; then 0x0B pose |
-| next_live_va | type2 0x0B pose then mailbox skips; type6 0x12; type3 0x85 | RESEARCH_REQUIRED | scratch&4 / region hit / D1F4 |
+| BTL-18EB4 | 11w 0x85; jal 66B60(lhu *arg0); v0=1 | PORTED | type3 HIT imm 0x1E; do not invent hit |
+| BTL-66B60 | 30w; CFEE=CFEF=2; CFE8/EA/EC=0xFF; CFF6=a0 | PORTED | boot 6E9A0(2); 68E24 needs 6A8D4 B0E38 |
+| next_live_va | type2 mailbox skips; type6 0x12; type3 0x85 hit | RESEARCH_REQUIRED | scratch&4 / region hit / D1F4 |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -229,12 +231,14 @@ python3 pc_port/tools/pe_btl37_19638_oracle.py
 python3 pc_port/tools/pe_btl38_68e24_oracle.py
 python3 pc_port/tools/pe_btl39_19658_oracle.py
 python3 pc_port/tools/pe_btl40_18bec_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=765/765
+python3 pc_port/tools/pe_btl41_18eb4_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=767/767
 ```
 
-STOP/NEXT: Type-2 `0x1E`/`0x79` are ported. Live
-`0xB` mailbox then writes type-2 pose through
-`0x0B`. Type-6 next is `0x12` after scratch&4.
-Type-3 `0x85` stays hit-gated. Do not invent pad
-/ persist==39 / scratch / hit. `D2E8` bit 0 stays
-set.
+STOP/NEXT: Type-2 `0xB` arm is ported through
+`0x0B` pose and mailbox skips. Type-3 `0x85` is
+ported but stays hit-gated (type-0 X=16 misses
+the `0x77` rects). Type-6 `0x12` waits on
+scratch[0]&4 with no type 0–6 / EXE immediate
+writer. Do not invent pad / persist==39 /
+scratch / hit. `D2E8` bit 0 stays set.
