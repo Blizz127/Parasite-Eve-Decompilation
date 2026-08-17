@@ -18,10 +18,10 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `func_8003D050` (505 words, SHA-256 `50b5ff75…`) after
-the ported EE=13 prefix (`+0x158` walk → `+0x1C0`). `6CC68` is not
-on the live bit1 path. Do not invent `3D050`/`6698C`/`3D834` or
-`andi 0xFC`. No matching `src/` C.
+STOP/NEXT: remainder of `func_8003D050` after the pointer-prefix
+(`+0/4/8/C/10`, `+0x54`, `+0xBA`). Three later jals `3D94C` /
+`794C4` / `3C5D8`, then `6698C` / `3D834` / `andi 0xFC`. Do not
+invent those or complete `0x55`. No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 

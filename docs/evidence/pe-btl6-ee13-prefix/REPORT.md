@@ -51,5 +51,8 @@ python3 pc_port/tools/pe_btl5_overlay_wait_oracle.py
 PE_TEST_FILTER=BTL ./pc_port/build/pe-native-tests
 ```
 
-STOP: `func_8003D050` so the live poll can reach `andi 0xFC` without
-fabrication.
+`func_8003D050_prefix_cut` ports the header pointer ladder. The
+remaining 3D050 body (3 jals) is not this cut.
+
+STOP: rest of `3D050` after `+0x10` so `6698C`/`3D834`/`andi 0xFC`
+can fire without fabrication.

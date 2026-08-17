@@ -17,7 +17,8 @@ the retail battle runtime, not a one-off script.
 | BTL-LIVE-3B | Next tick `6C4C4(CE4)` then `6C5BC` once; TRACE `overlay_wait` | PORTED | tests + TRACE_CONTRACT |
 | BTL-6CC68 | 79 words; six TEXT sites all in EE 0/1-7; **not** on live bit1→EE13 | PROVEN | `pe_btl6_ee13_oracle.py` |
 | BTL-EE13-PREFIX | EE=13 `lw +0x158` walk → `+0x1C0`; zeros `+0x10`/`+0x134`; D254/D1A0 a1 | PORTED | `func_8006C5BC_ee13_prefix_cut` |
-| BTL-EE13-3D050 | `jal 3D050` (505w) a0=`overlay+0x14` a3=704; then `6698C` (215w, 0 jals), `3D834` (489w), then `andi 0xFC` | RESEARCH_REQUIRED | next live blocker |
+| BTL-EE13-3D050 | `jal 3D050` (505w) a0=`overlay+0x14` a3=704; then `6698C` (215w, 0 jals), `3D834` (489w), then `andi 0xFC` | RESEARCH_REQUIRED | body after prefix |
+| BTL-3D050-PFX | Pointer ladder `+0/4/8/C/10`, `+0x54=a2`, `+0xBA=1` | PORTED | `func_8003D050_prefix_cut` |
 | BTL-6914C | 274-word loader; `0x39`/`mode7`; no `+0xE` store | PROVEN | not the 0x3B wait |
 | BTL-6D60C | `144FC` `0x38` jal `6D60C(1)`; 387 words; no `+0xE` | PROVEN | before 0x39 |
 | BTL-MODE7 | `0x8002CEE0` jal `6914C(0)` then `D_8009D28C=7` | PROVEN | not issued |
@@ -40,7 +41,7 @@ python3 pc_port/tools/pe_btl5_overlay_wait_oracle.py
 python3 pc_port/tools/pe_btl6_ee13_oracle.py
 python3 pc_port/tools/pe_btl3_29810_tail_oracle.py
 python3 pc_port/tools/pe_btl2_hp_trace_oracle.py
-./pc_port/build/pe-native-tests   # 667/667
+./pc_port/build/pe-native-tests   # 668/668
 ```
 
 STOP/NEXT: `func_8003D050` (505 words) so EE=13 can reach `6698C` /
