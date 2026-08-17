@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL96 — opcode 0x28 bit-clear
+
+`matching_native=822/822` local. Clear twin
+of `0x2A`. Type-6 `+0x1A38` is after `0x55`.
+Do not force `scratch[0]&4`.
+
 ## PE-BTL95 — 144FC jtbl[1..0x36] completes
 
 `matching_native=820/820` with BTL95 dirty
