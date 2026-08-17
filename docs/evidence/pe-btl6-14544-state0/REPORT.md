@@ -15,8 +15,10 @@ lw *s1; ori 0x00800000; sw *s1
 j 0x80014660   # v0=0, rewind gp+0x90 by 12
 ```
 
-`$s0` is overlay `D_800B0CD8`. `$s1` is `a0` (actor). Native uses
-overlay word 0 as the actor pointer, same as the 0x3B cut.
+`$s0` is overlay `D_800B0CD8`. State 0 and 0x3B `lw/sw 0($s0)`
+mutate overlay word 0 (`8E02`/`AE02`). `$s1` is 144FC a0; only
+0x3A uses `lw 0($s1)` (`8E22`) for `lbu(*binder)`. State 0x37
+tests overlay word 0 bit `0x400000`.
 
 ## State 0x37 (`0x80014570`, 11 words)
 

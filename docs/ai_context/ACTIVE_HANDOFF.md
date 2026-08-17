@@ -6,7 +6,8 @@ every meaningful change. Prefer shortening over accruing.
 ## PE-BTL5 — live 0x3B wait from 3F074 → 6C4C4/6C5BC
 
 NYPD/Eve-intro parks on m0005i `0x55(2)` at module 6 `+0x4140`
-with `D_8009D28C` still 0. Do not auto-complete `0x55`.
+with `D_8009D28C` still 0. 144FC 0x3B at `0x80014630` returns
+0 while `+0xE&3`. Do not fabricate that clear.
 
 `0x3B` is `lbu +0xE; andi 3`, not `6914C`. `0x3A` oris `D1A0` bit 1
 then jals `29810`. Live `+0xE` producers are field-tick `3F3C4` →
@@ -18,16 +19,18 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: `0x80014630` — 144FC 0x3B live park. 29810
-after_hp is fully resolved (209F0/30640/339A0). Do not
-auto-complete `0x55` after EE=13. Do not stub 6914C(a0=0)
-mode 7, jalr 0x800E086C. No matching `src/` C.
+STOP/NEXT: `0x8006CC68` (3F074 poll-exit after EE=0 idle).
+0x3B `lw/sw 0($s0)` is overlay word 0, not the binder.
+Live `0x55` is not completed. D278 is the 0x6F slot body.
+0x3A a0 is `lbu(*binder)` (`lbu(2)`; host RAM[2]==0 is
+APPROXIMATION). Do not stub 6914C(a0=0), jalr 0x800E086C.
+No matching `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
 
 NYPD/Eve-intro parks on m0005i `0x55(2)` at module 6 `+0x4140`
-with `D_8009D28C` still 0. `0x89` is the next opcode (`+0x414C`).
-Do not auto-complete `0x55`.
+with `D_8009D28C` still 0. `0x89` is the next opcode (`+0x414C`)
+after 0x3B v0=1. Do not fabricate the `+0xE` clear.
 
 `0x55` = `func_800144FC` (102 words), JT on `D_800B0CD8+0xF4`.
 State `0x3A` is the sole `jal 0x80029810`; that init `jal`s

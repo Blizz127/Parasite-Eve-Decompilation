@@ -14,7 +14,8 @@
  * Exclusive end is func_8006CC68. TEXT has exactly three jal sites:
  * 3F074@3F22C (field-tick poll), 35558@35B24 (after actor walk),
  * 6C1CC state 6@6C358. 209F0 @ 0x80020C5C jals it
- * (lh(*(D278+0x68)+6); live +0x68=0 → a0=lh(6)).
+ * (lh(*(D278+0x68)+6); slot-body +0x68=0 from 109B0.
+ * APPROXIMATION: host a0=lh(6)==0).
  * 144FC/29810/6914C/6D60C have no direct jal.
  *
  * Named cut implemented here: CE2 in [10,14], +0xEE JT gates,

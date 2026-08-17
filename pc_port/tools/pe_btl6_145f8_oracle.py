@@ -2,7 +2,8 @@
 """PE-BTL6 independent oracle: 144FC 0x3A at 0x800145F8.
 
 Pins SHA-1-exact EXE. After 6914C v0=0, 0x39 sb 0x3A. 0x3A:
-D_8009D1A0 |= 2, a0 = lbu(*overlay), jal 29810, sb F4=0x3B,
+D_8009D1A0 |= 2, lw v0,0(s1); lbu a0,0(v0); jal 29810, sb F4=0x3B,
+s1 is 144FC a0 (binder arg0). NYPD 0x55(2) mode 0 → lbu(2).
 j 0x80014660 (v0=0 park). Does not re-enter 0x3B in the same
 call. 29810 first jals 20EFC / 71A64 / 293F4(0). Does not
 import production C. Does not claim 0x55 completion, mode 7,
@@ -65,8 +66,9 @@ def main() -> int:
     require(load_u32(data, STATE3A + 4) == 0x8C42D1A0, "lw D1A0")
     require(load_u32(data, STATE3A + 0xC) == 0x34420002, "ori 2")
     require(load_u32(data, STATE3A + 0x14) == 0xAC22D1A0, "sw D1A0")
-    require(load_u32(data, STATE3A + 0x18) == 0x8E220000, "lw overlay")
-    require(load_u32(data, STATE3A + 0x20) == 0x90440000, "lbu a0,0(actor)")
+    require(load_u32(data, STATE3A + 0x18) == 0x8E220000, "lw 0(s1)")
+    require(load_u32(data, STATE3A + 0x20) == 0x90440000, "lbu 0(v0)")
+    require(load_u32(data, 0x80014504) == 0x00808821, "s1=a0 binder")
     require(jal_target(load_u32(data, STATE3A + 0x24)) == FN_29810, "jal 29810")
     require(load_u32(data, STATE3A + 0x2C) == 0x2402003B, "li 0x3B")
     require(j_target(load_u32(data, STATE3A + 0x30)) == PARK, "j park")
@@ -79,7 +81,7 @@ def main() -> int:
     require(load_u32(data, 0x80029914) == 0x00002021, "293F4 a0=0")
 
     print(
-        "PASS: 145F8 D1A0|=2 lbu(*overlay) jal 29810 sb 0x3B park; "
+        "PASS: 145F8 D1A0|=2 lw 0(s1) lbu 0(v0) jal 29810 sb 0x3B park; "
         "no 0x55/mode7/overlay claim"
     )
     return 0

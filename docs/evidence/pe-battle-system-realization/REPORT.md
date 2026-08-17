@@ -8,18 +8,20 @@ the retail battle runtime, not a one-off script.
 |---|---|---|---|
 | BTL-CMD | Writer B type-0 `idB=4` = `0x6C14` / 18 frames; actor `+0x1B0` | PORTED | `pe-btl3-first-command` |
 | BTL-HP | `293F4` HP triple; `29810` tail → `1A680` command 4 | PORTED | `pe-btl2-hp-layout`, `pe-btl3-first-command` |
-| BTL-3B | `144FC` `0x3B` = `lbu +0xE; andi 3`; not `6914C` | PROVEN | `pe-btl5-overlay-wait` |
+| BTL-3B | `144FC` `0x3B` @ `0x80014630` 12w; `lw/sw 0($s0)` overlay[0]; v0=1 iff bits clear | PORTED | `pe_btl6_14630_oracle.py` sha `3e531fb7…` |
+| BTL-3F074-POLL | `s0=1`; jal 6C5BC; `beq v0,s0` until v0=0 | PROVEN | `pe_btl7_3f074_poll_oracle.py` |
+| BTL-6CC68-EXIT | EE=0 idle after bits clear: jal 6CC68, 6C5BC v0=0, poll exits | PROVEN | same; 79w sha `262dcfc6…` |
 | BTL-6C4C4 | Setter `ori 1/2/3`, 62/62 | PORTED | `func_8006C4C4_port.c` |
 | BTL-6C5BC-WIN | `0x8006C5BC..0x8006CC68` 427 words, SHA-256 `d15126b6…686a` | PROVEN | `pe_btl5_overlay_wait_oracle.py` |
 | BTL-6C5BC-CALL | TEXT jals only `35B24`/`3F22C`/`6C358`; `3F3C4`→`3F074` poll + `35558` | PROVEN | same oracle |
 | BTL-6C5BC-CUT | CE2 `[10,14]`, EE 0/11/12; EE=13 prefix then 6CC2C clearer, return 1 | PORTED | `func_8006C5BC` named cut |
 | BTL-3A-D1A0 | `144FC` `0x3A` `D_8009D1A0 \|= 2` | PORTED | `func_800144FC_state3A_d1a0_cut` |
 | BTL-LIVE-3B | Next tick `6C4C4(CE4)` then `6C5BC` once; TRACE `overlay_wait` | PORTED | tests + TRACE_CONTRACT |
-| BTL-6CC68 | 79 words; six TEXT sites all in EE 0/1-7; **not** on live bit1→EE13 | PROVEN | `pe_btl6_ee13_oracle.py` |
+| BTL-6CC68 | 79 words; EE 0/1-7 jals; after 6CC2C the EE=0 idle jal is the 3F074 poll-exit | PROVEN | `pe_btl6_ee13_oracle.py` |
 | BTL-EE13-PREFIX | EE=13 `lw +0x158` walk → `+0x1C0`; zeros `+0x10`/`+0x134`; D254/D1A0 a1 | PORTED | `func_8006C5BC_ee13_prefix_cut` |
 | BTL-EE13-3D050 | `jal 3D050` (505w) a0=`overlay+0x14` a3=704; then `6698C` live 117w, `3D834` 70w, then `andi 0xFC` | PORTED | `pe-btl6-6cc2c-epilogue` |
 | BTL-6CC2C | EE=13 after jal 3D834: `andi 0xFC` / `sb +0xE` / `sb 0 → +0xEE`; v0=1 | PORTED | `func_8006C5BC_ee13_epilogue_cut` |
-| BTL-14544 | `144FC` state 0: if bits clear sb 0x37; ori actor `0x800000`; v0=0 | PORTED | `func_800144FC_state0_cut` |
+| BTL-14544 | `144FC` state 0: if bits clear sb 0x37; `*s1 |= 0x800000` (binder); v0=0 | PORTED | `func_800144FC_state0_cut` |
 | BTL-14570 | `144FC` state 0x37: jal 42EDC unless overlay bit `0x400000`; sb 0x38 | PORTED | `func_800144FC_state37_cut` |
 | BTL-42EDC | 17w; `lbu D_800BD024` clamp into gp+0x16C; gp+0x168/174=1 | PORTED | `func_80042EDC` |
 | BTL-3D050-PFX | Pointer ladder `+0/4/8/C/10`, `+0x54=a2`, `+0xBA=1` | PORTED | `func_8003D050_prefix_cut` |
@@ -44,14 +46,16 @@ the retail battle runtime, not a one-off script.
 | BTL-145DC | `144FC` 0x39 jal `6914C(1)`; v0==1 parks; no sb 0x3A | PORTED | no-disc 6E6A8 -1 stays 0x34 |
 | BTL-693F8 | 0x34 jal 6E6A8 dest `0x801ED800` LBA PE.IMG+`0x7E` n=5 | PORTED | sha256 `3b2ff0b8…d3c9`; sync poll → EF=0x36 |
 | BTL-69468 | 0x36 jal 6E1C0 ×64 stride `0x14` then 6E498(`+0x18C`, `0x73DECD80`) | PORTED | TIM-like; EF=0 overlay&=~8 v0=0; not overlay |
-| BTL-145F8 | `144FC` 0x3A: D1A0\|=2, `lbu(*overlay)` jal 29810, sb 0x3B, park | PORTED | `pe_btl6_145f8_oracle.py` |
+| BTL-145F8 | `144FC` 0x3A: D1A0\|=2, `lbu(*binder)` jal 29810, sb 0x3B, park | PORTED | `pe_btl6_145f8_oracle.py` |
 | BTL-20EFC | 7w 5×`sb 0` gp-rel; 29810 jal void(void), delay `s0=a0` | PORTED | sha256 `9136c11e…1e7b`; already matching `src/` |
 | BTL-71A64 | 3w BIOS A(0x30) puts; 29810 `a0=lw D_8009D250` | PORTED | live a0=0 no stores; no invented puts |
 | BTL-29854 | 29810 after 20EFC: D1AC&=~0x300, A7FF0×10 `{0,-1}`, B8A90×7 | PORTED | `pe_btl6_29854_oracle.py`; not `0x800C8A90` |
 | BTL-29810-PFX | 29810 prologue 15w: zeros D1E8/D290/D28C=0 (not 7), D278=lw(*D254) | PORTED | `pe_btl6_29810_oracle.py` sha256 `a8fd26f9…64e8` |
-| BTL-209F0 | 161w; D278 sb +0x12=4..+0x19=11; jal 6C4C4 needs +0x68 | PORTED | local sbs only; default +0x68=0; no invented 6C4C4 |
-| BTL-209F0-68 | No non-zero D278+0x68 writer; 2F658 copies 0x70 with +0x68=0 | PORTED | null-deref Kuseg; 6C4C4(lh(6)); 30640 beqz skip |
-| BTL-339A0 | 32w 0 jals; 4 pairs at 0x80010E38 → CE80/CE84/CE86 | PORTED | `pe_btl6_339a0_oracle.py`; a0=lbu(*overlay) |
+| BTL-209F0 | 161w; D278 sb +0x12=4..+0x19=11; jal 6C4C4(lh(*(D278+0x68)+6)) | PORTED | D278=*D254=0x6F slot body |
+| BTL-209F0-68 | Slot tmpl `109B0+0x68=0`; no non-zero sw to D278/+*D254 +0x68 | PORTED | actor+0x68 is motion (35038/35558/D2F0), not this pointer |
+| BTL-145F8-A0 | 0x3A `lw 0(s1); lbu 0(v0)`; s1=144FC a0=binder | PORTED | 0x55(2) mode 0 → lbu(2), not overlay/`*actor`/encounter 2 |
+| BTL-RAM-LOW | Host zeros at addr 2 and 6 | APPROXIMATION | EXE has no 0x80000000 image; replace from post-boot RAM |
+| BTL-339A0 | 32w 0 jals; 4 pairs at 0x80010E38 → CE80/CE84/CE86 | PORTED | `pe_btl6_339a0_oracle.py`; a0=lbu(*binder) |
 | BTL-87414 | 5w `D_8009D270=2` return 0; 6CDA4 state0 a0=3 | PORTED | matching `src/` already; native port |
 | BTL-6CDA4 | 181w +0xF0 SM; live a0=1 sb 7 + table 0x0F; state7 real 6E6D4 | PORTED | -1 → F0=0; ok → F0=8 |
 | BTL-6E7E8 | 19w poll; state8 -1→7 pending→8 0→9; PE.IMG 8C6 AKAO | PORTED | `func_8006CDA4_state8_cut` parks at 9 |
@@ -59,6 +63,9 @@ the retail battle runtime, not a one-off script.
 | BTL-870E0 | 4w return D_8009D24C; stateA -1→0 busy stay 0→F0=7 | PORTED | no DMA stub; writers 85098/850C0/851A8 |
 | BTL-MODE7 | `0x8002CEE0` jal `6914C(0)` then `D_8009D28C=7` | PROVEN | not issued |
 | BTL-ATB | ATB / menus / AI / damage / death / field return | RESEARCH_REQUIRED | do not invent |
+| opcode_0x55_complete | Live park remains 0x3B | NO | 3F074 poll not drained |
+| next_live_va | `0x8006CC68` | PROVEN | EE=0 idle after bits clear |
+| func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; deferred for 14630 | REVERIFY_IF_CONSUMED | `8E22` vs `8E02` |
 
 ## Rejected
 
@@ -68,6 +75,10 @@ the retail battle runtime, not a one-off script.
 | `144FC`/`29810` jal `6C5BC` | TEXT census: three sites, none inside those leaves |
 | Auto-clear `+0xE` or stub `6914C=0` | Fabrication; forbidden |
 | Bind idle/`0x20`/idA=2 | Wrong table row |
+| `10928+0x68` / actor+0x68 prove 209F0's pointer | Wrong object; D278 is the 0x6F slot body |
+| 0x3A `lbu(*overlay)` or 29810(2) | ROM is `lbu(*binder)`; 0x55(2) → `lbu(2)` |
+| State 0 / 0x3B `*s1` is the binder | `8E02` rs=$s0 overlay[0]; `8E22` is 0x3A binder only |
+| EE=13 return 1 completes `0x55` | 3F074 keeps polling while v0==1; exit is EE=0 → 6CC68 v0=0 |
 | `6CC68` is the EE=13 body | Six jal sites, all before `0x8006C9F8` |
 
 ## Verify
@@ -95,6 +106,8 @@ python3 pc_port/tools/pe_btl6_42f20_oracle.py
 python3 pc_port/tools/pe_btl6_693f8_oracle.py
 python3 pc_port/tools/pe_btl6_69468_oracle.py
 python3 pc_port/tools/pe_btl6_145f8_oracle.py
+python3 pc_port/tools/pe_btl6_14630_oracle.py
+python3 pc_port/tools/pe_btl7_3f074_poll_oracle.py
 python3 pc_port/tools/pe_btl6_20efc_oracle.py
 python3 pc_port/tools/pe_btl6_29854_oracle.py
 python3 pc_port/tools/pe_btl6_29810_oracle.py
@@ -103,8 +116,7 @@ python3 pc_port/tools/pe_btl6_339a0_oracle.py
 ./pc_port/build/pe-native-tests   # matching_native after this rung
 ```
 
-STOP/NEXT: `0x80014630` — 144FC 0x3B live park (`+0xE&3`,
-now also set by 209F0→6C4C4(0)+D1A0 bit1). 29810 after_hp
-is fully resolved. Do not auto-complete `0x55` when EE=13
-clears bits. Do not stub `6914C(a0=0)` mode 7 or jalr
-`0x800E086C`.
+STOP/NEXT: `0x8006CC68` — EE=0 idle jal after bits clear,
+the 3F074 poll-exit (v0=0). Live `0x55` stays at 0x3B while
+`+0xE&3`. Do not treat EE=13 v0=1 as complete. Do not jump
+`0x89`. Do not stub `6914C(a0=0)` or jalr `0x800E086C`.

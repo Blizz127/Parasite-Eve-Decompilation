@@ -2,7 +2,8 @@
 """PE-BTL6 independent oracle: 144FC state 0 and 0x37 / 42EDC.
 
 Pins SHA-1-exact EXE words. State 0 at 0x80014544 stores 0x37 when
-(+0xE & 3)==0, oris actor bit 0x800000, returns 0 via 0x80014660.
+(+0xE & 3)==0, oris overlay[0] bit 0x800000 (lw/sw 0($s0)),
+returns 0 via 0x80014660.
 State 0x37 jals 42EDC when overlay word bit 0x400000 is clear, then
 sb 0x38 and re-dispatches. Does not import production C. Does not
 claim 0x55 completion, 6D60C/6914C success, or mode 7.
@@ -146,7 +147,7 @@ def main() -> int:
     require(load_u32(data, STATE38 + 4) == 0x24040001, "0x38 a0=1")
 
     print(
-        "PASS: 144FC state 0 @ 14544 sb 0x37 + ori 0x800000 + v0=0; "
+        "PASS: 144FC state 0 @ 14544 sb 0x37 + ori overlay[0] 0x800000 + v0=0; "
         "state 0x37 jal 42EDC then sb 0x38; 42EDC 17w clamp BD024; "
         "next 0x38 jal 6D60C(1)"
     )

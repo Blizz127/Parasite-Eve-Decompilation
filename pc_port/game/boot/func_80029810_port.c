@@ -69,9 +69,15 @@ void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)
 }
 
 /*
- * Kuseg 2 MiB RAM mirror. 209F0 has no null check on D278+0x68;
- * default 0 is address 0, which is 0x80000000 on the R3000.
- * This is the hardware map, not an invented battle pointer.
+ * R3000 Kuseg/KSEG0 2 MiB RAM mirror. 209F0 has no null check on
+ * D278+0x68. After 29810, D278 is *D254 = slot body (0x6F / 2F7D8
+ * copies D_800109B0). That template +0x68 is 0; TEXT has no non-zero
+ * sw to D278+0x68 or *D254+0x68. Actor+0x68 is a different field
+ * (35038 / 35558 motion; opcode D2F0 stores).
+ *
+ * APPROXIMATION: bytes at physical 0+6 are not in the EXE. Host
+ * guest RAM is zero there. Replace when a post-boot RAM image of
+ * the exception-vector area is recovered. Not an invented pointer.
  */
 static pe_addr_t pe_kseg0(pe_addr_t addr)
 {
@@ -94,9 +100,9 @@ static const uint8_t k_209f0_scale[9] = {
  * 209F0. D278 sb +0x12=4 .. +0x19=11, sh +0x24 = (lhu+0x22 *
  * scale[lbu(obj+6)]) / 10, copy 5-byte row to obj+0x14.. and
  * sw row[4] to obj+8, jal 6C4C4(lh(obj+6)). obj = lw(D278+0x68)
- * through Kuseg. Default +0x68 is 0: no writer installs a
- * pointer. 6C4C4(0) with D1A0 bit1 sets +0xE bit1 (ROM, not
- * invented).
+ * through Kuseg. Slot-body +0x68 is 0 (109B0). 6C4C4 a0 is
+ * lh(obj+6). APPROXIMATION: host RAM[6]==0. D1A0 bit1 still
+ * sets +0xE bit1 regardless of a0 (ROM).
  */
 void func_800209F0_cut(void)
 {
@@ -133,8 +139,9 @@ void func_800209F0_cut(void)
 }
 
 /*
- * 30640. lw D278+0x68, lw obj+0x10, and 0x10000. Live +0x68=0
- * and RAM+0x10=0 skip the 71A54 arm. That arm is not invented.
+ * 30640. lw D278+0x68, lw obj+0x10, and 0x10000. Slot-body
+ * +0x68=0; APPROXIMATION host RAM+0x10=0 skips 71A54. That arm
+ * is not invented.
  */
 void func_80030640_cut(void)
 {
@@ -203,35 +210,34 @@ void func_80029810_after_hp_cut(unsigned int encounter)
     func_8001A680_command_cut(actor, PE_LoadU8(record + 0x12u));
 }
 
+/*
+ * 144FC 0x3B at 0x80014630 (12 words to park). $s0 = overlay
+ * D_800B0CD8. Busy (+0xE&3) j 0x80014660 v0=0. Clear: lw/sw
+ * 0($s0) &= ~0x00800000, sb F4=0, j 0x8001467C v0=1.
+ * 0x3A's $s1 binder is a different object (8E22 vs 8E02).
+ * No jal/jalr; not 6914C; not 0x800E086C. v0=1 is not issued
+ * on the live park (bits stay set until 3F074's 6C5BC poll
+ * returns 0 via EE=0 → 6CC68 after 6CC2C).
+ */
 int func_800144FC_state3B_cut(void)
 {
-    pe_addr_t actor;
-    unsigned int flags;
-
     if ((PE_LoadU8(GA_OVERLAY + 0x0Eu) & 3u) != 0u)
         return 0;
-    actor = PE_LoadU32(GA_OVERLAY);
     PE_StoreU8(GA_OVERLAY + 0xF4u, 0u);
-    flags = PE_LoadU32(actor) & 0xFF7FFFFFu;
-    PE_StoreU32(actor, flags);
+    PE_StoreU32(GA_OVERLAY, PE_LoadU32(GA_OVERLAY) & 0xFF7FFFFFu);
     return 1;
 }
 
 /*
- * 144FC state 0 at 0x80014544. After 0x3B stores +0xF4=0 the next
- * dispatch lands here. If (+0xE & 3)==0, sb 0x37 → +0xF4; always
- * ori 0x00800000 on *actor ($s1 = a0; native uses overlay word 0
- * like state 3B). j 0x80014660 returns 0 and rewinds the script PC.
- * Does not complete 0x55.
+ * 144FC state 0 at 0x80014544. If (+0xE & 3)==0, sb 0x37 → +0xF4;
+ * always overlay[0] |= 0x00800000 (lw/sw 0($s0)). j 0x80014660
+ * v0=0. Does not complete 0x55.
  */
 int func_800144FC_state0_cut(void)
 {
-    pe_addr_t actor;
-
     if ((PE_LoadU8(GA_OVERLAY + 0x0Eu) & 3u) == 0u)
         PE_StoreU8(GA_OVERLAY + 0xF4u, 0x37u);
-    actor = PE_LoadU32(GA_OVERLAY);
-    PE_StoreU32(actor, PE_LoadU32(actor) | 0x00800000u);
+    PE_StoreU32(GA_OVERLAY, PE_LoadU32(GA_OVERLAY) | 0x00800000u);
     return 0;
 }
 
@@ -681,17 +687,20 @@ void func_80029810_cut(unsigned int encounter)
 }
 
 /*
- * 144FC state 0x3A at 0x800145F8. D1A0 |= 2, a0 = lbu(*overlay),
- * jal 29810, sb F4=0x3B, j 0x80014660 (v0=0). Does not invent
- * 20EFC / 71A64 bodies, mode 7, or 0x55 completion.
+ * 144FC state 0x3A at 0x800145F8. D1A0 |= 2, then
+ * lw v0, 0(s1); lbu a0, 0(v0); jal 29810. s1 is 144FC a0 =
+ * binder arg0 (mode 0 = address of the immediate word).
+ * NYPD 0x55(2) therefore does lbu(2), not lbu(overlay) and not
+ * the encounter value 2. APPROXIMATION: host RAM[2]==0.
+ * sb F4=0x3B, j park v0=0.
  */
-int func_800144FC_state3A_cut(void)
+int func_800144FC_state3A_cut(pe_addr_t arg0)
 {
-    pe_addr_t actor;
+    pe_addr_t value;
 
     D_8009D1A0 |= 2u;
-    actor = PE_LoadU32(GA_OVERLAY);
-    func_80029810_cut(PE_LoadU8(actor));
+    value = PE_LoadU32(arg0);
+    func_80029810_cut(PE_LoadU8(pe_kseg0(value)));
     PE_StoreU8(GA_OVERLAY + 0xF4u, 0x3Bu);
     return 0;
 }
