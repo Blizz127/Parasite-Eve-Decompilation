@@ -74,6 +74,8 @@
 #define GA_D_800BCF88 0x800BCF88u
 /* Host stand-in for ROM 1735C sp+16. APPROXIMATION: no guest $sp. */
 #define GA_DESC       0x80120F70u
+/* Host stand-in for ROM 14DA0 sp+16. APPROXIMATION: no guest $sp. */
+#define GA_POLY       0x80120F30u
 
 static int32_t pe_mult_lo(int32_t a, int32_t b)
 {
@@ -417,5 +419,104 @@ int func_80014694(pe_addr_t args)
     PE_StoreU32(PE_LoadU32(args + 12u), PE_LoadU32(found + 0x58u));
     PE_StoreU32(PE_LoadU32(args + 16u), PE_LoadU32(found + 0x5Cu));
     PE_StoreU32(PE_LoadU32(args + 20u), PE_LoadU32(found + 0x60u));
+    return 1;
+}
+
+/*
+ * PE-BTL26 — opcode 0x77 / 14DA0 and hit-test 1CAB0.
+ *
+ * func_8001CAB0 — 60 words 0x8001CAB0..0x8001CBA0, SHA-256
+ * e011a7b8…9ebc. Zero jal. sra a0/a1 16, then n-edge
+ * crossing (same slt/mult family as 1C614) against 8-byte
+ * vertices at a2. v0 is the toggle.
+ *
+ * func_80014DA0 — 36 words 0x80014DA0..0x80014E30, SHA-256
+ * e66738b1…8201. D_800910A0[0x77]. Copies 4 pairs to
+ * ROM sp+16, jal 1CAB0(*arg8, *arg9, sp+16, 4), *arg10=v0.
+ * Always v0=1.
+ *
+ * Live type-3 rectangle (0x080A,0x04CD)-(0x0994,0x063D).
+ * Point is local[0]/local[2] from the 0x5E D254 copy.
+ * Type-0 spawn zeros those, so the first test stores 0.
+ */
+int func_8001CAB0(int a0, int a1, pe_addr_t poly, unsigned int n)
+{
+    int32_t px;
+    int32_t py;
+    int32_t x1;
+    int32_t y1;
+    unsigned int i;
+    unsigned int toggle;
+
+    px = a0 >> 16;
+    py = a1 >> 16;
+    n &= 0xFFFFu;
+    toggle = 0u;
+    if (n == 0u)
+        return 0;
+    x1 = (int32_t)(int16_t)PE_LoadU16(poly + n * 8u - 6u);
+    y1 = (int32_t)(int16_t)PE_LoadU16(poly + n * 8u - 2u);
+    for (i = 0u; i < n; i++) {
+        pe_addr_t v = poly + i * 8u;
+        int32_t y2 = (int32_t)(int16_t)PE_LoadU16(v + 6u);
+        int32_t x2 = (int32_t)(int16_t)PE_LoadU16(v + 2u);
+        int y_lt = py < y2;
+        int x_cross = 0;
+
+        if (y_lt) {
+            if (py < y1)
+                goto next;
+        } else if (!(py < y1)) {
+            goto next;
+        }
+
+        if (px < x2) {
+            if (px < x1)
+                goto toggle_bit;
+            x_cross = 1;
+        } else if (px < x1) {
+            x_cross = 1;
+        } else {
+            goto next;
+        }
+
+        if (x_cross) {
+            int32_t dy = y1 - y2;
+            int32_t dx = x1 - x2;
+            int32_t lhs = pe_mult_lo(dx, py - y2);
+            int32_t rhs = pe_mult_lo(dy, px - x2);
+            int pass;
+
+            if (dy < 0)
+                pass = lhs < rhs;
+            else
+                pass = rhs < lhs;
+            if (!pass)
+                goto next;
+        }
+    toggle_bit:
+        toggle = toggle < 1u;
+    next:
+        x1 = x2;
+        y1 = y2;
+    }
+    return (int)toggle;
+}
+
+int func_80014DA0(pe_addr_t args)
+{
+    unsigned int i;
+    int hit;
+
+    for (i = 0u; i < 4u; i++) {
+        PE_StoreU32(GA_POLY + i * 8u,
+                    PE_LoadU32(PE_LoadU32(args + i * 8u)));
+        PE_StoreU32(GA_POLY + 4u + i * 8u,
+                    PE_LoadU32(PE_LoadU32(args + 4u + i * 8u)));
+    }
+    hit = func_8001CAB0((int)PE_LoadU32(PE_LoadU32(args + 32u)),
+                        (int)PE_LoadU32(PE_LoadU32(args + 36u)),
+                        GA_POLY, 4u);
+    PE_StoreU32(PE_LoadU32(args + 40u), (uint32_t)hit);
     return 1;
 }

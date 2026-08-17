@@ -111,7 +111,9 @@ the retail battle runtime, not a one-off script.
 | BTL-17B34 | 16w 0x2F +0x12=min; +0x98\|=0x200 | PORTED | live imm 0 |
 | BTL-17B74 | 16w 0x30 v0=0; unequal rewinds CE00 | PORTED | live equal yield |
 | BTL-14694 | 147w 0x5E D254/walk pose-copy; miss -1 | PORTED | live type3 code 0 type 0 |
-| next_live_va | type3 `0x77`/`14DA0` jal 1CAB0; type0 `0x9B`/`15240` | RESEARCH_REQUIRED | do not stub 1CAB0/39B74/3A6A8 |
+| BTL-14DA0 | 36w 0x77 copies 4 pairs; jal 1CAB0 n=4 | PORTED | live miss on zero pose |
+| BTL-1CAB0 | 60w sra16 edge-cross; v0=toggle | PORTED | same family as 1C614 |
+| next_live_va | type3 +0xF8 next 0x5E/0x77; type0 `0x9B`/`15240` | RESEARCH_REQUIRED | do not stub 39B74/3A6A8 |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected

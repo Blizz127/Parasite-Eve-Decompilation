@@ -25,7 +25,9 @@ STOP/NEXT: type-1 `0x08`/`1735C` spawns type 3 then 0 then
 bit 0x80 so `1AA78` no-ops for type 3/0 on host BSS.
 Type 3 first script word is already-ported `0x02` (yield).
 Second visit `0x5E`/`14694` copies D254 pose into locals.
-Next type-3 word is `0x77`/`14DA0` (jal `1CAB0`).
+`0x77`/`14DA0`/`1CAB0` tests that pose against a rectangle
+and misses on the live zeroed type-0 spawn; `0x05` skips to
+`+0xF8` (another `0x5E`/`0x77` pair).
 Type 5 first visit through `0x14` / `0x0B` / `0x41` /
 `0x0A` / `0x09` / `0x05` skip / `0x2E` / `0x4E` / `0x2F` /
 `0x30` yield is ported. Type 0 first is `0x9B`/`15240`.
