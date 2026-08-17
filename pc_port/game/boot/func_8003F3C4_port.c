@@ -30,6 +30,9 @@
  * (75EE0/76B98) is not this cut.
  * 3F5EC VSync(2) then 6A0E8 @ 3F640. Live D1A0&0x10
  * early-out. 66C7C/6A25C are not live.
+ * 3F684 D1C4==D280 loops to 3EB04 in retail; this cut
+ * is one pass per 1220C tick. Dest-change (D1C4!=D280)
+ * takes 74DC0 / 87024 / 3DFC8(1). 696F0 is not this cut.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -42,12 +45,17 @@
 #define REC_STRIDE    56u
 
 extern unsigned int D_8009D280;
+extern unsigned int D_8009D1A0;
 extern void func_80068CE0(void);
+extern void func_80087024(void);
 extern void func_800661A4(void);
 extern void func_800661CC(void);
 extern int func_80074A44(int mode);
 
-extern unsigned int D_8009D1A0;
+void func_8003DFC8(int a0)
+{
+    (void)a0;
+}
 
 void func_8006A0E8(void)
 {
@@ -172,7 +180,9 @@ void func_8003F3C4(void)
 {
     uint32_t bits;
     uint32_t cddc;
+    uint32_t dest0;
 
+    dest0 = D_8009D280;
     pe_3f3c4_ce90_once();
     pe_3f3c4_dest_change();
     pe_3f3c4_host_pad();
@@ -207,4 +217,13 @@ void func_8003F3C4(void)
     }
     func_80073A44(2);
     func_8006A0E8();
+    /* 1220C stores D1C4=D280 before the jal. Tests that call
+     * 3F3C4 directly may have a stale D1C4; dest0 is that entry
+     * snapshot. Exit epilogue only if D280 changed this tick. */
+    if (dest0 != D_8009D280) {
+        func_80074DC0(0);
+        func_80087024();
+        func_8003DFC8(1);
+        /* 696F0 table walk and B0CD8/D1A0 stores are not this cut. */
+    }
 }

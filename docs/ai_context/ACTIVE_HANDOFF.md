@@ -3,6 +3,16 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL85 — 3DFC8 dest-change nop
+
+`matching_native=811/811`. `3DFC8` is `jr ra`.
+`3F3C4` snapshots `D280` and jals `74DC0` /
+`87024`/`3DFC8(1)` only if it changes this
+tick (`1220C` sets `D1C4=D280` first). `696F0`
+is the next exit tail. Type-6 still waits while
+`scratch[0]&4` is clear. Type-0 first unported
+is `0xC6` at `+0x12D4`. Do not force the bit.
+
 ## PE-BTL84 — 6A0E8 D1A0&0x10 early-out
 
 `matching_native=810/810`. Sole jal `3F640`.
