@@ -131,7 +131,8 @@ the retail battle runtime, not a one-off script.
 | BTL-66C7C | 27w; CFEE=6; zero CFE8/EA/EC; CFF6=a0; snap→CFF0/F2/F4 | PORTED | v0=0; 0x85/66B60 is the HIT twin |
 | BTL-T1-86 | persist==39 skips 0x86 via 0x00; live 0 takes 0x86 then 0x1C/0x02 | PROVEN | do not invert; 0xAA stays skipped |
 | BTL-17988 | 28w 0x04; walk +0xA0[0..2]; +8\|=0x10 except D300 | PORTED | type1 0x1C 0xFF → 65400 → type0 0x1F |
-| next_live_va | type0 after 0xFF `0x04` is `0x01` then `0xAA`; type6 `0x12` | RESEARCH_REQUIRED | 35558 cut does not yet jal 65400 |
+| BTL-19618 | 8w 0xAA; D_800B0CD8 \|= 0x2000; v0=1 | PORTED | type0 after 0xFF 0x04 / 0x01 |
+| next_live_va | type0 after 0xAA is `0x40` then `0x65`; type6 `0x12` | RESEARCH_REQUIRED | 35558 cut does not yet jal 65400 |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -212,11 +213,12 @@ python3 pc_port/tools/pe_btl29_1784c_oracle.py
 python3 pc_port/tools/pe_btl30_130b4_oracle.py
 python3 pc_port/tools/pe_btl31_18ee0_oracle.py
 python3 pc_port/tools/pe_btl32_17988_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=754/754
+python3 pc_port/tools/pe_btl33_19618_oracle.py
+./pc_port/build/pe-native-tests   # matching_native=755/755
 ```
 
-STOP/NEXT: `0x04` is ported. Type-0 `0xFF` arm
-continues `0x01` then `0xAA`. Type-6 next is `0x12`
+STOP/NEXT: `0xAA` is ported. Type-0 `0xFF` arm
+continues `0x40` then `0x65`. Type-6 next is `0x12`
 after scratch&4. Type-3 wait loop is live. Native
 `35558` walk does not yet jal `65400` at `3F4E8`.
 Do not invent pad / persist==39 / scratch / hit.

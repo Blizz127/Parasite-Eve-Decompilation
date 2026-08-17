@@ -85,3 +85,16 @@ int func_80018EE0(pe_addr_t args)
     func_80066C7C(PE_LoadU16(PE_LoadU32(args)));
     return 1;
 }
+
+/*
+ * PE-BTL33 — opcode 0xAA overlay bit 19618.
+ * 8 words 0x80019618..0x80019638, SHA-256 5eb9bc4a…c537.
+ * D_800910A0[0xAA]. Zero jal. D_800B0CD8 |= 0x2000; v0=1.
+ * Live type-0 after 0xFF 0x04 / 0x01.
+ */
+int func_80019618(pe_addr_t args)
+{
+    (void)args;
+    PE_StoreU32(0x800B0CD8u, PE_LoadU32(0x800B0CD8u) | 0x2000u);
+    return 1;
+}
