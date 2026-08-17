@@ -16,8 +16,10 @@
  *
  * Known jalr targets 0x80035E04 (types 1–9) and 0x80035C84
  * (type 0) are ported below. 35C84 jal 3999C is not this cut.
- * The remaining 29 jals in 35558 (including 6C5BC) are not this
- * cut. Not M2: this is the field-tick actor walk.
+ * After the walk, this cut also takes the live D1A0&2 jal
+ * 299CC @ 0x800355E8 (consume + after-consume idle gate) and
+ * the 35B2C jal 69594 event pump. 6C5BC @ 35B24 and the
+ * 355B4–35B20 mid-body are not this cut. Not M2.
  *
  * func_80035E04 — 83 words 0x80035E04..0x80035F50. If D1A0 bit
  * 0x100, only 361F4. Else snapshot +0x28/+0x38 into +0x40/+0x50,
@@ -135,4 +137,10 @@ void func_80035558_walk_cut(void)
             func_80035C84(actor);
         actor = PE_LoadU32(actor + 4u);
     }
+
+    if (D_8009D1A0 & 2u) {
+        func_800299CC_consume_cut();
+        func_800299CC_after_consume_cut();
+    }
+    func_80069594();
 }

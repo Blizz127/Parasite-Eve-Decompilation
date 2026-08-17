@@ -263,11 +263,14 @@ python3 pc_port/tools/pe_btl49_13c34_143b0_oracle.py
 python3 pc_port/tools/pe_btl50_187c0_oracle.py
 python3 pc_port/tools/pe_btl51_184ec_oracle.py
 python3 pc_port/tools/pe_btl52_14228_oracle.py
-./pc_port/build/pe-native-tests   # matching_native=778/778
+python3 pc_port/tools/pe_btl53_69594_oracle.py
+./pc_port/build/pe-native-tests
 ```
 
-STOP/NEXT: Type-2 waits on rec byte 4 and
+STOP/NEXT: 35558 jals 299CC (`D1A0&2`) and
+69594. Live 4D4==0 keeps 1D340 off, so 0x64
+still waits on rec byte 4. Fork waits
 `+0x0E==7`. Type-3 `0x85` stays hit-gated.
 Type-6 `0x12` waits on scratch[0]&4. Do not
 invent pad / persist==39 / scratch / hit /
-rec=4 / command 7. `D2E8` bit 0 stays set.
+rec=4 / command 7 / 4D4. `D2E8` bit 0 stays set.

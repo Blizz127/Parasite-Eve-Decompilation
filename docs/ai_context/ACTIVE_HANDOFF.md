@@ -19,17 +19,19 @@ CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
 overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
 `docs/evidence/pe-battle-system-realization/`.
 
-STOP/NEXT: Type-2 mailbox `0xFB` is ported
-through `0x64` and fork `0x0E`. Main waits
-on rec byte 4. Fork waits until `+0x0E==7`.
-Type-3 `0x85` stays hit-gated. Type-6
-`0x12` still waits on scratch[0]&4. Do not
-invent pad / persist==39 / scratch / hit /
-rec=4 / command 7. Do not force `+0x1B0` /
-dest+0x24 / `D2E8` / `3999C`. Do not
-publish `B0E70` until `3D050` tail is real.
-E0060 is EXE list-clear, not M2.
-`matching_native=778/778`. No matching
+STOP/NEXT: 35558 now jals 299CC when
+`D1A0&2` and 69594 after the walk. Live
+`293F4(0)` leaves `gp+0x4D4==0`, so 299CC
+idles before 1D340 (the rec=4 writer).
+Type-2 still waits on rec byte 4 and
+`+0x0E==7`. Type-3 `0x85` stays hit-gated.
+Type-6 `0x12` still waits on scratch[0]&4.
+Do not invent pad / persist==39 / scratch /
+hit / rec=4 / command 7 / 4D4. Do not force
+`+0x1B0` / dest+0x24 / `D2E8` / `3999C`.
+Do not publish `B0E70` until `3D050` tail
+is real. E0060 is EXE list-clear, not M2.
+`matching_native=779/779`. No matching
 `src/` C.
 
 ## PE-BTL3 — first actor command bound from Writer B table
