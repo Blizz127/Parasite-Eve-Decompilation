@@ -10790,6 +10790,8 @@ static void test_BTL98_1f704_40_to_39(void)
     PE_StoreU32(rec + 0x34u, 0u);
     PE_StoreU32(rec + 0x4Cu, 0x4000u);
     PE_StoreU32(rec + 0x6Cu, tbl);
+    PE_StoreU32(0x800B0E98u + 1u * 4u, 0x80108B00u);
+    PE_StoreU8(0x80108B00u + 2u, 1u);
 
     func_800299CC_damage_entry_cut();
     ASSERT(PE_LoadU16(rec + 0x0Cu) == 39u, "1F704 40→39");
@@ -10811,6 +10813,130 @@ static void test_BTL98_1f704_40_to_39(void)
             "unset,232039902ecd52853ed380d097feb499c3c773bc11fcf5020461e6d679ac857a,"
             "unchanged,unset,1\n");
     fclose(csv);
+    PASS();
+}
+
+static void test_BTL99_1f814_jtbl_and_d1d0(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t actor = 0x80108700u;
+    pe_addr_t body = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+    pe_addr_t tbl = 0x80108A00u;
+
+    TEST("BTL99_1f814_jtbl_and_d1d0");
+    ResetTestState();
+    ASSERT(func_80019D24(0u) == 1, "0xCF 4D4");
+    ASSERT(func_800192B8(0u) == 1, "0x95 mode 0");
+
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D20Cu, actor);
+    PE_StoreU32(actor, body);
+    PE_StoreU32(actor + 4u, 0u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(aya + 0x0Eu, 6u);
+    PE_StoreU8(aya + 0x0Fu, 4u);
+    PE_StoreU32(aya + 0x14u, 0xAABBCCDDu);
+    PE_StoreU32(body, 3u << 21);
+    PE_StoreU32(body + 0x18u, weapon);
+    PE_StoreU8(body + 0x90u, 0u);
+    PE_StoreU16(weapon + 0x0Cu, 1u);
+    PE_StoreU8(weapon + 1u, 0u);
+    PE_StoreU8(weapon + 0x0Eu, 1u);
+    PE_StoreU32(tbl, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x0Eu, 40u);
+    PE_StoreU16(rec + 0x10u, 0u);
+    PE_StoreU16(rec + 0x1Cu, 45u);
+    PE_StoreU16(rec + 0x20u, 0u);
+    PE_StoreU16(rec + 0x24u, 0u);
+    PE_StoreU32(rec + 0x34u, 0u);
+    PE_StoreU32(rec + 0x4Cu, 0x4000u);
+    PE_StoreU32(rec + 0x6Cu, tbl);
+    PE_StoreU32(0x800B0E98u + 0u * 4u, 0x80108B00u);
+    PE_StoreU32(0x800B0E98u + 1u * 4u, 0x80108B00u);
+    PE_StoreU32(0x800B0E98u + 2u * 4u, 0x80108B00u);
+    PE_StoreU32(0x800B0E98u + 3u * 4u, 0x80108B00u);
+    PE_StoreU8(0x80108B00u + 2u, 1u);
+
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 39u, "1F704 40→39");
+    ASSERT(PE_LoadU8(0x8009D29Au) == 6u, "D29A Aya+0x0E");
+    ASSERT(PE_LoadU8(0x8009D29Bu) == 4u, "D29B Aya+0x0F");
+    ASSERT(PE_LoadU16(0x8009D298u) == 1u, "gp+0x528 = 1");
+    ASSERT(PE_LoadU32(0x8009D29Cu) == 0xAABBCCDDu, "D29C Aya+0x14");
+    ASSERT(PE_LoadU32(0x8009D1D0u) == actor, "D1D0 = attacker");
+    ASSERT(PE_LoadU8(aya + 0x0Eu) == 1u, "1A680 facing cmd 1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    ASSERT(g_stub_count == 0, "1F814 recorded as stub");
+
+    PE_StoreU8(aya + 0x0Eu, 7u);
+    PE_StoreU8(aya + 0x0Fu, 9u);
+    ASSERT(func_8001F814(actor) == 2048, "305C8 ratan2(0,0) wrap");
+    ASSERT(PE_LoadU32(0x8009D29Cu) == (9u << 16), "D29C +0x0F<<16");
+    PASS();
+}
+
+static void test_BTL99_hp0_skips_1f814(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t actor = 0x80108700u;
+    pe_addr_t body = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+    pe_addr_t tbl = 0x80108A00u;
+
+    TEST("BTL99_hp0_skips_1f814");
+    ResetTestState();
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D20Cu, actor);
+    PE_StoreU32(actor, body);
+    PE_StoreU32(actor + 4u, 0u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU8(aya + 0x0Eu, 6u);
+    PE_StoreU8(aya + 0x0Fu, 4u);
+    PE_StoreU32(aya + 0x14u, 0x11111111u);
+    PE_StoreU32(body, 3u << 21);
+    PE_StoreU32(body + 0x18u, weapon);
+    PE_StoreU8(body + 0x90u, 0u);
+    PE_StoreU16(weapon + 0x0Cu, 40u);
+    PE_StoreU8(weapon + 1u, 0u);
+    PE_StoreU8(weapon + 0x0Eu, 1u);
+    PE_StoreU32(tbl, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x20u, 0u);
+    PE_StoreU16(rec + 0x24u, 0u);
+    PE_StoreU32(rec + 0x34u, 0u);
+    PE_StoreU32(rec + 0x4Cu, 0x4000u);
+    PE_StoreU32(rec + 0x6Cu, tbl);
+
+    func_8001D340(1u);
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 0u, "HP 40→0 from weapon+0x0C");
+    ASSERT(PE_LoadU8(0x8009D29Au) == 0u, "1F814 skipped");
+    ASSERT(PE_LoadU32(0x8009D1D0u) == 0u, "D1D0 skipped");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0; death later");
+    PASS();
+}
+
+static void test_BTL99_305c8_facing_wrap(void)
+{
+    pe_addr_t atk = 0x80108700u;
+    pe_addr_t tgt = 0x80108600u;
+
+    TEST("BTL99_305c8_facing_wrap");
+    ResetTestState();
+    PE_StoreU32(atk + 0x28u, 0u);
+    PE_StoreU32(atk + 0x30u, 0u);
+    PE_StoreU32(tgt + 0x28u, 0u);
+    PE_StoreU32(tgt + 0x30u, 0u);
+    PE_StoreU16(tgt + 0x3Au, 0u);
+    ASSERT(func_800305C8(atk, tgt) == 2048, "2048 - ratan2(0,0)");
+    PE_StoreU16(tgt + 0x3Au, 100u);
+    ASSERT(func_800305C8(atk, tgt) == 2148, "plus target+0x3A");
     PASS();
 }
 
@@ -27217,6 +27343,9 @@ int main(void)
     test_BTL98_192b8_95_mode0();
     test_BTL98_299cc_reaches_1d340();
     test_BTL98_1f704_40_to_39();
+    test_BTL99_1f814_jtbl_and_d1d0();
+    test_BTL99_hp0_skips_1f814();
+    test_BTL99_305c8_facing_wrap();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

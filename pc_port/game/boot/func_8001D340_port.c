@@ -1,5 +1,5 @@
 /*
- * PE-BTL98 — live 1D340 path through 1F704 HP subtract.
+ * PE-BTL98/99 — live 1D340 path through 1F704 and 1F814.
  *
  * Authority: build/disc1.candidate.exe SHA-1
  * 452fb033f2eaa4b18aa20a5bca60b8125af3a37b. Retail BTL83
@@ -10,11 +10,18 @@
  *   a0!=0 ATB: record+0x10 += +0x24 (delay-slot sh at 1D3A4)
  *   plus the 0xC0/0x100 speed adjust. Walk D20C skipping Aya
  *   and +0x98 bit 0x10. record+0x4C bit 0x4000 (ROM gate at
- *   1E780) jals 1F4D4(actor). 21D4C / 374E8 / 1E940 / mode-3
- *   epilogue are not this cut.
+ *   1E780) jals 1F4D4(actor). After 1F4D4, 1F078 lh +0x0C /
+ *   1F080 bgtz skips death; HP<=0 takes 1F41C mode 3, 1F43C
+ *   4D4=0, 1A680(19), 1F4B0 sh-zero. 21D4C / 374E8 / 1E940 /
+ *   HUD sb storm / 6DE80 stay deferred.
  *
- * 1F4D4 this cut: 0x8001F4D4 through 0x8001F708 exclusive
- * (the 1F704 sh +0x0C). 1F814 / 20288 stay deferred.
+ * 1F4D4 this cut: through 1F704, then if remaining HP!=0
+ * jal 1F814(actor) and maybe sw actor → D1D0. 20288 stays
+ * deferred.
+ *
+ * 1F814: Aya+0x0E in 6..15 takes jtbl 0x800106E4
+ * (D29A/D29B/gp+0x528/D29C). Default path jals 305C8 then
+ * 1A680(D254, facing cmd). 6DE80 deferred.
  *
  * 71A54 is BIOS A(2Fh) rand (3-word trampoline, SHA-256
  * db6da112…cffa). Used after s0 is already computed in the
@@ -26,6 +33,17 @@
 #define GA_D_8009D278 0x8009D278u
 #define GA_D_8009D254 0x8009D254u
 #define GA_D_8009D20C 0x8009D20Cu
+#define GA_D_8009D1D0 0x8009D1D0u
+#define GA_D_8009D298 0x8009D298u /* gp+0x528 */
+#define GA_D_8009D29A 0x8009D29Au
+#define GA_D_8009D29B 0x8009D29Bu
+#define GA_D_8009D29C 0x8009D29Cu
+#define GA_D_8009D1AC 0x8009D1ACu
+#define GA_D_8009D1A0 0x8009D1A0u
+#define GA_D_8009D1CE 0x8009D1CEu
+#define GA_D_8009D244 0x8009D244u
+#define GA_D_8009D28C 0x8009D28Cu
+#define GA_D_8009D2E8 0x8009D2E8u
 
 static uint32_t s_bios_rand_seed = 1u;
 
@@ -45,12 +63,116 @@ static uint32_t pe_u32_mul3_div10(uint32_t n)
     return (uint32_t)(((uint64_t)(n * 3u) * 0x66666667ull) >> 34);
 }
 
+int32_t func_800305C8(pe_addr_t attacker, pe_addr_t target)
+{
+    int32_t dx;
+    int32_t dz;
+    int32_t ang;
+    int32_t wrap;
+    int32_t base;
+
+    dx = (int32_t)PE_LoadU32(attacker + 0x28u) -
+         (int32_t)PE_LoadU32(target + 0x28u);
+    dz = (int32_t)PE_LoadU32(attacker + 0x30u) -
+         (int32_t)PE_LoadU32(target + 0x30u);
+    ang = 2048 - func_80079FB4(dx, dz);
+    ang = (int32_t)(int16_t)ang;
+    ang += (int32_t)(int16_t)PE_LoadU16(target + 0x3Au);
+    wrap = ang;
+    if (ang < 0)
+        wrap = ang + 4095;
+    base = (wrap >> 12) << 12;
+    return (int32_t)(int16_t)(ang - base);
+}
+
+int32_t func_8001F814(pe_addr_t actor)
+{
+    pe_addr_t aya;
+    pe_addr_t rec;
+    uint8_t kind;
+    uint8_t lo;
+    uint32_t flags;
+    int32_t s0;
+    int32_t angle;
+    unsigned int hit_cmd;
+
+    s0 = 0;
+    aya = PE_LoadU32(GA_D_8009D254);
+    if (aya == 0u)
+        return 0;
+
+    kind = PE_LoadU8(aya + 0x0Eu);
+    if (kind >= 6u && kind <= 15u) {
+        lo = PE_LoadU8(aya + 0x0Fu);
+        PE_StoreU8(GA_D_8009D29A, kind);
+        PE_StoreU16(GA_D_8009D298, 1u);
+        PE_StoreU8(GA_D_8009D29B, lo);
+        if (kind == 7u || kind == 9u || kind == 11u)
+            PE_StoreU32(GA_D_8009D29C, (uint32_t)lo << 16);
+        else
+            PE_StoreU32(GA_D_8009D29C, PE_LoadU32(aya + 0x14u));
+    }
+
+    rec = PE_LoadU32(GA_D_8009D278);
+    flags = (rec != 0u) ? PE_LoadU32(rec + 0x4Cu) : 0u;
+    if ((flags & 0x00012000u) != 0u || actor == 0u)
+        return 0;
+    s0 = func_800305C8(actor, aya);
+    angle = (int32_t)(int16_t)s0;
+    if (angle < 512)
+        hit_cmd = 0u;
+    else if (angle < 1536)
+        hit_cmd = 2u;
+    else if (angle < 2560)
+        hit_cmd = 1u;
+    else if (angle < 3584)
+        hit_cmd = 3u;
+    else
+        hit_cmd = 0u;
+    func_8001A680_command_cut(aya, hit_cmd);
+    flags = PE_LoadU32(aya + 0x98u);
+    if (flags & 0x100u) {
+        PE_StoreU32(aya + 0x98u, flags & ~0x100u);
+        PE_StoreU16(GA_D_8009D298, 2u);
+    }
+    return (int32_t)(int16_t)s0;
+}
+
+static void func_8001D340_death_cut(void)
+{
+    pe_addr_t aya;
+    pe_addr_t rec;
+    uint32_t v;
+
+    aya = PE_LoadU32(GA_D_8009D254);
+    if (aya != 0u) {
+        PE_StoreU32(aya + 0x68u, 0u);
+        PE_StoreU32(aya + 0x6Cu, 0u);
+        PE_StoreU32(aya + 0x70u, 0u);
+    }
+    v = PE_LoadU32(GA_D_8009D1AC);
+    PE_StoreU32(GA_D_8009D1AC, v & ~0x300u);
+    PE_StoreU32(GA_D_8009D28C, 3u);
+    PE_StoreU8(GA_D_8009D1CE, 0u);
+    PE_StoreU8(GA_D_8009D244, 0u);
+    D_8009D1A0 &= ~4u;
+    PE_StoreU32(GA_D_8009D1A0, PE_LoadU32(GA_D_8009D1A0) & ~4u);
+    v = PE_LoadU32(GA_D_8009D2E8);
+    PE_StoreU32(GA_D_8009D2E8, v | 1u);
+    if (aya != 0u)
+        func_8001A680_command_cut(aya, 19u);
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec != 0u)
+        PE_StoreU16(rec + 0x0Cu, 0u);
+}
+
 void func_8001F4D4(pe_addr_t actor)
 {
     pe_addr_t rec;
     pe_addr_t body;
     pe_addr_t weapon;
     pe_addr_t tbl;
+    pe_addr_t aya;
     uint32_t flags;
     uint32_t def;
     uint32_t a2;
@@ -120,6 +242,15 @@ void func_8001F4D4(pe_addr_t actor)
     hp = (int16_t)PE_LoadU16(rec + 0x0Cu);
     hp = (int16_t)(hp - (int16_t)s0);
     PE_StoreU16(rec + 0x0Cu, (uint16_t)hp);
+
+    /* 1F708: remaining HP!=0 → 1F814; HP==0 skips to 1F7D8. */
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec != 0u && (int16_t)PE_LoadU16(rec + 0x0Cu) != 0) {
+        (void)func_8001F814(actor);
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya != 0u && (PE_LoadU32(aya + 0x98u) & 0x100u) == 0u)
+            PE_StoreU32(GA_D_8009D1D0, actor);
+    }
 }
 
 void func_8001D340(unsigned int a0)
@@ -172,9 +303,13 @@ void func_8001D340(unsigned int a0)
             if (body != 0u && PE_LoadU32(body + 0x18u) != 0u &&
                 (flags & 0x4000u) != 0u) {
                 func_8001F4D4(actor);
-                return;
+                break;
             }
         }
         actor = next;
     }
+
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec != 0u && (int16_t)PE_LoadU16(rec + 0x0Cu) <= 0)
+        func_8001D340_death_cut();
 }

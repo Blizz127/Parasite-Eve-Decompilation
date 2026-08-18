@@ -355,6 +355,8 @@ extern int func_80017FF0(pe_addr_t args);
 extern int func_800192B8(pe_addr_t args);
 extern void func_8001D340(unsigned int a0);
 extern void func_8001F4D4(pe_addr_t actor);
+extern int32_t func_8001F814(pe_addr_t actor);
+extern int32_t func_800305C8(pe_addr_t attacker, pe_addr_t target);
 extern unsigned int func_80071A54(void);
 extern int func_8006F6D4(unsigned int index, unsigned int mode,
                          unsigned int a2, pe_addr_t out0, pe_addr_t out1,
