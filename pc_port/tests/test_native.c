@@ -4475,6 +4475,7 @@ static void test_2F7D8_table_full(void) {
 
 static void test_2F7D8_1A680_path(void) {
     pe_addr_t body;
+    pe_addr_t res = 0x80108B00u;
 
     TEST("2F7D8_1A680_path");
     ResetTestState();
@@ -4482,17 +4483,18 @@ static void test_2F7D8_1A680_path(void) {
     CH1_2F7D8_PlantTemplate();
     CH1_2F7D8_ClearTable();
     PE_StoreU32(CH1_2F7D8_ACTOR + 0x98u, 0u);
+    PE_StoreU8(CH1_2F7D8_ACTOR + 0x0Cu, 0u);
     PE_StoreU8(GA_T_8009D2A0, 0x05u);
+    PE_StoreU32(0x800B0E98u + 2u * 4u, res);
+    PE_StoreU8(res + 2u, 11u);
 
     func_8002F7D8(CH1_2F7D8_ACTOR);
     body = CH1_2F7D8_Rec(0) + 4u;
     ASSERT(PE_LoadU32(body + 0x18u) == body + 0x1Cu, "body+0x18");
     ASSERT(PE_LoadU8(GA_T_8009D2A0) == 0x06u, "D2A0++");
-    ASSERT(g_bootstrap_arg4_call_count == 1, "1A680 once");
-    ASSERT(strcmp(g_bootstrap_arg4_calls[0].symbol, "func_8001A680") == 0,
-           "symbol");
-    ASSERT(g_bootstrap_arg4_calls[0].arg0 == CH1_2F7D8_ACTOR, "a0 actor");
-    ASSERT(g_bootstrap_arg4_calls[0].arg1 == 2u, "a1=2");
+    ASSERT(PE_LoadU8(CH1_2F7D8_ACTOR + 0x0Eu) == 2u, "1A680 cmd 2");
+    ASSERT(PE_LoadU32(CH1_2F7D8_ACTOR) == body, "body published");
+    ASSERT(g_bootstrap_arg4_call_count == 0, "no 1A680 stub");
     PASS();
 }
 

@@ -87,8 +87,8 @@ void func_8002F7D8(pe_addr_t actor)
 
         if ((PE_LoadU32(actor + 0x98u) & 0x2000u) == 0u) {
             PE_StoreU32(body + 0x18u, body + 0x1Cu);
-            Bootstrap_ReturnVoid4("func_8001A680", "func_8002F7D8",
-                                  actor, 2u, 0u, 0u);
+            /* PE-BTL121: 1A680(actor,2) is the live command cut. */
+            func_8001A680_command_cut(actor, 2u);
             PE_StoreU8(GA_D_8009D2A0,
                        (uint8_t)((PE_LoadU8(GA_D_8009D2A0) + 1u) & 0xFFu));
         }
