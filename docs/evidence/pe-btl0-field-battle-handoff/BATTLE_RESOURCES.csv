@@ -1,0 +1,18 @@
+kind,id,scene,disc_location,range,size,sha256,loader,decode_status,notes
+field_package,m0005i,m0005i,PE.IMG sectors [0x266A,0x2794),table[4] meta 0x0600A921,610304,fc48530a84811c31ebf4cde06bb12c9c7bcc815348db8dd8c2bb7dacd3410724,func_8006B4F8 family (same as SYS0 rooms),container_located,first combat room
+slot_table,D_800A5D58,runtime,BSS 0x800A5D58..0x800A6360,7*220=1540,1540,,func_8002F7D8 / func_8002F9CC / func_8002F970,shape_proven,inUse+body[216]
+default_slot_blob,0x800109B0,EXE,exe VA 0x800109B0,208 bytes copied by 0x6F,208,,func_8002F7D8 memcpy from rodata,bytes_not_decoded,template body
+slot_field,40,m0005i_mod2,+0x1E3C 0x5A,value 0,4,,func_8002FF78 tag 40,numeric_only,
+slot_field,41,m0005i_mod2,+0x1E4C 0x5A,value 1,4,,func_8002FF78 tag 41,numeric_only,
+slot_field,42,m0005i_mod2,+0x1E5C 0x5A,value 2,4,,func_8002FF78 tag 42,numeric_only,
+slot_field,50,m0005i_mod2,+0x223C 0x5A,value 1333,4,,func_8002FF78 tag 50,numeric_only,not an English name
+slot_field,51,m0005i_mod2,+0x224C 0x5A,value 1332,4,,func_8002FF78 tag 51,numeric_only,
+slot_field,52,m0005i_mod2,+0x225C 0x5A,value 1334,4,,func_8002FF78 tag 52,numeric_only,
+formation_write,0x70,m0005i_mod2,+0x21A0,"args 0,0,8,9,1,5,-1,-1",, ,func_8002FA10,record_bytes_only,writes actor+index*16+0x1C and +0x7C
+formation_write,0xB7,m0005i_mod2,+0x2154,"args 3,0,6,7,1",, ,func_8002FAA4,record_bytes_only,
+variant,49_or_50,m0005i_mod2,+0x1DCC 0x1A,rng 0..100 threshold 19,,,func_800176FC,script_local,does not change package
+arena_background,unknown,m0005i,same field package as room,,,,field background path,RESEARCH_REQUIRED,no separate arena file proven
+battle_bgm,unknown,m0005i,0xEA near request,,,,AUD lane,RESEARCH_REQUIRED,0x89 does not select AKAO
+enemy_model,unknown,m0005i,ids 1332/1333/1334 only,,,,unmapped table,RESEARCH_REQUIRED,do not invent species names
+animation,unknown,m0005i,,,,,RESEARCH_REQUIRED,
+ai_script,unknown,m0005i,,,,,RESEARCH_REQUIRED,

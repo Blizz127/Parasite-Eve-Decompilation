@@ -1,0 +1,7 @@
+decoded_name,token,table_index,chunk2_size,chunk2_sha256,hdr_0c_idbs,writera_count,list_count,desc_count,desc_types,type1_first_opcode,confidence,notes
+M0005I,0xA80002C8,4,196608,01a64ba3769dae259e9c3151aa9eaacf977a44ac7db4ec8053f2d338ef017e3b,"2,5",21,7,2,"1,6",0xEA,PROVEN,persist-gated 0x31 from M0367I type1; do not hop runtime
+M0319I,0xA80614C8,318,124928,fafb08d77f8d9f0c79b44835c8910fdca6fb0a1fe37e82cc406bdc9362995d85,"2,3,4",6,8,1,1,0x09,PROVEN,persist-gated 0x31 from M0367I type1; do not hop runtime
+M0239I,0xA80434C8,238,374784,1de117c799dab0d0d04803e89a922ff7bbb027958c7a47d37f6eb516a6d814f8,"2,3,4",66,6,1,1,0x88,PROVEN,persist-gated 0x31 from M0367I type1; do not hop runtime
+M0058I,0xA8005448,57,182272,be04c5f835c72485c62191b080e02a629e635700d09666f333158293618505d2,"2,3,4",32,6,1,1,0xEA,PROVEN,persist-gated 0x31 from M0367I type1; do not hop runtime
+M0035I,0xA80032C8,34,284672,f2f7e7049f1fcd1f99b1cdaf4b3b0fcb2de435baff7b49c4ab3b87b94d31109d,"2,3,4",41,5,1,1,0xEA,PROVEN,persist-gated 0x31 from M0367I type1; do not hop runtime
+M0136I,0xA8023348,135,59392,6fa9dee4763af16cbed129b8d1f799067ede252a44b84f2aed1b469e33d08a72,,12,3,1,1,0x40,PROVEN,persist-gated 0x31 from M0367I type1; do not hop runtime

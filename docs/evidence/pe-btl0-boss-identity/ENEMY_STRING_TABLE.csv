@@ -1,0 +1,14 @@
+message_id,id_hex,marker,marker_off,decoded_text,opened_on_m0005i,first_encounter_path,role,notes
+45,0x2D,fffe2d,+0x7E4,Battle VS Eve<01>,no,no,title_in_bank_not_opened_here,0x01 is an unmapped glyph; 0x0D 45 is on later maps only (m0038i first)
+46,0x2E,fffe2e,+0x7F5,"Actress, Hahaha...",yes_mod2_+0x1C3C,yes,pre_fight_speaker,last 0x0D before 0x1A/0x6F
+50,0x32,fffe32,+0x8A1,"Actress, Our bodies are communicating with each other...",yes_mod2_+0x1CC8,yes,pre_fight_speaker,second last 0x0D before 0x1A
+54,0x36,fffe36,+0x993,"Actress, Eve...",yes_mod0_+0x0ED0,no,later_same_room,speaker still Actress; body letters Eve
+55,0x37,fffe37,+0x9A5,"[NAME], Eve...",yes_mod0_+0x0F38,no,later_same_room,FA name + Eve
+56,0x38,fffe38,+0x9B2,"Eve, I'm surprised you don't know me<4B> [NAME]... You should know me well...",yes_mod0_+0x0F50,no,later_same_room_speaker_eve,speaker token Eve; 0x4B unmapped as in TXT0
+132,0x84,fffe84,+0x1D84,"Eve, Hahaha...",yes_mod0_+0x0464,no,later_same_room_speaker_eve,gated by persist[0] tests; not the first 0x89 preface
+38,0x26,fffe26,+0x6CC,"[NAME], Freeze! NYPD!",yes_mod0_+0x09F8,no,field_dialogue,same bank; not a species name
+39,0x27,fffe27,+0x6E0,"Actress, Hmph... You're the only one who seems to be fine...",yes_mod0_+0x0A1C,no,field_dialogue,Actress speaker before first fight module
+47,0x2F,fffe2f,+0x80A,"[NAME], What's happening... My body!... It's...! It's getting hot!!",yes_mod0_+0x126C,no,field_dialogue,post-setup module 0
+1332,,n/a,n/a,,no,n/a,NOT_A_STRING,0x5A tag 51 -> slot+0xB2; a0 to func_8006DCE4
+1333,,n/a,n/a,,no,n/a,NOT_A_STRING,0x5A tag 50 -> slot+0xB0
+1334,,n/a,n/a,,no,n/a,NOT_A_STRING,0x5A tag 52 -> slot+0xB4 spatial

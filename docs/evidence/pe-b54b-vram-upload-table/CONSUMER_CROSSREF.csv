@@ -1,0 +1,7 @@
+consumer,wanted,match_entries,verdict,proof
+D_80091644_tpage_clut,runtime halfwords at ptr+0x0C/+0x0E,none,NOT_THIS_TABLE,func_8006E1C0 only LoadImages; EXE has no sw/sh to 0x80091644 in this loop; func_80037870 lui/addiu $fp=D_80091644 is a reader
+VIS1-E_player_texture,"RECT(960,256,64,255) + RECT(960,511,64,1)",none,NOT_THIS_TABLE,no dest x=960; player page is PE.IMG[220,237) via func_8006BECC
+VIS1-E_player_clut,"RECT(0,448,256,2)",none,NOT_THIS_TABLE,this table's CLUTs start at x>=256 on rows 448/449/456/476-479; player CLUT is x=0 w=256
+TXT0_21x12_atlas,>=252 effective px per row and proven CLUT,none,NOT_IN_TABLE,max single-entry 4bpp width is 128 (entry 0); see FONT_ATLAS_FINDING.md
+entry0_B54A,RECT(704,64,32,64) + CLUT(256,456,64,1) from 0x8012B8B8,0,MATCH,header 0x0340B5B8 entry0
+tiled_704_0_block,"entries 1-8 tile (704,0)-(768,64)",1-8,NOT_A_NAMED_CONSUMER,256px 4bpp wide enough for a 21-col row but eight separate 16-color CLUTs and no D_80091644 writer

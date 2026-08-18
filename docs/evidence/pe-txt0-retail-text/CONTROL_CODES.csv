@@ -1,0 +1,18 @@
+byte,operands,handler,state_change,yield,semantics
+0x0F,none,0x80038704 then generic glyph,none,no,space glyph; if 0x124(gp)==1 x-=7 then still draw width-14 cell (net +7)
+0xF7,none,0x80037BF0,none,yes,newline: x=saved origin; y+=12
+0xF8,none,0x80037C10,none unless 0x100,yes,page wait; on new 0x100 skip to next 0xF8
+0xF9,none (body),0x80037C50,state=0 immediately,yes,close/chain; next search finds F9 FE <nextid>
+0xF9 FE id,2 bytes,search at 0x80037974,cursor after marker,n/a,record start marker (same as FF FE id)
+0xFA,none,0x80037CA8,none,no,draw D_80091694[0..count) as glyphs; ROM default 10 48 30 count=3
+0xFB 00..03,1,0x80037E6C,none,no,icon-like SPRT; U=(sub*12)+0x40
+0xFB 04,1,0x80037F54,RGB 0xFF/0/0,no,color write
+0xFB 05,1,0x80037F6C,RGB 0x80/0x80/0x80,no,restore default gray
+0xFB 06,1,0x80037F84,none,yes,wait for 0x100 then skip
+0xFB 07,nn,0x80038010,record+0x0D increments while < nn,yes while waiting,pause nn ticks
+0xFB 08,1,0x800380CC,none,no,emit digits from record+0x1A (0x0D a2 list)
+0xFB 09,1,0x800381F0,OR flags 0x00200000,no,flag; also reads 0x20 on D_8009D1F4
+0xFC,1,0x80038484,none,no,extended glyph index byte+0x34
+0xFD,1,0x800385C4,none,no,extended glyph index byte+0x134
+0xFF,none,0x80037C5C,1->2 on first; 2->0 on new 0x100 if !0x02000000,yes,stream terminal
+0xFE,follows FF/F9,search only,n/a,n/a,not a body opcode; marker infix

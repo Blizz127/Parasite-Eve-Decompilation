@@ -1,0 +1,12 @@
+va,addiu_va,hint
+0x800171CC,0x800171D0,binder_mode2_base
+0x80034F18,0x80034F1C,new_game_zero_persist
+0x8003F808,0x8003F80C,save_copy_persist_out
+0x8003FBE0,0x8003FBE4,load_copy_persist_in
+0x800531CC,0x800531D0,cross_system_reads_persist_index_range
+0x80010690,,binder mode table (5 cases)
+0x80010000,,opcode 0x09 ALU jtbl 24 entries
+0x800910A0,,field opcode handler table
+0x80034F10,,new-game zero 512 persist words + scratch + actors
+0x80034FC4,,field actor rebuild; does not touch persist
+0x8003E680,,boot dispatcher; jal func_80034F10

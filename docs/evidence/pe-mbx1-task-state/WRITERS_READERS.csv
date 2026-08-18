@@ -1,0 +1,25 @@
+site,pc,fn,op,object,role,notes
+boot_clear,0x800653AC,func_8006536C,sb 0,D_8009CDB4 / 0x44($gp),clearer,sole scene-independent zero of count
+boot_clear_table,0x80065388,func_8006536C,sw 0,D_800A3180+row*12+col*4,clearer,28x3 words; jal only 0x8003E730
+append,0x800653B8,func_800653B8,lbu,count,writer_index,start of append
+append_payload,0x800653D8,func_800653B8,sb a0,rec+3,writer,a0 is 0x1C payload
+append_id,0x800653DC,func_800653B8,sb a1,rec+2,writer,0x1C dest id
+append_sender,0x800653E4,func_800653B8,sw a3,rec+8,writer,current actor+0x24
+append_type,0x800653E8,func_800653B8,sh a2,rec+0,writer,0x1C dest type
+append_extra,0x800653EC,func_800653B8,sw 16($sp),rec+4,writer,0x1C stores zero
+append_inc,0x800653F4,func_800653B8,sb count+1,count,writer,no wrap
+send_opcode,0x80017794,func_80017764,jal 653B8,queue,writer,sole jal of 653B8; table 0x80091110
+send_extra0,0x80017798,func_80017764,sw $zero 16($sp),extra,writer,delay slot; extra arm unreachable
+drain_empty,0x8006541C,func_80065400,beq count,count,reader,skip if zero
+drain_extra,0x80065440,func_80065400,lbu rec+4,rec+4,reader,nonzero -> serial arm
+drain_type,0x80065508,func_80065400,lhu rec+0 vs actor+0x0C,rec+0,reader,extra==0 arm
+drain_id,0x8006552C,func_80065400,lbu rec+2 vs actor+0x0D,rec+2,reader,extra==0 arm
+drain_make,0x80065484 / 0x8006553C,func_80065400,jal 12700,task,writer,a0=actor+0x19C a1=0
+drain_flag,0x8006549C / 0x80065554,func_80065400,sh \|=4,task+0x08,writer,mailbox pending
+drain_sender,0x800654A8 / 0x80065560,func_80065400,sw rec+8,task+0x0C,writer,sender serial
+drain_payload,0x800654B4 / 0x8006556C,func_80065400,sw rec+3,task+0x14,writer,payload as word
+drain_link,0x800654CC / 0x80065584,func_80065400,sw task,actor+0xA8,writer,list head
+drain_reset,0x800655B0,func_80065400,sb 0,count,clearer,does not bzero records
+pump_site,0x8003F4E8,func_8003F3C4,jal 65400,queue,reader,sole jal; before 35558
+task_alloc,0x80012750,func_80012700,sw a0,task+0x00,writer,entry PC
+poll_opcode,0x800177B4,func_800177AC,lw 0x14,task+0x14,reader,table 0x8009111C; no ACK

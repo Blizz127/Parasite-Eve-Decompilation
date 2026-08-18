@@ -1,0 +1,17 @@
+symbol,pc,op,dest,value,when,context,notes
+D_80091644,none,none,0x80091644,0 (static),link,EXE data,no sw/sh/sb in SLUS_006.62; used only as $fp base
+D_80091648_A,none,none,0x80091648,0x0140,link,EXE record 0 A,no runtime store
+D_80091648_B,none,none,0x8009164A,0x0000,link,EXE record 0 B,no runtime store
+D_80091648_C,none,none,0x8009164C,0x0140,link,EXE record 0 C,x for GetClut
+D_80091648_D,none,none,0x8009164E,0x00FC,link,EXE record 0 D,y for GetClut
+D_80091650_tpage,0x8006AFF8,sh,0x80091650,0x0025,func_8006AD40 after 718D0,pack loop a1=0,GetTPage from A/B; $fp+0x0C
+D_80091652_clut,0x8006B02C,sh,0x80091652,0x3F14,func_8006AD40 after 718D0,pack loop a1=0,GetClut(C,D); $fp+0x0E
+D_80091660_tpage,0x8006AFF8,sh,0x80091660,0x0026,same loop a1=0x10,record 1 dest1,not the 37870 $fp
+D_80091662_clut,0x8006B02C,sh,0x80091662,0x3F15,same loop a1=0x10,record 1 dest2,not the 37870 $fp
+D_80091670_tpage,0x8006AEB0,sh,0x80091670,0x0034,B54D prefix a1=0x20,record 2 dest1,not font
+D_80091672_clut,0x8006AEE4,sh,0x80091672,0x7793,B54D prefix a1=0x20,record 2 dest2,not font
+D_80091680_tpage,0x8006AEB0,sh,0x80091680,0x0034,B54D prefix a1=0x30,record 3 dest1,not font
+D_80091682_clut,0x8006AEE4,sh,0x80091682,0x7753,B54D prefix a1=0x30,record 3 dest2,not font
+D_80091694,0x800525B0/D4,sb,0x80091694..9B + 9169D,src bytes + count,func_80052594,B27 name copy,ROM default 10 48 30 until called
+D_800B1628,none_in_SLUS,none,0x800B1628,0 static,UNKNOWN,reader 0x8003F270,no sw/sh/sb in main EXE
+D_800B162C,none_in_SLUS,none,0x800B162C,0 static,UNKNOWN,reader 0x8003F260,no sw/sh/sb in main EXE

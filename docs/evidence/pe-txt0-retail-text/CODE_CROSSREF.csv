@@ -1,0 +1,32 @@
+symbol_or_site,va,role,evidence
+opcode_dispatch,0x800910A0,handler table op*4,word[0x0D]=0x80017410 word[0x22]=0x800177C8
+func_80017410,0x80017410,opcode 0x0D,lh id; a1=0; jal 0x800375E0; return 1
+func_800177C8,0x800177C8,opcode 0x22,jal 0x80037548; rewind gp+0x90 if byte0!=0
+func_800375E0,0x800375E0,record alloc,4x56 D_800BCEA8; state=1; id at +0x10
+func_80037548,0x80037548,record poll,return signed byte0 for matching +0x10
+func_8003746C,0x8003746C,explicit clear,opcode 0x23; not used on 0x21..0x23
+func_800371B0,0x800371B0,text subsystem init,sw a0 0x120(gp); 4-record zero; window prims
+func_800371A4,0x800371A4,space-mode flag,sb a0 0x124(gp); boot later passes 1
+func_80037870,0x80037870,per-frame window/text,marker search; glyph loop; close
+func_80037870_call,0x8003F568,field update jal,after 0x80068CE0
+stream_select,0x8003F244,USA vs other,D_800B0CD8&0x40000000 -> 162C else 1628
+lang_bit_or,0x8005286C,USA English enable,or 0x40000000 into D_800B0CD8
+D_800BCEA8,0x800BCEA8,record table,lui 0x800C + -0x3158
+D_8009CD90,0x8009CD90,stream pointer,0x120(gp) gp=0x8009CD70
+D_800B1628,0x800B1628,slot7 store0 ptr,selected when bit clear
+D_800B162C,0x800B162C,slot7 store1 ptr,selected when bit set
+D_800B0CD8,0x800B0CD8,loader flags,bit 0x40000000 = English stream
+D_8009D1F4,0x8009D1F4,newly-pressed pad,0x100 advance; from func_8003EB04
+D_800916A0,0x800916A0,glyph width pairs,lbu odd byte as advance
+D_80091694,0x80091694,FA name bytes,ROM 10 48 30 00
+D_8009169D,0x8009169D,FA name count,ROM 3
+D_80091644,0x80091644,tpage/CLUT state,zero in EXE; runtime fill
+FB_jtable,0x80010E6C,FB 0..9,10 words starting 0x80037E6C
+func_8005E894,0x8005E894,named-window helper,only a1==1
+func_80061C34,0x80061C34,named-window helper,only a1==1
+func_80077C84,0x80077C84,GPU prim setup,SPRT/DR_MODE
+func_80077C04,0x80077C04,GPU prim,pair with 77CB4
+func_80077CB4,0x80077CB4,GPU prim,pair with 77C04
+func_80077AC4,0x80077AC4,OT insert,after each sprite
+func_8005DC4C,0x8005DC4C,boot string table,NOT field dialogue
+field_table,0x80093378 / file 0x83B78,package directory,index 3=m0004i 371=m0372i

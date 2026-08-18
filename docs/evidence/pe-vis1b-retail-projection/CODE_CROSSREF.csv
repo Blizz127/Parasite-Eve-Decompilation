@@ -1,0 +1,37 @@
+item,symbol,address,file_offset,role,status
+slot6_pointer,D_800B1624,0x800B1624,bss,camera/tile container,PROVEN
+view_matrix_ptr,D_800BCFA4,0x800BCFA4,bss,*MATRIX after 66800,PROVEN
+view_H_ptr,D_800BCFA8,0x800BCFA8,bss,*H after 66800,PROVEN
+view_index,D_800BCFFD,0x800BCFFD,bss,current 52-byte index; init 0,PROVEN
+player_actor,D_8009D254,0x8009D254,bss,lh +0x2A/+0x2E/+0x32 = int XYZ,PROVEN
+actor_y_word,actor+0x2C,n/a,actor,16.16 Y written by 1AA78,PROVEN
+actor_flags,actor+0x98,n/a,actor,bit 0x80 skips 1AA78,PROVEN
+classic_flag,D_8009D1D8 / 0x468(gp),0x8009D1D8,bss,header+0x20; 0 = group-height arm,PROVEN
+heading_digital,D_800BD020,0x800BD020,bss,opcode 0x84; spawn 0,PROVEN
+movement_matrix,D_800BD000,0x800BD000,bss,func_80066CE8 walk only,PROVEN
+player_sxy,D_800BCFB4,0x800BCFB4,bss,68B94 RTPS SXY2,PROVEN
+follow_ofx_ofy,D_800BCF94,0x800BCF94,bss,65E48 write; 661A4 read,PROVEN
+height_snap,func_8001AA78,0x8001AA78,0xB278,classic group height<<16 -> actor+0x2C,PROVEN
+even_odd,func_8001C614,0x8001C614,0xCE14,XZ hit test used by 1AA78,PROVEN
+pose_opcode,func_80012C20,0x80012C20,0x3420,0x0B subop0 store XYZ then jal 1AA78,PROVEN
+view_apply,func_80066800,0x80066800,0x57000,52-byte -> H + MATRIX + index,PROVEN
+field_cam_init,func_80065B70,0x80065B70,0x56370,bind CFA4/CFA8; BCFFD=0,PROVEN
+field_view_and_tiles,func_800677FC,0x800677FC,0x57FFC,66800 + write +0x38/+0x3A,PROVEN
+tile_sprite_build,func_80066F60,0x80066F60,0x57760,layer XY + display pan,PROVEN
+tile_activate,func_800655D4,0x800655D4,0x55DD4,aux -> layer[index] |= 2,PROVEN
+field_load_project,func_80068B94,0x80068B94,0x59394,655D4 + lh XYZ + RTPS,PROVEN
+follow_set_gte,func_800661A4,0x800661A4,0x569A4,ctc2 OFX/OFY from CF94/96,PROVEN
+follow_reset_gte,func_800661CC,0x800661CC,0x569CC,OFX/OFY back to 160/112,PROVEN
+SetGeomOffset,func_80079004,0x80079004,0x69804,ctc2 OFX/OFY = arg<<16,PROVEN
+SetGeomScreen,func_80079024,0x80079024,0x69824,ctc2 H,PROVEN
+rtps_wrapper,func_80079244,0x80079244,0x69A44,lwc2 + RTPS 4A180001; SZ3>>2,PROVEN
+world_to_cam_only,func_800792D4,0x800792D4,0x69AD4,MVMVA R*V+TR no perspective,PROVEN
+actor_draw_project,func_8006DFA8,0x8006DFA8,0x5E7A8,follow + MATRIX + H + 79244,PROVEN
+mesh_rtpt,0x8003AEAC,0x8003AEAC,0x2B6AC,RTPT 4A280030,PROVEN
+boot_geom,func_8003E610,0x8003E610,0x2EE10,default OFX/OFY 160/112; H=240,PROVEN
+m0002i_view52,package+0x48DA0+0x1040,n/a,n/a,H=307 MATRIX,PROVEN
+m0003i_view52,package+0x686AC+0x298C,n/a,n/a,H=251 MATRIX,PROVEN
+native_w2c,native/src/pe_camera.cpp:world_to_camera,n/a,native,integer MAC>>12,PROVEN
+native_proj,native/src/pe_camera.cpp:project_camera,n/a,native,IEEE double H/SZ,DEFECT
+native_submit,native/src/pe_render.cpp:submit_player,n/a,native,double SXY + pan,DEFECT
+tool,tools/research/pe_vis1b_project.py,n/a,repo,re-derives packages/MATRIX/IR/SXY,PROVEN

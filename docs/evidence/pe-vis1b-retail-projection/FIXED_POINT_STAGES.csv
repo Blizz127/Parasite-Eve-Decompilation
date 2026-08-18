@@ -1,0 +1,22 @@
+stage,quantity,encoding,width,shift_or_frac,retail_site,native_site,float_allowed,status,notes
+actor_world_x,actor+0x28,signed 16.16,s32,16 frac bits,opcode 0x0B / mover,pe_movement pos_x,no,PROVEN,integer units in high half
+actor_world_y,actor+0x2C,signed 16.16,s32,16 frac bits,func_8001AA78 sw after sll 16,pe_vm 0x0B then group_height<<16,no,PROVEN,overwrites authored immediate
+actor_world_z,actor+0x30,signed 16.16,s32,16 frac bits,opcode 0x0B / mover,pe_movement pos_z,no,PROVEN,
+projection_input_xyz,GTE VX/VY/VZ,signed integer,s16,0 frac,func_80068B94 lh +0x2A/+0x2E/+0x32,integer_x/y/z = pos>>16,no,PROVEN,high half of 16.16
+yaw,actor+0x3A,PS1 angle,u16,0x1000/turn,rsin/rcos 0x80077CF4,g_sincos from EXE 0x800966EC,no,PROVEN,not the view MATRIX
+model_vertex,type-2 VX/VY/VZ,signed model unit,s16,0 frac,bank [316,340),PlayerModel vx/vy/vz,no,PROVEN,VIS-C; do not reopen
+bone_R,clip R,12.4,s16,>>12 after mul,func_8003A088,not in native submit (R2),no,PROVEN,assembly is VIS1-A R2
+view_R,MATRIX R11..R33,12.4,s16,>>12 after mul,func_80066800 lhu rec+2,ViewRecord.rotation,no,PROVEN,
+view_TR,MATRIX TRX/TRY/TRZ,signed integer,s32,<<12 into MAC,func_80066800 lw rec+0x14,ViewRecord.translation,no,PROVEN,
+gte_mac,RTPS/MVMVA acc,GTE MAC,>=32 + guard,sf=1 >>12,cop2 RTPS/MVMVA,s64 mac then >>12,no,PROVEN,native world_to_camera is integer
+gte_ir,IR1/IR2/IR3,signed,s16 sat,0 frac,GTE,s32 keep (no sat yet),no,PROVEN,samples inside s16
+gte_h,H / SetGeomScreen,unsigned,u16,integer pixels,ctc2 rd=26 rec+0,ViewRecord.H,no,PROVEN,m0002i 307; m0003i 251
+gte_ofx_ofy,OFX/OFY,signed 16.16,s32,<<16 before ctc2,func_80079004,kOfx/kOfy then double add,no,DEFECT,retail 16.16; native promotes to double
+gte_sz,SZ3,unsigned depth,u16,integer,GTE SZ FIFO,s32 cz,no,PROVEN,
+gte_sxy,SXY2,signed pixel,s16,16.16 then >>16,GTE SXY FIFO,double sx/sy,no,DEFECT,native project_camera IEEE divide
+proj_scale,H/SZ3,rational u16/u16,n/a,not stored,implicit in RTPS,double H/cz,no,DEFECT,contract is the ratio not a float global
+tile_pan,container+0x38/+0x3A,signed pixel,s16,0 frac,func_800677FC,ViewRecord.pan_x/y,no,PROVEN,2D offset; not a scale
+nclip,MAC0,signed,s32,integer,GTE NCLIP,double edge,no,DEFECT,keep MAC0>0
+otz_quad,avg SZ,integer,s32,sum>>4,mesh cluster,otz_quad,no,PROVEN,
+otz_tri,avg SZ,integer,s32,magic 0x55555556 >>34,mesh cluster,otz_tri,no,PROVEN,
+background,tile framebuffer,native pixels,320x224,1:1,func_80066F60,decode_background,no,PROVEN,no zoom

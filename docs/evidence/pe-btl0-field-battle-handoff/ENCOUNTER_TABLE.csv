@@ -1,0 +1,21 @@
+scene,table_index,opcode,module,script_pc,kind,id_or_args,first_play_reachable,mandatory,random,notes
+m0002i,1,,,,,,,no,SYS0 prefix; no 0x89/0x6F/0x70/0xB7
+m0003i,2,,,,,,,no,SYS0 prefix; no battle request
+m0372i,371,,,,,,,no,cutscene only
+m0004i,3,0x1C,4,+0x1040 / +0x10A4,mailbox_to_battle_room,payload 3,yes_after_reel,if_volume_walked,no,volume +0x0F78; consumed by type-0 poll as hop to m0005i
+m0004i,3,0x1C,4,+0x11AC / +0x1210,mailbox_to_battle_room,payload 4,yes_after_reel,if_volume_walked,no,volume +0x10E4
+m0004i,3,0x31,4,+0x0F40,field_dest,0xA8067448 m0378i,yes_after_reel,no,no,north exploration; not combat
+m0378i,377,,,,,,,no,no battle opcodes
+m0377i,376,,,,,,,no,only 0x31 back to m0378i
+m0005i,4,0x6F,2,+0x1E34,slot_alloc,func_8002F7D8,yes_via_mailbox_3_or_4,yes_for_day1_continue,no,after 0x1A variant pick
+m0005i,4,0x1A,2,+0x1DCC,variant_rng,local[24]=rng(0,100); <19 -> 49 else 50,yes,yes,yes_variant_only,does not skip 0x6F
+m0005i,4,0x5A,2,+0x223C/+0x224C/+0x225C,resource_fields,50=1333 51=1332 52=1334,yes,yes,no,numeric IDs only
+m0005i,4,0x70,2,+0x21A0,formation_write,"0,0,8,9,1,5,-1,-1",yes,yes,no,func_8002FA10
+m0005i,4,0xB7,2,+0x2154,formation_write,"3,0,6,7,1",yes,yes,no,func_8002FAA4
+m0005i,4,0x89,6,+0x350C,mode_request,D_8009D28C=6,yes,yes,no,EARLIEST request
+m0005i,4,0x89,6,+0x3728,mode_request,D_8009D28C=6,same_room_later,unknown,no,second request; not first
+m0005i,4,0x89,6,+0x414C,mode_request,D_8009D28C=6,same_room_later,unknown,no,third request; not first
+m0012i,11,0x89,6,+0x5EB0,mode_request,6,not_on_sys0_prefix,unknown,unknown,later map; not Day1-first
+m0013i,12,0x89,3,+0x2324,mode_request,6,not_on_sys0_prefix,unknown,unknown,later map
+m0014i,13,0x89,8,+0x4B38,mode_request,6,not_on_sys0_prefix,unknown,unknown,later map
+m0016i,15,0x89,7,+0x46B4,mode_request,6,not_on_sys0_prefix,unknown,unknown,later map
