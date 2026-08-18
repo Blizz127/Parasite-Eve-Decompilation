@@ -75,36 +75,14 @@ return (s0 as i16)
 
 | VA | Status on this host |
 |---|---|
-| `305C8` | NONMATCHING_C ported (`2048-79FB4`); not called this cut |
-| `1A680` | native `func_8001A680_command_cut` only; not a full MATCHED leaf |
+| `305C8` | NONMATCHING_C; called from `1F814` on PE-BTL99 |
+| `1A680` | native `func_8001A680_command_cut`; live from `1F814` |
 | `6DE80` | not ported |
 | `20288` | deferred (1F4D4 epilogue, not 1F814) |
 
 ## Classification
 
 `func_8001F814`: NONMATCHING_C (native cut). Not MATCHED.
-Jump-table stores D29A/D29B/D29C/`gp+0x528` are EXE-proven
-and live after `1F704` when HP!=0. `305C8` is ported
-(`2048 - 79FB4(dx,dz)` + target `+0x3A` wrap) but not
-called this cut (needs a command-table fixture for
-`1A680`). `6DE80` stays fail-closed.
-
-Death is **not** this function. HP==0 skips `1F814` and
-goes to `1F7D8`. The `1D340` `1F078` `bgtz` death arm
-(HUD storm, then `1F41C` mode 3 / `1F4B0` HP clear) is
-later in `1D340`. Do not force either.
-
-## Native verify
-
-```text
-PE_TEST_FILTER=BTL98 ./pc_port/build/pe-native-tests  # 3/0
-PE_TEST_FILTER=BTL99 ./pc_port/build/pe-native-tests  # 3/0 after 305C8 pin
-sha1sum build/disc1.candidate.exe
-# 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
-```
-
-## Next native cut
-
-1. Call `305C8` from `1F814` with a live command-table fixture.
-2. `1A680(D254, facing class)` then `6DE80`.
-3. `1D340` `1F078` death arm. Keep `20288` out until weapon+1!=0.
+Jump-table stores plus `305C8`/`1A680` and the `1F080`
+death stores landed in `docs/evidence/pe-btl99-1f814-death/`.
+`6DE80` stays fail-closed. Do not poke HP.

@@ -10891,6 +10891,8 @@ static void test_BTL99_hp0_skips_1f814(void)
 
     TEST("BTL99_hp0_skips_1f814");
     ResetTestState();
+    ASSERT(func_80019D24(0u) == 1, "0xCF 4D4");
+    ASSERT(func_800192B8(0u) == 1, "0x95 mode 0");
     PE_StoreU32(0x8009D278u, rec);
     PE_StoreU32(0x8009D254u, aya);
     PE_StoreU32(0x8009D20Cu, actor);
@@ -10900,6 +10902,7 @@ static void test_BTL99_hp0_skips_1f814(void)
     PE_StoreU8(aya + 0x0Eu, 6u);
     PE_StoreU8(aya + 0x0Fu, 4u);
     PE_StoreU32(aya + 0x14u, 0x11111111u);
+    PE_StoreU32(aya + 0x68u, 0x11u);
     PE_StoreU32(body, 3u << 21);
     PE_StoreU32(body + 0x18u, weapon);
     PE_StoreU8(body + 0x90u, 0u);
@@ -10913,12 +10916,66 @@ static void test_BTL99_hp0_skips_1f814(void)
     PE_StoreU32(rec + 0x34u, 0u);
     PE_StoreU32(rec + 0x4Cu, 0x4000u);
     PE_StoreU32(rec + 0x6Cu, tbl);
+    PE_StoreU32(0x800B0E98u + 19u * 4u, 0x80108B00u);
+    PE_StoreU8(0x80108B00u + 2u, 1u);
 
-    func_8001D340(1u);
-    ASSERT(PE_LoadU16(rec + 0x0Cu) == 0u, "HP 40→0 from weapon+0x0C");
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 0u, "1F704 40→0");
     ASSERT(PE_LoadU8(0x8009D29Au) == 0u, "1F814 skipped");
     ASSERT(PE_LoadU32(0x8009D1D0u) == 0u, "D1D0 skipped");
-    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0; death later");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0; 1F078 death later");
+    ASSERT(PE_LoadU8(0x8009D244u) == 1u, "4D4 stays 1");
+    ASSERT(PE_LoadU8(aya + 0x0Eu) == 6u, "1A680(19) not this cut");
+    ASSERT(PE_LoadU32(aya + 0x68u) == 0x11u, "Aya +0x68 unchanged");
+    ASSERT(g_stub_count == 0, "HP0 skip recorded as stub");
+    PASS();
+}
+
+static void test_BTL99_damage_loop_39_to_34(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t actor = 0x80108700u;
+    pe_addr_t body = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+    pe_addr_t tbl = 0x80108A00u;
+
+    TEST("BTL99_damage_loop_39_to_34");
+    ResetTestState();
+    ASSERT(func_80019D24(0u) == 1, "0xCF 4D4");
+    ASSERT(func_800192B8(0u) == 1, "0x95 mode 0");
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D20Cu, actor);
+    PE_StoreU32(actor, body);
+    PE_StoreU32(actor + 4u, 0u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(body, 3u << 21);
+    PE_StoreU32(body + 0x18u, weapon);
+    PE_StoreU8(body + 0x90u, 0u);
+    PE_StoreU16(weapon + 0x0Cu, 1u);
+    PE_StoreU8(weapon + 1u, 0u);
+    PE_StoreU8(weapon + 0x0Eu, 1u);
+    PE_StoreU32(tbl, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x0Eu, 40u);
+    PE_StoreU16(rec + 0x10u, 0u);
+    PE_StoreU16(rec + 0x20u, 0u);
+    PE_StoreU16(rec + 0x24u, 0u);
+    PE_StoreU32(rec + 0x34u, 0u);
+    PE_StoreU32(rec + 0x4Cu, 0x4000u);
+    PE_StoreU32(rec + 0x6Cu, tbl);
+    PE_StoreU32(0x800B0E98u + 1u * 4u, 0x80108B00u);
+    PE_StoreU8(0x80108B00u + 2u, 1u);
+
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 39u, "first 1F704 40→39");
+    PE_StoreU16(weapon + 0x0Cu, 5u);
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 34u, "second 1F704 39→34");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    ASSERT(PE_LoadU8(0x8009D244u) == 1u, "4D4 stays 1");
+    ASSERT(g_stub_count == 0, "loop recorded as stub");
     PASS();
 }
 
@@ -27345,6 +27402,7 @@ int main(void)
     test_BTL98_1f704_40_to_39();
     test_BTL99_1f814_jtbl_and_d1d0();
     test_BTL99_hp0_skips_1f814();
+    test_BTL99_damage_loop_39_to_34();
     test_BTL99_305c8_facing_wrap();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();

@@ -9,16 +9,16 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
-## PE-BTL99 — 1F814 jump table; 305C8 parked
+## PE-BTL99 — 1F814 jtbl + 305C8 + 1A680
 
-`matching_native=830/830` local. After `1F704`,
+`matching_native=832/832` local. After `1F704`,
 HP!=0 jals `1F814`; HP==0 skips to `1F7D8` (no
-D1D0). `1F814` this cut: Aya+0x0E in 6..15 writes
-D29A/D29B/`gp+0x528`/D29C. `305C8` facing wrap is
-ported (`2048-79FB4`) but not called until a
-command-table fixture exists. `1A680` / `6DE80` /
-`20288` / `1D340` death after `1F078` stay out.
-Do not poke HP. Evidence:
+D1D0). `1F814` writes D29A/D29B/`gp+0x528`/D29C
+when Aya+0x0E is 6..15, then `305C8` and
+`1A680(D254, facing class)`. Second live subtract
+is 39→34. `1F078` death (HUD storm, then mode 3)
+is **not** this cut — do not invent it at `1F4D4`.
+`6DE80` / `20288` stay out. Evidence:
 `docs/evidence/pe-btl99-1f814-post-hp/`.
 
 ## PE-BTL98 — 0x95 mode 0; 299CC jal 1D340; 1F704 40→39
@@ -30,8 +30,7 @@ jals `1D340(1)` at `2A4FC`. Live `1D340` ATB
 set, jals `1F4D4` through the `1F704` `HP-=s0` store.
 First retail delta is 40→39. `hp_mutated` emits only
 then (`pc_port/build/btl98_hp_mutated.csv`). Do not
-poke `4D4`, mode 7, scratch bits, or HP. `1F814` /
-death / teardown / field return are not this cut.
+poke `4D4`, mode 7, scratch bits, or HP.
 Evidence: `docs/evidence/pe-btl83-retail-battle-transition/`.
 
 ## PE-BTL97 — mode-6 2A7F8→2BC90→2CF24; 0xCF sets 4D4

@@ -23,7 +23,7 @@ not the frontier branch. Do not treat it as this checkout.
 Retail EXE SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`
 (verified `build/disc1.candidate.exe`).
 
-DECOMP_HEAD=`a6edd081963cca3ba512c8b34d038b2b2b207f9a` (local writing; not origin)
+DECOMP_HEAD=`79f25888e05a74ba56bc5e3c5eee0df28e064ae2` (local writing BTL99; not origin)
 UE_HEAD=`d3ae7db730a05a6cba7d7f0e42a652847c01d67e` (GitHub `main` only)
 
 ## Match counters (this checkout)
@@ -41,8 +41,8 @@ Do not subtract yaml asm segments from 227.
 
 ## Frontiers
 
-CURRENT_DECOMP_TARGET=`305C8` call from `1F814` (ported, parked)
-CURRENT_DECOMP_FRONTIER=`1F814` jump table live; `305C8`/`1A680`/`6DE80` parked; death after `1F078`
+CURRENT_DECOMP_TARGET=`6DE80` after `1A680` (parked)
+CURRENT_DECOMP_FRONTIER=`1F814` jtbl+305C8+1A680 live; `6DE80`/`1F078` death parked
 CURRENT_UE_FRONTIER=`PE-PLAY2` 0x55 overlay wait drain → 0x89 mode 6; disc verify m0377i→m0012i and m0005i hop
 CURRENT_DAY1_BLOCKER=UE5 disc verification of hops; decomp death/teardown after HP
 
