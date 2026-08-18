@@ -61,6 +61,22 @@
  *       close these with (a).
  *   (d) 0x10A50 lui/ori split: retail hoists the lui into the alignment
  *       beqz slot, ori executes on both paths; ours keeps them together.
+ *
+ * ROUND-3 DATAPOINTS (d13/d14/d15 — bounded gate-vs-copies matrix):
+ *   d13 (function-scope sentinel vars + called pin + memcpy, default opts):
+ *       225 words — sentinel vars ripple zone 2+ despite fixing zone 1/3.
+ *   d14 (BLOCK-SCOPED sentinel pins: $17 in zone-1/3 blocks, $20 in zone-2/4
+ *       blocks, disjoint scopes; called function-scope $17): compiles cleanly
+ *       and makes ALL zone gates word-exact (zero mismatches through w069)
+ *       but BLOATS the copy regions to 226 words — pinned sentinel liveness
+ *       steals registers from the copy loops.
+ *   d15 (d10 zones + __builtin_memcpy unaligned): 224 words — memcpy costs
+ *       +8 vs d10's strength-reduced unaligned copy in this pressure context.
+ *   CONCLUSION: d10<->d14 brackets the solution — a gates-vs-copies register-
+ *   pressure trade-off. Next levers: narrow sentinel lifetimes further (kill
+ *   before the copies), or pin the COPY cursors and free the gates, or
+ *   accept the d10 residual and close the gates with 5FK-style barriers only
+ *   where the word budget allows.
  * ROM: asm/disc1/5B1E4.s @ file 0x5B1E4, 215 words (0x35C), frame 0x30.
  * This file mirrors d10 (best checkpoint). Scratch: /tmp/5fo/ (session-local).
  */
