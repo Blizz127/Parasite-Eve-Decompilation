@@ -9,9 +9,18 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL105 — 27D14 → 28E94 → 292EC on combat ticks
+
+After `1D340`, `299CC` walks non-Aya bodies into
+`27D14`. `body+0x10<=0` jals `28E94`; two ticks
+with `D2A0==1` and `AF==0` null the body and arm
+mode 2. Player death stays mode 3. Evidence:
+`docs/evidence/pe-btl105-27d14/`.
+
 ## PE-BTL104 — remaining-enemy tail arms mode 2
 
-`292EC` walks `D20C`: leftover enemy body
+`matching_native=853/853` local. `292EC` walks
+`D20C`: leftover enemy body
 blocks victory; Aya HP<=0 skips (death is
 mode 3). Empty leftovers + HP>0 → `2F300`
 mode 2. `27D14`/`28E94` parent and HUD

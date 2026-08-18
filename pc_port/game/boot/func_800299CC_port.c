@@ -84,6 +84,7 @@ void func_800299CC_consume_cut(void)
 #define GA_D_8009D254 0x8009D254u
 #define GA_D_8009D230 0x8009D230u
 #define GA_D_8009D244 0x8009D244u /* gp+0x4D4 */
+#define GA_D_8009D20C 0x8009D20Cu
 
 void func_800299CC_after_consume_cut(void)
 {
@@ -162,9 +163,22 @@ void func_800299CC_mode_switch_cut(void)
  */
 void func_800299CC_damage_entry_cut(void)
 {
+    pe_addr_t actor;
+    pe_addr_t aya;
+
     if (PE_LoadU32(GA_D_8009D28C) != 0u)
         return;
     if (PE_LoadU8(GA_D_8009D244) == 0u)
         return;
     func_8001D340(1u);
+    /* 2A504: walk D20C, jal 27D14 on non-Aya actors with a body. */
+    aya = PE_LoadU32(GA_D_8009D254);
+    actor = PE_LoadU32(GA_D_8009D20C);
+    while (actor != 0u) {
+        pe_addr_t next = PE_LoadU32(actor + 4u);
+
+        if (actor != aya && PE_LoadU32(actor) != 0u)
+            func_80027D14(actor);
+        actor = next;
+    }
 }

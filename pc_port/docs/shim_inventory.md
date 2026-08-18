@@ -425,6 +425,9 @@ never native function pointers.
 - ~~`func_8006A25C` / `2B29C` cases 1-5~~ — TRANSLATED
   (PE-BTL101): player-death phase drain; case 5 mode=-1
   and dest `0xA9400048`. `game/boot/func_8002AA98_port.c`
+- ~~`func_80027D14` / `func_80028E94` / `func_8002F970`~~ —
+  TRANSLATED (PE-BTL105): combat-tick parent of `292EC`.
+  `game/boot/func_80027D14_port.c`
 - ~~`func_800292EC_victory_ready_cut` / `2F300_mode2_cut`~~ —
   TRANSLATED (PE-BTL104): remaining-enemy walk arms mode 2.
   `game/boot/func_8002AA98_port.c`

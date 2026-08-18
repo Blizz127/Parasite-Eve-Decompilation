@@ -80,7 +80,9 @@ boot loop. Title dispatch / field return are not
 this cut. Mode 2 (`2B0E8`) is victory and
 stores mode 9 without dest `0xA9400048`.
 `292EC` arms mode 2 only when no non-Aya
-body remains and Aya `record+0x0C>0`. Do not invent pad / hit / rec=4 / `4D4` /
+body remains and Aya `record+0x0C>0`.
+`27D14` after `1D340` is the live parent:
+`body+0x10<=0` → `28E94` → `2F970` → `292EC`. Do not invent pad / hit / rec=4 / `4D4` /
 mode 7 / HP.
 | `battle_mode` | `D_8009D28C` raw | 0/3/4/5/6/7/8 |
 | `formation_id` | `49` or `50` plus `1332/1333/1334` | write as `49;1332,1333,1334` |
