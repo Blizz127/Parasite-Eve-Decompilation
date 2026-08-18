@@ -66,9 +66,13 @@ menu Attack, rec=4, or HP damage. Live type-3 ops after that
 inside the rect. `hp_mutated` is
 legal only when record `+0x0C` changes from a retail
 damage writer (`1F704` inside `1F4D4`, jal from `1D340`),
-not from the `293F4` copy. First retail subtract is 40→39.
-`encounter_complete` is not this cut. Do not invent pad /
-hit / rec=4 / `4D4` / mode 7 / HP.
+not from the `293F4` copy. First retail subtract is 40→39;
+the next live store is 39→34. After a nonzero remainder,
+`1F814` issues `1A680` on `D254` (hit-react). Death is the
+`1D340` `1F080` HP<=0 path (mode 3, `4D4=0`, `1A680(19)`,
+`1F4B0` zero). `encounter_complete` / field return are
+not this cut. Do not invent pad / hit / rec=4 / `4D4` /
+mode 7 / HP.
 | `battle_mode` | `D_8009D28C` raw | 0/3/4/5/6/7/8 |
 | `formation_id` | `49` or `50` plus `1332/1333/1334` | write as `49;1332,1333,1334` |
 | `player_state_hash` | SHA-256 of Aya actor bytes that battle actually touches | BTL2: SHA-256 of record `+0x0C/+0x0E/+0x1C` (HP triple, `func_800293F4_hp_cut`). BTL1 rows stay `partial` |

@@ -9,17 +9,16 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
-## PE-BTL99 — 1F814 jtbl + 305C8 + 1A680
+## PE-BTL99 — 1F814 hit-react; 39→34 loop; 1D340 death
 
 `matching_native=832/832` local. After `1F704`,
-HP!=0 jals `1F814`; HP==0 skips to `1F7D8` (no
-D1D0). `1F814` writes D29A/D29B/`gp+0x528`/D29C
-when Aya+0x0E is 6..15, then `305C8` and
-`1A680(D254, facing class)`. Second live subtract
-is 39→34. `1F078` death (HUD storm, then mode 3)
-is **not** this cut — do not invent it at `1F4D4`.
-`6DE80` / `20288` stay out. Evidence:
-`docs/evidence/pe-btl99-1f814-post-hp/`.
+HP!=0 jals `1F814` (`305C8` + `1A680` facing cmd).
+Second live subtract is 39→34. `1F078`/`1F080`:
+HP<=0 stores mode 3, `4D4=0`, `1A680(19)`,
+`1F4B0` HP=0. HUD sb storm / `21D4C` / `6DE80` /
+teardown / field return are not this cut. Do not
+poke `4D4`, mode 7, scratch bits, or HP. Evidence:
+`docs/evidence/pe-btl99-1f814-death/`.
 
 ## PE-BTL98 — 0x95 mode 0; 299CC jal 1D340; 1F704 40→39
 

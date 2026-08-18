@@ -407,10 +407,12 @@ never native function pointers.
 - ~~`func_800299CC_damage_entry_cut(void)`~~ — TRANSLATED
   (PE-BTL98): `mode==0 && 4D4!=0` jal `1D340(1)` (`2A4FC`,
   `s1=1` from `299F0`); `game/boot/func_800299CC_port.c`
-- ~~`func_8001D340` / `func_8001F4D4`~~ — TRANSLATED (PE-BTL98):
-  live ATB `+0x10+=+0x24` and `1F4D4` through `1F704` `HP-=s0`
-  when record+0x4C bit `0x4000`; `71A54` = BIOS A(2Fh) rand;
-  `game/boot/func_8001D340_port.c`
+- ~~`func_8001D340` / `func_8001F4D4` / `func_8001F814` / `func_800305C8`~~
+  — TRANSLATED (PE-BTL99): live ATB `+0x10+=+0x24`, `1F4D4`
+  through `1F704` `HP-=s0` when record+0x4C bit `0x4000`,
+  then `1F814` → `305C8`/`1A680` if HP!=0; HP<=0 takes
+  mode 3 / `4D4=0` / `1A680(19)` / `1F4B0`; `71A54` =
+  BIOS A(2Fh) rand; `game/boot/func_8001D340_port.c`
 - ~~`func_8002CF24_mode7_cut(void)`~~ — TRANSLATED (PE-BTL2):
   2-word inlined `D_8009D28C=7` store (`0x8002CF24..0x8002CF2C`
   exclusive; `addiu $v0,7` / `sw $v0,0x51C($gp)`); no jal site;

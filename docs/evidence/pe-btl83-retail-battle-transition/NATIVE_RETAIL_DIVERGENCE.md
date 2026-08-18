@@ -34,6 +34,8 @@ Opcode `0xCF` was an unported table slot (advance / v0=0), so
 
 ## Still not this cut
 
-`21D4C` / `374E8` / actor walk `2CD40..2CEDC` / `1F814` /
-death / teardown / field return. Type-6 `scratch[0]&4` wait on
-M0005I/M0367I is a different script loop. Do not force the bit.
+`21D4C` / `374E8` / actor walk `2CD40..2CEDC` / `6DE80` /
+`20288` / HUD sb storm / teardown / field return. Type-6
+`scratch[0]&4` wait on M0005I/M0367I is a different script
+loop. Do not force the bit. `1F814` and the `1F080` death
+stores are PE-BTL99.

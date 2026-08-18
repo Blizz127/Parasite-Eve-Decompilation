@@ -10920,14 +10920,15 @@ static void test_BTL99_hp0_skips_1f814(void)
     PE_StoreU8(0x80108B00u + 2u, 1u);
 
     func_800299CC_damage_entry_cut();
-    ASSERT(PE_LoadU16(rec + 0x0Cu) == 0u, "1F704 40→0");
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 0u, "1F704 40→0 then 1F4B0");
     ASSERT(PE_LoadU8(0x8009D29Au) == 0u, "1F814 skipped");
     ASSERT(PE_LoadU32(0x8009D1D0u) == 0u, "D1D0 skipped");
-    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0; 1F078 death later");
-    ASSERT(PE_LoadU8(0x8009D244u) == 1u, "4D4 stays 1");
-    ASSERT(PE_LoadU8(aya + 0x0Eu) == 6u, "1A680(19) not this cut");
-    ASSERT(PE_LoadU32(aya + 0x68u) == 0x11u, "Aya +0x68 unchanged");
-    ASSERT(g_stub_count == 0, "HP0 skip recorded as stub");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 3u, "1F41C mode 3");
+    ASSERT(PE_LoadU8(0x8009D244u) == 0u, "1F43C 4D4=0");
+    ASSERT(PE_LoadU8(aya + 0x0Eu) == 19u, "1A680(19)");
+    ASSERT(PE_LoadU32(aya + 0x68u) == 0u, "Aya +0x68 cleared");
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) != 0u, "D2E8|=1");
+    ASSERT(g_stub_count == 0, "death recorded as stub");
     PASS();
 }
 

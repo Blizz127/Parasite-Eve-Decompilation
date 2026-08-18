@@ -17,3 +17,5 @@ Do not poke `4D4`, mode 7, `1D340`, or HP. Opcode `0xCF` (`19D24`) is
 the live jal to `33A2C`. `6914C(0)==0` plus `s1!=0` is the live gate
 into `2CF24`. Opcode `0x95` (`192B8`) stores mode 0. Native PE-BTL98
 jals `1D340` at `2A4FC` and takes `1F704` 40→39.
+PE-BTL99 jals `1F814` after a nonzero remainder and
+takes the `1F080` death stores when HP<=0.

@@ -116,8 +116,9 @@ after Theater load and a live M0036I (`0xA8001248`) encounter.
 Native rung PE-BTL97 recovers `6914C(0)` v0=0, `2A7F8`
 mode-6 → `2BC90`/`2CEE0`/`2CF24`, and opcode `0xCF`.
 PE-BTL98 recovers opcode `0x95` mode 0, `299CC` jal
-`1D340` @ `2A4FC`, and `1F704` 40→39. Do not poke
-`4D4`, mode 7, `1D340`, or HP.
+`1D340` @ `2A4FC`, and `1F704` 40→39. PE-BTL99
+recovers `1F814` / the 39→34 loop / `1F080` death.
+Do not poke `4D4`, mode 7, `1D340`, or HP.
 
 ## Harness
 
@@ -132,8 +133,8 @@ retail_first_4D4_nonzero_writer=0x80033A34 ra=0x80019D34
 retail_mode7_writer=0x8002CF24 via 2CEE0
 retail_first_hp_subtractive_writer=0x8001F704 ra=0x8001F5F0 40→39
 retail_damage_entry_call_chain=2A4FC jal 1D340 ra=2A504
-native_first_divergence=recovered 0x95 mode0 + 299CC jal 1D340 + 1F704 40→39
-next_native_rung=1F814 / death / encounter complete / teardown / field return
+native_first_divergence=recovered 1F814 + 39→34 loop + 1F080 death
+next_native_rung=encounter complete / teardown / field return
 ```
 
 GOAL_STATUS=CONTINUE
