@@ -369,14 +369,76 @@ void func_800E0060(void)
  * 0/2 jal 6C1CC(1) and skip the rest of the case on
  * nonzero. Tests with +0xED==0 take this default.
  */
+/*
+ * PE-BTL118 — 6C1CC states 32-36. s0=overlay. +0xED jtbl at
+ * 0x800113D0. State 32 a0!=0: overlay|=0x20000, save CE2 to
+ * +0x13, sb 14 → CE2, ED=33, return 1. 33/34 increment.
+ * 35 may ori overlay 0x200000 and +0xE bit 4, then ED=36.
+ * 36 jals 6BECC; v0==1 stays; a0!=0 jumps to 39. State 39
+ * (3D050 / 6698C / 3D834 / 1A680(21)) stays fail-closed.
+ */
 int func_8006C1CC(int a0)
 {
     uint8_t state;
+    uint8_t ce2;
+    unsigned int word;
 
-    (void)a0;
     state = PE_LoadU8(0x800B0DC5u);
     if ((uint8_t)(state - 32u) >= 8u)
         return 0;
-    /* States 32-39 are the live bank SM. Do not invent v0=0. */
+    if (state == 32u) {
+        word = PE_LoadU32(GA_OVERLAY) | 0x20000u;
+        PE_StoreU32(GA_OVERLAY, word);
+        if (a0 != 0) {
+            ce2 = PE_LoadU8(GA_OVERLAY + 0x0Au);
+            PE_StoreU8(GA_OVERLAY + 0x0Au, 14u);
+            PE_StoreU8(GA_OVERLAY + 0x13u, ce2);
+        } else {
+            PE_StoreU8(GA_OVERLAY + 0x0Au, PE_LoadU8(GA_OVERLAY + 0x13u));
+        }
+        PE_StoreU8(0x800B0DC5u, 33u);
+        return 1;
+    }
+    if (state == 33u) {
+        PE_StoreU8(0x800B0DC5u, 34u);
+        return 1;
+    }
+    if (state == 34u) {
+        PE_StoreU8(0x800B0DC5u, 35u);
+        return 1;
+    }
+    if (state == 35u) {
+        ce2 = PE_LoadU8(GA_OVERLAY + 0x0Au);
+        if ((uint8_t)(ce2 - 10u) < 5u) {
+            uint8_t cur = PE_LoadU8(GA_OVERLAY + 0x0Bu);
+
+            if (ce2 != cur) {
+                word = PE_LoadU32(GA_OVERLAY) | 0x200000u;
+                PE_StoreU32(GA_OVERLAY, word);
+            }
+            {
+                unsigned int d_ce = (unsigned int)(ce2 - 10u);
+                int d_cur = (int)cur - 10;
+                int half = (d_cur + (int)((unsigned int)d_cur >> 31)) >> 1;
+
+                if ((int)(d_ce >> 1) != half)
+                    PE_StoreU8(GA_OVERLAY + 0x0Eu,
+                               (uint8_t)(PE_LoadU8(GA_OVERLAY + 0x0Eu) | 4u));
+            }
+        }
+        PE_StoreU8(0x800B0DC5u, 36u);
+        return 1;
+    }
+    if (state == 36u) {
+        if (func_8006BECC() == 1)
+            return 1;
+        if (a0 != 0) {
+            PE_StoreU8(0x800B0DC5u, 39u);
+            return 1;
+        }
+        PE_StoreU8(0x800B0DC5u, 37u);
+        return 1;
+    }
+    /* 37-39: 6C4C4 / 6C5BC / 3D050 family. Do not stub v0=0. */
     return 1;
 }

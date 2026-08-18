@@ -9,6 +9,16 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL118 — 6C1CC 32–36; case 0/2/5 3C5D8
+
+`matching_native` rerun this commit. `6C1CC` 32–36
+increment `+0xED` (CE2=14 on 32). a0=1 skips to 39.
+State 39 (`3D050`/`3D834`) stay fail-closed. Case 0
+zeros CE48 and jals `3C5D8(30)` / `6F39C(0x6B)`.
+Case 2 jals `3C5D8(30)` / `6F39C(0x6C)`. Case 5
+`3C5D8(15)`. `+0x252` clearer still unfound. Evidence:
+`docs/evidence/pe-btl118-6c1cc-32-36/`.
+
 ## PE-BTL117 — 6D60C(0) F2 0→45→50→64 completes
 
 `matching_native=900/900` local. `2B0E8` phase 3

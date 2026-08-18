@@ -67,6 +67,16 @@ def main() -> int:
     require(load_u32(blob, 0x8006D8F0) == 0x24020032, "45 fallthrough li 50")
     require(load_u32(blob, 0x8006D948) == 0x2402FFFF, "50 lh -1 compare")
     require(load_u32(blob, 0x8006DA54) == 0xA22000F2, "64 sb F2=0")
+    require(jal_target(load_u32(blob, 0x80024AF4)) == 0x8003C5D8, "case0 3C5D8")
+    require(jal_target(load_u32(blob, 0x80024B48)) == 0x8006F39C, "case0 6F39C")
+    require(load_u32(blob, 0x80024B4C) == 0x2404006B, "case0 a0=0x6B")
+    require(jal_target(load_u32(blob, 0x80024BF0)) == 0x8003C5D8, "case2 3C5D8")
+    require(jal_target(load_u32(blob, 0x80024C10)) == 0x8006F39C, "case2 6F39C")
+    require(load_u32(blob, 0x80024C08) == 0x2404006C, "case2 a0=0x6C")
+    require(jal_target(load_u32(blob, 0x80025150)) == 0x8003C5D8, "case5 3C5D8")
+    require(load_u32(blob, 0x8002514C) == 0x2405000F, "case5 a1=15")
+    require(load_u32(blob, 0x800113D0) == 0x8006C218, "6C1CC jtbl[0]")
+    require(load_u32(blob, 0x8006C23C) == 0x2402000E, "state32 li 14")
     print("PASS: 24F94 is the CE54 store; 1A4AC copies +0x14 to +0x18")
     return 0
 

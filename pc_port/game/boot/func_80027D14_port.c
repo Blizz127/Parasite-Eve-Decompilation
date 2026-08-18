@@ -34,6 +34,8 @@
 #define GA_D_8009CE38 0x8009CE38u
 #define GA_D_8009CE39 0x8009CE39u
 #define GA_D_8009D25C 0x8009D25Cu
+#define GA_D_8009D258 0x8009D258u
+#define GA_OVERLAY    0x800B0CD8u
 #define GA_T_800BE830 0x800BE830u
 #define GA_D_800A5D58 0x800A5D58u
 #define SLOT_STRIDE   220u
@@ -212,7 +214,24 @@ int func_80024A3C(void)
     if (phase >= 0x11u)
         return 0;
     if (phase == 0u) {
-        /* Case 0: 6C1CC/3C5D8/702DC/6F39C deferred. sb D25C+1. */
+        uint32_t flags;
+        int ev;
+
+        (void)func_8006C1CC(1);
+        PE_StoreU8(GA_D_8009CE48, 0u);
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya != 0u) {
+            flags = PE_LoadU32(aya + 0x98u) | 0x80u;
+            PE_StoreU32(aya + 0x98u, flags);
+            func_8003C5D8(aya + 0x1B4u, 30);
+            PE_StoreU16(aya + 0x250u,
+                        (uint16_t)(PE_LoadU16(aya + 0x250u) | 2u));
+            func_8003C5D8(GA_OVERLAY + 0x14u, 30);
+            if (PE_LoadU32(0x800942E0u) != 0u) {
+                ev = func_8006F39C(0x6Bu, aya);
+                PE_StoreU32(GA_D_8009D258, (uint32_t)ev);
+            }
+        }
         PE_StoreU8(GA_D_8009D25C, 1u);
         return 0;
     }
@@ -237,7 +256,10 @@ int func_80024A3C(void)
         PE_StoreU8(aya + 0x252u, 1u);
         flags = PE_LoadU32(aya + 0x98u) | 0x100u;
         PE_StoreU32(aya + 0x98u, flags);
+        func_8003C5D8(aya + 0x1B4u, 30);
         PE_StoreU16(aya + 0x250u, (uint16_t)(PE_LoadU16(aya + 0x250u) | 4u));
+        if (PE_LoadU32(0x800942E0u) != 0u)
+            (void)func_8006F39C(0x6Cu, aya);
         PE_StoreU16(GA_D_8009CE4C, 30u);
         PE_StoreU8(GA_D_8009D25C, 3u);
         return 0;
@@ -287,7 +309,7 @@ int func_80024A3C(void)
         if (aya == 0u)
             return 0;
         func_8001A680_command_cut(aya, 6u);
-        /* 3C5D8 deferred. */
+        func_8003C5D8(aya + 0x1B4u, 15);
         PE_StoreU16(aya + 0x250u, (uint16_t)(PE_LoadU16(aya + 0x250u) | 2u));
         PE_StoreU8(GA_D_8009D25C, 6u);
         return 0;

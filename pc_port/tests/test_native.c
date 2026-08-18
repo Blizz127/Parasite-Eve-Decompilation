@@ -12457,6 +12457,9 @@ static void test_BTL114_d25c_case0_1(void)
     ASSERT(PE_LoadU8(0x8009D25Cu) == 0u, "D25C starts 0");
     ASSERT(func_80024A3C() == 0, "case 0");
     ASSERT(PE_LoadU8(0x8009D25Cu) == 1u, "0→1");
+    ASSERT(PE_LoadU8(0x8009CE48u) == 0u, "CE48=0");
+    ASSERT((PE_LoadU32(aya + 0x98u) & 0x80u) != 0u, "+0x98|=0x80");
+    ASSERT(PE_LoadU8(aya + 0x241u) == 30u, "3C5D8 a1=30");
     ASSERT(func_80024A3C() == 0, "case 1");
     ASSERT(PE_LoadU8(0x8009D25Cu) == 2u, "1→2");
     ASSERT(PE_LoadU8(0x8009CE54u) == 0u, "not yet CE54");
@@ -12480,6 +12483,7 @@ static void test_BTL114_d25c_case2_3(void)
     ASSERT(PE_LoadU8(0x8009D25Cu) == 2u, "at 2");
     ASSERT(func_80024A3C() == 0, "2");
     ASSERT(PE_LoadU8(0x8009D25Cu) == 3u, "2→3");
+    ASSERT(PE_LoadU8(aya + 0x241u) == 30u, "case2 3C5D8 30");
     ASSERT(PE_LoadU16(0x8009CE4Cu) == 30u, "timer 30");
     ASSERT((PE_LoadU32(aya + 0x98u) & 0x100u) != 0u, "0x100");
     for (i = 0; i < 30; i++)
@@ -12601,6 +12605,7 @@ static void test_BTL115_cases4_to_9_ce54(void)
     ASSERT(func_80024A3C() == 0, "5");
     ASSERT(PE_LoadU8(0x8009D25Cu) == 6u, "6");
     ASSERT(PE_LoadU8(aya + 0x0Eu) == 6u, "1A680(6)");
+    ASSERT(PE_LoadU8(aya + 0x241u) == 15u, "case5 3C5D8 15");
     ASSERT(func_80024A3C() == 0, "6");
     ASSERT(PE_LoadU8(0x8009D25Cu) == 7u, "7");
     pe_btl114_tick_1a_eq_0f(aya);
@@ -12769,6 +12774,32 @@ static void test_BTL117_e8_zero_parks(void)
     PE_StoreU8(0x800B0CD8u + 0xF2u, 0u);
     ASSERT(func_8006D60C(0) == 1, "E8==0 6CDA4 parks");
     ASSERT(PE_LoadU8(0x800B0CD8u + 0xF2u) == 0x32u, "stay 50");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "no mode");
+    PASS();
+}
+
+static void test_BTL118_6c1cc_32_to_39_parks(void)
+{
+    TEST("BTL118_6c1cc_32_to_39_parks");
+    ResetTestState();
+    PE_StoreU8(0x800B0CE2u, 11u);
+    PE_StoreU8(0x800B0CE3u, 11u);
+    PE_StoreU8(0x800B0DC5u, 32u);
+    ASSERT(func_8006C1CC(1) == 1, "32");
+    ASSERT(PE_LoadU8(0x800B0DC5u) == 33u, "→33");
+    ASSERT(PE_LoadU8(0x800B0CE2u) == 14u, "CE2=14");
+    ASSERT(PE_LoadU8(0x800B0CEBu) == 11u, "saved 11");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x20000u) != 0u, "bit 0x20000");
+    ASSERT(func_8006C1CC(1) == 1, "33");
+    ASSERT(PE_LoadU8(0x800B0DC5u) == 34u, "→34");
+    ASSERT(func_8006C1CC(1) == 1, "34");
+    ASSERT(PE_LoadU8(0x800B0DC5u) == 35u, "→35");
+    ASSERT(func_8006C1CC(1) == 1, "35");
+    ASSERT(PE_LoadU8(0x800B0DC5u) == 36u, "→36");
+    ASSERT(func_8006C1CC(1) == 1, "36");
+    ASSERT(PE_LoadU8(0x800B0DC5u) == 39u, "a0=1 skips 37/38");
+    ASSERT(func_8006C1CC(1) == 1, "39 fail-closed");
+    ASSERT(PE_LoadU8(0x800B0DC5u) == 39u, "stay 39");
     ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "no mode");
     PASS();
 }
@@ -29259,6 +29290,7 @@ int main(void)
     test_BTL117_phase3_no_f2_plant();
     test_BTL117_e8_zero_parks();
     test_BTL117_bit4_parks_state40();
+    test_BTL118_6c1cc_32_to_39_parks();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();
