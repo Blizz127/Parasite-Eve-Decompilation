@@ -9,16 +9,19 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
-## PE-BTL99 — 1F814 hit-react; 39→34 loop; 1D340 death
+## PE-BTL99 — 1F814 hit-react; 6DE80 after 1A680
 
-`matching_native=832/832` local. After `1F704`,
-HP!=0 jals `1F814` (`305C8` + `1A680` facing cmd).
-Second live subtract is 39→34. `1F078`/`1F080`:
-HP<=0 stores mode 3, `4D4=0`, `1A680(19)`,
-`1F4B0` HP=0. HUD sb storm / `21D4C` / `6DE80` /
-teardown / field return are not this cut. Do not
+MATCHED yaml C leaves = 227. `matching_native=833/833`
+local. `1F814` / `6DE80` are
+NONMATCHING_C native ports. After `1F704`, HP!=0
+jals `1F814` → `305C8` → `1A680` → `6DE80(0x46A)`
+→ gated D1D0. Second live subtract is 39→34.
+`6DED4` → `6DFA8`/`6DF50` stay fail-closed.
+Death is **not** at `1F4D4`. Next native frontier
+is authentic `1F078` (after the 1D340 prefix),
+whose death-arm `6DE80` uses `a0=0x46B`. Do not
 poke `4D4`, mode 7, scratch bits, or HP. Evidence:
-`docs/evidence/pe-btl99-1f814-death/`.
+`docs/evidence/pe-btl99-6de80/`.
 
 ## PE-BTL98 — 0x95 mode 0; 299CC jal 1D340; 1F704 40→39
 

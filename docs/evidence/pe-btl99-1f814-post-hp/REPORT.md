@@ -77,12 +77,12 @@ return (s0 as i16)
 |---|---|
 | `305C8` | NONMATCHING_C; called from `1F814` on PE-BTL99 |
 | `1A680` | native `func_8001A680_command_cut`; live from `1F814` |
-| `6DE80` | not ported |
+| `6DE80` | NONMATCHING_C wrapper; `6DFA8`/`6DF50` parked |
 | `20288` | deferred (1F4D4 epilogue, not 1F814) |
 
 ## Classification
 
 `func_8001F814`: NONMATCHING_C (native cut). Not MATCHED.
-Jump-table stores plus `305C8`/`1A680` and the `1F080`
-death stores landed in `docs/evidence/pe-btl99-1f814-death/`.
-`6DE80` stays fail-closed. Do not poke HP.
+Jump-table stores plus `305C8`/`1A680`/`6DE80` are live.
+Death is not at `1F4D4`. See `docs/evidence/pe-btl99-6de80/`.
+Do not poke HP.

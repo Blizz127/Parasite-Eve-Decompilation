@@ -10840,6 +10840,7 @@ static void test_BTL99_1f814_jtbl_and_d1d0(void)
     PE_StoreU8(aya + 0x0Eu, 6u);
     PE_StoreU8(aya + 0x0Fu, 4u);
     PE_StoreU32(aya + 0x14u, 0xAABBCCDDu);
+    PE_StoreU32(0x800B0E08u, 0u);
     PE_StoreU32(body, 3u << 21);
     PE_StoreU32(body + 0x18u, weapon);
     PE_StoreU8(body + 0x90u, 0u);
@@ -10871,6 +10872,7 @@ static void test_BTL99_1f814_jtbl_and_d1d0(void)
     ASSERT(PE_LoadU32(0x8009D1D0u) == actor, "D1D0 = attacker");
     ASSERT(PE_LoadU8(aya + 0x0Eu) == 1u, "1A680 facing cmd 1");
     ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    ASSERT(PE_LoadU32(0x800B0E08u) == 0u, "6DE80 dest still 0");
     ASSERT(g_stub_count == 0, "1F814 recorded as stub");
 
     PE_StoreU8(aya + 0x0Eu, 7u);
@@ -10920,15 +10922,15 @@ static void test_BTL99_hp0_skips_1f814(void)
     PE_StoreU8(0x80108B00u + 2u, 1u);
 
     func_800299CC_damage_entry_cut();
-    ASSERT(PE_LoadU16(rec + 0x0Cu) == 0u, "1F704 40→0 then 1F4B0");
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 0u, "1F704 40→0");
     ASSERT(PE_LoadU8(0x8009D29Au) == 0u, "1F814 skipped");
     ASSERT(PE_LoadU32(0x8009D1D0u) == 0u, "D1D0 skipped");
-    ASSERT(PE_LoadU32(0x8009D28Cu) == 3u, "1F41C mode 3");
-    ASSERT(PE_LoadU8(0x8009D244u) == 0u, "1F43C 4D4=0");
-    ASSERT(PE_LoadU8(aya + 0x0Eu) == 19u, "1A680(19)");
-    ASSERT(PE_LoadU32(aya + 0x68u) == 0u, "Aya +0x68 cleared");
-    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) != 0u, "D2E8|=1");
-    ASSERT(g_stub_count == 0, "death recorded as stub");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0; 1F078 not this cut");
+    ASSERT(PE_LoadU8(0x8009D244u) == 1u, "4D4 stays 1");
+    ASSERT(PE_LoadU8(aya + 0x0Eu) == 6u, "1A680(19) not taken");
+    ASSERT(PE_LoadU32(aya + 0x68u) == 0x11u, "Aya +0x68 not cleared");
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) == 0u, "D2E8 not set");
+    ASSERT(g_stub_count == 0, "hp0 recorded as stub");
     PASS();
 }
 
@@ -10995,6 +10997,23 @@ static void test_BTL99_305c8_facing_wrap(void)
     ASSERT(func_800305C8(atk, tgt) == 2048, "2048 - ratan2(0,0)");
     PE_StoreU16(tgt + 0x3Au, 100u);
     ASSERT(func_800305C8(atk, tgt) == 2148, "plus target+0x3A");
+    PASS();
+}
+
+static void test_BTL99_6de80_wrapper(void)
+{
+    TEST("BTL99_6de80_wrapper");
+    ResetTestState();
+    PE_StoreU32(0x800B0E08u, 0u);
+    func_8006DE80(0x46A, 0, 0x10001, -1, 0x80001234);
+    ASSERT(PE_LoadU32(0x800B0E08u) == 0u, "dest==0 unchanged");
+    ASSERT(g_stub_count == 0, "6DE80 not stub");
+
+    PE_StoreU32(0x800B0E08u, 0x80190000u);
+    PE_StoreU32(0x80190000u, 0xA5A5A5A5u);
+    func_8006DE80(0x46A, 0, 10, 20, 30);
+    ASSERT(PE_LoadU32(0x80190000u) == 0xA5A5A5A5u, "6DFA8/6DF50 parked");
+    ASSERT(g_stub_count == 0, "6DED4 not stub");
     PASS();
 }
 
@@ -27405,6 +27424,7 @@ int main(void)
     test_BTL99_hp0_skips_1f814();
     test_BTL99_damage_loop_39_to_34();
     test_BTL99_305c8_facing_wrap();
+    test_BTL99_6de80_wrapper();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

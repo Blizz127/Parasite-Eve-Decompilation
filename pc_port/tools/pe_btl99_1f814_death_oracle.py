@@ -68,7 +68,8 @@ def main() -> int:
     require(load_u32(blob, 0x8001F4B0) == 0xA440000C, "1F4B0 sh zero")
     require(load_u32(blob, 0x800106E4) == 0x8001F860, "jtbl[0]")
     require(load_u32(blob, 0x800106E8) == 0x8001F898, "jtbl[1]")
-    print("PASS: 1F814→305C8/1A680; 1F080 HP<=0 → mode3/4D4=0/1A680(19)/1F4B0")
+    require(jal_target(load_u32(blob, 0x8001F970)) == 0x8006DE80, "1F814 jal 6DE80")
+    print("PASS: 1F814→305C8/1A680/6DE80; 1F078 death arm is ROM-located, not 1F4D4")
     return 0
 
 
