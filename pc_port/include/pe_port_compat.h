@@ -195,7 +195,10 @@ extern void func_80030220(pe_addr_t actor, unsigned int tag,
 extern void func_800299CC_consume_cut(void);
 extern void func_800299CC_after_consume_cut(void);
 extern int func_8005C498(void);
+extern void func_800512AC(int cmd, pe_addr_t src);
 extern void func_800512AC_cmd10_cut(void);
+extern int func_80026824(int a0);
+extern void func_80026FD0(void);
 extern void func_80062CB8(pe_addr_t obj);
 extern pe_addr_t func_80062CC4(void);
 extern void func_8004B90C(void);

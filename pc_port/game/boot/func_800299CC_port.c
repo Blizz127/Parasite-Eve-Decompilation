@@ -211,9 +211,24 @@ int func_8005C498(void)
     return (int)PE_LoadU32(0x8009D010u);
 }
 
+void func_800512AC(int cmd, pe_addr_t src)
+{
+    uint32_t value;
+
+    if (cmd == 10) {
+        PE_StoreU32(0x8009D010u, 1000u);
+        return;
+    }
+    /* jtbl[1] @ 5130C: v0 = *a1 + 387; sw D010. */
+    if (cmd == 1 && src != 0u) {
+        value = PE_LoadU32(src) + 387u;
+        PE_StoreU32(0x8009D010u, value);
+    }
+}
+
 void func_800512AC_cmd10_cut(void)
 {
-    PE_StoreU32(0x8009D010u, 1000u);
+    func_800512AC(10, 0u);
 }
 
 /*

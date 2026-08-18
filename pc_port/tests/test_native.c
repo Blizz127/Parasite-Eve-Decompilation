@@ -12711,10 +12711,15 @@ static void test_BTL116_22394_tid406_then_ce54(void)
     PE_StoreU16(rec + 0x0Cu, 10u);
     PE_StoreU16(rec + 0x1Cu, 10u);
     PE_StoreU8(0x8009D2A0u, 1u);
-    PE_StoreU8(0x8009CE3Cu, 1u);
-    PE_StoreU16(0x800BE834u, 406u);
-    PE_StoreU32(0x800BE830u, enemy);
     PE_StoreU32(enemy, ebody);
+    PE_StoreU16(0x8009D2A4u, 406u);
+    PE_StoreU8(0x8009D2B0u, 1u);
+    PE_StoreU32(0x800AE000u, enemy);
+    PE_StoreU8(aya + 0x0Eu, 4u);
+    ASSERT(func_80026824(1) == 0, "26824");
+    ASSERT(PE_LoadU16(0x800BE834u) == 406u, "D2A4→BE834");
+    ASSERT(PE_LoadU32(0x800BE830u) == enemy, "AE000 actor");
+    ASSERT(PE_LoadU8(0x8009CE3Cu) == 7u, "seven slots");
     pe_btl114_bind_cmds(aya, res);
     PE_StoreU32(0x800B0E98u + 9u * 4u, res9);
     PE_StoreU8(res9 + 2u, 11u);
@@ -12916,6 +12921,75 @@ static void test_BTL120_prefix_clears_via_35558(void)
     ASSERT(func_80024A3C() == 0, "6 opens");
     ASSERT(PE_LoadU8(0x8009D25Cu) == 7u, "6→7");
     ASSERT(PE_LoadU8(0x8009CE54u) == 0u, "no CE54 plant");
+    PASS();
+}
+
+static void test_BTL121_512ac_case1_387plus(void)
+{
+    pe_addr_t src = 0x8010B000u;
+
+    TEST("BTL121_512ac_case1_387plus");
+    ResetTestState();
+    PE_StoreU32(src, 19u);
+    PE_StoreU32(0x8009D010u, 0u);
+    func_800512AC(1, src);
+    ASSERT(PE_LoadU32(0x8009D010u) == 406u, "*src+387");
+    PE_StoreU32(src, 0u);
+    func_800512AC(1, src);
+    ASSERT(PE_LoadU32(0x8009D010u) == 387u, "tid 387");
+    func_800512AC(10, 0u);
+    ASSERT(PE_LoadU32(0x8009D010u) == 1000u, "case 10 intact");
+    PASS();
+}
+
+static void test_BTL121_26824_publishes_d2a4(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL121_26824_publishes_d2a4");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU16(0x8009D2A4u, 387u);
+    PE_StoreU8(0x8009D2D8u, 3u);
+    ASSERT(func_80026824(1) == 0, "a0=1");
+    ASSERT(PE_LoadU16(0x800BE834u) == 387u, "slot+4");
+    ASSERT(PE_LoadU32(0x800BE830u) == aya, "actor D254");
+    ASSERT(PE_LoadU8(0x8009CE3Cu) == 1u, "count");
+    ASSERT(PE_LoadU8(0x8009D2D8u) == 2u, "568--");
+    ASSERT(func_80026824(0) == 0, "a0!=1 fail-closed");
+    ASSERT(PE_LoadU8(0x8009CE3Cu) == 1u, "no extra slot");
+    PASS();
+}
+
+static void test_BTL121_26824_tid406_seven(void)
+{
+    pe_addr_t enemy = 0x80108700u;
+    unsigned int i;
+
+    TEST("BTL121_26824_tid406_seven");
+    ResetTestState();
+    PE_StoreU16(0x8009D2A4u, 406u);
+    PE_StoreU8(0x8009D2B0u, 1u);
+    PE_StoreU32(0x800AE000u, enemy);
+    PE_StoreU8(0x8009D25Cu, 5u);
+    ASSERT(func_80026824(1) == 0, "406");
+    ASSERT(PE_LoadU8(0x8009CE3Cu) == 7u, "seven");
+    ASSERT(PE_LoadU8(0x8009D25Cu) == 0u, "D25C cleared");
+    for (i = 0u; i < 7u; i++) {
+        ASSERT(PE_LoadU16(0x800BE830u + i * 8u + 4u) == 406u, "tid");
+        ASSERT(PE_LoadU32(0x800BE830u + i * 8u) == enemy, "actor");
+    }
+    PASS();
+}
+
+static void test_BTL121_no_be834_plant(void)
+{
+    TEST("BTL121_no_be834_plant");
+    ResetTestState();
+    PE_StoreU16(0x8009D2A4u, 406u);
+    ASSERT(PE_LoadU16(0x800BE834u) == 0u, "mailbox is not the slot");
+    ASSERT(func_80026824(1) == 0, "publish");
+    ASSERT(PE_LoadU16(0x800BE834u) == 406u, "only 26824 writes");
     PASS();
 }
 
@@ -29456,6 +29530,10 @@ int main(void)
     test_BTL120_3af14_gates();
     test_BTL120_3c818_counts_from_3c5d8();
     test_BTL120_prefix_clears_via_35558();
+    test_BTL121_512ac_case1_387plus();
+    test_BTL121_26824_publishes_d2a4();
+    test_BTL121_26824_tid406_seven();
+    test_BTL121_no_be834_plant();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

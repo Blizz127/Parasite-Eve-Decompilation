@@ -3,6 +3,16 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL121 — 26824 publishes D2A4 to BE834
+
+`matching_native` local (suite grows). Absolute `sh` to
+`BE834` are zeros only. `26824(a0==1)` copies `lh D2A4`
+(`gp+0x534`, the `5C498` return) into `BE830[CE3C].tid`.
+tid 406 is `jtbl[13]`: seven `AE000` slots and `D25C=0`.
+`512AC(1)` writes `*a1+387` to `D010`. Do not plant
+`BE834`. Natural `5C498→406` still needs the `512AC(1)`
+enqueue. Evidence: `docs/evidence/pe-btl121-tid406/`.
+
 ## Post-merge verify (main)
 
 Verified from a clean clone of `main` @

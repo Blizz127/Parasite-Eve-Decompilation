@@ -454,6 +454,93 @@ void func_80022394(void)
     func_80024250((int)tid - 387, actor);
 }
 
+/*
+ * PE-BTL121 — 26824(a0==1) publishes D2A4 into BE830 slot+4.
+ * Absolute sh to BE834 are only table zeros (20F7C / 26FA0).
+ * a0==1 reads lh D2A4. tid<387 and most [387,407) take 269F4:
+ * one slot, actor=D254, tid=D2A4. tid 406 is jtbl[13] @ 2692C:
+ * 26FD0, D25C=0, seven RNG slots from AE000[rnd % D2B0].
+ * D2A4 itself is 299CC/35558 sh of the 5C498 return.
+ */
+#define GA_D_8009D2A4 0x8009D2A4u
+#define GA_D_8009D2B0 0x8009D2B0u
+#define GA_D_8009D2D8 0x8009D2D8u
+#define GA_D_8009CE50 0x8009CE50u
+#define GA_D_8009CE40 0x8009CE40u /* gp+0xD0 */
+#define GA_T_800AE000 0x800AE000u
+
+void func_80026FD0(void)
+{
+    if ((int8_t)PE_LoadU8(GA_D_8009D2B0) == 0)
+        return;
+    PE_StoreU8(0x8009CE68u, 0x80u);
+    PE_StoreU8(0x8009CE6Cu, (uint8_t)-8);
+}
+
+static void pe_btl121_fill_slot(pe_addr_t actor, uint16_t tid)
+{
+    unsigned int n;
+    pe_addr_t slot;
+    int8_t extra;
+
+    n = PE_LoadU8(GA_D_8009CE3C);
+    slot = GA_T_800BE830 + (n << 3);
+    extra = (int8_t)PE_LoadU8(GA_D_8009D2D8);
+    PE_StoreU32(slot, actor);
+    PE_StoreU16(slot + 4u, tid);
+    PE_StoreU16(slot + 6u, (uint16_t)(int16_t)extra);
+    PE_StoreU8(GA_D_8009CE3C, (uint8_t)(n + 1u));
+}
+
+int func_80026824(int a0)
+{
+    int16_t tid;
+    unsigned int i;
+    unsigned int n;
+    int8_t div;
+    unsigned int rnd;
+    pe_addr_t actor;
+
+    if ((int8_t)a0 != 1)
+        return 0;
+    tid = (int16_t)PE_LoadU16(GA_D_8009D2A4);
+    if (tid <= 0) {
+        PE_StoreU16(GA_D_8009CE50, (uint16_t)tid);
+        return 0;
+    }
+    if (tid == 406) {
+        func_80026FD0();
+        PE_StoreU8(GA_D_8009D25C, 0u);
+        div = (int8_t)PE_LoadU8(GA_D_8009D2B0);
+        for (i = 0u; i < 7u; i++) {
+            actor = 0u;
+            if (div != 0) {
+                rnd = func_80071A54();
+                n = rnd % (unsigned int)(int)div;
+                actor = PE_LoadU32(GA_T_800AE000 + n * 12u);
+            }
+            pe_btl121_fill_slot(actor, (uint16_t)tid);
+        }
+        PE_StoreU8(GA_D_8009D2D8,
+                   (uint8_t)((int8_t)PE_LoadU8(GA_D_8009D2D8) - 1));
+        PE_StoreU8(GA_D_8009CE40, 0u);
+        PE_StoreU16(GA_D_8009CE50, (uint16_t)tid);
+        return 0;
+    }
+    if (tid < 407) {
+        /* 26868 / 269F4. 393-395/397 specials stay deferred
+         * and share this one-slot publish (same D2A4 store). */
+        pe_btl121_fill_slot(PE_LoadU32(GA_D_8009D254), (uint16_t)tid);
+        PE_StoreU8(GA_D_8009D2D8,
+                   (uint8_t)((int8_t)PE_LoadU8(GA_D_8009D2D8) - 1));
+        PE_StoreU8(GA_D_8009CE40, 0u);
+        PE_StoreU16(GA_D_8009CE50, (uint16_t)tid);
+        return 0;
+    }
+    PE_StoreU16(GA_D_8009CE50, (uint16_t)tid);
+    return 0;
+}
+
 void func_80021DE0(void)
 {
     uint8_t count;
