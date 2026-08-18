@@ -63,6 +63,11 @@ def main() -> int:
     require(load_u32(blob, 0x80022C64) == 0x24020196, "22394 li 406 is compare")
     require(load_u32(blob, 0x80022CA8) == 0x24020196, "22394 second compare")
     require(load_u32(blob, 0x80027A58) == 0x24020196, "27A58 li 406 is compare")
+    require(load_u32(blob, 0x80055610) == 0x3C05800C, "55610 lui C0E24")
+    require(load_u32(blob, 0x8005563C) == 0x28620014, "55610 slti 20")
+    require(load_u32(blob, 0x8005565C) == 0xAF8202D0, "55610 sw count gp+0x2D0")
+    require(load_u32(blob, 0x800556F0) == 0x8F8202D0, "556E8 lw count")
+    require(load_u32(blob, 0x8005570C) == 0x84221D9C, "556E8 lh table")
 
     print(
         "PASS: 512AC(1)=*a1+387→D010; 57B70(index); "

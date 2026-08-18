@@ -12790,6 +12790,23 @@ static void test_BTL121_no_be834_plant(void)
     PASS();
 }
 
+static void test_BTL121_556e8_bit19_is_index_19(void)
+{
+    TEST("BTL121_556e8_bit19_is_index_19");
+    ResetTestState();
+    PE_StoreU32(0x800C0E24u, 0xFFFFFu);
+    func_80055610();
+    ASSERT(PE_LoadU32(0x8009D040u) == 20u, "20 packed");
+    ASSERT(func_800556E8(19) == 19, "slot 19 → cmd 19");
+    PE_StoreU32(0x800C0E24u, 1u << 19);
+    func_80055610();
+    ASSERT(PE_LoadU32(0x8009D040u) == 1u, "one bit");
+    ASSERT(func_800556E8(0) == 19, "only bit 19");
+    func_80057B70((uint32_t)func_800556E8(0));
+    ASSERT(PE_LoadU32(0x8009D010u) == 406u, "packed 19 → 406");
+    PASS();
+}
+
 static void test_BTL117_6d60c0_e8_neg1_completes(void)
 {
     TEST("BTL117_6d60c0_e8_neg1_completes");
@@ -29510,6 +29527,7 @@ int main(void)
     test_BTL121_57b70_publishes_d010();
     test_BTL121_26824_publishes_be834();
     test_BTL121_no_be834_plant();
+    test_BTL121_556e8_bit19_is_index_19();
     test_BTL117_6d60c0_e8_neg1_completes();
     test_BTL117_phase3_no_f2_plant();
     test_BTL117_e8_zero_parks();

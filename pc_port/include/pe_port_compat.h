@@ -199,6 +199,8 @@ extern void func_800512AC_cmd10_cut(void);
 extern void func_800512AC(int cmd, pe_addr_t args);
 extern void func_80026824(int gate);
 extern void func_80057B70(uint32_t cmd_index);
+extern void func_80055610(void);
+extern int func_800556E8(int index);
 extern void func_80062CB8(pe_addr_t obj);
 extern pe_addr_t func_80062CC4(void);
 extern void func_8004B90C(void);
