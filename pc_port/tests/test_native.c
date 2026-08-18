@@ -12225,6 +12225,59 @@ static void test_BTL112_score_snap_delays_1000(void)
     PASS();
 }
 
+static void test_BTL113_1a4ac_reaches_16_eq_10(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t res = 0x80108B00u;
+    int i;
+
+    TEST("BTL113_1a4ac_reaches_16_eq_10");
+    ResetTestState();
+    PE_StoreU8(aya + 0x0Cu, 0u);
+    PE_StoreU32(0x800B0E98u, res);
+    PE_StoreU8(res + 2u, 11u);
+    PE_StoreU32(aya + 0x1Cu, 0x10000u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    func_8001A680_command_cut(aya, 0u);
+    ASSERT(PE_LoadU16(aya + 0x16u) == 0u, "1A680 zeros +0x16");
+    ASSERT(PE_LoadU8(aya + 0x0Fu) == 10u, "resource+2-1");
+    for (i = 0; i < 10; i++)
+        func_8001A4AC(aya);
+    ASSERT(PE_LoadU16(aya + 0x16u) == 10u, "ten +0x1C steps");
+    PASS();
+}
+
+static void test_BTL113_phase0_no_16_plant(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t res = 0x80108B00u;
+    int i;
+
+    TEST("BTL113_phase0_no_16_plant");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(aya, rec);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU8(aya + 0x0Cu, 0u);
+    PE_StoreU32(0x800B0E98u, res);
+    PE_StoreU8(res + 2u, 11u);
+    PE_StoreU32(aya + 0x1Cu, 0x10000u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU32(0x8009D304u, 0u);
+    func_8001A680_command_cut(aya, 0u);
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 0u, "not yet 10");
+    for (i = 0; i < 10; i++)
+        func_8001A4AC(aya);
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "1A4AC reached 10");
+    ASSERT(PE_LoadU16(aya + 0x16u) == 10u, "+0x16 from ticker");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -28681,6 +28734,8 @@ int main(void)
     test_BTL112_5c498_returns_1000_after_persist();
     test_BTL112_phase1_no_534_plant();
     test_BTL112_score_snap_delays_1000();
+    test_BTL113_1a4ac_reaches_16_eq_10();
+    test_BTL113_phase0_no_16_plant();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

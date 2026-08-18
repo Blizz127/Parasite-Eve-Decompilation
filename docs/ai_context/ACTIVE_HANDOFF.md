@@ -9,9 +9,18 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL113 — 1A4AC produces +0x16==10
+
+`matching_native=883/883` local. `2B0E8` phase 0 waits
+Aya `+0x16==10`. That half is the high half of `+0x14`.
+`1A680` zeros it; `35038` stores `+0x1C=0x10000`;
+`1A4AC` adds that each tick. Ten ticks with
+`+0x0F>=10` reach 10. Do not plant `+0x16`. Evidence:
+`docs/evidence/pe-btl113-1a4ac-16/`.
+
 ## PE-BTL112 — 4B70C persist arms 534=1000
 
-`matching_native` pending suite. `2B0E8` phase 0 jals
+`matching_native=881/881` local. `2B0E8` phase 0 jals
 `4B70C` → `4B90C` stores `4BB80` at `obj+0x2C` /
 `62CB8`. Next `5C498` `5E30C` jalrs it with
 `a1=0x10000`; `4BB80` then `512AC(10)`. Phase 1

@@ -78,8 +78,10 @@ void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)
  *
  * Clears +0x98 bit 3, sets bit 0x800000, copies +0x14 → +0x18.
  * Bit 0x100 returns. Bit 0x200 and +0x16==+0x12 returns.
- * Else +0x14 += +0x1C (125E0 plants 0x10000) and clamps to
- * +0x12<<16. +0x0F wrap / bit 8 is the no-0x200 path.
+ * Else +0x14 += +0x1C (35038 stores 0x10000) and clamps to
+ * +0x12<<16. +0x16 is the high half of +0x14: 2B0E8 phase 0
+ * waits that half == 10. +0x0F wrap / bit 8 is the no-0x200
+ * path.
  */
 void func_8001A4AC(pe_addr_t actor)
 {

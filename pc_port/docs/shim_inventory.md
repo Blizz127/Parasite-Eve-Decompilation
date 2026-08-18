@@ -447,6 +447,8 @@ never native function pointers.
 - ~~`4B70C` / `4B90C` / `4BB80` / `5E30C`~~ — TRANSLATED
   (PE-BTL112): mode-2 persist installs `4BB80`;
   `5C498` → `512AC(10)` → `534=1000`.
+- ~~`1A4AC` `+0x16`~~ — TRANSLATED (PE-BTL113): clip
+  high-half after ten `+0x1C` steps is the phase-0 wait.
 - ~~`func_8005C498` / `512AC` case 10 / 27D14 DoT~~ —
   TRANSLATED (PE-BTL107): `body+0x10 -= body+0x96`;
   `29A68` stores `5C498` to `gp+0x534`.
