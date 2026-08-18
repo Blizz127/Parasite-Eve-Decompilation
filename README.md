@@ -1,7 +1,8 @@
 # Parasite Eve Decompilation
 
-A work-in-progress reverse engineering and decompilation project for the
-original Sony PlayStation version of **Parasite Eve** (Square, 1998).
+A work-in-progress reverse engineering, matching decompilation, and native
+runtime research project for the original Sony PlayStation version of
+**Parasite Eve** (Square, 1998).
 
 Initial target:
 
@@ -11,35 +12,33 @@ Initial target:
 
 ## Project status
 
-**Current phase: Phase 5DB — 103 matching C leaves** on branch
-`phase5ae-2a0c-hole-aware`. Disc 1 EXE rebuilds byte-for-byte via
-`scripts/build_us.sh` (SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`).
-Phase 1 local verification is complete; the official redump.org cross-check
-remains open (non-blocking). PC port is out of scope.
+**Matching decomp:** Phase 5FI — **227 matching C leaves** on `main`.
+Disc 1 EXE rebuilds byte-for-byte via `scripts/build_us.sh`
+(SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`).
+`func_8001F814` remains assembly (`NONMATCHING_C`); native battle ports
+of that body are not matching decomp leaves.
 
-**Progress dashboard:** https://blizz127.github.io/parasite-eve-progress/
+**Native / PC-port research:** in-tree under `pc_port/`. This is a
+host-safe guest-RAM runtime with translated boot/battle leaves, oracles,
+and a test suite. It is **not** a complete playable game, **not** a
+complete battle teardown, and **not** first-Eve-boss complete.
+
+**UE5:** a separate consumer repo. Gameplay semantics live here.
 
 See [`docs/project_plan.md`](docs/project_plan.md) for the roadmap and
-[`docs/ai_context/ACTIVE_HANDOFF.md`](docs/ai_context/ACTIVE_HANDOFF.md) for
-the current working state. Public mirror:
-[GitHub Wiki](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki).
+[`docs/ai_context/ACTIVE_HANDOFF.md`](docs/ai_context/ACTIVE_HANDOFF.md)
+for the current working state. Public progress:
+https://blizz127.github.io/parasite-eve-progress/
 
-Regenerate/publish the dashboard:
+## Repository roles
 
-```bash
-python3 tools/progress/generate_progress.py
-python3 tools/progress/render_dashboard.py
-scripts/publish_progress.sh
-```
+| Repo | Role |
+| --- | --- |
+| [Blizz127/Parasite-Eve-Decompilation](https://github.com/Blizz127/Parasite-Eve-Decompilation) | Retail / matching-decomp / native gameplay authority |
+| [Blizz127/parasite-eve-ue5](https://github.com/Blizz127/parasite-eve-ue5) | Presentation consumer of promoted native behavior |
 
-## Goals
-
-1. Document the original executable and disc layout.
-2. Build reproducible extraction and splitting tools.
-3. Create a matching/rebuildable decompilation workflow.
-4. Gradually replace assembly with readable C.
-5. Eventually explore native runtime / PC-port experiments once enough
-   systems are understood.
+Do not add Unreal Engine source here. Do not duplicate gameplay
+research into the UE5 tree.
 
 ## Repository layout
 
@@ -47,19 +46,62 @@ scripts/publish_progress.sh
 configs/USA/     Splat/spimdisasm split configs (per disc)
 docs/            Project documentation and research notes
 docs/ai_context/ Handoff state for AI-assisted sessions
+docs/acceptance/ Day-1 / fidelity / UE-native contract
 include/         C headers (as decompilation progresses)
 rom/image/       User-supplied disc images — NEVER committed
-scripts/         Reproducible extract/split/verify entry points
-src/main/        Decompiled C source (matching only)
-tools/           Extraction, analysis, and verification tooling
+scripts/         Reproducible extract/split/verify/build entry points
+src/             Matching decompiled C leaves only
+pc_port/         Native PC-port / battle-runtime research
 asm/, assets/, build/   Generated locally; ignored by git
 ```
 
-## Getting started
+## Getting started — matching rebuild
 
-You must provide your own legally obtained copies of the game discs. Place
-disc images under `rom/image/` (git-ignored). Tooling and setup scripts are
-placeholders until Phase 1.
+You must provide your own legally obtained copies of the game discs.
+
+```bash
+# 1. Place Disc 1 bin+cue under rom/image/
+scripts/setup_env.sh
+scripts/setup_era.sh
+scripts/extract_us.sh 1
+scripts/split_us.sh
+scripts/verify_us.sh
+# 2. Matching rebuild (needs mipsel-linux-gnu-{as,gcc} or docker)
+docker run --rm -v "$PWD":/workspace -w /workspace pe-mipsel:trixie \
+  bash scripts/build_us.sh
+```
+
+`scripts/build_us.sh` is a match only when the rebuilt candidate EXE
+SHA-1 equals retail `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+Compilation alone is not a match.
+
+Count matching C leaves from yaml, not from `src/` or native ports:
+
+```bash
+grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml
+```
+
+## Getting started — native runtime
+
+```bash
+cmake -S pc_port -B pc_port/build
+cmake --build pc_port/build -j"$(nproc)"
+./pc_port/build/pe-native-tests
+```
+
+Sanitizer build (ASan + UBSan):
+
+```bash
+cmake -S pc_port -B pc_port/build-san -DPE_PORT_SANITIZERS=ON
+cmake --build pc_port/build-san -j"$(nproc)"
+./pc_port/build-san/pe-native-tests
+```
+
+Battle oracles live in that same suite (`PE_TEST_FILTER=BTL120`, etc.).
+They do not claim a complete battle system.
+
+Disc-backed native oracles read a local path file
+`local/pe_disc1.path` (git-ignored) or `PE_DISC1_BIN`.
 
 ## Project principles
 
@@ -69,6 +111,7 @@ placeholders until Phase 1.
 3. No game images, extracted game data, or proprietary SDK files are ever
    committed.
 4. Small commits with exact, descriptive names.
+5. Native C ports are not matching decomp leaves.
 
 ## Legal
 

@@ -752,7 +752,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (566 tests, all pass)
+- `pe-native-tests` — test suite (current main: 907 tests)
 
 ## Running
 
@@ -783,9 +783,9 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_8006AD40_prefix_cut from
-# func_8006AD40.  Focused B53I-C issues the second DMA; B53I-D admits one
-# separate later checkpoint that completes only that token without an IRQ.
+# Current global frontier: exit 1 at func_80030894_L2L3_cut from
+# func_80030894 (6AD40 continues to func_8006AD40_post30894_cut).
+# Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
 ./parasite-eve-port --headless \

@@ -1,9 +1,9 @@
 # CLAUDE.md — AI agent guidance for this repository
 
 This is a PS1 decompilation research project for **Parasite Eve** (USA,
-NTSC-U: SLUS-00662 / SLUS-00668). It is structured like a serious matching
-decomp (compare: Xenogears decomp, PE2 decomp), not a PC port. Read
-`docs/project_plan.md` for the phase roadmap and
+NTSC-U: SLUS-00662 / SLUS-00668). Matching decomp is the first authority;
+`pc_port/` is the in-tree native / battle-runtime research implementation.
+Read `docs/project_plan.md` for the phase roadmap and
 `docs/ai_context/ACTIVE_HANDOFF.md` for the current working state **before
 doing anything**.
 
@@ -36,7 +36,13 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table
+**Phase 5FI — 227 matching C leaves** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
+`func_8001F814` remains `NONMATCHING_C`. Native ports under `pc_port/` are
+not matching leaves. Exact SHA-1 rebuild via `scripts/build_us.sh` /
+`scripts/verify_us.sh`. Native suite: `cmake -S pc_port -B pc_port/build`
+then `./pc_port/build/pe-native-tests`.
+
+**Prior: Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table
 pointer-match search-and-clear, 23 words) matches byte-exact on era
 `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1` — the table twin of 2F9CC,
 reusing the exact `SlotRecord` typing (inheritance, no variant layouts).
@@ -116,5 +122,8 @@ globals proven by `jalr`, and one write-only `unsigned int` opaque word support
 the final 13 delay-slot leaves; see `docs/ai_context/PHASE5EF_TYPING.md`.
 `func_800405A4` is a use-site only.
 Population counter: `tools/analysis/at_absolute_store_counter.py`.
-PC port is out of scope. `docs/ai_context/ACTIVE_HANDOFF.md` has the exact current
-state and `docs/splitting.md` the split target and policy.
+Native PC-port / battle-runtime research lives in `pc_port/` and is incomplete
+where evidence says it is. UE5 is a separate consumer repo
+(`Blizz127/parasite-eve-ue5`); this repo owns gameplay semantics.
+`docs/ai_context/ACTIVE_HANDOFF.md` has the exact current state and
+`docs/splitting.md` the split target and policy.
