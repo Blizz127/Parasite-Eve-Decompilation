@@ -330,7 +330,9 @@ void func_8002B29C(void)
  *   1: wait gp+0x534==1000; phase++; +0x98&=~0x100
  *   2: wait +0x0F==+0x1A; 1A680(0x15) or 0x18 if D1A0&0x1800;
  *      clear 0x1800; phase++
- *   3: 6D60C(0)==1 wait; else 295E4, mode=9, B0CD8&=~0x8000
+ *   3: 6D60C(0); F2==0 starts 45→50→64. +0xE8==-1
+ *      (6A674) skips 6CDA4; bit4 clear returns 0 →
+ *      295E4, mode=9, B0CD8&=~0x8000. Do not plant 0x41.
  */
 /*
  * 2F300 named cut: jal 293F4(0) then sw mode 2 @ 2F570.

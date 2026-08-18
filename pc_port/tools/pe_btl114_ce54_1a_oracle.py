@@ -57,6 +57,16 @@ def main() -> int:
     require(jal_target(load_u32(blob, 0x80022C9C)) == 0x80024250, "22394 24250")
     require(load_u32(blob, 0x800107D4 + 19 * 4) == 0x80024974, "jtbl[19]")
     require(load_u32(blob, 0x80051314) == 0x24420183, "5112C addiu 387")
+    require(load_u32(blob, 0x8006D634) == 0x2C620041, "6D60C sltiu 0x41")
+    require(load_u32(blob, 0x80011508) == 0x8006D658, "jtbl[0] 6D658")
+    require(load_u32(blob, 0x80011508 + 45 * 4) == 0x8006D8BC, "jtbl[45]")
+    require(load_u32(blob, 0x80011508 + 50 * 4) == 0x8006D944, "jtbl[50]")
+    require(load_u32(blob, 0x80011508 + 64 * 4) == 0x8006D9E8, "jtbl[64]")
+    require(load_u32(blob, 0x8006D664) == 0x12400021, "a0==0 → 6D6EC")
+    require(load_u32(blob, 0x8006D71C) == 0x2402002D, "6D6EC li 45")
+    require(load_u32(blob, 0x8006D8F0) == 0x24020032, "45 fallthrough li 50")
+    require(load_u32(blob, 0x8006D948) == 0x2402FFFF, "50 lh -1 compare")
+    require(load_u32(blob, 0x8006DA54) == 0xA22000F2, "64 sb F2=0")
     print("PASS: 24F94 is the CE54 store; 1A4AC copies +0x14 to +0x18")
     return 0
 

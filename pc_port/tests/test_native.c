@@ -11399,8 +11399,9 @@ static void test_BTL103_2b0e8_phase3_waits_6d60c(void)
     PE_StoreU32(0x8009D28Cu, 2u);
     PE_StoreU8(0x800B0CD8u + 0xF2u, 0u);
     func_8002B0E8();
-    ASSERT(PE_LoadU32(0x8009D28Cu) == 2u, "6D60C(0)==1 keeps mode 2");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 2u, "6CDA4 parks keeps mode 2");
     ASSERT(PE_LoadU8(0x8009CE74u) == 3u, "phase stays 3");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF2u) == 0x32u, "F2==0 starts 45→50");
     PASS();
 }
 
@@ -12720,6 +12721,66 @@ static void test_BTL116_22394_tid406_then_ce54(void)
     pe_btl114_tick_1a_eq_0f(aya);
     func_80021DE0();
     ASSERT(PE_LoadU8(0x8009CE54u) == 1u, "second tick case 9");
+    PASS();
+}
+
+static void test_BTL117_6d60c0_e8_neg1_completes(void)
+{
+    TEST("BTL117_6d60c0_e8_neg1_completes");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, 3u);
+    PE_StoreU16(0x800B0CD8u + 0xE8u, 0xFFFFu);
+    PE_StoreU8(0x800B0CD8u + 0xEAu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xEBu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0u);
+    ASSERT(func_8006D60C(0) == 0, "0→45→50→64→0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF2u) == 0u, "F2 back to 0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "6D60C does not store mode");
+    PASS();
+}
+
+static void test_BTL117_phase3_no_f2_plant(void)
+{
+    TEST("BTL117_phase3_no_f2_plant");
+    ResetTestState();
+    PE_StoreU8(0x8009CE74u, 3u);
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU32(0x8009D280u, 0xA8001248u);
+    D_8009D280 = 0xA8001248u;
+    PE_StoreU32(0x800B0CD8u, 0x8000u);
+    PE_StoreU16(0x800B0CD8u + 0xE8u, 0xFFFFu);
+    PE_StoreU8(0x800B0CD8u + 0xEAu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xEBu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0u);
+    func_8002B0E8();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 9u, "mode 9 without 0x41");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA8001248u, "dest not A940");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x8000u) == 0u, "B0CD8&=~0x8000");
+    ASSERT(PE_LoadU32(0x8009D28Cu) != 0xFFFFFFFFu, "not player-death -1");
+    PASS();
+}
+
+static void test_BTL117_e8_zero_parks(void)
+{
+    TEST("BTL117_e8_zero_parks");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, 3u);
+    PE_StoreU16(0x800B0CD8u + 0xE8u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0u);
+    ASSERT(func_8006D60C(0) == 1, "E8==0 6CDA4 parks");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF2u) == 0x32u, "stay 50");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "no mode");
+    PASS();
+}
+
+static void test_BTL117_bit4_parks_state40(void)
+{
+    TEST("BTL117_bit4_parks_state40");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, 4u);
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0x40u);
+    ASSERT(func_8006D60C(0) == 1, "bit4 does not complete");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF2u) == 0x40u, "stay 64");
     PASS();
 }
 
@@ -29194,6 +29255,10 @@ int main(void)
     test_BTL116_6c1cc_default_and_block();
     test_BTL116_24250_tid406_sets_bit();
     test_BTL116_22394_tid406_then_ce54();
+    test_BTL117_6d60c0_e8_neg1_completes();
+    test_BTL117_phase3_no_f2_plant();
+    test_BTL117_e8_zero_parks();
+    test_BTL117_bit4_parks_state40();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

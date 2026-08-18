@@ -9,6 +9,16 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL117 — 6D60C(0) F2 0→45→50→64 completes
+
+`matching_native=900/900` local. `2B0E8` phase 3
+jals `6D60C(0)`. F2==0 is not a wait: `jtbl[0]` takes
+`6D6EC` → 45. `6A674` `+0xE8==-1` skips `6CDA4`; bit 4
+clear at 64 returns 0 and zeros F2. Do not plant
+`0x41`. `+0xE8==0` parks at 50. `+0x252` clearer and
+`6C1CC` 32–39 remain. Evidence:
+`docs/evidence/pe-btl117-6d60c0-f2/`.
+
 ## PE-BTL116 — 24250 case 19 writes rec+0x4C 0x80000
 
 `matching_native=896/896` local. Sole TEXT OR of
@@ -17,8 +27,7 @@ pushed `Blizz127/parasite-eve-ue5` `main`
 `24A3C` runs. Do not plant the bit. `6C1CC` default
 returns 0; overlay `+0xED` in `[32,40)` parks case 2.
 `+0x252` clearer is still unfound (no `sb 0` in EXE
-or PE.IMG). Next: `5112C` tid 406, then overlay
-`+0xF2`. Evidence:
+or PE.IMG). Evidence:
 `docs/evidence/pe-btl116-24250-80000/`.
 
 ## PE-BTL115 — 24A3C cases 4–8; case 6 waits +0x252

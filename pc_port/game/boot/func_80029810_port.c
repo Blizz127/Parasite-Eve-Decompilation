@@ -462,6 +462,77 @@ void func_8006D60C_state2C_cut(void)
     PE_StoreU8(GA_OVERLAY + 0xF2u, 0x2Eu);
 }
 
+/*
+ * PE-BTL117 — 6D60C(0) F2==0 is not a wait. jtbl[0]=6D658
+ * always jal 87024 / sw 0 at gp+0x418, then a0==0 takes
+ * 6D6EC → F2=45. 6A674 stores +0xE8=-1 and +0xEA/+0xEB=0,
+ * so 45 increments the index and 50 skips 6CDA4. jtbl[64]
+ * at 6D9E8 with overlay bit 4 clear sb F2=0 and returns 0.
+ * Do not plant F2=0x41. Bit 4 set on 64 parks (86FF8 / 62
+ * stay deferred). 86C5C on the 6D6EC bit-4 arm is not this
+ * cut; F2 still becomes 45.
+ */
+static void func_8006D60C_state0_common(void)
+{
+    PE_StoreU32(GA_GP_418, 0u);
+    func_80087024();
+}
+
+static int func_8006D60C_state2D_cut(void)
+{
+    int idx;
+
+    idx = (int)PE_LoadU32(GA_GP_418);
+    if (idx < 2) {
+        if (PE_LoadU8(GA_OVERLAY + 0xEAu + (unsigned int)idx) != 0u) {
+            PE_StoreU8(GA_OVERLAY + 0xF2u, 0x31u);
+            return 0;
+        }
+        PE_StoreU32(GA_GP_418, (unsigned int)(idx + 1));
+    }
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0x32u);
+    return 0;
+}
+
+static int func_8006D60C_state31_cut(void)
+{
+    unsigned int idx;
+
+    idx = PE_LoadU32(GA_GP_418);
+    if (func_8006CDA4(2, (int)PE_LoadU8(GA_OVERLAY + 0xEAu + idx), 0,
+                      PE_LoadU32(GA_OVERLAY + 0x194u), 0x21, 0) == 1)
+        return 1;
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0x2Du);
+    PE_StoreU32(GA_GP_418, idx + 1u);
+    return 0;
+}
+
+static int func_8006D60C_state32_cut(void)
+{
+    int16_t xa;
+
+    xa = (int16_t)PE_LoadU16(GA_OVERLAY + 0xE8u);
+    if (xa != -1) {
+        if (func_8006CDA4(1, (int)xa, 0,
+                          PE_LoadU32(GA_OVERLAY + 0x194u), 0x21, 0) == 1)
+            return 1;
+    }
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0x40u);
+    return 0;
+}
+
+static int func_8006D60C_state40_cut(void)
+{
+    unsigned int word;
+
+    word = PE_LoadU32(GA_OVERLAY);
+    if ((word & 4u) != 0u)
+        return 1;
+    PE_StoreU8(GA_OVERLAY + 0xF2u, 0u);
+    PE_StoreU32(GA_OVERLAY, word & ~4u);
+    return 0;
+}
+
 int func_8006D60C(int a0)
 {
     unsigned int f2;
@@ -472,10 +543,14 @@ int func_8006D60C(int a0)
         return 0;
     for (hops = 0; hops < 16u; hops++) {
         if (f2 == 0u) {
-            if (a0 == 0)
-                return 1;
-            func_8006D60C_state0_a0eq1_cut();
-            f2 = 0x2Cu;
+            if (a0 != 0) {
+                func_8006D60C_state0_a0eq1_cut();
+                f2 = 0x2Cu;
+                continue;
+            }
+            func_8006D60C_state0_common();
+            PE_StoreU8(GA_OVERLAY + 0xF2u, 0x2Du);
+            f2 = 0x2Du;
             continue;
         }
         if (f2 == 0x2Cu) {
@@ -505,6 +580,25 @@ int func_8006D60C(int a0)
         }
         if (f2 == 0x30u)
             return func_8006D60C_state30_cut();
+        if (f2 == 0x2Du) {
+            (void)func_8006D60C_state2D_cut();
+            f2 = PE_LoadU8(GA_OVERLAY + 0xF2u);
+            continue;
+        }
+        if (f2 == 0x31u) {
+            if (func_8006D60C_state31_cut() == 1)
+                return 1;
+            f2 = PE_LoadU8(GA_OVERLAY + 0xF2u);
+            continue;
+        }
+        if (f2 == 0x32u) {
+            if (func_8006D60C_state32_cut() == 1)
+                return 1;
+            f2 = PE_LoadU8(GA_OVERLAY + 0xF2u);
+            continue;
+        }
+        if (f2 == 0x40u)
+            return func_8006D60C_state40_cut();
         return 0;
     }
     return 1;
