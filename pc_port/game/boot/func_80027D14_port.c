@@ -193,8 +193,8 @@ void func_80021F38(void)
  * 24A3C (lbu D25C), not 24A40. Sole TEXT jal is 22394 @
  * 229D8. Case 9 is the only CE54 writer: wait Aya
  * +0x0F==+0x1A, 1A680((int8)CE48*2+9), CE55=2, CE54=1,
- * body |= 0x2000. Cases 0-8 / 10-16 stay deferred; they
- * are the D25C producers. 6F39C / extra body bits deferred.
+ * body |= 0x2000. Cases 0-1 increment D25C (6C1CC and
+ * HUD jals deferred). Cases 2-8 / 10-16 stay deferred.
  */
 int func_80024A3C(void)
 {
@@ -208,6 +208,20 @@ int func_80024A3C(void)
     phase = PE_LoadU8(GA_D_8009D25C);
     if (phase >= 0x11u)
         return 0;
+    if (phase == 0u) {
+        /* Case 0: 6C1CC/3C5D8/702DC/6F39C deferred. sb D25C+1. */
+        PE_StoreU8(GA_D_8009D25C, 1u);
+        return 0;
+    }
+    if (phase == 1u) {
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya != 0u && PE_LoadU8(aya + 0x252u) != 0u)
+            return 0;
+        if (PE_LoadU8(0x800B0D8Au) != 0u)
+            return 0;
+        PE_StoreU8(GA_D_8009D25C, 2u);
+        return 0;
+    }
     if (phase != 9u)
         return 0;
     aya = PE_LoadU32(GA_D_8009D254);

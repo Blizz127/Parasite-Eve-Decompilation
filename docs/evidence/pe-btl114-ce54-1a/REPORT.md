@@ -18,9 +18,9 @@ Case 9 waits `Aya+0x0F == Aya+0x1A`, then `1A680((int8)CE48*2+9)`,
 then CE54/CE55, then `body |= 0x2000` (same `~0x6000 | 0x2000` mask
 as `236E8`). Do not plant CE54. Do not jal `236E8` just to advance.
 
-`D25C` is the case index. Writers are the case 0–8 / 10–16
-increments inside `24A3C` plus `26934` zero. Those cases stay
-deferred; they are the remaining D25C producers.
+`D25C` is the case index. Case 0 always stores 1. Case 1
+stores 2 when `Aya+0x252==0` and `overlay+0xB2==0`. Writers
+for 2→9 are cases 2–8 (still deferred) plus `26934` zero.
 
 ## Gate C — +0x1A
 
