@@ -21,12 +21,16 @@ Same hierarchy as `PE_DAY1_ACCEPTANCE_CONTRACT.md`.
 
 ```text
 Retail disc / EXE / bytecode     content + behavior authority
+Blizz127/Parasite-Eve-Decompilation
+                                 retail / decomp / native gameplay authority
 Accepted oracle trace            comparison artifact
 Python research runtime          oracle generator (not production)
-UE5 / native runtime             production, once parity passes
+Native runtime (this repo)       promoted gameplay semantics
+Blizz127/parasite-eve-ue5        presentation consumer of promoted native behavior
 ```
 
-Old PC ports are not a parity target.
+Old PC ports are not a parity target. Do not duplicate gameplay
+research into the UE5 tree.
 
 The matching-decomp SHA-1 on this checkout proves C leaves equal
 retail words. That is not scene parity and not Day 1 acceptance.

@@ -36,12 +36,15 @@
 #define GA_D_800930EA  0x800930EAu
 #define GA_D_800930EC  0x800930ECu
 #define GA_D_800930EE  0x800930EEu
+#define GA_D_800930F0  0x800930F0u
 #define GA_D_80091648  0x80091648u
 #define GA_D_800B0CD8  0x800B0CD8u
 #define GA_D_800B0DD8  0x800B0DD8u
 
 extern int func_8006E6A8(int lba, pe_addr_t dest, int sectors);
 extern int func_8006E7E8(void);
+extern pe_addr_t func_800718D0(pe_addr_t tim);
+extern void func_80030894(void);
 
 /* Shared GetTPage/GetClut pack used by B54D records 2/3 (a1=0x20,0x30)
  * and by the B54C font sites at 0x8006AFF8 / 0x8006B02C (a1=0,0x10). */
@@ -241,10 +244,25 @@ int func_8006AD40(void)
         /* 0x8006AF9C: s0==1 branches to 0x8006B044. */
     }
 
-    /* B54G prefix cut at retail 0x8006B060, poll==0 fallthrough.
-     * PARK the 6AD40 sequence. Do not enter func_80030894. */
+    /* B54K-A: issue D_800930F0 into dest+0x14C. Do not poll — the
+     * busy bits stay armed across the 30894 L2L3 cut. 718D0 walks
+     * the prior 930EE dest at +0x180 (zero TIM on the prefix path). */
+    {
+        uint32_t start = PE_LoadU16(GA_D_800930F0);
+        uint32_t end = PE_LoadU16(GA_D_800930F0 + 2u);
+
+        do {
+            status = func_8006E6A8(
+                (int)(lba_base + start),
+                PE_LoadU32(GA_D_800B0CD8 + 0x14Cu),
+                (int)(end - start));
+        } while (status == -1);
+        (void)func_800718D0(PE_LoadU32(GA_D_800B0CD8 + 0x180u));
+    }
+
+    func_80030894();
     (void)Bootstrap_ReturnInt(
-        "func_8006AD40_prefix_cut", "func_8006AD40", 0);
+        "func_8006AD40_post30894_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }

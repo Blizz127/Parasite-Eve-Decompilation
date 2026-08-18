@@ -51,13 +51,18 @@ exist, outputs are verified, and evidence (commands + hashes) is recorded in
   verified by the Phase 4 harness (correct compiler/flags to be determined
   from EXE fingerprinting — likely a Psy-Q-era gcc).
 
-## Phase 7 — Native runtime / PC experiments (later)
+## Phase 7 — Native runtime / PC-port research (in progress)
 
-- Only once enough systems are understood and matching coverage is
-  meaningful. Explicitly out of scope until then.
+- Host-safe native runtime under `pc_port/` (guest RAM, disc, GPU/IRQ
+  shims, translated boot and battle leaves, oracles).
+- Battle runtime is partial: promoted oracles through BTL120 exist;
+  teardown, first Eve, and full command coverage remain incomplete.
+- UE5 (`Blizz127/parasite-eve-ue5`) consumes promoted native behavior
+  only. It is not gameplay authority.
 
 ## Non-goals (for now)
 
-- PC port work.
+- A complete playable PC port of the full game.
+- Shipping Unreal Engine source in this repository.
 - Non-US regions (JP `SLPS-01291/01292`, later Squaresoft Millennium
   Collection reprints) — revisit after the US target rebuilds.

@@ -3,11 +3,27 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## Post-merge verify (main)
+
+Verified from a clean clone of `main` @
+`455e1a1eb651b43fe8a1373552e0f69320704312` plus the
+`verify/post-merge-main` integration/doc fixes:
+
+- Matching C leaves: **227** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
+- `func_8001F814` remains `NONMATCHING_C`
+- Matching rebuild: **EXACT** SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`
+- Native tests: **907 run, 907 passed, 0 failed, 0 skipped**
+- ASan/UBSan: **907/907**, no sanitizer diagnostics
+- Strict disc frontier: exit 1 at `func_80030894_L2L3_cut` from `func_80030894`
+- Strict bootstrap frontier: exit 1 at `func_8007F72C` from `func_800698D4`
+- Battle oracles through BTL120 are in that suite; battle is still incomplete
+
+`Blizz127/Parasite-Eve-Decompilation` owns retail/decomp/native gameplay
+semantics. `Blizz127/parasite-eve-ue5` is a presentation consumer.
+
 Overnight dual-lane dashboard:
 `docs/ai_context/CAMPAIGN_DASHBOARD.md`.
-This host writes decomp/native only. UE5 authority is
-pushed `Blizz127/parasite-eve-ue5` `main`
-`d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
+This host writes decomp/native only. UE5 is a separate consumer repo.
 
 ## PE-BTL120 — Aya+0x252 is dest+0x9E; 3C818 clears it
 

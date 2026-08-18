@@ -510,4 +510,10 @@ extern void     func_800370DC(pe_addr_t p, uint32_t mode);
 extern void     func_80037140(pe_addr_t p, uint32_t mode);
 extern uint32_t func_800719E4(uint32_t mode);
 
+/* Phase 6E-B54K-A / B45 siblings: declared here so tests and TUs that
+ * include only the shared headers see the real ports instead of an
+ * implicit declaration. */
+extern void func_80030894(void);
+extern int  func_800870E0(void);
+
 #endif

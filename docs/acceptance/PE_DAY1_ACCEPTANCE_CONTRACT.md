@@ -38,17 +38,21 @@ Retail Disc
 Retail EXE / ASM / script bytecode
   = behavior + interpretation authority
 
-Retail emulator/runtime
-  = comparison oracle
+Blizz127/Parasite-Eve-Decompilation
+  = retail / matching-decomp / native gameplay authority
+
+Native runtime in this repo (pc_port/)
+  = promoted gameplay semantics, once oracles pass
+
+Blizz127/parasite-eve-ue5
+  = presentation consumer of promoted native behavior
 
 Python clean runtime
   = research + executable oracle + trace generator
-
-UE5 / native runtime
-  = eventual production runtime
 ```
 
-Old PC ports are **not** fidelity authority.
+Old PC ports are **not** fidelity authority. UE5 does not own
+gameplay research.
 
 Generated or licensed retail payloads remain untracked and gitignored.
 
