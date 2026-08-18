@@ -11428,6 +11428,73 @@ static void test_BTL103_mode2_switch(void)
     PASS();
 }
 
+static void test_BTL104_victory_ready_enemy_blocks(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+
+    TEST("BTL104_victory_ready_enemy_blocks");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(enemy + 4u, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU8(0x8009D2A0u, 0u);
+    PE_StoreU32(0x8009D28Cu, 0u);
+    func_800292EC_victory_ready_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "body keeps combat");
+    PASS();
+}
+
+static void test_BTL104_victory_ready_aya_hp0_skips(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+
+    TEST("BTL104_victory_ready_aya_hp0_skips");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, 0u);
+    PE_StoreU32(enemy + 4u, 0u);
+    PE_StoreU16(rec + 0x0Cu, 0u);
+    PE_StoreU8(0x8009D2A0u, 0u);
+    PE_StoreU32(0x8009D28Cu, 0u);
+    func_800292EC_victory_ready_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "Aya HP<=0 is not victory");
+    PASS();
+}
+
+static void test_BTL104_victory_ready_sets_mode2(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+
+    TEST("BTL104_victory_ready_sets_mode2");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, 0u);
+    PE_StoreU32(enemy + 4u, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x0Eu, 40u);
+    PE_StoreU16(rec + 0x1Cu, 40u);
+    PE_StoreU8(0x8009D2A0u, 0u);
+    PE_StoreU32(0x8009D28Cu, 0u);
+    func_800292EC_victory_ready_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 2u, "mode 2");
+    ASSERT(PE_LoadU16(rec + 0x0Eu) == 40u, "293F4 copied HP");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -27853,6 +27920,9 @@ int main(void)
     test_BTL103_2b0e8_phase3_waits_6d60c();
     test_BTL103_2b0e8_phase3_to_mode9();
     test_BTL103_mode2_switch();
+    test_BTL104_victory_ready_enemy_blocks();
+    test_BTL104_victory_ready_aya_hp0_skips();
+    test_BTL104_victory_ready_sets_mode2();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

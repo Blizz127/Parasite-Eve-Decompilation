@@ -9,9 +9,19 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL104 — remaining-enemy tail arms mode 2
+
+`292EC` walks `D20C`: leftover enemy body
+blocks victory; Aya HP<=0 skips (death is
+mode 3). Empty leftovers + HP>0 → `2F300`
+mode 2. `27D14`/`28E94` parent and HUD
+storm deferred. Evidence:
+`docs/evidence/pe-btl104-victory-ready/`.
+
 ## PE-BTL103 — 2B0E8 mode 2 → mode 9
 
-Encounter-end / victory, not player death.
+`matching_native=850/850` local. Encounter-end /
+victory, not player death.
 `2B0E8` phases drain to mode 9; dest stays
 the encounter token. `2F300` is the mode-2
 producer (not this cut). Evidence:

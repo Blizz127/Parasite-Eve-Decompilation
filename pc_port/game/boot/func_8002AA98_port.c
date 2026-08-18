@@ -332,6 +332,49 @@ void func_8002B29C(void)
  *      clear 0x1800; phase++
  *   3: 6D60C(0)==1 wait; else 295E4, mode=9, B0CD8&=~0x8000
  */
+/*
+ * 2F300 named cut: jal 293F4(0) then sw mode 2 @ 2F570.
+ * HUD sb storm / 1A680 / 6DE80 / 5218C stay deferred.
+ */
+void func_8002F300_mode2_cut(void)
+{
+    func_800293F4_hp_cut();
+    PE_StoreU32(GA_D_8009D28C, 2u);
+}
+
+/*
+ * 292EC remaining-enemy tail (inside 28E94).
+ * D2A0!=0 → out. Walk D20C: any non-Aya with body keeps
+ * combat. If none remain and record+0x0C>0 → 2F300.
+ * Aya HP<=0 does not start victory (player death is mode 3).
+ */
+void func_800292EC_victory_ready_cut(void)
+{
+    pe_addr_t actor;
+    pe_addr_t aya;
+    pe_addr_t rec;
+    int remain;
+
+    if ((int8_t)PE_LoadU8(GA_D_8009D2A0) != 0)
+        return;
+    actor = PE_LoadU32(GA_D_8009D20C);
+    remain = 1;
+    aya = PE_LoadU32(GA_D_8009D254);
+    while (actor != 0u) {
+        if (actor != aya && PE_LoadU32(actor) != 0u)
+            remain = 0;
+        actor = PE_LoadU32(actor + 4u);
+    }
+    if (remain == 0)
+        return;
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec == 0u)
+        return;
+    if ((int16_t)PE_LoadU16(rec + 0x0Cu) <= 0)
+        return;
+    func_8002F300_mode2_cut();
+}
+
 void func_8002B0E8(void)
 {
     uint8_t phase;
