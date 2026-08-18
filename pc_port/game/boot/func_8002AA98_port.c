@@ -6,7 +6,7 @@
  *
  * 2A7F8 is a compare chain, not a jump table:
  *   mode 1 → 25EE8 (not this cut)
- *   mode 2 → 2B0E8 (not this cut)
+ *   mode 2 → 2B0E8 (victory phases → mode 9)
  *   mode 3 → record+0x4C bit 0x800 ? 2AA98
  *            : 53E6C(18) ? 2AA98 (+ 5409C if 2AA98!=0)
  *            : 2B29C
@@ -37,6 +37,7 @@
 #define GA_D_8009D1A0 0x8009D1A0u
 #define GA_D_8009D2E8 0x8009D2E8u
 #define GA_D_8009D2A0 0x8009D2A0u /* gp+0x530 */
+#define GA_D_8009D2A4 0x8009D2A4u /* gp+0x534 */
 #define GA_D_8009D2EC 0x8009D2ECu /* gp+0x57C */
 #define GA_D_8009CE70 0x8009CE70u /* gp+0x100 timer */
 #define GA_D_8009CE74 0x8009CE74u /* gp+0x104 phase */
@@ -319,6 +320,76 @@ void func_8002B29C(void)
     func_800295E4_tail_cut();
     PE_StoreU32(GA_D_8009D28C, 0xFFFFFFFFu);
     func_8006A25C();
+}
+
+/*
+ * 2B0E8 — mode 2 (encounter-end / victory), not player death.
+ * Phase on D_8009CE74:
+ *   0: wait Aya+0x16==10 or D1A0&0x800; +0x98|=0x100;
+ *      703F4 / 4B70C / 67CBC deferred; phase++
+ *   1: wait gp+0x534==1000; phase++; +0x98&=~0x100
+ *   2: wait +0x0F==+0x1A; 1A680(0x15) or 0x18 if D1A0&0x1800;
+ *      clear 0x1800; phase++
+ *   3: 6D60C(0)==1 wait; else 295E4, mode=9, B0CD8&=~0x8000
+ */
+void func_8002B0E8(void)
+{
+    uint8_t phase;
+    pe_addr_t aya;
+    uint32_t flags;
+    uint32_t d1a0;
+    unsigned int cmd;
+
+    phase = PE_LoadU8(GA_D_8009CE74);
+    aya = PE_LoadU32(GA_D_8009D254);
+    d1a0 = D_8009D1A0 | PE_LoadU32(GA_D_8009D1A0);
+
+    if (phase == 0u) {
+        if (aya == 0u)
+            return;
+        if (PE_LoadU16(aya + 0x16u) != 10u && (d1a0 & 0x800u) == 0u)
+            return;
+        flags = PE_LoadU32(aya + 0x98u);
+        PE_StoreU32(aya + 0x98u, flags | 0x100u);
+        /* 703F4 / 4B70C persist / 67CBC stay deferred. */
+        PE_StoreU8(GA_D_8009CE74, 1u);
+        return;
+    }
+    if (phase == 1u) {
+        if ((int16_t)PE_LoadU16(GA_D_8009D2A4) != 1000)
+            return;
+        PE_StoreU8(GA_D_8009CE74, 2u);
+        if (aya != 0u) {
+            flags = PE_LoadU32(aya + 0x98u);
+            PE_StoreU32(aya + 0x98u, flags & ~0x100u);
+        }
+        return;
+    }
+    if (phase == 2u) {
+        if (aya == 0u)
+            return;
+        if (PE_LoadU8(aya + 0x0Fu) != (uint8_t)PE_LoadU16(aya + 0x1Au))
+            return;
+        if ((d1a0 & 0x1800u) != 0u) {
+            d1a0 &= ~0x1800u;
+            D_8009D1A0 = d1a0;
+            PE_StoreU32(GA_D_8009D1A0, d1a0);
+            cmd = 0x18u;
+        } else {
+            cmd = 0x15u;
+        }
+        func_8001A680_command_cut(aya, cmd);
+        PE_StoreU8(GA_D_8009CE74, 3u);
+        return;
+    }
+    if (phase != 3u)
+        return;
+    if (func_8006D60C(0) == 1)
+        return;
+    func_800295E4_tail_cut();
+    PE_StoreU32(GA_D_8009D28C, 9u);
+    flags = PE_LoadU32(GA_D_800B0CD8) & ~0x8000u;
+    PE_StoreU32(GA_D_800B0CD8, flags);
 }
 
 void func_8002A7F8_mode3_cut(void)

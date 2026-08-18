@@ -150,6 +150,8 @@ void func_800299CC_mode_switch_cut(void)
         func_8002BC90_mode6_cut();
     else if (mode == 3u)
         func_8002A7F8_mode3_cut();
+    else if (mode == 2u)
+        func_8002B0E8();
 }
 
 /*

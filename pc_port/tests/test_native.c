@@ -11332,6 +11332,102 @@ static void test_BTL102_death_tick_3f3c4_dest_change(void)
     PASS();
 }
 
+static void test_BTL103_2b0e8_phase0_wait(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL103_2b0e8_phase0_wait");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU16(aya + 0x16u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    D_8009D1A0 = 0u;
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 0u, "phase stays 0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode not invented");
+    PASS();
+}
+
+static void test_BTL103_2b0e8_phase0_advance(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL103_2b0e8_phase0_advance");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU16(aya + 0x16u, 10u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "phase 0→1");
+    ASSERT((PE_LoadU32(aya + 0x98u) & 0x100u) != 0u, "+0x98|=0x100");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode not 9 yet");
+    PASS();
+}
+
+static void test_BTL103_2b0e8_phase1_advance(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL103_2b0e8_phase1_advance");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(aya + 0x98u, 0x100u);
+    PE_StoreU8(0x8009CE74u, 1u);
+    PE_StoreU16(0x8009D2A4u, 1000u);
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 2u, "phase 1→2");
+    ASSERT((PE_LoadU32(aya + 0x98u) & 0x100u) == 0u, "+0x98&=~0x100");
+    PASS();
+}
+
+static void test_BTL103_2b0e8_phase3_waits_6d60c(void)
+{
+    TEST("BTL103_2b0e8_phase3_waits_6d60c");
+    ResetTestState();
+    PE_StoreU8(0x8009CE74u, 3u);
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0u);
+    func_8002B0E8();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 2u, "6D60C(0)==1 keeps mode 2");
+    ASSERT(PE_LoadU8(0x8009CE74u) == 3u, "phase stays 3");
+    PASS();
+}
+
+static void test_BTL103_2b0e8_phase3_to_mode9(void)
+{
+    TEST("BTL103_2b0e8_phase3_to_mode9");
+    ResetTestState();
+    PE_StoreU8(0x8009CE74u, 3u);
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU32(0x8009D280u, 0xA8001248u);
+    D_8009D280 = 0xA8001248u;
+    PE_StoreU32(0x800B0CD8u, 0x8000u);
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0x41u);
+    func_8002B0E8();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 9u, "mode 9");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA8001248u, "dest not A940");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x8000u) == 0u, "B0CD8&=~0x8000");
+    ASSERT(PE_LoadU32(0x8009D28Cu) != 0xFFFFFFFFu, "not player-death -1");
+    PASS();
+}
+
+static void test_BTL103_mode2_switch(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL103_mode2_switch");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU16(aya + 0x16u, 10u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    func_800299CC_mode_switch_cut();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "mode 2 reaches 2B0E8");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -27751,6 +27847,12 @@ int main(void)
     test_BTL101_2b29c_phases_to_mode_neg1();
     test_BTL102_3f3c4_bit100_stable_skips_dest_change();
     test_BTL102_death_tick_3f3c4_dest_change();
+    test_BTL103_2b0e8_phase0_wait();
+    test_BTL103_2b0e8_phase0_advance();
+    test_BTL103_2b0e8_phase1_advance();
+    test_BTL103_2b0e8_phase3_waits_6d60c();
+    test_BTL103_2b0e8_phase3_to_mode9();
+    test_BTL103_mode2_switch();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();
