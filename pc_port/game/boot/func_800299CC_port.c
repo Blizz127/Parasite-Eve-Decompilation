@@ -121,16 +121,93 @@ void func_800299CC_after_consume_cut(void)
 }
 
 /*
- * PE-BTL107 — 5C498 return is gp+0x534. 42ED0 is lw
- * D_8009CED8; nonzero → 42F44 / v0=0. Zero → 51504
- * clears D_8009D010, chain deferred, 514F8 returns it.
- * 512AC(10) is the 1000 writer (jtbl[10] @ 514A0).
+ * PE-BTL107 / PE-BTL112 — 5C498 return is gp+0x534.
+ * 42ED0 is lw D_8009CED8; nonzero → 42F44 / v0=0.
+ * Zero → 51504 clears D_8009D010, then 5E30C, then
+ * 514F8 returns D010. 512AC(10) (jtbl[10] @ 514A0)
+ * is the 1000 writer. 4B90C (from 2B0E8 phase 0
+ * 4B70C) stores 4BB80 at obj+0x2C and 62CB8(obj).
+ * 5E30C type-4 jalr is a1=0x10000; 4BB80 then
+ * 512AC(10) after the score snap. Type-4 enqueue
+ * and 57ECC / 48654 stay deferred.
  */
+#define GA_D_8009D15C 0x8009D15Cu /* gp+0x3EC 62CB8 head */
+#define GA_D_8009CFE8 0x8009CFE8u /* gp+0x278 score lo */
+#define GA_D_8009CFEC 0x8009CFECu /* gp+0x27C score hi */
+#define GA_D_800C0E00 0x800C0E00u
+#define GA_CB_4BB80   0x8004BB80u
+#define GA_OBJ_4B90C  0x8010B000u /* 62D2C heap deferred */
+
+void func_80062CB8(pe_addr_t obj)
+{
+    PE_StoreU32(GA_D_8009D15C, obj);
+}
+
+pe_addr_t func_80062CC4(void)
+{
+    return PE_LoadU32(GA_D_8009D15C);
+}
+
+void func_8004B90C(void)
+{
+    PE_StoreU32(GA_OBJ_4B90C + 0x2Cu, GA_CB_4BB80);
+    func_80062CB8(GA_OBJ_4B90C);
+}
+
+void func_8004B70C(uint32_t a0, uint32_t a1, pe_addr_t a2)
+{
+    uint32_t base;
+
+    (void)a1;
+    (void)a2;
+    base = PE_LoadU32(GA_D_800C0E00);
+    PE_StoreU32(GA_D_8009CFE8, base);
+    PE_StoreU32(GA_D_8009CFEC, base + a0);
+    func_8004B90C();
+}
+
+int func_8004BB80(pe_addr_t obj, uint32_t a1)
+{
+    int32_t lo;
+    int32_t hi;
+
+    (void)obj;
+    if ((a1 & 0x10000u) == 0u)
+        return 1;
+    lo = (int32_t)PE_LoadU32(GA_D_8009CFE8);
+    hi = (int32_t)PE_LoadU32(GA_D_8009CFEC);
+    if (lo < hi) {
+        PE_StoreU32(GA_D_8009CFE8, (uint32_t)hi);
+        return 1;
+    }
+    /* 57ECC==0 arm @ 4BC4C. 48654 deferred. */
+    func_800512AC_cmd10_cut();
+    return 1;
+}
+
+void func_8005E30C(void)
+{
+    pe_addr_t obj;
+
+    /* Type-4 arm: jal 62CC4, jalr obj+0x2C, a1=0x10000.
+     * Enqueue of that event is not this cut; the arm
+     * runs while mode 2 and 4B90C has installed 4BB80. */
+    if (PE_LoadU32(0x8009D28Cu) != 2u)
+        return;
+    obj = func_80062CC4();
+    if (obj == 0u)
+        return;
+    if (PE_LoadU32(obj + 0x2Cu) != GA_CB_4BB80)
+        return;
+    (void)func_8004BB80(obj, 0x10000u);
+}
+
 int func_8005C498(void)
 {
     if (PE_LoadU32(0x8009CED8u) != 0u)
         return 0;
     PE_StoreU32(0x8009D010u, 0u);
+    func_8005E30C();
     return (int)PE_LoadU32(0x8009D010u);
 }
 

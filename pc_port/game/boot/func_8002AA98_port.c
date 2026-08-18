@@ -326,7 +326,7 @@ void func_8002B29C(void)
  * 2B0E8 — mode 2 (encounter-end / victory), not player death.
  * Phase on D_8009CE74:
  *   0: wait Aya+0x16==10 or D1A0&0x800; +0x98|=0x100;
- *      703F4 / 4B70C / 67CBC deferred; phase++
+ *      703F4 / 67CBC deferred; jal 4B70C; phase++
  *   1: wait gp+0x534==1000; phase++; +0x98&=~0x100
  *   2: wait +0x0F==+0x1A; 1A680(0x15) or 0x18 if D1A0&0x1800;
  *      clear 0x1800; phase++
@@ -394,7 +394,10 @@ void func_8002B0E8(void)
             return;
         flags = PE_LoadU32(aya + 0x98u);
         PE_StoreU32(aya + 0x98u, flags | 0x100u);
-        /* 703F4 / 4B70C persist / 67CBC stay deferred. */
+        /* 703F4 / 67CBC stay deferred. 4B70C installs 4BB80. */
+        func_8004B70C(PE_LoadU32(0x8009D304u),
+                      PE_LoadU16(0x8009D21Cu),
+                      0x800A7FF0u);
         PE_StoreU8(GA_D_8009CE74, 1u);
         return;
     }

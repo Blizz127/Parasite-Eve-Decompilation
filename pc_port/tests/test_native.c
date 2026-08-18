@@ -12148,6 +12148,83 @@ static void test_BTL111_4000_clears_next_tick(void)
     PASS();
 }
 
+static void test_BTL112_4b70c_installs_4bb80(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL112_4b70c_installs_4bb80");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU16(aya + 0x16u, 10u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU32(0x8009D304u, 0u);
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "phase 0→1");
+    ASSERT(func_80062CC4() == 0x8010B000u, "62CB8 head");
+    ASSERT(PE_LoadU32(0x8010B000u + 0x2Cu) == 0x8004BB80u, "4BB80 cb");
+    PASS();
+}
+
+static void test_BTL112_5c498_returns_1000_after_persist(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL112_5c498_returns_1000_after_persist");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU16(aya + 0x16u, 10u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU32(0x8009D304u, 0u);
+    PE_StoreU32(0x8009CED8u, 0u);
+    func_8002B0E8();
+    ASSERT(func_8005C498() == 1000, "5E30C → 4BB80 → 512AC(10)");
+    ASSERT(PE_LoadU32(0x8009D010u) == 1000u, "D010");
+    PASS();
+}
+
+static void test_BTL112_phase1_no_534_plant(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t rec = 0x8010A000u;
+
+    TEST("BTL112_phase1_no_534_plant");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(aya, rec);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(rec + 0x4Cu, 0u);
+    PE_StoreU16(aya + 0x16u, 10u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU32(0x8009D304u, 0u);
+    PE_StoreU32(0x8009CED8u, 0u);
+    func_8002B0E8();
+    func_800299CC_after_consume_cut();
+    ASSERT(PE_LoadU16(0x8009D2A4u) == 1000u, "534 from 5C498");
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 2u, "phase 1→2");
+    ASSERT((PE_LoadU32(aya + 0x98u) & 0x100u) == 0u, "cleared 0x100");
+    PASS();
+}
+
+static void test_BTL112_score_snap_delays_1000(void)
+{
+    TEST("BTL112_score_snap_delays_1000");
+    ResetTestState();
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU32(0x8009CED8u, 0u);
+    func_8004B70C(5u, 0u, 0x800A7FF0u);
+    ASSERT(func_8005C498() == 0, "278<27C snaps");
+    ASSERT(PE_LoadU32(0x8009CFE8u) == 5u, "278=27C");
+    ASSERT(func_8005C498() == 1000, "then 512AC(10)");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -28600,6 +28677,10 @@ int main(void)
     test_BTL110_21de0_arms_d294();
     test_BTL110_attack_clip_damages();
     test_BTL111_4000_clears_next_tick();
+    test_BTL112_4b70c_installs_4bb80();
+    test_BTL112_5c498_returns_1000_after_persist();
+    test_BTL112_phase1_no_534_plant();
+    test_BTL112_score_snap_delays_1000();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

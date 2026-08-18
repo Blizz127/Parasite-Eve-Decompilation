@@ -9,9 +9,18 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL112 — 4B70C persist arms 534=1000
+
+`matching_native` pending suite. `2B0E8` phase 0 jals
+`4B70C` → `4B90C` stores `4BB80` at `obj+0x2C` /
+`62CB8`. Next `5C498` `5E30C` jalrs it with
+`a1=0x10000`; `4BB80` then `512AC(10)`. Phase 1
+no longer plants `534`. Evidence:
+`docs/evidence/pe-btl112-4b70c-534/`.
+
 ## PE-BTL111 — 27D14 0x4000 clears 0x6000
 
-`matching_native` pending suite. After `28574` the next
+`matching_native=877/877` local. After `28574` the next
 tick stores `body & ~0x6000`. `1A680` react deferred.
 Evidence: `docs/evidence/pe-btl111-4000-clear/`.
 
