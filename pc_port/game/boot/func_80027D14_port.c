@@ -27,6 +27,9 @@
 #define GA_D_8009D294 0x8009D294u
 #define GA_D_8009D1D4 0x8009D1D4u
 #define GA_D_8009CE54 0x8009CE54u
+#define GA_D_8009CE3C 0x8009CE3Cu
+#define GA_D_8009CE38 0x8009CE38u
+#define GA_D_8009CE39 0x8009CE39u
 #define GA_T_800BE830 0x800BE830u
 #define GA_D_800A5D58 0x800A5D58u
 #define SLOT_STRIDE   220u
@@ -138,6 +141,77 @@ void func_80023008(void)
         return;
     }
     PE_StoreU8(GA_D_8009D294, 0u);
+}
+
+/*
+ * PE-BTL110 — 2312C kinds 6/8/10: clip +0x0F==+0x16 and
+ * gp+0xC8/C9==0 jals 23008. 21F38 always reaches 2312C
+ * unless Aya+0x0E==12. 21DE0: CE3C!=0 && D1D4<CE3C &&
+ * Aya+0x0E>=4 && slot+4<3 → 21F38.
+ */
+int func_8002312C(pe_addr_t slot)
+{
+    pe_addr_t aya;
+    uint8_t kind;
+
+    (void)slot;
+    aya = PE_LoadU32(GA_D_8009D254);
+    if (aya == 0u)
+        return 0;
+    kind = PE_LoadU8(aya + 0x0Eu);
+    if (kind < 6u || kind > 11u)
+        return 0;
+    if ((kind & 1u) != 0u)
+        return 0;
+    if ((uint32_t)PE_LoadU8(aya + 0x0Fu) !=
+        (uint32_t)PE_LoadU16(aya + 0x16u))
+        return 0;
+    if (PE_LoadU8(GA_D_8009CE38) != 0u ||
+        PE_LoadU8(GA_D_8009CE39) != 0u)
+        return 0;
+    func_80023008();
+    return 1;
+}
+
+void func_80021F38(void)
+{
+    pe_addr_t aya;
+    pe_addr_t slot;
+
+    aya = PE_LoadU32(GA_D_8009D254);
+    if (aya != 0u && PE_LoadU8(aya + 0x0Eu) == 12u)
+        return;
+    slot = GA_T_800BE830 + ((uint32_t)PE_LoadU8(GA_D_8009D1D4) << 3);
+    (void)func_8002312C(slot);
+}
+
+void func_80021DE0(void)
+{
+    uint8_t count;
+    uint8_t idx;
+    pe_addr_t aya;
+    pe_addr_t slot;
+    int16_t tid;
+
+    count = PE_LoadU8(GA_D_8009CE3C);
+    idx = PE_LoadU8(GA_D_8009D1D4);
+    if (count == 0u || idx >= count) {
+        PE_StoreU8(GA_D_8009D1D4, 0u);
+        PE_StoreU8(GA_D_8009CE3C, 0u);
+        return;
+    }
+    aya = PE_LoadU32(GA_D_8009D254);
+    if (aya != 0u) {
+        PE_StoreU32(aya + 0x68u, 0u);
+        PE_StoreU32(aya + 0x6Cu, 0u);
+        PE_StoreU32(aya + 0x70u, 0u);
+        if (PE_LoadU8(aya + 0x0Eu) < 4u)
+            return;
+    }
+    slot = GA_T_800BE830 + ((uint32_t)idx << 3);
+    tid = (int16_t)PE_LoadU16(slot + 4u);
+    if (tid < 3)
+        func_80021F38();
 }
 
 /*

@@ -439,6 +439,9 @@ never native function pointers.
   then subtracts `body+0x10`.
   `game/boot/func_80027D14_port.c`,
   `game/boot/func_800299CC_port.c`
+- ~~`func_80021DE0` / `21F38` / `2312C`~~ — TRANSLATED
+  (PE-BTL110): Attack clip completion sets `D294`.
+  `game/boot/func_80027D14_port.c`
 - ~~`func_8005C498` / `512AC` case 10 / 27D14 DoT~~ —
   TRANSLATED (PE-BTL107): `body+0x10 -= body+0x96`;
   `29A68` stores `5C498` to `gp+0x534`.

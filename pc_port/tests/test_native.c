@@ -12056,6 +12056,67 @@ static void test_BTL109_aya_hp0_no_victory(void)
     PASS();
 }
 
+static void test_BTL110_21de0_arms_d294(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t weapon = 0x80108900u;
+
+    TEST("BTL110_21de0_arms_d294");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(rec + 0x68u, weapon);
+    PE_StoreU16(weapon + 6u, 8u);
+    PE_StoreU8(aya + 0x0Eu, 6u);
+    PE_StoreU8(aya + 0x0Fu, 0u);
+    PE_StoreU16(aya + 0x16u, 0u);
+    PE_StoreU8(0x8009CE3Cu, 1u);
+    PE_StoreU16(0x800BE834u, 0u);
+    func_80021DE0();
+    ASSERT(PE_LoadU8(0x8009D294u) == 1u, "23008 via 21DE0");
+    PASS();
+}
+
+static void test_BTL110_attack_clip_damages(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+
+    TEST("BTL110_attack_clip_damages");
+    ResetTestState();
+    ASSERT(func_80019D24(0u) == 1, "4D4");
+    ASSERT(func_800192B8(0u) == 1, "mode 0");
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(rec + 0x68u, weapon);
+    PE_StoreU16(weapon, 10u);
+    PE_StoreU16(weapon + 6u, 8u);
+    PE_StoreU32(weapon + 0x10u, 1u);
+    PE_StoreU32(ebody + 0x10u, 40u);
+    PE_StoreU32(ebody + 0x88u, 40u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU8(aya + 0x0Eu, 6u);
+    PE_StoreU8(aya + 0x0Fu, 0u);
+    PE_StoreU16(aya + 0x16u, 0u);
+    PE_StoreU8(0x8009CE3Cu, 1u);
+    PE_StoreU8(0x8009CE54u, 1u);
+    PE_StoreU32(0x800BE830u, enemy);
+    PE_StoreU16(0x800BE834u, 0u);
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU8(0x8009D294u) == 0u, "236E8 cleared D294");
+    ASSERT(PE_LoadU32(ebody + 0x10u) == 30u, "clip→28574");
+    ASSERT((PE_LoadU32(ebody) & 0x6000u) == 0x4000u, "0x4000");
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 40u, "Aya kept");
+    ASSERT(PE_LoadU32(0x8009D28Cu) != 3u, "not death");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -28505,6 +28566,8 @@ int main(void)
     test_BTL109_attack_kills_then_mode2();
     test_BTL109_236e8_then_damage_entry();
     test_BTL109_aya_hp0_no_victory();
+    test_BTL110_21de0_arms_d294();
+    test_BTL110_attack_clip_damages();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

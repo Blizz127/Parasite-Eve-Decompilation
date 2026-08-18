@@ -87,6 +87,7 @@ void func_800299CC_consume_cut(void)
 #define GA_D_8009D20C 0x8009D20Cu
 #define GA_D_8009D294 0x8009D294u
 #define GA_D_8009CE3C 0x8009CE3Cu
+#define GA_D_8009D1A0 0x8009D1A0u
 
 void func_800299CC_after_consume_cut(void)
 {
@@ -224,9 +225,17 @@ void func_800299CC_damage_entry_cut(void)
         return;
     if (PE_LoadU8(GA_D_8009D244) == 0u)
         return;
-    /* 2A470: 21054>0 and D294 → 236E8 before 1D340. */
-    if (func_80021054() > 0 && PE_LoadU8(GA_D_8009D294) != 0u)
-        func_800236E8();
+    /* 2A470: 21054>0 → 21DE0 (unless 0x4000 && !D1A0.100), then 236E8. */
+    if (func_80021054() > 0) {
+        pe_addr_t rec = PE_LoadU32(GA_D_8009D278);
+        uint32_t flags = (rec != 0u) ? PE_LoadU32(rec + 0x4Cu) : 0u;
+
+        if ((flags & 0x4000u) == 0u ||
+            (PE_LoadU32(GA_D_8009D1A0) & 0x100u) != 0u)
+            func_80021DE0();
+        if (PE_LoadU8(GA_D_8009D294) != 0u)
+            func_800236E8();
+    }
     func_8001D340(1u);
     /* 2A504: walk D20C, jal 27D14 on non-Aya actors with a body. */
     aya = PE_LoadU32(GA_D_8009D254);
