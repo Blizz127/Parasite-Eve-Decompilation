@@ -3,6 +3,15 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL122 — D20C body is 0x6F / 2F7D8
+
+`matching_native` local. `35038` zeros `*actor` for
+non-type-0. Sole body store for those actors is `2F7D8`
+via opcode `0x6F`. The allocator is already live. Story
+m0005i still has to reach type-1's type-2 `0x08` and
+type-2 `0x6F`. Do not plant a D20C enemy.
+Evidence: `docs/evidence/pe-btl122-d20c-body/`.
+
 ## PE-BTL121 — 26824 publishes D2A4 to BE834
 
 `matching_native` local (suite grows). Absolute `sh` to

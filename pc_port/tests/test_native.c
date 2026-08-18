@@ -12993,6 +12993,56 @@ static void test_BTL121_no_be834_plant(void)
     PASS();
 }
 
+static void test_BTL122_08_6f_body_on_d20c(void)
+{
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t actor;
+    pe_addr_t aya;
+    int found;
+
+    TEST("BTL122_08_6f_body_on_d20c");
+    ResetTestState();
+    func_8003F074_pool_cut();
+    PE_StoreU32(0x800915E4u, 0x80035E04u);
+    PE_StoreU32(0x800915ECu, 0x80035E04u);
+    PE_StoreU32(hdr + 8u + 4u, 0x80035E04u);
+    PE_StoreU32(hdr + 8u + 8u, 0x80035E04u);
+    PE_StoreU32(0x800B161Cu, hdr);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU8(desc, 2u);
+    child = func_80035038(desc, parent, 1u);
+    ASSERT(PE_LoadU32(0x8009D20Cu) == parent, "type1 head");
+    ASSERT(PE_LoadU32(parent + 4u) == child, "type2 sibling");
+    ASSERT(PE_LoadU32(child) == 0u, "35038 zeros non-Aya body");
+    PE_StoreU32(0x8009D2F0u, child);
+    ASSERT(func_80018954(0u) == 1, "0x6F");
+    ASSERT(PE_LoadU32(child) != 0u, "2F7D8 body");
+    aya = PE_LoadU32(0x8009D254u);
+    found = 0;
+    actor = PE_LoadU32(0x8009D20Cu);
+    while (actor != 0u) {
+        if (actor != aya && PE_LoadU32(actor) != 0u)
+            found = 1;
+        actor = PE_LoadU32(actor + 4u);
+    }
+    ASSERT(found, "D20C walk sees body");
+    PASS();
+}
+
+static void test_BTL122_no_d20c_enemy_plant(void)
+{
+    TEST("BTL122_no_d20c_enemy_plant");
+    ResetTestState();
+    func_8003F074_pool_cut();
+    ASSERT(PE_LoadU32(0x8009D20Cu) == 0u, "empty before spawn");
+    PASS();
+}
+
 static void test_BTL119_6c1cc_39_returns_0(void)
 {
     pe_addr_t aya = 0x80108600u;
@@ -29534,6 +29584,8 @@ int main(void)
     test_BTL121_26824_publishes_d2a4();
     test_BTL121_26824_tid406_seven();
     test_BTL121_no_be834_plant();
+    test_BTL122_08_6f_body_on_d20c();
+    test_BTL122_no_d20c_enemy_plant();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();
