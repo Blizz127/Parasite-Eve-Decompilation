@@ -18,6 +18,15 @@ Verified from a clean clone of `main` @
 - Strict bootstrap frontier: exit 1 at `func_8007F72C` from `func_800698D4`
 - Battle oracles through BTL120 are in that suite; battle is still incomplete
 
+## PE-BTL121 — TID 406 is 512AC(1) index+387; 26824 publishes BE834
+
+`512AC` jtbl[1] writes `D010=*a1+387`. `57B70(index)` is
+that caller. `26824(1)` copies `D2A4` onto `BE834+CE3C*8`
+for tid 406 (`jtbl[13]`). TEXT `sh BE834` sites write 0;
+`li 406` sites are compares. Do not plant 406. `556E8` /
+`5E30C` dispatch of case 1 remain. Evidence:
+`docs/evidence/pe-btl121-tid406/`.
+
 `Blizz127/Parasite-Eve-Decompilation` owns retail/decomp/native gameplay
 semantics. `Blizz127/parasite-eve-ue5` is a presentation consumer.
 

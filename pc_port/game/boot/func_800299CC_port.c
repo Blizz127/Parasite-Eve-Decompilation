@@ -211,9 +211,33 @@ int func_8005C498(void)
     return (int)PE_LoadU32(0x8009D010u);
 }
 
+/*
+ * PE-BTL121 — 512AC case 1 writes D010 = *a1 + 387.
+ * jtbl[1] @ 0x80011174 = 0x8005130C: lw v0,0(a3); j 514CC;
+ * delay addiu v0,387; 514CC sw v0, gp+0x2A0 (D010).
+ * Case 10 remains li 1000 @ 514A4. Do not plant 406.
+ */
+void func_800512AC(int cmd, pe_addr_t args)
+{
+    int32_t value;
+
+    if ((unsigned int)cmd >= 13u)
+        return;
+    if (cmd == 10) {
+        PE_StoreU32(0x8009D010u, 1000u);
+        return;
+    }
+    if (cmd == 1) {
+        if (args == 0u)
+            return;
+        value = (int32_t)PE_LoadU32(args);
+        PE_StoreU32(0x8009D010u, (uint32_t)(value + 387));
+    }
+}
+
 void func_800512AC_cmd10_cut(void)
 {
-    PE_StoreU32(0x8009D010u, 1000u);
+    func_800512AC(10, 0u);
 }
 
 /*

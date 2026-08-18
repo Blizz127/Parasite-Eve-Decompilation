@@ -12711,8 +12711,13 @@ static void test_BTL116_22394_tid406_then_ce54(void)
     PE_StoreU16(rec + 0x0Cu, 10u);
     PE_StoreU16(rec + 0x1Cu, 10u);
     PE_StoreU8(0x8009D2A0u, 1u);
-    PE_StoreU8(0x8009CE3Cu, 1u);
-    PE_StoreU16(0x800BE834u, 406u);
+    PE_StoreU8(0x8009CE3Cu, 0u);
+    PE_StoreU32(0x8010B000u, 19u);
+    func_800512AC(1, 0x8010B000u);
+    ASSERT(PE_LoadU32(0x8009D010u) == 406u, "512AC(1) index+387");
+    PE_StoreU16(0x8009D2A4u, (uint16_t)PE_LoadU32(0x8009D010u));
+    func_80026824(1);
+    ASSERT(PE_LoadU16(0x800BE834u) == 406u, "26824 publishes D2A4");
     PE_StoreU32(0x800BE830u, enemy);
     PE_StoreU32(enemy, ebody);
     pe_btl114_bind_cmds(aya, res);
@@ -12726,6 +12731,60 @@ static void test_BTL116_22394_tid406_then_ce54(void)
     pe_btl114_tick_1a_eq_0f(aya);
     func_80021DE0();
     ASSERT(PE_LoadU8(0x8009CE54u) == 1u, "second tick case 9");
+    PASS();
+}
+
+static void test_BTL121_512ac_case1_is_index_plus_387(void)
+{
+    TEST("BTL121_512ac_case1_is_index_plus_387");
+    ResetTestState();
+    PE_StoreU32(0x8010B000u, 0u);
+    func_800512AC(1, 0x8010B000u);
+    ASSERT(PE_LoadU32(0x8009D010u) == 387u, "index 0 → 387");
+    PE_StoreU32(0x8010B000u, 19u);
+    func_800512AC(1, 0x8010B000u);
+    ASSERT(PE_LoadU32(0x8009D010u) == 406u, "index 19 → 406");
+    func_800512AC(10, 0u);
+    ASSERT(PE_LoadU32(0x8009D010u) == 1000u, "case 10 stays 1000");
+    PASS();
+}
+
+static void test_BTL121_57b70_publishes_d010(void)
+{
+    TEST("BTL121_57b70_publishes_d010");
+    ResetTestState();
+    func_80057B70(19u);
+    ASSERT(PE_LoadU32(0x8009D010u) == 406u, "57B70(19) → 406");
+    func_80057B70(0u);
+    ASSERT(PE_LoadU32(0x8009D010u) == 387u, "57B70(0) → 387");
+    PASS();
+}
+
+static void test_BTL121_26824_publishes_be834(void)
+{
+    TEST("BTL121_26824_publishes_be834");
+    ResetTestState();
+    PE_StoreU16(0x800BE834u, 0u);
+    PE_StoreU8(0x8009CE3Cu, 0u);
+    PE_StoreU16(0x8009D2A4u, 387u);
+    func_80026824(1);
+    ASSERT(PE_LoadU16(0x800BE834u) == 0u, "387 is not jtbl[13]");
+    PE_StoreU16(0x8009D2A4u, 406u);
+    func_80026824(1);
+    ASSERT(PE_LoadU16(0x800BE834u) == 406u, "406 → slot+4");
+    ASSERT(PE_LoadU8(0x8009CE3Cu) == 1u, "CE3C++");
+    PASS();
+}
+
+static void test_BTL121_no_be834_plant(void)
+{
+    TEST("BTL121_no_be834_plant");
+    ResetTestState();
+    func_80057B70(19u);
+    PE_StoreU16(0x8009D2A4u, (uint16_t)PE_LoadU32(0x8009D010u));
+    func_80026824(1);
+    ASSERT(PE_LoadU16(0x800BE834u) == 406u, "chain");
+    ASSERT(PE_LoadU32(0x8009D010u) == 406u, "D010 stays 406");
     PASS();
 }
 
@@ -29445,6 +29504,10 @@ int main(void)
     test_BTL116_6c1cc_default_and_block();
     test_BTL116_24250_tid406_sets_bit();
     test_BTL116_22394_tid406_then_ce54();
+    test_BTL121_512ac_case1_is_index_plus_387();
+    test_BTL121_57b70_publishes_d010();
+    test_BTL121_26824_publishes_be834();
+    test_BTL121_no_be834_plant();
     test_BTL117_6d60c0_e8_neg1_completes();
     test_BTL117_phase3_no_f2_plant();
     test_BTL117_e8_zero_parks();
