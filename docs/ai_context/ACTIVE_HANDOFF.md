@@ -9,6 +9,15 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL109 — 28574 enemy HP; 236E8 arms 0x2000
+
+`matching_native` pending suite. `23008` sets `D294`.
+`21054>0` and `D294` jals `236E8` before `1D340`.
+`body&0x6000==0x2000` jals `28574`, which subtracts
+`body+0x10` from the weapon/scale formula. Aya
+`1F704` stays player HP. Evidence:
+`docs/evidence/pe-btl109-28574/`.
+
 ## PE-BTL108 — 0xB2 / 392EC persist scale
 
 `matching_native=869/869` local. m0005i after mode 9

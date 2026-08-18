@@ -11905,6 +11905,157 @@ static void test_BTL108_death_skips_b2_dest(void)
     PASS();
 }
 
+static void test_BTL109_21054_and_23008(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t weapon = 0x80108900u;
+
+    TEST("BTL109_21054_and_23008");
+    ResetTestState();
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU8(0x8009CE3Cu, 3u);
+    ASSERT(func_80021054() == 3, "lb CE3C");
+    PE_StoreU32(rec + 0x4Cu, 0x10000u);
+    ASSERT(func_80021054() == -1, "bit 0x10000");
+    PE_StoreU32(rec + 0x4Cu, 0u);
+    PE_StoreU32(rec + 0x68u, weapon);
+    PE_StoreU16(weapon + 6u, 8u);
+    func_80023008();
+    ASSERT(PE_LoadU8(0x8009D294u) == 1u, "D294");
+    PASS();
+}
+
+static void test_BTL109_28574_subtracts_body_hp(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+
+    TEST("BTL109_28574_subtracts_body_hp");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(rec + 0x68u, weapon);
+    PE_StoreU16(weapon, 10u);
+    PE_StoreU16(weapon + 6u, 8u);
+    PE_StoreU32(weapon + 0x10u, 1u);
+    PE_StoreU32(ebody, 0x2000u);
+    PE_StoreU32(ebody + 0x10u, 40u);
+    PE_StoreU32(ebody + 0x88u, 40u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    func_80027D14(enemy);
+    ASSERT(PE_LoadU32(ebody + 0x10u) == 30u, "40-10");
+    ASSERT((PE_LoadU32(ebody) & 0x6000u) == 0x4000u, "0x4000");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "not victory");
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 40u, "Aya HP kept");
+    PASS();
+}
+
+static void test_BTL109_attack_kills_then_mode2(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+
+    TEST("BTL109_attack_kills_then_mode2");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(rec + 0x68u, weapon);
+    PE_StoreU16(weapon, 10u);
+    PE_StoreU16(weapon + 6u, 8u);
+    PE_StoreU32(weapon + 0x10u, 1u);
+    PE_StoreU32(ebody, 0x2000u);
+    PE_StoreU32(ebody + 0x10u, 5u);
+    PE_StoreU32(ebody + 0x88u, 40u);
+    PE_StoreU8(ebody + 0xAFu, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x0Eu, 40u);
+    PE_StoreU16(rec + 0x1Cu, 40u);
+    PE_StoreU8(0x8009D2A0u, 1u);
+    func_80027D14(enemy);
+    ASSERT((int32_t)PE_LoadU32(ebody + 0x10u) <= 0, "28574 killed");
+    ASSERT(PE_LoadU8(ebody + 0xACu) == 3u, "28E94");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "not yet 2");
+    func_80027D14(enemy);
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 2u, "mode 2");
+    ASSERT(PE_LoadU32(0x8009D280u) != 0xA9400048u, "not death dest");
+    PASS();
+}
+
+static void test_BTL109_236e8_then_damage_entry(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+
+    TEST("BTL109_236e8_then_damage_entry");
+    ResetTestState();
+    ASSERT(func_80019D24(0u) == 1, "4D4");
+    ASSERT(func_800192B8(0u) == 1, "mode 0");
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(rec + 0x68u, weapon);
+    PE_StoreU16(weapon, 10u);
+    PE_StoreU16(weapon + 6u, 8u);
+    PE_StoreU32(weapon + 0x10u, 1u);
+    PE_StoreU32(ebody + 0x10u, 40u);
+    PE_StoreU32(ebody + 0x88u, 40u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU8(0x8009CE54u, 1u);
+    PE_StoreU8(0x8009CE3Cu, 1u);
+    PE_StoreU32(0x800BE830u, enemy);
+    func_80023008();
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU32(ebody + 0x10u) == 30u, "236E8+28574");
+    ASSERT((PE_LoadU32(ebody) & 0x6000u) == 0x4000u, "react");
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 40u, "Aya kept");
+    PASS();
+}
+
+static void test_BTL109_aya_hp0_no_victory(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+
+    TEST("BTL109_aya_hp0_no_victory");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(rec + 0x68u, weapon);
+    PE_StoreU16(weapon, 10u);
+    PE_StoreU16(weapon + 6u, 8u);
+    PE_StoreU32(weapon + 0x10u, 1u);
+    PE_StoreU32(ebody, 0x2000u);
+    PE_StoreU32(ebody + 0x10u, 5u);
+    PE_StoreU32(ebody + 0x88u, 40u);
+    PE_StoreU8(ebody + 0xAFu, 0u);
+    PE_StoreU16(rec + 0x0Cu, 0u);
+    PE_StoreU8(0x8009D2A0u, 1u);
+    func_80027D14(enemy);
+    func_80027D14(enemy);
+    ASSERT(PE_LoadU32(0x8009D28Cu) != 2u, "no mode 2");
+    ASSERT(PE_LoadU32(0x8009D28Cu) != 9u, "no mode 9");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -28349,6 +28500,11 @@ int main(void)
     test_BTL108_392ec_default_one();
     test_BTL108_0xb2_after_mode9();
     test_BTL108_death_skips_b2_dest();
+    test_BTL109_21054_and_23008();
+    test_BTL109_28574_subtracts_body_hp();
+    test_BTL109_attack_kills_then_mode2();
+    test_BTL109_236e8_then_damage_entry();
+    test_BTL109_aya_hp0_no_victory();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

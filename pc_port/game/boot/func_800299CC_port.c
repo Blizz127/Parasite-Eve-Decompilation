@@ -85,6 +85,8 @@ void func_800299CC_consume_cut(void)
 #define GA_D_8009D230 0x8009D230u
 #define GA_D_8009D244 0x8009D244u /* gp+0x4D4 */
 #define GA_D_8009D20C 0x8009D20Cu
+#define GA_D_8009D294 0x8009D294u
+#define GA_D_8009CE3C 0x8009CE3Cu
 
 void func_800299CC_after_consume_cut(void)
 {
@@ -200,6 +202,19 @@ void func_800299CC_mode_switch_cut(void)
  * unless 2A444/2A4BC overwrite it (mode-1 / bit-0x4000 arms,
  * not first retail entry). a0 = s1. Do not store 4D4 or HP.
  */
+/*
+ * PE-BTL109 — 21054. 9 words. rec+0x4C bit 0x10000 → -1,
+ * else lb gp+0xCC. 299CC @ 2A470: blez skips 236E8.
+ */
+int func_80021054(void)
+{
+    pe_addr_t rec = PE_LoadU32(GA_D_8009D278);
+
+    if (rec != 0u && (PE_LoadU32(rec + 0x4Cu) & 0x10000u) != 0u)
+        return -1;
+    return (int)(int8_t)PE_LoadU8(GA_D_8009CE3C);
+}
+
 void func_800299CC_damage_entry_cut(void)
 {
     pe_addr_t actor;
@@ -209,6 +224,9 @@ void func_800299CC_damage_entry_cut(void)
         return;
     if (PE_LoadU8(GA_D_8009D244) == 0u)
         return;
+    /* 2A470: 21054>0 and D294 → 236E8 before 1D340. */
+    if (func_80021054() > 0 && PE_LoadU8(GA_D_8009D294) != 0u)
+        func_800236E8();
     func_8001D340(1u);
     /* 2A504: walk D20C, jal 27D14 on non-Aya actors with a body. */
     aya = PE_LoadU32(GA_D_8009D254);

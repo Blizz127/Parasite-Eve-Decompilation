@@ -6,6 +6,7 @@
  *
  * 27D14: 534 words 0x80027D14..0x80028570. a0 = actor, *actor = body.
  * After 1D340, 299CC @ 0x8002A53C walks non-Aya bodies here.
+ * body&0x6000==0x2000 jals 28574 (Attack HP subtract).
  * body+0x10<=0 and !(D1A0&0x100) and kind not 1/3 → zero
  * +0x68/6C/70, jal 28E94(actor).
  *
@@ -22,8 +23,16 @@
 #define GA_D_8009D20C 0x8009D20Cu
 #define GA_D_8009D1A0 0x8009D1A0u
 #define GA_D_8009D2A0 0x8009D2A0u
+#define GA_D_8009D278 0x8009D278u
+#define GA_D_8009D294 0x8009D294u
+#define GA_D_8009D1D4 0x8009D1D4u
+#define GA_D_8009CE54 0x8009CE54u
+#define GA_T_800BE830 0x800BE830u
 #define GA_D_800A5D58 0x800A5D58u
 #define SLOT_STRIDE   220u
+#define BODY_HIT      0x2000u
+#define BODY_REACT    0x4000u
+#define BODY_HITMASK  0x6000u
 
 extern unsigned int D_8009D1A0;
 
@@ -103,6 +112,156 @@ void func_80028E94(pe_addr_t actor)
     func_800292EC_victory_ready_cut();
 }
 
+/*
+ * PE-BTL109 — 23008 sets D294 so 299CC @ 2A4D4 jals 236E8.
+ * weapon+6==8 or ammo (weapon+0x0C & 0x3FF) → D294=1.
+ */
+void func_80023008(void)
+{
+    pe_addr_t rec;
+    pe_addr_t weapon;
+    int16_t kind;
+
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec == 0u)
+        return;
+    weapon = PE_LoadU32(rec + 0x68u);
+    if (weapon == 0u)
+        return;
+    kind = (int16_t)PE_LoadU16(weapon + 6u);
+    if (kind == 8) {
+        PE_StoreU8(GA_D_8009D294, 1u);
+        return;
+    }
+    if ((PE_LoadU32(weapon + 0x0Cu) & 0x3FFu) != 0u) {
+        PE_StoreU8(GA_D_8009D294, 1u);
+        return;
+    }
+    PE_StoreU8(GA_D_8009D294, 0u);
+}
+
+/*
+ * 236E8: 457 words. Live 0x2000 arm: table[D1D4].actor body
+ * |= 0x2000 when gp+0xE4==1 and weapon+6 is 6 or 8.
+ * 23DE8 clears D294. 21278 / 6DE80 stay deferred.
+ */
+void func_800236E8(void)
+{
+    pe_addr_t rec;
+    pe_addr_t weapon;
+    pe_addr_t actor;
+    pe_addr_t body;
+    int16_t kind;
+    uint32_t word;
+    unsigned int idx;
+
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec == 0u)
+        return;
+    weapon = PE_LoadU32(rec + 0x68u);
+    if (weapon == 0u)
+        return;
+    kind = (int16_t)PE_LoadU16(weapon + 6u);
+    if (kind != 6 && kind != 8)
+        return;
+    if ((int8_t)PE_LoadU8(GA_D_8009CE54) != 1)
+        return;
+    idx = PE_LoadU8(GA_D_8009D1D4);
+    actor = PE_LoadU32(GA_T_800BE830 + (idx << 3));
+    if (actor == 0u)
+        return;
+    body = PE_LoadU32(actor);
+    if (body == 0u)
+        return;
+    word = PE_LoadU32(body);
+    word = (word & ~BODY_HITMASK) | BODY_HIT;
+    PE_StoreU32(body, word);
+    PE_StoreU8(GA_D_8009D294, 0u);
+}
+
+static int32_t pe_s32_div100(int32_t n)
+{
+    int64_t prod = (int64_t)n * (int64_t)(int32_t)0x51EB851F;
+    int32_t hi = (int32_t)(prod >> 32);
+
+    return (hi >> 5) - (n >> 31);
+}
+
+/*
+ * 28574: 437 words. Default path (rec+0x4C bits 8 and 0x10 clear):
+ * a1 = ((rec+0x1E)/5 + weapon+0) * ROM[0x800108E4][weapon+0x10&0xf] / 100
+ * s0 = a1 - body+0x8C (weapon+6==8 or flags 0x180000).
+ * s0<=0 → chip 1 or 2. Always sw body+0x10 -= s0, then
+ * body = (body & ~0x6000) | 0x4000. FP bit-8 path fail-closed.
+ */
+void func_80028574(pe_addr_t actor)
+{
+    pe_addr_t body;
+    pe_addr_t rec;
+    pe_addr_t weapon;
+    uint32_t flags;
+    uint32_t word;
+    unsigned int idx;
+    uint8_t scale;
+    int32_t atk;
+    int32_t dmg;
+    int32_t hp;
+
+    if (actor == 0u)
+        return;
+    body = PE_LoadU32(actor);
+    if (body == 0u)
+        return;
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec == 0u)
+        return;
+    flags = PE_LoadU32(rec + 0x4Cu);
+    if ((flags & 8u) != 0u || (flags & 0x10u) != 0u)
+        return;
+    weapon = PE_LoadU32(rec + 0x68u);
+    if (weapon == 0u)
+        return;
+
+    {
+        static const uint8_t rom_scale[11] = {
+            0, 100, 60, 41, 0, 25, 0, 18, 0, 0, 13
+        };
+        uint32_t atb = PE_LoadU16(rec + 0x1Eu);
+        uint32_t fifth = (uint32_t)(((uint64_t)atb * 0xCCCCCCCDull) >> 34);
+
+        idx = PE_LoadU32(weapon + 0x10u) & 0xFu;
+        scale = (idx < 11u) ? rom_scale[idx] : 0u;
+        atk = (int32_t)fifth + (int32_t)(int16_t)PE_LoadU16(weapon);
+        atk = pe_s32_div100(atk * (int32_t)scale);
+    }
+
+    if ((flags & 0x180000u) != 0u ||
+        (int16_t)PE_LoadU16(weapon + 6u) == 8)
+        dmg = atk - (int32_t)PE_LoadU16(body + 0x8Cu);
+    else {
+        unsigned int div = PE_LoadU32(weapon + 0x10u) & 0xFu;
+
+        if (div == 0u)
+            dmg = atk;
+        else
+            dmg = atk - (int32_t)PE_LoadU16(body + 0x8Cu) / (int)div;
+    }
+
+    if (dmg <= 0) {
+        word = PE_LoadU32(body);
+        dmg = ((word & 0x38000u) == 0x18000u) ? 2 : 1;
+        if ((word & 0xC0000u) == 0xC0000u)
+            PE_StoreU32(body + 0xCCu,
+                        PE_LoadU32(body + 0xCCu) | 0x1000000u);
+    }
+
+    hp = (int32_t)PE_LoadU32(body + 0x10u) - dmg;
+    PE_StoreU32(body + 0x10u, (uint32_t)hp);
+    word = PE_LoadU32(body);
+    word = (word & ~BODY_HITMASK) | BODY_REACT;
+    PE_StoreU32(body, word);
+}
+
 static void pe_27d14_atb(pe_addr_t actor, pe_addr_t body)
 {
     uint16_t cur;
@@ -176,7 +335,9 @@ void func_80027D14(pe_addr_t actor)
         pe_27d14_dot(body);
     }
 
-    /* body&0x6000 → 27A08 / 28574 / 6DCE4 deferred. */
+    /* body&0x6000==0x2000 → 28574. 27A08 / 6DCE4 / 0x4000 deferred. */
+    if ((PE_LoadU32(body) & BODY_HITMASK) == BODY_HIT)
+        func_80028574(actor);
     kind = (int8_t)PE_LoadU8(body + 5u);
     if (kind != 1) {
         PE_StoreU32(actor + 0x68u, 0u);
