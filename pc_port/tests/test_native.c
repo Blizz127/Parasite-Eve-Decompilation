@@ -12117,6 +12117,37 @@ static void test_BTL110_attack_clip_damages(void)
     PASS();
 }
 
+static void test_BTL111_4000_clears_next_tick(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+
+    TEST("BTL111_4000_clears_next_tick");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(rec + 0x68u, weapon);
+    PE_StoreU16(weapon, 10u);
+    PE_StoreU16(weapon + 6u, 8u);
+    PE_StoreU32(weapon + 0x10u, 1u);
+    PE_StoreU32(ebody, 0x2000u);
+    PE_StoreU32(ebody + 0x10u, 40u);
+    PE_StoreU32(ebody + 0x88u, 40u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    func_80027D14(enemy);
+    ASSERT((PE_LoadU32(ebody) & 0x6000u) == 0x4000u, "react");
+    ASSERT(PE_LoadU32(ebody + 0x10u) == 30u, "hit");
+    func_80027D14(enemy);
+    ASSERT((PE_LoadU32(ebody) & 0x6000u) == 0u, "28088 cleared");
+    ASSERT(PE_LoadU32(ebody + 0x10u) == 30u, "no second 28574");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -28568,6 +28599,7 @@ int main(void)
     test_BTL109_aya_hp0_no_victory();
     test_BTL110_21de0_arms_d294();
     test_BTL110_attack_clip_damages();
+    test_BTL111_4000_clears_next_tick();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

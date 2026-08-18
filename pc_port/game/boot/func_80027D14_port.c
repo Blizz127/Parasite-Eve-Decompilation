@@ -388,6 +388,7 @@ void func_80027D14(pe_addr_t actor)
     int32_t cap;
     int8_t kind;
     uint32_t d1a0;
+    uint32_t bits;
 
     if (actor == 0u)
         return;
@@ -409,9 +410,13 @@ void func_80027D14(pe_addr_t actor)
         pe_27d14_dot(body);
     }
 
-    /* body&0x6000==0x2000 → 28574. 27A08 / 6DCE4 / 0x4000 deferred. */
-    if ((PE_LoadU32(body) & BODY_HITMASK) == BODY_HIT)
+    /* body&0x6000==0x2000 → 28574. 0x4000 → 28088 clears 0x6000.
+     * 27A08 / 6DCE4 / 1A680 react stay deferred. */
+    bits = PE_LoadU32(body) & BODY_HITMASK;
+    if (bits == BODY_HIT)
         func_80028574(actor);
+    else if (bits == BODY_REACT)
+        PE_StoreU32(body, PE_LoadU32(body) & ~BODY_HITMASK);
     kind = (int8_t)PE_LoadU8(body + 5u);
     if (kind != 1) {
         PE_StoreU32(actor + 0x68u, 0u);

@@ -9,9 +9,15 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL111 — 27D14 0x4000 clears 0x6000
+
+`matching_native` pending suite. After `28574` the next
+tick stores `body & ~0x6000`. `1A680` react deferred.
+Evidence: `docs/evidence/pe-btl111-4000-clear/`.
+
 ## PE-BTL110 — 21DE0 Attack clip arms D294
 
-`matching_native` pending suite. `21DE0` → `21F38` →
+`matching_native=876/876` local. `21DE0` → `21F38` →
 `2312C` kinds 6/8/10 → `23008` sets `D294` when the
 Attack clip finishes. `CE54==1` still required for
 `236E8` to OR `0x2000`. Evidence:

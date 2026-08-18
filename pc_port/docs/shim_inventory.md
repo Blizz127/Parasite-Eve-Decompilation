@@ -442,6 +442,8 @@ never native function pointers.
 - ~~`func_80021DE0` / `21F38` / `2312C`~~ — TRANSLATED
   (PE-BTL110): Attack clip completion sets `D294`.
   `game/boot/func_80027D14_port.c`
+- ~~`27D14` `0x4000` clear~~ — TRANSLATED (PE-BTL111):
+  next tick after `28574` stores `body & ~0x6000`.
 - ~~`func_8005C498` / `512AC` case 10 / 27D14 DoT~~ —
   TRANSLATED (PE-BTL107): `body+0x10 -= body+0x96`;
   `29A68` stores `5C498` to `gp+0x534`.
