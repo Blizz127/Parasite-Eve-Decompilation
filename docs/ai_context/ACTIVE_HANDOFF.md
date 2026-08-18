@@ -9,18 +9,28 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL100 — 1F078 mode 3; 2A7F8 → 2B29C
+
+MATCHED yaml C leaves = 227. `matching_native=840/840`
+local. `1F814` / `6DE80` /
+`2AA98` / `2B29C` / `53E6C` are NONMATCHING_C.
+After a real `1F704` leaves HP<=0, `1F078` stores
+mode 3, `4D4=0`, `1A680(19)`, `6DE80(0x46B)`.
+Next `299CC` tick takes `2A7F8` mode 3: bit
+`0x800` or `53E6C(18)` → `2AA98`, else `2B29C`.
+Zero fixture takes `2B29C` case 0 (wait Aya
+`+0x0E==19` / `+0x0F==+0x16`). `2B0E8` is mode 2.
+`2B29C` case 5 mode=-1 / `6A25C` is not this cut.
+Do not poke `4D4`, mode 7, scratch bits, or HP.
+Evidence: `docs/evidence/pe-btl100-mode3-2aa98/`.
+
 ## PE-BTL99 — 1F814 hit-react; 6DE80 after 1A680
 
-MATCHED yaml C leaves = 227. `matching_native=833/833`
-local. `1F814` / `6DE80` are
-NONMATCHING_C native ports. After `1F704`, HP!=0
-jals `1F814` → `305C8` → `1A680` → `6DE80(0x46A)`
-→ gated D1D0. Second live subtract is 39→34.
-`6DED4` → `6DFA8`/`6DF50` stay fail-closed.
-Death is **not** at `1F4D4`. Next native frontier
-is authentic `1F078` (after the 1D340 prefix),
-whose death-arm `6DE80` uses `a0=0x46B`. Do not
-poke `4D4`, mode 7, scratch bits, or HP. Evidence:
+`matching_native=833/833` local. After `1F704`,
+HP!=0 jals `1F814` → `305C8` → `1A680` →
+`6DE80(0x46A)` → gated D1D0. Second live subtract
+is 39→34. `6DED4` → `6DFA8`/`6DF50` stay
+fail-closed. Death is **not** at `1F4D4`. Evidence:
 `docs/evidence/pe-btl99-6de80/`.
 
 ## PE-BTL98 — 0x95 mode 0; 299CC jal 1D340; 1F704 40→39

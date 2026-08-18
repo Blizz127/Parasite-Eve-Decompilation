@@ -29,12 +29,11 @@ delta is 39→34 (`s0=5`). Native reproduces that by
 a second live subtract with weapon `+0x0C=5`.
 HP is not planted between ticks.
 
-## Death (ROM-located, not this cut)
+## Death (BTL100)
 
 Death is **not** at `1F4D4`. `1D340` `1F078`
-`lh +0x0C` / `1F080` `bgtz` is after the 1D340
-prefix (HUD `sb` storm, `77CF4`, `1F9C4`, `32B0C`,
-`21054`, `6F6D4`, `21D4C`). HP<=0 then stores:
+`lh +0x0C` / `1F080` `bgtz` after a real `1F704`
+HP<=0 stores:
 
 - Aya `+0x68/6C/70=0`
 - `D1AC &= ~0x300`
@@ -46,8 +45,9 @@ prefix (HUD `sb` storm, `77CF4`, `1F9C4`, `32B0C`,
 - `1A680(D254, 19)`
 - `1F4B0` `sh $zero, +0x0C`
 
-Do not invent those stores immediately after
-`1F4D4`. `encounter_complete` / teardown / field
+Those stores are the BTL100 `1F078` arm after a
+real `1F704`. HUD / `21D4C` / `374E8` stay
+deferred. `encounter_complete` / teardown / field
 return are not this cut.
 
 ## Verify

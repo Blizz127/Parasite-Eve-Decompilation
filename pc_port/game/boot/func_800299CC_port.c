@@ -143,8 +143,13 @@ void func_8002BC90_mode6_cut(void)
 
 void func_800299CC_mode_switch_cut(void)
 {
-    if (PE_LoadU32(GA_D_8009D28C) == 6u)
+    uint32_t mode;
+
+    mode = PE_LoadU32(GA_D_8009D28C);
+    if (mode == 6u)
         func_8002BC90_mode6_cut();
+    else if (mode == 3u)
+        func_8002A7F8_mode3_cut();
 }
 
 /*

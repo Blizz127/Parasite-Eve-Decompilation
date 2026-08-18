@@ -11,8 +11,10 @@
  *   plus the 0xC0/0x100 speed adjust. Walk D20C skipping Aya
  *   and +0x98 bit 0x10. record+0x4C bit 0x4000 (ROM gate at
  *   1E780) jals 1F4D4(actor). Death is not at 1F4D4.
- *   Authentic 1F078 / 1F080 is after the 1D340 prefix
- *   (HUD sb storm, 21D4C, 6F6D4, …) and is not this cut.
+ *   After a real 1F704 leaves HP<=0, the 1F078 / 1F080
+ *   arm stores mode 3, 4D4=0, 1A680(19), 1F4B0, and
+ *   6DE80(0x46B). HUD sb storm / 21D4C / 374E8 / 62F9C
+ *   / 67CBC stay deferred.
  *
  * 1F4D4 this cut: through 1F704, then if remaining HP!=0
  * jal 1F814(actor) and maybe sw actor → D1D0. 20288 stays
@@ -38,6 +40,12 @@
 #define GA_D_8009D29A 0x8009D29Au
 #define GA_D_8009D29B 0x8009D29Bu
 #define GA_D_8009D29C 0x8009D29Cu
+#define GA_D_8009D1AC 0x8009D1ACu
+#define GA_D_8009D1A0 0x8009D1A0u
+#define GA_D_8009D1CE 0x8009D1CEu
+#define GA_D_8009D244 0x8009D244u
+#define GA_D_8009D28C 0x8009D28Cu
+#define GA_D_8009D2E8 0x8009D2E8u
 
 static uint32_t s_bios_rand_seed = 1u;
 
@@ -226,6 +234,39 @@ void func_8001F4D4(pe_addr_t actor)
     }
 }
 
+static void func_8001D340_1f078_arm(void)
+{
+    pe_addr_t aya;
+    pe_addr_t rec;
+    uint32_t v;
+
+    aya = PE_LoadU32(GA_D_8009D254);
+    if (aya != 0u) {
+        PE_StoreU32(aya + 0x68u, 0u);
+        PE_StoreU32(aya + 0x6Cu, 0u);
+        PE_StoreU32(aya + 0x70u, 0u);
+    }
+    v = PE_LoadU32(GA_D_8009D1AC);
+    PE_StoreU32(GA_D_8009D1AC, v & ~0x300u);
+    PE_StoreU32(GA_D_8009D28C, 3u);
+    PE_StoreU8(GA_D_8009D1CE, 0u);
+    if (aya != 0u)
+        func_8006DE80(0x46B, 0,
+                      (int)(int16_t)PE_LoadU16(aya + 0x2Au),
+                      (int)(int16_t)PE_LoadU16(aya + 0x2Eu),
+                      (int)(int16_t)PE_LoadU16(aya + 0x32u));
+    PE_StoreU8(GA_D_8009D244, 0u);
+    D_8009D1A0 &= ~4u;
+    PE_StoreU32(GA_D_8009D1A0, PE_LoadU32(GA_D_8009D1A0) & ~4u);
+    v = PE_LoadU32(GA_D_8009D2E8);
+    PE_StoreU32(GA_D_8009D2E8, v | 1u);
+    if (aya != 0u)
+        func_8001A680_command_cut(aya, 19u);
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec != 0u)
+        PE_StoreU16(rec + 0x0Cu, 0u);
+}
+
 void func_8001D340(unsigned int a0)
 {
     pe_addr_t rec;
@@ -236,6 +277,7 @@ void func_8001D340(unsigned int a0)
     uint16_t spd;
     uint16_t sum;
     uint32_t c0;
+    int did_1f4d4;
 
     rec = PE_LoadU32(GA_D_8009D278);
     if (rec == 0u)
@@ -263,6 +305,7 @@ void func_8001D340(unsigned int a0)
     if ((flags & 0x00800000u) != 0u || (flags & 0x00180000u) != 0u)
         return;
 
+    did_1f4d4 = 0;
     aya = PE_LoadU32(GA_D_8009D254);
     actor = PE_LoadU32(GA_D_8009D20C);
     while (actor != 0u) {
@@ -276,9 +319,16 @@ void func_8001D340(unsigned int a0)
             if (body != 0u && PE_LoadU32(body + 0x18u) != 0u &&
                 (flags & 0x4000u) != 0u) {
                 func_8001F4D4(actor);
+                did_1f4d4 = 1;
                 break;
             }
         }
         actor = next;
     }
+
+    /* 1F078 lh +0x0C / 1F080 bgtz. Only after a real 1F704. */
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (did_1f4d4 && rec != 0u &&
+        (int16_t)PE_LoadU16(rec + 0x0Cu) <= 0)
+        func_8001D340_1f078_arm();
 }

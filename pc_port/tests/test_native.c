@@ -10922,14 +10922,14 @@ static void test_BTL99_hp0_skips_1f814(void)
     PE_StoreU8(0x80108B00u + 2u, 1u);
 
     func_800299CC_damage_entry_cut();
-    ASSERT(PE_LoadU16(rec + 0x0Cu) == 0u, "1F704 40→0");
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 0u, "1F704 40→0 then 1F4B0");
     ASSERT(PE_LoadU8(0x8009D29Au) == 0u, "1F814 skipped");
     ASSERT(PE_LoadU32(0x8009D1D0u) == 0u, "D1D0 skipped");
-    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0; 1F078 not this cut");
-    ASSERT(PE_LoadU8(0x8009D244u) == 1u, "4D4 stays 1");
-    ASSERT(PE_LoadU8(aya + 0x0Eu) == 6u, "1A680(19) not taken");
-    ASSERT(PE_LoadU32(aya + 0x68u) == 0x11u, "Aya +0x68 not cleared");
-    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) == 0u, "D2E8 not set");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 3u, "1F41C mode 3");
+    ASSERT(PE_LoadU8(0x8009D244u) == 0u, "1F43C 4D4=0");
+    ASSERT(PE_LoadU8(aya + 0x0Eu) == 19u, "1A680(19)");
+    ASSERT(PE_LoadU32(aya + 0x68u) == 0u, "Aya +0x68 cleared");
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) != 0u, "D2E8|=1");
     ASSERT(g_stub_count == 0, "hp0 recorded as stub");
     PASS();
 }
@@ -11014,6 +11014,202 @@ static void test_BTL99_6de80_wrapper(void)
     func_8006DE80(0x46A, 0, 10, 20, 30);
     ASSERT(PE_LoadU32(0x80190000u) == 0xA5A5A5A5u, "6DFA8/6DF50 parked");
     ASSERT(g_stub_count == 0, "6DED4 not stub");
+    PASS();
+}
+
+static void test_BTL100_53e6c_zero_fixture(void)
+{
+    TEST("BTL100_53e6c_zero_fixture");
+    ResetTestState();
+    ASSERT(func_80053E6C(18) == 0, "empty table v0=0");
+    ASSERT(g_stub_count == 0, "53E6C not stub");
+    PASS();
+}
+
+static void test_BTL100_2aa98_case0_wait(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL100_2aa98_case0_wait");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU8(aya + 0x0Eu, 19u);
+    PE_StoreU8(aya + 0x0Fu, 3u);
+    PE_StoreU16(aya + 0x16u, 8u);
+    PE_StoreU32(aya + 0x98u, 0x100u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    ASSERT(func_8002AA98() == 0, "wait v0=0");
+    ASSERT(PE_LoadU8(0x8009CE74u) == 0u, "phase stays 0");
+    ASSERT((PE_LoadU32(aya + 0x98u) & 0x100u) == 0u, "+0x98 bit 0x100 clear");
+    ASSERT(g_stub_count == 0, "2AA98 wait not stub");
+    PASS();
+}
+
+static void test_BTL100_2aa98_case0_advance(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL100_2aa98_case0_advance");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU8(aya + 0x0Eu, 19u);
+    PE_StoreU8(aya + 0x0Fu, 8u);
+    PE_StoreU16(aya + 0x16u, 8u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    ASSERT(func_8002AA98() == 0, "advance v0=0");
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "phase 1");
+    ASSERT(PE_LoadU8(0x8009CE70u) == 16u, "CE70=16");
+    ASSERT((PE_LoadU32(aya + 0x98u) & 0x100u) != 0u, "+0x98|=0x100");
+    PASS();
+}
+
+static void test_BTL100_mode3_next_tick_2b29c_wait(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t actor = 0x80108700u;
+    pe_addr_t body = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+    pe_addr_t tbl = 0x80108A00u;
+
+    TEST("BTL100_mode3_next_tick_2b29c_wait");
+    ResetTestState();
+    ASSERT(func_80019D24(0u) == 1, "0xCF 4D4");
+    ASSERT(func_800192B8(0u) == 1, "0x95 mode 0");
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D20Cu, actor);
+    PE_StoreU32(actor, body);
+    PE_StoreU32(actor + 4u, 0u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU8(aya + 0x0Eu, 6u);
+    PE_StoreU8(aya + 0x0Fu, 4u);
+    PE_StoreU32(aya + 0x98u, 0x100u);
+    PE_StoreU32(body, 3u << 21);
+    PE_StoreU32(body + 0x18u, weapon);
+    PE_StoreU8(body + 0x90u, 0u);
+    PE_StoreU16(weapon + 0x0Cu, 40u);
+    PE_StoreU8(weapon + 1u, 0u);
+    PE_StoreU8(weapon + 0x0Eu, 1u);
+    PE_StoreU32(tbl, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x20u, 0u);
+    PE_StoreU16(rec + 0x24u, 0u);
+    PE_StoreU32(rec + 0x34u, 0u);
+    PE_StoreU32(rec + 0x4Cu, 0x4000u);
+    PE_StoreU32(rec + 0x6Cu, tbl);
+    PE_StoreU32(0x800B0E98u + 19u * 4u, 0x80108B00u);
+    /* 1A680(19) sets +0x0F=resource[2]-1 and sw 0 at +0x14 (clears +0x16). */
+    PE_StoreU8(0x80108B00u + 2u, 10u);
+    PE_StoreU8(0x8009CE74u, 0u);
+
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 3u, "1F078 mode 3");
+    ASSERT(PE_LoadU8(0x8009D244u) == 0u, "4D4=0");
+    ASSERT(PE_LoadU8(aya + 0x0Eu) == 19u, "1A680(19)");
+
+    func_800299CC_mode_switch_cut();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 0u, "2B29C wait phase 0");
+    ASSERT((PE_LoadU32(aya + 0x98u) & 0x100u) == 0u, "2B29C wait clears 0x100");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 3u, "mode stays 3");
+    ASSERT(g_stub_count == 0, "mode3 wait recorded as stub");
+    PASS();
+}
+
+static void test_BTL100_2b29c_case0_advance(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+
+    TEST("BTL100_2b29c_case0_advance");
+    ResetTestState();
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(enemy + 4u, 0u);
+    PE_StoreU8(ebody + 5u, 1u);
+    PE_StoreU32(enemy + 0x68u, 0x22u);
+    PE_StoreU8(aya + 0x0Eu, 19u);
+    PE_StoreU8(aya + 0x0Fu, 8u);
+    PE_StoreU16(aya + 0x16u, 8u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU16(rec + 0x0Cu, 0u);
+    PE_StoreU16(rec + 0x0Eu, 0u);
+    PE_StoreU16(rec + 0x1Cu, 40u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    func_8002B29C();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "phase 1");
+    ASSERT(PE_LoadU8(0x8009CE70u) == 70u, "CE70=70");
+    ASSERT((PE_LoadU32(aya + 0x98u) & 0x100u) != 0u, "Aya +0x98|=0x100");
+    ASSERT(PE_LoadU32(enemy + 0x68u) == 0x22u, "body+5==1 skipped");
+    ASSERT(PE_LoadU16(rec + 0x0Eu) == 0u, "293F4 copied HP 0");
+    ASSERT(g_stub_count == 0, "2B29C advance not stub");
+    PASS();
+}
+
+static void test_BTL100_2b29c_walks_enemy(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+
+    TEST("BTL100_2b29c_walks_enemy");
+    ResetTestState();
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(enemy + 4u, 0u);
+    PE_StoreU8(enemy + 0x0Cu, 0u);
+    PE_StoreU8(ebody + 5u, 0u);
+    PE_StoreU8(ebody + 6u, 4u);
+    PE_StoreU32(enemy + 0x68u, 0x22u);
+    PE_StoreU32(enemy + 0x98u, 0u);
+    PE_StoreU16(enemy + 0x250u, 0u);
+    PE_StoreU8(aya + 0x0Eu, 19u);
+    PE_StoreU8(aya + 0x0Fu, 0u);
+    PE_StoreU16(aya + 0x16u, 0u);
+    PE_StoreU32(0x800B0E98u + 4u * 4u, 0x80108B00u);
+    PE_StoreU8(0x80108B00u + 2u, 1u);
+    PE_StoreU16(rec + 0x0Cu, 0u);
+    PE_StoreU16(rec + 0x0Eu, 0u);
+    PE_StoreU16(rec + 0x1Cu, 40u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    func_8002B29C();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "phase 1");
+    ASSERT((PE_LoadU16(enemy + 0x250u) & 2u) != 0u, "+0x250|=2");
+    ASSERT((PE_LoadU32(enemy + 0x98u) & 0x1000u) != 0u, "+0x98|=0x1000");
+    ASSERT(PE_LoadU8(enemy + 0x0Eu) == 4u, "1A680 body+6");
+    ASSERT(PE_LoadU32(enemy + 0x68u) == 0u, "+0x68 cleared");
+    ASSERT(PE_LoadU32(aya + 0x68u) == 0u, "Aya not walked");
+    ASSERT(g_stub_count == 0, "walk recorded as stub");
+    PASS();
+}
+
+static void test_BTL100_bit800_takes_2aa98(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL100_bit800_takes_2aa98");
+    ResetTestState();
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(rec + 0x4Cu, 0x800u);
+    PE_StoreU8(aya + 0x0Eu, 19u);
+    PE_StoreU8(aya + 0x0Fu, 8u);
+    PE_StoreU16(aya + 0x16u, 8u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    func_8002A7F8_mode3_cut();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "2AA98 advanced");
+    ASSERT(PE_LoadU8(0x8009CE70u) == 16u, "CE70=16 not 70");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode not invented");
     PASS();
 }
 
@@ -27425,6 +27621,13 @@ int main(void)
     test_BTL99_damage_loop_39_to_34();
     test_BTL99_305c8_facing_wrap();
     test_BTL99_6de80_wrapper();
+    test_BTL100_53e6c_zero_fixture();
+    test_BTL100_2aa98_case0_wait();
+    test_BTL100_2aa98_case0_advance();
+    test_BTL100_mode3_next_tick_2b29c_wait();
+    test_BTL100_2b29c_case0_advance();
+    test_BTL100_2b29c_walks_enemy();
+    test_BTL100_bit800_takes_2aa98();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

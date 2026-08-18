@@ -70,8 +70,10 @@ not from the `293F4` copy. First retail subtract is 40→39;
 the next live store is 39→34. After a nonzero remainder,
 `1F814` issues `1A680` on `D254` (hit-react). Death is the
 `1D340` `1F080` HP<=0 path (mode 3, `4D4=0`, `1A680(19)`,
-`1F4B0` zero). `encounter_complete` / field return are
-not this cut. Do not invent pad / hit / rec=4 / `4D4` /
+`1F4B0` zero). Next tick `2A7F8` mode 3 takes `2B29C`
+on the zero fixture (`2AA98` if bit `0x800` /
+`53E6C(18)`). `2B29C` case 5 mode=-1 is not this cut.
+`encounter_complete` / field return are not this cut. Do not invent pad / hit / rec=4 / `4D4` /
 mode 7 / HP.
 | `battle_mode` | `D_8009D28C` raw | 0/3/4/5/6/7/8 |
 | `formation_id` | `49` or `50` plus `1332/1333/1334` | write as `49;1332,1333,1334` |
