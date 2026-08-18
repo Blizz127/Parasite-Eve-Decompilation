@@ -85,6 +85,8 @@ body remains and Aya `record+0x0C>0`.
 `body+0x10<=0` → `28E94` → `2F970` → `292EC`.
 Mode 9 has no `2A7F8` arm (`2AA24` join).
 m0005i `0x94` vs 9 then `0x40`/`0xAD`/`0xAA`.
+`27D14` DoT (`body&0x10`, shift>=0x1E) subtracts
+`body+0x96` from `body+0x10`. `5C498` is `gp+0x534`.
 Do not invent pad / hit / rec=4 / `4D4` /
 mode 7 / HP.
 | `battle_mode` | `D_8009D28C` raw | 0/3/4/5/6/7/8 |

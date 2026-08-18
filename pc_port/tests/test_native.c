@@ -11765,6 +11765,95 @@ static void test_BTL106_death_not_mode9(void)
     PASS();
 }
 
+static void test_BTL107_dot_kills_then_mode2(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+
+    TEST("BTL107_dot_kills_then_mode2");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(enemy + 4u, 0u);
+    PE_StoreU32(ebody, 0x3D0u);
+    PE_StoreU32(ebody + 0x10u, 40u);
+    PE_StoreU32(ebody + 0x88u, 40u);
+    PE_StoreU16(ebody + 0x96u, 40u);
+    PE_StoreU8(ebody + 0xAFu, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x0Eu, 40u);
+    PE_StoreU16(rec + 0x1Cu, 40u);
+    PE_StoreU8(0x8009D2A0u, 1u);
+    func_80027D14(enemy);
+    ASSERT((int32_t)PE_LoadU32(ebody + 0x10u) == 0, "DoT 40-40");
+    ASSERT(PE_LoadU8(ebody + 0xACu) == 3u, "same tick 28E94");
+    func_80027D14(enemy);
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 2u, "mode 2");
+    ASSERT(PE_LoadU32(0x8009D280u) != 0xA9400048u, "not death dest");
+    PASS();
+}
+
+static void test_BTL107_dot_aya_hp0_no_mode2(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+
+    TEST("BTL107_dot_aya_hp0_no_mode2");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(ebody, 0x3D0u);
+    PE_StoreU32(ebody + 0x10u, 40u);
+    PE_StoreU16(ebody + 0x96u, 40u);
+    PE_StoreU16(rec + 0x0Cu, 0u);
+    PE_StoreU8(0x8009D2A0u, 1u);
+    func_80027D14(enemy);
+    func_80027D14(enemy);
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "Aya HP<=0 is not victory");
+    PASS();
+}
+
+static void test_BTL107_512ac10_sets_1000(void)
+{
+    TEST("BTL107_512ac10_sets_1000");
+    ResetTestState();
+    PE_StoreU32(0x8009D010u, 0u);
+    func_800512AC_cmd10_cut();
+    ASSERT(PE_LoadU32(0x8009D010u) == 1000u, "jtbl[10]");
+    PASS();
+}
+
+static void test_BTL107_5c498_and_534(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL107_5c498_and_534");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(aya, 0x8010A000u);
+    PE_StoreU32(0x8009D278u, 0x8010A000u);
+    PE_StoreU32(0x8010A000u + 0x4Cu, 0u);
+    PE_StoreU32(0x8009CED8u, 1u);
+    PE_StoreU32(0x8009D010u, 5u);
+    ASSERT(func_8005C498() == 0, "CED8 blocks");
+    ASSERT(PE_LoadU32(0x8009D010u) == 5u, "51504 skipped");
+    PE_StoreU32(0x8009CED8u, 0u);
+    ASSERT(func_8005C498() == 0, "51504 zeros");
+    ASSERT(PE_LoadU32(0x8009D010u) == 0u, "D010=0");
+    func_800512AC_cmd10_cut();
+    func_800299CC_after_consume_cut();
+    ASSERT(PE_LoadU16(0x8009D2A4u) == 0u, "5C498 after 51504");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -28202,6 +28291,10 @@ int main(void)
     test_BTL106_mode9_join_keeps_dest();
     test_BTL106_0x94_sees_9_then_40_ad_aa();
     test_BTL106_death_not_mode9();
+    test_BTL107_dot_kills_then_mode2();
+    test_BTL107_dot_aya_hp0_no_mode2();
+    test_BTL107_512ac10_sets_1000();
+    test_BTL107_5c498_and_534();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

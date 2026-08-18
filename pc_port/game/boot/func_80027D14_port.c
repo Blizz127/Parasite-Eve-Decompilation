@@ -108,19 +108,43 @@ static void pe_27d14_atb(pe_addr_t actor, pe_addr_t body)
     uint16_t cur;
     uint16_t rate;
 
-    cur = PE_LoadU16(actor + 0x0Cu);
-    rate = PE_LoadU16(actor + 0x8Eu);
+    /* s1 stays *actor. ATB is body+0x0C / +0x8E. */
+    cur = PE_LoadU16(body + 0x0Cu);
+    rate = PE_LoadU16(body + 0x8Eu);
     if (cur < 0x2328u) {
         uint16_t sum = (uint16_t)(cur + rate);
 
         if ((PE_LoadU32(body) & 1u) != 0u)
             sum = (uint16_t)((int)sum - ((int)rate * 8) / 5);
-        PE_StoreU16(actor + 0x0Cu, sum);
+        PE_StoreU16(body + 0x0Cu, sum);
         return;
     }
-    PE_StoreU16(actor + 0x0Cu, 0x2328u);
+    PE_StoreU16(body + 0x0Cu, 0x2328u);
     if ((PE_LoadU32(actor + 0x98u) & 0x1000u) != 0u)
-        PE_StoreU16(actor + 0x0Cu, 0u);
+        PE_StoreU16(body + 0x0Cu, 0u);
+}
+
+static void pe_27d14_dot(pe_addr_t body)
+{
+    uint32_t word;
+    unsigned int shift;
+    int32_t hp;
+    int16_t tick;
+
+    word = PE_LoadU32(body);
+    if ((word & 0x10u) == 0u)
+        return;
+    shift = (word >> 5) & 0x1Fu;
+    if (shift < 0x1Eu) {
+        shift = (shift + 1u) & 0x1Fu;
+        word = (word & 0xFFFFFC1Fu) | (shift << 5);
+        PE_StoreU32(body, word);
+        return;
+    }
+    tick = (int16_t)PE_LoadU16(body + 0x96u);
+    hp = (int32_t)PE_LoadU32(body + 0x10u) - (int32_t)tick;
+    PE_StoreU32(body + 0x10u, (uint32_t)hp);
+    PE_StoreU32(body, word & 0xFFFFFC1Fu);
 }
 
 void func_80027D14(pe_addr_t actor)
@@ -147,8 +171,10 @@ void func_80027D14(pe_addr_t actor)
     }
 
     d1a0 = pe_d1a0();
-    if ((d1a0 & 0x100u) == 0u)
+    if ((d1a0 & 0x100u) == 0u) {
         pe_27d14_atb(actor, body);
+        pe_27d14_dot(body);
+    }
 
     /* body&0x6000 → 27A08 / 28574 / 6DCE4 deferred. */
     kind = (int8_t)PE_LoadU8(body + 5u);

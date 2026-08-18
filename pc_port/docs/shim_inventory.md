@@ -431,6 +431,11 @@ never native function pointers.
 - ~~`func_800292EC_victory_ready_cut` / `2F300_mode2_cut`~~ —
   TRANSLATED (PE-BTL104): remaining-enemy walk arms mode 2.
   `game/boot/func_8002AA98_port.c`
+- ~~`func_8005C498` / `512AC` case 10 / 27D14 DoT~~ —
+  TRANSLATED (PE-BTL107): `body+0x10 -= body+0x96`;
+  `29A68` stores `5C498` to `gp+0x534`.
+  `game/boot/func_80027D14_port.c`,
+  `game/boot/func_800299CC_port.c`
 - ~~`func_8002A7F8_join_cut` / mode 9~~ — TRANSLATED
   (PE-BTL106): `2AA24` fallthrough after `bne` vs 8;
   no dest store. `34DE0`/`33A40`/`67CBC` deferred.

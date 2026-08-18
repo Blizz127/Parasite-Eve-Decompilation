@@ -108,10 +108,32 @@ void func_800299CC_after_consume_cut(void)
     PE_StoreU32(GA_D_8009D230, 0u);
     PE_StoreU32(GA_D_8009D278, PE_LoadU32(aya));
 
+    /* 29A5C jal 5C498; 29A68 sh v0, gp+0x534. Before mode!=0. */
+    PE_StoreU16(0x8009D2A4u, (uint16_t)func_8005C498());
+
     if (PE_LoadU32(GA_D_8009D28C) != 0u)
         return;
     if (PE_LoadU8(GA_D_8009D244) == 0u)
         return;
+}
+
+/*
+ * PE-BTL107 — 5C498 return is gp+0x534. 42ED0 is lw
+ * D_8009CED8; nonzero → 42F44 / v0=0. Zero → 51504
+ * clears D_8009D010, chain deferred, 514F8 returns it.
+ * 512AC(10) is the 1000 writer (jtbl[10] @ 514A0).
+ */
+int func_8005C498(void)
+{
+    if (PE_LoadU32(0x8009CED8u) != 0u)
+        return 0;
+    PE_StoreU32(0x8009D010u, 0u);
+    return (int)PE_LoadU32(0x8009D010u);
+}
+
+void func_800512AC_cmd10_cut(void)
+{
+    PE_StoreU32(0x8009D010u, 1000u);
 }
 
 /*

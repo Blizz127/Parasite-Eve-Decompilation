@@ -9,6 +9,15 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL107 — 27D14 DoT; 5C498 → 534
+
+`matching_native=866/866` local. `27D14` ATB is
+`body+0x0C`. `body&0x10` and shift>=0x1E subtracts
+`body+0x96` from `body+0x10` on the same tick as
+`28E94`. `5C498` return is `gp+0x534`. `512AC(10)`
+writes 1000. Chain to that case is not this cut.
+Evidence: `docs/evidence/pe-btl107-dot-534/`.
+
 ## PE-BTL106 — mode 9 join; 0x94 vs 9
 
 `matching_native=862/862` local. `2A7F8` has no
