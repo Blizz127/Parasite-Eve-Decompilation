@@ -218,6 +218,7 @@ extern int func_80021054(void);
 extern void func_80021DE0(void);
 extern void func_80022394(void);
 extern int func_80024A3C(void);
+extern void func_80024250(int index, pe_addr_t actor);
 extern void func_80021F38(void);
 extern int func_8002312C(pe_addr_t slot);
 extern void func_80023008(void);
@@ -276,6 +277,7 @@ extern int func_8006CDA4_stateA_cut(void);
 extern int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
                          int stack_flag);
 extern int func_8006C4C4(int a0);
+extern int func_8006C1CC(int a0);
 extern int func_8006C5BC(void);
 extern pe_addr_t func_8006C5BC_ee13_prefix_cut(void);
 extern void func_8006C5BC_ee13_epilogue_cut(void);

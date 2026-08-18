@@ -228,7 +228,8 @@ int func_80024A3C(void)
     if (phase == 2u) {
         uint32_t flags;
 
-        /* 6C1CC/3C5D8/6F39C deferred (treat 6C1CC ready). */
+        if (func_8006C1CC(1) != 0)
+            return 0;
         aya = PE_LoadU32(GA_D_8009D254);
         if (aya == 0u)
             return 0;
@@ -362,22 +363,72 @@ int func_80024A3C(void)
 }
 
 /*
+ * PE-BTL116 — 24250 jtbl[19] (tid 406 = 387+19) is the only
+ * TEXT OR of rec+0x4C bit 0x80000 (24988/24994). jtbl[0]
+ * (tid 387) jumps to 24998 and skips that OR. Do not plant
+ * the bit.
+ */
+void func_80024250(int index, pe_addr_t actor)
+{
+    pe_addr_t rec;
+    uint32_t word;
+
+    (void)actor;
+    if ((unsigned int)index >= 20u)
+        return;
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec == 0u)
+        return;
+    if (index == 19) {
+        word = PE_LoadU32(rec + 0x4Cu);
+        word = (word | 0x80000u) & ~0x200000u;
+        PE_StoreU32(rec + 0x4Cu, word);
+    }
+    if ((int16_t)PE_LoadU16(rec + 0x1Cu) < (int16_t)PE_LoadU16(rec + 0x0Cu))
+        PE_StoreU16(rec + 0x0Cu, PE_LoadU16(rec + 0x1Cu));
+}
+
+/*
  * 22394: lb D2A0. Zero walks/clears targeting (not this cut).
- * Nonzero and rec+0x4C&0x80000 jals 24A3C. 0x200000 memcpy
- * prefix and 53D2C stay deferred.
+ * rec+0x4C&0x80000 jals 24A3C. When that bit is clear and
+ * 0x10000 is clear, 22C78 ORs 0x200000 and jals 24250
+ * (tid-387). Slot used in [1,2] blocks unless tid==406.
  */
 void func_80022394(void)
 {
     pe_addr_t rec;
+    pe_addr_t slot;
+    pe_addr_t actor;
+    pe_addr_t pool;
+    uint32_t flags;
+    int16_t tid;
+    unsigned int used;
+    unsigned int idx;
 
     if ((int8_t)PE_LoadU8(GA_D_8009D2A0) == 0)
         return;
     rec = PE_LoadU32(GA_D_8009D278);
     if (rec == 0u)
         return;
-    if ((PE_LoadU32(rec + 0x4Cu) & 0x80000u) == 0u)
+    flags = PE_LoadU32(rec + 0x4Cu);
+    if ((flags & 0x80000u) != 0u) {
+        (void)func_80024A3C();
         return;
-    (void)func_80024A3C();
+    }
+    if ((flags & 0x10000u) != 0u)
+        return;
+    slot = GA_T_800BE830 + ((uint32_t)PE_LoadU8(GA_D_8009D1D4) << 3);
+    tid = (int16_t)PE_LoadU16(slot + 4u);
+    idx = PE_LoadU32(0x8009D258u);
+    pool = PE_LoadU32(0x800942E4u);
+    used = 0u;
+    if (pool != 0u && idx < 11u)
+        used = PE_LoadU8(pool + idx * 0xA0Cu);
+    if ((used - 1u) < 2u && tid != 406)
+        return;
+    PE_StoreU32(rec + 0x4Cu, flags | 0x200000u);
+    actor = PE_LoadU32(slot);
+    func_80024250((int)tid - 387, actor);
 }
 
 void func_80021DE0(void)

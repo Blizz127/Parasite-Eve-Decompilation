@@ -12645,6 +12645,84 @@ static void test_BTL115_prefix_blocks_case6(void)
     PASS();
 }
 
+static void test_BTL116_6c1cc_default_and_block(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t res = 0x80108B00u;
+
+    TEST("BTL116_6c1cc_default_and_block");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    pe_btl114_bind_cmds(aya, res);
+    ASSERT(func_8006C1CC(1) == 0, "ED==0");
+    PE_StoreU8(0x800B0DC5u, 32u);
+    ASSERT(func_8006C1CC(1) == 1, "state 32 parks");
+    PE_StoreU8(0x8009D25Cu, 2u);
+    ASSERT(func_80024A3C() == 0, "case2");
+    ASSERT(PE_LoadU8(0x8009D25Cu) == 2u, "no stub advance");
+    PE_StoreU8(0x800B0DC5u, 0u);
+    ASSERT(func_80024A3C() == 0, "ready");
+    ASSERT(PE_LoadU8(0x8009D25Cu) == 3u, "2→3");
+    PASS();
+}
+
+static void test_BTL116_24250_tid406_sets_bit(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t dummy = 0x8010A200u;
+
+    TEST("BTL116_24250_tid406_sets_bit");
+    ResetTestState();
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(rec + 0x4Cu, 0x200000u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x1Cu, 10u);
+    PE_StoreU32(rec + 0x6Cu, dummy);
+    func_80024250(0, 0u);
+    ASSERT((PE_LoadU32(rec + 0x4Cu) & 0x80000u) == 0u, "tid387 no bit");
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 10u, "clamp");
+    PE_StoreU32(rec + 0x4Cu, 0x200000u);
+    func_80024250(19, 0u);
+    ASSERT((PE_LoadU32(rec + 0x4Cu) & 0x80000u) != 0u, "tid406 OR");
+    ASSERT((PE_LoadU32(rec + 0x4Cu) & 0x200000u) == 0u, "clears 0x200000");
+    PASS();
+}
+
+static void test_BTL116_22394_tid406_then_ce54(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t res = 0x80108B00u;
+    pe_addr_t res9 = 0x80108C00u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+
+    TEST("BTL116_22394_tid406_then_ce54");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(rec + 0x4Cu, 0u);
+    PE_StoreU16(rec + 0x0Cu, 10u);
+    PE_StoreU16(rec + 0x1Cu, 10u);
+    PE_StoreU8(0x8009D2A0u, 1u);
+    PE_StoreU8(0x8009CE3Cu, 1u);
+    PE_StoreU16(0x800BE834u, 406u);
+    PE_StoreU32(0x800BE830u, enemy);
+    PE_StoreU32(enemy, ebody);
+    pe_btl114_bind_cmds(aya, res);
+    PE_StoreU32(0x800B0E98u + 9u * 4u, res9);
+    PE_StoreU8(res9 + 2u, 11u);
+    func_8001A680_command_cut(aya, 8u);
+    PE_StoreU8(0x8009D25Cu, 9u);
+    func_80021DE0();
+    ASSERT(PE_LoadU8(0x8009CE54u) == 0u, "first tick arms bit");
+    ASSERT((PE_LoadU32(rec + 0x4Cu) & 0x80000u) != 0u, "natural 0x80000");
+    pe_btl114_tick_1a_eq_0f(aya);
+    func_80021DE0();
+    ASSERT(PE_LoadU8(0x8009CE54u) == 1u, "second tick case 9");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -29113,6 +29191,9 @@ int main(void)
     test_BTL115_case6_waits_252();
     test_BTL115_cases4_to_9_ce54();
     test_BTL115_prefix_blocks_case6();
+    test_BTL116_6c1cc_default_and_block();
+    test_BTL116_24250_tid406_sets_bit();
+    test_BTL116_22394_tid406_then_ce54();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

@@ -361,3 +361,22 @@ void func_800E0060(void)
     }
     PE_StoreU16(0x800E21A4u, 0u);
 }
+
+/*
+ * PE-BTL116 — 6C1CC default. lbu overlay+0xED (B0DC5).
+ * v1=state-32; if v1 not in [0,8) return 0 at 6C4A8.
+ * States 32-39 (jtbl 113D0) stay deferred. 24A3C cases
+ * 0/2 jal 6C1CC(1) and skip the rest of the case on
+ * nonzero. Tests with +0xED==0 take this default.
+ */
+int func_8006C1CC(int a0)
+{
+    uint8_t state;
+
+    (void)a0;
+    state = PE_LoadU8(0x800B0DC5u);
+    if ((uint8_t)(state - 32u) >= 8u)
+        return 0;
+    /* States 32-39 are the live bank SM. Do not invent v0=0. */
+    return 1;
+}
