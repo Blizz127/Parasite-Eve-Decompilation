@@ -12778,6 +12778,31 @@ static void test_BTL117_e8_zero_parks(void)
     PASS();
 }
 
+static void test_BTL119_case2_after_ed32_bank(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t res = 0x80108B00u;
+    int i;
+
+    TEST("BTL119_case2_after_ed32_bank");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    pe_btl114_bind_cmds(aya, res);
+    PE_StoreU8(0x800B0CE2u, 11u);
+    PE_StoreU8(0x800B0CE3u, 11u);
+    PE_StoreU8(0x800B0DC5u, 32u);
+    PE_StoreU8(0x8009D25Cu, 2u);
+    for (i = 0; i < 5; i++) {
+        ASSERT(func_80024A3C() == 0, "bank tick");
+        ASSERT(PE_LoadU8(0x8009D25Cu) == 2u, "parks 32-36");
+    }
+    ASSERT(PE_LoadU8(0x800B0DC5u) == 39u, "at 39");
+    ASSERT(func_80024A3C() == 0, "39 opens case 2");
+    ASSERT(PE_LoadU8(0x8009D25Cu) == 3u, "2→3");
+    ASSERT(PE_LoadU8(aya + 0x252u) == 1u, "case2 set 1");
+    PASS();
+}
+
 static void test_BTL119_6c1cc_39_returns_0(void)
 {
     pe_addr_t aya = 0x80108600u;
@@ -29310,6 +29335,7 @@ int main(void)
     test_BTL117_bit4_parks_state40();
     test_BTL118_6c1cc_32_to_39_parks();
     test_BTL119_6c1cc_39_returns_0();
+    test_BTL119_case2_after_ed32_bank();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

@@ -9,6 +9,14 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL119 — 6C1CC state 39 returns 0
+
+`matching_native=902/902` local. State 39 with Aya
+jals `6698C` / `3D834`, wraps `+0xED` to 32, returns 0.
+Aya==0 stays fail-closed. `3D834` uses existing 3A088 /
+3DFD8 / 3B97C / 3BCE0 cuts. `+0x252` clearer remains.
+Evidence: `docs/evidence/pe-btl119-6c1cc-39/`.
+
 ## PE-BTL118 — 6C1CC 32–36; case 0/2/5 3C5D8
 
 `matching_native=901/901` local. `6C1CC` 32–36
