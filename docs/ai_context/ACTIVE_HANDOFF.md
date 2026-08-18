@@ -3,6 +3,15 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL123 — type-2 0x08 is persist[0x4A] < 40
+
+`matching_native` local. m0005i type-1 after the first
+`0x02` does three `0x08`s (3, 0, 5) then `0x09` subop
+`0x0A` (`persist[0x4A] < 40`) / `0x05` / `0x08` type 2.
+New-game persist 0 takes the spawn. persist `>= 40`
+skips. Type 2 still needs `0x6F` for a body. Do not poke
+persist. Evidence: `docs/evidence/pe-btl123-type2-gate/`.
+
 ## PE-BTL122 — D20C body is 0x6F / 2F7D8
 
 `matching_native` local. `35038` zeros `*actor` for

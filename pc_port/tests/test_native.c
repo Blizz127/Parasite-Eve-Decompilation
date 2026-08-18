@@ -13043,6 +13043,131 @@ static void test_BTL122_no_d20c_enemy_plant(void)
     PASS();
 }
 
+static void test_BTL123_persist4a_lt40_spawns_type2(void)
+{
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t stream = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t parent;
+    pe_addr_t task;
+    pe_addr_t actor;
+    int saw2;
+
+    TEST("BTL123_persist4a_lt40_spawns_type2");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x09u * 4u, 0x80012850u);
+    PE_StoreU32(0x800910A0u + 0x05u * 4u, 0x8001731Cu);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU8(desc, 1u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    task = PE_LoadU32(parent + 0xA8u);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task, stream);
+    PE_StoreU32(task + 0x10u, 1u);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU16(task + 8u, 0u);
+    /* disc type-1 +0x104: 09 slt persist[0x4A] < 40; 05; 08 type 2 */
+    PE_StoreU32(stream, 0x01308009u);
+    PE_StoreU32(stream + 4u, 0u);
+    PE_StoreU32(stream + 8u, 0xAu);
+    PE_StoreU32(stream + 12u, 0u);
+    PE_StoreU32(stream + 16u, 0x4Au);
+    PE_StoreU32(stream + 20u, 0x28u);
+    PE_StoreU32(stream + 24u, 0x00064005u);
+    PE_StoreU32(stream + 28u, 0u);
+    PE_StoreU32(stream + 32u, 0u);
+    PE_StoreU32(stream + 36u, 0xA4u);
+    PE_StoreU32(stream + 40u, 0x0000A008u);
+    PE_StoreU32(stream + 44u, 0u);
+    PE_StoreU32(stream + 48u, 2u);
+    PE_StoreU32(stream + 52u, 0u);
+    PE_StoreU32(stream + 56u, 0u);
+    PE_StoreU32(stream + 60u, 0u);
+    PE_StoreU32(stream + 64u, 0u);
+    PE_StoreU32(stream + 68u, 0x00002002u);
+    PE_StoreU32(stream + 72u, 0u);
+    PE_StoreU32(stream + 76u, 1u);
+    PE_StoreU32(parent + 0x98u, 0x100000E0u);
+    PE_StoreU32(0x800A77F0u + 0x4Au * 4u, 0u);
+    func_80017018();
+    saw2 = 0;
+    actor = PE_LoadU32(0x8009D20Cu);
+    while (actor != 0u) {
+        if (PE_LoadU8(actor + 0x0Cu) == 2u)
+            saw2 = 1;
+        actor = PE_LoadU32(actor + 4u);
+    }
+    ASSERT(saw2, "persist 0 < 40 spawns type 2");
+    PASS();
+}
+
+static void test_BTL123_persist4a_ge40_skips_type2(void)
+{
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t stream = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t parent;
+    pe_addr_t task;
+    pe_addr_t actor;
+    int saw2;
+
+    TEST("BTL123_persist4a_ge40_skips_type2");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x09u * 4u, 0x80012850u);
+    PE_StoreU32(0x800910A0u + 0x05u * 4u, 0x8001731Cu);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU8(desc, 1u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    task = PE_LoadU32(parent + 0xA8u);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task, stream);
+    PE_StoreU32(task + 0x10u, 1u);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(stream, 0x01308009u);
+    PE_StoreU32(stream + 4u, 0u);
+    PE_StoreU32(stream + 8u, 0xAu);
+    PE_StoreU32(stream + 12u, 0u);
+    PE_StoreU32(stream + 16u, 0x4Au);
+    PE_StoreU32(stream + 20u, 0x28u);
+    PE_StoreU32(stream + 24u, 0x00064005u);
+    PE_StoreU32(stream + 28u, 0u);
+    PE_StoreU32(stream + 32u, 0u);
+    PE_StoreU32(stream + 36u, 0xA4u);
+    PE_StoreU32(stream + 40u, 0x0000A008u);
+    PE_StoreU32(stream + 44u, 0u);
+    PE_StoreU32(stream + 48u, 2u);
+    PE_StoreU32(stream + 52u, 0u);
+    PE_StoreU32(stream + 56u, 0u);
+    PE_StoreU32(stream + 60u, 0u);
+    PE_StoreU32(stream + 64u, 0u);
+    PE_StoreU32(stream + 68u, 0x00002002u);
+    PE_StoreU32(stream + 72u, 0u);
+    PE_StoreU32(stream + 76u, 1u);
+    PE_StoreU32(parent + 0x98u, 0x100000E0u);
+    PE_StoreU32(0x800A77F0u + 0x4Au * 4u, 40u);
+    func_80017018();
+    saw2 = 0;
+    actor = PE_LoadU32(0x8009D20Cu);
+    while (actor != 0u) {
+        if (PE_LoadU8(actor + 0x0Cu) == 2u)
+            saw2 = 1;
+        actor = PE_LoadU32(actor + 4u);
+    }
+    ASSERT(saw2 == 0, "persist 40 skips type 2");
+    PASS();
+}
+
 static void test_BTL119_6c1cc_39_returns_0(void)
 {
     pe_addr_t aya = 0x80108600u;
@@ -29586,6 +29711,8 @@ int main(void)
     test_BTL121_no_be834_plant();
     test_BTL122_08_6f_body_on_d20c();
     test_BTL122_no_d20c_enemy_plant();
+    test_BTL123_persist4a_lt40_spawns_type2();
+    test_BTL123_persist4a_ge40_skips_type2();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();
