@@ -195,6 +195,7 @@ extern void func_80030220(pe_addr_t actor, unsigned int tag,
 extern void func_800299CC_consume_cut(void);
 extern void func_800299CC_after_consume_cut(void);
 extern void func_800299CC_mode_switch_cut(void);
+extern void func_8002A7F8_join_cut(void);
 extern void func_800299CC_damage_entry_cut(void);
 extern void func_8002BC90_mode6_cut(void);
 extern void func_8002A7F8_mode3_cut(void);

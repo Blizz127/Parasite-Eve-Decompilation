@@ -11658,6 +11658,113 @@ static void test_BTL105_aya_hp0_no_mode2(void)
     PASS();
 }
 
+static void test_BTL106_combat_drains_mode9(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+
+    TEST("BTL106_combat_drains_mode9");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(enemy + 4u, 0u);
+    PE_StoreU32(ebody + 0x10u, 0u);
+    PE_StoreU32(ebody + 0x88u, 40u);
+    PE_StoreU8(ebody + 5u, 0u);
+    PE_StoreU8(ebody + 0xACu, 0u);
+    PE_StoreU8(ebody + 0xAFu, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x0Eu, 40u);
+    PE_StoreU16(rec + 0x1Cu, 40u);
+    PE_StoreU8(0x8009D2A0u, 1u);
+    PE_StoreU32(0x8009D28Cu, 0u);
+    func_80027D14(enemy);
+    func_80027D14(enemy);
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 2u, "27D14 armed mode 2");
+    PE_StoreU32(0x8009D280u, 0xA8001248u);
+    D_8009D280 = 0xA8001248u;
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU8(0x8009CE74u, 3u);
+    PE_StoreU32(0x800B0CD8u, 0x8000u);
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0x41u);
+    func_800299CC_mode_switch_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 9u, "mode 9");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA8001248u, "dest unchanged");
+    ASSERT(PE_LoadU32(0x8009D280u) != 0xA9400048u, "not player-death dest");
+    ASSERT(PE_LoadU32(0x8009D28Cu) != 0xFFFFFFFFu, "not mode -1");
+    PASS();
+}
+
+static void test_BTL106_mode9_join_keeps_dest(void)
+{
+    TEST("BTL106_mode9_join_keeps_dest");
+    ResetTestState();
+    PE_StoreU32(0x8009D28Cu, 9u);
+    PE_StoreU32(0x8009D280u, 0xA8001248u);
+    D_8009D280 = 0xA8001248u;
+    PE_StoreU16(0x8009D2A4u, 1000u);
+    func_800299CC_mode_switch_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 9u, "mode 9 sticky");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA8001248u, "2AA24 no dest");
+    PASS();
+}
+
+static void test_BTL106_0x94_sees_9_then_40_ad_aa(void)
+{
+    pe_addr_t args = 0x80106010u;
+    pe_addr_t dest = 0x80106000u;
+
+    TEST("BTL106_0x94_sees_9_then_40_ad_aa");
+    ResetTestState();
+    PE_StoreU32(0x8009D28Cu, 9u);
+    PE_StoreU32(0x8009D280u, 0xA8001248u);
+    D_8009D280 = 0xA8001248u;
+    PE_StoreU32(0x8009D2E8u, 4u);
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU32(args, dest);
+    PE_StoreU32(dest, 0xFFFFFFFFu);
+    ASSERT(func_80019154(args) == 1, "0x94");
+    ASSERT(PE_LoadU32(dest) == 9u, "script local == 9");
+    ASSERT(func_80017D7C(0u) == 1, "0x40");
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) != 0u, "0x40 D2E8|=1");
+    ASSERT(func_80019748(0u) == 1, "0xAD");
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 4u) == 0u, "0xAD D2E8&=~4");
+    ASSERT(func_80019618(0u) == 1, "0xAA");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x2000u) != 0u, "0xAA B0CD8|=0x2000");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 9u, "ops do not clear mode 9");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA8001248u, "ops do not dest-change");
+    PASS();
+}
+
+static void test_BTL106_death_not_mode9(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL106_death_not_mode9");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(rec + 0x4Cu, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x0Eu, 40u);
+    PE_StoreU16(rec + 0x1Cu, 40u);
+    PE_StoreU32(0x8009D20Cu, 0u);
+    PE_StoreU32(0x8009D28Cu, 3u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    PE_StoreU8(aya + 0x0Eu, 19u);
+    PE_StoreU8(aya + 0x0Fu, 0u);
+    PE_StoreU16(aya + 0x16u, 0u);
+    func_800299CC_mode_switch_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 3u, "mode 3 is not 2B0E8");
+    ASSERT(PE_LoadU32(0x8009D28Cu) != 9u, "death is not mode 9");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -28091,6 +28198,10 @@ int main(void)
     test_BTL105_damage_entry_walks_27d14();
     test_BTL105_second_enemy_blocks();
     test_BTL105_aya_hp0_no_mode2();
+    test_BTL106_combat_drains_mode9();
+    test_BTL106_mode9_join_keeps_dest();
+    test_BTL106_0x94_sees_9_then_40_ad_aa();
+    test_BTL106_death_not_mode9();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

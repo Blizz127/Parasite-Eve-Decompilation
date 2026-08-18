@@ -9,9 +9,21 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL106 — mode 9 join; 0x94 vs 9
+
+`matching_native=862/862` local. `2A7F8` has no
+mode-9 arm; `bne` vs 8 joins `2AA24` (no dest
+store). Combat `27D14` → mode 2 → `2B0E8` via
+`mode_switch` reaches mode 9. m0005i `0x94`
+copies 9; `0x40`/`0xAD`/`0xAA` continue on the
+same dest. Player death stays mode 3. `5C498` /
+`D010==1000` is the next 534 producer. Evidence:
+`docs/evidence/pe-btl106-mode9-join/`.
+
 ## PE-BTL105 — 27D14 → 28E94 → 292EC on combat ticks
 
-After `1D340`, `299CC` walks non-Aya bodies into
+`matching_native=858/858` local. After `1D340`,
+`299CC` walks non-Aya bodies into
 `27D14`. `body+0x10<=0` jals `28E94`; two ticks
 with `D2A0==1` and `AF==0` null the body and arm
 mode 2. Player death stays mode 3. Evidence:

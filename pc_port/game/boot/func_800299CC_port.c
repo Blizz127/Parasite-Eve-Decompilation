@@ -142,6 +142,21 @@ void func_8002BC90_mode6_cut(void)
         func_8002CF24_mode7_cut();
 }
 
+/*
+ * PE-BTL106 — 2A7F8 join at 2AA24. Mode 9 has no dedicated
+ * compare arm: bne mode,8 → 2AA24. Same join after every
+ * arm, including 2B0E8. D1CE&&mode==0 → 34DE0 (not live
+ * on 9). 4D4 → 33A40 (2F300 a0=0 clears 4D4). lh 534≠0
+ * → 67CBC pad (deferred). Dest is not written here.
+ */
+void func_8002A7F8_join_cut(void)
+{
+    /*
+     * Retail falls through all three checks. 34DE0 / 33A40 /
+     * 67CBC stay unimplemented; they do not write mode or dest.
+     */
+}
+
 void func_800299CC_mode_switch_cut(void)
 {
     uint32_t mode;
@@ -153,6 +168,8 @@ void func_800299CC_mode_switch_cut(void)
         func_8002A7F8_mode3_cut();
     else if (mode == 2u)
         func_8002B0E8();
+    /* mode 9 and the rest fall through to 2AA24. */
+    func_8002A7F8_join_cut();
 }
 
 /*
