@@ -172,3 +172,37 @@ void func_8003D050_epilogue_cut(pe_addr_t dest, int skipped)
     }
     PE_StoreU32(dest + 0xB0u, 0u);
 }
+
+/*
+ * PE-BTL119 — 3D834 (68 words). a1==0 skips the clip bind and
+ * jals 3A088. Both arms 3DFD8(B1638, dest+52, 1), 3B97C, two
+ * 3BCE0 with D_8009CDDC toggled. 39B74 is a no-op when clip=0.
+ */
+#define GA_B1638  0x800B1638u
+#define GA_91A38  0x80091A38u
+#define GA_9CDDC  0x8009CDDCu
+
+void func_8003D834(pe_addr_t dest, pe_addr_t clip, int a2, pe_addr_t bea40)
+{
+    uint32_t word;
+    int16_t half;
+
+    if (dest == 0u)
+        return;
+    if (clip != 0u) {
+        PE_StoreU32(dest + 0xB0u, clip);
+        func_8003DFD8(dest + 52u, GA_B1638, 1);
+        func_8003DFD8(GA_91A38, dest + 52u, 1);
+        func_80039B74(dest, clip, (int)(int16_t)a2, 0);
+    }
+    func_8003A088_mode0_empty_cut(dest);
+    func_8003DFD8(GA_B1638, dest + 52u, 1);
+    func_8003B97C_empty_cut(dest, bea40);
+    half = (int16_t)PE_LoadU16(GA_9CDDC);
+    func_8003BCE0(dest, 1, (int)half);
+    word = PE_LoadU32(GA_9CDDC) ^ 1u;
+    PE_StoreU32(GA_9CDDC, word);
+    func_8003BCE0(dest, 1, (int)(int16_t)word);
+    word = PE_LoadU32(GA_9CDDC) ^ 1u;
+    PE_StoreU32(GA_9CDDC, word);
+}

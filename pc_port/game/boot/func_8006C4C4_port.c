@@ -439,6 +439,36 @@ int func_8006C1CC(int a0)
         PE_StoreU8(0x800B0DC5u, 37u);
         return 1;
     }
-    /* 37-39: 6C4C4 / 6C5BC / 3D050 family. Do not stub v0=0. */
+    if (state == 39u) {
+        pe_addr_t aya;
+        pe_addr_t dest;
+        pe_addr_t obj;
+        unsigned int word;
+
+        aya = PE_LoadU32(GA_D254);
+        if (aya == 0u)
+            return 1;
+        PE_StoreU32(aya + 0x1ACu, PE_LoadU32(GA_OVERLAY + 0x198u));
+        PE_StoreU32(aya + 0x1B0u, PE_LoadU32(GA_OVERLAY + 0x214u));
+        if (PE_LoadU32(0x800B0E98u + 21u * 4u) != 0u)
+            func_8001A680_command_cut(aya, 21u);
+        dest = aya + 0x1B4u;
+        obj = PE_LoadU32(aya + 0x1ACu);
+        if (obj != 0u) {
+            func_8003D050_prefix_cut(dest, obj, 0u, 1u);
+            func_8003D050_ptr14_cut(dest, obj);
+        }
+        func_8006698C(dest);
+        func_8003D834(dest, PE_LoadU32(aya + 0x1B0u), 0, 0x800BEA40u);
+        word = PE_LoadU32(GA_OVERLAY) & ~0x60000u;
+        if (a0 != 0)
+            word |= 0x80000u;
+        else
+            word &= ~0x80000u;
+        PE_StoreU32(GA_OVERLAY, word);
+        PE_StoreU8(0x800B0DC5u, 32u);
+        return 0;
+    }
+    /* 37-38: 6C4C4 / 6C5BC. Do not stub v0=0. */
     return 1;
 }

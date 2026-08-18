@@ -11,7 +11,7 @@ pushed `Blizz127/parasite-eve-ue5` `main`
 
 ## PE-BTL118 — 6C1CC 32–36; case 0/2/5 3C5D8
 
-`matching_native` rerun this commit. `6C1CC` 32–36
+`matching_native=901/901` local. `6C1CC` 32–36
 increment `+0xED` (CE2=14 on 32). a0=1 skips to 39.
 State 39 (`3D050`/`3D834`) stay fail-closed. Case 0
 zeros CE48 and jals `3C5D8(30)` / `6F39C(0x6B)`.

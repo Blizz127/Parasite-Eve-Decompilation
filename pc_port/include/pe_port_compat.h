@@ -444,6 +444,7 @@ extern void func_8003D050_epilogue_cut(pe_addr_t dest, int skipped);
 extern void func_8003C5D8(pe_addr_t dest, int a1);
 extern void func_8006698C(pe_addr_t dest);
 extern void func_8003DFD8(pe_addr_t src, pe_addr_t dst, int count);
+extern void func_8003D834(pe_addr_t dest, pe_addr_t clip, int a2, pe_addr_t bea40);
 extern void func_800794C4(pe_addr_t angles, pe_addr_t out);
 extern void func_8003A088_mode0_empty_cut(pe_addr_t dest);
 extern void func_8003A088_mode0_walk_cut(pe_addr_t dest);

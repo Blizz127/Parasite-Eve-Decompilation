@@ -12778,6 +12778,24 @@ static void test_BTL117_e8_zero_parks(void)
     PASS();
 }
 
+static void test_BTL119_6c1cc_39_returns_0(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL119_6c1cc_39_returns_0");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU8(0x800B0DC5u, 39u);
+    PE_StoreU32(0x800B0CD8u, 0x60000u);
+    ASSERT(func_8006C1CC(1) == 0, "39 completes");
+    ASSERT(PE_LoadU8(0x800B0DC5u) == 32u, "wrap 32");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x60000u) == 0u, "clears 0x60000");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x80000u) != 0u, "a0=1 sets 0x80000");
+    PE_StoreU8(0x800B0DC5u, 0u);
+    ASSERT(func_8006C1CC(1) == 0, "ED==0 default");
+    PASS();
+}
+
 static void test_BTL118_6c1cc_32_to_39_parks(void)
 {
     TEST("BTL118_6c1cc_32_to_39_parks");
@@ -29291,6 +29309,7 @@ int main(void)
     test_BTL117_e8_zero_parks();
     test_BTL117_bit4_parks_state40();
     test_BTL118_6c1cc_32_to_39_parks();
+    test_BTL119_6c1cc_39_returns_0();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

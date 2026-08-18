@@ -77,6 +77,10 @@ def main() -> int:
     require(load_u32(blob, 0x8002514C) == 0x2405000F, "case5 a1=15")
     require(load_u32(blob, 0x800113D0) == 0x8006C218, "6C1CC jtbl[0]")
     require(load_u32(blob, 0x8006C23C) == 0x2402000E, "state32 li 14")
+    require(load_u32(blob, 0x800113D0 + 7 * 4) == 0x8006C390, "jtbl[7] 39")
+    require(jal_target(load_u32(blob, 0x8006C43C)) == 0x8003D834, "39 3D834")
+    require(load_u32(blob, 0x8006C4A0) == 0x24020020, "39 li 32")
+    require(load_u32(blob, 0x8003D834) == 0x27BDFFD8, "3D834 addiu sp")
     print("PASS: 24F94 is the CE54 store; 1A4AC copies +0x14 to +0x18")
     return 0
 
