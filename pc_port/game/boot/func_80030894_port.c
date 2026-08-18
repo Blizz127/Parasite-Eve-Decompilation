@@ -1,0 +1,160 @@
+/*
+ * Phase 6E-B54K-A — func_80030894: boot GPU-primitive builder,
+ * prologue + bank-0 L2/L3 sprite array (translated retail prefix).
+ *
+ * Full retail body:
+ *   788 words / 0xC50 bytes, exe 0x80030894–0x800314E4 (exclusive),
+ *   file offset 0x21094, window SHA-256
+ *   a4dbd2cf130979a0f5db8ed532d0c559c5b3b90b2c5786e10fe91125311ed6e2.
+ *   Sole caller: jal func_8006AD40 @ 0x8006B0AC.  ABI void(void)
+ *   (backward liveness fixpoint in the B54J audit; $v0 at exit is a
+ *   stale scratch discarded by the caller).
+ *
+ * Implemented prefix (this rung):
+ *   0x80030894..0x80030AC4 (140 words) — prologue, the bank record
+ *   init at 0x800BE9F0, and the L2(j=0..9) × L3(k=0..3) sprite-array
+ *   build at 0x800B01C0.  The first excluded instruction is
+ *
+ *       move  a0, zero                  # 0x80030AC4
+ *
+ *   (group L4 argument setup; B54K-B territory).  The named strict
+ *   boundary is func_80030894_L2L3_cut.
+ *
+ * Word decode of the implemented window (verified against the
+ * SHA-1-exact retail executable 452fb033f2eaa4b18aa20a5bca60b8125af3a37b):
+ *
+ *   prologue (0x80030894..0x8003090C):
+ *     frame 88B; ra@84, fp@80, s7@76 .. s0@48 (sp-relative)
+ *     sp+16/17/18 <- sign-extended lb 0x8009CD90+0/+1/+2 (font triple;
+ *                    dead in this window — no reader before 0x80030AC4)
+ *     fp  <- GetTPage(0,1,0x100,0x1E0) & 0xFFFF = 0x34   (delay slot of
+ *            the GetClut jal at 0x800308FC consumes the GetTPage return)
+ *     s7  <- 0x80 (vertex byte; first used by B54K-B groups)
+ *     sp+32 (half) <- GetClut(0x130,0x1F8) = 0x7E13
+ *     sp+24 (byte) <- 0 (outer bank counter i; ++ @0x80031484 and
+ *                     test <2 @0x800314A8 live in B54K-B's epilogue)
+ *
+ *   bank record init (0x80030910..0x80030A14), per bank i (i = 0 here):
+ *     s3  <- func_8005DADC(139)  == *(u32*)0x800A8030 + 0x800A8028 + 1112
+ *     s0  <- 0x800BE9F0 + i*40  (record table; the audit's corrected
+ *            lui 0x800C / addiu -0x1610 resolution)
+ *     func_80077BA4(s0)                       SetPolyFT4 header
+ *     sb s0+0x0C <- lbu(s3+0)                  u1
+ *     sb s0+0x0D <- lbu(s3+1)                  v1
+ *     sb s0+0x14 <- (lbu(s3+0)+lbu(s3+4))&0xFF u2
+ *     sb s0+0x15 <- lbu(s3+1)                  v2
+ *     sb s0+0x1C <- lbu(s3+0)                  u3
+ *     sb s0+0x1D <- (lbu(s3+1)+lbu(s3+5))&0xFF v3
+ *     sb s0+0x24 <- (lbu(s3+0)+lbu(s3+4))&0xFF u4
+ *     sb s0+0x25 <- (lbu(s3+1)+lbu(s3+5))&0xFF v4 (delay slot of the
+ *            second GetTPage jal — stores the PRE-call adder value)
+ *     sh s0+0x16 <- GetTPage(0,0,0x1C0,0)
+ *     sh s0+0x0E <- lhu(s3+2)                  clut id
+ *     a1 <- 1 at 0x800309D8 — AFTER the second GetTPage call (which
+ *           clobbers a1 to 0) and BEFORE SetSemiTrans, so the retail
+ *           argument is abr=1
+ *     sh zero -> s0+8,+0xA,+0x10,+0x12,+0x18,+0x1A,+0x20,+0x22
+ *     sb zero -> s0+4,+5,+6
+ *     func_80077B04(s0, 1)                    SetSemiTrans ON
+ *
+ *   L2/L3 sprite array (0x80030A18..0x80030AC0):
+ *     s5 <- i*1400  (((i*3*4 - i)*16 - i)*8, instruction-exact)
+ *     s6 <- 0 (j), s3 <- 0 (k)
+ *     L3 body: s1 <- j*140 (((j*8+j)*4-j)*4)
+ *              s0 <- k*28  (((k*8-k))*4... == (k*8-k)*4)
+ *              a0 <- 0x800B01C0 + s5 + s1 + s0
+ *              sp+40 word <- i*12 (v1 save; restored after the call;
+ *                              host-stack only, not guest-observable)
+ *              func_800370DC(a0, fp)          wrap_sprt twin
+ *              sh 0x7E13 -> 0x800B0000 + (s5+s1+s0) + 0x1D6
+ *                         == packet + 0x16   clut halfword
+ *     L3: k < 4 (sltiu), L2: j < 10 (sltiu), counters &0xFF.
+ *
+ * All callees are native since B54I/GPU1 (GetTPage, GetClut,
+ * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC); the L2L3
+ * cut is the first untranslated boundary inside this body.
+ *
+ * Classification: 1 — translated retail prefix.
+ */
+#include "psx_compat.h"
+#include "pe_port_compat.h"
+#include "game_port.h"
+
+#define GA_8009CD90      0x8009CD90u
+#define GA_RECORD_TABLE  0x800BE9F0u
+#define GA_SPRITE_BASE   0x800B01C0u
+
+void func_80030894(void)
+{
+    uint32_t tpage_sprt;   /* s8: sprite tpage mode for wrap_sprt */
+    uint16_t clut_id;      /* sp+32 half */
+    uint8_t bank = 0u;     /* sp+24 byte: outer bank counter */
+
+    /* 0x800308E0..0x8003090C prologue vectors.  The font triple loads
+     * (sp+16..18) are dead in this window; sp+16..18 hold the
+     * sign-extended bytes but nothing reads them before the cut. */
+    tpage_sprt = func_80077A64(0u, 1u, 0x100u, 0x1E0u) & 0xFFFFu;
+    clut_id = (uint16_t)func_80077AA4(0x130, 0x1F8);
+
+    /* 0x80030910.. bank record init (bank 0). */
+    {
+        pe_addr_t rec = func_8005DADC(139u);            /* s3 */
+        pe_addr_t rec_tab = GA_RECORD_TABLE +
+                            (pe_addr_t)((uint32_t)bank * 40u); /* s0 */
+        uint32_t u0v0_sum;                               /* delay-slot adder */
+        uint32_t s5;                                     /* i*1400 */
+        uint32_t j, k;
+
+        func_80077BA4(rec_tab);                          /* SetPolyFT4 */
+
+        PE_StoreU8(rec_tab + 0x0Cu, PE_LoadU8(rec + 0u));
+        PE_StoreU8(rec_tab + 0x0Du, PE_LoadU8(rec + 1u));
+        PE_StoreU8(rec_tab + 0x14u, (uint8_t)(
+                   (uint32_t)PE_LoadU8(rec + 0u) + (uint32_t)PE_LoadU8(rec + 4u)));
+        PE_StoreU8(rec_tab + 0x15u, PE_LoadU8(rec + 1u));
+        PE_StoreU8(rec_tab + 0x1Cu, PE_LoadU8(rec + 0u));
+        PE_StoreU8(rec_tab + 0x1Du, (uint8_t)(
+                   (uint32_t)PE_LoadU8(rec + 1u) + (uint32_t)PE_LoadU8(rec + 5u)));
+        PE_StoreU8(rec_tab + 0x24u, (uint8_t)(
+                   (uint32_t)PE_LoadU8(rec + 0u) + (uint32_t)PE_LoadU8(rec + 4u)));
+        u0v0_sum = (uint32_t)PE_LoadU8(rec + 1u) +
+                   (uint32_t)PE_LoadU8(rec + 5u);
+        PE_StoreU8(rec_tab + 0x25u, (uint8_t)u0v0_sum);  /* delay-slot store */
+
+        PE_StoreU16(rec_tab + 0x16u,
+                    (uint16_t)func_80077A64(0u, 0u, 0x1C0u, 0u));
+        PE_StoreU16(rec_tab + 0x0Eu, PE_LoadU16(rec + 2u));
+
+        /* 0x800309E8..0x80030A0C: zero the xy halfword pairs and the
+         * u0/v0/clut-low bytes. */
+        PE_StoreU16(rec_tab + 0x08u, 0u);
+        PE_StoreU16(rec_tab + 0x0Au, 0u);
+        PE_StoreU16(rec_tab + 0x10u, 0u);
+        PE_StoreU16(rec_tab + 0x12u, 0u);
+        PE_StoreU16(rec_tab + 0x18u, 0u);
+        PE_StoreU16(rec_tab + 0x1Au, 0u);
+        PE_StoreU16(rec_tab + 0x20u, 0u);
+        PE_StoreU16(rec_tab + 0x22u, 0u);
+        PE_StoreU8(rec_tab + 0x04u, 0u);
+        PE_StoreU8(rec_tab + 0x05u, 0u);
+        PE_StoreU8(rec_tab + 0x06u, 0u);
+        func_80077B04(rec_tab, 1u);                      /* SetSemiTrans(.,1) */
+
+        /* 0x80030A18..0x80030AC0: L2 (j<10) x L3 (k<4) sprite array. */
+        s5 = (uint32_t)bank * 1400u;
+        for (j = 0u; j < 10u; j++) {                     /* s6 */
+            for (k = 0u; k < 4u; k++) {                  /* s3 */
+                uint32_t off = s5 + j * 140u + k * 28u;
+
+                func_800370DC(GA_SPRITE_BASE + off, tpage_sprt);
+                /* 0x80030AA0: sh clut -> 0x800B0000 + off + 0x1D6. */
+                PE_StoreU16(0x800B0000u + off + 0x1D6u, clut_id);
+            }
+        }
+    }
+
+    /* B54K-A cut: stop before group L4 at retail 0x80030AC4. */
+    (void)Bootstrap_ReturnInt(
+        "func_80030894_L2L3_cut", "func_80030894", 0);
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+}

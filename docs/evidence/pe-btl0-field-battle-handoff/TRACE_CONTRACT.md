@@ -25,7 +25,7 @@ battle_tick
 | `field_scene` | packed name | `m0004i` then `m0005i` |
 | `field_script_pc` | current module offset | e.g. `mod4+0x1040`, `mod6+0x350C` |
 | `encounter_id` | first request id | `m0005i_mod6_350C` until a better retail id exists |
-| `transition_state` | enum | `field` `mailbox_3` `mailbox_4` `m0005i_enter` `rng_selected` `slots_ready` `mode6_request` `mode6_consumed` `wait_mode7` `encounter_55` `hp_copied` `first_command` `command_bound` `overlay_wait` `overlay_cleared` `post_return` |
+| `transition_state` | enum | `field` `mailbox_3` `mailbox_4` `m0005i_enter` `rng_selected` `slots_ready` `mode6_request` `mode6_consumed` `wait_mode7` `encounter_55` `hp_copied` `first_command` `command_bound` `overlay_wait` `overlay_cleared` `input_held` `actors_captured` `attack_available` `hp_mutated` `encounter_complete` `post_return` |
 
 `first_command` is legal only after the ROM-verified post-`293F4` tail:
 `0x800299AC` loads record `+0x12` (the preceding HP cut stored byte `4`),
@@ -51,6 +51,24 @@ the actor walk. Those are the live callers; `144FC`/`29810` do not jal
 is legal only after the EE=13 epilogue at `0x8006CC2C` (`andi 0xFC`
 immediately after `jal 3D834`) makes `(+0xE & 3)==0`. It does not
 emit `post_return`, stub `6914C`, or store mode 7.
+`input_held` is legal only after `func_8003EB04` rebuilds `D_8009D26C`
+from `lhu 0x800BE9A2` (active-low) through `A76F0`. Planting `D26C`
+directly is not this state. `actors_captured` is legal only after a
+type-0 `35C84` tick that records pose `+0x28/+0x30`, `D26C`, and
+`D_8009D28C`. `attack_available` is legal only when a retail gate
+opens. The BTL72 playable loop emits it after type-3 `0x85`
+(`18EB4`) once `1CAB0` returns 1 on rect1 from the live 0x0B
+pose plus 409 Right ticks (`BE9A2=0xFFDF`). It is not ATB,
+menu Attack, rec=4, or HP damage. Live type-3 ops after that
+`0x85` are `0x9C` / `0x0A` persist[1]=5 / `0x31` `0xA8000248`
+(M0004I door). That hop is not `field_return`. Do not emit
+`attack_available` from a planted `D26C` or a planted pose
+inside the rect. `hp_mutated` is
+legal only when record `+0x0C` changes from a retail
+damage writer (`1F704` inside `1F4D4`, jal from `1D340`),
+not from the `293F4` copy. First retail subtract is 40→39.
+`encounter_complete` is not this cut. Do not invent pad /
+hit / rec=4 / `4D4` / mode 7 / HP.
 | `battle_mode` | `D_8009D28C` raw | 0/3/4/5/6/7/8 |
 | `formation_id` | `49` or `50` plus `1332/1333/1334` | write as `49;1332,1333,1334` |
 | `player_state_hash` | SHA-256 of Aya actor bytes that battle actually touches | BTL2: SHA-256 of record `+0x0C/+0x0E/+0x1C` (HP triple, `func_800293F4_hp_cut`). BTL1 rows stay `partial` |

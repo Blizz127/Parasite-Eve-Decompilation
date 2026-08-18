@@ -112,3 +112,52 @@ void func_800299CC_after_consume_cut(void)
     if (PE_LoadU8(GA_D_8009D244) == 0u)
         return;
 }
+
+/*
+ * PE-BTL97 — 2A7F8 mode==6 arm jals 2BC90 (0x8002A9EC).
+ * 2BC90 prefix: jal 21D4C / 374E8 not this cut. Retail delay
+ * at 2BCA8 sets s1=1, then D2E8|=1, *D254+0x68/6C/70=0,
+ * D1A0&=~4. Actor walk 2CD40..2CEDC is not this cut.
+ * 2CEE0 tail (fall-through at 2CED8 with s1 still 1):
+ * jal 6914C(0); v0==0 → 2CF24 mode 7. Do not store 4D4.
+ */
+#define GA_D_8009D2E8 0x8009D2E8u
+
+void func_8002BC90_mode6_cut(void)
+{
+    pe_addr_t aya;
+
+    PE_StoreU32(GA_D_8009D2E8, PE_LoadU32(GA_D_8009D2E8) | 1u);
+    aya = PE_LoadU32(GA_D_8009D254);
+    if (aya != 0u) {
+        if (aya < 0x80000000u)
+            aya |= 0x80000000u;
+        PE_StoreU32(aya + 0x68u, 0u);
+        PE_StoreU32(aya + 0x6Cu, 0u);
+        PE_StoreU32(aya + 0x70u, 0u);
+    }
+    D_8009D1A0 &= ~4u;
+    if (func_8006914C(0) == 0)
+        func_8002CF24_mode7_cut();
+}
+
+void func_800299CC_mode_switch_cut(void)
+{
+    if (PE_LoadU32(GA_D_8009D28C) == 6u)
+        func_8002BC90_mode6_cut();
+}
+
+/*
+ * PE-BTL98 — 299CC mode==0 && 4D4!=0 body reaches jal 1D340
+ * at 0x8002A4FC. s1 is 1 from the consume delay at 0x800299F0
+ * unless 2A444/2A4BC overwrite it (mode-1 / bit-0x4000 arms,
+ * not first retail entry). a0 = s1. Do not store 4D4 or HP.
+ */
+void func_800299CC_damage_entry_cut(void)
+{
+    if (PE_LoadU32(GA_D_8009D28C) != 0u)
+        return;
+    if (PE_LoadU8(GA_D_8009D244) == 0u)
+        return;
+    func_8001D340(1u);
+}

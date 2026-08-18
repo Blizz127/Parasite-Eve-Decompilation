@@ -321,6 +321,120 @@ never native function pointers.
   reads, no SDK/GTE/hardware/GPU work; sole call site func_8003E680
   @0x8003E730 (nop delay slot, $v0=0 unconsumed); idempotent incl.
   after PE_RamReset; `game/boot/func_8006536C_port.c`
+- ~~`func_800653B8(payload, dest_id, dest_type, sender, extra)`~~ —
+  TRANSLATED (PE-CH1): 18-word mailbox append at
+  `D_800A3180 + count*12` then `count++` (`0x44($gp)` =
+  `0x8009CDB4`); stores payload@+3, id@+2, sender@+8, type@+0,
+  extra@+4 in that ROM order; no clamp at 28; all 18 words
+  exe-verified (`build/disc1.candidate.exe`); sole jal
+  `func_80017764` @`0x80017794` (opcode `0x1C`, extra 0 in the jal
+  delay slot); `game/boot/func_800653B8_port.c`
+- ~~`func_80065954(index, enabled)`~~ — TRANSLATED (PE-CH2): 18-word
+  opcode `0x75` camera-slot byte update; 16-byte stride, OR 6 / AND
+  `0xF9`; all words and handler jal EXE-verified;
+  `game/boot/func_80065954_port.c`
+- ~~`func_800659C8(index, value)`~~ — TRANSLATED (PE-CH2): 12-word
+  opcode `0x7B` camera-slot halfword update; stores `value >> 8` at
+  slot+8; all words and handler jal EXE-verified;
+  `game/boot/func_800659C8_port.c`
+- ~~`func_80066800(index)`~~ — TRANSLATED (PE-CH2): 99-word opcode
+  `0x82` 52-byte view-record apply; publishes H/MATRIX/index, calls the
+  real native `func_80079024`, and ORs `D_800BCF88` with `0x80`; all
+  words, stores, and both callers EXE-verified;
+  `game/boot/func_80066800_port.c`
+- ~~`func_80017764(args)`~~ — TRANSLATED (PE-CH1): 18-word opcode
+  `0x1C` send; resolves type/id/payload from a guest pointer triple,
+  sender = `lhu(*(D_8009D2F0)+0x24)`, extra 0, `jal func_800653B8`,
+  return 1; jump table `0x80091110`; all 18 words exe-verified;
+  `game/boot/func_80017764_port.c`
+- ~~`func_80017BB4_btl1_cut(args)`~~ — TRANSLATED NORMAL PATH
+  (PE-CH1): opcode `0x31` for Carnegie token `0xA80002C8`;
+  `D_8009D1A0 |= 0x2000`, `D_8009D280=token`, return 0.
+  Full 40-word handler is exe-verified; unrelated `A9400048` special
+  path is outside this cut; `game/boot/func_80017BB4_port.c`
+- ~~`func_80065400(void)`~~ — TRANSLATED (PE-CH1): 117-word mailbox
+  drain; extra≠0 serial arm (stop after one); extra==0 type+id
+  (continue); jal real `func_80012700`; count `sb 0`;
+  records kept; sole site `0x8003F4E8`; all 117 words exe-verified;
+  `game/boot/func_80065400_port.c`
+- ~~`func_80012700(entry, a1)`~~ — TRANSLATED (PE-CH1): 29-word
+  freelist pop at `D_8009CDFC` / serial `D_8009D308`; a1==0 mailbox
+  unlink; a1!=0 insert at `a1+0x24`; 7 jal sites; all 29 words
+  exe-verified; `game/boot/func_80012700_port.c`
+- ~~`func_800177AC(args)`~~ — TRANSLATED (PE-CH1): 7-word opcode
+  `0x1F` poll; `lw 0x590($gp)` current task `D_8009D300`, copy
+  `task+0x14` through `*arg0`, return 1; no ACK; jump table
+  `0x8009111C`; all 7 words exe-verified;
+  `game/boot/func_800177AC_port.c`
+- ~~`func_80019154(args)`~~ — TRANSLATED (PE-CH1): 7-word opcode
+  `0x94` mode read; `lw D_8009D28C` through `*arg0`, return 1;
+  no store-back; jump table `0x800912F0`; twin of matching
+  `func_80017FF0` (`0x89`); all 7 words exe-verified;
+  `game/boot/func_80019154_port.c`
+- ~~`func_8002F7D8(actor)`~~ — TRANSLATED (PE-CH1): 102-word
+  opcode `0x6F` slot alloc; first free `D_800A5D58` `SlotRecord`
+  (7×220); copy 216B `D_800109B0`; `*actor=body`; `D_8009D2EC++`
+  / `body+7`; `body+8=1<<i`; if `actor+0x98&0x2000==0` then
+  `body+0x18=body+0x1C`, record `func_8001A680(actor,2)`,
+  `D_8009D2A0++`; wrapper `0x80018954`; all 102 words
+  exe-verified; `game/boot/func_8002F7D8_port.c`
+- ~~`func_8002FA10(actor, …)`~~ — TRANSLATED (PE-CH1): 37-word
+  opcode `0x70` formation; writes `*actor + i*16 + 0x1C` and
+  `*actor + i*4 + 0x7C`; wrapper `0x8001897C`; all 37 words
+  exe-verified; `game/boot/func_8002FA10_port.c`
+- ~~`func_8002FAA4(actor, …)`~~ — TRANSLATED (PE-CH1): 13-word
+  opcode `0xB7` formation; writes `*actor + i*16 + 0x1C` bytes
+  `+0..+3` and half `+0xC` (0x70 subset; no `+0x7C`); wrapper
+  `0x80018A48`; all 13 words exe-verified;
+  `game/boot/func_8002FAA4_port.c`
+- ~~`func_8002FF78(tag, value)`~~ — TRANSLATED (PE-CH1): 101-word
+  opcode `0x5A` Aya tagged setter through `*D_8009D254`; wrapper
+  `0x80018164` (else `func_80030220` for slot tags 40+); all 101
+  words exe-verified; `game/boot/func_8002FF78_port.c`
+- ~~`func_80030220(actor, tag, value)`~~ — TRANSLATED (PE-CH1):
+  197-word opcode `0x5A` slot tagged setter; `D_80010C90[tag-40]`;
+  m0005i 40/41/42/50–52; all 197 words exe-verified;
+  `game/boot/func_80030220_port.c`
+- ~~`func_800299CC_consume_cut(void)`~~ — TRANSLATED (PE-CH1):
+  16-word named cut of the battle/field tick consume edge
+  (`0x800299CC..0x80029A0C` exclusive, file `0x1A1CC`); both
+  guards `record+0x4C & 0x00080000` and `D_8009D28C==6`; `sb 6`
+  to `gp+0x10C` (`D_8009CE7C`) then `sw $zero` to `D_8009D28C`;
+  all 16 words exe-verified; `game/boot/func_800299CC_port.c`
+- ~~`func_800192B8(args)`~~ — TRANSLATED (PE-BTL98): 4-word
+  opcode `0x95` `sw $zero, D_8009D28C` / `v0=1`; guest RAM
+  so `0x89`/`0x94`/`299CC` agree; `game/boot/func_80017018_port.c`
+- ~~`func_800299CC_damage_entry_cut(void)`~~ — TRANSLATED
+  (PE-BTL98): `mode==0 && 4D4!=0` jal `1D340(1)` (`2A4FC`,
+  `s1=1` from `299F0`); `game/boot/func_800299CC_port.c`
+- ~~`func_8001D340` / `func_8001F4D4`~~ — TRANSLATED (PE-BTL98):
+  live ATB `+0x10+=+0x24` and `1F4D4` through `1F704` `HP-=s0`
+  when record+0x4C bit `0x4000`; `71A54` = BIOS A(2Fh) rand;
+  `game/boot/func_8001D340_port.c`
+- ~~`func_8002CF24_mode7_cut(void)`~~ — TRANSLATED (PE-BTL2):
+  2-word inlined `D_8009D28C=7` store (`0x8002CF24..0x8002CF2C`
+  exclusive; `addiu $v0,7` / `sw $v0,0x51C($gp)`); no jal site;
+  battle-path only; M0367I dest-ready must not call it;
+  `game/boot/func_8002CF24_port.c`
+- ~~`func_80019AC0`~~ — TRANSLATED (PE-BTL94): 9-word opcode
+  `0xC1` (`0x80019AC0..0x80019AE4`); `D2F0+0x98 |= 0x400`,
+  `v0=1`; live M0367I type-2/3 after `0x79`;
+  `game/boot/func_80017018_port.c`
+- ~~`func_8003F074_dest_ready_cut(token)`~~ — TRANSLATED (PE-BTL90):
+  named dest-enter: `6B35C` table clear, `6B4F8` (CE2=hdr+1,
+  hdr+0x0C → `B0E70[idB]`, Writer A @ `0x8006B84C`), `6BE4C` /
+  `6BECC` Writer B from CE2=10 (not CE2=14), poll `6C5BC` to 0,
+  `1A918` (`B1620` → `D1FC`; M0367I `chunk2+0x1C6D8`,
+  `lhu(+2)=1`), `125E0`
+  type-1. Type-1 `+0x1AC/+0x1B0` stay 0. Does not write
+  mode 7/9/10 and does not run 3D050;
+  `game/boot/func_8006B4F8_port.c`
+- ~~`func_800293F4_hp_cut(void)`~~ — TRANSLATED (PE-BTL2):
+  21-word named cut of `func_800293F4` (`0x800293F4..0x80029448`
+  exclusive); signed clamp `record+0x0C` to `+0x1C`, copy `+0x0C` to
+  `+0x0E`; reached from `0x55` → `144FC` state `0x3A` → `29810`
+  `jal` with `a0=0`; does not complete `0x55`;
+  `game/boot/func_800293F4_port.c`
 - ~~`func_80038D1C(void)`~~ — TRANSLATED (Phase 6E-B15): 11-word
   (0x2C, exe 0x80038D1C–0x80038D44, file 0x2951C) byte test-and-clear
   status leaf: lbu D_80091A20; if nonzero sb 0 → D_80091A20 and return

@@ -57,10 +57,70 @@ set(GAME_SRCS
     game/boot/func_80029388_port.c
     game/boot/func_8005BCA8_port.c
     game/boot/func_80068D28_port.c
+    game/boot/func_80068E24_port.c
+    game/boot/func_80066B60_port.c
+    game/boot/func_8006F39C_port.c
+    game/boot/func_8006F6D4_port.c
+    game/boot/func_8002FAF8_port.c
+    game/boot/func_80014228_port.c
+    game/boot/func_80069594_port.c
+    game/boot/func_80037548_port.c
+    game/boot/func_800375E0_port.c
+    game/boot/func_80037870_port.c
+    game/boot/func_8003EB04_port.c
+    game/boot/func_8003F3C4_port.c
     game/boot/func_800124F8_port.c
+    game/boot/func_800125E0_port.c
+    game/boot/func_80035558_port.c
+    game/boot/func_80017018_port.c
+    game/boot/func_800181CC_port.c
+    game/boot/func_80015DAC_port.c
+    game/boot/func_80012850_port.c
+    game/boot/func_80016910_port.c
+    game/boot/func_8001A374_port.c
+    game/boot/func_8001735C_port.c
+    game/boot/func_80015240_port.c
+    game/boot/func_8001A15C_port.c
+    game/boot/func_800130B4_port.c
+    game/boot/func_800131E8_port.c
+    game/boot/func_80013C34_port.c
+    game/boot/func_800143B0_port.c
+    game/boot/func_8006B4F8_port.c
+    game/boot/func_800371B0_port.c
     game/boot/func_8001A890_port.c
     game/boot/func_80034F10_port.c
     game/boot/func_8006536C_port.c
+    game/boot/func_800653B8_port.c
+    game/boot/func_80065954_port.c
+    game/boot/func_800659C8_port.c
+    game/boot/func_80066800_port.c
+    game/boot/func_80017764_port.c
+    game/boot/func_80065400_port.c
+    game/boot/func_80012700_port.c
+    game/boot/func_80017BB4_port.c
+    game/boot/func_800177AC_port.c
+    game/boot/func_80019154_port.c
+    game/boot/func_8002F7D8_port.c
+    game/boot/func_8002FA10_port.c
+    game/boot/func_8002FAA4_port.c
+    game/boot/func_8002FF78_port.c
+    game/boot/func_8002FE78_port.c
+    game/boot/func_8003010C_port.c
+    game/boot/func_80030220_port.c
+    game/boot/func_800299CC_port.c
+    game/boot/func_8001D340_port.c
+    game/boot/func_8002CF24_port.c
+    game/boot/func_800293F4_port.c
+    game/boot/func_80029810_port.c
+    game/boot/func_8006C4C4_port.c
+    game/boot/func_8003D050_port.c
+    game/boot/func_8003C5D8_port.c
+    game/boot/func_8006698C_port.c
+    game/boot/func_8003DFD8_port.c
+    game/boot/func_800794C4_port.c
+    game/boot/func_8003A088_port.c
+    game/boot/func_8003B97C_port.c
+    game/boot/func_8003BCE0_port.c
     game/boot/func_80038D1C_port.c
     game/boot/func_8006E6A8_port.c
     game/boot/func_8006E7E8_port.c
@@ -139,6 +199,7 @@ set(GAME_SRCS
     game/boot/func_8005DADC_port.c
     game/boot/func_800370DC_port.c
     game/boot/func_80037140_port.c
+    game/boot/func_80030894_port.c
 )
 
 set(PORT_SRCS

@@ -25,11 +25,14 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+extern int func_8006EC08(void);
 extern int func_80053D2C(int arg);
 extern void func_80042C78(void);
 extern void func_80042CC4(int a0, int a1);
 extern int func_800614AC(int a0);
 extern void func_80051CC4(void);
+extern int func_80013300(pe_addr_t args);
+extern int func_800144FC(pe_addr_t args);
 
 static int tests_run = 0;
 static int tests_passed = 0;
@@ -3588,6 +3591,8633 @@ static void test_6536C_strict_not_stub(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_800653B8 mailbox queue append
+ *
+ * Retail contract (see game/boot/func_800653B8_port.c header):
+ *   rec = D_800A3180 + count*12; sb payload@+3, sb id@+2, sw sender@+8,
+ *   sh type@+0, sw extra@+4; count++ at 0x44($gp). No clamp at 28.
+ *   18 words, sole jal from opcode 0x1C (func_80017764 @ 0x80017794).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static pe_addr_t CH1_Rec(unsigned int i) {
+    return GA_T_800A3180 + i * 0xCu;
+}
+
+static void test_653B8_raw_contract(void) {
+    TEST("653B8_raw_contract");
+    ResetTestState();
+
+    /* BTL0 m0004i mailbox 3: type 0, id 0, payload 3, extra 0. */
+    func_800653B8(3u, 0u, 0u, 0x00001234u, 0u);
+
+    ASSERT(PE_LoadU16(CH1_Rec(0) + 0u) == 0u, "type");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 2u) == 0u, "id");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == 3u, "payload 3");
+    ASSERT(PE_LoadU32(CH1_Rec(0) + 4u) == 0u, "extra");
+    ASSERT(PE_LoadU32(CH1_Rec(0) + 8u) == 0x00001234u, "sender");
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 1u, "count");
+    ASSERT(PE_LoadU32(CH1_Rec(1)) == 0u, "slot 1 untouched");
+    ASSERT(g_stub_count == 0, "func_800653B8 recorded as stub");
+    PASS();
+}
+
+static void test_653B8_two_records(void) {
+    TEST("653B8_two_records");
+    ResetTestState();
+
+    func_800653B8(3u, 0u, 0u, 0xAAu, 0u);
+    func_800653B8(4u, 0u, 0u, 0xBBu, 0u);
+
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == 3u, "first payload kept");
+    ASSERT(PE_LoadU8(CH1_Rec(1) + 3u) == 4u, "second payload");
+    ASSERT(PE_LoadU32(CH1_Rec(0) + 8u) == 0xAAu, "first sender");
+    ASSERT(PE_LoadU32(CH1_Rec(1) + 8u) == 0xBBu, "second sender");
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 2u, "count 2");
+    PASS();
+}
+
+static void test_653B8_after_boot_clear(void) {
+    TEST("653B8_after_boot_clear");
+    ResetTestState();
+
+    B14_DirtyWritten(0xDEADBEEFu);
+    func_8006536C();
+    func_800653B8(4u, 0u, 0u, 0x8009D254u, 0u);
+
+    ASSERT(B14_VerifyState() != 0, "append must dirty the cleared table");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == 4u, "mailbox 4 payload");
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 1u, "count after clear+append");
+    ASSERT(PE_LoadU32(CH1_Rec(1)) == 0u, "uncleared rows stay zero");
+    PASS();
+}
+
+static void test_653B8_count_byte_width(void) {
+    TEST("653B8_count_byte_width");
+    ResetTestState();
+
+    PE_StoreU32(GA_T_8009CDB4, 0xDEADBEEFu); /* count = 0xEF */
+    func_800653B8(1u, 2u, 3u, 4u, 5u);
+    ASSERT(PE_LoadU32(GA_T_8009CDB4) == 0xDEADBEF0u,
+           "count store is a byte (0xEF+1 → 0xF0)");
+    ASSERT(PE_LoadU8(CH1_Rec(0xEFu) + 3u) == 1u, "indexed raw u8 count");
+    PASS();
+}
+
+static void test_653B8_no_clamp_at_28(void) {
+    TEST("653B8_no_clamp_at_28");
+    ResetTestState();
+
+    for (pe_addr_t a = GA_T_800A3180; a < GA_T_800A32D0; a += 4)
+        PE_StoreU32(a, 0x11111111u);
+    PE_StoreU8(GA_T_8009CDB4, 28u);
+
+    func_800653B8(9u, 8u, 7u, 6u, 5u);
+
+    ASSERT(PE_LoadU32(GA_T_800A3180) == 0x11111111u, "row 0 unchanged");
+    ASSERT(PE_LoadU32(GA_T_800A32D0 - 4u) == 0x11111111u, "last in-table word");
+    ASSERT(PE_LoadU16(GA_T_800A32D0 + 0u) == 7u, "type past table");
+    ASSERT(PE_LoadU8(GA_T_800A32D0 + 2u) == 8u, "id past table");
+    ASSERT(PE_LoadU8(GA_T_800A32D0 + 3u) == 9u, "payload past table");
+    ASSERT(PE_LoadU32(GA_T_800A32D0 + 4u) == 5u, "extra past table");
+    ASSERT(PE_LoadU32(GA_T_800A32D0 + 8u) == 6u, "sender past table");
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 29u, "count 29");
+    PASS();
+}
+
+static void test_653B8_write_footprint(void) {
+    TEST("653B8_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    /* Canary leaves count=0xA5; start from boot-clear count 0 so the
+     * record lands in slot 0. The sb of 0 is test setup, not the leaf. */
+    PE_StoreU8(GA_T_8009CDB4, 0u);
+
+    func_800653B8(0x03u, 0x02u, 0x0001u, 0x80001234u, 0xAABBCCDDu);
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        unsigned int got = PE_LoadU32(a);
+        unsigned int want = 0xA5A5A5A5u;
+        if (a == GA_T_800A3180) want = 0x03020001u;
+        else if (a == GA_T_800A3180 + 4u) want = 0xAABBCCDDu;
+        else if (a == GA_T_800A3180 + 8u) want = 0x80001234u;
+        else if (a == GA_T_8009CDB4) want = 0xA5A5A501u;
+        if (got != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
+            FAIL("write footprint exceeds the retail record+count");
+            return;
+        }
+    }
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_80017764 opcode 0x1C mailbox send
+ *
+ * Retail contract (see game/boot/func_80017764_port.c header):
+ *   a0 = guest pointer triple: +0 → lhu type, +4 → lbu id, +8 → lbu
+ *   payload. sender = lhu(*(D_8009D2F0)+0x24). extra always 0.
+ *   jal func_800653B8; return 1. Jump table D_800910A0[0x1C].
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_17764_SCRATCH 0x80100000u
+#define CH1_17764_TYPE    (CH1_17764_SCRATCH + 0x00u)
+#define CH1_17764_ID      (CH1_17764_SCRATCH + 0x10u)
+#define CH1_17764_PAYLOAD (CH1_17764_SCRATCH + 0x20u)
+#define CH1_17764_ARGS    (CH1_17764_SCRATCH + 0x30u)
+#define CH1_17764_ACTOR   (CH1_17764_SCRATCH + 0x40u)
+
+static void CH1_17764_PlantArgs(unsigned int type, unsigned int id,
+                                unsigned int payload, unsigned int serial_word)
+{
+    PE_StoreU32(CH1_17764_TYPE, 0xFFFF0000u | (type & 0xFFFFu));
+    PE_StoreU32(CH1_17764_ID, 0xFFFFFF00u | (id & 0xFFu));
+    PE_StoreU32(CH1_17764_PAYLOAD, 0xFFFFFF00u | (payload & 0xFFu));
+    PE_StoreU32(CH1_17764_ARGS + 0u, CH1_17764_TYPE);
+    PE_StoreU32(CH1_17764_ARGS + 4u, CH1_17764_ID);
+    PE_StoreU32(CH1_17764_ARGS + 8u, CH1_17764_PAYLOAD);
+    PE_StoreU32(CH1_17764_ACTOR + 0x24u, serial_word);
+    PE_StoreU32(GA_T_8009D2F0, CH1_17764_ACTOR);
+}
+
+static void test_17764_btl0_mailbox3(void) {
+    TEST("17764_btl0_mailbox3");
+    ResetTestState();
+
+    /* BTL0 m0004i mailbox 3: (type,id,payload)=(0,0,3); extra 0. */
+    CH1_17764_PlantArgs(0u, 0u, 3u, 0xAABB1234u);
+    ASSERT(func_80017764(CH1_17764_ARGS) == 1, "return 1");
+
+    ASSERT(PE_LoadU16(CH1_Rec(0) + 0u) == 0u, "type");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 2u) == 0u, "id");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == 3u, "payload 3");
+    ASSERT(PE_LoadU32(CH1_Rec(0) + 4u) == 0u, "extra always 0");
+    ASSERT(PE_LoadU32(CH1_Rec(0) + 8u) == 0x00001234u, "sender is lhu");
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 1u, "count");
+    ASSERT(g_stub_count == 0, "func_80017764 recorded as stub");
+    PASS();
+}
+
+static void test_17764_sender_is_lhu(void) {
+    TEST("17764_sender_is_lhu");
+    ResetTestState();
+
+    CH1_17764_PlantArgs(0u, 0u, 3u, 0xDEADBEEFu);
+    ASSERT(func_80017764(CH1_17764_ARGS) == 1, "return 1");
+    ASSERT(PE_LoadU32(CH1_Rec(0) + 8u) == 0x0000BEEFu,
+           "sender must be lhu of actor+0x24, not lw");
+    ASSERT(PE_LoadU32(CH1_17764_ACTOR + 0x24u) == 0xDEADBEEFu,
+           "actor serial word must stay read-only");
+    PASS();
+}
+
+static void test_17764_extra_always_zero(void) {
+    TEST("17764_extra_always_zero");
+    ResetTestState();
+
+    PE_StoreU32(CH1_Rec(0) + 4u, 0x11111111u);
+    CH1_17764_PlantArgs(1u, 2u, 9u, 0x00000005u);
+    ASSERT(func_80017764(CH1_17764_ARGS) == 1, "return 1");
+    ASSERT(PE_LoadU32(CH1_Rec(0) + 4u) == 0u, "extra hardcoded 0");
+    ASSERT(PE_LoadU16(CH1_Rec(0) + 0u) == 1u, "type lhu");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 2u) == 2u, "id lbu");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == 9u, "payload lbu");
+    PASS();
+}
+
+static void test_17764_two_sends(void) {
+    TEST("17764_two_sends");
+    ResetTestState();
+
+    CH1_17764_PlantArgs(0u, 0u, 3u, 0x000000AAu);
+    ASSERT(func_80017764(CH1_17764_ARGS) == 1, "first return");
+    CH1_17764_PlantArgs(0u, 0u, 4u, 0x000000BBu);
+    ASSERT(func_80017764(CH1_17764_ARGS) == 1, "second return");
+
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == 3u, "mailbox 3 kept");
+    ASSERT(PE_LoadU8(CH1_Rec(1) + 3u) == 4u, "mailbox 4");
+    ASSERT(PE_LoadU32(CH1_Rec(0) + 8u) == 0xAAu, "first sender");
+    ASSERT(PE_LoadU32(CH1_Rec(1) + 8u) == 0xBBu, "second sender");
+    ASSERT(PE_LoadU32(CH1_Rec(0) + 4u) == 0u, "first extra 0");
+    ASSERT(PE_LoadU32(CH1_Rec(1) + 4u) == 0u, "second extra 0");
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 2u, "count 2");
+    PASS();
+}
+
+static void test_17764_write_footprint(void) {
+    TEST("17764_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+
+    CH1_17764_PlantArgs(0x0001u, 0x02u, 0x03u, 0xCC001234u);
+    PE_StoreU8(GA_T_8009CDB4, 0u);
+
+    ASSERT(func_80017764(CH1_17764_ARGS) == 1, "return 1");
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4) {
+        unsigned int got = PE_LoadU32(a);
+        unsigned int want = 0xA5A5A5A5u;
+        if (a == GA_T_800A3180) want = 0x03020001u;
+        else if (a == GA_T_800A3180 + 4u) want = 0u;
+        else if (a == GA_T_800A3180 + 8u) want = 0x00001234u;
+        else if (a == GA_T_8009CDB4) want = 0xA5A5A501u;
+        else if (a == CH1_17764_TYPE) want = 0xFFFF0001u;
+        else if (a == CH1_17764_ID) want = 0xFFFFFF02u;
+        else if (a == CH1_17764_PAYLOAD) want = 0xFFFFFF03u;
+        else if (a == CH1_17764_ARGS + 0u) want = CH1_17764_TYPE;
+        else if (a == CH1_17764_ARGS + 4u) want = CH1_17764_ID;
+        else if (a == CH1_17764_ARGS + 8u) want = CH1_17764_PAYLOAD;
+        else if (a == CH1_17764_ACTOR + 0x24u) want = 0xCC001234u;
+        else if (a == GA_T_8009D2F0) want = CH1_17764_ACTOR;
+        if (got != want) {
+            printf("FAIL: guest 0x%08X = 0x%08X, want 0x%08X\n", a, got, want);
+            FAIL("write footprint exceeds record+count plus planted args");
+            return;
+        }
+    }
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_80065400 mailbox drain
+ *
+ * Retail contract (see game/boot/func_80065400_port.c header):
+ *   walk D_800A3180[0 .. count-1]; extra_b=lbu rec+4 selects serial
+ *   vs type+id; deliver via real func_80012700; count sb 0;
+ *   records kept. Actor list D_8009D20C, next at actor+4.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_65400_ACTOR0 0x80100800u
+#define CH1_65400_ACTOR1 0x80100A00u
+#define CH1_65400_TASK0  0x80100C00u
+#define CH1_65400_TASK1  0x80100E00u
+#define CH1_65400_ENTRY0 0x80102000u
+#define CH1_65400_ENTRY1 0x80102010u
+
+static void CH1_65400_PlantActor(pe_addr_t actor, pe_addr_t next,
+                                 unsigned int type, unsigned int id,
+                                 unsigned int serial, pe_addr_t entry)
+{
+    PE_StoreU32(actor + 4u, next);
+    PE_StoreU8(actor + 0x0Cu, (uint8_t)type);
+    PE_StoreU8(actor + 0x0Du, (uint8_t)id);
+    PE_StoreU16(actor + 0x24u, (uint16_t)serial);
+    PE_StoreU32(actor + 0xA8u, 0u);
+    PE_StoreU32(actor + 0x19Cu, entry);
+}
+
+static void CH1_PlantFree1(pe_addr_t a)
+{
+    PE_StoreU32(GA_T_8009CDFC, a);
+    PE_StoreU32(a + 0x24u, 0u);
+}
+
+static void CH1_PlantFree2(pe_addr_t a, pe_addr_t b)
+{
+    PE_StoreU32(GA_T_8009CDFC, a);
+    PE_StoreU32(a + 0x24u, b);
+    PE_StoreU32(b + 0x24u, 0u);
+}
+
+static void test_65400_count_zero(void) {
+    TEST("65400_count_zero");
+    ResetTestState();
+
+    PE_StoreU32(CH1_Rec(0), 0x11111111u);
+    func_80065400();
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 0u, "count");
+    ASSERT(PE_LoadU32(CH1_Rec(0)) == 0x11111111u, "records must stay");
+    ASSERT(PE_LoadU32(GA_T_8009CDFC) == 0u, "freelist untouched");
+    ASSERT(g_stub_count == 0, "func_80065400 recorded as stub");
+    PASS();
+}
+
+static void test_65400_btl0_mailbox3(void) {
+    TEST("65400_btl0_mailbox3");
+    ResetTestState();
+
+    CH1_65400_PlantActor(CH1_65400_ACTOR0, 0u, 0u, 0u, 0x1234u,
+                         CH1_65400_ENTRY0);
+    PE_StoreU32(GA_T_8009D20C, CH1_65400_ACTOR0);
+    CH1_PlantFree1(CH1_65400_TASK0);
+    func_800653B8(3u, 0u, 0u, 0x0000AAAAu, 0u);
+
+    func_80065400();
+
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 0u, "count cleared");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == 3u, "payload kept");
+    ASSERT(PE_LoadU32(CH1_65400_TASK0) == CH1_65400_ENTRY0, "entry");
+    ASSERT(PE_LoadU32(GA_T_8009CDFC) == 0u, "freelist popped");
+    ASSERT((PE_LoadU16(CH1_65400_TASK0 + 8u) & 4u) == 4u, "bit 2");
+    ASSERT(PE_LoadU32(CH1_65400_TASK0 + 0xCu) == 0x0000AAAAu, "sender");
+    ASSERT(PE_LoadU32(CH1_65400_TASK0 + 0x14u) == 3u, "payload word");
+    ASSERT(PE_LoadU32(CH1_65400_TASK0 + 0x24u) == 0u, "old head 0");
+    ASSERT(PE_LoadU32(CH1_65400_ACTOR0 + 0xA8u) == CH1_65400_TASK0,
+           "list head");
+    PASS();
+}
+
+static void test_65400_mismatch_clears_count(void) {
+    TEST("65400_mismatch_clears_count");
+    ResetTestState();
+
+    CH1_65400_PlantActor(CH1_65400_ACTOR0, 0u, 1u, 0u, 0u, CH1_65400_ENTRY0);
+    PE_StoreU32(GA_T_8009D20C, CH1_65400_ACTOR0);
+    func_800653B8(3u, 0u, 0u, 0u, 0u); /* type 0 vs actor type 1 */
+
+    func_80065400();
+
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 0u, "count cleared on miss");
+    ASSERT(PE_LoadU32(GA_T_8009CDFC) == 0u, "no spawn");
+    ASSERT(PE_LoadU32(CH1_65400_ACTOR0 + 0xA8u) == 0u, "head untouched");
+    PASS();
+}
+
+static void test_65400_two_records(void) {
+    TEST("65400_two_records");
+    ResetTestState();
+
+    CH1_65400_PlantActor(CH1_65400_ACTOR0, 0u, 0u, 0u, 0u, CH1_65400_ENTRY0);
+    PE_StoreU32(GA_T_8009D20C, CH1_65400_ACTOR0);
+    CH1_PlantFree2(CH1_65400_TASK0, CH1_65400_TASK1);
+    func_800653B8(3u, 0u, 0u, 0xAAu, 0u);
+    func_800653B8(4u, 0u, 0u, 0xBBu, 0u);
+
+    func_80065400();
+
+    ASSERT(PE_LoadU32(CH1_65400_TASK0) == CH1_65400_ENTRY0, "first entry");
+    ASSERT(PE_LoadU32(CH1_65400_TASK1) == CH1_65400_ENTRY0, "second entry");
+    ASSERT(PE_LoadU32(CH1_65400_TASK0 + 0x14u) == 3u, "first payload");
+    ASSERT(PE_LoadU32(CH1_65400_TASK1 + 0x14u) == 4u, "second payload");
+    ASSERT(PE_LoadU32(CH1_65400_TASK1 + 0x24u) == CH1_65400_TASK0, "new->old");
+    ASSERT(PE_LoadU32(CH1_65400_TASK0 + 0x28u) == CH1_65400_TASK1, "old->new");
+    ASSERT(PE_LoadU32(CH1_65400_ACTOR0 + 0xA8u) == CH1_65400_TASK1, "head");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == 3u, "rec0 kept");
+    ASSERT(PE_LoadU8(CH1_Rec(1) + 3u) == 4u, "rec1 kept");
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 0u, "count");
+    PASS();
+}
+
+static void test_65400_serial_arm_stops(void) {
+    TEST("65400_serial_arm_stops");
+    ResetTestState();
+
+    /* Two actors with the same serial; extra_b selects serial arm.
+     * ROM stops the walk after the first hit. */
+    CH1_65400_PlantActor(CH1_65400_ACTOR0, CH1_65400_ACTOR1, 9u, 9u, 0x34u,
+                         CH1_65400_ENTRY0);
+    CH1_65400_PlantActor(CH1_65400_ACTOR1, 0u, 9u, 9u, 0x34u,
+                         CH1_65400_ENTRY1);
+    PE_StoreU32(GA_T_8009D20C, CH1_65400_ACTOR0);
+    CH1_PlantFree1(CH1_65400_TASK0);
+    func_800653B8(7u, 0u, 0u, 0x1111u, 0x00000034u);
+
+    func_80065400();
+
+    ASSERT(PE_LoadU32(CH1_65400_TASK0) == CH1_65400_ENTRY0, "first actor only");
+    ASSERT(PE_LoadU32(GA_T_8009CDFC) == 0u, "one pop");
+    ASSERT(PE_LoadU32(CH1_65400_ACTOR0 + 0xA8u) == CH1_65400_TASK0, "a0 head");
+    ASSERT(PE_LoadU32(CH1_65400_ACTOR1 + 0xA8u) == 0u, "a1 not delivered");
+    ASSERT(PE_LoadU32(CH1_65400_TASK0 + 0x14u) == 7u, "payload");
+    PASS();
+}
+
+static void test_65400_typeid_multi_actor(void) {
+    TEST("65400_typeid_multi_actor");
+    ResetTestState();
+
+    CH1_65400_PlantActor(CH1_65400_ACTOR0, CH1_65400_ACTOR1, 0u, 0u, 1u,
+                         CH1_65400_ENTRY0);
+    CH1_65400_PlantActor(CH1_65400_ACTOR1, 0u, 0u, 0u, 2u, CH1_65400_ENTRY1);
+    PE_StoreU32(GA_T_8009D20C, CH1_65400_ACTOR0);
+    CH1_PlantFree2(CH1_65400_TASK0, CH1_65400_TASK1);
+    func_800653B8(3u, 0u, 0u, 0x2222u, 0u);
+
+    func_80065400();
+
+    ASSERT(PE_LoadU32(CH1_65400_TASK0) == CH1_65400_ENTRY0, "first entry");
+    ASSERT(PE_LoadU32(CH1_65400_TASK1) == CH1_65400_ENTRY1, "second entry");
+    ASSERT(PE_LoadU32(CH1_65400_ACTOR0 + 0xA8u) == CH1_65400_TASK0, "a0");
+    ASSERT(PE_LoadU32(CH1_65400_ACTOR1 + 0xA8u) == CH1_65400_TASK1, "a1");
+    PASS();
+}
+
+static void test_65400_null_entry_continues(void) {
+    TEST("65400_null_entry_continues");
+    ResetTestState();
+
+    /* Type+id: first actor matches type but +0x19C==0; walk continues. */
+    CH1_65400_PlantActor(CH1_65400_ACTOR0, CH1_65400_ACTOR1, 0u, 0u, 0u, 0u);
+    CH1_65400_PlantActor(CH1_65400_ACTOR1, 0u, 0u, 0u, 0u, CH1_65400_ENTRY1);
+    PE_StoreU32(GA_T_8009D20C, CH1_65400_ACTOR0);
+    CH1_PlantFree1(CH1_65400_TASK1);
+    func_800653B8(4u, 0u, 0u, 0x3333u, 0u);
+
+    func_80065400();
+
+    ASSERT(PE_LoadU32(CH1_65400_TASK1) == CH1_65400_ENTRY1, "second actor");
+    ASSERT(PE_LoadU32(GA_T_8009CDFC) == 0u, "one pop");
+    ASSERT(PE_LoadU32(CH1_65400_ACTOR0 + 0xA8u) == 0u, "a0 skipped");
+    ASSERT(PE_LoadU32(CH1_65400_TASK1 + 0x14u) == 4u, "payload");
+    PASS();
+}
+
+static void test_65400_write_footprint(void) {
+    TEST("65400_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+
+    CH1_65400_PlantActor(CH1_65400_ACTOR0, 0u, 0u, 0u, 0u, CH1_65400_ENTRY0);
+    PE_StoreU32(GA_T_8009D20C, CH1_65400_ACTOR0);
+    PE_StoreU8(GA_T_8009CDB4, 0u);
+    CH1_PlantFree1(CH1_65400_TASK0);
+    func_800653B8(0x03u, 0x00u, 0x0000u, 0x80001234u, 0u);
+
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        func_80065400();
+        ASSERT(PE_LoadU32(CH1_65400_TASK0) == CH1_65400_ENTRY0, "entry");
+        ASSERT(PE_LoadU32(CH1_65400_ACTOR0 + 0xA8u) == CH1_65400_TASK0,
+               "head");
+        ASSERT((PE_LoadU16(CH1_65400_TASK0 + 8u) & 4u) == 4u, "bit 2");
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a == GA_T_8009CDB4)
+                || (a >= GA_T_8009CDFC && a < GA_T_8009CDFC + 4u)
+                || (a >= GA_T_8009D308 && a < GA_T_8009D308 + 2u)
+                || (a >= CH1_65400_TASK0 && a < CH1_65400_TASK0 + 0x2Cu)
+                || (a >= CH1_65400_ACTOR0 + 0xA8u && a < CH1_65400_ACTOR0 + 0xACu);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds drain+deliver");
+                return;
+            }
+        }
+    }
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_80012700 task spawn
+ *
+ * Retail contract (see game/boot/func_80012700_port.c header):
+ *   pop D_8009CDFC via +0x24; a1==0 clears +0x24/+0x28; a1!=0 inserts
+ *   at a1+0x24; init entry/zeros/flags/serial; return popped block.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_12700_TASK0  0x80104000u
+#define CH1_12700_TASK1  0x80104200u
+#define CH1_12700_ENTRY  0x80104400u
+#define CH1_12700_PARENT 0x80104600u
+#define CH1_12700_OLD    0x80104800u
+
+static void test_12700_a1_zero_mailbox(void) {
+    TEST("12700_a1_zero_mailbox");
+    ResetTestState();
+
+    CH1_PlantFree1(CH1_12700_TASK0);
+    PE_StoreU16(GA_T_8009D308, 0x0010u);
+
+    ASSERT(func_80012700(CH1_12700_ENTRY, 0u) == CH1_12700_TASK0, "return");
+    ASSERT(PE_LoadU32(GA_T_8009CDFC) == 0u, "popped");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0u) == CH1_12700_ENTRY, "entry");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 4u) == 0u, "+4");
+    ASSERT(PE_LoadU16(CH1_12700_TASK0 + 8u) == 0u, "flags");
+    ASSERT(PE_LoadU16(CH1_12700_TASK0 + 0x0Au) == 0x0010u, "serial");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0x0Cu) == 0u, "+0x0C");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0x10u) == 1u, "+0x10");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0x24u) == 0u, "+0x24");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0x28u) == 0u, "+0x28");
+    ASSERT(PE_LoadU16(GA_T_8009D308) == 0x0011u, "serial++");
+    ASSERT(g_stub_count == 0, "func_80012700 recorded as stub");
+    PASS();
+}
+
+static void test_12700_serial_is_lhu(void) {
+    TEST("12700_serial_is_lhu");
+    ResetTestState();
+
+    CH1_PlantFree1(CH1_12700_TASK0);
+    PE_StoreU32(GA_T_8009D308, 0xAABB1234u);
+
+    ASSERT(func_80012700(CH1_12700_ENTRY, 0u) == CH1_12700_TASK0, "return");
+    ASSERT(PE_LoadU16(CH1_12700_TASK0 + 0x0Au) == 0x1234u, "lhu serial");
+    ASSERT(PE_LoadU32(GA_T_8009D308) == 0xAABB1235u, "sh width");
+    PASS();
+}
+
+static void test_12700_two_pops(void) {
+    TEST("12700_two_pops");
+    ResetTestState();
+
+    CH1_PlantFree2(CH1_12700_TASK0, CH1_12700_TASK1);
+    ASSERT(func_80012700(0x100u, 0u) == CH1_12700_TASK0, "first");
+    ASSERT(func_80012700(0x200u, 0u) == CH1_12700_TASK1, "second");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0) == 0x100u, "e0");
+    ASSERT(PE_LoadU32(CH1_12700_TASK1) == 0x200u, "e1");
+    ASSERT(PE_LoadU32(GA_T_8009CDFC) == 0u, "empty");
+    ASSERT(PE_LoadU16(GA_T_8009D308) == 2u, "two serials");
+    PASS();
+}
+
+static void test_12700_a1_insert(void) {
+    TEST("12700_a1_insert");
+    ResetTestState();
+
+    CH1_PlantFree1(CH1_12700_TASK0);
+    PE_StoreU32(CH1_12700_PARENT + 0x24u, CH1_12700_OLD);
+    PE_StoreU32(CH1_12700_OLD + 0x28u, 0xDEADu);
+
+    ASSERT(func_80012700(CH1_12700_ENTRY, CH1_12700_PARENT) == CH1_12700_TASK0,
+           "return");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0x28u) == CH1_12700_PARENT, "pred");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0x24u) == CH1_12700_OLD, "old next");
+    ASSERT(PE_LoadU32(CH1_12700_OLD + 0x28u) == CH1_12700_TASK0, "old pred");
+    ASSERT(PE_LoadU32(CH1_12700_PARENT + 0x24u) == CH1_12700_TASK0, "head");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0) == CH1_12700_ENTRY, "entry kept");
+    PASS();
+}
+
+static void test_12700_write_footprint(void) {
+    TEST("12700_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    CH1_PlantFree1(CH1_12700_TASK0);
+    PE_StoreU16(GA_T_8009D308, 0x0007u);
+
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        ASSERT(func_80012700(CH1_12700_ENTRY, 0u) == CH1_12700_TASK0, "ret");
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a >= GA_T_8009CDFC && a < GA_T_8009CDFC + 4u)
+                || (a >= GA_T_8009D308 && a < GA_T_8009D308 + 2u)
+                || (a >= CH1_12700_TASK0 && a < CH1_12700_TASK0 + 0x2Cu);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds pop+init");
+                return;
+            }
+        }
+    }
+    ASSERT(PE_LoadU32(CH1_12700_TASK0) == CH1_12700_ENTRY, "entry");
+    ASSERT(PE_LoadU16(CH1_12700_TASK0 + 0x0Au) == 7u, "serial");
+    ASSERT(PE_LoadU16(GA_T_8009D308) == 8u, "serial++");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_800177AC opcode 0x1F mailbox poll
+ *
+ * Retail contract (see game/boot/func_800177AC_port.c header):
+ *   task = *D_8009D300 (0x590($gp)); *(*(u32*)args) = task+0x14;
+ *   return 1. No ACK.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_177AC_SCRATCH 0x80105000u
+#define CH1_177AC_DEST    (CH1_177AC_SCRATCH + 0x00u)
+#define CH1_177AC_ARGS    (CH1_177AC_SCRATCH + 0x10u)
+#define CH1_177AC_TASK    (CH1_177AC_SCRATCH + 0x20u)
+
+static void CH1_177AC_Plant(unsigned int payload, unsigned int dest_poison)
+{
+    PE_StoreU32(GA_T_8009D300, CH1_177AC_TASK);
+    PE_StoreU32(CH1_177AC_TASK + 0x14u, payload);
+    PE_StoreU32(CH1_177AC_ARGS, CH1_177AC_DEST);
+    PE_StoreU32(CH1_177AC_DEST, dest_poison);
+}
+
+static void test_177AC_btl0_payload3(void) {
+    TEST("177AC_btl0_payload3");
+    ResetTestState();
+
+    CH1_177AC_Plant(3u, 0xDEADBEEFu);
+    ASSERT(func_800177AC(CH1_177AC_ARGS) == 1, "return 1");
+    ASSERT(PE_LoadU32(CH1_177AC_DEST) == 3u, "dest payload 3");
+    ASSERT(g_stub_count == 0, "func_800177AC recorded as stub");
+    PASS();
+}
+
+static void test_177AC_no_ack(void) {
+    TEST("177AC_no_ack");
+    ResetTestState();
+
+    CH1_177AC_Plant(4u, 0u);
+    ASSERT(func_800177AC(CH1_177AC_ARGS) == 1, "return 1");
+    ASSERT(PE_LoadU32(CH1_177AC_DEST) == 4u, "copied");
+    ASSERT(PE_LoadU32(CH1_177AC_TASK + 0x14u) == 4u, "task+0x14 kept");
+    ASSERT(PE_LoadU32(GA_T_8009D300) == CH1_177AC_TASK, "current task kept");
+    PASS();
+}
+
+static void test_177AC_word_copy(void) {
+    TEST("177AC_word_copy");
+    ResetTestState();
+
+    CH1_177AC_Plant(0xAABBCCDDu, 0x11111111u);
+    ASSERT(func_800177AC(CH1_177AC_ARGS) == 1, "return 1");
+    ASSERT(PE_LoadU32(CH1_177AC_DEST) == 0xAABBCCDDu, "lw/sw width");
+    PASS();
+}
+
+static void test_177AC_two_polls(void) {
+    TEST("177AC_two_polls");
+    ResetTestState();
+
+    CH1_177AC_Plant(3u, 0u);
+    ASSERT(func_800177AC(CH1_177AC_ARGS) == 1, "first");
+    ASSERT(PE_LoadU32(CH1_177AC_DEST) == 3u, "first dest");
+    PE_StoreU32(CH1_177AC_TASK + 0x14u, 4u);
+    ASSERT(func_800177AC(CH1_177AC_ARGS) == 1, "second");
+    ASSERT(PE_LoadU32(CH1_177AC_DEST) == 4u, "second dest");
+    ASSERT(PE_LoadU32(CH1_177AC_TASK + 0x14u) == 4u, "still no ACK");
+    PASS();
+}
+
+static void test_177AC_write_footprint(void) {
+    TEST("177AC_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    CH1_177AC_Plant(0x00000007u, 0xA5A5A5A5u);
+
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        ASSERT(func_800177AC(CH1_177AC_ARGS) == 1, "ret");
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a >= CH1_177AC_DEST && a < CH1_177AC_DEST + 4u);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds dest word");
+                return;
+            }
+        }
+    }
+    ASSERT(PE_LoadU32(CH1_177AC_DEST) == 7u, "dest");
+    ASSERT(PE_LoadU32(CH1_177AC_TASK + 0x14u) == 7u, "no ACK");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_80019154 opcode 0x94 mode-word read
+ *
+ * Retail contract (see game/boot/func_80019154_port.c header):
+ *   *(*(u32*)args) = *D_8009D28C; return 1. Word-copy; no store-back.
+ * Twin of matching func_80017FF0 (0x89 stores 6).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define GA_T_8009D28C     0x8009D28Cu
+#define CH1_19154_SCRATCH 0x80106000u
+#define CH1_19154_DEST    (CH1_19154_SCRATCH + 0x00u)
+#define CH1_19154_ARGS    (CH1_19154_SCRATCH + 0x10u)
+
+static void CH1_19154_Plant(unsigned int mode, unsigned int dest_poison)
+{
+    PE_StoreU32(GA_T_8009D28C, mode);
+    PE_StoreU32(CH1_19154_ARGS, CH1_19154_DEST);
+    PE_StoreU32(CH1_19154_DEST, dest_poison);
+}
+
+static void test_19154_mode6_after_89(void) {
+    TEST("19154_mode6_after_89");
+    ResetTestState();
+
+    CH1_19154_Plant(6u, 0xDEADBEEFu);
+    ASSERT(func_80019154(CH1_19154_ARGS) == 1, "return 1");
+    ASSERT(PE_LoadU32(CH1_19154_DEST) == 6u, "dest mode 6");
+    ASSERT(g_stub_count == 0, "func_80019154 recorded as stub");
+    PASS();
+}
+
+static void test_19154_no_store_back(void) {
+    TEST("19154_no_store_back");
+    ResetTestState();
+
+    CH1_19154_Plant(7u, 0u);
+    ASSERT(func_80019154(CH1_19154_ARGS) == 1, "return 1");
+    ASSERT(PE_LoadU32(CH1_19154_DEST) == 7u, "copied");
+    ASSERT(PE_LoadU32(GA_T_8009D28C) == 7u, "mode word kept");
+    PASS();
+}
+
+static void test_19154_word_copy(void) {
+    TEST("19154_word_copy");
+    ResetTestState();
+
+    CH1_19154_Plant(0xAABBCCDDu, 0x11111111u);
+    ASSERT(func_80019154(CH1_19154_ARGS) == 1, "return 1");
+    ASSERT(PE_LoadU32(CH1_19154_DEST) == 0xAABBCCDDu, "lw/sw width");
+    PASS();
+}
+
+static void test_19154_two_polls(void) {
+    TEST("19154_two_polls");
+    ResetTestState();
+
+    CH1_19154_Plant(6u, 0u);
+    ASSERT(func_80019154(CH1_19154_ARGS) == 1, "first");
+    ASSERT(PE_LoadU32(CH1_19154_DEST) == 6u, "first dest");
+    PE_StoreU32(GA_T_8009D28C, 0u);
+    ASSERT(func_80019154(CH1_19154_ARGS) == 1, "second");
+    ASSERT(PE_LoadU32(CH1_19154_DEST) == 0u, "second dest");
+    ASSERT(PE_LoadU32(GA_T_8009D28C) == 0u, "still no store-back");
+    PASS();
+}
+
+static void test_19154_write_footprint(void) {
+    TEST("19154_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    CH1_19154_Plant(0x00000006u, 0xA5A5A5A5u);
+
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        ASSERT(func_80019154(CH1_19154_ARGS) == 1, "ret");
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a >= CH1_19154_DEST && a < CH1_19154_DEST + 4u);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds dest word");
+                return;
+            }
+        }
+    }
+    ASSERT(PE_LoadU32(CH1_19154_DEST) == 6u, "dest");
+    ASSERT(PE_LoadU32(GA_T_8009D28C) == 6u, "no store-back");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_8002F7D8 opcode 0x6F slot alloc
+ *
+ * Retail contract (see game/boot/func_8002F7D8_port.c header):
+ *   claim first free D_800A5D58[i]; copy 216B D_800109B0 → body;
+ *   *actor = body; D_8009D2EC++ → body+7; body+8 = 1<<i;
+ *   if (actor+0x98 & 0x2000)==0: body+0x18=body+0x1C,
+ *   record func_8001A680(actor,2), D_8009D2A0++.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_2F7D8_TMPL  0x800109B0u
+#define CH1_2F7D8_ACTOR 0x80107000u
+
+static pe_addr_t CH1_2F7D8_Rec(unsigned int i)
+{
+    return GA_T_800A5D58 + i * 220u;
+}
+
+static void CH1_2F7D8_PlantTemplate(void)
+{
+    unsigned int w;
+
+    for (w = 0; w < 54u; w++)
+        PE_StoreU32(CH1_2F7D8_TMPL + w * 4u, 0xC1000000u + w);
+}
+
+static void CH1_2F7D8_ClearTable(void)
+{
+    unsigned int i;
+
+    for (i = 0; i < 7u; i++)
+        PE_StoreU32(CH1_2F7D8_Rec(i), 0u);
+}
+
+static void test_2F7D8_claim_slot0(void) {
+    pe_addr_t body;
+
+    TEST("2F7D8_claim_slot0");
+    ResetTestState();
+
+    CH1_2F7D8_PlantTemplate();
+    CH1_2F7D8_ClearTable();
+    PE_StoreU32(CH1_2F7D8_ACTOR, 0xDEADBEEFu);
+    PE_StoreU32(CH1_2F7D8_ACTOR + 0x98u, 0x2000u);
+    PE_StoreU8(GA_T_8009D2EC, 0x10u);
+    PE_StoreU8(GA_T_8009D2A0, 0x03u);
+
+    func_8002F7D8(CH1_2F7D8_ACTOR);
+    body = CH1_2F7D8_Rec(0) + 4u;
+    ASSERT(PE_LoadU32(CH1_2F7D8_Rec(0)) == 1u, "inUse");
+    ASSERT(PE_LoadU32(CH1_2F7D8_ACTOR) == body, "actor+0 body");
+    ASSERT(PE_LoadU32(body) == 0xC1000000u, "tmpl word0");
+    ASSERT(PE_LoadU32(body + 0xD4u) == 0xC1000000u + 53u, "tmpl tail");
+    ASSERT(PE_LoadU8(GA_T_8009D2EC) == 0x11u, "D2EC++");
+    ASSERT(PE_LoadU8(body + 7u) == 0x11u, "body+7");
+    ASSERT(PE_LoadU32(body + 8u) == 1u, "bit 0");
+    ASSERT(PE_LoadU8(GA_T_8009D2A0) == 0x03u, "D2A0 skipped");
+    ASSERT(g_bootstrap_arg4_call_count == 0, "1A680 skipped");
+    ASSERT(g_stub_count == 0, "func_8002F7D8 recorded as stub");
+    PASS();
+}
+
+static void test_2F7D8_claim_next(void) {
+    pe_addr_t body;
+
+    TEST("2F7D8_claim_next");
+    ResetTestState();
+
+    CH1_2F7D8_PlantTemplate();
+    CH1_2F7D8_ClearTable();
+    PE_StoreU32(CH1_2F7D8_Rec(0), 1u);
+    PE_StoreU32(CH1_2F7D8_ACTOR + 0x98u, 0x2000u);
+
+    func_8002F7D8(CH1_2F7D8_ACTOR);
+    body = CH1_2F7D8_Rec(1) + 4u;
+    ASSERT(PE_LoadU32(CH1_2F7D8_Rec(1)) == 1u, "slot1 inUse");
+    ASSERT(PE_LoadU32(CH1_2F7D8_Rec(0)) == 1u, "slot0 kept");
+    ASSERT(PE_LoadU32(CH1_2F7D8_ACTOR) == body, "body1");
+    ASSERT(PE_LoadU32(body + 8u) == 2u, "bit 1");
+    PASS();
+}
+
+static void test_2F7D8_table_full(void) {
+    unsigned int i;
+
+    TEST("2F7D8_table_full");
+    ResetTestState();
+
+    CH1_2F7D8_PlantTemplate();
+    for (i = 0; i < 7u; i++)
+        PE_StoreU32(CH1_2F7D8_Rec(i), 1u);
+    PE_StoreU32(CH1_2F7D8_ACTOR, 0xDEADBEEFu);
+    PE_StoreU8(GA_T_8009D2EC, 0x22u);
+
+    func_8002F7D8(CH1_2F7D8_ACTOR);
+    ASSERT(PE_LoadU32(CH1_2F7D8_ACTOR) == 0xDEADBEEFu, "no store");
+    ASSERT(PE_LoadU8(GA_T_8009D2EC) == 0x22u, "D2EC kept");
+    for (i = 0; i < 7u; i++)
+        ASSERT(PE_LoadU32(CH1_2F7D8_Rec(i)) == 1u, "inUse kept");
+    PASS();
+}
+
+static void test_2F7D8_1A680_path(void) {
+    pe_addr_t body;
+
+    TEST("2F7D8_1A680_path");
+    ResetTestState();
+
+    CH1_2F7D8_PlantTemplate();
+    CH1_2F7D8_ClearTable();
+    PE_StoreU32(CH1_2F7D8_ACTOR + 0x98u, 0u);
+    PE_StoreU8(GA_T_8009D2A0, 0x05u);
+
+    func_8002F7D8(CH1_2F7D8_ACTOR);
+    body = CH1_2F7D8_Rec(0) + 4u;
+    ASSERT(PE_LoadU32(body + 0x18u) == body + 0x1Cu, "body+0x18");
+    ASSERT(PE_LoadU8(GA_T_8009D2A0) == 0x06u, "D2A0++");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "1A680 once");
+    ASSERT(strcmp(g_bootstrap_arg4_calls[0].symbol, "func_8001A680") == 0,
+           "symbol");
+    ASSERT(g_bootstrap_arg4_calls[0].arg0 == CH1_2F7D8_ACTOR, "a0 actor");
+    ASSERT(g_bootstrap_arg4_calls[0].arg1 == 2u, "a1=2");
+    PASS();
+}
+
+static void test_2F7D8_write_footprint(void) {
+    pe_addr_t rec0;
+    pe_addr_t body;
+
+    TEST("2F7D8_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    CH1_2F7D8_PlantTemplate();
+    CH1_2F7D8_ClearTable();
+    PE_StoreU32(CH1_2F7D8_ACTOR, 0xA5A5A5A5u);
+    PE_StoreU32(CH1_2F7D8_ACTOR + 0x98u, 0x2000u);
+    PE_StoreU8(GA_T_8009D2EC, 0x00u);
+
+    rec0 = CH1_2F7D8_Rec(0);
+    body = rec0 + 4u;
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        func_8002F7D8(CH1_2F7D8_ACTOR);
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a >= rec0 && a < rec0 + 220u)
+                || (a >= CH1_2F7D8_ACTOR && a < CH1_2F7D8_ACTOR + 4u)
+                || (a == GA_T_8009D2EC);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds claim+actor+D2EC");
+                return;
+            }
+        }
+    }
+    ASSERT(PE_LoadU32(rec0) == 1u, "inUse");
+    ASSERT(PE_LoadU32(CH1_2F7D8_ACTOR) == body, "actor");
+    ASSERT(PE_LoadU8(GA_T_8009D2EC) == 1u, "D2EC");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_8002FA10 opcode 0x70 formation write
+ *
+ * Retail contract (see game/boot/func_8002FA10_port.c header):
+ *   i = index & 0xFF; body = *actor;
+ *   body+i*16+0x1C: +0=0 +1=a2 +2=a3 +3=b3 +0xC=half +0xE +0xF;
+ *   body+i*4+0x7C..+0x7F: four bytes (lb/sb).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_2FA10_ACTOR 0x80108000u
+#define CH1_2FA10_BODY  0x80108100u
+
+static void CH1_2FA10_Plant(void)
+{
+    unsigned int off;
+
+    for (off = 0; off < 0x90u; off += 4u)
+        PE_StoreU32(CH1_2FA10_BODY + off, 0xA1A1A1A1u);
+    PE_StoreU32(CH1_2FA10_ACTOR, CH1_2FA10_BODY);
+}
+
+static void test_2FA10_m0005i_index0(void) {
+    pe_addr_t p16;
+    pe_addr_t p4;
+
+    TEST("2FA10_m0005i_index0");
+    ResetTestState();
+
+    CH1_2FA10_Plant();
+    func_8002FA10(CH1_2FA10_ACTOR, 0u, 0u, 8u, 9u, 1u,
+                  5, -1, -1, -1, 3u, 15u);
+    p16 = CH1_2FA10_BODY + 0x1Cu;
+    p4 = CH1_2FA10_BODY;
+    ASSERT(PE_LoadU8(p16 + 0u) == 0u, "+0");
+    ASSERT(PE_LoadU8(p16 + 1u) == 0u, "+1 a2");
+    ASSERT(PE_LoadU8(p16 + 2u) == 8u, "+2 a3");
+    ASSERT(PE_LoadU8(p16 + 3u) == 9u, "+3");
+    ASSERT(PE_LoadU16(p16 + 0xCu) == 1u, "+0xC half");
+    ASSERT(PE_LoadU8(p16 + 0xEu) == 3u, "+0xE");
+    ASSERT(PE_LoadU8(p16 + 0xFu) == 15u, "+0xF");
+    ASSERT(PE_LoadU8(p4 + 0x7Cu) == 5u, "+0x7C");
+    ASSERT(PE_LoadU8(p4 + 0x7Du) == 0xFFu, "+0x7D -1");
+    ASSERT(PE_LoadU8(p4 + 0x7Eu) == 0xFFu, "+0x7E -1");
+    ASSERT(PE_LoadU8(p4 + 0x7Fu) == 0xFFu, "+0x7F -1");
+    ASSERT(g_stub_count == 0, "func_8002FA10 recorded as stub");
+    PASS();
+}
+
+static void test_2FA10_index_stride(void) {
+    pe_addr_t p16;
+    pe_addr_t p4;
+
+    TEST("2FA10_index_stride");
+    ResetTestState();
+
+    CH1_2FA10_Plant();
+    func_8002FA10(CH1_2FA10_ACTOR, 1u, 2u, 3u, 4u, 0x1234u,
+                  0x10, 0x20, 0x30, 0x40, 5u, 6u);
+    p16 = CH1_2FA10_BODY + 16u + 0x1Cu;
+    p4 = CH1_2FA10_BODY + 4u;
+    ASSERT(PE_LoadU8(p16 + 0u) == 0u, "i1 +0");
+    ASSERT(PE_LoadU8(p16 + 1u) == 2u, "i1 a2");
+    ASSERT(PE_LoadU8(p16 + 2u) == 3u, "i1 a3");
+    ASSERT(PE_LoadU8(p16 + 3u) == 4u, "i1 b3");
+    ASSERT(PE_LoadU16(p16 + 0xCu) == 0x1234u, "i1 half");
+    ASSERT(PE_LoadU8(p16 + 0xEu) == 5u, "i1 +0xE");
+    ASSERT(PE_LoadU8(p16 + 0xFu) == 6u, "i1 +0xF");
+    ASSERT(PE_LoadU8(p4 + 0x7Cu) == 0x10u, "i1 +0x7C");
+    ASSERT(PE_LoadU8(p4 + 0x7Du) == 0x20u, "i1 +0x7D");
+    ASSERT(PE_LoadU8(p4 + 0x7Eu) == 0x30u, "i1 +0x7E");
+    ASSERT(PE_LoadU8(p4 + 0x7Fu) == 0x40u, "i1 +0x7F");
+    ASSERT(PE_LoadU8(CH1_2FA10_BODY + 0x1Cu) == 0xA1u, "index0 untouched");
+    ASSERT(PE_LoadU8(CH1_2FA10_BODY + 0x7Cu) == 0xA1u, "i0 7C untouched");
+    PASS();
+}
+
+static void test_2FA10_index_andi(void) {
+    TEST("2FA10_index_andi");
+    ResetTestState();
+
+    CH1_2FA10_Plant();
+    func_8002FA10(CH1_2FA10_ACTOR, 0x101u, 7u, 8u, 9u, 0u,
+                  0, 0, 0, 0, 0u, 0u);
+    ASSERT(PE_LoadU8(CH1_2FA10_BODY + 16u + 0x1Cu + 1u) == 7u,
+           "0x101 masks to 1");
+    ASSERT(PE_LoadU8(CH1_2FA10_BODY + 0x1Cu + 1u) == 0xA1u,
+           "slot0 not written");
+    PASS();
+}
+
+static void test_2FA10_halfword_width(void) {
+    TEST("2FA10_halfword_width");
+    ResetTestState();
+
+    CH1_2FA10_Plant();
+    func_8002FA10(CH1_2FA10_ACTOR, 0u, 0u, 0u, 0u, 0xBEEFu,
+                  0, 0, 0, 0, 0u, 0u);
+    ASSERT(PE_LoadU16(CH1_2FA10_BODY + 0x1Cu + 0xCu) == 0xBEEFu, "sh");
+    ASSERT(PE_LoadU8(CH1_2FA10_BODY + 0x1Cu + 0xBu) == 0xA1u, "below half");
+    ASSERT(PE_LoadU8(CH1_2FA10_BODY + 0x1Cu + 0xEu) == 0u, "+0xE written 0");
+    PASS();
+}
+
+static void test_2FA10_write_footprint(void) {
+    pe_addr_t p16;
+    pe_addr_t p4;
+
+    TEST("2FA10_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    PE_StoreU32(CH1_2FA10_ACTOR, CH1_2FA10_BODY);
+
+    p16 = CH1_2FA10_BODY + 0x1Cu;
+    p4 = CH1_2FA10_BODY;
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        func_8002FA10(CH1_2FA10_ACTOR, 0u, 1u, 2u, 3u, 4u,
+                      5, 6, 7, 8, 9u, 10u);
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a == p16 + 0u) || (a == p16 + 1u)
+                || (a == p16 + 2u) || (a == p16 + 3u)
+                || (a == p16 + 0xCu) || (a == p16 + 0xDu)
+                || (a == p16 + 0xEu) || (a == p16 + 0xFu)
+                || (a == p4 + 0x7Cu) || (a == p4 + 0x7Du)
+                || (a == p4 + 0x7Eu) || (a == p4 + 0x7Fu);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds formation bytes");
+                return;
+            }
+        }
+    }
+    ASSERT(PE_LoadU8(p16 + 2u) == 2u, "a3");
+    ASSERT(PE_LoadU8(p4 + 0x7Cu) == 5u, "7C");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_8002FAA4 opcode 0xB7 formation write
+ *
+ * Retail contract (see game/boot/func_8002FAA4_port.c header):
+ *   i = index & 0xFF; body = *actor;
+ *   body+i*16+0x1C: +0=0 +1=a2 +2=a3 +3=b3 +0xC=half (jr delay).
+ *   No +0xE/+0xF and no +0x7C quartet (those are 0x70 only).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_2FAA4_ACTOR 0x80108200u
+#define CH1_2FAA4_BODY  0x80108300u
+
+static void CH1_2FAA4_Plant(void)
+{
+    unsigned int off;
+
+    for (off = 0; off < 0x90u; off += 4u)
+        PE_StoreU32(CH1_2FAA4_BODY + off, 0xA1A1A1A1u);
+    PE_StoreU32(CH1_2FAA4_ACTOR, CH1_2FAA4_BODY);
+}
+
+static void test_2FAA4_m0005i_index3(void) {
+    pe_addr_t p16;
+
+    TEST("2FAA4_m0005i_index3");
+    ResetTestState();
+
+    CH1_2FAA4_Plant();
+    func_8002FAA4(CH1_2FAA4_ACTOR, 3u, 0u, 6u, 7u, 1u);
+    p16 = CH1_2FAA4_BODY + 3u * 16u + 0x1Cu;
+    ASSERT(PE_LoadU8(p16 + 0u) == 0u, "+0");
+    ASSERT(PE_LoadU8(p16 + 1u) == 0u, "+1 a2");
+    ASSERT(PE_LoadU8(p16 + 2u) == 6u, "+2 a3");
+    ASSERT(PE_LoadU8(p16 + 3u) == 7u, "+3");
+    ASSERT(PE_LoadU16(p16 + 0xCu) == 1u, "+0xC half");
+    ASSERT(PE_LoadU8(p16 + 0xEu) == 0xA1u, "+0xE untouched");
+    ASSERT(PE_LoadU8(CH1_2FAA4_BODY + 0x7Cu) == 0xA1u, "7C untouched");
+    ASSERT(g_stub_count == 0, "func_8002FAA4 recorded as stub");
+    PASS();
+}
+
+static void test_2FAA4_index_stride(void) {
+    pe_addr_t p16;
+
+    TEST("2FAA4_index_stride");
+    ResetTestState();
+
+    CH1_2FAA4_Plant();
+    func_8002FAA4(CH1_2FAA4_ACTOR, 1u, 2u, 3u, 4u, 0x1234u);
+    p16 = CH1_2FAA4_BODY + 16u + 0x1Cu;
+    ASSERT(PE_LoadU8(p16 + 1u) == 2u, "i1 a2");
+    ASSERT(PE_LoadU8(p16 + 2u) == 3u, "i1 a3");
+    ASSERT(PE_LoadU16(p16 + 0xCu) == 0x1234u, "i1 half");
+    ASSERT(PE_LoadU8(CH1_2FAA4_BODY + 0x1Cu + 1u) == 0xA1u,
+           "index0 untouched");
+    PASS();
+}
+
+static void test_2FAA4_index_andi(void) {
+    TEST("2FAA4_index_andi");
+    ResetTestState();
+
+    CH1_2FAA4_Plant();
+    func_8002FAA4(CH1_2FAA4_ACTOR, 0x101u, 7u, 8u, 9u, 0u);
+    ASSERT(PE_LoadU8(CH1_2FAA4_BODY + 16u + 0x1Cu + 1u) == 7u,
+           "0x101 uses index 1");
+    ASSERT(PE_LoadU8(CH1_2FAA4_BODY + 0x1Cu + 1u) == 0xA1u,
+           "index0 untouched");
+    PASS();
+}
+
+static void test_2FAA4_halfword_width(void) {
+    TEST("2FAA4_halfword_width");
+    ResetTestState();
+
+    CH1_2FAA4_Plant();
+    func_8002FAA4(CH1_2FAA4_ACTOR, 0u, 0u, 0u, 0u, 0xBEEFu);
+    ASSERT(PE_LoadU16(CH1_2FAA4_BODY + 0x1Cu + 0xCu) == 0xBEEFu, "sh");
+    ASSERT(PE_LoadU8(CH1_2FAA4_BODY + 0x1Cu + 0xBu) == 0xA1u, "below half");
+    ASSERT(PE_LoadU8(CH1_2FAA4_BODY + 0x1Cu + 0xEu) == 0xA1u, "+0xE untouched");
+    PASS();
+}
+
+static void test_2FAA4_write_footprint(void) {
+    pe_addr_t p16;
+
+    TEST("2FAA4_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    PE_StoreU32(CH1_2FAA4_ACTOR, CH1_2FAA4_BODY);
+
+    p16 = CH1_2FAA4_BODY + 0x1Cu;
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        func_8002FAA4(CH1_2FAA4_ACTOR, 0u, 1u, 2u, 3u, 4u);
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a == p16 + 0u) || (a == p16 + 1u)
+                || (a == p16 + 2u) || (a == p16 + 3u)
+                || (a == p16 + 0xCu) || (a == p16 + 0xDu);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds 0xB7 formation bytes");
+                return;
+            }
+        }
+    }
+    ASSERT(PE_LoadU8(p16 + 2u) == 2u, "a3");
+    ASSERT(PE_LoadU16(p16 + 0xCu) == 4u, "half");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_8002FF78 opcode 0x5A Aya tagged setter
+ *
+ * Retail contract (see game/boot/func_8002FF78_port.c header):
+ *   dest = *D_8009D254; switch(tag&0xFF) stores value at proven
+ *   offsets; tag 255 writes D_800942EC; unknown tags store nothing.
+ *   BTL1 tags 40/50 are func_80030220, not this leaf.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_2FF78_OBJ     0x80108400u
+#define GA_D_8009D254     0x8009D254u
+#define GA_D_800942EC     0x800942ECu
+
+static void CH1_2FF78_Plant(void)
+{
+    unsigned int off;
+
+    for (off = 0; off < 0x80u; off += 4u)
+        PE_StoreU32(CH1_2FF78_OBJ + off, 0xA1A1A1A1u);
+    PE_StoreU32(GA_D_8009D254, CH1_2FF78_OBJ);
+    PE_StoreU16(GA_D_800942EC, 0xA1A1u);
+}
+
+static void test_2FF78_tag0_word(void) {
+    TEST("2FF78_tag0_word");
+    ResetTestState();
+
+    CH1_2FF78_Plant();
+    func_8002FF78(0u, 0x11223344u);
+    ASSERT(PE_LoadU32(CH1_2FF78_OBJ) == 0x11223344u, "sw +0");
+    ASSERT(PE_LoadU16(CH1_2FF78_OBJ + 4u) == 0xA1A1u, "+4 untouched");
+    ASSERT(g_stub_count == 0, "func_8002FF78 recorded as stub");
+    PASS();
+}
+
+static void test_2FF78_tag1_half(void) {
+    TEST("2FF78_tag1_half");
+    ResetTestState();
+
+    CH1_2FF78_Plant();
+    func_8002FF78(1u, 0xBEEFu);
+    ASSERT(PE_LoadU16(CH1_2FF78_OBJ + 4u) == 0xBEEFu, "sh +4");
+    ASSERT(PE_LoadU8(CH1_2FF78_OBJ + 3u) == 0xA1u, "below half");
+    ASSERT(PE_LoadU8(CH1_2FF78_OBJ + 6u) == 0xA1u, "above half");
+    PASS();
+}
+
+static void test_2FF78_tag255_global(void) {
+    TEST("2FF78_tag255_global");
+    ResetTestState();
+
+    CH1_2FF78_Plant();
+    func_8002FF78(255u, 0x7788u);
+    ASSERT(PE_LoadU16(GA_D_800942EC) == 0x7788u, "D_800942EC");
+    ASSERT(PE_LoadU32(CH1_2FF78_OBJ) == 0xA1A1A1A1u, "obj untouched");
+    PASS();
+}
+
+static void test_2FF78_tag40_no_store(void) {
+    TEST("2FF78_tag40_no_store");
+    ResetTestState();
+
+    CH1_2FF78_Plant();
+    func_8002FF78(40u, 0x12345678u);
+    func_8002FF78(50u, 1333u);
+    ASSERT(PE_LoadU32(CH1_2FF78_OBJ) == 0xA1A1A1A1u, "obj");
+    ASSERT(PE_LoadU16(GA_D_800942EC) == 0xA1A1u, "global");
+    PASS();
+}
+
+static void test_2FF78_write_footprint(void) {
+    TEST("2FF78_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    PE_StoreU32(GA_D_8009D254, CH1_2FF78_OBJ);
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        func_8002FF78(0u, 0x11223344u);
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a >= CH1_2FF78_OBJ && a < CH1_2FF78_OBJ + 4u);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds tag0 word");
+                return;
+            }
+        }
+    }
+    ASSERT(PE_LoadU32(CH1_2FF78_OBJ) == 0x11223344u, "value");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_80030220 opcode 0x5A slot tagged setter
+ *
+ * Retail contract (see game/boot/func_80030220_port.c header):
+ *   slot=*actor; idx=(tag&0xFF)-40; reject if idx>=85;
+ *   m0005i 40/41/42/50/51/52 write slot+0xE/+4/+5/+0xB0/+0xB2/+0xB4.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_30220_ACTOR 0x80108600u
+#define CH1_30220_SLOT  0x80108700u
+
+static void CH1_30220_Plant(void)
+{
+    unsigned int off;
+
+    for (off = 0; off < 0xE0u; off += 4u)
+        PE_StoreU32(CH1_30220_SLOT + off, 0xA1A1A1A1u);
+    PE_StoreU32(CH1_30220_ACTOR, CH1_30220_SLOT);
+}
+
+static void test_30220_m0005i_40_42(void) {
+    TEST("30220_m0005i_40_42");
+    ResetTestState();
+
+    CH1_30220_Plant();
+    func_80030220(CH1_30220_ACTOR, 40u, 0u);
+    func_80030220(CH1_30220_ACTOR, 41u, 1u);
+    func_80030220(CH1_30220_ACTOR, 42u, 2u);
+    ASSERT(PE_LoadU16(CH1_30220_SLOT + 0x0Eu) == 0u, "tag40 +0xE");
+    ASSERT(PE_LoadU8(CH1_30220_SLOT + 0x04u) == 1u, "tag41 +4");
+    ASSERT(PE_LoadU8(CH1_30220_SLOT + 0x05u) == 2u, "tag42 +5");
+    ASSERT(g_stub_count == 0, "func_80030220 recorded as stub");
+    PASS();
+}
+
+static void test_30220_m0005i_50_52(void) {
+    TEST("30220_m0005i_50_52");
+    ResetTestState();
+
+    CH1_30220_Plant();
+    func_80030220(CH1_30220_ACTOR, 50u, 1333u);
+    func_80030220(CH1_30220_ACTOR, 51u, 1332u);
+    func_80030220(CH1_30220_ACTOR, 52u, 1334u);
+    ASSERT(PE_LoadU16(CH1_30220_SLOT + 0xB0u) == 1333u, "1333");
+    ASSERT(PE_LoadU16(CH1_30220_SLOT + 0xB2u) == 1332u, "1332");
+    ASSERT(PE_LoadU16(CH1_30220_SLOT + 0xB4u) == 1334u, "1334");
+    PASS();
+}
+
+static void test_30220_reject_below_40(void) {
+    TEST("30220_reject_below_40");
+    ResetTestState();
+
+    CH1_30220_Plant();
+    func_80030220(CH1_30220_ACTOR, 39u, 0xFFFFu);
+    ASSERT(PE_LoadU32(CH1_30220_SLOT) == 0xA1A1A1A1u, "untouched");
+    PASS();
+}
+
+static void test_30220_nop_tag48(void) {
+    TEST("30220_nop_tag48");
+    ResetTestState();
+
+    CH1_30220_Plant();
+    func_80030220(CH1_30220_ACTOR, 48u, 0x1234u);
+    ASSERT(PE_LoadU32(CH1_30220_SLOT + 0x0Cu) == 0xA1A1A1A1u, "nop");
+    PASS();
+}
+
+static void test_30220_write_footprint(void) {
+    TEST("30220_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    PE_StoreU32(CH1_30220_ACTOR, CH1_30220_SLOT);
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        func_80030220(CH1_30220_ACTOR, 50u, 1333u);
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a == CH1_30220_SLOT + 0xB0u)
+                || (a == CH1_30220_SLOT + 0xB1u);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds tag50 half");
+                return;
+            }
+        }
+    }
+    ASSERT(PE_LoadU16(CH1_30220_SLOT + 0xB0u) == 1333u, "1333");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — func_800299CC_consume_cut BTL1 D_8009D28C 6→0
+ *
+ * Retail contract (see game/boot/func_800299CC_port.c header):
+ *   record = *D_8009D278 (gp+0x508);
+ *   if (record+0x4C & 0x00080000)==0: return (no stores);
+ *   if D_8009D28C != 6: return (no stores);
+ *   sb 6 → gp+0x10C (D_8009CE7C); sw 0 → D_8009D28C.
+ * Exclusive end 0x80029A0C; inverse at 0x80029A20 is not this cut.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH1_299CC_MODE     0x8009D28Cu
+#define CH1_299CC_EDGE     0x8009CE7Cu
+#define CH1_299CC_RECORD_P 0x8009D278u
+#define CH1_299CC_RECORD   0x80109000u
+#define CH1_299CC_FLAG     0x00080000u
+
+static void CH1_299CC_Plant(unsigned int mode, unsigned int rec_flags,
+                            unsigned int edge)
+{
+    unsigned int off;
+
+    for (off = 0; off < 0x80u; off += 4u)
+        PE_StoreU32(CH1_299CC_RECORD + off, 0xB1B1B1B1u);
+    PE_StoreU32(CH1_299CC_RECORD + 0x4Cu, rec_flags);
+    PE_StoreU32(CH1_299CC_RECORD_P, CH1_299CC_RECORD);
+    PE_StoreU32(CH1_299CC_MODE, mode);
+    PE_StoreU8(CH1_299CC_EDGE, (uint8_t)edge);
+}
+
+static void test_299CC_consume_mode6(void) {
+    TEST("299CC_consume_mode6");
+    ResetTestState();
+
+    CH1_299CC_Plant(6u, CH1_299CC_FLAG, 0u);
+    func_800299CC_consume_cut();
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 0u, "mode 6->0");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE) == 6u, "gp+0x10C=6");
+    ASSERT(PE_LoadU32(CH1_299CC_RECORD + 0x4Cu) == CH1_299CC_FLAG,
+           "flag kept");
+    ASSERT(g_stub_count == 0, "func_800299CC_consume_cut recorded as stub");
+    PASS();
+}
+
+static void test_299CC_skip_mode_ne6(void) {
+    TEST("299CC_skip_mode_ne6");
+    ResetTestState();
+
+    CH1_299CC_Plant(7u, CH1_299CC_FLAG, 0xAAu);
+    func_800299CC_consume_cut();
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 7u, "mode kept");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE) == 0xAAu, "edge kept");
+    PASS();
+}
+
+static void test_299CC_skip_flag_clear(void) {
+    TEST("299CC_skip_flag_clear");
+    ResetTestState();
+
+    CH1_299CC_Plant(6u, 0u, 6u);
+    func_800299CC_consume_cut();
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 6u, "mode kept");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE) == 6u, "edge kept (no 29A20 inverse)");
+    PASS();
+}
+
+static void test_299CC_write_footprint(void) {
+    TEST("299CC_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    CH1_299CC_Plant(6u, CH1_299CC_FLAG | 1u, 0xA5u);
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        func_800299CC_consume_cut();
+        for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a == CH1_299CC_EDGE)
+                || (a >= CH1_299CC_MODE && a < CH1_299CC_MODE + 4u);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds mode word + edge byte");
+                return;
+            }
+        }
+    }
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 0u, "mode 0");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE) == 6u, "edge 6");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE - 1u) == 0xA5u, "edge-1");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE + 1u) == 0xA5u, "edge+1");
+    PASS();
+}
+
+static void test_2CF24_mode7_store(void) {
+    TEST("2CF24_mode7_store");
+    ResetTestState();
+
+    PE_StoreU32(0x8009D28Cu, 0u);
+    func_8002CF24_mode7_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 7u, "D_8009D28C=7");
+    ASSERT(g_stub_count == 0, "func_8002CF24_mode7_cut recorded as stub");
+    PASS();
+}
+
+static void test_2CF24_mode7_from_nonzero(void) {
+    TEST("2CF24_mode7_from_nonzero");
+    ResetTestState();
+
+    PE_StoreU32(0x8009D28Cu, 6u);
+    func_8002CF24_mode7_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 7u, "overwrites 6 with 7");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-BTL2 — func_800293F4_hp_cut record+0x0C/+0x0E/+0x1C
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define BTL2_HP_REC       0x8010A000u
+#define BTL2_HP_RECORD_P  0x8009D278u
+#define BTL2_HP_GP460     0x8009D1D0u
+
+static void BTL2_HpPlant(unsigned int hp, unsigned int cap)
+{
+    unsigned int off;
+
+    for (off = 0; off < 0x40u; off += 4u)
+        PE_StoreU32(BTL2_HP_REC + off, 0xA1A1A1A1u);
+    PE_StoreU16(BTL2_HP_REC + 0x0Cu, (uint16_t)hp);
+    PE_StoreU16(BTL2_HP_REC + 0x0Eu, 0xA1A1u);
+    PE_StoreU16(BTL2_HP_REC + 0x10u, 0xA1A1u);
+    PE_StoreU8(BTL2_HP_REC + 0x12u, 0xA1u);
+    PE_StoreU16(BTL2_HP_REC + 0x1Cu, (uint16_t)cap);
+    PE_StoreU32(BTL2_HP_REC + 0x34u, 0xA1A1A1A1u);
+    PE_StoreU32(BTL2_HP_RECORD_P, BTL2_HP_REC);
+    PE_StoreU32(BTL2_HP_GP460, 0xA1A1A1A1u);
+}
+
+static void test_293F4_hp_copy_no_clamp(void) {
+    TEST("293F4_hp_copy_no_clamp");
+    ResetTestState();
+
+    BTL2_HpPlant(0x28u, 0x2Du);
+    func_800293F4_hp_cut();
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Cu) == 0x28u, "+0x0C stays 40");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Eu) == 0x28u, "+0x0E copy 40");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x1Cu) == 0x2Du, "+0x1C untouched");
+    ASSERT(PE_LoadU8(BTL2_HP_REC + 0x12u) == 4u, "+0x12=4");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x10u) == 0u, "+0x10=0");
+    ASSERT(PE_LoadU32(BTL2_HP_REC + 0x34u) == 0u, "+0x34=0");
+    ASSERT(PE_LoadU32(BTL2_HP_GP460) == 0u, "gp+0x460=0");
+    ASSERT(g_stub_count == 0, "func_800293F4_hp_cut recorded as stub");
+    PASS();
+}
+
+static void test_293F4_hp_clamp_then_copy(void) {
+    TEST("293F4_hp_clamp_then_copy");
+    ResetTestState();
+
+    BTL2_HpPlant(50u, 40u);
+    func_800293F4_hp_cut();
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Cu) == 40u, "+0x0C clamped to 40");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Eu) == 40u, "+0x0E copy after clamp");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x1Cu) == 40u, "cap unchanged");
+    PASS();
+}
+
+static void test_293F4_hp_write_footprint(void) {
+    TEST("293F4_hp_write_footprint");
+    ResetTestState();
+
+    for (pe_addr_t a = PE_RAM_BASE; a < PE_RAM_END; a += 4)
+        PE_StoreU32(a, 0xA5A5A5A5u);
+    BTL2_HpPlant(0x2Du, 0x2Du);
+    {
+        static unsigned char snap[PE_RAM_SIZE];
+        pe_addr_t a;
+
+        memcpy(snap, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+        func_800293F4_hp_cut();
+        for (a = PE_RAM_BASE; a < PE_RAM_END; a++) {
+            uint8_t got = PE_LoadU8(a);
+            uint8_t want = snap[a - PE_RAM_BASE];
+            int allow = (a == BTL2_HP_REC + 0x0Cu) ||
+                        (a == BTL2_HP_REC + 0x0Du) ||
+                        (a == BTL2_HP_REC + 0x0Eu) ||
+                        (a == BTL2_HP_REC + 0x0Fu) ||
+                        (a == BTL2_HP_REC + 0x10u) ||
+                        (a == BTL2_HP_REC + 0x11u) ||
+                        (a == BTL2_HP_REC + 0x12u) ||
+                        (a >= BTL2_HP_REC + 0x34u && a < BTL2_HP_REC + 0x38u) ||
+                        (a >= BTL2_HP_GP460 && a < BTL2_HP_GP460 + 4u);
+            if (!allow && got != want) {
+                printf("FAIL: guest 0x%08X = 0x%02X, want 0x%02X\n",
+                       a, got, want);
+                FAIL("write footprint exceeds HP cut stores");
+                return;
+            }
+        }
+    }
+    PASS();
+}
+
+#define BTL3_PKG          0x80120000u
+#define BTL3_CLIP_OFF     0x60u
+
+static pe_addr_t BTL3_PlantCommandPackage(pe_addr_t actor, unsigned int frames)
+{
+    PE_StoreU8(actor + 0x0Cu, 0u);
+    PE_StoreU32(BTL3_PKG + 4u, 0x20u);
+    PE_StoreU32(BTL3_PKG + 0x30u, (1u << 22) | 0x40u);
+    PE_StoreU32(BTL3_PKG + 0x40u, 16u);
+    PE_StoreU32(BTL3_PKG + 0x44u, (4u << 24) | BTL3_CLIP_OFF);
+    PE_StoreU8(BTL3_PKG + BTL3_CLIP_OFF + 2u, (uint8_t)frames);
+    PE_StoreU32(actor + 0x98u, 0xA5A5A7A5u);
+    func_8006C140_type0_clip_bind(BTL3_PKG);
+    return BTL3_PKG + BTL3_CLIP_OFF;
+}
+
+static void test_BTL3_type0_clip_bind_writes_slot4(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t resource;
+
+    TEST("BTL3_type0_clip_bind_writes_slot4");
+    ResetTestState();
+    resource = BTL3_PlantCommandPackage(actor, 6u);
+    ASSERT(PE_LoadU32(0x800B0E98u + 4u * 4u) == resource,
+           "Writer B filled D_800B0E98[4]");
+    ASSERT(PE_LoadU32(0x800B0CD8u + 0x1C0u + 4u * 4u) == resource,
+           "store is overlay+0x1C0+idB*4");
+    ASSERT(g_stub_count == 0, "bind cut has no unresolved calls");
+    PASS();
+}
+
+static void test_BTL3_first_command_store(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t resource;
+
+    TEST("BTL3_first_command_store");
+    ResetTestState();
+    resource = BTL3_PlantCommandPackage(actor, 6u);
+    func_8001A680_command_cut(actor, 4u);
+    ASSERT(PE_LoadU8(actor + 0x0Eu) == 4u, "actor+0x0E command 4");
+    ASSERT(PE_LoadU32(actor + 0x14u) == 0u, "actor+0x14 zero");
+    ASSERT(PE_LoadU32(actor + 0x18u) == 0u, "actor+0x18 zero");
+    ASSERT(PE_LoadU32(actor + 0x1B0u) == resource, "actor+0x1B0 from table");
+    ASSERT(PE_LoadU32(actor + 0x98u) == 0xA5A5A5A5u,
+           "actor+0x98 bit 0x200 clear");
+    ASSERT(PE_LoadU8(actor + 0x0Fu) == 5u, "actor+0x0F frames-1");
+    ASSERT(g_stub_count == 0, "command cut has no unresolved calls");
+    PASS();
+}
+
+static void test_BTL3_29810_tail_calls_command(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t resource;
+    pe_addr_t source = 0x8010D000u;
+
+    TEST("BTL3_29810_tail_calls_command");
+    ResetTestState();
+    BTL2_HpPlant(0x28u, 0x2Du);
+    resource = BTL3_PlantCommandPackage(actor, 6u);
+    PE_StoreU32(0x8009D254u, actor);
+    PE_StoreU32(actor + 0x238u, source);
+    PE_StoreU32(source + 0x18u, 650u);
+    PE_StoreU32(BTL2_HP_REC + 0x08u, 0u);
+    PE_StoreU32(BTL2_HP_REC + 0x28u, 0x00500000u);
+    PE_StoreU8(BTL2_HP_REC + 0x12u, 4u);
+    func_80029810_after_hp_cut(2u);
+    ASSERT(PE_LoadU32(BTL2_HP_REC + 0x08u) == 0x00010000u,
+           "record+0x08 floor");
+    ASSERT(PE_LoadU32(actor + 0x194u) == 0x8002D268u, "callback");
+    ASSERT(PE_LoadU16(0x8009D27Cu) == 550u, "source+0x18 minus 100");
+    ASSERT(PE_LoadU8(actor + 0x0Eu) == 4u, "first command issued");
+    ASSERT(PE_LoadU32(actor + 0x1B0u) == resource, "29810 consumed Writer B slot");
+    ASSERT(PE_LoadU8(0x8009CE80u) == 2u, "339A0 CE80");
+    ASSERT(PE_LoadU16(0x8009CE84u) == 0x000Fu, "339A0 CE84 pair2");
+    ASSERT(PE_LoadU16(0x8009CE86u) == 0x000Fu, "339A0 CE86 pair2");
+    ASSERT(g_stub_count == 0, "after_hp fully resolved");
+    PASS();
+}
+
+static void test_BTL3_0x55_overlay_gate(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t binder = 0x8010E000u;
+
+    TEST("BTL3_0x55_overlay_gate");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, actor | 0x00800000u);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x3Bu);
+    PE_StoreU32(actor, 0xFFFFFFFFu);
+    PE_StoreU32(binder, 0x00800002u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 2u);
+    ASSERT(func_800144FC_state3B_cut() == 0, "busy parks");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x3Bu, "busy state kept");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == (actor | 0x00800000u), "busy overlay[0] kept");
+    ASSERT(PE_LoadU32(actor) == 0xFFFFFFFFu, "busy *actor kept");
+    ASSERT(PE_LoadU32(binder) == 0x00800002u, "busy binder kept");
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    ASSERT(func_800144FC_state3B_cut() == 1, "clear v0=1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0u, "state cleared");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == actor, "overlay[0] &= ~0x00800000");
+    ASSERT(PE_LoadU32(actor) == 0xFFFFFFFFu, "*actor is not 0($s0)");
+    ASSERT(PE_LoadU32(binder) == 0x00800002u, "binder is 0x3A $s1 only");
+    PASS();
+}
+
+static void test_BTL5_6C4C4_sets_wait_bits(void) {
+    TEST("BTL3_6C4C4_sets_wait_bits");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Cu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Du, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    ASSERT(func_8006C4C4(1) == 0, "6C4C4 returns 0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0x0Eu) == 1u, "a0=1 sets bit 0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0x0Cu) == 1u, "slot to +0xC");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0x0Du) == 1u, "slot to +0xD");
+
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Du, 7u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    ASSERT(func_8006C4C4(-1) == 0, "a0=-1 returns 0");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 3u,
+           "a0=-1 ori 3");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0x0Cu) == 7u, "-1 copies +0xD to +0xC");
+
+    ResetTestState();
+    D_8009D1A0 = 2u;
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    PE_StoreU32(0x8009D2E8u, 0xFFFFFFFFu);
+    ASSERT(func_8006C4C4(0) == 0, "flag path returns 0");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 2u) == 2u,
+           "D_8009D1A0 bit1 ori 2");
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 2u) == 0u, "D2E8 bit1 cleared");
+    PASS();
+}
+
+static void test_BTL5_6C5BC_clear_opens_3B(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t binder = 0x8010E000u;
+
+    TEST("BTL3_6C5BC_clear_opens_3B");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800B0CD8u, actor);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x3Bu);
+    PE_StoreU32(actor, 0xFFFFFFFFu);
+    PE_StoreU32(binder, 0x00800002u);
+    PE_StoreU8(0x800B0CD8u + 0x0Cu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Du, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x81u);
+    PE_StoreU8(0x800B0CD8u + 0xEEu, 0x0Cu);
+    ASSERT(func_8006C4C4(2) == 0, "setter");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) != 0u, "busy after setter");
+    ASSERT(func_800144FC_state3B_cut() == 0, "0x3B parks while busy");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x3Bu, "state kept");
+    func_8006C5BC_clear_wait_cut();
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "andi 0xFC");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEEu) == 0u, "+0xEE zeroed");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 0xFCu) == 0x80u,
+           "high bits kept");
+    ASSERT(func_800144FC_state3B_cut() == 1, "0x3B passes after proven clear");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == actor, "overlay[0] unchanged if bit clear");
+    ASSERT(PE_LoadU32(actor) == 0xFFFFFFFFu, "*actor is not 0($s0)");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL5_6C5BC_ce2_gate_and_ee0(void) {
+    TEST("BTL5_6C5BC_ce2_gate_and_ee0");
+    ResetTestState();
+    PE_StoreU8(0x800B0CE2u, 9u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 3u);
+    PE_StoreU8(0x800B0CD8u + 0xEEu, 0u);
+    ASSERT(func_8006C5BC() == 0, "CE2=9 returns 0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0x0Eu) == 3u, "gate does not store +0xE");
+    PE_StoreU8(0x800B0CE2u, 14u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    ASSERT(func_8006C5BC() == 0, "EE=0 bits clear returns 0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEEu) == 0u, "idle EE stays 0");
+    PASS();
+}
+
+static void test_BTL5_6C5BC_bit1_advances_without_clear(void) {
+    TEST("BTL5_6C5BC_bit1_advances_without_clear");
+    ResetTestState();
+    PE_StoreU8(0x800B0CE2u, 14u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 2u);
+    PE_StoreU8(0x800B0CD8u + 0xEEu, 0u);
+    ASSERT(func_8006C5BC() == 1, "bit1 → EE11/12 returns 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEEu) == 12u, "EE=12");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 3u, "ori 1 keeps bit1");
+    ASSERT(func_8006C5BC() == 1, "EE12 → 13");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEEu) == 13u, "EE=13");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) != 0u, "EE12 does not clear");
+    ASSERT(func_8006C5BC() == 1, "EE13 returns 1");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "6CC2C andi 0xFC");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEEu) == 0u, "+0xEE zeroed");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL6_ee13_prefix_rebinds_without_clear(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t resource;
+    pe_addr_t a1;
+
+    TEST("BTL6_ee13_prefix_rebinds_without_clear");
+    ResetTestState();
+    D_8009D1A0 = 2u;
+    resource = BTL3_PlantCommandPackage(actor, 6u);
+    PE_StoreU32(0x800B0CD8u + 0x158u, BTL3_PKG);
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU8(0x800B0CE2u, 14u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 3u);
+    PE_StoreU8(0x800B0CD8u + 0xEEu, 13u);
+    PE_StoreU32(0x800B0CD8u + 0x1C0u + 4u * 4u, 0u);
+    ASSERT(func_8006C5BC() == 1, "EE13 returns 1");
+    ASSERT(PE_LoadU32(0x800B0CD8u + 0x1C0u + 4u * 4u) == resource,
+           "EE13 rebinds slot 4");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0x10u) == 0u, "+0x10 zeroed");
+    ASSERT(PE_LoadU32(0x800B0CD8u + 0x134u) == 0u, "+0x134 zeroed");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "6CC2C andi 0xFC");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEEu) == 0u, "+0xEE zeroed");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 3u);
+    PE_StoreU8(0x800B0CD8u + 0xEEu, 13u);
+    PE_StoreU32(0x8009D254u, actor);
+    PE_StoreU32(BTL3_PKG + 0x20u + 0x0Cu, 0x40u);
+    a1 = func_8006C5BC_ee13_prefix_cut();
+    ASSERT(a1 == resource, "D1A0 bit1 a1 from section+0xC");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 3u, "prefix does not clear");
+    PASS();
+}
+
+static void test_BTL6_3D050_prefix_pointer_walk(void) {
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+    pe_addr_t stream = 0x80132000u;
+
+    TEST("BTL6_3D050_prefix_pointer_walk");
+    ResetTestState();
+    PE_StoreU8(obj + 2u, 2u);
+    PE_StoreU16(obj + 6u, 3u);
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    ASSERT(PE_LoadU32(dest + 0x00u) == obj, "dest+0 = obj");
+    ASSERT(PE_LoadU32(dest + 0x04u) == obj + 0x1Cu, "dest+4 = obj+0x1C");
+    ASSERT(PE_LoadU32(dest + 0x08u) == obj + 0x1Cu + 24u, "dest+8 += count*12");
+    ASSERT(PE_LoadU32(dest + 0x0Cu) == obj + 0x1Cu + 24u + 24u,
+           "dest+0xC += half<<3");
+    ASSERT(PE_LoadU32(dest + 0x10u) == obj + 0x1Cu + 24u + 24u + 12u,
+           "dest+0x10 += half<<2");
+    ASSERT(PE_LoadU32(dest + 0x54u) == stream, "dest+0x54 = a2");
+    ASSERT(PE_LoadU16(dest + 0xBAu) == 1u, "dest+0xBA = EE13 stack 1");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no +0xE store");
+    func_8003D050_prefix_cut(0u, obj, stream, 1u);
+    PASS();
+}
+
+static void test_BTL6_3D050_ptr14_and_post_skip(void) {
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+    pe_addr_t stream = 0x80132000u;
+    pe_addr_t p14;
+    int skipped;
+
+    TEST("BTL6_3D050_ptr14_and_post_skip");
+    ResetTestState();
+    PE_StoreU8(obj + 2u, 0u);
+    PE_StoreU16(obj + 6u, 3u);
+    PE_StoreU16(obj + 8u, 1u);
+    PE_StoreU16(obj + 0xAu, 0u);
+    PE_StoreU16(obj + 0xCu, 2u);
+    PE_StoreU16(obj + 0xEu, 0u);
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    func_8003D050_ptr14_cut(dest, obj);
+    p14 = PE_LoadU32(dest + 0x10u) + 36u;
+    ASSERT(PE_LoadU32(dest + 0x14u) == p14, "dest+0x14 += sum*12");
+    ASSERT(PE_LoadU32(dest + 0x18u) == p14 + 16u, "dest+0x18 = +16");
+    ASSERT(PE_LoadU32(dest + 0x1Cu) == p14 + 16u, "dest+0x1C count0");
+    ASSERT(PE_LoadU32(dest + 0x20u) == p14 + 24u, "dest+0x20 = +8");
+
+    PE_StoreU16(p14 + 6u, 0x1111u);
+    PE_StoreU16(p14 + 16u + 6u, 0x2222u);
+    PE_StoreU16(p14 + 16u + 2u, 0x0030u);
+    skipped = func_8003D050_post_3d94c_skip_cut(dest, stream);
+    ASSERT(skipped == 0, "count0 no skip tally");
+    ASSERT(PE_LoadU16(dest + 0x70u) == 0x1111u, "+0x70 from +0x14+6");
+    ASSERT(PE_LoadU16(dest + 0x72u) == 0x2222u, "+0x72 from +0x1C+6");
+    ASSERT(PE_LoadU32(dest + 0x80u) == stream, "+0x80 = stream");
+    ASSERT(PE_LoadU32(dest + 0x84u) == stream, "+0x84 count0");
+    ASSERT(PE_LoadU16(obj + 0x14u) == 0u, "obj+0x14 cleared");
+    ASSERT(PE_LoadU16(dest + 0x2Cu) == 0u, "+0x2C zero");
+    ASSERT(PE_LoadU16(dest + 0x32u) == 1u, "+0x32 = 1");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PASS();
+}
+
+static void test_BTL6_3C5D8_and_epilogue(void) {
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+    pe_addr_t stream = 0x80132000u;
+    pe_addr_t p14;
+
+    TEST("BTL6_3C5D8_and_epilogue");
+    ResetTestState();
+    D_8009CDDC = 0x00000007;
+    PE_StoreU8(obj + 2u, 0u);
+    PE_StoreU16(obj + 6u, 8u);
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    func_8003D050_ptr14_cut(dest, obj);
+    p14 = PE_LoadU32(dest + 0x14u);
+    PE_StoreU16(p14 + 6u, 0u);
+    PE_StoreU16(PE_LoadU32(dest + 0x1Cu) + 6u, 0x0040u);
+    PE_StoreU16(PE_LoadU32(dest + 0x1Cu) + 2u, 0x0005u);
+    (void)func_8003D050_post_3d94c_skip_cut(dest, stream);
+    func_8003C5D8(dest, 50);
+    ASSERT(PE_LoadU8(dest + 0x8Du) == 50u, "3C5D8 +0x8D = 50");
+    ASSERT(PE_LoadU8(dest + 0x8Eu) == 2u, "128/50 = 2");
+    ASSERT(PE_LoadU8(dest + 0x8Fu) == 2u, "+0x8F = 2");
+    ASSERT(PE_LoadU8(dest + 0x93u) == 2u, "+0x93 = 2");
+    func_8003D050_epilogue_cut(dest, 0);
+    ASSERT(PE_LoadU8(dest + 0x8Cu) == 0xFFu, "delay sb -1 +0x8C");
+    ASSERT(PE_LoadU8(dest + 0x90u) == 0x80u, "+0x90");
+    ASSERT(PE_LoadU8(dest + 0x9Eu) == 1u, "+0x9E");
+    ASSERT(PE_LoadU8(dest + 0x9Fu) == 7u, "+0x9F = CDDC");
+    ASSERT(PE_LoadU16(obj + 0x1Au) == 8u, "obj+0x1A = half-s2");
+    ASSERT(PE_LoadU16(dest + 0x6Eu) == (uint16_t)(5u + (0x0040 >> 4)),
+           "+0x6E = lhu(+2) + (half>>4)");
+    ASSERT(PE_LoadU8(dest + 0xA6u) == 0u, "+0xA6");
+    ASSERT(PE_LoadU32(dest + 0xB0u) == 0u, "+0xB0");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PASS();
+}
+
+static void test_BTL6_6698C_bea40_fill(void) {
+    pe_addr_t dest = 0x80130000u;
+
+    TEST("BTL6_6698C_bea40_fill");
+    ResetTestState();
+    PE_StoreU8(dest + 0x88u, 16u);
+    PE_StoreU8(dest + 0x89u, 0u);
+    PE_StoreU8(dest + 0x8Au, 16u);
+    PE_StoreU8(0x800BD025u, 128u);
+    PE_StoreU8(0x800BD026u, 64u);
+    PE_StoreU8(0x800BD027u, 32u);
+    func_8006698C(dest);
+    ASSERT(PE_LoadU16(0x800BEA40u) == 0u, "EA40=0");
+    ASSERT(PE_LoadU16(0x800BEA42u) == 4096u, "EA42=4096");
+    ASSERT(PE_LoadU16(0x800BEA48u) == (uint16_t)-4096, "EA48=-4096");
+    ASSERT(PE_LoadU16(0x800BEA60u) == 256u, "EA60=(32<<4)*128>>8");
+    ASSERT(PE_LoadU16(0x800BEA66u) == 128u, "EA66=(32<<4)*64>>8");
+    ASSERT(PE_LoadU16(0x800BEA6Cu) == 64u, "EA6C=(32<<4)*32>>8");
+    ASSERT(PE_LoadU16(0x800BEA62u) == 128u, "EA62=(16<<4)*128>>8");
+    ASSERT(PE_LoadU16(0x800BEA70u) == 0u, "EA70=0");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PASS();
+}
+
+static void test_BTL6_3DFD8_matrix_copy(void) {
+    pe_addr_t src = 0x800B1638u;
+    pe_addr_t dst = 0x80130034u;
+    unsigned int i;
+
+    TEST("BTL6_3DFD8_matrix_copy");
+    ResetTestState();
+    for (i = 0; i < 32u; i++)
+        PE_StoreU8(src + i, (uint8_t)(0xA0u + i));
+    PE_StoreU16(dst + 0x12u, 0xBEEFu);
+    func_8003DFD8(src, dst, 1);
+    ASSERT(PE_LoadU16(dst + 0x00u) == PE_LoadU16(src + 0x00u), "+0");
+    ASSERT(PE_LoadU16(dst + 0x10u) == PE_LoadU16(src + 0x10u), "+0x10");
+    ASSERT(PE_LoadU16(dst + 0x12u) == 0xBEEFu, "+0x12 not copied");
+    ASSERT(PE_LoadU32(dst + 0x14u) == PE_LoadU32(src + 0x14u), "+0x14");
+    ASSERT(PE_LoadU32(dst + 0x1Cu) == PE_LoadU32(src + 0x1Cu), "+0x1C");
+    func_8003DFD8(src, dst, 0);
+    ASSERT(PE_LoadU16(dst + 0x12u) == 0xBEEFu, "blez count no store");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PASS();
+}
+
+static void test_BTL6_794C4_zero_angle_identity(void) {
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+    pe_addr_t stream = 0x80132000u;
+
+    TEST("BTL6_794C4_zero_angle_identity");
+    ResetTestState();
+    PE_StoreU32(0x800966ECu, 0x10000000u);
+    PE_StoreU8(obj + 2u, 0u);
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    func_8003D050_ptr14_cut(dest, obj);
+    PE_StoreU16(PE_LoadU32(dest + 0x14u) + 6u, 0u);
+    PE_StoreU16(PE_LoadU32(dest + 0x1Cu) + 6u, 0u);
+    (void)func_8003D050_post_3d94c_skip_cut(dest, stream);
+    func_800794C4(dest + 0x2Cu, dest + 0x34u);
+    ASSERT(PE_LoadU16(dest + 0x34u) == 4096u, "m00");
+    ASSERT(PE_LoadU16(dest + 0x36u) == 0u, "m01");
+    ASSERT(PE_LoadU16(dest + 0x38u) == 0u, "m02");
+    ASSERT(PE_LoadU16(dest + 0x3Au) == 0u, "m10");
+    ASSERT(PE_LoadU16(dest + 0x3Cu) == 4096u, "m11");
+    ASSERT(PE_LoadU16(dest + 0x3Eu) == 0u, "m12");
+    ASSERT(PE_LoadU16(dest + 0x40u) == 0u, "m20");
+    ASSERT(PE_LoadU16(dest + 0x42u) == 0u, "m21");
+    ASSERT(PE_LoadU16(dest + 0x44u) == 4096u, "m22");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PASS();
+}
+
+static void test_BTL6_3A088_mode0_empty(void) {
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+    pe_addr_t stream = 0x80132000u;
+
+    TEST("BTL6_3A088_mode0_empty");
+    ResetTestState();
+    PE_StoreU8(obj + 2u, 0u);
+    PE_StoreU16(obj + 0x18u, 0u);
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    PE_StoreU16(dest + 0x28u, 0u);
+    func_8003A088_mode0_empty_cut(dest);
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PE_StoreU16(dest + 0x28u, 1u);
+    func_8003A088_mode0_empty_cut(dest);
+    ASSERT(PE_LoadU16(dest + 0x28u) == 1u, "mode1 not invented");
+    PASS();
+}
+
+static void pe_btl6_store_identity_matrix(pe_addr_t m)
+{
+    PE_StoreU16(m + 0u, 4096u);
+    PE_StoreU16(m + 2u, 0u);
+    PE_StoreU16(m + 4u, 0u);
+    PE_StoreU16(m + 6u, 0u);
+    PE_StoreU16(m + 8u, 4096u);
+    PE_StoreU16(m + 10u, 0u);
+    PE_StoreU16(m + 12u, 0u);
+    PE_StoreU16(m + 14u, 0u);
+    PE_StoreU16(m + 16u, 4096u);
+    PE_StoreU32(m + 20u, 0u);
+    PE_StoreU32(m + 24u, 0u);
+    PE_StoreU32(m + 28u, 0u);
+}
+
+static void test_BTL6_3A088_mode0_walk_2bone(void) {
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+    pe_addr_t stream = 0x80132000u;
+    pe_addr_t out;
+    unsigned i;
+
+    TEST("BTL6_3A088_mode0_walk_2bone");
+    ResetTestState();
+    /* CE2=11+CE4=1 PE.IMG [428,434) header / recs / slots / parents. */
+    PE_StoreU8(obj + 2u, 2u);
+    PE_StoreU16(obj + 6u, 39u);
+    PE_StoreU16(obj + 8u, 24u);
+    PE_StoreU16(obj + 10u, 10u);
+    PE_StoreU16(obj + 12u, 0u);
+    PE_StoreU16(obj + 14u, 0u);
+    PE_StoreU16(obj + 0x18u, 2u);
+    PE_StoreU8(obj + 0x1Cu + 4u, 0u);
+    PE_StoreU8(obj + 0x1Cu + 12u + 4u, 1u);
+    PE_StoreU16(obj + 0x3B0u + 16u + 0u, 0u);
+    PE_StoreU16(obj + 0x3B0u + 16u + 2u, 20u);
+    PE_StoreU16(obj + 0x3B0u + 16u + 4u, (uint16_t)-7);
+    PE_StoreU16(obj + 0x3B0u + 16u + 6u, 0x20u);
+    PE_StoreU16(obj + 0x3B0u + 16u + 14u, 1u);
+    PE_StoreU8(obj + 0x3D8u, 0u);
+    PE_StoreU8(obj + 0x3D9u, 1u);
+
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    func_8003D050_ptr14_cut(dest, obj);
+    (void)func_8003D050_post_3d94c_skip_cut(dest, stream);
+    PE_StoreU16(dest + 0x28u, 0u);
+    pe_btl6_store_identity_matrix(dest + 0x34u);
+    out = PE_LoadU32(dest + 0x84u);
+    PE_StoreU32(dest + 0x58u, out);
+    for (i = 0; i < 2u; i++)
+        pe_btl6_store_identity_matrix(out + i * 32u);
+
+    func_8003A088_mode0_walk_cut(dest);
+
+    ASSERT(PE_LoadU16(out + 0u) == 4096u, "out0 m00");
+    ASSERT(PE_LoadU16(out + 8u) == 4096u, "out0 m11");
+    ASSERT(PE_LoadU16(out + 16u) == 4096u, "out0 m22");
+    ASSERT(PE_LoadU32(out + 20u) == 0u, "out0 trx");
+    ASSERT(PE_LoadU16(out + 32u) == 4096u, "out1 m00");
+    ASSERT(PE_LoadU16(stream + 0u) == 0u, "stream vx");
+    ASSERT(PE_LoadU16(stream + 2u) == 20u, "stream vy");
+    ASSERT((int16_t)PE_LoadU16(stream + 4u) == -7, "stream vz");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PASS();
+}
+
+static void test_BTL6_3B97C_empty_gate(void) {
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+
+    TEST("BTL6_3B97C_empty_gate");
+    ResetTestState();
+    PE_StoreU32(dest, obj);
+    PE_StoreU16(dest + 0xBAu, 1u);
+    PE_StoreU8(obj + 2u, 0u);
+    func_8003B97C_empty_cut(dest, 0x800BEA40u);
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PE_StoreU16(dest + 0xBAu, 0u);
+    func_8003B97C_empty_cut(dest, 0x800BEA40u);
+    ASSERT(PE_LoadU16(dest + 0xBAu) == 0u, "BA0 returns");
+    PASS();
+}
+
+static void test_BTL6_3B97C_lighting_2bone(void) {
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+    pe_addr_t stream = 0x80132000u;
+    pe_addr_t bea40 = 0x800BEA40u;
+    pe_addr_t out;
+    unsigned i;
+
+    TEST("BTL6_3B97C_lighting_2bone");
+    ResetTestState();
+    PE_StoreU8(obj + 2u, 2u);
+    PE_StoreU16(obj + 6u, 39u);
+    PE_StoreU16(obj + 8u, 24u);
+    PE_StoreU16(obj + 10u, 10u);
+    PE_StoreU16(obj + 12u, 0u);
+    PE_StoreU16(obj + 14u, 0u);
+    PE_StoreU16(obj + 0x18u, 2u);
+    PE_StoreU8(obj + 0x1Cu + 4u, 0u);
+    PE_StoreU16(obj + 0x1Cu + 12u, 1u);
+    PE_StoreU16(obj + 0x1Cu + 14u, 1u);
+    PE_StoreU8(obj + 0x1Cu + 12u + 4u, 1u);
+
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    func_8003D050_ptr14_cut(dest, obj);
+    PE_StoreU16(dest + 0x28u, 0u);
+    pe_btl6_store_identity_matrix(dest + 0x34u);
+    out = stream + 64u;
+    PE_StoreU32(dest + 0x84u, out);
+    for (i = 0; i < 2u; i++)
+        pe_btl6_store_identity_matrix(out + i * 32u);
+
+    /* dest+8 + (lhu0<<3) + 22: indices 0,0,0 for one triangle. */
+    PE_StoreU16(PE_LoadU32(dest + 0x08u) + 8u + 6u, 0u);
+    PE_StoreU16(PE_LoadU32(dest + 0x08u) + 8u + 14u, 0u);
+    PE_StoreU16(PE_LoadU32(dest + 0x08u) + 8u + 22u, 0u);
+    PE_StoreU32(0x80091A58u, 0u);
+    PE_StoreU32(0x80091A58u + 4u, 0u);
+    PE_StoreU32(0x8009CDA0u, 0x00808080u);
+    PE_StoreU8(dest + 0x88u, 0u);
+    pe_btl6_store_identity_matrix(bea40);
+    PE_StoreU16(bea40 + 0u, 0u);
+    PE_StoreU16(bea40 + 2u, 4096u);
+    PE_StoreU16(bea40 + 8u, (uint16_t)-4096);
+
+    func_8003B97C_lighting_cut(dest, bea40);
+    /* Live LCM/BK are 0 → NCCT FIFO is 0. rec0 skipped. */
+    ASSERT(PE_LoadU32(0x800B1638u + 4u) == 0u, "B1638 idx1 RGB0");
+    ASSERT(PE_LoadU32(0x800A6360u + 4u) == 0u, "A6360 idx1 RGB0");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+
+    /* Controlled NCCT: identity RT/LCM, V=(0,4096,0), RGB=0x808080. */
+    ResetTestState();
+    PE_StoreU8(obj + 2u, 1u);
+    PE_StoreU16(obj + 6u, 1u);
+    PE_StoreU8(obj + 0x1Cu + 4u, 1u);
+    PE_StoreU16(obj + 0x1Cu, 0u);
+    PE_StoreU16(obj + 0x1Cu + 2u, 1u);
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    out = stream + 64u;
+    PE_StoreU32(dest + 0x84u, out);
+    pe_btl6_store_identity_matrix(out);
+    pe_btl6_store_identity_matrix(bea40);
+    PE_StoreU16(PE_LoadU32(dest + 0x08u) + 6u, 0u);
+    PE_StoreU16(PE_LoadU32(dest + 0x08u) + 14u, 0u);
+    PE_StoreU16(PE_LoadU32(dest + 0x08u) + 22u, 0u);
+    PE_StoreU16(0x80091A58u + 0u, 0u);
+    PE_StoreU16(0x80091A58u + 2u, 4096u);
+    PE_StoreU16(0x80091A58u + 4u, 0u);
+    PE_StoreU32(0x8009CDA0u, 0x00808080u);
+    PE_StoreU8(dest + 0x88u, 0u);
+    {
+        pe_addr_t lcm = 0x80134000u;
+        pe_btl6_store_identity_matrix(lcm);
+        PE_GTE_LoadLCM(lcm);
+    }
+    func_8003B97C_lighting_cut(dest, bea40);
+    /* LLM=I, V=(0,4096,0) → IR=(0,4096,0); LCM=I; G=0x80*4096>>8=2048;
+     * FIFO G=2048/16=0x80 → word 0x00008000. */
+    ASSERT(PE_LoadU32(0x800B1638u) == 0x00008000u, "NCCT G=0x80");
+    ASSERT(PE_LoadU32(0x800A6360u) == 0x00008000u, "NCCT2 G=0x80");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PASS();
+}
+
+static void test_BTL6_3BCE0_zero_counts_and_one_packet(void) {
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+    pe_addr_t stream = 0x80132000u;
+    pe_addr_t dir;
+
+    TEST("BTL6_3BCE0_zero_counts_and_one_packet");
+    ResetTestState();
+    PE_StoreU8(obj + 2u, 0u);
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    func_8003BCE0(dest, 1, 0);
+    ASSERT(PE_LoadU32(stream) == 0u, "zero counts no store");
+
+    PE_StoreU16(obj + 8u, 1u);
+    func_8003D050_prefix_cut(dest, obj, stream, 1u);
+    dir = PE_LoadU32(dest + 0x10u);
+    PE_StoreU16(dir + 4u, 1u);
+    PE_StoreU16(dir + 6u, 2u);
+    PE_StoreU16(dir + 8u, 3u);
+    PE_StoreU16(dir + 10u, 4u);
+    PE_StoreU32(0x800B1638u + 4u, 0x11111111u);
+    PE_StoreU32(0x800B1638u + 8u, 0x22222222u);
+    PE_StoreU32(0x800B1638u + 12u, 0x33333333u);
+    PE_StoreU32(0x800B1638u + 16u, 0x44444444u);
+    PE_StoreU32(stream, 0u);
+    PE_StoreU8(stream + 7u, 0xABu);
+    func_8003BCE0(dest, 1, 0);
+    /* ROM sw +4 then sb keep at +7: LE word is 0xAB111111. */
+    ASSERT(PE_LoadU32(stream + 0x04u) == 0xAB111111u, "pkt+4");
+    ASSERT(PE_LoadU32(stream + 0x10u) == 0x22222222u, "pkt+0x10");
+    ASSERT(PE_LoadU32(stream + 0x1Cu) == 0x33333333u, "pkt+0x1C");
+    ASSERT(PE_LoadU32(stream + 0x28u) == 0x44444444u, "pkt+0x28");
+    ASSERT(PE_LoadU8(stream + 7u) == 0xABu, "byte7 kept");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
+    PASS();
+}
+
+static void test_BTL5_live_3B_from_3A_d1a0(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t binder = 0x8010E000u;
+
+    TEST("BTL5_live_3B_from_3A_d1a0");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800B0CD8u, actor);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x3Au);
+    PE_StoreU8(0x800B0CE2u, 14u);
+    PE_StoreU8(0x800B0CE4u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Cu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Du, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xEEu, 0u);
+    PE_StoreU32(binder, 2u);
+    func_800144FC_state3A_d1a0_cut();
+    ASSERT((D_8009D1A0 & 2u) != 0u, "0x3A ori D1A0 bit1");
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x3Bu);
+    ASSERT(func_8003F074_6C4C4_6C5BC_cut() == 1, "3F074 tail busy");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) != 0u, "6C4C4 set bits");
+    ASSERT(func_800144FC_state3B_cut() == 0, "0x3B parks");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x3Bu, "state kept");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == actor, "park does not store overlay[0]");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL6_6CC2C_epilogue_opens_3B(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t binder = 0x8010E000u;
+
+    TEST("BTL6_6CC2C_epilogue_opens_3B");
+    ResetTestState();
+    D_8009D1A0 = 2u;
+    PE_StoreU32(0x800B0CD8u, actor | 0x00800000u);
+    PE_StoreU32(actor, 0xFFFFFFFFu);
+    PE_StoreU32(binder, 0x00800002u);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x3Bu);
+    PE_StoreU8(0x800B0CE2u, 14u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x83u);
+    PE_StoreU8(0x800B0CD8u + 0xEEu, 13u);
+    ASSERT(func_800144FC_state3B_cut() == 0, "0x3B parks before epilogue");
+    ASSERT(func_8006C5BC() == 1, "EE13 epilogue returns 1");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "andi 0xFC");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 0xFCu) == 0x80u, "high bits kept");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEEu) == 0u, "+0xEE zeroed");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x3Bu, "0x55 not auto-completed");
+    ASSERT(func_800144FC_state3B_cut() == 1, "0x3B v0=1 after 6CC2C");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0u, "0x3B stores state 0");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == actor, "overlay[0] &= ~0x00800000");
+    ASSERT(PE_LoadU32(actor) == 0xFFFFFFFFu, "*actor is not 0($s0)");
+    ASSERT(PE_LoadU32(binder) == 0x00800002u, "binder unchanged");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL6_144FC_state0_to_37(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t binder = 0x8010E000u;
+
+    TEST("BTL6_144FC_state0_to_37");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, actor);
+    PE_StoreU32(actor, 0u);
+    PE_StoreU32(binder, 2u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x80u);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0u);
+    ASSERT(func_800144FC_state0_cut() == 0, "state 0 returns 0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x37u, "sb 0x37");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == (actor | 0x00800000u), "ori overlay[0]");
+    ASSERT(PE_LoadU32(actor) == 0u, "*actor is not 0($s0)");
+    ASSERT(PE_LoadU32(binder) == 2u, "binder unchanged");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x03u);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0u);
+    PE_StoreU32(0x800B0CD8u, actor);
+    ASSERT(func_800144FC_state0_cut() == 0, "busy still returns 0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0u, "busy keeps state 0");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == (actor | 0x00800000u), "busy still oris overlay[0]");
+    ASSERT(PE_LoadU32(actor) == 0u, "busy *actor unchanged");
+    PASS();
+}
+
+static void test_BTL6_144FC_state37_42EDC(void) {
+    pe_addr_t actor = 0x8010B000u;
+
+    TEST("BTL6_144FC_state37_42EDC");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, actor);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x37u);
+    PE_StoreU8(0x800BD024u, 5u);
+    PE_StoreU32(0x8009CED8u, 0xDEADBEEFu);
+    PE_StoreU32(0x8009CEDCu, 0xDEADBEEFu);
+    PE_StoreU32(0x8009CEE4u, 0xDEADBEEFu);
+    PE_StoreU32(0x8009CEE8u, 0xDEADBEEFu);
+    ASSERT((actor & 0x00400000u) == 0u, "live actor bit 22 clear");
+    ASSERT(func_800144FC_state37_cut() == 0, "0x37 returns 0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x38u, "sb 0x38");
+    ASSERT(PE_LoadU32(0x8009CED8u) == 1u, "gp+0x168=1");
+    ASSERT(PE_LoadU32(0x8009CEE4u) == 1u, "gp+0x174=1");
+    ASSERT(PE_LoadU32(0x8009CEE8u) == 0u, "gp+0x178=0");
+    ASSERT(PE_LoadU32(0x8009CEDCu) == 5u, "gp+0x16C=BD024");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+
+    PE_StoreU8(0x800BD024u, 40u);
+    func_80042EDC();
+    ASSERT(PE_LoadU32(0x8009CEDCu) == 32u, "clamp >=33 to 32");
+    PE_StoreU8(0x800BD024u, 0u);
+    func_80042EDC();
+    ASSERT(PE_LoadU32(0x8009CEDCu) == 0u, "zero kept");
+
+    PE_StoreU32(0x800B0CD8u, actor | 0x00400000u);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x37u);
+    PE_StoreU32(0x8009CED8u, 0xDEADBEEFu);
+    ASSERT(func_800144FC_state37_cut() == 0, "bit22 skip still 0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x38u, "skip still sb 0x38");
+    ASSERT(PE_LoadU32(0x8009CED8u) == 0xDEADBEEFu, "42EDC skipped");
+    PASS();
+}
+
+static void test_BTL6_6D60C_after_6d078(void) {
+    TEST("BTL6_6D60C_after_6d078");
+    ResetTestState();
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xF3u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xDCu, 0xFFu);
+    PE_StoreU8(0x800B0CD8u + 0xE0u, 0x27u);
+    PE_StoreU8(0x800B0CD8u + 0xE1u, 0x0Du);
+    PE_StoreU32(0x8009317Cu, 0x000008B0u);
+    PE_StoreU16(0x8009317Cu + 4u + 0x1Au, 0x01F8u);
+    PE_StoreU16(0x8009317Cu + 0x1Au + 6u, 0x0268u);
+    PE_StoreU32(0x800B0DD8u, 0x00001000u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x80u);
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU32(0x800B0CD8u + 0x124u, 0x80100000u);
+    PE_StoreU32(0x80100000u, 0u);
+    ASSERT(func_8006D60C(1) == 1, "first tick parks at 6D078");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF2u) == 0x2Eu, "0→2C→2E");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 4u) == 4u, "0x2C ori 4");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF3u) == 0x28u, "6D078 sb 0x28");
+    ASSERT(func_8006D60C(1) == 1, "empty 0x2A then D79C");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF2u) == 0x2Fu, "D79C→3F→2F");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF3u) == 0u, "empty archive");
+    ASSERT(PE_LoadU32(0x8009D270u) == 1u, "0x2F 87198 D270=1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 7u, "0x2F 6CDA4 sb 7");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no +0xE");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    ASSERT(func_800144FC_state38_cut() == 0, "0x38 still parks");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF2u) == 0u, "0x30 sb F2=0");
+    ASSERT(PE_LoadU32(0x800BCD80u) == 0xC0u, "86C1C cmd 0xC0");
+    ASSERT(PE_LoadU32(0x800BCD84u) == 0x7Fu, "86C1C a1&0x7F");
+    ASSERT(PE_LoadU32(0x800BCD90u) == 0u, "86C1C a0=0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x39u, "0x38 sb 0x39");
+    ASSERT(PE_LoadU32(0x8009CED8u) == 5u, "42F20 gp+0x168=5");
+    ASSERT(PE_LoadU32(0x8009CEE4u) == 0xFFFFFFFFu, "42F20 gp+0x174=-1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) != 0x3Au, "no 0x3A");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL6_42F20_144FC_39(void) {
+    TEST("BTL6_42F20_144FC_39");
+    ResetTestState();
+    PE_StoreU32(0x8009CED8u, 0xDEADBEEFu);
+    PE_StoreU32(0x8009CEE4u, 0xDEADBEEFu);
+    func_80042F20();
+    ASSERT(PE_LoadU32(0x8009CED8u) == 5u, "gp+0x168=5");
+    ASSERT(PE_LoadU32(0x8009CEE4u) == 0xFFFFFFFFu, "gp+0x174=-1");
+
+    PE_StoreU32(0x800B0CD8u, 0x00400000u);
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0x30u);
+    PE_StoreU32(0x800B0CD8u + 0x124u, 0x80100000u);
+    PE_StoreU32(0x80100000u, 0u);
+    PE_StoreU32(0x8009CED8u, 0xDEADBEEFu);
+    PE_StoreU32(0x8009CEE4u, 0xDEADBEEFu);
+    ASSERT(func_800144FC_state38_cut() == 0, "bit22 skip still 0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x39u, "skip still sb 0x39");
+    ASSERT(PE_LoadU32(0x8009CED8u) == 0xDEADBEEFu, "42F20 skipped");
+
+    ResetTestState();
+    PE_StoreU8(0x800B0CD8u + 0xEFu, 0u);
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800B0CD8u + 0x188u, 0x80110000u);
+    PE_StoreU32(0x800B0CD8u + 0x194u, 0x801ED800u);
+    PE_StoreU32(0x800B0CD8u + 0x100u, 0x00001000u);
+    PE_StoreU16(0x800930E2u, 0x007Eu);
+    PE_StoreU16(0x800930E4u, 0x0083u);
+    ASSERT(func_800144FC_state39_cut() == 0, "0x39 parks");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEFu) == 0x34u, "6914C sb 0x34");
+    ASSERT((D_8009D1A0 & 0x80u) != 0u, "D1A0 |= 0x80");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 8u) != 0u, "overlay |= 8");
+    ASSERT(PE_LoadU32(0x800942E4u) == 0x80110000u, "942E4=+0x188");
+    ASSERT(PE_LoadU8(0x80110000u) == 0u, "slot0 byte0");
+    ASSERT(PE_LoadU8(0x80110001u) == 0xFFu, "slot0 byte1");
+    ASSERT(PE_LoadU32(0x80110004u) == 0u, "slot0 word4");
+    ASSERT(PE_LoadU32(0x800942E8u) == 0x80116E84u, "942E8=+0x188+0x6E84");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) != 0x3Au, "6914C busy no 0x3A");
+    ASSERT(func_800144FC_state39_cut() == 0, "0x34 6E6A8 -1 parks");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEFu) == 0x34u, "stay 0x34");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static PE_Disc *BTL6_OpenDisc1(char *err, size_t err_size)
+{
+    char path[1024];
+    FILE *fp;
+    const char *env;
+    size_t n;
+
+    env = getenv("PE_DISC1_BIN");
+    if (env && env[0])
+        return PE_Disc_Open(env, err, err_size);
+    fp = fopen("local/pe_disc1.path", "r");
+    if (!fp) {
+        if (err && err_size)
+            snprintf(err, err_size, "missing local/pe_disc1.path");
+        return NULL;
+    }
+    if (!fgets(path, (int)sizeof(path), fp)) {
+        fclose(fp);
+        if (err && err_size)
+            snprintf(err, err_size, "empty pe_disc1.path");
+        return NULL;
+    }
+    fclose(fp);
+    n = strlen(path);
+    while (n > 0 && (path[n - 1u] == '\n' || path[n - 1u] == '\r'))
+        path[--n] = 0;
+    return PE_Disc_Open(path, err, err_size);
+}
+
+static void test_BTL6_6914C_0x34_issue(void) {
+    PE_Disc *disc;
+    char err[256];
+
+    TEST("BTL6_6914C_0x34_issue");
+    err[0] = 0;
+    disc = BTL6_OpenDisc1(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+    ResetTestState();
+    func_8007ED58();
+    PE_Disc_SetActive(disc);
+    PE_StoreU8(0x800B0CD8u + 0xEFu, 0x34u);
+    PE_StoreU32(0x800B0CD8u + 0x100u, 1013u);
+    PE_StoreU32(0x800B0CD8u + 0x194u, 0x801ED800u);
+    PE_StoreU16(0x800930E2u, 0x007Eu);
+    PE_StoreU16(0x800930E4u, 0x0083u);
+    D_8009D1A0 = 0x80u;
+    PE_StoreU32(0x800B0CD8u, 8u);
+    ASSERT(func_8006914C(1) == 1, "0x34 returns 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEFu) == 0x35u, "6E6A8 ok sb 0x35");
+    ASSERT(PE_LoadU32(0x801ED800u) == 0x2050u, "payload w0");
+    ASSERT(PE_LoadU32(0x801ED804u) == 0x2008u, "payload w1");
+    ASSERT(func_8006914C(1) == 1, "0x35 returns 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEFu) == 0x36u, "sync poll sb 0x36");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) != 0x3Au, "no 0x3A");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    /* 7506C LoadImage reads D_80095744 → jtb[2]/jtb[8]. PE_RamReset
+     * zeros that pointer; plant the static retail jtb (B52_SeedGpuDispatch). */
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x8009570Cu, 0x80076C34u);
+    PE_StoreU32(0x80095724u, 0x80076664u);
+    PE_StoreU32(0x800B0CD8u + 0x18Cu, 0x8010F000u);
+    PE_StoreU32(0x8010F004u, 0u);
+    PE_StoreU32(0x8010F008u, 0u);
+    ASSERT(func_8006914C(1) == 0, "0x36 done v0=0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEFu) == 0u, "0x36 sb EF=0");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 8u) == 0u, "overlay &= ~8");
+    ASSERT(PE_LoadU32(0x801ED800u) == 0x2050u, "6E1C0 does not write w0");
+    ASSERT(PE_LoadU32(0x801ED804u) == 0x2008u, "6E1C0 does not write w1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) != 0x3Au, "6914C does not sb F4");
+    ASSERT(func_800144FC_state39_cut() == 0, "0x39 after done");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x3Au, "v0=0 sb 0x3A");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_BTL6_144FC_0x3A(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t source = 0x8010D000u;
+    pe_addr_t resource;
+    pe_addr_t slot;
+    pe_addr_t binder = 0x8010E000u;
+
+    TEST("BTL6_144FC_0x3A");
+    ResetTestState();
+    resource = BTL3_PlantCommandPackage(actor, 6u);
+    func_8002F7D8(actor);
+    slot = 0x800A5D5Cu;
+    PE_StoreU32(binder, 2u);
+    PE_StoreU32(0x800B0CD8u, actor);
+    PE_StoreU32(0x8009D254u, actor);
+    PE_StoreU32(actor + 0x238u, source);
+    PE_StoreU32(source + 0x18u, 650u);
+    D_8009D1A0 = 0x80u;
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x3Au);
+    PE_StoreU8(0x8009CE3Cu, 0x77u);
+    PE_StoreU8(0x8009D1D4u, 0x77u);
+    PE_StoreU8(0x8009D1DCu, 0x77u);
+    PE_StoreU8(0x8009D2D8u, 0x77u);
+    PE_StoreU8(0x8009D1F0u, 0x77u);
+    PE_StoreU32(0x8009D1ACu, 0xAABB03DDu);
+    PE_StoreU32(0x8009D1A8u, 0x11111111u);
+    PE_StoreU8(0x8009D1CEu, 0x77u);
+    PE_StoreU8(0x8009D235u, 0x77u);
+    PE_StoreU32(0x8009D304u, 0x22222222u);
+    PE_StoreU16(0x8009D21Cu, 0x3333u);
+    PE_StoreU32(0x800A7FF0u, 0x44444444u);
+    PE_StoreU32(0x800A8014u, 0x55555555u);
+    PE_StoreU32(0x800B8A90u, 0x66666666u);
+    PE_StoreU32(0x800B8AA8u, 0x77777777u);
+    PE_StoreU32(0x8009D1E8u, 0xDEADu);
+    PE_StoreU32(0x8009D290u, 0xBEEFu);
+    PE_StoreU32(0x8009D28Cu, 6u);
+    PE_StoreU8(0x8009CE7Cu, 0x77u);
+    PE_StoreU8(0x8009CE78u, 0x77u);
+    PE_StoreU8(0x8009D288u, 0x77u);
+    PE_StoreU8(0x8009CE74u, 0x77u);
+    ASSERT(func_800144FC_state3A_cut(binder) == 0, "0x3A parks");
+    ASSERT((D_8009D1A0 & 2u) != 0u, "D1A0 |= 2");
+    ASSERT(PE_LoadU32(0x8009D1E8u) == 0u, "29810 D1E8");
+    ASSERT(PE_LoadU32(0x8009D290u) == 0u, "29810 D290");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "29810 D28C=0 not 7");
+    ASSERT(PE_LoadU8(0x8009CE7Cu) == 0u, "29810 CE7C");
+    ASSERT(PE_LoadU8(0x8009CE78u) == 0u, "29810 CE78");
+    ASSERT(PE_LoadU8(0x8009D288u) == 0u, "29810 D288");
+    ASSERT(PE_LoadU8(0x8009CE74u) == 0u, "29810 CE74");
+    ASSERT(PE_LoadU32(0x8009D278u) == slot, "29810 D278=*actor slot body");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x3Bu, "sb 0x3B");
+    ASSERT(PE_LoadU8(0x8009CE3Cu) == 0u, "20EFC CE3C");
+    ASSERT(PE_LoadU8(0x8009D1D4u) == 0u, "20EFC D1D4");
+    ASSERT(PE_LoadU8(0x8009D1DCu) == 0u, "20EFC D1DC");
+    ASSERT(PE_LoadU8(0x8009D2D8u) == 0u, "20EFC D2D8");
+    ASSERT(PE_LoadU8(0x8009D1F0u) == 0u, "20EFC D1F0");
+    ASSERT(CountOrderLog("func_80071A64") == 0, "71A64 a0=0 no boundary");
+    ASSERT(PE_LoadU32(0x8009D1A8u) == 0u, "29854 D1A8");
+    ASSERT(PE_LoadU32(0x8009D1ACu) == 0xAABB0000u, "29854 D1AC sb+and");
+    ASSERT(PE_LoadU8(0x8009D1CEu) == 0u, "29854 D1CE");
+    ASSERT(PE_LoadU8(0x8009D235u) == 0u, "29854 D235");
+    ASSERT(PE_LoadU32(0x8009D304u) == 0u, "29854 D304");
+    ASSERT(PE_LoadU16(0x8009D21Cu) == 0u, "29854 D21C");
+    ASSERT(PE_LoadU32(0x800A7FF0u) == 0xFFFF0000u, "A7FF0 pair0");
+    ASSERT(PE_LoadU32(0x800A8014u) == 0xFFFF0000u, "A7FF0 pair9");
+    ASSERT(PE_LoadU32(0x800B8A90u) == 0u, "B8A90 word0");
+    ASSERT(PE_LoadU32(0x800B8AA8u) == 0u, "B8A90 word6");
+    ASSERT(PE_LoadU8(slot + 0x12u) == 4u, "209F0 +0x12=4");
+    ASSERT(PE_LoadU8(slot + 0x13u) == 5u, "209F0 +0x13=5");
+    ASSERT(PE_LoadU8(slot + 0x14u) == 6u, "209F0 +0x14=6");
+    ASSERT(PE_LoadU8(slot + 0x15u) == 8u, "209F0 +0x15=8");
+    ASSERT(PE_LoadU8(slot + 0x16u) == 10u, "209F0 +0x16=10");
+    ASSERT(PE_LoadU8(slot + 0x17u) == 7u, "209F0 +0x17=7");
+    ASSERT(PE_LoadU8(slot + 0x18u) == 9u, "209F0 +0x18=9");
+    ASSERT(PE_LoadU8(slot + 0x19u) == 11u, "209F0 +0x19=11");
+    ASSERT(PE_LoadU32(slot + 0x08u) == 0u, "after_hp caps 2F7D8 body+8=1 to +0x28=0");
+    ASSERT(PE_LoadU32(slot + 0x34u) == 240u, "after_hp cap arm +0x34=240");
+    ASSERT(PE_LoadU8(actor + 0x0Eu) == 4u, "1A680 command 4");
+    ASSERT(PE_LoadU32(actor + 0x1B0u) == resource, "Writer B slot");
+    ASSERT(PE_LoadU8(0x8009CE80u) == PE_LoadU8(0x80000002u),
+           "339A0 a0=lbu(2) via Kuseg; APPROX host 0");
+    ASSERT(PE_LoadU16(0x8009CE84u) == 0x00DDu, "339A0 pair0; APPROX RAM[2]==0");
+    ASSERT(PE_LoadU16(0x8009CE86u) == 0x00B1u, "339A0 pair0; APPROX RAM[2]==0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    ASSERT(PE_LoadU16(slot + 0x24u) == 0u, "209F0 +0x24 scale0");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 2u) != 0u,
+           "209F0 6C4C4+D1A0 bit1");
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 2u);
+    ASSERT(func_800144FC_state3B_cut() == 0, "0x3B parks while +0xE&3");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x3Bu, "0x55 not complete");
+    ASSERT(PE_LoadU32(binder) == 2u, "park leaves binder 2");
+    PASS();
+}
+
+static void test_BTL6_144FC_0x3B(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t binder = 0x8010E000u;
+
+    TEST("BTL6_144FC_0x3B");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, actor | 0x00800000u);
+    PE_StoreU32(actor, 0xFFFFFFFFu);
+    PE_StoreU32(binder, 0x00800002u);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x3Bu);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    ASSERT(func_800144FC_state3B_cut() == 1, "bits-clear v0=1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0u, "sb F4=0");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == actor, "lw/sw 0($s0) &= ~0x00800000");
+    ASSERT(PE_LoadU32(actor) == 0xFFFFFFFFu, "*actor is not 0($s0)");
+    ASSERT(PE_LoadU32(binder) == 0x00800002u, "binder is 0x3A $s1 only");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL7_6CC68_gates_and_d10(void) {
+    pe_addr_t actor = 0x8010B000u;
+
+    TEST("BTL7_6CC68_gates_and_d10");
+    ResetTestState();
+    D_8009D1A0 = 2u;
+    PE_StoreU32(0x800B0CD8u, actor);
+    PE_StoreU32(0x8009D254u, 0u);
+    ASSERT(func_8006CC68() == 0, "D254=0 v0=0");
+    ASSERT(PE_LoadU32(0x800B0D10u) == 0u, "D254=0 skips D10");
+
+    PE_StoreU32(0x800B0CD8u, actor | 0x000C0000u);
+    PE_StoreU32(0x8009D254u, actor);
+    PE_StoreU32(actor + 0x98u, 0u);
+    ASSERT(func_8006CC68() == 0, "0xC0000 skip v0=0");
+    ASSERT(PE_LoadU32(0x800B0D10u) == 0u, "0xC0000 skips D10");
+
+    PE_StoreU32(0x800B0CD8u, actor);
+    PE_StoreU32(actor + 0x98u, 0x20000040u);
+    ASSERT(func_8006CC68() == 0, "+0x98 flag v0=0");
+    ASSERT(PE_LoadU32(0x800B0D10u) == 0u, "+0x98 flag skips D10");
+
+    PE_StoreU32(actor + 0x98u, 0u);
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x8009D2E8u, 2u);
+    ASSERT(func_8006CC68() == 0, "D2E8 bit1 v0=0");
+    ASSERT(PE_LoadU32(0x800B0D10u) == 0u, "D2E8 bit1 skips D10");
+
+    D_8009D1A0 = 2u;
+    PE_StoreU16(0x800BCF94u, 0x0011u);
+    PE_StoreU16(0x800BCF96u, 0x0022u);
+    g_pe_gte.ofx = 0xDEAD0000;
+    g_pe_gte.ofy = 0xBEEF0000;
+    ASSERT(func_8006CC68() == 0, "live arm v0=0");
+    ASSERT(PE_LoadU32(0x800B0D10u) == actor + 0x1B4u, "D10=actor+0x1B4");
+    ASSERT(PE_LoadU16(0x800B0D14u) == 3u, "D14=3");
+    ASSERT(PE_LoadU16(0x800B0D16u) == 0x12u, "D16=0x12");
+    ASSERT(g_pe_gte.ofx == (0xA0 << 16), "661CC OFX 0xA0");
+    ASSERT(g_pe_gte.ofy == (0x70 << 16), "661CC OFY 0x70");
+    PE_StoreU32(0x800B0D10u, 0x11111111u);
+    ASSERT(func_8006CC68() == 0, "repeat v0=0");
+    ASSERT(PE_LoadU32(0x800B0D10u) == 0x11111111u, "D10 kept if set");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL7_3F074_poll_opens_3B(void) {
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t binder = 0x8010E000u;
+
+    TEST("BTL7_3F074_poll_opens_3B");
+    ResetTestState();
+    D_8009D1A0 = 2u;
+    PE_StoreU32(0x800B0CD8u, actor | 0x00800000u);
+    PE_StoreU32(actor, 0xFFFFFFFFu);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(binder, 2u);
+    PE_StoreU32(0x8009D254u, actor);
+    PE_StoreU8(0x800B0CE2u, 14u);
+    PE_StoreU8(0x800B0CE4u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xEEu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x3Bu);
+    ASSERT(func_8003F074_poll_cut() == 0, "tight poll exits v0=0");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "6CC2C cleared bits");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEEu) == 0u, "EE idle");
+    ASSERT(PE_LoadU32(0x800B0D10u) == actor + 0x1B4u, "6CC68 published +0x1B4");
+    ASSERT(func_800144FC_state3B_cut() == 1, "0x3B v0=1 after drained poll");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0u, "sb F4=0");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == actor, "overlay[0] &= ~0x00800000");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "0x89 not jumped");
+    PASS();
+}
+
+static void test_BTL8_1A918_rebase_and_repeat(void) {
+    pe_addr_t obj = 0x80120000u;
+
+    TEST("BTL8_1A918_rebase_and_repeat");
+    ResetTestState();
+    PE_StoreU32(0x800B1620u, obj);
+    PE_StoreU16(obj + 2u, 2u);
+    PE_StoreU16(obj + 8u, 0u);
+    PE_StoreU32(obj + 0x18u, 0x40u);
+    PE_StoreU32(obj + 0x1Cu, 0x50u);
+    PE_StoreU32(obj + 0x20u, 0x60u);
+    PE_StoreU32(obj + 0x24u, 0x70u);
+    PE_StoreU32(obj + 0x28u, 0x80u);
+    PE_StoreU32(obj + 0x2Cu, 0x90u);
+    func_8001A918();
+    ASSERT(PE_LoadU32(obj + 0x18u) == obj + 0x40u, "rebased +0x18");
+    ASSERT(PE_LoadU32(obj + 0x1Cu) == obj + 0x50u, "rebased +0x1C");
+    ASSERT(PE_LoadU32(obj + 0x20u) == obj + 0x60u, "rebased +0x20");
+    ASSERT(PE_LoadU32(obj + 0x24u) == obj + 0x70u, "rebased +0x24");
+    ASSERT(PE_LoadU32(obj + 0x28u) == obj + 0x80u, "table0");
+    ASSERT(PE_LoadU32(obj + 0x2Cu) == obj + 0x90u, "table1");
+    ASSERT(PE_LoadU16(obj + 8u) == 1u, "+8 = (0>>5)+1");
+    ASSERT(PE_LoadU32(0x8009D1FCu) == obj, "gp+0x48C");
+    ASSERT(PE_LoadU32(0x8009CE08u) == obj + 0x28u, "gp+0x98");
+    ASSERT(PE_LoadU32(0x8009D1D8u) == obj + 0x60u, "gp+0x468");
+    ASSERT(PE_LoadU32(0x8009CE14u) == obj + 0x70u, "gp+0xA4");
+    PE_StoreU32(0x8009CE14u, 0xDEADu);
+    func_8001A918();
+    ASSERT(PE_LoadU32(obj + 0x18u) == obj + 0x40u, "repeat keeps +0x18");
+    ASSERT(PE_LoadU16(obj + 8u) == 1u, "repeat does not bump +8");
+    ASSERT(PE_LoadU32(0x8009CE14u) == 0xDEADu, "short path skips gp+0xA4");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL9_371B0_window_and_gp120(void) {
+    unsigned int i;
+    pe_addr_t rec;
+    pe_addr_t tile;
+    pe_addr_t sprt;
+
+    TEST("BTL9_371B0_window_and_gp120");
+    ResetTestState();
+    PE_StoreU16(0x8009167Au, 0x01D4u);
+    PE_StoreU16(0x80091680u, 0x0034u);
+    PE_StoreU16(0x80091682u, 0x1234u);
+    for (i = 0; i < 4u; i++) {
+        rec = 0x800BCEA8u + i * 56u;
+        PE_StoreU32(rec, 0x11111111u);
+        PE_StoreU32(rec + 4u, 0x22222222u);
+        PE_StoreU32(rec + 8u, 0x33333333u);
+        PE_StoreU32(rec + 0x0Cu, 0xFFFFFFFFu);
+        PE_StoreU16(rec + 0x10u, 0x0005u);
+    }
+    func_800371B0(0x80140000u);
+    ASSERT(PE_LoadU32(0x8009CE90u) == 0x80140000u, "sw a0 gp+0x120");
+    ASSERT(PE_LoadU8(0x8009CEA0u) == 0u, "gp+0x130");
+    ASSERT(PE_LoadU8(0x8009CED0u) == 0u, "gp+0x160");
+    ASSERT(PE_LoadU32(0x8009CED4u) == 0u, "gp+0x164");
+    for (i = 0; i < 4u; i++) {
+        rec = 0x800BCEA8u + i * 56u;
+        ASSERT(PE_LoadU8(rec) == 0u, "rec+0");
+        ASSERT(PE_LoadU32(rec + 4u) == 0u, "rec+4");
+        ASSERT(PE_LoadU8(rec + 8u) == 0u, "rec+8");
+        ASSERT(PE_LoadU8(rec + 9u) == 0u, "rec+9");
+        ASSERT(PE_LoadU32(rec + 0x0Cu) == 0xFC000000u, "rec+0xC bits 26-31");
+        ASSERT(PE_LoadU16(rec + 0x10u) == 0xFFFFu, "rec+0x10 = -1");
+    }
+    sprt = 0x800AEC78u;
+    ASSERT(PE_LoadU8(0x800AEC70u + 3u) == 6u, "sprt compound len");
+    ASSERT(PE_LoadU32(sprt) == 0u, "sprt tag 0");
+    ASSERT((PE_LoadU8(sprt + 7u) & 1u) != 0u, "SetShadeTex");
+    ASSERT(PE_LoadU8(sprt + 0x0Cu) == 0x70u, "u0");
+    ASSERT(PE_LoadU8(sprt + 0x0Du) == 0xD4u, "v0 from 9167A");
+    ASSERT(PE_LoadU16(0x800AEC86u) == 0x1234u, "clut from 91682");
+    ASSERT(PE_LoadU16(sprt + 0x10u) == 0x18u, "sprt w");
+    ASSERT(PE_LoadU16(sprt + 0x12u) == 0x0Cu, "sprt h");
+    ASSERT(PE_LoadU32(0x800AEC74u) == 0xE1000234u, "DR_MODE from 91680");
+    tile = 0x800AECB0u;
+    ASSERT(PE_LoadU8(tile + 4u) == 2u, "tile r");
+    ASSERT(PE_LoadU8(tile + 5u) == 2u, "tile g");
+    ASSERT(PE_LoadU8(tile + 6u) == 2u, "tile b");
+    ASSERT(PE_LoadU16(tile + 8u) == 0u, "tile x");
+    ASSERT(PE_LoadU16(tile + 0x0Au) == 0xAAu, "tile y=170");
+    ASSERT(PE_LoadU16(tile + 0x0Cu) == 0x140u, "tile w=320");
+    ASSERT(PE_LoadU16(tile + 0x0Eu) == 0x36u, "tile h=54");
+    ASSERT((PE_LoadU8(tile + 7u) & 2u) != 0u, "SetSemiTrans");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL9_371B0_selects_162C(void) {
+    TEST("BTL9_371B0_selects_162C");
+    ResetTestState();
+    PE_StoreU32(0x800B1628u, 0x80111111u);
+    PE_StoreU32(0x800B162Cu, 0x80122222u);
+    PE_StoreU32(0x800B0CD8u, 0u);
+    ASSERT(func_8003F074_371b0_a0() == 0x80111111u, "bit clear -> 1628");
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    ASSERT(func_8003F074_371b0_a0() == 0x80122222u, "USA bit -> 162C");
+    func_800371B0(func_8003F074_371b0_a0());
+    ASSERT(PE_LoadU32(0x8009CE90u) == 0x80122222u, "live a0 is 162C");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL9_12574_rebase_and_125E0(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t desc = 0x80121100u;
+    int ds0, ds1;
+
+    TEST("BTL9_12574_rebase_and_125E0");
+    ResetTestState();
+    HostFB_Init();
+    PE_StoreU32(hdr, 0x100u);
+    PE_StoreU32(hdr + 4u, 1u);
+    PE_StoreU32(hdr + 8u, 0x100u);
+    PE_StoreU8(desc, 2u);
+    PE_StoreU8(desc + 1u, 0u);
+    PE_StoreU8(desc + 2u, 4u);
+    ASSERT(func_80012574(hdr) == hdr, "12574 returns a0");
+    ASSERT(PE_LoadU32(0x8009CE04u) == hdr, "published gp+0x94");
+    ASSERT(PE_LoadU32(hdr) == desc, "rebased *hdr");
+    ASSERT(PE_LoadU32(hdr + 8u) == desc, "rebased +8");
+    HostFB_GetState(NULL, &ds0, NULL, NULL);
+    func_800125E0();
+    HostFB_GetState(NULL, &ds1, NULL, NULL);
+    ASSERT(ds1 == ds0 + 1, "DrawSync(0) once");
+    ASSERT(func_80035038(desc + 1u, 0u, 1u) == 0u, "empty freelist v0=0");
+    ASSERT(PE_LoadU32(0x8009D2ACu) == 0u, "D2AC stays 0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL9_34FC4_freelist(void) {
+    unsigned int i;
+
+    TEST("BTL9_34FC4_freelist");
+    ResetTestState();
+    PE_StoreU32(0x8009D2ACu, 0xDEADu);
+    PE_StoreU32(0x8009D254u, 0xBEEFu);
+    func_80034FC4();
+    ASSERT(PE_LoadU32(0x8009D2ACu) == 0x800BEA90u, "head");
+    for (i = 0; i < 13u; i++) {
+        ASSERT(PE_LoadU32(0x800BEA90u + 4u + i * 0x280u)
+                   == 0x800BEA90u + (i + 1u) * 0x280u,
+               "next link");
+    }
+    ASSERT(PE_LoadU32(0x800C0B14u) == 0u, "tail next=0");
+    ASSERT(PE_LoadU32(0x8009D20Cu) == 0u, "gp+0x49C");
+    ASSERT(PE_LoadU16(0x8009D2A6u) == 0u, "gp+0x536");
+    ASSERT(PE_LoadU32(0x8009D254u) == 0u, "D254");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL10_1266C_task_pool(void) {
+    unsigned int i;
+
+    TEST("BTL10_1266C_task_pool");
+    ResetTestState();
+    func_8001266C();
+    ASSERT(PE_LoadU32(0x8009CDFCu) == 0x8009D310u, "task head");
+    ASSERT(PE_LoadU32(0x8009D300u) == 0u, "gp+0x590");
+    for (i = 0; i < 0x47u; i++) {
+        ASSERT(PE_LoadU32(0x8009D310u + 0x24u + i * 0x2Cu)
+                   == 0x8009D310u + (i + 1u) * 0x2Cu,
+               "task next");
+    }
+    ASSERT(PE_LoadU32(0x8009DF68u) == 0u, "last next=0");
+    ASSERT(PE_LoadU32(0x800B6A80u) == 0u, "B6A80");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL10_35038_a1eq0_empty_1ac(void) {
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t actor;
+    pe_addr_t task;
+
+    TEST("BTL10_35038_a1eq0_empty_1ac");
+    ResetTestState();
+    func_8003F074_pool_cut();
+    PE_StoreU32(0x800915E4u, 0x80035E04u);
+    PE_StoreU32(0x800915E8u, 0u);
+    PE_StoreU32(hdr + 8u + 4u, 0x80035E04u);
+    PE_StoreU32(0x800B161Cu, hdr);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 4u);
+    actor = func_80035038(desc, 0u, 1u);
+    ASSERT(actor == 0x800BEA90u, "popped first slot");
+    ASSERT(PE_LoadU32(0x8009D2ACu) == 0x800BED10u, "head advanced");
+    ASSERT(PE_LoadU32(0x8009D20Cu) == actor, "list head");
+    ASSERT(PE_LoadU32(actor + 4u) == 0u, "no pred");
+    ASSERT(PE_LoadU32(actor + 8u) == 0u, "no succ");
+    ASSERT(PE_LoadU8(actor + 0x0Cu) == 1u, "type");
+    ASSERT(PE_LoadU8(actor + 0x0Du) == 4u, "idB");
+    ASSERT(PE_LoadU32(actor + 0x20u) == 0x50000u, "type!=0 +0x20");
+    ASSERT(PE_LoadU32(actor) == 0u, "type!=0 +0");
+    ASSERT(PE_LoadU32(actor + 0x190u) == 0x80035E04u, "vtable");
+    ASSERT(PE_LoadU32(actor + 0x1ACu) == 0u, "B0E70 BSS 0");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0xE0u) == 0xE0u, "flags |= 0xE0");
+    ASSERT(PE_LoadU32(actor + 0x9Cu) == 0x80035E04u, "task entry");
+    task = PE_LoadU32(actor + 0xA8u);
+    ASSERT(task == 0x8009D310u, "12700 first task");
+    ASSERT(PE_LoadU32(task) == 0x80035E04u, "task PC");
+    ASSERT(PE_LoadU32(0x8009D254u) == 0u, "type1 does not publish D254");
+    ASSERT(PE_LoadU16(actor + 0x24u) == 0u, "id 0");
+    ASSERT(PE_LoadU32(0x8009D224u) == 1u, "id++");
+    ASSERT(PE_LoadU16(0x8009D2A6u) == 1u, "gp+0x536");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL11_35558_d1a0_skips_walk(void) {
+    TEST("BTL11_35558_d1a0_skips_walk");
+    ResetTestState();
+    D_8009D1A0 = 4u;
+    PE_StoreU32(0x8009D20Cu, 0x800BEA90u);
+    PE_StoreU32(0x800BEA90u + 0x190u, 0x80035E04u);
+    PE_StoreU32(0x800BEA90u + 0x28u, 0x111u);
+    func_80035558_walk_cut();
+    ASSERT(PE_LoadU32(0x800BEA90u + 0x40u) == 0u, "no snapshot");
+    ASSERT(PE_LoadU32(0x8009D2F0u) == 0u, "no 361F4");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL11_35558_walk_35E04(void) {
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t actor;
+    pe_addr_t task;
+
+    TEST("BTL11_35558_walk_35E04");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    func_8003F074_pool_cut();
+    PE_StoreU32(0x800915E4u, 0x80035E04u);
+    PE_StoreU32(hdr + 8u + 4u, 0x80035E04u);
+    PE_StoreU32(0x800B161Cu, hdr);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 4u);
+    actor = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(actor + 0x28u, 0x10u);
+    PE_StoreU32(actor + 0x2Cu, 0x20u);
+    PE_StoreU32(actor + 0x30u, 0x30u);
+    PE_StoreU16(actor + 0x38u, 0x40u);
+    PE_StoreU16(actor + 0x3Au, 0x50u);
+    PE_StoreU16(actor + 0x3Cu, 0x60u);
+    func_80035558_walk_cut();
+    ASSERT(PE_LoadU32(actor + 0x40u) == 0x10u, "snap x");
+    ASSERT(PE_LoadU32(actor + 0x44u) == 0x20u, "snap y");
+    ASSERT(PE_LoadU32(actor + 0x48u) == 0x30u, "snap z");
+    ASSERT(PE_LoadU16(actor + 0x50u) == 0x40u, "snap rx");
+    ASSERT(PE_LoadU16(actor + 0x52u) == 0x50u, "snap ry");
+    ASSERT(PE_LoadU16(actor + 0x54u) == 0x60u, "snap rz");
+    ASSERT(PE_LoadU32(0x8009D2F0u) == actor, "361F4 actor");
+    task = PE_LoadU32(actor + 0xA8u);
+    ASSERT(task == 0x8009D310u, "12700 first task");
+    ASSERT(PE_LoadU32(0x8009D300u) == 0u, "17018 walked +0x24");
+    ASSERT(PE_LoadU32(actor + 0x28u) == 0x10u, "no motion +0x98 bit1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL12_17018_countdown_and_gate(void) {
+    pe_addr_t task = 0x8009D310u;
+    pe_addr_t actor = 0x800BEA90u;
+    pe_addr_t stream = 0x80122000u;
+
+    TEST("BTL12_17018_countdown_and_gate");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task, stream);
+    PE_StoreU32(task + 0x10u, 2u);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(stream, 1u);
+    PE_StoreU32(actor + 0x98u, 0x100000E0u);
+    func_80017018();
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "delay 2→1");
+    ASSERT(PE_LoadU32(task) == stream, "PC held");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x10u) == 0u, "no op1");
+    ASSERT(PE_LoadU32(0x8009D300u) == 0u, "walked next");
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU16(task + 8u, 0x10u);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(task) == stream, "0x50 gate holds PC");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x10u) == 0u, "0x50 no op1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL12_17018_opcode1(void) {
+    pe_addr_t task = 0x8009D310u;
+    pe_addr_t actor = 0x800BEA90u;
+    pe_addr_t stream = 0x80122000u;
+
+    TEST("BTL12_17018_opcode1");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800910A4u, 0x800172BCu);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task, stream);
+    PE_StoreU32(task + 0x10u, 1u);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(stream, 1u);
+    PE_StoreU32(actor + 0x98u, 0x100000E0u);
+    func_80017018();
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x10u) != 0u, "op1 |= 0x10");
+    ASSERT(PE_LoadU32(task) == stream + 8u, "PC +8");
+    ASSERT(PE_LoadU32(task + 0x10u) == 0u, "delay consumed");
+    ASSERT(PE_LoadU32(0x8009D300u) == 0u, "walked next");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL13_2F76C_type0_stores(void) {
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t actor;
+
+    TEST("BTL13_2F76C_type0_stores");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    func_8003F074_pool_cut();
+    PE_StoreU32(0x800915DCu, 0x80035C84u);
+    PE_StoreU32(hdr + 8u, 0x80122000u);
+    PE_StoreU32(0x800B161Cu, hdr);
+    PE_StoreU8(desc, 0u);
+    PE_StoreU8(desc + 1u, 0u);
+    actor = func_80035038(desc, 0u, 1u);
+    ASSERT(actor == 0x800BEA90u, "type0 slot");
+    ASSERT(PE_LoadU32(0x8009D254u) == actor, "D254");
+    ASSERT(PE_LoadU32(actor) == 0x800B8A20u, "2F76C actor+0");
+    ASSERT(PE_LoadU32(0x800B8A88u) == 0x800B0CB0u, "B8A88");
+    ASSERT(PE_LoadU32(0x800B8A8Cu) == 0x8009D1B0u, "B8A8C");
+    ASSERT(PE_LoadU32(actor + 0x20u) == 0x10000u, "+0x20");
+    ASSERT(PE_LoadU32(actor + 0x190u) == 0x80035C84u, "type0 vtable");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL13_35C84_d2e8_skip(void) {
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t actor;
+
+    TEST("BTL13_35C84_d2e8_skip");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    func_8003F074_pool_cut();
+    PE_StoreU32(0x800915DCu, 0x80035C84u);
+    PE_StoreU32(hdr + 8u, 0x80122000u);
+    PE_StoreU32(0x800B161Cu, hdr);
+    PE_StoreU8(desc, 0u);
+    PE_StoreU8(desc + 1u, 0u);
+    actor = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2E8u, 1u);
+    PE_StoreU32(actor + 0x28u, 0xAAu);
+    PE_StoreU32(actor + 0x2Cu, 0xBBu);
+    PE_StoreU32(actor + 0x30u, 0xCCu);
+    func_80035558_walk_cut();
+    ASSERT(PE_LoadU32(actor + 0x40u) == 0xAAu, "snap x");
+    ASSERT(PE_LoadU32(actor + 0x44u) == 0xBBu, "snap y");
+    ASSERT(PE_LoadU32(actor + 0x48u) == 0xCCu, "snap z");
+    ASSERT(PE_LoadU32(0x8009D2F0u) == actor, "361F4");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL14_6E2D0_m0005i_token(void) {
+    static const unsigned char charset[] =
+        "0123456789abcdefghiklmnoprstuvwy";
+    pe_addr_t dest = 0x80121000u;
+    unsigned int i;
+
+    TEST("BTL14_6E2D0_m0005i_token");
+    ResetTestState();
+    for (i = 0; i < 32u; i++)
+        PE_StoreU8(0x800930B4u + i, charset[i]);
+    func_8006E2D0(dest, 0xA80002C8u);
+    ASSERT(PE_LoadU8(dest) == 'M', "M");
+    ASSERT(PE_LoadU8(dest + 1u) == '0', "0");
+    ASSERT(PE_LoadU8(dest + 2u) == '0', "0");
+    ASSERT(PE_LoadU8(dest + 3u) == '0', "0");
+    ASSERT(PE_LoadU8(dest + 4u) == '5', "5");
+    ASSERT(PE_LoadU8(dest + 5u) == 'I', "I");
+    ASSERT(PE_LoadU8(dest + 6u) == 0u, "NUL");
+    ASSERT(func_8006E454(dest) == 5, "atoi 5");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL14_6B4F8_publish_12574(void) {
+    pe_addr_t chunk = 0x80140000u;
+    pe_addr_t list;
+    unsigned int i;
+
+    TEST("BTL14_6B4F8_publish_12574");
+    ResetTestState();
+    for (i = 0; i < 0x180u; i += 4u)
+        PE_StoreU32(chunk + i, 0u);
+    PE_StoreU32(chunk + 4u, 0x40u);
+    PE_StoreU32(chunk + 0x40u + 0x14u, 0x80u);
+    PE_StoreU32(chunk + 0x40u + 0x18u, 0x90u);
+    PE_StoreU32(chunk + 0x40u + 0x1Cu, 0xA0u);
+    PE_StoreU32(chunk + 0x40u + 0x20u, (2u << 22) | 0xB0u);
+    PE_StoreU32(chunk + 0x80u + 4u, 0x100u);
+    PE_StoreU32(chunk + 0x90u + 4u, 0x200u);
+    PE_StoreU32(chunk + 0xA0u + 4u, 0x300u);
+    PE_StoreU32(chunk + 0xB0u + 4u, 0x400u);
+    PE_StoreU8(chunk + 0xB0u + 7u, 0u);
+    PE_StoreU32(chunk + 0xB8u + 4u, 0x500u);
+    PE_StoreU8(chunk + 0xB8u + 7u, 1u);
+    PE_StoreU32(chunk + 0x100u, 0x20u);
+    PE_StoreU32(chunk + 0x100u + 4u, 2u);
+    PE_StoreU32(chunk + 0x100u + 8u, 0x40u);
+    PE_StoreU32(chunk + 0x100u + 12u, 0x50u);
+    PE_StoreU32(0x800B0E64u, chunk);
+    func_8006B4F8_12574_publish_cut();
+    list = chunk + 0x100u;
+    ASSERT(PE_LoadU32(0x800B161Cu) == list, "+0x944 list");
+    ASSERT(PE_LoadU32(0x8009CE04u) == list, "CE04");
+    ASSERT(PE_LoadU32(list) == list + 0x20u, "12574 rebase desc");
+    ASSERT(PE_LoadU32(list + 8u) == list + 0x40u, "type0 entry");
+    ASSERT(PE_LoadU32(0x800B1620u) == chunk + 0x200u, "+0x948");
+    ASSERT(PE_LoadU32(0x800B1624u) == chunk + 0x300u, "+0x94C");
+    ASSERT(PE_LoadU32(0x800B1628u) == chunk + 0x400u, "+0x950 id0");
+    ASSERT(PE_LoadU32(0x800B162Cu) == chunk + 0x500u, "+0x954 id1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL14_125E0_desc_type1_type6(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t a6;
+    pe_addr_t a1;
+
+    TEST("BTL14_125E0_desc_type1_type6");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    func_8003F074_pool_cut();
+    PE_StoreU32(0x800915DCu + 8u, 0x80035E04u);
+    PE_StoreU32(0x800915DCu + 6u * 8u, 0x80035E04u);
+    PE_StoreU32(hdr, desc);
+    PE_StoreU32(hdr + 4u, 7u);
+    PE_StoreU8(desc, 2u);
+    PE_StoreU8(desc + 1u, 1u);
+    PE_StoreU8(desc + 2u, 0u);
+    PE_StoreU8(desc + 3u, 6u);
+    PE_StoreU8(desc + 4u, 0u);
+    PE_StoreU32(0x8009CE04u, hdr);
+    PE_StoreU32(0x800B161Cu, hdr);
+    func_800125E0();
+    a6 = PE_LoadU32(0x8009D20Cu);
+    a1 = PE_LoadU32(a6 + 4u);
+    ASSERT(PE_LoadU8(a6 + 0x0Cu) == 6u, "head type 6");
+    ASSERT(PE_LoadU8(a1 + 0x0Cu) == 1u, "next type 1");
+    ASSERT(PE_LoadU32(a6 + 0x190u) == 0x80035E04u, "type6 35E04");
+    ASSERT(PE_LoadU32(a1 + 0x190u) == 0x80035E04u, "type1 35E04");
+    ASSERT(PE_LoadU32(0x8009D254u) == 0u, "no type0 D254");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL14_181CC_tag255_d942ec(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+
+    TEST("BTL14_181CC_tag255_d942ec");
+    ResetTestState();
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0xFFu);
+    PE_StoreU32(imm + 12u, 0xFFFFFBA9u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU16(0x800942ECu, 0u);
+    ASSERT(func_800181CC(args) == 1, "v0=1");
+    ASSERT(PE_LoadU16(0x800942ECu) == 0xFBA9u, "2FF78 tag 255");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL14_17018_ce_refetch(void) {
+    pe_addr_t task = 0x8009D310u;
+    pe_addr_t actor = 0x800BEA90u;
+    pe_addr_t stream = 0x80122000u;
+
+    TEST("BTL14_17018_ce_refetch");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800910A0u + 0xCEu * 4u, 0x800181CCu);
+    PE_StoreU32(0x800910A4u, 0x800172BCu);
+    ASSERT(PE_LoadU32(0x800910A0u + 0xCEu * 4u) == 0x800181CCu,
+           "table[0xCE] planted");
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task, stream);
+    PE_StoreU32(task + 0x10u, 1u);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(stream, 0x000080CEu);
+    PE_StoreU32(stream + 4u, 0u);
+    PE_StoreU32(stream + 8u, 0u);
+    PE_StoreU32(stream + 12u, 0u);
+    PE_StoreU32(stream + 16u, 0xFFu);
+    PE_StoreU32(stream + 20u, 0xFFFFFBA9u);
+    PE_StoreU32(stream + 24u, 1u);
+    PE_StoreU32(actor + 0x98u, 0x100000E0u);
+    PE_StoreU16(0x800942ECu, 0u);
+    func_80017018();
+    ASSERT(PE_LoadU16(0x800942ECu) == 0xFBA9u, "0xCE wrote D942EC");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x10u) != 0u, "re-fetch op1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL15_15DAC_nop_194(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+
+    TEST("BTL15_15DAC_nop_194");
+    ResetTestState();
+    PE_StoreU32(0x800101B0u + (0x194u - 100u) * 4u, 0x800168F4u);
+    PE_StoreU32(imm, 0x194u);
+    PE_StoreU32(args, imm);
+    PE_StoreU16(0x800942ECu, 0x1111u);
+    ASSERT(func_80015DAC_default_cut(args) == 1, "v0=1");
+    ASSERT(PE_LoadU16(0x800942ECu) == 0x1111u, "nop no store");
+    PE_StoreU32(imm, 0x3EEu);
+    ASSERT(func_80015DAC_default_cut(args) == 1, "oor v0=1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL15_173F4_store(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t dst = 0x80122100u;
+    pe_addr_t src = 0x80122110u;
+
+    TEST("BTL15_173F4_store");
+    ResetTestState();
+    PE_StoreU32(src, 0x10000u);
+    PE_StoreU32(dst, 0u);
+    PE_StoreU32(args, dst);
+    PE_StoreU32(args + 4u, src);
+    ASSERT(func_800173F4(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(dst) == 0x10000u, "*arg0=*arg1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL15_17E20_cond_jump(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t actor = 0x800BEA90u;
+
+    TEST("BTL15_17E20_cond_jump");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x9Cu, 0x80123000u);
+    PE_StoreU32(0x8009CE00u, 0xDEADu);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0x42u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    ASSERT(func_80017E20(args) == 1, "eq v0=1");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0xDEADu, "eq holds CE00");
+    PE_StoreU32(imm, 1u);
+    ASSERT(func_80017E20(args) == 1, "ne v0=1");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80123000u + (0x42u << 1),
+           "ne CE00=base+imm<<1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL16_12850_live_slt_ba(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+
+    TEST("BTL16_12850_live_slt_ba");
+    ResetTestState();
+    PE_StoreU32(imm, 0x9u);
+    PE_StoreU32(imm + 8u, 0u);
+    PE_StoreU32(imm + 12u, 3u);
+    PE_StoreU32(imm + 16u, 0xDEADu);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 16u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    ASSERT(func_80012850(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(imm + 16u) == 0u, "3 < 0 is 0");
+    PE_StoreU32(imm + 8u, 4u);
+    ASSERT(func_80012850(args) == 1, "v0=1 again");
+    ASSERT(PE_LoadU32(imm + 16u) == 1u, "3 < 4 is 1");
+    PE_StoreU32(imm, 24u);
+    PE_StoreU32(imm + 16u, 0xBEEFu);
+    ASSERT(func_80012850(args) == 1, "oor v0=1");
+    ASSERT(PE_LoadU32(imm + 16u) == 0xBEEFu, "oor no store");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL16_12850_alu_ops(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+
+    TEST("BTL16_12850_alu_ops");
+    ResetTestState();
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 16u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(imm + 8u, 5u);
+    PE_StoreU32(imm + 12u, 7u);
+    ASSERT(func_80012850(args) == 1, "add v0=1");
+    ASSERT(PE_LoadU32(imm + 16u) == 12u, "5+7");
+    PE_StoreU32(imm, 3u);
+    ASSERT(func_80012850(args) == 1, "and v0=1");
+    ASSERT(PE_LoadU32(imm + 16u) == 5u, "5&7");
+    PE_StoreU32(imm, 0xBu);
+    PE_StoreU32(imm + 12u, 5u);
+    ASSERT(func_80012850(args) == 1, "eq v0=1");
+    ASSERT(PE_LoadU32(imm + 16u) == 1u, "5==5");
+    PE_StoreU32(imm, 0x14u);
+    PE_StoreU32(imm + 8u, 0x10000u);
+    PE_StoreU32(imm + 12u, 0x20000u);
+    ASSERT(func_80012850(args) == 1, "16.16 mul v0=1");
+    ASSERT(PE_LoadU32(imm + 16u) == 0x20000u, "1.0*2.0");
+    ASSERT(func_8003708C(0x10000u, 0x20000u) == 0x20000u, "3708C");
+    ASSERT(func_800370A8(0x20000u, 0x10000u) == 0x20000u, "370A8");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL16_1731C_skip_if_false(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t actor = 0x800BEA90u;
+
+    TEST("BTL16_1731C_skip_if_false");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x9Cu, 0x80123000u);
+    PE_StoreU32(0x8009CE00u, 0xDEADu);
+    PE_StoreU32(imm, 1u);
+    PE_StoreU32(imm + 4u, 0xB8u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    ASSERT(func_8001731C(args) == 1, "nz v0=1");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0xDEADu, "nz holds CE00");
+    PE_StoreU32(imm, 0u);
+    ASSERT(func_8001731C(args) == 1, "z v0=1");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80123000u + (0xB8u << 1),
+           "z CE00=base+imm<<1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL17_17588_label_ptr(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t actor = 0x800BEA90u;
+    pe_addr_t task = 0x8009D310u;
+
+    TEST("BTL17_17588_label_ptr");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(actor + 0x9Cu, 0x80123000u);
+    PE_StoreU32(actor + 0x19Cu, 0xDEADu);
+    PE_StoreU32(imm, 2u);
+    PE_StoreU32(imm + 4u, 0x684u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    ASSERT(func_80017588(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(actor + 0x19Cu) == 0x80123000u + (0x684u << 1),
+           "code2 base+rel<<1");
+    PE_StoreU32(imm + 4u, 0xFFFFFFFFu);
+    ASSERT(func_80017588(args) == 1, "neg v0=1");
+    ASSERT(PE_LoadU32(actor + 0x19Cu) == 0u, "neg clears");
+    PE_StoreU32(imm, 3u);
+    PE_StoreU32(imm + 4u, 0x10u);
+    PE_StoreU32(task + 4u, 0u);
+    ASSERT(func_80017588(args) == 1, "code3 v0=1");
+    ASSERT(PE_LoadU32(task + 4u) == 0x80123000u + (0x10u << 1),
+           "code3 task+4");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL18_15DAC_key190_table(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t ov = 0x80140000u;
+    pe_addr_t ent;
+
+    TEST("BTL18_15DAC_key190_table");
+    ResetTestState();
+    PE_StoreU32(0x800101B0u + (0x190u - 100u) * 4u, 0x80016658u);
+    PE_StoreU32(0x800B0E64u, ov);
+    PE_StoreU32(ov + 4u, 0u);
+    PE_StoreU32(ov + 0x30u, (1u << 22) | 0x40u);
+    ent = ov + 0x40u;
+    PE_StoreU8(ent + 3u, 0x10u);
+    PE_StoreU32(ent + 4u, 0x2E838u);
+    PE_StoreU8(ent + 8u, 0x17u);
+    PE_StoreU16(ent + 10u, 0x28u);
+    PE_StoreU32(imm, 0x190u);
+    PE_StoreU32(imm + 4u, 0x28u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU8(0x800B0DB8u, 0u);
+    PE_StoreU8(0x800B0DB9u, 0u);
+    PE_StoreU32(0x800B0DFCu, 0u);
+    ASSERT(func_80015DAC_default_cut(args) == 1, "v0=1");
+    ASSERT(PE_LoadU8(0x800B0DB8u) == 0x28u, "key byte");
+    ASSERT(PE_LoadU8(0x800B0DB9u) == 0x17u, "entry+8");
+    ASSERT(PE_LoadU32(0x800B0DFCu) == ov + 0x2E838u, "overlay+off");
+    PE_StoreU32(imm + 4u, 0x99u);
+    PE_StoreU8(0x800B0DB8u, 0xAAu);
+    ASSERT(func_80015DAC_default_cut(args) == 1, "miss v0=1");
+    ASSERT(PE_LoadU8(0x800B0DB8u) == 0xAAu, "miss no store");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL19_17D7C_d2e8_bit0(void) {
+    TEST("BTL19_17D7C_d2e8_bit0");
+    ResetTestState();
+    PE_StoreU32(0x8009D2E8u, 0u);
+    ASSERT(func_80017D7C(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU32(0x8009D2E8u) == 1u, "bit0 set from 0");
+    PE_StoreU32(0x8009D2E8u, 0xCu);
+    ASSERT(func_80017D7C(0u) == 1, "v0=1 or");
+    ASSERT(PE_LoadU32(0x8009D2E8u) == 0xDu, "or preserves 0xC");
+    ASSERT(func_80017D5C(0u) == 1, "0x3F v0=1");
+    ASSERT(PE_LoadU32(0x8009D2E8u) == 0xCu, "0x3F clears bit0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL20_16910_key2900(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+
+    TEST("BTL20_16910_key2900");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, 0x40000402u);
+    PE_StoreU32(imm, 2900u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80016910_key2900_cut(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x40400402u, "|= 0x400000");
+    PE_StoreU32(imm, 1u);
+    ASSERT(func_80016910_key2900_cut(args) == 1, "other v0=1");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x40400402u, "other no store");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL21_e1_84_88(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+
+    TEST("BTL21_e1_84_88");
+    ResetTestState();
+    PE_StoreU32(imm, 0x54u);
+    PE_StoreU32(imm + 4u, 0x800u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU8(0x800BCFFCu, 0u);
+    ASSERT(func_8001A374(args) == 1, "0xE1 v0=1");
+    ASSERT(PE_LoadU8(0x800BCFFCu) == 0x54u, "BCFFC=0x54");
+    PE_StoreU32(imm, 0x800u);
+    PE_StoreU16(0x800CD020u, 0u);
+    PE_StoreU16(0x800CD022u, 0u);
+    ASSERT(func_80018E84(args) == 1, "0x84 v0=1");
+    ASSERT(PE_LoadU16(0x800CD020u) == 0x800u, "D020");
+    ASSERT(PE_LoadU16(0x800CD022u) == 0x800u, "D022");
+    PE_StoreU8(0x800BCFEEu, 0xFFu);
+    ASSERT(func_80018F54(args) == 1, "0x88 v0=1");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 0xBFu, "&=~0x40");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void pe_btl22_plant_ctor(pe_addr_t hdr, pe_addr_t script)
+{
+    unsigned int t;
+
+    func_8003F074_pool_cut();
+    PE_StoreU32(0x800915DCu, 0x80035C84u);
+    for (t = 1u; t < 10u; t++)
+        PE_StoreU32(0x800915DCu + t * 8u, 0x80035E04u);
+    PE_StoreU32(0x800B161Cu, hdr);
+    for (t = 0u; t < 10u; t++)
+        PE_StoreU32(hdr + 8u + t * 4u, script + t * 0x40u);
+}
+
+static void test_BTL22_1735C_type3_parent_fields(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t desc = 0x80121100u;
+
+    TEST("BTL22_1735C_type3_parent_fields");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 3u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0x20000u);
+    PE_StoreU32(imm + 12u, 0xFBC80000u);
+    PE_StoreU32(imm + 16u, 0x2710000u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "v0=1");
+    child = PE_LoadU32(parent + 4u);
+    ASSERT(child != 0u, "sibling");
+    ASSERT(PE_LoadU8(child + 0x0Cu) == 3u, "type 3");
+    ASSERT(PE_LoadU8(child + 0x0Du) == 0u, "idB 0");
+    ASSERT(PE_LoadU32(child + 8u) == parent, "parent link");
+    ASSERT(PE_LoadU32(child + 0x28u) == 0x20000u, "+0x28");
+    ASSERT(PE_LoadU32(child + 0x2Cu) == 0xFBC80000u, "+0x2C");
+    ASSERT(PE_LoadU32(child + 0x30u) == 0x2710000u, "+0x30");
+    ASSERT(PE_LoadU32(child + 0x190u) == 0x80035E04u, "35E04");
+    ASSERT((PE_LoadU32(child + 0x98u) & 0xE0u) == 0xE0u, "empty 1AC 0xE0");
+    ASSERT(PE_LoadU32(0x8009D254u) == 0u, "type3 no D254");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL22_1AA78_flag80_noop(void) {
+    pe_addr_t actor = 0x800BEA90u;
+
+    TEST("BTL22_1AA78_flag80_noop");
+    ResetTestState();
+    PE_StoreU32(actor + 0x98u, 0x100000E0u);
+    PE_StoreU32(actor + 0x1A4u, 0x111u);
+    PE_StoreU32(actor + 0x2Cu, 0x222u);
+    PE_StoreU32(0x8009D1FCu, 0x80120000u);
+    PE_StoreU16(0x80120002u, 1u);
+    func_8001AA78(actor);
+    ASSERT(PE_LoadU32(actor + 0x1A4u) == 0x111u, "no 1A4");
+    ASSERT(PE_LoadU32(actor + 0x2Cu) == 0x222u, "no 2C");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL22_1C614_toggle_and_1AA78_arm0(void) {
+    pe_addr_t obj = 0x80120000u;
+    pe_addr_t geom = 0x80120100u;
+    pe_addr_t recs = 0x80120200u;
+    pe_addr_t list = 0x80120300u;
+    pe_addr_t actor = 0x800BEA90u;
+
+    TEST("BTL22_1C614_toggle_and_1AA78_arm0");
+    ResetTestState();
+    PE_StoreU16(geom, 0u);
+    PE_StoreU16(geom + 2u, 0u);
+    PE_StoreU16(geom + 4u, 30u);
+    PE_StoreU16(geom + 6u, 0u);
+    PE_StoreU16(geom + 8u, 15u);
+    PE_StoreU16(geom + 10u, 30u);
+    PE_StoreU32(obj + 0x18u, geom);
+    PE_StoreU32(0x8009D1FCu, obj);
+    PE_StoreU32(0x8009D1D8u, 0u);
+    PE_StoreU16(recs + 2u, 1u);
+    PE_StoreU16(recs + 4u, 2u);
+    PE_StoreU16(recs + 6u, 0u);
+    ASSERT(func_8001C614(recs, 15, 10) == 1, "inside triangle");
+    ASSERT(func_8001C614(recs, 40, 10) == 0, "outside triangle");
+
+    PE_StoreU16(obj + 2u, 1u);
+    PE_StoreU32(obj + 0x1Cu, recs);
+    PE_StoreU32(list, recs + 0x20u);
+    PE_StoreU16(recs + 0x20u, 0xFBA9u);
+    PE_StoreU16(recs + 0x22u, 1u);
+    PE_StoreU16(recs + 0x24u, 0u);
+    PE_StoreU32(0x8009CE08u, list);
+    PE_StoreU32(actor + 0x98u, 0x10000000u);
+    PE_StoreU32(actor + 0x28u, 0x000F0000u);
+    PE_StoreU32(actor + 0x2Cu, 0xDEADu);
+    PE_StoreU32(actor + 0x30u, 0x000A0000u);
+    func_8001AA78(actor);
+    ASSERT(PE_LoadU32(actor + 0x1A4u) == recs, "+0x1A4");
+    ASSERT(PE_LoadU32(actor + 0x1A8u) == recs, "+0x1A8");
+    ASSERT(PE_LoadU32(actor + 0x2Cu) == 0xFBA90000u, "+0x2C lh<<16");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL22_17018_three_08_spawn_order(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t stream = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t parent;
+    pe_addr_t a3;
+    pe_addr_t a0;
+    pe_addr_t a5;
+    pe_addr_t task;
+
+    TEST("BTL22_17018_three_08_spawn_order");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(0x8009D2E8u, 1u);
+    task = PE_LoadU32(parent + 0xA8u);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task, stream);
+    PE_StoreU32(task + 0x10u, 1u);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(stream, 0x0000A008u);
+    PE_StoreU32(stream + 4u, 0u);
+    PE_StoreU32(stream + 8u, 3u);
+    PE_StoreU32(stream + 12u, 0u);
+    PE_StoreU32(stream + 16u, 0x20000u);
+    PE_StoreU32(stream + 20u, 0xFBC80000u);
+    PE_StoreU32(stream + 24u, 0x2710000u);
+    PE_StoreU32(stream + 28u, 0x0000A008u);
+    PE_StoreU32(stream + 32u, 0u);
+    PE_StoreU32(stream + 36u, 0u);
+    PE_StoreU32(stream + 40u, 0u);
+    PE_StoreU32(stream + 44u, 0u);
+    PE_StoreU32(stream + 48u, 0u);
+    PE_StoreU32(stream + 52u, 0u);
+    PE_StoreU32(stream + 56u, 0x0000A008u);
+    PE_StoreU32(stream + 60u, 0u);
+    PE_StoreU32(stream + 64u, 5u);
+    PE_StoreU32(stream + 68u, 0u);
+    PE_StoreU32(stream + 72u, 0u);
+    PE_StoreU32(stream + 76u, 0u);
+    PE_StoreU32(stream + 80u, 0u);
+    PE_StoreU32(stream + 84u, 0x00002002u);
+    PE_StoreU32(stream + 88u, 0u);
+    PE_StoreU32(stream + 92u, 1u);
+    PE_StoreU32(parent + 0x98u, 0x100000E0u);
+    func_80017018();
+    a5 = PE_LoadU32(parent + 4u);
+    a0 = PE_LoadU32(a5 + 4u);
+    a3 = PE_LoadU32(a0 + 4u);
+    ASSERT(PE_LoadU8(parent + 0x0Cu) == 1u, "head still type 1");
+    ASSERT(PE_LoadU8(a5 + 0x0Cu) == 5u, "newest sibling type 5");
+    ASSERT(PE_LoadU8(a0 + 0x0Cu) == 0u, "then type 0");
+    ASSERT(PE_LoadU8(a3 + 0x0Cu) == 3u, "then type 3");
+    ASSERT(PE_LoadU16(a3 + 0x24u) == 1u, "type3 created first id 1");
+    ASSERT(PE_LoadU16(a0 + 0x24u) == 2u, "type0 created second id 2");
+    ASSERT(PE_LoadU16(a5 + 0x24u) == 3u, "type5 created third id 3");
+    ASSERT(PE_LoadU32(0x8009D254u) == a0, "D254 type0");
+    ASSERT(PE_LoadU32(a3 + 0x28u) == 0x20000u, "type3 +0x28");
+    ASSERT(PE_LoadU32(a3 + 0x2Cu) == 0xFBC80000u, "type3 +0x2C");
+    ASSERT(PE_LoadU32(a3 + 0x30u) == 0x2710000u, "type3 +0x30");
+    ASSERT(PE_LoadU32(a0 + 0x28u) == 0u, "type0 +0x28");
+    ASSERT(PE_LoadU32(a3 + 0x190u) == 0x80035E04u, "type3 35E04");
+    ASSERT(PE_LoadU32(a0 + 0x190u) == 0x80035C84u, "type0 35C84");
+    ASSERT(PE_LoadU32(a5 + 0x190u) == 0x80035E04u, "type5 35E04");
+    ASSERT(PE_LoadU32(0x8009D2E8u) == 1u, "D2E8 bit0 stays");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "0x02 delay");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL22_type3_first_visit_yields_02(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+
+    TEST("BTL22_type3_first_visit_yields_02");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(script + 3u * 0x40u, 0x00002002u);
+    PE_StoreU32(script + 3u * 0x40u + 4u, 0u);
+    PE_StoreU32(script + 3u * 0x40u + 8u, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 3u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0x20000u);
+    PE_StoreU32(imm + 12u, 0xFBC80000u);
+    PE_StoreU32(imm + 16u, 0x2710000u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "type3 0x02 yield");
+    ASSERT(PE_LoadU8(child + 0x0Cu) == 3u, "still type 3");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL23_12C20_code0_and_code5(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t actor = 0x800BEA90u;
+
+    TEST("BTL23_12C20_code0_and_code5");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU32(actor + 0x98u, 0x100000E0u);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(imm + 4u, 0x08C90000u);
+    PE_StoreU32(imm + 8u, 0xF8790000u);
+    PE_StoreU32(imm + 12u, 0xF80A0000u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    ASSERT(func_80012C20(args) == 1, "code0 v0=1");
+    ASSERT(PE_LoadU32(actor + 0x28u) == 0x08C90000u, "+0x28");
+    ASSERT(PE_LoadU32(actor + 0x2Cu) == 0xF8790000u, "+0x2C");
+    ASSERT(PE_LoadU32(actor + 0x30u) == 0xF80A0000u, "+0x30");
+    ASSERT(PE_LoadU32(actor + 0x40u) == 0x08C90000u, "snap +0x40");
+    ASSERT(PE_LoadU32(actor + 0x44u) == 0xF8790000u, "snap +0x44");
+    ASSERT(PE_LoadU32(actor + 0x48u) == 0xF80A0000u, "snap +0x48");
+    ASSERT(PE_LoadU32(0x800BCF88u) == 0u, "not D254 no BCF88");
+    PE_StoreU32(imm, 5u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0x400u);
+    PE_StoreU32(imm + 12u, 0u);
+    ASSERT(func_80012C20(args) == 1, "code5 v0=1");
+    ASSERT(PE_LoadU16(actor + 0x38u) == 0u, "+0x38");
+    ASSERT(PE_LoadU16(actor + 0x3Au) == 0x400u, "+0x3A");
+    ASSERT(PE_LoadU16(actor + 0x3Cu) == 0u, "+0x3C");
+    PE_StoreU32(imm, 7u);
+    ASSERT(func_80012C20(args) == 1, "OOR v0=1");
+    ASSERT(func_80017D9C(args) == 1, "0x41 v0=1");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x40u) != 0u, "+0x98 |= 0x40");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL23_type5_first_visit_14_0b_41(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+    pe_addr_t base;
+
+    TEST("BTL23_type5_first_visit_14_0b_41");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x14u * 4u, 0x80017588u);
+    PE_StoreU32(0x800910A0u + 0x0Bu * 4u, 0x80012C20u);
+    PE_StoreU32(0x800910A0u + 0x41u * 4u, 0x80017D9Cu);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    base = script + 5u * 0x40u;
+    PE_StoreU32(base, 0x00004014u);
+    PE_StoreU32(base + 4u, 0u);
+    PE_StoreU32(base + 8u, 1u);
+    PE_StoreU32(base + 12u, 0x7Cu);
+    PE_StoreU32(base + 16u, 0x0000800Bu);
+    PE_StoreU32(base + 20u, 0u);
+    PE_StoreU32(base + 24u, 0u);
+    PE_StoreU32(base + 28u, 0x08C90000u);
+    PE_StoreU32(base + 32u, 0xF8790000u);
+    PE_StoreU32(base + 36u, 0xF80A0000u);
+    PE_StoreU32(base + 40u, 0x0000800Bu);
+    PE_StoreU32(base + 44u, 0u);
+    PE_StoreU32(base + 48u, 5u);
+    PE_StoreU32(base + 52u, 0u);
+    PE_StoreU32(base + 56u, 0x400u);
+    PE_StoreU32(base + 60u, 0u);
+    PE_StoreU32(base + 64u, 0x00000041u);
+    PE_StoreU32(base + 68u, 0u);
+    PE_StoreU32(base + 72u, 0x00002002u);
+    PE_StoreU32(base + 76u, 0u);
+    PE_StoreU32(base + 80u, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 5u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0u);
+    PE_StoreU32(imm + 12u, 0u);
+    PE_StoreU32(imm + 16u, 0u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn type5");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    ASSERT(PE_LoadU32(child + 0x1A0u) == base + 0xF8u, "0x14 +0x1A0");
+    ASSERT(PE_LoadU32(child + 0x28u) == 0x08C90000u, "0x0B +0x28");
+    ASSERT(PE_LoadU32(child + 0x40u) == 0x08C90000u, "snap");
+    ASSERT(PE_LoadU16(child + 0x3Au) == 0x400u, "code5 +0x3A");
+    ASSERT((PE_LoadU32(child + 0x98u) & 0x40u) != 0u, "0x41 bit 0x40");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "yield 0x02");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL24_type5_2e_4e_2f_30(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t actor = 0x800BEA90u;
+    pe_addr_t task = 0x8009D310u;
+    pe_addr_t res = 0x80125000u;
+
+    TEST("BTL24_type5_2e_4e_2f_30");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU8(actor + 0x0Cu, 5u);
+    PE_StoreU32(actor + 0x98u, 0x100000E0u);
+    PE_StoreU8(res + 2u, 1u);
+    PE_StoreU32(0x800B0E98u + 5u * 192u, res);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80017AE8(args) == 1, "0x2E v0=1");
+    ASSERT(PE_LoadU8(actor + 0x0Eu) == 0u, "command 0");
+    ASSERT(PE_LoadU8(actor + 0x0Fu) == 0u, "+0x0F");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x100u) == 0u, "clear 0x100");
+    ASSERT(func_80017EC4(args) == 1, "0x4E v0=1");
+    ASSERT(PE_LoadU32(actor + 0x14u) == 0u, "+0x14 min<<16");
+    ASSERT(func_80017B34(args) == 1, "0x2F v0=1");
+    ASSERT(PE_LoadU16(actor + 0x12u) == 0u, "+0x12");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x200u) != 0u, "ori 0x200");
+    PE_StoreU16(actor + 0x16u, 0u);
+    PE_StoreU32(0x8009CE00u, 0x80126040u);
+    PE_StoreU32(task + 0x10u, 0u);
+    ASSERT(func_80017B74(args) == 0, "0x30 v0=0");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "delay 1");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80126040u, "equal no rewind");
+    PE_StoreU16(actor + 0x16u, 3u);
+    ASSERT(func_80017B74(args) == 0, "0x30 ne");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80126038u, "rewind 8");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL25_14694_d254_and_miss(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t src = 0x800BEA90u;
+    pe_addr_t dst0 = 0x80122100u;
+    pe_addr_t dst1 = 0x80122104u;
+    pe_addr_t dst2 = 0x80122108u;
+    pe_addr_t flag = 0x8012210Cu;
+
+    TEST("BTL25_14694_d254_and_miss");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, dst0);
+    PE_StoreU32(args + 16u, dst1);
+    PE_StoreU32(args + 20u, dst2);
+    PE_StoreU32(args + 24u, flag);
+    PE_StoreU32(flag, 0u);
+    ASSERT(func_80014694(args) == 1, "miss v0=1");
+    ASSERT(PE_LoadU32(flag) == 0xFFFFFFFFu, "miss -1");
+    PE_StoreU32(src + 0x28u, 0x111u);
+    PE_StoreU32(src + 0x2Cu, 0x222u);
+    PE_StoreU32(src + 0x30u, 0x333u);
+    PE_StoreU32(0x8009D254u, src);
+    ASSERT(func_80014694(args) == 1, "hit v0=1");
+    ASSERT(PE_LoadU32(flag) == 1u, "found");
+    ASSERT(PE_LoadU32(dst0) == 0x111u, "+0x28");
+    ASSERT(PE_LoadU32(dst1) == 0x222u, "+0x2C");
+    ASSERT(PE_LoadU32(dst2) == 0x333u, "+0x30");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL25_type3_second_visit_5e(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+    pe_addr_t type0 = 0x80128000u;
+
+    TEST("BTL25_type3_second_visit_5e");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(0x800910A0u + 0x5Eu * 4u, 0x80014694u);
+    PE_StoreU32(script + 3u * 0x40u, 0x00002002u);
+    PE_StoreU32(script + 3u * 0x40u + 4u, 0u);
+    PE_StoreU32(script + 3u * 0x40u + 8u, 1u);
+    PE_StoreU32(script + 3u * 0x40u + 0x0Cu, 0x2400E05Eu);
+    PE_StoreU32(script + 3u * 0x40u + 0x10u, 0x00000009u);
+    PE_StoreU32(script + 3u * 0x40u + 0x14u, 0u);
+    PE_StoreU32(script + 3u * 0x40u + 0x18u, 0u);
+    PE_StoreU32(script + 3u * 0x40u + 0x1Cu, 0u);
+    PE_StoreU32(script + 3u * 0x40u + 0x20u, 0u);
+    PE_StoreU32(script + 3u * 0x40u + 0x24u, 1u);
+    PE_StoreU32(script + 3u * 0x40u + 0x28u, 2u);
+    PE_StoreU32(script + 3u * 0x40u + 0x2Cu, 3u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 3u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0x20000u);
+    PE_StoreU32(imm + 12u, 0xFBC80000u);
+    PE_StoreU32(imm + 16u, 0x2710000u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn type3");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "first 0x02");
+    PE_StoreU32(type0 + 0x28u, 0x111u);
+    PE_StoreU32(type0 + 0x2Cu, 0x222u);
+    PE_StoreU32(type0 + 0x30u, 0x333u);
+    PE_StoreU32(0x8009D254u, type0);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(child + 0xACu) == 0x111u, "local0");
+    ASSERT(PE_LoadU32(child + 0xB0u) == 0x222u, "local1");
+    ASSERT(PE_LoadU32(child + 0xB4u) == 0x333u, "local2");
+    ASSERT(PE_LoadU32(child + 0xB8u) == 1u, "found");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL26_1CAB0_rect(void) {
+    pe_addr_t poly = 0x80125000u;
+
+    TEST("BTL26_1CAB0_rect");
+    ResetTestState();
+    PE_StoreU32(poly + 0u, 0x09940000u);
+    PE_StoreU32(poly + 4u, 0x04CD0000u);
+    PE_StoreU32(poly + 8u, 0x09940000u);
+    PE_StoreU32(poly + 12u, 0x063D0000u);
+    PE_StoreU32(poly + 16u, 0x080A0000u);
+    PE_StoreU32(poly + 20u, 0x063D0000u);
+    PE_StoreU32(poly + 24u, 0x080A0000u);
+    PE_StoreU32(poly + 28u, 0x04CD0000u);
+    ASSERT(func_8001CAB0(0, 0, poly, 4u) == 0, "origin outside");
+    ASSERT(func_8001CAB0((int)0x08A00000, (int)0x05000000, poly, 4u) == 1,
+           "inside");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL26_14DA0_stores(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t out = 0x80122100u;
+
+    TEST("BTL26_14DA0_stores");
+    ResetTestState();
+    PE_StoreU32(imm + 0u, 0x09940000u);
+    PE_StoreU32(imm + 4u, 0x04CD0000u);
+    PE_StoreU32(imm + 8u, 0x09940000u);
+    PE_StoreU32(imm + 12u, 0x063D0000u);
+    PE_StoreU32(imm + 16u, 0x080A0000u);
+    PE_StoreU32(imm + 20u, 0x063D0000u);
+    PE_StoreU32(imm + 24u, 0x080A0000u);
+    PE_StoreU32(imm + 28u, 0x04CD0000u);
+    PE_StoreU32(imm + 32u, 0u);
+    PE_StoreU32(imm + 36u, 0u);
+    PE_StoreU32(args + 0u, imm + 0u);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    PE_StoreU32(args + 20u, imm + 20u);
+    PE_StoreU32(args + 24u, imm + 24u);
+    PE_StoreU32(args + 28u, imm + 28u);
+    PE_StoreU32(args + 32u, imm + 32u);
+    PE_StoreU32(args + 36u, imm + 36u);
+    PE_StoreU32(args + 40u, out);
+    PE_StoreU32(out, 0xFFFFFFFFu);
+    ASSERT(func_80014DA0(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(out) == 0u, "origin miss");
+    PE_StoreU32(imm + 32u, 0x08A00000u);
+    PE_StoreU32(imm + 36u, 0x05000000u);
+    ASSERT(func_80014DA0(args) == 1, "v0=1 hit");
+    ASSERT(PE_LoadU32(out) == 1u, "inside");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL26_type3_77_05_skip(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t t3s = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+    pe_addr_t type0 = 0x80128000u;
+
+    TEST("BTL26_type3_77_05_skip");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(hdr + 8u + 3u * 4u, t3s);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(0x800910A0u + 0x5Eu * 4u, 0x80014694u);
+    PE_StoreU32(0x800910A0u + 0x77u * 4u, 0x80014DA0u);
+    PE_StoreU32(0x800910A0u + 0x09u * 4u, 0x80012850u);
+    PE_StoreU32(0x800910A0u + 0x05u * 4u, 0x8001731Cu);
+    PE_StoreU32(t3s + 0x000u, 0x00002002u);
+    PE_StoreU32(t3s + 0x004u, 0u);
+    PE_StoreU32(t3s + 0x008u, 1u);
+    PE_StoreU32(t3s + 0x00Cu, 0x2400E05Eu);
+    PE_StoreU32(t3s + 0x010u, 0x00000009u);
+    PE_StoreU32(t3s + 0x014u, 0u);
+    PE_StoreU32(t3s + 0x018u, 0u);
+    PE_StoreU32(t3s + 0x01Cu, 0u);
+    PE_StoreU32(t3s + 0x020u, 0u);
+    PE_StoreU32(t3s + 0x024u, 1u);
+    PE_StoreU32(t3s + 0x028u, 2u);
+    PE_StoreU32(t3s + 0x02Cu, 3u);
+    PE_StoreU32(t3s + 0x030u, 0x00016077u);
+    PE_StoreU32(t3s + 0x034u, 0x00009200u);
+    PE_StoreU32(t3s + 0x038u, 0x09940000u);
+    PE_StoreU32(t3s + 0x03Cu, 0x04CD0000u);
+    PE_StoreU32(t3s + 0x040u, 0x09940000u);
+    PE_StoreU32(t3s + 0x044u, 0x063D0000u);
+    PE_StoreU32(t3s + 0x048u, 0x080A0000u);
+    PE_StoreU32(t3s + 0x04Cu, 0x063D0000u);
+    PE_StoreU32(t3s + 0x050u, 0x080A0000u);
+    PE_StoreU32(t3s + 0x054u, 0x04CD0000u);
+    PE_StoreU32(t3s + 0x058u, 0u);
+    PE_StoreU32(t3s + 0x05Cu, 2u);
+    PE_StoreU32(t3s + 0x060u, 4u);
+    PE_StoreU32(t3s + 0x064u, 0x00B08009u);
+    PE_StoreU32(t3s + 0x068u, 0u);
+    PE_StoreU32(t3s + 0x06Cu, 0x0Bu);
+    PE_StoreU32(t3s + 0x070u, 0u);
+    PE_StoreU32(t3s + 0x074u, 4u);
+    PE_StoreU32(t3s + 0x078u, 1u);
+    PE_StoreU32(t3s + 0x07Cu, 0x00064005u);
+    PE_StoreU32(t3s + 0x080u, 0u);
+    PE_StoreU32(t3s + 0x084u, 0u);
+    PE_StoreU32(t3s + 0x088u, 0x7Cu);
+    PE_StoreU32(t3s + 0x0F8u, 0x00002002u);
+    PE_StoreU32(t3s + 0x0FCu, 0u);
+    PE_StoreU32(t3s + 0x100u, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 3u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0x20000u);
+    PE_StoreU32(imm + 12u, 0xFBC80000u);
+    PE_StoreU32(imm + 16u, 0x2710000u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn type3");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    PE_StoreU32(type0 + 0x28u, 0u);
+    PE_StoreU32(type0 + 0x2Cu, 0u);
+    PE_StoreU32(type0 + 0x30u, 0u);
+    PE_StoreU32(0x8009D254u, type0);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(child + 0xB8u) == 1u, "0x5E found");
+    ASSERT(PE_LoadU32(child + 0xBCu) == 0u, "0x77 miss");
+    ASSERT(PE_LoadU32(0x8009DF70u) == 0u, "cond0 local4!=1");
+    ASSERT(PE_LoadU32(task) == t3s + 0x0F8u + 0x0Cu, "0x05 skipped to +0xF8 0x02");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "fixture 0x02 yield");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL27_362B8_and_39B74_empty(void) {
+    pe_addr_t dest = 0x80130000u;
+
+    TEST("BTL27_362B8_and_39B74_empty");
+    ResetTestState();
+    PE_StoreU32(0x800B0E4Cu, 0x80140000u);
+    ASSERT(func_800362B8(100u) == 0x80140000u, "bank1 slot0");
+    ASSERT(PE_LoadU32(0x800A7620u) == 1u, "bank");
+    ASSERT(func_800362B8(100u) == 0x801447E0u, "slot1");
+    func_80039B74(dest, 0u, 0, 1);
+    ASSERT(PE_LoadU32(dest) == 0u, "early-out no store");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL27_15240_type0_empty(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t actor = 0x800BEA90u;
+
+    TEST("BTL27_15240_type0_empty");
+    ResetTestState();
+    PE_StoreU32(0x800966ECu, 0x10000000u);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D300u, 0x8009D310u);
+    PE_StoreU32(actor + 0x26u, 0x1000u);
+    PE_StoreU32(actor + 0x98u, 0x100000E0u);
+    PE_StoreU32(actor + 0x1B0u, 0u);
+    PE_StoreU32(imm, 0x55u);
+    PE_StoreU32(imm + 4u, 0xA0u);
+    PE_StoreU32(imm + 8u, 0x28u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    ASSERT(func_80015240(args) == 1, "v0=1 no yield");
+    ASSERT(PE_LoadU8(actor + 0x23Cu) == 0x55u, "arg0");
+    ASSERT(PE_LoadU8(actor + 0x23Du) == 0xA0u, "arg1");
+    ASSERT(PE_LoadU8(actor + 0x23Eu) == 0x28u, "arg2");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x10000000u) != 0u, "keep bit");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL27_type0_9b_then_14(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t t0s = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+
+    TEST("BTL27_type0_9b_then_14");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800966ECu, 0x10000000u);
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(hdr + 8u, t0s);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x9Bu * 4u, 0x80015240u);
+    PE_StoreU32(0x800910A0u + 0xEDu * 4u, 0x80016910u);
+    PE_StoreU32(0x800910A0u + 0x14u * 4u, 0x80017588u);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(t0s + 0x00u, 0x0000609Bu);
+    PE_StoreU32(t0s + 0x04u, 0u);
+    PE_StoreU32(t0s + 0x08u, 0x55u);
+    PE_StoreU32(t0s + 0x0Cu, 0xA0u);
+    PE_StoreU32(t0s + 0x10u, 0x28u);
+    PE_StoreU32(t0s + 0x14u, 0x000100EDu);
+    PE_StoreU32(t0s + 0x18u, 0x40u);
+    PE_StoreU32(t0s + 0x1Cu, 0xA29u);
+    PE_StoreU32(t0s + 0x20u, 0x80u);
+    PE_StoreU32(t0s + 0x24u, 0u);
+    PE_StoreU32(t0s + 0x28u, 0u);
+    PE_StoreU32(t0s + 0x2Cu, 0u);
+    PE_StoreU32(t0s + 0x30u, 0u);
+    PE_StoreU32(t0s + 0x34u, 0u);
+    PE_StoreU32(t0s + 0x38u, 0u);
+    PE_StoreU32(t0s + 0x3Cu, 0x00004014u);
+    PE_StoreU32(t0s + 0x40u, 0u);
+    PE_StoreU32(t0s + 0x44u, 2u);
+    PE_StoreU32(t0s + 0x48u, 0x30Cu);
+    PE_StoreU32(t0s + 0x4Cu, 0x00002002u);
+    PE_StoreU32(t0s + 0x50u, 0u);
+    PE_StoreU32(t0s + 0x54u, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0u);
+    PE_StoreU32(imm + 12u, 0u);
+    PE_StoreU32(imm + 16u, 0u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn type0");
+    child = PE_LoadU32(parent + 4u);
+    ASSERT(PE_LoadU8(child + 0x0Cu) == 0u, "type 0");
+    ASSERT(PE_LoadU32(0x8009D254u) == child, "D254");
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    ASSERT(PE_LoadU8(child + 0x23Cu) == 0x55u, "0x9B args");
+    ASSERT(PE_LoadU32(child + 0x19Cu) == t0s + 0x618u, "+0x19C base+0x30C*2");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "yield after 0x14");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL27_type3_double_miss_yields(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t t3s = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+    pe_addr_t type0 = 0x80128000u;
+
+    TEST("BTL27_type3_double_miss_yields");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(hdr + 8u + 3u * 4u, t3s);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(0x800910A0u + 0x5Eu * 4u, 0x80014694u);
+    PE_StoreU32(0x800910A0u + 0x77u * 4u, 0x80014DA0u);
+    PE_StoreU32(0x800910A0u + 0x09u * 4u, 0x80012850u);
+    PE_StoreU32(0x800910A0u + 0x05u * 4u, 0x8001731Cu);
+    PE_StoreU32(0x800910A0u + 0x00u * 4u, 0x80017294u);
+    PE_StoreU32(t3s + 0x000u, 0x00002002u);
+    PE_StoreU32(t3s + 0x004u, 0u);
+    PE_StoreU32(t3s + 0x008u, 1u);
+    PE_StoreU32(t3s + 0x00Cu, 0x2400E05Eu);
+    PE_StoreU32(t3s + 0x010u, 9u);
+    PE_StoreU32(t3s + 0x014u, 0u);
+    PE_StoreU32(t3s + 0x018u, 0u);
+    PE_StoreU32(t3s + 0x01Cu, 0u);
+    PE_StoreU32(t3s + 0x020u, 0u);
+    PE_StoreU32(t3s + 0x024u, 1u);
+    PE_StoreU32(t3s + 0x028u, 2u);
+    PE_StoreU32(t3s + 0x02Cu, 3u);
+    PE_StoreU32(t3s + 0x030u, 0x00016077u);
+    PE_StoreU32(t3s + 0x034u, 0x9200u);
+    PE_StoreU32(t3s + 0x038u, 0x09940000u);
+    PE_StoreU32(t3s + 0x03Cu, 0x04CD0000u);
+    PE_StoreU32(t3s + 0x040u, 0x09940000u);
+    PE_StoreU32(t3s + 0x044u, 0x063D0000u);
+    PE_StoreU32(t3s + 0x048u, 0x080A0000u);
+    PE_StoreU32(t3s + 0x04Cu, 0x063D0000u);
+    PE_StoreU32(t3s + 0x050u, 0x080A0000u);
+    PE_StoreU32(t3s + 0x054u, 0x04CD0000u);
+    PE_StoreU32(t3s + 0x058u, 0u);
+    PE_StoreU32(t3s + 0x05Cu, 2u);
+    PE_StoreU32(t3s + 0x060u, 4u);
+    PE_StoreU32(t3s + 0x064u, 0x00B08009u);
+    PE_StoreU32(t3s + 0x068u, 0u);
+    PE_StoreU32(t3s + 0x06Cu, 0x0Bu);
+    PE_StoreU32(t3s + 0x070u, 0u);
+    PE_StoreU32(t3s + 0x074u, 4u);
+    PE_StoreU32(t3s + 0x078u, 1u);
+    PE_StoreU32(t3s + 0x07Cu, 0x00064005u);
+    PE_StoreU32(t3s + 0x080u, 0u);
+    PE_StoreU32(t3s + 0x084u, 0u);
+    PE_StoreU32(t3s + 0x088u, 0x7Cu);
+    PE_StoreU32(t3s + 0x0F8u, 0x2400E05Eu);
+    PE_StoreU32(t3s + 0x0FCu, 9u);
+    PE_StoreU32(t3s + 0x100u, 0u);
+    PE_StoreU32(t3s + 0x104u, 0u);
+    PE_StoreU32(t3s + 0x108u, 0u);
+    PE_StoreU32(t3s + 0x10Cu, 0u);
+    PE_StoreU32(t3s + 0x110u, 1u);
+    PE_StoreU32(t3s + 0x114u, 2u);
+    PE_StoreU32(t3s + 0x118u, 3u);
+    PE_StoreU32(t3s + 0x11Cu, 0x00016077u);
+    PE_StoreU32(t3s + 0x120u, 0x9200u);
+    PE_StoreU32(t3s + 0x124u, 0xF7B10000u);
+    PE_StoreU32(t3s + 0x128u, 0x04780000u);
+    PE_StoreU32(t3s + 0x12Cu, 0xF7B10000u);
+    PE_StoreU32(t3s + 0x130u, 0x061E0000u);
+    PE_StoreU32(t3s + 0x134u, 0xF60D0000u);
+    PE_StoreU32(t3s + 0x138u, 0x061E0000u);
+    PE_StoreU32(t3s + 0x13Cu, 0xF60D0000u);
+    PE_StoreU32(t3s + 0x140u, 0x04780000u);
+    PE_StoreU32(t3s + 0x144u, 0u);
+    PE_StoreU32(t3s + 0x148u, 2u);
+    PE_StoreU32(t3s + 0x14Cu, 4u);
+    PE_StoreU32(t3s + 0x150u, 0x00B08009u);
+    PE_StoreU32(t3s + 0x154u, 0u);
+    PE_StoreU32(t3s + 0x158u, 0x0Bu);
+    PE_StoreU32(t3s + 0x15Cu, 0u);
+    PE_StoreU32(t3s + 0x160u, 4u);
+    PE_StoreU32(t3s + 0x164u, 1u);
+    PE_StoreU32(t3s + 0x168u, 0x00064005u);
+    PE_StoreU32(t3s + 0x16Cu, 0u);
+    PE_StoreU32(t3s + 0x170u, 0u);
+    PE_StoreU32(t3s + 0x174u, 0xF2u);
+    PE_StoreU32(t3s + 0x1E4u, 0x01308009u);
+    PE_StoreU32(t3s + 0x1E8u, 0u);
+    PE_StoreU32(t3s + 0x1ECu, 0x0Cu);
+    PE_StoreU32(t3s + 0x1F0u, 0u);
+    PE_StoreU32(t3s + 0x1F4u, 0x4Au);
+    PE_StoreU32(t3s + 0x1F8u, 0x28u);
+    PE_StoreU32(t3s + 0x1FCu, 0x00064005u);
+    PE_StoreU32(t3s + 0x200u, 0u);
+    PE_StoreU32(t3s + 0x204u, 0u);
+    PE_StoreU32(t3s + 0x208u, 0x1F2u);
+    PE_StoreU32(t3s + 0x3E4u, 0x00002002u);
+    PE_StoreU32(t3s + 0x3E8u, 0u);
+    PE_StoreU32(t3s + 0x3ECu, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 3u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0x20000u);
+    PE_StoreU32(imm + 12u, 0xFBC80000u);
+    PE_StoreU32(imm + 16u, 0x2710000u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    PE_StoreU32(type0 + 0x28u, 0u);
+    PE_StoreU32(type0 + 0x2Cu, 0u);
+    PE_StoreU32(type0 + 0x30u, 0u);
+    PE_StoreU32(0x8009D254u, type0);
+    PE_StoreU32(0x800A77F0u + 0x4Au * 4u, 0u);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(task) == t3s + 0x3E4u + 0x0Cu, "yield at +0x3E4");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "0x02");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL28_12E7C_and_79FB4_zero(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t actor = 0x800BEA90u;
+    pe_addr_t out = 0x80123000u;
+
+    TEST("BTL28_12E7C_and_79FB4_zero");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x28u, 0x100000u);
+    PE_StoreU32(actor + 0x2Cu, 0x200000u);
+    PE_StoreU32(actor + 0x30u, 0x300000u);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, out);
+    PE_StoreU32(args + 8u, out + 4u);
+    PE_StoreU32(args + 12u, out + 8u);
+    ASSERT(func_80012E7C(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(out) == 0x100000u, "+0x28");
+    ASSERT(PE_LoadU32(out + 4u) == 0x200000u, "+0x2C");
+    ASSERT(PE_LoadU32(out + 8u) == 0x300000u, "+0x30");
+    ASSERT(func_80079FB4(0, 0) == 0, "ratan2(0,0)");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL28_type5_0c_d9_zero_pose(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t t5s = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+    pe_addr_t type0 = 0x80128000u;
+
+    TEST("BTL28_type5_0c_d9_zero_pose");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(hdr + 8u + 5u * 4u, t5s);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x09u * 4u, 0x80012850u);
+    PE_StoreU32(0x800910A0u + 0x05u * 4u, 0x8001731Cu);
+    PE_StoreU32(0x800910A0u + 0x5Eu * 4u, 0x80014694u);
+    PE_StoreU32(0x800910A0u + 0x0Cu * 4u, 0x80012E7Cu);
+    PE_StoreU32(0x800910A0u + 0xD9u * 4u, 0x8001A15Cu);
+    /* first visit 0x02; second visit is the +0x128 miss path through 0xD9 */
+    PE_StoreU32(t5s + 0x000u, 0x00002002u);
+    PE_StoreU32(t5s + 0x004u, 0u);
+    PE_StoreU32(t5s + 0x008u, 1u);
+    PE_StoreU32(t5s + 0x00Cu, 0x2400E05Eu);
+    PE_StoreU32(t5s + 0x010u, 9u);
+    PE_StoreU32(t5s + 0x014u, 0u);
+    PE_StoreU32(t5s + 0x018u, 0u);
+    PE_StoreU32(t5s + 0x01Cu, 0u);
+    PE_StoreU32(t5s + 0x020u, 0x0Au);
+    PE_StoreU32(t5s + 0x024u, 0x0Fu);
+    PE_StoreU32(t5s + 0x028u, 0x0Bu);
+    PE_StoreU32(t5s + 0x02Cu, 0x0Fu);
+    PE_StoreU32(t5s + 0x030u, 0x0490800Cu);
+    PE_StoreU32(t5s + 0x034u, 0u);
+    PE_StoreU32(t5s + 0x038u, 0u);
+    PE_StoreU32(t5s + 0x03Cu, 0x0Du);
+    PE_StoreU32(t5s + 0x040u, 0x0Fu);
+    PE_StoreU32(t5s + 0x044u, 0x0Eu);
+    PE_StoreU32(t5s + 0x048u, 0x04B08009u);
+    PE_StoreU32(t5s + 0x04Cu, 0u);
+    PE_StoreU32(t5s + 0x050u, 1u);
+    PE_StoreU32(t5s + 0x054u, 0u);
+    PE_StoreU32(t5s + 0x058u, 0x0Eu);
+    PE_StoreU32(t5s + 0x05Cu, 0x0Bu);
+    PE_StoreU32(t5s + 0x060u, 0x04B08009u);
+    PE_StoreU32(t5s + 0x064u, 0u);
+    PE_StoreU32(t5s + 0x068u, 1u);
+    PE_StoreU32(t5s + 0x06Cu, 1u);
+    PE_StoreU32(t5s + 0x070u, 0x0Du);
+    PE_StoreU32(t5s + 0x074u, 0x0Au);
+    PE_StoreU32(t5s + 0x078u, 0x00B660D9u);
+    PE_StoreU32(t5s + 0x07Cu, 0u);
+    PE_StoreU32(t5s + 0x080u, 0u);
+    PE_StoreU32(t5s + 0x084u, 1u);
+    PE_StoreU32(t5s + 0x088u, 1u);
+    PE_StoreU32(t5s + 0x08Cu, 0x00002002u);
+    PE_StoreU32(t5s + 0x090u, 0u);
+    PE_StoreU32(t5s + 0x094u, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 5u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0u);
+    PE_StoreU32(imm + 12u, 0u);
+    PE_StoreU32(imm + 16u, 0u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn type5");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    PE_StoreU32(type0 + 0x28u, 0u);
+    PE_StoreU32(type0 + 0x2Cu, 0u);
+    PE_StoreU32(type0 + 0x30u, 0u);
+    PE_StoreU32(0x8009D254u, type0);
+    PE_StoreU32(0x800B6A80u, 0u);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(child + 0xACu + 0x0Du * 4u) == 0u, "0x0C x");
+    ASSERT(PE_LoadU32(child + 0xACu + 0x0Eu * 4u) == 0u, "0x0C z");
+    ASSERT(PE_LoadU32(child + 0xACu + 1u * 4u) == 0u, "0xD9 ratan2(0,0)");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "yield after 0xD9");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL29_1784C_task_words(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t dest = 0x80123000u;
+    pe_addr_t task = 0x8009D310u;
+
+    TEST("BTL29_1784C_task_words");
+    ResetTestState();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x18u, 0x11111111u);
+    PE_StoreU32(task + 0x1Cu, 0x22222222u);
+    PE_StoreU32(args, dest);
+    PE_StoreU32(args + 4u, dest + 4u);
+    ASSERT(func_8001784C(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(dest) == 0x11111111u, "task+0x18");
+    ASSERT(PE_LoadU32(dest + 4u) == 0x22222222u, "task+0x1C");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL29_type5_24_zero_pool(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t t5s = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+
+    TEST("BTL29_type5_24_zero_pool");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(hdr + 8u + 5u * 4u, t5s);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x24u * 4u, 0x8001784Cu);
+    PE_StoreU32(t5s + 0x000u, 0x00002002u);
+    PE_StoreU32(t5s + 0x004u, 0u);
+    PE_StoreU32(t5s + 0x008u, 1u);
+    PE_StoreU32(t5s + 0x00Cu, 0x00124024u);
+    PE_StoreU32(t5s + 0x010u, 0u);
+    PE_StoreU32(t5s + 0x014u, 2u);
+    PE_StoreU32(t5s + 0x018u, 3u);
+    PE_StoreU32(t5s + 0x01Cu, 0x00002002u);
+    PE_StoreU32(t5s + 0x020u, 0u);
+    PE_StoreU32(t5s + 0x024u, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 5u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0u);
+    PE_StoreU32(imm + 12u, 0u);
+    PE_StoreU32(imm + 16u, 0u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn type5");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(child + 0xACu + 2u * 4u) == PE_LoadU32(task + 0x18u),
+           "local[2]=task+0x18");
+    ASSERT(PE_LoadU32(child + 0xACu + 3u * 4u) == PE_LoadU32(task + 0x1Cu),
+           "local[3]=task+0x1C");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "yield after 0x24");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL30_130B4_codes(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t dest = 0x80123000u;
+
+    TEST("BTL30_130B4_codes");
+    ResetTestState();
+    PE_StoreU32(imm, 1u);
+    PE_StoreU32(imm + 4u, 0x100u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, dest);
+    PE_StoreU32(dest, 0xFFFFFFFFu);
+    ASSERT(func_800130B4(args) == 1, "v0=1 miss");
+    ASSERT(PE_LoadU32(dest) == 0u, "D1F4=0 → 0");
+    PE_StoreU32(0x8009D1F4u, 0x100u);
+    ASSERT(func_800130B4(args) == 1, "v0=1 hit");
+    ASSERT(PE_LoadU32(dest) == 1u, "D1F4&0x100");
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(0x8009D26Cu, 0x3u);
+    PE_StoreU32(imm + 4u, 0x1u);
+    PE_StoreU32(dest, 0xFFFFFFFFu);
+    ASSERT(func_800130B4(args) == 1, "code0");
+    ASSERT(PE_LoadU32(dest) == 1u, "D26C&1");
+    PE_StoreU32(imm, 2u);
+    PE_StoreU32(0x8009D1E4u, 0u);
+    PE_StoreU32(imm + 4u, 0x8u);
+    PE_StoreU32(dest, 0xFFFFFFFFu);
+    ASSERT(func_800130B4(args) == 1, "code2");
+    ASSERT(PE_LoadU32(dest) == 0u, "D1E4=0 → 0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL30_type5_11_zero_pad(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t t5s = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+
+    TEST("BTL30_type5_11_zero_pad");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(hdr + 8u + 5u * 4u, t5s);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x24u * 4u, 0x8001784Cu);
+    PE_StoreU32(0x800910A0u + 0x09u * 4u, 0x80012850u);
+    PE_StoreU32(0x800910A0u + 0x05u * 4u, 0x8001731Cu);
+    PE_StoreU32(0x800910A0u + 0x11u * 4u, 0x800130B4u);
+    PE_StoreU32(t5s + 0x000u, 0x00002002u);
+    PE_StoreU32(t5s + 0x004u, 0u);
+    PE_StoreU32(t5s + 0x008u, 1u);
+    PE_StoreU32(t5s + 0x00Cu, 0x00124024u);
+    PE_StoreU32(t5s + 0x010u, 0u);
+    PE_StoreU32(t5s + 0x014u, 2u);
+    PE_StoreU32(t5s + 0x018u, 3u);
+    PE_StoreU32(t5s + 0x01Cu, 0x00B08009u);
+    PE_StoreU32(t5s + 0x020u, 0u);
+    PE_StoreU32(t5s + 0x024u, 0x0Bu);
+    PE_StoreU32(t5s + 0x028u, 0u);
+    PE_StoreU32(t5s + 0x02Cu, 2u);
+    PE_StoreU32(t5s + 0x030u, 0u);
+    PE_StoreU32(t5s + 0x034u, 0x00064005u);
+    PE_StoreU32(t5s + 0x038u, 0u);
+    PE_StoreU32(t5s + 0x03Cu, 0u);
+    PE_StoreU32(t5s + 0x040u, 0x10u);
+    PE_StoreU32(t5s + 0x044u, 0x00806011u);
+    PE_StoreU32(t5s + 0x048u, 0u);
+    PE_StoreU32(t5s + 0x04Cu, 1u);
+    PE_StoreU32(t5s + 0x050u, 0x100u);
+    PE_StoreU32(t5s + 0x054u, 4u);
+    PE_StoreU32(t5s + 0x058u, 0x00002002u);
+    PE_StoreU32(t5s + 0x05Cu, 0u);
+    PE_StoreU32(t5s + 0x060u, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 5u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0u);
+    PE_StoreU32(imm + 12u, 0u);
+    PE_StoreU32(imm + 16u, 0u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn type5");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(child + 0xACu + 4u * 4u) == 0u, "0x11 D1F4=0");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "yield after 0x11");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL31_66C7C_and_18EE0(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+
+    TEST("BTL31_66C7C_and_18EE0");
+    ResetTestState();
+    PE_StoreU16(0x800BCFE8u, 0x1111u);
+    PE_StoreU16(0x800BCFEAu, 0x2222u);
+    PE_StoreU16(0x800BCFECu, 0x3333u);
+    PE_StoreU8(0x800BCFEEu, 0xAAu);
+    ASSERT(func_80066C7C(0x1Eu) == 0, "v0=0");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 6u, "CFEE=6");
+    ASSERT(PE_LoadU16(0x800BCFE8u) == 0u, "CFE8");
+    ASSERT(PE_LoadU16(0x800BCFEAu) == 0u, "CFEA");
+    ASSERT(PE_LoadU16(0x800BCFECu) == 0u, "CFEC");
+    ASSERT(PE_LoadU16(0x800BCFF6u) == 0x1Eu, "CFF6");
+    ASSERT(PE_LoadU16(0x800BCFF8u) == 0u, "CFF8");
+    ASSERT(PE_LoadU16(0x800BCFF0u) == 0x1111u, "snap CFE8");
+    ASSERT(PE_LoadU16(0x800BCFF2u) == 0x2222u, "snap CFEA");
+    ASSERT(PE_LoadU16(0x800BCFF4u) == 0x3333u, "snap CFEC");
+    PE_StoreU32(imm, 0x1Eu);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80018EE0(args) == 1, "0x86 v0=1");
+    ASSERT(PE_LoadU16(0x800BCFF6u) == 0x1Eu, "repeat CFF6");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL31_type1_86_persist_ne39(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t t1s = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t task;
+
+    TEST("BTL31_type1_86_persist_ne39");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(hdr + 8u + 1u * 4u, t1s);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x09u * 4u, 0x80012850u);
+    PE_StoreU32(0x800910A0u + 0x05u * 4u, 0x8001731Cu);
+    PE_StoreU32(0x800910A0u + 0x86u * 4u, 0x80018EE0u);
+    PE_StoreU32(t1s + 0x000u, 0x00002002u);
+    PE_StoreU32(t1s + 0x004u, 0u);
+    PE_StoreU32(t1s + 0x008u, 1u);
+    PE_StoreU32(t1s + 0x00Cu, 0x01308009u);
+    PE_StoreU32(t1s + 0x010u, 0u);
+    PE_StoreU32(t1s + 0x014u, 0x0Bu);
+    PE_StoreU32(t1s + 0x018u, 0u);
+    PE_StoreU32(t1s + 0x01Cu, 0x4Au);
+    PE_StoreU32(t1s + 0x020u, 0x27u);
+    PE_StoreU32(t1s + 0x024u, 0x00064005u);
+    PE_StoreU32(t1s + 0x028u, 0u);
+    PE_StoreU32(t1s + 0x02Cu, 0u);
+    PE_StoreU32(t1s + 0x030u, 0x20u);
+    PE_StoreU32(t1s + 0x034u, 0x00002000u);
+    PE_StoreU32(t1s + 0x038u, 0u);
+    PE_StoreU32(t1s + 0x03Cu, 0x26u);
+    PE_StoreU32(t1s + 0x040u, 0x00002086u);
+    PE_StoreU32(t1s + 0x044u, 0u);
+    PE_StoreU32(t1s + 0x048u, 0x1Eu);
+    PE_StoreU32(t1s + 0x04Cu, 0x00002002u);
+    PE_StoreU32(t1s + 0x050u, 0u);
+    PE_StoreU32(t1s + 0x054u, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    task = PE_LoadU32(parent + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU32(0x800A77F0u + 0x4Au * 4u, 0u);
+    func_80017018();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 6u, "0x86 CFEE=6");
+    ASSERT(PE_LoadU16(0x800BCFF6u) == 0x1Eu, "0x86 CFF6=30");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "yield after 0x86");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL32_17988_skips_current(void) {
+    pe_addr_t actor = 0x800BEA90u;
+    pe_addr_t t0 = 0x8009D310u;
+    pe_addr_t t1 = 0x8009D33Cu;
+
+    TEST("BTL32_17988_skips_current");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D300u, t0);
+    PE_StoreU32(actor + 0xA0u, t0);
+    PE_StoreU32(actor + 0xA4u, 0u);
+    PE_StoreU32(actor + 0xA8u, 0u);
+    PE_StoreU32(t0 + 0x24u, t1);
+    PE_StoreU16(t0 + 8u, 0u);
+    PE_StoreU16(t1 + 8u, 0u);
+    PE_StoreU32(t1 + 0x24u, 0u);
+    ASSERT(func_80017988(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU16(t0 + 8u) == 0u, "D300 skipped");
+    ASSERT(PE_LoadU16(t1 + 8u) == 0x10u, "other |=0x10");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL32_type0_04_after_ff(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t t0s = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+    pe_addr_t other;
+
+    TEST("BTL32_type0_04_after_ff");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(hdr + 8u, t0s);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x1Fu * 4u, 0x800177ACu);
+    PE_StoreU32(0x800910A0u + 0x09u * 4u, 0x80012850u);
+    PE_StoreU32(0x800910A0u + 0x05u * 4u, 0x8001731Cu);
+    PE_StoreU32(0x800910A0u + 0x04u * 4u, 0x80017988u);
+    PE_StoreU32(t0s + 0x000u, 0x00002002u);
+    PE_StoreU32(t0s + 0x004u, 0u);
+    PE_StoreU32(t0s + 0x008u, 1u);
+    PE_StoreU32(t0s + 0x00Cu, 0x0002201Fu);
+    PE_StoreU32(t0s + 0x010u, 0u);
+    PE_StoreU32(t0s + 0x014u, 4u);
+    PE_StoreU32(t0s + 0x018u, 0x00B08009u);
+    PE_StoreU32(t0s + 0x01Cu, 0u);
+    PE_StoreU32(t0s + 0x020u, 0x0Bu);
+    PE_StoreU32(t0s + 0x024u, 0u);
+    PE_StoreU32(t0s + 0x028u, 4u);
+    PE_StoreU32(t0s + 0x02Cu, 0xFFu);
+    PE_StoreU32(t0s + 0x030u, 0x00064005u);
+    PE_StoreU32(t0s + 0x034u, 0u);
+    PE_StoreU32(t0s + 0x038u, 0u);
+    PE_StoreU32(t0s + 0x03Cu, 0x28u);
+    PE_StoreU32(t0s + 0x040u, 0x00000004u);
+    PE_StoreU32(t0s + 0x044u, 0u);
+    PE_StoreU32(t0s + 0x048u, 0x00002002u);
+    PE_StoreU32(t0s + 0x04Cu, 0u);
+    PE_StoreU32(t0s + 0x050u, 1u);
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0u);
+    PE_StoreU32(imm + 12u, 0u);
+    PE_StoreU32(imm + 16u, 0u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn type0");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    other = PE_LoadU32(parent + 0xA8u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x14u, 0xFFu);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU16(other + 8u, 0u);
+    PE_StoreU32(child + 0xA0u, other);
+    func_80017018();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(child + 0xACu + 4u * 4u) == 0xFFu, "0x1F");
+    ASSERT(PE_LoadU16(other + 8u) == 0x10u, "0x04 flagged other");
+    ASSERT(PE_LoadU16(task + 8u) == 0u, "current not flagged");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "yield after 0x04");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL33_19618_overlay_bit(void) {
+    TEST("BTL33_19618_overlay_bit");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    ASSERT(func_80019618(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x40002000u, "|=0x2000");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL34_1856C_clears_pose_groups(void) {
+    pe_addr_t actor = 0x800BEA90u;
+    unsigned int off;
+
+    TEST("BTL34_1856C_clears_pose_groups");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    for (off = 0x68u; off <= 0x80u; off += 4u)
+        PE_StoreU32(actor + off, 0x11111111u);
+    ASSERT(func_8001856C(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU32(actor + 0x68u) == 0u, "+0x68");
+    ASSERT(PE_LoadU32(actor + 0x6Cu) == 0u, "+0x6C");
+    ASSERT(PE_LoadU32(actor + 0x70u) == 0u, "+0x70");
+    ASSERT(PE_LoadU32(actor + 0x74u) == 0x11111111u, "+0x74 kept");
+    ASSERT(PE_LoadU32(actor + 0x78u) == 0u, "+0x78");
+    ASSERT(PE_LoadU32(actor + 0x7Cu) == 0u, "+0x7C");
+    ASSERT(PE_LoadU32(actor + 0x80u) == 0u, "+0x80");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL34_type0_65_after_aa(void) {
+    pe_addr_t hdr = 0x80121000u;
+    pe_addr_t script = 0x80123000u;
+    pe_addr_t t0s = 0x80124000u;
+    pe_addr_t desc = 0x80121100u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t parent;
+    pe_addr_t child;
+    pe_addr_t task;
+
+    TEST("BTL34_type0_65_after_aa");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    pe_btl22_plant_ctor(hdr, script);
+    PE_StoreU32(hdr + 8u, t0s);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+    PE_StoreU32(0x800910A0u + 0x08u * 4u, 0x8001735Cu);
+    PE_StoreU32(0x800910A0u + 0x40u * 4u, 0x80017D7Cu);
+    PE_StoreU32(0x800910A0u + 0x65u * 4u, 0x8001856Cu);
+    PE_StoreU32(t0s + 0x000u, 0x00002002u);
+    PE_StoreU32(t0s + 0x004u, 0u);
+    PE_StoreU32(t0s + 0x008u, 1u);
+    PE_StoreU32(t0s + 0x00Cu, 0x00000040u);
+    PE_StoreU32(t0s + 0x010u, 0u);
+    PE_StoreU32(t0s + 0x014u, 0x00000065u);
+    PE_StoreU32(t0s + 0x018u, 0u);
+    PE_StoreU32(t0s + 0x01Cu, 0x00002002u);
+    PE_StoreU32(t0s + 0x020u, 0u);
+    PE_StoreU32(t0s + 0x024u, 1u);
+    /* first 17018 consumes the opening 0x02; second runs 0x40/0x65 */
+    PE_StoreU8(desc, 1u);
+    PE_StoreU8(desc + 1u, 0u);
+    parent = func_80035038(desc, 0u, 1u);
+    PE_StoreU32(0x8009D2F0u, parent);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(imm + 4u, 0u);
+    PE_StoreU32(imm + 8u, 0u);
+    PE_StoreU32(imm + 12u, 0u);
+    PE_StoreU32(imm + 16u, 0u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(args + 12u, imm + 12u);
+    PE_StoreU32(args + 16u, imm + 16u);
+    ASSERT(func_8001735C(args) == 1, "spawn type0");
+    child = PE_LoadU32(parent + 4u);
+    task = PE_LoadU32(child + 0xA8u);
+    PE_StoreU32(child + 0x68u, 1u);
+    PE_StoreU32(child + 0x6Cu, 2u);
+    PE_StoreU32(child + 0x70u, 3u);
+    PE_StoreU32(child + 0x78u, 4u);
+    PE_StoreU32(child + 0x7Cu, 5u);
+    PE_StoreU32(child + 0x80u, 6u);
+    PE_StoreU32(0x8009D2F0u, child);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x24u, 0u);
+    func_80017018();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 1u);
+    func_80017018();
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) != 0u, "0x40");
+    ASSERT(PE_LoadU32(child + 0x68u) == 0u, "0x65 +0x68");
+    ASSERT(PE_LoadU32(child + 0x80u) == 0u, "0x65 +0x80");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "yield after 0x65");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL35_18E58_calls_66800(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t container = 0x80110000u;
+    pe_addr_t view;
+    pe_addr_t matrix = 0x80112000u;
+    pe_addr_t h_dest = 0x80112100u;
+    unsigned int i;
+
+    TEST("BTL35_18E58_calls_66800");
+    ResetTestState();
+    view = container + 0x200u + 52u;
+    PE_StoreU32(0x800B1624u, container);
+    PE_StoreU32(container + 0x1Cu, 0x200u);
+    PE_StoreU32(0x800BCFA4u, matrix);
+    PE_StoreU32(0x800BCFA8u, h_dest);
+    PE_StoreU16(view, 0x0345u);
+    for (i = 0u; i < 9u; i++)
+        PE_StoreU16(view + 2u + i * 2u, 0x1100u + i);
+    PE_StoreU32(view + 0x14u, 0x11223344u);
+    PE_StoreU32(view + 0x18u, 0x55667788u);
+    PE_StoreU32(view + 0x1Cu, 0x99AABBCCu);
+    PE_StoreU32(0x800BCF88u, 0x12340020u);
+    PE_StoreU32(imm, 1u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80018E58(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(h_dest) == 0x0345u, "H");
+    ASSERT(PE_LoadU32(matrix + 0x14u) == 0x11223344u, "TRX");
+    ASSERT(PE_LoadU8(0x800BCFFDu) == 1u, "index");
+    ASSERT((PE_LoadU32(0x800BCF88u) & 0x80u) != 0u, "bit 0x80");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL36_19410_fade_wait(void) {
+    pe_addr_t task = 0x8009D310u;
+
+    TEST("BTL36_19410_fade_wait");
+    ResetTestState();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x80126040u);
+    PE_StoreU32(task + 0x10u, 0u);
+    PE_StoreU8(0x800BCFEEu, 6u);
+    ASSERT(func_80019410(0u) == 0, "CFEE=6 yield");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80126038u, "rewind 8");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "delay 1");
+    PE_StoreU32(0x8009CE00u, 0x80126040u);
+    PE_StoreU8(0x800BCFEEu, 2u);
+    ASSERT(func_80019410(0u) == 0, "CFEE=2 yield");
+    PE_StoreU8(0x800BCFEEu, 1u);
+    PE_StoreU32(0x8009CE00u, 0x80126040u);
+    PE_StoreU32(task + 0x10u, 0u);
+    ASSERT(func_80019410(0u) == 1, "CFEE=1 continue");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80126040u, "no rewind");
+    ASSERT(PE_LoadU32(task + 0x10u) == 0u, "delay kept");
+    PE_StoreU8(0x800BCFEEu, 0u);
+    ASSERT(func_80019410(0u) == 1, "CFEE=0 continue");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL37_19638_clears_overlay_bit(void) {
+    TEST("BTL37_19638_clears_overlay_bit");
+    ResetTestState();
+    PE_StoreU32(0x800B0CD8u, 0x40002000u);
+    ASSERT(func_80019638(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x40000000u, "&=~0x2000");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void pe_btl38_plant_fade_slot(void)
+{
+    pe_addr_t pkt = 0x80130000u;
+
+    PE_StoreU32(0x8009CDDCu, 0u);
+    PE_StoreU32(0x800B0E38u, pkt);
+    PE_StoreU32(pkt + 0xCu, 0u);
+    PE_StoreU32(0x800BCF88u + 0x30u, 0u);
+    PE_StoreU32(0x800BCF88u + 0x50u, 0u);
+    PE_StoreU8(0x800BCF88u + 0x67u, 2u);
+}
+
+static void test_BTL38_68E24_cfee6_expires(void) {
+    TEST("BTL38_68E24_cfee6_expires");
+    ResetTestState();
+    pe_btl38_plant_fade_slot();
+    PE_StoreU8(0x800BCFEEu, 6u);
+    PE_StoreU16(0x800BCFF6u, 2u);
+    PE_StoreU16(0x800BCFF8u, 0u);
+    ASSERT(func_80068E24() == 0, "tick0 v0");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 6u, "still 6");
+    ASSERT(PE_LoadU16(0x800BCFF8u) == 1u, "CFF8=1");
+    ASSERT(func_80068E24() == 0, "tick1 v0");
+    ASSERT(PE_LoadU16(0x800BCFF8u) == 2u, "CFF8=2");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 0u, "CFEE=0");
+    PE_StoreU8(0x800BCFEEu, 2u);
+    PE_StoreU16(0x800BCFF6u, 1u);
+    PE_StoreU16(0x800BCFF8u, 0u);
+    ASSERT(func_80068E24() == 0, "cfee2");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 1u, "CFEE=1");
+    PE_StoreU8(0x800BCFEEu, 0u);
+    PE_StoreU16(0x800BCFF8u, 9u);
+    ASSERT(func_80068E24() == 0, "cfee0");
+    ASSERT(PE_LoadU16(0x800BCFF8u) == 9u, "no timer");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL38_3F3C4_fade_and_mailbox(void) {
+    TEST("BTL38_3F3C4_fade_and_mailbox");
+    ResetTestState();
+    pe_btl38_plant_fade_slot();
+    PE_StoreU32(0x800B0CD8u, 0x40002000u);
+    PE_StoreU8(0x800BCFEEu, 6u);
+    PE_StoreU16(0x800BCFF6u, 1u);
+    PE_StoreU16(0x800BCFF8u, 0u);
+    func_8003F3C4();
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 0u, "68E24 via 3F3C4");
+    PE_StoreU32(0x800B0CD8u, 0x40002100u);
+    PE_StoreU8(0x800BCFEEu, 6u);
+    PE_StoreU16(0x800BCFF8u, 0u);
+    func_8003F3C4();
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 6u, "bit 0x100 skips");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL38_9C_completes_after_fade(void) {
+    pe_addr_t task = 0x8009D310u;
+
+    TEST("BTL38_9C_completes_after_fade");
+    ResetTestState();
+    pe_btl38_plant_fade_slot();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x80126040u);
+    PE_StoreU8(0x800BCFEEu, 6u);
+    PE_StoreU16(0x800BCFF6u, 1u);
+    PE_StoreU16(0x800BCFF8u, 0u);
+    ASSERT(func_80019410(0u) == 0, "wait");
+    func_80068E24();
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 0u, "expired");
+    ASSERT(func_80019410(0u) == 1, "continue");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL39_19658_sets_bit80(void) {
+    pe_addr_t actor = 0x800BEA90u;
+
+    TEST("BTL39_19658_sets_bit80");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x98u, 0x100000E0u);
+    ASSERT(func_80019658(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU32(actor + 0x98u) == 0x100000E0u, "already had 0x80");
+    PE_StoreU32(actor + 0x98u, 0x10000060u);
+    ASSERT(func_80019658(0u) == 1, "v0=1 again");
+    ASSERT(PE_LoadU32(actor + 0x98u) == 0x100000E0u, "|=0x80");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL41_66B60_and_18EB4(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+
+    TEST("BTL41_66B60_and_18EB4");
+    ResetTestState();
+    PE_StoreU16(0x800BCFE8u, 0x1111u);
+    PE_StoreU16(0x800BCFEAu, 0x2222u);
+    PE_StoreU16(0x800BCFECu, 0x3333u);
+    PE_StoreU8(0x800BCFEEu, 0xAAu);
+    PE_StoreU8(0x800BCFEFu, 0xBBu);
+    ASSERT(func_80066B60(0x1Eu) == 0, "v0=0");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 2u, "CFEE=2");
+    ASSERT(PE_LoadU8(0x800BCFEFu) == 2u, "CFEF=2");
+    ASSERT(PE_LoadU16(0x800BCFE8u) == 0xFFu, "CFE8");
+    ASSERT(PE_LoadU16(0x800BCFEAu) == 0xFFu, "CFEA");
+    ASSERT(PE_LoadU16(0x800BCFECu) == 0xFFu, "CFEC");
+    ASSERT(PE_LoadU16(0x800BCFF6u) == 0x1Eu, "CFF6");
+    ASSERT(PE_LoadU16(0x800BCFF8u) == 0u, "CFF8");
+    ASSERT(PE_LoadU16(0x800BCFF0u) == 0x1111u, "snap CFE8");
+    ASSERT(PE_LoadU16(0x800BCFF2u) == 0x2222u, "snap CFEA");
+    ASSERT(PE_LoadU16(0x800BCFF4u) == 0x3333u, "snap CFEC");
+    PE_StoreU32(imm, 0x1Eu);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80018EB4(args) == 1, "0x85 v0=1");
+    ASSERT(PE_LoadU16(0x800BCFF6u) == 0x1Eu, "repeat CFF6");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL41_6E9A0_calls_66B60(void) {
+    TEST("BTL41_6E9A0_calls_66B60");
+    ResetTestState();
+    g_bootstrap_disc = 1;
+    HostFB_Init();
+    func_8006A8D4();
+    PE_StoreU16(0x800BCFE8u, 0x10u);
+    PE_StoreU16(0x800BCFEAu, 0x20u);
+    PE_StoreU16(0x800BCFECu, 0x30u);
+    func_8006E9A0(0);
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 2u, "boot CFEE=2");
+    ASSERT(PE_LoadU16(0x800BCFE8u) == 0xFFu, "boot CFE8");
+    ASSERT(PE_LoadU16(0x800BCFF6u) == 2u, "boot CFF6=2");
+    ASSERT(PE_LoadU16(0x800BCFF8u) == 1u, "one 68E24 tick");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL43_176FC_equal_and_range(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t dest = 0x80122100u;
+    pe_addr_t lo = 0x80122110u;
+    pe_addr_t hi = 0x80122120u;
+    uint32_t expect;
+    uint32_t got;
+
+    TEST("BTL43_176FC_equal_and_range");
+    ResetTestState();
+    func_80070D10();
+    PE_StoreU32(args, dest);
+    PE_StoreU32(args + 4u, lo);
+    PE_StoreU32(args + 8u, hi);
+    PE_StoreU32(lo, 5u);
+    PE_StoreU32(hi, 5u);
+    PE_StoreU32(dest, 0xDEADu);
+    ASSERT(func_800176FC(args) == 1, "eq v0=1");
+    got = PE_LoadU32(dest);
+    ResetTestState();
+    func_80070D10();
+    expect = func_80070D6C();
+    ASSERT(got == expect, "eq uses 70D6C");
+
+    ResetTestState();
+    func_80070D10();
+    PE_StoreU32(args, dest);
+    PE_StoreU32(args + 4u, lo);
+    PE_StoreU32(args + 8u, hi);
+    PE_StoreU32(lo, 0u);
+    PE_StoreU32(hi, 0x64u);
+    ASSERT(func_800176FC(args) == 1, "range v0=1");
+    got = PE_LoadU32(dest);
+    ResetTestState();
+    func_80070D10();
+    expect = (uint32_t)func_80070DD0(0, 0x64);
+    ASSERT(got == expect, "range uses 70DD0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL45_18A48_and_1897C(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imms = 0x80122100u;
+    pe_addr_t p16;
+    unsigned int i;
+
+    TEST("BTL45_18A48_and_1897C");
+    ResetTestState();
+    CH1_2FA10_Plant();
+    PE_StoreU32(0x8009D2F0u, CH1_2FA10_ACTOR);
+    for (i = 0; i < 5u; i++)
+        PE_StoreU32(args + i * 4u, imms + i * 4u);
+    PE_StoreU32(imms + 0u, 3u);
+    PE_StoreU32(imms + 4u, 0u);
+    PE_StoreU32(imms + 8u, 6u);
+    PE_StoreU32(imms + 12u, 7u);
+    PE_StoreU32(imms + 16u, 1u);
+    ASSERT(func_80018A48(args) == 1, "0xB7 v0=1");
+    p16 = CH1_2FA10_BODY + 3u * 16u + 0x1Cu;
+    ASSERT(PE_LoadU8(p16 + 0u) == 0u, "B7 +0");
+    ASSERT(PE_LoadU8(p16 + 1u) == 0u, "B7 a2");
+    ASSERT(PE_LoadU8(p16 + 2u) == 6u, "B7 a3");
+    ASSERT(PE_LoadU8(p16 + 3u) == 7u, "B7 b3");
+    ASSERT(PE_LoadU16(p16 + 0xCu) == 1u, "B7 half");
+
+    ResetTestState();
+    CH1_2FA10_Plant();
+    PE_StoreU32(0x8009D2F0u, CH1_2FA10_ACTOR);
+    for (i = 0; i < 11u; i++)
+        PE_StoreU32(args + i * 4u, imms + i * 4u);
+    PE_StoreU32(imms + 0u, 0u);
+    PE_StoreU32(imms + 4u, 0u);
+    PE_StoreU32(imms + 8u, 8u);
+    PE_StoreU32(imms + 12u, 9u);
+    PE_StoreU32(imms + 16u, 1u);
+    PE_StoreU32(imms + 20u, 5u);
+    PE_StoreU32(imms + 24u, 0xFFFFFFFFu);
+    PE_StoreU32(imms + 28u, 0xFFFFFFFFu);
+    PE_StoreU32(imms + 32u, 0xFFFFFFFFu);
+    PE_StoreU32(imms + 36u, 3u);
+    PE_StoreU32(imms + 40u, 0xFu);
+    ASSERT(func_8001897C(args) == 1, "0x70 v0=1");
+    p16 = CH1_2FA10_BODY + 0x1Cu;
+    ASSERT(PE_LoadU8(p16 + 1u) == 0u, "70 a2");
+    ASSERT(PE_LoadU8(p16 + 2u) == 8u, "70 a3");
+    ASSERT(PE_LoadU8(p16 + 3u) == 9u, "70 b3");
+    ASSERT(PE_LoadU16(p16 + 0xCu) == 1u, "70 half");
+    ASSERT(PE_LoadU8(p16 + 0xEu) == 3u, "70 +0xE");
+    ASSERT(PE_LoadU8(p16 + 0xFu) == 0xFu, "70 +0xF");
+    ASSERT(PE_LoadU8(CH1_2FA10_BODY + 0x7Cu) == 5u, "70 +0x7C");
+    ASSERT(PE_LoadU8(CH1_2FA10_BODY + 0x7Du) == 0xFFu, "70 lb -1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL46_18004_and_3010C(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm0 = 0x80122100u;
+    pe_addr_t dest = 0x80122110u;
+    pe_addr_t actor = CH1_30220_ACTOR;
+    pe_addr_t slot = CH1_30220_SLOT;
+    pe_addr_t rec = 0x80108800u;
+
+    TEST("BTL46_18004_and_3010C");
+    ResetTestState();
+    CH1_30220_Plant();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU8(actor + 0x0Cu, 2u);
+    PE_StoreU32(slot + 0x10u, 0x1234u);
+    PE_StoreU32(imm0, 0x2Cu);
+    PE_StoreU32(dest, 0xDEADBEEFu);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, dest);
+    ASSERT(func_80018004(args) == 1, "0x59 v0=1");
+    ASSERT(PE_LoadU32(dest) == 0x1234u, "tag44 +0x10");
+
+    PE_StoreU32(slot + 0x10u, 0xFFFFFFFFu);
+    PE_StoreU32(dest, 0xDEADBEEFu);
+    ASSERT(func_80018004(args) == 1, "clamp v0=1");
+    ASSERT(PE_LoadU32(dest) == 0u, "tag44 clamp <0");
+
+    PE_StoreU32(imm0, 0x2Au);
+    PE_StoreU32(dest, 0u);
+    ASSERT(func_80018004(args) == 1, "nop tag v0=1");
+    ASSERT(PE_LoadU32(dest) == 0xFFFFFC18u, "tag42 sentinel");
+
+    PE_StoreU8(actor + 0x0Cu, 0u);
+    PE_StoreU32(0x8009D254u, CH1_2FF78_OBJ);
+    PE_StoreU32(CH1_2FF78_OBJ, rec);
+    PE_StoreU16(rec + 0x0Cu, 0x002Du);
+    PE_StoreU32(imm0, 4u);
+    PE_StoreU32(dest, 0u);
+    ASSERT(func_80018004(args) == 1, "type0 v0=1");
+    ASSERT(PE_LoadU32(dest) == 0x2Du, "2FE78 tag4 lh +0xC");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL47_131E8_forks_task(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t base = 0x80105000u;
+    pe_addr_t current = CH1_12700_PARENT;
+    pe_addr_t old = CH1_12700_OLD;
+
+    TEST("BTL47_131E8_forks_task");
+    ResetTestState();
+    CH1_PlantFree1(CH1_12700_TASK0);
+    PE_StoreU32(0x8009D300u, current);
+    PE_StoreU16(current + 8u, 0u);
+    PE_StoreU32(current + 0x24u, 0u);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x9Cu, base);
+    PE_StoreU32(actor + 0xA8u, 0u);
+    PE_StoreU16(0x8009D308u, 0x0010u);
+    PE_StoreU32(imm, 0x10u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_800131E8(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0) == (base + 0x20u), "pc");
+    ASSERT(PE_LoadU32(current + 0x24u) == CH1_12700_TASK0, "insert +0x24");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0x28u) == current, "back link");
+    ASSERT(PE_LoadU32(actor + 0xA8u) == 0u, "A8 untouched");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0x10u) == 1u, "delay 1");
+    ASSERT(PE_LoadU16(CH1_12700_TASK0 + 0x0Au) == 0x0010u, "serial");
+
+    ResetTestState();
+    CH1_PlantFree1(CH1_12700_TASK0);
+    PE_StoreU32(0x8009D300u, current);
+    PE_StoreU16(current + 8u, 3u);
+    PE_StoreU32(current + 0x24u, 0xABCDu);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x9Cu, base);
+    PE_StoreU32(actor + 0xA8u, old);
+    PE_StoreU32(old + 0x28u, 0u);
+    PE_StoreU16(0x8009D308u, 0x0020u);
+    PE_StoreU32(imm, 0x08u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_800131E8(args) == 1, "A8 v0=1");
+    ASSERT(PE_LoadU32(actor + 0xA8u) == CH1_12700_TASK0, "A8 prepend");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0 + 0x24u) == old, "old next");
+    ASSERT(PE_LoadU32(old + 0x28u) == CH1_12700_TASK0, "old back");
+    ASSERT(PE_LoadU32(current + 0x24u) == 0xABCDu, "current +0x24 stays");
+    ASSERT(PE_LoadU32(CH1_12700_TASK0) == (base + 0x10u), "A8 pc");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL48_18774_and_6F39C(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+    pe_addr_t dest = 0x80122110u;
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t table = 0x80123000u;
+    pe_addr_t entry = 0x80123100u;
+    pe_addr_t slot;
+
+    TEST("BTL48_18774_and_6F39C");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800942E0u, table);
+    PE_StoreU32(table + 0x55u * 4u, 0u);
+    PE_StoreU32(imm, 0x75u);
+    PE_StoreU32(dest, 0xDEADBEEFu);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, dest);
+    PE_StoreU32(0x8009D2F0u, actor);
+    ASSERT(func_80018774(args) == 1, "empty v0=1");
+    ASSERT(PE_LoadU32(dest) == 0xFFFFFFF8u, "table miss -8");
+
+    PE_StoreU32(imm, 0xC0u);
+    ASSERT(func_8006F39C(0xC0u, actor) == -7, ">=0xC0 -7");
+
+    PE_StoreU32(table + 0x55u * 4u, entry);
+    PE_StoreU32(entry + 4u, 0u);
+    ASSERT(func_8006F39C(0x75u, actor) == -1, "null fn -1");
+
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    func_8006A8D4();
+    PE_StoreU32(0x800942E0u, table);
+    PE_StoreU32(table + 0x55u * 4u, entry);
+    PE_StoreU32(entry + 4u, 0x800D4620u);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(imm, 0x75u);
+    PE_StoreU32(dest, 0xDEADBEEFu);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, dest);
+    ASSERT(func_80018774(args) == 1, "live v0=1");
+    ASSERT(PE_LoadU32(dest) == 0u, "slot index 0");
+    slot = PE_LoadU32(0x800B0E60u);
+    ASSERT(PE_LoadU8(slot) == 1u, "in use");
+    ASSERT(PE_LoadU8(slot + 1u) == 0x75u, "orig code");
+    ASSERT(PE_LoadU8(slot + 2u) == 1u, "D4620 +2");
+    ASSERT(PE_LoadU32(slot + 8u) == actor, "userdata");
+    ASSERT(PE_LoadU32(slot + 0x10u) == slot + 0x90u, "D4620 +0x10");
+    ASSERT(PE_LoadU16(slot + 0x2Cu) == 0xFFFFu, "D4620 rec0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL49_13C34_and_143B0(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm0 = 0x80122100u;
+    pe_addr_t imm1 = 0x80122110u;
+    pe_addr_t imm2 = 0x80122120u;
+    pe_addr_t dest = 0x80122130u;
+    pe_addr_t self = 0x80108600u;
+    pe_addr_t target = 0x80108700u;
+    pe_addr_t task = 0x80104000u;
+
+    TEST("BTL49_13C34_and_143B0");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, self);
+    PE_StoreU32(0x8009D254u, target);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(self + 0x28u, 0x100000u);
+    PE_StoreU32(self + 0x2Cu, 0u);
+    PE_StoreU32(self + 0x30u, 0x200000u);
+    PE_StoreU32(target + 0x28u, 0u);
+    PE_StoreU32(target + 0x2Cu, 0x40000u);
+    PE_StoreU32(target + 0x30u, 0u);
+    PE_StoreU32(imm0, 0u);
+    PE_StoreU32(imm1, 0u);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, imm1);
+    PE_StoreU32(args + 8u, dest);
+    PE_StoreU32(dest, 0u);
+    ASSERT(func_800143B0(args) == 1, "0x54 v0=1");
+    ASSERT(PE_LoadU32(dest) == 0x340000u, "abs sum");
+
+    PE_StoreU32(0x8009D254u, 0u);
+    ASSERT(func_800143B0(args) == 1, "miss v0=1");
+    ASSERT(PE_LoadU32(dest) == 0xFFFFFFFFu, "miss -1");
+
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, self);
+    PE_StoreU32(0x8009D254u, target);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x80105014u);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(self + 0x28u, 0u);
+    PE_StoreU32(self + 0x30u, 0u);
+    PE_StoreU32(target + 0x28u, 0u);
+    PE_StoreU32(target + 0x30u, 0u);
+    PE_StoreU16(self + 0x3Au, 0x400u);
+    PE_StoreU32(imm0, 0u);
+    PE_StoreU32(imm1, 0u);
+    PE_StoreU32(imm2, 0x400u);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, imm1);
+    PE_StoreU32(args + 8u, imm2);
+    ASSERT(func_80013C34(args) == 1, "0x4B v0=1");
+    ASSERT(PE_LoadU16(self + 0x3Au) == 0x400u, "already facing");
+    ASSERT((PE_LoadU16(task + 8u) & 0x20u) == 0u, "bit 0x20 clear");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80105014u, "no rewind");
+
+    PE_StoreU16(self + 0x3Au, 0u);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(imm2, 0x100u);
+    ASSERT(func_80013C34(args) == 1, "step v0=1");
+    ASSERT(PE_LoadU16(self + 0x3Au) == 0x100u, "step 0x100");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80105000u, "rewind 0x14");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "delay 1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL50_187C0_and_6F6D4(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm0 = 0x80122100u;
+    pe_addr_t imm1 = 0x80122110u;
+    pe_addr_t imm2 = 0x80122120u;
+    pe_addr_t imm3 = 0x80122130u;
+    pe_addr_t imm4 = 0x80122140u;
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t table = 0x80123000u;
+    pe_addr_t entry = 0x80123100u;
+    pe_addr_t slot;
+    pe_addr_t out0 = 0x80123200u;
+    pe_addr_t out1 = 0x80123210u;
+    pe_addr_t out2 = 0x80123220u;
+
+    TEST("BTL50_187C0_and_6F6D4");
+    ResetTestState();
+    ASSERT(func_8006F6D4(0x16u, 0u, 1u, 0u, 0u, 0u) == -10, "index OOB -10");
+
+    D_8009D1A0 = 0u;
+    func_8006A8D4();
+    PE_StoreU32(0x800942E0u, table);
+    PE_StoreU32(table + 0x55u * 4u, entry);
+    PE_StoreU32(entry + 4u, 0x800D4620u);
+    PE_StoreU32(entry + 8u, 0x800D4698u);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(imm0, 0x75u);
+    PE_StoreU32(imm1, 0xDEADBEEFu);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, imm1);
+    ASSERT(func_80018774(args) == 1, "0x6A v0=1");
+    ASSERT(PE_LoadU32(imm1) == 0u, "slot index 0");
+    slot = PE_LoadU32(0x800B0E60u);
+
+    PE_StoreU32(imm0, 0u);
+    PE_StoreU32(imm1, 1u);
+    PE_StoreU32(imm2, 0u);
+    PE_StoreU32(imm3, 0u);
+    PE_StoreU32(imm4, 0u);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, imm1);
+    PE_StoreU32(args + 8u, imm2);
+    PE_StoreU32(args + 12u, imm3);
+    PE_StoreU32(args + 16u, imm4);
+    ASSERT(func_800187C0(args) == 1, "0x6B v0=1");
+    ASSERT(PE_LoadU32(0x800F32D0u) == slot, "F32D0 slot");
+    ASSERT(PE_LoadU32(0x800E2368u) == slot + 0x0Cu, "E2368 slot+0xC");
+    ASSERT(PE_LoadU32(slot + 0x8Cu) == 0u, "CE49C left +0x8C 0");
+    ASSERT(PE_LoadU32(0x80000030u) == 0u, "kuseg 0x30 zero");
+
+    PE_StoreU8(slot + 2u, 4u);
+    PE_StoreU8(slot + 3u, 5u);
+    PE_StoreU32(slot + 4u, 0x12345678u);
+    ASSERT(func_8006F6D4(0u, 1u, 0u, out0, out1, out2) == 0, "mode1 copy");
+    ASSERT(PE_LoadU32(out0) == 4u, "slot+2");
+    ASSERT(PE_LoadU32(out1) == 5u, "slot+3");
+    ASSERT(PE_LoadU32(out2) == 0x12345678u, "slot+4");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL51_184EC_and_2FAF8(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm0 = 0x80122100u;
+    pe_addr_t dest = 0x80122110u;
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t slot = 0x80108000u;
+    pe_addr_t task = 0x80104000u;
+    pe_addr_t rec3;
+
+    TEST("BTL51_184EC_and_2FAF8");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x80105010u);
+    PE_StoreU32(actor, slot);
+    PE_StoreU32(imm0, 3u);
+    PE_StoreU32(dest, 0xDEADBEEFu);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, dest);
+    ASSERT(func_800184EC(args) == 1, "D1A0 clear v0=1");
+    ASSERT(PE_LoadU32(dest) == 1u, "store 1");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80105010u, "no rewind");
+
+    D_8009D1A0 = 2u;
+    PE_StoreU8(actor + 0x0Eu, 2u);
+    PE_StoreU8(slot + 5u, 0u);
+    PE_StoreU32(slot + 0x18u, slot + 0x1Cu);
+    PE_StoreU8(slot + 0x1Cu, 0u);
+    rec3 = slot + 0x4Cu;
+    PE_StoreU8(rec3, 0u);
+    PE_StoreU8(rec3 + 2u, 6u);
+    PE_StoreU32(rec3 + 4u, 0x11111111u);
+    PE_StoreU32(dest, 0xDEADBEEFu);
+    ASSERT(func_800184EC(args) == 0, "wait v0=0");
+    ASSERT(PE_LoadU32(dest) == 0u, "store 0");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80105000u, "rewind 0x10");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "delay 1");
+    ASSERT(PE_LoadU32(slot + 0x18u) == rec3, "activate rec3");
+    ASSERT(PE_LoadU32(actor + 0x1Cu) == 0x11111111u, "copy rec+4");
+
+    PE_StoreU8(rec3, 4u);
+    PE_StoreU32(0x8009CE00u, 0x80105010u);
+    PE_StoreU32(dest, 0xDEADBEEFu);
+    ASSERT(func_800184EC(args) == 1, "done v0=1");
+    ASSERT(PE_LoadU32(dest) == 1u, "store 1 done");
+    ASSERT(PE_LoadU32(slot + 0x18u) == 0u, "cleared current");
+    ASSERT(PE_LoadU8(rec3) == 0u, "cleared rec");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL52_14228_actor_field(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm0 = 0x80122100u;
+    pe_addr_t imm1 = 0x80122110u;
+    pe_addr_t imm2 = 0x80122120u;
+    pe_addr_t dest = 0x80122130u;
+    pe_addr_t self = 0x80108600u;
+    pe_addr_t other = 0x80108700u;
+
+    TEST("BTL52_14228_actor_field");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, self);
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU32(0x8009D20Cu, 0u);
+    PE_StoreU32(imm0, 0u);
+    PE_StoreU32(imm1, 0u);
+    PE_StoreU32(imm2, 0u);
+    PE_StoreU32(dest, 0xDEADBEEFu);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, imm1);
+    PE_StoreU32(args + 8u, imm2);
+    PE_StoreU32(args + 12u, dest);
+    ASSERT(func_80014228(args) == 1, "miss v0=1");
+    ASSERT(PE_LoadU32(dest) == 0xFFFFFFFFu, "miss -1");
+
+    PE_StoreU32(0x8009D254u, other);
+    PE_StoreU8(other + 0x0Eu, 4u);
+    ASSERT(func_80014228(args) == 1, "D254 v0=1");
+    ASSERT(PE_LoadU32(dest) == 4u, "D254 +0x0E");
+
+    PE_StoreU8(self + 0x0Cu, 2u);
+    PE_StoreU8(self + 0x0Du, 0u);
+    PE_StoreU8(self + 0x0Eu, 2u);
+    PE_StoreU32(self + 0x98u, 0x100000E0u);
+    PE_StoreU16(self + 0x16u, 0xFFF0u);
+    PE_StoreU8(self + 0x0Fu, 9u);
+    PE_StoreU32(imm1, 2u);
+    PE_StoreU32(imm2, 0u);
+    ASSERT(func_80014228(args) == 1, "self v0=1");
+    ASSERT(PE_LoadU32(dest) == 2u, "self +0x0E");
+
+    PE_StoreU32(imm0, 1u);
+    ASSERT(func_80014228(args) == 1, "code1");
+    ASSERT(PE_LoadU32(dest) == 0x100000E0u, "+0x98");
+    PE_StoreU32(imm0, 2u);
+    ASSERT(func_80014228(args) == 1, "code2");
+    ASSERT(PE_LoadU32(dest) == 0xFFFFFFF0u, "lh +0x16");
+    PE_StoreU32(imm0, 3u);
+    ASSERT(func_80014228(args) == 1, "code3");
+    ASSERT(PE_LoadU32(dest) == 9u, "+0x0F");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL53_299CC_idle_and_69594(void) {
+    pe_addr_t table = 0x80123000u;
+    pe_addr_t entry = 0x80123100u;
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t slot;
+    pe_addr_t rec3;
+
+    TEST("BTL53_299CC_idle_and_69594");
+    ResetTestState();
+    CH1_299CC_Plant(6u, 0u, 6u);
+    func_800299CC_after_consume_cut();
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 6u, "inverse mode 6");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE) == 0u, "inverse edge 0");
+
+    ResetTestState();
+    CH1_299CC_Plant(6u, CH1_299CC_FLAG, 0u);
+    D_8009D1A0 = 2u;
+    PE_StoreU32(0x8009D20Cu, 0u);
+    PE_StoreU32(0x8009D254u, 0u);
+    func_80035558_walk_cut();
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 0u, "35558 consume 6→0");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE) == 6u, "edge 6");
+    ASSERT(PE_LoadU8(0x8009D244u) == 0u, "4D4 stays 0");
+
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    func_8006A8D4();
+    PE_StoreU32(0x800942E0u, table);
+    PE_StoreU32(table + 0x55u * 4u, entry);
+    PE_StoreU32(entry + 4u, 0x800D4620u);
+    PE_StoreU32(entry + 8u, 0x800D4698u);
+    PE_StoreU32(entry + 0xCu, 0x800D4704u);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x80122100u, 0x75u);
+    PE_StoreU32(0x80122110u, 0xDEADBEEFu);
+    PE_StoreU32(0x80120F80u, 0x80122100u);
+    PE_StoreU32(0x80120F84u, 0x80122110u);
+    ASSERT(func_80018774(0x80120F80u) == 1, "0x6A");
+    slot = PE_LoadU32(0x800B0E60u);
+    rec3 = slot + 0x4Cu;
+    PE_StoreU8(rec3, 0u);
+    D_8009D1A0 |= 0x80u;
+    ASSERT(func_80069594() == 0, "69594 v0=0");
+    ASSERT(PE_LoadU32(0x800F32D0u) == slot, "D4704 F32D0");
+    ASSERT(PE_LoadU16(slot + 0x2Cu) == 0xFFFFu, "stream rec FFFF");
+    ASSERT(PE_LoadU8(rec3) == 0u, "clip rec3 not invented");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL54_17410_177C8_message_open_poll(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+    pe_addr_t task = 0x80122200u;
+    pe_addr_t rec0 = 0x800BCEA8u;
+    pe_addr_t rec1 = 0x800BCEA8u + 56u;
+    unsigned int i;
+
+    TEST("BTL54_17410_177C8_message_open_poll");
+    ResetTestState();
+    for (i = 0; i < 4u; i++) {
+        PE_StoreU8(0x800BCEA8u + i * 56u, 0u);
+        PE_StoreU32(0x800BCEA8u + i * 56u + 0x0Cu, 0x00300000u);
+        PE_StoreU16(0x800BCEA8u + i * 56u + 0x10u, 0xFFFFu);
+    }
+    PE_StoreU32(imm, 7u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80017410(args) == 1, "0x0D v0=1");
+    ASSERT(PE_LoadU8(rec0) == 1u, "state 1");
+    ASSERT(PE_LoadU8(rec0 + 8u) == 0u, "mode 0");
+    ASSERT(PE_LoadU16(rec0 + 0x10u) == 7u, "id 7");
+    ASSERT((PE_LoadU32(rec0 + 0x0Cu) & 0x00300000u) == 0u, "flag bits");
+    ASSERT(PE_LoadU8(0x8009CEA0u) == 0u, "gp+0x130");
+    ASSERT(PE_LoadU8(0x8009CEA4u) == 0xFFu, "gp+0x134");
+    ASSERT(func_80037548(7) == 1, "37548 open");
+    ASSERT(func_80037548(0x26) == 0, "37548 miss");
+
+    PE_StoreU32(0x8009CE00u, 0x800202C8u + 0x92Cu);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(task + 0x10u, 0u);
+    ASSERT(func_800177C8(args) == 0, "0x22 waits");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x800202C8u + 0x920u, "rewind 0xC");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "delay 1");
+
+    PE_StoreU8(rec0, 0u);
+    ASSERT(func_800177C8(args) == 1, "0x22 closed");
+
+    ResetTestState();
+    for (i = 0; i < 4u; i++) {
+        PE_StoreU8(0x800BCEA8u + i * 56u, 0u);
+        PE_StoreU16(0x800BCEA8u + i * 56u + 0x10u, 0xFFFFu);
+    }
+    PE_StoreU8(rec0, 1u);
+    PE_StoreU16(rec0 + 0x10u, 1u);
+    PE_StoreU32(imm, 7u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80017410(args) == 1, "second slot");
+    ASSERT(PE_LoadU8(rec1) == 1u, "rec1 state");
+    ASSERT(PE_LoadU16(rec1 + 0x10u) == 7u, "rec1 id");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL55_37870_ff_and_f9(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+    pe_addr_t stream = 0x80140000u;
+    pe_addr_t rec0 = 0x800BCEA8u;
+    unsigned int i;
+
+    TEST("BTL55_37870_ff_and_f9");
+    ResetTestState();
+    for (i = 0; i < 4u; i++) {
+        PE_StoreU8(0x800BCEA8u + i * 56u, 0u);
+        PE_StoreU16(0x800BCEA8u + i * 56u + 0x10u, 0xFFFFu);
+    }
+    PE_StoreU8(stream, 0xFFu);
+    PE_StoreU8(stream + 1u, 0xFEu);
+    PE_StoreU8(stream + 2u, 7u);
+    PE_StoreU8(stream + 3u, 0x10u);
+    PE_StoreU8(stream + 4u, 0xFFu);
+    PE_StoreU32(0x8009CE90u, stream);
+    PE_StoreU32(imm, 7u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80017410(args) == 1, "open");
+    func_80037870();
+    ASSERT(PE_LoadU8(rec0) == 2u, "FF promotes 1→2");
+    ASSERT(PE_LoadU32(rec0 + 4u) == stream + 4u, "cursor on FF");
+    PE_StoreU32(0x8009D1F4u, 0u);
+    func_80037870();
+    ASSERT(PE_LoadU8(rec0) == 2u, "no pad stays 2");
+    PE_StoreU32(0x8009D1F4u, 0x100u);
+    func_80037870();
+    ASSERT(PE_LoadU8(rec0) == 0u, "0x100 closes");
+    ASSERT(func_800177C8(args) == 1, "0x22 done");
+
+    ResetTestState();
+    for (i = 0; i < 4u; i++) {
+        PE_StoreU8(0x800BCEA8u + i * 56u, 0u);
+        PE_StoreU16(0x800BCEA8u + i * 56u + 0x10u, 0xFFFFu);
+    }
+    PE_StoreU8(stream, 0xF9u);
+    PE_StoreU8(stream + 1u, 0xFEu);
+    PE_StoreU8(stream + 2u, 8u);
+    PE_StoreU8(stream + 3u, 0x10u);
+    PE_StoreU8(stream + 4u, 0xF9u);
+    PE_StoreU32(0x8009CE90u, stream);
+    PE_StoreU32(imm, 8u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80017410(args) == 1, "open F9");
+    func_80037870();
+    ASSERT(PE_LoadU8(rec0) == 0u, "F9 closes");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL56_3EB04_cross_edge(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+    pe_addr_t stream = 0x80140000u;
+    pe_addr_t rec0 = 0x800BCEA8u;
+    unsigned int i;
+
+    TEST("BTL56_3EB04_cross_edge");
+    ResetTestState();
+    func_8003E974();
+    PE_StoreU16(0x800BE9A2u, 0xFFFFu);
+    func_8003EB04();
+    ASSERT(PE_LoadU32(0x8009D1F4u) == 0u, "idle edge 0");
+    PE_StoreU16(0x800BE9A2u, 0xBFFFu);
+    func_8003EB04();
+    ASSERT((PE_LoadU32(0x8009D26C) & 0x100u) == 0x100u, "held 0x100");
+    ASSERT((PE_LoadU32(0x8009D1F4u) & 0x100u) == 0x100u, "edge 0x100");
+    func_8003EB04();
+    ASSERT((PE_LoadU32(0x8009D1F4u) & 0x100u) == 0u, "held-from-before");
+
+    ResetTestState();
+    func_8003E974();
+    for (i = 0; i < 4u; i++) {
+        PE_StoreU8(0x800BCEA8u + i * 56u, 0u);
+        PE_StoreU16(0x800BCEA8u + i * 56u + 0x10u, 0xFFFFu);
+    }
+    PE_StoreU8(stream, 0xFFu);
+    PE_StoreU8(stream + 1u, 0xFEu);
+    PE_StoreU8(stream + 2u, 7u);
+    PE_StoreU8(stream + 3u, 0x10u);
+    PE_StoreU8(stream + 4u, 0xFFu);
+    PE_StoreU32(0x8009CE90u, stream);
+    PE_StoreU32(imm, 7u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80017410(args) == 1, "open");
+    func_80037870();
+    ASSERT(PE_LoadU8(rec0) == 2u, "ready");
+    PE_StoreU16(0x800BE9A2u, 0xBFFFu);
+    func_8003EB04();
+    func_80037870();
+    ASSERT(PE_LoadU8(rec0) == 0u, "Cross closes");
+    ASSERT(func_800177C8(args) == 1, "0x22 done");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    D_8009D1A0 = 0u;
+    PASS();
+}
+
+static void test_BTL57_17DE4_choice_and_fb09(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t dest = 0x80122100u;
+    pe_addr_t stream = 0x80140000u;
+    pe_addr_t rec0 = 0x800BCEA8u;
+    unsigned int i;
+
+    TEST("BTL57_17DE4_choice_and_fb09");
+    ResetTestState();
+    func_8003E974();
+    PE_StoreU32(0x80122110u, 7u);
+    PE_StoreU32(args, 0x80122110u);
+    ASSERT(func_80017410(args) == 1, "open");
+    ASSERT(func_80037864() == -1, "375E0 wrote -1");
+    PE_StoreU32(args, dest);
+    ASSERT(func_80017DE4(args) == 1, "0x43");
+    ASSERT((int32_t)PE_LoadU32(dest) == -1, "local -1");
+
+    ResetTestState();
+    func_8003E974();
+    for (i = 0; i < 4u; i++) {
+        PE_StoreU8(0x800BCEA8u + i * 56u, 0u);
+        PE_StoreU16(0x800BCEA8u + i * 56u + 0x10u, 0xFFFFu);
+    }
+    PE_StoreU8(stream, 0xFFu);
+    PE_StoreU8(stream + 1u, 0xFEu);
+    PE_StoreU8(stream + 2u, 7u);
+    PE_StoreU8(stream + 3u, 0x10u);
+    PE_StoreU8(stream + 4u, 0xF7u);
+    PE_StoreU8(stream + 5u, 0xFBu);
+    PE_StoreU8(stream + 6u, 9u);
+    PE_StoreU8(stream + 7u, 2u);
+    PE_StoreU8(stream + 8u, 0xFFu);
+    PE_StoreU32(0x8009CE90u, stream);
+    PE_StoreU32(dest, 7u);
+    PE_StoreU32(args, dest);
+    ASSERT(func_80017410(args) == 1, "open F7");
+    func_80037870();
+    ASSERT(PE_LoadU8(rec0) == 2u, "F7 promotes");
+    PE_StoreU16(0x800BE9A2u, 0xBFFFu);
+    func_8003EB04();
+    func_80037870();
+    ASSERT(PE_LoadU8(rec0) == 0u, "closed");
+    ASSERT(PE_LoadU8(0x8009CEA4u) == 0u, "Watch");
+    PE_StoreU32(dest, 0xDEADu);
+    ASSERT(func_80017DE4(args) == 1, "0x43 Watch");
+    ASSERT(PE_LoadU32(dest) == 0u, "choice 0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    D_8009D1A0 = 0u;
+    PASS();
+}
+
+static void test_BTL58_17F88_17FB0_19484(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t dest = 0x80122100u;
+
+    TEST("BTL58_17F88_17FB0_19484");
+    ResetTestState();
+    D_8009D1A0 = 0x0040u;
+    PE_StoreU32(dest, 0x800u);
+    PE_StoreU32(args, dest);
+    ASSERT(func_80017F88(args) == 1, "0x52 v0");
+    ASSERT(D_8009D1A0 == 0x840u, "or 0x800");
+    ASSERT(func_80017FB0(args) == 1, "0x53 v0");
+    ASSERT(D_8009D1A0 == 0x40u, "clear 0x800");
+    PE_StoreU32(dest, 0x7Fu);
+    ASSERT(func_80019484(args) == 1, "0xA6 v0");
+    ASSERT(PE_LoadU32(0x8009CEF0u) == 0x7Fu, "438C0 0x7F");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    D_8009D1A0 = 0u;
+    PASS();
+}
+
+static void test_BTL59_17A50_and_3F3C4_pad(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t dest = 0x80122100u;
+    pe_addr_t shift = 0x80122110u;
+    pe_addr_t stream = 0x80140000u;
+    pe_addr_t rec0 = 0x800BCEA8u;
+
+    TEST("BTL59_17A50_and_3F3C4_pad");
+    ResetTestState();
+    PE_StoreU32(dest, 0u);
+    PE_StoreU32(shift, 4u);
+    PE_StoreU32(args, dest);
+    PE_StoreU32(args + 4u, shift);
+    ASSERT(func_80017A50(args) == 1, "0x2A v0");
+    ASSERT(PE_LoadU32(dest) == 0x10u, "bit 4 not bit 2");
+
+    ResetTestState();
+    HostFB_Init();
+    func_8003E974();
+    D_8009D1A0 = 0u;
+    PE_StoreU16(0x800BE9A2u, 0u);
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    func_8003F3C4();
+    ASSERT(PE_LoadU16(0x800BE9A2u) == 0xFFFFu, "idle raw");
+    ASSERT(PE_LoadU32(0x8009D1F4u) == 0u, "no invented edge");
+
+    ResetTestState();
+    HostFB_Init();
+    func_8003E974();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    PE_StoreU32(0x800B162Cu, stream);
+    PE_StoreU8(stream, 0xFFu);
+    PE_StoreU8(stream + 1u, 0xFEu);
+    PE_StoreU8(stream + 2u, 7u);
+    PE_StoreU8(stream + 3u, 0x10u);
+    PE_StoreU8(stream + 4u, 0xF7u);
+    PE_StoreU8(stream + 5u, 0xFBu);
+    PE_StoreU8(stream + 6u, 9u);
+    PE_StoreU8(stream + 7u, 2u);
+    PE_StoreU8(stream + 8u, 0xFFu);
+    func_8003F3C4();
+    ASSERT(PE_LoadU32(0x8009CE90u) == stream, "371B0 once");
+    PE_StoreU32(dest, 7u);
+    PE_StoreU32(args, dest);
+    ASSERT(func_80017410(args) == 1, "0x0D");
+    func_80037870();
+    ASSERT(PE_LoadU8(rec0) == 2u, "state 2");
+    func_8003F3C4();
+    ASSERT(PE_LoadU8(rec0) == 0u, "Cross closed");
+    ASSERT(PE_LoadU8(0x8009CEA4u) == 0u, "Watch");
+    PE_StoreU32(dest, 0xDEADu);
+    ASSERT(func_80017DE4(args) == 1, "0x43");
+    ASSERT(PE_LoadU32(dest) == 0u, "choice 0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    D_8009D1A0 = 0u;
+    PASS();
+}
+
+static void test_BTL60_18F0C_and_17BB4_live(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm[5];
+    unsigned int i;
+
+    TEST("BTL60_18F0C_and_17BB4_live");
+    ResetTestState();
+    PE_StoreU16(0x800BCFE8u, 0x11u);
+    PE_StoreU16(0x800BCFEAu, 0x22u);
+    PE_StoreU16(0x800BCFECu, 0x33u);
+    for (i = 0; i < 5u; i++)
+        imm[i] = 0x80122100u + i * 4u;
+    PE_StoreU32(imm[0], 0x3Cu);
+    PE_StoreU32(imm[1], 0xFFu);
+    PE_StoreU32(imm[2], 0xFFu);
+    PE_StoreU32(imm[3], 0xFFu);
+    PE_StoreU32(imm[4], 1u);
+    for (i = 0; i < 5u; i++)
+        PE_StoreU32(args + i * 4u, imm[i]);
+    ASSERT(func_80018F0C(args) == 1, "0x87 v0");
+    ASSERT(PE_LoadU16(0x800BCFE8u) == 0xFFu, "CFE8");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 2u, "CFEE");
+    ASSERT(PE_LoadU8(0x800BCFEFu) == 1u, "CFEF");
+    ASSERT(PE_LoadU16(0x800BCFF6u) == 0x3Cu, "CFF6");
+    ASSERT(PE_LoadU16(0x800BCFF0u) == 0x11u, "snap");
+
+    ResetTestState();
+    D_8009D1A0 = 0u;
+    D_8009D280 = 0u;
+    PE_StoreU32(imm[0], 0xA80663C8u);
+    PE_StoreU32(args, imm[0]);
+    ASSERT(func_80017BB4_btl1_cut(args) == 0, "0x31 yield");
+    ASSERT(D_8009D280 == 0xA80663C8u, "live dest");
+    ASSERT((D_8009D1A0 & 0x2000u) != 0u, "D1A0 bit 13");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    D_8009D1A0 = 0u;
+    PASS();
+}
+
+static void test_BTL61_19BE4_19154_18080(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t dest = 0x80122100u;
+    pe_addr_t task = 0x8009D310u;
+    pe_addr_t actor = CH1_30220_ACTOR;
+    pe_addr_t slot = CH1_30220_SLOT;
+
+    TEST("BTL61_19BE4_19154_18080");
+    ResetTestState();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU16(task + 8u, 0u);
+    ASSERT(func_80019BE4(0u) == 1, "0xC7");
+    ASSERT(PE_LoadU16(task + 8u) == 0x80u, "task+8 |= 0x80");
+    PE_StoreU32(0x8009D2E8u, 0xFu);
+    ASSERT(func_80019748(0u) == 1, "0xAD");
+    ASSERT(PE_LoadU32(0x8009D2E8u) == 0xBu, "D2E8 &= ~4");
+    ASSERT(func_80019728(0u) == 1, "0xAE");
+    ASSERT(PE_LoadU32(0x8009D2E8u) == 0xFu, "D2E8 |= 4");
+    PE_StoreU32(0x8009D28Cu, 6u);
+    PE_StoreU32(args, dest);
+    ASSERT(func_80019154(args) == 1, "0x94");
+    ASSERT(PE_LoadU32(dest) == 6u, "mode copy");
+
+    ResetTestState();
+    CH1_30220_Plant();
+    PE_StoreU32(0x8009D20Cu, actor);
+    PE_StoreU32(actor + 4u, 0u);
+    PE_StoreU8(actor + 0x0Cu, 2u);
+    PE_StoreU8(actor + 0x0Du, 0u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(slot + 0x10u, 0x1234u);
+    PE_StoreU32(dest, 2u);
+    PE_StoreU32(dest + 4u, 0u);
+    PE_StoreU32(dest + 8u, 0x2Cu);
+    PE_StoreU32(dest + 0xCu, 0xDEADu);
+    PE_StoreU32(args, dest);
+    PE_StoreU32(args + 4u, dest + 4u);
+    PE_StoreU32(args + 8u, dest + 8u);
+    PE_StoreU32(args + 0xCu, dest + 0xCu);
+    ASSERT(func_80018080(args) == 1, "0x8B hit");
+    ASSERT(PE_LoadU32(dest + 0xCu) == 0x1234u, "tag44 slot+0x10");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+
+    ResetTestState();
+    PE_StoreU32(0x8009D20Cu, 0u);
+    PE_StoreU32(dest, 2u);
+    PE_StoreU32(dest + 4u, 0u);
+    PE_StoreU32(dest + 8u, 0x2Cu);
+    PE_StoreU32(dest + 0xCu, 0xDEADu);
+    PE_StoreU32(args, dest);
+    PE_StoreU32(args + 4u, dest + 4u);
+    PE_StoreU32(args + 8u, dest + 8u);
+    PE_StoreU32(args + 0xCu, dest + 0xCu);
+    ASSERT(func_80018080(args) == 1, "0x8B miss");
+    ASSERT(PE_LoadU32(dest + 0xCu) == 0xDEADu, "miss skips dest");
+    PASS();
+}
+
+static void test_BTL62_17FF0_mode6(void) {
+    TEST("BTL62_17FF0_mode6");
+    ResetTestState();
+    PE_StoreU32(0x8009D28Cu, 0u);
+    ASSERT(func_80017FF0(0u) == 1, "0x89");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 6u, "D28C=6");
+    ASSERT(func_80017FF0(0u) == 1, "repeat");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 6u, "stays 6");
+    PASS();
+}
+
+static void test_BTL63_6B4F8_m0367i_load(void) {
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest0 = 0x80120000u;
+    pe_addr_t dest1 = 0x80140000u;
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t name = 0x80122180u;
+
+    TEST("BTL63_6B4F8_m0367i_load");
+    ResetTestState();
+    {
+        static const unsigned char charset[] =
+            "0123456789abcdefghiklmnoprstuvwy";
+        unsigned int i;
+
+        for (i = 0; i < 32u; i++)
+            PE_StoreU8(0x800930B4u + i, charset[i]);
+    }
+    PE_StoreU32(0x80093378u + 366u * 8u, 0x15050u);
+    PE_StoreU32(0x80093378u + 366u * 8u + 4u, 0x04E0AA21u);
+    func_8006E2D0(name, 0xA80663C8u);
+    ASSERT(PE_LoadU8(name) == (uint8_t)'M', "M");
+    ASSERT(PE_LoadU8(name + 1u) == (uint8_t)'0', "0");
+    ASSERT(PE_LoadU8(name + 2u) == (uint8_t)'3', "3");
+    ASSERT(PE_LoadU8(name + 3u) == (uint8_t)'6', "6");
+    ASSERT(PE_LoadU8(name + 4u) == (uint8_t)'7', "7");
+    ASSERT(PE_LoadU8(name + 5u) == (uint8_t)'I', "I");
+    ASSERT(func_8006E454(name) == 367, "atoi 367");
+    ASSERT(PE_LoadU32(0x80093378u + 366u * 8u) == 0x15050u, "rel");
+    ASSERT(PE_LoadU32(0x80093378u + 366u * 8u + 4u) == 0x04E0AA21u, "packed");
+
+    err[0] = 0;
+    disc = BTL6_OpenDisc1(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+    func_8007ED58();
+    PE_Disc_SetActive(disc);
+    PE_StoreU32(0x800B0DD8u, 1013u);
+    PE_StoreU32(0x800B0CD8u + 0x194u, dest0);
+    PE_StoreU32(0x800B0CD8u + 0x168u, dest1);
+    PE_StoreU32(0x800B0CD8u + 0x18Cu, dest2);
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x8009570Cu, 0x80076C34u);
+    PE_StoreU32(0x80095724u, 0x80076664u);
+    ASSERT(func_8006B4F8_dest_load_cut(0xA80663C8u) == 1, "load");
+    ASSERT(PE_LoadU32(dest0) == 0x1008Cu, "chunk0 w0");
+    ASSERT(PE_LoadU32(dest1) == 0x54908u, "chunk1 w0");
+    ASSERT(PE_LoadU32(dest2) == 0x26BD8u, "chunk2 w0");
+    ASSERT(PE_LoadU32(dest2 + 4u) == 0x2696Cu, "chunk2 w1");
+    PE_StoreU32(0x800915DCu + 8u, 0x80035E04u);
+    func_80034FC4();
+    func_8001266C();
+    func_800125E0();
+    ASSERT(PE_LoadU8(PE_LoadU32(0x8009D20Cu) + 0x0Cu) == 1u, "type1");
+    ASSERT(PE_LoadU8(PE_LoadU32(0x8009D20Cu) + 0x0Du) == 0u, "id0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_BTL64_17C54_661EC(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+
+    TEST("BTL64_17C54_661EC");
+    ResetTestState();
+    PE_StoreU32(imm, 0x12Bu);
+    PE_StoreU32(imm + 4u, 0x7Cu);
+    PE_StoreU32(imm + 8u, 1u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    PE_StoreU32(args + 8u, imm + 8u);
+    PE_StoreU32(0x800BCF88u, 0u);
+    ASSERT(func_800661EC(0x12B, 0x7C, 1u, 0u) == -19, "bit40 clear");
+    ASSERT(PE_LoadU16(0x800BCF9Cu) == 0u, "no store");
+    ASSERT(func_80017C54(args) == 1, "0x03 still 1");
+    PE_StoreU32(0x800BCF88u, 0x40u);
+    PE_StoreU32(0x800BCF8Cu, 0xABCDu);
+    ASSERT(func_80017C54(args) == 1, "0x03 hit");
+    ASSERT(PE_LoadU16(0x800BCF9Cu) == 0x12Bu, "x");
+    ASSERT(PE_LoadU16(0x800BCF9Eu) == 0x7Cu, "y");
+    ASSERT(PE_LoadU16(0x800BCFA2u) == 1u, "z");
+    ASSERT(PE_LoadU16(0x800BCFA0u) == 1u, "flag");
+    ASSERT(PE_LoadU32(0x800BCF98u) == 0xABCDu, "copy");
+    ASSERT(PE_LoadU32(0x800BCF88u) == 0x49u, "low 9");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL65_13514_turn_toward_point(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm0 = 0x80122100u;
+    pe_addr_t imm1 = 0x80122110u;
+    pe_addr_t imm2 = 0x80122120u;
+    pe_addr_t self = 0x80108600u;
+    pe_addr_t task = 0x80104000u;
+    int32_t desired;
+
+    TEST("BTL65_13514_turn_toward_point");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, self);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x80105014u);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(self + 0x28u, 0x40D0000u);
+    PE_StoreU32(self + 0x30u, 0xFF670000u);
+    PE_StoreU16(self + 0x3Au, 0x123u);
+    PE_StoreU32(imm0, 0x40D0000u);
+    PE_StoreU32(imm1, 0xFF670000u);
+    PE_StoreU32(imm2, 0xB4u);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, imm1);
+    PE_StoreU32(args + 8u, imm2);
+    ASSERT(func_80013514(args) == 1, "on-point v0=1");
+    ASSERT(PE_LoadU32(task + 0x14u) == 0x40D0000u, "latch x");
+    ASSERT(PE_LoadU32(task + 0x18u) == 0xFF670000u, "latch z");
+    ASSERT(PE_LoadU32(task + 0x1Cu) == 0xB4u, "latch step");
+    ASSERT((PE_LoadU16(task + 8u) & 0x20u) != 0u, "bit stays");
+    ASSERT(PE_LoadU16(self + 0x3Au) == 0x123u, "no face write");
+
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, self);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x80105014u);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(self + 0x28u, 0x10000u);
+    PE_StoreU32(self + 0x30u, 0u);
+    PE_StoreU16(self + 0x3Au, 0u);
+    PE_StoreU32(imm0, 0u);
+    PE_StoreU32(imm1, 0u);
+    PE_StoreU32(imm2, 0xB4u);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, imm1);
+    PE_StoreU32(args + 8u, imm2);
+    /* ratan2(0,1) is 0 without D_8009A6EC; desired = 0x400. */
+    desired = (0x1400 - func_80079FB4(0, 1)) & 0xFFF;
+    ASSERT(desired == 0x400, "desired");
+    ASSERT(func_80013514(args) == 0, "step yield");
+    ASSERT(PE_LoadU16(self + 0x3Au) == 0xB4u, "step 0xB4");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80105000u, "rewind 0x14");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "delay 1");
+    ASSERT((PE_LoadU16(task + 8u) & 0x20u) != 0u, "bit held");
+
+    PE_StoreU16(self + 0x3Au, (uint16_t)desired);
+    PE_StoreU32(0x8009CE00u, 0x80105014u);
+    ASSERT(func_80013514(args) == 1, "facing done");
+    ASSERT((PE_LoadU16(task + 8u) & 0x20u) == 0u, "bit clear");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80105014u, "no rewind");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL66_writer_a_and_1A4AC(void) {
+    pe_addr_t chunk = 0x80140000u;
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t task = 0x80104000u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+    pe_addr_t resource;
+    unsigned int i;
+
+    TEST("BTL66_writer_a_and_1A4AC");
+    ResetTestState();
+    for (i = 0; i < 0x80u; i += 4u)
+        PE_StoreU32(chunk + i, 0u);
+    PE_StoreU32(chunk + 4u, 0x40u);
+    PE_StoreU32(chunk + 0x40u + 0x10u, (1u << 22) | 0x60u);
+    PE_StoreU32(chunk + 0x60u + 4u, 0x70u);
+    PE_StoreU8(chunk + 0x60u + 7u, 0x17u);
+    PE_StoreU8(chunk + 0x60u + 0x0Bu, 2u);
+    PE_StoreU8(chunk + 0x70u + 2u, 51u);
+    PE_StoreU32(0x800B0E64u, chunk);
+    func_8006B4F8_12574_publish_cut();
+    resource = chunk + 0x70u;
+    ASSERT(PE_LoadU32(0x800B0E98u + 2u * 192u + 0x17u * 4u) == resource,
+           "Writer A type2 cmd17");
+
+    PE_StoreU8(actor + 0x0Cu, 2u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(actor + 0x1Cu, 0x10000u);
+    func_8001A680_command_cut(actor, 0x17u);
+    ASSERT(PE_LoadU8(actor + 0x0Fu) == 50u, "+0x0F = 50");
+    ASSERT(PE_LoadU32(actor + 0x14u) == 0u, "1A680 zeros +0x14");
+
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(imm, 0u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80017EC4(args) == 1, "0x4E");
+    ASSERT(PE_LoadU32(actor + 0x14u) == 0u, "4E imm0");
+    PE_StoreU32(imm, 0x33u);
+    ASSERT(func_80017B34(args) == 1, "0x2F");
+    ASSERT(PE_LoadU16(actor + 0x12u) == 50u, "2F min 50");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x200u) != 0u, "bit 200");
+
+    func_8001A4AC(actor);
+    ASSERT(PE_LoadU32(actor + 0x14u) == 0x10000u, "one frame");
+    ASSERT(PE_LoadU16(actor + 0x16u) == 1u, "+0x16=1");
+    for (i = 1u; i < 50u; i++)
+        func_8001A4AC(actor);
+    ASSERT(PE_LoadU16(actor + 0x16u) == 50u, "+0x16=50");
+    ASSERT(PE_LoadU32(actor + 0x14u) == (50u << 16), "latched");
+    func_8001A4AC(actor);
+    ASSERT(PE_LoadU16(actor + 0x16u) == 50u, "hold at dest");
+
+    PE_StoreU32(actor + 0x14u, 0u);
+    PE_StoreU16(actor + 0x12u, 50u);
+    PE_StoreU32(actor + 0x98u, 0x200u);
+    PE_StoreU32(0x8009D1A0, 0u);
+    PE_StoreU32(0x8009D20Cu, actor);
+    PE_StoreU32(actor + 4u, 0u);
+    PE_StoreU32(actor + 0x190u, 0u);
+    D_8009D1A0 = 0u;
+    func_80035558_walk_cut();
+    ASSERT(PE_LoadU16(actor + 0x16u) == 1u, "35558 ticks");
+
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x80105008u);
+    ASSERT(func_80017B74(args) == 0, "0x30 yield");
+    PE_StoreU16(actor + 0x16u, 50u);
+    PE_StoreU32(0x8009CE00u, 0x80105008u);
+    ASSERT(func_80017B74(args) == 0, "0x30 done");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80105008u, "no rewind");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL67_3999C_after_3F(void) {
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t table = 0x80140000u;
+
+    TEST("BTL67_3999C_after_3F");
+    ResetTestState();
+    PE_StoreU32(0x8009D2E8u, 1u);
+    ASSERT(func_80017D5C(0u) == 1, "0x3F");
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) == 0u, "bit0 clear");
+
+    PE_StoreU32(actor, 0x800B8A20u);
+    func_8003999C(actor, table, 0x80122190u);
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "code0 empty");
+
+    PE_StoreU32(actor, 0u);
+    PE_StoreU32(table, 0u);
+    func_8003999C(actor, table, 0x80122190u);
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "row0 empty");
+
+    PE_StoreU32(0x8009D254u, actor);
+    PE_StoreU8(actor + 0x0Eu, 0x15u);
+    PE_StoreU32(actor + 0x190u, 0x80035C84u);
+    PE_StoreU32(actor + 4u, 0u);
+    PE_StoreU32(0x8009D20Cu, actor);
+    D_8009D1A0 = 0u;
+    func_80035C84(actor);
+    ASSERT(PE_LoadU32(0x80122190u) == 0x15u, "code 0x15");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void btl68_plant_row21(void)
+{
+    PE_StoreU32(0x800943C0u + 21u * 4u, 0x800942F0u);
+    PE_StoreU32(0x800942F0u, 0x3u);
+    PE_StoreU32(0x800942F4u, 0x1u);
+    PE_StoreU32(0x800942F8u, 0x78u);
+    PE_StoreU32(0x800942FCu, 0x8007136Cu);
+    PE_StoreU32(0x80094300u, 0x2u);
+    PE_StoreU32(0x80094304u, 0u);
+    PE_StoreU32(0x80094308u, 0x78u);
+    PE_StoreU32(0x8009430Cu, 0x800710A4u);
+    PE_StoreU32(0x80094310u, 0u);
+    PE_StoreU32(0x80094314u, 0u);
+    PE_StoreU32(0x80094318u, 0u);
+    PE_StoreU32(0x8009431Cu, 0u);
+    PE_StoreU32(0x800BD000u, 0x1000u);
+    PE_StoreU32(0x800BD004u, 0u);
+    PE_StoreU32(0x800BD008u, 0x1000u);
+    PE_StoreU32(0x800BD00Cu, 0u);
+    PE_StoreU32(0x800BD010u, 0x1000u);
+    PE_StoreU16(0x800BD020u, 0u);
+}
+
+static void test_BTL68_3999C_codep_walk(void) {
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t clip = 0x80130000u;
+
+    TEST("BTL68_3999C_codep_walk");
+    ResetTestState();
+    btl68_plant_row21();
+    PE_StoreU8(clip + 2u, 2u);
+    PE_StoreU32(0x800B0E98u + 0x16u * 4u, clip);
+    PE_StoreU32(0x800B0E98u + 0x17u * 4u, clip);
+    PE_StoreU32(actor, 0x800B8A20u);
+    PE_StoreU8(actor + 0x0Cu, 0u);
+    PE_StoreU32(actor + 0x20u, 0x10000u);
+    PE_StoreU16(actor + 0x26u, 0x1000u);
+    PE_StoreU32(actor + 0x68u, 0u);
+    PE_StoreU32(actor + 0x6Cu, 0u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU16(actor + 0x3Au, 0u);
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU32(0x8009D2E8u, 0u);
+    D_8009D1A0 = 0u;
+
+    PE_StoreU32(0x80122190u, 0x15u);
+    PE_StoreU32(0x8009D26Cu, 0u);
+    func_8003999C(actor, 0x800943C0u, 0x80122190u);
+    ASSERT(PE_LoadU32(0x80122190u) == 0x15u, "idle keeps 0x15");
+    ASSERT(PE_LoadU32(actor + 0x70u) == 0u, "idle no vz");
+
+    PE_StoreU32(0x8009D26Cu, 0x8u);
+    func_8003999C(actor, 0x800943C0u, 0x80122190u);
+    ASSERT(PE_LoadU32(0x80122190u) == 0x16u, "d-pad 710A4 cmd 0x16");
+    ASSERT(PE_LoadU16(actor + 0x3Au) == 0x800u, "Up facing");
+    ASSERT(PE_LoadU32(actor + 0x68u) == 0u, "Up vx");
+    ASSERT(PE_LoadU32(actor + 0x70u) == 0x50000u, "Up vz 0x50000");
+
+    PE_StoreU32(0x80122190u, 0x15u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU32(0x8009D26Cu, 0x9u);
+    func_8003999C(actor, 0x800943C0u, 0x80122190u);
+    ASSERT(PE_LoadU32(0x80122190u) == 0x17u, "Circle+Up 7136C");
+    ASSERT(PE_LoadU16(actor + 0x3Au) == 0x800u, "Circle+Up facing");
+    ASSERT(PE_LoadU32(actor + 0x70u) == 0x168000u, "Circle+Up vz");
+    PASS();
+}
+
+static void btl69_plant_rsin0(void)
+{
+    PE_StoreU16(0x8009589Cu, 0u);
+    PE_StoreU16(0x8009609Cu, 0x1000u);
+}
+
+static void test_BTL69_66CE8_walk_matrix(void) {
+    TEST("BTL69_66CE8_walk_matrix");
+    ResetTestState();
+    btl69_plant_rsin0();
+    PE_StoreU16(0x800BD020u, 0u);
+    PE_StoreU16(0x800BE9A0u, 0u);
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU32(0x8009D2E8u, 0u);
+    func_80066CE8();
+    ASSERT(PE_LoadU16(0x800BD000u) == 0x1000u, "R11");
+    ASSERT(PE_LoadU16(0x800BD000u + 4u) == 0u, "R13");
+    ASSERT(PE_LoadU16(0x800BD000u + 8u) == 0x1000u, "R22");
+    ASSERT(PE_LoadU16(0x800BD000u + 12u) == 0u, "R31");
+    ASSERT(PE_LoadU16(0x800BD000u + 16u) == 0x1000u, "R33");
+    ASSERT(PE_LoadU32(0x800BD000u + 0x14u) == 0u, "TRX");
+    ASSERT(func_80077CF4(0) == 0, "rsin0");
+    ASSERT(func_80077DC4(0) == 0x1000, "rcos0");
+    PASS();
+}
+
+static void test_BTL70_35C84_always_integrates(void) {
+    pe_addr_t actor = 0x80108600u;
+
+    TEST("BTL70_35C84_always_integrates");
+    ResetTestState();
+    PE_StoreU32(0x8009D2E8u, 1u);
+    PE_StoreU32(actor + 0x28u, 0u);
+    PE_StoreU32(actor + 0x2Cu, 0u);
+    PE_StoreU32(actor + 0x30u, 0u);
+    PE_StoreU32(actor + 0x68u, 0x10000u);
+    PE_StoreU32(actor + 0x6Cu, 0u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU32(actor + 0x78u, 0u);
+    PE_StoreU32(actor + 0x58u, 0u);
+    PE_StoreU32(actor + 0x88u, 0x1000u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(actor + 0xA0u, 0u);
+    PE_StoreU32(actor + 0xA4u, 0u);
+    PE_StoreU32(actor + 0xA8u, 0u);
+    func_80035C84(actor);
+    ASSERT(PE_LoadU32(actor + 0x28u) == 0x10000u, "bit1 clear still adds +0x68");
+    ASSERT(PE_LoadU32(actor + 0x68u) == 0x10000u, "no +0x88");
+
+    PE_StoreU32(actor + 0x28u, 0u);
+    PE_StoreU32(actor + 0x98u, 2u);
+    func_80035C84(actor);
+    ASSERT(PE_LoadU32(actor + 0x68u) == 0x11000u, "bit1 adds +0x88");
+    ASSERT(PE_LoadU32(actor + 0x28u) == 0x11000u, "pose uses summed vel");
+    PASS();
+}
+
+static void test_BTL71_3EB04_up_walks(void) {
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t clip = 0x80130000u;
+
+    TEST("BTL71_3EB04_up_walks");
+    ResetTestState();
+    func_8003E974();
+    D_8009D1A0 = 0u;
+    btl68_plant_row21();
+    btl69_plant_rsin0();
+    func_80066CE8();
+    PE_StoreU8(clip + 2u, 2u);
+    PE_StoreU32(0x800B0E98u + 0x16u * 4u, clip);
+    PE_StoreU8(actor + 0x0Cu, 0u);
+    PE_StoreU32(actor + 0x20u, 0x10000u);
+    PE_StoreU16(actor + 0x26u, 0x1000u);
+    PE_StoreU32(actor + 0x28u, 0u);
+    PE_StoreU32(actor + 0x30u, 0u);
+    PE_StoreU32(actor + 0x68u, 0u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(actor + 0xA0u, 0u);
+    PE_StoreU32(actor + 0xA4u, 0u);
+    PE_StoreU32(actor + 0xA8u, 0u);
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU32(0x8009D2E8u, 0u);
+    PE_StoreU8(actor + 0x0Eu, 0x15u);
+    PE_StoreU32(0x80122190u, 0x15u);
+    PE_StoreU16(0x800BE9A2u, 0xFFEFu);
+    func_8003EB04();
+    ASSERT((PE_LoadU32(0x8009D26Cu) & 0x8u) == 0x8u, "Up -> D26C bit3");
+    func_80035C84(actor);
+    ASSERT(PE_LoadU32(0x80122190u) == 0x16u, "710A4");
+    ASSERT(PE_LoadU16(actor + 0x3Au) == 0x800u, "facing");
+    ASSERT(PE_LoadU32(actor + 0x30u) == 0x50000u, "pose Z from Up");
+    ASSERT(PE_LoadU32(0x800A76F0u + 3u * 4u) == 0x10u, "A76F0[3]=Up");
+    PASS();
+}
+
+static void btl73_plant_row22(void)
+{
+    PE_StoreU32(0x800943C0u + 22u * 4u, 0x80094320u);
+    PE_StoreU32(0x80094320u, 0x3u);
+    PE_StoreU32(0x80094324u, 0x1u);
+    PE_StoreU32(0x80094328u, 0x78u);
+    PE_StoreU32(0x8009432Cu, 0x8007136Cu);
+    PE_StoreU32(0x80094330u, 0x2u);
+    PE_StoreU32(0x80094334u, 0u);
+    PE_StoreU32(0x80094338u, 0x78u);
+    PE_StoreU32(0x8009433Cu, 0x800710A4u);
+    PE_StoreU32(0x80094340u, 0u);
+    PE_StoreU32(0x80094344u, 0u);
+    PE_StoreU32(0x80094348u, 0u);
+    PE_StoreU32(0x8009434Cu, 0u);
+}
+
+static void test_BTL73_right_hits_type3_77(void) {
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t clip = 0x80130000u;
+    pe_addr_t poly = 0x80131000u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    int i;
+    int32_t x;
+    int32_t z;
+
+    TEST("BTL73_right_hits_type3_77");
+    ResetTestState();
+    func_8003E974();
+    D_8009D1A0 = 0u;
+    btl68_plant_row21();
+    btl73_plant_row22();
+    btl69_plant_rsin0();
+    func_80066CE8();
+    PE_StoreU8(clip + 2u, 2u);
+    PE_StoreU32(0x800B0E98u + 0x16u * 4u, clip);
+    PE_StoreU8(actor + 0x0Cu, 0u);
+    PE_StoreU32(actor + 0x20u, 0x10000u);
+    PE_StoreU16(actor + 0x26u, 0x1000u);
+    PE_StoreU32(actor + 0x28u, 0x100000u);
+    PE_StoreU32(actor + 0x2Cu, 0xFBA90000u);
+    PE_StoreU32(actor + 0x30u, 0x05410000u);
+    PE_StoreU32(actor + 0x68u, 0u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU32(actor + 0x78u, 0u);
+    PE_StoreU32(actor + 0x80u, 0u);
+    PE_StoreU32(actor + 0x58u, 0u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(actor + 0xA0u, 0u);
+    PE_StoreU32(actor + 0xA4u, 0u);
+    PE_StoreU32(actor + 0xA8u, 0u);
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU32(0x8009D2E8u, 0u);
+    PE_StoreU8(actor + 0x0Eu, 0x15u);
+    PE_StoreU32(poly, 0x09940000u);
+    PE_StoreU32(poly + 4u, 0x04CD0000u);
+    PE_StoreU32(poly + 8u, 0x09940000u);
+    PE_StoreU32(poly + 12u, 0x063D0000u);
+    PE_StoreU32(poly + 16u, 0x080A0000u);
+    PE_StoreU32(poly + 20u, 0x063D0000u);
+    PE_StoreU32(poly + 24u, 0x080A0000u);
+    PE_StoreU32(poly + 28u, 0x04CD0000u);
+    ASSERT(func_8001CAB0(0x100000, 0x05410000, poly, 4u) == 0,
+           "0x0B pose misses rect1");
+    PE_StoreU16(0x800BE9A2u, 0xFFDFu);
+    for (i = 0; i < 409; i++) {
+        func_8003EB04();
+        func_80035C84(actor);
+    }
+    x = (int32_t)PE_LoadU32(actor + 0x28u);
+    z = (int32_t)PE_LoadU32(actor + 0x30u);
+    ASSERT((x >> 16) >= 0x80A && (x >> 16) <= 0x994, "X in rect1");
+    ASSERT((z >> 16) >= 0x4CD && (z >> 16) <= 0x63D, "Z in rect1");
+    ASSERT(func_8001CAB0(x, z, poly, 4u) == 1, "1CAB0 hit");
+    PE_StoreU32(imm, 0x1Eu);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80018EB4(args) == 1, "0x85");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 2u, "CFEE=2");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL74_65674_d1a0_out(void) {
+    pe_addr_t cam = 0x80132000u;
+
+    TEST("BTL74_65674_d1a0_out");
+    ResetTestState();
+    btl69_plant_rsin0();
+    D_8009D1A0 = 0x4000u;
+    PE_StoreU16(cam + 6u, 0u);
+    PE_StoreU32(cam + 0x14u, 0u);
+    PE_StoreU32(0x800B1624u, cam);
+    func_80065674();
+    ASSERT(PE_LoadU32(0x800B1624u) == cam, "D1A0 out skips walk");
+    func_80068CE0();
+    ASSERT(PE_LoadU16(0x800BD000u) == 0x1000u, "66CE8 via 68CE0");
+    ASSERT(PE_LoadU32(0x800B1624u) == cam, "65674 still out");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL75_67e1c_camera_slots(void) {
+    pe_addr_t cam = 0x80132000u;
+    pe_addr_t rec = 0x80132100u;
+
+    TEST("BTL75_67e1c_camera_slots");
+    ResetTestState();
+    PE_StoreU16(cam + 6u, 1u);
+    PE_StoreU32(cam + 0x14u, rec - cam);
+    PE_StoreU32(0x800B1624u, cam);
+    PE_StoreU8(rec, 4u);
+    PE_StoreU16(rec + 4u, 3u);
+    PE_StoreU16(rec + 6u, 5u);
+    PE_StoreU16(rec + 0xCu, 10u);
+    PE_StoreU16(rec + 0xEu, 20u);
+    PE_StoreU16(rec + 0x1Cu, 0x80u);
+    PE_StoreU16(rec + 0x1Eu, 0x100u);
+    PE_StoreU8(rec + 0x20u, 0x80u);
+    PE_StoreU8(rec + 0x22u, 0u);
+    D_8009D1A0 = 0x104u;
+    func_80067E1C();
+    ASSERT(PE_LoadU16(rec + 0xCu) == 10u, "0x104 out");
+    D_8009D1A0 = 0x4000u;
+    func_80067E1C();
+    ASSERT(PE_LoadU16(rec + 0xCu) == 2u, "bit4 rem X");
+    ASSERT(PE_LoadU16(rec + 0x20u) == 0u, "bit4 frac X");
+    ASSERT(PE_LoadU16(rec + 0xEu) == 1u, "bit4 rem Y");
+    ASSERT(PE_LoadU16(rec + 0x22u) == 0u, "bit4 frac Y");
+
+    ResetTestState();
+    PE_StoreU16(cam + 6u, 1u);
+    PE_StoreU32(cam + 0x14u, rec - cam);
+    PE_StoreU32(0x800B1624u, cam);
+    PE_StoreU8(rec, 8u);
+    PE_StoreU16(rec + 8u, 5u);
+    PE_StoreU16(rec + 0xAu, 7u);
+    PE_StoreU16(rec + 0x1Cu, 2u);
+    PE_StoreU16(rec + 0x1Eu, 3u);
+    PE_StoreU16(0x800BCF8Cu, 100u);
+    PE_StoreU16(0x800BCF8Eu, 200u);
+    PE_StoreU16(0x800BD028u, 40u);
+    PE_StoreU16(0x800BD02Au, 50u);
+    D_8009D1A0 = 0u;
+    func_80067E1C();
+    ASSERT(PE_LoadU16(rec + 0xCu) == 5u, "bit8 X hi");
+    ASSERT(PE_LoadU16(rec + 0x20u) == 0x78u, "bit8 X lo");
+    ASSERT(PE_LoadU16(rec + 0xEu) == 8u, "bit8 Y hi");
+    ASSERT(PE_LoadU16(rec + 0x22u) == 0xC2u, "bit8 Y lo");
+
+    PE_StoreU32(0x800BCF88u, 0x180u);
+    PE_StoreU16(0x800BCF8Cu, 0x1111u);
+    PE_StoreU16(0x800BCF8Eu, 0x2222u);
+    func_80067E1C();
+    ASSERT(PE_LoadU32(0x800BCF88u) == 0x100u, "clear 0x80");
+    ASSERT(PE_LoadU16(0x800BCF90u) == 0x1111u, "snap X");
+    ASSERT(PE_LoadU16(0x800BCF92u) == 0x2222u, "snap Y");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL76_67a78_67294_outs(void) {
+    pe_addr_t cam = 0x80132000u;
+    pe_addr_t rec = 0x80132100u;
+
+    TEST("BTL76_67a78_67294_outs");
+    ResetTestState();
+    PE_StoreU16(cam + 6u, 0u);
+    PE_StoreU32(cam + 0x14u, rec - cam);
+    PE_StoreU32(0x800B1624u, cam);
+    func_80067A78();
+    ASSERT(PE_LoadU16(cam + 0x38u) == 160u, "+0x38 = 160-BCF8C");
+    ASSERT(PE_LoadU16(cam + 0x3Au) == 112u, "+0x3A = 112-BCF8E");
+
+    PE_StoreU16(cam + 6u, 1u);
+    PE_StoreU8(rec, 2u);
+    PE_StoreU8(rec + 0x24u, 0u);
+    PE_StoreU16(rec + 0xCu, 10u);
+    PE_StoreU16(rec + 0xEu, 20u);
+    PE_StoreU16(rec + 0x26u, 0u);
+    PE_StoreU8(0x800BCFFDu, 0u);
+    func_80067A78();
+    ASSERT(PE_LoadU16(rec + 0x18u) == 170u, "67294 X+160");
+    ASSERT(PE_LoadU16(rec + 0x1Au) == 132u, "67294 Y+112");
+
+    PE_StoreU32(0x800BCF88u, 0u);
+    func_80067B74();
+    func_80067D18();
+    ASSERT(PE_LoadU32(0x800BCF88u) == 0u, "flag outs");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL77_3F3C4_661cc_offset(void) {
+    TEST("BTL77_3F3C4_661cc_offset");
+    ResetTestState();
+    btl69_plant_rsin0();
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    PE_StoreU16(0x800BCF94u, 1u);
+    PE_StoreU16(0x800BCF96u, 2u);
+    func_8003F3C4();
+    ASSERT(g_pe_gte.ofx == (0xA0 << 16), "661CC OFX");
+    ASSERT(g_pe_gte.ofy == (0x70 << 16), "661CC OFY");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL78_3F3C4_70e54_prefix(void) {
+    int vs0;
+    int ds0;
+    int vs1;
+    int ds1;
+
+    TEST("BTL78_3F3C4_70e54_prefix");
+    ResetTestState();
+    HostFB_Init();
+    btl69_plant_rsin0();
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    HostFB_GetState(&vs0, &ds0, NULL, NULL);
+    func_8003F3C4();
+    HostFB_GetState(&vs1, &ds1, NULL, NULL);
+    ASSERT(ds1 == ds0 + 1, "DrawSync");
+    ASSERT(vs1 >= vs0 + 1, "VSync call");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL79_70e54_resetgraph1(void) {
+    TEST("BTL79_70e54_resetgraph1");
+    ResetTestState();
+    HostFB_Init();
+    btl69_plant_rsin0();
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    PE_StoreU8(0x8009574Cu, 0xAAu);
+    func_8003F3C4();
+    ASSERT(PE_LoadU8(0x8009574Cu) == 0xAAu, "mode1 skips reset");
+    ASSERT(func_80074A44(1) == 0, "light v0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL80_70e54_putdispenv(void) {
+    int p0;
+    int p1;
+
+    TEST("BTL80_70e54_putdispenv");
+    ResetTestState();
+    HostFB_Init();
+    btl69_plant_rsin0();
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    PE_StoreU32(0x8009CDDCu, 0u);
+    HostFB_GetState(NULL, NULL, &p0, NULL);
+    func_8003F3C4();
+    HostFB_GetState(NULL, NULL, &p1, NULL);
+    ASSERT(p1 == p0 + 1, "PutDispEnv present");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL81_6ec08_status(void) {
+    TEST("BTL81_6ec08_status");
+    ResetTestState();
+    ASSERT(func_8006EC08() == 0, "zero byte");
+    PE_StoreU8(0x800B0DBAu, 1u);
+    PE_StoreU16(0x800B0DBCu, 0u);
+    ASSERT(func_8006EC08() == 0, "h<=0");
+    PE_StoreU16(0x800B0DBCu, 1u);
+    PE_StoreU8(0x800B0DBBu, 0u);
+    ASSERT(func_8006EC08() == 1, "b==0");
+    PE_StoreU8(0x800B0DBBu, 1u);
+    ASSERT(func_8006EC08() == 2, "b!=0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL82_19728_ae(void) {
+    TEST("BTL82_19728_ae");
+    ResetTestState();
+    PE_StoreU32(0x8009D2E8u, 0x11u);
+    ASSERT(func_80019728(0u) == 1, "0xAE");
+    ASSERT(PE_LoadU32(0x8009D2E8u) == 0x15u, "D2E8 |= 4");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+extern void func_8006A0E8(void);
+extern void func_8003DFC8(int a0);
+extern void func_800696F0(void);
+
+static void test_BTL83_70e54_cddc_flip(void) {
+    TEST("BTL83_70e54_cddc_flip");
+    ResetTestState();
+    HostFB_Init();
+    btl69_plant_rsin0();
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    PE_StoreU32(0x8009CDDCu, 0u);
+    func_8003F3C4();
+    ASSERT(PE_LoadU32(0x8009CDDCu) == 1u, "CDDC 0->1");
+    func_8003F3C4();
+    ASSERT(PE_LoadU32(0x8009CDDCu) == 0u, "CDDC 1->0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL84_6a0e8_d1a0_out(void) {
+    TEST("BTL84_6a0e8_d1a0_out");
+    ResetTestState();
+    HostFB_Init();
+    btl69_plant_rsin0();
+    D_8009D1A0 = 0x4000u;
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    PE_StoreU8(0x800CCDE0u, 0xAAu);
+    func_8006A0E8();
+    ASSERT(PE_LoadU8(0x800CCDE0u) == 0xAAu, "direct out");
+    func_8003F3C4();
+    ASSERT(PE_LoadU8(0x800CCDE0u) == 0xAAu, "via 3F3C4");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL85_3dfc8_dest_change(void) {
+    int ds0;
+    int ds1;
+
+    TEST("BTL85_3dfc8_dest_change");
+    ResetTestState();
+    HostFB_Init();
+    btl69_plant_rsin0();
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    D_8009D280 = 0u;
+    func_8003DFC8(1);
+    HostFB_GetState(NULL, &ds0, NULL, NULL);
+    func_8003F3C4();
+    HostFB_GetState(NULL, &ds1, NULL, NULL);
+    ASSERT(ds1 == ds0 + 1, "stable dest skips extra DrawSync");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL86_696f0_live_tail(void) {
+    pe_addr_t table = 0x80134000u;
+    pe_addr_t slot = 0x80134100u;
+
+    TEST("BTL86_696f0_live_tail");
+    ResetTestState();
+    D_8009D1A0 = 0x4000u;
+    func_800696F0();
+    ASSERT(PE_LoadU32(0x800942E0u) == 0u, "unpublished");
+    PE_StoreU32(0x800942E0u, table);
+    PE_StoreU32(table + 8u * 4u, slot);
+    PE_StoreU32(slot, 0xDEADu);
+    func_800696F0();
+    ASSERT(PE_LoadU32(slot) == 0u, "slot8 cleared");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL87_3f3c4_stable_dest_flags(void) {
+    TEST("BTL87_3f3c4_stable_dest_flags");
+    ResetTestState();
+    HostFB_Init();
+    btl69_plant_rsin0();
+    D_8009D1A0 = 0x4000u;
+    D_8009D280 = 0u;
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    func_8003F3C4();
+    ASSERT(D_8009D1A0 == 0x4000u, "stable dest keeps D1A0");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x40000000u, "stable dest keeps B0CD8");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL88_754e4_setdrawenv(void) {
+    pe_addr_t env = 0x800BCDC8u;
+    pe_addr_t dr = env + 0x1Cu;
+    pe_addr_t ot = 0x80100000u + 0x3FFCu;
+
+    TEST("BTL88_754e4_setdrawenv");
+    ResetTestState();
+    HostFB_Init();
+    func_8003E754(0x140, 0xE0);
+    func_800754E4(ot, env);
+    ASSERT(PE_LoadU32(dr + 4u) == 0xE3000000u, "clip start");
+    ASSERT(PE_LoadU32(dr + 8u) == 0xE4037D3Fu, "clip end");
+    ASSERT(PE_LoadU32(dr + 0xCu) == 0xE5000000u, "ofs");
+    ASSERT(PE_LoadU32(dr + 0x10u) == 0xE1000200u, "mode dtd");
+    ASSERT(PE_LoadU32(dr + 0x14u) == 0xE2000000u, "tw");
+    ASSERT(PE_LoadU32(dr + 0x18u) == 0xE6000000u, "e6");
+    ASSERT(PE_LoadU32(dr + 0x1Cu) == 0x02000000u, "isbg fill");
+    ASSERT(PE_LoadU32(dr + 0x20u) == 0u, "fill xy");
+    ASSERT(PE_LoadU32(dr + 0x24u) == 0x00E00140u, "fill wh");
+    ASSERT(PE_LoadU8(dr + 3u) == 9u, "len 9");
+    ASSERT((PE_LoadU32(dr) & 0x00FFFFFFu) == (ot & 0x00FFFFFFu), "ot tag");
+    ASSERT(PE_LoadU16(0x8009575Cu + 4u) == 0x140u, "memcpy clip.w");
+    ASSERT(PE_LoadU8(0x8009575Cu + 0x18u) == 1u, "memcpy isbg");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL89_13300_c6(void) {
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t task = 0x80108700u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+    pe_addr_t res = 0x80130000u;
+
+    TEST("BTL89_13300_c6");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x8012300Cu);
+    PE_StoreU16(task + 8u, 0u);
+    PE_StoreU32(task + 0x10u, 0u);
+    PE_StoreU8(actor + 0x0Cu, 0u);
+    PE_StoreU32(actor + 0x98u, 0x100u);
+    PE_StoreU32(imm, 0x1Du);
+    PE_StoreU32(args, imm);
+    PE_StoreU8(res + 2u, 5u);
+    PE_StoreU32(0x800B0E98u + 0x1Du * 4u, res);
+    ASSERT(func_80013300(args) == 0, "first visit yields");
+    ASSERT((PE_LoadU16(task + 8u) & 0x20u) != 0u, "bit 0x20");
+    ASSERT(PE_LoadU8(actor + 0x0Eu) == 0x1Du, "command 0x1D");
+    ASSERT((PE_LoadU32(actor + 0x98u) & 0x100u) == 0u, "clear 0x100");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80123000u, "rewind 0xC");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "delay 1");
+
+    PE_StoreU8(actor + 0x0Fu, 0u);
+    PE_StoreU32(0x8009CE00u, 0x8012300Cu);
+    ASSERT(func_80013300(args) == 1, "+0x0F==0 done");
+    ASSERT((PE_LoadU16(task + 8u) & 0x20u) == 0u, "bit cleared");
+
+    PE_StoreU16(task + 8u, 0x20u);
+    PE_StoreU8(actor + 0x0Fu, 1u);
+    PE_StoreU32(actor + 0x1Cu, 1u);
+    PE_StoreU32(actor + 0x14u, 5u);
+    PE_StoreU32(actor + 0x18u, 3u);
+    PE_StoreU32(0x8009CE00u, 0x8012300Cu);
+    ASSERT(func_80013300(args) == 0, "not ready yields");
+    ASSERT((PE_LoadU16(task + 8u) & 0x20u) != 0u, "bit held");
+
+    PE_StoreU32(actor + 0x14u, 2u);
+    PE_StoreU32(actor + 0x18u, 5u);
+    ASSERT(func_80013300(args) == 1, "ready");
+    ASSERT((PE_LoadU16(task + 8u) & 0x20u) == 0u, "bit done");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+extern void func_800E01BC(void);
+
+static void test_BTL93_16910_a29(void) {
+    pe_addr_t actor = 0x800BEA90u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+
+    TEST("BTL93_16910_a29");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU8(actor + 0x27Du, 0u);
+    PE_StoreU32(imm, 0xA29u);
+    PE_StoreU32(imm + 4u, 0x80u);
+    PE_StoreU32(args, imm);
+    PE_StoreU32(args + 4u, imm + 4u);
+    ASSERT(func_80016910_key2900_cut(args) == 1, "v0=1");
+    ASSERT(PE_LoadU8(actor + 0x27Du) == 0x80u, "+0x27D");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL92_e01bc_zero_count(void) {
+    TEST("BTL92_e01bc_zero_count");
+    ResetTestState();
+    PE_StoreU16(0x800E21A4u, 0u);
+    PE_StoreU32(0x800E2800u, 0xDEADu);
+    func_800E01BC();
+    ASSERT(PE_LoadU16(0x800E21A4u) == 0u, "count stays 0");
+    ASSERT(PE_LoadU32(0x800E2800u) == 0xDEADu, "table untouched");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+extern int func_800179F8(pe_addr_t args);
+
+static void test_BTL97_6914c_a0_zero(void)
+{
+    TEST("BTL97_6914c_a0_zero");
+    ResetTestState();
+    D_8009D1A0 = 0x80u;
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xEFu, 0u);
+    ASSERT(func_8006914C(0) == 0, "bit1 clear v0=0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xEFu) == 0u, "EF=0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL97_2bc90_mode6_sets_7(void)
+{
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL97_2bc90_mode6_sets_7");
+    ResetTestState();
+    D_8009D1A0 = 0x80u;
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xEFu, 0u);
+    PE_StoreU32(0x8009D28Cu, 6u);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(aya + 0x68u, 0x111u);
+    PE_StoreU32(aya + 0x6Cu, 0x222u);
+    PE_StoreU32(aya + 0x70u, 0x333u);
+    PE_StoreU32(0x8009D2E8u, 0u);
+    PE_StoreU8(0x8009D244u, 0u);
+    func_8002BC90_mode6_cut();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 7u, "2CF24 mode 7");
+    ASSERT(PE_LoadU8(0x8009D244u) == 0u, "4D4 not forced");
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) != 0u, "D2E8 bit 0");
+    ASSERT(PE_LoadU32(aya + 0x68u) == 0u, "+0x68");
+    ASSERT((D_8009D1A0 & 4u) == 0u, "D1A0 bit 2 clear");
+    PASS();
+}
+
+static void test_BTL97_19d24_cf_sets_4d4(void)
+{
+    TEST("BTL97_19d24_cf_sets_4d4");
+    ResetTestState();
+    PE_StoreU8(0x8009D244u, 0u);
+    PE_StoreU32(0x8009D28Cu, 7u);
+    ASSERT(func_80019D24(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU8(0x8009D244u) == 1u, "4D4=1 via 33A2C");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 7u, "mode not forced");
+    PASS();
+}
+
+static void test_BTL98_192b8_95_mode0(void)
+{
+    TEST("BTL98_192b8_95_mode0");
+    ResetTestState();
+    PE_StoreU32(0x8009D28Cu, 7u);
+    PE_StoreU8(0x8009D244u, 1u);
+    ASSERT(func_800192B8(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "0x95 writes mode 0");
+    ASSERT(PE_LoadU8(0x8009D244u) == 1u, "4D4 not forced");
+    PASS();
+}
+
+static void test_BTL98_299cc_reaches_1d340(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL98_299cc_reaches_1d340");
+    ResetTestState();
+    PE_StoreU32(0x8009D28Cu, 7u);
+    PE_StoreU8(0x8009D244u, 0u);
+    ASSERT(func_80019D24(0u) == 1, "0xCF");
+    ASSERT(func_800192B8(0u) == 1, "0x95");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode 0 via 0x95");
+    ASSERT(PE_LoadU8(0x8009D244u) == 1u, "4D4 via 0xCF");
+
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(aya, rec);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU16(rec + 0x10u, 0u);
+    PE_StoreU16(rec + 0x24u, 5u);
+    PE_StoreU32(rec + 0x4Cu, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU32(0x8009D20Cu, 0u);
+    func_800299CC_after_consume_cut();
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU16(rec + 0x10u) == 5u, "1D340 ATB +0x10");
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 40u, "HP untouched without 0x4000");
+    ASSERT(g_stub_count == 0, "1D340 recorded as stub");
+    PASS();
+}
+
+static void test_BTL98_1f704_40_to_39(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t actor = 0x80108700u;
+    pe_addr_t body = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+    pe_addr_t tbl = 0x80108A00u;
+    FILE *csv;
+
+    TEST("BTL98_1f704_40_to_39");
+    ResetTestState();
+    ASSERT(func_80019D24(0u) == 1, "0xCF 4D4");
+    ASSERT(func_800192B8(0u) == 1, "0x95 mode 0");
+
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D20Cu, actor);
+    PE_StoreU32(actor, body);
+    PE_StoreU32(actor + 4u, 0u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(body, 3u << 21);
+    PE_StoreU32(body + 0x18u, weapon);
+    PE_StoreU8(body + 0x90u, 0u);
+    PE_StoreU16(weapon + 0x0Cu, 1u);
+    PE_StoreU8(weapon + 1u, 0u);
+    PE_StoreU8(weapon + 0x0Eu, 1u);
+    PE_StoreU32(tbl, 0u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU16(rec + 0x0Eu, 40u);
+    PE_StoreU16(rec + 0x10u, 0u);
+    PE_StoreU16(rec + 0x1Cu, 45u);
+    PE_StoreU16(rec + 0x20u, 0u);
+    PE_StoreU16(rec + 0x24u, 0u);
+    PE_StoreU32(rec + 0x34u, 0u);
+    PE_StoreU32(rec + 0x4Cu, 0x4000u);
+    PE_StoreU32(rec + 0x6Cu, tbl);
+
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU16(rec + 0x0Cu) == 39u, "1F704 40→39");
+    ASSERT(PE_LoadU16(rec + 0x0Eu) == 40u, "+0x0E copy stays");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    ASSERT(PE_LoadU8(0x8009D244u) == 1u, "4D4 stays 1");
+    ASSERT(g_stub_count == 0, "1F704 recorded as stub");
+
+    csv = fopen("pc_port/build/btl98_hp_mutated.csv", "w");
+    if (csv == NULL)
+        csv = fopen("btl98_hp_mutated.csv", "w");
+    ASSERT(csv != NULL, "open btl98_hp_mutated.csv");
+    fprintf(csv,
+            "field_tick,field_scene,field_script_pc,encounter_id,"
+            "transition_state,battle_mode,formation_id,player_state_hash,"
+            "persist_hash,rng_state,battle_tick\n");
+    fprintf(csv,
+            "0,m0036i,0xcf+0x95,m0036i,hp_mutated,0,"
+            "unset,232039902ecd52853ed380d097feb499c3c773bc11fcf5020461e6d679ac857a,"
+            "unchanged,unset,1\n");
+    fclose(csv);
+    PASS();
+}
+
+static void test_BTL96_179f8_28(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t dest = 0x80122100u;
+    pe_addr_t bitp = 0x80122110u;
+
+    TEST("BTL96_179f8_28");
+    ResetTestState();
+    PE_StoreU32(dest, 0x1Fu);
+    PE_StoreU32(bitp, 2u);
+    PE_StoreU32(args, dest);
+    PE_StoreU32(args + 4u, bitp);
+    ASSERT(func_800179F8(args) == 1, "v0=1");
+    ASSERT(PE_LoadU32(dest) == 0x1Bu, "cleared bit 2");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL95_144fc_jtbl_complete(void) {
+    pe_addr_t task = 0x80108700u;
+    pe_addr_t args = 0x80120F80u;
+
+    TEST("BTL95_144fc_jtbl_complete");
+    ResetTestState();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x8012300Cu);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 1u);
+    ASSERT(func_800144FC(args) == 1, "jtbl[1] complete");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x8012300Cu, "no rewind");
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0x3Cu);
+    ASSERT(func_800144FC(args) == 0, ">=0x3C parks");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80123000u, "rewind 0xC");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL91_144fc_55_park(void) {
+    pe_addr_t task = 0x80108700u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122100u;
+
+    TEST("BTL91_144fc_55_park");
+    ResetTestState();
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(0x8009CE00u, 0x8012300Cu);
+    PE_StoreU8(0x800B0CD8u + 0xF4u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    PE_StoreU32(imm, 2u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_800144FC(args) == 0, "state0 parks");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF4u) == 0x37u, "F4=0x37");
+    ASSERT(PE_LoadU32(0x8009CE00u) == 0x80123000u, "rewind 0xC");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "delay 1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL90_m0367i_dest_ready(void) {
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest0 = 0x80120000u;
+    pe_addr_t dest1 = 0x80140000u;
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t dest_wb = 0x801D0000u;
+    pe_addr_t actor;
+    pe_addr_t task;
+    pe_addr_t script;
+    pe_addr_t clip15;
+    pe_addr_t clip09;
+
+    TEST("BTL90_m0367i_dest_ready");
+    ResetTestState();
+    {
+        static const unsigned char charset[] =
+            "0123456789abcdefghiklmnoprstuvwy";
+        unsigned int i;
+
+        for (i = 0; i < 32u; i++)
+            PE_StoreU8(0x800930B4u + i, charset[i]);
+    }
+    PE_StoreU32(0x80093378u + 366u * 8u, 0x15050u);
+    PE_StoreU32(0x80093378u + 366u * 8u + 4u, 0x04E0AA21u);
+    PE_StoreU16(0x800930D8u + 18u * 2u, 288u);
+    PE_StoreU16(0x800930D8u + 19u * 2u, 316u);
+    PE_StoreU8(0x800B0CD8u + 0x0Bu, 14u);
+    PE_StoreU32(0x800B0E70u + 4u, 0xDEADu);
+    PE_StoreU32(0x800915DCu + 8u, 0x80035E04u);
+    PE_StoreU32(0x800910A0u + 0x40u * 4u, 0x80017D7Cu);
+    PE_StoreU32(0x800910A0u + 0x84u * 4u, 0x80018E84u);
+    PE_StoreU32(0x800910A0u + 0x88u * 4u, 0x80018F54u);
+    PE_StoreU32(0x800910A0u + 0x02u * 4u, 0x800172E0u);
+
+    err[0] = 0;
+    disc = BTL6_OpenDisc1(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+    func_8007ED58();
+    PE_Disc_SetActive(disc);
+    PE_StoreU32(0x800B0DD8u, 1013u);
+    PE_StoreU32(0x800B0CD8u + 0x194u, dest0);
+    PE_StoreU32(0x800B0CD8u + 0x168u, dest1);
+    PE_StoreU32(0x800B0CD8u + 0x18Cu, dest2);
+    PE_StoreU32(0x800B0CD8u + 0x154u, dest_wb);
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x8009570Cu, 0x80076C34u);
+    PE_StoreU32(0x80095724u, 0x80076664u);
+    D_8009D1A0 = 0u;
+    D_8009D280 = 0xA80663C8u;
+    ASSERT(func_8003F074_dest_ready_cut(0xA80663C8u) == 1, "dest-ready");
+    ASSERT(PE_LoadU8(0x800B0CE2u) == 10u, "CE2=10");
+    ASSERT(PE_LoadU8(0x800B0CE3u) == 10u, "CE3=CE2");
+    ASSERT(PE_LoadU32(0x800B0E70u + 4u) == 0u, "B0E70[1] empty");
+    ASSERT(PE_LoadU32(0x800B0E70u + 8u) == dest2 + 8u, "B0E70[2]");
+    ASSERT(PE_LoadU32(0x800B0E70u + 0x10u) == dest2 + 0x5EC0u, "B0E70[4]");
+    clip09 = PE_LoadU32(0x800B0E98u + 2u * 192u + 0x09u * 4u);
+    ASSERT(clip09 != 0u, "Writer A type2 0x09");
+    ASSERT(PE_LoadU8(clip09 + 2u) == 1u, "type2 0x09 frames");
+    clip15 = PE_LoadU32(0x800B0E98u + 0x15u * 4u);
+    ASSERT(clip15 != 0u, "Writer B CE2=10 0x15");
+    ASSERT(PE_LoadU8(clip15 + 2u) == 1u, "0x15 frames 1 not 34");
+    actor = PE_LoadU32(0x8009D20Cu);
+    ASSERT(PE_LoadU8(actor + 0x0Cu) == 1u, "type1");
+    ASSERT(PE_LoadU8(actor + 0x0Du) == 0u, "id0");
+    ASSERT(PE_LoadU32(actor + 0x1ACu) == 0u, "+0x1AC empty");
+    ASSERT(PE_LoadU32(actor + 0x1B0u) == 0u, "+0x1B0 empty");
+    script = dest2 + 0x1B454u;
+    ASSERT(PE_LoadU32(script) == 0x40u, "first VM 0x40");
+    task = PE_LoadU32(actor + 0xA8u);
+    ASSERT(PE_LoadU32(task) == script, "task PC");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0 after ready");
+
+    func_80035558_walk_cut();
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 1u) != 0u, "0x40 D2E8|=1");
+    ASSERT(PE_LoadU32(task + 0x10u) == 1u, "0x02 yield delay");
+    ASSERT(PE_LoadU32(task) == script + 0x2Cu, "PC after +0x20/0x02");
+    ASSERT(PE_LoadU32(actor + 0x1B0u) == 0u, "still no type1 clip");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0 after yield");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void btl94_persist_store(unsigned int idx, uint32_t value)
+{
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80120FC0u;
+
+    PE_StoreU32(imm, value);
+    PE_StoreU32(args, 0x800A77F0u + idx * 4u);
+    PE_StoreU32(args + 4u, imm);
+    (void)func_800173F4(args);
+}
+
+static unsigned int btl94_actor_count(void)
+{
+    unsigned int n = 0u;
+    pe_addr_t actor;
+
+    actor = PE_LoadU32(0x8009D20Cu);
+    while (actor != 0u) {
+        n++;
+        actor = PE_LoadU32(actor + 4u);
+    }
+    return n;
+}
+
+static PE_Disc *btl94_setup_m0367i(char *err, size_t err_size)
+{
+    static const unsigned char charset[] =
+        "0123456789abcdefghiklmnoprstuvwy";
+    static const unsigned int ops[][2] = {
+        { 0x40u, 0x80017D7Cu }, { 0x84u, 0x80018E84u },
+        { 0x88u, 0x80018F54u }, { 0x02u, 0x800172E0u },
+        { 0x09u, 0x80012850u }, { 0x05u, 0x8001731Cu },
+        { 0x08u, 0x8001735Cu }, { 0x9Bu, 0x80015240u },
+        { 0xEDu, 0x80016910u }, { 0x14u, 0x80017588u },
+        { 0x1Eu, 0x80019658u }, { 0x79u, 0x80018BECu },
+        { 0xC1u, 0x80019AC0u }, { 0x0Bu, 0x80012C20u },
+        { 0x2Eu, 0x80017AE8u }, { 0x20u, 0x800172FCu },
+        { 0xAAu, 0x80019618u }, { 0x03u, 0x80017C54u },
+        { 0x0Au, 0x800173F4u }, { 0xEAu, 0x80015DACu },
+        { 0x87u, 0x80018F0Cu }, { 0x9Cu, 0x80019410u },
+        { 0x0Du, 0x80017410u }, { 0x22u, 0x800177C8u },
+        { 0x31u, 0x80017BB4u }, { 0x1Fu, 0x800177ACu },
+        { 0x01u, 0x800172BCu },
+    };
+    PE_Disc *disc;
+    unsigned int i;
+
+    for (i = 0; i < 32u; i++)
+        PE_StoreU8(0x800930B4u + i, charset[i]);
+    PE_StoreU32(0x80093378u + 366u * 8u, 0x15050u);
+    PE_StoreU32(0x80093378u + 366u * 8u + 4u, 0x04E0AA21u);
+    PE_StoreU16(0x800930D8u + 18u * 2u, 288u);
+    PE_StoreU16(0x800930D8u + 19u * 2u, 316u);
+    PE_StoreU8(0x800B0CD8u + 0x0Bu, 14u);
+    PE_StoreU32(0x800B0E70u + 4u, 0xDEADu);
+    for (i = 1u; i <= 4u; i++)
+        PE_StoreU32(0x800915DCu + i * 8u, 0x80035E04u);
+    for (i = 0; i < (unsigned int)(sizeof(ops) / sizeof(ops[0])); i++)
+        PE_StoreU32(0x800910A0u + ops[i][0] * 4u, ops[i][1]);
+
+    err[0] = 0;
+    disc = BTL6_OpenDisc1(err, err_size);
+    if (disc == NULL)
+        return NULL;
+    func_8007ED58();
+    PE_Disc_SetActive(disc);
+    PE_StoreU32(0x800B0DD8u, 1013u);
+    PE_StoreU32(0x800B0CD8u + 0x194u, 0x80120000u);
+    PE_StoreU32(0x800B0CD8u + 0x168u, 0x80140000u);
+    PE_StoreU32(0x800B0CD8u + 0x18Cu, 0x801A0000u);
+    PE_StoreU32(0x800B0CD8u + 0x154u, 0x801D0000u);
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x8009570Cu, 0x80076C34u);
+    PE_StoreU32(0x80095724u, 0x80076664u);
+    D_8009D1A0 = 0u;
+    D_8009D280 = 0xA80663C8u;
+    return disc;
+}
+
+static void test_BTL94_m0367i_persist09_gate(void) {
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t script;
+    pe_addr_t type2_script;
+    pe_addr_t actor;
+    pe_addr_t type2;
+    pe_addr_t task;
+    pe_addr_t task2;
+    pe_addr_t clip09;
+    pe_addr_t dummy = 0x80108600u;
+    unsigned int i;
+    unsigned int n;
+
+    TEST("BTL94_m0367i_persist09_gate");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, dummy);
+    PE_StoreU32(dummy + 0x98u, 0x10000000u);
+    ASSERT(func_80019AC0(0u) == 1, "0xC1 v0=1");
+    ASSERT((PE_LoadU32(dummy + 0x98u) & 0x400u) != 0u, "0xC1 |=0x400");
+
+    disc = btl94_setup_m0367i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+    ASSERT(PE_LoadU32(0x800A77F0u + 0x4Au * 4u) == 0u, "persist[0x4A] closed");
+    ASSERT(func_8003F074_dest_ready_cut(0xA80663C8u) == 1, "dest-ready closed");
+    ASSERT(PE_LoadU32(0x8009D1FCu) == 0x801A0000u + 0x1C6D8u, "1A918 D1FC");
+    ASSERT(PE_LoadU16(PE_LoadU32(0x8009D1FCu) + 2u) == 1u, "ntbl=1");
+    script = dest2 + 0x1B454u;
+    actor = PE_LoadU32(0x8009D20Cu);
+    task = PE_LoadU32(actor + 0xA8u);
+    func_80035558_walk_cut();
+    ASSERT(PE_LoadU32(task) == script + 0x2Cu, "first yield +0x2C");
+    func_80035558_walk_cut();
+    ASSERT(btl94_actor_count() == 1u, "closed gate: no 0x08");
+    ASSERT(PE_LoadU32(task) == script + 0x1B8u, "closed parks after +0x1AC");
+    ASSERT(PE_LoadU8(actor + 0x0Cu) == 1u, "still type1");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode 0 closed");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+
+    ResetTestState();
+    disc = btl94_setup_m0367i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+    btl94_persist_store(1u, 5u);
+    btl94_persist_store(0x4Au, 0x26u);
+    ASSERT(PE_LoadU32(0x800A77F0u + 0x4Au * 4u) == 0x26u, "Watch 0x0A");
+    ASSERT(PE_LoadU32(0x800A77F0u + 4u) == 5u, "Watch persist[1]");
+    ASSERT(func_8003F074_dest_ready_cut(0xA80663C8u) == 1, "dest-ready open");
+    script = dest2 + 0x1B454u;
+    type2_script = dest2 + 0x1C230u;
+    actor = PE_LoadU32(0x8009D20Cu);
+    task = PE_LoadU32(actor + 0xA8u);
+    clip09 = PE_LoadU32(0x800B0E98u + 2u * 192u + 0x09u * 4u);
+    ASSERT(clip09 != 0u, "Writer A type2 0x09");
+    func_80035558_walk_cut();
+    ASSERT(PE_LoadU32(task) == script + 0x2Cu, "open first yield");
+    ASSERT(btl94_actor_count() == 1u, "no spawn before second visit");
+
+    func_80035558_walk_cut();
+    ASSERT(btl94_actor_count() == 2u, "Watch opens first 0x08 only");
+    type2 = PE_LoadU32(actor + 4u);
+    ASSERT(type2 != 0u, "type2 sibling");
+    ASSERT(PE_LoadU8(type2 + 0x0Cu) == 2u, "first spawn type 2");
+    ASSERT(PE_LoadU8(type2 + 0x0Du) == 0u, "idB 0");
+    ASSERT(PE_LoadU32(actor + 4u + 4u) == 0u ||
+           PE_LoadU32(PE_LoadU32(actor + 4u) + 4u) == 0u,
+           "no second sibling");
+    ASSERT(PE_LoadU32(type2 + 4u) == 0u, "later 0x08 groups stay closed");
+    ASSERT(PE_LoadU32(task) == script + 0x1B8u, "type1 after +0x1AC");
+    ASSERT(PE_LoadU32(type2 + 0x1ACu) == dest2 + 8u, "type2 +0x1AC");
+    ASSERT(PE_LoadU32(type2 + 0x1B0u) == clip09, "0x2E bound 0x09");
+    ASSERT((PE_LoadU32(type2 + 0x98u) & 0x400u) != 0u, "0xC1 bit");
+    ASSERT(PE_LoadU8(type2 + 0x27Du) == 0x80u, "0xED 0xA29");
+    task2 = PE_LoadU32(type2 + 0xA8u);
+    ASSERT(PE_LoadU32(task2) == type2_script + 0xACu, "type2 after 0x02");
+    ASSERT(PE_LoadU32(0x800A77F0u + 0x4Au * 4u) == 0x26u, "persist still 0x26");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode 0 after spawn");
+
+    for (i = 0; i < 20u; i++) {
+        func_80035558_walk_cut();
+        if (PE_LoadU32(task) == script + 0x24Cu)
+            break;
+    }
+    ASSERT(PE_LoadU32(task) == script + 0x24Cu, "type1 0x9C fade-wait");
+    ASSERT((PE_LoadU8(0x800BCFEEu) & 3u) >= 2u, "CFEE fade live");
+    ASSERT(btl94_actor_count() == 2u, "still one spawn");
+    n = 0u;
+    type2 = PE_LoadU32(0x8009D20Cu);
+    while (type2 != 0u) {
+        n = (n << 4) | PE_LoadU8(type2 + 0x0Cu);
+        type2 = PE_LoadU32(type2 + 4u);
+    }
+    ASSERT(n == 0x12u, "actors 1 then 2");
+    ASSERT((PE_LoadU16(task2 + 8u) & 0x10u) != 0u, "type2 0x20 park");
+    ASSERT(PE_LoadU32(0x800A77F0u + 0x4Au * 4u) == 0x26u, "no 0x27 yet");
+    ASSERT(D_8009D280 == 0xA80663C8u, "no M0005I hop");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_BTL44_18954_and_18164(void) {
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm0 = 0x80122100u;
+    pe_addr_t imm1 = 0x80122110u;
+    pe_addr_t actor = CH1_2F7D8_ACTOR;
+    pe_addr_t slot = 0x80108000u;
+    pe_addr_t body;
+
+    TEST("BTL44_18954_and_18164");
+    ResetTestState();
+    CH1_2F7D8_PlantTemplate();
+    CH1_2F7D8_ClearTable();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor, 0xDEADBEEFu);
+    PE_StoreU32(actor + 0x98u, 0x2000u);
+    PE_StoreU8(actor + 0x0Cu, 2u);
+    ASSERT(func_80018954(0u) == 1, "0x6F v0=1");
+    body = CH1_2F7D8_Rec(0) + 4u;
+    ASSERT(PE_LoadU32(actor) == body, "2F7D8 via 18954");
+
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU8(actor + 0x0Cu, 2u);
+    PE_StoreU32(actor, slot);
+    PE_StoreU16(slot + 0x0Eu, 0xABCDu);
+    PE_StoreU32(imm0, 0x28u);
+    PE_StoreU32(imm1, 0u);
+    PE_StoreU32(args, imm0);
+    PE_StoreU32(args + 4u, imm1);
+    ASSERT(func_80018164(args) == 1, "0x5A v0=1");
+    ASSERT(PE_LoadU16(slot + 0x0Eu) == 0u, "30220 tag 40");
+
+    PE_StoreU8(actor + 0x0Cu, 0u);
+    PE_StoreU32(0x8009D254u, slot);
+    PE_StoreU32(imm0, 0u);
+    PE_StoreU32(imm1, 0x11223344u);
+    PE_StoreU32(slot, 0u);
+    ASSERT(func_80018164(args) == 1, "type0 v0=1");
+    ASSERT(PE_LoadU32(slot) == 0x11223344u, "2FF78 tag 0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL42_1A1F0_sets_bit01000000(void) {
+    pe_addr_t actor = 0x800BEA90u;
+
+    TEST("BTL42_1A1F0_sets_bit01000000");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x98u, 0x100000E0u);
+    ASSERT(func_8001A1F0(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU32(actor + 0x98u) == 0x110000E0u, "|=0x01000000");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL40_18BEC_sets_bit20(void) {
+    pe_addr_t actor = 0x800BEA90u;
+
+    TEST("BTL40_18BEC_sets_bit20");
+    ResetTestState();
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x98u, 0x100000C0u);
+    ASSERT(func_80018BEC(0u) == 1, "v0=1");
+    ASSERT(PE_LoadU32(actor + 0x98u) == 0x100000E0u, "|=0x20");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL9_after_poll_not_m2(void) {
+    int ds0, ds1, mask;
+
+    TEST("BTL9_after_poll_not_m2");
+    ResetTestState();
+    HostFB_Init();
+    D_8009D1A0 = 0x42u;
+    PE_StoreU32(0x800B0CD8u, 0x40000402u);
+    PE_StoreU32(0x800B162Cu, 0x80150000u);
+    PE_StoreU32(0x8009D2E8u, 0xFu);
+    PE_StoreU32(0x800B0E5Cu, 0x80130028u);
+    PE_StoreU16(0x800E21A4u, 0u);
+    HostFB_GetState(NULL, &ds0, NULL, NULL);
+    func_8003F074_after_poll_cut();
+    HostFB_GetState(NULL, &ds1, NULL, &mask);
+    ASSERT(PE_LoadU32(0x8009CE90u) == 0x80150000u, "371B0 published 162C");
+    ASSERT(ds1 >= ds0 + 2, "125E0 + after-poll DrawSync");
+    ASSERT(mask == 1, "SetDispMask(1)");
+    ASSERT((D_8009D1A0 & 0x40u) == 0u, "D1A0 &= ~0x40");
+    ASSERT((PE_LoadU32(0x8009D2E8u) & 0xCu) == 0u, "D2E8 &= ~0xC");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x402u) == 0u, "overlay &= ~0x402");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x40000000u) != 0u, "language bit kept");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL8_E0060_exe_list_clear(void) {
+    pe_addr_t base = 0x80130028u;
+    pe_addr_t slot0 = base - 0x14u;
+    pe_addr_t slot1 = slot0 - 0x14u;
+
+    TEST("BTL8_E0060_exe_list_clear");
+    ResetTestState();
+    PE_StoreU32(0x800B0E5Cu, base);
+    PE_StoreU16(0x800E21A4u, 0u);
+    PE_StoreU8(slot0, 9u);
+    func_800E0060();
+    ASSERT(PE_LoadU32(0x800E2800u) == slot0, "n=0 cursor");
+    ASSERT(PE_LoadU16(0x800E21A4u) == 0u, "n=0 stays 0");
+    ASSERT(PE_LoadU8(slot0) == 9u, "n=0 does not walk");
+
+    PE_StoreU16(0x800E21A4u, 2u);
+    PE_StoreU8(slot0, 1u);
+    PE_StoreU8(slot1, 2u);
+    func_800E0060();
+    ASSERT(PE_LoadU8(slot0) == 0u, "slot0 cleared");
+    ASSERT(PE_LoadU8(slot1) == 0u, "slot1 cleared");
+    ASSERT(PE_LoadU16(0x800E21A4u) == 0u, "count zeroed");
+    ASSERT(PE_LoadU32(0x800E2800u) == slot0, "cursor first slot");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL6_86464_86C1C_cmd10_fail(void) {
+    TEST("BTL6_86464_86C1C_cmd10_fail");
+    ResetTestState();
+    PE_StoreU32(0x80100000u, 0u);
+    PE_StoreU32(0x8009D268u, 0xDEADu);
+    ASSERT(func_80085084(0x80100000u) != 0, "empty dest magic fail");
+    func_80086464(0x80100000u);
+    ASSERT(PE_LoadU32(0x800BCD80u) == 0x10u, "86464 cmd 0x10");
+    ASSERT(PE_LoadU32(0x800BCD84u) == 0x80100000u, "86464 a0");
+    ASSERT(PE_LoadU32(0x8009D268u) == 0u, "8CBA8 epilogue D268=0");
+    func_80086C1C(0, 0x7F);
+    ASSERT(PE_LoadU32(0x800BCD80u) == 0xC0u, "86C1C cmd 0xC0");
+    ASSERT(PE_LoadU32(0x800BCD84u) == 0x7Fu, "86C1C masked a1");
+    ASSERT(PE_LoadU32(0x800BCD90u) == 0u, "86C1C a0");
+    PE_StoreU32(0x80100000u, 0x4F414B41u);
+    ASSERT(func_80085084(0x80100000u) == 0, "AKAO magic 0");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL6_6D078_state0_parks_at_6CDA4(void) {
+    TEST("BTL6_6D078_state0_parks_at_6CDA4");
+    ResetTestState();
+    PE_StoreU8(0x800B0CD8u + 0xF3u, 0u);
+    PE_StoreU32(0x8009CDCCu, 0xDEADBEEFu);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x80u);
+    ASSERT(func_8006D078() == 1, "state0 reaches 0x28 and parks");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF3u) == 0x28u, "sb 0x28");
+    ASSERT(PE_LoadU32(0x8009CDCCu) == 0u, "gp+0x5C=0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 7u, "6CDA4 a0=1 sb 7");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no +0xE store");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    ASSERT(func_8006D078() == 0, "6E6D4 -1 re-dispatches empty 0x2A");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF3u) == 0u, "empty archive sb F3=0");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 0u, "state7 -1 sb F0=0");
+    PE_StoreU8(0x800B0CD8u + 0xF3u, 1u);
+    ASSERT(func_8006D078() == 0, "unused state returns 0");
+    PE_StoreU8(0x800B0CD8u + 0xF3u, 44u);
+    ASSERT(func_8006D078() == 0, "F3>=44 returns 0");
+    PASS();
+}
+
+static void test_BTL6_6CDA4_state0_a0eq1_sb7(void) {
+    TEST("BTL6_6CDA4_state0_a0eq1_sb7");
+    ResetTestState();
+    PE_StoreU32(0x8009317Cu, 0x000008B0u);
+    PE_StoreU16(0x80093182u, 0x0016u);
+    PE_StoreU16(0x80093184u, 0x0025u);
+    PE_StoreU32(0x800B0DD8u, 0x00001000u);
+    PE_StoreU8(0x800B0CD8u + 0xF0u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x80u);
+    ASSERT(func_8006CDA4(1, 1, 0, 0x800B0E6Cu, 0x21, 0) == 1, "return 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 7u, "sb 7");
+    ASSERT(PE_LoadU32(0x8009D174u) == 0x0Fu, "gp+0x404=0x0F");
+    ASSERT(PE_LoadU32(0x8009D178u) == 0x0Fu, "gp+0x408=0x0F");
+    ASSERT(PE_LoadU32(0x8009D170u) == 0x000018C6u, "LBA+8B0+16");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no +0xE");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    ASSERT(func_8006CDA4(1, 1, 0, 0x800B0E6Cu, 0x21, 0) == 0,
+           "F0=7 issues 6E6D4; no disc → -1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 0u, "state7 -1 sb 0");
+    PASS();
+}
+
+static void test_BTL6_6CDA4_state0_a0eq0_87198(void) {
+    TEST("BTL6_6CDA4_state0_a0eq0_87198");
+    ResetTestState();
+    PE_StoreU32(0x8009317Cu, 0x000008B0u);
+    PE_StoreU16(0x8009317Cu + 4u + 0x1Au, 0x01F8u);
+    PE_StoreU16(0x8009317Cu + 0x1Au + 6u, 0x0268u);
+    PE_StoreU32(0x800B0DD8u, 0x00001000u);
+    PE_StoreU8(0x800B0CD8u + 0xF0u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xE1u, 0x0Du);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x80u);
+    PE_StoreU32(0x8009D270u, 0u);
+    ASSERT(func_80087198() == 0, "87198 ret0");
+    ASSERT(PE_LoadU32(0x8009D270u) == 1u, "direct D270=1");
+    PE_StoreU32(0x8009D270u, 0u);
+    ASSERT(func_8006CDA4(0, 0x0D, 0, 0x800B0E6Cu, 0x21, 0) == 1, "return 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 7u, "sb 7");
+    ASSERT(PE_LoadU32(0x8009D270u) == 1u, "87198 D_8009D270=1");
+    ASSERT(PE_LoadU32(0x8009D174u) == 0x70u, "gp+0x404=0x70");
+    ASSERT(PE_LoadU32(0x8009D178u) == 0x70u, "gp+0x408=0x70");
+    ASSERT(PE_LoadU32(0x8009D170u) == 0x00001AA8u, "LBA+8B0+1F8");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no +0xE");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    ASSERT(func_8006CDA4(0, 0x0D, 0, 0x800B0E6Cu, 0x21, 0) == 0,
+           "F0=7 issues 6E6D4; no disc → -1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 0u, "state7 -1 sb 0");
+    PASS();
+}
+
+static void test_BTL6_6CDA4_state8_poll_sm(void) {
+    TEST("BTL6_6CDA4_state8_poll_sm");
+    int vs;
+
+    ResetTestState();
+    HostFB_Init();
+    PE_StoreU8(0x800B0CD8u + 0xF0u, 8u);
+    PE_StoreU32(0x8009B6C4u, 0u);
+    PE_StoreU32(0x8009B6B4u, 1u);
+    ASSERT(func_8006CDA4(1, 1, 0, 0, 0x21, 0) == 1, "pending returns 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 8u, "pending stays 8");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+
+    PE_StoreU32(0x8009B6B4u, 0u);
+    ASSERT(func_8006CDA4(1, 1, 0, 0, 0x21, 0) == 1, "sync poll returns");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 9u, "st==0 sb 9");
+    ASSERT(func_8006CDA4(1, 1, 0, 0x80100000u, 0x21, 0) == 1,
+           "F0=9 calls 87090; empty dest → 851A8 -1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 0u, "87090 -1 sb F0=0");
+
+    HostFB_VSync(0);
+    HostFB_VSync(0);
+    HostFB_GetState(&vs, NULL, NULL, NULL);
+    PE_StoreU8(0x800B0CD8u + 0xF0u, 8u);
+    PE_StoreU32(0x8009B6C4u, (uint32_t)(vs - 1300));
+    PE_StoreU32(0x8009B6B4u, 1u);
+    ASSERT(func_8006CDA4(1, 1, 0, 0, 0x21, 0) == 1, "timeout returns 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 7u, "st==-1 sb 7");
+    PASS();
+}
+
+static void test_BTL6_6CDA4_state9_87090_empty_dest(void) {
+    TEST("BTL6_6CDA4_state9_87090_empty_dest");
+    ResetTestState();
+    PE_StoreU8(0x800B0CD8u + 0xF0u, 9u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x80u);
+    ASSERT(func_8006CDA4(1, 1, 0, 0x80100000u, 0x21, 0) == 1, "return 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 0u, "empty dest sb 0");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 0xFFFFFFFFu, "851A8 error flag");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no +0xE");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PE_StoreU8(0x800B0CD8u + 0xF0u, 9u);
+    ASSERT(func_8006CDA4(0, 1, 0, 0x80100000u, 0x21, 0) == 1, "a0!=1 parks");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 9u, "a0!=1 does not call 87090");
+    PASS();
+}
+
+static void test_BTL6_6CDA4_stateA_870E0_poll(void) {
+    TEST("BTL6_6CDA4_stateA_870E0_poll");
+    ResetTestState();
+    PE_StoreU8(0x800B0CD8u + 0xF0u, 0xAu);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x80u);
+    PE_StoreU32(0x8009D178u, 0x0Fu);
+    PE_StoreU32(0x8009D17Cu, 0x0Fu);
+    PE_StoreU32(0x8009D24Cu, 1u);
+    ASSERT(func_800870E0() == 1, "busy read");
+    ASSERT(func_8006CDA4(1, 1, 0, 0, 0x21, 0) == 1, "busy returns 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 0xAu, "busy stays 0xA");
+    ASSERT(PE_LoadU32(0x8009D178u) == 0x0Fu, "busy does not subtract");
+    ASSERT(PE_LoadU32(0x8009D24Cu) == 1u, "870E0 does not store");
+
+    PE_StoreU32(0x8009D24Cu, 0xFFFFFFFFu);
+    ASSERT(func_800870E0() == -1, "fail read");
+    ASSERT(func_8006CDA4(1, 1, 0, 0, 0x21, 0) == 1, "fail returns 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 0u, "-1 sb F0=0");
+    ASSERT(PE_LoadU32(0x8009D178u) == 0x0Fu, "fail does not subtract");
+
+    PE_StoreU8(0x800B0CD8u + 0xF0u, 0xAu);
+    PE_StoreU32(0x8009D24Cu, 0u);
+    ASSERT(func_800870E0() == 0, "planted-0 read; not a DMA stub");
+    ASSERT(func_8006CDA4(1, 1, 0, 0, 0x21, 0) == 1, "complete returns 1");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 7u, "D24C==0 sb 7");
+    ASSERT(PE_LoadU32(0x8009D178u) == 0u, "remain -= chunk");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no +0xE");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_BTL6_6D078_state2A_walk(void) {
+    TEST("BTL6_6D078_state2A_walk");
+    ResetTestState();
+    PE_StoreU32(0x800B0E64u, 0x80110000u);
+    PE_StoreU32(0x80110004u, 0u);
+    PE_StoreU32(0x80110024u, (1u << 16) | 0x30u);
+    PE_StoreU8(0x80120033u, 0x10u);
+    PE_StoreU16(0x80120034u, 2u);
+    PE_StoreU16(0x80120036u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xF3u, 0x2Au);
+    PE_StoreU8(0x800B0CD8u + 0xF0u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0x80u);
+    PE_StoreU32(0x8009CDCCu, 0u);
+    ASSERT(func_8006D078() == 1, "take 0x2B then 6CDA4(3)");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF3u) == 0x2Bu, "sb 0x2B");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF0u) == 7u, "a0=3 table+87414 sb 7");
+    ASSERT(PE_LoadU32(0x8009D270u) == 2u, "87414 D_8009D270=2");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no +0xE");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+
+    ResetTestState();
+    PE_StoreU32(0x800B0E64u, 0x80110000u);
+    PE_StoreU32(0x80110004u, 0u);
+    PE_StoreU32(0x80110024u, (1u << 16) | 0x30u);
+    PE_StoreU8(0x80120033u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xF3u, 0x2Au);
+    PE_StoreU32(0x8009CDCCu, 0u);
+    ASSERT(func_8006D078() == 0, "skip bit0x10 then exhaust");
+    ASSERT(PE_LoadU8(0x800B0CD8u + 0xF3u) == 0u, "exhaust sb 0");
+    ASSERT(PE_LoadU32(0x8009CDCCu) == 1u, "index++");
+    PASS();
+}
+
+static void test_299CC_second_tick_idle(void) {
+    TEST("299CC_second_tick_idle");
+    ResetTestState();
+
+    CH1_299CC_Plant(6u, CH1_299CC_FLAG, 0u);
+    func_800299CC_consume_cut();
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 0u, "first consume");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE) == 6u, "first edge");
+    func_800299CC_consume_cut();
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 0u, "mode stays 0");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE) == 6u, "edge stays 6");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH1 — BTL1 TRACE_CONTRACT integration (not a new leaf)
+ *
+ * Sequences already-translated ports:
+ *   0x1C mailbox 3 → real BTL1 0x31 cut → 0x6F/0x70/0xB7/0x5A →
+ *   0x89 (D_8009D28C=6, matching 17FF0 guest store) → consume cut.
+ * persist_hash of D_800A77F0..+0x800 must not change on the 0x89 row.
+ * 0x31 uses the EXE-verified normal path for token 0xA80002C8.
+ * 0x1A uses the translated 70DD0(0,100); its pre-call 19-word state
+ * spans the two index words plus the 17-word table.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define BTL1_PERSIST      0x800A77F0u
+#define BTL1_PERSIST_LEN  0x800u
+#define BTL1_ENCOUNTER    "m0005i_mod6_350C"
+#define BTL1_DEST_ARGS    0x80109200u
+#define BTL1_DEST_VALUE   0x80109210u
+#define BTL1_DEST_TOKEN   0xA80002C8u
+#define BTL1_RNG_STATE    0x80070E04u
+#define BTL1_RNG_WORDS    19u
+
+static void BTL1_Sha256(const unsigned char *data, size_t len,
+                        char hex[65])
+{
+    static const uint32_t K[64] = {
+        0x428a2f98u,0x71374491u,0xb5c0fbcfu,0xe9b5dba5u,0x3956c25bu,0x59f111f1u,
+        0x923f82a4u,0xab1c5ed5u,0xd807aa98u,0x12835b01u,0x243185beu,0x550c7dc3u,
+        0x72be5d74u,0x80deb1feu,0x9bdc06a7u,0xc19bf174u,0xe49b69c1u,0xefbe4786u,
+        0x0fc19dc6u,0x240ca1ccu,0x2de92c6fu,0x4a7484aau,0x5cb0a9dcu,0x76f988dau,
+        0x983e5152u,0xa831c66du,0xb00327c8u,0xbf597fc7u,0xc6e00bf3u,0xd5a79147u,
+        0x06ca6351u,0x14292967u,0x27b70a85u,0x2e1b2138u,0x4d2c6dfcu,0x53380d13u,
+        0x650a7354u,0x766a0abbu,0x81c2c92eu,0x92722c85u,0xa2bfe8a1u,0xa81a664bu,
+        0xc24b8b70u,0xc76c51a3u,0xd192e819u,0xd6990624u,0xf40e3585u,0x106aa070u,
+        0x19a4c116u,0x1e376c08u,0x2748774cu,0x34b0bcb5u,0x391c0cb3u,0x4ed8aa4au,
+        0x5b9cca4fu,0x682e6ff3u,0x748f82eeu,0x78a5636fu,0x84c87814u,0x8cc70208u,
+        0x90befffau,0xa4506cebu,0xbef9a3f7u,0xc67178f2u
+    };
+    uint32_t h[8] = {
+        0x6a09e667u,0xbb67ae85u,0x3c6ef372u,0xa54ff53au,
+        0x510e527fu,0x9b05688cu,0x1f83d9abu,0x5be0cd19u
+    };
+    unsigned char block[64];
+    uint64_t bitlen = (uint64_t)len * 8u;
+    size_t i, n;
+    unsigned int t;
+
+    n = 0;
+    for (i = 0; i < len; i++) {
+        block[n++] = data[i];
+        if (n == 64) {
+            uint32_t w[64], a, b, c, d, e, f, g, hv, t1, t2;
+            unsigned int j;
+            for (j = 0; j < 16; j++)
+                w[j] = ((uint32_t)block[j * 4] << 24) |
+                       ((uint32_t)block[j * 4 + 1] << 16) |
+                       ((uint32_t)block[j * 4 + 2] << 8) |
+                       (uint32_t)block[j * 4 + 3];
+            for (j = 16; j < 64; j++) {
+                uint32_t s0 = ((w[j - 15] >> 7) | (w[j - 15] << 25)) ^
+                              ((w[j - 15] >> 18) | (w[j - 15] << 14)) ^
+                              (w[j - 15] >> 3);
+                uint32_t s1 = ((w[j - 2] >> 17) | (w[j - 2] << 15)) ^
+                              ((w[j - 2] >> 19) | (w[j - 2] << 13)) ^
+                              (w[j - 2] >> 10);
+                w[j] = w[j - 16] + s0 + w[j - 7] + s1;
+            }
+            a = h[0]; b = h[1]; c = h[2]; d = h[3];
+            e = h[4]; f = h[5]; g = h[6]; hv = h[7];
+            for (j = 0; j < 64; j++) {
+                uint32_t S1 = ((e >> 6) | (e << 26)) ^
+                              ((e >> 11) | (e << 21)) ^
+                              ((e >> 25) | (e << 7));
+                uint32_t ch = (e & f) ^ ((~e) & g);
+                uint32_t S0 = ((a >> 2) | (a << 30)) ^
+                              ((a >> 13) | (a << 19)) ^
+                              ((a >> 22) | (a << 10));
+                uint32_t maj = (a & b) ^ (a & c) ^ (b & c);
+                t1 = hv + S1 + ch + K[j] + w[j];
+                t2 = S0 + maj;
+                hv = g; g = f; f = e; e = d + t1;
+                d = c; c = b; b = a; a = t1 + t2;
+            }
+            h[0] += a; h[1] += b; h[2] += c; h[3] += d;
+            h[4] += e; h[5] += f; h[6] += g; h[7] += hv;
+            n = 0;
+        }
+    }
+    block[n++] = 0x80;
+    if (n > 56) {
+        while (n < 64)
+            block[n++] = 0;
+        {
+            uint32_t w[64], a, b, c, d, e, f, g, hv, t1, t2;
+            unsigned int j;
+            for (j = 0; j < 16; j++)
+                w[j] = ((uint32_t)block[j * 4] << 24) |
+                       ((uint32_t)block[j * 4 + 1] << 16) |
+                       ((uint32_t)block[j * 4 + 2] << 8) |
+                       (uint32_t)block[j * 4 + 3];
+            for (j = 16; j < 64; j++) {
+                uint32_t s0 = ((w[j - 15] >> 7) | (w[j - 15] << 25)) ^
+                              ((w[j - 15] >> 18) | (w[j - 15] << 14)) ^
+                              (w[j - 15] >> 3);
+                uint32_t s1 = ((w[j - 2] >> 17) | (w[j - 2] << 15)) ^
+                              ((w[j - 2] >> 19) | (w[j - 2] << 13)) ^
+                              (w[j - 2] >> 10);
+                w[j] = w[j - 16] + s0 + w[j - 7] + s1;
+            }
+            a = h[0]; b = h[1]; c = h[2]; d = h[3];
+            e = h[4]; f = h[5]; g = h[6]; hv = h[7];
+            for (j = 0; j < 64; j++) {
+                uint32_t S1 = ((e >> 6) | (e << 26)) ^
+                              ((e >> 11) | (e << 21)) ^
+                              ((e >> 25) | (e << 7));
+                uint32_t ch = (e & f) ^ ((~e) & g);
+                uint32_t S0 = ((a >> 2) | (a << 30)) ^
+                              ((a >> 13) | (a << 19)) ^
+                              ((a >> 22) | (a << 10));
+                uint32_t maj = (a & b) ^ (a & c) ^ (b & c);
+                t1 = hv + S1 + ch + K[j] + w[j];
+                t2 = S0 + maj;
+                hv = g; g = f; f = e; e = d + t1;
+                d = c; c = b; b = a; a = t1 + t2;
+            }
+            h[0] += a; h[1] += b; h[2] += c; h[3] += d;
+            h[4] += e; h[5] += f; h[6] += g; h[7] += hv;
+        }
+        n = 0;
+    }
+    while (n < 56)
+        block[n++] = 0;
+    for (t = 0; t < 8; t++)
+        block[56 + t] = (unsigned char)(bitlen >> (56 - 8 * t));
+    {
+        uint32_t w[64], a, b, c, d, e, f, g, hv, t1, t2;
+        unsigned int j;
+        for (j = 0; j < 16; j++)
+            w[j] = ((uint32_t)block[j * 4] << 24) |
+                   ((uint32_t)block[j * 4 + 1] << 16) |
+                   ((uint32_t)block[j * 4 + 2] << 8) |
+                   (uint32_t)block[j * 4 + 3];
+        for (j = 16; j < 64; j++) {
+            uint32_t s0 = ((w[j - 15] >> 7) | (w[j - 15] << 25)) ^
+                          ((w[j - 15] >> 18) | (w[j - 15] << 14)) ^
+                          (w[j - 15] >> 3);
+            uint32_t s1 = ((w[j - 2] >> 17) | (w[j - 2] << 15)) ^
+                          ((w[j - 2] >> 19) | (w[j - 2] << 13)) ^
+                          (w[j - 2] >> 10);
+            w[j] = w[j - 16] + s0 + w[j - 7] + s1;
+        }
+        a = h[0]; b = h[1]; c = h[2]; d = h[3];
+        e = h[4]; f = h[5]; g = h[6]; hv = h[7];
+        for (j = 0; j < 64; j++) {
+            uint32_t S1 = ((e >> 6) | (e << 26)) ^
+                          ((e >> 11) | (e << 21)) ^
+                          ((e >> 25) | (e << 7));
+            uint32_t ch = (e & f) ^ ((~e) & g);
+            uint32_t S0 = ((a >> 2) | (a << 30)) ^
+                          ((a >> 13) | (a << 19)) ^
+                          ((a >> 22) | (a << 10));
+            uint32_t maj = (a & b) ^ (a & c) ^ (b & c);
+            t1 = hv + S1 + ch + K[j] + w[j];
+            t2 = S0 + maj;
+            hv = g; g = f; f = e; e = d + t1;
+            d = c; c = b; b = a; a = t1 + t2;
+        }
+        h[0] += a; h[1] += b; h[2] += c; h[3] += d;
+        h[4] += e; h[5] += f; h[6] += g; h[7] += hv;
+    }
+    for (t = 0; t < 8; t++)
+        sprintf(hex + t * 8, "%08x", h[t]);
+    hex[64] = 0;
+}
+
+static FILE *BTL1_OpenBuild(const char *name, const char *mode)
+{
+    FILE *f;
+    char path[256];
+
+    snprintf(path, sizeof(path), "pc_port/build/%s", name);
+    f = fopen(path, mode);
+    if (f)
+        return f;
+    return fopen(name, mode);
+}
+
+static void test_BTL1_trace_mode6_consumed(void) {
+    pe_addr_t actor;
+    pe_addr_t body;
+    unsigned int i;
+    unsigned int mailbox;
+    char hash_before[65];
+    char hash_after_89[65];
+    char hash_after_consume[65];
+    char rng_state[BTL1_RNG_WORDS * 9u + 1u];
+    char formation[32];
+    int roll;
+    unsigned int variant;
+    static unsigned char persist[BTL1_PERSIST_LEN];
+    FILE *csv;
+    FILE *bin;
+    char trace_name[40];
+    char persist_name[40];
+
+    TEST("BTL1_trace_mode6_consumed");
+    for (mailbox = 3u; mailbox <= 4u; mailbox++) {
+    ResetTestState();
+
+    actor = CH1_2F7D8_ACTOR;
+    for (i = 0; i < BTL1_PERSIST_LEN; i++)
+        PE_StoreU8(BTL1_PERSIST + i, (uint8_t)((i * 7u) & 0xFFu));
+
+    CH1_17764_PlantArgs(0u, 0u, mailbox, 0x0000AAAAu);
+    ASSERT(func_80017764(CH1_17764_ARGS) == 1, "0x1C mailbox 3/4");
+    ASSERT(PE_LoadU8(GA_T_8009CDB4) == 1u, "mailbox count");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == mailbox, "mailbox payload");
+
+    PE_StoreU32(BTL1_DEST_ARGS, BTL1_DEST_VALUE);
+    PE_StoreU32(BTL1_DEST_VALUE, BTL1_DEST_TOKEN);
+    D_8009D1A0 = 0x0040u;
+    D_8009D280 = 0u;
+    ASSERT(func_80017BB4_btl1_cut(BTL1_DEST_ARGS) == 0, "0x31 return");
+    ASSERT(D_8009D280 == BTL1_DEST_TOKEN, "0x31 destination token");
+    ASSERT(D_8009D1A0 == 0x2040u, "0x31 D_8009D1A0 |= 0x2000");
+
+    func_80070D10();
+    rng_state[0] = 0;
+    for (i = 0; i < BTL1_RNG_WORDS; i++) {
+        size_t used = strlen(rng_state);
+        snprintf(rng_state + used, sizeof(rng_state) - used,
+                 i + 1u == BTL1_RNG_WORDS ? "%08X" : "%08X.",
+                 PE_LoadU32(BTL1_RNG_STATE + i * 4u));
+    }
+    roll = func_80070DD0(0, 100);
+    variant = roll < 19 ? 49u : 50u;
+    snprintf(formation, sizeof(formation), "%u;1332,1333,1334", variant);
+    ASSERT(roll >= 0 && roll < 100, "0x1A range");
+    ASSERT(variant == 49u || variant == 50u, "0x1A variant");
+
+    CH1_2F7D8_PlantTemplate();
+    CH1_2F7D8_ClearTable();
+    PE_StoreU32(actor, 0u);
+    PE_StoreU32(actor + 0x98u, 0x2000u);
+    func_8002F7D8(actor);
+    body = PE_LoadU32(actor);
+    ASSERT(PE_LoadU32(GA_T_800A5D58) == 1u, "0x6F inUse");
+    ASSERT(body == CH1_2F7D8_Rec(0) + 4u, "slot0 body");
+
+    func_8002FA10(actor, 0u, 0u, 8u, 9u, 1u, 5, -1, -1, -1, 3u, 15u);
+    func_8002FAA4(actor, 3u, 0u, 6u, 7u, 1u);
+    func_80030220(actor, 40u, 0u);
+    func_80030220(actor, 41u, 1u);
+    func_80030220(actor, 42u, 2u);
+    func_80030220(actor, 50u, 1333u);
+    func_80030220(actor, 51u, 1332u);
+    func_80030220(actor, 52u, 1334u);
+    ASSERT(PE_LoadU16(body + 0xB0u) == 1333u, "tag50");
+    ASSERT(PE_LoadU16(body + 0xB2u) == 1332u, "tag51");
+    ASSERT(PE_LoadU16(body + 0xB4u) == 1334u, "tag52");
+
+    memcpy(persist, PE_TranslateConst(BTL1_PERSIST, BTL1_PERSIST_LEN),
+           BTL1_PERSIST_LEN);
+    BTL1_Sha256(persist, BTL1_PERSIST_LEN, hash_before);
+
+    /* Matching func_80017FF0 guest effect: D_8009D28C = 6. The src/
+     * leaf writes a host extern, so the native test stores the same
+     * word in guest RAM. */
+    PE_StoreU32(CH1_299CC_MODE, 6u);
+    memcpy(persist, PE_TranslateConst(BTL1_PERSIST, BTL1_PERSIST_LEN),
+           BTL1_PERSIST_LEN);
+    BTL1_Sha256(persist, BTL1_PERSIST_LEN, hash_after_89);
+    ASSERT(strcmp(hash_before, hash_after_89) == 0,
+           "persist_hash changed on 0x89");
+
+    CH1_299CC_Plant(6u, CH1_299CC_FLAG, 0u);
+    /* Restore mode 6: Plant() overwrites it; 0x89 already stored 6. */
+    PE_StoreU32(CH1_299CC_MODE, 6u);
+    func_800299CC_consume_cut();
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 0u, "consume 6->0");
+    ASSERT(PE_LoadU8(CH1_299CC_EDGE) == 6u, "gp+0x10C=6");
+    memcpy(persist, PE_TranslateConst(BTL1_PERSIST, BTL1_PERSIST_LEN),
+           BTL1_PERSIST_LEN);
+    BTL1_Sha256(persist, BTL1_PERSIST_LEN, hash_after_consume);
+    ASSERT(strcmp(hash_after_89, hash_after_consume) == 0,
+           "persist_hash drifted after consume");
+
+    snprintf(trace_name, sizeof(trace_name),
+             mailbox == 3u ? "btl1_trace.csv" : "btl1_trace_mailbox4.csv");
+    csv = BTL1_OpenBuild(trace_name, "w");
+    ASSERT(csv != NULL, "open btl1_trace.csv");
+    fprintf(csv,
+            "field_tick,field_scene,field_script_pc,encounter_id,"
+            "transition_state,battle_mode,formation_id,player_state_hash,"
+            "persist_hash,rng_state,battle_tick\n");
+    fprintf(csv, "0,m0004i,mod4+field,%s,field,0,unset,partial,%s,unset,0\n",
+            BTL1_ENCOUNTER, hash_before);
+    fprintf(csv,
+            "1,m0004i,mod4+mailbox%u,%s,mailbox_%u,0,unset,partial,%s,unset,0\n",
+            mailbox, BTL1_ENCOUNTER, mailbox, hash_before);
+    fprintf(csv, "2,m0005i,mod4+0x31,%s,m0005i_enter,0,unset,partial,%s,unset,0\n",
+            BTL1_ENCOUNTER, hash_before);
+    fprintf(csv,
+            "3,m0005i,mod2+0x1DCC,%s,rng_selected,0,"
+            "\"%u\",partial,%s,\"%s\",0\n",
+            BTL1_ENCOUNTER, variant, hash_before, rng_state);
+    fprintf(csv,
+            "4,m0005i,mod2+slots,%s,slots_ready,0,"
+            "\"%s\",partial,%s,unchanged,0\n",
+            BTL1_ENCOUNTER, formation, hash_before);
+    fprintf(csv,
+            "5,m0005i,mod6+0x350C,%s,mode6_request,6,"
+            "\"%s\",partial,%s,unchanged,0\n",
+            BTL1_ENCOUNTER, formation, hash_after_89);
+    fprintf(csv,
+            "6,m0005i,mod6+consume,%s,mode6_consumed,0,"
+            "\"%s\",partial,%s,unchanged,1\n",
+            BTL1_ENCOUNTER, formation, hash_after_consume);
+    fclose(csv);
+
+    snprintf(persist_name, sizeof(persist_name),
+             mailbox == 3u ? "btl1_persist.bin" : "btl1_persist_mailbox4.bin");
+    bin = BTL1_OpenBuild(persist_name, "wb");
+    ASSERT(bin != NULL, "open btl1_persist.bin");
+    ASSERT(fwrite(persist, 1, BTL1_PERSIST_LEN, bin) == BTL1_PERSIST_LEN,
+           "persist dump");
+    fclose(bin);
+
+    ASSERT(g_stub_count == 0, "BTL1 path recorded a bootstrap stub");
+    }
+    PASS();
+}
+
+static void test_BTL3_trace_command_bound(void) {
+    unsigned char hp[6];
+    char hash[65];
+    FILE *csv;
+    pe_addr_t actor = 0x8010B000u;
+    pe_addr_t resource;
+    pe_addr_t source = 0x8010D000u;
+
+    TEST("BTL3_trace_command_bound");
+    ResetTestState();
+
+    BTL2_HpPlant(0x28u, 0x2Du);
+    func_800293F4_hp_cut();
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Eu) == 0x28u, "HP copy");
+    resource = BTL3_PlantCommandPackage(actor, 6u);
+    PE_StoreU32(0x8009D254u, actor);
+    PE_StoreU32(actor + 0x238u, source);
+    PE_StoreU32(source + 0x18u, 650u);
+    PE_StoreU32(BTL2_HP_REC + 0x08u, 0u);
+    func_80029810_after_hp_cut(2u);
+    ASSERT(PE_LoadU8(actor + 0x0Eu) == 4u, "first command 4");
+    ASSERT(PE_LoadU32(actor + 0x1B0u) == resource, "command table pointer");
+    ASSERT(PE_LoadU8(actor + 0x0Fu) == 5u, "resource frames-1");
+    PE_StoreU8(0x800B0CE2u, 14u);
+    PE_StoreU8(0x800B0CE4u, 0u);
+    PE_StoreU8(0x800B0CD8u + 0x0Eu, 0u);
+    PE_StoreU8(0x800B0CD8u + 0xEEu, 0u);
+    func_800144FC_state3A_d1a0_cut();
+    ASSERT(func_8003F074_6C4C4_6C5BC_cut() == 1, "live 3F074 wait");
+    ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) != 0u, "wait bits set");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    hp[0] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x0Cu) & 0xFFu);
+    hp[1] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x0Cu) >> 8);
+    hp[2] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x0Eu) & 0xFFu);
+    hp[3] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x0Eu) >> 8);
+    hp[4] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x1Cu) & 0xFFu);
+    hp[5] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x1Cu) >> 8);
+    BTL1_Sha256(hp, 6, hash);
+
+    csv = BTL1_OpenBuild("btl2_trace.csv", "w");
+    ASSERT(csv != NULL, "open btl2_trace.csv");
+    fprintf(csv,
+            "field_tick,field_scene,field_script_pc,encounter_id,"
+            "transition_state,battle_mode,formation_id,player_state_hash,"
+            "persist_hash,rng_state,battle_tick\n");
+    fprintf(csv,
+            "0,m0005i,mod6+0x4140,m0005i_mod6_4140,encounter_55,0,"
+            "unset,partial,unchanged,unset,0\n");
+    fprintf(csv,
+            "1,m0005i,mod6+0x4140,m0005i_mod6_4140,hp_copied,0,"
+            "unset,%s,unchanged,unset,0\n", hash);
+    fprintf(csv,
+            "2,m0005i,mod6+0x4140,m0005i_mod6_4140,first_command,0,"
+            "unset,%s,unchanged,unset,0\n", hash);
+    fprintf(csv,
+            "3,m0005i,mod6+0x4140,m0005i_mod6_4140,command_bound,0,"
+            "unset,%s,unchanged,unset,0\n", hash);
+    fprintf(csv,
+            "4,m0005i,mod6+0x4140,m0005i_mod6_4140,overlay_wait,0,"
+            "unset,%s,unchanged,unset,0\n", hash);
+    fclose(csv);
+    ASSERT(g_stub_count == 0, "after_hp fully resolved");
+    PASS();
+}
+
+static void test_BTL72_playable_loop_field_to_hp(void) {
+    pe_addr_t actor = 0x80108600u;
+    pe_addr_t clip = 0x80130000u;
+    pe_addr_t poly = 0x80131000u;
+    pe_addr_t args = 0x80120F80u;
+    pe_addr_t imm = 0x80122000u;
+    pe_addr_t body;
+    unsigned char hp[6];
+    char hash[65];
+    FILE *csv;
+    int i;
+    int32_t x;
+    int32_t z;
+
+    TEST("BTL72_playable_loop_field_to_hp");
+    ResetTestState();
+    func_8003E974();
+
+    CH1_17764_PlantArgs(0u, 0u, 3u, 0x0000AAAAu);
+    ASSERT(func_80017764(CH1_17764_ARGS) == 1, "0x1C mailbox 3");
+    ASSERT(PE_LoadU8(CH1_Rec(0) + 3u) == 3u, "mailbox payload 3");
+
+    PE_StoreU32(BTL1_DEST_ARGS, BTL1_DEST_VALUE);
+    PE_StoreU32(BTL1_DEST_VALUE, BTL1_DEST_TOKEN);
+    D_8009D1A0 = 0x0040u;
+    D_8009D280 = 0u;
+    ASSERT(func_80017BB4_btl1_cut(BTL1_DEST_ARGS) == 0, "0x31 return");
+    ASSERT(D_8009D280 == BTL1_DEST_TOKEN, "0x31 destination token");
+
+    CH1_2F7D8_PlantTemplate();
+    CH1_2F7D8_ClearTable();
+    PE_StoreU32(CH1_2F7D8_ACTOR, 0u);
+    PE_StoreU32(CH1_2F7D8_ACTOR + 0x98u, 0x2000u);
+    func_8002F7D8(CH1_2F7D8_ACTOR);
+    body = PE_LoadU32(CH1_2F7D8_ACTOR);
+    ASSERT(body == CH1_2F7D8_Rec(0) + 4u, "slot0 body");
+
+    PE_StoreU32(CH1_299CC_MODE, 6u);
+    CH1_299CC_Plant(6u, CH1_299CC_FLAG, 0u);
+    PE_StoreU32(CH1_299CC_MODE, 6u);
+    func_800299CC_consume_cut();
+    ASSERT(PE_LoadU32(CH1_299CC_MODE) == 0u, "consume 6->0");
+
+    BTL2_HpPlant(0x28u, 0x2Du);
+    func_800293F4_hp_cut();
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Eu) == 0x28u, "HP copy");
+    hp[0] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x0Cu) & 0xFFu);
+    hp[1] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x0Cu) >> 8);
+    hp[2] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x0Eu) & 0xFFu);
+    hp[3] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x0Eu) >> 8);
+    hp[4] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x1Cu) & 0xFFu);
+    hp[5] = (unsigned char)(PE_LoadU16(BTL2_HP_REC + 0x1Cu) >> 8);
+    BTL1_Sha256(hp, 6, hash);
+
+    btl68_plant_row21();
+    btl69_plant_rsin0();
+    func_80066CE8();
+    PE_StoreU8(clip + 2u, 2u);
+    PE_StoreU32(0x800B0E98u + 0x16u * 4u, clip);
+    PE_StoreU8(actor + 0x0Cu, 0u);
+    PE_StoreU32(actor + 0x20u, 0x10000u);
+    PE_StoreU16(actor + 0x26u, 0x1000u);
+    PE_StoreU32(actor + 0x28u, 0u);
+    PE_StoreU32(actor + 0x30u, 0u);
+    PE_StoreU32(actor + 0x68u, 0u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(actor + 0xA0u, 0u);
+    PE_StoreU32(actor + 0xA4u, 0u);
+    PE_StoreU32(actor + 0xA8u, 0u);
+    PE_StoreU32(0x8009D254u, 0u);
+    PE_StoreU32(0x8009D2E8u, 0u);
+    PE_StoreU8(actor + 0x0Eu, 0x15u);
+    PE_StoreU32(0x80122190u, 0x15u);
+    PE_StoreU16(0x800BE9A2u, 0xFFEFu);
+    func_8003EB04();
+    ASSERT((PE_LoadU32(0x8009D26Cu) & 0x8u) == 0x8u, "Up via 3EB04");
+    ASSERT((PE_LoadU32(0x8009D26Cu) & 0x1u) == 0u, "Circle not held");
+    func_80035C84(actor);
+    ASSERT(PE_LoadU32(actor + 0x30u) == 0x50000u, "pose Z from Up");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Cu) == 0x28u, "HP +0x0C unchanged");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Eu) == 0x28u, "HP +0x0E unchanged");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+
+    /* Live type-0 0x0B pose; Z already in rect1. Right via 3EB04. */
+    btl73_plant_row22();
+    PE_StoreU32(actor + 0x28u, 0x100000u);
+    PE_StoreU32(actor + 0x2Cu, 0xFBA90000u);
+    PE_StoreU32(actor + 0x30u, 0x05410000u);
+    PE_StoreU32(actor + 0x68u, 0u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU8(actor + 0x0Eu, 0x15u);
+    PE_StoreU32(0x80122190u, 0x15u);
+    PE_StoreU32(poly, 0x09940000u);
+    PE_StoreU32(poly + 4u, 0x04CD0000u);
+    PE_StoreU32(poly + 8u, 0x09940000u);
+    PE_StoreU32(poly + 12u, 0x063D0000u);
+    PE_StoreU32(poly + 16u, 0x080A0000u);
+    PE_StoreU32(poly + 20u, 0x063D0000u);
+    PE_StoreU32(poly + 24u, 0x080A0000u);
+    PE_StoreU32(poly + 28u, 0x04CD0000u);
+    ASSERT(func_8001CAB0(0x100000, 0x05410000, poly, 4u) == 0,
+           "0x0B pose misses rect1");
+    PE_StoreU16(0x800BE9A2u, 0xFFDFu);
+    for (i = 0; i < 409; i++) {
+        func_8003EB04();
+        func_80035C84(actor);
+    }
+    x = (int32_t)PE_LoadU32(actor + 0x28u);
+    z = (int32_t)PE_LoadU32(actor + 0x30u);
+    ASSERT((x >> 16) >= 0x80A && (x >> 16) <= 0x994, "X in rect1");
+    ASSERT((z >> 16) >= 0x4CD && (z >> 16) <= 0x63D, "Z in rect1");
+    ASSERT(func_8001CAB0(x, z, poly, 4u) == 1, "1CAB0 hit");
+    PE_StoreU32(imm, 0x1Eu);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80018EB4(args) == 1, "0x85 after hit");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 2u, "CFEE=2");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Cu) == 0x28u, "HP not damaged");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Eu) == 0x28u, "HP copy not damaged");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0 after 0x85");
+
+    /* Live type-3 after 0x85: 0x9C fade-wait, 0x0A persist[1]=5,
+     * 0x31 hop 0xA8000248 → M0004I. Door exit, not damage. */
+    pe_btl38_plant_fade_slot();
+    PE_StoreU32(0x8009D300u, 0x8009D310u);
+    PE_StoreU32(0x8009CE00u, 0x80126040u);
+    ASSERT(func_80019410(0u) == 0, "0x9C yields while CFEE=2");
+    for (i = 0; i < 30; i++)
+        ASSERT(func_80068E24() == 0, "68E24 fade tick");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 1u, "CFEE=1 after 30 ticks");
+    ASSERT(func_80019410(0u) == 1, "0x9C continues");
+    PE_StoreU32(0x800A77F0u + 4u, 0u);
+    PE_StoreU32(imm, 5u);
+    PE_StoreU32(args, 0x800A77F0u + 4u);
+    PE_StoreU32(args + 4u, imm);
+    ASSERT(func_800173F4(args) == 1, "0x0A persist[1]=5");
+    ASSERT(PE_LoadU32(0x800A77F0u + 4u) == 5u, "persist[1]");
+    PE_StoreU32(imm, 0xA8000248u);
+    PE_StoreU32(args, imm);
+    ASSERT(func_80017BB4_btl1_cut(args) == 0, "0x31 M0004I");
+    ASSERT(D_8009D280 == 0xA8000248u, "door dest M0004I");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Cu) == 0x28u, "HP still 0x28 after hop");
+    ASSERT(PE_LoadU16(BTL2_HP_REC + 0x0Eu) == 0x28u, "HP copy still 0x28");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0 after door");
+
+    csv = BTL1_OpenBuild("btl72_playable_loop.csv", "w");
+    ASSERT(csv != NULL, "open btl72_playable_loop.csv");
+    fprintf(csv,
+            "field_tick,field_scene,field_script_pc,encounter_id,"
+            "transition_state,battle_mode,formation_id,player_state_hash,"
+            "persist_hash,rng_state,battle_tick\n");
+    fprintf(csv,
+            "0,m0004i,mod4+field,m0005i_mod6_350C,field,0,"
+            "unset,partial,unchanged,unset,0\n");
+    fprintf(csv,
+            "1,m0004i,mod4+mailbox3,m0005i_mod6_350C,mailbox_3,0,"
+            "unset,partial,unchanged,unset,0\n");
+    fprintf(csv,
+            "2,m0005i,mod4+0x31,m0005i_mod6_350C,m0005i_enter,0,"
+            "unset,partial,unchanged,unset,0\n");
+    fprintf(csv,
+            "3,m0005i,mod6+consume,m0005i_mod6_350C,mode6_consumed,0,"
+            "unset,partial,unchanged,unset,1\n");
+    fprintf(csv,
+            "4,m0005i,mod6+0x4140,m0005i_mod6_350C,hp_copied,0,"
+            "unset,%s,unchanged,unset,1\n", hash);
+    fprintf(csv,
+            "5,m0005i,mod6+0x4140,m0005i_mod6_350C,input_held,0,"
+            "unset,%s,unchanged,unset,1\n", hash);
+    fprintf(csv,
+            "6,m0005i,mod6+0x4140,m0005i_mod6_350C,actors_captured,0,"
+            "unset,%s,unchanged,unset,1\n", hash);
+    fprintf(csv,
+            "7,m0005i,mod6+0x4140,m0005i_mod6_350C,attack_available,0,"
+            "unset,%s,unchanged,unset,1\n", hash);
+    fclose(csv);
+    ASSERT(g_stub_count == 0, "playable loop recorded a bootstrap stub");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PE-CH2 — Carnegie prefix camera leaves and static route sequence.
+ * 0x7B/0x75 occur in m0003i; 0x82(1) occurs in m0372i/m0004i.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define CH2_D_800B1624 0x800B1624u
+#define CH2_D_800BCF88 0x800BCF88u
+#define CH2_D_800BCFA4 0x800BCFA4u
+#define CH2_D_800BCFA8 0x800BCFA8u
+#define CH2_D_800BCFFD 0x800BCFFDu
+#define CH2_CONTAINER  0x80110000u
+#define CH2_SLOT_OFF   0x00000100u
+#define CH2_VIEW_OFF   0x00000200u
+#define CH2_MATRIX     0x80112000u
+#define CH2_H_DEST     0x80112100u
+
+static pe_addr_t CH2_Slot(unsigned int index)
+{
+    return CH2_CONTAINER + CH2_SLOT_OFF + index * 16u;
+}
+
+static pe_addr_t CH2_View(unsigned int index)
+{
+    return CH2_CONTAINER + CH2_VIEW_OFF + index * 52u;
+}
+
+static void CH2_PlantCamera(void)
+{
+    unsigned int i;
+    pe_addr_t view = CH2_View(1u);
+
+    PE_StoreU32(CH2_D_800B1624, CH2_CONTAINER);
+    PE_StoreU32(CH2_CONTAINER + 0x10u, CH2_SLOT_OFF);
+    PE_StoreU32(CH2_CONTAINER + 0x1Cu, CH2_VIEW_OFF);
+    PE_StoreU32(CH2_D_800BCFA4, CH2_MATRIX);
+    PE_StoreU32(CH2_D_800BCFA8, CH2_H_DEST);
+    PE_StoreU16(view, 0x0345u);
+    for (i = 0; i < 9u; i++)
+        PE_StoreU16(view + 2u + i * 2u, 0x1100u + i);
+    PE_StoreU32(view + 0x14u, 0x11223344u);
+    PE_StoreU32(view + 0x18u, 0x55667788u);
+    PE_StoreU32(view + 0x1Cu, 0x99AABBCCu);
+}
+
+static void test_CH2_65954_flag_paths(void) {
+    TEST("CH2_65954_flag_paths");
+    ResetTestState();
+    CH2_PlantCamera();
+
+    PE_StoreU32(CH2_Slot(0u), 0xA1B2C3D4u);
+    ASSERT(func_80065954(0u, 1u) == 0, "65954 enabled return");
+    ASSERT(PE_LoadU32(CH2_Slot(0u)) == 0xA1B2C3D6u,
+           "65954 OR 6 byte width");
+    PE_StoreU32(CH2_Slot(1u), 0x556677FFu);
+    ASSERT(func_80065954(1u, 0u) == 0, "65954 disabled return");
+    ASSERT(PE_LoadU32(CH2_Slot(1u)) == 0x556677F9u,
+           "65954 AND F9 byte width");
+    PASS();
+}
+
+static void test_CH2_659C8_shift_stride(void) {
+    TEST("CH2_659C8_shift_stride");
+    ResetTestState();
+    CH2_PlantCamera();
+
+    PE_StoreU32(CH2_Slot(1u) + 8u, 0xAABBCCDDu);
+    ASSERT(func_800659C8(1u, 0x12345678u) == 0, "659C8 return");
+    ASSERT(PE_LoadU32(CH2_Slot(1u) + 8u) == 0xAABB3456u,
+           "659C8 value>>8 halfword");
+    ASSERT(PE_LoadU32(CH2_Slot(0u) + 8u) == 0u, "659C8 index stride");
+    PASS();
+}
+
+static void test_CH2_66800_view_apply(void) {
+    unsigned int i;
+
+    TEST("CH2_66800_view_apply");
+    ResetTestState();
+    CH2_PlantCamera();
+    PE_StoreU32(CH2_D_800BCF88, 0x12340020u);
+    PE_StoreU16(CH2_MATRIX + 0x12u, 0xCDEFu);
+    PE_StoreU32(CH2_MATRIX + 0x20u, 0xDEADBEEFu);
+    PE_StoreU32(CH2_D_800BCFFD - 1u, 0xAABBCCDDu);
+
+    ASSERT(func_80066800(1u) == 0, "66800 return");
+    ASSERT(PE_LoadU32(CH2_H_DEST) == 0x0345u, "66800 H publication");
+    ASSERT(g_pe_gte.h == 0x0345, "66800 SetGeomScreen");
+    for (i = 0; i < 9u; i++)
+        ASSERT(PE_LoadU16(CH2_MATRIX + i * 2u) == 0x1100u + i,
+               "66800 rotation copy");
+    ASSERT(PE_LoadU32(CH2_MATRIX + 0x14u) == 0x11223344u, "66800 TRX");
+    ASSERT(PE_LoadU32(CH2_MATRIX + 0x18u) == 0x55667788u, "66800 TRY");
+    ASSERT(PE_LoadU32(CH2_MATRIX + 0x1Cu) == 0x99AABBCCu, "66800 TRZ");
+    ASSERT(PE_LoadU32(CH2_D_800BCFFD - 1u) == 0xAABB01DDu,
+           "66800 view-index byte width");
+    ASSERT(PE_LoadU32(CH2_D_800BCF88) == 0x123400A0u, "66800 flag OR 0x80");
+    ASSERT(PE_LoadU16(CH2_MATRIX + 0x12u) == 0xCDEFu,
+           "66800 MATRIX padding guard");
+    ASSERT(PE_LoadU32(CH2_MATRIX + 0x20u) == 0xDEADBEEFu,
+           "66800 MATRIX upper guard");
+    PASS();
+}
+
+static void test_CH2_prefix_camera_trace(void) {
+    FILE *csv;
+
+    TEST("CH2_prefix_camera_trace");
+    ResetTestState();
+    CH2_PlantCamera();
+    PE_StoreU8(CH2_Slot(0u), 0xA1u);
+    PE_StoreU8(CH2_Slot(1u), 0xF8u);
+
+    csv = BTL1_OpenBuild("ch2_prefix_camera_trace.csv", "w");
+    ASSERT(csv != NULL, "open CH2 camera trace");
+    fprintf(csv, "field_scene,field_script_pc,opcode,arg0,arg1,"
+                 "slot0_flags,slot1_flags,slot0_param,slot1_param,"
+                 "view_index,view_h,matrix_r11,matrix_trx\n");
+
+    func_800659C8(0u, 0x4000u);
+    fprintf(csv, "m0003i,mod0+0x4D0,0x7B,0,16384,%u,%u,%u,%u,unset,unset,unset,unset\n",
+            PE_LoadU8(CH2_Slot(0u)), PE_LoadU8(CH2_Slot(1u)),
+            PE_LoadU16(CH2_Slot(0u) + 8u), PE_LoadU16(CH2_Slot(1u) + 8u));
+    func_800659C8(1u, 0x4000u);
+    fprintf(csv, "m0003i,mod0+0x4E0,0x7B,1,16384,%u,%u,%u,%u,unset,unset,unset,unset\n",
+            PE_LoadU8(CH2_Slot(0u)), PE_LoadU8(CH2_Slot(1u)),
+            PE_LoadU16(CH2_Slot(0u) + 8u), PE_LoadU16(CH2_Slot(1u) + 8u));
+    func_80065954(0u, 1u);
+    fprintf(csv, "m0003i,mod0+0x4F0,0x75,0,1,%u,%u,%u,%u,unset,unset,unset,unset\n",
+            PE_LoadU8(CH2_Slot(0u)), PE_LoadU8(CH2_Slot(1u)),
+            PE_LoadU16(CH2_Slot(0u) + 8u), PE_LoadU16(CH2_Slot(1u) + 8u));
+    func_80065954(1u, 1u);
+    fprintf(csv, "m0003i,mod0+0x500,0x75,1,1,%u,%u,%u,%u,unset,unset,unset,unset\n",
+            PE_LoadU8(CH2_Slot(0u)), PE_LoadU8(CH2_Slot(1u)),
+            PE_LoadU16(CH2_Slot(0u) + 8u), PE_LoadU16(CH2_Slot(1u) + 8u));
+
+    func_80066800(1u);
+    fprintf(csv, "m0372i,mod3+0xAE8,0x82,1,unset,%u,%u,%u,%u,%u,%u,%u,%u\n",
+            PE_LoadU8(CH2_Slot(0u)), PE_LoadU8(CH2_Slot(1u)),
+            PE_LoadU16(CH2_Slot(0u) + 8u), PE_LoadU16(CH2_Slot(1u) + 8u),
+            PE_LoadU8(CH2_D_800BCFFD), PE_LoadU32(CH2_H_DEST),
+            PE_LoadU16(CH2_MATRIX), PE_LoadU32(CH2_MATRIX + 0x14u));
+    func_80066800(1u);
+    fprintf(csv, "m0004i,mod0+0xF4,0x82,1,unset,%u,%u,%u,%u,%u,%u,%u,%u\n",
+            PE_LoadU8(CH2_Slot(0u)), PE_LoadU8(CH2_Slot(1u)),
+            PE_LoadU16(CH2_Slot(0u) + 8u), PE_LoadU16(CH2_Slot(1u) + 8u),
+            PE_LoadU8(CH2_D_800BCFFD), PE_LoadU32(CH2_H_DEST),
+            PE_LoadU16(CH2_MATRIX), PE_LoadU32(CH2_MATRIX + 0x14u));
+
+    PE_StoreU32(BTL1_DEST_ARGS, BTL1_DEST_VALUE);
+    PE_StoreU32(BTL1_DEST_VALUE, BTL1_DEST_TOKEN);
+    D_8009D1A0 = 0u;
+    D_8009D280 = 0u;
+    ASSERT(func_80017BB4_btl1_cut(BTL1_DEST_ARGS) == 0, "CH2 0x31 return");
+    fprintf(csv, "m0005i,mod0+0x6BC,0x31,0xA80002C8,unset,%u,%u,%u,%u,%u,%u,%u,%u\n",
+            PE_LoadU8(CH2_Slot(0u)), PE_LoadU8(CH2_Slot(1u)),
+            PE_LoadU16(CH2_Slot(0u) + 8u), PE_LoadU16(CH2_Slot(1u) + 8u),
+            PE_LoadU8(CH2_D_800BCFFD), PE_LoadU32(CH2_H_DEST),
+            PE_LoadU16(CH2_MATRIX), PE_LoadU32(CH2_MATRIX + 0x14u));
+    fclose(csv);
+
+    ASSERT(D_8009D280 == BTL1_DEST_TOKEN, "CH2 destination token");
+    ASSERT(g_stub_count == 0, "CH2 path recorded a bootstrap stub");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
  * Phase 6E-B15 — func_80038D1C byte test-and-clear status leaf
  *
  * Retail contract (see game/boot/func_80038D1C_port.c header; ALSO a
@@ -4898,6 +13528,7 @@ static void test_6E9A0_dispatch_arg1(void) {
     g_bootstrap_disc = 1;
     HostFB_Init();
     D_8009D280 = 0;
+    func_8006A8D4();
 
     func_8006E9A0(1);
 
@@ -4912,6 +13543,7 @@ static void test_6E9A0_dispatch_arg3(void) {
     g_bootstrap_disc = 1;
     HostFB_Init();
     D_8009D280 = 0;
+    func_8006A8D4();
 
     func_8006E9A0(3);
 
@@ -4969,7 +13601,9 @@ static void test_first_clear_path_reached(void) {
     ResetTestState();
     g_bootstrap_disc = 1;
 
-    /* func_8006E9A0 is the direct-clear function. Verify it runs. */
+    /* func_8006E9A0 is the direct-clear function. Verify it runs.
+     * 6A8D4 must publish B0E38 before 66B60+68E24 touch the OT. */
+    func_8006A8D4();
     func_8006E9A0(0);
     /* Check that the framebuffer was modified (func_8006E9A0 clears it) */
     const uint8_t *p = HostFB_GetPixels();
@@ -11949,6 +20583,7 @@ static void test_64964_ramreset_repeat_and_guards(void) {
 
 #define B50_BASE        0x80100000u
 #define B50_METADATA    0x80100100u
+#define B50_F0_DEST     0x80120000u
 #define B50_FIRST_ENTRY 0x80100200u
 #define B50_DIR_ENTRY   0x80100140u
 #define B50_ARCHIVE     0x80100300u
@@ -12035,6 +20670,8 @@ static void B50_SeedPrefixState(uint32_t count)
     PE_StoreU32(0x800B0CD8u + 0x160u, B50_BASE);
     PE_StoreU32(0x800B0CD8u + 0x174u, 0x80110000u);
     PE_StoreU32(0x800B0CD8u + 0x180u, 0x80118000u);
+    /* B54K-A: the D_800930F0 issue reads into the word at +0x14C. */
+    PE_StoreU32(0x800B0CD8u + 0x14Cu, B50_F0_DEST);
 
     /* Retail: metadata = base + lw(base+4), then header = metadata+0x28.
      * A zero decoy at base+0x28 rejects the provisional direct-load bug. */
@@ -12147,8 +20784,9 @@ static void test_6AD40_guard_bit0(void)
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 0);
     ASSERT(func_8006AD40() == 0, "zero-count prefix return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "zero-count path must only add the live 718D0 image walk");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "zero-count path must add the live 718D0 image walk plus the "
+           "B54K-A D_800930F0 718D0 walk");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "zero-count suffix cut must remain an honest host stop");
     FxFree(&fx);
@@ -12169,11 +20807,13 @@ static void test_6AD40_prefix_boundary_args(void)
 
     ASSERT(func_8006AD40() == 0, "prefix boundary must return retail zero");
     /* B52 advances through func_8007506C to jtb[2]=func_80076C34.  The
-     * zero fixture still has image h=0x100 and no CLUT call. */
-    ASSERT(g_bootstrap_arg4_call_count == 2,
-           "prefix must record the texture dispatch plus the 718D0 image");
+     * zero fixture still has image h=0x100 and no CLUT call; B54K-A adds
+     * the D_800930F0 718D0 image walk over the zero TIM at +0x180. */
+    ASSERT(g_bootstrap_arg4_call_count == 3,
+           "prefix must record the texture dispatch plus two 718D0 images");
     B52_AssertGpuCall(0, 0u, B50_BASE, 0x01000000u);
     B52_AssertGpuCall(1, 0u, 0x80110000u + 20u, 0u);
+    B52_AssertGpuCall(2, 0u, 0x80118000u + 20u, 0u);
     ASSERT(CountOrderLog("func_80076C34") == 0 &&
            CountOrderLog("func_80073E10") == 0 &&
            CountOrderLog("func_80076664") == 0,
@@ -12181,25 +20821,25 @@ static void test_6AD40_prefix_boundary_args(void)
     ASSERT(CountOrderLog("func_8006E1C0") == 0,
            "translated callee must not record a bootstrap boundary");
     ASSERT(CountOrderLog("func_800718D0") == 0 &&
-           CountOrderLog("func_80030894") == 0,
-           "prefix must not continue to later dependencies");
+           CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "prefix must now enter func_80030894 up to the L2L3 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "prefix must request an honest unresolved-boundary host stop");
     /* Channel 2's poll clears 0x01004000; B54F's D_800930EE issue sets
-     * it again; B54G's second live poll clears it. Host first sample is
-     * collapse, not an assigned 0. */
+     * it again; B54G's second live poll clears it; B54K-A's D_800930F0
+     * issue re-arms it and no poll before the post30894 cut clears it. */
     ASSERT(PE_LoadU32(0x800B0CD8u) ==
-           (*(uint32_t *)(snapshot + (0x800B0CD8u - PE_RAM_BASE)) &
-            ~0x01004000u),
+           (*(uint32_t *)(snapshot + (0x800B0CD8u - PE_RAM_BASE)) |
+            0x01004000u),
            "prefix issue/poll state differs from retail");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "B54G must consume the second poll through live func_8006E7E8");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must leave the busy bits armed");
     ASSERT(PE_LoadU32(0x8009B6ACu) == 0x200u &&
-           PE_LoadU32(0x8009B6B0u) == 0x80118000u &&
+           PE_LoadU32(0x8009B6B0u) == B50_F0_DEST &&
            PE_LoadU32(0x8009B6B4u) == 0u &&
            PE_LoadU32(0x8009B6C4u) == 1u &&
            PE_LoadU32(0x8009B6D4u) == 1u,
-           "prefix D_800930EE provider state differs from retail adapter");
+           "prefix D_800930F0 provider state differs from retail adapter");
     for (uint32_t a = PE_RAM_BASE; a < PE_RAM_END; a++) {
         if ((a >= 0x800B0CD8u && a < 0x800B0CDCu) ||
             (a >= 0x8009B6ACu && a < 0x8009B6B8u) ||
@@ -12211,7 +20851,9 @@ static void test_6AD40_prefix_boundary_args(void)
             (a >= 0x80091650u && a < 0x80091654u) ||
             (a >= 0x80091660u && a < 0x80091664u) ||
             (a >= 0x80091670u && a < 0x80091674u) ||
-            (a >= 0x80091680u && a < 0x80091684u))
+            (a >= 0x80091680u && a < 0x80091684u) ||
+            (a >= 0x800BE9F0u && a < 0x800BE9F0u + 0x28u) ||
+            (a >= 0x800B01C0u && a < 0x800B01C0u + 0x568u))
             continue;
         if (PE_LoadU8(a) != snapshot[a - PE_RAM_BASE]) {
             free(snapshot);
@@ -12272,10 +20914,12 @@ static void test_6AD40_strict_stops_at_frontier(void)
     ASSERT(B53E_SeedBusyDma(), "busy DMA seed failed");
     Stub_ResetOrderLog();
     func_8006AD40();
-    ASSERT(g_stub_order_count == 1,
-           "B50 prefix path must reach exactly one BOOTSTRAP_RET provider");
-    ASSERT(strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "the B50 prefix cut is no longer the named strict frontier");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0 &&
+           strcmp(g_stub_order_log[1], "func_8006AD40_post30894_cut") == 0,
+           "B50 prefix path must reach the two named B54K-A providers");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "the L2L3 cut is no longer the first strict frontier");
     /* The busy transfer must still be in flight and the queued request
      * unconsumed: reaching the frontier must not have completed DMA. */
     ASSERT(PE_GPU_DMA2Pending(), "prefix path completed the pending DMA");
@@ -12328,13 +20972,13 @@ static void test_6AD40_prefix_repeat_dirty(void)
     HostFB_VSync(0);
     PE_Port_RunControlReset();
     ASSERT(func_8006AD40() == 0, "repeated dirty prefix return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 4,
-           "repeated prefix must record two texture plus two 718D0 snapshots");
+    ASSERT(g_bootstrap_arg4_call_count == 6,
+           "repeated prefix must record two texture plus four 718D0 walks");
     /* B51: the dirty entry+4 = 0xDEADBEEF flows through the retail 24-bit
      * mask into the LoadImage data address; nothing dereferences it.
      * Calls 0 and 2 are the texture dispatches; 1 and 3 are 718D0. */
     for (int i = 0; i < 2; i++) {
-        int tex = i * 2;
+        int tex = i * 3;
         ASSERT(strcmp(g_bootstrap_arg4_calls[tex].symbol,
                       "func_80076C34") == 0,
                "dirty/repeated snapshot identity changed");
@@ -12369,8 +21013,8 @@ static void test_B54B_6AD40_canonical_counted_loop(void)
     Stub_ResetOrderLog();
 
     ASSERT(func_8006AD40() == 0, "B54B canonical return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 14,
-           "count 13 must issue 13 entries plus the live 718D0 image");
+    ASSERT(g_bootstrap_arg4_call_count == 15,
+           "count 13 must issue 13 entries plus two live 718D0 walks");
     for (i = 0; i < 13u; i++) {
         ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
                B50_BASE + 0x1000u + i * 4u,
@@ -12379,11 +21023,12 @@ static void test_B54B_6AD40_canonical_counted_loop(void)
     ASSERT(g_bootstrap_arg4_calls[0].arg3 !=
            g_bootstrap_arg4_calls[1].arg3,
            "B54B replayed entry 0");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0 &&
+           strcmp(g_stub_order_log[1], "func_8006AD40_post30894_cut") == 0,
            "retained B54B path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_80030894") == 0,
-           "B54B entered func_80030894");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "B54B must now enter func_80030894 up to the L2L3 cut");
     ASSERT(PE_LoadU16(0x80091650u) == 0x0020u &&
            PE_LoadU16(0x80091652u) == 0u,
            "B54B path must pack record 0 from unseeded sources");
@@ -12404,10 +21049,10 @@ static void test_B54B_6AD40_count_edges(void)
     B50_StartFixture(&fx, 0u);
     Stub_ResetOrderLog();
     ASSERT(func_8006AD40() == 0, "count-zero return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "count zero must only add the live 718D0 image walk");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "count zero must add both live 718D0 walks");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
            "count zero did not reach the current frontier");
     FxFree(&fx);
 
@@ -12417,8 +21062,8 @@ static void test_B54B_6AD40_count_edges(void)
     B50_StartFixture(&fx, 1u);
     B54B_SeedLoopEntries(1u);
     ASSERT(func_8006AD40() == 0, "count-one return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 2,
-           "count one must keep one texture plus the live 718D0 image");
+    ASSERT(g_bootstrap_arg4_call_count == 3,
+           "count one must keep one texture plus both 718D0 walks");
     FxFree(&fx);
 
     /* count=2 catches increment-before-compare and the branch delay slot. */
@@ -12427,7 +21072,7 @@ static void test_B54B_6AD40_count_edges(void)
     B50_StartFixture(&fx, 2u);
     B54B_SeedLoopEntries(2u);
     ASSERT(func_8006AD40() == 0, "count-two return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 3,
+    ASSERT(g_bootstrap_arg4_call_count == 4,
            "count two has an off-by-one helper count");
     ASSERT(g_bootstrap_arg4_calls[0].arg3 == B50_BASE + 0x1000u &&
            g_bootstrap_arg4_calls[1].arg3 == B50_BASE + 0x1004u,
@@ -12467,8 +21112,8 @@ static void test_B54D_6AD40_canonical_material_prefix(void)
            PE_LoadU16(0x80091660u) == 0x0026u &&
            PE_LoadU16(0x80091662u) == 0x3F15u,
            "retained B54D path must now pack records 0 and 1");
-    ASSERT(g_bootstrap_arg4_call_count == 15,
-           "B54D must retain 13 texture entries, one material walk, and 718D0");
+    ASSERT(g_bootstrap_arg4_call_count == 16,
+           "B54D must retain 13 texture entries, two walks, and 718D0");
     for (i = 0; i < 13u; i++) {
         ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
                B54D_BASE + 0x1000u + i * 4u,
@@ -12477,13 +21122,14 @@ static void test_B54D_6AD40_canonical_material_prefix(void)
     B52_AssertGpuCall(13, 0x000001C0u, 0x801229B4u, 0x00FE0040u);
     ASSERT(B54D_LOOKUP + (0x00007F0Cu & ~3u) == B54D_TERMINATOR,
            "B54D canonical terminator address changed");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0 &&
+           strcmp(g_stub_order_log[1], "func_8006AD40_post30894_cut") == 0,
            "retained B54D path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_80030894") == 0,
-           "B54D entered a forbidden later dependency");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "retained B54D path must now consume the second poll live");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "B54D must now enter func_80030894 up to the L2L3 cut");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54D frontier stop reason changed");
     FxFree(&fx);
@@ -12502,18 +21148,18 @@ static void test_B54D_6AD40_no_walk_still_stops_before_poll(void)
     Stub_ResetOrderLog();
 
     ASSERT(func_8006AD40() == 0, "B54D zero-record return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "B54D zero terminator must only add the live 718D0 image walk");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "B54D zero terminator must add both live 718D0 walks");
     ASSERT(PE_LoadU16(0x80091670u) == 0x0034u &&
            PE_LoadU16(0x80091672u) == 0x7793u &&
            PE_LoadU16(0x80091680u) == 0x0034u &&
            PE_LoadU16(0x80091682u) == 0x7753u,
            "B54D packing depended on the archive walk");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
            "B54D zero-record path did not reach the current frontier");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "B54D zero-record path must now consume the second poll live");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54D added a DMA completion checkpoint");
     FxFree(&fx);
@@ -12628,7 +21274,8 @@ static void test_B54C_718D0_atlas_rects_and_record0_pack(void)
            "record 1 pack (a1=0x10) changed");
 
     /* B54G reaches 718D0 + record 0/1 packs and the second live poll.
-     * It still must not invent poll=0 or enter 30894. */
+     * B54K-A then issues D_800930F0 and enters func_80030894 up to
+     * the named L2L3 cut. */
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 0u);
     B54D_SeedCanonicalMaterial(0u);
@@ -12643,13 +21290,13 @@ static void test_B54C_718D0_atlas_rects_and_record0_pack(void)
     ASSERT(PE_LoadU16(0x80091660u) == 0x0026u &&
            PE_LoadU16(0x80091662u) == 0x3F15u,
            "live 6AD40 prefix must now pack record 1");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "6AD40 cut moved off the named prefix_cut provider");
-    ASSERT(CountOrderLog("func_80030894") == 0,
-           "6AD40 entered func_80030894");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "live prefix must consume the second poll through func_8006E7E8");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
+           "6AD40 cut moved off the named L2L3 provider");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "6AD40 must now enter func_80030894 up to the L2L3 cut");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54C added a third DMA checkpoint on the live prefix");
     FxFree(&fx);
@@ -12685,24 +21332,24 @@ static void test_B54E_6AD40_canonical_poll_exit(void)
     ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
            PE_LoadU16(0x80091652u) == 0x3F14u,
            "retained B54E path must now pack record 0");
-    ASSERT(g_bootstrap_arg4_call_count == 15,
-           "B54E must retain 13 textures, one material walk, and 718D0");
+    ASSERT(g_bootstrap_arg4_call_count == 16,
+           "B54E must retain 13 textures, one material walk, and both 718D0s");
     for (i = 0; i < 13u; i++) {
         ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
                B54D_BASE + 0x1000u + i * 4u,
                "B54E changed the retained counted-loop order");
     }
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "retained B54E path must now consume the second poll live");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host pending-byte collapse remains after the D_800930EE issue");
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
-           "retained B54E path must now issue D_800930EE / dest+0x180");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "B54E did not stop at the named prefix_cut");
-    ASSERT(CountOrderLog("func_80030894") == 0,
-           "B54E entered func_80030894");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_F0_DEST,
+           "retained B54E path must now issue D_800930F0 / dest+0x14C");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
+           "B54E did not stop at the named L2L3 cut");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "B54E must now enter func_80030894");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54E frontier stop reason changed");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
@@ -12725,22 +21372,22 @@ static void test_B54E_6AD40_live_poll_not_assigned(void)
     Stub_ResetOrderLog();
 
     ASSERT(func_8006AD40() == 0, "B54E zero-record return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "B54E zero terminator must only add the live 718D0 image walk");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "zero-record path must consume the second poll live");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "B54E zero terminator must add both live 718D0 walks");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
            PE_LoadU16(0x80091652u) == 0x3F14u &&
            PE_LoadU16(0x80091660u) == 0x0026u &&
            PE_LoadU16(0x80091662u) == 0x3F15u,
            "zero-record path must now pack records 0/1");
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
-           "zero-record path must now issue D_800930EE");
-    ASSERT(CountOrderLog("func_80030894") == 0,
-           "zero-record path entered 30894");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "zero-record path left the named prefix_cut");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_F0_DEST,
+           "zero-record path must now issue D_800930F0 / dest+0x14C");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "zero-record path must enter 30894 up to the L2L3 cut");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
+           "zero-record path left the named L2L3 cut");
     FxFree(&fx);
     PASS();
 }
@@ -12787,8 +21434,8 @@ static void test_B54F_6AD40_live_atlas_and_record_packs(void)
     ASSERT(PE_LoadU16(0x80091660u) == 0x0026u &&
            PE_LoadU16(0x80091662u) == 0x3F15u,
            "live path record 1 is not 0x0026/0x3F15");
-    ASSERT(g_bootstrap_arg4_call_count == 16,
-           "B54F must keep 13 textures, one material, and two atlas LoadImages");
+    ASSERT(g_bootstrap_arg4_call_count == 17,
+           "B54F must keep 13 textures, one material, and three walks");
     for (i = 0; i < 13u; i++) {
         ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
                B54D_BASE + 0x1000u + i * 4u,
@@ -12797,17 +21444,21 @@ static void test_B54F_6AD40_live_atlas_and_record_packs(void)
     B52_AssertGpuCall(13, 0x000001C0u, 0x801229B4u, 0x00FE0040u);
     B52_AssertGpuCall(14, 0x00000140u, image + 12u, 0x01000040u);
     B52_AssertGpuCall(15, 0x00FC0140u, B54C_TIM + 20u, 0x00010010u);
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
-           "B54F did not issue D_800930EE to dest+0x180");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "retained B54F path must now consume the second poll live");
+    /* B54K-A: the F0 walk over the zero TIM left at B54E_NEXT_DEST
+     * (the EE read range is empty in this fixture) adds one image-only
+     * LoadImage with a zero RECT. */
+    B52_AssertGpuCall(16, 0u, B54E_NEXT_DEST + 20u, 0u);
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_F0_DEST,
+           "B54F must now issue D_800930F0 to dest+0x14C");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host collapse after D_800930EE must stay recorded, not assigned");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "B54F did not stop at the named B04C cut");
-    ASSERT(CountOrderLog("func_80030894") == 0,
-           "B54F entered func_80030894");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
+           "B54F did not stop at the named L2L3 cut");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "B54F must now enter func_80030894");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54F added a DMA completion checkpoint");
     FxFree(&fx);
@@ -12831,15 +21482,17 @@ static void test_B54F_6AD40_second_poll_not_consumed(void)
     ASSERT(PE_LoadU16(0x80091650u) == 0x0025u &&
            PE_LoadU16(0x80091652u) == 0x3F14u,
            "zero-record live path must pack record 0");
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
-           "zero-record live path must issue D_800930EE");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "zero-record path must consume the second poll live");
-    ASSERT(CountOrderLog("func_80030894") == 0,
-           "zero-record path entered 30894");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "zero-record path left the named prefix_cut");
+    /* The EE issue ran first (its dest write is superseded by the F0
+     * issue); reaching the F0 dest proves the whole EE block completed. */
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_F0_DEST,
+           "zero-record live path must issue D_800930F0 / dest+0x14C");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must re-arm the busy bits");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "zero-record path must enter 30894 up to the L2L3 cut");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
+           "zero-record path left the named L2L3 cut");
     FxFree(&fx);
     PASS();
 }
@@ -12888,8 +21541,8 @@ static void test_B54G_6AD40_canonical_second_poll_exit(void)
            PE_LoadU16(0x80091680u) == 0x0034u &&
            PE_LoadU16(0x80091682u) == 0x7753u,
            "B54G disturbed retained record 2/3 packing");
-    ASSERT(g_bootstrap_arg4_call_count == 16,
-           "B54G must keep 13 textures, one material, and two atlas LoadImages");
+    ASSERT(g_bootstrap_arg4_call_count == 17,
+           "B54G must keep 13 textures, one material, and three walks");
     for (i = 0; i < 13u; i++) {
         ASSERT(g_bootstrap_arg4_calls[i].arg3 ==
                B54D_BASE + 0x1000u + i * 4u,
@@ -12898,17 +21551,19 @@ static void test_B54G_6AD40_canonical_second_poll_exit(void)
     B52_AssertGpuCall(13, 0x000001C0u, 0x801229B4u, 0x00FE0040u);
     B52_AssertGpuCall(14, 0x00000140u, image + 12u, 0x01000040u);
     B52_AssertGpuCall(15, 0x00FC0140u, B54C_TIM + 20u, 0x00010010u);
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
-           "B54G must not issue D_800930F0 / dest+0x14C");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "B54G must clear busy bits through live func_8006E7E8");
+    /* B54K-A: F0 walk over the zero TIM at B54E_NEXT_DEST. */
+    B52_AssertGpuCall(16, 0u, B54E_NEXT_DEST + 20u, 0u);
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_F0_DEST,
+           "B54G must now issue D_800930F0 / dest+0x14C");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host collapse remains recorded, not assigned as retail 0");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "B54G did not stop at the named B060 cut");
-    ASSERT(CountOrderLog("func_80030894") == 0,
-           "B54G entered func_80030894");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
+           "B54G did not stop at the named L2L3 cut");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "B54G must now enter func_80030894");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54G frontier stop reason changed");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
@@ -12931,19 +21586,174 @@ static void test_B54G_6AD40_live_poll_not_assigned(void)
     Stub_ResetOrderLog();
 
     ASSERT(func_8006AD40() == 0, "B54G zero-record return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "B54G zero terminator must only add the live 718D0 image walk");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
-           "zero-record path must consume the second poll live");
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B54E_NEXT_DEST,
-           "zero-record path must not issue D_800930F0");
-    ASSERT(CountOrderLog("func_80030894") == 0,
-           "zero-record path entered 30894");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_prefix_cut") == 0,
-           "zero-record path left the named prefix_cut");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "B54G zero terminator must add both live 718D0 walks");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
+           "B54K-A D_800930F0 issue must re-arm the busy bits");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_F0_DEST,
+           "zero-record path must now issue D_800930F0 / dest+0x14C");
+    ASSERT(CountOrderLog("func_80030894_L2L3_cut") == 1,
+           "zero-record path must enter 30894 up to the L2L3 cut");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
+           "zero-record path left the named L2L3 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "zero-record path changed the frontier stop reason");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B54K-A — func_80030894 prologue + bank-0 L2/L3 (2 tests)
+ *
+ * Retail window 0x80030894..0x80030AC4 (140 words, file 0x21094; window
+ * SHA-256 a4dbd2cf…1ed6e2 covers the full 788-word body).  The prologue
+ * vectors GetTPage(0,1,0x100,0x1E0)=0x34 and GetClut(0x130,0x1F8)=0x7E13,
+ * the bank-0 record at 0x800BE9F0 is initialized from the
+ * func_8005DADC(139) palette record, and the L2(j<10) x L3(k<4) loop
+ * builds the 40-packet sprite array at 0x800B01C0 through the native
+ * wrap_sprt twin (func_800370DC) plus the per-packet clut halfword at
+ * packet+0x16.  All constants below derive from the literal retail words
+ * cross-checked by tools/b54ka_30894_l2l3_oracle.py.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define B54KA_PALETTE 0x8012F000u   /* chosen func_8005DADC(139) target */
+
+static void test_B54KA_30894_prologue_record_l2l3(void)
+{
+    uint32_t j, k;
+    TEST("B54KA_30894_prologue_record_l2l3");
+    ResetTestState();
+    /* func_8005DADC(139) == *(u32*)0x800A8030 + 0x800A8028 + 139*8. */
+    PE_StoreU32(0x800A8030u,
+                B54KA_PALETTE - 0x800A8028u - (139u * 8u));
+    PE_StoreU8(B54KA_PALETTE + 0u, 0x11u);
+    PE_StoreU8(B54KA_PALETTE + 1u, 0x22u);
+    PE_StoreU16(B54KA_PALETTE + 2u, 0xBEEFu);
+    PE_StoreU8(B54KA_PALETTE + 4u, 3u);
+    PE_StoreU8(B54KA_PALETTE + 5u, 7u);
+    Stub_ResetOrderLog();
+
+    func_80030894();
+
+    /* Bank-0 record init at 0x800BE9F0. */
+    ASSERT(PE_LoadU8(0x800BE9F0u + 0x03u) == 9u,
+           "SetPolyFT4 length byte changed");
+    ASSERT(PE_LoadU8(0x800BE9F0u + 0x07u) == 0x2Eu,
+           "code byte is not 0x2C|2 (semi-trans on)");
+    ASSERT(PE_LoadU8(0x800BE9F0u + 0x0Cu) == 0x11u &&
+           PE_LoadU8(0x800BE9F0u + 0x0Du) == 0x22u,
+           "u1/v1 not copied from the palette record");
+    ASSERT(PE_LoadU8(0x800BE9F0u + 0x14u) == 0x14u &&
+           PE_LoadU8(0x800BE9F0u + 0x15u) == 0x22u,
+           "u2/v2 palette arithmetic changed");
+    ASSERT(PE_LoadU8(0x800BE9F0u + 0x1Cu) == 0x11u &&
+           PE_LoadU8(0x800BE9F0u + 0x1Du) == 0x29u,
+           "u3/v3 palette arithmetic changed");
+    ASSERT(PE_LoadU8(0x800BE9F0u + 0x24u) == 0x14u &&
+           PE_LoadU8(0x800BE9F0u + 0x25u) == 0x29u,
+           "u4/v4 palette arithmetic changed");
+    ASSERT(PE_LoadU16(0x800BE9F0u + 0x16u) == 7u,
+           "tpage halfword is not GetTPage(0,0,0x1C0,0) = 7");
+    ASSERT(PE_LoadU16(0x800BE9F0u + 0x0Eu) == 0xBEEFu,
+           "clut halfword not copied from palette +2");
+    ASSERT(PE_LoadU16(0x800BE9F0u + 0x08u) == 0u &&
+           PE_LoadU16(0x800BE9F0u + 0x0Au) == 0u &&
+           PE_LoadU16(0x800BE9F0u + 0x10u) == 0u &&
+           PE_LoadU16(0x800BE9F0u + 0x12u) == 0u &&
+           PE_LoadU16(0x800BE9F0u + 0x18u) == 0u &&
+           PE_LoadU16(0x800BE9F0u + 0x1Au) == 0u &&
+           PE_LoadU16(0x800BE9F0u + 0x20u) == 0u &&
+           PE_LoadU16(0x800BE9F0u + 0x22u) == 0u,
+           "xy halfword zeroing changed");
+    ASSERT(PE_LoadU8(0x800BE9F0u + 0x04u) == 0u &&
+           PE_LoadU8(0x800BE9F0u + 0x05u) == 0u &&
+           PE_LoadU8(0x800BE9F0u + 0x06u) == 0u,
+           "u0/v0/clut-low zeroing changed");
+    ASSERT(PE_LoadU8(0x800BE9F0u + 0x27u) == 0u,
+           "bank-0 record wrote past +0x27");
+
+    /* Sprite array: exactly 40 packets, j*140 + k*28 stride. */
+    for (j = 0u; j < 10u; j++) {
+        for (k = 0u; k < 4u; k++) {
+            pe_addr_t p = 0x800B01C0u + j * 140u + k * 28u;
+
+            ASSERT(PE_LoadU8(p + 3u) == 6u,
+                   "wrap_sprt append length is not 6");
+            ASSERT(PE_LoadU32(p + 4u) == 0xE1000234u,
+                   "draw-mode word is not 0xE1000200|0x34");
+            ASSERT(PE_LoadU32(p + 8u) == 0u,
+                   "append did not zero the tail tag word");
+            ASSERT(PE_LoadU8(p + 15u) == 0x64u,
+                   "setSprt code byte changed");
+            ASSERT(PE_LoadU16(p + 0x16u) == 0x7E13u,
+                   "per-packet clut halfword is not 0x7E13");
+        }
+    }
+    /* Extent: nothing at the next bank slot (i=1 record) or beyond the
+     * last packet (packet (9,3) ends at 0x800B01C0+0x567). */
+    ASSERT(PE_LoadU8(0x800BE9F0u + 40u) == 0u,
+           "bank-1 record touched by the bank-0 window");
+    ASSERT(PE_LoadU16(0x800B01C0u + 0x568u) == 0u,
+           "sprite array extent exceeded packet (9,3)");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0,
+           "30894 did not stop at the named L2L3 cut");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "L2L3 cut stop reason changed");
+    PASS();
+}
+
+static void test_B54KA_6AD40_live_path_reaches_l2l3(void)
+{
+    DiscFixture fx;
+    pe_addr_t image;
+    TEST("B54KA_6AD40_live_path_reaches_l2l3");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 0u);
+    B54D_SeedCanonicalMaterial(13u);
+    PE_StoreU32(0x800B0CD8u + 0x174u, B54C_TIM);
+    PE_StoreU32(0x800B0CD8u + 0x180u, B54E_NEXT_DEST);
+    B54C_SeedTim(8u, 320, 0, 64, 256, 320, 252, 16, 1);
+    B54C_SeedFontRecords();
+    PE_StoreU32(0x800A8030u,
+                B54KA_PALETTE - 0x800A8028u - (139u * 8u));
+    PE_StoreU8(B54KA_PALETTE + 0u, 0xF0u);
+    PE_StoreU8(B54KA_PALETTE + 1u, 0x0Fu);
+    PE_StoreU16(B54KA_PALETTE + 2u, 0x1234u);
+    PE_StoreU8(B54KA_PALETTE + 4u, 0x30u);
+    PE_StoreU8(B54KA_PALETTE + 5u, 0x40u);
+    image = B54C_TIM + 8u + B54C_CLUT_BNUM;
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54KA canonical return wrong");
+    /* The F0 walk over the zero TIM at B54E_NEXT_DEST is image-only. */
+    ASSERT(g_bootstrap_arg4_call_count == 17,
+           "B54KA live call census changed");
+    B52_AssertGpuCall(16, 0u, B54E_NEXT_DEST + 20u, 0u);
+    /* The bank-0 record came from the SEEDED palette record. */
+    ASSERT(PE_LoadU8(0x800BE9F0u + 0x0Cu) == 0xF0u &&
+           PE_LoadU8(0x800BE9F0u + 0x0Du) == 0x0Fu &&
+           PE_LoadU8(0x800BE9F0u + 0x14u) == 0x20u &&
+           PE_LoadU8(0x800BE9F0u + 0x1Du) == 0x4Fu &&
+           PE_LoadU16(0x800BE9F0u + 0x0Eu) == 0x1234u &&
+           PE_LoadU16(0x800BE9F0u + 0x16u) == 7u,
+           "live bank-0 record did not use the seeded palette");
+    ASSERT(PE_LoadU16(0x800B01C0u + 0x16u) == 0x7E13u &&
+           PE_LoadU16(0x800B01C0u + 9u * 140u + 3u * 28u + 0x16u) ==
+               0x7E13u,
+           "live sprite array clut halfwords changed");
+    ASSERT(g_stub_order_count == 2 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L2L3_cut") == 0 &&
+           strcmp(g_stub_order_log[1],
+                  "func_8006AD40_post30894_cut") == 0,
+           "B54KA live provider order changed");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "B54KA frontier stop reason changed");
+    ASSERT(!PE_GPU_DMA2CompletionPending(),
+           "B54KA added a DMA completion checkpoint");
+    (void)image;
     FxFree(&fx);
     PASS();
 }
@@ -18166,6 +26976,286 @@ int main(void)
     test_6536C_strict_not_stub();
     test_38D1C_frontier_past_3E680();
 
+    /* PE-CH1 — func_800653B8 mailbox append */
+    test_653B8_raw_contract();
+    test_653B8_two_records();
+    test_653B8_after_boot_clear();
+    test_653B8_count_byte_width();
+    test_653B8_no_clamp_at_28();
+    test_653B8_write_footprint();
+
+    /* PE-CH1 — func_80017764 opcode 0x1C send */
+    test_17764_btl0_mailbox3();
+    test_17764_sender_is_lhu();
+    test_17764_extra_always_zero();
+    test_17764_two_sends();
+    test_17764_write_footprint();
+
+    /* PE-CH1 — func_80065400 mailbox drain */
+    test_65400_count_zero();
+    test_65400_btl0_mailbox3();
+    test_65400_mismatch_clears_count();
+    test_65400_two_records();
+    test_65400_serial_arm_stops();
+    test_65400_typeid_multi_actor();
+    test_65400_null_entry_continues();
+    test_65400_write_footprint();
+
+    /* PE-CH1 — func_80012700 task spawn */
+    test_12700_a1_zero_mailbox();
+    test_12700_serial_is_lhu();
+    test_12700_two_pops();
+    test_12700_a1_insert();
+    test_12700_write_footprint();
+
+    /* PE-CH1 — func_800177AC opcode 0x1F poll */
+    test_177AC_btl0_payload3();
+    test_177AC_no_ack();
+    test_177AC_word_copy();
+    test_177AC_two_polls();
+    test_177AC_write_footprint();
+
+    /* PE-CH1 — func_80019154 opcode 0x94 mode read */
+    test_19154_mode6_after_89();
+    test_19154_no_store_back();
+    test_19154_word_copy();
+    test_19154_two_polls();
+    test_19154_write_footprint();
+
+    /* PE-CH1 — func_8002F7D8 opcode 0x6F slot alloc */
+    test_2F7D8_claim_slot0();
+    test_2F7D8_claim_next();
+    test_2F7D8_table_full();
+    test_2F7D8_1A680_path();
+    test_2F7D8_write_footprint();
+
+    /* PE-CH1 — func_8002FA10 opcode 0x70 formation */
+    test_2FA10_m0005i_index0();
+    test_2FA10_index_stride();
+    test_2FA10_index_andi();
+    test_2FA10_halfword_width();
+    test_2FA10_write_footprint();
+
+    /* PE-CH1 — func_8002FAA4 opcode 0xB7 formation */
+    test_2FAA4_m0005i_index3();
+    test_2FAA4_index_stride();
+    test_2FAA4_index_andi();
+    test_2FAA4_halfword_width();
+    test_2FAA4_write_footprint();
+
+    /* PE-CH1 — func_8002FF78 opcode 0x5A Aya tagged setter */
+    test_2FF78_tag0_word();
+    test_2FF78_tag1_half();
+    test_2FF78_tag255_global();
+    test_2FF78_tag40_no_store();
+    test_2FF78_write_footprint();
+
+    /* PE-CH1 — func_80030220 opcode 0x5A slot tagged setter */
+    test_30220_m0005i_40_42();
+    test_30220_m0005i_50_52();
+    test_30220_reject_below_40();
+    test_30220_nop_tag48();
+    test_30220_write_footprint();
+
+    /* PE-CH1 — func_800299CC_consume_cut BTL1 D_8009D28C 6→0 */
+    test_299CC_consume_mode6();
+    test_299CC_skip_mode_ne6();
+    test_299CC_skip_flag_clear();
+    test_299CC_write_footprint();
+    test_299CC_second_tick_idle();
+
+    /* PE-BTL2 — func_8002CF24_mode7_cut D_8009D28C=7 */
+    test_2CF24_mode7_store();
+    test_2CF24_mode7_from_nonzero();
+
+    /* PE-BTL2 — func_800293F4_hp_cut record+0x0C/+0x0E/+0x1C */
+    test_293F4_hp_copy_no_clamp();
+    test_293F4_hp_clamp_then_copy();
+    test_293F4_hp_write_footprint();
+    test_BTL3_type0_clip_bind_writes_slot4();
+    test_BTL3_first_command_store();
+    test_BTL3_29810_tail_calls_command();
+    test_BTL3_0x55_overlay_gate();
+    test_BTL5_6C4C4_sets_wait_bits();
+    test_BTL5_6C5BC_clear_opens_3B();
+    test_BTL5_6C5BC_ce2_gate_and_ee0();
+    test_BTL5_6C5BC_bit1_advances_without_clear();
+    test_BTL5_live_3B_from_3A_d1a0();
+    test_BTL6_ee13_prefix_rebinds_without_clear();
+    test_BTL6_6CC2C_epilogue_opens_3B();
+    test_BTL6_144FC_state0_to_37();
+    test_BTL6_144FC_state37_42EDC();
+    test_BTL6_6D60C_after_6d078();
+    test_BTL6_42F20_144FC_39();
+    test_BTL6_6914C_0x34_issue();
+    test_BTL6_144FC_0x3A();
+    test_BTL6_144FC_0x3B();
+    test_BTL7_6CC68_gates_and_d10();
+    test_BTL7_3F074_poll_opens_3B();
+    test_BTL8_1A918_rebase_and_repeat();
+    test_BTL8_E0060_exe_list_clear();
+    test_BTL9_371B0_window_and_gp120();
+    test_BTL9_371B0_selects_162C();
+    test_BTL9_12574_rebase_and_125E0();
+    test_BTL9_34FC4_freelist();
+    test_BTL10_1266C_task_pool();
+    test_BTL10_35038_a1eq0_empty_1ac();
+    test_BTL11_35558_d1a0_skips_walk();
+    test_BTL11_35558_walk_35E04();
+    test_BTL12_17018_countdown_and_gate();
+    test_BTL12_17018_opcode1();
+    test_BTL13_2F76C_type0_stores();
+    test_BTL13_35C84_d2e8_skip();
+    test_BTL14_6E2D0_m0005i_token();
+    test_BTL14_6B4F8_publish_12574();
+    test_BTL14_125E0_desc_type1_type6();
+    test_BTL14_181CC_tag255_d942ec();
+    test_BTL14_17018_ce_refetch();
+    test_BTL15_15DAC_nop_194();
+    test_BTL15_173F4_store();
+    test_BTL15_17E20_cond_jump();
+    test_BTL16_12850_live_slt_ba();
+    test_BTL16_12850_alu_ops();
+    test_BTL16_1731C_skip_if_false();
+    test_BTL17_17588_label_ptr();
+    test_BTL18_15DAC_key190_table();
+    test_BTL19_17D7C_d2e8_bit0();
+    test_BTL20_16910_key2900();
+    test_BTL21_e1_84_88();
+    test_BTL22_1735C_type3_parent_fields();
+    test_BTL22_1AA78_flag80_noop();
+    test_BTL22_1C614_toggle_and_1AA78_arm0();
+    test_BTL22_17018_three_08_spawn_order();
+    test_BTL22_type3_first_visit_yields_02();
+    test_BTL23_12C20_code0_and_code5();
+    test_BTL23_type5_first_visit_14_0b_41();
+    test_BTL24_type5_2e_4e_2f_30();
+    test_BTL25_14694_d254_and_miss();
+    test_BTL25_type3_second_visit_5e();
+    test_BTL26_1CAB0_rect();
+    test_BTL26_14DA0_stores();
+    test_BTL26_type3_77_05_skip();
+    test_BTL27_362B8_and_39B74_empty();
+    test_BTL27_15240_type0_empty();
+    test_BTL27_type0_9b_then_14();
+    test_BTL27_type3_double_miss_yields();
+    test_BTL28_12E7C_and_79FB4_zero();
+    test_BTL28_type5_0c_d9_zero_pose();
+    test_BTL29_1784C_task_words();
+    test_BTL29_type5_24_zero_pool();
+    test_BTL30_130B4_codes();
+    test_BTL30_type5_11_zero_pad();
+    test_BTL31_66C7C_and_18EE0();
+    test_BTL31_type1_86_persist_ne39();
+    test_BTL32_17988_skips_current();
+    test_BTL32_type0_04_after_ff();
+    test_BTL33_19618_overlay_bit();
+    test_BTL34_1856C_clears_pose_groups();
+    test_BTL34_type0_65_after_aa();
+    test_BTL35_18E58_calls_66800();
+    test_BTL36_19410_fade_wait();
+    test_BTL37_19638_clears_overlay_bit();
+    test_BTL38_68E24_cfee6_expires();
+    test_BTL38_3F3C4_fade_and_mailbox();
+    test_BTL38_9C_completes_after_fade();
+    test_BTL39_19658_sets_bit80();
+    test_BTL40_18BEC_sets_bit20();
+    test_BTL41_66B60_and_18EB4();
+    test_BTL41_6E9A0_calls_66B60();
+    test_BTL42_1A1F0_sets_bit01000000();
+    test_BTL43_176FC_equal_and_range();
+    test_BTL44_18954_and_18164();
+    test_BTL45_18A48_and_1897C();
+    test_BTL46_18004_and_3010C();
+    test_BTL47_131E8_forks_task();
+    test_BTL48_18774_and_6F39C();
+    test_BTL49_13C34_and_143B0();
+    test_BTL50_187C0_and_6F6D4();
+    test_BTL51_184EC_and_2FAF8();
+    test_BTL52_14228_actor_field();
+    test_BTL53_299CC_idle_and_69594();
+    test_BTL54_17410_177C8_message_open_poll();
+    test_BTL55_37870_ff_and_f9();
+    test_BTL56_3EB04_cross_edge();
+    test_BTL57_17DE4_choice_and_fb09();
+    test_BTL58_17F88_17FB0_19484();
+    test_BTL59_17A50_and_3F3C4_pad();
+    test_BTL60_18F0C_and_17BB4_live();
+    test_BTL61_19BE4_19154_18080();
+    test_BTL62_17FF0_mode6();
+    test_BTL63_6B4F8_m0367i_load();
+    test_BTL64_17C54_661EC();
+    test_BTL65_13514_turn_toward_point();
+    test_BTL66_writer_a_and_1A4AC();
+    test_BTL67_3999C_after_3F();
+    test_BTL68_3999C_codep_walk();
+    test_BTL69_66CE8_walk_matrix();
+    test_BTL70_35C84_always_integrates();
+    test_BTL71_3EB04_up_walks();
+    test_BTL73_right_hits_type3_77();
+    test_BTL74_65674_d1a0_out();
+    test_BTL75_67e1c_camera_slots();
+    test_BTL76_67a78_67294_outs();
+    test_BTL77_3F3C4_661cc_offset();
+    test_BTL78_3F3C4_70e54_prefix();
+    test_BTL79_70e54_resetgraph1();
+    test_BTL80_70e54_putdispenv();
+    test_BTL81_6ec08_status();
+    test_BTL82_19728_ae();
+    test_BTL83_70e54_cddc_flip();
+    test_BTL84_6a0e8_d1a0_out();
+    test_BTL85_3dfc8_dest_change();
+    test_BTL86_696f0_live_tail();
+    test_BTL87_3f3c4_stable_dest_flags();
+    test_BTL88_754e4_setdrawenv();
+    test_BTL89_13300_c6();
+    test_BTL93_16910_a29();
+    test_BTL92_e01bc_zero_count();
+    test_BTL97_6914c_a0_zero();
+    test_BTL97_2bc90_mode6_sets_7();
+    test_BTL97_19d24_cf_sets_4d4();
+    test_BTL98_192b8_95_mode0();
+    test_BTL98_299cc_reaches_1d340();
+    test_BTL98_1f704_40_to_39();
+    test_BTL96_179f8_28();
+    test_BTL95_144fc_jtbl_complete();
+    test_BTL91_144fc_55_park();
+    test_BTL90_m0367i_dest_ready();
+    test_BTL94_m0367i_persist09_gate();
+    test_BTL72_playable_loop_field_to_hp();
+    test_BTL9_after_poll_not_m2();
+    test_BTL6_86464_86C1C_cmd10_fail();
+    test_BTL6_6D078_state0_parks_at_6CDA4();
+    test_BTL6_6D078_state2A_walk();
+    test_BTL6_6CDA4_state0_a0eq1_sb7();
+    test_BTL6_6CDA4_state0_a0eq0_87198();
+    test_BTL6_6CDA4_state8_poll_sm();
+    test_BTL6_6CDA4_state9_87090_empty_dest();
+    test_BTL6_6CDA4_stateA_870E0_poll();
+    test_BTL6_3D050_prefix_pointer_walk();
+    test_BTL6_3D050_ptr14_and_post_skip();
+    test_BTL6_3C5D8_and_epilogue();
+    test_BTL6_6698C_bea40_fill();
+    test_BTL6_3DFD8_matrix_copy();
+    test_BTL6_794C4_zero_angle_identity();
+    test_BTL6_3A088_mode0_empty();
+    test_BTL6_3A088_mode0_walk_2bone();
+    test_BTL6_3B97C_empty_gate();
+    test_BTL6_3B97C_lighting_2bone();
+    test_BTL6_3BCE0_zero_counts_and_one_packet();
+
+    /* PE-CH1 — BTL1 TRACE_CONTRACT integration */
+    test_BTL1_trace_mode6_consumed();
+
+    /* PE-BTL3 — TRACE encounter_55 → hp_copied → first_command → command_bound */
+    test_BTL3_trace_command_bound();
+
+    /* PE-CH2 — Carnegie prefix camera leaves + evidence-correct sequence */
+    test_CH2_65954_flag_paths();
+    test_CH2_659C8_shift_stride();
+    test_CH2_66800_view_apply();
+    test_CH2_prefix_camera_trace();
+
     /* Phase 6E-B15 — func_80038D1C rung */
     test_38D1C_raw_contract();
     test_38D1C_write_footprint();
@@ -18560,6 +27650,10 @@ int main(void)
     /* Phase 6E-B54G second live poll at 0x8006B04C (2 tests). */
     test_B54G_6AD40_canonical_second_poll_exit();
     test_B54G_6AD40_live_poll_not_assigned();
+
+    /* Phase 6E-B54K-A func_80030894 prologue + bank-0 L2/L3 (2 tests). */
+    test_B54KA_30894_prologue_record_l2l3();
+    test_B54KA_6AD40_live_path_reaches_l2l3();
 
     /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
     test_6E1C0_single_call_zero_entry();

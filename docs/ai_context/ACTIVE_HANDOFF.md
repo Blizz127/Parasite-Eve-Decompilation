@@ -3,25 +3,74 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL98 — 0x95 mode 0; 299CC jal 1D340; 1F704 40→39
+
+`matching_native=828/828` local. Opcode `0x95`
+(`192B8`) stores mode 0. `299CC` mode==0 && `4D4!=0`
+jals `1D340(1)` at `2A4FC`. Live `1D340` ATB
+`+0x10+=+0x24` and, when record+0x4C bit `0x4000` is
+set, jals `1F4D4` through the `1F704` `HP-=s0` store.
+First retail delta is 40→39. `hp_mutated` emits only
+then (`pc_port/build/btl98_hp_mutated.csv`). Do not
+poke `4D4`, mode 7, scratch bits, or HP. `1F814` /
+death / teardown / field return are not this cut.
+Evidence: `docs/evidence/pe-btl83-retail-battle-transition/`.
+
+## PE-BTL97 — mode-6 2A7F8→2BC90→2CF24; 0xCF sets 4D4
+
+`matching_native=825/825` local.
+Retail BTL83 capture at
+`/var/home/blizz/Applications/pcsx-redux/captures/pe-btl83`
+(M0036I `0xA8001248`). `2CF24` is the mode-7 store
+(`6914C(0)==0` and `s1!=0` after `2BC90`). `192BC`
+is opcode `0x95` storing 0. Opcode `0xCF` (`19D24`)
+jals `33A2C` → `4D4=1`. Do not poke those states.
+`1D340` / HP death / teardown / field return are
+not this cut. Type-6 `scratch[0]&4` wait is a
+different script. Evidence:
+`docs/evidence/pe-btl83-retail-battle-transition/`.
+
 ## PE-BTL96 — opcode 0x28 bit-clear
 
 `matching_native=822/822` local. Clear twin
 of `0x2A`. Type-6 `+0x1A38` is after `0x55`.
 Do not force `scratch[0]&4`.
 
+## PE-BTL94 — M0367I persist 0x09 second visit
+
+`matching_native=821/821`. Watch
+`persist[0x4A]==0x26` (via `0x0A`, not a poke)
+opens only the first listed `0x08` (type 2).
+`0x5E` / `0xCD` / `0x29E` have no dest-enter
+writers; do not force them. Dest-ready now
+jals `1A918` before `125E0` (`B1620` =
+`chunk2+0x1C6D8`). Type-2 first visit takes
+`0xC1` (`19AC0`, `+0x98|=0x400`) then
+`0x2E(0x09)` and parks on `0x20`. Type-1
+continues to `0x9C` fade-wait. Do not hop
+M0005I. Type-6 still waits while
+`scratch[0]&4` is clear. Do not force the bit.
+Evidence: `docs/evidence/pe-btl94-m0367i-persist09/`.
+
 ## PE-BTL95 — 144FC jtbl[1..0x36] completes
 
-`matching_native=820/820` with BTL95 dirty
-test. Unused states take `14658` `v0=1`.
-`>=0x3C` still parks. Type-6 `0x55` remains
-behind `scratch[0]&4`.
+`matching_native=820/820`. Unused states take
+`14658` `v0=1`. `>=0x3C` still parks. Type-6
+`0x55` remains behind `scratch[0]&4`.
 
 ## PE-BTL93 — 0xED key 0xA29 actor+0x27D
 
-`matching_native=819/820` local (dirty persist
-gate extra). Live type-0/2 `0xED` `0xA29`
-stores `*arg1` to `actor+0x27D`. Not
+`matching_native=819/819`. Live type-0/2 `0xED`
+`0xA29` stores `*arg1` to `actor+0x27D`. Not
 `scratch[0]&4`. `E00CC` arms stay out.
+
+## PE-BTL83-RETAIL — PCSX-Redux battle-transition capture
+
+Completed locally. Combat dest `0xA8001248`
+(M0036I). Firsts: `33A2C` `4D4=1` via `0xCF`,
+`2CF24` mode 7 via `2CEE0`, `1D340` live,
+`1F704` HP 40→39 then 39→34. Implemented on
+the PE-BTL97 rung. Do not poke those states.
 
 ## PE-BTL92 — 3F3C4 jals E01BC
 
@@ -37,6 +86,21 @@ writer. Do not force the bit.
 `0x55` instead of skipping the encounter start.
 Type-6 still waits while `scratch[0]&4` is
 clear. Do not force the bit.
+
+## PE-BTL90 — M0367I dest-ready
+
+`matching_native=816/816`. Dest-enter is now
+`6B35C` + `6B4F8` (CE2=10, hdr+0x0C, Writer A)
++ `6BECC==0` (Writer B CE2=10) + `6C5BC==0` +
+`125E0` type-1. Type-1 `+0x1AC/+0x1B0` stay 0;
+first VM `0x40`, first yield `+0x20/0x02`. Do
+not set or wait for mode 7/9/10. Do not
+manufacture a type-1 clip. CE2=14 `+0x8` /
+3D050 stay fail-closed. Type-6 still waits
+while `scratch[0]&4` is clear. Do not force
+the bit.
+Evidence: `docs/evidence/pe-battle-data-precovery/`,
+`docs/evidence/pe-btl90-m0367i-dest-ready/`.
 
 ## PE-BTL89 — 0xC6 command-wait 13300
 
@@ -80,19 +144,20 @@ Next `3F3C4` exit stores are `D1A0|=0x40` and
 `3F3C4` snapshots `D280` and jals `74DC0` /
 `87024`/`3DFC8(1)` only if it changes this
 tick (`1220C` sets `D1C4=D280` first). `696F0`
-is the next exit tail. Type-6 still waits while
-`scratch[0]&4` is clear. Type-0 first unported
-is `0xC6` at `+0x12D4`. Do not force the bit.
+is the next exit tail.
+Type-6 still waits while `scratch[0]&4` is
+clear. Type-0 first unported is `0xC6` at
+`+0x12D4`. Do not force the scratch bit.
 
 ## PE-BTL84 — 6A0E8 D1A0&0x10 early-out
 
 `matching_native=810/810`. Sole jal `3F640`.
 Live `D1A0=0x4000` skips the PutDrawEnv body.
-`3F5EC` VSync(2) is live. The `3F684`
-`D1C4==D280` back-branch to `3EB04` is the
-retail inner frame loop; this cut keeps one
-pass per `1220C` tick. Type-6 still waits
-while `scratch[0]&4` is clear.
+`3F5EC` VSync(2) is live. Next `3F3C4` stores
+are the pad/B0CD8 epilogue (`gp+0x430` bit
+`0x40`, `B0CD8|=2` then maybe `&~0x200`).
+Type-6 still waits while `scratch[0]&4` is
+clear.
 
 ## PE-BTL83 — 70E54 flips guest CDDC
 
@@ -103,6 +168,22 @@ cut stores `CDDC=(CDDC==0)`. DrawOTagEnv
 `3F3C4` jal is `6A0E8` (live `D1A0&0x10==0`
 early-out). Type-6 still waits while
 `scratch[0]&4` is clear.
+
+## PE-BTL82 — HP writer census; 0x85 is a door
+
+`matching_native=808/808`. First subtractive HP
+writer is `1E940` inside `1D340` (`HP - lbu+0x92`).
+`1D340` needs `4D4!=0`. Only live-shaped `4D4=1`
+is `293F4(1)` via `2AA98` JT[7], which needs
+mode==3, which is stored only inside `1D340`.
+`33A2C` / `2CEE0` have zero jal and zero pointer.
+Type-3 `0x85` continues `0x9C`/`0x0A`/`0x31`
+M0004I (door, not damage). `0xAE` (`19728`, 8w)
+is `D2E8 |= 4`; not the scratch[0]&4 setter.
+Do not emit `hp_mutated` / `encounter_complete` /
+`field_return`. Do not invent `4D4` or
+`scratch[0]&4`.
+Evidence: `docs/evidence/pe-btl82-hp-writers/`.
 
 ## PE-BTL81 — 6EC08 two-byte status
 
@@ -186,8 +267,10 @@ not planted `D26C`) → `35C84` pose Z `0x50000`. TRACE
 `field → mailbox_3 → m0005i_enter → mode6_consumed → hp_copied →
 input_held → actors_captured → attack_available`. HP hash stable.
 `attack_available` is type-3 `0x85` after BTL73's 409 Right ticks
-into rect1, not ATB/damage. Do not emit `hp_mutated` /
-`encounter_complete`. Do not invent pad / rec=4 / 4D4 / mode 7.
+into rect1, not ATB/damage. Live follow-on is the M0004I door
+(`0x9C`/`0x0A`/`0x31`). Do not emit `hp_mutated` /
+`encounter_complete` / `field_return`. Do not invent pad /
+rec=4 / 4D4 / mode 7.
 No matching `src/` C.
 Evidence: `docs/evidence/pe-btl72-playable-loop/`.
 

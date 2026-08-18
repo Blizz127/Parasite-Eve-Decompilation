@@ -577,7 +577,9 @@ static void func_8006914C_state0_tables(void)
  * over the 10240B TIM-like dest; does not write it) then 6E498
  * (+0x18C, key 0x73DECD80). Done: sb EF=0, overlay&=~8, v0=0.
  * Next 6914C(1) at EF=0 with bit8 clear returns 0 (not a stub).
- * a0==0 returns 1 (does not write mode 7). Does not sb 0x3A.
+ * a0==0 at 0x800693B4: D1A0 bit 1 clear → sb EF=0, v0=0.
+ * a0==0 and bit 1 set uses the same overlay&8 arm as a0!=0.
+ * 2CEE0 needs that v0=0 (plus s1!=0) to reach 2CF24. Does not sb 0x3A.
  */
 int func_8006914C(int a0)
 {
@@ -595,8 +597,10 @@ int func_8006914C(int a0)
             PE_StoreU32(GA_OVERLAY, word | 8u);
             D_8009D1A0 |= 0x80u;
         }
-        if (a0 == 0)
-            return 1;
+        if (a0 == 0 && (D_8009D1A0 & 2u) == 0u) {
+            PE_StoreU8(GA_OVERLAY + 0xEFu, 0u);
+            return 0;
+        }
         if ((PE_LoadU32(GA_OVERLAY) & 8u) != 0u) {
             PE_StoreU8(GA_OVERLAY + 0xEFu, 0x34u);
             return 1;

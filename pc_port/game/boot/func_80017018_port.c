@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22 / 0x43 / 0x52 / 0x53 / 0xA6 / 0x2A / 0x28 / 0x87 / 0x31 / 0x94 / 0xC7 / 0xAD / 0x8B / 0x89 / 0x03 / 0xB8 / 0xC6 / 0x55. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0xC1 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22 / 0x43 / 0x52 / 0x53 / 0xA6 / 0x2A / 0x87 / 0x31 / 0x94 / 0xC7 / 0xAD / 0xAE / 0x8B / 0x89 / 0x95 / 0x03 / 0xB8 / 0xC6 / 0x55 / 0xCF. 0x1C and 0x1F are the already-ported
  * mailbox leaves. Other table slots are not this cut (return 0
  * = advance). Not M2.
  */
@@ -89,6 +89,7 @@
 #define GA_OPAB       0x80019638u
 #define GA_OP1E       0x80019658u
 #define GA_OP79       0x80018BECu
+#define GA_OPC1       0x80019AC0u
 #define GA_OP85       0x80018EB4u
 #define GA_OPDC       0x8001A1F0u
 #define GA_OP1A       0x800176FCu
@@ -117,12 +118,15 @@
 #define GA_OP94       0x80019154u
 #define GA_OPC7       0x80019BE4u
 #define GA_OPAD       0x80019748u
+#define GA_OPAE       0x80019728u
 #define GA_OP8B       0x80018080u
 #define GA_OP89       0x80017FF0u
+#define GA_OP95       0x800192B8u
 #define GA_OP3        0x80017C54u
 #define GA_OPB8       0x80013514u
 #define GA_OPC6       0x80013300u
 #define GA_OP55       0x800144FCu
+#define GA_OPCF       0x80019D24u
 /* Host stand-in for ROM sp+16. APPROXIMATION: native has no guest $sp. */
 #define GA_VM_FRAME   0x80120F80u
 /* Host stand-in for 17410's stack s16 = -1. APPROXIMATION. */
@@ -131,6 +135,31 @@
 extern unsigned int D_8009D1A0;
 extern int func_80013300(pe_addr_t args);
 extern int func_800144FC(pe_addr_t args);
+
+/*
+ * PE-BTL97 — func_80033A2C sb 4D4=1.
+ * 5 words 0x80033A2C..0x80033A40, SHA-256
+ * 2a210c65…5803. li 1 / lui / sb D244 / jr / nop.
+ * Sole TEXT jal is opcode 0xCF at 0x80019D2C. Do not poke 4D4
+ * from 299CC or 2CF24.
+ */
+void func_80033A2C(void)
+{
+    PE_StoreU8(0x8009D244u, 1u);
+}
+
+/*
+ * PE-BTL97 — opcode 0xCF wrapper 19D24.
+ * 8 words 0x80019D24..0x80019D44, SHA-256
+ * 4581b7eb…ba24. D_800910A0[0xCF]. jal 33A2C; v0=1.
+ * Retail BTL83 capture: ra=0x80019D34 while dest=M0036I.
+ */
+int func_80019D24(pe_addr_t args)
+{
+    (void)args;
+    func_80033A2C();
+    return 1;
+}
 
 int func_80017294(pe_addr_t args)
 {
@@ -324,6 +353,23 @@ int func_80018BEC(pe_addr_t args)
     (void)args;
     actor = PE_LoadU32(GA_D_8009D2F0);
     PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0x20u);
+    return 1;
+}
+
+/*
+ * PE-BTL94 — opcode 0xC1 actor-flag 19AC0.
+ *
+ * 9 words 0x80019AC0..0x80019AE4, SHA-256 eac1de42…d666.
+ * D_800910A0[0xC1]. Zero jal. D2F0+0x98 |= 0x400; v0=1.
+ * Live M0367I type-2/3 after 0x79, before 0x0B / 0x2E(0x09).
+ */
+int func_80019AC0(pe_addr_t args)
+{
+    pe_addr_t actor;
+
+    (void)args;
+    actor = PE_LoadU32(GA_D_8009D2F0);
+    PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0x400u);
     return 1;
 }
 
@@ -732,6 +778,22 @@ int func_80019748(pe_addr_t args)
 }
 
 /*
+ * PE-BTL82 — opcode 0xAE D2E8-or-4 19728.
+ *
+ * 8 words 0x80019728..0x80019748, SHA-256
+ * a0eb25f922ee3ac811b0dd66b37bbef3dcbf67d46084f8ae04e0856831407e2b.
+ * D_800910A0[0xAE]. Zero jal. D_8009D2E8 |= 4; v0=1.
+ * Set twin of 0xAD. Type-6 +0x1100 after 0x55(2); not the
+ * scratch[0]&4 setter (that is 0x2A[0,2] at +0x1850).
+ */
+int func_80019728(pe_addr_t args)
+{
+    (void)args;
+    PE_StoreU32(GA_D_8009D2E8, PE_LoadU32(GA_D_8009D2E8) | 4u);
+    return 1;
+}
+
+/*
  * PE-BTL61 — opcode 0x8B typed tagged-read 18080.
  *
  * 57 words 0x80018080..0x80018164, SHA-256
@@ -786,6 +848,24 @@ int func_80017FF0(pe_addr_t args)
 {
     (void)args;
     PE_StoreU32(GA_D_8009D28C, 6u);
+    return 1;
+}
+
+/*
+ * PE-BTL98 — opcode 0x95 mode-0 store 192B8.
+ *
+ * 4 words 0x800192B8..0x800192C8, SHA-256
+ * cf7731ec…6897. D_800910A0[0x95]. Zero jal.
+ * lui $at,0x800A / sw $zero,D28C / jr / addiu v0,1.
+ * Matching src/func_800192B8.c writes the host symbol; this
+ * cut writes guest RAM so 0x89/0x94/299CC agree. Retail BTL83
+ * capture: ra=0x80017248 immediately before first 1D340
+ * (mode already 0). Not a mode-7 store.
+ */
+int func_800192B8(pe_addr_t args)
+{
+    (void)args;
+    PE_StoreU32(GA_D_8009D28C, 0u);
     return 1;
 }
 
@@ -896,6 +976,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80019658(args);
     if (fn == GA_OP79)
         return func_80018BEC(args);
+    if (fn == GA_OPC1)
+        return func_80019AC0(args);
     if (fn == GA_OP85)
         return func_80018EB4(args);
     if (fn == GA_OPDC)
@@ -952,10 +1034,14 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80019BE4(args);
     if (fn == GA_OPAD)
         return func_80019748(args);
+    if (fn == GA_OPAE)
+        return func_80019728(args);
     if (fn == GA_OP8B)
         return func_80018080(args);
     if (fn == GA_OP89)
         return func_80017FF0(args);
+    if (fn == GA_OP95)
+        return func_800192B8(args);
     if (fn == GA_OP3)
         return func_80017C54(args);
     if (fn == GA_OPB8)
@@ -964,6 +1050,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80013300(args);
     if (fn == GA_OP55)
         return func_800144FC(args);
+    if (fn == GA_OPCF)
+        return func_80019D24(args);
     /* Unported / empty table slot: not this cut. Advance. */
     return 0;
 }

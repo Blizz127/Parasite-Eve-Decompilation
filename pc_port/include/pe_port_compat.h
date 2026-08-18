@@ -92,7 +92,54 @@ static inline void func_8003E91C(void)    { Bootstrap_ReturnVoid("func_8003E91C"
  * D_800B0CD8 flag-bit clear (45 retail words).
  * func_8006536C is now a REAL translation too (Phase 6E-B14):
  * game/boot/func_8006536C_port.c — 28x3-word record-table clear +
- * index byte clear (19 retail words). */
+ * index byte clear (19 retail words).
+ * func_800653B8 is now a REAL translation too (PE-CH1):
+ * game/boot/func_800653B8_port.c — 18-word mailbox append into
+ * D_800A3180[count++] (12-byte record; no clamp at 28).
+ * func_80017764 is now a REAL translation too (PE-CH1):
+ * game/boot/func_80017764_port.c — opcode 0x1C send; jal 653B8
+ * with extra 0; return 1.
+ * func_80065400 is now a REAL translation too (PE-CH1):
+ * game/boot/func_80065400_port.c — 117-word mailbox drain; jal
+ * func_80012700.
+ * func_80012700 is now a REAL translation too (PE-CH1):
+ * game/boot/func_80012700_port.c — 29-word freelist pop + init.
+ * func_800177AC is now a REAL translation too (PE-CH1):
+ * game/boot/func_800177AC_port.c — 7-word opcode 0x1F poll;
+ * copies current task+0x14 through *arg0; return 1; no ACK.
+ * func_80019154 is now a REAL translation too (PE-CH1):
+ * game/boot/func_80019154_port.c — 7-word opcode 0x94 mode
+ * read; copies D_8009D28C through *arg0; return 1.
+ * func_8002F7D8 is now a REAL translation too (PE-CH1):
+ * game/boot/func_8002F7D8_port.c — 102-word opcode 0x6F slot
+ * alloc; claims first free SlotRecord; jal 1A680 unresolved.
+ * func_8002FA10 is now a REAL translation too (PE-CH1):
+ * game/boot/func_8002FA10_port.c — 37-word opcode 0x70
+ * formation write through *actor.
+ * func_8002FAA4 is now a REAL translation too (PE-CH1):
+ * game/boot/func_8002FAA4_port.c — 13-word opcode 0xB7
+ * formation write through *actor (0x70 subset).
+ * func_8002FF78 is now a REAL translation too (PE-CH1):
+ * game/boot/func_8002FF78_port.c — 101-word opcode 0x5A
+ * Aya tagged setter through *D_8009D254.
+ * func_80030220 is now a REAL translation too (PE-CH1):
+ * game/boot/func_80030220_port.c — 197-word opcode 0x5A
+ * slot tagged setter via D_80010C90[tag-40].
+ * func_8002FE78 is now a REAL translation too (PE-BTL46):
+ * game/boot/func_8002FE78_port.c — 64-word opcode 0x59
+ * Aya tagged reader through *(*D_8009D254).
+ * func_8003010C is now a REAL translation too (PE-BTL46):
+ * game/boot/func_8003010C_port.c — 69-word opcode 0x59
+ * slot tagged reader via D_80010B28[tag-41].
+ * func_800299CC_consume_cut is now a REAL translation too (PE-CH1):
+ * game/boot/func_800299CC_port.c — 16-word named cut of the
+ * battle tick consume edge; D_8009D28C 6→0 and sb gp+0x10C=6.
+ * func_8002CF24_mode7_cut is now a REAL translation too (PE-BTL2):
+ * game/boot/func_8002CF24_port.c — 2-word inlined D_8009D28C=7
+ * store (addiu 7 / sw gp+0x51C).
+ * func_800293F4_hp_cut is now a REAL translation too (PE-BTL2):
+ * game/boot/func_800293F4_port.c — 21-word HP clamp/copy named cut
+ * of func_800293F4 (record+0x0C/+0x0E/+0x1C). */
 
 /* ── REAL translated Boot Rung functions ────────────────────────────── */
 extern void func_8003E610(void);
@@ -107,12 +154,265 @@ extern void func_800371A4(int);
 extern void func_80029388(void);
 extern void func_8002F658(void);
 extern void func_80020EFC(void);
+extern void func_80071A64(pe_addr_t str);
 extern void func_8005BCA8(void);
 extern void func_80068D28(void);
 extern void func_800124F8(void);
 extern void func_8001A890(void);
 extern void func_80034F10(void);
+extern void func_80034FC4(void);
 extern void func_8006536C(void);
+extern void func_800653B8(unsigned int payload, unsigned int dest_id,
+                          unsigned int dest_type, unsigned int sender,
+                          unsigned int extra);
+extern int  func_80065954(unsigned int index, unsigned int enabled);
+extern int  func_800659C8(unsigned int index, unsigned int value);
+extern int  func_80066800(unsigned int index);
+extern int  func_800661EC(int a0, int a1, unsigned int a2, unsigned int a3);
+extern int  func_80017C54(pe_addr_t args);
+extern int  func_80017764(pe_addr_t args);
+extern void func_80065400(void);
+extern int func_80068E24(void);
+extern void func_8003F3C4(void);
+extern pe_addr_t func_80012700(pe_addr_t entry, unsigned int a1);
+extern int  func_80017BB4_btl1_cut(pe_addr_t args);
+extern int  func_800177AC(pe_addr_t args);
+extern int  func_80019154(pe_addr_t args);
+extern void func_8002F7D8(pe_addr_t actor);
+extern void func_8002FA10(pe_addr_t actor, unsigned int index,
+                          unsigned int a2, unsigned int a3,
+                          unsigned int b3, unsigned int half_c,
+                          int b7c, int b7d, int b7e, int b7f,
+                          unsigned int b_e, unsigned int b_f);
+extern void func_8002FAA4(pe_addr_t actor, unsigned int index,
+                          unsigned int a2, unsigned int a3,
+                          unsigned int b3, unsigned int half_c);
+extern void func_8002FF78(unsigned int tag, unsigned int value);
+extern int  func_8002FE78(unsigned int tag);
+extern int  func_8003010C(pe_addr_t actor, unsigned int tag);
+extern void func_80030220(pe_addr_t actor, unsigned int tag,
+                          unsigned int value);
+extern void func_800299CC_consume_cut(void);
+extern void func_800299CC_after_consume_cut(void);
+extern void func_800299CC_mode_switch_cut(void);
+extern void func_800299CC_damage_entry_cut(void);
+extern void func_8002BC90_mode6_cut(void);
+extern void func_80033A2C(void);
+extern int func_80019D24(pe_addr_t args);
+extern int func_80069594(void);
+extern int func_8006F8EC(unsigned int index);
+extern int func_800D4704(pe_addr_t slot);
+extern void func_8002CF24_mode7_cut(void);
+extern void func_800293F4_hp_cut(void);
+extern void func_800209F0_cut(void);
+extern void func_80030640_cut(void);
+extern void func_800339A0_cut(unsigned int encounter);
+extern void func_80029810_after_hp_cut(unsigned int encounter);
+extern void func_80029810_remainder_cut(void);
+extern void func_80029810_prologue_cut(void);
+extern void func_80029810_cut(unsigned int encounter);
+extern void func_8001A680_command_cut(pe_addr_t actor, unsigned int command);
+extern void func_8001A4AC(pe_addr_t actor);
+extern void func_8006C140_type0_clip_bind(pe_addr_t package);
+extern int func_800144FC_state3B_cut(void);
+extern void func_800144FC_state3A_d1a0_cut(void);
+extern int func_800144FC_state3A_cut(pe_addr_t arg0);
+extern int func_800144FC_state0_cut(void);
+extern int func_800144FC_state37_cut(void);
+extern int func_800144FC_state38_cut(void);
+extern int func_800144FC_state39_cut(void);
+extern void func_80042EDC(void);
+extern void func_80042F20(void);
+extern int func_8006914C(int a0);
+extern void func_8006D60C_after_6d078_cut(void);
+extern int func_8006D60C_state3F_cut(void);
+extern int func_8006D60C_state2F_cut(void);
+extern int func_8006D60C_state30_cut(void);
+extern void func_80086464(pe_addr_t a0);
+extern void func_80086C1C(int a0, int a1);
+extern int func_80085084(pe_addr_t buffer);
+extern void func_8006D60C_state0_a0eq1_cut(void);
+extern void func_8006D60C_state2C_cut(void);
+extern int func_8006D60C(int a0);
+extern void func_8006D078_state0_cut(void);
+extern int func_8006D078_state2A_cut(void);
+extern int func_8006D078_state2B_cut(void);
+extern int func_8006D078(void);
+extern int func_80087198(void);
+extern void func_8006CDA4_state0_a0eq1_cut(int a1);
+extern int func_8006CDA4_state7_cut(pe_addr_t dest, int stack_len);
+extern int func_8006CDA4_state8_cut(void);
+extern int func_8006CDA4_state9_a0eq1_cut(pe_addr_t dest);
+extern int func_8006CDA4_stateA_cut(void);
+extern int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
+                         int stack_flag);
+extern int func_8006C4C4(int a0);
+extern int func_8006C5BC(void);
+extern pe_addr_t func_8006C5BC_ee13_prefix_cut(void);
+extern void func_8006C5BC_ee13_epilogue_cut(void);
+extern int func_8003F074_6C4C4_6C5BC_cut(void);
+extern int func_8003F074_poll_cut(void);
+extern pe_addr_t func_8003F074_371b0_a0(void);
+extern void func_8003F074_after_poll_cut(void);
+extern void func_8001A918(void);
+extern void func_800E0060(void);
+extern void func_800371B0(pe_addr_t a0);
+extern pe_addr_t func_80012574(pe_addr_t a0);
+extern void func_8001266C(void);
+extern void func_800125E0(void);
+extern pe_addr_t func_80035038(pe_addr_t desc, pe_addr_t parent,
+                               unsigned int a2);
+extern void func_8003F074_pool_cut(void);
+extern void func_800361F4(pe_addr_t actor);
+extern void func_80035E04(pe_addr_t actor);
+extern void func_80035C84(pe_addr_t actor);
+extern void func_8003999C(pe_addr_t actor, pe_addr_t table, pe_addr_t codep);
+extern void func_8007136C(pe_addr_t actor, pe_addr_t codep);
+extern void func_800710A4(pe_addr_t actor, pe_addr_t codep);
+extern void func_80078934(pe_addr_t matrix, pe_addr_t src, pe_addr_t dst);
+extern void func_8002F76C(pe_addr_t actor);
+extern void func_80035558_walk_cut(void);
+extern void func_80017018(void);
+extern int func_80017294(pe_addr_t args);
+extern int func_800172BC(pe_addr_t args);
+extern int func_800172E0(pe_addr_t args);
+extern int func_800172FC(pe_addr_t args);
+extern int func_800181CC(pe_addr_t args);
+extern int func_80015DAC_default_cut(pe_addr_t args);
+extern int func_80015DAC_key190_cut(pe_addr_t args);
+extern int func_800173F4(pe_addr_t args);
+extern int func_80017E20(pe_addr_t args);
+extern uint32_t func_8003708C(uint32_t a, uint32_t b);
+extern uint32_t func_800370A8(uint32_t a, uint32_t b);
+extern int func_80012850(pe_addr_t args);
+extern int func_8001731C(pe_addr_t args);
+extern int func_80017588(pe_addr_t args);
+extern int func_80017D7C(pe_addr_t args);
+extern int func_80017D5C(pe_addr_t args);
+extern int func_80016910_key2900_cut(pe_addr_t args);
+extern int func_8001A374(pe_addr_t args);
+extern int func_80018E84(pe_addr_t args);
+extern int func_80018F54(pe_addr_t args);
+extern int func_80066C7C(unsigned int a0);
+extern void func_80066CE8(void);
+extern void func_80065674(void);
+extern void func_80067E1C(void);
+extern int func_80067294(pe_addr_t rec);
+extern void func_80067A78(void);
+extern void func_80067B74(void);
+extern void func_80067D18(void);
+extern void func_80068CE0(void);
+extern int32_t func_80077CF4(int32_t angle);
+extern int32_t func_80077DC4(int32_t angle);
+extern int func_80018EE0(pe_addr_t args);
+extern int func_80017988(pe_addr_t args);
+extern int func_80019618(pe_addr_t args);
+extern int func_8001856C(pe_addr_t args);
+extern int func_80018E58(pe_addr_t args);
+extern int func_80019410(pe_addr_t args);
+extern int func_80019638(pe_addr_t args);
+extern int func_80019658(pe_addr_t args);
+extern int func_80018BEC(pe_addr_t args);
+extern int func_80019AC0(pe_addr_t args);
+extern int func_80066B60(unsigned int a0);
+extern int func_80018EB4(pe_addr_t args);
+extern int func_8001A1F0(pe_addr_t args);
+extern int func_800176FC(pe_addr_t args);
+extern int func_80018954(pe_addr_t args);
+extern int func_80018164(pe_addr_t args);
+extern int func_80018A48(pe_addr_t args);
+extern int func_8001897C(pe_addr_t args);
+extern int func_80018004(pe_addr_t args);
+extern int func_800131E8(pe_addr_t args);
+extern int func_80018774(pe_addr_t args);
+extern int func_80013C34(pe_addr_t args);
+extern int func_80013514(pe_addr_t args);
+extern int func_800143B0(pe_addr_t args);
+extern int func_800187C0(pe_addr_t args);
+extern int func_800184EC(pe_addr_t args);
+extern int func_8002FAF8(pe_addr_t actor, unsigned int code);
+extern int func_80014228(pe_addr_t args);
+extern int func_80017410(pe_addr_t args);
+extern int func_800177C8(pe_addr_t args);
+extern int func_80037548(int needle);
+extern void func_800375E0(int id, unsigned int mode, pe_addr_t list);
+extern void func_80037870(void);
+extern void func_8003EB04(void);
+extern int func_80037864(void);
+extern int func_80017DE4(pe_addr_t args);
+extern int func_80017F88(pe_addr_t args);
+extern int func_80017FB0(pe_addr_t args);
+extern int func_80019484(pe_addr_t args);
+extern int func_80017A50(pe_addr_t args);
+extern int func_80066BD8(unsigned int a0, unsigned int a1, unsigned int a2,
+                         unsigned int a3, unsigned int a4);
+extern int func_80018F0C(pe_addr_t args);
+extern int func_80019BE4(pe_addr_t args);
+extern int func_80019748(pe_addr_t args);
+extern int func_80019728(pe_addr_t args);
+extern int func_80018080(pe_addr_t args);
+extern int func_80017FF0(pe_addr_t args);
+extern int func_800192B8(pe_addr_t args);
+extern void func_8001D340(unsigned int a0);
+extern void func_8001F4D4(pe_addr_t actor);
+extern unsigned int func_80071A54(void);
+extern int func_8006F6D4(unsigned int index, unsigned int mode,
+                         unsigned int a2, pe_addr_t out0, pe_addr_t out1,
+                         pe_addr_t out2);
+extern int func_800D4698(pe_addr_t slot, unsigned int mode, unsigned int a2,
+                         unsigned int a3, unsigned int extra0,
+                         unsigned int extra1);
+extern int func_8006F39C(unsigned int code, pe_addr_t userdata);
+extern int func_800CE49C(pe_addr_t slot, unsigned int extra);
+extern void func_800D4620(pe_addr_t slot);
+extern int func_8001735C(pe_addr_t args);
+extern void func_8001AA78(pe_addr_t actor);
+extern int func_8001C614(pe_addr_t rec, int a1, int a2);
+extern int func_80012C20(pe_addr_t args);
+extern int func_80017D9C(pe_addr_t args);
+extern int func_80017AE8(pe_addr_t args);
+extern int func_80017EC4(pe_addr_t args);
+extern int func_80017B34(pe_addr_t args);
+extern int func_80017B74(pe_addr_t args);
+extern int func_80014694(pe_addr_t args);
+extern int func_8001CAB0(int a0, int a1, pe_addr_t poly, unsigned int n);
+extern int func_80014DA0(pe_addr_t args);
+extern int func_80012E7C(pe_addr_t args);
+extern int32_t func_80079FB4(int32_t a0, int32_t a1);
+extern int func_8001A15C(pe_addr_t args);
+extern int func_8001784C(pe_addr_t args);
+extern int func_800130B4(pe_addr_t args);
+extern int func_80015240(pe_addr_t args);
+extern void func_80039B74(pe_addr_t dest, pe_addr_t clip, int a2, int a3);
+extern pe_addr_t func_800362B8(unsigned int size);
+extern void func_8003A6A8(pe_addr_t dest, pe_addr_t unused);
+extern void func_8003E188(pe_addr_t dest);
+extern void func_8006E2D0(pe_addr_t dest, uint32_t token);
+extern int func_8006E454(pe_addr_t name);
+extern void func_8006B4F8_12574_publish_cut(void);
+extern int func_8006B4F8_dest_load_cut(uint32_t token);
+extern void func_8006B35C(void);
+extern int func_8006BE4C(void);
+extern int func_8006BECC(void);
+extern int func_8003F074_dest_ready_cut(uint32_t token);
+extern int func_8006CC68(void);
+extern void func_800661A4(void);
+extern void func_800661CC(void);
+extern void func_8006C5BC_clear_wait_cut(void);
+extern void func_8003D050_prefix_cut(pe_addr_t dest, pe_addr_t obj,
+                                     pe_addr_t stream, unsigned int stack_ba);
+extern void func_8003D050_ptr14_cut(pe_addr_t dest, pe_addr_t obj);
+extern int func_8003D050_post_3d94c_skip_cut(pe_addr_t dest, pe_addr_t stream);
+extern void func_8003D050_epilogue_cut(pe_addr_t dest, int skipped);
+extern void func_8003C5D8(pe_addr_t dest, int a1);
+extern void func_8006698C(pe_addr_t dest);
+extern void func_8003DFD8(pe_addr_t src, pe_addr_t dst, int count);
+extern void func_800794C4(pe_addr_t angles, pe_addr_t out);
+extern void func_8003A088_mode0_empty_cut(pe_addr_t dest);
+extern void func_8003A088_mode0_walk_cut(pe_addr_t dest);
+extern void func_8003B97C_empty_cut(pe_addr_t dest, pe_addr_t bea40);
+extern void func_8003B97C_lighting_cut(pe_addr_t dest, pe_addr_t bea40);
+extern void func_8003BCE0(pe_addr_t dest, int a1, int a2);
 extern void func_80070D10(void);
 extern unsigned int func_80070D6C(void);
 extern int func_80070DD0(int, int);
@@ -132,7 +432,8 @@ extern void func_8006A8D4(void);
  * SetSprt).  game/boot/func_80077B{64,BA4,BC4,C44,C64}_port.c — each a
  * 5-word real outlined header-inline writing the primitive packet's byte
  * offset 3 (length) and byte offset 7 (code).  Called via jal from
- * func_80030894; not exercised until that body is ported. */
+ * func_80030894; B54K-A now exercises the SET leaves via the L2/L3
+ * sprite-array prefix. */
 extern void func_80077B64(pe_addr_t p);
 extern void func_80077BA4(pe_addr_t p);
 extern void func_80077BC4(pe_addr_t p);

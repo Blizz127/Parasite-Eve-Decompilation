@@ -451,6 +451,13 @@ void func_80035558_walk_cut(void)
     if (D_8009D1A0 & 2u) {
         func_800299CC_consume_cut();
         func_800299CC_after_consume_cut();
+        /* 29A6C mode!=0 and 29A7C 4D4==0 both go to 2A7F8.
+         * mode==0 && 4D4!=0 falls through to jal 1D340 @ 2A4FC. */
+        if (PE_LoadU32(0x8009D28Cu) != 0u ||
+            PE_LoadU8(0x8009D244u) == 0u)
+            func_800299CC_mode_switch_cut();
+        else
+            func_800299CC_damage_entry_cut();
     }
     func_80069594();
 
