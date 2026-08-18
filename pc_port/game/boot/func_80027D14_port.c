@@ -29,6 +29,7 @@
 #define GA_D_8009CE54 0x8009CE54u
 #define GA_D_8009CE55 0x8009CE55u
 #define GA_D_8009CE48 0x8009CE48u
+#define GA_D_8009CE4C 0x8009CE4Cu
 #define GA_D_8009CE3C 0x8009CE3Cu
 #define GA_D_8009CE38 0x8009CE38u
 #define GA_D_8009CE39 0x8009CE39u
@@ -193,8 +194,8 @@ void func_80021F38(void)
  * 24A3C (lbu D25C), not 24A40. Sole TEXT jal is 22394 @
  * 229D8. Case 9 is the only CE54 writer: wait Aya
  * +0x0F==+0x1A, 1A680((int8)CE48*2+9), CE55=2, CE54=1,
- * body |= 0x2000. Cases 0-1 increment D25C (6C1CC and
- * HUD jals deferred). Cases 2-8 / 10-16 stay deferred.
+ * body |= 0x2000. Cases 0-3 increment D25C (6C1CC and
+ * HUD jals deferred). Cases 4-8 / 10-16 stay deferred.
  */
 int func_80024A3C(void)
 {
@@ -220,6 +221,39 @@ int func_80024A3C(void)
         if (PE_LoadU8(0x800B0D8Au) != 0u)
             return 0;
         PE_StoreU8(GA_D_8009D25C, 2u);
+        return 0;
+    }
+    if (phase == 2u) {
+        uint32_t flags;
+
+        /* 6C1CC/3C5D8/6F39C deferred (treat 6C1CC ready). */
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya == 0u)
+            return 0;
+        func_8001A680_command_cut(aya, 5u);
+        PE_StoreU8(aya + 0x252u, 1u);
+        flags = PE_LoadU32(aya + 0x98u) | 0x100u;
+        PE_StoreU32(aya + 0x98u, flags);
+        PE_StoreU16(aya + 0x250u, (uint16_t)(PE_LoadU16(aya + 0x250u) | 4u));
+        PE_StoreU16(GA_D_8009CE4C, 30u);
+        PE_StoreU8(GA_D_8009D25C, 3u);
+        return 0;
+    }
+    if (phase == 3u) {
+        int16_t timer;
+
+        timer = (int16_t)PE_LoadU16(GA_D_8009CE4C);
+        if (timer != 0) {
+            PE_StoreU16(GA_D_8009CE4C, (uint16_t)(timer - 1));
+            return 0;
+        }
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya != 0u) {
+            uint32_t flags = PE_LoadU32(aya + 0x98u) & ~0x100u;
+
+            PE_StoreU32(aya + 0x98u, flags);
+        }
+        PE_StoreU8(GA_D_8009D25C, 4u);
         return 0;
     }
     if (phase != 9u)

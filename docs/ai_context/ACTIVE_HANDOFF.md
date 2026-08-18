@@ -11,13 +11,14 @@ pushed `Blizz127/parasite-eve-ue5` `main`
 
 ## PE-BTL114 — CE54 case 9; +0x1A from 1A4AC
 
-`matching_native=888/888` local. Sole CE54 store is
+`matching_native=889/889` local. Sole CE54 store is
 `24A3C` case 9 (`24F94`). `21DE0` tid `[387,407)` jals
 `22394`; `rec+0x4C&0x80000` and `D2A0!=0` jals `24A3C`.
 Case 9 waits `+0x0F==+0x1A` then `1A680` / CE54=1 /
 `body|=0x2000`. Do not plant CE54. `+0x1A` is the high
 half of `1A4AC`'s `+0x14→+0x18` copy. Phase 2 does not
-copy fields. `D25C` cases 0–1 increment; 2–8 stay deferred.
+copy fields. `D25C` cases 0–3 increment (case 2 arms
+the 30-tick `CE4C` timer). Cases 4–8 stay deferred.
 Evidence:
 `docs/evidence/pe-btl114-ce54-1a/`.
 

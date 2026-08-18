@@ -19,8 +19,10 @@ then CE54/CE55, then `body |= 0x2000` (same `~0x6000 | 0x2000` mask
 as `236E8`). Do not plant CE54. Do not jal `236E8` just to advance.
 
 `D25C` is the case index. Case 0 always stores 1. Case 1
-stores 2 when `Aya+0x252==0` and `overlay+0xB2==0`. Writers
-for 2→9 are cases 2–8 (still deferred) plus `26934` zero.
+stores 2 when `Aya+0x252==0` and `overlay+0xB2==0`. Case 2
+runs `1A680(5)`, sets `+0x252=1`, `+0x98|=0x100`, timer
+`CE4C=30`, stores 3. Case 3 decrements `CE4C` then stores 4
+and clears `0x100`. Cases 4–8 stay deferred.
 
 ## Gate C — +0x1A
 
