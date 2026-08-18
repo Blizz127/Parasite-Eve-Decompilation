@@ -22,8 +22,9 @@
  *
  * 2AA98 is the bit-0x800 / category-18 presentation.
  * 2B29C is the zero-fixture remaining-actor cleanup.
- * Later phases (fade, 6DE80 0x4AF, mode=-1 / 6A25C,
- * 77AC4, 32B0C, 27D14, 5409C) stay deferred.
+ * Cases 1-4 drain CE70 / +0x252. Case 5: 295E4 tail,
+ * mode=-1, 6A25C dest 0xA9400048. Overlay / 21D4C /
+ * 51510 / sound jals stay deferred.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -31,8 +32,20 @@
 #define GA_D_8009D254 0x8009D254u
 #define GA_D_8009D278 0x8009D278u
 #define GA_D_8009D20C 0x8009D20Cu
+#define GA_D_8009D280 0x8009D280u
+#define GA_D_8009D28C 0x8009D28Cu
+#define GA_D_8009D1A0 0x8009D1A0u
+#define GA_D_8009D2E8 0x8009D2E8u
+#define GA_D_8009D2A0 0x8009D2A0u /* gp+0x530 */
+#define GA_D_8009D2EC 0x8009D2ECu /* gp+0x57C */
 #define GA_D_8009CE70 0x8009CE70u /* gp+0x100 timer */
 #define GA_D_8009CE74 0x8009CE74u /* gp+0x104 phase */
+#define GA_D_800A77F4 0x800A77F4u
+#define GA_D_800B0CD8 0x800B0CD8u
+#define GA_D_800B0CE6 0x800B0CE6u
+#define GA_D_800B0D8A 0x800B0D8Au
+#define GA_D_800915E0 0x800915E0u
+#define DEST_GAMEOVER 0xA9400048u
 
 static int pe_aya_death_clip_ready(pe_addr_t aya)
 {
@@ -75,18 +88,11 @@ int func_8002AA98(void)
     return 0;
 }
 
-void func_8002B29C(void)
+static void func_8002B29C_case0(void)
 {
     pe_addr_t aya;
     pe_addr_t actor;
-    uint8_t phase;
     uint32_t flags;
-
-    phase = PE_LoadU8(GA_D_8009CE74);
-    if (phase >= 6u)
-        return;
-    if (phase != 0u)
-        return;
 
     aya = PE_LoadU32(GA_D_8009D254);
     if (!pe_aya_death_clip_ready(aya)) {
@@ -150,6 +156,164 @@ void func_8002B29C(void)
         flags = PE_LoadU32(aya + 0x98u);
         PE_StoreU32(aya + 0x98u, flags | 0x100u);
     }
+}
+
+/* 2B29C[1] CE70!=60 walk: remaining actors get +0x98 bit 0x10. */
+static void func_8002B29C_flag10_walk(void)
+{
+    pe_addr_t aya;
+    pe_addr_t actor;
+
+    aya = PE_LoadU32(GA_D_8009D254);
+    actor = PE_LoadU32(GA_D_8009D20C);
+    while (actor != 0u) {
+        pe_addr_t next;
+        pe_addr_t body;
+
+        next = PE_LoadU32(actor + 4u);
+        if (actor != aya) {
+            body = PE_LoadU32(actor);
+            if (body != 0u ||
+                (PE_LoadU32(actor + 0x98u) & 0x40u) == 0u) {
+                if (PE_LoadU8(actor + 0x252u) == 0u) {
+                    uint32_t flags = PE_LoadU32(actor + 0x98u);
+                    PE_StoreU32(actor + 0x98u, flags | 0x10u);
+                }
+            }
+        }
+        actor = next;
+    }
+}
+
+/*
+ * 295E4 tail (21D4C / 51510 / HUD sb storm deferred).
+ * sb 0 gp+0x57C / +0x530, Aya+0x194 = D_800915E0,
+ * D1A0 &= ~2, D2E8 &= ~0x10, B0CE6 |= 2.
+ */
+static void func_800295E4_tail_cut(void)
+{
+    pe_addr_t aya;
+    uint32_t v;
+
+    PE_StoreU8(GA_D_8009D2EC, 0u);
+    PE_StoreU8(GA_D_8009D2A0, 0u);
+    aya = PE_LoadU32(GA_D_8009D254);
+    if (aya != 0u)
+        PE_StoreU32(aya + 0x194u, PE_LoadU32(GA_D_800915E0));
+    D_8009D1A0 &= ~2u;
+    PE_StoreU32(GA_D_8009D1A0, PE_LoadU32(GA_D_8009D1A0) & ~2u);
+    v = PE_LoadU32(GA_D_8009D2E8);
+    PE_StoreU32(GA_D_8009D2E8, v & ~0x10u);
+    PE_StoreU8(GA_D_800B0CE6, (uint8_t)(PE_LoadU8(GA_D_800B0CE6) | 2u));
+}
+
+/*
+ * 6A25C dest restore. Sound/CD jals (81268 / 86F34 / 86FF8 /
+ * 87024 / 85744 / 38D0C / 39970) stay fail-closed.
+ */
+void func_8006A25C(void)
+{
+    uint32_t old;
+
+    old = PE_LoadU32(GA_D_8009D280);
+    PE_StoreU32(GA_D_800A77F4, old);
+    PE_StoreU32(GA_D_8009D280, DEST_GAMEOVER);
+    PE_StoreU32(GA_D_800B0CD8, PE_LoadU32(GA_D_800B0CD8) | 0x100u);
+}
+
+static void func_8002B29C_case1(void)
+{
+    uint8_t timer;
+
+    timer = PE_LoadU8(GA_D_8009CE70);
+    if (timer == 60u) {
+        pe_addr_t aya = PE_LoadU32(GA_D_8009D254);
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D20C);
+
+        while (actor != 0u) {
+            pe_addr_t next = PE_LoadU32(actor + 4u);
+            pe_addr_t body = PE_LoadU32(actor);
+
+            if (actor != aya) {
+                int8_t kind = 0;
+                if (body != 0u)
+                    kind = (int8_t)PE_LoadU8(body + 5u);
+                if (kind != 1 &&
+                    (body != 0u ||
+                     (PE_LoadU32(actor + 0x98u) & 0x40u) == 0u))
+                    func_8003C5D8(actor + 0x1B4u, 60);
+            }
+            actor = next;
+        }
+    } else {
+        func_8002B29C_flag10_walk();
+    }
+    timer = PE_LoadU8(GA_D_8009CE70);
+    if (timer != 0u) {
+        PE_StoreU8(GA_D_8009CE70, (uint8_t)(timer - 1u));
+        return;
+    }
+    PE_StoreU8(GA_D_8009CE70, 30u);
+    PE_StoreU8(GA_D_8009CE74,
+               (uint8_t)(PE_LoadU8(GA_D_8009CE74) + 1u));
+}
+
+static void func_8002B29C_timer_advance(uint8_t next_timer)
+{
+    uint8_t timer;
+
+    timer = PE_LoadU8(GA_D_8009CE70);
+    if (timer != 0u) {
+        PE_StoreU8(GA_D_8009CE70, (uint8_t)(timer - 1u));
+        return;
+    }
+    PE_StoreU8(GA_D_8009CE70, next_timer);
+    PE_StoreU8(GA_D_8009CE74,
+               (uint8_t)(PE_LoadU8(GA_D_8009CE74) + 1u));
+}
+
+void func_8002B29C(void)
+{
+    uint8_t phase;
+    pe_addr_t aya;
+
+    phase = PE_LoadU8(GA_D_8009CE74);
+    if (phase >= 6u)
+        return;
+    if (phase == 0u) {
+        func_8002B29C_case0();
+        return;
+    }
+    if (phase == 1u) {
+        func_8002B29C_case1();
+        return;
+    }
+    if (phase == 2u) {
+        func_8002B29C_timer_advance(80u);
+        return;
+    }
+    if (phase == 3u) {
+        func_8002B29C_timer_advance(60u);
+        return;
+    }
+    if (phase == 4u) {
+        aya = PE_LoadU32(GA_D_8009D254);
+        if ((aya == 0u || PE_LoadU8(aya + 0x252u) == 0u) &&
+            PE_LoadU8(GA_D_800B0D8A) == 0u) {
+            PE_StoreU8(GA_D_8009CE74, 5u);
+            return;
+        }
+        {
+            uint8_t timer = PE_LoadU8(GA_D_8009CE70);
+            if (timer != 0u)
+                PE_StoreU8(GA_D_8009CE70, (uint8_t)(timer - 1u));
+        }
+        return;
+    }
+    /* phase 5: 2B8E8 jal 295E4; sw -1 mode; jal 6A25C */
+    func_800295E4_tail_cut();
+    PE_StoreU32(GA_D_8009D28C, 0xFFFFFFFFu);
+    func_8006A25C();
 }
 
 void func_8002A7F8_mode3_cut(void)

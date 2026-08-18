@@ -9,6 +9,15 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL101 — 2B29C phases; mode=-1 / 6A25C
+
+`matching_native=842/842` local. Player-death
+aftermath (not victory). `2B29C` cases
+1-4 drain `CE70` / `+0x252`. Case 5: `295E4` tail,
+mode `-1`, `6A25C` dest `0xA9400048`. Sound/CD /
+`21D4C` stay deferred. Evidence:
+`docs/evidence/pe-btl101-2b29c-end/`.
+
 ## PE-BTL100 — 1F078 mode 3; 2A7F8 → 2B29C
 
 MATCHED yaml C leaves = 227. `matching_native=840/840`

@@ -11213,6 +11213,67 @@ static void test_BTL100_bit800_takes_2aa98(void)
     PASS();
 }
 
+static void test_BTL101_2b29c_case1_flag10(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+
+    TEST("BTL101_2b29c_case1_flag10");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(enemy + 4u, 0u);
+    PE_StoreU8(enemy + 0x252u, 0u);
+    PE_StoreU32(enemy + 0x98u, 0u);
+    PE_StoreU8(0x8009CE74u, 1u);
+    PE_StoreU8(0x8009CE70u, 2u);
+    func_8002B29C();
+    ASSERT((PE_LoadU32(enemy + 0x98u) & 0x10u) != 0u, "+0x98|=0x10");
+    ASSERT(PE_LoadU8(0x8009CE70u) == 1u, "CE70 2→1");
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "phase stays 1");
+    ASSERT(g_stub_count == 0, "case1 not stub");
+    PASS();
+}
+
+static void test_BTL101_2b29c_phases_to_mode_neg1(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t rec = 0x8010A000u;
+
+    TEST("BTL101_2b29c_phases_to_mode_neg1");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D280u, 0xA8001248u);
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU8(aya + 0x252u, 0u);
+    PE_StoreU8(0x800B0D8Au, 0u);
+    PE_StoreU32(0x8009D28Cu, 3u);
+    PE_StoreU8(0x8009CE74u, 1u);
+    PE_StoreU8(0x8009CE70u, 0u);
+    func_8002B29C();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 2u, "phase 1→2");
+    ASSERT(PE_LoadU8(0x8009CE70u) == 30u, "CE70=30");
+    PE_StoreU8(0x8009CE70u, 0u);
+    func_8002B29C();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 3u, "phase 2→3");
+    PE_StoreU8(0x8009CE70u, 0u);
+    func_8002B29C();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 4u, "phase 3→4");
+    func_8002B29C();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 5u, "phase 4→5");
+    func_8002B29C();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0xFFFFFFFFu, "mode=-1");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA9400048u, "6A25C dest");
+    ASSERT(PE_LoadU32(0x800A77F4u) == 0xA8001248u, "old dest saved");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x100u) != 0u, "B0CD8|=0x100");
+    ASSERT((D_8009D1A0 & 2u) == 0u, "295E4 D1A0&=~2");
+    ASSERT(g_stub_count == 0, "phase5 not stub");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -27628,6 +27689,8 @@ int main(void)
     test_BTL100_2b29c_case0_advance();
     test_BTL100_2b29c_walks_enemy();
     test_BTL100_bit800_takes_2aa98();
+    test_BTL101_2b29c_case1_flag10();
+    test_BTL101_2b29c_phases_to_mode_neg1();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

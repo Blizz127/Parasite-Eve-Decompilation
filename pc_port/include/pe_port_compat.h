@@ -201,6 +201,7 @@ extern void func_8002A7F8_mode3_cut(void);
 extern int func_8002AA98(void);
 extern void func_8002B29C(void);
 extern int func_80053E6C(int id);
+extern void func_8006A25C(void);
 extern void func_80033A2C(void);
 extern int func_80019D24(pe_addr_t args);
 extern int func_80069594(void);

@@ -422,6 +422,9 @@ never native function pointers.
   fixture → `2B29C` case 0). `2B0E8` is mode 2.
   `game/boot/func_8002AA98_port.c`,
   `game/boot/func_80053E6C_port.c`
+- ~~`func_8006A25C` / `2B29C` cases 1-5~~ — TRANSLATED
+  (PE-BTL101): player-death phase drain; case 5 mode=-1
+  and dest `0xA9400048`. `game/boot/func_8002AA98_port.c`
 - ~~`func_8002CF24_mode7_cut(void)`~~ — TRANSLATED (PE-BTL2):
   2-word inlined `D_8009D28C=7` store (`0x8002CF24..0x8002CF2C`
   exclusive; `addiu $v0,7` / `sw $v0,0x51C($gp)`); no jal site;
