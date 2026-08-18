@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5FI: 227 C leaves.
+# Current production subsegments (file offsets). Phase 5FK: 229 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -185,6 +185,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x5AE74, c, func_8006A674]'
     '[0x5B0D4, c, func_8006A8D4]'
     '[0x5B1E4, asm]'
+    '[0x5F034, c, func_8006E834]'
+    '[0x5F1A0, c, func_8006E9A0]'
     '[0x5F3D4, c, func_8006EBD4]'
     '[0x5F3E4, asm]'
     '[0x645E8, c, func_80073DE8]'
@@ -527,6 +529,8 @@ EXPECTED_ARTIFACTS=(
     "src/func_8006A64C.c"
     "src/func_8006A674.c"
     "src/func_8006A8D4.c"
+    "src/func_8006E834.c"
+    "src/func_8006E9A0.c"
     "src/func_8006EBD4.c"
     "src/func_80073DE8.c"
     "src/func_80073DF8.c"
@@ -807,7 +811,13 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80062A34.c" ]]; then
+if [[ -f "$ROOT/src/func_8006E834.c" ]]; then
+    echo "C conversion: Phase 5FK-6e834 — 229 leaves (+ post-mount image loader + display env setup func_8006E834; era -O2 -G0; paired \$v1-backup/\$v0-test register pins + two zero-code \"=r\":\"0\" barriers; 91/91 words)"
+    echo "  sources: src/func_8006E834.c (+ prior 5FJ)"
+elif [[ -f "$ROOT/src/func_8006E9A0.c" ]]; then
+    echo "C conversion: Phase 5FJ-6e9a0 — 228 leaves (+ boot display init + pointer arena + ClearOTagR poll loop + dispatch exit; era -O2 -G0; 6A8D4 + \$s0/\$s2 pins, asm barrier; 141/141 words)"
+    echo "  sources: src/func_8006E9A0.c (+ prior 5FI)"
+elif [[ -f "$ROOT/src/func_80062A34.c" ]]; then
     echo "C conversion: Phase 5FI-62a34 — 227 leaves (+ 2-key node-list search over D_8009D154; era -O2 -G8 gp head; && short-circuit matches two-target block layout)"
     echo "  sources: src/func_80062A34.c (+ prior 5FH)"
 elif [[ -f "$ROOT/src/func_80037548.c" ]]; then

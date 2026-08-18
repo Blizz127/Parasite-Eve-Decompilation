@@ -419,6 +419,15 @@ segments:
       # stores with byte-address cursor arithmetic. Era -O2 -G0; no $gp.
       - [0x5B0D4, c, func_8006A8D4]
       - [0x5B1E4, asm]
+      # Phase 5FK: C leaf func_8006E834 — VRAM 0x8006E834, size 0x16C.
+      # Post-mount image loader + display env setup. Era -O2 -G0; paired
+      # $v1-backup/$v0-test register pins + two zero-code "=r":"0" barriers
+      # restore retail's poll-loop register home (91/91).
+      - [0x5F034, c, func_8006E834]
+      # Phase 5FJ: C leaf func_8006E9A0 — VRAM 0x8006E9A0, size 0x234.
+      # Boot display init + 19-global pointer arena + ClearOTagR poll loop +
+      # dispatch exit. Era -O2 -G0; 6A8D4 register pins + $s0/$s2 pins.
+      - [0x5F1A0, c, func_8006E9A0]
       # Phase 5BS: C leaf func_8006EBD4 — VRAM 0x8006EBD4, size 0x10.
       # Signed-byte global getter on D_800B0DBA; plain -O1 matches.
       - [0x5F3D4, c, func_8006EBD4]
