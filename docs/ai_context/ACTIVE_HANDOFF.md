@@ -9,6 +9,13 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL108 — 0xB2 / 392EC persist scale
+
+`matching_native=869/869` local. m0005i after mode 9
+runs `0xB2`: `19798` stores `392EC` (`91A1C`/`91A1D`)
+to the script dest. Dest stays the encounter token.
+Evidence: `docs/evidence/pe-btl108-0xb2/`.
+
 ## PE-BTL107 — 27D14 DoT; 5C498 → 534
 
 `matching_native=866/866` local. `27D14` ATB is

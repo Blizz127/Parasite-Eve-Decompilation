@@ -11854,6 +11854,57 @@ static void test_BTL107_5c498_and_534(void)
     PASS();
 }
 
+static void test_BTL108_392ec_default_one(void)
+{
+    TEST("BTL108_392ec_default_one");
+    ResetTestState();
+    PE_StoreU8(0x80091A1Cu, 0u);
+    ASSERT(func_800392EC() == 1, "1A1C==0 → 1");
+    PE_StoreU8(0x80091A1Cu, 2u);
+    PE_StoreU8(0x80091A1Du, 7u);
+    ASSERT(func_800392EC() == 7, "1A1C→1A1D");
+    PASS();
+}
+
+static void test_BTL108_0xb2_after_mode9(void)
+{
+    pe_addr_t args = 0x80106010u;
+    pe_addr_t dest = 0x80106000u;
+    pe_addr_t persist = 0x80106100u;
+
+    TEST("BTL108_0xb2_after_mode9");
+    ResetTestState();
+    PE_StoreU32(0x8009D28Cu, 9u);
+    PE_StoreU32(0x8009D280u, 0xA8001248u);
+    D_8009D280 = 0xA8001248u;
+    PE_StoreU8(0x80091A1Cu, 0u);
+    PE_StoreU32(args, dest);
+    PE_StoreU32(dest, 0xFFFFFFFFu);
+    ASSERT(func_80019798(args) == 1, "0xB2");
+    ASSERT(PE_LoadU32(dest) == 1u, "persist scale 1");
+    PE_StoreU32(args, persist);
+    PE_StoreU32(args + 4u, dest);
+    ASSERT(func_800173F4(args) == 1, "0x0A");
+    ASSERT(PE_LoadU32(persist) == 1u, "0x0A copied");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 9u, "mode 9 kept");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA8001248u, "dest unchanged");
+    ASSERT(PE_LoadU32(0x8009D280u) != 0xA9400048u, "not death dest");
+    PASS();
+}
+
+static void test_BTL108_death_skips_b2_dest(void)
+{
+    TEST("BTL108_death_skips_b2_dest");
+    ResetTestState();
+    PE_StoreU32(0x8009D28Cu, 0xFFFFFFFFu);
+    PE_StoreU32(0x8009D280u, 0xA9400048u);
+    D_8009D280 = 0xA9400048u;
+    ASSERT(func_800392EC() == 1, "0xB2 scale");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0xFFFFFFFFu, "death mode kept");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA9400048u, "death dest kept");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -28295,6 +28346,9 @@ int main(void)
     test_BTL107_dot_aya_hp0_no_mode2();
     test_BTL107_512ac10_sets_1000();
     test_BTL107_5c498_and_534();
+    test_BTL108_392ec_default_one();
+    test_BTL108_0xb2_after_mode9();
+    test_BTL108_death_skips_b2_dest();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

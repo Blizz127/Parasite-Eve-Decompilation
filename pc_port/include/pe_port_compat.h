@@ -363,6 +363,8 @@ extern int func_80066BD8(unsigned int a0, unsigned int a1, unsigned int a2,
 extern int func_80018F0C(pe_addr_t args);
 extern int func_80019BE4(pe_addr_t args);
 extern int func_80019748(pe_addr_t args);
+extern int func_80019798(pe_addr_t args);
+extern int func_800392EC(void);
 extern int func_80019728(pe_addr_t args);
 extern int func_80018080(pe_addr_t args);
 extern int func_80017FF0(pe_addr_t args);

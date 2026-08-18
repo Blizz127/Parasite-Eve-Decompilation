@@ -431,6 +431,9 @@ never native function pointers.
 - ~~`func_800292EC_victory_ready_cut` / `2F300_mode2_cut`~~ —
   TRANSLATED (PE-BTL104): remaining-enemy walk arms mode 2.
   `game/boot/func_8002AA98_port.c`
+- ~~`func_80019798` / `func_800392EC`~~ — TRANSLATED
+  (PE-BTL108): opcode `0xB2` persist scale.
+  `game/boot/func_80017018_port.c`
 - ~~`func_8005C498` / `512AC` case 10 / 27D14 DoT~~ —
   TRANSLATED (PE-BTL107): `body+0x10 -= body+0x96`;
   `29A68` stores `5C498` to `gp+0x534`.
