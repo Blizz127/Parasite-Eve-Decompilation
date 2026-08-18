@@ -201,10 +201,14 @@ void func_8001220C(void)
                 }
             }
 
+            /* 124A4 andi 0x100 / beq continue 12294.
+             * Taken: VSync(0), SetDispMask(0), andi ~0x100
+             * (addiu 0xFEFF), j 1224C outer 6A5BC restart.
+             * Retail clears 0x100 only, not 0x001. */
             if (*data & 0x100) {
                 func_80073A44(0);
                 func_80074D28(0);
-                *data &= ~0x101u;
+                *data &= ~0x100u;
                 break;
             }
         }

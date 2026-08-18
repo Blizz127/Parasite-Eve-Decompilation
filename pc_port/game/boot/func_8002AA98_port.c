@@ -215,8 +215,13 @@ void func_8006A25C(void)
 {
     uint32_t old;
 
-    old = PE_LoadU32(GA_D_8009D280);
+    /* D280 is host-owned for 1220C/3F3C4; guest word is the
+     * PE_Load view. Retail has one location — write both. */
+    old = D_8009D280;
+    if (old == 0u)
+        old = PE_LoadU32(GA_D_8009D280);
     PE_StoreU32(GA_D_800A77F4, old);
+    D_8009D280 = DEST_GAMEOVER;
     PE_StoreU32(GA_D_8009D280, DEST_GAMEOVER);
     PE_StoreU32(GA_D_800B0CD8, PE_LoadU32(GA_D_800B0CD8) | 0x100u);
 }

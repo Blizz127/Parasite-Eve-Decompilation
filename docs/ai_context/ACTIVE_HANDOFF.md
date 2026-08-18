@@ -9,6 +9,18 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL102 — 3F3C4 0x100 join; 1220C outer restart
+
+`matching_native=844/844` local. Player-death dest
+`0xA9400048` sets `B0CD8` bit `0x100`. `3F3C4`
+`andi 0x100` after `35558` skips draw/`6A0E8`
+but still dest-changes (`D1A0|=0x40`,
+`B0CD8|=2`). `1220C` then `VSync(0)` /
+`SetDispMask(0)`, clears `0x100` only, jumps
+to outer `6A5BC`. Title dispatch after that
+restart is not this cut. Evidence:
+`docs/evidence/pe-btl102-bit100-exit/`.
+
 ## PE-BTL101 — 2B29C phases; mode=-1 / 6A25C
 
 `matching_native=842/842` local. Player-death

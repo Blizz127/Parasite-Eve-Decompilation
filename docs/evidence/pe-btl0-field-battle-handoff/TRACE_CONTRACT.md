@@ -74,8 +74,10 @@ the next live store is 39→34. After a nonzero remainder,
 on the zero fixture (`2AA98` if bit `0x800` /
 `53E6C(18)`). `2B29C` case 5 stores mode=-1 and `6A25C` dest
 `0xA9400048` (player-death / title, not victory).
-`encounter_complete` / field return after that dest
-are not this cut. Do not invent pad / hit / rec=4 / `4D4` /
+Same tick `3F3C4` keeps dest-change after the
+`0x100` draw skip; `1220C` then restarts the outer
+boot loop. Title dispatch / field return are not
+this cut. Do not invent pad / hit / rec=4 / `4D4` /
 mode 7 / HP.
 | `battle_mode` | `D_8009D28C` raw | 0/3/4/5/6/7/8 |
 | `formation_id` | `49` or `50` plus `1332/1333/1334` | write as `49;1332,1333,1334` |

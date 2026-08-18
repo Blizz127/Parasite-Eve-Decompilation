@@ -11246,6 +11246,7 @@ static void test_BTL101_2b29c_phases_to_mode_neg1(void)
     ResetTestState();
     PE_StoreU32(0x8009D254u, aya);
     PE_StoreU32(0x8009D278u, rec);
+    D_8009D280 = 0xA8001248u;
     PE_StoreU32(0x8009D280u, 0xA8001248u);
     PE_StoreU32(0x800B0CD8u, 0u);
     PE_StoreU8(aya + 0x252u, 0u);
@@ -11271,6 +11272,63 @@ static void test_BTL101_2b29c_phases_to_mode_neg1(void)
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x100u) != 0u, "B0CD8|=0x100");
     ASSERT((D_8009D1A0 & 2u) == 0u, "295E4 D1A0&=~2");
     ASSERT(g_stub_count == 0, "phase5 not stub");
+    PASS();
+}
+
+static void test_BTL102_3f3c4_bit100_stable_skips_dest_change(void)
+{
+    TEST("BTL102_3f3c4_bit100_stable_skips_dest_change");
+    ResetTestState();
+    HostFB_Init();
+    btl69_plant_rsin0();
+    D_8009D1A0 = 0x4000u;
+    D_8009D280 = 0xA9400048u;
+    PE_StoreU32(0x8009D280u, 0xA9400048u);
+    PE_StoreU32(0x800B0CD8u, 0x100u);
+    PE_StoreU32(0x8009CE90u, 1u);
+    func_8003F3C4();
+    ASSERT(D_8009D1A0 == 0x4000u, "stable+0x100 skips dest-change D1A0");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x100u, "stable keeps 0x100 only");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA9400048u, "dest stays");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode not invented");
+    PASS();
+}
+
+static void test_BTL102_death_tick_3f3c4_dest_change(void)
+{
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t aya = 0x80108600u;
+
+    TEST("BTL102_death_tick_3f3c4_dest_change");
+    ResetTestState();
+    HostFB_Init();
+    btl69_plant_rsin0();
+    PE_StoreU32(aya, rec);
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, 0u);
+    PE_StoreU32(rec + 0x4Cu, 0u);
+    PE_StoreU8(aya + 0x252u, 0u);
+    PE_StoreU8(0x800B0D8Au, 0u);
+    PE_StoreU32(0x8009D28Cu, 3u);
+    PE_StoreU8(0x8009CE74u, 5u);
+    PE_StoreU8(0x8009D244u, 0u);
+    PE_StoreU32(0x8009CE90u, 1u);
+    PE_StoreU32(0x800B0DD8u, 0u);
+    D_8009D280 = 0xA8001248u;
+    PE_StoreU32(0x8009D280u, 0xA8001248u);
+    D_8009D1A0 = 2u;
+    PE_StoreU32(0x8009D1A0u, 2u);
+    PE_StoreU32(0x800B0CD8u, 0u);
+    func_8003F3C4();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0xFFFFFFFFu, "mode=-1");
+    ASSERT(PE_LoadU32(0x8009D280u) == 0xA9400048u, "6A25C dest");
+    ASSERT(PE_LoadU32(0x800A77F4u) == 0xA8001248u, "old dest saved");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x100u) != 0u, "B0CD8 keeps 0x100");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 2u) != 0u, "dest-change B0CD8|=2");
+    ASSERT((D_8009D1A0 & 0x40u) != 0u, "dest-change D1A0|=0x40");
+    ASSERT((D_8009D1A0 & 2u) == 0u, "295E4 D1A0&=~2");
+    ASSERT(g_stub_count == 0, "death tick not stub");
     PASS();
 }
 
@@ -27691,6 +27749,8 @@ int main(void)
     test_BTL100_bit800_takes_2aa98();
     test_BTL101_2b29c_case1_flag10();
     test_BTL101_2b29c_phases_to_mode_neg1();
+    test_BTL102_3f3c4_bit100_stable_skips_dest_change();
+    test_BTL102_death_tick_3f3c4_dest_change();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

@@ -35,6 +35,13 @@
  * is one pass per 1220C tick. Dest-change (D1C4!=D280)
  * takes 74DC0 / 87024 / 3DFC8(1) / 696F0 live tail
  * then D1A0|=0x40 / B0CD8|=2.
+ *
+ * PE-BTL102: andi 0x100 after 35558 @ 3F500 is not a
+ * function return. bnez 3F5F4 skips overlay/draw/6A0E8
+ * and still falls into dest-change when D280 moved
+ * (player-death 6A25C). 3F624 pad-combo 6A25C is not
+ * this cut. 1220C then VSync(0)/SetDispMask(0),
+ * B0CD8 &= ~0x100, j 1224C (outer 6A5BC restart).
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -230,35 +237,36 @@ void func_8003F3C4(void)
     func_80065400();
     func_80035558_walk_cut();
     bits = PE_LoadU32(0x800B0CD8u);
-    if ((bits & 0x100u) != 0u)
-        return;
-    /* 3F50C: live 6EC08==0 skips overlay 122040/121A00/6E60C. */
-    (void)func_8006EC08();
-    bits = PE_LoadU32(0x800B0CD8u);
-    if ((bits & 0x200u) != 0u)
-        return;
-    func_80068CE0();
-    func_80037870();
-    func_800661A4();
-    func_800E01BC();
-    func_800661CC();
-    func_80068E24();
-    func_80074DC0(0);
-    func_80073A44(2);
-    func_80074A44(1);
-    func_800755F0(PE_Translate(
-        0x800BCE80u + PE_LoadU32(0x8009CDDCu) * 20u, 0x14u));
-    if (func_8006EC08() == 0 &&
-        (PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u) {
-        /* 754E4 DrawOTagEnv(B0E38[CDDC]+0x3FFC, BCDC8+92*CDDC).
-         * 76C34 GPU enqueue is not this cut. */
-        cddc = PE_LoadU32(0x8009CDDCu);
-        func_800754E4(PE_LoadU32(0x800B0E38u + cddc * 4u) + 0x3FFCu,
-                      0x800BCDC8u + 92u * cddc);
-        PE_StoreU32(0x8009CDDCu, cddc == 0u);
+    /* 3F500 andi 0x100 / bnez 3F5F4: skip draw, not jr. */
+    if ((bits & 0x100u) == 0u) {
+        /* 3F50C: live 6EC08==0 skips overlay 122040/121A00/6E60C. */
+        (void)func_8006EC08();
+        bits = PE_LoadU32(0x800B0CD8u);
+        if ((bits & 0x200u) != 0u)
+            return;
+        func_80068CE0();
+        func_80037870();
+        func_800661A4();
+        func_800E01BC();
+        func_800661CC();
+        func_80068E24();
+        func_80074DC0(0);
+        func_80073A44(2);
+        func_80074A44(1);
+        func_800755F0(PE_Translate(
+            0x800BCE80u + PE_LoadU32(0x8009CDDCu) * 20u, 0x14u));
+        if (func_8006EC08() == 0 &&
+            (PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u) {
+            /* 754E4 DrawOTagEnv(B0E38[CDDC]+0x3FFC, BCDC8+92*CDDC).
+             * 76C34 GPU enqueue is not this cut. */
+            cddc = PE_LoadU32(0x8009CDDCu);
+            func_800754E4(PE_LoadU32(0x800B0E38u + cddc * 4u) + 0x3FFCu,
+                          0x800BCDC8u + 92u * cddc);
+            PE_StoreU32(0x8009CDDCu, cddc == 0u);
+        }
+        func_80073A44(2);
+        func_8006A0E8();
     }
-    func_80073A44(2);
-    func_8006A0E8();
     /* 1220C stores D1C4=D280 before the jal. Tests that call
      * 3F3C4 directly may have a stale D1C4; dest0 is that entry
      * snapshot. Exit epilogue only if D280 changed this tick. */
