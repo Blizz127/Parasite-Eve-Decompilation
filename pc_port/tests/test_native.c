@@ -13168,6 +13168,292 @@ static void test_BTL123_persist4a_ge40_skips_type2(void)
     PASS();
 }
 
+static void pe_btl124_plant_exe_tables(void)
+{
+    static const unsigned char charset[] =
+        "0123456789abcdefghiklmnoprstuvwy";
+    static const uint16_t d930d8[] = {
+        0, 71, 72, 87, 121, 126, 131, 153, 156, 157, 180, 197,
+        200, 203, 220, 237, 254, 271, 288, 316, 340, 368, 396,
+        428, 434, 442, 448, 456, 464, 472, 478, 483
+    };
+    unsigned int n;
+
+    for (n = 0; n < 32u; n++)
+        PE_StoreU8(0x800930B4u + n, charset[n]);
+    for (n = 0; n < 32u; n++)
+        PE_StoreU16(0x800930D8u + n * 2u, d930d8[n]);
+    PE_StoreU32(0x80093378u + 4u * 8u, 0x266Au);
+    PE_StoreU32(0x80093378u + 4u * 8u + 4u, 0x0600A921u);
+}
+
+static void pe_btl124_plant_vm_table(void)
+{
+    static const unsigned int ops[][2] = {
+        { 0x00u, 0x80017294u }, { 0x01u, 0x800172BCu },
+        { 0x02u, 0x800172E0u }, { 0x03u, 0x80017C54u },
+        { 0x04u, 0x80017988u }, { 0x05u, 0x8001731Cu },
+        { 0x08u, 0x8001735Cu }, { 0x09u, 0x80012850u },
+        { 0x0Au, 0x800173F4u }, { 0x0Bu, 0x80012C20u },
+        { 0x0Du, 0x80017410u }, { 0x12u, 0x800131E8u },
+        { 0x14u, 0x80017588u }, { 0x1Au, 0x800176FCu },
+        { 0x1Cu, 0x80017764u }, { 0x1Du, 0x80017E20u },
+        { 0x1Eu, 0x80019658u }, { 0x1Fu, 0x800177ACu },
+        { 0x20u, 0x800172FCu }, { 0x22u, 0x800177C8u },
+        { 0x2Eu, 0x80017AE8u }, { 0x2Fu, 0x80017B34u },
+        { 0x30u, 0x80017B74u }, { 0x3Fu, 0x80017D5Cu },
+        { 0x40u, 0x80017D7Cu }, { 0xABu, 0x80019638u },
+        { 0x4Bu, 0x80013C34u }, { 0x4Eu, 0x80017EC4u },
+        { 0x55u, 0x800144FCu }, { 0x5Eu, 0x80014694u },
+        { 0x65u, 0x8001856Cu }, { 0x6Fu, 0x80018954u },
+        { 0x79u, 0x80018BECu }, { 0x82u, 0x80018E58u },
+        { 0x84u, 0x80018E84u }, { 0x86u, 0x80018EE0u },
+        { 0x88u, 0x80018F54u }, { 0x89u, 0x80017FF0u },
+        { 0x8Bu, 0x80018080u }, { 0x94u, 0x80019154u },
+        { 0x9Bu, 0x80015240u }, { 0x9Cu, 0x80019410u },
+        { 0xAAu, 0x80019618u }, { 0xC7u, 0x80019BE4u },
+        { 0xCEu, 0x800181CCu }, { 0xDCu, 0x8001A1F0u },
+        { 0xE1u, 0x8001A374u }, { 0xEAu, 0x80015DACu },
+        { 0xEDu, 0x80016910u },
+    };
+    unsigned int t;
+    unsigned int i;
+
+    PE_StoreU32(0x800915DCu, 0x80035C84u);
+    for (t = 1u; t < 10u; t++)
+        PE_StoreU32(0x800915DCu + t * 8u, 0x80035E04u);
+    for (i = 0; i < (unsigned int)(sizeof(ops) / sizeof(ops[0])); i++)
+        PE_StoreU32(0x800910A0u + ops[i][0] * 4u, ops[i][1]);
+}
+
+static PE_Disc *pe_btl124_open_m0005i(char *err, size_t err_size)
+{
+    PE_Disc *disc;
+    pe_addr_t dest0 = 0x80120000u;
+    pe_addr_t dest1 = 0x80140000u;
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t dest_wb = 0x801D0000u;
+
+    pe_btl124_plant_exe_tables();
+    pe_btl124_plant_vm_table();
+    err[0] = 0;
+    disc = BTL6_OpenDisc1(err, err_size);
+    if (disc == NULL)
+        return NULL;
+    func_8007ED58();
+    PE_Disc_SetActive(disc);
+    PE_StoreU32(0x800B0DD8u, 1013u);
+    PE_StoreU32(0x800B0CD8u + 0x194u, dest0);
+    PE_StoreU32(0x800B0CD8u + 0x168u, dest1);
+    PE_StoreU32(0x800B0CD8u + 0x18Cu, dest2);
+    PE_StoreU32(0x800B0CD8u + 0x154u, dest_wb);
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x8009570Cu, 0x80076C34u);
+    PE_StoreU32(0x80095724u, 0x80076664u);
+    D_8009D1A0 = 0u;
+    D_8009D280 = 0xA80002C8u;
+    if (func_8003F074_dest_ready_cut(0xA80002C8u) != 1) {
+        snprintf(err, err_size, "dest-ready");
+        PE_Disc_SetActive(NULL);
+        PE_Disc_Close(disc);
+        return NULL;
+    }
+    return disc;
+}
+
+static int pe_btl124_find_type(uint8_t type, pe_addr_t *out)
+{
+    pe_addr_t actor;
+
+    actor = PE_LoadU32(0x8009D20Cu);
+    while (actor != 0u) {
+        if (PE_LoadU8(actor + 0x0Cu) == type) {
+            if (out != NULL)
+                *out = actor;
+            return 1;
+        }
+        actor = PE_LoadU32(actor + 4u);
+    }
+    return 0;
+}
+
+static void test_BTL124_m0005i_type1_ticks_type2(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t type1;
+    pe_addr_t type2;
+    pe_addr_t task;
+    pe_addr_t script;
+    pe_addr_t clip15;
+    int i;
+    int saw2;
+
+    TEST("BTL124_m0005i_type1_ticks_type2");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    ASSERT(PE_LoadU8(0x800B0CE2u) == 10u, "dest CE2=10");
+    clip15 = PE_LoadU32(0x800B0E98u + 0x15u * 4u);
+    ASSERT(clip15 != 0u, "Writer B CE2=10 cmd 0x15");
+    ASSERT(PE_LoadU8(clip15 + 2u) == 1u, "CE2=10 0x15 frames 1");
+    ASSERT(pe_btl124_find_type(1u, &type1), "125E0 type 1");
+    ASSERT(pe_btl124_find_type(6u, NULL), "125E0 type 6");
+    ASSERT(pe_btl124_find_type(2u, NULL) == 0, "type 2 not planted");
+    script = dest2 + 0x21678u;
+    task = PE_LoadU32(type1 + 0xA8u);
+    ASSERT(PE_LoadU32(task) == script, "natural type-1 PC");
+    ASSERT(PE_LoadU32(script) == 0x0000C0EAu, "type-1 0xEA");
+
+    saw2 = 0;
+    for (i = 0; i < 8; i++) {
+        func_80065400();
+        func_80035558_walk_cut();
+        if (pe_btl124_find_type(2u, &type2)) {
+            saw2 = 1;
+            break;
+        }
+    }
+    ASSERT(saw2, "type-1 0x08 spawned type 2");
+    ASSERT(PE_LoadU32(type2) == 0u, "35038 zeros body");
+    ASSERT(PE_LoadU32(type2 + 0xA8u) != 0u, "type-2 task");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+/* Next: type-6 0x89 / 0x1C(2,0,0x7D). New-game type-0 skips 0x1C(2,0,0xB). */
+static void test_BTL124_type2_6f_body_live(void) __attribute__((unused));
+static void test_BTL124_type2_6f_body_live(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t type2;
+    pe_addr_t task;
+    pe_addr_t script;
+    int i;
+    int saw2;
+    int saw_body;
+    uint32_t rel;
+
+    TEST("BTL124_type2_6f_body_live");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+
+    saw2 = 0;
+    saw_body = 0;
+    type2 = 0u;
+    rel = 0u;
+    script = dest2 + 0x218D4u;
+    {
+        int tick_19c = -1;
+        int tick_mb = -1;
+        int tick_t2mb = -1;
+        unsigned int rec_ty = 0u;
+        unsigned int rec_id = 0u;
+        unsigned int rec_pl = 0u;
+        unsigned int rec_n = 0u;
+        unsigned int rec1_ty = 0u;
+        unsigned int rec1_pl = 0u;
+        unsigned int t2id = 0u;
+        unsigned int t2mb_pl = 0u;
+        unsigned int t2n = 0u;
+
+        for (i = 0; i < 256; i++) {
+            unsigned int mb;
+            unsigned int r;
+
+            mb = PE_LoadU8(0x8009CDB4u);
+            if (mb != 0u && tick_mb < 0) {
+                tick_mb = i;
+                rec_n = mb;
+                rec_ty = PE_LoadU16(0x800A3180u);
+                rec_id = PE_LoadU8(0x800A3180u + 2u);
+                rec_pl = PE_LoadU8(0x800A3180u + 3u);
+                if (mb > 1u) {
+                    rec1_ty = PE_LoadU16(0x800A3180u + 12u);
+                    rec1_pl = PE_LoadU8(0x800A3180u + 15u);
+                }
+            }
+            for (r = 0u; r < mb; r++) {
+                if (PE_LoadU16(0x800A3180u + r * 12u) == 2u) {
+                    t2n++;
+                    if (tick_t2mb < 0) {
+                        tick_t2mb = i;
+                        t2mb_pl = PE_LoadU8(0x800A3180u + r * 12u + 3u);
+                    }
+                }
+            }
+            func_80065400();
+            func_80035558_walk_cut();
+            if (!saw2 && pe_btl124_find_type(2u, &type2)) {
+                saw2 = 1;
+                t2id = PE_LoadU8(type2 + 0x0Du);
+            }
+            if (saw2) {
+                task = PE_LoadU32(type2 + 0xA8u);
+                if (tick_19c < 0 && PE_LoadU32(type2 + 0x19Cu) != 0u)
+                    tick_19c = i;
+                if (task != 0u && PE_LoadU32(task) >= script)
+                    rel = PE_LoadU32(task) - script;
+                if (PE_LoadU32(type2) != 0u) {
+                    saw_body = 1;
+                    break;
+                }
+            }
+        }
+        if (!saw_body) {
+            pe_addr_t type0;
+            pe_addr_t t0task;
+            unsigned int flags8 = 0u;
+            unsigned int t0rel = 0u;
+            unsigned int t0flags = 0u;
+
+            task = type2 ? PE_LoadU32(type2 + 0xA8u) : 0u;
+            if (task != 0u)
+                flags8 = PE_LoadU16(task + 8u);
+            if (pe_btl124_find_type(0u, &type0)) {
+                t0task = PE_LoadU32(type0 + 0xA8u);
+                if (t0task != 0u) {
+                    t0flags = PE_LoadU16(t0task + 8u);
+                    if (PE_LoadU32(t0task) >= dest2 + 0x202C8u)
+                        t0rel = PE_LoadU32(t0task) - (dest2 + 0x202C8u);
+                }
+            }
+            {
+                pe_addr_t type6 = 0u;
+                pe_addr_t t6task = 0u;
+                unsigned int t6rel = 0u;
+                unsigned int t6flags = 0u;
+
+                if (pe_btl124_find_type(6u, &type6)) {
+                    t6task = PE_LoadU32(type6 + 0xA8u);
+                    if (t6task != 0u) {
+                        t6flags = PE_LoadU16(t6task + 8u);
+                        if (PE_LoadU32(t6task) >= dest2 + 0x2341Cu)
+                            t6rel = PE_LoadU32(t6task) - (dest2 + 0x2341Cu);
+                    }
+                }
+                snprintf(err, sizeof(err),
+                         "0x6F t2 +0x%X f8=0x%X t0 +0x%X f8=0x%X t6 +0x%X f8=0x%X dly=%u f98=0x%X mode=%u",
+                         rel, flags8, t0rel, t0flags, t6rel, t6flags,
+                         t6task ? PE_LoadU32(t6task + 0x10u) : 0u,
+                         type6 ? PE_LoadU32(type6 + 0x98u) : 0u,
+                         PE_LoadU32(0x8009D28Cu));
+            }
+            ASSERT(saw2, "type 2 spawned");
+            ASSERT(0, err);
+        }
+    }
+    ASSERT(type2 != PE_LoadU32(0x8009D254u), "body is not Aya");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
 static void test_BTL119_6c1cc_39_returns_0(void)
 {
     pe_addr_t aya = 0x80108600u;
@@ -29713,6 +29999,7 @@ int main(void)
     test_BTL122_no_d20c_enemy_plant();
     test_BTL123_persist4a_lt40_spawns_type2();
     test_BTL123_persist4a_ge40_skips_type2();
+    test_BTL124_m0005i_type1_ticks_type2();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

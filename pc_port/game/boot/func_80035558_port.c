@@ -23,10 +23,13 @@
  * the 35B2C jal 69594 event pump. PE-BTL66 adds the post-69594
  * 1A4AC clip ticks @ 35B84 (D254 when D1A0&0x100) and 35BEC
  * (D20C walk when that bit is clear; skip +0x98 & 0x800040).
- * 6C5BC @ 35B24, 661CC @ 35B34 stay deferred. PE-BTL120 takes
- * the dest tick at 35AE0: jal 3AF14(actor+0x1B4) when
- * +0x98 bit 0x40 is clear. 3AC90 / 3A6A8 / 6698C / 68014
- * stay deferred. Not M2.
+ * PE-BTL124 takes 35C2C jal 360B4's proven +0x98
+ * `and 0xFF7FFFFF` (clear the 1A4AC-this-frame bit) and the
+ * 35C34 walk `and 0xEFFFFFFF`. 360B4's 6FE14 child tail,
+ * 36448, and 12774 stay deferred. 6C5BC @ 35B24, 661CC @
+ * 35B34 stay deferred. PE-BTL120 takes the dest tick at
+ * 35AE0: jal 3AF14(actor+0x1B4) when +0x98 bit 0x40 is
+ * clear. 3AC90 / 3A6A8 / 6698C / 68014 stay deferred. Not M2.
  *
  * func_80035E04 — 83 words 0x80035E04..0x80035F50. If D1A0 bit
  * 0x100, only 361F4. Else snapshot +0x28/+0x38 into +0x40/+0x50,
@@ -478,7 +481,7 @@ void func_80035558_walk_cut(void)
     }
     func_80069594();
 
-    /* ROM 0x80035B44: D1A0&4 skips both 1A4AC sites. */
+    /* ROM 0x80035B44: D1A0&4 skips 1A4AC, 36448, 12774, 360B4. */
     if (D_8009D1A0 & 4u)
         return;
     if (D_8009D1A0 & 0x100u) {
@@ -487,14 +490,31 @@ void func_80035558_walk_cut(void)
             if (actor != 0u)
                 func_8001A4AC(actor);
         }
-        return;
+    } else {
+        actor = PE_LoadU32(GA_D_8009D20C);
+        while (actor != 0u) {
+            if (!(actor == PE_LoadU32(GA_D_8009D254)
+                  && (PE_LoadU32(GA_D_800B0CD8) & 0x40000u) != 0u)
+                && (PE_LoadU32(actor + 0x98u) & 0x800040u) == 0u)
+                func_8001A4AC(actor);
+            actor = PE_LoadU32(actor + 4u);
+        }
     }
+
+    /*
+     * ROM 0x80035C2C jal 360B4 prefix: lw +0x98 / and
+     * 0xFF7FFFFF / sw. 1A4AC sets bit 0x800000 so a later
+     * walk this frame skips children already ticked; the
+     * clearer must run before the next frame or 0x30 waits
+     * stall. 6FE14 is not this cut.
+     * ROM 0x80035C34 then walks and ands 0xEFFFFFFF.
+     */
     actor = PE_LoadU32(GA_D_8009D20C);
     while (actor != 0u) {
-        if (!(actor == PE_LoadU32(GA_D_8009D254)
-              && (PE_LoadU32(GA_D_800B0CD8) & 0x40000u) != 0u)
-            && (PE_LoadU32(actor + 0x98u) & 0x800040u) == 0u)
-            func_8001A4AC(actor);
+        uint32_t flags;
+
+        flags = PE_LoadU32(actor + 0x98u) & ~0x800000u;
+        PE_StoreU32(actor + 0x98u, flags & ~0x10000000u);
         actor = PE_LoadU32(actor + 4u);
     }
 }

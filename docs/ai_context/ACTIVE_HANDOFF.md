@@ -3,6 +3,18 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL124 — dest-ready m0005i type-1 ticks type-2
+
+`matching_native` local. dest-ready m0005i plus `65400`+
+`35558` ticks the existing type-1 actor through the first
+`0x02` and the four `0x08`s. persist 0 takes the type-2
+spawn. Dest CE2 is 10. `35558` `360B4` suffix clears
+`+0x98` bit `0x800000` so `1A4AC` can tick next frame.
+Do not force PC / `2F7D8` / D20C. Type-2 still needs
+`0x6F`. New-game type-0 skips `0x1C(2,0,0xB)`; next is
+type-6 `0x89` / `0x1C(2,0,0x7D)`.
+Evidence: `docs/evidence/pe-btl124-type1-type2/`.
+
 ## PE-BTL123 — type-2 0x08 is persist[0x4A] < 40
 
 `matching_native` local. m0005i type-1 after the first
