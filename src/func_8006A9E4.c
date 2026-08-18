@@ -1,10 +1,11 @@
 /*
  * IN PROGRESS — Phase 5FO: func_8006A9E4 (main's boot-read callee, 215 words).
  * DO NOT INTEGRATE — checkpoint candidate, NOT matched.
- * Best state: draft d6 (session 2026-08-18) — frame EXACT (0x30; vars 8 +
- * 5x$s + $ra + args 16), control structure proven, 218 words (+3), ~178
- * positional mismatches dominated by relocation placeholders and three
- * identified microstructure deltas below.
+ * Best state: draft d10 (session 2026-08-18, second round) — 216 words (+1),
+ * frame EXACT (0x30; vars 8 + 5x$s + $ra + args 16), all zone/copy STRUCTURE
+ * word-count-exact. The single structural extra is the zone-1 gate steal
+ * (698D4-class dbr_sched divergence). Remaining byte deltas are register/
+ * offset choices inside the copy loops and the zone-3/4 gate li extras.
  *
  * SEMANTICS (retail-decoded, proven against 0x5B1E4-0x5B540):
  *   RECT16 {0,0,0x3FF,0x1FF} local at sp+0x10; ClearImage(&rect,0,0,1)
@@ -12,56 +13,60 @@
  *   s3 = &D_800B0CD8 (data struct), s2 = D_800B0DD8 (mount base).
  *   FOUR table-driven read zones over the u16 boundary pairs at
  *   D_800930DC[0],[1],[4],[5] ({off,end}: len = end-off, src = base+off):
- *     each zone:  retry issue func_8006E6A8(dst, buf, len) while == -1;
- *     then the GOTO-GATE poll structure —
- *         flag = 1;
- *     poll: if (flag == -1) goto zone_restart;   (dead-ish gate; live only
- *                                                if poll returns -1)
- *           flag = func_8006E7E8();              (zone 3/4: booleanized
- *                                                via sltu: flag = (r != 0))
- *           if (flag != 0) goto poll;
+ *     retry func_8006E6A8(dst, buf, len) while == -1; then the GOTO-GATE
+ *     poll: flag = 1; poll: if (flag == -1) goto restart;
+ *     flag = func_8006E7E8();  (zone 3/4 booleanized via sltu: flag=(r!=0))
+ *     if (flag != 0) goto poll.
  *     Zone 1 dst = D_800A8028; zones 2/3/4 dst = *(data+0x194) loaded
- *     INSIDE the retry loop (per-iteration lw $a1,0x194($s3) — write the
- *     expression in the call argument, NOT a hoisted local).
+ *     INSIDE the retry loop (write the expression in the call argument).
  *     Zone 2 additionally calls func_800527C8() once (called-flag at the
  *     poll-loop head; flag=1 store sits in the jal delay slot).
  *   After zone 2: copy 0x10A50 bytes *(data+0x194) -> D_800E2858; alignment
  *   split on ((src|dst)&3): unaligned = 16-byte lwl/lwr + swl/swr blocks,
- *   aligned = lw/sw; do/while shape (retail has NO trip guard); loop test
- *   bne src,end with dst+=16 in the slot; end = src + 0x10A50 (lui hoisted
- *   into the beqz slot, ori executed on both paths).
- *   data[0x148] = &D_800E2858 (store in the first 6E498 jal slot);
- *   data[0x140] = func_8006E498(&D_800E2858, 0x57D40D84) (store in the
- *   second jal slot); data[0x144] = SECOND call's return (post-call sw).
+ *   aligned = lw/sw; do/while shape (retail has NO trip guard); end =
+ *   src + 0x10A50 (lui hoisted into the beqz slot, ori on both paths).
+ *   data[0x148] = &D_800E2858 (store in first 6E498 jal slot);
+ *   data[0x140] = func_8006E498(&D_800E2858, 0x57D40D84) (store in second
+ *   jal slot); data[0x144] = SECOND call's return (post-call sw).
  *   Zone 3 + func_80087090(D_800B0E6C, 1) (symbol form, not data+0x194).
- *   Zone 4, then copy 2: 0x1400 bytes *(data+0x194) -> *(data+0x130)
- *   (same alignment split; end = src + 0x1400 via single addiu in the
- *   beqz delay slot).
+ *   Zone 4, then copy 2: 0x1400 bytes *(data+0x194) -> *(data+0x130).
  *
- * PROVEN LEVERS (this session):
+ * PROVEN LEVERS (this session, rounds 1-2):
  *   - goto-gate form reproduces retail's dead-edge outer/retry/poll layout
- *   - inline *(data+0x194) in the call arg = per-iteration load, removes
- *     the 6th $s register (frame 56 -> 48 exact)
- *   - pins: data->asm("$19"), base->asm("$18"), t->asm("$16") natural-fit
- *   - OVERLAPPING double pin (flag AND sentinel both asm("$17")) BREAKS
- *     codegen (d7 collapsed to 40 words) — do not retry that shape
+ *   - inline *(data+0x194) call arg = per-iteration load; removed 6th $s
+ *     (frame 56 -> 48 exact)
+ *   - pins data->asm("$19"), base->asm("$18"), t->asm("$16") natural-fit
+ *   - called->asm("$17") pin flips zone 2 to retail's called=$s1 /
+ *     sentinel2=$s4 assignment (d8/d10)
+ *   - __builtin_memcpy(dst, src, 16) on char* emits EXACTLY retail's
+ *     lwl/lwr x4 + swl/swr x4 block shape (proven isolated AND in-function)
+ *   - do/while copy = no trip guard (retail shape)
+ *   NEGATIVE RESULTS (do not retry): packed struct -> byte-wise synthesis
+ *   (+119 words); aligned(1) struct attr -> ignored (plain lw/sw);
+ *   -fno-strength-reduce -> 208/221-word regressions; OVERLAPPING double
+ *   pin on $17 (flag AND sentinel) COLLAPSES codegen to 40 words.
  *
- * REMAINING DELTAS (d6 -> retail):
- *   (a) retry back-edge slot: retail NOP, ours steals the gate's li -1
- *       into the slot (698D4-class dbr_sched decision; retail gate keeps
- *       -1 in $s1, ours materializes into $v0) — register-home + steal
- *   (b) called/sentinel2 register swap (ours called->$s4, retail $s1 with
- *       sentinel2->$s4)
- *   (c) copy loops: ours strength-reduced (negative-offset pointer form,
- *       single-word-per-iter reshuffle) vs retail offset-addressed 4x4
- *       batched blocks; unaligned branch needs the packed-type lever to
- *       emit lwl/lwr (untested at d6 — d7 died before proving it)
- *   (d) 0x10A50 lui/ori split scheduling into the beqz slot
+ * REMAINING DELTAS (d10 -> retail):
+ *   (a) zone-1 retry back-edge slot: retail NOP, ours steals the gate li -1
+ *       (698D4-class). Sentinel VARIABLE in zones 1/3 fixes the steal and
+ *       removes the extra li, but RIPPLES zone 2 (d9/d11 regression) —
+ *       next: combine called pin + sentinel vars + zone-2 sentinel pin $20.
+ *   (b) copy loops: ours strength-reduced (base+offset via separate
+ *       induction regs, e.g. lw $v0,-8($a0)) vs retail clean base+offset
+ *       (lw $v1,4($a2)); same word counts, different encodings. Retail's
+ *       aligned loop batches 4 loads (lw v0/v1/a0/a1 consecutive) — our
+ *       temp-batched attempt (d12) added load-delay nops instead (+9).
+ *   (c) zone-3/4 gates: bare -1 materialized to $v0 (extra li, one balanced
+ *       by retail's own sltu-slot copy). Sentinel-var + pin combo should
+ *       close these with (a).
+ *   (d) 0x10A50 lui/ori split: retail hoists the lui into the alignment
+ *       beqz slot, ori executes on both paths; ours keeps them together.
  * ROM: asm/disc1/5B1E4.s @ file 0x5B1E4, 215 words (0x35C), frame 0x30.
- * Scratch: /tmp/5fo/d6.c (session-local) — this file mirrors d6.
+ * This file mirrors d10 (best checkpoint). Scratch: /tmp/5fo/ (session-local).
  */
 
 typedef struct { short x, y, w, h; } RECT16;
+typedef struct { unsigned int w; } __attribute__((aligned(1))) U32U;
 
 extern unsigned int D_800B0CD8;
 extern unsigned char *D_800B0DD8;
@@ -82,9 +87,9 @@ void func_8006A9E4(void) {
     register unsigned char *data asm("$19") = (unsigned char *)&D_800B0CD8;
     register unsigned char *base asm("$18") = D_800B0DD8;
     register unsigned short *t asm("$16");
-    unsigned char *buf, *dst, *end;
+    unsigned char *buf, *dst;
     int flag;
-    int called;
+    register int called asm("$17");
 
     rect.x = 0;
     rect.y = 0;
@@ -124,25 +129,26 @@ z2_poll:
 
     buf = *(unsigned char **)(data + 0x194);
     dst = D_800E2858;
-    end = buf + 0x10A50;
     if (((unsigned int)buf | (unsigned int)dst) & 3) {
-        while (buf != end) {
-            *(unsigned int *)(dst + 0)  = *(unsigned int *)(buf + 0);
-            *(unsigned int *)(dst + 4)  = *(unsigned int *)(buf + 4);
-            *(unsigned int *)(dst + 8)  = *(unsigned int *)(buf + 8);
-            *(unsigned int *)(dst + 12) = *(unsigned int *)(buf + 12);
+        unsigned char *end = buf + 0x10A50;
+        do {
+            ((U32U *)(dst + 0))->w  = ((U32U *)(buf + 0))->w;
+            ((U32U *)(dst + 4))->w  = ((U32U *)(buf + 4))->w;
+            ((U32U *)(dst + 8))->w  = ((U32U *)(buf + 8))->w;
+            ((U32U *)(dst + 12))->w = ((U32U *)(buf + 12))->w;
             buf += 16;
             dst += 16;
-        }
+        } while (buf != end);
     } else {
-        while (buf != end) {
+        unsigned char *end = buf + 0x10A50;
+        do {
             *(int *)(dst + 0)  = *(int *)(buf + 0);
             *(int *)(dst + 4)  = *(int *)(buf + 4);
             *(int *)(dst + 8)  = *(int *)(buf + 8);
             *(int *)(dst + 12) = *(int *)(buf + 12);
             buf += 16;
             dst += 16;
-        }
+        } while (buf != end);
     }
 
     *(unsigned char **)(data + 0x148) = D_800E2858;
@@ -177,24 +183,25 @@ z4_poll:
 
     buf = *(unsigned char **)(data + 0x194);
     dst = *(unsigned char **)(data + 0x130);
-    end = buf + 0x1400;
     if (((unsigned int)buf | (unsigned int)dst) & 3) {
-        while (buf != end) {
-            *(unsigned int *)(dst + 0)  = *(unsigned int *)(buf + 0);
-            *(unsigned int *)(dst + 4)  = *(unsigned int *)(buf + 4);
-            *(unsigned int *)(dst + 8)  = *(unsigned int *)(buf + 8);
-            *(unsigned int *)(dst + 12) = *(unsigned int *)(buf + 12);
+        unsigned char *end = buf + 0x1400;
+        do {
+            ((U32U *)(dst + 0))->w  = ((U32U *)(buf + 0))->w;
+            ((U32U *)(dst + 4))->w  = ((U32U *)(buf + 4))->w;
+            ((U32U *)(dst + 8))->w  = ((U32U *)(buf + 8))->w;
+            ((U32U *)(dst + 12))->w = ((U32U *)(buf + 12))->w;
             buf += 16;
             dst += 16;
-        }
+        } while (buf != end);
     } else {
-        while (buf != end) {
+        unsigned char *end = buf + 0x1400;
+        do {
             *(int *)(dst + 0)  = *(int *)(buf + 0);
             *(int *)(dst + 4)  = *(int *)(buf + 4);
             *(int *)(dst + 8)  = *(int *)(buf + 8);
             *(int *)(dst + 12) = *(int *)(buf + 12);
             buf += 16;
             dst += 16;
-        }
+        } while (buf != end);
     }
 }
