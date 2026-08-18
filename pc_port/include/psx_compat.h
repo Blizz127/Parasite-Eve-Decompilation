@@ -112,12 +112,12 @@ static inline void func_800752AC(void *o, int n) {
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
-static inline void func_8003F3C4(void)   { Bootstrap_ReturnVoid("func_8003F3C4", "func_8001220C"); }
+/* func_8003F3C4 / func_80066B60 / func_80068E24 are REAL native ports
+ * (game/boot/func_8003F3C4_port.c, func_80066B60_port.c,
+ * func_80068E24_port.c). Prototypes live in pe_port_compat.h. */
 static inline void func_801235DC(void)   { Bootstrap_ReturnVoid("func_801235DC", "func_8001220C"); }
 static inline void func_8019234C(void)   { Bootstrap_ReturnVoid("func_8019234C", "func_8001220C"); }
 static inline int  func_801909B4(void)   { return Bootstrap_ReturnInt("func_801909B4", "func_8001220C", 0); }
-static inline void func_80066B60(int a)  { Bootstrap_ReturnVoid("func_80066B60", "func_8006E9A0"); (void)a; }
-static inline void func_80068E24(void)   { Bootstrap_ReturnVoid("func_80068E24", "func_8006E9A0"); }
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
 /* func_8006E1C0 is REAL (Phase 6E-B51):
  * game/boot/func_8006E1C0_port.c — packed texture-entry LoadImage

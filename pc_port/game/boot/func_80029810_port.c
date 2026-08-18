@@ -37,16 +37,118 @@ void func_8006C140_type0_clip_bind(pe_addr_t package)
     unsigned int i;
     pe_addr_t rec;
 
-    dir = package + PE_LoadU32(package + 4u);
+    dir = package + (PE_LoadU32(package + 4u) & 0x3FFFFFu);
+    if (dir < 0x80000000u)
+        return;
     packed = PE_LoadU32(dir + 0x10u);
     count = packed >> 22;
     rec = package + (packed & 0x3FFFFFu);
+    if (rec < 0x80000000u)
+        return;
     for (i = 0; i < count; i++) {
         unsigned int idb = PE_LoadU8(rec + 7u);
         unsigned int ptr = PE_LoadU32(rec + 4u) & 0x00FFFFFFu;
         PE_StoreU32(GA_OVERLAY + 0x1C0u + idb * 4u, package + ptr);
         rec += 12u;
     }
+}
+
+extern int func_8006E6A8(int lba, pe_addr_t dest, int sectors);
+extern int func_8006E7E8(void);
+
+#define GA_D_800B0DD8  0x800B0DD8u
+#define GA_D_800930D8  0x800930D8u
+#define MASK_22_BECC   0x003FFFFFu
+#define MASK_24_BECC   0x00FFFFFFu
+
+/*
+ * PE-BTL90 — func_8006BECC dest-enter Writer B (states 4/5/6).
+ *
+ * State 4 @ 0x8006C068: 6E6A8 into overlay+0x154 from
+ * D_800930D8[CE2+8]..[CE2+9] + D_800B0DD8.
+ * State 5 @ 0x8006C0AC: 6E7E8 poll; -1 retries state 4.
+ * State 6 @ 0x8006C0E4: 6C118 B0E70[0] + 6C140 type-0 bind,
+ * CE3=CE2, +0xEC=0, overlay &= ~0x200000, return 0.
+ * Other states stay fail-closed (return 1).
+ */
+int func_8006BECC(void)
+{
+    uint8_t state;
+    uint8_t ce2;
+    pe_addr_t dest;
+    pe_addr_t package;
+    pe_addr_t section;
+    uint32_t packed;
+    uint32_t count;
+    uint16_t start;
+    uint16_t end;
+    int status;
+    int lba;
+
+    state = PE_LoadU8(GA_OVERLAY + 0xECu);
+    ce2 = PE_LoadU8(GA_OVERLAY + 0x0Au);
+    dest = PE_LoadU32(GA_OVERLAY + 0x154u);
+
+    /* State 0 @ 0x8006BF34: overlay bit 0x200000 selects state 1;
+     * else fall through to state 6 (bind existing dest+0x154). */
+    if (state == 0u) {
+        if ((PE_LoadU32(GA_OVERLAY) & 0x200000u) != 0u) {
+            /* State 1 reloads dest+0x194. No dest means nothing to do. */
+            if (PE_LoadU32(GA_OVERLAY + 0x194u) < 0x80000000u)
+                return 0;
+            PE_StoreU8(GA_OVERLAY + 0xECu, 1u);
+            return 1;
+        }
+        state = 6u;
+    }
+
+    if (state == 4u) {
+        if (dest < 0x80000000u)
+            return 0;
+        start = PE_LoadU16(GA_D_800930D8 + (uint32_t)(ce2 + 8u) * 2u);
+        end = PE_LoadU16(GA_D_800930D8 + (uint32_t)(ce2 + 9u) * 2u);
+        lba = (int)(PE_LoadU32(GA_D_800B0DD8) + start);
+        status = func_8006E6A8(lba, dest, (int)end - (int)start);
+        if (status == -1)
+            return 1;
+        PE_StoreU8(GA_OVERLAY + 0xECu, 5u);
+        return 1;
+    }
+
+    if (state == 5u) {
+        status = func_8006E7E8();
+        if (status == -1) {
+            PE_StoreU8(GA_OVERLAY + 0xECu, 4u);
+            return 1;
+        }
+        if (status != 0)
+            return 1;
+        PE_StoreU8(GA_OVERLAY + 0xECu, 6u);
+        state = 6u;
+    }
+
+    if (state != 6u)
+        return 1;
+
+    package = dest;
+    if (package < 0x80000000u)
+        return 0;
+    section = package + (PE_LoadU32(package + 4u) & MASK_22_BECC);
+    if (section < 0x80000000u)
+        return 0;
+    packed = PE_LoadU32(section + 0x0Cu);
+    {
+        pe_addr_t rec0 = package + (packed & MASK_22_BECC);
+
+        if (rec0 >= 0x80000000u)
+            PE_StoreU32(0x800B0E70u,
+                        package + (PE_LoadU32(rec0 + 4u) & MASK_24_BECC));
+    }
+    func_8006C140_type0_clip_bind(package);
+    PE_StoreU8(GA_OVERLAY + 0xECu, 0u);
+    PE_StoreU8(GA_OVERLAY + 0x0Bu, ce2);
+    PE_StoreU32(GA_OVERLAY, PE_LoadU32(GA_OVERLAY) & ~0x200000u);
+    return 0;
 }
 
 void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)

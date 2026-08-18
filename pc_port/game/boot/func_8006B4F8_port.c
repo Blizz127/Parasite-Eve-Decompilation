@@ -115,10 +115,14 @@ void func_8006B4F8_12574_publish_cut(void)
     word = PE_LoadU32(s5 + 0x10u);
     count = word >> 22;
     rec = s4 + (word & MASK_22);
+    if (rec < 0x80000000u)
+        count = 0;
     for (i = 0; i < count; i++) {
         uint8_t type;
         uint8_t cmd;
 
+        if (rec < 0x80000000u)
+            break;
         type = PE_LoadU8(rec + 0x0Bu);
         cmd = PE_LoadU8(rec + 7u);
         PE_StoreU32(GA_OVERLAY + 0x1C0u
@@ -136,7 +140,11 @@ void func_8006B4F8_12574_publish_cut(void)
     word = PE_LoadU32(s5 + 0x20u);
     count = word >> 22;
     rec = s4 + (word & MASK_22);
+    if (rec < 0x80000000u)
+        count = 0;
     for (i = 0; i < count; i++) {
+        if (rec < 0x80000000u)
+            break;
         id = PE_LoadU8(rec + 7u);
         PE_StoreU32(GA_OVERLAY + 0x950u + (uint32_t)id * 4u,
                     s4 + (PE_LoadU32(rec + 4u) & MASK_24));
@@ -243,5 +251,147 @@ int func_8006B4F8_dest_load_cut(uint32_t token)
     func_800726C4();
     func_80072724();
     func_8006B4F8_12574_publish_cut();
+    return 1;
+}
+
+extern pe_addr_t func_8006E498(pe_addr_t base, uint32_t key);
+extern int func_8006C5BC(void);
+extern void func_800125E0(void);
+extern void func_80034FC4(void);
+extern void func_8001266C(void);
+extern void func_8001A918(void);
+extern int func_8006BECC(void);
+
+/*
+ * PE-BTL90 — func_8006B35C dest-enter clear (103 words,
+ * 0x8006B35C..0x8006B4F8, SHA-256 1106cb2a…). 3F074 first jal.
+ *
+ * Proven stores: B0E70[0..9] countdown from overlay+0x1BC,
+ * ten B0E98 rows of 48 words stride 192, then one-word zeros
+ * at +0x940/+0x944/+0x948/+0x94C, +0x954 then +0x950, +0x958.
+ * Suffix is the retail 6E498 lookup plus the documented overlay
+ * byte/bit stores.  +0x14C==0 skips the lookup (host guard;
+ * ROM would deref).
+ */
+void func_8006B35C(void)
+{
+    unsigned int i;
+    unsigned int j;
+    pe_addr_t row;
+    pe_addr_t wordp;
+    pe_addr_t base;
+    uint32_t overlay;
+    pe_addr_t lookup;
+
+    for (i = 0; i < 10u; i++)
+        PE_StoreU32(0x800B0E70u + (9u - i) * 4u, 0u);
+
+    row = GA_OVERLAY;
+    for (i = 0; i < 10u; i++) {
+        wordp = row + 0x27Cu;
+        for (j = 0; j < 48u; j++) {
+            PE_StoreU32(wordp, 0u);
+            wordp -= 4u;
+        }
+        row += 192u;
+    }
+
+    PE_StoreU32(GA_OVERLAY + 0x940u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x944u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x948u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x94Cu, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x954u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x950u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x958u, 0u);
+
+    base = PE_LoadU32(GA_OVERLAY + 0x14Cu);
+    PE_StoreU32(GA_OVERLAY + 0x128u, PE_LoadU32(GA_OVERLAY + 0x150u));
+    PE_StoreU32(GA_OVERLAY + 0x12Cu,
+                PE_LoadU32(GA_OVERLAY + 0x150u) + 0x1400u);
+    lookup = 0u;
+    if (base >= 0x80000000u)
+        lookup = func_8006E498(base, 0x5EAF6804u);
+    PE_StoreU32(GA_OVERLAY + 0x124u, lookup);
+
+    overlay = PE_LoadU32(GA_OVERLAY) & ~0x400000u;
+    PE_StoreU32(GA_OVERLAY, overlay);
+    PE_StoreU8(GA_OVERLAY + 0xE0u, 39u);
+    PE_StoreU8(GA_OVERLAY + 0xE1u, 13u);
+    PE_StoreU8(GA_OVERLAY + 0x11u, 0u);
+    PE_StoreU8(GA_OVERLAY + 0x12u, 0u);
+    PE_StoreU16(0x80094488u, 0u);
+    for (i = 0; i < 4u; i++)
+        PE_StoreU16(0x8009448Cu + i * 8u, 0u);
+    PE_StoreU8(GA_OVERLAY + 0xF6u, 48u);
+    PE_StoreU8(GA_OVERLAY + 0xF7u, 127u);
+    PE_StoreU16(GA_OVERLAY + 0xF8u, 256u);
+    PE_StoreU16(GA_OVERLAY + 0xFAu, 2048u);
+}
+
+/*
+ * 6B4F8 after 72724: hdr+1 → CE2, hdr+3 → overlay+8, then
+ * hdr+0x0C B0E70[idB] (0x8006B7B0..0x8006B820). dest_load_cut
+ * deliberately stops before this window.
+ */
+static void pe_6b4f8_ce2_hdr0c(void)
+{
+    pe_addr_t s4;
+    pe_addr_t s5;
+    uint32_t word;
+    uint32_t count;
+    uint32_t i;
+    pe_addr_t rec;
+
+    s4 = PE_LoadU32(GA_OVERLAY + 0x18Cu);
+    if (s4 < 0x80000000u)
+        return;
+    s5 = s4 + (PE_LoadU32(s4 + 4u) & MASK_22);
+    PE_StoreU8(GA_OVERLAY + 0x0Au, PE_LoadU8(s5 + 1u));
+    PE_StoreU8(GA_OVERLAY + 0x08u, PE_LoadU8(s5 + 3u));
+
+    word = PE_LoadU32(s5 + 0x0Cu);
+    count = word >> 22;
+    rec = s4 + (word & MASK_22);
+    if (rec < 0x80000000u)
+        count = 0;
+    for (i = 0; i < count; i++) {
+        uint8_t idb;
+
+        if (rec < 0x80000000u)
+            break;
+        idb = PE_LoadU8(rec + 7u);
+        uint32_t ptr = PE_LoadU32(rec + 4u) & MASK_24;
+
+        PE_StoreU32(0x800B0E70u + (uint32_t)idb * 4u, s4 + ptr);
+        rec += 12u;
+    }
+}
+
+/*
+ * PE-BTL90 named dest-ready cut: 6B35C + 6B4F8 (CE2 / hdr+0x0C /
+ * Writer A) + 6BECC until 0 + 6C5BC until 0 + 125E0.
+ * Does not plant mode 7/9/10 or a type-1 clip.
+ */
+int func_8003F074_dest_ready_cut(uint32_t token)
+{
+    int guard;
+
+    func_8006B35C();
+    if (!func_8006B4F8_dest_load_cut(token))
+        return 0;
+    if (PE_LoadU32(GA_OVERLAY + 0x18Cu) >= 0x80000000u)
+        pe_6b4f8_ce2_hdr0c();
+    PE_StoreU8(GA_OVERLAY + 0xECu, 4u);
+    guard = 0;
+    while (func_8006BECC() == 1 && guard < 32)
+        guard++;
+    guard = 0;
+    while (func_8006C5BC() == 1 && guard < 16)
+        guard++;
+    func_8001A918();
+    func_80034FC4();
+    func_8001266C();
+    if (PE_LoadU32(GA_OVERLAY + 0x944u) >= 0x80000000u)
+        func_800125E0();
     return 1;
 }
