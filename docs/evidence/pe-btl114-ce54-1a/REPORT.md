@@ -22,7 +22,7 @@ as `236E8`). Do not plant CE54. Do not jal `236E8` just to advance.
 stores 2 when `Aya+0x252==0` and `overlay+0xB2==0`. Case 2
 runs `1A680(5)`, sets `+0x252=1`, `+0x98|=0x100`, timer
 `CE4C=30`, stores 3. Case 3 decrements `CE4C` then stores 4
-and clears `0x100`. Cases 4–8 stay deferred.
+and clears `0x100`. Cases 4–8 are PE-BTL115.
 
 ## Gate C — +0x1A
 

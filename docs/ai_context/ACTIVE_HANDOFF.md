@@ -9,6 +9,24 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL115 — 24A3C cases 4–8; case 6 waits +0x252
+
+`matching_native=893/893` local. `24A3C` cases 4–8
+increment under retail waits. Case 4 waits
+`+0x0F==+0x16` (not `+0x1A`), zeros non-Aya
+`+0x68/6C/70`, then D25C=5. Case 5 `1A680(6)` and
+`+0x250|=2`. Case 6 waits `Aya+0x252==0`, arms
+`CE4C=30`. Case 7 may `1A680(7)` on `+0x0F==+0x1A`,
+always drains `CE4C`, then `+0x252=1` and D25C=8.
+Case 8 waits `+0x0F==+0x1A`, `+0x250|=0x20`,
+`1A680((CE48*2+8)&~1)`, D25C=9. Do not plant D25C=9.
+A 0→5 prefix leaves `+0x252=1` from case 2; TEXT has
+no `sb 0` at `+0x252`. Next is `6F39C(0x6C)` /
+overlay `801F1BD8` (prelude at `6F3D4`) plus the
+`D4698` jalr that must clear that byte. `6C1CC` is
+not called by cases 4–8. Evidence:
+`docs/evidence/pe-btl115-d25c-4-8/`.
+
 ## PE-BTL114 — CE54 case 9; +0x1A from 1A4AC
 
 `matching_native=889/889` local. Sole CE54 store is
@@ -18,8 +36,7 @@ Case 9 waits `+0x0F==+0x1A` then `1A680` / CE54=1 /
 `body|=0x2000`. Do not plant CE54. `+0x1A` is the high
 half of `1A4AC`'s `+0x14→+0x18` copy. Phase 2 does not
 copy fields. `D25C` cases 0–3 increment (case 2 arms
-the 30-tick `CE4C` timer). Cases 4–8 stay deferred.
-Evidence:
+the 30-tick `CE4C` timer). Evidence:
 `docs/evidence/pe-btl114-ce54-1a/`.
 
 ## PE-BTL113 — 1A4AC produces +0x16==10

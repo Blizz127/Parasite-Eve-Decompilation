@@ -194,8 +194,10 @@ void func_80021F38(void)
  * 24A3C (lbu D25C), not 24A40. Sole TEXT jal is 22394 @
  * 229D8. Case 9 is the only CE54 writer: wait Aya
  * +0x0F==+0x1A, 1A680((int8)CE48*2+9), CE55=2, CE54=1,
- * body |= 0x2000. Cases 0-3 increment D25C (6C1CC and
- * HUD jals deferred). Cases 4-8 / 10-16 stay deferred.
+ * body |= 0x2000. Cases 0-8 increment D25C. 6C1CC / 6FC18 /
+ * 3C5D8 / 6F39C / 6DE80 stay deferred. Case 6 waits
+ * Aya+0x252==0; EXE has no sb-0 to that byte — overlay /
+ * 6C1CC family is the remaining clearer after case 2.
  */
 int func_80024A3C(void)
 {
@@ -254,6 +256,84 @@ int func_80024A3C(void)
             PE_StoreU32(aya + 0x98u, flags);
         }
         PE_StoreU8(GA_D_8009D25C, 4u);
+        return 0;
+    }
+    if (phase == 4u) {
+        pe_addr_t walk;
+
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya == 0u)
+            return 0;
+        if (PE_LoadU8(aya + 0x0Fu) != (uint8_t)PE_LoadU16(aya + 0x16u))
+            return 0;
+        walk = PE_LoadU32(GA_D_8009D20C);
+        while (walk != 0u) {
+            pe_addr_t next = PE_LoadU32(walk + 4u);
+
+            if (walk != aya && PE_LoadU32(walk) != 0u) {
+                PE_StoreU32(walk + 0x68u, 0u);
+                PE_StoreU32(walk + 0x6Cu, 0u);
+                PE_StoreU32(walk + 0x70u, 0u);
+            }
+            walk = next;
+        }
+        /* 6FC18 / 6F39C(109) deferred. */
+        PE_StoreU8(GA_D_8009D25C, 5u);
+        return 0;
+    }
+    if (phase == 5u) {
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya == 0u)
+            return 0;
+        func_8001A680_command_cut(aya, 6u);
+        /* 3C5D8 deferred. */
+        PE_StoreU16(aya + 0x250u, (uint16_t)(PE_LoadU16(aya + 0x250u) | 2u));
+        PE_StoreU8(GA_D_8009D25C, 6u);
+        return 0;
+    }
+    if (phase == 6u) {
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya == 0u || PE_LoadU8(aya + 0x252u) != 0u)
+            return 0;
+        /* 30584 / 77CF4 / 6DE80 camera deferred. */
+        PE_StoreU16(GA_D_8009CE4C, 30u);
+        PE_StoreU8(GA_D_8009D25C, 7u);
+        return 0;
+    }
+    if (phase == 7u) {
+        int16_t timer;
+
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya != 0u &&
+            PE_LoadU8(aya + 0x0Fu) == (uint8_t)PE_LoadU16(aya + 0x1Au)) {
+            func_8001A680_command_cut(aya, 7u);
+            PE_StoreU32(aya + 0x14u,
+                        (uint32_t)PE_LoadU8(aya + 0x0Fu) << 15);
+        }
+        timer = (int16_t)PE_LoadU16(GA_D_8009CE4C);
+        if (timer != 0) {
+            PE_StoreU16(GA_D_8009CE4C, (uint16_t)(timer - 1));
+            return 0;
+        }
+        if (aya != 0u) {
+            PE_StoreU8(aya + 0x252u, 1u);
+            PE_StoreU16(aya + 0x250u,
+                        (uint16_t)(PE_LoadU16(aya + 0x250u) | 4u));
+        }
+        PE_StoreU8(GA_D_8009D25C, 8u);
+        return 0;
+    }
+    if (phase == 8u) {
+        aya = PE_LoadU32(GA_D_8009D254);
+        if (aya == 0u)
+            return 0;
+        if (PE_LoadU8(aya + 0x0Fu) != (uint8_t)PE_LoadU16(aya + 0x1Au))
+            return 0;
+        PE_StoreU16(aya + 0x250u,
+                    (uint16_t)(PE_LoadU16(aya + 0x250u) | 0x20u));
+        cmd = ((unsigned int)(int)(int8_t)PE_LoadU8(GA_D_8009CE48) << 1) + 8u;
+        func_8001A680_command_cut(aya, cmd & 0xFFFEu);
+        PE_StoreU8(GA_D_8009D25C, 9u);
         return 0;
     }
     if (phase != 9u)

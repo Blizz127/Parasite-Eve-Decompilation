@@ -47,6 +47,11 @@ def main() -> int:
     require(load_u32(blob, 0x8001A520) == 0xAE070018, "1A4AC sw +0x18")
     require(load_u32(blob, 0x8002B1E8) == 0x9083000F, "phase2 lbu +0x0F")
     require(load_u32(blob, 0x8002B1EC) == 0x9482001A, "phase2 lhu +0x1A")
+    require(load_u32(blob, 0x80024C7C) == 0x94820016, "case4 lhu +0x16")
+    require(load_u32(blob, 0x80024D04) == 0x24050006, "case5 a1=6")
+    require(load_u32(blob, 0x80024D1C) == 0x90C20252, "case6 lbu +0x252")
+    require(load_u32(blob, 0x80024E88) == 0x9482001A, "case7 lhu +0x1A")
+    require(load_u32(blob, 0x80024F10) == 0x9482001A, "case8 lhu +0x1A")
     print("PASS: 24F94 is the CE54 store; 1A4AC copies +0x14 to +0x18")
     return 0
 
