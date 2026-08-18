@@ -9,6 +9,17 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL114 — CE54 case 9; +0x1A from 1A4AC
+
+`matching_native=887/887` local. Sole CE54 store is
+`24A3C` case 9 (`24F94`). `21DE0` tid `[387,407)` jals
+`22394`; `rec+0x4C&0x80000` and `D2A0!=0` jals `24A3C`.
+Case 9 waits `+0x0F==+0x1A` then `1A680` / CE54=1 /
+`body|=0x2000`. Do not plant CE54. `+0x1A` is the high
+half of `1A4AC`'s `+0x14→+0x18` copy. Phase 2 does not
+copy fields. `D25C` cases 0–8 stay deferred. Evidence:
+`docs/evidence/pe-btl114-ce54-1a/`.
+
 ## PE-BTL113 — 1A4AC produces +0x16==10
 
 `matching_native=883/883` local. `2B0E8` phase 0 waits

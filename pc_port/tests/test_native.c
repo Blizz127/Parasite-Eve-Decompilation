@@ -12278,6 +12278,174 @@ static void test_BTL113_phase0_no_16_plant(void)
     PASS();
 }
 
+static void test_BTL114_1a4ac_1a_lags_16(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t res = 0x80108B00u;
+    int i;
+
+    TEST("BTL114_1a4ac_1a_lags_16");
+    ResetTestState();
+    PE_StoreU8(aya + 0x0Cu, 0u);
+    PE_StoreU32(0x800B0E98u, res);
+    PE_StoreU8(res + 2u, 11u);
+    PE_StoreU32(aya + 0x1Cu, 0x10000u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    func_8001A680_command_cut(aya, 0u);
+    ASSERT(PE_LoadU16(aya + 0x1Au) == 0u, "1A680 zeros +0x1A");
+    for (i = 0; i < 10; i++)
+        func_8001A4AC(aya);
+    ASSERT(PE_LoadU16(aya + 0x16u) == 10u, "+0x16");
+    ASSERT(PE_LoadU16(aya + 0x1Au) == 9u, "+0x1A lags one");
+    func_8001A4AC(aya);
+    ASSERT(PE_LoadU16(aya + 0x1Au) == 10u, "copy makes equality");
+    PASS();
+}
+
+static void test_BTL114_phase2_no_1a_plant(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t res0 = 0x80108B00u;
+    pe_addr_t res15 = 0x80108C00u;
+    int i;
+
+    TEST("BTL114_phase2_no_1a_plant");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(aya, rec);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(rec + 0x4Cu, 0u);
+    PE_StoreU8(aya + 0x0Cu, 0u);
+    PE_StoreU32(0x800B0E98u, res0);
+    PE_StoreU32(0x800B0E98u + 0x15u * 4u, res15);
+    PE_StoreU8(res0 + 2u, 11u);
+    PE_StoreU8(res15 + 2u, 11u);
+    PE_StoreU32(aya + 0x1Cu, 0x10000u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009CE74u, 0u);
+    PE_StoreU32(0x8009D28Cu, 2u);
+    PE_StoreU32(0x8009D304u, 0u);
+    PE_StoreU32(0x8009CED8u, 0u);
+    func_8001A680_command_cut(aya, 0u);
+    for (i = 0; i < 10; i++)
+        func_8001A4AC(aya);
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "phase 0");
+    func_8001A4AC(aya);
+    ASSERT(PE_LoadU16(aya + 0x1Au) == 10u, "+0x1A from copy");
+    func_800299CC_after_consume_cut();
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 2u, "phase 1");
+    func_8002B0E8();
+    ASSERT(PE_LoadU8(0x8009CE74u) == 3u, "phase 2 via +0x1A");
+    ASSERT(PE_LoadU8(aya + 0x0Eu) == 0x15u, "1A680(0x15)");
+    PE_StoreU8(0x800B0CD8u + 0xF2u, 0x41u);
+    func_8002B0E8();
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 9u, "mode 9");
+    PASS();
+}
+
+static void test_BTL114_24a3c_case9_sets_ce54(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t res = 0x80108B00u;
+    pe_addr_t res9 = 0x80108C00u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+    int i;
+
+    TEST("BTL114_24a3c_case9_sets_ce54");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(rec + 0x4Cu, 0x80000u);
+    PE_StoreU8(aya + 0x0Cu, 0u);
+    PE_StoreU32(0x800B0E98u + 6u * 4u, res);
+    PE_StoreU32(0x800B0E98u + 9u * 4u, res9);
+    PE_StoreU8(res + 2u, 11u);
+    PE_StoreU8(res9 + 2u, 11u);
+    PE_StoreU32(aya + 0x1Cu, 0x10000u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009D2A0u, 1u);
+    PE_StoreU8(0x8009D25Cu, 9u);
+    PE_StoreU8(0x8009CE3Cu, 1u);
+    PE_StoreU16(0x800BE834u, 387u);
+    PE_StoreU32(0x800BE830u, enemy);
+    PE_StoreU32(enemy, ebody);
+    func_8001A680_command_cut(aya, 6u);
+    ASSERT(PE_LoadU8(0x8009CE54u) == 0u, "CE54 starts 0");
+    for (i = 0; i < 10; i++)
+        func_8001A4AC(aya);
+    func_80021DE0();
+    ASSERT(PE_LoadU8(0x8009CE54u) == 0u, "lag blocks case 9");
+    func_8001A4AC(aya);
+    ASSERT(PE_LoadU8(aya + 0x0Fu) == PE_LoadU16(aya + 0x1Au), "equal");
+    func_80021DE0();
+    ASSERT(PE_LoadU8(0x8009CE54u) == 1u, "24F94");
+    ASSERT(PE_LoadU8(0x8009CE55u) == 2u, "CE55");
+    ASSERT((PE_LoadU32(ebody) & 0x6000u) == 0x2000u, "case9 0x2000");
+    ASSERT(PE_LoadU8(aya + 0x0Eu) == 9u, "1A680(9)");
+    PASS();
+}
+
+static void test_BTL114_ce54_then_236e8(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t rec = 0x8010A000u;
+    pe_addr_t res = 0x80108B00u;
+    pe_addr_t res9 = 0x80108C00u;
+    pe_addr_t enemy = 0x80108700u;
+    pe_addr_t ebody = 0x80108800u;
+    pe_addr_t weapon = 0x80108900u;
+    int i;
+
+    TEST("BTL114_ce54_then_236e8");
+    ResetTestState();
+    ASSERT(func_80019D24(0u) == 1, "4D4");
+    ASSERT(func_800192B8(0u) == 1, "mode 0");
+    PE_StoreU32(0x8009D254u, aya);
+    PE_StoreU32(0x8009D278u, rec);
+    PE_StoreU32(0x8009D20Cu, enemy);
+    PE_StoreU32(enemy, ebody);
+    PE_StoreU32(rec + 0x68u, weapon);
+    PE_StoreU32(rec + 0x4Cu, 0x80000u);
+    PE_StoreU16(weapon, 10u);
+    PE_StoreU16(weapon + 6u, 8u);
+    PE_StoreU32(weapon + 0x10u, 1u);
+    PE_StoreU32(ebody + 0x10u, 40u);
+    PE_StoreU32(ebody + 0x88u, 40u);
+    PE_StoreU16(rec + 0x0Cu, 40u);
+    PE_StoreU8(aya + 0x0Cu, 0u);
+    PE_StoreU32(0x800B0E98u + 6u * 4u, res);
+    PE_StoreU32(0x800B0E98u + 9u * 4u, res9);
+    PE_StoreU8(res + 2u, 11u);
+    PE_StoreU8(res9 + 2u, 11u);
+    PE_StoreU32(aya + 0x1Cu, 0x10000u);
+    PE_StoreU32(aya + 0x98u, 0u);
+    PE_StoreU8(0x8009D2A0u, 1u);
+    PE_StoreU8(0x8009D25Cu, 9u);
+    PE_StoreU8(0x8009CE3Cu, 1u);
+    PE_StoreU16(0x800BE834u, 387u);
+    PE_StoreU32(0x800BE830u, enemy);
+    func_8001A680_command_cut(aya, 6u);
+    for (i = 0; i < 11; i++)
+        func_8001A4AC(aya);
+    func_80021DE0();
+    ASSERT(PE_LoadU8(0x8009CE54u) == 1u, "natural CE54");
+    PE_StoreU32(ebody, 0u);
+    PE_StoreU16(0x800BE834u, 0u);
+    PE_StoreU8(aya + 0x0Eu, 6u);
+    PE_StoreU8(aya + 0x0Fu, 0u);
+    PE_StoreU16(aya + 0x16u, 0u);
+    func_800299CC_damage_entry_cut();
+    ASSERT(PE_LoadU8(0x8009D294u) == 0u, "236E8 cleared D294");
+    ASSERT(PE_LoadU32(ebody + 0x10u) == 30u, "28574");
+    ASSERT((PE_LoadU32(ebody) & 0x6000u) == 0x4000u, "react");
+    PASS();
+}
+
 static void test_BTL96_179f8_28(void) {
     pe_addr_t args = 0x80120F80u;
     pe_addr_t dest = 0x80122100u;
@@ -28736,6 +28904,10 @@ int main(void)
     test_BTL112_score_snap_delays_1000();
     test_BTL113_1a4ac_reaches_16_eq_10();
     test_BTL113_phase0_no_16_plant();
+    test_BTL114_1a4ac_1a_lags_16();
+    test_BTL114_phase2_no_1a_plant();
+    test_BTL114_24a3c_case9_sets_ce54();
+    test_BTL114_ce54_then_236e8();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

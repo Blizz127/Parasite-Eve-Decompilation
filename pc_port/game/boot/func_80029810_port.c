@@ -77,6 +77,8 @@ void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)
  * that pointer, so those callees are not this cut.
  *
  * Clears +0x98 bit 3, sets bit 0x800000, copies +0x14 → +0x18.
+ * +0x1A is the high half of that copy, so it lags +0x16 by one
+ * tick. 2B0E8 phase 2 and 24A3C case 9 wait +0x0F==+0x1A.
  * Bit 0x100 returns. Bit 0x200 and +0x16==+0x12 returns.
  * Else +0x14 += +0x1C (35038 stores 0x10000) and clamps to
  * +0x12<<16. +0x16 is the high half of +0x14: 2B0E8 phase 0

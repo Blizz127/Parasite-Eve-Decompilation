@@ -216,6 +216,8 @@ extern void func_80027D14(pe_addr_t actor);
 extern void func_80028E94(pe_addr_t actor);
 extern int func_80021054(void);
 extern void func_80021DE0(void);
+extern void func_80022394(void);
+extern int func_80024A3C(void);
 extern void func_80021F38(void);
 extern int func_8002312C(pe_addr_t slot);
 extern void func_80023008(void);

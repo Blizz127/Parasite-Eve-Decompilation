@@ -27,9 +27,12 @@
 #define GA_D_8009D294 0x8009D294u
 #define GA_D_8009D1D4 0x8009D1D4u
 #define GA_D_8009CE54 0x8009CE54u
+#define GA_D_8009CE55 0x8009CE55u
+#define GA_D_8009CE48 0x8009CE48u
 #define GA_D_8009CE3C 0x8009CE3Cu
 #define GA_D_8009CE38 0x8009CE38u
 #define GA_D_8009CE39 0x8009CE39u
+#define GA_D_8009D25C 0x8009D25Cu
 #define GA_T_800BE830 0x800BE830u
 #define GA_D_800A5D58 0x800A5D58u
 #define SLOT_STRIDE   220u
@@ -185,6 +188,70 @@ void func_80021F38(void)
     (void)func_8002312C(slot);
 }
 
+/*
+ * PE-BTL114 — 24A3C is the 17-way at 0x80010824. Entry is
+ * 24A3C (lbu D25C), not 24A40. Sole TEXT jal is 22394 @
+ * 229D8. Case 9 is the only CE54 writer: wait Aya
+ * +0x0F==+0x1A, 1A680((int8)CE48*2+9), CE55=2, CE54=1,
+ * body |= 0x2000. Cases 0-8 / 10-16 stay deferred; they
+ * are the D25C producers. 6F39C / extra body bits deferred.
+ */
+int func_80024A3C(void)
+{
+    pe_addr_t aya;
+    pe_addr_t actor;
+    pe_addr_t body;
+    uint8_t phase;
+    unsigned int cmd;
+    uint32_t word;
+
+    phase = PE_LoadU8(GA_D_8009D25C);
+    if (phase >= 0x11u)
+        return 0;
+    if (phase != 9u)
+        return 0;
+    aya = PE_LoadU32(GA_D_8009D254);
+    if (aya == 0u)
+        return 0;
+    if (PE_LoadU8(aya + 0x0Fu) != (uint8_t)PE_LoadU16(aya + 0x1Au))
+        return 0;
+    cmd = ((unsigned int)(int)(int8_t)PE_LoadU8(GA_D_8009CE48) << 1) + 9u;
+    func_8001A680_command_cut(aya, cmd & 0xFFFFu);
+    PE_StoreU8(GA_D_8009CE55, 2u);
+    PE_StoreU8(GA_D_8009CE54, 1u);
+    actor = PE_LoadU32(GA_T_800BE830 +
+                       ((uint32_t)PE_LoadU8(GA_D_8009D1D4) << 3));
+    if (actor != 0u) {
+        body = PE_LoadU32(actor);
+        if (body != 0u) {
+            word = PE_LoadU32(body);
+            word = (word & ~BODY_HITMASK) | BODY_HIT;
+            PE_StoreU32(body, word);
+        }
+    }
+    PE_StoreU8(GA_D_8009CE48, (uint8_t)(PE_LoadU8(GA_D_8009CE48) + 1u));
+    return 0;
+}
+
+/*
+ * 22394: lb D2A0. Zero walks/clears targeting (not this cut).
+ * Nonzero and rec+0x4C&0x80000 jals 24A3C. 0x200000 memcpy
+ * prefix and 53D2C stay deferred.
+ */
+void func_80022394(void)
+{
+    pe_addr_t rec;
+
+    if ((int8_t)PE_LoadU8(GA_D_8009D2A0) == 0)
+        return;
+    rec = PE_LoadU32(GA_D_8009D278);
+    if (rec == 0u)
+        return;
+    if ((PE_LoadU32(rec + 0x4Cu) & 0x80000u) == 0u)
+        return;
+    (void)func_80024A3C();
+}
+
 void func_80021DE0(void)
 {
     uint8_t count;
@@ -212,6 +279,8 @@ void func_80021DE0(void)
     tid = (int16_t)PE_LoadU16(slot + 4u);
     if (tid < 3)
         func_80021F38();
+    else if (tid >= 387 && tid < 407)
+        func_80022394();
 }
 
 /*
