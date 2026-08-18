@@ -23,8 +23,10 @@
  * the 35B2C jal 69594 event pump. PE-BTL66 adds the post-69594
  * 1A4AC clip ticks @ 35B84 (D254 when D1A0&0x100) and 35BEC
  * (D20C walk when that bit is clear; skip +0x98 & 0x800040).
- * 6C5BC @ 35B24, 661CC @ 35B34, and the 355B4–35B20 mid-body
- * are not this cut. Not M2.
+ * 6C5BC @ 35B24, 661CC @ 35B34 stay deferred. PE-BTL120 takes
+ * the dest tick at 35AE0: jal 3AF14(actor+0x1B4) when
+ * +0x98 bit 0x40 is clear. 3AC90 / 3A6A8 / 6698C / 68014
+ * stay deferred. Not M2.
  *
  * func_80035E04 — 83 words 0x80035E04..0x80035F50. If D1A0 bit
  * 0x100, only 361F4. Else snapshot +0x28/+0x38 into +0x40/+0x50,
@@ -445,6 +447,21 @@ void func_80035558_walk_cut(void)
             func_80035E04(actor);
         else if (fn == GA_VT_35C84)
             func_80035C84(actor);
+        actor = PE_LoadU32(actor + 4u);
+    }
+
+    /* ROM 359B8: dest tick. Skip Aya when overlay&0x40000.
+     * +0x98&0x40 and +0x98&0x20000000 skip 3AF14. */
+    actor = PE_LoadU32(GA_D_8009D20C);
+    while (actor != 0u) {
+        uint32_t flags;
+
+        if (!(actor == PE_LoadU32(GA_D_8009D254)
+              && (PE_LoadU32(GA_D_800B0CD8) & 0x40000u) != 0u)) {
+            flags = PE_LoadU32(actor + 0x98u);
+            if ((flags & 0x40u) == 0u && (flags & 0x20000000u) == 0u)
+                (void)func_8003AF14(actor + 0x1B4u, 0u);
+        }
         actor = PE_LoadU32(actor + 4u);
     }
 

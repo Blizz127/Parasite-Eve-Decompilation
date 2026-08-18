@@ -9,12 +9,24 @@ This host writes decomp/native only. UE5 authority is
 pushed `Blizz127/parasite-eve-ue5` `main`
 `d3ae7db730a05a6cba7d7f0e42a652847c01d67e`.
 
+## PE-BTL120 — Aya+0x252 is dest+0x9E; 3C818 clears it
+
+`matching_native=907/907` local. `Aya+0x1B4+0x9E` is
+`Aya+0x252`. `35558` jals `3AF14`
+on that dest; `+0x9C&2` (case 0 `+0x250|=2`) jals
+`3C818`. When `+0x8C==1`, `sb $0, dest+0x9E`.
+`3C5D8(30)` arms `+0x8D=30`; the 0→-1→copy countdown
+clears during case 3 if dest+0 and `+0xBA` are live.
+BSS dest stays fail-closed (BTL115 prefix). Do not
+plant `+0x252=0`. Tid 406 publisher remains.
+Evidence: `docs/evidence/pe-btl120-252-dest/`.
+
 ## PE-BTL119 — 6C1CC state 39 returns 0
 
 `matching_native=903/903` local. State 39 with Aya
 jals `6698C` / `3D834`, wraps `+0xED` to 32, returns 0.
 Aya==0 stays fail-closed. `3D834` uses existing 3A088 /
-3DFD8 / 3B97C / 3BCE0 cuts. `+0x252` clearer remains.
+3DFD8 / 3B97C / 3BCE0 cuts. `+0x252` clearer is BTL120.
 Evidence: `docs/evidence/pe-btl119-6c1cc-39/`.
 
 ## PE-BTL118 — 6C1CC 32–36; case 0/2/5 3C5D8

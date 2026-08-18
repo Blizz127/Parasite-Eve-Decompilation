@@ -197,9 +197,10 @@ void func_80021F38(void)
  * 229D8. Case 9 is the only CE54 writer: wait Aya
  * +0x0F==+0x1A, 1A680((int8)CE48*2+9), CE55=2, CE54=1,
  * body |= 0x2000. Cases 0-8 increment D25C. 6C1CC / 6FC18 /
- * 3C5D8 / 6F39C / 6DE80 stay deferred. Case 6 waits
- * Aya+0x252==0; EXE has no sb-0 to that byte — overlay /
- * 6C1CC family is the remaining clearer after case 2.
+ * 6F39C / 6DE80 stay deferred. Case 6 waits Aya+0x252==0.
+ * That byte is dest+0x9E on the embedded Aya+0x1B4 dest.
+ * 35558 jals 3AF14 → 3C818, which sb $0 at dest+0x9E when
+ * +0x8C==1. Do not plant the clear.
  */
 int func_80024A3C(void)
 {

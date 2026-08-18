@@ -12803,6 +12803,122 @@ static void test_BTL119_case2_after_ed32_bank(void)
     PASS();
 }
 
+static void pe_btl120_prime_aya_dest(pe_addr_t aya, pe_addr_t obj)
+{
+    pe_addr_t dest = aya + 0x1B4u;
+
+    PE_StoreU32(dest, obj);
+    PE_StoreU16(dest + 0xBAu, 1u);
+    PE_StoreU32(0x8009D20Cu, aya);
+    PE_StoreU32(aya + 4u, 0u);
+}
+
+static void test_BTL120_dest_9e_is_252(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t dest = aya + 0x1B4u;
+    pe_addr_t obj = 0x80131000u;
+
+    TEST("BTL120_dest_9e_is_252");
+    ResetTestState();
+    pe_btl120_prime_aya_dest(aya, obj);
+    PE_StoreU8(aya + 0x252u, 1u);
+    ASSERT(PE_LoadU8(dest + 0x9Eu) == 1u, "alias set");
+    PE_StoreU16(dest + 0x9Cu, 2u);
+    PE_StoreU8(dest + 0x8Cu, 1u);
+    ASSERT(func_8003AF14(dest, 0u) == 0, "tick");
+    ASSERT(PE_LoadU8(dest + 0x9Eu) == 0u, "3C818 cleared dest+0x9E");
+    ASSERT(PE_LoadU8(aya + 0x252u) == 0u, "same byte as +0x252");
+    ASSERT(PE_LoadU8(dest + 0x8Cu) == 0u, "+0x8C--");
+    PASS();
+}
+
+static void test_BTL120_3af14_gates(void)
+{
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+
+    TEST("BTL120_3af14_gates");
+    ResetTestState();
+    PE_StoreU8(dest + 0x9Eu, 1u);
+    PE_StoreU16(dest + 0x9Cu, 2u);
+    PE_StoreU8(dest + 0x8Cu, 1u);
+    ASSERT(func_8003AF14(dest, 0u) == 0, "no obj");
+    ASSERT(PE_LoadU8(dest + 0x9Eu) == 1u, "dest+0==0 fail-closed");
+    PE_StoreU32(dest, obj);
+    ASSERT(func_8003AF14(dest, 0u) == 0, "no BA");
+    ASSERT(PE_LoadU8(dest + 0x9Eu) == 1u, "+0xBA==0 fail-closed");
+    PE_StoreU16(dest + 0xBAu, 1u);
+    PE_StoreU16(dest + 0x9Cu, 0u);
+    ASSERT(func_8003AF14(dest, 0u) == 0, "no bit1");
+    ASSERT(PE_LoadU8(dest + 0x9Eu) == 1u, "needs +0x9C&2");
+    PASS();
+}
+
+static void test_BTL120_3c818_counts_from_3c5d8(void)
+{
+    pe_addr_t dest = 0x80130000u;
+    pe_addr_t obj = 0x80131000u;
+    int i;
+
+    TEST("BTL120_3c818_counts_from_3c5d8");
+    ResetTestState();
+    PE_StoreU32(dest, obj);
+    PE_StoreU16(dest + 0xBAu, 1u);
+    PE_StoreU16(dest + 0x9Cu, 2u);
+    PE_StoreU8(dest + 0x9Eu, 1u);
+    func_8003C5D8(dest, 30);
+    ASSERT(PE_LoadU8(dest + 0x8Du) == 30u, "scale 30");
+    ASSERT(func_8003C818(dest) == 0, "0→-1");
+    ASSERT(PE_LoadU8(dest + 0x8Cu) == 0xFFu, "armed -1");
+    ASSERT(PE_LoadU8(dest + 0x9Eu) == 1u, "still busy");
+    ASSERT(func_8003C818(dest) == 0, "copy 30");
+    ASSERT(PE_LoadU8(dest + 0x8Cu) == 29u, "30 then --");
+    for (i = 0; i < 28; i++)
+        ASSERT(func_8003C818(dest) == 0, "count");
+    ASSERT(PE_LoadU8(dest + 0x8Cu) == 1u, "at 1");
+    ASSERT(PE_LoadU8(dest + 0x9Eu) == 1u, "clears on the ==1 tick");
+    ASSERT(func_8003C818(dest) == 0, "clear");
+    ASSERT(PE_LoadU8(dest + 0x9Eu) == 0u, "dest+0x9E=0");
+    ASSERT(PE_LoadU8(dest + 0x8Cu) == 0u, "then --");
+    PASS();
+}
+
+static void test_BTL120_prefix_clears_via_35558(void)
+{
+    pe_addr_t aya = 0x80108600u;
+    pe_addr_t res = 0x80108B00u;
+    pe_addr_t obj = 0x80131000u;
+    int i;
+
+    TEST("BTL120_prefix_clears_via_35558");
+    ResetTestState();
+    PE_StoreU32(0x8009D254u, aya);
+    pe_btl114_bind_cmds(aya, res);
+    pe_btl120_prime_aya_dest(aya, obj);
+    ASSERT(func_80024A3C() == 0, "0");
+    func_80035558_walk_cut();
+    ASSERT(func_80024A3C() == 0, "1");
+    func_80035558_walk_cut();
+    ASSERT(func_80024A3C() == 0, "2");
+    ASSERT(PE_LoadU8(aya + 0x252u) == 1u, "case2 set");
+    ASSERT(PE_LoadU8(aya + 0x1B4u + 0x9Eu) == 1u, "dest+0x9E");
+    for (i = 0; i < 31; i++) {
+        ASSERT(func_80024A3C() == 0, "3");
+        func_80035558_walk_cut();
+    }
+    ASSERT(PE_LoadU8(0x8009D25Cu) == 4u, "prefix");
+    ASSERT(PE_LoadU8(aya + 0x252u) == 0u, "3C818 cleared");
+    pe_btl114_tick_16_eq_0f(aya);
+    ASSERT(func_80024A3C() == 0, "4");
+    ASSERT(func_80024A3C() == 0, "5");
+    ASSERT(PE_LoadU8(0x8009D25Cu) == 6u, "at 6");
+    ASSERT(func_80024A3C() == 0, "6 opens");
+    ASSERT(PE_LoadU8(0x8009D25Cu) == 7u, "6→7");
+    ASSERT(PE_LoadU8(0x8009CE54u) == 0u, "no CE54 plant");
+    PASS();
+}
+
 static void test_BTL119_6c1cc_39_returns_0(void)
 {
     pe_addr_t aya = 0x80108600u;
@@ -29336,6 +29452,10 @@ int main(void)
     test_BTL118_6c1cc_32_to_39_parks();
     test_BTL119_6c1cc_39_returns_0();
     test_BTL119_case2_after_ed32_bank();
+    test_BTL120_dest_9e_is_252();
+    test_BTL120_3af14_gates();
+    test_BTL120_3c818_counts_from_3c5d8();
+    test_BTL120_prefix_clears_via_35558();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();
