@@ -142,7 +142,47 @@ at +0x0544 (after checking `persist[0x4A] < 0x18`).
 0x18 = 24, which is ≥ 17 (type-4 prerequisite) and < 40 (type-1 spawn
 gate). This value survives into m0005i.
 
-## K. Status
+## K. Type-4 0x77 volume (m0005i module 4)
+
+Module 4 of m0005i contains the type-4 proximity volume:
+
+```text
++0x2988: 0x77 volume rect (4 vertices, args 8-10 = [0x0, 0x2, 0x4])
++0x29BC: local[4]==1 → skip if false
++0x29E4: persist[0x4A] < 0x28 (40) → spawn gate
++0x2A0C: persist[0x4A] >= 0x11 (17) → send gate
++0x2A34: persist[0x4A] = 0x28
++0x2A44: 0x1C(0, 0, 0x0D) — send payload 0x0D to type 0
+```
+
+Both gates pass when `persist[0x4A] = 0x18` (from m0004i):
+- 0x18 < 0x28 → TRUE (spawn gate passes)
+- 0x18 >= 0x11 → TRUE (send gate passes)
+
+The volume is a retail-authored rectangular region. The player must
+physically walk Aya into this volume for the 0x77 hit to register.
+Do not auto-trigger the volume.
+
+## L. Full chain verification (revisit m0005i)
+
+With `persist[0]&4` set by m0360i and `persist[0x4A]=0x18` from m0004i:
+
+```text
+1. Player enters type-4 0x77 volume (module 4 +0x2988)
+2. +0x2A44: 0x1C(0, 0, 0x0D) — type-4 mails type-0 payload 0x0D
+3. Module 0 +0x0738: payload==0x0D → branch to +0x664
+4. +0x091C: persist[0] & 4 — PASS (m0360i set it)
+5. +0x0CD0: 0x1C(6, 0, 0x81) — type-0 sends 0x81 to type-6
+6. Type-6 0x81 arm: +0xFC8 0x55 → 0x89 → 0x1C(0,0,0x65)
+7. Type-0 0x65 arm: +0x114C 0x1C(2,0,0x7F) + +0x1160 0x1C(6,0,0x70) + scratch[0]|=0x10
+8. Type-2 0x7F → +0x804 0x6F → 2F7D8 → D20C body creation
+9. Type-6 0x70 → wait scratch[0]&0x10 → 0xAE → scratch[0]|=4
+10. MAIN type-6 wait released → 0x89 → 0x1C(2,0,0x7D) → handshake
+```
+
+Every link in the chain is now script-verified. No values planted.
+
+## M. Status
 
 ```text
 persist_0_bit4_provenance=PROVEN
@@ -152,9 +192,12 @@ persist_0_bit4_first_play=NEVER_SET
 persist_0_bit4_revisit=SET_AFTER_M0360I
 eve_battle_gating=FIRST_VISIT_ACTRESS_ONLY
 eve_battle_requires=m0360i_visited (Day 2+)
-type4_0x0D_requires=persist[0x4A] >= 17 AND type-4 0x77 volume hit
+type4_0x0D_volume=m0005i module 4 +0x2988 (authored rect)
+type4_0x0D_requires=persist[0x4A] >= 17 AND < 40 AND volume hit
 type4_0x0D_arrival_value=persist[0x4A] = 0x18 (from m0004i)
-body_creation_chain=persist[0]&4 → 0x0D → 0x81 → 0x55 → 0x65 → 0x7F/0x70 → 0x6F → D20C
+type4_0x0D_gates_both_pass=YES (0x18 in [17,40))
+body_creation_chain=PROVEN_SCRIPT_VERIFIED
+full_chain=persist[0]&4 → 0x0D → 0x81 → 0x55 → 0x65 → 0x7F/0x70 → 0x6F → D20C
 ```
 
 ## Files
@@ -162,6 +205,7 @@ body_creation_chain=persist[0]&4 → 0x0D → 0x81 → 0x55 → 0x65 → 0x7F/0x
 ```text
 docs/evidence/pe-btl130-persist0-provenance/REPORT.md
 tools/research/pe_pst0_all_scene_scan.py
+tools/research/pe_btl130_persist0_writer_scan.py
 docs/evidence/pe-pst0-persist-provenance/persist0_all_scenes.json
 docs/evidence/pe-pst0-persist-provenance/PERSIST0_COMPREHENSIVE_REPORT.md
 ```

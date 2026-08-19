@@ -31,10 +31,15 @@ m0360i sets persist[0]|=4
 ```
 
 persist[0x4A] arrival value: 0x18 (from m0004i +0x0544). Satisfies
-type-4 prerequisite (≥17). EXE census: 5 persist base sites, zero
+type-4 prerequisite (≥17, <40). EXE census: 5 persist base sites, zero
 direct bit-4 stores. All OR/AND via binder VM.
+
+Type-4 0x77 volume verified: m0005i module 4 +0x2988, authored rect,
+player must physically enter. Both gates pass (0x18 in [17,40)).
+Full chain from volume hit to D20C body creation is script-verified.
 Evidence: `docs/evidence/pe-btl130-persist0-provenance/`.
-Next: verify type-4 0x77 volume geometry, then reproduce full chain.
+Next: native implementation of the revisit battle chain, targeting,
+5C498 → tid406 → combat.
 
 ## PE-BTL129 — first-visit graph; 36448 recovered
 
