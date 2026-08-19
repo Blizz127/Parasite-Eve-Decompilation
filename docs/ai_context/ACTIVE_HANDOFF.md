@@ -3,6 +3,24 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL128 — type-6 +0x1850 is a mailbox-island task
+
+`matching_native` local. Retail `3F074` always jals `1266C`
+before `6BECC`/`1A918`/`125E0`; dest-ready now follows that
+tail (`6C4C4(CE4)` included). Type-6 `+0x1850` `0x2A[0,2]`
+is **not** on the `+0x190` task. Main: wait → `0x89` →
+`0x1C(2,0,0x7D)` → `0x20`. Mailbox `+0xD08` `0x1F` owns
+`0x55`/`0xAE`/`+0x1850`. New-game type-1 `0x1C(0,0,0xFF)`
+wakes type-0 mailbox onto persist `!=39` park; that arm
+does not mail type 6. Live dest-ready leaves type-6 at
+`+0x1DC` with `+0x19C=+0xD08` and scratch bit 2 clear.
+Do not poke scratch or inject `0x81`/`0x7D`. Next is the
+authentic first-visit type-6 mailbox payload, or the
+live work while it waits (type-3 `0x77`). PCSX watch
+`pe_btl128_ordering.lua` is ready; Theater save is not
+m0005i.
+Evidence: `docs/evidence/pe-btl128-task-cfg/`.
+
 ## PE-BTL127 — 6BE4C after 1266C is CE2/CE3 overlay
 
 `matching_native` local. `3F074@3F204` jals `6BE4C` after

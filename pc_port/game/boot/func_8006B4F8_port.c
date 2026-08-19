@@ -256,6 +256,7 @@ int func_8006B4F8_dest_load_cut(uint32_t token)
 
 extern pe_addr_t func_8006E498(pe_addr_t base, uint32_t key);
 extern int func_8006C5BC(void);
+extern int func_8006C4C4(int a0);
 extern void func_800125E0(void);
 extern void func_80034FC4(void);
 extern void func_8001266C(void);
@@ -368,10 +369,13 @@ static void pe_6b4f8_ce2_hdr0c(void)
 }
 
 /*
- * PE-BTL90 named dest-ready cut: 6B35C + 6B4F8 (CE2 / hdr+0x0C /
- * Writer A) + 6BECC until 0 + 6C5BC until 0 + 125E0.
- * PE-BTL127 jals 6BE4C after 1266C (retail 3F204).
- * Does not plant mode 7/9/10 or a type-1 clip.
+ * PE-BTL90 named dest-ready cut, PE-BTL128 retail 3F074 order:
+ * 6B35C + 6B4F8 (CE2 / hdr+0x0C / Writer A) then the 3F09C..3F27C
+ * tail: D224/D308 serials, 34FC4, 1266C, 6BE4C, 6BECC until 0,
+ * 6C4C4(CE4), 6C5BC until 0, 1A918, 125E0.
+ * Native still plants +0xEC=4 so 6BECC takes the already-ported
+ * state-4 load; that is not a 1266C/6BECC swap. 6BD68 / 3F758 /
+ * 68B94 / 371B0 / E0060 stay deferred. Does not plant mode 7/9/10.
  */
 int func_8003F074_dest_ready_cut(uint32_t token)
 {
@@ -383,16 +387,19 @@ int func_8003F074_dest_ready_cut(uint32_t token)
     if (PE_LoadU32(GA_OVERLAY + 0x18Cu) >= 0x80000000u)
         pe_6b4f8_ce2_hdr0c();
     PE_StoreU8(GA_OVERLAY + 0xECu, 4u);
+    PE_StoreU32(0x8009D224u, 1u);
+    PE_StoreU16(0x8009D308u, 1u);
+    func_80034FC4();
+    func_8001266C();
+    (void)func_8006BE4C();
     guard = 0;
     while (func_8006BECC() == 1 && guard < 32)
         guard++;
+    (void)func_8006C4C4((int)(int8_t)PE_LoadU8(GA_OVERLAY + 0x0Cu));
     guard = 0;
     while (func_8006C5BC() == 1 && guard < 16)
         guard++;
     func_8001A918();
-    func_80034FC4();
-    func_8001266C();
-    (void)func_8006BE4C();
     if (PE_LoadU32(GA_OVERLAY + 0x944u) >= 0x80000000u)
         func_800125E0();
     return 1;

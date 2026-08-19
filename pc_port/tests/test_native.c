@@ -13494,23 +13494,142 @@ static void test_BTL127_dest_ready_ce2_10(void)
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
     ASSERT(PE_LoadU8(0x800B0CE2u) == 10u, "CE2=10");
-    {
-        uint8_t ce3 = PE_LoadU8(0x800B0CE3u);
-        uint32_t left = (10u - 10u) >> 1;
-        uint32_t right;
-        int32_t delta = (int32_t)ce3 - 10;
-
-        right = ((uint32_t)delta >> 31) + (uint32_t)ce3;
-        right = (uint32_t)((int32_t)right >> 1);
-        if (ce3 != 10u)
-            ASSERT((PE_LoadU32(0x800B0CD8u) & 0x200000u) != 0u,
-                   "CE2!=CE3 sets 0x200000");
-        if (left != right)
-            ASSERT((PE_LoadU8(0x800B0CE6u) & 4u) != 0u, "6BE4C CE6");
-        else
-            ASSERT((PE_LoadU8(0x800B0CE6u) & 4u) == 0u, "6BE4C no CE6");
-    }
+    /*
+     * Retail 3F074 runs 6BE4C before 6BECC. Live dest-enter CE3
+     * is 0, so 6BE4C sets 0x200000 and leaves +0x0E bit 2 clear.
+     * 6BECC state 6 then copies CE3=CE2 and clears 0x200000.
+     */
+    ASSERT((PE_LoadU8(0x800B0CE6u) & 4u) == 0u, "6BE4C CE3=0 no CE6");
     ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "scratch still clear");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_BTL128_dest_ready_1266c_before_becc(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t t6base = dest2 + 0x2341Cu;
+    pe_addr_t type6;
+    pe_addr_t task;
+
+    TEST("BTL128_dest_ready_1266c_before_becc");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    ASSERT(PE_LoadU32(0x8009D224u) >= 1u, "D224 serial");
+    ASSERT(PE_LoadU16(0x8009D308u) >= 1u, "D308 serial");
+    ASSERT(PE_LoadU32(0x800B6A80u) == 0u, "1266C zeroed scratch");
+    ASSERT(pe_btl124_find_type(6u, &type6), "125E0 after 1266C");
+    ASSERT(PE_LoadU32(type6 + 0x19Cu) == 0u, "mailbox label not yet");
+    task = PE_LoadU32(type6 + 0xA8u);
+    ASSERT(task != 0u, "type-6 main task");
+    ASSERT(PE_LoadU32(type6 + 0xA0u) == 0u, "slot0 empty");
+    ASSERT(PE_LoadU32(type6 + 0xA4u) == 0u, "slot1 empty");
+    ASSERT(PE_LoadU32(task) == t6base, "main PC at script start");
+    ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "no dest-enter bit 2");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_BTL128_type6_1850_is_mailbox_island(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t t0base = dest2 + 0x202C8u;
+    pe_addr_t t1base = dest2 + 0x21678u;
+    pe_addr_t t2base = dest2 + 0x218D4u;
+    pe_addr_t t6base = dest2 + 0x2341Cu;
+
+    TEST("BTL128_type6_1850_is_mailbox_island");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    ASSERT((PE_LoadU32(t6base + 0x180u) & 0x1FFFu) == 0x14u, "0x14");
+    ASSERT(PE_LoadU32(t6base + 0x188u) == 2u, "code 2");
+    ASSERT(PE_LoadU32(t6base + 0x18Cu) == 1668u, "rel 1668 -> +0xD08");
+    ASSERT((PE_LoadU32(t6base + 0xD08u) & 0x1FFFu) == 0x1Fu, "mailbox 0x1F");
+    ASSERT((PE_LoadU32(t6base + 0xD00u) & 0x1FFFu) == 0x20u, "dead 0x20 pad");
+    ASSERT((PE_LoadU32(t6base + 0x40Cu) & 0x1FFFu) == 0x20u, "park after 0x7D");
+    ASSERT(PE_LoadU32(t6base + 0x408u) == 0x7Du, "0x7D payload");
+    ASSERT(PE_LoadU32(t6base + 0x1850u) == 0x0008402Au, "+0x1850 0x2A");
+    ASSERT((PE_LoadU32(t1base + 0x1D8u) & 0x1FFFu) == 0x1Cu, "type-1 0x1C");
+    ASSERT(PE_LoadU32(t1base + 0x1E8u) == 255u, "payload 0xFF");
+    ASSERT((PE_LoadU32(t0base + 0x618u) & 0x1FFFu) == 0x1Fu, "type-0 mailbox");
+    ASSERT((PE_LoadU32(t2base + 0xA8u) & 0x1FFFu) == 0x1Fu, "type-2 mailbox");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_BTL128_first_visit_task_map(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t t0base = dest2 + 0x202C8u;
+    pe_addr_t t1base = dest2 + 0x21678u;
+    pe_addr_t t2base = dest2 + 0x218D4u;
+    pe_addr_t t6base = dest2 + 0x2341Cu;
+    pe_addr_t type0;
+    pe_addr_t type1;
+    pe_addr_t type2;
+    pe_addr_t type6;
+    pe_addr_t task;
+    pe_addr_t mail;
+    int i;
+
+    TEST("BTL128_first_visit_task_map");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+
+    type0 = 0u;
+    type2 = 0u;
+    for (i = 0; i < 16; i++) {
+        func_8003EB04();
+        func_80065400();
+        func_80035558_walk_cut();
+        func_80068CE0();
+        (void)pe_btl124_find_type(0u, &type0);
+        (void)pe_btl124_find_type(2u, &type2);
+    }
+
+    ASSERT(pe_btl124_find_type(1u, &type1), "type 1");
+    ASSERT(pe_btl124_find_type(6u, &type6), "type 6");
+    ASSERT(type0 != 0u, "type-1 0x08 spawned type 0");
+    ASSERT(type2 != 0u, "type-1 0x08 spawned type 2");
+
+    task = PE_LoadU32(type6 + 0xA8u);
+    ASSERT(task != 0u, "type-6 main");
+    ASSERT(PE_LoadU32(type6 + 0xA0u) == 0u, "type-6 no slot0");
+    ASSERT(PE_LoadU32(type6 + 0xA4u) == 0u, "type-6 no slot1");
+    ASSERT(PE_LoadU32(type6 + 0x19Cu) == t6base + 0xD08u, "mailbox armed");
+    ASSERT(PE_LoadU32(task) == t6base + 0x1DCu, "main still at +0x1DC wait");
+    ASSERT(PE_LoadU32(task + 0x24u) == 0u, "no mailbox task prepended");
+    ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "scratch[0]&4 still clear");
+
+    task = PE_LoadU32(type1 + 0xA8u);
+    ASSERT(task != 0u, "type-1 task");
+    ASSERT((PE_LoadU16(task + 8u) & 0x10u) != 0u, "type-1 parked after 0xFF");
+    ASSERT(PE_LoadU32(type1 + 0x19Cu) == t1base + 0x200u, "type-1 mailbox +0x200");
+
+    ASSERT(PE_LoadU32(type0 + 0x19Cu) == t0base + 0x618u, "type-0 mailbox +0x618");
+    mail = PE_LoadU32(type0 + 0xA8u);
+    ASSERT(mail != 0u, "type-0 task");
+    ASSERT((PE_LoadU16(mail + 8u) & 0x10u) != 0u, "type-0 0x20 park");
+
+    task = PE_LoadU32(type2 + 0xA8u);
+    ASSERT(task != 0u, "type-2 task");
+    ASSERT((PE_LoadU16(task + 8u) & 0x10u) != 0u, "type-2 0x20 park");
+    ASSERT(PE_LoadU32(type2 + 0x19Cu) == t2base + 0xA8u, "type-2 mailbox +0xA8");
+    ASSERT(PE_LoadU32(type2) == 0u, "no body");
+
+    ASSERT(PE_LoadU8(0x8009CDB4u) == 0u, "mailbox queue drained");
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
     PASS();
@@ -30068,6 +30187,9 @@ int main(void)
     test_BTL126_7d_is_handshake_not_6f();
     test_BTL127_6be4c_ce2_gate();
     test_BTL127_dest_ready_ce2_10();
+    test_BTL128_dest_ready_1266c_before_becc();
+    test_BTL128_type6_1850_is_mailbox_island();
+    test_BTL128_first_visit_task_map();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();
