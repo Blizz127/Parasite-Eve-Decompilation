@@ -3,6 +3,17 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL125 — type-6 waits while scratch[0]&4 is clear
+
+`matching_native` local. dest-ready `1266C` zeros
+`D_800B6A80`. Type-6 `+0x190` waits while
+`scratch[0]&4` is clear (BTL74 polarity). New-game
+type-0 does not send `0x1C(2,0,0xB)`. Type 2 parks
+on `0x20`. Do not poke scratch. First `0x2A[0,2]` is
+late (`+0x1850`). Next is the post-`1266C` producer
+of bit 2, then type-6 `0x89` / `0x1C(2,0,0x7D)`.
+Evidence: `docs/evidence/pe-btl125-scratch0/`.
+
 ## PE-BTL124 — dest-ready m0005i type-1 ticks type-2
 
 `matching_native` local. dest-ready m0005i plus `65400`+

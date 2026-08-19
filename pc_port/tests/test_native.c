@@ -13323,132 +13323,45 @@ static void test_BTL124_m0005i_type1_ticks_type2(void)
     PASS();
 }
 
-/* Next: type-6 0x89 / 0x1C(2,0,0x7D). New-game type-0 skips 0x1C(2,0,0xB). */
-static void test_BTL124_type2_6f_body_live(void) __attribute__((unused));
-static void test_BTL124_type2_6f_body_live(void)
+static void test_BTL125_type6_waits_scratch0_bit2(void)
 {
     PE_Disc *disc;
     char err[256];
     pe_addr_t dest2 = 0x801A0000u;
     pe_addr_t type2;
+    pe_addr_t type6;
     pe_addr_t task;
-    pe_addr_t script;
     int i;
     int saw2;
-    int saw_body;
-    uint32_t rel;
 
-    TEST("BTL124_type2_6f_body_live");
+    TEST("BTL125_type6_waits_scratch0_bit2");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "1266C zeros scratch[0]");
 
     saw2 = 0;
-    saw_body = 0;
     type2 = 0u;
-    rel = 0u;
-    script = dest2 + 0x218D4u;
-    {
-        int tick_19c = -1;
-        int tick_mb = -1;
-        int tick_t2mb = -1;
-        unsigned int rec_ty = 0u;
-        unsigned int rec_id = 0u;
-        unsigned int rec_pl = 0u;
-        unsigned int rec_n = 0u;
-        unsigned int rec1_ty = 0u;
-        unsigned int rec1_pl = 0u;
-        unsigned int t2id = 0u;
-        unsigned int t2mb_pl = 0u;
-        unsigned int t2n = 0u;
-
-        for (i = 0; i < 256; i++) {
-            unsigned int mb;
-            unsigned int r;
-
-            mb = PE_LoadU8(0x8009CDB4u);
-            if (mb != 0u && tick_mb < 0) {
-                tick_mb = i;
-                rec_n = mb;
-                rec_ty = PE_LoadU16(0x800A3180u);
-                rec_id = PE_LoadU8(0x800A3180u + 2u);
-                rec_pl = PE_LoadU8(0x800A3180u + 3u);
-                if (mb > 1u) {
-                    rec1_ty = PE_LoadU16(0x800A3180u + 12u);
-                    rec1_pl = PE_LoadU8(0x800A3180u + 15u);
-                }
-            }
-            for (r = 0u; r < mb; r++) {
-                if (PE_LoadU16(0x800A3180u + r * 12u) == 2u) {
-                    t2n++;
-                    if (tick_t2mb < 0) {
-                        tick_t2mb = i;
-                        t2mb_pl = PE_LoadU8(0x800A3180u + r * 12u + 3u);
-                    }
-                }
-            }
-            func_80065400();
-            func_80035558_walk_cut();
-            if (!saw2 && pe_btl124_find_type(2u, &type2)) {
-                saw2 = 1;
-                t2id = PE_LoadU8(type2 + 0x0Du);
-            }
-            if (saw2) {
-                task = PE_LoadU32(type2 + 0xA8u);
-                if (tick_19c < 0 && PE_LoadU32(type2 + 0x19Cu) != 0u)
-                    tick_19c = i;
-                if (task != 0u && PE_LoadU32(task) >= script)
-                    rel = PE_LoadU32(task) - script;
-                if (PE_LoadU32(type2) != 0u) {
-                    saw_body = 1;
-                    break;
-                }
-            }
-        }
-        if (!saw_body) {
-            pe_addr_t type0;
-            pe_addr_t t0task;
-            unsigned int flags8 = 0u;
-            unsigned int t0rel = 0u;
-            unsigned int t0flags = 0u;
-
-            task = type2 ? PE_LoadU32(type2 + 0xA8u) : 0u;
-            if (task != 0u)
-                flags8 = PE_LoadU16(task + 8u);
-            if (pe_btl124_find_type(0u, &type0)) {
-                t0task = PE_LoadU32(type0 + 0xA8u);
-                if (t0task != 0u) {
-                    t0flags = PE_LoadU16(t0task + 8u);
-                    if (PE_LoadU32(t0task) >= dest2 + 0x202C8u)
-                        t0rel = PE_LoadU32(t0task) - (dest2 + 0x202C8u);
-                }
-            }
-            {
-                pe_addr_t type6 = 0u;
-                pe_addr_t t6task = 0u;
-                unsigned int t6rel = 0u;
-                unsigned int t6flags = 0u;
-
-                if (pe_btl124_find_type(6u, &type6)) {
-                    t6task = PE_LoadU32(type6 + 0xA8u);
-                    if (t6task != 0u) {
-                        t6flags = PE_LoadU16(t6task + 8u);
-                        if (PE_LoadU32(t6task) >= dest2 + 0x2341Cu)
-                            t6rel = PE_LoadU32(t6task) - (dest2 + 0x2341Cu);
-                    }
-                }
-                snprintf(err, sizeof(err),
-                         "0x6F t2 +0x%X f8=0x%X t0 +0x%X f8=0x%X t6 +0x%X f8=0x%X dly=%u f98=0x%X mode=%u",
-                         rel, flags8, t0rel, t0flags, t6rel, t6flags,
-                         t6task ? PE_LoadU32(t6task + 0x10u) : 0u,
-                         type6 ? PE_LoadU32(type6 + 0x98u) : 0u,
-                         PE_LoadU32(0x8009D28Cu));
-            }
-            ASSERT(saw2, "type 2 spawned");
-            ASSERT(0, err);
-        }
+    for (i = 0; i < 16; i++) {
+        func_8003EB04();
+        func_80065400();
+        func_80035558_walk_cut();
+        func_80068CE0();
+        if (pe_btl124_find_type(2u, &type2))
+            saw2 = 1;
     }
-    ASSERT(type2 != PE_LoadU32(0x8009D254u), "body is not Aya");
+    ASSERT(saw2, "type 2 spawned");
+    ASSERT(PE_LoadU32(type2) == 0u, "no body yet");
+    task = PE_LoadU32(type2 + 0xA8u);
+    ASSERT(task != 0u, "type-2 task");
+    ASSERT((PE_LoadU16(task + 8u) & 0x10u) != 0u, "type-2 0x20 park");
+    ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "scratch[0]&4 still clear");
+    ASSERT(pe_btl124_find_type(6u, &type6), "type 6");
+    task = PE_LoadU32(type6 + 0xA8u);
+    ASSERT(task != 0u, "type-6 task");
+    ASSERT(PE_LoadU32(task) == dest2 + 0x2341Cu + 0x1DCu,
+           "type-6 0x02 wait at +0x1DC");
+    ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
     PASS();
@@ -30000,6 +29913,7 @@ int main(void)
     test_BTL123_persist4a_lt40_spawns_type2();
     test_BTL123_persist4a_ge40_skips_type2();
     test_BTL124_m0005i_type1_ticks_type2();
+    test_BTL125_type6_waits_scratch0_bit2();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();
