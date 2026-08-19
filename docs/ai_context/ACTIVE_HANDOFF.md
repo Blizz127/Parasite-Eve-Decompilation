@@ -15,10 +15,11 @@ wakes type-0 mailbox onto persist `!=39` park; that arm
 does not mail type 6. Live dest-ready leaves type-6 at
 `+0x1DC` with `+0x19C=+0xD08` and scratch bit 2 clear.
 Do not poke scratch or inject `0x81`/`0x7D`. Next is the
-authentic first-visit type-6 mailbox payload, or the
-live work while it waits (type-3 `0x77`). PCSX watch
-`pe_btl128_ordering.lua` is ready; Theater save is not
-m0005i.
+authentic first-visit type-6 mailbox payload, type-3
+`0x77`, or the deferred `35558@35C1C` `36448` proximity
+`+0x1A0`→`A4` spawn (type-6 has no `+0x1A0`). PCSX
+watch `pe_btl128_ordering.lua` is ready; Theater save
+is not m0005i.
 Evidence: `docs/evidence/pe-btl128-task-cfg/`.
 
 ## PE-BTL127 — 6BE4C after 1266C is CE2/CE3 overlay

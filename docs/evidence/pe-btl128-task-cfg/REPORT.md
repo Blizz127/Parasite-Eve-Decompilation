@@ -98,6 +98,14 @@ Live dest-enter `CE3=0` so `6BE4C` does not set
 | first-visit mailbox starts `+0xD08` | REJECTED (no live `0x1C` to type 6) |
 | scratch set before type-6 wait | REJECTED on native dest-ready |
 
+`35558@35C1C` jals `36448` (deferred). That leaf is a
+proximity walk: if `actor+0x1A0` is set it `12700`s that
+entry into slot `A4`. Type-6 never writes `+0x1A0` (only
+`+0x19C`). Type-5 `+0x1A0=+0xF8` and type-0/2 `+0x1A0`
+are `0x20` parks or the type-5 `0x1C(0,0,0xFE)` island.
+Proximity spawn is not dest-enter and does not reach
+type-6 `+0x1850` without a later `0x1C` to type 6.
+
 PCSX watch: `pc_port/tools/pe_btl128_ordering.lua`.
 First-visit retail recording still needs a human new-game
 drive; the Theater memcard is not m0005i.
