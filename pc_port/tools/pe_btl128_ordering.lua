@@ -1,8 +1,10 @@
--- PE-BTL128 PCSX-Redux watch: retail first-visit dest-enter ordering.
+-- PE-BTL128/129 PCSX-Redux watch: retail first-visit dest-enter ordering.
 -- Usage (interpreter recommended):
 --   PCSX-Redux ... -interpreter -fastboot -lua pc_port/tools/pe_btl128_ordering.lua
 -- Do not poke RAM. Logs 1266C / 6BE4C / 125E0 / 17018 kind-4 /
--- 0x2A / 65400 / 12700 / B6A80 writes / type-6 PCs / mailboxes.
+-- 0x2A / 65400 / 12700 / 36448 / B6A80 writes / type-6 PCs / mailboxes.
+-- BTL129 also logs 0x77, type-0 +0xCAC/+0x113C, type-2 type-6 sends,
+-- and type-6 +0xD08/+0xFC8/+0x1100/+0x1850.
 
 local B6A80 = 0x800B6A80
 local DEST = 0x8009D280
@@ -68,8 +70,9 @@ local function walk_actors(tag)
     local lab = ru32(actor + 0x19C)
     local pc0 = t2 ~= 0 and ru32(t2) or 0
     local fl = t2 ~= 0 and (ru32(t2 + 8) & 0xFFFF) or 0
-    log("BTL128 actor %s a=%08X type=%u idB=%u A0=%08X A4=%08X A8=%08X base=%08X lab=%08X pc=%08X f=%04X",
-        tag, actor, typ, idb, t0, t1, t2, base, lab, pc0, fl)
+    local prox = ru32(actor + 0x1A0)
+    log("BTL128 actor %s a=%08X type=%u idB=%u A0=%08X A4=%08X A8=%08X base=%08X lab=%08X prox=%08X pc=%08X f=%04X",
+        tag, actor, typ, idb, t0, t1, t2, base, lab, prox, pc0, fl)
     if typ == 6 and base ~= 0 and pc0 ~= 0 then
       local rel = pc0 - base
       if rel == 0x1DC then
@@ -114,7 +117,8 @@ local function hook(addr, name)
         saw_1266c = true
       end
       snapshot(name)
-      if name == "125E0" or name == "65400" then
+      if name == "125E0" or name == "65400" or name == "36448"
+          or name == "0x77" or name == "0x1C" then
         walk_actors(name)
       end
       if name == "0x2A" then
@@ -134,5 +138,8 @@ hook(0x80065400, "65400")
 hook(0x80012700, "12700")
 hook(0x80017FF0, "0x89")
 hook(0x80017764, "0x1C")
+hook(0x80036448, "36448")
+hook(0x80012774, "12774")
+hook(0x80014DA0, "0x77")
 
 log("BTL128 watch armed saw_execslots=%s", tostring(PCSX.ExecSlots ~= nil))

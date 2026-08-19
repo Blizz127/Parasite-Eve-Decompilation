@@ -3,6 +3,26 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL129 — first-visit graph; 36448 recovered
+
+`matching_native` local. `36448` is 608 words, jal'd from
+`35558@35C1C`; it `12700`s `actor+0x1A0` into slot `A4`.
+Type-6 has no `+0x1A0`. Live `+0x1A0`: type-5 `+0xF8`
+(`0xFE`/`0xFF` to type 0), type-0/2 parks. No A4 island
+mails type 6. Type-3 `0x77` is `14DA0`/`1CAB0`; hit mails
+type 0 `0xFE` and dest-hops; miss loops. New-game type-0
+`0xFF`/`0xFE` never reach `+0xCAC`. `0x81` needs
+`persist[0]&4` plus type-4 `0x0D` (`persist[0x4A]>=17`).
+`0x81` does the `0x55` wait and replies `0x65`; that is
+what makes type 0 send `0x7F`/`0x70` and set scratch bit
+4. `+0x1850` is the later `0x70` arm after bit 4, not the
+`0x81` arm. Type-2 `0x84`/`0x7B`/`0x86`/`0x7C` are replies
+to `0x7D`/`0x7A`/`0x79`/`0x7E`, not dest-enter. Do not
+inject those payloads or plant `+0x1A0` on type 6. Next
+is `persist[0]&4` provenance (not an m0005i script store)
+or the type-4 `0x0D` persist`[0x4A]` path.
+Evidence: `docs/evidence/pe-btl129-first-visit-graph/`.
+
 ## PE-BTL128 — type-6 +0x1850 is a mailbox-island task
 
 `matching_native` local. Retail `3F074` always jals `1266C`
@@ -10,16 +30,10 @@ before `6BECC`/`1A918`/`125E0`; dest-ready now follows that
 tail (`6C4C4(CE4)` included). Type-6 `+0x1850` `0x2A[0,2]`
 is **not** on the `+0x190` task. Main: wait → `0x89` →
 `0x1C(2,0,0x7D)` → `0x20`. Mailbox `+0xD08` `0x1F` owns
-`0x55`/`0xAE`/`+0x1850`. New-game type-1 `0x1C(0,0,0xFF)`
-wakes type-0 mailbox onto persist `!=39` park; that arm
-does not mail type 6. Live dest-ready leaves type-6 at
-`+0x1DC` with `+0x19C=+0xD08` and scratch bit 2 clear.
-Do not poke scratch or inject `0x81`/`0x7D`. Next is the
-authentic first-visit type-6 mailbox payload, type-3
-`0x77`, or the deferred `35558@35C1C` `36448` proximity
-`+0x1A0`→`A4` spawn (type-6 has no `+0x1A0`). PCSX
-watch `pe_btl128_ordering.lua` is ready; Theater save
-is not m0005i.
+`0x55`/`0xAE`/`+0x1850` in unconstrained CFG; BTL129 splits
+those by payload. New-game type-1 `0x1C(0,0,0xFF)` wakes
+type-0 mailbox onto persist `!=39` park. Live dest-ready
+leaves type-6 at `+0x1DC` with `+0x19C=+0xD08`.
 Evidence: `docs/evidence/pe-btl128-task-cfg/`.
 
 ## PE-BTL127 — 6BE4C after 1266C is CE2/CE3 overlay

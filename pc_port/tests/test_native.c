@@ -13635,6 +13635,91 @@ static void test_BTL128_first_visit_task_map(void)
     PASS();
 }
 
+static void test_BTL129_first_visit_1a0_map(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t t0base = dest2 + 0x202C8u;
+    pe_addr_t t2base = dest2 + 0x218D4u;
+    pe_addr_t t5base = dest2 + 0x22D20u;
+    pe_addr_t t6base = dest2 + 0x2341Cu;
+    pe_addr_t type0;
+    pe_addr_t type2;
+    pe_addr_t type3;
+    pe_addr_t type5;
+    pe_addr_t type6;
+    pe_addr_t task;
+    int i;
+
+    TEST("BTL129_first_visit_1a0_map");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    for (i = 0; i < 16; i++) {
+        func_8003EB04();
+        func_80065400();
+        func_80035558_walk_cut();
+        func_80068CE0();
+    }
+    ASSERT(pe_btl124_find_type(0u, &type0), "type 0");
+    ASSERT(pe_btl124_find_type(2u, &type2), "type 2");
+    ASSERT(pe_btl124_find_type(3u, &type3), "type 3");
+    ASSERT(pe_btl124_find_type(5u, &type5), "type 5");
+    ASSERT(pe_btl124_find_type(6u, &type6), "type 6");
+    ASSERT(PE_LoadU32(type0 + 0x1A0u) == t0base + 0x610u, "type-0 +0x1A0 park");
+    ASSERT(PE_LoadU32(type2 + 0x1A0u) == t2base + 0xA0u, "type-2 +0x1A0 park");
+    ASSERT(PE_LoadU32(type3 + 0x1A0u) == 0u, "type-3 no +0x1A0");
+    ASSERT(PE_LoadU32(type5 + 0x1A0u) == t5base + 0xF8u, "type-5 +0x1A0=+0xF8");
+    ASSERT(PE_LoadU32(type6 + 0x1A0u) == 0u, "type-6 no +0x1A0");
+    ASSERT(PE_LoadU32(type0 + 0xA4u) == 0u, "type-0 A4 empty");
+    ASSERT(PE_LoadU32(type2 + 0xA4u) == 0u, "type-2 A4 empty");
+    ASSERT(PE_LoadU32(type5 + 0xA4u) == 0u, "type-5 A4 empty");
+    ASSERT(PE_LoadU32(type6 + 0xA4u) == 0u, "type-6 A4 empty");
+    task = PE_LoadU32(type6 + 0xA8u);
+    ASSERT(task != 0u, "type-6 main");
+    ASSERT(PE_LoadU32(task) == t6base + 0x1DCu, "type-6 still waiting");
+    ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "scratch[0]&4 clear");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_BTL129_type6_81_is_not_1850(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t t0base = dest2 + 0x202C8u;
+    pe_addr_t t2base = dest2 + 0x218D4u;
+    pe_addr_t t3base = dest2 + 0x227FCu;
+    pe_addr_t t6base = dest2 + 0x2341Cu;
+
+    TEST("BTL129_type6_81_is_not_1850");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    ASSERT((PE_LoadU32(t6base + 0xD08u) & 0x1FFFu) == 0x1Fu, "mailbox 0x1F");
+    ASSERT(PE_LoadU32(t6base + 0xD10u) == 15u, "local[15]");
+    ASSERT(PE_LoadU32(t6base + 0xE80u) == 0x81u, "0x81 compare");
+    ASSERT(PE_LoadU32(t6base + 0x1020u) == 0x70u, "0x70 compare");
+    ASSERT((PE_LoadU32(t6base + 0xFC8u) & 0x1FFFu) == 0x55u, "0x81 arm 0x55");
+    ASSERT((PE_LoadU32(t6base + 0x1100u) & 0x1FFFu) == 0xAEu, "0xAE after bit4");
+    ASSERT(PE_LoadU32(t6base + 0x1850u) == 0x0008402Au, "+0x1850 0x2A[0,2]");
+    ASSERT(PE_LoadU32(t0base + 0xCB4u) == 6u, "type-0 0x81 dest type 6");
+    ASSERT(PE_LoadU32(t0base + 0xCBCu) == 0x81u, "type-0 payload 0x81");
+    ASSERT(PE_LoadU32(t0base + 0x114Cu) == 0x70u, "type-0 0x70");
+    ASSERT(PE_LoadU32(t0base + 0x1138u) == 0x7Fu, "type-0 0x7F");
+    ASSERT(PE_LoadU32(t0base + 0x115Cu) == 4u, "type-0 scratch bit 4");
+    ASSERT(PE_LoadU32(t2base + 0x53Cu) == 6u, "type-2 0x84 dest 6");
+    ASSERT(PE_LoadU32(t2base + 0x544u) == 0x84u, "0x7D -> 0x84");
+    ASSERT((PE_LoadU32(t3base + 0x30u) & 0x1FFFu) == 0x77u, "type-3 0x77");
+    ASSERT(PE_LoadU32(t3base + 0xC4u) == 0xFEu, "0x77 hit 0xFE");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
 static void test_BTL119_6c1cc_39_returns_0(void)
 {
     pe_addr_t aya = 0x80108600u;
@@ -30190,6 +30275,8 @@ int main(void)
     test_BTL128_dest_ready_1266c_before_becc();
     test_BTL128_type6_1850_is_mailbox_island();
     test_BTL128_first_visit_task_map();
+    test_BTL129_first_visit_1a0_map();
+    test_BTL129_type6_81_is_not_1850();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();
