@@ -3,6 +3,20 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL126 — only scratch[0]|=4 store is type-6 +0x1850
+
+`matching_native` local. EXE/disc `0x6A80` sites remain
+`1266C` zero / `17018` kind-4 / `34F10` zero. m0005i's only
+`0x2A[scratch[0],2]` is type-6 `+0x1850` after `0xAE`.
+First-visit dest-ready leaves the bit clear. Type-2 `0x20`
+parks; mailbox is `+0x19C` → `+0xA8` `0x1F`. `0x7D` is the
+type-6 handshake (`0x1C(6,0,0x84)`), not the `0x6F` arm.
+`0x7F` (type-0 `+0x1128`) goes to `+0x804` `0x6F`. Do not
+poke scratch or force PC. Next is the authentic first-visit
+producer still missing from dest-enter/scripts, then type-6
+`0x89` / `0x1C(2,0,0x7D)`.
+Evidence: `docs/evidence/pe-btl126-scratch0-producer/`.
+
 ## PE-BTL125 — type-6 waits while scratch[0]&4 is clear
 
 `matching_native` local. dest-ready `1266C` zeros

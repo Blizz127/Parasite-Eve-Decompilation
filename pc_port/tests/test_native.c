@@ -13367,6 +13367,97 @@ static void test_BTL125_type6_waits_scratch0_bit2(void)
     PASS();
 }
 
+static void test_BTL126_only_setter_is_type6_1850(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t t2base = dest2 + 0x218D4u;
+    pe_addr_t t6base = dest2 + 0x2341Cu;
+
+    TEST("BTL126_only_setter_is_type6_1850");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    ASSERT(PE_LoadU32(t6base + 0x1850u) == 0x0008402Au, "type-6 +0x1850 0x2A[0,2]");
+    ASSERT(PE_LoadU32(t6base + 0x1858u) == 0u, "0x2A dest imm 0");
+    ASSERT(PE_LoadU32(t6base + 0x185Cu) == 2u, "0x2A bit 2");
+    ASSERT(PE_LoadU32(t6base + 0x190u) == 0x02308009u, "wait AND scratch[0]&4");
+    ASSERT(PE_LoadU32(t2base + 0x804u) == 0x0000006Fu, "type-2 +0x804 0x6F");
+    ASSERT(PE_LoadU32(dest2 + 0x202C8u + 0x1150u) == 0x0008402Au,
+           "type-0 +0x1150 is 0x2A");
+    ASSERT(PE_LoadU32(dest2 + 0x202C8u + 0x115Cu) == 4u, "type-0 bit 4");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_BTL126_type2_mailbox_not_20(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t type2;
+    pe_addr_t type6;
+    pe_addr_t task;
+    pe_addr_t t2base = dest2 + 0x218D4u;
+    pe_addr_t t6base = dest2 + 0x2341Cu;
+    int i;
+
+    TEST("BTL126_type2_mailbox_not_20");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    type2 = 0u;
+    type6 = 0u;
+    for (i = 0; i < 16; i++) {
+        func_8003EB04();
+        func_80065400();
+        func_80035558_walk_cut();
+        func_80068CE0();
+        (void)pe_btl124_find_type(2u, &type2);
+        (void)pe_btl124_find_type(6u, &type6);
+    }
+    ASSERT(type2 != 0u, "type 2");
+    ASSERT(type6 != 0u, "type 6");
+    ASSERT(PE_LoadU32(type2 + 0x19Cu) == t2base + 0xA8u, "type-2 +0x19C is 0x1F");
+    ASSERT((PE_LoadU32(t2base + 0xA8u) & 0x1FFFu) == 0x1Fu, "mailbox op 0x1F");
+    task = PE_LoadU32(type2 + 0xA8u);
+    ASSERT(task != 0u, "type-2 task");
+    ASSERT((PE_LoadU16(task + 8u) & 0x10u) != 0u, "0x20 still parked");
+    ASSERT(PE_LoadU32(type6 + 0x19Cu) == t6base + 0xD08u, "type-6 mailbox +0xD08");
+    ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "no first-visit bit 2");
+    ASSERT(PE_LoadU8(0x8009CDB4u) == 0u, "no planted 0x7D mailbox");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_BTL126_7d_is_handshake_not_6f(void)
+{
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t t2 = dest2 + 0x218D4u;
+    PE_Disc *disc;
+    char err[256];
+
+    TEST("BTL126_7d_is_handshake_not_6f");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    ASSERT(PE_LoadU32(t2 + 0x4CCu) == 0x7Du, "0x7D imm");
+    ASSERT((PE_LoadU32(t2 + 0x534u) & 0x1FFFu) == 0x1Cu, "0x7D arm 0x1C");
+    ASSERT(PE_LoadU32(t2 + 0x53Cu) == 6u, "send type 6");
+    ASSERT(PE_LoadU32(t2 + 0x544u) == 0x84u, "payload 0x84");
+    ASSERT(PE_LoadU32(t2 + 0x498u) == 0x7Fu, "0x7F imm");
+    ASSERT((PE_LoadU32(t2 + 0x4ACu) & 0x1FFFu) == 0x00u, "0x7F goto");
+    ASSERT(PE_LoadU32(t2 + 0x4B4u) == 902u, "goto +0x70C");
+    ASSERT((PE_LoadU32(t2 + 0x804u) & 0x1FFFu) == 0x6Fu, "0x6F after 0x7F");
+    ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "control: bit still clear");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
 static void test_BTL119_6c1cc_39_returns_0(void)
 {
     pe_addr_t aya = 0x80108600u;
@@ -29914,6 +30005,9 @@ int main(void)
     test_BTL123_persist4a_ge40_skips_type2();
     test_BTL124_m0005i_type1_ticks_type2();
     test_BTL125_type6_waits_scratch0_bit2();
+    test_BTL126_only_setter_is_type6_1850();
+    test_BTL126_type2_mailbox_not_20();
+    test_BTL126_7d_is_handshake_not_6f();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();
