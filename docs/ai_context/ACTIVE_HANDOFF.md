@@ -3,6 +3,17 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL127 — 6BE4C after 1266C is CE2/CE3 overlay
+
+`matching_native` local. `3F074@3F204` jals `6BE4C` after
+`1266C`. CE2 in `[10,15)` may `overlay|=0x200000` and
+`+0x0E|=4`. dest-ready now runs it. Live m0005i CE2=10
+CE3=0 takes `0x200000` and leaves `+0x0E` bit 2 clear.
+Not `scratch[0]`. Type-6 wait is still clear. Next is
+still the first-visit `scratch[0]|=4` producer, then
+`0x89` / `0x1C(2,0,0x7D)`.
+Evidence: `docs/evidence/pe-btl127-6be4c/`.
+
 ## PE-BTL126 — only scratch[0]|=4 store is type-6 +0x1850
 
 `matching_native` local. EXE/disc `0x6A80` sites remain

@@ -13458,6 +13458,64 @@ static void test_BTL126_7d_is_handshake_not_6f(void)
     PASS();
 }
 
+static void test_BTL127_6be4c_ce2_gate(void)
+{
+    TEST("BTL127_6be4c_ce2_gate");
+    ResetTestState();
+    PE_StoreU8(0x800B0CE2u, 9u);
+    PE_StoreU8(0x800B0CE3u, 0u);
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU8(0x800B0CE6u, 0u);
+    ASSERT(func_8006BE4C() == 0, "CE2=9 v0");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0u, "CE2=9 no overlay");
+    ASSERT(PE_LoadU8(0x800B0CE6u) == 0u, "CE2=9 no CE6");
+
+    PE_StoreU8(0x800B0CE2u, 10u);
+    ASSERT(func_8006BE4C() == 0, "CE2=10 CE3=0 v0");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x200000u) != 0u, "CE2!=CE3 sets 0x200000");
+    ASSERT(PE_LoadU8(0x800B0CE6u) == 0u, "CE3=0 skips CE6");
+
+    PE_StoreU32(0x800B0CD8u, 0u);
+    PE_StoreU8(0x800B0CE3u, 10u);
+    ASSERT(func_8006BE4C() == 0, "CE2=CE3=10 v0");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x200000u) == 0u, "equal skips 0x200000");
+    ASSERT((PE_LoadU8(0x800B0CE6u) & 4u) != 0u, "CE2=CE3=10 sets CE6 bit 2");
+    ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "not scratch[0]");
+    PASS();
+}
+
+static void test_BTL127_dest_ready_ce2_10(void)
+{
+    PE_Disc *disc;
+    char err[256];
+
+    TEST("BTL127_dest_ready_ce2_10");
+    ResetTestState();
+    disc = pe_btl124_open_m0005i(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "open m0005i");
+    ASSERT(PE_LoadU8(0x800B0CE2u) == 10u, "CE2=10");
+    {
+        uint8_t ce3 = PE_LoadU8(0x800B0CE3u);
+        uint32_t left = (10u - 10u) >> 1;
+        uint32_t right;
+        int32_t delta = (int32_t)ce3 - 10;
+
+        right = ((uint32_t)delta >> 31) + (uint32_t)ce3;
+        right = (uint32_t)((int32_t)right >> 1);
+        if (ce3 != 10u)
+            ASSERT((PE_LoadU32(0x800B0CD8u) & 0x200000u) != 0u,
+                   "CE2!=CE3 sets 0x200000");
+        if (left != right)
+            ASSERT((PE_LoadU8(0x800B0CE6u) & 4u) != 0u, "6BE4C CE6");
+        else
+            ASSERT((PE_LoadU8(0x800B0CE6u) & 4u) == 0u, "6BE4C no CE6");
+    }
+    ASSERT((PE_LoadU32(0x800B6A80u) & 4u) == 0u, "scratch still clear");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
 static void test_BTL119_6c1cc_39_returns_0(void)
 {
     pe_addr_t aya = 0x80108600u;
@@ -30008,6 +30066,8 @@ int main(void)
     test_BTL126_only_setter_is_type6_1850();
     test_BTL126_type2_mailbox_not_20();
     test_BTL126_7d_is_handshake_not_6f();
+    test_BTL127_6be4c_ce2_gate();
+    test_BTL127_dest_ready_ce2_10();
     test_BTL96_179f8_28();
     test_BTL95_144fc_jtbl_complete();
     test_BTL91_144fc_55_park();

@@ -370,6 +370,7 @@ static void pe_6b4f8_ce2_hdr0c(void)
 /*
  * PE-BTL90 named dest-ready cut: 6B35C + 6B4F8 (CE2 / hdr+0x0C /
  * Writer A) + 6BECC until 0 + 6C5BC until 0 + 125E0.
+ * PE-BTL127 jals 6BE4C after 1266C (retail 3F204).
  * Does not plant mode 7/9/10 or a type-1 clip.
  */
 int func_8003F074_dest_ready_cut(uint32_t token)
@@ -391,7 +392,40 @@ int func_8003F074_dest_ready_cut(uint32_t token)
     func_8001A918();
     func_80034FC4();
     func_8001266C();
+    (void)func_8006BE4C();
     if (PE_LoadU32(GA_OVERLAY + 0x944u) >= 0x80000000u)
         func_800125E0();
     return 1;
+}
+
+/*
+ * PE-BTL127 — func_8006BE4C dest-enter CE2/CE3 gate.
+ * 32 words 0x8006BE4C..0x8006BECC, SHA-256 fb4091da…306b.
+ * Sole TEXT jal 3F074@0x8003F204, after 1266C and before 6BECC.
+ * CE2 in [10,15): if CE2!=CE3, overlay|=0x200000. Then if
+ * (CE2-10)>>1 != ((CE3-10 srl 31)+CE3)>>1, overlay+0x0E|=4.
+ * Always v0=0. Writes B0CD8/B0CE6, not D_800B6A80.
+ */
+int func_8006BE4C(void)
+{
+    uint8_t ce2;
+    uint8_t ce3;
+    uint32_t left;
+    uint32_t right;
+    int32_t delta;
+
+    ce2 = PE_LoadU8(GA_OVERLAY + 0x0Au);
+    if ((uint32_t)(ce2 - 10u) >= 5u)
+        return 0;
+    ce3 = PE_LoadU8(GA_OVERLAY + 0x0Bu);
+    if (ce2 != ce3)
+        PE_StoreU32(GA_OVERLAY, PE_LoadU32(GA_OVERLAY) | 0x200000u);
+    left = (uint32_t)(ce2 - 10u) >> 1;
+    delta = (int32_t)ce3 - 10;
+    right = ((uint32_t)delta >> 31) + (uint32_t)ce3;
+    right = (uint32_t)((int32_t)right >> 1);
+    if (left != right)
+        PE_StoreU8(GA_OVERLAY + 0x0Eu,
+                   (uint8_t)(PE_LoadU8(GA_OVERLAY + 0x0Eu) | 4u));
+    return 0;
 }
