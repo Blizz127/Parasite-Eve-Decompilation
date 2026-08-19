@@ -98,7 +98,7 @@ CSV: `CURRENT_ROUTE_TIMELINE.csv`.
 |---:|---|---|---|
 | 1 | **PROVEN_SEMANTIC** | `entrance_selector` | equality set of source-map / door ids; writers sit next to `0x31`; dest modules `==` the same slot |
 | 0x4A | **STRONG_ROLE** | *(none)* | compared/assigned thresholds 9/0x11/0x12/0x18/0x28/0x30/0x78; **not** named storyProgress |
-| 0 | **STRONG_ROLE** | *(none)* | flag word (`andi 2`, `andi 4`, `ori`) |
+| 0 | **PROVEN** | *(none)* | flag word; bit 2 (0x4) set by m0360i ONLY, bit 1 (0x2) by 18 scenes |
 | 0x18, 0x19, 0x1A | VALUE_ONLY | | bit/eq/add on Day-1 maps |
 | 8, 0x0A, 0x12, 0x50, 0x54, 0x64 | VALUE_ONLY | | m0005i only |
 

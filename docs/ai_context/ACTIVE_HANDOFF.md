@@ -3,6 +3,39 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL130 — persist[0]&4 provenance; m0360i sole writer
+
+`matching_native` local. Comprehensive scan of **all 438** field table
+entries found the sole persist[0] bit-4 (0x4) writer: **m0360i**
+(table_index 359, module 2, +0x06CC / +0x06E4). Operation:
+`persist[0] |= 0x4`. Original PST0 scanner missed it (only 8 scenes).
+Bit 4 is write-once (set by m0360i, never cleared by any script).
+31 scenes test `persist[0]&4` but only m0360i sets it.
+
+m0360i is NOT on the Day-1 first-play route. First-play m0005i has
+`persist[0]=0`; the +0x091C check always branches. First visit is an
+Actress cutscene only. The Eve battle chain requires a **revisit**
+(Day 2+) after m0360i has been visited:
+
+```
+m0360i sets persist[0]|=4
+→ revisit m0005i
+→ type-4 0x77 volume hit (persist[0x4A]>=17 from m0004i)
+→ type-0 payload 0x0D
+→ persist[0]&4 gate PASS
+→ type-0 +0xCAC → 0x1C(6,0,0x81)
+→ type-6 0x81 → 0x55 → 0x89 → 0x1C(0,0,0x65)
+→ type-0 0x65 → 0x1C(type2,0x7F) + 0x1C(type6,0x70) + scratch[0]|=0x10
+→ type-2 0x7F → +0x804 0x6F → 2F7D8 → D20C body
+→ type-6 0x70 → scratch[0]|=4 → MAIN wait released → 0x89 → 0x7D
+```
+
+persist[0x4A] arrival value: 0x18 (from m0004i +0x0544). Satisfies
+type-4 prerequisite (≥17). EXE census: 5 persist base sites, zero
+direct bit-4 stores. All OR/AND via binder VM.
+Evidence: `docs/evidence/pe-btl130-persist0-provenance/`.
+Next: verify type-4 0x77 volume geometry, then reproduce full chain.
+
 ## PE-BTL129 — first-visit graph; 36448 recovered
 
 `matching_native` local. `36448` is 608 words, jal'd from
