@@ -36,11 +36,10 @@ doing anything**.
 
 ## Current phase
 
-**231 matching C leaves.** `func_80030534` (2D distance helper, 20 words)
-matches byte-exact on era `-O2 -G0` + maspsx `--aspsx-version=2.30`
-(`nop_mflo_mfhi`: nop between second `subu` and `mult`). `func_80030640`
-(RNG gate, 40 words) matches on era `-O2 -G0`. Exact SHA-1 rebuild via
-`scripts/build_us.sh` / `scripts/verify_us.sh`.
+**232 matching C leaves.** `func_8002F7D8` (0x6F body create, 102 words)
+matches byte-exact on era `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`
+(4-register `Body216` copies). `func_80030534` and `func_80030640` also
+match. Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`.
 
 **Prior: Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table
 pointer-match search-and-clear, 23 words) matches byte-exact on era

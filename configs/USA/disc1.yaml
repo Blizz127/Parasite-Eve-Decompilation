@@ -111,6 +111,11 @@ segments:
       - [0xA404, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
+      # func_8002F7D8 — opcode 0x6F body create, VRAM 0x8002F7D8, size
+      # 0x198 (102 words). era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1.
+      # 4-register 216-byte block copy (Body216). Tail of 11718: prefix
+      # 0xE8C0, C 0x198, then existing 2F970.
+      - [0x1FFD8, c, func_8002F7D8]
       # Phase 5FE: C leaf func_8002F970 — VRAM 0x8002F970, size 0x5C (23 words).
       # Slot-table pointer-match search and clear (table twin of 2F9CC):
       # finds the record whose body address equals *p, clears its in-use

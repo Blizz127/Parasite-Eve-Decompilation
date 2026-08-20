@@ -71,6 +71,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x27DD0, c, func_800375D0]'
     '[0x29140, c, func_80038940]'
     '[0x116FC, c, func_80020EFC]'
+    '[0x1FFD8, c, func_8002F7D8]'
     '[0x20170, c, func_8002F970]'
     '[0x201CC, c, func_8002F9CC]'
     '[0x20210, asm]'
@@ -502,6 +503,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_800190B4.c"
     "src/func_80038D0C.c"
     "src/func_80038D1C.c"
+    "src/func_8002F7D8.c"
     "src/func_8002F970.c"
     "src/func_8002F9CC.c"
     "src/func_80030534.c"
@@ -819,7 +821,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80030534.c" ]]; then
+if [[ -f "$ROOT/src/func_8002F7D8.c" ]]; then
+    echo "C conversion: Phase 5FJ-2f7d8 — 232 leaves (+ 0x6F body create func_8002F7D8; era -O2 -G0 + 3W store; 4-register 216-byte Body216 copy; 102/102 words)"
+    echo "  sources: src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
+elif [[ -f "$ROOT/src/func_80030534.c" ]]; then
     echo "C conversion: Phase 5FJ-30534 — 231 leaves (+ 2D distance helper func_80030534; era -O2 -G0 + aspsx 2.30 mflo/mult nop; 20/20 words)"
     echo "  sources: src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
 elif [[ -f "$ROOT/src/func_80030640.c" ]]; then
