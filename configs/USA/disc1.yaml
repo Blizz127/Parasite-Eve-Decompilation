@@ -144,7 +144,12 @@ segments:
       # Mid-11718 carve: prefix 0xEA58, two C leaves (2F970 0x5C, 2F9CC 0x44),
       # resume 20210.s.
       - [0x201CC, c, func_8002F9CC]
-      - [0x20210, asm]
+      # PE-BTL143: three indexed record-field writers, era -O2 -G0, BYTE_EXACT.
+      # 2FA10 0x94 (37w, stack extras), 2FAA4 0x34 (13w), 2FAD8 0x20 (8w).
+      - [0x20210, c, func_8002FA10]
+      - [0x202A4, c, func_8002FAA4]
+      - [0x202D8, c, func_8002FAD8]
+      - [0x202F8, asm]
       - [0x24220, c, func_80033A20]
       - [0x2422C, asm]
       # Phase 5FG: search-and-clear over the 16-entry D_800A7624 table.

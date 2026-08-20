@@ -294,7 +294,10 @@ SIZE_C_2F76C=0x6c
 SIZE_1FFD8=0x198
 SIZE_C_2F970=0x5c
 SIZE_C_2F9CC=0x44
-SIZE_20210=0x4010
+SIZE_C_2FA10=0x94
+SIZE_C_2FAA4=0x34
+SIZE_C_2FAD8=0x20
+SIZE_202F8=0x3f28
 SIZE_C_33A20=0xc
 SIZE_2422C=0x29c8
 SIZE_C_363F4=0x54
@@ -745,7 +748,10 @@ OBJECTS=(
     "build/asm/disc1/1FFD8.s.o"
     "build/src/func_8002F970.c.o"
     "build/src/func_8002F9CC.c.o"
-    "build/asm/disc1/20210.s.o"
+    "build/src/func_8002FA10.c.o"
+    "build/src/func_8002FAA4.c.o"
+    "build/src/func_8002FAD8.c.o"
+    "build/asm/disc1/202F8.s.o"
     "build/src/func_80033A20.c.o"
     "build/asm/disc1/2422C.s.o"
     "build/src/func_800363F4.c.o"
@@ -1134,7 +1140,10 @@ SOURCES=(
     "asm/disc1/1FFD8.s"
     "src/func_8002F970.c"
     "src/func_8002F9CC.c"
-    "asm/disc1/20210.s"
+    "src/func_8002FA10.c"
+    "src/func_8002FAA4.c"
+    "src/func_8002FAD8.c"
+    "asm/disc1/202F8.s"
     "src/func_80033A20.c"
     "asm/disc1/2422C.s"
     "src/func_800363F4.c"
@@ -1626,7 +1635,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/A404.s.o asm/di
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/11718.s.o asm/disc1/11718.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/19DE4.s.o asm/disc1/19DE4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/1FFD8.s.o asm/disc1/1FFD8.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/20210.s.o asm/disc1/20210.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/202F8.s.o asm/disc1/202F8.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2422C.s.o asm/disc1/2422C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/26C48.s.o asm/disc1/26C48.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/279B0.s.o asm/disc1/279B0.s
@@ -1770,7 +1779,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEBB4.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEC70.s.o asm/disc1/BEC70.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/C5060.s.o asm/disc1/C5060.s
 
-step "Compile C leaves (230 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139))"
+step "Compile C leaves (233 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139))"
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80017E9C.c.o src/func_80017E9C.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019050.c.o src/func_80019050.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019058.c.o src/func_80019058.c
@@ -1860,6 +1869,9 @@ MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_8002F970.c build/src/func_
 # loop, and the three-word knob picks retail's 3-word expansion over as's
 # 4-word one. -O2 exact; the -O1/sched2 rungs are byte-identical to -O2 here.
 MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_8002F9CC.c build/src/func_8002F9CC.c.o -O2 -G0
+era_compile src/func_8002FA10.c build/src/func_8002FA10.c.o -O2 -G0
+era_compile src/func_8002FAA4.c build/src/func_8002FAA4.c.o -O2 -G0
+era_compile src/func_8002FAD8.c build/src/func_8002FAD8.c.o -O2 -G0
 # Phase 5FG: 16-entry search-and-clear over D_800A7624; indexed lw AND sw
 # route through the 3-word gate (first era leaf using the load path).
 MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_800363F4.c build/src/func_800363F4.c.o -O2 -G0
@@ -2080,7 +2092,10 @@ python3 "$TRIM" build/src/func_8002F76C.c.o .text "$SIZE_C_2F76C"
 python3 "$TRIM" build/asm/disc1/1FFD8.s.o .text "$SIZE_1FFD8"
 python3 "$TRIM" build/src/func_8002F970.c.o .text "$SIZE_C_2F970"
 python3 "$TRIM" build/src/func_8002F9CC.c.o .text "$SIZE_C_2F9CC"
-python3 "$TRIM" build/asm/disc1/20210.s.o .text "$SIZE_20210"
+python3 "$TRIM" build/src/func_8002FA10.c.o .text "$SIZE_C_2FA10"
+python3 "$TRIM" build/src/func_8002FAA4.c.o .text "$SIZE_C_2FAA4"
+python3 "$TRIM" build/src/func_8002FAD8.c.o .text "$SIZE_C_2FAD8"
+python3 "$TRIM" build/asm/disc1/202F8.s.o .text "$SIZE_202F8"
 python3 "$TRIM" build/src/func_80033A20.c.o .text "$SIZE_C_33A20"
 python3 "$TRIM" build/asm/disc1/2422C.s.o .text "$SIZE_2422C"
 python3 "$TRIM" build/src/func_800363F4.c.o .text "$SIZE_C_363F4"
@@ -2508,7 +2523,10 @@ SECTIONS
         build/asm/disc1/1FFD8.s.o(.text)
         build/src/func_8002F970.c.o(.text)
         build/src/func_8002F9CC.c.o(.text)
-        build/asm/disc1/20210.s.o(.text)
+        build/src/func_8002FA10.c.o(.text)
+        build/src/func_8002FAA4.c.o(.text)
+        build/src/func_8002FAD8.c.o(.text)
+        build/asm/disc1/202F8.s.o(.text)
         build/src/func_80033A20.c.o(.text)
         build/asm/disc1/2422C.s.o(.text)
         build/src/func_800363F4.c.o(.text)
@@ -2893,7 +2911,10 @@ SECTIONS
         build/asm/disc1/1FFD8.s.o(.data)
         build/src/func_8002F970.c.o(.data)
         build/src/func_8002F9CC.c.o(.data)
-        build/asm/disc1/20210.s.o(.data)
+        build/src/func_8002FA10.c.o(.data)
+        build/src/func_8002FAA4.c.o(.data)
+        build/src/func_8002FAD8.c.o(.data)
+        build/asm/disc1/202F8.s.o(.data)
         build/src/func_80033A20.c.o(.data)
         build/asm/disc1/2422C.s.o(.data)
         build/src/func_800363F4.c.o(.data)
@@ -3275,7 +3296,10 @@ SECTIONS
         build/asm/disc1/1FFD8.s.o(.rodata)
         build/src/func_8002F970.c.o(.rodata)
         build/src/func_8002F9CC.c.o(.rodata)
-        build/asm/disc1/20210.s.o(.rodata)
+        build/src/func_8002FA10.c.o(.rodata)
+        build/src/func_8002FAA4.c.o(.rodata)
+        build/src/func_8002FAD8.c.o(.rodata)
+        build/asm/disc1/202F8.s.o(.rodata)
         build/src/func_80033A20.c.o(.rodata)
         build/asm/disc1/2422C.s.o(.rodata)
         build/src/func_800363F4.c.o(.rodata)
@@ -3657,7 +3681,10 @@ SECTIONS
         build/asm/disc1/1FFD8.s.o(.bss)
         build/src/func_8002F970.c.o(.bss)
         build/src/func_8002F9CC.c.o(.bss)
-        build/asm/disc1/20210.s.o(.bss)
+        build/src/func_8002FA10.c.o(.bss)
+        build/src/func_8002FAA4.c.o(.bss)
+        build/src/func_8002FAD8.c.o(.bss)
+        build/asm/disc1/202F8.s.o(.bss)
         build/src/func_80033A20.c.o(.bss)
         build/asm/disc1/2422C.s.o(.bss)
         build/src/func_800363F4.c.o(.bss)
@@ -4363,13 +4390,13 @@ set -e
 echo
 echo "=== Summary ==="
 echo "Assemble: OK (asm units + 35 gp carves)"
-echo "Compile:  OK (230 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
+echo "Compile:  OK (233 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
 echo "Pad trim: OK (incl. C .text pad strip for 0x14/0x18/0x30/0xC/0x8/0x10/0x28/0x2C/0x38/0x3C bodies)"
 echo "Link:     OK (ROM-order ld script + absolute symbol workarounds)"
 echo "Pack:     OK (build/disc1.candidate.exe, size 0x1EE800)"
 if [[ "$cmp_ec" -eq 0 ]]; then
     echo "Compare:  EXACT SHA-1 MATCH"
-    echo "Matching claim: YES (230 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139) + remaining asm)"
+    echo "Matching claim: YES (233 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139) + remaining asm)"
     echo "Artifacts (git-ignored): build/asm/**/*.o build/src/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 0
 else

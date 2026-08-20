@@ -5,6 +5,15 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PE-BTL139 — func_800293F4 matching C (124 words)
 
+`matching_native` local. **233 matching C leaves.** Three indexed
+record-field writers `func_8002FA10` (37w) / `2FAA4` (13w) / `2FAD8`
+(8w) match byte-exact on era `-O2 -G0`. Contiguous after 2F9CC; resume
+`202F8.s`. `scripts/build_us.sh` **EXACT SHA-1**
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+Evidence: `docs/evidence/pe-btl143-record-writers/`.
+
+## PE-BTL142 — func_8002F76C matching C (27 words)
+
 `matching_native` local. **230 matching C leaves.** `func_8002F76C`
 (pointer-install + 5218C/51980/51E64, 27 words) matches byte-exact on
 era `-O2 -G0`. Carve mid-19DE4: prefix `0x6188`, C `0x6C`, resume
@@ -255,7 +264,7 @@ Verified from a clean clone of `main` @
 `455e1a1eb651b43fe8a1373552e0f69320704312` plus the
 `verify/post-merge-main` integration/doc fixes:
 
-- Matching C leaves: **230** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
+- Matching C leaves: **233** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
 - `func_8001F814` remains `NONMATCHING_C`
 - Matching rebuild: **EXACT** SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`
 - Native tests: **907 run, 907 passed, 0 failed, 0 skipped**
