@@ -150,6 +150,10 @@ segments:
       - [0x202A4, c, func_8002FAA4]
       - [0x202D8, c, func_8002FAD8]
       - [0x202F8, asm]
+      # PE-BTL144: C leaf func_80030584 — VRAM 0x80030584, size 0x44 (17 words).
+      # ratan2 of shifted shorts vs vector, +2048 as i16. era -O2 -G0.
+      - [0x20D84, c, func_80030584]
+      - [0x20DC8, asm]
       - [0x24220, c, func_80033A20]
       - [0x2422C, asm]
       # Phase 5FG: search-and-clear over the 16-entry D_800A7624 table.
