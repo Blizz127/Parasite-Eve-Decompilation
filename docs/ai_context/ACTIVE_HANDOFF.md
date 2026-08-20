@@ -3,6 +3,15 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80030584 — angle helper matching C (17 words)
+
+`src/func_80030584.c` matches byte-exact on era `-O2 -G0`. VRAM
+`0x80030584` / file `0x20D84` / size `0x44`. ratan2 of two `lh<<16`
+vs `a1[0]`/`a1[2]`, then `+2048` as i16. Head of former `20D84.s`;
+resume `20DC8.s` `0x78`. `scripts/build_us.sh` **EXACT SHA-1**
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+Evidence: `docs/evidence/func-80030584/REPORT.md`.
+
 ## func_8002F7D8 — 0x6F body create matching C (102 words)
 
 `src/func_8002F7D8.c` matches byte-exact on era `-O2 -G0` +
@@ -40,11 +49,11 @@ Evidence: `docs/evidence/func-80030640/REPORT.md`.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5fm-main-barrier-revisit` @ post-5FO-checkpoint + func_8002F7D8 | `git branch --show-current` / `git status --short` |
-| Phase | **5FO-6a9e4 IN PROGRESS / 232 exact leaves** (`func_8002F7D8` + `func_80030534` + `func_80030640` integrated; 6A9E4 still a checkpoint candidate) | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **232** (non-integrated candidates: parked src/func_800698D4.c / func_8001220C.c / func_800725DC.c + IN-PROGRESS src/func_8006A9E4.c) | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Branch / tip | `phase5fm-main-barrier-revisit` @ post-5FO-checkpoint + func_80030584 | `git branch --show-current` / `git status --short` |
+| Phase | **5FO-6a9e4 IN PROGRESS / 233 exact leaves** (`func_80030584` + `func_8002F7D8` + `func_80030534` + `func_80030640` integrated; 6A9E4 still a checkpoint candidate) | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **233** (non-integrated candidates: parked src/func_800698D4.c / func_8001220C.c / func_800725DC.c + IN-PROGRESS src/func_8006A9E4.c) | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
 | Yaml asm segments | **154** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **75** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Era leaf compiles | **76** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -52,7 +61,7 @@ Evidence: `docs/evidence/func-80030640/REPORT.md`.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5FJ-2f7d8 / 232. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5FJ-30584 / 233. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**

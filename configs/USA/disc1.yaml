@@ -138,7 +138,10 @@ segments:
       # two-instruction gap nop). Mid-20210 carve: prefix 0xB24, C 0x50,
       # resume 20D84.s 0xBC then existing 30640 C.
       - [0x20D34, c, func_80030534]
-      - [0x20D84, asm]
+      # func_80030584 — angle helper, VRAM 0x80030584, size 0x44 (17 words).
+      # era -O2 -G0. Head of former 20D84.s; resume 20DC8.s 0x78.
+      - [0x20D84, c, func_80030584]
+      - [0x20DC8, asm]
       # func_80030640 — RNG gate, VRAM 0x80030640, size 0xA0 (40 words).
       # era -O2 -G0. Mid-20210 carve: prefix 0xC30, C 0xA0, resume 20EE0.s.
       - [0x20E40, c, func_80030640]

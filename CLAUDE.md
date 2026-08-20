@@ -36,10 +36,10 @@ doing anything**.
 
 ## Current phase
 
-**232 matching C leaves.** `func_8002F7D8` (0x6F body create, 102 words)
-matches byte-exact on era `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`
-(4-register `Body216` copies). `func_80030534` and `func_80030640` also
-match. Exact SHA-1 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`.
+**233 matching C leaves.** `func_80030584` (angle helper, 17 words)
+matches byte-exact on era `-O2 -G0`. `func_8002F7D8` / `func_80030534` /
+`func_80030640` also match. Exact SHA-1 rebuild via `scripts/build_us.sh`
+/ `scripts/verify_us.sh`.
 
 **Prior: Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table
 pointer-match search-and-clear, 23 words) matches byte-exact on era

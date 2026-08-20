@@ -76,7 +76,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x201CC, c, func_8002F9CC]'
     '[0x20210, asm]'
     '[0x20D34, c, func_80030534]'
-    '[0x20D84, asm]'
+    '[0x20D84, c, func_80030584]'
+    '[0x20DC8, asm]'
     '[0x20E40, c, func_80030640]'
     '[0x20EE0, asm]'
     '[0x3DA88, c, func_8004D288]'
@@ -379,7 +380,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
     "asm/disc1/20210.s"
-    "asm/disc1/20D84.s"
+    "asm/disc1/20DC8.s"
     "asm/disc1/20EE0.s"
     "asm/disc1/29574.s"
     "asm/disc1/2E034.s"
@@ -507,6 +508,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_8002F970.c"
     "src/func_8002F9CC.c"
     "src/func_80030534.c"
+    "src/func_80030584.c"
     "src/func_80030640.c"
     "src/func_80038D48.c"
     "src/func_8003D82C.c"
@@ -821,7 +823,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8002F7D8.c" ]]; then
+if [[ -f "$ROOT/src/func_80030584.c" ]]; then
+    echo "C conversion: Phase 5FJ-30584 — 233 leaves (+ angle helper func_80030584; era -O2 -G0; 17/17 words)"
+    echo "  sources: src/func_80030584.c src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
+elif [[ -f "$ROOT/src/func_8002F7D8.c" ]]; then
     echo "C conversion: Phase 5FJ-2f7d8 — 232 leaves (+ 0x6F body create func_8002F7D8; era -O2 -G0 + 3W store; 4-register 216-byte Body216 copy; 102/102 words)"
     echo "  sources: src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
 elif [[ -f "$ROOT/src/func_80030534.c" ]]; then
