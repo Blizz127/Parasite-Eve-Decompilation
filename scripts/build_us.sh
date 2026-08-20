@@ -286,7 +286,8 @@ SIZE_A010=0x3d4
 SIZE_C_19BE4=0x20
 SIZE_A404=0x72f8
 SIZE_C_20EFC=0x1c
-SIZE_11718=0x84dc
+SIZE_11718=0x8470
+SIZE_C_29388=0x6c
 SIZE_C_293F4=0x1f0
 SIZE_19DE4=0x638c
 SIZE_C_2F970=0x5c
@@ -735,6 +736,7 @@ OBJECTS=(
     "build/asm/disc1/A404.s.o"
     "build/src/func_80020EFC.c.o"
     "build/asm/disc1/11718.s.o"
+    "build/src/func_80029388.c.o"
     "build/src/func_800293F4.c.o"
     "build/asm/disc1/19DE4.s.o"
     "build/src/func_8002F970.c.o"
@@ -1121,6 +1123,7 @@ SOURCES=(
     "asm/disc1/A404.s"
     "src/func_80020EFC.c"
     "asm/disc1/11718.s"
+    "src/func_80029388.c"
     "src/func_800293F4.c"
     "asm/disc1/19DE4.s"
     "src/func_8002F970.c"
@@ -1760,7 +1763,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEBB4.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BEC70.s.o asm/disc1/BEC70.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/C5060.s.o asm/disc1/C5060.s
 
-step "Compile C leaves (228 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139))"
+step "Compile C leaves (229 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139))"
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80017E9C.c.o src/func_80017E9C.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019050.c.o src/func_80019050.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019058.c.o src/func_80019058.c
@@ -1836,6 +1839,9 @@ era_compile src/func_800192C8.c build/src/func_800192C8.c.o -O2 -G0
 # PE-BTL139: HP clamp/copy + record flag storm. era -O2 -G8.
 # D_8009D2E8 is a 4-byte scalar that ROM addresses with 2-word lui/lw;
 # strip cc1's sdata .extern so GNU as does not emit gp-relative RMW.
+# PE-BTL141: 2F658 + 7-slot clear + D2A0/D2EC gp zeros + 20EFC.
+# Same 3-word store as 2F9CC; -G8 for the two gp byte clears; delay-slot andi.
+MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_80029388.c build/src/func_80029388.c.o -O2 -G8
 MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8 era_compile src/func_800293F4.c build/src/func_800293F4.c.o -O2 -G8
 # Phase 5FE: slot-table pointer-match search and clear (table twin of 2F9CC).
 # Same aggregate typing; sw $zero,0($a0) in the jr delay slot (5EN pattern).
@@ -2059,6 +2065,7 @@ python3 "$TRIM" build/src/func_80019BE4.c.o .text "$SIZE_C_19BE4"
 python3 "$TRIM" build/asm/disc1/A404.s.o .text "$SIZE_A404"
 python3 "$TRIM" build/src/func_80020EFC.c.o .text "$SIZE_C_20EFC"
 python3 "$TRIM" build/asm/disc1/11718.s.o .text "$SIZE_11718"
+python3 "$TRIM" build/src/func_80029388.c.o .text "$SIZE_C_29388"
 python3 "$TRIM" build/src/func_800293F4.c.o .text "$SIZE_C_293F4"
 python3 "$TRIM" build/asm/disc1/19DE4.s.o .text "$SIZE_19DE4"
 python3 "$TRIM" build/src/func_8002F970.c.o .text "$SIZE_C_2F970"
@@ -2484,6 +2491,7 @@ SECTIONS
         build/asm/disc1/A404.s.o(.text)
         build/src/func_80020EFC.c.o(.text)
         build/asm/disc1/11718.s.o(.text)
+        build/src/func_80029388.c.o(.text)
         build/src/func_800293F4.c.o(.text)
         build/asm/disc1/19DE4.s.o(.text)
         build/src/func_8002F970.c.o(.text)
@@ -2866,6 +2874,7 @@ SECTIONS
         build/asm/disc1/A404.s.o(.data)
         build/src/func_80020EFC.c.o(.data)
         build/asm/disc1/11718.s.o(.data)
+        build/src/func_80029388.c.o(.data)
         build/src/func_800293F4.c.o(.data)
         build/asm/disc1/19DE4.s.o(.data)
         build/src/func_8002F970.c.o(.data)
@@ -3245,6 +3254,7 @@ SECTIONS
         build/asm/disc1/A404.s.o(.rodata)
         build/src/func_80020EFC.c.o(.rodata)
         build/asm/disc1/11718.s.o(.rodata)
+        build/src/func_80029388.c.o(.rodata)
         build/src/func_800293F4.c.o(.rodata)
         build/asm/disc1/19DE4.s.o(.rodata)
         build/src/func_8002F970.c.o(.rodata)
@@ -3624,6 +3634,7 @@ SECTIONS
         build/asm/disc1/A404.s.o(.bss)
         build/src/func_80020EFC.c.o(.bss)
         build/asm/disc1/11718.s.o(.bss)
+        build/src/func_80029388.c.o(.bss)
         build/src/func_800293F4.c.o(.bss)
         build/asm/disc1/19DE4.s.o(.bss)
         build/src/func_8002F970.c.o(.bss)
@@ -4334,13 +4345,13 @@ set -e
 echo
 echo "=== Summary ==="
 echo "Assemble: OK (asm units + 35 gp carves)"
-echo "Compile:  OK (228 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
+echo "Compile:  OK (229 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139) with Phase 4J flags; func_80051E48 -fno-delayed-branch)"
 echo "Pad trim: OK (incl. C .text pad strip for 0x14/0x18/0x30/0xC/0x8/0x10/0x28/0x2C/0x38/0x3C bodies)"
 echo "Link:     OK (ROM-order ld script + absolute symbol workarounds)"
 echo "Pack:     OK (build/disc1.candidate.exe, size 0x1EE800)"
 if [[ "$cmp_ec" -eq 0 ]]; then
     echo "Compare:  EXACT SHA-1 MATCH"
-    echo "Matching claim: YES (228 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139) + remaining asm)"
+    echo "Matching claim: YES (229 C leaves (incl. gp batches + era + 5EF + 5EG + 5EH + 5EI + 5EJ + 5EK + 5EL + 5EM + 5EQ + 5ER + 5ES + 5ET + 5EW + 5EX + 5EY + 5EZ + 5FA + 5FD + 5FE + 5FG + 5FH + 5FI + BTL139) + remaining asm)"
     echo "Artifacts (git-ignored): build/asm/**/*.o build/src/*.o build/disc1.elf build/disc1.candidate.exe"
     exit 0
 else

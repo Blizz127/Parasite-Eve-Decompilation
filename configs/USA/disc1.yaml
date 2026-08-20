@@ -111,6 +111,12 @@ segments:
       - [0xA404, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
+      # PE-BTL141: C leaf func_80029388 — VRAM 0x80029388, size 0x6C (27 words).
+      # jal 2F658, then the same 7x220 SlotRecord in-use clear as 2F9CC
+      # (unsigned char, sltiu 7, 3-word symbol store), gp zeros D2A0/D2EC,
+      # jal 20EFC. Back-branch delay is FILLED (andi), inverse of 2F9CC nop.
+      # era -O2 -G8 + MASPSX_THREE_WORD_SYMBOL_STORE=1. Prefix 0x8470, then 293F4.
+      - [0x19B88, c, func_80029388]
       # PE-BTL139: C leaf func_800293F4 — VRAM 0x800293F4, size 0x1F0 (124 words).
       # HP clamp/copy + record flag storm. era -O2 -G8. D_8009D2E8 forced
       # absolute (strip .extern sdata size) so RMW is 2-word lui/lw + lui/at sw.

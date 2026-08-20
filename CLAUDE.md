@@ -36,9 +36,10 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5FJ / PE-BTL139 — 228 matching C leaves** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
-`func_800293F4` (HP clamp/copy + record flag storm, 124 words) matches
-byte-exact on era `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8`.
+**Phase 5FJ / PE-BTL141 — 229 matching C leaves** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
+`func_80029388` (27 words, slot-table clear + 2F658/20EFC) and
+`func_800293F4` (HP clamp/copy + record flag storm, 124 words) match
+byte-exact on era `-O2 -G8`.
 `func_8001F814` remains `NONMATCHING_C` (jump table in the `0x800` rodata
 pool). Native ports under `pc_port/` are not matching leaves. Exact SHA-1
 rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. Native suite:

@@ -5,6 +5,15 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PE-BTL139 — func_800293F4 matching C (124 words)
 
+`matching_native` local. **229 matching C leaves.** `func_80029388`
+(slot-table clear + 2F658/20EFC, 27 words) matches byte-exact on era
+`-O2 -G8` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`. Same SlotRecord loop as
+2F9CC; back-branch delay FILLED (`andi`). Immediately before 293F4.
+`scripts/build_us.sh` **EXACT SHA-1** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+Evidence: `docs/evidence/pe-btl141-func-80029388/`.
+
+## PE-BTL139 — func_800293F4 matching C (124 words)
+
 `matching_native` local. **228 matching C leaves.** `func_800293F4`
 (HP clamp/copy + record flag storm, 124 words, `0x800293F4..0x800295E4`)
 matches byte-exact on era `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8`.
@@ -237,7 +246,7 @@ Verified from a clean clone of `main` @
 `455e1a1eb651b43fe8a1373552e0f69320704312` plus the
 `verify/post-merge-main` integration/doc fixes:
 
-- Matching C leaves: **228** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
+- Matching C leaves: **229** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
 - `func_8001F814` remains `NONMATCHING_C`
 - Matching rebuild: **EXACT** SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`
 - Native tests: **907 run, 907 passed, 0 failed, 0 skipped**
