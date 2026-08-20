@@ -36,11 +36,11 @@ doing anything**.
 
 ## Current phase
 
-**230 matching C leaves.** `func_80030640` (RNG gate, 40 words) matches
-byte-exact on era `-O2 -G0`. `lui $v1,1` is `0x10000`; the store reloads
-`D_8009D278` into `$v1` because signed `%100` clobbers `$a0`. Mid-20210
-carve: prefix `0xC30`, C `0xA0`, resume `20EE0.s`. Exact SHA-1 rebuild
-via `scripts/build_us.sh` / `scripts/verify_us.sh`.
+**231 matching C leaves.** `func_80030534` (2D distance helper, 20 words)
+matches byte-exact on era `-O2 -G0` + maspsx `--aspsx-version=2.30`
+(`nop_mflo_mfhi`: nop between second `subu` and `mult`). `func_80030640`
+(RNG gate, 40 words) matches on era `-O2 -G0`. Exact SHA-1 rebuild via
+`scripts/build_us.sh` / `scripts/verify_us.sh`.
 
 **Prior: Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table
 pointer-match search-and-clear, 23 words) matches byte-exact on era

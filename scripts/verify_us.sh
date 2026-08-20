@@ -74,6 +74,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x20170, c, func_8002F970]'
     '[0x201CC, c, func_8002F9CC]'
     '[0x20210, asm]'
+    '[0x20D34, c, func_80030534]'
+    '[0x20D84, asm]'
     '[0x20E40, c, func_80030640]'
     '[0x20EE0, asm]'
     '[0x3DA88, c, func_8004D288]'
@@ -376,6 +378,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
     "asm/disc1/20210.s"
+    "asm/disc1/20D84.s"
     "asm/disc1/20EE0.s"
     "asm/disc1/29574.s"
     "asm/disc1/2E034.s"
@@ -501,6 +504,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80038D1C.c"
     "src/func_8002F970.c"
     "src/func_8002F9CC.c"
+    "src/func_80030534.c"
     "src/func_80030640.c"
     "src/func_80038D48.c"
     "src/func_8003D82C.c"
@@ -815,7 +819,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80030640.c" ]]; then
+if [[ -f "$ROOT/src/func_80030534.c" ]]; then
+    echo "C conversion: Phase 5FJ-30534 — 231 leaves (+ 2D distance helper func_80030534; era -O2 -G0 + aspsx 2.30 mflo/mult nop; 20/20 words)"
+    echo "  sources: src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
+elif [[ -f "$ROOT/src/func_80030640.c" ]]; then
     echo "C conversion: Phase 5FJ-30640 — 230 leaves (+ RNG gate func_80030640; era -O2 -G0; lui 0x10000 mask + D_8009D278 reload into \$v1; 40/40 words)"
     echo "  sources: src/func_80030640.c (+ prior 5FK)"
 elif [[ -f "$ROOT/src/func_8006E834.c" ]]; then
