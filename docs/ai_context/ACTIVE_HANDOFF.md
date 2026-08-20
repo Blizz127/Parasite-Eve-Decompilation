@@ -5,6 +5,14 @@ every meaningful change. Prefer shortening over accruing.
 
 ## PE-BTL139 — func_800293F4 matching C (124 words)
 
+`matching_native` local. **235 matching C leaves.** `func_800305C8`
+(1F814 angle callee, 30 words) matches byte-exact on era `-O2 -G0`.
+`scripts/build_us.sh` **EXACT SHA-1** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+Evidence: `docs/evidence/pe-btl145-func-800305C8/`.
+1F814 itself still blocked on prefix-pool jtbl `0x800106E4`.
+
+## PE-BTL144 — func_80030584 matching C (17 words)
+
 `matching_native` local. **234 matching C leaves.** `func_80030584`
 (angle helper, 17 words) matches byte-exact on era `-O2 -G0`.
 `scripts/build_us.sh` **EXACT SHA-1** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
@@ -271,7 +279,7 @@ Verified from a clean clone of `main` @
 `455e1a1eb651b43fe8a1373552e0f69320704312` plus the
 `verify/post-merge-main` integration/doc fixes:
 
-- Matching C leaves: **234** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
+- Matching C leaves: **235** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
 - `func_8001F814` remains `NONMATCHING_C`
 - Matching rebuild: **EXACT** SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`
 - Native tests: **907 run, 907 passed, 0 failed, 0 skipped**

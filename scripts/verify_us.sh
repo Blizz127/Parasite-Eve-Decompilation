@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5FJ / BTL144: 234 C leaves.
+# Current production subsegments (file offsets). Phase 5FJ / BTL145: 235 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -807,7 +807,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80030584.c" ]]; then
+if [[ -f "$ROOT/src/func_800305C8.c" ]]; then
+    echo "C conversion: PE-BTL145 / Phase 5FJ — 235 leaves (+ func_800305C8 1F814 angle callee; era -O2 -G0)"
+    echo "  sources: src/func_800305C8.c src/func_80030584.c (+ 2FA10/2FAA4/2FAD8/2F76C/29388/293F4)"
+elif [[ -f "$ROOT/src/func_80030584.c" ]]; then
     echo "C conversion: PE-BTL144 / Phase 5FJ — 234 leaves (+ func_80030584 angle helper; era -O2 -G0)"
     echo "  sources: src/func_80030584.c (+ 2FA10/2FAA4/2FAD8/2F76C/29388/293F4)"
 elif [[ -f "$ROOT/src/func_8002FAD8.c" ]]; then

@@ -36,7 +36,7 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5FJ / PE-BTL144 — 234 matching C leaves** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
+**Phase 5FJ / PE-BTL145 — 235 matching C leaves** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
 `func_80029388` (27 words, slot-table clear + 2F658/20EFC) and
 `func_800293F4` (HP clamp/copy + record flag storm, 124 words) match
 byte-exact on era `-O2 -G8`.

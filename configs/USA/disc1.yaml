@@ -153,7 +153,10 @@ segments:
       # PE-BTL144: C leaf func_80030584 — VRAM 0x80030584, size 0x44 (17 words).
       # ratan2 of shifted shorts vs vector, +2048 as i16. era -O2 -G0.
       - [0x20D84, c, func_80030584]
-      - [0x20DC8, asm]
+      # PE-BTL145: C leaf func_800305C8 — VRAM 0x800305C8, size 0x78 (30 words).
+      # 1F814 angle callee. era -O2 -G0. Head of former 20DC8.s.
+      - [0x20DC8, c, func_800305C8]
+      - [0x20E40, asm]
       - [0x24220, c, func_80033A20]
       - [0x2422C, asm]
       # Phase 5FG: search-and-clear over the 16-entry D_800A7624 table.
