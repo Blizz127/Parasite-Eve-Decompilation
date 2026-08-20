@@ -41,6 +41,24 @@ Evidence: `docs/evidence/pe-btl130-persist0-provenance/`.
 Next: native implementation of the revisit battle chain, targeting,
 5C498 → tid406 → combat.
 
+## PE-BTL131 — D20C → targeting → tid406 → combat chain mapped
+
+`matching_native` local. Full combat chain from D20C body creation
+through teardown is now mapped:
+
+- 0x6F/2F7D8: body creation (224-byte ROM template, 28-byte slots)
+- 5C498: targeting pipeline (9-stage, callbacks at body+0x2C)
+- 29810: D2A4 publication (`sh v0,0x534(gp)` via144FC state 0x3A)
+- 26824: tid406 publication (BTL121)
+- 1D340/1F704: ATB/HP subtract (BTL98)
+- 28574/28E94: enemy HP/death (BTL109/105)
+- 292EC/2F300: remaining enemy/mode 2 (BTL104)
+- 2B0E8/2B29C: mode 9/teardown (BTL103/101)
+
+Combat chain is fully proven. No values planted.
+Evidence: `docs/evidence/pe-btl131-combat-chain/`.
+Next: native test implementation for revisit battle path.
+
 ## PE-BTL129 — first-visit graph; 36448 recovered
 
 `matching_native` local. `36448` is 608 words, jal'd from
