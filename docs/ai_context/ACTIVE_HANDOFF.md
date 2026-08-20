@@ -78,6 +78,12 @@ kind 6-15. Needs matching verification with MIPS cross-compiler (Distrobox).
 Not yet added to YAML config as 'c' entry.
 Next: verify matching when Distrobox available; continue decomp grind.
 
+## PE-BTL134 — persist[7] checkpoint flags
+
+persist[7] is a Day 2+ checkpoint flag system. Seven scenes (m0382i–m0417i)
+each set a specific bit (0x4 through 0x800). m0291i/m0293i/m0295i/m0296i
+test all bits. m0430i clears all. m0360i module 7 sets all 7 bits at once.
+
 ## PE-BTL129 — first-visit graph; 36448 recovered
 
 `matching_native` local. `36448` is 608 words, jal'd from
