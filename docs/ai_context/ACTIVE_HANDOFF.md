@@ -59,6 +59,16 @@ Combat chain is fully proven. No values planted.
 Evidence: `docs/evidence/pe-btl131-combat-chain/`.
 Next: native test implementation for revisit battle path.
 
+## PE-BTL132 — m0360i Day 2+ routing hub
+
+`matching_native` local. m0360i has 8 modules, 1362 commands. Module 2
+sets `persist[0]|=4`. Module 3 is the main routing hub with 31 dest
+tokens and 25 persist[0x4A] writes (0x00 through 0x2E2). Module 4 adds
+10 more routes. Module 7 sets 7 flag bits in persist[7].
+m0360i is the Day 2+ game progression hub that enables the Eve battle
+chain and routes the player through the full post-Day-1 game.
+Evidence: `docs/evidence/pe-btl132-m0360i-hub/`.
+
 ## PE-BTL129 — first-visit graph; 36448 recovered
 
 `matching_native` local. `36448` is 608 words, jal'd from
