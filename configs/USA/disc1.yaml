@@ -156,7 +156,11 @@ segments:
       # PE-BTL145: C leaf func_800305C8 — VRAM 0x800305C8, size 0x78 (30 words).
       # 1F814 angle callee. era -O2 -G0. Head of former 20DC8.s.
       - [0x20DC8, c, func_800305C8]
-      - [0x20E40, asm]
+      # PE-BTL146: C leaf func_80030640 — VRAM 0x80030640, size 0xA0 (40 words).
+      # RNG gate: inner+0x10 bit16 and RNG%100 < rec+0x22, then sh 9000
+      # at rec+0x10. era -O2 -G0. Head of former 20E40.s.
+      - [0x20E40, c, func_80030640]
+      - [0x20EE0, asm]
       - [0x24220, c, func_80033A20]
       - [0x2422C, asm]
       # Phase 5FG: search-and-clear over the 16-entry D_800A7624 table.

@@ -73,7 +73,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x116FC, c, func_80020EFC]'
     '[0x20170, c, func_8002F970]'
     '[0x201CC, c, func_8002F9CC]'
-    '[0x20210, asm]'
+    '[0x20E40, c, func_80030640]'
+    '[0x20EE0, asm]'
     '[0x3DA88, c, func_8004D288]'
     '[0x4C498, c, func_8005BC98]'
     '[0x4CC88, c, func_8005C488]'
@@ -371,7 +372,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/86A4.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
-    "asm/disc1/20210.s"
+    "asm/disc1/20EE0.s"
     "asm/disc1/29574.s"
     "asm/disc1/2E034.s"
     "asm/disc1/2E7D8.s"
@@ -807,7 +808,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800305C8.c" ]]; then
+if [[ -f "$ROOT/src/func_80030640.c" ]]; then
+    echo "C conversion: PE-BTL146 / Phase 5FJ — 236 leaves (+ func_80030640 RNG gate; era -O2 -G0)"
+    echo "  sources: src/func_80030640.c src/func_800305C8.c src/func_80030584.c (+ 2FA10/2FAA4/2FAD8/2F76C/29388/293F4)"
+elif [[ -f "$ROOT/src/func_800305C8.c" ]]; then
     echo "C conversion: PE-BTL145 / Phase 5FJ — 235 leaves (+ func_800305C8 1F814 angle callee; era -O2 -G0)"
     echo "  sources: src/func_800305C8.c src/func_80030584.c (+ 2FA10/2FAA4/2FAD8/2F76C/29388/293F4)"
 elif [[ -f "$ROOT/src/func_80030584.c" ]]; then

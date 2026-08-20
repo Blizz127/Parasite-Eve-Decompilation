@@ -3,7 +3,18 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
-## PE-BTL139 — func_800293F4 matching C (124 words)
+## PE-BTL146 — func_80030640 matching C (40 words)
+
+`matching_native` local. **236 matching C leaves.** `func_80030640`
+(RNG gate, 40 words) matches byte-exact on era `-O2 -G0`.
+`lui $v1,1` is bit 16 (`0x10000`), not `andi 1`. Second `D_8009D278`
+load is `$v1` because `%100` clobbers `$a0`. Head of former `20E40.s`;
+resume `20EE0.s`. `scripts/build_us.sh` **EXACT SHA-1**
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+Evidence: `docs/evidence/pe-btl146-func-80030640/`.
+1F814 itself still blocked on prefix-pool jtbl `0x800106E4`.
+
+## PE-BTL145 — func_800305C8 matching C (30 words)
 
 `matching_native` local. **235 matching C leaves.** `func_800305C8`
 (1F814 angle callee, 30 words) matches byte-exact on era `-O2 -G0`.
