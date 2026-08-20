@@ -95,6 +95,12 @@ scratch[0x12] (D_800B6A80 + 0x48) is a ubiquitous "scene active" flag
 across the entire game. m0360i requires it to be non-zero before the
 Day 2+ bit-4 write fires.
 
+## PE-BTL136 — m0037i-m0039i routing analyzed
+
+m0037i-m0039i are m0360i module 4 targets. All test persist[0] bit 4
+and write persist[0x4A] values (0xC0, 0x160, 0x2A4, 0xE4, 0x1C8, 0xD8).
+0xA8000048 is a special return token (not a standard scene index).
+
 ## PE-BTL129 — first-visit graph; 36448 recovered
 
 `matching_native` local. `36448` is 608 words, jal'd from
