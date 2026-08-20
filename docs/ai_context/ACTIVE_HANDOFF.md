@@ -3,15 +3,25 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80030640 — RNG gate matching C (40 words)
+
+`src/func_80030640.c` matches byte-exact on era `-O2 -G0`. VRAM
+`0x80030640` / file `0x20E40` / size `0xA0`. Mid-20210 carve: prefix
+`0xC30`, C `0xA0`, resume `20EE0.s`. `lui $v1,1` is bit 16 (`0x10000`),
+not `andi 1`. Second `D_8009D278` load is `$v1` because signed `%100`
+clobbers `$a0`. `scripts/build_us.sh` **EXACT SHA-1**
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+Evidence: `docs/evidence/func-80030640/REPORT.md`.
+
 ## Current state
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5fm-main-barrier-revisit` @ post-5FO-checkpoint (5FJ+5FK integrated; 5FL+5FM+5FN parked; 5FO in progress) | `git branch --show-current` / `git status --short` |
-| Phase | **5FO-6a9e4 IN PROGRESS / 229 exact leaves** (checkpoint candidate committed; production unchanged) | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **229** (non-integrated candidates: parked src/func_800698D4.c / func_8001220C.c / func_800725DC.c + IN-PROGRESS src/func_8006A9E4.c) | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **152** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **72** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Branch / tip | `phase5fm-main-barrier-revisit` @ post-5FO-checkpoint + func_80030640 | `git branch --show-current` / `git status --short` |
+| Phase | **5FO-6a9e4 IN PROGRESS / 230 exact leaves** (`func_80030640` RNG gate integrated; 6A9E4 still a checkpoint candidate) | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **230** (non-integrated candidates: parked src/func_800698D4.c / func_8001220C.c / func_800725DC.c + IN-PROGRESS src/func_8006A9E4.c) | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **153** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **73** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -19,7 +29,7 @@ every meaningful change. Prefer shortening over accruing.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5FK-6e834 / 229. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5FJ-30640 / 230. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**

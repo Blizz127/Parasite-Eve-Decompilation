@@ -36,7 +36,13 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table
+**230 matching C leaves.** `func_80030640` (RNG gate, 40 words) matches
+byte-exact on era `-O2 -G0`. `lui $v1,1` is `0x10000`; the store reloads
+`D_8009D278` into `$v1` because signed `%100` clobbers `$a0`. Mid-20210
+carve: prefix `0xC30`, C `0xA0`, resume `20EE0.s`. Exact SHA-1 rebuild
+via `scripts/build_us.sh` / `scripts/verify_us.sh`.
+
+**Prior: Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table
 pointer-match search-and-clear, 23 words) matches byte-exact on era
 `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1` — the table twin of 2F9CC,
 reusing the exact `SlotRecord` typing (inheritance, no variant layouts).

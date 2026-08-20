@@ -128,6 +128,10 @@ segments:
       # resume 20210.s.
       - [0x201CC, c, func_8002F9CC]
       - [0x20210, asm]
+      # func_80030640 — RNG gate, VRAM 0x80030640, size 0xA0 (40 words).
+      # era -O2 -G0. Mid-20210 carve: prefix 0xC30, C 0xA0, resume 20EE0.s.
+      - [0x20E40, c, func_80030640]
+      - [0x20EE0, asm]
       - [0x24220, c, func_80033A20]
       - [0x2422C, asm]
       # Phase 5FG: search-and-clear over the 16-entry D_800A7624 table.
