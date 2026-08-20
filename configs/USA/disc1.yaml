@@ -123,6 +123,11 @@ segments:
       # Mid-11718 carve: prefix 0x84DC, C 0x1F0, resume 19DE4.s 0x638C to 2F970.
       - [0x19BF4, c, func_800293F4]
       - [0x19DE4, asm]
+      # PE-BTL142: C leaf func_8002F76C — VRAM 0x8002F76C, size 0x6C (27 words).
+      # Pointer-install of B8A20/B0CB0/D1B0 then jal 5218C/51980/51E64.
+      # era -O2 -G0. Mid-19DE4 carve: prefix 0x6188, C 0x6C, resume 1FFD8.s 0x198.
+      - [0x1FF6C, c, func_8002F76C]
+      - [0x1FFD8, asm]
       # Phase 5FE: C leaf func_8002F970 — VRAM 0x8002F970, size 0x5C (23 words).
       # Slot-table pointer-match search and clear (table twin of 2F9CC):
       # finds the record whose body address equals *p, clears its in-use
