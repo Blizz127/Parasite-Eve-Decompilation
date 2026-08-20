@@ -68,6 +68,15 @@ tokens and 25 persist[0x4A] writes (0x00 through 0x2E2). Module 4 adds
 m0360i is the Day 2+ game progression hub that enables the Eve battle
 chain and routes the player through the full post-Day-1 game.
 Evidence: `docs/evidence/pe-btl132-m0360i-hub/`.
+Dest token format: `scene_index = ((token & 0xFFFF) - 0x248) / 0x80 + 3`.
+
+## PE-BTL133 — func_8001F814 matching C draft
+
+`matching_native` local. func_8001F814 matching C draft in `src/func_8001F814.c`.
+Hit-react handler: angle-based command select + overlay. Jump table for
+kind 6-15. Needs matching verification with MIPS cross-compiler (Distrobox).
+Not yet added to YAML config as 'c' entry.
+Next: verify matching when Distrobox available; continue decomp grind.
 
 ## PE-BTL129 — first-visit graph; 36448 recovered
 
