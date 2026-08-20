@@ -3,6 +3,27 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-BTL139 — func_800293F4 matching C (124 words)
+
+`matching_native` local. **228 matching C leaves.** `func_800293F4`
+(HP clamp/copy + record flag storm, 124 words, `0x800293F4..0x800295E4`)
+matches byte-exact on era `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8`.
+`scripts/build_us.sh` **EXACT SHA-1** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+The BTL137 21-word named cut is this leaf's `a0==0` prefix. D278/D1D0/D244
+are gp-relative; D2E8 is a 4-byte scalar whose ROM 2-word lui/lw is
+forced by stripping cc1's sdata `.extern`. Carve: 11718 prefix
+`0x84DC`, C `0x1F0`, resume `19DE4.s` `0x638C`.
+Evidence: `docs/evidence/pe-btl139-func-800293F4/`.
+
+`func_800292EC` is the tail of `func_80028E94`, not a standalone leaf.
+`func_8001F814` jump table sits in the `0x800` rodata pool (`0x800106E4`).
+
+m0360i has **zero** `0x31` inbound hops across all 414 scripts (1011
+immediate dest tokens). Packed name `m0360i` = `0xA8066048` is absent
+from EXE and from every field script. Day-2 entry is not a script hop.
+Do not poke persist. Next inbound lead: EXE dest-change / world-map /
+m0354i neighbourhood.
+
 ## PE-BTL130 — persist[0]&4 provenance; m0360i sole writer
 
 `matching_native` local. Comprehensive scan of **all 438** field table
@@ -216,7 +237,7 @@ Verified from a clean clone of `main` @
 `455e1a1eb651b43fe8a1373552e0f69320704312` plus the
 `verify/post-merge-main` integration/doc fixes:
 
-- Matching C leaves: **227** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
+- Matching C leaves: **228** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
 - `func_8001F814` remains `NONMATCHING_C`
 - Matching rebuild: **EXACT** SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`
 - Native tests: **907 run, 907 passed, 0 failed, 0 skipped**

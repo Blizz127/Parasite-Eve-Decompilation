@@ -36,11 +36,13 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5FI — 227 matching C leaves** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
-`func_8001F814` remains `NONMATCHING_C`. Native ports under `pc_port/` are
-not matching leaves. Exact SHA-1 rebuild via `scripts/build_us.sh` /
-`scripts/verify_us.sh`. Native suite: `cmake -S pc_port -B pc_port/build`
-then `./pc_port/build/pe-native-tests`.
+**Phase 5FJ / PE-BTL139 — 228 matching C leaves** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
+`func_800293F4` (HP clamp/copy + record flag storm, 124 words) matches
+byte-exact on era `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8`.
+`func_8001F814` remains `NONMATCHING_C` (jump table in the `0x800` rodata
+pool). Native ports under `pc_port/` are not matching leaves. Exact SHA-1
+rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. Native suite:
+`cmake -S pc_port -B pc_port/build` then `./pc_port/build/pe-native-tests`.
 
 **Prior: Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table
 pointer-match search-and-clear, 23 words) matches byte-exact on era
