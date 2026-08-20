@@ -89,21 +89,79 @@ Sets bits in persist[7]:
 
 Each bit is OR'd individually (7 separate OR operations).
 
-## G. Key insight
+## G. Dest token format decoded
 
-m0360i is the **Day 2+ game progression hub**. After the Day 1 completion
-(m0377i/m0378i), the game returns to this scene which:
+```text
+scene_table_index = ((token & 0xFFFF) - 0x248) / 0x80 + 3
+```
 
-1. Sets persist[0] |= 4 (enables the Eve battle chain)
-2. Advances persist[0x4A] through many values (0x00 → 0x2E2+)
-3. Routes the player to different Day 2+ scenes based on progress
-4. Sets additional game flags in persist[7]
+Verified against all known tokens:
+- 0xA80000C8 → m0001i (index 0) ✓
+- 0xA8000148 → m0002i (index 1) ✓
+- 0xA80001C8 → m0003i (index 2) ✓
+- 0xA8000248 → m0004i (index 3) ✓
+- 0xA80002C8 → m0005i (index 4) ✓
+- 0xA8001248 → m0036i (index 35) ✓
 
-The31 dest tokens in module 3 represent the full Day 2+ route through
-the game. Each persist[0x4A] value corresponds to a specific game state
-and routes to the appropriate next scene.
+## H. Module 3 routing decoded
 
-## H. Status
+| persist[0x4A] | Token | Scene |
+|---:|---|---|
+| 0x00 | 0xA80830C8 | m0096i |
+| 0x09 | 0xA80010C8 | m0032i |
+| 0x68 | 0xA8002348 | m0069i |
+| 0x70 | 0xA80654C8 | m0168i |
+| 0x88 | 0xA8004148 | m0129i |
+| 0xC0 | 0xA80290C8 | m0288i |
+| 0xD8 | 0xA8004348 | m0133i |
+| 0xE4 | 0xA8067248 | m0227i |
+| 0x120 | 0xA80040C8 | m0128i |
+| 0x128 | 0xA8009048 | m0287i |
+| 0x130 | 0xA80090C8 | m0288i |
+| 0x160 | 0xA80290C8 | m0288i |
+| 0x180 | 0xA80201C8 | m0002i |
+| 0x1C8 | 0xA80222C8 | m0068i |
+| 0x210 | 0xA8004148 | m0129i |
+| 0x220 | 0xA80260C8 | m0192i |
+| 0x238 | 0xA8046048 | m0191i |
+| 0x258 | 0xA8029148 | m0289i |
+| 0x2A4 | 0xA80454C8 | m0168i |
+| 0x2A8 | 0xA80470C8 | m0224i |
+| 0x2B0 | 0xA8047148 | m0225i |
+| 0x2CA | 0xA80471C8 | m0226i |
+| 0x2DA | 0xA8082448 | m0071i |
+| 0x2E2 | 0xA8048448 | m0263i |
+| 0x2E2 | 0xA80671C8 | m0226i |
+
+## I. Module 4 routing decoded
+
+| persist[0x4A] | Token | Scene |
+|---:|---|---|
+| 0x78 | 0xA8003348 | m0037i |
+| 0xB8 | 0xA8003448 | m0039i |
+| 0xD0 | 0xA8004048 | m0128i |
+| 0xE0 | 0xA80034C8 | m0039i |
+| 0x148 | 0xA8003448 | m0039i |
+| 0x178 | 0xA80033C8 | m0038i |
+| 0x1C0 | 0xA80034C8 | m0039i |
+| 0x208 | 0xA80032C8 | m0036i |
+| 0x298 | 0xA80033C8 | m0038i |
+| 0x2A2 | 0xA80034C8 | m0039i |
+
+## J. Module 1 entry dest
+
+| Token | Scene |
+|---|---|
+| 0xA8081448 | m0039i |
+
+## K. Key insight
+
+m0360i routes the player through 25+ unique scenes across the Day 2+
+game. The routing starts at m0096i and progresses through increasingly
+high-numbered scenes. The route returns to m0002i (Carnegie Hall) at
+persist[0x4A]=0x180, suggesting a mid-game return to a familiar location.
+
+## L. Status
 
 ```text
 m0360i_role=DAY2_ROUTING_HUB
