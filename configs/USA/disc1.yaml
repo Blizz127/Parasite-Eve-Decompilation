@@ -207,7 +207,13 @@ segments:
       # Mid-11718 carve: prefix 0xEA58, two C leaves (2F970 0x5C, 2F9CC 0x44),
       # resume 20210.s.
       - [0x201CC, c, func_8002F9CC]
-      - [0x20210, asm]
+      # Three indexed record-field writers, era -O2 -G0:
+      # 2FA10 0x94 (37w, stack extras), 2FAA4 0x34 (13w), 2FAD8 0x20 (8w).
+      # Head-of-20210 carve: C 0xE8 total, resume 202F8.s 0xA3C to 20D34.
+      - [0x20210, c, func_8002FA10]
+      - [0x202A4, c, func_8002FAA4]
+      - [0x202D8, c, func_8002FAD8]
+      - [0x202F8, asm]
       # func_80030534 — 2D distance helper, VRAM 0x80030534, size 0x50
       # (20 words). era -O2 -G0 + maspsx --aspsx-version=2.30 (mflo/mult
       # two-instruction gap nop). Mid-20210 carve: prefix 0xB24, C 0x50,

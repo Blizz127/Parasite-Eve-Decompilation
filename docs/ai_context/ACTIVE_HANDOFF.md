@@ -3,9 +3,26 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## Grind-lane port complete — 275 matching C leaves (2026-08-21)
+
+All remaining pe-continuous-decomp grind leaves are ported. After 29388
+(below): `func_800293F4` (0x19BF4, 124w, era `-O2 -G8` +
+`MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8` — new era_compile knob that
+strips a symbol's sdata `.extern` so its RMW stays absolute),
+`func_8002F76C` (0x1FF6C, 27w, `-O2 -G0`, tail-of-19DE4 carve, no
+resume), and the writer trio `func_8002FA10`/`FAA4`/`FAD8`
+(0x20210/0x202A4/0x202D8, `-O2 -G0`, head-of-20210 carve, resume
+`202F8.s` 0xA3C). Each landed as one commit with a fresh in-container
+EXACT SHA-1 build; evidence under `docs/evidence/func-800293F4/`,
+`func-8002F76C/`, `func-8002FA10-FAA4-FAD8/`. Branch
+`leaves/from-grind-20260821`, pushed to origin.
+
+**Next (needs the user awake):** the 308-commit merge unifying the
+lanes' evidence and native work. Do not start it unattended.
+
 ## func_80029388 — slot-table clear + record-init wrapper matching C (27 words)
 
-**270 matching C leaves.** `src/func_80029388.c` matches era `-O2 -G8` +
+**270 matching C leaves (now 275, see above).** `src/func_80029388.c` matches era `-O2 -G8` +
 `MASPSX_THREE_WORD_SYMBOL_STORE=1`, VRAM `0x80029388` / file `0x19B88` /
 size `0x6C`. jal 2F658, 7×220B `SlotRecord` in-use clear (2F9CC shape,
 andi-FILLED back-branch slot), gp byte zeros D_8009D2A0/D_8009D2EC, jal
