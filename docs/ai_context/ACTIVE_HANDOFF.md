@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80017F88 — D_8009D1A0 dynamic bit setter matching C (10 words)
+
+`src/func_80017F88.c` matches era `-O2 -G0`, VRAM `0x80017F88` / file
+`0x8788` / size `0x28`. It ORs a nested reader mask into `D_8009D1A0` and
+returns 1. Evidence: `docs/evidence/func-80017f88/REPORT.md`.
+
 ## func_80017F20 — D_8009D2F0 flag clearer matching C (9 words)
 
 `src/func_80017F20.c` matches era `-O2 -G0`, VRAM `0x80017F20` / file
