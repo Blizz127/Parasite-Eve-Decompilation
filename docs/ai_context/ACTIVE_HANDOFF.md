@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_800CD970 — return-zero stub matching C (2 words)
+
+`src/func_800CD970.c` matches era `-O2 -G0`, VRAM `0x800CD970` / file
+`0xBE170` / size `0x8`. It returns 0. Evidence:
+`docs/evidence/func-800cd970/REPORT.md`.
+
 ## func_80018F0C — five-reader call wrapper matching C (18 words)
 
 `src/func_80018F0C.c` matches era `-O2 -G0`, VRAM `0x80018F0C` / file
