@@ -167,6 +167,15 @@ segments:
       - [0xA404, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
+      # C leaf func_80029388 — VRAM 0x80029388, size 0x6C (27 words).
+      # jal 2F658, then the same 7 x 220-byte SlotRecord in-use clear as
+      # 2F9CC (unsigned char counter, sltiu 7, 3-word symbol store), gp
+      # byte zeros D_8009D2A0/D_8009D2EC, jal 20EFC. Back-branch delay
+      # slot FILLED (andi), inverse of 2F9CC's nop. era -O2 -G8 +
+      # MASPSX_THREE_WORD_SYMBOL_STORE=1. Mid-11718 carve: prefix 0x8470,
+      # C 0x6C, resume 19BF4.s 0x63E4 to 1FFD8.
+      - [0x19B88, c, func_80029388]
+      - [0x19BF4, asm]
       # func_8002F7D8 — opcode 0x6F body create, VRAM 0x8002F7D8, size
       # 0x198 (102 words). era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1.
       # 4-register 216-byte block copy (Body216). Tail of 11718: prefix

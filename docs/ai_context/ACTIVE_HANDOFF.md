@@ -3,6 +3,24 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80029388 — slot-table clear + record-init wrapper matching C (27 words)
+
+**270 matching C leaves.** `src/func_80029388.c` matches era `-O2 -G8` +
+`MASPSX_THREE_WORD_SYMBOL_STORE=1`, VRAM `0x80029388` / file `0x19B88` /
+size `0x6C`. jal 2F658, 7×220B `SlotRecord` in-use clear (2F9CC shape,
+andi-FILLED back-branch slot), gp byte zeros D_8009D2A0/D_8009D2EC, jal
+20EFC. Mid-`11718` carve: prefix 0x8470, C 0x6C, resume `19BF4.s` 0x63E4.
+Evidence: `docs/evidence/func-80029388/REPORT.md`.
+
+**Build environment note:** the `pe-mipsel-img` docker image was rebuilt
+from `dev/mipsel/Dockerfile` (2026-08-21) — the stale image lacked
+`python3` and aborted `build_us.sh` at the maspsx step; a prior agent then
+hashed a stale candidate and committed a false match (dropped via
+`git reset --hard`). `build_us.sh` now deletes `build/disc1.candidate.exe`
+at start so a stale artifact can never pass for a fresh build. Run builds
+as: `docker run --rm -v "$PWD:/workspace" -w /workspace --user
+"$(id -u):$(id -g)" pe-mipsel-img:latest bash scripts/build_us.sh`.
+
 ## func_8005288C — return-zero stub matching C (2 words)
 
 `src/func_8005288C.c` matches era `-O2 -G0`, VRAM `0x8005288C` / file
