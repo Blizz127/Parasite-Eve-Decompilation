@@ -80,6 +80,8 @@ segments:
       - [0x87DC, c, func_80017FDC]
       - [0x87F0, c, func_80017FF0]
       - [0x8804, asm]
+      # Phase 5GA: D_800BCF88 bits-0xC0 clearer, era -O2 -G0.
+      - [0x8AA0, c, func_800182A0]
       # Phase 5FZ: D_800BCF88 bits-0xC0 setter, era -O2 -G0.
       - [0x8AC0, c, func_800182C0]
       - [0x8AE0, asm]

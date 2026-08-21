@@ -289,7 +289,8 @@ SIZE_C_17F88=0x28
 SIZE_C_17FB0=0x2c
 SIZE_C_17FDC=0x14
 SIZE_C_17FF0=0x14
-SIZE_8804=0x2bc
+SIZE_8804=0x29c
+SIZE_C_182A0=0x20
 SIZE_C_182C0=0x20
 SIZE_8AE0=0xd70
 SIZE_C_19050=0x8
@@ -758,6 +759,7 @@ OBJECTS=(
     "build/src/func_80017FDC.c.o"
     "build/src/func_80017FF0.c.o"
     "build/asm/disc1/8804.s.o"
+    "build/src/func_800182A0.c.o"
     "build/src/func_800182C0.c.o"
     "build/asm/disc1/8AE0.s.o"
     "build/src/func_80019050.c.o"
@@ -1165,6 +1167,7 @@ SOURCES=(
     "src/func_80017FDC.c"
     "src/func_80017FF0.c"
     "asm/disc1/8804.s"
+    "src/func_800182A0.c"
     "src/func_800182C0.c"
     "asm/disc1/8AE0.s"
     "src/func_80019050.c"
@@ -1821,6 +1824,7 @@ era_compile src/func_80017EFC.c build/src/func_80017EFC.c.o -O2 -G0
 era_compile src/func_80017F20.c build/src/func_80017F20.c.o -O2 -G0
 era_compile src/func_80017F88.c build/src/func_80017F88.c.o -O2 -G0
 era_compile src/func_80017FB0.c build/src/func_80017FB0.c.o -O2 -G0
+era_compile src/func_800182A0.c build/src/func_800182A0.c.o -O2 -G0
 era_compile src/func_800182C0.c build/src/func_800182C0.c.o -O2 -G0
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019050.c.o src/func_80019050.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80019058.c.o src/func_80019058.c
@@ -2126,6 +2130,7 @@ python3 "$TRIM" build/src/func_80017FB0.c.o .text "$SIZE_C_17FB0"
 python3 "$TRIM" build/src/func_80017FDC.c.o .text "$SIZE_C_17FDC"
 python3 "$TRIM" build/src/func_80017FF0.c.o .text "$SIZE_C_17FF0"
 python3 "$TRIM" build/asm/disc1/8804.s.o .text "$SIZE_8804"
+python3 "$TRIM" build/src/func_800182A0.c.o .text "$SIZE_C_182A0"
 python3 "$TRIM" build/src/func_800182C0.c.o .text "$SIZE_C_182C0"
 python3 "$TRIM" build/asm/disc1/8AE0.s.o .text "$SIZE_8AE0"
 python3 "$TRIM" build/src/func_80019050.c.o .text "$SIZE_C_19050"
@@ -2572,6 +2577,7 @@ SECTIONS
         build/src/func_80017FDC.c.o(.text)
         build/src/func_80017FF0.c.o(.text)
         build/asm/disc1/8804.s.o(.text)
+        build/src/func_800182A0.c.o(.text)
         build/src/func_800182C0.c.o(.text)
         build/asm/disc1/8AE0.s.o(.text)
         build/src/func_80019050.c.o(.text)
@@ -2975,6 +2981,7 @@ SECTIONS
         build/src/func_80017FDC.c.o(.data)
         build/src/func_80017FF0.c.o(.data)
         build/asm/disc1/8804.s.o(.data)
+        build/src/func_800182A0.c.o(.data)
         build/src/func_800182C0.c.o(.data)
         build/asm/disc1/8AE0.s.o(.data)
         build/src/func_80019050.c.o(.data)
@@ -3375,6 +3382,7 @@ SECTIONS
         build/src/func_80017FDC.c.o(.rodata)
         build/src/func_80017FF0.c.o(.rodata)
         build/asm/disc1/8804.s.o(.rodata)
+        build/src/func_800182A0.c.o(.rodata)
         build/src/func_800182C0.c.o(.rodata)
         build/asm/disc1/8AE0.s.o(.rodata)
         build/src/func_80019050.c.o(.rodata)
@@ -3775,6 +3783,7 @@ SECTIONS
         build/src/func_80017FDC.c.o(.bss)
         build/src/func_80017FF0.c.o(.bss)
         build/asm/disc1/8804.s.o(.bss)
+        build/src/func_800182A0.c.o(.bss)
         build/src/func_800182C0.c.o(.bss)
         build/asm/disc1/8AE0.s.o(.bss)
         build/src/func_80019050.c.o(.bss)

@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_800182A0 — D_800BCF88 bits-0xC0 clearer matching C (8 words)
+
+`src/func_800182A0.c` matches era `-O2 -G0`, VRAM `0x800182A0` / file
+`0x8AA0` / size `0x20`. It clears `0xC0` from `D_800BCF88` and returns 1.
+Evidence: `docs/evidence/func-800182a0/REPORT.md`.
+
 ## func_800182C0 — D_800BCF88 bits-0xC0 setter matching C (8 words)
 
 `src/func_800182C0.c` matches era `-O2 -G0`, VRAM
