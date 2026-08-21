@@ -881,13 +881,15 @@ segments:
       # Phase 5CU: C leaf func_800CD71C — file 0xBDF1C, size 0xC.
       - [0xBDF1C, c, func_800CD71C]
       # Phase 5ED: mid-BDF28 hole — sb+ret0 func_800CD960.
-      # Prefix 0x238 (= 0xBE160 - 0xBDF28); then CD970 C (0x8), resume
-      # BE178.s 0x38C (= 0xBE504 - 0xBE178).
+      # Prefix 0x238 (= 0xBE160 - 0xBDF28); then CD970/CD978 C stubs
+      # (0x10 total), resume BE180.s 0x384 (= 0xBE504 - 0xBE180).
       - [0xBDF28, asm]
       - [0xBE160, c, func_800CD960]
       # Phase 5GQ: return-zero stub, era -O2 -G0.
       - [0xBE170, c, func_800CD970]
-      - [0xBE178, asm]
+      # Phase 5GR: return-zero stub twin, era -O2 -G0.
+      - [0xBE178, c, func_800CD978]
+      - [0xBE180, asm]
       # Phase 5AA: C leaf func_800CDD04 — VRAM 0x800CDD04, size 0x8.
       # File span 0xBE504–0xBE50C exclusive. Empty jr/nop stub.
       - [0xBE504, c, func_800CDD04]
