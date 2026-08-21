@@ -90,6 +90,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x436B0, c, func_80052EB0]'
     '[0x4F094, c, func_8005E894]'
     '[0x24220, c, func_80033A20]'
+    '[0x2422C, c, func_80033A2C]'
+    '[0x24240, asm]'
     '[0x28064, c, func_80037864]'
     '[0x336D0, c, func_80042ED0]'
     '[0x340E0, c, func_800438E0]'
@@ -516,6 +518,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_8002F9CC.c"
     "src/func_800370A8.c"
     "src/func_800370DC.c"
+    "src/func_80033A2C.c"
     "src/func_80037140.c"
     "src/func_80030534.c"
     "src/func_80030584.c"
@@ -834,7 +837,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80037140.c" ]]; then
+if [[ -f "$ROOT/src/func_80033A2C.c" ]]; then
+    echo "C conversion: Phase 5FS-33A2C — 239 leaves (+ D_8009D244 byte-flag setter func_80033A2C; era -O2 -G0; 5/5 words)"
+    echo "  sources: src/func_80033A2C.c src/func_80037140.c (+ prior 5FR)"
+elif [[ -f "$ROOT/src/func_80037140.c" ]]; then
     echo "C conversion: Phase 5FR-37140 — 238 leaves (+ packet setup/submit twin func_80037140; era -O2 -G0; 25/25 words)"
     echo "  sources: src/func_80037140.c src/func_800370DC.c (+ prior 5FQ)"
 elif [[ -f "$ROOT/src/func_800370DC.c" ]]; then

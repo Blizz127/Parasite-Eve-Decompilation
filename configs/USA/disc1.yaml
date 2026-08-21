@@ -153,7 +153,9 @@ segments:
       - [0x20E40, c, func_80030640]
       - [0x20EE0, asm]
       - [0x24220, c, func_80033A20]
-      - [0x2422C, asm]
+      # Phase 5FS-33A2C: D_8009D244 byte-flag setter, era -O2 -G0.
+      - [0x2422C, c, func_80033A2C]
+      - [0x24240, asm]
       # Phase 5FG: search-and-clear over the 16-entry D_800A7624 table.
       # era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 (indexed lw AND sw
       # route through the gate; first leaf exercising the load path).

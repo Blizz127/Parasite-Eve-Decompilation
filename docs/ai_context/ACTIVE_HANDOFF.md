@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80033A2C — D_8009D244 byte-flag setter matching C (5 words)
+
+`src/func_80033A2C.c` matches era `-O2 -G0`, VRAM `0x80033A2C` / file
+`0x2422C` / size `0x14`; `2422C.s` now resumes at `24240.s`. Evidence:
+`docs/evidence/func-80033a2c/REPORT.md`.
+
 ## func_80037140 — packet setup/submit twin matching C (25 words)
 
 `src/func_80037140.c` matches era `-O2 -G0`, VRAM `0x80037140` / file
