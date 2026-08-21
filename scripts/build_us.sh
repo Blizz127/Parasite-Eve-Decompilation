@@ -341,7 +341,8 @@ SIZE_C_20EFC=0x1c
 SIZE_11718=0x8470
 SIZE_C_29388=0x6c
 SIZE_C_293F4=0x1f0
-SIZE_19DE4=0x61f4
+SIZE_19DE4=0x6188
+SIZE_C_2F76C=0x6c
 SIZE_C_2F7D8=0x198
 SIZE_C_2F970=0x5c
 SIZE_C_2F9CC=0x44
@@ -849,6 +850,7 @@ OBJECTS=(
     "build/src/func_80029388.c.o"
     "build/src/func_800293F4.c.o"
     "build/asm/disc1/19DE4.s.o"
+    "build/src/func_8002F76C.c.o"
     "build/src/func_8002F7D8.c.o"
     "build/src/func_8002F970.c.o"
     "build/src/func_8002F9CC.c.o"
@@ -1289,6 +1291,7 @@ SOURCES=(
     "src/func_80029388.c"
     "src/func_800293F4.c"
     "asm/disc1/19DE4.s"
+    "src/func_8002F76C.c"
     "src/func_8002F7D8.c"
     "src/func_8002F970.c"
     "src/func_8002F9CC.c"
@@ -2053,6 +2056,8 @@ MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_80029388.c build/src/func_
 # func_800293F4: HP clamp/copy + record flag storm; D_8009D2E8 forced
 # absolute so its RMW is 2-word lui/lw + lui/$at sw, not gp-relative.
 MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8 era_compile src/func_800293F4.c build/src/func_800293F4.c.o -O2 -G8
+# func_8002F76C: pointer-install + jal 5218C/51980/51E64.
+era_compile src/func_8002F76C.c build/src/func_8002F76C.c.o -O2 -G0
 # Phase 5FE: slot-table pointer-match search and clear (table twin of 2F9CC).
 # Same aggregate typing; sw $zero,0($a0) in the jr delay slot (5EN pattern).
 MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_8002F7D8.c build/src/func_8002F7D8.c.o -O2 -G0
@@ -2337,6 +2342,7 @@ python3 "$TRIM" build/asm/disc1/11718.s.o .text "$SIZE_11718"
 python3 "$TRIM" build/src/func_80029388.c.o .text "$SIZE_C_29388"
 python3 "$TRIM" build/src/func_800293F4.c.o .text "$SIZE_C_293F4"
 python3 "$TRIM" build/asm/disc1/19DE4.s.o .text "$SIZE_19DE4"
+python3 "$TRIM" build/src/func_8002F76C.c.o .text "$SIZE_C_2F76C"
 python3 "$TRIM" build/src/func_8002F7D8.c.o .text "$SIZE_C_2F7D8"
 python3 "$TRIM" build/src/func_8002F970.c.o .text "$SIZE_C_2F970"
 python3 "$TRIM" build/src/func_8002F9CC.c.o .text "$SIZE_C_2F9CC"
@@ -2816,6 +2822,7 @@ SECTIONS
         build/src/func_80029388.c.o(.text)
         build/src/func_800293F4.c.o(.text)
         build/asm/disc1/19DE4.s.o(.text)
+        build/src/func_8002F76C.c.o(.text)
         build/src/func_8002F7D8.c.o(.text)
         build/src/func_8002F970.c.o(.text)
         build/src/func_8002F9CC.c.o(.text)
@@ -3252,6 +3259,7 @@ SECTIONS
         build/src/func_80029388.c.o(.data)
         build/src/func_800293F4.c.o(.data)
         build/asm/disc1/19DE4.s.o(.data)
+        build/src/func_8002F76C.c.o(.data)
         build/src/func_8002F7D8.c.o(.data)
         build/src/func_8002F970.c.o(.data)
         build/src/func_8002F9CC.c.o(.data)
@@ -3685,6 +3693,7 @@ SECTIONS
         build/src/func_80029388.c.o(.rodata)
         build/src/func_800293F4.c.o(.rodata)
         build/asm/disc1/19DE4.s.o(.rodata)
+        build/src/func_8002F76C.c.o(.rodata)
         build/src/func_8002F7D8.c.o(.rodata)
         build/src/func_8002F970.c.o(.rodata)
         build/src/func_8002F9CC.c.o(.rodata)
@@ -4118,6 +4127,7 @@ SECTIONS
         build/src/func_80029388.c.o(.bss)
         build/src/func_800293F4.c.o(.bss)
         build/asm/disc1/19DE4.s.o(.bss)
+        build/src/func_8002F76C.c.o(.bss)
         build/src/func_8002F7D8.c.o(.bss)
         build/src/func_8002F970.c.o(.bss)
         build/src/func_8002F9CC.c.o(.bss)

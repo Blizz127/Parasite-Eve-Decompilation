@@ -178,9 +178,14 @@ segments:
       # C leaf func_800293F4 — VRAM 0x800293F4, size 0x1F0 (124 words).
       # HP clamp/copy + record flag storm. era -O2 -G8. D_8009D2E8 forced
       # absolute (strip .extern sdata size) so RMW is 2-word lui/lw + lui/at
-      # sw. C 0x1F0, resume 19DE4.s 0x61F4 to 1FFD8.
+      # sw. C 0x1F0, resume 19DE4.s 0x6188 to 1FF6C.
       - [0x19BF4, c, func_800293F4]
       - [0x19DE4, asm]
+      # C leaf func_8002F76C — VRAM 0x8002F76C, size 0x6C (27 words).
+      # Pointer-install of B8A20/B0CB0/D1B0 then jal 5218C/51980/51E64.
+      # era -O2 -G0. Tail of 19DE4: prefix 0x6188, C 0x6C to the 2F7D8
+      # boundary — no asm resume needed.
+      - [0x1FF6C, c, func_8002F76C]
       # func_8002F7D8 — opcode 0x6F body create, VRAM 0x8002F7D8, size
       # 0x198 (102 words). era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1.
       # 4-register 216-byte block copy (Body216). Tail of 11718: prefix
