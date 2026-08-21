@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_800370DC — packet setup/submit wrapper matching C (25 words)
+
+`src/func_800370DC.c` matches era `-O2 -G0`, VRAM `0x800370DC` / file
+`0x278DC` / size `0x64`. It initializes a packet, configures the `+8` member,
+submits it, and reports `-1` on error. `278BC.s` resumes at `27940.s`.
+Evidence: `docs/evidence/func-800370dc/REPORT.md`.
+
 ## func_800370A8 — fixed-point quotient helper matching C (5 words)
 
 `src/func_800370A8.c` matches era `-O2 -G0`: `sra; div; mflo; jr; sll`.
