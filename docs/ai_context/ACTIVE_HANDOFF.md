@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80018B68 — two-reader call wrapper twin matching C (12 words)
+
+`src/func_80018B68.c` matches era `-O2 -G0`, VRAM
+`0x80018B68` / file `0x9368` / size `0x30`. It forwards two nested reader
+values to `func_8006590C` then returns 1. Evidence:
+`docs/evidence/func-80018b68/REPORT.md`.
+
 ## func_80018B00 — two-reader call wrapper matching C (12 words)
 
 `src/func_80018B00.c` matches era `-O2 -G0`, VRAM `0x80018B00` / file
