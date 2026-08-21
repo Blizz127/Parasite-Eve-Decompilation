@@ -114,6 +114,9 @@ segments:
       # Phase 5GM: unsigned-halfword reader wrapper, era -O2 -G0.
       - [0x96B4, c, func_80018EB4]
       - [0x96E0, asm]
+      # Phase 5GN: unsigned-halfword reader wrapper twin, era -O2 -G0.
+      - [0x96E0, c, func_80018EE0]
+      - [0x970C, asm]
       # Phase 5AL: C leaf func_80019050 — VRAM 0x80019050, size 0x8.
       # File span 0x9850–0x9858 exclusive. Return-1 stub (jr; addiu $v0,1),
       # third of the seven return-1 twins (shape scratch-proven in 5AJ).

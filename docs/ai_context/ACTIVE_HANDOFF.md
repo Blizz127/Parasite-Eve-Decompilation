@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80018EE0 — unsigned-halfword reader wrapper twin matching C (11 words)
+
+`src/func_80018EE0.c` matches era `-O2 -G0`, VRAM `0x80018EE0` / file
+`0x96E0` / size `0x2C`. It forwards an unsigned halfword from its reader to
+`func_80066C7C` and returns 1. Evidence:
+`docs/evidence/func-80018ee0/REPORT.md`.
+
 ## func_80018EB4 — unsigned-halfword reader wrapper matching C (11 words)
 
 `src/func_80018EB4.c` matches era `-O2 -G0`, VRAM `0x80018EB4` / file
