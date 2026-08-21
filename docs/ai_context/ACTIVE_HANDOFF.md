@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80018BC8 — D_8009D2F0 flag-0x20 clearer matching C (9 words)
+
+`src/func_80018BC8.c` matches era `-O2 -G0`, VRAM
+`0x80018BC8` / file `0x93C8` / size `0x24`. It clears bit `0x20` in offset
+`0x98` of `D_8009D2F0` and returns 1. Evidence:
+`docs/evidence/func-80018bc8/REPORT.md`.
+
 ## func_80018B68 — two-reader call wrapper twin matching C (12 words)
 
 `src/func_80018B68.c` matches era `-O2 -G0`, VRAM
