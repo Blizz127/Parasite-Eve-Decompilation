@@ -160,7 +160,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x9684, asm]'
     '[0x96B4, c, func_80018EB4]'
     '[0x96E0, c, func_80018EE0]'
-    '[0x970C, asm]'
+    '[0x970C, c, func_80018F0C]'
     '[0x9754, c, func_80018F54]'
     '[0x9774, asm]'
     '[0x9850, c, func_80019050]'
@@ -425,7 +425,6 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/9410.s"
     "asm/disc1/9550.s"
     "asm/disc1/9684.s"
-    "asm/disc1/970C.s"
     "asm/disc1/9774.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
@@ -568,6 +567,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80018E58.c"
     "src/func_80018EB4.c"
     "src/func_80018EE0.c"
+    "src/func_80018F0C.c"
     "src/func_80018F54.c"
     "src/func_80019050.c"
     "src/func_80019058.c"
@@ -900,7 +900,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80018F54.c" ]]; then
+if [[ -f "$ROOT/src/func_80018F0C.c" ]]; then
+    echo "C conversion: Phase 5GP-18F0C — 262 leaves (+ five-reader call wrapper; era -O2 -G0; 18/18 words)"
+    echo "  sources: src/func_80018F0C.c (+ prior 5GO)"
+elif [[ -f "$ROOT/src/func_80018F54.c" ]]; then
     echo "C conversion: Phase 5GO-18F54 — 261 leaves (+ D_800BCFEE bit-0x40 clearer; era -O2 -G0; 8/8 words)"
     echo "  sources: src/func_80018F54.c (+ prior 5GN)"
 elif [[ -f "$ROOT/src/func_80018EE0.c" ]]; then

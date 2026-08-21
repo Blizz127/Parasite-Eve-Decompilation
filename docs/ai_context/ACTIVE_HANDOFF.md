@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80018F0C — five-reader call wrapper matching C (18 words)
+
+`src/func_80018F0C.c` matches era `-O2 -G0`, VRAM `0x80018F0C` / file
+`0x970C` / size `0x48`. It forwards five unsigned-halfword reader values to
+`func_80066BD8` and returns 1. Evidence:
+`docs/evidence/func-80018f0c/REPORT.md`.
+
 ## func_80018F54 — D_800BCFEE bit-0x40 clearer matching C (8 words)
 
 `src/func_80018F54.c` matches era `-O2 -G0`, VRAM `0x80018F54` / file
