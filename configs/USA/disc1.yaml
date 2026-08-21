@@ -836,10 +836,13 @@ segments:
       # Phase 5CQ: C leaf func_800C9968 — file 0xBA168, size 0xC.
       - [0xBA168, c, func_800C9968]
       # Phase 5ED: mid-BA174 hole — sb+ret0 func_800C9C00.
-      # Prefix 0x28C (= 0xBA400 - 0xBA174); resume BA410.s 0x290 (= 0xBA6A0 - 0xBA410).
+      # Prefix 0x28C (= 0xBA400 - 0xBA174); then C9C10 C (0x8), resume
+      # BA418.s 0x288 (= 0xBA6A0 - 0xBA418).
       - [0xBA174, asm]
       - [0xBA400, c, func_800C9C00]
-      - [0xBA410, asm]
+      # Phase 5GS: return-zero stub, era -O2 -G0.
+      - [0xBA410, c, func_800C9C10]
+      - [0xBA418, asm]
       # Phase 5V: C leaf func_800C9EA0 — VRAM 0x800C9EA0, size 0x8.
       # File span 0xBA6A0–0xBA6A8 exclusive. Empty jr/nop stub.
       - [0xBA6A0, c, func_800C9EA0]
