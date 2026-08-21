@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_800370A8 — fixed-point quotient helper matching C (5 words)
+
+`src/func_800370A8.c` matches era `-O2 -G0`: `sra; div; mflo; jr; sll`.
+VRAM `0x800370A8` / file `0x278A8` / size `0x14`. `26C48.s` now resumes at
+`278BC.s`; the full Docker rebuild is the exact target SHA-1 with 236 leaves.
+Evidence: `docs/evidence/func-800370a8/REPORT.md`.
+
 ## func_800124F8 — boot-table clear leaf matching C (31 words)
 
 `src/func_800124F8.c` matches byte-exact on era `-O2 -G8`. VRAM
