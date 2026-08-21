@@ -6,12 +6,17 @@
  *   file offset 0x5B540.
  *
  * Implemented prefix:
- *   200 words / 800 bytes, exe 0x8006AD40–0x8006B060 (exclusive).
+ *   223 words / 892 bytes, exe 0x8006AD40–0x8006B0BC (exclusive).
  *   B54G consumes 0x8006B04C..0x8006B060: the second live
- *   func_8006E7E8 wait/reissue, B54E-shaped. Exclusive end is the
- *   poll==0 fallthrough. The first excluded instruction is:
+ *   func_8006E7E8 wait/reissue, B54E-shaped. B54K-A then consumes
+ *   0x8006B060..0x8006B0BC: D_800930F0 / dest+0x14C, the second
+ *   func_800718D0 walk of dest+0x180, and jal func_80030894.
+ *   Exclusive end is the first excluded instruction:
  *
- *       addu  s0, zero, zero            # 0x8006B060
+ *       jal    func_8006E7E8                 # 0x8006B0BC
+ *
+ * func_80030894 itself is prefix-translated through bank-0 L2/L3
+ * (0x80030894..0x80030AC4, named func_80030894_L2L3_cut).
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
@@ -24,11 +29,10 @@
  * Classification: 1 — translated retail prefix. The second poll is
  * consumed live; poll/s2 are not assigned. Host D_8009B6B4 collapse
  * at the D_800930EE issue is B54E-HOST-POLL-COLLAPSE, not retail
- * timing. After this cut the 6AD40 sequence is PARKED: the next
- * already-translated issue (D_800930F0) sits in front of
- * func_80030894 (788 words, 7 unresolved callees, no translated
- * prefix; first jal is unresolved GetTPage). PE-GPU1 ported the
- * five SET leaves; they do not create a 30894 prefix.
+ * timing. After this cut the 6AD40 sequence parks at 0x8006B0BC
+ * (the third live func_8006E7E8, not taken). func_80030894 parks
+ * internally at func_80030894_L2L3_cut; B54K-B is groups L4..L11
+ * plus the bank-1 pass and epilogue.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -36,6 +40,7 @@
 #define GA_D_800930EA  0x800930EAu
 #define GA_D_800930EC  0x800930ECu
 #define GA_D_800930EE  0x800930EEu
+#define GA_D_800930F0  0x800930F0u
 #define GA_D_80091648  0x80091648u
 #define GA_D_800B0CD8  0x800B0CD8u
 #define GA_D_800B0DD8  0x800B0DD8u
@@ -241,10 +246,43 @@ int func_8006AD40(void)
         /* 0x8006AF9C: s0==1 branches to 0x8006B044. */
     }
 
-    /* B54G prefix cut at retail 0x8006B060, poll==0 fallthrough.
-     * PARK the 6AD40 sequence. Do not enter func_80030894. */
+    /* 0x8006B060..0x8006B0BC: D_800930F0 issue, the second 718D0 TIM
+     * walk, and the boot GPU-primitive builder func_80030894.  Locals:
+     * s0 = 0 (0x8006B060), s1 = D_800930F0, s2 = -1 then 1 (0x8006B090),
+     * s1 = -1 again at 0x8006B094.  The read destination is the word at
+     * D_800B0CD8+0x14C and the walk target is the word at +0x180 — the
+     * buffer the D_800930EE issue above filled on retail.  Retry on -1
+     * only.  B54K-A parks INSIDE func_80030894 at the named
+     * func_80030894_L2L3_cut; after its stub return the retail
+     * 0x8006B0B4 beq s2(1), s1(-1) is not taken and this sequence
+     * parks here at 0x8006B0BC. */
+    {
+        int s0 = 0; /* 0x8006B060 */
+
+        do {
+            uint32_t start = PE_LoadU16(GA_D_800930F0);
+            uint32_t end = PE_LoadU16(GA_D_800930F0 + 2u);
+
+            status = func_8006E6A8(
+                (int)(lba_base + start),
+                PE_LoadU32(GA_D_800B0CD8 + 0x14Cu),
+                (int)(end - start));
+        } while (status == -1);
+        /* 0x8006B090: s2 = 1; 0x8006B094: s1 = -1. */
+        if (s0 == 0) {
+            (void)func_800718D0(PE_LoadU32(GA_D_800B0CD8 + 0x180u));
+            s0 = 1; /* 0x8006B0A8 delay slot */
+        }
+        func_80030894(); /* 0x8006B0AC */
+        /* 0x8006B0B4: beq s2, s1 -> 0x8006B064 — not taken (s2 == 1). */
+        (void)s0;
+    }
+
+    /* B54K-A sequence cut at retail 0x8006B0BC: everything through the
+     * func_80030894 call is translated; the remaining 6AD40 suffix
+     * (0x8006B0BC..0x8006B35C) is not. */
     (void)Bootstrap_ReturnInt(
-        "func_8006AD40_prefix_cut", "func_8006AD40", 0);
+        "func_8006AD40_post30894_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }

@@ -151,11 +151,18 @@ same hash as m0005i type-0 cmd `0x18`). Types 2 and 3 share
 cmds `0x00–0x0A` (22-bone clips). Type 4 has cmds `0x00–0x0C`.
 
 `6B35C` zeros `D_800B0E98` on dest enter. Writer A then writes
-the 36 room rows (type 0 cmd `0x18` only). `6BECC` is still
-jal'd every `3F074` tick at `0x8003F20C`; whether its state-6
-Writer B loop republishes CE2=14 after that clear is not
-proven here. Listed M0367I type-0 `0x2E(0x15)` has no Writer A
-row.
+the 36 room rows (type 0 cmd `0x18` only). `6BECC` is jal'd
+every `3F074` at `0x8003F20C` and is busy-waited until
+`v0!=1`, so state 6 **does** run in the same `3F074` after
+the clear. It does **not** republish CE2=14. `6B4F8` sets
+`CE2 = hdr+1 = 10`. `6BE4C` sets overlay bit `0x00200000`
+when `CE2!=CE3` and `CE2` is in `[10,14]`. State 6 then
+publishes the CE2=10 bank (`29753bd66426838dae50e1487a663004aa938b1ebf58008fff09705af9f59d93`).
+Listed M0367I type-0 `0x2E(0x15)` therefore resolves to CE2=10
+cmd `0x15` (396B, 1 frame,
+`e1cb9dfd14eafe873e4768722b39f7fd51e763ea5147279d6a09ad401c1ba40e`),
+not the CE2=14 2776B/34-frame clip. First-visit `0x08` does
+not spawn type 0.
 
 After `0xC1` (`19AC0`: `actor+0x98 |= 0x400`, return 1), spawned
 type 2/3 issue `0x2E(0x09)` (300B, 1 frame, SHA-256
@@ -220,6 +227,170 @@ M0367I hdr+0x0C:
 The 125E0 type-1 actor therefore still takes empty `+0x1AC`.
 Later `0x08` constructs types 2/3/4, which bind `B0E70[2/3/4]`.
 
+## M0367I destination / resource lifecycle
+
+Initiator: `0x31` (`0x80017BB4`, 19w SHA-256
+`69306ee0f7e8b3dc37f2dfbcda9ea6c9073ce409672f83716aa7ebdbe76d1ecf`)
+stores the token to `D_8009D280` and `D_8009D1A0 |= 0x2000`.
+`1220C@0x800122D8` copies `D280 → D1C4` before `jal 3F3C4`.
+`3F3C4@0x8003F3D4` unconditionally jals `3F074`. `3F074` first
+jals `6B35C` then `6B4F8(a0=D280)`.
+
+D280 is a 32-bit token. Other writers: `1220C` init
+`0xA9400048`, `1239C` `0xA80830C8`, `3E680` zero, `3ED9C`,
+`6A2C8`, `6EBB0`, plus the `15834` cluster. Loads: `122D0`,
+`123E8`, `15918`, `3F084`, `3F3E0`, `3F67C`, `5D948`, `6A2B8`.
+
+Change detection does **not** gate the `6B4F8` jal.
+`3F3C4` compares `D1C4` vs `D280` at `0x8003F3E8` **after**
+`3F074`; mismatch takes `0x8003F68C`. Same-tick `0x31` is
+therefore loaded on the **next** `3F074`. `6B4F8` has no
+token-compare early-out (540w SHA-256
+`02320912544ccb61d5aae520c607ec62e5293f3ae31ccdfcbfb9d70980cbe827`).
+Host change-gating is host policy, not a retail skip.
+
+### 6B35C reset order (before disc)
+
+103w. `$s0 = D_800B0CD8`.
+
+1. `D_800B0E70[0..9]` countdown `+0x1BC` → `+0x198`
+2. `D_800B0E98` 10 rows × 48 words, stride 192
+3. overlay `+0x940`, `+0x944`, `+0x948`, `+0x94C` (one word each)
+4. `+0x954` then `+0x950` (`a0=1`, `v0=s0+4`)
+5. `+0x958`
+6. copy `+0x150` → `+0x128`, `+0x150+0x1400` → `+0x12C`; `jal 6E498`
+7. overlay `&= ~0x00400000`; `+0xE0=0x27`; `+0xE1=0x0D`
+
+Does **not** touch `+0x0A` (CE2), `+0x0B` (CE3), `+0xEC`
+(6BECC state), or `+0x154` (CE2 package pointer). Cleared
+once does not mean resources stay absent.
+
+### 6B4F8 M0367I load
+
+Sole TEXT caller: `3F074@0x8003F088`. `6E2D0` decode →
+`6E454` atoi → index atoi−1 into `D_80093378`. Three
+`6E6A8` reads:
+
+| chunk | dest | sectors | LBA | size | SHA-256 |
+|---:|---|---:|---:|---:|---|
+| 0 | overlay+0x194 | 33 | 87109 | 67584 | `b8a23aa2c259d4d7c448dbafa74fb6a4737a035675a1030403a3d93d3d0bc2b5` |
+| 1 | overlay+0x168 | 170 | 87142 | 348160 | `daf7e449777a52af14d0b557da962a0f1513d06fbdc9d4f87307ea2382939f6c` |
+| 2 | overlay+0x18C | 78 | 87312 | 159744 | `ab9af4f446a6f9a1f8f79f1f80b862c4d516beddbede1229afab2dfc30b44b1e` |
+
+Uncompressed Form1 user data. Publish after arrival:
+`hdr+1 → CE2` @ `0x8006B7B8`; `hdr+3 → overlay+0x08`;
+`hdr+0x0C` @ `0x8006B804` → `B0E70[idB]`; Writer A @
+`0x8006B84C`; `hdr+0x14` → `+0x944`; `+0x18` → `+0x948`;
+`+0x1C` → `+0x94C`; `hdr+0x20` → `+0x950+id*4`.
+`3F074` does not inspect the return.
+
+### Writer B after the clear (M0367I-specific)
+
+JT `0x800113B0`: 0→`6BF34` … 6→`6C0E4`. State 0: if bit
+`0x00200000` set → state 1 (reload `D_800930D8[CE2+3]` and
+`[CE2+8]` into `+0x194` / `+0x154`); else → state 6 using
+leftover `+0x154`. States 1–5 return 1 while CD is in
+flight. `3F074` polls until `v0!=1`, so state 6 completes
+in the same dest-enter `3F074`.
+
+State 6: `6C118` writes package hdr+0x0C rel24 to
+`B0E70[0]`; Writer B loop `6C140–6C174` writes type-0
+`B0E98[idB]`; `+0xEC=0`; `CE3=CE2`; clear bit `0x00200000`;
+return 0.
+
+M0367I `hdr+1=10`. After a prior `6C1CC(a0=1)` battle
+switch, `CE3=14`, so `6BE4C` sets the bit and state 6
+publishes **CE2=10**, not CE2=14. If `CE2==CE3==10`
+already, state 0→6 republishes the leftover CE2=10
+`+0x154`. Either way after settle: Writer B is the CE2=10
+bank. CE2=14 does not stay. Type 1 receives no Writer B
+row. `6C1CC` is the only EXE `sb 14` to `D_800B0CE2`
+(callers `24A3C` / `25388`; not `144FC` / `29810` /
+`3F074`).
+
+CE2=10 `D_800930D8[18]=288,[19]=316` (28 sectors, LBA
+`[1301,1329)`). Type-0 cmds `0x00–0x03`, `0x0D–0x17`,
+`0x1C`. Has `0x15`, no `0x04`, no `0x18` (Writer A keeps
+`0x18`). Cmd `0x15` is not the CE2=14 clip.
+
+### Type-1 first visit
+
+`35038`: if `type<10`, `+0x1AC = B0E70[type]`; then
+`+0x1B0 = 0` (`0x800351E0`). `B0E70[1]` is never written
+(hdr+0x0C is 2/3/4; `6C118` always writes `[0]`). Initial
+`+0x1AC=0`, `+0x1B0=0`, `+0x1B4` unfilled (`362B8`/`3D050`
+gated on `+0x1AC!=0`). First VM `0x40`; first yield `0x02`
+at script `+0x20`; no `0x2E`. No clip required. Later
+`0x08` constructs types 2/3/4 onto Writer A + `B0E70[2/3/4]`.
+Do not manufacture a type-1 Writer A row.
+
+### First eight `0x08` resource needs
+
+All idB=0, pose 0. Writer A rows are live before `125E0`.
+First unresolved resource = none.
+
+| order | type | script | first `0x2E` | yield | clip |
+|---:|---:|---|---|---|---|
+| 1,2,6 | 2 | `+0x1C230` | `0x09` @ `+0x94` | `0x02` | 300B / 1f / `6bd22d6c…` |
+| 4,7 | 3 | `+0x1C32C` | `0x09` @ `+0x84` | `0x02` | same shared payload |
+| 3,5,8 | 4 | `+0x1C3D4` | `0x07` @ `+0xF0` then `0x01` @ `+0x1E8` | `0x30` | `685f3ea8…` / `b4331c8a…` |
+
+Type 2/3 first-visit consumed command is **`0x09` only**.
+Dormant shared `0x00–0x0A` are indexed in `WRITER_A.csv`
+but are not first-visit consumers. Type 4 later also
+issues `0x2E(0x00)`.
+
+### Type 4 `0x9D`
+
+`D_800910A0[0x9D]=0x80019450` (13w SHA-256
+`bcdc1c39f6225f7d21b2e1d36ab30e5b87f7845c1c0fec4265a37049d4fcb219`).
+`lh D_8009D2F0+0x224`; `*imm` (`0x9999`); `mult`; `mflo`;
+`sra 16`; `sh` to `*(D2F0+0x1B4)+0x14`; return 1. Does
+**not** publish clips. Uses `D_8009D2F0` dest, not the
+type-4 actor's `+0x1B4`.
+
+### CE2=14 `+0x8` (fail-closed)
+
+Package bounds: CE2=14 bank `+0x8`, 23864 bytes, SHA-256
+`bcbdf4f4117bda4662847db35b1eca4ca61f1a099f17a809e3e3bf87bf6f1418`.
+Head words `0x0F1F1D71`, `0x01B302CB`, `0x024A0081`.
+hdr+0x0C count=1. Consumer: `6C118` → `B0E70[0]` →
+`35038` → actor `+0x1AC` on the **CE2=14** path only.
+`+0x1B4` init only if `+0x1AC!=0`. Structure still
+partial (TMD / 3D050 tail gated). Neutral evidence only.
+Do **not** wire into runtime. M0367I dest-enter replaces
+this pointer with CE2=10 `+0x8` (24000B,
+`1e9e9282452a6a29f9517557d308ad955128d1be15196cd7aa46bcc86adbb01a`).
+
+### Mode 7 / 9 / 10 producer contract
+
+`D_8009D28C` (`sw gp+0x51C`). Each value has exactly one
+store. None is a dest-load or dest-ready write. M0367I
+first visit uses **none** of them. Dest-ready =
+`6B4F8` publish + `6BECC` returns 0 + `6C5BC` returns 0 +
+`125E0` type-1 spawn. Type-6 wait on 7/9/10 is the
+m0005i battle path. Do not write these modes.
+
+| value | li / sw | window SHA-256 | precondition |
+|---:|---|---|---|
+| 7 | `0x8002CF24` / `0x8002CF28` | `bda2d942d0bd2fa5dbc753e66fab7b79cbd34c5eb6c3c5c0e1216511af3b7892` | `6914C(0)==0` and `s1` |
+| 9 | `0x8002B278` / `0x8002B27C` | `8ffeb6f863c6066d878c9636e211feaeab0126e15040d8d443cf35dd6fa50794` | `2B0EC` a2==3; `6D60C(0)!=1`; `295E4` |
+| 10 | `0x8002BC74` / `0x8002BC78` | `19d29a684296b879cacd37ba2508b793dce35b97a38ac5fa4ec60ab8b78fc2ae` | `6D60C(0)`; `2F9CC`; `1A680(D254,21)`; `295E4` |
+
+### Persist `0x31` contrast
+
+Same `6B4F8` walk. Different `hdr+1` / Writer A / hdr+0x0C.
+
+| dest | hdr+1 CE2 | hdr+0x0C | Writer A |
+|---|---:|---|---:|
+| M0005I | 10 | 2,5 | 21 |
+| M0367I | 10 | 2,3,4 | 36 |
+| M0319I | 10 | 2,3,4 | 6 |
+| M0239I | 12 | 2,3,4 | 66 |
+| M0058I | 12 | 2,3,4 | 32 |
+| M0035I | 12 | 2,3,4 | 41 |
+| M0136I | 12 | none | 12 type0 only |
+
 ## Files
 
 | file | contents |
@@ -234,6 +405,12 @@ Later `0x08` constructs types 2/3/4, which bind `B0E70[2/3/4]`.
 | `SPAWN_DESCRIPTORS.csv` | type-1 `0x08` argc-5 descriptors |
 | `DEST_HOPS.csv` | M0367I type-1 `0x31` tokens |
 | `DEST_PACKAGE_HEADS.csv` | chunk2 / 125E0 / Writer A counts for those dests |
+| `DESTINATION_LIFECYCLE.csv` | M0367I enter order + persist dest contrast |
+| `M0367I_RESOURCE_TIMELINE.csv` | clear / load / publish / spawn events |
+| `WRITER_A.csv` | dest-level Writer A slots + first-visit consume |
+| `WRITER_B.csv` | CE2=14 battle bank + CE2=10 dest-enter bank |
+| `ACTOR_RESOURCE_REQUIREMENTS.csv` | type1 + first eight `0x08` |
+| `MODE_TRANSITION_WRITERS.csv` | unique mode 7/9/10 stores |
 
 ## RUNTIME_HANDOFF
 
@@ -258,4 +435,22 @@ m0367i_type2_2E=0x09_writera
 m0367i_type3_2E=0x09_writera
 m0367i_type4_2E=0x07,0x01_writera
 op_0xC1=actor_plus_98_OR_0x400
+m0367i_reset_order=6B35C:B0E70,B0E98,+940,+944,+948,+94C,+954then+950,+958; no CE2/CE3/+EC/+154
+m0367i_writera_publish_pc=0x8006B84C
+m0367i_6B4F8_sets_CE2=hdr_plus_1=10
+m0367i_writerb_present=YES
+m0367i_writerb_bank=CE2_10_not_CE2_14
+m0367i_writerb_precondition=3F074_polls_6BECC_to_v0_0; 6BE4C_bit200000_if_CE2!=CE3
+m0367i_initial_type1_requires_clip=NO
+m0367i_type1_1AC=0
+m0367i_type1_1B0=0
+m0367i_mode7_writer=0x8002CF24
+m0367i_mode7_precondition=NOT_DEST_READY; battle_6914C0_and_s1
+m0367i_first_mode_on_dest=NONE_OF_7_9_10
+d280_change_triggers_load=NO_GATE_IN_3F074
+d280_width=u32_token
+d1c4_is_copy_of_d280_before_3F3C4=YES
+m0367i_type0_2e_15_bank=CE2_10
+cmd_0x15_ce210_sha256=e1cb9dfd14eafe873e4768722b39f7fd51e763ea5147279d6a09ad401c1ba40e
+op_0x9D_is_clip_publisher=NO
 ```

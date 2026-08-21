@@ -1,0 +1,42 @@
+ce2,ida,idb,source,source_offset,dest_slot,writer_pc,size,frames,sha256,dest_scene,first_consumer,confidence,notes
+14,0,0x00,ce2_14_clip_bank,0x5D40,D_800B0E98[0*192+0*4],0x8006C158,3796,69,cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x01,ce2_14_clip_bank,0x5D40,D_800B0E98[0*192+1*4],0x8006C158,3796,69,cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x02,ce2_14_clip_bank,0x5D40,D_800B0E98[0*192+2*4],0x8006C158,3796,69,cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x03,ce2_14_clip_bank,0x5D40,D_800B0E98[0*192+3*4],0x8006C158,3796,69,cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x04,ce2_14_clip_bank,0x6C14,D_800B0E98[0*192+4*4],0x8006C158,1700,18,6207fbca2fe44a3549bf0b7fbcf1ce3e979a0a12e8b130e606ea4a985b1885e4,m0005i_battle,29810 cmd4,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x05,ce2_14_clip_bank,0x72B8,D_800B0E98[0*192+5*4],0x8006C158,3564,48,6d6161c745865935c85c6d93269d77b4413ee6b2c663dae19fd461713c7a020a,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x06,ce2_14_clip_bank,0x80A4,D_800B0E98[0*192+6*4],0x8006C158,1796,21,ff260cd6f44ea4156549737e8ee1f41d7ea9d4b875c835a67491d58a7be1079f,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x07,ce2_14_clip_bank,0x5D40,D_800B0E98[0*192+7*4],0x8006C158,3796,69,cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x08,ce2_14_clip_bank,0x87A8,D_800B0E98[0*192+8*4],0x8006C158,856,11,0917a6e4eacff43d49bd1c37ce5f880cce5197366366674df5059cc22e216a5a,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x09,ce2_14_clip_bank,0x8B00,D_800B0E98[0*192+9*4],0x8006C158,2244,28,4e9ecaa6fafe7352b2cb8aa021539d48fe6ee1d2294774404ebbc1b0f521e0d0,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x0A,ce2_14_clip_bank,0x93C4,D_800B0E98[0*192+10*4],0x8006C158,1688,22,0d2c6f5ea8b2ffbdfa306fae51003e6735f2e529e9fb83ff31882140d16f99de,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x0B,ce2_14_clip_bank,0x9A5C,D_800B0E98[0*192+11*4],0x8006C158,3316,41,5fc79d2935db712f39ec3685f2a99aa6f2f9dc63aa647e087f5bcb3cca4cb5ab,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x0C,ce2_14_clip_bank,0xA750,D_800B0E98[0*192+12*4],0x8006C158,1436,21,1844686e2a12ea56534932b339a4668d25672771310c1853fb011e0d42c1546a,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x0D,ce2_14_clip_bank,0xACEC,D_800B0E98[0*192+13*4],0x8006C158,3668,51,fe471967e3e67962d79033d408f39b73818a098f8c25774f0b5268c39df22e10,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x0E,ce2_14_clip_bank,0xBB40,D_800B0E98[0*192+14*4],0x8006C158,1616,20,5b46c68115efd821856cc55eb889d613ccc00c1acff2e4b367dd1bb6188484bf,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x0F,ce2_14_clip_bank,0xC190,D_800B0E98[0*192+15*4],0x8006C158,2512,34,bd7f377cb574db9c963ad85ee08a9706db3197ede530bbb2e5c700ce9430780a,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x10,ce2_14_clip_bank,0xCB60,D_800B0E98[0*192+16*4],0x8006C158,640,6,e631c68c76612370812c8fdba3ee63cc1ed1a3c8aad4afd394af5b0c17882f0d,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x11,ce2_14_clip_bank,0xCDE0,D_800B0E98[0*192+17*4],0x8006C158,2172,24,06cf3147bf51452033259598504c036a410f87b3c7e6be7227dc6c6ee573260d,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x12,ce2_14_clip_bank,0xD65C,D_800B0E98[0*192+18*4],0x8006C158,2084,26,900fc974bc4b34538cae0d781d0bd7623975e298a126d7c10206a4bf68b71433,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x13,ce2_14_clip_bank,0xDE80,D_800B0E98[0*192+19*4],0x8006C158,2708,34,2fc4ba41e78c45322882bb7c88c75f892ced8c2fcb691fd52c1509441c868514,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x14,ce2_14_clip_bank,0xE914,D_800B0E98[0*192+20*4],0x8006C158,1556,20,365799d5fdabd71c44b8d8cb4f60c1414f751d66a5108ef7c5d39e7867ddbcf9,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x15,ce2_14_clip_bank,0xEF28,D_800B0E98[0*192+21*4],0x8006C158,2776,34,194a37c66679857b8a4ca3e8df72b3812cb5fafb2e03dbeb45c9e79b3fda1537,m0005i_battle,listed type0 0x2E,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x16,ce2_14_clip_bank,0x5D40,D_800B0E98[0*192+22*4],0x8006C158,3796,69,cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x17,ce2_14_clip_bank,0x5D40,D_800B0E98[0*192+23*4],0x8006C158,3796,69,cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e,m0005i_battle,type0 command row,PROVEN,battle / 6C1CC(a0=1) bank
+14,0,0x1C,ce2_14_clip_bank,0x5D40,D_800B0E98[0*192+28*4],0x8006C158,3796,69,cabc0c490153091a3d83b5f79da71c108d1cbe5004276ccae70707397e25e85e,m0005i_battle,listed type0 0x2E,PROVEN,battle / 6C1CC(a0=1) bank
+10,0,0x00,ce2_10_clip_bank,0x5DC8,D_800B0E98[0*192+0*4],0x8006C158,1516,20,891b02ee43dd09d0b522a349b6069fe98e85994d11b2ed13fe65716cbaf56cab,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x01,ce2_10_clip_bank,0x63B4,D_800B0E98[0*192+1*4],0x8006C158,1436,20,0fc25198bb4a52ac3c055a63576f744ccd1d006e9626aedbdcfd8fe8a3e99ab5,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x02,ce2_10_clip_bank,0x6950,D_800B0E98[0*192+2*4],0x8006C158,1416,20,95a11709b1d80b695d6eb50b6fe1ed5fe7fe729fef75825adbf3bc37a0114fb5,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x03,ce2_10_clip_bank,0x6ED8,D_800B0E98[0*192+3*4],0x8006C158,1436,20,166dbde8f2317fd51f584126297bf0f67d50f790fe1e6cc18751aa5987408783,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x0D,ce2_10_clip_bank,0x7474,D_800B0E98[0*192+13*4],0x8006C158,1576,20,0fea1b19603f35406fabca83e892692d46fc1b301c76d146263febbc77af8670,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x0E,ce2_10_clip_bank,0x7A9C,D_800B0E98[0*192+14*4],0x8006C158,3456,60,99f245c766b80ca651781a55770eabf9a993086926d56e6b911d83c65c1f0e44,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x0F,ce2_10_clip_bank,0x881C,D_800B0E98[0*192+15*4],0x8006C158,3876,60,7729fe26a39fa26ee19aa33e16c87a423fd7708c3f6ac73da3f7fdb859015a3f,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x10,ce2_10_clip_bank,0x9740,D_800B0E98[0*192+16*4],0x8006C158,1096,18,d2275b913c6a9c9b2c66b9881885b6ba29865cbb527eb405aca00a3b9acc59fb,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x11,ce2_10_clip_bank,0x9B88,D_800B0E98[0*192+17*4],0x8006C158,1584,30,ba9bc93fb166c625934602e7cb0e1f8b3f54b4e7072f6184cdaf7c351c194cd7,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x12,ce2_10_clip_bank,0xA1B8,D_800B0E98[0*192+18*4],0x8006C158,2636,40,ce2ece9f49baa9f8f37ec2449944eff0bee9e77bb58a47f54c9a2e73aa406d64,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x13,ce2_10_clip_bank,0xAC04,D_800B0E98[0*192+19*4],0x8006C158,1788,25,4765d61ac1133b564090fc4440ca7cbdc4e992aa8a3f29b46991ec4967b6713f,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x14,ce2_10_clip_bank,0xB300,D_800B0E98[0*192+20*4],0x8006C158,3368,42,084b4a44f284b1dfef463a25c2691b57dac2b42293abb3fe6b5089dbb91ddf6b,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x15,ce2_10_clip_bank,0xC028,D_800B0E98[0*192+21*4],0x8006C158,396,1,e1cb9dfd14eafe873e4768722b39f7fd51e763ea5147279d6a09ad401c1ba40e,m0367i_dest_enter,listed type0 0x2E,PROVEN,M0367I settle bank
+10,0,0x16,ce2_10_clip_bank,0xC1B4,D_800B0E98[0*192+22*4],0x8006C158,1956,40,e79a6fc829b5e4ebcb7943a929f4541b24905b005fee8bbb08f045c513a176e3,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x17,ce2_10_clip_bank,0xC958,D_800B0E98[0*192+23*4],0x8006C158,1208,18,fff6648303662d283a50728d21351527c00d5cbc40d05e747b41cb724aa8ec9f,m0367i_dest_enter,type0 command row,PROVEN,M0367I settle bank
+10,0,0x1C,ce2_10_clip_bank,0xCE10,D_800B0E98[0*192+28*4],0x8006C158,2988,70,75e4c9ad8d6392565bf7d1b1fbced86216512d3f789e3eaae3d7846f77b5cac9,m0367i_dest_enter,listed type0 0x2E,PROVEN,M0367I settle bank

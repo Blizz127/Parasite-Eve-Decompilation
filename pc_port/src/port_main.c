@@ -19,6 +19,7 @@
 #include <limits.h>
 
 extern void func_8001220C(void);
+extern void func_8006A8D4(void);
 extern int  func_8006E9A0(int);
 extern pe_addr_t D_80011614;
 extern void func_80070D10(void);
@@ -100,6 +101,13 @@ static void ParseArgs(int argc, char **argv) {
         fprintf(stderr, "--rng-oracle-dump requires --disc-image\n");
         exit(1);
     }
+}
+
+static int HostQuitPollWithPad(void)
+{
+    int rc = HostWindow_Poll();
+    PE_StoreU16(0x800BE9A2u, HostWindow_PadRaw());
+    return rc;
 }
 
 /* ── Trace ──────────────────────────────────────────────────────────── */
@@ -438,13 +446,14 @@ int main(int argc, char **argv) {
         if (HostWindow_Open(dpy, w, h, g_opts.window_title, g_opts.scale) != 0)
             use_window = 0;
         else
-            PE_Port_SetQuitPoll(HostWindow_Poll);
+            PE_Port_SetQuitPoll(HostQuitPollWithPad);
     }
 
     if (g_opts.direct_clear_test) {
         /* Explicit test path — requires --direct-clear-test flag */
         TraceEvent("direct_clear_test_begin");
         UpdateTitle("Direct clear test", "func_8006E9A0");
+        func_8006A8D4();
         func_8006E9A0(0);
         TraceEvent("direct_clear_test_done");
     } else {
@@ -462,7 +471,19 @@ int main(int argc, char **argv) {
         HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
         UpdateTitle("Black frame", "waiting");
         if (PE_Port_GetStopReason() != PE_PORT_STOP_NONE) {
-            /* A quit request or explicit budget already ended execution. */
+            /* A quit request or explicit budget already ended execution.
+             * Still honor an explicit user hold request: the windowed run
+             * is a viewing tool, and the frontier black frame is the
+             * honest current state of the translation. */
+            if (g_opts.hold_until_close) {
+                fprintf(stderr, "[WINDOW] Open until close/Escape "
+                        "(execution ended: %s)...\n",
+                        PE_Port_StopReasonName(
+                            PE_Port_GetStopReason()));
+                HostWindow_Run(-1);
+            } else if (g_opts.hold_ms > 0) {
+                HostWindow_Run(g_opts.hold_ms);
+            }
         } else if (g_opts.hold_until_close) {
             fprintf(stderr, "[WINDOW] Open until close/Escape...\n");
             HostWindow_Run(-1);

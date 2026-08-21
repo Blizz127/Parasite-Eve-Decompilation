@@ -1,0 +1,983 @@
+[
+  {
+    "id": 1,
+    "id_hex": "0x01",
+    "marker": "fffe01",
+    "off": 24,
+    "raw": "fffe01153e443d330f2d1843343c1843343c2d2fff",
+    "text": "Found <2D>ItemItem<2D>.",
+    "len": 21
+  },
+  {
+    "id": 3,
+    "id_hex": "0x03",
+    "marker": "fffe03",
+    "off": 83,
+    "raw": "fffe03283e44410f383d45343d433e41480f38420f35443b3b2ff826383b3b0f483e440f41343f3b3032340f303d0f3843343c2cf7fb09020f0f0f0f283442f70f0f0f0f1d3eff",
+    "text": "Your inventory is full.Will you replace an item<2C>\n[FB_09]<02>    Yes\n    No",
+    "len": 71
+  },
+  {
+    "id": 5,
+    "id_hex": "0x05",
+    "marker": "fffe05",
+    "off": 179,
+    "raw": "fffe051f44430f3843343c0f383d0f43413430424441340f313e472cff",
+    "text": "Put item in treasure box<2C>",
+    "len": 29
+  },
+  {
+    "id": 7,
+    "id_hex": "0x07",
+    "marker": "fffe07",
+    "off": 256,
+    "raw": "fffe0726383b3b0f483e440f46304332370f433738420f3445343d432cf7fb09020f0f0f0f2630433237f70f0f0f0f223a383fff",
+    "text": "Will you watch this event<2C>\n[FB_09]<02>    Watch\n    Skip",
+    "len": 52
+  },
+  {
+    "id": 9,
+    "id_hex": "0x09",
+    "marker": "fffe09",
+    "off": 340,
+    "raw": "fffe091c303d4a0f263730432e420f46413e3d362c2f2f2f0f283e442e41340f433734f70f3e3d340f46373e0f46303d4334330f433e0f323e3c340f433e0f433734f70f3e3f3441302fff",
+    "text": "Man, What's wrong<2C>... You're the\n one who wanted to come to the\n opera.",
+    "len": 75
+  },
+  {
+    "id": 11,
+    "id_hex": "0x0B",
+    "marker": "fffe0b",
+    "off": 488,
+    "raw": "fffe0b0f0f1d303c344a0ffa0f11413430f70f0f1036344a0f0205f70f0f1e3232443f3043383e3d4a0f1d281f130f3e353538323441ff",
+    "text": "  Name, [NAME] Brea\n  Age, <02><05>\n  Occupation, NYPD officer",
+    "len": 55
+  },
+  {
+    "id": 13,
+    "id_hex": "0x0D",
+    "marker": "fffe0d",
+    "off": 596,
+    "raw": "fffe0d1c303d4a0f1041343d2e430f483e440f363b30330f483e440f333432383334330f433ef70f363e0f3e44430f463843370f3c342cf80f180f3445343d0f3730330f3c480f3330330f3634430f4337340f31344243f70f42343043420f353e410f44420f433e3d383637432bf80f223e0f3b38363743343d0f443f2b0f26342e41340f363e3d3d300f373045340f30f70f36413430430f43383c342b0f283e442e3b3b0f4234342bff",
+    "text": "Man, Aren't you glad you decided to\n go out with me<2C> I even had my dad get the best\n seats for us tonight! So lighten up! We're gonna have a\n great time! You'll see!",
+    "len": 171
+  },
+  {
+    "id": 15,
+    "id_hex": "0x0F",
+    "marker": "fffe0f",
+    "off": 803,
+    "raw": "fffe0f133e3e413c303d4a0f1f3b343042340f43303a340f483e44410f42343043422ff70f2337340f42373e462e420f30313e44430f433e0f42433041432f2f2fff",
+    "text": "Doorman, Please take your seats.\n The show's about to start...",
+    "len": 66
+  },
+  {
+    "id": 17,
+    "id_hex": "0x11",
+    "marker": "fffe11",
+    "off": 895,
+    "raw": "fffe111c303d4a0f1b34432e420f3634430f433e0f3e44410f42343043422f0f233734482e4534f70f303b41343033480f424330414334330f4337340f35384142430f3032432fff",
+    "text": "Man, Let's get to our seats. They've\n already started the first act.",
+    "len": 72
+  },
+  {
+    "id": 19,
+    "id_hex": "0x13",
+    "marker": "fffe13",
+    "off": 984,
+    "raw": "fffe131c303d4a0f1f3b343042342f2f2f0f1b30333834420f35384142432fff",
+    "text": "Man, Please... Ladies first.",
+    "len": 32
+  },
+  {
+    "id": 21,
+    "id_hex": "0x15",
+    "marker": "f9fe15",
+    "off": 1078,
+    "raw": "f9fe151a383d364a0f180f151e211118130f18232bfb072d",
+    "text": "King, I FORBID IT![PAUSE 45]",
+    "len": 24
+  },
+  {
+    "id": 22,
+    "id_hex": "0x16",
+    "marker": "f9fe16",
+    "off": 1102,
+    "raw": "f9fe160f283e440f3a3d3e460f46343b3b0f463730430f46383b3b0f37303f3f343d0f3835f70f483e440f333e2b0ffb0755",
+    "text": " You know well what will happen if\n you do! [PAUSE 85]",
+    "len": 50
+  },
+  {
+    "id": 23,
+    "id_hex": "0x17",
+    "marker": "f9fe17",
+    "off": 1152,
+    "raw": "f9fe170f23373e42340f46373e0f42443232443c310f433e0f3734410f3134304443480f101b1bf70f3338340f383d0f373e414138313b340f463048422b0ffb0778",
+    "text": " Those who succumb to her beauty ALL\n die in horrible ways! [PAUSE 120]",
+    "len": 66
+  },
+  {
+    "id": 24,
+    "id_hex": "0x18",
+    "marker": "f9fe18",
+    "off": 1218,
+    "raw": "f9fe181f41383d32344a0f283e440f333e3d2e430f443d3334414243303d332bfb072d",
+    "text": "Prince, You don't understand![PAUSE 45]",
+    "len": 35
+  },
+  {
+    "id": 25,
+    "id_hex": "0x19",
+    "marker": "f9fe19",
+    "off": 1253,
+    "raw": "f9fe190f2217140f38420f4337340f3e3d340f433730430f3730420f4244353534413433f70f30354334410f4337340f3334304337422ffb0764",
+    "text": " SHE is the one that has suffered\n after the deaths.[PAUSE 100]",
+    "len": 58
+  },
+  {
+    "id": 26,
+    "id_hex": "0x1A",
+    "marker": "f9fe1a",
+    "off": 1311,
+    "raw": "f9fe1a1a383d364a0f2217140f38420f1425181b2bfb072d",
+    "text": "King, SHE is EVIL![PAUSE 45]",
+    "len": 24
+  },
+  {
+    "id": 27,
+    "id_hex": "0x1B",
+    "marker": "f9fe1b",
+    "off": 1335,
+    "raw": "f9fe1b0f16443041332b0f164130310f1714212bfb073c",
+    "text": " Guard! Grab HER![PAUSE 60]",
+    "len": 23
+  },
+  {
+    "id": 28,
+    "id_hex": "0x1C",
+    "marker": "f9fe1c",
+    "off": 1358,
+    "raw": "f9fe1c0f103d332f2f2f0f1124211d0f3734410f30430f4337340f4243303a342bfb073c",
+    "text": " And... BURN her at the stake![PAUSE 60]",
+    "len": 36
+  },
+  {
+    "id": 29,
+    "id_hex": "0x1D",
+    "marker": "f9fe1d",
+    "off": 1394,
+    "raw": "f9fe1d1f41383d32344a0f1530433734412bfb072d",
+    "text": "Prince, Father![PAUSE 45]",
+    "len": 21
+  },
+  {
+    "id": 30,
+    "id_hex": "0x1E",
+    "marker": "f9fe1e",
+    "off": 1415,
+    "raw": "f9fe1e0f18350f483e440f3041340f42343d43343d32383d360f3734410f433ef70f33343043372f2f2ffb073c",
+    "text": " If you are sentencing her to\n death...[PAUSE 60]",
+    "len": 45
+  },
+  {
+    "id": 31,
+    "id_hex": "0x1F",
+    "marker": "f9fe1f",
+    "off": 1460,
+    "raw": "f9fe1f0f2f2f2f4337343d0f180f30423a0f483e440f433e0f43303a340f3c480f3b383534f70f303b3e3d360f463843370f373441422f2f2ffb073c",
+    "text": " ...then I ask you to take my life\n along with hers...[PAUSE 60]",
+    "len": 60
+  },
+  {
+    "id": 32,
+    "id_hex": "0x20",
+    "marker": "f9fe20",
+    "off": 1520,
+    "raw": "f9fe201445304a0f1433463041332f2f2ffb073c",
+    "text": "Eva, Edward...[PAUSE 60]",
+    "len": 20
+  },
+  {
+    "id": 33,
+    "id_hex": "0x21",
+    "marker": "f9fe21",
+    "off": 1540,
+    "raw": "f9fe21fa4a0f2b2bff",
+    "text": "[NAME], !!",
+    "len": 9
+  },
+  {
+    "id": 35,
+    "id_hex": "0x23",
+    "marker": "fffe23",
+    "off": 1610,
+    "raw": "fffe23fa4a0f163e2b0f1634430f3e444343300f373441342b2b0f1d1e262b2bff",
+    "text": "[NAME], Go! Get outta here!! NOW!!",
+    "len": 33
+  },
+  {
+    "id": 37,
+    "id_hex": "0x25",
+    "marker": "fffe25",
+    "off": 1692,
+    "raw": "fffe25fa4a0f233734482e41342f2f2f0f233734482e4134f70f3144413d34330f433e0f4337340f313e3d342f2f2f2bff",
+    "text": "[NAME], They're... They're\n burned to the bone...!",
+    "len": 49
+  },
+  {
+    "id": 39,
+    "id_hex": "0x27",
+    "marker": "fffe27",
+    "off": 1760,
+    "raw": "fffe27103243413442424a0f173c3f372f2f2f0f283e442e41340f4337340f3e3d3b48f70f3e3d340f46373e0f4234343c420f433e0f31340f35383d342f2f2fff",
+    "text": "Actress, Hmph... You're the only\n one who seems to be fine...",
+    "len": 65
+  },
+  {
+    "id": 41,
+    "id_hex": "0x29",
+    "marker": "fffe29",
+    "off": 1835,
+    "raw": "fffe29103243413442424a0f283e440f42373e443b330f31340f3046303a343d383d36f70f423e3e3d2f2f2fff",
+    "text": "Actress, You should be awakening\n soon...",
+    "len": 45
+  },
+  {
+    "id": 43,
+    "id_hex": "0x2B",
+    "marker": "fffe2b",
+    "off": 1921,
+    "raw": "fffe2b103243413442424a0f1b384243343d2f2f2f0f283e44410f32343b3b420f304134f70f434148383d360f433e0f323e3c3c443d38323043342f2f2fff",
+    "text": "Actress, Listen... Your cells are\n trying to communicate...",
+    "len": 63
+  },
+  {
+    "id": 45,
+    "id_hex": "0x2D",
+    "marker": "fffe2d",
+    "off": 2020,
+    "raw": "fffe2d113043433b340f25220f14453401ff",
+    "text": "Battle VS Eve<01>",
+    "len": 18
+  },
+  {
+    "id": 47,
+    "id_hex": "0x2F",
+    "marker": "fffe2f",
+    "off": 2058,
+    "raw": "fffe2ffa4a0f263730432e420f37303f3f343d383d362f2f2f2cf70f1c480f313e33482b2f2f2f0f18432e422f2f2f2b0f18432e420f36344343383d36f70f373e432b2bff",
+    "text": "[NAME], What's happening...<2C>\n My body!... It's...! It's getting\n hot!!",
+    "len": 69
+  },
+  {
+    "id": 49,
+    "id_hex": "0x31",
+    "marker": "fffe31",
+    "off": 2162,
+    "raw": "fffe31fa4a0f263730432f2f2f0f38420f433738422c0f26373043f70f3338330f483e440f131e0f231e0f1c142c2bff",
+    "text": "[NAME], What... is this<2C> What\n did you DO TO ME<2C>!",
+    "len": 48
+  },
+  {
+    "id": 51,
+    "id_hex": "0x33",
+    "marker": "fffe33",
+    "off": 2269,
+    "raw": "fffe33fa4a0f2f2f2f261710232c2b0f123e3c3c443d38323043383d36f70f463730432c0f263730430f333e0f483e440f46303d432c2bff",
+    "text": "[NAME], ...WHAT<2C>! Communicating\n what<2C> What do you want<2C>!",
+    "len": 56
+  },
+  {
+    "id": 53,
+    "id_hex": "0x35",
+    "marker": "fffe35",
+    "off": 2405,
+    "raw": "fffe35fa4a0f1f3e4634412f2f2f2c0f263730430f3f3e4634412c2bf70f26373e0f1021140f483e442f2f2f2c2bff",
+    "text": "[NAME], Power...<2C> What power<2C>!\n Who ARE you...<2C>!",
+    "len": 47
+  },
+  {
+    "id": 55,
+    "id_hex": "0x37",
+    "marker": "fffe37",
+    "off": 2469,
+    "raw": "fffe37fa4a0f1445342c2f2f2fff",
+    "text": "[NAME], Eve<2C>...",
+    "len": 14
+  },
+  {
+    "id": 57,
+    "id_hex": "0x39",
+    "marker": "fffe39",
+    "off": 2556,
+    "raw": "fffe39fa4a0f263730432c2f2f2fff",
+    "text": "[NAME], What<2C>...",
+    "len": 15
+  },
+  {
+    "id": 59,
+    "id_hex": "0x3B",
+    "marker": "fffe3b",
+    "off": 2599,
+    "raw": "fffe3bfa4a0f2f2f2f263730430f4630420f433730432c2f2f2fff",
+    "text": "[NAME], ...What was that<2C>...",
+    "len": 27
+  },
+  {
+    "id": 61,
+    "id_hex": "0x3D",
+    "marker": "fffe3d",
+    "off": 2693,
+    "raw": "fffe3d2f2f2f1d3e0f3734304143313430432f2f2fff",
+    "text": "...No heartbeat...",
+    "len": 22
+  },
+  {
+    "id": 63,
+    "id_hex": "0x3F",
+    "marker": "fffe3f",
+    "off": 2757,
+    "raw": "fffe3f123e3f4a0f263730432c2bff",
+    "text": "Cop, What<2C>!",
+    "len": 15
+  },
+  {
+    "id": 65,
+    "id_hex": "0x41",
+    "marker": "fffe41",
+    "off": 2833,
+    "raw": "fffe41123e3f4a0f2f2f2f1734482f2f2f0f4637480f333e3d2e430f483e440f37304534f70f101d280f383d3944413834422f2f2f2cff",
+    "text": "Cop, ...Hey... why don't you have\n ANY injuries...<2C>",
+    "len": 55
+  },
+  {
+    "id": 67,
+    "id_hex": "0x43",
+    "marker": "fffe43",
+    "off": 2938,
+    "raw": "fffe43123e3f4a0f14453441483e3d342e420f363e4343343d0f3144413d34332f2f2f0f30f70f3b3e430f3e350f4337343c2f2f2f0f3f413e3130313b480f463e3d2e430f3c303a34f70f38432f2f2fff",
+    "text": "Cop, Everyone's gotten burned... a\n lot of them... probably won't make\n it...",
+    "len": 81
+  },
+  {
+    "id": 69,
+    "id_hex": "0x45",
+    "marker": "fffe45",
+    "off": 3089,
+    "raw": "fffe45fa4a0f18432e420f3d3e430f3b383a340f433734480f30423a3433f70f3c340f38350f180f3338333d2e430f46303d430f433e0f3634430f3144413d34334bf70f483e440f3a3d3e462f2f2fff",
+    "text": "[NAME], It's not like they asked\n me if I didn't want to get burned<4B>\n you know...",
+    "len": 80
+  },
+  {
+    "id": 71,
+    "id_hex": "0x47",
+    "marker": "fffe47",
+    "off": 3258,
+    "raw": "fffe47fa4a0f283e442e330f3134434334412fff",
+    "text": "[NAME], You'd better.",
+    "len": 20
+  },
+  {
+    "id": 73,
+    "id_hex": "0x49",
+    "marker": "fffe49",
+    "off": 3501,
+    "raw": "fffe49123e3f4a0f1734482b0f182e45340f363e430f4337340f42303c340f36443d2bf70f182e45340f363e430f31443b3b3443420f353e410f433730430f38350f4830f70f46303d432f2f2fff",
+    "text": "Cop, Hey! I've got the same gun!\n I've got bullets for that if ya\n want...",
+    "len": 78
+  },
+  {
+    "id": 75,
+    "id_hex": "0x4B",
+    "marker": "fffe4b",
+    "off": 3602,
+    "raw": "fffe4b123e3f4a0f223e4141484b0f3144430f182e3c0f3e44432f0f103d330f180f32303d2e43f70f363845340f483e440f4337340f3e3d34420f180f373045340f383d0f3c480f36443d2fff",
+    "text": "Cop, Sorry<4B> but I'm out. And I can't\n give you the ones I have in my gun.",
+    "len": 77
+  },
+  {
+    "id": 77,
+    "id_hex": "0x4D",
+    "marker": "fffe4d",
+    "off": 3731,
+    "raw": "fffe4dfa4a0f2f2f2f180f3a3d3e460f4237342e420f333e463df70f43373441342f2f2fff",
+    "text": "[NAME], ...I know she's down\n there...",
+    "len": 37
+  },
+  {
+    "id": 79,
+    "id_hex": "0x4F",
+    "marker": "fffe4f",
+    "off": 3806,
+    "raw": "fffe4ffb09020f0f0f0f19443c3f0f333e463df70f0f0f0f153e413634430f3843ff",
+    "text": "[FB_09]<02>    Jump down\n    Forget it",
+    "len": 34
+  },
+  {
+    "id": 81,
+    "id_hex": "0x51",
+    "marker": "fffe51",
+    "off": 3903,
+    "raw": "fffe51fa4a0f233730430f3638413b2f2f2f2bf70f18430f323e443b333d2e430f31342f2f2fff",
+    "text": "[NAME], That girl...!\n It couldn't be...",
+    "len": 39
+  },
+  {
+    "id": 83,
+    "id_hex": "0x53",
+    "marker": "fffe53",
+    "off": 4053,
+    "raw": "fffe53fa4a0f19344244422b0f1338330f2d1445342d0f333e0f43373043f70f433e0f4337340f4130432f2f2f2c2b0f263730430f38420f363e383d360f3e3df70f171421142c2bff",
+    "text": "[NAME], Jesus! Did <2D>Eve<2D> do that\n to the rat...<2C>! What is going on\n HERE<2C>!",
+    "len": 73
+  },
+  {
+    "id": 85,
+    "id_hex": "0x55",
+    "marker": "fffe55",
+    "off": 4191,
+    "raw": "fffe551c303d4a0f10373737372b0f173441342b0f23303a340f38432b0f23303a34f70f34453441484337383d362b0f18432e420f303b3b0f3e3d0f433734f70f323e443d4334412bff",
+    "text": "Man, Ahhhh! Here! Take it! Take\n everything! It's all on the\n counter!",
+    "len": 74
+  },
+  {
+    "id": 87,
+    "id_hex": "0x57",
+    "marker": "fffe57",
+    "off": 4307,
+    "raw": "fffe571c303d4a0f283e442e41340f4337340f3e3d340f433730430f4232304134330f1c144bf70f3b3033482b0f180f4630420f394442430f36344343383d360f41343033482ff80f2f2f2f283e440f3a3d3e464b0f3e3d3b480f22231015150f304134f70f303b3b3e4634330f383d0f373441342f2f2fff",
+    "text": "Man, You're the one that scared ME<4B>\n lady! I was just getting ready. ...You know<4B> only STAFF are\n allowed in here...",
+    "len": 121
+  },
+  {
+    "id": 89,
+    "id_hex": "0x59",
+    "marker": "fffe59",
+    "off": 4486,
+    "raw": "fffe591c303d4a0f261710232c2bf80f283e442e41340f1a181313181d164b0f41383637432c2b0f1734484b0f182e3cf70f3d3e430f3348383d360f373441340f433e3d383637432b0f2214140f28102f2f2f2bff",
+    "text": "Man, WHAT<2C>! You're KIDDING<4B> right<2C>! Hey<4B> I'm\n not dying here tonight! SEE YA...!",
+    "len": 85
+  },
+  {
+    "id": 91,
+    "id_hex": "0x5B",
+    "marker": "f9fe5b",
+    "off": 4590,
+    "raw": "f9fe5bfa4a0f18432e420f433730430f323b3e463d2f2f2f0f35413e3c0f433734f70f3341344242383d360f413e3e3c2f2f2fff",
+    "text": "[NAME], It's that clown... from the\n dressing room...",
+    "len": 52
+  },
+  {
+    "id": 93,
+    "id_hex": "0x5D",
+    "marker": "fffe5d",
+    "off": 4657,
+    "raw": "fffe5dfa4a0f283e442e41340f4243383b3b0f303b3845342b0f173e3b33f70f3e3d2b0f1b34430f3c340f32303b3b0f4337340f3f3041303c34333832422bff",
+    "text": "[NAME], You're still alive! Hold\n on! Let me call the paramedics!",
+    "len": 64
+  },
+  {
+    "id": 95,
+    "id_hex": "0x5F",
+    "marker": "fffe5f",
+    "off": 4770,
+    "raw": "fffe5ffa4a0f133e3d2e430f4341480f433e0f43303b3a0f3d3e462ff70f1c343b384242302c2f2f2f0f1c343b384242302f2f2f0f283e440f3c34303df70f4337340f3c30383d0f303243413442422bff",
+    "text": "[NAME], Don't try to talk now.\n Melissa<2C>... Melissa... You mean\n the main actress!",
+    "len": 81
+  },
+  {
+    "id": 97,
+    "id_hex": "0x61",
+    "marker": "fffe61",
+    "off": 4929,
+    "raw": "fffe61fa4a0f1d3e2f2f2f2b0f1f3b343042342b0f26303a340f443f2bf70f17303d360f383d0f43373441342f2f2f2bff",
+    "text": "[NAME], No...! Please! Wake up!\n Hang in there...!",
+    "len": 49
+  },
+  {
+    "id": 99,
+    "id_hex": "0x63",
+    "marker": "fffe63",
+    "off": 4995,
+    "raw": "fffe63fa4a0f100f33383041482f2f2f2cff",
+    "text": "[NAME], A diary...<2C>",
+    "len": 18
+  },
+  {
+    "id": 101,
+    "id_hex": "0x65",
+    "marker": "fffe65",
+    "off": 5278,
+    "raw": "fffe650f1d3e45343c3134410f01070f4c1c3e3d4cf70f2337340f323042430f4630420f303d3d3e443d3234330f303d330f224449303d3d34f70f303d330f180f3041340f333e44313b340f323042432ff80f180f46303d430f433e0f3f3b30480f4337340f3f3041430f303b3e3d344b0f314443f70f34453441483e3d340f3a3d3e46420f4237342e420f363e3e332f2f2fff",
+    "text": " November <01><07> <4C>Mon<4C>\n The cast was announced and Suzanne\n and I are double cast. I want to play the part alone<4B> but\n everyone knows she's good...",
+    "len": 148
+  },
+  {
+    "id": 103,
+    "id_hex": "0x67",
+    "marker": "fffe67",
+    "off": 5560,
+    "raw": "fffe670f133432343c3134410f060f4c2230434cf70f180f323e3b3b303f4234330f433e3330482ff80f180f3b3e42430f323e3d4232383e44423d3442420f30354334410f3c480f313e3348f70f363e430f373e432ff80f180f333e3d2e430f323041340f38350f180f3338342f0f180f394442430f46303d43f70f433e0f3634430f4337413e4436370f433738420f42373e462fff",
+    "text": " December <06> <4C>Sat<4C>\n I collapsed today. I lost consciousness after my body\n got hot. I don't care if I die. I just want\n to get through this show.",
+    "len": 150
+  },
+  {
+    "id": 105,
+    "id_hex": "0x69",
+    "marker": "fffe69",
+    "off": 5935,
+    "raw": "fffe690f133432343c3134410f01010f4c23374cf70f224449303d3d340f4630420f3144413d34330f383d0f303d0f303f3041433c343d43f70f353841342ff80f18420f38430f313432304442340f180f46303d4334330f4337340f3f304143f70f423e0f3130332c0f163e334b0f353e41363845340f3c342f2f2fff",
+    "text": " December <01><01> <4C>Th<4C>\n Suzanne was burned in an apartment\n fire. Is it because I wanted the part\n so bad<2C> God<4B> forgive me...",
+    "len": 125
+  },
+  {
+    "id": 107,
+    "id_hex": "0x6B",
+    "marker": "fffe6b",
+    "off": 6160,
+    "raw": "fffe6b0f133432343c3134410f02030f4c23444cf70f1e3f343d383d360f3d383637432f0f14453441484337383d360f46343d43f70f423c3e3e43373b482ff80f233e3c3e41413e460f38420f1237413842433c30420f1445342ff70f26340f42373e443b330f373045340f4337340f313836363442430f32413e4633f70f3e350f4337340f423430423e3d2ff80f103d332f2f2f0f180f373045340f4337340f423e3b3e0f323e3d323441430f433734f70f3d3447430f3330480f30430f4337340f3f30413a2ff80f1144430f182e3c0f3d3e430f3534343b383d360f46343b3b2f0f182e33f70f3134434334410f4237303f340f443f0f38350f180f46303d430f433e0f363443f70f4337413e4436370f433738422ff80f182e330f3134434334410f43303a340f3c3e41340f3c343338323043383e3d2fff",
+    "text": " December <02><03> <4C>Tu<4C>\n Opening night. Everything went\n smoothly. Tomorrow is Christmas Eve.\n We should have the biggest crowd\n of the season. And... I have the solo concert the\n next day at the park. But I'm not feeling well. I'd\n better shape up if I want to get\n through this. I'd better take more medication.",
+    "len": 315
+  },
+  {
+    "id": 109,
+    "id_hex": "0x6D",
+    "marker": "fffe6d",
+    "off": 6577,
+    "raw": "fffe6df7163e430f2d21343734304142303b0f213e3e3c0f1a34482dff",
+    "text": "\nGot <2D>Rehearsal Room Key<2D>",
+    "len": 29
+  },
+  {
+    "id": 111,
+    "id_hex": "0x6F",
+    "marker": "fffe6f",
+    "off": 6655,
+    "raw": "fffe6ffa4a0f2c2b2f2f2f0f1e374b0f38432e420f3e3d3b480f30f70f4130432f2f2fff",
+    "text": "[NAME], <2C>!... Oh<4B> it's only a\n rat...",
+    "len": 36
+  },
+  {
+    "id": 113,
+    "id_hex": "0x71",
+    "marker": "fffe71",
+    "off": 6705,
+    "raw": "fffe711f3041413e434a0f2d173e432b0f173e432b0f17343b3f2b0f17343b3f2b2d0ffb075a",
+    "text": "Parrot, <2D>Hot! Hot! Help! Help!<2D> [PAUSE 90]",
+    "len": 38
+  },
+  {
+    "id": 114,
+    "id_hex": "0x72",
+    "marker": "f9fe72",
+    "off": 6743,
+    "raw": "f9fe72fa4a0f182e330f3134434334410f3d3e433835480f433734f70f33343f3041433c343d430f30313e44430f463730432e420f37303f3f343d3433f70f373441342f2f2fff",
+    "text": "[NAME], I'd better notify the\n department about what's happened\n here...",
+    "len": 71
+  },
+  {
+    "id": 116,
+    "id_hex": "0x74",
+    "marker": "fffe74",
+    "off": 6838,
+    "raw": "fffe74f7163e430f2d1341344242383d360f213e3e3c0f1a34482dff",
+    "text": "\nGot <2D>Dressing Room Key<2D>",
+    "len": 28
+  },
+  {
+    "id": 118,
+    "id_hex": "0x76",
+    "marker": "fffe76",
+    "off": 6888,
+    "raw": "fffe76f70f0f0f0f0f243d3b3e323a34330f4337340f333e3e412fff",
+    "text": "\n     Unlocked the door.",
+    "len": 28
+  },
+  {
+    "id": 120,
+    "id_hex": "0x78",
+    "marker": "fffe78",
+    "off": 6942,
+    "raw": "fffe781c343b384242304a0f182e3c2f2f2f0f1c343b384242302f2f2f0f182e3c2f2f2ff70f1d1e2f2f2f2b0f182e3c2f2f2f0f182f2f2fff",
+    "text": "Melissa, I'm... Melissa... I'm...\n NO...! I'm... I...",
+    "len": 57
+  },
+  {
+    "id": 122,
+    "id_hex": "0x7A",
+    "marker": "fffe7a",
+    "off": 7039,
+    "raw": "fffe7a1c343b384242304a0f103030372f2f2f2b0f182e3c2f2f2f0f182e3c2f2f2ff70f36344343383d360f171e232b2bff",
+    "text": "Melissa, Aaah...! I'm... I'm...\n getting HOT!!",
+    "len": 50
+  },
+  {
+    "id": 124,
+    "id_hex": "0x7C",
+    "marker": "fffe7c",
+    "off": 7160,
+    "raw": "fffe7cfa4a0f263730432c2bff",
+    "text": "[NAME], What<2C>!",
+    "len": 13
+  },
+  {
+    "id": 126,
+    "id_hex": "0x7E",
+    "marker": "fffe7e",
+    "off": 7193,
+    "raw": "fffe7e0f4337340f3330480f353e410f4337340f3c38433e32373e3d334138300f433e0f3134f70f354134340f3730420f35383d303b3b480f304141384534332b2bff",
+    "text": " the day for the mitochondria to be\n free has finally arrived!!",
+    "len": 67
+  },
+  {
+    "id": 128,
+    "id_hex": "0x80",
+    "marker": "fffe80",
+    "off": 7312,
+    "raw": "fffe801445344a0f2f2f2f443d43383b0f483e44410f3c38433e32373e3d334138300f3842f70f323e3c3f3b3443343b480f152114142f2f2fff",
+    "text": "Eve, ...until your mitochondria is\n completely FREE...",
+    "len": 58
+  },
+  {
+    "id": 130,
+    "id_hex": "0x82",
+    "marker": "fffe82",
+    "off": 7435,
+    "raw": "fffe82fa4a0f2f2f2f263730432cf80f26373441340f38420f433738422c0f18420f433730432f2f2f2cf70f18420f433730430f4337340f3b3843433b340f3638413b0f180f4230462f2f2f2c4bf70f1d3e4b0f38432e422f2f2fff",
+    "text": "[NAME], ...What<2C> Where is this<2C> Is that...<2C>\n Is that the little girl I saw...<2C><4B>\n No<4B> it's...",
+    "len": 92
+  },
+  {
+    "id": 132,
+    "id_hex": "0x84",
+    "marker": "fffe84",
+    "off": 7556,
+    "raw": "fffe841445344a0f1730373037302f2f2fff",
+    "text": "Eve, Hahaha...",
+    "len": 18
+  },
+  {
+    "id": 134,
+    "id_hex": "0x86",
+    "marker": "fffe86",
+    "off": 7610,
+    "raw": "fffe86fa4a0f26373441342e330f4237340f363e2f2f2f2cf7fb09020f0f0f0f19443c3f0f383df70f0f0f0f153e413634430f3843ff",
+    "text": "[NAME], Where'd she go...<2C>\n[FB_09]<02>    Jump in\n    Forget it",
+    "len": 54
+  },
+  {
+    "id": 136,
+    "id_hex": "0x88",
+    "marker": "fffe88",
+    "off": 7758,
+    "raw": "fffe8821343f3e414334414a0f1c3842422b0f283e440f3041340f4337340f423e3b34f70f4244414538453e410f3e350f433738420f373e414138313b340f3e413334303b4bf70f121e21211412232c2b0fff",
+    "text": "Reporter, Miss! You are the sole\n survivor of this horrible ordeal<4B>\n CORRECT<2C>! ",
+    "len": 83
+  },
+  {
+    "id": 138,
+    "id_hex": "0x8A",
+    "marker": "fffe8a",
+    "off": 7853,
+    "raw": "fffe8a21343f3e414334414a0f243d43383b0f3d3e464b0f43373842f70f323e3c31444243383e3d0f4337343e41480f3730420f3134343df80f30323a3d3e463b34333634330f3e3d3b480f31480f3e3232443b43f70f343d4337444238304243422f2f2fff",
+    "text": "Reporter, Until now<4B> this\n combustion theory has been acknowledged only by occult\n enthusiasts...",
+    "len": 102
+  },
+  {
+    "id": 140,
+    "id_hex": "0x8C",
+    "marker": "fffe8c",
+    "off": 7996,
+    "raw": "fffe8c21343f3e414334414a0f233738420f383d323833343d430f37303f3f343d34330f433ef70f43303a340f3f3b3032340f3e3d2f2f2f0f1237413842433c30420f1445344b0f3e35f70f303b3b0f3d38363743422b2bf80f180f463e443b330f3b383a340f433e0f41343f413442343d430f433734f70f3238433849343d420f3e350f4337340f323843480f303d330f383d43344145383446f70f483e440f3447323b44423845343b482f2f2fff",
+    "text": "Reporter, This incident happened to\n take place on... Christmas Eve<4B> of\n all nights!! I would like to represent the\n citizens of the city and interview\n you exclusively...",
+    "len": 176
+  },
+  {
+    "id": 142,
+    "id_hex": "0x8E",
+    "marker": "fffe8e",
+    "off": 8239,
+    "raw": "fffe8e1c303d4a0f223241303c4b0f31443333482bff",
+    "text": "Man, Scram<4B> buddy!",
+    "len": 22
+  },
+  {
+    "id": 144,
+    "id_hex": "0x90",
+    "marker": "fffe90",
+    "off": 8275,
+    "raw": "fffe9013303d38343b4a0f223e4141480f182e3c0f3b3043344b0ffa2fff",
+    "text": "Daniel, Sorry I'm late<4B> [NAME].",
+    "len": 30
+  },
+  {
+    "id": 146,
+    "id_hex": "0x92",
+    "marker": "fffe92",
+    "off": 8395,
+    "raw": "fffe92123e3f4a0f2230460f48300f3e3d0f23252b2b0f283e442e41340f35413e3c0f433734f70f010743370f3f413432383d32434b0f3041343d2e430f483e442f2f2f2cf70f283e442e41340f4337340f3e3d340f433730430f42444145384534332f2f2fff",
+    "text": "Cop, Saw ya on TV!! You're from the\n <01><07>th precinct<4B> aren't you...<2C>\n You're the one that survived...",
+    "len": 103
+  },
+  {
+    "id": 148,
+    "id_hex": "0x94",
+    "marker": "fffe94",
+    "off": 8633,
+    "raw": "fffe94fa4a0f2f2f2f233738420f3c303d2bf80f182f2f2f0f3a3d3e460f37383c2f2f2f0f180f4337383d3a2f2f2fff",
+    "text": "[NAME], ...This man! I... know him... I think...",
+    "len": 48
+  },
+  {
+    "id": 150,
+    "id_hex": "0x96",
+    "marker": "fffe96",
+    "off": 8690,
+    "raw": "fffe96fa4a0f233738420f38422f2f2fff",
+    "text": "[NAME], This is...",
+    "len": 17
+  },
+  {
+    "id": 152,
+    "id_hex": "0x98",
+    "marker": "fffe98",
+    "off": 8725,
+    "raw": "fffe9813303d38343b4a0f283e44410f3c3e433734410f303d330f483e44410f423842433441f70f463441340f333e3d3e41422fff",
+    "text": "Daniel, Your mother and your sister\n were donors.",
+    "len": 53
+  },
+  {
+    "id": 154,
+    "id_hex": "0x9A",
+    "marker": "fffe9a",
+    "off": 8824,
+    "raw": "fffe9a1c303433304a0f283e44410f3c3e433734412e420f3e4136303d42f70f323e443b333d2e430f31340f4341303d423f3b303d4334330f3035433441f70f4337340f3032323833343d432f2f2ff80f223e0f1c3048302e420f3a38333d34480f4630420f4341303d420bf70f3f3b303d4334330f383d433e0f4337340f483e443d360f1445342f2f2ff80f1d3e4b0f182e3c0f423e4141484b0f4337340f483e443d360f2d1c343b384242302d2ff70f2237340f3730330f3a38333d34480f3530383b4441342f2f2fff",
+    "text": "Maeda, Your mother's organs\n couldn't be transplanted after\n the accident... So Maya's kidney was trans<0B>\n planted into the young Eve... No<4B> I'm sorry<4B> the young <2D>Melissa<2D>.\n She had kidney failure...",
+    "len": 204
+  },
+  {
+    "id": 156,
+    "id_hex": "0x9C",
+    "marker": "fffe9c",
+    "off": 9082,
+    "raw": "fffe9c13303d38343b4a0f2337340f383d4334413d0f433730430f4630420f3f413442343d43f70f30430f4337340f3e3f34413043383e3d0f4630422f2f2f0f283e44f70f364434424234330f38432f2f2fff",
+    "text": "Daniel, The intern that was present\n at the operation was... You\n guessed it...",
+    "len": 83
+  },
+  {
+    "id": 158,
+    "id_hex": "0x9E",
+    "marker": "fffe9e",
+    "off": 9239,
+    "raw": "fffe9e1c303433304a0f2337340f333e32433e41420f433730430f46344134f70f3f413442343d430f334441383d360f4337340f3e3f34413043383e3d0f46344134f70f303b3b0f42443f41384234330f303d332f2f2ff80f433734480f303b3b0f42324134303c34330f433730430f4337340f3a38333d3448f70f4630420f373e432f2f2f2bff",
+    "text": "Maeda, The doctors that were\n present during the operation were\n all suprised and... they all screamed that the kidney\n was hot...!",
+    "len": 136
+  },
+  {
+    "id": 160,
+    "id_hex": "0xA0",
+    "marker": "fffea0",
+    "off": 9412,
+    "raw": "fffea0fa4a0f2337303d3a0f483e444b0f11343d2fff",
+    "text": "[NAME], Thank you<4B> Ben.",
+    "len": 22
+  },
+  {
+    "id": 162,
+    "id_hex": "0xA2",
+    "marker": "fffea2",
+    "off": 9494,
+    "raw": "fffea211343d4a0f1d30374b0f3d3e430f3c342b0f180f3b3e45340f4337344234f70f4337383d36422bff",
+    "text": "Ben, Nah<4B> not me! I love these\n things!",
+    "len": 43
+  },
+  {
+    "id": 164,
+    "id_hex": "0xA4",
+    "marker": "fffea4",
+    "off": 9580,
+    "raw": "fffea41c303433304a0f233738420f38420f3c480f35384142430f43383c344b0f423e2f2f2ff70f182e3c2f2f2f0f3c3c3c2f2f2f0f182e3c0f3d3441453e44422f2f2fff",
+    "text": "Maeda, This is my first time<4B> so...\n I'm... mmm... I'm nervous...",
+    "len": 69
+  },
+  {
+    "id": 166,
+    "id_hex": "0xA6",
+    "marker": "fffea6",
+    "off": 9720,
+    "raw": "fffea61c303433304a0f263730432c2b0f1d3e2b4b0f1d1e2b0f233730432e420f3d3e43f70f38432b0f1e350f323e444142340f3d3e432bff",
+    "text": "Maeda, What<2C>! No!<4B> NO! That's not\n it! Of course not!",
+    "len": 57
+  },
+  {
+    "id": 168,
+    "id_hex": "0xA8",
+    "marker": "fffea8",
+    "off": 9806,
+    "raw": "fffea81c303433304a0f1c3c3c3c2f2f2f0f4834422f2f2f0f134b0f13303d38343b0f303d33f70f11343d0f3041340f3b3043344b0f3041343d2e430f433734482cff",
+    "text": "Maeda, Mmmm... yes... D<4B> Daniel and\n Ben are late<4B> aren't they<2C>",
+    "len": 67
+  },
+  {
+    "id": 170,
+    "id_hex": "0xAA",
+    "marker": "fffeaa",
+    "off": 9937,
+    "raw": "fffeaa1c303433304a0f24372f2f2f0f4337340f41344243413e3e3c0f3c4442430f3134f70f4134303b3b480f32413e463334332f0f2834424b0f433730432e42f70f3f413e3130313b480f38432fff",
+    "text": "Maeda, Uh... the restroom must be\n really crowded. Yes<4B> that's\n probably it.",
+    "len": 80
+  },
+  {
+    "id": 172,
+    "id_hex": "0xAC",
+    "marker": "fffeac",
+    "off": 10057,
+    "raw": "fffeac1c303433304a0f2f2f2f24372f2f2f0f34412f2f2f0f443c2f2f2f0f4834424b0f3e35f70f323e444142342f2f2fff",
+    "text": "Maeda, ...Uh... er... um... yes<4B> of\n course...",
+    "len": 50
+  },
+  {
+    "id": 174,
+    "id_hex": "0xAE",
+    "marker": "fffeae",
+    "off": 10117,
+    "raw": "fffeae1c303433304a0f1e374b0f44372f2f2f0f26343b3b4b0f42383d32340f182e3cf70f363e383d360f3130323a0f433e0f19303f303d0f433e3c3e41413e460f18f70f3c383637430f30422f2f2fff",
+    "text": "Maeda, Oh<4B> uh... Well<4B> since I'm\n going back to Japan tomorrow I\n might as...",
+    "len": 81
+  },
+  {
+    "id": 176,
+    "id_hex": "0xB0",
+    "marker": "fffeb0",
+    "off": 10276,
+    "raw": "fffeb013303d38343b4a0f223e4141480f46342e41340f3b3043342fff",
+    "text": "Daniel, Sorry we're late.",
+    "len": 29
+  },
+  {
+    "id": 178,
+    "id_hex": "0xB2",
+    "marker": "fffeb2",
+    "off": 10371,
+    "raw": "fffeb210443338343d32344a0f283e442e41340f3d3e430f42443f3f3e4234330f433ef70f4243303d330f443f0f3e3d32340f38430f4243304143422bff",
+    "text": "Audience, You're not supposed to\n stand up once it starts!",
+    "len": 62
+  },
+  {
+    "id": 180,
+    "id_hex": "0xB4",
+    "marker": "fffeb4",
+    "off": 10451,
+    "raw": "fffeb411343d4a0f1634430f463843370f38434b0f364448422bff",
+    "text": "Ben, Get with it<4B> guys!",
+    "len": 27
+  },
+  {
+    "id": 182,
+    "id_hex": "0xB6",
+    "marker": "fffeb6",
+    "off": 10494,
+    "raw": "fffeb6f70f0f0f0f0f1c343d440f3f413e3234424234332b2bff",
+    "text": "\n     Menu processed!!",
+    "len": 26
+  },
+  {
+    "id": 184,
+    "id_hex": "0xB8",
+    "marker": "fffeb8",
+    "off": 10523,
+    "raw": "fffeb801ff",
+    "text": "<01>",
+    "len": 5
+  },
+  {
+    "id": 186,
+    "id_hex": "0xBA",
+    "marker": "fffeba",
+    "off": 10531,
+    "raw": "fffeba03ff",
+    "text": "<03>",
+    "len": 5
+  },
+  {
+    "id": 188,
+    "id_hex": "0xBC",
+    "marker": "fffebc",
+    "off": 10539,
+    "raw": "fffebc05ff",
+    "text": "<05>",
+    "len": 5
+  },
+  {
+    "id": 190,
+    "id_hex": "0xBE",
+    "marker": "fffebe",
+    "off": 10547,
+    "raw": "fffebe07ff",
+    "text": "<07>",
+    "len": 5
+  },
+  {
+    "id": 192,
+    "id_hex": "0xC0",
+    "marker": "fffec0",
+    "off": 10555,
+    "raw": "fffec009ff",
+    "text": "<09>",
+    "len": 5
+  },
+  {
+    "id": 194,
+    "id_hex": "0xC2",
+    "marker": "fffec2",
+    "off": 10564,
+    "raw": "fffec20101ff",
+    "text": "<01><01>",
+    "len": 6
+  },
+  {
+    "id": 196,
+    "id_hex": "0xC4",
+    "marker": "fffec4",
+    "off": 10574,
+    "raw": "fffec40103ff",
+    "text": "<01><03>",
+    "len": 6
+  },
+  {
+    "id": 198,
+    "id_hex": "0xC6",
+    "marker": "fffec6",
+    "off": 10584,
+    "raw": "fffec60105ff",
+    "text": "<01><05>",
+    "len": 6
+  },
+  {
+    "id": 200,
+    "id_hex": "0xC8",
+    "marker": "fffec8",
+    "off": 10605,
+    "raw": "fffec8151c250f03f7144534010f1046303a343d424b0f123e3c31444243383e3dff",
+    "text": "FMV <03>\nEve<01> Awakens<4B> Combustion",
+    "len": 34
+  },
+  {
+    "id": 202,
+    "id_hex": "0xCA",
+    "marker": "fffeca",
+    "off": 10666,
+    "raw": "fffeca151c250f05f71445340f020f2341303d42353e413c3043383e3dff",
+    "text": "FMV <05>\nEve <02> Transformation",
+    "len": 30
+  },
+  {
+    "id": 204,
+    "id_hex": "0xCC",
+    "marker": "fffecc",
+    "off": 10711,
+    "raw": "fffeccfa4a0f100f3f373e3d342b0f182e330f313443433441f70f3d3e433835480f4337340f33343f3041433c343d430f30313e44430f433734f70f423843443043383e3d0f373441342f2f2fff",
+    "text": "[NAME], A phone! I'd better\n notify the department about the\n situation here...",
+    "len": 78
+  }
+]

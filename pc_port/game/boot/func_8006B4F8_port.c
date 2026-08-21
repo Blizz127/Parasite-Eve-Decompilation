@@ -32,8 +32,12 @@
  * 12-byte records: lbu type rec+0x0B, lbu cmd rec+7, ptr =
  * rec+4 & 0x00FFFFFF. Stores chunk2+ptr at overlay+0x1C0 +
  * type*192 + cmd*4 (D_800B0E98). Live m0005i type-2 cmd 0x17
- * byte+2 = 51 so 1A680 sets +0x0F = 50. hdr+0x0C B0E70 bind
- * @ 0x8006B7C8 is still not this cut (3D050 tail gate).
+ * byte+2 = 51 so 1A680 sets +0x0F = 50.
+ *
+ * PE-BTL90 — hdr+1 → CE2 @ 0x8006B7B8 and hdr+0x0C →
+ * D_800B0E70[idB] @ 0x8006B804. M0367I hdr+1=10; idB 2/3/4.
+ * This is the room object table, not CE2=14 +0x8. 3D050 stays
+ * fail-closed. Type-1 B0E70[1] stays empty.
  *
  * Then 12574(s4 + (lw(s4 + (hdr+0x14 & 0x3FFFFF))+4 &
  * 0x00FFFFFF)) → overlay+0x944. Sibling stores +0x948/+0x94C
@@ -62,6 +66,13 @@ extern int func_8006E1C0(pe_addr_t entry, pe_addr_t base);
 extern int func_80072714(void);
 extern void func_800726C4(void);
 extern void func_80072724(void);
+extern void func_8006C140_type0_clip_bind(pe_addr_t package);
+extern int func_8006C5BC(void);
+extern int func_8006C4C4(int a0);
+extern void func_80034FC4(void);
+extern void func_8001266C(void);
+extern void func_800125E0(void);
+extern void func_8001A918(void);
 
 void func_8006E2D0(pe_addr_t dest, uint32_t token)
 {
@@ -111,7 +122,23 @@ void func_8006B4F8_12574_publish_cut(void)
     s4 = PE_LoadU32(GA_OVERLAY + 0x18Cu);
     s5 = s4 + (PE_LoadU32(s4 + 4u) & MASK_22);
 
-    /* Writer A — ROM 0x8006B828. Do not add hdr+0x0C B0E70. */
+    /* hdr+1 → CE2. M0367I / M0005I = 10. */
+    PE_StoreU8(GA_OVERLAY + 0x0Au, PE_LoadU8(s5 + 1u));
+
+    /* hdr+0x0C → B0E70[idB]. Room objects only. */
+    word = PE_LoadU32(s5 + 0x0Cu);
+    count = word >> 22;
+    rec = s4 + (word & MASK_22);
+    for (i = 0; i < count; i++) {
+        uint8_t idb;
+
+        idb = PE_LoadU8(rec + 7u);
+        PE_StoreU32(GA_OVERLAY + 0x198u + (uint32_t)idb * 4u,
+                    s4 + (PE_LoadU32(rec + 4u) & MASK_24));
+        rec += 12u;
+    }
+
+    /* Writer A — ROM 0x8006B84C. */
     word = PE_LoadU32(s5 + 0x10u);
     count = word >> 22;
     rec = s4 + (word & MASK_22);
@@ -243,5 +270,146 @@ int func_8006B4F8_dest_load_cut(uint32_t token)
     func_800726C4();
     func_80072724();
     func_8006B4F8_12574_publish_cut();
+    return 1;
+}
+
+/*
+ * PE-BTL90 — func_8006B35C dest-enter reset (resource tables only).
+ * 103w 0x8006B35C..0x8006B4F8. Does not clear CE2/CE3/+0xEC/+0x154.
+ * Order: B0E70, B0E98, +0x940, +0x944, +0x948, +0x94C, +0x954
+ * then +0x950, then +0x958. +0x150 copy / 6E498 are not this cut.
+ */
+void func_8006B35C(void)
+{
+    unsigned int i;
+    unsigned int row;
+    unsigned int word;
+
+    for (i = 0; i < 10u; i++)
+        PE_StoreU32(GA_OVERLAY + 0x198u + i * 4u, 0u);
+    for (row = 0; row < 10u; row++) {
+        for (word = 0; word < 48u; word++)
+            PE_StoreU32(GA_OVERLAY + 0x1C0u + row * 192u + word * 4u, 0u);
+    }
+    PE_StoreU32(GA_OVERLAY + 0x940u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x944u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x948u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x94Cu, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x954u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x950u, 0u);
+    PE_StoreU32(GA_OVERLAY + 0x958u, 0u);
+}
+
+/*
+ * 6BE4C: if CE2 in [10,14] and CE2 != CE3, set overlay bit
+ * 0x00200000. Pair-index +0xE bit 4 is not this cut.
+ */
+int func_8006BE4C(void)
+{
+    unsigned int ce2;
+    unsigned int ce3;
+
+    ce2 = PE_LoadU8(GA_OVERLAY + 0x0Au);
+    if ((ce2 - 10u) >= 5u)
+        return 0;
+    ce3 = PE_LoadU8(GA_OVERLAY + 0x0Bu);
+    if (ce2 != ce3)
+        PE_StoreU32(GA_OVERLAY, PE_LoadU32(GA_OVERLAY) | 0x00200000u);
+    return 0;
+}
+
+/*
+ * Dest-enter 6BECC settle. Host is synchronous: load CE2+8 into
+ * +0x154 when that dest is KSEG, then state 6 (6C118 B0E70[0] +
+ * Writer B type-0 row). M0367I bank is CE2=10, not CE2=14.
+ * Does not CD into +0x194 (dest chunk0). Does not run 3D050.
+ * Returns 0 when settled, 1 only if a CD issue is still busy.
+ */
+int func_8006BECC(void)
+{
+    unsigned int ce2;
+    unsigned int start;
+    unsigned int end;
+    int lba;
+    int state6;
+    pe_addr_t pkg;
+    pe_addr_t dest0;
+    pe_addr_t dest1;
+    pe_addr_t dest2;
+    pe_addr_t hdr;
+    uint32_t packed;
+
+    ce2 = PE_LoadU8(GA_OVERLAY + 0x0Au);
+    pkg = PE_LoadU32(GA_OVERLAY + 0x154u);
+    dest0 = PE_LoadU32(GA_OVERLAY + 0x194u);
+    dest1 = PE_LoadU32(GA_OVERLAY + 0x168u);
+    dest2 = PE_LoadU32(GA_OVERLAY + 0x18Cu);
+    /* Host: do not CD CE2+8 onto dest chunk0/1/2. Retail
+     * state 1 also fills +0x194; that smash is not this cut. */
+    if (pkg < 0x80000000u || pkg == dest0 || pkg == dest1 || pkg == dest2)
+        pkg = 0u;
+    state6 = 0;
+    if ((PE_LoadU32(GA_OVERLAY) & 0x00200000u) != 0u &&
+        pkg != 0u && (ce2 - 10u) < 5u) {
+        start = PE_LoadU16(0x800930D8u + (ce2 + 8u) * 2u);
+        end = PE_LoadU16(0x800930D8u + (ce2 + 9u) * 2u);
+        if (end > start) {
+            lba = (int)(PE_LoadU32(GA_D_800B0DD8) + start);
+            if (!pe_6b4f8_issue_poll(lba, pkg, (int)(end - start)))
+                return 1;
+            state6 = 1;
+        }
+    } else if ((PE_LoadU32(GA_OVERLAY) & 0x00200000u) == 0u && pkg != 0u) {
+        state6 = 1;
+    }
+    if (state6 != 0) {
+        hdr = pkg + (PE_LoadU32(pkg + 4u) & MASK_22);
+        packed = PE_LoadU32(hdr + 0x0Cu);
+        PE_StoreU32(GA_OVERLAY + 0x198u,
+                    pkg + (PE_LoadU32(pkg + (packed & MASK_22) + 4u) & MASK_24));
+        func_8006C140_type0_clip_bind(pkg);
+    }
+    PE_StoreU8(GA_OVERLAY + 0xECu, 0u);
+    PE_StoreU8(GA_OVERLAY + 0x0Bu, (uint8_t)ce2);
+    PE_StoreU32(GA_OVERLAY, PE_LoadU32(GA_OVERLAY) & ~0x00200000u);
+    return 0;
+}
+
+/*
+ * Canonical M0367I dest-ready:
+ * 6B35C + 6B4F8 + 6BECC==0 + 6C5BC==0 + 1A918 + 125E0 type-1.
+ * 3F074 jals 1A918 after 6C5BC==0 and before 125E0; M0367I
+ * B1620 is chunk2+0x1C6D8, lhu(+2)=1, +0x20!=0. 371B0 /
+ * E0060 are not this cut. Does not write mode 7/9/10. Does
+ * not manufacture a type-1 clip.
+ */
+int func_8003F074_dest_ready_cut(uint32_t token)
+{
+    int v0;
+    int guard;
+
+    func_8006B35C();
+    if (func_8006B4F8_dest_load_cut(token) == 0)
+        return 0;
+    func_80034FC4();
+    func_8001266C();
+    (void)func_8006BE4C();
+    guard = 0;
+    do {
+        v0 = func_8006BECC();
+        guard++;
+    } while (v0 == 1 && guard < 16);
+    if (v0 == 1)
+        return 0;
+    (void)func_8006C4C4((int)(int8_t)PE_LoadU8(GA_OVERLAY + 0x0Cu));
+    guard = 0;
+    do {
+        v0 = func_8006C5BC();
+        guard++;
+    } while (v0 == 1 && guard < 16);
+    if (v0 != 0)
+        return 0;
+    func_8001A918();
+    func_800125E0();
     return 1;
 }

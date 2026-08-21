@@ -1,0 +1,10 @@
+identity=PASS
+ram[0x8001d340]=0x27bdfcd8 expected=0x27bdfcd8
+ram[0x800293f4]=0x8f850508 expected=0x8f850508
+ram[0x800144fc]=0x27bdffe0 expected=0x27bdffe0
+ram[0x80033a2c]=0x24020001 expected=0x24020001
+ram[0x8002cee0]=0x0c01a453 expected=0x0c01a453
+ram[0x80072534]=0x3c02800a expected=0x3c02800a
+ram64k_path=/var/home/blizz/Applications/pcsx-redux/captures/pe-btl83/ram64k.bin
+expected_ram64k_sha1=668f4a900da0f5d581a35b533f177cb521706edf
+pc=0x00001ec4

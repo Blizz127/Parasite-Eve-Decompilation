@@ -3,9 +3,11 @@
 
 Pins SHA-1-exact EXE. 161 words 0x800209F0..0x80020C70. Copies
 rodata 0x800106A4 / 0x800106D4 onto $sp, then D278-local sb
-+0x12=4 .. +0x19=11, jal 6C4C4(lh(*(D278+0x68)+6)). Default
-D_80010928+0x68 is 0 — this oracle does not invent that pointer
-or a 6C4C4 argument. Does not import production C.
++0x12=4 .. +0x19=11, jal 6C4C4(lh(*(D278+0x68)+6)).
+29810 sets D278=*D254 = 0x6F slot body (D_800109B0 copy).
+109B0+0x68 is 0. Actor+0x68 (D254/D2F0) is a different field.
+Does not invent a pointer or a 6C4C4 argument. Does not import
+production C.
 """
 from __future__ import annotations
 
@@ -21,7 +23,8 @@ SHA = "e7766a6237150448a4affe0090e84f2c0964e7803d0e573b284a8919f9564246"
 RODATA_A = 0x800106A4
 RODATA_B = 0x800106D4
 FN_6C4C4 = 0x8006C4C4
-REC = 0x80010928
+HP_TMPL = 0x80010928
+SLOT_TMPL = 0x800109B0
 
 
 def require(cond: bool, msg: str) -> None:
@@ -83,22 +86,25 @@ def main() -> int:
     require(load_u32(data, 0x80020BB8) == 0xA0620019, "sb +0x19")
     require(jal_target(load_u32(data, 0x80020C5C)) == FN_6C4C4, "jal 6C4C4")
     require(load_u32(data, 0x80020C58) == 0x84440006, "lh *(+0x68)+6")
-    require(load_u32(data, REC + 0x68) == 0, "default D278+0x68 is 0")
+    require(load_u32(data, SLOT_TMPL + 0x68) == 0, "109B0 slot-body +0x68 is 0")
+    require(load_u32(data, HP_TMPL + 0x68) == 0, "10928 HP tmpl +0x68 is 0")
     require(jal_target(load_u32(data, 0x80029918)) == START, "29810 jal 209F0")
     require(load_u32(data, 0x8002F664) == 0x24C60928, "2F658 src 10928")
     require(load_u32(data, 0x8002F668) == 0x24C80070, "2F658 copy 0x70")
-    require(data[exe_off(REC + 0x68) : exe_off(REC + 0x6C)] == b"\x00\x00\x00\x00",
-            "10928+0x68 bytes 0")
+    require(load_u32(data, 0x8002F7EC) == 0x24C609B0, "2F7D8 src 109B0")
+    require(data[exe_off(SLOT_TMPL + 0x68) : exe_off(SLOT_TMPL + 0x6C)]
+            == b"\x00\x00\x00\x00", "109B0+0x68 bytes 0")
     require(data[exe_off(RODATA_B) : exe_off(RODATA_B) + 9]
             == bytes([0x00, 0x0A, 0x08, 0x0A, 0x08, 0x08, 0x04, 0x0A, 0x14]),
             "106D4 scale")
-    zeros = []
-    for va in (0x8001EA10, 0x8001F0A0, 0x80020D28, 0x80020D7C,
-               0x8002BCD0, 0x8002DC78):
-        require(load_u32(data, va) in (0xAC400068, 0xAC800068, 0xAC600068),
-                f"D278-near +0x68 is sw zero at {va:#x}")
-        zeros.append(va)
-    require(len(zeros) == 6, "six proven D278-near zero stores")
+    require(load_u32(data, 0x80020D1C) == 0x8C84D254, "20D28 base is D254")
+    require(load_u32(data, 0x80020D28) == 0xAC800068, "20D28 zeros actor+0x68")
+    require(load_u32(data, 0x80020D74) == 0x8C84D254, "20D7C base is D254")
+    require(load_u32(data, 0x80020D7C) == 0xAC800068, "20D7C zeros actor+0x68")
+    require(load_u32(data, 0x800350DC) == 0xAE200068, "35038 zeros actor+0x68")
+    require(load_u32(data, 0x80014504) == 0x00808821, "144FC s1=a0")
+    require(load_u32(data, 0x80014610) == 0x8E220000, "0x3A lw 0(s1)")
+    require(load_u32(data, 0x80014618) == 0x90440000, "0x3A lbu 0(v0)")
     require(load_u32(data, 0x80030640) == 0x3C04800A, "30640 lui")
     require(load_u32(data, 0x80030644) == 0x8C84D278, "30640 lw D278")
     require(load_u32(data, 0x80030654) == 0x8C820068, "30640 lw +0x68")
@@ -106,8 +112,8 @@ def main() -> int:
     require(load_u32(data, 0x80030668) == 0x10400018, "30640 beqz skip")
 
     print(
-        "PASS: 209F0 161w; no +0x68 writer; null-deref lbu(6); "
-        "jal 6C4C4(lh(6)); 30640 beqz when +0x10 bit clear; no invented ptr"
+        "PASS: 209F0 161w; D278=slot body 109B0+0x68=0; actor+0x68 "
+        "is motion; 0x3A lbu(*arg0); no invented ptr"
     )
     return 0
 

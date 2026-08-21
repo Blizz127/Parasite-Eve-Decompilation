@@ -112,12 +112,12 @@ static inline void func_800752AC(void *o, int n) {
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
-static inline void func_8003F3C4(void)   { Bootstrap_ReturnVoid("func_8003F3C4", "func_8001220C"); }
+/* func_8003F3C4 is REAL (PE-BTL38): game/boot/func_8003F3C4_port.c */
 static inline void func_801235DC(void)   { Bootstrap_ReturnVoid("func_801235DC", "func_8001220C"); }
 static inline void func_8019234C(void)   { Bootstrap_ReturnVoid("func_8019234C", "func_8001220C"); }
 static inline int  func_801909B4(void)   { return Bootstrap_ReturnInt("func_801909B4", "func_8001220C", 0); }
-static inline void func_80066B60(int a)  { Bootstrap_ReturnVoid("func_80066B60", "func_8006E9A0"); (void)a; }
-static inline void func_80068E24(void)   { Bootstrap_ReturnVoid("func_80068E24", "func_8006E9A0"); }
+/* func_80066B60 is REAL (PE-BTL41): game/boot/func_80066B60_port.c */
+/* func_80068E24 is REAL (PE-BTL38): game/boot/func_80068E24_port.c */
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
 /* func_8006E1C0 is REAL (Phase 6E-B51):
  * game/boot/func_8006E1C0_port.c — packed texture-entry LoadImage
@@ -134,7 +134,9 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * archive/LoadImage walk. B54E consumes the live AF54 func_8006E7E8 wait.
  * B54F issues D_800930EE, walks dest+0x174 through func_800718D0, and
  * packs records 0/1, stopping at 0x8006B04C. s2/poll are never assigned.
- * The named provider remains `func_8006AD40_prefix_cut`. */
+ * B54K-A then issues D_800930F0, walks dest+0x180, and enters
+ * func_80030894 through the named `func_80030894_L2L3_cut`; 6AD40
+ * parks at `func_8006AD40_post30894_cut` @ retail 0x8006B0BC. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear
@@ -176,6 +178,7 @@ extern int  func_8006E1C0(pe_addr_t entry, pe_addr_t base);
 extern void func_80074E28(pe_addr_t name, const RECT *rect);
 extern int  func_8007506C(const RECT *rect, pe_addr_t data);
 extern pe_addr_t func_800718D0(pe_addr_t tim);
+extern void func_80030894(void);
 extern void PE_func_8006AD40_PackFontRecords(void);
 extern int  func_80076664(pe_addr_t rect, pe_addr_t source);
 extern int  PE_func_80076664_Inline8(uint32_t rect_word0,
@@ -272,6 +275,12 @@ extern void func_8005F844(int);
 extern int  func_8006E834(void);
 extern int  func_8006E9A0(int);
 extern int  func_80087090(pe_addr_t buffer, int count);
+extern int  func_800870E0(void);
+extern int  func_80085084(pe_addr_t buffer);
+extern void func_80086464(pe_addr_t a0);
+extern void func_80086C1C(int a0, int a1);
+extern int  func_80087198(void);
+extern int  func_80087414(void);
 extern pe_addr_t func_80085EB4(pe_addr_t spu_addr);
 extern void func_800850F4(pe_addr_t src, uint32_t size);
 extern void func_80085098(void);

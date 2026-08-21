@@ -34,15 +34,16 @@ ASM_REMAINING=UNKNOWN (152 yaml `asm` segments; not a function count)
 STUBS=UNKNOWN (native shim inventory; not matching classification)
 MATCHED_BYTES=UNKNOWN
 BYTE_MATCH_PERCENT=UNKNOWN
-NATIVE_TRANSLATED=`matching_native=828/828` claimed at BTL98 (functional ports, **not** MATCHED C)
+NATIVE_TRANSLATED=BTL99 `1F814`+`6DE80` wrapper live (functional ports, **not** MATCHED C)
 
 Yaml `grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml` = 227.
 Do not subtract yaml asm segments from 227.
+`1F814` / `6DE80` = NONMATCHING_C native, not yaml MATCHED.
 
 ## Frontiers
 
-CURRENT_DECOMP_TARGET=`6DE80` after `1A680` (parked)
-CURRENT_DECOMP_FRONTIER=`1F814` jtbl+305C8+1A680 live; `6DE80`/`1F078` death parked
+CURRENT_DECOMP_TARGET=`1F078` authentic death arm (after 1D340 prefix)
+CURRENT_DECOMP_FRONTIER=`1F814` jtbl+305C8+1A680+`6DE80(0x46A)` live; `6DFA8`/`1F078` parked
 CURRENT_UE_FRONTIER=`PE-PLAY2` 0x55 overlay wait drain → 0x89 mode 6; disc verify m0377i→m0012i and m0005i hop
 CURRENT_DAY1_BLOCKER=UE5 disc verification of hops; decomp death/teardown after HP
 
@@ -88,10 +89,10 @@ NEXT_5_MATCH_TASKS=
 5. Census TOTAL_FUNCTIONS from splat glabels (yaml, not asm/ disk)
 
 NEXT_5_RUNTIME_TASKS=
-1. BTL99: after 1F704, if HP!=0 jal 1F814 (audit in pe-btl99-1f814-post-hp)
-2. 1F814 jump table on Aya+0x0E in [6,15]; park at 305C8
-3. HP==0 path 1F7D8 / 20288; do not force HP to 0
-4. 1D340 epilogue death 1F41C mode 3 / 1F4B0 HP clear — only if retail reaches it
+1. 6DFA8 GTE / 79244 then 6DF50 (6E514 + 86608); do not invent
+2. Authentic 1F078 after the 1D340 prefix (not a post-1F4D4 shortcut)
+3. Death-arm 6DE80(0x46B) at 1F430, then mode 3 / 4D4=0 / 1A680(19)
+4. HP==0 path 1F7D8 / 20288; do not force HP to 0
 5. Encounter complete → teardown → field return
 
 NEXT_5_UE_TASKS= (for the other host; this host does not write UE5)

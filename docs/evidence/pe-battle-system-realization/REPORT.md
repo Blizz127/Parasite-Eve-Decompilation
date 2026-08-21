@@ -8,6 +8,7 @@ the retail battle runtime, not a one-off script.
 |---|---|---|---|
 | BTL-CMD | Writer B type-0 `idB=4` = `0x6C14` / 18 frames; actor `+0x1B0` | PORTED | `pe-btl3-first-command` |
 | BTL-HP | `293F4` HP triple; `29810` tail → `1A680` command 4 | PORTED | `pe-btl2-hp-layout`, `pe-btl3-first-command` |
+| BTL-HP-CENSUS | D278 writers classified; DAMAGE=`1E940` 4D4-gated; `0x85`=M0004I door | PROVEN | `pe-btl82-hp-writers` |
 | BTL-3B | `144FC` `0x3B` @ `0x80014630` 12w; `lw/sw 0($s0)` overlay[0]; v0=1 iff bits clear | PORTED | `pe_btl6_14630_oracle.py` sha `3e531fb7…` |
 | BTL-3F074-POLL | `s0=1`; jal 6C5BC; `beq v0,s0` until v0=0 | PROVEN | `pe_btl7_3f074_poll_oracle.py` |
 | BTL-6CC68-EXIT | EE=0 idle after bits clear: jal 6CC68, 6C5BC v0=0, poll exits | PROVEN | same; 79w sha `262dcfc6…` |
@@ -163,6 +164,7 @@ the retail battle runtime, not a one-off script.
 | BTL-2FAF8 | 224w; D1A0&2; JT +0x0E; activate code*16+0x1C | PORTED | wait until rec byte 4 |
 | BTL-14228 | 98w 0x0E; field read; miss -1; codes 0..3 | PORTED | live self +0x0E → local[0xD] |
 | next_live_va | wait producers: rec=4, +0x0E==7, scratch&4, hit | RESEARCH_REQUIRED | do not invent |
+| BTL-PLAYABLE-LOOP | field mailbox → 0x89 consume → 293F4 HP copy → 3EB04 Up → 35C84 pose; attack/HP-mutate/complete not emitted | PORTED | `pe-btl72-playable-loop` |
 | func_800339A0_a0_provenance | 0x3A `lbu 0($s1)` binder; 14630 does not consume 339A0 | DEFERRED | `8E22` vs `8E02` |
 
 ## Rejected
@@ -264,13 +266,17 @@ python3 pc_port/tools/pe_btl50_187c0_oracle.py
 python3 pc_port/tools/pe_btl51_184ec_oracle.py
 python3 pc_port/tools/pe_btl52_14228_oracle.py
 python3 pc_port/tools/pe_btl53_69594_oracle.py
+python3 pc_port/tools/pe_btl72_playable_loop_oracle.py
 ./pc_port/build/pe-native-tests
 ```
 
-STOP/NEXT: 35558 jals 299CC (`D1A0&2`) and
-69594. Live 4D4==0 keeps 1D340 off, so 0x64
-still waits on rec byte 4. Fork waits
-`+0x0E==7`. Type-3 `0x85` stays hit-gated.
-Type-6 `0x12` waits on scratch[0]&4. Do not
-invent pad / persist==39 / scratch / hit /
-rec=4 / command 7 / 4D4. `D2E8` bit 0 stays set.
+STOP/NEXT: BTL82 classified every D278 HP
+writer. DAMAGE is `1E940`/`1F704` inside
+`1D340`, 4D4-gated. Live BTL72 `0x85` is a
+M0004I door (`0x9C`/`0x0A`/`0x31`), not
+damage. Type-6 waits while `scratch[0]&4` is
+clear; only setter is `+0x1850` after `0x55`.
+`hp_mutated` is not reachable without inventing
+`4D4` or that bit. Do not invent pad /
+persist==39 / scratch / hit / rec=4 /
+command 7 / 4D4 / mode 7.

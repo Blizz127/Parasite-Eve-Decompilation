@@ -5,7 +5,7 @@ Pins SHA-1-exact EXE. 20EFC is 7 words (5 gp-relative sb 0 + jr/nop):
 D_8009CE3C, D_8009D1D4, D_8009D1DC, D_8009D2D8, D_8009D1F0.
 Exactly two jal sites: 29388 @0x800293DC and 29810 @0x8002984C
 (delay addu s0,a0,zero — 20EFC is void(void); s0 keeps 0x3A
-lbu(*overlay)). 71A64 is 3 words: li t2,0xA0 / jr t2 / li t9,0x30
+lbu(*binder)). 71A64 is 3 words: li t2,0xA0 / jr t2 / li t9,0x30
 (BIOS A(0x30) std_out_puts). 29810 a0 = lw D_8009D250. Does not
 import production C. Does not invent puts output, mode 7, overlay
 jalr, or 0x55 completion.

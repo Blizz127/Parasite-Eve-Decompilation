@@ -42,7 +42,7 @@ D_80070E08   index2  (byte offset, seed 0x10)
 ```
 
 The word that must be reproducible is that **`func_80070D6C` 32-bit
-result** (low 16 bits scale the 0..99 draw). Pinning the 14-word
+result** (low 16 bits scale the 0..99 draw). Pinning the 19-word
 image `0x80070E04..0x80070E4C` immediately **before** the `0x1A` is
 equivalent and matches BTL0 `TRACE_CONTRACT` column `rng_state`.
 

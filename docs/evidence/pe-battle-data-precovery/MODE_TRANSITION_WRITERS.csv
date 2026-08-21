@@ -1,0 +1,4 @@
+mode,writer_va,store_va,function_start,window_sha256,length,caller_precondition,dest_load_prereq,resource_ready_prereq,used_on_m0367i_first,consumer,confidence,notes
+7,0x8002CF24,0x8002CF28,0x8002CEE0,bda2d942d0bd2fa5dbc753e66fab7b79cbd34c5eb6c3c5c0e1216511af3b7892,76,jal 6914C(0)@2CEE0 returns 0; s1 low8 != 0,NO,NO,NO,D_8009D28C / type6 wait,PROVEN,unique li 7 + sw gp+0x51C; zeros record +0x48/+0x49; m0005i battle path
+9,0x8002B278,0x8002B27C,0x8002B0EC,8ffeb6f863c6066d878c9636e211feaeab0126e15040d8d443cf35dd6fa50794,76,func 2B0EC a2==3; 6D60C(0)!=1; then 295E4,NO,NO,NO,D_8009D28C / type6 wait,PROVEN,unique li 9 + sw gp+0x51C; clears overlay bit 0x8000; not dest-ready
+10,0x8002BC74,0x8002BC78,0x8002BC44,19d29a684296b879cacd37ba2508b793dce35b97a38ac5fa4ec60ab8b78fc2ae,56,"6D60C(0)!=1; 2F9CC; 1A680(D254,21); 295E4",NO,NO,NO,D_8009D28C / type6 wait,PROVEN,unique li 10 + sw gp+0x51C; m0005i battle path; do not write this mode

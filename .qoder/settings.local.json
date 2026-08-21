@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd ~/dev/parasite-eve-ue5 && git log --oneline -10 && echo \"---\" && git status --short | head -30)"
+    ]
+  }
+}

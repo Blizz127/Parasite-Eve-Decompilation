@@ -1,0 +1,16 @@
+order,event,va,source,source_offset,dest,length,sha256,consumer,confidence,notes
+1,6B35C_clear_B0E70,0x8006B378,zero,,D_800B0E70[0..9],40,1106cb2a94fa877af5a067e36a3c24d08f186694b112c2139d2869f7cf341f24,35038,PROVEN,before disc request
+2,6B35C_clear_B0E98,0x8006B398,zero,,D_800B0E98,1920,1106cb2a94fa877af5a067e36a3c24d08f186694b112c2139d2869f7cf341f24,1A680,PROVEN,10x48 words stride 192
+3,6B35C_clear_plus940,0x8006B3C0,zero,,overlay+0x940,4,1106cb2a94fa877af5a067e36a3c24d08f186694b112c2139d2869f7cf341f24,6B4F8 slots,PROVEN,then +944 +948 +94C
+4,6B35C_clear_plus954_then_950,0x8006B420,zero,,overlay+0x954 then +0x950,8,1106cb2a94fa877af5a067e36a3c24d08f186694b112c2139d2869f7cf341f24,6B4F8 hdr+0x20,PROVEN,a0=1 v0=s0+4 countdown
+5,6B35C_clear_plus958,0x8006B438,zero,,overlay+0x958,4,1106cb2a94fa877af5a067e36a3c24d08f186694b112c2139d2869f7cf341f24,6B4F8,PROVEN,does not clear CE2/CE3/+EC/+154
+6,6B4F8_chunk0,0x8006B4F8,PE.IMG,LBA 87109,overlay+0x194,67584,b8a23aa2c259d4d7c448dbafa74fb6a4737a035675a1030403a3d93d3d0bc2b5,6E6A8,PROVEN,33 sectors uncompressed Form1
+7,6B4F8_chunk1,0x8006B4F8,PE.IMG,LBA 87142,overlay+0x168,348160,daf7e449777a52af14d0b557da962a0f1513d06fbdc9d4f87307ea2382939f6c,6E6A8 / 6E1C0,PROVEN,170 sectors
+8,6B4F8_chunk2,0x8006B4F8,PE.IMG,LBA 87312,overlay+0x18C,159744,ab9af4f446a6f9a1f8f79f1f80b862c4d516beddbede1229afab2dfc30b44b1e,6B4F8 publish,PROVEN,78 sectors
+9,6B4F8_CE2_hdr_plus_1,0x8006B7B8,m0367i_chunk2,0x2696D,D_800B0CE2,1,,6BE4C,PROVEN,value 10
+10,6B4F8_WriterA,0x8006B84C,m0367i_chunk2,hdr+0x10,D_800B0E98[type*192+cmd*4],36,d64bcffc8c277be8d50f781ded265f7e581df5e95c6604d686cf3afd36dc502e,1A680 after 0x08,PROVEN,36 rows live before actor spawn
+11,6BE4C_bit200000,0x8006BE88,CE2!=CE3,,D_800B0CD8,4,fb4091da59b98ce270dd0a50c7edf8574fe5bf2117fa6a1e0cb3f5dc9e71306b,6BECC state0,PROVEN,"CE2 in [10,14]"
+12,6BECC_state6_B0E70_0,0x8006C118,ce2_10_clip_bank,0x8,D_800B0E70[0],24000,1e9e9282452a6a29f9517557d308ad955128d1be15196cd7aa46bcc86adbb01a,35038 type0 only,PROVEN,not type1; CE2=14 +0x8 replaced
+13,6BECC_state6_WriterB,0x8006C158,ce2_10_clip_bank,hdr+0x10,D_800B0E98 type0,16,29753bd66426838dae50e1487a663004aa938b1ebf58008fff09705af9f59d93,1A680 type0,PROVEN,"cmds 0-3,0x0D-0x17,0x1C; has 0x15 no 4 no 0x18"
+14,125E0_type1_spawn,0x800125E0,m0367i_chunk2,0x1C6D4,actor+0x1AC/+0x1B0,0,,type1 VM 0x40,PROVEN,both fields 0; no clip required
+15,ce2_14_plus_8_neutral,0x8006C118,ce2_14_clip_bank,0x8,B0E70[0] on CE2=14 path only,23864,bcbdf4f4117bda4662847db35b1eca4ca61f1a099f17a809e3e3bf87bf6f1418,do_not_wire_runtime,PROVEN,fail-closed; M0367I dest-enter uses CE2=10 +0x8 instead
