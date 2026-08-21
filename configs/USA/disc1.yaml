@@ -87,6 +87,9 @@ segments:
       # Phase 5GB: D_8009D2F0 offset-0x20 reader commit, era -O2 -G0.
       - [0x8AE0, c, func_800182E0]
       - [0x8B00, asm]
+      # Phase 5GC: two-reader call wrapper, era -O2 -G0.
+      - [0x9300, c, func_80018B00]
+      - [0x9330, asm]
       # Phase 5AL: C leaf func_80019050 — VRAM 0x80019050, size 0x8.
       # File span 0x9850–0x9858 exclusive. Return-1 stub (jr; addiu $v0,1),
       # third of the seven return-1 twins (shape scratch-proven in 5AJ).
