@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5FK: 229 C leaves.
+# Current production subsegments (file offsets). Phase 5FK: 234 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -77,7 +77,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x20210, asm]'
     '[0x20D34, c, func_80030534]'
     '[0x20D84, c, func_80030584]'
-    '[0x20DC8, asm]'
+    '[0x20DC8, c, func_800305C8]'
     '[0x20E40, c, func_80030640]'
     '[0x20EE0, asm]'
     '[0x3DA88, c, func_8004D288]'
@@ -823,7 +823,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80030584.c" ]]; then
+if [[ -f "$ROOT/src/func_800305C8.c" ]]; then
+    echo "C conversion: Phase 5FK-305C8 — 234 leaves (+ angle-wrap helper func_800305C8; era -O2 -G0; 30/30 words)"
+    echo "  sources: src/func_800305C8.c src/func_80030584.c src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
+elif [[ -f "$ROOT/src/func_80030584.c" ]]; then
     echo "C conversion: Phase 5FJ-30584 — 233 leaves (+ angle helper func_80030584; era -O2 -G0; 17/17 words)"
     echo "  sources: src/func_80030584.c src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
 elif [[ -f "$ROOT/src/func_8002F7D8.c" ]]; then

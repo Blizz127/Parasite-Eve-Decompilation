@@ -141,7 +141,9 @@ segments:
       # func_80030584 — angle helper, VRAM 0x80030584, size 0x44 (17 words).
       # era -O2 -G0. Head of former 20D84.s; resume 20DC8.s 0x78.
       - [0x20D84, c, func_80030584]
-      - [0x20DC8, asm]
+      # func_800305C8 — angle-wrap helper, VRAM 0x800305C8, size 0x78 (30 words).
+      # era -O2 -G0. Head of 20DC8.s; resume 20E40.s.
+      - [0x20DC8, c, func_800305C8]
       # func_80030640 — RNG gate, VRAM 0x80030640, size 0xA0 (40 words).
       # era -O2 -G0. Mid-20210 carve: prefix 0xC30, C 0xA0, resume 20EE0.s.
       - [0x20E40, c, func_80030640]
