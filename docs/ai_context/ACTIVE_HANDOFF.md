@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80018BEC — D_8009D2F0 flag-0x20 setter matching C (9 words)
+
+`src/func_80018BEC.c` matches era `-O2 -G0`, VRAM
+`0x80018BEC` / file `0x93EC` / size `0x24`. Evidence:
+`docs/evidence/func-80018bec/REPORT.md`.
+
 ## func_80018BC8 — D_8009D2F0 flag-0x20 clearer matching C (9 words)
 
 `src/func_80018BC8.c` matches era `-O2 -G0`, VRAM
