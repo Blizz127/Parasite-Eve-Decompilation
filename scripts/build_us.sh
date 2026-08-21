@@ -340,7 +340,8 @@ SIZE_A404=0x72f8
 SIZE_C_20EFC=0x1c
 SIZE_11718=0x8470
 SIZE_C_29388=0x6c
-SIZE_19BF4=0x63e4
+SIZE_C_293F4=0x1f0
+SIZE_19DE4=0x61f4
 SIZE_C_2F7D8=0x198
 SIZE_C_2F970=0x5c
 SIZE_C_2F9CC=0x44
@@ -846,7 +847,8 @@ OBJECTS=(
     "build/src/func_80020EFC.c.o"
     "build/asm/disc1/11718.s.o"
     "build/src/func_80029388.c.o"
-    "build/asm/disc1/19BF4.s.o"
+    "build/src/func_800293F4.c.o"
+    "build/asm/disc1/19DE4.s.o"
     "build/src/func_8002F7D8.c.o"
     "build/src/func_8002F970.c.o"
     "build/src/func_8002F9CC.c.o"
@@ -1285,7 +1287,8 @@ SOURCES=(
     "src/func_80020EFC.c"
     "asm/disc1/11718.s"
     "src/func_80029388.c"
-    "asm/disc1/19BF4.s"
+    "src/func_800293F4.c"
+    "asm/disc1/19DE4.s"
     "src/func_8002F7D8.c"
     "src/func_8002F970.c"
     "src/func_8002F9CC.c"
@@ -1742,6 +1745,22 @@ era_compile() {
     local d; d="$(mktemp -d)"
     "$ERA_CPP" "$src" > "$d/x.i" 2>/dev/null
     "$ERA_CC1" -quiet "$@" "$d/x.i" -o "$d/x.s"
+    # MASPSX_FORCE_ABSOLUTE_SYMBOLS=SYM[,SYM...]
+    # Drop cc1 `.extern SYM, size` so GNU as emits the 2-word lui/lw and
+    # lui/$at sw form instead of gp-relative. Used when a 4-byte scalar is
+    # lui in ROM but -G8 would classify it as sdata.
+    if [[ -n "${MASPSX_FORCE_ABSOLUTE_SYMBOLS:-}" ]]; then
+        python3 - "$d/x.s" "$MASPSX_FORCE_ABSOLUTE_SYMBOLS" << 'PY'
+import re
+import sys
+
+path, spec = sys.argv[1], sys.argv[2]
+text = open(path).read()
+for sym in spec.split(","):
+    text = re.sub(rf"\t\.extern\t{re.escape(sym)}, \d+\n", "", text)
+open(path, "w").write(text)
+PY
+    fi
     # Close stdin: maspsx treats non-TTY as pipe mode and can hang on open agent sockets.
     # --dont-expand-li: maspsx expands li→ori for positive small consts; ROM wants addiu — defer to GNU as.
     python3 "$MASPSX" --aspsx-version="$ERA_ASPSX_VER" --dont-expand-li "$d/x.s" > "$d/xm.s" </dev/null
@@ -1784,7 +1803,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/9CB0.s.o asm/di
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/A010.s.o asm/disc1/A010.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/A404.s.o asm/disc1/A404.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/11718.s.o asm/disc1/11718.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/19BF4.s.o asm/disc1/19BF4.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/19DE4.s.o asm/disc1/19DE4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/20210.s.o asm/disc1/20210.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/20EE0.s.o asm/disc1/20EE0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/24240.s.o asm/disc1/24240.s
@@ -2031,6 +2050,9 @@ era_compile src/func_800192C8.c build/src/func_800192C8.c.o -O2 -G0
 # andi-filled back-branch slot), gp byte zeros D_8009D2A0/D_8009D2EC, jal
 # 20EFC. -G8 for the two gp byte clears; 3-word knob for the symbol store.
 MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_80029388.c build/src/func_80029388.c.o -O2 -G8
+# func_800293F4: HP clamp/copy + record flag storm; D_8009D2E8 forced
+# absolute so its RMW is 2-word lui/lw + lui/$at sw, not gp-relative.
+MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8 era_compile src/func_800293F4.c build/src/func_800293F4.c.o -O2 -G8
 # Phase 5FE: slot-table pointer-match search and clear (table twin of 2F9CC).
 # Same aggregate typing; sw $zero,0($a0) in the jr delay slot (5EN pattern).
 MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_8002F7D8.c build/src/func_8002F7D8.c.o -O2 -G0
@@ -2313,7 +2335,8 @@ python3 "$TRIM" build/asm/disc1/A404.s.o .text "$SIZE_A404"
 python3 "$TRIM" build/src/func_80020EFC.c.o .text "$SIZE_C_20EFC"
 python3 "$TRIM" build/asm/disc1/11718.s.o .text "$SIZE_11718"
 python3 "$TRIM" build/src/func_80029388.c.o .text "$SIZE_C_29388"
-python3 "$TRIM" build/asm/disc1/19BF4.s.o .text "$SIZE_19BF4"
+python3 "$TRIM" build/src/func_800293F4.c.o .text "$SIZE_C_293F4"
+python3 "$TRIM" build/asm/disc1/19DE4.s.o .text "$SIZE_19DE4"
 python3 "$TRIM" build/src/func_8002F7D8.c.o .text "$SIZE_C_2F7D8"
 python3 "$TRIM" build/src/func_8002F970.c.o .text "$SIZE_C_2F970"
 python3 "$TRIM" build/src/func_8002F9CC.c.o .text "$SIZE_C_2F9CC"
@@ -2791,7 +2814,8 @@ SECTIONS
         build/src/func_80020EFC.c.o(.text)
         build/asm/disc1/11718.s.o(.text)
         build/src/func_80029388.c.o(.text)
-        build/asm/disc1/19BF4.s.o(.text)
+        build/src/func_800293F4.c.o(.text)
+        build/asm/disc1/19DE4.s.o(.text)
         build/src/func_8002F7D8.c.o(.text)
         build/src/func_8002F970.c.o(.text)
         build/src/func_8002F9CC.c.o(.text)
@@ -3226,7 +3250,8 @@ SECTIONS
         build/src/func_80020EFC.c.o(.data)
         build/asm/disc1/11718.s.o(.data)
         build/src/func_80029388.c.o(.data)
-        build/asm/disc1/19BF4.s.o(.data)
+        build/src/func_800293F4.c.o(.data)
+        build/asm/disc1/19DE4.s.o(.data)
         build/src/func_8002F7D8.c.o(.data)
         build/src/func_8002F970.c.o(.data)
         build/src/func_8002F9CC.c.o(.data)
@@ -3658,7 +3683,8 @@ SECTIONS
         build/src/func_80020EFC.c.o(.rodata)
         build/asm/disc1/11718.s.o(.rodata)
         build/src/func_80029388.c.o(.rodata)
-        build/asm/disc1/19BF4.s.o(.rodata)
+        build/src/func_800293F4.c.o(.rodata)
+        build/asm/disc1/19DE4.s.o(.rodata)
         build/src/func_8002F7D8.c.o(.rodata)
         build/src/func_8002F970.c.o(.rodata)
         build/src/func_8002F9CC.c.o(.rodata)
@@ -4090,7 +4116,8 @@ SECTIONS
         build/src/func_80020EFC.c.o(.bss)
         build/asm/disc1/11718.s.o(.bss)
         build/src/func_80029388.c.o(.bss)
-        build/asm/disc1/19BF4.s.o(.bss)
+        build/src/func_800293F4.c.o(.bss)
+        build/asm/disc1/19DE4.s.o(.bss)
         build/src/func_8002F7D8.c.o(.bss)
         build/src/func_8002F970.c.o(.bss)
         build/src/func_8002F9CC.c.o(.bss)
