@@ -326,9 +326,9 @@ segments:
       - [0x41D04, c, func_80051504]
       - [0x41D10, asm]
       - [0x42034, c, func_80051834]
+      # Phase 5FT: dynamic bit setter; era -O2 -G0 with $v0/$v1 pointer/mask pins.
+      - [0x4204C, c, func_8005184C]
       # Phase 5ET: loop-as-volume leaf func_8005186C; era -O2 -G0, no $gp.
-      # Mid-4204C carve: prefix 0x20, C 0x3C (15 words), resume 420A8.s 0x5A0.
-      - [0x4204C, asm]
       - [0x4206C, c, func_8005186C]
       - [0x420A8, asm]
       # Phase 5AQ: C leaf func_80051E48 — VRAM 0x80051E48, size 0x10.

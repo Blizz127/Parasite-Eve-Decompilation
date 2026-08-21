@@ -174,7 +174,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x41518, c, func_80050D18]'
     '[0x41520, asm]'
     '[0x42034, c, func_80051834]'
-    '[0x4204C, asm]'
+    '[0x4204C, c, func_8005184C]'
     '[0x4206C, c, func_8005186C]'
     '[0x420A8, asm]'
     '[0x42648, c, func_80051E48]'
@@ -402,7 +402,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/3C740.s"
     "asm/disc1/3E2A4.s"
     "asm/disc1/41520.s"
-    "asm/disc1/4204C.s"
+    "src/func_8005184C.c"
     "asm/disc1/420A8.s"
     "asm/disc1/42658.s"
     "asm/disc1/42D34.s"
@@ -539,6 +539,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_8004DA9C.c"
     "src/func_80050D18.c"
     "src/func_80051834.c"
+    "src/func_8005184C.c"
     "src/func_8005186C.c"
     "src/func_80051E48.c"
     "src/func_80052514.c"
@@ -837,7 +838,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80033A2C.c" ]]; then
+if [[ -f "$ROOT/src/func_8005184C.c" ]]; then
+    echo "C conversion: Phase 5FT-5184C — 240 leaves (+ dynamic bit setter func_8005184C; era -O2 -G0; \$v0/\$v1 pointer/mask pins; 8/8 words)"
+    echo "  sources: src/func_8005184C.c src/func_80033A2C.c (+ prior 5FS)"
+elif [[ -f "$ROOT/src/func_80033A2C.c" ]]; then
     echo "C conversion: Phase 5FS-33A2C — 239 leaves (+ D_8009D244 byte-flag setter func_80033A2C; era -O2 -G0; 5/5 words)"
     echo "  sources: src/func_80033A2C.c src/func_80037140.c (+ prior 5FR)"
 elif [[ -f "$ROOT/src/func_80037140.c" ]]; then
