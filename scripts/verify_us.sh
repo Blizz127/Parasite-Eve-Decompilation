@@ -131,7 +131,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x2CF8, c, func_800124F8]'
     '[0x2D74, asm]'
     '[0x869C, c, func_80017E9C]'
-    '[0x86A4, asm]'
+    '[0x86A4, c, func_80017EA4]'
+    '[0x86C4, asm]'
     '[0x9850, c, func_80019050]'
     '[0x9858, c, func_80019058]'
     '[0x9860, asm]'
@@ -385,7 +386,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
     "asm/disc1/2D74.s"
-    "asm/disc1/86A4.s"
+    "asm/disc1/86C4.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
     "asm/disc1/20210.s"
@@ -507,6 +508,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
     "src/func_80017E9C.c"
+    "src/func_80017EA4.c"
     "src/func_80019050.c"
     "src/func_80019058.c"
     "src/func_800190AC.c"
@@ -838,7 +840,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8005184C.c" ]]; then
+if [[ -f "$ROOT/src/func_80017EA4.c" ]]; then
+    echo "C conversion: Phase 5FU-17EA4 — 241 leaves (+ reader result commit; era -O2 -G0; 8/8 words)"
+    echo "  sources: src/func_80017EA4.c src/func_8005184C.c (+ prior 5FT)"
+elif [[ -f "$ROOT/src/func_8005184C.c" ]]; then
     echo "C conversion: Phase 5FT-5184C — 240 leaves (+ dynamic bit setter func_8005184C; era -O2 -G0; \$v0/\$v1 pointer/mask pins; 8/8 words)"
     echo "  sources: src/func_8005184C.c src/func_80033A2C.c (+ prior 5FS)"
 elif [[ -f "$ROOT/src/func_80033A2C.c" ]]; then

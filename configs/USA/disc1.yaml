@@ -62,10 +62,12 @@ segments:
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).
       # Prefix size 0x5C90 (= 0x869C - 0x2A0C); contiguous — no ROM holes.
       - [0x869C, c, func_80017E9C]
-      - [0x86A4, asm]
+      # Phase 5FU: reader result commit, era -O2 -G0; eight exact words.
+      - [0x86A4, c, func_80017EA4]
+      - [0x86C4, asm]
       # Phase 5EJ: D_8009D28C int-state setters (READY-FROM-READER).
       # func_80017FDC / func_80017FF0 — set state 5/6, return 1; size 0x14 each.
-      # Mid-86A4 carve: prefix 0x138, C×2, resume 8804.s to 9850.
+      # Mid-86A4 carve: C 0x20, asm to 87DC, C×2, resume 8804.s.
       - [0x87DC, c, func_80017FDC]
       - [0x87F0, c, func_80017FF0]
       - [0x8804, asm]
