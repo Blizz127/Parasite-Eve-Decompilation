@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80018F54 — D_800BCFEE bit-0x40 clearer matching C (8 words)
+
+`src/func_80018F54.c` matches era `-O2 -G0`, VRAM `0x80018F54` / file
+`0x9754` / size `0x20`. It clears bit `0x40` in `D_800BCFEE` and returns 1.
+Evidence: `docs/evidence/func-80018f54/REPORT.md`.
+
 ## func_80018EE0 — unsigned-halfword reader wrapper twin matching C (11 words)
 
 `src/func_80018EE0.c` matches era `-O2 -G0`, VRAM `0x80018EE0` / file
