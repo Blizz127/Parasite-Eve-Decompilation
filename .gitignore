@@ -61,6 +61,6 @@ tools/era/maspsx/tests/*
 !tools/era/maspsx/tests/test_three_word_symbol_store.py
 .claude/
 .mimocode/
-*.csv
+/*.csv
 then
 pe-decomp-main-verify/
