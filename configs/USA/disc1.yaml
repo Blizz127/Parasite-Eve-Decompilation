@@ -73,7 +73,8 @@ segments:
       - [0x8768, asm]
       # Phase 5FX: D_8009D1A0 bitwise OR setter, era -O2 -G0.
       - [0x8788, c, func_80017F88]
-      - [0x87B0, asm]
+      # Phase 5FY: D_8009D1A0 dynamic bit clearer, era -O2 -G0.
+      - [0x87B0, c, func_80017FB0]
       # Phase 5EJ: D_8009D28C int-state setters (READY-FROM-READER).
       # func_80017FDC / func_80017FF0 — set state 5/6, return 1; size 0x14 each.
       # Mid-86A4 carve: C 0x20, asm to 87DC, C×2, resume 8804.s.
