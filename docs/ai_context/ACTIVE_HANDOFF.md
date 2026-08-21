@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80018D20 — complemented two-reader call wrapper matching C (12 words)
+
+`src/func_80018D20.c` matches era `-O2 -G0`, VRAM `0x80018D20` / file
+`0x9520` / size `0x30`. It forwards a dereferenced reader and the complement
+of the second to `func_80065A9C`, then returns 1. Evidence:
+`docs/evidence/func-80018d20/REPORT.md`.
+
 ## func_80018CF0 — two-reader call wrapper matching C (12 words)
 
 `src/func_80018CF0.c` matches era `-O2 -G0`, VRAM `0x80018CF0` / file
