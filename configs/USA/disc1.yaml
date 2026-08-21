@@ -167,7 +167,8 @@ segments:
       # Mid-278BC carve: prefix 0x20, C 0x64, resume 27940.s.
       - [0x278BC, asm]
       - [0x278DC, c, func_800370DC]
-      - [0x27940, asm]
+      # Phase 5FR-37140: packet setup/submit twin, era -O2 -G0.
+      - [0x27940, c, func_80037140]
       - [0x279A4, c, func_800371A4]
       - [0x279B0, asm]
       - [0x27C54, c, func_80037454]

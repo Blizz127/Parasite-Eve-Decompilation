@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80037140 — packet setup/submit twin matching C (25 words)
+
+`src/func_80037140.c` matches era `-O2 -G0`, VRAM `0x80037140` / file
+`0x27940` / size `0x64`. It is the 370DC wrapper twin with the `77C44` packet
+configuration call; its full span is now C. Evidence:
+`docs/evidence/func-80037140/REPORT.md`.
+
 ## func_800370DC — packet setup/submit wrapper matching C (25 words)
 
 `src/func_800370DC.c` matches era `-O2 -G0`, VRAM `0x800370DC` / file
