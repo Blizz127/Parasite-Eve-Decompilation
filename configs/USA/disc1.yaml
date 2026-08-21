@@ -68,6 +68,9 @@ segments:
       # Phase 5FV: D_8009D2F0 flag-0x100 setter, era -O2 -G0.
       - [0x86FC, c, func_80017EFC]
       - [0x8720, asm]
+      # Phase 5FW: D_8009D2F0 flag-0x100 clearer, era -O2 -G0.
+      - [0x8744, c, func_80017F20]
+      - [0x8768, asm]
       # Phase 5EJ: D_8009D28C int-state setters (READY-FROM-READER).
       # func_80017FDC / func_80017FF0 — set state 5/6, return 1; size 0x14 each.
       # Mid-86A4 carve: C 0x20, asm to 87DC, C×2, resume 8804.s.

@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80017F20 — D_8009D2F0 flag clearer matching C (9 words)
+
+`src/func_80017F20.c` matches era `-O2 -G0`, VRAM `0x80017F20` / file
+`0x8744` / size `0x24`. It clears bit `0x100` in the offset-`0x98` field.
+Evidence: `docs/evidence/func-80017f20/REPORT.md`.
+
 ## func_80017EFC — D_8009D2F0 flag setter matching C (9 words)
 
 `src/func_80017EFC.c` matches era `-O2 -G0`, VRAM `0x80017EFC` / file
