@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_8005288C — return-zero stub matching C (2 words)
+
+`src/func_8005288C.c` matches era `-O2 -G0`, VRAM `0x8005288C` / file
+`0x4308C` / size `0x8`. It returns 0. Evidence:
+`docs/evidence/func-8005288c/REPORT.md`.
+
 ## func_800CA7B0 — return-zero stub twin matching C (2 words)
 
 `src/func_800CA7B0.c` matches era `-O2 -G0`, VRAM `0x800CA7B0` / file
