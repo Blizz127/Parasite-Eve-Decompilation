@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5FK: 234 C leaves.
+# Current production subsegments (file offsets). Phase 5FM: 235 C leaves.
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -122,6 +122,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x534B8, c, func_80062CB8]'
     '[0x800, rodata]'
     '[0x2A0C, asm]'
+    '[0x2CF8, c, func_800124F8]'
+    '[0x2D74, asm]'
     '[0x869C, c, func_80017E9C]'
     '[0x86A4, asm]'
     '[0x9850, c, func_80019050]'
@@ -376,6 +378,7 @@ EXPECTED_SUBSEGMENTS=(
 EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
+    "asm/disc1/2D74.s"
     "asm/disc1/86A4.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
@@ -509,6 +512,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_8002F9CC.c"
     "src/func_80030534.c"
     "src/func_80030584.c"
+    "src/func_800124F8.c"
     "src/func_80030640.c"
     "src/func_80038D48.c"
     "src/func_8003D82C.c"
@@ -823,7 +827,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800305C8.c" ]]; then
+if [[ -f "$ROOT/src/func_800124F8.c" ]]; then
+    echo "C conversion: Phase 5FM-124F8 — 235 leaves (+ boot-table clear leaf func_800124F8; era -O2 -G8; 31/31 words)"
+    echo "  sources: src/func_800124F8.c src/func_800305C8.c src/func_80030584.c src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
+elif [[ -f "$ROOT/src/func_800305C8.c" ]]; then
     echo "C conversion: Phase 5FK-305C8 — 234 leaves (+ angle-wrap helper func_800305C8; era -O2 -G0; 30/30 words)"
     echo "  sources: src/func_800305C8.c src/func_80030584.c src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
 elif [[ -f "$ROOT/src/func_80030584.c" ]]; then

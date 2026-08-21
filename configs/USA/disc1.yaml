@@ -52,7 +52,11 @@ segments:
     vram: 0x80010000
     subsegments:
       - [0x800, rodata]
+      # Phase 5FM-124F8: C leaf func_800124F8 — VRAM 0x800124F8, size 0x7C
+      # (31 words). Prefix 2A0C.s ends at the leaf; resume 2D74.s afterward.
       - [0x2A0C, asm]
+      - [0x2CF8, c, func_800124F8]
+      - [0x2D74, asm]
       # Phase 5AK: C leaf func_80017E9C — VRAM 0x80017E9C, size 0x8.
       # File span 0x869C–0x86A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).
