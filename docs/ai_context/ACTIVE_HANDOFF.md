@@ -3,6 +3,41 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## MACHINE / WORKTREE TOPOLOGY (read before running or committing anything)
+
+One GitHub remote, several checkouts, one build environment. Every
+failure of 2026-08-2x week (false-claim commit, wrong-machine `mv`,
+a Codex session that couldn't find its branch) was an agent not knowing
+one of these lines:
+
+- **Remote (single source of truth):**
+  `github.com/Blizz127/Parasite-Eve-Decompilation.git`. All lanes are
+  branches of this one repo: `main` (published), `grind/continuous-decomp`
+  (grind lane: PE-BTL leaf work + `pc_port/` native), `leaves/*` (desktop
+  leaf lane), `sync/laptop-*` / `wip/laptop-*` (laptop machine). **Push
+  after every commit** — local-only progress on any machine is unbacked.
+- **`~/dev/parasite-eve`** (desktop): primary decomp worktree. This is
+  the ONLY checkout where leaf work is built and committed.
+- **`~/dev/pe-continuous-decomp`** (desktop): separate clone of the same
+  remote, checked out on `grind/continuous-decomp`. Read-only source for
+  ported leaves and evidence. Do not build or commit there unless the
+  task explicitly says so. After `grind/continuous-decomp` is updated
+  from elsewhere it needs a `git pull` before use.
+- **Build environment:** the host has NO mipsel toolchain and no
+  distrobox. Builds run in docker image `pe-mipsel-img:latest`, built
+  from `dev/mipsel/Dockerfile` (tracked in-repo):
+  `docker run --rm -v "$PWD:/workspace" -w /workspace --user
+  "$(id -u):$(id -g)" pe-mipsel-img:latest bash scripts/build_us.sh`.
+  If `python3: command not found` appears, the image is stale — rebuild
+  it from the Dockerfile. Splat runs on the host (`.venv/bin/splat`).
+- **Git-ignored build inputs that exist only locally** (never in the
+  repo, must be provisioned per machine): `rom/image/`,
+  `build/extracted/` (retail EXE), `tools/era/` (fetched by
+  `scripts/setup_era.sh` around the tracked maspsx patch), `.venv/`.
+- **Agent prompts:** hand work to agents using
+  `docs/ai_context/PROMPT_TEMPLATE.md`. Named branches in the prompt,
+  worktree path included, always.
+
 ## Grind-lane port complete — 275 matching C leaves (2026-08-21)
 
 All remaining pe-continuous-decomp grind leaves are ported. After 29388
@@ -17,8 +52,15 @@ EXACT SHA-1 build; evidence under `docs/evidence/func-800293F4/`,
 `func-8002F76C/`, `func-8002FA10-FAA4-FAD8/`. Branch
 `leaves/from-grind-20260821`, pushed to origin.
 
-**Next (needs the user awake):** the 308-commit merge unifying the
-lanes' evidence and native work. Do not start it unattended.
+**Lanes merged (2026-08-21):** `leaves/from-grind-20260821` merged into
+`grind/continuous-decomp` (309-commit divergence). Leaf-file conflicts
+resolved to the leaves lane (its `build_us.sh`/`disc1.yaml` are
+authoritative); grind's `pc_port/` and PE-BTL evidence carried over
+untouched. Gates re-run on the merged tree: split `c: 275`, docker build
+EXACT SHA-1, `verify_us.sh` EXACT MATCH. The grind lane's pre-merge
+handoff narrative (native/PE-BTL state) is preserved at commit
+`29fe11b:docs/ai_context/ACTIVE_HANDOFF.md`. PR toward `main` carries
+the unified 275 story; deeper doc reconciliation can follow on `main`.
 
 ## func_80029388 — slot-table clear + record-init wrapper matching C (27 words)
 
