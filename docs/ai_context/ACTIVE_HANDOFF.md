@@ -99,11 +99,11 @@ Evidence: `docs/evidence/func-80030640/REPORT.md`.
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch / tip | `phase5fm-main-barrier-revisit` @ post-5FO-checkpoint + func_800124F8 | `git branch --show-current` / `git status --short` |
-| Phase | **5FM-124F8 / 235 exact leaves** (func_800124F8 plus prior exact leaves; parked candidates remain untouched) | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **235** (non-integrated candidates: parked src/func_800698D4.c / func_8001220C.c / func_800725DC.c + IN-PROGRESS src/func_8006A9E4.c) | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **154** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **77** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Branch / tip | `phase5fm-main-barrier-revisit` @ 5FS-33A2C | `git branch --show-current` / `git status --short` |
+| Phase | **5FS-33A2C / 239 exact leaves** (four nearby exact leaves added after 5FM; parked candidates remain untouched) | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **239** (non-integrated candidates: parked src/func_800698D4.c / func_8001220C.c / func_800725DC.c + IN-PROGRESS src/func_8006A9E4.c) | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **155** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **81** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -111,7 +111,7 @@ Evidence: `docs/evidence/func-80030640/REPORT.md`.
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5FM-124F8 / 235. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5FS-33A2C / 239. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
