@@ -3,6 +3,13 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_80018CB8 — three-reader call wrapper matching C (14 words)
+
+`src/func_80018CB8.c` matches era `-O2 -G0`, VRAM `0x80018CB8` / file
+`0x94B8` / size `0x38`. It forwards three dereferenced reader values to
+`func_80065A60` and returns 1. Evidence:
+`docs/evidence/func-80018cb8/REPORT.md`.
+
 ## func_80018C88 — two-reader call wrapper matching C (12 words)
 
 `src/func_80018C88.c` matches era `-O2 -G0`, VRAM `0x80018C88` / file

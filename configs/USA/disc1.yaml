@@ -101,7 +101,9 @@ segments:
       - [0x9458, c, func_80018C58]
       # Phase 5GH: two-reader call wrapper, era -O2 -G0.
       - [0x9488, c, func_80018C88]
-      - [0x94B8, asm]
+      # Phase 5GI: three-reader call wrapper, era -O2 -G0.
+      - [0x94B8, c, func_80018CB8]
+      - [0x94F0, asm]
       # Phase 5AL: C leaf func_80019050 — VRAM 0x80019050, size 0x8.
       # File span 0x9850–0x9858 exclusive. Return-1 stub (jr; addiu $v0,1),
       # third of the seven return-1 twins (shape scratch-proven in 5AJ).
