@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_800182E0 — D_8009D2F0 offset-0x20 reader commit matching C (8 words)
+
+`src/func_800182E0.c` matches era `-O2 -G0`, VRAM `0x800182E0` / file
+`0x8AE0` / size `0x20`. It stores the nested reader value at offset `0x20` of
+`D_8009D2F0` and returns 1. Evidence: `docs/evidence/func-800182e0/REPORT.md`.
+
 ## func_800182A0 — D_800BCF88 bits-0xC0 clearer matching C (8 words)
 
 `src/func_800182A0.c` matches era `-O2 -G0`, VRAM `0x800182A0` / file
