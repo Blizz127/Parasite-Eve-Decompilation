@@ -12,7 +12,9 @@ Initial target:
 
 ## Project status
 
-**Matching decomp:** Phase 5FI — **227 matching C leaves** on `main`.
+**Matching decomp:** **275 matching C leaves** (leaves lane merged with
+the grind lane's remaining matches, 2026-08-21; authoritative count:
+`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
 Disc 1 EXE rebuilds byte-for-byte via `scripts/build_us.sh`
 (SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`).
 `func_8001F814` remains assembly (`NONMATCHING_C`); native battle ports

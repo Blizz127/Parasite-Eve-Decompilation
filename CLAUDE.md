@@ -36,14 +36,16 @@ doing anything**.
 
 ## Current phase
 
-**Phase 5FJ / PE-BTL146 — 236 matching C leaves** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
-`func_80030640` (RNG gate, 40 words) matches byte-exact on era `-O2 -G0`.
-`func_80029388` (27 words, slot-table clear + 2F658/20EFC) and
-`func_800293F4` (HP clamp/copy + record flag storm, 124 words) match
-byte-exact on era `-O2 -G8`.
+**275 matching C leaves** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
+— the leaves lane (`leaves/from-grind-20260821`, 269 leaves matched
+independently) merged with the grind lane's remaining matches
+(`func_80029388`/`func_800293F4` on era `-O2 -G8`, `func_8002F76C`,
+`func_8002FA10`/`FAA4`/`FAD8` on era `-O2 -G0`). The leaves-lane
+`build_us.sh`/`disc1.yaml` are authoritative for the rebuild.
 `func_8001F814` remains `NONMATCHING_C` (jump table in the `0x800` rodata
 pool). Native ports under `pc_port/` are not matching leaves. Exact SHA-1
-rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh`. Native suite:
+rebuild via `scripts/build_us.sh` / `scripts/verify_us.sh` (build runs in
+the `pe-mipsel-img` docker container — see ACTIVE_HANDOFF). Native suite:
 `cmake -S pc_port -B pc_port/build` then `./pc_port/build/pe-native-tests`.
 
 **Prior: Phase 5FE — 224 matching C leaves. `func_8002F970` (slot-table

@@ -37,7 +37,8 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). Phase 5FJ / BTL145: 235 C leaves.
+# Current production subsegments (file offsets). 275 C leaves
+# (authoritative count: grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml).
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
@@ -67,12 +68,28 @@ EXPECTED_SUBSEGMENTS=(
     '[0x41884, c, func_80051084]'
     '[0x41A44, c, func_80051244]'
     '[0x27C54, c, func_80037454]'
+    '[0x278A8, c, func_800370A8]'
+    '[0x278BC, asm]'
+    '[0x278DC, c, func_800370DC]'
+    '[0x27940, c, func_80037140]'
     '[0x27DB4, c, func_800375B4]'
     '[0x27DD0, c, func_800375D0]'
     '[0x29140, c, func_80038940]'
     '[0x116FC, c, func_80020EFC]'
+    '[0x19B88, c, func_80029388]'
+    '[0x19BF4, c, func_800293F4]'
+    '[0x19DE4, asm]'
+    '[0x1FF6C, c, func_8002F76C]'
+    '[0x1FFD8, c, func_8002F7D8]'
     '[0x20170, c, func_8002F970]'
     '[0x201CC, c, func_8002F9CC]'
+    '[0x20210, c, func_8002FA10]'
+    '[0x202A4, c, func_8002FAA4]'
+    '[0x202D8, c, func_8002FAD8]'
+    '[0x202F8, asm]'
+    '[0x20D34, c, func_80030534]'
+    '[0x20D84, c, func_80030584]'
+    '[0x20DC8, c, func_800305C8]'
     '[0x20E40, c, func_80030640]'
     '[0x20EE0, asm]'
     '[0x3DA88, c, func_8004D288]'
@@ -81,6 +98,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x436B0, c, func_80052EB0]'
     '[0x4F094, c, func_8005E894]'
     '[0x24220, c, func_80033A20]'
+    '[0x2422C, c, func_80033A2C]'
+    '[0x24240, asm]'
     '[0x28064, c, func_80037864]'
     '[0x336D0, c, func_80042ED0]'
     '[0x340E0, c, func_800438E0]'
@@ -117,8 +136,41 @@ EXPECTED_SUBSEGMENTS=(
     '[0x534B8, c, func_80062CB8]'
     '[0x800, rodata]'
     '[0x2A0C, asm]'
+    '[0x2CF8, c, func_800124F8]'
+    '[0x2D74, asm]'
     '[0x869C, c, func_80017E9C]'
-    '[0x86A4, asm]'
+    '[0x86A4, c, func_80017EA4]'
+    '[0x86C4, asm]'
+    '[0x86FC, c, func_80017EFC]'
+    '[0x8720, c, func_80017F20]'
+    '[0x8744, asm]'
+    '[0x8788, c, func_80017F88]'
+    '[0x87B0, c, func_80017FB0]'
+    '[0x8804, asm]'
+    '[0x8AA0, c, func_800182A0]'
+    '[0x8AC0, c, func_800182C0]'
+    '[0x8AE0, c, func_800182E0]'
+    '[0x8B00, asm]'
+    '[0x9300, c, func_80018B00]'
+    '[0x9330, asm]'
+    '[0x9368, c, func_80018B68]'
+    '[0x9398, asm]'
+    '[0x93C8, c, func_80018BC8]'
+    '[0x93EC, c, func_80018BEC]'
+    '[0x9410, asm]'
+    '[0x9458, c, func_80018C58]'
+    '[0x9488, c, func_80018C88]'
+    '[0x94B8, c, func_80018CB8]'
+    '[0x94F0, c, func_80018CF0]'
+    '[0x9520, c, func_80018D20]'
+    '[0x9550, asm]'
+    '[0x9658, c, func_80018E58]'
+    '[0x9684, asm]'
+    '[0x96B4, c, func_80018EB4]'
+    '[0x96E0, c, func_80018EE0]'
+    '[0x970C, c, func_80018F0C]'
+    '[0x9754, c, func_80018F54]'
+    '[0x9774, asm]'
     '[0x9850, c, func_80019050]'
     '[0x9858, c, func_80019058]'
     '[0x9860, asm]'
@@ -161,7 +213,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x41518, c, func_80050D18]'
     '[0x41520, asm]'
     '[0x42034, c, func_80051834]'
-    '[0x4204C, asm]'
+    '[0x4204C, c, func_8005184C]'
     '[0x4206C, c, func_8005186C]'
     '[0x420A8, asm]'
     '[0x42648, c, func_80051E48]'
@@ -172,6 +224,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x42D94, asm]'
     '[0x42FC0, c, func_800527C0]'
     '[0x42FC8, asm]'
+    '[0x4308C, c, func_8005288C]'
+    '[0x43094, asm]'
     '[0x433CC, c, func_80052BCC]'
     '[0x43408, asm]'
     '[0x4C4A8, c, func_8005BCA8]'
@@ -186,6 +240,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x5AE74, c, func_8006A674]'
     '[0x5B0D4, c, func_8006A8D4]'
     '[0x5B1E4, asm]'
+    '[0x5F034, c, func_8006E834]'
+    '[0x5F1A0, c, func_8006E9A0]'
     '[0x5F3D4, c, func_8006EBD4]'
     '[0x5F3E4, asm]'
     '[0x645E8, c, func_80073DE8]'
@@ -326,13 +382,17 @@ EXPECTED_SUBSEGMENTS=(
     '[0xBA168, c, func_800C9968]'
     '[0xBA174, asm]'
     '[0xBA400, c, func_800C9C00]'
-    '[0xBA410, asm]'
+    '[0xBA410, c, func_800C9C10]'
+    '[0xBA418, c, func_800C9C18]'
+    '[0xBA420, asm]'
     '[0xBA6A0, c, func_800C9EA0]'
     '[0xBA6A8, asm]'
     '[0xBACA8, c, func_800CA4A8]'
     '[0xBACB4, asm]'
     '[0xBAF98, c, func_800CA798]'
-    '[0xBAFA8, asm]'
+    '[0xBAFA8, c, func_800CA7A8]'
+    '[0xBAFB0, c, func_800CA7B0]'
+    '[0xBAFB8, asm]'
     '[0xBB4D4, c, func_800CACD4]'
     '[0xBB4DC, asm]'
     '[0xBC324, c, func_800CBB24]'
@@ -350,7 +410,9 @@ EXPECTED_SUBSEGMENTS=(
     '[0xBDF1C, c, func_800CD71C]'
     '[0xBDF28, asm]'
     '[0xBE160, c, func_800CD960]'
-    '[0xBE170, asm]'
+    '[0xBE170, c, func_800CD970]'
+    '[0xBE178, c, func_800CD978]'
+    '[0xBE180, asm]'
     '[0xBE504, c, func_800CDD04]'
     '[0xBE50C, asm]'
     '[0xBE740, c, func_800CDF40]'
@@ -369,13 +431,25 @@ EXPECTED_SUBSEGMENTS=(
 EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
-    "asm/disc1/86A4.s"
+    "asm/disc1/2D74.s"
+    "asm/disc1/86C4.s"
+    "asm/disc1/8744.s"
+    "asm/disc1/8804.s"
+    "asm/disc1/8B00.s"
+    "asm/disc1/9330.s"
+    "asm/disc1/9398.s"
+    "asm/disc1/9410.s"
+    "asm/disc1/9550.s"
+    "asm/disc1/9684.s"
+    "asm/disc1/9774.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
+    "asm/disc1/20210.s"
+    "asm/disc1/20DC8.s"
     "asm/disc1/20EE0.s"
     "asm/disc1/29574.s"
     "asm/disc1/2E034.s"
-    "asm/disc1/2E7D8.s"
+    "asm/disc1/2E7D0.s"
     "asm/disc1/2EF54.s"
     "asm/disc1/307CC.s"
     "asm/disc1/330D4.s"
@@ -384,15 +458,16 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/3C740.s"
     "asm/disc1/3E2A4.s"
     "asm/disc1/41520.s"
-    "asm/disc1/4204C.s"
+    "src/func_8005184C.c"
     "asm/disc1/420A8.s"
-    "asm/disc1/42664.s"
+    "asm/disc1/42658.s"
     "asm/disc1/42D34.s"
     "asm/disc1/42D94.s"
     "asm/disc1/42FC8.s"
+    "asm/disc1/43094.s"
     "asm/disc1/43408.s"
-    "asm/disc1/4C4BC.s"
-    "asm/disc1/4F0A4.s"
+    "asm/disc1/4C4B0.s"
+    "asm/disc1/4F094.s"
     "asm/disc1/539C0.s"
     "asm/disc1/55430.s"
     "asm/disc1/5B1E4.s"
@@ -461,17 +536,23 @@ EXPECTED_ARTIFACTS=(
     "src/func_800C8F18.c"
     "src/func_800C8F20.c"
     "src/func_800C9C00.c"
+    "src/func_800C9C10.c"
+    "src/func_800C9C18.c"
     "src/func_800CA798.c"
+    "src/func_800CA7A8.c"
+    "src/func_800CA7B0.c"
     "src/func_800CBFA4.c"
     "src/func_800CCF80.c"
     "src/func_800CD960.c"
+    "src/func_800CD970.c"
+    "src/func_800CD978.c"
     "src/func_800CE1DC.c"
     "src/func_800D4850.c"
     "asm/disc1/BA174.s"
-    "asm/disc1/BA410.s"
+    "asm/disc1/BA420.s"
     "asm/disc1/BA6A8.s"
     "asm/disc1/BACB4.s"
-    "asm/disc1/BAFA8.s"
+    "asm/disc1/BAFB8.s"
     "asm/disc1/BB4DC.s"
     "asm/disc1/BC330.s"
     "asm/disc1/BC7B4.s"
@@ -479,7 +560,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/BDAEC.s"
     "asm/disc1/BDDB0.s"
     "asm/disc1/BDF28.s"
-    "asm/disc1/BE170.s"
+    "asm/disc1/BE180.s"
     "asm/disc1/BE50C.s"
     "asm/disc1/BE74C.s"
     "asm/disc1/BE9EC.s"
@@ -489,14 +570,45 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
     "src/func_80017E9C.c"
+    "src/func_80017EA4.c"
+    "src/func_80017EFC.c"
+    "src/func_80017F20.c"
+    "src/func_80017F88.c"
+    "src/func_80017FB0.c"
+    "src/func_800182C0.c"
+    "src/func_800182A0.c"
+    "src/func_800182E0.c"
+    "src/func_80018B00.c"
+    "src/func_80018B68.c"
+    "src/func_80018BC8.c"
+    "src/func_80018BEC.c"
+    "src/func_80018C58.c"
+    "src/func_80018C88.c"
+    "src/func_80018CB8.c"
+    "src/func_80018CF0.c"
+    "src/func_80018D20.c"
+    "src/func_80018E58.c"
+    "src/func_80018EB4.c"
+    "src/func_80018EE0.c"
+    "src/func_80018F0C.c"
+    "src/func_80018F54.c"
     "src/func_80019050.c"
     "src/func_80019058.c"
     "src/func_800190AC.c"
     "src/func_800190B4.c"
     "src/func_80038D0C.c"
     "src/func_80038D1C.c"
+    "src/func_8002F7D8.c"
     "src/func_8002F970.c"
     "src/func_8002F9CC.c"
+    "src/func_800370A8.c"
+    "src/func_800370DC.c"
+    "src/func_80033A2C.c"
+    "src/func_80037140.c"
+    "src/func_80030534.c"
+    "src/func_80030584.c"
+    "src/func_800124F8.c"
+    "src/func_80030640.c"
     "src/func_80038D48.c"
     "src/func_8003D82C.c"
     "src/func_8003DFC8.c"
@@ -512,12 +624,14 @@ EXPECTED_ARTIFACTS=(
     "src/func_8004DA9C.c"
     "src/func_80050D18.c"
     "src/func_80051834.c"
+    "src/func_8005184C.c"
     "src/func_8005186C.c"
     "src/func_80051E48.c"
     "src/func_80052514.c"
     "src/func_80052524.c"
     "src/func_8005257C.c"
     "src/func_800527C0.c"
+    "src/func_8005288C.c"
     "src/func_80052BCC.c"
     "src/func_8005BCA8.c"
     "src/func_8005E884.c"
@@ -528,6 +642,8 @@ EXPECTED_ARTIFACTS=(
     "src/func_8006A64C.c"
     "src/func_8006A674.c"
     "src/func_8006A8D4.c"
+    "src/func_8006E834.c"
+    "src/func_8006E9A0.c"
     "src/func_8006EBD4.c"
     "src/func_80073DE8.c"
     "src/func_80073DF8.c"
@@ -808,27 +924,129 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80030640.c" ]]; then
-    echo "C conversion: PE-BTL146 / Phase 5FJ — 236 leaves (+ func_80030640 RNG gate; era -O2 -G0)"
-    echo "  sources: src/func_80030640.c src/func_800305C8.c src/func_80030584.c (+ 2FA10/2FAA4/2FAD8/2F76C/29388/293F4)"
+if [[ -f "$ROOT/src/func_8002FA10.c" ]]; then
+    count="$(grep -cE ',[[:space:]]*c,' "$CONFIG" || true)"
+    echo "C conversion: $count leaves (leaves lane + grind-lane port complete, 2026-08-21)"
+    echo "  latest: func_80029388/293F4, func_8002F76C, func_8002FA10/FAA4/FAD8"
+elif [[ -f "$ROOT/src/func_8005288C.c" ]]; then
+    echo "C conversion: Phase 5GW-5288C — 269 leaves (+ return-zero stub; era -O2 -G0; 2/2 words)"
+    echo "  sources: src/func_8005288C.c (+ prior 5GV)"
+elif [[ -f "$ROOT/src/func_800CA7B0.c" ]]; then
+    echo "C conversion: Phase 5GV-CA7B0 — 268 leaves (+ return-zero stub twin; era -O2 -G0; 2/2 words)"
+    echo "  sources: src/func_800CA7B0.c (+ prior 5GU)"
+elif [[ -f "$ROOT/src/func_800CA7A8.c" ]]; then
+    echo "C conversion: Phase 5GU-CA7A8 — 267 leaves (+ return-zero stub; era -O2 -G0; 2/2 words)"
+    echo "  sources: src/func_800CA7A8.c (+ prior 5GT)"
+elif [[ -f "$ROOT/src/func_800C9C18.c" ]]; then
+    echo "C conversion: Phase 5GT-C9C18 — 266 leaves (+ return-zero stub twin; era -O2 -G0; 2/2 words)"
+    echo "  sources: src/func_800C9C18.c (+ prior 5GS)"
+elif [[ -f "$ROOT/src/func_800C9C10.c" ]]; then
+    echo "C conversion: Phase 5GS-C9C10 — 265 leaves (+ return-zero stub; era -O2 -G0; 2/2 words)"
+    echo "  sources: src/func_800C9C10.c (+ prior 5GR)"
+elif [[ -f "$ROOT/src/func_800CD978.c" ]]; then
+    echo "C conversion: Phase 5GR-CD978 — 264 leaves (+ return-zero stub twin; era -O2 -G0; 2/2 words)"
+    echo "  sources: src/func_800CD978.c (+ prior 5GQ)"
+elif [[ -f "$ROOT/src/func_800CD970.c" ]]; then
+    echo "C conversion: Phase 5GQ-CD970 — 263 leaves (+ return-zero stub; era -O2 -G0; 2/2 words)"
+    echo "  sources: src/func_800CD970.c (+ prior 5GP)"
+elif [[ -f "$ROOT/src/func_80018F0C.c" ]]; then
+    echo "C conversion: Phase 5GP-18F0C — 262 leaves (+ five-reader call wrapper; era -O2 -G0; 18/18 words)"
+    echo "  sources: src/func_80018F0C.c (+ prior 5GO)"
+elif [[ -f "$ROOT/src/func_80018F54.c" ]]; then
+    echo "C conversion: Phase 5GO-18F54 — 261 leaves (+ D_800BCFEE bit-0x40 clearer; era -O2 -G0; 8/8 words)"
+    echo "  sources: src/func_80018F54.c (+ prior 5GN)"
+elif [[ -f "$ROOT/src/func_80018EE0.c" ]]; then
+    echo "C conversion: Phase 5GN-18EE0 — 260 leaves (+ unsigned-halfword reader wrapper twin; era -O2 -G0; 11/11 words)"
+    echo "  sources: src/func_80018EE0.c (+ prior 5GM)"
+elif [[ -f "$ROOT/src/func_80018EB4.c" ]]; then
+    echo "C conversion: Phase 5GM-18EB4 — 259 leaves (+ unsigned-halfword reader wrapper; era -O2 -G0; 11/11 words)"
+    echo "  sources: src/func_80018EB4.c (+ prior 5GL)"
+elif [[ -f "$ROOT/src/func_80018E58.c" ]]; then
+    echo "C conversion: Phase 5GL-18E58 — 258 leaves (+ one-reader call wrapper; era -O2 -G0; 11/11 words)"
+    echo "  sources: src/func_80018E58.c (+ prior 5GK)"
+elif [[ -f "$ROOT/src/func_80018D20.c" ]]; then
+    echo "C conversion: Phase 5GK-18D20 — 257 leaves (+ complemented two-reader wrapper; era -O2 -G0; 12/12 words)"
+    echo "  sources: src/func_80018D20.c (+ prior 5GJ)"
+elif [[ -f "$ROOT/src/func_80018CF0.c" ]]; then
+    echo "C conversion: Phase 5GJ-18CF0 — 256 leaves (+ two-reader call wrapper; era -O2 -G0; 12/12 words)"
+    echo "  sources: src/func_80018CF0.c (+ prior 5GI)"
+elif [[ -f "$ROOT/src/func_80018CB8.c" ]]; then
+    echo "C conversion: Phase 5GI-18CB8 — 255 leaves (+ three-reader call wrapper; era -O2 -G0; 14/14 words)"
+    echo "  sources: src/func_80018CB8.c (+ prior 5GH)"
+elif [[ -f "$ROOT/src/func_80018C88.c" ]]; then
+    echo "C conversion: Phase 5GH-18C88 — 254 leaves (+ two-reader call wrapper; era -O2 -G0; 12/12 words)"
+    echo "  sources: src/func_80018C88.c (+ prior 5GG)"
+elif [[ -f "$ROOT/src/func_80018C58.c" ]]; then
+    echo "C conversion: Phase 5GG-18C58 — 253 leaves (+ two-reader call wrapper; era -O2 -G0; 12/12 words)"
+    echo "  sources: src/func_80018C58.c (+ prior 5GF)"
+elif [[ -f "$ROOT/src/func_80018BEC.c" ]]; then
+    echo "C conversion: Phase 5GF-18BEC — 252 leaves (+ D_8009D2F0 flag-0x20 setter; era -O2 -G0; 9/9 words)"
+elif [[ -f "$ROOT/src/func_80018BC8.c" ]]; then
+    echo "C conversion: Phase 5GE-18BC8 — 251 leaves (+ D_8009D2F0 flag-0x20 clearer; era -O2 -G0; 9/9 words)"
+    echo "  sources: src/func_80018BC8.c (+ prior 5GD)"
+elif [[ -f "$ROOT/src/func_80018B68.c" ]]; then
+    echo "C conversion: Phase 5GD-18B68 — 250 leaves (+ two-reader call wrapper twin; era -O2 -G0; 12/12 words)"
+    echo "  sources: src/func_80018B68.c (+ prior 5GC)"
+elif [[ -f "$ROOT/src/func_80018B00.c" ]]; then
+    echo "C conversion: Phase 5GC-18B00 — 249 leaves (+ two-reader call wrapper; era -O2 -G0; 12/12 words)"
+    echo "  sources: src/func_80018B00.c (+ prior 5GB)"
+elif [[ -f "$ROOT/src/func_800182E0.c" ]]; then
+    echo "C conversion: Phase 5GB-182E0 — 248 leaves (+ D_8009D2F0 offset-0x20 reader commit; era -O2 -G0; 8/8 words)"
+    echo "  sources: src/func_800182E0.c (+ prior 5GA)"
+elif [[ -f "$ROOT/src/func_800182A0.c" ]]; then
+    echo "C conversion: Phase 5GA-182A0 — 247 leaves (+ D_800BCF88 bits-0xC0 clearer; era -O2 -G0; 8/8 words)"
+    echo "  sources: src/func_800182A0.c (+ prior 5FZ)"
+elif [[ -f "$ROOT/src/func_800182C0.c" ]]; then
+    echo "C conversion: Phase 5FZ-182C0 — 246 leaves (+ D_800BCF88 bits-0xC0 setter; era -O2 -G0; 8/8 words)"
+    echo "  sources: src/func_800182C0.c (+ prior 5FY)"
+elif [[ -f "$ROOT/src/func_80017FB0.c" ]]; then
+    echo "C conversion: Phase 5FY-17FB0 — 245 leaves (+ D_8009D1A0 dynamic bit clearer; era -O2 -G0; 11/11 words)"
+    echo "  sources: src/func_80017FB0.c (+ prior 5FX)"
+elif [[ -f "$ROOT/src/func_80017F88.c" ]]; then
+    echo "C conversion: Phase 5FX-17F88 — 244 leaves (+ D_8009D1A0 bitwise OR setter; era -O2 -G0; 10/10 words)"
+    echo "  sources: src/func_80017F88.c (+ prior 5FW)"
+elif [[ -f "$ROOT/src/func_80017EA4.c" ]]; then
+    echo "C conversion: Phase 5FU-17EA4 — 241 leaves (+ reader result commit; era -O2 -G0; 8/8 words)"
+    echo "  sources: src/func_80017EA4.c src/func_8005184C.c (+ prior 5FT)"
+elif [[ -f "$ROOT/src/func_8005184C.c" ]]; then
+    echo "C conversion: Phase 5FT-5184C — 240 leaves (+ dynamic bit setter func_8005184C; era -O2 -G0; \$v0/\$v1 pointer/mask pins; 8/8 words)"
+    echo "  sources: src/func_8005184C.c src/func_80033A2C.c (+ prior 5FS)"
+elif [[ -f "$ROOT/src/func_80033A2C.c" ]]; then
+    echo "C conversion: Phase 5FS-33A2C — 239 leaves (+ D_8009D244 byte-flag setter func_80033A2C; era -O2 -G0; 5/5 words)"
+    echo "  sources: src/func_80033A2C.c src/func_80037140.c (+ prior 5FR)"
+elif [[ -f "$ROOT/src/func_80037140.c" ]]; then
+    echo "C conversion: Phase 5FR-37140 — 238 leaves (+ packet setup/submit twin func_80037140; era -O2 -G0; 25/25 words)"
+    echo "  sources: src/func_80037140.c src/func_800370DC.c (+ prior 5FQ)"
+elif [[ -f "$ROOT/src/func_800370DC.c" ]]; then
+    echo "C conversion: Phase 5FQ-370DC — 237 leaves (+ packet setup/submit wrapper func_800370DC; era -O2 -G0; 25/25 words)"
+    echo "  sources: src/func_800370DC.c src/func_800370A8.c (+ prior 5FP)"
+elif [[ -f "$ROOT/src/func_800370A8.c" ]]; then
+    echo "C conversion: Phase 5FP-370A8 — 236 leaves (+ fixed-point quotient helper func_800370A8; era -O2 -G0; 5/5 words)"
+    echo "  sources: src/func_800370A8.c src/func_800124F8.c (+ prior 5FM)"
+elif [[ -f "$ROOT/src/func_800124F8.c" ]]; then
+    echo "C conversion: Phase 5FM-124F8 — 235 leaves (+ boot-table clear leaf func_800124F8; era -O2 -G8; 31/31 words)"
+    echo "  sources: src/func_800124F8.c src/func_800305C8.c src/func_80030584.c src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
 elif [[ -f "$ROOT/src/func_800305C8.c" ]]; then
-    echo "C conversion: PE-BTL145 / Phase 5FJ — 235 leaves (+ func_800305C8 1F814 angle callee; era -O2 -G0)"
-    echo "  sources: src/func_800305C8.c src/func_80030584.c (+ 2FA10/2FAA4/2FAD8/2F76C/29388/293F4)"
+    echo "C conversion: Phase 5FK-305C8 — 234 leaves (+ angle-wrap helper func_800305C8; era -O2 -G0; 30/30 words)"
+    echo "  sources: src/func_800305C8.c src/func_80030584.c src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
 elif [[ -f "$ROOT/src/func_80030584.c" ]]; then
-    echo "C conversion: PE-BTL144 / Phase 5FJ — 234 leaves (+ func_80030584 angle helper; era -O2 -G0)"
-    echo "  sources: src/func_80030584.c (+ 2FA10/2FAA4/2FAD8/2F76C/29388/293F4)"
-elif [[ -f "$ROOT/src/func_8002FAD8.c" ]]; then
-    echo "C conversion: PE-BTL143 / Phase 5FJ — 233 leaves (+ 2FA10/2FAA4/2FAD8 record-field writers; era -O2 -G0)"
-    echo "  sources: src/func_8002FA10.c src/func_8002FAA4.c src/func_8002FAD8.c (+ 2F76C/29388/293F4)"
-elif [[ -f "$ROOT/src/func_8002F76C.c" ]]; then
-    echo "C conversion: PE-BTL142 / Phase 5FJ — 230 leaves (+ func_8002F76C pointer-install; era -O2 -G0; plus 29388/293F4)"
-    echo "  sources: src/func_8002F76C.c src/func_80029388.c src/func_800293F4.c (+ prior 5FI)"
-elif [[ -f "$ROOT/src/func_80029388.c" ]]; then
-    echo "C conversion: PE-BTL141 / Phase 5FJ — 229 leaves (+ func_80029388 slot-table clear; era -O2 -G8 + 3W store; and func_800293F4)"
-    echo "  sources: src/func_80029388.c src/func_800293F4.c (+ prior 5FI)"
-elif [[ -f "$ROOT/src/func_800293F4.c" ]]; then
-    echo "C conversion: PE-BTL139 / Phase 5FJ — 228 leaves (+ func_800293F4 HP clamp/copy + flag storm; era -O2 -G8; MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8)"
-    echo "  sources: src/func_800293F4.c (+ prior 5FI)"
+    echo "C conversion: Phase 5FJ-30584 — 233 leaves (+ angle helper func_80030584; era -O2 -G0; 17/17 words)"
+    echo "  sources: src/func_80030584.c src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
+elif [[ -f "$ROOT/src/func_8002F7D8.c" ]]; then
+    echo "C conversion: Phase 5FJ-2f7d8 — 232 leaves (+ 0x6F body create func_8002F7D8; era -O2 -G0 + 3W store; 4-register 216-byte Body216 copy; 102/102 words)"
+    echo "  sources: src/func_8002F7D8.c src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
+elif [[ -f "$ROOT/src/func_80030534.c" ]]; then
+    echo "C conversion: Phase 5FJ-30534 — 231 leaves (+ 2D distance helper func_80030534; era -O2 -G0 + aspsx 2.30 mflo/mult nop; 20/20 words)"
+    echo "  sources: src/func_80030534.c src/func_80030640.c (+ prior 5FK)"
+elif [[ -f "$ROOT/src/func_80030640.c" ]]; then
+    echo "C conversion: Phase 5FJ-30640 — 230 leaves (+ RNG gate func_80030640; era -O2 -G0; lui 0x10000 mask + D_8009D278 reload into \$v1; 40/40 words)"
+    echo "  sources: src/func_80030640.c (+ prior 5FK)"
+elif [[ -f "$ROOT/src/func_8006E834.c" ]]; then
+    echo "C conversion: Phase 5FK-6e834 — 229 leaves (+ post-mount image loader + display env setup func_8006E834; era -O2 -G0; paired \$v1-backup/\$v0-test register pins + two zero-code \"=r\":\"0\" barriers; 91/91 words)"
+    echo "  sources: src/func_8006E834.c (+ prior 5FJ)"
+elif [[ -f "$ROOT/src/func_8006E9A0.c" ]]; then
+    echo "C conversion: Phase 5FJ-6e9a0 — 228 leaves (+ boot display init + pointer arena + ClearOTagR poll loop + dispatch exit; era -O2 -G0; 6A8D4 + \$s0/\$s2 pins, asm barrier; 141/141 words)"
+    echo "  sources: src/func_8006E9A0.c (+ prior 5FI)"
 elif [[ -f "$ROOT/src/func_80062A34.c" ]]; then
     echo "C conversion: Phase 5FI-62a34 — 227 leaves (+ 2-key node-list search over D_8009D154; era -O2 -G8 gp head; && short-circuit matches two-target block layout)"
     echo "  sources: src/func_80062A34.c (+ prior 5FH)"

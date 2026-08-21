@@ -3,2786 +3,334 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
-## PE-BTL146 — func_80030640 matching C (40 words)
+## Grind-lane port complete — 275 matching C leaves (2026-08-21)
 
-`matching_native` local. **236 matching C leaves.** `func_80030640`
-(RNG gate, 40 words) matches byte-exact on era `-O2 -G0`.
-`lui $v1,1` is bit 16 (`0x10000`), not `andi 1`. Second `D_8009D278`
-load is `$v1` because `%100` clobbers `$a0`. Head of former `20E40.s`;
-resume `20EE0.s`. `scripts/build_us.sh` **EXACT SHA-1**
+All remaining pe-continuous-decomp grind leaves are ported. After 29388
+(below): `func_800293F4` (0x19BF4, 124w, era `-O2 -G8` +
+`MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8` — new era_compile knob that
+strips a symbol's sdata `.extern` so its RMW stays absolute),
+`func_8002F76C` (0x1FF6C, 27w, `-O2 -G0`, tail-of-19DE4 carve, no
+resume), and the writer trio `func_8002FA10`/`FAA4`/`FAD8`
+(0x20210/0x202A4/0x202D8, `-O2 -G0`, head-of-20210 carve, resume
+`202F8.s` 0xA3C). Each landed as one commit with a fresh in-container
+EXACT SHA-1 build; evidence under `docs/evidence/func-800293F4/`,
+`func-8002F76C/`, `func-8002FA10-FAA4-FAD8/`. Branch
+`leaves/from-grind-20260821`, pushed to origin.
+
+**Next (needs the user awake):** the 308-commit merge unifying the
+lanes' evidence and native work. Do not start it unattended.
+
+## func_80029388 — slot-table clear + record-init wrapper matching C (27 words)
+
+**270 matching C leaves (now 275, see above).** `src/func_80029388.c` matches era `-O2 -G8` +
+`MASPSX_THREE_WORD_SYMBOL_STORE=1`, VRAM `0x80029388` / file `0x19B88` /
+size `0x6C`. jal 2F658, 7×220B `SlotRecord` in-use clear (2F9CC shape,
+andi-FILLED back-branch slot), gp byte zeros D_8009D2A0/D_8009D2EC, jal
+20EFC. Mid-`11718` carve: prefix 0x8470, C 0x6C, resume `19BF4.s` 0x63E4.
+Evidence: `docs/evidence/func-80029388/REPORT.md`.
+
+**Build environment note:** the `pe-mipsel-img` docker image was rebuilt
+from `dev/mipsel/Dockerfile` (2026-08-21) — the stale image lacked
+`python3` and aborted `build_us.sh` at the maspsx step; a prior agent then
+hashed a stale candidate and committed a false match (dropped via
+`git reset --hard`). `build_us.sh` now deletes `build/disc1.candidate.exe`
+at start so a stale artifact can never pass for a fresh build. Run builds
+as: `docker run --rm -v "$PWD:/workspace" -w /workspace --user
+"$(id -u):$(id -g)" pe-mipsel-img:latest bash scripts/build_us.sh`.
+
+## func_8005288C — return-zero stub matching C (2 words)
+
+`src/func_8005288C.c` matches era `-O2 -G0`, VRAM `0x8005288C` / file
+`0x4308C` / size `0x8`. It returns 0. Evidence:
+`docs/evidence/func-8005288c/REPORT.md`.
+
+## func_800CA7B0 — return-zero stub twin matching C (2 words)
+
+`src/func_800CA7B0.c` matches era `-O2 -G0`, VRAM `0x800CA7B0` / file
+`0xBAFB0` / size `0x8`. It returns 0. Evidence:
+`docs/evidence/func-800ca7b0/REPORT.md`.
+
+## func_800CA7A8 — return-zero stub matching C (2 words)
+
+`src/func_800CA7A8.c` matches era `-O2 -G0`, VRAM `0x800CA7A8` / file
+`0xBAFA8` / size `0x8`. It returns 0. Evidence:
+`docs/evidence/func-800ca7a8/REPORT.md`.
+
+## func_800C9C18 — return-zero stub twin matching C (2 words)
+
+`src/func_800C9C18.c` matches era `-O2 -G0`, VRAM `0x800C9C18` / file
+`0xBA418` / size `0x8`. It returns 0. Evidence:
+`docs/evidence/func-800c9c18/REPORT.md`.
+
+## func_800C9C10 — return-zero stub matching C (2 words)
+
+`src/func_800C9C10.c` matches era `-O2 -G0`, VRAM `0x800C9C10` / file
+`0xBA410` / size `0x8`. It returns 0. Evidence:
+`docs/evidence/func-800c9c10/REPORT.md`.
+
+## func_800CD978 — return-zero stub twin matching C (2 words)
+
+`src/func_800CD978.c` matches era `-O2 -G0`, VRAM `0x800CD978` / file
+`0xBE178` / size `0x8`. It returns 0. Evidence:
+`docs/evidence/func-800cd978/REPORT.md`.
+
+## func_800CD970 — return-zero stub matching C (2 words)
+
+`src/func_800CD970.c` matches era `-O2 -G0`, VRAM `0x800CD970` / file
+`0xBE170` / size `0x8`. It returns 0. Evidence:
+`docs/evidence/func-800cd970/REPORT.md`.
+
+## func_80018F0C — five-reader call wrapper matching C (18 words)
+
+`src/func_80018F0C.c` matches era `-O2 -G0`, VRAM `0x80018F0C` / file
+`0x970C` / size `0x48`. It forwards five unsigned-halfword reader values to
+`func_80066BD8` and returns 1. Evidence:
+`docs/evidence/func-80018f0c/REPORT.md`.
+
+## func_80018F54 — D_800BCFEE bit-0x40 clearer matching C (8 words)
+
+`src/func_80018F54.c` matches era `-O2 -G0`, VRAM `0x80018F54` / file
+`0x9754` / size `0x20`. It clears bit `0x40` in `D_800BCFEE` and returns 1.
+Evidence: `docs/evidence/func-80018f54/REPORT.md`.
+
+## func_80018EE0 — unsigned-halfword reader wrapper twin matching C (11 words)
+
+`src/func_80018EE0.c` matches era `-O2 -G0`, VRAM `0x80018EE0` / file
+`0x96E0` / size `0x2C`. It forwards an unsigned halfword from its reader to
+`func_80066C7C` and returns 1. Evidence:
+`docs/evidence/func-80018ee0/REPORT.md`.
+
+## func_80018EB4 — unsigned-halfword reader wrapper matching C (11 words)
+
+`src/func_80018EB4.c` matches era `-O2 -G0`, VRAM `0x80018EB4` / file
+`0x96B4` / size `0x2C`. It forwards an unsigned halfword from its reader to
+`func_80066B60` and returns 1. Evidence:
+`docs/evidence/func-80018eb4/REPORT.md`.
+
+## func_80018E58 — one-reader call wrapper matching C (11 words)
+
+`src/func_80018E58.c` matches era `-O2 -G0`, VRAM `0x80018E58` / file
+`0x9658` / size `0x2C`. It forwards a dereferenced reader value to
+`func_80066800` and returns 1. Evidence:
+`docs/evidence/func-80018e58/REPORT.md`.
+
+## func_80018D20 — complemented two-reader call wrapper matching C (12 words)
+
+`src/func_80018D20.c` matches era `-O2 -G0`, VRAM `0x80018D20` / file
+`0x9520` / size `0x30`. It forwards a dereferenced reader and the complement
+of the second to `func_80065A9C`, then returns 1. Evidence:
+`docs/evidence/func-80018d20/REPORT.md`.
+
+## func_80018CF0 — two-reader call wrapper matching C (12 words)
+
+`src/func_80018CF0.c` matches era `-O2 -G0`, VRAM `0x80018CF0` / file
+`0x94F0` / size `0x30`. It forwards the two dereferenced reader values to
+`func_80065A9C` and returns 1. Evidence:
+`docs/evidence/func-80018cf0/REPORT.md`.
+
+## func_80018CB8 — three-reader call wrapper matching C (14 words)
+
+`src/func_80018CB8.c` matches era `-O2 -G0`, VRAM `0x80018CB8` / file
+`0x94B8` / size `0x38`. It forwards three dereferenced reader values to
+`func_80065A60` and returns 1. Evidence:
+`docs/evidence/func-80018cb8/REPORT.md`.
+
+## func_80018C88 — two-reader call wrapper matching C (12 words)
+
+`src/func_80018C88.c` matches era `-O2 -G0`, VRAM `0x80018C88` / file
+`0x9488` / size `0x30`. It forwards the two dereferenced reader values to
+`func_800659F8` and returns 1. Evidence:
+`docs/evidence/func-80018c88/REPORT.md`.
+
+## func_80018C58 — two-reader call wrapper matching C (12 words)
+
+`src/func_80018C58.c` matches era `-O2 -G0`, VRAM `0x80018C58` / file
+`0x9458` / size `0x30`. It forwards the two dereferenced reader values to
+`func_800659C8` and returns 1. Evidence:
+`docs/evidence/func-80018c58/REPORT.md`.
+
+## func_80018BEC — D_8009D2F0 flag-0x20 setter matching C (9 words)
+
+`src/func_80018BEC.c` matches era `-O2 -G0`, VRAM
+`0x80018BEC` / file `0x93EC` / size `0x24`. Evidence:
+`docs/evidence/func-80018bec/REPORT.md`.
+
+## func_80018BC8 — D_8009D2F0 flag-0x20 clearer matching C (9 words)
+
+`src/func_80018BC8.c` matches era `-O2 -G0`, VRAM
+`0x80018BC8` / file `0x93C8` / size `0x24`. It clears bit `0x20` in offset
+`0x98` of `D_8009D2F0` and returns 1. Evidence:
+`docs/evidence/func-80018bc8/REPORT.md`.
+
+## func_80018B68 — two-reader call wrapper twin matching C (12 words)
+
+`src/func_80018B68.c` matches era `-O2 -G0`, VRAM
+`0x80018B68` / file `0x9368` / size `0x30`. It forwards two nested reader
+values to `func_8006590C` then returns 1. Evidence:
+`docs/evidence/func-80018b68/REPORT.md`.
+
+## func_80018B00 — two-reader call wrapper matching C (12 words)
+
+`src/func_80018B00.c` matches era `-O2 -G0`, VRAM `0x80018B00` / file
+`0x9300` / size `0x30`. It forwards two nested reader values to
+`func_80067678` then returns 1. Evidence: `docs/evidence/func-80018b00/REPORT.md`.
+
+## func_800182E0 — D_8009D2F0 offset-0x20 reader commit matching C (8 words)
+
+`src/func_800182E0.c` matches era `-O2 -G0`, VRAM `0x800182E0` / file
+`0x8AE0` / size `0x20`. It stores the nested reader value at offset `0x20` of
+`D_8009D2F0` and returns 1. Evidence: `docs/evidence/func-800182e0/REPORT.md`.
+
+## func_800182A0 — D_800BCF88 bits-0xC0 clearer matching C (8 words)
+
+`src/func_800182A0.c` matches era `-O2 -G0`, VRAM `0x800182A0` / file
+`0x8AA0` / size `0x20`. It clears `0xC0` from `D_800BCF88` and returns 1.
+Evidence: `docs/evidence/func-800182a0/REPORT.md`.
+
+## func_800182C0 — D_800BCF88 bits-0xC0 setter matching C (8 words)
+
+`src/func_800182C0.c` matches era `-O2 -G0`, VRAM
+`0x800182C0` / file `0x8AC0` / size `0x20`. It ORs `0xC0` into
+`D_800BCF88` and returns 1. Evidence: `docs/evidence/func-800182c0/REPORT.md`.
+
+## func_80017FB0 — D_8009D1A0 dynamic bit clearer matching C (11 words)
+
+`src/func_80017FB0.c` matches era `-O2 -G0`, VRAM `0x80017FB0` / file
+`0x87B0` / size `0x2C`. It clears a nested reader mask from `D_8009D1A0` and
+returns 1. Evidence: `docs/evidence/func-80017fb0/REPORT.md`.
+
+## func_80017F88 — D_8009D1A0 dynamic bit setter matching C (10 words)
+
+`src/func_80017F88.c` matches era `-O2 -G0`, VRAM `0x80017F88` / file
+`0x8788` / size `0x28`. It ORs a nested reader mask into `D_8009D1A0` and
+returns 1. Evidence: `docs/evidence/func-80017f88/REPORT.md`.
+
+## func_80017F20 — D_8009D2F0 flag clearer matching C (9 words)
+
+`src/func_80017F20.c` matches era `-O2 -G0`, VRAM `0x80017F20` / file
+`0x8720` / size `0x24`. It clears bit `0x100` in the offset-`0x98` field.
+Evidence: `docs/evidence/func-80017f20/REPORT.md`.
+
+## func_80017EFC — D_8009D2F0 flag setter matching C (9 words)
+
+`src/func_80017EFC.c` matches era `-O2 -G0`, VRAM `0x80017EFC` / file
+`0x86FC` / size `0x24`. It sets bit `0x100` in the offset-`0x98` field and
+returns 1. Evidence: `docs/evidence/func-80017efc/REPORT.md`.
+
+## func_80017EA4 — reader result commit matching C (8 words)
+
+`src/func_80017EA4.c` matches era `-O2 -G0`, VRAM `0x80017EA4` / file
+`0x86A4` / size `0x20`. It commits the nested reader value to offset `0x1C`
+of `D_8009D2F0` and returns 1. Evidence: `docs/evidence/func-80017ea4/REPORT.md`.
+
+## func_8005184C — dynamic bit setter matching C (8 words)
+
+`src/func_8005184C.c` matches era `-O2 -G0`, VRAM `0x8005184C` / file
+`0x4204C` / size `0x20`. The `$v0` pointer and `$v1` mask pins reproduce
+retail's address/mask allocation and store delay slot. Evidence:
+`docs/evidence/func-8005184c/REPORT.md`.
+
+## func_80033A2C — D_8009D244 byte-flag setter matching C (5 words)
+
+`src/func_80033A2C.c` matches era `-O2 -G0`, VRAM `0x80033A2C` / file
+`0x2422C` / size `0x14`; `2422C.s` now resumes at `24240.s`. Evidence:
+`docs/evidence/func-80033a2c/REPORT.md`.
+
+## func_80037140 — packet setup/submit twin matching C (25 words)
+
+`src/func_80037140.c` matches era `-O2 -G0`, VRAM `0x80037140` / file
+`0x27940` / size `0x64`. It is the 370DC wrapper twin with the `77C44` packet
+configuration call; its full span is now C. Evidence:
+`docs/evidence/func-80037140/REPORT.md`.
+
+## func_800370DC — packet setup/submit wrapper matching C (25 words)
+
+`src/func_800370DC.c` matches era `-O2 -G0`, VRAM `0x800370DC` / file
+`0x278DC` / size `0x64`. It initializes a packet, configures the `+8` member,
+submits it, and reports `-1` on error. `278BC.s` resumes at `27940.s`.
+Evidence: `docs/evidence/func-800370dc/REPORT.md`.
+
+## func_800370A8 — fixed-point quotient helper matching C (5 words)
+
+`src/func_800370A8.c` matches era `-O2 -G0`: `sra; div; mflo; jr; sll`.
+VRAM `0x800370A8` / file `0x278A8` / size `0x14`. `26C48.s` now resumes at
+`278BC.s`; the full Docker rebuild is the exact target SHA-1 with 236 leaves.
+Evidence: `docs/evidence/func-800370a8/REPORT.md`.
+
+## func_800124F8 — boot-table clear leaf matching C (31 words)
+
+`src/func_800124F8.c` matches byte-exact on era `-O2 -G8`. VRAM
+`0x800124F8` / file `0x2CF8` / size `0x7C`. The leaf clears the
+`D_8009D310` 72×11 work table, the `D_8009DF70` 16-word table, and the
+gp-relative state fields using the retail pointer and delay-slot loop shape.
+The former `2A0C.s` chunk is split at the leaf and resumes at `2D74.s`.
+`scripts/build_us.sh` and `scripts/verify_us.sh` report **EXACT SHA-1**
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` with 235 leaves. Evidence:
+`docs/evidence/func-800124f8/REPORT.md`.
+
+## func_800305C8 — angle-wrap helper matching C (30 words)
+
+`src/func_800305C8.c` matches byte-exact on era `-O2 -G0`. VRAM
+`0x800305C8` / file `0x20DC8` / size `0x78`. The non-leaf uses a 0x18-byte
+frame, preserves the second record pointer in `$s0`, calls `func_80079FB4`,
+then performs the signed-i16 truncation and `+0xFFF` negative wrap shown by
+the retail branch. `$v0`/`$v1` register pins preserve the exact allocation.
+`scripts/build_us.sh` and `scripts/verify_us.sh` report **EXACT SHA-1**
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` with 234 leaves. The split resumes
+at `20E40.s` for `func_80030640`. Evidence:
+`docs/evidence/func-800305c8/REPORT.md`.
+
+## func_80030584 — angle helper matching C (17 words)
+
+`src/func_80030584.c` matches byte-exact on era `-O2 -G0`. VRAM
+`0x80030584` / file `0x20D84` / size `0x44`. ratan2 of two `lh<<16`
+vs `a1[0]`/`a1[2]`, then `+2048` as i16. Head of former `20D84.s`;
+resume `20DC8.s` `0x78`. `scripts/build_us.sh` **EXACT SHA-1**
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-Evidence: `docs/evidence/pe-btl146-func-80030640/`.
-1F814 itself still blocked on prefix-pool jtbl `0x800106E4`.
+Evidence: `docs/evidence/func-80030584/REPORT.md`.
 
-## PE-BTL145 — func_800305C8 matching C (30 words)
+## func_8002F7D8 — 0x6F body create matching C (102 words)
 
-`matching_native` local. **235 matching C leaves.** `func_800305C8`
-(1F814 angle callee, 30 words) matches byte-exact on era `-O2 -G0`.
-`scripts/build_us.sh` **EXACT SHA-1** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-Evidence: `docs/evidence/pe-btl145-func-800305C8/`.
-1F814 itself still blocked on prefix-pool jtbl `0x800106E4`.
-
-## PE-BTL144 — func_80030584 matching C (17 words)
-
-`matching_native` local. **234 matching C leaves.** `func_80030584`
-(angle helper, 17 words) matches byte-exact on era `-O2 -G0`.
-`scripts/build_us.sh` **EXACT SHA-1** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-Evidence: `docs/evidence/pe-btl144-func-80030584/`.
-
-## PE-BTL143 — 2FA10 / 2FAA4 / 2FAD8 matching C
-
-`matching_native` local. **233 matching C leaves.** Three indexed
-record-field writers `func_8002FA10` (37w) / `2FAA4` (13w) / `2FAD8`
-(8w) match byte-exact on era `-O2 -G0`. Contiguous after 2F9CC; resume
-`202F8.s`. `scripts/build_us.sh` **EXACT SHA-1**
+`src/func_8002F7D8.c` matches byte-exact on era `-O2 -G0` +
+`MASPSX_THREE_WORD_SYMBOL_STORE=1`. VRAM `0x8002F7D8` / file `0x1FFD8` /
+size `0x198`. Both 216-byte copies are gcc aligned `Body216` block
+moves: four `lw` `$v0/$v1/$a0/$a1`, four `sw`, `addiu` 0x10 in the
+`bne` delay, 2-word tail. First-cut `dst[i]=src[i]` unrolls miss that
+shape. Tail of 11718: prefix `0xE8C0`, C `0x198`, then existing 2F970.
+`scripts/build_us.sh` **EXACT SHA-1**
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-Evidence: `docs/evidence/pe-btl143-record-writers/`.
-
-## PE-BTL142 — func_8002F76C matching C (27 words)
-
-`matching_native` local. **230 matching C leaves.** `func_8002F76C`
-(pointer-install + 5218C/51980/51E64, 27 words) matches byte-exact on
-era `-O2 -G0`. Carve mid-19DE4: prefix `0x6188`, C `0x6C`, resume
-`1FFD8.s` `0x198`. Next in that file is `2F7D8` (opcode 0x6F body create).
-`scripts/build_us.sh` **EXACT SHA-1** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-Evidence: `docs/evidence/pe-btl142-func-8002F76C/`.
-
-## PE-BTL141 — func_80029388 matching C (27 words)
-
-`matching_native` local. **229 matching C leaves.** `func_80029388`
-(slot-table clear + 2F658/20EFC, 27 words) matches byte-exact on era
-`-O2 -G8` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`. Same SlotRecord loop as
-2F9CC; back-branch delay FILLED (`andi`). Immediately before 293F4.
-`scripts/build_us.sh` **EXACT SHA-1** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-Evidence: `docs/evidence/pe-btl141-func-80029388/`.
-
-## PE-BTL139 — func_800293F4 matching C (124 words)
-
-`matching_native` local. **228 matching C leaves.** `func_800293F4`
-(HP clamp/copy + record flag storm, 124 words, `0x800293F4..0x800295E4`)
-matches byte-exact on era `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8`.
-`scripts/build_us.sh` **EXACT SHA-1** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-The BTL137 21-word named cut is this leaf's `a0==0` prefix. D278/D1D0/D244
-are gp-relative; D2E8 is a 4-byte scalar whose ROM 2-word lui/lw is
-forced by stripping cc1's sdata `.extern`. Carve: 11718 prefix
-`0x84DC`, C `0x1F0`, resume `19DE4.s` `0x638C`.
-Evidence: `docs/evidence/pe-btl139-func-800293F4/`.
-
-`func_800292EC` is the tail of `func_80028E94`, not a standalone leaf.
-`func_8001F814` jump table sits in the `0x800` rodata pool (`0x800106E4`).
-
-m0360i has **zero** `0x31` inbound hops across all 414 scripts (1011
-immediate dest tokens). Packed name `m0360i` = `0xA8066048` is absent
-from EXE and from every field script. Day-2 entry is not a script hop.
-Do not poke persist. Next inbound lead: EXE dest-change / world-map /
-m0354i neighbourhood.
-
-## PE-BTL130 — persist[0]&4 provenance; m0360i sole writer
-
-`matching_native` local. Comprehensive scan of **all 438** field table
-entries found the sole persist[0] bit-4 (0x4) writer: **m0360i**
-(table_index 359, module 2, +0x06CC / +0x06E4). Operation:
-`persist[0] |= 0x4`. Original PST0 scanner missed it (only 8 scenes).
-Bit 4 is write-once (set by m0360i, never cleared by any script).
-31 scenes test `persist[0]&4` but only m0360i sets it.
-
-m0360i is NOT on the Day-1 first-play route. First-play m0005i has
-`persist[0]=0`; the +0x091C check always branches. First visit is an
-Actress cutscene only. The Eve battle chain requires a **revisit**
-(Day 2+) after m0360i has been visited:
-
-```
-m0360i sets persist[0]|=4
-→ revisit m0005i
-→ type-4 0x77 volume hit (persist[0x4A]>=17 from m0004i)
-→ type-0 payload 0x0D
-→ persist[0]&4 gate PASS
-→ type-0 +0xCAC → 0x1C(6,0,0x81)
-→ type-6 0x81 → 0x55 → 0x89 → 0x1C(0,0,0x65)
-→ type-0 0x65 → 0x1C(type2,0x7F) + 0x1C(type6,0x70) + scratch[0]|=0x10
-→ type-2 0x7F → +0x804 0x6F → 2F7D8 → D20C body
-→ type-6 0x70 → scratch[0]|=4 → MAIN wait released → 0x89 → 0x7D
-```
-
-persist[0x4A] arrival value: 0x18 (from m0004i +0x0544). Satisfies
-type-4 prerequisite (≥17, <40). EXE census: 5 persist base sites, zero
-direct bit-4 stores. All OR/AND via binder VM.
-
-Type-4 0x77 volume verified: m0005i module 4 +0x2988, authored rect,
-player must physically enter. Both gates pass (0x18 in [17,40)).
-Full chain from volume hit to D20C body creation is script-verified.
-Evidence: `docs/evidence/pe-btl130-persist0-provenance/`.
-Next: native implementation of the revisit battle chain, targeting,
-5C498 → tid406 → combat.
-
-## PE-BTL131 — D20C → targeting → tid406 → combat chain mapped
-
-`matching_native` local. Full combat chain from D20C body creation
-through teardown is now mapped:
-
-- 0x6F/2F7D8: body creation (224-byte ROM template, 28-byte slots)
-- 5C498: targeting pipeline (9-stage, callbacks at body+0x2C)
-- 29810: D2A4 publication (`sh v0,0x534(gp)` via144FC state 0x3A)
-- 26824: tid406 publication (BTL121)
-- 1D340/1F704: ATB/HP subtract (BTL98)
-- 28574/28E94: enemy HP/death (BTL109/105)
-- 292EC/2F300: remaining enemy/mode 2 (BTL104)
-- 2B0E8/2B29C: mode 9/teardown (BTL103/101)
-
-Combat chain is fully proven. No values planted.
-Evidence: `docs/evidence/pe-btl131-combat-chain/`.
-Next: native test implementation for revisit battle path.
-
-## PE-BTL132 — m0360i Day 2+ routing hub
-
-`matching_native` local. m0360i has 8 modules, 1362 commands. Module 2
-sets `persist[0]|=4`. Module 3 is the main routing hub with 31 dest
-tokens and 25 persist[0x4A] writes (0x00 through 0x2E2). Module 4 adds
-10 more routes. Module 7 sets 7 flag bits in persist[7].
-m0360i is the Day 2+ game progression hub that enables the Eve battle
-chain and routes the player through the full post-Day-1 game.
-Evidence: `docs/evidence/pe-btl132-m0360i-hub/`.
-Dest token format: `scene_index = ((token & 0xFFFF) - 0x248) / 0x80 + 3`.
-
-## PE-BTL133 — func_8001F814 matching C draft
-
-`matching_native` local. func_8001F814 matching C draft in `src/func_8001F814.c`.
-Hit-react handler: angle-based command select + overlay. Jump table for
-kind 6-15. Needs matching verification with MIPS cross-compiler (Distrobox).
-Not yet added to YAML config as 'c' entry.
-Next: verify matching when Distrobox available; continue decomp grind.
-
-## PE-BTL134 — persist[7] checkpoint flags
-
-persist[7] is a Day 2+ checkpoint flag system. Seven scenes (m0382i–m0417i)
-each set a specific bit (0x4 through 0x800). m0291i/m0293i/m0295i/m0296i
-test all bits. m0430i clears all. m0360i module 7 sets all 7 bits at once.
-
-## PE-BTL135 — m0360i bit-4 gate structure
-
-m0360i module 2 gates the `persist[0]|=4` write on three conditions:
-1. actor-local[0] == 0 (scene entry state)
-2. scratch[0x12] != 0 (scene-active flag, used in 100+ scenes)
-3. actor-local[0x2] != 0 (secondary state)
-
-scratch[0x12] (D_800B6A80 + 0x48) is a ubiquitous "scene active" flag
-across the entire game. m0360i requires it to be non-zero before the
-Day 2+ bit-4 write fires.
-
-## PE-BTL136 — m0037i-m0039i routing analyzed
-
-m0037i-m0039i are m0360i module 4 targets. All test persist[0] bit 4
-and write persist[0x4A] values (0xC0, 0x160, 0x2A4, 0xE4, 0x1C8, 0xD8).
-0xA8000048 is a special return token (not a standard scene index).
-
-## PE-BTL129 — first-visit graph; 36448 recovered
-
-`matching_native` local. `36448` is 608 words, jal'd from
-`35558@35C1C`; it `12700`s `actor+0x1A0` into slot `A4`.
-Type-6 has no `+0x1A0`. Live `+0x1A0`: type-5 `+0xF8`
-(`0xFE`/`0xFF` to type 0), type-0/2 parks. No A4 island
-mails type 6. Type-3 `0x77` is `14DA0`/`1CAB0`; hit mails
-type 0 `0xFE` and dest-hops; miss loops. New-game type-0
-`0xFF`/`0xFE` never reach `+0xCAC`. `0x81` needs
-`persist[0]&4` plus type-4 `0x0D` (`persist[0x4A]>=17`).
-`0x81` does the `0x55` wait and replies `0x65`; that is
-what makes type 0 send `0x7F`/`0x70` and set scratch bit
-4. `+0x1850` is the later `0x70` arm after bit 4, not the
-`0x81` arm. Type-2 `0x84`/`0x7B`/`0x86`/`0x7C` are replies
-to `0x7D`/`0x7A`/`0x79`/`0x7E`, not dest-enter. Do not
-inject those payloads or plant `+0x1A0` on type 6. Next
-is `persist[0]&4` provenance (not an m0005i script store)
-or the type-4 `0x0D` persist`[0x4A]` path.
-Evidence: `docs/evidence/pe-btl129-first-visit-graph/`.
-
-## PE-BTL128 — type-6 +0x1850 is a mailbox-island task
-
-`matching_native` local. Retail `3F074` always jals `1266C`
-before `6BECC`/`1A918`/`125E0`; dest-ready now follows that
-tail (`6C4C4(CE4)` included). Type-6 `+0x1850` `0x2A[0,2]`
-is **not** on the `+0x190` task. Main: wait → `0x89` →
-`0x1C(2,0,0x7D)` → `0x20`. Mailbox `+0xD08` `0x1F` owns
-`0x55`/`0xAE`/`+0x1850` in unconstrained CFG; BTL129 splits
-those by payload. New-game type-1 `0x1C(0,0,0xFF)` wakes
-type-0 mailbox onto persist `!=39` park. Live dest-ready
-leaves type-6 at `+0x1DC` with `+0x19C=+0xD08`.
-Evidence: `docs/evidence/pe-btl128-task-cfg/`.
-
-## PE-BTL127 — 6BE4C after 1266C is CE2/CE3 overlay
-
-`matching_native` local. `3F074@3F204` jals `6BE4C` after
-`1266C`. CE2 in `[10,15)` may `overlay|=0x200000` and
-`+0x0E|=4`. dest-ready now runs it. Live m0005i CE2=10
-CE3=0 takes `0x200000` and leaves `+0x0E` bit 2 clear.
-Not `scratch[0]`. Type-6 wait is still clear. Next is
-still the first-visit `scratch[0]|=4` producer, then
-`0x89` / `0x1C(2,0,0x7D)`.
-Evidence: `docs/evidence/pe-btl127-6be4c/`.
-
-## PE-BTL126 — only scratch[0]|=4 store is type-6 +0x1850
-
-`matching_native` local. EXE/disc `0x6A80` sites remain
-`1266C` zero / `17018` kind-4 / `34F10` zero. m0005i's only
-`0x2A[scratch[0],2]` is type-6 `+0x1850` after `0xAE`.
-First-visit dest-ready leaves the bit clear. Type-2 `0x20`
-parks; mailbox is `+0x19C` → `+0xA8` `0x1F`. `0x7D` is the
-type-6 handshake (`0x1C(6,0,0x84)`), not the `0x6F` arm.
-`0x7F` (type-0 `+0x1128`) goes to `+0x804` `0x6F`. Do not
-poke scratch or force PC. Next is the authentic first-visit
-producer still missing from dest-enter/scripts, then type-6
-`0x89` / `0x1C(2,0,0x7D)`.
-Evidence: `docs/evidence/pe-btl126-scratch0-producer/`.
-
-## PE-BTL125 — type-6 waits while scratch[0]&4 is clear
-
-`matching_native` local. dest-ready `1266C` zeros
-`D_800B6A80`. Type-6 `+0x190` waits while
-`scratch[0]&4` is clear (BTL74 polarity). New-game
-type-0 does not send `0x1C(2,0,0xB)`. Type 2 parks
-on `0x20`. Do not poke scratch. First `0x2A[0,2]` is
-late (`+0x1850`). Next is the post-`1266C` producer
-of bit 2, then type-6 `0x89` / `0x1C(2,0,0x7D)`.
-Evidence: `docs/evidence/pe-btl125-scratch0/`.
-
-## PE-BTL124 — dest-ready m0005i type-1 ticks type-2
-
-`matching_native` local. dest-ready m0005i plus `65400`+
-`35558` ticks the existing type-1 actor through the first
-`0x02` and the four `0x08`s. persist 0 takes the type-2
-spawn. Dest CE2 is 10. `35558` `360B4` suffix clears
-`+0x98` bit `0x800000` so `1A4AC` can tick next frame.
-Do not force PC / `2F7D8` / D20C. Type-2 still needs
-`0x6F`. New-game type-0 skips `0x1C(2,0,0xB)`; next is
-type-6 `0x89` / `0x1C(2,0,0x7D)`.
-Evidence: `docs/evidence/pe-btl124-type1-type2/`.
-
-## PE-BTL123 — type-2 0x08 is persist[0x4A] < 40
-
-`matching_native` local. m0005i type-1 after the first
-`0x02` does three `0x08`s (3, 0, 5) then `0x09` subop
-`0x0A` (`persist[0x4A] < 40`) / `0x05` / `0x08` type 2.
-New-game persist 0 takes the spawn. persist `>= 40`
-skips. Type 2 still needs `0x6F` for a body. Do not poke
-persist. Evidence: `docs/evidence/pe-btl123-type2-gate/`.
-
-## PE-BTL122 — D20C body is 0x6F / 2F7D8
-
-`matching_native` local. `35038` zeros `*actor` for
-non-type-0. Sole body store for those actors is `2F7D8`
-via opcode `0x6F`. The allocator is already live. Story
-m0005i still has to reach type-1's type-2 `0x08` and
-type-2 `0x6F`. Do not plant a D20C enemy.
-Evidence: `docs/evidence/pe-btl122-d20c-body/`.
-
-## PE-BTL121 — 26824 publishes D2A4 to BE834
-
-`matching_native` local (suite grows). Absolute `sh` to
-`BE834` are zeros only. `26824(a0==1)` copies `lh D2A4`
-(`gp+0x534`, the `5C498` return) into `BE830[CE3C].tid`.
-tid 406 is `jtbl[13]`: seven `AE000` slots and `D25C=0`.
-`512AC(1)` writes `*a1+387` to `D010`. Do not plant
-`BE834`. Natural `5C498→406` still needs the `512AC(1)`
-enqueue. Evidence: `docs/evidence/pe-btl121-tid406/`.
-
-## Post-merge verify (main)
-
-Verified from a clean clone of `main` @
-`455e1a1eb651b43fe8a1373552e0f69320704312` plus the
-`verify/post-merge-main` integration/doc fixes:
-
-- Matching C leaves: **235** (`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`)
-- `func_8001F814` remains `NONMATCHING_C`
-- Matching rebuild: **EXACT** SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`
-- Native tests: **907 run, 907 passed, 0 failed, 0 skipped**
-- ASan/UBSan: **907/907**, no sanitizer diagnostics
-- Strict disc frontier: exit 1 at `func_80030894_L2L3_cut` from `func_80030894`
-- Strict bootstrap frontier: exit 1 at `func_8007F72C` from `func_800698D4`
-- Battle oracles through BTL120 are in that suite; battle is still incomplete
-
-`Blizz127/Parasite-Eve-Decompilation` owns retail/decomp/native gameplay
-semantics. `Blizz127/parasite-eve-ue5` is a presentation consumer.
-
-Overnight dual-lane dashboard:
-`docs/ai_context/CAMPAIGN_DASHBOARD.md`.
-This host writes decomp/native only. UE5 is a separate consumer repo.
-
-## PE-BTL120 — Aya+0x252 is dest+0x9E; 3C818 clears it
-
-`matching_native=907/907` local. `Aya+0x1B4+0x9E` is
-`Aya+0x252`. `35558` jals `3AF14`
-on that dest; `+0x9C&2` (case 0 `+0x250|=2`) jals
-`3C818`. When `+0x8C==1`, `sb $0, dest+0x9E`.
-`3C5D8(30)` arms `+0x8D=30`; the 0→-1→copy countdown
-clears during case 3 if dest+0 and `+0xBA` are live.
-BSS dest stays fail-closed (BTL115 prefix). Do not
-plant `+0x252=0`. Tid 406 publisher remains.
-Evidence: `docs/evidence/pe-btl120-252-dest/`.
-
-## PE-BTL119 — 6C1CC state 39 returns 0
-
-`matching_native=903/903` local. State 39 with Aya
-jals `6698C` / `3D834`, wraps `+0xED` to 32, returns 0.
-Aya==0 stays fail-closed. `3D834` uses existing 3A088 /
-3DFD8 / 3B97C / 3BCE0 cuts. `+0x252` clearer is BTL120.
-Evidence: `docs/evidence/pe-btl119-6c1cc-39/`.
-
-## PE-BTL118 — 6C1CC 32–36; case 0/2/5 3C5D8
-
-`matching_native=901/901` local. `6C1CC` 32–36
-increment `+0xED` (CE2=14 on 32). a0=1 skips to 39.
-State 39 (`3D050`/`3D834`) stay fail-closed. Case 0
-zeros CE48 and jals `3C5D8(30)` / `6F39C(0x6B)`.
-Case 2 jals `3C5D8(30)` / `6F39C(0x6C)`. Case 5
-`3C5D8(15)`. `+0x252` clearer still unfound. Evidence:
-`docs/evidence/pe-btl118-6c1cc-32-36/`.
-
-## PE-BTL117 — 6D60C(0) F2 0→45→50→64 completes
-
-`matching_native=900/900` local. `2B0E8` phase 3
-jals `6D60C(0)`. F2==0 is not a wait: `jtbl[0]` takes
-`6D6EC` → 45. `6A674` `+0xE8==-1` skips `6CDA4`; bit 4
-clear at 64 returns 0 and zeros F2. Do not plant
-`0x41`. `+0xE8==0` parks at 50. `+0x252` clearer and
-`6C1CC` 32–39 remain. Evidence:
-`docs/evidence/pe-btl117-6d60c0-f2/`.
-
-## PE-BTL116 — 24250 case 19 writes rec+0x4C 0x80000
-
-`matching_native=896/896` local. Sole TEXT OR of
-`rec+0x4C&0x80000` is `24250` jtbl[19] (`tid==406`).
-`22394` jals it when the bit is clear. Next tick
-`24A3C` runs. Do not plant the bit. `6C1CC` default
-returns 0; overlay `+0xED` in `[32,40)` parks case 2.
-`+0x252` clearer is still unfound (no `sb 0` in EXE
-or PE.IMG). Evidence:
-`docs/evidence/pe-btl116-24250-80000/`.
-
-## PE-BTL115 — 24A3C cases 4–8; case 6 waits +0x252
-
-`matching_native=893/893` local. `24A3C` cases 4–8
-increment under retail waits. Case 4 waits
-`+0x0F==+0x16` (not `+0x1A`), zeros non-Aya
-`+0x68/6C/70`, then D25C=5. Case 5 `1A680(6)` and
-`+0x250|=2`. Case 6 waits `Aya+0x252==0`, arms
-`CE4C=30`. Case 7 may `1A680(7)` on `+0x0F==+0x1A`,
-always drains `CE4C`, then `+0x252=1` and D25C=8.
-Case 8 waits `+0x0F==+0x1A`, `+0x250|=0x20`,
-`1A680((CE48*2+8)&~1)`, D25C=9. Do not plant D25C=9.
-A 0→5 prefix leaves `+0x252=1` from case 2; TEXT has
-no `sb 0` at `+0x252`. Next is `6F39C(0x6C)` /
-overlay `801F1BD8` (prelude at `6F3D4`) plus the
-`D4698` jalr that must clear that byte. `6C1CC` is
-not called by cases 4–8. Evidence:
-`docs/evidence/pe-btl115-d25c-4-8/`.
-
-## PE-BTL114 — CE54 case 9; +0x1A from 1A4AC
-
-`matching_native=889/889` local. Sole CE54 store is
-`24A3C` case 9 (`24F94`). `21DE0` tid `[387,407)` jals
-`22394`; `rec+0x4C&0x80000` and `D2A0!=0` jals `24A3C`.
-Case 9 waits `+0x0F==+0x1A` then `1A680` / CE54=1 /
-`body|=0x2000`. Do not plant CE54. `+0x1A` is the high
-half of `1A4AC`'s `+0x14→+0x18` copy. Phase 2 does not
-copy fields. `D25C` cases 0–3 increment (case 2 arms
-the 30-tick `CE4C` timer). Evidence:
-`docs/evidence/pe-btl114-ce54-1a/`.
-
-## PE-BTL113 — 1A4AC produces +0x16==10
-
-`matching_native=883/883` local. `2B0E8` phase 0 waits
-Aya `+0x16==10`. That half is the high half of `+0x14`.
-`1A680` zeros it; `35038` stores `+0x1C=0x10000`;
-`1A4AC` adds that each tick. Ten ticks with
-`+0x0F>=10` reach 10. Do not plant `+0x16`. Evidence:
-`docs/evidence/pe-btl113-1a4ac-16/`.
-
-## PE-BTL112 — 4B70C persist arms 534=1000
-
-`matching_native=881/881` local. `2B0E8` phase 0 jals
-`4B70C` → `4B90C` stores `4BB80` at `obj+0x2C` /
-`62CB8`. Next `5C498` `5E30C` jalrs it with
-`a1=0x10000`; `4BB80` then `512AC(10)`. Phase 1
-no longer plants `534`. Evidence:
-`docs/evidence/pe-btl112-4b70c-534/`.
-
-## PE-BTL111 — 27D14 0x4000 clears 0x6000
-
-`matching_native=877/877` local. After `28574` the next
-tick stores `body & ~0x6000`. `1A680` react deferred.
-Evidence: `docs/evidence/pe-btl111-4000-clear/`.
-
-## PE-BTL110 — 21DE0 Attack clip arms D294
-
-`matching_native=876/876` local. `21DE0` → `21F38` →
-`2312C` kinds 6/8/10 → `23008` sets `D294` when the
-Attack clip finishes. `CE54==1` still required for
-`236E8` to OR `0x2000`. Evidence:
-`docs/evidence/pe-btl110-21de0/`.
-
-## PE-BTL109 — 28574 enemy HP; 236E8 arms 0x2000
-
-`matching_native=874/874` local. `23008` sets `D294`.
-`21054>0` and `D294` jals `236E8` before `1D340`.
-`body&0x6000==0x2000` jals `28574`, which subtracts
-`body+0x10` from the weapon/scale formula. Aya
-`1F704` stays player HP. Evidence:
-`docs/evidence/pe-btl109-28574/`.
-
-## PE-BTL108 — 0xB2 / 392EC persist scale
-
-`matching_native=869/869` local. m0005i after mode 9
-runs `0xB2`: `19798` stores `392EC` (`91A1C`/`91A1D`)
-to the script dest. Dest stays the encounter token.
-Evidence: `docs/evidence/pe-btl108-0xb2/`.
-
-## PE-BTL107 — 27D14 DoT; 5C498 → 534
-
-`matching_native=866/866` local. `27D14` ATB is
-`body+0x0C`. `body&0x10` and shift>=0x1E subtracts
-`body+0x96` from `body+0x10` on the same tick as
-`28E94`. `5C498` return is `gp+0x534`. `512AC(10)`
-writes 1000. Chain to that case is not this cut.
-Evidence: `docs/evidence/pe-btl107-dot-534/`.
-
-## PE-BTL106 — mode 9 join; 0x94 vs 9
-
-`matching_native=862/862` local. `2A7F8` has no
-mode-9 arm; `bne` vs 8 joins `2AA24` (no dest
-store). Combat `27D14` → mode 2 → `2B0E8` via
-`mode_switch` reaches mode 9. m0005i `0x94`
-copies 9; `0x40`/`0xAD`/`0xAA` continue on the
-same dest. Player death stays mode 3. `5C498` /
-`D010==1000` is the next 534 producer. Evidence:
-`docs/evidence/pe-btl106-mode9-join/`.
-
-## PE-BTL105 — 27D14 → 28E94 → 292EC on combat ticks
-
-`matching_native=858/858` local. After `1D340`,
-`299CC` walks non-Aya bodies into
-`27D14`. `body+0x10<=0` jals `28E94`; two ticks
-with `D2A0==1` and `AF==0` null the body and arm
-mode 2. Player death stays mode 3. Evidence:
-`docs/evidence/pe-btl105-27d14/`.
-
-## PE-BTL104 — remaining-enemy tail arms mode 2
-
-`matching_native=853/853` local. `292EC` walks
-`D20C`: leftover enemy body
-blocks victory; Aya HP<=0 skips (death is
-mode 3). Empty leftovers + HP>0 → `2F300`
-mode 2. `27D14`/`28E94` parent and HUD
-storm deferred. Evidence:
-`docs/evidence/pe-btl104-victory-ready/`.
-
-## PE-BTL103 — 2B0E8 mode 2 → mode 9
-
-`matching_native=850/850` local. Encounter-end /
-victory, not player death.
-`2B0E8` phases drain to mode 9; dest stays
-the encounter token. `2F300` is the mode-2
-producer (not this cut). Evidence:
-`docs/evidence/pe-btl103-2b0e8-mode2/`.
-
-## PE-BTL102 — 3F3C4 0x100 join; 1220C outer restart
-
-`matching_native=844/844` local. Player-death dest
-`0xA9400048` sets `B0CD8` bit `0x100`. `3F3C4`
-`andi 0x100` after `35558` skips draw/`6A0E8`
-but still dest-changes (`D1A0|=0x40`,
-`B0CD8|=2`). `1220C` then `VSync(0)` /
-`SetDispMask(0)`, clears `0x100` only, jumps
-to outer `6A5BC`. Title dispatch after that
-restart is not this cut. Evidence:
-`docs/evidence/pe-btl102-bit100-exit/`.
-
-## PE-BTL101 — 2B29C phases; mode=-1 / 6A25C
-
-`matching_native=842/842` local. Player-death
-aftermath (not victory). `2B29C` cases
-1-4 drain `CE70` / `+0x252`. Case 5: `295E4` tail,
-mode `-1`, `6A25C` dest `0xA9400048`. Sound/CD /
-`21D4C` stay deferred. Evidence:
-`docs/evidence/pe-btl101-2b29c-end/`.
-
-## PE-BTL100 — 1F078 mode 3; 2A7F8 → 2B29C
-
-MATCHED yaml C leaves = 227. `matching_native=840/840`
-local. `1F814` / `6DE80` /
-`2AA98` / `2B29C` / `53E6C` are NONMATCHING_C.
-After a real `1F704` leaves HP<=0, `1F078` stores
-mode 3, `4D4=0`, `1A680(19)`, `6DE80(0x46B)`.
-Next `299CC` tick takes `2A7F8` mode 3: bit
-`0x800` or `53E6C(18)` → `2AA98`, else `2B29C`.
-Zero fixture takes `2B29C` case 0 (wait Aya
-`+0x0E==19` / `+0x0F==+0x16`). `2B0E8` is mode 2.
-`2B29C` case 5 mode=-1 / `6A25C` is not this cut.
-Do not poke `4D4`, mode 7, scratch bits, or HP.
-Evidence: `docs/evidence/pe-btl100-mode3-2aa98/`.
-
-## PE-BTL99 — 1F814 hit-react; 6DE80 after 1A680
-
-`matching_native=833/833` local. After `1F704`,
-HP!=0 jals `1F814` → `305C8` → `1A680` →
-`6DE80(0x46A)` → gated D1D0. Second live subtract
-is 39→34. `6DED4` → `6DFA8`/`6DF50` stay
-fail-closed. Death is **not** at `1F4D4`. Evidence:
-`docs/evidence/pe-btl99-6de80/`.
-
-## PE-BTL98 — 0x95 mode 0; 299CC jal 1D340; 1F704 40→39
-
-`matching_native=828/828` local. Opcode `0x95`
-(`192B8`) stores mode 0. `299CC` mode==0 && `4D4!=0`
-jals `1D340(1)` at `2A4FC`. Live `1D340` ATB
-`+0x10+=+0x24` and, when record+0x4C bit `0x4000` is
-set, jals `1F4D4` through the `1F704` `HP-=s0` store.
-First retail delta is 40→39. `hp_mutated` emits only
-then (`pc_port/build/btl98_hp_mutated.csv`). Do not
-poke `4D4`, mode 7, scratch bits, or HP.
-Evidence: `docs/evidence/pe-btl83-retail-battle-transition/`.
-
-## PE-BTL97 — mode-6 2A7F8→2BC90→2CF24; 0xCF sets 4D4
-
-`matching_native=825/825` local.
-Retail BTL83 capture at
-`/var/home/blizz/Applications/pcsx-redux/captures/pe-btl83`
-(M0036I `0xA8001248`). `2CF24` is the mode-7 store
-(`6914C(0)==0` and `s1!=0` after `2BC90`). `192BC`
-is opcode `0x95` storing 0. Opcode `0xCF` (`19D24`)
-jals `33A2C` → `4D4=1`. Do not poke those states.
-`1D340` / HP death / teardown / field return are
-not this cut. Type-6 `scratch[0]&4` wait is a
-different script. Evidence:
-`docs/evidence/pe-btl83-retail-battle-transition/`.
-
-## PE-BTL96 — opcode 0x28 bit-clear
-
-`matching_native=822/822` local. Clear twin
-of `0x2A`. Type-6 `+0x1A38` is after `0x55`.
-Do not force `scratch[0]&4`.
-
-## PE-BTL94 — M0367I persist 0x09 second visit
-
-`matching_native=821/821`. Watch
-`persist[0x4A]==0x26` (via `0x0A`, not a poke)
-opens only the first listed `0x08` (type 2).
-`0x5E` / `0xCD` / `0x29E` have no dest-enter
-writers; do not force them. Dest-ready now
-jals `1A918` before `125E0` (`B1620` =
-`chunk2+0x1C6D8`). Type-2 first visit takes
-`0xC1` (`19AC0`, `+0x98|=0x400`) then
-`0x2E(0x09)` and parks on `0x20`. Type-1
-continues to `0x9C` fade-wait. Do not hop
-M0005I. Type-6 still waits while
-`scratch[0]&4` is clear. Do not force the bit.
-Evidence: `docs/evidence/pe-btl94-m0367i-persist09/`.
-
-## PE-BTL95 — 144FC jtbl[1..0x36] completes
-
-`matching_native=820/820`. Unused states take
-`14658` `v0=1`. `>=0x3C` still parks. Type-6
-`0x55` remains behind `scratch[0]&4`.
-
-## PE-BTL93 — 0xED key 0xA29 actor+0x27D
-
-`matching_native=819/819`. Live type-0/2 `0xED`
-`0xA29` stores `*arg1` to `actor+0x27D`. Not
-`scratch[0]&4`. `E00CC` arms stay out.
-
-## PE-BTL83-RETAIL — PCSX-Redux battle-transition capture
-
-Completed locally. Combat dest `0xA8001248`
-(M0036I). Firsts: `33A2C` `4D4=1` via `0xCF`,
-`2CF24` mode 7 via `2CEE0`, `1D340` live,
-`1F704` HP 40→39 then 39→34. Implemented on
-the PE-BTL97 rung. Do not poke those states.
-
-## PE-BTL92 — 3F3C4 jals E01BC
-
-`matching_native=817/817`. Live `E21A4<=0`
-early-outs. `E026C`/`E03A0` are not this cut.
-Type-6 still waits while `scratch[0]&4` is
-clear. Disc scan found no overlay `B6A80`
-writer. Do not force the bit.
-
-## PE-BTL91 — 0x55 144FC park-rewind
-
-`matching_native=816/816`. 17018 now retries
-`0x55` instead of skipping the encounter start.
-Type-6 still waits while `scratch[0]&4` is
-clear. Do not force the bit.
-
-## PE-BTL90 — M0367I dest-ready
-
-`matching_native=816/816`. Dest-enter is now
-`6B35C` + `6B4F8` (CE2=10, hdr+0x0C, Writer A)
-+ `6BECC==0` (Writer B CE2=10) + `6C5BC==0` +
-`125E0` type-1. Type-1 `+0x1AC/+0x1B0` stay 0;
-first VM `0x40`, first yield `+0x20/0x02`. Do
-not set or wait for mode 7/9/10. Do not
-manufacture a type-1 clip. CE2=14 `+0x8` /
-3D050 stay fail-closed. Type-6 still waits
-while `scratch[0]&4` is clear. Do not force
-the bit.
-Evidence: `docs/evidence/pe-battle-data-precovery/`,
-`docs/evidence/pe-btl90-m0367i-dest-ready/`.
-
-## PE-BTL89 — 0xC6 command-wait 13300
-
-`matching_native=815/815`. First type-0 unported
-after the 0x20 sleep. `1A680` then waits on
-`+0x0F` / `+0x14/+0x18`. Type-0 still parks on
-`task+8` bit `0x10`; the EXE has no `andi 0xFFEF`
-of that halfword. Type-6 still waits while
-`scratch[0]&4` is clear. Do not force either bit.
-
-## PE-BTL88 — 754E4 SetDrawEnv + memcpy
-
-`matching_native=814/814`. Live `70E54` now
-builds the DRAWENV packet (`75EE0`) and copies
-`0x5C` to `9575C`. `76C34(76B98)` GPU enqueue
-stays deferred. Type-6 still waits while
-`scratch[0]&4` is clear. Do not force the bit.
-
-## PE-BTL87 — 3F3C4 dest-change flag stores
-
-`matching_native=813/813`. Dest-change exit stores
-`D1A0=(D1A0|0x40)&~0x3800` and `B0CD8|=2,&~0x800`.
-Stable dest leaves both unchanged. Next live
-`3F3C4` body is `754E4` DrawOTagEnv software
-(`75EE0`/`71A34`); `76C34` GPU enqueue stays
-deferred. Type-6 still waits while
-`scratch[0]&4` is clear. Do not force the bit.
-
-## PE-BTL86 — 696F0 dest-change tail
-
-`matching_native=812/812`. Live `D1A0&0x80==0`
-skips the jalr half and still nulls
-`*942E0[8..0x54]` and `E10BC[0x1E..0x67]`.
-Next `3F3C4` exit stores are `D1A0|=0x40` and
-`B0CD8|=2`. Type-6 still waits while
-`scratch[0]&4` is clear. Do not force the bit.
-
-## PE-BTL85 — 3DFC8 dest-change nop
-
-`matching_native=811/811`. `3DFC8` is `jr ra`.
-`3F3C4` snapshots `D280` and jals `74DC0` /
-`87024`/`3DFC8(1)` only if it changes this
-tick (`1220C` sets `D1C4=D280` first). `696F0`
-is the next exit tail.
-Type-6 still waits while `scratch[0]&4` is
-clear. Type-0 first unported is `0xC6` at
-`+0x12D4`. Do not force the scratch bit.
-
-## PE-BTL84 — 6A0E8 D1A0&0x10 early-out
-
-`matching_native=810/810`. Sole jal `3F640`.
-Live `D1A0=0x4000` skips the PutDrawEnv body.
-`3F5EC` VSync(2) is live. Next `3F3C4` stores
-are the pad/B0CD8 epilogue (`gp+0x430` bit
-`0x40`, `B0CD8|=2` then maybe `&~0x200`).
-Type-6 still waits while `scratch[0]&4` is
-clear.
-
-## PE-BTL83 — 70E54 flips guest CDDC
-
-`matching_native=809/809`. Live `6EC08==0` and
-`B0CD8&0x200==0` takes the `754E4` path; this
-cut stores `CDDC=(CDDC==0)`. DrawOTagEnv
-`75EE0`/`76B98` is not this cut. Next executed
-`3F3C4` jal is `6A0E8` (live `D1A0&0x10==0`
-early-out). Type-6 still waits while
-`scratch[0]&4` is clear.
-
-## PE-BTL82 — HP writer census; 0x85 is a door
-
-`matching_native=808/808`. First subtractive HP
-writer is `1E940` inside `1D340` (`HP - lbu+0x92`).
-`1D340` needs `4D4!=0`. Only live-shaped `4D4=1`
-is `293F4(1)` via `2AA98` JT[7], which needs
-mode==3, which is stored only inside `1D340`.
-`33A2C` / `2CEE0` have zero jal and zero pointer.
-Type-3 `0x85` continues `0x9C`/`0x0A`/`0x31`
-M0004I (door, not damage). `0xAE` (`19728`, 8w)
-is `D2E8 |= 4`; not the scratch[0]&4 setter.
-Do not emit `hp_mutated` / `encounter_complete` /
-`field_return`. Do not invent `4D4` or
-`scratch[0]&4`.
-Evidence: `docs/evidence/pe-btl82-hp-writers/`.
-
-## PE-BTL81 — 6EC08 two-byte status
-
-`matching_native=807/807`. Returns 0/1/2 from
-`B0DBA/DBC/DBB`. Live zeros return 0. `3F50C`
-then skips overlay `122040`. `70E54` live 0
-plus `B0CD8&0x200==0` takes `754E4`, not
-`75424`. Type-6 still waits while
-`scratch[0]&4` is clear.
-
-## PE-BTL80 — 70E54 jals PutDispEnv
-
-`matching_native=806/806`. `755F0(BCE80+20*CDDC)`.
-Next `70E54` jal is `6EC08`. Type-6 still waits
-while `scratch[0]&4` is clear.
-
-## PE-BTL79 — 70E54 jals ResetGraph(1)
-
-`matching_native=805/805`. `74A44(1)` is the
-already-ported light path. Next `70E54` jal is
-`755F0`. Type-6 still waits while `scratch[0]&4`
-is clear.
-
-## PE-BTL78 — 70E54 DrawSync + VSync(2) prefix
-
-`matching_native=804/804`. Live `B0CD8&0x200`
-is already clear, so `70E54` takes VSync(2).
-`42FE8` is a no-op (`CED8!=6`). `74A44` is the
-next `70E54` tail. Type-6 still waits while
-`scratch[0]&4` is clear.
-
-## PE-BTL77 — 3F3C4 jals 661A4 then 661CC
-
-`matching_native=803/803`. Same `B0CD8` gate as
-`68CE0`. `661CC` wins OFX/OFY (`160<<16`,`112<<16`).
-`E01BC` overlay between them is not this cut.
-Next `3F3C4` jal is `70E54`. Type-6 still waits
-while `scratch[0]&4` is clear.
-
-## PE-BTL76 — 67A78/67294 and 68CE0 flag outs
-
-`matching_native=802/802`. `68CE0` now jals `67A78`,
-`67B74`, `67D18`. `67A78` writes `+0x38/+0x3A` and
-jals `67294` when rec bit 1 and `+0x24==BCFFD`.
-Live m0005i rec0 matches. `67294` writes `+0x18/+0x1A`;
-OT walk skipped while `+0x30==0` (publisher is
-`3F074→68B94→66F60`, not this 3F3C4 cut).
-`67B74`/`67D18` live early-out. Type-6 still waits
-while `scratch[0]&4` is clear.
-
-## PE-BTL75 — 67E1C camera-slot interpolate
-
-`matching_native=801/801`. `68CE0` now jals `67E1C`
-after `65674`. `(D1A0&0x104)==0` walks `B1624+0x14`
-stride-56 records. Bit 4 is 8.8 rem; bit 8 pulls
-`BCF8C` vs `BD028`. `BCF88&0x80` snapshots to
-`BCF90/92` (setter is `66800`). Next `68CE0` tail
-is `67A78` (jal `67294` when rec bit 1 and
-`+0x24==BCFFD`). Type-6 still waits while
-`scratch[0]&4` is clear. Do not force the bit.
-
-## PE-BATTLE-DATA-PRECOVERY — dest lifecycle (parallel lane)
-
-Evidence only. No UE5 / gameplay edits. Pack:
-`docs/evidence/pe-battle-data-precovery/`. Oracle
-`python3 pc_port/tools/pe_battle_data_precovery_oracle.py` PASS.
-M0367I enter: `6B35C` clear → `6B4F8` (CE2=hdr+1=10) →
-Writer A @ `0x8006B84C` → `6BECC` state6 Writer B **CE2=10**
-(not CE2=14) → `125E0` type1 with `+0x1AC=0` `+0x1B0=0`
-(no clip). First eight `0x08` types 2,2,4,3,4,2,3,4 use
-Writer A `0x09` / `0x07` then `0x01`. Mode 7/9/10 unique
-stores `2CF24`/`2B278`/`2BC74` are battle-path only.
-`D280` change does not gate `6B4F8`. Do not wire CE2+0x8.
-
-## PE-BTL72 — playable-loop TRACE through actors/HP capture
-
-`matching_native=799/799`. Native composition (not a new leaf):
-m0004i mailbox 3 → `0x31` →
-`0x89` consume → `293F4` HP copy → `3EB04` Up (`BE9A2=0xFFEF`,
-not planted `D26C`) → `35C84` pose Z `0x50000`. TRACE
-`field → mailbox_3 → m0005i_enter → mode6_consumed → hp_copied →
-input_held → actors_captured → attack_available`. HP hash stable.
-`attack_available` is type-3 `0x85` after BTL73's 409 Right ticks
-into rect1, not ATB/damage. Live follow-on is the M0004I door
-(`0x9C`/`0x0A`/`0x31`). Do not emit `hp_mutated` /
-`encounter_complete` / `field_return`. Do not invent pad /
-rec=4 / 4D4 / mode 7.
-No matching `src/` C.
-Evidence: `docs/evidence/pe-btl72-playable-loop/`.
-
-## PE-BTL74 — 68CE0 + 65674 D1A0 out
-
-`matching_native=800/800`. `3F3C4` now jals `68CE0`
-(`66CE8` then `65674`). Live `D1A0|=0x4000` makes
-`65674` a no-op. Next live tail is `67E1C`. Type-6
-waits while `scratch[0]&4` is clear; only setter is
-`+0x1850` after `0xAE`. Type-3 `0x85` hops M0004I /
-M0009I. Do not force the bit or those exits.
-
-## PE-BTL73 — Right from 0x0B pose hits type-3 0x77
-
-`matching_native=799/799`. `BE9A2=0xFFDF` (not planted
-`D26C`). 409 Rights from live `0x0B` (16,1345) enter
-rect1 `(0x80A,0x4CD)-(0x994,0x63D)`. `1CAB0` returns 1.
-`0x85` is then the authentic type-3 arm. No wall clip
-in this 35C84 cut. Do not invent pad or a toggle.
-
-## PE-BTL71 — 3EB04 Up via BE9A2
-
-`A76F0[3]=0x10`. `BE9A2=0xFFEF` → `D26C` bit 3 →
-`710A4` → `+0x30 += 0x50000`. Row 22 keeps `710A4`
-after command `0x16`.
-
-## PE-BTL70 — 35C84/35E04 always apply +0x68
-
-`matching_native=796/796`. Bit 1 only adds `+0x88`. BTL11
-skip-all-motion is REJECTED. Pad walk can move type-0 without
-opcode `0x17`. Do not invent pad.
-
-## PE-BTL69 — 66CE8 walk matrix on the 3F3C4 gate
-
-`matching_native=795/795`. `3F3C4@3F560` jals `68CE0` → `66CE8`
-before `37870`. Digital `BD020` + `77DC4`/`77CF4` write Ry to
-`BD000`. `68CE0` tail is not this cut. Do not invent pad.
-
-## PE-BTL68 — 3999C `*codep` walk + digital 710A4/7136C
-
-`matching_native=794/794`. HEAD after this rung: BTL68. No matching
-`src/` C. No push. Shared dirty files stay unstaged.
-
-BTL67 indexed `table[actor+0]`. **REJECTED.** ROM `399C0` is
-`lw 0(s2)` / `s2=a2`: `table[*codep]`. Live `0x2E(0x15)` → row 21.
-`D26C=0` jalrs nothing. `D26C&0x78` → `710A4` (cmd `0x16`).
-`D26C&1` plus `0x78` → `7136C` (cmd `0x17`). `3EB04` bit0=Circle,
-bits 3–6=Up/Right/Down/Left. Do not invent pad.
-
-`78934` applies `D_800BD000`. Publisher is `66CE8` (jal from
-`68CE8`); not this cut. `+0x98` bit 1 still gates 35C84 integrate.
-Type-6 scratch/`D28C` and type-3 `0x85` stay authentic-gated.
-
-## PE-BTL5 — live 0x3B wait from 3F074 → 6C4C4/6C5BC
-
-NYPD/Eve-intro parks on m0005i `0x55(2)` at module 6 `+0x4140`
-with `D_8009D28C` still 0. 144FC 0x3B at `0x80014630` returns
-0 while `+0xE&3`. Do not fabricate that clear.
-
-`0x3B` is `lbu +0xE; andi 3`, not `6914C`. `0x3A` oris `D1A0` bit 1
-then jals `29810`. Live `+0xE` producers are field-tick `3F3C4` →
-`3F074` (`6C4C4(CE4)` then poll `6C5BC`) and `35558@35B24`. TEXT has
-exactly those two plus `6C1CC` state 6. `6C5BC` is 427 words
-`0x8006C5BC..0x8006CC68` (SHA-256 `d15126b6…`). Native named cut:
-CE2 `[10,14]`, EE 0/11/12, no auto-clear; EE=13 returns 1. TRACE
-`encounter_55 → hp_copied → first_command → command_bound →
-overlay_wait`. Evidence: `docs/evidence/pe-btl5-overlay-wait/` and
-`docs/evidence/pe-battle-system-realization/`.
-
-STOP/NEXT: 35558 now jals 299CC when
-`D1A0&2` and 69594 after the walk. Live
-`293F4(0)` leaves `gp+0x4D4==0`, so 299CC
-idles before 1D340 (the rec=4 writer).
-Type-2 still waits on rec byte 4 and
-`+0x0E==7`. Type-3 `0x85` stays hit-gated.
-Type-6 `0x12` still waits on scratch[0]&4.
-Do not invent pad / persist==39 / scratch /
-hit / rec=4 / command 7 / 4D4. Do not force
-`+0x1B0` / dest+0x24 / `D2E8` / `3999C`.
-Do not publish `B0E70` until `3D050` tail
-is real. E0060 is EXE list-clear, not M2.
-`matching_native=779/779`. No matching
-`src/` C.
-
-## PE-BTL3 — first actor command bound from Writer B table
-
-NYPD/Eve-intro parks on m0005i `0x55(2)` at module 6 `+0x4140`
-with `D_8009D28C` still 0. `0x89` is the next opcode (`+0x414C`)
-after 0x3B v0=1. Do not fabricate the `+0xE` clear.
-
-`0x55` = `func_800144FC` (102 words), JT on `D_800B0CD8+0xF4`.
-State `0x3A` is the sole `jal 0x80029810`; that init `jal`s
-`func_800293F4(0)`. Named cut `func_800293F4_hp_cut` (21 words)
-clamps Aya record `+0x0C` to `+0x1C` and copies `+0x0C` → `+0x0E`.
-Reader `lh +0x0C; blez` at `0x80029350`. Default `D_80010928`
-halfwords `+0x0C/+0x0E/+0x1C = 45`. Oracles
-`pc_port/tools/pe_btl2_144fc_oracle.py`,
-`pe_btl2_293f4_oracle.py`, `pe_btl2_hp_trace_oracle.py`.
-Evidence: `docs/evidence/pe-btl2-hp-layout/`.
-
-The post-HP `29810` tail is pinned 45/45 words. It floors/caps record
-`+0x08`, writes `240` to `+0x34` on the cap arm, installs callback
-`0x8002D268` at actor `+0x194`, writes
-`(*(actor+0x238)+0x18)-100` as `sh D_8009D27C`, calls
-`339A0(encounter)`, then loads record `+0x12` and calls `1A680`.
-The `1A680` prefix is pinned 33/33: command byte `4` → actor `+0x0E`,
-zero `+0x14/+0x18`, resource pointer → `+0x1B0`, clear flag `0x200`,
-resource frames-minus-one → `+0x0F`. Index math is
-`D_800B0E98[type*192 + command*4]`. Type is ctor `desc[0]`:
-`func_80035038` `sb` at actor `+0x0C` and, when that byte is 0,
-publishes the actor to `D_8009D254` (`sw 0x4E4($gp)`). `29810`
-passes `*D_8009D254` to `1A680`. HP `sh +0x0C` is `D_8009D278`, a
-different object. The NYPD row is type 0 / command 4.
-
-Writer A (`0x8006B84C`, room packages, `idA*192+idB*4`) does not
-supply m0005i type-0 `idB=4`. Writer B (`0x8006C140..0x8006C174`
-inside `func_8006BECC` state 6) fills the type-0 row:
-`sw (package+ptr), overlay+0x1C0+idB*4`. `func_8006C1CC(a0=1)` sets
-`CE2=14`; `D_800930D8[22..23]` maps that to PE.IMG `[396,428)`.
-Type-0 `idB=4` there is 1700 bytes, 31 bones, 18 frames. `29810` /
-`144FC` do not jal `6C1CC`/`6BECC`; native runs Writer B as the
-global table producer `1A680` reads. TRACE
-`encounter_55 → hp_copied → first_command → command_bound`. This is a
-clip/animation command, not menu/ATB/damage/PE/AI. Overlay wait bits
-are PE-BTL5; do not invent idle/0x20/idA=2.
-
-## PE-CH2 — Carnegie prefix camera leaves
-
-Goal: EXE-audit/native-port `func_80065954` (`0x75`),
-`func_800659C8` (`0x7B`), and `func_80066800` (`0x82`), then verify
-the real static route sequence without inventing projection/framing.
-
-All three are translated and independently oracle-backed: 18/18,
-12/12, and 99/99 EXE words. Census correction: m0004i contains no
-`0x75`/`0x7B`; the route is m0003i `0x7B`/`0x75`, m0372i+m0004i
-`0x82(1)`, then the existing `0x31` hop to m0005i. Native tests use a
-synthetic record-1 fixture to prove exact stores/copy widths; no retail
-Carnegie framing or playable-field claim. Evidence:
-`docs/evidence/pe-ch2-prefix-camera/`. Full native suite: 651/651;
-all three leaf oracles and the route-trace oracle pass.
-
-Playable follow-through completed in the `pe-vis3-retail-body-prims`
-native worktree: real package slot 6 is bound as the `D_800B1624`
-analogue; `0x75`/`0x7B` mutate the m0003i records; `0x82(1)` applies
-retail m0372i H=307 and m0004i H=577 through the live H/MATRIX
-projection path; packaged PT2 smoke traces seven events through the
-verified m0005i hop. Focused native 36/0 and independent retail-disc
-oracle pass. Evidence lives there at
-`docs/evidence/pe-ch2-playable-camera/`. No synthetic camera data, ATB,
-mode 7, AI, or matching `src/` C.
-
-No matching `src/` C (monolithic split unavailable). Do not extend this
-into `677FC` projection, ATB, mode 7, or AI.
-
-## PE-CH1 — BTL1 TRACE_CONTRACT integration
-
-Goal: m0004i mailbox 3/4 → m0005i → 0x6F/0x5A/0x70/0xB7 → 0x89
-(`D_8009D28C=6`) → consume 6→0 + `gp+0x10C`, with TRACE rows through
-`mode6_consumed`. Persist hash unchanged on the 0x89 row. No ATB,
-mode 7, or AI.
-
-Leaves through `func_800299CC_consume_cut` are native-ported. This
-rung is the handshake: `BTL1_trace_mode6_consumed` +
-`pe_ch1_btl1_trace_oracle.py`. `0x31` now uses the EXE-verified normal
-path of `func_80017BB4` for token `0xA80002C8` (40/40 handler words;
-unrelated `A9400048` special path excluded). `0x1A` now runs translated
-`func_80070DD0(0,100)`, records the corrected 19-word pre-call image,
-and carries variant 49/50 into formation_id. The native integration test
-now runs the complete path independently for mailbox payloads 3 and 4;
-the oracle validates both traces through `mode6_consumed`, including
-6→0 and unchanged persist hashes. Full native suite: 647/647.
-`scripts/verify_us.sh` still cannot take matching C. **PE-B54K-B is not
-on this path. BTL1 is complete; do not extend it into ATB/mode 7/AI.**
-
-## PE-PREFIX-SEWER-AUDIT — dual-lane audit + native m0377i first view
-
-Field playable-prefix work lives in the vis3 native worktree, not this
-matching checkout. Bound: `m0002i` through first stable `m0377i`
-(`sewer_entry`). Matching `pc_port` remains mid-`func_80030894`
-(`func_80030894_L2L3_cut` @ `0x80030AC4`); Carnegie Hall cannot be
-played here. Next matching rung is still **PE-B54K-B**.
-
-Native repairs (vis3): stop auto-applying 52-byte view 0 on
-`SewerEntry` (RD7-R / DEBT-FID1-002); remove `mailbox_boot_clear` from
-prefix scene enters (DEBT-FID1-036); model the proved `m0002i`
-`0x85(30)`/`0x9C` fade gate; restore fixed 320×224 projection center
-plus authored pan; add deterministic boot-to-m0377i trace
-`08811f51…`. RD4 `0xB8` interpolation and the destination `0x3F`
-task-payload first-frame value remain evidence blockers, so
-retail-exact end-to-end timing is not claimed. Evidence:
-`docs/evidence/pe-prefix-sewer-audit/` in
-`pe-vis3-retail-body-prims`. Launch:
-`DISPLAY=:0 python3 tools/ue0/pe_pt2_play.py --scale 3`.
-
-## PE-B54K-A — func_80030894 prologue + bank-0 L2/L3 (named cut)
-
-Translated prefix of the 788-word boot GPU-primitive builder.
-**140 words** `0x80030894..0x80030AC4` (file 0x21094): prologue
-GetTPage(0,1,256,480)→0x34 / GetClut(304,504)→0x7E13, bank-0
-SetPolyFT4 record at `0x800BE9F0` from `func_8005DADC(139)`,
-SetSemiTrans(.,1) (a1 reloaded after GetTPage clobbers it), then
-L2(j<10)×L3(k<4) wrap_sprt array at `0x800B01C0` + j*140 + k*28
-with clut `sh` at packet+0x16. Named `func_80030894_L2L3_cut`.
-First excluded word `move a0,zero` at `0x80030AC4` (L4). Zero new
-callees. To reach 30894, 6AD40 is unparked through
-`0x8006B060..0x8006B0BC` (`D_800930F0` / dest+0x14C, second 718D0
-of dest+0x180, jal 30894) and parks at
-`func_8006AD40_post30894_cut` before the third `func_8006E7E8`.
-Tests 582/582 normal + ASan/UBSan. Oracle 8/8. Real-disc
-`--strict-stubs` exits 1 at `func_80030894_L2L3_cut` from
-`func_80030894`. Evidence:
-`docs/evidence/pe-b54ka-30894-l2l3-prefix/`.
-NEXT: **PE-B54K-B** — groups L4..L11 + bank-1 + epilogue
-(`0x80030AC4..0x800314E4`). Zero new callees.
-
-## PE-B54J — func_80030894 structural audit (evidence only; consumed by B54K-A)
-
-Read-only audit of the 788-word boot GPU-primitive builder
-(0x80030894..0x800314E4, file 0x21094, window SHA-256
-`a4dbd2cf…1ed6e2`). **Structure: loop nest, NOT straight-line** —
-11 `bnez` (outer bank loop ×2 on sp+24 [init 0 @0x8003090C, ++ @
-0x80031484, test <2 @0x800314A8] wrapping ten fixed-count group loops
-10/4/5/3/3/10/4/2/13/4-k) + 1 `jr $ra`, no forward branches, one exit.
-The audit caught and corrected three of its own working hypotheses
-(tab-grep missed all bnez; "sp+24 written once" false; `lui 0x800C,
-addiu -5648` = **0x800BE9F0** not 0x800CE9F0). Frame 88B, 10 saves;
-locals sp+16..18 font triple (lb 0x8009CD90), sp+24 outer counter,
-sp+32 = GetClut(304,504)=0x7E13, sp+40 scratch. Sprite array: for
-i<2, j<10, k<4 → wrap_sprt(0x800B01C0 + i*1400 + j*140 + k*28, 0x34)
-+ clut `sh` at +0x1D6 (strides instruction-exact @0x80030A18..A6C);
-L11's ×13 matches the B54B VRAM count (material strip). 42 jal, all
-native since B54I/GPU1 — zero new dependencies. s7=128 vertex byte.
-Oracle `pc_port/tools/b54j_30894_audit_oracle.py` = 19 check groups
-(window hash, branch census, loop map, counter protocol, strides,
-frame, call order, boundary, vectors). Tests 580/580 unchanged (no
-production edit). Evidence: `docs/evidence/pe-b54j-30894-structural-audit/`.
-NEXT: consumed by **PE-B54K-A** (named `func_80030894_L2L3_cut`);
-remaining body is B54K-B (groups L4..L11 + epilogue).
-
-## PE-B54I — all func_80030894 callees now native; wall is the 788-word body
-
-Ported 11 word-exact leaves/wrappers (evidence-first redo; a dead
-context-exhausted session had left nine speculative uncommitted files
-claiming this work — deleted as unverified): GetTPage func_80077A64
-(real Psy-Q ABI tp,abr,x,y — the "a1=Y=16" theory was false; retail call
-(0,1,256,480)→0x34), CLUT variant func_80077AA4 ((y<<6)|((x>>a4)&0x3F)
-→0x7E13 at the retail call), SetSemiTrans func_80077B04 / SetShadeTex
-func_80077B34 (code byte p+7), setSprt func_80077C04 (len 4/code 0x64 —
-its p[7] store IS the jr delay slot at 0x80077C14), DR draw-mode
-func_80077C84 (p[3]=1; word (0xE1000000|(a2?0x200:0))|((a3&0x9FF)|(a1?0x400:0))
-stored at p+4 in the delay slot 0x80077CAC), length-budget append
-func_80077CB4 (len=head[3]+tail[3]+1; cap 17; fail −1 no-stores; success
-zeroes *(u32*)tail), guest lookup func_8005DADC (*(u32*)0x800A8030 +
-0x800A8028 + (a0<<3); final add in delay slot), wrappers func_800370DC
-(sprt twin → compound len 6) / func_80037140 (tile twin via SetTile →
-len 5), and func_800719E4 = 3-word **BIOS B(38h) CD-mode trampoline**
-(NOT a large function; 12 jal sites: 11× a0=−1 fail paths never taken
-with retail data, 1× a0=1 CD set already collapsed in pe_libcd.c).
-**func_80030894 is 100% callee-unblocked.** Tests 580/580 normal +
-ASan/UBSan (toolbox jk2026-dev); exe-arg oracle matrix 52/52; new
-`b54i_gpu_leaves_oracle.py` 30 checks; GPU1 oracle 18 retained.
-Frontier unchanged (B54G in-suite assertions). func_80030894 NOT
-entered. Evidence: `docs/evidence/pe-b54i-gpu-primitive-leaves/`.
-NEXT: PE-B54J read-only prefix audit of the 788-word func_80030894 body
-(register flow, frame, packet destinations) before production C.
-
-## PE-B54G — second poll consumed; 6AD40 sequence parked
-
-Live named cut is now `func_8006AD40_prefix_cut` @ `0x8006B060`.
-B54E-shaped wait at `0x8006B04C..0x8006B060` (5 words): live
-`func_8006E7E8`; `poll`/`s2` not assigned. Host first sample is
-0 (`B54E-HOST-POLL-COLLAPSE`). `func_80030894` is not taken.
-**6AD40 sequence is PARKED** here: `30894` is 788 words with no
-translated prefix (first jal unresolved `GetTPage`). PE-GPU1
-ported the five SET leaves; they are not a reason to enter
-`30894`. Tests 579/579. Evidence:
-`docs/evidence/pe-b54g-second-poll-cut/`.
-
-## PE-GPU1 — GPU packet-header leaves ported (native)
-
-Five matching-C GPU-header leaves now have native ports; four getters are
-classified. All nine are REAL outlined ROM functions (each owns a `jr $ra`
-and a distinct `jal` site inside `func_80030894`); none is a pure inline
-expansion folded into the caller. Psy-Q `libgpu.h` defines them as header
-inlines/macros, but the retail compiler outlined each into a standalone 5-word
-(SET leaves) / 7+ word (getters) function.
-
-Ported (native, `pc_port/game/boot/func_80077B{64,BA4,BC4,C44,C64}_port.c`,
-each `void(pe_addr_t p)`, byte-exact two-byte store, order 3-then-7):
-
-| symbol | Psy-Q | ROM @ | byte[3] | byte[7] |
-| --- | --- | --- | --- | --- |
-| func_80077B64 | SetPolyF3 | 0x80077B64 | 4  | 32 (0x20) |
-| func_80077BA4 | SetPolyFT4 | 0x80077BA4 | 9  | 44 (0x2C) |
-| func_80077BC4 | SetPolyG4  | 0x80077BC4 | 8  | 56 (0x38) |
-| func_80077C44 | SetTile    | 0x80077C44 | 3  | 96 (0x60) |
-| func_80077C64 | SetSprt    | 0x80077C64 | 3  | 64 (0x40) |
-
-These block `func_80030894` (788 words, boot GPU-primitive builder) — the SET
-leaves are jal'd at words 41/167/185/298/302/424/464/468/483. Classified only
-(do not necessarily port, per task): func_80077A64 GetTPage, func_80077AA4
-GetClut, func_80077B04 SetSemiTrans, func_80077B34 SetShadeTex — all REAL
-functions (terminate in `jr $ra`; jal'd at words 22/26/74/95/143/161/350/375/
-399/614/710/748). No native implementation added for the four getters; they are
-documented, not ported.
-
-Verification: `pc_port/tools/pe_gpu1_header_leaves_oracle.py` (loads
-SHA-1-exact `build/disc1.candidate.exe`, decodes each ROM word-block, asserts
-the 5 SET leaves' exact (offset3, offset7) store contract and that all nine are
-jal callees of `func_80030894`) passes 18 checks. Native focused test
-`test_PEGPU1_header_leaves_byte_exact` (pc_port/tests/test_native.c) calls each
-native leaf on a scratch guest buffer and asserts the identical two bytes plus
-idempotence; full suite 579/579. `func_80030894` is NOT entered; the 6AD40
-frontier is NOT advanced. Evidence: `pc_port/docs/pe_gpu1_header_leaves.md`.
-
-## PE-B54F — D_800930EE issue and live font atlas
-
-Live named cut is now `func_8006AD40_prefix_cut` @ `0x8006B04C`.
-`0x8006AF68..0x8006B04C` (57 words): issue `D_800930EE` via
-`func_8006E6A8`, walk dest+0x174 through `func_800718D0`, pack
-records 0/1. Atlas is on the live prefix (`0x0025`/`0x3F14`,
-`{320,0,64,256}` / `{320,252,16,1}`). Record 1 packs
-`0x0026`/`0x3F15` from EXE `{384,0,336,252}` — not assumed a
-second font. That cut is now behind B54G. HostFB digest is blind to
-the x=320 atlas. Evidence:
-`docs/evidence/pe-b54f-d800930ee-issue/`.
-
-## PE-B54E — AF54 poll-exit cut
-
-Consumed the AF54 wait to `0x8006AF68`. Host first sample is 0
-(`B54E-HOST-POLL-COLLAPSE`). That cut is now behind B54F.
-Evidence: `docs/evidence/pe-b54e-poll-exit-cut/`.
-
-## PE-B54D — func_80030894 audit (evidence only)
-
-Audit only. `func_80030894` is 788 words / `0xC50`, void, one
-`jr $ra`, no jalr. Sole caller `jal` `0x8006B0AC` in
-`func_8006AD40`. Twelve direct callees; seven unresolved. AF54
-is ever 0 on this Disc 1 prefix; poll=0 was not assigned. That
-audit's recommended cut is now the live B54E frontier.
-Evidence: `docs/evidence/pe-b54d-func-80030894-audit/`.
-
-## PE-B54C — func_800718D0 font atlas upload
-
-`func_800718D0` (29 words) and the `0x8006AFF8`/`0x8006B02C` packs
-are translated. Image then CLUT LoadImage via existing
-`func_8007506C`. Record 0 writes `0x0025`/`0x3F14`. Live
-`func_8006AD40` cut stays `func_8006AD40_prefix_cut` @
-`0x8006AF54` — poll=0 was not invented. Next unresolved function
-is `func_80030894` @ `0x8006B0AC`. Tests 572/572. Evidence:
-`docs/evidence/pe-b54c-func-800718d0/`.
-
-## PE-TXT0-B — D_80091644 and font atlas (evidence only)
-
-Local evidence commit. No TXT1, no production C, no cut move.
-`func_80037870` reads tpage/CLUT at `D_80091644+0x0C/+0x0E`.
-Those halfwords are packed at `0x8006AFF8/0x8006B02C` to
-`0x0025` / `0x3F14` after `func_800718D0` LoadImages the TIM at
-PE.IMG `[180,197)`: image `{320,0,64,256}`, CLUT `{320,252,16,1}`.
-`D_80091694` writer is `func_80052594`. `D_800B1628/162C` have no
-store in SLUS. Evidence: `docs/evidence/pe-txt0b-d80091644/`.
-Scanner: `python3 tools/research/pe_txt0b_d80091644.py --peimg PE.IMG`.
-
-## PE-MBX2 — retail mailbox transport in native field
-
-Native field (`feature/pe-ue0-native-field-bootstrap`) now runs
-the PE-MBX1 queue: 28×12 at `D_800A3180`, `0x1C` append, drain
-once per `func_8003F3C4` before `func_80035558`, `0x1F` reads
-`task+0x14`, no ACK. Fail-close removed. Python payload-byte
-shim not rehosted. Oracle `9cefa0bc…` row-for-row. Hazards
-DEBT-FID1-034/035/036 are `RETAIL_FAITHFUL_UNSAFE`. Evidence:
-`docs/evidence/pe-mbx2-native-mailbox/`.
-
-## PE-MBX1 — mailbox / task-state mechanism (evidence only)
-
-Local evidence commit. No implementation, no DEBT1 promotion, no
-push. `D_800A3180` is a 28-deep append queue; count is
-`0x44($gp)`. `0x1C` (`func_80017764`) is the sole append;
-`func_80065400` drains once per `func_8003F3C4` then zeros count;
-`0x1F` reads `task+0x14` with no ACK. Mailbox 3/4 are payloads
-3/4 on the same path. Battle/save do not touch the table
-(DEBT-FID1-004 stays NONBLOCKING). Evidence:
-`docs/evidence/pe-mbx1-task-state/`.
-
-## PE-B54B — VRAM upload table (evidence only)
-
-Local evidence commit. Production C not edited. The
-`0x8006AE50..0x8006AE68` counted `func_8006E1C0` loop is already
-live (`c1efff5`). All 13 channel-1 entries decoded from PE.IMG
-`+0x4E800` header `0x0340B5B8`. None is `D_80091644`, the VIS1-E
-player page/CLUT, or a 21×12 font atlas. TXT1 stays blocked.
-Evidence: `docs/evidence/pe-b54b-vram-upload-table/`. Scanner:
-`python3 tools/research/pe_b54b_upload_table.py --peimg PE.IMG`.
-
-## PE-VIS1-D — SY span reconcile (evidence only)
-
-Local evidence commit. No `native/` edit, no H/SZ/Y/pan change, no
-push. VIS1-A 24.7767 / 57.6353 is the unposed bind mesh. VIS1-C
-26 / 29 is the posed idle mesh through the same camera. Origin SZ,
-H, pan, and snapped Y match across sites (m0003i SZ=1235, H=251,
-Y=−4, pan (0,−144)). Authored Y=0 is not the 57-vs-29 gap.
-correct_figure=BOTH_CONTEXT_DEPENDENT. defect_present=no.
-Evidence: `docs/evidence/pe-vis1d-span-reconcile/`.
-Scanner: `python3 tools/research/pe_vis1d_span_reconcile.py --exe SLUS --peimg PE.IMG`.
-
-## PE-BTL0-BOSS — Day 1 enemy identity from retail strings
-
-Local evidence commit. No battle implementation, no ATB, no push.
-Enemy names live in the **same USA stream 1** as TXT0
-(`231da625…`, `func_80037870`, letters `code+0x31`). First
-m0005i `0x89` opens speaker **Actress** (ids 46, 50). Later
-same-room lines name **Eve** (54, 56, 132); title id 45
-`Battle VS Eve` is in the bank but not opened on this map.
-Slot fields 1332/1333/1334 are resource halfwords at
-`+0xB2/+0xB0/+0xB4`, not string ids. 49 vs 50 is an unused
-`local[24]` RNG write. Later m0005i `0x89` reuse the same
-slot. Evidence: `docs/evidence/pe-btl0-boss-identity/`.
-
-## PE-VIS1-B — retail actor projection contract (evidence only)
-
-Local evidence commit. No `native/` edit, no PT1 reopen, no push.
-World→screen is GTE `RTPS`/`RTPT` through the 52-byte view MATRIX.
-Y consumed by projection is **SNAPPED** (`func_8001AA78` classic
-`height<<16`), not the `0x0B` authored immediate (RD7-R). Origin
-samples: m0002i cam (−145,224,2475) SXY 142.014141414141 /
-139.785050505050 scale 307/2475; m0003i cam (−16,939,1235) SXY
-156.748178137652 / 302.841295546559 scale 251/1235. Posed idle
-pixel height is 26.09 / 29.71 (VIS-C span; not a target). Native
-`project_camera` IEEE divide is a recorded defect. Background
-stays native 320×224. Contract:
-`docs/evidence/pe-vis1b-retail-projection/`. Scanner:
-`python3 tools/research/pe_vis1b_project.py --exe SLUS --peimg PE.IMG`.
-
-## PE-DEBT1 — cross-lane fidelity debt registry (evidence only)
-
-Local evidence commit. No repair, no promotion, no push. 36 live
-entries across UE0 / RD / AUD / TXT / PST / BTL / this native tree.
-Mailbox is the highest-risk collision (Python payload-byte vs
-native empty `D_800A3180` vs UE0 fail-closed). UE0 lobby view 0
-and RD7-R "auto-apply view 0 without 0x82" are the same question
-(merged). Evidence:
-`docs/evidence/pe-debt1-fidelity-registry/`.
-
-## PE-RD5-F9 — m0372i 0xF9 close vs RD5-C2 OP_0x22 edge
-
-Local evidence commit. No runtime repair, no trace rewrite, no push.
-TXT0 `0xF9` auto-closes `MSG_0x14`..`MSG_0x20`. RD5-C2 `1e7f0df`
-applies the newly-pressed `0x100` edge only to m0004i
-`OP_0x22`+`MSG_0x21`..`MSG_0x23`. The m0372i reel still uses
-authored `OP_0x02` waits (`pe_rd4e_cutscene.py` untouched since
-RD4-E). Over-gating is absent; control-restore tick delta is 0.
-Evidence: `docs/evidence/pe-rd5-f9-diff/`.
-
-## PE-BTL0 — field→battle handoff (evidence only)
-
-Local evidence commit. No battle implementation, no production
-runtime change, no push. Field requests battle with opcode `0x89`
-(`func_80017FF0`, `D_8009D28C = 6`). First Day 1 combat room is
-`m0005i`, reached from m0004i mailbox 3/4 volumes after the concert
-reel. Boss identity is now PE-BTL0-BOSS (Actress first, Eve later,
-same m0005i slot). BTL1 may implement
-the handoff only (no ATB). Evidence:
-`docs/evidence/pe-btl0-field-battle-handoff/`. Scanner:
-`python3 tools/research/pe_btl0_scan.py "$PE_DISC1_BIN"`.
-
-## PE-TXT0 — retail text / font / window contract (evidence only)
-
-Local evidence commit. No production text runtime, no push. Opcode
-`0x0D` (`0x80017410`) opens a `D_800BCEA8` record (not `0x800CCEA8`)
-via `func_800375E0`; `func_80037870` is the first ID→bytes step
-(`FF/F9 FE <id>` in the slot7 stream bound at `0x120($gp)`). USA boot
-ORs `D_800B0CD8 |= 0x40000000` and selects stream 1 (English,
-`231da625…`). Letters are `code+0x31`; `0x14..0x23` decode from that
-bank. Font UV/width proven; atlas pixels not found.
-`txt1_implementation_ready=NO`. Decoder:
-`python3 tools/research/pe_txt0_decode.py "$PE_DISC1_BIN" --message 0x21`.
-Evidence: `docs/evidence/pe-txt0-retail-text/`.
-
-## PE-PST0 — retail persist[] provenance (evidence only)
-
-Local evidence commit. No production runtime change, no save
-implementation, no push. Canonical persist is `D_800A77F0`, 512 words /
-`0x800` bytes, binder mode 2. New-game zero is `func_80034F10`; field
-load does not clear it; save/load memcpy the whole bank via
-`func_8003F800` / `func_8003FBD8`. First-play walker ends at
-`persist[1]=0x17A`, `persist[0x4A]=0x18`. Only `persist[1]` is
-`PROVEN_SEMANTIC` (`entrance_selector`). Evidence:
-`docs/evidence/pe-pst0-persist-provenance/`. Scanner:
-`python3 tools/research/pe_pst0_scan.py "$PE_DISC1_BIN"`.
-
-## PE-SYS0 Day 1 acceptance contract (documentation only)
-
-Day 1 playable-slice acceptance and fidelity promotion are frozen as
-documentation/evidence. No production implementation, no gameplay
-change, no visual reopen, no push.
-
-```text
-docs/acceptance/PE_DAY1_ACCEPTANCE_CONTRACT.md
-docs/acceptance/FIDELITY_PROMOTION_POLICY.md
-docs/acceptance/DAY1_SYSTEM_GATE_MATRIX.csv
-docs/acceptance/DEBT_REGISTRY_SCHEMA.md
-docs/acceptance/UE_NATIVE_PARITY_POLICY.md
-
-day1_contract_status=DEFINED
-day1_acceptance_ready_now=no
-python_production_fallback_allowed=no
-retail_bytecode_runtime_authority=yes
-largest_current_blocker=day1_combat_boss_and_completion_unproven
-next_system_research_priority=PE-RD7-A_post_m0377i_progression
-```
-
-Proven playable prefix reaches `m0002i → m0003i → m0372i → m0004i →
-m0378i → m0377i`. RD7-R proves the m0377i identity and first-stable
-authored-2D-layer contract. Post-m0377i progression remains RD7-A
-research. PT1 visual freeze
-`3e4c65d` / CAM-B `1bf3832` / VIS-B `ac62411` / VIS-C `cad4598` is
-not reopened. AUD1-D `40b7c3f` is the audio floor.
-
-This checkout's matching/native frontier below is a parallel
-behavior-oracle lane, not the Day 1 playable runtime.
-
-## PC port branch state (this checkout)
-
-## Phase 6E-B54D func_8006AD40 material prefix completed
-
-Base is `c1efff529e1529893c2ae73f78637b3677c30f77`. The accepted read-only
-B54C evidence is exact commit
-`8bf5dbf0e43fd129f4a498ac91fe45cc30b36847`. B54D implements only retail
-`0x8006AE68..0x8006AF54` exclusive: pack records 2 and 3 of `D_80091648`,
-call the existing `func_8006E498` with key `0xABADC06C`, walk the returned
-size-prefixed material payload through the existing `func_8007506C`, and
-stop before the live `func_8006E7E8` poll.
-
-Canonical results are `(0x80091670,0x80091672)=(0x0034,0x7793)` and
-`(0x80091680,0x80091682)=(0x0034,0x7753)`. The lookup
-`func_8006E498(0x801229A0,0xABADC06C)` returns `0x801229A8`. Exactly one
-material walk dispatches `RECT {448,0,64,254}` with data `0x801229B4` and
-terminates at `0x8012A8B4`. Canonical `s2=1`; the `s2==-1` back-edge is not
-taken.
-
-The named strict frontier `func_8006AD40_prefix_cut` now corresponds to
-retail `0x8006AF54`. B54D does not call `func_8006E7E8`, assign its return,
-enter `func_800718D0` or `func_80030894`, add a DMA checkpoint, or add CD
-progression.
-
-Fresh normal and ASan/UBSan suites pass 570/570. Focused B54D passes 2/2 in
-both builds; the complete oracle matrix is 49/49, with B54A/B54B/B54C each
-8/8. B49 passes normal and sanitizer. Three real-disc runs retain
-byte-identical framebuffer SHA-256
-`fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb`
-and trace SHA-256
-`42c1956e077a40fed5176653b6a18938a8a91e99e35fe9d7044f31581de785af`.
-
-Evidence: `pc_port/docs/b54d_func_8006AD40_material_prefix.md`.
-Accepted audit: `pc_port/docs/b54c_func_8006AD40_material_table_audit.md`.
-Independent audit contract:
-`pc_port/tools/b54c_6ad40_material_table_oracle.py`.
-
-NEXT ONLY: PE-6E-B54E-A — READ-ONLY CANONICAL CD POLL SEMANTICS AUDIT.
-
-## Phase 6E-B54B func_8006AD40 counted loop completed (accepted input)
-
-Starting evidence commit is
-`d58ff9b88b71373fd34c3d3866e8c16220a9a5d0` (production parent
-`f003e4aa5ecfd17c5b98aa466f8262f44c5d6d37`). B54B implements only retail
-`0x8006AE50..0x8006AE67`: reload the header, increment the completed-entry
-counter, extract the count, compare with `sltu`, branch back when required,
-and advance the entry pointer by `0x14` in the delay slot.
-
-Canonical count 13 now dispatches entry 0 once and entries 1 through 12 once
-each through the existing faithful `func_8006E1C0`. It exits with the local
-`s1=13`, local `s0=0x8012E05C`, and the named strict frontier
-`func_8006AD40_prefix_cut` moved to `0x8006AE68`. It does not consume the
-`D_80091648` packing, archive lookup, later `func_8007506C` table walk,
-`func_8006E7E8` poll, `func_800718D0`, `func_80030894`, or a third DMA
-checkpoint.
-
-Fresh normal and ASan/UBSan suites pass 568/568. Focused B54B tests pass 2/2
-in both builds; the complete oracle matrix is 47/47, including B54A 8/8 and
-B54B 8/8. Three real-disc runs retain byte-identical framebuffer SHA-256
-`fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb`,
-trace SHA-256 `42c1956e077a40fed5176653b6a18938a8a91e99e35fe9d7044f31581de785af`,
-and disc-load FNV `7D860391E1ED6C97`.
-
-Evidence: `pc_port/docs/b54b_func_8006AD40_counted_loop.md`.
-Independent contract: `pc_port/tools/b54b_6ad40_counted_loop_oracle.py`.
-The next rung is a read-only suffix audit beginning at `0x8006AE68`; do not
-translate it automatically.
-
-## Phase 6E-B54A func_8006AD40 suffix audit (accepted input)
-
-Starting D commit is
-`f003e4aa5ecfd17c5b98aa466f8262f44c5d6d37`. B54A was read-only. At that
-evidence commit the frontier remained `func_8006AD40_prefix_cut` at
-`0x8006AE50`; production C was unchanged.
-
-The old B50 cut is mid-loop. Canonical Disc 1 packet count is 13; only
-entry 0 (`func_8006E1C0`) has run. That entry is the accepted two-LoadImage
-pair `{704,64,32,64}` + `{256,456,64,1}`. The suffix's first 12 calls are
-the same already-translated helper. Recommended B54B cut is `.L8006AE68`
-(`0x8006AE68`) after those iterations. First unresolved *function* if the
-later path is taken is 29-word `func_800718D0` at `0x8006AFA8` (only callee
-`func_8007506C`); it is not reached without an explicit CD poll result.
-`D_800B0CD8` still has `0x01004000` at the current cut.
-
-Evidence: `pc_port/docs/b54a_func_8006AD40_suffix_audit.md`.
-Independent contract: `pc_port/tools/b54a_6ad40_suffix_oracle.py`.
-B54B subsequently implemented only the recommended counted loop.
-
-## Phase 6E-B53I-D second LoadImage DMA completion verified
-
-Starting C commit is
-`175b16a4a78b68ec7515deceb2fd6088b57c4356` (parent
-`44d05fa06a4461dbb8e37a236bcdee26d44b74b8`). B53I-D admits one distinct
-later invocation of the existing B2 hardware checkpoint and completes only
-the active second-DMA token. It does not add a periodic scheduler or another
-checkpoint implementation: the existing host-safe continuation makes two
-explicit calls, with the second allowed only after the first returns normally.
-There is no loop or third opportunity, and it does not enter the B50 suffix.
-
-The measured C endpoint has token 2 active at
-`MADR/BCR/CHCR = 0x8012B8B8/0x00020010/0x01000201`, RECT
-`{256,456,64,1}`, producer/consumer 1/1, DMA callback slot 2 zero, marker 1,
-DrawSync zero, I_STAT zero, I_MASK `0x0009`, `D_800945E6=0`, and raw/physical
-DICR `0x00800000`. All 64 destination pixels are still zero.
-
-The later checkpoint captures token 2 once and services it once. Pixels
-`0x6000..0x603F` become visible at `(256..319,456)` in low-halfword-first
-order; source bytes and adjacent VRAM remain intact; CHCR clears to
-`0x00000201`. Because channel-2 enable was removed before issue, flag 26 is
-not created. Raw/physical DICR stay `0x00800000`, no bit-31 rise is latched,
-and I_STAT remains zero. Source-3 service, `func_80074520`, pump, worker, and
-DrawSync deltas are all zero; queue indices/bytes, callbacks, marker, mask,
-dispatcher-active, GPUSTAT, and VBlank are frozen. Token 2 replay is inert;
-hardware reset/reissue gives a distinct token and rejects the old one.
-
-The checkpoint now calls the edge bridge only for a pending sticky DICR rise
-and the CPU scanner only when live `I_STAT & I_MASK` is nonzero. CPU service
-is not gated only on a new DICR edge, so an older pending source that becomes
-unmasked is still eligible. On the canonical D path neither helper is called.
-Each invocation still captures exactly one token and never loops or recaptures.
-
-Eight focused D groups expand the suite to 566 tests. The independent
-`pc_port/tools/b53i_d_oracle.py` verifies 15 explicit state scenarios without
-production imports or automatic hardware evolution; the full oracle matrix
-is 46/46. Fresh normal and ASan/UBSan suites pass 566/566; retained C/B2/B1/
-H/B53B and B49/frontier/hash gates remain green. Full evidence is
-`pc_port/docs/b53i_d_second_dma_completion.md`.
-
-**TWO-LOADIMAGE ASYNCHRONOUS GPU LIFECYCLE VERIFIED:** the first transfer
-issues, defers, completes through source-3 IRQ and the retail queue pump, then
-issues the second transfer; the second defers and completes at a later
-opportunity without IRQ because its channel enable/callback was removed.
-
-That suffix audit became B54A. B54B subsequently implemented only the
-remaining `func_8006E1C0` loop and moved the live frontier to `0x8006AE68`.
-Bootstrap remains `func_8007F72C` from `func_800698D4`.
-
-## Phase 6E-B53I-C idle GPU command pump verified
-
-Starting B2 commit is
-`44d05fa06a4461dbb8e37a236bcdee26d44b74b8` (parent
-`76d8cffc48b4a0c38627ff5dfbb771a704880f33`). B53I-C translates the exact
-remaining idle suffix `0x80076F10..0x8007712F` (136 words / `0x220`, SHA-256
-`fed73d363d43e4ce9ada5534224fca37a044bdb2fc590f494d6b1fb413c954c4`).
-Together with B53H's busy prefix and the shared epilogue, all 152 words /
-`0x260` of `func_80076EE4` are now represented. Full-body SHA-256 remains
-`a124857ab6fd91a3b68ea3e5c2efa5337bf6ed5528ef94ca23bc4a781337a78c`;
-semantic ABI is `int func_80076EE4(void)`.
-
-The idle path calls `func_80073E10(0)`, saves the actual prior mask as a
-32-bit word in `D_80095880`, and keeps I_MASK zero through queue mutation.
-It uses the live guest ring at `D_800BD030` (64 × `0x60`; worker/argument/
-auxiliary at `+0/+4/+8`). Only the last queued item with DrawSync callback
-zero removes channel-2 callback `0x80076EE4` through the complete
-`func_80073CF4(2,0)` path, yielding stored DICR `0x00840000 -> 0x00800000`.
-GPUSTAT readiness is a literal inert `0x04000000` tight poll: it cannot
-complete DMA, auto-ready, advance VBlank, or mutate the queue.
-
-The canonical ring entry resolves guest worker `0x80076664` with argument
-`0x800BD03C`, source `0x8012B8B8`, and RECT `{256,456,64,1}`. The worker
-issues DMA2 `MADR/BCR/CHCR = 0x8012B8B8/0x00020010/0x01000201` and returns.
-Only then does the pump store consumer `0 -> 1` at exact retail PC
-`0x80077054`; producer remains 1 and the entire `0x60` entry remains
-byte-identical. It restores the actual saved I_MASK (`0x0009` canonically).
-Because DMA is now busy, marker remains 1 and DrawSync callback remains zero.
-The pump returns zero normally, so the enclosing DMA/CPU scans finish and
-the authentic CPU terminal path clears `D_800945E6` from 1 to 0.
-
-The first checkpoint still captures only the first DMA token before doing
-any work and never loops or recaptures. Consequently the callback-created
-second DMA remains active with completion pending false; its pixels are not
-yet DMA-visible and it cannot raise another source-3 event in the same
-checkpoint. Callback removal precedes issue, so the second transfer starts
-with channel-2 interrupt enable clear and stored DICR `0x00800000`.
-
-Worker identities remain 32-bit guest values. Only `0x80076664` is bound;
-all other values, including zero, stop at typed indirect boundaries before
-consumer advance and mask restoration. Stop-epoch comparison distinguishes
-an actual nested non-return from an older sticky host stop. A DrawSync
-identity is loaded live after mask restoration; marker clears before its
-typed indirect boundary. Invalid raw ring arithmetic stops at
-`func_80076EE4_ring_span` without masking the index or dereferencing a host
-pointer. The adjacent `func_80077144` ResetGraph queue-reset suffix is not
-reached here and remains separate work.
-
-Ten focused C groups expand the suite to 558 tests. The standalone
-`pc_port/tools/b53i_c_oracle.py` rechecks all 152 literal words, full/idle
-hashes, every control-transfer delay slot, and 20 explicit scenarios without
-production imports or autonomous hardware progress. Fresh normal and
-ASan/UBSan suites pass 558/558; the full oracle matrix passes 45/45; B49 and
-real-disc load pass in both configurations. Five independent reviews found
-no HIGH or MEDIUM issue. Full evidence is
-`pc_port/docs/b53i_c_idle_gpu_pump.md`.
-
-The resolved focused path now returns normally instead of stopping at
-`func_80076EE4_idle_pump`. The global continuing frontier remains
-`func_8006AD40_prefix_cut` from `func_8006AD40` at `0x8006AE50`; bootstrap
-strict remains `func_8007F72C` from `func_800698D4`.
-
-That later second-token completion is now verified by B53I-D; this paragraph
-is retained as C's historical handoff boundary.
-
-## Phase 6E-B53I-B2 DMA completion/IRQ delivery verified
-
-Starting B1 commit is
-`76d8cffc48b4a0c38627ff5dfbb771a704880f33` (parent
-`31da8f843241910a70d49cee6e738b4c19bb76fd`). B2 connects one captured
-active DMA2 token through three separate phases: GPU completion, a sticky
-physical-DICR rising-edge bridge to I_STAT source 3, and generation-checked
-CPU pending service. Completion never calls a callback; the bridge only ORs
-source 3 into I_STAT; CPU service never completes DMA.
-
-`pe_gpu` remains the single DICR authority. Stored bit 31 is always zero and
-physical reads derive it as `force15 || (master23 && any flags24..30)`.
-Every stored transition recomputes the level and sticky-latches only a
-false-to-true edge until the separate bridge consumes it. Normal completion
-always exposes the copied VRAM and clears CHCR, but creates flag 24+n only
-when that channel's enable and master were both set at completion. This is
-the one deliberate correction to B53B's earlier bounded expectation.
-
-Retail recovery is reverified against SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. `func_80073F00` is
-`0x80073F00..0x800740CF`, 116 words, semantic void; it scans
-`D_80094614 & I_STAT & I_MASK`, sources 0..10, acknowledges I_STAT before a
-live CPU-slot lookup, and clears `D_800945E6` only on normal terminal return.
-`func_80074520` is `0x80074520..0x8007469F`, 96 words, semantic void; it
-scans `(DICR>>24)&0x7F`, channels 0..6, W1C-acknowledges before a live DMA
-slot lookup, and resamples after normally returned snapshots. CPU and DMA
-tables stay separate guest-backed 32-bit identities; zero alone skips and an
-unbound nonzero identity becomes an honest typed indirect boundary.
-
-Canonical order is DICR edge, I_STAT W0C `0xFFF7`, source-3 identity
-`0x80074520`, DICR channel-2 W1C `0x04840000`, then DMA identity
-`0x80076EE4`. The B53H typed pump distinguishes its real busy return from an
-idle non-return. After completion it reaches `func_80076EE4_idle_pump` and
-propagates immediately through DMA scan, CPU scan, checkpoint, and caller.
-Both acknowledgements stay committed; `D_800945E6` stays 1; producer/consumer
-stay 1/0; the queued entry is byte-identical; no worker or second DMA runs.
-Value-only telemetry at the actual typed pump entry proves neither hardware
-completion nor edge bridging can hide an early call in the silent busy path.
-
-The deterministic checkpoint is after `func_8006AD40()` and before the
-sticky stop check. It captures one DMA token plus IRQ generation and never
-loops or recaptures, so a callback-created DMA waits for a later hardware
-opportunity. Full reset clears both guest callback tables, I_STAT/I_MASK,
-registered/active/watchdog state, raw DICR and its edge, and invalidates both
-DMA and IRQ generations. ResetCallback reproduces the deferred
-`func_800744D4` DMA-table clear and literal DICR zero-control write before
-source-3 installation; zero retains flags by W1C semantics.
-
-Fifteen focused B2 groups expanded the then-current suite to 548 tests. The
-standalone `pc_port/tools/b53i_b2_oracle.py` verifies all 96 DMA words, 53
-literal CPU windows plus its full-body hash, and 17 explicit state scenarios
-without production imports. The focused boundary at that rung was
-`func_80076EE4_idle_pump`; B53I-C now resolves it. The separately measured global frontier remains
-`func_8006AD40_prefix_cut` at retail `0x8006AE50`, and bootstrap strict
-remains `func_8007F72C` from `func_800698D4`. Full proof is
-`pc_port/docs/b53i_b2_dma_irq_delivery.md`.
-
-The B2 handoff target was the idle-DMA consumer beginning at `0x80076F10`;
-B53I-C completed it without combining the B50 suffix or recursively
-completing the second DMA.
-
-## Phase 6E-B53I-B1 CPU IRQ state/registration verified
-
-Starting evidence commit is
-`31da8f843241910a70d49cee6e738b4c19bb76fd` (parent
-`a470422d1accdae39a1d8cb4b501df599df9003c`). B53I-B1 adds one native
-16-bit I_STAT beside the existing I_MASK in `pc_port/platform/pe_irq.[ch]`.
-I_STAT write semantics are W0C (`status &= written`); assertion is an OR
-independent of I_MASK; masked pending bits survive later unmasking. Raw IRQ
-reset clears status/mask and advances a nonzero 64-bit generation. A
-generation-checked assertion rejects captured pre-reset work. None of these
-operations dispatches a callback.
-
-Direct retail recovery corrects one B53I-A sentence: at `0x80073E80`,
-`func_80073E28` calls the nine-word `func_80074330` with delay-slot count
-`0x41A`. It clears exactly `0x41A` words / `0x1068` bytes at
-`[0x800945E4,0x8009564C)`, including the guard, dispatch-active flag, all
-eleven CPU callback slots, and `D_80094614`; the exclusive end is exactly
-the SDK jump table. Retail actively removes the same-handler hazard before
-registration.
-
-ResetCallback now installs source 0 then source 3 through bounded
-`func_80073CC4`/`func_800740D0` paths. Source 0 stores guest identity
-`0x8007440C`, updates mask/registered bit 0, calls B(5Bh)(0), then
-C(0Ah)(3,0), both while I_MASK is zero, and restores mask 1 afterward.
-Source 3 stores guest identity `0x80074520` in `D_800945F4`, sets bit 3,
-performs no special BIOS call, and restores final I_MASK `0x0009`.
-`D_80094614` also finishes `0x0009`. All identities remain 32-bit guest
-values in `D_800945E8`; there is no native CPU callback-table mirror or
-function-pointer cast. Unsupported setter sources stop at the named
-`func_800740D0_source_cut`.
-
-This rung has no `PE_IRQ_ServicePending`, DMA completion, DICR/source-3 edge
-bridge, `func_80074520` execution, DMA callback dispatch, idle pump, ring
-consumption, or second DMA issue. A registration-only hardware snapshot
-proves DMA2, DICR, GPUSTAT, VRAM, queue state, and VBlank remain unchanged.
-Eight focused groups expand the native suite to 533 tests. The standalone
-`pc_port/tools/b53i_b1_oracle.py` verifies 210 literal words across seven
-retail windows, exact calls/delay slots, the bulk clear, W0C, masked pending,
-coherent reset, and zero delivery without importing production C. Full
-proof: `pc_port/docs/b53i_b1_irq_state_registration.md`.
-
-Fresh completion gates are 533/533 normal and ASan/UBSan, focused B1 8/8
-each, frozen B53B 15/15 each, retained B53H 8/8 each, the full oracle matrix
-43/43 (retained subset 33/33), and B49 normal/sanitizer PASS. The canonical
-frontiers, framebuffer SHA-256, real-data FNV, and matching executable hashes
-remain unchanged. Four independent review lanes closed with no HIGH or
-MEDIUM finding after corrections.
-
-The next rung from B53I-B1 was B53I-B2: deterministic DMA hardware completion and
-physical DICR bit-31 edge generation; source-3 I_STAT assertion; separately
-invoked CPU pending service; literal `func_80074520` DICR W1C/resampling;
-typed DMA callback binding to `0x80076EE4`; and honest propagation of a
-nested untranslated idle-pump boundary. Hardware completion and callback
-execution must remain separate observable phases.
-
-## Phase 6E-B53H GPU pump busy-DMA prefix verified
-
-The exact B53G base is
-`0eae8ad5c957f7ff5199eeae9cfad46eb071ce4e` (parent
-`0650bdbef128b82c44faae5d378acdcbd8bfcf96`). B53H translates ONLY the
-execution-proven busy-DMA fast path of the libgpu queue pump
-`func_80076EE4`: 152 words / `0x260` bytes at `0x80076EE4..0x80077143`
-(exclusive end `0x80077144`, file offset `0x676E4`, live split
-`asm/disc1/66B54.s`), body SHA-256
-`a124857ab6fd91a3b68ea3e5c2efa5337bf6ed5528ef94ca23bc4a781337a78c`.
-
-ABI is `int func_80076EE4(void)` — proven by a backward liveness fixpoint:
-no instruction reads `a0`/`a1` before writing it and `a2`/`a3` never
-appear. The first state read is DMA2 CHCR via retail pointer
-`D_80095860` = `0x1F8010A8`; `and` with `lui 0x0100` then
-`bnez -> 0x80077130` (target verified arithmetically) returns exactly `1`
-from the delay slot at `0x80076F0C`. The busy path writes only its own
-three stack words and touches NO I_MASK, producer, consumer, ring entry,
-GPUSTAT, callback slot, or DICR — every one of those lives at an address
-after the taken branch. DICR is never referenced anywhere in the 152 words.
-
-**Caller census:** 4 direct `jal` (`0x80076C78`, `0x80076EA4` canonical,
-`0x800772B4`, `0x8007736C`), 2 identity materializations (`0x80076D58`,
-`0x80077A08`), and libgpu jump-table slot 9 (`0x80095728`) which holds the
-pump but is **never dispatched** by any executable site.
-
-Canonical effect: producer 1→1, consumer 0→0, entry 0 byte-identical,
-callback slot 2 `0x80076EE4`, DICR `0x00840000`, I_MASK 0, DMA2 active=1
-completion=0 IRQ=0, GPUSTAT `0x04000000`, VBlank 0 — all unchanged, pump
-returns 1. It is invoked exactly once in the whole canonical run.
-
-**Strict frontier advanced one rung.** With the pump returning a real
-value, `func_80076C34` returns its retail pending count and both LoadImage
-calls complete, so the canonical Disc 1 strict run now reaches the
-pre-existing B50 prefix cut in `func_8006AD40_port.c` (retail
-`0x8006AE50`). That cut previously requested a stop without naming itself,
-which would have degraded strict mode to a silent exit 0; B53H **names**
-it `func_8006AD40_prefix_cut`, so canonical strict still **exits 1** with
-an exact frontier (`func_8006AD40_prefix_cut` from `func_8006AD40`) and it
-is the only BOOTSTRAP_RET provider on the canonical path. Bootstrap strict
-is unchanged.
-
-**Boundary signalling is explicit, not inferred.** `PE_Port_RequestStop`
-keeps only the FIRST reason, so the reason value cannot report that a
-specific callee just stopped. The pump reports through an explicit
-`int *retail_returned` out-parameter on `PE_func_80076EE4_Pump`, and the
-sibling direct-issue path in `func_80076C34_port.c` compares a new
-monotonic `PE_Port_StopEpoch()` across the worker call — retail
-`0x80076D40..0x80076D4C` restores the saved I_MASK unconditionally, so a
-pre-latched stop must not suppress it and a new worker boundary must not be
-hidden by it.
-
-**§20 asynchronous-progress answer:** the pending first LoadImage can only
-complete via **DMA completion event integration + source-3 DMA IRQ dispatch
-integration**. B53B's `PE_GPU_ServiceDMA2Completion` exists but nothing
-calls it; `func_80074520` is untranslated and the source-3 I_MASK
-installation `func_80073CC4(3, func_80074520)` is still deferred. That is
-B53I.
-
-Full proof is in `pc_port/docs/b53h_func_80076EE4.md`.
-
-## Phase 6E-B53G DMA callback-slot setter verified
-
-The exact B53F base is
-`0650bdbef128b82c44faae5d378acdcbd8bfcf96`. B53G translates the complete
-Psy-Q DMA callback-slot setter `func_800746A0`: 43 words / `0xAC` bytes at
-`0x800746A0..0x8007474B` (exclusive end `0x8007474C`, file offset
-`0x64EA0`, live split `asm/disc1/64CC8.s`), body SHA-256
-`ac160079410a40d719e5a8668f627d05d36d287d08959adc22fd3e069e4e99dd`.
-
-ABI is `pe_addr_t func_800746A0(uint32_t channel, pe_addr_t handler)`. It
-reads the previous 32-bit guest identity from the guest-backed eight-slot
-table `D_800956C0` (`0x800956C0..0x800956DF`, cleared by
-`func_800744D4` → `func_8007474C(&D_800956C0, 8)`), returns immediately if
-the handler is unchanged, otherwise stores the slot and **then** performs
-the DICR RMW, and always returns the previous identity. Retail performs no
-channel validation whatsoever; the enable bit is
-`1 << ((channel + 16) & 31)`. Install is
-`(DICR & 0x00FFFFFF) | bit | 0x00800000`; removal is
-`((DICR & 0x00FFFFFF) | 0x00800000) & ~bit`, so channel 7 — whose enable
-bit *is* master bit 23 — clears master again. The `0x00FFFFFF` mask means
-W1C completion flags 24..30 are never acknowledged.
-
-**Bit-31 verdict B:** read by the `lw`, masked off before writeback, never
-tested, never written as one; B53B is NOT extended (proved by running the
-oracle with and without a synthesized master flag). **I_MASK verdict:** not
-accessed at all; the B53D `pe_irq` authority is unchanged. DICR remains
-solely owned by B53B `pe_gpu` via `PE_GPU_ReadDICR`/`PE_GPU_WriteDICR`; no
-native callback mirror or native function pointer exists.
-
-Caller census from the SHA-exact image: **zero** direct `jal`, zero static
-data words holding `0x800746A0`, and exactly one address materialization at
-`0x80074508` inside `func_800744D4`. ResetCallback stores that identity in
-libetc jump-table field `+0x04`, and `func_80073CF4` is the sole wrapper
-dispatching that field — so B53F's 11 call sites (channels 2/3/4, including
-null-handler removal) are the effective ABI.
-
-`func_80073CF4` is now COMPLETE. The canonical enqueue therefore proceeds:
-callback slot 2 `0` → `0x80076EE4`, DICR `0` → `0x00840000`, setter returns
-`0`, then ring entry 0 is built and published (worker `0x80076664`,
-argument `0x800BD03C` = guest address of the copied inline RECT
-`{256,456,64,1}`, auxiliary `0x8012B8B8`), producer `0`→`1`, consumer
-unmoved, I_MASK exchanged and restored. The pending first LoadImage DMA is
-still active and still incomplete; nothing pumps, completes, or delivers.
-
-Full proof is in `pc_port/docs/b53g_func_800746A0.md`.
-
-## Phase 6E-B53F installed-target wrapper prefix verified
-
-The exact B53E base is
-`f7772f014d037209dfcc1a1d56d3c576593648a6`. B52 translates the complete
-Psy-Q LoadImage wrapper `func_8007506C` (24 words, 0x60 bytes,
-`0x8007506C..0x800750CC`) and its complete read-only debug validator
-`func_80074E28` (71 words, 0x11C bytes,
-`0x80074E28..0x80074F44`). The wrapper validates its transient four-signed-
-halfword RECT, reloads `D_80095744`, and dispatches through
-`jtb[2] = func_80076C34` with `a0 = jtb[8] = func_80076664`, `a1 = RECT *`,
-`a2 = 8`, and `a3 = data`.
-
-B53A completely recovered that hardware contract. B53B now implements one
-private native authority in `pc_port/platform/pe_gpu.[ch]`: 1024x512x16
-VRAM, GPUSTAT ready bit 26, GP0 A0 parsing, the proven GP1 subset, DMA2 raw
-registers and tokenized deferred completion, DPCR/DICR channel-2 state, and
-an explicit VBlank counter. It has no retail ring or callback state and does
-not touch HostFB.
-
-B53C translates complete 13-word timeout helper `func_800773D0` and the
-dispatcher prefix; B53D adds the single 16-bit I_MASK authority and complete
-6-word `func_80073E10`. B53E translates the 143-word LoadImage issue worker
-`func_80076664` (`0x80076664..0x800768A0`, body SHA-256
-`79dd44e3819f51eb5928c9af3ec0d6906cc3d95765dc2718c3c10e49ef78e0f7`)
-against B53B. It preserves signed RECT clamps, complete source-span safety,
-the inert GPUSTAT bit-26 wait, exact GP1/GP0 A0 sequence, CPU-fed remainder,
-and asynchronous DMA2 MADR/BCR/CHCR issue. The worker does not complete DMA,
-pump the ring, or invoke callbacks. An executable-wide DPCR audit proved the
-enable belongs to earlier ResetGraph initialization: guard-passing
-ResetCallback now writes `0x33333333`, collapsed `func_80077144` ORs
-`0x800`, and canonical entry is `0x33333B33`; the worker never force-enables
-the channel. The first canonical request issues DMA and leaves it busy, so
-the second request selects enqueue. B53F translates the execution-proven
-installed-target path through the 12-word `func_80073CF4` wrapper without
-adding a callback-table mirror or native function pointer. It now stops at
-the separate `func_800746A0` callback-slot/DICR setter before ring
-construction or publication. A full ring and the worker timeout-recovery
-suffix expose `func_80077404`.
-The B52 transient RECT remains two by-value words with no native pointer
-retained. B53C/D/E oracles independently execute literal words with exact
-delay slots and explicit hardware/dependency inputs.
-
-The raw retail trampoline at executable `0x80071A24..0x80071A2F` (file
-offset `0x62224`) is exactly `240A00A0 01400008 24090028`: load `$t2=0xA0`,
-jump through `$t2`, and load `$t1/r9=0x28` in the delay slot.  Authoritative
-BIOS tables identify this as A(28h) `bzero(dst,len)`; C(02h)
-`SysEnqIntRP(priority,struc)` uses vector `0xC0`.  The corrected provider
-uses checked guest-memory `PE_Fill`, and `func_80064964` clears
-`0x800A3060..0x800A317F` before its eight ordered `sb 0xFF` stores.
-Independent contracts are `pc_port/tools/b21_bzero_oracle.py` and
-`pc_port/tools/b21_order_oracle.py`.  History remains intact: provisional
-`8e90ac7`, incorrect `14ac77b`, then one corrective commit only after gates.
+Evidence: `docs/evidence/func-8002F7D8/REPORT.md`.
+
+## func_80030534 — 2D distance helper matching C (20 words)
+
+`src/func_80030534.c` matches byte-exact on era `-O2 -G0` + maspsx
+`--aspsx-version=2.30`. VRAM `0x80030534` / file `0x20D34` / size `0x50`.
+The leftover nop sits between the second `subu` and `mult` because
+ASPSX ≥ 2.30 requires two instructions between `mflo` and the next
+`mult` (`nop_mflo_mfhi`). 2.21 omits it. Mid-20210 carve: prefix `0xB24`,
+C `0x50`, resume `20D84.s` `0xBC`. `scripts/build_us.sh` **EXACT SHA-1**
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+Evidence: `docs/evidence/func-80030534/REPORT.md`.
+
+## func_80030640 — RNG gate matching C (40 words)
+
+`src/func_80030640.c` matches byte-exact on era `-O2 -G0`. VRAM
+`0x80030640` / file `0x20E40` / size `0xA0`. Mid-20210 carve: prefix
+`0xC30`, C `0xA0`, resume `20EE0.s`. `lui $v1,1` is bit 16 (`0x10000`),
+not `andi 1`. Second `D_8009D278` load is `$v1` because signed `%100`
+clobbers `$a0`. `scripts/build_us.sh` **EXACT SHA-1**
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+Evidence: `docs/evidence/func-80030640/REPORT.md`.
+
+## Current state
 
 | Fact | Value | Derive |
 | --- | --- | --- |
-| Branch | `phase6e-b-provider-frontier` (from `phase6d-s-guest-memory-safety` @ `9ac15f8`) | `git branch --show-current` |
-| Port phase | **6E-B54K-A func_80030894 prologue + bank-0 L2/L3**; named `func_80030894_L2L3_cut` @ retail `0x80030AC4`; 6AD40 parks at `func_8006AD40_post30894_cut` @ `0x8006B0BC`; next: B54K-B groups L4..L11 + epilogue | tests 582/582; b54ka oracle 8/8; b54j audit oracle 19 groups; b54i oracle 30 checks; exe-arg oracles 56/56 |
-| Guest memory | Contiguous 2 MiB guest RAM; `pe_addr_t`; typed lvalue macros in `psx_compat.h`; `PE_RamInit/Reset/Destroy` | `pc_port/platform/pe_guest_ram.[ch]` |
-| Policy | Centralized `Bootstrap_ReturnInt/Void` + strict abort; deterministic provider sequences | `pc_port/bootstrap/pe_bootstrap.[ch]` |
-| Disc layer | Read-only user-supplied Disc 1 (BIN/CUE MODE2/2352, ISO9660); real providers func_80082314/func_80081414/func_80080C48/func_8006E6D4/func_800811E4; `func_800698D4` retail mount sequence; PE.IMG bytes land at `D_80011614` (0x8010BD00); retail boot exe (SYSTEM.CNF `BOOT=`, PS-X EXE) loaded into guest RAM at taddr with `--disc-image` | `pc_port/platform/pe_disc.[ch]`, `pc_port/platform/pe_libcd.c`, `pc_port/platform/pe_guest_image.[ch]` |
-| RNG | func_80070D10/70D6C/70DD0 TRANSLATED (lagged-Fibonacci; verbatim `i2 \|= 0x40` wrap cycles through 14 retail code words below the table); oracle gate `--rng-oracle-dump` ≡ `pc_port/tools/rng_oracle.py` on retail exe | `pc_port/game/boot/func_80070D{10,6C,D0}_port.c` |
-| Subsystem init | func_8003E974 + func_8003EAC8 TRANSLATED (state clear + 20 ROM-ordered registrations; GTE LZCS/LZCR leaf: idx = (a0==0x80000000) ? 31 : 31−LZCR(a0), below-table write at 0x800A76EC preserved, never clamped; 20 distinct call sites, not 63); oracle gate `--lzcr-oracle-dump` ≡ `pc_port/tools/lzcr_oracle.py`. func_80036DC8 + leaves func_80036DF8/36E34/36E58 TRANSLATED (timer-record init: three 12-byte records at 0x800A76A0/AC/B8 = {1,0,x}, record 0 field2 0x1499700; consumers divide field1 by 60 — 60 Hz tick counters) | `pc_port/game/boot/func_8003E{974,AC8}_port.c`, `pc_port/game/boot/func_80036DC8_port.c`, `pc_port/platform/pe_gte.c` (`PE_GTE_LZCR`) |
-| VBlank callbacks | func_80073D24 IMPLEMENTED (libetc jump-table wrapper, slot 4 forced, return forwarded → func_80074478 semantics: prev = D_8009568C[4], store-if-different, return prev); guest-backed 8-slot table at 0x8009568C + dispatch counter at 0x800956AC; func_8007440C-faithful dispatcher; typed guest→host binding map, full pointer width, unknown identities = visible errors; slot 8 aliases the counter (exact retail arithmetic preserved); oracle gate `--callback-oracle-dump` ≡ `pc_port/tools/callback_oracle.py` (MIPS interpreter on the verified retail words) | `pc_port/platform/pe_callback.[ch]`, `pc_port/platform/pe_libetc.c` |
-| Boot globals | func_800371A4 TRANSLATED (3-word $gp-relative byte setter: `sb $a0, 0x124($gp)` → D_8009CE94 = guest 0x8009CE94, exe-verified words; call sites 3E680 arg 0 + 527C8 arg 1, returns unused; sole reader func_80037870 off boot path). func_80029388 TRANSLATED (slot-table clear + record init: 7 in-use words at D_800A5D58 + i*220 — same 7×220 SlotRecord table as decomp leaf func_8002F9CC — plus bytes D_8009D2A0/D_8009D2EC; leaves func_8002F658 = rodata-record copies D_80010928→D_800B8A20 0x70 / D_80010998→D_800B0CB0 0x18 + zero D_8009D1B0/D_8009D1B4, func_80020EFC = matched 5-byte clear; sole 29388 call site 3E680 @0x8003E700, nop slot). func_8005BCA8 TRANSLATED (empty jr/nop stub: 2 words at 0x8005BCA8 / file 0x4C4A8 = `03E00008 00000000`, zero guest effects; sole call site 3E680 @0x8003E708, nop slot; matching decomp C leaf since Phase 5AH). func_80068D28 TRANSLATED (63 words / 0xFC at 0x80068D28, live split 55430.s, all exe-verified: double-buffered display-record data init at D_800BCF88 — scalar block +0x60..0x70, two 16-byte records +0x30+i*0x10, two 8-byte records +0x50+i*0x8 with 0xE1000440 GP0-shaped DATA word, not a hardware write; loop bytes are retail load-after-store from the scalars; write extent 0x800BCFBB..0x800BCFF9; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E710, nop slot, $v0=0 unconsumed). func_800124F8 TRANSLATED (31 words / 0x7C at 0x800124F8, live split 2A0C.s, all exe-verified: subsystem table clear — sw 0 → 0x8009D300, sh 0 → 0x8009D308 with 0x8009D304 untouched, sw 0 → 0x8009CDFC/0x8009CE00/0x8009CE04, 72×11-word matrix at D_8009D310 stride 0x2C span ..0x8009DF6F, contiguous 16-word array at D_8009DF70 span ..0x8009DFAF; pure zero-stores, no reads, no SDK/GTE/hardware/GPU work; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E718, nop slot, $v0=0 unconsumed). func_8001A890 TRANSLATED (34 words / 0x88 at 0x8001A890, live split A404.s, all exe-verified: subsystem scalar/array clear — sw 0 → 0x8009CE08, stride-2 halfword loop 0x8009CE0C..CE13, sw 0 → 0x8009CE14, 20-word array at D_8009DFB0 span ..0x8009DFFC contiguous above 124F8's array, six stride-4 halfwords 0x8009CE18/1C/20/24/28/2C with interleaved upper halves untouched (ROM order A8, B8, B4, B0, AC, BC), words 0x8009D1D8/D1FC/D2F8/D248 (ROM order 468, 48C, 588, 4D8), halfwords 0x8009D264/D1CC (ROM order 4F4, 45C); pure zero-stores, no reads; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E720, nop slot, $v0=0 unconsumed). func_80034F10 TRANSLATED (45 words / 0xB4 at 0x80034F10, live split 2422C.s, all exe-verified: subsystem table clear + flag-bit clear — sw 0 → 0x8009D2E8, 512-word array at D_800A77F0 span ..0x800A7FEC, D_800B6A80 = 0 (retail stores the same word 64× via delay-slot loop with no pointer advance, reproduced as one store), 14×160-word matrix at D_800BEA90 stride 0x280 span ..0x800C0D8F, scalars sw 0 → 0x8009D2AC/D20C/D2F0/D254/D224 + sh 0 → 0x8009D2A6 (ROM order 53C, 49C, 580, 536, 4E4, 4B4), sole guest read + RMW D_800B0CD8 &= ~0x3000 with the store in the jr $ra delay slot; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E728, nop slot, $v0=&D_800B0CD8 unconsumed). func_8006536C TRANSLATED (19 words / 0x4C at 0x8006536C, live split 55430.s, all exe-verified: subsystem record-table clear + index byte clear — 28×3-word table at D_800A3180, row stride 0xC, contiguous 84 words span ..0x800A32CF, sb 0 → 0x44($gp) = 0x8009CDB4 current-record index byte (func_800653B8 below reads lbu 0x44($gp) and indexes D_800A3180 + byte×12, confirming 28×12-byte records); no reads, no SDK/GTE/hardware/GPU work; idempotent incl. after PE_RamReset; sole call site 3E680 @0x8003E730, nop slot, $v0=0 unconsumed). func_80038D1C TRANSLATED (11 words / 0x2C at 0x80038D1C, live split 2951C.s, all exe-verified + matched decomp C leaf: byte test-and-clear status leaf — lbu D_80091A20, if nonzero sb 0 → D_80091A20 return 0, else return 0xFF; conditional write only; two call sites both return-ignored: 3E680 @0x8003E738 final call + 6E9A0 @0x8006EB7C; with this leaf func_8003E680 FULLY translated) | `pc_port/game/boot/func_800371A4_port.c`, `pc_port/game/boot/func_80029388_port.c`, `pc_port/game/boot/func_8005BCA8_port.c`, `pc_port/game/boot/func_80068D28_port.c`, `pc_port/game/boot/func_800124F8_port.c`, `pc_port/game/boot/func_8001A890_port.c`, `pc_port/game/boot/func_80034F10_port.c`, `pc_port/game/boot/func_8006536C_port.c`, `pc_port/game/boot/func_80038D1C_port.c` |
-| Streaming load | func_8006A9E4 TRANSLATED (215 words / 0x35C at 0x8006A9E4, live split 5B1E4.s, all exe-verified: ClearImage({0,0,0x3FF,0x1FF},0,0,1) via REAL func_80074F44; four PE.IMG sector-read/poll cycles — table D_800930DC..E8, dests D_800A8028 / lw(D_800B0E6C), A/B restart-on-(-1), C/D sltu-clamped re-poll, sector counts proven by the 34-sector/67792-byte and 3-sector/5120-byte cycle/copy pairs; 0x10A50-byte copy to D_800E2858; two func_8006E498 lookups keys 0x57D40D84/0x57D41D84 exact delay-slot order D_800B0E20→E18→E1C; 0x1400-byte copy to lw(D_800B0E08); sole call site func_8001220C @0x80012284, nop slot, return ignored). Dependencies TRANSLATED: func_8006E6A8, func_8006E7E8, func_8006E498, func_800527C8. B45: func_80087090 TRANSLATED (retry wrapper). B46: func_800851A8 PREFIX TRANSLATED (magic check + error path). B47: func_80085EB4 TRANSLATED (SPU address validation); func_800851A8 extended prefix past func_80085EB4 through payload copy; func_800850F4 (DMA transfer) remains UNRESOLVED | `pc_port/game/boot/func_8006A9E4_port.c`, `func_8006E6A8_port.c`, `func_8006E7E8_port.c`, `func_8006E498_port.c`, `func_80087090_port.c`, `func_800851A8_port.c`, `func_80085EB4_port.c` |
-| Dispatcher | func_800527C8 TRANSLATED (49 words / 0xC4 at 0x800527C8, live split 42FC8.s, all 49 exe-verified): multi-subsystem bootstrap dispatcher, 17 calls (16 distinct callees, func_8005BC98 twice). Every direct callee is translated. Call 15 is real func_80051CC4; B40 translates its first nested dependency func_8005332C, B41/B42 complete the exposed B29 func_80053968/func_80053B48 dependencies, and B43 translates func_8005218C only through its first honest internal boundary at func_8005B91C. Sole call site func_8006A9E4 @0x8006AAD0, `$s1`-guarded one-shot inside cycle B; void return unconsumed. | `pc_port/game/boot/func_800527C8_port.c`, `func_80051CC4_port.c`, `func_8005218C_port.c`, `func_8005332C_port.c`, `func_80053968_port.c`, `func_80053B48_port.c` |
-| Framebuffer SHA-256 | `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb` (3 headless + windowed identical, bootstrap and real-disc runs) | `sha256sum` of `--screenshot` PPM |
-| Real-disc load trace | PE.IMG lba=1013, size=206213120, load 32 KiB at 0x8010BD00, fnv1a64 `7D860391E1ED6C97`; trace SHA-256 `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b` (3 runs identical) | `--disc-image <bin> --disc-load-test --trace` |
-| Strict mode | continuing real data: **exit 1** at `func_80030894_L2L3_cut` from `func_80030894`, retail PC `0x80030AC4` (first BOOTSTRAP_RET on the canonical path; 6AD40 would then name `func_8006AD40_post30894_cut`); `--bootstrap-disc`: exit 1 at `func_8007F72C` from `func_800698D4` | fresh normal and ASan/UBSan agree |
-| GPU/DMA2 + CPU IRQ | One private 1024x512x16 VRAM; GPUSTAT bit26; GP0 A0; GP1 00/01/02/04; exact DMA2 block issue; DPCR/DICR channel2; tokenized explicit completion; deterministic VBlank. Stored DICR excludes physical bit31, which is derived on read and sticky-edge evaluated on every transition. Completion flags are enable/master gated. The separate bridge asserts B1's I_STAT source 3, bounded CPU/DMA dispatch uses two guest-backed identity tables, B53I-C consumes the live guest ring without a host queue mirror, and B53I-D proves a later interrupt-disabled token completion is hardware-only. | `pc_port/platform/pe_gpu.[ch]`, `pc_port/platform/pe_irq.[ch]`, `pc_port/platform/pe_irq_delivery.[ch]`, `pc_port/docs/b53i_d_second_dma_completion.md` |
-| Sanitizers | B54K-A fresh ASan/UBSan 582/582; focused B54K-A 2/2, retained B54G 2/2, B54I 1/1, PEGPU1 1/1, B54F 2/2, B54E 2/2, D 8/8, C 10/10, B2 15/15, B1 8/8, B53B 15/15, H 8/8, and B49 pass without sanitizer diagnostics | Fedora toolbox `jk2026-dev`, `PE_PORT_SANITIZERS=ON` |
-| Matching build | **EXACT SHA-1 MATCH** `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` / SHA-256 `5d94938ee752e81ef375bd4493c9883850c25a86895f9cb0732cf3622b44351b` (227 C leaves) via docker `pe-mipsel:trixie` (`dev/mipsel/Dockerfile`) | `docker run --rm -v $PWD:/workspace -w /workspace pe-mipsel:trixie bash scripts/build_us.sh` |
-| Next frontier | B54K-B: remaining `func_80030894` groups L4..L11 + bank-1 pass + epilogue (`0x80030AC4..0x800314E4`). Zero new callees. After a complete 30894 the live 6AD40 cut is the third `func_8006E7E8` at `0x8006B0BC`. | `docs/evidence/pe-b54ka-30894-l2l3-prefix/` |
-
-### Phase 6E-B43 func_8005218C — current findings
-
-`func_8005218C` is classification 1, translated retail
-resource-table/record derivation logic, with an architecture-B prefix-only
-production implementation. Its complete 155-instruction / `0x26C`-byte
-body is at `0x8005218C..0x800523F7` (exclusive end `0x800523F8`, file offset
-`0x4298C`), live at `asm/disc1/42664.s:246-406`. The exact top-level ABI is
-`void func_8005218C(void)`: all five executable callers pass no arguments and
-ignore the residual register value.
-
-The full body has 15 direct calls in retail order: seven unresolved
-`func_8005B91C`, seven translated `func_8005DBAC`, and one unresolved
-`func_80052F24`. The first `func_8005B91C` receives
-`(0, (int32_t)(int16_t)load16(0x800C0E28), sp+0x10, 0)`. Its return is
-ignored, but it must write the selected 32-bit table index through `a2`;
-instruction `0x800521B8` immediately loads that word for the following
-`func_8005DBAC` call. A return-only bootstrap result cannot reproduce that
-state effect. Production therefore preserves the exact prefix read and all
-four arguments, then stops through the centralized boundary before any
-persistent guest or authoritative state is written. Neither dependency is
-implemented by B43.
-
-`pc_port/tools/b43_oracle.py` verifies all 155 literal words and all five
-caller contexts against the SHA-exact executable, then executes the full
-body with controlled dependency output contracts. Ten production tests
-bring the normal suite to 417/417 and prove the prefix width, signed
-argument, full-width transient pointer, repeated/reset behavior, canary
-footprint, five-caller ABI, internal call map, B39 integration, and strict
-advancement. Complete caller/dependency/operation/state proof is in
-`pc_port/docs/b43_func_8005218C.md`. Fresh ASan/UBSan also passes 417/417;
-all 28 oracle programs pass. Three bootstrap, real-boot, and real-disc-load
-captures are byte-identical, all canonical hashes/FNV are unchanged, and the
-isolated Docker matching rebuild remains an exact executable SHA-1 match.
-
-### Phase 6E-B42 func_80053B48 — historical findings
-
-`func_80053B48` is classification 1, translated retail resource-category
-logic. Its complete 121-instruction / `0x1E4`-byte body is at
-`0x80053B48..0x80053D2B` (exclusive end `0x80053D2C`, file offset
-`0x44348`), live at `asm/disc1/43724.s:940-1082`. The exact ABI is
-`int32_t func_80053B48(pe_addr_t record)`. Types 1-7 and 16-18 map to one of
-three fixed records at `0x800A1E64 + category*0x20`; all other byte types
-return one immediately. It searches the authoritative ID table for
-`0x200+category`, installs it in the first zero signed-halfword slot if
-absent, accumulates the input record's `+0xA` halfword, and applies the exact
-signed threshold/999 cap. A full ID table returns one but does not suppress
-the fixed-record update.
-
-There are exactly two callers. `func_80053D2C @ 0x80053E1C` receives the
-selected guest record in `$a0` and forwards the return unchanged for record
-types 16-18. `func_8005833C @ 0x80058408` also forwards every 32-bit result,
-branching only to clear its source mapping halfword when the result is zero.
-Controlled `0,1,7,0x7FFFFFFF,0x80000000,0xFFFFFFFF` returns are exact. The
-body has no callees or unresolved internal boundary.
-
-`pc_port/tools/b42_oracle.py` verifies all 121 words and both caller tails
-before its delay-slot-aware MIPS-I interpreter executes them. Ten production
-tests bring normal and fresh ASan/UBSan suites to 407/407; all 27 oracle
-programs pass. Three bootstrap, real-boot, and real-disc-load captures are
-byte-identical. Framebuffer, bootstrap trace, real-disc trace, FNV, and exact
-Docker matching SHA remain unchanged. Detailed proof is
-`pc_port/docs/b42_func_80053B48.md`. Normal/sanitizer real-disc strict now
-advances to untouched `func_8005218C` from `func_80051CC4`; bootstrap strict
-remains `func_8007F72C` from `func_800698D4`.
-
-### Phase 6E-B41 func_80053968 — historical findings
-
-`func_80053968` is classification 1, translated retail resource-record
-materialization. Its complete 120-instruction / `0x1E0`-byte body is at
-`0x80053968..0x80053B47` (exclusive end `0x80053B48`, file offset
-`0x44168`), live at `asm/disc1/43724.s:805-936`. The exact ABI is
-`pe_addr_t func_80053968(int32_t resource_id)`. It scans 128 records at
-`0x800C0EAC` with stride 32 and the current authoritative ID table for their
-first free entries. Success calls translated `func_8005DB44(arg-1)`, copies
-32 bytes in two ordered 16-byte load/store groups, commits the primary shared
-table state, calls translated `func_80052F70`, writes
-`0x100+record_slot`, and returns the exact destination. Either full search
-returns zero without persistent writes or calls.
-
-The sole executable caller is `func_80053D2C @ 0x80053DF8`; types 1..9
-reach it. The call delay moves the original argument from `s0` to `a0`.
-The following jump delay is `sltiu s1,v0,1`, so controlled provider returns
-`0,1,0xFFFFFFFF,7,0x800C0EAC` produce caller returns `1,0,0,0,0`. The
-provider never normalizes its pointer-or-zero result. On real Disc 1 the
-first path is `func_8005CCA4 @ 0x8005CDC8` with argument `0x44`, and its
-`func_80053D2C` result is discarded by the immediately following call.
-
-`pc_port/tools/b41_oracle.py` verifies all 120 words, the sole call site,
-and the complete 18-word B29 jump table/consumed-return sequence before a
-delay-slot-aware interpreter executes them. Ten production tests bring
-normal and fresh ASan/UBSan suites to 397/397; all 26 oracle programs pass.
-Detailed instruction map, footprints, dependencies,
-state authority, and test proof are in
-`pc_port/docs/b41_func_80053968.md`. Normal real-disc strict now advances to
-untouched `func_80053B48` from `func_80053D2C`; bootstrap strict remains
-`func_8007F72C` from `func_800698D4`.
-
-### Phase 6E-B40 func_8005332C verified — historical findings
-
-`func_8005332C` is classification 1, translated retail logic. Its complete
-42-instruction / `0xA8`-byte body is at
-`0x8005332C..0x800533D3` (exclusive end `0x800533D4`, file offset
-`0x43B2C`), live at `asm/disc1/43724.s:331-378`. The exact contract is
-`pe_addr_t func_8005332C(int32_t resource_id)`. It rejects negative and
-signed-out-of-count IDs, reads one signed halfword from the authoritative
-resource indirection table, returns one of two fixed-stride guest records,
-or forwards translated `func_8005DB44(entry-1)` for entries `1..255`.
-It has no writes, cache, blocking, platform behavior, or unresolved callee.
-The dependency audit also corrects `func_8005DB44`'s prior native
-misresolution: signed immediates `0x8038/0x8034` address
-`0x800A8038/34`, and the surviving register contributes literal
-`0x800A8028` to the result. The retained B23 oracle had already modeled
-both facts exactly; B40 production tests now reject the former aliases.
-
-`pc_port/tools/b40_oracle.py` independently verifies and executes all 42
-words with delay slots, verifies all 46 direct executable call sites plus
-the compatible indirect callback ABI evidence, and never calls production
-C. Ten retail-derived production tests bring normal and fresh ASan/UBSan
-suites to 387/387.
-The detailed operation map, all callers, global authority census, exact
-footprints, dependency proof, and test scope are recorded in
-`pc_port/docs/b40_func_8005332C.md`. Post-translation real-disc strict stops
-at pre-existing `func_80053968` from `func_80053D2C`; the corrected shared
-lookup makes that B29 boundary reachable before B39. Bootstrap strict remains
-`func_8007F72C` from `func_800698D4`.
-
-### Phase 6E-B39 func_80051CC4 verified — historical findings
-
-`func_80051CC4` is classification 1, translated retail logic: a
-resource/table command-state initializer. Its complete body is 77
-instructions / `0x134` bytes at executable
-`0x80051CC4..0x80051DF7` (exclusive end `0x80051DF8`), file offset
-`0x424C4`. The live split is `asm/disc1/420A8.s:314-401`, selected by
-`configs/USA/disc1.yaml:298` (`[0x420A8, asm]`). The map labels it
-nonmatching at `0x80051CC4`; the only current port declaration is the true
-`void func_80051CC4(void)` prototype. No matching/nonmatching C body or
-SDK-map entry existed before B39; the port path was the centralized stub in
-`func_800527C8_port.c`. The SHA-exact executable has SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-
-The complete 77-word body and eight-word jump table at `0x800111F8` are
-literal constants in `pc_port/tools/b39_oracle.py`. The oracle compares
-every word with the executable before execution, uses one register file,
-samples branches at issue, executes every delay slot exactly once, models
-32-bit arithmetic and little-endian guest memory, logs ordered reads,
-writes, calls and the single void return, and exposes state at both
-unresolved boundaries. Its opcode self-tests cover signed `lb`/`slt`,
-unsigned `sltiu`, and the MIPS low-five-bit variable-shift rule.
-
-ROM order is exact:
-
-1. Save the exact boolean result of `func_80052F0C()`
-   (`D_8009D048 != 0x800C0E48`).
-2. Call translated `func_80052E30(0)` while the old `D_8009D018` is still
-   visible through `func_80052F70`.
-3. Clear authoritative `D_8009D018`, then store zero in descending order
-   at `0x800A1B48, 44, 40, 3C, 38, 34, 30`.
-4. Sign-extend the byte at `0x800C0E22` and call unresolved
-   `func_8005332C(source_id)`. A null return skips the record loop.
-5. For a non-null record, read unsigned count at `record+0x14`; for signed
-   loop index `i < count`, decode `U8(record+0x15+i) & 0x1F`. Commands
-   8/9/10 set `D_8009D018` to 1/2/4; 11 stores 3 at `0x800A1B30`; 12
-   stores 2 at `0x800A1B34`; 13 stores `-2` at `0x800A1B44`; 14 is a
-   no-op; 15 stores `-2` at `0x800A1B34`; all other values are no-ops.
-6. Call unresolved `func_8005218C()`.
-7. Call translated `func_80052E30(0)`, then
-   `func_80052E30(saved_boolean)`, and return void through the sole return
-   path.
-
-The three distinct executable call sites all use `jal` plus a `nop` delay
-slot, consume no argument registers, and discard the void return:
-
-- `func_800512AC` at `0x800514C0`, conditional command-12 switch arm.
-  Immediately before it, `D_8009D018=4` and `func_80052E30(0)` execute;
-  immediately after it, `$v0=2` is stored at `$gp+0x2A0`, proving the
-  callee return is overwritten. This event path is repeatable.
-- `func_80051E64` at `0x80052170`, unconditional converged epilogue after
-  the caller's record update/parser paths. The following instructions load
-  `$ra/$s0` and return; no result is consumed. This routine is repeatable.
-- `func_800527C8` at `0x80052844`, operation-map position 15 and the 14th
-  `jal` instruction. The preceding retail
-  operation is translated `func_8005D6F4`; the following operation is
-  translated `func_80042C78`. The dispatcher does not consume the return.
-  `func_8006A9E4` invokes the dispatcher at most once per streaming run via
-  its `$s1` guard, although explicit dispatcher invocations remain
-  repeatable.
-
-Before B39, the dispatcher-local unresolved sequence was
-`func_80051CC4`, then `func_80042C78`. After B39 every direct dispatcher
-callee is translated; the first transitive unresolved sequence is now
-`func_8005332C`, then `func_8005218C`, both from `func_80051CC4`.
-`func_8005332C` has a proven signed 32-bit argument and guest-address
-return but its `0xA8`-byte body is not begun. `func_8005218C` has a void
-contract and a `0x26C`-byte body with broad fan-out, also not begun. In
-strict mode the prefix through the seven clears is committed before the
-central policy exits at `func_8005332C`; no return is fabricated and no
-function-specific bypass exists.
-
-The direct persistent guest-write footprint is exactly the 28-byte range
-`0x800A1B30..0x800A1B4B`, as seven aligned 32-bit stores. Retail also has
-the ordinary transient ABI frame saves at `incoming_sp-8` and
-`incoming_sp-4`, with matching reloads before return; the independent
-oracle models and logs them, while native C uses the host ABI stack. Fixed guest
-reads include the signed byte at `0x800C0E22`; translated
-`func_80052E30` can read the byte at `0x800C0E0C`. Data-dependent record
-reads span an absolute checked range from `0x80000014` through
-`0x801FFFFF`, with one-byte width only. Thus fixed/data guest reads span
-`0x80000014..0x801FFFFF`, and fixed persistent guest writes span
-`0x800A1B30..0x800A1B4B`; transient stack bounds are caller-SP-relative.
-Every guest state access uses checked
-`PE_LoadU8`/`PE_StoreU32`; address zero remains invalid. There is no
-hardware, BIOS, Psy-Q, GPU, DMA, MDEC, SPU, controller, disc, timer,
-event or interrupt access; no callback; no multiplication/division;
-no unaligned access; no poll/loop other than the bounded record scan; and
-no blocking in the translated body. The unresolved callees' blocking
-behavior is unknown, and current execution is not deterministic from
-guest state alone because the `$gp` fields below are authoritative host
-globals plus controlled dependency returns.
-
-With retail `$gp=0x8009CD70`, the touched global authority is:
-
-| Retail address | Role and recovered readers/writers | Current authority/reset |
-| --- | --- | --- |
-| `0x8009D018` (`gp+0x2A8`) | command mask; read by `func_80051E58`/`func_80052F70`; written by `func_800512AC` and B39 | `pe_globals.c` host `uint32_t`; reset only by `PE_Sdk_ResetState` |
-| `0x8009D048` (`gp+0x2D8`) | active resource-buffer guest address; read by `func_80052F0C`, `func_80053D2C`, `func_8005CCA4`; written by `func_80052E30`/`func_8005CCA4` | same host authority/reset |
-| `0x8009D04C` (`gp+0x2DC`) | saved/reuse buffer; written by `func_80052EB0` and cleared by `func_80052C6C`; read by `func_80052E30` | same host authority/reset |
-| `0x8009D050` (`gp+0x2E0`) | resource count/ID; read by `func_80053D2C`; written by `func_80052E30`/`func_8005CCA4` | same host authority/reset |
-| `0x8009D054` (`gp+0x2E4`) | saved count/ID; written by `func_80052EB0`; read by `func_80052E30` | same host authority/reset |
-| `0x8009D058` (`gp+0x2E8`) | resource-table guest address; written by `func_80052E30`/`func_8005CCA4` | same host authority/reset |
-| `0x8009D064` (`gp+0x2F4`) | resource-buffer kind (2 or 4); written by `func_80052E30`/`func_8005CCA4` | same host authority/reset |
-
-Guest words at those retail addresses are deliberately not a second copy;
-full-RAM canary tests prove they remain untouched. `PE_RamReset` clears
-guest state but preserves these authoritative fields, while
-`PE_Sdk_ResetState` clears them. Pointer-shaped values remain 32-bit guest
-addresses (`pe_addr_t`); no host pointer is stored or truncated.
-
-B39 adds ten retail-derived production tests, bringing both normal and a
-fresh ASan/UBSan suite to 377/377. The B39 oracle and all 23 retained
-oracles pass. Normal and sanitizer real-disc strict runs agree on
-`func_8005332C` from `func_80051CC4` (exit 1); bootstrap strict remains
-`func_8007F72C` from `func_800698D4` (exit 1). Three bootstrap traces,
-three real-disc load traces, three bootstrap framebuffers, and three
-real-disc boot framebuffers are pairwise identical within each group.
-Hashes remain framebuffer `fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb`,
-bootstrap trace `42c1956e077a40fed5176653b6a18938a8a91e99e35fe9d7044f31581de785af`,
-real-disc load trace `7b8724acf4d4787f58ca0068e68839f171e2d3f36f72a42f0a4ef03f0041672b`,
-and real-disc FNV-1a-64 `7D860391E1ED6C97`.
-
-### Phase 6E-B33 func_8005E884 verified — current findings
-
-`func_8005E884` is translated retail logic: 4 instructions / 0x10 bytes
-at executable `0x8005E884..0x8005E890` (exclusive end `0x8005E894`, file
-offset `0x4F084`, yaml segment `[0x4F084, c]`). It loads the signed byte
-at `D_800B0DB1` (`lui $v0,0x800B; lb $v0,0x0DB1($v0)`) and returns it.
-It has no callees, no guest writes, no SDK/GPU/disc/audio/input activity,
-and cannot block. All 4 words are exe-verified against SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-
-The sole writer to `D_800B0DB1` is `func_8006A2E8` (a value-validated
-setter: `sltiu $v0,$a1,16; beqz → skip`; stores `$a1` as signed byte
-only when `$a1 < 16`; also stores to `0x800C0DFF` and `0x800C0CEA`).
-During boot `D_800B0DB1` is unwritten BSS, so the retail return is 0.
-
-Six executable call sites:
-- `func_8005D6F4` @ `0x8005D8F0` → r; `func_8005E850(0, 8-r)` (nop slot)
-- `func_8004B5A4` @ `0x8004B5C0` → `sw $v0,628($gp)`; epilogue
-- `func_8004B5DC` @ `0x8004B5F0` → `subu a0,a0,v0`; `func_8005FCAC(8-r)`
-- `func_8004B6CC` @ `0x8004B6CC` → `lw $gp+0x274`; `subu a1,a1,v0`;
-  `func_8005E850(0, stored-r)`
-- `func_8005C150` @ `0x8005C300` → `sb $v0,0x800C0DFF`
-- `func_8005C310` @ `0x8005C414` → `lb a1,0x800C0DFF`; `subu a1,a1,v0`;
-  `func_8005E850(0, stored-r)`
-
-Classification: 1 — translated retail logic (trivial leaf). The returned
-integer is the signed byte at `D_800B0DB1`, representing the alarm timer
-value set by `func_8006A2E8`.
-
-Independent oracle `pc_port/tools/b33_oracle.py` — delay-slot-aware
-MIPS-I interpreter over the SHA-1-verified retail words; every modeled
-word cross-checked against the exe; every read logged with address,
-width, value and order; asserts exact reads-only footprint and return
-for unwritten-BSS, positive, negative, boundary, and repeated scenarios.
-
-The strict frontier advances to **func_8005E850** from `func_8005D6F4`
-(three identical captures, exit 1). The D6F4 boundary now has 3 remaining
-unresolved callees in retail ROM order: `func_8005E850`, `func_800649D0`,
-`func_80052790`. The dispatcher oracle still reports two unresolved callees
-in order: `func_80051CC4`, `func_80042C78`. Native and fresh ASan/UBSan
-suites are 349/349. Framebuffer (`fb28dc21…`), bootstrap trace
-(`42c1956e…`), and real-disc load trace (`7b8724ac…`, FNV
-`7D860391E1ED6C97`) hashes are unchanged. Nothing has been pushed and the
-next rung has not started.
-
-### Phase 6E-B34 func_8005E850 verified — current findings
-
-`func_8005E850` is translated retail logic: 13 instructions / 0x34 bytes
-at executable `0x8005E850..0x8005E880` (exclusive end `0x8005E884`, file
-offset `0x4F050`, live split `[0x4F050, c]`). All 13 words exe-verified
-against SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-
-Non-leaf void wrapper: reads D_800B0DB0 (signed byte, always 0 — never
-written in the retail executable) and D_800B0DB1 (signed byte, alarm
-timer set by func_8006A2E8), adds each to the corresponding argument,
-and calls func_8006A2E8(a0 + D_800B0DB0, a1 + D_800B0DB1). Stack
-frame: addiu $sp,-0x18 / sw $ra,0x10($sp) / lw $ra,0x10($sp) /
-addiu $sp,+0x18 / jr $ra / nop.
-
-func_8006A2E8 is UNRESOLVED — it routes through the centralized
-bootstrap boundary. Its return value is discarded (no caller of
-func_8005E850 ever reads $v0).
-
-Four executable call sites:
-- func_8004B61C @ 0x8004B684 — a0=0, a1=1; nop slot; ret discarded
-- func_8004B674 @ 0x8004B6DC — a0=0, a1=lw(gp+0x274)-r; subu slot
-- func_8005C310 @ 0x8005C428 — a0=0, a1=lb(0x800C0DFF)-r; subu slot
-- func_8005D6F4 @ 0x8005D900 — a0=0, a1=8-r; subu slot
-
-Classification: 1 — translated retail logic (thin wrapper) with
-unresolved callee on the centralized boundary.
-
-Independent oracle `pc_port/tools/b34_oracle.py` — delay-slot-aware
-MIPS-I interpreter over the SHA-1-verified retail words; every modeled
-word cross-checked against the exe; every read logged; delay-slot
-argument computation verified; asserts exact call arguments and
-no guest writes for all five scenarios.
-
-The strict frontier advances to **func_8006A2E8** from `func_8005E850`
-(three identical captures, exit 1). The D6F4 boundary now has 2 remaining
-unresolved callees in retail ROM order: `func_800649D0`, `func_80052790`.
-The dispatcher oracle still reports two unresolved callees in order:
-`func_80051CC4`, `func_80042C78`. Native and fresh ASan/UBSan suites are
-354/354. Framebuffer (`fb28dc21…`), bootstrap trace (`42c1956e…`), and
-real-disc load trace (`7b8724ac…`, FNV `7D860391E1ED6C97`) hashes are
-unchanged. Docker matching rebuild remains EXACT at
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. Nothing has been pushed and
-the next rung has not started.
-
-### Phase 6E-B35 func_800649D0 verified — current findings
-
-`func_800649D0` is translated retail logic: 30 instructions / 0x78 bytes
-at executable `0x800649D0..0x80064A44` (exclusive end `0x80064A48`, file
-offset `0x551D0`). All 30 words exe-verified against SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-
-Stores the argument at D_8009D16C ($gp+0x3FC). If a0 is zero:
-bzero(0x800A3060, 0x120) via REAL func_80071A24, then stores 0xFF to
-eight specific bytes: 0x800A3078, 0x800A30A0, 0x800A30B0, 0x800A30B8,
-0x800A30C0, 0x800A30C4, 0x800A3124, 0x800A3134. If a0 is non-zero:
-returns immediately after the state store. No other callees. Void return.
-
-Three executable call sites:
-- func_8004AF38 @ 0x8004B0EC — a0=func_80063428 ret; addu slot
-- func_8005C310 @ 0x8005C450 — a0=lb(0x800C0DFF)&1; andi slot
-- func_8005D6F4 @ 0x8005D908 — a0=0; addu slot
-
-Classification: 1 — translated retail logic (resource-state reset).
-
-Independent oracle `pc_port/tools/b35_oracle.py` — delay-slot-aware
-MIPS-I interpreter over the SHA-1-verified retail words; bzero modeled
-from the proven A(28h) contract; every word cross-checked; asserts exact
-footprint for both the zero and nonzero paths.
-
-The strict frontier advances to **func_80052790** from `func_8005D6F4`
-(three identical captures, exit 1). The D6F4 boundary now has 1 remaining
-unresolved callee: `func_80052790`. The dispatcher oracle still reports
-two unresolved callees: `func_80051CC4`, `func_80042C78`. Native and
-fresh ASan/UBSan suites are 358/358. Framebuffer (`fb28dc21…`),
-bootstrap trace (`42c1956e…`), and real-disc trace hashes are unchanged.
-Docker matching rebuild remains EXACT at
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. Nothing has been pushed and
-the next rung has not started.
-
-### Phase 6E-B36 func_80052790 verified — D6F4 chain complete
-
-`func_80052790` is translated retail logic: 9 instructions / 0x24 bytes
-at executable `0x80052790..0x800527B0` (exclusive end `0x800527B4`, file
-offset `0x42F90`). All 9 words exe-verified against SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-
-Stores the argument at D_8009D020 ($gp+0x2B0), converts it to a
-boolean (a0 < 1 → 1, else 0) in the jal delay slot, and calls
-func_80086728(bool) through the centralized bootstrap boundary. Stack
-frame with $ra save/restore. func_80086728 is UNRESOLVED. Void return.
-
-Three executable call sites:
-- func_8004AF38 @ 0x8004AFEC — a0=func_80063428 ret; addu slot
-- func_8005C310 @ 0x8005C438 — a0=lb(0x800C0DFF)&3; andi slot
-- func_8005D6F4 @ 0x8005D910 — a0=1; addiu slot
-
-Classification: 1 — translated retail logic (thin wrapper).
-
-Independent oracle `pc_port/tools/b36_oracle.py` — delay-slot-aware
-MIPS-I interpreter over the SHA-1-verified retail words; asserts exact
-state store, boolean conversion, call arguments, and write footprint
-for all four scenarios.
-
-**The func_8005D6F4 dependency chain is now complete.** All callees are
-REAL: func_80071A24 (B21), func_8005DC4C (B26), func_80052594 (B27),
-func_8005CCA4 (B28), func_800614AC (B32), func_8005E884 (B33),
-func_8005E850 (B34), func_800649D0 (B35), func_80052790 (B36). The
-remaining bootstrap boundary stubs come from func_8005E850's callee
-func_8006A2E8, func_80052790's callee func_80086728, the dispatcher's
-func_80051CC4, and func_8006A9E4's func_80087090. Native and fresh
-ASan/UBSan suites are 362/362. Framebuffer (`fb28dc21…`), bootstrap
-trace (`42c1956e…`), and real-disc trace hashes are unchanged. Docker
-matching rebuild remains EXACT at
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. Nothing has been pushed and
-the next rung has not started.
-
-### Phase 6E-B37 func_8006A2E8 verified — current findings
-
-`func_8006A2E8` is translated retail logic: 12 instructions / 0x30 bytes
-at executable `0x8006A2E8..0x8006A314` (exclusive end `0x8006A318`, file
-offset `0x5AAE8`). All 12 words exe-verified against SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-
-Conditional setter: if a1 < 16, stores a1 as halfword to 0x800BCE9E
-and 0x800BCE8A, stores a1 as signed byte to D_800B0DB1, and returns 0
-(retail jr delay slot: `addu $v0,$zero,$zero`). If a1 >= 16, returns 0
-without writing. The first argument (a0) is ignored.
-
-Sole call site: func_8005E850 @ 0x8005E86C (delay slot: addu $a1,$v1,$a1;
-return discarded by all callers of 5E850).
-
-Classification: 1 — translated retail logic (conditional leaf).
-
-Independent oracle `pc_port/tools/b37_oracle.py` — delay-slot-aware
-MIPS-I interpreter over the SHA-1-verified retail words; asserts exact
-conditional stores, threshold boundary, return value, and a0-independence
-for six scenarios.
-
-The strict frontier advances past func_8006A2E8 to the next unresolved
-provider. The remaining bootstrap boundary stubs are func_80086728 (from
-func_80052790), func_80051CC4 (from func_800527C8), and func_80087090
-(from func_8006A9E4). Native and fresh ASan/UBSan suites are 367/367.
-Framebuffer (`fb28dc21…`), bootstrap trace (`42c1956e…`), and real-disc
-trace hashes are unchanged. Docker matching rebuild remains EXACT at
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. Nothing has been pushed and
-the next rung has not started.
-
-**Window-white is a known host-layer artifact:** the X11 window background
-is white and Expose events are not re-blitted; the port blits once after
-boot returns.  The guest framebuffer remains `fb28dc21…` (near-black).
-Do not report the white window as a retail frame.
-
-### Historical B30 func_80042C78 verified
-
-`func_80042C78` is translated retail logic through its proven prefix:
-executable `0x80042C78..0x80042CB4`, exclusive end `0x80042CB8`, file
-offset `0x33478`, 16 instructions. It writes zero to `$gp+0x168/0x170/0x174`,
-writes `0x20` to `$gp+0x16C`, calls translated `func_80042CC4` with
-`a0=0x90` and `a1=0xFF` after the delay slot, then writes `0x48` to
-`$gp+0x17C`. With `$gp=0x8009CD70`, the direct guest footprint is
-`0x8009CED8`, `0x8009CEDC`, `0x8009CEE0`, `0x8009CEE4`, and `0x8009CEEC`.
-The B30 oracle independently transcribes, SHA-verifies, and executes all
-16 words, including the delayed call arguments and exact prefix state.
-
-There are two executable callers: `func_8005CCA4` at `0x8005CFF8` after
-its final direct stores, and `func_800527C8` at `0x8005284C` after
-`func_80051CC4`; both discard the void return and have a nop delay slot.
-Normal and repeated calls preserve the same prefix ordering. The final
-suite was 339/339 normal and 339/339 ASan/UBSan. Real-disc strict now stops
-at `func_800614AC` from `func_8005D6F4`, exit 1, consistently in normal and
-sanitizer runs. Bootstrap strict remains `func_8007F72C` from
-`func_800698D4`, exit 1. Nothing has been pushed and the next rung has not
-started.
-
-### Historical Phase 6E-B31 func_80042CC4 verified
-
-`func_80042CC4` is translated retail logic: 31 instructions / `0x7C` bytes
-at executable `0x80042CC4..0x80042D3C` (exclusive end `0x80042D40`, file
-offset `0x334C4`, live split `asm/disc1/334C4.s`). It is a void leaf with
-arguments `(a0, a1)`. It clears `0x800A1878`, shifts the color base in the
-initial branch delay slot, and fills subsequent bytes while signed `lbu < a1`
-holds. The final count `(cursor - 0x800A1878) + 1` is stored at
-`0x8009CEE0` (`$gp+0x170`). The B30 call `(0x90, 0xFF)` produces the retail
-ramp prefix `00 90 CF EA F6 FB FD FE FF` and count 9.
-
-Its direct write footprint is the termination-dependent subset of bytes
-`0x800A1878..0x800A1887` plus word `0x8009CEE0`; reads are current ramp bytes.
-It has no direct callees, SDK/GPU/disc/audio/input activity, blocking, host
-pointers, low-address mirror, or clamping. Executable call sites are
-`func_80042C78 @ 0x80042C98` (a0=0x90, delay-slot a1=0xFF) and
-`func_8005D2B4 @ 0x8005D5E8` (delay-slot a0=`$s0`); both discard the void
-return. Incoming
-a2/a3 are overwritten before use. `pc_port/tools/b31_oracle.py` verifies the
-executable SHA-1, all 31 words, delay slots, ordered writes, threshold paths,
-and count using its independent transcription.
-
-The final native and fresh ASan/UBSan suites were 341/341. Real-disc strict
-then stopped at `func_800614AC` from `func_8005D6F4`; bootstrap strict remained at
-`func_8007F72C` from `func_800698D4`. Nothing has been pushed and the next
-rung has not started.
-
-### Phase 6E-B32 func_800614AC verified — current findings
-
-`func_800614AC` is translated retail logic: 36 instructions / `0x90` bytes
-at executable `0x800614AC..0x80061538` (exclusive end `0x8006153C`, file
-offset `0x51CAC`, live split `asm/disc1/51CAC.s`). It masks the input to
-24 bits, stores that word at `0x8009D14C` (`$gp+0x3DC`), computes the three
-pairwise arithmetic means of the packed color bytes with the exact retail
-saturation branches, stores the packed result at `0x8009D150` (`$gp+0x3E0`),
-and returns that result. It has no callees, reads no guest memory, cannot
-block, and has no GPU/SDK/disc/audio/input activity. For D6F4, the call at
-`0x8005D8C8` is unconditional: `$a0` is built as `0x00404040` by the
-`ori` delay slot, the preceding stores are `sh 0x0203 → 0x800C1F80` and
-`sw 0x00404040 → 0x800C0E44`, the return is discarded, and the following
-operations clear `0x800A76A4/B0/BC/C8`. The D6F4 unresolved sibling order
-after B32 is `func_8005E884`, `func_8005E850`, `func_800649D0`,
-`func_80052790`.
-
-The other executable call sites are `func_800434C0 @ 0x80043564` and
-`0x8004358C`, `func_8005C374 @ 0x8005C3C0`, `func_8004B394 @
-0x8004B440`, `0x8004B494`, and `0x8004B504`, and `func_8004FEEC @
-0x8004FF10`; their return values are overwritten or otherwise discarded.
-The B32 oracle independently verifies the executable SHA-1 and all 36 words,
-executes delay slots and branches from its transcription, and checks exact
-ordered stores and returns. Native and fresh ASan/UBSan suites are 344/344.
-Real-disc strict now stops at `func_8005E884` from `func_8005D6F4`; bootstrap
-strict remains at `func_8007F72C` from `func_800698D4`. Nothing has been pushed
-and the next rung has not started.
-
-### Historical B29 func_80053D2C verified — accepted commit `eedd456`
-
-`func_80053D2C` is translated retail logic: executable
-`0x80053D2C..0x80053E6B`, exclusive end `0x80053E6C`, file offset `0x4452C`,
-80 instructions. It scans `D_8009D048/D_8009D050` for the first zero
-halfword, calls translated `func_8005DB44`, dispatches record types 1–18,
-and performs the proven exact halfword store/return behavior. Types 1–9
-route `func_80053968`; types 16–18 route `func_80053B48`. Both were
-centralized unresolved integer providers at B29; B41 and B42 now complete
-them, and B42 corrects the latter ABI to `$a0=selected record`. The B29 oracle independently
-transcribes, SHA-verifies, and executes all 80 words with delay slots.
-
-Executable call sites are preserved: `func_8005CCA4` calls at
-`0x8005CDC8/0x8005CDD0/0x8005CDD8/0x8005CDE0/0x8005CDE8` with constants
-`0x44/0x96/0x3F/1/6`, plus conditional index calls at
-`0x8005CED0` and `0x8005CFB8`; other callers are
-`func_80021D4C` (`0x80021D8C`), `func_80022394` (`0x80022410`),
-`func_800236E8` (`0x8002381C`), `func_8005112C` (`0x800511B0`),
-`func_80044444` (`0x80044538`), `func_800194B0` (`0x800194CC`), and
-`func_8005D020` (`0x8005D184`). Their delay slots and return consumers were
-audited; no caller requires a fabricated return or bypass.
-
-The B29 suite was 337/337 normal and 337/337 ASan/UBSan. Real-disc strict
-now stops at `func_80042C78` from `func_8005CCA4`, exit 1, consistently in
-normal and sanitizer runs. Bootstrap strict remains
-`func_8007F72C` from `func_800698D4`, exit 1. Nothing has been pushed and the
-next rung has not started.
-
-### Historical B28 func_8005CCA4 verified — key findings (corrective commit)
-
-**Zero loop range (CORRECTED):** retail loads `$gp+0x2D8` (= D_8009D048 =
-0x800C0E48, set by this rung) and adds 0x62 (`addiu v1,v1,0x62`) → the
-descending zero loop writes 50 halfwords covering **0x800C0E48..0x800C0EAA**,
-NOT 0x800C0DE6..0x800C0E48. It does NOT overlap the earlier GA_E06/E08/E0C/
-E24/E28..E34 stores (all below 0x800C0E48) — those SURVIVE. GA_E24 stays 1;
-GA_E22 is written 1 unconditionally (retail `beq` delay slot). GA_E40
-(0x800C0E40, below the loop) receives its u16 0x3D once, after the loop.
-An earlier draft dropped the +0x62 and descended from 0x800C0E48; that
-zeroed the wrong 100-byte region. Now executed word-by-word by the oracle.
-
-**gp base + shared state (CORRECTED):** gp = 0x8009CD70 (proven via
-func_800438C0's 0x180(gp)=D_8009CEF0).  The four state words are
-$gp+0x2D8/2E0/2E8/2F4 = **D_8009D048/D_8009D050/D_8009D058/D_8009D064**
-(an earlier draft used a +0x10-shifted gp).  func_8005CCA4 writes the SAME
-host globals func_80052C6C uses — one authoritative storage, no host/guest
-duplicate.  Values: D_8009D048=0x800C0E48, D_8009D050=func_80052F70(),
-D_8009D058=0x8009D05C, D_8009D064=2.
-
-**First loop (CORRECTED):** stores `*(u16*)func_8005DB8C(i)` (retail
-`lhu 0(v0)`), not the low half of the returned address.
-
-**Fixture correction:** FxPattern offsets 0x10-0x17 return 0 (retail BSS
-state for D_800A8038/D_800A803C). The original fixture wrote canary data
-there, causing func_8005DBAC to dereference a garbage pointer
-(0xA49D968F + 0x800A8028 = 0x24A816B7). The function was correct; the
-fixture was wrong.
-
-**Split-brain:** the 8 func_80052C6C state globals (D_8009D018/D_8009D03C/
-D_8009D048/D_8009D04C/D_8009D050/D_8009D054/D_8009D058/D_8009D064) live in
-pe_globals.c (extern via psx_compat.h), reset by PE_Sdk_ResetState.
-func_8005CCA4 now shares those globals directly (never guest RAM), so the
-four it writes are unified with func_80052C6C — verified by
-test_5CCA4_no_split_brain (host values correct, aliasing guest words stay
-canary, PE_RamReset does not clear them, PE_Sdk_ResetState does).
-
-**Oracle transcription:** func_8005DB8C is 8 words; 0x8005DB90 is `addiu`
-(sign-extended 0x8038 → 0x800A8038), not `lw`. func_8005DBAC uses the `j`
-delay slot (addu $v1,$zero,$zero) for negative clamping. func_800438C0
-stores before the zero-check branch (sw, bne, addiu, sw).
-
-**Test count:** 335/335 (normal + ASan/UBSan).
-
-**B28 provenance:** provisional implementation `a1559ae`; oracle/bootstrap
-corrective `cd2e375`. **B28 oracle (CORRECTIVE):**
-`pc_port/tools/b28_oracle.py` — independently
-transcribes all 223 func_8005CCA4 words (W_5CCA4), cross-checks every word
-against the SHA-verified exe at load time (first mismatch fails with address
-and both values), then executes the transcribed words with a delay-slot-aware
-MIPS-I interpreter. func_8005DB8C/func_8005DBAC/func_800438C0 are also
-cross-checked word-by-word and executed. func_8005CCA4 execution uses the
-transcription (not the exe) for its own words; sub-callees read from the exe.
-The body is executable `0x8005CCA4..0x8005D01F` (exclusive end
-`0x8005D020`), 223 retail words, file offset `0x4D4A4`. Boundary funcs
-func_80053D2C/func_80042C78 are stubbed. Asserts the retail final
-state (zero loop 0x800C0E48..0x800C0EAA, GA_E24=1, GA_E22=1,
-D_8009D048=0x800C0E48, D_8009D058=0x8009D05C, D_8009D064=2, GA_E40=0x003D,
-D_8009CEF0=0x3D).
-
-**Bootstrap-disc fixture (CORRECTIVE):** `func_800698D4_port.c` now seeds a
-minimal valid archive at D_800A8028 in the bootstrap-disc path (R=0x30,
-S=0x14, count=120, entry[30] → lone 0xFF record).  On real hardware this
-data arrives from PE.IMG via cycle A of func_8006A9E4; the fixture
-establishes the same precondition so func_8005DC4C returns `0x800A8400`
-instead of 0. Address zero remains invalid; no KUSEG or low-address mirror
-exists, no clamping, and no function-specific bypass was added. With
-`PE_StoreU32(0x800A803C, 0xA49D968F)`, malformed-header
-`func_8005DBAC(0)` returns `0x24A816B7`; that malformed result is not
-dereferenced. Normal and ASan/UBSan native tests are 335/335. Normal
-bootstrap-disc completes with 15 bootstrap stubs invoked; bootstrap strict
-exits 1 at `func_8007F72C` from `func_800698D4`, and real-disc strict exits 1
-at `func_80053D2C` from `func_8005CCA4`. Framebuffer SHA-256 is
-`fb28dc21dd1e41eb72b8fe22dd3295bb8ed0c040aa88f7885a68dedc2629dfdb`;
-bootstrap trace begins `42c1956e…`, real-disc trace begins `7b8724ac…`,
-real-disc FNV-1a-64 is `7D860391E1ED6C97`, and matching executable SHA-1 is
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-
-### B22 audit complete
-
-`func_8005DE88` is translated as a 23-word, no-callee resource-list/state
-initializer. It links the 12-byte records at `0x800A2090..0x800A2174`,
-null-terminates `0x800A2174`, and initializes `$gp+0x36C..0x380`. The current
-strict frontier is `func_80052C6C` from `func_800527C8`, captured with exit
-status 1. The dispatcher oracle now reports five unresolved callees in order:
-`func_80052C6C`, `func_8005BCBC`, `func_8005D6F4`, `func_80051CC4`,
-`func_80042C78`. Bootstrap-disc remains intentionally stopped at
-`func_8007F72C`. Native and sanitizer tests are 271/271; LSAN leak detection
-requires `LSAN_OPTIONS=detect_leaks=0` in this ptrace-restricted environment.
-
-The independent oracle `pc_port/tools/b22_5de88_oracle.py` is a
-delay-slot-aware MIPS-I interpreter executing the verified retail words
-(SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`); it cross-checks the
-transcription against the retail exe bytes, then records and validates all
-27 guest writes in retail ROM order.
-
-### B23 audit complete — func_80052C6C translated
-
-`func_80052C6C` (113 words / 0x1C4 at 0x80052C6C, live split 43408.s) is
-translated as a resource-table search + init rung. Coupled callees translated
-in the same file: func_80052E30 (resource-buffer init/reuse, 31 words),
-func_80052EB0 (two-word state setter, 3 words), func_80052F0C (buffer-identity
-comparison, 5 words), func_80052F70 (capped-add allocator, 22 words),
-func_8005DB44 (32-byte record-table lookup, 17 words). func_80051E58 is the
-pre-existing C leaf (2 words). The strict frontier advances to **func_8005BCBC**
-from `func_800527C8`; the dispatcher oracle now reports four unresolved
-callees in order: func_8005BCBC, func_8005D6F4, func_80051CC4, func_80042C78.
-
-Independent oracle `pc_port/tools/b23_oracle.py` — a delay-slot-aware MIPS-I
-interpreter executing the verified retail words (SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`) for func_80052C6C and all coupled
-callees, asserting every guest write, the $GP-state writes, and the exact
-internal call order. **Addressing-mode finding:** func_8005DB44's base/alt-base
-pointers are loaded via `lui 0x800B ; addiu 0x8038` — the 16-bit immediate
-0x8038 has bit 15 set, so MIPS sign-extends it and the real access is
-0x800A8038 / 0x800A8034, NOT 0x800B8038 / 0x800B8034. The oracle models the
-hardware faithfully (reads `0x800A8038`). The original B23 C port and test
-fixture incorrectly used `0x800B8038`; B40 corrected production to
-`0x800A8038/34` after the shared real-disc lookup exposed the divergence.
-Current B40-B42 tests poison the obsolete `0x800B...` bytes only as inert
-canaries and prove they are never semantic inputs. The B23 oracle has always
-modeled the retail addresses correctly.
-
-**B23 oracle corrective (Phase 6E-B26 mandatory pre-audit).** The B26
-interpreter audit proved the committed b23_oracle.py materially
-defective and corrected it in a separate commit (history preserved, no
-amend): (1) two word transcription errors in W_80052C6C, never
-cross-checked against the exe — 0x80052CC8 was byte-swapped residue
-0x06004290, retail word is 0x90420006 (lbu $v0,6($v0), the search
-record-byte load); 0x80052DC8 was 0x14C0FF44 (branch to an
-out-of-function address), retail word is 0x1440FFCB (bne $v0,$zero,-53
-— the main loop's i<9 back-edge; the corrupted word removed the loop);
-(2) interpreter semantics errors: branch conditions evaluated after
-the delay slot, not-taken branches re-executed their delay slot, and
-callees ran on fresh register files without argument propagation.
-Under the corrected words + corrected MIPS-I semantics the scenario
-produces: D_8009D03C = 2 (unchanged), db44 called 11 times (a0
-sequence 0,1 | 1,2,3 ×3), return 0x800C1F7E, and ALL NINE output
-records receive byte[9]=0 and halfword[18]=999 plus the full 32-byte
-record copy from the seeded source records.  The retired "rec0-only"
-assertion was an artifact of the defects.  The corrected oracle
-cross-checks every modeled word against the SHA-verified exe at load
-time, runs seven interpreter self-tests (delay-slot single execution
-taken/not-taken, non-idempotent register and memory slot effects,
-next-PC target/PC+8, jal/jr slots, shared register file), and asserts
-the exact 409-write ROM-order footprint.  The production C port is
-unchanged by this corrective (its 9-iteration main loop already
-matches the retail structure; its db44 literal-address divergence
-remains documented); the ctest suite remains the C-port authority.
-
-**Leaf-count reconciliation (227 vs 229).** This checkout's committed yaml at
-base `71114ac` has **227** C leaves (`grep -cE ',[[:space:]]*c,'
-configs/USA/disc1.yaml`) and builds EXACT SHA-1. The **229** figure in the
-Phase 6D-R docs came from the sibling checkout
-`/home/blizz/dev/parasite-eve` (branch `phase5fm-main-barrier-revisit` @
-`7467308`), whose *uncommitted* working tree promotes `func_8006E9A0` (5FJ)
-and `func_8006E834` (5FK) to C leaves; that state also builds EXACT SHA-1
-(docker, "Matching claim: YES (229 C leaves)"). Both are exact because C
-leaves are byte-exact asm replacements — the count is conversion progress,
-not output content. Documentation now reports the count of the checkout it
-lives in.
-
-`D_80011614` is a `pe_addr_t` guest pointer (bootstrap-policy value
-`0x8010BD00`; no translated retail writer yet).  The boot-time
-`func_8006E6D4(D_800B0DD8 + 0, 0, D_80011614, 0)` from `func_8006E834` is
-degenerate on retail too (D_80093164 is unwritten BSS), so the
-`--disc-load-test` driver is the deterministic proof of the real byte
-path.  `func_8001220C`'s disc-wait loop is retail-corrected
-(`while (func_800698D4() != 0)`; a Phase 6D-S port bug had it inverted);
-without a disc the run ends via the established stop-at-first-present
-adaptation plus a bounded-wait backstop, never a faked mount.
-
-### B24 audit complete — func_8005BCBC translated
-
-`func_8005BCBC` (21 words / 0x54 at 0x8005BCBC, live split 4C4BC.s) is
-translated as a resource-state pointer/count selector rung.  ROM order:
-`sw $a0 → 0x358($gp)` (D_8009D0C8) always first; then a0 != 0 selects
-via `lbu 6($a0)` (== 9 → 0x800C20B4, else 0x800C20A4) or a0 == 0 selects
-via `lw 0x4A8($gp)` (D_8009D218 != 0 → 0x800C0DF0, else 0x800C0DE0);
-final stores `sw $a1 → 0x350($gp)` (D_8009D0C0) and `sw $v0 → 0x354($gp)`
-(D_8009D0C4 = 8); returns 8 on every path.  Exactly two exe call sites
-(jal word 0x0C016F2F): `func_800527C8` @0x80052834 (a0 = 0 in the delay
-slot, immediately after jal func_80052C6C @0x8005282C) and
-`func_8004DD64` @0x8004DF28 (a0 = lw 0x294($gp) = D_8009D004; off the
-boot frontier); both discard the return.  No callees, no SDK/GTE/GPU/
-MDEC/SPU/disc/input activity; deterministic; idempotent; PE_RamReset
-restores initial conditions (post-reset flag 0 → 0x800C0DE0).  The three
-state words are guest-RAM resident — exe-wide $gp-access scan shows
-retail readers/writers in func_8005BD10/func_8005BE1C (same split) and
-the func_8005D6F4 region (stores at 0x8005D730-38 / 0x8005D7F4-F8), all
-via $gp-relative guest accesses (B22-style storage decision).  The
-dispatcher call reads D_8009D218 = 1 that func_8005BC98 stores (guest
-RAM cross-function dependency, asserted in tests).
-
-Independent oracle `pc_port/tools/b24_oracle.py` — delay-slot-aware
-MIPS-I interpreter over the SHA-1-verified retail words (branch
-conditions sampled at issue, before the delay slot executes; shared
-register file; every read/write logged with width and order).  It
-asserts the exact ROM-order footprint and return for all four selection
-paths: (a0=0,flag=1) → C0=0x800C0DF0; (a0=0,flag=0) → C0=0x800C0DE0;
-(record,byte6=9) → C0=0x800C20B4; (record,byte6≠9) → C0=0x800C20A4.
-The B23 oracle remains green after the Phase 6E-B26 corrective
-(hardware-faithful contract: all nine records updated under the seed;
-see the corrective note in the B23 audit section).
-
-The strict frontier advances to **func_8005D6F4** from `func_800527C8`
-(three identical captures, exit 1); the dispatcher oracle now reports
-three unresolved callees in order: func_8005D6F4, func_80051CC4,
-func_80042C78.  Native and sanitizer tests are 279/279.  Framebuffer
-(`fb28dc21…`), boot trace (`42c1956e…`), and real-disc load trace
-(`7b8724ac…`, FNV `7D860391E1ED6C97`) hashes are unchanged; windowed
-framebuffer matches headless.
-
-### B25 audit complete — func_8005D6F4 translated
-
-`func_8005D6F4` (147 words / 0x24C at 0x8005D6F4, live split 4CC98.s,
-file 0x4DEF4) is translated as a resource-buffer + display-state
-initializer rung.  ROM order: REAL `func_80071A24(0x800C0DE0, 0x12E4)`
-bzero (A(28h), B21 contract); flag `D_8009D218 = 1`; block-1 state
-stores in order C8(=0), C0(=0x800C0DF0), C4(=8); fill loop #1
-(0xFF × 8 at 0x800C0DF0, retail reloads C0/C4 from guest RAM every
-iteration); selection #1 — `lw C8` reads the 0 just stored, so the
-func_8005DC9C arm is statically dead (preserved structurally) and
-`func_8005DC4C(0x1E, a1=0xFF)` is called — retail sets the copy dest
-`$a1 = D_8009D0C0` only AFTER the call returns (addu $a1,$s0 is not a
-delay slot; proven by the oracle's register-level execution); string
-copy #1 from the func_8005DC4C return into D_8009D0C0 until the copied
-byte == 0xFF (dest cursor advances per byte including the terminator);
-block 2 re-selects 0x800C0DF0 with store order flag, C4, C8, C0 and
-re-fills the buffer — retail overwrites copy #1's bytes, reproduced;
-selection #2 + copy #2; third `func_8005DC4C(0x1E, a1=cursor-after-
-copy-2)`; `func_80052594(ret)`; `func_8005CCA4()`; `sh 0x0203 →
-0x800C1F80`; `sw 0x00404040 → 0x800C0E44`; `func_800614AC(0x00404040)`;
-timer-tick clears 0x800A76A4/B0/BC/C8; `func_8005E884() → r`;
-`func_8005E850(0, 8−r)`; `func_800649D0(0)`; `func_80052790(1)`;
-terminator bytes 0xFF at 0x800C20A4/0x800C20B4; returns 0xFF.  Sole
-exe call site: func_800527C8 @0x8005283C (nop delay slot, a0 carries
-the residual 0 from func_8005BCBC's delay-slot setup — the body never
-reads $a0); return discarded.
-
-Boundary (as of B26): func_80071A24 and func_8005DC4C are REAL; the
-SEVEN remaining callees route through the centralized boundary in
-retail ROM order (7 provider invocations non-strict: func_80052594,
-func_8005CCA4, func_800614AC, func_8005E884, func_8005E850,
-func_800649D0, func_80052790; the func_8005DC9C arm is dead).  The B25
-degenerate in-RAM default for the func_8005DC4C return is RETIRED — the
-copy source now comes from the real archive, and tests establish the
-archive precondition instead of scripting a provider return.
-Idempotence: state-reproducible (every store overwrites); PE_RamReset
-restores initial conditions, and also clears the guest-resident archive
-that cycle A re-populates on a real boot.
-
-Independent oracle `pc_port/tools/b25_oracle.py` — delay-slot-aware
-MIPS-I interpreter over the SHA-1-verified retail words; branch
-conditions sampled at issue BEFORE the delay slot executes (the B24
-oracle was audited and carries the same fix); shared register file;
-exact little-endian widths; every read/write logged with address,
-width, value, order; bzero modeled by the proven A(28h) contract; the
-nine unresolved callees are recorded with their register-state
-arguments but NOT executed.  Asserts the exact ROM-order footprint and
-return for the degenerate boot path AND a controlled 4-byte string
-return (seeded outside the bzero range — the seed region is zeroed
-first, same as on hardware).  NOTE: while building B25 the committed
-b23/b24 oracles' shared interpreter pattern was audited; b24 received
-the not-taken `pc += 2` advancement fix (idempotent-safe slots — results
-unchanged, still PASS), b23 was left untouched per the B23 rung
-directive (its assertions encode its committed corrected contract).
-
-The strict frontier advanced INSIDE the translated func_8005D6F4 to
-**func_8005DC4C** (three identical captures, exit 1) — superseded by
-B26, which translates func_8005DC4C and moves the frontier on to
-func_80052594.  The dispatcher oracle reports two unresolved callees in
-order: func_80051CC4, func_80042C78.  Native and sanitizer tests were
-285/285 at B25.  Framebuffer
-(`fb28dc21…`), boot trace (`42c1956e…`), and real-disc load trace
-(`7b8724ac…`, FNV `7D860391E1ED6C97`) hashes are unchanged; windowed
-framebuffer matches headless.
-
-### B26 audit complete — func_8005DC4C translated
-
-`func_8005DC4C` (20 words / 0x50 at `0x8005DC4C..0x8005DC9B`, file
-`0x4E44C`, live split `4CC98.s:1779-1802`, yaml segment `[0x4CC98, asm]`)
-is translated as a read-only PE.IMG message/string-table lookup.  Exactly
-one body exists in the tree (one `glabel`, no matching or nonmatching C
-source); all 20 words are exe-verified.
-
-```
-ptr = mem32[0x800A802C] + 0x800A8028
-tbl = ptr + mem32[ptr + 4]
-return (idx <u mem16[tbl]) ? tbl + sext16(mem16[tbl + 2 + 2*idx]) : 0
-```
-
-**Three corrections to the pre-audit B26 working state, all proven from
-the raw bytes.** (1) `0x8005DC7C` is `sll $v0,$a0,1` (0x00041040 → sa=1),
-so the record stride is **2**, not 16.  (2) the `j` delay slot at
-`0x8005DC8C` is `addu $v0,$v1,$v0` (0x00621021 → rd=v0, rs=v1, rt=v0), so
-the return is **tbl + off**, NOT `a1 + off`.  (3) the exe-wide `jal
-0x0C017713` scan finds **39 call sites in 24 callers**, not three.  Under
-the corrected decode every return is an ordinary guest-RAM address, so
-the KUSEG RAM mirror the pre-audit state had added to `pe_guest_ram` —
-which made every address below `0x80000000` valid, including the proven
-failure return 0 — was unnecessary and was removed.  No clamping, no
-sentinel, no function-specific bypass.
-
-Signature is ONE argument: no instruction reads `$a1`.  Values retail
-leaves in `$a1` at call sites are residual (in func_8005D6F4 the 0xFF
-fill constant; at `0x8004685C` the jal delay slot is `sb $v0,0($s1)`).
-Three guest reads on the failure path, four on the success path, ZERO
-guest writes, no callees, cannot block, deterministic from guest state
-alone, repeated calls stable.  Zero is retail's own out-of-range return
-(`addu $v0,$zero,$zero`); no call site anywhere compares the return to
-zero.  Observed constant indices across all sites run 3..117.
-
-Measured in guest RAM at the func_8005D6F4 call on the real Disc 1 USA
-image (probe, not port output): `R = 0x30` → ptr `0x800A8058`;
-`S = 0x14` → tbl `0x800A806C`; count `0x78` (120); entries `242..1971`
-→ records `0x800A815E..0x800A881F`.  `min(entry) == 2 + 2*count` exactly,
-so the record pool begins where the offset table ends — an independent
-confirmation of the stride-2 layout.  Index 30 (used by all three
-func_8005D6F4 sites) → `0x800A82A9`, bytes `10 48 30 FF`.  The
-independent oracle reproduces `0x800A82A9` from the retail words alone.
-
-The archive is guest-resident and arrives from PE.IMG via cycle A of
-func_8006A9E4 before the dispatcher runs.  With the region zeroed the
-lookup returns 0 and func_8005D6F4's copy loop dereferences address 0 —
-surfaced by the checked-access layer, deliberately not masked.  Tests
-therefore establish the same precondition the real boot does
-(`B26_SeedArchive`), and the fixture PE.IMG now carries a valid archive
-header at the offsets cycle A copies.
-
-Independent oracle `pc_port/tools/b26_oracle.py` — delay-slot-aware
-MIPS-I interpreter over the SHA-1-verified retail words; seven
-interpreter self-tests (taken/not-taken slot single execution,
-non-idempotent register and memory slot effects, next-PC target vs PC+8,
-j/jr slots, shared register file); every modeled word cross-checked
-against the exe; every read/write logged with address, width, value and
-order; 36 checks over empty, populated, immediate-terminator, failure,
-first/last, repeated, `$a1`-independence, signed/wraparound, dirty,
-PE_RamReset and return-address boundary scenarios (including a return
-that legitimately leaves guest RAM and is NOT clamped).
-
-The strict frontier advances to **func_80052594** from `func_8005D6F4`
-(three identical captures, exit 1) — NOT to func_80051CC4, because
-func_8005D6F4 still carries seven boundary callees that all precede the
-dispatcher's remaining two.  The dispatcher oracle still reports two
-unresolved callees in order: func_80051CC4, func_80042C78.  Native and
-sanitizer tests are 298/298.  Framebuffer (`fb28dc21…`), boot trace
-(`42c1956e…`), and real-disc load trace (`7b8724ac…`, FNV
-`7D860391E1ED6C97`) hashes are unchanged; windowed framebuffer matches
-headless.  Docker matching rebuild remains EXACT at
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-
-### B27 audit complete — func_80052594 translated
-
-`func_80052594` (22 words / 0x58 at `0x80052594..0x800525EB`, file
-offset `0x42D94`, live split `42D94.s`, yaml segment `[0x42D94, asm]`)
-is translated as a leaf string-copy function.  All 22 words are
-exe-verified against the SHA-1-verified retail executable.
-
-ROM-order operation map (no `$gp` usage — all addresses via absolute
-`lui`/`addiu`):
-1. `$a1 = D_80091694` (buffer base), `$v1 = $a1 + 8` (buffer end)
-2. `sltu $v0,$a1,$v1` — always true (8-byte buffer); `beqz` → skip
-3. `$a2 = 0xFF` (terminator constant)
-4. Loop: `lbu $v0,0($a0)` / `nop` (load delay) / `beq $v0,$a2 → exit`
-   / `nop` / `sb $v0,0($a1)` / `addiu $a1,1` / `sltu $v0,$a1,$v1`
-   / `bnez → loop` / `addiu $a0,1` (delay slot)
-5. Exit: `$v1 = D_8009169D` / `$v0 = $a1 - D_80091694` = byte count
-6. `jr $ra` / `sb $v0,0($v1)` (delay slot: store count at D_8009169D)
-
-Signature: `int func_80052594(pe_addr_t src)`.  One argument in `$a0`.
-Returns byte count (0-8) in `$v0`.  Side effect: stores count at
-`D_8009169D`.  The `0xFF` terminator byte is NOT copied.
-
-Five executable call sites (`jal` word `0x0C014965`):
-- `func_8005D6F4` @ `0x8005D898` (delay: `addu $a0,$v0`; return discarded)
-- `func_8004DD64` @ `0x8004E28C` (delay: `addu $a0,$v0`; return discarded)
-- `func_8004DD64` @ `0x8004E428` (delay: `addu $a0,$v0`; return discarded)
-- `func_8004DD64` @ `0x8004E6A8` (delay: `addu $a0,$v0`; return discarded)
-- `func_8005C46C` @ `0x8005C46C` (delay: `nop`; return discarded)
-
-All call sites discard the return value.
-
-`D_80091694` (8-byte buffer) and `D_8009169D` (1-byte count) are
-guest-RAM resident.  Exhaustive executable-wide `lui`/`addiu` scan found
-NO readers — these are write-only stores.  Not `$gp`-relative (`$gp` =
-`0x8009CD70`, offset would be `-0xB6DC`, outside small-data area).
-
-Classification: 1 — translated retail logic (leaf, no callees, pure
-guest-memory, deterministic, idempotent for same source).
-
-Independent oracle `pc_port/tools/b27_oracle.py` — delay-slot-aware
-MIPS-I interpreter over the SHA-1-verified retail words; every modeled
-word cross-checked against the exe; every read/write logged with address,
-width, value and order; asserts the exact ROM-order footprint and return
-for terminator-only, partial, full, and boundary scenarios.
-
-The strict frontier advances to **func_8005CCA4** from `func_8005D6F4`
-(three identical captures, exit 1) — NOT to func_80051CC4, because
-func_8005D6F4 still carries six boundary callees that all precede the
-dispatcher's remaining two.  The dispatcher oracle still reports two
-unresolved callees in order: func_80051CC4, func_80042C78.  Native and
-sanitizer tests are 309/309.  Framebuffer (`fb28dc21…`), boot trace
-(`42c1956e…`), and real-disc load trace (`7b8724ac…`, FNV
-`7D860391E1ED6C97`) hashes are unchanged; windowed framebuffer matches
-headless.  Docker matching rebuild remains EXACT at
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
-
-## Decomp state (main repo)
-
-| Fact | Value | Derive |
-| --- | --- | --- |
-| Branch / tip | `main` @ tip (227, synced) | `git branch --show-current` / `git log --oneline -1` |
-| Phase | **5FI-62a34 / 227 exact leaves** (62CE4 parked loop-layout, sixth skew instance; main v5 + atom at stash; cc1 archaeology gates boot-to-black) | `scripts/verify_us.sh` summary + exact rebuild |
-| Matching C leaves | **227** | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
-| Yaml asm segments | **152** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
-| Era leaf compiles | **70** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
+| Branch / tip | `phase5fm-main-barrier-revisit` @ 5FU-17EA4 | `git branch --show-current` / `git status --short` |
+| Phase | **5FU-17EA4 / 241 exact leaves** (six nearby exact leaves added after 5FM; parked candidates remain untouched) | `scripts/verify_us.sh` summary + exact rebuild |
+| Matching C leaves | **241** (non-integrated candidates: parked src/func_800698D4.c / func_8001220C.c / func_800725DC.c + IN-PROGRESS src/func_8006A9E4.c) | `grep -c ',\s*c,' configs/USA/disc1.yaml` |
+| Yaml asm segments | **153** | `grep -c ',\s*asm\]' configs/USA/disc1.yaml` |
+| Era leaf compiles | **83** | `grep -c '^era_compile \|^\w*=1 era_compile ' scripts/build_us.sh` |
 | Target SHA-1 | `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` | `scripts/build_us.sh` compare |
 | Progress | https://blizz127.github.io/parasite-eve-progress/ | `scripts/publish_progress.sh` |
 
@@ -2790,7 +338,7 @@ headless.  Docker matching rebuild remains EXACT at
 dozens of glabels; do not subtract it from anything as a function count.
 
 Oracle: bare `scripts/build_us.sh` exits 0 on exact SHA-1; `scripts/verify_us.sh`
-reports Phase 5FE-table-2f970 / 224. Disc images / `asm/` / `build/` / `tools/era/`
+reports Phase 5FU-17EA4 / 241. Disc images / `asm/` / `build/` / `tools/era/`
 are git-ignored inputs — never commit them.
 
 **Toolchain**
@@ -2863,6 +411,8 @@ yaml-only and still works when asm/ is stale.
 | Outgoing `$a0` + `jal` after double dereference | **PROVEN** (5EJ-outgoing-arg): era `-O2 -G0` on `func_80019484(int **)` emits `lw $v0,0($a0)` / load-delay nop / `lw $a0,0($v0)` / `jal func_800438C0` + nop, then the proven return-1 frame teardown shape; all 11 words exact |
 | Return-forwarded `$v0` + teardown-before-`jr` epilogue | **PROVEN** (5EL-return-forwarding): era `-O2 -G0` on `func_8007F7A8` emits the frame + `jal func_8007FCAC` + nop, forwards `$v0` untouched, then `lw $ra`; `addiu $sp,+0x18`; `jr $ra`; nop. Era reproduces this per-function schedule as well as 197D0/F0's opposite teardown-in-slot schedule |
 | Straight-line boot pointer-layout scheduling | **PROVEN, COMPILER-CONSTRAINED C** (5EM-boot-6a8d4): era `-O2 -G0` matches all 68 words / 19 absolute pointer stores in retail order. Both the initial plain-local source and one retail-order retry allocate cursors to `$a0/$a1`, constants to `$v0/$v1`, and sink `D_800B0E28` past `D_800B0E2C/E30`. The exact fallback therefore uses the established explicit-register convention (`$v0/$v1` cursors, `$a0/$a1` constants); it is target-specific matching C, not portable natural C |
+| Empty-asm scheduling barrier for materialization placement | **PROVEN (5FJ `func_8006E9A0`)**: era `-O2`'s pre-RA scheduler sank a callee-saved `$s2 = &SYM` lui/addiu pair past a `jal` (source position = retail words 29-30; cc1 put it after the first post-arena call); `asm volatile("" : : "r"(reg) : "memory")` right after the assignment pins the pair to retail position, emits no code, and the leaf matches 141/141. `-fno-schedule-insns` is NOT the lever (double materialization, breaks arena scheduling) |
+| Paired register pins + `"=r":"0"` zero-code barrier for call-result home | **PROVEN (5FK `func_8006E834`)**: retail keeps a `$v1` backup of a call result across a range test and restores it to `$v0` for the equality tests; natural C makes cc1 coalesce the tests onto `$v1` and drop both restore copies (90/91). Pinning `register int t asm("$3")` (backup) and `register int rt asm("$2")` (test home) plus empty `asm volatile("" : "=r"(x) : "0"(x))` barriers (emit nothing; block copy-prop folding) restores the retail shape, and reorg threads the idempotent merge copy into the `beqz` delay slot — 91/91. Single-register pins alone (V1/V3) are inert; pinning only `$v0` without the decoupling barrier leaves the tests on `$v1` |
 | Counting-loop back-edge scheduling | **PROVEN; VOLUME-ELIGIBLE** (5EN/5EP `func_8006A674` probe): era `-O2 -G0` puts pointer advances in all five retail back-branch delay slots — `bnez` up-counters (`$a0+4`, `$v1+2`, `$a1+8`) and `bgez` down-counters (`$a3-4`, `$v0-4`) — and preserves the final store in the `jr` delay slot. The leaf remains parked for unrelated constant-hoist scheduling; the loop primitive passed. |
 | Natural counting loop in volume | **PROVEN, VOLUME** (5ES `func_8004BF08`): era `-O2 -G0` matches a natural pointer-walk loop over parallel signed `int[8]` arrays in all 14 words, with no pins or maspsx opt-in. Explicit initialization in retail order (`i`, first pointer, second pointer) plus `do/while` phrasing gives `$a1/$a0/$v1` allocation; the first pointer advances before the bound test and the second pointer advances in the backward `bnez` delay slot. The declaration-initialized `for` form was semantically correct but allocated the three live values differently. |
 | Pure-register bit-serial loop in volume | **PROVEN, VOLUME** (5ET `func_8005186C`): era `-O2 -G0` matches all 15 words on the first natural-C try — no loads/stores, calls, or `$gp`; explicit-init `do/while`; the unconditional `result <<= 1` fills the forward `bnez` skip-branch delay slot, the `bgez` back-edge keeps a nop slot, and the return lands as `addu $v0,$a1,$zero` in the `jr` delay slot |
@@ -2876,13 +426,16 @@ yaml-only and still works when asm/ is stale.
 | dbr_sched `$v0`-steal screening rule | **CHARACTERIZED (5FB `func_800698D4`, PARKED)**: a `beqz`/`beq` whose delay-slot steal candidate is a `$v0`-setter gets the fill when the branch target hits a `jal` immediately (kills `$v0`), but retail DECLINES the steal when the target is the return-computation block (`$v0` live to `jr $ra`) — our cc1 steals anyway. Screening rule: nop slot + `$v0`-constant load on fall-through + branch to a RETURN block → expect divergence; same pattern to a `jal`-adjacent block → matches. reorg.c liveness skew (ccpsx vs 2.7.2-psx), not source-expressible |
 | Nested-if defeats range-test collapse | **PROVEN IDIOM (5FB `func_800698D4`)**: `v != 0 && v != -1` folds to `addiu $v0,$v0,1; sltiu $v0,$v0,2; bnez` under era `-O2` (range test, not retail's shape). Two nested `if`s keep the separate `beqz`/`beq` compares. -O1 keeps compares but flattens other structure |
 | Frame-size arithmetic for struct locals | **PROVEN (5FB `func_800698D4`)**: size opaque locals from the frame, not the type's rounded size — DsSearchFile's CdlFILE local is `0x18` (pos 4 + size 4 + name 16): `0x10` args + `0x18` local + `$s0` + `$ra` = frame `0x30`. A `0x20` local emits frame `0x38` and fails at word 0 |
-| Five-arg call (o32 stack arg) | **PROVEN, FIRST LEAF** (5FC `func_8006E834`, PARKED on unrelated residual): the 5th argument emits `sw $v0,0x10($sp)` in the `jal`'s delay slot — plain C `f(a,b,c,d,e)` with an immediate 5th arg, era `-O2 -G0`, worked first try. `sb $v0,0x29($sp)` (struct byte field) also lands in a `jal` slot |
+| Five-arg call (o32 stack arg) | **PROVEN, FIRST LEAF** (5FC `func_8006E834`; leaf integrated exact in 5FK): the 5th argument emits `sw $v0,0x10($sp)` in the `jal`'s delay slot — plain C `f(a,b,c,d,e)` with an immediate 5th arg, era `-O2 -G0`, worked first try. `sb $v0,0x29($sp)` (struct byte field) also lands in a `jal` slot |
 | Frame decomposition before writing | **PROVEN METHOD (5FB/5FC)**: decompose the frame BEFORE choosing local sizes — `args + locals + saves + pad = frame` must be exact (5FB: CdlFILE `0x18` not `0x20`; 5FC: args `0x18` + env `0x18` + local30 `0x8` + regs `0xC` + pad `0x4` = `0x48`, byte field lands at `env[0x11]` = `0x29($sp)`). Wrong local size fails at word 0 |
 | Aggregate element type as addressing-mode lever | **PROVEN (5FD `func_8002F9CC`)**: for an indexed store into a symbol array, declaring the real aggregate element (`SlotRecord D_800A5D58[]`, `arr[i].field = 0`) makes cc1 emit the standalone indexed symbolic store (`sw $0,SYM($3)`) at plain `-O2` — flat `arr[i*55] = 0` instead hoists `la $5,SYM` out of the loop (invariant under `-O2`/`-O1`/`-O1 -fschedule-insns2`; an addressing choice, not scheduling). With the symbol store present, `MASPSX_THREE_WORD_SYMBOL_STORE=1` passes it to GNU as for retail's 3-word `lui $at / addu / sw %lo($at)` form. Also: a lone symbol materialization is NOT an `-O1` signal — the `-O1` lever is for *repeated* constant/address materialization |
 | `-O1` per-use constant materialization — SELECTION RULE | **PREDICTIVE (three leaves)**: if ROM materializes the same constant/address more than once, try `-O1` FIRST. `-O2`'s shared hoist runs through the hardwired `optimize>1` path (not flag-reachable); `-O1` re-materializes per use. 6A674 (discovered: per-use `-1`), 6A5BC (applied: `$s0=1` twice), 3E680 (predicted from five per-store `lui`s with a shared `0x8009` high half retail didn't CSE) |
 | Return-use readiness of asm callees | **VALIDATED (5EZ `func_8006A5BC`)**: a caller may USE a still-asm callee's return and stay matchable when the use is a **raw full-width compare** (`beq $v0,$s0`, no mask/sign-extend) or a **bare store** (`sh $v0`). Both are codegen-determined regardless of the callee's true return type, so `int f(void)` externs suffice. Extends the 5EY rule (immediates-only args, returns ignored) |
 | Fn-ptr arg to still-asm callee | **PROVEN, FIRST LEAF** (5FA `func_8003E680`): `f(func_8003E91C)` emits `lui $a0,%hi(sym)` / `addiu $a0,$a0,%lo(sym)` with R_MIPS_HI16/LO16 relocs against a same-segment TEXT symbol; the linker resolves it exactly like a data symbol. Declare `extern void g(void);` and pass the bare name |
 | Unsigned loop-bound compare | **PROVEN (5FA `func_8003E680`)**: ROM `sltiu` (unsigned) vs cc1's `slt` for `int i < const` — declare the counter `unsigned int`. One-word type-driven fix, no flag involvement |
+| Two-word `lui/addiu` zero from C | **PROVEN (5FN `func_800725DC` probe)**: no C zero spelling emits `lui/addiu` (ten forms probed, all `move`; a constant-0 loop bound deletes the whole loop at `-O2` AND `-O1`). The address expression `(int)SYM - BASE` compiles to `la $r,SYM+(0-BASE)` → `R_MIPS_HI16/LO16` with addend; when `SYM==BASE` the final words are `lui 0x0000 / addiu 0x0000` and the loop body STAYS ALIVE. The only known source-expressible origin for a baked two-word zero |
+| No-args-area frame via asm call | **PROVEN (5FN `func_800725DC` probe)**: era cc1 reserves the 16-byte o32 outgoing-args area for EVERY C call form (direct/indexed-pointer/pinned-pointer all `args=16`). An inline-asm `jalr` (counter decrement as tied `"=r"/"0"` operand in the delay slot) is not a CALL insn → `.frame args=0`, frame = saves only. Diagnostic for retail frames smaller than saves+16 |
+| Era prologue save order is fixed descending | **CHARACTERIZED (5FN)**: multi-`$s` prologue saves emit `$ra`-first / offsets top-down under `-O2`, `-O1`, `-fno-schedule-insns`, `-fschedule-insns2`, `-G8` alike — flag-invariant. PE1's matched/asm units are all descending or slot-interleaved; only the 0x800725xx SDK-runtime unit is contiguous-ascending (per-TU toolchain skew; see `per-tu-725dc`) |
 
 All four fingerprints from the original 5EA era claim are now proven in bytes.
 The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a countdown.
@@ -2940,20 +493,13 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   not source-expressible. Banked idioms: nested-if defeats range-test collapse;
   CdlFILE local is `0x18` not `0x20` (frame arithmetic). Detail:
   `docs/ai_context/parked_blockers.json` (`boot-698d4-dbr-sched`).
-- **post-mount loader `func_8006E834`:** **PARKED-ALLOCATION** (branch
-  `phase5fc-boot-6e834`; candidate stashed as `park phase5fc func_8006E834
-  89-91 (call-result register-home residual)`). Post-mount image loader +
-  display env: reads a `D_80093164` lhu offset/size pair from the mounted
-  image base `D_800B0DD8` (written by parked 698D4 — the two are producer/
-  consumer), polls `func_800811E4`, then `VSync(0)`/`SetDispMask(0)`/
-  `func_800749D8(&env,0,0,320,240)` (PROBABLE SetDefDrawEnv)/`PutDispEnv`.
-  89/91 content words at era `-O2 -G0`. PROVEN firsts: five-arg call (5th
-  arg `sw $v0,0x10($sp)` in the `jal` slot); frame decomposition method.
-  Retail FOLDS the `r==0||r==-1` range test in this unit (698D4's did not —
-  per-TU compile-settings datapoint). Residual: poll result homed in `$v0`
-  by retail (two restores) vs `$v1` by ours — call-result register-home skew,
-  not source-expressible. `$v0`-liveness rule NOT exercised (non-event).
-  Detail: `docs/ai_context/parked_blockers.json` (`boot-6e834-register-home`).
+- **post-mount loader `func_8006E834`:** **RESOLVED — INTEGRATED (5FK,
+  91/91 exact).** The 5FC call-result register-home residual (`$v0`+two
+  restores vs `$v1`) WAS source-expressible after all: paired hard-register
+  pins ($v1 backup / $v0 test home) + two zero-code `"=r":"0"` barriers
+  (fingerprint table). Historical park evidence preserved in
+  `docs/ai_context/parked_blockers.json` (`boot-6e834-register-home`,
+  status INTEGRATED).
 - **flag-clear loop `func_800374E8`:** **PARKED-ALLOCATION, register COLORING**
   (branch `phase5ff-374e8`; candidate stashed as `park phase5ff func_800374E8
   (register-coloring skew; structure correct)`). Flag-clear loop over 4 x 56-byte
@@ -2987,6 +533,43 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   filters could not catch loop-layout skew (no pre-compile tell known).
   Detail: `docs/ai_context/parked_blockers.json` (`loop-layout-62ce4`).
 
+- **SDK-runtime runner `func_800725DC` + twin `func_8007264C`:** **PARKED-PER-TU-TOOLCHAIN**
+  (candidate preserved at `src/func_800725DC.c`, PARKED, semantically complete;
+  detail: `docs/ai_context/parked_blockers.json` `per-tu-725dc`). One-shot
+  callback runner over the empty fn-ptr table at `jtbl_80010000` (main's
+  first callee). **THREE BANKED LEVERS** (durable, probe-verified): (1) the
+  retail two-word zero count (`lui/addiu` of 0) is unreachable from any C
+  zero spelling — the address expression `(int)jtbl_80010000 - 0x80010000`
+  emits `la SYM+0x7FFF0000` whose hi/lo relocs resolve to 0000/0000 and KEEP
+  the loop body alive at -O2; (2) an inline-asm `jalr` call (decrement as
+  tied operand in the slot) yields `.frame args=0` — the no-args-area frame;
+  (3) the loop body + flag load/store shape is word-exact on era `-O2 -G0`
+  with pins. **RESIDUAL — three coupled per-TU mechanisms, flag-invariant**
+  (-O2/-O1/-fno-schedule-insns/-fschedule-insns2/-G8 ladder): ascending
+  contiguous prologue saves (era's base order is fixed descending; PE1's
+  other units are descending/slot-interleaved), `li→ori` expansion (retail
+  slot constant is `ori`, era pipeline yields `addiu`), and the
+  no-args-area frame model. **Third per-TU datapoint** — the 0x800725xx
+  SDK-runtime unit was built with a different ccpsx/aspsx configuration.
+
+- **boot-read `func_8006A9E4` (215w):** **IN PROGRESS (5FO checkpoint d10)** —
+  candidate preserved at `src/func_8006A9E4.c` (d10: frame EXACT 0x30,
+  all zone/copy structure word-count-exact, **216 words (+1)**; sole
+  structural extra = zone-1 gate steal, 698D4-class; NOT integrated).
+  Key levers: `__builtin_memcpy(dst,src,16)` = retail's lwl/lwr+swl/swr
+  block shape; `called→$17` pin = retail's zone-2 register split;
+  do/while = no trip guard; sentinel VARIABLE fixes the zone-1/3 steal
+  but ripples zone 2 (next: pin combo). Main's post-init
+  boot-read: ClearImage rect setup, FOUR table-driven retry-read zones over
+  the u16 boundary pairs at `D_800930DC[0]/[1]/[4]/[5]` (issue `func_8006E6A8`,
+  poll `func_8006E7E8` through a goto-gate: `flag=1; poll: if (flag==-1)
+  goto restart; flag=poll(); if (flag) goto poll;` — reproduces retail's
+  dead-edge outer loop), zone-2 one-shot `func_800527C8`, 0x10A50-byte
+  alignment-split copy to `D_800E2858` (unaligned = lwl/lwr blocks), two
+  `func_8006E498` decode calls (data[0x144] = SECOND call's return),
+  `func_80087090(D_800B0E6C,1)`, 0x1400-byte copy to data[0x130].
+  Resume from `src/func_8006A9E4.c` + the REMAINING-DELTAS list in its header.
+
 - **CC1 PROVENANCE INVESTIGATION — COMPLETE (NULL RESULT):** **no closer community build exists.**
   Four-phase read-only investigation (Phases 1–4) into the era toolchain's cc1, the retail PE1 compiler
   (ccpsx), and whether a closer community build is obtainable. Blinded two GCC MIPS-backend mechanisms
@@ -3012,21 +595,20 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   calls; cc1 kept the li at the same position and the $s-save interleaving identical —
   source cannot express the difference): prologue save-batching + invariant-constant
   placement, cc1 ordering pass vs ccpsx. Fifth scheduling-family instance.
-  NOTE: this park joins 698D4 and 6E834 as the THIRD boot-chain function in the skew set —
-  the cc1 archaeology now directly gates boot-to-black. Detail:
-  `docs/ai_context/parked_blockers.json` (`main-prologue-scheduling`).
+  NOTE: with 6E834 resolved in 5FK, main and 698D4 are the TWO remaining
+  boot-chain parks — the cc1 archaeology still directly gates boot-to-black.
+  Detail: `docs/ai_context/parked_blockers.json` (`main-prologue-scheduling`).
 
 - **ccpsx-vs-2.7.2 SKEW SET — four distinct mechanisms:** (1) the
   allocation/scheduling family (`6A674`/`55724`/`52BCC`; two recovered via
   `-O1`), (2) dbr_sched `$v0`-liveness slot-steal (`698D4`), (3) call-result
-  register home (`6E834`), (4) register coloring / pseudo-numbering
-  (`374E8`). All unreachable from C. (3)+(4) are both register-ASSIGNMENT
-  skew, strengthening the case that the single highest-value open lever is
-  whether a closer-to-ccpsx cc1 build is obtainable — that would be the
-  one-layer-up analog of the maspsx patches and could address the whole set.
-  SIX instances now documented (four scheduling, two register-assignment), and THREE are boot-chain functions (`main`,
-  `698D4`, `6E834`) — the cc1 question is no longer archaeology for curiosity;
-  it directly gates boot-to-black under plan A.
+  register home (`6E834`) — **RESOLVED 5FK via paired register pins +
+  zero-code barriers; NOT unreachable from C**, (4) register coloring /
+  pseudo-numbering (`374E8`). (4) remains register-ASSIGNMENT skew; (2)
+  remains a liveness-screening skew.
+  SIX instances documented (four scheduling, two register-assignment); 6E834
+  left the set in 5FK. TWO boot-chain functions remain parked (`main`,
+  `698D4`) — the cc1 question still directly gates boot-to-black under plan A.
   Do not chase mid-leaf.
 - **PARKED-ALLOCATION/SCHEDULING family:** cc1 2.7 register
   allocation/scheduling decisions that natural C cannot steer and `-O` level
@@ -3214,10 +796,15 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | 5FE-table-2f970 | 224 | Table twin `func_8002F970` (23 words) on era `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`: pointer-match search-and-clear over the 2F9CC table (`SlotRecord` typing inherited unchanged); `*p == D_800A5D58[i].body` → clear `inUse`, then `*p = 0` with the `sw` in the `jr` delay slot (5EN pattern). `$a3` body-base hoist = the aggregate lever producing (not preventing) a hoist; back-branch slot FILLED vs 2F9CC's nop — slot fill is per-shape, not per-table. One phrasing fix: operand order in the compare (`body == *p`) for `bne $v0,$v1`. Object-level `%lo` difference on the hoisted base (`D_800A5D58+4` vs `D_800A5D5C`) resolves to identical bytes at link. Contiguous carve with 2F9CC (prefix 0xEA58, C 0x5C, C 0x44, resume 20210.s) |
 | 5FF-maspsx-loads | 224 | Toolchain patch `439c244`: `MASPSX_THREE_WORD_SYMBOL_STORE` extended from stores to standalone indexed symbolic LOADS (lb/lbu/lh/lhu/lw/lwl/lwr) under addiu_at — pass-through emits the ASPSX 2.30 three-word lui/addu/op-%lo form; compound lines retain legacy; `lwc2` stays outside (durable negative). Store path untouched; one gate, existing name. Full gate: flag-OFF 224 exact SHA; flag-ON 224 exact SHA (6A674/2F9CC/2F970 unchanged under the extended meaning); 153 vendored tests (was 148, +5 load); re-clone restores all three tracked files byte-identical. `func_800374E8` (which motivated the patch) PARKED — register-coloring residual (structure correct; see Known-open families + parked_blockers.json). 224 unchanged, no carve.
 | 5FG-363f4 | 225 | Search-and-clear `func_800363F4` (21 words / 0x54 @ 0x26BF4): 16-entry D_800A7624 scan, clear key on match, break. era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 — FIRST leaf exercising the load gate; the probe EXPOSED the 439c244 bug (GNU as uses the DESTINATION reg as temp for lw; ROM uses $at), fixed at 5dac87e. 21/21 words; mid-2422C carve (prefix 0x29C8, C 0x54, resume 26C48.s 0xD5C); full 225 build EXACT SHA.
+| 5FI-62a34 | 227 | 2-key node-list search `func_80062A34` on era `-O2 -G8` (gp head); `&&` short-circuit matches two-target block layout |
+| 5FJ-6e9a0 | 228 | Boot display init + pointer arena + ClearOTagR poll loop + dispatch exit `func_8006E9A0` (141 words / 0x234 @ 0x5F1A0) on era `-O2 -G0`, **141/141 exact**: 6A8D4 arena pins (`$v0/$v1` cursors, `$a0/$a1` consts) reused verbatim; NEW pins `$s0`=saved_arg / `$s2`=&D_800B0E38 (natural allocation swaps them and sinks the materialization past a call); empty-asm barrier holds the `$s2` lui/addiu at retail words 29-30. Tail carve of 5B1E4: asm prefix 0x3FBC, C 0x234, no resume (6EBD4 C sibling follows). P3 types: D_800BCE80/D_800BCFEE/D_800B0DC6 `unsigned char` (opaque DISP_ENV addr, lbu poll, sb); arena globals + D_80011614 `unsigned char *`; D_8009D280 `unsigned int`, D_8009CDDC `int` (3E680). Full 228 build EXACT SHA. **Uncommitted on branch `phase5fj-6e9a0`** |
+| 5FK-6e834 | 229 | Post-mount image loader + display env setup `func_8006E834` (91 words / 0x16C @ 0x5F034) on era `-O2 -G0`, **91/91 exact** — the 5FC-parked call-result register-home residual resolved by the 5FJ control technique: paired pins `register int t asm("$3")` ($v1 backup across the range test) + `register int rt asm("$2")` ($v0 equality-test home) and two zero-code `asm volatile("" : "=r"(x) : "0"(x))` barriers (block copy-prop folding, emit nothing); reorg threads the idempotent restore copy into the `beqz` delay slot, reproducing retail's two restores. Bounded matrix: natural V0 = historical 90-word residual; single-pin V1/V3 inert; paired pins without the rt barrier leave tests on $v1. Mid-5B1E4 carve: asm prefix 0x3E50, C 0x16C, then 6E9A0 C — 6E834→6E9A0→6EBD4 now contiguous C. Full 229 build EXACT SHA. **Uncommitted on branch `phase5fk-6e834-pin-revisit`** |
+| 5FL-698d4-revisit | 229 | **PARKED** — Bounded pin/barrier revisit of `func_800698D4` (disc mount, 141w) following the 5FK proof. V0-V8 barrier matrix tested: empty `asm volatile("")` and 5FK-style value barriers prevent the delay-slot steal at searches #3/#4 but add scheduling-boundary overhead bloating to 144 words (+3 vs retail). Residual is pure instruction-scheduling (delay-slot fill), not register allocation; the 5FK control family cannot resolve without unacceptable overhead. sltiu fix confirmed. Candidate preserved at `src/func_800698D4.c` (PARKED, 140/141). Production unchanged at 229. **Uncommitted on branch `phase5fl-698d4-barrier-revisit`** |
+| 5FM-main-revisit | 229 | **PARKED** — Bounded revisit of `func_8001220C` (main, 187w). V0 baseline (era -O2 -G0) produces 188 words with 150/187 word-level mismatches across all 7 zones: prologue save-batching order fundamentally differs, $s2/$s3 register assignment is swapped (state_val→$s2 vs retail $s3; flagbyte→$s4 vs retail $s2), invariant bitmask 0x100000 materialization point diverges, and the skew cascades through the entire dispatch loop. Scratchpad stack-handoff atom remains byte-exact. The bounded hard-register/barrier family from 5FJ/5FK cannot address pervasive global register-allocation skew of this scope; the V0-V6 matrix was not executed because the baseline already exceeds what localized barriers control. Candidate preserved at `src/func_8001220C.c` (PARKED, semantically complete, 20 callee declarations verified). Production unchanged at 229. Fresh Docker build confirms EXACT SHA-1. **Uncommitted on branch `phase5fm-main-barrier-revisit`** |
+| 5FN-725dc | 229 | **PARKED-PER-TU-TOOLCHAIN** — bounded campaign on `func_800725DC` (main's first callee, 28w) + twin `func_8007264C` (26w): one-shot callback runner over the EMPTY fn-ptr table at `jtbl_80010000`. THREE LEVERS BANKED (probe-verified): the retail `lui/addiu`-zero count is unreachable from any C zero spelling (10 forms probed) but `(int)jtbl_80010000 - 0x80010000` → `la SYM+0x7FFF0000` resolves to 0000/0000 at link and keeps the loop alive at -O2; an inline-asm `jalr` call (tied decrement in the slot) gives the retail no-args-area frame (`.frame args=0`); the loop body + flag load/store shape is word-exact on era `-O2 -G0` with pins. RESIDUAL is three coupled per-TU mechanisms, flag-invariant across the ladder: ascending contiguous prologue saves (era fixed descending; all other PE1 units descending/interleaved), `li→ori` expansion, no-args-area frame model — the 0x800725xx SDK-runtime unit used a different ccpsx/aspsx config (third per-TU datapoint). Candidate preserved at `src/func_800725DC.c`. Production unchanged at 229 |
+| 5FO-6a9e4 | 229 | **IN PROGRESS, CHECKPOINT d10** — `func_8006A9E4` (main's boot-read, 215w): twelve-draft campaign, **216 words (+1)**, frame EXACT 0x30, all zone/copy structure word-count-exact. NEW PROVEN LEVERS: `__builtin_memcpy(dst,src,16)` on char* emits EXACTLY retail's lwl/lwr×4 + swl/swr×4 block shape; `called→asm("$17")` pin flips zone 2 to retail's called=$s1/sentinel2=$s4; do/while copies kill the trip guard. NEGATIVE RESULTS banked: packed struct → byte-wise synthesis (+119w), aligned(1) ignored, `-fno-strength-reduce` regresses (208/221w). Sole structural extra = zone-1 gate steal (698D4-class); remaining deltas are copy-loop register/offset encodings + zone-3/4 gate li extras. ROUND-3 matrix (d13-d15) brackets the solution: block-scoped sentinel pins make ALL gates word-exact but bloat copies (+10) — gates-vs-copies register-pressure trade-off; next: narrow sentinel lifetimes or pin copy cursors. Candidate at `src/func_8006A9E4.c` (NOT integrated) |
 | 5FH-twin-37548 | 226 | Record-field lookup twin `func_80037548` (27 words / 0x6C @ 0x27D48): scan 4 x 56-byte D_800BCEA8 records for short needle at +0x10, return signed byte0 (+0x00) on match else 0. era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 (lh/lbu indexed pair through the 5dac87e $at gate). Twin-hypothesis FALSIFIED: matches 27/27, no coloring skew — live-value-pressure rule refined (see register-coloring-374e8 parked entry). Accumulator phrasing banked (fingerprint table). Mid-27C6C carve: prefix 0xDC, C 0x6C, resume 27DB4 (existing sibling); full 226 build EXACT SHA; packed-span byte-exact.
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
 PC port remains out of scope. Redump.org cross-check still open (non-blocking).
-junction.  The provider returns the incoming destination per the BIOS
-memset-family convention; `func_80064964` does not consume it.

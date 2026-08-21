@@ -66,3 +66,10 @@ pc_port/build-san/
 
 # Local disc pointer used by native battle oracles (path only; never the BIN)
 local/pe_disc1.path
+
+# Agent scratch / local verify trees (leaves lane)
+.claude/
+.mimocode/
+/*.csv
+then
+pe-decomp-main-verify/
