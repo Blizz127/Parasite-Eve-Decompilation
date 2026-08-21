@@ -373,7 +373,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0xBA174, asm]'
     '[0xBA400, c, func_800C9C00]'
     '[0xBA410, c, func_800C9C10]'
-    '[0xBA418, asm]'
+    '[0xBA418, c, func_800C9C18]'
+    '[0xBA420, asm]'
     '[0xBA6A0, c, func_800C9EA0]'
     '[0xBA6A8, asm]'
     '[0xBACA8, c, func_800CA4A8]'
@@ -523,6 +524,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_800C8F20.c"
     "src/func_800C9C00.c"
     "src/func_800C9C10.c"
+    "src/func_800C9C18.c"
     "src/func_800CA798.c"
     "src/func_800CBFA4.c"
     "src/func_800CCF80.c"
@@ -532,7 +534,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_800CE1DC.c"
     "src/func_800D4850.c"
     "asm/disc1/BA174.s"
-    "asm/disc1/BA418.s"
+    "asm/disc1/BA420.s"
     "asm/disc1/BA6A8.s"
     "asm/disc1/BACB4.s"
     "asm/disc1/BAFA8.s"
@@ -906,7 +908,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800C9C10.c" ]]; then
+if [[ -f "$ROOT/src/func_800C9C18.c" ]]; then
+    echo "C conversion: Phase 5GT-C9C18 — 266 leaves (+ return-zero stub twin; era -O2 -G0; 2/2 words)"
+    echo "  sources: src/func_800C9C18.c (+ prior 5GS)"
+elif [[ -f "$ROOT/src/func_800C9C10.c" ]]; then
     echo "C conversion: Phase 5GS-C9C10 — 265 leaves (+ return-zero stub; era -O2 -G0; 2/2 words)"
     echo "  sources: src/func_800C9C10.c (+ prior 5GR)"
 elif [[ -f "$ROOT/src/func_800CD978.c" ]]; then
