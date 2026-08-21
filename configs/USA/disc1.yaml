@@ -852,13 +852,15 @@ segments:
       # Phase 5CR: C leaf func_800CA4A8 — file 0xBACA8, size 0xC.
       - [0xBACA8, c, func_800CA4A8]
       # Phase 5ED: mid-BACB4 hole — sb+ret0 func_800CA798.
-      # Prefix 0x2E4 (= 0xBAF98 - 0xBACB4); then CA7A8 C (0x8), resume
-      # BAFB0.s 0x524 (= 0xBB4D4 - 0xBAFB0).
+      # Prefix 0x2E4 (= 0xBAF98 - 0xBACB4); then CA7A8/CA7B0 C stubs
+      # (0x10 total), resume BAFB8.s 0x51C (= 0xBB4D4 - 0xBAFB8).
       - [0xBACB4, asm]
       - [0xBAF98, c, func_800CA798]
       # Phase 5GU: return-zero stub, era -O2 -G0.
       - [0xBAFA8, c, func_800CA7A8]
-      - [0xBAFB0, asm]
+      # Phase 5GV: return-zero stub twin, era -O2 -G0.
+      - [0xBAFB0, c, func_800CA7B0]
+      - [0xBAFB8, asm]
       # Phase 5W: C leaf func_800CACD4 — VRAM 0x800CACD4, size 0x8.
       # File span 0xBB4D4–0xBB4DC exclusive. Empty jr/nop stub.
       - [0xBB4D4, c, func_800CACD4]
