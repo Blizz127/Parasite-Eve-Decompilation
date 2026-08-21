@@ -134,11 +134,13 @@ EXPECTED_SUBSEGMENTS=(
     '[0x86A4, c, func_80017EA4]'
     '[0x86C4, asm]'
     '[0x86FC, c, func_80017EFC]'
-    '[0x8720, asm]'
-    '[0x8744, c, func_80017F20]'
-    '[0x8768, asm]'
+    '[0x8720, c, func_80017F20]'
+    '[0x8744, asm]'
     '[0x8788, c, func_80017F88]'
     '[0x87B0, c, func_80017FB0]'
+    '[0x8804, asm]'
+    '[0x8AC0, c, func_800182C0]'
+    '[0x8AE0, asm]'
     '[0x9850, c, func_80019050]'
     '[0x9858, c, func_80019058]'
     '[0x9860, asm]'
@@ -393,8 +395,9 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/2A0C.s"
     "asm/disc1/2D74.s"
     "asm/disc1/86C4.s"
-    "asm/disc1/8720.s"
-    "asm/disc1/8768.s"
+    "asm/disc1/8744.s"
+    "asm/disc1/8804.s"
+    "asm/disc1/8AE0.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
     "asm/disc1/20210.s"
@@ -521,6 +524,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80017F20.c"
     "src/func_80017F88.c"
     "src/func_80017FB0.c"
+    "src/func_800182C0.c"
     "src/func_80019050.c"
     "src/func_80019058.c"
     "src/func_800190AC.c"
@@ -852,7 +856,10 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80017FB0.c" ]]; then
+if [[ -f "$ROOT/src/func_800182C0.c" ]]; then
+    echo "C conversion: Phase 5FZ-182C0 — 246 leaves (+ D_800BCF88 bits-0xC0 setter; era -O2 -G0; 8/8 words)"
+    echo "  sources: src/func_800182C0.c (+ prior 5FY)"
+elif [[ -f "$ROOT/src/func_80017FB0.c" ]]; then
     echo "C conversion: Phase 5FY-17FB0 — 245 leaves (+ D_8009D1A0 dynamic bit clearer; era -O2 -G0; 11/11 words)"
     echo "  sources: src/func_80017FB0.c (+ prior 5FX)"
 elif [[ -f "$ROOT/src/func_80017F88.c" ]]; then

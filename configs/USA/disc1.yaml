@@ -67,10 +67,9 @@ segments:
       - [0x86C4, asm]
       # Phase 5FV: D_8009D2F0 flag-0x100 setter, era -O2 -G0.
       - [0x86FC, c, func_80017EFC]
-      - [0x8720, asm]
+      - [0x8720, c, func_80017F20]
       # Phase 5FW: D_8009D2F0 flag-0x100 clearer, era -O2 -G0.
-      - [0x8744, c, func_80017F20]
-      - [0x8768, asm]
+      - [0x8744, asm]
       # Phase 5FX: D_8009D1A0 bitwise OR setter, era -O2 -G0.
       - [0x8788, c, func_80017F88]
       # Phase 5FY: D_8009D1A0 dynamic bit clearer, era -O2 -G0.
@@ -81,6 +80,9 @@ segments:
       - [0x87DC, c, func_80017FDC]
       - [0x87F0, c, func_80017FF0]
       - [0x8804, asm]
+      # Phase 5FZ: D_800BCF88 bits-0xC0 setter, era -O2 -G0.
+      - [0x8AC0, c, func_800182C0]
+      - [0x8AE0, asm]
       # Phase 5AL: C leaf func_80019050 — VRAM 0x80019050, size 0x8.
       # File span 0x9850–0x9858 exclusive. Return-1 stub (jr; addiu $v0,1),
       # third of the seven return-1 twins (shape scratch-proven in 5AJ).

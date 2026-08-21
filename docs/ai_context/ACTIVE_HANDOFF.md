@@ -3,6 +3,12 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## func_800182C0 — D_800BCF88 bits-0xC0 setter matching C (8 words)
+
+`src/func_800182C0.c` matches era `-O2 -G0`, VRAM
+`0x800182C0` / file `0x8AC0` / size `0x20`. It ORs `0xC0` into
+`D_800BCF88` and returns 1. Evidence: `docs/evidence/func-800182c0/REPORT.md`.
+
 ## func_80017FB0 — D_8009D1A0 dynamic bit clearer matching C (11 words)
 
 `src/func_80017FB0.c` matches era `-O2 -G0`, VRAM `0x80017FB0` / file
@@ -18,7 +24,7 @@ returns 1. Evidence: `docs/evidence/func-80017f88/REPORT.md`.
 ## func_80017F20 — D_8009D2F0 flag clearer matching C (9 words)
 
 `src/func_80017F20.c` matches era `-O2 -G0`, VRAM `0x80017F20` / file
-`0x8744` / size `0x24`. It clears bit `0x100` in the offset-`0x98` field.
+`0x8720` / size `0x24`. It clears bit `0x100` in the offset-`0x98` field.
 Evidence: `docs/evidence/func-80017f20/REPORT.md`.
 
 ## func_80017EFC — D_8009D2F0 flag setter matching C (9 words)
