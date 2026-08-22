@@ -142,7 +142,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x2E6C, c, func_8001266C]'
     '[0x2F00, asm]'
     '[0x2F74, c, func_80012774]'
-    '[0x3050, asm]'
+    '[0x3050, c, func_80012850]'
+    '[0x3420, asm]'
     '[0x869C, c, func_80017E9C]'
     '[0x86A4, c, func_80017EA4]'
     '[0x86C4, asm]'
@@ -438,7 +439,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/2A0C.s"
     "asm/disc1/2D74.s"
     "asm/disc1/2F00.s"
-    "asm/disc1/3050.s"
+    "asm/disc1/3420.s"
     "asm/disc1/86C4.s"
     "asm/disc1/8744.s"
     "asm/disc1/8804.s"
@@ -617,6 +618,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_800125E0.c"
     "src/func_8001266C.c"
     "src/func_80012774.c"
+    "src/func_80012850.c"
     "src/func_80030640.c"
     "src/func_80038D48.c"
     "src/func_8003D82C.c"
@@ -933,7 +935,11 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_80012774.c" ]]; then
+if [[ -f "$ROOT/src/func_80012850.c" ]]; then
+    count="$(grep -cE ',[[:space:]]*c,' "$CONFIG" || true)"
+    echo "C conversion: Phase 5HD-12850 — $count leaves (+ script VM step; era -O2 -G8 + EXPAND_DIV + THREE_WORD + DISPATCH_FOLD)"
+    echo "  source: src/func_80012850.c"
+elif [[ -f "$ROOT/src/func_80012774.c" ]]; then
     count="$(grep -cE ',[[:space:]]*c,' "$CONFIG" || true)"
     echo "C conversion: Phase 5HB-12774 — $count leaves (+ bucket drain walk; era -O2 -G8)"
     echo "  source: src/func_80012774.c"

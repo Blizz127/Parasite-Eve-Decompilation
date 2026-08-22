@@ -68,7 +68,10 @@ segments:
       # (0x2F00..0x2F74 remains asm — parked func_80012700.)
       - [0x2F00, asm]
       - [0x2F74, c, func_80012774]
-      - [0x3050, asm]
+      # Phase 5HD-12850: script VM step (24-opcode interpreter), VRAM
+      # 0x80012850, file 0x3050, size 0x3D0. Resume generated asm at 0x3420.
+      - [0x3050, c, func_80012850]
+      - [0x3420, asm]
       # Phase 5AK: C leaf func_80017E9C — VRAM 0x80017E9C, size 0x8.
       # File span 0x869C–0x86A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).

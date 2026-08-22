@@ -72,7 +72,8 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # C 1266C:  0x2E6C  → 0x2F00  = 0x94
 # 2F00:     0x2F00  → 0x2F74  = 0x74
 # C 12774:  0x2F74  → 0x3050  = 0xDC
-# 3050:     0x3050  → 0x869C  = 0x564C
+# C 12850:  0x3050  → 0x3420  = 0x3D0
+# 3420:     0x3420  → 0x869C  = 0x527C
 # C 17E9C:  0x869C  → 0x86A4  = 0x8
 # 86A4:     0x86A4  → 0x86FC  = 0x58
 # C 17EFC:  0x86FC  → 0x8720  = 0x24
@@ -294,7 +295,8 @@ SIZE_C_125E0=0x8c
 SIZE_C_1266C=0x94
 SIZE_2F00=0x74
 SIZE_C_12774=0xdc
-SIZE_3050=0x564c
+SIZE_C_12850=0x3d0
+SIZE_3420=0x527c
 SIZE_C_17E9C=0x8
 SIZE_C_17EA4=0x20
 SIZE_86C4=0x38
@@ -811,7 +813,8 @@ OBJECTS=(
     "build/src/func_8001266C.c.o"
     "build/asm/disc1/2F00.s.o"
     "build/src/func_80012774.c.o"
-    "build/asm/disc1/3050.s.o"
+    "build/src/func_80012850.c.o"
+    "build/asm/disc1/3420.s.o"
     "build/src/func_80017E9C.c.o"
     "build/src/func_80017EA4.c.o"
     "build/asm/disc1/86C4.s.o"
@@ -1260,7 +1263,8 @@ SOURCES=(
     "src/func_8001266C.c"
     "asm/disc1/2F00.s"
     "src/func_80012774.c"
-    "asm/disc1/3050.s"
+    "src/func_80012850.c"
+    "asm/disc1/3420.s"
     "src/func_80017E9C.c"
     "src/func_80017EA4.c"
     "asm/disc1/86C4.s"
@@ -1807,6 +1811,111 @@ PY
         ${MASPSX_DIV_ARGS[@]+"${MASPSX_DIV_ARGS[@]}"} \
         "$d/x.s" > "$d/xm.s" </dev/null
     run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o "$out" "$d/xm.s"
+    # LOCAL PATCH (switch dispatch retarget, Axis B): when
+    # MASPSX_DISPATCH_FOLD names a pooled jump-table symbol
+    # (jtbl_<vram-hex>), the compiled object's .rodata is exactly the
+    # duplicate of that pool table (the fold retargeted all references).
+    # Verify content against the retail EXE byte-for-byte, then strip the
+    # duplicate section. Any mismatch is a loud failure — never strip on
+    # assumption.
+    if [[ -n "${MASPSX_DISPATCH_FOLD:-}" ]]; then
+        sym="$MASPSX_DISPATCH_FOLD"
+        if ! [[ "$sym" =~ ^jtbl_([0-9A-Fa-f]{8})$ ]]; then
+            die "MASPSX_DISPATCH_FOLD: unrecognized symbol '$sym' (expected jtbl_<vram-hex>)"
+        fi
+        # Expected table contents come from the split-generated pool source
+        # (post-absolutizer: literal retail address words).
+        python3 - "$out" "$EXE" "$sym" "$ROOT"/asm/disc1/data/*.rodata.s <<'PY'
+import re
+import struct
+import sys
+
+obj_path, exe_path, sym = sys.argv[1], sys.argv[2], sys.argv[3]
+pool_src = "".join(open(p).read() for p in sys.argv[4:])
+
+# 1. Expected table from the generated pool source.
+block = re.search(
+    rf"dlabel {sym}\n(.*?)enddlabel {sym}", pool_src, re.S
+)
+if not block:
+    sys.exit(f"ERROR: pool source has no {sym} block")
+lits = re.findall(r"\.word\s+(0x[0-9A-Fa-f]+)", block.group(1))
+if not lits or len(lits) < 2:
+    sys.exit(f"ERROR: {sym} pool block has no literal words")
+expected_size = len(lits) * 4
+
+data = bytearray(open(obj_path, "rb").read())
+if data[:4] != b"\x7fELF":
+    sys.exit(f"ERROR: {obj_path}: not ELF")
+e_shoff = struct.unpack_from("<I", data, 32)[0]
+e_shentsize = struct.unpack_from("<H", data, 46)[0]
+e_shnum = struct.unpack_from("<H", data, 48)[0]
+e_shstrndx = struct.unpack_from("<H", data, 50)[0]
+shstr_off = struct.unpack_from("<I", data, e_shoff + e_shstrndx * e_shentsize + 16)[0]
+
+def name(i):
+    off = struct.unpack_from("<I", data, e_shoff + i * e_shentsize)[0]
+    end = data.index(b"\x00", shstr_off + off)
+    return data[shstr_off + off : end].decode()
+
+def hdr(i):
+    return e_shoff + i * e_shentsize
+
+idx = next((i for i in range(e_shnum) if name(i) == ".rodata"), None)
+if idx is None:
+    sys.exit("ERROR: no .rodata section in compiled switch leaf")
+base = hdr(idx)
+sh_offset, sh_size = struct.unpack_from("<II", data, base + 16)
+if sh_size != expected_size:
+    sys.exit(
+        f"ERROR: .rodata 0x{sh_size:X} != pool table 0x{expected_size:X} "
+        f"for {sym} — refusing to strip"
+    )
+
+# 2. Structural proof: every word is one R_MIPS_32 relocation against a
+#    defined .text symbol of this object, strictly ascending by target
+#    offset — i.e., an address array over its own code blocks, not data.
+text_idx = next((i for i in range(e_shnum) if name(i) == ".text"), None)
+text_size = struct.unpack_from("<I", data, hdr(text_idx) + 20)[0]
+rel = next((i for i in range(e_shnum) if name(i) == ".rel.rodata"), None)
+if rel is None:
+    sys.exit("ERROR: no relocations for .rodata — cannot prove table identity")
+rbase = hdr(rel)
+r_off = struct.unpack_from("<I", data, rbase + 16)[0]
+r_size = struct.unpack_from("<I", data, rbase + 20)[0]
+r_link = struct.unpack_from("<I", data, rbase + 24)[0]  # sh_link -> symtab idx
+symtab_base = hdr(r_link)
+sym_off = struct.unpack_from("<I", data, symtab_base + 16)[0]
+words = r_size // 8
+if words != len(lits):
+    sys.exit(f"ERROR: {words} relocs != {len(lits)} pool words for {sym}")
+for k in range(words):
+    r_offset, r_info = struct.unpack_from("<II", data, r_off + k * 8)
+    if r_offset != k * 4:
+        sys.exit(f"ERROR: reloc {k} covers offset 0x{r_offset:X}, expected 0x{k*4:X}")
+    if r_info & 0xFF != 2:  # R_MIPS_32
+        sys.exit(f"ERROR: reloc {k} type {r_info & 0xFF:#x} != R_MIPS_32")
+    sym_i = r_info >> 8
+    st_value = struct.unpack_from("<I", data, sym_off + sym_i * 16 + 4)[0]
+    st_shndx = struct.unpack_from("<H", data, sym_off + sym_i * 16 + 14)[0]
+    if st_shndx != text_idx:
+        sys.exit(f"ERROR: reloc {k} targets non-.text section {st_shndx}")
+    if st_value >= text_size:
+        sys.exit(f"ERROR: reloc {k} target offset 0x{st_value:X} outside .text")
+
+# 3. Proven: pure self-text address array matching pool shape. Strip the
+#    table AND its relocation section (dangling relocs into an emptied
+#    section crash GNU ld).
+struct.pack_into("<I", data, base + 20, 0)
+rel_idx_name = ".rel.rodata"
+for i in range(e_shnum):
+    if name(i) == rel_idx_name:
+        struct.pack_into("<I", data, hdr(i) + 20, 0)
+        break
+open(obj_path, "wb").write(data)
+print(f"dispatch dedup: stripped {sh_size}-byte duplicate table from {obj_path}")
+PY
+    fi
     rm -rf "$d"
 }
 
@@ -1860,7 +1969,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/data/800.rodata
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2A0C.s.o asm/disc1/2A0C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2D74.s.o asm/disc1/2D74.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2F00.s.o asm/disc1/2F00.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/3050.s.o asm/disc1/3050.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/3420.s.o asm/disc1/3420.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/86C4.s.o asm/disc1/86C4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/8744.s.o asm/disc1/8744.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/8804.s.o asm/disc1/8804.s
@@ -2155,6 +2264,7 @@ era_compile src/func_800124F8.c build/src/func_800124F8.c.o -O2 -G8
 era_compile src/func_800125E0.c build/src/func_800125E0.c.o -O2 -G8
 MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_8001266C.c build/src/func_8001266C.c.o -O2 -G8
 era_compile src/func_80012774.c build/src/func_80012774.c.o -O2 -G8
+MASPSX_EXPAND_DIV=1 MASPSX_THREE_WORD_SYMBOL_STORE=1 MASPSX_DISPATCH_FOLD=jtbl_80010000 era_compile src/func_80012850.c build/src/func_80012850.c.o -O2 -G8
 # Phase 5FG: 16-entry search-and-clear over D_800A7624; indexed lw AND sw
 # route through the 3-word gate (first era leaf using the load path).
 MASPSX_THREE_WORD_SYMBOL_STORE=1 era_compile src/func_800363F4.c build/src/func_800363F4.c.o -O2 -G0
@@ -2369,7 +2479,8 @@ python3 "$TRIM" build/src/func_800125E0.c.o .text "$SIZE_C_125E0"
 python3 "$TRIM" build/src/func_8001266C.c.o .text "$SIZE_C_1266C"
 python3 "$TRIM" build/asm/disc1/2F00.s.o .text "$SIZE_2F00"
 python3 "$TRIM" build/src/func_80012774.c.o .text "$SIZE_C_12774"
-python3 "$TRIM" build/asm/disc1/3050.s.o .text "$SIZE_3050"
+python3 "$TRIM" build/src/func_80012850.c.o .text "$SIZE_C_12850"
+python3 "$TRIM" build/asm/disc1/3420.s.o .text "$SIZE_3420"
 python3 "$TRIM" build/src/func_80017E9C.c.o .text "$SIZE_C_17E9C"
 python3 "$TRIM" build/src/func_80017EA4.c.o .text "$SIZE_C_17EA4"
 python3 "$TRIM" build/asm/disc1/86C4.s.o .text "$SIZE_86C4"
@@ -2857,7 +2968,8 @@ SECTIONS
         build/src/func_8001266C.c.o(.text)
         build/asm/disc1/2F00.s.o(.text)
         build/src/func_80012774.c.o(.text)
-        build/asm/disc1/3050.s.o(.text)
+        build/src/func_80012850.c.o(.text)
+        build/asm/disc1/3420.s.o(.text)
         build/src/func_80017E9C.c.o(.text)
         build/src/func_80017EA4.c.o(.text)
         build/asm/disc1/86C4.s.o(.text)
@@ -3302,7 +3414,8 @@ SECTIONS
         build/src/func_8001266C.c.o(.data)
         build/asm/disc1/2F00.s.o(.data)
         build/src/func_80012774.c.o(.data)
-        build/asm/disc1/3050.s.o(.data)
+        build/src/func_80012850.c.o(.data)
+        build/asm/disc1/3420.s.o(.data)
         build/src/func_80017E9C.c.o(.data)
         build/src/func_80017EA4.c.o(.data)
         build/asm/disc1/86C4.s.o(.data)
@@ -3744,7 +3857,8 @@ SECTIONS
         build/src/func_8001266C.c.o(.rodata)
         build/asm/disc1/2F00.s.o(.rodata)
         build/src/func_80012774.c.o(.rodata)
-        build/asm/disc1/3050.s.o(.rodata)
+        build/src/func_80012850.c.o(.rodata)
+        build/asm/disc1/3420.s.o(.rodata)
         build/src/func_80017E9C.c.o(.rodata)
         build/src/func_80017EA4.c.o(.rodata)
         build/asm/disc1/86C4.s.o(.rodata)
@@ -4186,7 +4300,8 @@ SECTIONS
         build/src/func_8001266C.c.o(.bss)
         build/asm/disc1/2F00.s.o(.bss)
         build/src/func_80012774.c.o(.bss)
-        build/asm/disc1/3050.s.o(.bss)
+        build/src/func_80012850.c.o(.bss)
+        build/asm/disc1/3420.s.o(.bss)
         build/src/func_80017E9C.c.o(.bss)
         build/src/func_80017EA4.c.o(.bss)
         build/asm/disc1/86C4.s.o(.bss)
