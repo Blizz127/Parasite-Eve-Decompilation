@@ -65,12 +65,21 @@ Consequences:
   with the cc1 archaeology null result — we do not have that cc1), or
   aspsx folded the pair post-assembly (unverifiable — no aspsx binary).
   Either way, only a translation-layer rewrite can reach parity.
-- Separate, independently-fixable defect observed in the same E2E run:
-  the candidate epilogue lacked the delay-slot `nop` after `jr ra`.
-  Root cause identified mechanically: gcc emitted it, and the C `.text`
-  pad-strip removed it as a zero-word tail while trimming to the target
-  size. Fix belongs to trim policy (preserve-final-word / explicit tail
-  length), orthogonal to tables.
+- **Audit correction (post-review):** the missing tail `nop` is *not* an
+  independent defect and needs no trim-policy change. Mechanism pinned by
+  reconstruction: cc1 emits the epilogue's `j $31` inside a `.set reorder`
+  region, so GAS auto-fills the delay slot (pre-trim `.text` = `0x3E0`,
+  containing `nop` at `0x3D0` plus align pad); trimming to the retail
+  target `0x3D0` then cuts exactly that gas-appended word. It sits one
+  word past the target solely because the dispatch +1 shifted every later
+  instruction. Once the Axis-A fold removes the +1, the nop lands back at
+  its retail position *inside* the kept window and existing trim behavior
+  preserves it. Audit of matched leaves found zero historical exposure:
+  trim can only ever strip gcc-private excess beyond the retail-derived
+  size (zero-tail verified), so any bite into retail content would have
+  tripped the SHA gate; all committed leaves are EXACT post-trim. No park
+  records were misattributed (12574 was under-emission; 12850's over-
+  emission is fully accounted for by div guards + this displacement).
 
 ## Q3 — Should maspsx rewrite it, or should C/build produce it?
 
@@ -117,15 +126,12 @@ when the referenced label is a local `.rodata` data label. Notes:
 
 Extend the existing trim machinery for gated leaves:
 
-1. Strip the C object's local table block from `.rodata` (the pool copy
-   already carries identical literal bytes). Scope: exactly the
-   `$L…:`-labeled word array the folded dispatch used to reference.
-2. Fix the pad-strip policy so a genuine trailing delay-slot `nop` is not
-   consumed as padding (e.g., explicit body-size argument instead of
-   zero-tail heuristic).
+Strip the C object's local table block from `.rodata` (the pool copy
+already carries identical literal bytes). Scope: exactly the
+`$L…:`-labeled word array the folded dispatch used to reference.
 
-Both are mechanical extensions of existing build_us.sh steps, gated,
-with loud failures.
+(The pad-strip policy fix originally listed here is withdrawn — the
+audit above showed no trim bug exists; see the Q2 correction.)
 
 ## Rejected alternatives
 
@@ -142,7 +148,10 @@ with loud failures.
    sequences untouched), flag-off passthrough, retarget naming.
 2. Flag-off full rebuild → EXACT SHA-1 (unchanged baseline).
 3. Gate ON for `func_80012850` only → size gate `0x3D0` → verify →
-   expected EXACT SHA-1 (this also exercises Axis B + nop fix end-to-end).
+   expected EXACT SHA-1. Per the audit correction, this single gate
+   validates Axis A and Axis B together: folding the dispatch removes
+   the +4 shift, which restores the gas-filled nop at its retail
+   position automatically; the dedup strip then keeps the object clean.
 4. Repeat for `func_8001F814`; then batch through remaining jtbl owners.
 
 ## Open items for review
@@ -150,7 +159,31 @@ with loud failures.
 - Confirm the fold should key on env-provided pool symbol name vs. an
   automatic local→pool mapping derived from the yaml (more magic, less
   wiring).
-- Confirm trim-policy change shape (explicit body size vs. preserve-tail
-  count) — affects every C leaf, wants its own careful pass.
 - Whether Axis B table-stripping should live in `$TRIM` or a dedicated
   filter next to the absolutize step.
+
+## Audit addendum — pad-strip exposure (2026-08-22)
+
+Ten-minute audit requested during review; result: **no trim-policy bug
+exists and none is needed**.
+
+- Semantics (tools/trim_elf_section_pad.py): refuse if target > current;
+  if current > target, require all bytes beyond target to be zero, then
+  truncate sh_size to target and lower alignment. Silent by design but
+  bounded: it can never remove nonzero bytes.
+- Reconstruction of func_80012850's untrimmed object under
+  `--expand-div`: `.text` = `0x3E0` — cc1 emits the terminal `j $31`
+  inside a `.set reorder` region, GAS appends the delay-slot `nop`
+  (`0x3D0`) plus align pad (`0x3D4..0x3E0`). Trimming to retail size
+  `0x3D0` therefore consumes exactly the gas-appended nop — which is
+  displaced one word past its retail position purely by the dispatch +1.
+- Matched-leaf exposure: structurally impossible without a SHA failure
+  (any stripped retail byte would mismatch). All committed leaves are
+  EXACT post-trim.
+- Park-record misattribution check: none found. 12574 = under-emission
+  (0x60 vs 0x6C); 12850 over-emission fully explained (div guards −16
+  words; nop displacement a consequence of dispatch shape).
+
+Consequence for implementation order: the separately-gated "trim fix"
+step is withdrawn. Axis A + Axis B together close func_80012850 in one
+E2E gate; no trim changes required.
