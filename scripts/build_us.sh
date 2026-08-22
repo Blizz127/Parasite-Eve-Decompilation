@@ -1907,11 +1907,45 @@ for k in range(words):
 #    table AND its relocation section (dangling relocs into an emptied
 #    section crash GNU ld).
 struct.pack_into("<I", data, base + 20, 0)
-rel_idx_name = ".rel.rodata"
 for i in range(e_shnum):
-    if name(i) == rel_idx_name:
+    if name(i) == ".rel.rodata":
         struct.pack_into("<I", data, hdr(i) + 20, 0)
         break
+
+# 4. Post-strip consistency pass — catches the CLASS of ELF-surgery bugs,
+#    not just the instances found in bring-up:
+#    a. every section stays inside the file (offset/size bounds);
+#    b. no SHT_REL section retains relocs targeting an emptied section;
+#    c. every symbol table entry's st_shndx is a valid section index or a
+#       reserved value; symtab itself remains inside the file.
+file_len = len(data)
+for i in range(e_shnum):
+    b = hdr(i)
+    off, size = struct.unpack_from("<II", data, b + 16)
+    sh_type = struct.unpack_from("<I", data, b + 4)[0]
+    if sh_type != 8 and off + size > file_len:  # SHT_NOBITS owns no bytes
+        sys.exit(f"ERROR: post-strip check: section {i} ({name(i)}) out of bounds")
+for i in range(e_shnum):
+    b = hdr(i)
+    if struct.unpack_from("<I", data, b + 4)[0] != 9:  # SHT_REL
+        continue
+    target = struct.unpack_from("<I", data, b + 28)[0]  # sh_info
+    rsize = struct.unpack_from("<I", data, b + 20)[0]
+    if target == idx and rsize != 0:
+        sys.exit(
+            f"ERROR: post-strip check: {name(i)} still holds {rsize} bytes "
+            f"of relocs against stripped .rodata"
+        )
+symtab_hdr = hdr(r_link)
+sym_off2 = struct.unpack_from("<I", data, symtab_hdr + 16)[0]
+sym_size = struct.unpack_from("<I", data, symtab_hdr + 20)[0]
+if sym_off2 + sym_size > file_len:
+    sys.exit("ERROR: post-strip check: symtab out of bounds")
+for s in range(sym_size // 16):
+    st_shndx = struct.unpack_from("<H", data, sym_off2 + s * 16 + 14)[0]
+    if st_shndx >= e_shnum and st_shndx not in (0, 0xFFF1, 0xFFF2):
+        sys.exit(f"ERROR: post-strip check: symbol {s} bad shndx 0x{st_shndx:X}")
+
 open(obj_path, "wb").write(data)
 print(f"dispatch dedup: stripped {sh_size}-byte duplicate table from {obj_path}")
 PY
