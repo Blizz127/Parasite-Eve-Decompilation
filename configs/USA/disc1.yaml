@@ -60,7 +60,15 @@ segments:
       # file 0x2DE0, size 0x8C. Resume generated asm at 0x2E6C.
       - [0x2D74, asm]
       - [0x2DE0, c, func_800125E0]
-      - [0x2E6C, asm]
+      # Phase 5GZ-1266C: boot work-table link init, VRAM 0x8001266C,
+      # file 0x2E6C, size 0x94. Resume generated asm at 0x2F00.
+      - [0x2E6C, c, func_8001266C]
+      # Phase 5HB-12774: bucket drain walk, VRAM 0x80012774,
+      # file 0x2F74, size 0xDC. Resume generated asm at 0x3050.
+      # (0x2F00..0x2F74 remains asm — parked func_80012700.)
+      - [0x2F00, asm]
+      - [0x2F74, c, func_80012774]
+      - [0x3050, asm]
       # Phase 5AK: C leaf func_80017E9C — VRAM 0x80017E9C, size 0x8.
       # File span 0x869C–0x86A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).
