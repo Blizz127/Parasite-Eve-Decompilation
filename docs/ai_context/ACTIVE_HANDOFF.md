@@ -62,6 +62,28 @@ handoff narrative (native/PE-BTL state) is preserved at commit
 `29fe11b:docs/ai_context/ACTIVE_HANDOFF.md`. PR toward `main` carries
 the unified 275 story; deeper doc reconciliation can follow on `main`.
 
+## func_800125E0 — descriptor spawn loop matching C (35 words)
+
+**276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,
+VRAM `0x800125E0` / file `0x2DE0` / size `0x8C`. DrawSync(0), then walk
+`**D_8009CE04` (`lbu` count, two-byte descriptors from offset 1) calling
+`func_80035038(desc, 0, 1)`. A local list pointer keeps the header in `$a0`
+(retail gp-load carry). Pins hold `$s0=count` / `$s1=offset`; an unused
+`int` with an empty m-constraint supplies the retail `vars=8` / frame
+`0x28` and emits no instructions. Mid-`2D74` carve: prefix `0x6C`, C
+`0x8C`, resume `2E6C.s` `0x5830`. Evidence:
+`docs/evidence/func-800125E0/REPORT.md`.
+
+## func_80012574 — parked non-exact relocation leaf
+
+Three bounded attempts on `func_80012574` (file `0x2D74`, 27 words) produced
+a size-correct candidate with the retail unsigned tag test, empty 8-byte
+frame, and loop cursor form, but retained a four-byte count/sum register
+allocation mismatch (`$v0`/`$a2` instead of retail `$v1`/`$v0`). The leaf
+stays parked and must not be retried without explicit authorization.
+Evidence: `docs/evidence/func-80012574/REPORT.md`. The next unmatched
+head after 125E0 is `func_8001266C` (file `0x2E6C`, 37 words).
+
 ## func_80029388 — slot-table clear + record-init wrapper matching C (27 words)
 
 **270 matching C leaves (now 275, see above).** `src/func_80029388.c` matches era `-O2 -G8` +

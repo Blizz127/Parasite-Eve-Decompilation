@@ -56,7 +56,11 @@ segments:
       # (31 words). Prefix 2A0C.s ends at the leaf; resume 2D74.s afterward.
       - [0x2A0C, asm]
       - [0x2CF8, c, func_800124F8]
+      # Phase 5GY-125E0: descriptor spawn loop, VRAM 0x800125E0,
+      # file 0x2DE0, size 0x8C. Resume generated asm at 0x2E6C.
       - [0x2D74, asm]
+      - [0x2DE0, c, func_800125E0]
+      - [0x2E6C, asm]
       # Phase 5AK: C leaf func_80017E9C — VRAM 0x80017E9C, size 0x8.
       # File span 0x869C–0x86A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).

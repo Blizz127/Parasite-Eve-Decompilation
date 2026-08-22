@@ -37,7 +37,7 @@ EXE="$ROOT/build/extracted/disc1/SLUS_006.62"
 EXPECTED_SHA1="452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 EXPECTED_SPLAT_PIN="0.41.0"
 
-# Current production subsegments (file offsets). 275 C leaves
+# Current production subsegments (file offsets). 276 C leaves
 # (authoritative count: grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml).
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
@@ -138,6 +138,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x2A0C, asm]'
     '[0x2CF8, c, func_800124F8]'
     '[0x2D74, asm]'
+    '[0x2DE0, c, func_800125E0]'
+    '[0x2E6C, asm]'
     '[0x869C, c, func_80017E9C]'
     '[0x86A4, c, func_80017EA4]'
     '[0x86C4, asm]'
@@ -432,6 +434,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
     "asm/disc1/2D74.s"
+    "asm/disc1/2E6C.s"
     "asm/disc1/86C4.s"
     "asm/disc1/8744.s"
     "asm/disc1/8804.s"
@@ -444,7 +447,6 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/9774.s"
     "asm/disc1/9860.s"
     "asm/disc1/98BC.s"
-    "asm/disc1/20210.s"
     "asm/disc1/20DC8.s"
     "asm/disc1/20EE0.s"
     "asm/disc1/29574.s"
@@ -608,6 +610,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_80030534.c"
     "src/func_80030584.c"
     "src/func_800124F8.c"
+    "src/func_800125E0.c"
     "src/func_80030640.c"
     "src/func_80038D48.c"
     "src/func_8003D82C.c"
@@ -924,7 +927,11 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_8002FA10.c" ]]; then
+if [[ -f "$ROOT/src/func_800125E0.c" ]]; then
+    count="$(grep -cE ',[[:space:]]*c,' "$CONFIG" || true)"
+    echo "C conversion: Phase 5GY-125E0 — $count leaves (+ descriptor spawn loop; era -O2 -G8)"
+    echo "  source: src/func_800125E0.c"
+elif [[ -f "$ROOT/src/func_8002FA10.c" ]]; then
     count="$(grep -cE ',[[:space:]]*c,' "$CONFIG" || true)"
     echo "C conversion: $count leaves (leaves lane + grind-lane port complete, 2026-08-21)"
     echo "  latest: func_80029388/293F4, func_8002F76C, func_8002FA10/FAA4/FAD8"
