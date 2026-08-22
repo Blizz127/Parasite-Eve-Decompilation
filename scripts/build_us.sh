@@ -1795,7 +1795,17 @@ PY
     fi
     # Close stdin: maspsx treats non-TTY as pipe mode and can hang on open agent sockets.
     # --dont-expand-li: maspsx expands li→ori for positive small consts; ROM wants addiu — defer to GNU as.
-    python3 "$MASPSX" --aspsx-version="$ERA_ASPSX_VER" --dont-expand-li "$d/x.s" > "$d/xm.s" </dev/null
+    # MASPSX_EXPAND_DIV=1: per-leaf opt-in to upstream maspsx's ASPSX-style
+    # signed div/rem guard expansion (break 7 zero-check + break 6
+    # INT_MIN/-1 check). Required by any C leaf containing integer / or %
+    # (retail Psy-Q always guards; GNU as's own div macro does not).
+    MASPSX_DIV_ARGS=()
+    if [[ "${MASPSX_EXPAND_DIV:-}" == "1" ]]; then
+        MASPSX_DIV_ARGS+=(--expand-div)
+    fi
+    python3 "$MASPSX" --aspsx-version="$ERA_ASPSX_VER" --dont-expand-li \
+        ${MASPSX_DIV_ARGS[@]+"${MASPSX_DIV_ARGS[@]}"} \
+        "$d/x.s" > "$d/xm.s" </dev/null
     run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o "$out" "$d/xm.s"
     rm -rf "$d"
 }
@@ -1815,6 +1825,37 @@ step "Assemble (asm units → build/asm/disc1/**/*.s.o)"
 mkdir -p build/asm/disc1/data build/src
 # shellcheck disable=SC2086
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/header.s.o            asm/disc1/header.s
+# Phase 5HD tooling: absolutize jump-table label words in generated rodata.
+# splat emits `.word .L800xxxxx` where the local label's value IS that VRAM
+# address; when a target function is carved to C, its .L labels no longer
+# exist in any object. Rewriting to literals is byte-identical (the image
+# is fully static) and removes the link dependency. Idempotent; runs every
+# build. Only exact 8-hex-digit labels decoding to plausible VRAM addresses
+# are touched (`.L00000000_main` and friends are left symbolic).
+python3 - "$ROOT"/asm/disc1/data/*.rodata.s <<'PY'
+import re
+import sys
+
+pat = re.compile(r"(\.word\s+)\.L([0-9A-Fa-f]{8})(?=\s|$)")
+total = 0
+for path in sys.argv[1:]:
+    with open(path) as f:
+        src = f.read()
+
+    def repl(m):
+        global total
+        addr = int(m.group(2), 16)
+        if not (0x80010000 <= addr < 0x80200000):
+            return m.group(0)
+        total += 1
+        return m.group(1) + "0x" + m.group(2)
+
+    out = pat.sub(repl, src)
+    if out != src:
+        with open(path, "w") as f:
+            f.write(out)
+print(f"rodata absolutize: {total} label refs -> literal")
+PY
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/data/800.rodata.s.o asm/disc1/data/800.rodata.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2A0C.s.o asm/disc1/2A0C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2D74.s.o asm/disc1/2D74.s
