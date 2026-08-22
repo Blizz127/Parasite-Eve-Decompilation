@@ -139,7 +139,10 @@ EXPECTED_SUBSEGMENTS=(
     '[0x2CF8, c, func_800124F8]'
     '[0x2D74, asm]'
     '[0x2DE0, c, func_800125E0]'
-    '[0x2E6C, asm]'
+    '[0x2E6C, c, func_8001266C]'
+    '[0x2F00, asm]'
+    '[0x2F74, c, func_80012774]'
+    '[0x3050, asm]'
     '[0x869C, c, func_80017E9C]'
     '[0x86A4, c, func_80017EA4]'
     '[0x86C4, asm]'
@@ -434,7 +437,8 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/header.s"
     "asm/disc1/2A0C.s"
     "asm/disc1/2D74.s"
-    "asm/disc1/2E6C.s"
+    "asm/disc1/2F00.s"
+    "asm/disc1/3050.s"
     "asm/disc1/86C4.s"
     "asm/disc1/8744.s"
     "asm/disc1/8804.s"
@@ -611,6 +615,8 @@ EXPECTED_ARTIFACTS=(
     "src/func_80030584.c"
     "src/func_800124F8.c"
     "src/func_800125E0.c"
+    "src/func_8001266C.c"
+    "src/func_80012774.c"
     "src/func_80030640.c"
     "src/func_80038D48.c"
     "src/func_8003D82C.c"
@@ -927,7 +933,15 @@ else
     echo "  matching claim: NO"
 fi
 
-if [[ -f "$ROOT/src/func_800125E0.c" ]]; then
+if [[ -f "$ROOT/src/func_80012774.c" ]]; then
+    count="$(grep -cE ',[[:space:]]*c,' "$CONFIG" || true)"
+    echo "C conversion: Phase 5HB-12774 — $count leaves (+ bucket drain walk; era -O2 -G8)"
+    echo "  source: src/func_80012774.c"
+elif [[ -f "$ROOT/src/func_8001266C.c" ]]; then
+    count="$(grep -cE ',[[:space:]]*c,' "$CONFIG" || true)"
+    echo "C conversion: Phase 5GZ-1266C — $count leaves (+ boot work-table link init; era -O2 -G8)"
+    echo "  source: src/func_8001266C.c"
+elif [[ -f "$ROOT/src/func_800125E0.c" ]]; then
     count="$(grep -cE ',[[:space:]]*c,' "$CONFIG" || true)"
     echo "C conversion: Phase 5GY-125E0 — $count leaves (+ descriptor spawn loop; era -O2 -G8)"
     echo "  source: src/func_800125E0.c"
