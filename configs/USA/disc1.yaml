@@ -79,8 +79,8 @@ segments:
       - [0x869C, c, func_80017E9C]
       # Phase 5FU: reader result commit, era -O2 -G0; eight exact words.
       - [0x86A4, c, func_80017EA4]
-      - [0x86C4, asm]
       # Phase 5FV: D_8009D2F0 flag-0x100 setter, era -O2 -G0.
+      - [0x86C4, c, func_80017EC4]
       - [0x86FC, c, func_80017EFC]
       - [0x8720, c, func_80017F20]
       # Phase 5FW: D_8009D2F0 flag-0x100 clearer, era -O2 -G0.
