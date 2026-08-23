@@ -549,7 +549,9 @@ segments:
       # Boot memory-region layout initializer: 19 ordered absolute pointer
       # stores with byte-address cursor arithmetic. Era -O2 -G0; no $gp.
       - [0x5B0D4, c, func_8006A8D4]
+      # Mid-5B1E4 carve: prefix 0x3E04, C 0x4C, resume 5F034.s.
       - [0x5B1E4, asm]
+      - [0x5EFE8, c, func_8006E7E8]
       # Phase 5FK: C leaf func_8006E834 — VRAM 0x8006E834, size 0x16C.
       # Post-mount image loader + display env setup. Era -O2 -G0; paired
       # $v1-backup/$v0-test register pins + two zero-code "=r":"0" barriers

@@ -1,0 +1,18 @@
+extern int func_800811E4(void *);
+extern unsigned int D_800B0CD8;
+
+int func_8006E7E8(void)
+{
+    register int r asm("$5");
+    register int t asm("$2");
+    int p;
+
+    r = func_800811E4(&p);
+    t = r + 1;
+    if ((unsigned int)t < 2) {
+        register unsigned int mask asm("$4") = 0xFEFFBFFF;
+        register unsigned int *ptr asm("$3") = &D_800B0CD8;
+        *ptr &= mask;
+    }
+    return r;
+}

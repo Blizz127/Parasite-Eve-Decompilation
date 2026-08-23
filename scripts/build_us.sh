@@ -538,7 +538,8 @@ SIZE_C_6A5BC=0x90
 SIZE_C_6A64C=0x28
 SIZE_C_6A674=0x260
 SIZE_C_6A8D4=0x110
-SIZE_5B1E4=0x3e50
+SIZE_5B1E4=0x3e04
+SIZE_C_6E7E8=0x4c
 SIZE_C_6E834=0x16c
 SIZE_C_6E9A0=0x234
 SIZE_C_6EBD4=0x10
@@ -1054,6 +1055,7 @@ OBJECTS=(
     "build/src/func_8006A674.c.o"
     "build/src/func_8006A8D4.c.o"
     "build/asm/disc1/5B1E4.s.o"
+    "build/src/func_8006E7E8.c.o"
     "build/src/func_8006E834.c.o"
     "build/src/func_8006E9A0.c.o"
     "build/src/func_8006EBD4.c.o"
@@ -2380,6 +2382,9 @@ era_compile src/func_800197F0.c build/src/func_800197F0.c.o -O2 -G0
 era_compile src/func_8007F7A8.c build/src/func_8007F7A8.c.o -O2 -G0
 # Phase 5EM: boot memory-region layout init; ordered absolute pointer stores.
 era_compile src/func_8006A8D4.c build/src/func_8006A8D4.c.o -O2 -G0
+# Phase 5FM: VSync poll helper; calls func_800811E4, checks -1/0 return,
+# clears D_800B0CD8 bit 0x01004000 on match. Mid-5B1E4 carve.
+era_compile src/func_8006E7E8.c build/src/func_8006E7E8.c.o -O2 -G0
 # Phase 5FK: post-mount image loader + display env setup; paired
 # $v1-backup/$v0-test register pins + two zero-code "=r":"0" barriers
 # (source-documented) restore retail's poll-loop register home.
@@ -2754,6 +2759,7 @@ python3 "$TRIM" build/src/func_8006A64C.c.o .text "$SIZE_C_6A64C"
 python3 "$TRIM" build/src/func_8006A674.c.o .text "$SIZE_C_6A674"
 python3 "$TRIM" build/src/func_8006A8D4.c.o .text "$SIZE_C_6A8D4"
 python3 "$TRIM" build/asm/disc1/5B1E4.s.o .text "$SIZE_5B1E4"
+python3 "$TRIM" build/src/func_8006E7E8.c.o .text "$SIZE_C_6E7E8"
 python3 "$TRIM" build/src/func_8006E834.c.o .text "$SIZE_C_6E834"
 python3 "$TRIM" build/src/func_8006E9A0.c.o .text "$SIZE_C_6E9A0"
 python3 "$TRIM" build/src/func_8006EBD4.c.o .text "$SIZE_C_6EBD4"
@@ -3243,6 +3249,7 @@ SECTIONS
         build/src/func_8006A674.c.o(.text)
         build/src/func_8006A8D4.c.o(.text)
         build/asm/disc1/5B1E4.s.o(.text)
+        build/src/func_8006E7E8.c.o(.text)
         build/src/func_8006E834.c.o(.text)
         build/src/func_8006E9A0.c.o(.text)
         build/src/func_8006EBD4.c.o(.text)
@@ -3687,6 +3694,8 @@ SECTIONS
         build/src/func_8006A674.c.o(.data)
         build/src/func_8006A8D4.c.o(.data)
         build/asm/disc1/5B1E4.s.o(.data)
+        build/src/func_8006E7E8.c.o(.data)
+        build/src/func_8006E834.c.o(.data)
         build/src/func_8006E834.c.o(.data)
         build/src/func_8006E9A0.c.o(.data)
         build/src/func_8006EBD4.c.o(.data)
@@ -4130,6 +4139,8 @@ SECTIONS
         build/src/func_8006A674.c.o(.rodata)
         build/src/func_8006A8D4.c.o(.rodata)
         build/asm/disc1/5B1E4.s.o(.rodata)
+        build/src/func_8006E7E8.c.o(.rodata)
+        build/src/func_8006E834.c.o(.rodata)
         build/src/func_8006E834.c.o(.rodata)
         build/src/func_8006E9A0.c.o(.rodata)
         build/src/func_8006EBD4.c.o(.rodata)
@@ -4573,6 +4584,8 @@ SECTIONS
         build/src/func_8006A674.c.o(.bss)
         build/src/func_8006A8D4.c.o(.bss)
         build/asm/disc1/5B1E4.s.o(.bss)
+        build/src/func_8006E7E8.c.o(.bss)
+        build/src/func_8006E834.c.o(.bss)
         build/src/func_8006E834.c.o(.bss)
         build/src/func_8006E9A0.c.o(.bss)
         build/src/func_8006EBD4.c.o(.bss)
