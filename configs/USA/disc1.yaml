@@ -612,24 +612,31 @@ segments:
       - [0x6824C, asm]
       # Phase 5CB: C leaf func_80077B64 — file 0x68364, size 0x14.
       - [0x68364, c, func_80077B64]
+      # 12-byte zero-filled alignment padding between 77B64 and 77B84.
       - [0x68378, asm]
       # Phase 5CC: C leaf func_80077B84 — file 0x68384, size 0x14.
       - [0x68384, c, func_80077B84]
+      # 12-byte zero-filled alignment padding between 77B84 and 77BA4.
       - [0x68398, asm]
       # Phase 5CD: C leaf func_80077BA4 — file 0x683A4, size 0x14.
       - [0x683A4, c, func_80077BA4]
+      # 12-byte zero-filled alignment padding between 77BA4 and 77BC4.
       - [0x683B8, asm]
       # Phase 5CE: C leaf func_80077BC4 — file 0x683C4, size 0x14.
       - [0x683C4, c, func_80077BC4]
+      # 12-byte zero-filled alignment padding between 77BC4 and 77BE4.
       - [0x683D8, asm]
       # Phase 5CF: C leaf func_80077BE4 — file 0x683E4, size 0x14.
       - [0x683E4, c, func_80077BE4]
+      # 12-byte zero-filled alignment padding between 77BE4 and 77C04.
       - [0x683F8, asm]
       # Phase 5CG: C leaf func_80077C04 — file 0x68404, size 0x14.
       - [0x68404, c, func_80077C04]
+      # 12-byte zero-filled alignment padding between 77C04 and 77C24.
       - [0x68418, asm]
       # Phase 5CH: C leaf func_80077C24 — file 0x68424, size 0x14.
       - [0x68424, c, func_80077C24]
+      # 12-byte zero-filled alignment padding between 77C24 and 77C44.
       - [0x68438, asm]
       # Phase 5CI: C leaf func_80077C44 — file 0x68444, size 0x14.
       - [0x68444, c, func_80077C44]
