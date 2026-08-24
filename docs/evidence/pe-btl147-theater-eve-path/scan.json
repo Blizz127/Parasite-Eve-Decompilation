@@ -1,0 +1,4831 @@
+{
+  "packed_m0005i": "0xA80002C8",
+  "packed_m0360i": "0xA8066048",
+  "dest_formula_m0005i": "0xA80002C8",
+  "hops_to_m0005i": [
+    {
+      "from": "m0004i",
+      "from_index": 3,
+      "module": 0,
+      "pc": "+0x06A0",
+      "token": "0xA80002C8",
+      "packed_name": "m0005i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": 4,
+      "last_persist_4a": 24,
+      "context": [
+        "   +0x0690 mov k=[2, 0] imm=['0x1', '0x4']",
+        ">> +0x06A0 dest 0x31 0xA80002C8 packed=m0005i idx=m0005i",
+        "   +0x06AC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x06C4 skip0 cond_k=3 -> +0x7C0"
+      ]
+    },
+    {
+      "from": "m0004i",
+      "from_index": 3,
+      "module": 0,
+      "pc": "+0x07B4",
+      "token": "0xA80002C8",
+      "packed_name": "m0005i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": 4,
+      "last_persist_4a": 24,
+      "context": [
+        "   +0x07A4 mov k=[2, 0] imm=['0x1', '0x4']",
+        ">> +0x07B4 dest 0x31 0xA80002C8 packed=m0005i idx=m0005i",
+        "   +0x07C0 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0xfe']",
+        "   +0x07D8 skip0 cond_k=3 -> +0x820"
+      ]
+    },
+    {
+      "from": "m0009i",
+      "from_index": 8,
+      "module": 2,
+      "pc": "+0x0110",
+      "token": "0xA80002C8",
+      "packed_name": "m0005i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0100 mov k=[2, 0] imm=['0x1', '0x9']",
+        ">> +0x0110 dest 0x31 0xA80002C8 packed=m0005i idx=m0005i",
+        "   +0x0148 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x5330000', '0xf94f0000', '0x1670000', '0xf9570000', '0x23c0000', '0xfa130000', '0x53a0000', '0xf9550000', '0x0', '0x2', '0x4']",
+        "   +0x017C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x0194 skip0 cond_k=3 -> +0x23C",
+        "   +0x01A4 alu or k=[0, 3, 2, 0] imm=['0x2', '0x1', '0x18', '0x1']"
+      ]
+    },
+    {
+      "from": "m0009i",
+      "from_index": 8,
+      "module": 2,
+      "pc": "+0x0228",
+      "token": "0xA80002C8",
+      "packed_name": "m0005i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0218 mov k=[2, 0] imm=['0x1', '0x9']",
+        ">> +0x0228 dest 0x31 0xA80002C8 packed=m0005i idx=m0005i",
+        "   +0x0260 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x1670000', '0xf9570000', '0xfa980000', '0xf8800000', '0xfadf0000', '0xfc110000', '0x23c0000', '0xfa130000', '0x0', '0x2', '0x4']",
+        "   +0x0294 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x02AC skip0 cond_k=3 -> +0x32C"
+      ]
+    },
+    {
+      "from": "m0009i",
+      "from_index": 8,
+      "module": 2,
+      "pc": "+0x0318",
+      "token": "0xA80002C8",
+      "packed_name": "m0005i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0308 mov k=[2, 0] imm=['0x1', '0x9']",
+        ">> +0x0318 dest 0x31 0xA80002C8 packed=m0005i idx=m0005i",
+        "   +0x0350 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x6e0000', '0xf2030000', '0xfb8c0000', '0xf2130000', '0xfb2f0000', '0xf61c0000', '0xffb90000', '0xf62d0000', '0x0', '0x2', '0x4']",
+        "   +0x0384 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x039C skip0 cond_k=3 -> +0x404",
+        "   +0x03AC alu eq k=[0, 3, 4, 0] imm=['0xb', '0x1', '0x12', '0x0']"
+      ]
+    },
+    {
+      "from": "m0204i",
+      "from_index": 203,
+      "module": 3,
+      "pc": "+0x0270",
+      "token": "0xA80402C8",
+      "packed_name": "m0205i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": 204,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0210 mov k=[2, 3] imm=['0x2a', '0x0']",
+        "   +0x0220 mov k=[2, 0] imm=['0x1', '0xcc']",
+        "   +0x0230 alu sge_ab k=[0, 3, 2, 0] imm=['0xc', '0x0', '0x22', '0xd2']",
+        "   +0x0248 skip0 cond_k=3 -> +0x270",
+        "   +0x0258 dest 0x31 0xA80640C8 packed=m0341i idx=m0129i",
+        ">> +0x0270 dest 0x31 0xA80402C8 packed=m0205i idx=m0005i"
+      ]
+    },
+    {
+      "from": "m0206i",
+      "from_index": 205,
+      "module": 2,
+      "pc": "+0x0198",
+      "token": "0xA80402C8",
+      "packed_name": "m0205i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": 206,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0138 mov k=[2, 3] imm=['0x2a', '0x0']",
+        "   +0x0148 mov k=[2, 0] imm=['0x1', '0xce']",
+        "   +0x0158 alu sge_ab k=[0, 3, 2, 0] imm=['0xc', '0x0', '0x22', '0xd2']",
+        "   +0x0170 skip0 cond_k=3 -> +0x198",
+        "   +0x0180 dest 0x31 0xA80640C8 packed=m0341i idx=m0129i",
+        ">> +0x0198 dest 0x31 0xA80402C8 packed=m0205i idx=m0005i",
+        "   +0x01C8 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x2910000', '0x78a0000', '0x2910000', '0x8520000', '0xfea10000', '0x8520000', '0xfea10000', '0x78a0000', '0x0', '0x2', '0x4']",
+        "   +0x01FC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x0214 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x1', '0x6', '0x0']",
+        "   +0x022C alu bool_and k=[0, 3, 3, 3] imm=['0x6', '0x2', '0x0', '0x1']",
+        "   +0x0244 skip0 cond_k=3 -> +0x2A4"
+      ]
+    },
+    {
+      "from": "m0367i",
+      "from_index": 366,
+      "module": 1,
+      "pc": "+0x02D8",
+      "token": "0xA80002C8",
+      "packed_name": "m0005i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 39,
+      "context": [
+        "   +0x02C8 mov k=[2, 0] imm=['0x4a', '0x27']",
+        ">> +0x02D8 dest 0x31 0xA80002C8 packed=m0005i idx=m0005i",
+        "   +0x02EC alu eq k=[0, 3, 2, 0] imm=['0xb', '0x0', '0x4a', '0x5e']",
+        "   +0x0304 skip0 cond_k=3 -> +0x428"
+      ]
+    }
+  ],
+  "hops_from_theater": [
+    {
+      "from": "m0001i",
+      "from_index": 0,
+      "module": 0,
+      "pc": "+0x04E8",
+      "token": "0xA8067448",
+      "packed_name": "m0378i",
+      "scene_index": 231,
+      "scene_name_from_index": "m0232i",
+      "map_id_from_low": 232,
+      "scene_name_from_map": "m0232i",
+      "last_persist_0": null,
+      "last_persist_1": 1,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x04D8 mov k=[2, 0] imm=['0x1', '0x1']",
+        ">> +0x04E8 dest 0x31 0xA8067448 packed=m0378i idx=m0232i",
+        "   +0x04F4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x050C skip0 cond_k=3 -> +0x550"
+      ]
+    },
+    {
+      "from": "m0001i",
+      "from_index": 0,
+      "module": 5,
+      "pc": "+0x00C0",
+      "token": "0xA8067448",
+      "packed_name": "m0378i",
+      "scene_index": 231,
+      "scene_name_from_index": "m0232i",
+      "map_id_from_low": 232,
+      "scene_name_from_map": "m0232i",
+      "last_persist_0": null,
+      "last_persist_1": 2,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x007C skip0 cond_k=3 -> +0xD4",
+        "   +0x00B0 mov k=[2, 0] imm=['0x1', '0x2']",
+        ">> +0x00C0 dest 0x31 0xA8067448 packed=m0378i idx=m0232i"
+      ]
+    },
+    {
+      "from": "m0002i",
+      "from_index": 1,
+      "module": 5,
+      "pc": "+0x00C0",
+      "token": "0xA80001C8",
+      "packed_name": "m0003i",
+      "scene_index": null,
+      "scene_name_from_index": null,
+      "map_id_from_low": 3,
+      "scene_name_from_map": "m0003i",
+      "last_persist_0": null,
+      "last_persist_1": 2,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x007C skip0 cond_k=3 -> +0xD4",
+        "   +0x00B0 mov k=[2, 0] imm=['0x1', '0x2']",
+        ">> +0x00C0 dest 0x31 0xA80001C8 packed=m0003i idx=None"
+      ]
+    },
+    {
+      "from": "m0003i",
+      "from_index": 2,
+      "module": 0,
+      "pc": "+0x0568",
+      "token": "0xA8000248",
+      "packed_name": "m0004i",
+      "scene_index": 3,
+      "scene_name_from_index": "m0004i",
+      "map_id_from_low": 4,
+      "scene_name_from_map": "m0004i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0540 alu sge_ab k=[0, 3, 2, 0] imm=['0xc', '0x0', '0x4a', '0x11']",
+        "   +0x0558 skip0 cond_k=3 -> +0x580",
+        ">> +0x0568 dest 0x31 0xA8000248 packed=m0004i idx=m0004i",
+        "   +0x0580 dest 0x31 0xA8067148 packed=m0372i idx=m0226i"
+      ]
+    },
+    {
+      "from": "m0003i",
+      "from_index": 2,
+      "module": 0,
+      "pc": "+0x0580",
+      "token": "0xA8067148",
+      "packed_name": "m0372i",
+      "scene_index": 225,
+      "scene_name_from_index": "m0226i",
+      "map_id_from_low": 226,
+      "scene_name_from_map": "m0226i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0540 alu sge_ab k=[0, 3, 2, 0] imm=['0xc', '0x0', '0x4a', '0x11']",
+        "   +0x0558 skip0 cond_k=3 -> +0x580",
+        "   +0x0568 dest 0x31 0xA8000248 packed=m0004i idx=m0004i",
+        ">> +0x0580 dest 0x31 0xA8067148 packed=m0372i idx=m0226i"
+      ]
+    },
+    {
+      "from": "m0003i",
+      "from_index": 2,
+      "module": 5,
+      "pc": "+0x0128",
+      "token": "0xA8000148",
+      "packed_name": "m0002i",
+      "scene_index": null,
+      "scene_name_from_index": null,
+      "map_id_from_low": 2,
+      "scene_name_from_map": "m0002i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x00BC skip0 cond_k=3 -> +0x140",
+        "   +0x00CC alu and k=[0, 3, 2, 0] imm=['0x3', '0x1', '0x19', '0x8000000']",
+        "   +0x00E4 skip0 cond_k=3 -> +0x114",
+        ">> +0x0128 dest 0x31 0xA8000148 packed=m0002i idx=None",
+        "   +0x0154 dest 0x31 0xA80000C8 packed=m0001i idx=None"
+      ]
+    },
+    {
+      "from": "m0003i",
+      "from_index": 2,
+      "module": 5,
+      "pc": "+0x0154",
+      "token": "0xA80000C8",
+      "packed_name": "m0001i",
+      "scene_index": null,
+      "scene_name_from_index": null,
+      "map_id_from_low": 1,
+      "scene_name_from_map": "m0001i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0128 dest 0x31 0xA8000148 packed=m0002i idx=None",
+        ">> +0x0154 dest 0x31 0xA80000C8 packed=m0001i idx=None",
+        "   +0x0198 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xfcc20000', '0xdd60000', '0xfcc20000', '0xc4c0000', '0x15e0000', '0xc4c0000', '0x15e0000', '0xdd60000', '0x0', '0x2', '0x4']",
+        "   +0x01CC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x01E4 skip0 cond_k=3 -> +0x220"
+      ]
+    },
+    {
+      "from": "m0004i",
+      "from_index": 3,
+      "module": 0,
+      "pc": "+0x06A0",
+      "token": "0xA80002C8",
+      "packed_name": "m0005i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": 4,
+      "last_persist_4a": 24,
+      "context": [
+        "   +0x0690 mov k=[2, 0] imm=['0x1', '0x4']",
+        ">> +0x06A0 dest 0x31 0xA80002C8 packed=m0005i idx=m0005i",
+        "   +0x06AC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x06C4 skip0 cond_k=3 -> +0x7C0"
+      ]
+    },
+    {
+      "from": "m0004i",
+      "from_index": 3,
+      "module": 0,
+      "pc": "+0x07B4",
+      "token": "0xA80002C8",
+      "packed_name": "m0005i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": 4,
+      "last_persist_4a": 24,
+      "context": [
+        "   +0x07A4 mov k=[2, 0] imm=['0x1', '0x4']",
+        ">> +0x07B4 dest 0x31 0xA80002C8 packed=m0005i idx=m0005i",
+        "   +0x07C0 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0xfe']",
+        "   +0x07D8 skip0 cond_k=3 -> +0x820"
+      ]
+    },
+    {
+      "from": "m0004i",
+      "from_index": 3,
+      "module": 4,
+      "pc": "+0x00C0",
+      "token": "0xA8067448",
+      "packed_name": "m0378i",
+      "scene_index": 231,
+      "scene_name_from_index": "m0232i",
+      "map_id_from_low": 232,
+      "scene_name_from_map": "m0232i",
+      "last_persist_0": null,
+      "last_persist_1": 4,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x007C skip0 cond_k=3 -> +0xD4",
+        "   +0x00B0 mov k=[2, 0] imm=['0x1', '0x4']",
+        ">> +0x00C0 dest 0x31 0xA8067448 packed=m0378i idx=m0232i",
+        "   +0x00F8 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xde80000', '0x7440000', '0x7790000', '0x8b60000', '0x9260000', '0xb520000', '0xb5a0000', '0xa940000', '0x0', '0x2', '0x4']",
+        "   +0x012C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x0144 skip0 cond_k=3 -> +0x240"
+      ]
+    },
+    {
+      "from": "m0005i",
+      "from_index": 4,
+      "module": 0,
+      "pc": "+0x1064",
+      "token": "0xA80663C8",
+      "packed_name": "m0367i",
+      "scene_index": 198,
+      "scene_name_from_index": "m0199i",
+      "map_id_from_low": 199,
+      "scene_name_from_map": "m0199i",
+      "last_persist_0": null,
+      "last_persist_1": 5,
+      "last_persist_4a": 38,
+      "context": [
+        "   +0x1044 mov k=[2, 0] imm=['0x1', '0x5']",
+        "   +0x1054 mov k=[2, 0] imm=['0x4a', '0x26']",
+        ">> +0x1064 dest 0x31 0xA80663C8 packed=m0367i idx=m0199i",
+        "   +0x1070 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x74']",
+        "   +0x1088 skip0 cond_k=3 -> +0x10B0",
+        "   +0x10B0 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x65']"
+      ]
+    },
+    {
+      "from": "m0005i",
+      "from_index": 4,
+      "module": 3,
+      "pc": "+0x00EC",
+      "token": "0xA8000248",
+      "packed_name": "m0004i",
+      "scene_index": 3,
+      "scene_name_from_index": "m0004i",
+      "map_id_from_low": 4,
+      "scene_name_from_map": "m0004i",
+      "last_persist_0": null,
+      "last_persist_1": 5,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x008C alu or k=[0, 3, 2, 0] imm=['0x2', '0x1', '0x18', '0x1']",
+        "   +0x00A4 mov k=[2, 3] imm=['0x18', '0x1']",
+        "   +0x00B4 mail 0x1C(0,0,0xFE)",
+        "   +0x00DC mov k=[2, 0] imm=['0x1', '0x5']",
+        ">> +0x00EC dest 0x31 0xA8000248 packed=m0004i idx=m0004i",
+        "   +0x011C vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xf7b10000', '0x4780000', '0xf7b10000', '0x61e0000', '0xf60d0000', '0x61e0000', '0xf60d0000', '0x4780000', '0x0', '0x2', '0x4']",
+        "   +0x0150 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x0168 skip0 cond_k=3 -> +0x1E4",
+        "   +0x0178 alu and k=[0, 3, 2, 0] imm=['0x3', '0x1', '0x18', '0xfffffffe']",
+        "   +0x0190 mov k=[2, 3] imm=['0x18', '0x1']"
+      ]
+    },
+    {
+      "from": "m0005i",
+      "from_index": 4,
+      "module": 3,
+      "pc": "+0x01D8",
+      "token": "0xA8000248",
+      "packed_name": "m0004i",
+      "scene_index": 3,
+      "scene_name_from_index": "m0004i",
+      "map_id_from_low": 4,
+      "scene_name_from_map": "m0004i",
+      "last_persist_0": null,
+      "last_persist_1": 5,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0178 alu and k=[0, 3, 2, 0] imm=['0x3', '0x1', '0x18', '0xfffffffe']",
+        "   +0x0190 mov k=[2, 3] imm=['0x18', '0x1']",
+        "   +0x01A0 mail 0x1C(0,0,0xFE)",
+        "   +0x01C8 mov k=[2, 0] imm=['0x1', '0x5']",
+        ">> +0x01D8 dest 0x31 0xA8000248 packed=m0004i idx=m0004i",
+        "   +0x01E4 alu sge_ab k=[0, 3, 2, 0] imm=['0xc', '0x0', '0x4a', '0x28']",
+        "   +0x01FC skip0 cond_k=3 -> +0x3E4",
+        "   +0x0230 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xa7c0000', '0xa90000', '0xa7c0000', '0x3690000', '0x84b0000', '0x3690000', '0x84b0000', '0xa90000', '0x0', '0x2', '0x4']",
+        "   +0x0264 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x027C skip0 cond_k=3 -> +0x2F8"
+      ]
+    },
+    {
+      "from": "m0005i",
+      "from_index": 4,
+      "module": 3,
+      "pc": "+0x02EC",
+      "token": "0xA80004C8",
+      "packed_name": "m0009i",
+      "scene_index": 8,
+      "scene_name_from_index": "m0009i",
+      "map_id_from_low": 9,
+      "scene_name_from_map": "m0009i",
+      "last_persist_0": null,
+      "last_persist_1": 5,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x028C alu or k=[0, 3, 2, 0] imm=['0x2', '0x1', '0x18', '0x1']",
+        "   +0x02A4 mov k=[2, 3] imm=['0x18', '0x1']",
+        "   +0x02B4 mail 0x1C(0,0,0xFE)",
+        "   +0x02DC mov k=[2, 0] imm=['0x1', '0x5']",
+        ">> +0x02EC dest 0x31 0xA80004C8 packed=m0009i idx=m0009i",
+        "   +0x031C vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xf7ba0000', '0x70000', '0xf7ba0000', '0x2f00000', '0xf67b0000', '0x2f00000', '0xf67b0000', '0x70000', '0x0', '0x2', '0x4']",
+        "   +0x0350 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x0368 skip0 cond_k=3 -> +0x3E4",
+        "   +0x0378 alu and k=[0, 3, 2, 0] imm=['0x3', '0x1', '0x18', '0xfffffffe']",
+        "   +0x0390 mov k=[2, 3] imm=['0x18', '0x1']"
+      ]
+    },
+    {
+      "from": "m0005i",
+      "from_index": 4,
+      "module": 3,
+      "pc": "+0x03D8",
+      "token": "0xA80004C8",
+      "packed_name": "m0009i",
+      "scene_index": 8,
+      "scene_name_from_index": "m0009i",
+      "map_id_from_low": 9,
+      "scene_name_from_map": "m0009i",
+      "last_persist_0": null,
+      "last_persist_1": 5,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0378 alu and k=[0, 3, 2, 0] imm=['0x3', '0x1', '0x18', '0xfffffffe']",
+        "   +0x0390 mov k=[2, 3] imm=['0x18', '0x1']",
+        "   +0x03A0 mail 0x1C(0,0,0xFE)",
+        "   +0x03C8 mov k=[2, 0] imm=['0x1', '0x5']",
+        ">> +0x03D8 dest 0x31 0xA80004C8 packed=m0009i idx=m0009i"
+      ]
+    },
+    {
+      "from": "m0064i",
+      "from_index": 63,
+      "module": 2,
+      "pc": "+0x0150",
+      "token": "0xA80061C8",
+      "packed_name": "m0063i",
+      "scene_index": 194,
+      "scene_name_from_index": "m0195i",
+      "map_id_from_low": 195,
+      "scene_name_from_map": "m0195i",
+      "last_persist_0": null,
+      "last_persist_1": 64,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x010C skip0 cond_k=3 -> +0x164",
+        "   +0x0140 mov k=[2, 0] imm=['0x1', '0x40']",
+        ">> +0x0150 dest 0x31 0xA80061C8 packed=m0063i idx=m0195i",
+        "   +0x01A0 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x3320000', '0xfea00000', '0x3320000', '0xff9c0000', '0x28a0000', '0xff9c0000', '0x28a0000', '0xfea00000', '0x0', '0x2', '0x4']",
+        "   +0x01D4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 1,
+      "pc": "+0x0144",
+      "token": "0xA8081448",
+      "packed_name": "m0418i",
+      "scene_index": 39,
+      "scene_name_from_index": "m0040i",
+      "map_id_from_low": 40,
+      "scene_name_from_map": "m0040i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0108 alu ne k=[0, 3, 1, 0] imm=['0xe', '0x0', '0x0', '0x0']",
+        "   +0x0120 skip0 cond_k=3 -> +0x150",
+        ">> +0x0144 dest 0x31 0xA8081448 packed=m0418i idx=m0040i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0200",
+      "token": "0xA80830C8",
+      "packed_name": "m0431i",
+      "scene_index": 96,
+      "scene_name_from_index": "m0097i",
+      "map_id_from_low": 97,
+      "scene_name_from_map": "m0097i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 0,
+      "context": [
+        "   +0x01B4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x01CC skip0 cond_k=3 -> +0x20C",
+        "   +0x01DC mov k=[2, 0] imm=['0x4a', '0x0']",
+        ">> +0x0200 dest 0x31 0xA80830C8 packed=m0431i idx=m0097i",
+        "   +0x020C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0224 skip0 cond_k=3 -> +0x264",
+        "   +0x0248 mov k=[2, 0] imm=['0x1', '0x9']",
+        "   +0x0258 dest 0x31 0xA80010C8 packed=m0011i idx=m0033i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0258",
+      "token": "0xA80010C8",
+      "packed_name": "m0011i",
+      "scene_index": 32,
+      "scene_name_from_index": "m0033i",
+      "map_id_from_low": 33,
+      "scene_name_from_map": "m0033i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 0,
+      "context": [
+        "   +0x0200 dest 0x31 0xA80830C8 packed=m0431i idx=m0097i",
+        "   +0x020C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0224 skip0 cond_k=3 -> +0x264",
+        "   +0x0248 mov k=[2, 0] imm=['0x1', '0x9']",
+        ">> +0x0258 dest 0x31 0xA80010C8 packed=m0011i idx=m0033i",
+        "   +0x0264 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x027C skip0 cond_k=3 -> +0x2BC",
+        "   +0x028C mov k=[2, 0] imm=['0x4a', '0x68']",
+        "   +0x02B0 dest 0x31 0xA8002348 packed=m0026i idx=m0070i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x02B0",
+      "token": "0xA8002348",
+      "packed_name": "m0026i",
+      "scene_index": 69,
+      "scene_name_from_index": "m0070i",
+      "map_id_from_low": 70,
+      "scene_name_from_map": "m0070i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 104,
+      "context": [
+        "   +0x0258 dest 0x31 0xA80010C8 packed=m0011i idx=m0033i",
+        "   +0x0264 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x027C skip0 cond_k=3 -> +0x2BC",
+        "   +0x028C mov k=[2, 0] imm=['0x4a', '0x68']",
+        ">> +0x02B0 dest 0x31 0xA8002348 packed=m0026i idx=m0070i",
+        "   +0x02BC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x02D4 skip0 cond_k=3 -> +0x314",
+        "   +0x02E4 mov k=[2, 0] imm=['0x4a', '0x70']",
+        "   +0x0308 dest 0x31 0xA80654C8 packed=m0359i idx=m0169i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0308",
+      "token": "0xA80654C8",
+      "packed_name": "m0359i",
+      "scene_index": 168,
+      "scene_name_from_index": "m0169i",
+      "map_id_from_low": 169,
+      "scene_name_from_map": "m0169i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 112,
+      "context": [
+        "   +0x02B0 dest 0x31 0xA8002348 packed=m0026i idx=m0070i",
+        "   +0x02BC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x02D4 skip0 cond_k=3 -> +0x314",
+        "   +0x02E4 mov k=[2, 0] imm=['0x4a', '0x70']",
+        ">> +0x0308 dest 0x31 0xA80654C8 packed=m0359i idx=m0169i",
+        "   +0x0314 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x032C skip0 cond_k=3 -> +0x36C",
+        "   +0x033C mov k=[2, 0] imm=['0x4a', '0x88']",
+        "   +0x0360 dest 0x31 0xA8004148 packed=m0042i idx=m0130i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0360",
+      "token": "0xA8004148",
+      "packed_name": "m0042i",
+      "scene_index": 129,
+      "scene_name_from_index": "m0130i",
+      "map_id_from_low": 130,
+      "scene_name_from_map": "m0130i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 136,
+      "context": [
+        "   +0x0308 dest 0x31 0xA80654C8 packed=m0359i idx=m0169i",
+        "   +0x0314 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x032C skip0 cond_k=3 -> +0x36C",
+        "   +0x033C mov k=[2, 0] imm=['0x4a', '0x88']",
+        ">> +0x0360 dest 0x31 0xA8004148 packed=m0042i idx=m0130i",
+        "   +0x036C mov k=[4, 0] imm=['0x12', '0x0']",
+        "   +0x037C mail 0x1C(0,0,0xFF)"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x047C",
+      "token": "0xA80290C8",
+      "packed_name": "m0191i",
+      "scene_index": 288,
+      "scene_name_from_index": "m0289i",
+      "map_id_from_low": 289,
+      "scene_name_from_map": "m0289i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 192,
+      "context": [
+        "   +0x0430 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x0448 skip0 cond_k=3 -> +0x488",
+        "   +0x0458 mov k=[2, 0] imm=['0x4a', '0xc0']",
+        ">> +0x047C dest 0x31 0xA80290C8 packed=m0191i idx=m0289i",
+        "   +0x0488 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x04A0 skip0 cond_k=3 -> +0x4E0",
+        "   +0x04B0 mov k=[2, 0] imm=['0x4a', '0xd8']",
+        "   +0x04D4 dest 0x31 0xA8004348 packed=m0046i idx=m0134i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x04D4",
+      "token": "0xA8004348",
+      "packed_name": "m0046i",
+      "scene_index": 133,
+      "scene_name_from_index": "m0134i",
+      "map_id_from_low": 134,
+      "scene_name_from_map": "m0134i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 216,
+      "context": [
+        "   +0x047C dest 0x31 0xA80290C8 packed=m0191i idx=m0289i",
+        "   +0x0488 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x04A0 skip0 cond_k=3 -> +0x4E0",
+        "   +0x04B0 mov k=[2, 0] imm=['0x4a', '0xd8']",
+        ">> +0x04D4 dest 0x31 0xA8004348 packed=m0046i idx=m0134i",
+        "   +0x04E0 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x04F8 skip0 cond_k=3 -> +0x538",
+        "   +0x0508 mov k=[2, 0] imm=['0x4a', '0xe4']",
+        "   +0x052C dest 0x31 0xA8067248 packed=m0374i idx=m0228i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x052C",
+      "token": "0xA8067248",
+      "packed_name": "m0374i",
+      "scene_index": 227,
+      "scene_name_from_index": "m0228i",
+      "map_id_from_low": 228,
+      "scene_name_from_map": "m0228i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 228,
+      "context": [
+        "   +0x04D4 dest 0x31 0xA8004348 packed=m0046i idx=m0134i",
+        "   +0x04E0 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x04F8 skip0 cond_k=3 -> +0x538",
+        "   +0x0508 mov k=[2, 0] imm=['0x4a', '0xe4']",
+        ">> +0x052C dest 0x31 0xA8067248 packed=m0374i idx=m0228i",
+        "   +0x0538 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0550 skip0 cond_k=3 -> +0x590",
+        "   +0x0560 mov k=[2, 0] imm=['0x4a', '0x120']",
+        "   +0x0584 dest 0x31 0xA80040C8 packed=m0041i idx=m0129i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0584",
+      "token": "0xA80040C8",
+      "packed_name": "m0041i",
+      "scene_index": 128,
+      "scene_name_from_index": "m0129i",
+      "map_id_from_low": 129,
+      "scene_name_from_map": "m0129i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 288,
+      "context": [
+        "   +0x052C dest 0x31 0xA8067248 packed=m0374i idx=m0228i",
+        "   +0x0538 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0550 skip0 cond_k=3 -> +0x590",
+        "   +0x0560 mov k=[2, 0] imm=['0x4a', '0x120']",
+        ">> +0x0584 dest 0x31 0xA80040C8 packed=m0041i idx=m0129i",
+        "   +0x0590 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x05A8 skip0 cond_k=3 -> +0x5E8",
+        "   +0x05B8 mov k=[2, 0] imm=['0x4a', '0x128']",
+        "   +0x05DC dest 0x31 0xA8009048 packed=m0090i idx=m0288i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x05DC",
+      "token": "0xA8009048",
+      "packed_name": "m0090i",
+      "scene_index": 287,
+      "scene_name_from_index": "m0288i",
+      "map_id_from_low": 288,
+      "scene_name_from_map": "m0288i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 296,
+      "context": [
+        "   +0x0584 dest 0x31 0xA80040C8 packed=m0041i idx=m0129i",
+        "   +0x0590 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x05A8 skip0 cond_k=3 -> +0x5E8",
+        "   +0x05B8 mov k=[2, 0] imm=['0x4a', '0x128']",
+        ">> +0x05DC dest 0x31 0xA8009048 packed=m0090i idx=m0288i",
+        "   +0x05E8 mov k=[4, 0] imm=['0x12', '0x0']",
+        "   +0x05F8 mail 0x1C(0,0,0xFF)"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x06F8",
+      "token": "0xA80090C8",
+      "packed_name": "m0091i",
+      "scene_index": 288,
+      "scene_name_from_index": "m0289i",
+      "map_id_from_low": 289,
+      "scene_name_from_map": "m0289i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 304,
+      "context": [
+        "   +0x06AC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x06C4 skip0 cond_k=3 -> +0x704",
+        "   +0x06D4 mov k=[2, 0] imm=['0x4a', '0x130']",
+        ">> +0x06F8 dest 0x31 0xA80090C8 packed=m0091i idx=m0289i",
+        "   +0x0704 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x071C skip0 cond_k=3 -> +0x75C",
+        "   +0x072C mov k=[2, 0] imm=['0x4a', '0x160']",
+        "   +0x0750 dest 0x31 0xA80290C8 packed=m0191i idx=m0289i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0750",
+      "token": "0xA80290C8",
+      "packed_name": "m0191i",
+      "scene_index": 288,
+      "scene_name_from_index": "m0289i",
+      "map_id_from_low": 289,
+      "scene_name_from_map": "m0289i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 352,
+      "context": [
+        "   +0x06F8 dest 0x31 0xA80090C8 packed=m0091i idx=m0289i",
+        "   +0x0704 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x071C skip0 cond_k=3 -> +0x75C",
+        "   +0x072C mov k=[2, 0] imm=['0x4a', '0x160']",
+        ">> +0x0750 dest 0x31 0xA80290C8 packed=m0191i idx=m0289i",
+        "   +0x075C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x0774 skip0 cond_k=3 -> +0x7B4",
+        "   +0x0784 mov k=[2, 0] imm=['0x4a', '0x180']",
+        "   +0x07A8 dest 0x31 0xA80201C8 packed=m0103i idx=None"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x07A8",
+      "token": "0xA80201C8",
+      "packed_name": "m0103i",
+      "scene_index": null,
+      "scene_name_from_index": null,
+      "map_id_from_low": 3,
+      "scene_name_from_map": "m0003i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 384,
+      "context": [
+        "   +0x0750 dest 0x31 0xA80290C8 packed=m0191i idx=m0289i",
+        "   +0x075C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x0774 skip0 cond_k=3 -> +0x7B4",
+        "   +0x0784 mov k=[2, 0] imm=['0x4a', '0x180']",
+        ">> +0x07A8 dest 0x31 0xA80201C8 packed=m0103i idx=None",
+        "   +0x07B4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x07CC skip0 cond_k=3 -> +0x80C",
+        "   +0x07DC mov k=[2, 0] imm=['0x4a', '0x1c8']",
+        "   +0x0800 dest 0x31 0xA80222C8 packed=m0125i idx=m0069i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0800",
+      "token": "0xA80222C8",
+      "packed_name": "m0125i",
+      "scene_index": 68,
+      "scene_name_from_index": "m0069i",
+      "map_id_from_low": 69,
+      "scene_name_from_map": "m0069i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 456,
+      "context": [
+        "   +0x07A8 dest 0x31 0xA80201C8 packed=m0103i idx=None",
+        "   +0x07B4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x07CC skip0 cond_k=3 -> +0x80C",
+        "   +0x07DC mov k=[2, 0] imm=['0x4a', '0x1c8']",
+        ">> +0x0800 dest 0x31 0xA80222C8 packed=m0125i idx=m0069i",
+        "   +0x080C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x0824 skip0 cond_k=3 -> +0x864",
+        "   +0x0834 mov k=[2, 0] imm=['0x4a', '0x210']",
+        "   +0x0858 dest 0x31 0xA8004148 packed=m0042i idx=m0130i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0858",
+      "token": "0xA8004148",
+      "packed_name": "m0042i",
+      "scene_index": 129,
+      "scene_name_from_index": "m0130i",
+      "map_id_from_low": 130,
+      "scene_name_from_map": "m0130i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 528,
+      "context": [
+        "   +0x0800 dest 0x31 0xA80222C8 packed=m0125i idx=m0069i",
+        "   +0x080C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x0824 skip0 cond_k=3 -> +0x864",
+        "   +0x0834 mov k=[2, 0] imm=['0x4a', '0x210']",
+        ">> +0x0858 dest 0x31 0xA8004148 packed=m0042i idx=m0130i",
+        "   +0x0864 mov k=[4, 0] imm=['0x12', '0x0']",
+        "   +0x0874 mail 0x1C(0,0,0xFF)"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0974",
+      "token": "0xA80260C8",
+      "packed_name": "m0161i",
+      "scene_index": 192,
+      "scene_name_from_index": "m0193i",
+      "map_id_from_low": 193,
+      "scene_name_from_map": "m0193i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 544,
+      "context": [
+        "   +0x0928 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x0940 skip0 cond_k=3 -> +0x980",
+        "   +0x0950 mov k=[2, 0] imm=['0x4a', '0x220']",
+        ">> +0x0974 dest 0x31 0xA80260C8 packed=m0161i idx=m0193i",
+        "   +0x0980 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0998 skip0 cond_k=3 -> +0x9C8",
+        "   +0x09BC dest 0x31 0xA8046048 packed=m0260i idx=m0192i",
+        "   +0x09C8 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x09BC",
+      "token": "0xA8046048",
+      "packed_name": "m0260i",
+      "scene_index": 191,
+      "scene_name_from_index": "m0192i",
+      "map_id_from_low": 192,
+      "scene_name_from_map": "m0192i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 544,
+      "context": [
+        "   +0x0974 dest 0x31 0xA80260C8 packed=m0161i idx=m0193i",
+        "   +0x0980 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0998 skip0 cond_k=3 -> +0x9C8",
+        ">> +0x09BC dest 0x31 0xA8046048 packed=m0260i idx=m0192i",
+        "   +0x09C8 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x09E0 skip0 cond_k=3 -> +0xA20",
+        "   +0x09F0 mov k=[2, 0] imm=['0x4a', '0x238']",
+        "   +0x0A14 dest 0x31 0xA8026348 packed=m0166i idx=m0198i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0A14",
+      "token": "0xA8026348",
+      "packed_name": "m0166i",
+      "scene_index": 197,
+      "scene_name_from_index": "m0198i",
+      "map_id_from_low": 198,
+      "scene_name_from_map": "m0198i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 568,
+      "context": [
+        "   +0x09BC dest 0x31 0xA8046048 packed=m0260i idx=m0192i",
+        "   +0x09C8 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x09E0 skip0 cond_k=3 -> +0xA20",
+        "   +0x09F0 mov k=[2, 0] imm=['0x4a', '0x238']",
+        ">> +0x0A14 dest 0x31 0xA8026348 packed=m0166i idx=m0198i",
+        "   +0x0A20 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0A38 skip0 cond_k=3 -> +0xA68",
+        "   +0x0A5C dest 0x31 0xA8028148 packed=m0182i idx=m0258i",
+        "   +0x0A68 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0A5C",
+      "token": "0xA8028148",
+      "packed_name": "m0182i",
+      "scene_index": 257,
+      "scene_name_from_index": "m0258i",
+      "map_id_from_low": 258,
+      "scene_name_from_map": "m0258i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 568,
+      "context": [
+        "   +0x0A14 dest 0x31 0xA8026348 packed=m0166i idx=m0198i",
+        "   +0x0A20 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0A38 skip0 cond_k=3 -> +0xA68",
+        ">> +0x0A5C dest 0x31 0xA8028148 packed=m0182i idx=m0258i",
+        "   +0x0A68 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x0A80 skip0 cond_k=3 -> +0xAB0",
+        "   +0x0AA4 dest 0x31 0xA80284C8 packed=m0189i idx=m0265i",
+        "   +0x0AB0 mov k=[4, 0] imm=['0x12', '0x0']"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0AA4",
+      "token": "0xA80284C8",
+      "packed_name": "m0189i",
+      "scene_index": 264,
+      "scene_name_from_index": "m0265i",
+      "map_id_from_low": 265,
+      "scene_name_from_map": "m0265i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 568,
+      "context": [
+        "   +0x0A5C dest 0x31 0xA8028148 packed=m0182i idx=m0258i",
+        "   +0x0A68 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x0A80 skip0 cond_k=3 -> +0xAB0",
+        ">> +0x0AA4 dest 0x31 0xA80284C8 packed=m0189i idx=m0265i",
+        "   +0x0AB0 mov k=[4, 0] imm=['0x12', '0x0']",
+        "   +0x0AC0 mail 0x1C(0,0,0xFF)"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0BC0",
+      "token": "0xA8029148",
+      "packed_name": "m0192i",
+      "scene_index": 289,
+      "scene_name_from_index": "m0290i",
+      "map_id_from_low": 290,
+      "scene_name_from_map": "m0290i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 600,
+      "context": [
+        "   +0x0B74 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x0B8C skip0 cond_k=3 -> +0xBCC",
+        "   +0x0B9C mov k=[2, 0] imm=['0x4a', '0x258']",
+        ">> +0x0BC0 dest 0x31 0xA8029148 packed=m0192i idx=m0290i",
+        "   +0x0BCC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0BE4 skip0 cond_k=3 -> +0xC24",
+        "   +0x0BF4 mov k=[2, 0] imm=['0x4a', '0x2a4']",
+        "   +0x0C18 dest 0x31 0xA80454C8 packed=m0259i idx=m0169i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0C18",
+      "token": "0xA80454C8",
+      "packed_name": "m0259i",
+      "scene_index": 168,
+      "scene_name_from_index": "m0169i",
+      "map_id_from_low": 169,
+      "scene_name_from_map": "m0169i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 676,
+      "context": [
+        "   +0x0BC0 dest 0x31 0xA8029148 packed=m0192i idx=m0290i",
+        "   +0x0BCC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0BE4 skip0 cond_k=3 -> +0xC24",
+        "   +0x0BF4 mov k=[2, 0] imm=['0x4a', '0x2a4']",
+        ">> +0x0C18 dest 0x31 0xA80454C8 packed=m0259i idx=m0169i",
+        "   +0x0C24 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x0C3C skip0 cond_k=3 -> +0xC7C",
+        "   +0x0C4C mov k=[2, 0] imm=['0x4a', '0x2a8']",
+        "   +0x0C70 dest 0x31 0xA80470C8 packed=m0271i idx=m0225i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0C70",
+      "token": "0xA80470C8",
+      "packed_name": "m0271i",
+      "scene_index": 224,
+      "scene_name_from_index": "m0225i",
+      "map_id_from_low": 225,
+      "scene_name_from_map": "m0225i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 680,
+      "context": [
+        "   +0x0C18 dest 0x31 0xA80454C8 packed=m0259i idx=m0169i",
+        "   +0x0C24 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x0C3C skip0 cond_k=3 -> +0xC7C",
+        "   +0x0C4C mov k=[2, 0] imm=['0x4a', '0x2a8']",
+        ">> +0x0C70 dest 0x31 0xA80470C8 packed=m0271i idx=m0225i",
+        "   +0x0C7C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0C94 skip0 cond_k=3 -> +0xCD4",
+        "   +0x0CA4 mov k=[2, 0] imm=['0x4a', '0x2b0']",
+        "   +0x0CC8 dest 0x31 0xA8047148 packed=m0272i idx=m0226i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0CC8",
+      "token": "0xA8047148",
+      "packed_name": "m0272i",
+      "scene_index": 225,
+      "scene_name_from_index": "m0226i",
+      "map_id_from_low": 226,
+      "scene_name_from_map": "m0226i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 688,
+      "context": [
+        "   +0x0C70 dest 0x31 0xA80470C8 packed=m0271i idx=m0225i",
+        "   +0x0C7C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0C94 skip0 cond_k=3 -> +0xCD4",
+        "   +0x0CA4 mov k=[2, 0] imm=['0x4a', '0x2b0']",
+        ">> +0x0CC8 dest 0x31 0xA8047148 packed=m0272i idx=m0226i",
+        "   +0x0CD4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x0CEC skip0 cond_k=3 -> +0xD2C",
+        "   +0x0CFC mov k=[2, 0] imm=['0x4a', '0x2ca']",
+        "   +0x0D20 dest 0x31 0xA80471C8 packed=m0273i idx=m0227i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0D20",
+      "token": "0xA80471C8",
+      "packed_name": "m0273i",
+      "scene_index": 226,
+      "scene_name_from_index": "m0227i",
+      "map_id_from_low": 227,
+      "scene_name_from_map": "m0227i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 714,
+      "context": [
+        "   +0x0CC8 dest 0x31 0xA8047148 packed=m0272i idx=m0226i",
+        "   +0x0CD4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x0CEC skip0 cond_k=3 -> +0xD2C",
+        "   +0x0CFC mov k=[2, 0] imm=['0x4a', '0x2ca']",
+        ">> +0x0D20 dest 0x31 0xA80471C8 packed=m0273i idx=m0227i",
+        "   +0x0D2C mov k=[4, 0] imm=['0x12', '0x0']",
+        "   +0x0D3C mail 0x1C(0,0,0xFF)"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0E08",
+      "token": "0xA8082448",
+      "packed_name": "m0428i",
+      "scene_index": 71,
+      "scene_name_from_index": "m0072i",
+      "map_id_from_low": 72,
+      "scene_name_from_map": "m0072i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 730,
+      "context": [
+        "   +0x0DAC skip0 cond_k=3 -> +0xDBC",
+        "   +0x0DBC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x1', '0x4', '0x1']",
+        "   +0x0DD4 skip0 cond_k=3 -> +0xE14",
+        "   +0x0DF8 mov k=[2, 0] imm=['0x4a', '0x2da']",
+        ">> +0x0E08 dest 0x31 0xA8082448 packed=m0428i idx=m0072i",
+        "   +0x0E14 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x0E2C skip0 cond_k=3 -> +0xE6C",
+        "   +0x0E3C mov k=[2, 0] imm=['0x4a', '0x2e2']",
+        "   +0x0E60 dest 0x31 0xA8048448 packed=m0288i idx=m0264i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0E60",
+      "token": "0xA8048448",
+      "packed_name": "m0288i",
+      "scene_index": 263,
+      "scene_name_from_index": "m0264i",
+      "map_id_from_low": 264,
+      "scene_name_from_map": "m0264i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 738,
+      "context": [
+        "   +0x0E08 dest 0x31 0xA8082448 packed=m0428i idx=m0072i",
+        "   +0x0E14 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x0E2C skip0 cond_k=3 -> +0xE6C",
+        "   +0x0E3C mov k=[2, 0] imm=['0x4a', '0x2e2']",
+        ">> +0x0E60 dest 0x31 0xA8048448 packed=m0288i idx=m0264i",
+        "   +0x0E6C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0E84 skip0 cond_k=3 -> +0xEC4",
+        "   +0x0E94 mov k=[2, 0] imm=['0x4a', '0x2e2']",
+        "   +0x0EB8 dest 0x31 0xA80671C8 packed=m0373i idx=m0227i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0EB8",
+      "token": "0xA80671C8",
+      "packed_name": "m0373i",
+      "scene_index": 226,
+      "scene_name_from_index": "m0227i",
+      "map_id_from_low": 227,
+      "scene_name_from_map": "m0227i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 738,
+      "context": [
+        "   +0x0E60 dest 0x31 0xA8048448 packed=m0288i idx=m0264i",
+        "   +0x0E6C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0E84 skip0 cond_k=3 -> +0xEC4",
+        "   +0x0E94 mov k=[2, 0] imm=['0x4a', '0x2e2']",
+        ">> +0x0EB8 dest 0x31 0xA80671C8 packed=m0373i idx=m0227i",
+        "   +0x0EC4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x0EDC skip0 cond_k=3 -> +0xF0C",
+        "   +0x0F00 dest 0x31 0xA8049048 packed=m0290i idx=m0288i",
+        "   +0x0F0C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0F00",
+      "token": "0xA8049048",
+      "packed_name": "m0290i",
+      "scene_index": 287,
+      "scene_name_from_index": "m0288i",
+      "map_id_from_low": 288,
+      "scene_name_from_map": "m0288i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 738,
+      "context": [
+        "   +0x0EB8 dest 0x31 0xA80671C8 packed=m0373i idx=m0227i",
+        "   +0x0EC4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x0EDC skip0 cond_k=3 -> +0xF0C",
+        ">> +0x0F00 dest 0x31 0xA8049048 packed=m0290i idx=m0288i",
+        "   +0x0F0C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0F24 skip0 cond_k=3 -> +0xF54",
+        "   +0x0F48 dest 0x31 0xA8061148 packed=m0312i idx=m0034i",
+        "   +0x0F54 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0F48",
+      "token": "0xA8061148",
+      "packed_name": "m0312i",
+      "scene_index": 33,
+      "scene_name_from_index": "m0034i",
+      "map_id_from_low": 34,
+      "scene_name_from_map": "m0034i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 738,
+      "context": [
+        "   +0x0F00 dest 0x31 0xA8049048 packed=m0290i idx=m0288i",
+        "   +0x0F0C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0F24 skip0 cond_k=3 -> +0xF54",
+        ">> +0x0F48 dest 0x31 0xA8061148 packed=m0312i idx=m0034i",
+        "   +0x0F54 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x0F6C skip0 cond_k=3 -> +0xF9C",
+        "   +0x0F90 dest 0x31 0xA8061448 packed=m0318i idx=m0040i",
+        "   +0x0F9C mov k=[4, 0] imm=['0x12', '0x0']"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 3,
+      "pc": "+0x0F90",
+      "token": "0xA8061448",
+      "packed_name": "m0318i",
+      "scene_index": 39,
+      "scene_name_from_index": "m0040i",
+      "map_id_from_low": 40,
+      "scene_name_from_map": "m0040i",
+      "last_persist_0": null,
+      "last_persist_1": 9,
+      "last_persist_4a": 738,
+      "context": [
+        "   +0x0F48 dest 0x31 0xA8061148 packed=m0312i idx=m0034i",
+        "   +0x0F54 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x0F6C skip0 cond_k=3 -> +0xF9C",
+        ">> +0x0F90 dest 0x31 0xA8061448 packed=m0318i idx=m0040i",
+        "   +0x0F9C mov k=[4, 0] imm=['0x12', '0x0']",
+        "   +0x0FAC mail 0x1C(0,0,0xFF)"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x0200",
+      "token": "0xA8003348",
+      "packed_name": "m0036i",
+      "scene_index": 101,
+      "scene_name_from_index": "m0102i",
+      "map_id_from_low": 102,
+      "scene_name_from_map": "m0102i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 120,
+      "context": [
+        "   +0x01B4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x01CC skip0 cond_k=3 -> +0x20C",
+        "   +0x01DC mov k=[2, 0] imm=['0x4a', '0x78']",
+        ">> +0x0200 dest 0x31 0xA8003348 packed=m0036i idx=m0102i",
+        "   +0x020C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0224 skip0 cond_k=3 -> +0x264",
+        "   +0x0234 mov k=[2, 0] imm=['0x4a', '0xb8']",
+        "   +0x0258 dest 0x31 0xA8003448 packed=m0038i idx=m0104i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x0258",
+      "token": "0xA8003448",
+      "packed_name": "m0038i",
+      "scene_index": 103,
+      "scene_name_from_index": "m0104i",
+      "map_id_from_low": 104,
+      "scene_name_from_map": "m0104i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 184,
+      "context": [
+        "   +0x0200 dest 0x31 0xA8003348 packed=m0036i idx=m0102i",
+        "   +0x020C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x0224 skip0 cond_k=3 -> +0x264",
+        "   +0x0234 mov k=[2, 0] imm=['0x4a', '0xb8']",
+        ">> +0x0258 dest 0x31 0xA8003448 packed=m0038i idx=m0104i",
+        "   +0x0264 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x027C skip0 cond_k=3 -> +0x2BC",
+        "   +0x028C mov k=[2, 0] imm=['0x4a', '0xd0']",
+        "   +0x02B0 dest 0x31 0xA8004048 packed=m0040i idx=m0128i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x02B0",
+      "token": "0xA8004048",
+      "packed_name": "m0040i",
+      "scene_index": 127,
+      "scene_name_from_index": "m0128i",
+      "map_id_from_low": 128,
+      "scene_name_from_map": "m0128i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 208,
+      "context": [
+        "   +0x0258 dest 0x31 0xA8003448 packed=m0038i idx=m0104i",
+        "   +0x0264 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x027C skip0 cond_k=3 -> +0x2BC",
+        "   +0x028C mov k=[2, 0] imm=['0x4a', '0xd0']",
+        ">> +0x02B0 dest 0x31 0xA8004048 packed=m0040i idx=m0128i",
+        "   +0x02BC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x02D4 skip0 cond_k=3 -> +0x314",
+        "   +0x02E4 mov k=[2, 0] imm=['0x4a', '0xe0']",
+        "   +0x0308 dest 0x31 0xA80034C8 packed=m0039i idx=m0105i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x0308",
+      "token": "0xA80034C8",
+      "packed_name": "m0039i",
+      "scene_index": 104,
+      "scene_name_from_index": "m0105i",
+      "map_id_from_low": 105,
+      "scene_name_from_map": "m0105i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 224,
+      "context": [
+        "   +0x02B0 dest 0x31 0xA8004048 packed=m0040i idx=m0128i",
+        "   +0x02BC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x02D4 skip0 cond_k=3 -> +0x314",
+        "   +0x02E4 mov k=[2, 0] imm=['0x4a', '0xe0']",
+        ">> +0x0308 dest 0x31 0xA80034C8 packed=m0039i idx=m0105i",
+        "   +0x0314 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x032C skip0 cond_k=3 -> +0x36C",
+        "   +0x033C mov k=[2, 0] imm=['0x4a', '0x148']",
+        "   +0x0360 dest 0x31 0xA8003448 packed=m0038i idx=m0104i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x0360",
+      "token": "0xA8003448",
+      "packed_name": "m0038i",
+      "scene_index": 103,
+      "scene_name_from_index": "m0104i",
+      "map_id_from_low": 104,
+      "scene_name_from_map": "m0104i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 328,
+      "context": [
+        "   +0x0308 dest 0x31 0xA80034C8 packed=m0039i idx=m0105i",
+        "   +0x0314 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x6']",
+        "   +0x032C skip0 cond_k=3 -> +0x36C",
+        "   +0x033C mov k=[2, 0] imm=['0x4a', '0x148']",
+        ">> +0x0360 dest 0x31 0xA8003448 packed=m0038i idx=m0104i",
+        "   +0x036C mov k=[4, 0] imm=['0x12', '0x0']",
+        "   +0x037C mail 0x1C(0,0,0xFF)"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x0448",
+      "token": "0xA80033C8",
+      "packed_name": "m0037i",
+      "scene_index": 102,
+      "scene_name_from_index": "m0103i",
+      "map_id_from_low": 103,
+      "scene_name_from_map": "m0103i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 376,
+      "context": [
+        "   +0x03EC skip0 cond_k=3 -> +0x3FC",
+        "   +0x03FC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x1', '0x4', '0x1']",
+        "   +0x0414 skip0 cond_k=3 -> +0x454",
+        "   +0x0424 mov k=[2, 0] imm=['0x4a', '0x178']",
+        ">> +0x0448 dest 0x31 0xA80033C8 packed=m0037i idx=m0103i",
+        "   +0x0454 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x046C skip0 cond_k=3 -> +0x4AC",
+        "   +0x047C mov k=[2, 0] imm=['0x4a', '0x1c0']",
+        "   +0x04A0 dest 0x31 0xA80034C8 packed=m0039i idx=m0105i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x04A0",
+      "token": "0xA80034C8",
+      "packed_name": "m0039i",
+      "scene_index": 104,
+      "scene_name_from_index": "m0105i",
+      "map_id_from_low": 105,
+      "scene_name_from_map": "m0105i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 448,
+      "context": [
+        "   +0x0448 dest 0x31 0xA80033C8 packed=m0037i idx=m0103i",
+        "   +0x0454 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+        "   +0x046C skip0 cond_k=3 -> +0x4AC",
+        "   +0x047C mov k=[2, 0] imm=['0x4a', '0x1c0']",
+        ">> +0x04A0 dest 0x31 0xA80034C8 packed=m0039i idx=m0105i",
+        "   +0x04AC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x04C4 skip0 cond_k=3 -> +0x504",
+        "   +0x04D4 mov k=[2, 0] imm=['0x4a', '0x208']",
+        "   +0x04F8 dest 0x31 0xA80032C8 packed=m0035i idx=m0101i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x04F8",
+      "token": "0xA80032C8",
+      "packed_name": "m0035i",
+      "scene_index": 100,
+      "scene_name_from_index": "m0101i",
+      "map_id_from_low": 101,
+      "scene_name_from_map": "m0101i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 520,
+      "context": [
+        "   +0x04A0 dest 0x31 0xA80034C8 packed=m0039i idx=m0105i",
+        "   +0x04AC alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+        "   +0x04C4 skip0 cond_k=3 -> +0x504",
+        "   +0x04D4 mov k=[2, 0] imm=['0x4a', '0x208']",
+        ">> +0x04F8 dest 0x31 0xA80032C8 packed=m0035i idx=m0101i",
+        "   +0x0504 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x051C skip0 cond_k=3 -> +0x55C",
+        "   +0x052C mov k=[2, 0] imm=['0x4a', '0x298']",
+        "   +0x0550 dest 0x31 0xA80033C8 packed=m0037i idx=m0103i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x0550",
+      "token": "0xA80033C8",
+      "packed_name": "m0037i",
+      "scene_index": 102,
+      "scene_name_from_index": "m0103i",
+      "map_id_from_low": 103,
+      "scene_name_from_map": "m0103i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 664,
+      "context": [
+        "   +0x04F8 dest 0x31 0xA80032C8 packed=m0035i idx=m0101i",
+        "   +0x0504 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+        "   +0x051C skip0 cond_k=3 -> +0x55C",
+        "   +0x052C mov k=[2, 0] imm=['0x4a', '0x298']",
+        ">> +0x0550 dest 0x31 0xA80033C8 packed=m0037i idx=m0103i",
+        "   +0x055C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0574 skip0 cond_k=3 -> +0x5B4",
+        "   +0x0584 mov k=[2, 0] imm=['0x4a', '0x2a2']",
+        "   +0x05A8 dest 0x31 0xA80034C8 packed=m0039i idx=m0105i"
+      ]
+    },
+    {
+      "from": "m0360i",
+      "from_index": 359,
+      "module": 4,
+      "pc": "+0x05A8",
+      "token": "0xA80034C8",
+      "packed_name": "m0039i",
+      "scene_index": 104,
+      "scene_name_from_index": "m0105i",
+      "map_id_from_low": 105,
+      "scene_name_from_map": "m0105i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 674,
+      "context": [
+        "   +0x0550 dest 0x31 0xA80033C8 packed=m0037i idx=m0103i",
+        "   +0x055C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+        "   +0x0574 skip0 cond_k=3 -> +0x5B4",
+        "   +0x0584 mov k=[2, 0] imm=['0x4a', '0x2a2']",
+        ">> +0x05A8 dest 0x31 0xA80034C8 packed=m0039i idx=m0105i",
+        "   +0x05B4 mov k=[4, 0] imm=['0x12', '0x0']",
+        "   +0x05C4 mail 0x1C(0,0,0xFF)"
+      ]
+    },
+    {
+      "from": "m0367i",
+      "from_index": 366,
+      "module": 1,
+      "pc": "+0x02D8",
+      "token": "0xA80002C8",
+      "packed_name": "m0005i",
+      "scene_index": 4,
+      "scene_name_from_index": "m0005i",
+      "map_id_from_low": 5,
+      "scene_name_from_map": "m0005i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 39,
+      "context": [
+        "   +0x02C8 mov k=[2, 0] imm=['0x4a', '0x27']",
+        ">> +0x02D8 dest 0x31 0xA80002C8 packed=m0005i idx=m0005i",
+        "   +0x02EC alu eq k=[0, 3, 2, 0] imm=['0xb', '0x0', '0x4a', '0x5e']",
+        "   +0x0304 skip0 cond_k=3 -> +0x428"
+      ]
+    },
+    {
+      "from": "m0367i",
+      "from_index": 366,
+      "module": 1,
+      "pc": "+0x0414",
+      "token": "0xA80614C8",
+      "packed_name": "m0319i",
+      "scene_index": 40,
+      "scene_name_from_index": "m0041i",
+      "map_id_from_low": 41,
+      "scene_name_from_map": "m0041i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 95,
+      "context": [
+        "   +0x0404 mov k=[2, 0] imm=['0x4a', '0x5f']",
+        ">> +0x0414 dest 0x31 0xA80614C8 packed=m0319i idx=m0041i",
+        "   +0x0428 alu eq k=[0, 3, 2, 0] imm=['0xb', '0x0', '0x4a', '0xcd']",
+        "   +0x0440 skip0 cond_k=3 -> +0x520"
+      ]
+    },
+    {
+      "from": "m0367i",
+      "from_index": 366,
+      "module": 1,
+      "pc": "+0x050C",
+      "token": "0xA80434C8",
+      "packed_name": "m0239i",
+      "scene_index": 104,
+      "scene_name_from_index": "m0105i",
+      "map_id_from_low": 105,
+      "scene_name_from_map": "m0105i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 206,
+      "context": [
+        "   +0x04FC mov k=[2, 0] imm=['0x4a', '0xce']",
+        ">> +0x050C dest 0x31 0xA80434C8 packed=m0239i idx=m0105i",
+        "   +0x0520 alu eq k=[0, 3, 2, 0] imm=['0xb', '0x0', '0x4a', '0x11b']",
+        "   +0x0538 skip0 cond_k=3 -> +0x864"
+      ]
+    },
+    {
+      "from": "m0367i",
+      "from_index": 366,
+      "module": 1,
+      "pc": "+0x0850",
+      "token": "0xA8005448",
+      "packed_name": "m0058i",
+      "scene_index": 167,
+      "scene_name_from_index": "m0168i",
+      "map_id_from_low": 168,
+      "scene_name_from_map": "m0168i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 284,
+      "context": [
+        "   +0x0840 mov k=[2, 0] imm=['0x4a', '0x11c']",
+        ">> +0x0850 dest 0x31 0xA8005448 packed=m0058i idx=m0168i",
+        "   +0x0864 alu eq k=[0, 3, 2, 0] imm=['0xb', '0x0', '0x4a', '0x29e']",
+        "   +0x087C skip0 cond_k=3 -> +0xA3C"
+      ]
+    },
+    {
+      "from": "m0367i",
+      "from_index": 366,
+      "module": 1,
+      "pc": "+0x0A28",
+      "token": "0xA80032C8",
+      "packed_name": "m0035i",
+      "scene_index": 100,
+      "scene_name_from_index": "m0101i",
+      "map_id_from_low": 101,
+      "scene_name_from_map": "m0101i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 671,
+      "context": [
+        "   +0x0A18 mov k=[2, 0] imm=['0x4a', '0x29f']",
+        ">> +0x0A28 dest 0x31 0xA80032C8 packed=m0035i idx=m0101i",
+        "   +0x0A3C alu slt_ab k=[0, 3, 2, 0] imm=['0xa', '0x0', '0x4a', '0x208']",
+        "   +0x0A54 skip0 cond_k=3 -> +0xDD0",
+        "   +0x0A64 alu and k=[0, 3, 2, 0] imm=['0x3', '0x1', '0x43', '0x4000']",
+        "   +0x0A7C skip0 cond_k=3 -> +0xDD0"
+      ]
+    },
+    {
+      "from": "m0367i",
+      "from_index": 366,
+      "module": 1,
+      "pc": "+0x0DC4",
+      "token": "0xA8023348",
+      "packed_name": "m0136i",
+      "scene_index": 101,
+      "scene_name_from_index": "m0102i",
+      "map_id_from_low": 102,
+      "scene_name_from_map": "m0102i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 671,
+      "context": [
+        ">> +0x0DC4 dest 0x31 0xA8023348 packed=m0136i idx=m0102i"
+      ]
+    },
+    {
+      "from": "m0372i",
+      "from_index": 371,
+      "module": 1,
+      "pc": "+0x03B0",
+      "token": "0xA8000248",
+      "packed_name": "m0004i",
+      "scene_index": 3,
+      "scene_name_from_index": "m0004i",
+      "map_id_from_low": 4,
+      "scene_name_from_map": "m0004i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 18,
+      "context": [
+        "   +0x0380 mov k=[2, 0] imm=['0x4a', '0x12']",
+        ">> +0x03B0 dest 0x31 0xA8000248 packed=m0004i idx=m0004i"
+      ]
+    },
+    {
+      "from": "m0372i",
+      "from_index": 371,
+      "module": 3,
+      "pc": "+0x04D0",
+      "token": "0xA8000248",
+      "packed_name": "m0004i",
+      "scene_index": 3,
+      "scene_name_from_index": "m0004i",
+      "map_id_from_low": 4,
+      "scene_name_from_map": "m0004i",
+      "last_persist_0": null,
+      "last_persist_1": null,
+      "last_persist_4a": 18,
+      "context": [
+        "   +0x04C0 mov k=[2, 0] imm=['0x4a', '0x12']",
+        ">> +0x04D0 dest 0x31 0xA8000248 packed=m0004i idx=m0004i",
+        "   +0x04F8 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x10']",
+        "   +0x0510 skip0 cond_k=3 -> +0x530"
+      ]
+    },
+    {
+      "from": "m0377i",
+      "from_index": 376,
+      "module": 5,
+      "pc": "+0x00C0",
+      "token": "0xA8067448",
+      "packed_name": "m0378i",
+      "scene_index": 231,
+      "scene_name_from_index": "m0232i",
+      "map_id_from_low": 232,
+      "scene_name_from_map": "m0232i",
+      "last_persist_0": null,
+      "last_persist_1": 377,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x007C skip0 cond_k=3 -> +0xD4",
+        "   +0x00B0 mov k=[2, 0] imm=['0x1', '0x179']",
+        ">> +0x00C0 dest 0x31 0xA8067448 packed=m0378i idx=m0232i"
+      ]
+    },
+    {
+      "from": "m0378i",
+      "from_index": 377,
+      "module": 0,
+      "pc": "+0x0374",
+      "token": "0xA8000248",
+      "packed_name": "m0004i",
+      "scene_index": 3,
+      "scene_name_from_index": "m0004i",
+      "map_id_from_low": 4,
+      "scene_name_from_map": "m0004i",
+      "last_persist_0": null,
+      "last_persist_1": 378,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x0364 mov k=[2, 0] imm=['0x1', '0x17a']",
+        ">> +0x0374 dest 0x31 0xA8000248 packed=m0004i idx=m0004i"
+      ]
+    },
+    {
+      "from": "m0378i",
+      "from_index": 377,
+      "module": 4,
+      "pc": "+0x00F0",
+      "token": "0xA80673C8",
+      "packed_name": "m0377i",
+      "scene_index": 230,
+      "scene_name_from_index": "m0231i",
+      "map_id_from_low": 231,
+      "scene_name_from_map": "m0231i",
+      "last_persist_0": null,
+      "last_persist_1": 378,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x00A4 alu slt_ab k=[0, 3, 2, 0] imm=['0xa', '0x0', '0x4a', '0x30']",
+        "   +0x00BC skip0 cond_k=3 -> +0x108",
+        "   +0x00E0 mov k=[2, 0] imm=['0x1', '0x17a']",
+        ">> +0x00F0 dest 0x31 0xA80673C8 packed=m0377i idx=m0231i",
+        "   +0x011C mov k=[2, 0] imm=['0x1', '0x17a']",
+        "   +0x012C dest 0x31 0xA80000C8 packed=m0001i idx=None"
+      ]
+    },
+    {
+      "from": "m0378i",
+      "from_index": 377,
+      "module": 4,
+      "pc": "+0x012C",
+      "token": "0xA80000C8",
+      "packed_name": "m0001i",
+      "scene_index": null,
+      "scene_name_from_index": null,
+      "map_id_from_low": 1,
+      "scene_name_from_map": "m0001i",
+      "last_persist_0": null,
+      "last_persist_1": 378,
+      "last_persist_4a": null,
+      "context": [
+        "   +0x00E0 mov k=[2, 0] imm=['0x1', '0x17a']",
+        "   +0x00F0 dest 0x31 0xA80673C8 packed=m0377i idx=m0231i",
+        "   +0x011C mov k=[2, 0] imm=['0x1', '0x17a']",
+        ">> +0x012C dest 0x31 0xA80000C8 packed=m0001i idx=None",
+        "   +0x0170 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xfcc20000', '0xdd60000', '0xfcc20000', '0x12220000', '0x15e0000', '0x12220000', '0x15e0000', '0xdd60000', '0x0', '0x2', '0x4']",
+        "   +0x01A4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "   +0x01BC skip0 cond_k=3 -> +0x1E8"
+      ]
+    }
+  ],
+  "inbound_m0360i": [],
+  "persist0_theater": [
+    {
+      "scene": "m0001i",
+      "module": 0,
+      "pc": "+0x0108",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4,
+      "imm_a": null
+    },
+    {
+      "scene": "m0001i",
+      "module": 0,
+      "pc": "+0x01B0",
+      "rw": "read",
+      "index": 0,
+      "op": "or",
+      "sub": 2,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null
+    },
+    {
+      "scene": "m0001i",
+      "module": 0,
+      "pc": "+0x01C8",
+      "rw": "write",
+      "index": 0,
+      "op": "assign",
+      "src_kind": 3,
+      "value": null
+    },
+    {
+      "scene": "m0002i",
+      "module": 0,
+      "pc": "+0x01B8",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null
+    },
+    {
+      "scene": "m0002i",
+      "module": 0,
+      "pc": "+0x0230",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4294967293,
+      "imm_a": null
+    },
+    {
+      "scene": "m0002i",
+      "module": 0,
+      "pc": "+0x0248",
+      "rw": "write",
+      "index": 0,
+      "op": "assign",
+      "src_kind": 3,
+      "value": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 0,
+      "pc": "+0x0320",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 0,
+      "pc": "+0x0500",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4294967293,
+      "imm_a": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 0,
+      "pc": "+0x0518",
+      "rw": "write",
+      "index": 0,
+      "op": "assign",
+      "src_kind": 3,
+      "value": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 1,
+      "pc": "+0x0100",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x0370",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x05B4",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4294967293,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x05CC",
+      "rw": "write",
+      "index": 0,
+      "op": "assign",
+      "src_kind": 3,
+      "value": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x08F8",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x09A0",
+      "rw": "read",
+      "index": 0,
+      "op": "or",
+      "sub": 2,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x09B8",
+      "rw": "write",
+      "index": 0,
+      "op": "assign",
+      "src_kind": 3,
+      "value": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x0D98",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null
+    },
+    {
+      "scene": "m0360i",
+      "module": 2,
+      "pc": "+0x040C",
+      "rw": "read",
+      "index": 0,
+      "op": "or",
+      "sub": 2,
+      "arg_i": 2,
+      "imm_b": 4,
+      "imm_a": null
+    },
+    {
+      "scene": "m0360i",
+      "module": 2,
+      "pc": "+0x0424",
+      "rw": "write",
+      "index": 0,
+      "op": "assign",
+      "src_kind": 3,
+      "value": null
+    },
+    {
+      "scene": "m0372i",
+      "module": 3,
+      "pc": "+0x013C",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4,
+      "imm_a": null
+    },
+    {
+      "scene": "m0372i",
+      "module": 3,
+      "pc": "+0x01EC",
+      "rw": "read",
+      "index": 0,
+      "op": "or",
+      "sub": 2,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null
+    },
+    {
+      "scene": "m0372i",
+      "module": 3,
+      "pc": "+0x0204",
+      "rw": "write",
+      "index": 0,
+      "op": "assign",
+      "src_kind": 3,
+      "value": null
+    }
+  ],
+  "persist0_bit4_theater": [
+    {
+      "scene": "m0001i",
+      "module": 0,
+      "pc": "+0x0108",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x08F8",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4,
+      "imm_a": null
+    },
+    {
+      "scene": "m0360i",
+      "module": 2,
+      "pc": "+0x040C",
+      "rw": "read",
+      "index": 0,
+      "op": "or",
+      "sub": 2,
+      "arg_i": 2,
+      "imm_b": 4,
+      "imm_a": null
+    },
+    {
+      "scene": "m0372i",
+      "module": 3,
+      "pc": "+0x013C",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4,
+      "imm_a": null
+    }
+  ],
+  "persist4a_theater": [
+    {
+      "scene": "m0002i",
+      "module": 0,
+      "pc": "+0x016C",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 9,
+      "imm_a": null
+    },
+    {
+      "scene": "m0002i",
+      "module": 0,
+      "pc": "+0x0258",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 9
+    },
+    {
+      "scene": "m0002i",
+      "module": 1,
+      "pc": "+0x00D0",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 9,
+      "imm_a": null
+    },
+    {
+      "scene": "m0002i",
+      "module": 1,
+      "pc": "+0x012C",
+      "rw": "read",
+      "index": 74,
+      "op": "sge_ab",
+      "sub": 12,
+      "arg_i": 2,
+      "imm_b": 9,
+      "imm_a": null
+    },
+    {
+      "scene": "m0002i",
+      "module": 2,
+      "pc": "+0x00EC",
+      "rw": "read",
+      "index": 74,
+      "op": "sge_ab",
+      "sub": 12,
+      "arg_i": 2,
+      "imm_b": 9,
+      "imm_a": null
+    },
+    {
+      "scene": "m0003i",
+      "module": 0,
+      "pc": "+0x0540",
+      "rw": "read",
+      "index": 74,
+      "op": "sge_ab",
+      "sub": 12,
+      "arg_i": 2,
+      "imm_b": 17,
+      "imm_a": null
+    },
+    {
+      "scene": "m0003i",
+      "module": 1,
+      "pc": "+0x0084",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 24,
+      "imm_a": null
+    },
+    {
+      "scene": "m0003i",
+      "module": 5,
+      "pc": "+0x00A4",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 48,
+      "imm_a": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 0,
+      "pc": "+0x005C",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 24,
+      "imm_a": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 0,
+      "pc": "+0x02D4",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 24,
+      "imm_a": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 0,
+      "pc": "+0x0528",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 24
+    },
+    {
+      "scene": "m0004i",
+      "module": 1,
+      "pc": "+0x00BC",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 40,
+      "imm_a": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 1,
+      "pc": "+0x0140",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 24,
+      "imm_a": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 1,
+      "pc": "+0x0190",
+      "rw": "read",
+      "index": 74,
+      "op": "sge_ab",
+      "sub": 12,
+      "arg_i": 2,
+      "imm_b": 24,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x022C",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 39,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x02F4",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 39,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x05DC",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 40
+    },
+    {
+      "scene": "m0005i",
+      "module": 0,
+      "pc": "+0x1054",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 38
+    },
+    {
+      "scene": "m0005i",
+      "module": 1,
+      "pc": "+0x0104",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 40,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 1,
+      "pc": "+0x0148",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 39,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 1,
+      "pc": "+0x0198",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 39,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 3,
+      "pc": "+0x01E4",
+      "rw": "read",
+      "index": 74,
+      "op": "sge_ab",
+      "sub": 12,
+      "arg_i": 2,
+      "imm_b": 40,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 4,
+      "pc": "+0x008C",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 40,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 4,
+      "pc": "+0x00B4",
+      "rw": "read",
+      "index": 74,
+      "op": "sge_ab",
+      "sub": 12,
+      "arg_i": 2,
+      "imm_b": 17,
+      "imm_a": null
+    },
+    {
+      "scene": "m0005i",
+      "module": 4,
+      "pc": "+0x00DC",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 40
+    },
+    {
+      "scene": "m0064i",
+      "module": 1,
+      "pc": "+0x0114",
+      "rw": "read",
+      "index": 74,
+      "op": "sge_ab",
+      "sub": 12,
+      "arg_i": 2,
+      "imm_b": 240,
+      "imm_a": null
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x01DC",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 0
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x028C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 104
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x02E4",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 112
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x033C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 136
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0458",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 192
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x04B0",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 216
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0508",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 228
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0560",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 288
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x05B8",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 296
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x06D4",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 304
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x072C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 352
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0784",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 384
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x07DC",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 456
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0834",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 528
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0950",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 544
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x09F0",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 568
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0B9C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 600
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0BF4",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 676
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0C4C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 680
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0CA4",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 688
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0CFC",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 714
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0DF8",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 730
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0E3C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 738
+    },
+    {
+      "scene": "m0360i",
+      "module": 3,
+      "pc": "+0x0E94",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 738
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x01DC",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 120
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x0234",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 184
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x028C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 208
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x02E4",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 224
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x033C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 328
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x0424",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 376
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x047C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 448
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x04D4",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 520
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x052C",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 664
+    },
+    {
+      "scene": "m0360i",
+      "module": 4,
+      "pc": "+0x0584",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 674
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x002C",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 38,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x0070",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 94,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x00D0",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 205,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x0130",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 670,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x01E8",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 38,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x02C8",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 39
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x02EC",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 94,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x0404",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 95
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x0428",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 205,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x04FC",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 206
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x0520",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 283,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x0840",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 284
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x0864",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 670,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x0A18",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 671
+    },
+    {
+      "scene": "m0367i",
+      "module": 1,
+      "pc": "+0x0A3C",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 520,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 4,
+      "pc": "+0x0098",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 205,
+      "imm_a": null
+    },
+    {
+      "scene": "m0367i",
+      "module": 4,
+      "pc": "+0x011C",
+      "rw": "read",
+      "index": 74,
+      "op": "eq",
+      "sub": 11,
+      "arg_i": 2,
+      "imm_b": 283,
+      "imm_a": null
+    },
+    {
+      "scene": "m0372i",
+      "module": 1,
+      "pc": "+0x0380",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 18
+    },
+    {
+      "scene": "m0372i",
+      "module": 2,
+      "pc": "+0x02CC",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 17
+    },
+    {
+      "scene": "m0372i",
+      "module": 3,
+      "pc": "+0x00CC",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 16,
+      "imm_a": null
+    },
+    {
+      "scene": "m0372i",
+      "module": 3,
+      "pc": "+0x04C0",
+      "rw": "write",
+      "index": 74,
+      "op": "assign",
+      "src_kind": 0,
+      "value": 18
+    },
+    {
+      "scene": "m0378i",
+      "module": 1,
+      "pc": "+0x00A4",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ba",
+      "sub": 9,
+      "arg_i": 2,
+      "imm_b": 120,
+      "imm_a": null
+    },
+    {
+      "scene": "m0378i",
+      "module": 4,
+      "pc": "+0x00A4",
+      "rw": "read",
+      "index": 74,
+      "op": "slt_ab",
+      "sub": 10,
+      "arg_i": 2,
+      "imm_b": 48,
+      "imm_a": null
+    }
+  ],
+  "m0004i_persist0": [
+    {
+      "scene": "m0004i",
+      "module": 0,
+      "pc": "+0x0320",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null,
+      "line": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 0,
+      "pc": "+0x0500",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 4294967293,
+      "imm_a": null,
+      "line": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 0,
+      "pc": "+0x0518",
+      "rw": "write",
+      "index": 0,
+      "op": "assign",
+      "src_kind": 3,
+      "value": null,
+      "line": null
+    },
+    {
+      "scene": "m0004i",
+      "module": 1,
+      "pc": "+0x0100",
+      "rw": "read",
+      "index": 0,
+      "op": "and",
+      "sub": 3,
+      "arg_i": 2,
+      "imm_b": 2,
+      "imm_a": null,
+      "line": null
+    }
+  ],
+  "m0372i_bit4_lines": [
+    "+0x013C alu and k=[0, 3, 2, 0] imm=['0x3', '0x0', '0x0', '0x4']"
+  ],
+  "m0360i_module2": [
+    "+0x0000 op1E argc=0 k=[] imm=[]",
+    "+0x0008 op14 argc=2 k=[0, 0] imm=['0x1', '0x2e']",
+    "+0x0018 op0B argc=4 k=[0, 0, 0, 0] imm=['0x0', '0xfedf0000', '0x0', '0x14e0000']",
+    "+0x0030 op0B argc=4 k=[0, 0, 0, 0] imm=['0x5', '0x0', '0x400', '0x0']",
+    "+0x0048 op02 argc=1 k=[0] imm=['0x1']",
+    "+0x0054 op20 argc=0 k=[] imm=[]",
+    "+0x005C op24 argc=2 k=[1, 1] imm=['0x0', '0x1']",
+    "+0x006C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x0', '0x0']",
+    "+0x0084 skip0 cond_k=3 -> +0x4F0",
+    "+0x0094 alu eq k=[0, 3, 4, 0] imm=['0xb', '0x1', '0x12', '0x0']",
+    "+0x00AC skip0 cond_k=3 -> +0x4F0",
+    "+0x00BC op11 argc=3 k=[0, 0, 1] imm=['0x1', '0x100', '0x2']",
+    "+0x00D0 alu ne k=[0, 3, 1, 0] imm=['0xe', '0x0', '0x2', '0x0']",
+    "+0x00E8 skip0 cond_k=3 -> +0x4E0",
+    "+0x00F8 mov k=[4, 0] imm=['0x12', '0x1']",
+    "+0x0108 mail 0x1C(0,0,0xFE)",
+    "+0x011C opD0 argc=4 k=[0, 0, 0, 0] imm=['0x10', '0x6e', '0x120', '0x5c']",
+    "+0x0134 opD1 argc=1 k=[0] imm=['0xa9']",
+    "+0x0140 op22 argc=1 k=[0] imm=['0xa9']",
+    "+0x014C op43 argc=1 k=[1] imm=['0x4']",
+    "+0x0158 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x0']",
+    "+0x0170 skip0 cond_k=3 -> +0x180",
+    "+0x0180 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x1', '0x4', '0x1']",
+    "+0x0198 skip0 cond_k=3 -> +0x1B8",
+    "+0x01A8 op2A argc=2 k=[2, 0] imm=['0xa', '0x1f']",
+    "+0x01B8 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x2']",
+    "+0x01D0 skip0 cond_k=3 -> +0x1F0",
+    "+0x01E0 op28 argc=2 k=[2, 0] imm=['0xa', '0x1f']",
+    "+0x01F0 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x3']",
+    "+0x0208 skip0 cond_k=3 -> +0x3E4",
+    "+0x0218 opA7 argc=2 k=[0, 1] imm=['0x67', '0x7']",
+    "+0x0228 opA7 argc=2 k=[0, 1] imm=['0xc7', '0x7']",
+    "+0x0238 opA7 argc=2 k=[0, 1] imm=['0x67', '0x7']",
+    "+0x0248 opA7 argc=2 k=[0, 1] imm=['0x80', '0x7']",
+    "+0x0258 opA7 argc=2 k=[0, 1] imm=['0x8f', '0x7']",
+    "+0x0268 opA7 argc=2 k=[0, 1] imm=['0x90', '0x7']",
+    "+0x0278 opA7 argc=2 k=[0, 1] imm=['0x6b', '0x7']",
+    "+0x0288 opA7 argc=2 k=[0, 1] imm=['0xad', '0x7']",
+    "+0x0298 opA7 argc=2 k=[0, 1] imm=['0xb3', '0x7']",
+    "+0x02A8 opA7 argc=2 k=[0, 1] imm=['0xba', '0x7']",
+    "+0x02B8 opA7 argc=2 k=[0, 1] imm=['0x17', '0x7']",
+    "+0x02C8 opA7 argc=2 k=[0, 1] imm=['0x17', '0x7']",
+    "+0x02D8 opA7 argc=2 k=[0, 1] imm=['0x17', '0x7']",
+    "+0x02E8 opA7 argc=2 k=[0, 1] imm=['0x17', '0x7']",
+    "+0x02F8 opA7 argc=2 k=[0, 1] imm=['0x17', '0x7']",
+    "+0x0308 opA7 argc=2 k=[0, 1] imm=['0x17', '0x7']",
+    "+0x0318 opA7 argc=2 k=[0, 1] imm=['0x17', '0x7']",
+    "+0x0328 opA7 argc=2 k=[0, 1] imm=['0x3', '0x7']",
+    "+0x0338 opA7 argc=2 k=[0, 1] imm=['0x3', '0x7']",
+    "+0x0348 opA7 argc=2 k=[0, 1] imm=['0x3', '0x7']",
+    "+0x0358 opA7 argc=2 k=[0, 1] imm=['0x5', '0x7']",
+    "+0x0368 opA7 argc=2 k=[0, 1] imm=['0x5', '0x7']",
+    "+0x0378 opA7 argc=2 k=[0, 1] imm=['0x5', '0x7']",
+    "+0x0388 opA7 argc=2 k=[0, 1] imm=['0x5', '0x7']",
+    "+0x0398 opA7 argc=2 k=[0, 1] imm=['0x5', '0x7']",
+    "+0x03A8 opA7 argc=2 k=[0, 1] imm=['0x5', '0x7']",
+    "+0x03B8 opA7 argc=2 k=[0, 1] imm=['0x5', '0x7']",
+    "+0x03C8 opA7 argc=2 k=[0, 1] imm=['0x5', '0x7']",
+    "+0x03D8 opA6 argc=1 k=[0] imm=['0x1ff']",
+    "+0x03E4 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x4']",
+    "+0x03FC skip0 cond_k=3 -> +0x440",
+    "+0x040C alu or k=[0, 3, 2, 0] imm=['0x2', '0x1', '0x0', '0x4']",
+    "+0x0424 mov k=[2, 3] imm=['0x0', '0x1']",
+    "+0x0434 opA6 argc=1 k=[0] imm=['0x1ff']",
+    "+0x0440 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x5']",
+    "+0x0458 skip0 cond_k=3 -> +0x4CC",
+    "+0x0468 op0D argc=1 k=[0] imm=['0xb6']",
+    "+0x0474 op22 argc=1 k=[0] imm=['0xb6']",
+    "+0x0480 op43 argc=1 k=[1] imm=['0x4']",
+    "+0x048C alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x0']",
+    "+0x04A4 skip0 cond_k=3 -> +0x4CC",
+    "+0x04B4 mov k=[2, 0] imm=['0x1', '0x3e6']",
+    "+0x04C4 opE7 argc=0 k=[] imm=[]",
+    "+0x04CC mail 0x1C(0,0,0xFF)",
+    "+0x04E0 mov k=[4, 0] imm=['0x12', '0x0']",
+    "+0x04F0 op20 argc=0 k=[] imm=[]"
+  ],
+  "type4_0x77": [
+    {
+      "module": 3,
+      "rel": 48,
+      "argc": 11,
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms_hex": [
+        "0x9940000",
+        "0x4CD0000",
+        "0x9940000",
+        "0x63D0000",
+        "0x80A0000",
+        "0x63D0000",
+        "0x80A0000",
+        "0x4CD0000",
+        "0x0",
+        "0x2",
+        "0x4"
+      ],
+      "s16_imms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        4
+      ],
+      "hi16": [
+        2452,
+        1229,
+        2452,
+        1597,
+        2058,
+        1597,
+        2058,
+        1229,
+        0,
+        0,
+        0
+      ],
+      "window": [
+        "+0x0000 op02 argc=1 k=[0] imm=['0x1']",
+        "+0x000C op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+        "+0x0030 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x9940000', '0x4cd0000', '0x9940000', '0x63d0000', '0x80a0000', '0x63d0000', '0x80a0000', '0x4cd0000', '0x0', '0x2', '0x4']",
+        "+0x0064 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "+0x007C skip0 cond_k=3 -> +0xF8",
+        "+0x008C alu or k=[0, 3, 2, 0] imm=['0x2', '0x1', '0x18', '0x1']",
+        "+0x00A4 mov k=[2, 3] imm=['0x18', '0x1']",
+        "+0x00B4 mail 0x1C(0,0,0xFE)",
+        "+0x00C8 op85 argc=1 k=[0] imm=['0x1e']",
+        "+0x00D4 op9C argc=0 k=[] imm=[]",
+        "+0x00DC mov k=[2, 0] imm=['0x1', '0x5']",
+        "+0x00EC dest 0x31 0xA8000248 packed=m0004i idx=m0004i",
+        "+0x00F8 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+        "+0x011C vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xf7b10000', '0x4780000', '0xf7b10000', '0x61e0000', '0xf60d0000', '0x61e0000', '0xf60d0000', '0x4780000', '0x0', '0x2', '0x4']"
+      ]
+    },
+    {
+      "module": 3,
+      "rel": 284,
+      "argc": 11,
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms_hex": [
+        "0xF7B10000",
+        "0x4780000",
+        "0xF7B10000",
+        "0x61E0000",
+        "0xF60D0000",
+        "0x61E0000",
+        "0xF60D0000",
+        "0x4780000",
+        "0x0",
+        "0x2",
+        "0x4"
+      ],
+      "s16_imms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        4
+      ],
+      "hi16": [
+        -2127,
+        1144,
+        -2127,
+        1566,
+        -2547,
+        1566,
+        -2547,
+        1144,
+        0,
+        0,
+        0
+      ],
+      "window": [
+        "+0x00D4 op9C argc=0 k=[] imm=[]",
+        "+0x00DC mov k=[2, 0] imm=['0x1', '0x5']",
+        "+0x00EC dest 0x31 0xA8000248 packed=m0004i idx=m0004i",
+        "+0x00F8 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+        "+0x011C vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xf7b10000', '0x4780000', '0xf7b10000', '0x61e0000', '0xf60d0000', '0x61e0000', '0xf60d0000', '0x4780000', '0x0', '0x2', '0x4']",
+        "+0x0150 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "+0x0168 skip0 cond_k=3 -> +0x1E4",
+        "+0x0178 alu and k=[0, 3, 2, 0] imm=['0x3', '0x1', '0x18', '0xfffffffe']",
+        "+0x0190 mov k=[2, 3] imm=['0x18', '0x1']",
+        "+0x01A0 mail 0x1C(0,0,0xFE)",
+        "+0x01B4 op85 argc=1 k=[0] imm=['0x1e']",
+        "+0x01C0 op9C argc=0 k=[] imm=[]",
+        "+0x01C8 mov k=[2, 0] imm=['0x1', '0x5']",
+        "+0x01D8 dest 0x31 0xA8000248 packed=m0004i idx=m0004i",
+        "+0x01E4 alu sge_ab k=[0, 3, 2, 0] imm=['0xc', '0x0', '0x4a', '0x28']",
+        "+0x01FC skip0 cond_k=3 -> +0x3E4"
+      ]
+    },
+    {
+      "module": 3,
+      "rel": 560,
+      "argc": 11,
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms_hex": [
+        "0xA7C0000",
+        "0xA90000",
+        "0xA7C0000",
+        "0x3690000",
+        "0x84B0000",
+        "0x3690000",
+        "0x84B0000",
+        "0xA90000",
+        "0x0",
+        "0x2",
+        "0x4"
+      ],
+      "s16_imms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        4
+      ],
+      "hi16": [
+        2684,
+        169,
+        2684,
+        873,
+        2123,
+        873,
+        2123,
+        169,
+        0,
+        0,
+        0
+      ],
+      "window": [
+        "+0x01D8 dest 0x31 0xA8000248 packed=m0004i idx=m0004i",
+        "+0x01E4 alu sge_ab k=[0, 3, 2, 0] imm=['0xc', '0x0', '0x4a', '0x28']",
+        "+0x01FC skip0 cond_k=3 -> +0x3E4",
+        "+0x020C op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+        "+0x0230 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xa7c0000', '0xa90000', '0xa7c0000', '0x3690000', '0x84b0000', '0x3690000', '0x84b0000', '0xa90000', '0x0', '0x2', '0x4']",
+        "+0x0264 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "+0x027C skip0 cond_k=3 -> +0x2F8",
+        "+0x028C alu or k=[0, 3, 2, 0] imm=['0x2', '0x1', '0x18', '0x1']",
+        "+0x02A4 mov k=[2, 3] imm=['0x18', '0x1']",
+        "+0x02B4 mail 0x1C(0,0,0xFE)",
+        "+0x02C8 op85 argc=1 k=[0] imm=['0x1e']",
+        "+0x02D4 op9C argc=0 k=[] imm=[]",
+        "+0x02DC mov k=[2, 0] imm=['0x1', '0x5']",
+        "+0x02EC dest 0x31 0xA80004C8 packed=m0009i idx=m0009i",
+        "+0x02F8 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+        "+0x031C vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xf7ba0000', '0x70000', '0xf7ba0000', '0x2f00000', '0xf67b0000', '0x2f00000', '0xf67b0000', '0x70000', '0x0', '0x2', '0x4']"
+      ]
+    },
+    {
+      "module": 3,
+      "rel": 796,
+      "argc": 11,
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms_hex": [
+        "0xF7BA0000",
+        "0x70000",
+        "0xF7BA0000",
+        "0x2F00000",
+        "0xF67B0000",
+        "0x2F00000",
+        "0xF67B0000",
+        "0x70000",
+        "0x0",
+        "0x2",
+        "0x4"
+      ],
+      "s16_imms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        4
+      ],
+      "hi16": [
+        -2118,
+        7,
+        -2118,
+        752,
+        -2437,
+        752,
+        -2437,
+        7,
+        0,
+        0,
+        0
+      ],
+      "window": [
+        "+0x02D4 op9C argc=0 k=[] imm=[]",
+        "+0x02DC mov k=[2, 0] imm=['0x1', '0x5']",
+        "+0x02EC dest 0x31 0xA80004C8 packed=m0009i idx=m0009i",
+        "+0x02F8 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+        "+0x031C vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xf7ba0000', '0x70000', '0xf7ba0000', '0x2f00000', '0xf67b0000', '0x2f00000', '0xf67b0000', '0x70000', '0x0', '0x2', '0x4']",
+        "+0x0350 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "+0x0368 skip0 cond_k=3 -> +0x3E4",
+        "+0x0378 alu and k=[0, 3, 2, 0] imm=['0x3', '0x1', '0x18', '0xfffffffe']",
+        "+0x0390 mov k=[2, 3] imm=['0x18', '0x1']",
+        "+0x03A0 mail 0x1C(0,0,0xFE)",
+        "+0x03B4 op85 argc=1 k=[0] imm=['0x1e']",
+        "+0x03C0 op9C argc=0 k=[] imm=[]",
+        "+0x03C8 mov k=[2, 0] imm=['0x1', '0x5']",
+        "+0x03D8 dest 0x31 0xA80004C8 packed=m0009i idx=m0009i",
+        "+0x03E4 op02 argc=1 k=[0] imm=['0x1']",
+        "+0x03F0 goto +0xC"
+      ]
+    },
+    {
+      "module": 4,
+      "rel": 48,
+      "argc": 11,
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms_hex": [
+        "0x3E30000",
+        "0xFF360000",
+        "0x3E30000",
+        "0x9180000",
+        "0xFCCC0000",
+        "0x9180000",
+        "0xFCCC0000",
+        "0xFF360000",
+        "0x0",
+        "0x2",
+        "0x4"
+      ],
+      "s16_imms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        4
+      ],
+      "hi16": [
+        995,
+        -202,
+        995,
+        2328,
+        -820,
+        2328,
+        -820,
+        -202,
+        0,
+        0,
+        0
+      ],
+      "window": [
+        "+0x0000 op02 argc=1 k=[0] imm=['0x1']",
+        "+0x000C op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+        "+0x0030 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x3e30000', '0xff360000', '0x3e30000', '0x9180000', '0xfccc0000', '0x9180000', '0xfccc0000', '0xff360000', '0x0', '0x2', '0x4']",
+        "+0x0064 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x0', '0x4', '0x1']",
+        "+0x007C skip0 cond_k=3 -> +0x108",
+        "+0x008C alu slt_ab k=[0, 3, 2, 0] imm=['0xa', '0x1', '0x4a', '0x28']",
+        "+0x00A4 skip0 cond_k=3 -> +0x108",
+        "+0x00B4 alu sge_ab k=[0, 3, 2, 0] imm=['0xc', '0x2', '0x4a', '0x11']",
+        "+0x00CC skip0 cond_k=3 -> +0x108",
+        "+0x00DC mov k=[2, 0] imm=['0x4a', '0x28']",
+        "+0x00EC mail 0x1C(0,0,0x0D)",
+        "+0x0100 op01 argc=0 k=[] imm=[]",
+        "+0x0108 op02 argc=1 k=[0] imm=['0x1']",
+        "+0x0114 goto +0xC"
+      ]
+    },
+    {
+      "module": 6,
+      "rel": 3036,
+      "argc": 11,
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms_hex": [
+        "0x0",
+        "0x0",
+        "0x0",
+        "0x0",
+        "0x0",
+        "0x0",
+        "0x0",
+        "0x0",
+        "0x6",
+        "0x7",
+        "0x9"
+      ],
+      "s16_imms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        7,
+        9
+      ],
+      "hi16": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "window": [
+        "+0x0B8C mov k=[2, 3] imm=['0xa', '0x0']",
+        "+0x0B9C goto +0xBB8",
+        "+0x0BA8 op2A argc=2 k=[4, 0] imm=['0x0', '0x5']",
+        "+0x0BB8 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x6', '0x1a', '0x7']",
+        "+0x0BDC vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x6', '0x7', '0x9']",
+        "+0x0C10 alu and k=[0, 3, 4, 0] imm=['0x3', '0x0', '0x0', '0x2000']",
+        "+0x0C28 skip0 cond_k=3 -> +0xC6C",
+        "+0x0C38 alu eq k=[0, 3, 1, 0] imm=['0xb', '0x1', '0x9', '0x1']",
+        "+0x0C50 skip0 cond_k=3 -> +0xC6C",
+        "+0x0C60 goto +0xCC4",
+        "+0x0C6C alu ne k=[0, 3, 1, 0] imm=['0xe', '0x0', '0x9', '0x1']",
+        "+0x0C84 skip0 cond_k=3 -> +0xCA0",
+        "+0x0C94 goto +0xCC4",
+        "+0x0CA0 op2A argc=2 k=[4, 0] imm=['0x0', '0x0']",
+        "+0x0CB0 op85 argc=1 k=[0] imm=['0x1e']",
+        "+0x0CBC op9C argc=0 k=[] imm=[]"
+      ]
+    }
+  ],
+  "m0005i_spawn_mail_vol": [
+    {
+      "module": 0,
+      "line": "+0x035C mail 0x1C(2,0,0x0B)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        11
+      ],
+      "rel": 860
+    },
+    {
+      "module": 0,
+      "line": "+0x0420 mail 0x1C(2,0,0x17)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        23
+      ],
+      "rel": 1056
+    },
+    {
+      "module": 0,
+      "line": "+0x0458 mail 0x1C(2,0,0x1A)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        26
+      ],
+      "rel": 1112
+    },
+    {
+      "module": 0,
+      "line": "+0x058C mail 0x1C(2,0,0xFB)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        251
+      ],
+      "rel": 1420
+    },
+    {
+      "module": 0,
+      "line": "+0x0798 mail 0x1C(2,0,0x1B)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        27
+      ],
+      "rel": 1944
+    },
+    {
+      "module": 0,
+      "line": "+0x0A04 mail 0x1C(2,0,0x14)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        20
+      ],
+      "rel": 2564
+    },
+    {
+      "module": 0,
+      "line": "+0x0AA4 mail 0x1C(2,0,0x15)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        21
+      ],
+      "rel": 2724
+    },
+    {
+      "module": 0,
+      "line": "+0x0B38 mail 0x1C(2,0,0x16)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        22
+      ],
+      "rel": 2872
+    },
+    {
+      "module": 0,
+      "line": "+0x0BB4 mail 0x1C(2,0,0x0A)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        10
+      ],
+      "rel": 2996
+    },
+    {
+      "module": 0,
+      "line": "+0x0BE8 mail 0x1C(2,0,0x09)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        9
+      ],
+      "rel": 3048
+    },
+    {
+      "module": 0,
+      "line": "+0x0CAC mail 0x1C(6,0,0x81)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        6,
+        0,
+        129
+      ],
+      "rel": 3244
+    },
+    {
+      "module": 0,
+      "line": "+0x0E04 mail 0x1C(2,0,0x15)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        21
+      ],
+      "rel": 3588
+    },
+    {
+      "module": 0,
+      "line": "+0x0E8C mail 0x1C(2,0,0x14)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        20
+      ],
+      "rel": 3724
+    },
+    {
+      "module": 0,
+      "line": "+0x0F38 mail 0x1C(2,0,0x15)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        21
+      ],
+      "rel": 3896
+    },
+    {
+      "module": 0,
+      "line": "+0x1128 mail 0x1C(2,0,0x7F)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        127
+      ],
+      "rel": 4392
+    },
+    {
+      "module": 0,
+      "line": "+0x113C mail 0x1C(6,0,0x70)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        6,
+        0,
+        112
+      ],
+      "rel": 4412
+    },
+    {
+      "module": 0,
+      "line": "+0x1388 mail 0x1C(2,0,0x7A)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        122
+      ],
+      "rel": 5000
+    },
+    {
+      "module": 1,
+      "line": "+0x00B0 spawn type=3 k=[0, 0, 0, 0, 0] imm=['0x3', '0x0', '0x20000', '0xfbc80000', '0x2710000']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        3,
+        0,
+        131072,
+        4224188416,
+        40960000
+      ],
+      "rel": 176
+    },
+    {
+      "module": 1,
+      "line": "+0x00CC spawn type=0 k=[0, 0, 0, 0, 0] imm=['0x0', '0x0', '0x0', '0x0', '0x0']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rel": 204
+    },
+    {
+      "module": 1,
+      "line": "+0x00E8 spawn type=5 k=[0, 0, 0, 0, 0] imm=['0x5', '0x0', '0x0', '0x0', '0x0']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rel": 232
+    },
+    {
+      "module": 1,
+      "line": "+0x012C spawn type=2 k=[0, 0, 0, 0, 0] imm=['0x2', '0x0', '0x0', '0x0', '0x0']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rel": 300
+    },
+    {
+      "module": 1,
+      "line": "+0x0170 spawn type=4 k=[0, 0, 0, 0, 0] imm=['0x4', '0x0', '0x20000', '0xfbc80000', '0x2710000']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        4,
+        0,
+        131072,
+        4224188416,
+        40960000
+      ],
+      "rel": 368
+    },
+    {
+      "module": 1,
+      "line": "+0x01D8 mail 0x1C(0,0,0xFF)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        255
+      ],
+      "rel": 472
+    },
+    {
+      "module": 1,
+      "line": "+0x023C mail 0x1C(0,0,0x0E)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        14
+      ],
+      "rel": 572
+    },
+    {
+      "module": 2,
+      "line": "+0x0534 mail 0x1C(6,0,0x84)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        6,
+        0,
+        132
+      ],
+      "rel": 1332
+    },
+    {
+      "module": 2,
+      "line": "+0x05A8 mail 0x1C(6,0,0x7B)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        6,
+        0,
+        123
+      ],
+      "rel": 1448
+    },
+    {
+      "module": 2,
+      "line": "+0x0624 mail 0x1C(6,0,0x86)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        6,
+        0,
+        134
+      ],
+      "rel": 1572
+    },
+    {
+      "module": 2,
+      "line": "+0x06E4 mail 0x1C(6,0,0x7C)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        6,
+        0,
+        124
+      ],
+      "rel": 1764
+    },
+    {
+      "module": 3,
+      "line": "+0x000C op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        2,
+        3
+      ],
+      "rel": 12
+    },
+    {
+      "module": 3,
+      "line": "+0x0030 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x9940000', '0x4cd0000', '0x9940000', '0x63d0000', '0x80a0000', '0x63d0000', '0x80a0000', '0x4cd0000', '0x0', '0x2', '0x4']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        160694272,
+        80543744,
+        160694272,
+        104660992,
+        134873088,
+        104660992,
+        134873088,
+        80543744,
+        0,
+        2,
+        4
+      ],
+      "rel": 48
+    },
+    {
+      "module": 3,
+      "line": "+0x00B4 mail 0x1C(0,0,0xFE)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        254
+      ],
+      "rel": 180
+    },
+    {
+      "module": 3,
+      "line": "+0x00F8 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        2,
+        3
+      ],
+      "rel": 248
+    },
+    {
+      "module": 3,
+      "line": "+0x011C vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xf7b10000', '0x4780000', '0xf7b10000', '0x61e0000', '0xf60d0000', '0x61e0000', '0xf60d0000', '0x4780000', '0x0', '0x2', '0x4']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        4155572224,
+        74973184,
+        4155572224,
+        102629376,
+        4128047104,
+        102629376,
+        4128047104,
+        74973184,
+        0,
+        2,
+        4
+      ],
+      "rel": 284
+    },
+    {
+      "module": 3,
+      "line": "+0x01A0 mail 0x1C(0,0,0xFE)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        254
+      ],
+      "rel": 416
+    },
+    {
+      "module": 3,
+      "line": "+0x020C op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        2,
+        3
+      ],
+      "rel": 524
+    },
+    {
+      "module": 3,
+      "line": "+0x0230 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xa7c0000', '0xa90000', '0xa7c0000', '0x3690000', '0x84b0000', '0x3690000', '0x84b0000', '0xa90000', '0x0', '0x2', '0x4']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        175898624,
+        11075584,
+        175898624,
+        57212928,
+        139132928,
+        57212928,
+        139132928,
+        11075584,
+        0,
+        2,
+        4
+      ],
+      "rel": 560
+    },
+    {
+      "module": 3,
+      "line": "+0x02B4 mail 0x1C(0,0,0xFE)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        254
+      ],
+      "rel": 692
+    },
+    {
+      "module": 3,
+      "line": "+0x02F8 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        2,
+        3
+      ],
+      "rel": 760
+    },
+    {
+      "module": 3,
+      "line": "+0x031C vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0xf7ba0000', '0x70000', '0xf7ba0000', '0x2f00000', '0xf67b0000', '0x2f00000', '0xf67b0000', '0x70000', '0x0', '0x2', '0x4']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        4156162048,
+        458752,
+        4156162048,
+        49283072,
+        4135256064,
+        49283072,
+        4135256064,
+        458752,
+        0,
+        2,
+        4
+      ],
+      "rel": 796
+    },
+    {
+      "module": 3,
+      "line": "+0x03A0 mail 0x1C(0,0,0xFE)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        254
+      ],
+      "rel": 928
+    },
+    {
+      "module": 4,
+      "line": "+0x000C op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x1', '0x2']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        2,
+        3
+      ],
+      "rel": 12
+    },
+    {
+      "module": 4,
+      "line": "+0x0030 vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x3e30000', '0xff360000', '0x3e30000', '0x9180000', '0xfccc0000', '0x9180000', '0xfccc0000', '0xff360000', '0x0', '0x2', '0x4']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        65208320,
+        4281729024,
+        65208320,
+        152567808,
+        4241227776,
+        152567808,
+        4241227776,
+        4281729024,
+        0,
+        2,
+        4
+      ],
+      "rel": 48
+    },
+    {
+      "module": 4,
+      "line": "+0x00EC mail 0x1C(0,0,0x0D)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        13
+      ],
+      "rel": 236
+    },
+    {
+      "module": 5,
+      "line": "+0x0128 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0xa', '0xf', '0xb']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        0,
+        0,
+        10,
+        15,
+        11,
+        15
+      ],
+      "rel": 296
+    },
+    {
+      "module": 5,
+      "line": "+0x0200 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x5', '0x0', '0x0', '0xf', '0xc', '0xf']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        5,
+        0,
+        0,
+        15,
+        12,
+        15,
+        15
+      ],
+      "rel": 512
+    },
+    {
+      "module": 5,
+      "line": "+0x0338 mail 0x1C(0,0,0xFE)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        254
+      ],
+      "rel": 824
+    },
+    {
+      "module": 5,
+      "line": "+0x06DC mail 0x1C(0,0,0xFF)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        255
+      ],
+      "rel": 1756
+    },
+    {
+      "module": 6,
+      "line": "+0x026C op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x2', '0x0', '0x15', '0x16', '0x17']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        2,
+        0,
+        21,
+        22,
+        23,
+        19
+      ],
+      "rel": 620
+    },
+    {
+      "module": 6,
+      "line": "+0x03F8 mail 0x1C(2,0,0x7D)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        125
+      ],
+      "rel": 1016
+    },
+    {
+      "module": 6,
+      "line": "+0x0448 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x2', '0x0', '0x15', '0x16', '0x17']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        2,
+        0,
+        21,
+        22,
+        23,
+        19
+      ],
+      "rel": 1096
+    },
+    {
+      "module": 6,
+      "line": "+0x0614 mail 0x1C(2,0,0x7D)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        125
+      ],
+      "rel": 1556
+    },
+    {
+      "module": 6,
+      "line": "+0x0744 mail 0x1C(1,0,0x75)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        1,
+        0,
+        117
+      ],
+      "rel": 1860
+    },
+    {
+      "module": 6,
+      "line": "+0x0758 mail 0x1C(0,0,0x71)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        113
+      ],
+      "rel": 1880
+    },
+    {
+      "module": 6,
+      "line": "+0x0BB8 op5E argc=7 k=[0, 0, 0, 1, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x6', '0x1a', '0x7']",
+      "kinds": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        0,
+        0,
+        6,
+        26,
+        7,
+        26
+      ],
+      "rel": 3000
+    },
+    {
+      "module": 6,
+      "line": "+0x0BDC vol77 argc=11 k=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1] imm=['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x6', '0x7', '0x9']",
+      "kinds": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "imms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        7,
+        9
+      ],
+      "rel": 3036
+    },
+    {
+      "module": 6,
+      "line": "+0x0CC4 mail 0x1C(1,0,0x75)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        1,
+        0,
+        117
+      ],
+      "rel": 3268
+    },
+    {
+      "module": 6,
+      "line": "+0x0CD8 mail 0x1C(0,0,0x72)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        114
+      ],
+      "rel": 3288
+    },
+    {
+      "module": 6,
+      "line": "+0x0D98 mail 0x1C(2,0,0x79)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        121
+      ],
+      "rel": 3480
+    },
+    {
+      "module": 6,
+      "line": "+0x0DC0 mail 0x1C(2,0,0x7E)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        2,
+        0,
+        126
+      ],
+      "rel": 3520
+    },
+    {
+      "module": 6,
+      "line": "+0x0E04 mail 0x1C(0,0,0x78)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        120
+      ],
+      "rel": 3588
+    },
+    {
+      "module": 6,
+      "line": "+0x0F08 mail 0x1C(1,0,0x82)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        1,
+        0,
+        130
+      ],
+      "rel": 3848
+    },
+    {
+      "module": 6,
+      "line": "+0x0F64 mail 0x1C(0,0,0x74)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        116
+      ],
+      "rel": 3940
+    },
+    {
+      "module": 6,
+      "line": "+0x0F98 mail 0x1C(1,0,0xFC)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        1,
+        0,
+        252
+      ],
+      "rel": 3992
+    },
+    {
+      "module": 6,
+      "line": "+0x0FDC mail 0x1C(0,0,0x65)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        0,
+        0,
+        101
+      ],
+      "rel": 4060
+    },
+    {
+      "module": 6,
+      "line": "+0x1AE4 mail 0x1C(1,0,0x82)",
+      "kinds": [
+        0,
+        0,
+        0
+      ],
+      "imms": [
+        1,
+        0,
+        130
+      ],
+      "rel": 6884
+    }
+  ],
+  "exe_dest_immediates": [
+    {
+      "kind": "lui_pair",
+      "va": "0x8001240C",
+      "pair": "ori",
+      "rt": 2,
+      "value": "0xA80660C8"
+    }
+  ],
+  "scripts_found": 414
+}

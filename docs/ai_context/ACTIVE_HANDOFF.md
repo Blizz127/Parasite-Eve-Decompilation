@@ -62,6 +62,16 @@ handoff narrative (native/PE-BTL state) is preserved at commit
 `29fe11b:docs/ai_context/ACTIVE_HANDOFF.md`. PR toward `main` carries
 the unified 275 story; deeper doc reconciliation can follow on `main`.
 
+## PE-BTL147 — theater → Eve-entry dependency audit (2026-08-24)
+
+Retail evidence is committed under `docs/evidence/pe-btl147-theater-eve-path/`.
+The exhaustive 414-script scan finds the authentic `m0004i` → `m0005i` hops
+and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
+is the unique `persist[0] |= 4` writer; the native branch must not plant that
+bit or a destination token. The current native code has no generic scene
+scheduler that enters m0360i, so the next faithful rung is the event/scheduler
+bridge, not another m0005i gate workaround. Native suite: 928/928 passed.
+
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
 **276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,
