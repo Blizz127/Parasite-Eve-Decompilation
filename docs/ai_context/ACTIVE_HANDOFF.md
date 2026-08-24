@@ -72,6 +72,22 @@ bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
 bridge, not another m0005i gate workaround. Native suite: 928/928 passed.
 
+## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
+
+The Disc 1 executable census is recorded at
+`docs/evidence/pe-btl148-scheduler-census/REPORT.md`. All 1,011 field-script
+`0x31` commands use immediate argument mode. The executable destination-state
+writers are limited to ordinary immediate `0x31`, the two fixed computed
+name-table handlers (`func_80015790`/`func_80015964`), system/death/menu
+states, and save restoration. The computed tables omit `m0360i`, and the
+package loader consumes only `D_8009D280`.
+
+No scheduler implementation or m0360i special case is allowed yet. A retail
+PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
+contains the missing writer, is required to close the provenance. The
+standalone native frontier remains separately
+`PRODUCTION_REACHABILITY=blocked_at_func_80030894_L2L3_cut`.
+
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
 **276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,
