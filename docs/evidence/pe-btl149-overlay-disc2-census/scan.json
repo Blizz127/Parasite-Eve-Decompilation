@@ -1,0 +1,960 @@
+{
+  "destination_state": "D_8009D280",
+  "disc1_executable": {
+    "bytes": 2025472,
+    "direct_800AD280_candidates": [],
+    "direct_D_8009D280_candidates": [
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 10892,
+        "memory": 2889077376,
+        "memory_offset": 10896
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006862346,
+        "lui_offset": 10956,
+        "memory": 2355352192,
+        "memory_offset": 10960
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 11160,
+        "memory": 2888028800,
+        "memory_offset": 11164
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006862346,
+        "lui_offset": 11236,
+        "memory": 2355352192,
+        "memory_offset": 11240
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 24624,
+        "memory": 2887963264,
+        "memory_offset": 24628
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 24836,
+        "memory": 2887963264,
+        "memory_offset": 24840
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006796810,
+        "lui_offset": 24852,
+        "memory": 2353189504,
+        "memory_offset": 24856
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 25080,
+        "memory": 2887963264,
+        "memory_offset": 25084
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 25196,
+        "memory": 2887963264,
+        "memory_offset": 25200
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 33780,
+        "memory": 2888028800,
+        "memory_offset": 33784
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 192148,
+        "memory": 2887832192,
+        "memory_offset": 192152
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 193944,
+        "memory": 2888028800,
+        "memory_offset": 193948
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006993418,
+        "lui_offset": 319812,
+        "memory": 2359677568,
+        "memory_offset": 319816
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006862346,
+        "lui_offset": 371380,
+        "memory": 2355352192,
+        "memory_offset": 371384
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 371396,
+        "memory": 2888159872,
+        "memory_offset": 371400
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 390060,
+        "memory": 2887963264,
+        "memory_offset": 390064
+      }
+    ],
+    "direct_D_8009D280_writers": [
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 10892,
+        "memory": 2889077376,
+        "memory_offset": 10896
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 11160,
+        "memory": 2888028800,
+        "memory_offset": 11164
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 24624,
+        "memory": 2887963264,
+        "memory_offset": 24628
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 24836,
+        "memory": 2887963264,
+        "memory_offset": 24840
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 25080,
+        "memory": 2887963264,
+        "memory_offset": 25084
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 25196,
+        "memory": 2887963264,
+        "memory_offset": 25200
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 33780,
+        "memory": 2888028800,
+        "memory_offset": 33784
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 192148,
+        "memory": 2887832192,
+        "memory_offset": 192152
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 193944,
+        "memory": 2888028800,
+        "memory_offset": 193948
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 371396,
+        "memory": 2888159872,
+        "memory_offset": 371400
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 390060,
+        "memory": 2887963264,
+        "memory_offset": 390064
+      }
+    ],
+    "m0360_token_construction_candidates": [],
+    "raw_m0360_token_offsets": [],
+    "sha1": "452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
+  },
+  "disc1_peimg": {
+    "bytes": 206213120,
+    "full_archive_scan": {
+      "direct_D_8009D280_writers": [
+        {
+          "lui": 1006731274,
+          "lui_offset": 3682396,
+          "memory": 2888094336,
+          "memory_offset": 3682400
+        },
+        {
+          "lui": 1006731274,
+          "lui_offset": 3682860,
+          "memory": 2887963264,
+          "memory_offset": 3682864
+        },
+        {
+          "lui": 1006731274,
+          "lui_offset": 3682860,
+          "memory": 2887963264,
+          "memory_offset": 3682904
+        }
+      ],
+      "m0360_token_construction_candidates": [],
+      "raw_m0360_token_offsets": []
+    },
+    "ranges": [
+      {
+        "byte_end": 1976320,
+        "byte_start": 1898496,
+        "bytes": 77824,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 965,
+        "lba_start": 927,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "e7331867b4d1464da4d5f386d9137eaa1c98422b"
+      },
+      {
+        "byte_end": 1984512,
+        "byte_start": 1976320,
+        "bytes": 8192,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 969,
+        "lba_start": 965,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "f8f6ea3892df4a7b1c8b58c7fb76222e4bb52736"
+      },
+      {
+        "byte_end": 2002944,
+        "byte_start": 1984512,
+        "bytes": 18432,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 978,
+        "lba_start": 969,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "1d0e972cf9446dc700c82a8597292ced45958ef4"
+      },
+      {
+        "byte_end": 2275328,
+        "byte_start": 2002944,
+        "bytes": 272384,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1111,
+        "lba_start": 978,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "a0b604ead810592dd9a8d74f7c74fe94151f4d32"
+      },
+      {
+        "byte_end": 2613248,
+        "byte_start": 2275328,
+        "bytes": 337920,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1276,
+        "lba_start": 1111,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "08b5c11984153ba1fd6ec23d4a2b79a0c9acada6"
+      },
+      {
+        "byte_end": 2666496,
+        "byte_start": 2613248,
+        "bytes": 53248,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1302,
+        "lba_start": 1276,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "3748ade473e12d272914d36f67685fd2bafc0f91"
+      },
+      {
+        "byte_end": 3168256,
+        "byte_start": 2666496,
+        "bytes": 501760,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1547,
+        "lba_start": 1302,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "b0a5b96f209bdf480e18ef5de5609053150b957a"
+      },
+      {
+        "byte_end": 3670016,
+        "byte_start": 3168256,
+        "bytes": 501760,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1792,
+        "lba_start": 1547,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "81c7ad0704053ac0537d74a6a412886e6baa0a0b"
+      },
+      {
+        "byte_end": 4044800,
+        "byte_start": 3670016,
+        "bytes": 374784,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12380,
+            "memory": 2888094336,
+            "memory_offset": 12384
+          },
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12844,
+            "memory": 2887963264,
+            "memory_offset": 12848
+          },
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12884,
+            "memory": 2887963264,
+            "memory_offset": 12888
+          }
+        ],
+        "direct_D_8009D280_writers": [
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12380,
+            "memory": 2888094336,
+            "memory_offset": 12384
+          },
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12844,
+            "memory": 2887963264,
+            "memory_offset": 12848
+          },
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12884,
+            "memory": 2887963264,
+            "memory_offset": 12888
+          }
+        ],
+        "lba_end": 1975,
+        "lba_start": 1792,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "9f8786a9d6f8b11548a14680d34fc540d8e909de"
+      },
+      {
+        "byte_end": 4128768,
+        "byte_start": 4044800,
+        "bytes": 83968,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 2016,
+        "lba_start": 1975,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "76e35721b89024be704a592ac7921b14e60b0602"
+      },
+      {
+        "byte_end": 4311040,
+        "byte_start": 4128768,
+        "bytes": 182272,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 2105,
+        "lba_start": 2016,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "3693644f708c28389e43779d3fe028bfba61b1ee"
+      },
+      {
+        "byte_end": 4515840,
+        "byte_start": 4311040,
+        "bytes": 204800,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 2205,
+        "lba_start": 2105,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "a7a64965e373d07a57cf2d7113bbc41d5ca72c95"
+      },
+      {
+        "byte_end": 4554752,
+        "byte_start": 4515840,
+        "bytes": 38912,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 2224,
+        "lba_start": 2205,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "9e8dcc12bc73e877b69d4a8b4c52fef29d545223"
+      }
+    ],
+    "sha1": "146c0ce7308bf9fdc2ba5a84230e198db0663f3b"
+  },
+  "disc2_executable": {
+    "bytes": 2025472,
+    "direct_800AD280_candidates": [],
+    "direct_D_8009D280_candidates": [
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 10892,
+        "memory": 2889077376,
+        "memory_offset": 10896
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006862346,
+        "lui_offset": 10956,
+        "memory": 2355352192,
+        "memory_offset": 10960
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 11160,
+        "memory": 2888028800,
+        "memory_offset": 11164
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006862346,
+        "lui_offset": 11236,
+        "memory": 2355352192,
+        "memory_offset": 11240
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 24624,
+        "memory": 2887963264,
+        "memory_offset": 24628
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 24836,
+        "memory": 2887963264,
+        "memory_offset": 24840
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006796810,
+        "lui_offset": 24852,
+        "memory": 2353189504,
+        "memory_offset": 24856
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 25080,
+        "memory": 2887963264,
+        "memory_offset": 25084
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 25196,
+        "memory": 2887963264,
+        "memory_offset": 25200
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 33780,
+        "memory": 2888028800,
+        "memory_offset": 33784
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 192148,
+        "memory": 2887832192,
+        "memory_offset": 192152
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 193944,
+        "memory": 2888028800,
+        "memory_offset": 193948
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006993418,
+        "lui_offset": 319812,
+        "memory": 2359677568,
+        "memory_offset": 319816
+      },
+      {
+        "distance_words": 1,
+        "kind": "load",
+        "lui": 1006862346,
+        "lui_offset": 371380,
+        "memory": 2355352192,
+        "memory_offset": 371384
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 371396,
+        "memory": 2888159872,
+        "memory_offset": 371400
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 390060,
+        "memory": 2887963264,
+        "memory_offset": 390064
+      }
+    ],
+    "direct_D_8009D280_writers": [
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 10892,
+        "memory": 2889077376,
+        "memory_offset": 10896
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 11160,
+        "memory": 2888028800,
+        "memory_offset": 11164
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 24624,
+        "memory": 2887963264,
+        "memory_offset": 24628
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 24836,
+        "memory": 2887963264,
+        "memory_offset": 24840
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 25080,
+        "memory": 2887963264,
+        "memory_offset": 25084
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 25196,
+        "memory": 2887963264,
+        "memory_offset": 25200
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 33780,
+        "memory": 2888028800,
+        "memory_offset": 33784
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 192148,
+        "memory": 2887832192,
+        "memory_offset": 192152
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 193944,
+        "memory": 2888028800,
+        "memory_offset": 193948
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 371396,
+        "memory": 2888159872,
+        "memory_offset": 371400
+      },
+      {
+        "distance_words": 1,
+        "kind": "store",
+        "lui": 1006731274,
+        "lui_offset": 390060,
+        "memory": 2887963264,
+        "memory_offset": 390064
+      }
+    ],
+    "m0360_token_construction_candidates": [],
+    "raw_m0360_token_offsets": [],
+    "sha1": "452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
+  },
+  "disc2_executable_byte_identical": true,
+  "disc2_peimg": {
+    "bytes": 206213120,
+    "full_archive_scan": {
+      "direct_D_8009D280_writers": [
+        {
+          "lui": 1006731274,
+          "lui_offset": 3682396,
+          "memory": 2888094336,
+          "memory_offset": 3682400
+        },
+        {
+          "lui": 1006731274,
+          "lui_offset": 3682860,
+          "memory": 2887963264,
+          "memory_offset": 3682864
+        },
+        {
+          "lui": 1006731274,
+          "lui_offset": 3682860,
+          "memory": 2887963264,
+          "memory_offset": 3682904
+        }
+      ],
+      "m0360_token_construction_candidates": [],
+      "raw_m0360_token_offsets": []
+    },
+    "ranges": [
+      {
+        "byte_end": 1976320,
+        "byte_start": 1898496,
+        "bytes": 77824,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 965,
+        "lba_start": 927,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "e7331867b4d1464da4d5f386d9137eaa1c98422b"
+      },
+      {
+        "byte_end": 1984512,
+        "byte_start": 1976320,
+        "bytes": 8192,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 969,
+        "lba_start": 965,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "f8f6ea3892df4a7b1c8b58c7fb76222e4bb52736"
+      },
+      {
+        "byte_end": 2002944,
+        "byte_start": 1984512,
+        "bytes": 18432,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 978,
+        "lba_start": 969,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "1d0e972cf9446dc700c82a8597292ced45958ef4"
+      },
+      {
+        "byte_end": 2275328,
+        "byte_start": 2002944,
+        "bytes": 272384,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1111,
+        "lba_start": 978,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "a0b604ead810592dd9a8d74f7c74fe94151f4d32"
+      },
+      {
+        "byte_end": 2613248,
+        "byte_start": 2275328,
+        "bytes": 337920,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1276,
+        "lba_start": 1111,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "08b5c11984153ba1fd6ec23d4a2b79a0c9acada6"
+      },
+      {
+        "byte_end": 2666496,
+        "byte_start": 2613248,
+        "bytes": 53248,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1302,
+        "lba_start": 1276,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "3748ade473e12d272914d36f67685fd2bafc0f91"
+      },
+      {
+        "byte_end": 3168256,
+        "byte_start": 2666496,
+        "bytes": 501760,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1547,
+        "lba_start": 1302,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "b0a5b96f209bdf480e18ef5de5609053150b957a"
+      },
+      {
+        "byte_end": 3670016,
+        "byte_start": 3168256,
+        "bytes": 501760,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 1792,
+        "lba_start": 1547,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "81c7ad0704053ac0537d74a6a412886e6baa0a0b"
+      },
+      {
+        "byte_end": 4044800,
+        "byte_start": 3670016,
+        "bytes": 374784,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12380,
+            "memory": 2888094336,
+            "memory_offset": 12384
+          },
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12844,
+            "memory": 2887963264,
+            "memory_offset": 12848
+          },
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12884,
+            "memory": 2887963264,
+            "memory_offset": 12888
+          }
+        ],
+        "direct_D_8009D280_writers": [
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12380,
+            "memory": 2888094336,
+            "memory_offset": 12384
+          },
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12844,
+            "memory": 2887963264,
+            "memory_offset": 12848
+          },
+          {
+            "distance_words": 1,
+            "kind": "store",
+            "lui": 1006731274,
+            "lui_offset": 12884,
+            "memory": 2887963264,
+            "memory_offset": 12888
+          }
+        ],
+        "lba_end": 1975,
+        "lba_start": 1792,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "9f8786a9d6f8b11548a14680d34fc540d8e909de"
+      },
+      {
+        "byte_end": 4128768,
+        "byte_start": 4044800,
+        "bytes": 83968,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 2016,
+        "lba_start": 1975,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "76e35721b89024be704a592ac7921b14e60b0602"
+      },
+      {
+        "byte_end": 4311040,
+        "byte_start": 4128768,
+        "bytes": 182272,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 2105,
+        "lba_start": 2016,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "3693644f708c28389e43779d3fe028bfba61b1ee"
+      },
+      {
+        "byte_end": 4515840,
+        "byte_start": 4311040,
+        "bytes": 204800,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 2205,
+        "lba_start": 2105,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "a7a64965e373d07a57cf2d7113bbc41d5ca72c95"
+      },
+      {
+        "byte_end": 4554752,
+        "byte_start": 4515840,
+        "bytes": 38912,
+        "direct_800AD280_candidates": [],
+        "direct_D_8009D280_candidates": [],
+        "direct_D_8009D280_writers": [],
+        "lba_end": 2224,
+        "lba_start": 2205,
+        "m0360_token_construction_candidates": [],
+        "raw_m0360_token_offsets": [],
+        "sha1": "9e8dcc12bc73e877b69d4a8b4c52fef29d545223"
+      }
+    ],
+    "sha1": "146c0ce7308bf9fdc2ba5a84230e198db0663f3b"
+  },
+  "overlay_ranges_source": "retail D_8009315E..D_8009317A",
+  "peimg_byte_identical": true,
+  "scanner": "pe_btl149_overlay_disc2_census.py",
+  "target_token": "0xA8066048"
+}

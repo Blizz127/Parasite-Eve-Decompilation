@@ -88,6 +88,27 @@ contains the missing writer, is required to close the provenance. The
 standalone native frontier remains separately
 `PRODUCTION_REACHABILITY=blocked_at_func_80030894_L2L3_cut`.
 
+## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
+
+The prior Disc 1 executable census was extended to the PE.IMG ranges selected
+by retail `D_8009315E..D_8009317A` and to Disc 2. Disc 2 `SLUS_006.68` and
+PE.IMG are byte-identical to Disc 1, so they add no distinct code coverage.
+The PE.IMG range `[0x0700,0x07B7)` contains a real state-driven chooser:
+three direct stores to `D_8009D280` at raw offsets `0x383060`, `0x383230`,
+and `0x383258`, with inputs including `D_800A7918`, `D_800A77FC`, and an
+indirect `D_801ACA68`/`D_8019F034` dispatch. It constructs nearby computed
+destination tokens but not `0xA8066048`; the full PE.IMG scan found zero raw
+or `lui 0xA806`→`ori/addiu 0x6048` forms. Evidence and reproducible scanner:
+`docs/evidence/pe-btl149-overlay-disc2-census/REPORT.md` and
+`tools/research/pe_btl149_overlay_disc2_census.py`.
+
+This closes the “Disc 2 may contain a different executable” hypothesis and
+corrects BTL148's coverage boundary, but does not prove the indirect branch's
+event input or m0360i selection. Do not implement a scheduler or special-case
+m0360i. Remaining status: `SEMANTIC_IMPLEMENTATION=not_started`,
+`PRODUCTION_REACHABILITY=blocked_at_func_80030894_L2L3_cut`, native suite
+`928/928`.
+
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
 **276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,
