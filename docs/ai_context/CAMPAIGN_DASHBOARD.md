@@ -1,5 +1,15 @@
 # Overnight campaign dashboard
 
+```text
+STATUS=SUPERSEDED_BY_RUNTIME_LANES
+AUTHORITATIVE_CURRENT_STATUS=docs/ai_context/RUNTIME_LANES.md
+DO_NOT_USE_THIS_FILE_FOR_CURRENT_COUNTS_OR_FRONTIERS=yes
+```
+
+This file is retained as historical campaign context only. For current
+cross-lane runtime status, verified counters, execution frontiers, commands,
+and policy contradictions, read `docs/ai_context/RUNTIME_LANES.md`.
+
 Host writing this file: `Blizz-AW.localdomain`
 Lane: matching decomp / native only.
 UE5 tree on this machine is **not** authority. Dirty/uncommitted
