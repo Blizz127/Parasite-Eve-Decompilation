@@ -551,6 +551,14 @@ segments:
       - [0x5B0D4, c, func_8006A8D4]
       # Mid-5B1E4 carve: prefix 0x3E04, C 0x4C, resume 5F034.s.
       - [0x5B1E4, asm]
+      # Phase 5FM-redo: C leaf func_8006E7E8 — VRAM 0x8006E7E8, size 0x4C
+      # (19 words). VSync poll helper: calls func_800811E4 (asm callee),
+      # tests -1/0 via (unsigned)(ret+1) < 2, clears 0xFEFFBFFF mask in
+      # D_800B0CD8, returns ret. Era -O2 -G0, PINLESS. The range test must
+      # be written INLINE in the if (no named temp): a named temp coalesces
+      # with the call result into one $v0 web and cc1 drops retail's paired
+      # $a1-home moves (17/19); the inline form restores them naturally.
+      # Mask builds in $a0 and &D_800B0CD8 in $v1 naturally.
       - [0x5EFE8, c, func_8006E7E8]
       # Phase 5FK: C leaf func_8006E834 — VRAM 0x8006E834, size 0x16C.
       # Post-mount image loader + display env setup. Era -O2 -G0; paired

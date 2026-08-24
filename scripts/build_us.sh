@@ -158,7 +158,8 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # C 6A64C:  0x5AE4C → 0x5AE74 = 0x28
 # C 6A674:  0x5AE74 → 0x5B0D4 = 0x260
 # C 6A8D4:  0x5B0D4 → 0x5B1E4 = 0x110
-# 5B1E4:    0x5B1E4 → 0x5F034 = 0x3E50
+# 5B1E4:    0x5B1E4 → 0x5EFE8 = 0x3E04 (prefix after 6E7E8 carve)
+# C 6E7E8:  0x5EFE8 → 0x5F034 = 0x4C
 # C 6E834:  0x5F034 → 0x5F1A0 = 0x16C
 # C 6E9A0:  0x5F1A0 → 0x5F3D4 = 0x234
 # C 6EBD4:  0x5F3D4 → 0x5F3E4 = 0x10
@@ -1506,6 +1507,7 @@ SOURCES=(
     "src/func_8006A674.c"
     "src/func_8006A8D4.c"
     "asm/disc1/5B1E4.s"
+    "src/func_8006E7E8.c"
     "src/func_8006E834.c"
     "src/func_8006E9A0.c"
     "src/func_8006EBD4.c"
@@ -2383,8 +2385,8 @@ era_compile src/func_800197F0.c build/src/func_800197F0.c.o -O2 -G0
 era_compile src/func_8007F7A8.c build/src/func_8007F7A8.c.o -O2 -G0
 # Phase 5EM: boot memory-region layout init; ordered absolute pointer stores.
 era_compile src/func_8006A8D4.c build/src/func_8006A8D4.c.o -O2 -G0
-# Phase 5FM: VSync poll helper; calls func_800811E4, checks -1/0 return,
-# clears D_800B0CD8 bit 0x01004000 on match. Mid-5B1E4 carve.
+# Phase 5FM-redo: VSync poll helper; calls func_800811E4, tests -1/0 via
+# (unsigned)(ret+1)<2 inline, clears 0xFEFFBFFF in D_800B0CD8. PINLESS.
 era_compile src/func_8006E7E8.c build/src/func_8006E7E8.c.o -O2 -G0
 # Phase 5FK: post-mount image loader + display env setup; paired
 # $v1-backup/$v0-test register pins + two zero-code "=r":"0" barriers
@@ -3697,7 +3699,6 @@ SECTIONS
         build/asm/disc1/5B1E4.s.o(.data)
         build/src/func_8006E7E8.c.o(.data)
         build/src/func_8006E834.c.o(.data)
-        build/src/func_8006E834.c.o(.data)
         build/src/func_8006E9A0.c.o(.data)
         build/src/func_8006EBD4.c.o(.data)
         build/asm/disc1/5F3E4.s.o(.data)
@@ -4142,7 +4143,6 @@ SECTIONS
         build/asm/disc1/5B1E4.s.o(.rodata)
         build/src/func_8006E7E8.c.o(.rodata)
         build/src/func_8006E834.c.o(.rodata)
-        build/src/func_8006E834.c.o(.rodata)
         build/src/func_8006E9A0.c.o(.rodata)
         build/src/func_8006EBD4.c.o(.rodata)
         build/asm/disc1/5F3E4.s.o(.rodata)
@@ -4586,7 +4586,6 @@ SECTIONS
         build/src/func_8006A8D4.c.o(.bss)
         build/asm/disc1/5B1E4.s.o(.bss)
         build/src/func_8006E7E8.c.o(.bss)
-        build/src/func_8006E834.c.o(.bss)
         build/src/func_8006E834.c.o(.bss)
         build/src/func_8006E9A0.c.o(.bss)
         build/src/func_8006EBD4.c.o(.bss)
