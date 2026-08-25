@@ -786,6 +786,8 @@ segments:
       # func_80083BB8; size 0x1C, era -O2 -G0.
       - [0x74420, c, func_80083C20]
       - [0x7443C, asm]
+      # Volume campaign: callback/object initializer; size 0x20, era -O2 -G0.
+      - [0x74650, c, func_80083E50]
       # Phase 5CM: C leaf func_80083E70 — file 0x74670, size 0x14.
       - [0x74670, c, func_80083E70]
       - [0x74684, asm]

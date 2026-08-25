@@ -174,3 +174,10 @@ callers and real boundaries, but both require `ctc2` semantic bodies. They
 moved to `SKIP-SDK-LIBRARY-COP2` without attempts or count change; Tier 1
 66→64 and SKIP 743→745. Evidence:
 `../volume-campaign-20260824/COP2_SDK_SCREEN.md`.
+
+The next Tier-1 leaf, `func_80083E50` @ `0x74650`, has two direct callers and
+initializes object bytes plus an interior pointer. Natural argument-relative C
+matched all eight words on the first era `-O2 -G0` phrasing, including the
+final state-byte store in the return delay slot. Carve
+`0x214 + 0x20 = 0x234`, packed span/full SHA exact, verify green at 305.
+Evidence: `func-80083e50/REPORT.md`.
