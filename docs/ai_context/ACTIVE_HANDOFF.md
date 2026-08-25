@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `f553145`, 311 accepted matching-C
+Current matching-lane status: `main` @ `2de186f`, 312 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -949,6 +949,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-50-77B34 | 311 | `func_80077B34` @ `0x68334` is the ten-word bit-0 byte flag helper, with four exact-start calls and canonical return; prior B54I evidence identifies `SetShadeTex`. Natural `-O2 -G0` C matched first phrasing. Both adjacent two-nop alignment fragments remain asm; carve `0x08 + 0x28 + 0x08 = 0x38`, packed span/full SHA exact, verify green at 311. Evidence: `docs/evidence/volume-campaign-20260825/func-80077b34/REPORT.md`. |
 | VOLUME-51-8783C-PARK | 311 | `func_8008783C` @ `0x7803C` is a proven callable ten-word per-voice SPU halfword RMW. Two `-O2 -G0` phrasings match the first eight words but both emit `sh; jr; nop` instead of retail `jr; sh`; returning the computed `$v0` value does not alter volatile-store scheduling. `PARKED-VOLATILE-STORE-SCHEDULING`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-8008783c/PARK.md`; source is in the labeled stash. |
 | VOLUME-52-87864-SCREEN | 311 | `func_80087864` @ `0x78064` is the proven callable nibble-update twin over the same per-voice SPU register, with exact caller `0x80087A80`. The direct volatile `sh` return-slot blocker is identical to bounded `8783C`; screened without an attempt as `PARKED-VOLATILE-STORE-SCHEDULING-FAMILY`. Count stays 311 and consecutive park stays 1. Evidence: `docs/evidence/volume-campaign-20260825/func-80087864/SKIP.md`. |
+| VOLUME-53-9059C | 312 | `func_8009059C` @ `0x80D9C` is a ten-word stream-byte flag helper. Function hood is proven by direct call `0x80090AC0`, exact-start callback-table entry `0x8009CBA8`, canonical return, and real boundaries. The adjacent `906B4` family phrasing matched first attempt under modern GCC 14 `-O1 -G0`; carve `0xD8 + 0x28 + 0xF0 = 0x1F0`, packed span/full SHA exact, verify green at 312. Consecutive-park count resets to zero. Evidence: `docs/evidence/volume-campaign-20260825/func-8009059c/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

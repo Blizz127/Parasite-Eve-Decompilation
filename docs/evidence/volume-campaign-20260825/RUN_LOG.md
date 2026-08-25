@@ -265,3 +265,13 @@ per-voice SPU volatile `sh` return-slot mechanism as parked `8783C`, changing
 only the selected nibble. It is screened without a duplicate attempt as
 `PARKED-VOLATILE-STORE-SCHEDULING-FAMILY`; count and consecutive-park state
 remain 311 and 1. Evidence: `func-80087864/SKIP.md`.
+
+The next Tier-1 leaf, `func_8009059C` @ `0x80D9C`, passes function hood via
+the direct call at `0x80090AC0`, an exact-start callback-table word at
+`0x8009CBA8`, canonical return, and real adjacent functions. It consumes one
+stream byte, advances the cursor, ORs `0x1000` into state `+0xF4`, and stores
+the byte as a halfword at `+0x110`. The exact `func_800906B4` family phrasing
+matched all ten words on the first modern GCC 14 `-O1 -G0` attempt. Carve
+`0xD8 + 0x28 + 0xF0 = 0x1F0`, packed span/full SHA exact, verify green at
+312. This match resets the consecutive-park count. Evidence:
+`func-8009059c/REPORT.md`.
