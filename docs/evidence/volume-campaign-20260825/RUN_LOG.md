@@ -112,3 +112,8 @@ The next Tier-1 leaf, `func_800877D4` @ `0x77FD4`, is a distinct per-voice
 SPU halfword setter and matched on the first natural `-O2 -G0` indexed-store
 phrasing. Carve `0x1C + 0x332C = 0x3348`, packed span/full SHA exact, verify
 green at 298. Evidence: `func-800877d4/REPORT.md`.
+
+The next Tier-1 leaf, `func_800877F0` @ `0x77FF0`, is the per-voice SPU
+halfword-setter twin of `877D4` and matched on the first natural `-O2 -G0`
+phrasing. Carve `0x1C + 0x3310 = 0x332C`, packed span/full SHA exact, verify
+green at 299. Evidence: `func-800877f0/REPORT.md`.
