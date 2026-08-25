@@ -797,6 +797,9 @@ segments:
       - [0x779AC, asm]
       - [0x77C14, c, func_80087414]
       - [0x77C28, asm]
+      # Volume campaign: hardware halfword pair setter func_8008770C,
+      # size 0x1C, using the proven one-base MMIO idiom.
+      - [0x77F0C, c, func_8008770C]
       # Volume campaign: hardware halfword pair setter func_80087728,
       # size 0x1C, era -O2 -G0.
       - [0x77F28, c, func_80087728]

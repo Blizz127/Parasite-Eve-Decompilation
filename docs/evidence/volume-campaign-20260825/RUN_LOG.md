@@ -87,3 +87,8 @@ two direct callers and matched on the second `-O2 -G0` phrasing. Direct fixed
 address stores overflowed; one volatile base with halfword indices reproduced
 the `$at` MMIO form. Carve `0x300 + 0x1C + 0x78 = 0x394`, packed span/full SHA
 exact, verify green at 293. Evidence: `func-80087728/REPORT.md`.
+
+The next Tier-1 leaf, `func_8008770C` @ `0x77F0C`, matched on the first
+`-O2 -G0` phrasing using the proven one-base volatile MMIO pointer. Carve
+`0x2E4 + 0x1C = 0x300`, packed span/full SHA exact, verify green at 294.
+Evidence: `func-8008770c/REPORT.md`.
