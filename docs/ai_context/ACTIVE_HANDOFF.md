@@ -42,6 +42,9 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
+Current matching-lane status: `main` @ `3894b85`, 290 accepted matching-C
+leaves; the 287-leaf line above is the historical grind-lane port milestone.
+
 All remaining pe-continuous-decomp grind leaves are ported. After 29388
 (below): `func_800293F4` (0x19BF4, 124w, era `-O2 -G8` +
 `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8` — new era_compile knob that
