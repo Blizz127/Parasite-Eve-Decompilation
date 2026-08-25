@@ -367,3 +367,13 @@ Both direct array stores and an explicit-local-base retry compile under era
 materialization, versus retail's eleven words. It parks as
 `PARKED-SYMBOLIC-BASE-RETENTION`; count stays 320, consecutive park 1.
 Evidence: `func-80082adc/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 leaf, `func_80074478` @ `0x64C78`, passes function hood via
+the exact-start pointer construction returned by `func_800743B4` and stored
+into a callback slot by its caller, plus canonical return and real
+boundaries. The direct indexed conditional-setter phrasing matched 10/11;
+reversing the commutative comparison operands selected retail's `beq a1,v0`
+and matched all eleven words under era `-O2 -G0`. Carve
+`0x124 + 0x02C + 0x000 = 0x150`, packed span/full SHA exact, verify green at
+321. This match resets consecutive parks to zero. Evidence:
+`func-80074478/REPORT.md`.

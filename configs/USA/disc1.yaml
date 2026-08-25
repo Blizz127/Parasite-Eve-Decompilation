@@ -611,6 +611,8 @@ segments:
       # Phase 5CX: C leaf func_80074330 — file 0x64B30, size 0x24.
       - [0x64B30, c, func_80074330]
       - [0x64B54, asm]
+      # Volume campaign: indexed conditional state setter, era -O2 -G0.
+      - [0x64C78, c, func_80074478]
       # Phase 5CY: C leaf func_800744A4 — file 0x64CA4, size 0x24.
       - [0x64CA4, c, func_800744A4]
       - [0x64CC8, asm]
