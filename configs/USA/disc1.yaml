@@ -991,8 +991,10 @@ segments:
       # Phase 5CP: C leaf func_800C8BB4 — file 0xB93B4, size 0xC.
       - [0xB93B4, c, func_800C8BB4]
       # Phase 5EC: mid-B93C0 hole — sb+ret0 func_800C8F08 abuts 5EB twins.
-      # Prefix 0x348 (= 0xB9708 - 0xB93C0); resume B9728.s 0x338 (= 0xB9A60 - 0xB9728).
+      # Volume carve at B944C; remaining resume reaches C8F08 at B9708.
       - [0xB93C0, asm]
+      - [0xB944C, c, func_800C8C4C]
+      - [0xB9480, asm]
       - [0xB9708, c, func_800C8F08]
       - [0xB9718, c, func_800C8F18]
       - [0xB9720, c, func_800C8F20]

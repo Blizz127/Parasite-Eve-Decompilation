@@ -415,3 +415,12 @@ nonvolatile halfword RMW matched all thirteen words first phrasing under era
 `0x080 + 0x034 + 0x000 = 0x0B4`. Packed span/full SHA exact, verify green at
 324. Tier 1 falls 41→40; consecutive parks remain zero. Evidence:
 `func-8008788c/REPORT.md`.
+
+The next Tier-1 leaf, `func_800C8C4C` @ `0xB944C`, passes function hood via
+exact-start callback-table word `0x800E0848`, canonical return, and real
+boundaries. Natural signed-halfword threshold C matched all thirteen words
+on the first era `-O2 -G0` phrasing, including post-store sign extension and
+the constant-setting branch delay slot. Carve
+`0x08C + 0x034 + 0x288 = 0x348`, packed span/full SHA exact, verify green at
+325. Tier 1 falls 40→39; consecutive parks remain zero. Evidence:
+`func-800c8c4c/REPORT.md`.
