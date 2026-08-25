@@ -10,5 +10,6 @@ Base: `811f8f0`, 281 accepted leaves.
 | 4 | `func_800CCF98` @ `0xBD798` | TIER 1; jr-ra; exact-start table ref; 0 jal/gp/index/loop | `MATCHED@era -O2 -G0` | 2 | 0 | commit with leaf 285 |
 | 5 | `func_800CE1EC` @ `0xBE9EC` | TIER 1; jr-ra; exact-start table ref; 0 jal/gp/index/loop | `MATCHED@era -O2 -G0` | 2 | 0 | commit with leaf 286 |
 | 6 | `func_800CE1F4` @ `0xBE9F4` | TIER 1; jr-ra; exact-start table ref; 0 jal/gp/index/loop | `MATCHED@era -O2 -G0` | 2 | 0 | commit with leaf 287 |
+| 7 | `func_80079024` @ `0x69824` | TIER 1; proven callable handwritten GTE helper; `ctc2 a0,$26` | `PARKED-HANDWRITTEN-COP2` | 3 | 0 | stash ordinary-C boundary candidate; docs-only commit |
 
-Running count: **6 attempts; 6 matched; 0 parked; 0 reclassified.**
+Running count: **7 attempts; 6 matched; 1 parked; 0 reclassified.**
