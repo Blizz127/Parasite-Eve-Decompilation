@@ -651,7 +651,8 @@ SIZE_77C28=0x2e4
 SIZE_C_8770C=0x1c
 SIZE_C_87728=0x1c
 SIZE_C_87744=0x1c
-SIZE_77F60=0x5c
+SIZE_C_87760=0x1c
+SIZE_77F7C=0x40
 SIZE_C_877BC=0x18
 SIZE_77FD4=0x3348
 SIZE_C_8AB1C=0x80
@@ -1191,7 +1192,8 @@ OBJECTS=(
     "build/src/func_8008770C.c.o"
     "build/src/func_80087728.c.o"
     "build/src/func_80087744.c.o"
-    "build/asm/disc1/77F60.s.o"
+    "build/src/func_80087760.c.o"
+    "build/asm/disc1/77F7C.s.o"
     "build/src/func_800877BC.c.o"
     "build/asm/disc1/77FD4.s.o"
     "build/src/func_8008AB1C.c.o"
@@ -1660,7 +1662,8 @@ SOURCES=(
     "src/func_8008770C.c"
     "src/func_80087728.c"
     "src/func_80087744.c"
-    "asm/disc1/77F60.s"
+    "src/func_80087760.c"
+    "asm/disc1/77F7C.s"
     "src/func_800877BC.c"
     "asm/disc1/77FD4.s"
     "src/func_8008AB1C.c"
@@ -2194,7 +2197,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/75F44.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/778F0.s.o asm/disc1/778F0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/779AC.s.o asm/disc1/779AC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/77C28.s.o asm/disc1/77C28.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/77F60.s.o asm/disc1/77F60.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/77F7C.s.o asm/disc1/77F7C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/77FD4.s.o asm/disc1/77FD4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/7B39C.s.o asm/disc1/7B39C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/7D284.s.o asm/disc1/7D284.s
@@ -2482,6 +2485,7 @@ era_compile src/func_800877BC.c build/src/func_800877BC.c.o -O2 -G0
 era_compile src/func_80087728.c build/src/func_80087728.c.o -O2 -G0
 era_compile src/func_8008770C.c build/src/func_8008770C.c.o -O2 -G0
 era_compile src/func_80087744.c build/src/func_80087744.c.o -O2 -G0
+era_compile src/func_80087760.c build/src/func_80087760.c.o -O2 -G0
 era_compile src/func_80085084.c build/src/func_80085084.c.o -O2 -G0
 # Phase 5ER: byte/word test-and-clear-return twins; forward if/else scheduling.
 era_compile src/func_80038D1C.c build/src/func_80038D1C.c.o -O2 -G0
@@ -2951,7 +2955,8 @@ python3 "$TRIM" build/asm/disc1/77C28.s.o .text "$SIZE_77C28"
 python3 "$TRIM" build/src/func_8008770C.c.o .text "$SIZE_C_8770C"
 python3 "$TRIM" build/src/func_80087728.c.o .text "$SIZE_C_87728"
 python3 "$TRIM" build/src/func_80087744.c.o .text "$SIZE_C_87744"
-python3 "$TRIM" build/asm/disc1/77F60.s.o .text "$SIZE_77F60"
+python3 "$TRIM" build/src/func_80087760.c.o .text "$SIZE_C_87760"
+python3 "$TRIM" build/asm/disc1/77F7C.s.o .text "$SIZE_77F7C"
 python3 "$TRIM" build/src/func_800877BC.c.o .text "$SIZE_C_877BC"
 python3 "$TRIM" build/asm/disc1/77FD4.s.o .text "$SIZE_77FD4"
 python3 "$TRIM" build/src/func_8008AB1C.c.o .text "$SIZE_C_8AB1C"
@@ -3459,7 +3464,8 @@ SECTIONS
         build/src/func_8008770C.c.o(.text)
         build/src/func_80087728.c.o(.text)
         build/src/func_80087744.c.o(.text)
-        build/asm/disc1/77F60.s.o(.text)
+        build/src/func_80087760.c.o(.text)
+        build/asm/disc1/77F7C.s.o(.text)
         build/src/func_800877BC.c.o(.text)
         build/asm/disc1/77FD4.s.o(.text)
         build/src/func_8008AB1C.c.o(.text)
@@ -3922,7 +3928,8 @@ SECTIONS
         build/src/func_8008770C.c.o(.data)
         build/src/func_80087728.c.o(.data)
         build/src/func_80087744.c.o(.data)
-        build/asm/disc1/77F60.s.o(.data)
+        build/src/func_80087760.c.o(.data)
+        build/asm/disc1/77F7C.s.o(.data)
         build/src/func_800877BC.c.o(.data)
         build/asm/disc1/77FD4.s.o(.data)
         build/src/func_8008AB1C.c.o(.data)
@@ -4384,7 +4391,8 @@ SECTIONS
         build/src/func_8008770C.c.o(.rodata)
         build/src/func_80087728.c.o(.rodata)
         build/src/func_80087744.c.o(.rodata)
-        build/asm/disc1/77F60.s.o(.rodata)
+        build/src/func_80087760.c.o(.rodata)
+        build/asm/disc1/77F7C.s.o(.rodata)
         build/src/func_800877BC.c.o(.rodata)
         build/asm/disc1/77FD4.s.o(.rodata)
         build/src/func_8008AB1C.c.o(.rodata)
@@ -4846,7 +4854,8 @@ SECTIONS
         build/src/func_8008770C.c.o(.bss)
         build/src/func_80087728.c.o(.bss)
         build/src/func_80087744.c.o(.bss)
-        build/asm/disc1/77F60.s.o(.bss)
+        build/src/func_80087760.c.o(.bss)
+        build/asm/disc1/77F7C.s.o(.bss)
         build/src/func_800877BC.c.o(.bss)
         build/asm/disc1/77FD4.s.o(.bss)
         build/src/func_8008AB1C.c.o(.bss)
