@@ -928,12 +928,13 @@ segments:
       - [0xBB4DC, asm]
       # Phase 5CS: C leaf func_800CBB24 — file 0xBC324, size 0xC.
       - [0xBC324, c, func_800CBB24]
-      # Phase 5ED: dual mid-BC330 holes — sb+ret0 func_800CBFA4 + func_800CCF80.
-      # Prefix 0x474 (= 0xBC7A4 - 0xBC330); mid BC7B4.s 0xFCC (= 0xBD780 - 0xBC7B4);
-      # resume BD790.s 0x34C (= 0xBDADC - 0xBD790). Abutting return-0 twins stay asm.
+      # Volume campaign 1: return-zero func_800CBFB4, era -O2 -G0.
+      # Prior BC7B4 span closes by boundary arithmetic:
+      # C 0x8 + resume 0xFC4 (= 0xBD780 - 0xBC7BC) = 0xFCC.
       - [0xBC330, asm]
       - [0xBC7A4, c, func_800CBFA4]
-      - [0xBC7B4, asm]
+      - [0xBC7B4, c, func_800CBFB4]
+      - [0xBC7BC, asm]
       - [0xBD780, c, func_800CCF80]
       - [0xBD790, asm]
       # Phase 5X: C leaf func_800CD2DC — VRAM 0x800CD2DC, size 0x8.
