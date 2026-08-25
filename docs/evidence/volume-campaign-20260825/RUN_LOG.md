@@ -283,3 +283,12 @@ stream-helper sibling. The proven GCC 14 `-O1 -G0` source form matched all ten
 words on the first phrasing. Carve `0x00 + 0x28 + 0xC8 = 0xF0`, packed
 span/full SHA exact, verify green at 313. Evidence:
 `func-800905c4/REPORT.md`.
+
+Adjacent `func_800905EC` @ `0x80DEC` passes function hood via the exact-start
+callback-table word at `0x8009CBB4`, canonical return, and real boundaries.
+This corrects the pool's stale `0/0 no caller/ref` screen. It is the
+`0x2200`/output-`+0x114` stream-helper sibling. Proven GCC 14 `-O1 -G0` C
+matched all ten words on the first phrasing. Carve
+`0x00 + 0x28 + 0xA0 = 0xC8`, packed span/full SHA exact, verify green at 314.
+The Tier-3 pool count falls 98→97 and consecutive-park count stays zero.
+Evidence: `func-800905ec/REPORT.md`.

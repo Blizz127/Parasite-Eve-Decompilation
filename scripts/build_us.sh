@@ -245,7 +245,8 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # 80CC4:    0x80CC4 → 0x80D9C = 0xD8
 # C 9059C:  0x80D9C → 0x80DC4 = 0x28
 # C 905C4:  0x80DC4 → 0x80DEC = 0x28
-# 80DEC:    0x80DEC → 0x80EB4 = 0xC8
+# C 905EC:  0x80DEC → 0x80E14 = 0x28
+# 80E14:    0x80E14 → 0x80EB4 = 0xA0
 # C 906B4:  0x80EB4 → 0x80EE4 = 0x30
 # 80EE4:    0x80EE4 → 0x8120C = 0x328
 # C 90A0C:  0x8120C → 0x81220 = 0x14
@@ -701,7 +702,8 @@ SIZE_C_904BC=0x8
 SIZE_80CC4=0xd8
 SIZE_C_9059C=0x28
 SIZE_C_905C4=0x28
-SIZE_80DEC=0xc8
+SIZE_C_905EC=0x28
+SIZE_80E14=0xa0
 SIZE_C_906B4=0x30
 SIZE_80EE4=0x328
 SIZE_C_90A0C=0x14
@@ -1265,7 +1267,8 @@ OBJECTS=(
     "build/asm/disc1/80CC4.s.o"
     "build/src/func_8009059C.c.o"
     "build/src/func_800905C4.c.o"
-    "build/asm/disc1/80DEC.s.o"
+    "build/src/func_800905EC.c.o"
+    "build/asm/disc1/80E14.s.o"
     "build/src/func_800906B4.c.o"
     "build/asm/disc1/80EE4.s.o"
     "build/src/func_80090A0C.c.o"
@@ -1758,7 +1761,8 @@ SOURCES=(
     "asm/disc1/80CC4.s"
     "src/func_8009059C.c"
     "src/func_800905C4.c"
-    "asm/disc1/80DEC.s"
+    "src/func_800905EC.c"
+    "asm/disc1/80E14.s"
     "src/func_800906B4.c"
     "asm/disc1/80EE4.s"
     "src/func_80090A0C.c"
@@ -2284,7 +2288,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/7FEB0.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/80098.s.o asm/disc1/80098.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/804BC.s.o asm/disc1/804BC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/80CC4.s.o asm/disc1/80CC4.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/80DEC.s.o asm/disc1/80DEC.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/80E14.s.o asm/disc1/80E14.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/80EE4.s.o asm/disc1/80EE4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/81220.s.o asm/disc1/81220.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/81488.s.o asm/disc1/81488.s
@@ -2656,6 +2660,7 @@ run "$CC" $CFLAGS_LEAF -c -o build/src/func_800904B4.c.o src/func_800904B4.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800904BC.c.o src/func_800904BC.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8009059C.c.o src/func_8009059C.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800905C4.c.o src/func_800905C4.c
+run "$CC" $CFLAGS_LEAF -c -o build/src/func_800905EC.c.o src/func_800905EC.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800906B4.c.o src/func_800906B4.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80090A0C.c.o src/func_80090A0C.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80090C38.c.o src/func_80090C38.c
@@ -3097,7 +3102,8 @@ python3 "$TRIM" build/src/func_800904BC.c.o .text "$SIZE_C_904BC"
 python3 "$TRIM" build/asm/disc1/80CC4.s.o .text "$SIZE_80CC4"
 python3 "$TRIM" build/src/func_8009059C.c.o .text "$SIZE_C_9059C"
 python3 "$TRIM" build/src/func_800905C4.c.o .text "$SIZE_C_905C4"
-python3 "$TRIM" build/asm/disc1/80DEC.s.o .text "$SIZE_80DEC"
+python3 "$TRIM" build/src/func_800905EC.c.o .text "$SIZE_C_905EC"
+python3 "$TRIM" build/asm/disc1/80E14.s.o .text "$SIZE_80E14"
 python3 "$TRIM" build/src/func_800906B4.c.o .text "$SIZE_C_906B4"
 python3 "$TRIM" build/asm/disc1/80EE4.s.o .text "$SIZE_80EE4"
 python3 "$TRIM" build/src/func_80090A0C.c.o .text "$SIZE_C_90A0C"
@@ -3629,7 +3635,8 @@ SECTIONS
         build/asm/disc1/80CC4.s.o(.text)
         build/src/func_8009059C.c.o(.text)
         build/src/func_800905C4.c.o(.text)
-        build/asm/disc1/80DEC.s.o(.text)
+        build/src/func_800905EC.c.o(.text)
+        build/asm/disc1/80E14.s.o(.text)
         build/src/func_800906B4.c.o(.text)
         build/asm/disc1/80EE4.s.o(.text)
         build/src/func_80090A0C.c.o(.text)
@@ -4116,7 +4123,8 @@ SECTIONS
         build/asm/disc1/80CC4.s.o(.data)
         build/src/func_8009059C.c.o(.data)
         build/src/func_800905C4.c.o(.data)
-        build/asm/disc1/80DEC.s.o(.data)
+        build/src/func_800905EC.c.o(.data)
+        build/asm/disc1/80E14.s.o(.data)
         build/src/func_800906B4.c.o(.data)
         build/asm/disc1/80EE4.s.o(.data)
         build/src/func_80090A0C.c.o(.data)
@@ -4602,7 +4610,8 @@ SECTIONS
         build/asm/disc1/80CC4.s.o(.rodata)
         build/src/func_8009059C.c.o(.rodata)
         build/src/func_800905C4.c.o(.rodata)
-        build/asm/disc1/80DEC.s.o(.rodata)
+        build/src/func_800905EC.c.o(.rodata)
+        build/asm/disc1/80E14.s.o(.rodata)
         build/src/func_800906B4.c.o(.rodata)
         build/asm/disc1/80EE4.s.o(.rodata)
         build/src/func_80090A0C.c.o(.rodata)
@@ -5088,7 +5097,8 @@ SECTIONS
         build/asm/disc1/80CC4.s.o(.bss)
         build/src/func_8009059C.c.o(.bss)
         build/src/func_800905C4.c.o(.bss)
-        build/asm/disc1/80DEC.s.o(.bss)
+        build/src/func_800905EC.c.o(.bss)
+        build/asm/disc1/80E14.s.o(.bss)
         build/src/func_800906B4.c.o(.bss)
         build/asm/disc1/80EE4.s.o(.bss)
         build/src/func_80090A0C.c.o(.bss)
@@ -5332,6 +5342,7 @@ leaf904b4 = slice(0x80CB4, 0x80CBC)
 leaf904bc = slice(0x80CBC, 0x80CC4)
 leaf9059c = slice(0x80D9C, 0x80DC4)
 leaf905c4 = slice(0x80DC4, 0x80DEC)
+leaf905ec = slice(0x80DEC, 0x80E14)
 leaf906b4 = slice(0x80EB4, 0x80EE4)
 leaf0 = slice(0x8120C, 0x81220)
 leaf1 = slice(0x81438, 0x8144C)
@@ -5462,6 +5473,7 @@ print(f"  probe file 0x80CB4 (904B4): cand={cand[leaf904b4].hex()} orig={orig[le
 print(f"  probe file 0x80CBC (904BC): cand={cand[leaf904bc].hex()} orig={orig[leaf904bc].hex()}")
 print(f"  probe file 0x80D9C (9059C): cand={cand[leaf9059c].hex()} orig={orig[leaf9059c].hex()}")
 print(f"  probe file 0x80DC4 (905C4): cand={cand[leaf905c4].hex()} orig={orig[leaf905c4].hex()}")
+print(f"  probe file 0x80DEC (905EC): cand={cand[leaf905ec].hex()} orig={orig[leaf905ec].hex()}")
 print(f"  probe file 0x80EB4 (906B4): cand={cand[leaf906b4].hex()} orig={orig[leaf906b4].hex()}")
 print(f"  probe file 0x8120C (90A0C): cand={cand[leaf0].hex()} orig={orig[leaf0].hex()}")
 print(f"  probe file 0x81438 (90C38): cand={cand[leaf1].hex()} orig={orig[leaf1].hex()}")
