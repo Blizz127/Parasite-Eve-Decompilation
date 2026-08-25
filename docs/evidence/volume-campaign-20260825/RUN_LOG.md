@@ -181,3 +181,10 @@ matched all eight words on the first era `-O2 -G0` phrasing, including the
 final state-byte store in the return delay slot. Carve
 `0x214 + 0x20 = 0x234`, packed span/full SHA exact, verify green at 305.
 Evidence: `func-80083e50/REPORT.md`.
+
+The next Tier-1 leaf, `func_80083E84` @ `0x74684`, has two direct callers and
+is the tag-`0x4C` structural twin of `83E50`. Proven initializer C matched all
+eight words on the first era `-O2 -G0` phrasing. Carve
+`0x20 + 0x40 = 0x60`, packed span/full SHA exact. The first verifier run
+caught a stale `[0x74684, asm]` expected marker; after correcting the cluster's
+C/asm manifest, verify passed at 306. Evidence: `func-80083e84/REPORT.md`.

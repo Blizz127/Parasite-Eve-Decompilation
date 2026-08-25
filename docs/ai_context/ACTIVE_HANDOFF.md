@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `68cb15b`, 304 accepted matching-C
+Current matching-lane status: `main` @ `033888b`, 305 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -938,6 +938,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-39-5DB8C | 304 | `func_8005DB8C` @ `0x4E38C` is an eight-word retained-address helper with four direct calls. Two `-O2 -G0` phrasings bounded the DAG: one shared the address with the wrong allocation/order; one duplicated materialization. Retail requires address-in-`$v0`, adjusted copy in `$v1`, then load overwriting `$v0`. `PARKED-ADDRESS-DAG-COLORING`; no integration/count change. Evidence: `docs/evidence/volume-campaign-20260825/func-8005db8c/PARK.md`; source is in the labeled stash. |
 | VOLUME-40-GTE-POOL-SCREEN | 304 | Pool drift correction: callable `func_80078E04` and `func_80078E94` still appeared in Tier 1 despite the authoritative 23-function handwritten libGTE/COP2 screen. Each has three direct callers, canonical return, real boundaries, and unavoidable `ctc2` semantic bodies. Both moved to `SKIP-SDK-LIBRARY-COP2` without attempts; Tier 1 66→64, SKIP 743→745. Evidence: `docs/evidence/volume-campaign-20260824/COP2_SDK_SCREEN.md`. |
 | VOLUME-41-83E50 | 305 | `func_80083E50` @ `0x74650` is an eight-word object initializer with two direct calls. Natural argument-relative pointer/byte stores match first phrasing under era `-O2 -G0`, including the final state store in the return delay slot. Carve `0x214 + 0x20 = 0x234`, packed span/full SHA exact, verify green at 305. Evidence: `docs/evidence/volume-campaign-20260825/func-80083e50/REPORT.md`. |
+| VOLUME-42-83E84 | 306 | `func_80083E84` @ `0x74684` is the eight-word tag-`0x4C` initializer twin with two direct calls. Proven source shape matched first phrasing under era `-O2 -G0`; carve `0x20 + 0x40 = 0x60`, packed span/full SHA exact. The verifier first caught its stale `[0x74684, asm]` manifest marker; corrected C/asm registrations pass at 306. Evidence: `docs/evidence/volume-campaign-20260825/func-80083e84/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
