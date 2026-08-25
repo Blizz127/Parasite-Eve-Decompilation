@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `fa38889`, 299 accepted matching-C
+Current matching-lane status: `main` @ `fd35238`, 300 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -923,6 +923,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-31-877D4 | 298 | `func_800877D4` @ `0x77FD4` is a seven-word per-voice SPU halfword setter, distinct from the paired-control helpers. Natural indexed volatile C matches on the first `-O2 -G0` phrasing; carve `0x1C + 0x332C = 0x3348`, packed span/full SHA exact, verify green at 298. Evidence: `docs/evidence/volume-campaign-20260825/func-800877d4/REPORT.md`. |
 | VOLUME-32-877F0 | 299 | `func_800877F0` @ `0x77FF0` is the per-voice SPU halfword-setter twin of `877D4`. Natural indexed volatile C matches on the first `-O2 -G0` phrasing; carve `0x1C + 0x3310 = 0x332C`, packed span/full SHA exact, verify green at 299. Evidence: `docs/evidence/volume-campaign-20260825/func-800877f0/REPORT.md`. |
 | VOLUME-33-83C20 | 300 | `func_80083C20` @ `0x74420` is a seven-word callback initializer. Function hood is proven by the exact-start HI/LO callback-address construction in `func_80083BB8`, canonical return, and real boundaries. Natural `-O2 -G0` C matched first phrasing; carve `0x660 + 0x1C + 0x234 = 0x8B0`, packed span/full SHA exact, verify green at 300. Evidence: `docs/evidence/volume-campaign-20260825/func-80083c20/REPORT.md`. |
+| VOLUME-34-5E8A4 | 301 | `func_8005E8A4` @ `0x4F0A4` is an eight-word gp-relative two-component accumulator with 247 direct calls. Natural `D_8009D124 += a0; D_8009D128 += a1;` matches first phrasing under era `-O2 -G8`; all GPREL16 relocations normalize to retail. Carve `0x20 + 0x294 = 0x2B4`, packed span/full SHA exact, verify green at 301. Evidence: `docs/evidence/volume-campaign-20260825/func-8005e8a4/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

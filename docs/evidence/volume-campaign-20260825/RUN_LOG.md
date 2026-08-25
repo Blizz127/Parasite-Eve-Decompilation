@@ -123,3 +123,9 @@ the exact-start callback-address construction in `func_80083BB8`; the pool's
 `0/2` is its HI/LO reference pair. Natural `-O2 -G0` C matched all seven words
 on the first phrasing. Carve `0x660 + 0x1C + 0x234 = 0x8B0`, packed span/full
 SHA exact, verify green at 300. Evidence: `func-80083c20/REPORT.md`.
+
+The next Tier-1 leaf, `func_8005E8A4` @ `0x4F0A4`, has 247 direct calls and
+updates the gp-relative pair `D_8009D124/D_8009D128`, which has 32 other
+Stage-0 readers. Natural two-statement accumulator C matched all eight words
+on the first era `-O2 -G8` phrasing. Carve `0x20 + 0x294 = 0x2B4`, packed
+span/full SHA exact, verify green at 301. Evidence: `func-8005e8a4/REPORT.md`.
