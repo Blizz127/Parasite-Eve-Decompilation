@@ -194,3 +194,10 @@ is the tag-`0x47` structural twin of `83E50`/`83E84`. Proven initializer C
 matched all eight words on the first era `-O2 -G0` phrasing. Carve
 `0x20 + 0x20 = 0x40`, packed span/full SHA exact, verify green at 307.
 Evidence: `func-80083ec4/REPORT.md`.
+
+The next Tier-1 leaf, `func_80083EA4` @ `0x746A4`, has one direct caller and
+is the tag-`0x46` structural twin completing this initializer cluster. Proven
+initializer C matched all eight words on the first era `-O2 -G0` phrasing.
+The old asm span was exactly the leaf (`0x20 = 0x20`), so it closes with no
+prefix or resume; packed span/full SHA exact, verify green at 308. Evidence:
+`func-80083ea4/REPORT.md`.
