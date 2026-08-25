@@ -81,3 +81,9 @@ two direct callers and matched on the second `-O2 -G0` phrasing. An explicit
 result accumulator reproduced retail's filled null-branch delay slot; carve
 `0x1C + 0x186C = 0x1888`, packed span and full SHA exact, verify green at 292.
 Evidence: `func-800631c0/REPORT.md`.
+
+The next Tier-1 leaf, `func_80087728` @ `0x77F28`, passed function hood with
+two direct callers and matched on the second `-O2 -G0` phrasing. Direct fixed
+address stores overflowed; one volatile base with halfword indices reproduced
+the `$at` MMIO form. Carve `0x300 + 0x1C + 0x78 = 0x394`, packed span/full SHA
+exact, verify green at 293. Evidence: `func-80087728/REPORT.md`.

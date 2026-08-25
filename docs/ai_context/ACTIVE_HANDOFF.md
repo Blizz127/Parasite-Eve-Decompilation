@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `0b8cc42`, 291 accepted matching-C
+Current matching-lane status: `main` @ `e6319d1`, 292 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -913,6 +913,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-23-3708C | 291 | `func_8003708C` @ `0x2788C` is a seven-word fixed-point multiply with 65 direct callers and canonical return. Two `-O2 -G0` natural product forms retain wrong HI/LO temporary coloring and exceed the exact body; `PARKED-FIXED-POINT-REGISTER-COLORING`, no integration/count change. Evidence: `docs/evidence/volume-campaign-20260825/func-8003708c/PARK.md`; candidate is in the labeled stash. |
 | VOLUME-24-762A0 | 291 | `func_800762A0` @ `0x66AA0` is a seven-word packed GPU command helper with three direct callers and canonical return. Two `-O2 -G0` phrasings retain the first masked/shifted value in `$v0` instead of retail `$a1`; `PARKED-REGISTER-COLORING`, no integration/count change. Evidence: `docs/evidence/volume-campaign-20260825/func-800762a0/PARK.md`; candidate is in the labeled stash. |
 | VOLUME-25-631C0 | 292 | `func_800631C0` @ `0x539C0` is a seven-word nullable flag query with two direct callers and canonical return. The explicit result accumulator in `-O2 -G0` fills the null-branch delay slot exactly; carve `0x1C + 0x186C = 0x1888`, packed span/full SHA exact, verify green at 292. Evidence: `docs/evidence/volume-campaign-20260825/func-800631c0/REPORT.md`. |
+| VOLUME-26-87728 | 293 | `func_80087728` @ `0x77F28` is a seven-word volatile MMIO halfword-pair setter with two direct callers and canonical return. Direct-address C overflows; a single-base indexed phrasing reproduces the `$at` store form on `-O2 -G0`; carve `0x300 + 0x1C + 0x78 = 0x394`, packed span/full SHA exact, verify green at 293. Evidence: `docs/evidence/volume-campaign-20260825/func-80087728/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
