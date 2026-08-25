@@ -482,3 +482,14 @@ reversed-OR retry leaves those mask homes unchanged and also swaps the first
 two loads. It parks after two phrasings as `PARKED-MASK-CONSTANT-COLORING`;
 count stays 329, Tier 1 falls 34→33, and consecutive park becomes 2.
 Evidence: `func-80077ac4/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 leaf, `func_80077A64` @ `0x68264`, passes function hood
+via 36 raw direct callers, canonical return with a live delay slot, and real
+boundaries. Earlier B54I retail/native evidence proves the Psy-Q `GetTPage`
+five-field packing semantics and supplies the independent oracle
+`(0,1,256,480) -> 0x34`. That proven C matched all fifteen words on the first
+era `-O2 -G0` phrasing, including in-place `$a1/$a2/$a3` coloring and the
+final OR in the return delay slot. Carve
+`0x0018 + 0x003C + 0x0004 = 0x0058`, packed span/full SHA exact, verify
+green at 330. Tier 1 falls 33→32, and the match resets consecutive parks
+from two to zero. Evidence: `func-80077a64/REPORT.md`.
