@@ -326,6 +326,13 @@
       "note": "func_80043474 @ file 0x33C74 is a proven callable nineteen-word six-result signed threshold classifier with direct callers 0x800402F4 and 0x8005C340, canonical return, and real boundaries. Two era -O2 -G0 phrasings were tested. An ascending less-than ladder and a complementary >= final condition both compile to twenty words. cc1 emits a separate category-4 beqz/nop plus local jump. Retail instead branches to a category-4 assignment block while computing the fifth predicate in that branch delay slot, then chooses categories 6/5 through a branch/local-jump pair. The complement changes only 5/6 polarity and cannot select retail's cross-block schedule. No YAML/build/verifier integration; matching count remains 334.",
       "evidence": "docs/evidence/volume-campaign-20260825/func-80043474/PARK.md; final source preserved in stash 'park volume func_80043474 threshold ladder block layout'",
       "next": "Do not retry without a source or compiler block-layout lever that demonstrably places the fifth compare in the category-4 branch delay slot."
+    },
+    {
+      "id": "lexicographic-compare-canonicalization-73244",
+      "status": "PARKED-LEXICOGRAPHIC-COMPARE-CANONICALIZATION",
+      "note": "func_80073244 @ file 0x63A44 is a proven callable twenty-word unsigned lexicographic comparator over two {lo,hi} word pairs, with direct callers 0x80073040 and 0x8007309C, canonical return, and real boundaries. Two era -O2 -G0 phrasings were tested. Scalar unsigned long long selects cc1's generic multiword compare and no argument homes. Passing two two-word structs by value proves the ABI source shape by reproducing retail words 0-5 exactly, including stores of a0/a1/a2 and the branch-delay a3 store. cc1 then folds the equal-high-word low comparison into sltu plus negu, producing seventeen content words instead of retail's explicit twenty-word branch/result ladder. No YAML/build/verifier integration; matching count remains 334. This was the third consecutive actual park after func_8005DBAC and func_80043474, so the mandatory hard stop fired with no Tier-1 row skipped.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-80073244/PARK.md; final source preserved in stash 'park volume func_80073244 lexicographic compare canonicalization'",
+      "next": "Do not retry without a source or compiler optimization lever that preserves explicit low-word branches instead of folding the three-way result through negu."
     }
   ]
 }

@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `397f22f`, 334 accepted matching-C
+Current matching-lane status: `main` @ `0ee54f2`, 334 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -62,6 +62,12 @@ result, spell an explicit pointer local and dereference it. `func_8005DADC`
 proved this can recover shared `$v1` retention. This is distinct from the
 parked scalar-exchange family, where the assembler-selected store form remains
 the blocker.
+
+**By-value aggregate ABI-home lever:** when retail compares incoming words
+but also stores `$a0..$a3` to `0/4/8/12(sp)` without a frame, test two
+two-word structs passed by value. `func_80073244` proves this recovers the
+argument-home prefix exactly; its remaining low-word result fold is a
+separate canonicalization blocker.
 
 All remaining pe-continuous-decomp grind leaves are ported. After 29388
 (below): `func_800293F4` (0x19BF4, 124w, era `-O2 -G8` +
@@ -983,6 +989,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-84-653B8 | 334 | `func_800653B8` @ `0x55BB8` is the eighteen-word mailbox queue append, proven by its sole direct opcode-`0x1C` caller, canonical return, real boundaries, and independent PE-MBX1/2 state evidence. A natural 12-byte aggregate subscript matches first phrasing under era `-O2 -G8` after ordinary relocations. Carve `0x0788 + 0x0048 + 0x51BC = 0x598C`, packed span/full SHA exact, verify green at 334; consecutive parks reset. Evidence: `docs/evidence/volume-campaign-20260825/func-800653b8/REPORT.md`. |
 | VOLUME-85-5DBAC-PARK | 334 | `func_8005DBAC` @ `0x4E3AC` is a proven callable nineteen-word clamped symbolic-table address helper with eleven direct callers, canonical return, and real boundaries. Both bounded era `-O2 -G0` phrasings preserve proven B28 semantics but miss retail's lifetime split: retail copies index to `$v1` so `$a0` can later hold the symbolic address/value; natural C either keeps index in `$a0` or hoists the pointer into `$a1`, yielding eighteen content words. `PARKED-SYMBOLIC-ADDRESS-LIFETIME-COLORING`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-8005dbac/PARK.md`; source is in the labeled stash. |
 | VOLUME-86-43474-PARK | 334 | `func_80043474` @ `0x33C74` is a proven callable nineteen-word signed threshold classifier with two direct callers, canonical return, and real boundaries. Both bounded era `-O2 -G0` phrasings emit twenty words: cc1 keeps a separate category-4 branch/jump, while retail hoists the fifth compare into that branch's delay slot and places category 4 after the 5/6 jump. `PARKED-THRESHOLD-LADDER-BLOCK-LAYOUT`; no integration/count change, consecutive park 2. Evidence: `docs/evidence/volume-campaign-20260825/func-80043474/PARK.md`; source is in the labeled stash. |
+| VOLUME-87-73244-PARK/STOP | 334 | `func_80073244` @ `0x63A44` is a proven callable twenty-word unsigned word-pair comparator with two direct callers, canonical return, and real boundaries. A by-value two-struct phrasing recovers retail's first six words, including all four ABI argument homes, but cc1 folds the low-word three-way comparison into `sltu` + `negu` and shrinks to seventeen content words. `PARKED-LEXICOGRAPHIC-COMPARE-CANONICALIZATION`; no integration/count change, consecutive park 3. Hard stop fires honestly after `5DBAC/43474/73244`, with no Tier-1 row skipped. Evidence: `docs/evidence/volume-campaign-20260825/func-80073244/PARK.md`; source is in the labeled stash. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

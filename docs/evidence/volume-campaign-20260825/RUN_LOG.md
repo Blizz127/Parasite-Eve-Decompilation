@@ -271,6 +271,23 @@ polarity. It parks as `PARKED-THRESHOLD-LADDER-BLOCK-LAYOUT`; count stays
 334, Tier 1 falls 24→23, and consecutive park becomes 2. Evidence:
 `func-80043474/PARK.md`; source is in the labeled stash.
 
+The next Tier-1 candidate, `func_80073244` @ `0x63A44`, was not skipped to
+evade the stop rule. It passes function hood via two direct callers,
+canonical return, and real adjacent functions. Scalar `unsigned long long`
+confirms the unsigned two-word comparison but emits a generic compare graph.
+The second and final by-value `{lo,hi}` aggregate phrasing proves the source
+type by recovering retail words 0–5 exactly, including all four ABI argument
+homes. cc1 then canonicalizes the equal-high-word low comparison to `sltu`
+plus `negu`, yielding seventeen content words versus retail's explicit
+twenty-word branch ladder. It parks as
+`PARKED-LEXICOGRAPHIC-COMPARE-CANONICALIZATION`; count stays 334, Tier 1
+falls 23→22, and consecutive park becomes 3. Evidence:
+`func-80073244/PARK.md`; source is in the labeled stash.
+
+`HARD_STOP=THREE_CONSECUTIVE_ACTUAL_PARKS`. The consecutive sequence is
+`func_8005DBAC`, `func_80043474`, `func_80073244`; no candidate was skipped
+to manufacture or avoid the stop. Campaign terminal count is 334.
+
 Adjacent `func_80087864` @ `0x78064` is function-hood proven by its exact
 caller at `0x80087A80` and canonical return. Its complete body has the same
 per-voice SPU volatile `sh` return-slot mechanism as parked `8783C`, changing
