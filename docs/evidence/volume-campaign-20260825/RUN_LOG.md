@@ -143,3 +143,10 @@ OFX/OFY `ctc2` writes. Existing projection evidence proves it restores
 `(160,112)`; the established COP2 screen proves ordinary-C expressibility is
 absent. It was moved to `SKIP-HANDWRITTEN-COP2` without an attempt or count
 change. Evidence: `func-800661cc/SKIP.md`.
+
+The next Tier-1 leaf, `func_8005BEE8` @ `0x4C6E8`, has six direct callers and
+returns one of two 0x10-separated addresses inside `D_800C0DE0` according to
+gp-relative `D_8009D218`. An explicit result pointer retained the address in
+`$v1` and matched all eight words on the first era `-O2 -G8` phrasing. Carve
+`0x20 + 0x580 = 0x5A0`, packed span/full SHA exact, verify green at 303.
+Evidence: `func-8005bee8/REPORT.md`.

@@ -486,7 +486,10 @@ segments:
       - [0x4C4B0, c, func_8005BCB0]
       - [0x4C4BC, asm]
       - [0x4C6DC, c, func_8005BEDC]
-      - [0x4C6E8, asm]
+      # Volume campaign: gp-selected pointer into D_800C0DE0; size 0x20,
+      # era -O2 -G8.
+      - [0x4C6E8, c, func_8005BEE8]
+      - [0x4C708, asm]
       - [0x4CC88, c, func_8005C488]
       - [0x4CC98, asm]
       - [0x4E914, c, func_8005E114]

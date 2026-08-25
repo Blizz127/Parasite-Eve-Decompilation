@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `43210d8`, 302 accepted matching-C
+Current matching-lane status: `main` @ `6a7a940`, 302 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -926,6 +926,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-34-5E8A4 | 301 | `func_8005E8A4` @ `0x4F0A4` is an eight-word gp-relative two-component accumulator with 247 direct calls. Natural `D_8009D124 += a0; D_8009D128 += a1;` matches first phrasing under era `-O2 -G8`; all GPREL16 relocations normalize to retail. Carve `0x20 + 0x294 = 0x2B4`, packed span/full SHA exact, verify green at 301. Evidence: `docs/evidence/volume-campaign-20260825/func-8005e8a4/REPORT.md`. |
 | VOLUME-35-5E968 | 302 | `func_8005E968` @ `0x4F168` is an eight-word gp-relative packed-value setter with 16 direct calls. Natural signed shift/mask C matches first phrasing under era `-O2 -G8`; all GPREL16 relocations normalize to retail. Carve `0xA4 + 0x20 + 0x1D0 = 0x294`, packed span/full SHA exact, verify green at 302. Evidence: `docs/evidence/volume-campaign-20260825/func-8005e968/REPORT.md`. |
 | VOLUME-36-661CC-COP2 | 302 | `func_800661CC` @ `0x569CC` is a proven callable handwritten projection reset helper with seven direct calls. Its semantic body writes GTE OFX/OFY via two `ctc2` instructions, unavailable in sanctioned ordinary C. Screened without an attempt as `SKIP-HANDWRITTEN-COP2`; it is not labeled SDK without provenance. Evidence: `docs/evidence/volume-campaign-20260825/func-800661cc/SKIP.md`. |
+| VOLUME-37-5BEE8 | 303 | `func_8005BEE8` @ `0x4C6E8` is an eight-word gp-selected pointer getter with six direct calls. An explicit result pointer retains `D_800C0DE0` in `$v1`, conditionally adds `0x10`, and fills the return delay slot exactly under era `-O2 -G8`. Carve `0x20 + 0x580 = 0x5A0`, packed span/full SHA exact, verify green at 303. Evidence: `docs/evidence/volume-campaign-20260825/func-8005bee8/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
