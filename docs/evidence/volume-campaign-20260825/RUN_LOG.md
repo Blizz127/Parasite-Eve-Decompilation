@@ -549,3 +549,14 @@ the default-result branch slot, load-delay nops, and `mult/mflo` allocation.
 Carve `0x024C + 0x0044 + 0x15DC = 0x186C`, packed span/full SHA exact,
 verify green at 333. Tier 1 falls 28→27 and the match resets consecutive
 parks from one to zero. Evidence: `func-80063428/REPORT.md`.
+
+The next Tier-1 candidate, `func_8006E454` @ `0x5EC54`, passes function
+hood via two direct callers, canonical return with a live delay slot, and
+real adjacent functions. Existing BTL14 evidence proves its decimal parse of
+field-name bytes 2–4. Attempt 1 exposed plain-`char` unsignedness and early
+load hoisting; attempt 2 recovered the signed `lb` opcodes, but cc1 still
+hoists byte 4 before either scaled term while retail loads it only after the
+hundreds/tens arithmetic. It parks after two era `-O2 -G0` phrasings as
+`PARKED-INDEPENDENT-LOAD-SCHEDULING`; count stays 333, Tier 1 falls 27→26,
+and consecutive park becomes 1. Evidence: `func-8006e454/PARK.md`; source
+is in the labeled stash.

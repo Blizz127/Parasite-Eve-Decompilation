@@ -305,6 +305,13 @@
       "note": "func_8005E988 @ file 0x4F188 is a proven callable sixteen-word three-way packed-value selector with twelve exact direct callers, canonical return, and real boundaries. It selects 0x408080, 0x404080, or 0x808080 from two signed comparisons, then writes the selected value and its unsigned half to gp-relative D_8009D110/D_8009D114. Two era -O2 -G8 phrasings preserve the semantics but not retail's control-flow/constant schedule. Natural nested selection remains sixteen words but uses beqz plus an early local jump for the first arm. An explicit less-case default selects retail's first bnez but hoists lui v1,0x40 ahead of the compare and shrinks to fifteen content words. Retail intertwines all three constant constructions with two branch delay slots and one local-jump delay slot. No YAML/build/verifier integration; matching count remains 332.",
       "evidence": "docs/evidence/volume-campaign-20260825/func-8005e988/PARK.md; final source preserved in stash 'park volume func_8005E988 control-flow constant scheduling'",
       "next": "Do not retry without a new source or compiler scheduling lever that demonstrably reproduces retail's branch topology and delay-slot constant materialization."
+    },
+    {
+      "id": "independent-load-scheduling-6e454",
+      "status": "PARKED-INDEPENDENT-LOAD-SCHEDULING",
+      "note": "func_8006E454 @ file 0x5EC54 is a proven callable seventeen-word decimal parser for field/package-name bytes 2-4, with direct callers 0x8005D958 and 0x8006B560, canonical return, and real boundaries. Existing BTL14 evidence independently proves the semantics. Two era -O2 -G0 phrasings were tested. Explicit signed char fixes attempt 1's lbu opcodes, but cc1 always hoists all three independent byte loads before arithmetic. Retail loads bytes 2 and 3, completes the strength-reduced hundreds/tens terms, then loads byte 4 into reused v1 and adds it in the return delay slot. Attempt 2 is semantically exact and seventeen words but differs solely in load scheduling/register reuse. No YAML/build/verifier integration; matching count remains 333.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-8006e454/PARK.md; final source preserved in stash 'park volume func_8006E454 independent load scheduling'",
+      "next": "Do not retry without a source or compiler scheduling lever that demonstrably prevents the independent byte-4 load from being hoisted."
     }
   ]
 }
