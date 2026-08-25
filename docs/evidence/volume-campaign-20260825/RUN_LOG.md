@@ -397,3 +397,12 @@ address pair. It parks after two phrasings as
 `PARKED-INDEPENDENT-OP-SCHEDULING`; count stays 322, Tier 1 falls 43→42,
 and consecutive park becomes 1. Evidence: `func-8008780c/PARK.md`; source is
 in the labeled stash.
+
+Adjacent `func_800878C0` @ `0x780C0` independently passes function hood via
+direct caller `0x80087A48`, canonical return, and real boundaries. A grouped
+nonvolatile halfword RMW matched all twelve words on the first era `-O2 -G0`
+phrasing: the grouped incoming fields select retail's `$a2 |= $a1` dataflow,
+and the lvalue permits the exact `jr; sh` ending. Carve
+`0x00B4 + 0x0030 + 0x322C = 0x3310`, packed span/full SHA exact, verify
+green at 323. Tier 1 falls 42→41 and the match resets consecutive parks to
+zero. Evidence: `func-800878c0/REPORT.md`.
