@@ -335,3 +335,10 @@ retry changes only that instruction to `srav`. Both candidates are nine words
 and omit retail's explicit `addiu 1; sllv; and; sltu` path. It is
 `PARKED-BIT-TEST-CANONICALIZATION`; no integration/count change, consecutive
 park 1. Evidence: `func-80055fe0/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 row, `func_80079244` @ `0x69A44`, is screened without a C
+attempt. Six direct callers and canonical return prove function hood; the
+exact body is a handwritten libGTE `RTPS` wrapper containing `lwc2`, `rtps`,
+`swc2`, `cfc2`, and `mfc2`. Existing projection evidence corroborates the
+role. It moves to `SKIP-SDK-LIBRARY-COP2`; count stays 318 and consecutive
+parks stay 1. Evidence: `func-80079244/SKIP.md`.
