@@ -109,6 +109,29 @@ m0360i. Remaining status: `SEMANTIC_IMPLEMENTATION=not_started`,
 `PRODUCTION_REACHABILITY=blocked_at_func_80030894_L2L3_cut`, native suite
 `928/928`.
 
+## PE-BTL150 — name-form search for m0360i (2026-08-24)
+
+The retail alphabet at `D_800930B4` is
+`0123456789abcdefghiklmnopqrstuvwxy` (no `j`). `func_8006E2D0` extracts six
+5-bit fields at shifts `27,22,17,12,7,2`; `func_8006E3D4`, called by
+`func_80015790` and `func_80015964`, is the inverse. Round-trip proof confirms
+`0xA8066048` is exactly `m0360i`, so the BTL147 token identity was correct.
+
+The executable and complete PE.IMG name-form scan found zero ASCII
+`m0360i`/`M0360I` spellings and zero packed `0xA8066048` words in either byte
+order. The generic `D_80093378` package table has the established numeric slot
+359 (`D_80093378 + 359*8 = 0x80093EB0`), but that entry is package metadata and
+does not provide a static name association. Evidence and scanner:
+`docs/evidence/pe-btl150-name-search/REPORT.md` and
+`tools/research/pe_btl150_name_search.py`.
+
+BTL150 closes the wrong-token hypothesis and the available static name-form
+lead. The unresolved boundary remains the runtime population/selection of the
+indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
+special-case m0360i. Status remains `SEMANTIC_IMPLEMENTATION=not_started`,
+`PRODUCTION_REACHABILITY=blocked_at_func_80030894_L2L3_cut`, native suite
+`928/928`.
+
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
 **276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,
