@@ -917,7 +917,10 @@ segments:
       # Volume campaign: C leaf func_8009063C — VRAM 0x8009063C, size 0x28.
       # File span 0x80E3C–0x80E64 exclusive. Stream byte + flag OR at +0xF4.
       - [0x80E3C, c, func_8009063C]
-      - [0x80E64, asm]
+      # Volume campaign: C leaf func_80090664 — VRAM 0x80090664, size 0x28.
+      # File span 0x80E64–0x80E8C exclusive. Stream byte + flag OR at +0xF4.
+      - [0x80E64, c, func_80090664]
+      - [0x80E8C, asm]
       # Phase 5S: C leaf func_800906B4 — VRAM 0x800906B4, size 0x30.
       # File span 0x80EB4–0x80EE4 exclusive. Stream byte + flag ORs at +0x38/+0xF4.
       - [0x80EB4, c, func_800906B4]

@@ -309,3 +309,11 @@ siblings, this helper widens the byte into a word store at `+0x100` while ORing
 phrasing. Carve `0x00 + 0x28 + 0x50 = 0x78`, packed span/full SHA exact,
 verify green at 316. Tier 3 falls 96→95; consecutive parks remain zero.
 Evidence: `func-8009063c/REPORT.md`.
+
+Adjacent `func_80090664` @ `0x80E64` passes function hood via exact-start
+callback-table word `0x8009CBDC`, canonical return, and real boundaries,
+correcting its stale pool `0/0` screen. It ORs `0x0200` and widens the stream
+byte into the word slot at `+0x104`. Proven GCC 14 `-O1 -G0` C matched all ten
+words first phrasing. Carve `0x00 + 0x28 + 0x28 = 0x50`, packed span/full SHA
+exact, verify green at 317. Tier 3 falls 95→94; consecutive parks remain zero.
+Evidence: `func-80090664/REPORT.md`.
