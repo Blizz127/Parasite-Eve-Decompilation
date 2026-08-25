@@ -48,6 +48,16 @@ statically linked PsyQ libraries.
 | `func_80081714` | `DS_newmedia` | `"DS_newmedia: Read error in ds_read(PVD)\n"` and related media diagnostics |
 | `func_80081A7C` | `DS_cachefile` | `"DS_cachefile: dir not found\n"` and related cache diagnostics |
 
+## libSPU voice-register helpers (hardware-signature identified)
+
+The `func_8008770C`–`func_800877BC` cluster writes the SPU voice/control MMIO
+block at `0x1F801C00`–`0x1F801D9A`. The paired helpers at `8770C`, `87728`,
+`87744`, `87760`, and `8777C` write 32-bit values as two 16-bit stores to the
+SPU control registers; nearby indexed helpers address per-voice registers at
+`0x1F801C00 + voice*0x10`. This identifies the cluster as libSPU voice-control
+support (including `SpuSetKey`-adjacent operations) by hardware layout. Exact
+PsyQ routine names are not yet string- or symbol-proven.
+
 ## Still to map
 
 These families are redirectable but have not yet been identified completely by
@@ -57,7 +67,7 @@ string cross-reference or signature matching:
   - Screened for port-scope SKIP: the handwritten COP2 register/helper
     cluster `func_80078E04` through `func_80079024` in `asm/disc1/68478.s`.
     See `docs/evidence/volume-campaign-20260824/COP2_SDK_SCREEN.md`.
-- libSPU
+- remaining libSPU names outside the hardware-signature cluster above
 - MDEC / libpress
 - pad and SIO
 - interrupt and root-counter support

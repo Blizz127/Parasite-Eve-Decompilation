@@ -107,3 +107,8 @@ The next Tier-1 leaf, `func_8008777C` @ `0x77F7C`, matched on the first
 `-O2 -G0` phrasing using the proven one-base volatile MMIO pointer. Carve
 `0x1C + 0x1C + 0x24 = 0x5C`, packed span/full SHA exact, verify green at 297.
 Evidence: `func-8008777c/REPORT.md`.
+
+The next Tier-1 leaf, `func_800877D4` @ `0x77FD4`, is a distinct per-voice
+SPU halfword setter and matched on the first natural `-O2 -G0` indexed-store
+phrasing. Carve `0x1C + 0x332C = 0x3348`, packed span/full SHA exact, verify
+green at 298. Evidence: `func-800877d4/REPORT.md`.

@@ -811,7 +811,8 @@ segments:
       # size 0x18, era -O2 -G0. Mid-77C28 carve: prefix 0x394, C 0x18,
       # trailing asm resumes at 77FD4.
       - [0x77FBC, c, func_800877BC]
-      - [0x77FD4, asm]
+      - [0x77FD4, c, func_800877D4]
+      - [0x77FF0, asm]
       # Phase 5EG-readers: func_8008AB1C — VRAM 0x8008AB1C, size 0x80.
       # Pins D_8009D240 as unsigned short * and D_8009D260 as unsigned char *
       # via lhu / unscaled addu. Era -O1 -G0.
