@@ -92,3 +92,8 @@ The next Tier-1 leaf, `func_8008770C` @ `0x77F0C`, matched on the first
 `-O2 -G0` phrasing using the proven one-base volatile MMIO pointer. Carve
 `0x2E4 + 0x1C = 0x300`, packed span/full SHA exact, verify green at 294.
 Evidence: `func-8008770c/REPORT.md`.
+
+The next Tier-1 leaf, `func_80087744` @ `0x77F44`, matched on the first
+`-O2 -G0` phrasing using the proven one-base volatile MMIO pointer. Carve
+`0x1C + 0x1C + 0x5C = 0x90`, packed span/full SHA exact, verify green at 295.
+Evidence: `func-80087744/REPORT.md`.
