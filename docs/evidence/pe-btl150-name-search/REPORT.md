@@ -99,3 +99,28 @@ SEMANTIC_IMPLEMENTATION=not_started
 NEXT_REQUIRED_ARTIFACT=retail capture/save or complete indirect-dispatch mapping
 NATIVE_SUITE=928/928 (unchanged)
 ```
+
+## Capture guidance from the negative result
+
+Because the proven token/name/index forms have no static m0360i witness, the
+remaining faithful explanation is runtime construction from state-derived
+parts: for example, a caller assembles a six-character name before calling
+`func_8006E3D4`, or computes a token field from a neighboring token. This is a
+hypothesis for the next artifact, not a native implementation claim.
+
+The strongest concrete relation is:
+
+```text
+m0367i = 0xA80663C8
+m0360i = 0xA8066048
+```
+
+Only the fifth 5-bit field changes. A runtime chooser could therefore derive
+`m0360i` from the `m0367i` family by computing that field rather than storing
+or naming the complete destination.
+
+The next retail capture should watch `func_8006E3D4` calls and record each
+caller's six-byte input, alongside the resulting `D_8009D280` write. This is a
+smaller and more discriminating watch than tracing every possible destination
+writer: it directly tests name assembly, numeric-field derivation, and the
+indirect overlay chooser's state inputs.

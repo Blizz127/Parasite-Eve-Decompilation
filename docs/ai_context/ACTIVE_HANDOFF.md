@@ -132,6 +132,12 @@ special-case m0360i. Status remains `SEMANTIC_IMPLEMENTATION=not_started`,
 `PRODUCTION_REACHABILITY=blocked_at_func_80030894_L2L3_cut`, native suite
 `928/928`.
 
+Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
+the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
+`m0360i=0xA8066048` differ only in one 5-bit field, runtime field derivation
+from a neighboring token is a concrete hypothesis to test; this is not a
+native implementation claim.
+
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
 **276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,
