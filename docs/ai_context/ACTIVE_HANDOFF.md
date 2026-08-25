@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `9f507fd`, 331 accepted matching-C
+Current matching-lane status: `main` @ `291093d`, 332 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -975,6 +975,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-76-77AC4-PARK | 329 | `func_80077AC4` @ `0x682C4` is a proven callable fifteen-word low-24 link exchange with 55 direct callers. Direct C reproduces size, memory schedule, semantics, and return-delay store, but colors low/high masks into `$a3/$a2` versus retail `$a2/$a3`; the explicit-value retry does not move the masks. `PARKED-MASK-CONSTANT-COLORING`; no integration/count change, consecutive park 2. Evidence: `docs/evidence/volume-campaign-20260825/func-80077ac4/PARK.md`; source is in the labeled stash. |
 | VOLUME-77-77A64 | 330 | `func_80077A64` @ `0x68264` is the fifteen-word Psy-Q `GetTPage` bit packer, proven by 36 direct calls, canonical return with a live delay slot, and real boundaries. B54I evidence proves the semantics; the natural expression matched first phrasing under era `-O2 -G0`. Carve `0x0018 + 0x003C + 0x0004 = 0x0058`, packed span/full SHA exact, verify green at 330; the match resets consecutive parks from two to zero. Evidence: `docs/evidence/volume-campaign-20260825/func-80077a64/REPORT.md`. |
 | VOLUME-78-749D8 | 331 | `func_800749D8` @ `0x651D8` is a fifteen-word display-environment initializer, proven by four direct calls, canonical return with a live store delay slot, and real adjacent functions. Its 20-byte layout makes Psy-Q `SetDefDispEnv` probable but not string/symbol-proven. Natural struct C matched first phrasing under era `-O2 -G0`; carve `0x0268 + 0x003C + 0x0000 = 0x02A4`, packed span/full SHA exact, verify green at 331. Evidence: `docs/evidence/volume-campaign-20260825/func-800749d8/REPORT.md`. |
+| VOLUME-79-63158 | 332 | `func_80063158` @ `0x53958` is a sixteen-word null-safe paired position updater, proven by 30 direct calls, canonical return, and real adjacent functions. Natural struct C updates argument words `+0x18/+0x1C` and proven gp pair `D_8009D124/D_8009D128`; it matched first phrasing under era `-O2 -G8` after gp relocation normalization. Carve `0x0474 + 0x0040 + 0x0000 = 0x04B4`, packed span/full SHA exact, verify green at 332. Evidence: `docs/evidence/volume-campaign-20260825/func-80063158/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

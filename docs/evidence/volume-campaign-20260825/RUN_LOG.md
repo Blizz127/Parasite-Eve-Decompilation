@@ -506,3 +506,14 @@ span/full SHA exact, verify green at 331. The trim guard first caught a stale
 ignored asm split retaining nonzero carved bytes; regenerating from YAML made
 the same arithmetic pass without changing the carve. Tier 1 falls 32→31;
 consecutive parks remain zero. Evidence: `func-800749d8/REPORT.md`.
+
+The next Tier-1 leaf, `func_80063158` @ `0x53958`, passes function hood
+via 30 direct callers, canonical return, and real adjacent functions. It is a
+null-safe paired position updater: the two deltas update argument words
+`+0x18/+0x1C` and the proven gp accumulator pair
+`D_8009D124/D_8009D128`. Natural struct C matched all sixteen words on the
+first era `-O2 -G8` phrasing after normalizing four ordinary gp relocations,
+including the interleaved local/global schedule. Carve
+`0x0474 + 0x0040 + 0x0000 = 0x04B4`, packed span/full SHA exact, verify
+green at 332. Tier 1 falls 31→30; consecutive parks remain zero. Evidence:
+`func-80063158/REPORT.md`.

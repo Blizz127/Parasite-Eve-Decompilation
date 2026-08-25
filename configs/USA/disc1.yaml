@@ -547,6 +547,8 @@ segments:
       - [0x534C4, c, func_80062CC4]
       - [0x534D0, c, func_80062CD0]
       - [0x534E4, asm]
+      # Volume campaign: null-safe local/global position accumulator; era -O2 -G8.
+      - [0x53958, c, func_80063158]
       # Phase 5BY: C leaf func_80063198 — file 0x53998, size 0x14.
       - [0x53998, c, func_80063198]
       # Phase 5BZ: C leaf func_800631AC — file 0x539AC, size 0x14.

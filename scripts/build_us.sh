@@ -551,7 +551,8 @@ SIZE_5327C=0x23c
 SIZE_C_62CB8=0xc
 SIZE_C_62CC4=0xc
 SIZE_C_62CD0=0x14
-SIZE_534E4=0x4b4
+SIZE_534E4=0x474
+SIZE_C_63158=0x40
 SIZE_C_63198=0x14
 SIZE_C_631AC=0x14
 SIZE_C_631C0=0x1c
@@ -1151,6 +1152,7 @@ OBJECTS=(
     "build/src/func_80062CC4.c.o"
     "build/src/func_80062CD0.c.o"
     "build/asm/disc1/534E4.s.o"
+    "build/src/func_80063158.c.o"
     "build/src/func_80063198.c.o"
     "build/src/func_800631AC.c.o"
     "build/src/func_800631C0.c.o"
@@ -1670,6 +1672,7 @@ SOURCES=(
     "src/func_80062CC4.c"
     "src/func_80062CD0.c"
     "asm/disc1/534E4.s"
+    "src/func_80063158.c"
     "src/func_80063198.c"
     "src/func_800631AC.c"
     "src/func_800631C0.c"
@@ -2467,6 +2470,7 @@ run "$CC" $CFLAGS_LEAF -c -o build/src/func_800527C0.c.o src/func_800527C0.c
 era_compile src/func_8005288C.c build/src/func_8005288C.c.o -O2 -G0
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8005BCA8.c.o src/func_8005BCA8.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8005E884.c.o src/func_8005E884.c
+era_compile src/func_80063158.c build/src/func_80063158.c.o -O2 -G8
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80063198.c.o src/func_80063198.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800631AC.c.o src/func_800631AC.c
 era_compile src/func_800631C0.c build/src/func_800631C0.c.o -O2 -G0
@@ -3061,6 +3065,7 @@ python3 "$TRIM" build/src/func_80062CB8.c.o .text "$SIZE_C_62CB8"
 python3 "$TRIM" build/src/func_80062CC4.c.o .text "$SIZE_C_62CC4"
 python3 "$TRIM" build/src/func_80062CD0.c.o .text "$SIZE_C_62CD0"
 python3 "$TRIM" build/asm/disc1/534E4.s.o .text "$SIZE_534E4"
+python3 "$TRIM" build/src/func_80063158.c.o .text "$SIZE_C_63158"
 python3 "$TRIM" build/src/func_80063198.c.o .text "$SIZE_C_63198"
 python3 "$TRIM" build/src/func_800631AC.c.o .text "$SIZE_C_631AC"
 python3 "$TRIM" build/src/func_800631C0.c.o .text "$SIZE_C_631C0"
@@ -3619,6 +3624,7 @@ SECTIONS
         build/src/func_80062CC4.c.o(.text)
         build/src/func_80062CD0.c.o(.text)
         build/asm/disc1/534E4.s.o(.text)
+        build/src/func_80063158.c.o(.text)
         build/src/func_80063198.c.o(.text)
         build/src/func_800631AC.c.o(.text)
         build/src/func_800631C0.c.o(.text)
@@ -4132,6 +4138,7 @@ SECTIONS
         build/src/func_80062CC4.c.o(.data)
         build/src/func_80062CD0.c.o(.data)
         build/asm/disc1/534E4.s.o(.data)
+        build/src/func_80063158.c.o(.data)
         build/src/func_80063198.c.o(.data)
         build/src/func_800631AC.c.o(.data)
         build/src/func_800631C0.c.o(.data)
@@ -4644,6 +4651,7 @@ SECTIONS
         build/src/func_80062CC4.c.o(.rodata)
         build/src/func_80062CD0.c.o(.rodata)
         build/asm/disc1/534E4.s.o(.rodata)
+        build/src/func_80063158.c.o(.rodata)
         build/src/func_80063198.c.o(.rodata)
         build/src/func_800631AC.c.o(.rodata)
         build/src/func_800631C0.c.o(.rodata)
@@ -5156,6 +5164,7 @@ SECTIONS
         build/src/func_80062CC4.c.o(.bss)
         build/src/func_80062CD0.c.o(.bss)
         build/asm/disc1/534E4.s.o(.bss)
+        build/src/func_80063158.c.o(.bss)
         build/src/func_80063198.c.o(.bss)
         build/src/func_800631AC.c.o(.bss)
         build/src/func_800631C0.c.o(.bss)
@@ -5528,6 +5537,7 @@ leaf527c0 = slice(0x42FC0, 0x42FC8)
 leaf55fb4 = slice(0x467B4, 0x467E0)
 leaf5bca8 = slice(0x4C4A8, 0x4C4B0)
 leaf5e884 = slice(0x4F084, 0x4F094)
+leaf63158 = slice(0x53958, 0x53998)
 leaf6a5bc = slice(0x5ADBC, 0x5AE4C)
 leaf6a64c = slice(0x5AE4C, 0x5AE74)
 leaf6a674 = slice(0x5AE74, 0x5B0D4)
@@ -5671,6 +5681,7 @@ print(f"  probe file 0x42FC0 (527C0): cand={cand[leaf527c0].hex()} orig={orig[le
 print(f"  volume file 0x467B4 (55FB4): cand={cand[leaf55fb4].hex()} orig={orig[leaf55fb4].hex()}")
 print(f"  probe file 0x4C4A8 (5BCA8): cand={cand[leaf5bca8].hex()} orig={orig[leaf5bca8].hex()}")
 print(f"  probe file 0x4F084 (5E884): cand={cand[leaf5e884].hex()} orig={orig[leaf5e884].hex()}")
+print(f"  volume file 0x53958 (63158): cand={cand[leaf63158].hex()} orig={orig[leaf63158].hex()}")
 print(f"  volume file 0x5ADBC (6A5BC): cand={cand[leaf6a5bc].hex()} orig={orig[leaf6a5bc].hex()}")
 print(f"  volume file 0x5AE4C (6A64C): cand={cand[leaf6a64c].hex()} orig={orig[leaf6a64c].hex()}")
 print(f"  volume file 0x5AE74 (6A674): cand={cand[leaf6a674].hex()} orig={orig[leaf6a674].hex()}")
