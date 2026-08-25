@@ -129,3 +129,10 @@ updates the gp-relative pair `D_8009D124/D_8009D128`, which has 32 other
 Stage-0 readers. Natural two-statement accumulator C matched all eight words
 on the first era `-O2 -G8` phrasing. Carve `0x20 + 0x294 = 0x2B4`, packed
 span/full SHA exact, verify green at 301. Evidence: `func-8005e8a4/REPORT.md`.
+
+The next Tier-1 leaf, `func_8005E968` @ `0x4F168`, has 16 direct calls and
+stores a packed value plus its signed-shifted, `0x7F7F7F`-masked companion in
+the gp-relative pair `D_8009D110/D_8009D114`. Natural C matched all eight
+words on the first era `-O2 -G8` phrasing. Carve
+`0xA4 + 0x20 + 0x1D0 = 0x294`, packed span/full SHA exact, verify green at
+302. Evidence: `func-8005e968/REPORT.md`.

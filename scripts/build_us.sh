@@ -512,7 +512,9 @@ SIZE_4EEF0=0x194
 SIZE_C_5E884=0x10
 SIZE_C_5E894=0x10
 SIZE_C_5E8A4=0x20
-SIZE_4F0C4=0x294
+SIZE_4F0C4=0xa4
+SIZE_C_5E968=0x20
+SIZE_4F188=0x1d0
 SIZE_C_5EB58=0xc
 SIZE_4F364=0x364
 SIZE_C_5EEC8=0xc
@@ -1060,6 +1062,8 @@ OBJECTS=(
     "build/src/func_8005E894.c.o"
     "build/src/func_8005E8A4.c.o"
     "build/asm/disc1/4F0C4.s.o"
+    "build/src/func_8005E968.c.o"
+    "build/asm/disc1/4F188.s.o"
     "build/src/func_8005EB58.c.o"
     "build/asm/disc1/4F364.s.o"
     "build/src/func_8005EEC8.c.o"
@@ -1536,6 +1540,8 @@ SOURCES=(
     "src/func_8005E894.c"
     "src/func_8005E8A4.c"
     "asm/disc1/4F0C4.s"
+    "src/func_8005E968.c"
+    "asm/disc1/4F188.s"
     "src/func_8005EB58.c"
     "asm/disc1/4F364.s"
     "src/func_8005EEC8.c"
@@ -2161,6 +2167,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4E92C.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4ED88.s.o asm/disc1/4ED88.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4EEF0.s.o asm/disc1/4EEF0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4F0C4.s.o asm/disc1/4F0C4.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4F188.s.o asm/disc1/4F188.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4F364.s.o asm/disc1/4F364.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4F6D4.s.o asm/disc1/4F6D4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/51CAC.s.o asm/disc1/51CAC.s
@@ -2510,6 +2517,7 @@ era_compile src/func_800877D4.c build/src/func_800877D4.c.o -O2 -G0
 era_compile src/func_800877F0.c build/src/func_800877F0.c.o -O2 -G0
 era_compile src/func_80083C20.c build/src/func_80083C20.c.o -O2 -G0
 era_compile src/func_8005E8A4.c build/src/func_8005E8A4.c.o -O2 -G8
+era_compile src/func_8005E968.c build/src/func_8005E968.c.o -O2 -G8
 era_compile src/func_80085084.c build/src/func_80085084.c.o -O2 -G0
 # Phase 5ER: byte/word test-and-clear-return twins; forward if/else scheduling.
 era_compile src/func_80038D1C.c build/src/func_80038D1C.c.o -O2 -G0
@@ -2841,6 +2849,8 @@ python3 "$TRIM" build/src/func_8005E884.c.o .text "$SIZE_C_5E884"
 python3 "$TRIM" build/src/func_8005E894.c.o .text "$SIZE_C_5E894"
 python3 "$TRIM" build/src/func_8005E8A4.c.o .text "$SIZE_C_5E8A4"
 python3 "$TRIM" build/asm/disc1/4F0C4.s.o .text "$SIZE_4F0C4"
+python3 "$TRIM" build/src/func_8005E968.c.o .text "$SIZE_C_5E968"
+python3 "$TRIM" build/asm/disc1/4F188.s.o .text "$SIZE_4F188"
 python3 "$TRIM" build/src/func_8005EB58.c.o .text "$SIZE_C_5EB58"
 python3 "$TRIM" build/asm/disc1/4F364.s.o .text "$SIZE_4F364"
 python3 "$TRIM" build/src/func_8005EEC8.c.o .text "$SIZE_C_5EEC8"
@@ -3356,6 +3366,8 @@ SECTIONS
         build/src/func_8005E894.c.o(.text)
         build/src/func_8005E8A4.c.o(.text)
         build/asm/disc1/4F0C4.s.o(.text)
+        build/src/func_8005E968.c.o(.text)
+        build/asm/disc1/4F188.s.o(.text)
         build/src/func_8005EB58.c.o(.text)
         build/asm/disc1/4F364.s.o(.text)
         build/src/func_8005EEC8.c.o(.text)
@@ -3826,6 +3838,8 @@ SECTIONS
         build/src/func_8005E894.c.o(.data)
         build/src/func_8005E8A4.c.o(.data)
         build/asm/disc1/4F0C4.s.o(.data)
+        build/src/func_8005E968.c.o(.data)
+        build/asm/disc1/4F188.s.o(.data)
         build/src/func_8005EB58.c.o(.data)
         build/asm/disc1/4F364.s.o(.data)
         build/src/func_8005EEC8.c.o(.data)
@@ -4295,6 +4309,8 @@ SECTIONS
         build/src/func_8005E894.c.o(.rodata)
         build/src/func_8005E8A4.c.o(.rodata)
         build/asm/disc1/4F0C4.s.o(.rodata)
+        build/src/func_8005E968.c.o(.rodata)
+        build/asm/disc1/4F188.s.o(.rodata)
         build/src/func_8005EB58.c.o(.rodata)
         build/asm/disc1/4F364.s.o(.rodata)
         build/src/func_8005EEC8.c.o(.rodata)
@@ -4764,6 +4780,8 @@ SECTIONS
         build/src/func_8005E894.c.o(.bss)
         build/src/func_8005E8A4.c.o(.bss)
         build/asm/disc1/4F0C4.s.o(.bss)
+        build/src/func_8005E968.c.o(.bss)
+        build/asm/disc1/4F188.s.o(.bss)
         build/src/func_8005EB58.c.o(.bss)
         build/asm/disc1/4F364.s.o(.bss)
         build/src/func_8005EEC8.c.o(.bss)
