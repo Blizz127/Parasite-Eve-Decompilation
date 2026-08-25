@@ -292,3 +292,11 @@ matched all ten words on the first phrasing. Carve
 `0x00 + 0x28 + 0xA0 = 0xC8`, packed span/full SHA exact, verify green at 314.
 The Tier-3 pool count falls 98→97 and consecutive-park count stays zero.
 Evidence: `func-800905ec/REPORT.md`.
+
+Adjacent `func_80090614` @ `0x80E14` passes function hood via exact-start
+callback-table word `0x8009CBB8`, canonical return, and real boundaries,
+again correcting a stale pool `0/0` screen. It is the `0x4400`/output-`+0x116`
+halfword sibling. Proven GCC 14 `-O1 -G0` C matched all ten words first
+phrasing. Carve `0x00 + 0x28 + 0x78 = 0xA0`, packed span/full SHA exact,
+verify green at 315. Tier 3 falls 97→96; consecutive-park count remains zero.
+Evidence: `func-80090614/REPORT.md`.

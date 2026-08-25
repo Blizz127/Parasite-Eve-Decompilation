@@ -2,7 +2,7 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1111** — TIER 1 50, TIER 2 214, TIER 3 97, SKIP 750.
+Total: **1110** — TIER 1 50, TIER 2 214, TIER 3 96, SKIP 750.
 
 ## TIER 1
 
@@ -592,7 +592,6 @@ Total: **1111** — TIER 1 50, TIER 2 214, TIER 3 97, SKIP 750.
 | 0x803D4 | `func_8008FBD4` | 10 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
 | 0x804BC | `func_8008FCBC` | 10 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
 | 0x80D74 | `func_80090574` | 10 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
-| 0x80E14 | `func_80090614` | 10 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
 | 0x80E3C | `func_8009063C` | 10 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
 | 0x80E64 | `func_80090664` | 10 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
 | 0x80E8C | `func_8009068C` | 10 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
