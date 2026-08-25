@@ -59,6 +59,12 @@ The following `func_80057D18` @ `0x48518` is a gp-indexed getter/clear twin of
 caller. It was screened under the same gp-absolute-form blocker without an
 attempt; no count change. Evidence: `func-80057d18/SKIP.md`.
 
+The next independent attempt, `func_8003708C` @ `0x2788C`, passed function
+hood with 65 direct callers but was parked after two `-O2 -G0` fixed-point
+product phrasings. Both retained wrong HI/LO temporary coloring and nonzero
+text beyond the exact 7-word body; no count change. Evidence:
+`func-8003708c/PARK.md`.
+
 ## Stop / continuation
 
 This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
