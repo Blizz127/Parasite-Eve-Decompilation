@@ -100,4 +100,4 @@ The second phrasing has the correct old-value semantics but still fails the reta
 
 ## Disposition
 
-No YAML, build, verifier, or count integration was made. The current candidate is preserved in stash: park volume func_800824C8 address-retention residual. Evidence is this report; the pool removes the row from TIER 1 and classifies it as PARKED-ADDRESS-RETENTION.
+No YAML, build, verifier, or count integration was made. The current candidate is preserved in stash: park volume func_800824C8 address-retention residual. The adjacent func_800824DC has the identical five-word exchange shape over D_800B8AB8 and is screened into the same family without a second attempt. Evidence is this report; the pool removes both rows from TIER 1 and classifies them as PARKED-ADDRESS-RETENTION.

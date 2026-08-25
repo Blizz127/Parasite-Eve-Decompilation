@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1136** — TIER 1 94, TIER 2 214, TIER 3 99, SKIP 729.
+Total: **1136** — TIER 1 93, TIER 2 214, TIER 3 99, SKIP 730.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x72CDC | `func_800824DC` | 5 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x75884 | `func_80085084` | 5 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x68920 | `func_80078120` | 5 | tail | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x7265C | `func_80081E5C` | 5 | jr-ra | 2/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1196,3 +1195,5 @@ TIER 1 as `PARKED-ADDRESS-RETENTION` after two allowed phrasings. Retail keeps
 the scalar-global address in `$v1` through the load and store-in-`jr` delay
 slot; ordinary era C did not. Evidence:
 `docs/evidence/volume-campaign-20260825/func-800824c8/PARK.md`.
+The adjacent `func_800824DC` is the same five-word exchange over
+`D_800B8AB8` and is screened into the same family without a second attempt.
