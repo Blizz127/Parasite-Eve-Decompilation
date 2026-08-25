@@ -39,6 +39,11 @@ The next eligible Tier-1 leaf, func_800877BC @ 0x77FBC, matched on the first
 carve `0x394 + 0x18 + 0x3348 = 0x36F4`; full SHA exact and verify green at
 291. Evidence: `func-800877bc/REPORT.md`; committed as the next leaf.
 
+The following `func_8005DC10` @ `0x4E410` is the exact six-word
+address-register-coloring twin of parked `func_8005DBF8`, over `D_800A8048`
+with offset `-0x20` and two callers. It was screened without a duplicate
+attempt; no count change. Evidence: `func-8005dc10/SKIP.md`.
+
 ## Stop / continuation
 
 This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
