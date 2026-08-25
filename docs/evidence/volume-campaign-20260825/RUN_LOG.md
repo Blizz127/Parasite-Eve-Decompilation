@@ -54,6 +54,11 @@ address-register-coloring family over `D_800A8044` with offset `-0x1C` and one
 caller. It was screened without a duplicate attempt; no count change.
 Evidence: `func-8005de70/SKIP.md`.
 
+The following `func_80057D18` @ `0x48518` is a gp-indexed getter/clear twin of
+`func_800534CC`, with an exact-start function-pointer construction and no jal
+caller. It was screened under the same gp-absolute-form blocker without an
+attempt; no count change. Evidence: `func-80057d18/SKIP.md`.
+
 ## Stop / continuation
 
 This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
