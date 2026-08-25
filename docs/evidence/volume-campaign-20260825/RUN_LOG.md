@@ -117,3 +117,9 @@ The next Tier-1 leaf, `func_800877F0` @ `0x77FF0`, is the per-voice SPU
 halfword-setter twin of `877D4` and matched on the first natural `-O2 -G0`
 phrasing. Carve `0x1C + 0x3310 = 0x332C`, packed span/full SHA exact, verify
 green at 299. Evidence: `func-800877f0/REPORT.md`.
+
+The next Tier-1 leaf, `func_80083C20` @ `0x74420`, passed function hood via
+the exact-start callback-address construction in `func_80083BB8`; the pool's
+`0/2` is its HI/LO reference pair. Natural `-O2 -G0` C matched all seven words
+on the first phrasing. Carve `0x660 + 0x1C + 0x234 = 0x8B0`, packed span/full
+SHA exact, verify green at 300. Evidence: `func-80083c20/REPORT.md`.

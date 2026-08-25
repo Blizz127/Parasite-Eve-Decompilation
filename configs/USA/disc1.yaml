@@ -768,6 +768,10 @@ segments:
       # Phase 5CL: C leaf func_800835B0 — file 0x73DB0, size 0x10.
       - [0x73DB0, c, func_800835B0]
       - [0x73DC0, asm]
+      # Volume campaign: callback func_80083C20, exact-start address stored by
+      # func_80083BB8; size 0x1C, era -O2 -G0.
+      - [0x74420, c, func_80083C20]
+      - [0x7443C, asm]
       # Phase 5CM: C leaf func_80083E70 — file 0x74670, size 0x14.
       - [0x74670, c, func_80083E70]
       - [0x74684, asm]

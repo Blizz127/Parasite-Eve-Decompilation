@@ -631,7 +631,9 @@ SIZE_C_82CDC=0x14
 SIZE_734F0=0x8b4
 SIZE_C_835A4=0xc
 SIZE_C_835B0=0x10
-SIZE_73DC0=0x8b0
+SIZE_73DC0=0x660
+SIZE_C_83C20=0x1c
+SIZE_7443C=0x234
 SIZE_C_83E70=0x14
 SIZE_74684=0x60
 SIZE_C_83EE4=0x14
@@ -1176,6 +1178,8 @@ OBJECTS=(
     "build/src/func_800835A4.c.o"
     "build/src/func_800835B0.c.o"
     "build/asm/disc1/73DC0.s.o"
+    "build/src/func_80083C20.c.o"
+    "build/asm/disc1/7443C.s.o"
     "build/src/func_80083E70.c.o"
     "build/asm/disc1/74684.s.o"
     "build/src/func_80083EE4.c.o"
@@ -1649,6 +1653,8 @@ SOURCES=(
     "src/func_800835A4.c"
     "src/func_800835B0.c"
     "asm/disc1/73DC0.s"
+    "src/func_80083C20.c"
+    "asm/disc1/7443C.s"
     "src/func_80083E70.c"
     "asm/disc1/74684.s"
     "src/func_80083EE4.c"
@@ -2198,6 +2204,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/71A68.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/72ABC.s.o asm/disc1/72ABC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/734F0.s.o asm/disc1/734F0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/73DC0.s.o asm/disc1/73DC0.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/7443C.s.o asm/disc1/7443C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/74684.s.o asm/disc1/74684.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/746F8.s.o asm/disc1/746F8.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/74FB0.s.o asm/disc1/74FB0.s
@@ -2498,6 +2505,7 @@ era_compile src/func_80087760.c build/src/func_80087760.c.o -O2 -G0
 era_compile src/func_8008777C.c build/src/func_8008777C.c.o -O2 -G0
 era_compile src/func_800877D4.c build/src/func_800877D4.c.o -O2 -G0
 era_compile src/func_800877F0.c build/src/func_800877F0.c.o -O2 -G0
+era_compile src/func_80083C20.c build/src/func_80083C20.c.o -O2 -G0
 era_compile src/func_80085084.c build/src/func_80085084.c.o -O2 -G0
 # Phase 5ER: byte/word test-and-clear-return twins; forward if/else scheduling.
 era_compile src/func_80038D1C.c build/src/func_80038D1C.c.o -O2 -G0
@@ -2948,6 +2956,8 @@ python3 "$TRIM" build/asm/disc1/734F0.s.o .text "$SIZE_734F0"
 python3 "$TRIM" build/src/func_800835A4.c.o .text "$SIZE_C_835A4"
 python3 "$TRIM" build/src/func_800835B0.c.o .text "$SIZE_C_835B0"
 python3 "$TRIM" build/asm/disc1/73DC0.s.o .text "$SIZE_73DC0"
+python3 "$TRIM" build/src/func_80083C20.c.o .text "$SIZE_C_83C20"
+python3 "$TRIM" build/asm/disc1/7443C.s.o .text "$SIZE_7443C"
 python3 "$TRIM" build/src/func_80083E70.c.o .text "$SIZE_C_83E70"
 python3 "$TRIM" build/asm/disc1/74684.s.o .text "$SIZE_74684"
 python3 "$TRIM" build/src/func_80083EE4.c.o .text "$SIZE_C_83EE4"
@@ -3460,6 +3470,8 @@ SECTIONS
         build/src/func_800835A4.c.o(.text)
         build/src/func_800835B0.c.o(.text)
         build/asm/disc1/73DC0.s.o(.text)
+        build/src/func_80083C20.c.o(.text)
+        build/asm/disc1/7443C.s.o(.text)
         build/src/func_80083E70.c.o(.text)
         build/asm/disc1/74684.s.o(.text)
         build/src/func_80083EE4.c.o(.text)
@@ -3927,6 +3939,8 @@ SECTIONS
         build/src/func_800835A4.c.o(.data)
         build/src/func_800835B0.c.o(.data)
         build/asm/disc1/73DC0.s.o(.data)
+        build/src/func_80083C20.c.o(.data)
+        build/asm/disc1/7443C.s.o(.data)
         build/src/func_80083E70.c.o(.data)
         build/asm/disc1/74684.s.o(.data)
         build/src/func_80083EE4.c.o(.data)
@@ -4393,6 +4407,8 @@ SECTIONS
         build/src/func_800835A4.c.o(.rodata)
         build/src/func_800835B0.c.o(.rodata)
         build/asm/disc1/73DC0.s.o(.rodata)
+        build/src/func_80083C20.c.o(.rodata)
+        build/asm/disc1/7443C.s.o(.rodata)
         build/src/func_80083E70.c.o(.rodata)
         build/asm/disc1/74684.s.o(.rodata)
         build/src/func_80083EE4.c.o(.rodata)
@@ -4859,6 +4875,8 @@ SECTIONS
         build/src/func_800835A4.c.o(.bss)
         build/src/func_800835B0.c.o(.bss)
         build/asm/disc1/73DC0.s.o(.bss)
+        build/src/func_80083C20.c.o(.bss)
+        build/asm/disc1/7443C.s.o(.bss)
         build/src/func_80083E70.c.o(.bss)
         build/asm/disc1/74684.s.o(.bss)
         build/src/func_80083EE4.c.o(.bss)
