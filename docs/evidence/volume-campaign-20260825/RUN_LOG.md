@@ -136,3 +136,10 @@ the gp-relative pair `D_8009D110/D_8009D114`. Natural C matched all eight
 words on the first era `-O2 -G8` phrasing. Carve
 `0xA4 + 0x20 + 0x1D0 = 0x294`, packed span/full SHA exact, verify green at
 302. Evidence: `func-8005e968/REPORT.md`.
+
+The next Tier-1 row, `func_800661CC` @ `0x569CC`, is a real callable
+handwritten helper with seven direct callers, but its semantic body is two GTE
+OFX/OFY `ctc2` writes. Existing projection evidence proves it restores
+`(160,112)`; the established COP2 screen proves ordinary-C expressibility is
+absent. It was moved to `SKIP-HANDWRITTEN-COP2` without an attempt or count
+change. Evidence: `func-800661cc/SKIP.md`.

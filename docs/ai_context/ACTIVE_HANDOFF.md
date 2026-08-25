@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `648c275`, 301 accepted matching-C
+Current matching-lane status: `main` @ `43210d8`, 302 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -925,6 +925,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-33-83C20 | 300 | `func_80083C20` @ `0x74420` is a seven-word callback initializer. Function hood is proven by the exact-start HI/LO callback-address construction in `func_80083BB8`, canonical return, and real boundaries. Natural `-O2 -G0` C matched first phrasing; carve `0x660 + 0x1C + 0x234 = 0x8B0`, packed span/full SHA exact, verify green at 300. Evidence: `docs/evidence/volume-campaign-20260825/func-80083c20/REPORT.md`. |
 | VOLUME-34-5E8A4 | 301 | `func_8005E8A4` @ `0x4F0A4` is an eight-word gp-relative two-component accumulator with 247 direct calls. Natural `D_8009D124 += a0; D_8009D128 += a1;` matches first phrasing under era `-O2 -G8`; all GPREL16 relocations normalize to retail. Carve `0x20 + 0x294 = 0x2B4`, packed span/full SHA exact, verify green at 301. Evidence: `docs/evidence/volume-campaign-20260825/func-8005e8a4/REPORT.md`. |
 | VOLUME-35-5E968 | 302 | `func_8005E968` @ `0x4F168` is an eight-word gp-relative packed-value setter with 16 direct calls. Natural signed shift/mask C matches first phrasing under era `-O2 -G8`; all GPREL16 relocations normalize to retail. Carve `0xA4 + 0x20 + 0x1D0 = 0x294`, packed span/full SHA exact, verify green at 302. Evidence: `docs/evidence/volume-campaign-20260825/func-8005e968/REPORT.md`. |
+| VOLUME-36-661CC-COP2 | 302 | `func_800661CC` @ `0x569CC` is a proven callable handwritten projection reset helper with seven direct calls. Its semantic body writes GTE OFX/OFY via two `ctc2` instructions, unavailable in sanctioned ordinary C. Screened without an attempt as `SKIP-HANDWRITTEN-COP2`; it is not labeled SDK without provenance. Evidence: `docs/evidence/volume-campaign-20260825/func-800661cc/SKIP.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

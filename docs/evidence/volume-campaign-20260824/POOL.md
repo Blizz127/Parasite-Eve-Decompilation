@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1123** — TIER 1 70, TIER 2 214, TIER 3 98, SKIP 741.
+Total: **1123** — TIER 1 69, TIER 2 214, TIER 3 98, SKIP 742.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x569CC | `func_800661CC` | 8 | jr-ra | 7/7 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x4C6E8 | `func_8005BEE8` | 8 | jr-ra | 6/6 | 0 | yes | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x4E2DC | `func_8005DADC` | 8 | jr-ra | 5/5 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x4E38C | `func_8005DB8C` | 8 | jr-ra | 4/4 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1144,6 +1143,19 @@ The complete contiguous family (`func_80078E04` through `func_80079024`, 23
 handwritten COP2/register helpers) is screened in
 `COP2_SDK_SCREEN.md`. Exact matching remains optional SDK work; these entries
 must not consume matching-C campaign attempts.
+
+## Post-campaign SKIP overlay: handwritten PE1 COP2 helper
+
+`func_800661CC` is a game-side projection reset helper, so it is not folded
+into the SDK family without provenance. Its body is nevertheless handwritten
+and requires two `ctc2` writes unavailable in the sanctioned ordinary-C
+subset. It is screened without a duplicate expressibility attempt:
+
+| file off | function | words | disposition |
+|---:|---|---:|---|
+| `0x569CC` | `func_800661CC` | 8 | `SKIP-HANDWRITTEN-COP2` |
+
+Evidence: `docs/evidence/volume-campaign-20260825/func-800661cc/SKIP.md`.
 
 ## Post-campaign SKIP overlay: address-retention family
 
