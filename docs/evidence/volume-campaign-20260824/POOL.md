@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1114** — TIER 1 54, TIER 2 214, TIER 3 98, SKIP 748.
+Total: **1114** — TIER 1 53, TIER 2 214, TIER 3 98, SKIP 749.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x7803C | `func_8008783C` | 10 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x78064 | `func_80087864` | 10 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x80D9C | `func_8009059C` | 10 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x80DC4 | `func_800905C4` | 10 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1210,6 +1209,14 @@ for a three-word copy and moves it to `$v0` only after all stores. Aggregate C
 keeps nine words but homes the destination/result in `$v0` at entry; scalar C
 also fills the return delay slot and shrinks to eight words. Evidence:
 `docs/evidence/volume-campaign-20260825/func-80078c94/PARK.md`.
+
+`func_8008783C` is removed after two attempts as
+`PARKED-VOLATILE-STORE-SCHEDULING`. Both the void volatile RMW and explicit
+returned-value phrasing reproduce the first eight words exactly, then emit
+`sh; jr; nop` where retail has `jr; sh`. The existing store-delay maspsx patch
+only handles absolute symbolic `sw` macros and does not apply to this direct
+volatile halfword store. Evidence:
+`docs/evidence/volume-campaign-20260825/func-8008783c/PARK.md`.
 
 ## Post-refresh SKIP overlay: handwritten syscall wrappers
 

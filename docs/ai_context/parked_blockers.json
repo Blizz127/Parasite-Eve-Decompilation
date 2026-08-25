@@ -291,6 +291,13 @@
       "note": "func_800792D4 @ file 0x69AD4 is a proven callable ten-word handwritten libGTE operation helper with six exact direct callers. Its body uses lwc2 to load COP2 data registers, executes mvmva, writes three COP2 results via swc2, reads the COP2 flag register via cfc2, and stores that flag in the jr delay slot. These architectural side effects have no sanctioned ordinary-C spelling. It is real SDK code, not padding and not a compiler blocker. No C attempt or YAML/build/verifier integration; matching count remains 309.",
       "evidence": "docs/evidence/volume-campaign-20260825/func-800792d4/SKIP.md",
       "next": "Do not schedule for matching-C campaigns; redirect through PsyCross for the port. Exact PsyQ routine-name attribution remains open."
+    },
+    {
+      "id": "volatile-store-scheduling-8783c",
+      "status": "PARKED-VOLATILE-STORE-SCHEDULING",
+      "note": "func_8008783C @ file 0x7803C is a proven callable ten-word per-voice SPU halfword RMW with exact direct caller 0x80087A74, canonical return, and contiguous real-function boundaries. Retail retains the computed 0x1F801C08 + voice*0x10 address in a0, replaces bits 4..7, and puts sh v0,0(a0) in the jr delay slot. Two era -O2 -G0 phrasings (void volatile RMW and explicit returned value) reproduce the first eight words exactly but both emit sh; jr; nop. The existing MASPSX_FILL_STORE_DELAY_SLOT patch only handles absolute symbolic sw macros and cannot affect this direct volatile sh. No YAML/build/verifier integration; matching count remains 311.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-8008783c/PARK.md; source preserved in stash 'park volume func_8008783C volatile store scheduling'",
+      "next": "Do not retry without a compiler/scheduler lever or separately justified and fully regressed maspsx rule for direct volatile sb/sh return-slot stores."
     }
   ]
 }

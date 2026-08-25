@@ -250,3 +250,11 @@ argument-relative C matched all ten words on the first era `-O2 -G0`
 phrasing. Both two-nop alignment fragments remain asm; carve
 `0x08 + 0x28 + 0x08 = 0x38`, packed span/full SHA exact, verify green at
 311. Evidence: `func-80077b34/REPORT.md`.
+
+The next Tier-1 candidate, `func_8008783C` @ `0x7803C`, is a proven callable
+ten-word per-voice SPU register RMW. Two era `-O2 -G0` phrasings reproduce
+address formation, load, mask, shift, and merge exactly, but both emit
+`sh; jr; nop` instead of retail `jr; sh`. An explicit returned value does not
+move the volatile store. `PARKED-VOLATILE-STORE-SCHEDULING`; no integration
+or count change, consecutive park 1. Evidence: `func-8008783c/PARK.md`;
+source is in the labeled stash.
