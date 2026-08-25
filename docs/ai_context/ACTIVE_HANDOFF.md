@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `a268fee`, 295 accepted matching-C
+Current matching-lane status: `main` @ `b318aad`, 296 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -919,6 +919,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-27-8770C | 294 | `func_8008770C` @ `0x77F0C` is the adjacent seven-word volatile MMIO halfword-pair setter. The proven one-base pointer idiom matches on the first `-O2 -G0` phrasing; carve `0x2E4 + 0x1C = 0x300`, packed span/full SHA exact, verify green at 294. Evidence: `docs/evidence/volume-campaign-20260825/func-8008770c/REPORT.md`. |
 | VOLUME-28-87744 | 295 | `func_80087744` @ `0x77F44` is the next seven-word volatile MMIO halfword-pair setter. The proven one-base pointer idiom matches on the first `-O2 -G0` phrasing; carve `0x1C + 0x1C + 0x5C = 0x90`, packed span/full SHA exact, verify green at 295. Evidence: `docs/evidence/volume-campaign-20260825/func-80087744/REPORT.md`. |
 | VOLUME-29-87760 | 296 | `func_80087760` @ `0x77F60` is the next seven-word volatile MMIO halfword-pair setter. The proven one-base pointer idiom matches on the first `-O2 -G0` phrasing; carve `0x1C + 0x1C + 0x40 = 0x78`, packed span/full SHA exact, verify green at 296. Evidence: `docs/evidence/volume-campaign-20260825/func-80087760/REPORT.md`. |
+| VOLUME-30-8777C | 297 | `func_8008777C` @ `0x77F7C` is the next seven-word volatile MMIO halfword-pair setter. The proven one-base pointer idiom matches on the first `-O2 -G0` phrasing; carve `0x1C + 0x1C + 0x24 = 0x5C`, packed span/full SHA exact, verify green at 297. Evidence: `docs/evidence/volume-campaign-20260825/func-8008777c/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

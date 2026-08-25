@@ -805,7 +805,8 @@ segments:
       - [0x77F28, c, func_80087728]
       - [0x77F44, c, func_80087744]
       - [0x77F60, c, func_80087760]
-      - [0x77F7C, asm]
+      - [0x77F7C, c, func_8008777C]
+      - [0x77F98, asm]
       # Phase 5FY: hardware halfword setter func_800877BC — VRAM 0x800877BC,
       # size 0x18, era -O2 -G0. Mid-77C28 carve: prefix 0x394, C 0x18,
       # trailing asm resumes at 77FD4.
