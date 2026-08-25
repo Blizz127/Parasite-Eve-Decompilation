@@ -459,3 +459,15 @@ result accumulator, matching all fourteen words after normalizing the local
 jump relocation. Carve `0x003C + 0x0038 + 0x2638 = 0x26AC`, packed span/full
 SHA exact, verify green at 329. Tier 1 falls 36→35; consecutive parks remain
 zero. Evidence: `func-80077cb4/REPORT.md`.
+
+The next Tier-1 candidate, `func_80083790` @ `0x73F90`, passes function
+hood via exact caller `0x80083738`, canonical return, and real boundaries.
+Its fourteen-word body computes two packed offset terms and adds a retained
+base in the return delay slot. The base-first phrasing matches only five
+words. An explicit offset-before-base retry recovers all load order, register
+homes, main arithmetic, and the ending, reaching 9/14; GCC's only residual is
+reassociating an independent `+4` onto the first term before computing the
+second, while retail applies it after masking the second term. It parks after
+two phrasings as `PARKED-ARITHMETIC-ASSOCIATION-SCHEDULING`; count stays 329,
+Tier 1 falls 35→34, and consecutive park becomes 1. Evidence:
+`func-80083790/PARK.md`; source is in the labeled stash.
