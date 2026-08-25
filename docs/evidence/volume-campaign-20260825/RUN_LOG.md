@@ -571,3 +571,16 @@ phrasing after ordinary gp/HI/LO relocation normalization. Carve
 `0x0788 + 0x0048 + 0x51BC = 0x598C`, packed span/full SHA exact, verify
 green at 334. Tier 1 falls 26→25 and the match resets consecutive parks
 from one to zero. Evidence: `func-800653b8/REPORT.md`.
+
+The next Tier-1 candidate, `func_8005DBAC` @ `0x4E3AC`, passes function
+hood via eleven direct callers, canonical return with a live delay slot, and
+real adjacent functions. B28 evidence proves its `[0,98]` clamp and
+24-byte symbolic-table address result; the boundary audit corrects an older
+pc-port overcount from twenty words to nineteen. Natural expression order
+keeps the clamp in `$a0` and consumes the global first; an explicit pointer
+hoists the address into `$a1`. Both era `-O2 -G0` candidates have eighteen
+content words, while retail's initial `move v1,a0` deliberately frees `$a0`
+for the later symbolic address/load. It parks as
+`PARKED-SYMBOLIC-ADDRESS-LIFETIME-COLORING`; count stays 334, Tier 1 falls
+25→24, and consecutive park becomes 1. Evidence: `func-8005dbac/PARK.md`;
+source is in the labeled stash.

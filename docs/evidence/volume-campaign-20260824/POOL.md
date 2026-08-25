@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1085** — TIER 1 25, TIER 2 214, TIER 3 93, SKIP 753.
+Total: **1084** — TIER 1 24, TIER 2 214, TIER 3 93, SKIP 753.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x4E3AC | `func_8005DBAC` | 19 | jr-ra | 11/11 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x33C74 | `func_80043474` | 19 | jr-ra | 2/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x63A44 | `func_80073244` | 20 | jr-ra | 2/2 | 0 | no | - | - | addiu:-0x1x2,addiu:0x1x2 | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x5E348 | `func_8006DB48` | 21 | jr-ra | 4/4 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |

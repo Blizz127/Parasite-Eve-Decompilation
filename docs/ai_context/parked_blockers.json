@@ -312,6 +312,13 @@
       "note": "func_8006E454 @ file 0x5EC54 is a proven callable seventeen-word decimal parser for field/package-name bytes 2-4, with direct callers 0x8005D958 and 0x8006B560, canonical return, and real boundaries. Existing BTL14 evidence independently proves the semantics. Two era -O2 -G0 phrasings were tested. Explicit signed char fixes attempt 1's lbu opcodes, but cc1 always hoists all three independent byte loads before arithmetic. Retail loads bytes 2 and 3, completes the strength-reduced hundreds/tens terms, then loads byte 4 into reused v1 and adds it in the return delay slot. Attempt 2 is semantically exact and seventeen words but differs solely in load scheduling/register reuse. No YAML/build/verifier integration; matching count remains 333.",
       "evidence": "docs/evidence/volume-campaign-20260825/func-8006e454/PARK.md; final source preserved in stash 'park volume func_8006E454 independent load scheduling'",
       "next": "Do not retry without a source or compiler scheduling lever that demonstrably prevents the independent byte-4 load from being hoisted."
+    },
+    {
+      "id": "symbolic-address-lifetime-coloring-5dbac",
+      "status": "PARKED-SYMBOLIC-ADDRESS-LIFETIME-COLORING",
+      "note": "func_8005DBAC @ file 0x4E3AC is a proven callable nineteen-word clamped symbolic-table address helper with eleven direct callers, canonical return, and real boundaries. Existing B28 evidence proves clamp(index,0,98) and the returned D_800A803C value plus (&D_800A803C-0x14) plus index*24. Two era -O2 -G0 phrasings were tested. Natural expression order keeps the clamp in a0 and consumes the global/address before scaling. An explicit pointer hoists the address into a1 before the clamp. Both produce eighteen content words. Retail alone begins move v1,a0, then after the clamp reuses a0 for the symbolic address and loaded value; that lifetime split supplies the nineteenth word. No YAML/build/verifier integration; matching count remains 334. Older pc-port commentary that called the body twenty words included the following function's first lui at 0x8005DBF8; the matching boundary is nineteen words.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-8005dbac/PARK.md; final source preserved in stash 'park volume func_8005DBAC symbolic address lifetime coloring'",
+      "next": "Do not retry without a source or compiler allocation lever that demonstrably copies the index to v1 and reserves dead a0 for the later symbolic address/load."
     }
   ]
 }
