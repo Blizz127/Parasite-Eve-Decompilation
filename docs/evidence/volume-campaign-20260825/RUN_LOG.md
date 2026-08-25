@@ -150,3 +150,11 @@ gp-relative `D_8009D218`. An explicit result pointer retained the address in
 `$v1` and matched all eight words on the first era `-O2 -G8` phrasing. Carve
 `0x20 + 0x580 = 0x5A0`, packed span/full SHA exact, verify green at 303.
 Evidence: `func-8005bee8/REPORT.md`.
+
+The next Tier-1 leaf, `func_8005DADC` @ `0x4E2DC`, has five direct callers
+and returns an eight-byte-indexed address using the word and adjusted base at
+`D_800A8030`. Attempt 1 duplicated the symbol materialization; an explicit
+pointer local made cc1 retain the shared address in `$v1` and matched all eight
+words on attempt 2 under era `-O2 -G0`. Carve
+`0x1644 + 0x20 + 0x618 = 0x1C7C`, packed span/full SHA exact, verify green at
+304. Evidence: `func-8005dadc/REPORT.md`.

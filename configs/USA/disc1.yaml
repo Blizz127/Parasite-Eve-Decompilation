@@ -492,6 +492,10 @@ segments:
       - [0x4C708, asm]
       - [0x4CC88, c, func_8005C488]
       - [0x4CC98, asm]
+      # Volume campaign: indexed address from a retained symbolic pointer;
+      # size 0x20, era -O2 -G0.
+      - [0x4E2DC, c, func_8005DADC]
+      - [0x4E2FC, asm]
       - [0x4E914, c, func_8005E114]
       - [0x4E920, c, func_8005E120]
       - [0x4E92C, asm]

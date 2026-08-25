@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `6a7a940`, 302 accepted matching-C
+Current matching-lane status: `main` @ `4f55e1c`, 303 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -55,6 +55,13 @@ tail entry is recorded as `FUNCTION_HOOD=PROVEN_BY_TAIL_JUMP`; absence of
 through a load/store or return delay slot is a no-attempt family screen once
 the body shape is proven. Preserve historical parks and do not generalize the
 rule to unrelated multi-access heuristic rows without body-level proof.
+
+**Address-sharing pointer lever:** when retail materializes one symbolic
+address, loads through it, and then reuses that same adjusted address in the
+result, spell an explicit pointer local and dereference it. `func_8005DADC`
+proved this can recover shared `$v1` retention. This is distinct from the
+parked scalar-exchange family, where the assembler-selected store form remains
+the blocker.
 
 All remaining pe-continuous-decomp grind leaves are ported. After 29388
 (below): `func_800293F4` (0x19BF4, 124w, era `-O2 -G8` +
@@ -927,6 +934,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-35-5E968 | 302 | `func_8005E968` @ `0x4F168` is an eight-word gp-relative packed-value setter with 16 direct calls. Natural signed shift/mask C matches first phrasing under era `-O2 -G8`; all GPREL16 relocations normalize to retail. Carve `0xA4 + 0x20 + 0x1D0 = 0x294`, packed span/full SHA exact, verify green at 302. Evidence: `docs/evidence/volume-campaign-20260825/func-8005e968/REPORT.md`. |
 | VOLUME-36-661CC-COP2 | 302 | `func_800661CC` @ `0x569CC` is a proven callable handwritten projection reset helper with seven direct calls. Its semantic body writes GTE OFX/OFY via two `ctc2` instructions, unavailable in sanctioned ordinary C. Screened without an attempt as `SKIP-HANDWRITTEN-COP2`; it is not labeled SDK without provenance. Evidence: `docs/evidence/volume-campaign-20260825/func-800661cc/SKIP.md`. |
 | VOLUME-37-5BEE8 | 303 | `func_8005BEE8` @ `0x4C6E8` is an eight-word gp-selected pointer getter with six direct calls. An explicit result pointer retains `D_800C0DE0` in `$v1`, conditionally adds `0x10`, and fills the return delay slot exactly under era `-O2 -G8`. Carve `0x20 + 0x580 = 0x5A0`, packed span/full SHA exact, verify green at 303. Evidence: `docs/evidence/volume-campaign-20260825/func-8005bee8/REPORT.md`. |
+| VOLUME-38-5DADC | 304 | `func_8005DADC` @ `0x4E2DC` is an eight-word retained-address index helper with five direct calls. Attempt 1 duplicated the symbolic materialization; an explicit pointer local shared the load/base address in `$v1` and matched attempt 2 under era `-O2 -G0`. Carve `0x1644 + 0x20 + 0x618 = 0x1C7C`, packed span/full SHA exact, verify green at 304. Evidence: `docs/evidence/volume-campaign-20260825/func-8005dadc/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
