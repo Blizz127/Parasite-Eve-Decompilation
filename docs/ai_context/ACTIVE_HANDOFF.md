@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `230224e`, 326 accepted matching-C
+Current matching-lane status: `main` @ `d4dcfab`, 327 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -968,6 +968,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-69-8788C | 324 | `func_8008788C` @ `0x7808C` is a thirteen-word per-voice SPU halfword bitfield update with three direct callers, canonical return, and real boundaries. The grouped nonvolatile RMW matched first phrasing under era `-O2 -G0`, including field-shift order, `$a2 |= $a1`, and `jr; sh`. Carve `0x080 + 0x034 + 0x000 = 0x0B4`, packed span/full SHA exact, verify green at 324; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-8008788c/REPORT.md`. |
 | VOLUME-70-C8C4C | 325 | `func_800C8C4C` @ `0xB944C` is a thirteen-word signed-halfword callback, proven by exact-start table word `0x800E0848`, canonical return, and real boundaries. Natural era `-O2 -G0` C matched first phrasing, including post-store sign extension and the branch-delay constant. Carve `0x08C + 0x034 + 0x288 = 0x348`, packed span/full SHA exact, verify green at 325; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-800c8c4c/REPORT.md`. |
 | VOLUME-71-C9A00 | 326 | `func_800C9A00` @ `0xBA200` is the thirteen-word signed-halfword callback twin, proven by exact-start table word `0x800E09BC`, canonical return, and real boundaries. Proven era `-O2 -G0` C matched first phrasing. Carve `0x08C + 0x034 + 0x1CC = 0x28C`, packed span/full SHA exact, verify green at 326; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-800c9a00/REPORT.md`. |
+| VOLUME-72-CA540 | 327 | `func_800CA540` @ `0xBAD40` is the third thirteen-word signed-halfword callback twin, proven by exact-start table word `0x800E0AAC`, canonical return, and real boundaries. Proven era `-O2 -G0` C matched first phrasing. Carve `0x08C + 0x034 + 0x224 = 0x2E4`, packed span/full SHA exact, verify green at 327; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-800ca540/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

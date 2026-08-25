@@ -1027,6 +1027,8 @@ segments:
       # Prefix 0x2E4 (= 0xBAF98 - 0xBACB4); then CA7A8/CA7B0 C stubs
       # (0x10 total), resume BAFB8.s 0x51C (= 0xBB4D4 - 0xBAFB8).
       - [0xBACB4, asm]
+      - [0xBAD40, c, func_800CA540]
+      - [0xBAD74, asm]
       - [0xBAF98, c, func_800CA798]
       # Phase 5GU: return-zero stub, era -O2 -G0.
       - [0xBAFA8, c, func_800CA7A8]
