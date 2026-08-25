@@ -27,6 +27,13 @@ func_800824B4 @ 0x72CB4 over D_800B8AB0. It was moved to
 SKIP-ADDRESS-RETENTION-FAMILY without an attempt; no matching-C count change.
 Evidence: `ADDRESS_RETENTION_SCREEN.md`.
 
+The next Tier-1 attempt, func_8005DBF8 @ 0x4E3F8, passed function hood but was
+parked after two natural-C phrasings. Retail's address/load register coloring
+is not reproduced by either expression; the pointer-local retry also exceeded
+the exact 0x18-byte body and was rejected by the trim guard. Evidence:
+`func-8005dbf8/PARK.md`; candidate/integration work remains in its labeled
+stash; no count change.
+
 ## Stop / continuation
 
 This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
