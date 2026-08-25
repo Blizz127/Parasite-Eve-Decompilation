@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1121** — TIER 1 66, TIER 2 214, TIER 3 98, SKIP 743.
+Total: **1121** — TIER 1 64, TIER 2 214, TIER 3 98, SKIP 745.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x69694 | `func_80078E94` | 8 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x74650 | `func_80083E50` | 8 | jr-ra | 2/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x74684 | `func_80083E84` | 8 | jr-ra | 2/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x746C4 | `func_80083EC4` | 8 | jr-ra | 2/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -30,7 +29,6 @@ Total: **1121** — TIER 1 66, TIER 2 214, TIER 3 98, SKIP 743.
 | 0x732DC | `func_80082ADC` | 11 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x64C78 | `func_80074478` | 11 | jr-ra | 0/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0xBEC70 | `func_800CE470` | 11 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0x69604 | `func_80078E04` | 12 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x7800C | `func_8008780C` | 12 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x780C0 | `func_800878C0` | 12 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x7808C | `func_8008788C` | 13 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1127,11 +1125,13 @@ Total: **1121** — TIER 1 66, TIER 2 214, TIER 3 98, SKIP 743.
 
 ## Post-campaign SKIP overlay: handwritten libGTE/COP2 family
 
-The following three rows were removed from TIER 1 after the campaign and are
+The following five callable rows were removed from TIER 1 and are
 now included in the `SKIP` total as `SKIP-SDK-LIBRARY-COP2`:
 
 | file off | function | words | disposition |
 |---:|---|---:|---|
+| `0x69604` | `func_80078E04` | 12 | `SKIP-SDK-LIBRARY-COP2` |
+| `0x69694` | `func_80078E94` | 8 | `SKIP-SDK-LIBRARY-COP2` |
 | `0x697AC` | `func_80078FAC` | 3 | `SKIP-SDK-LIBRARY-COP2` |
 | `0x697B8` | `func_80078FB8` | 3 | `SKIP-SDK-LIBRARY-COP2` |
 | `0x69824` | `func_80079024` | 3 | `SKIP-SDK-LIBRARY-COP2` |

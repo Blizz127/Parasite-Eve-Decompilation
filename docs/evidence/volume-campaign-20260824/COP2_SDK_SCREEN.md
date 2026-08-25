@@ -66,6 +66,21 @@ operations establish the broader library cluster. No source phrasing or
 ordinary-C intrinsic is introduced. The three candidates remain preserved in
 their named stashes as historical diagnostic evidence.
 
+The refreshed pool later exposed two callable rows that had incorrectly
+remained in Tier 1 despite this family-wide disposition:
+
+- `func_80078E04`: three direct callers at `0x80031A14`, `0x80068400`, and
+  `0x800C724C`; five loads followed by `ctc2` controls 0--4.
+- `func_80078E94`: three direct callers at `0x80031A2C`, `0x80068408`, and
+  `0x800C7240`; three loads followed by `ctc2` controls 5--7.
+
+Both have canonical returns and real boundaries. They are functions, not
+padding, but their proven handwritten COP2 bodies place them in this same
+`SKIP-SDK-LIBRARY-COP2` family. The 2026-08-25 pool correction moved those two
+rows from Tier 1 to SKIP without attempts or matching-C count changes. The
+other 18 unattempted family members were already present in the base SKIP
+section.
+
 `MATCHING_C_COUNT=287`  
 `INTEGRATION=NONE`  
 `POOL_DISPOSITION=SKIP-SDK-LIBRARY-COP2`  

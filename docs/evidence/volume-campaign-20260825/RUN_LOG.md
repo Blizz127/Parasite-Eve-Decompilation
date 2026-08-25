@@ -166,3 +166,11 @@ allocation/order; the adjusted-base phrasing duplicated symbol
 materialization. Retail's copy-before-load DAG remains unreproduced, so it is
 `PARKED-ADDRESS-DAG-COLORING` with no integration/count change. Evidence:
 `func-8005db8c/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 row, `func_80078E94`, was pool drift: it and
+`func_80078E04` were already members of the authoritative 23-function
+handwritten libGTE/COP2 screen. Both are function-hood proven by three direct
+callers and real boundaries, but both require `ctc2` semantic bodies. They
+moved to `SKIP-SDK-LIBRARY-COP2` without attempts or count change; Tier 1
+66→64 and SKIP 743→745. Evidence:
+`../volume-campaign-20260824/COP2_SDK_SCREEN.md`.
