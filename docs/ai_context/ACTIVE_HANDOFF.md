@@ -38,7 +38,9 @@ one of these lines:
   `docs/ai_context/PROMPT_TEMPLATE.md`. Named branches in the prompt,
   worktree path included, always.
 
-## Grind-lane port complete — 275 matching C leaves (2026-08-21)
+## Grind-lane port complete — 287 matching C leaves (2026-08-21)
+
+Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
 All remaining pe-continuous-decomp grind leaves are ported. After 29388
 (below): `func_800293F4` (0x19BF4, 124w, era `-O2 -G8` +

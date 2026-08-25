@@ -1,3 +1,8 @@
+# SUPERSEDED_BY_RUNTIME_LANES
+
+This historical dashboard is not current authority. Cross-lane status lives in
+`~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
+
 # Overnight campaign dashboard
 
 Host writing this file: `Blizz-AW.localdomain`

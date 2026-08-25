@@ -1,0 +1,15 @@
+extern unsigned int D_8009D1A0;
+
+int func_80017F44(int a0)
+{
+    unsigned int v0 = *(unsigned int *)a0;
+    unsigned int v1 = D_8009D1A0 & v0;
+    if (v1 != 0) {
+        unsigned int *ptr = (unsigned int *)(*(unsigned int *)(a0 + 4));
+        *ptr = 1;
+    } else {
+        unsigned int *ptr = (unsigned int *)(*(unsigned int *)(a0 + 4));
+        *ptr = 0;
+    }
+    return 1;
+}
