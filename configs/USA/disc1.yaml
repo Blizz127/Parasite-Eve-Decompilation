@@ -1045,6 +1045,8 @@ segments:
       # Prior BC7B4 span closes by boundary arithmetic:
       # C 0x8 + resume 0xFC4 (= 0xBD780 - 0xBC7BC) = 0xFCC.
       - [0xBC330, asm]
+      - [0xBC3BC, c, func_800CBBBC]
+      - [0xBC3F0, asm]
       - [0xBC7A4, c, func_800CBFA4]
       - [0xBC7B4, c, func_800CBFB4]
       # Volume campaign 2: adjacent return-zero callback. Prior BC7BC asm:

@@ -440,3 +440,11 @@ first phrasing under era `-O2 -G0`. Carve
 `0x08C + 0x034 + 0x224 = 0x2E4`, packed span/full SHA exact, verify green at
 327. Tier 1 falls 38→37; consecutive parks remain zero. Evidence:
 `func-800ca540/REPORT.md`.
+
+The fourth callback-table twin, `func_800CBBBC` @ `0xBC3BC`, passes function
+hood via exact-start word `0x800E0BA8`, canonical return, and real
+boundaries. Proven signed-halfword threshold C matched all thirteen words
+first phrasing under era `-O2 -G0`. Carve
+`0x08C + 0x034 + 0x3B4 = 0x474`, packed span/full SHA exact, verify green at
+328. Tier 1 falls 37→36; consecutive parks remain zero. Evidence:
+`func-800cbbbc/REPORT.md`.
