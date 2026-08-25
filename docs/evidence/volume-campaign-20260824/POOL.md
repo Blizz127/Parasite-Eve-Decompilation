@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1116** — TIER 1 57, TIER 2 214, TIER 3 98, SKIP 747.
+Total: **1116** — TIER 1 56, TIER 2 214, TIER 3 98, SKIP 748.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x69AD4 | `func_800792D4` | 10 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x68304 | `func_80077B04` | 10 | jr-ra | 5/5 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x68334 | `func_80077B34` | 10 | jr-ra | 4/4 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x7803C | `func_8008783C` | 10 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1133,6 +1132,12 @@ The complete contiguous family (`func_80078E04` through `func_80079024`, 23
 handwritten COP2/register helpers) is screened in
 `COP2_SDK_SCREEN.md`. Exact matching remains optional SDK work; these entries
 must not consume matching-C campaign attempts.
+
+The later handwritten operation helper `func_800792D4` is also removed as
+`SKIP-SDK-LIBRARY-COP2`. Its body is ten words of `lwc2`, `mvmva`, `swc2`,
+and `cfc2`, with six exact direct callers. It is not part of the earlier
+23-function register-helper span, so its separate evidence is:
+`docs/evidence/volume-campaign-20260825/func-800792d4/SKIP.md`.
 
 ## Post-campaign SKIP overlay: handwritten PE1 COP2 helper
 

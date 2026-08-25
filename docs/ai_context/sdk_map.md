@@ -67,6 +67,9 @@ string cross-reference or signature matching:
   - Screened for port-scope SKIP: the handwritten COP2 register/helper
     cluster `func_80078E04` through `func_80079024` in `asm/disc1/68478.s`.
     See `docs/evidence/volume-campaign-20260824/COP2_SDK_SCREEN.md`.
+  - Screened separately: handwritten COP2 operation helper
+    `func_800792D4` (`lwc2`/`mvmva`/`swc2`/`cfc2`), with six direct callers.
+    Its exact PsyQ routine name remains unproven.
 - remaining libSPU names outside the hardware-signature cluster above
 - MDEC / libpress
 - pad and SIO

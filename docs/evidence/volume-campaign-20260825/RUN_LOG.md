@@ -226,3 +226,10 @@ last store into the return delay slot. Retail retains `$a0` for all stores and
 moves it to `$v0` afterward. It is `PARKED-AGGREGATE-RETURN-COLORING`, with no
 integration/count change. This is consecutive park 1. Evidence:
 `func-80078c94/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 row, `func_800792D4` @ `0x69AD4`, is a function-hood-proven
+handwritten libGTE operation with six direct callers. Its ten words perform
+`lwc2`, `mvmva`, `swc2`, and `cfc2` side effects that ordinary sanctioned C
+cannot express. It moved to `SKIP-SDK-LIBRARY-COP2` without an attempt or
+count change; the consecutive-park count remains 1. Evidence:
+`func-800792d4/SKIP.md`.

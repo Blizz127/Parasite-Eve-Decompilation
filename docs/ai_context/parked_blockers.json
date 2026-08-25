@@ -284,6 +284,13 @@
       "note": "func_80078C94 @ file 0x69494 is a proven callable nine-word three-word-copy helper with exact direct caller 0x80031A24 and canonical return. Retail loads three words to t0/t1/t2, stores them at a0+0x14/+0x18/+0x1C, then copies a0 to v0 after all stores. Era -O2 -G0 aggregate assignment preserves nine words but moves a0 to v0 at entry and uses v0 as the destination base. Scalar field-copy C keeps that early result home and moves the final store into the jr delay slot, shrinking to eight words. The residual is aggregate-copy return/address register allocation plus scheduling. Adjacency to libGTE is suggestive but no exact SDK routine name is proven. No YAML/build/verifier integration; matching count remains 309.",
       "evidence": "docs/evidence/volume-campaign-20260825/func-80078c94/PARK.md; source preserved in stash 'park volume func_80078C94 aggregate return coloring'",
       "next": "Do not retry without a new aggregate-copy source or compiler lever that demonstrably retains a0 as destination through all stores and delays the v0 result copy until afterward."
+    },
+    {
+      "id": "handwritten-cop2-792d4",
+      "status": "SKIP-SDK-LIBRARY-COP2",
+      "note": "func_800792D4 @ file 0x69AD4 is a proven callable ten-word handwritten libGTE operation helper with six exact direct callers. Its body uses lwc2 to load COP2 data registers, executes mvmva, writes three COP2 results via swc2, reads the COP2 flag register via cfc2, and stores that flag in the jr delay slot. These architectural side effects have no sanctioned ordinary-C spelling. It is real SDK code, not padding and not a compiler blocker. No C attempt or YAML/build/verifier integration; matching count remains 309.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-800792d4/SKIP.md",
+      "next": "Do not schedule for matching-C campaigns; redirect through PsyCross for the port. Exact PsyQ routine-name attribution remains open."
     }
   ]
 }
