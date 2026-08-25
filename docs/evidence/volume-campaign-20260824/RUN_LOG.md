@@ -12,5 +12,14 @@ Base: `811f8f0`, 281 accepted leaves.
 | 6 | `func_800CE1F4` @ `0xBE9F4` | TIER 1; jr-ra; exact-start table ref; 0 jal/gp/index/loop | `MATCHED@era -O2 -G0` | 2 | 0 | commit with leaf 287 |
 | 7 | `func_80079024` @ `0x69824` | TIER 1; proven callable handwritten GTE helper; `ctc2 a0,$26` | `PARKED-HANDWRITTEN-COP2` | 3 | 0 | stash ordinary-C boundary candidate; docs-only commit |
 | 8 | `func_80078FAC` @ `0x697AC` | TIER 1; proven callable handwritten GTE helper; `ctc2 a0,$27` | `PARKED-HANDWRITTEN-COP2` | 3 | 0 | stash ordinary-C boundary candidate; docs-only commit |
+| 9 | `func_80078FB8` @ `0x697B8` | TIER 1; proven callable handwritten GTE helper; `ctc2 a0,$28` | `PARKED-HANDWRITTEN-COP2` | 3 | 0 | stash ordinary-C boundary candidate; docs-only commit |
 
-Running count: **8 attempts; 6 matched; 2 parked; 0 reclassified.**
+Final count: **9 attempts; 6 matched; 3 parked; 0 reclassified.**
+
+## Terminal condition
+
+`HARD_STOP=THREE_CONSECUTIVE_PARKS` after attempts 7–9. All three are proven
+callable handwritten GTE helpers whose sole semantic instruction is `ctc2`;
+ordinary C plus the sanctioned toolchain has no intrinsic for that side effect,
+while inline assembly/macros are forbidden. The queue remains intact after
+`func_80078FB8`; no Tier 1 candidate was skipped to evade the stop.

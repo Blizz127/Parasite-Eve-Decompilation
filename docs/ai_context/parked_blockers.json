@@ -244,6 +244,13 @@
       "next": "Same COP2 intrinsic/policy prerequisite as handwritten-cop2-79024."
     },
     {
+      "id": "handwritten-cop2-78fb8",
+      "status": "PARKED-HANDWRITTEN-COP2",
+      "note": "func_80078FB8 @ file 0x697B8 is a proven callable three-word handwritten GTE helper: ctc2 a0,$28; jr ra; nop, with direct jal caller 0x80077F50. Era -O2 -G0 ordinary C emits only jr ra; nop, missing exactly ctc2. Same expressibility blocker as func_80079024 and func_80078FAC. No integration; count remains 287. This is the volume campaign's third consecutive park and triggers its mandatory hard stop.",
+      "evidence": "docs/evidence/volume-campaign-20260824/func-80078fb8/PARK.md; source preserved in stash 'park volume func_80078FB8 handwritten COP2 ctc2 unexpressible in C'",
+      "next": "Same COP2 intrinsic/policy prerequisite as the other handwritten helpers."
+    },
+    {
       "id": "assembler-temp-703f0",
       "status": "PARKED-ASSEMBLER-TEMP",
       "note": "func_8007FBF0 @ 0x703F0 is a proven six-word callable table getter returning D_8009B574[index]. Function-hood: jr ra + nop, eleven direct jal callers (including 0x8007E8FC, 0x8007F7F8, and 0x80082324), and real instruction boundaries on both sides. Retail is sll a0,a0,2; lui v0,%hi; addu v0,v0,a0; lw v0,0(v0); jr ra; nop. With MASPSX_THREE_WORD_SYMBOL_STORE=1, the candidate has the correct three-instruction indexed-symbolic-load form, but uses $at as the address temporary while retail uses $v0, the load destination, as the temporary. The alternate pointer phrasing did not change this; the choice is in the assembler macro, not cc1 or source shape. This exposes a per-load-site discriminator: the 3W gate is correct for the $at-required 0x363F4-class site but wrong when the destination is also usable as the base. Do not change the global gate from this leaf alone. A fourth maspsx patch requires its own investigation and full regression with leaves traversing both branches. Matching-C remains 281; no YAML/build integration or leaf claim. Rejected candidate and both R6 retry objdumps are preserved in stash 'hold rejected 0x703F0 R6 retries'; the prior stash 'hold unaccepted 0x703F0 matching-C proposal' is also non-matching and rejected.",
