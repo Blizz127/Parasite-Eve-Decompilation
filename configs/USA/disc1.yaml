@@ -794,6 +794,9 @@ segments:
       # era -O2 -G0.
       - [0x74684, c, func_80083E84]
       - [0x746A4, asm]
+      # Volume campaign: initializer twin with tag 0x47; size 0x20,
+      # era -O2 -G0.
+      - [0x746C4, c, func_80083EC4]
       # Phase 5CN: C leaf func_80083EE4 — file 0x746E4, size 0x14.
       - [0x746E4, c, func_80083EE4]
       - [0x746F8, asm]

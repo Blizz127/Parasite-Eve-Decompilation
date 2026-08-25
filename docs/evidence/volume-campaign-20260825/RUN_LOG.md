@@ -188,3 +188,9 @@ eight words on the first era `-O2 -G0` phrasing. Carve
 `0x20 + 0x40 = 0x60`, packed span/full SHA exact. The first verifier run
 caught a stale `[0x74684, asm]` expected marker; after correcting the cluster's
 C/asm manifest, verify passed at 306. Evidence: `func-80083e84/REPORT.md`.
+
+The next Tier-1 leaf, `func_80083EC4` @ `0x746C4`, has two direct callers and
+is the tag-`0x47` structural twin of `83E50`/`83E84`. Proven initializer C
+matched all eight words on the first era `-O2 -G0` phrasing. Carve
+`0x20 + 0x20 = 0x40`, packed span/full SHA exact, verify green at 307.
+Evidence: `func-80083ec4/REPORT.md`.
