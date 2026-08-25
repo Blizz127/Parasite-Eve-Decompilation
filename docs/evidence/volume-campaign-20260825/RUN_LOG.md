@@ -259,6 +259,18 @@ move the volatile store. `PARKED-VOLATILE-STORE-SCHEDULING`; no integration
 or count change, consecutive park 1. Evidence: `func-8008783c/PARK.md`;
 source is in the labeled stash.
 
+The next Tier-1 candidate, `func_80043474` @ `0x33C74`, passes function
+hood via two direct callers, canonical return with a live delay slot, and
+real adjacent functions. Its six-result signed threshold ladder matches the
+first three compare/result pairs naturally. Both bounded era `-O2 -G0`
+phrasings emit a twenty-word tail: cc1 uses a separate category-4 `beqz`
+plus local jump, while retail fits nineteen words by computing the fifth
+predicate in the category-4 branch delay slot and placing category 4 after
+the category-5/6 jump. Complementing the final condition changes only 5/6
+polarity. It parks as `PARKED-THRESHOLD-LADDER-BLOCK-LAYOUT`; count stays
+334, Tier 1 falls 24→23, and consecutive park becomes 2. Evidence:
+`func-80043474/PARK.md`; source is in the labeled stash.
+
 Adjacent `func_80087864` @ `0x78064` is function-hood proven by its exact
 caller at `0x80087A80` and canonical return. Its complete body has the same
 per-voice SPU volatile `sh` return-slot mechanism as parked `8783C`, changing

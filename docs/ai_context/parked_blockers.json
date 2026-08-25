@@ -319,6 +319,13 @@
       "note": "func_8005DBAC @ file 0x4E3AC is a proven callable nineteen-word clamped symbolic-table address helper with eleven direct callers, canonical return, and real boundaries. Existing B28 evidence proves clamp(index,0,98) and the returned D_800A803C value plus (&D_800A803C-0x14) plus index*24. Two era -O2 -G0 phrasings were tested. Natural expression order keeps the clamp in a0 and consumes the global/address before scaling. An explicit pointer hoists the address into a1 before the clamp. Both produce eighteen content words. Retail alone begins move v1,a0, then after the clamp reuses a0 for the symbolic address and loaded value; that lifetime split supplies the nineteenth word. No YAML/build/verifier integration; matching count remains 334. Older pc-port commentary that called the body twenty words included the following function's first lui at 0x8005DBF8; the matching boundary is nineteen words.",
       "evidence": "docs/evidence/volume-campaign-20260825/func-8005dbac/PARK.md; final source preserved in stash 'park volume func_8005DBAC symbolic address lifetime coloring'",
       "next": "Do not retry without a source or compiler allocation lever that demonstrably copies the index to v1 and reserves dead a0 for the later symbolic address/load."
+    },
+    {
+      "id": "threshold-ladder-block-layout-43474",
+      "status": "PARKED-THRESHOLD-LADDER-BLOCK-LAYOUT",
+      "note": "func_80043474 @ file 0x33C74 is a proven callable nineteen-word six-result signed threshold classifier with direct callers 0x800402F4 and 0x8005C340, canonical return, and real boundaries. Two era -O2 -G0 phrasings were tested. An ascending less-than ladder and a complementary >= final condition both compile to twenty words. cc1 emits a separate category-4 beqz/nop plus local jump. Retail instead branches to a category-4 assignment block while computing the fifth predicate in that branch delay slot, then chooses categories 6/5 through a branch/local-jump pair. The complement changes only 5/6 polarity and cannot select retail's cross-block schedule. No YAML/build/verifier integration; matching count remains 334.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-80043474/PARK.md; final source preserved in stash 'park volume func_80043474 threshold ladder block layout'",
+      "next": "Do not retry without a source or compiler block-layout lever that demonstrably places the fifth compare in the category-4 branch delay slot."
     }
   ]
 }
