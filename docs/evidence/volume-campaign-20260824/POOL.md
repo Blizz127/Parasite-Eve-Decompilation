@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1134** — TIER 1 86, TIER 2 214, TIER 3 98, SKIP 736.
+Total: **1134** — TIER 1 85, TIER 2 214, TIER 3 98, SKIP 737.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x43CCC | `func_800534CC` | 6 | jr-ra | 1/1 | 0 | yes | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x4E670 | `func_8005DE70` | 6 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x48518 | `func_80057D18` | 6 | jr-ra | 0/2 | 0 | yes | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x2788C | `func_8003708C` | 7 | jr-ra | 65/65 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1190,6 +1189,11 @@ another campaign attempt without a new compiler/tooling hypothesis.
 The adjacent `func_8005DC10` is an exact same-shape twin over `D_800A8048`
 with offset `-0x20` and two direct callers. It is screened into the same
 family without a duplicate attempt.
+
+`func_800534CC` is removed after two attempts as `PARKED-GP-ABSOLUTE-FORM`:
+its natural C forms emit an absolute address, while retail uses the `$gp+0x2D8`
+small-data load. It must not consume another attempt without a new gp-form
+hypothesis.
 
 ## Post-refresh SKIP overlay: handwritten syscall wrappers
 
