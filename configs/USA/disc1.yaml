@@ -689,6 +689,10 @@ segments:
       # Phase 5CJ: C leaf func_80077C64 — file 0x68464, size 0x14.
       - [0x68464, c, func_80077C64]
       - [0x68478, asm]
+      # Volume campaign: packet-chain merge helper; the 0x80077CE8 nop is
+      # the jr-ra delay slot and belongs to this 0x38-byte function.
+      - [0x684B4, c, func_80077CB4]
+      - [0x684EC, asm]
       # Phase 5BK: C leaf func_8007A324 — VRAM 0x8007A324, size 0x10.
       # Unsigned-byte global getter on D_8009AFC4; plain -O1 matches.
       - [0x6AB24, c, func_8007A324]

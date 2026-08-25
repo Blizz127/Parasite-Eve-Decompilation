@@ -448,3 +448,14 @@ first phrasing under era `-O2 -G0`. Carve
 `0x08C + 0x034 + 0x3B4 = 0x474`, packed span/full SHA exact, verify green at
 328. Tier 1 falls 37→36; consecutive parks remain zero. Evidence:
 `func-800cbbbc/REPORT.md`.
+
+The next Tier-1 leaf, `func_80077CB4` @ `0x684B4`, passes function hood via
+eleven raw direct callers, canonical return, and real boundaries. The audit
+corrects older B54I evidence: the nop at `0x80077CE8` is the return delay
+slot, so the function is fourteen words, not thirteen. An unsigned,
+early-return first phrasing selected `sltiu` and the wrong branch shape. The
+second and final era `-O2 -G0` phrasing uses a signed length and explicit
+result accumulator, matching all fourteen words after normalizing the local
+jump relocation. Carve `0x003C + 0x0038 + 0x2638 = 0x26AC`, packed span/full
+SHA exact, verify green at 329. Tier 1 falls 36→35; consecutive parks remain
+zero. Evidence: `func-80077cb4/REPORT.md`.

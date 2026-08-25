@@ -612,7 +612,9 @@ SIZE_68438=0xc
 SIZE_C_77C44=0x14
 SIZE_68458=0xc
 SIZE_C_77C64=0x14
-SIZE_68478=0x26ac
+SIZE_68478=0x3c
+SIZE_C_77CB4=0x38
+SIZE_684EC=0x2638
 SIZE_C_7A324=0x10
 SIZE_C_7A334=0x10
 SIZE_C_7A344=0x10
@@ -1207,6 +1209,8 @@ OBJECTS=(
     "build/asm/disc1/68458.s.o"
     "build/src/func_80077C64.c.o"
     "build/asm/disc1/68478.s.o"
+    "build/src/func_80077CB4.c.o"
+    "build/asm/disc1/684EC.s.o"
     "build/src/func_8007A324.c.o"
     "build/src/func_8007A334.c.o"
     "build/src/func_8007A344.c.o"
@@ -1721,6 +1725,8 @@ SOURCES=(
     "asm/disc1/68458.s"
     "src/func_80077C64.c"
     "asm/disc1/68478.s"
+    "src/func_80077CB4.c"
+    "asm/disc1/684EC.s"
     "src/func_8007A324.c"
     "src/func_8007A334.c"
     "src/func_8007A344.c"
@@ -2332,6 +2338,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/68418.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/68438.s.o asm/disc1/68438.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/68458.s.o asm/disc1/68458.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/68478.s.o asm/disc1/68478.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/684EC.s.o asm/disc1/684EC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/6AB60.s.o asm/disc1/6AB60.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/6AC00.s.o asm/disc1/6AC00.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/6ACD0.s.o asm/disc1/6ACD0.s
@@ -2473,6 +2480,7 @@ run "$CC" $CFLAGS_LEAF -c -o build/src/func_80077C04.c.o src/func_80077C04.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80077C24.c.o src/func_80077C24.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80077C44.c.o src/func_80077C44.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80077C64.c.o src/func_80077C64.c
+era_compile src/func_80077CB4.c build/src/func_80077CB4.c.o -O2 -G0
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8007A324.c.o src/func_8007A324.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8007A334.c.o src/func_8007A334.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8007A344.c.o src/func_8007A344.c
@@ -3102,6 +3110,8 @@ python3 "$TRIM" build/src/func_80077C44.c.o .text "$SIZE_C_77C44"
 python3 "$TRIM" build/asm/disc1/68458.s.o .text "$SIZE_68458"
 python3 "$TRIM" build/src/func_80077C64.c.o .text "$SIZE_C_77C64"
 python3 "$TRIM" build/asm/disc1/68478.s.o .text "$SIZE_68478"
+python3 "$TRIM" build/src/func_80077CB4.c.o .text "$SIZE_C_77CB4"
+python3 "$TRIM" build/asm/disc1/684EC.s.o .text "$SIZE_684EC"
 python3 "$TRIM" build/src/func_8007A324.c.o .text "$SIZE_C_7A324"
 python3 "$TRIM" build/src/func_8007A334.c.o .text "$SIZE_C_7A334"
 python3 "$TRIM" build/src/func_8007A344.c.o .text "$SIZE_C_7A344"
@@ -3655,6 +3665,8 @@ SECTIONS
         build/asm/disc1/68458.s.o(.text)
         build/src/func_80077C64.c.o(.text)
         build/asm/disc1/68478.s.o(.text)
+        build/src/func_80077CB4.c.o(.text)
+        build/asm/disc1/684EC.s.o(.text)
         build/src/func_8007A324.c.o(.text)
         build/src/func_8007A334.c.o(.text)
         build/src/func_8007A344.c.o(.text)
@@ -4163,6 +4175,8 @@ SECTIONS
         build/asm/disc1/68458.s.o(.data)
         build/src/func_80077C64.c.o(.data)
         build/asm/disc1/68478.s.o(.data)
+        build/src/func_80077CB4.c.o(.data)
+        build/asm/disc1/684EC.s.o(.data)
         build/src/func_8007A324.c.o(.data)
         build/src/func_8007A334.c.o(.data)
         build/src/func_8007A344.c.o(.data)
@@ -4670,6 +4684,8 @@ SECTIONS
         build/asm/disc1/68458.s.o(.rodata)
         build/src/func_80077C64.c.o(.rodata)
         build/asm/disc1/68478.s.o(.rodata)
+        build/src/func_80077CB4.c.o(.rodata)
+        build/asm/disc1/684EC.s.o(.rodata)
         build/src/func_8007A324.c.o(.rodata)
         build/src/func_8007A334.c.o(.rodata)
         build/src/func_8007A344.c.o(.rodata)
@@ -5177,6 +5193,8 @@ SECTIONS
         build/asm/disc1/68458.s.o(.bss)
         build/src/func_80077C64.c.o(.bss)
         build/asm/disc1/68478.s.o(.bss)
+        build/src/func_80077CB4.c.o(.bss)
+        build/asm/disc1/684EC.s.o(.bss)
         build/src/func_8007A324.c.o(.bss)
         build/src/func_8007A334.c.o(.bss)
         build/src/func_8007A344.c.o(.bss)
@@ -5497,6 +5515,7 @@ leaf74a14 = slice(0x65214, 0x65228)
 leaf74a28 = slice(0x65228, 0x65238)
 leaf74cb8 = slice(0x654B8, 0x654C8)
 leaf7633c = slice(0x66B3C, 0x66B54)
+leaf77cb4 = slice(0x684B4, 0x684EC)
 leaf7a324 = slice(0x6AB24, 0x6AB34)
 leaf7a334 = slice(0x6AB34, 0x6AB44)
 leaf7a344 = slice(0x6AB44, 0x6AB54)
@@ -5637,6 +5656,7 @@ print(f"  probe file 0x65214 (74A14): cand={cand[leaf74a14].hex()} orig={orig[le
 print(f"  probe file 0x65228 (74A28): cand={cand[leaf74a28].hex()} orig={orig[leaf74a28].hex()}")
 print(f"  probe file 0x654B8 (74CB8): cand={cand[leaf74cb8].hex()} orig={orig[leaf74cb8].hex()}")
 print(f"  probe file 0x66B3C (7633C): cand={cand[leaf7633c].hex()} orig={orig[leaf7633c].hex()}")
+print(f"  volume file 0x684B4 (77CB4): cand={cand[leaf77cb4].hex()} orig={orig[leaf77cb4].hex()}")
 print(f"  probe file 0x6AB24 (7A324): cand={cand[leaf7a324].hex()} orig={orig[leaf7a324].hex()}")
 print(f"  probe file 0x6AB34 (7A334): cand={cand[leaf7a334].hex()} orig={orig[leaf7a334].hex()}")
 print(f"  probe file 0x6AB44 (7A344): cand={cand[leaf7a344].hex()} orig={orig[leaf7a344].hex()}")
