@@ -342,3 +342,11 @@ exact body is a handwritten libGTE `RTPS` wrapper containing `lwc2`, `rtps`,
 `swc2`, `cfc2`, and `mfc2`. Existing projection evidence corroborates the
 role. It moves to `SKIP-SDK-LIBRARY-COP2`; count stays 318 and consecutive
 parks stay 1. Evidence: `func-80079244/SKIP.md`.
+
+The next Tier-1 leaf, `func_8003E0D0` @ `0x2E8D0`, passes function hood via
+its exact call at `0x80019270`, canonical return, and real boundaries. Natural
+argument-relative initializer C matched all eleven words on the first era
+`-O2 -G0` phrasing, including useful load/branch/jump delay slots and the
+normalized local jump relocation. Carve `0x0F8 + 0x02C + 0x514 = 0x638`,
+packed span/full SHA exact, verify green at 319. This match resets consecutive
+parks to zero. Evidence: `func-8003e0d0/REPORT.md`.
