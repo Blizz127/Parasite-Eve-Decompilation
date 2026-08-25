@@ -201,3 +201,12 @@ initializer C matched all eight words on the first era `-O2 -G0` phrasing.
 The old asm span was exactly the leaf (`0x20 = 0x20`), so it closes with no
 prefix or resume; packed span/full SHA exact, verify green at 308. Evidence:
 `func-80083ea4/REPORT.md`.
+
+The next Tier-1 candidate, `func_80087798` @ `0x77F98`, is a proven callable
+nine-word per-voice SPU register-pair writer. Two era `-O2 -G0` phrasings
+compiled identically: cc1 retains the scaled index in `$a0`, computes the
+first address in `$v0`, and rematerializes the second through `$at`; retail
+retains one computed address in `$a0` for both stores. It is
+`PARKED-MMIO-ADDRESS-RETENTION`, with no integration or count change. This is
+consecutive park 1. Evidence: `func-80087798/PARK.md`; source is in the
+labeled stash.

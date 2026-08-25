@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `828658b`, 307 accepted matching-C
+Current matching-lane status: `main` @ `3df338e`, 308 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -941,6 +941,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-42-83E84 | 306 | `func_80083E84` @ `0x74684` is the eight-word tag-`0x4C` initializer twin with two direct calls. Proven source shape matched first phrasing under era `-O2 -G0`; carve `0x20 + 0x40 = 0x60`, packed span/full SHA exact. The verifier first caught its stale `[0x74684, asm]` manifest marker; corrected C/asm registrations pass at 306. Evidence: `docs/evidence/volume-campaign-20260825/func-80083e84/REPORT.md`. |
 | VOLUME-43-83EC4 | 307 | `func_80083EC4` @ `0x746C4` is the eight-word tag-`0x47` initializer twin with two direct calls. Proven source shape matched first phrasing under era `-O2 -G0`; carve `0x20 + 0x20 = 0x40`, packed span/full SHA exact, verify green at 307. Evidence: `docs/evidence/volume-campaign-20260825/func-80083ec4/REPORT.md`. |
 | VOLUME-44-83EA4 | 308 | `func_80083EA4` @ `0x746A4` is the eight-word tag-`0x46` initializer twin with one direct call. Proven source shape matched first phrasing under era `-O2 -G0`; the old asm span closes exactly as `0x20 = 0x20`, packed span/full SHA exact, verify green at 308. Evidence: `docs/evidence/volume-campaign-20260825/func-80083ea4/REPORT.md`. |
+| VOLUME-45-87798-PARK | 308 | `func_80087798` @ `0x77F98` is a proven callable nine-word per-voice SPU register-pair writer with three direct calls. Two `-O2 -G0` phrasings compile identically: cc1 keeps the scaled index in `$a0`, first address in `$v0`, and rematerializes the second through `$at`, while retail retains the shared address in `$a0`. `PARKED-MMIO-ADDRESS-RETENTION`; no integration/count change; consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-80087798/PARK.md`; source is in the labeled stash. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

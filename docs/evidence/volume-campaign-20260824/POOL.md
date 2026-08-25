@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1117** — TIER 1 60, TIER 2 214, TIER 3 98, SKIP 745.
+Total: **1117** — TIER 1 59, TIER 2 214, TIER 3 98, SKIP 746.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x77F98 | `func_80087798` | 9 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x4E170 | `func_8005D970` | 9 | jr-ra | 1/1 | 0 | yes | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x69494 | `func_80078C94` | 9 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x69AD4 | `func_800792D4` | 10 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1195,6 +1194,14 @@ HI/LO temporaries in the wrong registers and exceed the exact 7-word body.
 One phrasing shared the address but selected the `5DADC` allocation; the other
 duplicated materialization. Evidence:
 `docs/evidence/volume-campaign-20260825/func-8005db8c/PARK.md`.
+
+`func_80087798` is removed after two attempts as
+`PARKED-MMIO-ADDRESS-RETENTION`. Retail computes the per-voice SPU block
+address into `$a0` and retains it across two volatile halfword stores. Both an
+explicit pointer and an explicit parameter-mutation phrasing instead keep the
+scaled index in `$a0`, form the first address in `$v0`, and rematerialize the
+second through `$at`. Evidence:
+`docs/evidence/volume-campaign-20260825/func-80087798/PARK.md`.
 
 ## Post-refresh SKIP overlay: handwritten syscall wrappers
 

@@ -270,6 +270,13 @@
       "note": "func_80072714 @ file 0x62F14 is a proven callable four-word handwritten wrapper: addiu a0,zero,1; syscall 0; jr ra; nop. It has 26 unique direct jal callsites and real boundaries. The adjacent func_80072724 has the same wrapper shape with immediate 2 and is screened with it. Ordinary C has no sanctioned spelling for the MIPS syscall architectural side effect; R7 forbids inline/file-scope assembly and mismatch-hiding macros. No YAML/build/verifier integration; matching count remains 287.",
       "evidence": "docs/evidence/volume-campaign-20260825/func-80072714/PARK.md; diagnostic boundary source preserved in stash 'park volume func_80072714 handwritten syscall unexpressible in C'",
       "next": "Do not schedule the adjacent syscall wrappers for matching-C attempts; continue with the next eligible Tier 1 candidate."
+    },
+    {
+      "id": "mmio-address-retention-87798",
+      "status": "PARKED-MMIO-ADDRESS-RETENTION",
+      "note": "func_80087798 @ file 0x77F98 is a proven callable nine-word per-voice SPU register-pair writer with direct callers at 0x80087958, 0x8008C780, and 0x8008C960, canonical return, and real boundaries. Retail materializes 0x1F801C00, folds voice*0x10 into a0, masks a1/a2 to 0x7FFF, and retains a0 across stores at offsets 0 and 2. Two era -O2 -G0 phrasings (explicit volatile pointer and explicit a0 address mutation) compile identically to 12 words: cc1 leaves the scaled index in a0, forms the first address in v0, then rematerializes the second address through at. This is an address-DAG/register-home residual, not a semantic mismatch. No YAML/build/verifier integration; matching count remains 308.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-80087798/PARK.md; source preserved in stash 'park volume func_80087798 MMIO address-retention'",
+      "next": "Do not retry without a new source or compiler lever that demonstrably retains a computed MMIO address in the argument register across both volatile stores."
     }
   ]
 }
