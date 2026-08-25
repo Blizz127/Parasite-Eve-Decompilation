@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `3894b85`, 290 accepted matching-C
+Current matching-lane status: `main` @ `ad67207`, 291 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -911,6 +911,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-21-5DE70 | 291 | `func_8005DE70` @ `0x4E670` is the same six-word address-register-coloring family over `D_800A8044` with offset `-0x1C` and one caller. Screened without a duplicate attempt; no count change. Evidence: `docs/evidence/volume-campaign-20260825/func-8005de70/SKIP.md`. |
 | VOLUME-22-57D18 | 291 | `func_80057D18` @ `0x48518` is a six-word gp-indexed signed-halfword getter/clear twin of `func_800534CC`, with an exact-start function-pointer construction and real boundaries. Screened under the same gp-absolute-form blocker; no attempt/count change. Evidence: `docs/evidence/volume-campaign-20260825/func-80057d18/SKIP.md`. |
 | VOLUME-23-3708C | 291 | `func_8003708C` @ `0x2788C` is a seven-word fixed-point multiply with 65 direct callers and canonical return. Two `-O2 -G0` natural product forms retain wrong HI/LO temporary coloring and exceed the exact body; `PARKED-FIXED-POINT-REGISTER-COLORING`, no integration/count change. Evidence: `docs/evidence/volume-campaign-20260825/func-8003708c/PARK.md`; candidate is in the labeled stash. |
+| VOLUME-24-762A0 | 291 | `func_800762A0` @ `0x66AA0` is a seven-word packed GPU command helper with three direct callers and canonical return. Two `-O2 -G0` phrasings retain the first masked/shifted value in `$v0` instead of retail `$a1`; `PARKED-REGISTER-COLORING`, no integration/count change. Evidence: `docs/evidence/volume-campaign-20260825/func-800762a0/PARK.md`; candidate is in the labeled stash. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

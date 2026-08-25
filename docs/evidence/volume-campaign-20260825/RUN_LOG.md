@@ -68,3 +68,10 @@ text beyond the exact 7-word body; no count change. Evidence:
 ## Stop / continuation
 
 This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
+
+The next Tier-1 attempt, `func_800762A0` @ `0x66AA0`, passed function hood
+with three direct callers and was parked after two `-O2 -G0` packed-command
+phrasings. Both retain the first masked/shifted value in `$v0` instead of
+retail `$a1`; the full candidate differed in 13 bytes. Evidence:
+`func-800762a0/PARK.md`; no count change. Candidate/integration work remains
+in the labeled stash.
