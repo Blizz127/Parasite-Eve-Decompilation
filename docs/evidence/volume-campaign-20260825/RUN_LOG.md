@@ -22,6 +22,11 @@ The next Tier 1 span, func_80081E5C @ 0x7265C, was screened without a C
 attempt as the same PARKED-ADDRESS-RETENTION-FAMILY established by 824C8/824DC.
 No attempt was consumed.
 
+The pool family pass then found the unreferenced exact scalar-exchange twin
+func_800824B4 @ 0x72CB4 over D_800B8AB0. It was moved to
+SKIP-ADDRESS-RETENTION-FAMILY without an attempt; no matching-C count change.
+Evidence: `ADDRESS_RETENTION_SCREEN.md`.
+
 ## Stop / continuation
 
 This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.

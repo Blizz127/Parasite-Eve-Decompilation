@@ -2,7 +2,7 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1135** — TIER 1 89, TIER 2 214, TIER 3 99, SKIP 733.
+Total: **1135** — TIER 1 89, TIER 2 214, TIER 3 98, SKIP 734.
 
 ## TIER 1
 
@@ -508,7 +508,6 @@ Total: **1135** — TIER 1 89, TIER 2 214, TIER 3 99, SKIP 733.
 | 0x69764 | `func_80078F64` | 5 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
 | 0x69778 | `func_80078F78` | 5 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
 | 0x6978C | `func_80078F8C` | 5 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
-| 0x72CB4 | `func_800824B4` | 5 | jr-ra | 0/0 | 0 | no | - | - | - | real/real | no caller/ref |
 | 0x7CF0C | `func_8008C70C` | 5 | jr-ra | 0/0 | 0 | no | lw:destination | - | - | real/real | no caller/ref; destination-as-temp |
 | 0xB3310 | `func_800C2B10` | 6 | jr-ra | 15/15 | 0 | no | lw:destination | - | - | real/real | destination-as-temp |
 | 0x703F0 | `func_8007FBF0` | 6 | jr-ra | 11/11 | 0 | no | lw:destination | - | - | real/real | destination-as-temp |
@@ -1164,6 +1163,24 @@ The complete contiguous family (`func_80078E04` through `func_80079024`, 23
 handwritten COP2/register helpers) is screened in
 `COP2_SDK_SCREEN.md`. Exact matching remains optional SDK work; these entries
 must not consume matching-C campaign attempts.
+
+## Post-campaign SKIP overlay: address-retention family
+
+The static family screen in `docs/evidence/volume-campaign-20260825/ADDRESS_RETENTION_SCREEN.md`
+proves the exact scalar-global exchange shape and records the indexed getter
+variant. These spans are removed from matching-C scheduling without duplicate
+phrasing attempts:
+
+| file off | function | evidence | disposition |
+|---:|---|---|---|
+| `0x72CB4` | `func_800824B4` | exact five-word scalar exchange; no exact-start caller/reference | `SKIP-ADDRESS-RETENTION-FAMILY` |
+| `0x72CC8` | `func_800824C8` | exact five-word scalar exchange; 12 callers; two bounded C attempts already parked | `PARKED-ADDRESS-RETENTION` |
+| `0x72CDC` | `func_800824DC` | exact five-word scalar exchange twin; screened with 824C8 | `PARKED-ADDRESS-RETENTION-FAMILY` |
+| `0x7265C` | `func_80081E5C` | exact five-word scalar exchange; two callers; screened with 824C8 | `PARKED-ADDRESS-RETENTION-FAMILY` |
+| `0x703F0` | `func_8007FBF0` | indexed getter; 11 callers; `$v0` address-temp residual after two retries | `PARKED-ASSEMBLER-TEMP` |
+
+The 824C8/824DC/81E5C/703F0 historical evidence remains authoritative; this
+overlay only prevents repeated scheduling.
 
 ## Post-refresh SKIP overlay: handwritten syscall wrappers
 

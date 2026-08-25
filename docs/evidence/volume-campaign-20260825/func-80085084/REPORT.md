@@ -49,6 +49,13 @@ unsigned int func_80085084(const unsigned int *a0) {
 
 This first phrasing preserves the retail constant materialization order and the load/add return shape. No alternate phrasing, pins, or inline assembly was used.
 
+The `0xB0BEB4BF` value is recorded as an unsigned addend because that is the
+exact C expression whose code generation matches retail. Its signed rendering
+is negative (`-0x4F414B41`), so the arithmetic spelling should not by itself be
+read as a semantic name such as “constant addition”; caller-level intent would
+need separate evidence. This semantic caveat does not affect the byte-exact
+match.
+
 ## C5 / single-leaf object comparison
 
 ```text

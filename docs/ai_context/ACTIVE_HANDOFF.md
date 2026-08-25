@@ -45,6 +45,17 @@ Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 Current matching-lane status: `main` @ `3894b85`, 290 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
+**Function-hood screen rule (current):** a callable tiny span must end in a
+canonical `jr ra`/delay slot **or** a provable tail jump into a shared function
+body, and must have an exact-start caller/reference plus real boundaries. A
+tail entry is recorded as `FUNCTION_HOOD=PROVEN_BY_TAIL_JUMP`; absence of
+`jr ra` alone is not a padding classification.
+
+**Address-retention screen rule (current):** exact symbolic-address retention
+through a load/store or return delay slot is a no-attempt family screen once
+the body shape is proven. Preserve historical parks and do not generalize the
+rule to unrelated multi-access heuristic rows without body-level proof.
+
 All remaining pe-continuous-decomp grind leaves are ported. After 29388
 (below): `func_800293F4` (0x19BF4, 124w, era `-O2 -G8` +
 `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2E8` — new era_compile knob that
