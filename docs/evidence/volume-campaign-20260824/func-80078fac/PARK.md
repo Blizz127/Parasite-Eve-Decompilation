@@ -1,4 +1,4 @@
-# func_80078FAC — volume attempt 8 — PARKED-HANDWRITTEN-COP2
+# func_80078FAC — volume attempt 8 — SDK-LIBRARY-COP2 (reclassified)
 
 No C leaf is claimed; count remains 287.
 
@@ -36,6 +36,11 @@ to only:
 
 The sole missing word is `48c4d800 ctc2 a0,$27`. This is the same proven
 instruction-expressibility mechanism as attempt 7; a second phrasing cannot
-create a COP2 side effect. `PARKED-HANDWRITTEN-COP2`. Candidate is in stash
+create a COP2 side effect. Historical disposition was
+`PARKED-HANDWRITTEN-COP2`. Candidate is in stash
 `park volume func_80078FAC handwritten COP2 ctc2 unexpressible in C`; YAML,
 build, and verifier were never changed.
+
+Current disposition: `SKIP-SDK-LIBRARY-COP2`, as a member of the handwritten
+libGTE/COP2 cluster screened in `../COP2_SDK_SCREEN.md`. This is redirectable
+SDK support, not a PE1 game-code matching blocker.

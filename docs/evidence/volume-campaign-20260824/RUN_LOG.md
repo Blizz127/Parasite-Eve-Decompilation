@@ -14,7 +14,8 @@ Base: `811f8f0`, 281 accepted leaves.
 | 8 | `func_80078FAC` @ `0x697AC` | TIER 1; proven callable handwritten GTE helper; `ctc2 a0,$27` | `PARKED-HANDWRITTEN-COP2` | 3 | 0 | stash ordinary-C boundary candidate; docs-only commit |
 | 9 | `func_80078FB8` @ `0x697B8` | TIER 1; proven callable handwritten GTE helper; `ctc2 a0,$28` | `PARKED-HANDWRITTEN-COP2` | 3 | 0 | stash ordinary-C boundary candidate; docs-only commit |
 
-Final count: **9 attempts; 6 matched; 3 parked; 0 reclassified.**
+Final count: **9 attempts; 6 matched; 3 historically parked; 3 reclassified
+to `SKIP-SDK-LIBRARY-COP2` after the family screen.**
 
 ## Terminal condition
 

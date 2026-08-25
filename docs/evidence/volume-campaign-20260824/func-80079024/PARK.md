@@ -1,4 +1,4 @@
-# func_80079024 — volume attempt 7 — PARKED-HANDWRITTEN-COP2
+# func_80079024 — volume attempt 7 — SDK-LIBRARY-COP2 (reclassified)
 
 No C leaf is claimed. Matching count remains 287.
 
@@ -57,7 +57,7 @@ does not provide an ordinary-C spelling.
 
 ## Disposition
 
-`PARKED-HANDWRITTEN-COP2`: matching requires inline assembly, a macro that
+Historical campaign disposition was `PARKED-HANDWRITTEN-COP2`: matching requires inline assembly, a macro that
 expands to assembly, or a new compiler intrinsic. All are outside this
 campaign's allowed C subset; no second phrasing can change instruction-set
 expressibility. YAML, build, and verifier remain unchanged. Candidate source is
@@ -65,3 +65,7 @@ preserved in stash `park volume func_80079024 handwritten COP2 ctc2 unexpressibl
 
 Unparking requires an explicitly sanctioned COP2 intrinsic policy/toolchain
 feature, not a source-phrasing retry.
+
+Current disposition: `SKIP-SDK-LIBRARY-COP2`, as a member of the handwritten
+libGTE/COP2 cluster screened in `../COP2_SDK_SCREEN.md`. The port policy
+redirects SDK libraries to PsyCross; this is not a PE1 game-code blocker.

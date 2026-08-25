@@ -54,6 +54,9 @@ These families are redirectable but have not yet been identified completely by
 string cross-reference or signature matching:
 
 - libGTE (`RotTransPers`, matrix operations, and related geometry helpers)
+  - Screened for port-scope SKIP: the handwritten COP2 register/helper
+    cluster `func_80078E04` through `func_80079024` in `asm/disc1/68478.s`.
+    See `docs/evidence/volume-campaign-20260824/COP2_SDK_SCREEN.md`.
 - libSPU
 - MDEC / libpress
 - pad and SIO

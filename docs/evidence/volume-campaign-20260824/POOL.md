@@ -2,7 +2,7 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt.
 
-Total: **1143** — TIER 1 107, TIER 2 214, TIER 3 99, SKIP 723.
+Total: **1143** — TIER 1 104, TIER 2 214, TIER 3 99, SKIP 726.
 
 ## TIER 1
 
@@ -14,9 +14,6 @@ Total: **1143** — TIER 1 107, TIER 2 214, TIER 3 99, SKIP 723.
 | 0xBD798 | `func_800CCF98` | 2 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0xBE9EC | `func_800CE1EC` | 2 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0xBE9F4 | `func_800CE1F4` | 2 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0x69824 | `func_80079024` | 3 | jr-ra | 4/4 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0x697AC | `func_80078FAC` | 3 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0x697B8 | `func_80078FB8` | 3 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x62F14 | `func_80072714` | 4 | jr-ra | 26/26 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x62F24 | `func_80072724` | 4 | jr-ra | 24/24 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x53220 | `func_80062A20` | 5 | jr-ra | 39/39 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1166,3 +1163,19 @@ Total: **1143** — TIER 1 107, TIER 2 214, TIER 3 99, SKIP 723.
 | 0xBFE58 | `func_800CF658` | 40 | jr-ra | 0/0 | 3 | no | - | - | - | real/real | no caller/ref |
 | 0xC070C | `func_800CFF0C` | 40 | jr-ra | 0/0 | 3 | no | lhu:destination,sh:$at,lhu:destination | - | lui:1x3,addiu:0x100x2 | real/real | no caller/ref; destination-as-temp; address-retention |
 | 0xC07AC | `func_800CFFAC` | 40 | jr-ra | 0/0 | 3 | no | lhu:destination,sh:$at,lhu:destination | - | lui:1x3,addiu:0x100x2 | real/real | no caller/ref; destination-as-temp; address-retention |
+
+## Post-campaign SKIP overlay: handwritten libGTE/COP2 family
+
+The following three rows were removed from TIER 1 after the campaign and are
+now included in the `SKIP` total as `SKIP-SDK-LIBRARY-COP2`:
+
+| file off | function | words | disposition |
+|---:|---|---:|---|
+| `0x697AC` | `func_80078FAC` | 3 | `SKIP-SDK-LIBRARY-COP2` |
+| `0x697B8` | `func_80078FB8` | 3 | `SKIP-SDK-LIBRARY-COP2` |
+| `0x69824` | `func_80079024` | 3 | `SKIP-SDK-LIBRARY-COP2` |
+
+The complete contiguous family (`func_80078E04` through `func_80079024`, 23
+handwritten COP2/register helpers) is screened in
+`COP2_SDK_SCREEN.md`. Exact matching remains optional SDK work; these entries
+must not consume matching-C campaign attempts.
