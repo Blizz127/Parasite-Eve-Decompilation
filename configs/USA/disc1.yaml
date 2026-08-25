@@ -1009,6 +1009,8 @@ segments:
       # Prefix 0x28C (= 0xBA400 - 0xBA174); then C9C10/C9C18 C stubs
       # (0x10 total), resume BA420.s 0x280 (= 0xBA6A0 - 0xBA420).
       - [0xBA174, asm]
+      - [0xBA200, c, func_800C9A00]
+      - [0xBA234, asm]
       - [0xBA400, c, func_800C9C00]
       # Phase 5GS: return-zero stub, era -O2 -G0.
       - [0xBA410, c, func_800C9C10]

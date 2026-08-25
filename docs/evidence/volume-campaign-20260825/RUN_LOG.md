@@ -424,3 +424,11 @@ the constant-setting branch delay slot. Carve
 `0x08C + 0x034 + 0x288 = 0x348`, packed span/full SHA exact, verify green at
 325. Tier 1 falls 40→39; consecutive parks remain zero. Evidence:
 `func-800c8c4c/REPORT.md`.
+
+Adjacent callback-table twin `func_800C9A00` @ `0xBA200` passes function
+hood via exact-start word `0x800E09BC`, canonical return, and real
+boundaries. The proven signed-halfword threshold C matched all thirteen
+words first phrasing under era `-O2 -G0`. Carve
+`0x08C + 0x034 + 0x1CC = 0x28C`, packed span/full SHA exact, verify green at
+326. Tier 1 falls 39→38; consecutive parks remain zero. Evidence:
+`func-800c9a00/REPORT.md`.

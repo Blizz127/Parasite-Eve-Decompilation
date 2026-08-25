@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `656d0f9`, 325 accepted matching-C
+Current matching-lane status: `main` @ `230224e`, 326 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -967,6 +967,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-68-878C0 | 323 | `func_800878C0` @ `0x780C0` is a twelve-word per-voice SPU halfword bitfield update, proven by direct caller `0x80087A48`, canonical return, and real boundaries. A grouped nonvolatile RMW matched first phrasing under era `-O2 -G0`, including retail's `$a2 |= $a1` dataflow and `jr; sh` ending. Carve `0x00B4 + 0x0030 + 0x322C = 0x3310`, packed span/full SHA exact, verify green at 323; consecutive parks reset. Evidence: `docs/evidence/volume-campaign-20260825/func-800878c0/REPORT.md`. |
 | VOLUME-69-8788C | 324 | `func_8008788C` @ `0x7808C` is a thirteen-word per-voice SPU halfword bitfield update with three direct callers, canonical return, and real boundaries. The grouped nonvolatile RMW matched first phrasing under era `-O2 -G0`, including field-shift order, `$a2 |= $a1`, and `jr; sh`. Carve `0x080 + 0x034 + 0x000 = 0x0B4`, packed span/full SHA exact, verify green at 324; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-8008788c/REPORT.md`. |
 | VOLUME-70-C8C4C | 325 | `func_800C8C4C` @ `0xB944C` is a thirteen-word signed-halfword callback, proven by exact-start table word `0x800E0848`, canonical return, and real boundaries. Natural era `-O2 -G0` C matched first phrasing, including post-store sign extension and the branch-delay constant. Carve `0x08C + 0x034 + 0x288 = 0x348`, packed span/full SHA exact, verify green at 325; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-800c8c4c/REPORT.md`. |
+| VOLUME-71-C9A00 | 326 | `func_800C9A00` @ `0xBA200` is the thirteen-word signed-halfword callback twin, proven by exact-start table word `0x800E09BC`, canonical return, and real boundaries. Proven era `-O2 -G0` C matched first phrasing. Carve `0x08C + 0x034 + 0x1CC = 0x28C`, packed span/full SHA exact, verify green at 326; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-800c9a00/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
