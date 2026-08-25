@@ -295,8 +295,8 @@
     {
       "id": "volatile-store-scheduling-8783c",
       "status": "PARKED-VOLATILE-STORE-SCHEDULING",
-      "note": "func_8008783C @ file 0x7803C is a proven callable ten-word per-voice SPU halfword RMW with exact direct caller 0x80087A74, canonical return, and contiguous real-function boundaries. Retail retains the computed 0x1F801C08 + voice*0x10 address in a0, replaces bits 4..7, and puts sh v0,0(a0) in the jr delay slot. Two era -O2 -G0 phrasings (void volatile RMW and explicit returned value) reproduce the first eight words exactly but both emit sh; jr; nop. The existing MASPSX_FILL_STORE_DELAY_SLOT patch only handles absolute symbolic sw macros and cannot affect this direct volatile sh. No YAML/build/verifier integration; matching count remains 311.",
-      "evidence": "docs/evidence/volume-campaign-20260825/func-8008783c/PARK.md; source preserved in stash 'park volume func_8008783C volatile store scheduling'",
+      "note": "func_8008783C @ file 0x7803C is a proven callable ten-word per-voice SPU halfword RMW with exact direct caller 0x80087A74, canonical return, and contiguous real-function boundaries. Retail retains the computed 0x1F801C08 + voice*0x10 address in a0, replaces bits 4..7, and puts sh v0,0(a0) in the jr delay slot. Two era -O2 -G0 phrasings (void volatile RMW and explicit returned value) reproduce the first eight words exactly but both emit sh; jr; nop. Adjacent func_80087864 has the same direct volatile sh return-slot mechanism and is screened into this family without a duplicate attempt. The existing MASPSX_FILL_STORE_DELAY_SLOT patch only handles absolute symbolic sw macros and cannot affect these direct volatile sh sites. No YAML/build/verifier integration; matching count remains 311.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-8008783c/PARK.md; docs/evidence/volume-campaign-20260825/func-80087864/SKIP.md; source preserved in stash 'park volume func_8008783C volatile store scheduling'",
       "next": "Do not retry without a compiler/scheduler lever or separately justified and fully regressed maspsx rule for direct volatile sb/sh return-slot stores."
     }
   ]

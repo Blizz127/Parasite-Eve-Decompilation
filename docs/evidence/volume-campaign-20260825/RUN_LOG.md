@@ -258,3 +258,10 @@ address formation, load, mask, shift, and merge exactly, but both emit
 move the volatile store. `PARKED-VOLATILE-STORE-SCHEDULING`; no integration
 or count change, consecutive park 1. Evidence: `func-8008783c/PARK.md`;
 source is in the labeled stash.
+
+Adjacent `func_80087864` @ `0x78064` is function-hood proven by its exact
+caller at `0x80087A80` and canonical return. Its complete body has the same
+per-voice SPU volatile `sh` return-slot mechanism as parked `8783C`, changing
+only the selected nibble. It is screened without a duplicate attempt as
+`PARKED-VOLATILE-STORE-SCHEDULING-FAMILY`; count and consecutive-park state
+remain 311 and 1. Evidence: `func-80087864/SKIP.md`.

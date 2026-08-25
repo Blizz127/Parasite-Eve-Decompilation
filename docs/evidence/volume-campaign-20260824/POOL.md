@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1114** — TIER 1 53, TIER 2 214, TIER 3 98, SKIP 749.
+Total: **1114** — TIER 1 52, TIER 2 214, TIER 3 98, SKIP 750.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x78064 | `func_80087864` | 10 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x80D9C | `func_8009059C` | 10 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x80DC4 | `func_800905C4` | 10 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x467E0 | `func_80055FE0` | 11 | jr-ra | 12/12 | 0 | yes | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1217,6 +1216,12 @@ returned-value phrasing reproduce the first eight words exactly, then emit
 only handles absolute symbolic `sw` macros and does not apply to this direct
 volatile halfword store. Evidence:
 `docs/evidence/volume-campaign-20260825/func-8008783c/PARK.md`.
+
+Adjacent `func_80087864` has the identical per-voice SPU RMW and direct
+volatile `sh` return-slot mechanism, differing only in which nibble is
+replaced. It is screened without a duplicate attempt as
+`PARKED-VOLATILE-STORE-SCHEDULING-FAMILY`. Evidence:
+`docs/evidence/volume-campaign-20260825/func-80087864/SKIP.md`.
 
 ## Post-refresh SKIP overlay: handwritten syscall wrappers
 
