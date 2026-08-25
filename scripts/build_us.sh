@@ -717,7 +717,8 @@ SIZE_C_CBFBC=0x8
 SIZE_BC7C4=0xfbc
 SIZE_C_CCF80=0x10
 SIZE_C_CCF90=0x8
-SIZE_BD798=0x344
+SIZE_C_CCF98=0x8
+SIZE_BD7A0=0x33c
 SIZE_C_CD2DC=0x8
 SIZE_C_CD2E4=0x8
 SIZE_BDAEC=0x2b0
@@ -784,7 +785,8 @@ SIZE_C_CBFBC=0x8
 SIZE_BC7C4=0xfbc
 SIZE_C_CCF80=0x10
 SIZE_C_CCF90=0x8
-SIZE_BD798=0x344
+SIZE_C_CCF98=0x8
+SIZE_BD7A0=0x33c
 SIZE_C_CD2DC=0x8
 SIZE_C_CD2E4=0x8
 SIZE_BDAEC=0x2b0
@@ -1239,7 +1241,8 @@ OBJECTS=(
     "build/asm/disc1/BC7C4.s.o"
     "build/src/func_800CCF80.c.o"
     "build/src/func_800CCF90.c.o"
-    "build/asm/disc1/BD798.s.o"
+    "build/src/func_800CCF98.c.o"
+    "build/asm/disc1/BD7A0.s.o"
     "build/src/func_800CD2DC.c.o"
     "build/src/func_800CD2E4.c.o"
     "build/asm/disc1/BDAEC.s.o"
@@ -1693,7 +1696,8 @@ SOURCES=(
     "asm/disc1/BC7C4.s"
     "src/func_800CCF80.c"
     "src/func_800CCF90.c"
-    "asm/disc1/BD798.s"
+    "src/func_800CCF98.c"
+    "asm/disc1/BD7A0.s"
     "src/func_800CD2DC.c"
     "src/func_800CD2E4.c"
     "asm/disc1/BDAEC.s"
@@ -2172,7 +2176,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BAFB8.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BB4DC.s.o asm/disc1/BB4DC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BC330.s.o asm/disc1/BC330.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BC7C4.s.o asm/disc1/BC7C4.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BD798.s.o asm/disc1/BD798.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BD7A0.s.o asm/disc1/BD7A0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BDAEC.s.o asm/disc1/BDAEC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BDDB0.s.o asm/disc1/BDDB0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/BDF28.s.o asm/disc1/BDF28.s
@@ -2384,6 +2388,7 @@ era_compile src/func_800CBFB4.c build/src/func_800CBFB4.c.o -O2 -G0
 era_compile src/func_800CBFBC.c build/src/func_800CBFBC.c.o -O2 -G0
 era_compile src/func_800CCF80.c build/src/func_800CCF80.c.o -O2 -G0
 era_compile src/func_800CCF90.c build/src/func_800CCF90.c.o -O2 -G0
+era_compile src/func_800CCF98.c build/src/func_800CCF98.c.o -O2 -G0
 era_compile src/func_800CD960.c build/src/func_800CD960.c.o -O2 -G0
 era_compile src/func_800CD970.c build/src/func_800CD970.c.o -O2 -G0
 era_compile src/func_800CD978.c build/src/func_800CD978.c.o -O2 -G0
@@ -2954,7 +2959,8 @@ python3 "$TRIM" build/src/func_800CBFBC.c.o .text "$SIZE_C_CBFBC"
 python3 "$TRIM" build/asm/disc1/BC7C4.s.o .text "$SIZE_BC7C4"
 python3 "$TRIM" build/src/func_800CCF80.c.o .text "$SIZE_C_CCF80"
 python3 "$TRIM" build/src/func_800CCF90.c.o .text "$SIZE_C_CCF90"
-python3 "$TRIM" build/asm/disc1/BD798.s.o .text "$SIZE_BD798"
+python3 "$TRIM" build/src/func_800CCF98.c.o .text "$SIZE_C_CCF98"
+python3 "$TRIM" build/asm/disc1/BD7A0.s.o .text "$SIZE_BD7A0"
 python3 "$TRIM" build/src/func_800CD2DC.c.o .text "$SIZE_C_CD2DC"
 python3 "$TRIM" build/src/func_800CD2E4.c.o .text "$SIZE_C_CD2E4"
 python3 "$TRIM" build/asm/disc1/BDAEC.s.o .text "$SIZE_BDAEC"
@@ -3447,7 +3453,8 @@ SECTIONS
         build/asm/disc1/BC7C4.s.o(.text)
         build/src/func_800CCF80.c.o(.text)
         build/src/func_800CCF90.c.o(.text)
-        build/asm/disc1/BD798.s.o(.text)
+        build/src/func_800CCF98.c.o(.text)
+        build/asm/disc1/BD7A0.s.o(.text)
         build/src/func_800CD2DC.c.o(.text)
         build/src/func_800CD2E4.c.o(.text)
         build/asm/disc1/BDAEC.s.o(.text)
@@ -3894,7 +3901,8 @@ SECTIONS
         build/asm/disc1/BC7C4.s.o(.data)
         build/src/func_800CCF80.c.o(.data)
         build/src/func_800CCF90.c.o(.data)
-        build/asm/disc1/BD798.s.o(.data)
+        build/src/func_800CCF98.c.o(.data)
+        build/asm/disc1/BD7A0.s.o(.data)
         build/src/func_800CD2DC.c.o(.data)
         build/src/func_800CD2E4.c.o(.data)
         build/asm/disc1/BDAEC.s.o(.data)
@@ -4341,7 +4349,8 @@ SECTIONS
         build/asm/disc1/BC7C4.s.o(.rodata)
         build/src/func_800CCF80.c.o(.rodata)
         build/src/func_800CCF90.c.o(.rodata)
-        build/asm/disc1/BD798.s.o(.rodata)
+        build/src/func_800CCF98.c.o(.rodata)
+        build/asm/disc1/BD7A0.s.o(.rodata)
         build/src/func_800CD2DC.c.o(.rodata)
         build/src/func_800CD2E4.c.o(.rodata)
         build/asm/disc1/BDAEC.s.o(.rodata)
@@ -4788,7 +4797,8 @@ SECTIONS
         build/asm/disc1/BC7C4.s.o(.bss)
         build/src/func_800CCF80.c.o(.bss)
         build/src/func_800CCF90.c.o(.bss)
-        build/asm/disc1/BD798.s.o(.bss)
+        build/src/func_800CCF98.c.o(.bss)
+        build/asm/disc1/BD7A0.s.o(.bss)
         build/src/func_800CD2DC.c.o(.bss)
         build/src/func_800CD2E4.c.o(.bss)
         build/asm/disc1/BDAEC.s.o(.bss)
@@ -5146,6 +5156,8 @@ leafccf80 = slice(0xBD780, 0xBD790)
 print(f"  probe file 0xBD780 (CCF80): cand={cand[leafccf80].hex()} orig={orig[leafccf80].hex()}")
 leafccf90 = slice(0xBD790, 0xBD798)
 print(f"  probe file 0xBD790 (CCF90): cand={cand[leafccf90].hex()} orig={orig[leafccf90].hex()}")
+leafccf98 = slice(0xBD798, 0xBD7A0)
+print(f"  probe file 0xBD798 (CCF98): cand={cand[leafccf98].hex()} orig={orig[leafccf98].hex()}")
 leaf11 = slice(0xBDADC, 0xBDAE4)
 print(f"  probe file 0xBDADC (CD2DC): cand={cand[leaf11].hex()} orig={orig[leaf11].hex()}")
 leaf12 = slice(0xBDAE4, 0xBDAEC)

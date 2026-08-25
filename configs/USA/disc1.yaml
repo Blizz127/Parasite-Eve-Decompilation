@@ -942,7 +942,10 @@ segments:
       # Volume campaign 3: return-zero callback. Prior BD790 asm:
       # C 0x8 + resume 0x344 (= 0xBDADC - 0xBD798) = 0x34C.
       - [0xBD790, c, func_800CCF90]
-      - [0xBD798, asm]
+      # Volume campaign 4: adjacent return-zero callback. Prior BD798 asm:
+      # C 0x8 + resume 0x33C (= 0xBDADC - 0xBD7A0) = 0x344.
+      - [0xBD798, c, func_800CCF98]
+      - [0xBD7A0, asm]
       # Phase 5X: C leaf func_800CD2DC — VRAM 0x800CD2DC, size 0x8.
       # File span 0xBDADC–0xBDAE4 exclusive. Empty jr/nop stub.
       - [0xBDADC, c, func_800CD2DC]
