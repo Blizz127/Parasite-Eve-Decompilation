@@ -218,3 +218,11 @@ An explicit default accumulator matched all nine words on the first era
 Carve `0x14D8 + 0x24 + 0x148 = 0x1644`, packed span/full SHA exact, verify
 green at 309. This match resets the consecutive-park count. Evidence:
 `func-8005d970/REPORT.md`.
+
+The next Tier-1 candidate, `func_80078C94` @ `0x69494`, is a proven callable
+nine-word three-word-copy helper. Aggregate C preserved the size but homed the
+destination/result in `$v0` at entry; scalar C retained that home and moved the
+last store into the return delay slot. Retail retains `$a0` for all stores and
+moves it to `$v0` afterward. It is `PARKED-AGGREGATE-RETURN-COLORING`, with no
+integration/count change. This is consecutive park 1. Evidence:
+`func-80078c94/PARK.md`; source is in the labeled stash.

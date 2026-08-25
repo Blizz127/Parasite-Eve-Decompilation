@@ -277,6 +277,13 @@
       "note": "func_80087798 @ file 0x77F98 is a proven callable nine-word per-voice SPU register-pair writer with direct callers at 0x80087958, 0x8008C780, and 0x8008C960, canonical return, and real boundaries. Retail materializes 0x1F801C00, folds voice*0x10 into a0, masks a1/a2 to 0x7FFF, and retains a0 across stores at offsets 0 and 2. Two era -O2 -G0 phrasings (explicit volatile pointer and explicit a0 address mutation) compile identically to 12 words: cc1 leaves the scaled index in a0, forms the first address in v0, then rematerializes the second address through at. This is an address-DAG/register-home residual, not a semantic mismatch. No YAML/build/verifier integration; matching count remains 308.",
       "evidence": "docs/evidence/volume-campaign-20260825/func-80087798/PARK.md; source preserved in stash 'park volume func_80087798 MMIO address-retention'",
       "next": "Do not retry without a new source or compiler lever that demonstrably retains a computed MMIO address in the argument register across both volatile stores."
+    },
+    {
+      "id": "aggregate-return-coloring-78c94",
+      "status": "PARKED-AGGREGATE-RETURN-COLORING",
+      "note": "func_80078C94 @ file 0x69494 is a proven callable nine-word three-word-copy helper with exact direct caller 0x80031A24 and canonical return. Retail loads three words to t0/t1/t2, stores them at a0+0x14/+0x18/+0x1C, then copies a0 to v0 after all stores. Era -O2 -G0 aggregate assignment preserves nine words but moves a0 to v0 at entry and uses v0 as the destination base. Scalar field-copy C keeps that early result home and moves the final store into the jr delay slot, shrinking to eight words. The residual is aggregate-copy return/address register allocation plus scheduling. Adjacency to libGTE is suggestive but no exact SDK routine name is proven. No YAML/build/verifier integration; matching count remains 309.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-80078c94/PARK.md; source preserved in stash 'park volume func_80078C94 aggregate return coloring'",
+      "next": "Do not retry without a new aggregate-copy source or compiler lever that demonstrably retains a0 as destination through all stores and delays the v0 result copy until afterward."
     }
   ]
 }

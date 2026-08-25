@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1116** — TIER 1 58, TIER 2 214, TIER 3 98, SKIP 746.
+Total: **1116** — TIER 1 57, TIER 2 214, TIER 3 98, SKIP 747.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x69494 | `func_80078C94` | 9 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x69AD4 | `func_800792D4` | 10 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x68304 | `func_80077B04` | 10 | jr-ra | 5/5 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x68334 | `func_80077B34` | 10 | jr-ra | 4/4 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1201,6 +1200,13 @@ explicit pointer and an explicit parameter-mutation phrasing instead keep the
 scaled index in `$a0`, form the first address in `$v0`, and rematerialize the
 second through `$at`. Evidence:
 `docs/evidence/volume-campaign-20260825/func-80087798/PARK.md`.
+
+`func_80078C94` is removed after two attempts as
+`PARKED-AGGREGATE-RETURN-COLORING`. Retail retains `$a0` as the destination
+for a three-word copy and moves it to `$v0` only after all stores. Aggregate C
+keeps nine words but homes the destination/result in `$v0` at entry; scalar C
+also fills the return delay slot and shrinks to eight words. Evidence:
+`docs/evidence/volume-campaign-20260825/func-80078c94/PARK.md`.
 
 ## Post-refresh SKIP overlay: handwritten syscall wrappers
 

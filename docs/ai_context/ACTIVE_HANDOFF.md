@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `3ebfc15`, 308 accepted matching-C
+Current matching-lane status: `main` @ `60255ef`, 309 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -943,6 +943,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-44-83EA4 | 308 | `func_80083EA4` @ `0x746A4` is the eight-word tag-`0x46` initializer twin with one direct call. Proven source shape matched first phrasing under era `-O2 -G0`; the old asm span closes exactly as `0x20 = 0x20`, packed span/full SHA exact, verify green at 308. Evidence: `docs/evidence/volume-campaign-20260825/func-80083ea4/REPORT.md`. |
 | VOLUME-45-87798-PARK | 308 | `func_80087798` @ `0x77F98` is a proven callable nine-word per-voice SPU register-pair writer with three direct calls. Two `-O2 -G0` phrasings compile identically: cc1 keeps the scaled index in `$a0`, first address in `$v0`, and rematerializes the second through `$at`, while retail retains the shared address in `$a0`. `PARKED-MMIO-ADDRESS-RETENTION`; no integration/count change; consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-80087798/PARK.md`; source is in the labeled stash. |
 | VOLUME-46-5D970 | 309 | `func_8005D970` @ `0x4E170` is a nine-word signed-threshold state selector with one direct call. An explicit default accumulator matched first phrasing under era `-O2 -G8`, including load/branch delay slots and normalized gp relocations. Carve `0x14D8 + 0x24 + 0x148 = 0x1644`, packed span/full SHA exact, verify green at 309; consecutive-park count reset. Evidence: `docs/evidence/volume-campaign-20260825/func-8005d970/REPORT.md`. |
+| VOLUME-47-78C94-PARK | 309 | `func_80078C94` @ `0x69494` is a proven callable nine-word three-word-copy helper. Aggregate C keeps nine words but homes destination/result in `$v0` at entry; scalar C also fills the return delay slot and shrinks to eight words. Retail retains `$a0` through all stores and copies it to `$v0` afterward. `PARKED-AGGREGATE-RETURN-COLORING`; no integration/count change; consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-80078c94/PARK.md`; source is in the labeled stash. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
