@@ -158,3 +158,11 @@ pointer local made cc1 retain the shared address in `$v1` and matched all eight
 words on attempt 2 under era `-O2 -G0`. Carve
 `0x1644 + 0x20 + 0x618 = 0x1C7C`, packed span/full SHA exact, verify green at
 304. Evidence: `func-8005dadc/REPORT.md`.
+
+The next Tier-1 candidate, `func_8005DB8C` @ `0x4E38C`, has four direct
+callers and a retained-address index shape. Two era `-O2 -G0` phrasings were
+bounded: the explicit pointer shared the address but selected the `5DADC`
+allocation/order; the adjusted-base phrasing duplicated symbol
+materialization. Retail's copy-before-load DAG remains unreproduced, so it is
+`PARKED-ADDRESS-DAG-COLORING` with no integration/count change. Evidence:
+`func-8005db8c/PARK.md`; source is in the labeled stash.
