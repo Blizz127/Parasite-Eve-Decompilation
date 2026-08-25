@@ -233,3 +233,12 @@ handwritten libGTE operation with six direct callers. Its ten words perform
 cannot express. It moved to `SKIP-SDK-LIBRARY-COP2` without an attempt or
 count change; the consecutive-park count remains 1. Evidence:
 `func-800792d4/SKIP.md`.
+
+The next Tier-1 leaf, `func_80077B04` @ `0x68304`, is a ten-word byte flag
+set/clear helper with five direct callers. Canonical return and exact-start
+calls prove function hood; the neighboring alignment nops remain outside the
+leaf. Natural argument-relative C matched all ten words on the first era
+`-O2 -G0` phrasing, including the local jump relocation and return-delay-slot
+store. Carve `0x48 + 0x28 + 0x38 = 0xA8`, packed span/full SHA exact, verify
+green at 310. This match resets the consecutive-park count. Evidence:
+`func-80077b04/REPORT.md`.
