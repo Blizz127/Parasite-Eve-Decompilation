@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `f0b2d2b`, 329 accepted matching-C
+Current matching-lane status: `main` @ `5630c18`, 329 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -972,6 +972,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-73-CBBBC | 328 | `func_800CBBBC` @ `0xBC3BC` is the fourth thirteen-word signed-halfword callback twin, proven by exact-start table word `0x800E0BA8`, canonical return, and real boundaries. Proven era `-O2 -G0` C matched first phrasing. Carve `0x08C + 0x034 + 0x3B4 = 0x474`, packed span/full SHA exact, verify green at 328; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-800cbbbc/REPORT.md`. |
 | VOLUME-74-77CB4 | 329 | `func_80077CB4` @ `0x684B4` is a fourteen-word packet-chain merge helper, proven by eleven direct calls, canonical return, and real boundaries. A signed length plus explicit result accumulator matched second phrasing under era `-O2 -G0`; the local jump is exact after relocation normalization. The audit corrects old 13-word evidence: `0x80077CE8` is the return delay slot. Carve `0x003C + 0x0038 + 0x2638 = 0x26AC`, packed span/full SHA exact, verify green at 329; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-80077cb4/REPORT.md`. |
 | VOLUME-75-83790-PARK | 329 | `func_80083790` @ `0x73F90` is a proven callable fourteen-word packed-offset calculator with exact caller `0x80083738`. Attempt 2 reaches 9/14 exact and recovers load order, register homes, main arithmetic, and the base addition in the return delay slot; GCC's residual is reassociating independent `+4` onto the first term instead of retail's post-mask second term. `PARKED-ARITHMETIC-ASSOCIATION-SCHEDULING`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-80083790/PARK.md`; source is in the labeled stash. |
+| VOLUME-76-77AC4-PARK | 329 | `func_80077AC4` @ `0x682C4` is a proven callable fifteen-word low-24 link exchange with 55 direct callers. Direct C reproduces size, memory schedule, semantics, and return-delay store, but colors low/high masks into `$a3/$a2` versus retail `$a2/$a3`; the explicit-value retry does not move the masks. `PARKED-MASK-CONSTANT-COLORING`; no integration/count change, consecutive park 2. Evidence: `docs/evidence/volume-campaign-20260825/func-80077ac4/PARK.md`; source is in the labeled stash. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

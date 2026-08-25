@@ -471,3 +471,14 @@ second, while retail applies it after masking the second term. It parks after
 two phrasings as `PARKED-ARITHMETIC-ASSOCIATION-SCHEDULING`; count stays 329,
 Tier 1 falls 35→34, and consecutive park becomes 1. Evidence:
 `func-80083790/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 candidate, `func_80077AC4` @ `0x682C4`, passes function
+hood via 55 raw direct callers, canonical return, and real boundaries. Its
+fifteen-word body exchanges low-24 link information between two argument
+words while preserving their high bytes. Direct C reproduces the exact
+size, memory schedule, dataflow, and return-delay store, but assigns the two
+mask constants to `$a2/$a3` opposite retail. An explicit-loaded-value and
+reversed-OR retry leaves those mask homes unchanged and also swaps the first
+two loads. It parks after two phrasings as `PARKED-MASK-CONSTANT-COLORING`;
+count stays 329, Tier 1 falls 34→33, and consecutive park becomes 2.
+Evidence: `func-80077ac4/PARK.md`; source is in the labeled stash.
