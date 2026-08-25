@@ -406,3 +406,12 @@ and the lvalue permits the exact `jr; sh` ending. Carve
 `0x00B4 + 0x0030 + 0x322C = 0x3310`, packed span/full SHA exact, verify
 green at 323. Tier 1 falls 42→41 and the match resets consecutive parks to
 zero. Evidence: `func-800878c0/REPORT.md`.
+
+Adjacent `func_8008788C` @ `0x7808C` independently passes function hood via
+three direct callers, canonical return, and real boundaries. The grouped
+nonvolatile halfword RMW matched all thirteen words first phrasing under era
+`-O2 -G0`, including retail's field-shift order, `$a2 |= $a1` DAG, and
+`jr; sh` ending. The asm span closes directly against matched `878C0`:
+`0x080 + 0x034 + 0x000 = 0x0B4`. Packed span/full SHA exact, verify green at
+324. Tier 1 falls 41→40; consecutive parks remain zero. Evidence:
+`func-8008788c/REPORT.md`.

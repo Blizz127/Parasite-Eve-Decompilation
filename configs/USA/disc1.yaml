@@ -863,6 +863,8 @@ segments:
       - [0x77FD4, c, func_800877D4]
       - [0x77FF0, c, func_800877F0]
       - [0x7800C, asm]
+      # Volume campaign: adjacent per-voice SPU bitfield update, era -O2 -G0.
+      - [0x7808C, c, func_8008788C]
       # Volume campaign: per-voice SPU halfword bitfield update, era -O2 -G0.
       - [0x780C0, c, func_800878C0]
       - [0x780F0, asm]
