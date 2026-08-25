@@ -242,3 +242,11 @@ leaf. Natural argument-relative C matched all ten words on the first era
 store. Carve `0x48 + 0x28 + 0x38 = 0xA8`, packed span/full SHA exact, verify
 green at 310. This match resets the consecutive-park count. Evidence:
 `func-80077b04/REPORT.md`.
+
+Adjacent `func_80077B34` @ `0x68334` independently passes function hood via
+four exact-start calls and canonical return. It is the bit-0 set/clear twin;
+existing B54I evidence identifies its Psy-Q role as `SetShadeTex`. Minimal
+argument-relative C matched all ten words on the first era `-O2 -G0`
+phrasing. Both two-nop alignment fragments remain asm; carve
+`0x08 + 0x28 + 0x08 = 0x38`, packed span/full SHA exact, verify green at
+311. Evidence: `func-80077b34/REPORT.md`.

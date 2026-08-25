@@ -642,6 +642,10 @@ segments:
       # era -O2 -G0.
       - [0x68304, c, func_80077B04]
       - [0x6832C, asm]
+      # Volume campaign: byte flag-1 set/clear helper; size 0x28,
+      # era -O2 -G0.
+      - [0x68334, c, func_80077B34]
+      - [0x6835C, asm]
       # Phase 5CB: C leaf func_80077B64 — file 0x68364, size 0x14.
       - [0x68364, c, func_80077B64]
       # 12-byte zero-filled alignment padding between 77B64 and 77B84.
