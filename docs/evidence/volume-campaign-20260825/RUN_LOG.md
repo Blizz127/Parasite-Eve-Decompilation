@@ -210,3 +210,11 @@ retains one computed address in `$a0` for both stores. It is
 `PARKED-MMIO-ADDRESS-RETENTION`, with no integration or count change. This is
 consecutive park 1. Evidence: `func-80087798/PARK.md`; source is in the
 labeled stash.
+
+The next Tier-1 leaf, `func_8005D970` @ `0x4E170`, has one direct caller and
+selects signed value `4` or `-4` from a gp-relative input threshold of 300.
+An explicit default accumulator matched all nine words on the first era
+`-O2 -G8` phrasing, including the load-delay nop and branch-delay default.
+Carve `0x14D8 + 0x24 + 0x148 = 0x1644`, packed span/full SHA exact, verify
+green at 309. This match resets the consecutive-park count. Evidence:
+`func-8005d970/REPORT.md`.
