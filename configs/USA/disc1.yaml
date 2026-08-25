@@ -473,6 +473,9 @@ segments:
       - [0x44A88, c, func_80054288]
       - [0x44A94, c, func_80054294]
       - [0x44AA0, asm]
+      # Volume campaign: gp-backed bitset setter, era -O2 -G8.
+      - [0x467B4, c, func_80055FB4]
+      - [0x467E0, asm]
       - [0x486CC, c, func_80057ECC]
       - [0x486D8, asm]
       - [0x4C090, c, func_8005B890]

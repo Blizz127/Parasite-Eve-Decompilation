@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `8c2699f`, 319 accepted matching-C
+Current matching-lane status: `main` @ `f899ffa`, 320 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -959,6 +959,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-60-55FE0-PARK | 318 | `func_80055FE0` @ `0x467E0` is a proven callable eleven-word gp-backed bitset query with twelve direct callers. Two era `-O2 -G8` phrasings canonicalize retail's explicit mask/intersection/boolean DAG into nine-word shift-and-low-bit extraction; signedness changes only `srlv` to `srav`. `PARKED-BIT-TEST-CANONICALIZATION`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-80055fe0/PARK.md`; source is in the labeled stash. |
 | VOLUME-61-79244-SDK | 318 | `func_80079244` @ `0x69A44` is a proven callable eleven-word handwritten libGTE `RTPS` wrapper with six direct callers. Its `lwc2`/`rtps`/`swc2`/`cfc2`/`mfc2` side effects are not expressible in sanctioned ordinary C. Screened as `SKIP-SDK-LIBRARY-COP2` without an attempt or count change; consecutive parks remain 1. Evidence: `docs/evidence/volume-campaign-20260825/func-80079244/SKIP.md`. |
 | VOLUME-62-3E0D0 | 319 | `func_8003E0D0` @ `0x2E8D0` is an eleven-word conditional state initializer, with exact caller `0x80019270`, canonical return, and real boundaries. Natural era `-O2 -G0` C matched first phrasing, including load/branch/jump delay slots and the normalized local jump. Carve `0x0F8 + 0x02C + 0x514 = 0x638`, packed span/full SHA exact, verify green at 319; consecutive parks reset. Evidence: `docs/evidence/volume-campaign-20260825/func-8003e0d0/REPORT.md`. |
+| VOLUME-63-55FB4 | 320 | `func_80055FB4` @ `0x467B4` is an eleven-word gp-backed bitset setter, with exact caller `0x80044CC4`, canonical return, and real boundaries. Natural era `-O2 -G8` C matched first phrasing, including normalized `D_8009D058-_gp=0x2E8` and the return-slot store. Carve `0x1D14 + 0x002C + 0x1EEC = 0x3C2C`, packed span/full SHA exact, verify green at 320. Evidence: `docs/evidence/volume-campaign-20260825/func-80055fb4/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

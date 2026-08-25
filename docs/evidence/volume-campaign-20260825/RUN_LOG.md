@@ -350,3 +350,11 @@ argument-relative initializer C matched all eleven words on the first era
 normalized local jump relocation. Carve `0x0F8 + 0x02C + 0x514 = 0x638`,
 packed span/full SHA exact, verify green at 319. This match resets consecutive
 parks to zero. Evidence: `func-8003e0d0/REPORT.md`.
+
+The next Tier-1 leaf, `func_80055FB4` @ `0x467B4`, passes function hood via
+its exact call at `0x80044CC4`, canonical return, and real boundaries. Natural
+gp-backed bitset-setter C matched all eleven words on the first era `-O2 -G8`
+phrasing, including normalized `D_8009D058-_gp=0x2E8` and the return-slot
+store. Carve `0x1D14 + 0x002C + 0x1EEC = 0x3C2C`, packed span/full SHA exact,
+verify green at 320. Consecutive parks remain zero. Evidence:
+`func-80055fb4/REPORT.md`.

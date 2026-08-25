@@ -499,7 +499,9 @@ SIZE_C_52F0C=0x18
 SIZE_43724=0x1364
 SIZE_C_54288=0xc
 SIZE_C_54294=0xc
-SIZE_44AA0=0x3c2c
+SIZE_44AA0=0x1d14
+SIZE_C_55FB4=0x2c
+SIZE_467E0=0x1eec
 SIZE_C_57ECC=0xc
 SIZE_486D8=0x39b8
 SIZE_C_5B890=0xc
@@ -1070,6 +1072,8 @@ OBJECTS=(
     "build/src/func_80054288.c.o"
     "build/src/func_80054294.c.o"
     "build/asm/disc1/44AA0.s.o"
+    "build/src/func_80055FB4.c.o"
+    "build/asm/disc1/467E0.s.o"
     "build/src/func_80057ECC.c.o"
     "build/asm/disc1/486D8.s.o"
     "build/src/func_8005B890.c.o"
@@ -1569,6 +1573,8 @@ SOURCES=(
     "src/func_80054288.c"
     "src/func_80054294.c"
     "asm/disc1/44AA0.s"
+    "src/func_80055FB4.c"
+    "asm/disc1/467E0.s"
     "src/func_80057ECC.c"
     "asm/disc1/486D8.s"
     "src/func_8005B890.c"
@@ -2231,6 +2237,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/43408.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/436C0.s.o asm/disc1/436C0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/43724.s.o asm/disc1/43724.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/44AA0.s.o asm/disc1/44AA0.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/467E0.s.o asm/disc1/467E0.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/486D8.s.o asm/disc1/486D8.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4C0A8.s.o asm/disc1/4C0A8.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/4C4BC.s.o asm/disc1/4C4BC.s
@@ -2603,6 +2610,7 @@ era_compile src/func_8005E8A4.c build/src/func_8005E8A4.c.o -O2 -G8
 era_compile src/func_8005E968.c build/src/func_8005E968.c.o -O2 -G8
 era_compile src/func_8005BEE8.c build/src/func_8005BEE8.c.o -O2 -G8
 era_compile src/func_8005D970.c build/src/func_8005D970.c.o -O2 -G8
+era_compile src/func_80055FB4.c build/src/func_80055FB4.c.o -O2 -G8
 era_compile src/func_8005DADC.c build/src/func_8005DADC.c.o -O2 -G0
 era_compile src/func_80085084.c build/src/func_80085084.c.o -O2 -G0
 # Phase 5ER: byte/word test-and-clear-return twins; forward if/else scheduling.
@@ -2920,6 +2928,8 @@ python3 "$TRIM" build/asm/disc1/43724.s.o .text "$SIZE_43724"
 python3 "$TRIM" build/src/func_80054288.c.o .text "$SIZE_C_54288"
 python3 "$TRIM" build/src/func_80054294.c.o .text "$SIZE_C_54294"
 python3 "$TRIM" build/asm/disc1/44AA0.s.o .text "$SIZE_44AA0"
+python3 "$TRIM" build/src/func_80055FB4.c.o .text "$SIZE_C_55FB4"
+python3 "$TRIM" build/asm/disc1/467E0.s.o .text "$SIZE_467E0"
 python3 "$TRIM" build/src/func_80057ECC.c.o .text "$SIZE_C_57ECC"
 python3 "$TRIM" build/asm/disc1/486D8.s.o .text "$SIZE_486D8"
 python3 "$TRIM" build/src/func_8005B890.c.o .text "$SIZE_C_5B890"
@@ -3458,6 +3468,8 @@ SECTIONS
         build/src/func_80054288.c.o(.text)
         build/src/func_80054294.c.o(.text)
         build/asm/disc1/44AA0.s.o(.text)
+        build/src/func_80055FB4.c.o(.text)
+        build/asm/disc1/467E0.s.o(.text)
         build/src/func_80057ECC.c.o(.text)
         build/asm/disc1/486D8.s.o(.text)
         build/src/func_8005B890.c.o(.text)
@@ -3951,6 +3963,8 @@ SECTIONS
         build/src/func_80054288.c.o(.data)
         build/src/func_80054294.c.o(.data)
         build/asm/disc1/44AA0.s.o(.data)
+        build/src/func_80055FB4.c.o(.data)
+        build/asm/disc1/467E0.s.o(.data)
         build/src/func_80057ECC.c.o(.data)
         build/asm/disc1/486D8.s.o(.data)
         build/src/func_8005B890.c.o(.data)
@@ -4443,6 +4457,8 @@ SECTIONS
         build/src/func_80054288.c.o(.rodata)
         build/src/func_80054294.c.o(.rodata)
         build/asm/disc1/44AA0.s.o(.rodata)
+        build/src/func_80055FB4.c.o(.rodata)
+        build/asm/disc1/467E0.s.o(.rodata)
         build/src/func_80057ECC.c.o(.rodata)
         build/asm/disc1/486D8.s.o(.rodata)
         build/src/func_8005B890.c.o(.rodata)
@@ -4935,6 +4951,8 @@ SECTIONS
         build/src/func_80054288.c.o(.bss)
         build/src/func_80054294.c.o(.bss)
         build/asm/disc1/44AA0.s.o(.bss)
+        build/src/func_80055FB4.c.o(.bss)
+        build/asm/disc1/467E0.s.o(.bss)
         build/src/func_80057ECC.c.o(.bss)
         build/asm/disc1/486D8.s.o(.bss)
         build/src/func_8005B890.c.o(.bss)
@@ -5334,6 +5352,7 @@ leaf52514 = slice(0x42D14, 0x42D24)
 leaf52524 = slice(0x42D24, 0x42D34)
 leaf5257c = slice(0x42D7C, 0x42D94)
 leaf527c0 = slice(0x42FC0, 0x42FC8)
+leaf55fb4 = slice(0x467B4, 0x467E0)
 leaf5bca8 = slice(0x4C4A8, 0x4C4B0)
 leaf5e884 = slice(0x4F084, 0x4F094)
 leaf6a5bc = slice(0x5ADBC, 0x5AE4C)
@@ -5470,6 +5489,7 @@ print(f"  probe file 0x42D14 (52514): cand={cand[leaf52514].hex()} orig={orig[le
 print(f"  probe file 0x42D24 (52524): cand={cand[leaf52524].hex()} orig={orig[leaf52524].hex()}")
 print(f"  probe file 0x42D7C (5257C): cand={cand[leaf5257c].hex()} orig={orig[leaf5257c].hex()}")
 print(f"  probe file 0x42FC0 (527C0): cand={cand[leaf527c0].hex()} orig={orig[leaf527c0].hex()}")
+print(f"  volume file 0x467B4 (55FB4): cand={cand[leaf55fb4].hex()} orig={orig[leaf55fb4].hex()}")
 print(f"  probe file 0x4C4A8 (5BCA8): cand={cand[leaf5bca8].hex()} orig={orig[leaf5bca8].hex()}")
 print(f"  probe file 0x4F084 (5E884): cand={cand[leaf5e884].hex()} orig={orig[leaf5e884].hex()}")
 print(f"  volume file 0x5ADBC (6A5BC): cand={cand[leaf6a5bc].hex()} orig={orig[leaf6a5bc].hex()}")
