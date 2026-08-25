@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `4d8d7e2`, 317 accepted matching-C
+Current matching-lane status: `main` @ `c7e80ff`, 318 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -955,6 +955,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-56-90614 | 315 | `func_80090614` @ `0x80E14` is the adjacent ten-word stream-byte flag helper (`0x4400`, output `+0x116`). Function hood is proven by exact-start callback-table entry `0x8009CBB8`, canonical return, and real boundaries, correcting another stale `0/0` reference screen. Proven modern GCC 14 `-O1 -G0` C matched first attempt; carve `0x00 + 0x28 + 0x78 = 0xA0`, packed span/full SHA exact, verify green at 315. Evidence: `docs/evidence/volume-campaign-20260825/func-80090614/REPORT.md`. |
 | VOLUME-57-9063C | 316 | `func_8009063C` @ `0x80E3C` is the adjacent ten-word stream-byte flag helper (`0x0100`, word output `+0x100`). Function hood is proven by exact-start callback-table entry `0x8009CBCC`, canonical return, and real boundaries, correcting its stale `0/0` reference screen. Explicit word-output GCC 14 `-O1 -G0` C matched first attempt; carve `0x00 + 0x28 + 0x50 = 0x78`, packed span/full SHA exact, verify green at 316. Evidence: `docs/evidence/volume-campaign-20260825/func-8009063c/REPORT.md`. |
 | VOLUME-58-90664 | 317 | `func_80090664` @ `0x80E64` is the adjacent ten-word stream-byte flag helper (`0x0200`, word output `+0x104`). Function hood is proven by exact-start callback-table entry `0x8009CBDC`, canonical return, and real boundaries, correcting its stale `0/0` reference screen. Proven modern GCC 14 `-O1 -G0` C matched first attempt; carve `0x00 + 0x28 + 0x28 = 0x50`, packed span/full SHA exact, verify green at 317. Evidence: `docs/evidence/volume-campaign-20260825/func-80090664/REPORT.md`. |
+| VOLUME-59-9068C | 318 | `func_8009068C` @ `0x80E8C` is the adjacent ten-word stream-byte flag helper (`0x0400`, word output `+0x108`). Function hood is proven by exact-start callback-table entry `0x8009CBEC`, canonical return, and real boundaries, correcting its stale `0/0` reference screen. Proven modern GCC 14 `-O1 -G0` C matched first attempt; final carve `0x00 + 0x28 + 0x00 = 0x28`, packed span/full SHA exact, verify green at 318. Evidence: `docs/evidence/volume-campaign-20260825/func-8009068c/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
