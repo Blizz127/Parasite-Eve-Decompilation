@@ -579,7 +579,8 @@ SIZE_C_74478=0x2c
 SIZE_C_744A4=0x24
 SIZE_64CC8=0x284
 SIZE_C_7474C=0x24
-SIZE_64F70=0x2a4
+SIZE_64F70=0x268
+SIZE_C_749D8=0x3c
 SIZE_C_74A14=0x14
 SIZE_C_74A28=0x10
 SIZE_65238=0x280
@@ -1178,6 +1179,7 @@ OBJECTS=(
     "build/asm/disc1/64CC8.s.o"
     "build/src/func_8007474C.c.o"
     "build/asm/disc1/64F70.s.o"
+    "build/src/func_800749D8.c.o"
     "build/src/func_80074A14.c.o"
     "build/src/func_80074A28.c.o"
     "build/asm/disc1/65238.s.o"
@@ -1696,6 +1698,7 @@ SOURCES=(
     "asm/disc1/64CC8.s"
     "src/func_8007474C.c"
     "asm/disc1/64F70.s"
+    "src/func_800749D8.c"
     "src/func_80074A14.c"
     "src/func_80074A28.c"
     "asm/disc1/65238.s"
@@ -2585,6 +2588,7 @@ era_compile src/func_80042C64.c build/src/func_80042C64.c.o -O2 -G0
 # 5EF delay-slot family: maspsx LOCAL PATCH opt-in (sw store fills the j $31
 # delay slot; see tools/era/maspsx/maspsx/__init__.py patch log). Env var flows
 # through era_compile to the maspsx child process.
+era_compile src/func_800749D8.c build/src/func_800749D8.c.o -O2 -G0
 MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_80074A14.c build/src/func_80074A14.c.o -O2 -G0
 MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007A3EC.c build/src/func_8007A3EC.c.o -O2 -G0
 MASPSX_FILL_STORE_DELAY_SLOT=1 era_compile src/func_8007A4A8.c build/src/func_8007A4A8.c.o -O2 -G0
@@ -3085,6 +3089,7 @@ python3 "$TRIM" build/src/func_800744A4.c.o .text "$SIZE_C_744A4"
 python3 "$TRIM" build/asm/disc1/64CC8.s.o .text "$SIZE_64CC8"
 python3 "$TRIM" build/src/func_8007474C.c.o .text "$SIZE_C_7474C"
 python3 "$TRIM" build/asm/disc1/64F70.s.o .text "$SIZE_64F70"
+python3 "$TRIM" build/src/func_800749D8.c.o .text "$SIZE_C_749D8"
 python3 "$TRIM" build/src/func_80074A14.c.o .text "$SIZE_C_74A14"
 python3 "$TRIM" build/src/func_80074A28.c.o .text "$SIZE_C_74A28"
 python3 "$TRIM" build/asm/disc1/65238.s.o .text "$SIZE_65238"
@@ -3642,6 +3647,7 @@ SECTIONS
         build/asm/disc1/64CC8.s.o(.text)
         build/src/func_8007474C.c.o(.text)
         build/asm/disc1/64F70.s.o(.text)
+        build/src/func_800749D8.c.o(.text)
         build/src/func_80074A14.c.o(.text)
         build/src/func_80074A28.c.o(.text)
         build/asm/disc1/65238.s.o(.text)
@@ -4154,6 +4160,7 @@ SECTIONS
         build/asm/disc1/64CC8.s.o(.data)
         build/src/func_8007474C.c.o(.data)
         build/asm/disc1/64F70.s.o(.data)
+        build/src/func_800749D8.c.o(.data)
         build/src/func_80074A14.c.o(.data)
         build/src/func_80074A28.c.o(.data)
         build/asm/disc1/65238.s.o(.data)
@@ -4665,6 +4672,7 @@ SECTIONS
         build/asm/disc1/64CC8.s.o(.rodata)
         build/src/func_8007474C.c.o(.rodata)
         build/asm/disc1/64F70.s.o(.rodata)
+        build/src/func_800749D8.c.o(.rodata)
         build/src/func_80074A14.c.o(.rodata)
         build/src/func_80074A28.c.o(.rodata)
         build/asm/disc1/65238.s.o(.rodata)
@@ -5176,6 +5184,7 @@ SECTIONS
         build/asm/disc1/64CC8.s.o(.bss)
         build/src/func_8007474C.c.o(.bss)
         build/asm/disc1/64F70.s.o(.bss)
+        build/src/func_800749D8.c.o(.bss)
         build/src/func_80074A14.c.o(.bss)
         build/src/func_80074A28.c.o(.bss)
         build/asm/disc1/65238.s.o(.bss)
@@ -5529,6 +5538,7 @@ leaf6ebd4 = slice(0x5F3D4, 0x5F3E4)
 leaf73de8 = slice(0x645E8, 0x645F8)
 leaf73df8 = slice(0x645F8, 0x64610)
 leaf74478 = slice(0x64C78, 0x64CA4)
+leaf749d8 = slice(0x651D8, 0x65214)
 leaf74a14 = slice(0x65214, 0x65228)
 leaf74a28 = slice(0x65228, 0x65238)
 leaf74cb8 = slice(0x654B8, 0x654C8)
@@ -5671,6 +5681,7 @@ print(f"  probe file 0x5F3D4 (6EBD4): cand={cand[leaf6ebd4].hex()} orig={orig[le
 print(f"  probe file 0x645E8 (73DE8): cand={cand[leaf73de8].hex()} orig={orig[leaf73de8].hex()}")
 print(f"  probe file 0x645F8 (73DF8): cand={cand[leaf73df8].hex()} orig={orig[leaf73df8].hex()}")
 print(f"  volume file 0x64C78 (74478): cand={cand[leaf74478].hex()} orig={orig[leaf74478].hex()}")
+print(f"  volume file 0x651D8 (749D8): cand={cand[leaf749d8].hex()} orig={orig[leaf749d8].hex()}")
 print(f"  probe file 0x65214 (74A14): cand={cand[leaf74a14].hex()} orig={orig[leaf74a14].hex()}")
 print(f"  probe file 0x65228 (74A28): cand={cand[leaf74a28].hex()} orig={orig[leaf74a28].hex()}")
 print(f"  probe file 0x654B8 (74CB8): cand={cand[leaf74cb8].hex()} orig={orig[leaf74cb8].hex()}")

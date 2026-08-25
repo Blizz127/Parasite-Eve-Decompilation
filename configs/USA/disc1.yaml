@@ -619,6 +619,8 @@ segments:
       # Phase 5CZ: C leaf func_8007474C — file 0x64F4C, size 0x24.
       - [0x64F4C, c, func_8007474C]
       - [0x64F70, asm]
+      # Volume campaign: display-environment initializer, size 0x3C.
+      - [0x651D8, c, func_800749D8]
       # Phase 5EF: exchange D_800956EC (int from accepted getter 80074A28).
       - [0x65214, c, func_80074A14]
       # Phase 5AX: C leaf func_80074A28 — VRAM 0x80074A28, size 0x10.

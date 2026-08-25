@@ -493,3 +493,16 @@ final OR in the return delay slot. Carve
 `0x0018 + 0x003C + 0x0004 = 0x0058`, packed span/full SHA exact, verify
 green at 330. Tier 1 falls 33→32, and the match resets consecutive parks
 from two to zero. Evidence: `func-80077a64/REPORT.md`.
+
+The next Tier-1 leaf, `func_800749D8` @ `0x651D8`, passes function hood
+via four direct callers, canonical return with a live delay slot, and real
+functions immediately on both sides. Its stores prove a 20-byte display
+environment initializer; `SetDefDispEnv` is the probable Psy-Q name, still
+explicitly not string- or symbol-proven. A natural struct initializer matched
+all fifteen words on the first era `-O2 -G0` phrasing, including `$v0` base
+retention, the o32 fifth-argument load, and the final height store in the
+return delay slot. Carve `0x0268 + 0x003C + 0x0000 = 0x02A4`, packed
+span/full SHA exact, verify green at 331. The trim guard first caught a stale
+ignored asm split retaining nonzero carved bytes; regenerating from YAML made
+the same arithmetic pass without changing the carve. Tier 1 falls 32→31;
+consecutive parks remain zero. Evidence: `func-800749d8/REPORT.md`.
