@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `c8208a5`, 332 accepted matching-C
+Current matching-lane status: `main` @ `ff75e0f`, 333 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -978,6 +978,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-79-63158 | 332 | `func_80063158` @ `0x53958` is a sixteen-word null-safe paired position updater, proven by 30 direct calls, canonical return, and real adjacent functions. Natural struct C updates argument words `+0x18/+0x1C` and proven gp pair `D_8009D124/D_8009D128`; it matched first phrasing under era `-O2 -G8` after gp relocation normalization. Carve `0x0474 + 0x0040 + 0x0000 = 0x04B4`, packed span/full SHA exact, verify green at 332. Evidence: `docs/evidence/volume-campaign-20260825/func-80063158/REPORT.md`. |
 | VOLUME-80-5E988-PARK | 332 | `func_8005E988` @ `0x4F188` is a proven callable sixteen-word three-way packed-value selector with twelve direct callers, canonical return, and real adjacent functions. Two era `-O2 -G8` phrasings preserve the semantics but not retail's interleaving of three constant constructions with two branch slots and a local-jump slot: natural nested selection chooses an early jump, while an explicit default hoists the first constant and shrinks to fifteen content words. `PARKED-CONTROL-FLOW-CONSTANT-SCHEDULING`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-8005e988/PARK.md`; source is in the labeled stash. |
 | VOLUME-81-3F758-COP2 | 332 | `func_8003F758` @ `0x2FF58` is a proven callable sixteen-word handwritten GTE helper with exact caller `0x8003F0D0`, canonical return, and real boundaries. It writes control registers 13–15 (`RBK/GBK/BBK`) via three `ctc2` instructions and zeroes nine buffer halfwords. Screened without an attempt as `SKIP-HANDWRITTEN-COP2`; exact SDK provenance/name is not claimed. Count stays 332 and consecutive parks remain 1. Evidence: `docs/evidence/volume-campaign-20260825/func-8003f758/SKIP.md`. |
+| VOLUME-82-63428 | 333 | `func_80063428` @ `0x53C28` is a seventeen-word guarded value calculator, proven by 59 direct calls, canonical return, and real adjacent functions. Natural explicit-result C matches first phrasing under era `-O2 -G0`, including all load-delay nops and `mult/mflo` allocation. Carve `0x024C + 0x0044 + 0x15DC = 0x186C`, packed span/full SHA exact, verify green at 333; consecutive parks reset. Evidence: `docs/evidence/volume-campaign-20260825/func-80063428/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

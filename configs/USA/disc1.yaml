@@ -556,7 +556,12 @@ segments:
       # Volume campaign: null-safe flag query func_800631C0, size 0x1C;
       # era -O2 -G0.
       - [0x539C0, c, func_800631C0]
+      # Volume campaign: null/signed-field guarded value calculation;
+      # era -O2 -G0. Mid-539DC carve: prefix 0x24C, C 0x44,
+      # resume 53C6C.s 0x15DC.
       - [0x539DC, asm]
+      - [0x53C28, c, func_80063428]
+      - [0x53C6C, asm]
       - [0x55248, c, func_80064A48]
       - [0x55254, asm]
       # Phase 5CA: C leaf func_80064C20 — file 0x55420, size 0x10.

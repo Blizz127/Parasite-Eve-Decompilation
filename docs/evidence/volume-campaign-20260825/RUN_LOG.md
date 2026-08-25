@@ -539,3 +539,13 @@ ordinary-C intrinsic, so it is screened without an attempt as
 `SKIP-HANDWRITTEN-COP2`; no SDK routine name is asserted without provenance.
 Count stays 332, Tier 1 falls 29→28, SKIP rises 752→753, and consecutive
 parks remain 1. Evidence: `func-8003f758/SKIP.md`.
+
+The next Tier-1 leaf, `func_80063428` @ `0x53C28`, passes function hood via
+59 raw direct callers, canonical return, and real adjacent functions. It
+returns `-1` for a null record or negative words at `+0x44/+0x48`; otherwise
+it returns `field_44 + field_34 * field_48`. The natural explicit-result C
+matched all seventeen words on the first era `-O2 -G0` phrasing, including
+the default-result branch slot, load-delay nops, and `mult/mflo` allocation.
+Carve `0x024C + 0x0044 + 0x15DC = 0x186C`, packed span/full SHA exact,
+verify green at 333. Tier 1 falls 28→27 and the match resets consecutive
+parks from one to zero. Evidence: `func-80063428/REPORT.md`.
