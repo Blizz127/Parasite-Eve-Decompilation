@@ -529,3 +529,13 @@ shrinks to fifteen content words. It parks after two era `-O2 -G8`
 phrasings as `PARKED-CONTROL-FLOW-CONSTANT-SCHEDULING`; count stays 332,
 Tier 1 falls 30→29, and consecutive park becomes 1. Evidence:
 `func-8005e988/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 row, `func_8003F758` @ `0x2FF58`, is a real sixteen-word
+function: exact caller `0x8003F0D0`, canonical return with a live store delay
+slot, and real boundaries. Its handwritten body shifts three arguments and
+writes GTE control registers 13–15 (`RBK/GBK/BBK`) with `ctc2`, then zeroes
+nine buffer halfwords. The architectural side effects have no sanctioned
+ordinary-C intrinsic, so it is screened without an attempt as
+`SKIP-HANDWRITTEN-COP2`; no SDK routine name is asserted without provenance.
+Count stays 332, Tier 1 falls 29→28, SKIP rises 752→753, and consecutive
+parks remain 1. Evidence: `func-8003f758/SKIP.md`.
