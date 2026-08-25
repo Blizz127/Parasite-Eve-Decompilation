@@ -377,3 +377,12 @@ and matched all eleven words under era `-O2 -G0`. Carve
 `0x124 + 0x02C + 0x000 = 0x150`, packed span/full SHA exact, verify green at
 321. This match resets consecutive parks to zero. Evidence:
 `func-80074478/REPORT.md`.
+
+The next Tier-1 leaf, `func_800CE470` @ `0xBEC70`, passes function hood via
+exact-start callback-table word `0x800E0FD0`, canonical return, and real
+boundaries. Natural signed-byte callback C matched all eleven words on the
+first era `-O2 -G0` phrasing, including the post-store sign extension and
+the constant-setting branch delay slot. Carve
+`0x0000 + 0x002C + 0x63B4 = 0x63E0`, packed span/full SHA exact, verify
+green at 322. Tier 1 falls 44→43; consecutive parks remain zero. Evidence:
+`func-800ce470/REPORT.md`.

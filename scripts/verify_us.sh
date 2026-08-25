@@ -463,7 +463,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0xBEBAC, c, func_800CE3AC]'
     '[0xBEBB4, asm]'
     '[0xBEC64, c, func_800CE464]'
-    '[0xBEC70, asm]'
+    '[0xBEC70, c, func_800CE470]'
+    '[0xBEC9C, asm]'
     '[0xC5050, c, func_800D4850]'
     '[0xC5060, asm]'
 )
@@ -630,7 +631,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/BE74C.s"
     "asm/disc1/BE9FC.s"
     "asm/disc1/BEBB4.s"
-    "asm/disc1/BEC70.s"
+    "asm/disc1/BEC9C.s"
     "asm/disc1/C5060.s"
     "asm/disc1/data/800.rodata.s"
     "asm/disc1/data/818A0.rodata.s"
@@ -818,6 +819,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_800CDF40.c"
     "src/func_800CE3AC.c"
     "src/func_800CE464.c"
+    "src/func_800CE470.c"
 )
 
 # Paths that must remain git-ignored (same set as split_us.sh OUTPUT_PATHS).
