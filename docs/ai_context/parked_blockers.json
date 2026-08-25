@@ -256,6 +256,13 @@
       "note": "func_8007FBF0 @ 0x703F0 is a proven six-word callable table getter returning D_8009B574[index]. Function-hood: jr ra + nop, eleven direct jal callers (including 0x8007E8FC, 0x8007F7F8, and 0x80082324), and real instruction boundaries on both sides. Retail is sll a0,a0,2; lui v0,%hi; addu v0,v0,a0; lw v0,0(v0); jr ra; nop. With MASPSX_THREE_WORD_SYMBOL_STORE=1, the candidate has the correct three-instruction indexed-symbolic-load form, but uses $at as the address temporary while retail uses $v0, the load destination, as the temporary. The alternate pointer phrasing did not change this; the choice is in the assembler macro, not cc1 or source shape. This exposes a per-load-site discriminator: the 3W gate is correct for the $at-required 0x363F4-class site but wrong when the destination is also usable as the base. Do not change the global gate from this leaf alone. A fourth maspsx patch requires its own investigation and full regression with leaves traversing both branches. Matching-C remains 281; no YAML/build integration or leaf claim. Rejected candidate and both R6 retry objdumps are preserved in stash 'hold rejected 0x703F0 R6 retries'; the prior stash 'hold unaccepted 0x703F0 matching-C proposal' is also non-matching and rejected.",
       "evidence": "docs/evidence/func-8007fbf0/PARK.md; full candidate/retry report and source preserved in the rejected R6 stash",
       "next": "Investigate the GNU-as indexed symbolic-load temporary-register discriminator, then run the full maspsx regression and a leaf exercising each branch before any fourth patch."
+    },
+    {
+      "id": "handwritten-syscall-72714",
+      "status": "SKIP-SDK-LIBRARY-SYSCALL",
+      "note": "func_80072714 @ file 0x62F14 is a proven callable four-word handwritten wrapper: addiu a0,zero,1; syscall 0; jr ra; nop. It has 26 unique direct jal callsites and real boundaries. The adjacent func_80072724 has the same wrapper shape with immediate 2 and is screened with it. Ordinary C has no sanctioned spelling for the MIPS syscall architectural side effect; R7 forbids inline/file-scope assembly and mismatch-hiding macros. No YAML/build/verifier integration; matching count remains 287.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-80072714/PARK.md; diagnostic boundary source preserved in stash 'park volume func_80072714 handwritten syscall unexpressible in C'",
+      "next": "Do not schedule the adjacent syscall wrappers for matching-C attempts; continue with the next eligible Tier 1 candidate."
     }
   ]
 }

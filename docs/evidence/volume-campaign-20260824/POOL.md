@@ -1,21 +1,13 @@
-# Matching-C volume campaign pool — 2026-08-24
+# Matching-C volume campaign pool — refreshed 2026-08-25
 
-Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt.
+Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1143** — TIER 1 104, TIER 2 214, TIER 3 99, SKIP 726.
+Total: **1137** — TIER 1 96, TIER 2 214, TIER 3 99, SKIP 728.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0xBC7B4 | `func_800CBFB4` | 2 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0xBC7BC | `func_800CBFBC` | 2 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0xBD790 | `func_800CCF90` | 2 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0xBD798 | `func_800CCF98` | 2 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0xBE9EC | `func_800CE1EC` | 2 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0xBE9F4 | `func_800CE1F4` | 2 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0x62F14 | `func_80072714` | 4 | jr-ra | 26/26 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0x62F24 | `func_80072724` | 4 | jr-ra | 24/24 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x53220 | `func_80062A20` | 5 | jr-ra | 39/39 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x72CC8 | `func_800824C8` | 5 | jr-ra | 12/12 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x72CDC | `func_800824DC` | 5 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1179,3 +1171,18 @@ The complete contiguous family (`func_80078E04` through `func_80079024`, 23
 handwritten COP2/register helpers) is screened in
 `COP2_SDK_SCREEN.md`. Exact matching remains optional SDK work; these entries
 must not consume matching-C campaign attempts.
+
+## Post-refresh SKIP overlay: handwritten syscall wrappers
+
+The adjacent 4-word wrappers `func_80072714` and `func_80072724` are removed
+from TIER 1 after the first refreshed-campaign screen. Both contain a literal
+MIPS `syscall 0` instruction between an immediate `$a0` setup and the canonical
+`jr ra; nop`; ordinary C has no sanctioned spelling for that architectural
+side effect, and inline assembly is forbidden by R7. They are classified
+`SKIP-SDK-LIBRARY-SYSCALL` and must not consume matching-C attempts. Evidence:
+`docs/evidence/volume-campaign-20260825/func-80072714/PARK.md`.
+
+| file off | function | words | disposition |
+|---:|---|---:|---|
+| `0x62F14` | `func_80072714` | 4 | `SKIP-SDK-LIBRARY-SYSCALL` |
+| `0x62F24` | `func_80072724` | 4 | `SKIP-SDK-LIBRARY-SYSCALL` |

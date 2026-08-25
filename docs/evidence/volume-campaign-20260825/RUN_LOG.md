@@ -1,0 +1,11 @@
+# Matching-C volume campaign run log — 2026-08-25
+
+Base: a648f45, 287 accepted leaves; pool refreshed from 2026-08-24 state to 1137 candidates (TIER 1 96, TIER 2 214, TIER 3 99, SKIP 728).
+
+| attempt | target | pool row | outcome | words | iterations | commit or stash |
+|---:|---|---|---|---:|---:|---|
+| 1 | func_80072714 @ 0x62F14 | TIER 1; jr-ra; 26 direct callers; real boundaries | SKIP-SDK-LIBRARY-SYSCALL after function-hood/static screen; adjacent func_80072724 screened with same proof | 4 | 0 | labeled stash; docs commit pending |
+
+## Stop / continuation
+
+This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
