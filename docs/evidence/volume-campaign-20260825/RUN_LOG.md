@@ -75,3 +75,9 @@ phrasings. Both retain the first masked/shifted value in `$v0` instead of
 retail `$a1`; the full candidate differed in 13 bytes. Evidence:
 `func-800762a0/PARK.md`; no count change. Candidate/integration work remains
 in the labeled stash.
+
+The next Tier-1 leaf, `func_800631C0` @ `0x539C0`, passed function hood with
+two direct callers and matched on the second `-O2 -G0` phrasing. An explicit
+result accumulator reproduced retail's filled null-branch delay slot; carve
+`0x1C + 0x186C = 0x1888`, packed span and full SHA exact, verify green at 292.
+Evidence: `func-800631c0/REPORT.md`.

@@ -526,7 +526,10 @@ segments:
       - [0x53998, c, func_80063198]
       # Phase 5BZ: C leaf func_800631AC — file 0x539AC, size 0x14.
       - [0x539AC, c, func_800631AC]
-      - [0x539C0, asm]
+      # Volume campaign: null-safe flag query func_800631C0, size 0x1C;
+      # era -O2 -G0.
+      - [0x539C0, c, func_800631C0]
+      - [0x539DC, asm]
       - [0x55248, c, func_80064A48]
       - [0x55254, asm]
       # Phase 5CA: C leaf func_80064C20 — file 0x55420, size 0x10.

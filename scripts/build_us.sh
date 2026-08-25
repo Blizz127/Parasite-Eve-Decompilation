@@ -531,7 +531,8 @@ SIZE_C_62CD0=0x14
 SIZE_534E4=0x4b4
 SIZE_C_63198=0x14
 SIZE_C_631AC=0x14
-SIZE_539C0=0x1888
+SIZE_C_631C0=0x1c
+SIZE_539DC=0x186c
 SIZE_C_64A48=0xc
 SIZE_55254=0x1cc
 SIZE_C_64C20=0x10
@@ -1066,7 +1067,8 @@ OBJECTS=(
     "build/asm/disc1/534E4.s.o"
     "build/src/func_80063198.c.o"
     "build/src/func_800631AC.c.o"
-    "build/asm/disc1/539C0.s.o"
+    "build/src/func_800631C0.c.o"
+    "build/asm/disc1/539DC.s.o"
     "build/src/func_80064A48.c.o"
     "build/asm/disc1/55254.s.o"
     "build/src/func_80064C20.c.o"
@@ -1530,7 +1532,8 @@ SOURCES=(
     "asm/disc1/534E4.s"
     "src/func_80063198.c"
     "src/func_800631AC.c"
-    "asm/disc1/539C0.s"
+    "src/func_800631C0.c"
+    "asm/disc1/539DC.s"
     "src/func_80064A48.c"
     "asm/disc1/55254.s"
     "src/func_80064C20.c"
@@ -2132,7 +2135,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/52ABC.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/531BC.s.o asm/disc1/531BC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/5327C.s.o asm/disc1/5327C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/534E4.s.o asm/disc1/534E4.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/539C0.s.o asm/disc1/539C0.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/539DC.s.o asm/disc1/539DC.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/55254.s.o asm/disc1/55254.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/55430.s.o asm/disc1/55430.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/5B1E4.s.o asm/disc1/5B1E4.s
@@ -2269,6 +2272,7 @@ run "$CC" $CFLAGS_LEAF -c -o build/src/func_8005BCA8.c.o src/func_8005BCA8.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8005E884.c.o src/func_8005E884.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80063198.c.o src/func_80063198.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_800631AC.c.o src/func_800631AC.c
+era_compile src/func_800631C0.c build/src/func_800631C0.c.o -O2 -G0
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80064C20.c.o src/func_80064C20.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_8006EBD4.c.o src/func_8006EBD4.c
 run "$CC" $CFLAGS_LEAF -c -o build/src/func_80073DE8.c.o src/func_80073DE8.c
@@ -2811,7 +2815,8 @@ python3 "$TRIM" build/src/func_80062CD0.c.o .text "$SIZE_C_62CD0"
 python3 "$TRIM" build/asm/disc1/534E4.s.o .text "$SIZE_534E4"
 python3 "$TRIM" build/src/func_80063198.c.o .text "$SIZE_C_63198"
 python3 "$TRIM" build/src/func_800631AC.c.o .text "$SIZE_C_631AC"
-python3 "$TRIM" build/asm/disc1/539C0.s.o .text "$SIZE_539C0"
+python3 "$TRIM" build/src/func_800631C0.c.o .text "$SIZE_C_631C0"
+python3 "$TRIM" build/asm/disc1/539DC.s.o .text "$SIZE_539DC"
 python3 "$TRIM" build/src/func_80064A48.c.o .text "$SIZE_C_64A48"
 python3 "$TRIM" build/asm/disc1/55254.s.o .text "$SIZE_55254"
 python3 "$TRIM" build/src/func_80064C20.c.o .text "$SIZE_C_64C20"
@@ -3314,7 +3319,8 @@ SECTIONS
         build/asm/disc1/534E4.s.o(.text)
         build/src/func_80063198.c.o(.text)
         build/src/func_800631AC.c.o(.text)
-        build/asm/disc1/539C0.s.o(.text)
+        build/src/func_800631C0.c.o(.text)
+        build/asm/disc1/539DC.s.o(.text)
         build/src/func_80064A48.c.o(.text)
         build/asm/disc1/55254.s.o(.text)
         build/src/func_80064C20.c.o(.text)
@@ -3772,7 +3778,8 @@ SECTIONS
         build/asm/disc1/534E4.s.o(.data)
         build/src/func_80063198.c.o(.data)
         build/src/func_800631AC.c.o(.data)
-        build/asm/disc1/539C0.s.o(.data)
+        build/src/func_800631C0.c.o(.data)
+        build/asm/disc1/539DC.s.o(.data)
         build/src/func_80064A48.c.o(.data)
         build/asm/disc1/55254.s.o(.data)
         build/src/func_80064C20.c.o(.data)
@@ -4229,7 +4236,8 @@ SECTIONS
         build/asm/disc1/534E4.s.o(.rodata)
         build/src/func_80063198.c.o(.rodata)
         build/src/func_800631AC.c.o(.rodata)
-        build/asm/disc1/539C0.s.o(.rodata)
+        build/src/func_800631C0.c.o(.rodata)
+        build/asm/disc1/539DC.s.o(.rodata)
         build/src/func_80064A48.c.o(.rodata)
         build/asm/disc1/55254.s.o(.rodata)
         build/src/func_80064C20.c.o(.rodata)
@@ -4686,7 +4694,8 @@ SECTIONS
         build/asm/disc1/534E4.s.o(.bss)
         build/src/func_80063198.c.o(.bss)
         build/src/func_800631AC.c.o(.bss)
-        build/asm/disc1/539C0.s.o(.bss)
+        build/src/func_800631C0.c.o(.bss)
+        build/asm/disc1/539DC.s.o(.bss)
         build/src/func_80064A48.c.o(.bss)
         build/asm/disc1/55254.s.o(.bss)
         build/src/func_80064C20.c.o(.bss)

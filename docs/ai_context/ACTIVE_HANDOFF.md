@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `ad67207`, 291 accepted matching-C
+Current matching-lane status: `main` @ `0b8cc42`, 291 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -912,6 +912,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-22-57D18 | 291 | `func_80057D18` @ `0x48518` is a six-word gp-indexed signed-halfword getter/clear twin of `func_800534CC`, with an exact-start function-pointer construction and real boundaries. Screened under the same gp-absolute-form blocker; no attempt/count change. Evidence: `docs/evidence/volume-campaign-20260825/func-80057d18/SKIP.md`. |
 | VOLUME-23-3708C | 291 | `func_8003708C` @ `0x2788C` is a seven-word fixed-point multiply with 65 direct callers and canonical return. Two `-O2 -G0` natural product forms retain wrong HI/LO temporary coloring and exceed the exact body; `PARKED-FIXED-POINT-REGISTER-COLORING`, no integration/count change. Evidence: `docs/evidence/volume-campaign-20260825/func-8003708c/PARK.md`; candidate is in the labeled stash. |
 | VOLUME-24-762A0 | 291 | `func_800762A0` @ `0x66AA0` is a seven-word packed GPU command helper with three direct callers and canonical return. Two `-O2 -G0` phrasings retain the first masked/shifted value in `$v0` instead of retail `$a1`; `PARKED-REGISTER-COLORING`, no integration/count change. Evidence: `docs/evidence/volume-campaign-20260825/func-800762a0/PARK.md`; candidate is in the labeled stash. |
+| VOLUME-25-631C0 | 292 | `func_800631C0` @ `0x539C0` is a seven-word nullable flag query with two direct callers and canonical return. The explicit result accumulator in `-O2 -G0` fills the null-branch delay slot exactly; carve `0x1C + 0x186C = 0x1888`, packed span/full SHA exact, verify green at 292. Evidence: `docs/evidence/volume-campaign-20260825/func-800631c0/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
