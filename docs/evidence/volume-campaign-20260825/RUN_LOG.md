@@ -13,6 +13,10 @@ The adjacent func_800824DC @ 0x72CDC has the same scalar-global exchange
 shape over D_800B8AB8 and was screened into the same park family without a
 separate attempt.
 
+The next Tier 1 span, func_80078120 @ 0x68920, was screened without a C
+attempt as SKIP-SDK-LIBRARY-GTE-TAIL; its five-word tail entry branches into
+func_80078134’s shared handwritten-COP2 continuation. No attempt was consumed.
+
 ## Stop / continuation
 
 This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
