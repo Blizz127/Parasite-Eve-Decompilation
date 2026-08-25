@@ -794,6 +794,11 @@ segments:
       - [0x779AC, asm]
       - [0x77C14, c, func_80087414]
       - [0x77C28, asm]
+      # Phase 5FY: hardware halfword setter func_800877BC — VRAM 0x800877BC,
+      # size 0x18, era -O2 -G0. Mid-77C28 carve: prefix 0x394, C 0x18,
+      # trailing asm resumes at 77FD4.
+      - [0x77FBC, c, func_800877BC]
+      - [0x77FD4, asm]
       # Phase 5EG-readers: func_8008AB1C — VRAM 0x8008AB1C, size 0x80.
       # Pins D_8009D240 as unsigned short * and D_8009D260 as unsigned char *
       # via lhu / unscaled addu. Era -O1 -G0.

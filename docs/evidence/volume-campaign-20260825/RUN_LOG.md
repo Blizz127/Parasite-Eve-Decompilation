@@ -34,6 +34,11 @@ the exact 0x18-byte body and was rejected by the trim guard. Evidence:
 `func-8005dbf8/PARK.md`; candidate/integration work remains in its labeled
 stash; no count change.
 
+The next eligible Tier-1 leaf, func_800877BC @ 0x77FBC, matched on the first
+`-O2 -G0` phrasing as a volatile hardware halfword setter. Six words exact;
+carve `0x394 + 0x18 + 0x3348 = 0x36F4`; full SHA exact and verify green at
+291. Evidence: `func-800877bc/REPORT.md`; committed as the next leaf.
+
 ## Stop / continuation
 
 This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
