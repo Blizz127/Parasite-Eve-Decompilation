@@ -49,6 +49,11 @@ hood but was parked after two `-O2 -G8` phrasings. Both emitted an absolute
 address instead of retail's `$gp+0x2D8` load; full mismatch was 22 bytes.
 Evidence: `func-800534cc/PARK.md`; no count change.
 
+The following `func_8005DE70` @ `0x4E670` is the same six-word
+address-register-coloring family over `D_800A8044` with offset `-0x1C` and one
+caller. It was screened without a duplicate attempt; no count change.
+Evidence: `func-8005de70/SKIP.md`.
+
 ## Stop / continuation
 
 This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
