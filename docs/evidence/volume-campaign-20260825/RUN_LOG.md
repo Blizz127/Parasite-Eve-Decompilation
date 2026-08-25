@@ -300,3 +300,12 @@ halfword sibling. Proven GCC 14 `-O1 -G0` C matched all ten words first
 phrasing. Carve `0x00 + 0x28 + 0x78 = 0xA0`, packed span/full SHA exact,
 verify green at 315. Tier 3 falls 97→96; consecutive-park count remains zero.
 Evidence: `func-80090614/REPORT.md`.
+
+Adjacent `func_8009063C` @ `0x80E3C` passes function hood via exact-start
+callback-table word `0x8009CBCC`, canonical return, and real boundaries,
+correcting its stale pool `0/0` screen. Unlike the preceding halfword-output
+siblings, this helper widens the byte into a word store at `+0x100` while ORing
+`0x0100`. Explicit word-output GCC 14 `-O1 -G0` C matched all ten words first
+phrasing. Carve `0x00 + 0x28 + 0x50 = 0x78`, packed span/full SHA exact,
+verify green at 316. Tier 3 falls 96→95; consecutive parks remain zero.
+Evidence: `func-8009063c/REPORT.md`.
