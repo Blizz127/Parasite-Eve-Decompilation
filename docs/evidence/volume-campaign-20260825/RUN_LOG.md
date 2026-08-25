@@ -386,3 +386,14 @@ the constant-setting branch delay slot. Carve
 `0x0000 + 0x002C + 0x63B4 = 0x63E0`, packed span/full SHA exact, verify
 green at 322. Tier 1 falls 44→43; consecutive parks remain zero. Evidence:
 `func-800ce470/REPORT.md`.
+
+The next Tier-1 candidate, `func_8008780C` @ `0x7800C`, passes function hood
+with three direct callers, canonical return, and real boundaries. The natural
+volatile expression gets the address form but differs in field ordering and
+store scheduling. An explicit-dataflow, nonvolatile retry reaches the exact
+twelve-word size, exact register homes, and retail `jr; sh`; its sole residual
+is GCC scheduling the independent `$a2` shift pair before retail's `$a0`
+address pair. It parks after two phrasings as
+`PARKED-INDEPENDENT-OP-SCHEDULING`; count stays 322, Tier 1 falls 43→42,
+and consecutive park becomes 1. Evidence: `func-8008780c/PARK.md`; source is
+in the labeled stash.

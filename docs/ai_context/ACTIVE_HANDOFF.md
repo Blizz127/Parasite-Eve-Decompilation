@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `43e96ac`, 322 accepted matching-C
+Current matching-lane status: `main` @ `0ec0f5d`, 322 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -963,6 +963,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-64-82ADC-PARK | 320 | `func_80082ADC` @ `0x732DC` is a proven callable eleven-word callback-record initializer with exact caller `0x80084618`. Retail retains one `D_800A5AB4` base in `$v0` across four stores; direct stores and an explicit-local retry both compile to fourteen words with repeated `$at` materialization. `PARKED-SYMBOLIC-BASE-RETENTION`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-80082adc/PARK.md`; source is in the labeled stash. |
 | VOLUME-65-74478 | 321 | `func_80074478` @ `0x64C78` is an eleven-word indexed callback-table setter, proven by an exact-start pointer returned from `func_800743B4` and stored into a callback slot. Reversing commutative comparison operands on phrasing 2 selected retail's `beq a1,v0`; all 11 words match under era `-O2 -G0`. Carve `0x124 + 0x02C + 0x000 = 0x150`, packed span/full SHA exact, verify green at 321; consecutive parks reset. Evidence: `docs/evidence/volume-campaign-20260825/func-80074478/REPORT.md`. |
 | VOLUME-66-CE470 | 322 | `func_800CE470` @ `0xBEC70` is an eleven-word signed-byte callback, proven by exact-start table word `0x800E0FD0`, canonical return, and real boundaries. Natural era `-O2 -G0` C matched first phrasing, including the post-store sign extension and branch-delay constant. Carve `0x0000 + 0x002C + 0x63B4 = 0x63E0`, packed span/full SHA exact, verify green at 322; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260825/func-800ce470/REPORT.md`. |
+| VOLUME-67-8780C-PARK | 322 | `func_8008780C` @ `0x7800C` is a proven callable twelve-word per-voice SPU control update with three direct callers. Attempt 2 fixes size, register homes, expression DAG, and `jr; sh`, but GCC schedules the independent `$a2` shifts before retail's `$a0` address pair; four words remain reordered. `PARKED-INDEPENDENT-OP-SCHEDULING`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-8008780c/PARK.md`; source is in the labeled stash. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
