@@ -258,6 +258,13 @@
       "next": "Investigate the GNU-as indexed symbolic-load temporary-register discriminator, then run the full maspsx regression and a leaf exercising each branch before any fourth patch."
     },
     {
+      "id": "address-retention-824c8",
+      "status": "PARKED-ADDRESS-RETENTION",
+      "note": "func_800824C8 @ file 0x72CC8 is a proven callable five-word scalar-global exchange with 12 unique direct jal callsites and real boundaries. Retail loads D_800B8AB4 through a retained $v1 address and stores the new a0 in the jr delay slot, returning the old v0. Two allowed era -O2 -G0 phrasings were tested: assignment-expression form uses v0/a0 plus at and loses the old-value load; explicit old-value form has correct semantics but rebuilds the address through v0/at and emits seven words. The residual is address retention/register allocation, not a missing semantic. No YAML/build/verifier integration; matching count remains 288.",
+      "evidence": "docs/evidence/volume-campaign-20260825/func-800824c8/PARK.md; candidate source preserved in stash 'park volume func_800824C8 address-retention residual'",
+      "next": "Do not retry without a sanctioned address-retention lever; pins and further phrasing iterations are outside R6/R7."
+    },
+    {
       "id": "handwritten-syscall-72714",
       "status": "SKIP-SDK-LIBRARY-SYSCALL",
       "note": "func_80072714 @ file 0x62F14 is a proven callable four-word handwritten wrapper: addiu a0,zero,1; syscall 0; jr ra; nop. It has 26 unique direct jal callsites and real boundaries. The adjacent func_80072724 has the same wrapper shape with immediate 2 and is screened with it. Ordinary C has no sanctioned spelling for the MIPS syscall architectural side effect; R7 forbids inline/file-scope assembly and mismatch-hiding macros. No YAML/build/verifier integration; matching count remains 287.",
