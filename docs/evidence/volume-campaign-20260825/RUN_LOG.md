@@ -358,3 +358,12 @@ phrasing, including normalized `D_8009D058-_gp=0x2E8` and the return-slot
 store. Carve `0x1D14 + 0x002C + 0x1EEC = 0x3C2C`, packed span/full SHA exact,
 verify green at 320. Consecutive parks remain zero. Evidence:
 `func-80055fb4/REPORT.md`.
+
+The next Tier-1 candidate, `func_80082ADC` @ `0x732DC`, passes function hood
+via exact call `0x80084618`, canonical return, and real boundaries. Retail
+retains one `D_800A5AB4` base in `$v0` across four callback-record stores.
+Both direct array stores and an explicit-local-base retry compile under era
+`-O2 -G0` to the same fourteen-word sequence with repeated `$at`
+materialization, versus retail's eleven words. It parks as
+`PARKED-SYMBOLIC-BASE-RETENTION`; count stays 320, consecutive park 1.
+Evidence: `func-80082adc/PARK.md`; source is in the labeled stash.

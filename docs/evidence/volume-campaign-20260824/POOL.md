@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1104** — TIER 1 46, TIER 2 214, TIER 3 93, SKIP 751.
+Total: **1104** — TIER 1 45, TIER 2 214, TIER 3 93, SKIP 752.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x732DC | `func_80082ADC` | 11 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x64C78 | `func_80074478` | 11 | jr-ra | 0/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0xBEC70 | `func_800CE470` | 11 | jr-ra | 0/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x7800C | `func_8008780C` | 12 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1151,6 +1150,7 @@ phrasing attempts:
 | `0x72CDC` | `func_800824DC` | exact five-word scalar exchange twin; screened with 824C8 | `PARKED-ADDRESS-RETENTION-FAMILY` |
 | `0x7265C` | `func_80081E5C` | exact five-word scalar exchange; two callers; screened with 824C8 | `PARKED-ADDRESS-RETENTION-FAMILY` |
 | `0x703F0` | `func_8007FBF0` | indexed getter; 11 callers; `$v0` address-temp residual after two retries | `PARKED-ASSEMBLER-TEMP` |
+| `0x732DC` | `func_80082ADC` | four callback-record stores; one caller; retail retains one `$v0` symbolic base, while two C phrasings rematerialize through `$at` | `PARKED-SYMBOLIC-BASE-RETENTION` |
 
 The 824C8/824DC/81E5C/703F0 historical evidence remains authoritative; this
 overlay only prevents repeated scheduling.
@@ -1219,6 +1219,13 @@ attempt. Six direct callers prove its exact eleven-word function span; its
 handwritten body is a libGTE `RTPS` wrapper using `lwc2`, `rtps`, `swc2`,
 `cfc2`, and `mfc2`, which ordinary sanctioned C cannot express. Evidence:
 `docs/evidence/volume-campaign-20260825/func-80079244/SKIP.md`.
+
+`func_80082ADC` is removed after two attempts as
+`PARKED-SYMBOLIC-BASE-RETENTION`. Retail retains one `D_800A5AB4` base in
+`$v0` across four callback-record stores. Both direct symbolic stores and an
+explicit local base compile to the same fourteen-word sequence with repeated
+`$at` materialization, versus retail's eleven words. Evidence:
+`docs/evidence/volume-campaign-20260825/func-80082adc/PARK.md`.
 
 Adjacent `func_80087864` has the identical per-voice SPU RMW and direct
 volatile `sh` return-slot mechanism, differing only in which nibble is

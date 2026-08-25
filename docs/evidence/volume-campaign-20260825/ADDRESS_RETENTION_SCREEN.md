@@ -36,6 +36,17 @@ The known indexed variant is:
 |---|---:|---|---:|---|
 | `func_8007FBF0` | `[0x703F0,0x70408)` | `D_8009B574[index]` | 11 direct callers | historical `PARKED-ASSEMBLER-TEMP` |
 
+The multi-store symbolic-base variant is:
+
+| function | file span | access | exact-start refs | disposition |
+|---|---:|---|---:|---|
+| `func_80082ADC` | `[0x732DC,0x73308)` | callbacks/zeros at `D_800A5AB4 + {-4,0,4,8}` | 1 direct caller | `PARKED-SYMBOLIC-BASE-RETENTION` after two phrasings |
+
+Here retail retains one `$v0` base across all four stores. GCC 2.7.2 folds an
+explicit local base back into independent symbolic stores, so maspsx expands
+each through `$at`; this broadens the pressure class beyond scalar exchanges
+without making every multi-store initializer an automatic skip.
+
 `func_800824B4` has canonical `jr ra`/delay-slot semantics and real
 boundaries, but no exact-start caller or relocation was found; it is retained
 as a proven retail body pattern, not claimed as callable matching-C progress.
