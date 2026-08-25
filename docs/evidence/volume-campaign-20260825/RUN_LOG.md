@@ -517,3 +517,15 @@ including the interleaved local/global schedule. Carve
 `0x0474 + 0x0040 + 0x0000 = 0x04B4`, packed span/full SHA exact, verify
 green at 332. Tier 1 falls 31→30; consecutive parks remain zero. Evidence:
 `func-80063158/REPORT.md`.
+
+The next Tier-1 candidate, `func_8005E988` @ `0x4F188`, passes function
+hood via twelve direct callers, canonical return, and real adjacent
+functions. Its sixteen-word body selects one of three 24-bit constants from
+two signed comparisons and writes the value plus its unsigned half to the
+same gp pair proven by `func_8005E968`. Natural nested selection preserves
+sixteen words but chooses an early-jump topology; an explicit less-case
+default selects the retail first branch but hoists the first constant and
+shrinks to fifteen content words. It parks after two era `-O2 -G8`
+phrasings as `PARKED-CONTROL-FLOW-CONSTANT-SCHEDULING`; count stays 332,
+Tier 1 falls 30→29, and consecutive park becomes 1. Evidence:
+`func-8005e988/PARK.md`; source is in the labeled stash.
