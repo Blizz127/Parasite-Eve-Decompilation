@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1137** — TIER 1 96, TIER 2 214, TIER 3 99, SKIP 728.
+Total: **1136** — TIER 1 95, TIER 2 214, TIER 3 99, SKIP 728.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x53220 | `func_80062A20` | 5 | jr-ra | 39/39 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x72CC8 | `func_800824C8` | 5 | jr-ra | 12/12 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x72CDC | `func_800824DC` | 5 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x75884 | `func_80085084` | 5 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1186,3 +1185,9 @@ side effect, and inline assembly is forbidden by R7. They are classified
 |---:|---|---:|---|
 | `0x62F14` | `func_80072714` | 4 | `SKIP-SDK-LIBRARY-SYSCALL` |
 | `0x62F24` | `func_80072724` | 4 | `SKIP-SDK-LIBRARY-SYSCALL` |
+
+## 2026-08-25 campaign match overlay
+
+The first eligible post-refresh Tier 1 candidate, `func_80062A20` at
+`0x53220`, matched 5/5 words under era `-O2 -G0` and was integrated as leaf
+288. Its evidence is `docs/evidence/volume-campaign-20260825/func-80062a20/REPORT.md`.
