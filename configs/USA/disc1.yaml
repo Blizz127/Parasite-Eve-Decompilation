@@ -612,6 +612,11 @@ segments:
       # Phase 5DA: C leaf func_80077A28 — file 0x68228, size 0x24.
       - [0x68228, c, func_80077A28]
       - [0x6824C, asm]
+      # Phase 5FY: packed coordinate helper func_80077AA4 — VRAM 0x80077AA4,
+      # size 0x18, era -O2 -G0. Mid-6824C carve: prefix 0x58, C 0x18,
+      # trailing asm resumes at 682BC.
+      - [0x682A4, c, func_80077AA4]
+      - [0x682BC, asm]
       # Phase 5CB: C leaf func_80077B64 — file 0x68364, size 0x14.
       - [0x68364, c, func_80077B64]
       # 12-byte zero-filled alignment padding between 77B64 and 77B84.

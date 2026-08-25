@@ -1,6 +1,6 @@
 # Matching-C volume campaign run log — 2026-08-25
 
-Base: a648f45, 287 accepted leaves; pool refreshed from 2026-08-24 state to 1137 candidates (TIER 1 96, TIER 2 214, TIER 3 99, SKIP 728).
+Base: a648f45, 287 accepted leaves; pool refresh and subsequent screens reduced the active pool to 1136 candidates before this attempt (TIER 1 90, TIER 2 214, TIER 3 99, SKIP 733).
 
 | attempt | target | pool row | outcome | words | iterations | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -8,6 +8,7 @@ Base: a648f45, 287 accepted leaves; pool refreshed from 2026-08-24 state to 1137
 | 2 | func_80062A20 @ 0x53220 | TIER 1; jr-ra; 39 direct callers; real boundaries; argument-indexed load | MATCHED@era -O2 -G0; 5/5 exact | 5 | 2 | committed 655628e; target leaf 288 |
 | 3 | func_800824C8 @ 0x72CC8 | TIER 1; jr-ra; 12 direct callers; scalar global read/write; address-retention | PARKED-ADDRESS-RETENTION after two allowed phrasings; no integration | 5 | 2 | labeled stash; docs commit pending |
 | 4 | func_80085084 @ 0x75884 | TIER 1; jr-ra; 6 direct callers; constant-add getter; real boundaries | MATCHED@era -O2 -G0; 5/5 exact | 5 | 0 | commit pending; target leaf 289 |
+| 5 | func_80077AA4 @ 0x682A4 | TIER 1; jr-ra; 50 direct callers; packed coordinate helper; real boundaries | MATCHED@era -O2 -G0; 6/6 exact; full SHA exact; verify green at 290 | 6 | 0 | presented for commit |
 
 The adjacent func_800824DC @ 0x72CDC has the same scalar-global exchange
 shape over D_800B8AB8 and was screened into the same park family without a
