@@ -984,7 +984,10 @@ segments:
       # Volume campaign 5: return-zero callback. Prior BE9EC asm:
       # C 0x8 + resume 0x1B8 (= 0xBEBAC - 0xBE9F4) = 0x1C0.
       - [0xBE9EC, c, func_800CE1EC]
-      - [0xBE9F4, asm]
+      # Volume campaign 6: adjacent return-zero callback. Prior BE9F4 asm:
+      # C 0x8 + resume 0x1B0 (= 0xBEBAC - 0xBE9FC) = 0x1B8.
+      - [0xBE9F4, c, func_800CE1F4]
+      - [0xBE9FC, asm]
       # Phase 5AB: C leaf func_800CE3AC — VRAM 0x800CE3AC, size 0x8.
       # File span 0xBEBAC–0xBEBB4 exclusive. Final empty jr/nop STAR stub.
       - [0xBEBAC, c, func_800CE3AC]

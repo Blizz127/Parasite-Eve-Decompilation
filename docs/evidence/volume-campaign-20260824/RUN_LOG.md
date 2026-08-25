@@ -9,5 +9,6 @@ Base: `811f8f0`, 281 accepted leaves.
 | 3 | `func_800CCF90` @ `0xBD790` | TIER 1; jr-ra; exact-start table ref; 0 jal/gp/index/loop | `MATCHED@era -O2 -G0` | 2 | 0 | commit with leaf 284 |
 | 4 | `func_800CCF98` @ `0xBD798` | TIER 1; jr-ra; exact-start table ref; 0 jal/gp/index/loop | `MATCHED@era -O2 -G0` | 2 | 0 | commit with leaf 285 |
 | 5 | `func_800CE1EC` @ `0xBE9EC` | TIER 1; jr-ra; exact-start table ref; 0 jal/gp/index/loop | `MATCHED@era -O2 -G0` | 2 | 0 | commit with leaf 286 |
+| 6 | `func_800CE1F4` @ `0xBE9F4` | TIER 1; jr-ra; exact-start table ref; 0 jal/gp/index/loop | `MATCHED@era -O2 -G0` | 2 | 0 | commit with leaf 287 |
 
-Running count: **5 attempts; 5 matched; 0 parked; 0 reclassified.**
+Running count: **6 attempts; 6 matched; 0 parked; 0 reclassified.**
