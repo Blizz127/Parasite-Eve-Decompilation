@@ -326,3 +326,12 @@ words first phrasing. The remaining asm span closes with no resume:
 `0x00 + 0x28 + 0x00 = 0x28`. Packed span/full SHA exact, verify green at 318.
 Tier 3 falls 94→93; consecutive parks remain zero. Evidence:
 `func-8009068c/REPORT.md`.
+
+The next Tier-1 candidate, `func_80055FE0` @ `0x467E0`, passes function hood
+with twelve direct callers, canonical return, and real boundaries. Retail is
+an eleven-word gp-backed bitset query. Under era `-O2 -G8`, the unsigned
+phrasing canonicalizes the explicit mask test to `srlv; andi 1`; the signed
+retry changes only that instruction to `srav`. Both candidates are nine words
+and omit retail's explicit `addiu 1; sllv; and; sltu` path. It is
+`PARKED-BIT-TEST-CANONICALIZATION`; no integration/count change, consecutive
+park 1. Evidence: `func-80055fe0/PARK.md`; source is in the labeled stash.

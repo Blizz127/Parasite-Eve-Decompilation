@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1107** — TIER 1 50, TIER 2 214, TIER 3 93, SKIP 750.
+Total: **1106** — TIER 1 49, TIER 2 214, TIER 3 93, SKIP 750.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x467E0 | `func_80055FE0` | 11 | jr-ra | 12/12 | 0 | yes | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x69A44 | `func_80079244` | 11 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x2E8D0 | `func_8003E0D0` | 11 | jr-ra | 1/1 | 0 | no | - | - | addiu:0x2x2 | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x467B4 | `func_80055FB4` | 11 | jr-ra | 1/1 | 0 | yes | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1209,6 +1208,14 @@ returned-value phrasing reproduce the first eight words exactly, then emit
 only handles absolute symbolic `sw` macros and does not apply to this direct
 volatile halfword store. Evidence:
 `docs/evidence/volume-campaign-20260825/func-8008783c/PARK.md`.
+
+`func_80055FE0` is removed after two attempts as
+`PARKED-BIT-TEST-CANONICALIZATION`. Retail explicitly constructs a variable
+bit mask, intersects it with a gp-referenced bitset word, and converts the
+result with `sltu`. Era `-O2 -G8` canonicalizes both unsigned and signed C
+forms into a nine-word variable shift plus `andi 1`; signedness changes only
+`srlv` to `srav`. Evidence:
+`docs/evidence/volume-campaign-20260825/func-80055fe0/PARK.md`.
 
 Adjacent `func_80087864` has the identical per-voice SPU RMW and direct
 volatile `sh` return-slot mechanism, differing only in which nibble is
