@@ -275,3 +275,11 @@ matched all ten words on the first modern GCC 14 `-O1 -G0` attempt. Carve
 `0xD8 + 0x28 + 0xF0 = 0x1F0`, packed span/full SHA exact, verify green at
 312. This match resets the consecutive-park count. Evidence:
 `func-8009059c/REPORT.md`.
+
+Adjacent `func_800905C4` @ `0x80DC4` independently passes function hood via
+the direct call at `0x80090ACC`, exact callback-table word at `0x8009CBAC`,
+canonical return, and real boundaries. It is the `0x8000`/output-`+0x112`
+stream-helper sibling. The proven GCC 14 `-O1 -G0` source form matched all ten
+words on the first phrasing. Carve `0x00 + 0x28 + 0xC8 = 0xF0`, packed
+span/full SHA exact, verify green at 313. Evidence:
+`func-800905c4/REPORT.md`.
