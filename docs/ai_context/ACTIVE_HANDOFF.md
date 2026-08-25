@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `2ef3395`, 333 accepted matching-C
+Current matching-lane status: `main` @ `8aacbf4`, 334 accepted matching-C
 leaves; the 287-leaf line above is the historical grind-lane port milestone.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
@@ -980,6 +980,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-81-3F758-COP2 | 332 | `func_8003F758` @ `0x2FF58` is a proven callable sixteen-word handwritten GTE helper with exact caller `0x8003F0D0`, canonical return, and real boundaries. It writes control registers 13–15 (`RBK/GBK/BBK`) via three `ctc2` instructions and zeroes nine buffer halfwords. Screened without an attempt as `SKIP-HANDWRITTEN-COP2`; exact SDK provenance/name is not claimed. Count stays 332 and consecutive parks remain 1. Evidence: `docs/evidence/volume-campaign-20260825/func-8003f758/SKIP.md`. |
 | VOLUME-82-63428 | 333 | `func_80063428` @ `0x53C28` is a seventeen-word guarded value calculator, proven by 59 direct calls, canonical return, and real adjacent functions. Natural explicit-result C matches first phrasing under era `-O2 -G0`, including all load-delay nops and `mult/mflo` allocation. Carve `0x024C + 0x0044 + 0x15DC = 0x186C`, packed span/full SHA exact, verify green at 333; consecutive parks reset. Evidence: `docs/evidence/volume-campaign-20260825/func-80063428/REPORT.md`. |
 | VOLUME-83-6E454-PARK | 333 | `func_8006E454` @ `0x5EC54` is a proven callable seventeen-word decimal parser for field-name bytes 2–4, with two direct callers, canonical return, and real boundaries. Explicit signed bytes recover retail's `lb` operations, but both bounded era `-O2 -G0` phrasings hoist byte 4 before the scaled hundreds/tens terms; retail defers it and reuses `$v1`. `PARKED-INDEPENDENT-LOAD-SCHEDULING`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-8006e454/PARK.md`; source is in the labeled stash. |
+| VOLUME-84-653B8 | 334 | `func_800653B8` @ `0x55BB8` is the eighteen-word mailbox queue append, proven by its sole direct opcode-`0x1C` caller, canonical return, real boundaries, and independent PE-MBX1/2 state evidence. A natural 12-byte aggregate subscript matches first phrasing under era `-O2 -G8` after ordinary relocations. Carve `0x0788 + 0x0048 + 0x51BC = 0x598C`, packed span/full SHA exact, verify green at 334; consecutive parks reset. Evidence: `docs/evidence/volume-campaign-20260825/func-800653b8/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

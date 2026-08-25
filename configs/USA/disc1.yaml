@@ -568,8 +568,12 @@ segments:
       - [0x55420, c, func_80064C20]
       # Phase 5EQ: C leaf func_8006A64C — VRAM 0x8006A64C, size 0x28.
       # Boot wrapper: two void(void) calls; era -O2 -G0, no $gp.
-      # Interleaved 55430 carve: prefix 0x5A1C, C 0x28, then 6A674 C below.
+      # It follows the matched 6A5BC leaf directly below.
+      # Volume campaign: 12-byte mailbox-record append; era -O2 -G8.
+      # Refined 55430 carve: prefix 0x788, C 0x48, resume 55C00.s 0x51BC.
       - [0x55430, asm]
+      - [0x55BB8, c, func_800653B8]
+      - [0x55C00, asm]
       # Phase 5EZ: C leaf func_8006A5BC — VRAM 0x8006A5BC, size 0x90 (36 words).
       # Boot init with two VSync-polled wait loops (VSync = func_80073A44,
       # SDK). era -O1 -G0: per-use $s0=1 materialization (in 86FF8's delay

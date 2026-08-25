@@ -560,3 +560,14 @@ hundreds/tens arithmetic. It parks after two era `-O2 -G0` phrasings as
 `PARKED-INDEPENDENT-LOAD-SCHEDULING`; count stays 333, Tier 1 falls 27→26,
 and consecutive park becomes 1. Evidence: `func-8006e454/PARK.md`; source
 is in the labeled stash.
+
+The next Tier-1 leaf, `func_800653B8` @ `0x55BB8`, passes function hood via
+the sole direct opcode-`0x1C` caller, canonical return, and real adjacent
+functions. PE-MBX1/2 evidence independently proves its append into the
+12-byte `D_800A3180` mailbox queue and gp-relative byte count
+`D_8009CDB4`, including the intentional absence of a full check. A natural
+aggregate-subscript C matched all eighteen words on the first era `-O2 -G8`
+phrasing after ordinary gp/HI/LO relocation normalization. Carve
+`0x0788 + 0x0048 + 0x51BC = 0x598C`, packed span/full SHA exact, verify
+green at 334. Tier 1 falls 26→25 and the match resets consecutive parks
+from one to zero. Evidence: `func-800653b8/REPORT.md`.
