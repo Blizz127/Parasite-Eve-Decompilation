@@ -934,7 +934,10 @@ segments:
       - [0xBC330, asm]
       - [0xBC7A4, c, func_800CBFA4]
       - [0xBC7B4, c, func_800CBFB4]
-      - [0xBC7BC, asm]
+      # Volume campaign 2: adjacent return-zero callback. Prior BC7BC asm:
+      # C 0x8 + resume 0xFBC (= 0xBD780 - 0xBC7C4) = 0xFC4.
+      - [0xBC7BC, c, func_800CBFBC]
+      - [0xBC7C4, asm]
       - [0xBD780, c, func_800CCF80]
       - [0xBD790, asm]
       # Phase 5X: C leaf func_800CD2DC — VRAM 0x800CD2DC, size 0x8.
