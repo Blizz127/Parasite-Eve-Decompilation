@@ -590,8 +590,13 @@ segments:
       # Boot memory-region layout initializer: 19 ordered absolute pointer
       # stores with byte-address cursor arithmetic. Era -O2 -G0; no $gp.
       - [0x5B0D4, c, func_8006A8D4]
-      # Mid-5B1E4 carve: prefix 0x3E04, C 0x4C, resume 5F034.s.
+      # Mid-5B1E4 carve: prefix 0x3164, C 0x54, resume 5E39C.s.
       - [0x5B1E4, asm]
+      # Volume campaign: byte-field updater and flag setter over D_800B0CD8.
+      # Era -O2 -G0; union layout preserves the word-backed flag field and
+      # the shared symbolic base across all byte stores.
+      - [0x5E348, c, func_8006DB48]
+      - [0x5E39C, asm]
       # Phase 5FM-redo: C leaf func_8006E7E8 — VRAM 0x8006E7E8, size 0x4C
       # (19 words). VSync poll helper: calls func_800811E4 (asm callee),
       # tests -1/0 via (unsigned)(ret+1) < 2, clears 0xFEFFBFFF mask in

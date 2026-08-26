@@ -24,3 +24,15 @@ callable handwritten GTE helpers whose sole semantic instruction is `ctc2`;
 ordinary C plus the sanctioned toolchain has no intrinsic for that side effect,
 while inline assembly/macros are forbidden. The queue remains intact after
 `func_80078FB8`; no Tier 1 candidate was skipped to evade the stop.
+
+## Post-policy Tier-1 continuation
+
+| attempt | target | pool row | outcome | words | iterations | commit or stash |
+|---:|---|---|---|---:|---:|---|
+| 10 | `func_8006DB48` @ `0x5E348` | TIER 1; canonical `jr ra`/delay slot; 4 exact-start callers; real/real boundaries | `MATCHED@era -O2 -G0` | 21 | 0 | commit `func_8006DB48` |
+
+Function hood and the complete 21-word object comparison passed. A union over the
+word-backed `D_800B0CD8` overlay preserves one symbolic base for the byte stores
+and flag RMWs; the final C is byte-exact after ordinary relocations. Count:
+334→335; Tier 1: 22→21. Evidence:
+`docs/evidence/volume-campaign-20260825/func-8006db48/REPORT.md`.

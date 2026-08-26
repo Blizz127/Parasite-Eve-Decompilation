@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: last executable-changing commit `27bc1db`, 334 exact matching-C
+Current matching-lane status: 335 exact matching-C
 leaves plus 19 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -995,6 +995,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-85-5DBAC-PARK | 334 | `func_8005DBAC` @ `0x4E3AC` is a proven callable nineteen-word clamped symbolic-table address helper with eleven direct callers, canonical return, and real boundaries. Both bounded era `-O2 -G0` phrasings preserve proven B28 semantics but miss retail's lifetime split: retail copies index to `$v1` so `$a0` can later hold the symbolic address/value; natural C either keeps index in `$a0` or hoists the pointer into `$a1`, yielding eighteen content words. `PARKED-SYMBOLIC-ADDRESS-LIFETIME-COLORING`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260825/func-8005dbac/PARK.md`; source is in the labeled stash. |
 | VOLUME-86-43474-PARK | 334 | `func_80043474` @ `0x33C74` is a proven callable nineteen-word signed threshold classifier with two direct callers, canonical return, and real boundaries. Both bounded era `-O2 -G0` phrasings emit twenty words: cc1 keeps a separate category-4 branch/jump, while retail hoists the fifth compare into that branch's delay slot and places category 4 after the 5/6 jump. `PARKED-THRESHOLD-LADDER-BLOCK-LAYOUT`; no integration/count change, consecutive park 2. Evidence: `docs/evidence/volume-campaign-20260825/func-80043474/PARK.md`; source is in the labeled stash. |
 | VOLUME-87-73244-PARK/STOP | 334 | `func_80073244` @ `0x63A44` is a proven callable twenty-word unsigned word-pair comparator with two direct callers, canonical return, and real boundaries. A by-value two-struct phrasing recovers retail's first six words, including all four ABI argument homes, but cc1 folds the low-word three-way comparison into `sltu` + `negu` and shrinks to seventeen content words. `PARKED-LEXICOGRAPHIC-COMPARE-CANONICALIZATION`; no integration/count change, consecutive park 3. Hard stop fires honestly after `5DBAC/43474/73244`, with no Tier-1 row skipped. Evidence: `docs/evidence/volume-campaign-20260825/func-80073244/PARK.md`; source is in the labeled stash. |
+| VOLUME-88-6DB48 | 335 | `func_8006DB48` @ `0x5E348` is a proven callable twenty-one-word byte-field updater and flag setter over word-backed `D_800B0CD8`, with four exact-start callers, canonical return, and real boundaries. A union overlay preserves the shared symbolic base and matches all 21 words under era `-O2 -G0` after ordinary relocations; carve `0x3164 + 0x54 + 0xC4C = 0x3E04`, packed span/full SHA exact, verify green at 335. Evidence: `docs/evidence/volume-campaign-20260825/func-8006db48/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
