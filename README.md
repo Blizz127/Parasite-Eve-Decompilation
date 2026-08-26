@@ -12,11 +12,13 @@ Initial target:
 
 ## Project status
 
-**Matching decomp:** **275 matching C leaves** (leaves lane merged with
-the grind lane's remaining matches, 2026-08-21; authoritative count:
-`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`).
+**Matching decomp:** **334 exact matching C leaves**, plus **19
+`ACCEPTED-RESIDUAL` leaves** whose semantic C and compiler-decision residuals
+are documented but are not counted as matching C. Authoritative count:
+`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`.
 Disc 1 EXE rebuilds byte-for-byte via `scripts/build_us.sh`
 (SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`).
+See [`docs/acceptance/MATCHING_RESIDUAL_POLICY.md`](docs/acceptance/MATCHING_RESIDUAL_POLICY.md).
 `func_8001F814` remains assembly (`NONMATCHING_C`); native battle ports
 of that body are not matching decomp leaves.
 

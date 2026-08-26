@@ -42,8 +42,10 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: `main` @ `0ee54f2`, 334 accepted matching-C
-leaves; the 287-leaf line above is the historical grind-lane port milestone.
+Current matching-lane status: last executable-changing commit `27bc1db`, 334 exact matching-C
+leaves plus 19 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
+historical grind-lane port milestone. Residual policy:
+`docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
 canonical `jr ra`/delay slot **or** a provable tail jump into a shared function
@@ -673,8 +675,11 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   across the 2.7→2.8 version boundary (loop-body layout via `62CE4`, dbr_sched `$v0`-liveness via `698D4`);
   both survived REORGED (the `reorg.c` rewrite in 2.8 produced identical steal-vs-decline decisions).
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
-  FORK: (i) cc1 source patch (the maspsx model one layer deeper — the 698D4 liveness check is scoped)
-  or (ii) accept the six residuals as structurally-correct-C with one-word compiler-decision deltas.
+  DISPOSITION: the source-patch path is declined. The residual policy accepts
+  the documented structurally-correct C candidates without counting them as
+  matching C; current disposition is 334 exact leaves plus 19
+  `ACCEPTED-RESIDUAL` leaves. See
+  `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
   candidate hashes and `git show stash@{N}^3:path` recovery procedure.
 
