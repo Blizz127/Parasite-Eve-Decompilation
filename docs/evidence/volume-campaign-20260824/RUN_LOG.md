@@ -36,3 +36,10 @@ word-backed `D_800B0CD8` overlay preserves one symbolic base for the byte stores
 and flag RMWs; the final C is byte-exact after ordinary relocations. Count:
 334→335; Tier 1: 22→21. Evidence:
 `docs/evidence/volume-campaign-20260825/func-8006db48/REPORT.md`.
+
+| 11 | `func_8007E6B0` @ `0x6EEB0` | TIER 1; canonical `jr ra`/delay slot; 4 exact-start callers; real/real boundaries | `PARKED-SYMBOLIC-ADDRESS-REGISTER-COLORING` | 21 | 2 | docs-only commit |
+
+Function hood passed. Two source phrasings preserve the indexed ring-buffer
+semantics but not retail's `$v1` base / `$a0` index coloring; both exceed the
+0x54-byte span at 0x60 bytes. No integration or count change; exact count
+remains 335 and the next Tier-1 pool is 20.

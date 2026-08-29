@@ -2,7 +2,7 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1081** — TIER 1 21, TIER 2 214, TIER 3 93, SKIP 753.
+Total: **1081** — TIER 1 20, TIER 2 214, TIER 3 93, SKIP 753.
 
 ## TIER 1
 
@@ -1075,6 +1075,16 @@ Total: **1081** — TIER 1 21, TIER 2 214, TIER 3 93, SKIP 753.
 | 0xBFE58 | `func_800CF658` | 40 | jr-ra | 0/0 | 3 | no | - | - | - | real/real | no caller/ref |
 | 0xC070C | `func_800CFF0C` | 40 | jr-ra | 0/0 | 3 | no | lhu:destination,sh:$at,lhu:destination | - | lui:1x3,addiu:0x100x2 | real/real | no caller/ref; destination-as-temp; address-retention |
 | 0xC07AC | `func_800CFFAC` | 40 | jr-ra | 0/0 | 3 | no | lhu:destination,sh:$at,lhu:destination | - | lui:1x3,addiu:0x100x2 | real/real | no caller/ref; destination-as-temp; address-retention |
+
+## Post-campaign parked leaves
+
+`func_8007E6B0` is removed from TIER 1 after two bounded source phrasings.
+Retail retains the symbolic table base in `$v1` while the loaded index lives
+in `$a0`, then adjusts that same base for the returned address. Both natural
+pointer/struct formulations make the returned base `$a0`, rematerialize the
+`-8` load through `$at`/`$v0`, and produce 0x60 bytes instead of retail's
+0x54. Disposition: `PARKED-SYMBOLIC-ADDRESS-REGISTER-COLORING`. Evidence:
+`docs/evidence/volume-campaign-20260825/func-8007e6b0/PARK.md`.
 
 ## Post-campaign SKIP overlay: handwritten libGTE/COP2 family
 
