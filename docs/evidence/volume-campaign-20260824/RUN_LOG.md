@@ -43,3 +43,10 @@ Function hood passed. Two source phrasings preserve the indexed ring-buffer
 semantics but not retail's `$v1` base / `$a0` index coloring; both exceed the
 0x54-byte span at 0x60 bytes. No integration or count change; exact count
 remains 335 and the next Tier-1 pool is 20.
+
+| 12 | `func_8005BCBC` @ `0x4C4BC` | TIER 1; canonical `jr ra`/delay slot; 2 exact-start callers; real/real boundaries | `PARKED-GP-STATUS-REGISTER-AND-DELAY-SCHEDULE` | 21 | 2 | docs-only commit |
+
+Function hood passed. Two era `-O2 -G8` phrasings preserve the table-selection
+semantics but produce a 20-word body: the status stays in `$a1` instead of
+retail `$v0`, and the table base is scheduled later. No integration or count
+change; exact count remains 335 and the next Tier-1 pool is 19.

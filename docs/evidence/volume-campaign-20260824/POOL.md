@@ -2,7 +2,7 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1081** — TIER 1 20, TIER 2 214, TIER 3 93, SKIP 753.
+Total: **1081** — TIER 1 19, TIER 2 214, TIER 3 93, SKIP 753.
 
 ## TIER 1
 
@@ -1085,6 +1085,13 @@ pointer/struct formulations make the returned base `$a0`, rematerialize the
 `-8` load through `$at`/`$v0`, and produce 0x60 bytes instead of retail's
 0x54. Disposition: `PARKED-SYMBOLIC-ADDRESS-REGISTER-COLORING`. Evidence:
 `docs/evidence/volume-campaign-20260825/func-8007e6b0/PARK.md`.
+
+`func_8005BCBC` is removed from TIER 1 after two bounded source phrasings.
+The natural GP-backed implementation preserves the callback-table selection
+semantics but cc1 keeps the status value in `$a1` rather than retail `$v0`,
+places the table materialization after the byte load, and emits 20 words
+instead of retail's 21. Disposition: `PARKED-GP-STATUS-REGISTER-AND-DELAY-SCHEDULE`.
+Evidence: `docs/evidence/volume-campaign-20260825/func-8005bcbc/PARK.md`.
 
 ## Post-campaign SKIP overlay: handwritten libGTE/COP2 family
 
