@@ -2,7 +2,7 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1081** — TIER 1 18, TIER 2 214, TIER 3 93, SKIP 753.
+Total: **1081** — TIER 1 17, TIER 2 214, TIER 3 93, SKIP 753.
 
 ## TIER 1
 
@@ -1075,6 +1075,14 @@ Total: **1081** — TIER 1 18, TIER 2 214, TIER 3 93, SKIP 753.
 | 0xBFE58 | `func_800CF658` | 40 | jr-ra | 0/0 | 3 | no | - | - | - | real/real | no caller/ref |
 | 0xC070C | `func_800CFF0C` | 40 | jr-ra | 0/0 | 3 | no | lhu:destination,sh:$at,lhu:destination | - | lui:1x3,addiu:0x100x2 | real/real | no caller/ref; destination-as-temp; address-retention |
 | 0xC07AC | `func_800CFFAC` | 40 | jr-ra | 0/0 | 3 | no | lhu:destination,sh:$at,lhu:destination | - | lui:1x3,addiu:0x100x2 | real/real | no caller/ref; destination-as-temp; address-retention |
+
+## Post-campaign SKIP overlay: handwritten GTE/COP2 wrapper
+
+`func_80079178` is removed from TIER 1 without an ordinary-C attempt. Its
+21-word body saves and restores three COP2 control registers, loads vector
+data with `lwc2`, executes a COP2 operation, and stores results with `swc2`.
+Disposition: `SKIP-SDK-LIBRARY-COP2`; evidence:
+`docs/evidence/volume-campaign-20260825/func-80079178/SKIP.md`.
 
 ## Post-campaign parked leaves
 

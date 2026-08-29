@@ -58,3 +58,10 @@ semantics but emitted 0x60 bytes rather than retail's 0x54: cc1 reloads the
 mode in the case-2 path and lays out the shared tail differently. No
 integration or count change; exact count remains 335 and the next Tier-1 pool
 is 18.
+
+| 14 | `func_80079178` @ `0x69978` | TIER 1; canonical `jr ra`; 4 exact-start callers; real/real boundaries | `SKIP-SDK-LIBRARY-COP2` | 21 | 0 | docs-only commit |
+
+Function hood passed. The body is a handwritten GTE/COP2 wrapper using
+`cfc2`, `ctc2`, `lwc2`, a COP2 operation, and `swc2`; it was screened without
+burning an ordinary-C attempt. Exact count remains 335 and the next Tier-1
+pool is 17.
