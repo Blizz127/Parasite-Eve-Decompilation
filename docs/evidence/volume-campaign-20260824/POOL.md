@@ -2,7 +2,7 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1081** — TIER 1 19, TIER 2 214, TIER 3 93, SKIP 753.
+Total: **1081** — TIER 1 18, TIER 2 214, TIER 3 93, SKIP 753.
 
 ## TIER 1
 
@@ -1116,6 +1116,14 @@ The later handwritten operation helper `func_800792D4` is also removed as
 and `cfc2`, with six exact direct callers. It is not part of the earlier
 23-function register-helper span, so its separate evidence is:
 `docs/evidence/volume-campaign-20260825/func-800792d4/SKIP.md`.
+
+## Post-campaign parked leaves
+
+`func_80083D9C` is removed from TIER 1 after two bounded source phrasings.
+Both switch-shaped formulations recover the cases and stores but retain an
+extra mode reload and a different shared-tail layout, producing 0x60 bytes
+instead of retail's 0x54. Disposition: `PARKED-SWITCH-TAIL-BLOCK-LAYOUT`.
+Evidence: `docs/evidence/volume-campaign-20260825/func-80083d9c/PARK.md`.
 
 ## Post-campaign SKIP overlay: handwritten PE1 COP2 helper
 

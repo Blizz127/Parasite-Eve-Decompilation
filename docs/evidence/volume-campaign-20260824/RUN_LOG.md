@@ -50,3 +50,11 @@ Function hood passed. Two era `-O2 -G8` phrasings preserve the table-selection
 semantics but produce a 20-word body: the status stays in `$a1` instead of
 retail `$v0`, and the table base is scheduled later. No integration or count
 change; exact count remains 335 and the next Tier-1 pool is 19.
+
+| 13 | `func_80083D9C` @ `0x7459C` | TIER 1; canonical `jr ra`; exact-start callback-table refs; real/real boundaries | `PARKED-SWITCH-TAIL-BLOCK-LAYOUT` | 21 | 2 | docs-only commit |
+
+Function hood passed. Two era `-O2 -G0` switch phrasings recovered the
+semantics but emitted 0x60 bytes rather than retail's 0x54: cc1 reloads the
+mode in the case-2 path and lays out the shared tail differently. No
+integration or count change; exact count remains 335 and the next Tier-1 pool
+is 18.
