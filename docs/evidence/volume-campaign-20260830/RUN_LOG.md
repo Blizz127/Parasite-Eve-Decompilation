@@ -2,8 +2,8 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,090 current active spans — Tier 1 8, Tier 2 214, Tier 3 99,
-SKIP/suppressed 769. Refresh evidence: `POOL_REFRESH.md`.
+Pool: 1,090 current active spans — Tier 1 7, Tier 2 214, Tier 3 99,
+SKIP/suppressed 770. Refresh evidence: `POOL_REFRESH.md`.
 
 Consecutive bounded parks: 0. Matched leaves this campaign: 4.
 
@@ -17,3 +17,4 @@ Consecutive bounded parks: 0. Matched leaves this campaign: 4.
 | 6 | `func_80012700` @ `0x2F00` | canonical return with live result slot; seven direct callers; real boundaries; no frame/callees/loop; Stage-0 freelist and serial census closed | MATCHED leaf 338; direct postincrement assignment preserves old/new serial homes and store order; 29/29 normalized object, packed span, full SHA exact | 29 | 2 | VOLUME-101 leaf commit |
 | 7 | `func_80079304` @ `0x69B04` | canonical return with live result slot; two direct callers; real handwritten neighbors plus explicit two-nop alignment gaps; split marks handwritten COP2 operation | `SKIP-SDK-LIBRARY-COP2`; no C attempt or integration | 30 | 0 | VOLUME-102 docs-only commit |
 | 8 | `func_8003DF50` @ `0x2E750` | canonical return with live store slot; one direct caller; immediate real boundaries; no frame/callees/globals/loop | MATCHED leaf 339 first phrasing; signed-short 16-byte typed record plus alias-sensitive repeated source expressions; 30/30 object, packed span, full SHA exact | 30 | 1 | VOLUME-103 leaf commit |
+| 9 | `func_80078554` @ `0x68D54` | canonical return; two direct callers; preceding real return delay slot and one-nop gap before next real function; split marks handwritten COP2 operation | `SKIP-SDK-LIBRARY-COP2`; no C attempt or integration | 31 | 0 | VOLUME-104 docs-only commit |

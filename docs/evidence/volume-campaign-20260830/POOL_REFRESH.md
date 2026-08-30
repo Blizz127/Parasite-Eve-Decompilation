@@ -15,19 +15,19 @@ The current active universe contains **1,090** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                   8
+TIER 1                   7
 TIER 2                 214
 TIER 3                  99
-SKIP / suppressed      769
+SKIP / suppressed      770
                        ---
 TOTAL                 1090
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,039 rows:
-8 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
-active. The 51 active spans below were added after the primary tables through
-campaign overlays. Adding all 51 to the suppressed class closes the pool:
-`1039 + 51 = 1090` and `718 + 51 = 769`.
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,038 rows:
+7 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+active. The 52 active spans below were added after the primary tables through
+campaign overlays. Adding all 52 to the suppressed class closes the pool:
+`1038 + 52 = 1090` and `718 + 52 = 770`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
@@ -37,13 +37,15 @@ residual set after two bounded phrasings; VOLUME-99 then removed exact
 `func_8003F798` without a C attempt; VOLUME-101 removed exact
 `func_80012700` from Tier 1; VOLUME-102 screened handwritten libGTE helper
 `func_80079304` without a C attempt; VOLUME-103 removed exact
-`func_8003DF50` from Tier 1. A suppressed `func_` label is not assumed to be a
-retail function.
+`func_8003DF50` from Tier 1; VOLUME-104 screened handwritten libGTE helper
+`func_80078554` without a C attempt. A suppressed `func_` label is not assumed
+to be a retail function.
 
 ## Reconciled post-table spans
 
 | file off | generated label | words | current scheduling disposition | evidence |
 |---:|---|---:|---|---|
+| `0x68D54` | `func_80078554` | 31 | `SKIP-SDK-LIBRARY-COP2` | `volume-campaign-20260830/func-80078554/SKIP.md` |
 | `0x69B04` | `func_80079304` | 30 | `SKIP-SDK-LIBRARY-COP2` | `volume-campaign-20260830/func-80079304/SKIP.md` |
 | `0x2FF98` | `func_8003F798` | 26 | `SKIP-HANDWRITTEN-COP2` | `volume-campaign-20260830/func-8003f798/SKIP.md` |
 | `0x2788C` | `func_8003708C` | 7 | `PARKED-FIXED-POINT-REGISTER-COLORING` | `volume-campaign-20260825/func-8003708c/PARK.md` |
