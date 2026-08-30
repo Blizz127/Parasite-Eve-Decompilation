@@ -9,7 +9,7 @@ count is:
 grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml
 ```
 
-There are also **23 `ACCEPTED-RESIDUAL` leaves**. These are not counted as
+There are also **24 `ACCEPTED-RESIDUAL` leaves**. These are not counted as
 matching C and are not registered as `c` spans. They are semantically
 reconstructed C candidates whose retail bytes differ only in a documented
 compiler, assembler, or per-translation-unit decision that the available
@@ -31,7 +31,7 @@ assembly, or a source spelling whose only purpose is to hide the mismatch.
 
 ## Residual inventory
 
-The 23 leaves are represented by the current `PARKED-*` records in
+The 24 leaves are represented by the current `PARKED-*` records in
 `docs/ai_context/parked_blockers.json`; twin records are counted separately:
 
 | mechanism | leaves |
@@ -41,7 +41,7 @@ The 23 leaves are represented by the current `PARKED-*` records in
 | address-lifetime coloring | `func_800824C8`, `func_800824DC`, `func_80087798`, `func_8005DBAC` |
 | assembler temporary selection | `func_8007FBF0` |
 | direct volatile delay-slot scheduling | `func_8008783C`, `func_80087864` |
-| independent-load scheduling | `func_8006E454`, `func_80080C48` |
+| independent-load scheduling | `func_8006E454`, `func_80080C48`, `func_8007AA34` |
 | GP-loop scheduling | `func_80055724` |
 | loop-body canonicalization | `func_80062CE4` |
 | cross-block/threshold layout | `func_80043474` |
@@ -61,5 +61,5 @@ SDK handwritten COP2/syscall skips are outside this residual count.
 
 The exact executable SHA-1 remains
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. It is produced from the 340
-registered matching-C leaves plus the existing assembly spans; the 23 residual
+registered matching-C leaves plus the existing assembly spans; the 24 residual
 leaves are intentionally excluded from the exact build.

@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-108, the matching-C count is **340**.
+`634dd1b` (335-leaf base). After VOLUME-109, the matching-C count is **340**.
 
 ## Method and closure
 
@@ -15,19 +15,19 @@ The current active universe contains **1,089** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                   3
+TIER 1                   2
 TIER 2                 214
 TIER 3                  99
-SKIP / suppressed      773
+SKIP / suppressed      774
                        ---
 TOTAL                 1089
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,034 rows:
-3 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
-active. The 55 active spans below were added after the primary tables through
-campaign overlays. Adding all 55 to the suppressed class closes the pool:
-`1034 + 55 = 1089` and `718 + 55 = 773`.
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,033 rows:
+2 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+active. The 56 active spans below were added after the primary tables through
+campaign overlays. Adding all 56 to the suppressed class closes the pool:
+`1033 + 56 = 1089` and `718 + 56 = 774`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
@@ -42,7 +42,9 @@ residual set after two bounded phrasings; VOLUME-99 then removed exact
 `func_800CE870` from Tier 1; VOLUME-106 moved `func_800339A0` to the
 suppressed residual set after two bounded phrasings; VOLUME-107 did the same
 for `func_80080C48`; VOLUME-108 did the same for `func_800762BC` and fired
-hard stop H5. A suppressed `func_`
+hard stop H5. A new explicit close-out authorization then let VOLUME-109
+screen byte-identical `func_8007AA34` into the `func_80080C48` residual
+family without a duplicate compile. A suppressed `func_`
 label is not assumed to be a
 retail function.
 
@@ -50,6 +52,7 @@ retail function.
 
 | file off | generated label | words | current scheduling disposition | evidence |
 |---:|---|---:|---|---|
+| `0x6B234` | `func_8007AA34` | 32 | `PARKED-INDEPENDENT-LOAD-AND-BCD-ACCUMULATOR-SCHEDULING-FAMILY` | `volume-campaign-20260830/func-8007aa34/PARK.md` |
 | `0x66ABC` | `func_800762BC` | 32 | `PARKED-TEXTURE-WINDOW-CONTROL-FLOW-LOAD-SCHEDULE-AND-COLORING` | `volume-campaign-20260830/func-800762bc/PARK.md` |
 | `0x71448` | `func_80080C48` | 32 | `PARKED-INDEPENDENT-LOAD-AND-BCD-ACCUMULATOR-SCHEDULING` | `volume-campaign-20260830/func-80080c48/PARK.md` |
 | `0x241A0` | `func_800339A0` | 32 | `PARKED-GP-LOAD-STORE-SCHEDULING-AND-REGISTER-HOME` | `volume-campaign-20260830/func-800339a0/PARK.md` |

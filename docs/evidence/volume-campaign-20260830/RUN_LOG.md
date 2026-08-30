@@ -2,11 +2,15 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,089 current active spans — Tier 1 3, Tier 2 214, Tier 3 99,
-SKIP/suppressed 773. Refresh evidence: `POOL_REFRESH.md`.
+Pool: 1,089 current active spans — Tier 1 2, Tier 2 214, Tier 3 99,
+SKIP/suppressed 774. Refresh evidence: `POOL_REFRESH.md`.
 
 Consecutive bounded parks: 3. Matched leaves this campaign: 5.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
+
+Close-out reset: a new explicit authorization resumes only the three remaining
+Tier-1 rows after the historical H5. Current close-out streak: zero bounded
+parks, zero matches, one proven-family suppression.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -23,3 +27,4 @@ Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 | 11 | `func_800339A0` @ `0x241A0` | canonical return; six direct callers; immediate real boundaries; no callees/loop; sole writer of three Stage-0-censused gp fields | `PARKED-GP-LOAD-STORE-SCHEDULING-AND-REGISTER-HOME`; two source store orders compile byte-identically, retaining selected address in `v0` and hoisting the second `lhu` versus retail `v1` home and interleaved store | 32 | 2 | stash `park func_800339A0 gp-load-store scheduling residual` |
 | 12 | `func_80080C48` @ `0x71448` | canonical return with live subtract; six direct callers; immediate real boundaries; no frame/callees/globals/loop; independent native `CdPosToInt` vectors | `PARKED-INDEPENDENT-LOAD-AND-BCD-ACCUMULATOR-SCHEDULING`; both candidates are 32 words, but cc1 hoists byte 2 to entry and changes the BCD accumulator homes/schedule | 32 | 2 | stash `park func_80080C48 independent-load scheduling residual` |
 | 13 | `func_800762BC` @ `0x66ABC` | canonical return with live frame teardown; four direct callers; immediate real boundaries; no callees/globals/loop; independently identified libGPU E2 texture-window packer | `PARKED-TEXTURE-WINDOW-CONTROL-FLOW-LOAD-SCHEDULE-AND-COLORING`; array retry recovers frame/stores/size, but null layout, X/W versus Y load order, and register homes differ; H5 stop | 32 | 2 | stash `park func_800762BC texture-window layout residual` |
+| 14 / close-out 1 | `func_8007AA34` @ `0x6B234` | canonical return with live subtract; one direct caller; immediate real boundaries; full 32-word body byte-identical to `func_80080C48` | `PARKED-INDEPENDENT-LOAD-AND-BCD-ACCUMULATOR-SCHEDULING-FAMILY`; exact duplicate of an exhausted residual, screened without redundant compilation | 32 | 0 | stash `park func_8007AA34 duplicate CdPosToInt residual` |
