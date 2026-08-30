@@ -2,18 +2,19 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,079 current active spans — Tier 1 0, Tier 2 205, Tier 3 99,
+Pool: 1,078 current active spans — Tier 1 0, Tier 2 204, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 15.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 16.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
 Tier-1 rows after the historical H5. Current close-out streak: zero bounded
 parks, one match, two proven-family suppressions. Tier 1 is closed.
 
-Tier-2 probe: separately authorized after Tier-1 closure. Current probe
-streak: zero bounded parks, nine matches.
+Tier-2 probe: separately authorized after Tier-1 closure. The bounded probe
+closed after zero parks and ten consecutive matches; work then pivots to the
+native runtime rather than extending the sample.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -42,3 +43,4 @@ streak: zero bounded parks, nine matches.
 | 23 / Tier-2 probe 7 | `func_800C2AF0` @ `0xB32F0` | canonical return with live indexed store; eight direct callers; immediate real boundaries; Stage-0 mutable base-pointer census | MATCHED leaf 348 first phrasing; typed advanced base plus indexed field store reproduces all eight words and the natural return delay slot; packed span/full SHA exact | 8 | 1 | VOLUME-118 leaf commit |
 | 24 / Tier-2 probe 8 | `func_80084FC4` @ `0x757C4` | canonical return with live store; seven direct callers; real boundaries plus preceding alignment; Stage-0 timer baseline/limit census | MATCHED leaf 349 first phrasing; volatile root-counter read and two ordered stores reproduce all eight words with the established store-delay gate; packed span/full SHA exact | 8 | 1 | VOLUME-119 leaf commit |
 | 25 / Tier-2 probe 9 | `func_80080AE4` @ `0x712E4` | canonical return with live teardown; three direct callers; immediate real boundaries; one hardware-transaction callee | MATCHED leaf 350 first phrasing; direct zero-status comparison reproduces the eight-word call/boolean wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-120 leaf commit |
+| 26 / Tier-2 probe 10 | `func_8004DC84` @ `0x3E484` | canonical return; one direct caller; immediate real boundaries; one unresolved node/list callee; no direct globals or loop | MATCHED leaf 351 first phrasing; natural constant forwarding wrapper places `0x2A` in the call delay slot; packed span/full SHA exact | 8 | 1 | VOLUME-121 leaf commit |

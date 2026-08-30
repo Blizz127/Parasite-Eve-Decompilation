@@ -407,7 +407,11 @@ segments:
       # seventh/final of the seven return-1 twins (shape scratch-proven in 5AJ).
       # Preceding 33338.s is 0xAF64; resume 3E2A4.s is 0x3274.
       - [0x3E29C, c, func_8004DA9C]
+      # Tier-2 probe: constant forwarding wrapper func_8004DC84.
+      # Former 3E2A4 asm span: prefix 0x1E0, C 0x20, resume 0xCCC.
       - [0x3E2A4, asm]
+      - [0x3E484, c, func_8004DC84]
+      - [0x3E4A4, asm]
       - [0x3F170, c, func_8004E970]
       # Phase 5EG: C leaf func_8004F448 — VRAM 0x8004F448, size 0x1C.
       # File span 0x3FC48–0x3FC64 exclusive. First branchy leaf: gp read,
