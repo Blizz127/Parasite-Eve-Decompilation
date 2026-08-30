@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,091 current active spans — Tier 1 9, Tier 2 214, Tier 3 99,
+Pool: 1,090 current active spans — Tier 1 8, Tier 2 214, Tier 3 99,
 SKIP/suppressed 769. Refresh evidence: `POOL_REFRESH.md`.
 
-Consecutive bounded parks: 0. Matched leaves this campaign: 3.
+Consecutive bounded parks: 0. Matched leaves this campaign: 4.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -16,3 +16,4 @@ Consecutive bounded parks: 0. Matched leaves this campaign: 3.
 | 5 | `func_8003F798` @ `0x2FF98` | canonical return; three direct callers; real boundaries; split marks handwritten; five `ctc2` effects | `SKIP-HANDWRITTEN-COP2`; no C attempt or integration | 26 | 0 | VOLUME-100 docs-only commit |
 | 6 | `func_80012700` @ `0x2F00` | canonical return with live result slot; seven direct callers; real boundaries; no frame/callees/loop; Stage-0 freelist and serial census closed | MATCHED leaf 338; direct postincrement assignment preserves old/new serial homes and store order; 29/29 normalized object, packed span, full SHA exact | 29 | 2 | VOLUME-101 leaf commit |
 | 7 | `func_80079304` @ `0x69B04` | canonical return with live result slot; two direct callers; real handwritten neighbors plus explicit two-nop alignment gaps; split marks handwritten COP2 operation | `SKIP-SDK-LIBRARY-COP2`; no C attempt or integration | 30 | 0 | VOLUME-102 docs-only commit |
+| 8 | `func_8003DF50` @ `0x2E750` | canonical return with live store slot; one direct caller; immediate real boundaries; no frame/callees/globals/loop | MATCHED leaf 339 first phrasing; signed-short 16-byte typed record plus alias-sensitive repeated source expressions; 30/30 object, packed span, full SHA exact | 30 | 1 | VOLUME-103 leaf commit |

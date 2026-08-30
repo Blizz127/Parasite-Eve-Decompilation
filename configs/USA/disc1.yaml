@@ -296,9 +296,10 @@ segments:
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.
       - [0x2E02C, c, func_8003D82C]
       - [0x2E034, asm]
+      # Volume 103: signed-index 16-byte-record initializer; era -O2 -G0.
+      - [0x2E750, c, func_8003DF50]
       # Phase 5AE: C leaf func_8003DFC8 — VRAM 0x8003DFC8, size 0x8.
       # File span 0x2E7C8–0x2E7D0 exclusive. Empty jr/nop stub (first mid-2A0C).
-      # Resume size 0x794 (= 0x2E7C8 - 0x2E034); contiguous — no ROM holes.
       - [0x2E7C8, c, func_8003DFC8]
       # Phase 5EE: $at absolute-sw pilot func_8003FFAC — VRAM 0x8003FFAC,
       # file 0x307AC, size 0x10. Existing matching getter confirms int global.

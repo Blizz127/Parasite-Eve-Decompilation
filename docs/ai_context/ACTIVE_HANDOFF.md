@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 338 exact matching-C
+Current matching-lane status: 339 exact matching-C
 leaves plus 20 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -677,7 +677,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 338 exact leaves plus 20
+  matching C; current disposition is 339 exact leaves plus 20
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1010,6 +1010,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-100-3F798-SKIP | 337 | `func_8003F798` @ `0x2FF98` is hood-proven by three direct callers, canonical `jr ra; nop`, and real boundaries. The split explicitly marks its 26-word body handwritten, and five required `ctc2` instructions write GTE control registers 16–20 after argument-relative buffer updates. The established COP2 expressibility rule classifies it `SKIP-HANDWRITTEN-COP2` with zero C phrasings, no integration, and no count change; exact Psy-Q routine provenance is not asserted. Pool remains 1,092 active spans, with Tier 1 11 and SKIP/suppressed 768. Evidence: `docs/evidence/volume-campaign-20260830/func-8003f798/SKIP.md`. |
 | VOLUME-101-12700 | 338 | `func_80012700` @ `0x2F00` is a hood-proven 29-word task-freelist pop/link initializer with seven direct callers, canonical return with live result delay slot, and real boundaries. The split-local serial phrasing swapped `$v0/$v1` homes and hoisted the active store; preserving `task->serial = D_8009D308++` matched phrasing 2 under era `-O2 -G8`, including four normalized gp relocations and one local jump. Carve `0x0000 + 0x0074 + 0x0000 = 0x0074`; 29/29 object, packed span, full SHA exact, verify green at 338. Banked lever: preserve a scalar postincrement assignment when retail stores the old value into a record and writes old+1 back later; splitting the operation can extend liveness and reorder independent stores. Evidence: `docs/evidence/volume-campaign-20260830/func-80012700/REPORT.md`. |
 | VOLUME-102-79304-SKIP | 338 | `func_80079304` @ `0x69B04` is function-hood proven by two direct callers, canonical `jr ra` with a live shift delay slot, and real handwritten neighbors separated by two-nop alignment gaps on each side. Its explicitly handwritten 30-word body requires `lwc2`, `rtpt`, `rtps`, `swc2`, `cfc2`, and `mfc2`; the established libGTE/PsyCross rule therefore classifies it `SKIP-SDK-LIBRARY-COP2` with zero C phrasings and no integration/count change. Tier 1 falls 10→9; exact Psy-Q routine naming remains unproven. Evidence: `docs/evidence/volume-campaign-20260830/func-80079304/SKIP.md`. |
+| VOLUME-103-3DF50 | 339 | `func_8003DF50` @ `0x2E750` is a hood-proven 30-word signed-index 16-byte-record initializer with one direct caller, canonical return with live halfword-store delay slot, and immediate real boundaries. Natural typed-struct C matched first phrasing under era `-O2 -G0`: the signed-short formal recovers retail's `sll 16; sra 12` scale, and repeated source-field expressions preserve four alias-sensitive table-base reloads. Carve `0x071C + 0x0078 + 0x0000 = 0x0794`; 30/30 object, packed span, full SHA exact, verify green at 339. Banked lever: keep a signed-short formal plus typed 16-byte array and avoid hoisting an explicit record pointer when retail reloads a potentially aliased source base between destination stores. Evidence: `docs/evidence/volume-campaign-20260830/func-8003df50/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

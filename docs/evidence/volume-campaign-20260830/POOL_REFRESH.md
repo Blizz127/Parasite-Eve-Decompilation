@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-102, the matching-C count is **338**.
+`634dd1b` (335-leaf base). After VOLUME-103, the matching-C count is **339**.
 
 ## Method and closure
 
@@ -11,23 +11,23 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,091** unique spans. The four-way
+The current active universe contains **1,090** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                   9
+TIER 1                   8
 TIER 2                 214
 TIER 3                  99
 SKIP / suppressed      769
                        ---
-TOTAL                 1091
+TOTAL                 1090
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,040 rows:
-9 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,039 rows:
+8 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
 active. The 51 active spans below were added after the primary tables through
 campaign overlays. Adding all 51 to the suppressed class closes the pool:
-`1040 + 51 = 1091` and `718 + 51 = 769`.
+`1039 + 51 = 1090` and `718 + 51 = 769`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
@@ -36,8 +36,9 @@ residual set after two bounded phrasings; VOLUME-99 then removed exact
 `func_8006346C` from Tier 1; VOLUME-100 screened handwritten COP2 helper
 `func_8003F798` without a C attempt; VOLUME-101 removed exact
 `func_80012700` from Tier 1; VOLUME-102 screened handwritten libGTE helper
-`func_80079304` without a C attempt. A suppressed `func_` label is not assumed
-to be a retail function.
+`func_80079304` without a C attempt; VOLUME-103 removed exact
+`func_8003DF50` from Tier 1. A suppressed `func_` label is not assumed to be a
+retail function.
 
 ## Reconciled post-table spans
 
