@@ -415,6 +415,23 @@ caller test must still measure that outcome after both DMA checkpoints.
 Evidence: `docs/evidence/pe-b54kn-726c4-flushcache/REPORT.md` and
 `pc_port/tools/b54kn_726c4_flushcache_oracle.py`.
 
+## PE-B54K-O — `func_801909B4` overlay recovery (2026-08-30)
+
+The canonical post-B54K-M boundary's retail bytes are now recovered. Retail
+6E834 loads PE.IMG `[0x03D2,0x0457)` at `0x8018EFF0`, placing
+`func_801909B4` at PE.IMG offset `0x1EA9C4`. Its exact range is
+`[0x801909B4,0x801918F8)`, 0xF44 bytes / 977 words, with 70 direct calls to
+32 targets and a normal return.
+
+The audit found a prerequisite native discrepancy: `D_80093164` is currently
+modeled as zero BSS and `D_80011614` uses bootstrap address `0x8010BD00`,
+whereas retail rodata is `{0x03D2,0x0457}` and `0x8018EFF0`. Thus native
+6E834 presently performs a zero-length read and does not load this overlay.
+Do not claim natural 801909B4 entry until a dedicated authority/layout rung
+fixes and tests those values. Production and suite remain B54K-L / `954/954`.
+Evidence: `docs/evidence/pe-b54ko-1909b4-overlay-recovery/REPORT.md` and
+`pc_port/tools/b54ko_1909b4_overlay_oracle.py`.
+
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
 **276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,

@@ -103,6 +103,9 @@ the completed `D_80093126` archive load at `0x8006B220`. Its exact final
 unimplemented until a dedicated rung migrates 23 historical prefix-boundary
 test contracts to full-function assertions; see the
 [B54K-M readiness report](../evidence/pe-b54km-6ad40-completion-readiness/REPORT.md).
+The subsequent `func_801909B4` bytes are also now statically recovered from
+PE.IMG, but native 6E834 still lacks the retail overlay table/pointer values;
+see the [B54K-O report](../evidence/pe-b54ko-1909b4-overlay-recovery/REPORT.md).
 
 ## C. Matching-C decomp
 
@@ -192,5 +195,5 @@ for natural `m0360i` entry; it must be proven before implementation.
 
 ```text
 REPORT_STATUS=CURRENT
-LAST_REFRESH=2026-08-30_B54K-N
+LAST_REFRESH=2026-08-30_B54K-O
 ```
