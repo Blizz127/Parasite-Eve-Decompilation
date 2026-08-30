@@ -1,19 +1,25 @@
 # Matching-C volume campaign pool — refreshed 2026-08-30
 
-Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign and VOLUME-97's `func_8003C5D8`; VOLUME-98's `func_80070D6C` is suppressed as a bounded residual, and the three COP2 helpers remain in SKIP.
+Generated from the active `[address, asm]` subsegments in
+`configs/USA/disc1.yaml`; stale generated asm outside active span geometry is
+excluded. Candidates are active `nonmatching` spans of 40 words or fewer.
+Screens are static triage and must be re-proven at C2 before an attempt. This
+refresh removes the six leaves matched by the 2026-08-24 campaign,
+VOLUME-97's `func_8003C5D8`, and VOLUME-99's `func_8006346C`;
+VOLUME-98's `func_80070D6C` is suppressed as a bounded residual, and the
+three COP2 helpers remain in SKIP.
 
 The 2026-08-30 active-span reconciliation is recorded in
 `docs/evidence/volume-campaign-20260830/POOL_REFRESH.md`. The primary tables
-below contain 1,044 still-active rows. The reconciliation adds 49 post-table
+below contain 1,043 still-active rows. The reconciliation adds 49 post-table
 park/skip/padding dispositions and corrects the stale header arithmetic.
 
-Total: **1093** — TIER 1 13, TIER 2 214, TIER 3 99, SKIP/suppressed 767.
+Total: **1092** — TIER 1 12, TIER 2 214, TIER 3 99, SKIP/suppressed 767.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x53C6C | `func_8006346C` | 26 | jr-ra | 4/4 | 0 | no | - | - | addiu:-0x1x3 | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x2FF98 | `func_8003F798` | 26 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x2F00 | `func_80012700` | 29 | jr-ra | 7/7 | 0 | yes | - | - | addiu:0x1x2 | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x69B04 | `func_80079304` | 30 | jr-ra | 2/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |

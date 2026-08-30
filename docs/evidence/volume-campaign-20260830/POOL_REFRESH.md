@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-97, the matching-C count is **336**.
+`634dd1b` (335-leaf base). After VOLUME-99, the matching-C count is **337**.
 
 ## Method and closure
 
@@ -11,29 +11,30 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,093** unique spans. The four-way
+The current active universe contains **1,092** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                  13
+TIER 1                  12
 TIER 2                 214
 TIER 3                  99
 SKIP / suppressed      767
                        ---
-TOTAL                 1093
+TOTAL                 1092
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,044 rows:
-13 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,043 rows:
+12 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
 active. The 49 active spans below were added after the primary tables through
 campaign overlays. Adding all 49 to the suppressed class closes the pool:
-`1044 + 49 = 1093` and `718 + 49 = 767`.
+`1043 + 49 = 1092` and `718 + 49 = 767`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
 after exact integration; VOLUME-98 moved `func_80070D6C` to the suppressed
-residual set after two bounded phrasings. A suppressed `func_` label is not
-assumed to be a retail function.
+residual set after two bounded phrasings; VOLUME-99 then removed exact
+`func_8006346C` from Tier 1. A suppressed `func_` label is not assumed to be
+a retail function.
 
 ## Reconciled post-table spans
 

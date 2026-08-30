@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 336 exact matching-C
+Current matching-lane status: 337 exact matching-C
 leaves plus 20 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -677,7 +677,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 336 exact leaves plus 20
+  matching C; current disposition is 337 exact leaves plus 20
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1006,6 +1006,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-96-78C34-SKIP | 335 | `func_80078C34` @ `0x69434` is function-hood proven by 25 raw direct callers, canonical `jr ra; nop`, and real boundaries. Its 23-word split is explicitly handwritten and performs matrix/vector work through `ctc2`, `lwc2`, `mvmva`, and `mfc2`; the existing libGTE/PsyCross policy therefore classifies it `SKIP-SDK-LIBRARY-COP2` with zero C phrasings and no integration. Tier 1 falls 16→15; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260830/func-80078c34/SKIP.md`. |
 | VOLUME-97-3C5D8 | 336 | `func_8003C5D8` @ `0x2CDD8` is a hood-proven 24-word reciprocal-byte initializer with 26 direct callers, canonical return, and real boundaries. Phrasing 1 used an `int` formal and lost retail's entry copy; the proven signed-`short` formal forces `a1 -> a2`, and phrasing 2 matches all 24 words under era `-O2 -G0` plus the sanctioned signed-div guard expansion. Carve `0x3864 + 0x0060 + 0x11F4 = 0x4AB8`; packed span/full SHA exact, verify green at 336. Evidence: `docs/evidence/volume-campaign-20260830/func-8003c5d8/REPORT.md`. |
 | VOLUME-98-70D6C-PARK | 336 | `func_80070D6C` @ `0x6156C` is hood-proven by four direct callers (correcting the pool's stale 3), canonical return, and real boundaries. Independent RNG oracles close its self-adjacent state semantics and Stage-0 census. Two natural era `-O2 -G0` phrasings compile byte-identically to 24 versus retail 25 words: cc1 uses `$v0/$a*` homes, steals both cursor decrements into load gaps, computes the sum directly in `$v0`, and schedules different guard slots; retail preserves a full `$t0–$t8` home plan and explicit result copy. `PARKED-REGISTER-HOME-AND-CROSS-BLOCK-SCHEDULING`, `ACCEPTED-RESIDUAL`; no integration/count change. Candidate stash: `park func_80070D6C register-schedule residual`. Evidence: `docs/evidence/volume-campaign-20260830/func-80070d6c/PARK.md`. |
+| VOLUME-99-6346C | 337 | `func_8006346C` @ `0x53C6C` is a hood-proven 26-word guarded record-bit query with four direct callers, canonical return, and real boundaries. Phrasing 1 initialized the default result at entry, extending its lifetime into `$a2`, forcing `mflo a3`, and emitting 27 words. Delaying only that default assignment frees `$a2` for the product and selects `$a0` as the late result home; phrasing 2 matches all 26 words under era `-O2 -G0`, including the late guard-slot constant. Carve `0x0000 + 0x0068 + 0x1574 = 0x15DC`; packed span/full SHA exact, verify green at 337, and consecutive parks reset. Banked lever: delay default-result initialization when retail needs an argument register for an earlier product and another as the late result accumulator. Evidence: `docs/evidence/volume-campaign-20260830/func-8006346c/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
