@@ -1024,7 +1024,11 @@ segments:
       # Phase 3 (2026-07-08): resume asm after mid-image data island.
       # Evidence: 8-byte zero padding then addiu $sp,$sp,-0x18 prologue at
       # VRAM 0x800C22F8; sustained valid MIPS follows.
+      # Tier-2 probe: base-publishing indexed setter func_800C2AF0.
+      # Former B2AF8 asm span: prefix 0x7F8, C 0x20, resume 0x30.
       - [0xB2AF8, asm]
+      - [0xB32F0, c, func_800C2AF0]
+      - [0xB3310, asm]
       # Phase 5G: C leaf func_800C2B40 — VRAM 0x800C2B40, size 0x10.
       # File span 0xB3340–0xB3350 exclusive. Store arg0 to *(D_800E2248+0x70).
       - [0xB3340, c, func_800C2B40]

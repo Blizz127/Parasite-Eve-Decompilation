@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 347 exact matching-C
+Current matching-lane status: 348 exact matching-C
 leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -677,7 +677,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 347 exact leaves plus 24
+  matching C; current disposition is 348 exact leaves plus 24
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1025,6 +1025,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-115-7C544 | 345 | `func_8007C544` @ `0x6CD44` is hood-proven by one direct caller, a canonical return with live store delay, and real neighboring functions separated by explicit alignment nops. Natural ordered stores to three Stage-0-censused state words match 7/7 on phrasing 1 under era `-O2 -G0` with the established default-off store-delay gate. Carve `0x0408 + 0x001C + 0x1944 = 0x1D68`; packed span/full SHA exact, verify green at 345. Tier 2 falls 211→210. Evidence: `docs/evidence/volume-campaign-20260830/func-8007c544/REPORT.md`. |
 | VOLUME-116-812F4 | 346 | `func_800812F4` @ `0x71AF4` is hood-proven by one direct caller, canonical `jr ra; nop`, a preceding real return with live teardown, and a following one-word alignment gap before the next real prologue. Natural unsigned range-guarded state-setter C matches 7/7 on phrasing 1 under era `-O2 -G0` with no maspsx gate. Carve `0x008C + 0x001C + 0x0F9C = 0x1044`; packed span/full SHA exact, verify green at 346. Tier 2 falls 210→209. Evidence: `docs/evidence/volume-campaign-20260830/func-800812f4/REPORT.md`. |
 | VOLUME-117-62F1C | 347 | `func_80062F1C` @ `0x5371C` is hood-proven by 57 unique executable direct callers, canonical return, and immediate real boundaries. Its one unresolved callee is the recursive node-removal routine `func_8006269C`; natural void forwarding-wrapper C matches all eight words on phrasing 1 under era `-O2 -G0`, with only the normalized call relocation. Carve `0x0238 + 0x0020 + 0x021C = 0x0474`; packed span/full SHA exact, verify green at 347. Tier 2 falls 209→208. Evidence: `docs/evidence/volume-campaign-20260830/func-80062f1c/REPORT.md`. |
+| VOLUME-118-C2AF0 | 348 | `func_800C2AF0` @ `0xB32F0` is hood-proven by eight direct callers, canonical return with live indexed-store delay slot, and immediate real boundaries. Natural typed C advances the base by 12 bytes, publishes it in Stage-0-censused `D_800E2248`, writes the indexed `+0x48` slot, and returns zero; it matches all eight words on phrasing 1 under era `-O2 -G0` with no gate. Carve `0x07F8 + 0x0020 + 0x0030 = 0x0848`; packed span/full SHA exact, verify green at 348. Tier 2 falls 208→207. Evidence: `docs/evidence/volume-campaign-20260830/func-800c2af0/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

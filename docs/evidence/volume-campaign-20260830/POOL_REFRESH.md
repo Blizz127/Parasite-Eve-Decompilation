@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-117, the matching-C count is **347**.
+`634dd1b` (335-leaf base). After VOLUME-118, the matching-C count is **348**.
 
 ## Method and closure
 
@@ -11,26 +11,26 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,082** unique spans. The four-way
+The current active universe contains **1,081** unique spans. The four-way
 scheduling closure is:
 
 ```text
 TIER 1                   0
-TIER 2                 208
+TIER 2                 207
 TIER 3                  99
 SKIP / suppressed      775
                        ---
-TOTAL                 1082
+TOTAL                 1081
 ```
 
 The primary tables in `volume-campaign-20260824/POOL.md` contain 1,032
 historical rows: 0 Tier 1, 214 Tier 2, 99 Tier 3, and 719 SKIP. VOLUME-112
-removed six Tier-2 rows by integrating `func_800C6ED8`,
-`func_800C6EC0`, `func_80050020`, `func_8007C544`, `func_800812F4`, and
-`func_80062F1C`, leaving 1,026 active primary rows. The 56 active spans below
-were added after the primary tables through campaign overlays. Thus
-`1026 + 56 = 1082`; the suppressed class
-remains `719 + 56 = 775`.
+removed seven Tier-2 rows by integrating `func_800C6ED8`,
+`func_800C6EC0`, `func_80050020`, `func_8007C544`, `func_800812F4`,
+`func_80062F1C`, and `func_800C2AF0`, leaving 1,025 active primary rows.
+The 56 active spans below were added after the primary tables through
+campaign overlays. Thus `1025 + 56 = 1081`; the suppressed class remains
+`719 + 56 = 775`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
@@ -58,8 +58,9 @@ symbolic-load gate. VOLUME-115 then removed exact three-state setter
 `func_8007C544` with the established store-delay gate. VOLUME-116 removed
 exact range-guarded setter `func_800812F4` on its first natural phrasing.
 VOLUME-117 removed exact forwarding wrapper `func_80062F1C` on its first
-natural phrasing. A suppressed `func_` label is not assumed to be a retail
-function.
+natural phrasing. VOLUME-118 removed exact base-publishing indexed setter
+`func_800C2AF0` on its first natural phrasing. A suppressed `func_` label is
+not assumed to be a retail function.
 
 ## Reconciled post-table spans
 
