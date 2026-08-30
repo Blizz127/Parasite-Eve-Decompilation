@@ -1,6 +1,6 @@
 /*
- * Phase 6E-B54K-F — func_80030894: boot GPU-primitive builder,
- * prologue through the bank-0 L9 packet group (translated prefix).
+ * Phase 6E-B54K-G — func_80030894: boot GPU-primitive builder,
+ * prologue through the bank-0 L10 packet group (translated prefix).
  *
  * Full retail body:
  *   788 words / 0xC50 bytes, exe 0x80030894–0x800314E4 (exclusive),
@@ -11,18 +11,18 @@
  *   stale scratch discarded by the caller).
  *
  * Implemented prefix:
- *   0x80030894..0x800311EC (598 words) — prologue, the bank record
+ *   0x80030894..0x80031320 (675 words) — prologue, the bank record
  *   init at 0x800BE9F0, and the L2(j=0..9) × L3(k=0..3) sprite-array
  *   build at 0x800B01C0, followed by the fixed bank-0 tile/sprite setup
  *   complete L4/L5 loops, fixed G4/sprite records, the complete L6 loop,
- *   the following fixed primitive records, complete L7/L8 loops, and
- *   the fixed sprite plus complete L9 loop.  The first excluded
- *   instruction is
+ *   the following fixed primitive records, complete L7/L8/L9 loops,
+ *   and the post-L9 fixed sprites plus complete L10 loop.  The first
+ *   excluded instruction is
  *
- *       lui   s0, %hi(D_8009E730)       # 0x800311EC
+ *       lui   s2, %hi(D_8009E928)       # 0x80031320
  *
  *   (the next fixed-sprite group).  The named strict boundary is
- *   func_80030894_L9_cut.
+ *   func_80030894_L10_cut.
  *
  * Word decode of the implemented window (verified against the
  * SHA-1-exact retail executable 452fb033f2eaa4b18aa20a5bca60b8125af3a37b):
@@ -76,7 +76,7 @@
  *
  * All callees are native since B54I/GPU1 (GetTPage, GetClut,
  * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC,
- * func_80077C64, func_80077B64); the L9 cut is the first untranslated
+ * func_80077C64, func_80077B64); the L10 cut is the first untranslated
  * boundary inside this body.
  *
  * Classification: 1 — translated retail prefix.
@@ -106,6 +106,9 @@
 #define GA_L8_BASE       0x8009E500u
 #define GA_POST_L8_SPRT  0x8009E768u
 #define GA_L9_BASE       0x8009E7A0u
+#define GA_POST_L9_SPRT  0x8009E730u
+#define GA_SECOND_SPRT   0x8009E880u
+#define GA_L10_BASE      0x8009E8B8u
 
 void func_80030894(void)
 {
@@ -198,6 +201,7 @@ void func_80030894(void)
             uint32_t bank20 = (uint32_t)bank * 20u;
             uint32_t bank84 = (uint32_t)bank * 84u;
             uint32_t bank280 = (uint32_t)bank * 280u;
+            uint32_t bank56 = (uint32_t)bank * 56u;
             pe_addr_t tile = GA_TILE_BASE + bank24;
             pe_addr_t tile_packet = tile + 8u;
             pe_addr_t packet = GA_TILE_PACKET + bank16;
@@ -431,11 +435,49 @@ void func_80030894(void)
                 PE_StoreU16(l9 + 0x18u, 6u);
                 PE_StoreU16(l9 + 0x1Au, 6u);
             }
+
+            /* 0x800311EC..0x800312C8: two fixed sprites before L10. */
+            {
+                pe_addr_t first = GA_POST_L9_SPRT + bank28;
+                pe_addr_t second = GA_SECOND_SPRT + bank28;
+                uint16_t clut_1f9;
+
+                func_800370DC(first, tpage_sprt);
+                PE_StoreU8(first + 0x14u, 0x68u);
+                PE_StoreU8(first + 0x15u, 0xF4u);
+                clut_1f9 = (uint16_t)func_80077AA4(0x130, 0x1F9);
+                PE_StoreU16(first + 0x16u, clut_1f9);
+                PE_StoreU16(first + 0x18u, 24u);
+                PE_StoreU16(first + 0x1Au, 4u);
+                PE_StoreU8(first + 0x0Cu, 0x80u);
+                PE_StoreU8(first + 0x0Du, 0x80u);
+                PE_StoreU8(first + 0x0Eu, 0x80u);
+
+                func_800370DC(second, tpage_sprt);
+                PE_StoreU8(second + 0x0Cu, 0x80u);
+                PE_StoreU8(second + 0x0Du, 0x80u);
+                PE_StoreU8(second + 0x0Eu, 0x80u);
+                PE_StoreU8(second + 0x14u, 0x7Cu);
+                PE_StoreU8(second + 0x15u, 0xEFu);
+                PE_StoreU16(second + 0x16u, clut_id);
+                PE_StoreU16(second + 0x18u, 36u);
+                PE_StoreU16(second + 0x1Au, 5u);
+            }
+
+            /* 0x800312CC..0x8003131C: L10, two 28-byte sprites. */
+            for (slot = 0u; slot < 2u; slot++) {
+                pe_addr_t l10 = GA_L10_BASE + bank56 + slot * 28u;
+
+                func_800370DC(l10, tpage_sprt);
+                PE_StoreU16(l10 + 0x16u, clut_id);
+                PE_StoreU16(l10 + 0x18u, 6u);
+                PE_StoreU16(l10 + 0x1Au, 6u);
+            }
         }
     }
 
-    /* B54K-F cut: stop after L9 at retail 0x800311EC. */
+    /* B54K-G cut: stop after L10 at retail 0x80031320. */
     (void)Bootstrap_ReturnInt(
-        "func_80030894_L9_cut", "func_80030894", 0);
+        "func_80030894_L10_cut", "func_80030894", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
 }

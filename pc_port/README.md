@@ -1,21 +1,21 @@
-# Parasite Eve Native PC Port — Phase 6E-B54K-F
+# Parasite Eve Native PC Port — Phase 6E-B54K-G
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B54K-F advances the production implementation of
-`func_80030894` through retail address `0x800311EC`: 598 words of the
-788-word GPU-primitive builder are now native. The new retail 55-word group
-builds one fixed wrapped sprite at `D_8009E768 + bank*28` and the complete
-four-sprite L9 loop at `D_8009E7A0 + bank*112 + slot*28`. Its independent
-oracle compares all 55 words, verifies both static calls, loop
-edge/bound/strides/extent, and both cut-side words. Two focused tests cover
-both exact ranges, their gap/end sentinels, all packet fields,
-dirty/repeat determinism, and the retail-untouched XY word in every packet.
-The named frontier is `func_80030894_L9_cut`; normal and rebuilt ASan/UBSan
-suites pass 940/940 with zero diagnostics. Scheduler provenance remains
-independently artifact-bound: this rung adds no destination, `m0360i`, or
-persist special case. Full proof is in
-`docs/evidence/pe-b54kf-30894-l9/REPORT.md`.
+**Current milestone:** B54K-G advances the production implementation of
+`func_80030894` through retail address `0x80031320`: 675 words of the
+788-word GPU-primitive builder are now native. The new retail 77-word group
+builds fixed sprites at `D_8009E730` and `D_8009E880`, computes the first's
+CLUT `(0x130,0x1F9)->0x7E53`, and closes the two-sprite L10 loop at
+`D_8009E8B8 + bank*56 + slot*28`. Its independent oracle compares all 77
+words, verifies four calls in order, CLUT derivation, loop geometry, and both
+cut-side words. Two focused tests cover all three exact ranges, gaps/end
+sentinels, all written fields, dirty/repeat determinism, and the
+retail-untouched fixed XY plus L10 RGB/XY fields. The named frontier is
+`func_80030894_L10_cut`; normal and rebuilt ASan/UBSan suites pass 942/942
+with zero diagnostics. Scheduler provenance remains independently
+artifact-bound: this rung adds no destination, `m0360i`, or persist special
+case. Full proof is in `docs/evidence/pe-b54kg-30894-l10/REPORT.md`.
 
 **Earlier retained milestone:** B53I-D admits one separate later checkpoint
 for the second LoadImage DMA token created by B53I-C. The exact 32-word
@@ -799,7 +799,7 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_80030894_L9_cut from
+# Current global frontier: exit 1 at func_80030894_L10_cut from
 # func_80030894 (6AD40 continues to func_8006AD40_post30894_cut).
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 
