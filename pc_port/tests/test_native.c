@@ -23817,8 +23817,8 @@ static void test_6AD40_prefix_boundary_args(void)
     ASSERT(CountOrderLog("func_8006E1C0") == 0,
            "translated callee must not record a bootstrap boundary");
     ASSERT(CountOrderLog("func_800718D0") == 0 &&
-           CountOrderLog("func_80030894_L8_cut") == 1,
-           "prefix must now enter func_80030894 through L8");
+           CountOrderLog("func_80030894_L9_cut") == 1,
+           "prefix must now enter func_80030894 through L9");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "prefix must request an honest unresolved-boundary host stop");
     /* Channel 2's poll clears 0x01004000; B54F's D_800930EE issue sets
@@ -23867,7 +23867,9 @@ static void test_6AD40_prefix_boundary_args(void)
             (a >= 0x8009E4A8u && a < 0x8009E4B0u) ||
             (a >= 0x8009E4D8u && a < 0x8009E4E0u) ||
             (a >= 0x8009E3B8u && a < 0x8009E40Cu) ||
-            (a >= 0x8009E500u && a < 0x8009E618u))
+            (a >= 0x8009E500u && a < 0x8009E618u) ||
+            (a >= 0x8009E768u && a < 0x8009E784u) ||
+            (a >= 0x8009E7A0u && a < 0x8009E810u))
             continue;
         if (PE_LoadU8(a) != snapshot[a - PE_RAM_BASE]) {
             free(snapshot);
@@ -23929,11 +23931,11 @@ static void test_6AD40_strict_stops_at_frontier(void)
     Stub_ResetOrderLog();
     func_8006AD40();
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0 &&
            strcmp(g_stub_order_log[1], "func_8006AD40_post30894_cut") == 0,
            "B50 prefix path must reach the two named current B54K providers");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
-           "the L8 cut is now the first strict frontier");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
+           "the L9 cut is now the first strict frontier");
     /* The busy transfer must still be in flight and the queued request
      * unconsumed: reaching the frontier must not have completed DMA. */
     ASSERT(PE_GPU_DMA2Pending(), "prefix path completed the pending DMA");
@@ -24038,11 +24040,11 @@ static void test_B54B_6AD40_canonical_counted_loop(void)
            g_bootstrap_arg4_calls[1].arg3,
            "B54B replayed entry 0");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0 &&
            strcmp(g_stub_order_log[1], "func_8006AD40_post30894_cut") == 0,
            "retained B54B path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
-           "B54B must now enter func_80030894 through L8");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
+           "B54B must now enter func_80030894 through L9");
     ASSERT(PE_LoadU16(0x80091650u) == 0x0020u &&
            PE_LoadU16(0x80091652u) == 0u,
            "B54B path must pack record 0 from unseeded sources");
@@ -24066,7 +24068,7 @@ static void test_B54B_6AD40_count_edges(void)
     ASSERT(g_bootstrap_arg4_call_count == 2,
            "count zero must add both live 718D0 walks");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
            "count zero did not reach the current frontier");
     FxFree(&fx);
 
@@ -24137,11 +24139,11 @@ static void test_B54D_6AD40_canonical_material_prefix(void)
     ASSERT(B54D_LOOKUP + (0x00007F0Cu & ~3u) == B54D_TERMINATOR,
            "B54D canonical terminator address changed");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0 &&
            strcmp(g_stub_order_log[1], "func_8006AD40_post30894_cut") == 0,
            "retained B54D path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
-           "B54D must now enter func_80030894 through L8");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
+           "B54D must now enter func_80030894 through L9");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
            "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
@@ -24170,7 +24172,7 @@ static void test_B54D_6AD40_no_walk_still_stops_before_poll(void)
            PE_LoadU16(0x80091682u) == 0x7753u,
            "B54D packing depended on the archive walk");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
            "B54D zero-record path did not reach the current frontier");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
            "B54K-A D_800930F0 issue must re-arm the busy bits");
@@ -24289,7 +24291,7 @@ static void test_B54C_718D0_atlas_rects_and_record0_pack(void)
 
     /* B54G reaches 718D0 + record 0/1 packs and the second live poll.
      * B54K-A then issues D_800930F0 and enters func_80030894 up to
-     * the named L8 cut. */
+     * the named L9 cut. */
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 0u);
     B54D_SeedCanonicalMaterial(0u);
@@ -24305,10 +24307,10 @@ static void test_B54C_718D0_atlas_rects_and_record0_pack(void)
            PE_LoadU16(0x80091662u) == 0x3F15u,
            "live 6AD40 prefix must now pack record 1");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "6AD40 cut moved off the named L8 provider");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
-           "6AD40 must now enter func_80030894 through L8");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "6AD40 cut moved off the named L9 provider");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
+           "6AD40 must now enter func_80030894 through L9");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
            "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
@@ -24360,9 +24362,9 @@ static void test_B54E_6AD40_canonical_poll_exit(void)
     ASSERT(PE_LoadU32(0x8009B6B0u) == B50_F0_DEST,
            "retained B54E path must now issue D_800930F0 / dest+0x14C");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "B54E did not stop at the named L8 cut");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "B54E did not stop at the named L9 cut");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
            "B54E must now enter func_80030894");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54E frontier stop reason changed");
@@ -24397,11 +24399,11 @@ static void test_B54E_6AD40_live_poll_not_assigned(void)
            "zero-record path must now pack records 0/1");
     ASSERT(PE_LoadU32(0x8009B6B0u) == B50_F0_DEST,
            "zero-record path must now issue D_800930F0 / dest+0x14C");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
-           "zero-record path must enter 30894 through L8");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
+           "zero-record path must enter 30894 through L9");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "zero-record path left the named L8 cut");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "zero-record path left the named L9 cut");
     FxFree(&fx);
     PASS();
 }
@@ -24469,9 +24471,9 @@ static void test_B54F_6AD40_live_atlas_and_record_packs(void)
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host collapse after D_800930EE must stay recorded, not assigned");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "B54F did not stop at the named L8 cut");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "B54F did not stop at the named L9 cut");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
            "B54F must now enter func_80030894");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54F added a DMA completion checkpoint");
@@ -24502,11 +24504,11 @@ static void test_B54F_6AD40_second_poll_not_consumed(void)
            "zero-record live path must issue D_800930F0 / dest+0x14C");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) != 0u,
            "B54K-A D_800930F0 issue must re-arm the busy bits");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
-           "zero-record path must enter 30894 through L8");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
+           "zero-record path must enter 30894 through L9");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "zero-record path left the named L8 cut");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "zero-record path left the named L9 cut");
     FxFree(&fx);
     PASS();
 }
@@ -24574,9 +24576,9 @@ static void test_B54G_6AD40_canonical_second_poll_exit(void)
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host collapse remains recorded, not assigned as retail 0");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "B54G did not stop at the named L8 cut");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "B54G did not stop at the named L9 cut");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
            "B54G must now enter func_80030894");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54G frontier stop reason changed");
@@ -24606,11 +24608,11 @@ static void test_B54G_6AD40_live_poll_not_assigned(void)
            "B54K-A D_800930F0 issue must re-arm the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B0u) == B50_F0_DEST,
            "zero-record path must now issue D_800930F0 / dest+0x14C");
-    ASSERT(CountOrderLog("func_80030894_L8_cut") == 1,
-           "zero-record path must enter 30894 through L8");
+    ASSERT(CountOrderLog("func_80030894_L9_cut") == 1,
+           "zero-record path must enter 30894 through L9");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "zero-record path left the named L8 cut");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "zero-record path left the named L9 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "zero-record path changed the frontier stop reason");
     FxFree(&fx);
@@ -24711,10 +24713,10 @@ static void test_B54KA_30894_prologue_record_l2l3(void)
     ASSERT(PE_LoadU16(0x800B01C0u + 0x568u) == 0u,
            "sprite array extent exceeded packet (9,3)");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "30894 did not stop at the named L8 cut");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "30894 did not stop at the named L9 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "L8 cut stop reason changed");
+           "L9 cut stop reason changed");
     PASS();
 }
 
@@ -24759,7 +24761,7 @@ static void test_B54KA_6AD40_live_path_reaches_l2l3(void)
                0x7E13u,
            "live sprite array clut halfwords changed");
     ASSERT(g_stub_order_count == 2 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0 &&
            strcmp(g_stub_order_log[1],
                   "func_8006AD40_post30894_cut") == 0,
            "B54KA live provider order changed");
@@ -24870,10 +24872,10 @@ static void test_B54KB1_30894_fixed_setup_and_l4(void)
     ASSERT(PE_LoadU8(0x8009E160u) == 0u,
            "L4 loop wrote beyond its four-packet extent");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "30894 did not stop at the named L8 cut");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "30894 did not stop at the named L9 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "L8 cut stop reason changed");
+           "L9 cut stop reason changed");
     PASS();
 }
 
@@ -24944,10 +24946,10 @@ static void test_B54KB2_30894_l5_five_packets(void)
     ASSERT(PE_LoadU8(0x8009E25Cu) == 0u,
            "L5 loop wrote beyond its five-packet extent");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "30894 did not stop at the named L8 cut");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "30894 did not stop at the named L9 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "L8 cut stop reason changed");
+           "L9 cut stop reason changed");
     PASS();
 }
 
@@ -25095,10 +25097,10 @@ static void test_B54KC_30894_fixed_records_and_l6(void)
            PE_LoadU8(0x8009E388u) == 0x38u,
            "B54K-C crossed a proven record/loop extent");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "30894 did not stop at the named L8 cut");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "30894 did not stop at the named L9 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "L8 cut stop reason changed");
+           "L9 cut stop reason changed");
     PASS();
 }
 
@@ -25235,10 +25237,10 @@ static void test_B54KD_30894_fixed_primitives_and_l7(void)
            PE_LoadU8(0x8009E40Cu) == 0x0Cu,
            "B54K-D crossed a proven primitive/L7 extent");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "30894 did not stop at the named L8 cut");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "30894 did not stop at the named L9 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "L8 cut stop reason changed");
+           "L9 cut stop reason changed");
     PASS();
 }
 
@@ -25307,7 +25309,6 @@ static void test_B54KE_30894_l8_ten_sprites(void)
     ResetTestState();
     PE_StoreU8(0x8009E4FFu, 0x4Fu);
     PE_StoreU8(0x8009E618u, 0x18u);
-    PE_StoreU8(0x8009E768u, 0x68u);
     B54KB1_SeedPalette();
     Stub_ResetOrderLog();
 
@@ -25315,14 +25316,13 @@ static void test_B54KE_30894_l8_ten_sprites(void)
 
     B54KE_AssertL8();
     ASSERT(PE_LoadU8(0x8009E4FFu) == 0x4Fu &&
-           PE_LoadU8(0x8009E618u) == 0x18u &&
-           PE_LoadU8(0x8009E768u) == 0x68u,
+           PE_LoadU8(0x8009E618u) == 0x18u,
            "B54K-E crossed the exact ten-sprite L8 extent");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_80030894_L8_cut") == 0,
-           "30894 did not stop at the named L8 cut");
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "30894 did not stop at the named L9 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "L8 cut stop reason changed");
+           "L9 cut stop reason changed");
     PASS();
 }
 
@@ -25353,6 +25353,115 @@ static void test_B54KE_30894_l8_dirty_repeat_deterministic(void)
                PE_LoadU32(p + 0x14u) == 0xA5A5A5A5u &&
                PE_LoadU32(p + 0x18u) == 0xA5A5A5A5u,
                "L8 wrapper wrote retail-untouched sprite tail bytes");
+    }
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B54K-F — func_80030894 fixed sprite + L9 (2 tests)
+ *
+ * Retail window 0x80031110..0x800311EC (55 words). It builds one
+ * 28-byte fixed sprite at D_8009E768 and four L9 sprites at
+ * D_8009E7A0 + bank*112. The next word begins a different fixed group.
+ * The independent source is tools/b54kf_30894_l9_oracle.py.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void B54KF_AssertState(void)
+{
+    pe_addr_t fixed = 0x8009E768u;
+    uint32_t slot;
+
+    ASSERT(PE_LoadU8(fixed + 3u) == 6u &&
+           PE_LoadU32(fixed + 4u) == 0xE1000234u &&
+           PE_LoadU32(fixed + 8u) == 0u &&
+           PE_LoadU8(fixed + 0x0Cu) == 0x80u &&
+           PE_LoadU8(fixed + 0x0Du) == 0x80u &&
+           PE_LoadU8(fixed + 0x0Eu) == 0x80u &&
+           PE_LoadU8(fixed + 0x0Fu) == 0x64u &&
+           PE_LoadU8(fixed + 0x14u) == 0x58u &&
+           PE_LoadU8(fixed + 0x15u) == 0xEFu &&
+           PE_LoadU16(fixed + 0x16u) == 0x7E13u &&
+           PE_LoadU16(fixed + 0x18u) == 36u &&
+           PE_LoadU16(fixed + 0x1Au) == 5u,
+           "post-L8 fixed sprite differs from retail");
+
+    for (slot = 0u; slot < 4u; slot++) {
+        pe_addr_t p = 0x8009E7A0u + slot * 28u;
+        ASSERT(PE_LoadU8(p + 3u) == 6u &&
+               PE_LoadU32(p + 4u) == 0xE1000234u &&
+               PE_LoadU32(p + 8u) == 0u &&
+               PE_LoadU8(p + 0x0Cu) == 0x80u &&
+               PE_LoadU8(p + 0x0Du) == 0x80u &&
+               PE_LoadU8(p + 0x0Eu) == 0x80u &&
+               PE_LoadU8(p + 0x0Fu) == 0x64u &&
+               PE_LoadU16(p + 0x16u) == 0x7E13u &&
+               PE_LoadU16(p + 0x18u) == 6u &&
+               PE_LoadU16(p + 0x1Au) == 6u,
+               "L9 sprite differs from retail");
+    }
+}
+
+static void B54KF_CopyState(uint8_t out[0x8C])
+{
+    memcpy(out, PE_TranslateConst(0x8009E768u, 0x1Cu), 0x1Cu);
+    memcpy(out + 0x1Cu, PE_TranslateConst(0x8009E7A0u, 0x70u), 0x70u);
+}
+
+static void test_B54KF_30894_fixed_sprite_and_l9(void)
+{
+    TEST("B54KF_30894_fixed_sprite_and_l9");
+    ResetTestState();
+    PE_StoreU8(0x8009E730u, 0x30u);
+    PE_StoreU8(0x8009E767u, 0x67u);
+    PE_StoreU8(0x8009E784u, 0x84u);
+    PE_StoreU8(0x8009E79Fu, 0x9Fu);
+    PE_StoreU8(0x8009E810u, 0x10u);
+    B54KB1_SeedPalette();
+    Stub_ResetOrderLog();
+
+    func_80030894();
+
+    B54KF_AssertState();
+    ASSERT(PE_LoadU8(0x8009E730u) == 0x30u &&
+           PE_LoadU8(0x8009E767u) == 0x67u &&
+           PE_LoadU8(0x8009E784u) == 0x84u &&
+           PE_LoadU8(0x8009E79Fu) == 0x9Fu &&
+           PE_LoadU8(0x8009E810u) == 0x10u,
+           "B54K-F crossed a fixed-sprite/L9 boundary");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_80030894_L9_cut") == 0,
+           "30894 did not stop at the named L9 cut");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "L9 cut stop reason changed");
+    PASS();
+}
+
+static void test_B54KF_30894_l9_dirty_repeat_deterministic(void)
+{
+    uint8_t first[0x8C];
+    uint8_t second[0x8C];
+    uint32_t slot;
+    TEST("B54KF_30894_l9_dirty_repeat_deterministic");
+    ResetTestState();
+    PE_Fill(0x8009E768u, 0x1Cu, 0xA5u);
+    PE_Fill(0x8009E7A0u, 0x70u, 0xA5u);
+    B54KB1_SeedPalette();
+
+    func_80030894();
+    B54KF_CopyState(first);
+    Stub_ResetOrderLog();
+    func_80030894();
+    B54KF_CopyState(second);
+
+    ASSERT(memcmp(first, second, sizeof(first)) == 0,
+           "fixed sprite/L9 output is not deterministic on repeat");
+    B54KF_AssertState();
+    ASSERT(PE_LoadU32(0x8009E768u + 0x10u) == 0xA5A5A5A5u,
+           "fixed sprite wrote retail-untouched xy bytes");
+    for (slot = 0u; slot < 4u; slot++) {
+        pe_addr_t p = 0x8009E7A0u + slot * 28u;
+        ASSERT(PE_LoadU32(p + 0x10u) == 0xA5A5A5A5u,
+               "L9 sprite wrote retail-untouched xy bytes");
     }
     PASS();
 }
@@ -31373,6 +31482,10 @@ int main(void)
     /* Phase 6E-B54K-E func_80030894 L8 (2 tests). */
     test_B54KE_30894_l8_ten_sprites();
     test_B54KE_30894_l8_dirty_repeat_deterministic();
+
+    /* Phase 6E-B54K-F func_80030894 fixed sprite + L9 (2 tests). */
+    test_B54KF_30894_fixed_sprite_and_l9();
+    test_B54KF_30894_l9_dirty_repeat_deterministic();
 
     /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
     test_6E1C0_single_call_zero_entry();
