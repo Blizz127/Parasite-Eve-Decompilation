@@ -182,6 +182,13 @@ segments:
       - [0xA404, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
+      # VOLUME-110: C leaf func_80021850 — VRAM 0x80021850, size 0x88
+      # (34 words). Swap two 12-byte records selected by signed-byte indices.
+      # Era -O2 -G0 matches on the first natural aggregate-copy phrasing.
+      # Mid-11718 carve: prefix 0x938, C 0x88, resume 120D8.s 0x7AB0;
+      # 0x938 + 0x88 + 0x7AB0 = prior span 0x8470.
+      - [0x12050, c, func_80021850]
+      - [0x120D8, asm]
       # C leaf func_80029388 — VRAM 0x80029388, size 0x6C (27 words).
       # jal 2F658, then the same 7 x 220-byte SlotRecord in-use clear as
       # 2F9CC (unsigned char counter, sltiu 7, 3-word symbol store), gp

@@ -371,7 +371,9 @@ SIZE_A010=0x3d4
 SIZE_C_19BE4=0x20
 SIZE_A404=0x72f8
 SIZE_C_20EFC=0x1c
-SIZE_11718=0x8470
+SIZE_11718=0x938
+SIZE_C_21850=0x88
+SIZE_120D8=0x7ab0
 SIZE_C_29388=0x6c
 SIZE_C_293F4=0x1f0
 SIZE_19DE4=0x6188
@@ -988,6 +990,8 @@ OBJECTS=(
     "build/asm/disc1/A404.s.o"
     "build/src/func_80020EFC.c.o"
     "build/asm/disc1/11718.s.o"
+    "build/src/func_80021850.c.o"
+    "build/asm/disc1/120D8.s.o"
     "build/src/func_80029388.c.o"
     "build/src/func_800293F4.c.o"
     "build/asm/disc1/19DE4.s.o"
@@ -1520,6 +1524,8 @@ SOURCES=(
     "asm/disc1/A404.s"
     "src/func_80020EFC.c"
     "asm/disc1/11718.s"
+    "src/func_80021850.c"
+    "asm/disc1/120D8.s"
     "src/func_80029388.c"
     "src/func_800293F4.c"
     "asm/disc1/19DE4.s"
@@ -2304,6 +2310,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/9CB0.s.o asm/di
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/A010.s.o asm/disc1/A010.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/A404.s.o asm/disc1/A404.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/11718.s.o asm/disc1/11718.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/120D8.s.o asm/disc1/120D8.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/19DE4.s.o asm/disc1/19DE4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/202F8.s.o asm/disc1/202F8.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/20EE0.s.o asm/disc1/20EE0.s
@@ -2577,6 +2584,9 @@ era_compile src/func_80017FDC.c build/src/func_80017FDC.c.o -O2 -G0
 era_compile src/func_80017FF0.c build/src/func_80017FF0.c.o -O2 -G0
 era_compile src/func_800192B8.c build/src/func_800192B8.c.o -O2 -G0
 era_compile src/func_800192C8.c build/src/func_800192C8.c.o -O2 -G0
+# func_80021850: swap two 12-byte records selected by signed-byte indices.
+# Natural aggregate-copy phrasing matches the retail stack temporary exactly.
+era_compile src/func_80021850.c build/src/func_80021850.c.o -O2 -G0
 # func_80029388: jal 2F658, 7x220B SlotRecord in-use clear (2F9CC shape,
 # andi-filled back-branch slot), gp byte zeros D_8009D2A0/D_8009D2EC, jal
 # 20EFC. -G8 for the two gp byte clears; 3-word knob for the symbol store.
@@ -2939,6 +2949,8 @@ python3 "$TRIM" build/src/func_80019BE4.c.o .text "$SIZE_C_19BE4"
 python3 "$TRIM" build/asm/disc1/A404.s.o .text "$SIZE_A404"
 python3 "$TRIM" build/src/func_80020EFC.c.o .text "$SIZE_C_20EFC"
 python3 "$TRIM" build/asm/disc1/11718.s.o .text "$SIZE_11718"
+python3 "$TRIM" build/src/func_80021850.c.o .text "$SIZE_C_21850"
+python3 "$TRIM" build/asm/disc1/120D8.s.o .text "$SIZE_120D8"
 python3 "$TRIM" build/src/func_80029388.c.o .text "$SIZE_C_29388"
 python3 "$TRIM" build/src/func_800293F4.c.o .text "$SIZE_C_293F4"
 python3 "$TRIM" build/asm/disc1/19DE4.s.o .text "$SIZE_19DE4"
@@ -3510,6 +3522,8 @@ SECTIONS
         build/asm/disc1/A404.s.o(.text)
         build/src/func_80020EFC.c.o(.text)
         build/asm/disc1/11718.s.o(.text)
+        build/src/func_80021850.c.o(.text)
+        build/asm/disc1/120D8.s.o(.text)
         build/src/func_80029388.c.o(.text)
         build/src/func_800293F4.c.o(.text)
         build/asm/disc1/19DE4.s.o(.text)
@@ -4038,6 +4052,8 @@ SECTIONS
         build/asm/disc1/A404.s.o(.data)
         build/src/func_80020EFC.c.o(.data)
         build/asm/disc1/11718.s.o(.data)
+        build/src/func_80021850.c.o(.data)
+        build/asm/disc1/120D8.s.o(.data)
         build/src/func_80029388.c.o(.data)
         build/src/func_800293F4.c.o(.data)
         build/asm/disc1/19DE4.s.o(.data)
@@ -4563,6 +4579,8 @@ SECTIONS
         build/asm/disc1/A404.s.o(.rodata)
         build/src/func_80020EFC.c.o(.rodata)
         build/asm/disc1/11718.s.o(.rodata)
+        build/src/func_80021850.c.o(.rodata)
+        build/asm/disc1/120D8.s.o(.rodata)
         build/src/func_80029388.c.o(.rodata)
         build/src/func_800293F4.c.o(.rodata)
         build/asm/disc1/19DE4.s.o(.rodata)
@@ -5088,6 +5106,8 @@ SECTIONS
         build/asm/disc1/A404.s.o(.bss)
         build/src/func_80020EFC.c.o(.bss)
         build/asm/disc1/11718.s.o(.bss)
+        build/src/func_80021850.c.o(.bss)
+        build/asm/disc1/120D8.s.o(.bss)
         build/src/func_80029388.c.o(.bss)
         build/src/func_800293F4.c.o(.bss)
         build/asm/disc1/19DE4.s.o(.bss)

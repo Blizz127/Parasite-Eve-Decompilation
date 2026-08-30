@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-109, the matching-C count is **340**.
+`634dd1b` (335-leaf base). After VOLUME-110, the matching-C count is **341**.
 
 ## Method and closure
 
@@ -11,23 +11,23 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,089** unique spans. The four-way
+The current active universe contains **1,088** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                   2
+TIER 1                   1
 TIER 2                 214
 TIER 3                  99
 SKIP / suppressed      774
                        ---
-TOTAL                 1089
+TOTAL                 1088
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,033 rows:
-2 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,032 rows:
+1 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
 active. The 56 active spans below were added after the primary tables through
 campaign overlays. Adding all 56 to the suppressed class closes the pool:
-`1033 + 56 = 1089` and `718 + 56 = 774`.
+`1032 + 56 = 1088` and `718 + 56 = 774`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
@@ -44,7 +44,8 @@ suppressed residual set after two bounded phrasings; VOLUME-107 did the same
 for `func_80080C48`; VOLUME-108 did the same for `func_800762BC` and fired
 hard stop H5. A new explicit close-out authorization then let VOLUME-109
 screen byte-identical `func_8007AA34` into the `func_80080C48` residual
-family without a duplicate compile. A suppressed `func_`
+family without a duplicate compile. VOLUME-110 then removed exact
+`func_80021850` from Tier 1 after a first-phrasing 34/34 match. A suppressed `func_`
 label is not assumed to be a
 retail function.
 

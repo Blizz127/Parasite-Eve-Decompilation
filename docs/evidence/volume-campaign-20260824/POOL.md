@@ -16,20 +16,20 @@ VOLUME-106 suppresses bounded residual `func_800339A0`, VOLUME-107 suppresses
 bounded residual `func_80080C48`, and VOLUME-108 suppresses bounded residual
 `func_800762BC` before hard stop H5. A new close-out authorization lets
 VOLUME-109 suppress byte-identical `func_8007AA34` as an exhausted family
-member without a duplicate attempt.
+member without a duplicate attempt. VOLUME-110 removes exact
+`func_80021850` on its first natural aggregate-copy phrasing.
 
 The 2026-08-30 active-span reconciliation is recorded in
 `docs/evidence/volume-campaign-20260830/POOL_REFRESH.md`. The primary tables
-below contain 1,033 still-active rows. The reconciliation adds 56 post-table
+below contain 1,032 still-active rows. The reconciliation adds 56 post-table
 park/skip/padding dispositions and corrects the stale header arithmetic.
 
-Total: **1089** — TIER 1 2, TIER 2 214, TIER 3 99, SKIP/suppressed 774.
+Total: **1088** — TIER 1 1, TIER 2 214, TIER 3 99, SKIP/suppressed 774.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x12050 | `func_80021850` | 34 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x68BE4 | `func_800783E4` | 34 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 
 ## TIER 2
@@ -1338,3 +1338,10 @@ compiler attempt. Its complete 32-word retail body is byte-identical to the
 already-exhausted `func_80080C48` `CdPosToInt` residual, while its own direct
 caller and boundaries independently prove function hood. Evidence:
 `docs/evidence/volume-campaign-20260830/func-8007aa34/PARK.md`.
+
+## 2026-08-30 12-byte record-swap overlay
+
+`func_80021850` at `0x12050` is removed from Tier 1 after its first natural
+typed-aggregate phrasing matched all 34 words. Its three exact-start callers,
+canonical return, and immediate real boundaries prove function hood. Evidence:
+`docs/evidence/volume-campaign-20260830/func-80021850/REPORT.md`.
