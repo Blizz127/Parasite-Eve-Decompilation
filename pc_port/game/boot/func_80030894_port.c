@@ -1,6 +1,6 @@
 /*
- * Phase 6E-B54K-A — func_80030894: boot GPU-primitive builder,
- * prologue + bank-0 L2/L3 sprite array (translated retail prefix).
+ * Phase 6E-B54K-B1 — func_80030894: boot GPU-primitive builder,
+ * prologue + bank-0 L2/L3 and L4 packet groups (translated retail prefix).
  *
  * Full retail body:
  *   788 words / 0xC50 bytes, exe 0x80030894–0x800314E4 (exclusive),
@@ -10,15 +10,18 @@
  *   (backward liveness fixpoint in the B54J audit; $v0 at exit is a
  *   stale scratch discarded by the caller).
  *
- * Implemented prefix (this rung):
- *   0x80030894..0x80030AC4 (140 words) — prologue, the bank record
+ * Implemented prefix:
+ *   0x80030894..0x80030CA0 (259 words) — prologue, the bank record
  *   init at 0x800BE9F0, and the L2(j=0..9) × L3(k=0..3) sprite-array
- *   build at 0x800B01C0.  The first excluded instruction is
+ *   build at 0x800B01C0, followed by the complete L4 packet group
+ *   (119 words / 0x1DC bytes; SHA-256
+ *   592dc73fa08202d91812b463aa71ef93cafd3af7713a0724d61e0815b17bc3ec).
+ *   The first excluded instruction is
  *
- *       move  a0, zero                  # 0x80030AC4
+ *       lbu   v1, 24(sp)                # 0x80030CA0
  *
- *   (group L4 argument setup; B54K-B territory).  The named strict
- *   boundary is func_80030894_L2L3_cut.
+ *   (group L5 setup; later B54K-B territory).  The named strict boundary
+ *   is func_80030894_L4_cut.
  *
  * Word decode of the implemented window (verified against the
  * SHA-1-exact retail executable 452fb033f2eaa4b18aa20a5bca60b8125af3a37b):
@@ -72,7 +75,9 @@
  *
  * All callees are native since B54I/GPU1 (GetTPage, GetClut,
  * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC); the L2L3
- * cut is the first untranslated boundary inside this body.
+ * group is followed by B54K-B1's native L4 calls (wrap_tile, SetTile,
+ * SetPolyG4, and wrap_sprt).  The L4 cut is the first untranslated
+ * boundary inside this body.
  *
  * Classification: 1 — translated retail prefix.
  */
@@ -83,6 +88,11 @@
 #define GA_8009CD90      0x8009CD90u
 #define GA_RECORD_TABLE  0x800BE9F0u
 #define GA_SPRITE_BASE   0x800B01C0u
+#define GA_L4_TILE_HEAD  0x8009E068u
+#define GA_L4_TILE       0x8009E098u
+#define GA_L4_POLYG4     0x800B00E8u
+#define GA_L4_SPRITE     0x800B6920u
+#define GA_L4_ARRAY      0x8009E0F0u
 
 void func_80030894(void)
 {
@@ -153,8 +163,69 @@ void func_80030894(void)
         }
     }
 
-    /* B54K-A cut: stop before group L4 at retail 0x80030AC4. */
+    /* B54K-B1, retail 0x80030AC4..0x80030C9C: complete L4 group. */
+    {
+        uint32_t tile_mode =
+            func_80077A64(0u, 0u, 0u, 0u) & 0xFFFFu;
+        pe_addr_t tile_head = GA_L4_TILE_HEAD + (uint32_t)bank * 24u;
+        pe_addr_t tile = tile_head + 8u;
+        pe_addr_t standalone_tile = GA_L4_TILE + (uint32_t)bank * 16u;
+        pe_addr_t poly = GA_L4_POLYG4 + (uint32_t)bank * 36u;
+        pe_addr_t sprite_head = GA_L4_SPRITE + (uint32_t)bank * 28u;
+        pe_addr_t sprite = sprite_head + 8u;
+        uint32_t j;
+
+        func_80037140(tile_head, tile_mode);
+        PE_StoreU8(tile + 4u, 0x30u);
+        PE_StoreU8(tile + 5u, 0x30u);
+        PE_StoreU8(tile + 6u, 0x30u);
+        func_80077B04(tile, 1u);
+
+        func_80077C44(standalone_tile);
+        PE_StoreU8(standalone_tile + 4u, 0x1Du);
+        PE_StoreU8(standalone_tile + 5u, 0x3Eu);
+        PE_StoreU8(standalone_tile + 6u, 0x32u);
+        PE_StoreU16(standalone_tile + 0x0Cu, 0x38u);
+        PE_StoreU16(standalone_tile + 0x0Eu, 3u);
+
+        func_80077BC4(poly);
+        func_800370DC(sprite_head, tpage_sprt);
+        PE_StoreU8(sprite + 0x0Cu, 0xC8u);
+        PE_StoreU8(sprite + 0x0Du, 0xE0u);
+        PE_StoreU16(sprite_head + 0x16u, clut_id);
+        PE_StoreU16(sprite + 0x10u, 4u);
+        PE_StoreU16(sprite + 0x12u, 8u);
+
+        PE_StoreU8(poly + 0x06u, 0x82u);
+        PE_StoreU8(poly + 0x0Du, 0xFFu);
+        PE_StoreU8(poly + 0x16u, 0x82u);
+        PE_StoreU8(poly + 0x04u, 0u);
+        PE_StoreU8(poly + 0x05u, 0x46u);
+        PE_StoreU8(poly + 0x0Cu, 0x9Fu);
+        PE_StoreU8(poly + 0x0Eu, 0xF9u);
+        PE_StoreU8(poly + 0x14u, 0u);
+        PE_StoreU8(poly + 0x15u, 0x46u);
+        PE_StoreU8(poly + 0x1Cu, 0x9Fu);
+        PE_StoreU8(poly + 0x1Du, 0xFFu);
+        PE_StoreU8(poly + 0x1Eu, 0xF9u);
+
+        PE_StoreU8(sprite + 0x04u, 0x9Fu);
+        PE_StoreU8(sprite + 0x05u, 0xFFu);
+        PE_StoreU8(sprite + 0x06u, 0xF9u);
+
+        for (j = 0u; j < 4u; j++) {
+            pe_addr_t head = GA_L4_ARRAY + (uint32_t)bank * 112u + j * 28u;
+            pe_addr_t sprt = head + 8u;
+
+            func_800370DC(head, tpage_sprt);
+            PE_StoreU16(head + 0x16u, clut_id);
+            PE_StoreU16(sprt + 0x10u, 6u);
+            PE_StoreU16(sprt + 0x12u, 10u);
+        }
+    }
+
+    /* B54K-B1 cut: stop before group L5 at retail 0x80030CA0. */
     (void)Bootstrap_ReturnInt(
-        "func_80030894_L2L3_cut", "func_80030894", 0);
+        "func_80030894_L4_cut", "func_80030894", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
 }

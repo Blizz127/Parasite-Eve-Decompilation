@@ -1,4 +1,4 @@
-# Shim Inventory — VIS1
+# Shim Inventory — Phase 6E-B54K-B1
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -60,6 +60,14 @@ word to RGB888 or write full raw/PPM artifacts, using only
 `PE_GPU_ReadVRAM`. It exposes no guest-memory write, GP0/GP1 write, DMA,
 callback, scheduler, or presentation operation. The diagnostic therefore
 cannot create the visible pixels it reports and cannot advance execution.
+
+`game/boot/func_80030894_port.c` is a translated retail prefix through
+exclusive address `0x80030CA0` (259 of 788 words). B54K-A covers the
+prologue, bank record, and L2/L3 40-sprite array. B54K-B1 adds the complete
+119-word L4 packet group: compound/standalone tiles, PolyG4, standalone
+sprite, and four-entry sprite array. Its seven calls use only the translated
+B54I/GPU1 helper set. The first excluded instruction is the L5 bank load;
+strict execution names that boundary `func_80030894_L4_cut`.
 
 `platform/pe_irq.[ch]` is the B53I-B1 single native authority for 16-bit
 I_STAT (`0x1F801070`) and I_MASK (`0x1F801074`). I_STAT writes use W0C

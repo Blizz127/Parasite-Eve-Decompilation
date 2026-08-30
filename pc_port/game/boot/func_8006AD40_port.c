@@ -24,11 +24,11 @@
  * Classification: 1 — translated retail prefix. The second poll is
  * consumed live; poll/s2 are not assigned. Host D_8009B6B4 collapse
  * at the D_800930EE issue is B54E-HOST-POLL-COLLAPSE, not retail
- * timing. After this cut the 6AD40 sequence is PARKED: the next
- * already-translated issue (D_800930F0) sits in front of
- * func_80030894 (788 words, 7 unresolved callees, no translated
- * prefix; first jal is unresolved GetTPage). PE-GPU1 ported the
- * five SET leaves; they do not create a 30894 prefix.
+ * timing. The suffix now issues D_800930F0, walks the prior image, and
+ * enters func_80030894. B54K-A/B1 translate that 788-word builder through
+ * exclusive address 0x80030CA0 (259 words), with every reached GPU helper
+ * native. The first unresolved inner boundary is the L5 setup named
+ * func_80030894_L4_cut.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -244,8 +244,8 @@ int func_8006AD40(void)
         /* 0x8006AF9C: s0==1 branches to 0x8006B044. */
     }
 
-    /* B54K-A: issue D_800930F0 into dest+0x14C. Do not poll — the
-     * busy bits stay armed across the 30894 L2L3 cut. 718D0 walks
+    /* B54K-A/B1: issue D_800930F0 into dest+0x14C. Do not poll — the
+     * busy bits stay armed across the current 30894 L4 cut. 718D0 walks
      * the prior 930EE dest at +0x180 (zero TIM on the prefix path). */
     {
         uint32_t start = PE_LoadU16(GA_D_800930F0);

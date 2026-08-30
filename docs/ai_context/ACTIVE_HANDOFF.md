@@ -47,17 +47,22 @@ leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
 
-Current native PC-port status (VIS1, 2026-08-30): a real Disc 1 run now emits
-a deterministic, visibly non-black read-only snapshot of the single modeled
-PSX VRAM authority via `--vram-raw` and `--vram-screenshot`. The independent
-oracle checks all 524,288 RGB555 words; 2,063 are nonzero within
-`256,64..735,456`. This is diagnostic VRAM, not a rendered 320x240 frame: the
-legacy host framebuffer remains black and the strict production frontier is
-still `func_80030894_L2L3_cut` (then
-`func_8006AD40_post30894_cut`). Four focused tests and full normal plus
-ASan/UBSan suites pass 932/932. Evidence:
-`docs/evidence/pe-vis1-vram-visible-state/REPORT.md`. BTL151 remains a
-human-operated local PCSX-Redux capture; do not retry it headlessly or claim
+Current native PC-port status (B54K-B1, 2026-08-30): `func_80030894` now
+translates retail through the complete bank-0 L4 packet group at
+`0x80030AC4..0x80030CA0` (119 new words). The strict production frontier is
+`func_80030894_L4_cut`, immediately before the L5 bank load, then normal mode
+continues to `func_8006AD40_post30894_cut`. The independent oracle verifies
+the full window, seven already-native calls, sole four-entry back-edge, and
+121-byte bank-0 write map. Full normal and ASan/UBSan suites pass 933/933.
+Evidence: `docs/evidence/pe-b54kb1-30894-l4/REPORT.md`.
+
+VIS1 remains available: a real Disc 1 run emits a deterministic, visibly
+non-black read-only snapshot of the single PSX VRAM authority via
+`--vram-raw` and `--vram-screenshot` (2,063 nonzero RGB555 words within
+`256,64..735,456`). The B54K-B1 artifact is byte-identical to VIS1 because L4
+only builds guest packet state. This is diagnostic VRAM, not a rendered
+320x240 frame; the legacy host framebuffer remains black. BTL151 remains a
+human-operated local PCSX-Redux capture—do not retry it headlessly or claim
 capture results without the GUI artifact.
 
 **Function-hood screen rule (current):** a callable tiny span must end in a
