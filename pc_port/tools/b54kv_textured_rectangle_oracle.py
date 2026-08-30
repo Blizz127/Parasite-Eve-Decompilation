@@ -167,7 +167,7 @@ def main() -> None:
             "func_80073A44(0)" in overlay_source and
             "func_80074A44(1)" in overlay_source and
             "func_80075424(environment)" in overlay_source and
-            "func_80190660_loop_reentry_cut" in overlay_source,
+            "while (frame < 480u)" in overlay_source,
             "overlay continuation source absent")
     require("m0360i" not in gpu_source + overlay_source and
             "0xA8066048" not in gpu_source + overlay_source,
@@ -186,12 +186,12 @@ def main() -> None:
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
     require("first unresolved BOOTSTRAP_RET provider: "
-            "func_80190660_loop_reentry_cut" in strict and
-            "called from: func_80190660" in strict,
+            "func_801909B4_80190D7C_cut" in strict and
+            "called from: func_801909B4" in strict,
             "strict loop-reentry frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
-    require("[STUB:BOOTSTRAP_RET] func_80190660_loop_reentry_cut" in normal and
-            "[FB] vsyncs=7 drawsyncs=7 presents=4 mask=1" in normal and
+    require("[STUB:BOOTSTRAP_RET] func_801909B4_80190D7C_cut" in normal and
+            "[FB] vsyncs=486 drawsyncs=1444 presents=483 mask=0" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 "
             "captured=26 serviced=26" in normal,
             "normal real-disc continuation effects")

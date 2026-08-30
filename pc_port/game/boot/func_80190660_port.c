@@ -1,11 +1,8 @@
 /*
- * Phase 6E-B54K-W — func_80190660 prefix through PutDrawEnv, PutDispEnv,
- * and the first taken loop back-edge.
+ * Phase 6E-B54K-X — complete func_80190660 fade/display initializer.
  *
  * Retail function: [0x80190660,0x801909B4), 0x354 / 213 words.
- * Translated prefix: [0x80190660,0x80190960), 0x300 / 192 words.
- * The boundary is the loop re-entry at 0x801907C8 after the taken branch at
- * 0x80190958 and its parity-computing delay slot.
+ * Translated body: [0x80190660,0x801909B4), 0x354 / 213 words.
  *
  * The two caller-stack packet banks remain native transients. No native
  * pointer is retained as guest authority.
@@ -130,8 +127,8 @@ int func_80190660(void)
     PE_StoreU8(PE_LoadU32(GA_ENVIRONMENT_0) + 0x6Du, 0u);
     func_80074D28(1);
 
-    /* First iteration of the 480-frame loop.  The complete intensity shape
-     * is retained even though this prefix reaches DrawPrim at frame zero. */
+    /* Complete 480-frame loop at 0x801907C4..0x8019095C. */
+    while (frame < 480u) {
     parity = frame & 1u;
     next_toggle = PE_LoadU32(GA_ENVIRONMENT_TOGGLE) == 0u ? 1u : 0u;
     environment = PE_LoadU32(GA_ENVIRONMENT_0 + next_toggle * 4u);
@@ -205,14 +202,12 @@ int func_80190660(void)
         return -1;
     func_800755F0((void *)(uintptr_t)(environment + 0x5Cu));
 
-    /* 0x80190954..0x8019095C: frame 1 takes the retail loop branch and
-     * computes parity in its delay slot.  Keep the back-edge explicit until
-     * the repeated 480-frame body is translated as a unit. */
-    parity = frame & 1u;
-    (void)Bootstrap_ReturnInt4Indirect(
-        "func_80190660_loop_reentry_cut", "func_80190660", -1,
-        0x801907C8u, frame, parity, environment,
-        PE_LoadU32(GA_ENVIRONMENT_TOGGLE), NULL, 0u);
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return -1;
+    }
+
+    /* 0x80190960..0x801909B0: hide display, re-enable both environment
+     * display flags, and return normally. */
+    func_80074D28(0);
+    PE_StoreU8(PE_LoadU32(GA_ENVIRONMENT_0 + 4u) + 0x6Du, 1u);
+    PE_StoreU8(PE_LoadU32(GA_ENVIRONMENT_0) + 0x6Du, 1u);
+    return 0;
 }

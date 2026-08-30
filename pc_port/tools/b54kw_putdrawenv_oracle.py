@@ -145,7 +145,7 @@ def main() -> None:
     require("func_80075424(pe_addr_t env)" in sources and
             "IsGp0EnvironmentWord" in sources and
             "ApplyTextureWindow" in sources and
-            "func_80190660_loop_reentry_cut" in sources,
+            "while (frame < 480u)" in sources,
             "generic provider or exact continuation source absent")
     require("m0360i" not in sources and "0xA8066048" not in sources,
             "forbidden scheduler/scene special case")
@@ -158,21 +158,21 @@ def main() -> None:
     test_env = os.environ.copy()
     test_env["PE_TEST_FILTER"] = "B54KW"
     focused = run([str(tests)], 0, test_env)
-    require(re.search(r"Results: 979 run, 2 passed, 0 failed, 977 skipped",
+    require(re.search(r"Results: 981 run, 2 passed, 0 failed, 979 skipped",
                       focused) is not None,
             "two focused B54K-W contracts")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("func_80190660_loop_reentry_cut" in strict and
-            "called from: func_80190660" in strict,
-            "strict loop-reentry frontier")
+    require("func_801909B4_80190D7C_cut" in strict and
+            "called from: func_801909B4" in strict,
+            "strict post-initializer frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
-    require("[STUB:BOOTSTRAP_RET] func_80190660_loop_reentry_cut" in normal and
-            "[FB] vsyncs=7 drawsyncs=7 presents=4 mask=1" in normal and
+    require("[STUB:BOOTSTRAP_RET] func_801909B4_80190D7C_cut" in normal and
+            "[FB] vsyncs=486 drawsyncs=1444 presents=483 mask=0" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 "
             "captured=26 serviced=26" in normal,
             "normal production continuation effects")
-    print("  OK runtime: 2 focused contracts; exact loop-reentry frontier")
+    print("  OK runtime: 2 focused contracts; later post-initializer frontier")
     print("\nB54K-W PutDrawEnv oracle: PASS.")
 
 

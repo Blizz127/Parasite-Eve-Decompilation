@@ -112,12 +112,12 @@ int func_801909B4(void)
     if (PE_LoadU32(0x8009D1BCu) == 0u) {
         PE_StoreU32(0x8009D1BCu, 1u);
         (void)func_80190660();
-    } else {
-        Bootstrap_ReturnVoid4(
-            "func_801909B4_80190D7C_cut", "func_801909B4",
-            saved_bit, environment0, environment1, 0u);
+        if (PE_Port_ShouldStop())
+            return -1;
     }
-    if (!PE_Port_ShouldStop())
-        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    Bootstrap_ReturnVoid4(
+        "func_801909B4_80190D7C_cut", "func_801909B4",
+        saved_bit, environment0, environment1, 0u);
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return -1; /* retail's retained s2 value */
 }

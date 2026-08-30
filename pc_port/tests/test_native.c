@@ -512,23 +512,15 @@ static void B54KQ_SeedOverlayPrefix(uint8_t bias)
 static int B54KR_OverlayBoundaryIsExact(const char *symbol)
 {
     BootstrapArgCall4 *call;
+    int index;
 
-    if (strcmp(symbol, "func_80190660_loop_reentry_cut") == 0) {
-        if (g_bootstrap_arg4_call_count != 3)
-            return 0;
-        call = &g_bootstrap_arg4_calls[2];
-        return strcmp(call->symbol, symbol) == 0 &&
-               strcmp(call->caller, "func_80190660") == 0 &&
-               call->target == 0x801907C8u &&
-               call->arg0 == 1u && call->arg1 == 1u &&
-               call->arg2 == PE_LoadU32(0x801D11C4u) &&
-               call->arg3 == PE_LoadU32(0x801D11C8u) &&
-               call->payload_size == 0u;
-    }
-
-    if (g_bootstrap_arg4_call_count != 1)
+    if (g_bootstrap_arg4_call_count == 1)
+        index = 0;
+    else if (g_bootstrap_arg4_call_count == 3)
+        index = 2;
+    else
         return 0;
-    call = &g_bootstrap_arg4_calls[0];
+    call = &g_bootstrap_arg4_calls[index];
     return strcmp(call->symbol, symbol) == 0 &&
            strcmp(call->caller, "func_801909B4") == 0 &&
            call->target == 0u;
@@ -857,11 +849,11 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
            gpu.move_size == 0x010000A0u &&
            gpu.draw_mode == 0xE100060Au &&
            gpu.texture_window == 0xE2000000u &&
-           gpu.drawing_area_top_left == 0xE303C000u &&
-           gpu.drawing_area_bottom_right == 0xE4077D3Fu &&
-           gpu.drawing_offset == 0xE5078000u &&
+           gpu.drawing_area_top_left == 0xE3000000u &&
+           gpu.drawing_area_bottom_right == 0xE403BD3Fu &&
+           gpu.drawing_offset == 0xE5000000u &&
            gpu.mask_setting == 0xE6000000u &&
-           gpu.rectangle_count == 1u &&
+           gpu.rectangle_count == 480u &&
            gpu.rectangle_command == 0x64000000u &&
            gpu.rectangle_position == 0x00580020u &&
            gpu.rectangle_uv_clut == 0x78000000u &&
@@ -881,19 +873,19 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
            PE_LoadU16(0x8013CDE6u) == 0u &&
            PE_LoadU16(0x80120D6Au) == 240u &&
            PE_LoadU16(0x8013CDEAu) == 240u &&
-           PE_LoadU8(0x80120D6Du) == 0u &&
-           PE_LoadU8(0x8013CDEDu) == 0u &&
+           PE_LoadU8(0x80120D6Du) == 1u &&
+           PE_LoadU8(0x8013CDEDu) == 1u &&
            PE_LoadU16(0x80120D74u) == 0u &&
            PE_LoadU16(0x8013CDF4u) == 0u &&
            PE_LoadU16(0x80120D7Cu) == 0u &&
            PE_LoadU16(0x8013CDFCu) == 0u,
            "draw/disp environment setup fields differ");
     ASSERT(PE_LoadU32(0x8009D1BCu) == 1u &&
-           PE_LoadU32(0x801D11C8u) == 1u &&
-           PE_LoadU32(0x801D11C4u) == 0x8013CD80u &&
+           PE_LoadU32(0x801D11C8u) == 0u &&
+           PE_LoadU32(0x801D11C4u) == 0x80120D00u &&
            B54KR_OverlayBoundaryIsExact(
-               "func_80190660_loop_reentry_cut"),
-           "overlay initializer state or loop-reentry boundary differs");
+               "func_801909B4_80190D7C_cut"),
+           "overlay initializer state or post-call boundary differs");
     ASSERT(B54KR_PixelIs(0u, 480u, 0x5000u) &&
            B54KR_PixelIs(15u, 480u, 0x500Fu) &&
            B54KR_PixelIs(512u, 256u, 0x6000u) &&
@@ -903,7 +895,8 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "prefix did not stop at overlay-local initializer");
     HostFB_GetState(&vsync, &drawsync, &presented, &mask);
-    ASSERT(mask == 1 && vsync == 5 && drawsync == 6 && presented == 1,
+    ASSERT(mask == 0 && vsync == 484 && drawsync == 1443 &&
+           presented == 480,
            "display synchronization call counts differ");
 
     for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
@@ -932,7 +925,7 @@ static void test_B54KR_801909B4_dirty_repeat_and_alternate_cut(void)
            "first repeat source seed failed");
     ASSERT(func_801909B4() == -1, "first prefix return differs");
     ASSERT(B54KR_OverlayBoundaryIsExact(
-               "func_80190660_loop_reentry_cut") &&
+               "func_801909B4_80190D7C_cut") &&
            PE_LoadU32(0x8009D1BCu) == 1u,
            "first repeat did not take one-time initializer path");
 
@@ -1112,15 +1105,13 @@ static void test_B54KT_80190660_two_images_packets_and_boundary(void)
     PE_StoreU8(0x8011016Du, 0x5Au);
     PE_Port_DmaIrqCheckpointTraceReset();
 
-    ASSERT(func_80190660() == -1 &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "func_80190660 did not stop at first DrawPrim");
+    ASSERT(func_80190660() == 0 && !PE_Port_ShouldStop(),
+           "func_80190660 did not complete its 480-frame loop");
     ASSERT(B54KT_LoadImageCallIsExact(
                0, 0x801CED30u, 0x01E00000u, 0x00010010u) &&
            B54KT_LoadImageCallIsExact(
                1, 0x801CED5Cu, 0x01000200u, 0x00400040u) &&
-           B54KR_OverlayBoundaryIsExact(
-               "func_80190660_loop_reentry_cut"),
+           g_bootstrap_arg4_call_count == 2,
            "image dispatches or initialized DrawPrim command differ");
     ASSERT(B54KR_PixelIs(0u, 480u, 0x5000u) &&
            B54KR_PixelIs(15u, 480u, 0x500Fu) &&
@@ -1133,13 +1124,13 @@ static void test_B54KT_80190660_two_images_packets_and_boundary(void)
            trace.service_calls == 1u && trace.last_captured_token != 0u &&
            trace.last_serviced_token == trace.last_captured_token,
            "large image was not completed by one DrawSync checkpoint");
-    ASSERT(PE_LoadU8(0x8011006Du) == 0u &&
-           PE_LoadU8(0x8011016Du) == 0u &&
-           PE_LoadU32(0x801D11C8u) == 1u &&
-           PE_LoadU32(0x801D11C4u) == 0x80110100u,
+    ASSERT(PE_LoadU8(0x8011006Du) == 1u &&
+           PE_LoadU8(0x8011016Du) == 1u &&
+           PE_LoadU32(0x801D11C8u) == 0u &&
+           PE_LoadU32(0x801D11C4u) == 0x80110000u,
            "environment disable/toggle/current state differs");
     HostFB_GetState(&vsync, &drawsync, &presented, &mask);
-    ASSERT(vsync == 1 && drawsync == 4 && presented == 1 && mask == 1,
+    ASSERT(vsync == 480 && drawsync == 1441 && presented == 480 && mask == 0,
            "func_80190660 host synchronization telemetry differs");
     PASS();
 }
@@ -1155,11 +1146,11 @@ static void test_B54KT_80190660_nonzero_toggle_selects_environment0(void)
     PE_StoreU32(0x801D11C0u, 0x80110300u);
     PE_StoreU32(0x801D11C8u, 7u);
 
-    ASSERT(func_80190660() == -1 &&
-           PE_LoadU32(0x801D11C8u) == 0u &&
-           PE_LoadU32(0x801D11C4u) == 0x80110200u &&
-           B54KR_OverlayBoundaryIsExact(
-               "func_80190660_loop_reentry_cut"),
+    ASSERT(func_80190660() == 0 && !PE_Port_ShouldStop() &&
+           PE_LoadU32(0x801D11C8u) == 1u &&
+           PE_LoadU32(0x801D11C4u) == 0x80110300u &&
+           PE_LoadU8(0x8011026Du) == 1u &&
+           PE_LoadU8(0x8011036Du) == 1u,
            "nonzero toggle did not use retail sltiu boolean/select env0");
     PASS();
 }
@@ -1401,6 +1392,77 @@ static void test_B54KW_environment_clip_offset_and_mask(void)
            state.mask_setting == 0xE6000002u &&
            state.mask_setting_count == 2u,
            "environment-state completion telemetry differs");
+    PASS();
+}
+
+static void test_B54KX_overlay_loop_cardinality_and_endpoint(void)
+{
+    PeGpuState state;
+    int vsync, drawsync, presented, mask;
+    TEST("B54KX_overlay_loop_cardinality_and_endpoint");
+    ResetTestState();
+    HostFB_Init();
+    B54KR_SeedGpuStatic();
+    B54KT_SeedOverlayData();
+    PE_StoreU32(0x801D11BCu, 0x80110000u);
+    PE_StoreU32(0x801D11C0u, 0x80110100u);
+    PE_StoreU32(0x801D11C8u, 0u);
+    (void)func_80074924(0x80110000u, 0, 0, 320, 240);
+    (void)func_80074924(0x80110100u, 0, 240, 320, 240);
+
+    ASSERT(func_80190660() == 0 && !PE_Port_ShouldStop(),
+           "complete overlay loop did not return normally");
+    PE_GPU_GetState(&state);
+    ASSERT(state.rectangle_count == 480u &&
+           state.draw_mode_count == 960u &&
+           state.texture_window_count == 480u &&
+           state.drawing_area_top_left_count == 480u &&
+           state.drawing_area_bottom_right_count == 480u &&
+           state.drawing_offset_count == 480u &&
+           state.mask_setting_count == 480u &&
+           state.rectangle_command == 0x64000000u &&
+           state.drawing_area_top_left == 0xE3000000u &&
+           state.drawing_area_bottom_right == 0xE403BD3Fu,
+           "480-frame GPU command cardinality or final env0 state differs");
+    ASSERT(PE_LoadU32(0x801D11C8u) == 0u &&
+           PE_LoadU32(0x801D11C4u) == 0x80110000u &&
+           PE_LoadU8(0x8011006Du) == 1u &&
+           PE_LoadU8(0x8011016Du) == 1u &&
+           memcmp(PE_TranslateConst(0x8009575Cu, 0x5Cu),
+                  PE_TranslateConst(0x80110000u, 0x5Cu), 0x5Cu) == 0,
+           "even loop endpoint, display flags, or final cache differs");
+    HostFB_GetState(&vsync, &drawsync, &presented, &mask);
+    ASSERT(vsync == 480 && drawsync == 1441 && presented == 480 && mask == 0,
+           "complete-loop host call cardinality differs");
+    PASS();
+}
+
+static void test_B54KX_nonzero_phase_remains_state_driven(void)
+{
+    PeGpuState state;
+    TEST("B54KX_nonzero_phase_remains_state_driven");
+    ResetTestState();
+    HostFB_Init();
+    B54KR_SeedGpuStatic();
+    B54KT_SeedOverlayData();
+    PE_StoreU32(0x801D11BCu, 0x80110200u);
+    PE_StoreU32(0x801D11C0u, 0x80110300u);
+    PE_StoreU32(0x801D11C8u, 7u);
+    (void)func_80074924(0x80110200u, 0, 0, 320, 240);
+    (void)func_80074924(0x80110300u, 0, 240, 320, 240);
+
+    ASSERT(func_80190660() == 0 && !PE_Port_ShouldStop() &&
+           PE_LoadU32(0x801D11C8u) == 1u &&
+           PE_LoadU32(0x801D11C4u) == 0x80110300u,
+           "nonzero initial phase was not retained across 480 toggles");
+    PE_GPU_GetState(&state);
+    ASSERT(state.rectangle_count == 480u &&
+           state.drawing_area_top_left == 0xE303C000u &&
+           state.drawing_area_bottom_right == 0xE4077D3Fu &&
+           state.drawing_offset == 0xE5078000u &&
+           memcmp(PE_TranslateConst(0x8009575Cu, 0x5Cu),
+                  PE_TranslateConst(0x80110300u, 0x5Cu), 0x5Cu) == 0,
+           "phase-shifted final env1 GPU/cache state differs");
     PASS();
 }
 
@@ -32428,6 +32490,8 @@ int main(void)
     test_B54KV_gpu_textured_rectangle_wrap_clip_and_fence();
     test_B54KW_putdrawenv_packet_dispatch_and_cache();
     test_B54KW_environment_clip_offset_and_mask();
+    test_B54KX_overlay_loop_cardinality_and_endpoint();
+    test_B54KX_nonzero_phase_remains_state_driven();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();

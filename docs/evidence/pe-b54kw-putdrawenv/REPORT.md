@@ -2,6 +2,10 @@
 
 Status: **VERIFIED AND INTEGRATED ON THE NATIVE GRIND LANE**.
 
+> **SUPERSEDED EXECUTION FRONTIER:** B54K-X completes all 213 words of
+> `func_80190660` and advances to caller PC `0x80190D7C`. This report remains
+> authoritative for PutDrawEnv and GP0 E2h..E6h.
+
 This rung translates the canonical state-bearing path of PsyQ PutDrawEnv
 `func_80075424`, extends the terminal one-node GPU worker for drawing-
 environment packets, and advances overlay-local `func_80190660` through

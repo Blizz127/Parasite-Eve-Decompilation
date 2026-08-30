@@ -149,11 +149,11 @@ def main() -> None:
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
     require("first unresolved BOOTSTRAP_RET provider: "
-            "func_80190660_loop_reentry_cut" in strict and
-            "called from: func_80190660" in strict,
+            "func_801909B4_80190D7C_cut" in strict and
+            "called from: func_801909B4" in strict,
             "strict later loop-reentry frontier")
     normal = run(common, 0)
-    require("[FB] vsyncs=7 drawsyncs=7 presents=4 mask=1" in normal and
+    require("[FB] vsyncs=486 drawsyncs=1444 presents=483 mask=0" in normal and
             "[HOST] stop_reason=unresolved-boundary" in normal,
             "normal first-DrawPrim effects")
     print("  OK runtime: 2 focused contracts; later loop frontier observed")
