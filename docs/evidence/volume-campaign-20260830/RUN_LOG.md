@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,085 current active spans — Tier 1 0, Tier 2 211, Tier 3 99,
+Pool: 1,084 current active spans — Tier 1 0, Tier 2 210, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 9.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 10.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -13,7 +13,7 @@ Tier-1 rows after the historical H5. Current close-out streak: zero bounded
 parks, one match, two proven-family suppressions. Tier 1 is closed.
 
 Tier-2 probe: separately authorized after Tier-1 closure. Current probe
-streak: zero bounded parks, three matches.
+streak: zero bounded parks, four matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -36,3 +36,4 @@ streak: zero bounded parks, three matches.
 | 17 / Tier-2 probe 1 | `func_800C6ED8` @ `0xB76D8` | canonical return; six direct callers; immediate real boundaries; sole `sh` writer plus one unsigned-halfword reader | MATCHED leaf 342 first phrasing; natural typed setter reproduces the four-word pre-return `sh` shape; packed span/full SHA exact | 4 | 1 | VOLUME-112 leaf commit |
 | 18 / Tier-2 probe 2 | `func_800C6EC0` @ `0xB76C0` | canonical return; seven direct callers; immediate real boundaries; sole `sh` writer plus one `lhu` reader for each of two globals | MATCHED leaf 343 first phrasing; ordered typed halfword stores reproduce all six words; packed span/full SHA exact | 6 | 1 | VOLUME-113 leaf commit |
 | 19 / Tier-2 probe 3 | `func_80050020` @ `0x40820` | canonical return; exact-start callback assignment at `0x80048420`; immediate real boundaries; Stage-0 word-state array census | MATCHED leaf 344 first phrasing; natural indexed getter plus established three-word symbolic-load gate reproduces all six words; packed span/full SHA exact | 6 | 1 | VOLUME-114 leaf commit |
+| 20 / Tier-2 probe 4 | `func_8007C544` @ `0x6CD44` | canonical return with live store delay; one direct caller; real neighbors plus explicit alignment; three Stage-0 state words | MATCHED leaf 345 first phrasing; ordered three-global setter plus established store-delay gate reproduces all seven words; packed span/full SHA exact | 7 | 1 | VOLUME-115 leaf commit |

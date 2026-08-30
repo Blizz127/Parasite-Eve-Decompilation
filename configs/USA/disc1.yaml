@@ -754,7 +754,11 @@ segments:
       - [0x6ACD0, asm]
       # Phase 5EF: write-only opaque 32-bit setter.
       - [0x6C930, c, func_8007C130]
+      # Tier-2 probe: three-word state setter func_8007C544.
+      # Former 0x6C93C asm span: prefix 0x408, C 0x1C, resume 0x1944.
       - [0x6C93C, asm]
+      - [0x6CD44, c, func_8007C544]
+      - [0x6CD60, asm]
       # Phase 5EF: int setter typed by accepted getter 8007DEB0.
       - [0x6E6A4, c, func_8007DEA4]
       - [0x6E6B0, c, func_8007DEB0]

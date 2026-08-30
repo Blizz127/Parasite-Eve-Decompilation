@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 344 exact matching-C
+Current matching-lane status: 345 exact matching-C
 leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -677,7 +677,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 344 exact leaves plus 24
+  matching C; current disposition is 345 exact leaves plus 24
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1022,6 +1022,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-112-C6ED8 | 342 | The separately authorized Tier-2 probe opens with `func_800C6ED8` @ `0xB76D8`, a hood-proven four-word unsigned-halfword state setter with six direct callers, canonical return, and immediate real boundaries. Stage-0 finds this sole `sh` writer and one `lhu` reader of `D_800F33E4`. Natural era `-O2 -G0` C matches 4/4 on phrasing 1. Carve `0x4370 + 0x0010 + 0x0EDC = 0x525C`; packed span/full SHA exact, verify green at 342. Tier 2 falls 214→213. Evidence: `docs/evidence/volume-campaign-20260830/func-800c6ed8/REPORT.md`. |
 | VOLUME-113-C6EC0 | 343 | `func_800C6EC0` @ `0xB76C0` is the hood-proven six-word dual-halfword setter immediately before C6ED8, with seven direct callers, canonical return, and real boundaries. It is the sole `sh` writer of `D_800F346C/D_800F3414`; one reader loads both with `lhu`. Ordered natural era `-O2 -G0` C matches 6/6 on phrasing 1. Carve `0x4358 + 0x0018 = 0x4370`; packed span/full SHA exact, verify green at 343. Tier 2 falls 213→212. Evidence: `docs/evidence/volume-campaign-20260830/func-800c6ec0/REPORT.md`. |
 | VOLUME-114-50020 | 344 | `func_80050020` @ `0x40820` is hood-proven by its canonical return, immediate real boundaries, and an exact-start address construction stored into callback slot `+0x8C` at `0x80048420–0x8004842C`. Natural indexed word getter C matches 6/6 on phrasing 1 under era `-O2 -G0` with the established default-off three-word symbolic-load gate, selecting retail's `$at` address temporary without changing maspsx. Carve `0x07E8 + 0x0018 + 0x0CE0 = 0x14E0`; packed span/full SHA exact, verify green at 344. Tier 2 falls 212→211. Evidence: `docs/evidence/volume-campaign-20260830/func-80050020/REPORT.md`. |
+| VOLUME-115-7C544 | 345 | `func_8007C544` @ `0x6CD44` is hood-proven by one direct caller, a canonical return with live store delay, and real neighboring functions separated by explicit alignment nops. Natural ordered stores to three Stage-0-censused state words match 7/7 on phrasing 1 under era `-O2 -G0` with the established default-off store-delay gate. Carve `0x0408 + 0x001C + 0x1944 = 0x1D68`; packed span/full SHA exact, verify green at 345. Tier 2 falls 211→210. Evidence: `docs/evidence/volume-campaign-20260830/func-8007c544/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

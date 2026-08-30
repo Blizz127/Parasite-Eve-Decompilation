@@ -12,7 +12,7 @@ Initial target:
 
 ## Project status
 
-**Matching decomp:** **344 exact matching C leaves**, plus **24
+**Matching decomp:** **345 exact matching C leaves**, plus **24
 `ACCEPTED-RESIDUAL` leaves** whose semantic C and compiler-decision residuals
 are documented but are not counted as matching C. Authoritative count:
 `grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`.
