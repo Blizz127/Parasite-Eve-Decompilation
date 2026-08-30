@@ -1,20 +1,19 @@
-# Parasite Eve Native PC Port — Phase 6E-B54K-I
+# Parasite Eve Native PC Port — Phase 6E-B54K-J
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B54K-I completes all 788 retail words of
-`func_80030894`. The final 43-word group builds a `16 x 16` wrapped sprite at
-`D_8009EC38 + bank*28`, increments the bank, repeats the entire bank-local
-body for banks 0 and 1 through the retail back edge to `0x80030910`, then
-returns normally. Its independent oracle compares all 43 new words, hashes
-the full body, and verifies the two calls, packet fields, loop edge/bound, and
-next-function boundary. Two focused tests sample every second-bank packet
-family and dirty/repeat the complete two-bank E-region. The named frontier is
-now the caller's `func_8006AD40_post30894_cut` before retail `0x8006B0B4`;
-normal and rebuilt ASan/UBSan suites pass 946/946 with zero diagnostics.
-Scheduler provenance remains independently artifact-bound: this rung adds no
-destination, `m0360i`, or persist special case. Full proof is in
-`docs/evidence/pe-b54ki-30894-complete/REPORT.md`.
+**Current milestone:** B54K-J translates the eight-word
+`D_800930F0` completion/reissue gate after the now-complete
+`func_80030894`. The live poll clears the read's busy bits; timeout reissues
+only the F0 range, while retained `s0 == 1` prevents replay of `func_800718D0`
+or `func_80030894`. The exact oracle compares all 8 words and both back edges,
+and two focused tests prove canonical completion plus repeat/no-duplicate
+behavior. The named frontier is now
+`func_8006AD40_D_800930E0_cut` before retail `0x8006B0D4`; normal and rebuilt
+ASan/UBSan suites pass 948/948 with zero diagnostics. Scheduler provenance
+remains independently artifact-bound: this rung adds no destination,
+`m0360i`, or persist special case. Full proof is in
+`docs/evidence/pe-b54kj-6ad40-f0-wait/REPORT.md`.
 
 **Earlier retained milestone:** B53I-D admits one separate later checkpoint
 for the second LoadImage DMA token created by B53I-C. The exact 32-word
@@ -767,7 +766,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current main: 907 tests)
+- `pe-native-tests` — test suite (current grind lane: 948 tests)
 
 ## Running
 
@@ -798,8 +797,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_8006AD40_post30894_cut from
-# func_8006AD40; func_80030894 now returns normally before this cut.
+# Current global frontier: exit 1 at func_8006AD40_D_800930E0_cut from
+# func_8006AD40; the D_800930F0 completion wait now precedes this cut.
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe

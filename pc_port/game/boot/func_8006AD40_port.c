@@ -1,17 +1,17 @@
 /*
- * Phase 6E-B54K-I — func_8006AD40 through complete func_80030894.
+ * Phase 6E-B54K-J — func_8006AD40 through the D_800930F0 wait.
  *
  * Full retail body:
  *   391 words / 1564 bytes, exe 0x8006AD40–0x8006B35C (exclusive),
  *   file offset 0x5B540.
  *
  * Implemented prefix:
- *   221 words / 884 bytes, exe 0x8006AD40–0x8006B0B4 (exclusive).
+ *   229 words / 916 bytes, exe 0x8006AD40–0x8006B0D4 (exclusive).
  *   It includes both live wait/reissue groups, the D_800930F0 issue,
- *   func_800718D0, and the now-complete 788-word func_80030894 call.
- *   The first excluded instruction is:
+ *   func_800718D0, the complete 788-word func_80030894 call, and the
+ *   D_800930F0 completion/reissue loop. The first excluded instruction is:
  *
- *       beq   s2, s1, .L8006B064        # 0x8006B0B4
+ *       lui   s1, %hi(D_800930E0)       # 0x8006B0D4
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
@@ -21,11 +21,11 @@
  * stops at the loop exit. If the initial entry count is zero, retail bypasses
  * the loop and reaches that same 0x8006AE68 boundary directly.
  *
- * Classification: 1 — translated retail prefix. The second poll is
- * consumed live; poll/s2 are not assigned. Host D_8009B6B4 collapse
- * at the D_800930EE issue is B54E-HOST-POLL-COLLAPSE, not retail timing.
- * The named strict boundary is now func_8006AD40_post30894_cut; no
- * unresolved provider remains inside func_80030894.
+ * Classification: 1 — translated retail prefix. All three completion
+ * polls are consumed live; poll/s2 are not assigned. Host D_8009B6B4
+ * collapse is synchronous-provider timing, not planted retail state.
+ * The named strict boundary is now func_8006AD40_D_800930E0_cut; no
+ * unresolved provider remains through the D_800930F0 completion wait.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -241,25 +241,48 @@ int func_8006AD40(void)
         /* 0x8006AF9C: s0==1 branches to 0x8006B044. */
     }
 
-    /* B54K-A: issue D_800930F0 into dest+0x14C. Do not poll — the
-     * busy bits stay armed across the complete 30894 call. 718D0 walks
-     * the prior 930EE dest at +0x180 (zero TIM on the prefix path). */
-    {
+    /* B54K-A: issue D_800930F0 into dest+0x14C. The busy bits stay armed
+     * across the complete 30894 call. 718D0 walks the prior 930EE dest at
+     * +0x180 (zero TIM on the prefix path). */
+    do {
         uint32_t start = PE_LoadU16(GA_D_800930F0);
         uint32_t end = PE_LoadU16(GA_D_800930F0 + 2u);
 
-        do {
-            status = func_8006E6A8(
-                (int)(lba_base + start),
-                PE_LoadU32(GA_D_800B0CD8 + 0x14Cu),
-                (int)(end - start));
-        } while (status == -1);
-        (void)func_800718D0(PE_LoadU32(GA_D_800B0CD8 + 0x180u));
-    }
+        status = func_8006E6A8(
+            (int)(lba_base + start),
+            PE_LoadU32(GA_D_800B0CD8 + 0x14Cu),
+            (int)(end - start));
+    } while (status == -1);
+    status = 1; /* 0x8006B090 */
+    (void)func_800718D0(PE_LoadU32(GA_D_800B0CD8 + 0x180u));
 
     func_80030894();
+
+    /* B54K-J: 0x8006B0B4..0x8006B0D0. A timeout branches back only to
+     * the D_800930F0 issue at 0x8006B064; s0 remains 1, so neither 718D0
+     * nor func_80030894 is repeated. Positive polls revisit B0B4, while
+     * zero clears s0 at B0D0 and advances to the next descriptor group. */
+    for (;;) {
+        if (status == -1) {
+            do {
+                uint32_t start = PE_LoadU16(GA_D_800930F0);
+                uint32_t end = PE_LoadU16(GA_D_800930F0 + 2u);
+
+                status = func_8006E6A8(
+                    (int)(lba_base + start),
+                    PE_LoadU32(GA_D_800B0CD8 + 0x14Cu),
+                    (int)(end - start));
+            } while (status == -1);
+            status = 1; /* 0x8006B090 */
+        }
+        status = func_8006E7E8(); /* 0x8006B0BC — live result */
+        if (status == 0)
+            break;
+        /* 0x8006B098: s0==1 returns to the B0B4 status gate. */
+    }
+
     (void)Bootstrap_ReturnInt(
-        "func_8006AD40_post30894_cut", "func_8006AD40", 0);
+        "func_8006AD40_D_800930E0_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }
