@@ -1,6 +1,6 @@
 /*
- * Phase 6E-B54K-G — func_80030894: boot GPU-primitive builder,
- * prologue through the bank-0 L10 packet group (translated prefix).
+ * Phase 6E-B54K-H — func_80030894: boot GPU-primitive builder,
+ * prologue through the bank-0 L11 packet group (translated prefix).
  *
  * Full retail body:
  *   788 words / 0xC50 bytes, exe 0x80030894–0x800314E4 (exclusive),
@@ -11,18 +11,18 @@
  *   stale scratch discarded by the caller).
  *
  * Implemented prefix:
- *   0x80030894..0x80031320 (675 words) — prologue, the bank record
+ *   0x80030894..0x80031438 (745 words) — prologue, the bank record
  *   init at 0x800BE9F0, and the L2(j=0..9) × L3(k=0..3) sprite-array
  *   build at 0x800B01C0, followed by the fixed bank-0 tile/sprite setup
  *   complete L4/L5 loops, fixed G4/sprite records, the complete L6 loop,
- *   the following fixed primitive records, complete L7/L8/L9 loops,
- *   and the post-L9 fixed sprites plus complete L10 loop.  The first
- *   excluded instruction is
+ *   the following fixed primitive records, complete L7/L8/L9/L10 loops,
+ *   and the fixed sprite plus complete descriptor-driven L11 loop.  The
+ *   first excluded instruction is
  *
- *       lui   s2, %hi(D_8009E928)       # 0x80031320
+ *       move  a0, zero                  # 0x80031438
  *
- *   (the next fixed-sprite group).  The named strict boundary is
- *   func_80030894_L10_cut.
+ *   (the final TPage/fixed-sprite/outer-loop epilogue).  The named
+ *   strict boundary is func_80030894_L11_cut.
  *
  * Word decode of the implemented window (verified against the
  * SHA-1-exact retail executable 452fb033f2eaa4b18aa20a5bca60b8125af3a37b):
@@ -76,7 +76,7 @@
  *
  * All callees are native since B54I/GPU1 (GetTPage, GetClut,
  * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC,
- * func_80077C64, func_80077B64); the L10 cut is the first untranslated
+ * func_80077C64, func_80077B64); the L11 cut is the first untranslated
  * boundary inside this body.
  *
  * Classification: 1 — translated retail prefix.
@@ -109,6 +109,8 @@
 #define GA_POST_L9_SPRT  0x8009E730u
 #define GA_SECOND_SPRT   0x8009E880u
 #define GA_L10_BASE      0x8009E8B8u
+#define GA_POST_L10_SPRT 0x8009E928u
+#define GA_L11_BASE      0x8009E960u
 
 void func_80030894(void)
 {
@@ -202,6 +204,7 @@ void func_80030894(void)
             uint32_t bank84 = (uint32_t)bank * 84u;
             uint32_t bank280 = (uint32_t)bank * 280u;
             uint32_t bank56 = (uint32_t)bank * 56u;
+            uint32_t bank364 = (uint32_t)bank * 364u;
             pe_addr_t tile = GA_TILE_BASE + bank24;
             pe_addr_t tile_packet = tile + 8u;
             pe_addr_t packet = GA_TILE_PACKET + bank16;
@@ -473,11 +476,40 @@ void func_80030894(void)
                 PE_StoreU16(l10 + 0x18u, 6u);
                 PE_StoreU16(l10 + 0x1Au, 6u);
             }
+
+            /* 0x80031320..0x80031390: fixed sprite before L11. */
+            {
+                pe_addr_t sprt = GA_POST_L10_SPRT + bank28;
+
+                func_800370DC(sprt, tpage_sprt);
+                PE_StoreU8(sprt + 0x0Cu, 0x80u);
+                PE_StoreU8(sprt + 0x0Du, 0x80u);
+                PE_StoreU8(sprt + 0x0Eu, 0u);
+                PE_StoreU16(sprt + 0x16u, clut_id);
+            }
+
+            /* 0x80031394..0x80031434: L11, 13 descriptor sprites. */
+            for (slot = 0u; slot < 13u; slot++) {
+                pe_addr_t rec = func_8005DADC(slot + 0x6Au);
+                uint32_t mode =
+                    func_80077A64(0u, 0u, 0x1C0u, 0u) & 0xFFFFu;
+                pe_addr_t l11 = GA_L11_BASE + bank364 + slot * 28u;
+
+                func_800370DC(l11, mode);
+                PE_StoreU8(l11 + 0x0Cu, 0x80u);
+                PE_StoreU8(l11 + 0x0Du, 0x80u);
+                PE_StoreU8(l11 + 0x0Eu, 0x80u);
+                PE_StoreU8(l11 + 0x14u, PE_LoadU8(rec + 0u));
+                PE_StoreU8(l11 + 0x15u, PE_LoadU8(rec + 1u));
+                PE_StoreU16(l11 + 0x16u, PE_LoadU16(rec + 2u));
+                PE_StoreU16(l11 + 0x18u, PE_LoadU8(rec + 4u));
+                PE_StoreU16(l11 + 0x1Au, PE_LoadU8(rec + 5u));
+            }
         }
     }
 
-    /* B54K-G cut: stop after L10 at retail 0x80031320. */
+    /* B54K-H cut: stop after L11 at retail 0x80031438. */
     (void)Bootstrap_ReturnInt(
-        "func_80030894_L10_cut", "func_80030894", 0);
+        "func_80030894_L11_cut", "func_80030894", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
 }

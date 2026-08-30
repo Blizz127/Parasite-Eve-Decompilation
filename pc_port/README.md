@@ -1,21 +1,21 @@
-# Parasite Eve Native PC Port — Phase 6E-B54K-G
+# Parasite Eve Native PC Port — Phase 6E-B54K-H
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B54K-G advances the production implementation of
-`func_80030894` through retail address `0x80031320`: 675 words of the
-788-word GPU-primitive builder are now native. The new retail 77-word group
-builds fixed sprites at `D_8009E730` and `D_8009E880`, computes the first's
-CLUT `(0x130,0x1F9)->0x7E53`, and closes the two-sprite L10 loop at
-`D_8009E8B8 + bank*56 + slot*28`. Its independent oracle compares all 77
-words, verifies four calls in order, CLUT derivation, loop geometry, and both
-cut-side words. Two focused tests cover all three exact ranges, gaps/end
-sentinels, all written fields, dirty/repeat determinism, and the
-retail-untouched fixed XY plus L10 RGB/XY fields. The named frontier is
-`func_80030894_L10_cut`; normal and rebuilt ASan/UBSan suites pass 942/942
-with zero diagnostics. Scheduler provenance remains independently
-artifact-bound: this rung adds no destination, `m0360i`, or persist special
-case. Full proof is in `docs/evidence/pe-b54kg-30894-l10/REPORT.md`.
+**Current milestone:** B54K-H advances the production implementation of
+`func_80030894` through retail address `0x80031438`: 745 words of the
+788-word GPU-primitive builder are now native. The new retail 70-word group
+builds the fixed sprite at `D_8009E928 + bank*28` and closes the thirteen-
+sprite L11 loop at `D_8009E960 + bank*364 + slot*28`, using descriptors
+`func_8005DADC(0x6A + slot)`. Its independent oracle compares all 70 words,
+verifies four calls in order, descriptor/TPage constants, loop geometry, and
+both cut-side words. Two focused tests use distinct per-slot descriptors,
+exact range/gap/end sentinels, dirty/repeat determinism, and retail-untouched
+XY/UV/dimension checks. The named frontier is `func_80030894_L11_cut`;
+normal and rebuilt ASan/UBSan suites pass 944/944 with zero diagnostics.
+Scheduler provenance remains independently artifact-bound: this rung adds no
+destination, `m0360i`, or persist special case. Full proof is in
+`docs/evidence/pe-b54kh-30894-l11/REPORT.md`.
 
 **Earlier retained milestone:** B53I-D admits one separate later checkpoint
 for the second LoadImage DMA token created by B53I-C. The exact 32-word
@@ -799,7 +799,7 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_80030894_L10_cut from
+# Current global frontier: exit 1 at func_80030894_L11_cut from
 # func_80030894 (6AD40 continues to func_8006AD40_post30894_cut).
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 
