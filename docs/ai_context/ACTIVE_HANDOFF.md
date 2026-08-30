@@ -86,8 +86,8 @@ No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
 standalone native frontier is separately
-`PRODUCTION_REACHABILITY=blocked_at_func_801924F8_from_func_80192CE8` after
-B54K-Z completed the first overlay-local setup helper; this
+`PRODUCTION_REACHABILITY=blocked_at_func_801918F8_from_func_801924F8` after
+B54K-AA entered the next overlay-local setup helper; this
 does not change the scheduler evidence boundary.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
@@ -109,7 +109,7 @@ corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining scheduler status: `SEMANTIC_IMPLEMENTATION=not_started`
 and `SCHEDULER_PROVENANCE=NEEDS_ARTIFACT`. The independent native frontier is
-now `func_801924F8` from `func_80192CE8`; current suite `985/985`.
+now `func_801918F8` from `func_801924F8`; current suite `985/985`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -132,7 +132,7 @@ lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Scheduler status remains
 `SEMANTIC_IMPLEMENTATION=not_started` / `NEEDS_ARTIFACT`; the independent
-native frontier is now `func_801924F8` from `func_80192CE8`, with suite
+native frontier is now `func_801918F8` from `func_801924F8`, with suite
 `985/985`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
@@ -773,6 +773,23 @@ FUNC_80191FB8=COMPLETE_207_WORDS
 PRODUCTION_REACHABILITY=blocked_at_func_801924F8_from_func_80192CE8
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 NEXT_ARTIFACT_FREE_RUNG=audit_func_801924F8
+```
+
+## PE-B54K-AA — enter `func_801924F8` (2026-08-30)
+
+`func_801924F8` is authenticated as a real 271-word function with one exact
+caller and a normal return. Its first 29 words are translated: index `<47`
+selects a 20-byte record, publishes its pointer, and passes signed record byte
+`+4` to the first overlay-local call. Index 47 is mutation-free. Production
+now stops exactly at `func_801918F8(0, kind)` from `func_801924F8`; all 985
+tests remain green. Evidence:
+`docs/evidence/pe-b54kaa-1924f8-prefix/REPORT.md`.
+
+```text
+FUNC_801924F8=AUTHENTICATED_271_WORDS_PREFIX_29_WORDS
+PRODUCTION_REACHABILITY=blocked_at_func_801918F8_from_func_801924F8
+SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
+NEXT_ARTIFACT_FREE_RUNG=audit_func_801918F8
 ```
 
 ## func_800125E0 — descriptor spawn loop matching C (35 words)

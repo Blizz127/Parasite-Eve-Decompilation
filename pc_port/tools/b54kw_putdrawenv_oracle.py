@@ -163,11 +163,11 @@ def main() -> None:
             "two focused B54K-W contracts")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("func_801924F8" in strict and
-            "called from: func_80192CE8" in strict,
+    require("func_801918F8" in strict and
+            "called from: func_801924F8" in strict,
             "strict post-initializer frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
-    require("[STUB:BOOTSTRAP_RET] func_801924F8" in normal and
+    require("[STUB:BOOTSTRAP_RET] func_801918F8" in normal and
             "[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 "
             "captured=26 serviced=26" in normal,

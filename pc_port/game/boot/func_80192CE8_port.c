@@ -7,9 +7,9 @@
  * selected PE.IMG read with the retail retry/poll CFG, balances the cache
  * critical section, and enters func_80191FB8(1, sp+0x10).  The stack word
  * contains arena + ((D_80093162-D_80093160)<<11). B54K-Z completes that
- * callee and advances this caller through the next call and delay slot.
+ * callee; B54K-AA enters the next call and its authenticated prefix.
  *
- * The remainder [0x80192E08,0x80192F98) is not approximated here.
+ * The remainder after the call at 0x80192E00 is not approximated here.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -68,9 +68,11 @@ retry_issue:
     if (PE_Port_ShouldStop())
         return -1;
 
-    Bootstrap_ReturnVoid1(
-        "func_801924F8", "func_80192CE8",
-        (uint32_t)(int32_t)(int16_t)index);
+    (void)func_801924F8((int16_t)index);
+    if (PE_Port_ShouldStop())
+        return -1;
+
+    Bootstrap_ReturnVoid("func_80192CE8_80192E08_cut", "func_80192CE8");
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return -1;
 }

@@ -100,7 +100,7 @@ def main() -> None:
     require("PE_func_80191FB8_Values" in source and
             "func_8007512C(&rect, 512, 0)" in source and
             "func_8007512C(&rect, 512, 256)" in source and
-            '"func_801924F8"' in caller,
+            "func_801924F8((int16_t)index)" in caller,
             "complete native function or next frontier absent")
     require("m0360i" not in source + caller and
             "0xA8066048" not in source + caller,
@@ -119,15 +119,15 @@ def main() -> None:
             "two focused B54K-Z contracts")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("func_801924F8" in strict and
-            "called from: func_80192CE8" in strict,
+    require("func_801918F8" in strict and
+            "called from: func_801924F8" in strict,
             "strict next-call frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
     require("[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 "
             "captured=26 serviced=26" in normal,
             "production telemetry")
-    print("  OK runtime: 2 focused contracts; func_801924F8 frontier")
+    print("  OK runtime: 2 focused contracts; func_801918F8 frontier")
     print("\nB54K-Z func_80191FB8 oracle: PASS.")
 
 

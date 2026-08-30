@@ -212,6 +212,7 @@ set(GAME_SRCS
     game/boot/func_80190660_port.c
     game/boot/func_801909B4_port.c
     game/boot/func_80191FB8_port.c
+    game/boot/func_801924F8_port.c
     game/boot/func_80192CE8_port.c
 )
 

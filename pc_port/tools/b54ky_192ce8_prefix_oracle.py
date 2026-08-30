@@ -133,7 +133,7 @@ def main() -> None:
         encoding="utf-8")
     require("retry_issue:" in source and "func_8006E7E8()" in source and
             "PE_func_80191FB8_Values" in source and
-            '"func_801924F8"' in source and
+            "func_801924F8((int16_t)index)" in source and
             '"func_801909B4_80191120_cut"' in caller_source and
             "func_80192CE8(1)" in caller_source,
             "native branch/prefix wiring")
@@ -154,8 +154,8 @@ def main() -> None:
             "two focused B54K-Y contracts")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("func_801924F8" in strict and
-            "called from: func_80192CE8" in strict,
+    require("func_801918F8" in strict and
+            "called from: func_801924F8" in strict,
             "strict frontier after completed func_80191FB8")
     normal = run(common + ["--dma-checkpoint-report"], 0)
     require("[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0" in normal and

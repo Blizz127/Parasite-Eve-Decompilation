@@ -95,3 +95,7 @@ PRODUCTION_REACHABILITY=blocked_at_func_801924F8_from_func_80192CE8
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 NEXT_ARTIFACT_FREE_RUNG=audit_func_801924F8
 ```
+
+Postscript: B54K-AA subsequently authenticated `func_801924F8` and translated
+its 29-word prefix. The current frontier is `func_801918F8` from
+`func_801924F8`; the raw B54K-Z frontier above remains this rung's measurement.

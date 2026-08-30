@@ -1472,7 +1472,7 @@ static void test_B54KX_nonzero_phase_remains_state_driven(void)
 static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
 {
     PE_Disc *disc;
-    BootstrapArgCall *call;
+    BootstrapArgCall4 *call;
     PeGpuState gpu;
     char err[256];
     TEST("B54KY_192CE8_real_disc_issue_poll_and_boundary");
@@ -1524,15 +1524,20 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            gpu.move_destination == 0x01000200u &&
            gpu.move_size == 0x00400140u,
            "func_80191FB8 MoveImage sequence differs");
-    ASSERT(g_bootstrap_arg_call_count == 1,
-           "func_801924F8 boundary count differs");
-    call = &g_bootstrap_arg_calls[0];
-    ASSERT(strcmp(call->symbol, "func_801924F8") == 0 &&
-           strcmp(call->caller, "func_80192CE8") == 0 &&
-           call->arg0 == 1u,
-           "func_801924F8 signed-index ABI differs");
+    ASSERT(PE_LoadU8(0x800B0DBFu) == 1u &&
+           PE_LoadU32(0x801D11ACu) == 0x801D0E14u &&
+           PE_LoadU8(0x800B0DBBu) == 1u,
+           "func_801924F8 indexed-record prefix differs");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "func_801918F8 boundary count differs");
+    call = &g_bootstrap_arg4_calls[0];
+    ASSERT(strcmp(call->symbol, "func_801918F8") == 0 &&
+           strcmp(call->caller, "func_801924F8") == 0 &&
+           call->target == 0u && call->arg0 == 0u && call->arg1 == 1u &&
+           call->arg2 == 0u && call->arg3 == 0u,
+           "func_801918F8 signed-kind ABI differs");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "func_801924F8 did not remain the exact frontier");
+           "func_801918F8 did not become the exact frontier");
 
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
@@ -1610,6 +1615,14 @@ static void test_B54KY_saved_bit_zero_skips_disc_prefix(void)
     B54KQ_SeedOverlayPrefix(0x4Du);
     PE_StoreU8(0x801D0E18u, 0xA6u);
     PE_StoreU32(0x8009B6D4u, 0xA5A55A5Au);
+    PE_StoreU8(0x800B0DBFu, 0x5Au);
+    PE_StoreU32(0x801D11ACu, 0xA5A55A5Au);
+
+    ASSERT(func_801924F8(47) == 0 && !PE_Port_ShouldStop() &&
+           PE_LoadU8(0x800B0DBFu) == 0x5Au &&
+           PE_LoadU32(0x801D11ACu) == 0xA5A55A5Au &&
+           g_bootstrap_arg4_call_count == 0,
+           "func_801924F8 out-of-range guard mutated state");
 
     ASSERT(func_801909B4() == -1,
            "saved-bit-zero caller result differs");

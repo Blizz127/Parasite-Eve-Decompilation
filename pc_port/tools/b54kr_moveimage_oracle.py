@@ -175,12 +175,12 @@ def main() -> None:
             "focused B54K-R native contract count")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_801924F8" in strict and
-            "called from: func_80192CE8" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: func_801918F8" in strict and
+            "called from: func_801924F8" in strict and
             "func_8007512C" not in strict,
             "strict real-disc path no longer traverses MoveImage")
     normal = run(common, 0)
-    require("[STUB:BOOTSTRAP_RET] func_801924F8" in normal and
+    require("[STUB:BOOTSTRAP_RET] func_801918F8" in normal and
             "[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0" in normal and
             "[HOST] stop_reason=unresolved-boundary" in normal and
             "func_8007512C" not in normal,
