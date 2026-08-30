@@ -97,7 +97,11 @@ The next scheduler rung is the human-driven BTL151 PCSX capture of
 `func_8006E3D4` inputs. Static provenance is exhausted and no forced
 destination or `persist[0] |= 4` is permitted. Independently, the next
 artifact-free production-reachability rung continues `func_8006AD40` from
-the completed `D_80093126` archive load at `0x8006B220`.
+the completed `D_80093126` archive load at `0x8006B220`. Its exact final
+79-word suffix is dependency-ready and fully audited, but remains deliberately
+unimplemented until a dedicated rung migrates 23 historical prefix-boundary
+test contracts to full-function assertions; see the
+[B54K-M readiness report](../evidence/pe-b54km-6ad40-completion-readiness/REPORT.md).
 
 ## C. Matching-C decomp
 

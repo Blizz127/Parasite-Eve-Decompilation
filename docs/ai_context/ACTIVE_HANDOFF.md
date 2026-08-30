@@ -377,6 +377,27 @@ now `func_8006AD40_D_80093126_archive_cut` before retail `0x8006B220`.
 Scheduler provenance remains independently `NEEDS_ARTIFACT`; no destination
 token, `m0360i` branch, or persistence bit was added.
 
+## PE-B54K-M readiness — final `func_8006AD40` suffix (2026-08-30)
+
+The remaining `[0x8006B220,0x8006B35C)` suffix is now fully audited but is
+**not implemented**. The independent oracle authenticates all 79 words, both
+window hashes, the completed `+0x188` archive walk, all seven now-available
+callees, display-env selection, exact state resets, bit-0 clear, normal
+return, and the next-function boundary.
+
+A temporary completion translation compiled, then was reverted after a full
+trial produced `929/952`: all 23 failures were historical contracts that
+intentionally require the current prefix frontier or pre-finalization repeat
+behavior. The dedicated implementation rung must migrate those assertions to
+full-function state checks, add positive/zero `+0x188` walks, the `0x40/0x80`
+matrix, first-call-clear/second-call-guard behavior, stream-F1 whole-RAM
+effects, and measure the caller's next strict frontier after its two DMA
+checkpoints. Production remains unchanged at B54K-L and `952/952`.
+
+Evidence:
+`docs/evidence/pe-b54km-6ad40-completion-readiness/REPORT.md` and
+`pc_port/tools/b54km_6ad40_completion_readiness.py`.
+
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
 **276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,
