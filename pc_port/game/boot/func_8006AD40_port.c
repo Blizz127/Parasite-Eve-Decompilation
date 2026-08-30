@@ -1,17 +1,17 @@
 /*
- * Phase 6E-B54F — func_8006AD40: D_800930EE issue, 718D0, record 0/1.
+ * Phase 6E-B54K-I — func_8006AD40 through complete func_80030894.
  *
  * Full retail body:
  *   391 words / 1564 bytes, exe 0x8006AD40–0x8006B35C (exclusive),
  *   file offset 0x5B540.
  *
  * Implemented prefix:
- *   200 words / 800 bytes, exe 0x8006AD40–0x8006B060 (exclusive).
- *   B54G consumes 0x8006B04C..0x8006B060: the second live
- *   func_8006E7E8 wait/reissue, B54E-shaped. Exclusive end is the
- *   poll==0 fallthrough. The first excluded instruction is:
+ *   221 words / 884 bytes, exe 0x8006AD40–0x8006B0B4 (exclusive).
+ *   It includes both live wait/reissue groups, the D_800930F0 issue,
+ *   func_800718D0, and the now-complete 788-word func_80030894 call.
+ *   The first excluded instruction is:
  *
- *       addu  s0, zero, zero            # 0x8006B060
+ *       beq   s2, s1, .L8006B064        # 0x8006B0B4
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
@@ -23,12 +23,9 @@
  *
  * Classification: 1 — translated retail prefix. The second poll is
  * consumed live; poll/s2 are not assigned. Host D_8009B6B4 collapse
- * at the D_800930EE issue is B54E-HOST-POLL-COLLAPSE, not retail
- * timing. After this cut the 6AD40 sequence is PARKED: the next
- * already-translated issue (D_800930F0) sits in front of
- * func_80030894 (788 words, 7 unresolved callees, no translated
- * prefix; first jal is unresolved GetTPage). PE-GPU1 ported the
- * five SET leaves; they do not create a 30894 prefix.
+ * at the D_800930EE issue is B54E-HOST-POLL-COLLAPSE, not retail timing.
+ * The named strict boundary is now func_8006AD40_post30894_cut; no
+ * unresolved provider remains inside func_80030894.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -245,7 +242,7 @@ int func_8006AD40(void)
     }
 
     /* B54K-A: issue D_800930F0 into dest+0x14C. Do not poll — the
-     * busy bits stay armed across the 30894 L2L3 cut. 718D0 walks
+     * busy bits stay armed across the complete 30894 call. 718D0 walks
      * the prior 930EE dest at +0x180 (zero TIM on the prefix path). */
     {
         uint32_t start = PE_LoadU16(GA_D_800930F0);

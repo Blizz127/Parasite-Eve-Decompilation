@@ -1,6 +1,5 @@
 /*
- * Phase 6E-B54K-H — func_80030894: boot GPU-primitive builder,
- * prologue through the bank-0 L11 packet group (translated prefix).
+ * Phase 6E-B54K-I — func_80030894: complete boot GPU-primitive builder.
  *
  * Full retail body:
  *   788 words / 0xC50 bytes, exe 0x80030894–0x800314E4 (exclusive),
@@ -10,19 +9,16 @@
  *   (backward liveness fixpoint in the B54J audit; $v0 at exit is a
  *   stale scratch discarded by the caller).
  *
- * Implemented prefix:
- *   0x80030894..0x80031438 (745 words) — prologue, the bank record
+ * Complete native body:
+ *   0x80030894..0x800314E4 (788 words) — prologue, the bank record
  *   init at 0x800BE9F0, and the L2(j=0..9) × L3(k=0..3) sprite-array
  *   build at 0x800B01C0, followed by the fixed bank-0 tile/sprite setup
  *   complete L4/L5 loops, fixed G4/sprite records, the complete L6 loop,
  *   the following fixed primitive records, complete L7/L8/L9/L10 loops,
- *   and the fixed sprite plus complete descriptor-driven L11 loop.  The
- *   first excluded instruction is
- *
- *       move  a0, zero                  # 0x80031438
- *
- *   (the final TPage/fixed-sprite/outer-loop epilogue).  The named
- *   strict boundary is func_80030894_L11_cut.
+ *   the fixed sprite plus complete descriptor-driven L11 loop, the final
+ *   16x16 sprite, and the outer bank loop for i=0,1.  The retail epilogue
+ *   restores the frame and returns at 0x800314DC/0x800314E0; the next word
+ *   at 0x800314E4 is func_800314E4's independent prologue.
  *
  * Word decode of the implemented window (verified against the
  * SHA-1-exact retail executable 452fb033f2eaa4b18aa20a5bca60b8125af3a37b):
@@ -76,10 +72,10 @@
  *
  * All callees are native since B54I/GPU1 (GetTPage, GetClut,
  * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC,
- * func_80077C64, func_80077B64); the L11 cut is the first untranslated
- * boundary inside this body.
+ * func_80077C64, func_80077B64); there is no untranslated boundary inside
+ * this body.
  *
- * Classification: 1 — translated retail prefix.
+ * Classification: 1 — complete translated retail function.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -111,6 +107,7 @@
 #define GA_L10_BASE      0x8009E8B8u
 #define GA_POST_L10_SPRT 0x8009E928u
 #define GA_L11_BASE      0x8009E960u
+#define GA_FINAL_SPRT    0x8009EC38u
 
 void func_80030894(void)
 {
@@ -129,8 +126,8 @@ void func_80030894(void)
     tpage_sprt = func_80077A64(0u, 1u, 0x100u, 0x1E0u) & 0xFFFFu;
     clut_id = (uint16_t)func_80077AA4(0x130, 0x1F8);
 
-    /* 0x80030910.. bank record init (bank 0). */
-    {
+    /* 0x80030910.. bank record init (banks 0 and 1). */
+    do {
         pe_addr_t rec = func_8005DADC(139u);            /* s3 */
         pe_addr_t rec_tab = GA_RECORD_TABLE +
                             (pe_addr_t)((uint32_t)bank * 40u); /* s0 */
@@ -506,10 +503,21 @@ void func_80030894(void)
                 PE_StoreU16(l11 + 0x1Au, PE_LoadU8(rec + 5u));
             }
         }
-    }
 
-    /* B54K-H cut: stop after L11 at retail 0x80031438. */
-    (void)Bootstrap_ReturnInt(
-        "func_80030894_L11_cut", "func_80030894", 0);
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        /* 0x80031438..0x8003149C: final 16x16 sprite for this bank. */
+        {
+            uint32_t mode =
+                func_80077A64(0u, 0u, 0x1C0u, 0u) & 0xFFFFu;
+            pe_addr_t sprt = GA_FINAL_SPRT + (uint32_t)bank * 28u;
+
+            func_800370DC(sprt, mode);
+            PE_StoreU16(sprt + 0x18u, 16u);
+            PE_StoreU16(sprt + 0x1Au, 16u);
+            PE_StoreU8(sprt + 0x0Cu, 0x80u);
+            PE_StoreU8(sprt + 0x0Du, 0x80u);
+            PE_StoreU8(sprt + 0x0Eu, 0x80u);
+        }
+
+        bank = (uint8_t)(bank + 1u);
+    } while (bank < 2u);
 }
