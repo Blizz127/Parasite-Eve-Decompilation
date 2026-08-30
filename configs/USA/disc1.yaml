@@ -880,7 +880,11 @@ segments:
       - [0x746F8, asm]
       # Phase 5CO: C leaf func_800847A0 — file 0x74FA0, size 0x10.
       - [0x74FA0, c, func_800847A0]
+      # Tier-2 probe: root-counter checkpoint func_80084FC4.
+      # Former 74FB0 asm prefix: 0x814, C 0x20, resume 0xA0.
       - [0x74FB0, asm]
+      - [0x757C4, c, func_80084FC4]
+      - [0x757E4, asm]
       # Phase 5FX: constant-add getter func_80085084 — VRAM 0x80085084,
       # size 0x14, era -O2 -G0. Mid-74FB0 carve: prefix 0x8D4, C 0x14,
       # trailing asm resumes at 75898.
