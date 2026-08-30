@@ -86,8 +86,8 @@ No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
 standalone native frontier is separately
-`PRODUCTION_REACHABILITY=blocked_at_func_801918F8_from_func_801924F8` after
-B54K-AA entered the next overlay-local setup helper; this
+`PRODUCTION_REACHABILITY=blocked_at_func_801924F8_80192584_cut` after
+B54K-AB completed the display-pair helper; this
 does not change the scheduler evidence boundary.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
@@ -109,7 +109,7 @@ corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining scheduler status: `SEMANTIC_IMPLEMENTATION=not_started`
 and `SCHEDULER_PROVENANCE=NEEDS_ARTIFACT`. The independent native frontier is
-now `func_801918F8` from `func_801924F8`; current suite `985/985`.
+now `func_801924F8` internal cut `0x80192584`; current suite `985/985`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -132,7 +132,7 @@ lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Scheduler status remains
 `SEMANTIC_IMPLEMENTATION=not_started` / `NEEDS_ARTIFACT`; the independent
-native frontier is now `func_801918F8` from `func_801924F8`, with suite
+native frontier is now `func_801924F8` internal cut `0x80192584`, with suite
 `985/985`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
@@ -787,9 +787,25 @@ tests remain green. Evidence:
 
 ```text
 FUNC_801924F8=AUTHENTICATED_271_WORDS_PREFIX_29_WORDS
-PRODUCTION_REACHABILITY=blocked_at_func_801918F8_from_func_801924F8
+PRODUCTION_REACHABILITY=blocked_at_func_801924F8_80192584_cut
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 NEXT_ARTIFACT_FREE_RUNG=audit_func_801918F8
+```
+
+## PE-B54K-AB — complete `func_801918F8` (2026-08-30)
+
+The 155-word overlay display-pair initializer is complete. Four exact callers,
+normal return, both 320-wide and 480-then-folded-to-320 paths, and all SDK
+environment effects are proven. `func_801924F8` now executes both calls and
+reaches exact cut `0x80192584`; 985/985 tests remain green. Evidence:
+`docs/evidence/pe-b54kab-1918f8-complete/REPORT.md`.
+
+```text
+FUNC_801918F8=COMPLETE_155_WORDS
+FUNC_801924F8=AUTHENTICATED_271_WORDS_PREFIX_35_WORDS
+PRODUCTION_REACHABILITY=blocked_at_func_801924F8_80192584_cut
+SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
+NEXT_ARTIFACT_FREE_RUNG=continue_func_801924F8_at_80192584
 ```
 
 ## func_800125E0 — descriptor spawn loop matching C (35 words)

@@ -1472,8 +1472,9 @@ static void test_B54KX_nonzero_phase_remains_state_driven(void)
 static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
 {
     PE_Disc *disc;
-    BootstrapArgCall4 *call;
     PeGpuState gpu;
+    uint8_t expected_disp[0x28];
+    uint8_t expected_draw[0xB8];
     char err[256];
     TEST("B54KY_192CE8_real_disc_issue_poll_and_boundary");
 
@@ -1493,6 +1494,8 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     PE_StoreU16(0x80093162u, 0x03C9u);
     PE_StoreU32(0x800B0CD8u, 0x00100001u);
     PE_StoreU8(0x801D0E18u, 0xA5u);
+    memcpy(expected_disp, PE_TranslateConst(0x800BCE80u, 0x28u), 0x28u);
+    memcpy(expected_draw, PE_TranslateConst(0x800BCDC8u, 0xB8u), 0xB8u);
 
     ASSERT(func_80192CE8(1) == -1,
            "func_80192CE8 prefix retained result differs");
@@ -1514,9 +1517,9 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU16(0x800B0DBCu) == 0u &&
            PE_LoadU16(0x801D11B0u) == 0xFFFFu &&
            memcmp(PE_TranslateConst(0x801D1384u, 0x28u),
-                  PE_TranslateConst(0x800BCE80u, 0x28u), 0x28u) == 0 &&
+                  expected_disp, 0x28u) == 0 &&
            memcmp(PE_TranslateConst(0x801D13ACu, 0xB8u),
-                  PE_TranslateConst(0x800BCDC8u, 0xB8u), 0xB8u) == 0,
+                  expected_draw, 0xB8u) == 0,
            "func_80191FB8 flags or environment copies differ");
     PE_GPU_GetState(&gpu);
     ASSERT(gpu.move_count == 2u &&
@@ -1528,16 +1531,16 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x801D11ACu) == 0x801D0E14u &&
            PE_LoadU8(0x800B0DBBu) == 1u,
            "func_801924F8 indexed-record prefix differs");
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "func_801918F8 boundary count differs");
-    call = &g_bootstrap_arg4_calls[0];
-    ASSERT(strcmp(call->symbol, "func_801918F8") == 0 &&
-           strcmp(call->caller, "func_801924F8") == 0 &&
-           call->target == 0u && call->arg0 == 0u && call->arg1 == 1u &&
-           call->arg2 == 0u && call->arg3 == 0u,
-           "func_801918F8 signed-kind ABI differs");
+    ASSERT(PE_LoadU8(0x801D0DBEu) == 3u &&
+           PE_LoadU16(0x800BCE80u + 4u) == 320u &&
+           PE_LoadU16(0x800BCE94u + 4u) == 320u &&
+           PE_LoadU16(0x800BCDC8u + 4u) == 320u &&
+           PE_LoadU16(0x800BCE24u + 4u) == 320u,
+           "func_801918F8 wide display-pair state differs");
+    ASSERT(g_bootstrap_arg4_call_count == 0,
+           "translated func_801918F8 remained a provider");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "func_801918F8 did not become the exact frontier");
+           "func_801924F8 internal cut did not become the exact frontier");
 
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
@@ -1633,6 +1636,13 @@ static void test_B54KY_saved_bit_zero_skips_disc_prefix(void)
            PE_LoadU32(0x8009B6D4u) == 0xA5A55A5Au &&
            (PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u,
            "saved-bit-zero arm entered the disc prefix");
+    func_801918F8(0, 0);
+    ASSERT(PE_LoadU8(0x801D0DBEu) == 2u &&
+           PE_LoadU16(0x800BCE80u + 4u) == 320u &&
+           PE_LoadU16(0x800BCDC8u + 4u) == 320u &&
+           PE_LoadU8(0x800BCDC8u + 0x16u) == 1u &&
+           PE_LoadU8(0x800BCDC8u + 0x18u) == 1u,
+           "func_801918F8 narrow display-pair state differs");
     PASS();
 }
 

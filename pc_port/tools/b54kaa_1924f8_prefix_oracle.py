@@ -14,9 +14,9 @@ import subprocess
 PEIMG_SHA1 = "146c0ce7308bf9fdc2ba5a84230e198db0663f3b"
 BASE = 0x03D2 * 0x800
 LOAD = 0x8018EFF0
-START, CUT, END = 0x801924F8, 0x8019256C, 0x80192934
+START, CUT, END = 0x801924F8, 0x80192584, 0x80192934
 FULL_SHA = "ef825dccdbfd2a74941203d37739c713ad1e3bd8de48ca747f55d0e75a92f00a"
-PREFIX_SHA = "2e6352856b04f1eee0ab1bae00324a36306fc63e14cb3101d030e073914b9ab2"
+PREFIX_SHA = "9f6476d633f517cd6e17fee8a76167180a9f87d320ecf0e62ef4e4f3b45114b1"
 
 
 def require(ok: bool, message: str) -> None:
@@ -54,7 +54,7 @@ def main() -> None:
     require(len(body) == 271 * 4 and hashlib.sha256(body).hexdigest() == FULL_SHA,
             "complete function identity")
     require(hashlib.sha256(prefix).hexdigest() == PREFIX_SHA and
-            u32(body, CUT - START) == 0x0C06463E and
+            u32(body, CUT - START) == 0x2E020015 and
             u32(body, 0x8019292C - START) == 0x03E00008 and
             u32(body, 0x80192930 - START) == 0,
             "prefix cut or retail return")
@@ -64,11 +64,12 @@ def main() -> None:
                if u32(overlay, i) == jal_word]
     require(callers == [0x80192E00], "exact-start caller census")
     print("  OK hood: 271 words, normal return, exact caller, real boundaries")
-    print("  OK prefix: 29 words; indexed record; func_801918F8 next")
+    print("  OK prefix: 35 words; indexed record and both display calls")
 
     source = (root / "pc_port/game/boot/func_801924F8_port.c").read_text()
     require("record_index >= 47u" in source and "0x801D0E00u" in source and
-            '"func_801918F8", "func_801924F8"' in source and
+            source.count("func_801918F8(") == 2 and
+            "func_801924F8_80192584_cut" in source and
             "m0360i" not in source and "0xA8066048" not in source,
             "native prefix scope")
     tests = pathlib.Path(args.tests) if args.tests else root / "pc_port/build/pe-native-tests"
@@ -82,13 +83,13 @@ def main() -> None:
             "focused positive/negative contracts")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("func_801918F8" in strict and "called from: func_801924F8" in strict,
+    require("func_801924F8_80192584_cut" in strict and "called from: func_801924F8" in strict,
             "strict frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
     require("[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 captured=26 serviced=26" in normal,
             "production telemetry")
-    print("  OK runtime: positive/negative contracts; func_801918F8 frontier")
+    print("  OK runtime: positive/negative contracts; func_801924F8 internal frontier")
     print("\nB54K-AA func_801924F8-prefix oracle: PASS.")
 
 

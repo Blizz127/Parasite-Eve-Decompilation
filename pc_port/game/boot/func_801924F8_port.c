@@ -3,9 +3,8 @@
  *
  * Complete retail function: [0x801924F8,0x80192934), 271 words, SHA-256
  * ef825dccdbfd2a74941203d37739c713ad1e3bd8de48ca747f55d0e75a92f00a.
- * Translated prefix: [0x801924F8,0x8019256C), 29 words, SHA-256
- * 2e6352856b04f1eee0ab1bae00324a36306fc63e14cb3101d030e073914b9ab2.
- * The next instruction is the first call to overlay-local func_801918F8.
+ * Translated prefix: [0x801924F8,0x80192584), 35 words, SHA-256
+ * 9f6476d633f517cd6e17fee8a76167180a9f87d320ecf0e62ef4e4f3b45114b1.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -25,9 +24,9 @@ int func_801924F8(int index)
     kind = PE_LoadU8(record + 4u);
     PE_StoreU8(0x800B0DBBu, kind);
 
-    Bootstrap_ReturnVoid4(
-        "func_801918F8", "func_801924F8",
-        0u, (uintptr_t)(int32_t)(int8_t)kind, 0u, 0u);
+    func_801918F8(0, (int8_t)kind);
+    func_801918F8(1, (int8_t)kind);
+    Bootstrap_ReturnVoid("func_801924F8_80192584_cut", "func_801924F8");
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }

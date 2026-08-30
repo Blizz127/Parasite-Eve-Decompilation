@@ -59,3 +59,7 @@ PRODUCTION_REACHABILITY=blocked_at_func_801918F8_from_func_801924F8
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 NEXT_ARTIFACT_FREE_RUNG=audit_func_801918F8
 ```
+
+Postscript: B54K-AB subsequently completed `func_801918F8` and advanced this
+prefix to 35 words. The current boundary is the exact internal cut
+`0x80192584`; the measurements above remain B54K-AA's original state.

@@ -142,7 +142,7 @@ def main() -> None:
 
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_801918F8" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: func_801924F8_80192584_cut" in strict and
             "called from: func_801924F8" in strict,
             "strict frontier changed unexpectedly")
     normal = run(common + ["--dma-checkpoint-report"], 0)
@@ -150,7 +150,7 @@ def main() -> None:
             "captured=26 serviced=26" in normal and
             "[HOST] stop_reason=unresolved-boundary" in normal,
             "real-disc DrawSync completion census")
-    print("  OK runtime: 26 DMA events drained; later 801918F8 frontier observed")
+    print("  OK runtime: 26 DMA events drained; later 801924F8 internal frontier observed")
     print("\nB54K-S DrawSync oracle: PASS.")
 
 

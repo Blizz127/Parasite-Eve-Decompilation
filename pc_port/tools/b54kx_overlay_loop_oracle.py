@@ -163,7 +163,7 @@ def main() -> None:
             "two focused B54K-X contracts")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("func_801918F8" in strict and
+    require("func_801924F8_80192584_cut" in strict and
             "called from: func_801924F8" in strict,
             "strict post-initializer frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
