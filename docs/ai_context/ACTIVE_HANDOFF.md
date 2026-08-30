@@ -70,7 +70,7 @@ and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
 is the unique `persist[0] |= 4` writer; the native branch must not plant that
 bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
-bridge, not another m0005i gate workaround. Current native suite: 962/962.
+bridge, not another m0005i gate workaround. Current native suite: 967/967.
 
 ## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
 
@@ -86,9 +86,9 @@ No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
 standalone native frontier is separately
-`PRODUCTION_REACHABILITY=blocked_at_func_8007512C_from_func_801909B4` after
-B54K-Q translated the first 149 overlay words; this does not change the
-scheduler evidence boundary.
+`PRODUCTION_REACHABILITY=blocked_at_func_80190660_from_func_801909B4` after
+B54K-R completed MoveImage and translated the first 240 overlay words; this
+does not change the scheduler evidence boundary.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
 
@@ -109,7 +109,7 @@ corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining scheduler status: `SEMANTIC_IMPLEMENTATION=not_started`
 and `SCHEDULER_PROVENANCE=NEEDS_ARTIFACT`. The independent native frontier is
-now `func_8007512C` from `func_801909B4`; current suite `962/962`.
+now `func_80190660` from `func_801909B4`; current suite `967/967`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -132,8 +132,8 @@ lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Scheduler status remains
 `SEMANTIC_IMPLEMENTATION=not_started` / `NEEDS_ARTIFACT`; the independent
-native frontier is now `func_8007512C` from `func_801909B4`, with suite
-`962/962`.
+native frontier is now `func_80190660` from `func_801909B4`, with suite
+`967/967`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
 the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
@@ -478,6 +478,8 @@ SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 
 ## PE-B54K-Q — `func_801909B4` MoveImage prefix (2026-08-30)
 
+Historical rung, superseded by B54K-R below.
+
 The real-disc overlay now enters 149 translated retail words
 `[0x801909B4,0x80190C08)`. The prefix copies two 0x5C-byte DRAWENV records
 and two 0x14-byte DISPENV records into overlay storage, publishes six arena
@@ -501,6 +503,42 @@ with zero sanitizer diagnostics. Evidence:
 FUNC_8006AD40=COMPLETE_NATIVE_TRANSLATION
 FUNC_801909B4_PREFIX=149_WORDS_TRANSLATED
 PRODUCTION_REACHABILITY=blocked_at_func_8007512C_from_func_801909B4
+SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
+```
+
+## PE-B54K-R — generic MoveImage and display prefix (2026-08-30)
+
+PsyQ `func_8007512C` is now a complete 46-word native translation. Retail
+`D_80095744=0x80095704` proves that it loads `func_80076C34` from jump-table
+offset `+8` and `func_80076B98` from `+0x18`; it does not route through
+`func_80076C10`. The exact 18-word worker accepts only the authenticated
+five-word GP0(80h) MoveImage packet. General DrawOTag linked lists remain a
+named boundary.
+
+The generic GPU authority now performs synchronous VRAM-to-VRAM copies with
+retail coordinate/size masking, zero-as-maximum dimensions, both-axis wrap,
+and the console-verified horizontal overlap direction. It has no overlay
+special case and creates no synthetic DMA2 completion or callback.
+
+`func_801909B4` now translates 240 words
+`[0x801909B4,0x80190D74)`: the canonical `160x256` MoveImage, DrawSync/VSync
+sequence, two draw/display environments, exact field stores, and black
+ClearImage all execute before the one-time overlay-local call
+`func_80190660`. Eight focused contracts, the independent oracle, full
+normal suite, and fresh ASan/UBSan suite pass; total is `967/967` with zero
+sanitizer diagnostics. Strict real-disc execution measures
+`func_80190660 from func_801909B4` as the next provider.
+
+Evidence:
+`docs/evidence/pe-b54kr-moveimage-display-prefix/REPORT.md` and
+`pc_port/tools/b54kr_moveimage_oracle.py`.
+
+```text
+FUNC_8007512C=COMPLETE_NATIVE_TRANSLATION
+FUNC_80076B98=MOVEIMAGE_ONE_PACKET_SUBSET_ONLY
+FUNC_801909B4_PREFIX=240_WORDS_TRANSLATED
+PRODUCTION_REACHABILITY=blocked_at_func_80190660_from_func_801909B4
+GENERAL_LINKED_LIST_DMA=UNSUPPORTED_NAMED_BOUNDARY
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 ```
 

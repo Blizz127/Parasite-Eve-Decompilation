@@ -22,6 +22,11 @@
  * func_80077404 (call at 0x80076C68).  No callback delivery, consumer
  * movement, or DMA completion happens here.
  *
+ * B54K-R adds the exact `func_80076B98` MoveImage packet subset on both the
+ * direct and queued paths.  It accepts only the five-word GP0(80h) packet
+ * template used by `func_8007512C`; general DrawOTag linked lists remain a
+ * named boundary and no guest command stream is interpreted here.
+ *
  * func_800773D0 is the complete 13-word timeout helper at
  * 0x800773D0..0x80077403.  It queries VSync(-1), stores query+240 at
  * D_80095888, clears D_8009588C, and returns the deadline.  B53B's inert,
@@ -315,8 +320,7 @@ direct_issue:
     }
 
     /* 0x80076D38: jalr s3 — the guest command-issue worker, called with
-     * a0 = argument (s0) and a1 = auxiliary (s2, delay slot).  Resolve only
-     * the exact LoadImage identity translated by B53E. */
+     * a0 = argument (s0) and a1 = auxiliary (s2, delay slot). */
     if (worker == 0x80076664u) {
         unsigned stop_epoch = PE_Port_StopEpoch();
 
@@ -341,6 +345,17 @@ direct_issue:
         /* 0x80076D40..0x80076D54: the worker result is deliberately ignored,
          * the saved low 16-bit I_MASK is restored, and direct issue returns
          * zero. */
+        (void)func_80073E10((uint16_t)PE_LoadU32(GA_GPU_SAVED_IMASK));
+        return 0;
+    }
+
+    if (worker == 0x80076B98u) {
+        unsigned stop_epoch = PE_Port_StopEpoch();
+
+        (void)func_80076B98(argument, auxiliary);
+        if (PE_Port_StopEpoch() != stop_epoch) {
+            return 0;
+        }
         (void)func_80073E10((uint16_t)PE_LoadU32(GA_GPU_SAVED_IMASK));
         return 0;
     }

@@ -1,12 +1,12 @@
 /*
- * Phase 6E-B54K-Q — func_801909B4 prefix through the first MoveImage.
+ * Phase 6E-B54K-R — func_801909B4 through MoveImage and display setup.
  *
  * Retail overlay body: [0x801909B4,0x801918F8), 977 words.
- * Implemented pre-call prefix: [0x801909B4,0x80190C08), 149 words.
- * The boundary pair at 0x80190C08 is jal func_8007512C / sh h,30(sp).
- * Native captures all three MoveImage arguments and the complete local RECT,
- * then stops.  No VRAM move, later overlay call, or scheduler state is
- * fabricated.
+ * Implemented prefix: [0x801909B4,0x80190D74), 240 words.  MoveImage now
+ * traverses the retail dispatcher and exact one-packet GP0(80h) worker.
+ * The next canonical boundary is the one-time overlay-local call
+ * func_80190660 at 0x80190D74; the D_8009D1BC-nonzero alternate is retained
+ * as a named structural cut at the 0x80190D7C saved-bit branch.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -37,15 +37,19 @@ int func_801909B4(void)
 {
     pe_addr_t arena;
     pe_addr_t second;
+    pe_addr_t environment0;
+    pe_addr_t environment1;
+    uint32_t saved_bit;
     RECT move_rect;
+    RECT clear_rect;
 
     CopyGuestBytes(GA_DISPENV_COPY_0, GA_DISPENV_SOURCE_0, 0x14u);
     CopyGuestBytes(GA_DISPENV_COPY_1, GA_DISPENV_SOURCE_1, 0x14u);
     CopyGuestBytes(GA_DRAWENV_COPY_0, GA_DRAWENV_SOURCE_0, 0x5Cu);
     CopyGuestBytes(GA_DRAWENV_COPY_1, GA_DRAWENV_SOURCE_1, 0x5Cu);
 
-    /* 0x80190A90: retained for the later 0x80190D7C branch. */
-    (void)(PE_LoadU8(0x800B0DCDu) & 1u);
+    /* 0x80190A90: retained in s4 for the later 0x80190D7C branch. */
+    saved_bit = PE_LoadU8(0x800B0DCDu) & 1u;
 
     arena = PE_LoadU32(0x80011610u);
     second = arena + 0x1C080u;
@@ -67,9 +71,51 @@ int func_801909B4(void)
     move_rect.y = 0;
     move_rect.w = 160;
     move_rect.h = 256; /* jal delay slot at 0x80190C0C */
-    (void)Bootstrap_ReturnInt4Indirect(
-        "func_8007512C", "func_801909B4", -1, 0x8007512Cu,
-        0u, 0x2C0u, 0u, 0u, &move_rect, sizeof(move_rect));
+    (void)func_8007512C(&move_rect, 0x2C0, 0);
+    if (PE_Port_ShouldStop())
+        return -1;
+
+    func_80074DC0(0);
+    func_80073A44(0);
+    func_80073A44(0);
+
+    environment0 = PE_LoadU32(0x801D11BCu);
+    environment1 = PE_LoadU32(0x801D11C0u);
+    (void)func_80074924(environment0, 0, 0, 320, 240);
+    (void)func_80074924(environment1, 0, 240, 320, 240);
+    (void)func_800749D8(environment0 + 0x5Cu, 0, 240, 320, 240);
+    (void)func_800749D8(environment1 + 0x5Cu, 0, 0, 320, 240);
+
+    PE_StoreU16(environment1 + 0x66u, 0u);
+    PE_StoreU16(environment0 + 0x66u, 0u);
+    PE_StoreU16(environment1 + 0x6Au, 240u);
+    PE_StoreU16(environment0 + 0x6Au, 240u);
+    PE_StoreU8(environment1 + 0x6Du, 1u);
+    PE_StoreU8(environment0 + 0x6Du, 1u);
+    PE_StoreU16(environment1 + 0x7Cu, 0u);
+    PE_StoreU16(environment0 + 0x7Cu, 0u);
+    PE_StoreU16(environment1 + 0x74u, 0u);
+    PE_StoreU16(environment0 + 0x74u, 0u);
+
+    clear_rect.x = 0;
+    clear_rect.y = 0;
+    clear_rect.w = 480;
+    clear_rect.h = 480;
+    func_80074F44(&clear_rect, 0, 0, 0);
+    func_80074DC0(0);
+    func_80073A44(0);
+    func_80073A44(0);
+
+    if (PE_LoadU32(0x8009D1BCu) == 0u) {
+        PE_StoreU32(0x8009D1BCu, 1u);
+        Bootstrap_ReturnVoid4Indirect(
+            "func_80190660", "func_801909B4", 0x80190660u,
+            0u, 0u, 0u, 0u);
+    } else {
+        Bootstrap_ReturnVoid4(
+            "func_801909B4_80190D7C_cut", "func_801909B4",
+            saved_bit, environment0, environment1, 0u);
+    }
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return -1; /* retail's retained s2 value */
 }

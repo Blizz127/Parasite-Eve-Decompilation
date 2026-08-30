@@ -8,6 +8,12 @@
 > that one expectation, adds derived read-only bit 31 and a separate rising-
 > edge bridge, and retains every other B53B substrate contract.
 
+> **B54K-R extension note:** B54K-R adds the generic synchronous GP0(80h)
+> VRAM-to-VRAM MoveImage operation and translates the exact one-packet
+> `func_80076B98` path used by PsyQ MoveImage. General linked-list DMA,
+> DrawOTag interpretation, StoreImage, and unrelated GP0 commands remain
+> unsupported. The scope statements below describe the historical B53B rung.
+
 ## Verdict and scope
 
 B53B implements the native hardware authority designed in B53A. It does not
@@ -235,7 +241,8 @@ B53B intentionally does not provide:
 - the retail libgpu ring, submitter, consumer, queue pump, or callbacks;
 - `func_80076C34`, `func_80076EE4`, `func_80076664`, DrawSync, or wait-loop translations;
 - DMA IRQ dispatch or guest callback binding;
-- StoreImage, MoveImage, linked-list DMA, display readback, or DMA directions other than 0/2;
+- StoreImage, MoveImage (added later by B54K-R), linked-list DMA, display
+  readback, or DMA directions other than 0/2;
 - polygon, line, sprite, environment, ordering-table, or general GP0 commands;
 - a general GP1/GPUSTAT/DMA controller;
 - HostFB projection, rendering, or presentation changes;

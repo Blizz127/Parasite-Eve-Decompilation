@@ -108,8 +108,9 @@ static inline void func_800752AC(void *o, int n) {
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
 /* func_8006AD40 is complete through its normal return (Phase 6E-B54K-M).
- * B54K-Q enters func_801909B4 after both DMA checkpoints; its current
- * canonical boundary is func_8007512C (MoveImage) at retail 0x80190C08. */
+ * B54K-R enters func_801909B4 after both DMA checkpoints, executes the
+ * generic MoveImage path and display setup, then reaches overlay-local
+ * func_80190660 at retail 0x80190D74. */
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
@@ -173,6 +174,8 @@ extern void func_8006A9E4(void);
 extern int  func_8006AD40(void);
 extern int  func_8006E1C0(pe_addr_t entry, pe_addr_t base);
 extern void func_80074E28(pe_addr_t name, const RECT *rect);
+extern int  func_8007512C(const RECT *rect, int destination_x,
+                          int destination_y);
 extern int  func_8007506C(const RECT *rect, pe_addr_t data);
 extern pe_addr_t func_800718D0(pe_addr_t tim);
 extern void PE_func_8006AD40_PackFontRecords(void);
@@ -231,6 +234,7 @@ extern uint64_t  PE_Pump_EntryCount(void);
 extern void      PE_Pump_GetTrace(PeGpuPumpTrace *out);
 extern int  func_80076C34(pe_addr_t worker, pe_addr_t argument,
                           int32_t copy_bytes, uint32_t auxiliary);
+extern int  func_80076B98(pe_addr_t packet, uint32_t auxiliary);
 extern int  PE_func_80076C34_Inline8(pe_addr_t worker,
                                      uint32_t argument_word0,
                                      uint32_t argument_word1,

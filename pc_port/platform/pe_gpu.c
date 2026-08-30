@@ -221,6 +221,125 @@ int PE_GPU_WriteGP1(uint32_t value)
     }
 }
 
+/* GP0(80h) copies each row left-to-right unless the destination begins to
+ * the right of the source, in which case the row is copied right-to-left.
+ * That horizontal overlap direction is hardware-tested by DuckStation's
+ * software backend.  Rows advance top-to-bottom.  Split both axes at VRAM
+ * wrap boundaries so every inner span has ordinary array bounds. */
+static void CopyVramSpan(uint32_t source_x, uint32_t source_y,
+                         uint32_t destination_x, uint32_t destination_y,
+                         uint32_t width, uint32_t height)
+{
+    uint32_t row;
+
+    if (source_x < destination_x) {
+        for (row = 0u; row < height; row++) {
+            uint32_t column = width;
+            const uint16_t *source =
+                &g_gpu.vram[(source_y + row) * PE_GPU_VRAM_WIDTH + source_x];
+            uint16_t *destination =
+                &g_gpu.vram[(destination_y + row) * PE_GPU_VRAM_WIDTH +
+                            destination_x];
+
+            while (column != 0u) {
+                column--;
+                destination[column] = source[column];
+            }
+        }
+    } else {
+        for (row = 0u; row < height; row++) {
+            uint32_t column;
+            const uint16_t *source =
+                &g_gpu.vram[(source_y + row) * PE_GPU_VRAM_WIDTH + source_x];
+            uint16_t *destination =
+                &g_gpu.vram[(destination_y + row) * PE_GPU_VRAM_WIDTH +
+                            destination_x];
+
+            for (column = 0u; column < width; column++) {
+                destination[column] = source[column];
+            }
+        }
+    }
+}
+
+int PE_GPU_MoveImage(uint32_t source, uint32_t destination, uint32_t size)
+{
+    uint32_t source_x;
+    uint32_t source_y;
+    uint32_t destination_x;
+    uint32_t destination_y;
+    uint32_t width;
+    uint32_t height;
+    uint32_t rows_remaining;
+    uint32_t current_source_y;
+    uint32_t current_destination_y;
+
+    if ((g_gpu.state.status & PE_GPU_STATUS_READY_GP0) == 0u ||
+        g_gpu.state.gp0_state != PE_GPU_GP0_IDLE ||
+        g_gpu.state.dma2_active ||
+        g_gpu.state.gp1_dma_direction != 2u) {
+        return 0;
+    }
+
+    source_x = source & (PE_GPU_VRAM_WIDTH - 1u);
+    source_y = (source >> 16) & (PE_GPU_VRAM_HEIGHT - 1u);
+    destination_x = destination & (PE_GPU_VRAM_WIDTH - 1u);
+    destination_y = (destination >> 16) & (PE_GPU_VRAM_HEIGHT - 1u);
+    width = (((size & 0xFFFFu) - 1u) &
+             (PE_GPU_VRAM_WIDTH - 1u)) + 1u;
+    height = ((((size >> 16) & 0xFFFFu) - 1u) &
+              (PE_GPU_VRAM_HEIGHT - 1u)) + 1u;
+
+    rows_remaining = height;
+    current_source_y = source_y;
+    current_destination_y = destination_y;
+    while (rows_remaining != 0u) {
+        uint32_t source_rows = PE_GPU_VRAM_HEIGHT - current_source_y;
+        uint32_t destination_rows =
+            PE_GPU_VRAM_HEIGHT - current_destination_y;
+        uint32_t rows = rows_remaining;
+        uint32_t columns_remaining = width;
+        uint32_t current_source_x = source_x;
+        uint32_t current_destination_x = destination_x;
+
+        if (rows > source_rows) rows = source_rows;
+        if (rows > destination_rows) rows = destination_rows;
+
+        while (columns_remaining != 0u) {
+            uint32_t source_columns =
+                PE_GPU_VRAM_WIDTH - current_source_x;
+            uint32_t destination_columns =
+                PE_GPU_VRAM_WIDTH - current_destination_x;
+            uint32_t columns = columns_remaining;
+
+            if (columns > source_columns) columns = source_columns;
+            if (columns > destination_columns) columns = destination_columns;
+            CopyVramSpan(current_source_x, current_source_y,
+                         current_destination_x, current_destination_y,
+                         columns, rows);
+            current_source_x =
+                (current_source_x + columns) & (PE_GPU_VRAM_WIDTH - 1u);
+            current_destination_x =
+                (current_destination_x + columns) &
+                (PE_GPU_VRAM_WIDTH - 1u);
+            columns_remaining -= columns;
+        }
+
+        current_source_y =
+            (current_source_y + rows) & (PE_GPU_VRAM_HEIGHT - 1u);
+        current_destination_y =
+            (current_destination_y + rows) &
+            (PE_GPU_VRAM_HEIGHT - 1u);
+        rows_remaining -= rows;
+    }
+
+    g_gpu.state.move_count++;
+    g_gpu.state.move_source = source;
+    g_gpu.state.move_destination = destination;
+    g_gpu.state.move_size = size;
+    return 1;
+}
+
 int PE_GPU_CanBeginImageLoad(int needs_dma)
 {
     if (g_gpu.state.gp0_state != PE_GPU_GP0_IDLE ||

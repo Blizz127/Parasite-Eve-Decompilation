@@ -368,11 +368,55 @@ static void test_B49_bounded_runs_repeat(void)
     PASS();
 }
 
-static void test_B54KQ_801909B4_strict_reaches_moveimage(void)
+static void B54KR_SeedGpuStatic(void)
 {
-    TEST("B54KQ_801909B4_strict_reaches_moveimage");
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x8009570Cu, 0x80076C34u); /* target at jtb + 8 */
+    PE_StoreU32(0x8009571Cu, 0x80076B98u); /* worker at jtb + 0x18 */
+    PE_StoreU32(0x800957E4u, 0x04FFFFFFu);
+    PE_StoreU32(0x800957E8u, 0x80000000u);
+    PE_StoreU8(0x8009574Du, 1u);
+    PE_StoreU32(0x80095874u, 0u);
+    PE_StoreU32(0x80095878u, 0u);
+    PE_StoreU32(0x80095758u, 0u);
+}
+
+static int B54KR_UploadPixels(uint32_t x, uint32_t y, uint32_t width,
+                              uint32_t height, const uint16_t *pixels)
+{
+    uint32_t count = width * height;
+    uint32_t i;
+
+    if (!PE_GPU_WriteGP1(0x04000000u) ||
+        !PE_GPU_WriteGP0(0x01000000u) ||
+        !PE_GPU_WriteGP0(0xA0000000u) ||
+        !PE_GPU_WriteGP0((y << 16) | x) ||
+        !PE_GPU_WriteGP0((height << 16) | width)) {
+        return 0;
+    }
+    for (i = 0u; i < count; i += 2u) {
+        uint32_t word = pixels[i];
+        if (i + 1u < count) word |= (uint32_t)pixels[i + 1u] << 16;
+        if (!PE_GPU_WriteGP0(word)) return 0;
+    }
+    return 1;
+}
+
+static int B54KR_PixelIs(uint32_t x, uint32_t y, uint16_t expected)
+{
+    uint16_t pixel = 0xFFFFu;
+    return PE_GPU_ReadVRAM(x, y, &pixel) && pixel == expected;
+}
+
+static void B54KQ_SeedOverlayPrefix(uint8_t bias);
+
+static void test_B54KR_801909B4_strict_reaches_overlay_init(void)
+{
+    TEST("B54KR_801909B4_strict_reaches_overlay_init");
 #if defined(__unix__) || defined(__APPLE__)
     ResetTestState();
+    HostFB_Init();
+    B54KQ_SeedOverlayPrefix(0x31u);
     fflush(NULL);
     pid_t pid = fork();
     ASSERT(pid >= 0, "fork failed");
@@ -385,7 +429,7 @@ static void test_B54KQ_801909B4_strict_reaches_moveimage(void)
     int status = 0;
     ASSERT(waitpid(pid, &status, 0) == pid, "waitpid failed");
     ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "func_801909B4 did not reach the strict MoveImage boundary");
+           "func_801909B4 did not reach strict func_80190660 boundary");
 #endif
     PASS();
 }
@@ -402,7 +446,14 @@ static int B54KQ_AddressIsWritten(uint32_t address)
            (address >= 0x800A0ED4u && address < 0x800A1708u) ||
            (address >= 0x800A1838u && address < 0x800A1850u) ||
            (address >= 0x800A1854u && address < 0x800A1858u) ||
-           (address >= 0x800A185Cu && address < 0x800A1870u);
+           (address >= 0x800A185Cu && address < 0x800A1870u) ||
+           (address >= 0x80120D00u && address < 0x80120D80u) ||
+           (address >= 0x8013CD80u && address < 0x8013CE00u) ||
+           (address >= 0x800957ECu && address < 0x800957F8u) ||
+           (address >= 0x80095754u && address < 0x80095758u) ||
+           (address >= 0x8009587Cu && address < 0x80095880u) ||
+           (address >= 0x80095888u && address < 0x80095890u) ||
+           (address >= 0x8009D1BCu && address < 0x8009D1C0u);
 }
 
 static void B54KQ_SeedOverlayPrefix(uint8_t bias)
@@ -416,28 +467,233 @@ static void B54KQ_SeedOverlayPrefix(uint8_t bias)
     PE_StoreU32(0x80011610u, 0x80120D00u);
     PE_StoreU32(0x800B0CD8u, 0x00100001u);
     PE_StoreU8(0x800B0DCDu, 1u);
+    B54KR_SeedGpuStatic();
     memset(PE_Translate(0x800A0ED4u, 0x830u), 0x5Au, 0x830u);
     PE_StoreU32(0x800A1704u, 0x5A5A5A5Au);
     memset(PE_Translate(0x800A1838u, 0x38u), 0x5Au, 0x38u);
 }
 
-static int B54KQ_MoveImageBoundaryIsExact(void)
+static int B54KR_OverlayBoundaryIsExact(const char *symbol)
 {
     BootstrapArgCall4 *call;
-    RECT rect;
 
     if (g_bootstrap_arg4_call_count != 1)
         return 0;
     call = &g_bootstrap_arg4_calls[0];
-    if (strcmp(call->symbol, "func_8007512C") != 0 ||
-        strcmp(call->caller, "func_801909B4") != 0 ||
-        call->target != 0x8007512Cu || call->arg0 != 0u ||
-        call->arg1 != 0x2C0u || call->arg2 != 0u || call->arg3 != 0u ||
-        call->payload_size != sizeof(rect))
-        return 0;
-    memcpy(&rect, call->payload, sizeof(rect));
-    return rect.x == 320 && rect.y == 0 &&
-           rect.w == 160 && rect.h == 256;
+    return strcmp(call->symbol, symbol) == 0 &&
+           strcmp(call->caller, "func_801909B4") == 0 &&
+           call->target == (strcmp(symbol, "func_80190660") == 0 ?
+                            0x80190660u : 0u);
+}
+
+static void test_B54KR_gpu_move_overlap_wrap_and_zero_geometry(void)
+{
+    static const uint16_t overlap[] = { 1u, 2u, 3u, 4u, 5u, 6u };
+    static const uint16_t wrap[] = { 0xA1u, 0xA2u, 0xA3u, 0xA4u };
+    uint16_t full_row[1024];
+    PeGpuState state;
+    uint32_t i;
+    TEST("B54KR_gpu_move_overlap_wrap_and_zero_geometry");
+    ResetTestState();
+
+    ASSERT(B54KR_UploadPixels(10u, 0u, 6u, 1u, overlap) &&
+           PE_GPU_WriteGP1(0x04000002u) &&
+           PE_GPU_MoveImage(10u, 12u, 0x00010004u),
+           "overlapping GP0(80h) setup/copy failed");
+    ASSERT(B54KR_PixelIs(10u, 0u, 1u) &&
+           B54KR_PixelIs(11u, 0u, 2u) &&
+           B54KR_PixelIs(12u, 0u, 1u) &&
+           B54KR_PixelIs(13u, 0u, 2u) &&
+           B54KR_PixelIs(14u, 0u, 3u) &&
+           B54KR_PixelIs(15u, 0u, 4u),
+           "rightward overlap was not copied right-to-left");
+
+    ASSERT(B54KR_UploadPixels(1022u, 4u, 4u, 1u, wrap) &&
+           PE_GPU_WriteGP1(0x04000002u) &&
+           PE_GPU_MoveImage((4u << 16) | 1022u,
+                            (6u << 16) | 100u, 0x00010004u),
+           "wrapped GP0(80h) setup/copy failed");
+    ASSERT(B54KR_PixelIs(100u, 6u, 0xA1u) &&
+           B54KR_PixelIs(101u, 6u, 0xA2u) &&
+           B54KR_PixelIs(102u, 6u, 0xA3u) &&
+           B54KR_PixelIs(103u, 6u, 0xA4u),
+           "wrapped source rectangle did not preserve pixel order");
+
+    for (i = 0u; i < 1024u; i++) full_row[i] = (uint16_t)(i ^ 0x5A5Au);
+    ASSERT(B54KR_UploadPixels(0u, 10u, 1024u, 1u, full_row) &&
+           PE_GPU_WriteGP1(0x04000002u) &&
+           PE_GPU_MoveImage(10u << 16, 11u << 16, 0x00010000u),
+           "raw width zero did not encode 1024 pixels");
+    ASSERT(B54KR_PixelIs(0u, 11u, full_row[0]) &&
+           B54KR_PixelIs(511u, 11u, full_row[511]) &&
+           B54KR_PixelIs(1023u, 11u, full_row[1023]),
+           "1024-pixel zero-width geometry differs");
+
+    ASSERT(PE_GPU_MoveImage(0u, 0u, 0u),
+           "raw 0x00000000 max-size identity copy rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.move_count == 4u && state.move_source == 0u &&
+           state.move_destination == 0u && state.move_size == 0u &&
+           B54KR_PixelIs(511u, 11u, full_row[511]),
+           "max-size identity copy or telemetry differs");
+    PASS();
+}
+
+static void test_B54KR_gpu_move_rejections_are_mutation_free(void)
+{
+    static const uint16_t seed[] = { 0x1111u, 0x2222u };
+    PeGpuState before, after;
+    TEST("B54KR_gpu_move_rejections_are_mutation_free");
+    ResetTestState();
+    ASSERT(B54KR_UploadPixels(20u, 20u, 2u, 1u, seed) &&
+           PE_GPU_WriteGP1(0x04000002u), "rejection seed failed");
+
+    PE_GPU_SetReady(0);
+    PE_GPU_GetState(&before);
+    ASSERT(!PE_GPU_MoveImage((20u << 16) | 20u,
+                             (30u << 16) | 30u, 0x00010002u),
+           "not-ready move was accepted");
+    PE_GPU_GetState(&after);
+    ASSERT(after.move_count == before.move_count &&
+           B54KR_PixelIs(30u, 30u, 0u),
+           "not-ready rejection changed telemetry or VRAM");
+
+    PE_GPU_SetReady(1);
+    ASSERT(PE_GPU_WriteGP0(0xA0000000u), "cannot make parser non-idle");
+    PE_GPU_GetState(&before);
+    ASSERT(!PE_GPU_MoveImage(0u, 0u, 0x00010001u),
+           "non-idle parser move was accepted");
+    PE_GPU_GetState(&after);
+    ASSERT(after.move_count == before.move_count &&
+           after.gp0_state == PE_GPU_GP0_EXPECT_POSITION &&
+           PE_GPU_WriteGP1(0x01000000u),
+           "parser rejection mutated state or could not reset");
+
+    ASSERT(PE_GPU_WriteGP1(0x04000000u) &&
+           PE_GPU_WriteGP0(0xA0000000u) &&
+           PE_GPU_WriteGP0(0u) &&
+           PE_GPU_WriteGP0(0x00010020u) &&
+           PE_GPU_WriteGP1(0x04000002u), "cannot seed busy DMA parser");
+    PE_GPU_EnableDMA2();
+    ASSERT(PE_GPU_DMA2Issue(0x80180000u, 0x00010010u, 0x01000201u),
+           "cannot seed busy DMA");
+    PE_GPU_GetState(&before);
+    ASSERT(!PE_GPU_MoveImage(0u, 0u, 0x00010001u),
+           "busy-DMA move was accepted");
+    PE_GPU_GetState(&after);
+    ASSERT(after.move_count == before.move_count && after.dma2_active &&
+           after.dma2_event_token == before.dma2_event_token,
+           "busy rejection changed DMA or move state");
+    PASS();
+}
+
+static void test_B54KR_moveimage_wrapper_packet_and_direct_dispatch(void)
+{
+    static const uint16_t pixels[] = {
+        0x101u, 0x102u, 0x103u, 0x104u,
+        0x201u, 0x202u, 0x203u, 0x204u
+    };
+    RECT rect = { 10, 20, 4, 2 };
+    PeGpuState state;
+    TEST("B54KR_moveimage_wrapper_packet_and_direct_dispatch");
+    ResetTestState();
+    B54KR_SeedGpuStatic();
+    ASSERT(B54KR_UploadPixels(10u, 20u, 4u, 2u, pixels),
+           "wrapper source upload failed");
+
+    ASSERT(func_8007512C(&rect, 100, 30) == 0 &&
+           !PE_Port_ShouldStop(), "MoveImage direct dispatcher did not return");
+    ASSERT(PE_LoadU32(0x800957E4u) == 0x04FFFFFFu &&
+           PE_LoadU32(0x800957E8u) == 0x80000000u &&
+           PE_LoadU32(0x800957ECu) == 0x0014000Au &&
+           PE_LoadU32(0x800957F0u) == 0x001E0064u &&
+           PE_LoadU32(0x800957F4u) == 0x00020004u,
+           "persistent MoveImage packet differs");
+    ASSERT(B54KR_PixelIs(100u, 30u, 0x101u) &&
+           B54KR_PixelIs(103u, 30u, 0x104u) &&
+           B54KR_PixelIs(100u, 31u, 0x201u) &&
+           B54KR_PixelIs(103u, 31u, 0x204u),
+           "direct MoveImage destination differs");
+    PE_GPU_GetState(&state);
+    ASSERT(state.move_count == 1u &&
+           state.move_source == 0x0014000Au &&
+           state.move_destination == 0x001E0064u &&
+           state.move_size == 0x00020004u &&
+           state.gp1_dma_direction == 2u && !state.dma2_active &&
+           PE_LoadU32(0x80095874u) == 0u &&
+           PE_LoadU32(0x80095878u) == 0u &&
+           PE_IRQ_GetMask() == 0u && g_bootstrap_arg4_call_count == 0,
+           "direct worker changed queue/IRQ state or telemetry differs");
+    PASS();
+}
+
+static void test_B54KR_moveimage_zero_and_packet_negative_controls(void)
+{
+    RECT zero_w = { 1, 2, 0, 3 };
+    RECT zero_h = { 1, 2, 3, 0 };
+    PeGpuState state;
+    TEST("B54KR_moveimage_zero_and_packet_negative_controls");
+    ResetTestState();
+    B54KR_SeedGpuStatic();
+    PE_StoreU32(0x800957ECu, 0xA5A5A5A5u);
+    PE_StoreU32(0x800957F0u, 0xB6B6B6B6u);
+    PE_StoreU32(0x800957F4u, 0xC7C7C7C7u);
+    ASSERT(func_8007512C(&zero_w, 9, 10) == -1 &&
+           func_8007512C(&zero_h, 9, 10) == -1 &&
+           PE_LoadU32(0x800957ECu) == 0xA5A5A5A5u &&
+           PE_LoadU32(0x800957F0u) == 0xB6B6B6B6u &&
+           PE_LoadU32(0x800957F4u) == 0xC7C7C7C7u,
+           "zero-size wrapper submitted or changed packet words");
+    PE_GPU_GetState(&state);
+    ASSERT(state.move_count == 0u && !PE_Port_ShouldStop(),
+           "zero-size wrapper reached hardware/boundary");
+
+    PE_StoreU32(0x800957E4u, 0x03FFFFFFu);
+    (void)func_80076B98(0x800957E4u, 0x14u);
+    PE_GPU_GetState(&state);
+    ASSERT(state.move_count == 0u && state.gp1_dma_direction == 0u &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
+           g_bootstrap_arg4_call_count == 1 &&
+           strcmp(g_bootstrap_arg4_calls[0].symbol,
+                  "func_80076B98_packet_cut") == 0,
+           "unsupported linked-list packet was not an inert named cut");
+    PASS();
+}
+
+static void test_B54KR_moveimage_queued_pump_path(void)
+{
+    static const uint16_t pixels[] = { 0x311u, 0x312u };
+    int returned = 0;
+    int result;
+    PeGpuPumpTrace trace;
+    TEST("B54KR_moveimage_queued_pump_path");
+    ResetTestState();
+    B54KR_SeedGpuStatic();
+    ASSERT(B54KR_UploadPixels(40u, 50u, 2u, 1u, pixels),
+           "queued source upload failed");
+    PE_StoreU32(0x800957ECu, (50u << 16) | 40u);
+    PE_StoreU32(0x800957F0u, (60u << 16) | 70u);
+    PE_StoreU32(0x800957F4u, 0x00010002u);
+    PE_StoreU32(0x800BD030u, 0x80076B98u);
+    PE_StoreU32(0x800BD034u, 0x800957E4u);
+    PE_StoreU32(0x800BD038u, 0u);
+    PE_StoreU32(0x80095874u, 1u);
+    PE_StoreU32(0x80095878u, 0u);
+
+    result = PE_func_80076EE4_Pump(&returned);
+    PE_Pump_GetTrace(&trace);
+    ASSERT(returned == 1 && result == 0 && !PE_Port_ShouldStop() &&
+           PE_LoadU32(0x80095878u) == 1u &&
+           trace.worker_calls == 1u && trace.worker_returned == 1 &&
+           trace.last_worker == 0x80076B98u &&
+           trace.last_argument == 0x800957E4u &&
+           trace.consumer_after_worker == 1u,
+           "queued pump did not consume one MoveImage worker");
+    ASSERT(B54KR_PixelIs(70u, 60u, 0x311u) &&
+           B54KR_PixelIs(71u, 60u, 0x312u) &&
+           PE_IRQ_GetMask() == 0u,
+           "queued MoveImage pixels or mask restore differ");
+    PASS();
 }
 
 static void test_B54KQ_prerequisite_setters_and_reset(void)
@@ -508,20 +764,26 @@ static void test_B54KQ_5C1EC_zero_path_is_named_boundary(void)
     PASS();
 }
 
-static void test_B54KQ_801909B4_prefix_effects_and_canary(void)
+static void test_B54KR_801909B4_prefix_effects_and_canary(void)
 {
     uint8_t *snapshot;
     uint32_t address;
     int vsync, drawsync, presented, mask;
-    TEST("B54KQ_801909B4_prefix_effects_and_canary");
+    uint16_t source0 = 0x1357u;
+    uint16_t source1 = 0x2468u;
+    PeGpuState gpu;
+    TEST("B54KR_801909B4_prefix_effects_and_canary");
     ResetTestState();
     HostFB_Init();
     B54KQ_SeedOverlayPrefix(0x13u);
+    ASSERT(B54KR_UploadPixels(320u, 0u, 1u, 1u, &source0) &&
+           B54KR_UploadPixels(479u, 255u, 1u, 1u, &source1),
+           "cannot seed canonical MoveImage source pixels");
     snapshot = malloc(PE_RAM_SIZE);
     ASSERT(snapshot != NULL, "cannot allocate B54KQ RAM snapshot");
     memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
 
-    ASSERT(func_801909B4() == -1, "prefix retained return differs");
+    ASSERT(func_801909B4() == -1, "continued prefix retained return differs");
     ASSERT(memcmp(PE_TranslateConst(0x801D1498u, 0xE0u),
                   PE_TranslateConst(0x800BCDC8u, 0xE0u), 0xE0u) == 0,
            "four fixed environment copies differ");
@@ -536,20 +798,52 @@ static void test_B54KQ_801909B4_prefix_effects_and_canary(void)
            PE_LoadU32(0x8009D030u) == 1u &&
            PE_LoadU32(0x800B0CD8u) == 0x0010C001u,
            "pre-MoveImage state calls differ");
-    ASSERT(B54KQ_MoveImageBoundaryIsExact(),
-           "MoveImage target, ABI, or RECT payload differs");
+    ASSERT(PE_LoadU32(0x800957ECu) == 0x00000140u &&
+           PE_LoadU32(0x800957F0u) == 0x000002C0u &&
+           PE_LoadU32(0x800957F4u) == 0x010000A0u,
+           "canonical MoveImage packet words differ");
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.move_count == 1u &&
+           gpu.move_source == 0x00000140u &&
+           gpu.move_destination == 0x000002C0u &&
+           gpu.move_size == 0x010000A0u &&
+           B54KR_PixelIs(704u, 0u, source0) &&
+           B54KR_PixelIs(863u, 255u, source1),
+           "canonical VRAM move or telemetry differs");
+    ASSERT(PE_LoadU16(0x80120D00u) == 0u &&
+           PE_LoadU16(0x80120D02u) == 0u &&
+           PE_LoadU16(0x80120D04u) == 320u &&
+           PE_LoadU16(0x80120D06u) == 240u &&
+           PE_LoadU16(0x8013CD80u) == 0u &&
+           PE_LoadU16(0x8013CD82u) == 240u &&
+           PE_LoadU16(0x8013CD84u) == 320u &&
+           PE_LoadU16(0x8013CD86u) == 240u &&
+           PE_LoadU16(0x80120D66u) == 0u &&
+           PE_LoadU16(0x8013CDE6u) == 0u &&
+           PE_LoadU16(0x80120D6Au) == 240u &&
+           PE_LoadU16(0x8013CDEAu) == 240u &&
+           PE_LoadU8(0x80120D6Du) == 1u &&
+           PE_LoadU8(0x8013CDEDu) == 1u &&
+           PE_LoadU16(0x80120D74u) == 0u &&
+           PE_LoadU16(0x8013CDF4u) == 0u &&
+           PE_LoadU16(0x80120D7Cu) == 0u &&
+           PE_LoadU16(0x8013CDFCu) == 0u,
+           "draw/disp environment setup fields differ");
+    ASSERT(PE_LoadU32(0x8009D1BCu) == 1u &&
+           B54KR_OverlayBoundaryIsExact("func_80190660"),
+           "one-time overlay initializer publication/boundary differs");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "prefix did not stop at MoveImage");
+           "prefix did not stop at overlay-local initializer");
     HostFB_GetState(&vsync, &drawsync, &presented, &mask);
-    ASSERT(mask == 0 && vsync == 0 && drawsync == 0 && presented == 0,
-           "pre-MoveImage display-mask call changed other host state");
+    ASSERT(mask == 0 && vsync == 4 && drawsync == 2 && presented == 0,
+           "display synchronization call counts differ");
 
     for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
         if (B54KQ_AddressIsWritten(address))
             continue;
         if (PE_LoadU8(address) != snapshot[address - PE_RAM_BASE]) {
             free(snapshot);
-            FAIL("prefix changed guest RAM outside exact retail writes");
+            FAIL("continued prefix changed RAM outside exact retail writes");
             return;
         }
     }
@@ -557,18 +851,28 @@ static void test_B54KQ_801909B4_prefix_effects_and_canary(void)
     PASS();
 }
 
-static void test_B54KQ_801909B4_dirty_repeat(void)
+static void test_B54KR_801909B4_dirty_repeat_and_alternate_cut(void)
 {
-    TEST("B54KQ_801909B4_dirty_repeat");
+    uint16_t first = 0x1111u;
+    uint16_t second = 0x7777u;
+    PeGpuState gpu;
+    TEST("B54KR_801909B4_dirty_repeat_and_alternate_cut");
     ResetTestState();
     HostFB_Init();
     B54KQ_SeedOverlayPrefix(0x21u);
+    ASSERT(B54KR_UploadPixels(320u, 0u, 1u, 1u, &first),
+           "first repeat source seed failed");
     ASSERT(func_801909B4() == -1, "first prefix return differs");
+    ASSERT(B54KR_OverlayBoundaryIsExact("func_80190660") &&
+           PE_LoadU32(0x8009D1BCu) == 1u,
+           "first repeat did not take one-time initializer path");
 
     PE_Port_RunControlReset();
     Stub_ResetOrderLog();
     Bootstrap_ResetArg4CallLog();
     B54KQ_SeedOverlayPrefix(0x87u);
+    ASSERT(B54KR_UploadPixels(320u, 0u, 1u, 1u, &second),
+           "second repeat source seed failed");
     PE_StoreU32(0x8009D120u, 0u);
     ASSERT(func_801909B4() == -1, "repeat prefix return differs");
     ASSERT(memcmp(PE_TranslateConst(0x801D1498u, 0xE0u),
@@ -576,8 +880,13 @@ static void test_B54KQ_801909B4_dirty_repeat(void)
            "repeat did not overwrite all copied environments");
     ASSERT(PE_LoadU32(0x8009D120u) == 1u &&
            PE_LoadU32(0x8009D030u) == 1u &&
-           B54KQ_MoveImageBoundaryIsExact(),
-           "repeat changed prerequisite or boundary behavior");
+           PE_LoadU32(0x8009D1BCu) == 1u &&
+           B54KR_OverlayBoundaryIsExact(
+               "func_801909B4_80190D7C_cut"),
+           "repeat changed prerequisite or alternate boundary behavior");
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.move_count == 2u && B54KR_PixelIs(704u, 0u, second),
+           "repeat did not issue a fresh deterministic VRAM move");
     PASS();
 }
 
@@ -31586,11 +31895,16 @@ int main(void)
     test_B49_main_iteration_budget_exact();
     test_B49_run_control_reset();
     test_B49_bounded_runs_repeat();
-    test_B54KQ_801909B4_strict_reaches_moveimage();
+    test_B54KR_801909B4_strict_reaches_overlay_init();
     test_B54KQ_prerequisite_setters_and_reset();
     test_B54KQ_5C1EC_zero_path_is_named_boundary();
-    test_B54KQ_801909B4_prefix_effects_and_canary();
-    test_B54KQ_801909B4_dirty_repeat();
+    test_B54KR_gpu_move_overlap_wrap_and_zero_geometry();
+    test_B54KR_gpu_move_rejections_are_mutation_free();
+    test_B54KR_moveimage_wrapper_packet_and_direct_dispatch();
+    test_B54KR_moveimage_zero_and_packet_negative_controls();
+    test_B54KR_moveimage_queued_pump_path();
+    test_B54KR_801909B4_prefix_effects_and_canary();
+    test_B54KR_801909B4_dirty_repeat_and_alternate_cut();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();

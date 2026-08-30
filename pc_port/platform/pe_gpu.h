@@ -69,6 +69,13 @@ typedef struct {
     uint64_t dma_data_order;
     uint64_t dma_completion_order;
     int dicr_rising_edge_pending;
+
+    /* Synchronous GP0(80h) VRAM-to-VRAM copies.  These fields are
+     * value-only hardware telemetry; VRAM remains the sole pixel authority. */
+    uint64_t move_count;
+    uint32_t move_source;
+    uint32_t move_destination;
+    uint32_t move_size;
 } PeGpuState;
 
 /* Host lifecycle.  Init clears VRAM and hardware.  Reset cancels hardware
@@ -86,6 +93,13 @@ void PE_GPU_SetReady(int ready);
  * command is unsupported or invalid for the current state. */
 int PE_GPU_WriteGP0(uint32_t value);
 int PE_GPU_WriteGP1(uint32_t value);
+
+/* GP0(80h) VRAM-to-VRAM copy payload.  Coordinates and dimensions use the
+ * retail GPU's 10/9-bit masks, including raw zero meaning 1024/512.  The
+ * operation is accepted only while GP0 is ready/idle, DMA2 is idle, and
+ * GP1 direction is CPU->GP0.  It is synchronous and never creates a DMA2
+ * completion event or guest callback. */
+int PE_GPU_MoveImage(uint32_t source, uint32_t destination, uint32_t size);
 
 /* Native safety preflight for an A0 image-load command.  This is a pure
  * query: it never changes readiness, parser, DMA, VRAM, or event state. */

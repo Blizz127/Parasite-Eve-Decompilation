@@ -182,10 +182,11 @@ the dispatcher's own timeout failure.
 
 ## Exhaustive executable caller census
 
-There is one direct `jal func_80076C34`, inside `func_80076C10`, and seven
+There is one direct `jal func_80076C34`, inside `func_80076C10`, and eight
 executable `jalr` sites through immutable `jtb[2]`. No other executable site
-loads that dispatch entry. The MoveImage wrapper reaches the direct site via
-`jtb[1]`.
+loads that dispatch entry. B54K-R corrected this audit's former off-by-one
+jump-table interpretation: MoveImage is itself the eighth `jtb[2]` caller;
+it does not traverse `func_80076C10`.
 
 | Public caller / site | `a0` worker | `a1` | `a2` | `a3` | Call delay slot | Result use |
 |---|---:|---|---:|---|---|---|
@@ -196,13 +197,15 @@ loads that dispatch entry. The MoveImage wrapper reaches the direct site via
 | DrawOTag `7540C` | `80076B98` | OT guest pointer | 0 | 0 | `a3 = 0` | forwarded |
 | PutDrawEnv `754B0` | `80076B98` | draw packet at env+`1C` | 64 | 0 | `a3 = 0` | ignored; wrapper returns env |
 | DrawOTagEnv `75588` | `80076B98` | draw packet at env+`1C` | 64 | 0 | `a3 = 0` | ignored |
+| MoveImage `751C4` | `80076B98` | persistent packet `800957E4` | 20 | 0 | `a3 = 0` | forwarded |
 | `func_80076C10` `76C1C` | incoming worker | incoming pointer | 0 | incoming `a2` | `a2 = 0` | forwarded |
 
-MoveImage calls `func_80076C10` at `0x800751C4` through `jtb[1]`, with
-worker `80076B98`, persistent packet `D_800957E4`, and incoming `a2=0x14`;
-the shim converts that to dispatcher `a2=0, a3=0x14`. MoveImage returns `-1`
-before submission for zero width or height; otherwise it forwards the
-dispatcher result.
+`D_80095744` contains `0x80095704`. MoveImage loads the dispatch target from
+that base plus 8 (`D_8009570C = func_80076C34`) and the worker from plus
+`0x18` (`D_8009571C = func_80076B98`). At `0x800751C4` it therefore calls
+the dispatcher directly with the persistent packet `D_800957E4`,
+`a2=0x14`, and `a3=0`. MoveImage returns `-1` before submission for zero
+width or height; otherwise it forwards the dispatcher result.
 
 Every site has the same state-conditioned blocking contract described below.
 For equal guest queue/MMIO state and equal arguments, the transition is

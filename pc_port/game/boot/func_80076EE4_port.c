@@ -62,6 +62,11 @@
  * D_80095860 is a retail .data word holding the literal MMIO address
  * 0x1F8010A8.  CHCR itself stays in the single B53B pe_gpu authority; this
  * translation creates no second CHCR representation.
+ *
+ * B54K-R resolves worker `func_80076B98` only for its authenticated
+ * one-packet MoveImage form.  A normal return advances the consumer through
+ * the existing retail pump ordering; unsupported general linked lists stop
+ * before consumer publication.
  */
 
 #include "psx_compat.h"
@@ -89,6 +94,7 @@
 #define GPU_QUEUE_MASK           63u
 
 #define GPU_LOADIMAGE_WORKER     0x80076664u
+#define GPU_LINKED_LIST_WORKER   0x80076B98u
 
 /* Value-only entry telemetry used to prove that hardware completion and the
  * DICR edge bridge never call the pump, including its otherwise silent busy
@@ -170,6 +176,15 @@ static int PumpDispatchWorker(pe_addr_t worker, pe_addr_t argument,
         unsigned stop_epoch = PE_Port_StopEpoch();
 
         (void)func_80076664(argument, auxiliary);
+        if (PE_Port_StopEpoch() != stop_epoch) return 0;
+        g_pump_trace.worker_returned = 1;
+        return 1;
+    }
+
+    if (worker == GPU_LINKED_LIST_WORKER) {
+        unsigned stop_epoch = PE_Port_StopEpoch();
+
+        (void)func_80076B98(argument, auxiliary);
         if (PE_Port_StopEpoch() != stop_epoch) return 0;
         g_pump_trace.worker_returned = 1;
         return 1;
