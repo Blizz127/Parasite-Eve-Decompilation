@@ -36,6 +36,29 @@ unsigned int D_8009D064 = 0;
  * func_8006A8D4's layout.  Real access sites translate via PE_Translate. */
 pe_addr_t D_80011614 = 0x8010BD00u;
 
+/* Adopt the image-backed authorities only after PE_GuestImage_LoadExe has
+ * authenticated and copied the retail executable.  Bootstrap fixtures keep
+ * the host defaults above, so they do not pretend to contain PE.IMG. */
+int PE_Globals_AdoptRetailImage(void)
+{
+    pe_addr_t dest = PE_LoadU32(0x80011614u);
+    uint16_t start = PE_LoadU16(0x80093164u);
+    uint16_t end = PE_LoadU16(0x80093166u);
+    uint32_t bytes;
+    unsigned int i;
+
+    if (end < start)
+        return -1;
+    bytes = (uint32_t)(end - start) * 0x800u;
+    if (!PE_RangeIsRam(dest, bytes))
+        return -1;
+
+    D_80011614 = dest;
+    for (i = 0; i < 4; i++)
+        D_80093164[i] = PE_LoadU16(0x80093164u + i * 2u);
+    return 0;
+}
+
 /* ── Arena pointer globals ────────────────────────────────────────────
  * Phase 6E-B16: the 19-slot table is now guest-RAM lvalue macros in
  * pe_port_compat.h (split-brain fix); no host storage remains. */

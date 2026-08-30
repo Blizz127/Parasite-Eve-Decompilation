@@ -74,6 +74,7 @@ typedef struct { uint8_t disp[20]; } DISP_ENV;
  * sites.  No translated retail writer exists yet; the initial value is
  * bootstrap policy (see pe_globals.c). */
 extern pe_addr_t D_80011614;
+int PE_Globals_AdoptRetailImage(void);
 
 /* ── Host-owned scalar globals (plain data, no pointer arithmetic) ──── */
 extern int       D_8009CDDC;

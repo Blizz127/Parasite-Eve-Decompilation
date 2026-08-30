@@ -432,6 +432,19 @@ fixes and tests those values. Production and suite remain B54K-L / `954/954`.
 Evidence: `docs/evidence/pe-b54ko-1909b4-overlay-recovery/REPORT.md` and
 `pc_port/tools/b54ko_1909b4_overlay_oracle.py`.
 
+## PE-B54K-P — retail overlay authority handoff (2026-08-30)
+
+Real-disc startup now adopts `D_80011614=0x8018EFF0` and
+`D_80093164[0..3]={0x03D2,0x0457,0x04FC,0x0516}` from guest RAM only after
+the boot EXE is authenticated and loaded. Range ordering and the complete
+0x42800-byte destination are validated before publication. Bootstrap fixtures
+retain their explicit safe defaults.
+
+Normal and fresh ASan/UBSan suites pass `956/956`; a real-disc strict smoke
+still reaches the unchanged B54K-L frontier. Evidence:
+`docs/evidence/pe-b54kp-overlay-authority/REPORT.md` and
+`pc_port/tools/b54kp_overlay_authority_oracle.py`.
+
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
 **276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,

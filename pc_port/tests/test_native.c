@@ -83,6 +83,7 @@ static void ResetTestState(void) {
     PE_Disc_SetActive(NULL);        /* drop any installed disc fixture    */
     PE_3EAC8_RecordReset();         /* drop recorded provider arguments   */
     D_80011614 = D_80011614_BOOTSTRAP;
+    memset(D_80093164, 0, 4u * sizeof(D_80093164[0]));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -15402,6 +15403,40 @@ static void test_d11614_arena_anchors_track(void) {
     ASSERT(D_800B0E68 == 0x80110000u, "D_800B0E68 does not track D_80011614");
     ASSERT(D_800B0E64 == 0x80110000u - 8, "D_800B0E64 != D_80011614 - 8");
     D_80011614 = D_80011614_BOOTSTRAP;
+    PASS();
+}
+
+static void test_retail_overlay_authority_adopt(void) {
+    TEST("retail_overlay_authority_adopt");
+    ResetTestState();
+    PE_StoreU32(0x80011614u, 0x8018EFF0u);
+    PE_StoreU16(0x80093164u, 0x03D2u);
+    PE_StoreU16(0x80093166u, 0x0457u);
+    PE_StoreU16(0x80093168u, 0x04FCu);
+    PE_StoreU16(0x8009316Au, 0x0516u);
+
+    ASSERT(PE_Globals_AdoptRetailImage() == 0,
+           "retail overlay authority was rejected");
+    ASSERT(D_80011614 == 0x8018EFF0u, "retail overlay destination changed");
+    ASSERT(D_80093164[0] == 0x03D2u && D_80093164[1] == 0x0457u &&
+           D_80093164[2] == 0x04FCu && D_80093164[3] == 0x0516u,
+           "retail overlay table copy changed");
+    PASS();
+}
+
+static void test_retail_overlay_authority_rejects_bad_range(void) {
+    TEST("retail_overlay_authority_rejects_bad_range");
+    ResetTestState();
+    PE_StoreU32(0x80011614u, 0x801FFFF0u);
+    PE_StoreU16(0x80093164u, 0x0457u);
+    PE_StoreU16(0x80093166u, 0x03D2u);
+
+    ASSERT(PE_Globals_AdoptRetailImage() == -1,
+           "descending overlay range was accepted");
+    ASSERT(D_80011614 == D_80011614_BOOTSTRAP,
+           "rejected authority changed destination");
+    ASSERT(D_80093164[0] == 0 && D_80093164[1] == 0,
+           "rejected authority changed table");
     PASS();
 }
 
@@ -31808,9 +31843,11 @@ int main(void)
     test_38D1C_3E680_integration();
     test_38D1C_strict_not_stub();
 
-    /* D_80011614 (2 tests) */
+    /* D_80011614 / retail overlay authority (4 tests) */
     test_d11614_bootstrap_value();
     test_d11614_arena_anchors_track();
+    test_retail_overlay_authority_adopt();
+    test_retail_overlay_authority_rejects_bad_range();
 
     /* Provider frontier: func_800725DC (3 tests) */
     test_725DC_sets_guard();

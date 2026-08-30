@@ -393,6 +393,13 @@ int main(int argc, char **argv) {
             PE_RamDestroy();
             return 1;
         }
+        if (PE_Globals_AdoptRetailImage() != 0) {
+            fprintf(stderr, "[DISC] retail overlay authority is invalid\n");
+            TraceClose();
+            PE_Disc_Close(disc);
+            PE_RamDestroy();
+            return 1;
+        }
         fprintf(stderr, "[DISC] boot executable loaded into guest RAM\n");
     }
 
