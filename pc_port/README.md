@@ -1,19 +1,19 @@
-# Parasite Eve Native PC Port — Phase 6E-B54K-B2
+# Parasite Eve Native PC Port — Phase 6E-B54K-C
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B54K-B2 advances the production implementation of
-`func_80030894` through retail address `0x80030D20`: 291 words of the
-788-word GPU-primitive builder are now native. The new retail 33-word L5
-continuation builds five sprite packets at the machine-decoded
-`0x8009E1D0 + bank*140 + slot*28` addresses and closes at exactly 0x8C bytes.
-Its independent oracle checks every retail word, the sole call, loop
-edge/bound, and first excluded post-L5 instruction. Two focused tests cover
-all packet fields, exact write extent, dirty/repeat determinism, and the named
-`func_80030894_L5_cut`; normal and rebuilt ASan/UBSan suites pass 932/932
-with zero diagnostics. Scheduler provenance remains independently
+**Current milestone:** B54K-C advances the production implementation of
+`func_80030894` through retail address `0x80030F6C`: 438 words of the
+788-word GPU-primitive builder are now native. The new retail 147-word group
+builds two G4 records, three shaded sprites, and the complete three-tile L6
+loop. Its independent oracle verifies the whole window hash, nine calls,
+selected literal/store words, loop edge/bound, and first excluded post-L6
+instruction. Two focused tests cover the six non-contiguous write ranges,
+gap/end sentinels, exact fields, and dirty/repeat determinism. The named
+frontier is `func_80030894_L6_cut`; normal and rebuilt ASan/UBSan suites pass
+934/934 with zero diagnostics. Scheduler provenance remains independently
 artifact-bound: this rung adds no destination, `m0360i`, or persist special
-case. Full proof is in `docs/evidence/pe-b54kb2-30894-l5/REPORT.md`.
+case. Full proof is in `docs/evidence/pe-b54kc-30894-l6/REPORT.md`.
 
 **Earlier retained milestone:** B53I-D admits one separate later checkpoint
 for the second LoadImage DMA token created by B53I-C. The exact 32-word
@@ -797,7 +797,7 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_80030894_L5_cut from
+# Current global frontier: exit 1 at func_80030894_L6_cut from
 # func_80030894 (6AD40 continues to func_8006AD40_post30894_cut).
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 

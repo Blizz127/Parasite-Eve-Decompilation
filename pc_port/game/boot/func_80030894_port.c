@@ -1,6 +1,6 @@
 /*
- * Phase 6E-B54K-B2 — func_80030894: boot GPU-primitive builder,
- * prologue + bank-0 L2/L3, L4, and L5 packet groups (translated prefix).
+ * Phase 6E-B54K-C — func_80030894: boot GPU-primitive builder,
+ * prologue through the bank-0 L6 packet group (translated prefix).
  *
  * Full retail body:
  *   788 words / 0xC50 bytes, exe 0x80030894–0x800314E4 (exclusive),
@@ -11,16 +11,16 @@
  *   stale scratch discarded by the caller).
  *
  * Implemented prefix:
- *   0x80030894..0x80030D20 (291 words) — prologue, the bank record
+ *   0x80030894..0x80030F6C (438 words) — prologue, the bank record
  *   init at 0x800BE9F0, and the L2(j=0..9) × L3(k=0..3) sprite-array
  *   build at 0x800B01C0, followed by the fixed bank-0 tile/sprite setup
- *   and complete L4 four-packet and L5 five-packet loops.  The first
- *   excluded instruction is
+ *   complete L4/L5 loops, the following fixed G4/sprite records, and the
+ *   complete three-tile L6 loop.  The first excluded instruction is
  *
- *       lbu   s5, 0x18(sp)              # 0x80030D20
+ *       lui   s0, %hi(D_8009E460)       # 0x80030F6C
  *
- *   (post-L5 fixed-group setup).  The named strict boundary is
- *   func_80030894_L5_cut.
+ *   (post-L6 sprite setup).  The named strict boundary is
+ *   func_80030894_L6_cut.
  *
  * Word decode of the implemented window (verified against the
  * SHA-1-exact retail executable 452fb033f2eaa4b18aa20a5bca60b8125af3a37b):
@@ -73,7 +73,7 @@
  *     L3: k < 4 (sltiu), L2: j < 10 (sltiu), counters &0xFF.
  *
  * All callees are native since B54I/GPU1 (GetTPage, GetClut,
- * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC); the L5 cut is
+ * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC); the L6 cut is
  * the first untranslated boundary inside this body.
  *
  * Classification: 1 — translated retail prefix.
@@ -91,16 +91,26 @@
 #define GA_SPRT_RECORD   0x800B6920u
 #define GA_L4_BASE       0x8009E0F0u
 #define GA_L5_BASE       0x8009E1D0u
+#define GA_G4_PAIR_BASE  0x800B0130u
+#define GA_FIXED_SPRT_A  0x8009E0B8u
+#define GA_FIXED_SPRT_B  0x8009E2E8u
+#define GA_FIXED_SPRT_C  0x8009E320u
+#define GA_L6_BASE       0x8009E358u
 
 void func_80030894(void)
 {
     uint32_t tpage_sprt;   /* s8: sprite tpage mode for wrap_sprt */
     uint16_t clut_id;      /* sp+32 half */
     uint8_t bank = 0u;     /* sp+24 byte: outer bank counter */
+    uint8_t tile_colors[3]; /* sp+16..18: entry-time font-byte snapshot */
 
-    /* 0x800308E0..0x8003090C prologue vectors.  The font triple loads
-     * (sp+16..18) are dead in this window; sp+16..18 hold the
-     * sign-extended bytes but nothing reads them before the cut. */
+    /* Retail snapshots these bytes before any call and later reloads them
+     * unsigned in L6. Preserve that timing, not merely their final values. */
+    tile_colors[0] = PE_LoadU8(GA_8009CD90 + 0u);
+    tile_colors[1] = PE_LoadU8(GA_8009CD90 + 1u);
+    tile_colors[2] = PE_LoadU8(GA_8009CD90 + 2u);
+
+    /* 0x800308E0..0x8003090C prologue vectors. */
     tpage_sprt = func_80077A64(0u, 1u, 0x100u, 0x1E0u) & 0xFFFFu;
     clut_id = (uint16_t)func_80077AA4(0x130, 0x1F8);
 
@@ -172,6 +182,8 @@ void func_80030894(void)
             uint32_t bank28 = (uint32_t)bank * 28u;
             uint32_t bank112 = (uint32_t)bank * 112u;
             uint32_t bank140 = (uint32_t)bank * 140u;
+            uint32_t bank72 = (uint32_t)bank * 72u;
+            uint32_t bank48 = (uint32_t)bank * 48u;
             pe_addr_t tile = GA_TILE_BASE + bank24;
             pe_addr_t tile_packet = tile + 8u;
             pe_addr_t packet = GA_TILE_PACKET + bank16;
@@ -238,11 +250,101 @@ void func_80030894(void)
                 PE_StoreU16(l5 + 0x18u, 6u);
                 PE_StoreU16(l5 + 0x1Au, 10u);
             }
+
+            /* 0x80030D20..0x80030F28: two fixed G4 records, three
+             * fixed sprite records, and the register setup consumed by
+             * L6.  The retail records are unrolled and remain so here. */
+            {
+                pe_addr_t g4_a = GA_G4_PAIR_BASE + bank72;
+                pe_addr_t g4_b = g4_a + 36u;
+                pe_addr_t sprt_a = GA_FIXED_SPRT_A + bank28;
+                pe_addr_t sprt_b = GA_FIXED_SPRT_B + bank28;
+                pe_addr_t sprt_c = GA_FIXED_SPRT_C + bank28;
+                pe_addr_t tail;
+
+                func_80077BC4(g4_a);
+                func_80077BC4(g4_b);
+
+                PE_StoreU8(g4_a + 0x04u, 0u);
+                PE_StoreU8(g4_a + 0x05u, 0x82u);
+                PE_StoreU8(g4_a + 0x06u, 0x36u);
+                PE_StoreU8(g4_a + 0x0Cu, 0x4Au);
+                PE_StoreU8(g4_a + 0x0Du, 0xFFu);
+                PE_StoreU8(g4_a + 0x0Eu, 0x3Bu);
+                PE_StoreU8(g4_a + 0x14u, 0u);
+                PE_StoreU8(g4_a + 0x15u, 0x82u);
+                PE_StoreU8(g4_a + 0x16u, 0x36u);
+                PE_StoreU8(g4_a + 0x1Cu, 0x4Au);
+                PE_StoreU8(g4_a + 0x1Du, 0xFFu);
+                PE_StoreU8(g4_a + 0x1Eu, 0x3Bu);
+
+                PE_StoreU8(g4_b + 0x04u, 0xFFu);
+                PE_StoreU8(g4_b + 0x05u, 0x3Du);
+                PE_StoreU8(g4_b + 0x06u, 0x81u);
+                PE_StoreU8(g4_b + 0x0Cu, 0x83u);
+                PE_StoreU8(g4_b + 0x0Du, 0x13u);
+                PE_StoreU8(g4_b + 0x0Eu, 1u);
+                PE_StoreU8(g4_b + 0x14u, 0xFFu);
+                PE_StoreU8(g4_b + 0x15u, 0x3Du);
+                PE_StoreU8(g4_b + 0x16u, 0x81u);
+                PE_StoreU8(g4_b + 0x1Cu, 0x83u);
+                PE_StoreU8(g4_b + 0x1Du, 0x13u);
+                PE_StoreU8(g4_b + 0x1Eu, 1u);
+
+                func_800370DC(sprt_a, tpage_sprt);
+                tail = sprt_a + 8u;
+                func_80077B34(tail, 1u);
+                PE_StoreU8(tail + 0x04u, 0x80u);
+                PE_StoreU8(tail + 0x05u, 0x80u);
+                PE_StoreU8(tail + 0x06u, 0x80u);
+                PE_StoreU8(tail + 0x0Cu, 0x50u);
+                PE_StoreU8(tail + 0x0Du, 0xF4u);
+                PE_StoreU16(sprt_a + 0x16u, clut_id);
+                PE_StoreU16(tail + 0x10u, 8u);
+                PE_StoreU16(tail + 0x12u, 4u);
+
+                func_800370DC(sprt_b, tpage_sprt);
+                tail = sprt_b + 8u;
+                func_80077B34(tail, 1u);
+                PE_StoreU8(tail + 0x04u, 0x80u);
+                PE_StoreU8(tail + 0x05u, 0x80u);
+                PE_StoreU8(tail + 0x06u, 0x80u);
+                PE_StoreU8(tail + 0x0Cu, 0x58u);
+                PE_StoreU8(tail + 0x0Du, 0xF4u);
+                PE_StoreU16(sprt_b + 0x16u, clut_id);
+                PE_StoreU16(tail + 0x10u, 8u);
+                PE_StoreU16(tail + 0x12u, 4u);
+
+                func_800370DC(sprt_c, tpage_sprt);
+                tail = sprt_c + 8u;
+                func_80077B34(tail, 1u);
+                PE_StoreU8(tail + 0x04u, 0x80u);
+                PE_StoreU8(tail + 0x05u, 0x80u);
+                PE_StoreU8(tail + 0x06u, 0x80u);
+                PE_StoreU8(tail + 0x0Cu, 0x60u);
+                PE_StoreU8(tail + 0x0Du, 0xF4u);
+                PE_StoreU16(sprt_c + 0x16u, clut_id);
+                PE_StoreU16(tail + 0x10u, 8u);
+                PE_StoreU16(tail + 0x12u, 4u);
+            }
+
+            /* 0x80030F2C..0x80030F68: L6, three direct SetTile packets.
+             * Each packet receives one of the three font bytes loaded by
+             * the prologue, replicated across RGB. */
+            for (slot = 0u; slot < 3u; slot++) {
+                pe_addr_t tile = GA_L6_BASE + bank48 + slot * 16u;
+                uint8_t color = tile_colors[slot];
+
+                func_80077C44(tile);
+                PE_StoreU8(tile + 0x04u, color);
+                PE_StoreU8(tile + 0x05u, color);
+                PE_StoreU8(tile + 0x06u, color);
+            }
         }
     }
 
-    /* B54K-B2 cut: stop after L5 at retail 0x80030D20. */
+    /* B54K-C cut: stop after L6 at retail 0x80030F6C. */
     (void)Bootstrap_ReturnInt(
-        "func_80030894_L5_cut", "func_80030894", 0);
+        "func_80030894_L6_cut", "func_80030894", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
 }

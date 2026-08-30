@@ -70,7 +70,7 @@ and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
 is the unique `persist[0] |= 4` writer; the native branch must not plant that
 bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
-bridge, not another m0005i gate workaround. Native suite: 932/932 passed.
+bridge, not another m0005i gate workaround. Native suite: 934/934 passed.
 
 ## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
 
@@ -86,7 +86,7 @@ No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
 standalone native frontier remains separately
-`PRODUCTION_REACHABILITY=blocked_at_func_80030894_L5_cut`.
+`PRODUCTION_REACHABILITY=blocked_at_func_80030894_L6_cut`.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
 
@@ -106,8 +106,8 @@ This closes the “Disc 2 may contain a different executable” hypothesis and
 corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining status: `SEMANTIC_IMPLEMENTATION=not_started`,
-`PRODUCTION_REACHABILITY=blocked_at_func_80030894_L5_cut`, native suite
-`932/932`.
+`PRODUCTION_REACHABILITY=blocked_at_func_80030894_L6_cut`, native suite
+`934/934`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -129,8 +129,8 @@ BTL150 closes the wrong-token hypothesis and the available static name-form
 lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Status remains `SEMANTIC_IMPLEMENTATION=not_started`,
-`PRODUCTION_REACHABILITY=blocked_at_func_80030894_L5_cut`, native suite
-`932/932`.
+`PRODUCTION_REACHABILITY=blocked_at_func_80030894_L6_cut`, native suite
+`934/934`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
 the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
@@ -179,6 +179,25 @@ Evidence: `docs/evidence/pe-b54kb2-30894-l5/REPORT.md` and
 `pc_port/tools/b54kb2_30894_l5_oracle.py`. Scheduler provenance remains
 `NEEDS_ARTIFACT`; the next artifact-free production rung begins with the
 post-L5 fixed-group setup.
+
+## PE-B54K-C — func_80030894 through L6 (2026-08-29)
+
+The production prefix now implements retail `[0x80030894,0x80030F6C)`:
+438 words total. The 147-word C rung closes a coherent group of two G4
+records, three shaded sprite records, and the three-tile L6 loop. Its exact
+write set is six separate ranges; gap/end sentinels prevent a broad envelope
+from hiding stray writes. L6 uses the three prologue bytes from
+`D_8009CD90`, one replicated RGB value per tile.
+
+The independent oracle verifies the whole retail-window hash, all nine calls
+in order, 55 selected words, L6 edge/bound/extent, and the first excluded
+`D_8009E460` materialization. Focused state and dirty/repeat tests pass;
+normal and rebuilt ASan/UBSan suites are `934/934` with zero diagnostics.
+
+Evidence: `docs/evidence/pe-b54kc-30894-l6/REPORT.md` and
+`pc_port/tools/b54kc_30894_l6_oracle.py`. The named production boundary is
+`func_80030894_L6_cut`; scheduler provenance remains independently
+`NEEDS_ARTIFACT`.
 
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
