@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 337 exact matching-C
+Current matching-lane status: 338 exact matching-C
 leaves plus 20 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -677,7 +677,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 337 exact leaves plus 20
+  matching C; current disposition is 338 exact leaves plus 20
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1008,6 +1008,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-98-70D6C-PARK | 336 | `func_80070D6C` @ `0x6156C` is hood-proven by four direct callers (correcting the pool's stale 3), canonical return, and real boundaries. Independent RNG oracles close its self-adjacent state semantics and Stage-0 census. Two natural era `-O2 -G0` phrasings compile byte-identically to 24 versus retail 25 words: cc1 uses `$v0/$a*` homes, steals both cursor decrements into load gaps, computes the sum directly in `$v0`, and schedules different guard slots; retail preserves a full `$t0–$t8` home plan and explicit result copy. `PARKED-REGISTER-HOME-AND-CROSS-BLOCK-SCHEDULING`, `ACCEPTED-RESIDUAL`; no integration/count change. Candidate stash: `park func_80070D6C register-schedule residual`. Evidence: `docs/evidence/volume-campaign-20260830/func-80070d6c/PARK.md`. |
 | VOLUME-99-6346C | 337 | `func_8006346C` @ `0x53C6C` is a hood-proven 26-word guarded record-bit query with four direct callers, canonical return, and real boundaries. Phrasing 1 initialized the default result at entry, extending its lifetime into `$a2`, forcing `mflo a3`, and emitting 27 words. Delaying only that default assignment frees `$a2` for the product and selects `$a0` as the late result home; phrasing 2 matches all 26 words under era `-O2 -G0`, including the late guard-slot constant. Carve `0x0000 + 0x0068 + 0x1574 = 0x15DC`; packed span/full SHA exact, verify green at 337, and consecutive parks reset. Banked lever: delay default-result initialization when retail needs an argument register for an earlier product and another as the late result accumulator. Evidence: `docs/evidence/volume-campaign-20260830/func-8006346c/REPORT.md`. |
 | VOLUME-100-3F798-SKIP | 337 | `func_8003F798` @ `0x2FF98` is hood-proven by three direct callers, canonical `jr ra; nop`, and real boundaries. The split explicitly marks its 26-word body handwritten, and five required `ctc2` instructions write GTE control registers 16–20 after argument-relative buffer updates. The established COP2 expressibility rule classifies it `SKIP-HANDWRITTEN-COP2` with zero C phrasings, no integration, and no count change; exact Psy-Q routine provenance is not asserted. Pool remains 1,092 active spans, with Tier 1 11 and SKIP/suppressed 768. Evidence: `docs/evidence/volume-campaign-20260830/func-8003f798/SKIP.md`. |
+| VOLUME-101-12700 | 338 | `func_80012700` @ `0x2F00` is a hood-proven 29-word task-freelist pop/link initializer with seven direct callers, canonical return with live result delay slot, and real boundaries. The split-local serial phrasing swapped `$v0/$v1` homes and hoisted the active store; preserving `task->serial = D_8009D308++` matched phrasing 2 under era `-O2 -G8`, including four normalized gp relocations and one local jump. Carve `0x0000 + 0x0074 + 0x0000 = 0x0074`; 29/29 object, packed span, full SHA exact, verify green at 338. Banked lever: preserve a scalar postincrement assignment when retail stores the old value into a record and writes old+1 back later; splitting the operation can extend liveness and reorder independent stores. Evidence: `docs/evidence/volume-campaign-20260830/func-80012700/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

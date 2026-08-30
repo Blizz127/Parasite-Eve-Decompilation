@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,092 current active spans — Tier 1 11, Tier 2 214, Tier 3 99,
+Pool: 1,091 current active spans — Tier 1 10, Tier 2 214, Tier 3 99,
 SKIP/suppressed 768. Refresh evidence: `POOL_REFRESH.md`.
 
-Consecutive bounded parks: 0. Matched leaves this campaign: 2.
+Consecutive bounded parks: 0. Matched leaves this campaign: 3.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -14,3 +14,4 @@ Consecutive bounded parks: 0. Matched leaves this campaign: 2.
 | 3 | `func_80070D6C` @ `0x6156C` | canonical return; four direct callers; real boundaries; no frame/callees/loop; Stage-0 state census closed | `PARKED-REGISTER-HOME-AND-CROSS-BLOCK-SCHEDULING`; both natural shapes byte-identical at 24 versus retail 25 words | 25 | 2 | stash `park func_80070D6C register-schedule residual` |
 | 4 | `func_8006346C` @ `0x53C6C` | canonical return; four direct callers; real boundaries; no frame/callees/globals/loop | MATCHED leaf 337; delayed default-result initialization frees `a2` for `mflo` and fills the late guard slot; 26/26 normalized object, packed span, full SHA exact | 26 | 2 | VOLUME-99 leaf commit |
 | 5 | `func_8003F798` @ `0x2FF98` | canonical return; three direct callers; real boundaries; split marks handwritten; five `ctc2` effects | `SKIP-HANDWRITTEN-COP2`; no C attempt or integration | 26 | 0 | VOLUME-100 docs-only commit |
+| 6 | `func_80012700` @ `0x2F00` | canonical return with live result slot; seven direct callers; real boundaries; no frame/callees/loop; Stage-0 freelist and serial census closed | MATCHED leaf 338; direct postincrement assignment preserves old/new serial homes and store order; 29/29 normalized object, packed span, full SHA exact | 29 | 2 | VOLUME-101 leaf commit |

@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-100, the matching-C count is **337**.
+`634dd1b` (335-leaf base). After VOLUME-101, the matching-C count is **338**.
 
 ## Method and closure
 
@@ -11,31 +11,32 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,092** unique spans. The four-way
+The current active universe contains **1,091** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                  11
+TIER 1                  10
 TIER 2                 214
 TIER 3                  99
 SKIP / suppressed      768
                        ---
-TOTAL                 1092
+TOTAL                 1091
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,042 rows:
-11 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,041 rows:
+10 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
 active. The 50 active spans below were added after the primary tables through
 campaign overlays. Adding all 50 to the suppressed class closes the pool:
-`1042 + 50 = 1092` and `718 + 50 = 768`.
+`1041 + 50 = 1091` and `718 + 50 = 768`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
 after exact integration; VOLUME-98 moved `func_80070D6C` to the suppressed
 residual set after two bounded phrasings; VOLUME-99 then removed exact
 `func_8006346C` from Tier 1; VOLUME-100 screened handwritten COP2 helper
-`func_8003F798` without a C attempt. A suppressed `func_` label is not assumed
-to be a retail function.
+`func_8003F798` without a C attempt; VOLUME-101 removed exact
+`func_80012700` from Tier 1. A suppressed `func_` label is not assumed to be a
+retail function.
 
 ## Reconciled post-table spans
 

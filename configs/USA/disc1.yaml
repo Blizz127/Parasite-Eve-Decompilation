@@ -61,12 +61,12 @@ segments:
       - [0x2D74, asm]
       - [0x2DE0, c, func_800125E0]
       # Phase 5GZ-1266C: boot work-table link init, VRAM 0x8001266C,
-      # file 0x2E6C, size 0x94. Resume generated asm at 0x2F00.
+      # file 0x2E6C, size 0x94.
       - [0x2E6C, c, func_8001266C]
+      # Volume 101: task freelist pop/link initializer; era -O2 -G8.
+      - [0x2F00, c, func_80012700]
       # Phase 5HB-12774: bucket drain walk, VRAM 0x80012774,
       # file 0x2F74, size 0xDC. Resume generated asm at 0x3050.
-      # (0x2F00..0x2F74 remains asm — parked func_80012700.)
-      - [0x2F00, asm]
       - [0x2F74, c, func_80012774]
       # Phase 5HD-12850: script VM step (24-opcode interpreter), VRAM
       # 0x80012850, file 0x3050, size 0x3D0. Resume generated asm at 0x3420.
