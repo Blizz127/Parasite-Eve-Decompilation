@@ -14,6 +14,12 @@
 > DrawOTag interpretation, StoreImage, and unrelated GP0 commands remain
 > unsupported. The scope statements below describe the historical B53B rung.
 
+> **B54K-S extension note:** B54K-S translates the execution-proven
+> `func_80077294` DrawSync behavior. Blocking waits admit one active DMA2
+> token through the established checkpoint owner between retail wait polls;
+> polling reads themselves remain inert. Timeout recovery and no-progress
+> states remain explicit named cuts.
+
 ## Verdict and scope
 
 B53B implements the native hardware authority designed in B53A. It does not

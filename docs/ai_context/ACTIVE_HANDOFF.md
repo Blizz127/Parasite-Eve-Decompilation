@@ -70,7 +70,7 @@ and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
 is the unique `persist[0] |= 4` writer; the native branch must not plant that
 bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
-bridge, not another m0005i gate workaround. Current native suite: 967/967.
+bridge, not another m0005i gate workaround. Current native suite: 971/971.
 
 ## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
 
@@ -109,7 +109,7 @@ corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining scheduler status: `SEMANTIC_IMPLEMENTATION=not_started`
 and `SCHEDULER_PROVENANCE=NEEDS_ARTIFACT`. The independent native frontier is
-now `func_80190660` from `func_801909B4`; current suite `967/967`.
+now `func_80190660` from `func_801909B4`; current suite `971/971`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -133,7 +133,7 @@ indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Scheduler status remains
 `SEMANTIC_IMPLEMENTATION=not_started` / `NEEDS_ARTIFACT`; the independent
 native frontier is now `func_80190660` from `func_801909B4`, with suite
-`967/967`.
+`971/971`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
 the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
@@ -539,6 +539,39 @@ FUNC_80076B98=MOVEIMAGE_ONE_PACKET_SUBSET_ONLY
 FUNC_801909B4_PREFIX=240_WORDS_TRANSLATED
 PRODUCTION_REACHABILITY=blocked_at_func_80190660_from_func_801909B4
 GENERAL_LINKED_LIST_DMA=UNSUPPORTED_NAMED_BOUNDARY
+SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
+```
+
+## PE-B54K-S — deterministic DrawSync DMA drain (2026-08-30)
+
+The 26-word PsyQ `func_80074DC0` wrapper and execution-proven 79-word
+`func_80077294` drain are now represented. Mode zero preserves retail queue,
+DMA-busy, and GPU-ready tests; nonzero mode preserves the exact pending/status
+returns. Between calls to retail wait helper `func_80077404`, the host admits
+at most one already-active DMA token through the established
+`PE_Port_ServiceDmaIrqCheckpoint` owner. Polling reads never evolve hardware,
+and the translated pump remains the only guest-ring consumer.
+
+The normal wait-poll half of `func_80077404` preserves deadline and poll-word
+semantics. Its destructive timeout recovery and a state with no external
+progress remain named boundaries. Four focused contracts prove idle/status,
+direct DMA, a two-transfer queued drain, and the no-progress negative. Full
+normal and fresh ASan/UBSan suites pass `971/971`.
+
+Real-disc execution now records 27 checkpoint opportunities, 26 active-token
+queries/services, then reaches the unchanged `func_80190660 from
+func_801909B4` frontier. This supersedes B54K-M's historical 2/2
+caller-checkpoint service trace; it does not change scheduler provenance.
+
+Evidence: `docs/evidence/pe-b54ks-drawsync-drain/REPORT.md` and
+`pc_port/tools/b54ks_drawsync_oracle.py`.
+
+```text
+FUNC_80074DC0=DRAWSYNC_WRAPPER_ADAPTED
+FUNC_80077294=EXECUTION_PROVEN_PATHS_TRANSLATED
+FUNC_80077404=NORMAL_POLL_TRANSLATED_TIMEOUT_RECOVERY_FENCED
+DMA_CHECKPOINT_TOTAL=27_CALLS_26_ACTIVE_TOKENS
+PRODUCTION_REACHABILITY=blocked_at_func_80190660_from_func_801909B4
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 ```
 

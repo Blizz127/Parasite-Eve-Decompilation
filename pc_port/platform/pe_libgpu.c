@@ -27,6 +27,7 @@
 #include "psx_compat.h"
 #include "pe_sdk.h"
 #include "pe_gpu.h"
+#include "game_port.h"
 #include <string.h>
 
 static const uint16_t kResetGraphW[3] = { 0x0400, 0x0400, 0x0400 };
@@ -79,6 +80,131 @@ int func_80074BB8(int level)
     int old = PE_LoadU8(0x8009574Eu);
     PE_StoreU8(0x8009574Eu, (uint8_t)level);
     return old;
+}
+
+/* Phase 6E-B54K-S — DrawSync wrapper plus the execution-proven behavior of
+ * func_80077294.  Retail hardware progresses independently between calls to
+ * func_80077404.  The deterministic port admits exactly one already-active
+ * DMA2 token at each such wait poll; the existing checkpoint keeps GPU,
+ * DICR, CPU-IRQ, callback, and pump ordering in their established owners.
+ * No polling read evolves hardware by itself. */
+#define GA_GPU_RING_PRODUCER       0x80095874u
+#define GA_GPU_RING_CONSUMER       0x80095878u
+#define GA_GPU_TIMEOUT_DEADLINE    0x80095888u
+#define GA_GPU_TIMEOUT_POLLS       0x8009588Cu
+#define GPU_QUEUE_MASK             63u
+
+static int PE_DrawSyncPendingCount(void)
+{
+    return (int)((PE_LoadU32(GA_GPU_RING_PRODUCER) -
+                  PE_LoadU32(GA_GPU_RING_CONSUMER)) & GPU_QUEUE_MASK);
+}
+
+/* Execution-proven normal half of func_80077404.  The timeout/recovery half
+ * rewrites the ring and GPU registers; it remains a named boundary rather
+ * than being approximated. */
+static int PE_DrawSyncWaitPoll(void)
+{
+    uint32_t now = PE_GPU_VSyncQuery();
+    uint32_t deadline = PE_LoadU32(GA_GPU_TIMEOUT_DEADLINE);
+    uint32_t polls = PE_LoadU32(GA_GPU_TIMEOUT_POLLS);
+
+    if ((int32_t)deadline < (int32_t)now ||
+        (int32_t)polls > (int32_t)0x000F0000) {
+        (void)Bootstrap_ReturnInt4Indirect(
+            "func_80077404_timeout_recovery_cut", "func_80074DC0", -1,
+            0x80077458u, deadline, now, polls, 0u, NULL, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return 0;
+    }
+
+    PE_StoreU32(GA_GPU_TIMEOUT_POLLS, polls + 1u);
+    return 1;
+}
+
+static int PE_DrawSyncWaitStep(int prior_progress)
+{
+    PEPortDmaIrqCheckpointResult result;
+
+    if (!PE_DrawSyncWaitPoll())
+        return 0;
+
+    if (PE_GPU_DMA2Pending()) {
+        result = PE_Port_ServiceDmaIrqCheckpoint();
+        if (result == PE_PORT_DMA_IRQ_CHECKPOINT_RETURNED)
+            return 1;
+        if (result == PE_PORT_DMA_IRQ_CHECKPOINT_BOUNDARY ||
+            result == PE_PORT_DMA_IRQ_CHECKPOINT_STALE)
+            return 0;
+    }
+
+    if (prior_progress)
+        return 1;
+
+    (void)Bootstrap_ReturnInt4Indirect(
+        "func_80077404_wait_cut", "func_80074DC0", -1,
+        0x80077404u, (uintptr_t)PE_DrawSyncPendingCount(),
+        PE_GPU_ReadDMA2CHCR(), PE_GPU_ReadStatus(),
+        PE_LoadU32(GA_GPU_TIMEOUT_POLLS), NULL, 0u);
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    return 0;
+}
+
+static int PE_func_80077294(int mode)
+{
+    if (mode != 0) {
+        int pending = PE_DrawSyncPendingCount();
+        int returned = 0;
+
+        if (pending != 0) {
+            (void)PE_func_80076EE4_Pump(&returned);
+            if (!returned || PE_Port_ShouldStop())
+                return pending;
+        }
+        if ((PE_GPU_ReadDMA2CHCR() & PE_GPU_DMA2_CHCR_BUSY) != 0u)
+            return pending;
+        if ((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) != 0u)
+            return pending;
+        return pending != 0 ? pending : 1;
+    }
+
+    (void)func_800773D0();
+    for (;;) {
+        int pending = PE_DrawSyncPendingCount();
+
+        if (pending != 0) {
+            uint32_t before = PE_LoadU32(GA_GPU_RING_CONSUMER);
+            int returned = 0;
+
+            (void)PE_func_80076EE4_Pump(&returned);
+            if (!returned || PE_Port_ShouldStop())
+                return -1;
+            if (!PE_DrawSyncWaitStep(
+                    PE_LoadU32(GA_GPU_RING_CONSUMER) != before))
+                return -1;
+            continue;
+        }
+
+        if ((PE_GPU_ReadDMA2CHCR() & PE_GPU_DMA2_CHCR_BUSY) != 0u) {
+            if (!PE_DrawSyncWaitStep(0))
+                return -1;
+            continue;
+        }
+
+        if ((PE_GPU_ReadStatus() & PE_GPU_STATUS_READY_GP0) == 0u) {
+            if (!PE_DrawSyncWaitStep(0))
+                return -1;
+            continue;
+        }
+        return 0;
+    }
+}
+
+int func_80074DC0(int mode)
+{
+    /* Host telemetry/presentation policy is separate from GPU authority. */
+    HostFB_DrawSync(mode);
+    return PE_func_80077294(mode);
 }
 
 pe_addr_t func_80074924(pe_addr_t env, int x, int y, int w, int h)

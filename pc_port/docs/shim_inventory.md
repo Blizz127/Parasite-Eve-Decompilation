@@ -110,8 +110,10 @@ separate later invocation of the same token-capturing checkpoint. It exposes
 all 64 pixels, clears CHCR to `0x00000201`, and leaves DICR `0x00800000`:
 channel-2 enable is already clear, so there is no flag, source-3 service,
 DMA dispatcher, pump, worker, or queue mutation. No new scheduler or callback
-authority is introduced. DrawSync
-(`func_80077294`) itself remains untranslated. The retail ring and its
+authority is introduced. B54K-S now translates the execution-proven
+`func_80077294` DrawSync paths and admits one already-active DMA token at
+each retail wait poll through that same checkpoint owner. Timeout recovery
+and no-progress states remain named cuts. The retail ring and its
 producer/consumer words stay authoritative in guest RAM; the DMA callback table `D_800956C0`
 stays guest-backed and separate from the VBlank table `D_8009568C`; DICR
 stays solely owned by B53B `pe_gpu`. All guest identities are `pe_addr_t`,
@@ -129,7 +131,7 @@ never native function pointers.
 |----------|----------|---------------------|
 | `func_80073A44` | VSync | `HostFB_VSync()` |
 | `func_80074D28` | SetDispMask | `HostFB_SetDispMask()` |
-| `func_80074DC0` | DrawSync | `HostFB_DrawSync()` |
+| `func_80074DC0` | DrawSync | translated `func_80077294` queue/DMA drain plus `HostFB_DrawSync()` telemetry (B54K-S) |
 | `func_80074F44` | ClearImage | `HostFB_ClearImage()` |
 | `func_800755F0` | PutDispEnv/Present | `HostFB_Present()` |
 

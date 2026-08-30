@@ -96,7 +96,7 @@ extern unsigned int D_8009D064;
 /* ── SDK IMPLEMENTED ──────────────────────────────────────────────── */
 static inline void func_80073A44(int m)  { HostFB_VSync(m); }
 static inline void func_80074D28(int m)  { HostFB_SetDispMask(m); }
-static inline void func_80074DC0(int m)  { HostFB_DrawSync(m); }
+int func_80074DC0(int mode);
 static inline void func_80074F44(RECT *r, uint8_t rv, uint8_t g, uint8_t b) {
     if (r) HostFB_ClearImage(r->x, r->y, r->w, r->h, rv, g, b);
 }

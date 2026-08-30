@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import os
 import pathlib
+import re
 import struct
 import subprocess
 
@@ -166,7 +167,10 @@ def main() -> None:
     focused_env = os.environ.copy()
     focused_env["PE_TEST_FILTER"] = "B54KR"
     focused = run([str(tests)], 0, focused_env)
-    require("Results: 967 run, 8 passed, 0 failed, 959 skipped" in focused,
+    focused_result = re.search(
+        r"Results: (\d+) run, 8 passed, 0 failed, (\d+) skipped", focused)
+    require(focused_result is not None and
+            int(focused_result.group(1)) == int(focused_result.group(2)) + 8,
             "focused B54K-R native contract count")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)

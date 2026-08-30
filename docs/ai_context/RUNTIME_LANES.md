@@ -49,7 +49,7 @@ The native test executable was run directly:
 
 ```text
 pc_port/build/pe-native-tests
-Results: 967 run, 967 passed, 0 failed, 0 skipped
+Results: 971 run, 971 passed, 0 failed, 0 skipped
 ```
 
 The production executable is not a complete Day 1 field runtime. Its strict
@@ -57,7 +57,7 @@ real-disc execution frontier is:
 
 ```text
 func_80190660 from func_801909B4
-func_8006AD40 is complete; both DMA checkpoints, MoveImage, and 240 overlay words execute first
+func_8006AD40 is complete; DrawSync drains DMA, then MoveImage and 240 overlay words execute
 ```
 
 The bootstrap-disc path has a separate earlier stop at
@@ -94,6 +94,7 @@ Evidence: [ACTIVE_HANDOFF.md](ACTIVE_HANDOFF.md),
 [B54K-N report](../evidence/pe-b54kn-726c4-flushcache/REPORT.md),
 [B54K-Q report](../evidence/pe-b54kq-1909b4-moveimage-prefix/REPORT.md),
 [B54K-R report](../evidence/pe-b54kr-moveimage-display-prefix/REPORT.md),
+[B54K-S report](../evidence/pe-b54ks-drawsync-drain/REPORT.md),
 [pe-btl147 report](../evidence/pe-btl147-theater-eve-path/REPORT.md), and the
 current native binary/test result above.
 
@@ -155,7 +156,7 @@ No complete playable Day 1→theater→Eve-battle runtime is verified on this
 host. The external dashboard describes UE5 as the best *partial* interactive
 slice, while the native runtime is currently a headless/testable bootstrap
 and component runtime. The only directly runnable authoritative experience
-here is the native executable's bounded headless behavior and its 967-test
+here is the native executable's bounded headless behavior and its 971-test
 suite; it is not a complete game route.
 
 Native commands are listed in section B. A UE5 run command cannot be stated
@@ -193,11 +194,11 @@ for natural `m0360i` entry; it must be proven before implementation.
 2. This host still cannot inspect the UE5 checkout, so no locally verified
    end-to-end UE5 claim is possible.
 3. `UE_NATIVE_PARITY_POLICY.md` retains useful acceptance rules but its status
-   table is historical; this file carries the measured 967-test native state.
+   table is historical; this file carries the measured 971-test native state.
 4. Matching residuals are evidence dispositions, not exact leaves: 335 is the
    only YAML-derived matching-C count.
 
 ```text
 REPORT_STATUS=CURRENT
-LAST_REFRESH=2026-08-30_B54K-R
+LAST_REFRESH=2026-08-30_B54K-S
 ```

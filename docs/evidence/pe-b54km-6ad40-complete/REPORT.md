@@ -2,6 +2,13 @@
 
 Status: **VERIFIED AND INTEGRATED ON THE NATIVE GRIND LANE**.
 
+> **B54K-S supersession note (2026-08-30):** B54K-S later translated the
+> execution-proven DrawSync drain and moved deterministic DMA completion into
+> its retail wait polls. The `2/2` caller-checkpoint service measurement below
+> is therefore a historical B54K-M observation, not current runtime state.
+> The completed `func_8006AD40` body and all non-DrawSync contracts remain
+> unchanged.
+
 This rung implements the final 79 retail words of `func_8006AD40`, migrates
 all 23 historical prefix-boundary test contracts to complete-function
 contracts without dropping their earlier assertions, and measures the real

@@ -373,9 +373,13 @@ static void B54KR_SeedGpuStatic(void)
     PE_StoreU32(0x80095744u, 0x80095704u);
     PE_StoreU32(0x8009570Cu, 0x80076C34u); /* target at jtb + 8 */
     PE_StoreU32(0x8009571Cu, 0x80076B98u); /* worker at jtb + 0x18 */
+    PE_StoreU32(0x80095724u, 0x80076664u); /* worker at jtb + 0x20 */
     PE_StoreU32(0x800957E4u, 0x04FFFFFFu);
     PE_StoreU32(0x800957E8u, 0x80000000u);
     PE_StoreU8(0x8009574Du, 1u);
+    PE_StoreU16(0x80095750u, 0x0400u);
+    PE_StoreU16(0x80095752u, 0x0200u);
+    PE_GPU_EnableDMA2();
     PE_StoreU32(0x80095874u, 0u);
     PE_StoreU32(0x80095878u, 0u);
     PE_StoreU32(0x80095758u, 0u);
@@ -887,6 +891,122 @@ static void test_B54KR_801909B4_dirty_repeat_and_alternate_cut(void)
     PE_GPU_GetState(&gpu);
     ASSERT(gpu.move_count == 2u && B54KR_PixelIs(704u, 0u, second),
            "repeat did not issue a fresh deterministic VRAM move");
+    PASS();
+}
+
+static void test_B54KS_drawsync_idle_and_poll_mode(void)
+{
+    int vsync, drawsync, presented, mask;
+    TEST("B54KS_drawsync_idle_and_poll_mode");
+    ResetTestState();
+    HostFB_Init();
+
+    PE_StoreU32(0x80095888u, 0xA5A5A5A5u);
+    PE_StoreU32(0x8009588Cu, 0x5A5A5A5Au);
+    ASSERT(func_80074DC0(1) == 0,
+           "ready nonblocking DrawSync status differs");
+    ASSERT(PE_LoadU32(0x80095888u) == 0xA5A5A5A5u &&
+           PE_LoadU32(0x8009588Cu) == 0x5A5A5A5Au,
+           "nonblocking DrawSync touched timeout state");
+
+    PE_GPU_SetReady(0);
+    ASSERT(func_80074DC0(1) == 1 && !PE_Port_ShouldStop(),
+           "not-ready nonblocking DrawSync status differs");
+    PE_GPU_SetReady(1);
+    ASSERT(func_80074DC0(0) == 0 && !PE_Port_ShouldStop() &&
+           PE_LoadU32(0x80095888u) == PE_GPU_VSyncQuery() + 0xF0u &&
+           PE_LoadU32(0x8009588Cu) == 0u,
+           "idle blocking DrawSync state differs");
+    HostFB_GetState(&vsync, &drawsync, &presented, &mask);
+    ASSERT(drawsync == 3 && vsync == 0 && presented == 0 && mask == 0,
+           "DrawSync host telemetry differs");
+    PASS();
+}
+
+static void test_B54KS_drawsync_completes_direct_dma(void)
+{
+    RECT rect = { 20, 30, 16, 2 };
+    PEPortDmaIrqCheckpointTrace trace;
+    uint32_t i;
+    TEST("B54KS_drawsync_completes_direct_dma");
+    ResetTestState();
+    HostFB_Init();
+    B54KR_SeedGpuStatic();
+    for (i = 0u; i < 16u; i++)
+        PE_StoreU32(0x80170000u + i * 4u,
+                    (0x2000u + i * 2u) | ((0x2001u + i * 2u) << 16));
+
+    ASSERT(func_8007506C(&rect, 0x80170000u) == 0 &&
+           PE_GPU_DMA2Pending(), "direct DMA did not issue");
+    PE_Port_DmaIrqCheckpointTraceReset();
+    ASSERT(func_80074DC0(0) == 0 && !PE_GPU_DMA2Pending() &&
+           !PE_Port_ShouldStop(), "blocking DrawSync did not complete DMA");
+    PE_Port_GetDmaIrqCheckpointTrace(&trace);
+    ASSERT(trace.checkpoint_calls == 1u && trace.token_queries == 1u &&
+           trace.service_calls == 1u &&
+           PE_LoadU32(0x8009588Cu) == 1u &&
+           B54KR_PixelIs(20u, 30u, 0x2000u) &&
+           B54KR_PixelIs(35u, 31u, 0x201Fu),
+           "direct DrawSync event, poll, or pixels differ");
+    PASS();
+}
+
+static void test_B54KS_drawsync_drains_queued_dma(void)
+{
+    RECT first = { 40, 50, 16, 2 };
+    RECT second = { 80, 60, 16, 2 };
+    PEPortDmaIrqCheckpointTrace trace;
+    uint32_t i;
+    TEST("B54KS_drawsync_drains_queued_dma");
+    ResetTestState();
+    HostFB_Init();
+    B54KR_SeedGpuStatic();
+    for (i = 0u; i < 16u; i++) {
+        PE_StoreU32(0x80170000u + i * 4u,
+                    (0x3000u + i * 2u) | ((0x3001u + i * 2u) << 16));
+        PE_StoreU32(0x80171000u + i * 4u,
+                    (0x4000u + i * 2u) | ((0x4001u + i * 2u) << 16));
+    }
+
+    ASSERT(func_8007506C(&first, 0x80170000u) == 0 &&
+           func_8007506C(&second, 0x80171000u) == 1 &&
+           PE_GPU_DMA2Pending() && PE_LoadU32(0x80095874u) == 1u &&
+           PE_LoadU32(0x80095878u) == 0u,
+           "two-transfer DrawSync seed differs");
+    PE_Port_DmaIrqCheckpointTraceReset();
+    ASSERT(func_80074DC0(0) == 0 && !PE_GPU_DMA2Pending() &&
+           !PE_Port_ShouldStop(), "DrawSync did not drain queued DMA");
+    PE_Port_GetDmaIrqCheckpointTrace(&trace);
+    ASSERT(trace.checkpoint_calls == 2u && trace.token_queries == 2u &&
+           trace.service_calls == 2u &&
+           PE_LoadU32(0x80095874u) == 1u &&
+           PE_LoadU32(0x80095878u) == 1u &&
+           PE_LoadU32(0x800956C8u) == 0u &&
+           /* The queued worker's own func_800773D0 resets the poll word;
+            * the final wait then increments it once. */
+           PE_LoadU32(0x8009588Cu) == 1u &&
+           B54KR_PixelIs(40u, 50u, 0x3000u) &&
+           B54KR_PixelIs(55u, 51u, 0x301Fu) &&
+           B54KR_PixelIs(80u, 60u, 0x4000u) &&
+           B54KR_PixelIs(95u, 61u, 0x401Fu),
+           "queued DrawSync ordering, callback, or pixels differ");
+    PASS();
+}
+
+static void test_B54KS_drawsync_no_progress_is_named_cut(void)
+{
+    TEST("B54KS_drawsync_no_progress_is_named_cut");
+    ResetTestState();
+    HostFB_Init();
+    PE_GPU_SetReady(0);
+    ASSERT(func_80074DC0(0) == -1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
+           PE_LoadU32(0x8009588Cu) == 1u &&
+           g_bootstrap_arg4_call_count == 1 &&
+           strcmp(g_bootstrap_arg4_calls[0].symbol,
+                  "func_80077404_wait_cut") == 0 &&
+           g_bootstrap_arg4_calls[0].target == 0x80077404u,
+           "DrawSync no-progress path was not an inert named cut");
     PASS();
 }
 
@@ -24506,9 +24626,9 @@ static void test_6AD40_complete_effect_allowlist(void)
 static void test_6AD40_strict_completes_without_frontier(void)
 {
     DiscFixture fx;
-    /* The complete direct function contains no bootstrap provider.  Strict
-     * mode must therefore return normally while leaving an unrelated seeded
-     * DMA in flight; caller checkpoints remain separate authority. */
+    /* The complete direct function contains no bootstrap provider. B54K-S
+     * gives its retail DrawSync(0) the hardware-completion opportunity that
+     * now drains the seeded GPU DMA before normal return. */
     TEST("6AD40_strict_completes_without_frontier");
     pid_t pid;
     int status = 0;
@@ -24547,11 +24667,8 @@ static void test_6AD40_strict_completes_without_frontier(void)
     func_8006AD40();
     ASSERT(B54KM_CompletionStateIsExact(),
            "normal complete path retained a boundary or wrong final state");
-    /* The busy transfer must still be in flight and the queued request
-     * unconsumed: reaching the frontier must not have completed DMA. */
-    ASSERT(PE_GPU_DMA2Pending(), "prefix path completed the pending DMA");
-    ASSERT(!PE_GPU_DMA2CompletionPending(),
-           "prefix path fabricated a DMA completion");
+    ASSERT(!PE_GPU_DMA2Pending() && PE_GPU_DMA2CompletionPending(),
+           "DrawSync did not complete the pending DMA through its event");
     FxFree(&fx);
     PASS();
 }
@@ -31905,6 +32022,10 @@ int main(void)
     test_B54KR_moveimage_queued_pump_path();
     test_B54KR_801909B4_prefix_effects_and_canary();
     test_B54KR_801909B4_dirty_repeat_and_alternate_cut();
+    test_B54KS_drawsync_idle_and_poll_mode();
+    test_B54KS_drawsync_completes_direct_dma();
+    test_B54KS_drawsync_drains_queued_dma();
+    test_B54KS_drawsync_no_progress_is_named_cut();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();
