@@ -23581,6 +23581,7 @@ static void test_64964_ramreset_repeat_and_guards(void) {
 #define B50_METADATA    0x80100100u
 #define B50_F0_DEST     0x80120000u
 #define B50_E0_DEST     0x80140000u
+#define B50_3126_DEST   0x80180000u
 #define B50_FIRST_ENTRY 0x80100200u
 #define B50_DIR_ENTRY   0x80100140u
 #define B50_ARCHIVE     0x80100300u
@@ -23671,6 +23672,8 @@ static void B50_SeedPrefixState(uint32_t count)
     PE_StoreU32(0x800B0CD8u + 0x14Cu, B50_F0_DEST);
     /* B54K-K: D_800930E0 is five sectors into the word at +0x16C. */
     PE_StoreU32(0x800B0CD8u + 0x16Cu, B50_E0_DEST);
+    /* B54K-L: the first D_80093126 range is two sectors into +0x188. */
+    PE_StoreU32(0x800B0CD8u + 0x188u, B50_3126_DEST);
 
     /* Retail: metadata = base + lw(base+4), then header = metadata+0x28.
      * A zero decoy at base+0x28 rejects the provisional direct-load bug. */
@@ -23820,7 +23823,7 @@ static void test_6AD40_prefix_boundary_args(void)
     ASSERT(CountOrderLog("func_8006E1C0") == 0,
            "translated callee must not record a bootstrap boundary");
     ASSERT(CountOrderLog("func_800718D0") == 0 &&
-           CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+           CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "prefix must complete func_80030894 before the caller cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "prefix must request an honest unresolved-boundary host stop");
@@ -23834,7 +23837,7 @@ static void test_6AD40_prefix_boundary_args(void)
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(PE_LoadU32(0x8009B6ACu) == 0x200u &&
-           PE_LoadU32(0x8009B6B0u) == B50_E0_DEST &&
+           PE_LoadU32(0x8009B6B0u) == B50_3126_DEST &&
            PE_LoadU32(0x8009B6B4u) == 0u &&
            PE_LoadU32(0x8009B6C4u) == 1u &&
            PE_LoadU32(0x8009B6D4u) == 1u,
@@ -23946,9 +23949,9 @@ static void test_6AD40_strict_stops_at_frontier(void)
     Stub_ResetOrderLog();
     func_8006AD40();
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "B50 prefix path must reach the caller's post-30894 frontier");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "the D_80093126 cut is now the first strict frontier");
     /* The busy transfer must still be in flight and the queued request
      * unconsumed: reaching the frontier must not have completed DMA. */
@@ -24054,9 +24057,9 @@ static void test_B54B_6AD40_canonical_counted_loop(void)
            g_bootstrap_arg4_calls[1].arg3,
            "B54B replayed entry 0");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "retained B54B path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "B54B must now complete func_80030894");
     ASSERT(PE_LoadU16(0x80091650u) == 0x0020u &&
            PE_LoadU16(0x80091652u) == 0u,
@@ -24081,7 +24084,7 @@ static void test_B54B_6AD40_count_edges(void)
     ASSERT(g_bootstrap_arg4_call_count == 2,
            "count zero must add both live 718D0 walks");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "count zero did not reach the current frontier");
     FxFree(&fx);
 
@@ -24152,9 +24155,9 @@ static void test_B54D_6AD40_canonical_material_prefix(void)
     ASSERT(B54D_LOOKUP + (0x00007F0Cu & ~3u) == B54D_TERMINATOR,
            "B54D canonical terminator address changed");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "retained B54D path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "B54D must now complete func_80030894");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
@@ -24184,7 +24187,7 @@ static void test_B54D_6AD40_no_walk_still_stops_before_poll(void)
            PE_LoadU16(0x80091682u) == 0x7753u,
            "B54D packing depended on the archive walk");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "B54D zero-record path did not reach the current frontier");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
@@ -24319,9 +24322,9 @@ static void test_B54C_718D0_atlas_rects_and_record0_pack(void)
            PE_LoadU16(0x80091662u) == 0x3F15u,
            "live 6AD40 prefix must now pack record 1");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "6AD40 moved off the caller's post-30894 provider");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "6AD40 must now complete func_80030894");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
@@ -24371,12 +24374,12 @@ static void test_B54E_6AD40_canonical_poll_exit(void)
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host pending-byte collapse remains after the D_800930EE issue");
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_E0_DEST,
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST,
            "retained B54E path must complete D_800930E0 / dest+0x16C");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "B54E did not reach the D_80093126 cut");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "B54E must now enter func_80030894");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54E frontier stop reason changed");
@@ -24409,12 +24412,12 @@ static void test_B54E_6AD40_live_poll_not_assigned(void)
            PE_LoadU16(0x80091660u) == 0x0026u &&
            PE_LoadU16(0x80091662u) == 0x3F15u,
            "zero-record path must now pack records 0/1");
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_E0_DEST,
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST,
            "zero-record path must complete D_800930E0 / dest+0x16C");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "zero-record path must complete 30894");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "zero-record path left the D_80093126 cut");
     FxFree(&fx);
     PASS();
@@ -24476,16 +24479,16 @@ static void test_B54F_6AD40_live_atlas_and_record_packs(void)
      * (the EE read range is empty in this fixture) adds one image-only
      * LoadImage with a zero RECT. */
     B52_AssertGpuCall(16, 0u, B54E_NEXT_DEST + 20u, 0u);
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_E0_DEST,
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST,
            "B54F must complete D_800930E0 at dest+0x16C");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host collapse after D_800930EE must stay recorded, not assigned");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "B54F did not reach the D_80093126 cut");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "B54F must now enter func_80030894");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54F added a DMA completion checkpoint");
@@ -24512,14 +24515,14 @@ static void test_B54F_6AD40_second_poll_not_consumed(void)
            "zero-record live path must pack record 0");
     /* The EE issue ran first (its dest write is superseded by the F0
      * issue); reaching the E0 dest proves the F0 and E0 groups completed. */
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_E0_DEST,
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST,
            "zero-record live path must complete D_800930E0 / dest+0x16C");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "zero-record path must complete 30894");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "zero-record path left the D_80093126 cut");
     FxFree(&fx);
     PASS();
@@ -24581,16 +24584,16 @@ static void test_B54G_6AD40_canonical_second_poll_exit(void)
     B52_AssertGpuCall(15, 0x00FC0140u, B54C_TIM + 20u, 0x00010010u);
     /* B54K-A: F0 walk over the zero TIM at B54E_NEXT_DEST. */
     B52_AssertGpuCall(16, 0u, B54E_NEXT_DEST + 20u, 0u);
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_E0_DEST,
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST,
            "B54G must complete D_800930E0 / dest+0x16C");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host collapse remains recorded, not assigned as retail 0");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "B54G did not reach the D_80093126 cut");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "B54G must now enter func_80030894");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54G frontier stop reason changed");
@@ -24618,12 +24621,12 @@ static void test_B54G_6AD40_live_poll_not_assigned(void)
            "B54G zero terminator must add both live 718D0 walks");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_E0_DEST,
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST,
            "zero-record path must complete D_800930E0 / dest+0x16C");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
            "zero-record path must complete 30894");
     ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_cut") == 0,
+           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
            "zero-record path left the D_80093126 cut");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "zero-record path changed the frontier stop reason");
@@ -24777,7 +24780,7 @@ static void test_B54KA_6AD40_live_path_reaches_l2l3(void)
            "live sprite array clut halfwords changed");
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0],
-                  "func_8006AD40_D_80093126_cut") == 0,
+                  "func_8006AD40_D_80093126_archive_cut") == 0,
            "B54KA live provider order changed");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "B54KA frontier stop reason changed");
@@ -25855,12 +25858,12 @@ static void test_B54KJ_6AD40_f0_completion_and_frontier(void)
            "F0 wait repeated 718D0 or earlier image work");
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0],
-                  "func_8006AD40_D_80093126_cut") == 0,
+                  "func_8006AD40_D_80093126_archive_cut") == 0,
            "retained B54KJ path did not reach the current D_80093126 boundary");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "E0 completion did not clear the issue/busy bits");
     ASSERT(PE_LoadU32(0x8009B6ACu) == 0x200u &&
-           PE_LoadU32(0x8009B6B0u) == B50_E0_DEST &&
+           PE_LoadU32(0x8009B6B0u) == B50_3126_DEST &&
            PE_LoadU32(0x8009B6B4u) == 0u &&
            PE_LoadU32(0x8009B6D4u) == 1u,
            "E0 completion changed the synchronous provider contract");
@@ -25887,10 +25890,10 @@ static void test_B54KJ_6AD40_repeat_no_duplicate_work(void)
 
     ASSERT(g_bootstrap_arg4_call_count == 4,
            "repeat must execute exactly two 718D0 walks per invocation");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 2,
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 2,
            "repeat must reach the new frontier exactly once per run");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u &&
-           PE_LoadU32(0x8009B6B0u) == B50_E0_DEST &&
+           PE_LoadU32(0x8009B6B0u) == B50_3126_DEST &&
            PE_LoadU32(0x8009B6B4u) == 0u,
            "repeat left stale E0 completion state");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
@@ -25908,12 +25911,13 @@ static void test_B54KJ_6AD40_repeat_no_duplicate_work(void)
  * ═══════════════════════════════════════════════════════════════════════ */
 
 #define B54KK_SECTORS 256u
+#define B54KL_SECTORS 640u
 
 /* The shared ISO fixture is intentionally only 64 sectors.  Retail's
  * D_800930E0/D_800930F0 ranges are relative sectors 0x79..0xCB, so these
  * tests need a larger backing image.  Grow the already-validated fixture
  * without changing any of its original bytes or weakening the disc layer. */
-static int B54KK_BuildDisc(DiscFixture *fx)
+static int B54K_BuildDisc(DiscFixture *fx, uint32_t sector_count)
 {
     uint8_t *grown;
     uint32_t i;
@@ -25921,13 +25925,17 @@ static int B54KK_BuildDisc(DiscFixture *fx)
     if (!FxBuild(fx, 0)) {
         return 0;
     }
-    grown = calloc(B54KK_SECTORS, PE_DISC_RAW_SECTOR);
+    if (sector_count < FX_SECTORS) {
+        FxFree(fx);
+        return 0;
+    }
+    grown = calloc(sector_count, PE_DISC_RAW_SECTOR);
     if (!grown) {
         FxFree(fx);
         return 0;
     }
     memcpy(grown, fx->img, (size_t)FX_SECTORS * PE_DISC_RAW_SECTOR);
-    for (i = FX_SECTORS; i < B54KK_SECTORS; i++) {
+    for (i = FX_SECTORS; i < sector_count; i++) {
         uint8_t *raw = grown + (size_t)i * PE_DISC_RAW_SECTOR;
 
         raw[0] = 0x00;
@@ -25939,7 +25947,7 @@ static int B54KK_BuildDisc(DiscFixture *fx)
     free(fx->img);
     fx->img = grown;
     fx->disc = PE_Disc_OpenMemory(
-        grown, (size_t)B54KK_SECTORS * PE_DISC_RAW_SECTOR);
+        grown, (size_t)sector_count * PE_DISC_RAW_SECTOR);
     if (!fx->disc) {
         free(grown);
         fx->img = NULL;
@@ -25993,7 +26001,8 @@ static void test_B54KK_6AD40_e0_archive_lookups_and_completion(void)
     DiscFixture fx;
     TEST("B54KK_6AD40_e0_archive_lookups_and_completion");
     ResetTestState();
-    ASSERT(B54KK_BuildDisc(&fx), "expanded fixture build failed");
+    ASSERT(B54K_BuildDisc(&fx, B54KK_SECTORS),
+           "expanded fixture build failed");
     B54KK_CraftF0Archive(&fx);
     B50_StartFixture(&fx, 0u);
     B54KK_SeedFocusedRanges();
@@ -26009,7 +26018,7 @@ static void test_B54KK_6AD40_e0_archive_lookups_and_completion(void)
            PE_LoadU8(B50_E0_DEST + 0x27FFu) == 0u &&
            PE_LoadU8(B50_E0_DEST + 0x2800u) == 0xA5u,
            "E0 issue did not write exactly five fixture sectors");
-    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_E0_DEST &&
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST &&
            PE_LoadU32(0x8009B6B4u) == 0u &&
            (PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "E0 completion/provider state differs from retail adapter");
@@ -26017,7 +26026,7 @@ static void test_B54KK_6AD40_e0_archive_lookups_and_completion(void)
            "E0 group replayed earlier image work");
     ASSERT(g_stub_order_count == 1 &&
            strcmp(g_stub_order_log[0],
-                  "func_8006AD40_D_80093126_cut") == 0,
+                  "func_8006AD40_D_80093126_archive_cut") == 0,
            "B54KK did not reach the D_80093126 boundary");
     FxFree(&fx);
     PASS();
@@ -26028,7 +26037,8 @@ static void test_B54KK_6AD40_empty_f0_clears_stale_results(void)
     DiscFixture fx;
     TEST("B54KK_6AD40_empty_f0_clears_stale_results");
     ResetTestState();
-    ASSERT(B54KK_BuildDisc(&fx), "expanded fixture build failed");
+    ASSERT(B54K_BuildDisc(&fx, B54KK_SECTORS),
+           "expanded fixture build failed");
     B50_StartFixture(&fx, 0u);
     B54KK_SeedFocusedRanges();
     PE_StoreU32(0x800B0CD8u + 0x11Cu, 0xDEADBEEFu);
@@ -26041,11 +26051,118 @@ static void test_B54KK_6AD40_empty_f0_clears_stale_results(void)
            PE_LoadU32(0x800B0CD8u + 0x120u) == 0u &&
            PE_LoadU32(0x800B0CD8u + 0x124u) == 0u,
            "empty F0 archive retained stale lookup results");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_cut") == 1 &&
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1 &&
            g_bootstrap_arg4_call_count == 2,
            "empty F0 path changed frontier or image-work count");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "empty F0 path did not complete the E0 read");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B54K-L — D_80093126 issue, E0 entry walk, completion (2 tests)
+ *
+ * Retail window 0x8006B16C..0x8006B220 (45 words). Complete words and
+ * control-flow topology are checked independently by
+ * tools/b54kl_6ad40_3126_wait_oracle.py.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void B54KL_E0PutU8(DiscFixture *fx, uint32_t offset, uint8_t value)
+{
+    FxUser(fx->img, FX_PEIMG_LBA + 0x79u + offset / 2048u)
+        [offset % 2048u] = value;
+}
+
+static void B54KL_E0PutU32(DiscFixture *fx, uint32_t offset, uint32_t value)
+{
+    B54KL_E0PutU8(fx, offset + 0u, (uint8_t)value);
+    B54KL_E0PutU8(fx, offset + 1u, (uint8_t)(value >> 8));
+    B54KL_E0PutU8(fx, offset + 2u, (uint8_t)(value >> 16));
+    B54KL_E0PutU8(fx, offset + 3u, (uint8_t)(value >> 24));
+}
+
+static void B54KL_CraftE0Archive(uint32_t count, DiscFixture *fx)
+{
+    uint32_t i;
+
+    B54KL_E0PutU32(fx, 4u, 0x40u);
+    B54KL_E0PutU32(fx, 0x68u, (count << 22) | 0x100u);
+    for (i = 0u; i < count; i++) {
+        uint32_t entry = 0x100u + i * 0x14u;
+
+        B54KL_E0PutU32(fx, entry + 4u, 0x500u + i * 0x100u);
+        B54KL_E0PutU8(fx, entry + 7u, 1u);
+        B54KL_E0PutU32(fx, entry + 8u, 0u);
+        B54KL_E0PutU32(fx, entry + 0xCu, 0u);
+        B54KL_E0PutU32(fx, entry + 0x10u, 0u);
+    }
+}
+
+static void B54KL_Seed3126Range(void)
+{
+    PE_StoreU16(0x80093126u, 0x0219u);
+    PE_StoreU16(0x80093128u, 0x021Bu);
+}
+
+static void test_B54KL_6AD40_e0_counted_then_3126_completion(void)
+{
+    DiscFixture fx;
+    TEST("B54KL_6AD40_e0_counted_then_3126_completion");
+    ResetTestState();
+    ASSERT(B54K_BuildDisc(&fx, B54KL_SECTORS),
+           "B54KL expanded fixture build failed");
+    B54KK_CraftF0Archive(&fx);
+    B54KL_CraftE0Archive(2u, &fx);
+    B50_StartFixture(&fx, 0u);
+    B54KK_SeedFocusedRanges();
+    B54KL_Seed3126Range();
+    PE_Fill(B50_3126_DEST, 0x1001u, 0xA5u);
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54KL canonical return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 4,
+           "two E0 entries did not add exactly two image dispatches");
+    ASSERT(g_bootstrap_arg4_calls[2].arg3 == B50_E0_DEST + 0x500u &&
+           g_bootstrap_arg4_calls[3].arg3 == B50_E0_DEST + 0x600u,
+           "E0 entry order/base/stride differs from retail");
+    ASSERT(PE_LoadU8(B50_3126_DEST) == 0u &&
+           PE_LoadU8(B50_3126_DEST + 0x0FFFu) == 0u &&
+           PE_LoadU8(B50_3126_DEST + 0x1000u) == 0xA5u,
+           "D_80093126 issue did not write exactly two sectors");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST &&
+           PE_LoadU32(0x8009B6B4u) == 0u &&
+           (PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
+           "D_80093126 completion/provider state differs");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0],
+                  "func_8006AD40_D_80093126_archive_cut") == 0,
+           "B54KL did not reach the archive boundary");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_B54KL_6AD40_empty_e0_skips_entry_walk(void)
+{
+    DiscFixture fx;
+    TEST("B54KL_6AD40_empty_e0_skips_entry_walk");
+    ResetTestState();
+    ASSERT(B54K_BuildDisc(&fx, B54KL_SECTORS),
+           "B54KL empty fixture build failed");
+    B54KK_CraftF0Archive(&fx);
+    B50_StartFixture(&fx, 0u);
+    B54KK_SeedFocusedRanges();
+    B54KL_Seed3126Range();
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54KL empty-E0 return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "zero-count E0 archive executed an entry");
+    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
+           "empty E0 archive changed the completion frontier");
+    ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST &&
+           (PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
+           "empty E0 path did not complete D_80093126");
     FxFree(&fx);
     PASS();
 }
@@ -32090,6 +32207,10 @@ int main(void)
     /* Phase 6E-B54K-K E0 issue, F0 lookups, completion (2 tests). */
     test_B54KK_6AD40_e0_archive_lookups_and_completion();
     test_B54KK_6AD40_empty_f0_clears_stale_results();
+
+    /* Phase 6E-B54K-L 3126 issue, E0 entry walk, completion (2 tests). */
+    test_B54KL_6AD40_e0_counted_then_3126_completion();
+    test_B54KL_6AD40_empty_e0_skips_entry_walk();
 
     /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
     test_6E1C0_single_call_zero_entry();

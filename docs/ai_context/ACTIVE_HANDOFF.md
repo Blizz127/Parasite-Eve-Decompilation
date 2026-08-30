@@ -70,7 +70,7 @@ and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
 is the unique `persist[0] |= 4` writer; the native branch must not plant that
 bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
-bridge, not another m0005i gate workaround. Native suite: 950/950 passed.
+bridge, not another m0005i gate workaround. Native suite: 952/952 passed.
 
 ## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
 
@@ -86,7 +86,7 @@ No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
 standalone native frontier remains separately
-`PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_cut`.
+`PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_archive_cut`.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
 
@@ -106,8 +106,8 @@ This closes the “Disc 2 may contain a different executable” hypothesis and
 corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining status: `SEMANTIC_IMPLEMENTATION=not_started`,
-`PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_cut`, native suite
-`950/950`.
+`PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_archive_cut`, native
+suite `952/952`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -129,8 +129,8 @@ BTL150 closes the wrong-token hypothesis and the available static name-form
 lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Status remains `SEMANTIC_IMPLEMENTATION=not_started`,
-`PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_cut`, native suite
-`950/950`.
+`PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_archive_cut`, native
+suite `952/952`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
 the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
@@ -351,9 +351,31 @@ rebuilt ASan/UBSan suites pass `950/950` with zero diagnostics.
 
 Evidence: `docs/evidence/pe-b54kk-6ad40-e0-group/REPORT.md` and
 `pc_port/tools/b54kk_6ad40_e0_group_oracle.py`. The production frontier is
-now `func_8006AD40_D_80093126_cut` before retail `0x8006B16C`. Scheduler
-provenance remains independently `NEEDS_ARTIFACT`; no destination token,
-`m0360i` branch, or persistence bit was added.
+superseded by B54K-L below. Scheduler provenance remains independently
+`NEEDS_ARTIFACT`; no destination token, `m0360i` branch, or persistence bit
+was added.
+
+## PE-B54K-L — first D_80093126 issue/walk/wait (2026-08-30)
+
+The coherent 45-word group `[0x8006B16C,0x8006B220)` is now native. It issues
+the two-sector `D_80093126={0x219,0x21B}` range into
+`*(D_800B0CD8+0x188)`, walks the completed E0 archive at `+0x16C` with the
+retail packed count/offset and 0x14-byte entry stride exactly once, then
+consumes completion. Timeout reissues only the 3126 range; positive polls
+skip the completed entry walk. The implemented prefix is now 0x4E0 bytes /
+312 words.
+
+The independent oracle authenticates and compares all 45 words, issue ABI,
+entry loop, retry topology, both boundaries, and the poll branch's mandatory
+delay-slot `lui`. Focused tests prove a two-entry archive, ordered data
+addresses, exact two-sector transfer, and a zero-count negative. Normal and
+freshly rebuilt ASan/UBSan suites pass `952/952` with zero diagnostics.
+
+Evidence: `docs/evidence/pe-b54kl-6ad40-3126-wait/REPORT.md` and
+`pc_port/tools/b54kl_6ad40_3126_wait_oracle.py`. The production frontier is
+now `func_8006AD40_D_80093126_archive_cut` before retail `0x8006B220`.
+Scheduler provenance remains independently `NEEDS_ARTIFACT`; no destination
+token, `m0360i` branch, or persistence bit was added.
 
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 

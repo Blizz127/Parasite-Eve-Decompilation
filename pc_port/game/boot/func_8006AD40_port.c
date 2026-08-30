@@ -1,17 +1,18 @@
 /*
- * Phase 6E-B54K-K — func_8006AD40 through the D_800930E0 group.
+ * Phase 6E-B54K-L — func_8006AD40 through the D_80093126 wait.
  *
  * Full retail body:
  *   391 words / 1564 bytes, exe 0x8006AD40–0x8006B35C (exclusive),
  *   file offset 0x5B540.
  *
  * Implemented prefix:
- *   267 words / 1068 bytes, exe 0x8006AD40–0x8006B16C (exclusive).
+ *   312 words / 1248 bytes, exe 0x8006AD40–0x8006B220 (exclusive).
  *   It includes the complete func_80030894 call, the D_800930F0 wait,
- *   and the D_800930E0 issue/three-lookups/completion group. The first
- *   excluded instruction is:
+ *   the D_800930E0 issue/three-lookups/completion group, and the following
+ *   D_80093126 issue/E0-entry-walk/completion group. The first excluded
+ *   instruction is:
  *
- *       lui   s1, %hi(D_80093126)       # 0x8006B16C
+ *       lw    s4, 0x188(s5)             # 0x8006B220
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
@@ -24,8 +25,8 @@
  * Classification: 1 — translated retail prefix. All completion polls are
  * consumed live; poll/s2 are not assigned. Host D_8009B6B4
  * collapse is synchronous-provider timing, not planted retail state.
- * The named strict boundary is now func_8006AD40_D_80093126_cut; no
- * unresolved provider remains through the D_800930E0 completion wait.
+ * The named strict boundary is now func_8006AD40_D_80093126_archive_cut; no
+ * unresolved provider remains through the D_80093126 completion wait.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -35,6 +36,7 @@
 #define GA_D_800930EE  0x800930EEu
 #define GA_D_800930F0  0x800930F0u
 #define GA_D_800930E0  0x800930E0u
+#define GA_D_80093126  0x80093126u
 #define GA_D_80091648  0x80091648u
 #define GA_D_800B0CD8  0x800B0CD8u
 #define GA_D_800B0DD8  0x800B0DD8u
@@ -330,8 +332,57 @@ int func_8006AD40(void)
         }
     }
 
+    /* B54K-L: 0x8006B16C..0x8006B21C. Issue the first D_80093126 range
+     * into +0x188, walk every 0x14-byte entry in the completed E0 archive
+     * at +0x16C once, then consume completion. Timeout reissues only the
+     * 3126 range; positive polls skip the already-complete entry walk. */
+    {
+        int entries_done = 0; /* retail s0 cleared at 0x8006B168 */
+
+        do {
+            uint32_t start = PE_LoadU16(GA_D_80093126);
+            uint32_t end = PE_LoadU16(GA_D_80093126 + 2u);
+
+            status = func_8006E6A8(
+                (int)(lba_base + start),
+                PE_LoadU32(GA_D_800B0CD8 + 0x188u),
+                (int)(end - start));
+        } while (status == -1);
+        status = 1; /* 0x8006B198 */
+
+        for (;;) {
+            if (!entries_done) {
+                pe_addr_t base = PE_LoadU32(GA_D_800B0CD8 + 0x16Cu);
+                pe_addr_t metadata = base + PE_LoadU32(base + 4u);
+                uint32_t header = PE_LoadU32(metadata + 0x28u);
+                uint32_t count = header >> 22;
+                pe_addr_t entry = base + (header & 0x003FFFFFu);
+                uint32_t i;
+
+                for (i = 0u; i < count; i++, entry += 0x14u)
+                    (void)func_8006E1C0(entry, base);
+                entries_done = 1; /* 0x8006B1FC */
+            }
+            if (status == -1) {
+                do {
+                    uint32_t start = PE_LoadU16(GA_D_80093126);
+                    uint32_t end = PE_LoadU16(GA_D_80093126 + 2u);
+
+                    status = func_8006E6A8(
+                        (int)(lba_base + start),
+                        PE_LoadU32(GA_D_800B0CD8 + 0x188u),
+                        (int)(end - start));
+                } while (status == -1);
+                status = 1; /* 0x8006B198 */
+            }
+            status = func_8006E7E8(); /* 0x8006B20C — live result */
+            if (status == 0)
+                break;
+        }
+    }
+
     (void)Bootstrap_ReturnInt(
-        "func_8006AD40_D_80093126_cut", "func_8006AD40", 0);
+        "func_8006AD40_D_80093126_archive_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }
