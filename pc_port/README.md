@@ -1,18 +1,17 @@
-# Parasite Eve Native PC Port — Phase 6E-B54K-M
+# Parasite Eve Native PC Port — Phase 6E-B54K-Q
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B54K-M completes all 391 words of `func_8006AD40`.
-The final 79-word suffix walks the completed `+0x188` archive, issues stream
-command F1, performs the retail display synchronization, applies the complete
-`0x40`/`0x80` state-reset matrix, clears bit 0, and returns normally. All 23
-historical prefix contracts were migrated without dropping their prior
-assertions. Real Disc 1 executes both explicit caller DMA checkpoints, then
-reaches the next strict frontier at `func_801909B4` from `func_8001220C`.
-Normal and fresh ASan/UBSan suites pass 958/958 with zero diagnostics.
+**Current milestone:** B54K-Q translates the first 149 words of the naturally
+loaded `func_801909B4` overlay. It copies four graphics environments,
+publishes six arena pointers, executes three translated state owners and
+`SetDispMask(0)`, then captures the exact first `MoveImage` call including
+its `RECT{320,0,160,256}` payload and destination `(704,0)`. Real Disc 1 now
+enters the overlay and reaches `func_8007512C` from `func_801909B4`.
+Normal and fresh ASan/UBSan suites pass 962/962 with zero diagnostics.
 Scheduler provenance remains independently artifact-bound: this rung adds no
 destination, `m0360i`, or persistence special case. Full proof is in
-`docs/evidence/pe-b54km-6ad40-complete/REPORT.md`.
+`docs/evidence/pe-b54kq-1909b4-moveimage-prefix/REPORT.md`.
 
 **Earlier retained milestone:** B53I-D admits one separate later checkpoint
 for the second LoadImage DMA token created by B53I-C. The exact 32-word
@@ -800,8 +799,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_801909B4 from func_8001220C.
-# func_8006AD40 and both caller DMA checkpoints complete before this call.
+# Current global frontier: exit 1 at func_8007512C from func_801909B4.
+# func_8006AD40, both caller DMA checkpoints, and 149 overlay words complete first.
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
@@ -1013,8 +1012,8 @@ status 1; native tests are 285/285.
 
 ## Next steps
 
-1. **Next artifact-free production rung:** decompose the statically recovered
-   977-word overlay function `func_801909B4`, now the measured strict frontier
+1. **Next artifact-free production rung:** implement generic PsyQ `MoveImage`
+   (`func_8007512C`) and continue the recovered `func_801909B4` overlay
 2. **Scheduler rung:** obtain the human-driven BTL151 PCSX packer capture;
    never synthesize `m0360i` or `persist[0] |= 4`
 3. Continue boot/frontier coverage from each newly proven provider

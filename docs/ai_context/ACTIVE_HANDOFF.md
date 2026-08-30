@@ -70,7 +70,7 @@ and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
 is the unique `persist[0] |= 4` writer; the native branch must not plant that
 bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
-bridge, not another m0005i gate workaround. Current native suite: 958/958.
+bridge, not another m0005i gate workaround. Current native suite: 962/962.
 
 ## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
 
@@ -86,8 +86,9 @@ No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
 standalone native frontier is separately
-`PRODUCTION_REACHABILITY=blocked_at_func_801909B4` after B54K-M completed
-`func_8006AD40`; this does not change the scheduler evidence boundary.
+`PRODUCTION_REACHABILITY=blocked_at_func_8007512C_from_func_801909B4` after
+B54K-Q translated the first 149 overlay words; this does not change the
+scheduler evidence boundary.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
 
@@ -108,7 +109,7 @@ corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining scheduler status: `SEMANTIC_IMPLEMENTATION=not_started`
 and `SCHEDULER_PROVENANCE=NEEDS_ARTIFACT`. The independent native frontier is
-now `func_801909B4`; current suite `958/958`.
+now `func_8007512C` from `func_801909B4`; current suite `962/962`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -131,7 +132,8 @@ lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Scheduler status remains
 `SEMANTIC_IMPLEMENTATION=not_started` / `NEEDS_ARTIFACT`; the independent
-native frontier is now `func_801909B4`, with suite `958/958`.
+native frontier is now `func_8007512C` from `func_801909B4`, with suite
+`962/962`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
 the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
@@ -471,6 +473,34 @@ frontier is `func_801909B4` from `func_8001220C`. Evidence:
 FUNC_8006AD40=COMPLETE_NATIVE_TRANSLATION
 PRODUCTION_REACHABILITY=blocked_at_func_801909B4
 FUNC_801909B4_BYTES=STATICALLY_RECOVERED_NOT_IMPLEMENTED
+SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
+```
+
+## PE-B54K-Q — `func_801909B4` MoveImage prefix (2026-08-30)
+
+The real-disc overlay now enters 149 translated retail words
+`[0x801909B4,0x80190C08)`. The prefix copies two 0x5C-byte DRAWENV records
+and two 0x14-byte DISPENV records into overlay storage, publishes six arena
+pointers from authenticated `D_80011610`, executes translated
+`func_8005E57C`, the positive path of `func_8005C1EC`, complete
+`func_80042538`, and `SetDispMask(0)`, then captures the first unresolved
+call.
+
+The exact next provider is PsyQ `MoveImage` (`func_8007512C`) at
+`0x80190C08`, with arguments `RECT{320,0,160,256}`, destination `(704,0)`.
+The full RECT payload is recorded and the caller now honors a nested stop
+before consuming the retained `-1` return. Strict real-disc execution proves
+natural overlay entry and reports `func_8007512C` from `func_801909B4`.
+
+Five focused tests, full normal, and fresh ASan/UBSan suites pass `962/962`
+with zero sanitizer diagnostics. Evidence:
+`docs/evidence/pe-b54kq-1909b4-moveimage-prefix/REPORT.md` and
+`pc_port/tools/b54kq_1909b4_prefix_oracle.py`.
+
+```text
+FUNC_8006AD40=COMPLETE_NATIVE_TRANSLATION
+FUNC_801909B4_PREFIX=149_WORDS_TRANSLATED
+PRODUCTION_REACHABILITY=blocked_at_func_8007512C_from_func_801909B4
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 ```
 

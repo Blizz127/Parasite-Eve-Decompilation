@@ -187,7 +187,8 @@ never native function pointers.
 - `func_8003F3C4`
 - `func_801235DC`
 - `func_8019234C`
-- `func_801909B4`
+- `func_8007512C` — current `MoveImage` boundary inside the translated
+  149-word `func_801909B4` prefix
 
 ### func_8003E610 callees (10)
 - `func_80073C94`
@@ -797,9 +798,10 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode now stops at `func_801909B4` from
-`func_8001220C`, after complete `func_8006AD40` and both explicit caller DMA
-checkpoints. It is the first BOOTSTRAP_RET provider on the canonical path.
+With Disc 1, strict mode now stops at `func_8007512C` from
+`func_801909B4`, after complete `func_8006AD40`, both explicit caller DMA
+checkpoints, and 149 translated overlay words. It is the first BOOTSTRAP_RET
+provider on the canonical path.
 The `--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by
 design. Normal and fresh sanitizer builds agree exactly on both frontiers.
 

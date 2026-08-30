@@ -144,6 +144,9 @@ set(GAME_SRCS
     game/boot/func_800527C8_port.c
     game/boot/func_800528F0_port.c
     game/boot/func_8005E588_port.c
+    game/boot/func_8005E57C_port.c
+    game/boot/func_8005C1EC_port.c
+    game/boot/func_80042538_port.c
     game/boot/func_80062568_port.c
     game/boot/func_80064964_port.c
     game/boot/func_8005DE88_port.c
@@ -204,6 +207,7 @@ set(GAME_SRCS
     game/boot/func_800370DC_port.c
     game/boot/func_80037140_port.c
     game/boot/func_80030894_port.c
+    game/boot/func_801909B4_port.c
 )
 
 set(PORT_SRCS

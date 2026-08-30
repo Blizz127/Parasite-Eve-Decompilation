@@ -138,12 +138,14 @@ def run() -> int:
     print("  OK runtime caller: 2 calls/queries/services, token 2 serviced")
 
     strict = run_native(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_801909B4" in strict and
-            "called from: func_8001220C" in strict,
-            "next strict frontier is not func_801909B4 from func_8001220C")
+    require("first unresolved BOOTSTRAP_RET provider: func_8007512C" in strict and
+            "called from: func_801909B4" in strict,
+            "strict continuation no longer passes 6AD40 into the overlay")
     require("func_8006AD40_D_80093126_archive_cut" not in strict,
             "obsolete 6AD40 prefix frontier remains live")
-    print("  OK strict continuation: next frontier func_801909B4 from func_8001220C")
+    require("provider: func_801909B4" not in strict,
+            "obsolete whole-overlay stub remains live")
+    print("  OK strict continuation: 6AD40 returns; overlay reaches func_8007512C")
     print("\nB54K-M completion oracle: PASS (retail, native, caller, and frontier).")
     return 0
 

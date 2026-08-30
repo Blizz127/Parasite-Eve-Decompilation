@@ -49,15 +49,15 @@ The native test executable was run directly:
 
 ```text
 pc_port/build/pe-native-tests
-Results: 958 run, 958 passed, 0 failed, 0 skipped
+Results: 962 run, 962 passed, 0 failed, 0 skipped
 ```
 
 The production executable is not a complete Day 1 field runtime. Its strict
 real-disc execution frontier is:
 
 ```text
-func_801909B4 from func_8001220C
-func_8006AD40 is complete; both explicit caller DMA checkpoints execute first
+func_8007512C from func_801909B4
+func_8006AD40 is complete; both DMA checkpoints and 149 overlay words execute first
 ```
 
 The bootstrap-disc path has a separate earlier stop at
@@ -92,6 +92,7 @@ Evidence: [ACTIVE_HANDOFF.md](ACTIVE_HANDOFF.md),
 [B54K-L report](../evidence/pe-b54kl-6ad40-3126-wait/REPORT.md),
 [B54K-M report](../evidence/pe-b54km-6ad40-complete/REPORT.md),
 [B54K-N report](../evidence/pe-b54kn-726c4-flushcache/REPORT.md),
+[B54K-Q report](../evidence/pe-b54kq-1909b4-moveimage-prefix/REPORT.md),
 [pe-btl147 report](../evidence/pe-btl147-theater-eve-path/REPORT.md), and the
 current native binary/test result above.
 
@@ -99,10 +100,10 @@ The next scheduler rung is the human-driven BTL151 PCSX capture of
 `func_8006E3D4` inputs. Static provenance is exhausted and no forced
 destination or `persist[0] |= 4` is permitted. Independently, B54K-M now
 completes all 391 words of `func_8006AD40`, migrates the 23 historical
-prefix contracts, and measures both caller DMA checkpoints. The next
-artifact-free production rung is the recovered 977-word `func_801909B4`
-overlay function. Real-disc startup already adopts its retail overlay
-table/pointer values after authenticating the boot EXE; see the
+prefix contracts, and measures both caller DMA checkpoints. B54K-Q now
+translates the first 149 words of the recovered 977-word `func_801909B4`
+overlay and measures `func_8007512C` (`MoveImage`) as the next provider.
+Real-disc startup already adopts its retail overlay table/pointer values; see
 [B54K-M report](../evidence/pe-b54km-6ad40-complete/REPORT.md),
 [B54K-O report](../evidence/pe-b54ko-1909b4-overlay-recovery/REPORT.md) and
 [B54K-P report](../evidence/pe-b54kp-overlay-authority/REPORT.md).
@@ -152,7 +153,7 @@ No complete playable Day 1→theater→Eve-battle runtime is verified on this
 host. The external dashboard describes UE5 as the best *partial* interactive
 slice, while the native runtime is currently a headless/testable bootstrap
 and component runtime. The only directly runnable authoritative experience
-here is the native executable's bounded headless behavior and its 958-test
+here is the native executable's bounded headless behavior and its 962-test
 suite; it is not a complete game route.
 
 Native commands are listed in section B. A UE5 run command cannot be stated
@@ -173,8 +174,8 @@ for natural `m0360i` entry; it must be proven before implementation.
 - UE5: obtain/verify the retail theater-side hops, then promote the HP path
   under the parity trace contract.
 - Native `pc_port`: capture the generic event/scheduler decision that naturally
-  enters `m0360i`; separately decompose the statically recovered
-  `func_801909B4` now measured as the production strict frontier.
+  enters `m0360i`; separately implement generic `MoveImage`, now the measured
+  provider inside the translated `func_801909B4` prefix.
 - Matching-C: review/refresh the 16-row Tier-1 queue after the three-park hard
   stop; retain 335 exact plus 19 explicitly non-exact residuals.
 - `parasite-eve-port-black`: no work here; it is a historical branch, not the
@@ -189,11 +190,11 @@ for natural `m0360i` entry; it must be proven before implementation.
 2. This host still cannot inspect the UE5 checkout, so no locally verified
    end-to-end UE5 claim is possible.
 3. `UE_NATIVE_PARITY_POLICY.md` retains useful acceptance rules but its status
-   table is historical; this file carries the measured 958-test native state.
+   table is historical; this file carries the measured 962-test native state.
 4. Matching residuals are evidence dispositions, not exact leaves: 335 is the
    only YAML-derived matching-C count.
 
 ```text
 REPORT_STATUS=CURRENT
-LAST_REFRESH=2026-08-30_B54K-M
+LAST_REFRESH=2026-08-30_B54K-Q
 ```

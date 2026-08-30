@@ -108,8 +108,8 @@ static inline void func_800752AC(void *o, int n) {
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
 /* func_8006AD40 is complete through its normal return (Phase 6E-B54K-M).
- * The next canonical real-disc strict boundary is the overlay function
- * func_801909B4, reached by func_8001220C after both DMA checkpoints. */
+ * B54K-Q enters func_801909B4 after both DMA checkpoints; its current
+ * canonical boundary is func_8007512C (MoveImage) at retail 0x80190C08. */
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
@@ -118,7 +118,7 @@ static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08",
  * func_80068E24_port.c). Prototypes live in pe_port_compat.h. */
 static inline void func_801235DC(void)   { Bootstrap_ReturnVoid("func_801235DC", "func_8001220C"); }
 static inline void func_8019234C(void)   { Bootstrap_ReturnVoid("func_8019234C", "func_8001220C"); }
-static inline int  func_801909B4(void)   { return Bootstrap_ReturnInt("func_801909B4", "func_8001220C", 0); }
+extern int func_801909B4(void);
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
 /* func_8006E1C0 is REAL (Phase 6E-B51):
  * game/boot/func_8006E1C0_port.c — packed texture-entry LoadImage

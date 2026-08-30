@@ -33,6 +33,9 @@ extern int func_800614AC(int a0);
 extern void func_80051CC4(void);
 extern int func_80013300(pe_addr_t args);
 extern int func_800144FC(pe_addr_t args);
+extern void func_8005E57C(int value);
+extern void func_8005C1EC(int enabled);
+extern void func_80042538(void);
 
 static int tests_run = 0;
 static int tests_passed = 0;
@@ -365,10 +368,11 @@ static void test_B49_bounded_runs_repeat(void)
     PASS();
 }
 
-static void test_B49_801909B4_remains_strict_boundary(void)
+static void test_B54KQ_801909B4_strict_reaches_moveimage(void)
 {
-    TEST("B49_801909B4_remains_strict_boundary");
+    TEST("B54KQ_801909B4_strict_reaches_moveimage");
 #if defined(__unix__) || defined(__APPLE__)
+    ResetTestState();
     fflush(NULL);
     pid_t pid = fork();
     ASSERT(pid >= 0, "fork failed");
@@ -381,8 +385,199 @@ static void test_B49_801909B4_remains_strict_boundary(void)
     int status = 0;
     ASSERT(waitpid(pid, &status, 0) == pid, "waitpid failed");
     ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "func_801909B4 did not remain a strict boundary");
+           "func_801909B4 did not reach the strict MoveImage boundary");
 #endif
+    PASS();
+}
+
+static int B54KQ_AddressIsWritten(uint32_t address)
+{
+    return (address >= 0x801D1498u && address < 0x801D1578u) ||
+           (address >= 0x801D11BCu && address < 0x801D11C4u) ||
+           (address >= 0x800B0E38u && address < 0x800B0E40u) ||
+           (address >= 0x800B0E50u && address < 0x800B0E58u) ||
+           (address >= 0x8009D120u && address < 0x8009D124u) ||
+           (address >= 0x8009D030u && address < 0x8009D034u) ||
+           (address >= 0x800B0CD8u && address < 0x800B0CDCu) ||
+           (address >= 0x800A0ED4u && address < 0x800A1708u) ||
+           (address >= 0x800A1838u && address < 0x800A1850u) ||
+           (address >= 0x800A1854u && address < 0x800A1858u) ||
+           (address >= 0x800A185Cu && address < 0x800A1870u);
+}
+
+static void B54KQ_SeedOverlayPrefix(uint8_t bias)
+{
+    uint32_t i;
+
+    for (i = 0u; i < 0xE0u; i++) {
+        PE_StoreU8(0x800BCDC8u + i, (uint8_t)(bias + i * 37u));
+        PE_StoreU8(0x801D1498u + i, 0xA5u);
+    }
+    PE_StoreU32(0x80011610u, 0x80120D00u);
+    PE_StoreU32(0x800B0CD8u, 0x00100001u);
+    PE_StoreU8(0x800B0DCDu, 1u);
+    memset(PE_Translate(0x800A0ED4u, 0x830u), 0x5Au, 0x830u);
+    PE_StoreU32(0x800A1704u, 0x5A5A5A5Au);
+    memset(PE_Translate(0x800A1838u, 0x38u), 0x5Au, 0x38u);
+}
+
+static int B54KQ_MoveImageBoundaryIsExact(void)
+{
+    BootstrapArgCall4 *call;
+    RECT rect;
+
+    if (g_bootstrap_arg4_call_count != 1)
+        return 0;
+    call = &g_bootstrap_arg4_calls[0];
+    if (strcmp(call->symbol, "func_8007512C") != 0 ||
+        strcmp(call->caller, "func_801909B4") != 0 ||
+        call->target != 0x8007512Cu || call->arg0 != 0u ||
+        call->arg1 != 0x2C0u || call->arg2 != 0u || call->arg3 != 0u ||
+        call->payload_size != sizeof(rect))
+        return 0;
+    memcpy(&rect, call->payload, sizeof(rect));
+    return rect.x == 320 && rect.y == 0 &&
+           rect.w == 160 && rect.h == 256;
+}
+
+static void test_B54KQ_prerequisite_setters_and_reset(void)
+{
+    uint32_t a;
+    TEST("B54KQ_prerequisite_setters_and_reset");
+    ResetTestState();
+
+    func_8005E57C(0x12345678);
+    ASSERT(PE_LoadU32(0x8009D120u) == 0x12345678u,
+           "func_8005E57C scalar store differs");
+
+    PE_StoreU32(0x800B0CD8u, 0x00100001u);
+    func_8005C1EC(1);
+    ASSERT(PE_LoadU32(0x8009D030u) == 1u &&
+           PE_LoadU32(0x800B0CD8u) == 0x0010C001u,
+           "func_8005C1EC first positive publication differs");
+    PE_StoreU32(0x800B0CD8u, 0x55AA0001u);
+    func_8005C1EC(7);
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x55AA0001u,
+           "func_8005C1EC repeated positive call was not inert");
+
+    memset(PE_Translate(0x800A0ED4u, 0x830u), 0x5Au, 0x830u);
+    memset(PE_Translate(0x800A1704u, 0x16Cu), 0x5Au, 0x16Cu);
+    func_80042538();
+    for (a = 0u; a < 0x830u; a++) {
+        uint8_t expected =
+            ((a >= 0x0Cu && a < 0x10u) ||
+             (a >= 0x424u && a < 0x428u)) ? 0xFFu : 0u;
+        if (PE_LoadU8(0x800A0ED4u + a) != expected) {
+            FAIL("func_80042538 record block differs");
+            return;
+        }
+    }
+    ASSERT(PE_LoadU32(0x800A1704u) == 0u &&
+           PE_LoadU32(0x800A1838u) == 0u &&
+           PE_LoadU32(0x800A183Cu) == 0u &&
+           PE_LoadU32(0x800A1840u) == 0u &&
+           PE_LoadU32(0x800A1844u) == 0u &&
+           PE_LoadU32(0x800A1848u) == 0u &&
+           PE_LoadU32(0x800A184Cu) == 0u &&
+           PE_LoadU32(0x800A1854u) == 0u &&
+           PE_LoadU32(0x800A185Cu) == 0u &&
+           PE_LoadU32(0x800A1860u) == 0u &&
+           PE_LoadU32(0x800A1864u) == 0u &&
+           PE_LoadU32(0x800A1868u) == 0u &&
+           PE_LoadU32(0x800A186Cu) == 0u,
+           "func_80042538 scalar clears differ");
+    PASS();
+}
+
+static void test_B54KQ_5C1EC_zero_path_is_named_boundary(void)
+{
+    TEST("B54KQ_5C1EC_zero_path_is_named_boundary");
+    ResetTestState();
+    PE_StoreU32(0x8009D030u, 7u);
+    PE_StoreU32(0x800B0CD8u, 0x1234C001u);
+    func_8005C1EC(0);
+    ASSERT(PE_LoadU32(0x8009D030u) == 0u,
+           "zero path did not execute its pre-call scalar clear");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x1234C001u,
+           "zero path fabricated the post-cleanup flag clear");
+    ASSERT(g_stub_order_count == 1 &&
+           strcmp(g_stub_order_log[0], "func_80042798") == 0,
+           "zero path did not expose func_80042798");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "zero path boundary stop reason differs");
+    PASS();
+}
+
+static void test_B54KQ_801909B4_prefix_effects_and_canary(void)
+{
+    uint8_t *snapshot;
+    uint32_t address;
+    int vsync, drawsync, presented, mask;
+    TEST("B54KQ_801909B4_prefix_effects_and_canary");
+    ResetTestState();
+    HostFB_Init();
+    B54KQ_SeedOverlayPrefix(0x13u);
+    snapshot = malloc(PE_RAM_SIZE);
+    ASSERT(snapshot != NULL, "cannot allocate B54KQ RAM snapshot");
+    memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
+
+    ASSERT(func_801909B4() == -1, "prefix retained return differs");
+    ASSERT(memcmp(PE_TranslateConst(0x801D1498u, 0xE0u),
+                  PE_TranslateConst(0x800BCDC8u, 0xE0u), 0xE0u) == 0,
+           "four fixed environment copies differ");
+    ASSERT(PE_LoadU32(0x801D11BCu) == 0x80120D00u &&
+           PE_LoadU32(0x801D11C0u) == 0x8013CD80u &&
+           PE_LoadU32(0x800B0E50u) == 0x80124D80u &&
+           PE_LoadU32(0x800B0E54u) == 0x80140E00u &&
+           PE_LoadU32(0x800B0E38u) == 0x80120D80u &&
+           PE_LoadU32(0x800B0E3Cu) == 0x8013CE00u,
+           "overlay arena pointer arithmetic differs");
+    ASSERT(PE_LoadU32(0x8009D120u) == 1u &&
+           PE_LoadU32(0x8009D030u) == 1u &&
+           PE_LoadU32(0x800B0CD8u) == 0x0010C001u,
+           "pre-MoveImage state calls differ");
+    ASSERT(B54KQ_MoveImageBoundaryIsExact(),
+           "MoveImage target, ABI, or RECT payload differs");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "prefix did not stop at MoveImage");
+    HostFB_GetState(&vsync, &drawsync, &presented, &mask);
+    ASSERT(mask == 0 && vsync == 0 && drawsync == 0 && presented == 0,
+           "pre-MoveImage display-mask call changed other host state");
+
+    for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
+        if (B54KQ_AddressIsWritten(address))
+            continue;
+        if (PE_LoadU8(address) != snapshot[address - PE_RAM_BASE]) {
+            free(snapshot);
+            FAIL("prefix changed guest RAM outside exact retail writes");
+            return;
+        }
+    }
+    free(snapshot);
+    PASS();
+}
+
+static void test_B54KQ_801909B4_dirty_repeat(void)
+{
+    TEST("B54KQ_801909B4_dirty_repeat");
+    ResetTestState();
+    HostFB_Init();
+    B54KQ_SeedOverlayPrefix(0x21u);
+    ASSERT(func_801909B4() == -1, "first prefix return differs");
+
+    PE_Port_RunControlReset();
+    Stub_ResetOrderLog();
+    Bootstrap_ResetArg4CallLog();
+    B54KQ_SeedOverlayPrefix(0x87u);
+    PE_StoreU32(0x8009D120u, 0u);
+    ASSERT(func_801909B4() == -1, "repeat prefix return differs");
+    ASSERT(memcmp(PE_TranslateConst(0x801D1498u, 0xE0u),
+                  PE_TranslateConst(0x800BCDC8u, 0xE0u), 0xE0u) == 0,
+           "repeat did not overwrite all copied environments");
+    ASSERT(PE_LoadU32(0x8009D120u) == 1u &&
+           PE_LoadU32(0x8009D030u) == 1u &&
+           B54KQ_MoveImageBoundaryIsExact(),
+           "repeat changed prerequisite or boundary behavior");
     PASS();
 }
 
@@ -31391,7 +31586,11 @@ int main(void)
     test_B49_main_iteration_budget_exact();
     test_B49_run_control_reset();
     test_B49_bounded_runs_repeat();
-    test_B49_801909B4_remains_strict_boundary();
+    test_B54KQ_801909B4_strict_reaches_moveimage();
+    test_B54KQ_prerequisite_setters_and_reset();
+    test_B54KQ_5C1EC_zero_path_is_named_boundary();
+    test_B54KQ_801909B4_prefix_effects_and_canary();
+    test_B54KQ_801909B4_dirty_repeat();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();

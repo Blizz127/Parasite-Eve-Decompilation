@@ -151,6 +151,9 @@ void func_8001220C(void)
             if (v == state_val) {
                 func_8006E834();
                 v = func_801909B4();
+                /* A translated overlay prefix can expose an honest nested
+                 * provider.  Do not consume its provisional return value. */
+                if (PE_Port_ShouldStop()) return;
                 func_8006E9A0(v);
                 *data |= 0x3;
             } else if (state_val < v) {
