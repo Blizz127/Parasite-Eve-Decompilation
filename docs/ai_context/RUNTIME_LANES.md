@@ -1,7 +1,8 @@
 # Runtime lanes — current-state reconciliation
 
-Status date: 2026-08-24. This is a read-only reconciliation. No runtime,
-YAML, build, or verifier files were changed for this report.
+Status date: 2026-08-29. This file is the maintained cross-lane status; the
+native and matching sections below were revalidated from their authoritative
+worktrees during the B54K-B1 rung.
 
 ## A. UE5 — `Blizz127/parasite-eve-ue5`
 
@@ -9,7 +10,8 @@ The UE5 checkout is not present on this host (`/home/blizz/dev/parasite-eve-ue5`
 does not exist), so its executable behavior and current commit cannot be
 independently run or inspected here.
 
-The best available evidence is the campaign dashboard, which reports the UE5
+The best available local evidence is the now-superseded campaign dashboard,
+which historically reported the UE5
 `main` tip as `d3ae7db730a05a6cba7d7f0e42a652847c01d67e` and describes a
 partial PE-PLAY2 slice: a prefix through Carnegie/theater-related field work,
 then an overlay wait drain and `0x89` mode-6 transition. The same dashboard
@@ -17,7 +19,7 @@ explicitly labels Day 1 field, text, and battle as `PARTIAL`, and lists
 `m0377i→m0012i`, `m0005i` hop verification, and the HP path as pending. It
 does not prove an end-to-end Day 1 route through the Eve battle.
 
-Evidence: [CAMPAIGN_DASHBOARD.md](CAMPAIGN_DASHBOARD.md), especially
+Historical evidence: [CAMPAIGN_DASHBOARD.md](CAMPAIGN_DASHBOARD.md), especially
 `CURRENT_UE_FRONTIER`, `DAY1_*`, and the UE task list. The parity policy
 currently says `NO_UE_PLAYABLE_RUNTIME`, so no UE5 Eve-battle behavior can be
 accepted from this host.
@@ -40,23 +42,22 @@ future UE parity input, but records that promotion as not yet accepted.
 
 ## B. Native `pc_port`
 
-Authoritative tree for this report: `/home/blizz/dev/pe-continuous-decomp`,
-branch `grind/continuous-decomp`, HEAD
-`2746417bee3a5b42f7984e707a2fc82767d0e2b5`.
+Authoritative tree: `/home/blizz/dev/pe-continuous-decomp`, branch
+`grind/continuous-decomp`.
 
 The native test executable was run directly:
 
 ```text
 pc_port/build/pe-native-tests
-Results: 928 run, 928 passed, 0 failed, 0 skipped
+Results: 930 run, 930 passed, 0 failed, 0 skipped
 ```
 
 The production executable is not a complete Day 1 field runtime. Its strict
 real-disc execution frontier is:
 
 ```text
-func_80030894_L2L3_cut @ 0x8006B0AC
-called from func_8006AD40
+func_80030894_L4_cut (first excluded retail instruction 0x80030C9C)
+func_80030894 is called from func_8006AD40 by jal @ 0x8006B0AC
 ```
 
 The bootstrap-disc path has a separate earlier stop at
@@ -77,45 +78,41 @@ cd /home/blizz/dev/pe-continuous-decomp/pc_port
 ```
 
 Evidence: [ACTIVE_HANDOFF.md](ACTIVE_HANDOFF.md),
-[pe-btl147 report](../evidence/pe-btl147-theater-eve-path/REPORT.md), and
-the current native binary/test result above.
+[B54K-B1 report](../evidence/pe-b54kb1-30894-l4/REPORT.md),
+[pe-btl147 report](../evidence/pe-btl147-theater-eve-path/REPORT.md), and the
+current native binary/test result above.
 
-The next native rung is scheduler provenance for natural `m0360i` entry. The
-BTL148 census found no proven generic scheduler in the available executable;
-it deliberately did not add a forced destination or `persist[0] |= 4`.
+The next scheduler rung is the human-driven BTL151 PCSX capture of
+`func_8006E3D4` inputs. Static provenance is exhausted and no forced
+destination or `persist[0] |= 4` is permitted. Independently, the next
+artifact-free production-reachability rung is `func_80030894` L5.
 
 ## C. Matching-C decomp
 
 Authoritative tree for the matching-C lane:
 `/home/blizz/dev/parasite-eve`.
 
-At accepted HEAD `15ef1320a5df81fc8b04b82a4847710f1480cba2`,
+At accepted HEAD `634dd1b`, the worktree is clean and the authoritative exact
+count is:
 
 ```text
 grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml
-281
+335
 ```
 
-That worktree is currently dirty. Its uncommitted experiment changes the
-`0x703F0` span from `[0x703F0, asm]` to a six-word C leaf and makes the local
-count 282. It is not accepted evidence and must not be reported as the
-project count.
+There are also 19 policy-qualified accepted residuals. They remain ASM in the
+YAML, are excluded from the 335 exact count, and are not byte-identity claims.
+`func_8007FBF0` (`0x703F0`) is one of those documented assembler-temp
+residuals; no unaccepted C integration remains in the tree.
 
-The boot ledger is the accepted handoff/parked-blocker record, not the dirty
-0x703F0 proposal. The parked set includes unresolved compiler allocation or
-scheduling families such as `func_800698D4`, `func_8006E834` (historical
-entry now documented as resolved in the handoff but with stale historical
-rows), `func_80055724`, `func_80062CE4`, `func_800725DC`/`func_8007264C`,
-and `func_8001220C`; each has evidence in
-`docs/ai_context/parked_blockers.json` or its named report. The abandoned
-0x80077B78–0x80077C38 batch is classification evidence/padding, not C
-progress.
-
-Next matching-C rung: resolve the accepted baseline/worktree discrepancy,
-then only pursue a separately authorized real leaf; do not count the dirty
-0x703F0 proposal until it is reviewed, exact, integrated, and accepted.
+The current ordinary-C campaign is stopped at its standing hard gate after
+three consecutive bounded parks (`func_8007E6B0`, `func_8005BCBC`, and
+`func_80083D9C`). Sixteen Tier-1 rows remain queued, but the queue requires
+review/refresh before another attempt rather than silently bypassing the
+stop.
 
 Evidence: `/home/blizz/dev/parasite-eve/docs/ai_context/ACTIVE_HANDOFF.md`,
+`/home/blizz/dev/parasite-eve/docs/ai_context/MATCHING_RESIDUAL_POLICY.md`,
 `parked_blockers.json`, and the accepted-HEAD YAML count above.
 
 ## D. Other PE trees
@@ -135,7 +132,7 @@ No complete playable Day 1→theater→Eve-battle runtime is verified on this
 host. The external dashboard describes UE5 as the best *partial* interactive
 slice, while the native runtime is currently a headless/testable bootstrap
 and component runtime. The only directly runnable authoritative experience
-here is the native executable's bounded headless behavior and its 928-test
+here is the native executable's bounded headless behavior and its 930-test
 suite; it is not a complete game route.
 
 Native commands are listed in section B. A UE5 run command cannot be stated
@@ -155,35 +152,28 @@ for natural `m0360i` entry; it must be proven before implementation.
 
 - UE5: obtain/verify the retail theater-side hops, then promote the HP path
   under the parity trace contract.
-- Native `pc_port`: recover the generic event/scheduler decision that naturally
-  enters `m0360i`; keep production reachability separately recorded at
-  `func_80030894_L2L3_cut`.
-- Matching-C: reconcile the dirty 282-count proposal against accepted 281,
-  then continue only with an accepted real leaf.
+- Native `pc_port`: capture the generic event/scheduler decision that naturally
+  enters `m0360i`; separately continue the artifact-free production prefix
+  from `func_80030894_L4_cut` into L5.
+- Matching-C: review/refresh the 16-row Tier-1 queue after the three-park hard
+  stop; retain 335 exact plus 19 explicitly non-exact residuals.
 - `parasite-eve-port-black`: no work here; it is a historical branch, not the
   current native authority.
 - Scratch/main-verify trees: no next production rung; preserve as historical
   references unless explicitly reassigned.
 
-## Policy/dashboard contradictions
+## Known documentation boundaries
 
-The current sources disagree with measured state in several places:
-
-1. `CAMPAIGN_DASHBOARD.md` is stale: it reports `MATCHED=227`, an old
-   `phase6e-b-provider-frontier` native authority, and old UE/native tips.
-   The current accepted matching-C HEAD is 281; the current grind native
-   authority is HEAD `2746417` with 928/928 tests.
-2. The dashboard labels a UE5 prefix “playable” and gives a UE frontier, but
-   this host cannot inspect or run that tree. That is external evidence, not a
-   current locally verified end-to-end claim.
-3. `UE_NATIVE_PARITY_POLICY.md` says the current native suite is 907 tests and
-   UE5 has `NO_UE_PLAYABLE_RUNTIME`; the current grind binary actually runs
-   928/928, while the UE5 status remains unverified here. The policy's
-   acceptance rules are still applicable, but its status table is stale.
-4. The matching-C worktree's dirty 282 count must not overwrite the accepted
-   281 count in either document until the leaf is reviewed and accepted.
+1. `CAMPAIGN_DASHBOARD.md` is explicitly superseded and retained only as
+   historical UE5 context. It must not supply current counts or frontiers.
+2. This host still cannot inspect the UE5 checkout, so no locally verified
+   end-to-end UE5 claim is possible.
+3. `UE_NATIVE_PARITY_POLICY.md` retains useful acceptance rules but its status
+   table is historical; this file carries the measured 930-test native state.
+4. Matching residuals are evidence dispositions, not exact leaves: 335 is the
+   only YAML-derived matching-C count.
 
 ```text
-REPORT_STATUS=PRESENTED_UNCOMMITTED
-NO_CODE_CHANGES=yes
+REPORT_STATUS=CURRENT
+LAST_REFRESH=2026-08-29_B54K-B1
 ```

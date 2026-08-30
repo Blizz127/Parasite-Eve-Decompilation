@@ -1,9 +1,24 @@
-# Parasite Eve Native PC Port — Phase 6E-B53I-D
+# Parasite Eve Native PC Port — Phase 6E-B54K-B1
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53I-D admits one separate later checkpoint for the
-second LoadImage DMA token created by B53I-C. The exact 32-word transfer from
+**Current milestone:** B54K-B1 advances the production implementation of
+`func_80030894` through retail address `0x80030C9C`: 258 words of the
+788-word GPU-primitive builder are now native. The new exact 118-word
+continuation initializes the bank-0 fixed tile/G4/state/sprite records and
+builds the complete four-packet L4 group. Its independent oracle verifies the
+whole retail-window hash, all seven calls, selected literal/store words, loop
+bound/back edge, and the first excluded L5 instruction. Two focused tests
+cover final state, exact write extents, dirty/repeat determinism, and the named
+`func_80030894_L4_cut`; normal and fresh ASan/UBSan suites pass 930/930 with
+zero sanitizer diagnostics. Scheduler provenance remains independently
+artifact-bound: this rung adds no destination, `m0360i`, or persist special
+case. Full proof is in
+`docs/evidence/pe-b54kb1-30894-l4/REPORT.md`.
+
+**Earlier retained milestone:** B53I-D admits one separate later checkpoint
+for the second LoadImage DMA token created by B53I-C. The exact 32-word
+transfer from
 `0x8012B8B8` exposes pixels `0x6000..0x603F` at `(256..319,456)` before
 CHCR clears from `0x01000201` to `0x00000201`. Because the idle pump already
 removed channel-2 callback/enable, stored and physical DICR remain
@@ -783,7 +798,7 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_80030894_L2L3_cut from
+# Current global frontier: exit 1 at func_80030894_L4_cut from
 # func_80030894 (6AD40 continues to func_8006AD40_post30894_cut).
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 
