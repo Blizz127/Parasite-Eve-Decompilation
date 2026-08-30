@@ -2,15 +2,15 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,088 current active spans — Tier 1 1, Tier 2 214, Tier 3 99,
-SKIP/suppressed 774. Refresh evidence: `POOL_REFRESH.md`.
+Pool: 1,088 current active spans — Tier 1 0, Tier 2 214, Tier 3 99,
+SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
 Consecutive bounded parks: 3. Matched leaves this campaign: 6.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
 Tier-1 rows after the historical H5. Current close-out streak: zero bounded
-parks, one match, one proven-family suppression.
+parks, one match, two proven-family suppressions. Tier 1 is closed.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -29,3 +29,4 @@ parks, one match, one proven-family suppression.
 | 13 | `func_800762BC` @ `0x66ABC` | canonical return with live frame teardown; four direct callers; immediate real boundaries; no callees/globals/loop; independently identified libGPU E2 texture-window packer | `PARKED-TEXTURE-WINDOW-CONTROL-FLOW-LOAD-SCHEDULE-AND-COLORING`; array retry recovers frame/stores/size, but null layout, X/W versus Y load order, and register homes differ; H5 stop | 32 | 2 | stash `park func_800762BC texture-window layout residual` |
 | 14 / close-out 1 | `func_8007AA34` @ `0x6B234` | canonical return with live subtract; one direct caller; immediate real boundaries; full 32-word body byte-identical to `func_80080C48` | `PARKED-INDEPENDENT-LOAD-AND-BCD-ACCUMULATOR-SCHEDULING-FAMILY`; exact duplicate of an exhausted residual, screened without redundant compilation | 32 | 0 | stash `park func_8007AA34 duplicate CdPosToInt residual` |
 | 15 / close-out 2 | `func_80021850` @ `0x12050` | canonical return; three direct callers; immediate real boundaries; no callees/globals/loop; two argument-derived record addresses | MATCHED leaf 341 first phrasing; signed-byte indices and typed 12-byte aggregate recover the 16-byte stack temporary and exact copy schedule; packed span/full SHA exact | 34 | 1 | VOLUME-110 leaf commit |
+| 16 / close-out 3 | `func_800783E4` @ `0x68BE4` | canonical return; three raw direct callers; immediate real handwritten boundaries; split explicitly handwritten | `SKIP-SDK-LIBRARY-COP2`; required `mtc2/gpf/gpl/mfc2` semantics, zero C attempt or integration; Tier 1 closed | 34 | 0 | VOLUME-111 docs-only commit |

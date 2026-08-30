@@ -17,20 +17,20 @@ bounded residual `func_80080C48`, and VOLUME-108 suppresses bounded residual
 `func_800762BC` before hard stop H5. A new close-out authorization lets
 VOLUME-109 suppress byte-identical `func_8007AA34` as an exhausted family
 member without a duplicate attempt. VOLUME-110 removes exact
-`func_80021850` on its first natural aggregate-copy phrasing.
+`func_80021850` on its first natural aggregate-copy phrasing. VOLUME-111
+screens handwritten `func_800783E4` into the established libGTE/COP2 family,
+closing Tier 1.
 
 The 2026-08-30 active-span reconciliation is recorded in
 `docs/evidence/volume-campaign-20260830/POOL_REFRESH.md`. The primary tables
 below contain 1,032 still-active rows. The reconciliation adds 56 post-table
 park/skip/padding dispositions and corrects the stale header arithmetic.
 
-Total: **1088** — TIER 1 1, TIER 2 214, TIER 3 99, SKIP/suppressed 774.
+Total: **1088** — TIER 1 0, TIER 2 214, TIER 3 99, SKIP/suppressed 775.
 
 ## TIER 1
 
-| file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
-|---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x68BE4 | `func_800783E4` | 34 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
+Tier 1 is closed. No rows remain.
 
 ## TIER 2
 
@@ -1345,3 +1345,11 @@ caller and boundaries independently prove function hood. Evidence:
 typed-aggregate phrasing matched all 34 words. Its three exact-start callers,
 canonical return, and immediate real boundaries prove function hood. Evidence:
 `docs/evidence/volume-campaign-20260830/func-80021850/REPORT.md`.
+
+## 2026-08-30 handwritten GTE interpolation overlay
+
+`func_800783E4` at `0x68BE4` is removed from Tier 1 without an ordinary-C
+attempt. Three raw exact-start callers and canonical boundaries prove it is a
+function; the handwritten marker plus required `mtc2/gpf/gpl/mfc2` semantics
+place it in `SKIP-SDK-LIBRARY-COP2`. Tier 1 is now closed. Evidence:
+`docs/evidence/volume-campaign-20260830/func-800783e4/SKIP.md`.

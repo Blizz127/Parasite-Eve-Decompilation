@@ -15,19 +15,19 @@ The current active universe contains **1,088** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                   1
+TIER 1                   0
 TIER 2                 214
 TIER 3                  99
-SKIP / suppressed      774
+SKIP / suppressed      775
                        ---
 TOTAL                 1088
 ```
 
 The primary tables in `volume-campaign-20260824/POOL.md` contain 1,032 rows:
-1 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+0 Tier 1, 214 Tier 2, 99 Tier 3, and 719 SKIP. Every one of those rows remains
 active. The 56 active spans below were added after the primary tables through
 campaign overlays. Adding all 56 to the suppressed class closes the pool:
-`1032 + 56 = 1088` and `718 + 56 = 774`.
+`1032 + 56 = 1088` and `719 + 56 = 775`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
@@ -45,7 +45,9 @@ for `func_80080C48`; VOLUME-108 did the same for `func_800762BC` and fired
 hard stop H5. A new explicit close-out authorization then let VOLUME-109
 screen byte-identical `func_8007AA34` into the `func_80080C48` residual
 family without a duplicate compile. VOLUME-110 then removed exact
-`func_80021850` from Tier 1 after a first-phrasing 34/34 match. A suppressed `func_`
+`func_80021850` from Tier 1 after a first-phrasing 34/34 match. VOLUME-111
+screened handwritten `func_800783E4` into the established libGTE/COP2 family
+and closed Tier 1. A suppressed `func_`
 label is not assumed to be a
 retail function.
 
