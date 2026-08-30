@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,080 current active spans — Tier 1 0, Tier 2 206, Tier 3 99,
+Pool: 1,079 current active spans — Tier 1 0, Tier 2 205, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 14.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 15.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -13,7 +13,7 @@ Tier-1 rows after the historical H5. Current close-out streak: zero bounded
 parks, one match, two proven-family suppressions. Tier 1 is closed.
 
 Tier-2 probe: separately authorized after Tier-1 closure. Current probe
-streak: zero bounded parks, eight matches.
+streak: zero bounded parks, nine matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -41,3 +41,4 @@ streak: zero bounded parks, eight matches.
 | 22 / Tier-2 probe 6 | `func_80062F1C` @ `0x5371C` | canonical return; 57 unique direct callers; immediate real boundaries; one recursive node-removal callee and no direct globals/loop | MATCHED leaf 347 first phrasing; natural void forwarding wrapper reproduces the canonical eight-word call frame; packed span/full SHA exact | 8 | 1 | VOLUME-117 leaf commit |
 | 23 / Tier-2 probe 7 | `func_800C2AF0` @ `0xB32F0` | canonical return with live indexed store; eight direct callers; immediate real boundaries; Stage-0 mutable base-pointer census | MATCHED leaf 348 first phrasing; typed advanced base plus indexed field store reproduces all eight words and the natural return delay slot; packed span/full SHA exact | 8 | 1 | VOLUME-118 leaf commit |
 | 24 / Tier-2 probe 8 | `func_80084FC4` @ `0x757C4` | canonical return with live store; seven direct callers; real boundaries plus preceding alignment; Stage-0 timer baseline/limit census | MATCHED leaf 349 first phrasing; volatile root-counter read and two ordered stores reproduce all eight words with the established store-delay gate; packed span/full SHA exact | 8 | 1 | VOLUME-119 leaf commit |
+| 25 / Tier-2 probe 9 | `func_80080AE4` @ `0x712E4` | canonical return with live teardown; three direct callers; immediate real boundaries; one hardware-transaction callee | MATCHED leaf 350 first phrasing; direct zero-status comparison reproduces the eight-word call/boolean wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-120 leaf commit |

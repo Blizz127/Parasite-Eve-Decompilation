@@ -833,7 +833,11 @@ segments:
       # File span 0x72AAC–0x72ABC exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_8009B70C. Plain -O1 matches.
       # Mid-71150 carve: prefix 0x195C, C 0x10, resume 72ABC.s 0xA7C0.
+      # Tier-2 probe: zero-status wrapper func_80080AE4.
+      # Former 71150 asm span: prefix 0x194, C 0x20, resume 0x1C4.
       - [0x71150, asm]
+      - [0x712E4, c, func_80080AE4]
+      - [0x71304, asm]
       # Phase 5EF: signed state/count exchange; same D_8009AFC0 evidence.
       - [0x714C8, c, func_80080CC8]
       - [0x714DC, asm]
