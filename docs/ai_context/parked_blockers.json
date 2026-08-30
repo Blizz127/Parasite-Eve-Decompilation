@@ -333,6 +333,13 @@
       "note": "func_80073244 @ file 0x63A44 is a proven callable twenty-word unsigned lexicographic comparator over two {lo,hi} word pairs, with direct callers 0x80073040 and 0x8007309C, canonical return, and real boundaries. Two era -O2 -G0 phrasings were tested. Scalar unsigned long long selects cc1's generic multiword compare and no argument homes. Passing two two-word structs by value proves the ABI source shape by reproducing retail words 0-5 exactly, including stores of a0/a1/a2 and the branch-delay a3 store. cc1 then folds the equal-high-word low comparison into sltu plus negu, producing seventeen content words instead of retail's explicit twenty-word branch/result ladder. No YAML/build/verifier integration; matching count remains 334. This was the third consecutive actual park after func_8005DBAC and func_80043474, so the mandatory hard stop fired with no Tier-1 row skipped.",
       "evidence": "docs/evidence/volume-campaign-20260825/func-80073244/PARK.md; final source preserved in stash 'park volume func_80073244 lexicographic compare canonicalization'",
       "next": "Do not retry without a source or compiler optimization lever that preserves explicit low-word branches instead of folding the three-way result through negu."
+    },
+    {
+      "id": "register-home-cross-block-scheduling-70d6c",
+      "status": "PARKED-REGISTER-HOME-AND-CROSS-BLOCK-SCHEDULING",
+      "note": "func_80070D6C @ file 0x6156C is a proven callable 25-word lagged-Fibonacci RNG advance with four direct callers, canonical return, and real boundaries. Independent retail/native oracles prove the self-adjacent state semantics. Two natural era -O2 -G0 phrasings compile byte-identically to 24 words: cc1 assigns the three retained bases and cursor/slot/value lifetimes through v0/t0/a3/a2/a1/a0/v1, moves both cursor decrements into earlier load gaps, and computes the sum directly in v0. Retail keeps a deliberate t0-t8 home plan, preserves one load-delay nop, copies t5 to v0, and fills the two guard slots plus return slot with the cursor operations. The explicit two-load/two-value retry changes nothing. No YAML/build/verifier integration; matching count remains 336. Disposition is ACCEPTED-RESIDUAL, not byte identity.",
+      "evidence": "docs/evidence/volume-campaign-20260830/func-80070d6c/PARK.md; final source preserved in stash 'park func_80070D6C register-schedule residual'",
+      "next": "Do not retry without a compiler allocation/scheduler lever that demonstrably reproduces the t0-t8 home plan and prevents both early cursor-decrement steals; pins and scheduling-hiding source tricks remain forbidden."
     }
   ]
 }

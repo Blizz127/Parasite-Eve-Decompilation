@@ -15,24 +15,25 @@ The current active universe contains **1,093** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                  14
+TIER 1                  13
 TIER 2                 214
 TIER 3                  99
-SKIP / suppressed      766
+SKIP / suppressed      767
                        ---
 TOTAL                 1093
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,045 rows:
-14 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
-active. The 48 active spans below were added after the primary tables through
-campaign overlays. Adding all 48 to the suppressed class closes the pool:
-`1045 + 48 = 1093` and `718 + 48 = 766`.
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,044 rows:
+13 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+active. The 49 active spans below were added after the primary tables through
+campaign overlays. Adding all 49 to the suppressed class closes the pool:
+`1044 + 49 = 1093` and `718 + 49 = 767`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
-after exact integration. A suppressed `func_` label is not assumed to be a
-retail function.
+after exact integration; VOLUME-98 moved `func_80070D6C` to the suppressed
+residual set after two bounded phrasings. A suppressed `func_` label is not
+assumed to be a retail function.
 
 ## Reconciled post-table spans
 
@@ -52,6 +53,7 @@ retail function.
 | `0x4F188` | `func_8005E988` | 16 | `PARKED-CONTROL-FLOW-CONSTANT-SCHEDULING` | `volume-campaign-20260825/func-8005e988/PARK.md` |
 | `0x569CC` | `func_800661CC` | 8 | `SKIP-HANDWRITTEN-COP2` | `volume-campaign-20260825/func-800661cc/SKIP.md` |
 | `0x5EC54` | `func_8006E454` | 17 | `PARKED-INDEPENDENT-LOAD-SCHEDULING` | `volume-campaign-20260825/func-8006e454/PARK.md` |
+| `0x6156C` | `func_80070D6C` | 25 | `PARKED-REGISTER-HOME-AND-CROSS-BLOCK-SCHEDULING` | `volume-campaign-20260830/func-80070d6c/PARK.md` |
 | `0x62F14` | `func_80072714` | 4 | `SKIP-SDK-LIBRARY-SYSCALL` | `volume-campaign-20260825/func-80072714/PARK.md` |
 | `0x62F24` | `func_80072724` | 4 | `SKIP-SDK-LIBRARY-SYSCALL` | `volume-campaign-20260825/func-80072714/PARK.md` |
 | `0x63A44` | `func_80073244` | 20 | `PARKED-LEXICOGRAPHIC-COMPARE-CANONICALIZATION` | `volume-campaign-20260825/func-80073244/PARK.md` |
