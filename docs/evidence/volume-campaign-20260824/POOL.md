@@ -12,21 +12,21 @@ SKIP. VOLUME-101 removes exact `func_80012700`, and VOLUME-102 moves
 handwritten libGTE helper `func_80079304` to SKIP. VOLUME-103 removes exact
 `func_8003DF50`, and VOLUME-104 moves handwritten libGTE helper
 `func_80078554` to SKIP. VOLUME-105 removes exact `func_800CE870`,
-VOLUME-106 suppresses bounded residual `func_800339A0`, and VOLUME-107
-suppresses bounded residual `func_80080C48`.
+VOLUME-106 suppresses bounded residual `func_800339A0`, VOLUME-107 suppresses
+bounded residual `func_80080C48`, and VOLUME-108 suppresses bounded residual
+`func_800762BC` before hard stop H5.
 
 The 2026-08-30 active-span reconciliation is recorded in
 `docs/evidence/volume-campaign-20260830/POOL_REFRESH.md`. The primary tables
-below contain 1,035 still-active rows. The reconciliation adds 54 post-table
+below contain 1,034 still-active rows. The reconciliation adds 55 post-table
 park/skip/padding dispositions and corrects the stale header arithmetic.
 
-Total: **1089** — TIER 1 4, TIER 2 214, TIER 3 99, SKIP/suppressed 772.
+Total: **1089** — TIER 1 3, TIER 2 214, TIER 3 99, SKIP/suppressed 773.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x66ABC | `func_800762BC` | 32 | jr-ra | 4/4 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x6B234 | `func_8007AA34` | 32 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x12050 | `func_80021850` | 34 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x68BE4 | `func_800783E4` | 34 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1318,3 +1318,14 @@ candidates are exactly 32 words, but cc1 hoists the independent byte-2 load
 to entry and changes the later BCD accumulator homes; retail delays byte 2
 until after the minute/second `*60` and `*75` pipeline. Evidence:
 `docs/evidence/volume-campaign-20260830/func-80080c48/PARK.md`.
+
+## 2026-08-30 texture-window layout overlay / hard stop
+
+`func_800762BC` at `0x66ABC` is removed from Tier 1 after two bounded
+phrasings as `PARKED-TEXTURE-WINDOW-CONTROL-FLOW-LOAD-SCHEDULE-AND-COLORING`.
+The four-element component-array retry recovers retail's 16-byte frame, all
+four stack homes, and exact 32-word size, but cc1 chooses the opposite null
+layout, schedules Y before W, and colors X/W differently. It is the third
+consecutive park after `func_800339A0` and `func_80080C48`; H5 fires with no
+Tier-1 row skipped. Evidence:
+`docs/evidence/volume-campaign-20260830/func-800762bc/PARK.md`.

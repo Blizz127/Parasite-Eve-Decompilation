@@ -2,10 +2,11 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,089 current active spans — Tier 1 4, Tier 2 214, Tier 3 99,
-SKIP/suppressed 772. Refresh evidence: `POOL_REFRESH.md`.
+Pool: 1,089 current active spans — Tier 1 3, Tier 2 214, Tier 3 99,
+SKIP/suppressed 773. Refresh evidence: `POOL_REFRESH.md`.
 
-Consecutive bounded parks: 2. Matched leaves this campaign: 5.
+Consecutive bounded parks: 3. Matched leaves this campaign: 5.
+Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -21,3 +22,4 @@ Consecutive bounded parks: 2. Matched leaves this campaign: 5.
 | 10 | `func_800CE870` @ `0xBF070` | canonical return; 27 direct callers; immediate real boundaries; no frame/callees/globals/loop | MATCHED leaf 340 on phrasing 2; signed 16.16 high-half source fields recover three retail `lh` operations; 32/32 normalized object, packed span, full SHA exact | 32 | 2 | VOLUME-105 leaf commit |
 | 11 | `func_800339A0` @ `0x241A0` | canonical return; six direct callers; immediate real boundaries; no callees/loop; sole writer of three Stage-0-censused gp fields | `PARKED-GP-LOAD-STORE-SCHEDULING-AND-REGISTER-HOME`; two source store orders compile byte-identically, retaining selected address in `v0` and hoisting the second `lhu` versus retail `v1` home and interleaved store | 32 | 2 | stash `park func_800339A0 gp-load-store scheduling residual` |
 | 12 | `func_80080C48` @ `0x71448` | canonical return with live subtract; six direct callers; immediate real boundaries; no frame/callees/globals/loop; independent native `CdPosToInt` vectors | `PARKED-INDEPENDENT-LOAD-AND-BCD-ACCUMULATOR-SCHEDULING`; both candidates are 32 words, but cc1 hoists byte 2 to entry and changes the BCD accumulator homes/schedule | 32 | 2 | stash `park func_80080C48 independent-load scheduling residual` |
+| 13 | `func_800762BC` @ `0x66ABC` | canonical return with live frame teardown; four direct callers; immediate real boundaries; no callees/globals/loop; independently identified libGPU E2 texture-window packer | `PARKED-TEXTURE-WINDOW-CONTROL-FLOW-LOAD-SCHEDULE-AND-COLORING`; array retry recovers frame/stores/size, but null layout, X/W versus Y load order, and register homes differ; H5 stop | 32 | 2 | stash `park func_800762BC texture-window layout residual` |

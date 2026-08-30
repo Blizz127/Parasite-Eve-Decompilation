@@ -9,7 +9,7 @@ count is:
 grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml
 ```
 
-There are also **22 `ACCEPTED-RESIDUAL` leaves**. These are not counted as
+There are also **23 `ACCEPTED-RESIDUAL` leaves**. These are not counted as
 matching C and are not registered as `c` spans. They are semantically
 reconstructed C candidates whose retail bytes differ only in a documented
 compiler, assembler, or per-translation-unit decision that the available
@@ -31,7 +31,7 @@ assembly, or a source spelling whose only purpose is to hide the mismatch.
 
 ## Residual inventory
 
-The 22 leaves are represented by the current `PARKED-*` records in
+The 23 leaves are represented by the current `PARKED-*` records in
 `docs/ai_context/parked_blockers.json`; twin records are counted separately:
 
 | mechanism | leaves |
@@ -49,6 +49,7 @@ The 22 leaves are represented by the current `PARKED-*` records in
 | comparison-result canonicalization | `func_80073244` |
 | register-home / cross-block scheduling | `func_80070D6C` |
 | GP load/store scheduling and register home | `func_800339A0` |
+| texture-window control-flow/load scheduling/coloring | `func_800762BC` |
 | prologue save-batching | `func_8001220C` |
 | per-TU toolchain/configuration skew | `func_800725DC`, `func_8007264C` |
 
@@ -60,5 +61,5 @@ SDK handwritten COP2/syscall skips are outside this residual count.
 
 The exact executable SHA-1 remains
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. It is produced from the 340
-registered matching-C leaves plus the existing assembly spans; the 22 residual
+registered matching-C leaves plus the existing assembly spans; the 23 residual
 leaves are intentionally excluded from the exact build.
