@@ -70,7 +70,7 @@ and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
 is the unique `persist[0] |= 4` writer; the native branch must not plant that
 bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
-bridge, not another m0005i gate workaround. Current native suite: 983/983.
+bridge, not another m0005i gate workaround. Current native suite: 985/985.
 
 ## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
 
@@ -86,8 +86,8 @@ No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
 standalone native frontier is separately
-`PRODUCTION_REACHABILITY=blocked_at_func_80191FB8_from_func_80192CE8` after
-B54K-Y followed Disc 1's saved-bit arm and translated its read prefix; this
+`PRODUCTION_REACHABILITY=blocked_at_func_801924F8_from_func_80192CE8` after
+B54K-Z completed the first overlay-local setup helper; this
 does not change the scheduler evidence boundary.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
@@ -109,7 +109,7 @@ corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining scheduler status: `SEMANTIC_IMPLEMENTATION=not_started`
 and `SCHEDULER_PROVENANCE=NEEDS_ARTIFACT`. The independent native frontier is
-now `func_80191FB8` from `func_80192CE8`; current suite `983/983`.
+now `func_801924F8` from `func_80192CE8`; current suite `985/985`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -132,8 +132,8 @@ lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Scheduler status remains
 `SEMANTIC_IMPLEMENTATION=not_started` / `NEEDS_ARTIFACT`; the independent
-native frontier is now `func_80191FB8` from `func_80192CE8`, with suite
-`983/983`.
+native frontier is now `func_801924F8` from `func_80192CE8`, with suite
+`985/985`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
 the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
@@ -751,6 +751,28 @@ FUNC_80192CE8_PREFIX=69_WORDS_TRANSLATED
 PRODUCTION_REACHABILITY=blocked_at_func_80191FB8_from_func_80192CE8
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 NEXT_ARTIFACT_FREE_RUNG=audit_func_80191FB8
+```
+
+## PE-B54K-Z — complete `func_80191FB8` (2026-08-30)
+
+Overlay-local `func_80191FB8` is complete: all 207 authenticated words,
+one/two-source pointer layouts, `0x28`/`0xB8` environment copies, state bytes,
+and both generic MoveImage calls execute. The `0x08000000` gate skips only
+the second move; invalid count, null-member, and busy paths are mutation-free.
+The transient caller-stack pointer list is consumed by value without assigning
+a host pointer any guest identity.
+
+All 985 normal and fresh ASan/UBSan tests pass. Production now stops at
+`func_801924F8` from `func_80192CE8`; framebuffer and DMA telemetry remain
+486/1445/483 and 27/26. Evidence:
+`docs/evidence/pe-b54kz-191fb8-complete/REPORT.md` and
+`pc_port/tools/b54kz_191fb8_oracle.py`.
+
+```text
+FUNC_80191FB8=COMPLETE_207_WORDS
+PRODUCTION_REACHABILITY=blocked_at_func_801924F8_from_func_80192CE8
+SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
+NEXT_ARTIFACT_FREE_RUNG=audit_func_801924F8
 ```
 
 ## func_800125E0 — descriptor spawn loop matching C (35 words)

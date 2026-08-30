@@ -5,11 +5,11 @@
  * 0670dc9a913589495f623812b226d1ac665ca7984a6cbbe15efc7c200c038855.
  * The prefix marks the indexed 20-byte record, performs the first table-
  * selected PE.IMG read with the retail retry/poll CFG, balances the cache
- * critical section, and reaches func_80191FB8(1, sp+0x10).  The stack word
- * contains arena + ((D_80093162-D_80093160)<<11).  A native stack address
- * has no guest identity, so the unresolved call records that word by value.
+ * critical section, and enters func_80191FB8(1, sp+0x10).  The stack word
+ * contains arena + ((D_80093162-D_80093160)<<11). B54K-Z completes that
+ * callee and advances this caller through the next call and delay slot.
  *
- * The remainder [0x80192DFC,0x80192F98) is not approximated here.
+ * The remainder [0x80192E08,0x80192F98) is not approximated here.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -21,6 +21,8 @@
 #define GA_PEIMG_LBA       0x800B0DD8u
 #define GA_OVERLAY_FLAGS   0x800B0CD8u
 #define GA_RECORD_BASE     0x801D0E04u
+
+extern int PE_func_80191FB8_Values(int count, const pe_addr_t *sources);
 
 int func_80192CE8(int index)
 {
@@ -62,10 +64,13 @@ retry_issue:
     stream = PE_LoadU32(GA_ARENA) +
              ((uint32_t)(PE_LoadU16(0x80093162u) -
                          PE_LoadU16(0x80093160u)) << 11);
-    Bootstrap_RecordArg4Indirect(
-        "func_80191FB8", "func_80192CE8", 0x80191FB8u,
-        1u, 0u, 0u, 0u, &stream, sizeof(stream));
-    Bootstrap_ReturnVoid("func_80191FB8", "func_80192CE8");
+    (void)PE_func_80191FB8_Values(1, &stream);
+    if (PE_Port_ShouldStop())
+        return -1;
+
+    Bootstrap_ReturnVoid1(
+        "func_801924F8", "func_80192CE8",
+        (uint32_t)(int32_t)(int16_t)index);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return -1;
 }

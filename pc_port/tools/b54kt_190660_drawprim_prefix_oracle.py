@@ -181,16 +181,16 @@ def main() -> None:
 
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_80191FB8" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: func_801924F8" in strict and
             "called from: func_80192CE8" in strict,
             "strict later PutDrawEnv frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
-    require("[STUB:BOOTSTRAP_RET] func_80191FB8" in normal and
+    require("[STUB:BOOTSTRAP_RET] func_801924F8" in normal and
             "[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 "
             "captured=26 serviced=26" in normal,
             "normal real-disc prefix effects")
-    print("  OK runtime: 2 focused contracts and later 80191FB8 frontier")
+    print("  OK runtime: 2 focused contracts and later 801924F8 frontier")
     print("\nB54K-T func_80190660 prefix oracle: PASS.")
 
 

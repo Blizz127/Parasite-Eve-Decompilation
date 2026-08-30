@@ -132,7 +132,8 @@ def main() -> None:
     caller_source = (root / "pc_port/game/boot/func_801909B4_port.c").read_text(
         encoding="utf-8")
     require("retry_issue:" in source and "func_8006E7E8()" in source and
-            '"func_80191FB8"' in source and
+            "PE_func_80191FB8_Values" in source and
+            '"func_801924F8"' in source and
             '"func_801909B4_80191120_cut"' in caller_source and
             "func_80192CE8(1)" in caller_source,
             "native branch/prefix wiring")
@@ -148,14 +149,14 @@ def main() -> None:
     env = os.environ.copy()
     env["PE_TEST_FILTER"] = "B54KY"
     focused = run([str(tests)], 0, env)
-    require(re.search(r"Results: 983 run, 2 passed, 0 failed, 981 skipped",
+    require(re.search(r"Results: 985 run, 2 passed, 0 failed, 983 skipped",
                       focused) is not None,
             "two focused B54K-Y contracts")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("func_80191FB8" in strict and
+    require("func_801924F8" in strict and
             "called from: func_80192CE8" in strict,
-            "strict frontier at first overlay-local callee")
+            "strict frontier after completed func_80191FB8")
     normal = run(common + ["--dma-checkpoint-report"], 0)
     require("[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 "

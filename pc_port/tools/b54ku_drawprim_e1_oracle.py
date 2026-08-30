@@ -148,7 +148,7 @@ def main() -> None:
 
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_80191FB8" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: func_801924F8" in strict and
             "called from: func_80192CE8" in strict,
             "strict later loop-reentry frontier")
     normal = run(common, 0)

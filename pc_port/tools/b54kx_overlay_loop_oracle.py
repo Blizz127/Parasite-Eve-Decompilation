@@ -158,12 +158,12 @@ def main() -> None:
     env = os.environ.copy()
     env["PE_TEST_FILTER"] = "B54KX"
     focused = run([str(tests)], 0, env)
-    require(re.search(r"Results: 983 run, 2 passed, 0 failed, 981 skipped",
+    require(re.search(r"Results: 985 run, 2 passed, 0 failed, 983 skipped",
                       focused) is not None,
             "two focused B54K-X contracts")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("func_80191FB8" in strict and
+    require("func_801924F8" in strict and
             "called from: func_80192CE8" in strict,
             "strict post-initializer frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)

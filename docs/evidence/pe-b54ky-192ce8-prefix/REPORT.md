@@ -121,3 +121,7 @@ PRODUCTION_REACHABILITY=blocked_at_func_80191FB8_from_func_80192CE8
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 NEXT_ARTIFACT_FREE_RUNG=audit_func_80191FB8
 ```
+
+Postscript: B54K-Z subsequently completed `func_80191FB8`; the current
+frontier is `func_801924F8` from `func_80192CE8`, with 985/985 tests. The raw
+B54K-Y frontier above is retained as the state measured by this rung.

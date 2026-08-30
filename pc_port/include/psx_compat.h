@@ -122,6 +122,8 @@ static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08",
 static inline void func_801235DC(void)   { Bootstrap_ReturnVoid("func_801235DC", "func_8001220C"); }
 static inline void func_8019234C(void)   { Bootstrap_ReturnVoid("func_8019234C", "func_8001220C"); }
 extern int func_801909B4(void);
+extern int func_80191FB8(int count, pe_addr_t source_list);
+extern int PE_func_80191FB8_Values(int count, const pe_addr_t *sources);
 extern int func_80192CE8(int index);
 extern int func_80190660(void);
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }

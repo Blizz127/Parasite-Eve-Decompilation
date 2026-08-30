@@ -1472,8 +1472,8 @@ static void test_B54KX_nonzero_phase_remains_state_driven(void)
 static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
 {
     PE_Disc *disc;
-    BootstrapArgCall4 *call;
-    uint32_t stream = 0u;
+    BootstrapArgCall *call;
+    PeGpuState gpu;
     char err[256];
     TEST("B54KY_192CE8_real_disc_issue_poll_and_boundary");
 
@@ -1502,22 +1502,103 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     ASSERT(PE_LoadU32(0x8010BCF8u) == 7u &&
            PE_LoadU32(0x8010BCFCu) == 0x4345444Du,
            "authenticated 38-sector PE.IMG payload was not loaded");
-    ASSERT(g_bootstrap_arg4_call_count == 1,
-           "func_80191FB8 boundary count differs");
-    call = &g_bootstrap_arg4_calls[0];
-    if (call->payload_size == sizeof(stream))
-        memcpy(&stream, call->payload, sizeof(stream));
-    ASSERT(strcmp(call->symbol, "func_80191FB8") == 0 &&
+    ASSERT(PE_LoadU32(0x801D0DE8u) == 0x80122D00u &&
+           PE_LoadU32(0x801D0DECu) == 0x80132700u &&
+           PE_LoadU32(0x801D0DFCu) == 0x80142100u &&
+           PE_LoadU32(0x801D0DF8u) == 0x80162100u &&
+           PE_LoadU32(0x801D0DF0u) == 0x80173100u &&
+           PE_LoadU32(0x801D0DF4u) == 0x80175E00u,
+           "func_80191FB8 one-source pointer layout differs");
+    ASSERT(PE_LoadU8(0x800B0DBAu) == 1u &&
+           PE_LoadU8(0x800B0DBEu) == 0x98u &&
+           PE_LoadU16(0x800B0DBCu) == 0u &&
+           PE_LoadU16(0x801D11B0u) == 0xFFFFu &&
+           memcmp(PE_TranslateConst(0x801D1384u, 0x28u),
+                  PE_TranslateConst(0x800BCE80u, 0x28u), 0x28u) == 0 &&
+           memcmp(PE_TranslateConst(0x801D13ACu, 0xB8u),
+                  PE_TranslateConst(0x800BCDC8u, 0xB8u), 0xB8u) == 0,
+           "func_80191FB8 flags or environment copies differ");
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.move_count == 2u &&
+           gpu.move_source == 0x01C00000u &&
+           gpu.move_destination == 0x01000200u &&
+           gpu.move_size == 0x00400140u,
+           "func_80191FB8 MoveImage sequence differs");
+    ASSERT(g_bootstrap_arg_call_count == 1,
+           "func_801924F8 boundary count differs");
+    call = &g_bootstrap_arg_calls[0];
+    ASSERT(strcmp(call->symbol, "func_801924F8") == 0 &&
            strcmp(call->caller, "func_80192CE8") == 0 &&
-           call->target == 0x80191FB8u && call->arg0 == 1u &&
-           call->arg1 == 0u && call->payload_size == sizeof(stream) &&
-           stream == 0x80122D00u,
-           "func_80191FB8 stack-word ABI snapshot differs");
+           call->arg0 == 1u,
+           "func_801924F8 signed-index ABI differs");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "func_80191FB8 did not remain the exact frontier");
+           "func_801924F8 did not remain the exact frontier");
 
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_B54KZ_191FB8_two_source_and_skip_second_move(void)
+{
+    const pe_addr_t sources[2] = { 0x80100000u, 0x80160000u };
+    PeGpuState gpu;
+    uint32_t i;
+    TEST("B54KZ_191FB8_two_source_and_skip_second_move");
+    ResetTestState();
+    HostFB_Init();
+    B54KR_SeedGpuStatic();
+    for (i = 0u; i < 0xB8u; i++) {
+        PE_StoreU8(0x800BCDC8u + i, (uint8_t)(i * 11u + 3u));
+        if (i < 0x28u)
+            PE_StoreU8(0x800BCE80u + i, (uint8_t)(i * 7u + 5u));
+    }
+    PE_StoreU32(0x800B0CD8u, 0x08000000u);
+
+    ASSERT(PE_func_80191FB8_Values(2, sources) == 1,
+           "two-source setup did not return one");
+    ASSERT(PE_LoadU32(0x801D0DE8u) == 0x80100000u &&
+           PE_LoadU32(0x801D0DECu) == 0x8010FA00u &&
+           PE_LoadU32(0x801D0DFCu) == 0x8011F400u &&
+           PE_LoadU32(0x801D0DF8u) == 0x80160000u &&
+           PE_LoadU32(0x801D0DF0u) == 0x80171000u &&
+           PE_LoadU32(0x801D0DF4u) == 0x80173D00u,
+           "two-source pointer layout differs");
+    ASSERT(memcmp(PE_TranslateConst(0x801D1384u, 0x28u),
+                  PE_TranslateConst(0x800BCE80u, 0x28u), 0x28u) == 0 &&
+           memcmp(PE_TranslateConst(0x801D13ACu, 0xB8u),
+                  PE_TranslateConst(0x800BCDC8u, 0xB8u), 0xB8u) == 0,
+           "two-source environment copies differ");
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.move_count == 1u &&
+           gpu.move_source == 0x00000140u &&
+           gpu.move_destination == 0x00000200u &&
+           gpu.move_size == 0x010000C0u,
+           "0x08000000 gate did not skip only the second move");
+    PASS();
+}
+
+static void test_B54KZ_191FB8_guards_are_mutation_free(void)
+{
+    const pe_addr_t zero[2] = { 0u, 0x80100000u };
+    const pe_addr_t valid[1] = { 0x80100000u };
+    PeGpuState gpu;
+    TEST("B54KZ_191FB8_guards_are_mutation_free");
+    ResetTestState();
+    HostFB_Init();
+    B54KR_SeedGpuStatic();
+    PE_StoreU32(0x801D0DE8u, 0xA5A55A5Au);
+    ASSERT(PE_func_80191FB8_Values(0, valid) == 0 &&
+           PE_func_80191FB8_Values(3, valid) == 0 &&
+           PE_func_80191FB8_Values(1, zero) == 0,
+           "count/null-source guard result differs");
+    PE_StoreU8(0x800B0DBAu, 1u);
+    ASSERT(PE_func_80191FB8_Values(1, valid) == 0 &&
+           PE_LoadU32(0x801D0DE8u) == 0xA5A55A5Au,
+           "busy guard mutated pointer state");
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.move_count == 0u,
+           "guard path issued a MoveImage");
     PASS();
 }
 
@@ -32570,6 +32651,8 @@ int main(void)
     test_B54KX_nonzero_phase_remains_state_driven();
     test_B54KY_192CE8_real_disc_issue_poll_and_boundary();
     test_B54KY_saved_bit_zero_skips_disc_prefix();
+    test_B54KZ_191FB8_two_source_and_skip_second_move();
+    test_B54KZ_191FB8_guards_are_mutation_free();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();

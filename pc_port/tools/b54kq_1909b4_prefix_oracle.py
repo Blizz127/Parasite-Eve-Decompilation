@@ -138,16 +138,16 @@ def main() -> None:
 
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run_native(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_80191FB8" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: func_801924F8" in strict and
             "called from: func_80192CE8" in strict and
             "provider: func_801909B4" not in strict,
             "strict runtime did not enter overlay prefix")
     normal = run_native(common, 0)
     require("[HOST] stop_reason=unresolved-boundary" in normal and
-            "[STUB:BOOTSTRAP_RET] func_80191FB8" in normal and
+            "[STUB:BOOTSTRAP_RET] func_801924F8" in normal and
             "func_8006E9A0" not in normal,
             "normal runtime did not stop at MoveImage boundary")
-    print("  OK real-disc runtime: overlay entered; later 80191FB8 boundary")
+    print("  OK real-disc runtime: overlay entered; later 801924F8 boundary")
     print("\nB54K-Q prefix oracle: PASS.")
 
 
