@@ -1,19 +1,18 @@
 # Matching-C volume campaign pool — refreshed 2026-08-30
 
-Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
+Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign and VOLUME-97's `func_8003C5D8`; the three COP2 helpers remain in SKIP.
 
 The 2026-08-30 active-span reconciliation is recorded in
 `docs/evidence/volume-campaign-20260830/POOL_REFRESH.md`. The primary tables
-below contain 1,046 still-active rows. The reconciliation adds 48 post-table
+below contain 1,045 still-active rows. The reconciliation adds 48 post-table
 park/skip/padding dispositions and corrects the stale header arithmetic.
 
-Total: **1094** — TIER 1 15, TIER 2 214, TIER 3 99, SKIP/suppressed 766.
+Total: **1093** — TIER 1 14, TIER 2 214, TIER 3 99, SKIP/suppressed 766.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x2CDD8 | `func_8003C5D8` | 24 | jr-ra | 26/26 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x6156C | `func_80070D6C` | 25 | jr-ra | 3/3 | 0 | no | - | - | lui:16x3,ori:0xFFFFx3,addiu:-0x4x2,ori:0x40x2 | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x53C6C | `func_8006346C` | 26 | jr-ra | 4/4 | 0 | no | - | - | addiu:-0x1x3 | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x2FF98 | `func_8003F798` | 26 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |

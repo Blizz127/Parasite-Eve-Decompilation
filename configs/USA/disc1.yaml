@@ -287,6 +287,10 @@ segments:
       - [0x2951C, c, func_80038D1C]
       - [0x29548, c, func_80038D48]
       - [0x29574, asm]
+      # Volume 97: reciprocal-byte initializer; era -O2 -G0 with the
+      # sanctioned ASPSX signed-division guard expansion.
+      - [0x2CDD8, c, func_8003C5D8]
+      - [0x2CE38, asm]
       # Phase 5AJ: C leaf func_8003D82C — VRAM 0x8003D82C, size 0x8.
       # File span 0x2E02C–0x2E034 exclusive. Return-1 stub (jr; addiu $v0,1).
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.

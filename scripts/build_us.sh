@@ -102,7 +102,9 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # C 38D0C:  0x2950C → 0x2951C = 0x10
 # C 38D1C:  0x2951C → 0x29548 = 0x2C
 # C 38D48:  0x29548 → 0x29574 = 0x2C
-# 29574:    0x29574 → 0x2E02C = 0x4AB8
+# 29574:    0x29574 → 0x2CDD8 = 0x3864
+# C 3C5D8:  0x2CDD8 → 0x2CE38 = 0x60
+# 2CE38:    0x2CE38 → 0x2E02C = 0x11F4
 # C 3D82C:  0x2E02C → 0x2E034 = 0x8
 # 2E034:    0x2E034 → 0x2E7C8 = 0x794
 # C 3DFC8:  0x2E7C8 → 0x2E7D0 = 0x8
@@ -408,7 +410,9 @@ SIZE_29154=0x3b8
 SIZE_C_38D0C=0x10
 SIZE_C_38D1C=0x2c
 SIZE_C_38D48=0x2c
-SIZE_29574=0x4ab8
+SIZE_29574=0x3864
+SIZE_C_3C5D8=0x60
+SIZE_2CE38=0x11f4
 SIZE_C_3D82C=0x8
 SIZE_2E034=0x794
 SIZE_C_3DFC8=0x8
@@ -1017,6 +1021,8 @@ OBJECTS=(
     "build/src/func_80038D1C.c.o"
     "build/src/func_80038D48.c.o"
     "build/asm/disc1/29574.s.o"
+    "build/src/func_8003C5D8.c.o"
+    "build/asm/disc1/2CE38.s.o"
     "build/src/func_8003D82C.c.o"
     "build/asm/disc1/2E034.s.o"
     "build/src/func_8003DFC8.c.o"
@@ -1543,6 +1549,8 @@ SOURCES=(
     "src/func_80038D1C.c"
     "src/func_80038D48.c"
     "asm/disc1/29574.s"
+    "src/func_8003C5D8.c"
+    "asm/disc1/2CE38.s"
     "src/func_8003D82C.c"
     "asm/disc1/2E034.s"
     "src/func_8003DFC8.c"
@@ -2292,6 +2300,7 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/27DE0.s.o asm/d
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/28070.s.o asm/disc1/28070.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/29154.s.o asm/disc1/29154.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/29574.s.o asm/disc1/29574.s
+run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2CE38.s.o asm/disc1/2CE38.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2E034.s.o asm/disc1/2E034.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2E7D8.s.o asm/disc1/2E7D8.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2E8FC.s.o asm/disc1/2E8FC.s
@@ -2731,6 +2740,9 @@ era_compile src/func_80085084.c build/src/func_80085084.c.o -O2 -G0
 # Phase 5ER: byte/word test-and-clear-return twins; forward if/else scheduling.
 era_compile src/func_80038D1C.c build/src/func_80038D1C.c.o -O2 -G0
 era_compile src/func_80038D48.c build/src/func_80038D48.c.o -O2 -G0
+# Volume 97: signed-short formal preserves retail's entry copy; division
+# expansion supplies the retail break 7 / break 6 signed-div guard sequence.
+MASPSX_EXPAND_DIV=1 era_compile src/func_8003C5D8.c build/src/func_8003C5D8.c.o -O2 -G0
 # Phase 5ES: first loop-as-volume leaf; parallel eight-word clears.
 era_compile src/func_8004BF08.c build/src/func_8004BF08.c.o -O2 -G0
 # Phase 5ET: loop-as-volume leaf; 16-pass bit-serial register loop.
@@ -2948,6 +2960,8 @@ python3 "$TRIM" build/src/func_80038D0C.c.o .text "$SIZE_C_38D0C"
 python3 "$TRIM" build/src/func_80038D1C.c.o .text "$SIZE_C_38D1C"
 python3 "$TRIM" build/src/func_80038D48.c.o .text "$SIZE_C_38D48"
 python3 "$TRIM" build/asm/disc1/29574.s.o .text "$SIZE_29574"
+python3 "$TRIM" build/src/func_8003C5D8.c.o .text "$SIZE_C_3C5D8"
+python3 "$TRIM" build/asm/disc1/2CE38.s.o .text "$SIZE_2CE38"
 python3 "$TRIM" build/src/func_8003D82C.c.o .text "$SIZE_C_3D82C"
 python3 "$TRIM" build/asm/disc1/2E034.s.o .text "$SIZE_2E034"
 python3 "$TRIM" build/src/func_8003DFC8.c.o .text "$SIZE_C_3DFC8"
@@ -3513,6 +3527,8 @@ SECTIONS
         build/src/func_80038D1C.c.o(.text)
         build/src/func_80038D48.c.o(.text)
         build/asm/disc1/29574.s.o(.text)
+        build/src/func_8003C5D8.c.o(.text)
+        build/asm/disc1/2CE38.s.o(.text)
         build/src/func_8003D82C.c.o(.text)
         build/asm/disc1/2E034.s.o(.text)
         build/src/func_8003DFC8.c.o(.text)
@@ -4035,6 +4051,8 @@ SECTIONS
         build/src/func_80038D1C.c.o(.data)
         build/src/func_80038D48.c.o(.data)
         build/asm/disc1/29574.s.o(.data)
+        build/src/func_8003C5D8.c.o(.data)
+        build/asm/disc1/2CE38.s.o(.data)
         build/src/func_8003D82C.c.o(.data)
         build/asm/disc1/2E034.s.o(.data)
         build/src/func_8003DFC8.c.o(.data)
@@ -4554,6 +4572,8 @@ SECTIONS
         build/src/func_80038D1C.c.o(.rodata)
         build/src/func_80038D48.c.o(.rodata)
         build/asm/disc1/29574.s.o(.rodata)
+        build/src/func_8003C5D8.c.o(.rodata)
+        build/asm/disc1/2CE38.s.o(.rodata)
         build/src/func_8003D82C.c.o(.rodata)
         build/asm/disc1/2E034.s.o(.rodata)
         build/src/func_8003DFC8.c.o(.rodata)
@@ -5073,6 +5093,8 @@ SECTIONS
         build/src/func_80038D1C.c.o(.bss)
         build/src/func_80038D48.c.o(.bss)
         build/asm/disc1/29574.s.o(.bss)
+        build/src/func_8003C5D8.c.o(.bss)
+        build/asm/disc1/2CE38.s.o(.bss)
         build/src/func_8003D82C.c.o(.bss)
         build/asm/disc1/2E034.s.o(.bss)
         build/src/func_8003DFC8.c.o(.bss)
@@ -5575,6 +5597,7 @@ leaf2f9cc = slice(0x201CC, 0x20210)
 leaf38d0c = slice(0x2950C, 0x2951C)
 leaf38d1c = slice(0x2951C, 0x29548)
 leaf38d48 = slice(0x29548, 0x29574)
+leaf3c5d8 = slice(0x2CDD8, 0x2CE38)
 leaf3d82c = slice(0x2E02C, 0x2E034)
 leaf3dfc8 = slice(0x2E7C8, 0x2E7D0)
 leaf3e0d0 = slice(0x2E8D0, 0x2E8FC)
@@ -5689,6 +5712,7 @@ print(f"  volume file 0x201CC (2F9CC): cand={cand[leaf2f9cc].hex()} orig={orig[l
 print(f"  probe file 0x2950C (38D0C): cand={cand[leaf38d0c].hex()} orig={orig[leaf38d0c].hex()}")
 print(f"  volume file 0x2951C (38D1C): cand={cand[leaf38d1c].hex()} orig={orig[leaf38d1c].hex()}")
 print(f"  volume file 0x29548 (38D48): cand={cand[leaf38d48].hex()} orig={orig[leaf38d48].hex()}")
+print(f"  volume file 0x2CDD8 (3C5D8): cand={cand[leaf3c5d8].hex()} orig={orig[leaf3c5d8].hex()}")
 print(f"  probe file 0x2E02C (3D82C): cand={cand[leaf3d82c].hex()} orig={orig[leaf3d82c].hex()}")
 print(f"  probe file 0x2E7C8 (3DFC8): cand={cand[leaf3dfc8].hex()} orig={orig[leaf3dfc8].hex()}")
 print(f"  volume file 0x2E8D0 (3E0D0): cand={cand[leaf3e0d0].hex()} orig={orig[leaf3e0d0].hex()}")

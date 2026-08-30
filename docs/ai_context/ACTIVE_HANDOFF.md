@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 335 exact matching-C
+Current matching-lane status: 336 exact matching-C
 leaves plus 19 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -677,7 +677,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 334 exact leaves plus 19
+  matching C; current disposition is 336 exact leaves plus 19
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1004,6 +1004,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-94-HARD-STOP | 335 | The continuation campaign hard-stops after three consecutive bounded parks: `func_8007E6B0`, `func_8005BCBC`, and `func_80083D9C`. The later `79178/791D0` COP2 family screens spent zero C attempts and do not reset the stop. No further ordinary-C attempt until review/refresh; 16 Tier-1 rows remain queued. |
 | VOLUME-95-POOL-REFRESH | 335 | A fresh campaign authorization resets the prior stop and rebuilds the pool from current YAML-selected asm spans. Closure is 1,094 active spans: Tier 1 16, Tier 2 214, Tier 3 99, SKIP/suppressed 765. The 47-row reconciliation includes five one-word `func_` labels independently classified as alignment padding after zero exact-start references and real neighboring function boundaries. Base Docker build is exact SHA, verify is green, and count remains 335. Evidence: `docs/evidence/volume-campaign-20260830/POOL_REFRESH.md`. |
 | VOLUME-96-78C34-SKIP | 335 | `func_80078C34` @ `0x69434` is function-hood proven by 25 raw direct callers, canonical `jr ra; nop`, and real boundaries. Its 23-word split is explicitly handwritten and performs matrix/vector work through `ctc2`, `lwc2`, `mvmva`, and `mfc2`; the existing libGTE/PsyCross policy therefore classifies it `SKIP-SDK-LIBRARY-COP2` with zero C phrasings and no integration. Tier 1 falls 16→15; consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260830/func-80078c34/SKIP.md`. |
+| VOLUME-97-3C5D8 | 336 | `func_8003C5D8` @ `0x2CDD8` is a hood-proven 24-word reciprocal-byte initializer with 26 direct callers, canonical return, and real boundaries. Phrasing 1 used an `int` formal and lost retail's entry copy; the proven signed-`short` formal forces `a1 -> a2`, and phrasing 2 matches all 24 words under era `-O2 -G0` plus the sanctioned signed-div guard expansion. Carve `0x3864 + 0x0060 + 0x11F4 = 0x4AB8`; packed span/full SHA exact, verify green at 336. Evidence: `docs/evidence/volume-campaign-20260830/func-8003c5d8/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
