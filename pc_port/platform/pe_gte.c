@@ -201,7 +201,10 @@ void PE_GTE_MVMVA(uint32_t cmd)
         for (row = 0; row < 3; row++) {
             int64_t mac;
 
-            mac = ((int64_t)t[row] << 12)
+            /* GTE translation is signed and scaled by 0x1000.  Multiply so
+             * negative translations retain the hardware value without C's
+             * undefined signed-left-shift behavior. */
+            mac = (int64_t)t[row] * 4096LL
                 + (int64_t)g_pe_gte.rt[row][0] * (int64_t)vx
                 + (int64_t)g_pe_gte.rt[row][1] * (int64_t)vy
                 + (int64_t)g_pe_gte.rt[row][2] * (int64_t)vz;
@@ -224,7 +227,7 @@ static void pe_gte_mul3(const int16_t m[3][3], int32_t tx, int32_t ty,
     for (row = 0; row < 3; row++) {
         int64_t mac;
 
-        mac = ((int64_t)t[row] << 12)
+        mac = (int64_t)t[row] * 4096LL
             + (int64_t)m[row][0] * (int64_t)v[0]
             + (int64_t)m[row][1] * (int64_t)v[1]
             + (int64_t)m[row][2] * (int64_t)v[2];
