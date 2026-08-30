@@ -246,6 +246,13 @@ void func_80072724(void)
     }
 }
 
+/* Retail is the three-word BIOS A0(44h) FlushCache veneer at 0x800726C4.
+ * Native host code is never emitted into the emulated R3000 instruction
+ * cache, so there is no corresponding cache authority to mutate. */
+void func_800726C4(void)
+{
+}
+
 int PE_Irq_LockDepth(void)
 {
     return g_irq_lock_depth;

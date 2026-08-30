@@ -43,9 +43,9 @@ extern void func_800755F0(void *env);
  * scratch address instead of a host stack pointer. */
 #define PE_6E834_SYNC_ADDR 0x801FFEE0u
 
-/* ── Bootstrap stubs ───────────────────────────────────────────────── */
-/* func_80086FF8 is real (pe_stream.c, Phase 6E-A batch 2). */
-void func_800726C4(void) { Bootstrap_ReturnVoid("func_800726C4", "func_8006E834"); }
+/* func_80086FF8 is real (pe_stream.c, Phase 6E-A batch 2), and
+ * func_800726C4 is the host-safe BIOS A0(44h) FlushCache adapter in
+ * pe_libetc.c. */
 
 /* ── Adapted function ──────────────────────────────────────────────── */
 int func_8006E834(void)

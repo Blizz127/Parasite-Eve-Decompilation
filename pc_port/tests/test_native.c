@@ -16514,6 +16514,42 @@ static void test_6E834_masks_state_word(void) {
     PASS();
 }
 
+static void test_726C4_flushcache_host_noop(void) {
+    TEST("726C4_flushcache_host_noop");
+    ResetTestState();
+    PE_StoreU32(0x80004000u, 0x726C4044u);
+    g_strict_stubs = 1;
+
+    func_800726C4();
+
+    g_strict_stubs = 0;
+    ASSERT(PE_LoadU32(0x80004000u) == 0x726C4044u,
+           "FlushCache adapter touched guest RAM");
+    ASSERT(CountOrderLog("func_800726C4") == 0,
+           "FlushCache adapter still routed through bootstrap policy");
+    ASSERT(PE_Irq_LockDepth() == 0,
+           "FlushCache adapter changed critical-section state");
+    PASS();
+}
+
+static void test_6E834_strict_crosses_flushcache(void) {
+    TEST("6E834_strict_crosses_flushcache");
+    ResetTestState();
+    g_bootstrap_disc = 1;
+    HostFB_Init();
+    func_8007ED58();
+    g_strict_stubs = 1;
+
+    ASSERT(func_8006E834() == 0, "strict 6E834 return changed");
+
+    g_strict_stubs = 0;
+    ASSERT(CountOrderLog("func_800726C4") == 0,
+           "strict 6E834 retained the FlushCache boundary");
+    ASSERT(PE_Irq_LockDepth() == 0,
+           "strict 6E834 left Enter/ExitCriticalSection unbalanced");
+    PASS();
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
  * Phase 6D-S — func_8006E9A0 dispatch tests
  * ═══════════════════════════════════════════════════════════════════════ */
@@ -31828,9 +31864,11 @@ int main(void)
     test_36DC8_not_bootstrap_stub();
     test_3E680_36DC8_integration();
 
-    /* func_8006E834 (2 tests) */
+    /* func_8006E834 / BIOS FlushCache adapter (4 tests) */
     test_6E834_clears_status_bytes();
     test_6E834_masks_state_word();
+    test_726C4_flushcache_host_noop();
+    test_6E834_strict_crosses_flushcache();
 
     /* func_8006E9A0 (2 tests) */
     test_6E9A0_dispatch_arg1();

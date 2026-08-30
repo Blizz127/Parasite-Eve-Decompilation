@@ -49,7 +49,7 @@ The native test executable was run directly:
 
 ```text
 pc_port/build/pe-native-tests
-Results: 952 run, 952 passed, 0 failed, 0 skipped
+Results: 954 run, 954 passed, 0 failed, 0 skipped
 ```
 
 The production executable is not a complete Day 1 field runtime. Its strict
@@ -90,6 +90,7 @@ Evidence: [ACTIVE_HANDOFF.md](ACTIVE_HANDOFF.md),
 [B54K-J report](../evidence/pe-b54kj-6ad40-f0-wait/REPORT.md),
 [B54K-K report](../evidence/pe-b54kk-6ad40-e0-group/REPORT.md),
 [B54K-L report](../evidence/pe-b54kl-6ad40-3126-wait/REPORT.md),
+[B54K-N report](../evidence/pe-b54kn-726c4-flushcache/REPORT.md),
 [pe-btl147 report](../evidence/pe-btl147-theater-eve-path/REPORT.md), and the
 current native binary/test result above.
 
@@ -148,7 +149,7 @@ No complete playable Day 1→theater→Eve-battle runtime is verified on this
 host. The external dashboard describes UE5 as the best *partial* interactive
 slice, while the native runtime is currently a headless/testable bootstrap
 and component runtime. The only directly runnable authoritative experience
-here is the native executable's bounded headless behavior and its 952-test
+here is the native executable's bounded headless behavior and its 954-test
 suite; it is not a complete game route.
 
 Native commands are listed in section B. A UE5 run command cannot be stated
@@ -185,11 +186,11 @@ for natural `m0360i` entry; it must be proven before implementation.
 2. This host still cannot inspect the UE5 checkout, so no locally verified
    end-to-end UE5 claim is possible.
 3. `UE_NATIVE_PARITY_POLICY.md` retains useful acceptance rules but its status
-   table is historical; this file carries the measured 952-test native state.
+   table is historical; this file carries the measured 954-test native state.
 4. Matching residuals are evidence dispositions, not exact leaves: 335 is the
    only YAML-derived matching-C count.
 
 ```text
 REPORT_STATUS=CURRENT
-LAST_REFRESH=2026-08-30_B54K-L
+LAST_REFRESH=2026-08-30_B54K-N
 ```

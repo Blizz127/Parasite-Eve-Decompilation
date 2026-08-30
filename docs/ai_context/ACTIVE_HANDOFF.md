@@ -398,6 +398,23 @@ Evidence:
 `docs/evidence/pe-b54km-6ad40-completion-readiness/REPORT.md` and
 `pc_port/tools/b54km_6ad40_completion_readiness.py`.
 
+## PE-B54K-N — BIOS `FlushCache` adapter (2026-08-30)
+
+`func_800726C4` is now a generic native platform provider. Retail is the
+three-word BIOS A0(44h) `FlushCache` veneer, with 14 exact executable callers.
+The host adapter is a deliberate no-op because native code has no emulated
+R3000 instruction-cache authority. Direct strict execution and strict
+`func_8006E834` integration pass without guest writes, bootstrap records, or
+an unbalanced critical section. The suite is `954/954`.
+The fresh ASan/UBSan suite is also `954/954` with zero diagnostics.
+
+This does not move the current B54K-L production frontier. It does establish
+that after a future B54K-M completion, canonical main-loop flow can cross
+6E834 and is statically expected to reach `func_801909B4`; the production
+caller test must still measure that outcome after both DMA checkpoints.
+Evidence: `docs/evidence/pe-b54kn-726c4-flushcache/REPORT.md` and
+`pc_port/tools/b54kn_726c4_flushcache_oracle.py`.
+
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 
 **276 matching C leaves.** `src/func_800125E0.c` matches era `-O2 -G8`,

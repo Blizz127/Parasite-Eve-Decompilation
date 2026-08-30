@@ -9,8 +9,10 @@ that walk on retry or positive polls. The exact oracle compares all 45 words,
 including the branch delay-slot carry into the next block; focused tests prove
 two-entry order/stride, zero-count bypass, and exact transfer extent. The named
 frontier is now `func_8006AD40_D_80093126_archive_cut` before retail
-`0x8006B220`; normal and rebuilt ASan/UBSan suites pass 952/952 with zero
-diagnostics. Scheduler provenance remains independently artifact-bound: this
+`0x8006B220`; the later B54K-N platform rung also resolves the generic BIOS
+A0(44h) `FlushCache` veneer used by `func_8006E834`. Normal tests pass
+954/954, as does a fresh ASan/UBSan build with zero diagnostics. Scheduler
+provenance remains independently artifact-bound: this
 rung adds no destination, `m0360i`, or persist special case. Full proof is in
 `docs/evidence/pe-b54kl-6ad40-3126-wait/REPORT.md`.
 
@@ -765,7 +767,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current grind lane: 952 tests)
+- `pe-native-tests` — test suite (current grind lane: 954 tests)
 
 ## Running
 
