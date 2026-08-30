@@ -166,7 +166,8 @@ def main() -> None:
             overlay_source and "func_80074DC0(0)" in overlay_source and
             "func_80073A44(0)" in overlay_source and
             "func_80074A44(1)" in overlay_source and
-            '"func_80075424"' in overlay_source,
+            "func_80075424(environment)" in overlay_source and
+            "func_80190660_loop_reentry_cut" in overlay_source,
             "overlay continuation source absent")
     require("m0360i" not in gpu_source + overlay_source and
             "0xA8066048" not in gpu_source + overlay_source,
@@ -184,16 +185,17 @@ def main() -> None:
 
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_80075424" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: "
+            "func_80190660_loop_reentry_cut" in strict and
             "called from: func_80190660" in strict,
-            "strict PutDrawEnv frontier")
+            "strict loop-reentry frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
-    require("[STUB:BOOTSTRAP_RET] func_80075424" in normal and
-            "[FB] vsyncs=7 drawsyncs=7 presents=3 mask=1" in normal and
+    require("[STUB:BOOTSTRAP_RET] func_80190660_loop_reentry_cut" in normal and
+            "[FB] vsyncs=7 drawsyncs=7 presents=4 mask=1" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 "
             "captured=26 serviced=26" in normal,
             "normal real-disc continuation effects")
-    print("  OK runtime: 2 focused contracts; PutDrawEnv frontier observed")
+    print("  OK runtime: 2 focused contracts; later loop frontier observed")
     print("\nB54K-V textured rectangle oracle: PASS.")
 
 

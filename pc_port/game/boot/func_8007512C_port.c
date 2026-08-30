@@ -7,9 +7,10 @@
  * func_80076B98.  It does not traverse the neighboring func_80076C10 shim.
  *
  * func_80076B98 is the complete 18-word linked-list DMA worker at
- * 0x80076B98..0x80076BDF.  Native resolves only the one-packet MoveImage
- * list (tag 0x04FFFFFF, command 0x80000000).  General DrawOTag lists remain
- * an explicit packet boundary; no guest instruction stream is interpreted.
+ * 0x80076B98..0x80076BDF. Native resolves a single, terminal GPU packet:
+ * GP0(80h) keeps its synchronous MoveImage path, while drawing-environment
+ * words traverse the generic GP0 parser. Multi-node ordering tables remain an
+ * explicit boundary; no guest instruction stream is interpreted.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -21,16 +22,24 @@
 #define GA_GPU_MOVE_PACKET     0x800957E4u
 #define GPU_MOVE_WORKER        0x80076B98u
 
+static int IsGp0EnvironmentWord(uint32_t word)
+{
+    uint32_t opcode = word >> 24;
+
+    return word == 0u || (opcode >= 0xE1u && opcode <= 0xE6u);
+}
+
 int func_80076B98(pe_addr_t packet, uint32_t auxiliary)
 {
     uint32_t tag;
+    uint32_t count;
     uint32_t command;
-    uint32_t source;
-    uint32_t destination;
-    uint32_t size;
+    uint32_t i;
+    size_t packet_bytes;
+    PeGpuState gpu;
 
     (void)auxiliary; /* retail worker never reads a1 */
-    if (!PE_RangeIsRam(packet, 0x14u)) {
+    if (!PE_RangeIsRam(packet, 4u)) {
         (void)Bootstrap_ReturnInt4Indirect(
             "func_80076B98_packet_span", "func_80076B98", 0, 0u,
             packet, auxiliary, 0u, 0u, NULL, 0u);
@@ -39,28 +48,76 @@ int func_80076B98(pe_addr_t packet, uint32_t auxiliary)
     }
 
     tag = PE_LoadU32(packet);
-    command = PE_LoadU32(packet + 4u);
-    source = PE_LoadU32(packet + 8u);
-    destination = PE_LoadU32(packet + 12u);
-    size = PE_LoadU32(packet + 16u);
-    if (tag != 0x04FFFFFFu || command != 0x80000000u) {
+    count = tag >> 24;
+    packet_bytes = ((size_t)count + 1u) * 4u;
+    if ((tag & 0x00FFFFFFu) != 0x00FFFFFFu || count == 0u ||
+        count > 15u || !PE_RangeIsRam(packet, packet_bytes)) {
         (void)Bootstrap_ReturnInt4Indirect(
             "func_80076B98_packet_cut", "func_80076B98", 0, 0u,
-            packet, tag, command, auxiliary, NULL, 0u);
+            packet, tag, count, auxiliary, NULL, 0u);
         PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
         return 0;
+    }
+    command = PE_LoadU32(packet + 4u);
+
+    /* Validate the whole represented node before the worker's GP1 write.
+     * This keeps rejected packet shapes mutation-free. */
+    if (!(count == 4u && command == 0x80000000u)) {
+        for (i = 0u; i < count; i++) {
+            if (!IsGp0EnvironmentWord(
+                    PE_LoadU32(packet + 4u + i * 4u))) {
+                (void)Bootstrap_ReturnInt4Indirect(
+                    "func_80076B98_packet_cut", "func_80076B98", 0, 0u,
+                    packet, tag, i, PE_LoadU32(packet + 4u + i * 4u),
+                    NULL, 0u);
+                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                return 0;
+            }
+        }
     }
 
     /* Retail writes GP1(04h)=2, DMA2 MADR=packet, BCR=0, then
      * CHCR=0x01000401.  The represented one-packet list is synchronous in
      * the native GPU authority, so it creates no request-mode DMA token. */
-    if (!PE_GPU_WriteGP1(0x04000002u) ||
-        !PE_GPU_MoveImage(source, destination, size)) {
+    if (!PE_GPU_WriteGP1(0x04000002u)) {
         (void)Bootstrap_ReturnInt4Indirect(
-            "func_80076B98_gpu_move_cut", "func_80076B98", 0, 0u,
-            packet, source, destination, size, NULL, 0u);
+            "func_80076B98_gp1_cut", "func_80076B98", 0, 0u,
+            packet, tag, command, auxiliary, NULL, 0u);
         PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
         return 0;
+    }
+
+    if (count == 4u && command == 0x80000000u) {
+        if (!PE_GPU_MoveImage(PE_LoadU32(packet + 8u),
+                              PE_LoadU32(packet + 12u),
+                              PE_LoadU32(packet + 16u))) {
+            (void)Bootstrap_ReturnInt4Indirect(
+                "func_80076B98_gpu_move_cut", "func_80076B98", 0, 0u,
+                packet, PE_LoadU32(packet + 8u),
+                PE_LoadU32(packet + 12u), PE_LoadU32(packet + 16u),
+                NULL, 0u);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        }
+        return 0;
+    }
+
+    for (i = 0u; i < count; i++) {
+        uint32_t word = PE_LoadU32(packet + 4u + i * 4u);
+
+        if (!PE_GPU_WriteGP0(word)) {
+            (void)Bootstrap_ReturnInt4Indirect(
+                "func_80076B98_gp0_packet_cut", "func_80076B98", 0, 0u,
+                packet, i, word, tag, NULL, 0u);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
+        }
+    }
+    PE_GPU_GetState(&gpu);
+    if (gpu.gp0_state != PE_GPU_GP0_IDLE) {
+        (void)Bootstrap_ReturnInt4Indirect(
+            "func_80076B98_incomplete_packet_cut", "func_80076B98", 0,
+            0u, packet, tag, gpu.gp0_state, 0u, NULL, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     }
     return 0; /* worker v0 is ignored by both retail callers */
 }

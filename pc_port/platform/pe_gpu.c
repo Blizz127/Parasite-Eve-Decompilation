@@ -151,6 +151,18 @@ static int32_t SignExtend11(uint32_t value)
         (int32_t)(value | 0xFFFFF800u) : (int32_t)value;
 }
 
+static uint32_t ApplyTextureWindow(uint32_t coordinate, int horizontal)
+{
+    uint32_t command = g_gpu.state.texture_window;
+    uint32_t mask = horizontal ? command & 0x1Fu :
+        (command >> 5) & 0x1Fu;
+    uint32_t offset = horizontal ? (command >> 10) & 0x1Fu :
+        (command >> 15) & 0x1Fu;
+
+    mask <<= 3;
+    return ((coordinate & ~mask) | ((offset << 3) & mask)) & 0xFFu;
+}
+
 static uint16_t ModulateTextureColor(uint16_t texture, uint32_t command)
 {
     uint32_t red = ((uint32_t)(texture & 0x1Fu) *
@@ -167,10 +179,9 @@ static uint16_t ModulateTextureColor(uint16_t texture, uint32_t command)
                       (texture & 0x8000u));
 }
 
-/* Execution-proven GP0(64h) subset. Rectangles do not dither. Coordinates
- * are clipped to the physical 1 MiB VRAM; drawing-area/offset, texture
- * window, mask, raw-texture, and semi-transparent commands remain outside
- * this provider until their register commands are represented. */
+/* Execution-proven GP0(64h) subset. Rectangles do not dither. The E2h..E6h
+ * environment is applied only after the corresponding command has actually
+ * been observed; this preserves the pre-PutDrawEnv physical-clip behavior. */
 static void DrawTexturedRectangle4(uint32_t size)
 {
     uint32_t draw_mode = g_gpu.state.draw_mode;
@@ -189,16 +200,30 @@ static void DrawTexturedRectangle4(uint32_t size)
     int flip_y = (draw_mode & 0x2000u) != 0u;
     uint32_t row;
 
+    if (g_gpu.state.drawing_offset_count != 0u) {
+        origin_x += SignExtend11(g_gpu.state.drawing_offset);
+        origin_y += SignExtend11(g_gpu.state.drawing_offset >> 11);
+    }
+
     for (row = 0u; row < height; row++) {
         int32_t destination_y = origin_y + (int32_t)row;
         uint32_t texture_v = (origin_v +
             (flip_y ? (0u - row) : row)) & 0xFFu;
         uint32_t column;
 
+        if (g_gpu.state.texture_window_count != 0u)
+            texture_v = ApplyTextureWindow(texture_v, 0);
         if (destination_y < 0 || destination_y >=
             (int32_t)PE_GPU_VRAM_HEIGHT) {
             continue;
         }
+        if (g_gpu.state.drawing_area_top_left_count != 0u &&
+            g_gpu.state.drawing_area_bottom_right_count != 0u &&
+            ((uint32_t)destination_y <
+                 ((g_gpu.state.drawing_area_top_left >> 10) & 0x1FFu) ||
+             (uint32_t)destination_y >
+                 ((g_gpu.state.drawing_area_bottom_right >> 10) & 0x1FFu)))
+            continue;
         for (column = 0u; column < width; column++) {
             int32_t destination_x = origin_x + (int32_t)column;
             uint32_t texture_u;
@@ -210,8 +235,17 @@ static void DrawTexturedRectangle4(uint32_t size)
                 (int32_t)PE_GPU_VRAM_WIDTH) {
                 continue;
             }
+            if (g_gpu.state.drawing_area_top_left_count != 0u &&
+                g_gpu.state.drawing_area_bottom_right_count != 0u &&
+                ((uint32_t)destination_x <
+                     (g_gpu.state.drawing_area_top_left & 0x3FFu) ||
+                 (uint32_t)destination_x >
+                     (g_gpu.state.drawing_area_bottom_right & 0x3FFu)))
+                continue;
             texture_u = (origin_u +
                 (flip_x ? (0u - column) : column)) & 0xFFu;
+            if (g_gpu.state.texture_window_count != 0u)
+                texture_u = ApplyTextureWindow(texture_u, 1);
             packed = g_gpu.vram[
                 ((texture_y + texture_v) &
                  (PE_GPU_VRAM_HEIGHT - 1u)) * PE_GPU_VRAM_WIDTH +
@@ -225,10 +259,23 @@ static void DrawTexturedRectangle4(uint32_t size)
                  (PE_GPU_VRAM_WIDTH - 1u))];
             if (texture_color == 0u)
                 continue;
-            g_gpu.vram[(uint32_t)destination_y * PE_GPU_VRAM_WIDTH +
-                       (uint32_t)destination_x] =
-                ModulateTextureColor(texture_color,
-                                     g_gpu.rectangle_command);
+            {
+                uint16_t *destination = &g_gpu.vram[
+                    (uint32_t)destination_y * PE_GPU_VRAM_WIDTH +
+                    (uint32_t)destination_x];
+                uint16_t result;
+
+                if (g_gpu.state.mask_setting_count != 0u &&
+                    (g_gpu.state.mask_setting & 2u) != 0u &&
+                    (*destination & 0x8000u) != 0u)
+                    continue;
+                result = ModulateTextureColor(texture_color,
+                                              g_gpu.rectangle_command);
+                if (g_gpu.state.mask_setting_count != 0u &&
+                    (g_gpu.state.mask_setting & 1u) != 0u)
+                    result |= 0x8000u;
+                *destination = result;
+            }
         }
     }
 }
@@ -248,6 +295,11 @@ int PE_GPU_WriteGP0(uint32_t value)
 
     switch (g_gpu.state.gp0_state) {
     case PE_GPU_GP0_IDLE:
+        if (value == 0u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.state.nop_count++;
+            return 1;
+        }
         if (value == 0x01000000u) {
             if (g_gpu.state.dma2_active) return 0;
             ResetParser();
@@ -262,6 +314,36 @@ int PE_GPU_WriteGP0(uint32_t value)
             if (g_gpu.state.dma2_active) return 0;
             g_gpu.state.draw_mode = value;
             g_gpu.state.draw_mode_count++;
+            return 1;
+        }
+        if ((value & 0xFF000000u) == 0xE2000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.state.texture_window = value;
+            g_gpu.state.texture_window_count++;
+            return 1;
+        }
+        if ((value & 0xFF000000u) == 0xE3000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.state.drawing_area_top_left = value;
+            g_gpu.state.drawing_area_top_left_count++;
+            return 1;
+        }
+        if ((value & 0xFF000000u) == 0xE4000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.state.drawing_area_bottom_right = value;
+            g_gpu.state.drawing_area_bottom_right_count++;
+            return 1;
+        }
+        if ((value & 0xFF000000u) == 0xE5000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.state.drawing_offset = value;
+            g_gpu.state.drawing_offset_count++;
+            return 1;
+        }
+        if ((value & 0xFF000000u) == 0xE6000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.state.mask_setting = value;
+            g_gpu.state.mask_setting_count++;
             return 1;
         }
         if ((value & 0xFF000000u) == 0x64000000u) {

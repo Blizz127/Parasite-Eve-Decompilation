@@ -1,14 +1,14 @@
 /*
- * Phase 6E-B54K-V — func_80190660 prefix through its first textured SPRT,
- * synchronization, VSync, and ResetGraph(1).
+ * Phase 6E-B54K-W — func_80190660 prefix through PutDrawEnv, PutDispEnv,
+ * and the first taken loop back-edge.
  *
  * Retail function: [0x80190660,0x801909B4), 0x354 / 213 words.
- * Translated prefix: [0x80190660,0x8019093C), 0x2DC / 183 words.
- * The boundary instruction is jal func_80075424 (PutDrawEnv) at 0x8019093C.
+ * Translated prefix: [0x80190660,0x80190960), 0x300 / 192 words.
+ * The boundary is the loop re-entry at 0x801907C8 after the taken branch at
+ * 0x80190958 and its parity-computing delay slot.
  *
  * The two caller-stack packet banks remain native transients. No native
- * pointer is retained as guest authority. The unresolved PutDrawEnv boundary
- * records only the value of its guest environment address.
+ * pointer is retained as guest authority.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -197,12 +197,22 @@ int func_80190660(void)
     func_80073A44(0);
     (void)func_80074A44(1);
 
-    /* 0x8019093C: PutDrawEnv(current), with frame++ in the retail delay
-     * slot. Frame is local and the unresolved call does not return. */
+    /* 0x8019093C..0x80190950: PutDrawEnv and PutDispEnv.  Frame increments
+     * in the first call's delay slot. */
     frame++;
+    (void)func_80075424(environment);
+    if (PE_Port_ShouldStop())
+        return -1;
+    func_800755F0((void *)(uintptr_t)(environment + 0x5Cu));
+
+    /* 0x80190954..0x8019095C: frame 1 takes the retail loop branch and
+     * computes parity in its delay slot.  Keep the back-edge explicit until
+     * the repeated 480-frame body is translated as a unit. */
+    parity = frame & 1u;
     (void)Bootstrap_ReturnInt4Indirect(
-        "func_80075424", "func_80190660", -1, 0x80075424u,
-        environment, 0u, 0u, 0u, NULL, 0u);
+        "func_80190660_loop_reentry_cut", "func_80190660", -1,
+        0x801907C8u, frame, parity, environment,
+        PE_LoadU32(GA_ENVIRONMENT_TOGGLE), NULL, 0u);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return -1;
 }

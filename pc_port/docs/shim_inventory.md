@@ -189,8 +189,8 @@ never native function pointers.
 - `func_8003F3C4`
 - `func_801235DC`
 - `func_8019234C`
-- `func_80075424` — current PutDrawEnv boundary at overlay PC `0x8019093C`,
-  after both DrawPrim packets, explicit DrawSync, VSync, and ResetGraph(1)
+- `func_80190660_loop_reentry_cut` — current structural boundary at overlay
+  PC `0x801907C8`, after PutDrawEnv, PutDispEnv, and frame-one branch delay
 
 ### func_8003E610 callees (10)
 - `func_80073C94`
@@ -800,10 +800,11 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode now stops at PutDrawEnv `func_80075424` from
+With Disc 1, strict mode now stops at `func_80190660_loop_reentry_cut` from
 overlay-local `func_80190660`, after complete `func_8006AD40`, generic
 MoveImage/display setup, both table-derived overlay images, both frame-zero
-DrawPrim packets, DrawSync, VSync, and ResetGraph(1). It is the first
+DrawPrim packets, DrawSync, VSync, ResetGraph(1), PutDrawEnv, and PutDispEnv.
+It is the first
 BOOTSTRAP_RET provider on the canonical path.
 The `--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by
 design. Normal and fresh sanitizer builds agree exactly on both frontiers.

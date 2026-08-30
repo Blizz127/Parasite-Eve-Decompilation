@@ -61,6 +61,21 @@ typedef struct {
     uint32_t draw_mode;
     uint64_t draw_mode_count;
 
+    /* GP0(E2h..E6h) drawing-environment registers.  Full command words are
+     * retained so tests can distinguish an unset register from a command
+     * whose payload is zero. */
+    uint32_t texture_window;
+    uint32_t drawing_area_top_left;
+    uint32_t drawing_area_bottom_right;
+    uint32_t drawing_offset;
+    uint32_t mask_setting;
+    uint64_t texture_window_count;
+    uint64_t drawing_area_top_left_count;
+    uint64_t drawing_area_bottom_right_count;
+    uint64_t drawing_offset_count;
+    uint64_t mask_setting_count;
+    uint64_t nop_count;
+
     /* Last completed GP0(64h) variable textured rectangle. In-progress
      * packet words remain private to the parser. */
     uint32_t rectangle_command;
@@ -103,7 +118,8 @@ void PE_GPU_Reset(void);
 uint32_t PE_GPU_ReadStatus(void);
 void PE_GPU_SetReady(int ready);
 
-/* Supported GP0 subset: 0x01000000 cache clear, GP0(E1h) draw mode,
+/* Supported GP0 subset: 00h NOP, 0x01000000 cache clear, GP0(E1h..E6h)
+ * drawing-environment registers,
  * GP0(64h) opaque/modulated variable-size 4bpp textured rectangles, and the
  * A0 image command/position/size/data stream. Supported GP1 subset: exact
  * commands 00, 01, 02, 04000000, and 04000002. Return 1 on acceptance, 0

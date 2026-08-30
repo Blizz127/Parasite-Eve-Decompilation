@@ -124,6 +124,7 @@ pe_addr_t func_80074924(pe_addr_t env, int x, int y, int w, int h); /* SetDefDra
 pe_addr_t func_800749D8(pe_addr_t env, int x, int y, int w, int h); /* SetDefDispEnv */
 int       func_80074A44(int mode);   /* ResetGraph */
 int       func_80074BB8(int level);  /* SetGraphDebug */
+pe_addr_t func_80075424(pe_addr_t env); /* PutDrawEnv */
 void      func_800754E4(pe_addr_t ot, pe_addr_t env); /* DrawOTagEnv software */
 
 /* ── libsnd (pc_port/platform/pe_libsnd.c) ──────────────────────────── */

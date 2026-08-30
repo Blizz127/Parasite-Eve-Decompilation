@@ -367,6 +367,52 @@ static void func_80075EE0(pe_addr_t dr, pe_addr_t env)
     PE_StoreU8(dr + 3u, (uint8_t)(t0 - 1u));
 }
 
+/* Phase 6E-B54K-W — complete PsyQ PutDrawEnv wrapper
+ * [0x80075424,0x800754E4), 48 words.  The debug-print branch is diagnostic
+ * only. The state-bearing path builds one terminal DR_ENV packet, submits it
+ * through the retail jtb[2]/jtb[6] identities, then caches exactly 0x5C
+ * bytes at D_8009575C after the worker returns. */
+pe_addr_t func_80075424(pe_addr_t env)
+{
+    const pe_addr_t jtb_pointer = 0x80095744u;
+    const pe_addr_t dispatch_identity = 0x80076C34u;
+    const pe_addr_t worker_identity = 0x80076B98u;
+    pe_addr_t dr;
+    pe_addr_t jtb;
+    pe_addr_t dispatch;
+    pe_addr_t worker;
+
+    if (!PE_RangeIsRam(env, 0x5Cu)) {
+        (void)Bootstrap_ReturnInt4Indirect(
+            "func_80075424_env_span", "func_80075424", 0,
+            0x80075424u, env, 0u, 0u, 0u, NULL, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return env;
+    }
+
+    dr = env + 0x1Cu;
+    func_80075EE0(dr, env);
+    PE_StoreU32(dr, PE_LoadU32(dr) | 0x00FFFFFFu);
+
+    jtb = PE_LoadU32(jtb_pointer);
+    dispatch = PE_LoadU32(jtb + 8u);
+    worker = PE_LoadU32(jtb + 0x18u);
+    if (dispatch == dispatch_identity && worker == worker_identity) {
+        (void)func_80076C34(worker, dr, 0x40, 0u);
+    } else {
+        (void)Bootstrap_ReturnInt4Indirect(
+            "func_80076C34", "func_80075424", 0, dispatch,
+            worker, dr, 0x40u, 0u, NULL, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    }
+    if (PE_Port_ShouldStop())
+        return env;
+
+    memcpy(PE_Translate(0x8009575Cu, 0x5Cu),
+           PE_Translate(env, 0x5Cu), 0x5Cu);
+    return env;
+}
+
 void func_800754E4(pe_addr_t ot, pe_addr_t env)
 {
     pe_addr_t dr;
