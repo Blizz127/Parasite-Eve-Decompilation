@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 341 exact matching-C
+Current matching-lane status: 342 exact matching-C
 leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -677,7 +677,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 341 exact leaves plus 24
+  matching C; current disposition is 342 exact leaves plus 24
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1019,6 +1019,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-109-7AA34-FAMILY | 340 | New explicit close-out authorization resets the historical H5 stop. `func_8007AA34` @ `0x6B234` is hood-proven by exact caller `0x8007C2C0`, canonical return with live subtract, and immediate real boundaries. Its entire 32-word retail body has SHA-256 `91ea1fb7…bdfecf2`, exactly equal to parked `func_80080C48`; it is the same `CdPosToInt` semantics and independent-load/BCD-accumulator residual. Screened as a family member with zero duplicate phrasings, `ACCEPTED-RESIDUAL`; count remains 340. Evidence: `docs/evidence/volume-campaign-20260830/func-8007aa34/PARK.md`; source is in the labeled stash. |
 | VOLUME-110-21850 | 341 | `func_80021850` @ `0x12050` is a hood-proven 34-word swap of two 12-byte records selected by signed-byte indices, with three direct callers, canonical return, and immediate real boundaries. Natural typed aggregate C matches 34/34 on the first era `-O2 -G0` phrasing, including the retail 16-byte stack temporary and both retained record addresses. Carve `0x0938 + 0x0088 + 0x7AB0 = 0x8470`; packed span/full SHA exact, verify green at 341. Evidence: `docs/evidence/volume-campaign-20260830/func-80021850/REPORT.md`. |
 | VOLUME-111-783E4-SKIP | 341 | `func_800783E4` @ `0x68BE4` is function-hood proven by three raw direct callers, canonical `jr ra; nop`, and immediate real handwritten boundaries. The split explicitly marks its 34-word body handwritten, and its semantics require `mtc2`, `gpf`, `gpl`, and `mfc2`. The established libGTE/PsyCross policy classifies it `SKIP-SDK-LIBRARY-COP2` with zero C phrasings and no integration/count change. Tier 1 is now closed at zero rows. Evidence: `docs/evidence/volume-campaign-20260830/func-800783e4/SKIP.md`. |
+| VOLUME-112-C6ED8 | 342 | The separately authorized Tier-2 probe opens with `func_800C6ED8` @ `0xB76D8`, a hood-proven four-word unsigned-halfword state setter with six direct callers, canonical return, and immediate real boundaries. Stage-0 finds this sole `sh` writer and one `lhu` reader of `D_800F33E4`. Natural era `-O2 -G0` C matches 4/4 on phrasing 1. Carve `0x4370 + 0x0010 + 0x0EDC = 0x525C`; packed span/full SHA exact, verify green at 342. Tier 2 falls 214→213. Evidence: `docs/evidence/volume-campaign-20260830/func-800c6ed8/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

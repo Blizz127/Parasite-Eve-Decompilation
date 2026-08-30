@@ -1015,10 +1015,14 @@ segments:
       # Phase 5BW: C leaf func_800C2B50 — VRAM 0x800C2B50, size 0x18.
       # Pointer field getter D_800E2248[+0x70]; zero-prefix of former B3350.s.
       - [0xB3350, c, func_800C2B50]
-      # Phase 5EC: mid-B3368 hole — sb+ret0 func_800C7DC4 (Phase 5I rematch)
-      # abuts 5EB return-0 twins. Prefix 0x525C (= 0xB85C4 - 0xB3368);
-      # resume B85E4.s 0x484 (= 0xB8A68 - 0xB85E4).
+      # Tier-2 probe: func_800C6ED8 — unsigned-halfword global setter.
+      # Prefix 0x4370 (= 0xB76D8 - 0xB3368), C 0x10, then resume asm.
       - [0xB3368, asm]
+      - [0xB76D8, c, func_800C6ED8]
+      - [0xB76E8, asm]
+      # Phase 5EC: mid-B3368 hole — sb+ret0 func_800C7DC4 (Phase 5I rematch)
+      # abuts 5EB return-0 twins. Resume 0xEDC (= 0xB85C4 - 0xB76E8);
+      # resume B85E4.s 0x484 (= 0xB8A68 - 0xB85E4).
       - [0xB85C4, c, func_800C7DC4]
       - [0xB85D4, c, func_800C7DD4]
       - [0xB85DC, c, func_800C7DDC]
