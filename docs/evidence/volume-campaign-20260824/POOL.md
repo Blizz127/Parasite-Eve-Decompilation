@@ -6,21 +6,21 @@ excluded. Candidates are active `nonmatching` spans of 40 words or fewer.
 Screens are static triage and must be re-proven at C2 before an attempt. This
 refresh removes the six leaves matched by the 2026-08-24 campaign,
 VOLUME-97's `func_8003C5D8`, and VOLUME-99's `func_8006346C`;
-VOLUME-98's `func_80070D6C` is suppressed as a bounded residual, and the
-three COP2 helpers remain in SKIP.
+VOLUME-98's `func_80070D6C` is suppressed as a bounded residual, and
+VOLUME-100's handwritten `func_8003F798` joins the screened COP2 helpers in
+SKIP.
 
 The 2026-08-30 active-span reconciliation is recorded in
 `docs/evidence/volume-campaign-20260830/POOL_REFRESH.md`. The primary tables
-below contain 1,043 still-active rows. The reconciliation adds 49 post-table
+below contain 1,042 still-active rows. The reconciliation adds 50 post-table
 park/skip/padding dispositions and corrects the stale header arithmetic.
 
-Total: **1092** — TIER 1 12, TIER 2 214, TIER 3 99, SKIP/suppressed 767.
+Total: **1092** — TIER 1 11, TIER 2 214, TIER 3 99, SKIP/suppressed 768.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x2FF98 | `func_8003F798` | 26 | jr-ra | 3/3 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x2F00 | `func_80012700` | 29 | jr-ra | 7/7 | 0 | yes | - | - | addiu:0x1x2 | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x69B04 | `func_80079304` | 30 | jr-ra | 2/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x2E750 | `func_8003DF50` | 30 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |

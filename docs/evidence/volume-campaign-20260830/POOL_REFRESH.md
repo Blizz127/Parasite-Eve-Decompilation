@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-99, the matching-C count is **337**.
+`634dd1b` (335-leaf base). After VOLUME-100, the matching-C count is **337**.
 
 ## Method and closure
 
@@ -15,31 +15,33 @@ The current active universe contains **1,092** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                  12
+TIER 1                  11
 TIER 2                 214
 TIER 3                  99
-SKIP / suppressed      767
+SKIP / suppressed      768
                        ---
 TOTAL                 1092
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,043 rows:
-12 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
-active. The 49 active spans below were added after the primary tables through
-campaign overlays. Adding all 49 to the suppressed class closes the pool:
-`1043 + 49 = 1092` and `718 + 49 = 767`.
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,042 rows:
+11 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+active. The 50 active spans below were added after the primary tables through
+campaign overlays. Adding all 50 to the suppressed class closes the pool:
+`1042 + 50 = 1092` and `718 + 50 = 768`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
 after exact integration; VOLUME-98 moved `func_80070D6C` to the suppressed
 residual set after two bounded phrasings; VOLUME-99 then removed exact
-`func_8006346C` from Tier 1. A suppressed `func_` label is not assumed to be
-a retail function.
+`func_8006346C` from Tier 1; VOLUME-100 screened handwritten COP2 helper
+`func_8003F798` without a C attempt. A suppressed `func_` label is not assumed
+to be a retail function.
 
 ## Reconciled post-table spans
 
 | file off | generated label | words | current scheduling disposition | evidence |
 |---:|---|---:|---|---|
+| `0x2FF98` | `func_8003F798` | 26 | `SKIP-HANDWRITTEN-COP2` | `volume-campaign-20260830/func-8003f798/SKIP.md` |
 | `0x2788C` | `func_8003708C` | 7 | `PARKED-FIXED-POINT-REGISTER-COLORING` | `volume-campaign-20260825/func-8003708c/PARK.md` |
 | `0x33C74` | `func_80043474` | 19 | `PARKED-THRESHOLD-LADDER-BLOCK-LAYOUT` | `volume-campaign-20260825/func-80043474/PARK.md` |
 | `0x43CCC` | `func_800534CC` | 6 | `PARKED-GP-ABSOLUTE-FORM` | `volume-campaign-20260825/func-800534cc/PARK.md` |
