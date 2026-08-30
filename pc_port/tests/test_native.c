@@ -415,6 +415,7 @@ static int B54KR_PixelIs(uint32_t x, uint32_t y, uint16_t expected)
 }
 
 static void B54KQ_SeedOverlayPrefix(uint8_t bias);
+static PE_Disc *BTL6_OpenDisc1(char *err, size_t err_size);
 
 static void test_B54KR_801909B4_strict_reaches_overlay_init(void)
 {
@@ -435,7 +436,7 @@ static void test_B54KR_801909B4_strict_reaches_overlay_init(void)
     int status = 0;
     ASSERT(waitpid(pid, &status, 0) == pid, "waitpid failed");
     ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "func_801909B4 did not reach strict func_80190660 boundary");
+           "func_801909B4 did not reach strict post-fade boundary");
 #endif
     PASS();
 }
@@ -501,7 +502,9 @@ static void B54KQ_SeedOverlayPrefix(uint8_t bias)
     }
     PE_StoreU32(0x80011610u, 0x80120D00u);
     PE_StoreU32(0x800B0CD8u, 0x00100001u);
-    PE_StoreU8(0x800B0DCDu, 1u);
+    /* Most prefix-only contracts exercise the authenticated saved-bit-zero
+     * arm.  B54K-Y separately proves Disc 1's positive arm with a real disc. */
+    PE_StoreU8(0x800B0DCDu, 0u);
     B54KR_SeedGpuStatic();
     B54KT_SeedOverlayData();
     memset(PE_Translate(0x800A0ED4u, 0x830u), 0x5Au, 0x830u);
@@ -523,7 +526,7 @@ static int B54KR_OverlayBoundaryIsExact(const char *symbol)
     call = &g_bootstrap_arg4_calls[index];
     return strcmp(call->symbol, symbol) == 0 &&
            strcmp(call->caller, "func_801909B4") == 0 &&
-           call->target == 0u;
+           call->target == 0x80191120u;
 }
 
 static void test_B54KR_gpu_move_overlap_wrap_and_zero_geometry(void)
@@ -884,7 +887,7 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
            PE_LoadU32(0x801D11C8u) == 0u &&
            PE_LoadU32(0x801D11C4u) == 0x80120D00u &&
            B54KR_OverlayBoundaryIsExact(
-               "func_801909B4_80190D7C_cut"),
+               "func_801909B4_80191120_cut"),
            "overlay initializer state or post-call boundary differs");
     ASSERT(B54KR_PixelIs(0u, 480u, 0x5000u) &&
            B54KR_PixelIs(15u, 480u, 0x500Fu) &&
@@ -925,7 +928,7 @@ static void test_B54KR_801909B4_dirty_repeat_and_alternate_cut(void)
            "first repeat source seed failed");
     ASSERT(func_801909B4() == -1, "first prefix return differs");
     ASSERT(B54KR_OverlayBoundaryIsExact(
-               "func_801909B4_80190D7C_cut") &&
+               "func_801909B4_80191120_cut") &&
            PE_LoadU32(0x8009D1BCu) == 1u,
            "first repeat did not take one-time initializer path");
 
@@ -944,7 +947,7 @@ static void test_B54KR_801909B4_dirty_repeat_and_alternate_cut(void)
            PE_LoadU32(0x8009D030u) == 1u &&
            PE_LoadU32(0x8009D1BCu) == 1u &&
            B54KR_OverlayBoundaryIsExact(
-               "func_801909B4_80190D7C_cut"),
+               "func_801909B4_80191120_cut"),
            "repeat changed prerequisite or alternate boundary behavior");
     PE_GPU_GetState(&gpu);
     ASSERT(gpu.move_count == 2u && B54KR_PixelIs(704u, 0u, second),
@@ -1463,6 +1466,79 @@ static void test_B54KX_nonzero_phase_remains_state_driven(void)
            memcmp(PE_TranslateConst(0x8009575Cu, 0x5Cu),
                   PE_TranslateConst(0x80110300u, 0x5Cu), 0x5Cu) == 0,
            "phase-shifted final env1 GPU/cache state differs");
+    PASS();
+}
+
+static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
+{
+    PE_Disc *disc;
+    BootstrapArgCall4 *call;
+    uint32_t stream = 0u;
+    char err[256];
+    TEST("B54KY_192CE8_real_disc_issue_poll_and_boundary");
+
+    err[0] = 0;
+    disc = BTL6_OpenDisc1(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    PE_Disc_SetActive(disc);
+    B54KR_SeedGpuStatic();
+    PE_StoreU32(0x800B0DD8u, 1013u);
+    PE_StoreU32(0x8001160Cu, 0x8010BCF8u);
+    PE_StoreU32(0x80011610u, 0x80120D00u);
+    PE_StoreU16(0x8009315Eu, 0x039Fu);
+    PE_StoreU16(0x80093160u, 0x03C5u);
+    PE_StoreU16(0x80093162u, 0x03C9u);
+    PE_StoreU32(0x800B0CD8u, 0x00100001u);
+    PE_StoreU8(0x801D0E18u, 0xA5u);
+
+    ASSERT(func_80192CE8(1) == -1,
+           "func_80192CE8 prefix retained result differs");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x00100201u &&
+           PE_LoadU8(0x801D0E18u) == 1u,
+           "busy-bit or indexed-record write differs");
+    ASSERT(PE_LoadU32(0x8010BCF8u) == 7u &&
+           PE_LoadU32(0x8010BCFCu) == 0x4345444Du,
+           "authenticated 38-sector PE.IMG payload was not loaded");
+    ASSERT(g_bootstrap_arg4_call_count == 1,
+           "func_80191FB8 boundary count differs");
+    call = &g_bootstrap_arg4_calls[0];
+    if (call->payload_size == sizeof(stream))
+        memcpy(&stream, call->payload, sizeof(stream));
+    ASSERT(strcmp(call->symbol, "func_80191FB8") == 0 &&
+           strcmp(call->caller, "func_80192CE8") == 0 &&
+           call->target == 0x80191FB8u && call->arg0 == 1u &&
+           call->arg1 == 0u && call->payload_size == sizeof(stream) &&
+           stream == 0x80122D00u,
+           "func_80191FB8 stack-word ABI snapshot differs");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "func_80191FB8 did not remain the exact frontier");
+
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_B54KY_saved_bit_zero_skips_disc_prefix(void)
+{
+    TEST("B54KY_saved_bit_zero_skips_disc_prefix");
+    ResetTestState();
+    HostFB_Init();
+    B54KQ_SeedOverlayPrefix(0x4Du);
+    PE_StoreU8(0x801D0E18u, 0xA6u);
+    PE_StoreU32(0x8009B6D4u, 0xA5A55A5Au);
+
+    ASSERT(func_801909B4() == -1,
+           "saved-bit-zero caller result differs");
+    ASSERT(B54KR_OverlayBoundaryIsExact(
+               "func_801909B4_80191120_cut"),
+           "saved-bit-zero arm did not reach exact 0x80191120 cut");
+    ASSERT(PE_LoadU8(0x801D0E18u) == 0xA6u &&
+           PE_LoadU32(0x8009B6D4u) == 0xA5A55A5Au &&
+           (PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u,
+           "saved-bit-zero arm entered the disc prefix");
     PASS();
 }
 
@@ -32492,6 +32568,8 @@ int main(void)
     test_B54KW_environment_clip_offset_and_mask();
     test_B54KX_overlay_loop_cardinality_and_endpoint();
     test_B54KX_nonzero_phase_remains_state_driven();
+    test_B54KY_192CE8_real_disc_issue_poll_and_boundary();
+    test_B54KY_saved_bit_zero_skips_disc_prefix();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();

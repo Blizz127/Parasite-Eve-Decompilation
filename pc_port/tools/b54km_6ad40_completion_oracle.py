@@ -131,21 +131,21 @@ def run() -> int:
         r"captured=(\d+) serviced=(\d+)", bounded)
     require(match is not None, "bounded caller run omitted checkpoint report")
     values = tuple(int(value) for value in match.groups())
-    require(values == (2, 2, 2, 2, 2),
+    require(values == (27, 26, 26, 26, 26),
             f"bounded caller checkpoint contract differs: {values}")
     require("[HOST] stop_reason=frame-limit" in bounded,
-            "bounded caller did not return through host frame limit")
-    print("  OK runtime caller: 2 calls/queries/services, token 2 serviced")
+            "bounded caller did not honor the host frame limit")
+    print("  OK runtime caller: all boot checkpoints, then host frame limit")
 
     strict = run_native(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_8007512C" in strict and
-            "called from: func_801909B4" in strict,
+    require("first unresolved BOOTSTRAP_RET provider: func_80191FB8" in strict and
+            "called from: func_80192CE8" in strict,
             "strict continuation no longer passes 6AD40 into the overlay")
     require("func_8006AD40_D_80093126_archive_cut" not in strict,
             "obsolete 6AD40 prefix frontier remains live")
     require("provider: func_801909B4" not in strict,
             "obsolete whole-overlay stub remains live")
-    print("  OK strict continuation: 6AD40 returns; overlay reaches func_8007512C")
+    print("  OK strict continuation: 6AD40 returns; overlay reaches func_80191FB8")
     print("\nB54K-M completion oracle: PASS (retail, native, caller, and frontier).")
     return 0
 

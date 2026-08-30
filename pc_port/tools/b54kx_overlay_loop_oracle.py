@@ -144,7 +144,7 @@ def main() -> None:
             "else if (frame < 392u)" in overlay_source and
             "else if (frame < 424u)" in overlay_source and
             "func_80074D28(0)" in overlay_source and
-            '"func_801909B4_80190D7C_cut"' in caller_source,
+            "func_80192CE8(1)" in caller_source,
             "complete loop or exact next-boundary source absent")
     require("m0360i" not in overlay_source + caller_source and
             "0xA8066048" not in overlay_source + caller_source,
@@ -158,16 +158,16 @@ def main() -> None:
     env = os.environ.copy()
     env["PE_TEST_FILTER"] = "B54KX"
     focused = run([str(tests)], 0, env)
-    require(re.search(r"Results: 981 run, 2 passed, 0 failed, 979 skipped",
+    require(re.search(r"Results: 983 run, 2 passed, 0 failed, 981 skipped",
                       focused) is not None,
             "two focused B54K-X contracts")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("func_801909B4_80190D7C_cut" in strict and
-            "called from: func_801909B4" in strict,
+    require("func_80191FB8" in strict and
+            "called from: func_80192CE8" in strict,
             "strict post-initializer frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
-    require("[FB] vsyncs=486 drawsyncs=1444 presents=483 mask=0" in normal and
+    require("[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 "
             "captured=26 serviced=26" in normal,
             "full-loop production telemetry")

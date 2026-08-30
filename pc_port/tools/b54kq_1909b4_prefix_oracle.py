@@ -114,14 +114,14 @@ def main() -> None:
               "func_801909B4_port.c").read_text(encoding="utf-8")
     caller = (root / "pc_port" / "bootstrap" /
               "func_8001220C_port.c").read_text(encoding="utf-8")
-    require("func_8007512C\", \"func_801909B4" in source and
-            "PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY)" in source,
-            "source lost explicit MoveImage boundary")
+    require("func_8007512C(&move_rect, 0x2C0, 0)" in source and
+            "if (PE_Port_ShouldStop())" in source,
+            "source lost translated MoveImage call/stop propagation")
     after = caller.split("v = func_801909B4();", 1)[1]
     before_consumer = after.split("func_8006E9A0(v);", 1)[0]
     require("if (PE_Port_ShouldStop()) return;" in before_consumer,
             "caller can consume a prefix return after nested stop")
-    print("  OK source boundary: payload capture, stop, and caller guard")
+    print("  OK source continuation: MoveImage call, stop propagation, caller guard")
 
     arena = 0x80120D00
     second = arena + 0x1C080
@@ -138,16 +138,16 @@ def main() -> None:
 
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run_native(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_8007512C" in strict and
-            "called from: func_801909B4" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: func_80191FB8" in strict and
+            "called from: func_80192CE8" in strict and
             "provider: func_801909B4" not in strict,
             "strict runtime did not enter overlay prefix")
     normal = run_native(common, 0)
     require("[HOST] stop_reason=unresolved-boundary" in normal and
-            "[STUB:BOOTSTRAP_RET] func_8007512C" in normal and
+            "[STUB:BOOTSTRAP_RET] func_80191FB8" in normal and
             "func_8006E9A0" not in normal,
             "normal runtime did not stop at MoveImage boundary")
-    print("  OK real-disc runtime: overlay entered; MoveImage is next boundary")
+    print("  OK real-disc runtime: overlay entered; later 80191FB8 boundary")
     print("\nB54K-Q prefix oracle: PASS.")
 
 

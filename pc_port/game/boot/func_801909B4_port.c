@@ -1,14 +1,14 @@
 /*
- * Phase 6E-B54K-R/W — func_801909B4 through MoveImage, display setup, and
- * the B54K-W prefix of its one-time overlay-local initializer.
+ * Phase 6E-B54K-R/Y — func_801909B4 through MoveImage, display setup, the
+ * one-time overlay-local initializer, and its saved-bit branch.
  *
  * Retail overlay body: [0x801909B4,0x801918F8), 977 words.
- * Implemented prefix: [0x801909B4,0x80190D74), 240 words.  MoveImage now
- * traverses the retail dispatcher and exact one-packet GP0(80h) worker.
- * func_80190660 is now entered directly and advances through both DrawPrim
- * packets, PutDrawEnv, and PutDispEnv to its frame-one loop re-entry. The
- * D_8009D1BC-nonzero alternate
- * remains a named structural cut at the 0x80190D7C saved-bit branch.
+ * Implemented caller path: [0x801909B4,0x80190D8C), 246 words through the
+ * positive-arm call. MoveImage traverses the retail dispatcher and exact
+ * one-packet GP0(80h) worker.
+ * func_80190660 now completes its 480-frame loop.  Disc 1's saved bit then
+ * enters func_80192CE8(1); the saved-bit-zero arm remains the exact named
+ * structural cut at 0x80191120.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -28,6 +28,7 @@ extern void func_8005E57C(int value);
 extern void func_8005C1EC(int enabled);
 extern void func_80042538(void);
 extern int func_80190660(void);
+extern int func_80192CE8(int index);
 
 static void CopyGuestBytes(pe_addr_t destination, pe_addr_t source,
                            uint32_t size)
@@ -115,9 +116,14 @@ int func_801909B4(void)
         if (PE_Port_ShouldStop())
             return -1;
     }
-    Bootstrap_ReturnVoid4(
-        "func_801909B4_80190D7C_cut", "func_801909B4",
-        saved_bit, environment0, environment1, 0u);
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return -1; /* retail's retained s2 value */
+    if (saved_bit == 0u) {
+        Bootstrap_ReturnVoid4Indirect(
+            "func_801909B4_80191120_cut", "func_801909B4", 0x80191120u,
+            saved_bit, environment0, environment1, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return -1;
+    }
+
+    (void)func_80192CE8(1);
+    return -1; /* prefix stops at func_80191FB8; retail retains s2 */
 }
