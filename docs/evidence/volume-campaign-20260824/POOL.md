@@ -1,8 +1,13 @@
-# Matching-C volume campaign pool — refreshed 2026-08-25
+# Matching-C volume campaign pool — refreshed 2026-08-30
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1081** — TIER 1 16, TIER 2 214, TIER 3 93, SKIP 753.
+The 2026-08-30 active-span reconciliation is recorded in
+`docs/evidence/volume-campaign-20260830/POOL_REFRESH.md`. The primary tables
+below contain 1,047 still-active rows. The reconciliation adds 47 post-table
+park/skip/padding dispositions and corrects the stale header arithmetic.
+
+Total: **1094** — TIER 1 16, TIER 2 214, TIER 3 99, SKIP/suppressed 765.
 
 ## TIER 1
 
