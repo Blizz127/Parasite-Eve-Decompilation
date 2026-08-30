@@ -145,10 +145,9 @@ never native function pointers.
 - `func_800725DC`
 - ~~`func_8006A9E4`~~ — TRANSLATED (Phase 6E-B16; see the func_8003E680
   callees section)
-- `func_8006AD40` — PREFIX TRANSLATED (Phase 6E-B50 corrective; full retail
-  body is 391 words, but production implements only the 68-word prefix
-  `0x8006AD40..0x8006AE50`, including the first unresolved call and delay
-  slot). Its callee `func_8006E1C0` is TRANSLATED (Phase 6E-B51). Phase
+- ~~`func_8006AD40`~~ — TRANSLATED COMPLETE (Phase 6E-B54K-M; all 391
+  retail words through `jr ra; nop`). Its callee `func_8006E1C0` is
+  TRANSLATED (Phase 6E-B51). Phase
   6E-B52 translates both `func_8007506C` (Psy-Q LoadImage) wrappers and the
   complete read-only `func_80074E28` RECT validator. Their indirect dispatch
   enters `jtb[2] = func_80076C34` with `a0 = jtb[8] = func_80076664`,
@@ -159,11 +158,10 @@ never native function pointers.
   callback through the completed wrapper and setter, publishes its ring
   entry, restores I_MASK, and calls the pump, whose busy-DMA path (B53H)
   returns 1 without consuming anything. The dispatcher then returns its
-  retail pending count, so the whole LoadImage dispatch completes and
-  execution reaches this function's own B50 prefix cut, which B53H names
-  `func_8006AD40_prefix_cut` — now the canonical strict frontier. Only the
-  The B50 suffix remains untranslated in this chain; B53I-C completes
-  the pump's idle-DMA consumer.
+  retail pending count. B53I-C/D complete the pump and two caller DMA
+  opportunities; B54B-M complete every remaining archive/poll/graphics
+  group, F1/display synchronization, state reset, and bit-0 clear. The
+  function now returns normally with no bootstrap provider.
   - `func_80076664` — TRANSLATED direct LoadImage issue worker (B53E), with
     timeout recovery suffix still exposed at `func_80077404`.
   - `func_80073CF4` — TRANSLATED complete 12-word retail wrapper (B53F
@@ -799,10 +797,9 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode stops at `func_8006AD40_prefix_cut` from
-`func_8006AD40` (B53H) — the named B50 translation prefix cut, reached
-once the whole LoadImage dispatch completes through the busy-DMA queue
-pump. It is the only BOOTSTRAP_RET provider invoked on the canonical path.
+With Disc 1, strict mode now stops at `func_801909B4` from
+`func_8001220C`, after complete `func_8006AD40` and both explicit caller DMA
+checkpoints. It is the first BOOTSTRAP_RET provider on the canonical path.
 The `--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by
 design. Normal and fresh sanitizer builds agree exactly on both frontiers.
 

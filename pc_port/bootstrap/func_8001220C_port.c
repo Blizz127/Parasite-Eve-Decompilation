@@ -140,9 +140,9 @@ void func_8001220C(void)
                     return;
                 }
             }
-            /* A prefix-only callee may request a host stop at an honest
-             * unresolved boundary.  Honor it before running caller code
-             * that could consume state the untranslated suffix produces. */
+            /* Honor any nested hardware/provider stop before consuming the
+             * completed function's destination state.  B54K-M itself now
+             * returns normally; this guard remains caller-wide policy. */
             if (PE_Port_ShouldStop()) return;
             v = D_8009D280;
             D_8009D1C4 = v;

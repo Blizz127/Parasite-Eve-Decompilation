@@ -23769,6 +23769,24 @@ static void B50_StartFixture(DiscFixture *fx, uint32_t count)
     B50_SeedPrefixState(count);
 }
 
+static int B54KM_CompletionStateIsExact(void)
+{
+    return (PE_LoadU32(0x800B0CD8u) & 1u) == 0u &&
+           PE_LoadU16(0x800B0CD8u + 0x06u) == 0xFFFFu &&
+           PE_LoadU8(0x800B0CD8u + 0x09u) == 0xFFu &&
+           PE_LoadU8(0x800B0CD8u + 0x0Bu) == 0u &&
+           PE_LoadU8(0x800B0CD8u + 0x0Cu) == 0xFFu &&
+           PE_LoadU16(0x800B0CD8u + 0xE8u) == 0xFFFFu &&
+           PE_LoadU8(0x800B0CD8u + 0xEAu) == 0u &&
+           PE_LoadU8(0x800B0CD8u + 0xEBu) == 0u &&
+           PE_LoadU32(0x800BCD80u) == 0xF1u &&
+           PE_LoadU32(0x8009D268u) == 0u &&
+           PE_LoadU32(0x8009D2F4u) == 1u &&
+           PE_LoadU32(0x800B8628u) == 0xF1u &&
+           g_stub_order_count == 0 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE;
+}
+
 static void B54B_SeedLoopEntries(uint32_t count)
 {
     uint32_t i;
@@ -23851,8 +23869,8 @@ static void test_6AD40_guard_bit0(void)
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
            "guard path must not request a host stop");
 
-    /* A zero entry count bypasses the conditional retail jal, but the
-     * untranslated suffix still begins at the same static prefix cut. */
+    /* A zero entry count bypasses both packed archive walks but still
+     * executes the complete retail suffix and normal return. */
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 0);
@@ -23860,17 +23878,17 @@ static void test_6AD40_guard_bit0(void)
     ASSERT(g_bootstrap_arg4_call_count == 2,
            "zero-count path must add the live 718D0 image walk plus the "
            "B54K-A D_800930F0 718D0 walk");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "zero-count suffix cut must remain an honest host stop");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "zero-count path did not complete the retail suffix exactly");
     FxFree(&fx);
     PASS();
 }
 
-static void test_6AD40_prefix_boundary_args(void)
+static void test_6AD40_complete_effect_allowlist(void)
 {
     DiscFixture fx;
     uint8_t *snapshot;
-    TEST("6AD40_prefix_boundary_args");
+    TEST("6AD40_complete_effect_allowlist");
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 1);
@@ -23878,12 +23896,12 @@ static void test_6AD40_prefix_boundary_args(void)
     ASSERT(snapshot != NULL, "cannot allocate B50 RAM snapshot");
     memcpy(snapshot, PE_TranslateConst(PE_RAM_BASE, PE_RAM_SIZE), PE_RAM_SIZE);
 
-    ASSERT(func_8006AD40() == 0, "prefix boundary must return retail zero");
+    ASSERT(func_8006AD40() == 0, "complete function must return retail zero");
     /* B52 advances through func_8007506C to jtb[2]=func_80076C34.  The
      * zero fixture still has image h=0x100 and no CLUT call; B54K-A adds
      * the D_800930F0 718D0 image walk over the zero TIM at +0x180. */
     ASSERT(g_bootstrap_arg4_call_count == 3,
-           "prefix must record the texture dispatch plus two 718D0 images");
+           "complete function must record the texture dispatch plus two 718D0 images");
     B52_AssertGpuCall(0, 0u, B50_BASE, 0x01000000u);
     B52_AssertGpuCall(1, 0u, 0x80110000u + 20u, 0u);
     B52_AssertGpuCall(2, 0u, 0x80118000u + 20u, 0u);
@@ -23894,17 +23912,17 @@ static void test_6AD40_prefix_boundary_args(void)
     ASSERT(CountOrderLog("func_8006E1C0") == 0,
            "translated callee must not record a bootstrap boundary");
     ASSERT(CountOrderLog("func_800718D0") == 0 &&
-           CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "prefix must complete func_80030894 before the caller cut");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "prefix must request an honest unresolved-boundary host stop");
+           g_stub_order_count == 0,
+           "complete function retained a bootstrap boundary");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "complete function requested a host stop");
     /* Channel 2's poll clears 0x01004000; B54F's D_800930EE issue sets
      * it again; B54G's second live poll clears it; B54K-A's D_800930F0
      * issue re-arms it, and B54K-J's live completion poll clears it. */
     ASSERT(PE_LoadU32(0x800B0CD8u) ==
            (*(uint32_t *)(snapshot + (0x800B0CD8u - PE_RAM_BASE)) &
-            0xFEFFBFFFu),
-           "prefix issue/poll state differs from retail");
+            0xFEFFBFFEu),
+           "complete issue/poll/final-bit state differs from retail");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(PE_LoadU32(0x8009B6ACu) == 0x200u &&
@@ -23918,6 +23936,10 @@ static void test_6AD40_prefix_boundary_args(void)
             (a >= 0x8009B6ACu && a < 0x8009B6B8u) ||
             (a >= 0x8009B6C4u && a < 0x8009B6C8u) ||
             (a >= 0x8009B6D4u && a < 0x8009B6D8u) ||
+            (a >= 0x8009D268u && a < 0x8009D26Cu) ||
+            (a >= 0x8009D2F4u && a < 0x8009D2F8u) ||
+            (a >= 0x800B8628u && a < 0x800B863Cu) ||
+            (a >= 0x800BCD80u && a < 0x800BCD84u) ||
             (a >= B53C_DEADLINE && a < B53C_TIMEOUT_POLLS + 4u) ||
             (a >= B53D_WORK_MARKER && a < B53D_WORK_MARKER + 4u) ||
             (a >= B53D_SAVED_IMASK && a < B53D_SAVED_IMASK + 4u) ||
@@ -23925,6 +23947,11 @@ static void test_6AD40_prefix_boundary_args(void)
             (a >= 0x80091660u && a < 0x80091664u) ||
             (a >= 0x80091670u && a < 0x80091674u) ||
             (a >= 0x80091680u && a < 0x80091684u) ||
+            (a >= 0x800B0CDEu && a < 0x800B0CE0u) ||
+            (a >= 0x800B0CE1u && a < 0x800B0CE2u) ||
+            (a >= 0x800B0CE3u && a < 0x800B0CE5u) ||
+            (a >= 0x800B0DB2u && a < 0x800B0DB8u) ||
+            (a >= 0x800B0DC0u && a < 0x800B0DC4u) ||
             (a >= 0x800BE9F0u && a < 0x800BE9F0u + 0x50u) ||
             (a >= 0x800B01C0u && a < 0x800B01C0u + 0x568u) ||
             (a >= 0x800B0738u && a < 0x800B0738u + 0x568u) ||
@@ -23963,7 +23990,7 @@ static void test_6AD40_prefix_boundary_args(void)
         if (PE_LoadU8(a) != snapshot[a - PE_RAM_BASE]) {
             free(snapshot);
             FxFree(&fx);
-            FAIL("proven prefix changed guest RAM outside accepted state");
+            FAIL("complete 6AD40 changed guest RAM outside accepted state");
             return;
         }
     }
@@ -23972,16 +23999,13 @@ static void test_6AD40_prefix_boundary_args(void)
     PASS();
 }
 
-static void test_6AD40_strict_stops_at_frontier(void)
+static void test_6AD40_strict_completes_without_frontier(void)
 {
     DiscFixture fx;
-    /* B53F resolves the wrapper's execution-proven installed-target path and
-     * B53H resolves the busy-DMA pump, so the whole B50 prefix now runs to
-     * its own cut.  B53H names that cut `func_8006AD40_prefix_cut`, so it is
-     * once again a visible strict frontier rather than a silent return.
-     * Strict therefore exits 1 here, and in normal mode the named provider
-     * is the LAST BOOTSTRAP_RET symbol recorded on this path. */
-    TEST("6AD40_strict_stops_at_frontier");
+    /* The complete direct function contains no bootstrap provider.  Strict
+     * mode must therefore return normally while leaving an unrelated seeded
+     * DMA in flight; caller checkpoints remain separate authority. */
+    TEST("6AD40_strict_completes_without_frontier");
     pid_t pid;
     int status = 0;
     ResetTestState();
@@ -23998,16 +24022,14 @@ static void test_6AD40_strict_stops_at_frontier(void)
         B50_SeedPrefixState(1);
         PE_StoreU8(B53D_INIT_BYTE, 1u);
         if (!B53E_SeedBusyDma()) _exit(2);
-        func_8006AD40();
-        _exit(3);  /* strict must have aborted before this point */
+        _exit(func_8006AD40() == 0 ? 0 : 3);
     }
     ASSERT(waitpid(pid, &status, 0) == pid,
            "waitpid failed for B51 strict boundary");
-    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
-           "strict B51 path no longer stops at the named B50 prefix cut");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+           "strict complete function did not return normally");
 
-    /* Same path in normal mode: prove the frontier symbol is exactly the
-     * named B50 prefix cut, and that nothing unresolved precedes it. */
+    /* Same path in normal mode: prove exact completion with no provider. */
     ResetTestState();
     PE_Disc_SetActive(fx.disc);
     HostFB_Init();
@@ -24019,11 +24041,8 @@ static void test_6AD40_strict_stops_at_frontier(void)
     ASSERT(B53E_SeedBusyDma(), "busy DMA seed failed");
     Stub_ResetOrderLog();
     func_8006AD40();
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "B50 prefix path must reach the caller's post-30894 frontier");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "the D_80093126 cut is now the first strict frontier");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "normal complete path retained a boundary or wrong final state");
     /* The busy transfer must still be in flight and the queued request
      * unconsumed: reaching the frontier must not have completed DMA. */
     ASSERT(PE_GPU_DMA2Pending(), "prefix path completed the pending DMA");
@@ -24033,29 +24052,26 @@ static void test_6AD40_strict_stops_at_frontier(void)
     PASS();
 }
 
-static void test_6AD40_prefix_does_not_finalize(void)
+static void test_6AD40_completion_finalizes(void)
 {
     DiscFixture fx;
-    TEST("6AD40_prefix_does_not_finalize");
+    TEST("6AD40_completion_finalizes");
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 1);
     PE_StoreU16(0x800B0CD8u + 6u, 0x1234u);
     PE_StoreU16(0x800B0CD8u + 0xE8u, 0x5678u);
-    ASSERT(func_8006AD40() == 0, "prefix return wrong");
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 1u) != 0,
-           "prefix must not execute suffix bit clear");
-    ASSERT(PE_LoadU16(0x800B0CD8u + 6u) == 0x1234u &&
-           PE_LoadU16(0x800B0CD8u + 0xE8u) == 0x5678u,
-           "prefix must not execute suffix finalization writes");
+    ASSERT(func_8006AD40() == 0, "complete return wrong");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "complete path did not execute exact suffix finalization");
     FxFree(&fx);
     PASS();
 }
 
-static void test_6AD40_prefix_repeat_dirty(void)
+static void test_6AD40_completion_second_call_guards(void)
 {
     DiscFixture fx;
-    TEST("6AD40_prefix_repeat_dirty");
+    TEST("6AD40_completion_second_call_guards");
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     B50_StartFixture(&fx, 1);
@@ -24067,7 +24083,7 @@ static void test_6AD40_prefix_repeat_dirty(void)
     PE_StoreU32(B50_FIRST_ENTRY + 0xCu, 0u);
     PE_StoreU8(B50_FIRST_ENTRY + 0xFu, 0u);
     PE_StoreU32(B50_FIRST_ENTRY + 0x10u, 0u);
-    ASSERT(func_8006AD40() == 0, "first dirty prefix return wrong");
+    ASSERT(func_8006AD40() == 0, "first dirty completion return wrong");
     /* B54E already consumed channel 2's live poll. A second sample is
      * still 0 and is only fixture teardown before a second invocation. */
     ASSERT(func_8006E7E8() == 0,
@@ -24075,13 +24091,13 @@ static void test_6AD40_prefix_repeat_dirty(void)
     func_8007ED58();
     HostFB_VSync(0);
     PE_Port_RunControlReset();
-    ASSERT(func_8006AD40() == 0, "repeated dirty prefix return wrong");
-    ASSERT(g_bootstrap_arg4_call_count == 6,
-           "repeated prefix must record two texture plus four 718D0 walks");
+    ASSERT(func_8006AD40() == 0, "guarded second completion return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 3,
+           "guarded second call repeated texture or 718D0 work");
     /* B51: the dirty entry+4 = 0xDEADBEEF flows through the retail 24-bit
      * mask into the LoadImage data address; nothing dereferences it.
-     * Calls 0 and 2 are the texture dispatches; 1 and 3 are 718D0. */
-    for (int i = 0; i < 2; i++) {
+     * Call 0 is the texture dispatch; calls 1 and 2 are 718D0. */
+    for (int i = 0; i < 1; i++) {
         int tex = i * 3;
         ASSERT(strcmp(g_bootstrap_arg4_calls[tex].symbol,
                       "func_80076C34") == 0,
@@ -24093,8 +24109,8 @@ static void test_6AD40_prefix_repeat_dirty(void)
                g_bootstrap_arg4_calls[tex].arg2 == 8u,
                "dirty/repeated LoadImage rect changed");
     }
-    ASSERT((PE_LoadU32(0x800B0CD8u) & 1u) != 0,
-           "repeated prefix must leave suffix state untouched");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "guarded second call changed completed suffix state");
     FxFree(&fx);
     PASS();
 }
@@ -24127,16 +24143,13 @@ static void test_B54B_6AD40_canonical_counted_loop(void)
     ASSERT(g_bootstrap_arg4_calls[0].arg3 !=
            g_bootstrap_arg4_calls[1].arg3,
            "B54B replayed entry 0");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "retained B54B path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "B54B must now complete func_80030894");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "retained B54B path did not complete the retail suffix");
     ASSERT(PE_LoadU16(0x80091650u) == 0x0020u &&
            PE_LoadU16(0x80091652u) == 0u,
            "B54B path must pack record 0 from unseeded sources");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "B54B frontier stop reason changed");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "B54B complete path requested a host stop");
     FxFree(&fx);
     PASS();
 }
@@ -24154,9 +24167,8 @@ static void test_B54B_6AD40_count_edges(void)
     ASSERT(func_8006AD40() == 0, "count-zero return wrong");
     ASSERT(g_bootstrap_arg4_call_count == 2,
            "count zero must add both live 718D0 walks");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "count zero did not reach the current frontier");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "count zero did not complete the retail suffix");
     FxFree(&fx);
 
     /* count=1 is the valid zero-remaining state at 0x8006AE50. */
@@ -24225,15 +24237,12 @@ static void test_B54D_6AD40_canonical_material_prefix(void)
     B52_AssertGpuCall(13, 0x000001C0u, 0x801229B4u, 0x00FE0040u);
     ASSERT(B54D_LOOKUP + (0x00007F0Cu & ~3u) == B54D_TERMINATOR,
            "B54D canonical terminator address changed");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "retained B54D path did not reach the current frontier");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "B54D must now complete func_80030894");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "retained B54D path did not complete the retail suffix");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "B54D frontier stop reason changed");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "B54D complete path requested a host stop");
     FxFree(&fx);
     PASS();
 }
@@ -24257,9 +24266,8 @@ static void test_B54D_6AD40_no_walk_still_stops_before_poll(void)
            PE_LoadU16(0x80091680u) == 0x0034u &&
            PE_LoadU16(0x80091682u) == 0x7753u,
            "B54D packing depended on the archive walk");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "B54D zero-record path did not reach the current frontier");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "B54D zero-record path did not complete the retail suffix");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
@@ -24392,11 +24400,8 @@ static void test_B54C_718D0_atlas_rects_and_record0_pack(void)
     ASSERT(PE_LoadU16(0x80091660u) == 0x0026u &&
            PE_LoadU16(0x80091662u) == 0x3F15u,
            "live 6AD40 prefix must now pack record 1");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "6AD40 moved off the caller's post-30894 provider");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "6AD40 must now complete func_80030894");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "live 6AD40 path did not complete the retail suffix");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
@@ -24447,13 +24452,8 @@ static void test_B54E_6AD40_canonical_poll_exit(void)
            "host pending-byte collapse remains after the D_800930EE issue");
     ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST,
            "retained B54E path must complete D_800930E0 / dest+0x16C");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "B54E did not reach the D_80093126 cut");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "B54E must now enter func_80030894");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "B54E frontier stop reason changed");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "B54E did not complete the retail suffix");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54E added a DMA completion checkpoint");
     FxFree(&fx);
@@ -24485,11 +24485,8 @@ static void test_B54E_6AD40_live_poll_not_assigned(void)
            "zero-record path must now pack records 0/1");
     ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST,
            "zero-record path must complete D_800930E0 / dest+0x16C");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "zero-record path must complete 30894");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "zero-record path left the D_80093126 cut");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "zero-record B54E path did not complete the retail suffix");
     FxFree(&fx);
     PASS();
 }
@@ -24556,11 +24553,8 @@ static void test_B54F_6AD40_live_atlas_and_record_packs(void)
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host collapse after D_800930EE must stay recorded, not assigned");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "B54F did not reach the D_80093126 cut");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "B54F must now enter func_80030894");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "B54F did not complete the retail suffix");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54F added a DMA completion checkpoint");
     FxFree(&fx);
@@ -24590,11 +24584,8 @@ static void test_B54F_6AD40_second_poll_not_consumed(void)
            "zero-record live path must complete D_800930E0 / dest+0x16C");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "B54K-K D_800930E0 completion must clear the busy bits");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "zero-record path must complete 30894");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "zero-record path left the D_80093126 cut");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "zero-record B54F path did not complete the retail suffix");
     FxFree(&fx);
     PASS();
 }
@@ -24661,13 +24652,8 @@ static void test_B54G_6AD40_canonical_second_poll_exit(void)
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B4u) == 0u,
            "host collapse remains recorded, not assigned as retail 0");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "B54G did not reach the D_80093126 cut");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "B54G must now enter func_80030894");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "B54G frontier stop reason changed");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "B54G did not complete the retail suffix");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54G added a DMA completion checkpoint");
     FxFree(&fx);
@@ -24694,13 +24680,8 @@ static void test_B54G_6AD40_live_poll_not_assigned(void)
            "B54K-K D_800930E0 completion must clear the busy bits");
     ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST,
            "zero-record path must complete D_800930E0 / dest+0x16C");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "zero-record path must complete 30894");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_8006AD40_D_80093126_archive_cut") == 0,
-           "zero-record path left the D_80093126 cut");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "zero-record path changed the frontier stop reason");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "zero-record B54G path did not complete the retail suffix");
     FxFree(&fx);
     PASS();
 }
@@ -24849,12 +24830,8 @@ static void test_B54KA_6AD40_live_path_reaches_l2l3(void)
            PE_LoadU16(0x800B01C0u + 9u * 140u + 3u * 28u + 0x16u) ==
                0x7E13u,
            "live sprite array clut halfwords changed");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0],
-                  "func_8006AD40_D_80093126_archive_cut") == 0,
-           "B54KA live provider order changed");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "B54KA frontier stop reason changed");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "B54KA live path did not complete the retail suffix");
     ASSERT(!PE_GPU_DMA2CompletionPending(),
            "B54KA added a DMA completion checkpoint");
     (void)image;
@@ -25927,10 +25904,8 @@ static void test_B54KJ_6AD40_f0_completion_and_frontier(void)
     ASSERT(func_8006AD40() == 0, "B54KJ canonical return wrong");
     ASSERT(g_bootstrap_arg4_call_count == 2,
            "F0 wait repeated 718D0 or earlier image work");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0],
-                  "func_8006AD40_D_80093126_archive_cut") == 0,
-           "retained B54KJ path did not reach the current D_80093126 boundary");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "retained B54KJ path did not complete the retail suffix");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "E0 completion did not clear the issue/busy bits");
     ASSERT(PE_LoadU32(0x8009B6ACu) == 0x200u &&
@@ -25938,8 +25913,8 @@ static void test_B54KJ_6AD40_f0_completion_and_frontier(void)
            PE_LoadU32(0x8009B6B4u) == 0u &&
            PE_LoadU32(0x8009B6D4u) == 1u,
            "E0 completion changed the synchronous provider contract");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "B54KJ frontier stop reason changed");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "B54KJ complete path requested a host stop");
     FxFree(&fx);
     PASS();
 }
@@ -25959,16 +25934,16 @@ static void test_B54KJ_6AD40_repeat_no_duplicate_work(void)
     PE_Port_RunControlReset();
     ASSERT(func_8006AD40() == 0, "repeated B54KJ return wrong");
 
-    ASSERT(g_bootstrap_arg4_call_count == 4,
-           "repeat must execute exactly two 718D0 walks per invocation");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 2,
-           "repeat must reach the new frontier exactly once per run");
+    ASSERT(g_bootstrap_arg4_call_count == 2,
+           "bit-0 guard did not suppress all repeated image work");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "guarded repeat changed the completed suffix state");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u &&
            PE_LoadU32(0x8009B6B0u) == B50_3126_DEST &&
            PE_LoadU32(0x8009B6B4u) == 0u,
            "repeat left stale E0 completion state");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "repeat lost the unresolved-boundary stop");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "guarded repeat requested a host stop");
     FxFree(&fx);
     PASS();
 }
@@ -26095,10 +26070,8 @@ static void test_B54KK_6AD40_e0_archive_lookups_and_completion(void)
            "E0 completion/provider state differs from retail adapter");
     ASSERT(g_bootstrap_arg4_call_count == 2,
            "E0 group replayed earlier image work");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0],
-                  "func_8006AD40_D_80093126_archive_cut") == 0,
-           "B54KK did not reach the D_80093126 boundary");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "B54KK did not complete the retail suffix");
     FxFree(&fx);
     PASS();
 }
@@ -26122,9 +26095,9 @@ static void test_B54KK_6AD40_empty_f0_clears_stale_results(void)
            PE_LoadU32(0x800B0CD8u + 0x120u) == 0u &&
            PE_LoadU32(0x800B0CD8u + 0x124u) == 0u,
            "empty F0 archive retained stale lookup results");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1 &&
+    ASSERT(B54KM_CompletionStateIsExact() &&
            g_bootstrap_arg4_call_count == 2,
-           "empty F0 path changed frontier or image-work count");
+           "empty F0 path changed completion or image-work count");
     ASSERT((PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "empty F0 path did not complete the E0 read");
     FxFree(&fx);
@@ -26205,10 +26178,8 @@ static void test_B54KL_6AD40_e0_counted_then_3126_completion(void)
            PE_LoadU32(0x8009B6B4u) == 0u &&
            (PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "D_80093126 completion/provider state differs");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0],
-                  "func_8006AD40_D_80093126_archive_cut") == 0,
-           "B54KL did not reach the archive boundary");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "B54KL did not complete the retail suffix");
     FxFree(&fx);
     PASS();
 }
@@ -26229,12 +26200,150 @@ static void test_B54KL_6AD40_empty_e0_skips_entry_walk(void)
     ASSERT(func_8006AD40() == 0, "B54KL empty-E0 return wrong");
     ASSERT(g_bootstrap_arg4_call_count == 2,
            "zero-count E0 archive executed an entry");
-    ASSERT(CountOrderLog("func_8006AD40_D_80093126_archive_cut") == 1,
-           "empty E0 archive changed the completion frontier");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "empty E0 archive changed the completion state");
     ASSERT(PE_LoadU32(0x8009B6B0u) == B50_3126_DEST &&
            (PE_LoadU32(0x800B0CD8u) & 0x01004000u) == 0u,
            "empty E0 path did not complete D_80093126");
     FxFree(&fx);
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B54K-M — final +0x188 archive, F1/display sync, and final state
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void B54KM_3126PutU8(DiscFixture *fx, uint32_t offset, uint8_t value)
+{
+    FxUser(fx->img, FX_PEIMG_LBA + 0x219u + offset / 2048u)
+        [offset % 2048u] = value;
+}
+
+static void B54KM_3126PutU32(DiscFixture *fx, uint32_t offset,
+                             uint32_t value)
+{
+    B54KM_3126PutU8(fx, offset + 0u, (uint8_t)value);
+    B54KM_3126PutU8(fx, offset + 1u, (uint8_t)(value >> 8));
+    B54KM_3126PutU8(fx, offset + 2u, (uint8_t)(value >> 16));
+    B54KM_3126PutU8(fx, offset + 3u, (uint8_t)(value >> 24));
+}
+
+static void B54KM_Craft3126Archive(uint32_t count, DiscFixture *fx)
+{
+    uint32_t i;
+
+    B54KM_3126PutU32(fx, 4u, 0x40u);
+    B54KM_3126PutU32(fx, 0x68u, (count << 22) | 0x100u);
+    for (i = 0u; i < count; i++) {
+        uint32_t entry = 0x100u + i * 0x14u;
+
+        B54KM_3126PutU32(fx, entry + 4u, 0x900u + i * 0x100u);
+        B54KM_3126PutU8(fx, entry + 7u, 1u);
+        B54KM_3126PutU32(fx, entry + 8u, 0u);
+        B54KM_3126PutU32(fx, entry + 0xCu, 0u);
+        B54KM_3126PutU32(fx, entry + 0x10u, 0u);
+    }
+}
+
+static void test_B54KM_6AD40_final_archive_positive_and_zero(void)
+{
+    DiscFixture fx;
+    TEST("B54KM_6AD40_final_archive_positive_and_zero");
+
+    ResetTestState();
+    ASSERT(B54K_BuildDisc(&fx, B54KL_SECTORS),
+           "B54KM positive fixture build failed");
+    B54KK_CraftF0Archive(&fx);
+    B54KL_CraftE0Archive(2u, &fx);
+    B54KM_Craft3126Archive(2u, &fx);
+    B50_StartFixture(&fx, 0u);
+    B54KK_SeedFocusedRanges();
+    B54KL_Seed3126Range();
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54KM positive return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 6,
+           "final archive did not add exactly two entry dispatches");
+    B52_AssertGpuCall(4, 0u, B50_3126_DEST + 0x900u, 0x00010000u);
+    B52_AssertGpuCall(5, 0u, B50_3126_DEST + 0xA00u, 0x00010000u);
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "positive final archive did not complete exact suffix state");
+    FxFree(&fx);
+
+    ResetTestState();
+    ASSERT(B54K_BuildDisc(&fx, B54KL_SECTORS),
+           "B54KM zero fixture build failed");
+    B54KK_CraftF0Archive(&fx);
+    B54KL_CraftE0Archive(1u, &fx);
+    B50_StartFixture(&fx, 0u);
+    B54KK_SeedFocusedRanges();
+    B54KL_Seed3126Range();
+    Stub_ResetOrderLog();
+
+    ASSERT(func_8006AD40() == 0, "B54KM zero return wrong");
+    ASSERT(g_bootstrap_arg4_call_count == 3,
+           "zero final archive executed an entry or replayed prior work");
+    B52_AssertGpuCall(2, 0u, B50_E0_DEST + 0x500u, 0x00010000u);
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "zero final archive did not complete exact suffix state");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_B54KM_6AD40_flag_matrix_and_f1_display(void)
+{
+    static const uint32_t flag_cases[] = { 0u, 0x40u, 0x80u, 0xC0u };
+    static const uint8_t initial[] = { 0xA0u, 0xA1u, 0xA2u,
+                                       0xA3u, 0xA4u, 0xA5u };
+    DiscFixture fx;
+    uint32_t c;
+    TEST("B54KM_6AD40_flag_matrix_and_f1_display");
+
+    for (c = 0u; c < 4u; c++) {
+        int vsync, drawsync, presented, mask;
+        uint32_t flags = flag_cases[c];
+
+        ResetTestState();
+        ASSERT(FxBuild(&fx, 0), "B54KM matrix fixture build failed");
+        B50_StartFixture(&fx, 0u);
+        PE_StoreU32(0x800B0CD8u, flags | 1u);
+        PE_StoreU8(0x800B0CD8u + 0xDAu, initial[0]);
+        PE_StoreU8(0x800B0CD8u + 0xDBu, initial[1]);
+        PE_StoreU8(0x800B0CD8u + 0xDCu, initial[2]);
+        PE_StoreU8(0x800B0CD8u + 0xDDu, initial[3]);
+        PE_StoreU8(0x800B0CD8u + 0xDEu, initial[4]);
+        PE_StoreU8(0x800B0CD8u + 0xDFu, initial[5]);
+        Stub_ResetOrderLog();
+
+        ASSERT(func_8006AD40() == 0, "B54KM matrix return wrong");
+        ASSERT(PE_LoadU32(0x800B0CD8u) == flags,
+               "B54KM final flag word differs from retail bit clear");
+        ASSERT(PE_LoadU8(0x800B0CD8u + 0xDAu) ==
+                   ((flags & 0x40u) ? initial[0] : 0xFFu) &&
+               PE_LoadU8(0x800B0CD8u + 0xDCu) ==
+                   ((flags & 0x40u) ? initial[2] : 0xFFu) &&
+               PE_LoadU8(0x800B0CD8u + 0xDDu) ==
+                   ((flags & 0x40u) ? initial[3] : 0xFFu),
+               "B54KM 0x40-gated field group differs");
+        ASSERT(PE_LoadU8(0x800B0CD8u + 0xDBu) ==
+                   ((flags & 0x80u) ? initial[1] : 0xFFu) &&
+               PE_LoadU8(0x800B0CD8u + 0xDEu) ==
+                   ((flags & 0x80u) ? initial[4] : 0xFFu) &&
+               PE_LoadU8(0x800B0CD8u + 0xDFu) ==
+                   ((flags & 0x80u) ? initial[5] : 0xFFu),
+               "B54KM 0x80-gated field group differs");
+        ASSERT(B54KM_CompletionStateIsExact(),
+               "B54KM common completion/F1 state differs");
+        ASSERT(PE_LoadU32(0x800B8628u + 0x04u) == 0u &&
+               PE_LoadU32(0x800B8628u + 0x08u) == 0u &&
+               PE_LoadU32(0x800B8628u + 0x0Cu) == 0u &&
+               PE_LoadU32(0x800B8628u + 0x10u) == 0u,
+               "B54KM F1 ring payload differs from command globals");
+        HostFB_GetState(&vsync, &drawsync, &presented, &mask);
+        ASSERT(drawsync == 1 && presented == 1 && mask == 1 && vsync >= 2,
+               "B54KM display synchronization sequence differs");
+        FxFree(&fx);
+    }
     PASS();
 }
 
@@ -32198,12 +32307,12 @@ int main(void)
     test_80071A24_rejects_bad_ranges();
     test_64964_ramreset_repeat_and_guards();
 
-    /* Phase 6E-B50 corrective — func_8006AD40 honest prefix (5 tests). */
+    /* Phase 6E-B54K-M — complete func_8006AD40 core contracts. */
     test_6AD40_guard_bit0();
-    test_6AD40_prefix_boundary_args();
-    test_6AD40_strict_stops_at_frontier();
-    test_6AD40_prefix_does_not_finalize();
-    test_6AD40_prefix_repeat_dirty();
+    test_6AD40_complete_effect_allowlist();
+    test_6AD40_strict_completes_without_frontier();
+    test_6AD40_completion_finalizes();
+    test_6AD40_completion_second_call_guards();
 
     /* Phase 6E-B54B counted func_8006E1C0 loop (2 tests). */
     test_B54B_6AD40_canonical_counted_loop();
@@ -32286,6 +32395,10 @@ int main(void)
     /* Phase 6E-B54K-L 3126 issue, E0 entry walk, completion (2 tests). */
     test_B54KL_6AD40_e0_counted_then_3126_completion();
     test_B54KL_6AD40_empty_e0_skips_entry_walk();
+
+    /* Phase 6E-B54K-M complete suffix contracts (2 tests). */
+    test_B54KM_6AD40_final_archive_positive_and_zero();
+    test_B54KM_6AD40_flag_matrix_and_f1_display();
 
     /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
     test_6E1C0_single_call_zero_entry();

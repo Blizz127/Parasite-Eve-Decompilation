@@ -2,7 +2,7 @@
 
 Status date: 2026-08-30. This file is the maintained cross-lane status; the
 native and matching sections below were revalidated from their authoritative
-worktrees during the B54K-L rung.
+worktrees during the B54K-M completion rung.
 
 ## A. UE5 — `Blizz127/parasite-eve-ue5`
 
@@ -49,15 +49,15 @@ The native test executable was run directly:
 
 ```text
 pc_port/build/pe-native-tests
-Results: 956 run, 956 passed, 0 failed, 0 skipped
+Results: 958 run, 958 passed, 0 failed, 0 skipped
 ```
 
 The production executable is not a complete Day 1 field runtime. Its strict
 real-disc execution frontier is:
 
 ```text
-func_8006AD40_D_80093126_archive_cut (first excluded retail instruction 0x8006B220)
-the first D_80093126 issue, completed-E0 entry walk, and wait are complete
+func_801909B4 from func_8001220C
+func_8006AD40 is complete; both explicit caller DMA checkpoints execute first
 ```
 
 The bootstrap-disc path has a separate earlier stop at
@@ -72,9 +72,9 @@ Run commands from the native tree:
 cd /home/blizz/dev/pe-continuous-decomp
 ./pc_port/build/pe-native-tests
 ./pc_port/build/parasite-eve-port --headless --disc-image "/path/to/Disc 1.bin" \
-  --max-frames 1 --trace /tmp/pe-boot.trace
+  --max-frames 2 --dma-checkpoint-report --trace /tmp/pe-boot.trace
 ./pc_port/build/parasite-eve-port --headless --strict-stubs \
-  --disc-image "/path/to/Disc 1.bin" --max-frames 2
+  --disc-image "/path/to/Disc 1.bin"
 ```
 
 Evidence: [ACTIVE_HANDOFF.md](ACTIVE_HANDOFF.md),
@@ -90,22 +90,20 @@ Evidence: [ACTIVE_HANDOFF.md](ACTIVE_HANDOFF.md),
 [B54K-J report](../evidence/pe-b54kj-6ad40-f0-wait/REPORT.md),
 [B54K-K report](../evidence/pe-b54kk-6ad40-e0-group/REPORT.md),
 [B54K-L report](../evidence/pe-b54kl-6ad40-3126-wait/REPORT.md),
+[B54K-M report](../evidence/pe-b54km-6ad40-complete/REPORT.md),
 [B54K-N report](../evidence/pe-b54kn-726c4-flushcache/REPORT.md),
 [pe-btl147 report](../evidence/pe-btl147-theater-eve-path/REPORT.md), and the
 current native binary/test result above.
 
 The next scheduler rung is the human-driven BTL151 PCSX capture of
 `func_8006E3D4` inputs. Static provenance is exhausted and no forced
-destination or `persist[0] |= 4` is permitted. Independently, the next
-artifact-free production-reachability rung continues `func_8006AD40` from
-the completed `D_80093126` archive load at `0x8006B220`. Its exact final
-79-word suffix is dependency-ready and fully audited, but remains deliberately
-unimplemented until a dedicated rung migrates 23 historical prefix-boundary
-test contracts to full-function assertions; see the
-[B54K-M readiness report](../evidence/pe-b54km-6ad40-completion-readiness/REPORT.md).
-The subsequent `func_801909B4` bytes are also now statically recovered from
-PE.IMG. Real-disc startup now adopts its retail overlay table/pointer values
-after authenticating the boot EXE; see the
+destination or `persist[0] |= 4` is permitted. Independently, B54K-M now
+completes all 391 words of `func_8006AD40`, migrates the 23 historical
+prefix contracts, and measures both caller DMA checkpoints. The next
+artifact-free production rung is the recovered 977-word `func_801909B4`
+overlay function. Real-disc startup already adopts its retail overlay
+table/pointer values after authenticating the boot EXE; see the
+[B54K-M report](../evidence/pe-b54km-6ad40-complete/REPORT.md),
 [B54K-O report](../evidence/pe-b54ko-1909b4-overlay-recovery/REPORT.md) and
 [B54K-P report](../evidence/pe-b54kp-overlay-authority/REPORT.md).
 
@@ -154,7 +152,7 @@ No complete playable Day 1→theater→Eve-battle runtime is verified on this
 host. The external dashboard describes UE5 as the best *partial* interactive
 slice, while the native runtime is currently a headless/testable bootstrap
 and component runtime. The only directly runnable authoritative experience
-here is the native executable's bounded headless behavior and its 956-test
+here is the native executable's bounded headless behavior and its 958-test
 suite; it is not a complete game route.
 
 Native commands are listed in section B. A UE5 run command cannot be stated
@@ -175,8 +173,8 @@ for natural `m0360i` entry; it must be proven before implementation.
 - UE5: obtain/verify the retail theater-side hops, then promote the HP path
   under the parity trace contract.
 - Native `pc_port`: capture the generic event/scheduler decision that naturally
-  enters `m0360i`; separately continue the artifact-free production prefix
-  from `func_8006AD40_D_80093126_archive_cut` at retail `0x8006B220`.
+  enters `m0360i`; separately decompose the statically recovered
+  `func_801909B4` now measured as the production strict frontier.
 - Matching-C: review/refresh the 16-row Tier-1 queue after the three-park hard
   stop; retain 335 exact plus 19 explicitly non-exact residuals.
 - `parasite-eve-port-black`: no work here; it is a historical branch, not the
@@ -191,11 +189,11 @@ for natural `m0360i` entry; it must be proven before implementation.
 2. This host still cannot inspect the UE5 checkout, so no locally verified
    end-to-end UE5 claim is possible.
 3. `UE_NATIVE_PARITY_POLICY.md` retains useful acceptance rules but its status
-   table is historical; this file carries the measured 956-test native state.
+   table is historical; this file carries the measured 958-test native state.
 4. Matching residuals are evidence dispositions, not exact leaves: 335 is the
    only YAML-derived matching-C count.
 
 ```text
 REPORT_STATUS=CURRENT
-LAST_REFRESH=2026-08-30_B54K-P
+LAST_REFRESH=2026-08-30_B54K-M
 ```

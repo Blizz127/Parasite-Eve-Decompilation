@@ -70,7 +70,7 @@ and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
 is the unique `persist[0] |= 4` writer; the native branch must not plant that
 bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
-bridge, not another m0005i gate workaround. Native suite: 952/952 passed.
+bridge, not another m0005i gate workaround. Current native suite: 958/958.
 
 ## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
 
@@ -85,8 +85,9 @@ package loader consumes only `D_8009D280`.
 No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
-standalone native frontier remains separately
-`PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_archive_cut`.
+standalone native frontier is separately
+`PRODUCTION_REACHABILITY=blocked_at_func_801909B4` after B54K-M completed
+`func_8006AD40`; this does not change the scheduler evidence boundary.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
 
@@ -105,9 +106,9 @@ or `lui 0xA806`→`ori/addiu 0x6048` forms. Evidence and reproducible scanner:
 This closes the “Disc 2 may contain a different executable” hypothesis and
 corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
-m0360i. Remaining status: `SEMANTIC_IMPLEMENTATION=not_started`,
-`PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_archive_cut`, native
-suite `952/952`.
+m0360i. Remaining scheduler status: `SEMANTIC_IMPLEMENTATION=not_started`
+and `SCHEDULER_PROVENANCE=NEEDS_ARTIFACT`. The independent native frontier is
+now `func_801909B4`; current suite `958/958`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -128,9 +129,9 @@ does not provide a static name association. Evidence and scanner:
 BTL150 closes the wrong-token hypothesis and the available static name-form
 lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
-special-case m0360i. Status remains `SEMANTIC_IMPLEMENTATION=not_started`,
-`PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_archive_cut`, native
-suite `952/952`.
+special-case m0360i. Scheduler status remains
+`SEMANTIC_IMPLEMENTATION=not_started` / `NEEDS_ARTIFACT`; the independent
+native frontier is now `func_801909B4`, with suite `958/958`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
 the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
@@ -372,15 +373,17 @@ addresses, exact two-sector transfer, and a zero-count negative. Normal and
 freshly rebuilt ASan/UBSan suites pass `952/952` with zero diagnostics.
 
 Evidence: `docs/evidence/pe-b54kl-6ad40-3126-wait/REPORT.md` and
-`pc_port/tools/b54kl_6ad40_3126_wait_oracle.py`. The production frontier is
-now `func_8006AD40_D_80093126_archive_cut` before retail `0x8006B220`.
+`pc_port/tools/b54kl_6ad40_3126_wait_oracle.py`. At that historical rung the
+production frontier was `func_8006AD40_D_80093126_archive_cut` before retail
+`0x8006B220`; B54K-M below has since completed the function.
 Scheduler provenance remains independently `NEEDS_ARTIFACT`; no destination
 token, `m0360i` branch, or persistence bit was added.
 
-## PE-B54K-M readiness — final `func_8006AD40` suffix (2026-08-30)
+## PE-B54K-M readiness — historical pre-implementation audit (2026-08-30)
 
-The remaining `[0x8006B220,0x8006B35C)` suffix is now fully audited but is
-**not implemented**. The independent oracle authenticates all 79 words, both
+At this audit rung, `[0x8006B220,0x8006B35C)` was fully audited but not yet
+implemented; the completion section below supersedes that disposition. The
+independent oracle authenticates all 79 words, both
 window hashes, the completed `+0x188` archive walk, all seven now-available
 callees, display-env selection, exact state resets, bit-0 clear, normal
 return, and the next-function boundary.
@@ -392,7 +395,7 @@ behavior. The dedicated implementation rung must migrate those assertions to
 full-function state checks, add positive/zero `+0x188` walks, the `0x40/0x80`
 matrix, first-call-clear/second-call-guard behavior, stream-F1 whole-RAM
 effects, and measure the caller's next strict frontier after its two DMA
-checkpoints. Production remains unchanged at B54K-L and `952/952`.
+checkpoints. Production remained at B54K-L and `952/952` at this audit rung.
 
 Evidence:
 `docs/evidence/pe-b54km-6ad40-completion-readiness/REPORT.md` and
@@ -408,10 +411,9 @@ R3000 instruction-cache authority. Direct strict execution and strict
 an unbalanced critical section. The suite is `954/954`.
 The fresh ASan/UBSan suite is also `954/954` with zero diagnostics.
 
-This does not move the current B54K-L production frontier. It does establish
-that after a future B54K-M completion, canonical main-loop flow can cross
-6E834 and is statically expected to reach `func_801909B4`; the production
-caller test must still measure that outcome after both DMA checkpoints.
+At B54K-N this did not move the B54K-L production frontier. B54K-M below has
+since completed 6AD40 and measured `func_801909B4` after both DMA checkpoints,
+confirming this static prediction.
 Evidence: `docs/evidence/pe-b54kn-726c4-flushcache/REPORT.md` and
 `pc_port/tools/b54kn_726c4_flushcache_oracle.py`.
 
@@ -444,6 +446,33 @@ Normal and fresh ASan/UBSan suites pass `956/956`; a real-disc strict smoke
 still reaches the unchanged B54K-L frontier. Evidence:
 `docs/evidence/pe-b54kp-overlay-authority/REPORT.md` and
 `pc_port/tools/b54kp_overlay_authority_oracle.py`.
+
+## PE-B54K-M — complete func_8006AD40 (2026-08-30)
+
+All 391 retail words of `func_8006AD40` are now implemented through the
+normal `jr ra; nop` return. The final 79-word suffix walks the completed
+`+0x188` archive, issues stream command F1, performs DrawSync/ResetGraph/
+VSync/PutDispEnv/SetDispMask in retail order, applies the complete
+`0x40`/`0x80` conditional-field matrix, and clears `D_800B0CD8` bit 0 last.
+
+All 23 historical B54K-L frontier failures were migrated to full-function
+contracts without deleting their earlier loop, poll, transfer, image-call,
+DMA, and ordering assertions. Two new tests cover positive/zero final
+archives and all four flag combinations. Normal and fresh ASan/UBSan suites
+pass `958/958`; sanitizer diagnostics are zero.
+
+The real-disc caller executes both explicit DMA checkpoints (`2/2` calls,
+queries, and services; token 2 serviced). The next measured unbounded strict
+frontier is `func_801909B4` from `func_8001220C`. Evidence:
+`docs/evidence/pe-b54km-6ad40-complete/REPORT.md` and
+`pc_port/tools/b54km_6ad40_completion_oracle.py`.
+
+```text
+FUNC_8006AD40=COMPLETE_NATIVE_TRANSLATION
+PRODUCTION_REACHABILITY=blocked_at_func_801909B4
+FUNC_801909B4_BYTES=STATICALLY_RECOVERED_NOT_IMPLEMENTED
+SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
+```
 
 ## func_800125E0 — descriptor spawn loop matching C (35 words)
 

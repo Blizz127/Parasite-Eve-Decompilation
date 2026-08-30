@@ -1,21 +1,18 @@
-# Parasite Eve Native PC Port — Phase 6E-B54K-L
+# Parasite Eve Native PC Port — Phase 6E-B54K-M
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B54K-L translates the 45-word first `D_80093126`
-group. It issues two sectors into `+0x188`, walks every 0x14-byte entry in the
-completed E0 archive exactly once, and consumes completion without replaying
-that walk on retry or positive polls. The exact oracle compares all 45 words,
-including the branch delay-slot carry into the next block; focused tests prove
-two-entry order/stride, zero-count bypass, and exact transfer extent. The named
-frontier is now `func_8006AD40_D_80093126_archive_cut` before retail
-`0x8006B220`; the later B54K-N platform rung also resolves the generic BIOS
-A0(44h) `FlushCache` veneer used by `func_8006E834`; B54K-P also adopts the
-retail overlay table/pointer after an authenticated real-executable load.
-Normal tests pass 956/956, as does a fresh ASan/UBSan build with zero diagnostics. Scheduler
-provenance remains independently artifact-bound: this
-rung adds no destination, `m0360i`, or persist special case. Full proof is in
-`docs/evidence/pe-b54kl-6ad40-3126-wait/REPORT.md`.
+**Current milestone:** B54K-M completes all 391 words of `func_8006AD40`.
+The final 79-word suffix walks the completed `+0x188` archive, issues stream
+command F1, performs the retail display synchronization, applies the complete
+`0x40`/`0x80` state-reset matrix, clears bit 0, and returns normally. All 23
+historical prefix contracts were migrated without dropping their prior
+assertions. Real Disc 1 executes both explicit caller DMA checkpoints, then
+reaches the next strict frontier at `func_801909B4` from `func_8001220C`.
+Normal and fresh ASan/UBSan suites pass 958/958 with zero diagnostics.
+Scheduler provenance remains independently artifact-bound: this rung adds no
+destination, `m0360i`, or persistence special case. Full proof is in
+`docs/evidence/pe-b54km-6ad40-complete/REPORT.md`.
 
 **Earlier retained milestone:** B53I-D admits one separate later checkpoint
 for the second LoadImage DMA token created by B53I-C. The exact 32-word
@@ -768,7 +765,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current grind lane: 956 tests)
+- `pe-native-tests` — test suite (current grind lane: 958 tests)
 
 ## Running
 
@@ -796,11 +793,15 @@ Produces:
 # Windowed (requires X11 display)
 DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overlay
 
-# Strict mode — centralized abort at first unresolved provider
-./parasite-eve-port --headless --strict-stubs --max-frames 2 \
+# Bounded caller-checkpoint report (B54K-M: expect 2/2/2, token 2)
+./parasite-eve-port --headless --max-frames 2 --dma-checkpoint-report \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_8006AD40_D_80093126_archive_cut
-# from func_8006AD40; the first D_80093126 issue/E0 walk/wait precedes it.
+
+# Strict mode — centralized abort at first unresolved provider
+./parasite-eve-port --headless --strict-stubs \
+  --disc-image "/path/disc1.bin"
+# Current global frontier: exit 1 at func_801909B4 from func_8001220C.
+# func_8006AD40 and both caller DMA checkpoints complete before this call.
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
@@ -1012,18 +1013,18 @@ status 1; native tests are 285/285.
 
 ## Next steps
 
-1. **Next rung:** in a later hardware opportunity, complete only the second
-   DMA token and prove channel-2 callback removal suppresses DICR/source-3
-   IRQ delivery while VRAM visibility and CHCR clearing still occur
-2. Continue the named `func_8006AD40_prefix_cut` only in a separate rung
-3. Identify the first boot asset (likely MDEC logo data)
+1. **Next artifact-free production rung:** decompose the statically recovered
+   977-word overlay function `func_801909B4`, now the measured strict frontier
+2. **Scheduler rung:** obtain the human-driven BTL151 PCSX packer capture;
+   never synthesize `m0360i` or `persist[0] |= 4`
+3. Continue boot/frontier coverage from each newly proven provider
 4. Audio, input, save/load (later phases)
 
 ## Constraints
 
 - PCSX-Redux is the retail oracle only — never used as runtime
-- Matching decomp remains separate and SHA-exact (SHA `452fb033`; 227 C
-  leaves in this repo's matching rebuild)
+- Matching decomp remains separate and SHA-exact (SHA `452fb033`; 335 exact
+  C leaves plus 19 explicitly non-exact accepted residuals)
 - No PS1 emulator in the native executable
 - The Disc 1 image is user-supplied and read-only; never commit it or
   any derivative captures

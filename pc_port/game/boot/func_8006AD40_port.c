@@ -1,18 +1,16 @@
 /*
- * Phase 6E-B54K-L — func_8006AD40 through the D_80093126 wait.
+ * Phase 6E-B54K-M — complete func_8006AD40.
  *
  * Full retail body:
  *   391 words / 1564 bytes, exe 0x8006AD40–0x8006B35C (exclusive),
  *   file offset 0x5B540.
  *
- * Implemented prefix:
- *   312 words / 1248 bytes, exe 0x8006AD40–0x8006B220 (exclusive).
+ * Implemented body:
+ *   391 words / 1564 bytes, exe 0x8006AD40–0x8006B35C (exclusive).
  *   It includes the complete func_80030894 call, the D_800930F0 wait,
- *   the D_800930E0 issue/three-lookups/completion group, and the following
- *   D_80093126 issue/E0-entry-walk/completion group. The first excluded
- *   instruction is:
- *
- *       lw    s4, 0x188(s5)             # 0x8006B220
+ *   the D_800930E0 issue/three-lookups/completion group, the following
+ *   D_80093126 issue/E0-entry-walk/completion group, the final +0x188
+ *   archive walk, F1/display synchronization, and retail state reset.
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
@@ -22,11 +20,13 @@
  * stops at the loop exit. If the initial entry count is zero, retail bypasses
  * the loop and reaches that same 0x8006AE68 boundary directly.
  *
- * Classification: 1 — translated retail prefix. All completion polls are
+ * Classification: 1 — complete translated retail function. All completion polls are
  * consumed live; poll/s2 are not assigned. Host D_8009B6B4
  * collapse is synchronous-provider timing, not planted retail state.
- * The named strict boundary is now func_8006AD40_D_80093126_archive_cut; no
- * unresolved provider remains through the D_80093126 completion wait.
+ * B54K-M walks the completed +0x188 archive, issues stream command 0xF1,
+ * performs the retail display synchronization, resets the selected state
+ * fields, clears D_800B0CD8 bit 0, and returns normally.  No bootstrap
+ * boundary remains inside this function.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -45,6 +45,8 @@ extern int func_8006E6A8(int lba, pe_addr_t dest, int sectors);
 extern int func_8006E7E8(void);
 extern pe_addr_t func_800718D0(pe_addr_t tim);
 extern void func_80030894(void);
+extern void func_80087024(void);
+extern int func_80074A44(int mode);
 
 /* Shared GetTPage/GetClut pack used by B54D records 2/3 (a1=0x20,0x30)
  * and by the B54C font sites at 0x8006AFF8 / 0x8006B02C (a1=0,0x10). */
@@ -381,8 +383,49 @@ int func_8006AD40(void)
         }
     }
 
-    (void)Bootstrap_ReturnInt(
-        "func_8006AD40_D_80093126_archive_cut", "func_8006AD40", 0);
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    /* B54K-M: 0x8006B220..0x8006B270.  The completed +0x188 archive
+     * has the same packed count/offset header and 0x14-byte entry stride
+     * as the earlier texture groups.  A zero count bypasses the walk. */
+    {
+        pe_addr_t base = PE_LoadU32(GA_D_800B0CD8 + 0x188u);
+        pe_addr_t metadata = base + PE_LoadU32(base + 4u);
+        uint32_t header = PE_LoadU32(metadata + 0x28u);
+        uint32_t count = header >> 22;
+        pe_addr_t entry = base + (header & 0x003FFFFFu);
+        uint32_t i;
+
+        for (i = 0u; i < count; i++, entry += 0x14u)
+            (void)func_8006E1C0(entry, base);
+    }
+
+    /* 0x8006B274..0x8006B2BC: stream F1 and retail display sync. */
+    func_80087024();
+    func_80074DC0(0);
+    (void)func_80074A44(1);
+    func_80073A44(0);
+    func_800755F0(D_800BCE80 + PE_LoadU32(0x800ACDDCu));
+    func_80074D28(1);
+
+    /* 0x8006B2C0..0x8006B32C: exact-width state reset.  The flag tests
+     * are live reloads in retail; bit 0 is cleared last. */
+    PE_StoreU16(GA_D_800B0CD8 + 0x06u, 0xFFFFu);
+    PE_StoreU8(GA_D_800B0CD8 + 0x0Bu, 0u);
+    PE_StoreU8(GA_D_800B0CD8 + 0x0Cu, 0xFFu);
+    PE_StoreU8(GA_D_800B0CD8 + 0x09u, 0xFFu);
+    PE_StoreU16(GA_D_800B0CD8 + 0xE8u, 0xFFFFu);
+    PE_StoreU8(GA_D_800B0CD8 + 0xEBu, 0u);
+    PE_StoreU8(GA_D_800B0CD8 + 0xEAu, 0u);
+    if ((PE_LoadU32(GA_D_800B0CD8) & 0x40u) == 0u) {
+        PE_StoreU8(GA_D_800B0CD8 + 0xDAu, 0xFFu);
+        PE_StoreU8(GA_D_800B0CD8 + 0xDDu, 0xFFu);
+        PE_StoreU8(GA_D_800B0CD8 + 0xDCu, 0xFFu);
+    }
+    if ((PE_LoadU32(GA_D_800B0CD8) & 0x80u) == 0u) {
+        PE_StoreU8(GA_D_800B0CD8 + 0xDBu, 0xFFu);
+        PE_StoreU8(GA_D_800B0CD8 + 0xDFu, 0xFFu);
+        PE_StoreU8(GA_D_800B0CD8 + 0xDEu, 0xFFu);
+    }
+    PE_StoreU32(GA_D_800B0CD8,
+                PE_LoadU32(GA_D_800B0CD8) & 0xFFFFFFFEu);
     return 0;
 }

@@ -1,6 +1,11 @@
 # PE-B54K-M — `func_8006AD40` completion readiness audit
 
-Status: **AUDITED; NOT IMPLEMENTED**.
+Status: **HISTORICAL READINESS AUDIT; IMPLEMENTED BY PE-B54K-M**.
+
+The dedicated completion rung has now landed.  Current implementation and
+verification authority is
+`docs/evidence/pe-b54km-6ad40-complete/REPORT.md`; the trial and migration
+matrix below are retained as the pre-implementation record.
 
 This evidence-only rung closes the retail and dependency audit for the final
 suffix of `func_8006AD40`. A temporary native translation compiled and reached
@@ -146,7 +151,8 @@ is intentionally deferred to a dedicated B54K-M implementation rung with the
 test-contract migration above, a new independent runtime oracle, normal and
 fresh ASan/UBSan suites, and a measured production-caller frontier.
 
-No production source or test changed in this audit. Current truth remains:
+No production source or test changed in this audit. At this historical audit
+rung, the terminal state was:
 
 ```text
 PRODUCTION_REACHABILITY=blocked_at_func_8006AD40_D_80093126_archive_cut
@@ -154,3 +160,7 @@ SEMANTIC_IMPLEMENTATION=verified_through_0x8006B220
 B54K_M_COMPLETION_SUFFIX=AUDITED_NOT_IMPLEMENTED
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 ```
+
+That state is superseded by
+`docs/evidence/pe-b54km-6ad40-complete/REPORT.md`; the completed function now
+returns normally and production next stops at `func_801909B4`.

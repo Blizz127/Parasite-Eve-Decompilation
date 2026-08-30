@@ -107,9 +107,9 @@ static inline void func_800752AC(void *o, int n) {
 }
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
-/* func_8006AD40 has a proven Phase 6E-B54F prefix through the AF54 wait,
- * D_800930EE issue, func_800718D0 atlas walk, and record-0/1 packs,
- * stopping before the second live poll at 0x8006B04C. */
+/* func_8006AD40 is complete through its normal return (Phase 6E-B54K-M).
+ * The next canonical real-disc strict boundary is the overlay function
+ * func_801909B4, reached by func_8001220C after both DMA checkpoints. */
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
@@ -131,11 +131,9 @@ static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54",
  * func_800746A0. B53H translates the busy-DMA prefix and B53I-C completes
  * the idle-DMA suffix of queue pump func_80076EE4; a later explicit IRQ
  * checkpoint now consumes the queued request and issues the second DMA.
- * B54D then consumes only the proven material packing and already-translated
- * archive/LoadImage walk. B54E consumes the live AF54 func_8006E7E8 wait.
- * B54F issues D_800930EE, walks dest+0x174 through func_800718D0, and
- * packs records 0/1, stopping at 0x8006B04C. s2/poll are never assigned.
- * The named provider remains `func_8006AD40_prefix_cut`. */
+ * B54D-M then complete every remaining archive/LoadImage walk, live poll,
+ * func_80030894, F1/display call, conditional state reset, and bit-0 clear.
+ * s2/poll are never assigned and no provider remains inside 6AD40. */
 
 /* func_80038D1C is now a REAL translation too (Phase 6E-B15):
  * game/boot/func_80038D1C_port.c — D_80091A20 byte test-and-clear

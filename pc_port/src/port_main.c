@@ -39,6 +39,7 @@ static struct {
     int rng_oracle_dump;
     int lzcr_oracle_dump;
     int callback_oracle_dump;
+    int dma_checkpoint_report;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
     .screenshot = NULL, .trace_path = NULL,
@@ -48,6 +49,7 @@ static struct {
     .max_frames = 0, .max_main_iterations = 0,
     .disc_image = NULL, .disc_load_test = 0, .rng_oracle_dump = 0,
     .lzcr_oracle_dump = 0, .callback_oracle_dump = 0,
+    .dma_checkpoint_report = 0,
 };
 
 static int ParsePositiveLimit(const char *option, const char *value) {
@@ -74,6 +76,7 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--rng-oracle-dump"))      g_opts.rng_oracle_dump = 1;
         else if (!strcmp(a, "--lzcr-oracle-dump"))     g_opts.lzcr_oracle_dump = 1;
         else if (!strcmp(a, "--callback-oracle-dump")) g_opts.callback_oracle_dump = 1;
+        else if (!strcmp(a, "--dma-checkpoint-report")) g_opts.dma_checkpoint_report = 1;
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--trace"))           g_opts.trace_path = argv[++i];
         else if (i+1<argc && !strcmp(a, "--hold-ms"))         g_opts.hold_ms = atoi(argv[++i]);
@@ -492,6 +495,19 @@ int main(int argc, char **argv) {
             vs, ds, pr, mk, g_port_main_iterations);
     fprintf(stderr, "[HOST] stop_reason=%s\n",
             PE_Port_StopReasonName(PE_Port_GetStopReason()));
+    if (g_opts.dma_checkpoint_report) {
+        PEPortDmaIrqCheckpointTrace checkpoint;
+
+        PE_Port_GetDmaIrqCheckpointTrace(&checkpoint);
+        fprintf(stderr,
+                "[DMA_CHECKPOINT] calls=%llu queries=%llu services=%llu "
+                "captured=%llu serviced=%llu\n",
+                (unsigned long long)checkpoint.checkpoint_calls,
+                (unsigned long long)checkpoint.token_queries,
+                (unsigned long long)checkpoint.service_calls,
+                (unsigned long long)checkpoint.last_captured_token,
+                (unsigned long long)checkpoint.last_serviced_token);
+    }
 
     TraceEvent("shutdown_end"); TraceClose();
     PE_Disc_Close(disc);
