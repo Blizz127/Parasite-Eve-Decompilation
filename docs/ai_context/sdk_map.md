@@ -75,6 +75,10 @@ string cross-reference or signature matching:
   - Screened separately: handwritten COP2 operation helper
     `func_800792D4` (`lwc2`/`mvmva`/`swc2`/`cfc2`), with six direct callers.
     Its exact PsyQ routine name remains unproven.
+  - Screened separately: handwritten four-point projection helper
+    `func_80079304` (`lwc2`/`rtpt`/`rtps`/`swc2`/`cfc2`/`mfc2`), with two
+    direct callers. Its instruction-level role is proven; its exact PsyQ
+    routine name remains unproven.
 - remaining libSPU names outside the hardware-signature cluster above
 - MDEC / libpress
 - pad and SIO

@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-101, the matching-C count is **338**.
+`634dd1b` (335-leaf base). After VOLUME-102, the matching-C count is **338**.
 
 ## Method and closure
 
@@ -15,19 +15,19 @@ The current active universe contains **1,091** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                  10
+TIER 1                   9
 TIER 2                 214
 TIER 3                  99
-SKIP / suppressed      768
+SKIP / suppressed      769
                        ---
 TOTAL                 1091
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,041 rows:
-10 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
-active. The 50 active spans below were added after the primary tables through
-campaign overlays. Adding all 50 to the suppressed class closes the pool:
-`1041 + 50 = 1091` and `718 + 50 = 768`.
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,040 rows:
+9 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+active. The 51 active spans below were added after the primary tables through
+campaign overlays. Adding all 51 to the suppressed class closes the pool:
+`1040 + 51 = 1091` and `718 + 51 = 769`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
@@ -35,13 +35,15 @@ after exact integration; VOLUME-98 moved `func_80070D6C` to the suppressed
 residual set after two bounded phrasings; VOLUME-99 then removed exact
 `func_8006346C` from Tier 1; VOLUME-100 screened handwritten COP2 helper
 `func_8003F798` without a C attempt; VOLUME-101 removed exact
-`func_80012700` from Tier 1. A suppressed `func_` label is not assumed to be a
-retail function.
+`func_80012700` from Tier 1; VOLUME-102 screened handwritten libGTE helper
+`func_80079304` without a C attempt. A suppressed `func_` label is not assumed
+to be a retail function.
 
 ## Reconciled post-table spans
 
 | file off | generated label | words | current scheduling disposition | evidence |
 |---:|---|---:|---|---|
+| `0x69B04` | `func_80079304` | 30 | `SKIP-SDK-LIBRARY-COP2` | `volume-campaign-20260830/func-80079304/SKIP.md` |
 | `0x2FF98` | `func_8003F798` | 26 | `SKIP-HANDWRITTEN-COP2` | `volume-campaign-20260830/func-8003f798/SKIP.md` |
 | `0x2788C` | `func_8003708C` | 7 | `PARKED-FIXED-POINT-REGISTER-COLORING` | `volume-campaign-20260825/func-8003708c/PARK.md` |
 | `0x33C74` | `func_80043474` | 19 | `PARKED-THRESHOLD-LADDER-BLOCK-LAYOUT` | `volume-campaign-20260825/func-80043474/PARK.md` |
