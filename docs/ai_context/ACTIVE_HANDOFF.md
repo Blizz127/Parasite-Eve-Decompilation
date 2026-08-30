@@ -70,7 +70,7 @@ and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
 is the unique `persist[0] |= 4` writer; the native branch must not plant that
 bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
-bridge, not another m0005i gate workaround. Current native suite: 975/975.
+bridge, not another m0005i gate workaround. Current native suite: 977/977.
 
 ## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
 
@@ -86,8 +86,8 @@ No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
 standalone native frontier is separately
-`PRODUCTION_REACHABILITY=blocked_at_func_80075358_sprite_at_80190868` after
-B54K-U entered the overlay initializer and translated its first 130 words; this
+`PRODUCTION_REACHABILITY=blocked_at_func_80075424_from_func_80190660` after
+B54K-V entered the overlay initializer and translated its first 183 words; this
 does not change the scheduler evidence boundary.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
@@ -109,8 +109,8 @@ corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining scheduler status: `SEMANTIC_IMPLEMENTATION=not_started`
 and `SCHEDULER_PROVENANCE=NEEDS_ARTIFACT`. The independent native frontier is
-now the sprite call to `func_80075358` at `0x80190868` from
-`func_80190660`; current suite `975/975`.
+now PutDrawEnv `func_80075424` from `func_80190660`; current suite
+`977/977`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -133,8 +133,8 @@ lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Scheduler status remains
 `SEMANTIC_IMPLEMENTATION=not_started` / `NEEDS_ARTIFACT`; the independent
-native frontier is now the sprite call to `func_80075358` at `0x80190868`
-from `func_80190660`, with suite `975/975`.
+native frontier is now PutDrawEnv `func_80075424` from `func_80190660`, with
+suite `977/977`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
 the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
@@ -640,6 +640,37 @@ FUNC_80076B58=COUNTED_COMMAND_WORD_PATH_TRANSLATED
 GP0_E1=DRAW_MODE_STATE_IMPLEMENTED
 FUNC_80190660_PREFIX=130_WORDS_TRANSLATED
 PRODUCTION_REACHABILITY=blocked_at_func_80075358_sprite_at_80190868
+SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
+```
+
+## PE-B54K-V — GP0(64h) textured SPRT (2026-08-30)
+
+The second DrawPrim now traverses the exact wrapper and a generic GP0(64h)
+parser/raster path. The accepted subset is opaque, modulated, variable-size
+4bpp: it sign-extends/clips destination coordinates, wraps eight-bit UV,
+fetches packed nibbles and the packet-selected CLUT from VRAM, preserves zero
+texture-color transparency and CLUT bit 15, and applies the retail 5-bit by
+8-bit modulation rule. Unsupported depth/raw forms are mutation-free fences;
+drawing-area/offset/mask state is not guessed.
+
+Retail data proves the canonical packet is a 256x64 SPRT at `{32,88}` using
+tpage `{512,256}` and CLUT `{0,480}`. The authenticated overlay prefix now
+covers 183 words, `[0x80190660,0x8019093C)`, including the explicit DrawSync,
+canonical optional-LoadImage bypass, VSync(0), and ResetGraph(1). PutDrawEnv
+`func_80075424` at `0x8019093C` is next.
+
+Two focused contracts, retained B54K-U/T/R contracts, the independent oracle,
+the full normal suite, and fresh ASan/UBSan pass `977/977`. Real-disc
+framebuffer telemetry is 7 VSync, 7 DrawSync, 3 presentations, mask 1; DMA
+remains 27/26.
+
+Evidence: `docs/evidence/pe-b54kv-textured-rectangle/REPORT.md` and
+`pc_port/tools/b54kv_textured_rectangle_oracle.py`.
+
+```text
+GP0_64=OPAQUE_MODULATED_4BPP_VARIABLE_RECTANGLE_IMPLEMENTED
+FUNC_80190660_PREFIX=183_WORDS_TRANSLATED
+PRODUCTION_REACHABILITY=blocked_at_func_80075424_from_func_80190660
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 ```
 

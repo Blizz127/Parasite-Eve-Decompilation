@@ -17,6 +17,9 @@ typedef struct {
     PeGpuState state;
     uint64_t order_counter;
     uint64_t event_serial;
+    uint32_t rectangle_command;
+    uint32_t rectangle_position;
+    uint32_t rectangle_uv_clut;
     uint16_t vram[PE_GPU_VRAM_PIXELS];
 } PeGpuAuthority;
 
@@ -60,6 +63,9 @@ static void ResetParser(void)
     g_gpu.state.image_height = 0;
     g_gpu.state.image_current_pixel = 0;
     g_gpu.state.image_remaining_pixels = 0;
+    g_gpu.rectangle_command = 0;
+    g_gpu.rectangle_position = 0;
+    g_gpu.rectangle_uv_clut = 0;
 }
 
 static void ResetHardwareState(void)
@@ -138,6 +144,102 @@ static void WriteImageWord(uint32_t value)
     }
 }
 
+static int32_t SignExtend11(uint32_t value)
+{
+    value &= 0x7FFu;
+    return (value & 0x400u) != 0u ?
+        (int32_t)(value | 0xFFFFF800u) : (int32_t)value;
+}
+
+static uint16_t ModulateTextureColor(uint16_t texture, uint32_t command)
+{
+    uint32_t red = ((uint32_t)(texture & 0x1Fu) *
+                    (command & 0xFFu)) >> 7;
+    uint32_t green = ((uint32_t)((texture >> 5) & 0x1Fu) *
+                      ((command >> 8) & 0xFFu)) >> 7;
+    uint32_t blue = ((uint32_t)((texture >> 10) & 0x1Fu) *
+                     ((command >> 16) & 0xFFu)) >> 7;
+
+    if (red > 0x1Fu) red = 0x1Fu;
+    if (green > 0x1Fu) green = 0x1Fu;
+    if (blue > 0x1Fu) blue = 0x1Fu;
+    return (uint16_t)(red | (green << 5) | (blue << 10) |
+                      (texture & 0x8000u));
+}
+
+/* Execution-proven GP0(64h) subset. Rectangles do not dither. Coordinates
+ * are clipped to the physical 1 MiB VRAM; drawing-area/offset, texture
+ * window, mask, raw-texture, and semi-transparent commands remain outside
+ * this provider until their register commands are represented. */
+static void DrawTexturedRectangle4(uint32_t size)
+{
+    uint32_t draw_mode = g_gpu.state.draw_mode;
+    uint32_t width = size & 0x3FFu;
+    uint32_t height = (size >> 16) & 0x1FFu;
+    int32_t origin_x = SignExtend11(g_gpu.rectangle_position);
+    int32_t origin_y = SignExtend11(g_gpu.rectangle_position >> 16);
+    uint32_t origin_u = g_gpu.rectangle_uv_clut & 0xFFu;
+    uint32_t origin_v = (g_gpu.rectangle_uv_clut >> 8) & 0xFFu;
+    uint32_t clut = g_gpu.rectangle_uv_clut >> 16;
+    uint32_t clut_x = (clut & 0x3Fu) * 16u;
+    uint32_t clut_y = (clut >> 6) & (PE_GPU_VRAM_HEIGHT - 1u);
+    uint32_t texture_x = (draw_mode & 0xFu) * 64u;
+    uint32_t texture_y = ((draw_mode >> 4) & 1u) * 256u;
+    int flip_x = (draw_mode & 0x1000u) != 0u;
+    int flip_y = (draw_mode & 0x2000u) != 0u;
+    uint32_t row;
+
+    for (row = 0u; row < height; row++) {
+        int32_t destination_y = origin_y + (int32_t)row;
+        uint32_t texture_v = (origin_v +
+            (flip_y ? (0u - row) : row)) & 0xFFu;
+        uint32_t column;
+
+        if (destination_y < 0 || destination_y >=
+            (int32_t)PE_GPU_VRAM_HEIGHT) {
+            continue;
+        }
+        for (column = 0u; column < width; column++) {
+            int32_t destination_x = origin_x + (int32_t)column;
+            uint32_t texture_u;
+            uint16_t packed;
+            uint32_t palette_index;
+            uint16_t texture_color;
+
+            if (destination_x < 0 || destination_x >=
+                (int32_t)PE_GPU_VRAM_WIDTH) {
+                continue;
+            }
+            texture_u = (origin_u +
+                (flip_x ? (0u - column) : column)) & 0xFFu;
+            packed = g_gpu.vram[
+                ((texture_y + texture_v) &
+                 (PE_GPU_VRAM_HEIGHT - 1u)) * PE_GPU_VRAM_WIDTH +
+                ((texture_x + texture_u / 4u) &
+                 (PE_GPU_VRAM_WIDTH - 1u))];
+            palette_index =
+                (packed >> ((texture_u & 3u) * 4u)) & 0xFu;
+            texture_color = g_gpu.vram[
+                clut_y * PE_GPU_VRAM_WIDTH +
+                ((clut_x + palette_index) &
+                 (PE_GPU_VRAM_WIDTH - 1u))];
+            if (texture_color == 0u)
+                continue;
+            g_gpu.vram[(uint32_t)destination_y * PE_GPU_VRAM_WIDTH +
+                       (uint32_t)destination_x] =
+                ModulateTextureColor(texture_color,
+                                     g_gpu.rectangle_command);
+        }
+    }
+}
+
+static int TexturedRectangle4ModeSupported(void)
+{
+    /* Bits 7-8 select 4/8/15bpp; bit 11 selects a second-MiB Y base. */
+    return (g_gpu.state.draw_mode & 0x180u) == 0u &&
+           (g_gpu.state.draw_mode & 0x800u) == 0u;
+}
+
 int PE_GPU_WriteGP0(uint32_t value)
 {
     uint64_t pixels;
@@ -160,6 +262,15 @@ int PE_GPU_WriteGP0(uint32_t value)
             if (g_gpu.state.dma2_active) return 0;
             g_gpu.state.draw_mode = value;
             g_gpu.state.draw_mode_count++;
+            return 1;
+        }
+        if ((value & 0xFF000000u) == 0x64000000u) {
+            if (g_gpu.state.dma2_active ||
+                !TexturedRectangle4ModeSupported()) {
+                return 0;
+            }
+            g_gpu.rectangle_command = value;
+            g_gpu.state.gp0_state = PE_GPU_GP0_RECT_EXPECT_POSITION;
             return 1;
         }
         return 0;
@@ -194,6 +305,29 @@ int PE_GPU_WriteGP0(uint32_t value)
     case PE_GPU_GP0_IMAGE_DATA:
         if (g_gpu.state.dma2_active) return 0;
         WriteImageWord(value);
+        return 1;
+
+    case PE_GPU_GP0_RECT_EXPECT_POSITION:
+        if (g_gpu.state.dma2_active) return 0;
+        g_gpu.rectangle_position = value;
+        g_gpu.state.gp0_state = PE_GPU_GP0_RECT_EXPECT_UV_CLUT;
+        return 1;
+
+    case PE_GPU_GP0_RECT_EXPECT_UV_CLUT:
+        if (g_gpu.state.dma2_active) return 0;
+        g_gpu.rectangle_uv_clut = value;
+        g_gpu.state.gp0_state = PE_GPU_GP0_RECT_EXPECT_SIZE;
+        return 1;
+
+    case PE_GPU_GP0_RECT_EXPECT_SIZE:
+        if (g_gpu.state.dma2_active) return 0;
+        DrawTexturedRectangle4(value);
+        g_gpu.state.rectangle_command = g_gpu.rectangle_command;
+        g_gpu.state.rectangle_position = g_gpu.rectangle_position;
+        g_gpu.state.rectangle_uv_clut = g_gpu.rectangle_uv_clut;
+        g_gpu.state.rectangle_size = value;
+        g_gpu.state.rectangle_count++;
+        ResetParser();
         return 1;
     }
 

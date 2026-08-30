@@ -1,15 +1,14 @@
 /*
- * Phase 6E-B54K-T — func_80190660 prefix through its first DrawPrim call.
+ * Phase 6E-B54K-V — func_80190660 prefix through its first textured SPRT,
+ * synchronization, VSync, and ResetGraph(1).
  *
  * Retail function: [0x80190660,0x801909B4), 0x354 / 213 words.
- * Translated prefix: [0x80190660,0x80190860), 0x200 / 128 words.
- * The boundary instruction is jal func_80075358 at 0x80190860; its delay
- * slot stores the final RGB byte of the first SPRT before the call.
+ * Translated prefix: [0x80190660,0x8019093C), 0x2DC / 183 words.
+ * The boundary instruction is jal func_80075424 (PutDrawEnv) at 0x8019093C.
  *
- * The two caller-stack packet banks remain native transients.  No native
- * pointer is retained as guest authority.  At the unresolved DrawPrim
- * boundary, only the packet length and initialized command bytes are
- * snapshotted; retail leaves tag bytes 0..2 uninitialized on its stack.
+ * The two caller-stack packet banks remain native transients. No native
+ * pointer is retained as guest authority. The unresolved PutDrawEnv boundary
+ * records only the value of its guest environment address.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -45,6 +44,14 @@ static void PE_TransientStoreU32(uint8_t *destination, uint32_t value)
     destination[1] = (uint8_t)(value >> 8);
     destination[2] = (uint8_t)(value >> 16);
     destination[3] = (uint8_t)(value >> 24);
+}
+
+static uint32_t PE_TransientLoadU32(const uint8_t *source)
+{
+    return (uint32_t)source[0] |
+           ((uint32_t)source[1] << 8) |
+           ((uint32_t)source[2] << 16) |
+           ((uint32_t)source[3] << 24);
 }
 
 static void PE_OverlayBuildSprtPair(uint8_t *pair)
@@ -90,6 +97,7 @@ int func_80190660(void)
     uint32_t next_toggle;
     uint32_t intensity;
     uint32_t draw_mode_command;
+    uint32_t sprite_words[4];
     uint32_t frame = 0u;
     RECT rect;
     unsigned parity;
@@ -150,13 +158,51 @@ int func_80190660(void)
         PE_Port_ShouldStop())
         return -1;
 
-    /* The next call is the four-word SPRT. Bytes 0..2 of the retail stack
-     * tag are intentionally excluded; all 16 initialized command bytes and
-     * the lbu p[3] length cross the diagnostic boundary by value. */
+    /* B54K-V: the four initialized SPRT words traverse the same synchronous
+     * DrawPrim wrapper. No native stack pointer is retained. */
+    for (unsigned i = 0u; i < 4u; i++)
+        sprite_words[i] = PE_TransientLoadU32(
+            sprites + parity * 0x28u + 4u + i * 4u);
+    if (PE_func_80075358_Transient(sprite_words, 4u) != 0 ||
+        PE_Port_ShouldStop())
+        return -1;
+
+    /* Retail advances to the paired sprite, writes the same frame intensity
+     * into RGB, then performs the explicit DrawSync. */
+    sprites[parity * 0x28u + 0x18u] = (uint8_t)intensity;
+    sprites[parity * 0x28u + 0x19u] = (uint8_t)intensity;
+    sprites[parity * 0x28u + 0x1Au] = (uint8_t)intensity;
+    if (func_80074DC0(0) != 0 || PE_Port_ShouldStop())
+        return -1;
+
+    /* The canonical environments have width zero and bypass this upload.
+     * Preserve the complete retail-positive path rather than specializing
+     * that state. */
+    if ((int16_t)PE_LoadU16(environment + 0x74u) > 0) {
+        RECT optional;
+
+        optional.x = (int16_t)(((int32_t)(int16_t)
+            PE_LoadU16(environment + 0x70u) * 3) >> 1);
+        optional.y = (int16_t)PE_LoadU16(environment + 0x72u);
+        optional.w = (int16_t)(((int32_t)(int16_t)
+            PE_LoadU16(environment + 0x74u) * 3) >> 1);
+        optional.h = (int16_t)PE_LoadU16(environment + 0x76u);
+        if (PE_LoadU32(GA_ENVIRONMENT_TOGGLE) == 0u)
+            optional.y = (int16_t)(optional.y + 240);
+        (void)func_8007506C(&optional, environment + 0x8080u);
+        if (PE_Port_ShouldStop())
+            return -1;
+    }
+
+    func_80073A44(0);
+    (void)func_80074A44(1);
+
+    /* 0x8019093C: PutDrawEnv(current), with frame++ in the retail delay
+     * slot. Frame is local and the unresolved call does not return. */
+    frame++;
     (void)Bootstrap_ReturnInt4Indirect(
-        "func_80075358", "func_80190660", -1, 0x80075358u,
-        0u, sprites[parity * 0x28u + 3u], 0u, 0u,
-        sprites + parity * 0x28u + 4u, 16u);
+        "func_80075424", "func_80190660", -1, 0x80075424u,
+        environment, 0u, 0u, 0u, NULL, 0u);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return -1;
 }

@@ -1,5 +1,9 @@
 # PE-B54K-U — DrawPrim wrapper and GP0(E1h) first packet
 
+> **SUPERSEDED EXECUTION FRONTIER:** B54K-V executes the four-word SPRT and
+> advances to PutDrawEnv `func_80075424` at `0x8019093C`. This report remains
+> authoritative for the wrapper, worker, and first E1 packet.
+
 Status: **VERIFIED AND INTEGRATED ON THE NATIVE GRIND LANE**.
 
 This rung translates PsyQ `func_80075358` and the execution-proven command

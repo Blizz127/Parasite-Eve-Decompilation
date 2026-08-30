@@ -1,13 +1,13 @@
 /*
- * Phase 6E-B54K-R/T — func_801909B4 through MoveImage, display setup, and
- * the B54K-T prefix of its one-time overlay-local initializer.
+ * Phase 6E-B54K-R/V — func_801909B4 through MoveImage, display setup, and
+ * the B54K-V prefix of its one-time overlay-local initializer.
  *
  * Retail overlay body: [0x801909B4,0x801918F8), 977 words.
  * Implemented prefix: [0x801909B4,0x80190D74), 240 words.  MoveImage now
  * traverses the retail dispatcher and exact one-packet GP0(80h) worker.
- * func_80190660 is now entered directly and advances to DrawPrim at
- * 0x80190860. The D_8009D1BC-nonzero alternate remains a named structural
- * cut at the 0x80190D7C saved-bit branch.
+ * func_80190660 is now entered directly and advances through both DrawPrim
+ * packets to PutDrawEnv at 0x8019093C. The D_8009D1BC-nonzero alternate
+ * remains a named structural cut at the 0x80190D7C saved-bit branch.
  */
 #include "psx_compat.h"
 #include "game_port.h"

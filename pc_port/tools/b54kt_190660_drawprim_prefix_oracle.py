@@ -160,11 +160,11 @@ def main() -> None:
 
     source = (root / "pc_port" / "game" / "boot" /
               "func_80190660_port.c").read_text(encoding="utf-8")
-    require("PE_func_80075358_Transient" in source and
-            "sprites + parity * 0x28u + 4u, 16u" in source and
-            "sprites[parity * 0x28u + 3u]" in source,
+    require("PE_func_80075358_Transient(&draw_mode_command, 1u)" in source and
+            "PE_func_80075358_Transient(sprite_words, 4u)" in source and
+            "sprites + parity * 0x28u + 4u + i * 4u" in source,
             "current continuation lost the transient DrawPrim contract")
-    require("func_80075358" in source and "0x80075358u" in source and
+    require("func_80075358" in source and
             "persist[0]" not in source and "m0360i" not in source and
             "0xA8066048" not in source,
             "source scope or forbidden planted state")
@@ -181,16 +181,16 @@ def main() -> None:
 
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_80075358" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: func_80075424" in strict and
             "called from: func_80190660" in strict,
-            "strict DrawPrim frontier")
+            "strict later PutDrawEnv frontier")
     normal = run(common + ["--dma-checkpoint-report"], 0)
-    require("[STUB:BOOTSTRAP_RET] func_80075358" in normal and
-            "[FB] vsyncs=6 drawsyncs=5 presents=3 mask=1" in normal and
+    require("[STUB:BOOTSTRAP_RET] func_80075424" in normal and
+            "[FB] vsyncs=7 drawsyncs=7 presents=3 mask=1" in normal and
             "[DMA_CHECKPOINT] calls=27 queries=26 services=26 "
             "captured=26 serviced=26" in normal,
             "normal real-disc prefix effects")
-    print("  OK runtime: 2 focused contracts and real-disc DrawPrim frontier")
+    print("  OK runtime: 2 focused contracts and later PutDrawEnv frontier")
     print("\nB54K-T func_80190660 prefix oracle: PASS.")
 
 

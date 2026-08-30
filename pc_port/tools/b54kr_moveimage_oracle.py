@@ -174,16 +174,17 @@ def main() -> None:
             "focused B54K-R native contract count")
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_80075358" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: func_80075424" in strict and
             "called from: func_80190660" in strict and
             "func_8007512C" not in strict,
             "strict real-disc path no longer traverses MoveImage")
     normal = run(common, 0)
-    require("[STUB:BOOTSTRAP_RET] func_80075358" in normal and
+    require("[STUB:BOOTSTRAP_RET] func_80075424" in normal and
+            "[FB] vsyncs=7 drawsyncs=7 presents=3 mask=1" in normal and
             "[HOST] stop_reason=unresolved-boundary" in normal and
             "func_8007512C" not in normal,
             "normal real-disc path no longer traverses MoveImage")
-    print("  OK runtime: 8 focused contracts; later DrawPrim frontier observed")
+    print("  OK runtime: 8 focused contracts; later PutDrawEnv frontier observed")
     print("\nB54K-R MoveImage oracle: PASS.")
 
 

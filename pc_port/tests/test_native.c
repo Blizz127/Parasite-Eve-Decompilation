@@ -511,22 +511,17 @@ static void B54KQ_SeedOverlayPrefix(uint8_t bias)
 static int B54KR_OverlayBoundaryIsExact(const char *symbol)
 {
     BootstrapArgCall4 *call;
-    uint32_t command[4] = { 0u, 0u, 0u, 0u };
 
-    if (strcmp(symbol, "func_80075358") == 0) {
+    if (strcmp(symbol, "func_80075424") == 0) {
         if (g_bootstrap_arg4_call_count != 3)
             return 0;
         call = &g_bootstrap_arg4_calls[2];
-        memcpy(command, call->payload, sizeof(command));
         return strcmp(call->symbol, symbol) == 0 &&
                strcmp(call->caller, "func_80190660") == 0 &&
-               call->target == 0x80075358u && call->arg0 == 0u &&
-               call->arg1 == 4u && call->arg2 == 0u && call->arg3 == 0u &&
-               call->payload_size == 16u &&
-               command[0] == 0x64000000u &&
-               command[1] == 0x00580020u &&
-               command[2] == 0x78000000u &&
-               command[3] == 0x00400100u;
+               call->target == 0x80075424u &&
+               call->arg0 == PE_LoadU32(0x801D11C4u) &&
+               call->arg1 == 0u && call->arg2 == 0u && call->arg3 == 0u &&
+               call->payload_size == 0u;
     }
 
     if (g_bootstrap_arg4_call_count != 1)
@@ -858,9 +853,15 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
            gpu.move_source == 0x00000140u &&
            gpu.move_destination == 0x000002C0u &&
            gpu.move_size == 0x010000A0u &&
+           gpu.draw_mode == 0xE1000018u &&
+           gpu.rectangle_count == 1u &&
+           gpu.rectangle_command == 0x64000000u &&
+           gpu.rectangle_position == 0x00580020u &&
+           gpu.rectangle_uv_clut == 0x78000000u &&
+           gpu.rectangle_size == 0x00400100u &&
            B54KR_PixelIs(704u, 0u, source0) &&
            B54KR_PixelIs(863u, 255u, source1),
-           "canonical VRAM move or telemetry differs");
+           "canonical VRAM move, SPRT, or telemetry differs");
     ASSERT(PE_LoadU16(0x80120D00u) == 0u &&
            PE_LoadU16(0x80120D02u) == 0u &&
            PE_LoadU16(0x80120D04u) == 320u &&
@@ -883,8 +884,8 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
     ASSERT(PE_LoadU32(0x8009D1BCu) == 1u &&
            PE_LoadU32(0x801D11C8u) == 1u &&
            PE_LoadU32(0x801D11C4u) == 0x8013CD80u &&
-           B54KR_OverlayBoundaryIsExact("func_80075358"),
-           "overlay initializer state or DrawPrim boundary differs");
+           B54KR_OverlayBoundaryIsExact("func_80075424"),
+           "overlay initializer state or PutDrawEnv boundary differs");
     ASSERT(B54KR_PixelIs(0u, 480u, 0x5000u) &&
            B54KR_PixelIs(15u, 480u, 0x500Fu) &&
            B54KR_PixelIs(512u, 256u, 0x6000u) &&
@@ -894,7 +895,7 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "prefix did not stop at overlay-local initializer");
     HostFB_GetState(&vsync, &drawsync, &presented, &mask);
-    ASSERT(mask == 1 && vsync == 4 && drawsync == 4 && presented == 0,
+    ASSERT(mask == 1 && vsync == 5 && drawsync == 6 && presented == 0,
            "display synchronization call counts differ");
 
     for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
@@ -922,7 +923,7 @@ static void test_B54KR_801909B4_dirty_repeat_and_alternate_cut(void)
     ASSERT(B54KR_UploadPixels(320u, 0u, 1u, 1u, &first),
            "first repeat source seed failed");
     ASSERT(func_801909B4() == -1, "first prefix return differs");
-    ASSERT(B54KR_OverlayBoundaryIsExact("func_80075358") &&
+    ASSERT(B54KR_OverlayBoundaryIsExact("func_80075424") &&
            PE_LoadU32(0x8009D1BCu) == 1u,
            "first repeat did not take one-time initializer path");
 
@@ -1109,7 +1110,7 @@ static void test_B54KT_80190660_two_images_packets_and_boundary(void)
                0, 0x801CED30u, 0x01E00000u, 0x00010010u) &&
            B54KT_LoadImageCallIsExact(
                1, 0x801CED5Cu, 0x01000200u, 0x00400040u) &&
-           B54KR_OverlayBoundaryIsExact("func_80075358"),
+           B54KR_OverlayBoundaryIsExact("func_80075424"),
            "image dispatches or initialized DrawPrim command differ");
     ASSERT(B54KR_PixelIs(0u, 480u, 0x5000u) &&
            B54KR_PixelIs(15u, 480u, 0x500Fu) &&
@@ -1128,7 +1129,7 @@ static void test_B54KT_80190660_two_images_packets_and_boundary(void)
            PE_LoadU32(0x801D11C4u) == 0x80110100u,
            "environment disable/toggle/current state differs");
     HostFB_GetState(&vsync, &drawsync, &presented, &mask);
-    ASSERT(vsync == 0 && drawsync == 2 && presented == 0 && mask == 1,
+    ASSERT(vsync == 1 && drawsync == 4 && presented == 0 && mask == 1,
            "func_80190660 host synchronization telemetry differs");
     PASS();
 }
@@ -1147,7 +1148,7 @@ static void test_B54KT_80190660_nonzero_toggle_selects_environment0(void)
     ASSERT(func_80190660() == -1 &&
            PE_LoadU32(0x801D11C8u) == 0u &&
            PE_LoadU32(0x801D11C4u) == 0x80110200u &&
-           B54KR_OverlayBoundaryIsExact("func_80075358"),
+           B54KR_OverlayBoundaryIsExact("func_80075424"),
            "nonzero toggle did not use retail sltiu boolean/select env0");
     PASS();
 }
@@ -1212,6 +1213,108 @@ static void test_B54KU_drawprim_wrapper_e1_and_indirect_fence(void)
            g_bootstrap_arg4_calls[0].arg1 == 1u &&
            g_bootstrap_arg4_calls[0].payload_size == 4u,
            "dirty slot-5 identity was not an inert typed boundary");
+    PASS();
+}
+
+static int B54KV_WriteRectangle(uint32_t command, uint32_t position,
+                                uint32_t uv_clut, uint32_t size)
+{
+    return PE_GPU_WriteGP0(command) && PE_GPU_WriteGP0(position) &&
+           PE_GPU_WriteGP0(uv_clut) && PE_GPU_WriteGP0(size);
+}
+
+static void test_B54KV_gpu_textured_rectangle_4bpp_modulation(void)
+{
+    uint16_t palette[16] = { 0u };
+    uint16_t texture = 0x3210u;
+    uint16_t destination[4] = { 0x4210u, 0x4211u, 0x4212u, 0x4213u };
+    PeGpuState state;
+    TEST("B54KV_gpu_textured_rectangle_4bpp_modulation");
+    ResetTestState();
+
+    palette[1] = 0x001Fu;
+    palette[2] = 0x83E0u;
+    palette[3] = 0x7C00u;
+    ASSERT(B54KR_UploadPixels(0u, 0u, 1u, 1u, &texture) &&
+           B54KR_UploadPixels(16u, 10u, 16u, 1u, palette) &&
+           B54KR_UploadPixels(100u, 20u, 4u, 1u, destination),
+           "cannot seed 4bpp texture, CLUT, and destination");
+    ASSERT(PE_GPU_WriteGP0(0xE1000000u) &&
+           B54KV_WriteRectangle(0x64808080u, 0x00140064u,
+                                0x02810000u, 0x00010004u),
+           "neutral-modulation rectangle was rejected");
+    ASSERT(B54KR_PixelIs(100u, 20u, 0x4210u) &&
+           B54KR_PixelIs(101u, 20u, 0x001Fu) &&
+           B54KR_PixelIs(102u, 20u, 0x83E0u) &&
+           B54KR_PixelIs(103u, 20u, 0x7C00u),
+           "transparent texel, neutral modulation, or CLUT bit 15 differs");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp0_state == PE_GPU_GP0_IDLE &&
+           state.rectangle_count == 1u &&
+           state.rectangle_command == 0x64808080u &&
+           state.rectangle_position == 0x00140064u &&
+           state.rectangle_uv_clut == 0x02810000u &&
+           state.rectangle_size == 0x00010004u,
+           "completed rectangle telemetry differs");
+    PASS();
+}
+
+static void test_B54KV_gpu_textured_rectangle_wrap_clip_and_fence(void)
+{
+    uint16_t palette[16] = { 0u };
+    uint16_t texture_tail = 0x1111u;
+    uint16_t texture_head = 0x2222u;
+    uint16_t destination[8] = {
+        0x5550u, 0x5551u, 0x5552u, 0x5553u,
+        0x5554u, 0x5555u, 0x5556u, 0x5557u
+    };
+    PeGpuState before, after;
+    TEST("B54KV_gpu_textured_rectangle_wrap_clip_and_fence");
+    ResetTestState();
+
+    palette[1] = 0x7FFFu;
+    palette[2] = 0x1110u;
+    ASSERT(B54KR_UploadPixels(127u, 0u, 1u, 1u, &texture_tail) &&
+           B54KR_UploadPixels(64u, 0u, 1u, 1u, &texture_head) &&
+           B54KR_UploadPixels(16u, 10u, 16u, 1u, palette) &&
+           B54KR_UploadPixels(100u, 30u, 8u, 1u, destination),
+           "cannot seed wrapped texture fixture");
+    ASSERT(PE_GPU_WriteGP0(0xE1000001u) &&
+           B54KV_WriteRectangle(0x64404040u, 0x001E0064u,
+                                0x028100FCu, 0x00010008u),
+           "wrapped-u rectangle was rejected");
+    ASSERT(B54KR_PixelIs(100u, 30u, 0x3DEFu) &&
+           B54KR_PixelIs(103u, 30u, 0x3DEFu) &&
+           B54KR_PixelIs(104u, 30u, 0x0888u) &&
+           B54KR_PixelIs(107u, 30u, 0x0888u),
+           "8-bit UV wrap or 64/128 modulation differs");
+
+    /* Signed -2 X clips two destination pixels but UV still advances. */
+    ASSERT(B54KV_WriteRectangle(0x64404040u, 0x002807FEu,
+                                0x02810000u, 0x00010004u) &&
+           B54KR_PixelIs(0u, 40u, 0x0888u) &&
+           B54KR_PixelIs(1u, 40u, 0x0888u),
+           "signed coordinate clipping or texture progression differs");
+
+    ASSERT(PE_GPU_WriteGP0(0xE1000081u),
+           "cannot select unsupported 8bpp mode for negative control");
+    PE_GPU_GetState(&before);
+    ASSERT(!PE_GPU_WriteGP0(0x64404040u),
+           "unsupported 8bpp rectangle entered the parser");
+    PE_GPU_GetState(&after);
+    ASSERT(after.gp0_state == PE_GPU_GP0_IDLE &&
+           after.rectangle_count == before.rectangle_count &&
+           after.rectangle_command == before.rectangle_command &&
+           after.rectangle_position == before.rectangle_position &&
+           after.rectangle_uv_clut == before.rectangle_uv_clut &&
+           after.rectangle_size == before.rectangle_size,
+           "unsupported depth mutated parser or rectangle telemetry");
+    ASSERT(!PE_GPU_WriteGP0(0x65404040u),
+           "raw-texture opcode was accepted by the opaque modulated subset");
+    PE_GPU_GetState(&after);
+    ASSERT(after.gp0_state == PE_GPU_GP0_IDLE &&
+           after.rectangle_count == before.rectangle_count,
+           "raw-texture opcode was accepted by the opaque modulated subset");
     PASS();
 }
 
@@ -32235,6 +32338,8 @@ int main(void)
     test_B54KT_80190660_nonzero_toggle_selects_environment0();
     test_B54KU_gpu_draw_mode_command_state();
     test_B54KU_drawprim_wrapper_e1_and_indirect_fence();
+    test_B54KV_gpu_textured_rectangle_4bpp_modulation();
+    test_B54KV_gpu_textured_rectangle_wrap_clip_and_fence();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();

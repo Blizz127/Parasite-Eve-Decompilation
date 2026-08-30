@@ -148,14 +148,14 @@ def main() -> None:
 
     common = [str(port), "--headless", "--disc-image", str(disc)]
     strict = run(common + ["--strict-stubs"], 1)
-    require("first unresolved BOOTSTRAP_RET provider: func_80075358" in strict and
+    require("first unresolved BOOTSTRAP_RET provider: func_80075424" in strict and
             "called from: func_80190660" in strict,
-            "strict second-DrawPrim frontier")
+            "strict later PutDrawEnv frontier")
     normal = run(common, 0)
-    require("[FB] vsyncs=6 drawsyncs=5 presents=3 mask=1" in normal and
+    require("[FB] vsyncs=7 drawsyncs=7 presents=3 mask=1" in normal and
             "[HOST] stop_reason=unresolved-boundary" in normal,
             "normal first-DrawPrim effects")
-    print("  OK runtime: 2 focused contracts; second DrawPrim is next")
+    print("  OK runtime: 2 focused contracts; later PutDrawEnv is next")
     print("\nB54K-U DrawPrim/E1 oracle: PASS.")
 
 

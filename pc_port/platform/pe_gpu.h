@@ -37,7 +37,10 @@ typedef enum {
     PE_GPU_GP0_IDLE = 0,
     PE_GPU_GP0_EXPECT_POSITION,
     PE_GPU_GP0_EXPECT_SIZE,
-    PE_GPU_GP0_IMAGE_DATA
+    PE_GPU_GP0_IMAGE_DATA,
+    PE_GPU_GP0_RECT_EXPECT_POSITION,
+    PE_GPU_GP0_RECT_EXPECT_UV_CLUT,
+    PE_GPU_GP0_RECT_EXPECT_SIZE
 } PeGpuGp0State;
 
 /* Read-only snapshot.  Every address is a 32-bit guest address; no native
@@ -57,6 +60,14 @@ typedef struct {
      * later primitive decoding consumes texture-page/depth fields. */
     uint32_t draw_mode;
     uint64_t draw_mode_count;
+
+    /* Last completed GP0(64h) variable textured rectangle. In-progress
+     * packet words remain private to the parser. */
+    uint32_t rectangle_command;
+    uint32_t rectangle_position;
+    uint32_t rectangle_uv_clut;
+    uint32_t rectangle_size;
+    uint64_t rectangle_count;
 
     pe_addr_t dma2_madr;
     uint32_t dma2_bcr;
@@ -92,10 +103,11 @@ void PE_GPU_Reset(void);
 uint32_t PE_GPU_ReadStatus(void);
 void PE_GPU_SetReady(int ready);
 
-/* Supported GP0 subset: 0x01000000 cache clear, GP0(E1h) draw mode, and the
- * A0 image command/position/size/data stream. Supported GP1 subset: exact commands
- * 00, 01, 02, 04000000, and 04000002.  Return 1 on acceptance, 0 when the
- * command is unsupported or invalid for the current state. */
+/* Supported GP0 subset: 0x01000000 cache clear, GP0(E1h) draw mode,
+ * GP0(64h) opaque/modulated variable-size 4bpp textured rectangles, and the
+ * A0 image command/position/size/data stream. Supported GP1 subset: exact
+ * commands 00, 01, 02, 04000000, and 04000002. Return 1 on acceptance, 0
+ * when the command is unsupported or invalid for the current state. */
 int PE_GPU_WriteGP0(uint32_t value);
 int PE_GPU_WriteGP1(uint32_t value);
 
