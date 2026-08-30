@@ -1,17 +1,17 @@
 /*
- * Phase 6E-B54K-J — func_8006AD40 through the D_800930F0 wait.
+ * Phase 6E-B54K-K — func_8006AD40 through the D_800930E0 group.
  *
  * Full retail body:
  *   391 words / 1564 bytes, exe 0x8006AD40–0x8006B35C (exclusive),
  *   file offset 0x5B540.
  *
  * Implemented prefix:
- *   229 words / 916 bytes, exe 0x8006AD40–0x8006B0D4 (exclusive).
- *   It includes both live wait/reissue groups, the D_800930F0 issue,
- *   func_800718D0, the complete 788-word func_80030894 call, and the
- *   D_800930F0 completion/reissue loop. The first excluded instruction is:
+ *   267 words / 1068 bytes, exe 0x8006AD40–0x8006B16C (exclusive).
+ *   It includes the complete func_80030894 call, the D_800930F0 wait,
+ *   and the D_800930E0 issue/three-lookups/completion group. The first
+ *   excluded instruction is:
  *
- *       lui   s1, %hi(D_800930E0)       # 0x8006B0D4
+ *       lui   s1, %hi(D_80093126)       # 0x8006B16C
  *
  * func_8006E1C0 is TRANSLATED (Phase 6E-B51), and B52 translates its two
  * func_8007506C (Psy-Q LoadImage) wrappers through the read-only validator.
@@ -21,11 +21,11 @@
  * stops at the loop exit. If the initial entry count is zero, retail bypasses
  * the loop and reaches that same 0x8006AE68 boundary directly.
  *
- * Classification: 1 — translated retail prefix. All three completion
- * polls are consumed live; poll/s2 are not assigned. Host D_8009B6B4
+ * Classification: 1 — translated retail prefix. All completion polls are
+ * consumed live; poll/s2 are not assigned. Host D_8009B6B4
  * collapse is synchronous-provider timing, not planted retail state.
- * The named strict boundary is now func_8006AD40_D_800930E0_cut; no
- * unresolved provider remains through the D_800930F0 completion wait.
+ * The named strict boundary is now func_8006AD40_D_80093126_cut; no
+ * unresolved provider remains through the D_800930E0 completion wait.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -34,6 +34,7 @@
 #define GA_D_800930EC  0x800930ECu
 #define GA_D_800930EE  0x800930EEu
 #define GA_D_800930F0  0x800930F0u
+#define GA_D_800930E0  0x800930E0u
 #define GA_D_80091648  0x80091648u
 #define GA_D_800B0CD8  0x800B0CD8u
 #define GA_D_800B0DD8  0x800B0DD8u
@@ -281,8 +282,56 @@ int func_8006AD40(void)
         /* 0x8006B098: s0==1 returns to the B0B4 status gate. */
     }
 
+    /* B54K-K: 0x8006B0D4..0x8006B168. Start the E0 range into +0x16C,
+     * resolve three keys from the completed F0 archive at +0x14C exactly
+     * once, then consume the E0 completion. A timeout reissues only E0;
+     * positive polls retain the lookup-done state and poll again. */
+    {
+        int lookups_done = 0; /* retail s0 cleared at 0x8006B0D0 */
+
+        do {
+            uint32_t start = PE_LoadU16(GA_D_800930E0);
+            uint32_t end = PE_LoadU16(GA_D_800930E0 + 2u);
+
+            status = func_8006E6A8(
+                (int)(lba_base + start),
+                PE_LoadU32(GA_D_800B0CD8 + 0x16Cu),
+                (int)(end - start));
+        } while (status == -1);
+        status = 1; /* 0x8006B100 */
+
+        for (;;) {
+            if (!lookups_done) {
+                pe_addr_t base = PE_LoadU32(GA_D_800B0CD8 + 0x14Cu);
+
+                lookups_done = 1; /* first jal delay slot, 0x8006B11C */
+                PE_StoreU32(GA_D_800B0CD8 + 0x11Cu,
+                            func_8006E498(base, 0xC4B5BA04u));
+                PE_StoreU32(GA_D_800B0CD8 + 0x120u,
+                            func_8006E498(base, 0xCAAD0704u));
+                PE_StoreU32(GA_D_800B0CD8 + 0x124u,
+                            func_8006E498(base, 0x5EAF6804u));
+            }
+            if (status == -1) {
+                do {
+                    uint32_t start = PE_LoadU16(GA_D_800930E0);
+                    uint32_t end = PE_LoadU16(GA_D_800930E0 + 2u);
+
+                    status = func_8006E6A8(
+                        (int)(lba_base + start),
+                        PE_LoadU32(GA_D_800B0CD8 + 0x16Cu),
+                        (int)(end - start));
+                } while (status == -1);
+                status = 1; /* 0x8006B100 */
+            }
+            status = func_8006E7E8(); /* 0x8006B154 — live result */
+            if (status == 0)
+                break;
+        }
+    }
+
     (void)Bootstrap_ReturnInt(
-        "func_8006AD40_D_800930E0_cut", "func_8006AD40", 0);
+        "func_8006AD40_D_80093126_cut", "func_8006AD40", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }

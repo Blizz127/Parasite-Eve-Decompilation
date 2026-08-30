@@ -2,7 +2,7 @@
 
 Status date: 2026-08-30. This file is the maintained cross-lane status; the
 native and matching sections below were revalidated from their authoritative
-worktrees during the B54K-J rung.
+worktrees during the B54K-K rung.
 
 ## A. UE5 — `Blizz127/parasite-eve-ue5`
 
@@ -49,15 +49,15 @@ The native test executable was run directly:
 
 ```text
 pc_port/build/pe-native-tests
-Results: 948 run, 948 passed, 0 failed, 0 skipped
+Results: 950 run, 950 passed, 0 failed, 0 skipped
 ```
 
 The production executable is not a complete Day 1 field runtime. Its strict
 real-disc execution frontier is:
 
 ```text
-func_8006AD40_D_800930E0_cut (first excluded retail instruction 0x8006B0D4)
-func_80030894 and the following D_800930F0 completion wait are complete
+func_8006AD40_D_80093126_cut (first excluded retail instruction 0x8006B16C)
+func_80030894, the F0 wait, and the E0 issue/lookups/completion are complete
 ```
 
 The bootstrap-disc path has a separate earlier stop at
@@ -88,6 +88,7 @@ Evidence: [ACTIVE_HANDOFF.md](ACTIVE_HANDOFF.md),
 [B54K-H report](../evidence/pe-b54kh-30894-l11/REPORT.md),
 [B54K-I report](../evidence/pe-b54ki-30894-complete/REPORT.md),
 [B54K-J report](../evidence/pe-b54kj-6ad40-f0-wait/REPORT.md),
+[B54K-K report](../evidence/pe-b54kk-6ad40-e0-group/REPORT.md),
 [pe-btl147 report](../evidence/pe-btl147-theater-eve-path/REPORT.md), and the
 current native binary/test result above.
 
@@ -95,7 +96,7 @@ The next scheduler rung is the human-driven BTL151 PCSX capture of
 `func_8006E3D4` inputs. Static provenance is exhausted and no forced
 destination or `persist[0] |= 4` is permitted. Independently, the next
 artifact-free production-reachability rung continues `func_8006AD40` from
-the `D_800930E0` setup at `0x8006B0D4` after the completed F0 wait.
+the `D_80093126` setup at `0x8006B16C` after the completed E0 group.
 
 ## C. Matching-C decomp
 
@@ -142,7 +143,7 @@ No complete playable Day 1→theater→Eve-battle runtime is verified on this
 host. The external dashboard describes UE5 as the best *partial* interactive
 slice, while the native runtime is currently a headless/testable bootstrap
 and component runtime. The only directly runnable authoritative experience
-here is the native executable's bounded headless behavior and its 948-test
+here is the native executable's bounded headless behavior and its 950-test
 suite; it is not a complete game route.
 
 Native commands are listed in section B. A UE5 run command cannot be stated
@@ -164,7 +165,7 @@ for natural `m0360i` entry; it must be proven before implementation.
   under the parity trace contract.
 - Native `pc_port`: capture the generic event/scheduler decision that naturally
   enters `m0360i`; separately continue the artifact-free production prefix
-  from `func_8006AD40_D_800930E0_cut` at retail `0x8006B0D4`.
+  from `func_8006AD40_D_80093126_cut` at retail `0x8006B16C`.
 - Matching-C: review/refresh the 16-row Tier-1 queue after the three-park hard
   stop; retain 335 exact plus 19 explicitly non-exact residuals.
 - `parasite-eve-port-black`: no work here; it is a historical branch, not the
@@ -179,11 +180,11 @@ for natural `m0360i` entry; it must be proven before implementation.
 2. This host still cannot inspect the UE5 checkout, so no locally verified
    end-to-end UE5 claim is possible.
 3. `UE_NATIVE_PARITY_POLICY.md` retains useful acceptance rules but its status
-   table is historical; this file carries the measured 948-test native state.
+   table is historical; this file carries the measured 950-test native state.
 4. Matching residuals are evidence dispositions, not exact leaves: 335 is the
    only YAML-derived matching-C count.
 
 ```text
 REPORT_STATUS=CURRENT
-LAST_REFRESH=2026-08-30_B54K-J
+LAST_REFRESH=2026-08-30_B54K-K
 ```

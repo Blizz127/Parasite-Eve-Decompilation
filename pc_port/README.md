@@ -1,19 +1,18 @@
-# Parasite Eve Native PC Port — Phase 6E-B54K-J
+# Parasite Eve Native PC Port — Phase 6E-B54K-K
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B54K-J translates the eight-word
-`D_800930F0` completion/reissue gate after the now-complete
-`func_80030894`. The live poll clears the read's busy bits; timeout reissues
-only the F0 range, while retained `s0 == 1` prevents replay of `func_800718D0`
-or `func_80030894`. The exact oracle compares all 8 words and both back edges,
-and two focused tests prove canonical completion plus repeat/no-duplicate
-behavior. The named frontier is now
-`func_8006AD40_D_800930E0_cut` before retail `0x8006B0D4`; normal and rebuilt
-ASan/UBSan suites pass 948/948 with zero diagnostics. Scheduler provenance
-remains independently artifact-bound: this rung adds no destination,
-`m0360i`, or persist special case. Full proof is in
-`docs/evidence/pe-b54kj-6ad40-f0-wait/REPORT.md`.
+**Current milestone:** B54K-K translates the 38-word `D_800930E0` group
+after the completed F0 wait. It issues five sectors into `+0x16C`, resolves
+three exact keys from the completed F0 archive into `+0x11C/+0x120/+0x124`,
+and consumes the live completion without repeating those lookups. The exact
+oracle compares all 38 words and every retry edge; two focused tests prove
+real on-disc lookup hits, empty-archive clearing, and exact transfer extent.
+The named frontier is now `func_8006AD40_D_80093126_cut` before retail
+`0x8006B16C`; normal and rebuilt ASan/UBSan suites pass 950/950 with zero
+diagnostics. Scheduler provenance remains independently artifact-bound: this
+rung adds no destination, `m0360i`, or persist special case. Full proof is in
+`docs/evidence/pe-b54kk-6ad40-e0-group/REPORT.md`.
 
 **Earlier retained milestone:** B53I-D admits one separate later checkpoint
 for the second LoadImage DMA token created by B53I-C. The exact 32-word
@@ -766,7 +765,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current grind lane: 948 tests)
+- `pe-native-tests` — test suite (current grind lane: 950 tests)
 
 ## Running
 
@@ -797,8 +796,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_8006AD40_D_800930E0_cut from
-# func_8006AD40; the D_800930F0 completion wait now precedes this cut.
+# Current global frontier: exit 1 at func_8006AD40_D_80093126_cut from
+# func_8006AD40; the D_800930E0 issue/lookups/completion now precede this cut.
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe
