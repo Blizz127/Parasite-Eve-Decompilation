@@ -7,6 +7,7 @@
 
 #include "psx_compat.h"
 #include "host_framebuffer.h"
+#include "host_vram.h"
 #include "host_window.h"
 #include "stub_registry.h"
 #include "game_port.h"
@@ -28,7 +29,7 @@ extern int  func_80070DD0(int, int);
 /* ── CLI ────────────────────────────────────────────────────────────── */
 static struct {
     int headless, bootstrap_disc, strict_stubs;
-    const char *screenshot, *trace_path;
+    const char *screenshot, *vram_screenshot, *vram_raw, *trace_path;
     int hold_ms, scale, hold_until_close, debug_overlay;
     const char *window_title;
     int direct_clear_test;
@@ -41,7 +42,8 @@ static struct {
     int callback_oracle_dump;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
-    .screenshot = NULL, .trace_path = NULL,
+    .screenshot = NULL, .vram_screenshot = NULL, .vram_raw = NULL,
+    .trace_path = NULL,
     .hold_ms = 0, .scale = 2, .hold_until_close = 1, .debug_overlay = 0,
     .window_title = "Parasite Eve Native Port",
     .direct_clear_test = 0, .stop_after_event = NULL,
@@ -75,6 +77,8 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--lzcr-oracle-dump"))     g_opts.lzcr_oracle_dump = 1;
         else if (!strcmp(a, "--callback-oracle-dump")) g_opts.callback_oracle_dump = 1;
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
+        else if (i+1<argc && !strcmp(a, "--vram-screenshot")) g_opts.vram_screenshot = argv[++i];
+        else if (i+1<argc && !strcmp(a, "--vram-raw"))        g_opts.vram_raw = argv[++i];
         else if (i+1<argc && !strcmp(a, "--trace"))           g_opts.trace_path = argv[++i];
         else if (i+1<argc && !strcmp(a, "--hold-ms"))         g_opts.hold_ms = atoi(argv[++i]);
         else if (i+1<argc && !strcmp(a, "--scale"))           g_opts.scale = atoi(argv[++i]);
@@ -478,6 +482,25 @@ int main(int argc, char **argv) {
     const char *sp = g_opts.screenshot ? g_opts.screenshot : "/tmp/pe-port-black.ppm";
     if (HostFB_WritePPM(sp) == 0)
         fprintf(stderr, "[SCREENSHOT] %s (%dx%d)\n", sp, PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
+
+    if (g_opts.vram_raw) {
+        if (HostVRAM_WriteRaw(g_opts.vram_raw) == 0) {
+            fprintf(stderr, "[VRAM-RAW] %s (%ux%u RGB555/STP little-endian)\n",
+                    g_opts.vram_raw, PE_GPU_VRAM_WIDTH, PE_GPU_VRAM_HEIGHT);
+        } else {
+            fprintf(stderr, "[VRAM-RAW] failed to write '%s'\n", g_opts.vram_raw);
+        }
+    }
+    if (g_opts.vram_screenshot) {
+        if (HostVRAM_WritePPM(g_opts.vram_screenshot) == 0) {
+            fprintf(stderr, "[VRAM-SCREENSHOT] %s (%ux%u RGB555 diagnostic)\n",
+                    g_opts.vram_screenshot,
+                    PE_GPU_VRAM_WIDTH, PE_GPU_VRAM_HEIGHT);
+        } else {
+            fprintf(stderr, "[VRAM-SCREENSHOT] failed to write '%s'\n",
+                    g_opts.vram_screenshot);
+        }
+    }
 
     Stub_PrintSummary();
     int vs, ds, pr, mk; HostFB_GetState(&vs, &ds, &pr, &mk);

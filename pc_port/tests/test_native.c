@@ -10,6 +10,7 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 #include "host_framebuffer.h"
+#include "host_vram.h"
 #include "game_port.h"
 #include "stub_registry.h"
 #include "pe_disc.h"
@@ -191,6 +192,173 @@ static void test_ppm_deterministic(void) {
         }
     }
     fclose(fa); fclose(fb);
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * VIS1 — read-only authoritative-VRAM artifacts (4 tests)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void test_VIS1_rgb555_vectors(void)
+{
+    uint8_t rgb[3] = { 0xA5u, 0xA5u, 0xA5u };
+    TEST("VIS1_rgb555_vectors");
+
+    HostVRAM_DecodePixel(0x001Fu, rgb);
+    ASSERT(rgb[0] == 0xFFu && rgb[1] == 0u && rgb[2] == 0u,
+           "RGB555 red decode changed");
+    HostVRAM_DecodePixel(0x03E0u, rgb);
+    ASSERT(rgb[0] == 0u && rgb[1] == 0xFFu && rgb[2] == 0u,
+           "RGB555 green decode changed");
+    HostVRAM_DecodePixel(0x7C00u, rgb);
+    ASSERT(rgb[0] == 0u && rgb[1] == 0u && rgb[2] == 0xFFu,
+           "RGB555 blue decode changed");
+    HostVRAM_DecodePixel(0xFFFFu, rgb);
+    ASSERT(rgb[0] == 0xFFu && rgb[1] == 0xFFu && rgb[2] == 0xFFu,
+           "STP bit changed diagnostic color");
+    HostVRAM_DecodePixel(0u, NULL);
+    PASS();
+}
+
+static void test_VIS1_copy_is_read_only(void)
+{
+    uint8_t *rgb;
+    uint16_t before[5];
+    uint16_t after;
+    PeGpuState state_before;
+    PeGpuState state_after;
+    size_t pixel;
+    TEST("VIS1_copy_is_read_only");
+
+    PE_GPU_Init();
+    ASSERT(PE_GPU_WriteGP0(0xA0000000u), "image command rejected");
+    ASSERT(PE_GPU_WriteGP0((20u << 16) | 10u), "image position rejected");
+    ASSERT(PE_GPU_WriteGP0((1u << 16) | 4u), "image size rejected");
+    ASSERT(PE_GPU_WriteGP0(0x03E0001Fu), "red/green data rejected");
+    ASSERT(PE_GPU_WriteGP0(0x7FFF7C00u), "blue/white data rejected");
+
+    ASSERT(PE_GPU_ReadVRAM(9u, 20u, &before[0]) &&
+           PE_GPU_ReadVRAM(10u, 20u, &before[1]) &&
+           PE_GPU_ReadVRAM(11u, 20u, &before[2]) &&
+           PE_GPU_ReadVRAM(12u, 20u, &before[3]) &&
+           PE_GPU_ReadVRAM(13u, 20u, &before[4]),
+           "fixture VRAM read failed");
+    PE_GPU_GetState(&state_before);
+
+    rgb = malloc(HOST_VRAM_RGB_BYTES);
+    ASSERT(rgb != NULL, "cannot allocate RGB snapshot");
+    ASSERT(HostVRAM_CopyRGB(rgb, HOST_VRAM_RGB_BYTES - 1u) == -1,
+           "undersized destination accepted");
+    ASSERT(HostVRAM_CopyRGB(NULL, HOST_VRAM_RGB_BYTES) == -1,
+           "null destination accepted");
+    ASSERT(HostVRAM_CopyRGB(rgb, HOST_VRAM_RGB_BYTES) == 0,
+           "full VRAM copy failed");
+
+    pixel = ((size_t)20u * PE_GPU_VRAM_WIDTH + 10u) * 3u;
+    ASSERT(rgb[pixel] == 0xFFu && rgb[pixel + 1u] == 0u &&
+           rgb[pixel + 2u] == 0u, "copied red pixel changed");
+    ASSERT(rgb[pixel + 3u] == 0u && rgb[pixel + 4u] == 0xFFu &&
+           rgb[pixel + 5u] == 0u, "copied green pixel changed");
+    ASSERT(rgb[pixel + 6u] == 0u && rgb[pixel + 7u] == 0u &&
+           rgb[pixel + 8u] == 0xFFu, "copied blue pixel changed");
+    ASSERT(rgb[pixel + 9u] == 0xFFu && rgb[pixel + 10u] == 0xFFu &&
+           rgb[pixel + 11u] == 0xFFu, "copied white pixel changed");
+    ASSERT(rgb[pixel - 3u] == 0u && rgb[pixel + 12u] == 0u,
+           "copy invented neighboring pixels");
+
+    PE_GPU_GetState(&state_after);
+    ASSERT(memcmp(&state_before, &state_after, sizeof(state_before)) == 0,
+           "snapshot changed GPU state");
+    for (uint32_t x = 9u; x <= 13u; x++) {
+        ASSERT(PE_GPU_ReadVRAM(x, 20u, &after), "post-copy VRAM read failed");
+        ASSERT(after == before[x - 9u], "snapshot changed a VRAM word");
+    }
+    free(rgb);
+    PASS();
+}
+
+static void test_VIS1_artifacts_match_authority(void)
+{
+    static const char raw_path[] = "/tmp/pe-vis1-test.vram";
+    static const char ppm_path[] = "/tmp/pe-vis1-test.ppm";
+    static const char ppm_header[] = "P6\n1024 512\n255\n";
+    FILE *file;
+    long size;
+    uint8_t bytes[3];
+    size_t ordinal;
+    PeGpuState before;
+    PeGpuState after;
+    TEST("VIS1_artifacts_match_authority");
+
+    PE_GPU_Init();
+    ASSERT(PE_GPU_WriteGP0(0xA0000000u), "image command rejected");
+    ASSERT(PE_GPU_WriteGP0((20u << 16) | 10u), "image position rejected");
+    ASSERT(PE_GPU_WriteGP0((1u << 16) | 2u), "image size rejected");
+    ASSERT(PE_GPU_WriteGP0(0x03E0001Fu), "fixture data rejected");
+    PE_GPU_GetState(&before);
+
+    ASSERT(HostVRAM_WriteRaw(raw_path) == 0, "raw artifact write failed");
+    ASSERT(HostVRAM_WritePPM(ppm_path) == 0, "PPM artifact write failed");
+
+    file = fopen(raw_path, "rb");
+    ASSERT(file != NULL, "cannot reopen raw artifact");
+    ASSERT(fseek(file, 0, SEEK_END) == 0, "raw size seek failed");
+    size = ftell(file);
+    ASSERT(size == (long)HOST_VRAM_RAW_BYTES, "raw artifact size changed");
+    ordinal = (size_t)20u * PE_GPU_VRAM_WIDTH + 10u;
+    ASSERT(fseek(file, (long)(ordinal * 2u), SEEK_SET) == 0,
+           "raw pixel seek failed");
+    ASSERT(fread(bytes, 1u, 2u, file) == 2u, "raw pixel read failed");
+    ASSERT(bytes[0] == 0x1Fu && bytes[1] == 0u,
+           "raw words are not little-endian authority data");
+    fclose(file);
+
+    file = fopen(ppm_path, "rb");
+    ASSERT(file != NULL, "cannot reopen PPM artifact");
+    ASSERT(fseek(file, 0, SEEK_END) == 0, "PPM size seek failed");
+    size = ftell(file);
+    ASSERT(size == (long)(sizeof(ppm_header) - 1u + HOST_VRAM_RGB_BYTES),
+           "PPM artifact size changed");
+    ASSERT(fseek(file,
+                 (long)(sizeof(ppm_header) - 1u + ordinal * 3u),
+                 SEEK_SET) == 0, "PPM pixel seek failed");
+    ASSERT(fread(bytes, 1u, 3u, file) == 3u, "PPM pixel read failed");
+    ASSERT(bytes[0] == 0xFFu && bytes[1] == 0u && bytes[2] == 0u,
+           "PPM pixel does not decode raw authority");
+    fclose(file);
+
+    PE_GPU_GetState(&after);
+    ASSERT(memcmp(&before, &after, sizeof(before)) == 0,
+           "artifact writes changed GPU state");
+    unlink(raw_path);
+    unlink(ppm_path);
+    PASS();
+}
+
+static void test_VIS1_zero_authority_stays_black(void)
+{
+    uint8_t *rgb;
+    uint16_t pixel;
+    TEST("VIS1_zero_authority_stays_black");
+
+    PE_GPU_Init();
+    rgb = malloc(HOST_VRAM_RGB_BYTES);
+    ASSERT(rgb != NULL, "cannot allocate zero snapshot");
+    memset(rgb, 0xA5, HOST_VRAM_RGB_BYTES);
+    ASSERT(HostVRAM_CopyRGB(rgb, HOST_VRAM_RGB_BYTES) == 0,
+           "zero VRAM copy failed");
+    for (size_t i = 0; i < HOST_VRAM_RGB_BYTES; i++) {
+        if (rgb[i] != 0u) {
+            free(rgb);
+            FAIL("zero VRAM produced a visible RGB byte");
+            return;
+        }
+    }
+    ASSERT(PE_GPU_ReadVRAM(0u, 0u, &pixel) && pixel == 0u &&
+           PE_GPU_ReadVRAM(PE_GPU_VRAM_WIDTH - 1u,
+                           PE_GPU_VRAM_HEIGHT - 1u, &pixel) && pixel == 0u,
+           "zero snapshot changed VRAM endpoints");
+    free(rgb);
     PASS();
 }
 
@@ -29788,6 +29956,12 @@ int main(void)
     test_strict_stubs();
     test_bootstrap_disc_flag();
     test_fb_dimensions();
+
+    /* VIS1 read-only PSX VRAM artifacts (4 tests). */
+    test_VIS1_rgb555_vectors();
+    test_VIS1_copy_is_read_only();
+    test_VIS1_artifacts_match_authority();
+    test_VIS1_zero_authority_stays_black();
 
     /* Phase 6E-B49 explicit host run-control policy (9 tests). */
     test_B49_present_has_no_implicit_stop();

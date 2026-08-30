@@ -1,8 +1,23 @@
-# Parasite Eve Native PC Port — Phase 6E-B53I-D
+# Parasite Eve Native PC Port — VIS1
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B53I-D admits one separate later checkpoint for the
+**Current milestone:** VIS1 exposes the authoritative 1024x512 PSX VRAM as
+read-only host diagnostics. `--vram-raw PATH` writes every RGB555/STP word in
+little-endian order; `--vram-screenshot PATH` writes an independently
+checkable P6 RGB888 projection. A normal Disc 1 run reaches the existing
+`func_80030894_L2L3_cut` after authentic texture uploads and produces a
+non-black, deterministic VRAM image (2,063 nonzero words, bounds
+`256,64..735,456`). This is deliberately a full-VRAM inspection surface, not
+a rendered display frame or a gameplay claim: the ordinary 320x240 host
+framebuffer is still black and the strict frontier does not move. The exporter
+has no guest-memory or GPU-write API, four focused tests cover decoding,
+authority equality, read-only behavior, and a zero-VRAM negative control, and
+normal plus fresh ASan/UBSan suites pass 932/932. An independent Python oracle
+decodes and compares all 524,288 words. Full proof is in
+`docs/evidence/pe-vis1-vram-visible-state/REPORT.md`.
+
+**Prior milestone:** B53I-D admits one separate later checkpoint for the
 second LoadImage DMA token created by B53I-C. The exact 32-word transfer from
 `0x8012B8B8` exposes pixels `0x6000..0x603F` at `(256..319,456)` before
 CHCR clears from `0x01000201` to `0x00000201`. Because the idle pump already
@@ -752,7 +767,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current main: 907 tests)
+- `pe-native-tests` — test suite (current main: 932 tests)
 
 ## Running
 
@@ -767,6 +782,16 @@ Produces:
   --disc-image "/path/Parasite Eve (USA) (Disc 1).bin" \
   --max-frames 1 \
   --screenshot /tmp/pe-black.ppm --trace /tmp/pe-boot.trace
+
+# Read-only diagnostic of the authoritative PSX VRAM. The raw artifact is
+# 1024x512 RGB555/STP, little-endian; the PPM is its RGB888 projection.
+# This is not the emulated display framebuffer.
+./parasite-eve-port --headless \
+  --disc-image "/path/Parasite Eve (USA) (Disc 1).bin" \
+  --vram-raw /tmp/pe-vram.rgb555 \
+  --vram-screenshot /tmp/pe-vram.ppm
+python3 tools/visible_vram_oracle.py \
+  /tmp/pe-vram.rgb555 /tmp/pe-vram.ppm
 
 # Real-disc byte-path verification driver: PVD verify → DsSearchFile
 # "\PE.IMG;1" → CdPosToInt → bounded guest-RAM load at D_80011614 → poll,

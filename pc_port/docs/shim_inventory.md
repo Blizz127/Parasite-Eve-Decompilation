@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53I-D
+# Shim Inventory — VIS1
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -53,6 +53,13 @@ wires its inert VSync query, B53D reads raw DMA2
 CHCR/GPUSTAT, and B53E drives its bounded GP1/GP0/DMA2 issue APIs. B53E adds
 one inert image-load preflight query; the hardware authority still owns no
 guest worker identity, RECT pointer, ring, or callback state.
+
+`platform/host_vram.[ch]` is a VIS1 host diagnostic over that same authority,
+not a second VRAM and not a retail-function translation. It can copy every
+word to RGB888 or write full raw/PPM artifacts, using only
+`PE_GPU_ReadVRAM`. It exposes no guest-memory write, GP0/GP1 write, DMA,
+callback, scheduler, or presentation operation. The diagnostic therefore
+cannot create the visible pixels it reports and cannot advance execution.
 
 `platform/pe_irq.[ch]` is the B53I-B1 single native authority for 16-bit
 I_STAT (`0x1F801070`) and I_MASK (`0x1F801074`). I_STAT writes use W0C

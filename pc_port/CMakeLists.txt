@@ -14,6 +14,7 @@ option(PE_PORT_SANITIZERS "Build with AddressSanitizer and UBSan" OFF)
 # Source lists
 set(PLATFORM_SRCS
     platform/host_framebuffer.c
+    platform/host_vram.c
     platform/host_window.c
     platform/pe_guest_ram.c
     platform/pe_gpu.c
@@ -252,6 +253,7 @@ if(BUILD_TESTS)
     add_executable(pe-native-tests
         tests/test_native.c
         platform/host_framebuffer.c
+        platform/host_vram.c
         platform/pe_guest_ram.c
         platform/pe_gpu.c
         platform/pe_irq.c

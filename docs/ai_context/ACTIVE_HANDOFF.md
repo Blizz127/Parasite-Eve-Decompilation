@@ -47,6 +47,19 @@ leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
 
+Current native PC-port status (VIS1, 2026-08-30): a real Disc 1 run now emits
+a deterministic, visibly non-black read-only snapshot of the single modeled
+PSX VRAM authority via `--vram-raw` and `--vram-screenshot`. The independent
+oracle checks all 524,288 RGB555 words; 2,063 are nonzero within
+`256,64..735,456`. This is diagnostic VRAM, not a rendered 320x240 frame: the
+legacy host framebuffer remains black and the strict production frontier is
+still `func_80030894_L2L3_cut` (then
+`func_8006AD40_post30894_cut`). Four focused tests and full normal plus
+ASan/UBSan suites pass 932/932. Evidence:
+`docs/evidence/pe-vis1-vram-visible-state/REPORT.md`. BTL151 remains a
+human-operated local PCSX-Redux capture; do not retry it headlessly or claim
+capture results without the GUI artifact.
+
 **Function-hood screen rule (current):** a callable tiny span must end in a
 canonical `jr ra`/delay slot **or** a provable tail jump into a shared function
 body, and must have an exact-start caller/reference plus real boundaries. A
