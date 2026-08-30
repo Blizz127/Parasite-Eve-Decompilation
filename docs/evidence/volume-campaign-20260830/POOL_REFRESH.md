@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-106, the matching-C count is **340**.
+`634dd1b` (335-leaf base). After VOLUME-107, the matching-C count is **340**.
 
 ## Method and closure
 
@@ -15,19 +15,19 @@ The current active universe contains **1,089** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                   5
+TIER 1                   4
 TIER 2                 214
 TIER 3                  99
-SKIP / suppressed      771
+SKIP / suppressed      772
                        ---
 TOTAL                 1089
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,036 rows:
-5 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
-active. The 53 active spans below were added after the primary tables through
-campaign overlays. Adding all 53 to the suppressed class closes the pool:
-`1036 + 53 = 1089` and `718 + 53 = 771`.
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,035 rows:
+4 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+active. The 54 active spans below were added after the primary tables through
+campaign overlays. Adding all 54 to the suppressed class closes the pool:
+`1035 + 54 = 1089` and `718 + 54 = 772`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
@@ -40,7 +40,8 @@ residual set after two bounded phrasings; VOLUME-99 then removed exact
 `func_8003DF50` from Tier 1; VOLUME-104 screened handwritten libGTE helper
 `func_80078554` without a C attempt; VOLUME-105 removed exact
 `func_800CE870` from Tier 1; VOLUME-106 moved `func_800339A0` to the
-suppressed residual set after two bounded phrasings. A suppressed `func_`
+suppressed residual set after two bounded phrasings; VOLUME-107 did the same
+for `func_80080C48`. A suppressed `func_`
 label is not assumed to be a
 retail function.
 
@@ -48,6 +49,7 @@ retail function.
 
 | file off | generated label | words | current scheduling disposition | evidence |
 |---:|---|---:|---|---|
+| `0x71448` | `func_80080C48` | 32 | `PARKED-INDEPENDENT-LOAD-AND-BCD-ACCUMULATOR-SCHEDULING` | `volume-campaign-20260830/func-80080c48/PARK.md` |
 | `0x241A0` | `func_800339A0` | 32 | `PARKED-GP-LOAD-STORE-SCHEDULING-AND-REGISTER-HOME` | `volume-campaign-20260830/func-800339a0/PARK.md` |
 | `0x68D54` | `func_80078554` | 31 | `SKIP-SDK-LIBRARY-COP2` | `volume-campaign-20260830/func-80078554/SKIP.md` |
 | `0x69B04` | `func_80079304` | 30 | `SKIP-SDK-LIBRARY-COP2` | `volume-campaign-20260830/func-80079304/SKIP.md` |
