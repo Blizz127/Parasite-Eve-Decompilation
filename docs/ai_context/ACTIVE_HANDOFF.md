@@ -47,20 +47,21 @@ leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
 
-Current native PC-port status (B54K-B1, 2026-08-30): `func_80030894` now
-translates retail through the complete bank-0 L4 packet group at
-`0x80030AC4..0x80030CA0` (119 new words). The strict production frontier is
-`func_80030894_L4_cut`, immediately before the L5 bank load, then normal mode
-continues to `func_8006AD40_post30894_cut`. The independent oracle verifies
-the full window, seven already-native calls, sole four-entry back-edge, and
-121-byte bank-0 write map. Full normal and ASan/UBSan suites pass 933/933.
-Evidence: `docs/evidence/pe-b54kb1-30894-l4/REPORT.md`.
+Current native PC-port status (B54K-B2, 2026-08-30): `func_80030894` now
+translates retail through the complete bank-0 L5 sprite loop at
+`0x80030CA0..0x80030D20` (32 new words; 291/788 total). The strict production
+frontier is `func_80030894_L5_cut`, immediately before the next distinct
+packet group, then normal mode continues to `func_8006AD40_post30894_cut`.
+The independent oracle verifies the full window, sole already-native call,
+sole five-entry back-edge, exact 140/28-byte strides, and 80-byte bank-0 write
+map. Full normal and ASan/UBSan suites pass 934/934. Evidence:
+`docs/evidence/pe-b54kb2-30894-l5/REPORT.md`.
 
 VIS1 remains available: a real Disc 1 run emits a deterministic, visibly
 non-black read-only snapshot of the single PSX VRAM authority via
 `--vram-raw` and `--vram-screenshot` (2,063 nonzero RGB555 words within
-`256,64..735,456`). The B54K-B1 artifact is byte-identical to VIS1 because L4
-only builds guest packet state. This is diagnostic VRAM, not a rendered
+`256,64..735,456`). The B54K-B2 artifact is byte-identical to VIS1 because
+L4/L5 only build guest packet state. This is diagnostic VRAM, not a rendered
 320x240 frame; the legacy host framebuffer remains black. BTL151 remains a
 human-operated local PCSX-Redux capture—do not retry it headlessly or claim
 capture results without the GUI artifact.
