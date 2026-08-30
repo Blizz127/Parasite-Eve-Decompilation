@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,087 current active spans — Tier 1 0, Tier 2 213, Tier 3 99,
+Pool: 1,086 current active spans — Tier 1 0, Tier 2 212, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 7.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 8.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -13,7 +13,7 @@ Tier-1 rows after the historical H5. Current close-out streak: zero bounded
 parks, one match, two proven-family suppressions. Tier 1 is closed.
 
 Tier-2 probe: separately authorized after Tier-1 closure. Current probe
-streak: zero bounded parks, one match.
+streak: zero bounded parks, two matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -34,3 +34,4 @@ streak: zero bounded parks, one match.
 | 15 / close-out 2 | `func_80021850` @ `0x12050` | canonical return; three direct callers; immediate real boundaries; no callees/globals/loop; two argument-derived record addresses | MATCHED leaf 341 first phrasing; signed-byte indices and typed 12-byte aggregate recover the 16-byte stack temporary and exact copy schedule; packed span/full SHA exact | 34 | 1 | VOLUME-110 leaf commit |
 | 16 / close-out 3 | `func_800783E4` @ `0x68BE4` | canonical return; three raw direct callers; immediate real handwritten boundaries; split explicitly handwritten | `SKIP-SDK-LIBRARY-COP2`; required `mtc2/gpf/gpl/mfc2` semantics, zero C attempt or integration; Tier 1 closed | 34 | 0 | VOLUME-111 docs-only commit |
 | 17 / Tier-2 probe 1 | `func_800C6ED8` @ `0xB76D8` | canonical return; six direct callers; immediate real boundaries; sole `sh` writer plus one unsigned-halfword reader | MATCHED leaf 342 first phrasing; natural typed setter reproduces the four-word pre-return `sh` shape; packed span/full SHA exact | 4 | 1 | VOLUME-112 leaf commit |
+| 18 / Tier-2 probe 2 | `func_800C6EC0` @ `0xB76C0` | canonical return; seven direct callers; immediate real boundaries; sole `sh` writer plus one `lhu` reader for each of two globals | MATCHED leaf 343 first phrasing; ordered typed halfword stores reproduce all six words; packed span/full SHA exact | 6 | 1 | VOLUME-113 leaf commit |

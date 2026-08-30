@@ -276,7 +276,8 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # B2AF8:    0xB2AF8 → 0xB3340 = 0x848
 # C C2B40:  0xB3340 → 0xB3350 = 0x10
 # C C2B50:  0xB3350 → 0xB3368 = 0x18
-# B3368:    0xB3368 → 0xB76D8 = 0x4370
+# B3368:    0xB3368 → 0xB76C0 = 0x4358
+# C C6EC0:  0xB76C0 → 0xB76D8 = 0x18
 # C C6ED8:  0xB76D8 → 0xB76E8 = 0x10
 # B76E8:    0xB76E8 → 0xB85C4 = 0xEDC
 # C C7DC4:  0xB85C4 → 0xB85D4 = 0x10
@@ -766,7 +767,8 @@ SIZE_818A0_RODATA=0x31258
 SIZE_B2AF8=0x848
 SIZE_C_C2B40=0x10
 SIZE_C_C2B50=0x18
-SIZE_B3368=0x4370
+SIZE_B3368=0x4358
+SIZE_C_C6EC0=0x18
 SIZE_C_C6ED8=0x10
 SIZE_B76E8=0xedc
 SIZE_C_C7DC4=0x10
@@ -849,7 +851,8 @@ SIZE_C5060=0x1297a0
 SIZE_B2AF8=0x848
 SIZE_C_C2B40=0x10
 SIZE_C_C2B50=0x18
-SIZE_B3368=0x4370
+SIZE_B3368=0x4358
+SIZE_C_C6EC0=0x18
 SIZE_C_C6ED8=0x10
 SIZE_B76E8=0xedc
 SIZE_C_C7DC4=0x10
@@ -1387,6 +1390,7 @@ OBJECTS=(
     "build/src/func_800C2B40.c.o"
     "build/src/func_800C2B50.c.o"
     "build/asm/disc1/B3368.s.o"
+    "build/src/func_800C6EC0.c.o"
     "build/src/func_800C6ED8.c.o"
     "build/asm/disc1/B76E8.s.o"
     "build/src/func_800C7DC4.c.o"
@@ -1923,6 +1927,7 @@ SOURCES=(
     "src/func_800C2B40.c"
     "src/func_800C2B50.c"
     "asm/disc1/B3368.s"
+    "src/func_800C6EC0.c"
     "src/func_800C6ED8.c"
     "asm/disc1/B76E8.s"
     "src/func_800C7DC4.c"
@@ -2687,6 +2692,7 @@ era_compile src/func_80087198.c build/src/func_80087198.c.o -O2 -G0
 era_compile src/func_80087414.c build/src/func_80087414.c.o -O2 -G0
 era_compile src/func_8008AB1C.c build/src/func_8008AB1C.c.o -O1 -G0
 era_compile src/func_80085728.c build/src/func_80085728.c.o -O2 -G0
+era_compile src/func_800C6EC0.c build/src/func_800C6EC0.c.o -O2 -G0
 era_compile src/func_800C6ED8.c build/src/func_800C6ED8.c.o -O2 -G0
 era_compile src/func_800C7DC4.c build/src/func_800C7DC4.c.o -O2 -G0
 era_compile src/func_800C7DD4.c build/src/func_800C7DD4.c.o -O2 -G0
@@ -3352,6 +3358,7 @@ python3 "$TRIM" build/asm/disc1/B2AF8.s.o .text "$SIZE_B2AF8"
 python3 "$TRIM" build/src/func_800C2B40.c.o .text "$SIZE_C_C2B40"
 python3 "$TRIM" build/src/func_800C2B50.c.o .text "$SIZE_C_C2B50"
 python3 "$TRIM" build/asm/disc1/B3368.s.o .text "$SIZE_B3368"
+python3 "$TRIM" build/src/func_800C6EC0.c.o .text "$SIZE_C_C6EC0"
 python3 "$TRIM" build/src/func_800C6ED8.c.o .text "$SIZE_C_C6ED8"
 python3 "$TRIM" build/asm/disc1/B76E8.s.o .text "$SIZE_B76E8"
 python3 "$TRIM" build/src/func_800C7DC4.c.o .text "$SIZE_C_C7DC4"
@@ -3927,6 +3934,7 @@ SECTIONS
         build/src/func_800C2B40.c.o(.text)
         build/src/func_800C2B50.c.o(.text)
         build/asm/disc1/B3368.s.o(.text)
+        build/src/func_800C6EC0.c.o(.text)
         build/src/func_800C6ED8.c.o(.text)
         build/asm/disc1/B76E8.s.o(.text)
         build/src/func_800C7DC4.c.o(.text)
@@ -4456,6 +4464,7 @@ SECTIONS
         build/src/func_800C2B40.c.o(.data)
         build/src/func_800C2B50.c.o(.data)
         build/asm/disc1/B3368.s.o(.data)
+        build/src/func_800C6EC0.c.o(.data)
         build/src/func_800C6ED8.c.o(.data)
         build/asm/disc1/B76E8.s.o(.data)
         build/src/func_800C7DC4.c.o(.data)
@@ -4985,6 +4994,7 @@ SECTIONS
         build/src/func_800C2B40.c.o(.rodata)
         build/src/func_800C2B50.c.o(.rodata)
         build/asm/disc1/B3368.s.o(.rodata)
+        build/src/func_800C6EC0.c.o(.rodata)
         build/src/func_800C6ED8.c.o(.rodata)
         build/asm/disc1/B76E8.s.o(.rodata)
         build/src/func_800C7DC4.c.o(.rodata)
@@ -5514,6 +5524,7 @@ SECTIONS
         build/src/func_800C2B40.c.o(.bss)
         build/src/func_800C2B50.c.o(.bss)
         build/asm/disc1/B3368.s.o(.bss)
+        build/src/func_800C6EC0.c.o(.bss)
         build/src/func_800C6ED8.c.o(.bss)
         build/asm/disc1/B76E8.s.o(.bss)
         build/src/func_800C7DC4.c.o(.bss)
@@ -5932,6 +5943,8 @@ leaf6 = slice(0xB3340, 0xB3350)
 leafc2b50 = slice(0xB3350, 0xB3368)
 print(f"  probe file 0xB3340 (C2B40): cand={cand[leaf6].hex()} orig={orig[leaf6].hex()}")
 print(f"  probe file 0xB3350 (C2B50): cand={cand[leafc2b50].hex()} orig={orig[leafc2b50].hex()}")
+leafc6ec0 = slice(0xB76C0, 0xB76D8)
+print(f"  tier2 file 0xB76C0 (C6EC0): cand={cand[leafc6ec0].hex()} orig={orig[leafc6ec0].hex()}")
 leafc6ed8 = slice(0xB76D8, 0xB76E8)
 print(f"  tier2 file 0xB76D8 (C6ED8): cand={cand[leafc6ed8].hex()} orig={orig[leafc6ed8].hex()}")
 leafc7dc4 = slice(0xB85C4, 0xB85D4)
