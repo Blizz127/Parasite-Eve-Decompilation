@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,083 current active spans — Tier 1 0, Tier 2 209, Tier 3 99,
+Pool: 1,082 current active spans — Tier 1 0, Tier 2 208, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 11.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 12.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -13,7 +13,7 @@ Tier-1 rows after the historical H5. Current close-out streak: zero bounded
 parks, one match, two proven-family suppressions. Tier 1 is closed.
 
 Tier-2 probe: separately authorized after Tier-1 closure. Current probe
-streak: zero bounded parks, five matches.
+streak: zero bounded parks, six matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -38,3 +38,4 @@ streak: zero bounded parks, five matches.
 | 19 / Tier-2 probe 3 | `func_80050020` @ `0x40820` | canonical return; exact-start callback assignment at `0x80048420`; immediate real boundaries; Stage-0 word-state array census | MATCHED leaf 344 first phrasing; natural indexed getter plus established three-word symbolic-load gate reproduces all six words; packed span/full SHA exact | 6 | 1 | VOLUME-114 leaf commit |
 | 20 / Tier-2 probe 4 | `func_8007C544` @ `0x6CD44` | canonical return with live store delay; one direct caller; real neighbors plus explicit alignment; three Stage-0 state words | MATCHED leaf 345 first phrasing; ordered three-global setter plus established store-delay gate reproduces all seven words; packed span/full SHA exact | 7 | 1 | VOLUME-115 leaf commit |
 | 21 / Tier-2 probe 5 | `func_800812F4` @ `0x71AF4` | canonical return; one direct caller; preceding live return delay and following one-word alignment before a real prologue; sole exact-symbol Stage-0 writer | MATCHED leaf 346 first phrasing; unsigned range guard plus natural symbolic store reproduces all seven words with no gate; packed span/full SHA exact | 7 | 1 | VOLUME-116 leaf commit |
+| 22 / Tier-2 probe 6 | `func_80062F1C` @ `0x5371C` | canonical return; 57 unique direct callers; immediate real boundaries; one recursive node-removal callee and no direct globals/loop | MATCHED leaf 347 first phrasing; natural void forwarding wrapper reproduces the canonical eight-word call frame; packed span/full SHA exact | 8 | 1 | VOLUME-117 leaf commit |

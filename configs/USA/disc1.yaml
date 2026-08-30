@@ -562,7 +562,11 @@ segments:
       - [0x534B8, c, func_80062CB8]
       - [0x534C4, c, func_80062CC4]
       - [0x534D0, c, func_80062CD0]
+      # Tier-2 probe: forwarding node-removal wrapper func_80062F1C.
+      # Former 0x534E4 asm span: prefix 0x238, C 0x20, resume 0x21C.
       - [0x534E4, asm]
+      - [0x5371C, c, func_80062F1C]
+      - [0x5373C, asm]
       # Volume campaign: null-safe local/global position accumulator; era -O2 -G8.
       - [0x53958, c, func_80063158]
       # Phase 5BY: C leaf func_80063198 — file 0x53998, size 0x14.
