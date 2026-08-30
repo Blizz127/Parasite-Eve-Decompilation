@@ -108,9 +108,9 @@ static inline void func_800752AC(void *o, int n) {
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
 /* func_8006AD40 is complete through its normal return (Phase 6E-B54K-M).
- * B54K-R enters func_801909B4 after both DMA checkpoints, executes the
- * generic MoveImage path and display setup, then reaches overlay-local
- * func_80190660 at retail 0x80190D74. */
+ * B54K-R enters func_801909B4 after both DMA checkpoints and executes the
+ * generic MoveImage path and display setup. B54K-T enters overlay-local
+ * func_80190660 and reaches its first DrawPrim call at retail 0x80190860. */
 static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
@@ -120,6 +120,7 @@ static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08",
 static inline void func_801235DC(void)   { Bootstrap_ReturnVoid("func_801235DC", "func_8001220C"); }
 static inline void func_8019234C(void)   { Bootstrap_ReturnVoid("func_8019234C", "func_8001220C"); }
 extern int func_801909B4(void);
+extern int func_80190660(void);
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
 /* func_8006E1C0 is REAL (Phase 6E-B51):
  * game/boot/func_8006E1C0_port.c — packed texture-entry LoadImage

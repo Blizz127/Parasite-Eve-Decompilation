@@ -189,9 +189,9 @@ never native function pointers.
 - `func_8003F3C4`
 - `func_801235DC`
 - `func_8019234C`
-- `func_80190660` — current overlay-local boundary after 240 translated
-  words of `func_801909B4`; B54K-R completed `func_8007512C` and its exact
-  one-packet `func_80076B98` path
+- `func_80075358` — current DrawPrim boundary from the 128-word translated
+  prefix of overlay-local `func_80190660`; the boundary snapshots only its
+  initialized command word and packet length, never a native stack pointer
 
 ### func_8003E610 callees (10)
 - `func_80073C94`
@@ -801,10 +801,11 @@ Independent oracle: `tools/b27_oracle.py`.
 
 ## Remaining bootstrap providers
 
-With Disc 1, strict mode now stops at overlay-local `func_80190660` from
-`func_801909B4`, after complete `func_8006AD40`, both explicit caller DMA
-checkpoints, generic MoveImage, display setup, and 240 translated overlay
-words. It is the first BOOTSTRAP_RET provider on the canonical path.
+With Disc 1, strict mode now stops at DrawPrim `func_80075358` from
+overlay-local `func_80190660`, after complete `func_8006AD40`, generic
+MoveImage/display setup, both table-derived overlay images, DrawSync, and
+frame-zero packet setup. It is the first BOOTSTRAP_RET provider on the
+canonical path.
 The `--bootstrap-disc` fixture still stops at `func_8007F72C` (CdReady) by
 design. Normal and fresh sanitizer builds agree exactly on both frontiers.
 

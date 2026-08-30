@@ -49,15 +49,15 @@ The native test executable was run directly:
 
 ```text
 pc_port/build/pe-native-tests
-Results: 971 run, 971 passed, 0 failed, 0 skipped
+Results: 973 run, 973 passed, 0 failed, 0 skipped
 ```
 
 The production executable is not a complete Day 1 field runtime. Its strict
 real-disc execution frontier is:
 
 ```text
-func_80190660 from func_801909B4
-func_8006AD40 is complete; DrawSync drains DMA, then MoveImage and 240 overlay words execute
+func_80075358 from func_80190660
+func_8006AD40 is complete; MoveImage/display setup and 128 words of func_80190660 execute first
 ```
 
 The bootstrap-disc path has a separate earlier stop at
@@ -95,6 +95,7 @@ Evidence: [ACTIVE_HANDOFF.md](ACTIVE_HANDOFF.md),
 [B54K-Q report](../evidence/pe-b54kq-1909b4-moveimage-prefix/REPORT.md),
 [B54K-R report](../evidence/pe-b54kr-moveimage-display-prefix/REPORT.md),
 [B54K-S report](../evidence/pe-b54ks-drawsync-drain/REPORT.md),
+[B54K-T report](../evidence/pe-b54kt-190660-drawprim-prefix/REPORT.md),
 [pe-btl147 report](../evidence/pe-btl147-theater-eve-path/REPORT.md), and the
 current native binary/test result above.
 
@@ -104,8 +105,9 @@ destination or `persist[0] |= 4` is permitted. Independently, B54K-M now
 completes all 391 words of `func_8006AD40`, migrates the 23 historical
 prefix contracts, and measures both caller DMA checkpoints. B54K-R completes
 generic `MoveImage`, translates the first 240 words of the recovered
-977-word `func_801909B4` overlay through display setup, and measures
-overlay-local `func_80190660` as the next provider.
+977-word `func_801909B4` overlay through display setup. B54K-T then enters
+overlay-local `func_80190660`, executes its first 128 words, and measures
+DrawPrim `func_80075358` as the next provider.
 Real-disc startup already adopts its retail overlay table/pointer values; see
 [B54K-M report](../evidence/pe-b54km-6ad40-complete/REPORT.md),
 [B54K-O report](../evidence/pe-b54ko-1909b4-overlay-recovery/REPORT.md) and
@@ -178,8 +180,8 @@ for natural `m0360i` entry; it must be proven before implementation.
   under the parity trace contract.
 - Native `pc_port`: capture the generic event/scheduler decision that naturally
   enters `m0360i`; independently continue the retail-proven overlay at
-  `func_80190660`, now the measured provider after generic MoveImage and
-  display setup.
+  DrawPrim `func_80075358` from `func_80190660`, after generic MoveImage,
+  display setup, both overlay image records, and frame-zero packet setup.
 - Matching-C: review/refresh the 16-row Tier-1 queue after the three-park hard
   stop; retain 335 exact plus 19 explicitly non-exact residuals.
 - `parasite-eve-port-black`: no work here; it is a historical branch, not the
@@ -194,11 +196,11 @@ for natural `m0360i` entry; it must be proven before implementation.
 2. This host still cannot inspect the UE5 checkout, so no locally verified
    end-to-end UE5 claim is possible.
 3. `UE_NATIVE_PARITY_POLICY.md` retains useful acceptance rules but its status
-   table is historical; this file carries the measured 971-test native state.
+   table is historical; this file carries the measured 973-test native state.
 4. Matching residuals are evidence dispositions, not exact leaves: 335 is the
    only YAML-derived matching-C count.
 
 ```text
 REPORT_STATUS=CURRENT
-LAST_REFRESH=2026-08-30_B54K-S
+LAST_REFRESH=2026-08-30_B54K-T
 ```

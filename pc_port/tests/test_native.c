@@ -441,7 +441,7 @@ static void test_B54KR_801909B4_strict_reaches_overlay_init(void)
 static int B54KQ_AddressIsWritten(uint32_t address)
 {
     return (address >= 0x801D1498u && address < 0x801D1578u) ||
-           (address >= 0x801D11BCu && address < 0x801D11C4u) ||
+           (address >= 0x801D11BCu && address < 0x801D11CCu) ||
            (address >= 0x800B0E38u && address < 0x800B0E40u) ||
            (address >= 0x800B0E50u && address < 0x800B0E58u) ||
            (address >= 0x8009D120u && address < 0x8009D124u) ||
@@ -460,6 +460,34 @@ static int B54KQ_AddressIsWritten(uint32_t address)
            (address >= 0x8009D1BCu && address < 0x8009D1C0u);
 }
 
+static void B54KT_SeedOverlayData(void)
+{
+    const pe_addr_t first = 0x801CED1Cu;
+    const pe_addr_t second = 0x801CED50u;
+    uint32_t i;
+
+    /* Canonical pointer/record geometry from the authenticated overlay. */
+    PE_StoreU32(0x80193278u, 0x0003BAC8u);
+    PE_StoreU32(first + 0x00u, 16u);
+    PE_StoreU32(first + 0x04u, 8u);
+    PE_StoreU32(first + 0x08u, 0x2Cu);
+    PE_StoreU16(first + 0x0Cu, 0u);
+    PE_StoreU16(first + 0x0Eu, 480u);
+    PE_StoreU16(first + 0x10u, 16u);
+    PE_StoreU16(first + 0x12u, 1u);
+    for (i = 0u; i < 16u; i++)
+        PE_StoreU16(first + 0x14u + i * 2u, (uint16_t)(0x5000u + i));
+
+    PE_StoreU32(second + 0x00u, 0x200Cu);
+    PE_StoreU16(second + 0x04u, 512u);
+    PE_StoreU16(second + 0x06u, 256u);
+    PE_StoreU16(second + 0x08u, 64u);
+    PE_StoreU16(second + 0x0Au, 64u);
+    for (i = 0u; i < 4096u; i++)
+        PE_StoreU16(second + 0x0Cu + i * 2u,
+                    (uint16_t)(0x6000u + i));
+}
+
 static void B54KQ_SeedOverlayPrefix(uint8_t bias)
 {
     uint32_t i;
@@ -472,6 +500,7 @@ static void B54KQ_SeedOverlayPrefix(uint8_t bias)
     PE_StoreU32(0x800B0CD8u, 0x00100001u);
     PE_StoreU8(0x800B0DCDu, 1u);
     B54KR_SeedGpuStatic();
+    B54KT_SeedOverlayData();
     memset(PE_Translate(0x800A0ED4u, 0x830u), 0x5Au, 0x830u);
     PE_StoreU32(0x800A1704u, 0x5A5A5A5Au);
     memset(PE_Translate(0x800A1838u, 0x38u), 0x5Au, 0x38u);
@@ -480,14 +509,26 @@ static void B54KQ_SeedOverlayPrefix(uint8_t bias)
 static int B54KR_OverlayBoundaryIsExact(const char *symbol)
 {
     BootstrapArgCall4 *call;
+    uint32_t command = 0u;
+
+    if (strcmp(symbol, "func_80075358") == 0) {
+        if (g_bootstrap_arg4_call_count != 3)
+            return 0;
+        call = &g_bootstrap_arg4_calls[2];
+        memcpy(&command, call->payload, sizeof(command));
+        return strcmp(call->symbol, symbol) == 0 &&
+               strcmp(call->caller, "func_80190660") == 0 &&
+               call->target == 0x80075358u && call->arg0 == 0u &&
+               call->arg1 == 1u && call->arg2 == 0u && call->arg3 == 0u &&
+               call->payload_size == 4u && command == 0xE1000018u;
+    }
 
     if (g_bootstrap_arg4_call_count != 1)
         return 0;
     call = &g_bootstrap_arg4_calls[0];
     return strcmp(call->symbol, symbol) == 0 &&
            strcmp(call->caller, "func_801909B4") == 0 &&
-           call->target == (strcmp(symbol, "func_80190660") == 0 ?
-                            0x80190660u : 0u);
+           call->target == 0u;
 }
 
 static void test_B54KR_gpu_move_overlap_wrap_and_zero_geometry(void)
@@ -826,20 +867,28 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
            PE_LoadU16(0x8013CDE6u) == 0u &&
            PE_LoadU16(0x80120D6Au) == 240u &&
            PE_LoadU16(0x8013CDEAu) == 240u &&
-           PE_LoadU8(0x80120D6Du) == 1u &&
-           PE_LoadU8(0x8013CDEDu) == 1u &&
+           PE_LoadU8(0x80120D6Du) == 0u &&
+           PE_LoadU8(0x8013CDEDu) == 0u &&
            PE_LoadU16(0x80120D74u) == 0u &&
            PE_LoadU16(0x8013CDF4u) == 0u &&
            PE_LoadU16(0x80120D7Cu) == 0u &&
            PE_LoadU16(0x8013CDFCu) == 0u,
            "draw/disp environment setup fields differ");
     ASSERT(PE_LoadU32(0x8009D1BCu) == 1u &&
-           B54KR_OverlayBoundaryIsExact("func_80190660"),
-           "one-time overlay initializer publication/boundary differs");
+           PE_LoadU32(0x801D11C8u) == 1u &&
+           PE_LoadU32(0x801D11C4u) == 0x8013CD80u &&
+           B54KR_OverlayBoundaryIsExact("func_80075358"),
+           "overlay initializer state or DrawPrim boundary differs");
+    ASSERT(B54KR_PixelIs(0u, 480u, 0x5000u) &&
+           B54KR_PixelIs(15u, 480u, 0x500Fu) &&
+           B54KR_PixelIs(512u, 256u, 0x6000u) &&
+           B54KR_PixelIs(575u, 319u, 0x6FFFu) &&
+           !PE_GPU_DMA2Pending(),
+           "overlay image records or DrawSync completion differ");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "prefix did not stop at overlay-local initializer");
     HostFB_GetState(&vsync, &drawsync, &presented, &mask);
-    ASSERT(mask == 0 && vsync == 4 && drawsync == 2 && presented == 0,
+    ASSERT(mask == 1 && vsync == 4 && drawsync == 3 && presented == 0,
            "display synchronization call counts differ");
 
     for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
@@ -867,7 +916,7 @@ static void test_B54KR_801909B4_dirty_repeat_and_alternate_cut(void)
     ASSERT(B54KR_UploadPixels(320u, 0u, 1u, 1u, &first),
            "first repeat source seed failed");
     ASSERT(func_801909B4() == -1, "first prefix return differs");
-    ASSERT(B54KR_OverlayBoundaryIsExact("func_80190660") &&
+    ASSERT(B54KR_OverlayBoundaryIsExact("func_80075358") &&
            PE_LoadU32(0x8009D1BCu) == 1u,
            "first repeat did not take one-time initializer path");
 
@@ -1007,6 +1056,93 @@ static void test_B54KS_drawsync_no_progress_is_named_cut(void)
                   "func_80077404_wait_cut") == 0 &&
            g_bootstrap_arg4_calls[0].target == 0x80077404u,
            "DrawSync no-progress path was not an inert named cut");
+    PASS();
+}
+
+static int B54KT_LoadImageCallIsExact(int index, uint32_t data,
+                                      uint32_t rect0, uint32_t rect1)
+{
+    BootstrapArgCall4 *call;
+    uint32_t got0 = 0u;
+    uint32_t got1 = 0u;
+
+    if (index < 0 || index >= g_bootstrap_arg4_call_count)
+        return 0;
+    call = &g_bootstrap_arg4_calls[index];
+    if (call->payload_size == 8u) {
+        memcpy(&got0, call->payload, 4u);
+        memcpy(&got1, call->payload + 4u, 4u);
+    }
+    return strcmp(call->symbol, "func_80076C34") == 0 &&
+           strcmp(call->caller, "func_8007506C") == 0 &&
+           call->target == 0x80076C34u && call->arg0 == 0x80076664u &&
+           call->arg1 == 0u && call->arg2 == 8u && call->arg3 == data &&
+           call->payload_size == 8u && got0 == rect0 && got1 == rect1;
+}
+
+static void test_B54KT_80190660_two_images_packets_and_boundary(void)
+{
+    int vsync, drawsync, presented, mask;
+    PEPortDmaIrqCheckpointTrace trace;
+    TEST("B54KT_80190660_two_images_packets_and_boundary");
+    ResetTestState();
+    HostFB_Init();
+    B54KR_SeedGpuStatic();
+    B54KT_SeedOverlayData();
+    PE_StoreU32(0x801D11BCu, 0x80110000u);
+    PE_StoreU32(0x801D11C0u, 0x80110100u);
+    PE_StoreU32(0x801D11C8u, 0u);
+    PE_StoreU8(0x8011006Du, 0xA5u);
+    PE_StoreU8(0x8011016Du, 0x5Au);
+    PE_Port_DmaIrqCheckpointTraceReset();
+
+    ASSERT(func_80190660() == -1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "func_80190660 did not stop at first DrawPrim");
+    ASSERT(B54KT_LoadImageCallIsExact(
+               0, 0x801CED30u, 0x01E00000u, 0x00010010u) &&
+           B54KT_LoadImageCallIsExact(
+               1, 0x801CED5Cu, 0x01000200u, 0x00400040u) &&
+           B54KR_OverlayBoundaryIsExact("func_80075358"),
+           "image dispatches or initialized DrawPrim command differ");
+    ASSERT(B54KR_PixelIs(0u, 480u, 0x5000u) &&
+           B54KR_PixelIs(15u, 480u, 0x500Fu) &&
+           B54KR_PixelIs(512u, 256u, 0x6000u) &&
+           B54KR_PixelIs(575u, 319u, 0x6FFFu) &&
+           !PE_GPU_DMA2Pending(),
+           "two image records did not reach exact VRAM geometry");
+    PE_Port_GetDmaIrqCheckpointTrace(&trace);
+    ASSERT(trace.checkpoint_calls == 1u && trace.token_queries == 1u &&
+           trace.service_calls == 1u && trace.last_captured_token != 0u &&
+           trace.last_serviced_token == trace.last_captured_token,
+           "large image was not completed by one DrawSync checkpoint");
+    ASSERT(PE_LoadU8(0x8011006Du) == 0u &&
+           PE_LoadU8(0x8011016Du) == 0u &&
+           PE_LoadU32(0x801D11C8u) == 1u &&
+           PE_LoadU32(0x801D11C4u) == 0x80110100u,
+           "environment disable/toggle/current state differs");
+    HostFB_GetState(&vsync, &drawsync, &presented, &mask);
+    ASSERT(vsync == 0 && drawsync == 1 && presented == 0 && mask == 1,
+           "func_80190660 host synchronization telemetry differs");
+    PASS();
+}
+
+static void test_B54KT_80190660_nonzero_toggle_selects_environment0(void)
+{
+    TEST("B54KT_80190660_nonzero_toggle_selects_environment0");
+    ResetTestState();
+    HostFB_Init();
+    B54KR_SeedGpuStatic();
+    B54KT_SeedOverlayData();
+    PE_StoreU32(0x801D11BCu, 0x80110200u);
+    PE_StoreU32(0x801D11C0u, 0x80110300u);
+    PE_StoreU32(0x801D11C8u, 7u);
+
+    ASSERT(func_80190660() == -1 &&
+           PE_LoadU32(0x801D11C8u) == 0u &&
+           PE_LoadU32(0x801D11C4u) == 0x80110200u &&
+           B54KR_OverlayBoundaryIsExact("func_80075358"),
+           "nonzero toggle did not use retail sltiu boolean/select env0");
     PASS();
 }
 
@@ -32026,6 +32162,8 @@ int main(void)
     test_B54KS_drawsync_completes_direct_dma();
     test_B54KS_drawsync_drains_queued_dma();
     test_B54KS_drawsync_no_progress_is_named_cut();
+    test_B54KT_80190660_two_images_packets_and_boundary();
+    test_B54KT_80190660_nonzero_toggle_selects_environment0();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();

@@ -70,7 +70,7 @@ and zero field-script `0x31` inbound hops to `m0360i`. Retail m0360i module 2
 is the unique `persist[0] |= 4` writer; the native branch must not plant that
 bit or a destination token. The current native code has no generic scene
 scheduler that enters m0360i, so the next faithful rung is the event/scheduler
-bridge, not another m0005i gate workaround. Current native suite: 971/971.
+bridge, not another m0005i gate workaround. Current native suite: 973/973.
 
 ## PE-BTL148 — scheduler census needs retail artifact (2026-08-24)
 
@@ -86,8 +86,8 @@ No scheduler implementation or m0360i special case is allowed yet. A retail
 PCSX trace/save reaching the Day 2+ event, or the executable/overlay that
 contains the missing writer, is required to close the provenance. The
 standalone native frontier is separately
-`PRODUCTION_REACHABILITY=blocked_at_func_80190660_from_func_801909B4` after
-B54K-R completed MoveImage and translated the first 240 overlay words; this
+`PRODUCTION_REACHABILITY=blocked_at_func_80075358_from_func_80190660` after
+B54K-T entered the overlay initializer and translated its first 128 words; this
 does not change the scheduler evidence boundary.
 
 ## PE-BTL149 — runtime-loaded overlay / Disc 2 census (2026-08-24)
@@ -109,7 +109,7 @@ corrects BTL148's coverage boundary, but does not prove the indirect branch's
 event input or m0360i selection. Do not implement a scheduler or special-case
 m0360i. Remaining scheduler status: `SEMANTIC_IMPLEMENTATION=not_started`
 and `SCHEDULER_PROVENANCE=NEEDS_ARTIFACT`. The independent native frontier is
-now `func_80190660` from `func_801909B4`; current suite `971/971`.
+now `func_80075358` from `func_80190660`; current suite `973/973`.
 
 ## PE-BTL150 — name-form search for m0360i (2026-08-24)
 
@@ -132,8 +132,8 @@ lead. The unresolved boundary remains the runtime population/selection of the
 indirect `D_801ACA68 -> D_8019F034` dispatch. Do not implement a scheduler or
 special-case m0360i. Scheduler status remains
 `SEMANTIC_IMPLEMENTATION=not_started` / `NEEDS_ARTIFACT`; the independent
-native frontier is now `func_80190660` from `func_801909B4`, with suite
-`971/971`.
+native frontier is now `func_80075358` from `func_80190660`, with suite
+`973/973`.
 
 Capture guidance: watch `func_8006E3D4` callers and their six-byte inputs, then
 the resulting `D_8009D280` write. Since `m0367i=0xA80663C8` and
@@ -572,6 +572,40 @@ FUNC_80077294=EXECUTION_PROVEN_PATHS_TRANSLATED
 FUNC_80077404=NORMAL_POLL_TRANSLATED_TIMEOUT_RECOVERY_FENCED
 DMA_CHECKPOINT_TOTAL=27_CALLS_26_ACTIVE_TOKENS
 PRODUCTION_REACHABILITY=blocked_at_func_80190660_from_func_801909B4
+SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
+```
+
+## PE-B54K-T — `func_80190660` image/fade prefix (2026-08-30)
+
+Function-hood is proven for the 213-word overlay-local `func_80190660`: one
+exact-start call at `0x80190D74`, a canonical `jr ra; nop`, and real preceding
+and following function boundaries. Its first 128 words
+`[0x80190660,0x80190860)` now execute.
+
+The prefix computes image records from `[0x80193278]=0x3BAC8` and anchor
+`0x80193254`, yielding records `0x801CED1C` and `0x801CED50`. Their retail
+RECTs `{0,480,16,1}` and `{512,256,64,64}` traverse LoadImage; DrawSync drains
+the large transfer through one established checkpoint in the focused test.
+It then builds both `E1000018/E1000019` draw-mode banks and paired SPRTs,
+clears both environment `+0x6D` bytes, enables display, applies the exact
+`old==0 ? 1 : 0` selector, and stores the selected environment pointer.
+
+The new boundary is `jal func_80075358` at `0x80190860`. Native applies its
+RGB delay-slot store and records only packet length 1 plus command word
+`0xE1000018`; retail's uninitialized stack-tag bytes 0..2 and a native stack
+pointer are excluded. Two focused contracts, retained B54K-R integration,
+the independent oracle, full normal suite, and fresh ASan/UBSan pass
+`973/973`. Real-disc framebuffer state is now 6 VSync, 4 DrawSync, 3
+presentations, mask 1; the aggregate DMA checkpoint census remains 27/26.
+
+Evidence: `docs/evidence/pe-b54kt-190660-drawprim-prefix/REPORT.md` and
+`pc_port/tools/b54kt_190660_drawprim_prefix_oracle.py`.
+
+```text
+FUNC_80190660_PREFIX=128_WORDS_TRANSLATED
+OVERLAY_IMAGE_RECORDS=TABLE_DERIVED_AND_EXECUTED
+TRANSIENT_PACKET_POINTER=NOT_RETAINED
+PRODUCTION_REACHABILITY=blocked_at_func_80075358_from_func_80190660
 SCHEDULER_PROVENANCE=NEEDS_ARTIFACT
 ```
 

@@ -2,6 +2,11 @@
 
 Status: **VERIFIED AND INTEGRATED ON THE NATIVE GRIND LANE**.
 
+> **B54K-T supersession note (2026-08-30):** B54K-T now enters
+> `func_80190660`, uses this DrawSync implementation for its image records,
+> and advances the real-disc frontier to `func_80075358 from func_80190660`.
+> The 971-test and prior-frontier measurements below remain B54K-S history.
+
 This rung translates the execution-proven DrawSync wrapper and queue/DMA drain
 needed by the B54K-R display prefix. It preserves the retail owner boundaries:
 the guest-ring pump remains the only ring consumer, and

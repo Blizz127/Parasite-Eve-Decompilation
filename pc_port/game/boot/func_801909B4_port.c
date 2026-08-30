@@ -1,12 +1,13 @@
 /*
- * Phase 6E-B54K-R — func_801909B4 through MoveImage and display setup.
+ * Phase 6E-B54K-R/T — func_801909B4 through MoveImage, display setup, and
+ * the B54K-T prefix of its one-time overlay-local initializer.
  *
  * Retail overlay body: [0x801909B4,0x801918F8), 977 words.
  * Implemented prefix: [0x801909B4,0x80190D74), 240 words.  MoveImage now
  * traverses the retail dispatcher and exact one-packet GP0(80h) worker.
- * The next canonical boundary is the one-time overlay-local call
- * func_80190660 at 0x80190D74; the D_8009D1BC-nonzero alternate is retained
- * as a named structural cut at the 0x80190D7C saved-bit branch.
+ * func_80190660 is now entered directly and advances to DrawPrim at
+ * 0x80190860. The D_8009D1BC-nonzero alternate remains a named structural
+ * cut at the 0x80190D7C saved-bit branch.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -25,6 +26,7 @@
 extern void func_8005E57C(int value);
 extern void func_8005C1EC(int enabled);
 extern void func_80042538(void);
+extern int func_80190660(void);
 
 static void CopyGuestBytes(pe_addr_t destination, pe_addr_t source,
                            uint32_t size)
@@ -108,14 +110,13 @@ int func_801909B4(void)
 
     if (PE_LoadU32(0x8009D1BCu) == 0u) {
         PE_StoreU32(0x8009D1BCu, 1u);
-        Bootstrap_ReturnVoid4Indirect(
-            "func_80190660", "func_801909B4", 0x80190660u,
-            0u, 0u, 0u, 0u);
+        (void)func_80190660();
     } else {
         Bootstrap_ReturnVoid4(
             "func_801909B4_80190D7C_cut", "func_801909B4",
             saved_bit, environment0, environment1, 0u);
     }
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    if (!PE_Port_ShouldStop())
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return -1; /* retail's retained s2 value */
 }

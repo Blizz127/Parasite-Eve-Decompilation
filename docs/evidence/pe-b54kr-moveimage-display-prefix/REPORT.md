@@ -2,6 +2,11 @@
 
 Status: **VERIFIED AND INTEGRATED ON THE NATIVE GRIND LANE**.
 
+> **B54K-T supersession note (2026-08-30):** B54K-T now enters the
+> `func_80190660` call documented below and advances 128 overlay words to
+> `func_80075358 from func_80190660`. The B54K-R frontier text and 967-test
+> measurements remain the historical result of this rung.
+
 This rung completes PsyQ `func_8007512C` (`MoveImage`), resolves the exact
 one-packet path through `func_80076B98`, adds the generic GP0(80h)
 VRAM-to-VRAM operation to the single native GPU authority, and advances the
