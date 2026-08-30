@@ -15,19 +15,19 @@ The current active universe contains **1,094** unique spans. The four-way
 scheduling closure is:
 
 ```text
-TIER 1                  16
+TIER 1                  15
 TIER 2                 214
 TIER 3                  99
-SKIP / suppressed      765
+SKIP / suppressed      766
                        ---
 TOTAL                 1094
 ```
 
-The primary tables in `volume-campaign-20260824/POOL.md` contain 1,047 rows:
-16 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
-active. The 47 active spans below were added after the primary tables through
-campaign overlays. Adding all 47 to the suppressed class closes the pool:
-`1047 + 47 = 1094` and `718 + 47 = 765`.
+The primary tables in `volume-campaign-20260824/POOL.md` contain 1,046 rows:
+15 Tier 1, 214 Tier 2, 99 Tier 3, and 718 SKIP. Every one of those rows remains
+active. The 48 active spans below were added after the primary tables through
+campaign overlays. Adding all 48 to the suppressed class closes the pool:
+`1046 + 48 = 1094` and `718 + 48 = 766`.
 
 No C source, YAML, build script, verifier, or toolchain file changes in this
 refresh. A suppressed `func_` label is not assumed to be a retail function.
@@ -61,6 +61,7 @@ refresh. A suppressed `func_` label is not assumed to be a retail function.
 | `0x6835C` | `func_80077B5C` | 1 | `SKIP-ALIGNMENT-PADDING` | function-hood audit below |
 | `0x684EC` | `func_80077CEC` | 1 | `SKIP-ALIGNMENT-PADDING` | function-hood audit below |
 | `0x68920` | `func_80078120` | 5 | `SKIP-SDK-LIBRARY-GTE-TAIL` | `volume-campaign-20260825/func-80078120/SKIP.md` |
+| `0x69434` | `func_80078C34` | 23 | `SKIP-SDK-LIBRARY-COP2` | `volume-campaign-20260830/func-80078c34/SKIP.md` |
 | `0x69494` | `func_80078C94` | 9 | `PARKED-AGGREGATE-RETURN-COLORING` | `volume-campaign-20260825/func-80078c94/PARK.md` |
 | `0x69604` | `func_80078E04` | 12 | `SKIP-SDK-LIBRARY-COP2` | `volume-campaign-20260824/COP2_SDK_SCREEN.md` |
 | `0x69694` | `func_80078E94` | 8 | `SKIP-SDK-LIBRARY-COP2` | `volume-campaign-20260824/COP2_SDK_SCREEN.md` |
@@ -114,6 +115,7 @@ scripts/verify_us.sh: exit 0; C conversion: 335 leaves
 yaml matching-C count: 335
 ```
 
-The refreshed Tier-1 queue therefore starts at `func_80078C34` (`0x69434`,
-23 words). Function hood and all screens must still be re-proven before its
-first C attempt.
+The first refreshed row, `func_80078C34`, was screened as a handwritten
+libGTE/COP2 routine without a C attempt. The Tier-1 queue therefore continues
+at `func_8003C5D8` (`0x2CDD8`, 24 words). Function hood and all screens must
+still be re-proven before its first C attempt.

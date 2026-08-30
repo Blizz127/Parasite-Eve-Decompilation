@@ -65,6 +65,10 @@ These families are redirectable but have not yet been identified completely by
 string cross-reference or signature matching:
 
 - libGTE (`RotTransPers`, matrix operations, and related geometry helpers)
+  - Screened separately: handwritten matrix/vector helper
+    `func_80078C34` (`ctc2`/`lwc2`/`mvmva`/`mfc2`), with 25 direct callers.
+    The instruction-level role is proven; its exact PsyQ routine name remains
+    unproven.
   - Screened for port-scope SKIP: the handwritten COP2 register/helper
     cluster `func_80078E04` through `func_80079024` in `asm/disc1/68478.s`.
     See `docs/evidence/volume-campaign-20260824/COP2_SDK_SCREEN.md`.
