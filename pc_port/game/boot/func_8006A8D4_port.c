@@ -55,8 +55,9 @@ void func_8006A8D4(void)
     D_800B0E54 = next;
     next = cursor + 0x3800;
     D_800B0E5C = next;
-    /* Retail reads the D_80011614 global here; it is a pe_addr_t guest
-     * address (bootstrap-policy value, see pe_globals.c). */
+    /* Retail reads the D_80011614 global here. Bootstrap fixtures use their
+     * policy address; real-disc startup adopts the authenticated rodata
+     * value before this function runs. */
     next = D_80011614;
     D_800B0E58 = cursor;
     cursor += 0x7000;

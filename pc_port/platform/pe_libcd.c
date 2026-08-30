@@ -314,9 +314,9 @@ int func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int size)
         /* func_80071A74 printf(D_8001136C, lba, size): collapsed. */
         return -1;
     }
-    /* size == 0 completes trivially (no data access), matching the retail
-     * boot-time DsRead(0) issued from func_8006E834 when the D_80093164
-     * table is still zero-filled BSS. */
+    /* size == 0 completes trivially (no data access). Bootstrap fixtures
+     * use that explicit path; authenticated retail images adopt 6E834's
+     * nonzero rodata range before entering the boot loop. */
     /* Retail post-issue state (asm func_80080E34); the transfer is already
      * complete on the host, so D_8009B6B4 (bytes pending) reads 0. */
     PE_StoreU32(0x8009B6ACu, 0x200u);

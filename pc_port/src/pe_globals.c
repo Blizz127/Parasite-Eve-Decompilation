@@ -30,10 +30,9 @@ unsigned int D_8009D064 = 0;
 
 /* ── D_80011614 — retail guest pointer, held host-side as pe_addr_t ────
  *
- * No translated retail writer exists yet (the retail writer is an
- * earlier, untranslated init function).  The initial value is bootstrap
- * policy: the D_8010BD00 arena base, matching the arena anchor used by
- * func_8006A8D4's layout.  Real access sites translate via PE_Translate. */
+ * The initial value is bootstrap-fixture policy: the D_8010BD00 arena base.
+ * Real-disc startup replaces it from authenticated executable rodata via
+ * PE_Globals_AdoptRetailImage. Real access sites translate via PE_Translate. */
 pe_addr_t D_80011614 = 0x8010BD00u;
 
 /* Adopt the image-backed authorities only after PE_GuestImage_LoadExe has

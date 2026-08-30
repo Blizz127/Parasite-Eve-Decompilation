@@ -71,8 +71,8 @@ typedef struct { uint8_t disp[20]; } DISP_ENV;
 
 /* D_80011614 — retail guest pointer (global at 0x80011614 holding a guest
  * address).  Stored host-side as pe_addr_t; translated only at real access
- * sites.  No translated retail writer exists yet; the initial value is
- * bootstrap policy (see pe_globals.c). */
+ * sites. The initial value is bootstrap policy; authenticated real-image
+ * startup adopts the executable-backed value (see pe_globals.c). */
 extern pe_addr_t D_80011614;
 int PE_Globals_AdoptRetailImage(void);
 

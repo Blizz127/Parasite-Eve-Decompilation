@@ -2,13 +2,11 @@
  * Phase 6E-A batch 3 — Native adaptation of func_8006E834 (post-mount
  * image loader), rewired to the real disc providers (pe_libcd.c).
  *
- * The boot-time read is degenerate on retail as well: D_80093164 is
- * zero-filled BSS with no writer in the retail image, so the call is
- * func_8006E6D4(D_800B0DD8 + 0, 0, D_80011614, 0) — a trivial-length
- * read that completes immediately; the retry/poll structure is what
- * matters.  When the table later carries real offsets the same call
- * shape loads PE.IMG bytes at the D_80011614 destination
- * (asm/disc1/5B1E4.s:4580).
+ * On a real image, B54K-P adopts retail rodata D_80093164={0x03D2,0x0457}
+ * and D_80011614=0x8018EFF0 after the boot EXE is authenticated.  This call
+ * therefore loads the 0x42800-byte overlay containing func_801909B4.
+ * Bootstrap fixtures retain an explicit zero range and exercise the same
+ * retry/poll topology through a trivial-length read.
  *
  * All bootstrap stubs now use centralized Bootstrap_ReturnInt/Void.
  * D_800BCE80 is guest-RAM-backed (defined in psx_compat.h), no local override.
