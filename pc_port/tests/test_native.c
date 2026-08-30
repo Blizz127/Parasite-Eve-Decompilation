@@ -372,8 +372,10 @@ static void B54KR_SeedGpuStatic(void)
 {
     PE_StoreU32(0x80095744u, 0x80095704u);
     PE_StoreU32(0x8009570Cu, 0x80076C34u); /* target at jtb + 8 */
+    PE_StoreU32(0x80095718u, 0x80076B58u); /* worker at jtb + 0x14 */
     PE_StoreU32(0x8009571Cu, 0x80076B98u); /* worker at jtb + 0x18 */
     PE_StoreU32(0x80095724u, 0x80076664u); /* worker at jtb + 0x20 */
+    PE_StoreU32(0x80095740u, 0x80077294u); /* target at jtb + 0x3C */
     PE_StoreU32(0x800957E4u, 0x04FFFFFFu);
     PE_StoreU32(0x800957E8u, 0x80000000u);
     PE_StoreU8(0x8009574Du, 1u);
@@ -509,18 +511,22 @@ static void B54KQ_SeedOverlayPrefix(uint8_t bias)
 static int B54KR_OverlayBoundaryIsExact(const char *symbol)
 {
     BootstrapArgCall4 *call;
-    uint32_t command = 0u;
+    uint32_t command[4] = { 0u, 0u, 0u, 0u };
 
     if (strcmp(symbol, "func_80075358") == 0) {
         if (g_bootstrap_arg4_call_count != 3)
             return 0;
         call = &g_bootstrap_arg4_calls[2];
-        memcpy(&command, call->payload, sizeof(command));
+        memcpy(command, call->payload, sizeof(command));
         return strcmp(call->symbol, symbol) == 0 &&
                strcmp(call->caller, "func_80190660") == 0 &&
                call->target == 0x80075358u && call->arg0 == 0u &&
-               call->arg1 == 1u && call->arg2 == 0u && call->arg3 == 0u &&
-               call->payload_size == 4u && command == 0xE1000018u;
+               call->arg1 == 4u && call->arg2 == 0u && call->arg3 == 0u &&
+               call->payload_size == 16u &&
+               command[0] == 0x64000000u &&
+               command[1] == 0x00580020u &&
+               command[2] == 0x78000000u &&
+               command[3] == 0x00400100u;
     }
 
     if (g_bootstrap_arg4_call_count != 1)
@@ -888,7 +894,7 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "prefix did not stop at overlay-local initializer");
     HostFB_GetState(&vsync, &drawsync, &presented, &mask);
-    ASSERT(mask == 1 && vsync == 4 && drawsync == 3 && presented == 0,
+    ASSERT(mask == 1 && vsync == 4 && drawsync == 4 && presented == 0,
            "display synchronization call counts differ");
 
     for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
@@ -1122,7 +1128,7 @@ static void test_B54KT_80190660_two_images_packets_and_boundary(void)
            PE_LoadU32(0x801D11C4u) == 0x80110100u,
            "environment disable/toggle/current state differs");
     HostFB_GetState(&vsync, &drawsync, &presented, &mask);
-    ASSERT(vsync == 0 && drawsync == 1 && presented == 0 && mask == 1,
+    ASSERT(vsync == 0 && drawsync == 2 && presented == 0 && mask == 1,
            "func_80190660 host synchronization telemetry differs");
     PASS();
 }
@@ -1143,6 +1149,69 @@ static void test_B54KT_80190660_nonzero_toggle_selects_environment0(void)
            PE_LoadU32(0x801D11C4u) == 0x80110200u &&
            B54KR_OverlayBoundaryIsExact("func_80075358"),
            "nonzero toggle did not use retail sltiu boolean/select env0");
+    PASS();
+}
+
+static void test_B54KU_gpu_draw_mode_command_state(void)
+{
+    PeGpuState state;
+    TEST("B54KU_gpu_draw_mode_command_state");
+    ResetTestState();
+
+    ASSERT(PE_GPU_WriteGP0(0xE1000018u),
+           "GP0(E1h) draw mode was rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.gp0_state == PE_GPU_GP0_IDLE &&
+           state.draw_mode == 0xE1000018u && state.draw_mode_count == 1u,
+           "first draw-mode state or parser completion differs");
+    ASSERT(PE_GPU_WriteGP0(0xE1000FFFu),
+           "second GP0(E1h) draw mode was rejected");
+    PE_GPU_GetState(&state);
+    ASSERT(state.draw_mode == 0xE1000FFFu && state.draw_mode_count == 2u,
+           "draw-mode replacement telemetry differs");
+
+    PE_GPU_SetReady(0);
+    ASSERT(!PE_GPU_WriteGP0(0xE1000019u),
+           "not-ready GPU accepted draw mode");
+    PE_GPU_GetState(&state);
+    ASSERT(state.draw_mode == 0xE1000FFFu && state.draw_mode_count == 2u,
+           "rejected draw mode mutated hardware state");
+    PASS();
+}
+
+static void test_B54KU_drawprim_wrapper_e1_and_indirect_fence(void)
+{
+    uint32_t command = 0xE1000018u;
+    PeGpuState state;
+    int vsync, drawsync, presented, mask;
+    TEST("B54KU_drawprim_wrapper_e1_and_indirect_fence");
+    ResetTestState();
+    HostFB_Init();
+    B54KR_SeedGpuStatic();
+
+    ASSERT(PE_func_80075358_Transient(&command, 1u) == 0 &&
+           !PE_Port_ShouldStop() && g_bootstrap_arg4_call_count == 0,
+           "exact DrawPrim wrapper/worker path did not return");
+    PE_GPU_GetState(&state);
+    ASSERT(state.draw_mode == command && state.draw_mode_count == 1u &&
+           state.gp0_state == PE_GPU_GP0_IDLE &&
+           state.gp1_dma_direction == 0u,
+           "DrawPrim E1 command or GP1 DMA-off effect differs");
+    HostFB_GetState(&vsync, &drawsync, &presented, &mask);
+    ASSERT(vsync == 0 && drawsync == 1 && presented == 0 && mask == 0,
+           "DrawPrim wrapper did not call DrawSync exactly once");
+
+    PE_Port_RunControlReset();
+    Bootstrap_ResetArg4CallLog();
+    PE_StoreU32(0x80095718u, 0xF1234567u);
+    ASSERT(PE_func_80075358_Transient(&command, 1u) == -1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
+           g_bootstrap_arg4_call_count == 1 &&
+           strcmp(g_bootstrap_arg4_calls[0].symbol, "func_80076B58") == 0 &&
+           g_bootstrap_arg4_calls[0].target == 0xF1234567u &&
+           g_bootstrap_arg4_calls[0].arg1 == 1u &&
+           g_bootstrap_arg4_calls[0].payload_size == 4u,
+           "dirty slot-5 identity was not an inert typed boundary");
     PASS();
 }
 
@@ -32164,6 +32233,8 @@ int main(void)
     test_B54KS_drawsync_no_progress_is_named_cut();
     test_B54KT_80190660_two_images_packets_and_boundary();
     test_B54KT_80190660_nonzero_toggle_selects_environment0();
+    test_B54KU_gpu_draw_mode_command_state();
+    test_B54KU_drawprim_wrapper_e1_and_indirect_fence();
 
     /* Guest RAM (12 tests) */
     test_ram_init_zero_fill();

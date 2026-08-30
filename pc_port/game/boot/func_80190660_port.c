@@ -89,6 +89,7 @@ int func_80190660(void)
     pe_addr_t environment;
     uint32_t next_toggle;
     uint32_t intensity;
+    uint32_t draw_mode_command;
     uint32_t frame = 0u;
     RECT rect;
     unsigned parity;
@@ -142,13 +143,20 @@ int func_80190660(void)
     sprites[parity * 0x28u + 5u] = (uint8_t)intensity;
     sprites[parity * 0x28u + 6u] = (uint8_t)intensity;
 
-    /* Native transient adapter for jal func_80075358.  Bytes 0..2 of the
-     * retail stack tag are intentionally excluded; only initialized command
-     * bytes and the lbu p[3] length cross the diagnostic boundary. */
+    /* B54K-U: the first DrawPrim now traverses the exact wrapper/worker and
+     * generic GP0(E1h) draw-mode state. */
+    draw_mode_command = 0xE1000018u;
+    if (PE_func_80075358_Transient(&draw_mode_command, 1u) != 0 ||
+        PE_Port_ShouldStop())
+        return -1;
+
+    /* The next call is the four-word SPRT. Bytes 0..2 of the retail stack
+     * tag are intentionally excluded; all 16 initialized command bytes and
+     * the lbu p[3] length cross the diagnostic boundary by value. */
     (void)Bootstrap_ReturnInt4Indirect(
         "func_80075358", "func_80190660", -1, 0x80075358u,
-        0u, draw_modes[parity * 0x10u + 3u], 0u, 0u,
-        draw_modes + parity * 0x10u + 4u, 4u);
+        0u, sprites[parity * 0x28u + 3u], 0u, 0u,
+        sprites + parity * 0x28u + 4u, 16u);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return -1;
 }

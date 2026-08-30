@@ -2,6 +2,12 @@
 
 Status: **VERIFIED AND INTEGRATED ON THE NATIVE GRIND LANE**.
 
+> **B54K-U supersession note (2026-08-30):** B54K-U translates the first
+> DrawPrim wrapper/worker path and generic GP0(E1h) state. The current
+> `func_80075358` boundary is now the second call at `0x80190868`, carrying
+> the four-word SPRT. The 128-word/973-test measurements below are B54K-T
+> history.
+
 This rung proves `func_80190660` is a real overlay function, enters it from
 the already translated `func_801909B4`, and translates its first 128 words.
 The represented path loads two table-derived images, synchronizes the large

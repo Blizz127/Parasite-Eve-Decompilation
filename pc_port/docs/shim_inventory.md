@@ -189,9 +189,10 @@ never native function pointers.
 - `func_8003F3C4`
 - `func_801235DC`
 - `func_8019234C`
-- `func_80075358` — current DrawPrim boundary from the 128-word translated
-  prefix of overlay-local `func_80190660`; the boundary snapshots only its
-  initialized command word and packet length, never a native stack pointer
+- `func_80075358` — current second-DrawPrim boundary at overlay PC
+  `0x80190868`, after the first DrawPrim/E1 packet was translated by B54K-U;
+  the boundary snapshots the four initialized SPRT words and length, never a
+  native stack pointer
 
 ### func_8003E610 callees (10)
 - `func_80073C94`

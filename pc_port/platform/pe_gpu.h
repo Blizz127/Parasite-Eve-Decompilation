@@ -53,6 +53,11 @@ typedef struct {
     uint32_t image_current_pixel;
     uint32_t image_remaining_pixels;
 
+    /* GP0(E1h) draw-mode state. The full command word is retained because
+     * later primitive decoding consumes texture-page/depth fields. */
+    uint32_t draw_mode;
+    uint64_t draw_mode_count;
+
     pe_addr_t dma2_madr;
     uint32_t dma2_bcr;
     uint32_t dma2_chcr;
@@ -87,8 +92,8 @@ void PE_GPU_Reset(void);
 uint32_t PE_GPU_ReadStatus(void);
 void PE_GPU_SetReady(int ready);
 
-/* Supported GP0 subset: 0x01000000 cache clear and the A0 image
- * command/position/size/data stream.  Supported GP1 subset: exact commands
+/* Supported GP0 subset: 0x01000000 cache clear, GP0(E1h) draw mode, and the
+ * A0 image command/position/size/data stream. Supported GP1 subset: exact commands
  * 00, 01, 02, 04000000, and 04000002.  Return 1 on acceptance, 0 when the
  * command is unsupported or invalid for the current state. */
 int PE_GPU_WriteGP0(uint32_t value);

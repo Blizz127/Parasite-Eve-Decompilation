@@ -57,7 +57,7 @@ typedef struct {
     uintptr_t arg1;
     uintptr_t arg2;
     uintptr_t arg3;
-    uint8_t payload[8];
+    uint8_t payload[16];
     uint32_t payload_size;
 } BootstrapArgCall4;
 

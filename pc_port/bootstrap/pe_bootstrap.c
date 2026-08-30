@@ -178,7 +178,7 @@ void Bootstrap_RecordArg4Indirect(const char *symbol, const char *caller,
                                   const void *payload,
                                   uint32_t payload_size)
 {
-    if (payload_size > 8u || (payload_size != 0u && payload == NULL)) {
+    if (payload_size > 16u || (payload_size != 0u && payload == NULL)) {
         fprintf(stderr, "FATAL: Bootstrap_RecordArg4Indirect: bad payload\n");
         abort();
     }

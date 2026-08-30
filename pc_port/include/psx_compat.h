@@ -97,6 +97,8 @@ extern unsigned int D_8009D064;
 static inline void func_80073A44(int m)  { HostFB_VSync(m); }
 static inline void func_80074D28(int m)  { HostFB_SetDispMask(m); }
 int func_80074DC0(int mode);
+int func_80075358(pe_addr_t packet);
+int PE_func_80075358_Transient(const uint32_t *words, uint8_t count);
 static inline void func_80074F44(RECT *r, uint8_t rv, uint8_t g, uint8_t b) {
     if (r) HostFB_ClearImage(r->x, r->y, r->w, r->h, rv, g, b);
 }

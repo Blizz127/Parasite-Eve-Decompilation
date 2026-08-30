@@ -156,6 +156,12 @@ int PE_GPU_WriteGP0(uint32_t value)
             g_gpu.state.gp0_state = PE_GPU_GP0_EXPECT_POSITION;
             return 1;
         }
+        if ((value & 0xFF000000u) == 0xE1000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.state.draw_mode = value;
+            g_gpu.state.draw_mode_count++;
+            return 1;
+        }
         return 0;
 
     case PE_GPU_GP0_EXPECT_POSITION:
