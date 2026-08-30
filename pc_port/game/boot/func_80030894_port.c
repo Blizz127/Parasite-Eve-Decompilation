@@ -1,6 +1,6 @@
 /*
- * Phase 6E-B54K-B1 — func_80030894: boot GPU-primitive builder,
- * prologue + bank-0 L2/L3 and L4 packet groups (translated retail prefix).
+ * Phase 6E-B54K-B2 — func_80030894: boot GPU-primitive builder,
+ * prologue + bank-0 L2/L3, L4, and L5 packet groups (translated prefix).
  *
  * Full retail body:
  *   788 words / 0xC50 bytes, exe 0x80030894–0x800314E4 (exclusive),
@@ -11,15 +11,16 @@
  *   stale scratch discarded by the caller).
  *
  * Implemented prefix:
- *   0x80030894..0x80030C9C (258 words) — prologue, the bank record
+ *   0x80030894..0x80030D20 (291 words) — prologue, the bank record
  *   init at 0x800BE9F0, and the L2(j=0..9) × L3(k=0..3) sprite-array
  *   build at 0x800B01C0, followed by the fixed bank-0 tile/sprite setup
- *   and complete L4 four-packet loop.  The first excluded instruction is
+ *   and complete L4 four-packet and L5 five-packet loops.  The first
+ *   excluded instruction is
  *
- *       move  s6, zero                  # 0x80030C9C
+ *       lbu   s5, 0x18(sp)              # 0x80030D20
  *
- *   (group L5 setup).  The named strict boundary is
- *   func_80030894_L4_cut.
+ *   (post-L5 fixed-group setup).  The named strict boundary is
+ *   func_80030894_L5_cut.
  *
  * Word decode of the implemented window (verified against the
  * SHA-1-exact retail executable 452fb033f2eaa4b18aa20a5bca60b8125af3a37b):
@@ -72,7 +73,7 @@
  *     L3: k < 4 (sltiu), L2: j < 10 (sltiu), counters &0xFF.
  *
  * All callees are native since B54I/GPU1 (GetTPage, GetClut,
- * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC); the L4 cut is
+ * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC); the L5 cut is
  * the first untranslated boundary inside this body.
  *
  * Classification: 1 — translated retail prefix.
@@ -89,6 +90,7 @@
 #define GA_TILE_STATE    0x800B00E8u
 #define GA_SPRT_RECORD   0x800B6920u
 #define GA_L4_BASE       0x8009E0F0u
+#define GA_L5_BASE       0x8009E1D0u
 
 void func_80030894(void)
 {
@@ -169,6 +171,7 @@ void func_80030894(void)
             uint32_t bank36 = (uint32_t)bank * 36u;
             uint32_t bank28 = (uint32_t)bank * 28u;
             uint32_t bank112 = (uint32_t)bank * 112u;
+            uint32_t bank140 = (uint32_t)bank * 140u;
             pe_addr_t tile = GA_TILE_BASE + bank24;
             pe_addr_t tile_packet = tile + 8u;
             pe_addr_t packet = GA_TILE_PACKET + bank16;
@@ -224,11 +227,22 @@ void func_80030894(void)
                 PE_StoreU16(l4 + 0x18u, 6u);
                 PE_StoreU16(l4 + 0x1Au, 10u);
             }
+
+            /* 0x80030C9C..0x80030D1C: L5, five 28-byte packets. */
+            for (slot = 0u; slot < 5u; slot++) {
+                uint32_t off = bank140 + slot * 28u;
+                pe_addr_t l5 = GA_L5_BASE + off;
+
+                func_800370DC(l5, tpage_sprt);
+                PE_StoreU16(l5 + 0x16u, clut_id);
+                PE_StoreU16(l5 + 0x18u, 6u);
+                PE_StoreU16(l5 + 0x1Au, 10u);
+            }
         }
     }
 
-    /* B54K-B1 cut: stop before group L5 at retail 0x80030C9C. */
+    /* B54K-B2 cut: stop after L5 at retail 0x80030D20. */
     (void)Bootstrap_ReturnInt(
-        "func_80030894_L4_cut", "func_80030894", 0);
+        "func_80030894_L5_cut", "func_80030894", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
 }
