@@ -43,7 +43,7 @@ one of these lines:
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
 Current matching-lane status: 340 exact matching-C
-leaves plus 20 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
+leaves plus 21 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
 
@@ -677,7 +677,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 340 exact leaves plus 20
+  matching C; current disposition is 340 exact leaves plus 21
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1013,6 +1013,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-103-3DF50 | 339 | `func_8003DF50` @ `0x2E750` is a hood-proven 30-word signed-index 16-byte-record initializer with one direct caller, canonical return with live halfword-store delay slot, and immediate real boundaries. Natural typed-struct C matched first phrasing under era `-O2 -G0`: the signed-short formal recovers retail's `sll 16; sra 12` scale, and repeated source-field expressions preserve four alias-sensitive table-base reloads. Carve `0x071C + 0x0078 + 0x0000 = 0x0794`; 30/30 object, packed span, full SHA exact, verify green at 339. Banked lever: keep a signed-short formal plus typed 16-byte array and avoid hoisting an explicit record pointer when retail reloads a potentially aliased source base between destination stores. Evidence: `docs/evidence/volume-campaign-20260830/func-8003df50/REPORT.md`. |
 | VOLUME-104-78554-SKIP | 339 | `func_80078554` @ `0x68D54` is function-hood proven by two direct callers and canonical `jr ra; nop`; its following one-word alignment gap precedes another real handwritten function. The split explicitly marks this 31-word fixed-point three-byte interpolation helper handwritten, and its semantics require `mtc2`, `gpf`, `gpl`, and `mfc2`. The established libGTE/PsyCross screen classifies it `SKIP-SDK-LIBRARY-COP2` with zero C phrasings and no integration/count change; exact routine naming is not asserted. Tier 1 falls 8→7, SKIP/suppressed rises 769→770, and consecutive parks remain zero. Evidence: `docs/evidence/volume-campaign-20260830/func-80078554/SKIP.md`. |
 | VOLUME-105-CE870 | 340 | `func_800CE870` @ `0xBF070` is a hood-proven 32-word two-source position selector with 27 direct callers, canonical return, and immediate real boundaries. Phrasing 1 recovered the full schedule but modeled three isolated shorts and emitted `lhu`; modeling the evidence-backed aligned signed 16.16 fields and `>> 16` conversions folds to retail's three high-half `lh` operations. Phrasing 2 matches 32/32 under era `-O2 -G0` after two local-jump relocations. Carve `0x03D4 + 0x0080 + 0x5F60 = 0x63B4`; packed span/full SHA exact, verify green at 340. Banked lever: a signed high-half `lh` at `+2` within aligned four-byte fields can arise from `signed int >> 16`, while isolated short-to-short copies may canonicalize to `lhu`. Evidence: `docs/evidence/volume-campaign-20260830/func-800ce870/REPORT.md`. |
+| VOLUME-106-339A0-PARK | 340 | `func_800339A0` @ `0x241A0` is hood-proven by six direct callers, canonical return, and immediate real boundaries. It copies a 16-byte four-pair constant table, selects by the low byte of its argument, and is the sole writer of gp state `D_8009CE80/84/86`. Two era `-O2 -G8` source orders compile byte-identically: cc1 keeps the selected pair address in `$v0`, hoists the second `lhu`, and groups the three GP stores, while retail keeps the address in `$v1`, the result in `$v0`, and stores the first half before the second load. `PARKED-GP-LOAD-STORE-SCHEDULING-AND-REGISTER-HOME`, `ACCEPTED-RESIDUAL`; no integration/count change, consecutive park 1. Evidence: `docs/evidence/volume-campaign-20260830/func-800339a0/PARK.md`; source is in the labeled stash. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

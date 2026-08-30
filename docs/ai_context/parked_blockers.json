@@ -340,6 +340,13 @@
       "note": "func_80070D6C @ file 0x6156C is a proven callable 25-word lagged-Fibonacci RNG advance with four direct callers, canonical return, and real boundaries. Independent retail/native oracles prove the self-adjacent state semantics. Two natural era -O2 -G0 phrasings compile byte-identically to 24 words: cc1 assigns the three retained bases and cursor/slot/value lifetimes through v0/t0/a3/a2/a1/a0/v1, moves both cursor decrements into earlier load gaps, and computes the sum directly in v0. Retail keeps a deliberate t0-t8 home plan, preserves one load-delay nop, copies t5 to v0, and fills the two guard slots plus return slot with the cursor operations. The explicit two-load/two-value retry changes nothing. No YAML/build/verifier integration; matching count remains 336. Disposition is ACCEPTED-RESIDUAL, not byte identity.",
       "evidence": "docs/evidence/volume-campaign-20260830/func-80070d6c/PARK.md; final source preserved in stash 'park func_80070D6C register-schedule residual'",
       "next": "Do not retry without a compiler allocation/scheduler lever that demonstrably reproduces the t0-t8 home plan and prevents both early cursor-decrement steals; pins and scheduling-hiding source tricks remain forbidden."
+    },
+    {
+      "id": "gp-load-store-scheduling-register-home-339a0",
+      "status": "PARKED-GP-LOAD-STORE-SCHEDULING-AND-REGISTER-HOME",
+      "note": "func_800339A0 @ file 0x241A0 is a proven callable 32-word constant-pair selector with six direct callers, canonical return, and real boundaries. It copies the 16-byte D_80010E38 table to a local aggregate, indexes a four-byte pair by index & 0xFF, and is the sole writer of gp state D_8009CE80/D_8009CE84/D_8009CE86. Two natural era -O2 -G8 phrasings differing in source store order compile byte-identically. Retail keeps the selected pair address in v1, loads the first result into v0, preserves a load-delay nop, stores it, then loads the second result. cc1 keeps the address in v0, first result in v1, hoists the second lhu, groups the three gp stores, and emits 31 content words plus alignment zero versus retail's 32 content words. No YAML/build/verifier integration; matching count remains 340. Disposition is ACCEPTED-RESIDUAL, not byte identity.",
+      "evidence": "docs/evidence/volume-campaign-20260830/func-800339a0/PARK.md; final source preserved in stash 'park func_800339A0 gp-load-store scheduling residual'",
+      "next": "Do not retry without a compiler allocation/scheduler lever that demonstrably retains the selected-pair address in v1, the first result in v0, and prevents the second lhu from moving across the first gp-relative halfword store; pins, volatile ordering fiction, and mismatch-hiding source tricks remain forbidden."
     }
   ]
 }

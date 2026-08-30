@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,089 current active spans — Tier 1 6, Tier 2 214, Tier 3 99,
-SKIP/suppressed 770. Refresh evidence: `POOL_REFRESH.md`.
+Pool: 1,089 current active spans — Tier 1 5, Tier 2 214, Tier 3 99,
+SKIP/suppressed 771. Refresh evidence: `POOL_REFRESH.md`.
 
-Consecutive bounded parks: 0. Matched leaves this campaign: 5.
+Consecutive bounded parks: 1. Matched leaves this campaign: 5.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -19,3 +19,4 @@ Consecutive bounded parks: 0. Matched leaves this campaign: 5.
 | 8 | `func_8003DF50` @ `0x2E750` | canonical return with live store slot; one direct caller; immediate real boundaries; no frame/callees/globals/loop | MATCHED leaf 339 first phrasing; signed-short 16-byte typed record plus alias-sensitive repeated source expressions; 30/30 object, packed span, full SHA exact | 30 | 1 | VOLUME-103 leaf commit |
 | 9 | `func_80078554` @ `0x68D54` | canonical return; two direct callers; preceding real return delay slot and one-nop gap before next real function; split marks handwritten COP2 operation | `SKIP-SDK-LIBRARY-COP2`; no C attempt or integration | 31 | 0 | VOLUME-104 docs-only commit |
 | 10 | `func_800CE870` @ `0xBF070` | canonical return; 27 direct callers; immediate real boundaries; no frame/callees/globals/loop | MATCHED leaf 340 on phrasing 2; signed 16.16 high-half source fields recover three retail `lh` operations; 32/32 normalized object, packed span, full SHA exact | 32 | 2 | VOLUME-105 leaf commit |
+| 11 | `func_800339A0` @ `0x241A0` | canonical return; six direct callers; immediate real boundaries; no callees/loop; sole writer of three Stage-0-censused gp fields | `PARKED-GP-LOAD-STORE-SCHEDULING-AND-REGISTER-HOME`; two source store orders compile byte-identically, retaining selected address in `v0` and hoisting the second `lhu` versus retail `v1` home and interleaved store | 32 | 2 | stash `park func_800339A0 gp-load-store scheduling residual` |
