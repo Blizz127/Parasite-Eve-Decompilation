@@ -65,3 +65,9 @@ Function hood passed. The body is a handwritten GTE/COP2 wrapper using
 `cfc2`, `ctc2`, `lwc2`, a COP2 operation, and `swc2`; it was screened without
 burning an ordinary-C attempt. Exact count remains 335 and the next Tier-1
 pool is 17.
+
+| 15 | `func_800791D0` @ `0x699D0` | TIER 1; canonical `jr ra`; one exact-start caller; real/real boundaries | `SKIP-SDK-LIBRARY-COP2` | 22 | 0 | docs-only commit |
+
+The body is the exact structural sibling of `func_80079178`, differing only
+in the COP2 operation word. It was screened without an ordinary-C attempt.
+Exact count remains 335 and the next Tier-1 pool is 16.

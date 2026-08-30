@@ -2,13 +2,12 @@
 
 Generated from the active `[address, asm]` subsegments in `configs/USA/disc1.yaml`; stale generated asm outside active span geometry is excluded. Candidates are active `nonmatching` spans of 40 words or fewer. Screens are static triage and must be re-proven at C2 before an attempt. This refresh removes the six leaves matched by the 2026-08-24 campaign; the three COP2 helpers remain in SKIP.
 
-Total: **1081** — TIER 1 17, TIER 2 214, TIER 3 93, SKIP 753.
+Total: **1081** — TIER 1 16, TIER 2 214, TIER 3 93, SKIP 753.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x699D0 | `func_800791D0` | 22 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x69434 | `func_80078C34` | 23 | jr-ra | 25/25 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x2CDD8 | `func_8003C5D8` | 24 | jr-ra | 26/26 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x6156C | `func_80070D6C` | 25 | jr-ra | 3/3 | 0 | no | - | - | lui:16x3,ori:0xFFFFx3,addiu:-0x4x2,ori:0x40x2 | real/real | 0 jal; no indexed symbolic access; no loop |
@@ -1079,6 +1078,11 @@ Total: **1081** — TIER 1 17, TIER 2 214, TIER 3 93, SKIP 753.
 data with `lwc2`, executes a COP2 operation, and stores results with `swc2`.
 Disposition: `SKIP-SDK-LIBRARY-COP2`; evidence:
 `docs/evidence/volume-campaign-20260825/func-80079178/SKIP.md`.
+
+The adjacent `func_800791D0` is the same save/load/execute/store/restore GTE
+wrapper with the alternate COP2 operation word at `0x80079204`. It is removed
+from TIER 1 without an ordinary-C attempt as `SKIP-SDK-LIBRARY-COP2`.
+Evidence: `docs/evidence/volume-campaign-20260829/func-800791d0/SKIP.md`.
 
 ## Post-campaign parked leaves
 
