@@ -8,10 +8,6 @@ Total: **1081** — TIER 1 17, TIER 2 214, TIER 3 93, SKIP 753.
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0x6EEB0 | `func_8007E6B0` | 21 | jr-ra | 4/4 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0x4C4BC | `func_8005BCBC` | 21 | jr-ra | 2/2 | 0 | yes | - | - | addiu:0x8x2,addiu:0x10x2 | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0x7459C | `func_80083D9C` | 21 | jr-ra | 0/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
-| 0x69978 | `func_80079178` | 22 | jr-ra | 2/2 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x699D0 | `func_800791D0` | 22 | jr-ra | 1/1 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x69434 | `func_80078C34` | 23 | jr-ra | 25/25 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x2CDD8 | `func_8003C5D8` | 24 | jr-ra | 26/26 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
