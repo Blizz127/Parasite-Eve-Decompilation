@@ -11,20 +11,19 @@ VOLUME-100's handwritten `func_8003F798` joins the screened COP2 helpers in
 SKIP. VOLUME-101 removes exact `func_80012700`, and VOLUME-102 moves
 handwritten libGTE helper `func_80079304` to SKIP. VOLUME-103 removes exact
 `func_8003DF50`, and VOLUME-104 moves handwritten libGTE helper
-`func_80078554` to SKIP.
+`func_80078554` to SKIP. VOLUME-105 removes exact `func_800CE870`.
 
 The 2026-08-30 active-span reconciliation is recorded in
 `docs/evidence/volume-campaign-20260830/POOL_REFRESH.md`. The primary tables
-below contain 1,038 still-active rows. The reconciliation adds 52 post-table
+below contain 1,037 still-active rows. The reconciliation adds 52 post-table
 park/skip/padding dispositions and corrects the stale header arithmetic.
 
-Total: **1090** — TIER 1 7, TIER 2 214, TIER 3 99, SKIP/suppressed 770.
+Total: **1089** — TIER 1 6, TIER 2 214, TIER 3 99, SKIP/suppressed 770.
 
 ## TIER 1
 
 | file off | function | words | jr/tail | callers/refs | jal | gp | indexed symbolic/temp | loop/back-edge owner | repeated constant | boundaries | screen |
 |---:|---|---:|---|---:|---:|---|---|---|---|---|---|
-| 0xBF070 | `func_800CE870` | 32 | jr-ra | 27/27 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x241A0 | `func_800339A0` | 32 | jr-ra | 6/6 | 0 | yes | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x71448 | `func_80080C48` | 32 | jr-ra | 6/6 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |
 | 0x66ABC | `func_800762BC` | 32 | jr-ra | 4/4 | 0 | no | - | - | - | real/real | 0 jal; no indexed symbolic access; no loop |

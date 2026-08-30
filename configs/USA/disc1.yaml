@@ -1143,8 +1143,11 @@ segments:
       - [0xBEC64, c, func_800CE464]
       # Volume campaign: signed-byte threshold callback, era -O2 -G0.
       - [0xBEC70, c, func_800CE470]
-      # Phase 5ED: mid-BEC9C hole — sb+ret0 func_800D4850.
+      # Volume campaign: position-source / signed-16.16 selector, era -O2 -G0.
       - [0xBEC9C, asm]
+      - [0xBF070, c, func_800CE870]
+      - [0xBF0F0, asm]
+      # Phase 5ED: mid-BEC9C hole — sb+ret0 func_800D4850.
       - [0xC5050, c, func_800D4850]
       - [0xC5060, asm]
   # End of file: 0x1EE800 = 2,025,472 bytes (verified size).

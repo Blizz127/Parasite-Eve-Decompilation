@@ -2,7 +2,7 @@
 
 ## Current disposition
 
-The repository currently has **339 exact matching-C leaves**. The authoritative
+The repository currently has **340 exact matching-C leaves**. The authoritative
 count is:
 
 ```sh
@@ -58,6 +58,6 @@ SDK handwritten COP2/syscall skips are outside this residual count.
 ## Exact-build relationship
 
 The exact executable SHA-1 remains
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. It is produced from the 339
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. It is produced from the 340
 registered matching-C leaves plus the existing assembly spans; the 20 residual
 leaves are intentionally excluded from the exact build.
