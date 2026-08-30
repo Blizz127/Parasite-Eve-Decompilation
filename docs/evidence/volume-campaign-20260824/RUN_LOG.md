@@ -71,3 +71,12 @@ pool is 17.
 The body is the exact structural sibling of `func_80079178`, differing only
 in the COP2 operation word. It was screened without an ordinary-C attempt.
 Exact count remains 335 and the next Tier-1 pool is 16.
+
+## Terminal condition — post-policy continuation
+
+`HARD_STOP=THREE_CONSECUTIVE_PARKS` applies to attempts 11–13
+(`func_8007E6B0`, `func_8005BCBC`, `func_80083D9C`). Attempts 14–15 were
+zero-attempt COP2 family screens and do not reset or evade that stop. No
+additional ordinary-C phrasing attempt is authorized in this campaign until
+human review or a refreshed campaign. Exact count remains 335; the 16-row
+queue is preserved.
