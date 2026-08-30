@@ -417,7 +417,11 @@ segments:
       - [0x3FC48, c, func_8004F448]
       - [0x3FC64, asm]
       - [0x40008, c, func_8004F808]
+      # Tier-2 probe: callback table getter func_80050020.
+      # Former 0x40038 asm span: prefix 0x7E8, C 0x18, resume 0xCE0.
       - [0x40038, asm]
+      - [0x40820, c, func_80050020]
+      - [0x40838, asm]
       # Phase 5AF: C leaf func_80050D18 — VRAM 0x80050D18, size 0x8.
       # File span 0x41518–0x41520 exclusive. Empty jr/nop stub (second mid-2A0C).
       - [0x41518, c, func_80050D18]
