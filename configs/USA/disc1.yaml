@@ -1241,6 +1241,11 @@ segments:
       # Prefix 0x238 (= 0xBE160 - 0xBDF28); then CD970/CD978 C stubs
       # (0x10 total), resume BE180.s 0x384 (= 0xBE504 - 0xBE180).
       - [0xBDF28, asm]
+      # Tier-2 W callback: exact-start table entry at 0xD1758. Six-argument
+      # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
+      # Carve: BDF28 prefix 0x174, C 0x2C, resume BE0C8.s 0x98.
+      - [0xBE09C, c, func_800CD89C]
+      - [0xBE0C8, asm]
       - [0xBE160, c, func_800CD960]
       # Phase 5GQ: return-zero stub, era -O2 -G0.
       - [0xBE170, c, func_800CD970]
