@@ -418,7 +418,10 @@ segments:
       # Tier-2 B: independently referenced callback-registration wrapper
       # for func_80050438; era -O2 -G0, exact first phrasing.
       - [0x3BD34, c, func_8004B534]
-      - [0x3BD5C, asm]
+      # Tier-2 B: independently referenced adjacent wrapper for
+      # func_800504BC; era -O2 -G0, exact first phrasing.
+      - [0x3BD5C, c, func_8004B55C]
+      - [0x3BD84, asm]
       - [0x3C708, c, func_8004BF08]
       - [0x3C740, asm]
       - [0x3D824, c, func_8004D024]
