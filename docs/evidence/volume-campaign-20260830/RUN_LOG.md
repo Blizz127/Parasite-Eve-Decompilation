@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,074 current active spans — Tier 1 0, Tier 2 200, Tier 3 99,
+Pool: 1,073 current active spans — Tier 1 0, Tier 2 199, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 16.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 21.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -18,7 +18,7 @@ native runtime rather than extending the sample.
 
 Tier-2 continuation: a later explicit sustained-work authorization resumes the
 queue after the native L10 predecode and runs matching work alongside the
-BTL151 retail capture. Current continuation result: four first-phrasing matches.
+BTL151 retail capture. Current continuation result: five first-phrasing matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -52,3 +52,4 @@ BTL151 retail capture. Current continuation result: four first-phrasing matches.
 | 28 / Tier-2 continuation 12 | `func_8007A88C` @ `0x6B08C` | canonical return; one exact direct caller; immediate real boundaries; one unresolved CD command-register callee; no direct globals or loop | MATCHED leaf 353 first phrasing; natural call-then-return-one wrapper reproduces the eight-word frame and late constant result; packed span/full SHA exact | 8 | 1 | VOLUME-123 leaf commit |
 | 29 / Tier-2 continuation 13 | `func_8007F788` @ `0x6FF88` | canonical return; one exact direct caller; immediate real boundaries; one already-C unsigned-byte getter callee; no direct globals or loop | MATCHED leaf 354 first phrasing; unsigned-byte forwarding return reproduces the eight-word frame and post-call `andi 0xFF`; packed span/full SHA exact | 8 | 1 | VOLUME-124 leaf commit |
 | 30 / Tier-2 continuation 14 | `func_80080AC4` @ `0x712C4` | canonical return; one exact direct caller; preceding real epilogue plus two explicit alignment nops; following real boundary; one command-register callee | MATCHED leaf 355 first phrasing; independently proven fixed-success twin of 7A88C; packed span/full SHA exact | 8 | 1 | VOLUME-125 leaf commit |
+| 31 / Tier-2 continuation 15 | `func_80080B04` @ `0x71304` | canonical return with live teardown; one exact direct caller; immediate real boundaries; one hardware/global transaction callee | MATCHED leaf 356 first phrasing; independently hood-proven zero-status twin of 80AE4; packed span/full SHA exact | 8 | 1 | VOLUME-126 leaf commit |

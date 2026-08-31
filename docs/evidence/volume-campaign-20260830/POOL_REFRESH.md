@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-125, the matching-C count is **355**.
+`634dd1b` (335-leaf base). After VOLUME-126, the matching-C count is **356**.
 
 ## Method and closure
 
@@ -11,27 +11,27 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,074** unique spans. The four-way
+The current active universe contains **1,073** unique spans. The four-way
 scheduling closure is:
 
 ```text
 TIER 1                   0
-TIER 2                 200
+TIER 2                 199
 TIER 3                  99
 SKIP / suppressed      775
                        ---
-TOTAL                 1074
+TOTAL                 1073
 ```
 
 The primary tables in `volume-campaign-20260824/POOL.md` contain 1,032
 historical rows: 0 Tier 1, 214 Tier 2, 99 Tier 3, and 719 SKIP. VOLUME-112
-removed fourteen Tier-2 rows by integrating `func_800C6ED8`,
+removed fifteen Tier-2 rows by integrating `func_800C6ED8`,
 `func_800C6EC0`, `func_80050020`, `func_8007C544`, `func_800812F4`,
 `func_80062F1C`, `func_800C2AF0`, `func_80084FC4`, `func_80080AE4`,
 `func_8004DC84`, `func_8007A488`, `func_8007A88C`, and
-`func_8007F788` and `func_80080AC4`, leaving 1,018 active primary rows. The
+`func_8007F788`, `func_80080AC4`, and `func_80080B04`, leaving 1,017 active primary rows. The
 56 active spans below were added after the primary tables through campaign overlays. Thus
-`1018 + 56 = 1074`; the suppressed class
+`1017 + 56 = 1073`; the suppressed class
 remains `719 + 56 = 775`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
@@ -72,8 +72,10 @@ then removed exact fixed-success command wrapper
 `func_8007A88C` on its first natural phrasing. VOLUME-124 then removed exact
 unsigned-byte forwarding wrapper `func_8007F788` on its first natural
 phrasing. VOLUME-125 then removed independently hood-proven fixed-success twin
-`func_80080AC4` on its first natural phrasing. A suppressed `func_` label
-is not assumed to be a retail function.
+`func_80080AC4` on its first natural phrasing. VOLUME-126 then removed
+independently hood-proven zero-status twin `func_80080B04` on its first
+natural phrasing. A suppressed `func_` label is not assumed to be a retail
+function.
 
 ## Reconciled post-table spans
 
