@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 367 exact matching-C
+Current matching-lane status: 368 exact matching-C
 leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -706,7 +706,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 367 exact leaves plus 24
+  matching C; current disposition is 368 exact leaves plus 24
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1074,6 +1074,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-135-50C50 | 365 | `func_80050C50` @ `0x41450` is hood-proven by an exact-start callback registration, canonical return, and immediate real boundaries. Natural `value + 0x28` forwarding C calls `func_80064C54`, matches all eight words on phrasing 1 under era `-O2 -G0`, and fills the call delay slot with the argument adjustment. Carve `0x0048 + 0x0020 + 0x00A8 = 0x0110`; packed span/full SHA exact, verify green at 365, and Tier 2 falls 191→190. Evidence: `docs/evidence/volume-campaign-20260830/func-80050c50/REPORT.md`. |
 | VOLUME-136-50CF8 | 366 | `func_80050CF8` @ `0x414F8` is hood-proven by an exact-start callback registration, canonical return, and immediate real boundaries. Natural fixed-8 forwarding C calls `func_80064C54`, matches all eight words on phrasing 1 under era `-O2 -G0`, and fills the call delay slot with the fixed argument. Carve `0x0088 + 0x0020 = 0x00A8`; packed span/full SHA exact, verify green at 366, and Tier 2 falls 190→189. Evidence: `docs/evidence/volume-campaign-20260830/func-80050cf8/REPORT.md`. |
 | VOLUME-137-813E8 | 367 | `func_800813E8` @ `0x71BE8` is hood-proven by an exact-start callback registration, canonical return, a real predecessor, and explicit alignment before the following real function. Natural no-argument forwarding C calls `func_8007C564` and matches all eight words on phrasing 1 under era `-O2 -G0`, with one normalized call relocation. Carve `0x00D8 + 0x0020 + 0x02EC = 0x03E4`; packed span/full SHA exact, verify green at 367, and Tier 2 falls 189→188. Evidence: `docs/evidence/volume-campaign-20260830/func-800813e8/REPORT.md`. |
+| VOLUME-138-824F0 | 368 | `func_800824F0` @ `0x72CF0` is hood-proven by seven direct callers, canonical return, and immediate real boundaries. Natural `(3, value)` forwarding C calls `func_80073CF4`, matches all nine words on phrasing 1 under era `-O2 -G0`, and fills the call delay slot with the fixed slot number. Carve `0x0234 + 0x0024 + 0x0020 = 0x0278`; packed span/full SHA exact, verify green at 368, and Tier 2 falls 188→187. Evidence: `docs/evidence/volume-campaign-20260830/func-800824f0/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).

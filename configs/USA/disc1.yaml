@@ -887,6 +887,8 @@ segments:
       # lui/lw/jr/nop on D_8009D24C. Plain -O1 matches.
       # Mid-72ABC carve: prefix 0x4E24, C 0x10, resume 778F0.s 0x598C.
       - [0x72ABC, asm]
+      - [0x72CF0, c, func_800824F0]
+      - [0x72D14, asm]
       - [0x72D34, c, func_80082534]
       - [0x72D54, asm]
       # Phase 5EF: return-and-clear int state flag.
