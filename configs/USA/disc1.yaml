@@ -476,9 +476,11 @@ segments:
       - [0x40780, c, func_8004FF80]
       # Adjacent wrapper func_8004FFA8 consumes 0x28 from the 0x78 span.
       - [0x407A8, c, func_8004FFA8]
-      - [0x407D0, asm]
+      # Adjacent wrapper func_8004FFD0 consumes half of the 0x50 span.
+      - [0x407D0, c, func_8004FFD0]
+      - [0x407F8, asm]
       # Tier-2 probe: callback table getter func_80050020.
-      # Current 0x407D0 asm span: prefix 0x50, C 0x18, resume 0xCE0.
+      # Current 0x407F8 asm span: prefix 0x28, C 0x18, resume 0xCE0.
       - [0x40820, c, func_80050020]
       - [0x40838, asm]
       - [0x40888, c, func_80050088]
