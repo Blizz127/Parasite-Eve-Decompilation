@@ -2,7 +2,7 @@
 
 ## Current disposition
 
-The repository currently has **360 exact matching-C leaves**. The authoritative
+The repository currently has **361 exact matching-C leaves**. The authoritative
 count is:
 
 ```sh

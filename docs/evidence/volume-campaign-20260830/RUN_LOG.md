@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,069 current active spans — Tier 1 0, Tier 2 195, Tier 3 99,
+Pool: 1,068 current active spans — Tier 1 0, Tier 2 194, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 25.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 26.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -18,7 +18,7 @@ native runtime rather than extending the sample.
 
 Tier-2 continuation: a later explicit sustained-work authorization resumes the
 queue after the native L10 predecode and runs matching work alongside the
-BTL151 retail capture. Current continuation result: nine first-phrasing matches.
+BTL151 retail capture. Current continuation result: ten first-phrasing matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -57,3 +57,4 @@ BTL151 retail capture. Current continuation result: nine first-phrasing matches.
 | 33 / Tier-2 continuation 17 | `func_80082534` @ `0x72D34` | canonical return; one exact direct caller; immediate real boundaries; one subsystem-reset callee; dead call result | MATCHED leaf 358 first phrasing; natural void forwarding wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-128 leaf commit |
 | 34 / Tier-2 continuation 18 | `func_80050088` @ `0x40888` | canonical return; exact-start callback registration; immediate real boundaries; one callback-list callee; dead call result | MATCHED leaf 359 first phrasing; natural null-callback forwarding wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-129 leaf commit |
 | 35 / Tier-2 continuation 19 | `func_80050260` @ `0x40A60` | canonical return; six exact-start callback registrations; immediate real boundaries; one unresolved callee; dead call result | MATCHED leaf 360 first phrasing; natural no-argument forwarding wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-130 leaf commit |
+| 36 / Tier-2 continuation 20 | `func_800506E8` @ `0x40EE8` | canonical return; exact-start callback registration; immediate real boundaries; one unresolved callee; dead call result | MATCHED leaf 361 first phrasing; natural registered callback wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-131 leaf commit |
