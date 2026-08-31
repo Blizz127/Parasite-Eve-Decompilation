@@ -297,6 +297,11 @@ segments:
       - [0x2951C, c, func_80038D1C]
       - [0x29548, c, func_80038D48]
       - [0x29574, asm]
+      # Tier-2 S: reset three byte states and one pointer-sized state word;
+      # five direct callers, era -O2 -G0, exact first phrasing.
+      # Carve: 29574 prefix 0xBFC, C 0x2C, resume 2A19C.s 0x2C3C.
+      - [0x2A170, c, func_80039970]
+      - [0x2A19C, asm]
       # Volume 97: reciprocal-byte initializer; era -O2 -G0 with the
       # sanctioned ASPSX signed-division guard expansion.
       - [0x2CDD8, c, func_8003C5D8]

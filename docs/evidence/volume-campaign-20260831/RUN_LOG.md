@@ -15,6 +15,7 @@ Baseline: clean `main` at `81ab3fe`, 380 exact matching-C leaves.
 | VOLUME-158 | `func_800CCEBC` (`0xBD6BC`, 11 words) | W | MATCHED phrasing 1 | 388 | independent exact-start table hood at `0xD16A4`; six-argument forward to matched `func_800C2AF0`; exact 11/11; carve `0xEF8 + 0x2C + 0x98 = 0xFBC`; packed span, exact SHA, verifier pass |
 | VOLUME-159 | `func_800CD89C` (`0xBE09C`, 11 words) | W | MATCHED phrasing 1 | 389 | independent exact-start table hood at `0xD1758`; six-argument forward to matched `func_800C2AF0`; exact 11/11; carve `0x174 + 0x2C + 0x98 = 0x238`; packed span, exact SHA, verifier pass |
 | VOLUME-160 | `func_800CE118` (`0xBE918`, 11 words) | W | MATCHED phrasing 1 | 390 | independent exact-start table hood at `0xD17E8`; final W-row, six-argument forward to matched `func_800C2AF0`; exact 11/11; carve `0x1CC + 0x2C + 0x98 = 0x290`; packed span, exact SHA, verifier pass |
+| VOLUME-161 | `func_80039970` (`0x2A170`, 11 words) | S | MATCHED phrasing 1 | 391 | five direct callers; branchless reset of three byte states and one pointer state; era `-O2 -G0`; exact 11/11; carve `0xBFC + 0x2C + 0x2C3C = 0x3864`; packed span, exact SHA, verifier pass |
 
 The campaign is active. Each leaf must independently pass function hood,
 Stage-0 typing, whole-object comparison, carve geometry, exact executable SHA,
