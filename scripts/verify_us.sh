@@ -150,6 +150,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x336D0, c, func_80042ED0]'
     '[0x340E0, c, func_800438E0]'
     '[0x3DA7C, c, func_8004D27C]'
+    '[0x3F14C, c, func_8004E94C]'
     '[0x3F170, c, func_8004E970]'
     '[0x41CF8, c, func_800514F8]'
     '[0x42658, c, func_80051E58]'
@@ -597,6 +598,7 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/3C740.s"
     "asm/disc1/3E2A4.s"
     "asm/disc1/3E4A4.s"
+    "src/func_8004E94C.c"
     "asm/disc1/40838.s"
     "asm/disc1/408A8.s"
     "asm/disc1/40A80.s"

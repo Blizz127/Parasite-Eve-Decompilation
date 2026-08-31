@@ -414,6 +414,7 @@ segments:
       - [0x3E2A4, asm]
       - [0x3E484, c, func_8004DC84]
       - [0x3E4A4, asm]
+      - [0x3F14C, c, func_8004E94C]
       - [0x3F170, c, func_8004E970]
       # Phase 5EG: C leaf func_8004F448 — VRAM 0x8004F448, size 0x1C.
       # File span 0x3FC48–0x3FC64 exclusive. First branchy leaf: gp read,
