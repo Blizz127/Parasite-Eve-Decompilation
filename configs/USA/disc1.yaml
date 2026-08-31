@@ -426,6 +426,8 @@ segments:
       - [0x40038, asm]
       - [0x40820, c, func_80050020]
       - [0x40838, asm]
+      - [0x40888, c, func_80050088]
+      - [0x408A8, asm]
       # Phase 5AF: C leaf func_80050D18 — VRAM 0x80050D18, size 0x8.
       # File span 0x41518–0x41520 exclusive. Empty jr/nop stub (second mid-2A0C).
       - [0x41518, c, func_80050D18]

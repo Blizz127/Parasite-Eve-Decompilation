@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,071 current active spans — Tier 1 0, Tier 2 197, Tier 3 99,
+Pool: 1,070 current active spans — Tier 1 0, Tier 2 196, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 23.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 24.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -18,7 +18,7 @@ native runtime rather than extending the sample.
 
 Tier-2 continuation: a later explicit sustained-work authorization resumes the
 queue after the native L10 predecode and runs matching work alongside the
-BTL151 retail capture. Current continuation result: seven first-phrasing matches.
+BTL151 retail capture. Current continuation result: eight first-phrasing matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -55,3 +55,4 @@ BTL151 retail capture. Current continuation result: seven first-phrasing matches
 | 31 / Tier-2 continuation 15 | `func_80080B04` @ `0x71304` | canonical return with live teardown; one exact direct caller; immediate real boundaries; one hardware/global transaction callee | MATCHED leaf 356 first phrasing; independently hood-proven zero-status twin of 80AE4; packed span/full SHA exact | 8 | 1 | VOLUME-126 leaf commit |
 | 32 / Tier-2 continuation 16 | `func_800816F4` @ `0x71EF4` | canonical return with live teardown; one exact direct caller; immediate real boundaries; one BIOS-vector bounded-compare callee | MATCHED leaf 357 first phrasing; constant-12 equality wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-127 leaf commit |
 | 33 / Tier-2 continuation 17 | `func_80082534` @ `0x72D34` | canonical return; one exact direct caller; immediate real boundaries; one subsystem-reset callee; dead call result | MATCHED leaf 358 first phrasing; natural void forwarding wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-128 leaf commit |
+| 34 / Tier-2 continuation 18 | `func_80050088` @ `0x40888` | canonical return; exact-start callback registration; immediate real boundaries; one callback-list callee; dead call result | MATCHED leaf 359 first phrasing; natural null-callback forwarding wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-129 leaf commit |
