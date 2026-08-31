@@ -263,6 +263,8 @@ segments:
       # Phase 5FP-370A8: fixed-point quotient helper, era -O2 -G0.
       # Mid-26C48 carve: prefix 0xC60, C 0x14, resume 278BC.s.
       - [0x26C48, asm]
+      - [0x27634, c, func_80036E34]
+      - [0x27658, asm]
       - [0x278A8, c, func_800370A8]
       # Phase 5FQ-370DC: packet setup/submit wrapper, era -O2 -G0.
       # Mid-278BC carve: prefix 0x20, C 0x64, resume 27940.s.
