@@ -1765,7 +1765,7 @@ SOURCES=(
     "asm/disc1/3420.s"
     "src/func_80017E9C.c"
     "src/func_80017EA4.c"
-    "asm/disc1/86C4.s"
+    "src/func_80017EC4.c"
     "src/func_80017EFC.c"
     "src/func_80017F20.c"
     "asm/disc1/8744.s"
@@ -2694,7 +2694,6 @@ run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/data/800.rodata
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2A0C.s.o asm/disc1/2A0C.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/2D74.s.o asm/disc1/2D74.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/3420.s.o asm/disc1/3420.s
-run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/86C4.s.o asm/disc1/86C4.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/8744.s.o asm/disc1/8744.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/8804.s.o asm/disc1/8804.s
 run "$AS" $ASFLAGS_DEFAULT -I "$ROOT/include" -o build/asm/disc1/8B00.s.o asm/disc1/8B00.s
