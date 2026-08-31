@@ -463,9 +463,12 @@ segments:
       # prefix 0x118, C 0x28, resume 0x6A8 (0x118 + 0x28 + 0x6A8 = 0x7E8).
       - [0x40038, asm]
       - [0x40150, c, func_8004F950]
-      - [0x40178, asm]
+      # Adjacent callback wrapper func_8004F978 consumes the head of the
+      # 0x6A8 span: C 0x28 + resume 0x680 = 0x6A8.
+      - [0x40178, c, func_8004F978]
+      - [0x401A0, asm]
       # Tier-2 probe: callback table getter func_80050020.
-      # Current 0x40178 asm span: prefix 0x6A8, C 0x18, resume 0xCE0.
+      # Current 0x401A0 asm span: prefix 0x680, C 0x18, resume 0xCE0.
       - [0x40820, c, func_80050020]
       - [0x40838, asm]
       - [0x40888, c, func_80050088]
