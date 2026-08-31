@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent B54K-AD oracle for func_801924F8 filename/search phase."""
+"""Independent B54K-AE oracle for func_801924F8 movie-state setup."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import argparse
 import hashlib
 import os
 import pathlib
-import re
 import struct
 import subprocess
 
@@ -16,9 +15,11 @@ PEIMG_SHA1 = "146c0ce7308bf9fdc2ba5a84230e198db0663f3b"
 BASE = 0x03D2 * 0x800
 LOAD = 0x8018EFF0
 START = 0x801924F8
-CUT = 0x80192614
+SETUP_START = 0x80192614
+CUT = 0x80192728
 END = 0x80192934
-PREFIX_SHA256 = "c5ac60f55bb880129bf6cb3363a84d1a3febec10fea7d81a78ea809658eb6c8c"
+SETUP_SHA256 = "dc9862aea7cf86ce063394d2c9ddae42774de12940250c8c219de3ab42ef1eca"
+PREFIX_SHA256 = "526fb8ca0e5558585d3fc06b8d6977d9999d648c57a5c259d69b214f3fd2fc1e"
 FULL_SHA256 = "ef825dccdbfd2a74941203d37739c713ad1e3bd8de48ca747f55d0e75a92f00a"
 
 
@@ -29,10 +30,6 @@ def require(ok: bool, message: str) -> None:
 
 def u32(data: bytes, off: int) -> int:
     return struct.unpack_from("<I", data, off)[0]
-
-
-def exe_u32(exe: bytes, va: int) -> int:
-    return u32(exe, 0x800 + va - 0x80010000)
 
 
 def jal_target(word: int, pc: int) -> int:
@@ -66,56 +63,46 @@ def main() -> None:
 
     off = BASE + START - LOAD
     body = peimg[off:off + END - START]
+    setup = body[SETUP_START - START:CUT - START]
     prefix = body[:CUT - START]
     require(len(body) == 271 * 4 and
             hashlib.sha256(body).hexdigest() == FULL_SHA256,
             "complete func_801924F8 identity")
-    require(len(prefix) == 71 * 4 and
-            hashlib.sha256(prefix).hexdigest() == PREFIX_SHA256 and
-            u32(body, CUT - START) == 0x3C06801D,
-            "71-word prefix and exact cut")
-    require(u32(body, 0x8019292C - START) == 0x03E00008 and
-            u32(body, 0x80192930 - START) == 0,
-            "complete function return")
-
-    calls = {
-        pc: jal_target(u32(body, pc - START), pc)
-        for pc in (0x801925AC, 0x801925C4, 0x801925CC,
-                   0x801925E0, 0x801925F8)
-    }
-    require(calls == {
-        0x801925AC: 0x800719F4,
-        0x801925C4: 0x800719F4,
-        0x801925CC: 0x8007F72C,
-        0x801925E0: 0x8007F778,
-        0x801925F8: 0x80081414,
-    }, "filename/search callee census")
-    require(exe_u32(exe, 0x800719F4) == 0x240A00A0 and
-            exe_u32(exe, 0x800719F8) == 0x01400008 and
-            exe_u32(exe, 0x800719FC) == 0x24090015,
-            "BIOS A(15h) strcat trampoline")
-    for va, expected in ((0x8018F2E4, b"\\FMV1\0"),
-                         (0x8018F2EC, b"\\FMV2\0")):
-        pos = BASE + va - LOAD
-        require(peimg[pos:pos + len(expected)] == expected,
-                f"prefix string {va:08X}")
-    require(peimg[BASE + 0x8018F2C4 - LOAD:
-                  BASE + 0x8018F2C4 - LOAD + 14] == b"\\FMV001.STR;1\0",
-            "Disc 1 record-1 suffix")
-    print("  OK retail: 71-word prefix, A(15h) strcat x2, CD search loop")
-    print("  OK names: index <21 uses \\FMV1; index >=21 uses \\FMV2")
+    require(len(setup) == 69 * 4 and
+            hashlib.sha256(setup).hexdigest() == SETUP_SHA256,
+            "69-word movie-state block identity")
+    require(len(prefix) == 140 * 4 and
+            hashlib.sha256(prefix).hexdigest() == PREFIX_SHA256,
+            "140-word combined prefix identity")
+    require(not any((u32(setup, off) >> 26) == 3
+                    for off in range(0, len(setup), 4)),
+            "unexpected call inside state-only block")
+    next_word = u32(body, CUT - START)
+    require(jal_target(next_word, CUT) == 0x8010BE3C and
+            u32(body, CUT + 4 - START) == 0x00002021,
+            "exact pre-call cut")
+    print("  OK retail: 69-word call-free state block, exact 0x80192728 cut")
+    print("  OK prefix: 140/271 authenticated words of func_801924F8")
 
     source = (root / "pc_port/game/boot/func_801924F8_port.c").read_text()
-    provider = (root / "pc_port/platform/func_800719E4_port.c").read_text()
-    source_cut = re.search(r'func_801924F8_(80192[0-9A-Fa-f]+)_cut', source)
-    require("record_index < 21u" in source and
-            "func_800719F4" in source and
-            "func_80081414(0x801D0DC4u, filename)" in source and
-            source_cut is not None and
-            int(source_cut.group(1), 16) >= CUT and
-            "return strcat(destination, source)" in provider and
+    tests_source = (root / "pc_port/tests/test_native.c").read_text()
+    required_source = (
+        "PE_StoreU32(0x801D0DDCu, PE_LoadU32(0x801D0DC4u))",
+        "display_buffer & 0xFFu",
+        "active_pair + 22u",
+        "active_pair + 24u",
+        "PE_LoadU8(0x800B0DBBu) != 0u ? 24u : 16u",
+        "func_801924F8_80192728_cut",
+    )
+    require(all(token in source for token in required_source) and
+            "func_8010BE3C" not in source and
             "m0360i" not in source and "0xA8066048" not in source,
             "native scope")
+    require("TEST(\"B54KAE_movie_state_setup\")" in tests_source and
+            "PE_StoreU32(0x800ACDDCu, 1u)" in tests_source and
+            "PE_LoadU16(0x801D148Eu) == 33u" in tests_source and
+            "PE_LoadU16(0x801D1490u) == 16u" in tests_source,
+            "independent active-pair/kind control")
 
     tests = args.tests or root / "pc_port/build/pe-native-tests"
     port = args.port or root / "pc_port/build/parasite-eve-port"
@@ -124,21 +111,22 @@ def main() -> None:
     else:
         disc = pathlib.Path(os.environ.get(
             "PE_DISC1_BIN", (root / "local/pe_disc1.path").read_text().strip()))
-    for test_filter in ("B54KY", "B54KAD"):
+    for test_filter, pass_name in (
+            ("B54KY", "B54KY_192CE8_real_disc_issue_poll_and_boundary... PASS"),
+            ("B54KAE", "B54KAE_movie_state_setup... PASS")):
         env = os.environ.copy()
         env["PE_TEST_FILTER"] = test_filter
         output = run([str(tests)], 0, env)
-        require("0 failed" in output, f"focused {test_filter} tests")
+        require(pass_name in output and "0 failed" in output,
+                f"focused {test_filter} contract")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    strict_cut = re.search(r'func_801924F8_(80192[0-9A-Fa-f]+)_cut', strict)
-    require(strict_cut is not None and
-            int(strict_cut.group(1), 16) >= CUT and
+    require("func_801924F8_80192728_cut" in strict and
             "called from: func_801924F8" in strict,
-            "strict frontier did not reach the authenticated filename phase")
-    print("  OK runtime: Disc 1 FMV001 and synthetic FMV2 threshold paths")
-    print("  OK production: strict frontier reaches or passes 0x80192614")
-    print("\nB54K-AD func_801924F8 filename oracle: PASS.")
+            "strict frontier")
+    print("  OK runtime: real Disc 1 and synthetic active-pair controls")
+    print("  OK production: strict frontier advanced exactly to 0x80192728")
+    print("\nB54K-AE func_801924F8 state oracle: PASS.")
 
 
 if __name__ == "__main__":

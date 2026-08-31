@@ -42,18 +42,31 @@ one of these lines:
 
 The reusable CMake target `pe_field_runtime` now produces
 `pc_port/build/libpe_field_runtime.a` from the 197 current translated/runtime
-translation units. `parasite-eve-port`, the 986-case native suite, and a
+translation units. `parasite-eve-port`, the 987-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-now stops at `func_801924F8_80192614_cut` after retail filename construction
-and CD-file search.
+now stops at `func_801924F8_80192728_cut` after retail filename construction,
+CD-file search, and the call-free movie-state setup block.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AE — movie state setup (2026-08-31)
+
+The authenticated `func_801924F8` prefix now covers 140 of 271 words through
+`0x80192728`. The new 69-word block copies the returned `CdlLOC`, populates
+four retail pointer fields, builds the two record-derived coordinate pairs,
+selects one with the low byte of `D_800ACDDC`, and derives 16 versus 24 from
+the movie-kind byte. The block contains no calls; native stops immediately
+before retail's `jal 0x8010BE3C`. Real Disc 1 and a poisoned synthetic
+buffer-1/kind-zero control both pass, as do normal and fresh ASan/UBSan CTest.
+The native suite is 987/987 and strict execution stops at
+`func_801924F8_80192728_cut`. Evidence:
+`docs/evidence/pe-b54kae-1924f8-state/REPORT.md`.
 
 ## PE-B54K-AD — movie filename/search continuation (2026-08-31)
 

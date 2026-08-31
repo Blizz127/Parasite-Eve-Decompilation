@@ -1568,7 +1568,16 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            "func_801918F8 wide display-pair state differs");
     ASSERT(g_bootstrap_arg4_call_count == 0,
            "translated func_801918F8 remained a provider");
-    ASSERT(CountOrderLog("func_801924F8_80192614_cut") == 1 &&
+    ASSERT(PE_LoadU32(0x801D0DDCu) == PE_LoadU32(0x801D0DC4u) &&
+           PE_LoadU32(0x801D1464u) == 0x80122D00u &&
+           PE_LoadU32(0x801D1468u) == 0x80132700u &&
+           PE_LoadU32(0x801D1470u) == 0x80173100u &&
+           PE_LoadU32(0x801D1474u) == 0x80175E00u &&
+           PE_LoadU16(0x801D148Cu) == 0u &&
+           PE_LoadU16(0x801D148Eu) == 240u &&
+           PE_LoadU16(0x801D1490u) == 24u,
+           "real-disc movie state setup differs");
+    ASSERT(CountOrderLog("func_801924F8_80192728_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "func_801924F8 internal cut did not become the exact frontier");
 
@@ -18164,7 +18173,7 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192614_cut") == 1 &&
+           CountOrderLog("func_801924F8_80192728_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-search cut");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18172,6 +18181,58 @@ static void test_B54KAD_fmv2_filename_threshold(void)
            memcmp(PE_TranslateConst(0x801D0DCCu, 13u),
                   "FMV018.STR;1", 13u) == 0,
            "index 21 did not select the FMV2 path");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_B54KAE_movie_state_setup(void)
+{
+    DiscFixture fx;
+    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
+    const pe_addr_t suffix = 0x801F0000u;
+
+    TEST("B54KAE_movie_state_setup");
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    PE_StoreU32(record, suffix);
+    PE_StoreU8(record + 4u, 0u);
+    PE_StoreU16(record + 10u, 17u);
+    PE_StoreU16(record + 12u, 33u);
+    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
+    PE_StoreU32(0x801D0DE8u, 0x80122000u);
+    PE_StoreU32(0x801D0DECu, 0x80132000u);
+    PE_StoreU32(0x801D0DF0u, 0x80173000u);
+    PE_StoreU32(0x801D0DF4u, 0x80175000u);
+    PE_StoreU32(0x800ACDDCu, 1u);
+    memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
+
+    ASSERT(func_801924F8(21) == 0 &&
+           CountOrderLog("func_801924F8_80192728_cut") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "movie state setup did not reach the exact pre-call cut");
+    ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
+                  PE_TranslateConst(0x801D0DC4u, 4u), 4u) == 0,
+           "CdlLOC copy differs");
+    ASSERT(PE_LoadU32(0x801D1464u) == 0x80122000u &&
+           PE_LoadU32(0x801D1468u) == 0x80132000u &&
+           PE_LoadU8(0x801D146Cu) == 0u &&
+           PE_LoadU32(0x801D1470u) == 0x80173000u &&
+           PE_LoadU32(0x801D1474u) == 0x80175000u &&
+           PE_LoadU8(0x801D1478u) == 0u,
+           "movie pointer block differs");
+    ASSERT(PE_LoadU16(0x801D147Au) == 17u &&
+           PE_LoadU16(0x801D147Cu) == 273u &&
+           PE_LoadU16(0x801D1482u) == 17u &&
+           PE_LoadU16(0x801D1484u) == 33u &&
+           PE_LoadU8(0x801D148Au) == 1u &&
+           PE_LoadU16(0x801D148Cu) == 17u &&
+           PE_LoadU16(0x801D148Eu) == 33u &&
+           PE_LoadU16(0x801D1490u) == 16u &&
+           PE_LoadU8(0x801D1494u) == 0u,
+           "movie coordinate selection or kind branch differs");
     FxFree(&fx);
     PASS();
 }
@@ -33366,7 +33427,7 @@ int main(void)
     test_6E9A0_dispatch_arg1();
     test_6E9A0_dispatch_arg3();
 
-    /* Phase 6E-A batch 3 / B54K-AD: real-disc foundation (42 tests) */
+    /* Phase 6E-A batch 3 / B54K-AE: real-disc foundation (43 tests) */
     test_disc_open_rejects_bad_size();
     test_disc_open_rejects_bad_sync();
     test_disc_open_rejects_mode1();
@@ -33392,6 +33453,7 @@ int main(void)
     test_dssearch_pe_img_cdlfile();
     test_dssearch_missing();
     test_B54KAD_fmv2_filename_threshold();
+    test_B54KAE_movie_state_setup();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();
