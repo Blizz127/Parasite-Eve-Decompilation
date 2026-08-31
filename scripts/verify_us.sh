@@ -87,6 +87,8 @@ EXPECTED_SUBSEGMENTS=(
     '[0x72D14, asm]'
     '[0x6E514, c, func_8007DD14]'
     '[0x6E538, asm]'
+    '[0x42D34, c, func_80052534]'
+    '[0x42D58, asm]'
     '[0x33720, c, func_80042F20]'
     '[0x33838, c, func_80043038]'
     '[0x534D0, c, func_80062CD0]'
@@ -270,7 +272,6 @@ EXPECTED_SUBSEGMENTS=(
     '[0x42648, c, func_80051E48]'
     '[0x42D14, c, func_80052514]'
     '[0x42D24, c, func_80052524]'
-    '[0x42D34, asm]'
     '[0x42D7C, c, func_8005257C]'
     '[0x42D94, asm]'
     '[0x42FC0, c, func_800527C0]'
@@ -830,6 +831,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_800813E8.c"
     "src/func_800824F0.c"
     "src/func_8007DD14.c"
+    "src/func_80052534.c"
     "src/func_80050D18.c"
     "src/func_80051834.c"
     "src/func_8005184C.c"

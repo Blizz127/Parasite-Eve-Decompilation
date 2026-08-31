@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,060 current active spans — Tier 1 0, Tier 2 186, Tier 3 99,
+Pool: 1,059 current active spans — Tier 1 0, Tier 2 185, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 34.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 35.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -18,7 +18,7 @@ native runtime rather than extending the sample.
 
 Tier-2 continuation: a later explicit sustained-work authorization resumes the
 queue after the native L10 predecode and runs matching work alongside the
-BTL151 retail capture. Current continuation result: eighteen first-phrasing matches.
+BTL151 retail capture. Current continuation result: nineteen first-phrasing matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -66,3 +66,4 @@ BTL151 retail capture. Current continuation result: eighteen first-phrasing matc
 | 42 / Tier-2 continuation 26 | `func_800813E8` @ `0x71BE8` | canonical return; exact-start callback registration; real predecessor; explicit alignment before following real function; one unresolved callee | MATCHED leaf 367 first phrasing; natural no-argument wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-137 leaf commit |
 | 43 / Tier-2 continuation 27 | `func_800824F0` @ `0x72CF0` | canonical return; seven direct callers; immediate real boundaries; one unresolved callee; argument shuffle plus fixed slot | MATCHED leaf 368 first phrasing; natural `(3, value)` forwarding wrapper fills call delay; packed span/full SHA exact | 9 | 1 | VOLUME-138 leaf commit |
 | 44 / Tier-2 continuation 28 | `func_8007DD14` @ `0x6E514` | canonical return; two direct callers; real neighbors separated by explicit alignment; one unresolved callee; argument shuffle plus fixed slot | MATCHED leaf 369 first phrasing; natural `(4, value)` forwarding twin fills call delay; packed span/full SHA exact | 9 | 1 | VOLUME-139 leaf commit |
+| 45 / Tier-2 continuation 29 | `func_80052534` @ `0x42D34` | canonical return with live teardown delay; two direct callers; immediate real boundaries; one unresolved callee; signed-byte result | MATCHED leaf 370 first phrasing; signed return type produces retail `sll 24 / sra 24`; packed span/full SHA exact | 9 | 1 | VOLUME-140 leaf commit |

@@ -481,7 +481,8 @@ segments:
       # lui $v0,%hi(D_800C0E32); lhu $v0,%lo(D_800C0E32)($v0); jr $ra; nop.
       # Zero-prefix carve of former 42D24.s; resume 42D34.s size 0x28C.
       - [0x42D24, c, func_80052524]
-      - [0x42D34, asm]
+      - [0x42D34, c, func_80052534]
+      - [0x42D58, asm]
       # Phase 5BT: C leaf func_8005257C — VRAM 0x8005257C, size 0x18.
       # Fixed-shift bit test on D_8009D1A0 (lui/lw/nop/srl/jr/andi).
       - [0x42D7C, c, func_8005257C]
