@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-150, the matching-C count is **380**.
+`634dd1b` (335-leaf base). After VOLUME-160, the matching-C count is **390**.
 
 ## Method and closure
 
@@ -11,21 +11,27 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,049** unique spans. The four-way
+The current active universe contains **1,039** unique spans. The four-way
 scheduling closure is:
 
 ```text
 TIER 1                   0
-TIER 2                 175
+TIER 2                 161
 TIER 3                  99
-SKIP / suppressed      775
+SKIP / suppressed      779
                        ---
-TOTAL                 1049
+TOTAL                 1039
 ```
+
+The Phase-0 shape partition started from all 175 then-active Tier-2 rows.
+VOLUME-151–160 exhausted class W with ten exact first-phrasing matches. Its
+remaining closure is W=0, S=1, B=121, C=39, SKIP=4: 165 rows total. The four
+SKIP rows moved from Tier 2 to the suppressed class, leaving 161 attemptable
+Tier-2 rows. See `volume-campaign-20260831/TIER2_CLASSES.md`.
 
 The primary tables in `volume-campaign-20260824/POOL.md` contain 1,032
 historical rows: 0 Tier 1, 214 Tier 2, 99 Tier 3, and 719 SKIP. VOLUME-112
-removed thirty-nine Tier-2 rows by integrating `func_800C6ED8`,
+through VOLUME-160 removed forty-nine Tier-2 rows by integrating `func_800C6ED8`,
 `func_800C6EC0`, `func_80050020`, `func_8007C544`, `func_800812F4`,
 `func_80062F1C`, `func_800C2AF0`, `func_80084FC4`, `func_80080AE4`,
 `func_8004DC84`, `func_8007A488`, `func_8007A88C`, and
@@ -41,11 +47,13 @@ wrapper `func_800824F0`, slot-4 twin `func_8007DD14`, and signed-byte wrapper
 GP-state forwarding wrapper `func_80064C30`, and GP-state forwarding twin
 `func_8005F594`, GP-countdown wrapper `func_8004E94C`, and state initializer
 `func_80036E34`, adjacent initializer `func_80036E58`, and nested-state wrapper
-`func_80064E90` and slot-3 forwarding twin `func_8007A8EC`, leaving 993 active
-primary rows. The
+`func_80064E90`, slot-3 forwarding twin `func_8007A8EC`, SDK wrappers
+`func_8007FC64/8007FC88`, and callback-table wrappers
+`func_800C7D00/800C8E44/800C9B3C/800CA6D4/800CBEE0/800CCEBC/800CD89C/800CE118`,
+leaving 983 active primary rows. The
 56 active spans below were added after the primary tables through campaign overlays. Thus
-`993 + 56 = 1049`; the suppressed class
-remains `719 + 56 = 775`.
+`983 + 56 = 1039`; four Phase-0 rows moved from Tier 2 into SKIP, so the
+suppressed class is now `723 + 56 = 779`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
 or toolchain file. VOLUME-97 subsequently removed `func_8003C5D8` from Tier 1
@@ -133,6 +141,12 @@ VOLUME-149 then removed exact nested-state clear wrapper `func_80064E90` on
 its first natural phrasing.
 VOLUME-150 then removed exact slot-3 forwarding twin `func_8007A8EC` on its
 first natural phrasing.
+VOLUME-151–160 then removed all ten shape-partition class-W rows on their
+first natural phrasings: SDK wrappers `func_8007FC64/8007FC88` and eight
+independently referenced callback-table wrappers forwarding six arguments to
+matched `func_800C2AF0`. Every leaf passed the exact object, packed span, full
+executable SHA, verifier, one-leaf commit, and push gates. Class W is exhausted
+without a park; work continues with the sole class-S row `func_80039970`.
 
 ## Reconciled post-table spans
 
@@ -225,7 +239,6 @@ scripts/verify_us.sh: exit 0; C conversion: 335 leaves
 yaml matching-C count: 335
 ```
 
-The first refreshed row, `func_80078C34`, was screened as a handwritten
-libGTE/COP2 routine without a C attempt. The Tier-1 queue therefore continues
-at `func_8003C5D8` (`0x2CDD8`, 24 words). Function hood and all screens must
-still be re-proven before its first C attempt.
+The current shape-ranked Tier-2 queue continues at class S
+`func_80039970` (`0x2A170`, 11 words). Function hood and all screens must still
+be re-proven before its first C attempt.
