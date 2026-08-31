@@ -35,3 +35,41 @@ Call and branch ownership:
 All ten remaining static call sites target helpers already native before this
 audit. The next implementation unit is L10. This report does not move the
 strict frontier, alter guest state, or claim tests beyond B54K-B6's 938/938.
+
+## L10 implementation predecode
+
+The read-only oracle `pc_port/tools/b54kb_tail_l10_predecode_oracle.py`
+closes the next unit one level further without importing production code:
+
+- the complete 77-word window and both boundary words are instruction-exact;
+- its only control flow is `0x80031318 -> 0x800312CC`, with the literal
+  two-item bound at `0x80031314`;
+- its four calls are the three `func_800370DC` sites at
+  `0x80031208/0x80031268/0x800312E0` and `func_80077AA4` at `0x8003122C`;
+- the latter receives `(0x130, 0x1F9)` and the independently restated retail
+  arithmetic produces CLUT `0x7E53`;
+- for bank zero, the future translation must write exactly 74 unique guest
+  bytes with packed address/value SHA-256
+  `cad997d53fb5fd3a345a130431eda562573d8ae848cb0b90e2395664b3138da4`.
+
+The packet model is: one compound sprite at `0x8009E730` (RGB `0x80`, UV
+`0x68,0xF4`, CLUT `0x7E53`, `24x4`); one at `0x8009E880` (RGB `0x80`, UV
+`0x7C,0xEF`, CLUT `0x7E13`, `36x5`); and two 28-byte-stride compound sprites
+from `0x8009E8B8` (CLUT `0x7E13`, `6x6`). Their independent write counts are
+`21 + 21 + 32 = 74`; the corresponding bank-one bases
+`0x8009E74C/0x8009E89C/0x8009E8F0` remain untouched. This is predecode only:
+the strict frontier remains `func_80030894_L9_cut`.
+
+Oracle and unchanged-suite gate:
+
+```text
+OK window: 77 words / 0x134 bytes, SHA-256 exact
+OK boundaries/constants: 13 instruction-exact words
+OK control flow: four native jal sites; one two-item back-edge
+OK computed value: GetClut(0x130,0x1F9) = 0x7E53
+model_unique_written_bytes=74
+model_write_map_sha256=cad997d53fb5fd3a345a130431eda562573d8ae848cb0b90e2395664b3138da4
+OK write bounds: 21 + 21 + 32 bytes; all bank-1 bases untouched
+Results: 938 run, 938 passed, 0 failed, 0 skipped
+Results: 938 run, 938 passed, 0 failed, 0 skipped  [ASan/UBSan build]
+```

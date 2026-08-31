@@ -62,7 +62,10 @@ L10 (77 words, `0x800311EC..0x80031320`), L11 (70 words,
 `0x80031438..0x800314B0`), and the 13-word epilogue through `0x800314E4`.
 All ten remaining static call sites target already-native helpers. Start with
 L10; exact hashes and call/branch ownership are in
-`docs/evidence/pe-b54kb-tail-partition/REPORT.md`.
+`docs/evidence/pe-b54kb-tail-partition/REPORT.md`. L10 is additionally
+predecoded there as two fixed compound sprites plus a two-item array, with an
+independent 74-byte bank-zero write-map oracle; this does not move the strict
+frontier.
 
 VIS1 remains available: a real Disc 1 run emits a deterministic, visibly
 non-black read-only snapshot of the single PSX VRAM authority via
