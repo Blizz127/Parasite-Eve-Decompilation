@@ -488,7 +488,11 @@ segments:
       # Second wrapper consumes the complete remaining 0x28 span.
       - [0x40860, c, func_80050060]
       - [0x40888, c, func_80050088]
+      # Tier-2 callback wrapper func_80050204.  Former 0x408A8 span:
+      # prefix 0x15C, C 0x28, resume 0x34 (closure 0x1B8).
       - [0x408A8, asm]
+      - [0x40A04, c, func_80050204]
+      - [0x40A2C, asm]
       - [0x40A60, c, func_80050260]
       - [0x40A80, asm]
       - [0x40EE8, c, func_800506E8]
