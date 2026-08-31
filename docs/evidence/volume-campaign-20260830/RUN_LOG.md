@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,058 current active spans — Tier 1 0, Tier 2 184, Tier 3 99,
+Pool: 1,057 current active spans — Tier 1 0, Tier 2 183, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 36.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 37.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -18,7 +18,7 @@ native runtime rather than extending the sample.
 
 Tier-2 continuation: a later explicit sustained-work authorization resumes the
 queue after the native L10 predecode and runs matching work alongside the
-BTL151 retail capture. Current continuation result: twenty first-phrasing matches.
+BTL151 retail capture. Current continuation result: twenty-one first-phrasing matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -68,3 +68,4 @@ BTL151 retail capture. Current continuation result: twenty first-phrasing matche
 | 44 / Tier-2 continuation 28 | `func_8007DD14` @ `0x6E514` | canonical return; two direct callers; real neighbors separated by explicit alignment; one unresolved callee; argument shuffle plus fixed slot | MATCHED leaf 369 first phrasing; natural `(4, value)` forwarding twin fills call delay; packed span/full SHA exact | 9 | 1 | VOLUME-139 leaf commit |
 | 45 / Tier-2 continuation 29 | `func_80052534` @ `0x42D34` | canonical return with live teardown delay; two direct callers; immediate real boundaries; one unresolved callee; signed-byte result | MATCHED leaf 370 first phrasing; signed return type produces retail `sll 24 / sra 24`; packed span/full SHA exact | 9 | 1 | VOLUME-140 leaf commit |
 | 46 / Tier-2 continuation 30 | `func_80052558` @ `0x42D58` | canonical return with live teardown delay; three direct callers; immediate real boundaries; one unresolved callee; signed-byte result | MATCHED leaf 371 first phrasing; proven signed-return twin; packed span/full SHA exact | 9 | 1 | VOLUME-141 leaf commit |
+| 47 / Tier-2 continuation 31 | `func_80052790` @ `0x42F90` | canonical return; three direct callers; immediate real boundaries; one unresolved callee; sole GP-state writer paired with accepted getter | MATCHED leaf 372 first phrasing under `-G8`; natural state store plus `value == 0` forwarding; packed span/full SHA exact | 9 | 1 | VOLUME-142 leaf commit |

@@ -487,6 +487,7 @@ segments:
       # Fixed-shift bit test on D_8009D1A0 (lui/lw/nop/srl/jr/andi).
       - [0x42D7C, c, func_8005257C]
       - [0x42D94, asm]
+      - [0x42F90, c, func_80052790]
       - [0x42FB4, c, func_800527B4]
       # Phase 5AG: C leaf func_800527C0 — VRAM 0x800527C0, size 0x8.
       # File span 0x42FC0–0x42FC8 exclusive. Empty jr/nop stub.

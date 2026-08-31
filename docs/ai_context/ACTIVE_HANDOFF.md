@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 371 exact matching-C
+Current matching-lane status: 372 exact matching-C
 leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -706,7 +706,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 371 exact leaves plus 24
+  matching C; current disposition is 372 exact leaves plus 24
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1078,6 +1078,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-139-7DD14 | 369 | `func_8007DD14` @ `0x6E514` is hood-proven by two direct callers, canonical return, and real neighboring functions separated by explicit alignment. Natural `(4, value)` forwarding C calls `func_80073CF4`, matches all nine words on phrasing 1 under era `-O2 -G0`, and fills the call delay slot with the fixed slot number. Carve `0x17B4 + 0x0024 + 0x016C = 0x1944`; packed span/full SHA exact, verify green at 369, and Tier 2 falls 187→186. Evidence: `docs/evidence/volume-campaign-20260830/func-8007dd14/REPORT.md`. |
 | VOLUME-140-52534 | 370 | `func_80052534` @ `0x42D34` is hood-proven by two direct callers, canonical return with live stack teardown, and immediate real boundaries. Natural signed-byte-return C calls `func_80021080`, matches all nine words on phrasing 1 under era `-O2 -G0`, and recovers retail's `sll 24 / sra 24` canonicalization. Carve `0x0024 + 0x0024 = 0x0048`; packed span/full SHA exact, verify green at 370, and Tier 2 falls 186→185. Evidence: `docs/evidence/volume-campaign-20260830/func-80052534/REPORT.md`. |
 | VOLUME-141-52558 | 371 | `func_80052558` @ `0x42D58` is hood-proven by three direct callers, canonical return with live stack teardown, and immediate real boundaries. Natural signed-byte-return C calls `func_800210D4`, matches all nine words on phrasing 1 under era `-O2 -G0`, and independently reproduces the adjacent sibling's `sll 24 / sra 24` canonicalization. The active asm span was exactly `0x0024`; packed/full SHA exact, verify green at 371, and Tier 2 falls 185→184. Evidence: `docs/evidence/volume-campaign-20260830/func-80052558/REPORT.md`. |
+| VOLUME-142-52790 | 372 | `func_80052790` @ `0x42F90` is hood-proven by three direct callers, canonical return, and immediate real boundaries. Natural era `-O2 -G8` C stores the input to GP state `D_8009D020`, forwards `value == 0` to `func_80086728`, and matches all nine words on phrasing 1 after normalizing GP and call relocations. Carve `0x01FC + 0x0024 = 0x0220`; packed/full SHA exact, verify green at 372, and Tier 2 falls 184→183. Evidence: `docs/evidence/volume-campaign-20260830/func-80052790/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
