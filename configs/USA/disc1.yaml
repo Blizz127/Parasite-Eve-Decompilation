@@ -485,7 +485,8 @@ segments:
       - [0x40820, c, func_80050020]
       # Two-wrapper span: first exact callback wrapper plus 0x28 resume.
       - [0x40838, c, func_80050038]
-      - [0x40860, asm]
+      # Second wrapper consumes the complete remaining 0x28 span.
+      - [0x40860, c, func_80050060]
       - [0x40888, c, func_80050088]
       - [0x408A8, asm]
       - [0x40A60, c, func_80050260]
