@@ -855,9 +855,12 @@ segments:
       - [0x70444, c, func_8007FC44]
       # Phase 5BI: C leaf func_8007FC54 — VRAM 0x8007FC54, size 0x10.
       # Unsigned-byte global getter on D_8009B56C; plain -O1 matches.
-      # Resume 70464.s 0x48 after third C leaf.
+      # The next asm span was formerly 70464.s 0x48 before this carve.
       - [0x70454, c, func_8007FC54]
-      - [0x70464, asm]
+      # Tier-2 W wrapper: func_8007FC64 forwards result to SDK CD_sync with
+      # mode 1. Era -O2 -G0, first phrasing. Carve: C 0x24, resume 0x70488.
+      - [0x70464, c, func_8007FC64]
+      - [0x70488, asm]
       # Phase 5BA: C leaf func_8007FCAC — VRAM 0x8007FCAC, size 0x10.
       # File span 0x704AC–0x704BC exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_8009B590. Plain -O1 matches.
