@@ -20,6 +20,7 @@ Baseline: clean `main` at `81ab3fe`, 380 exact matching-C leaves.
 | VOLUME-163 | `func_80085DC4` (`0x765C4`, 9 words) | B | MATCHED phrasing 1 | 393 | direct caller `func_80085D84`; forwards `(9, value)` to `func_80073CC4`; alignment nops remain asm; era `-O2 -G0`; exact 9/9; carve `0x680 + 0x24 + 0x12F8 = 0x199C`; packed span, exact SHA, verifier pass |
 | VOLUME-164 | `func_800471BC` (`0x379BC`, 10 words) | B | MATCHED phrasing 1 | 394 | two independent exact-start callback stores; registers `func_80047040` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x38D0 + 0x28 + 0x4D24 = 0x861C`; packed span, exact SHA, verifier pass |
 | VOLUME-165 | `func_8004732C` (`0x37B2C`, 10 words) | B | MATCHED phrasing 1 | 395 | independent exact-start callback store; registers `func_80050280` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x148 + 0x28 + 0x4BB4 = 0x4D24`; packed span, exact SHA, verifier pass |
+| VOLUME-166 | `func_800474A8` (`0x37CA8`, 10 words) | B | MATCHED phrasing 1 | 396 | independent exact-start callback store; registers `func_80050308` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x154 + 0x28 + 0x4A38 = 0x4BB4`; packed span, exact SHA, verifier pass |
 
 The campaign is active. Each leaf must independently pass function hood,
 Stage-0 typing, whole-object comparison, carve geometry, exact executable SHA,
