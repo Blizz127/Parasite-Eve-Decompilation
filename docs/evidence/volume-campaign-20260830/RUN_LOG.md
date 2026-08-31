@@ -2,7 +2,7 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,076 current active spans — Tier 1 0, Tier 2 202, Tier 3 99,
+Pool: 1,075 current active spans — Tier 1 0, Tier 2 201, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
 Historical consecutive bounded parks: 3. Matched leaves this campaign: 16.
@@ -18,7 +18,7 @@ native runtime rather than extending the sample.
 
 Tier-2 continuation: a later explicit sustained-work authorization resumes the
 queue after the native L10 predecode and runs matching work alongside the
-BTL151 retail capture. Current continuation result: two first-phrasing matches.
+BTL151 retail capture. Current continuation result: three first-phrasing matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -50,3 +50,4 @@ BTL151 retail capture. Current continuation result: two first-phrasing matches.
 | 26 / Tier-2 probe 10 | `func_8004DC84` @ `0x3E484` | canonical return; one direct caller; immediate real boundaries; one unresolved node/list callee; no direct globals or loop | MATCHED leaf 351 first phrasing; natural constant forwarding wrapper places `0x2A` in the call delay slot; packed span/full SHA exact | 8 | 1 | VOLUME-121 leaf commit |
 | 27 / Tier-2 continuation 11 | `func_8007A488` @ `0x6AC88` | canonical return; one exact direct caller; immediate real boundaries; one unresolved `CD_ready` callee; no direct globals or loop | MATCHED leaf 352 first phrasing; natural result-returning forwarding wrapper reproduces the eight-word call frame; packed span/full SHA exact | 8 | 1 | VOLUME-122 leaf commit |
 | 28 / Tier-2 continuation 12 | `func_8007A88C` @ `0x6B08C` | canonical return; one exact direct caller; immediate real boundaries; one unresolved CD command-register callee; no direct globals or loop | MATCHED leaf 353 first phrasing; natural call-then-return-one wrapper reproduces the eight-word frame and late constant result; packed span/full SHA exact | 8 | 1 | VOLUME-123 leaf commit |
+| 29 / Tier-2 continuation 13 | `func_8007F788` @ `0x6FF88` | canonical return; one exact direct caller; immediate real boundaries; one already-C unsigned-byte getter callee; no direct globals or loop | MATCHED leaf 354 first phrasing; unsigned-byte forwarding return reproduces the eight-word frame and post-call `andi 0xFF`; packed span/full SHA exact | 8 | 1 | VOLUME-124 leaf commit |
