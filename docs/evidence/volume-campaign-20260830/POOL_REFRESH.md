@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-160, the matching-C count is **390**.
+`634dd1b` (335-leaf base). After VOLUME-170, the matching-C count is **400**.
 
 ## Method and closure
 
@@ -11,27 +11,28 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,039** unique spans. The four-way
+The current active universe contains **1,029** unique spans. The four-way
 scheduling closure is:
 
 ```text
 TIER 1                   0
-TIER 2                 161
+TIER 2                 151
 TIER 3                  99
 SKIP / suppressed      779
                        ---
-TOTAL                 1039
+TOTAL                 1029
 ```
 
 The Phase-0 shape partition started from all 175 then-active Tier-2 rows.
-VOLUME-151–160 exhausted class W with ten exact first-phrasing matches. Its
-remaining closure is W=0, S=1, B=121, C=39, SKIP=4: 165 rows total. The four
-SKIP rows moved from Tier 2 to the suppressed class, leaving 161 attemptable
+VOLUME-151–160 exhausted class W with ten exact first-phrasing matches;
+VOLUME-161 exhausted class S; VOLUME-162–170 matched the first nine class-B
+rows. The remaining closure is W=0, S=0, B=112, C=39, SKIP=4: 155 rows total.
+The four SKIP rows are in the suppressed class, leaving 151 attemptable
 Tier-2 rows. See `volume-campaign-20260831/TIER2_CLASSES.md`.
 
 The primary tables in `volume-campaign-20260824/POOL.md` contain 1,032
 historical rows: 0 Tier 1, 214 Tier 2, 99 Tier 3, and 719 SKIP. VOLUME-112
-through VOLUME-160 removed forty-nine Tier-2 rows by integrating `func_800C6ED8`,
+through VOLUME-170 removed fifty-nine Tier-2 rows by integrating `func_800C6ED8`,
 `func_800C6EC0`, `func_80050020`, `func_8007C544`, `func_800812F4`,
 `func_80062F1C`, `func_800C2AF0`, `func_80084FC4`, `func_80080AE4`,
 `func_8004DC84`, `func_8007A488`, `func_8007A88C`, and
@@ -50,9 +51,12 @@ GP-state forwarding wrapper `func_80064C30`, and GP-state forwarding twin
 `func_80064E90`, slot-3 forwarding twin `func_8007A8EC`, SDK wrappers
 `func_8007FC64/8007FC88`, and callback-table wrappers
 `func_800C7D00/800C8E44/800C9B3C/800CA6D4/800CBEE0/800CCEBC/800CD89C/800CE118`,
-leaving 983 active primary rows. The
+state reset `func_80039970`, GP callback wrapper `func_80051060`, command
+wrapper `func_80085DC4`, and callback-registration wrappers
+`func_800471BC/8004732C/800474A8/8004B534/8004B55C/8004EF30/8004F2E4`,
+leaving 973 active primary rows. The
 56 active spans below were added after the primary tables through campaign overlays. Thus
-`983 + 56 = 1039`; four Phase-0 rows moved from Tier 2 into SKIP, so the
+`973 + 56 = 1029`; four Phase-0 rows moved from Tier 2 into SKIP, so the
 suppressed class is now `723 + 56 = 779`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
@@ -147,6 +151,13 @@ independently referenced callback-table wrappers forwarding six arguments to
 matched `func_800C2AF0`. Every leaf passed the exact object, packed span, full
 executable SHA, verifier, one-leaf commit, and push gates. Class W is exhausted
 without a park; work continues with the sole class-S row `func_80039970`.
+VOLUME-161 then removed the sole class-S row `func_80039970` on its first
+natural phrasing. VOLUME-162–170 removed the first nine class-B rows on their
+first natural phrasings: `func_80051060`, `func_80085DC4`, and seven
+independently hood-proven callback-registration wrappers
+`func_800471BC/8004732C/800474A8/8004B534/8004B55C/8004EF30/8004F2E4`.
+Every leaf passed the object, boundary-derived carve, packed span, exact SHA,
+verifier, one-leaf commit, and push gates.
 
 ## Reconciled post-table spans
 
@@ -239,6 +250,6 @@ scripts/verify_us.sh: exit 0; C conversion: 335 leaves
 yaml matching-C count: 335
 ```
 
-The current shape-ranked Tier-2 queue continues at class S
-`func_80039970` (`0x2A170`, 11 words). Function hood and all screens must still
+The current shape-ranked Tier-2 queue continues in class B with
+`func_8004F950` (`0x40150`, 10 words). Function hood and all screens must still
 be re-proven before its first C attempt.
