@@ -54,12 +54,13 @@
  *                  the real ISO9660 directory records synchronously with
  *                  the same guest-visible contract.
  *   func_8006E6D4  async read issue (asm/disc1/5B1E4.s):
- *                  (lba_base, lba_off, dest, size).  Guards transcribed
+ *                  (lba_base, lba_off, dest, sectors).  Guards transcribed
  *                  verbatim (D_800B0CD8 & 0x1000000, CdReady != 1, queue
  *                  != 0, mode mismatch vs D_800B0DD4).  The transfer is
- *                  synchronous on the host: bytes land in guest RAM before
- *                  return, so D_8009B6B4 (bytes pending) is 0 instead of
- *                  `size`; all other guest state matches the retail
+ *                  synchronous on the host: `sectors * 0x800` bytes land in
+ *                  guest RAM before return, so D_8009B6B4 (sectors pending)
+ *                  is 0 instead of `sectors`; all other guest state matches
+ *                  the retail
  *                  post-issue values (D_8009B6AC=0x200, D_8009B6B0=dest,
  *                  D_8009B6C4=vsync timestamp, D_8009B6D4=1).
  *                  Collapsed: func_800719E4(1) (BIOS B(38h) CD mode set —
@@ -290,10 +291,11 @@ int func_80081414(pe_addr_t fp, const char *name)
 }
 
 /* func_8006E6D4 — read issue; synchronous on the host. */
-int func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int size)
+int func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int sectors)
 {
     PE_Disc *d;
     uint32_t lba;
+    uint32_t byte_count;
     int vs, ds, pr, mk;
 
     if (D_800B0CD8 & 0x01000000u) return -1;
@@ -305,20 +307,26 @@ int func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int size)
     D_800B0CD8 |= 0x01004000u;
     lba = (uint32_t)(lba_base + lba_off);
     d = PE_Disc_GetActive();
-    if (size < 0 || (size > 0 && (!d ||
-        !PE_RangeIsRam(dest, (size_t)size) ||
-        !PE_Disc_ReadUserData(d, lba, 0,
-                              PE_Translate(dest, (size_t)size),
-                              (uint32_t)size)))) {
+    if (sectors < 0 ||
+        (uint32_t)sectors > UINT32_MAX / PE_DISC_USER_SECTOR) {
         D_800B0CD8 &= 0xFEFFBFFFu;
-        /* func_80071A74 printf(D_8001136C, lba, size): collapsed. */
         return -1;
     }
-    /* size == 0 completes trivially (no data access). Bootstrap fixtures
+    byte_count = (uint32_t)sectors * PE_DISC_USER_SECTOR;
+    if (byte_count > 0 && (!d ||
+        !PE_RangeIsRam(dest, (size_t)byte_count) ||
+        !PE_Disc_ReadUserData(d, lba, 0,
+                              PE_Translate(dest, (size_t)byte_count),
+                              byte_count))) {
+        D_800B0CD8 &= 0xFEFFBFFFu;
+        /* func_80071A74 printf(D_8001136C, lba, sectors): collapsed. */
+        return -1;
+    }
+    /* sectors == 0 completes trivially (no data access). Bootstrap fixtures
      * use that explicit path; authenticated retail images adopt 6E834's
      * nonzero rodata range before entering the boot loop. */
     /* Retail post-issue state (asm func_80080E34); the transfer is already
-     * complete on the host, so D_8009B6B4 (bytes pending) reads 0. */
+     * complete on the host, so D_8009B6B4 (sectors pending) reads 0. */
     PE_StoreU32(0x8009B6ACu, 0x200u);
     PE_StoreU32(0x8009B6B0u, dest);
     PE_StoreU32(0x8009B6B4u, 0u);

@@ -152,7 +152,7 @@ int  func_8007F7A8(void);            /* getter D_8009B590 */
 int  func_80080C48(pe_addr_t fp);    /* CdPosToInt: BCD mm/ss/ff @fp → LBA */
 int  func_80082314(void);            /* PVD verify; result word D_800B28F8 */
 int  func_80081414(pe_addr_t fp, const char *name); /* DsSearchFile */
-int  func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int size);
+int  func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int sectors);
 int  func_800811E4(pe_addr_t fp);    /* read poll: 0 done, -1 timeout */
 
 /* ── streaming wrappers (pc_port/game/boot/, Phase 6E-B16) ────────── */

@@ -57,9 +57,9 @@
  * translated, unresolved callees go through the centralized bootstrap
  * boundary, strict mode stops at the FIRST one):
  *   func_80074F44  REAL host SDK (ClearImage)
- *   func_8006E6A8  TRANSLATED this rung (thin wrapper over REAL
- *                  func_8006E6D4; sector→byte unit conversion at the
- *                  host-adaptation boundary — see func_8006E6A8_port.c)
+ *   func_8006E6A8  TRANSLATED this rung (thin sector-count wrapper over
+ *                  REAL func_8006E6D4; B54K-AC restores the provider's
+ *                  retail sector unit — see func_8006E6A8_port.c)
  *   func_8006E7E8  TRANSLATED this rung (REAL func_800811E4 + RMW)
  *   func_8006E498  TRANSLATED this rung (pure guest table walk)
  *   func_800527C8  TRANSLATED (Phase 6E-B17, multi-subsystem bootstrap

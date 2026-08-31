@@ -1193,9 +1193,10 @@ extern int func_8006E7E8(void);
  * D_8009317C + D_800B0DD8, skips 87198, sb 7, returns 1. a0==0
  * (6D60C F2=0x2F, a1=lb +0xE1=0x0D) calls 87198 (D_8009D270=1)
  * after the same table fill. a0==3 calls 87414 (D_8009D270=2).
- * Dest is lw overlay+0x194. State 7 jals real 6E6D4 with host
- * byte size (chunk<<11; retail a3 is sectors, proven by state 9
- * sll 11). -1 sb 0 return 0; else sb 8 return 1. State 8 jals
+ * Dest is lw overlay+0x194. State 7 jals real 6E6D4 with the retail
+ * sector count (B54K-AC corrected the former host-byte adaptation;
+ * state 9's sll 11 independently proves the unit). -1 sb 0 return 0;
+ * else sb 8 return 1. State 8 jals
  * real 6E7E8: -1 sb 7, pending stays 8, 0 sb 9. State 9 live a0=1
  * jals real 87090(dest, 0); -1 sb 0, else sb 0xA and parks.
  * State 0xA jals real 870E0 (return D_8009D24C). -1 sb 0;
@@ -1236,7 +1237,7 @@ int func_8006CDA4_state7_cut(pe_addr_t dest, int stack_len)
     PE_StoreU32(GA_GP_40C, chunk);
     issued = func_8006E6D4((int)PE_LoadU32(GA_GP_400),
                            (int)(PE_LoadU32(GA_GP_404) - remain), dest,
-                           (int)(chunk << 11));
+                           (int)chunk);
     if (issued == -1) {
         PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
         return 0;

@@ -135,7 +135,7 @@ static int RunDiscLoadTest(void) {
     char buf[160];
     int r;
     int lba;
-    uint32_t size, load_size;
+    uint32_t size, load_size, load_sectors;
     uint64_t h;
 
     TraceEvent("disc_load_test_begin");
@@ -156,11 +156,14 @@ static int RunDiscLoadTest(void) {
     lba = func_80080C48(PE_LOADTEST_CDLFILE);
     size = PE_LoadU32(PE_LOADTEST_CDLFILE + 4);
     load_size = size < PE_LOADTEST_MAX ? size : PE_LOADTEST_MAX;
+    load_sectors = (load_size + PE_DISC_USER_SECTOR - 1u) /
+                   PE_DISC_USER_SECTOR;
+    load_size = load_sectors * PE_DISC_USER_SECTOR;
     snprintf(buf, sizeof(buf), "disc_load_pe_img_lba=%d_size=%u", lba, size);
     TraceEvent(buf);
     if (lba <= 0 || size == 0) { TraceEvent("disc_load_test_fail"); return 1; }
 
-    r = func_8006E6D4(lba, 0, D_80011614, (int)load_size);
+    r = func_8006E6D4(lba, 0, D_80011614, (int)load_sectors);
     snprintf(buf, sizeof(buf), "disc_load_issue=%d_dest=0x%08X_len=%u",
              r, (unsigned)D_80011614, load_size);
     TraceEvent(buf);

@@ -417,6 +417,19 @@ static int B54KR_PixelIs(uint32_t x, uint32_t y, uint16_t expected)
 static void B54KQ_SeedOverlayPrefix(uint8_t bias);
 static PE_Disc *BTL6_OpenDisc1(char *err, size_t err_size);
 
+static uint64_t B54K_Fnv1a64(pe_addr_t address, size_t size)
+{
+    const uint8_t *bytes = PE_TranslateConst(address, size);
+    uint64_t hash = 1469598103934665603ULL;
+    size_t i;
+
+    for (i = 0; i < size; i++) {
+        hash ^= bytes[i];
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
 static void test_B54KR_801909B4_strict_reaches_overlay_init(void)
 {
     TEST("B54KR_801909B4_strict_reaches_overlay_init");
@@ -1485,6 +1498,17 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     HostFB_Init();
     func_8007ED58();
     PE_Disc_SetActive(disc);
+    D_800B0DD8 = 1013u;
+    D_80011614 = 0x8018EFF0u;
+    D_80093164[0] = 0x03D2u;
+    D_80093164[1] = 0x0457u;
+    PE_StoreU8(0x801D17F0u, 0xA5u);
+    ASSERT(func_8006E834() == 0 &&
+           B54K_Fnv1a64(0x8018EFF0u, 0x42800u) ==
+               0x55EC1574DF7D6A3DULL &&
+           PE_LoadU8(0x801D17F0u) == 0xA5u &&
+           PE_LoadU32(0x801D0E14u) == 0x8018F2C4u,
+           "retail 133-sector overlay was not loaded exactly");
     B54KR_SeedGpuStatic();
     PE_StoreU32(0x800B0DD8u, 1013u);
     PE_StoreU32(0x8001160Cu, 0x8010BCF8u);
@@ -18428,7 +18452,7 @@ static void test_read_guard_busy(void) {
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
     D_800B0CD8 |= 0x01000000u;
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 64) == -1,
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 1) == -1,
            "busy guard must return -1");
     FxFree(&fx);
     PASS();
@@ -18440,7 +18464,7 @@ static void test_read_guard_not_ready(void) {
     ResetTestState(); /* lane 0: no drive reset */
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 64) == -1,
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 1) == -1,
            "CdReady != 1 must return -1");
     FxFree(&fx);
     PASS();
@@ -18454,7 +18478,7 @@ static void test_read_guard_queue(void) {
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
     PE_StoreU32(0x800A3608u, 1);
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 64) == -1,
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 1) == -1,
            "nonzero queue must return -1");
     FxFree(&fx);
     PASS();
@@ -18468,7 +18492,7 @@ static void test_read_happy_guest_bytes(void) {
     func_8007ED58();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 4096) == 1,
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 2) == 1,
            "read issue must return 1");
     for (i = 0; i < 4096; i++) {
         if (PE_LoadU8(D_80011614 + i) != FxPattern(i)) {
@@ -18476,7 +18500,8 @@ static void test_read_happy_guest_bytes(void) {
         }
     }
     ASSERT((D_800B0CD8 & 0x01004000u) == 0x01004000u, "state bits not set");
-    ASSERT(PE_LoadU32(0x8009B6B4u) == 0, "bytes-pending must be 0 after sync read");
+    ASSERT(PE_LoadU32(0x8009B6B4u) == 0,
+           "sectors-pending must be 0 after sync read");
     ASSERT(PE_LoadU32(0x8009B6B0u) == D_80011614, "dest register wrong");
     ASSERT(PE_LoadU32(0x8009B6ACu) == 0x200u, "mode register wrong");
     ASSERT(PE_LoadU32(0x8009B6D4u) == 1, "read-active flag wrong");
@@ -18487,15 +18512,15 @@ static void test_read_happy_guest_bytes(void) {
 static void test_read_exact_end_boundary(void) {
     TEST("read_exact_end_boundary");
     DiscFixture fx;
-    pe_addr_t dest = PE_RAM_END - 64;
+    pe_addr_t dest = PE_RAM_END - PE_DISC_USER_SECTOR;
     uint32_t i;
     ResetTestState();
     func_8007ED58();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, dest, 64) == 1,
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, dest, 1) == 1,
            "exact-end write must succeed");
-    for (i = 0; i < 64; i++) {
+    for (i = 0; i < PE_DISC_USER_SECTOR; i++) {
         if (PE_LoadU8(dest + i) != FxPattern(i)) {
             FAIL("boundary byte mismatch"); FxFree(&fx); return;
         }
@@ -18507,13 +18532,13 @@ static void test_read_exact_end_boundary(void) {
 static void test_read_one_byte_overflow(void) {
     TEST("read_one_byte_overflow");
     DiscFixture fx;
-    pe_addr_t dest = PE_RAM_END - 63; /* 64 bytes would end one past RAM */
+    pe_addr_t dest = PE_RAM_END - (PE_DISC_USER_SECTOR - 1u);
     ResetTestState();
     func_8007ED58();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, dest, 64) == -1,
-           "one-byte overflow must be rejected, not written");
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, dest, 1) == -1,
+           "one-sector read ending one byte past RAM must be rejected");
     ASSERT(PE_LoadU8(PE_RAM_END - 1) == 0, "overflow wrote past RAM end");
     ASSERT(PE_LoadU8(dest) == 0, "failed read must not write any bytes");
     ASSERT((D_800B0CD8 & 0x01004000u) == 0, "state bits must be cleared on failure");
@@ -18528,10 +18553,10 @@ static void test_read_truncated_source(void) {
     func_8007ED58();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
-    /* lba 63 is the last sector; 4096 bytes runs past the image end */
-    ASSERT(func_8006E6D4(FX_SECTORS - 1, 0, D_80011614, 4096) == -1,
+    /* lba 63 is the last sector; two sectors run past the image end */
+    ASSERT(func_8006E6D4(FX_SECTORS - 1, 0, D_80011614, 2) == -1,
            "truncated source must be rejected");
-    ASSERT(func_8006E6D4(FX_SECTORS, 0, D_80011614, 2048) == -1,
+    ASSERT(func_8006E6D4(FX_SECTORS, 0, D_80011614, 1) == -1,
            "source past end must be rejected");
     FxFree(&fx);
     PASS();
@@ -18561,9 +18586,9 @@ static void test_read_repeated_loads(void) {
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
     D_800B0CD8 &= 0xFEFFBFFFu; /* caller clears between reads (retail shape) */
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 2048) == 1, "first read failed");
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 1) == 1, "first read failed");
     D_800B0CD8 &= 0xFEFFBFFFu;
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 1, D_80011614 + 0x10000u, 2048) == 1,
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 1, D_80011614 + 0x10000u, 1) == 1,
            "second read failed");
     for (i = 0; i < 2048; i++) {
         if (PE_LoadU8(D_80011614 + i) != FxPattern(i) ||
@@ -18582,7 +18607,7 @@ static void test_read_then_ramreset(void) {
     func_8007ED58();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 2048) == 1, "read failed");
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 1) == 1, "read failed");
     ASSERT(PE_LoadU8(D_80011614) == FxPattern(0), "data not loaded");
     PE_RamReset();
     ASSERT(PE_LoadU8(D_80011614) == 0, "PE_RamReset must clear loaded bytes");
@@ -18599,7 +18624,7 @@ static void test_poll_after_read(void) {
     func_8007ED58();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 2048) == 1, "read failed");
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, D_80011614, 1) == 1, "read failed");
     ASSERT(func_800811E4(0x801FFEE0u) == 0, "poll must report done after sync read");
     FxFree(&fx);
     PASS();
@@ -18798,10 +18823,10 @@ static uint8_t B16_FxByte(uint32_t i) {
     return (i < FX_PEIMG_SIZE) ? FxPattern(i) : (uint8_t)0;
 }
 
-/* ── func_8006E6A8: sector-count → byte-count wrapper ────────────────── */
+/* ── func_8006E6A8: retail sector-count forwarding wrapper ──────────── */
 
-static void test_6E6A8_sector_to_byte(void) {
-    TEST("6E6A8_sector_to_byte");
+static void test_6E6A8_sector_forward(void) {
+    TEST("6E6A8_sector_forward");
     DiscFixture fx;
     uint32_t i;
     ResetTestState();
@@ -18809,8 +18834,8 @@ static void test_6E6A8_sector_to_byte(void) {
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
 
-    /* 2 sectors must arrive as 4096 bytes: the << 11 conversion at the
-     * host-adaptation boundary. */
+    /* The two-sector count is forwarded unchanged; the generic provider
+     * performs the retail 0x800-byte sector transfer. */
     ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, 2) == 1,
            "2-sector issue must return 1");
     for (i = 0; i < 4096; i++) {
@@ -18837,18 +18862,17 @@ static void test_6E6A8_guard_zero_and_wrap(void) {
            "busy guard must return -1");
     D_800B0CD8 &= ~0x01000000u;
 
-    /* 0 sectors → byte size 0 → trivial success, no bytes written */
+    /* 0 sectors → trivial success, no bytes written */
     PE_StoreU8(B16_STREAM, 0xAA);
     ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, 0) == 1,
            "zero-sector issue must complete trivially");
     ASSERT(PE_LoadU8(B16_STREAM) == 0xAA, "zero-size read must not write");
 
-    /* exact << 11 wraparound: -1 → 0xFFFFF800 (negative → rejected),
-     * 0x100000 → 0x80000000 (negative → rejected) */
+    /* Negative and impossible guest-RAM-sized counts are rejected. */
     ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, -1) == -1,
-           "-1 sectors must wrap to a negative byte size and fail");
+           "negative sector count must fail");
     ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, 0x100000) == -1,
-           "0x100000 sectors must wrap to a negative byte size and fail");
+           "oversized sector count must fail");
     PASS();
 }
 
@@ -18863,7 +18887,7 @@ static void test_6E7E8_success_rmw(void) {
     PE_Disc_SetActive(fx.disc);
 
     D_800B0CD8 = 0xDEAD0000u;
-    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, B16_STREAM, 2048) == 1, "read failed");
+    ASSERT(func_8006E6D4(FX_PEIMG_LBA, 0, B16_STREAM, 1) == 1, "read failed");
     ASSERT(D_800B0CD8 == 0xDFAD4000u, "issue must set 0x01004000");
     ASSERT(func_8006E7E8() == 0, "poll must report 0 after sync read");
     /* RMW on st==0: &= 0xFEFFBFFF, every other bit preserved */
@@ -18894,7 +18918,7 @@ static void test_6E7E8_pending_no_rmw(void) {
     ResetTestState();
     HostFB_Init();
     PE_StoreU32(0x8009B6C4u, 0);  /* fresh timestamp: no timeout at vs=0 */
-    PE_StoreU32(0x8009B6B4u, 1);  /* 1 byte pending → st = 1 */
+    PE_StoreU32(0x8009B6B4u, 1);  /* 1 sector pending → st = 1 */
     D_800B0CD8 = 0xDFAD4000u;
     ASSERT(func_8006E7E8() == 1, "pending poll must return 1");
     /* (uint32_t)(st+1) < 2 is false for st==1: NO RMW */
@@ -33350,7 +33374,7 @@ int main(void)
     test_698D4_bootstrap_disc_reset_isolation();
 
     /* Phase 6E-B16: func_8006A9E4 streaming load rung (13 tests) */
-    test_6E6A8_sector_to_byte();
+    test_6E6A8_sector_forward();
     test_6E6A8_guard_zero_and_wrap();
     test_6E7E8_success_rmw();
     test_6E7E8_timeout_rmw();

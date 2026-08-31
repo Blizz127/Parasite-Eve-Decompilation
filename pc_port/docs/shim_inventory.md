@@ -511,8 +511,9 @@ never native function pointers.
   lw(D_800B0E08); all 215 words exe-verified; sole call site
   func_8001220C @0x80012284 (nop slot, return ignored);
   `game/boot/func_8006A9E4_port.c`.  Dependencies translated with it:
-  func_8006E6A8 (11 words, issue wrapper with sector→byte << 11 at the
-  host-adaptation boundary), func_8006E7E8 (19 words, poll + D_800B0CD8
+  func_8006E6A8 (11 words, retail sector-count forwarding wrapper;
+  B54K-AC moves the 0x800-byte conversion into the generic host provider),
+  func_8006E7E8 (19 words, poll + D_800B0CD8
   &= 0xFEFFBFFF on st∈{-1,0}), func_8006E498 (31 words, archive lookup,
   guest-address result).  func_80087090 remains UNRESOLVED via the
   centralized boundary.

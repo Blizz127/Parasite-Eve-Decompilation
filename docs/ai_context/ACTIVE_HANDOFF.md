@@ -54,6 +54,20 @@ still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
 
+## PE-B54K-AC — retail CD sector contract (2026-08-31)
+
+The next `func_801924F8` continuation exposed and corrected an older host-unit
+mismatch: retail passes sector counts through `func_8006E6A8` / `8006E6D4`
+into `func_80080E34`, while the host provider had treated direct counts as
+bytes. `func_8006E6D4` is now the single checked sector-to-`0x800`-byte
+adaptation point; compensating shifts were removed from `func_8006E6A8` and
+the `func_8006CDA4` state-7 cut. Real Disc 1 now loads the complete 133-sector
+overlay `[03D2,0457)` into `[8018EFF0,801D17F0)`, verified by SHA/FNV and an
+exclusive-end canary. Normal and fresh ASan/UBSan CTest pass; the 985-case
+suite is unchanged and strict production still stops honestly at
+`func_801924F8_80192584_cut`. Evidence:
+`docs/evidence/pe-b54kac-sector-overlay/REPORT.md`.
+
 ## Grind-lane port complete — 275 matching C leaves (2026-08-21)
 
 All remaining pe-continuous-decomp grind leaves are ported. After 29388

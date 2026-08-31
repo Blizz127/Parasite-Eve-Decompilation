@@ -297,8 +297,8 @@ the unresolved func_80087090 SPU upload, and a `0x1400`-byte copy to
 `lw(D_800B0E08)`.  Sole exe call site `func_8001220C` @`0x80012284`
 (nop delay slot, immediately after the func_8003E680 jal @`0x8001227C`);
 return ignored → `void(void)`.  Three dependencies translated with it:
-func_8006E6A8 (11-word issue wrapper; sector→byte unit conversion at
-the host-adaptation boundary, proven by the 34-sector/67792-byte and
+func_8006E6A8 (11-word issue wrapper; retail sector count forwarded to
+the generic provider, proven by the 34-sector/67792-byte and
 3-sector/5120-byte cycle/copy pairs), func_8006E7E8 (19-word completion
 poll + `D_800B0CD8 &= 0xFEFFBFFF` RMW on st∈{-1,0}), and func_8006E498
 (31-word pure guest table walk, guest-address result).  The rung also
@@ -716,7 +716,7 @@ now fully translated** — strict mode advances past it to
 | Function | Size | Words | Role |
 |----------|------|-------|------|
 | `func_8006A9E4` | 0x35C | 215 | ClearImage + four PE.IMG sector-read/poll cycles + two archive copies/lookups + translated func_800527C8 dispatcher + unresolved func_80087090 boundary call |
-| `func_8006E6A8` | 0x2C | 11 | Issue wrapper: `func_8006E6D4(lba, 0, dest, sectors << 11)` — sector→byte conversion at the host-adaptation boundary |
+| `func_8006E6A8` | 0x2C | 11 | Issue wrapper: `func_8006E6D4(lba, 0, dest, sectors)`; the generic provider transfers `sectors * 0x800` bytes |
 | `func_8006E7E8` | 0x4C | 19 | Completion poll: `func_800811E4` + `D_800B0CD8 &= 0xFEFFBFFF` when st∈{-1,0} |
 | `func_8006E498` | 0x7C | 31 | Archive directory lookup by 32-bit key; pure guest table walk; guest-address result |
 
@@ -914,8 +914,8 @@ cd pc_port/build
                     #   path canary, byte-width proof, 3E680 integration
                     #   (dispatcher fully translated), frontier advance
                     #   past 3E680 to func_8006A9E4
-                    # + 6E-B16: func_8006A9E4 rung — 6E6A8 sector→byte
-                    #   conversion/guards/wraparound, 6E7E8 RMW on all
+                    # + 6E-B16/B54K-AC: func_8006A9E4 rung — 6E6A8 sector
+                    #   forwarding/provider guards, 6E7E8 RMW on all
                     #   three poll outcomes, 6E498 hit/miss/empty/packed
                     #   fields/read-only footprint, full patterned run
                     #   (exact bytes, lookup slots, provider order),

@@ -65,6 +65,10 @@ func_80030894 and func_8006AD40 are complete; the authenticated overlay path
 and both calls to complete func_801918F8 execute first
 ```
 
+B54K-AC also corrected the generic CD provider to retail sector units. The
+real-disc path now loads all 133 sectors (`0x42800` bytes) of the active
+overlay at `0x8018EFF0`; the prior 133-byte host adaptation is superseded.
+
 The bootstrap-disc path has a separate earlier stop at
 `func_8007F72C` / the `func_800698D4` mount family. The native executable can
 exercise boot, graphics/CD, task-VM, field/battle components, and focused
