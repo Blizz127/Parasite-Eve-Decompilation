@@ -107,7 +107,7 @@ def main() -> None:
     caller_source = (root / "pc_port/game/boot/func_801924F8_port.c").read_text()
     require("if (mode == 0)" in wrapper_source and
             "func_80073C94()" in wrapper_source and
-            "Bootstrap_ReturnVoid1(\"func_8010C0FC\"" in wrapper_source and
+            "func_8010C0FC(mode)" in wrapper_source and
             "func_8010BE3C(0)" in caller_source and
             "m0360i" not in wrapper_source + caller_source and
             "0xA8066048" not in wrapper_source + caller_source,
@@ -128,11 +128,16 @@ def main() -> None:
             "mode-zero/mode-one wrapper controls")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_8010C0FC" in strict and
-            "called from: func_8010BE3C" in strict,
-            "strict internal-MDEC frontier")
+    reached_reset_or_later = (
+        ("func_8010C0FC" in strict and
+         "called from: func_8010BE3C" in strict) or
+        ("func_801924F8_80192730_cut" in strict and
+         "called from: func_801924F8" in strict)
+    )
+    require(reached_reset_or_later,
+            "strict path did not reach the authenticated MDEC reset")
     print("  OK runtime: mode 0 resets callbacks; mode 1 does not")
-    print("  OK production: exact frontier is func_8010C0FC from func_8010BE3C")
+    print("  OK production: strict frontier reaches or passes func_8010C0FC")
     print("\nB54K-AF DecDCTReset wrapper oracle: PASS.")
 
 

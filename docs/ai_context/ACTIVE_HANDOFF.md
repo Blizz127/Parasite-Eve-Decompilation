@@ -41,19 +41,32 @@ one of these lines:
 ## Native field-runtime library boundary (2026-08-31)
 
 The reusable CMake target `pe_field_runtime` now produces
-`pc_port/build/libpe_field_runtime.a` from the 198 current translated/runtime
-translation units. `parasite-eve-port`, the 988-case native suite, and a
+`pc_port/build/libpe_field_runtime.a` from the 199 current translated/runtime
+translation units. `parasite-eve-port`, the 989-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-now stops at `func_8010C0FC` from the authenticated libpress
-`DecDCTReset` wrapper.
+now stops at `func_801924F8_80192730_cut`, immediately after the authenticated
+libpress MDEC reset/table initialization returns.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AG — generic MDEC reset/table substrate (2026-08-31)
+
+The complete 60-word `func_8010C0FC` mode-zero/mode-one reset and its 36-word
+DMA0 table-submit helper are now translated over a generic value-only MDEC
+substrate. Retail's MMIO pointer table, DPCR `| 0x88`, DMA0 register values,
+and both 32-word command blocks are authenticated. Real Disc 1 submits exact
+quantization and scale payloads; the second submission remains pending rather
+than being falsely completed. A synthetic payload control and mutation-free
+invalid-mode boundary pass. Normal and fresh ASan/UBSan CTest pass, the native
+suite is 989/989, and strict production stops at
+`func_801924F8_80192730_cut`. Evidence:
+`docs/evidence/pe-b54kag-mdec-reset/REPORT.md`.
 
 ## PE-B54K-AF — libpress `DecDCTReset` wrapper (2026-08-31)
 

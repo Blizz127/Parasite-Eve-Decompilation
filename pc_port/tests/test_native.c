@@ -17,6 +17,7 @@
 #include "pe_gpu.h"
 #include "pe_irq.h"
 #include "pe_irq_delivery.h"
+#include "pe_mdec.h"
 #include "pe_sdk.h"
 #include <stdio.h>
 #include <string.h>
@@ -427,6 +428,19 @@ static uint64_t B54K_Fnv1a64(pe_addr_t address, size_t size)
     for (i = 0; i < size; i++) {
         hash ^= bytes[i];
         hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
+static uint64_t B54K_MdecFnv1a64(pe_addr_t address, size_t size)
+{
+    const uint8_t *bytes = PE_TranslateConst(address, size);
+    uint64_t hash = UINT64_C(0xCBF29CE484222325);
+    size_t i;
+
+    for (i = 0; i < size; i++) {
+        hash ^= bytes[i];
+        hash *= UINT64_C(0x100000001B3);
     }
     return hash;
 }
@@ -1487,6 +1501,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
 {
     PE_Disc *disc;
     PeGpuState gpu;
+    PeMdecState mdec;
     uint8_t expected_disp[0x28];
     uint8_t expected_draw[0xB8];
     char err[256];
@@ -1578,9 +1593,20 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU16(0x801D148Eu) == 240u &&
            PE_LoadU16(0x801D1490u) == 24u,
            "real-disc movie state setup differs");
-    ASSERT(CountOrderLog("func_8010C0FC") == 1 &&
+    PE_MDEC_GetState(&mdec);
+    ASSERT(mdec.control_last_write == 0x60000000u &&
+           mdec.command_last_write == 0x60000000u &&
+           mdec.reset_count == 1u && mdec.upload_count == 2u &&
+           mdec.completed_upload_count == 1u && mdec.dma0_active &&
+           mdec.dma0_madr == 0x8010DA94u &&
+           mdec.dma0_bcr == 0x00010020u &&
+           mdec.dma0_chcr == 0x01000201u &&
+           mdec.uploads[0].payload_fnv1a64 == UINT64_C(0x566D8476C515D8B5) &&
+           mdec.uploads[1].payload_fnv1a64 == UINT64_C(0x457F63592600EA19),
+           "real-disc MDEC reset or table submissions differ");
+    ASSERT(CountOrderLog("func_801924F8_80192730_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "DecDCTReset internal routine did not become the exact frontier");
+           "post-DecDCTReset caller cut did not become the exact frontier");
 
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
@@ -18174,9 +18200,9 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_8010C0FC") == 1 &&
+           CountOrderLog("func_801924F8_80192730_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "index 21 did not reach the exact MDEC-reset boundary");
+           "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
            PE_LoadU32(0x801D0DC8u) == FX_FMV018_SIZE &&
            memcmp(PE_TranslateConst(0x801D0DCCu, 13u),
@@ -18211,9 +18237,9 @@ static void test_B54KAE_movie_state_setup(void)
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_8010C0FC") == 1 &&
+           CountOrderLog("func_801924F8_80192730_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "movie state setup did not reach the exact MDEC-reset boundary");
+           "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
                   PE_TranslateConst(0x801D0DC4u, 4u), 4u) == 0,
            "CdlLOC copy differs");
@@ -18241,6 +18267,7 @@ static void test_B54KAE_movie_state_setup(void)
 static void test_B54KAF_dec_dct_reset_wrapper(void)
 {
     const uint32_t mode1_dpcr = 0xA5A55A5Au;
+    PeMdecState mdec;
 
     TEST("B54KAF_dec_dct_reset_wrapper");
     ResetTestState();
@@ -18248,26 +18275,80 @@ static void test_B54KAF_dec_dct_reset_wrapper(void)
     func_8010BE3C(0);
     ASSERT(PE_LoadU16(0x800945E4u) == 1u &&
            PE_LoadU16(0x80094614u) == 9u &&
-           PE_GPU_ReadDPCR() == 0x33333333u,
+           PE_GPU_ReadDPCR() == 0x333333BBu &&
+           !PE_Port_ShouldStop(),
            "mode 0 did not execute the complete ResetCallback path");
-    ASSERT(g_bootstrap_arg_call_count == 1 &&
-           g_bootstrap_arg_calls[0].arg0 == 0u &&
-           CountOrderLog("func_8010C0FC") == 1 &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "mode 0 internal call boundary differs");
+    PE_MDEC_GetState(&mdec);
+    ASSERT(mdec.reset_count == 1u && mdec.upload_count == 2u,
+           "mode 0 did not forward into the MDEC reset");
 
     ResetTestState();
     PE_GPU_WriteDPCR(mode1_dpcr);
     func_8010BE3C(1);
     ASSERT(PE_LoadU16(0x800945E4u) == 0u &&
            PE_LoadU16(0x80094614u) == 0u &&
-           PE_GPU_ReadDPCR() == mode1_dpcr,
+           PE_GPU_ReadDPCR() == mode1_dpcr &&
+           !PE_Port_ShouldStop(),
            "mode 1 incorrectly executed ResetCallback");
-    ASSERT(g_bootstrap_arg_call_count == 1 &&
-           g_bootstrap_arg_calls[0].arg0 == 1u &&
-           CountOrderLog("func_8010C0FC") == 1 &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "mode 1 internal call boundary differs");
+    PE_MDEC_GetState(&mdec);
+    ASSERT(mdec.reset_count == 1u && mdec.upload_count == 0u &&
+           mdec.control_last_write == 0x60000000u,
+           "mode 1 internal reset differs");
+    PASS();
+}
+
+static void test_B54KAG_mdec_table_upload(void)
+{
+    PeMdecState mdec;
+    uint32_t i;
+
+    TEST("B54KAG_mdec_table_upload");
+    ResetTestState();
+    PE_StoreU32(0x8010DA0Cu, 0x40000001u);
+    PE_StoreU32(0x8010DA90u, 0x60000000u);
+    for (i = 0u; i < 128u; i++) {
+        PE_StoreU8((pe_addr_t)(0x8010DA10u + i), (uint8_t)(i * 3u + 1u));
+        PE_StoreU8((pe_addr_t)(0x8010DA94u + i), (uint8_t)(255u - i));
+    }
+    func_8010BE3C(0);
+    PE_MDEC_GetState(&mdec);
+    ASSERT(!PE_Port_ShouldStop() && mdec.reset_count == 1u &&
+           mdec.control_write_count == 2u &&
+           mdec.control_last_write == 0x60000000u &&
+           mdec.input_wait_count == 2u && mdec.upload_count == 2u &&
+           mdec.completed_upload_count == 1u && mdec.dma0_active,
+           "generic MDEC reset/upload lifecycle differs");
+    ASSERT(mdec.uploads[0].command == 0x40000001u &&
+           mdec.uploads[0].source == 0x8010DA10u &&
+           mdec.uploads[0].word_count == 32u &&
+           mdec.uploads[0].bcr == 0x00010020u &&
+           mdec.uploads[0].payload_fnv1a64 ==
+               B54K_MdecFnv1a64(0x8010DA10u, 128u) &&
+           mdec.uploads[1].command == 0x60000000u &&
+           mdec.uploads[1].source == 0x8010DA94u &&
+           mdec.uploads[1].word_count == 32u &&
+           mdec.uploads[1].bcr == 0x00010020u &&
+           mdec.uploads[1].payload_fnv1a64 ==
+               B54K_MdecFnv1a64(0x8010DA94u, 128u),
+           "table command, range, or payload fingerprint differs");
+    ASSERT(mdec.command_last_write == 0x60000000u &&
+           mdec.dma0_madr == 0x8010DA94u &&
+           mdec.dma0_bcr == 0x00010020u &&
+           mdec.dma0_chcr == 0x01000201u &&
+           mdec.dma1_chcr == 0u && PE_GPU_ReadDPCR() == 0x333333BBu,
+           "final MDEC/DMA register state differs");
+
+    ResetTestState();
+    PE_GPU_WriteDPCR(0x12345678u);
+    func_8010BE3C(2);
+    PE_MDEC_GetState(&mdec);
+    ASSERT(CountOrderLog("func_8010C0FC_bad_mode") == 1 &&
+           g_bootstrap_arg_call_count == 1 &&
+           g_bootstrap_arg_calls[0].arg0 == 2u &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
+           mdec.reset_count == 0u && mdec.upload_count == 0u &&
+           PE_GPU_ReadDPCR() == 0x12345678u,
+           "invalid mode was not mutation-free at its named boundary");
     PASS();
 }
 
@@ -33461,7 +33542,7 @@ int main(void)
     test_6E9A0_dispatch_arg1();
     test_6E9A0_dispatch_arg3();
 
-    /* Phase 6E-A batch 3 / B54K-AF: real-disc foundation (44 tests) */
+    /* Phase 6E-A batch 3 / B54K-AG: real-disc foundation (45 tests) */
     test_disc_open_rejects_bad_size();
     test_disc_open_rejects_bad_sync();
     test_disc_open_rejects_mode1();
@@ -33489,6 +33570,7 @@ int main(void)
     test_B54KAD_fmv2_filename_threshold();
     test_B54KAE_movie_state_setup();
     test_B54KAF_dec_dct_reset_wrapper();
+    test_B54KAG_mdec_table_upload();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();
