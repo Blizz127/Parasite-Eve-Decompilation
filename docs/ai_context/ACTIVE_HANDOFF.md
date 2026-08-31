@@ -42,17 +42,31 @@ one of these lines:
 
 The reusable CMake target `pe_field_runtime` now produces
 `pc_port/build/libpe_field_runtime.a` from the 197 current translated/runtime
-translation units. `parasite-eve-port`, the 985-case native suite, and a
+translation units. `parasite-eve-port`, the 986-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-still stops at the pre-existing `func_801924F8_80192584_cut` boundary.
+now stops at `func_801924F8_80192614_cut` after retail filename construction
+and CD-file search.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AD — movie filename/search continuation (2026-08-31)
+
+The authenticated `func_801924F8` prefix now covers 71 words through
+`0x80192614`. Retail selects `\\FMV1` below record index 21 and `\\FMV2`
+otherwise, appends the record suffix through the proven BIOS A(15h) `strcat`
+trampoline, waits for the CD queue, and calls `DsSearchFile`. Real Disc 1
+index 1 resolves `FMV001.STR;1` at LBA 189742; a synthetic index-21 control
+independently proves the FMV2 branch without planting production state.
+Normal and fresh ASan/UBSan CTest pass, the native suite is 986/986, and
+strict real-disc execution stops honestly at
+`func_801924F8_80192614_cut`. Evidence:
+`docs/evidence/pe-b54kad-1924f8-filename/REPORT.md`.
 
 ## PE-B54K-AC — retail CD sector contract (2026-08-31)
 

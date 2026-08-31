@@ -154,6 +154,7 @@ int  func_80082314(void);            /* PVD verify; result word D_800B28F8 */
 int  func_80081414(pe_addr_t fp, const char *name); /* DsSearchFile */
 int  func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int sectors);
 int  func_800811E4(pe_addr_t fp);    /* read poll: 0 done, -1 timeout */
+char *func_800719F4(char *destination, const char *source); /* BIOS A(15h) strcat */
 
 /* ── streaming wrappers (pc_port/game/boot/, Phase 6E-B16) ────────── */
 int       func_8006E6A8(int lba, pe_addr_t dest, int sectors); /* issue */

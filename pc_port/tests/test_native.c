@@ -1555,6 +1555,11 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x801D11ACu) == 0x801D0E14u &&
            PE_LoadU8(0x800B0DBBu) == 1u,
            "func_801924F8 indexed-record prefix differs");
+    ASSERT(func_80080C48(0x801D0DC4u) == 189742 &&
+           PE_LoadU32(0x801D0DC8u) == 42584064u &&
+           memcmp(PE_TranslateConst(0x801D0DCCu, 13u),
+                  "FMV001.STR;1", 13u) == 0,
+           "Disc 1 filename assembly or DsSearchFile result differs");
     ASSERT(PE_LoadU8(0x801D0DBEu) == 3u &&
            PE_LoadU16(0x800BCE80u + 4u) == 320u &&
            PE_LoadU16(0x800BCE94u + 4u) == 320u &&
@@ -1563,7 +1568,8 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            "func_801918F8 wide display-pair state differs");
     ASSERT(g_bootstrap_arg4_call_count == 0,
            "translated func_801918F8 remained a provider");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+    ASSERT(CountOrderLog("func_801924F8_80192614_cut") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "func_801924F8 internal cut did not become the exact frontier");
 
     PE_Disc_SetActive(NULL);
@@ -17987,6 +17993,8 @@ static void test_direct_clear_not_default(void) {
 #define FX_IDF1_SIZE   100u
 #define FX_IDF2_LBA    41u
 #define FX_IDF2_SIZE   100u
+#define FX_FMV018_LBA  42u
+#define FX_FMV018_SIZE 2048u
 
 typedef struct {
     uint8_t  *img;
@@ -18110,8 +18118,10 @@ static int FxBuild(DiscFixture *fx, int with_fmv2) {
         p = FxUser(fx->img, 22);
         n = FxPutDirRec(p, 22, 2048, 0x02, "\0", 1);
         n += FxPutDirRec(p + n, 20, 2048, 0x02, "\1", 1);
-        FxPutDirRec(p + n, FX_IDF2_LBA, FX_IDF2_SIZE, 0x00,
-                    "PEDISC02.IDF;1", 14);
+        n += FxPutDirRec(p + n, FX_IDF2_LBA, FX_IDF2_SIZE, 0x00,
+                         "PEDISC02.IDF;1", 14);
+        FxPutDirRec(p + n, FX_FMV018_LBA, FX_FMV018_SIZE, 0x00,
+                    "FMV018.STR;1", 12);
     }
     /* FMV1 directory at sector 21 */
     p = FxUser(fx->img, 21);
@@ -18136,6 +18146,34 @@ static void FxFree(DiscFixture *fx) {
     free(fx->img);
     fx->img = NULL;
     fx->disc = NULL;
+}
+
+static void test_B54KAD_fmv2_filename_threshold(void)
+{
+    DiscFixture fx;
+    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
+    const pe_addr_t suffix = 0x801F0000u;
+
+    TEST("B54KAD_fmv2_filename_threshold");
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    PE_StoreU32(record, suffix);
+    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
+
+    ASSERT(func_801924F8(21) == 0 &&
+           CountOrderLog("func_801924F8_80192614_cut") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "index 21 did not reach the exact post-search cut");
+    ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
+           PE_LoadU32(0x801D0DC8u) == FX_FMV018_SIZE &&
+           memcmp(PE_TranslateConst(0x801D0DCCu, 13u),
+                  "FMV018.STR;1", 13u) == 0,
+           "index 21 did not select the FMV2 path");
+    FxFree(&fx);
+    PASS();
 }
 
 /* ── pe_disc layer ───────────────────────────────────────────────────── */
@@ -33328,7 +33366,7 @@ int main(void)
     test_6E9A0_dispatch_arg1();
     test_6E9A0_dispatch_arg3();
 
-    /* Phase 6E-A batch 3: real-disc foundation (41 tests) */
+    /* Phase 6E-A batch 3 / B54K-AD: real-disc foundation (42 tests) */
     test_disc_open_rejects_bad_size();
     test_disc_open_rejects_bad_sync();
     test_disc_open_rejects_mode1();
@@ -33353,6 +33391,7 @@ int main(void)
     fflush(stderr);
     test_dssearch_pe_img_cdlfile();
     test_dssearch_missing();
+    test_B54KAD_fmv2_filename_threshold();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();

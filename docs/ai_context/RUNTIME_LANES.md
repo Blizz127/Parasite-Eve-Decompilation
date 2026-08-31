@@ -2,7 +2,7 @@
 
 Status date: 2026-08-31. This file is the maintained cross-lane status; the
 native library boundary and strict frontier below were revalidated from the
-authoritative grind worktree after B54K-AB.
+authoritative grind worktree after B54K-AD.
 
 ## A. UE5 — `Blizz127/parasite-eve-ue5`
 
@@ -50,7 +50,7 @@ through CTest in normal and fresh ASan/UBSan builds:
 
 ```text
 pc_port/build/pe-native-tests
-Results: 985 run, 985 passed, 0 failed, 0 skipped
+Results: 986 run, 986 passed, 0 failed, 0 skipped
 field-runtime-link: PASS
 ```
 
@@ -60,9 +60,10 @@ link it. This is a packaging/API boundary, not a complete Day 1 claim. Its
 strict real-disc execution frontier is:
 
 ```text
-func_801924F8_80192584_cut from func_801924F8
+func_801924F8_80192614_cut from func_801924F8
 func_80030894 and func_8006AD40 are complete; the authenticated overlay path
-and both calls to complete func_801918F8 execute first
+and both calls to complete func_801918F8 execute first; filename construction
+and the real FMV file search are also complete
 ```
 
 B54K-AC also corrected the generic CD provider to retail sector units. The
