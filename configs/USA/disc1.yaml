@@ -864,6 +864,8 @@ segments:
       - [0x71A68, asm]
       - [0x71AF4, c, func_800812F4]
       - [0x71B10, asm]
+      - [0x71EF4, c, func_800816F4]
+      - [0x71F14, asm]
       - [0x72AAC, c, func_800822AC]
       # Phase 5BD: C leaf func_800870E0 — VRAM 0x800870E0, size 0x10.
       # File span 0x778E0–0x778F0 exclusive. 32-bit global getter:
