@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,067 current active spans — Tier 1 0, Tier 2 193, Tier 3 99,
+Pool: 1,066 current active spans — Tier 1 0, Tier 2 192, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 27.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 28.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -18,7 +18,7 @@ native runtime rather than extending the sample.
 
 Tier-2 continuation: a later explicit sustained-work authorization resumes the
 queue after the native L10 predecode and runs matching work alongside the
-BTL151 retail capture. Current continuation result: eleven first-phrasing matches.
+BTL151 retail capture. Current continuation result: twelve first-phrasing matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -59,3 +59,4 @@ BTL151 retail capture. Current continuation result: eleven first-phrasing matche
 | 35 / Tier-2 continuation 19 | `func_80050260` @ `0x40A60` | canonical return; six exact-start callback registrations; immediate real boundaries; one unresolved callee; dead call result | MATCHED leaf 360 first phrasing; natural no-argument forwarding wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-130 leaf commit |
 | 36 / Tier-2 continuation 20 | `func_800506E8` @ `0x40EE8` | canonical return; exact-start callback registration; immediate real boundaries; one unresolved callee; dead call result | MATCHED leaf 361 first phrasing; natural registered callback wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-131 leaf commit |
 | 37 / Tier-2 continuation 21 | `func_80050708` @ `0x40F08` | canonical return; exact-start callback registration; immediate real boundaries; one unresolved callee; in-place argument adjustment | MATCHED leaf 362 first phrasing; natural `+0x1F` callback wrapper fills the call delay slot; packed span/full SHA exact | 8 | 1 | VOLUME-132 leaf commit |
+| 38 / Tier-2 continuation 22 | `func_80050728` @ `0x40F28` | canonical return; exact-start callback registration; immediate real boundaries; one unresolved callee; in-place argument adjustment | MATCHED leaf 363 first phrasing; natural `+0x5D` offset twin fills the call delay slot; packed span/full SHA exact | 8 | 1 | VOLUME-133 leaf commit |
