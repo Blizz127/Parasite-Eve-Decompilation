@@ -567,6 +567,8 @@ segments:
       - [0x4F364, asm]
       - [0x4F6C8, c, func_8005EEC8]
       - [0x4F6D4, asm]
+      - [0x4FD94, c, func_8005F594]
+      - [0x4FDB8, asm]
       - [0x51CA0, c, func_800614A0]
       - [0x51CAC, asm]
       - [0x52AB0, c, func_800622B0]

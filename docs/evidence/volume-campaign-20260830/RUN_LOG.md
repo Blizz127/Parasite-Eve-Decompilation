@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,055 current active spans — Tier 1 0, Tier 2 181, Tier 3 99,
+Pool: 1,054 current active spans — Tier 1 0, Tier 2 180, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 39.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 40.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -18,7 +18,7 @@ native runtime rather than extending the sample.
 
 Tier-2 continuation: a later explicit sustained-work authorization resumes the
 queue after the native L10 predecode and runs matching work alongside the
-BTL151 retail capture. Current continuation result: twenty-three first-phrasing matches.
+BTL151 retail capture. Current continuation result: twenty-four first-phrasing matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -71,3 +71,4 @@ BTL151 retail capture. Current continuation result: twenty-three first-phrasing 
 | 47 / Tier-2 continuation 31 | `func_80052790` @ `0x42F90` | canonical return; three direct callers; immediate real boundaries; one unresolved callee; sole GP-state writer paired with accepted getter | MATCHED leaf 372 first phrasing under `-G8`; natural state store plus `value == 0` forwarding; packed span/full SHA exact | 9 | 1 | VOLUME-142 leaf commit |
 | 48 / Tier-2 continuation 32 | `func_8004D4A0` @ `0x3DCA0` | canonical return with live teardown delay; one direct caller; immediate real boundaries; one unresolved callee; fixed arguments and boolean result | MATCHED leaf 373 first phrasing; natural fixed allocation call plus `!= 0`; packed span/full SHA exact | 9 | 1 | VOLUME-143 leaf commit |
 | 49 / Tier-2 continuation 33 | `func_80064C30` @ `0x55430` | canonical return; one direct caller; immediate real boundaries; one unresolved callee; GP-state reader with Stage-0 writer | MATCHED leaf 374 first phrasing under `-G8`; natural `(value, D_8009D164)` forwarding; packed span/full SHA exact | 9 | 1 | VOLUME-144 leaf commit |
+| 50 / Tier-2 continuation 34 | `func_8005F594` @ `0x4FD94` | canonical return; seven direct callers; immediate real boundaries; one unresolved callee; GP-state reader with Stage-0 writer | MATCHED leaf 375 first phrasing under `-G8`; proven GP-forwarding twin over `D_8009D138`; packed span/full SHA exact | 9 | 1 | VOLUME-145 leaf commit |
