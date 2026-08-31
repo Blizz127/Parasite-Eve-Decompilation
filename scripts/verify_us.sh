@@ -42,6 +42,8 @@ EXPECTED_SPLAT_PIN="0.41.0"
 EXPECTED_SUBSEGMENTS=(
     '[0x340C0, c, func_800438C0]'
     '[0x340EC, asm]'
+    '[0x379BC, c, func_800471BC]'
+    '[0x379E4, asm]'
     '[0x3C708, c, func_8004BF08]'
     '[0x3C740, asm]'
     '[0x3FC48, c, func_8004F448]'
@@ -630,6 +632,8 @@ EXPECTED_ARTIFACTS=(
     "asm/disc1/330D4.s"
     "asm/disc1/33128.s"
     "asm/disc1/33478.s"
+    "src/func_800471BC.c"
+    "asm/disc1/379E4.s"
     "asm/disc1/3C740.s"
     "asm/disc1/3E2A4.s"
     "asm/disc1/3E4A4.s"
