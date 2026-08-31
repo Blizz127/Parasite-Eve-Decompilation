@@ -47,21 +47,20 @@ leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
 
-Current native PC-port status (B54K-B5, 2026-08-30): `func_80030894` now
-translates retail through the complete L8 loop at
-`0x800310A4..0x80031110` (27 new words; 543/788 total). The strict production
-frontier is `func_80030894_L8_cut`, immediately before the next packet group,
+Current native PC-port status (B54K-B6, 2026-08-30): `func_80030894` now
+translates retail through the complete L9 group at
+`0x80031110..0x800311EC` (55 new words; 598/788 total). The strict production
+frontier is `func_80030894_L9_cut`, immediately before the next packet group,
 then normal mode continues to `func_8006AD40_post30894_cut`. The independent
-oracle verifies the full window, sole already-native call, ten-entry
-back-edge, scale chains, and 130-byte bank-0 write map. Full normal and
-ASan/UBSan suites pass 937/937. Evidence:
-`docs/evidence/pe-b54kb5-30894-l8/REPORT.md`.
+oracle verifies the full window, two already-native calls, sole four-entry
+back-edge, and 97-byte bank-0 write map. Full normal and ASan/UBSan suites pass
+938/938. Evidence: `docs/evidence/pe-b54kb6-30894-l9/REPORT.md`.
 
 VIS1 remains available: a real Disc 1 run emits a deterministic, visibly
 non-black read-only snapshot of the single PSX VRAM authority via
 `--vram-raw` and `--vram-screenshot` (2,063 nonzero RGB555 words within
-`256,64..735,456`). The B54K-B5 artifact is byte-identical to VIS1 because
-L4-L8 only build guest packet state. This is diagnostic VRAM, not a rendered
+`256,64..735,456`). The B54K-B6 artifact is byte-identical to VIS1 because
+L4-L9 only build guest packet state. This is diagnostic VRAM, not a rendered
 320x240 frame; the legacy host framebuffer remains black. BTL151 remains a
 human-operated local PCSX-Redux capture—do not retry it headlessly or claim
 capture results without the GUI artifact.

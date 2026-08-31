@@ -1,6 +1,6 @@
 /*
- * Phase 6E-B54K-B5 — func_80030894: boot GPU-primitive builder,
- * translated bank-0 prefix through the complete L8 packet group.
+ * Phase 6E-B54K-B6 — func_80030894: boot GPU-primitive builder,
+ * translated bank-0 prefix through the complete L9 packet group.
  *
  * Full retail body:
  *   788 words / 0xC50 bytes, exe 0x80030894–0x800314E4 (exclusive),
@@ -11,7 +11,7 @@
  *   stale scratch discarded by the caller).
  *
  * Implemented prefix:
- *   0x80030894..0x80031110 (543 words) — prologue, the bank record
+ *   0x80030894..0x800311EC (598 words) — prologue, the bank record
  *   init at 0x800BE9F0, and the L2(j=0..9) × L3(k=0..3) sprite-array
  *   build at 0x800B01C0, followed by the complete L4 packet group
  *   (119 words / 0x1DC bytes; SHA-256
@@ -20,12 +20,12 @@
  *   b45f5a6c9a6d1565f3fcc6affce6edc91a679ebe2bd538734d75fd2c933575d0).
  *   B54K-B3 adds the 147-word L6 mixed packet group; B54K-B4 adds the
  *   78-word L7 group; B54K-B5 adds L8's 27-word loop. The first excluded
- *   instruction is
+ *   loop; B54K-B6 adds the 55-word L9 group. The first excluded instruction is
  *
- *       lui   s0, 0x800a                # 0x80031110
+ *       lui   s0, 0x800a                # 0x800311EC
  *
  *   (next packet-group base). The named strict boundary is
- *   func_80030894_L8_cut.
+ *   func_80030894_L9_cut.
  *
  * Word decode of the implemented window (verified against the
  * SHA-1-exact retail executable 452fb033f2eaa4b18aa20a5bca60b8125af3a37b):
@@ -101,9 +101,14 @@
  *     ten compound sprites at 0x8009E500 + i*280 + j*28, j=0..9
  *     tail RGB 80 80 80; sole call native; literal sltiu <10 back-edge.
  *
+ *   L9 group (0x80031110..0x800311E8):
+ *     compound sprite at 0x8009E768 + i*28, dimensions 36 x 5
+ *     four compound sprites at 0x8009E7A0 + i*112 + j*28, dimensions 6 x 6
+ *     both call sites native; sole back-edge is literal sltiu <4.
+ *
  * All callees are native since B54I/GPU1 (GetTPage, GetClut,
  * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC); the L2L3
- * group is followed by B54K-B1..B5's native packet calls. The L8 cut is the
+ * group is followed by B54K-B1..B6's native packet calls. The L9 cut is the
  * first untranslated boundary inside this body.
  *
  * Classification: 1 — translated retail prefix.
@@ -131,6 +136,8 @@
 #define GA_L7_POLYF3     0x8009E4D8u
 #define GA_L7_ARRAY      0x8009E3B8u
 #define GA_L8_ARRAY      0x8009E500u
+#define GA_L9_SPRITE     0x8009E768u
+#define GA_L9_ARRAY      0x8009E7A0u
 
 void func_80030894(void)
 {
@@ -400,8 +407,38 @@ void func_80030894(void)
         }
     }
 
-    /* B54K-B5 cut: stop before the next group at retail 0x80031110. */
+    /* B54K-B6, retail 0x80031110..0x800311E8: complete L9 group. */
+    {
+        pe_addr_t head = GA_L9_SPRITE + (uint32_t)bank * 28u;
+        pe_addr_t tail = head + 8u;
+        uint32_t j;
+
+        func_800370DC(head, tpage_sprt);
+        PE_StoreU8(tail + 0x04u, 0x80u);
+        PE_StoreU8(tail + 0x05u, 0x80u);
+        PE_StoreU8(tail + 0x06u, 0x80u);
+        PE_StoreU8(tail + 0x0Cu, 0x58u);
+        PE_StoreU8(tail + 0x0Du, 0xEFu);
+        PE_StoreU16(head + 0x16u, clut_id);
+        PE_StoreU16(tail + 0x10u, 36u);
+        PE_StoreU16(tail + 0x12u, 5u);
+
+        for (j = 0u; j < 4u; j++) {
+            pe_addr_t item = GA_L9_ARRAY + (uint32_t)bank * 112u + j * 28u;
+            pe_addr_t item_tail = item + 8u;
+
+            func_800370DC(item, tpage_sprt);
+            PE_StoreU8(item_tail + 0x04u, 0x80u);
+            PE_StoreU8(item_tail + 0x05u, 0x80u);
+            PE_StoreU8(item_tail + 0x06u, 0x80u);
+            PE_StoreU16(item + 0x16u, clut_id);
+            PE_StoreU16(item_tail + 0x10u, 6u);
+            PE_StoreU16(item_tail + 0x12u, 6u);
+        }
+    }
+
+    /* B54K-B6 cut: stop before the next group at retail 0x800311EC. */
     (void)Bootstrap_ReturnInt(
-        "func_80030894_L8_cut", "func_80030894", 0);
+        "func_80030894_L9_cut", "func_80030894", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
 }
