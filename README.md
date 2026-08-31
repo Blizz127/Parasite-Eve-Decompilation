@@ -12,10 +12,10 @@ Initial target:
 
 ## Project status
 
-**Matching decomp:** **411 exact matching C leaves**, plus **24
-`ACCEPTED-RESIDUAL` leaves** whose semantic C and compiler-decision residuals
-are documented but are not counted as matching C. Authoritative count:
-`grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`.
+**Matching decomp:** the exact matching-C count is generated from the YAML in
+[`docs/generated/DISC1_MATCHING_STATUS.md`](docs/generated/DISC1_MATCHING_STATUS.md).
+There are also **24 `ACCEPTED-RESIDUAL` leaves** whose semantic C and
+compiler-decision residuals are documented but are not counted as matching C.
 Disc 1 EXE rebuilds byte-for-byte via `scripts/build_us.sh`
 (SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`).
 See [`docs/acceptance/MATCHING_RESIDUAL_POLICY.md`](docs/acceptance/MATCHING_RESIDUAL_POLICY.md).
@@ -26,12 +26,15 @@ of that body are not matching decomp leaves.
 host-safe guest-RAM runtime with translated boot/battle leaves, oracles,
 and a test suite. It is **not** a complete playable game, **not** a
 complete battle teardown, and **not** first-Eve-boss complete.
+Machine-checked frontier, linked-runtime, coverage, and test metrics are in
+[`docs/generated/NATIVE_PORT_STATUS.md`](docs/generated/NATIVE_PORT_STATUS.md).
 
 **UE5:** a separate consumer repo. Gameplay semantics live here.
 
 See [`docs/project_plan.md`](docs/project_plan.md) for the roadmap and
 [`docs/ai_context/ACTIVE_HANDOFF.md`](docs/ai_context/ACTIVE_HANDOFF.md)
-for the current working state. Public progress:
+for the current working state. The generated-build contract is documented in
+[`docs/build_authority.md`](docs/build_authority.md). Public progress:
 https://blizz127.github.io/parasite-eve-progress/
 
 ## Repository roles
@@ -69,20 +72,21 @@ scripts/setup_env.sh
 scripts/setup_era.sh
 scripts/extract_us.sh 1
 scripts/split_us.sh
-scripts/verify_us.sh
 # 2. Matching rebuild (needs mipsel-linux-gnu-{as,gcc} or docker)
-docker run --rm -v "$PWD":/workspace -w /workspace pe-mipsel-img:latest \
-  bash scripts/build_us.sh
+docker run --rm -v "$PWD":/workspace -w /workspace \
+  --user "$(id -u):$(id -g)" pe-mipsel-img:latest bash scripts/build_us.sh
+# 3. Verify the generated manifest, exact executable, and every packed C span
+scripts/verify_us.sh
 ```
 
 `scripts/build_us.sh` is a match only when the rebuilt candidate EXE
 SHA-1 equals retail `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
 Compilation alone is not a match.
 
-Count matching C leaves from yaml, not from `src/` or native ports:
+Run the artifact-independent authority/count gate without a retail image:
 
 ```bash
-grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml
+scripts/verify_us.sh --public
 ```
 
 ## Getting started — native runtime

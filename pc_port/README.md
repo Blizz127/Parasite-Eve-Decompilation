@@ -2,15 +2,16 @@
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
+**Current metrics:** generated and cross-checked from the implementation,
+CMake source graph, test inventory, and evidence in
+[`docs/generated/NATIVE_PORT_STATUS.md`](../docs/generated/NATIVE_PORT_STATUS.md).
+
 **Current milestone:** B54K-B6 translates the complete L9 group in
-`func_80030894`: retail `0x80031110..0x800311EC` (55 words / `0xDC`, SHA-256
-`7d64f3e1…e56a739`). It builds one `36 x 5` compound sprite and a four-entry
-`6 x 6` compound-sprite array. Both static calls target the native sprite
-wrapper; the sole back-edge has literal bound four. The independent oracle
-checks the complete window, control flow, and a 97-byte zero-backed write map.
-The translated prefix is now 598 of 788 words and strict execution stops at
-`func_80030894_L9_cut`. Full normal and fresh ASan/UBSan suites pass 938/938.
-VIS1 remains byte-identical. Evidence:
+`func_80030894`. It builds one `36 x 5` compound sprite and a four-entry `6 x
+6` compound-sprite array. Both static calls target the native sprite wrapper;
+the sole back-edge has literal bound four. The independent oracle checks the
+complete window, control flow, and a 97-byte zero-backed write map. VIS1
+remains byte-identical. Evidence:
 `docs/evidence/pe-b54kb6-30894-l9/REPORT.md`.
 
 **Prior milestone:** VIS1 exposes the authoritative 1024x512 PSX VRAM as
@@ -778,7 +779,8 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current main: 938 tests)
+- `pe-native-tests` — test suite (current count is generated in
+  `docs/generated/NATIVE_PORT_STATUS.md`)
 
 ## Running
 
@@ -819,8 +821,8 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_80030894_L9_cut from
-# func_80030894 (6AD40 continues to func_8006AD40_post30894_cut).
+# Current global frontier is generated in docs/generated/NATIVE_PORT_STATUS.md.
+# 6AD40 continues to func_8006AD40_post30894_cut after func_80030894.
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 
 # RNG oracle gate — must equal tools/rng_oracle.py on the retail exe

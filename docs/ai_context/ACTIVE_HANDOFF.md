@@ -42,19 +42,27 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 411 exact matching-C
-leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
-historical grind-lane port milestone. Residual policy:
-`docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
+Current matching-lane exact count is generated from YAML in
+`docs/generated/DISC1_MATCHING_STATUS.md`, plus 24 `ACCEPTED-RESIDUAL` leaves;
+the 287-leaf line above is the historical grind-lane port milestone. Residual
+policy: `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
 
-Current native PC-port status (B54K-B6, 2026-08-30): `func_80030894` now
-translates retail through the complete L9 group at
-`0x80031110..0x800311EC` (55 new words; 598/788 total). The strict production
-frontier is `func_80030894_L9_cut`, immediately before the next packet group,
-then normal mode continues to `func_8006AD40_post30894_cut`. The independent
-oracle verifies the full window, two already-native calls, sole four-entry
-back-edge, and 97-byte bank-0 write map. Full normal and ASan/UBSan suites pass
-938/938. Evidence: `docs/evidence/pe-b54kb6-30894-l9/REPORT.md`.
+Current native PC-port metrics are machine-checked in
+`docs/generated/NATIVE_PORT_STATUS.md` (frontier, translated retail window,
+linked translation units, library-target status, and test inventory). The
+latest B54K-B6 oracle verifies the complete L9 window, two already-native
+calls, sole four-entry back-edge, and 97-byte bank-0 write map. Evidence:
+`docs/evidence/pe-b54kb6-30894-l9/REPORT.md`.
+
+Disc 1 build authority is normalized: `configs/USA/disc1.yaml` owns every
+span edge, source/object mapping, trim size, link order, verifier entry, and
+published exact count; compiler-only exceptions live in
+`configs/USA/disc1_build_profiles.json`. `scripts/build_us.sh` and
+`scripts/verify_us.sh` are generic drivers with no leaf lists. Extra tracked
+function C files require explicit nonmatching dispositions. Public and
+self-hosted exact CI contracts, wrapper-family batching, and the generated
+native-prioritized candidate queue are documented in
+`docs/build_authority.md`.
 
 The remaining 190-word tail is partitioned read-only into four closed units:
 L10 (77 words, `0x800311EC..0x80031320`), L11 (70 words,
@@ -706,7 +714,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 374 exact leaves plus 24
+  matching C; the current exact count is generated from YAML, alongside 24
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's

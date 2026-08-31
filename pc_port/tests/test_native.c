@@ -41,6 +41,15 @@ static int tests_failed = 0;
 static int tests_skipped = 0;
 static const char *test_filter = NULL;
 
+static int RetailDisc1FixtureConfigured(void)
+{
+    const char *env = getenv("PE_DISC1_BIN");
+
+    if (env && env[0])
+        return 1;
+    return access("local/pe_disc1.path", R_OK) == 0;
+}
+
 #define TEST(name) do { \
     tests_run++; \
     if (test_filter && !strstr(name, test_filter)) { \
@@ -49,6 +58,14 @@ static const char *test_filter = NULL;
         return; \
     } \
     printf("  TEST %s... ", name); \
+} while(0)
+#define TEST_RETAIL_DISC1(name) do { \
+    TEST(name); \
+    if (!RetailDisc1FixtureConfigured()) { \
+        tests_skipped++; \
+        printf("SKIP (requires PE_DISC1_BIN or local/pe_disc1.path)\n"); \
+        return; \
+    } \
 } while(0)
 #define PASS() do { tests_passed++; printf("PASS\n"); } while(0)
 #define FAIL(msg) do { tests_failed++; printf("FAIL: %s\n", msg); } while(0)
@@ -6239,7 +6256,7 @@ static void test_BTL6_6914C_0x34_issue(void) {
     PE_Disc *disc;
     char err[256];
 
-    TEST("BTL6_6914C_0x34_issue");
+    TEST_RETAIL_DISC1("BTL6_6914C_0x34_issue");
     err[0] = 0;
     disc = BTL6_OpenDisc1(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
@@ -9933,7 +9950,7 @@ static void test_BTL63_6B4F8_m0367i_load(void) {
     pe_addr_t dest2 = 0x801A0000u;
     pe_addr_t name = 0x80122180u;
 
-    TEST("BTL63_6B4F8_m0367i_load");
+    TEST_RETAIL_DISC1("BTL63_6B4F8_m0367i_load");
     ResetTestState();
     {
         static const unsigned char charset[] =
@@ -13458,7 +13475,7 @@ static void test_BTL124_m0005i_type1_ticks_type2(void)
     int i;
     int saw2;
 
-    TEST("BTL124_m0005i_type1_ticks_type2");
+    TEST_RETAIL_DISC1("BTL124_m0005i_type1_ticks_type2");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13502,7 +13519,7 @@ static void test_BTL125_type6_waits_scratch0_bit2(void)
     int i;
     int saw2;
 
-    TEST("BTL125_type6_waits_scratch0_bit2");
+    TEST_RETAIL_DISC1("BTL125_type6_waits_scratch0_bit2");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13543,7 +13560,7 @@ static void test_BTL126_only_setter_is_type6_1850(void)
     pe_addr_t t2base = dest2 + 0x218D4u;
     pe_addr_t t6base = dest2 + 0x2341Cu;
 
-    TEST("BTL126_only_setter_is_type6_1850");
+    TEST_RETAIL_DISC1("BTL126_only_setter_is_type6_1850");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13572,7 +13589,7 @@ static void test_BTL126_type2_mailbox_not_20(void)
     pe_addr_t t6base = dest2 + 0x2341Cu;
     int i;
 
-    TEST("BTL126_type2_mailbox_not_20");
+    TEST_RETAIL_DISC1("BTL126_type2_mailbox_not_20");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13608,7 +13625,7 @@ static void test_BTL126_7d_is_handshake_not_6f(void)
     PE_Disc *disc;
     char err[256];
 
-    TEST("BTL126_7d_is_handshake_not_6f");
+    TEST_RETAIL_DISC1("BTL126_7d_is_handshake_not_6f");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13657,7 +13674,7 @@ static void test_BTL127_dest_ready_ce2_10(void)
     PE_Disc *disc;
     char err[256];
 
-    TEST("BTL127_dest_ready_ce2_10");
+    TEST_RETAIL_DISC1("BTL127_dest_ready_ce2_10");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13683,7 +13700,7 @@ static void test_BTL128_dest_ready_1266c_before_becc(void)
     pe_addr_t type6;
     pe_addr_t task;
 
-    TEST("BTL128_dest_ready_1266c_before_becc");
+    TEST_RETAIL_DISC1("BTL128_dest_ready_1266c_before_becc");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13713,7 +13730,7 @@ static void test_BTL128_type6_1850_is_mailbox_island(void)
     pe_addr_t t2base = dest2 + 0x218D4u;
     pe_addr_t t6base = dest2 + 0x2341Cu;
 
-    TEST("BTL128_type6_1850_is_mailbox_island");
+    TEST_RETAIL_DISC1("BTL128_type6_1850_is_mailbox_island");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13751,7 +13768,7 @@ static void test_BTL128_first_visit_task_map(void)
     pe_addr_t mail;
     int i;
 
-    TEST("BTL128_first_visit_task_map");
+    TEST_RETAIL_DISC1("BTL128_first_visit_task_map");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13820,7 +13837,7 @@ static void test_BTL129_first_visit_1a0_map(void)
     pe_addr_t task;
     int i;
 
-    TEST("BTL129_first_visit_1a0_map");
+    TEST_RETAIL_DISC1("BTL129_first_visit_1a0_map");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13863,7 +13880,7 @@ static void test_BTL129_type6_81_is_not_1850(void)
     pe_addr_t t3base = dest2 + 0x227FCu;
     pe_addr_t t6base = dest2 + 0x2341Cu;
 
-    TEST("BTL129_type6_81_is_not_1850");
+    TEST_RETAIL_DISC1("BTL129_type6_81_is_not_1850");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -13895,7 +13912,7 @@ static void test_BTL130_type4_volume_gate(void)
     PE_Disc *disc;
     char err[256];
 
-    TEST("BTL130_type4_volume_gate");
+    TEST_RETAIL_DISC1("BTL130_type4_volume_gate");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14047,7 +14064,7 @@ static void test_BTL90_m0367i_dest_ready(void) {
     pe_addr_t clip15;
     pe_addr_t clip09;
 
-    TEST("BTL90_m0367i_dest_ready");
+    TEST_RETAIL_DISC1("BTL90_m0367i_dest_ready");
     ResetTestState();
     {
         static const unsigned char charset[] =
@@ -14212,7 +14229,7 @@ static void test_BTL94_m0367i_persist09_gate(void) {
     unsigned int i;
     unsigned int n;
 
-    TEST("BTL94_m0367i_persist09_gate");
+    TEST_RETAIL_DISC1("BTL94_m0367i_persist09_gate");
     ResetTestState();
     PE_StoreU32(0x8009D2F0u, dummy);
     PE_StoreU32(dummy + 0x98u, 0x10000000u);

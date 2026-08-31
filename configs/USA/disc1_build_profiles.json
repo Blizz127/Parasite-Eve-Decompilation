@@ -1,0 +1,401 @@
+{
+  "schema_version": 1,
+  "default_profile": "era_o2_g0",
+  "profiles": {
+    "era_o1_g0": {
+      "toolchain": "era",
+      "flags": [
+        "-O1",
+        "-G0"
+      ]
+    },
+    "era_o1_g0_sched2": {
+      "toolchain": "era",
+      "flags": [
+        "-O1",
+        "-G0",
+        "-fschedule-insns2"
+      ]
+    },
+    "era_o1_g0_sched2_three_word": {
+      "toolchain": "era",
+      "flags": [
+        "-O1",
+        "-G0",
+        "-fschedule-insns2"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
+      }
+    },
+    "era_o2_g0": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ]
+    },
+    "era_o2_g0_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30"
+      }
+    },
+    "era_o2_g0_expand_div": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_EXPAND_DIV": "1"
+      }
+    },
+    "era_o2_g0_fill_store_delay_slot": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_FILL_STORE_DELAY_SLOT": "1"
+      }
+    },
+    "era_o2_g0_three_word": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
+      }
+    },
+    "era_o2_g8": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ]
+    },
+    "era_o2_g8_force_d8009d2e8_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_8009D2E8"
+      }
+    },
+    "era_o2_g8_three_word": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
+      }
+    },
+    "era_o2_g8_vm_dispatch": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_EXPAND_DIV": "1",
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010000"
+      }
+    },
+    "modern_o1_g0": {
+      "toolchain": "modern",
+      "flags": []
+    },
+    "modern_o1_g0_no_delayed_branch": {
+      "toolchain": "modern",
+      "flags": [
+        "-fno-delayed-branch"
+      ]
+    },
+    "modern_o1_g8": {
+      "toolchain": "modern",
+      "flags": [
+        "-G",
+        "8"
+      ]
+    },
+    "modern_o1_g8_no_delayed_branch": {
+      "toolchain": "modern",
+      "flags": [
+        "-G",
+        "8",
+        "-fno-delayed-branch"
+      ]
+    },
+    "modern_o1_g8_no_tree_ter": {
+      "toolchain": "modern",
+      "flags": [
+        "-G",
+        "8",
+        "-fno-tree-ter"
+      ]
+    }
+  },
+  "assignments": {
+    "era_o1_g0": [
+      "func_8003E680",
+      "func_8006A5BC",
+      "func_8008AB1C"
+    ],
+    "era_o1_g0_sched2": [
+      "func_80052BCC"
+    ],
+    "era_o1_g0_sched2_three_word": [
+      "func_8006A674"
+    ],
+    "era_o2_g0_aspsx_230": [
+      "func_80030534"
+    ],
+    "era_o2_g0_expand_div": [
+      "func_8003C5D8"
+    ],
+    "era_o2_g0_fill_store_delay_slot": [
+      "func_80074A14",
+      "func_8007A3EC",
+      "func_8007A4A8",
+      "func_8007A4BC",
+      "func_8007C130",
+      "func_8007C544",
+      "func_8007DEA4",
+      "func_8007FBC0",
+      "func_8007FBCC",
+      "func_8007FBD8",
+      "func_8007FBE4",
+      "func_80080930",
+      "func_80080CC8",
+      "func_80081254",
+      "func_80082CDC",
+      "func_80084FC4"
+    ],
+    "era_o2_g0_three_word": [
+      "func_8002F7D8",
+      "func_8002F970",
+      "func_8002F9CC",
+      "func_800363F4",
+      "func_80037548",
+      "func_80050020"
+    ],
+    "era_o2_g8": [
+      "func_800124F8",
+      "func_800125E0",
+      "func_80012700",
+      "func_80012774",
+      "func_800197D0",
+      "func_800438C0",
+      "func_8004E94C",
+      "func_80051060",
+      "func_80052790",
+      "func_80055FB4",
+      "func_8005BEE8",
+      "func_8005D970",
+      "func_8005E8A4",
+      "func_8005E968",
+      "func_8005F594",
+      "func_80062A34",
+      "func_80063158",
+      "func_80064C30",
+      "func_800653B8"
+    ],
+    "era_o2_g8_force_d8009d2e8_absolute": [
+      "func_800293F4"
+    ],
+    "era_o2_g8_three_word": [
+      "func_8001266C",
+      "func_80029388"
+    ],
+    "era_o2_g8_vm_dispatch": [
+      "func_80012850"
+    ],
+    "modern_o1_g0": [
+      "func_80017E9C",
+      "func_80019050",
+      "func_80019058",
+      "func_800190AC",
+      "func_800190B4",
+      "func_80038D0C",
+      "func_8003D82C",
+      "func_8003DFC8",
+      "func_8003FFBC",
+      "func_800428C4",
+      "func_80042B28",
+      "func_80042BC8",
+      "func_8004DA9C",
+      "func_80050D18",
+      "func_80051834",
+      "func_80052514",
+      "func_80052524",
+      "func_8005257C",
+      "func_800527C0",
+      "func_8005BCA8",
+      "func_8005E884",
+      "func_80063198",
+      "func_800631AC",
+      "func_80064C20",
+      "func_8006EBD4",
+      "func_80073DE8",
+      "func_80073DF8",
+      "func_80074330",
+      "func_800744A4",
+      "func_8007474C",
+      "func_80074A28",
+      "func_80074CB8",
+      "func_8007633C",
+      "func_80077A28",
+      "func_80077B64",
+      "func_80077B84",
+      "func_80077BA4",
+      "func_80077BC4",
+      "func_80077BE4",
+      "func_80077C04",
+      "func_80077C24",
+      "func_80077C44",
+      "func_80077C64",
+      "func_8007A324",
+      "func_8007A334",
+      "func_8007A344",
+      "func_8007A354",
+      "func_8007DEB0",
+      "func_8007F778",
+      "func_8007FC08",
+      "func_8007FC18",
+      "func_8007FC28",
+      "func_8007FC34",
+      "func_8007FC44",
+      "func_8007FC54",
+      "func_8007FCAC",
+      "func_80080940",
+      "func_800822AC",
+      "func_800835A4",
+      "func_800835B0",
+      "func_80083E70",
+      "func_80083EE4",
+      "func_800847A0",
+      "func_800870E0",
+      "func_8008CA7C",
+      "func_8008D7C0",
+      "func_8008D820",
+      "func_8008F694",
+      "func_8008F6A8",
+      "func_8008F868",
+      "func_8008F880",
+      "func_8008FCB4",
+      "func_800904A0",
+      "func_800904AC",
+      "func_800904B4",
+      "func_800904BC",
+      "func_8009059C",
+      "func_800905C4",
+      "func_800905EC",
+      "func_80090614",
+      "func_8009063C",
+      "func_80090664",
+      "func_8009068C",
+      "func_800906B4",
+      "func_80090A0C",
+      "func_80090C38",
+      "func_80090C4C",
+      "func_80090C60",
+      "func_80090C74",
+      "func_80090F54",
+      "func_800C2B40",
+      "func_800C2B50",
+      "func_800C8268",
+      "func_800C8BB4",
+      "func_800C9260",
+      "func_800C9968",
+      "func_800C9EA0",
+      "func_800CA4A8",
+      "func_800CACD4",
+      "func_800CBB24",
+      "func_800CD2DC",
+      "func_800CD2E4",
+      "func_800CD59C",
+      "func_800CD5A4",
+      "func_800CD71C",
+      "func_800CDD04",
+      "func_800CDF40",
+      "func_800CE3AC",
+      "func_800CE464"
+    ],
+    "modern_o1_g0_no_delayed_branch": [
+      "func_80051E48"
+    ],
+    "modern_o1_g8": [
+      "func_80019BE4",
+      "func_80033A20",
+      "func_80037864",
+      "func_80042ED0",
+      "func_80043038",
+      "func_800438E0",
+      "func_8004D27C",
+      "func_8004E970",
+      "func_8004F448",
+      "func_800514F8",
+      "func_80051E58",
+      "func_800527B4",
+      "func_80054288",
+      "func_80054294",
+      "func_80057ECC",
+      "func_8005B89C",
+      "func_8005BCB0",
+      "func_8005BEDC",
+      "func_8005E120",
+      "func_800614A0",
+      "func_800629B0",
+      "func_80062CC4",
+      "func_80064A48"
+    ],
+    "modern_o1_g8_no_delayed_branch": [
+      "func_80020EFC",
+      "func_800371A4",
+      "func_80037454",
+      "func_800375B4",
+      "func_800375C4",
+      "func_800375D0",
+      "func_80038940",
+      "func_80042CB8",
+      "func_80042F20",
+      "func_80042F38",
+      "func_80043240",
+      "func_8004D024",
+      "func_8004D288",
+      "func_8004F808",
+      "func_80051084",
+      "func_80051244",
+      "func_80051504",
+      "func_80052EB0",
+      "func_8005B890",
+      "func_8005BC98",
+      "func_8005C488",
+      "func_8005E114",
+      "func_8005E57C",
+      "func_8005E6E4",
+      "func_8005E894",
+      "func_8005EB58",
+      "func_8005EEC8",
+      "func_800622B0",
+      "func_80062CB8",
+      "func_80062CD0"
+    ],
+    "modern_o1_g8_no_tree_ter": [
+      "func_80052F0C"
+    ]
+  }
+}

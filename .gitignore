@@ -20,6 +20,8 @@ assets/*
 # Build/generated output
 build/
 build-san/
+!tools/build/
+!tools/build/*.py
 asm/
 linkers/
 expected/

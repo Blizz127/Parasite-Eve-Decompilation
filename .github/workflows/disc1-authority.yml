@@ -1,0 +1,48 @@
+name: Disc 1 authority
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  artifact-independent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: YAML-derived plan tests
+        run: python3 tools/build/test_disc1_plan.py
+      - name: Public build/verify/count gate
+        run: scripts/verify_us.sh --public
+      - name: Generated status has no drift
+        run: python3 tools/build/disc1_plan.py --check --check-status
+      - name: Patch hygiene
+        run: git diff --check
+
+  native-progress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check generated native metrics
+        run: |
+          python3 tools/progress/test_progress.py
+          python3 tools/progress/native_metrics.py --check-status
+          python3 tools/progress/port_priority.py --check-status
+      - name: Configure and build normal native suite
+        run: cmake -S pc_port -B build/native -G Ninja
+      - name: Run artifact-independent normal native suite
+        run: |
+          cmake --build build/native
+          python3 tools/progress/native_metrics.py \
+            --test-binary build/native/pe-native-tests \
+            --test-mode artifact-independent
+      - name: Configure and build ASan/UBSan native suite
+        run: cmake -S pc_port -B build/native-san -G Ninja -DPE_PORT_SANITIZERS=ON
+      - name: Run artifact-independent ASan/UBSan native suite
+        run: |
+          cmake --build build/native-san
+          python3 tools/progress/native_metrics.py \
+            --test-binary build/native-san/pe-native-tests \
+            --test-mode artifact-independent

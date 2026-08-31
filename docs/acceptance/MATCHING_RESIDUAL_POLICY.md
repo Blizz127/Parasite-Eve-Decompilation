@@ -2,12 +2,10 @@
 
 ## Current disposition
 
-The repository currently has **411 exact matching-C leaves**. The authoritative
-count is:
-
-```sh
-grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml
-```
+The authoritative exact matching-C count is generated from
+`configs/USA/disc1.yaml` and published in
+[`docs/generated/DISC1_MATCHING_STATUS.md`](../generated/DISC1_MATCHING_STATUS.md).
+`scripts/verify_us.sh --public` rejects a stale published count.
 
 There are also **24 `ACCEPTED-RESIDUAL` leaves**. These are not counted as
 matching C and are not registered as `c` spans. They are semantically
@@ -60,6 +58,6 @@ SDK handwritten COP2/syscall skips are outside this residual count.
 ## Exact-build relationship
 
 The exact executable SHA-1 remains
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. It is produced from the 411
-registered matching-C leaves plus the existing assembly spans; the 24 residual
-leaves are intentionally excluded from the exact build.
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. It is produced from the
+YAML-registered matching-C leaves plus the existing assembly spans; the 24
+residual leaves are intentionally excluded from the exact build.

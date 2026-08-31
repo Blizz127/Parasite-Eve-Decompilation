@@ -1,0 +1,68 @@
+name: Disc 1 exact rebuild (self-hosted)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  exact:
+    # This runner is privately administered and has a legal retail executable
+    # exposed through PE_DISC1_EXE_PATH. Retail bytes are never uploaded.
+    runs-on: [self-hosted, parasite-eve-retail]
+    env:
+      PIP_NO_CACHE_DIR: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+      - name: Provision private retail executable
+        run: |
+          test -n "${PE_DISC1_EXE_PATH:-}"
+          test -f "$PE_DISC1_EXE_PATH"
+          install -D -m 600 "$PE_DISC1_EXE_PATH" build/extracted/disc1/SLUS_006.62
+          test "$(sha1sum build/extracted/disc1/SLUS_006.62 | cut -d' ' -f1)" = \
+            452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+      - name: Install pinned split and era toolchains (no actions cache)
+        run: |
+          scripts/setup_env.sh
+          scripts/setup_era.sh
+      - name: Generate split from zero state
+        run: scripts/split_us.sh
+      - name: Build clean compiler container (no Docker cache)
+        run: docker build --no-cache -t pe-mipsel-ci -f dev/mipsel/Dockerfile .
+      - name: Exact YAML-derived rebuild
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace \
+            --user "$(id -u):$(id -g)" pe-mipsel-ci scripts/build_us.sh
+      - name: Generated verifier and exact packed spans
+        run: scripts/verify_us.sh
+      - name: Exact SHA-1
+        run: test "$(sha1sum build/disc1.candidate.exe | cut -d' ' -f1)" = 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+      - name: Require private Disc 1 native-test fixture
+        run: |
+          test -n "${PE_DISC1_BIN_PATH:-}"
+          test -f "$PE_DISC1_BIN_PATH"
+      - name: Full native suite
+        run: |
+          cmake -S pc_port -B build/native -G Ninja
+          cmake --build build/native
+          PE_DISC1_BIN="$PE_DISC1_BIN_PATH" \
+            python3 tools/progress/native_metrics.py \
+              --check-status --test-binary build/native/pe-native-tests \
+              --test-mode full
+          python3 tools/progress/port_priority.py --check-status
+      - name: Full ASan/UBSan native suite
+        run: |
+          cmake -S pc_port -B build/native-san -G Ninja -DPE_PORT_SANITIZERS=ON
+          cmake --build build/native-san
+          PE_DISC1_BIN="$PE_DISC1_BIN_PATH" \
+            python3 tools/progress/native_metrics.py \
+              --test-binary build/native-san/pe-native-tests --test-mode full
+      - name: No tracked/generated-state drift
+        run: |
+          git diff --check
+          test -z "$(git status --short)"

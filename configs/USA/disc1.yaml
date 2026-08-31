@@ -128,7 +128,6 @@ segments:
       - [0x9684, asm]
       # Phase 5GM: unsigned-halfword reader wrapper, era -O2 -G0.
       - [0x96B4, c, func_80018EB4]
-      - [0x96E0, asm]
       # Phase 5GN: unsigned-halfword reader wrapper twin, era -O2 -G0.
       - [0x96E0, c, func_80018EE0]
       # Phase 5GP: five-reader call wrapper, era -O2 -G0.
