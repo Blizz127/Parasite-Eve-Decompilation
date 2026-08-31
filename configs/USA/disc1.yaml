@@ -459,9 +459,13 @@ segments:
       - [0x3FC48, c, func_8004F448]
       - [0x3FC64, asm]
       - [0x40008, c, func_8004F808]
-      # Tier-2 probe: callback table getter func_80050020.
-      # Former 0x40038 asm span: prefix 0x7E8, C 0x18, resume 0xCE0.
+      # Tier-2 callback wrapper func_8004F950.  Former 0x40038 asm span:
+      # prefix 0x118, C 0x28, resume 0x6A8 (0x118 + 0x28 + 0x6A8 = 0x7E8).
       - [0x40038, asm]
+      - [0x40150, c, func_8004F950]
+      - [0x40178, asm]
+      # Tier-2 probe: callback table getter func_80050020.
+      # Current 0x40178 asm span: prefix 0x6A8, C 0x18, resume 0xCE0.
       - [0x40820, c, func_80050020]
       - [0x40838, asm]
       - [0x40888, c, func_80050088]
