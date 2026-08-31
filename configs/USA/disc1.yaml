@@ -968,6 +968,11 @@ segments:
       # Mid-74FB0 carve: prefix 0xF78, C 0x1C, resume 75F44.s 0x199C.
       - [0x75F28, c, func_80085728]
       - [0x75F44, asm]
+      # Tier-2 B: direct-call-proven `func_80073CC4(9, value)` wrapper;
+      # era -O2 -G0, exact first phrasing. The 0xC resume begins with
+      # retail alignment nops before the next real function at 0x765F4.
+      - [0x765C4, c, func_80085DC4]
+      - [0x765E8, asm]
       - [0x778E0, c, func_800870E0]
       - [0x778F0, asm]
       # Phase 5EK: D_8009D270 unsigned-int flags setters (READY-FROM-BITWISE).
