@@ -1,6 +1,6 @@
 /*
- * Phase 6E-B54K-B2 — func_80030894: boot GPU-primitive builder,
- * prologue + bank-0 L2/L3, L4, and L5 packet groups (translated prefix).
+ * Phase 6E-B54K-B3 — func_80030894: boot GPU-primitive builder,
+ * translated bank-0 prefix through the complete L6 packet group.
  *
  * Full retail body:
  *   788 words / 0xC50 bytes, exe 0x80030894–0x800314E4 (exclusive),
@@ -11,19 +11,20 @@
  *   stale scratch discarded by the caller).
  *
  * Implemented prefix:
- *   0x80030894..0x80030D20 (291 words) — prologue, the bank record
+ *   0x80030894..0x80030F6C (438 words) — prologue, the bank record
  *   init at 0x800BE9F0, and the L2(j=0..9) × L3(k=0..3) sprite-array
  *   build at 0x800B01C0, followed by the complete L4 packet group
  *   (119 words / 0x1DC bytes; SHA-256
  *   592dc73fa08202d91812b463aa71ef93cafd3af7713a0724d61e0815b17bc3ec)
  *   and the five-entry L5 sprite array (32 words / 0x80 bytes; SHA-256
  *   b45f5a6c9a6d1565f3fcc6affce6edc91a679ebe2bd538734d75fd2c933575d0).
- *   The first excluded instruction is
+ *   B54K-B3 adds the 147-word L6 mixed packet group. The first excluded
+ *   instruction is
  *
- *       lbu   s5, 24(sp)                # 0x80030D20
+ *       lui   s0, 0x800a                # 0x80030F6C
  *
- *   (next packet-group setup).  The named strict boundary is
- *   func_80030894_L5_cut.
+ *   (next packet-group base). The named strict boundary is
+ *   func_80030894_L6_cut.
  *
  * Word decode of the implemented window (verified against the
  * SHA-1-exact retail executable 452fb033f2eaa4b18aa20a5bca60b8125af3a37b):
@@ -31,7 +32,7 @@
  *   prologue (0x80030894..0x8003090C):
  *     frame 88B; ra@84, fp@80, s7@76 .. s0@48 (sp-relative)
  *     sp+16/17/18 <- sign-extended lb 0x8009CD90+0/+1/+2 (font triple;
- *                    dead in this window — no reader before 0x80030AC4)
+ *                    consumed as bytes by L6's three standalone tiles)
  *     fp  <- GetTPage(0,1,0x100,0x1E0) & 0xFFFF = 0x34   (delay slot of
  *            the GetClut jal at 0x800308FC consumes the GetTPage return)
  *     s7  <- 0x80 (vertex byte; first used by B54K-B groups)
@@ -81,10 +82,17 @@
  *     sh clut -> packet+0x16; tail dimensions <- 6 x 10
  *     sole back-edge uses literal sltiu <5; the next group starts at D20.
  *
+ *   L6 mixed group (0x80030D20..0x80030F68):
+ *     two PolyG4 packets at 0x800B0130 + i*72 (+0 and +36)
+ *     three shaded compound sprites at 0x8009E0B8/E2E8/E320 + i*28
+ *     three standalone tiles at 0x8009E358 + i*48 + j*16, j=0..2;
+ *       each tile's RGB is the corresponding 0x8009CD90 font byte
+ *     nine static calls, all native; sole back-edge is literal sltiu <3.
+ *
  * All callees are native since B54I/GPU1 (GetTPage, GetClut,
  * SetPolyFT4, SetSemiTrans, func_8005DADC, func_800370DC); the L2L3
- * group is followed by B54K-B1/B2's native L4/L5 calls (wrap_tile,
- * SetTile, SetPolyG4, and wrap_sprt).  The L5 cut is the first
+ * group is followed by B54K-B1/B2/B3's native L4/L5/L6 calls (wrap_tile,
+ * SetTile, SetPolyG4, SetShadeTex, and wrap_sprt). The L6 cut is the first
  * untranslated boundary inside this body.
  *
  * Classification: 1 — translated retail prefix.
@@ -102,16 +110,23 @@
 #define GA_L4_SPRITE     0x800B6920u
 #define GA_L4_ARRAY      0x8009E0F0u
 #define GA_L5_ARRAY      0x8009E1D0u
+#define GA_L6_POLYG4     0x800B0130u
+#define GA_L6_SPRITE0    0x8009E0B8u
+#define GA_L6_SPRITE1    0x8009E2E8u
+#define GA_L6_SPRITE2    0x8009E320u
+#define GA_L6_TILES      0x8009E358u
 
 void func_80030894(void)
 {
     uint32_t tpage_sprt;   /* s8: sprite tpage mode for wrap_sprt */
     uint16_t clut_id;      /* sp+32 half */
     uint8_t bank = 0u;     /* sp+24 byte: outer bank counter */
+    uint8_t font_rgb[3];   /* retail lb snapshots at sp+16..18 */
 
-    /* 0x800308E0..0x8003090C prologue vectors.  The font triple loads
-     * (sp+16..18) are dead in this window; sp+16..18 hold the
-     * sign-extended bytes but nothing reads them before the cut. */
+    /* 0x800308C8..0x8003090C prologue vectors. */
+    font_rgb[0] = PE_LoadU8(GA_8009CD90 + 0u);
+    font_rgb[1] = PE_LoadU8(GA_8009CD90 + 1u);
+    font_rgb[2] = PE_LoadU8(GA_8009CD90 + 2u);
     tpage_sprt = func_80077A64(0u, 1u, 0x100u, 0x1E0u) & 0xFFFFu;
     clut_id = (uint16_t)func_80077AA4(0x130, 0x1F8);
 
@@ -248,8 +263,73 @@ void func_80030894(void)
         }
     }
 
-    /* B54K-B2 cut: stop before the next group at retail 0x80030D20. */
+    /* B54K-B3, retail 0x80030D20..0x80030F68: complete mixed L6 group. */
+    {
+        pe_addr_t poly0 = GA_L6_POLYG4 + (uint32_t)bank * 72u;
+        pe_addr_t poly1 = poly0 + 36u;
+        const pe_addr_t sprite_bases[3] = {
+            GA_L6_SPRITE0, GA_L6_SPRITE1, GA_L6_SPRITE2
+        };
+        const uint8_t sprite_u[3] = { 0x50u, 0x58u, 0x60u };
+        uint32_t j;
+
+        func_80077BC4(poly0);
+        func_80077BC4(poly1);
+
+        PE_StoreU8(poly0 + 0x04u, 0x00u);
+        PE_StoreU8(poly0 + 0x05u, 0x82u);
+        PE_StoreU8(poly0 + 0x06u, 0x36u);
+        PE_StoreU8(poly0 + 0x0Cu, 0x4Au);
+        PE_StoreU8(poly0 + 0x0Du, 0xFFu);
+        PE_StoreU8(poly0 + 0x0Eu, 0x3Bu);
+        PE_StoreU8(poly0 + 0x14u, 0x00u);
+        PE_StoreU8(poly0 + 0x15u, 0x82u);
+        PE_StoreU8(poly0 + 0x16u, 0x36u);
+        PE_StoreU8(poly0 + 0x1Cu, 0x4Au);
+        PE_StoreU8(poly0 + 0x1Du, 0xFFu);
+        PE_StoreU8(poly0 + 0x1Eu, 0x3Bu);
+
+        PE_StoreU8(poly1 + 0x04u, 0xFFu);
+        PE_StoreU8(poly1 + 0x05u, 0x3Du);
+        PE_StoreU8(poly1 + 0x06u, 0x81u);
+        PE_StoreU8(poly1 + 0x0Cu, 0x83u);
+        PE_StoreU8(poly1 + 0x0Du, 0x13u);
+        PE_StoreU8(poly1 + 0x0Eu, 0x01u);
+        PE_StoreU8(poly1 + 0x14u, 0xFFu);
+        PE_StoreU8(poly1 + 0x15u, 0x3Du);
+        PE_StoreU8(poly1 + 0x16u, 0x81u);
+        PE_StoreU8(poly1 + 0x1Cu, 0x83u);
+        PE_StoreU8(poly1 + 0x1Du, 0x13u);
+        PE_StoreU8(poly1 + 0x1Eu, 0x01u);
+
+        for (j = 0u; j < 3u; j++) {
+            pe_addr_t head = sprite_bases[j] + (uint32_t)bank * 28u;
+            pe_addr_t sprt = head + 8u;
+
+            func_800370DC(head, tpage_sprt);
+            func_80077B34(sprt, 1u);
+            PE_StoreU8(sprt + 0x04u, 0x80u);
+            PE_StoreU8(sprt + 0x05u, 0x80u);
+            PE_StoreU8(sprt + 0x06u, 0x80u);
+            PE_StoreU8(sprt + 0x0Cu, sprite_u[j]);
+            PE_StoreU8(sprt + 0x0Du, 0xF4u);
+            PE_StoreU16(head + 0x16u, clut_id);
+            PE_StoreU16(sprt + 0x10u, 8u);
+            PE_StoreU16(sprt + 0x12u, 4u);
+        }
+
+        for (j = 0u; j < 3u; j++) {
+            pe_addr_t tile = GA_L6_TILES + (uint32_t)bank * 48u + j * 16u;
+
+            func_80077C44(tile);
+            PE_StoreU8(tile + 0x04u, font_rgb[j]);
+            PE_StoreU8(tile + 0x05u, font_rgb[j]);
+            PE_StoreU8(tile + 0x06u, font_rgb[j]);
+        }
+    }
+
+    /* B54K-B3 cut: stop before the next group at retail 0x80030F6C. */
     (void)Bootstrap_ReturnInt(
-        "func_80030894_L5_cut", "func_80030894", 0);
+        "func_80030894_L6_cut", "func_80030894", 0);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
 }

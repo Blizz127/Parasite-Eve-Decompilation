@@ -1,21 +1,19 @@
-# Parasite Eve Native PC Port — Phase 6E-B54K-B2
+# Parasite Eve Native PC Port — Phase 6E-B54K-B3
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B54K-B2 translates the complete L5 sprite loop in
-`func_80030894`: retail `0x80030CA0..0x80030D20` (32 words / `0x80`,
-SHA-256 `b45f5a6c…33575d0`). It builds five bank-0 compound sprites at a
-28-byte item stride, with the retail 140-byte bank stride, CLUT, and `6 x 10`
-dimensions. Its sole call targets the already-native sprite wrapper and its
-sole back-edge has the literal bound five. The independent oracle verifies
-the complete window, boundaries, call/control-flow census, stride chains,
-and an 80-byte zero-backed write map. The translated prefix is now 291 of 788
-words and strict execution stops at `func_80030894_L5_cut`, before a distinct
-packet group. Full normal and fresh ASan/UBSan suites pass 934/934. The normal
-Disc 1 route remains visibly inspectable through VIS1, with raw VRAM and PPM
-outputs byte-identical to B54K-B1 because L5 constructs guest packet state
-and performs no upload. Full proof is in
-`docs/evidence/pe-b54kb2-30894-l5/REPORT.md`.
+**Current milestone:** B54K-B3 translates the complete mixed L6 packet group
+in `func_80030894`: retail `0x80030D20..0x80030F6C` (147 words / `0x24C`,
+SHA-256 `51fe2651…bf19125`). It builds two PolyG4 packets, three shaded
+compound sprites, and three standalone tiles colored from the entry-time
+font-byte triple. All nine static calls target already-native GPU helpers;
+the sole back-edge has the literal bound three. The independent oracle checks
+the complete window, boundaries, call/control-flow census, scale chains, and
+a 106-byte zero-backed write map. The translated prefix is now 438 of 788
+words and strict execution stops at `func_80030894_L6_cut`. Full normal and
+fresh ASan/UBSan suites pass 935/935. VIS1 raw VRAM and PPM outputs remain
+byte-identical because L6 constructs guest packet state and performs no
+upload. Full proof is in `docs/evidence/pe-b54kb3-30894-l6/REPORT.md`.
 
 **Prior milestone:** VIS1 exposes the authoritative 1024x512 PSX VRAM as
 read-only host diagnostics. `--vram-raw PATH` writes every RGB555/STP word in
@@ -782,7 +780,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current main: 934 tests)
+- `pe-native-tests` — test suite (current main: 935 tests)
 
 ## Running
 
@@ -823,7 +821,7 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_80030894_L5_cut from
+# Current global frontier: exit 1 at func_80030894_L6_cut from
 # func_80030894 (6AD40 continues to func_8006AD40_post30894_cut).
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 

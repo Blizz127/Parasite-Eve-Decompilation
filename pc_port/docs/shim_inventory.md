@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B54K-B2
+# Shim Inventory — Phase 6E-B54K-B3
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -62,13 +62,15 @@ callback, scheduler, or presentation operation. The diagnostic therefore
 cannot create the visible pixels it reports and cannot advance execution.
 
 `game/boot/func_80030894_port.c` is a translated retail prefix through
-exclusive address `0x80030D20` (291 of 788 words). B54K-A covers the
+exclusive address `0x80030F6C` (438 of 788 words). B54K-A covers the
 prologue, bank record, and L2/L3 40-sprite array. B54K-B1 adds the complete
 119-word L4 packet group: compound/standalone tiles, PolyG4, standalone
 sprite, and four-entry sprite array. B54K-B2 adds the complete 32-word,
-five-entry L5 compound-sprite array. All reached calls use only the translated
-B54I/GPU1 helper set. The first excluded instruction begins a distinct packet
-group; strict execution names that boundary `func_80030894_L5_cut`.
+five-entry L5 compound-sprite array. B54K-B3 adds the 147-word L6 group: two
+PolyG4 packets, three shaded compound sprites, and three font-byte-colored
+tiles. All reached calls use only the translated B54I/GPU1 helper set. The
+first excluded instruction begins a distinct packet group; strict execution
+names that boundary `func_80030894_L6_cut`.
 
 `platform/pe_irq.[ch]` is the B53I-B1 single native authority for 16-bit
 I_STAT (`0x1F801070`) and I_MASK (`0x1F801074`). I_STAT writes use W0C
