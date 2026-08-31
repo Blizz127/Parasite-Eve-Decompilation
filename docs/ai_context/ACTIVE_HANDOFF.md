@@ -56,6 +56,14 @@ oracle verifies the full window, two already-native calls, sole four-entry
 back-edge, and 97-byte bank-0 write map. Full normal and ASan/UBSan suites pass
 938/938. Evidence: `docs/evidence/pe-b54kb6-30894-l9/REPORT.md`.
 
+The remaining 190-word tail is partitioned read-only into four closed units:
+L10 (77 words, `0x800311EC..0x80031320`), L11 (70 words,
+`0x80031320..0x80031438`), outer close/final sprite (30 words,
+`0x80031438..0x800314B0`), and the 13-word epilogue through `0x800314E4`.
+All ten remaining static call sites target already-native helpers. Start with
+L10; exact hashes and call/branch ownership are in
+`docs/evidence/pe-b54kb-tail-partition/REPORT.md`.
+
 VIS1 remains available: a real Disc 1 run emits a deterministic, visibly
 non-black read-only snapshot of the single PSX VRAM authority via
 `--vram-raw` and `--vram-screenshot` (2,063 nonzero RGB555 words within
