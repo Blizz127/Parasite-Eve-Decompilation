@@ -2,7 +2,7 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,078 current active spans — Tier 1 0, Tier 2 204, Tier 3 99,
+Pool: 1,077 current active spans — Tier 1 0, Tier 2 203, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
 Historical consecutive bounded parks: 3. Matched leaves this campaign: 16.
@@ -15,6 +15,10 @@ parks, one match, two proven-family suppressions. Tier 1 is closed.
 Tier-2 probe: separately authorized after Tier-1 closure. The bounded probe
 closed after zero parks and ten consecutive matches; work then pivots to the
 native runtime rather than extending the sample.
+
+Tier-2 continuation: a later explicit sustained-work authorization resumes the
+queue after the native L10 predecode and runs matching work alongside the
+BTL151 retail capture. Current continuation result: one first-phrasing match.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -44,3 +48,4 @@ native runtime rather than extending the sample.
 | 24 / Tier-2 probe 8 | `func_80084FC4` @ `0x757C4` | canonical return with live store; seven direct callers; real boundaries plus preceding alignment; Stage-0 timer baseline/limit census | MATCHED leaf 349 first phrasing; volatile root-counter read and two ordered stores reproduce all eight words with the established store-delay gate; packed span/full SHA exact | 8 | 1 | VOLUME-119 leaf commit |
 | 25 / Tier-2 probe 9 | `func_80080AE4` @ `0x712E4` | canonical return with live teardown; three direct callers; immediate real boundaries; one hardware-transaction callee | MATCHED leaf 350 first phrasing; direct zero-status comparison reproduces the eight-word call/boolean wrapper; packed span/full SHA exact | 8 | 1 | VOLUME-120 leaf commit |
 | 26 / Tier-2 probe 10 | `func_8004DC84` @ `0x3E484` | canonical return; one direct caller; immediate real boundaries; one unresolved node/list callee; no direct globals or loop | MATCHED leaf 351 first phrasing; natural constant forwarding wrapper places `0x2A` in the call delay slot; packed span/full SHA exact | 8 | 1 | VOLUME-121 leaf commit |
+| 27 / Tier-2 continuation 11 | `func_8007A488` @ `0x6AC88` | canonical return; one exact direct caller; immediate real boundaries; one unresolved `CD_ready` callee; no direct globals or loop | MATCHED leaf 352 first phrasing; natural result-returning forwarding wrapper reproduces the eight-word call frame; packed span/full SHA exact | 8 | 1 | VOLUME-122 leaf commit |

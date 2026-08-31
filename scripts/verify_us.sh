@@ -338,6 +338,7 @@ EXPECTED_SUBSEGMENTS=(
     '[0x6AB60, asm]'
     '[0x6ABEC, c, func_8007A3EC]'
     '[0x6AC00, asm]'
+    '[0x6AC88, c, func_8007A488]'
     '[0x6ACA8, c, func_8007A4A8]'
     '[0x6ACBC, c, func_8007A4BC]'
     '[0x6ACD0, asm]'
@@ -839,6 +840,7 @@ EXPECTED_ARTIFACTS=(
     "src/func_8007A344.c"
     "src/func_8007A354.c"
     "src/func_8007A3EC.c"
+    "src/func_8007A488.c"
     "src/func_8007A4A8.c"
     "src/func_8007A4BC.c"
     "src/func_8007C130.c"
