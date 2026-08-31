@@ -27,6 +27,7 @@ Baseline: clean `main` at `81ab3fe`, 380 exact matching-C leaves.
 | VOLUME-170 | `func_8004F2E4` (`0x3FAE4`, 10 words) | B | MATCHED phrasing 1 | 400 | independently proven exact-start callback store at `0x3FA90`; registers `func_80050728` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x38C + 0x28 + 0x13C = 0x4F0`; packed span, exact SHA, verifier pass |
 | VOLUME-171 | `func_8004F950` (`0x40150`, 10 words) | B | MATCHED phrasing 1 | 401 | independently hood-proven by callback-field store at `0x3E344` (among multiple refs); registers `func_800509A8` through `func_800638D8`; exact 10/10; carve `0x118 + 0x28 + 0x6A8 = 0x7E8`; packed span, exact SHA, verifier pass |
 | VOLUME-172 | `func_8004F978` (`0x40178`, 10 words) | B | MATCHED phrasing 1 | 402 | independently hood-proven by exact-start callback store at `0x3A200`; registers `func_800509E0` through `func_800638D8`; exact 10/10; consumes asm head `0x28 + 0x680 = 0x6A8`; packed span, exact SHA, verifier pass |
+| VOLUME-173 | `func_8004FF30` (`0x40730`, 10 words) | B | MATCHED phrasing 1 | 403 | exact-start callback store at `0x3B5F4`; registers `func_80050C50` through `func_800638D8`; exact 10/10; carve `0x590 + 0x28 + 0xC8 = 0x680`; packed span, exact SHA, verifier pass |
 
 The campaign is active. Each leaf must independently pass function hood,
 Stage-0 typing, whole-object comparison, carve geometry, exact executable SHA,
