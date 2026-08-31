@@ -135,7 +135,8 @@ CFLAGS_LEAF="-EL -mips1 -mfp32 -mabi=32 -G0 -fno-pic -mno-abicalls -ffreestandin
 # C 4DA9C:  0x3E29C → 0x3E2A4 = 0x8
 # 3E2A4:    0x3E2A4 → 0x41518 = 0x3274
 # C 50D18:  0x41518 → 0x41520 = 0x8
-# 41520:    0x41520 → 0x42034 = 0xB14
+# 41520:    0x41520 → 0x41860 = 0x340
+# C 51060:  0x41860 → 0x41884 = 0x24
 # C 51834:  0x42034 → 0x4204C = 0x18
 # C 5184C:  0x4204C → 0x4206C = 0x20
 # C 5186C:  0x4206C → 0x420A8 = 0x3C
@@ -558,7 +559,8 @@ SIZE_C_50C50=0x20
 SIZE_41470=0x88
 SIZE_C_50CF8=0x20
 SIZE_C_50D18=0x8
-SIZE_41520=0x364
+SIZE_41520=0x340
+SIZE_C_51060=0x24
 SIZE_C_51084=0x14
 SIZE_41898=0x1ac
 SIZE_C_51244=0x14
@@ -1278,6 +1280,7 @@ OBJECTS=(
     "build/src/func_80050CF8.c.o"
     "build/src/func_80050D18.c.o"
     "build/asm/disc1/41520.s.o"
+    "build/src/func_80051060.c.o"
     "build/src/func_80051084.c.o"
     "build/asm/disc1/41898.s.o"
     "build/src/func_80051244.c.o"
@@ -1893,6 +1896,7 @@ SOURCES=(
     "src/func_80050CF8.c"
     "src/func_80050D18.c"
     "asm/disc1/41520.s"
+    "src/func_80051060.c"
     "src/func_80051084.c"
     "asm/disc1/41898.s"
     "src/func_80051244.c"
@@ -2995,6 +2999,7 @@ era_compile src/func_8003E610.c build/src/func_8003E610.c.o -O2 -G0
 era_compile src/func_8003E680.c build/src/func_8003E680.c.o -O1 -G0
 era_compile src/func_8003FFAC.c build/src/func_8003FFAC.c.o -O2 -G0
 era_compile src/func_80042910.c build/src/func_80042910.c.o -O2 -G0
+era_compile src/func_80051060.c build/src/func_80051060.c.o -O2 -G8
 era_compile src/func_80042B38.c build/src/func_80042B38.c.o -O2 -G0
 era_compile src/func_80042B50.c build/src/func_80042B50.c.o -O2 -G0
 era_compile src/func_80042B6C.c build/src/func_80042B6C.c.o -O2 -G0
@@ -3482,6 +3487,7 @@ python3 "$TRIM" build/asm/disc1/41470.s.o .text "$SIZE_41470"
 python3 "$TRIM" build/src/func_80050CF8.c.o .text "$SIZE_C_50CF8"
 python3 "$TRIM" build/src/func_80050D18.c.o .text "$SIZE_C_50D18"
 python3 "$TRIM" build/asm/disc1/41520.s.o .text "$SIZE_41520"
+python3 "$TRIM" build/src/func_80051060.c.o .text "$SIZE_C_51060"
 python3 "$TRIM" build/src/func_80051084.c.o .text "$SIZE_C_51084"
 python3 "$TRIM" build/asm/disc1/41898.s.o .text "$SIZE_41898"
 python3 "$TRIM" build/src/func_80051244.c.o .text "$SIZE_C_51244"
@@ -4136,6 +4142,7 @@ SECTIONS
         build/src/func_80050CF8.c.o(.text)
         build/src/func_80050D18.c.o(.text)
         build/asm/disc1/41520.s.o(.text)
+        build/src/func_80051060.c.o(.text)
         build/src/func_80051084.c.o(.text)
         build/asm/disc1/41898.s.o(.text)
         build/src/func_80051244.c.o(.text)
@@ -4747,6 +4754,7 @@ SECTIONS
         build/src/func_80050CF8.c.o(.data)
         build/src/func_80050D18.c.o(.data)
         build/asm/disc1/41520.s.o(.data)
+        build/src/func_80051060.c.o(.data)
         build/src/func_80051084.c.o(.data)
         build/asm/disc1/41898.s.o(.data)
         build/src/func_80051244.c.o(.data)
@@ -5355,6 +5363,7 @@ SECTIONS
         build/src/func_80050CF8.c.o(.rodata)
         build/src/func_80050D18.c.o(.rodata)
         build/asm/disc1/41520.s.o(.rodata)
+        build/src/func_80051060.c.o(.rodata)
         build/src/func_80051084.c.o(.rodata)
         build/asm/disc1/41898.s.o(.rodata)
         build/src/func_80051244.c.o(.rodata)
@@ -5963,6 +5972,7 @@ SECTIONS
         build/src/func_80050CF8.c.o(.bss)
         build/src/func_80050D18.c.o(.bss)
         build/asm/disc1/41520.s.o(.bss)
+        build/src/func_80051060.c.o(.bss)
         build/src/func_80051084.c.o(.bss)
         build/asm/disc1/41898.s.o(.bss)
         build/src/func_80051244.c.o(.bss)
@@ -6489,6 +6499,7 @@ leaf50be8 = slice(0x413E8, 0x41408)
 leaf50c50 = slice(0x41450, 0x41470)
 leaf50cf8 = slice(0x414F8, 0x41518)
 leaf50d18 = slice(0x41518, 0x41520)
+leaf51060 = slice(0x41860, 0x41884)
 leaf51834 = slice(0x42034, 0x4204C)
 leaf5184c = slice(0x4204C, 0x4206C)
 leaf5186c = slice(0x4206C, 0x420A8)
@@ -6676,6 +6687,7 @@ print(f"  tier2 file 0x413E8 (50BE8): cand={cand[leaf50be8].hex()} orig={orig[le
 print(f"  tier2 file 0x41450 (50C50): cand={cand[leaf50c50].hex()} orig={orig[leaf50c50].hex()}")
 print(f"  tier2 file 0x414F8 (50CF8): cand={cand[leaf50cf8].hex()} orig={orig[leaf50cf8].hex()}")
 print(f"  probe file 0x41518 (50D18): cand={cand[leaf50d18].hex()} orig={orig[leaf50d18].hex()}")
+print(f"  tier2 file 0x41860 (51060): cand={cand[leaf51060].hex()} orig={orig[leaf51060].hex()}")
 print(f"  probe file 0x42034 (51834): cand={cand[leaf51834].hex()} orig={orig[leaf51834].hex()}")
 print(f"  probe file 0x4204C (5184C): cand={cand[leaf5184c].hex()} orig={orig[leaf5184c].hex()}")
 print(f"  volume file 0x4206C (5186C): cand={cand[leaf5186c].hex()} orig={orig[leaf5186c].hex()}")
