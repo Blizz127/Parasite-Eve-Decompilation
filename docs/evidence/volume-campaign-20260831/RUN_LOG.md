@@ -36,8 +36,38 @@ Baseline: clean `main` at `81ab3fe`, 380 exact matching-C leaves.
 | VOLUME-179 | `func_80050038` (`0x40838`, 10 words) | B | MATCHED phrasing 1 | 409 | exact-start callback store at `0x38C1C`; registers `func_80050DC0` through `func_800638D8`; exact 10/10; splits two-wrapper span `0x28 + 0x28 = 0x50`; packed span, exact SHA, verifier pass |
 | VOLUME-180 | `func_80050060` (`0x40860`, 10 words) | B | MATCHED phrasing 1 | 410 | independent exact-start callback store at `0x3948C`; registers `func_80050E70` through `func_800638D8`; exact 10/10; consumes complete remaining `0x28` asm span; packed span through existing C successor, exact SHA, verifier pass |
 | VOLUME-181 | `func_80050204` (`0x40A04`, 10 words) | B | MATCHED phrasing 1 | 411 | exact-start callback store at `0x3FD28`; registers already-matched `func_80051060` through `func_800638D8`; exact 10/10; carve `0x15C + 0x28 + 0x34 = 0x1B8`; packed span, exact SHA, verifier pass |
+| PHASE-2 | campaign closeout | gate | PASS | 411 | zero-generated-state split; exact Docker rebuild; verifier green; count-bearing docs reconciled; everything committed and pushed |
 
-The campaign is active. Each leaf must independently pass function hood,
-Stage-0 typing, whole-object comparison, carve geometry, exact executable SHA,
-packed-span comparison, verifier, one-leaf commit, and push. This log records
-results; it does not promote an attempted or parked candidate to matching C.
+## Final campaign totals
+
+| Phase-0 class | matched | parked | remaining attemptable |
+|---|---:|---:|---:|
+| W | 10 | 0 | 0 |
+| S | 1 | 0 | 0 |
+| B | 20 | 0 | 101 |
+| C | 0 | 0 | 39 |
+| **Total** | **31** | **0** | **140** |
+
+The 31 attempts all matched on phrasing 1; phrasing 2 was never needed. None
+parked. Four Phase-0 `SKIP` rows remain suppressed and were not attempted, so
+the full unprocessed partition is `B=101, C=39, SKIP=4` (144 rows).
+
+Phase 2 moved the existing ignored generated outputs aside and regenerated the
+split with zero cached/generated inputs. That clean split exposed one obsolete
+`86C4.s` build prerequisite and six obsolete verifier asm expectations that
+stale generated files had masked. Commit `69285cb` replaced them with their
+registered C inputs. The final gate using `pe-mipsel-img:latest` reports:
+
+```text
+Split complete: c: 411 split, 0 cached
+Compile:  OK (411 registered C leaves; per-leaf flags from the build manifest)
+Compare:  EXACT SHA-1 MATCH
+candidate SHA-1: 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+scripts/verify_us.sh: Split verification (Phase 4E): OK
+yaml matching-C count: 411
+```
+
+This campaign is closed at Phase 2. The next run begins with class-B
+`func_800504F4` (`0x40CF4`, 10 words) and must independently repeat function
+hood, Stage-0 typing, whole-object comparison, carve geometry, exact SHA,
+packed-span comparison, verifier, one-leaf commit, and push.

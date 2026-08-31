@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-180, the matching-C count is **410**.
+`634dd1b` (335-leaf base). After VOLUME-181, the matching-C count is **411**.
 
 ## Method and closure
 
@@ -11,28 +11,28 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,019** unique spans. The four-way
+The current active universe contains **1,018** unique spans. The four-way
 scheduling closure is:
 
 ```text
 TIER 1                   0
-TIER 2                 141
+TIER 2                 140
 TIER 3                  99
 SKIP / suppressed      779
                        ---
-TOTAL                 1019
+TOTAL                 1018
 ```
 
 The Phase-0 shape partition started from all 175 then-active Tier-2 rows.
 VOLUME-151–160 exhausted class W with ten exact first-phrasing matches;
-VOLUME-161 exhausted class S; VOLUME-162–180 matched the first nineteen
-class-B rows. The remaining closure is W=0, S=0, B=102, C=39, SKIP=4: 145
-rows total. The four SKIP rows are in the suppressed class, leaving 141 attemptable
+VOLUME-161 exhausted class S; VOLUME-162–181 matched the first twenty
+class-B rows. The remaining closure is W=0, S=0, B=101, C=39, SKIP=4: 144
+rows total. The four SKIP rows are in the suppressed class, leaving 140 attemptable
 Tier-2 rows. See `volume-campaign-20260831/TIER2_CLASSES.md`.
 
 The primary tables in `volume-campaign-20260824/POOL.md` contain 1,032
 historical rows: 0 Tier 1, 214 Tier 2, 99 Tier 3, and 719 SKIP. VOLUME-112
-through VOLUME-180 removed sixty-nine Tier-2 rows by integrating `func_800C6ED8`,
+through VOLUME-181 removed seventy Tier-2 rows by integrating `func_800C6ED8`,
 `func_800C6EC0`, `func_80050020`, `func_8007C544`, `func_800812F4`,
 `func_80062F1C`, `func_800C2AF0`, `func_80084FC4`, `func_80080AE4`,
 `func_8004DC84`, `func_8007A488`, `func_8007A88C`, and
@@ -54,10 +54,10 @@ GP-state forwarding wrapper `func_80064C30`, and GP-state forwarding twin
 state reset `func_80039970`, GP callback wrapper `func_80051060`, command
 wrapper `func_80085DC4`, and callback-registration wrappers
 `func_800471BC/8004732C/800474A8/8004B534/8004B55C/8004EF30/8004F2E4`, and
-callback wrappers `func_8004F950/8004F978/8004FF30/8004FF58/8004FF80/8004FFA8/8004FFD0/8004FFF8/80050038/80050060`,
-leaving 963 active primary rows. The
+callback wrappers `func_8004F950/8004F978/8004FF30/8004FF58/8004FF80/8004FFA8/8004FFD0/8004FFF8/80050038/80050060/80050204`,
+leaving 962 active primary rows. The
 56 active spans below were added after the primary tables through campaign overlays. Thus
-`963 + 56 = 1019`; four Phase-0 rows moved from Tier 2 into SKIP, so the
+`962 + 56 = 1018`; four Phase-0 rows moved from Tier 2 into SKIP, so the
 suppressed class is now `723 + 56 = 779`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
@@ -256,6 +256,6 @@ scripts/verify_us.sh: exit 0; C conversion: 335 leaves
 yaml matching-C count: 335
 ```
 
-The current shape-ranked Tier-2 queue continues in class B with
-`func_80050204` (`0x40A04`, 10 words). Function hood and all screens must still
+The next shape-ranked Tier-2 run continues in class B with
+`func_800504F4` (`0x40CF4`, 10 words). Function hood and all screens must still
 be re-proven before its first C attempt.

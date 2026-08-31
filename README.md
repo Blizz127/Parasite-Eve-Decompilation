@@ -12,7 +12,7 @@ Initial target:
 
 ## Project status
 
-**Matching decomp:** **410 exact matching C leaves**, plus **24
+**Matching decomp:** **411 exact matching C leaves**, plus **24
 `ACCEPTED-RESIDUAL` leaves** whose semantic C and compiler-decision residuals
 are documented but are not counted as matching C. Authoritative count:
 `grep -cE ',[[:space:]]*c,' configs/USA/disc1.yaml`.
@@ -71,7 +71,7 @@ scripts/extract_us.sh 1
 scripts/split_us.sh
 scripts/verify_us.sh
 # 2. Matching rebuild (needs mipsel-linux-gnu-{as,gcc} or docker)
-docker run --rm -v "$PWD":/workspace -w /workspace pe-mipsel:trixie \
+docker run --rm -v "$PWD":/workspace -w /workspace pe-mipsel-img:latest \
   bash scripts/build_us.sh
 ```
 
