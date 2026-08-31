@@ -762,7 +762,11 @@ segments:
       # Phase 5EF: int state exchanges (zero/nonzero reader evidence).
       - [0x6ACA8, c, func_8007A4A8]
       - [0x6ACBC, c, func_8007A4BC]
+      # Tier-2 continuation: one-result wrapper around func_8007B964.
+      # Former 0x6ACD0 span: prefix 0x3BC, C 0x20, resume 0x1884.
       - [0x6ACD0, asm]
+      - [0x6B08C, c, func_8007A88C]
+      - [0x6B0AC, asm]
       # Phase 5EF: write-only opaque 32-bit setter.
       - [0x6C930, c, func_8007C130]
       # Tier-2 probe: three-word state setter func_8007C544.
