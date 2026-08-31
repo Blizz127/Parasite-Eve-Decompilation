@@ -483,7 +483,9 @@ segments:
       # Tier-2 probe: callback table getter func_80050020.
       # func_80050020 follows directly after the consumed wrapper span.
       - [0x40820, c, func_80050020]
-      - [0x40838, asm]
+      # Two-wrapper span: first exact callback wrapper plus 0x28 resume.
+      - [0x40838, c, func_80050038]
+      - [0x40860, asm]
       - [0x40888, c, func_80050088]
       - [0x408A8, asm]
       - [0x40A60, c, func_80050260]

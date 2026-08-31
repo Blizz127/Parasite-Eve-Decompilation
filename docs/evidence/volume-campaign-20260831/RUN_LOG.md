@@ -33,6 +33,7 @@ Baseline: clean `main` at `81ab3fe`, 380 exact matching-C leaves.
 | VOLUME-176 | `func_8004FFA8` (`0x407A8`, 10 words) | B | MATCHED phrasing 1 | 406 | one of several exact-start callback stores is at `0x38914`; registers `func_80050CF8` through `func_800638D8`; exact 10/10; consumes asm head `0x28 + 0x50 = 0x78`; packed span, exact SHA, verifier pass |
 | VOLUME-177 | `func_8004FFD0` (`0x407D0`, 10 words) | B | MATCHED phrasing 1 | 407 | independently hood-proven by exact-start callback store at `0x35D00`; registers `func_80050D18` through `func_800638D8`; exact 10/10; splits final asm pair `0x28 + 0x28 = 0x50`; packed span, exact SHA, verifier pass |
 | VOLUME-178 | `func_8004FFF8` (`0x407F8`, 10 words) | B | MATCHED phrasing 1 | 408 | exact-start callback store at `0x3C6A4`; registers `func_80050D20` through `func_800638D8`; exact 10/10; consumes complete final `0x28` asm span; packed span through existing C successor, exact SHA, verifier pass |
+| VOLUME-179 | `func_80050038` (`0x40838`, 10 words) | B | MATCHED phrasing 1 | 409 | exact-start callback store at `0x38C1C`; registers `func_80050DC0` through `func_800638D8`; exact 10/10; splits two-wrapper span `0x28 + 0x28 = 0x50`; packed span, exact SHA, verifier pass |
 
 The campaign is active. Each leaf must independently pass function hood,
 Stage-0 typing, whole-object comparison, carve geometry, exact executable SHA,
