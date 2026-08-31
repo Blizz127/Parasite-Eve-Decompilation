@@ -1175,6 +1175,11 @@ segments:
       - [0xBACB4, asm]
       - [0xBAD40, c, func_800CA540]
       - [0xBAD74, asm]
+      # Tier-2 W callback: exact-start table entry at 0xD13D4. Six-argument
+      # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
+      # Carve: BAD74 prefix 0x160, C 0x2C, resume BAF00.s 0x98.
+      - [0xBAED4, c, func_800CA6D4]
+      - [0xBAF00, asm]
       - [0xBAF98, c, func_800CA798]
       # Phase 5GU: return-zero stub, era -O2 -G0.
       - [0xBAFA8, c, func_800CA7A8]
