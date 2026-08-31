@@ -1,19 +1,18 @@
-# Parasite Eve Native PC Port — Phase 6E-B54K-B4
+# Parasite Eve Native PC Port — Phase 6E-B54K-B5
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
-**Current milestone:** B54K-B4 translates the complete L7 packet group in
-`func_80030894`: retail `0x80030F6C..0x800310A4` (78 words / `0x138`,
-SHA-256 `0b314923…551659d`). It builds one compound sprite, a standalone
-sprite pair, a PolyF3 header, and a three-entry compound-sprite array. All
-five static calls target already-native GPU helpers; the sole back-edge has
-the literal bound three. The independent oracle checks the complete window,
-boundaries, call/control-flow census, scale chains, and an 87-byte zero-backed
-write map. The translated prefix is now 516 of 788 words and strict execution
-stops at `func_80030894_L7_cut`. Full normal and fresh ASan/UBSan suites pass
-936/936. VIS1 remains byte-identical because L7 constructs guest packets and
-performs no upload. Full proof is in
-`docs/evidence/pe-b54kb4-30894-l7/REPORT.md`.
+**Current milestone:** B54K-B5 translates the complete L8 loop in
+`func_80030894`: retail `0x800310A4..0x80031110` (27 words / `0x6C`, SHA-256
+`9b87877a…f7b7ecb`). It builds ten compound sprites at a 28-byte item stride
+and 280-byte bank stride, with RGB `80 80 80`. Its sole static call targets
+the native sprite wrapper and its sole back-edge has the literal bound ten.
+The independent oracle checks the complete window, control flow, and a
+130-byte zero-backed write map. The translated prefix is now 543 of 788 words
+and strict execution stops at `func_80030894_L8_cut`. Full normal and fresh
+ASan/UBSan suites pass 937/937. VIS1 remains byte-identical because L8 only
+constructs packets. Full proof is in
+`docs/evidence/pe-b54kb5-30894-l8/REPORT.md`.
 
 **Prior milestone:** VIS1 exposes the authoritative 1024x512 PSX VRAM as
 read-only host diagnostics. `--vram-raw PATH` writes every RGB555/STP word in
@@ -780,7 +779,7 @@ make
 
 Produces:
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current main: 936 tests)
+- `pe-native-tests` — test suite (current main: 937 tests)
 
 ## Running
 
@@ -821,7 +820,7 @@ DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overla
 # Strict mode — centralized abort at first unresolved provider
 ./parasite-eve-port --headless --strict-stubs --max-frames 2 \
   --disc-image "/path/disc1.bin"
-# Current global frontier: exit 1 at func_80030894_L7_cut from
+# Current global frontier: exit 1 at func_80030894_L8_cut from
 # func_80030894 (6AD40 continues to func_8006AD40_post30894_cut).
 # Bootstrap-disc still stops at func_8007F72C from func_800698D4.
 

@@ -47,20 +47,21 @@ leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
 
-Current native PC-port status (B54K-B4, 2026-08-30): `func_80030894` now
-translates retail through the complete L7 packet group at
-`0x80030F6C..0x800310A4` (78 new words; 516/788 total). The strict production
-frontier is `func_80030894_L7_cut`, immediately before L8, then normal mode
-continues to `func_8006AD40_post30894_cut`. The independent oracle verifies
-the full window, five already-native calls, sole three-entry back-edge, scale
-chains, and 87-byte bank-0 write map. Full normal and ASan/UBSan suites pass
-936/936. Evidence: `docs/evidence/pe-b54kb4-30894-l7/REPORT.md`.
+Current native PC-port status (B54K-B5, 2026-08-30): `func_80030894` now
+translates retail through the complete L8 loop at
+`0x800310A4..0x80031110` (27 new words; 543/788 total). The strict production
+frontier is `func_80030894_L8_cut`, immediately before the next packet group,
+then normal mode continues to `func_8006AD40_post30894_cut`. The independent
+oracle verifies the full window, sole already-native call, ten-entry
+back-edge, scale chains, and 130-byte bank-0 write map. Full normal and
+ASan/UBSan suites pass 937/937. Evidence:
+`docs/evidence/pe-b54kb5-30894-l8/REPORT.md`.
 
 VIS1 remains available: a real Disc 1 run emits a deterministic, visibly
 non-black read-only snapshot of the single PSX VRAM authority via
 `--vram-raw` and `--vram-screenshot` (2,063 nonzero RGB555 words within
-`256,64..735,456`). The B54K-B4 artifact is byte-identical to VIS1 because
-L4-L7 only build guest packet state. This is diagnostic VRAM, not a rendered
+`256,64..735,456`). The B54K-B5 artifact is byte-identical to VIS1 because
+L4-L8 only build guest packet state. This is diagnostic VRAM, not a rendered
 320x240 frame; the legacy host framebuffer remains black. BTL151 remains a
 human-operated local PCSX-Redux capture—do not retry it headlessly or claim
 capture results without the GUI artifact.
