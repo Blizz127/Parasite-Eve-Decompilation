@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 354 exact matching-C
+Current matching-lane status: 355 exact matching-C
 leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -706,7 +706,7 @@ The “~290 era-blocked functions” figure remains an **ESTIMATE**, not a count
   The six parks reflect GCC 2.x MIPS-backend ARCHITECTURE DECISIONS, not version-local divergences.
   DISPOSITION: the source-patch path is declined. The residual policy accepts
   the documented structurally-correct C candidates without counting them as
-  matching C; current disposition is 354 exact leaves plus 24
+  matching C; current disposition is 355 exact leaves plus 24
   `ACCEPTED-RESIDUAL` leaves. See
   `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
   Full report: `docs/ai_context/cc1_investigation.md`. Pipeline reconstructible from the report's
@@ -1061,6 +1061,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-122-7A488 | 352 | A sustained-work continuation resumes Tier 2 with `func_8007A488` @ `0x6AC88`, hood-proven by its canonical return, immediate real boundaries, and the exact caller at `0x8007C5E8`. Natural result-returning forwarding-wrapper C calls the string-identified PsyQ `CD_ready` body and matches all eight words on phrasing 1 under era `-O2 -G0`, with one normalized call relocation. Carve `0x0088 + 0x0020 = 0x00A8`; packed span/full SHA exact, verify green at 352, and Tier 2 falls 204→203. Evidence: `docs/evidence/volume-campaign-20260830/func-8007a488/REPORT.md`. |
 | VOLUME-123-7A88C | 353 | `func_8007A88C` @ `0x6B08C` is hood-proven by its canonical return, immediate real boundaries, and exact caller `0x80087180`. Natural call-then-return-one C forwards the caller's four-byte command buffer to `func_8007B964`, discards that callee's zero, and matches all eight words on phrasing 1 under era `-O2 -G0`, with one normalized call relocation. Carve `0x03BC + 0x0020 + 0x1884 = 0x1C60`; packed span/full SHA exact, verify green at 353, and Tier 2 falls 203→202. Evidence: `docs/evidence/volume-campaign-20260830/func-8007a88c/REPORT.md`. |
 | VOLUME-124-7F788 | 354 | `func_8007F788` @ `0x6FF88` is hood-proven by its canonical return, immediate real boundaries, and exact caller `0x80069D88`. Natural unsigned-byte forwarding C calls already-matched global getter `func_8007FC54` and matches all eight words on phrasing 1 under era `-O2 -G0`, including the post-call `andi v0,0xFF` and one normalized call relocation. The former span is exactly the `0x20`-byte leaf; packed span/full SHA exact, verify green at 354, and Tier 2 falls 202→201. Evidence: `docs/evidence/volume-campaign-20260830/func-8007f788/REPORT.md`. |
+| VOLUME-125-80AC4 | 355 | `func_80080AC4` @ `0x712C4` is hood-proven by exact caller `0x80016894`, canonical return, and a real predecessor epilogue separated by two explicit alignment nops. Its body is word-identical to independently proven `func_8007A88C`; natural call-then-return-one C matches all eight words on phrasing 1 under era `-O2 -G0` with one normalized call relocation. Carve `0x0174 + 0x0020 = 0x0194`; packed span/full SHA exact, verify green at 355, and Tier 2 falls 201→200. Evidence: `docs/evidence/volume-campaign-20260830/func-80080ac4/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
