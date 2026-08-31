@@ -1,8 +1,8 @@
 # Runtime lanes — current-state reconciliation
 
-Status date: 2026-08-30. This file is the maintained cross-lane status; the
-native and matching sections below were revalidated from their authoritative
-worktrees during the B54K-R MoveImage/display-prefix rung.
+Status date: 2026-08-31. This file is the maintained cross-lane status; the
+native library boundary and strict frontier below were revalidated from the
+authoritative grind worktree after B54K-AB.
 
 ## A. UE5 — `Blizz127/parasite-eve-ue5`
 
@@ -45,19 +45,24 @@ future UE parity input, but records that promotion as not yet accepted.
 Authoritative tree: `/home/blizz/dev/pe-continuous-decomp`, branch
 `grind/continuous-decomp`.
 
-The native test executable was run directly:
+The native test executable and standalone field-runtime consumer were run
+through CTest in normal and fresh ASan/UBSan builds:
 
 ```text
 pc_port/build/pe-native-tests
-Results: 977 run, 977 passed, 0 failed, 0 skipped
+Results: 985 run, 985 passed, 0 failed, 0 skipped
+field-runtime-link: PASS
 ```
 
-The production executable is not a complete Day 1 field runtime. Its strict
-real-disc execution frontier is:
+The reusable CMake target `pe_field_runtime` now exists and produces
+`libpe_field_runtime.a`; the production executable and both test consumers
+link it. This is a packaging/API boundary, not a complete Day 1 claim. Its
+strict real-disc execution frontier is:
 
 ```text
-func_80075424 from func_80190660
-func_8006AD40 is complete; MoveImage/display setup and 183 words of func_80190660 execute first
+func_801924F8_80192584_cut from func_801924F8
+func_80030894 and func_8006AD40 are complete; the authenticated overlay path
+and both calls to complete func_801918F8 execute first
 ```
 
 The bootstrap-disc path has a separate earlier stop at

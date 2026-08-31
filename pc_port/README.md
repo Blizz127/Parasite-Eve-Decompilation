@@ -416,6 +416,13 @@ cycles through 14 retail code words below its table);
 ## Architecture
 
 - **Build system:** CMake 3.16+
+- **Reusable runtime target:** `pe_field_runtime` produces
+  `libpe_field_runtime.a` from the translated retail graph, guest globals,
+  bootstrap policy, and host-safe providers. The CLI-only `port_main.c` and
+  X11 adapter remain separate consumers. This target boundary is verified;
+  it is not a claim that Day 1 field execution is complete. See
+  `docs/field_runtime_library.md` and
+  `../docs/evidence/pe-field-runtime-library/REPORT.md`.
 - **Backend:** Headless software framebuffer + X11 window via dlopen
 - **Output:** PPM (Portable Pixmap), deterministic byte-identical results
 - **Game entry:** `port_main.c` → `func_8001220C_port.c` → full PE boot chain
@@ -763,8 +770,16 @@ make
 ```
 
 Produces:
+- `libpe_field_runtime.a` — reusable translated/runtime static library
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current grind lane: 958 tests)
+- `pe-native-tests` — test suite (current grind lane: 985 tests)
+- `pe-field-runtime-link-test` — standalone archive-consumer smoke test
+
+Run both CTest consumers from either the source root or build directory:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
 
 ## Running
 

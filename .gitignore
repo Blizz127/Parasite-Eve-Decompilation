@@ -63,6 +63,7 @@ tools/era/maspsx/tests/*
 build-port/
 pc_port/build/
 pc_port/build-san/
+pc_port/build-*/
 
 # Local disc pointer used by native battle oracles (path only; never the BIN)
 local/pe_disc1.path

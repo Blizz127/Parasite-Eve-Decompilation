@@ -38,6 +38,22 @@ one of these lines:
   `docs/ai_context/PROMPT_TEMPLATE.md`. Named branches in the prompt,
   worktree path included, always.
 
+## Native field-runtime library boundary (2026-08-31)
+
+The reusable CMake target `pe_field_runtime` now produces
+`pc_port/build/libpe_field_runtime.a` from the 197 current translated/runtime
+translation units. `parasite-eve-port`, the 985-case native suite, and a
+standalone external-consumer smoke test all link the archive; CLI-only
+`port_main.c` and `host_window.c` remain outside it. Normal and fresh
+ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
+still stops at the pre-existing `func_801924F8_80192584_cut` boundary.
+
+This is a verified product/build boundary, not a semantic-completeness claim:
+there is still no complete Day 1 field runtime and scheduler provenance is
+still `NEEDS_ARTIFACT`. Evidence:
+`docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
+`pc_port/docs/field_runtime_library.md`.
+
 ## Grind-lane port complete — 275 matching C leaves (2026-08-21)
 
 All remaining pe-continuous-decomp grind leaves are ported. After 29388

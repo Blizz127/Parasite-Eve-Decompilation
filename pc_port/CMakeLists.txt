@@ -14,7 +14,6 @@ option(PE_PORT_SANITIZERS "Build with AddressSanitizer and UBSan" OFF)
 # Source lists
 set(PLATFORM_SRCS
     platform/host_framebuffer.c
-    platform/host_window.c
     platform/pe_guest_ram.c
     platform/pe_gpu.c
     platform/pe_irq.c
@@ -217,8 +216,7 @@ set(GAME_SRCS
     game/boot/func_80192CE8_port.c
 )
 
-set(PORT_SRCS
-    src/port_main.c
+set(FIELD_RUNTIME_SRCS
     src/pe_globals.c
     platform/pe_callback.c
     ${PLATFORM_SRCS}
@@ -226,17 +224,31 @@ set(PORT_SRCS
     ${GAME_SRCS}
 )
 
-# Include paths
-include_directories(
+# The static runtime is the reusable product boundary.  It contains the
+# translated retail graph and its host-safe providers, but not the CLI entry
+# point or the X11 presentation adapter.  Creating this target does not claim
+# that the currently translated graph is a complete Day 1 field runtime.
+add_library(pe_field_runtime STATIC ${FIELD_RUNTIME_SRCS})
+target_include_directories(pe_field_runtime PUBLIC
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/platform
     ${CMAKE_SOURCE_DIR}/bootstrap
+    ${CMAKE_SOURCE_DIR}/src
+)
+target_compile_definitions(pe_field_runtime PUBLIC
+    PE_PORT_HEADLESS=1
+    PE_PORT_FB_WIDTH=320
+    PE_PORT_FB_HEIGHT=240
 )
 
-# Main executable
-add_executable(parasite-eve-port ${PORT_SRCS})
-target_link_libraries(parasite-eve-port PRIVATE dl)
+# The command-line host is one consumer of the static runtime.  Its window
+# backend remains outside the library so non-X11 consumers do not inherit it.
+add_executable(parasite-eve-port
+    src/port_main.c
+    platform/host_window.c
+)
+target_link_libraries(parasite-eve-port PRIVATE pe_field_runtime dl)
 
 target_compile_definitions(parasite-eve-port PRIVATE
     PE_PORT_HEADLESS=1
@@ -245,6 +257,10 @@ target_compile_definitions(parasite-eve-port PRIVATE
 )
 
 if(PE_PORT_SANITIZERS)
+    target_compile_options(pe_field_runtime PRIVATE
+        -fsanitize=address,undefined
+        -fno-omit-frame-pointer
+    )
     target_compile_options(parasite-eve-port PRIVATE
         -fsanitize=address,undefined
         -fno-omit-frame-pointer
@@ -260,49 +276,16 @@ endif()
 option(BUILD_TESTS "Build native port tests" ON)
 if(BUILD_TESTS)
     enable_testing()
-    add_executable(pe-native-tests
-        tests/test_native.c
-        platform/host_framebuffer.c
-        platform/pe_guest_ram.c
-        platform/pe_gpu.c
-        platform/pe_irq.c
-        platform/pe_irq_delivery.c
-        platform/pe_callback.c
-        platform/pe_gte.c
-        platform/pe_libetc.c
-        platform/pe_libgpu.c
-        platform/pe_libsnd.c
-        platform/pe_spu_dma.c
-        platform/pe_libcard.c
-        platform/pe_libcd.c
-        platform/pe_disc.c
-        platform/pe_save.c
-        platform/pe_stream.c
-    platform/func_80071A24_port.c
-    platform/func_800719E4_port.c
-        platform/pe_guest_image.c
-        bootstrap/stub_registry.c
-        bootstrap/pe_bootstrap.c
-        bootstrap/game_port.c
-        src/pe_globals.c
-        ${GAME_SRCS}
-        bootstrap/func_800725DC_port.c
-        bootstrap/func_800698D4_port.c
-        bootstrap/func_8006E834_port.c
-        bootstrap/func_8006E9A0_port.c
+    add_executable(pe-native-tests tests/test_native.c)
+    target_link_libraries(pe-native-tests PRIVATE pe_field_runtime)
+
+    # Small external-consumer contract: this source is intentionally not part
+    # of the runtime target and reaches both host substrate and translated
+    # retail code only through the archive's public include/link interface.
+    add_executable(pe-field-runtime-link-test
+        tests/test_field_runtime_link.c
     )
-    target_include_directories(pe-native-tests PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-        ${CMAKE_SOURCE_DIR}/platform
-        ${CMAKE_SOURCE_DIR}/bootstrap
-        ${CMAKE_SOURCE_DIR}/src
-    )
-    target_compile_definitions(pe-native-tests PRIVATE
-        PE_PORT_HEADLESS=1
-        PE_PORT_FB_WIDTH=320
-        PE_PORT_FB_HEIGHT=240
-    )
-    target_link_libraries(pe-native-tests PRIVATE dl)
+    target_link_libraries(pe-field-runtime-link-test PRIVATE pe_field_runtime)
 
     if(PE_PORT_SANITIZERS)
         target_compile_options(pe-native-tests PRIVATE
@@ -313,7 +296,19 @@ if(BUILD_TESTS)
             -fsanitize=address,undefined
             -static-libasan -static-libubsan
         )
+        target_compile_options(pe-field-runtime-link-test PRIVATE
+            -fsanitize=address,undefined
+            -fno-omit-frame-pointer
+        )
+        target_link_options(pe-field-runtime-link-test PRIVATE
+            -fsanitize=address,undefined
+            -static-libasan -static-libubsan
+        )
     endif()
 
     add_test(NAME native-tests COMMAND pe-native-tests)
+    add_test(NAME field-runtime-link COMMAND pe-field-runtime-link-test)
+    set_tests_properties(native-tests field-runtime-link PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/..
+    )
 endif()
