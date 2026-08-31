@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-134, the matching-C count is **364**.
+`634dd1b` (335-leaf base). After VOLUME-135, the matching-C count is **365**.
 
 ## Method and closure
 
@@ -11,21 +11,21 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,065** unique spans. The four-way
+The current active universe contains **1,064** unique spans. The four-way
 scheduling closure is:
 
 ```text
 TIER 1                   0
-TIER 2                 191
+TIER 2                 190
 TIER 3                  99
 SKIP / suppressed      775
                        ---
-TOTAL                 1065
+TOTAL                 1064
 ```
 
 The primary tables in `volume-campaign-20260824/POOL.md` contain 1,032
 historical rows: 0 Tier 1, 214 Tier 2, 99 Tier 3, and 719 SKIP. VOLUME-112
-removed twenty-three Tier-2 rows by integrating `func_800C6ED8`,
+removed twenty-four Tier-2 rows by integrating `func_800C6ED8`,
 `func_800C6EC0`, `func_80050020`, `func_8007C544`, `func_800812F4`,
 `func_80062F1C`, `func_800C2AF0`, `func_80084FC4`, `func_80080AE4`,
 `func_8004DC84`, `func_8007A488`, `func_8007A88C`, and
@@ -33,9 +33,10 @@ removed twenty-three Tier-2 rows by integrating `func_800C6ED8`,
 `func_80082534`, callback-registered `func_80050088`, and callback-registered
 `func_80050260`, registered callback `func_800506E8`, and offset callback
 `func_80050708`, offset twin `func_80050728`, and registered callback
-`func_80050BE8`, leaving 1,009 active primary rows. The
+`func_80050BE8`, and offset callback `func_80050C50`, leaving 1,008 active
+primary rows. The
 56 active spans below were added after the primary tables through campaign overlays. Thus
-`1009 + 56 = 1065`; the suppressed class
+`1008 + 56 = 1064`; the suppressed class
 remains `719 + 56 = 775`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
@@ -92,6 +93,8 @@ VOLUME-133 then removed independently hood-proven offset twin
 `func_80050728` on its first natural phrasing.
 VOLUME-134 then removed exact registered callback `func_80050BE8` on its
 first natural phrasing.
+VOLUME-135 then removed exact offset callback `func_80050C50` on its first
+natural phrasing.
 
 ## Reconciled post-table spans
 
