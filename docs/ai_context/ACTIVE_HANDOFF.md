@@ -41,19 +41,32 @@ one of these lines:
 ## Native field-runtime library boundary (2026-08-31)
 
 The reusable CMake target `pe_field_runtime` now produces
-`pc_port/build/libpe_field_runtime.a` from the 197 current translated/runtime
-translation units. `parasite-eve-port`, the 987-case native suite, and a
+`pc_port/build/libpe_field_runtime.a` from the 198 current translated/runtime
+translation units. `parasite-eve-port`, the 988-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-now stops at `func_801924F8_80192728_cut` after retail filename construction,
-CD-file search, and the call-free movie-state setup block.
+now stops at `func_8010C0FC` from the authenticated libpress
+`DecDCTReset` wrapper.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AF — libpress `DecDCTReset` wrapper (2026-08-31)
+
+The 38-sector payload `[0x039F,0x03C5)` is now authenticated as the retail
+MDEC/libpress module. Its debug strings, 256-byte environment pair, and
+channel-0/channel-1 callback wrappers establish the SDK family. The complete
+13-word `func_8010BE3C` is `DecDCTReset`: mode zero calls the already-complete
+`ResetCallback`, then all modes forward unchanged to `func_8010C0FC`.
+Production now executes the call at `func_801924F8+0x230` and stops at that
+60-word internal MDEC/DMA reset rather than treating it as a no-op. Mode-zero
+and mode-one controls pass, normal and fresh ASan/UBSan CTest pass, and the
+native suite is 988/988. Evidence:
+`docs/evidence/pe-b54kaf-decdctreset/REPORT.md`.
 
 ## PE-B54K-AE — movie state setup (2026-08-31)
 

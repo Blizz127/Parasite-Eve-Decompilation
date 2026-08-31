@@ -1,10 +1,10 @@
 /*
- * Phase 6E-B54K-AE — authenticated prefix of overlay func_801924F8.
+ * Phase 6E-B54K-AF — authenticated prefix of overlay func_801924F8.
  *
  * Complete retail function: [0x801924F8,0x80192934), 271 words, SHA-256
  * ef825dccdbfd2a74941203d37739c713ad1e3bd8de48ca747f55d0e75a92f00a.
- * Translated prefix: [0x801924F8,0x80192728), 140 words, SHA-256
- * 526fb8ca0e5558585d3fc06b8d6977d9999d648c57a5c259d69b214f3fd2fc1e.
+ * Translated prefix: [0x801924F8,0x80192730), 142 words, SHA-256
+ * d633247323e92b405eedfcea7d79d2078bc4217f77c263740d4dbeccc7dab180.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -72,7 +72,11 @@ int func_801924F8(int index)
                 PE_LoadU8(0x800B0DBBu) != 0u ? 24u : 16u);
     PE_StoreU8(0x801D1494u, 0u);
 
-    Bootstrap_ReturnVoid("func_801924F8_80192728_cut", "func_801924F8");
+    func_8010BE3C(0);
+    if (PE_Port_ShouldStop())
+        return 0;
+
+    Bootstrap_ReturnVoid("func_801924F8_80192730_cut", "func_801924F8");
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }

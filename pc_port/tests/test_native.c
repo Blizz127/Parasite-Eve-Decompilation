@@ -17,6 +17,7 @@
 #include "pe_gpu.h"
 #include "pe_irq.h"
 #include "pe_irq_delivery.h"
+#include "pe_sdk.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1577,9 +1578,9 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU16(0x801D148Eu) == 240u &&
            PE_LoadU16(0x801D1490u) == 24u,
            "real-disc movie state setup differs");
-    ASSERT(CountOrderLog("func_801924F8_80192728_cut") == 1 &&
+    ASSERT(CountOrderLog("func_8010C0FC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "func_801924F8 internal cut did not become the exact frontier");
+           "DecDCTReset internal routine did not become the exact frontier");
 
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
@@ -18173,9 +18174,9 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192728_cut") == 1 &&
+           CountOrderLog("func_8010C0FC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "index 21 did not reach the exact post-search cut");
+           "index 21 did not reach the exact MDEC-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
            PE_LoadU32(0x801D0DC8u) == FX_FMV018_SIZE &&
            memcmp(PE_TranslateConst(0x801D0DCCu, 13u),
@@ -18210,9 +18211,9 @@ static void test_B54KAE_movie_state_setup(void)
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192728_cut") == 1 &&
+           CountOrderLog("func_8010C0FC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "movie state setup did not reach the exact pre-call cut");
+           "movie state setup did not reach the exact MDEC-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
                   PE_TranslateConst(0x801D0DC4u, 4u), 4u) == 0,
            "CdlLOC copy differs");
@@ -18234,6 +18235,39 @@ static void test_B54KAE_movie_state_setup(void)
            PE_LoadU8(0x801D1494u) == 0u,
            "movie coordinate selection or kind branch differs");
     FxFree(&fx);
+    PASS();
+}
+
+static void test_B54KAF_dec_dct_reset_wrapper(void)
+{
+    const uint32_t mode1_dpcr = 0xA5A55A5Au;
+
+    TEST("B54KAF_dec_dct_reset_wrapper");
+    ResetTestState();
+    PE_GPU_WriteDPCR(0xDEADBEEFu);
+    func_8010BE3C(0);
+    ASSERT(PE_LoadU16(0x800945E4u) == 1u &&
+           PE_LoadU16(0x80094614u) == 9u &&
+           PE_GPU_ReadDPCR() == 0x33333333u,
+           "mode 0 did not execute the complete ResetCallback path");
+    ASSERT(g_bootstrap_arg_call_count == 1 &&
+           g_bootstrap_arg_calls[0].arg0 == 0u &&
+           CountOrderLog("func_8010C0FC") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "mode 0 internal call boundary differs");
+
+    ResetTestState();
+    PE_GPU_WriteDPCR(mode1_dpcr);
+    func_8010BE3C(1);
+    ASSERT(PE_LoadU16(0x800945E4u) == 0u &&
+           PE_LoadU16(0x80094614u) == 0u &&
+           PE_GPU_ReadDPCR() == mode1_dpcr,
+           "mode 1 incorrectly executed ResetCallback");
+    ASSERT(g_bootstrap_arg_call_count == 1 &&
+           g_bootstrap_arg_calls[0].arg0 == 1u &&
+           CountOrderLog("func_8010C0FC") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "mode 1 internal call boundary differs");
     PASS();
 }
 
@@ -33427,7 +33461,7 @@ int main(void)
     test_6E9A0_dispatch_arg1();
     test_6E9A0_dispatch_arg3();
 
-    /* Phase 6E-A batch 3 / B54K-AE: real-disc foundation (43 tests) */
+    /* Phase 6E-A batch 3 / B54K-AF: real-disc foundation (44 tests) */
     test_disc_open_rejects_bad_size();
     test_disc_open_rejects_bad_sync();
     test_disc_open_rejects_mode1();
@@ -33454,6 +33488,7 @@ int main(void)
     test_dssearch_missing();
     test_B54KAD_fmv2_filename_threshold();
     test_B54KAE_movie_state_setup();
+    test_B54KAF_dec_dct_reset_wrapper();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();

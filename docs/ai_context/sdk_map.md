@@ -48,6 +48,19 @@ statically linked PsyQ libraries.
 | `func_80081714` | `DS_newmedia` | `"DS_newmedia: Read error in ds_read(PVD)\n"` and related media diagnostics |
 | `func_80081A7C` | `DS_cachefile` | `"DS_cachefile: dir not found\n"` and related cache diagnostics |
 
+## MDEC / libpress (38-sector movie module `[0x039F,0x03C5)`)
+
+| Function | SDK name | Evidence |
+| --- | --- | --- |
+| `func_8010BE3C` | `DecDCTReset` | module string `"MDEC_rest:bad option(%d)"`; mode-zero `ResetCallback`; forwards mode to MDEC reset |
+| `func_8010C0B4` | `DecDCTinCallback` | exact libpress wrapper shape; calls DMA callback registration with channel 0 |
+| `func_8010C0D8` | `DecDCToutCallback` | exact libpress wrapper shape; calls DMA callback registration with channel 1 |
+
+The surrounding range contains the 256-byte `DECDCTENV` get/put pair and the
+input/output/sync family in the same ABI order as Sony's `libpress.h`. B54K-AF
+authenticates the complete module and lands the bounded `DecDCTReset` wrapper;
+the internal MDEC/DMA reset at `0x8010C0FC` remains the production frontier.
+
 ## Still to map
 
 These families are redirectable but have not yet been identified completely by
@@ -55,7 +68,6 @@ string cross-reference or signature matching:
 
 - libGTE (`RotTransPers`, matrix operations, and related geometry helpers)
 - libSPU
-- MDEC / libpress
 - pad and SIO
 - interrupt and root-counter support
 

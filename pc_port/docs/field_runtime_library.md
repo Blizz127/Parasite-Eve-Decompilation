@@ -38,4 +38,5 @@ The production CLI is the authoritative worked example.
 This interface packages only behavior already present and tested. In
 particular it does not provide a generic scene scheduler, fabricate m0360i,
 write `persist[0] |= 4`, or claim a complete Day 1 field runtime. The current
-strict frontier is `func_801924F8_80192728_cut`.
+strict frontier is `func_8010C0FC` from the authenticated libpress
+`DecDCTReset` wrapper `func_8010BE3C`.

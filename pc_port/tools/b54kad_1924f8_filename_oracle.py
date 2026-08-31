@@ -132,9 +132,11 @@ def main() -> None:
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
     strict_cut = re.search(r'func_801924F8_(80192[0-9A-Fa-f]+)_cut', strict)
-    require(strict_cut is not None and
-            int(strict_cut.group(1), 16) >= CUT and
-            "called from: func_801924F8" in strict,
+    reached_later_mdec = ("func_8010C0FC" in strict and
+                          "called from: func_8010BE3C" in strict)
+    require((strict_cut is not None and
+             int(strict_cut.group(1), 16) >= CUT and
+             "called from: func_801924F8" in strict) or reached_later_mdec,
             "strict frontier did not reach the authenticated filename phase")
     print("  OK runtime: Disc 1 FMV001 and synthetic FMV2 threshold paths")
     print("  OK production: strict frontier reaches or passes 0x80192614")

@@ -92,10 +92,9 @@ def main() -> None:
         "active_pair + 22u",
         "active_pair + 24u",
         "PE_LoadU8(0x800B0DBBu) != 0u ? 24u : 16u",
-        "func_801924F8_80192728_cut",
+        "func_8010BE3C(0)",
     )
     require(all(token in source for token in required_source) and
-            "func_8010BE3C" not in source and
             "m0360i" not in source and "0xA8066048" not in source,
             "native scope")
     require("TEST(\"B54KAE_movie_state_setup\")" in tests_source and
@@ -121,11 +120,16 @@ def main() -> None:
                 f"focused {test_filter} contract")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_801924F8_80192728_cut" in strict and
-            "called from: func_801924F8" in strict,
-            "strict frontier")
+    reached_state_or_later = (
+        ("func_801924F8_80192728_cut" in strict and
+         "called from: func_801924F8" in strict) or
+        ("func_8010C0FC" in strict and
+         "called from: func_8010BE3C" in strict)
+    )
+    require(reached_state_or_later,
+            "strict frontier did not reach the authenticated state block")
     print("  OK runtime: real Disc 1 and synthetic active-pair controls")
-    print("  OK production: strict frontier advanced exactly to 0x80192728")
+    print("  OK production: strict frontier reaches or passes 0x80192728")
     print("\nB54K-AE func_801924F8 state oracle: PASS.")
 
 

@@ -125,8 +125,11 @@ def main() -> None:
         require("0 failed" in output, f"focused {test_filter} tests")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require(re.search(r"func_801924F8_80192[0-9A-Fa-f]+_cut", strict) and
-            "called from: func_801924F8" in strict,
+    reached_movie_frontier = (
+        re.search(r"func_801924F8_80192[0-9A-Fa-f]+_cut", strict) is not None or
+        ("func_8010C0FC" in strict and "called from: func_8010BE3C" in strict)
+    )
+    require(reached_movie_frontier,
             "production reached func_801924F8 internal frontier")
     load = run([str(port), "--headless", "--disc-image", str(disc),
                 "--disc-load-test"], 0)
