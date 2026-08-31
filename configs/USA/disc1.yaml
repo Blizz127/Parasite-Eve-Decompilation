@@ -793,6 +793,8 @@ segments:
       - [0x6ACD0, asm]
       - [0x6B08C, c, func_8007A88C]
       - [0x6B0AC, asm]
+      - [0x6B0EC, c, func_8007A8EC]
+      - [0x6B110, asm]
       # Phase 5EF: write-only opaque 32-bit setter.
       - [0x6C930, c, func_8007C130]
       # Tier-2 probe: three-word state setter func_8007C544.

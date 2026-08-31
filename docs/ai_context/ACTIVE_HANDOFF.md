@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 379 exact matching-C
+Current matching-lane status: 380 exact matching-C
 leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -1086,6 +1086,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-147-36E34 | 377 | `func_80036E34` @ `0x27634` is hood-proven by one direct caller, canonical return, and immediate real boundaries. Natural era `-O2 -G0` C initializes `D_800A76BC=0`, `D_800A76C0=0`, and `D_800A76B8=1`, matching all nine words and three independent `$at` symbolic-store pairs on phrasing 1. Carve `0x09EC + 0x0024 + 0x0250 = 0x0C60`; packed/full SHA exact, verify green at 377, and Tier 2 falls 179→178. Evidence: `docs/evidence/volume-campaign-20260830/func-80036e34/REPORT.md`. |
 | VOLUME-148-36E58 | 378 | `func_80036E58` @ `0x27658` is independently hood-proven by its own direct caller, canonical return, and immediate real boundaries. Natural era `-O2 -G0` C initializes `D_800A76B0=0`, `D_800A76B4=0`, and `D_800A76AC=1`, independently matching all nine words and three `$at` store pairs on phrasing 1. Carve `0x0024 + 0x022C = 0x0250`; packed/full SHA exact, verify green at 378, and Tier 2 falls 178→177. Evidence: `docs/evidence/volume-campaign-20260830/func-80036e58/REPORT.md`. |
 | VOLUME-149-64E90 | 379 | `func_80064E90` @ `0x55690` is hood-proven by one direct caller, canonical return, and immediate real boundaries. Natural era `-O2 -G0` typed C clears nested field `object->state[0x20]`, calls `func_8006269C`, and matches all nine words on phrasing 1, including the store in the call delay slot. Carve `0x023C + 0x0024 + 0x0504 = 0x0764`; packed/full SHA exact, verify green at 379, and Tier 2 falls 177→176. Evidence: `docs/evidence/volume-campaign-20260830/func-80064e90/REPORT.md`. |
+| VOLUME-150-7A8EC | 380 | `func_8007A8EC` @ `0x6B0EC` is hood-proven by one direct caller, canonical return, and immediate real boundaries. Natural era `-O2 -G0` C forwards `(3,value)` to `func_80073CF4`, independently matching all nine words and the established `func_800824F0` twin shape on phrasing 1. Carve `0x0040 + 0x0024 + 0x1820 = 0x1884`; packed/full SHA exact, verify green at 380, and Tier 2 falls 176→175. Evidence: `docs/evidence/volume-campaign-20260830/func-8007a8ec/REPORT.md`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
