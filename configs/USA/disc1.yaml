@@ -622,6 +622,8 @@ segments:
       # Refined 55430 carve: prefix 0x788, C 0x48, resume 55C00.s 0x51BC.
       - [0x55430, c, func_80064C30]
       - [0x55454, asm]
+      - [0x55690, c, func_80064E90]
+      - [0x556B4, asm]
       - [0x55BB8, c, func_800653B8]
       - [0x55C00, asm]
       # Phase 5EZ: C leaf func_8006A5BC — VRAM 0x8006A5BC, size 0x90 (36 words).

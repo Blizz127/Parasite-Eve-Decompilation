@@ -2,10 +2,10 @@
 
 Base: `634dd1b`, 335 exact matching-C leaves.
 
-Pool: 1,051 current active spans — Tier 1 0, Tier 2 177, Tier 3 99,
+Pool: 1,050 current active spans — Tier 1 0, Tier 2 176, Tier 3 99,
 SKIP/suppressed 775. Refresh evidence: `POOL_REFRESH.md`.
 
-Historical consecutive bounded parks: 3. Matched leaves this campaign: 43.
+Historical consecutive bounded parks: 3. Matched leaves this campaign: 44.
 Hard stop: **H5 fired after attempt 13**; no Tier-1 row was skipped to avoid it.
 
 Close-out reset: a new explicit authorization resumes only the three remaining
@@ -18,7 +18,7 @@ native runtime rather than extending the sample.
 
 Tier-2 continuation: a later explicit sustained-work authorization resumes the
 queue after the native L10 predecode and runs matching work alongside the
-BTL151 retail capture. Current continuation result: twenty-seven first-phrasing matches.
+BTL151 retail capture. Current continuation result: twenty-eight first-phrasing matches.
 
 | attempt | target | function hood / screens | outcome | words | phrasings | commit or stash |
 |---:|---|---|---|---:|---:|---|
@@ -75,3 +75,4 @@ BTL151 retail capture. Current continuation result: twenty-seven first-phrasing 
 | 51 / Tier-2 continuation 35 | `func_8004E94C` @ `0x3F14C` | canonical return; one direct caller; immediate real boundaries; one unresolved callee; GP-state reader with two Stage-0 writers | MATCHED leaf 376 first phrasing under `-G8`; natural global countdown forwarding fills the call delay; packed span/full SHA exact | 9 | 1 | VOLUME-146 leaf commit |
 | 52 / Tier-2 continuation 36 | `func_80036E34` @ `0x27634` | canonical return; one direct caller; immediate real boundaries; no callee/loop; three Stage-0-censused globals | MATCHED leaf 377 first phrasing under `-G0`; ordered three-state initializer reproduces all `$at` store pairs; packed span/full SHA exact | 9 | 1 | VOLUME-147 leaf commit |
 | 53 / Tier-2 continuation 37 | `func_80036E58` @ `0x27658` | canonical return; one independent direct caller; immediate real boundaries; no callee/loop; three distinct Stage-0-censused globals | MATCHED leaf 378 first phrasing under `-G0`; adjacent ordered initializer independently reproduces all store pairs; packed span/full SHA exact | 9 | 1 | VOLUME-148 leaf commit |
+| 54 / Tier-2 continuation 38 | `func_80064E90` @ `0x55690` | canonical return; one direct caller; immediate real boundaries; one unresolved callee; nested pointer store in call delay | MATCHED leaf 379 first phrasing under `-G0`; typed field/index C reproduces all nine words; packed span/full SHA exact | 9 | 1 | VOLUME-149 leaf commit |

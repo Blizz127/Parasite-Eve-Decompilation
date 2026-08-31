@@ -1,7 +1,7 @@
 # Matching-C pool refresh — 2026-08-30
 
 Status: authoritative live pool for the campaign resumed from `main` at
-`634dd1b` (335-leaf base). After VOLUME-148, the matching-C count is **378**.
+`634dd1b` (335-leaf base). After VOLUME-149, the matching-C count is **379**.
 
 ## Method and closure
 
@@ -11,21 +11,21 @@ the generated `asm/disc1/*.s` bodies and retains active `nonmatching func_*`
 spans of at most 40 words. Stale generated files outside the selected YAML
 geometry are excluded.
 
-The current active universe contains **1,051** unique spans. The four-way
+The current active universe contains **1,050** unique spans. The four-way
 scheduling closure is:
 
 ```text
 TIER 1                   0
-TIER 2                 177
+TIER 2                 176
 TIER 3                  99
 SKIP / suppressed      775
                        ---
-TOTAL                 1051
+TOTAL                 1050
 ```
 
 The primary tables in `volume-campaign-20260824/POOL.md` contain 1,032
 historical rows: 0 Tier 1, 214 Tier 2, 99 Tier 3, and 719 SKIP. VOLUME-112
-removed thirty-seven Tier-2 rows by integrating `func_800C6ED8`,
+removed thirty-eight Tier-2 rows by integrating `func_800C6ED8`,
 `func_800C6EC0`, `func_80050020`, `func_8007C544`, `func_800812F4`,
 `func_80062F1C`, `func_800C2AF0`, `func_80084FC4`, `func_80080AE4`,
 `func_8004DC84`, `func_8007A488`, `func_8007A88C`, and
@@ -40,10 +40,11 @@ wrapper `func_800824F0`, slot-4 twin `func_8007DD14`, and signed-byte wrapper
 `func_80052790`, fixed-allocation boolean wrapper `func_8004D4A0`, and
 GP-state forwarding wrapper `func_80064C30`, and GP-state forwarding twin
 `func_8005F594`, GP-countdown wrapper `func_8004E94C`, and state initializer
-`func_80036E34` and adjacent initializer `func_80036E58`, leaving 995 active
+`func_80036E34`, adjacent initializer `func_80036E58`, and nested-state wrapper
+`func_80064E90`, leaving 994 active
 primary rows. The
 56 active spans below were added after the primary tables through campaign overlays. Thus
-`995 + 56 = 1051`; the suppressed class
+`994 + 56 = 1050`; the suppressed class
 remains `719 + 56 = 775`.
 
 The refresh commit itself changed no C source, YAML, build script, verifier,
@@ -128,6 +129,8 @@ VOLUME-147 then removed exact three-state initializer `func_80036E34` on its
 first natural phrasing.
 VOLUME-148 then removed independently hood-proven adjacent initializer
 `func_80036E58` on its first natural phrasing.
+VOLUME-149 then removed exact nested-state clear wrapper `func_80064E90` on
+its first natural phrasing.
 
 ## Reconciled post-table spans
 
