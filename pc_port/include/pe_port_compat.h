@@ -475,8 +475,8 @@ extern void func_8006A8D4(void);
  * SetSprt).  game/boot/func_80077B{64,BA4,BC4,C44,C64}_port.c — each a
  * 5-word real outlined header-inline writing the primitive packet's byte
  * offset 3 (length) and byte offset 7 (code).  Called via jal from
- * func_80030894; B54K-A/B1/B2/B3 exercise the SET leaves through L2/L3,
- * L4, L5, and the mixed L6 packet group. */
+ * func_80030894; B54K-A/B1/B2/B3/B4 exercise the SET leaves through L2/L3
+ * and the complete L4-L7 packet groups. */
 extern void func_80077B64(pe_addr_t p);
 extern void func_80077BA4(pe_addr_t p);
 extern void func_80077BC4(pe_addr_t p);
