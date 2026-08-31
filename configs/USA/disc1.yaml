@@ -860,7 +860,9 @@ segments:
       # Tier-2 W wrapper: func_8007FC64 forwards result to SDK CD_sync with
       # mode 1. Era -O2 -G0, first phrasing. Carve: C 0x24, resume 0x70488.
       - [0x70464, c, func_8007FC64]
-      - [0x70488, asm]
+      # Adjacent W twin: func_8007FC88 forwards result to SDK CD_ready with
+      # mode 1. Era -O2 -G0, first phrasing; consumes the final 0x24 span.
+      - [0x70488, c, func_8007FC88]
       # Phase 5BA: C leaf func_8007FCAC — VRAM 0x8007FCAC, size 0x10.
       # File span 0x704AC–0x704BC exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_8009B590. Plain -O1 matches.
