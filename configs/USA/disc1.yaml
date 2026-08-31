@@ -407,6 +407,10 @@ segments:
       # two independent exact-start stores, era -O2 -G0, first phrasing.
       - [0x379BC, c, func_800471BC]
       - [0x379E4, asm]
+      # Tier-2 B: independently referenced callback-registration wrapper
+      # for func_80050280; era -O2 -G0, exact first phrasing.
+      - [0x37B2C, c, func_8004732C]
+      - [0x37B54, asm]
       - [0x3C708, c, func_8004BF08]
       - [0x3C740, asm]
       - [0x3D824, c, func_8004D024]
