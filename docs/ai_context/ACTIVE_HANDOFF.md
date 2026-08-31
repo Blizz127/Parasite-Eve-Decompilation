@@ -42,7 +42,7 @@ one of these lines:
 
 Current cross-lane status: see `~/dev/pe-continuous-decomp/RUNTIME_LANES.md`.
 
-Current matching-lane status: 400 exact matching-C
+Current matching-lane status: 410 exact matching-C
 leaves plus 24 `ACCEPTED-RESIDUAL` leaves; the 287-leaf line above is the
 historical grind-lane port milestone. Residual policy:
 `docs/acceptance/MATCHING_RESIDUAL_POLICY.md`.
@@ -1089,6 +1089,7 @@ main -> func_8006A5BC ✓ exact C (5EZ, leaf 221)   # boot init, VSync waits
 | VOLUME-150-7A8EC | 380 | `func_8007A8EC` @ `0x6B0EC` is hood-proven by one direct caller, canonical return, and immediate real boundaries. Natural era `-O2 -G0` C forwards `(3,value)` to `func_80073CF4`, independently matching all nine words and the established `func_800824F0` twin shape on phrasing 1. Carve `0x0040 + 0x0024 + 0x1820 = 0x1884`; packed/full SHA exact, verify green at 380, and Tier 2 falls 176→175. Evidence: `docs/evidence/volume-campaign-20260830/func-8007a8ec/REPORT.md`. |
 | VOLUME-151–160-W-BATCH | 390 | The shape-ranked Tier-2 campaign independently hood-proved and matched all ten class-W rows: SDK wrappers `func_8007FC64/8007FC88` and eight six-argument callback-table wrappers `func_800C7D00/800C8E44/800C9B3C/800CA6D4/800CBEE0/800CCEBC/800CD89C/800CE118`. Every leaf matched natural era `-O2 -G0` phrasing 1, passed object/packed-span/full-SHA/verifier gates, and landed one leaf per commit. W is exhausted with no parks; the 175-row Phase-0 queue now has 165 rows: S=1, B=121, C=39, SKIP=4. Evidence: `docs/evidence/volume-campaign-20260831/`. |
 | VOLUME-161–170-S/B-BATCH | 400 | The campaign matched the sole class-S row `func_80039970`, then the first nine class-B rows: GP callback wrapper `func_80051060`, command wrapper `func_80085DC4`, and seven independently referenced callback-registration wrappers `func_800471BC/8004732C/800474A8/8004B534/8004B55C/8004EF30/8004F2E4`. All ten matched natural phrasing 1, passed whole-object, boundary carve, packed-span, exact-SHA, verifier, one-leaf commit, and push gates. Remaining Phase-0 closure: W=0, S=0, B=112, C=39, SKIP=4; 151 attemptable Tier-2 rows. Last executable-changing commit: `70ac58a`. Evidence: `docs/evidence/volume-campaign-20260831/`. |
+| VOLUME-171–180-B-BATCH | 410 | Ten independently hood-proven callback-registration wrappers matched natural era `-O2 -G0` phrasing 1: `func_8004F950/8004F978`, contiguous `func_8004FF30/8004FF58/8004FF80/8004FFA8/8004FFD0/8004FFF8`, and `func_80050038/80050060`. The run consumed its asm spans exactly, including two complete final `0x28` units, and every leaf passed object, carve, packed-span, exact-SHA, verifier, one-leaf commit, and push gates. Remaining closure: B=102, C=39, SKIP=4; 141 attemptable. Last executable-changing commit: `61ba6de`. Evidence: `docs/evidence/volume-campaign-20260831/`. |
 
 Detail and leaf-by-leaf narrative: git history + wiki
 ([Current Status](https://github.com/Blizz127/Parasite-Eve-Decompilation/wiki/Current-Status)).
