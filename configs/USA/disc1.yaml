@@ -167,7 +167,7 @@ segments:
       - [0x9330, asm]
       # Phase 5GD: two-reader call wrapper twin, era -O2 -G0.
       - [0x9368, c, func_80018B68]
-      - [0x9398, asm]
+      - [0x9398, c, func_80018B98]
       # Phase 5GE: D_8009D2F0 flag-0x20 clearer, era -O2 -G0.
       - [0x93C8, c, func_80018BC8]
       - [0x93EC, c, func_80018BEC]

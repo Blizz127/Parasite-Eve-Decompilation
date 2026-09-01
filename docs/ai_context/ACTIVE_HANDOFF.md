@@ -944,6 +944,14 @@ two pointer fields at `arg0 + 4` and `arg0 + 8` to `func_8008A400`; retaining
 the descriptor in `$v0` reproduces retail's frame, loads, and call sequence.
 Full rebuild, public verifier, and packed-span checks are exact at 555 leaves.
 
+## Matching leaf — func_80018B98 (2026-09-01)
+
+`func_80018B98` is now a registered 12-word exact C leaf. It dereferences two
+descriptor pointers from `arg0`, forwards their payload pointers to
+`func_80065954`, and returns `1`. Explicit descriptor locals preserve
+retail's `$v0`/`$v1` load order; full rebuild, public verifier, and packed-span
+checks are exact at 556 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
