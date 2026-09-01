@@ -621,7 +621,8 @@ segments:
       - [0x4E194, asm]
       # Bounded 16-byte record-address getter: era -O2 -G0.
       - [0x4E28C, c, func_8005DA8C]
-      - [0x4E2B4, asm]
+      # Bounded 32-byte record-address getter: era -O2 -G0.
+      - [0x4E2B4, c, func_8005DAB4]
       # Volume campaign: indexed address from a retained symbolic pointer;
       # size 0x20, era -O2 -G0.
       - [0x4E2DC, c, func_8005DADC]

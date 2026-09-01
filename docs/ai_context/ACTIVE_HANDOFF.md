@@ -125,6 +125,13 @@ predicate (`>= 0x41`) so era emits the required `beqz` branch polarity. The
 full rebuild, public verifier, and all packed-span checks are exact at 418
 leaves.
 
+## Matching leaf — func_8005DAB4 (2026-09-01)
+
+`func_8005DAB4` is now a registered 10-word exact C leaf, the 32-byte-stride
+twin of `func_8005DA8C`. It returns null for an unsigned index at least
+`0x41`, otherwise the matching record address in `D_80092888`. The full
+rebuild, public verifier, and all packed-span checks are exact at 419 leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits
