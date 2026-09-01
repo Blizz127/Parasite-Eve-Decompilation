@@ -100,6 +100,14 @@ It uses the existing era `-O2 -G8` profile, which reproduces retail's two
 loads before the call frame. The full rebuild, public verifier, and all
 packed-span checks are exact at 415 leaves.
 
+## Matching leaf — func_8005051C (2026-09-01)
+
+`func_8005051C` is now a registered 10-word exact C leaf. It is the adjacent
+GP-relative twin of `func_800504F4`, forwarding `D_8009CF44` and
+`D_8009CF48` to `func_80042170` under the same era `-O2 -G8` profile. The
+full rebuild, public verifier, and all packed-span checks are exact at 416
+leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits
