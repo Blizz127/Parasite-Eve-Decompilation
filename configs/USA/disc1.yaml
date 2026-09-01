@@ -159,6 +159,9 @@ segments:
       - [0x9AB8, c, func_800192B8]
       - [0x9AC8, c, func_800192C8]
       - [0x9ADC, asm]
+      # Phase 5EF: call-and-return-one wrapper around func_800703F4.
+      - [0x9BB8, c, func_800193B8]
+      - [0x9BD8, asm]
       # Phase 5EJ-outgoing-arg: C func_80019484 — VRAM 0x80019484, size 0x2C.
       # Double-dereference int **arg0 into outgoing $a0, then jal the already-C
       # int func_800438C0(int); return 1. Era -O2 -G0 (no $gp references).
@@ -179,6 +182,9 @@ segments:
       - [0xA010, asm]
       - [0xA3E4, c, func_80019BE4]
       - [0xA404, asm]
+      # Phase 5EF: call-and-return-one wrapper around func_80033A2C.
+      - [0xA524, c, func_80019D24]
+      - [0xA544, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
       # VOLUME-110: C leaf func_80021850 — VRAM 0x80021850, size 0x88

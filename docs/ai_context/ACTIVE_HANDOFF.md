@@ -262,6 +262,12 @@ and all packed-span checks are exact at 446 leaves.
 frame-and-return wrapper around `func_80090F68`. The full rebuild, public
 verifier, and all packed-span checks are exact at 447 leaves.
 
+## Matching leaves — call-and-return-one wrappers (2026-09-01)
+
+`func_800193B8` and `func_80019D24` now call their respective `void` callees
+and return one as registered eight-word exact C leaves. The full rebuild,
+public verifier, and all packed-span checks are exact at 449 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
