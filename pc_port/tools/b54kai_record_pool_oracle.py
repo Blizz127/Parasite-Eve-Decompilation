@@ -140,7 +140,7 @@ def main() -> None:
             "record footprint, widths, and zero-count controls")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_801924F8_80192790_cut" in strict and
+    require("func_801924F8_801927A0_cut" in strict and
             "called from: func_801924F8" in strict,
             "strict path did not reach the post-initializer cut")
     print("  OK runtime: bounded footprint and zero-count negative control")

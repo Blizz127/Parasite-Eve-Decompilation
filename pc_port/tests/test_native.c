@@ -1617,7 +1617,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x800B0CCCu) == 0u &&
            PE_LoadU32(0x8009B574u) == 1u &&
            PE_LoadU32(0x800A3608u) == 0u &&
-           CountOrderLog("func_801924F8_80192790_cut") == 1 &&
+           CountOrderLog("func_801924F8_801927A0_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "DecDCToutCallback registration or following cut differs");
 
@@ -18214,7 +18214,7 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192790_cut") == 1 &&
+           CountOrderLog("func_801924F8_801927A0_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18252,7 +18252,7 @@ static void test_B54KAE_movie_state_setup(void)
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192790_cut") == 1 &&
+           CountOrderLog("func_801924F8_801927A0_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
@@ -18483,6 +18483,46 @@ static void test_B54KAJ_stream_control_initializer(void)
 }
 
 /* ── pe_disc layer ───────────────────────────────────────────────────── */
+
+static void test_B54KAL_blocking_setloc_arm(void)
+{
+    DiscFixture fx;
+    const pe_addr_t loc = 0x801F1000u;
+    const pe_addr_t response = 0x801F1010u;
+    uint32_t expected;
+
+    TEST("B54KAL_blocking_setloc_arm");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    func_8007ED58();
+    ASSERT(func_80081414(loc, "\\FMV2\\FMV018.STR;1") == 1,
+           "fixture CdlLOC lookup failed");
+    expected = PE_LoadU32(loc);
+
+    ASSERT(func_80080D5C(2, loc, 0u) == 1 &&
+           PE_Cd_GetSetlocRaw() == expected &&
+           func_80080C48(loc) == (int)FX_FMV018_LBA,
+           "blocking CdlSetloc arm did not retain the exact location");
+    ASSERT(PE_LoadU32(0x8009B574u) == 1u &&
+           PE_LoadU32(0x800A3608u) == 0u,
+           "synchronous Setloc changed ready/queue authority");
+
+    func_8007ED58();
+    PE_StoreU32(response, 0xA5A55A5Au);
+    ASSERT(func_80080D5C(3, loc, 0u) == 0 &&
+           func_80080D5C(2, loc, response) == 0 &&
+           PE_Cd_GetSetlocRaw() == 0u &&
+           PE_LoadU32(response) == 0xA5A55A5Au,
+           "unsupported command/response path mutated state");
+
+    PE_StoreU8(loc + 1u, 0x6Au);
+    ASSERT(func_80080D5C(2, loc, 0u) == 0 &&
+           PE_Cd_GetSetlocRaw() == 0u,
+           "invalid BCD location was accepted");
+    FxFree(&fx);
+    PASS();
+}
 
 static void test_disc_open_rejects_bad_size(void) {
     TEST("disc_open_rejects_bad_size");
@@ -33704,6 +33744,7 @@ int main(void)
     test_B54KAH_dec_dct_out_callback_registration();
     test_B54KAI_record_pool_initializer();
     test_B54KAJ_stream_control_initializer();
+    test_B54KAL_blocking_setloc_arm();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();

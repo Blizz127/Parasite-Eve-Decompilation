@@ -98,7 +98,7 @@ def main() -> None:
                 f"focused {test_filter} idle-state contract")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_801924F8_80192790_cut" in strict and
+    require("func_801924F8_801927A0_cut" in strict and
             "called from: func_801924F8" in strict,
             "strict path did not reach the post-wait cut")
     print("  OK runtime: real and synthetic idle states pass without mutation")

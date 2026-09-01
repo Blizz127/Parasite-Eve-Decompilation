@@ -3,8 +3,9 @@
  *
  * Complete retail function: [0x801924F8,0x80192934), 271 words, SHA-256
  * ef825dccdbfd2a74941203d37739c713ad1e3bd8de48ca747f55d0e75a92f00a.
- * Translated prefix: [0x801924F8,0x80192790), 166 words, SHA-256
- * f82288e0a5e751bb7399cd1c34d9d60904de59150b9f98ad0f539d090dbac8eb.
+ * Translated prefix: [0x801924F8,0x801927A0), 170 words, SHA-256
+ * fb44b0aeb6ab2d3e6c52cf5242603e038dc32cd096062ade16a0b6cf713c9f39.
+ * Supersedes strict frontier func_801924F8_80192790_cut.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -89,7 +90,13 @@ int func_801924F8(int index)
         }
     } while (func_8007F778() != 0);
 
-    Bootstrap_ReturnVoid("func_801924F8_80192790_cut", "func_801924F8");
+    /* Retail passes an eight-byte stack result to the blocking command, but
+     * the complete 271-word CFG never reads it.  Passing null preserves the
+     * live CdlSetloc effect without inventing unobserved response bytes. */
+    if (func_80080D5C(2, 0x801D0DC4u, 0u) == 0)
+        return 0;
+
+    Bootstrap_ReturnVoid("func_801924F8_801927A0_cut", "func_801924F8");
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }

@@ -80,6 +80,11 @@
 #include "pe_disc.h"
 #include "host_framebuffer.h"
 
+/* B54K-AL: value-only controller location for the proven synchronous
+ * CdlSetloc arm.  This is host hardware state, not planted guest state. */
+static uint32_t g_cd_setloc_raw;
+static int g_cd_setloc_valid;
+
 /* Identical zeroing block shared by CdInit and func_8007ED58. */
 static void PE_Cd_ClearState(void)
 {
@@ -119,6 +124,8 @@ static void PE_Cd_ClearState(void)
         PE_StoreU32(0x800A3610u + (uint32_t)i * 0x10u, 0);
     }
     PE_StoreU32(0x800A3690u, 0);
+    g_cd_setloc_raw = 0u;
+    g_cd_setloc_valid = 0;
 }
 
 /* func_800822BC: DS-abort check; abort calls collapsed, flag always cleared. */
@@ -242,6 +249,49 @@ int func_80080C48(pe_addr_t fp)
     int s = PE_Cd_BcdByte(PE_LoadU8(fp + 1));
     int f = PE_Cd_BcdByte(PE_LoadU8(fp + 2));
     return ((m * 60 + s) * 75 + f) - 150;
+}
+
+/* func_80080D5C is the blocking command wrapper at [0x80080D5C,
+ * 0x80080DC4).  The native substrate currently implements only its proven
+ * production arm: command 2, named CdlSetloc by the retail executable's own
+ * command-name table.  The complete movie caller never reads its eight-byte
+ * response buffer, so result==0 deliberately avoids fabricating controller
+ * response bytes.  Other commands and response-consuming callers remain a
+ * mutation-free boundary rather than false successes. */
+int func_80080D5C(int command, pe_addr_t param, pe_addr_t result)
+{
+    PE_Disc *d;
+    uint8_t m, s, f;
+    int lba;
+
+    if (((uint32_t)command & 0xFFu) != 2u || result != 0u)
+        return 0;
+    if (!PE_RangeIsRam(param, 4u) || func_8007F72C() != 1 ||
+        func_8007F778() != 0)
+        return 0;
+    d = PE_Disc_GetActive();
+    if (!d)
+        return 0;
+
+    m = PE_LoadU8(param + 0u);
+    s = PE_LoadU8(param + 1u);
+    f = PE_LoadU8(param + 2u);
+    if ((m & 0x0Fu) > 9u || (m >> 4) > 9u ||
+        (s & 0x0Fu) > 9u || (s >> 4) > 5u ||
+        (f & 0x0Fu) > 9u || (f >> 4) > 7u)
+        return 0;
+    lba = func_80080C48(param);
+    if (lba < 0 || (uint32_t)lba >= PE_Disc_UserSectorCount(d))
+        return 0;
+
+    g_cd_setloc_raw = PE_LoadU32(param);
+    g_cd_setloc_valid = 1;
+    return 1;
+}
+
+uint32_t PE_Cd_GetSetlocRaw(void)
+{
+    return g_cd_setloc_valid ? g_cd_setloc_raw : 0u;
 }
 
 /* func_80082314 — PVD verify; see header for the collapsed async layer. */

@@ -42,18 +42,30 @@ one of these lines:
 
 The reusable CMake target `pe_field_runtime` now produces
 `pc_port/build/libpe_field_runtime.a` from the 200 current translated/runtime
-translation units. `parasite-eve-port`, the 992-case native suite, and a
+translation units. `parasite-eve-port`, the 993-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-now stops at `func_801924F8_80192790_cut`, after the authenticated libpress,
-record-pool, stream-control, and CD idle-wait sequence returns.
+now stops at `func_801924F8_801927A0_cut`, after the authenticated libpress,
+record-pool, stream-control, CD idle-wait, and blocking CdlSetloc sequence.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AL — blocking CdlSetloc arm (2026-08-31)
+
+The complete 26-word blocking command wrapper and the executable's own
+command-name table prove the movie call is command 2 / `CdlSetloc`. The
+complete movie CFG never reads its eight-byte stack response, so native
+retains the exact four-byte location without inventing response bytes.
+Unsupported commands, response consumers, absent disc, malformed BCD, and
+out-of-range locations are inert. The native suite is 993/993 and strict
+production stops before `func_80081314` at
+`func_801924F8_801927A0_cut`. Evidence:
+`docs/evidence/pe-b54kal-blocking-setloc/REPORT.md`.
 
 ## PE-B54K-AK — movie CD idle wait (2026-08-31)
 
