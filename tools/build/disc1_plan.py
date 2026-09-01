@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
@@ -36,6 +37,8 @@ SUBSEGMENT_RE = re.compile(
 SHA1_RE = re.compile(r"^sha1:\s*([0-9a-fA-F]{40})\s*$", re.MULTILINE)
 FUNC_RE = re.compile(r"^func_([0-9A-Fa-f]{8})$")
 ENV_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+GENERATED_ASM_UNIT_RE = re.compile(r"^[0-9A-F]+\.s$")
+ASM_OFFSET_RE = re.compile(r"/\*\s*([0-9A-Fa-f]+)\s+")
 
 
 class PlanError(RuntimeError):
@@ -333,6 +336,55 @@ def build_plan(
     return plan
 
 
+def remove_stale_generated_asm_units(root: Path, plan: dict[str, Any]) -> list[Path]:
+    """Delete ignored splat asm units superseded by the current YAML plan.
+
+    Splat names Disc 1 text units after their uppercase hexadecimal file offset.
+    A YAML carve can therefore leave an older unit behind when its old start is
+    now C, or (for a retained start) leave old instructions beyond a new C edge.
+    Only such generated names are considered, and every deletion is guarded by
+    ``git check-ignore`` so tracked or user-owned paths are never touched.
+    """
+
+    asm_dir = root / "asm/disc1"
+    if not asm_dir.is_dir():
+        return []
+
+    expected_sources = {
+        unit["source"] for unit in plan["units"] if unit["kind"] == "asm"
+    }
+    c_ranges = [
+        (unit["start"], unit["end"])
+        for unit in plan["units"]
+        if unit["kind"] == "c"
+    ]
+    removed: list[Path] = []
+
+    for path in sorted(asm_dir.glob("*.s")):
+        if not GENERATED_ASM_UNIT_RE.fullmatch(path.name):
+            continue
+        relative = path.relative_to(root)
+        offsets = [int(match.group(1), 16) for match in ASM_OFFSET_RE.finditer(path.read_text(encoding="utf-8"))]
+        overlaps_c = any(
+            start <= offset < end for offset in offsets for start, end in c_ranges
+        )
+        if str(relative) in expected_sources and not overlaps_c:
+            continue
+
+        ignored = subprocess.run(
+            ["git", "-C", str(root), "check-ignore", "-q", "--", str(relative)],
+            check=False,
+        ).returncode == 0
+        if not ignored:
+            raise PlanError(
+                f"refusing to delete non-ignored asm unit: {relative}"
+            )
+        path.unlink()
+        removed.append(relative)
+
+    return removed
+
+
 def render_linker_script(plan: dict[str, Any]) -> str:
     units = plan["units"]
     lines = [
@@ -419,6 +471,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profiles", type=Path, default=DEFAULT_PROFILES)
     parser.add_argument("--emit-dir", type=Path)
     parser.add_argument("--require-generated", action="store_true")
+    parser.add_argument("--cleanup-stale-asm", action="store_true")
     parser.add_argument("--write-status", action="store_true")
     parser.add_argument("--check-status", action="store_true")
     parser.add_argument("--status", type=Path, default=DEFAULT_STATUS)
@@ -432,6 +485,10 @@ def main(argv: list[str] | None = None) -> int:
             profiles_path=args.profiles,
             require_generated=args.require_generated,
         )
+        if args.cleanup_stale_asm:
+            removed = remove_stale_generated_asm_units(args.root.resolve(), plan)
+            for path in removed:
+                print(f"removed stale generated asm: {path}")
         if args.emit_dir:
             output = _repo_path(args.root.resolve(), args.emit_dir)
             write_generated(plan, output)

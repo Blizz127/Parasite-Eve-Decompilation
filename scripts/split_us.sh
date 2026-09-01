@@ -146,6 +146,12 @@ echo
 echo "Running: $SPLAT split $CONFIG"
 "$SPLAT" split "$CONFIG"
 
+# A YAML asm-to-C carve can leave an older splat unit behind. Remove only
+# hex-named, git-ignored generated units that are no longer current (or whose
+# embedded file offsets now land in a C span). The build-time stale-overlap
+# gate remains the backstop if generation ever produces an invalid unit.
+python3 "$ROOT/tools/build/disc1_plan.py" --root "$ROOT" --cleanup-stale-asm
+
 status_after="$(git -C "$ROOT" status --porcelain)"
 new_entries="$(comm -13 <(sort <<<"$status_before") <(sort <<<"$status_after"))"
 if [[ -n "$new_entries" ]]; then

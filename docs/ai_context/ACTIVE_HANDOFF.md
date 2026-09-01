@@ -919,6 +919,16 @@ field at `D_8009D2F0 + 0x98`, then returns success. The `$v0` state pointer
 and `$a0` mask preserve retail's load delays and return delay slot; full
 rebuild, public verifier, and packed-span checks are exact at 553 leaves.
 
+## Split cleanup — superseded generated asm units (2026-09-01)
+
+`scripts/split_us.sh` now removes only git-ignored, hex-named generated asm
+units that no longer belong to a YAML asm span or contain offsets now owned by
+C. The build-time stale-overlap gate remains unchanged as a backstop. The
+plan regression suite covers an asm-to-C carve; a detached scratch worktree
+also proved that a previously generated `asm/disc1/33128.s` is removed by a
+split with no manual cleanup. Real-tree rebuild and both verifiers remain
+exact at 553 C leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

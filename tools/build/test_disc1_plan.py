@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import hashlib
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,6 +18,7 @@ from disc1_plan import (  # noqa: E402
     PlanError,
     build_plan,
     matching_status,
+    remove_stale_generated_asm_units,
     render_linker_script,
     verification_manifest,
 )
@@ -120,6 +122,59 @@ class Disc1PlanTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(PlanError, "stale build override"):
                 build_plan(root=root)
+
+    def test_split_cleanup_removes_superseded_ignored_asm_unit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "configs/USA").mkdir(parents=True)
+            (root / "src").mkdir()
+            (root / "asm/disc1").mkdir(parents=True)
+            (root / ".gitignore").write_text("/asm/disc1/\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / "configs/USA/disc1_build_profiles.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "default_profile": "era",
+                        "profiles": {
+                            "era": {"toolchain": "era", "flags": ["-O2", "-G0"]}
+                        },
+                        "assignments": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            config = root / "configs/USA/disc1.yaml"
+            config.write_text(
+                "sha1: 452fb033f2eaa4b18aa20a5bca60b8125af3a37b\n"
+                "      - [0x800, asm]\n"
+                "  - [0x1EE800]\n",
+                encoding="utf-8",
+            )
+            old_unit = root / "asm/disc1/800.s"
+            old_unit.write_text("/* 800 80010000 00000000 */ nop\n", encoding="utf-8")
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "check-ignore", "-q", "--", "asm/disc1/800.s"],
+                    check=False,
+                ).returncode,
+                0,
+            )
+
+            (root / "src/func_80010000.c").write_text(
+                "int func_80010000(void) { return 0; }\n", encoding="utf-8"
+            )
+            config.write_text(
+                "sha1: 452fb033f2eaa4b18aa20a5bca60b8125af3a37b\n"
+                "      - [0x800, c, func_80010000]\n"
+                "  - [0x1EE800]\n",
+                encoding="utf-8",
+            )
+            plan = build_plan(root=root)
+            removed = remove_stale_generated_asm_units(root, plan)
+
+            self.assertEqual(removed, [Path("asm/disc1/800.s")])
+            self.assertFalse(old_unit.exists())
 
     def test_wrapper_matrix_requires_full_exact_word_equality(self) -> None:
         retail = struct.pack("<II", 0x03E00008, 0)
