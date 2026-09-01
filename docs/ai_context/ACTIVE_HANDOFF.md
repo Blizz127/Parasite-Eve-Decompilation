@@ -228,6 +228,12 @@ leaves.
 frame-and-return wrapper around `func_8007FB04`. The full rebuild, public
 verifier, and all packed-span checks are exact at 435 leaves.
 
+## Matching leaf — func_800C6EE8 (2026-09-01)
+
+`func_800C6EE8` is now a registered four-word exact C leaf. It truncates its
+input and stores the resulting unsigned halfword to `D_800F3420`. The full
+rebuild, public verifier, and all packed-span checks are exact at 436 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

@@ -1236,7 +1236,9 @@ segments:
       - [0xB3368, asm]
       - [0xB76C0, c, func_800C6EC0]
       - [0xB76D8, c, func_800C6ED8]
-      - [0xB76E8, asm]
+      # Phase 5EF: absolute unsigned-halfword setter D_800F3420.
+      - [0xB76E8, c, func_800C6EE8]
+      - [0xB76F8, asm]
       # Tier-2 W callback: exact-start table entry at 0xD1074. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: B76E8 prefix 0xE18, C 0x2C, resume B852C.s 0x98.
