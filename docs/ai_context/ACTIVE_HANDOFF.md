@@ -302,6 +302,14 @@ and all packed-span checks are exact at 453 leaves.
 The full rebuild, public verifier, and all packed-span checks are exact at 454
 leaves.
 
+## Matching leaves — func_800850F4 / func_80085134 (2026-09-01)
+
+`func_800850F4` and `func_80085134` are now registered sixteen-word exact C
+leaves. Both preserve their two arguments across `func_800850C0`, then forward
+them to their respective dispatchers (`func_80085E54` and `func_80085DF4`).
+The full rebuild, public verifier, and all packed-span checks are exact at 456
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
