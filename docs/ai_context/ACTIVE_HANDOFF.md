@@ -676,6 +676,13 @@ byte from an indirect input slot, and read the unsigned halfword at `+0x24`,
 respectively. The full rebuild, public verifier, and packed-span checks are
 exact at 518 leaves.
 
+## Matching leaf — func_800179F8 (2026-09-01)
+
+`func_800179F8` is now a registered eleven-word exact C leaf. It clears the
+selected indexed bit in the source word using the shared source/bit pointer
+layout. The full rebuild, public verifier, and packed-span checks are exact at
+519 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

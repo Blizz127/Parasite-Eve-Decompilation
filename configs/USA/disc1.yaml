@@ -80,6 +80,8 @@ segments:
       - [0x8148, c, func_80017948]
       - [0x8168, c, func_80017968]
       - [0x8188, asm]
+      # Probe: indexed bit-clear wrapper.
+      - [0x81F8, c, func_800179F8]
       # Probe: indexed bit-test and bit-set wrappers.
       - [0x8224, c, func_80017A24]
       - [0x8250, c, func_80017A50]
