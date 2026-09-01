@@ -654,6 +654,13 @@ incoming unsigned halfword by the byte limit at `D_8009D2F0+0xF`, stores it at
 `+0x12`, and sets state flag `0x200`. The full rebuild, public verifier, and
 packed-span checks are exact at 510 leaves.
 
+## Matching leaves — func_80017A78, func_80017AA4, and func_80017AC0 (2026-09-01)
+
+`func_80017A78`, `func_80017AA4`, and `func_80017AC0` are now registered
+exact C leaves for the `D_8009D2E8` flag word: a caller-supplied mask clear,
+a read to an indirect result slot, and a caller-supplied OR update. The full
+rebuild, public verifier, and packed-span checks are exact at 513 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
