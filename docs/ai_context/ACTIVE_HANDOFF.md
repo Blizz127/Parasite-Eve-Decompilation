@@ -871,6 +871,14 @@ or `0x101`, and stores it at `arg0 + 0xBC`. The default era `-O2 -G0` profile
 again preserves the retail `bnez` increment-delay-slot scheduling; full
 rebuild, public verifier, and packed-span checks are exact at 546 leaves.
 
+## Matching leaves — func_80089B28 / func_80089CF0 (2026-09-01)
+
+`func_80089B28` and `func_80089CF0` are now registered eight-word exact C
+leaves. Both are byte-identical siblings of `func_80089960`, setting bit
+`0x100` in `D_8009D2C4`; the natural unsigned-global form keeps the retail
+load delay and `$at` store sequence. Full rebuild, public verifier, and all
+packed-span checks are exact at 548 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

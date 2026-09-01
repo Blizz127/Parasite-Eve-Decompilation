@@ -1313,6 +1313,10 @@ segments:
       - [0x780F0, asm]
       - [0x7A160, c, func_80089960]
       - [0x7A180, asm]
+      - [0x7A328, c, func_80089B28]
+      - [0x7A348, asm]
+      - [0x7A4F0, c, func_80089CF0]
+      - [0x7A510, asm]
       # Phase 5EG-readers: func_8008AB1C — VRAM 0x8008AB1C, size 0x80.
       # Pins D_8009D240 as unsigned short * and D_8009D260 as unsigned char *
       # via lhu / unscaled addu. Era -O1 -G0.
