@@ -520,6 +520,13 @@ in the `+0x250` halfword state field of `D_8009D2F0`, retaining `$v1` for the
 retail load order. The full rebuild, public verifier, and packed-span checks
 are exact at 490 leaves.
 
+## Matching leaf — func_80019A9C (2026-09-01)
+
+`func_80019A9C` is now a registered nine-word exact C leaf. It clears bit 3
+in the `+0x250` halfword state field of `D_8009D2F0`, retaining `$v1` for the
+retail load order. The full rebuild, public verifier, and packed-span checks
+are exact at 491 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
