@@ -214,7 +214,9 @@ segments:
       - [0xA104, c, func_80019904]
       # Probe: state bit-0 setter through retail's $v1-loaded record.
       - [0xA128, c, func_80019928]
-      - [0xA14C, asm]
+      # Probe: four-dereference forwarding wrapper.
+      - [0xA14C, c, func_8001994C]
+      - [0xA18C, asm]
       - [0xA3E4, c, func_80019BE4]
       - [0xA404, asm]
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.

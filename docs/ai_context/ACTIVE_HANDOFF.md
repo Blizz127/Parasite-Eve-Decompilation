@@ -501,6 +501,12 @@ the `+0x98` flag word of `D_8009D2F0`, retaining the state pointer in `$v1`
 to reproduce retail loads. The full rebuild, public verifier, and packed-span
 checks are exact at 487 leaves.
 
+## Matching leaf — func_8001994C (2026-09-01)
+
+`func_8001994C` is now a registered 16-word exact C leaf. It dereferences four
+pointer slots, forwards their words to `func_800676CC`, and returns one. The
+full rebuild, public verifier, and packed-span checks are exact at 488 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
