@@ -807,6 +807,9 @@ segments:
       # Phase 5EZ: conditional offset-0xC pointer helper.
       - [0x62144, c, func_80071944]
       - [0x62164, asm]
+      # Phase 5FA: conditional offset-0x14 pointer helper.
+      - [0x621C4, c, func_800719C4]
+      - [0x621E4, asm]
       - [0x645E8, c, func_80073DE8]
       # Phase 5BX: C leaf func_80073DF8 — VRAM 0x80073DF8, size 0x18.
       # Halfword pointer deref on D_80095674 (lui/lw/nop/lhu0/jr/nop).

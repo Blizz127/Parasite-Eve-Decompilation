@@ -399,6 +399,12 @@ All rebuild and verifier checks are exact at 471 leaves.
 flags word is set it returns the offset-0xC field address, otherwise null.
 All rebuild and verifier checks are exact at 472 leaves.
 
+## Matching leaf — func_800719C4 (2026-09-01)
+
+`func_800719C4` is its matching sibling, returning the offset-0x14 field
+address when bit 3 of the flags word is set. All rebuild and verifier checks
+are exact at 473 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
