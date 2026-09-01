@@ -590,6 +590,12 @@ descriptor across `func_8005186C`, writes the result through the descriptor's
 second pointer slot, and returns one. The full rebuild, public verifier, and
 packed-span checks are exact at 500 leaves.
 
+## Matching leaf — func_80019D44 (2026-09-01)
+
+`func_80019D44` is now a registered 16-word exact C leaf. It dereferences four
+halfword pointer slots, forwards them to `func_80037454`, and returns one. The
+full rebuild, public verifier, and packed-span checks are exact at 501 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
