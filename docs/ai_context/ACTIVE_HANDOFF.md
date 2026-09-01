@@ -834,6 +834,13 @@ through its argument-held pointer into the halfword field at
 `D_8009D2F0 + 0x1E6`, then returns `1`. The state pointer is constrained to
 retail `$v1`; full rebuild and packed-span checks are exact at 541 leaves.
 
+## Matching leaf — func_800177AC (2026-09-01)
+
+`func_800177AC` is now a registered seven-word exact C leaf. It copies the
+word at `D_8009D300 + 0x14` through the supplied destination pointer and
+returns `1`. Era `-O2 -G8` preserves the GP-relative pointer load; full
+rebuild and packed-span checks are exact at 542 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
