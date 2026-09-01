@@ -1224,6 +1224,9 @@ segments:
       # Tier-2 probe: root-counter checkpoint func_80084FC4.
       # Former 74FB0 asm prefix: 0x814, C 0x20, resume 0xA0.
       - [0x74FB0, asm]
+      # Probe: conditional D_800A5B70 address selector.
+      - [0x75320, c, func_80084B20]
+      - [0x75340, asm]
       - [0x757C4, c, func_80084FC4]
       - [0x757E4, asm]
       # Phase 5FX: constant-add getter func_80085084 — VRAM 0x80085084,

@@ -719,6 +719,13 @@ companion signed-byte setter: it clears `D_8009D21E` and writes the shifted
 byte to `D_8009D2CC`, using the same retail `$v0` load-delay schedule. The full
 rebuild, public verifier, and packed-span checks are exact at 525 leaves.
 
+## Matching leaf — func_80084B20 (2026-09-01)
+
+`func_80084B20` is now a registered eight-word exact C leaf. It returns either
+the base of `D_800A5B70` or its `+0xF0` subregion according to bits 4–7 of the
+argument. The full rebuild, public verifier, and packed-span checks are exact
+at 526 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
