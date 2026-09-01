@@ -750,6 +750,14 @@ signed halfword `D_800B0DBC` when byte flag `D_800B0DBA` is set, otherwise
 and branch-delay scheduling. The full rebuild, public verifier, and
 packed-span checks are exact at 529 leaves.
 
+## Matching leaf — func_80090574 (2026-09-01)
+
+`func_80090574` is now a registered ten-word exact C leaf. It consumes one
+stream byte, sets the `0x900` flag at state offset `0xF4`, and writes the byte
+as a halfword at `+0x10E`. A zero-code memory barrier after advancing the
+stream pointer preserves retail's `$v0` reuse and load order. The full rebuild,
+public verifier, and packed-span checks are exact at 530 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
