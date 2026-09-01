@@ -75,6 +75,15 @@ ends the preceding assembly span at `0x3D5AC` and resumes it at `0x3D5D4`.
 The full rebuild and packed-span verifier pass at retail SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`; matching count is 412.
 
+## Matching leaf — func_8004CDD4 (2026-09-01)
+
+`func_8004CDD4` is now a registered 21-word exact C leaf. It calls the
+two-component accumulator with `(0, 10)`, selects `D_800A1A20` or its
+`+0x40` record by `state+0x24 == 0x3D`, then calls `func_8005F594`. The
+record pointer is deliberately constrained to `$a0` only after the first
+call; that matches retail's address materialization and avoids extending the
+frame. The full build and all packed-span checks are exact at 413 leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits

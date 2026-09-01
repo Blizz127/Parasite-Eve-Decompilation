@@ -426,7 +426,9 @@ segments:
       # Two-call constant forwarding wrapper: era -O2 -G0.
       # The preceding asm span ends at this callable 10-word leaf.
       - [0x3D5AC, c, func_8004CDAC]
-      - [0x3D5D4, asm]
+      # State-0x3D selects the second 0x40-byte message record.
+      - [0x3D5D4, c, func_8004CDD4]
+      - [0x3D628, asm]
       - [0x3D824, c, func_8004D024]
       - [0x3D830, asm]
       - [0x3DA7C, c, func_8004D27C]
