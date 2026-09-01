@@ -181,7 +181,8 @@ segments:
       - [0x9E18, c, func_80019618]
       # Probe: companion bit-13 clearer with retail $v0/$a0 allocation.
       - [0x9E38, c, func_80019638]
-      - [0x9E58, asm]
+      # Probe: state bit-7 setter through the retail $v1-loaded record.
+      - [0x9E58, c, func_80019658]
       # Probe: state bit-7 clearer with retail $v0/$a0 allocation.
       - [0x9E7C, c, func_8001967C]
       # Probe: state bit-14 setter through the retail $v1-loaded record.
