@@ -630,6 +630,8 @@ segments:
       - [0x4E914, c, func_8005E114]
       - [0x4E920, c, func_8005E120]
       - [0x4E92C, asm]
+      # GP-guarded worker call returning zero when inactive: era -O2 -G8.
+      - [0x4ED4C, c, func_8005E54C]
       - [0x4ED7C, c, func_8005E57C]
       - [0x4ED88, asm]
       - [0x4EEE4, c, func_8005E6E4]
