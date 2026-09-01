@@ -67,6 +67,14 @@ documents provide the current matching and native metrics. The preceding
 main-lane B54K-B1..B6 narrative remains historical evidence; later B54K and
 field-runtime work in this handoff supersedes its old strict frontier.
 
+## Matching leaf — func_8004CDAC (2026-09-01)
+
+`func_8004CDAC` is now a registered 10-word exact C leaf: it forwards the
+constants `0x28` and `0x3D` to `func_80062F3C` in order. The YAML split now
+ends the preceding assembly span at `0x3D5AC` and resumes it at `0x3D5D4`.
+The full rebuild and packed-span verifier pass at retail SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`; matching count is 412.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits
