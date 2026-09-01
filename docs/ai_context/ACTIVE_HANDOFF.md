@@ -937,6 +937,13 @@ byte-global conditional preserves the retail `beqz` return-constant delay
 slot; full rebuild, public verifier, and packed-span checks are exact at 554
 leaves.
 
+## Matching leaf — func_8008B1D0 (2026-09-01)
+
+`func_8008B1D0` is now a registered 11-word exact C leaf. It forwards the
+two pointer fields at `arg0 + 4` and `arg0 + 8` to `func_8008A400`; retaining
+the descriptor in `$v0` reproduces retail's frame, loads, and call sequence.
+Full rebuild, public verifier, and packed-span checks are exact at 555 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
