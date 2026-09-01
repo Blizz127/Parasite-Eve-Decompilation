@@ -132,6 +132,15 @@ twin of `func_8005DA8C`. It returns null for an unsigned index at least
 `0x41`, otherwise the matching record address in `D_80092888`. The full
 rebuild, public verifier, and all packed-span checks are exact at 419 leaves.
 
+## Matching leaf — func_8005F844 (2026-09-01)
+
+`func_8005F844` is now a registered 12-word exact C leaf. It writes two
+GP-relative state words from independent boolean-selected literal expressions
+(`0x3A1C`/`0x395D` and `0xCC`/`0x84`), then always writes `0xA4`. The
+independent assignment form is required to reproduce the two retail `bnez`
+delay slots. The full rebuild, public verifier, and all packed-span checks are
+exact at 420 leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits

@@ -652,6 +652,9 @@ segments:
       - [0x4F6D4, asm]
       - [0x4FD94, c, func_8005F594]
       - [0x4FDB8, asm]
+      # Boolean-selected GP state initializer: era -O2 -G8.
+      - [0x50044, c, func_8005F844]
+      - [0x50074, asm]
       - [0x51CA0, c, func_800614A0]
       - [0x51CAC, asm]
       - [0x52AB0, c, func_800622B0]
