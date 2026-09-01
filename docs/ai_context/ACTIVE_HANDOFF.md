@@ -116,6 +116,15 @@ argument is nonzero, it performs the two retail constant calls (`0x1F`, then
 returns after the shared epilogue. The full rebuild, public verifier, and all
 packed-span checks are exact at 417 leaves.
 
+## Matching leaf — func_8005DA8C (2026-09-01)
+
+`func_8005DA8C` is now a registered 10-word exact C leaf. It returns null for
+an unsigned index at least `0x41`, otherwise it returns the corresponding
+16-byte record address in `D_80092478`. The source uses the retail inverse
+predicate (`>= 0x41`) so era emits the required `beqz` branch polarity. The
+full rebuild, public verifier, and all packed-span checks are exact at 418
+leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits
