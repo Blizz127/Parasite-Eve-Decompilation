@@ -238,6 +238,9 @@ segments:
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.
       - [0xA524, c, func_80019D24]
       - [0xA544, asm]
+      # Probe: state bit-1 setter through retail's $v1 record.
+      - [0xAB2C, c, func_8001A32C]
+      - [0xAB50, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
       # VOLUME-110: C leaf func_80021850 — VRAM 0x80021850, size 0x88

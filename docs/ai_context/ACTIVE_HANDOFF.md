@@ -555,6 +555,13 @@ in the `+0x98` state flag word of `D_8009D2F0`, with the pointer in `$a0` and
 wide mask in `$v1` to match retail allocation. The full rebuild, public
 verifier, and packed-span checks are exact at 495 leaves.
 
+## Matching leaf — func_8001A32C (2026-09-01)
+
+`func_8001A32C` is now a registered nine-word exact C leaf. It sets bit 1 in
+the `+0x98` state flag word of `D_8009D2F0`, retaining `$v1` for the retail
+load order. The full rebuild, public verifier, and packed-span checks are
+exact at 496 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
