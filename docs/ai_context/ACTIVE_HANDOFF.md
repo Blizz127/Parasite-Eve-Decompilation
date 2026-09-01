@@ -625,6 +625,13 @@ low three bits of `D_800BCF88` and sets bit 7; pinning the global address in
 `$v0` retains the retail address/value register sequence. The full rebuild,
 public verifier, and packed-span checks are exact at 505 leaves.
 
+## Matching leaf — func_80017CC4 (2026-09-01)
+
+`func_80017CC4` is now a registered nine-word exact C leaf. It tests whether
+the low three bits of `D_800BCF88` equal four and writes the Boolean result to
+the caller's indirect result slot. The full rebuild, public verifier, and
+packed-span checks are exact at 506 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
