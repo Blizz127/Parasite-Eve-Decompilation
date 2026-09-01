@@ -797,6 +797,13 @@ word from the source pointer at argument offset `+4` to the destination
 pointer at `+0`, then returns `1`. The full rebuild and packed-span checks are
 exact at 536 leaves.
 
+## Matching leaf — func_800172FC (2026-09-01)
+
+`func_800172FC` is now a registered eight-word exact C leaf. It sets bit
+`0x10` in halfword `D_8009D300[4]` and returns `0`. The Era `-O2 -G8` profile
+preserves its GP-relative pointer load and retail `addu` return-zero form. The
+full rebuild and packed-span checks are exact at 537 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
