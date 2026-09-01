@@ -156,6 +156,15 @@ the global offset `D_800A8050` and returns the resulting byte from
 maspsx retains retail's indexed symbolic byte-load macro shape. The full
 rebuild, public verifier, and all packed-span checks are exact at 422 leaves.
 
+## Matching leaves — func_8005DBF8 / func_8005DC10 (2026-09-01)
+
+`func_8005DBF8` and `func_8005DC10` are now registered six-word exact C
+leaves. Each loads a global word then adds its record-base address minus its
+field offset (`0x18` and `0x20`, respectively). Explicit `$v0` address and
+`$v1` loaded-value lifetimes reproduce retail's materialization order. The
+full rebuild, public verifier, and all packed-span checks are exact at 424
+leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits
