@@ -67,6 +67,19 @@ The suite is 994/994 and strict production stops before queue issue at
 `func_80081314_func_8007F0C8_cut`. Evidence:
 `docs/evidence/pe-b54kam-read-registration/REPORT.md`.
 
+## PE-B54K-AN — CdlReadS delivery audit (2026-08-31)
+
+The registered CD callback enters a 583-word stream/ring state machine; its
+35-word DMA3 callback changes producer-record status from the CD phase's `3`
+to ready `2` before optional consumer notification. Retail also conditionally
+calls that callback at the CD-handler tail under `D_800B89F4`, so the next
+rung must recover the direct-tail versus DMA-dispatch rule. Direct
+sector-to-ring synchronous completion would erase retail partial-record,
+ring-full, DMA-in-flight, and callback ordering, so no such shortcut was
+added. The next rung is a generic first-sector event contract with the exact
+completion-selection rule. Evidence:
+`docs/evidence/pe-b54kan-cdlreads-delivery-audit/REPORT.md`.
+
 ## PE-B54K-AL — blocking CdlSetloc arm (2026-08-31)
 
 The complete 26-word blocking command wrapper and the executable's own
