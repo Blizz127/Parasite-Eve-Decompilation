@@ -892,7 +892,8 @@ segments:
       # Phase 5BS: C leaf func_8006EBD4 — VRAM 0x8006EBD4, size 0x10.
       # Signed-byte global getter on D_800B0DBA; plain -O1 matches.
       - [0x5F3D4, c, func_8006EBD4]
-      - [0x5F3E4, asm]
+      - [0x5F3E4, c, func_8006EBE4]
+      - [0x5F408, asm]
       # Signed-halfword indexed offset reader: era -O2 -G0.
       - [0x5F46C, c, func_8006EC6C]
       - [0x5F484, asm]

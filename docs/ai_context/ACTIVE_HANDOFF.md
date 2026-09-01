@@ -742,6 +742,14 @@ of two `D_800A5B70` entry addresses to slots `0x10` and `0x20`, returning
 retail's `$v1`, `$a1`, and `$a2` preserves the loop schedule. The full rebuild,
 public verifier, and packed-span checks are exact at 528 leaves.
 
+## Matching leaf — func_8006EBE4 (2026-09-01)
+
+`func_8006EBE4` is now a registered nine-word exact C leaf. It returns the
+signed halfword `D_800B0DBC` when byte flag `D_800B0DBA` is set, otherwise
+`-1`. The natural conditional-return phrasing preserves the retail load-delay
+and branch-delay scheduling. The full rebuild, public verifier, and
+packed-span checks are exact at 529 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
