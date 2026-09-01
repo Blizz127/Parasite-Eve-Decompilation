@@ -211,6 +211,7 @@ segments:
       - [0x98BC, asm]
       - [0x9954, c, func_80019154]
       - [0x9970, asm]
+      - [0x9A98, c, func_80019298]
       # Phase 5EJ: D_8009D28C int-state setters (READY-FROM-READER).
       # func_800192B8 / func_800192C8 — set state 0/8, return 1; sizes 0x10 / 0x14.
       # Mid-98BC carve: prefix 0x1FC, C×2, resume 9ADC.s to 9C84.
