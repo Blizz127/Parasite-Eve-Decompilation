@@ -929,6 +929,14 @@ also proved that a previously generated `asm/disc1/33128.s` is removed by a
 split with no manual cleanup. Real-tree rebuild and both verifiers remain
 exact at 553 C leaves.
 
+## Matching leaf — func_800392EC (2026-09-01)
+
+`func_800392EC` is now a registered nine-word exact C leaf. It returns `1`
+when `D_80091A1C` is zero, otherwise it returns `D_80091A1D`. The direct
+byte-global conditional preserves the retail `beqz` return-constant delay
+slot; full rebuild, public verifier, and packed-span checks are exact at 554
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
