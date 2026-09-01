@@ -1327,7 +1327,9 @@ segments:
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: B9480 prefix 0x1C4, C 0x2C, resume B9670.s 0x98.
       - [0xB9644, c, func_800C8E44]
-      - [0xB9670, asm]
+      # Phase 5ER: fixed-buffer dispatch wrapper.
+      - [0xB9670, c, func_800C8E70]
+      - [0xB9698, asm]
       - [0xB9708, c, func_800C8F08]
       - [0xB9718, c, func_800C8F18]
       - [0xB9720, c, func_800C8F20]
