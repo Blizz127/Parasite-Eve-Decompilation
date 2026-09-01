@@ -331,6 +331,13 @@ verifier, and all packed-span checks are exact at 459 leaves.
 argument and immediate delay slot are exact. The full rebuild, public verifier,
 and all packed-span checks are exact at 460 leaves.
 
+## Matching leaf — func_80080D34 (2026-09-01)
+
+`func_80080D34` is now a registered ten-word exact C leaf. It forwards its
+byte-typed first parameter and second word parameter to `func_8007EE84`, with
+two zero trailing fields. The full rebuild, public verifier, and all packed-span
+checks are exact at 461 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

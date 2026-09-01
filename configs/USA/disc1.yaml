@@ -1047,6 +1047,9 @@ segments:
       # Phase 5EF: signed state/count exchange; same D_8009AFC0 evidence.
       - [0x714C8, c, func_80080CC8]
       - [0x714DC, asm]
+      # Phase 5EM: byte-typed forwarding wrapper with two zero tail fields.
+      - [0x71534, c, func_80080D34]
+      - [0x7155C, asm]
       # Phase 5EF: callback exchange proven by jalr reader sites.
       - [0x71A54, c, func_80081254]
       # Tier-2 probe: range-guarded state setter func_800812F4.
