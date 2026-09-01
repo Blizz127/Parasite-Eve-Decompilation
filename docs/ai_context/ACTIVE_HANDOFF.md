@@ -189,6 +189,13 @@ of `func_80033A20()` to `D_8009D02C` and then calls `func_800339A0(0)`. Both
 use era `-O2 -G8`. The full rebuild, public verifier, and all packed-span
 checks are exact at 429 leaves.
 
+## Matching leaf — func_8006EC6C (2026-09-01)
+
+`func_8006EC6C` is now a registered six-word exact C leaf. It sign-extends a
+halfword index, scales it by four, reads an offset at that base location, and
+returns base plus the offset. The full rebuild, public verifier, and all
+packed-span checks are exact at 430 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

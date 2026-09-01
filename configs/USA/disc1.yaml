@@ -777,6 +777,9 @@ segments:
       # Signed-byte global getter on D_800B0DBA; plain -O1 matches.
       - [0x5F3D4, c, func_8006EBD4]
       - [0x5F3E4, asm]
+      # Signed-halfword indexed offset reader: era -O2 -G0.
+      - [0x5F46C, c, func_8006EC6C]
+      - [0x5F484, asm]
       # Two-phase subsystem teardown wrapper: era -O2 -G0.
       - [0x60BF4, c, func_800703F4]
       - [0x60C1C, asm]
