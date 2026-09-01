@@ -480,6 +480,13 @@ halfword reached through its pointer argument with `D_8009D2F0` to
 `func_8001ACE0`, then returns one. The full rebuild, public verifier, and
 packed-span checks are exact at 484 leaves.
 
+## Matching leaf — func_80019798 (2026-09-01)
+
+`func_80019798` is now a registered 14-word exact C leaf. It retains its
+output pointer across `func_800392EC`, masks the result to one byte, writes it
+through that pointer, and returns one. The full rebuild, public verifier, and
+packed-span checks are exact at 485 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

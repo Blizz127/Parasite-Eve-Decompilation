@@ -196,7 +196,8 @@ segments:
       - [0x9F48, c, func_80019748]
       # Probe: halfword-forwarding state wrapper.
       - [0x9F68, c, func_80019768]
-      - [0x9F98, asm]
+      # Probe: byte-result store wrapper retaining output pointer across a call.
+      - [0x9F98, c, func_80019798]
       # Phase 5EI-first-nonleaf: C func_800197D0 — VRAM 0x800197D0, size 0x20.
       # First non-leaf: frame (addiu $sp,-0x18 / sw $ra,0x10($sp)) + jal
       # func_800375B4 (already-C void(void)); return 1; teardown addiu $sp,+0x18
