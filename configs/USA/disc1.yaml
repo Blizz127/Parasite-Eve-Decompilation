@@ -139,6 +139,8 @@ segments:
       # Phase 5GB: D_8009D2F0 offset-0x20 reader commit, era -O2 -G0.
       - [0x8AE0, c, func_800182E0]
       - [0x8B00, asm]
+      - [0x8D6C, c, func_8001856C]
+      - [0x8D98, asm]
       # Phase 600: bit-2 setter with retail $v1 global-pointer allocation.
       - [0x8F54, c, func_80018754]
       - [0x8F74, asm]
