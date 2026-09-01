@@ -598,6 +598,9 @@ segments:
       # Volume campaign: gp-backed bitset setter, era -O2 -G8.
       - [0x467B4, c, func_80055FB4]
       - [0x467E0, asm]
+      # GP-relative halfword take-and-clear helper: era -O2 -G8.
+      - [0x48518, c, func_80057D18]
+      - [0x48530, asm]
       - [0x486CC, c, func_80057ECC]
       - [0x486D8, asm]
       - [0x4C090, c, func_8005B890]
@@ -619,6 +622,9 @@ segments:
       # era -O2 -G8.
       - [0x4C6E8, c, func_8005BEE8]
       - [0x4C708, asm]
+      # Byte-masked helper result store plus zero-argument call: era -O2 -G8.
+      - [0x4C944, c, func_8005C144]
+      - [0x4C974, asm]
       - [0x4CC88, c, func_8005C488]
       - [0x4CC98, asm]
       # Volume campaign: signed-threshold gp state selector; size 0x24,

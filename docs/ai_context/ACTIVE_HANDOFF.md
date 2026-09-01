@@ -180,6 +180,15 @@ input minus one to `func_8005DB44` and returns byte 6 of the resulting record.
 The full rebuild, public verifier, and all packed-span checks are exact at 426
 leaves.
 
+## Matching leaves — func_80057D18 / func_8005C144 (2026-09-01)
+
+`func_80057D18` reads and clears a signed halfword in the GP-relative
+`D_8009D048` table, returning the original `int` value; the return width keeps
+retail's `lh` plus return-delay `sh` form. `func_8005C144` stores the low byte
+of `func_80033A20()` to `D_8009D02C` and then calls `func_800339A0(0)`. Both
+use era `-O2 -G8`. The full rebuild, public verifier, and all packed-span
+checks are exact at 429 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
