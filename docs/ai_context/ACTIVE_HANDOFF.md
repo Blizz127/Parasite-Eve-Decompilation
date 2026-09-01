@@ -295,6 +295,13 @@ leaves.
 `func_80085F44`, then clears `D_8009D24C`. The full rebuild, public verifier,
 and all packed-span checks are exact at 453 leaves.
 
+## Matching leaf — func_800850C0 (2026-09-01)
+
+`func_800850C0` is now a registered thirteen-word exact C leaf. It sets
+`D_8009D24C` to one, then registers `func_80085098` through `func_80085F44`.
+The full rebuild, public verifier, and all packed-span checks are exact at 454
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
