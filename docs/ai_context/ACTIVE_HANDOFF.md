@@ -765,6 +765,12 @@ word fields at offsets `0x68`, `0x6C`, `0x70`, `0x78`, `0x7C`, and `0x80` of
 the `D_8009D2F0` state, then returns `1`. The full rebuild, public verifier,
 and packed-span checks are exact at 531 leaves.
 
+## Matching leaf — func_8007F960 (2026-09-01)
+
+`func_8007F960` is now a registered eleven-word exact C leaf. It invokes the
+nullable `D_800B8AB8` callback with the low byte of its argument. The full
+rebuild and packed-span checks are exact at 532 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

@@ -1088,6 +1088,8 @@ segments:
       # Phase 5EF: unsigned-byte forwarding wrapper around func_8007FC08.
       - [0x6FFC8, c, func_8007F7C8]
       - [0x6FFE8, asm]
+      - [0x70160, c, func_8007F960]
+      - [0x7018C, asm]
       # Phase 5EF-pilot: C leaf func_8007FBC0 — VRAM 0x8007FBC0, size 0xC.
       # Delay-slot $at sw setter: D_800A36A0 = cb (void (*)(void), jalr proof
       # in 704BC.s). ROM: lui/jr/sw — sw in the return delay slot.
