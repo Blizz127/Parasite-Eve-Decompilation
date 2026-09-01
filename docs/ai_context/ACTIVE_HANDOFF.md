@@ -180,6 +180,13 @@ input minus one to `func_8005DB44` and returns byte 6 of the resulting record.
 The full rebuild, public verifier, and all packed-span checks are exact at 426
 leaves.
 
+## Matching leaf — func_800534CC (2026-09-01)
+
+`func_800534CC` is now a registered six-word exact C leaf. It returns one
+signed halfword from the GP-relative table pointer `D_8009D048`; era `-O2
+-G8` reproduces the table load, scaled index, and halfword access. The full
+rebuild, public verifier, and all packed-span checks are exact at 427 leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits

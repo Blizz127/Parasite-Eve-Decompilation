@@ -586,6 +586,9 @@ segments:
       - [0x436C0, asm]
       - [0x4370C, c, func_80052F0C]
       - [0x43724, asm]
+      # GP-relative halfword table getter: era -O2 -G8.
+      - [0x43CCC, c, func_800534CC]
+      - [0x43CE4, asm]
       # Decremented record lookup and byte-6 getter: era -O2 -G0.
       - [0x44A1C, c, func_8005421C]
       - [0x44A40, asm]
