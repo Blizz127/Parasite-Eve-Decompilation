@@ -219,6 +219,9 @@ segments:
       # Probe: four-dereference forwarding wrapper twin.
       - [0xA18C, c, func_8001998C]
       - [0xA1CC, asm]
+      # Probe: state halfword bit-4 clearer through retail's $v1 record.
+      - [0xA1F8, c, func_800199F8]
+      - [0xA21C, asm]
       - [0xA3E4, c, func_80019BE4]
       - [0xA404, asm]
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.
