@@ -133,11 +133,11 @@ def main() -> None:
                 f"focused {test_filter} contract")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_801924F8_80192730_cut" in strict and
+    require("func_801924F8_80192740_cut" in strict and
             "called from: func_801924F8" in strict,
             "strict post-reset caller frontier")
     print("  OK runtime: real tables plus synthetic and invalid-mode controls")
-    print("  OK production: reset returns; exact frontier is 0x80192730")
+    print("  OK production: reset returns; strict path continues through callback registration")
     print("\nB54K-AG MDEC reset/table oracle: PASS.")
 
 

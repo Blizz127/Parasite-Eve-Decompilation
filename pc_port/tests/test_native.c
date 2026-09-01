@@ -1604,9 +1604,10 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            mdec.uploads[0].payload_fnv1a64 == UINT64_C(0x566D8476C515D8B5) &&
            mdec.uploads[1].payload_fnv1a64 == UINT64_C(0x457F63592600EA19),
            "real-disc MDEC reset or table submissions differ");
-    ASSERT(CountOrderLog("func_801924F8_80192730_cut") == 1 &&
+    ASSERT(PE_LoadU32(PE_DMA_CallbackSlotAddress(1u)) == 0x80191DC8u &&
+           CountOrderLog("func_801924F8_80192740_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "post-DecDCTReset caller cut did not become the exact frontier");
+           "DecDCToutCallback registration or following cut differs");
 
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
@@ -18200,7 +18201,7 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192730_cut") == 1 &&
+           CountOrderLog("func_801924F8_80192740_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18237,7 +18238,7 @@ static void test_B54KAE_movie_state_setup(void)
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192730_cut") == 1 &&
+           CountOrderLog("func_801924F8_80192740_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
@@ -18349,6 +18350,30 @@ static void test_B54KAG_mdec_table_upload(void)
            mdec.reset_count == 0u && mdec.upload_count == 0u &&
            PE_GPU_ReadDPCR() == 0x12345678u,
            "invalid mode was not mutation-free at its named boundary");
+    PASS();
+}
+
+static void test_B54KAH_dec_dct_out_callback_registration(void)
+{
+    TEST("B54KAH_dec_dct_out_callback_registration");
+    ResetTestState();
+    func_8010BE3C(0);
+    ASSERT(!PE_Port_ShouldStop() &&
+           PE_LoadU32(PE_DMA_CallbackSlotAddress(0u)) == 0u &&
+           PE_LoadU32(PE_DMA_CallbackSlotAddress(1u)) == 0u &&
+           PE_LoadU32(PE_DMA_CallbackSlotAddress(2u)) == 0u,
+           "reset did not leave the DMA callback table clear");
+
+    func_8010C0D8(0x80191DC8u);
+    ASSERT(!PE_Port_ShouldStop() &&
+           PE_LoadU32(PE_DMA_CallbackSlotAddress(0u)) == 0u &&
+           PE_LoadU32(PE_DMA_CallbackSlotAddress(1u)) == 0x80191DC8u &&
+           PE_LoadU32(PE_DMA_CallbackSlotAddress(2u)) == 0u,
+           "DecDCToutCallback did not change only DMA callback slot 1");
+    ASSERT(PE_GPU_ReadDICR() == 0x00820000u,
+           "DecDCToutCallback channel-1 DICR enable differs");
+    ASSERT(CountOrderLog("func_80074520_dma_indirect_call") == 0,
+           "callback registration fabricated DMA delivery");
     PASS();
 }
 
@@ -33542,7 +33567,7 @@ int main(void)
     test_6E9A0_dispatch_arg1();
     test_6E9A0_dispatch_arg3();
 
-    /* Phase 6E-A batch 3 / B54K-AG: real-disc foundation (45 tests) */
+    /* Phase 6E-A batch 3 / B54K-AH: real-disc foundation (46 tests) */
     test_disc_open_rejects_bad_size();
     test_disc_open_rejects_bad_sync();
     test_disc_open_rejects_mode1();
@@ -33571,6 +33596,7 @@ int main(void)
     test_B54KAE_movie_state_setup();
     test_B54KAF_dec_dct_reset_wrapper();
     test_B54KAG_mdec_table_upload();
+    test_B54KAH_dec_dct_out_callback_registration();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();

@@ -772,7 +772,7 @@ make
 Produces:
 - `libpe_field_runtime.a` — reusable translated/runtime static library
 - `parasite-eve-port` — native executable
-- `pe-native-tests` — test suite (current grind lane: 989 tests)
+- `pe-native-tests` — test suite (current grind lane: 990 tests)
 - `pe-field-runtime-link-test` — standalone archive-consumer smoke test
 
 Run both CTest consumers from either the source root or build directory:

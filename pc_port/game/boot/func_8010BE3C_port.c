@@ -42,3 +42,14 @@ void func_8010BE3C(int mode)
 
     func_8010C0FC(mode);
 }
+
+/*
+ * Retail DecDCToutCallback: [0x8010C0D8,0x8010C0FC), 9 words,
+ * SHA-256 e74b3ac9231b36b93ae760b3c2cd8c018905679c0da656f07b8cbd164933d59b.
+ * The wrapper registers only the guest callback identity in DMA channel 1;
+ * it does not deliver an interrupt or invoke the callback.
+ */
+void func_8010C0D8(pe_addr_t callback)
+{
+    (void)func_80073CF4(1u, callback);
+}

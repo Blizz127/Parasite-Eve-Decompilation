@@ -125,6 +125,8 @@ def main() -> None:
          "called from: func_801924F8" in strict) or
         ("func_801924F8_80192730_cut" in strict and
          "called from: func_801924F8" in strict) or
+        ("func_801924F8_80192740_cut" in strict and
+         "called from: func_801924F8" in strict) or
         ("func_8010C0FC" in strict and
          "called from: func_8010BE3C" in strict)
     )

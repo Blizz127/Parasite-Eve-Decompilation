@@ -42,18 +42,29 @@ one of these lines:
 
 The reusable CMake target `pe_field_runtime` now produces
 `pc_port/build/libpe_field_runtime.a` from the 199 current translated/runtime
-translation units. `parasite-eve-port`, the 989-case native suite, and a
+translation units. `parasite-eve-port`, the 990-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-now stops at `func_801924F8_80192730_cut`, immediately after the authenticated
-libpress MDEC reset/table initialization returns.
+now stops at `func_801924F8_80192740_cut`, immediately after the authenticated
+libpress MDEC reset and `DecDCToutCallback` registration return.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AH — libpress `DecDCToutCallback` registration (2026-08-31)
+
+The complete 9-word `func_8010C0D8` wrapper is now translated. Retail passes
+the exact guest callback identity `0x80191DC8` at `0x80192738`; the wrapper
+registers it through the complete DMA callback setter with channel 1. Focused
+controls prove only slot 1 and its DICR enable change, with no callback
+delivery or invented DMA completion. The native suite is 990/990 and strict
+production stops at `func_801924F8_80192740_cut`, before the following
+`ClearOTagR` call. Evidence:
+`docs/evidence/pe-b54kah-decdctoutcallback/REPORT.md`.
 
 ## PE-B54K-AG — generic MDEC reset/table substrate (2026-08-31)
 
