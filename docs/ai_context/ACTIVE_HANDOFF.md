@@ -911,6 +911,14 @@ success. The established `$v1` state-pointer form preserves both retail load
 delays and the return delay slot; full rebuild, public verifier, and packed
 span checks are exact at 552 leaves.
 
+## Matching leaf — func_80017DC0 (2026-09-01)
+
+`func_80017DC0` is now a registered nine-word exact C leaf and the bit-clear
+sibling of `func_80017D9C`: it clears `0x40` in the current state's flags
+field at `D_8009D2F0 + 0x98`, then returns success. The `$v0` state pointer
+and `$a0` mask preserve retail's load delays and return delay slot; full
+rebuild, public verifier, and packed-span checks are exact at 553 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
