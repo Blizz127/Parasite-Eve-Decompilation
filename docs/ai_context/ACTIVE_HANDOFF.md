@@ -790,6 +790,13 @@ The full rebuild and packed-span checks are exact at 534 leaves.
 pointer to retail `$v1` preserves the original allocation. The full rebuild
 and packed-span checks are exact at 535 leaves.
 
+## Matching leaf — func_800173F4 (2026-09-01)
+
+`func_800173F4` is now a registered seven-word exact C leaf. It copies one
+word from the source pointer at argument offset `+4` to the destination
+pointer at `+0`, then returns `1`. The full rebuild and packed-span checks are
+exact at 536 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
