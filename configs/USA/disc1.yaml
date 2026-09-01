@@ -1227,6 +1227,9 @@ segments:
       # Probe: conditional D_800A5B70 address selector.
       - [0x75320, c, func_80084B20]
       - [0x75340, asm]
+      # Probe: three-entry callback table initializer.
+      - [0x75344, c, func_80084B44]
+      - [0x75378, asm]
       - [0x757C4, c, func_80084FC4]
       - [0x757E4, asm]
       # Phase 5FX: constant-add getter func_80085084 — VRAM 0x80085084,

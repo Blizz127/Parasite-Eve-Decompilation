@@ -726,6 +726,14 @@ the base of `D_800A5B70` or its `+0xF0` subregion according to bits 4–7 of the
 argument. The full rebuild, public verifier, and packed-span checks are exact
 at 526 leaves.
 
+## Matching leaf — func_80084B44 (2026-09-01)
+
+`func_80084B44` is now a registered thirteen-word exact C leaf. It initializes
+the three callback slots at `D_8009B73C`, `D_8009B740`, and `D_8009B744`; the
+existing store-delay-slot profile preserves retail's final `sw` in the `jr`
+delay slot. The full rebuild, public verifier, and packed-span checks are
+exact at 527 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
