@@ -216,7 +216,9 @@ segments:
       - [0xA128, c, func_80019928]
       # Probe: four-dereference forwarding wrapper.
       - [0xA14C, c, func_8001994C]
-      - [0xA18C, asm]
+      # Probe: four-dereference forwarding wrapper twin.
+      - [0xA18C, c, func_8001998C]
+      - [0xA1CC, asm]
       - [0xA3E4, c, func_80019BE4]
       - [0xA404, asm]
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.

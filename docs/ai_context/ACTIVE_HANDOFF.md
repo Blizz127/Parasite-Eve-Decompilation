@@ -507,6 +507,12 @@ checks are exact at 487 leaves.
 pointer slots, forwards their words to `func_800676CC`, and returns one. The
 full rebuild, public verifier, and packed-span checks are exact at 488 leaves.
 
+## Matching leaf — func_8001998C (2026-09-01)
+
+`func_8001998C` is now a registered 16-word exact C leaf. It dereferences four
+pointer slots, forwards their words to `func_80067730`, and returns one. The
+full rebuild, public verifier, and packed-span checks are exact at 489 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
