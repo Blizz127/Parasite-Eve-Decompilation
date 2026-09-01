@@ -148,6 +148,14 @@ GP-relative activation word `D_8009D0E8`, returns zero when inactive, and
 otherwise returns `func_8005E038()`. The full rebuild, public verifier, and
 all packed-span checks are exact at 421 leaves.
 
+## Matching leaf — func_8005DC28 (2026-09-01)
+
+`func_8005DC28` is now a registered 9-word exact C leaf. It adds its input to
+the global offset `D_800A8050` and returns the resulting byte from
+`D_800A8028`. It uses the existing era `-O2 -G0` three-word-symbol profile so
+maspsx retains retail's indexed symbolic byte-load macro shape. The full
+rebuild, public verifier, and all packed-span checks are exact at 422 leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits

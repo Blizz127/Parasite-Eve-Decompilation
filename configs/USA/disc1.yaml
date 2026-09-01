@@ -627,6 +627,9 @@ segments:
       # size 0x20, era -O2 -G0.
       - [0x4E2DC, c, func_8005DADC]
       - [0x4E2FC, asm]
+      # Global-offset byte-table getter: era -O2 -G0.
+      - [0x4E428, c, func_8005DC28]
+      - [0x4E44C, asm]
       - [0x4E914, c, func_8005E114]
       - [0x4E920, c, func_8005E120]
       - [0x4E92C, asm]
