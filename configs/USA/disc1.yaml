@@ -471,7 +471,8 @@ segments:
       - [0x2EF54, asm]
       # Phase 5EF: two-call void wrapper.
       - [0x2F11C, c, func_8003E91C]
-      - [0x2F144, asm]
+      - [0x2F144, c, func_8003E944]
+      - [0x2F174, asm]
       - [0x307AC, c, func_8003FFAC]
       - [0x307BC, c, func_8003FFBC]
       - [0x307CC, asm]

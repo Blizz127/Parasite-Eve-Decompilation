@@ -887,6 +887,14 @@ The natural unsigned-byte form preserves retail's pointer load delay and
 return-delay-slot halfword store; full rebuild, public verifier, and packed
 span checks are exact at 549 leaves.
 
+## Matching leaf — func_8003E944 (2026-09-01)
+
+`func_8003E944` is now a registered 12-word exact C leaf. It initializes the
+fixed `D_800BE9A0` work buffer through `func_800844E4`, then calls
+`func_80082534`. The natural two-call form preserves retail's frame and both
+call delay slots; full rebuild, public verifier, and packed-span checks are
+exact at 550 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
