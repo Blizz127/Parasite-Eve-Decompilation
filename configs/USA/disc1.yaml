@@ -893,6 +893,8 @@ segments:
       # Address-of D_8009AFD0 (lui/jr/addiu in delay slot); plain -O1 matches.
       - [0x6AB54, c, func_8007A354]
       - [0x6AB60, asm]
+      # Phase 5EF: direct func_8007B9EC forwarding wrapper.
+      - [0x6ABCC, c, func_8007A3CC]
       # Phase 5EF: signed state/count exchange; blez/slti prove int.
       - [0x6ABEC, c, func_8007A3EC]
       # Tier-2 continuation: CdReady forwarding wrapper func_8007A488.
