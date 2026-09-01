@@ -1387,7 +1387,9 @@ segments:
       # Former B2AF8 asm span: prefix 0x7F8, C 0x20, resume 0x30.
       - [0xB2AF8, asm]
       - [0xB32F0, c, func_800C2AF0]
-      - [0xB3310, asm]
+      # Probe: indexed D_800E2248 address-return helpers.
+      - [0xB3310, c, func_800C2B10]
+      - [0xB3328, c, func_800C2B28]
       # Phase 5G: C leaf func_800C2B40 — VRAM 0x800C2B40, size 0x10.
       # File span 0xB3340–0xB3350 exclusive. Store arg0 to *(D_800E2248+0x70).
       - [0xB3340, c, func_800C2B40]

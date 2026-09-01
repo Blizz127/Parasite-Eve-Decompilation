@@ -683,6 +683,14 @@ selected indexed bit in the source word using the shared source/bit pointer
 layout. The full rebuild, public verifier, and packed-span checks are exact at
 519 leaves.
 
+## Matching leaves — func_800C2B10 and func_800C2B28 (2026-09-01)
+
+`func_800C2B10` and `func_800C2B28` are now registered six-word exact C
+leaves. They return indexed addresses in `D_800E2248` at base offsets `0x8`
+and `0x48`; a compiler memory barrier preserves the retail shift/load/add
+schedule. The full rebuild, public verifier, and packed-span checks are exact
+at 521 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
