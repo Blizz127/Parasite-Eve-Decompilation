@@ -855,6 +855,14 @@ rebuild and packed-span checks are exact at 543 leaves.
 retail load-delay and store sequence; full rebuild and packed-span checks are
 exact at 544 leaves.
 
+## Matching leaf — func_80090B30 (2026-09-01)
+
+`func_80090B30` is now a registered 11-word exact C leaf. It consumes one
+stream byte, stores either that byte plus one or the sentinel `0x101` at
+`arg0 + 0xBA`, and advances the stream pointer. The default era `-O2 -G0`
+profile preserves retail's `bnez`/increment delay-slot shape; full rebuild,
+public verifier, and packed-span checks are exact at 545 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
