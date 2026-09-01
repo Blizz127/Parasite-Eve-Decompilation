@@ -108,6 +108,14 @@ GP-relative twin of `func_800504F4`, forwarding `D_8009CF44` and
 full rebuild, public verifier, and all packed-span checks are exact at 416
 leaves.
 
+## Matching leaf — func_80050544 (2026-09-01)
+
+`func_80050544` is now a registered 15-word exact C leaf. When its second
+argument is nonzero, it performs the two retail constant calls (`0x1F`, then
+`0x45`) and publishes `func_800504F4` through `func_80042B50`; otherwise it
+returns after the shared epilogue. The full rebuild, public verifier, and all
+packed-span checks are exact at 417 leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits

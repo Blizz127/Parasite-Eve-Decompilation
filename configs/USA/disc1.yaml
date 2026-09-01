@@ -504,7 +504,9 @@ segments:
       - [0x40CF4, c, func_800504F4]
       # Adjacent GP-relative two-global forwarding wrapper: era -O2 -G8.
       - [0x40D1C, c, func_8005051C]
-      - [0x40D44, asm]
+      # Conditional setup and callback publication wrapper: era -O2 -G0.
+      - [0x40D44, c, func_80050544]
+      - [0x40D80, asm]
       - [0x40EE8, c, func_800506E8]
       - [0x40F08, c, func_80050708]
       - [0x40F28, c, func_80050728]
