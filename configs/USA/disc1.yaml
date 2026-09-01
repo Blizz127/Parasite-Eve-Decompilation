@@ -1402,6 +1402,8 @@ segments:
       - [0x81220, asm]
       - [0x81330, c, func_80090B30]
       - [0x8135C, asm]
+      - [0x813A0, c, func_80090BA0]
+      - [0x813CC, asm]
       # Phase 5B: C leaf func_80090C38 — VRAM 0x80090C38, size 0x14.
       # File span 0x81438–0x8144C exclusive. Proven GCC 14.2 match in Phase 4J.
       - [0x81438, c, func_80090C38]

@@ -863,6 +863,14 @@ stream byte, stores either that byte plus one or the sentinel `0x101` at
 profile preserves retail's `bnez`/increment delay-slot shape; full rebuild,
 public verifier, and packed-span checks are exact at 545 leaves.
 
+## Matching leaf — func_80090BA0 (2026-09-01)
+
+`func_80090BA0` is now a registered 11-word exact C leaf and the direct twin
+of `func_80090B30`: it consumes one stream byte, emits either byte-plus-one
+or `0x101`, and stores it at `arg0 + 0xBC`. The default era `-O2 -G0` profile
+again preserves the retail `bnez` increment-delay-slot scheduling; full
+rebuild, public verifier, and packed-span checks are exact at 546 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
