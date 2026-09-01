@@ -411,6 +411,13 @@ are exact at 473 leaves.
 `0xE1000000` base, two boolean-derived flag bits, and an `0x9FF` masked field.
 All rebuild and verifier checks are exact at 474 leaves.
 
+## Matching leaf — func_80018754 (2026-09-01)
+
+`func_80018754` is now a registered eight-word exact C leaf. It sets bit 2
+in `D_800A76C4` through a `$v1`-pinned global pointer and returns one. The
+full rebuild, public verifier, and all packed-span checks are exact at 475
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
