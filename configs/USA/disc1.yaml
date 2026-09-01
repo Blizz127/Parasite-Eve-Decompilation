@@ -739,6 +739,9 @@ segments:
       # Signed-byte global getter on D_800B0DBA; plain -O1 matches.
       - [0x5F3D4, c, func_8006EBD4]
       - [0x5F3E4, asm]
+      # Two-phase subsystem teardown wrapper: era -O2 -G0.
+      - [0x60BF4, c, func_800703F4]
+      - [0x60C1C, asm]
       - [0x645E8, c, func_80073DE8]
       # Phase 5BX: C leaf func_80073DF8 — VRAM 0x80073DF8, size 0x18.
       # Halfword pointer deref on D_80095674 (lui/lw/nop/lhu0/jr/nop).

@@ -84,6 +84,14 @@ record pointer is deliberately constrained to `$a0` only after the first
 call; that matches retail's address materialization and avoids extending the
 frame. The full build and all packed-span checks are exact at 413 leaves.
 
+## Matching leaf — func_800703F4 (2026-09-01)
+
+`func_800703F4` is now a registered 10-word exact C leaf. It invokes the
+retail teardown phases `func_800702DC` then `func_800701B4`; the YAML spans
+the wrapper at `[0x60BF4, 0x60C1C)` and resumes generated assembly afterward.
+The full rebuild, public verifier, and all packed-span checks are exact at
+414 leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits
