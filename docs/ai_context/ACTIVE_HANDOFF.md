@@ -418,6 +418,13 @@ in `D_800A76C4` through a `$v1`-pinned global pointer and returns one. The
 full rebuild, public verifier, and all packed-span checks are exact at 475
 leaves.
 
+## Matching leaf — func_80019618 (2026-09-01)
+
+`func_80019618` is now a registered eight-word exact C leaf. It sets bit 13
+in `D_800B0CD8` through a `$v1`-pinned global pointer and returns one. The
+full rebuild, public verifier, and all packed-span checks are exact at 476
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

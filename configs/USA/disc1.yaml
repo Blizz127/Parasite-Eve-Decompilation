@@ -177,6 +177,9 @@ segments:
       # Mid-9ADC carve: prefix 0x1A8, C 0x2C, resume 9CB0.s to 9FD0.
       - [0x9C84, c, func_80019484]
       - [0x9CB0, asm]
+      # Probe: bit-13 setter with retail $v1 global-pointer allocation.
+      - [0x9E18, c, func_80019618]
+      - [0x9E38, asm]
       # Phase 5EI-first-nonleaf: C func_800197D0 — VRAM 0x800197D0, size 0x20.
       # First non-leaf: frame (addiu $sp,-0x18 / sw $ra,0x10($sp)) + jal
       # func_800375B4 (already-C void(void)); return 1; teardown addiu $sp,+0x18
