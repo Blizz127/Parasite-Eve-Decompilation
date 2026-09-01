@@ -73,7 +73,8 @@ segments:
       - [0x3050, c, func_80012850]
       - [0x3420, asm]
       - [0x75F8, c, func_80016DF8]
-      - [0x761C, asm]
+      - [0x761C, c, func_80016E1C]
+      - [0x7640, asm]
       # Phase 5EO: signed-halfword double-deref call and true return.
       - [0x8020, c, func_80017820]
       - [0x804C, asm]

@@ -777,6 +777,12 @@ rebuild and packed-span checks are exact at 532 leaves.
 `0x20000000` in the `+0x98` state flags of `D_8009D2F0`, then returns `1`.
 The full rebuild and packed-span checks are exact at 533 leaves.
 
+## Matching leaf — func_80016E1C (2026-09-01)
+
+`func_80016E1C` is now a registered nine-word exact C leaf. It clears
+`0x20000000` in the `+0x98` state flags of `D_8009D2F0`, then returns `1`.
+The full rebuild and packed-span checks are exact at 534 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
