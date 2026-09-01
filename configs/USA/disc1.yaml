@@ -210,6 +210,9 @@ segments:
       # Segment-head carve: C 0x20, resume A010.s size 0x3D4 to A3E4.
       - [0x9FF0, c, func_800197F0]
       - [0xA010, asm]
+      # Probe: state bit-0 clearer with retail $v0/$a0 allocation.
+      - [0xA104, c, func_80019904]
+      - [0xA128, asm]
       - [0xA3E4, c, func_80019BE4]
       - [0xA404, asm]
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.
