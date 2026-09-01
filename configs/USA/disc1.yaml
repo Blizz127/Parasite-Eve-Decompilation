@@ -1469,7 +1469,9 @@ segments:
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: BE74C prefix 0x1CC, C 0x2C, resume BE944.s 0x98.
       - [0xBE918, c, func_800CE118]
-      - [0xBE944, asm]
+      # Phase 5EX: fixed-buffer dispatch wrapper.
+      - [0xBE944, c, func_800CE144]
+      - [0xBE96C, asm]
       - [0xBE9DC, c, func_800CE1DC]
       # Volume campaign 5: return-zero callback. Prior BE9EC asm:
       # C 0x8 + resume 0x1B8 (= 0xBEBAC - 0xBE9F4) = 0x1C0.
