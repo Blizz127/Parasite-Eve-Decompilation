@@ -841,6 +841,13 @@ word at `D_8009D300 + 0x14` through the supplied destination pointer and
 returns `1`. Era `-O2 -G8` preserves the GP-relative pointer load; full
 rebuild and packed-span checks are exact at 542 leaves.
 
+## Matching leaf — func_8003E5F0 (2026-09-01)
+
+`func_8003E5F0` is now a registered seven-word exact C leaf. It increments
+`D_8003E60C`; constraining the address and value locals to `$a0` and `$a1`
+preserves retail's load-delay schedule and return-delay-slot store. The full
+rebuild and packed-span checks are exact at 543 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
