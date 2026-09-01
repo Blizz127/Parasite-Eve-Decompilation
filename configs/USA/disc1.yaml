@@ -933,6 +933,9 @@ segments:
       # lui/lw/jr/nop on D_800A3608. Plain -O1 matches.
       # Mid-6E6C0 carve: prefix 0x18B8, C 0x10, resume 6FF88.s 0xD2F4.
       - [0x6E6C0, asm]
+      # Phase 5EF: direct func_8007FB04 forwarding wrapper.
+      - [0x6F664, c, func_8007EE64]
+      - [0x6F684, asm]
       - [0x6FF78, c, func_8007F778]
       # Tier-2 continuation: unsigned-byte forwarding wrapper; exact 0x20 span.
       - [0x6FF88, c, func_8007F788]
