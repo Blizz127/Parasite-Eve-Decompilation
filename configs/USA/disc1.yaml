@@ -1286,6 +1286,9 @@ segments:
       # Prefix of 77C28.s is 0x36F4 (= 0x7B31C - 0x77C28); resume 7B39C.s 0x1EE0.
       - [0x7B31C, c, func_8008AB1C]
       - [0x7B39C, asm]
+      # Probe: signed-byte state-word setter with paired halfword clear.
+      - [0x7C96C, c, func_8008C16C]
+      - [0x7C98C, asm]
       # Probe: D_8009D2C8 halfword setter in the return delay slot.
       - [0x7CF0C, c, func_8008C70C]
       - [0x7CF20, asm]

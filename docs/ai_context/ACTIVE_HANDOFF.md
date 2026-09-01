@@ -704,6 +704,14 @@ second input word as a halfword at `D_8009D2C8+0x56`, retaining the retail
 return-delay-slot store. The full rebuild, public verifier, and packed-span
 checks are exact at 523 leaves.
 
+## Matching leaf — func_8008C16C (2026-09-01)
+
+`func_8008C16C` is now a registered eight-word exact C leaf. It clears
+`D_8009D220` and stores the signed input byte shifted into the high halfword of
+`D_8009D2D0`; pinning the value in `$v0` retains retail's load-delay schedule.
+The full rebuild, public verifier, and packed-span checks are exact at 524
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
