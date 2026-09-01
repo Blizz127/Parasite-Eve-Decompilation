@@ -230,7 +230,8 @@ segments:
       - [0xA2E4, c, func_80019AE4]
       - [0xA308, asm]
       - [0xA3E4, c, func_80019BE4]
-      - [0xA404, asm]
+      # Probe: state bit-17 clearer with retail $a0/$v1 allocation.
+      - [0xA404, c, func_80019C04]
       # Probe: state bit-17 setter with retail $v0/$a0 allocation.
       - [0xA428, c, func_80019C28]
       - [0xA44C, asm]
