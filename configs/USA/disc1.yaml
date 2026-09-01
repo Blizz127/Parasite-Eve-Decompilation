@@ -105,6 +105,9 @@ segments:
       # Phase 5GB: D_8009D2F0 offset-0x20 reader commit, era -O2 -G0.
       - [0x8AE0, c, func_800182E0]
       - [0x8B00, asm]
+      # Phase 5EP: global record dispatch and true return.
+      - [0x9154, c, func_80018954]
+      - [0x917C, asm]
       # Phase 5GC: two-reader call wrapper, era -O2 -G0.
       - [0x9300, c, func_80018B00]
       - [0x9330, asm]

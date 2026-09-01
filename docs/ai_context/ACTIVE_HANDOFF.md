@@ -345,6 +345,12 @@ a pointer to obtain a signed halfword, calls `func_8003746C`, and returns one.
 The full rebuild, public verifier, and all packed-span checks are exact at 462
 leaves.
 
+## Matching leaf — func_80018954 (2026-09-01)
+
+`func_80018954` is now a registered ten-word exact C leaf. It passes the global
+record pointer `D_8009D2F0` to `func_8002F7D8` and returns one. The full rebuild,
+public verifier, and all packed-span checks are exact at 463 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
