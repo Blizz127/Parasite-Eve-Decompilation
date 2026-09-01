@@ -405,6 +405,12 @@ All rebuild and verifier checks are exact at 472 leaves.
 address when bit 3 of the flags word is set. All rebuild and verifier checks
 are exact at 473 leaves.
 
+## Matching leaf — func_80076150 (2026-09-01)
+
+`func_80076150` is an exact no-global command-word builder. It combines the
+`0xE1000000` base, two boolean-derived flag bits, and an `0x9FF` masked field.
+All rebuild and verifier checks are exact at 474 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

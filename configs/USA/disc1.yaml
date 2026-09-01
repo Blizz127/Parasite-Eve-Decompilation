@@ -846,6 +846,9 @@ segments:
       # Unsigned-byte global getter on D_8009574E; plain -O1 matches.
       - [0x654B8, c, func_80074CB8]
       - [0x654C8, asm]
+      # Phase 5FF: command-word builder with two flag bits and a masked field.
+      - [0x66950, c, func_80076150]
+      - [0x66970, asm]
       # Phase 5BU: C leaf func_8007633C — VRAM 0x8007633C, size 0x18.
       # Pointer double-deref on D_80095854 (lui/lw/nop/lw0/jr/nop).
       - [0x66B3C, c, func_8007633C]
