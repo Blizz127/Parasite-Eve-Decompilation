@@ -41,19 +41,31 @@ one of these lines:
 ## Native field-runtime library boundary (2026-08-31)
 
 The reusable CMake target `pe_field_runtime` now produces
-`pc_port/build/libpe_field_runtime.a` from the 199 current translated/runtime
-translation units. `parasite-eve-port`, the 990-case native suite, and a
+`pc_port/build/libpe_field_runtime.a` from the 200 current translated/runtime
+translation units. `parasite-eve-port`, the 991-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-now stops at `func_801924F8_80192740_cut`, immediately after the authenticated
-libpress MDEC reset and `DecDCToutCallback` registration return.
+now stops at `func_801924F8_80192750_cut`, immediately after the authenticated
+libpress setup and 64-record pool initialization return.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AI — movie record-pool initializer (2026-08-31)
+
+Retail entry `0x8007A214`, its worker `0x8007A244`, and the 13-word clear
+helper `0x8007C444` are now translated completely. The production call
+publishes `D_801D0DFC` as the pool base and `0x40` as its unsigned record
+count, resets the proven associated globals, and clears only word zero of
+each 32-byte record. No unproven SDK name is assigned. Synthetic footprint,
+access-width, count-boundary, and zero-count controls pass; the native suite
+is 991/991 and strict production stops at
+`func_801924F8_80192750_cut`. Evidence:
+`docs/evidence/pe-b54kai-record-pool/REPORT.md`.
 
 ## PE-B54K-AH — libpress `DecDCToutCallback` registration (2026-08-31)
 
@@ -62,8 +74,7 @@ the exact guest callback identity `0x80191DC8` at `0x80192738`; the wrapper
 registers it through the complete DMA callback setter with channel 1. Focused
 controls prove only slot 1 and its DICR enable change, with no callback
 delivery or invented DMA completion. The native suite is 990/990 and strict
-production stops at `func_801924F8_80192740_cut`, before the following
-`ClearOTagR` call. Evidence:
+production stops at the later record-pool initializer. Evidence:
 `docs/evidence/pe-b54kah-decdctoutcallback/REPORT.md`.
 
 ## PE-B54K-AG — generic MDEC reset/table substrate (2026-08-31)

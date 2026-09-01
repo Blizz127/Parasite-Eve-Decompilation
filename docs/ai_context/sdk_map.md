@@ -61,8 +61,9 @@ input/output/sync family in the same ABI order as Sony's `libpress.h`. B54K-AF
 authenticates the complete module and lands the bounded `DecDCTReset` wrapper;
 B54K-AG translates the internal MDEC/DMA reset and both table submissions.
 Production now executes the complete `DecDCToutCallback` wrapper and stops at
-`0x80192740`, before the following `ClearOTagR` call. Callback registration is
-modeled separately from DMA delivery.
+the later `0x80192750` frontier. The call at `0x80192748` is a separately
+authenticated 32-byte record-pool initializer, not the libGPU `ClearOTagR`
+wrapper. Callback registration is modeled separately from DMA delivery.
 
 ## Still to map
 

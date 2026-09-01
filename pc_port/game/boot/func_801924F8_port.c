@@ -3,8 +3,8 @@
  *
  * Complete retail function: [0x801924F8,0x80192934), 271 words, SHA-256
  * ef825dccdbfd2a74941203d37739c713ad1e3bd8de48ca747f55d0e75a92f00a.
- * Translated prefix: [0x801924F8,0x80192740), 146 words, SHA-256
- * 34b3cf3eec558cde8a6979762bd762d50873bbc1d2c76f489e5e38d1762fad7e.
+ * Translated prefix: [0x801924F8,0x80192750), 150 words, SHA-256
+ * cddb140d8d927057b46a04a2e22afeafce3e24bc1d1faf13c6599302a035313c.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -78,7 +78,9 @@ int func_801924F8(int index)
 
     func_8010C0D8(0x80191DC8u);
 
-    Bootstrap_ReturnVoid("func_801924F8_80192740_cut", "func_801924F8");
+    func_8007A214(PE_LoadU32(0x801D0DFCu), 0x40u);
+
+    Bootstrap_ReturnVoid("func_801924F8_80192750_cut", "func_801924F8");
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }
