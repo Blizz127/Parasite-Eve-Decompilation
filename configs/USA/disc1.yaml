@@ -1396,9 +1396,11 @@ segments:
       # Phase 5BW: C leaf func_800C2B50 — VRAM 0x800C2B50, size 0x18.
       # Pointer field getter D_800E2248[+0x70]; zero-prefix of former B3350.s.
       - [0xB3350, c, func_800C2B50]
+      # Probe: D_800E2248 high-halfword predicate.
+      - [0xB3368, c, func_800C2B68]
+      - [0xB3390, asm]
       # Tier-2 probe: adjacent unsigned-halfword global setters.
       # Prefix 0x4358 (= 0xB76C0 - 0xB3368), then C spans 0x18 + 0x10.
-      - [0xB3368, asm]
       - [0xB76C0, c, func_800C6EC0]
       - [0xB76D8, c, func_800C6ED8]
       # Phase 5EF: absolute unsigned-halfword setter D_800F3420.

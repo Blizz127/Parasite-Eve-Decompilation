@@ -691,6 +691,12 @@ and `0x48`; a compiler memory barrier preserves the retail shift/load/add
 schedule. The full rebuild, public verifier, and packed-span checks are exact
 at 521 leaves.
 
+## Matching leaf — func_800C2B68 (2026-09-01)
+
+`func_800C2B68` is now a registered ten-word exact C leaf. It checks whether
+the high halfword at `D_800E2248+4` equals `0x0101`. The full rebuild, public
+verifier, and packed-span checks are exact at 522 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
