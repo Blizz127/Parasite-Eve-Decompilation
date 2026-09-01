@@ -184,7 +184,9 @@ segments:
       - [0x9E58, asm]
       # Probe: state bit-14 setter through the retail $v1-loaded record.
       - [0x9EA0, c, func_800196A0]
-      - [0x9EC4, asm]
+      # Probe: companion state bit-14 clearer with retail $v0/$a0 allocation.
+      - [0x9EC4, c, func_800196C4]
+      - [0x9EE8, asm]
       # Phase 5EI-first-nonleaf: C func_800197D0 — VRAM 0x800197D0, size 0x20.
       # First non-leaf: frame (addiu $sp,-0x18 / sw $ra,0x10($sp)) + jal
       # func_800375B4 (already-C void(void)); return 1; teardown addiu $sp,+0x18
