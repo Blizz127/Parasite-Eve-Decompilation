@@ -241,6 +241,8 @@ segments:
       # Probe: state bit-24 setter with retail $v0/$a0 allocation.
       - [0xA9F0, c, func_8001A1F0]
       - [0xAA14, asm]
+      # Probe: population-count loop with second-slot result store.
+      - [0xAAF0, c, func_8001A2F0]
       # Probe: state bit-1 setter through retail's $v1 record.
       - [0xAB2C, c, func_8001A32C]
       # Probe: companion state bit-1 clearer with retail $v0/$a0 allocation.
