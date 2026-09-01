@@ -90,6 +90,17 @@ notifies the consumer, and clears it. The next implementation contract can
 therefore target the proven deferred-DMA production path. Evidence:
 `docs/evidence/pe-b54kao-stream-completion-selector/REPORT.md`.
 
+## PE-B54K-AP — first retail Form-2 stream sector (2026-08-31)
+
+Disc 1 LBA 189742, the first sector of authenticated `FMV001.STR`, is an
+exact Mode-2 Form-2 sector with a 2324-byte payload and duplicated routing
+subheader. Video chunks 0..6 are followed by an interleaved XA sector, then
+chunks 7..8. The current disc API intentionally exposes only 2048 ISO bytes
+and drops both the subheader and 276 payload bytes, so it cannot faithfully
+back `CdlReadS`. No delivery shortcut was added; the next rung is a separate
+read-only raw/Form-2 API with this sector as its oracle. Evidence:
+`docs/evidence/pe-b54kap-first-form2-sector/REPORT.md`.
+
 ## PE-B54K-AL — blocking CdlSetloc arm (2026-08-31)
 
 The complete 26-word blocking command wrapper and the executable's own
