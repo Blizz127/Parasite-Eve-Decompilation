@@ -647,6 +647,13 @@ leaves.
 arguments set to minus one. The full rebuild, public verifier, and packed-span
 checks are exact at 509 leaves.
 
+## Matching leaf — func_80017B34 (2026-09-01)
+
+`func_80017B34` is now a registered sixteen-word exact C leaf. It caps an
+incoming unsigned halfword by the byte limit at `D_8009D2F0+0xF`, stores it at
+`+0x12`, and sets state flag `0x200`. The full rebuild, public verifier, and
+packed-span checks are exact at 510 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
