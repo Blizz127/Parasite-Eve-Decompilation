@@ -445,6 +445,13 @@ checks are exact at 478 leaves.
 in the `+0x98` flag word of `D_8009D2F0`, with the state pointer in `$v0` and
 mask in `$a0` to match retail allocation. All checks are exact at 479 leaves.
 
+## Matching leaf — func_8001967C (2026-09-01)
+
+`func_8001967C` is now a registered nine-word exact C leaf. It clears bit 7
+in the `+0x98` flag word of `D_8009D2F0`, keeping the state pointer in `$v0`
+and mask in `$a0`. The full rebuild, public verifier, and packed-span checks
+are exact at 480 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
