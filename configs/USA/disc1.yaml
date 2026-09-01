@@ -910,9 +910,13 @@ segments:
       # Former 0x6ACD0 span: prefix 0x3BC, C 0x20, resume 0x1884.
       - [0x6ACD0, asm]
       - [0x6B08C, c, func_8007A88C]
-      - [0x6B0AC, asm]
+      # Phase 5EF: boolean-negating wrappers around 8007BF44 / 8007C044.
+      - [0x6B0AC, c, func_8007A8AC]
+      - [0x6B0CC, c, func_8007A8CC]
       - [0x6B0EC, c, func_8007A8EC]
-      - [0x6B110, asm]
+      # Phase 5EF: direct func_8007BDDC forwarding wrapper.
+      - [0x6B110, c, func_8007A910]
+      - [0x6B130, asm]
       # Phase 5EF: write-only opaque 32-bit setter.
       - [0x6C930, c, func_8007C130]
       # Tier-2 probe: three-word state setter func_8007C544.

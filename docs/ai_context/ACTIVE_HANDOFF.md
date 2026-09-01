@@ -249,6 +249,13 @@ eight-word exact C leaves. They are direct frame-and-return wrappers around
 `func_8007BDDC`, `func_80082CDC`, and `func_80082DBC`, respectively. The full
 rebuild, public verifier, and all packed-span checks are exact at 443 leaves.
 
+## Matching leaves — boolean and forwarding wrappers (2026-09-01)
+
+`func_8007A8AC` and `func_8007A8CC` return the boolean negation of their
+callees; `func_8007A910` directly forwards to `func_8007BDDC`. All three
+eight-word leaves are byte-exact C matches. The full rebuild, public verifier,
+and all packed-span checks are exact at 446 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
