@@ -1012,7 +1012,9 @@ segments:
       - [0x712C4, c, func_80080AC4]
       - [0x712E4, c, func_80080AE4]
       - [0x71304, c, func_80080B04]
-      - [0x71324, asm]
+      # Phase 5EF: direct func_8007BDDC forwarding wrapper.
+      - [0x71324, c, func_80080B24]
+      - [0x71344, asm]
       # Phase 5EF: signed state/count exchange; same D_8009AFC0 evidence.
       - [0x714C8, c, func_80080CC8]
       - [0x714DC, asm]
@@ -1041,9 +1043,12 @@ segments:
       - [0x72CC8, c, func_800824C8]
       - [0x72CDC, c, func_800824DC]
       - [0x72CF0, c, func_800824F0]
-      - [0x72D14, asm]
+      # Phase 5EF: direct func_80082CDC forwarding wrapper.
+      - [0x72D14, c, func_80082514]
       - [0x72D34, c, func_80082534]
-      - [0x72D54, asm]
+      # Phase 5EF: direct func_80082DBC forwarding wrapper.
+      - [0x72D54, c, func_80082554]
+      - [0x72D74, asm]
       # Phase 5EF: return-and-clear int state flag.
       - [0x734DC, c, func_80082CDC]
       - [0x734F0, asm]

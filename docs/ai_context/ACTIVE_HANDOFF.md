@@ -242,6 +242,13 @@ its input through a pointer pinned to `$v1` in the return delay slot, then
 returns the old value. The full rebuild, public verifier, and all packed-span
 checks are exact at 440 leaves.
 
+## Matching leaves — forwarding wrappers (2026-09-01)
+
+`func_80080B24`, `func_80082514`, and `func_80082554` are now registered
+eight-word exact C leaves. They are direct frame-and-return wrappers around
+`func_8007BDDC`, `func_80082CDC`, and `func_80082DBC`, respectively. The full
+rebuild, public verifier, and all packed-span checks are exact at 443 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
