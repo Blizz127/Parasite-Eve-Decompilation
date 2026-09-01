@@ -848,6 +848,13 @@ rebuild and packed-span checks are exact at 542 leaves.
 preserves retail's load-delay schedule and return-delay-slot store. The full
 rebuild and packed-span checks are exact at 543 leaves.
 
+## Matching leaf — func_80089960 (2026-09-01)
+
+`func_80089960` is now a registered eight-word exact C leaf. It sets bit
+`0x100` in `D_8009D2C4`. The natural unsigned-global C form preserves the
+retail load-delay and store sequence; full rebuild and packed-span checks are
+exact at 544 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
