@@ -324,6 +324,13 @@ three arguments to `func_80076C34` as `(arg0, arg1, 0, arg2)`, including the
 retail `$a3` move and zeroed delay-slot argument. The full rebuild, public
 verifier, and all packed-span checks are exact at 459 leaves.
 
+## Matching leaf — func_80077A00 (2026-09-01)
+
+`func_80077A00` is now a registered ten-word exact C leaf. It registers
+`func_80076EE4` with mode two through `func_80073CF4`; the function-pointer
+argument and immediate delay slot are exact. The full rebuild, public verifier,
+and all packed-span checks are exact at 460 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
