@@ -46,14 +46,24 @@ translation units. `parasite-eve-port`, the 992-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-now stops at `func_801924F8_80192770_cut`, immediately after the authenticated
-libpress, record-pool, and stream-control initialization return.
+now stops at `func_801924F8_80192790_cut`, after the authenticated libpress,
+record-pool, stream-control, and CD idle-wait sequence returns.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AK — movie CD idle wait (2026-08-31)
+
+The exact 8-word `CdReady`/queue-depth loop at `0x80192770..0x8019278F` is
+now translated over the already-complete libcd providers. It waits for ready
+state 1 and queue depth zero without writing either authority. Real Disc 1
+and the independent synthetic movie fixture both retain ready/idle state,
+all predecessor oracles pass, and strict production stops at
+`func_801924F8_80192790_cut` before the unresolved CD command wrapper.
+Evidence: `docs/evidence/pe-b54kak-cd-idle-wait/REPORT.md`.
 
 ## PE-B54K-AJ — movie stream-control initialization (2026-08-31)
 

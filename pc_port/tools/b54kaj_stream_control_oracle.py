@@ -111,7 +111,7 @@ def main() -> None:
     require("func_8007C544(1u, start, end)" in source and
             "PE_StoreU32(GA_STREAM_OPTION, mode & 1u)" in source and
             "func_8007C304(1u, (int32_t)(int16_t)PE_LoadU16(record + 6u)" in caller_source and
-            "func_801924F8_80192770_cut" in caller_source and
+            "func_801924F8_80192790_cut" in caller_source and
             "m0360i" not in source + caller_source and
             "0xA8066048" not in source + caller_source,
             "native stream-control scope")
@@ -128,11 +128,11 @@ def main() -> None:
             "stream state, widths, and bit-mask controls")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_801924F8_80192770_cut" in strict and
+    require("func_801924F8_80192790_cut" in strict and
             "called from: func_801924F8" in strict,
             "strict path did not reach the post-setup cut")
     print("  OK runtime: focused state/width controls")
-    print("  OK production: strict frontier is 0x80192770")
+    print("  OK production: strict path continues through the CD idle wait")
     print("\nB54K-AJ stream-control oracle: PASS.")
 
 

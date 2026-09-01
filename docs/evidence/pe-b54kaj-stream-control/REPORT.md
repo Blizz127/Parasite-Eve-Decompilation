@@ -95,5 +95,5 @@ scene, scheduler, story, persistence, or destination state is planted.
 FUNC_8007C304=COMPLETE_STREAM_CONTROL_INITIALIZER
 FUNC_8007C544=COMPLETE_THREE_GLOBAL_SETTER
 PRODUCTION_REACHABILITY=blocked_at_func_801924F8_80192770_cut
-NEXT_ARTIFACT_FREE_RUNG=cd_ready_search_loop_from_0x80192770
+NEXT_ARTIFACT_FREE_RUNG=cd_ready_queue_wait_at_0x80192770
 ```

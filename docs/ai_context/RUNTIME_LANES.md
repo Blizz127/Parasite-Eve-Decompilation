@@ -2,7 +2,7 @@
 
 Status date: 2026-08-31. This file is the maintained cross-lane status; the
 native library boundary and strict frontier below were revalidated from the
-authoritative grind worktree after B54K-AJ.
+authoritative grind worktree after B54K-AK.
 
 ## A. UE5 — `Blizz127/parasite-eve-ue5`
 
@@ -60,12 +60,12 @@ link it. This is a packaging/API boundary, not a complete Day 1 claim. Its
 strict real-disc execution frontier is:
 
 ```text
-func_801924F8_80192770_cut from func_801924F8
+func_801924F8_80192790_cut from func_801924F8
 func_80030894 and func_8006AD40 are complete; the authenticated overlay path
 and both calls to complete func_801918F8 execute first; filename construction,
 the real FMV file search, movie-state setup, DecDCTReset, its two retail table
 submissions, DecDCToutCallback registration, and the 64-record pool
-initializer and stream-control setup now return normally
+initializer, stream-control setup, and the CD idle wait now return normally
 ```
 
 B54K-AC also corrected the generic CD provider to retail sector units. The

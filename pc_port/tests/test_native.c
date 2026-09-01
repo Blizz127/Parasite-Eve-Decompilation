@@ -1615,7 +1615,9 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x800B0CC8u) == 0u &&
            PE_LoadU32(0x800A801Cu) == 1u &&
            PE_LoadU32(0x800B0CCCu) == 0u &&
-           CountOrderLog("func_801924F8_80192770_cut") == 1 &&
+           PE_LoadU32(0x8009B574u) == 1u &&
+           PE_LoadU32(0x800A3608u) == 0u &&
+           CountOrderLog("func_801924F8_80192790_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "DecDCToutCallback registration or following cut differs");
 
@@ -18212,7 +18214,7 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192770_cut") == 1 &&
+           CountOrderLog("func_801924F8_80192790_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18250,7 +18252,7 @@ static void test_B54KAE_movie_state_setup(void)
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192770_cut") == 1 &&
+           CountOrderLog("func_801924F8_80192790_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
