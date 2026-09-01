@@ -610,6 +610,14 @@ in `D_8009D2E8`, retaining retail's `$v0` global value and `$at` store
 address. The full rebuild, public verifier, and packed-span checks are exact
 at 503 leaves.
 
+## Matching leaf — func_80017D3C (2026-09-01)
+
+`func_80017D3C` is now a registered eight-word exact C leaf. It transfers the
+signed second halfword through the `$v0` load/store path into
+`D_8009D2F0+0x224`; an empty constrained asm operand preserves the retail
+signed-load choice. The full rebuild, public verifier, and packed-span checks
+are exact at 504 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

@@ -75,6 +75,8 @@ segments:
       # Phase 5EO: signed-halfword double-deref call and true return.
       - [0x8020, c, func_80017820]
       - [0x804C, asm]
+      # Probe: signed-halfword transfer to D_8009D2F0+0x224.
+      - [0x853C, c, func_80017D3C]
       # Probe: companion D_8009D2E8 bit-0 clearer with retail $at store.
       - [0x855C, c, func_80017D5C]
       # Probe: isolated D_8009D2E8 bit-0 setter with retail $at store address.
