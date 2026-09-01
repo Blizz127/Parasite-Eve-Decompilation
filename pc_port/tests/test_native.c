@@ -10,6 +10,7 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 #include "host_framebuffer.h"
+#include "host_vram.h"
 #include "game_port.h"
 #include "stub_registry.h"
 #include "pe_disc.h"
@@ -45,6 +46,15 @@ static int tests_failed = 0;
 static int tests_skipped = 0;
 static const char *test_filter = NULL;
 
+static int RetailDisc1FixtureConfigured(void)
+{
+    const char *env = getenv("PE_DISC1_BIN");
+
+    if (env && env[0])
+        return 1;
+    return access("local/pe_disc1.path", R_OK) == 0;
+}
+
 #define TEST(name) do { \
     tests_run++; \
     if (test_filter && !strstr(name, test_filter)) { \
@@ -53,6 +63,14 @@ static const char *test_filter = NULL;
         return; \
     } \
     printf("  TEST %s... ", name); \
+} while(0)
+#define TEST_RETAIL_DISC1(name) do { \
+    TEST(name); \
+    if (!RetailDisc1FixtureConfigured()) { \
+        tests_skipped++; \
+        printf("SKIP (requires PE_DISC1_BIN or local/pe_disc1.path)\n"); \
+        return; \
+    } \
 } while(0)
 #define PASS() do { tests_passed++; printf("PASS\n"); } while(0)
 #define FAIL(msg) do { tests_failed++; printf("FAIL: %s\n", msg); } while(0)
@@ -7411,7 +7429,7 @@ static void test_BTL6_6914C_0x34_issue(void) {
     PE_Disc *disc;
     char err[256];
 
-    TEST("BTL6_6914C_0x34_issue");
+    TEST_RETAIL_DISC1("BTL6_6914C_0x34_issue");
     err[0] = 0;
     disc = BTL6_OpenDisc1(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
@@ -11105,7 +11123,7 @@ static void test_BTL63_6B4F8_m0367i_load(void) {
     pe_addr_t dest2 = 0x801A0000u;
     pe_addr_t name = 0x80122180u;
 
-    TEST("BTL63_6B4F8_m0367i_load");
+    TEST_RETAIL_DISC1("BTL63_6B4F8_m0367i_load");
     ResetTestState();
     {
         static const unsigned char charset[] =
@@ -14630,7 +14648,7 @@ static void test_BTL124_m0005i_type1_ticks_type2(void)
     int i;
     int saw2;
 
-    TEST("BTL124_m0005i_type1_ticks_type2");
+    TEST_RETAIL_DISC1("BTL124_m0005i_type1_ticks_type2");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14674,7 +14692,7 @@ static void test_BTL125_type6_waits_scratch0_bit2(void)
     int i;
     int saw2;
 
-    TEST("BTL125_type6_waits_scratch0_bit2");
+    TEST_RETAIL_DISC1("BTL125_type6_waits_scratch0_bit2");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14715,7 +14733,7 @@ static void test_BTL126_only_setter_is_type6_1850(void)
     pe_addr_t t2base = dest2 + 0x218D4u;
     pe_addr_t t6base = dest2 + 0x2341Cu;
 
-    TEST("BTL126_only_setter_is_type6_1850");
+    TEST_RETAIL_DISC1("BTL126_only_setter_is_type6_1850");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14744,7 +14762,7 @@ static void test_BTL126_type2_mailbox_not_20(void)
     pe_addr_t t6base = dest2 + 0x2341Cu;
     int i;
 
-    TEST("BTL126_type2_mailbox_not_20");
+    TEST_RETAIL_DISC1("BTL126_type2_mailbox_not_20");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14780,7 +14798,7 @@ static void test_BTL126_7d_is_handshake_not_6f(void)
     PE_Disc *disc;
     char err[256];
 
-    TEST("BTL126_7d_is_handshake_not_6f");
+    TEST_RETAIL_DISC1("BTL126_7d_is_handshake_not_6f");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14829,7 +14847,7 @@ static void test_BTL127_dest_ready_ce2_10(void)
     PE_Disc *disc;
     char err[256];
 
-    TEST("BTL127_dest_ready_ce2_10");
+    TEST_RETAIL_DISC1("BTL127_dest_ready_ce2_10");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14855,7 +14873,7 @@ static void test_BTL128_dest_ready_1266c_before_becc(void)
     pe_addr_t type6;
     pe_addr_t task;
 
-    TEST("BTL128_dest_ready_1266c_before_becc");
+    TEST_RETAIL_DISC1("BTL128_dest_ready_1266c_before_becc");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14885,7 +14903,7 @@ static void test_BTL128_type6_1850_is_mailbox_island(void)
     pe_addr_t t2base = dest2 + 0x218D4u;
     pe_addr_t t6base = dest2 + 0x2341Cu;
 
-    TEST("BTL128_type6_1850_is_mailbox_island");
+    TEST_RETAIL_DISC1("BTL128_type6_1850_is_mailbox_island");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14923,7 +14941,7 @@ static void test_BTL128_first_visit_task_map(void)
     pe_addr_t mail;
     int i;
 
-    TEST("BTL128_first_visit_task_map");
+    TEST_RETAIL_DISC1("BTL128_first_visit_task_map");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -14992,7 +15010,7 @@ static void test_BTL129_first_visit_1a0_map(void)
     pe_addr_t task;
     int i;
 
-    TEST("BTL129_first_visit_1a0_map");
+    TEST_RETAIL_DISC1("BTL129_first_visit_1a0_map");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -15035,7 +15053,7 @@ static void test_BTL129_type6_81_is_not_1850(void)
     pe_addr_t t3base = dest2 + 0x227FCu;
     pe_addr_t t6base = dest2 + 0x2341Cu;
 
-    TEST("BTL129_type6_81_is_not_1850");
+    TEST_RETAIL_DISC1("BTL129_type6_81_is_not_1850");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -15067,7 +15085,7 @@ static void test_BTL130_type4_volume_gate(void)
     PE_Disc *disc;
     char err[256];
 
-    TEST("BTL130_type4_volume_gate");
+    TEST_RETAIL_DISC1("BTL130_type4_volume_gate");
     ResetTestState();
     disc = pe_btl124_open_m0005i(err, sizeof(err));
     ASSERT(disc != NULL, err[0] ? err : "open m0005i");
@@ -15219,7 +15237,7 @@ static void test_BTL90_m0367i_dest_ready(void) {
     pe_addr_t clip15;
     pe_addr_t clip09;
 
-    TEST("BTL90_m0367i_dest_ready");
+    TEST_RETAIL_DISC1("BTL90_m0367i_dest_ready");
     ResetTestState();
     {
         static const unsigned char charset[] =
@@ -15384,7 +15402,7 @@ static void test_BTL94_m0367i_persist09_gate(void) {
     unsigned int i;
     unsigned int n;
 
-    TEST("BTL94_m0367i_persist09_gate");
+    TEST_RETAIL_DISC1("BTL94_m0367i_persist09_gate");
     ResetTestState();
     PE_StoreU32(0x8009D2F0u, dummy);
     PE_StoreU32(dummy + 0x98u, 0x10000000u);
@@ -33049,6 +33067,205 @@ static void test_B54I_gpu_leaves_and_wrappers(void)
     PASS();
 }
 
+/* ── Merge compatibility tests retained by name from main ─────────────── */
+
+static void test_6E6A8_sector_to_byte(void)
+{
+    DiscFixture fx;
+    uint32_t i;
+    TEST("6E6A8_sector_to_byte");
+    ResetTestState();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    ASSERT(func_8006E6A8(FX_PEIMG_LBA, B16_STREAM, 2) == 1,
+           "two-sector issue failed");
+    for (i = 0; i < 4096u; i++)
+        ASSERT(PE_LoadU8(B16_STREAM + i) == B16_FxByte(i),
+               "sector-to-byte forwarding mismatch");
+    ASSERT(PE_LoadU8(B16_STREAM + 4096u) == 0u, "read crossed 4096-byte extent");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_B49_801909B4_remains_strict_boundary(void)
+{
+    TEST("B49_801909B4_remains_strict_boundary");
+#if defined(__unix__) || defined(__APPLE__)
+    pid_t pid;
+    int status = 0;
+    ResetTestState();
+    HostFB_Init();
+    B54KQ_SeedOverlayPrefix(0x31u);
+    fflush(NULL);
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed");
+    if (pid == 0) {
+        Bootstrap_Init();
+        Bootstrap_EnableStrict();
+        (void)func_801909B4();
+        _exit(0);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid, "waitpid failed");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 1,
+           "func_801909B4 did not remain a strict boundary");
+#endif
+    PASS();
+}
+
+static void test_6AD40_prefix_boundary_args(void)
+{
+    DiscFixture fx;
+    TEST("6AD40_prefix_boundary_args");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 1);
+    ASSERT(func_8006AD40() == 0, "complete call failed");
+    ASSERT(g_bootstrap_arg4_call_count == 3, "retail forwarding calls changed");
+    ASSERT(B54KM_CompletionStateIsExact(), "complete suffix state changed");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_6AD40_prefix_does_not_finalize(void)
+{
+    DiscFixture fx;
+    TEST("6AD40_prefix_does_not_finalize");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 1);
+    PE_StoreU16(0x800B0CD8u + 6u, 0x1234u);
+    PE_StoreU16(0x800B0CD8u + 0xE8u, 0x5678u);
+    ASSERT(func_8006AD40() == 0, "complete call failed");
+    ASSERT(B54KM_CompletionStateIsExact(),
+           "historical prefix name must now observe resolved finalization");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_6AD40_prefix_repeat_dirty(void)
+{
+    DiscFixture fx;
+    TEST("6AD40_prefix_repeat_dirty");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    B50_StartFixture(&fx, 1);
+    ASSERT(func_8006AD40() == 0, "first complete call failed");
+    func_8007ED58();
+    HostFB_VSync(0);
+    PE_Port_RunControlReset();
+    ASSERT(func_8006AD40() == 0, "repeat complete call failed");
+    ASSERT(B54KM_CompletionStateIsExact(), "repeat completion state changed");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_6AD40_strict_stops_at_frontier(void)
+{
+    DiscFixture fx;
+    pid_t pid;
+    int status = 0;
+    TEST("6AD40_strict_stops_at_frontier");
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 0), "fixture build failed");
+    pid = fork();
+    ASSERT(pid >= 0, "fork failed");
+    if (pid == 0) {
+        PE_Disc_SetActive(fx.disc);
+        HostFB_Init();
+        Bootstrap_Init();
+        Bootstrap_EnableStrict();
+        func_8007ED58();
+        HostFB_VSync(0);
+        B50_SeedPrefixState(1);
+        PE_StoreU8(B53D_INIT_BYTE, 1u);
+        if (!B53E_SeedBusyDma()) _exit(2);
+        _exit(func_8006AD40() == 0 ? 0 : 3);
+    }
+    ASSERT(waitpid(pid, &status, 0) == pid, "waitpid failed");
+    ASSERT(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+           "resolved 6AD40 must return in strict mode");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_B54KB1_30894_l4_group(void)
+{
+    TEST("B54KB1_30894_l4_group"); ResetTestState(); B54KB1_SeedPalette();
+    func_80030894(); B54KB1_AssertL4State(); PASS();
+}
+static void test_B54KB2_30894_l5_group(void)
+{
+    TEST("B54KB2_30894_l5_group"); ResetTestState(); B54KB1_SeedPalette();
+    func_80030894(); B54KB2_AssertL5State(); PASS();
+}
+static void test_B54KB3_30894_l6_group(void)
+{
+    TEST("B54KB3_30894_l6_group"); ResetTestState(); B54KC_SeedInputs();
+    func_80030894(); B54KC_AssertG4Pair(); B54KC_AssertL6(); PASS();
+}
+static void test_B54KB4_30894_l7_group(void)
+{
+    TEST("B54KB4_30894_l7_group"); ResetTestState(); B54KB1_SeedPalette();
+    func_80030894(); B54KD_AssertState(); PASS();
+}
+static void test_B54KB5_30894_l8_group(void)
+{
+    TEST("B54KB5_30894_l8_group"); ResetTestState(); B54KB1_SeedPalette();
+    func_80030894(); B54KE_AssertL8(); PASS();
+}
+static void test_B54KB6_30894_l9_group(void)
+{
+    TEST("B54KB6_30894_l9_group"); ResetTestState(); B54KB1_SeedPalette();
+    func_80030894(); B54KF_AssertState(); PASS();
+}
+
+static void test_VIS1_rgb555_vectors(void)
+{
+    uint8_t rgb[3];
+    TEST("VIS1_rgb555_vectors");
+    HostVRAM_DecodePixel(0x001Fu, rgb);
+    ASSERT(rgb[0] == 255u && rgb[1] == 0u && rgb[2] == 0u, "red decode changed");
+    HostVRAM_DecodePixel(0x7FFFu, rgb);
+    ASSERT(rgb[0] == 255u && rgb[1] == 255u && rgb[2] == 255u, "white decode changed");
+    PASS();
+}
+static void test_VIS1_copy_is_read_only(void)
+{
+    uint8_t *rgb;
+    uint16_t before, after;
+    TEST("VIS1_copy_is_read_only");
+    PE_GPU_Init();
+    ASSERT(PE_GPU_WriteGP0(0xA0000000u) && PE_GPU_WriteGP0((20u << 16) | 10u) &&
+           PE_GPU_WriteGP0((1u << 16) | 2u) && PE_GPU_WriteGP0(0x03E0001Fu),
+           "GPU fixture failed");
+    ASSERT(PE_GPU_ReadVRAM(10u, 20u, &before), "pre-copy read failed");
+    rgb = malloc(HOST_VRAM_RGB_BYTES); ASSERT(rgb != NULL, "allocation failed");
+    ASSERT(HostVRAM_CopyRGB(rgb, HOST_VRAM_RGB_BYTES) == 0, "copy failed");
+    ASSERT(PE_GPU_ReadVRAM(10u, 20u, &after) && before == after, "copy wrote VRAM");
+    free(rgb); PASS();
+}
+static void test_VIS1_zero_authority_stays_black(void)
+{
+    uint8_t *rgb;
+    TEST("VIS1_zero_authority_stays_black"); PE_GPU_Init();
+    rgb = malloc(HOST_VRAM_RGB_BYTES); ASSERT(rgb != NULL, "allocation failed");
+    ASSERT(HostVRAM_CopyRGB(rgb, HOST_VRAM_RGB_BYTES) == 0, "copy failed");
+    ASSERT(rgb[0] == 0u && rgb[HOST_VRAM_RGB_BYTES - 1u] == 0u, "zero VRAM is not black");
+    free(rgb); PASS();
+}
+static void test_VIS1_artifacts_match_authority(void)
+{
+    static const char raw_path[] = "/tmp/pe-vis1-test.vram";
+    FILE *file;
+    TEST("VIS1_artifacts_match_authority"); PE_GPU_Init();
+    ASSERT(HostVRAM_WriteRaw(raw_path) == 0, "raw artifact write failed");
+    file = fopen(raw_path, "rb"); ASSERT(file != NULL, "cannot reopen raw artifact");
+    ASSERT(fseek(file, 0, SEEK_END) == 0 && ftell(file) == (long)HOST_VRAM_RAW_BYTES,
+           "raw artifact size changed");
+    fclose(file); PASS();
+}
+
 /* ── main ────────────────────────────────────────────────────────────── */
 #include <stdlib.h>
 #include <string.h>
@@ -34117,6 +34334,14 @@ int main(void)
     test_B54KI_30894_second_bank_and_normal_return();
     test_B54KI_30894_full_region_dirty_repeat_deterministic();
 
+    /* Main-lane test-name union; assertions target the now-complete B54K path. */
+    test_B54KB1_30894_l4_group();
+    test_B54KB2_30894_l5_group();
+    test_B54KB3_30894_l6_group();
+    test_B54KB4_30894_l7_group();
+    test_B54KB5_30894_l8_group();
+    test_B54KB6_30894_l9_group();
+
     /* Retained Phase 6E-B54K-J F0 completion gate (2 tests). */
     test_B54KJ_6AD40_f0_completion_and_frontier();
     test_B54KJ_6AD40_repeat_no_duplicate_work();
@@ -34132,6 +34357,16 @@ int main(void)
     /* Phase 6E-B54K-M complete suffix contracts (2 tests). */
     test_B54KM_6AD40_final_archive_positive_and_zero();
     test_B54KM_6AD40_flag_matrix_and_f1_display();
+    test_6AD40_prefix_boundary_args();
+    test_6AD40_prefix_does_not_finalize();
+    test_6AD40_prefix_repeat_dirty();
+    test_6AD40_strict_stops_at_frontier();
+    test_6E6A8_sector_to_byte();
+    test_B49_801909B4_remains_strict_boundary();
+    test_VIS1_rgb555_vectors();
+    test_VIS1_copy_is_read_only();
+    test_VIS1_zero_authority_stays_black();
+    test_VIS1_artifacts_match_authority();
 
     /* Phase 6E-B51 func_8006E1C0 full translation (6 tests) */
     test_6E1C0_single_call_zero_entry();

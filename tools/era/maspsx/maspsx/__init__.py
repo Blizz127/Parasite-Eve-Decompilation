@@ -422,6 +422,7 @@ class MaspsxProcessor:
         use_comm_for_lcomm=False,
         fill_store_delay_slot=False,
         three_word_symbol_store=False,
+        dispatch_fold_symbol=None,
     ):
         self.lines = [x.strip() for x in lines]
 
@@ -454,6 +455,14 @@ class MaspsxProcessor:
         self.three_word_symbol_store = (
             three_word_symbol_store
             or os.environ.get("MASPSX_THREE_WORD_SYMBOL_STORE") == "1"
+        )
+        # LOCAL PATCH (switch dispatch retarget): substitute the shared
+        # rodata pool table symbol for cc1-local $L<n> switch-table
+        # labels in compound loads/stores. See docs/design/
+        # switch_table_ownership.md.
+        self.dispatch_fold_symbol = (
+            dispatch_fold_symbol
+            or os.environ.get("MASPSX_DISPATCH_FOLD") or None
         )
 
         self.bss_entries: dict[str, int] = {}
@@ -989,6 +998,21 @@ class MaspsxProcessor:
 
             elif is_addend and r_source:
                 # e.g. lw	$2,test_sym($4)
+                # LOCAL PATCH (switch dispatch retarget): when
+                # MASPSX_DISPATCH_FOLD=<sym> is set alongside the
+                # three-word gate and the operand is a compiler-local
+                # label ($L<digits> — cc1's own switch table), substitute
+                # <sym> (the shared rodata pool table) for the local
+                # label, producing retail's 3-word indexed-symbol
+                # dispatch against the pool copy; the now-dead local
+                # table is stripped build-side. Named symbols are never
+                # substituted; gate-off keeps every prior behavior.
+                if (
+                    self.three_word_symbol_store
+                    and self.dispatch_fold_symbol
+                    and re.match(r"^\$L\d+$", operand)
+                ):
+                    operand = self.dispatch_fold_symbol
                 if self.addiu_at:
                     # LOCAL PATCH: three_word_symbol_store gate (extended from
                     # stores to loads) — when enabled and not a compound macro

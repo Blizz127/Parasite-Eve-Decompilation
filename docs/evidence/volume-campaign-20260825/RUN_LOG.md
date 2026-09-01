@@ -1,0 +1,615 @@
+# Matching-C volume campaign run log — 2026-08-25
+
+Base: a648f45, 287 accepted leaves; pool refresh and subsequent screens reduced the active pool to 1136 candidates before this attempt (TIER 1 90, TIER 2 214, TIER 3 99, SKIP 733).
+
+| attempt | target | pool row | outcome | words | iterations | commit or stash |
+|---:|---|---|---|---:|---:|---|
+| 1 | func_80072714 @ 0x62F14 | TIER 1; jr-ra; 26 direct callers; real boundaries | SKIP-SDK-LIBRARY-SYSCALL after function-hood/static screen; adjacent func_80072724 screened with same proof | 4 | 0 | labeled stash; committed c28edcc |
+| 2 | func_80062A20 @ 0x53220 | TIER 1; jr-ra; 39 direct callers; real boundaries; argument-indexed load | MATCHED@era -O2 -G0; 5/5 exact | 5 | 2 | committed 655628e; target leaf 288 |
+| 3 | func_800824C8 @ 0x72CC8 | TIER 1; jr-ra; 12 direct callers; scalar global read/write; address-retention | PARKED-ADDRESS-RETENTION after two allowed phrasings; no integration | 5 | 2 | labeled stash; docs committed f8703c0 |
+| 4 | func_80085084 @ 0x75884 | TIER 1; jr-ra; 6 direct callers; constant-add getter; real boundaries | MATCHED@era -O2 -G0; 5/5 exact | 5 | 0 | committed 37ab013; target leaf 289 |
+| 5 | func_80077AA4 @ 0x682A4 | TIER 1; jr-ra; 50 direct callers; packed coordinate helper; real boundaries | MATCHED@era -O2 -G0; 6/6 exact; full SHA exact; verify green at 290 | 6 | 0 | committed 3894b85 |
+
+The adjacent func_800824DC @ 0x72CDC has the same scalar-global exchange
+shape over D_800B8AB8 and was screened into the same park family without a
+separate attempt.
+
+The next Tier 1 span, func_80078120 @ 0x68920, was screened without a C
+attempt as SKIP-SDK-LIBRARY-GTE-TAIL; its five-word tail entry branches into
+func_80078134’s shared handwritten-COP2 continuation. No attempt was consumed.
+
+The next Tier 1 span, func_80081E5C @ 0x7265C, was screened without a C
+attempt as the same PARKED-ADDRESS-RETENTION-FAMILY established by 824C8/824DC.
+No attempt was consumed.
+
+The pool family pass then found the unreferenced exact scalar-exchange twin
+func_800824B4 @ 0x72CB4 over D_800B8AB0. It was moved to
+SKIP-ADDRESS-RETENTION-FAMILY without an attempt; no matching-C count change.
+Evidence: `ADDRESS_RETENTION_SCREEN.md`.
+
+The next Tier-1 attempt, func_8005DBF8 @ 0x4E3F8, passed function hood but was
+parked after two natural-C phrasings. Retail's address/load register coloring
+is not reproduced by either expression; the pointer-local retry also exceeded
+the exact 0x18-byte body and was rejected by the trim guard. Evidence:
+`func-8005dbf8/PARK.md`; candidate/integration work remains in its labeled
+stash; no count change.
+
+The next eligible Tier-1 leaf, func_800877BC @ 0x77FBC, matched on the first
+`-O2 -G0` phrasing as a volatile hardware halfword setter. Six words exact;
+carve `0x394 + 0x18 + 0x3348 = 0x36F4`; full SHA exact and verify green at
+291. Evidence: `func-800877bc/REPORT.md`; committed as the next leaf.
+
+The following `func_8005DC10` @ `0x4E410` is the exact six-word
+address-register-coloring twin of parked `func_8005DBF8`, over `D_800A8048`
+with offset `-0x20` and two callers. It was screened without a duplicate
+attempt; no count change. Evidence: `func-8005dc10/SKIP.md`.
+
+The next independent attempt, `func_800534CC` @ `0x43CCC`, passed function
+hood but was parked after two `-O2 -G8` phrasings. Both emitted an absolute
+address instead of retail's `$gp+0x2D8` load; full mismatch was 22 bytes.
+Evidence: `func-800534cc/PARK.md`; no count change.
+
+The following `func_8005DE70` @ `0x4E670` is the same six-word
+address-register-coloring family over `D_800A8044` with offset `-0x1C` and one
+caller. It was screened without a duplicate attempt; no count change.
+Evidence: `func-8005de70/SKIP.md`.
+
+The following `func_80057D18` @ `0x48518` is a gp-indexed getter/clear twin of
+`func_800534CC`, with an exact-start function-pointer construction and no jal
+caller. It was screened under the same gp-absolute-form blocker without an
+attempt; no count change. Evidence: `func-80057d18/SKIP.md`.
+
+The next independent attempt, `func_8003708C` @ `0x2788C`, passed function
+hood with 65 direct callers but was parked after two `-O2 -G0` fixed-point
+product phrasings. Both retained wrong HI/LO temporary coloring and nonzero
+text beyond the exact 7-word body; no count change. Evidence:
+`func-8003708c/PARK.md`.
+
+## Stop / continuation
+
+This is not a hard stop: the syscall family is a proven SDK/handwritten architecture class, so it is removed from scheduling. No C count increase, carve, build integration, or false progress is claimed. Continue with the next eligible Tier 1 candidate after the docs commit.
+
+The next Tier-1 attempt, `func_800762A0` @ `0x66AA0`, passed function hood
+with three direct callers and was parked after two `-O2 -G0` packed-command
+phrasings. Both retain the first masked/shifted value in `$v0` instead of
+retail `$a1`; the full candidate differed in 13 bytes. Evidence:
+`func-800762a0/PARK.md`; no count change. Candidate/integration work remains
+in the labeled stash.
+
+The next Tier-1 leaf, `func_800631C0` @ `0x539C0`, passed function hood with
+two direct callers and matched on the second `-O2 -G0` phrasing. An explicit
+result accumulator reproduced retail's filled null-branch delay slot; carve
+`0x1C + 0x186C = 0x1888`, packed span and full SHA exact, verify green at 292.
+Evidence: `func-800631c0/REPORT.md`.
+
+The next Tier-1 leaf, `func_80087728` @ `0x77F28`, passed function hood with
+two direct callers and matched on the second `-O2 -G0` phrasing. Direct fixed
+address stores overflowed; one volatile base with halfword indices reproduced
+the `$at` MMIO form. Carve `0x300 + 0x1C + 0x78 = 0x394`, packed span/full SHA
+exact, verify green at 293. Evidence: `func-80087728/REPORT.md`.
+
+The next Tier-1 leaf, `func_8008770C` @ `0x77F0C`, matched on the first
+`-O2 -G0` phrasing using the proven one-base volatile MMIO pointer. Carve
+`0x2E4 + 0x1C = 0x300`, packed span/full SHA exact, verify green at 294.
+Evidence: `func-8008770c/REPORT.md`.
+
+The next Tier-1 leaf, `func_80087744` @ `0x77F44`, matched on the first
+`-O2 -G0` phrasing using the proven one-base volatile MMIO pointer. Carve
+`0x1C + 0x1C + 0x5C = 0x90`, packed span/full SHA exact, verify green at 295.
+Evidence: `func-80087744/REPORT.md`.
+
+The next Tier-1 leaf, `func_80087760` @ `0x77F60`, matched on the first
+`-O2 -G0` phrasing using the proven one-base volatile MMIO pointer. Carve
+`0x1C + 0x1C + 0x40 = 0x78`, packed span/full SHA exact, verify green at 296.
+Evidence: `func-80087760/REPORT.md`.
+
+The next Tier-1 leaf, `func_8008777C` @ `0x77F7C`, matched on the first
+`-O2 -G0` phrasing using the proven one-base volatile MMIO pointer. Carve
+`0x1C + 0x1C + 0x24 = 0x5C`, packed span/full SHA exact, verify green at 297.
+Evidence: `func-8008777c/REPORT.md`.
+
+The next Tier-1 leaf, `func_800877D4` @ `0x77FD4`, is a distinct per-voice
+SPU halfword setter and matched on the first natural `-O2 -G0` indexed-store
+phrasing. Carve `0x1C + 0x332C = 0x3348`, packed span/full SHA exact, verify
+green at 298. Evidence: `func-800877d4/REPORT.md`.
+
+The next Tier-1 leaf, `func_800877F0` @ `0x77FF0`, is the per-voice SPU
+halfword-setter twin of `877D4` and matched on the first natural `-O2 -G0`
+phrasing. Carve `0x1C + 0x3310 = 0x332C`, packed span/full SHA exact, verify
+green at 299. Evidence: `func-800877f0/REPORT.md`.
+
+The next Tier-1 leaf, `func_80083C20` @ `0x74420`, passed function hood via
+the exact-start callback-address construction in `func_80083BB8`; the pool's
+`0/2` is its HI/LO reference pair. Natural `-O2 -G0` C matched all seven words
+on the first phrasing. Carve `0x660 + 0x1C + 0x234 = 0x8B0`, packed span/full
+SHA exact, verify green at 300. Evidence: `func-80083c20/REPORT.md`.
+
+The next Tier-1 leaf, `func_8005E8A4` @ `0x4F0A4`, has 247 direct calls and
+updates the gp-relative pair `D_8009D124/D_8009D128`, which has 32 other
+Stage-0 readers. Natural two-statement accumulator C matched all eight words
+on the first era `-O2 -G8` phrasing. Carve `0x20 + 0x294 = 0x2B4`, packed
+span/full SHA exact, verify green at 301. Evidence: `func-8005e8a4/REPORT.md`.
+
+The next Tier-1 leaf, `func_8005E968` @ `0x4F168`, has 16 direct calls and
+stores a packed value plus its signed-shifted, `0x7F7F7F`-masked companion in
+the gp-relative pair `D_8009D110/D_8009D114`. Natural C matched all eight
+words on the first era `-O2 -G8` phrasing. Carve
+`0xA4 + 0x20 + 0x1D0 = 0x294`, packed span/full SHA exact, verify green at
+302. Evidence: `func-8005e968/REPORT.md`.
+
+The next Tier-1 row, `func_800661CC` @ `0x569CC`, is a real callable
+handwritten helper with seven direct callers, but its semantic body is two GTE
+OFX/OFY `ctc2` writes. Existing projection evidence proves it restores
+`(160,112)`; the established COP2 screen proves ordinary-C expressibility is
+absent. It was moved to `SKIP-HANDWRITTEN-COP2` without an attempt or count
+change. Evidence: `func-800661cc/SKIP.md`.
+
+The next Tier-1 leaf, `func_8005BEE8` @ `0x4C6E8`, has six direct callers and
+returns one of two 0x10-separated addresses inside `D_800C0DE0` according to
+gp-relative `D_8009D218`. An explicit result pointer retained the address in
+`$v1` and matched all eight words on the first era `-O2 -G8` phrasing. Carve
+`0x20 + 0x580 = 0x5A0`, packed span/full SHA exact, verify green at 303.
+Evidence: `func-8005bee8/REPORT.md`.
+
+The next Tier-1 leaf, `func_8005DADC` @ `0x4E2DC`, has five direct callers
+and returns an eight-byte-indexed address using the word and adjusted base at
+`D_800A8030`. Attempt 1 duplicated the symbol materialization; an explicit
+pointer local made cc1 retain the shared address in `$v1` and matched all eight
+words on attempt 2 under era `-O2 -G0`. Carve
+`0x1644 + 0x20 + 0x618 = 0x1C7C`, packed span/full SHA exact, verify green at
+304. Evidence: `func-8005dadc/REPORT.md`.
+
+The next Tier-1 candidate, `func_8005DB8C` @ `0x4E38C`, has four direct
+callers and a retained-address index shape. Two era `-O2 -G0` phrasings were
+bounded: the explicit pointer shared the address but selected the `5DADC`
+allocation/order; the adjusted-base phrasing duplicated symbol
+materialization. Retail's copy-before-load DAG remains unreproduced, so it is
+`PARKED-ADDRESS-DAG-COLORING` with no integration/count change. Evidence:
+`func-8005db8c/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 row, `func_80078E94`, was pool drift: it and
+`func_80078E04` were already members of the authoritative 23-function
+handwritten libGTE/COP2 screen. Both are function-hood proven by three direct
+callers and real boundaries, but both require `ctc2` semantic bodies. They
+moved to `SKIP-SDK-LIBRARY-COP2` without attempts or count change; Tier 1
+66→64 and SKIP 743→745. Evidence:
+`../volume-campaign-20260824/COP2_SDK_SCREEN.md`.
+
+The next Tier-1 leaf, `func_80083E50` @ `0x74650`, has two direct callers and
+initializes object bytes plus an interior pointer. Natural argument-relative C
+matched all eight words on the first era `-O2 -G0` phrasing, including the
+final state-byte store in the return delay slot. Carve
+`0x214 + 0x20 = 0x234`, packed span/full SHA exact, verify green at 305.
+Evidence: `func-80083e50/REPORT.md`.
+
+The next Tier-1 leaf, `func_80083E84` @ `0x74684`, has two direct callers and
+is the tag-`0x4C` structural twin of `83E50`. Proven initializer C matched all
+eight words on the first era `-O2 -G0` phrasing. Carve
+`0x20 + 0x40 = 0x60`, packed span/full SHA exact. The first verifier run
+caught a stale `[0x74684, asm]` expected marker; after correcting the cluster's
+C/asm manifest, verify passed at 306. Evidence: `func-80083e84/REPORT.md`.
+
+The next Tier-1 leaf, `func_80083EC4` @ `0x746C4`, has two direct callers and
+is the tag-`0x47` structural twin of `83E50`/`83E84`. Proven initializer C
+matched all eight words on the first era `-O2 -G0` phrasing. Carve
+`0x20 + 0x20 = 0x40`, packed span/full SHA exact, verify green at 307.
+Evidence: `func-80083ec4/REPORT.md`.
+
+The next Tier-1 leaf, `func_80083EA4` @ `0x746A4`, has one direct caller and
+is the tag-`0x46` structural twin completing this initializer cluster. Proven
+initializer C matched all eight words on the first era `-O2 -G0` phrasing.
+The old asm span was exactly the leaf (`0x20 = 0x20`), so it closes with no
+prefix or resume; packed span/full SHA exact, verify green at 308. Evidence:
+`func-80083ea4/REPORT.md`.
+
+The next Tier-1 candidate, `func_80087798` @ `0x77F98`, is a proven callable
+nine-word per-voice SPU register-pair writer. Two era `-O2 -G0` phrasings
+compiled identically: cc1 retains the scaled index in `$a0`, computes the
+first address in `$v0`, and rematerializes the second through `$at`; retail
+retains one computed address in `$a0` for both stores. It is
+`PARKED-MMIO-ADDRESS-RETENTION`, with no integration or count change. This is
+consecutive park 1. Evidence: `func-80087798/PARK.md`; source is in the
+labeled stash.
+
+The next Tier-1 leaf, `func_8005D970` @ `0x4E170`, has one direct caller and
+selects signed value `4` or `-4` from a gp-relative input threshold of 300.
+An explicit default accumulator matched all nine words on the first era
+`-O2 -G8` phrasing, including the load-delay nop and branch-delay default.
+Carve `0x14D8 + 0x24 + 0x148 = 0x1644`, packed span/full SHA exact, verify
+green at 309. This match resets the consecutive-park count. Evidence:
+`func-8005d970/REPORT.md`.
+
+The next Tier-1 candidate, `func_80078C94` @ `0x69494`, is a proven callable
+nine-word three-word-copy helper. Aggregate C preserved the size but homed the
+destination/result in `$v0` at entry; scalar C retained that home and moved the
+last store into the return delay slot. Retail retains `$a0` for all stores and
+moves it to `$v0` afterward. It is `PARKED-AGGREGATE-RETURN-COLORING`, with no
+integration/count change. This is consecutive park 1. Evidence:
+`func-80078c94/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 row, `func_800792D4` @ `0x69AD4`, is a function-hood-proven
+handwritten libGTE operation with six direct callers. Its ten words perform
+`lwc2`, `mvmva`, `swc2`, and `cfc2` side effects that ordinary sanctioned C
+cannot express. It moved to `SKIP-SDK-LIBRARY-COP2` without an attempt or
+count change; the consecutive-park count remains 1. Evidence:
+`func-800792d4/SKIP.md`.
+
+The next Tier-1 leaf, `func_80077B04` @ `0x68304`, is a ten-word byte flag
+set/clear helper with five direct callers. Canonical return and exact-start
+calls prove function hood; the neighboring alignment nops remain outside the
+leaf. Natural argument-relative C matched all ten words on the first era
+`-O2 -G0` phrasing, including the local jump relocation and return-delay-slot
+store. Carve `0x48 + 0x28 + 0x38 = 0xA8`, packed span/full SHA exact, verify
+green at 310. This match resets the consecutive-park count. Evidence:
+`func-80077b04/REPORT.md`.
+
+Adjacent `func_80077B34` @ `0x68334` independently passes function hood via
+four exact-start calls and canonical return. It is the bit-0 set/clear twin;
+existing B54I evidence identifies its Psy-Q role as `SetShadeTex`. Minimal
+argument-relative C matched all ten words on the first era `-O2 -G0`
+phrasing. Both two-nop alignment fragments remain asm; carve
+`0x08 + 0x28 + 0x08 = 0x38`, packed span/full SHA exact, verify green at
+311. Evidence: `func-80077b34/REPORT.md`.
+
+The next Tier-1 candidate, `func_8008783C` @ `0x7803C`, is a proven callable
+ten-word per-voice SPU register RMW. Two era `-O2 -G0` phrasings reproduce
+address formation, load, mask, shift, and merge exactly, but both emit
+`sh; jr; nop` instead of retail `jr; sh`. An explicit returned value does not
+move the volatile store. `PARKED-VOLATILE-STORE-SCHEDULING`; no integration
+or count change, consecutive park 1. Evidence: `func-8008783c/PARK.md`;
+source is in the labeled stash.
+
+The next Tier-1 candidate, `func_80043474` @ `0x33C74`, passes function
+hood via two direct callers, canonical return with a live delay slot, and
+real adjacent functions. Its six-result signed threshold ladder matches the
+first three compare/result pairs naturally. Both bounded era `-O2 -G0`
+phrasings emit a twenty-word tail: cc1 uses a separate category-4 `beqz`
+plus local jump, while retail fits nineteen words by computing the fifth
+predicate in the category-4 branch delay slot and placing category 4 after
+the category-5/6 jump. Complementing the final condition changes only 5/6
+polarity. It parks as `PARKED-THRESHOLD-LADDER-BLOCK-LAYOUT`; count stays
+334, Tier 1 falls 24→23, and consecutive park becomes 2. Evidence:
+`func-80043474/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 candidate, `func_80073244` @ `0x63A44`, was not skipped to
+evade the stop rule. It passes function hood via two direct callers,
+canonical return, and real adjacent functions. Scalar `unsigned long long`
+confirms the unsigned two-word comparison but emits a generic compare graph.
+The second and final by-value `{lo,hi}` aggregate phrasing proves the source
+type by recovering retail words 0–5 exactly, including all four ABI argument
+homes. cc1 then canonicalizes the equal-high-word low comparison to `sltu`
+plus `negu`, yielding seventeen content words versus retail's explicit
+twenty-word branch ladder. It parks as
+`PARKED-LEXICOGRAPHIC-COMPARE-CANONICALIZATION`; count stays 334, Tier 1
+falls 23→22, and consecutive park becomes 3. Evidence:
+`func-80073244/PARK.md`; source is in the labeled stash.
+
+`HARD_STOP=THREE_CONSECUTIVE_ACTUAL_PARKS`. The consecutive sequence is
+`func_8005DBAC`, `func_80043474`, `func_80073244`; no candidate was skipped
+to manufacture or avoid the stop. Campaign terminal count is 334.
+
+Adjacent `func_80087864` @ `0x78064` is function-hood proven by its exact
+caller at `0x80087A80` and canonical return. Its complete body has the same
+per-voice SPU volatile `sh` return-slot mechanism as parked `8783C`, changing
+only the selected nibble. It is screened without a duplicate attempt as
+`PARKED-VOLATILE-STORE-SCHEDULING-FAMILY`; count and consecutive-park state
+remain 311 and 1. Evidence: `func-80087864/SKIP.md`.
+
+The next Tier-1 leaf, `func_8009059C` @ `0x80D9C`, passes function hood via
+the direct call at `0x80090AC0`, an exact-start callback-table word at
+`0x8009CBA8`, canonical return, and real adjacent functions. It consumes one
+stream byte, advances the cursor, ORs `0x1000` into state `+0xF4`, and stores
+the byte as a halfword at `+0x110`. The exact `func_800906B4` family phrasing
+matched all ten words on the first modern GCC 14 `-O1 -G0` attempt. Carve
+`0xD8 + 0x28 + 0xF0 = 0x1F0`, packed span/full SHA exact, verify green at
+312. This match resets the consecutive-park count. Evidence:
+`func-8009059c/REPORT.md`.
+
+Adjacent `func_800905C4` @ `0x80DC4` independently passes function hood via
+the direct call at `0x80090ACC`, exact callback-table word at `0x8009CBAC`,
+canonical return, and real boundaries. It is the `0x8000`/output-`+0x112`
+stream-helper sibling. The proven GCC 14 `-O1 -G0` source form matched all ten
+words on the first phrasing. Carve `0x00 + 0x28 + 0xC8 = 0xF0`, packed
+span/full SHA exact, verify green at 313. Evidence:
+`func-800905c4/REPORT.md`.
+
+Adjacent `func_800905EC` @ `0x80DEC` passes function hood via the exact-start
+callback-table word at `0x8009CBB4`, canonical return, and real boundaries.
+This corrects the pool's stale `0/0 no caller/ref` screen. It is the
+`0x2200`/output-`+0x114` stream-helper sibling. Proven GCC 14 `-O1 -G0` C
+matched all ten words on the first phrasing. Carve
+`0x00 + 0x28 + 0xA0 = 0xC8`, packed span/full SHA exact, verify green at 314.
+The Tier-3 pool count falls 98→97 and consecutive-park count stays zero.
+Evidence: `func-800905ec/REPORT.md`.
+
+Adjacent `func_80090614` @ `0x80E14` passes function hood via exact-start
+callback-table word `0x8009CBB8`, canonical return, and real boundaries,
+again correcting a stale pool `0/0` screen. It is the `0x4400`/output-`+0x116`
+halfword sibling. Proven GCC 14 `-O1 -G0` C matched all ten words first
+phrasing. Carve `0x00 + 0x28 + 0x78 = 0xA0`, packed span/full SHA exact,
+verify green at 315. Tier 3 falls 97→96; consecutive-park count remains zero.
+Evidence: `func-80090614/REPORT.md`.
+
+Adjacent `func_8009063C` @ `0x80E3C` passes function hood via exact-start
+callback-table word `0x8009CBCC`, canonical return, and real boundaries,
+correcting its stale pool `0/0` screen. Unlike the preceding halfword-output
+siblings, this helper widens the byte into a word store at `+0x100` while ORing
+`0x0100`. Explicit word-output GCC 14 `-O1 -G0` C matched all ten words first
+phrasing. Carve `0x00 + 0x28 + 0x50 = 0x78`, packed span/full SHA exact,
+verify green at 316. Tier 3 falls 96→95; consecutive parks remain zero.
+Evidence: `func-8009063c/REPORT.md`.
+
+Adjacent `func_80090664` @ `0x80E64` passes function hood via exact-start
+callback-table word `0x8009CBDC`, canonical return, and real boundaries,
+correcting its stale pool `0/0` screen. It ORs `0x0200` and widens the stream
+byte into the word slot at `+0x104`. Proven GCC 14 `-O1 -G0` C matched all ten
+words first phrasing. Carve `0x00 + 0x28 + 0x28 = 0x50`, packed span/full SHA
+exact, verify green at 317. Tier 3 falls 95→94; consecutive parks remain zero.
+Evidence: `func-80090664/REPORT.md`.
+
+Adjacent `func_8009068C` @ `0x80E8C` passes function hood via exact-start
+callback-table word `0x8009CBEC`, canonical return, and real boundaries,
+correcting its stale pool `0/0` screen. It ORs `0x0400` and widens the stream
+byte into the word slot at `+0x108`. Proven GCC 14 `-O1 -G0` C matched all ten
+words first phrasing. The remaining asm span closes with no resume:
+`0x00 + 0x28 + 0x00 = 0x28`. Packed span/full SHA exact, verify green at 318.
+Tier 3 falls 94→93; consecutive parks remain zero. Evidence:
+`func-8009068c/REPORT.md`.
+
+The next Tier-1 candidate, `func_80055FE0` @ `0x467E0`, passes function hood
+with twelve direct callers, canonical return, and real boundaries. Retail is
+an eleven-word gp-backed bitset query. Under era `-O2 -G8`, the unsigned
+phrasing canonicalizes the explicit mask test to `srlv; andi 1`; the signed
+retry changes only that instruction to `srav`. Both candidates are nine words
+and omit retail's explicit `addiu 1; sllv; and; sltu` path. It is
+`PARKED-BIT-TEST-CANONICALIZATION`; no integration/count change, consecutive
+park 1. Evidence: `func-80055fe0/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 row, `func_80079244` @ `0x69A44`, is screened without a C
+attempt. Six direct callers and canonical return prove function hood; the
+exact body is a handwritten libGTE `RTPS` wrapper containing `lwc2`, `rtps`,
+`swc2`, `cfc2`, and `mfc2`. Existing projection evidence corroborates the
+role. It moves to `SKIP-SDK-LIBRARY-COP2`; count stays 318 and consecutive
+parks stay 1. Evidence: `func-80079244/SKIP.md`.
+
+The next Tier-1 leaf, `func_8003E0D0` @ `0x2E8D0`, passes function hood via
+its exact call at `0x80019270`, canonical return, and real boundaries. Natural
+argument-relative initializer C matched all eleven words on the first era
+`-O2 -G0` phrasing, including useful load/branch/jump delay slots and the
+normalized local jump relocation. Carve `0x0F8 + 0x02C + 0x514 = 0x638`,
+packed span/full SHA exact, verify green at 319. This match resets consecutive
+parks to zero. Evidence: `func-8003e0d0/REPORT.md`.
+
+The next Tier-1 leaf, `func_80055FB4` @ `0x467B4`, passes function hood via
+its exact call at `0x80044CC4`, canonical return, and real boundaries. Natural
+gp-backed bitset-setter C matched all eleven words on the first era `-O2 -G8`
+phrasing, including normalized `D_8009D058-_gp=0x2E8` and the return-slot
+store. Carve `0x1D14 + 0x002C + 0x1EEC = 0x3C2C`, packed span/full SHA exact,
+verify green at 320. Consecutive parks remain zero. Evidence:
+`func-80055fb4/REPORT.md`.
+
+The next Tier-1 candidate, `func_80082ADC` @ `0x732DC`, passes function hood
+via exact call `0x80084618`, canonical return, and real boundaries. Retail
+retains one `D_800A5AB4` base in `$v0` across four callback-record stores.
+Both direct array stores and an explicit-local-base retry compile under era
+`-O2 -G0` to the same fourteen-word sequence with repeated `$at`
+materialization, versus retail's eleven words. It parks as
+`PARKED-SYMBOLIC-BASE-RETENTION`; count stays 320, consecutive park 1.
+Evidence: `func-80082adc/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 leaf, `func_80074478` @ `0x64C78`, passes function hood via
+the exact-start pointer construction returned by `func_800743B4` and stored
+into a callback slot by its caller, plus canonical return and real
+boundaries. The direct indexed conditional-setter phrasing matched 10/11;
+reversing the commutative comparison operands selected retail's `beq a1,v0`
+and matched all eleven words under era `-O2 -G0`. Carve
+`0x124 + 0x02C + 0x000 = 0x150`, packed span/full SHA exact, verify green at
+321. This match resets consecutive parks to zero. Evidence:
+`func-80074478/REPORT.md`.
+
+The next Tier-1 leaf, `func_800CE470` @ `0xBEC70`, passes function hood via
+exact-start callback-table word `0x800E0FD0`, canonical return, and real
+boundaries. Natural signed-byte callback C matched all eleven words on the
+first era `-O2 -G0` phrasing, including the post-store sign extension and
+the constant-setting branch delay slot. Carve
+`0x0000 + 0x002C + 0x63B4 = 0x63E0`, packed span/full SHA exact, verify
+green at 322. Tier 1 falls 44→43; consecutive parks remain zero. Evidence:
+`func-800ce470/REPORT.md`.
+
+The next Tier-1 candidate, `func_8008780C` @ `0x7800C`, passes function hood
+with three direct callers, canonical return, and real boundaries. The natural
+volatile expression gets the address form but differs in field ordering and
+store scheduling. An explicit-dataflow, nonvolatile retry reaches the exact
+twelve-word size, exact register homes, and retail `jr; sh`; its sole residual
+is GCC scheduling the independent `$a2` shift pair before retail's `$a0`
+address pair. It parks after two phrasings as
+`PARKED-INDEPENDENT-OP-SCHEDULING`; count stays 322, Tier 1 falls 43→42,
+and consecutive park becomes 1. Evidence: `func-8008780c/PARK.md`; source is
+in the labeled stash.
+
+Adjacent `func_800878C0` @ `0x780C0` independently passes function hood via
+direct caller `0x80087A48`, canonical return, and real boundaries. A grouped
+nonvolatile halfword RMW matched all twelve words on the first era `-O2 -G0`
+phrasing: the grouped incoming fields select retail's `$a2 |= $a1` dataflow,
+and the lvalue permits the exact `jr; sh` ending. Carve
+`0x00B4 + 0x0030 + 0x322C = 0x3310`, packed span/full SHA exact, verify
+green at 323. Tier 1 falls 42→41 and the match resets consecutive parks to
+zero. Evidence: `func-800878c0/REPORT.md`.
+
+Adjacent `func_8008788C` @ `0x7808C` independently passes function hood via
+three direct callers, canonical return, and real boundaries. The grouped
+nonvolatile halfword RMW matched all thirteen words first phrasing under era
+`-O2 -G0`, including retail's field-shift order, `$a2 |= $a1` DAG, and
+`jr; sh` ending. The asm span closes directly against matched `878C0`:
+`0x080 + 0x034 + 0x000 = 0x0B4`. Packed span/full SHA exact, verify green at
+324. Tier 1 falls 41→40; consecutive parks remain zero. Evidence:
+`func-8008788c/REPORT.md`.
+
+The next Tier-1 leaf, `func_800C8C4C` @ `0xB944C`, passes function hood via
+exact-start callback-table word `0x800E0848`, canonical return, and real
+boundaries. Natural signed-halfword threshold C matched all thirteen words
+on the first era `-O2 -G0` phrasing, including post-store sign extension and
+the constant-setting branch delay slot. Carve
+`0x08C + 0x034 + 0x288 = 0x348`, packed span/full SHA exact, verify green at
+325. Tier 1 falls 40→39; consecutive parks remain zero. Evidence:
+`func-800c8c4c/REPORT.md`.
+
+Adjacent callback-table twin `func_800C9A00` @ `0xBA200` passes function
+hood via exact-start word `0x800E09BC`, canonical return, and real
+boundaries. The proven signed-halfword threshold C matched all thirteen
+words first phrasing under era `-O2 -G0`. Carve
+`0x08C + 0x034 + 0x1CC = 0x28C`, packed span/full SHA exact, verify green at
+326. Tier 1 falls 39→38; consecutive parks remain zero. Evidence:
+`func-800c9a00/REPORT.md`.
+
+The third callback-table twin, `func_800CA540` @ `0xBAD40`, passes function
+hood via exact-start word `0x800E0AAC`, canonical return, and real
+boundaries. Proven signed-halfword threshold C matched all thirteen words
+first phrasing under era `-O2 -G0`. Carve
+`0x08C + 0x034 + 0x224 = 0x2E4`, packed span/full SHA exact, verify green at
+327. Tier 1 falls 38→37; consecutive parks remain zero. Evidence:
+`func-800ca540/REPORT.md`.
+
+The fourth callback-table twin, `func_800CBBBC` @ `0xBC3BC`, passes function
+hood via exact-start word `0x800E0BA8`, canonical return, and real
+boundaries. Proven signed-halfword threshold C matched all thirteen words
+first phrasing under era `-O2 -G0`. Carve
+`0x08C + 0x034 + 0x3B4 = 0x474`, packed span/full SHA exact, verify green at
+328. Tier 1 falls 37→36; consecutive parks remain zero. Evidence:
+`func-800cbbbc/REPORT.md`.
+
+The next Tier-1 leaf, `func_80077CB4` @ `0x684B4`, passes function hood via
+eleven raw direct callers, canonical return, and real boundaries. The audit
+corrects older B54I evidence: the nop at `0x80077CE8` is the return delay
+slot, so the function is fourteen words, not thirteen. An unsigned,
+early-return first phrasing selected `sltiu` and the wrong branch shape. The
+second and final era `-O2 -G0` phrasing uses a signed length and explicit
+result accumulator, matching all fourteen words after normalizing the local
+jump relocation. Carve `0x003C + 0x0038 + 0x2638 = 0x26AC`, packed span/full
+SHA exact, verify green at 329. Tier 1 falls 36→35; consecutive parks remain
+zero. Evidence: `func-80077cb4/REPORT.md`.
+
+The next Tier-1 candidate, `func_80083790` @ `0x73F90`, passes function
+hood via exact caller `0x80083738`, canonical return, and real boundaries.
+Its fourteen-word body computes two packed offset terms and adds a retained
+base in the return delay slot. The base-first phrasing matches only five
+words. An explicit offset-before-base retry recovers all load order, register
+homes, main arithmetic, and the ending, reaching 9/14; GCC's only residual is
+reassociating an independent `+4` onto the first term before computing the
+second, while retail applies it after masking the second term. It parks after
+two phrasings as `PARKED-ARITHMETIC-ASSOCIATION-SCHEDULING`; count stays 329,
+Tier 1 falls 35→34, and consecutive park becomes 1. Evidence:
+`func-80083790/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 candidate, `func_80077AC4` @ `0x682C4`, passes function
+hood via 55 raw direct callers, canonical return, and real boundaries. Its
+fifteen-word body exchanges low-24 link information between two argument
+words while preserving their high bytes. Direct C reproduces the exact
+size, memory schedule, dataflow, and return-delay store, but assigns the two
+mask constants to `$a2/$a3` opposite retail. An explicit-loaded-value and
+reversed-OR retry leaves those mask homes unchanged and also swaps the first
+two loads. It parks after two phrasings as `PARKED-MASK-CONSTANT-COLORING`;
+count stays 329, Tier 1 falls 34→33, and consecutive park becomes 2.
+Evidence: `func-80077ac4/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 leaf, `func_80077A64` @ `0x68264`, passes function hood
+via 36 raw direct callers, canonical return with a live delay slot, and real
+boundaries. Earlier B54I retail/native evidence proves the Psy-Q `GetTPage`
+five-field packing semantics and supplies the independent oracle
+`(0,1,256,480) -> 0x34`. That proven C matched all fifteen words on the first
+era `-O2 -G0` phrasing, including in-place `$a1/$a2/$a3` coloring and the
+final OR in the return delay slot. Carve
+`0x0018 + 0x003C + 0x0004 = 0x0058`, packed span/full SHA exact, verify
+green at 330. Tier 1 falls 33→32, and the match resets consecutive parks
+from two to zero. Evidence: `func-80077a64/REPORT.md`.
+
+The next Tier-1 leaf, `func_800749D8` @ `0x651D8`, passes function hood
+via four direct callers, canonical return with a live delay slot, and real
+functions immediately on both sides. Its stores prove a 20-byte display
+environment initializer; `SetDefDispEnv` is the probable Psy-Q name, still
+explicitly not string- or symbol-proven. A natural struct initializer matched
+all fifteen words on the first era `-O2 -G0` phrasing, including `$v0` base
+retention, the o32 fifth-argument load, and the final height store in the
+return delay slot. Carve `0x0268 + 0x003C + 0x0000 = 0x02A4`, packed
+span/full SHA exact, verify green at 331. The trim guard first caught a stale
+ignored asm split retaining nonzero carved bytes; regenerating from YAML made
+the same arithmetic pass without changing the carve. Tier 1 falls 32→31;
+consecutive parks remain zero. Evidence: `func-800749d8/REPORT.md`.
+
+The next Tier-1 leaf, `func_80063158` @ `0x53958`, passes function hood
+via 30 direct callers, canonical return, and real adjacent functions. It is a
+null-safe paired position updater: the two deltas update argument words
+`+0x18/+0x1C` and the proven gp accumulator pair
+`D_8009D124/D_8009D128`. Natural struct C matched all sixteen words on the
+first era `-O2 -G8` phrasing after normalizing four ordinary gp relocations,
+including the interleaved local/global schedule. Carve
+`0x0474 + 0x0040 + 0x0000 = 0x04B4`, packed span/full SHA exact, verify
+green at 332. Tier 1 falls 31→30; consecutive parks remain zero. Evidence:
+`func-80063158/REPORT.md`.
+
+The next Tier-1 candidate, `func_8005E988` @ `0x4F188`, passes function
+hood via twelve direct callers, canonical return, and real adjacent
+functions. Its sixteen-word body selects one of three 24-bit constants from
+two signed comparisons and writes the value plus its unsigned half to the
+same gp pair proven by `func_8005E968`. Natural nested selection preserves
+sixteen words but chooses an early-jump topology; an explicit less-case
+default selects the retail first branch but hoists the first constant and
+shrinks to fifteen content words. It parks after two era `-O2 -G8`
+phrasings as `PARKED-CONTROL-FLOW-CONSTANT-SCHEDULING`; count stays 332,
+Tier 1 falls 30→29, and consecutive park becomes 1. Evidence:
+`func-8005e988/PARK.md`; source is in the labeled stash.
+
+The next Tier-1 row, `func_8003F758` @ `0x2FF58`, is a real sixteen-word
+function: exact caller `0x8003F0D0`, canonical return with a live store delay
+slot, and real boundaries. Its handwritten body shifts three arguments and
+writes GTE control registers 13–15 (`RBK/GBK/BBK`) with `ctc2`, then zeroes
+nine buffer halfwords. The architectural side effects have no sanctioned
+ordinary-C intrinsic, so it is screened without an attempt as
+`SKIP-HANDWRITTEN-COP2`; no SDK routine name is asserted without provenance.
+Count stays 332, Tier 1 falls 29→28, SKIP rises 752→753, and consecutive
+parks remain 1. Evidence: `func-8003f758/SKIP.md`.
+
+The next Tier-1 leaf, `func_80063428` @ `0x53C28`, passes function hood via
+59 raw direct callers, canonical return, and real adjacent functions. It
+returns `-1` for a null record or negative words at `+0x44/+0x48`; otherwise
+it returns `field_44 + field_34 * field_48`. The natural explicit-result C
+matched all seventeen words on the first era `-O2 -G0` phrasing, including
+the default-result branch slot, load-delay nops, and `mult/mflo` allocation.
+Carve `0x024C + 0x0044 + 0x15DC = 0x186C`, packed span/full SHA exact,
+verify green at 333. Tier 1 falls 28→27 and the match resets consecutive
+parks from one to zero. Evidence: `func-80063428/REPORT.md`.
+
+The next Tier-1 candidate, `func_8006E454` @ `0x5EC54`, passes function
+hood via two direct callers, canonical return with a live delay slot, and
+real adjacent functions. Existing BTL14 evidence proves its decimal parse of
+field-name bytes 2–4. Attempt 1 exposed plain-`char` unsignedness and early
+load hoisting; attempt 2 recovered the signed `lb` opcodes, but cc1 still
+hoists byte 4 before either scaled term while retail loads it only after the
+hundreds/tens arithmetic. It parks after two era `-O2 -G0` phrasings as
+`PARKED-INDEPENDENT-LOAD-SCHEDULING`; count stays 333, Tier 1 falls 27→26,
+and consecutive park becomes 1. Evidence: `func-8006e454/PARK.md`; source
+is in the labeled stash.
+
+The next Tier-1 leaf, `func_800653B8` @ `0x55BB8`, passes function hood via
+the sole direct opcode-`0x1C` caller, canonical return, and real adjacent
+functions. PE-MBX1/2 evidence independently proves its append into the
+12-byte `D_800A3180` mailbox queue and gp-relative byte count
+`D_8009CDB4`, including the intentional absence of a full check. A natural
+aggregate-subscript C matched all eighteen words on the first era `-O2 -G8`
+phrasing after ordinary gp/HI/LO relocation normalization. Carve
+`0x0788 + 0x0048 + 0x51BC = 0x598C`, packed span/full SHA exact, verify
+green at 334. Tier 1 falls 26→25 and the match resets consecutive parks
+from one to zero. Evidence: `func-800653b8/REPORT.md`.
+
+The next Tier-1 candidate, `func_8005DBAC` @ `0x4E3AC`, passes function
+hood via eleven direct callers, canonical return with a live delay slot, and
+real adjacent functions. B28 evidence proves its `[0,98]` clamp and
+24-byte symbolic-table address result; the boundary audit corrects an older
+pc-port overcount from twenty words to nineteen. Natural expression order
+keeps the clamp in `$a0` and consumes the global first; an explicit pointer
+hoists the address into `$a1`. Both era `-O2 -G0` candidates have eighteen
+content words, while retail's initial `move v1,a0` deliberately frees `$a0`
+for the later symbolic address/load. It parks as
+`PARKED-SYMBOLIC-ADDRESS-LIFETIME-COLORING`; count stays 334, Tier 1 falls
+25→24, and consecutive park becomes 1. Evidence: `func-8005dbac/PARK.md`;
+source is in the labeled stash.

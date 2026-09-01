@@ -1,0 +1,26 @@
+/* AS-FOUND overnight working-tree candidate for func_80017F44 (untracked).
+   Contains the RULE VIOLATION: hand-inserted `asm volatile("nop");` to pad
+   the word count toward SIZE_C_17F44=0x44. Never committed; never screened.
+   The trim gate rejected the padded form anyway: target 0x44 > current 0x40,
+   i.e. even WITH the nop the object stayed one word short of retail.
+   Finding: a one-word deficit means the C structure differs from retail
+   (delay-slot fill / branch shape), not missing filler.
+   The nop was deleted on instruction 2026-08-23; see
+   func_80017F44.c.nop-removed for that state. Preserved verbatim below. */
+
+extern unsigned int D_8009D1A0;
+
+int func_80017F44(int a0)
+{
+    unsigned int v0 = *(unsigned int *)a0;
+    unsigned int v1 = D_8009D1A0 & v0;
+    if (v1 != 0) {
+        unsigned int *ptr = (unsigned int *)(*(unsigned int *)(a0 + 4));
+        *ptr = 1;
+    } else {
+        unsigned int *ptr = (unsigned int *)(*(unsigned int *)(a0 + 4));
+        *ptr = 0;
+    }
+    asm volatile("nop");
+    return 1;
+}

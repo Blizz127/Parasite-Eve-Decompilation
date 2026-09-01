@@ -1,158 +1,231 @@
-# PE-B54K-B1 — `func_80030894` fixed setup and L4 continuation
+# PE-B54K-B1 — `func_80030894` complete L4 packet group
 
-Status: **VERIFIED AND INTEGRATED ON THE NATIVE GRIND LANE**.
+Date: 2026-08-30
 
-This rung advances the native production implementation of
-`func_80030894` from the end of its L2/L3 packet nest through the complete
-bank-local fixed setup and L4 packet loop. It does not implement or infer any
-event scheduler behavior, destination token, `m0360i` route, or persistent
-story-state write.
+## Verdict
 
-## Retail identity and cut
-
-The executable used by both the oracle and the port tests is the exact Disc 1
-candidate:
+B54K-B1 translates the next complete retail unit in `func_80030894`, moving
+the production strict frontier from the end of L2/L3 to the first instruction
+of L5.
 
 ```text
-SHA-1  452fb033f2eaa4b18aa20a5bca60b8125af3a37b
-load   0x8000F800
+IMPLEMENTED=0x80030AC4..0x80030C9C exclusive
+WORDS=118
+BYTES=0x1D8
+WINDOW_SHA256=79fa2086406d087e2781025634ec533d50e262f3543f5916eedcdd383da8f0f6
+NEW_STRICT_FRONTIER=func_80030894_L4_cut
+FIRST_EXCLUDED=0x80030C9C move s6,zero
+PLANTED_STATE=NO
+NEW_DEPENDENCIES=NONE
 ```
 
-The newly translated continuation is:
+Together with B54K-A, the native prefix is now:
 
 ```text
-VA range       [0x80030AC4, 0x80030C9C)
-file range     [0x000212C4, 0x0002149C)
-size           0x1D8 bytes / 118 words
-window SHA-256 79fa2086406d087e2781025634ec533d50e262f3543f5916eedcdd383da8f0f6
-prior word     0x80030AC0  addu s3,zero,zero   (L2 back-edge delay slot)
-first word     0x80030AC4  addu a0,zero,zero   (fixed-setup argument 0)
-last word      0x80030C98  andi v0,s6,0x00FF  (L4 back-edge delay slot)
-next word      0x80030C9C  addu s6,zero,zero   (first L5 instruction)
+0x80030894..0x80030C9C = 0x408 bytes = 258 words translated
+0x80030C9C..0x800314E4 = 0x848 bytes = 530 words remaining
+258 + 530 = 788 words (full function)
 ```
 
-The full function remains the B54J-proven real function
-`[0x80030894,0x800314E4)`, called by the sole direct `jal` at `0x8006B0AC`.
-This rung is an internal continuation cut, not a new function claim.
+## Boundary and control-flow proof
 
-The implemented prefix is now exactly:
+The predecessor and successor words are real instructions in the same proven
+788-word function:
 
 ```text
-[0x80030894, 0x80030C9C) = 0x408 bytes / 258 words
+0x80030ABC  1440FFDA  bnez v0,0x80030A28
+0x80030AC0  00009821  move s3,zero             # prior delay slot
+0x80030AC4  00002021  move a0,zero              # first included
+0x80030AC8  00002821  move a1,zero
+...
+0x80030C98  32C200FF  andi v0,s6,0xff           # L4 delay slot
+0x80030C9C  0000B021  move s6,zero              # first excluded / L5 counter init
+0x80030CA0  93A30018  lbu v1,24(sp)             # following L5 bank load
+0x80030CA4  3C12800A  lui s2,0x800a
 ```
 
-The named strict boundary moves from `func_80030894_L2L3_cut` to
-`func_80030894_L4_cut`. The stop remains explicit and unresolved; no host
-continuation is invented beyond the retail cut.
+There is one branch in the window:
 
-## Call census
+```text
+0x80030C94  bnez v0,0x80030C44
+```
 
-The independent oracle decodes every word in the new retail window and finds
-exactly seven `jal` instructions, in this order:
+Its bound is the literal `sltiu v0,v0,4` at `0x80030C90`; the delay slot
+re-masks the byte counter. Thus the back-edge owns exactly four iterations
+and closes before the new cut. There is no forward branch or alternate exit.
 
-| Call PC | Callee | Proven role in this window |
+The re-zero belongs to L5, not L4: L4's induction variable is incremented at
+`0x80030C60`, tested at `0x80030C90`, and consumed by its delay slot at
+`0x80030C98`. The next instruction initializes that same register for L5;
+L5 then immediately loads its bank and derives its own five-item address
+chain. The B54K-B2 oracle independently records `0x80030C9C` as the L5
+predecessor/counter initialization. This correction changes the historical
+B1 span from 119 to 118 words; it does not change production C.
+
+The seven `jal` sites, in retail order, are:
+
+| Call PC | Target | Proven role |
 | --- | --- | --- |
-| `0x80030AD0` | `func_80077A64` | build tile tpage from `(0,0,0,0)` |
-| `0x80030AF4` | `func_80037140` | initialize/wrap the fixed tile packet |
-| `0x80030B18` | `func_80077B04` | enable semi-transparency on its tail |
-| `0x80030B30` | `func_80077C44` | initialize the fixed tile/G4 record header |
-| `0x80030B78` | `func_80077BC4` | replace that header with the retail G4 header |
-| `0x80030B94` | `func_800370DC` | initialize the fixed sprite record |
-| `0x80030C58` | `func_800370DC` | initialize each of four L4 sprite packets |
+| `0x80030AD0` | `func_80077A64` | `GetTPage(0,0,0,0)` |
+| `0x80030AF4` | `func_80037140` | compound tile wrapper |
+| `0x80030B18` | `func_80077B04` | set tile semitrans bit |
+| `0x80030B30` | `func_80077C44` | SetTile header |
+| `0x80030B78` | `func_80077BC4` | SetPolyG4 header |
+| `0x80030B94` | `func_800370DC` | standalone sprite wrapper |
+| `0x80030C58` | `func_800370DC` | four-entry sprite-loop wrapper |
 
-All seven callees were already real native implementations before this rung.
-No new SDK collapse, callback binding, or unresolved provider was added.
+Every target was already native at B54I/GPU1. There is no `jalr`, hardware
+operation, callback, scheduler action, upload, or new boundary in the window.
 
-## Decoded state and address geometry
+## Retail address geometry
 
-The outer bank byte is still zero in the translated prefix. The C retains the
-retail bank formulas rather than flattening the addresses:
+All address scales come directly from the instruction sequence and use the
+outer bank byte at `24(sp)`. This rung executes bank 0 because the enclosing
+two-bank loop increment remains in the untranslated epilogue.
 
-| Object | Retail address formula | Bank-0 written extent |
-| --- | --- | --- |
-| fixed tile + append tail | `0x8009E068 + bank*24` | `[0x8009E068,0x8009E080)` |
-| fixed G4 record | `0x8009E098 + bank*16` | `[0x8009E098,0x8009E0A8)` |
-| two state triplets | `0x800B00E8 + bank*36` | `[0x800B00E8,0x800B010C)` |
-| fixed sprite record | `0x800B6920 + bank*28` | `[0x800B6920,0x800B693C)` |
-| L4 packet `slot` | `0x8009E0F0 + bank*112 + slot*28` | `[0x8009E0F0,0x8009E160)` |
+| Storage | Retail base | Bank stride | Construction |
+| --- | ---: | ---: | --- |
+| compound tile | `0x8009E068` | 24 | `(bank*2+bank)<<3` |
+| standalone tile | `0x8009E098` | 16 | `bank<<4` |
+| PolyG4 | `0x800B00E8` | 36 | `(bank*8+bank)<<2` |
+| standalone sprite | `0x800B6920` | 28 | `(bank*8-bank)<<2` |
+| L4 four-sprite array | `0x8009E0F0` | 112 | `(bank*8-bank)<<4` |
+| each L4 sprite | array base | 28 | `(index*8-index)<<2` |
 
-For L4, `slot` is the masked byte counter and the retail test is `slot < 4`.
-Thus `4 * 28 = 112 = 0x70` bytes, closing exactly at `0x8009E160`.
-The implementation writes the retail CLUT `0x7E13` and dimensions `6 x 10`
-to each packet. A sentinel at `0x8009E160` proves there is no fifth packet.
-`0x8009E1D0`, the base first materialized by L5, remains untouched.
+The L4 array bound and strides are checked instruction-exact by the oracle.
 
-The fixed records reproduce the retail constants, including RGB `30/30/30`,
-G4 RGB `1D/3E/32`, state bytes `00/46/82` and `9F/FF/F9`, sprite UV
-`C8/E0`, dimensions `4 x 8`, and the shared CLUT value.
+## Final bank-0 state
 
-## Focused native contract
+The translated order follows retail: wrapper/header calls first, then the
+literal byte/halfword fields, then the four-item loop.
 
-Two new tests exercise the continuation:
+- `0x8009E068`: compound tile head, draw-mode word `0xE1000200`, tail RGB
+  `30 30 30`, code `0x62`.
+- `0x8009E098`: standalone tile, header `len=3/code=0x60`, RGB
+  `1D 3E 32`, dimensions `0x38 x 3`.
+- `0x800B00E8`: PolyG4, header `len=8/code=0x38`, with the two proven
+  `00 46 82 / 9F FF F9` color pairs.
+- `0x800B6920`: compound standalone sprite with draw mode `0xE1000234`,
+  RGB `9F FF F9`, UV-like bytes `C8 E0`, CLUT `0x7E13`, dimensions `4 x 8`.
+- `0x8009E0F0 + index*28`, index 0..3: compound sprites with draw mode
+  `0xE1000234`, CLUT `0x7E13`, dimensions `6 x 10`.
 
-1. `B54KB1_30894_fixed_setup_and_l4` verifies every fixed packet/state
-   field, all four L4 packets, the exact L4/L5 extent, the named cut, and the
-   unresolved-boundary stop reason.
-2. `B54KB1_30894_dirty_repeat_deterministic` poisons the entire L4 extent,
-   executes twice, compares the complete 0x70-byte result, and preserves an
-   out-of-range sentinel. This is the negative/replay control.
+No semantic asset names are assigned; the packet layout and values are proven,
+but their higher-level UI role is not.
 
-The older B54K-A direct and live-through-`func_8006AD40` tests remain green,
-as does the production write-footprint guard after extending its whitelist
-only by the five retail-proven ranges above.
+## Independent oracle
 
-Focused output from the full run:
+`pc_port/tools/b54kb1_30894_l4_oracle.py` imports no production source. It
+reads the exact retail executable, verifies the full-window hash, 27 critical
+words, boundaries, branch and call census, then applies the decoded operations
+to its own zero-backed byte model. The model stores explicit little-endian
+bytes and implements the packet wrappers independently.
+
+Raw output:
+
+```text
+OK window: 118 words / 0x1d8 bytes, SHA-256 exact
+OK boundaries/scales/constants: 27 instruction-exact words
+OK control flow: seven native jal sites; one four-item back-edge
+model_unique_written_bytes=121
+model_write_map_sha256=812440af2f0f6c0778421e177ce747d616420bd91678e2a4d6ede3b49b2a1874
+OK independent bank-0 model: tile/PolyG4/sprites; L5 untouched
+```
+
+The older full-RAM `6AD40_prefix_boundary_args` canary was extended with the
+same **sparse** 121-byte predicate. It does not whitelist whole tables or the
+next group. Its focused result is:
+
+```text
+Results: 933 run, 1 passed, 0 failed, 932 skipped
+CANARY_RC=0
+```
+
+## Focused and full gates
+
+The B54K family retains both B54K-A tests and adds one B1 test covering every
+packet class, all four loop entries, bank-1 negative storage, L5 negative
+storage, and the named stop:
 
 ```text
 TEST B54KA_30894_prologue_record_l2l3... PASS
 TEST B54KA_6AD40_live_path_reaches_l2l3... PASS
-TEST B54KB1_30894_fixed_setup_and_l4... PASS
-TEST B54KB1_30894_dirty_repeat_deterministic... PASS
+TEST B54KB1_30894_l4_group... PASS
+
+Results: 933 run, 3 passed, 0 failed, 930 skipped
+B54K_RC=0
 ```
 
-## Independent oracle
-
-`pc_port/tools/b54kb1_30894_l4_oracle.py` imports no production code. It
-requires the exact executable SHA-1, hashes all 118 words, decodes the full
-`jal` census, checks 39 selected address/store/control words, proves the L4
-back edge and bound, and checks the first excluded L5 word.
+Full normal suite with the real Disc 1 path configured:
 
 ```text
-  OK retail window: 118 words, SHA-256 exact
-  OK call census: seven jal sites in retail order
-  OK selected literal words: 39
-  OK L4 loop: head 0x80030C44, bound 4, cut before L5
-
-B54K-B1 oracle: 4 check groups passed.
+Results: 933 run, 933 passed, 0 failed, 0 skipped
+FULL_RC=0
 ```
 
-## Full gates and sanitizer audit
-
-Normal native suite:
+Fresh `RelWithDebInfo` ASan/UBSan build and full suite:
 
 ```text
-Results: 930 run, 930 passed, 0 failed, 0 skipped
+Results: 933 run, 933 passed, 0 failed, 0 skipped
+SAN_RC=0
 ```
 
-The fresh ASan/UBSan run initially exposed a pre-existing signed-left-shift
-defect in GTE translation math (`pe_gte.c`, negative translation scaled by
-12 bits). The hardware operation is signed multiplication by 4096, so commit
-`469f13c` replaced both duplicated shifts with exact 64-bit multiplication.
-The normal suite stayed 930/930 and the rebuilt sanitizer suite then reported:
+## Production route and visible artifact
+
+Strict real-disc execution now fails at exactly the new first excluded unit:
 
 ```text
-Results: 930 run, 930 passed, 0 failed, 0 skipped
-sanitizer_diagnostics=0
+STRICT_RC=1
+[DISC] boot executable loaded into guest RAM
+[TRACE 0000] native_executable_start
+[TRACE 0000] call_func_8001220C
+FATAL: strict-stubs — first unresolved BOOTSTRAP_RET provider: func_80030894_L4_cut
+       called from: func_80030894
 ```
 
-## Negative-control verdict
+Normal real-disc execution reaches the same named cut, then the existing outer
+cut, and exits zero:
 
 ```text
-SEMANTIC_IMPLEMENTATION=func_80030894_through_L4
-PRODUCTION_REACHABILITY=blocked_at_func_80030894_L4_cut
-SCHEDULER_PROVENANCE=unchanged_NEEDS_ARTIFACT
-M0360I_SPECIAL_CASE=absent
-DESTINATION_TOKEN_PLANT=absent
-PERSIST_BIT_PLANT=absent
-L5_EXECUTION=absent
+[TRACE 0001] native_executable_start
+[TRACE 0002] call_func_8001220C
+[STUB:BOOTSTRAP_RET] func_80030894_L4_cut (first invocation)
+[STUB:BOOTSTRAP_RET] func_8006AD40_post30894_cut (first invocation)
+[TRACE 0003] func_8001220C_returned
+[TRACE 0004] shutdown_begin
+[VRAM-RAW] /tmp/pe-b54kb1.vram (1024x512 RGB555/STP little-endian)
+[VRAM-SCREENSHOT] /tmp/pe-b54kb1.ppm (1024x512 RGB555 diagnostic)
+[FB] vsyncs=0 drawsyncs=0 presents=1 mask=0 main_iters=1
+[HOST] stop_reason=unresolved-boundary
+[TRACE 0005] shutdown_end
+LIVE_RC=0
 ```
+
+L4 constructs guest packet state and does not issue a GPU upload. The VIS1
+artifacts therefore remain byte-identical, which is the expected negative
+effect:
+
+```text
+raw_sha256=47388fd370b957a60a85f295094e946aeba160fdc8bf1c89ab7038f2972fd072
+ppm_sha256=871f3d14e187449d675e655a0f2bb51d6519eaaff8b4d1335b69ec0c17296cce
+nonzero_words=2063
+nonzero_bounds=256,64..735,456
+decode=PASS all 524288 words / 1572864 RGB bytes
+VRAM_VS_VIS1=IDENTICAL
+PPM_VS_VIS1=IDENTICAL
+```
+
+A sanitizer production run exited zero, generated raw/PPM artifacts identical
+to the normal build, and passed the independent all-word VIS1 decoder:
+
+```text
+SAN_LIVE_RC=0
+RAW_NORMAL_SAN=IDENTICAL
+PPM_NORMAL_SAN=IDENTICAL
+decode=PASS all 524288 words / 1572864 RGB bytes
+```
+
+The legacy 320x240 host framebuffer remains black; B54K-B1 does not claim a
+display renderer. No guest state, VRAM, destination, event, or battle state is
+planted. The next semantic unit starts at retail `0x80030C9C` (L5 counter
+initialization), followed by its bank load at `0x80030CA0`.

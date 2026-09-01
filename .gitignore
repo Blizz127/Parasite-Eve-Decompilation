@@ -20,6 +20,8 @@ assets/*
 # Build/generated output
 build/
 build-san/
+!tools/build/
+!tools/build/*.py
 asm/
 linkers/
 expected/
@@ -60,6 +62,7 @@ tools/era/maspsx/maspsx/*
 tools/era/maspsx/tests/*
 !tools/era/maspsx/tests/test_fill_store_delay_slot.py
 !tools/era/maspsx/tests/test_three_word_symbol_store.py
+!tools/era/maspsx/tests/test_dispatch_fold.py
 build-port/
 pc_port/build/
 pc_port/build-san/

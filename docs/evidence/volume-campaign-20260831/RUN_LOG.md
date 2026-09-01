@@ -1,0 +1,73 @@
+# Tier-2 shape campaign run log — 2026-08-31
+
+Baseline: clean `main` at `81ab3fe`, 380 exact matching-C leaves.
+
+| rung | target | class | result | count | note |
+|---:|---|---|---|---:|---|
+| PHASE-0 | 175 active Tier-2 rows | partition | PASS | 380 | W=10, S=1, B=121, C=39, SKIP=4; work order W -> S -> B -> C |
+| VOLUME-151 | `func_8007FC64` (`0x70464`, 9 words) | W | MATCHED phrasing 1 | 381 | direct-call hood; SDK `CD_sync(1, result)` wrapper; era `-O2 -G0`; 9/9 object, packed span, exact SHA, verifier all pass |
+| VOLUME-152 | `func_8007FC88` (`0x70488`, 9 words) | W | MATCHED phrasing 1 | 382 | independently proven direct caller; SDK `CD_ready(1, result)` twin; exact 9/9; consumes final 0x24 asm span; exact SHA and verifier pass |
+| VOLUME-153 | `func_800C7D00` (`0xB8500`, 11 words) | W | MATCHED phrasing 1 | 383 | exact-start callback-table hood at `0xD1074`; six-argument forward to matched `func_800C2AF0`, then zero; exact 11/11 object and packed span; carve `0xE18 + 0x2C + 0x98 = 0xEDC`; exact SHA and verifier pass |
+| VOLUME-154 | `func_800C8E44` (`0xB9644`, 11 words) | W | MATCHED phrasing 1 | 384 | independently proven exact-start callback-table hood at `0xD11DC`; same six-argument forwarding semantics; exact 11/11; carve `0x1C4 + 0x2C + 0x98 = 0x288`; packed span, exact SHA, and verifier pass |
+| VOLUME-155 | `func_800C9B3C` (`0xBA33C`, 11 words) | W | MATCHED phrasing 1 | 385 | independent exact-start table hood at `0xD12C4`; six-argument forward to matched `func_800C2AF0`; exact 11/11; carve `0x108 + 0x2C + 0x98 = 0x1CC`; packed span, exact SHA, verifier pass |
+| VOLUME-156 | `func_800CA6D4` (`0xBAED4`, 11 words) | W | MATCHED phrasing 1 | 386 | independent exact-start table hood at `0xD13D4`; six-argument forward to matched `func_800C2AF0`; exact 11/11; carve `0x160 + 0x2C + 0x98 = 0x224`; packed span, exact SHA, verifier pass |
+| VOLUME-157 | `func_800CBEE0` (`0xBC6E0`, 11 words) | W | MATCHED phrasing 1 | 387 | independent exact-start table hood at `0xD1558`; six-argument forward to matched `func_800C2AF0`; exact 11/11; carve `0x2F0 + 0x2C + 0x98 = 0x3B4`; packed span, exact SHA, verifier pass |
+| VOLUME-158 | `func_800CCEBC` (`0xBD6BC`, 11 words) | W | MATCHED phrasing 1 | 388 | independent exact-start table hood at `0xD16A4`; six-argument forward to matched `func_800C2AF0`; exact 11/11; carve `0xEF8 + 0x2C + 0x98 = 0xFBC`; packed span, exact SHA, verifier pass |
+| VOLUME-159 | `func_800CD89C` (`0xBE09C`, 11 words) | W | MATCHED phrasing 1 | 389 | independent exact-start table hood at `0xD1758`; six-argument forward to matched `func_800C2AF0`; exact 11/11; carve `0x174 + 0x2C + 0x98 = 0x238`; packed span, exact SHA, verifier pass |
+| VOLUME-160 | `func_800CE118` (`0xBE918`, 11 words) | W | MATCHED phrasing 1 | 390 | independent exact-start table hood at `0xD17E8`; final W-row, six-argument forward to matched `func_800C2AF0`; exact 11/11; carve `0x1CC + 0x2C + 0x98 = 0x290`; packed span, exact SHA, verifier pass |
+| VOLUME-161 | `func_80039970` (`0x2A170`, 11 words) | S | MATCHED phrasing 1 | 391 | five direct callers; branchless reset of three byte states and one pointer state; era `-O2 -G0`; exact 11/11; carve `0xBFC + 0x2C + 0x2C3C = 0x3864`; packed span, exact SHA, verifier pass |
+| VOLUME-162 | `func_80051060` (`0x41860`, 9 words) | B | MATCHED phrasing 1 | 392 | exact-start callback registration by `func_80050204`; forwards gp-backed `D_8009CF58` to `func_80053648`; era `-O2 -G8`; exact 9/9; carve `0x340 + 0x24 = 0x364`; packed span, exact SHA, verifier pass |
+| VOLUME-163 | `func_80085DC4` (`0x765C4`, 9 words) | B | MATCHED phrasing 1 | 393 | direct caller `func_80085D84`; forwards `(9, value)` to `func_80073CC4`; alignment nops remain asm; era `-O2 -G0`; exact 9/9; carve `0x680 + 0x24 + 0x12F8 = 0x199C`; packed span, exact SHA, verifier pass |
+| VOLUME-164 | `func_800471BC` (`0x379BC`, 10 words) | B | MATCHED phrasing 1 | 394 | two independent exact-start callback stores; registers `func_80047040` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x38D0 + 0x28 + 0x4D24 = 0x861C`; packed span, exact SHA, verifier pass |
+| VOLUME-165 | `func_8004732C` (`0x37B2C`, 10 words) | B | MATCHED phrasing 1 | 395 | independent exact-start callback store; registers `func_80050280` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x148 + 0x28 + 0x4BB4 = 0x4D24`; packed span, exact SHA, verifier pass |
+| VOLUME-166 | `func_800474A8` (`0x37CA8`, 10 words) | B | MATCHED phrasing 1 | 396 | independent exact-start callback store; registers `func_80050308` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x154 + 0x28 + 0x4A38 = 0x4BB4`; packed span, exact SHA, verifier pass |
+| VOLUME-167 | `func_8004B534` (`0x3BD34`, 10 words) | B | MATCHED phrasing 1 | 397 | independent exact-start callback store; registers `func_80050438` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x4064 + 0x28 + 0x9AC = 0x4A38`; packed span, exact SHA, verifier pass |
+| VOLUME-168 | `func_8004B55C` (`0x3BD5C`, 10 words) | B | MATCHED phrasing 1 | 398 | independently hood-proven adjacent wrapper; registers `func_800504BC` through `func_800638D8`; era `-O2 -G0`; exact 10/10; consumes asm start and carves `0x28 + 0x984 = 0x9AC`; packed span, exact SHA, verifier pass |
+| VOLUME-169 | `func_8004EF30` (`0x3F730`, 10 words) | B | MATCHED phrasing 1 | 399 | exact-start callback-field store at `0x391C4`; registers `func_80050708` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x5B4 + 0x28 + 0x4F0 = 0xACC`; packed span, exact SHA, verifier pass |
+| VOLUME-170 | `func_8004F2E4` (`0x3FAE4`, 10 words) | B | MATCHED phrasing 1 | 400 | independently proven exact-start callback store at `0x3FA90`; registers `func_80050728` through `func_800638D8`; era `-O2 -G0`; exact 10/10; carve `0x38C + 0x28 + 0x13C = 0x4F0`; packed span, exact SHA, verifier pass |
+| VOLUME-171 | `func_8004F950` (`0x40150`, 10 words) | B | MATCHED phrasing 1 | 401 | independently hood-proven by callback-field store at `0x3E344` (among multiple refs); registers `func_800509A8` through `func_800638D8`; exact 10/10; carve `0x118 + 0x28 + 0x6A8 = 0x7E8`; packed span, exact SHA, verifier pass |
+| VOLUME-172 | `func_8004F978` (`0x40178`, 10 words) | B | MATCHED phrasing 1 | 402 | independently hood-proven by exact-start callback store at `0x3A200`; registers `func_800509E0` through `func_800638D8`; exact 10/10; consumes asm head `0x28 + 0x680 = 0x6A8`; packed span, exact SHA, verifier pass |
+| VOLUME-173 | `func_8004FF30` (`0x40730`, 10 words) | B | MATCHED phrasing 1 | 403 | exact-start callback store at `0x3B5F4`; registers `func_80050C50` through `func_800638D8`; exact 10/10; carve `0x590 + 0x28 + 0xC8 = 0x680`; packed span, exact SHA, verifier pass |
+| VOLUME-174 | `func_8004FF58` (`0x40758`, 10 words) | B | MATCHED phrasing 1 | 404 | independent exact-start callback store at `0x3B78C`; registers `func_80050C70` through `func_800638D8`; exact 10/10; consumes asm head `0x28 + 0xA0 = 0xC8`; packed span, exact SHA, verifier pass |
+| VOLUME-175 | `func_8004FF80` (`0x40780`, 10 words) | B | MATCHED phrasing 1 | 405 | independent exact-start callback store at `0x3B88C`; registers `func_80050CB4` through `func_800638D8`; exact 10/10; consumes asm head `0x28 + 0x78 = 0xA0`; packed span, exact SHA, verifier pass |
+| VOLUME-176 | `func_8004FFA8` (`0x407A8`, 10 words) | B | MATCHED phrasing 1 | 406 | one of several exact-start callback stores is at `0x38914`; registers `func_80050CF8` through `func_800638D8`; exact 10/10; consumes asm head `0x28 + 0x50 = 0x78`; packed span, exact SHA, verifier pass |
+| VOLUME-177 | `func_8004FFD0` (`0x407D0`, 10 words) | B | MATCHED phrasing 1 | 407 | independently hood-proven by exact-start callback store at `0x35D00`; registers `func_80050D18` through `func_800638D8`; exact 10/10; splits final asm pair `0x28 + 0x28 = 0x50`; packed span, exact SHA, verifier pass |
+| VOLUME-178 | `func_8004FFF8` (`0x407F8`, 10 words) | B | MATCHED phrasing 1 | 408 | exact-start callback store at `0x3C6A4`; registers `func_80050D20` through `func_800638D8`; exact 10/10; consumes complete final `0x28` asm span; packed span through existing C successor, exact SHA, verifier pass |
+| VOLUME-179 | `func_80050038` (`0x40838`, 10 words) | B | MATCHED phrasing 1 | 409 | exact-start callback store at `0x38C1C`; registers `func_80050DC0` through `func_800638D8`; exact 10/10; splits two-wrapper span `0x28 + 0x28 = 0x50`; packed span, exact SHA, verifier pass |
+| VOLUME-180 | `func_80050060` (`0x40860`, 10 words) | B | MATCHED phrasing 1 | 410 | independent exact-start callback store at `0x3948C`; registers `func_80050E70` through `func_800638D8`; exact 10/10; consumes complete remaining `0x28` asm span; packed span through existing C successor, exact SHA, verifier pass |
+| VOLUME-181 | `func_80050204` (`0x40A04`, 10 words) | B | MATCHED phrasing 1 | 411 | exact-start callback store at `0x3FD28`; registers already-matched `func_80051060` through `func_800638D8`; exact 10/10; carve `0x15C + 0x28 + 0x34 = 0x1B8`; packed span, exact SHA, verifier pass |
+| PHASE-2 | campaign closeout | gate | PASS | 411 | zero-generated-state split; exact Docker rebuild; verifier green; count-bearing docs reconciled; everything committed and pushed |
+
+## Final campaign totals
+
+| Phase-0 class | matched | parked | remaining attemptable |
+|---|---:|---:|---:|
+| W | 10 | 0 | 0 |
+| S | 1 | 0 | 0 |
+| B | 20 | 0 | 101 |
+| C | 0 | 0 | 39 |
+| **Total** | **31** | **0** | **140** |
+
+The 31 attempts all matched on phrasing 1; phrasing 2 was never needed. None
+parked. Four Phase-0 `SKIP` rows remain suppressed and were not attempted, so
+the full unprocessed partition is `B=101, C=39, SKIP=4` (144 rows).
+
+Phase 2 moved the existing ignored generated outputs aside and regenerated the
+split with zero cached/generated inputs. That clean split exposed one obsolete
+`86C4.s` build prerequisite and six obsolete verifier asm expectations that
+stale generated files had masked. Commit `69285cb` replaced them with their
+registered C inputs. The final gate using `pe-mipsel-img:latest` reports:
+
+```text
+Split complete: c: 411 split, 0 cached
+Compile:  OK (411 registered C leaves; per-leaf flags from the build manifest)
+Compare:  EXACT SHA-1 MATCH
+candidate SHA-1: 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+scripts/verify_us.sh: Split verification (Phase 4E): OK
+yaml matching-C count: 411
+```
+
+This campaign is closed at Phase 2. The next run begins with class-B
+`func_800504F4` (`0x40CF4`, 10 words) and must independently repeat function
+hood, Stage-0 typing, whole-object comparison, carve geometry, exact SHA,
+packed-span comparison, verifier, one-leaf commit, and push.

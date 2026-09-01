@@ -27,7 +27,7 @@ were false: nothing was ported before B54I.
 | func_80077B34 | 10 | 0x68334 | SetShadeTex: code byte p+7, set/clear bit 0 |
 | func_80077C04 | 5+1 | 0x68404 | setSprt header: p[3]=4, p[7]=0x64; **delay-slot store at 0x80077C14 is part of the function** |
 | func_80077C84 | 10+1 | 0x68484 | DR draw-mode: p[3]=1; `word=(0xE1000000\|(a2?0x200:0))\|((a3&0x9FF)\|(a1?0x400:0))`; sw at p+4 lands in the jr delay slot (0x80077CAC); returns word |
-| func_80077CB4 | 13 | 0x684B4 | length-budget append: `len=head[3]+tail[3]+1`; `len<17` → head[3]=len, `*(u32*)tail=0`, ret 0; else ret −1, **no stores** |
+| func_80077CB4 | 14 | 0x684B4 | length-budget append: `len=head[3]+tail[3]+1`; `len<17` → head[3]=len, `*(u32*)tail=0`, ret 0; else ret −1, **no stores**; the nop at 0x80077CE8 is the `jr ra` delay slot and belongs to the function |
 | func_8005DADC | 7+1 | 0x4E2DC | `*(u32*)0x800A8030 + 0x800A8028 + (a0<<3)`; final add is the jr delay slot (0x8005DAF8) |
 | func_800370DC | 25 | 0x278DC | add/sort wrapper (sprite twin): 77C84(p,0,1,mode) → 77C04(p+8) → 77CB4(p,p+8) → fail: 719E4(−1) |
 | func_80037140 | 25 | 0x27940 | add/sort wrapper (tile twin): 77C84(p,0,1,mode) → **77C44** (SetTile) → 77CB4 → fail: 719E4(−1) |

@@ -67,13 +67,23 @@ wrapper. The following stream-control initializer is also translated without
 assigning an unproven SDK name. Callback registration remains separate from
 DMA delivery.
 
+## libSPU voice-register helpers (hardware-signature identified)
+
+The `func_8008770C`–`func_800877BC` cluster writes the SPU voice/control MMIO
+block at `0x1F801C00`–`0x1F801D9A`. The paired helpers at `8770C`, `87728`,
+`87744`, `87760`, and `8777C` write 32-bit values as two 16-bit stores to the
+SPU control registers; nearby indexed helpers address per-voice registers at
+`0x1F801C00 + voice*0x10`. This identifies the cluster as libSPU voice-control
+support (including `SpuSetKey`-adjacent operations) by hardware layout. Exact
+PsyQ routine names are not yet string- or symbol-proven.
+
 ## Still to map
 
 These families are redirectable but have not yet been identified completely by
 string cross-reference or signature matching:
 
 - libGTE (`RotTransPers`, matrix operations, and related geometry helpers)
-- libSPU
+- remaining libSPU names outside the hardware-signature cluster above
 - pad and SIO
 - interrupt and root-counter support
 

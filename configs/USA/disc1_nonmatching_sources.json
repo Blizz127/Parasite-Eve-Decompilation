@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "src/func_8001220C.c": {
+      "disposition": "accepted-residual",
+      "evidence": "docs/acceptance/MATCHING_RESIDUAL_POLICY.md"
+    },
+    "src/func_8001F814.c": {
+      "disposition": "nonmatching-native-cut",
+      "evidence": "docs/evidence/pe-btl99-1f814-post-hp/REPORT.md"
+    },
+    "src/func_800292EC.c": {
+      "disposition": "rejected-tail-draft",
+      "evidence": "docs/evidence/pe-btl139-func-800293F4/REPORT.md"
+    },
+    "src/func_800698D4.c": {
+      "disposition": "accepted-residual",
+      "evidence": "docs/acceptance/MATCHING_RESIDUAL_POLICY.md"
+    },
+    "src/func_8006A9E4.c": {
+      "disposition": "in-progress-checkpoint",
+      "evidence": "docs/ai_context/ACTIVE_HANDOFF.md"
+    },
+    "src/func_800725DC.c": {
+      "disposition": "accepted-residual",
+      "evidence": "docs/acceptance/MATCHING_RESIDUAL_POLICY.md"
+    }
+  }
+}

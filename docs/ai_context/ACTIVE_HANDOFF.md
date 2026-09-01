@@ -56,6 +56,17 @@ still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
 
+## Main-lane YAML build authority (merged 2026-09-01)
+
+`configs/USA/disc1.yaml` owns Disc-1 span edges, source/object mapping, trim
+size, link order, verifier entry, and the published exact count; compiler-only
+exceptions live in `configs/USA/disc1_build_profiles.json`. The build and
+verifier scripts are generic drivers with no leaf lists, and tracked extra
+function C files require explicit nonmatching dispositions. Generated status
+documents provide the current matching and native metrics. The preceding
+main-lane B54K-B1..B6 narrative remains historical evidence; later B54K and
+field-runtime work in this handoff supersedes its old strict frontier.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits

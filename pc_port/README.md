@@ -2,6 +2,11 @@
 
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
 
+**Metrics authority:** the merged tree generates and cross-checks current
+native status from the implementation, CMake source graph, test inventory,
+and evidence in `docs/generated/NATIVE_PORT_STATUS.md`. Disc-1 matching-build
+status is derived from `configs/USA/disc1.yaml`.
+
 **Current milestone:** B54K-Q translates the first 149 words of the naturally
 loaded `func_801909B4` overlay. It copies four graphics environments,
 publishes six arena pointers, executes three translated state owners and
@@ -12,6 +17,13 @@ Normal and fresh ASan/UBSan suites pass 962/962 with zero diagnostics.
 Scheduler provenance remains independently artifact-bound: this rung adds no
 destination, `m0360i`, or persistence special case. Full proof is in
 `docs/evidence/pe-b54kq-1909b4-moveimage-prefix/REPORT.md`.
+
+**Historical retained milestone:** B54K-B6 completed the L9 packet group in
+`func_80030894` and independently proved its 97-byte bank-0 write map. VIS1
+exposes the same authoritative 1024x512 RGB555/STP VRAM as a read-only raw or
+PPM diagnostic; it is not a 320x240 rendered-display claim. Evidence remains
+at `docs/evidence/pe-b54kb6-30894-l9/REPORT.md` and
+`docs/evidence/pe-vis1-vram-visible-state/REPORT.md`.
 
 **Earlier retained milestone:** B53I-D admits one separate later checkpoint
 for the second LoadImage DMA token created by B53I-C. The exact 32-word

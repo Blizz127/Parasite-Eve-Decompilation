@@ -1,4 +1,4 @@
-# Shim Inventory — Phase 6E-B53I-D
+# Shim Inventory — Phase 6E-B54K-B6
 
 Bootstrap stubs invoked in the `func_8001220C` (main) → first-clear path.
 All stubs are explicitly classified. No anonymous empty stubs.
@@ -53,6 +53,28 @@ wires its inert VSync query, B53D reads raw DMA2
 CHCR/GPUSTAT, and B53E drives its bounded GP1/GP0/DMA2 issue APIs. B53E adds
 one inert image-load preflight query; the hardware authority still owns no
 guest worker identity, RECT pointer, ring, or callback state.
+
+`platform/host_vram.[ch]` is a VIS1 host diagnostic over that same authority,
+not a second VRAM and not a retail-function translation. It can copy every
+word to RGB888 or write full raw/PPM artifacts, using only
+`PE_GPU_ReadVRAM`. It exposes no guest-memory write, GP0/GP1 write, DMA,
+callback, scheduler, or presentation operation. The diagnostic therefore
+cannot create the visible pixels it reports and cannot advance execution.
+
+`game/boot/func_80030894_port.c` is a translated retail prefix through
+exclusive address `0x800311EC` (598 of 788 words). B54K-A covers the
+prologue, bank record, and L2/L3 40-sprite array. B54K-B1 adds the complete
+119-word L4 packet group: compound/standalone tiles, PolyG4, standalone
+sprite, and four-entry sprite array. B54K-B2 adds the complete 32-word,
+five-entry L5 compound-sprite array. B54K-B3 adds the 147-word L6 group: two
+PolyG4 packets, three shaded compound sprites, and three font-byte-colored
+tiles. B54K-B4 adds L7's compound sprite, standalone sprite pair, PolyF3,
+and three-entry compound-sprite array. B54K-B5 adds L8's ten-entry compound
+sprite loop. B54K-B6 adds L9's standalone compound sprite and four-entry
+compound-sprite array. All reached calls use only the
+translated B54I/GPU1 helper set. The
+first excluded instruction begins a distinct packet group; strict execution
+names that boundary `func_80030894_L9_cut`.
 
 `platform/pe_irq.[ch]` is the B53I-B1 single native authority for 16-bit
 I_STAT (`0x1F801070`) and I_MASK (`0x1F801074`). I_STAT writes use W0C

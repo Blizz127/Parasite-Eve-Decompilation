@@ -76,4 +76,4 @@ t="$(mktemp -d)"; printf 'int f(void){return 0x7F7F7F;}\n' >"$t/x.c"
 if grep -q 'ori' "$t/x.s"; then echo "OK  era emits lui;ori (matches retail)"; else
     echo "ERROR: era cc1 did not emit ori — wrong compiler?" >&2; exit 1; fi
 rm -rf "$t"
-echo "Era toolchain ready. build_us.sh will use it for ERA_LEAVES."
+echo "Era toolchain ready. The YAML-derived build plan will use it for era-profile leaves."

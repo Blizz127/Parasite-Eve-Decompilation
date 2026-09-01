@@ -1,0 +1,6 @@
+func_80077BD8 — linked object body (objdump -drz)
+
+00000000 <func_80077BD8>:
+   0:  00000000  nop
+   4:  00000000  nop
+   8:  00000000  nop
