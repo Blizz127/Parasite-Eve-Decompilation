@@ -668,6 +668,14 @@ respectively write a selected source bit to the destination slot and set that
 bit in the source word using the shared three-pointer argument layout. The
 full rebuild, public verifier, and packed-span checks are exact at 515 leaves.
 
+## Matching leaves — func_80017928, func_80017948, and func_80017968 (2026-09-01)
+
+`func_80017928`, `func_80017948`, and `func_80017968` are now registered
+eight-word exact C leaves. They read the byte at `D_8009D2F0+0xD`, write that
+byte from an indirect input slot, and read the unsigned halfword at `+0x24`,
+respectively. The full rebuild, public verifier, and packed-span checks are
+exact at 518 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
