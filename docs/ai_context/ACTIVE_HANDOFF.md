@@ -42,18 +42,30 @@ one of these lines:
 
 The reusable CMake target `pe_field_runtime` now produces
 `pc_port/build/libpe_field_runtime.a` from the 200 current translated/runtime
-translation units. `parasite-eve-port`, the 991-case native suite, and a
+translation units. `parasite-eve-port`, the 992-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-now stops at `func_801924F8_80192750_cut`, immediately after the authenticated
-libpress setup and 64-record pool initialization return.
+now stops at `func_801924F8_80192770_cut`, immediately after the authenticated
+libpress, record-pool, and stream-control initialization return.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AJ — movie stream-control initialization (2026-08-31)
+
+The complete 33-word `func_8007C304` initializer and 7-word
+`func_8007C544` setter are translated. Production supplies
+`(1, signed record[+6], -1, 0, 0)`; the setter publishes the signed range and
+the initializer resets only the proven callback/option/auxiliary state. No
+stream frame or callback is consumed. Signed-value, option-bit, callback,
+auxiliary, and halfword-width controls pass; the native suite is 992/992 and
+strict production stops at the first following CD-ready call,
+`func_801924F8_80192770_cut`. Evidence:
+`docs/evidence/pe-b54kaj-stream-control/REPORT.md`.
 
 ## PE-B54K-AI — movie record-pool initializer (2026-08-31)
 

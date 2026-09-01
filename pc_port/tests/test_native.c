@@ -1607,7 +1607,15 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     ASSERT(PE_LoadU32(PE_DMA_CallbackSlotAddress(1u)) == 0x80191DC8u &&
            PE_LoadU32(0x800C0DC8u) == PE_LoadU32(0x801D0DFCu) &&
            PE_LoadU32(0x800C20C4u) == 0x40u &&
-           CountOrderLog("func_801924F8_80192750_cut") == 1 &&
+           PE_LoadU32(0x800C0DC0u) == 1u &&
+           PE_LoadU32(0x800B6918u) ==
+               (uint32_t)(int32_t)(int16_t)PE_LoadU16(
+                   PE_LoadU32(0x801D11ACu) + 6u) &&
+           PE_LoadU32(0x800C0DBCu) == 0xFFFFFFFFu &&
+           PE_LoadU32(0x800B0CC8u) == 0u &&
+           PE_LoadU32(0x800A801Cu) == 1u &&
+           PE_LoadU32(0x800B0CCCu) == 0u &&
+           CountOrderLog("func_801924F8_80192770_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "DecDCToutCallback registration or following cut differs");
 
@@ -18204,7 +18212,7 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192750_cut") == 1 &&
+           CountOrderLog("func_801924F8_80192770_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18242,7 +18250,7 @@ static void test_B54KAE_movie_state_setup(void)
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_80192750_cut") == 1 &&
+           CountOrderLog("func_801924F8_80192770_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
@@ -18428,6 +18436,47 @@ static void test_B54KAI_record_pool_initializer(void)
     ASSERT(PE_LoadU32(base) == 0x12345678u &&
            PE_LoadU32(0x800C20C4u) == 0u,
            "zero-count initializer touched a record");
+    PASS();
+}
+
+static void test_B54KAJ_stream_control_initializer(void)
+{
+    TEST("B54KAJ_stream_control_initializer");
+    ResetTestState();
+    PE_StoreU32(0x800C0DC0u, 0xA5A5A5A5u);
+    PE_StoreU32(0x800B6918u, 0xA5A5A5A5u);
+    PE_StoreU32(0x800C0DBCu, 0xA5A5A5A5u);
+    PE_StoreU32(0x800C0DB8u, 0xA5A5A5A5u);
+    PE_StoreU32(0x800B0CC8u, 0xA5A5A5A5u);
+    PE_StoreU32(0x800A801Cu, 0xA5A5A5A5u);
+    PE_StoreU32(0x800B8620u, 0xA5A5A5A5u);
+    PE_StoreU32(0x800B6914u, 0xA5A5A5A5u);
+    PE_StoreU32(0x800A8018u, 0xA5A55A5Au);
+    PE_StoreU32(0x800A5D54u, 0xA5A5A5A5u);
+    PE_StoreU32(0x800B0CCCu, 0xA5A5A5A5u);
+
+    func_8007C304(2u, -7, -9, 0xF1234567u, 0x89ABCDEFu);
+    ASSERT(PE_LoadU32(0x800C0DC0u) == 1u &&
+           PE_LoadU32(0x800B6918u) == 0xFFFFFFF9u &&
+           PE_LoadU32(0x800C0DBCu) == 0xFFFFFFF7u,
+           "stream setter arguments or constant mode differ");
+    ASSERT(PE_LoadU32(0x800C0DB8u) == 0u &&
+           PE_LoadU32(0x800B0CC8u) == 0xF1234567u &&
+           PE_LoadU32(0x800A801Cu) == 0u &&
+           PE_LoadU32(0x800B8620u) == 0u &&
+           PE_LoadU32(0x800B6914u) == 0u &&
+           PE_LoadU16(0x800A8018u) == 0u &&
+           PE_LoadU16(0x800A801Au) == 0xA5A5u &&
+           PE_LoadU32(0x800A5D54u) == 0u &&
+           PE_LoadU32(0x800B0CCCu) == 0x89ABCDEFu,
+           "stream reset globals, low-bit option, or widths differ");
+
+    func_8007C304(3u, 4, 5, 0u, 0u);
+    ASSERT(PE_LoadU32(0x800C0DC0u) == 1u &&
+           PE_LoadU32(0x800A801Cu) == 1u &&
+           PE_LoadU32(0x800B6918u) == 4u &&
+           PE_LoadU32(0x800C0DBCu) == 5u,
+           "stream option did not retain only mode bit zero");
     PASS();
 }
 
@@ -33621,7 +33670,7 @@ int main(void)
     test_6E9A0_dispatch_arg1();
     test_6E9A0_dispatch_arg3();
 
-    /* Phase 6E-A batch 3 / B54K-AI: real-disc foundation (47 tests) */
+    /* Phase 6E-A batch 3 / B54K-AJ: real-disc foundation (48 tests) */
     test_disc_open_rejects_bad_size();
     test_disc_open_rejects_bad_sync();
     test_disc_open_rejects_mode1();
@@ -33652,6 +33701,7 @@ int main(void)
     test_B54KAG_mdec_table_upload();
     test_B54KAH_dec_dct_out_callback_registration();
     test_B54KAI_record_pool_initializer();
+    test_B54KAJ_stream_control_initializer();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();

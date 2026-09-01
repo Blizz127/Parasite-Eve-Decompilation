@@ -38,6 +38,7 @@ The production CLI is the authoritative worked example.
 This interface packages only behavior already present and tested. In
 particular it does not provide a generic scene scheduler, fabricate m0360i,
 write `persist[0] |= 4`, or claim a complete Day 1 field runtime. The current
-strict frontier is `func_801924F8_80192750_cut`, immediately after the
+strict frontier is `func_801924F8_80192770_cut`, immediately after the
 authenticated libpress MDEC reset, table submissions, channel-1
-`DecDCToutCallback` registration, and 64-record pool initialization return.
+`DecDCToutCallback` registration, 64-record pool initialization, and
+stream-control setup return.

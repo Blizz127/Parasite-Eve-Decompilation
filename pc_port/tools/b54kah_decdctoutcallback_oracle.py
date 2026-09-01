@@ -99,7 +99,7 @@ def main() -> None:
     caller_source = (root / "pc_port/game/boot/func_801924F8_port.c").read_text()
     require("func_80073CF4(1u, callback)" in wrapper_source and
             "func_8010C0D8(0x80191DC8u)" in caller_source and
-            "func_801924F8_80192750_cut" in caller_source and
+            "func_801924F8_80192770_cut" in caller_source and
             "m0360i" not in wrapper_source + caller_source and
             "0xA8066048" not in wrapper_source + caller_source,
             "native callback-registration scope")
@@ -116,7 +116,7 @@ def main() -> None:
             "registration and no-delivery controls")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_801924F8_80192750_cut" in strict and
+    require("func_801924F8_80192770_cut" in strict and
             "called from: func_801924F8" in strict,
             "strict path did not reach the post-registration cut")
     print("  OK runtime: DMA slot 1 only; DICR enabled; no callback delivery")

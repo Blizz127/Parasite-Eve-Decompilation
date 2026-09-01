@@ -55,3 +55,40 @@ void func_8007A214(pe_addr_t record_base, uint32_t record_count)
     PE_StoreU32(GA_RECORD_COUNT, record_count);
     func_8007A244();
 }
+
+/*
+ * Stream-control initializer [0x8007C304,0x8007C388), 33 words,
+ * SHA-256 b36aa720216a101d55e1f1fc01fdb4de5d469616649d35efb6e3637cc71992f2.
+ * Its setter [0x8007C544,0x8007C560), 7 words, SHA-256
+ * 0b85dee972b3ff9e4c01682f71ae2e5c63ed9c55d0934f20911104b6fb66f3db.
+ */
+#define GA_STREAM_MODE       0x800C0DC0u
+#define GA_STREAM_START      0x800B6918u
+#define GA_STREAM_END        0x800C0DBCu
+#define GA_STREAM_ACTIVE     0x800C0DB8u
+#define GA_STREAM_CALLBACK   0x800B0CC8u
+#define GA_STREAM_OPTION     0x800A801Cu
+#define GA_STREAM_STATE_A    0x800B8620u
+#define GA_STREAM_STATE_B    0x800B6914u
+#define GA_STREAM_AUXILIARY  0x800B0CCCu
+
+static void func_8007C544(uint32_t mode, int32_t start, int32_t end)
+{
+    PE_StoreU32(GA_STREAM_MODE, mode);
+    PE_StoreU32(GA_STREAM_START, (uint32_t)start);
+    PE_StoreU32(GA_STREAM_END, (uint32_t)end);
+}
+
+void func_8007C304(uint32_t mode, int32_t start,
+                   int32_t end, pe_addr_t callback, uint32_t auxiliary)
+{
+    func_8007C544(1u, start, end);
+    PE_StoreU32(GA_STREAM_ACTIVE, 0u);
+    PE_StoreU32(GA_STREAM_CALLBACK, (uint32_t)callback);
+    PE_StoreU32(GA_STREAM_OPTION, mode & 1u);
+    PE_StoreU32(GA_STREAM_STATE_A, 0u);
+    PE_StoreU32(GA_STREAM_STATE_B, 0u);
+    PE_StoreU16(GA_STATE_8018, 0u);
+    PE_StoreU32(GA_STATE_5D54, 0u);
+    PE_StoreU32(GA_STREAM_AUXILIARY, auxiliary);
+}

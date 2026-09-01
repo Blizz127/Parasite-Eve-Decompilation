@@ -122,7 +122,7 @@ def main() -> None:
     require("RECORD_SHIFT         5u" in source and
             "PE_StoreU32(record, 0u)" in source and
             "func_8007A214(PE_LoadU32(0x801D0DFCu), 0x40u)" in caller_source and
-            "func_801924F8_80192750_cut" in caller_source and
+            "func_801924F8_80192770_cut" in caller_source and
             "ClearOTagR" not in source and
             "m0360i" not in source + caller_source and
             "0xA8066048" not in source + caller_source,
@@ -140,11 +140,11 @@ def main() -> None:
             "record footprint, widths, and zero-count controls")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_801924F8_80192750_cut" in strict and
+    require("func_801924F8_80192770_cut" in strict and
             "called from: func_801924F8" in strict,
             "strict path did not reach the post-initializer cut")
     print("  OK runtime: bounded footprint and zero-count negative control")
-    print("  OK production: strict frontier is 0x80192750")
+    print("  OK production: strict path continues through stream-control setup")
     print("\nB54K-AI record-pool oracle: PASS.")
 
 
