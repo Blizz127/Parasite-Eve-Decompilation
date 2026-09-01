@@ -196,6 +196,13 @@ halfword index, scales it by four, reads an offset at that base location, and
 returns base plus the offset. The full rebuild, public verifier, and all
 packed-span checks are exact at 430 leaves.
 
+## Matching leaf — func_80073E10 (2026-09-01)
+
+`func_80073E10` is now a registered six-word exact C leaf. It returns the old
+unsigned halfword from `*D_80095674` and stores its input to that same address
+in the return delay slot. The full rebuild, public verifier, and all
+packed-span checks are exact at 431 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

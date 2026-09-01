@@ -787,7 +787,9 @@ segments:
       # Phase 5BX: C leaf func_80073DF8 — VRAM 0x80073DF8, size 0x18.
       # Halfword pointer deref on D_80095674 (lui/lw/nop/lhu0/jr/nop).
       - [0x645F8, c, func_80073DF8]
-      - [0x64610, asm]
+      # Unsigned-halfword read-and-replace helper: era -O2 -G0.
+      - [0x64610, c, func_80073E10]
+      - [0x64628, asm]
       # Phase 5CX: C leaf func_80074330 — file 0x64B30, size 0x24.
       - [0x64B30, c, func_80074330]
       - [0x64B54, asm]
