@@ -80,6 +80,16 @@ added. The next rung is a generic first-sector event contract with the exact
 completion-selection rule. Evidence:
 `docs/evidence/pe-b54kan-cdlreads-delivery-audit/REPORT.md`.
 
+## PE-B54K-AO — stream completion selector (2026-08-31)
+
+The executable/PE.IMG direct-writer census proves production
+`D_800C0DB8 == 0`. That value makes the CD-handler tail skip its optional
+direct call to `func_8007C214`; `D_800B89F4` remains one and suppresses CD
+re-entry until the separately registered DMA3 callback publishes status 2,
+notifies the consumer, and clears it. The next implementation contract can
+therefore target the proven deferred-DMA production path. Evidence:
+`docs/evidence/pe-b54kao-stream-completion-selector/REPORT.md`.
+
 ## PE-B54K-AL — blocking CdlSetloc arm (2026-08-31)
 
 The complete 26-word blocking command wrapper and the executable's own
