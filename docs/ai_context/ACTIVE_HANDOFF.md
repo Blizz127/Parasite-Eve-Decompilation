@@ -173,6 +173,13 @@ leaves.
 full rebuild, public verifier, and all packed-span checks are exact at 425
 leaves.
 
+## Matching leaf — func_8005421C (2026-09-01)
+
+`func_8005421C` is now a registered nine-word exact C leaf. It passes its
+input minus one to `func_8005DB44` and returns byte 6 of the resulting record.
+The full rebuild, public verifier, and all packed-span checks are exact at 426
+leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits
