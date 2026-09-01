@@ -634,6 +634,9 @@ segments:
       # Global-offset byte-table getter: era -O2 -G0.
       - [0x4E428, c, func_8005DC28]
       - [0x4E44C, asm]
+      # Global word plus record-base helper: era -O2 -G0.
+      - [0x4E670, c, func_8005DE70]
+      - [0x4E688, asm]
       - [0x4E914, c, func_8005E114]
       - [0x4E920, c, func_8005E120]
       - [0x4E92C, asm]

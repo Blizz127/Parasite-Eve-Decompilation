@@ -165,6 +165,14 @@ field offset (`0x18` and `0x20`, respectively). Explicit `$v0` address and
 full rebuild, public verifier, and all packed-span checks are exact at 424
 leaves.
 
+## Matching leaf — func_8005DE70 (2026-09-01)
+
+`func_8005DE70` is now a registered six-word exact C leaf. It loads
+`D_800A8044` and adds that record-base address minus `0x1C`; the explicit
+`$v0` address and `$v1` value lifetimes preserve retail materialization. The
+full rebuild, public verifier, and all packed-span checks are exact at 425
+leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits
