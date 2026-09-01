@@ -618,6 +618,13 @@ signed second halfword through the `$v0` load/store path into
 signed-load choice. The full rebuild, public verifier, and packed-span checks
 are exact at 504 leaves.
 
+## Matching leaf — func_80017D18 (2026-09-01)
+
+`func_80017D18` is now a registered nine-word exact C leaf. It clears the
+low three bits of `D_800BCF88` and sets bit 7; pinning the global address in
+`$v0` retains the retail address/value register sequence. The full rebuild,
+public verifier, and packed-span checks are exact at 505 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
