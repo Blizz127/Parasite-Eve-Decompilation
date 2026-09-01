@@ -131,8 +131,8 @@ def main() -> None:
     reached_reset_or_later = (
         ("func_8010C0FC" in strict and
          "called from: func_8010BE3C" in strict) or
-        ("func_801924F8_801927A0_cut" in strict and
-         "called from: func_801924F8" in strict)
+        ("func_80081314_func_8007F0C8_cut" in strict and
+         "called from: func_80081314" in strict)
     )
     require(reached_reset_or_later,
             "strict path did not reach the authenticated MDEC reset")

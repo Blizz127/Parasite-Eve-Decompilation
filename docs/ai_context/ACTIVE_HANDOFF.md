@@ -41,19 +41,31 @@ one of these lines:
 ## Native field-runtime library boundary (2026-08-31)
 
 The reusable CMake target `pe_field_runtime` now produces
-`pc_port/build/libpe_field_runtime.a` from the 200 current translated/runtime
-translation units. `parasite-eve-port`, the 993-case native suite, and a
+`pc_port/build/libpe_field_runtime.a` from the 201 current translated/runtime
+translation units. `parasite-eve-port`, the 994-case native suite, and a
 standalone external-consumer smoke test all link the archive; CLI-only
 `port_main.c` and `host_window.c` remain outside it. Normal and fresh
 ASan/UBSan CTest runs pass both consumers, and real-disc strict execution
-now stops at `func_801924F8_801927A0_cut`, after the authenticated libpress,
-record-pool, stream-control, CD idle-wait, and blocking CdlSetloc sequence.
+now stops at `func_80081314_func_8007F0C8_cut`, after the authenticated
+libpress, record-pool, stream-control, CD idle-wait, blocking CdlSetloc, and
+CdlReadS callback-registration sequence.
 
 This is a verified product/build boundary, not a semantic-completeness claim:
 there is still no complete Day 1 field runtime and scheduler provenance is
 still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
+
+## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
+
+The 30-word production prefix of `func_80081314` now applies both mode bits
+and registers exact guest callbacks `0x8007C214` (DMA channel 3) and
+`0x800813E8` (CD callback exchange). The executable names command `0x1B`
+`CdlReadS`; its 212-word low-level provider builds Pause/Setmode/Setloc/ReadS
+queue records and remains untranslated. Registration invokes no callback.
+The suite is 994/994 and strict production stops before queue issue at
+`func_80081314_func_8007F0C8_cut`. Evidence:
+`docs/evidence/pe-b54kam-read-registration/REPORT.md`.
 
 ## PE-B54K-AL — blocking CdlSetloc arm (2026-08-31)
 

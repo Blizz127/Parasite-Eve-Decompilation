@@ -116,8 +116,8 @@ def main() -> None:
             "registration and no-delivery controls")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_801924F8_801927A0_cut" in strict and
-            "called from: func_801924F8" in strict,
+    require("func_80081314_func_8007F0C8_cut" in strict and
+            "called from: func_80081314" in strict,
             "strict path did not reach the post-registration cut")
     print("  OK runtime: DMA slot 1 only; DICR enabled; no callback delivery")
     print("  OK production: strict path continues through the later record-pool initializer")

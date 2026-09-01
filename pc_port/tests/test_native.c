@@ -1617,7 +1617,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x800B0CCCu) == 0u &&
            PE_LoadU32(0x8009B574u) == 1u &&
            PE_LoadU32(0x800A3608u) == 0u &&
-           CountOrderLog("func_801924F8_801927A0_cut") == 1 &&
+           CountOrderLog("func_80081314_func_8007F0C8_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "DecDCToutCallback registration or following cut differs");
 
@@ -18214,7 +18214,7 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_801927A0_cut") == 1 &&
+           CountOrderLog("func_80081314_func_8007F0C8_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18252,7 +18252,7 @@ static void test_B54KAE_movie_state_setup(void)
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_801924F8_801927A0_cut") == 1 &&
+           CountOrderLog("func_80081314_func_8007F0C8_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
@@ -18521,6 +18521,38 @@ static void test_B54KAL_blocking_setloc_arm(void)
            PE_Cd_GetSetlocRaw() == 0u,
            "invalid BCD location was accepted");
     FxFree(&fx);
+    PASS();
+}
+
+static void test_B54KAM_read_registration_prefix(void)
+{
+    const pe_addr_t loc = 0x801F1000u;
+
+    TEST("B54KAM_read_registration_prefix");
+    ResetTestState();
+    PE_StoreU32(0x800A8020u, 0xA5A5A5A5u);
+    PE_StoreU32(0x800B8AB4u, 0x12345678u);
+    ASSERT(func_80081314(loc, 0x1E0u) == 0 &&
+           PE_Port_ShouldStop() &&
+           CountOrderLog("func_80081314_func_8007F0C8_cut") == 1,
+           "read setup did not stop at the low-level command boundary");
+    ASSERT(PE_LoadU32(0x800A8020u) == 0u &&
+           PE_LoadU32(PE_DMA_CallbackSlotAddress(3u)) == 0x8007C214u &&
+           PE_LoadU32(0x800B8AB4u) == 0x800813E8u &&
+           PE_GPU_ReadDICR() == 0x00880000u,
+           "mode branch or callback registrations differ");
+    ASSERT(CountOrderLog("func_80074520_dma_indirect_call") == 0,
+           "callback registration fabricated DMA delivery");
+
+    ResetTestState();
+    PE_StoreU32(0x800A8020u, 0u);
+    ASSERT(func_80081314(loc, 0x100u) == 0 &&
+           PE_LoadU32(0x800A8020u) == 1u,
+           "mode bit 0x20 false branch differs");
+    PE_StoreU32(0x800B8AB4u, 0x89ABCDEFu);
+    ASSERT(func_800824C8(0x10203040u) == 0x89ABCDEFu &&
+           PE_LoadU32(0x800B8AB4u) == 0x10203040u,
+           "callback exchange did not return/store full guest identities");
     PASS();
 }
 
@@ -33745,6 +33777,7 @@ int main(void)
     test_B54KAI_record_pool_initializer();
     test_B54KAJ_stream_control_initializer();
     test_B54KAL_blocking_setloc_arm();
+    test_B54KAM_read_registration_prefix();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();

@@ -133,8 +133,8 @@ def main() -> None:
                 f"focused {test_filter} contract")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_801924F8_801927A0_cut" in strict and
-            "called from: func_801924F8" in strict,
+    require("func_80081314_func_8007F0C8_cut" in strict and
+            "called from: func_80081314" in strict,
             "strict post-reset caller frontier")
     print("  OK runtime: real tables plus synthetic and invalid-mode controls")
     print("  OK production: reset returns; strict path continues through callback registration")

@@ -152,6 +152,9 @@ int  func_8007F7A8(void);            /* getter D_8009B590 */
 int  func_80080C48(pe_addr_t fp);    /* CdPosToInt: BCD mm/ss/ff @fp → LBA */
 int  func_80080D5C(int command, pe_addr_t param, pe_addr_t result);
 uint32_t PE_Cd_GetSetlocRaw(void);    /* host telemetry: last proven CdlLOC */
+pe_addr_t func_800824C8(pe_addr_t callback);
+pe_addr_t func_800824F0(pe_addr_t callback);
+int  func_80081314(pe_addr_t location, uint32_t mode);
 int  func_80082314(void);            /* PVD verify; result word D_800B28F8 */
 int  func_80081414(pe_addr_t fp, const char *name); /* DsSearchFile */
 int  func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int sectors);
