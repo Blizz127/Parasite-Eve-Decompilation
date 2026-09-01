@@ -1413,7 +1413,9 @@ segments:
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: BC7C4 prefix 0xEF8, C 0x2C, resume BD6E8.s 0x98.
       - [0xBD6BC, c, func_800CCEBC]
-      - [0xBD6E8, asm]
+      # Phase 5EV: fixed-buffer dispatch wrapper.
+      - [0xBD6E8, c, func_800CCEE8]
+      - [0xBD710, asm]
       - [0xBD780, c, func_800CCF80]
       # Volume campaign 3: return-zero callback. Prior BD790 asm:
       # C 0x8 + resume 0x344 (= 0xBDADC - 0xBD798) = 0x34C.

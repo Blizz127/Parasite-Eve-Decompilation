@@ -378,6 +378,11 @@ All rebuild and verifier checks are exact at 467 leaves.
 `func_800CBF0C` is the matching fixed-buffer sibling using `D_800E0D08`.
 All rebuild and verifier checks are exact at 468 leaves.
 
+## Matching leaf — func_800CCEE8 (2026-09-01)
+
+`func_800CCEE8` is the matching fixed-buffer sibling using `D_800E0E60`.
+All rebuild and verifier checks are exact at 469 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
