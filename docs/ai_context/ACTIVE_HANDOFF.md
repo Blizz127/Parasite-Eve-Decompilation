@@ -960,6 +960,15 @@ middle argument, and returns `1`. Explicit locals retain retail's `$v0`/`$v1`
 argument-load order and the zeroed `$a1` call delay slot; full rebuild, public
 verifier, and packed-span checks are exact at 557 leaves.
 
+## Matching leaf — func_80018894 (2026-09-01)
+
+`func_80018894` is now a registered 12-word exact C leaf. It follows the same
+two-stage descriptor load sequence as its adjacent sibling, forwarding the
+payload pointers to `func_8006F820` with a one-valued middle argument and
+returning `1`. Explicit first/second locals preserve the retail `$v1` cursor
+and `$v0` payload intermediary; full rebuild, public verifier, and packed-span
+checks are exact at 558 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

@@ -160,7 +160,8 @@ segments:
       - [0x8F54, c, func_80018754]
       - [0x8F74, asm]
       - [0x9064, c, func_80018864]
-      - [0x9094, asm]
+      - [0x9094, c, func_80018894]
+      - [0x90C4, asm]
       # Phase 5EP: global record dispatch and true return.
       - [0x9154, c, func_80018954]
       - [0x917C, asm]
