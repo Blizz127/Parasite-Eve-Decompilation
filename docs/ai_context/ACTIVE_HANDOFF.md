@@ -895,6 +895,14 @@ fixed `D_800BE9A0` work buffer through `func_800844E4`, then calls
 call delay slots; full rebuild, public verifier, and packed-span checks are
 exact at 550 leaves.
 
+## Matching leaf — func_80077C84 (2026-09-01)
+
+`func_80077C84` is now a registered 11-word exact C leaf. It writes a GPU
+draw-mode command packet, combining the `arg2` and `arg1` flags with the
+masked `arg3` payload. Hard-register locals for the two independent command
+words preserve the retail `$v1`/`$v0` schedule; full rebuild, public
+verifier, and packed-span checks are exact at 551 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
