@@ -804,6 +804,14 @@ exact at 536 leaves.
 preserves its GP-relative pointer load and retail `addu` return-zero form. The
 full rebuild and packed-span checks are exact at 537 leaves.
 
+## Matching leaf — func_800172E0 (2026-09-01)
+
+`func_800172E0` is now a registered seven-word exact C leaf. It reads an
+unsigned halfword through its argument pointer, stores it as a word at
+`D_8009D300 + 0x10`, and returns `0`. The Era `-O2 -G8` profile preserves the
+GP-relative state-pointer load; full rebuild and packed-span checks are exact
+at 538 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
