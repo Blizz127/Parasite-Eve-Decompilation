@@ -338,6 +338,13 @@ byte-typed first parameter and second word parameter to `func_8007EE84`, with
 two zero trailing fields. The full rebuild, public verifier, and all packed-span
 checks are exact at 461 leaves.
 
+## Matching leaf — func_80017820 (2026-09-01)
+
+`func_80017820` is now a registered eleven-word exact C leaf. It double-derefs
+a pointer to obtain a signed halfword, calls `func_8003746C`, and returns one.
+The full rebuild, public verifier, and all packed-span checks are exact at 462
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

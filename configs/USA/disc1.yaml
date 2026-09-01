@@ -72,6 +72,9 @@ segments:
       # 0x80012850, file 0x3050, size 0x3D0. Resume generated asm at 0x3420.
       - [0x3050, c, func_80012850]
       - [0x3420, asm]
+      # Phase 5EO: signed-halfword double-deref call and true return.
+      - [0x8020, c, func_80017820]
+      - [0x804C, asm]
       # Phase 5AK: C leaf func_80017E9C — VRAM 0x80017E9C, size 0x8.
       # File span 0x869C–0x86A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).
