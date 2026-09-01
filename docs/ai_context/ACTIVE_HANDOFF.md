@@ -466,6 +466,13 @@ in `D_8009D2E8`; the compiler naturally reproduces retail's `$v0` load and
 `$at`-addressed store. The full rebuild, public verifier, and packed-span
 checks are exact at 482 leaves.
 
+## Matching leaf — func_80019748 (2026-09-01)
+
+`func_80019748` is now a registered eight-word exact C leaf. It clears bit 2
+in `D_8009D2E8`, retaining retail's `$v0` global value and `$at` store
+address. The full rebuild, public verifier, and packed-span checks are exact
+at 483 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
