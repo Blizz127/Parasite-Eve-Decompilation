@@ -898,8 +898,10 @@ segments:
       # Phase 5EF: signed state/count exchange; blez/slti prove int.
       - [0x6ABEC, c, func_8007A3EC]
       # Tier-2 continuation: CdReady forwarding wrapper func_8007A488.
-      # Former 0x6AC00 asm span: prefix 0x88, C 0x20, closes at 0x6ACA8.
+      # Former 0x6AC00 asm span: prefix 0x68, C 0x20, C 0x20, closes at 0x6ACA8.
       - [0x6AC00, asm]
+      # Phase 5EF: direct func_8007B010 forwarding wrapper.
+      - [0x6AC68, c, func_8007A468]
       - [0x6AC88, c, func_8007A488]
       # Phase 5EF: int state exchanges (zero/nonzero reader evidence).
       - [0x6ACA8, c, func_8007A4A8]
