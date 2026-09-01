@@ -282,6 +282,13 @@ leaves.
 full rebuild, public verifier, and all packed-span checks are exact at 451
 leaves.
 
+## Matching leaf — func_8003E91C (2026-09-01)
+
+`func_8003E91C` is now a registered ten-word exact C leaf. It calls
+`func_80070D6C` followed by `func_80036F7C` through a minimal shared frame.
+The full rebuild, public verifier, and all packed-span checks are exact at 452
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
