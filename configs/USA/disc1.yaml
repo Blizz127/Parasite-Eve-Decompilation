@@ -838,6 +838,9 @@ segments:
       # Pointer double-deref on D_80095854 (lui/lw/nop/lw0/jr/nop).
       - [0x66B3C, c, func_8007633C]
       - [0x66B54, asm]
+      # Phase 5EK: four-argument forwarding wrapper with a zero third field.
+      - [0x67410, c, func_80076C10]
+      - [0x67434, asm]
       # Phase 5DA: C leaf func_80077A28 — file 0x68228, size 0x24.
       - [0x68228, c, func_80077A28]
       - [0x6824C, asm]

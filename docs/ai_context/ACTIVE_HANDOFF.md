@@ -317,6 +317,13 @@ leaves. Each obtains a handle with `func_80062A34(1, constant)` and immediately
 dispatches it through `func_80062F1C`; their constants are 19 and 39. The full
 rebuild, public verifier, and all packed-span checks are exact at 458 leaves.
 
+## Matching leaf — func_80076C10 (2026-09-01)
+
+`func_80076C10` is now a registered nine-word exact C leaf. It forwards its
+three arguments to `func_80076C34` as `(arg0, arg1, 0, arg2)`, including the
+retail `$a3` move and zeroed delay-slot argument. The full rebuild, public
+verifier, and all packed-span checks are exact at 459 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
