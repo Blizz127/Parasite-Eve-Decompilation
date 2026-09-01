@@ -820,6 +820,13 @@ destination pointer, and returns `1`. Era `-O2 -G8` preserves its
 GP-relative load and retail return form; full rebuild and packed-span checks
 are exact at 539 leaves.
 
+## Matching leaf — func_80019154 (2026-09-01)
+
+`func_80019154` is now a registered seven-word exact C leaf. It copies the
+global state value `D_8009D28C` through the destination pointer supplied in
+its argument and returns `1`. The full rebuild and packed-span checks are
+exact at 540 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
