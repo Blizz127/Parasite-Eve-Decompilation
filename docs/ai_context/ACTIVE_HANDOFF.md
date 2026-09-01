@@ -697,6 +697,13 @@ at 521 leaves.
 the high halfword at `D_800E2248+4` equals `0x0101`. The full rebuild, public
 verifier, and packed-span checks are exact at 522 leaves.
 
+## Matching leaf — func_8008C70C (2026-09-01)
+
+`func_8008C70C` is now a registered five-word exact C leaf. It stores the
+second input word as a halfword at `D_8009D2C8+0x56`, retaining the retail
+return-delay-slot store. The full rebuild, public verifier, and packed-span
+checks are exact at 523 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
