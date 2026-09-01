@@ -903,6 +903,14 @@ masked `arg3` payload. Hard-register locals for the two independent command
 words preserve the retail `$v1`/`$v0` schedule; full rebuild, public
 verifier, and packed-span checks are exact at 551 leaves.
 
+## Matching leaf — func_80017D9C (2026-09-01)
+
+`func_80017D9C` is now a registered nine-word exact C leaf. It sets bit
+`0x40` in the current state's flags field at `D_8009D2F0 + 0x98`, then returns
+success. The established `$v1` state-pointer form preserves both retail load
+delays and the return delay slot; full rebuild, public verifier, and packed
+span checks are exact at 552 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
