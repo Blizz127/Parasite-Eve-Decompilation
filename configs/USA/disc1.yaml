@@ -955,7 +955,9 @@ segments:
       # jr delay slot. Era -O2 -G0; no arguments or $gp references.
       # Mid-6FF88 carve: prefix 0x20, C 0x20, resume 6FFC8.s 0x3F8.
       - [0x6FFA8, c, func_8007F7A8]
-      - [0x6FFC8, asm]
+      # Phase 5EF: unsigned-byte forwarding wrapper around func_8007FC08.
+      - [0x6FFC8, c, func_8007F7C8]
+      - [0x6FFE8, asm]
       # Phase 5EF-pilot: C leaf func_8007FBC0 — VRAM 0x8007FBC0, size 0xC.
       # Delay-slot $at sw setter: D_800A36A0 = cb (void (*)(void), jalr proof
       # in 704BC.s). ROM: lui/jr/sw — sw in the return delay slot.

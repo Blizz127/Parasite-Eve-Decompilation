@@ -268,6 +268,13 @@ verifier, and all packed-span checks are exact at 447 leaves.
 and return one as registered eight-word exact C leaves. The full rebuild,
 public verifier, and all packed-span checks are exact at 449 leaves.
 
+## Matching leaf — func_8007F7C8 (2026-09-01)
+
+`func_8007F7C8` is now a registered eight-word exact C leaf. It forwards the
+unsigned-byte result from `func_8007FC08`, preserving the required byte mask.
+The full rebuild, public verifier, and all packed-span checks are exact at 450
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
