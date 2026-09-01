@@ -879,6 +879,14 @@ leaves. Both are byte-identical siblings of `func_80089960`, setting bit
 load delay and `$at` store sequence. Full rebuild, public verifier, and all
 packed-span checks are exact at 548 leaves.
 
+## Matching leaf — func_8008F84C (2026-09-01)
+
+`func_8008F84C` is now a registered seven-word exact C leaf. It consumes a
+stream byte, advances the input pointer, and stores the byte at `arg0 + 0x7C`.
+The natural unsigned-byte form preserves retail's pointer load delay and
+return-delay-slot halfword store; full rebuild, public verifier, and packed
+span checks are exact at 549 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
