@@ -432,6 +432,9 @@ segments:
       - [0x3BD84, asm]
       - [0x3C708, c, func_8004BF08]
       - [0x3C740, asm]
+      # Phase 5EJ: constant handle construction and dispatch.
+      - [0x3CDDC, c, func_8004C5DC]
+      - [0x3CE08, asm]
       # Two-call constant forwarding wrapper: era -O2 -G0.
       # The preceding asm span ends at this callable 10-word leaf.
       - [0x3D5AC, c, func_8004CDAC]
@@ -445,6 +448,9 @@ segments:
       - [0x3DA98, asm]
       - [0x3DCA0, c, func_8004D4A0]
       - [0x3DCC4, asm]
+      # Phase 5EJ: sibling constant handle construction and dispatch.
+      - [0x3E1D8, c, func_8004D9D8]
+      - [0x3E204, asm]
       # Phase 5AO: C leaf func_8004DA9C — VRAM 0x8004DA9C, size 0x8.
       # File span 0x3E29C–0x3E2A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # seventh/final of the seven return-1 twins (shape scratch-proven in 5AJ).

@@ -310,6 +310,13 @@ them to their respective dispatchers (`func_80085E54` and `func_80085DF4`).
 The full rebuild, public verifier, and all packed-span checks are exact at 456
 leaves.
 
+## Matching leaves — func_8004C5DC / func_8004D9D8 (2026-09-01)
+
+`func_8004C5DC` and `func_8004D9D8` are now registered eleven-word exact C
+leaves. Each obtains a handle with `func_80062A34(1, constant)` and immediately
+dispatches it through `func_80062F1C`; their constants are 19 and 39. The full
+rebuild, public verifier, and all packed-span checks are exact at 458 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
