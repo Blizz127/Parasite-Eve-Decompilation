@@ -75,6 +75,9 @@ segments:
       # Phase 5EO: signed-halfword double-deref call and true return.
       - [0x8020, c, func_80017820]
       - [0x804C, asm]
+      # Probe: isolated D_8009D2E8 bit-0 setter with retail $at store address.
+      - [0x857C, c, func_80017D7C]
+      - [0x859C, asm]
       # Phase 5AK: C leaf func_80017E9C — VRAM 0x80017E9C, size 0x8.
       # File span 0x869C–0x86A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).
