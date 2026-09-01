@@ -226,7 +226,9 @@ segments:
       - [0xA29C, c, func_80019A9C]
       # Probe: state bit-10 setter through retail's $v1 record.
       - [0xA2C0, c, func_80019AC0]
-      - [0xA2E4, asm]
+      # Probe: companion state bit-10 clearer with retail $v0/$a0 allocation.
+      - [0xA2E4, c, func_80019AE4]
+      - [0xA308, asm]
       - [0xA3E4, c, func_80019BE4]
       - [0xA404, asm]
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.
