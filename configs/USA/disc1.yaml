@@ -231,6 +231,9 @@ segments:
       - [0xA308, asm]
       - [0xA3E4, c, func_80019BE4]
       - [0xA404, asm]
+      # Probe: state bit-17 setter with retail $v0/$a0 allocation.
+      - [0xA428, c, func_80019C28]
+      - [0xA44C, asm]
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.
       - [0xA524, c, func_80019D24]
       - [0xA544, asm]
