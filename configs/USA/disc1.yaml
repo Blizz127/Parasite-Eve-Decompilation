@@ -935,6 +935,9 @@ segments:
       - [0x6D874, asm]
       - [0x6E514, c, func_8007DD14]
       - [0x6E538, asm]
+      # Phase 5EF: two-call void wrapper.
+      - [0x6E678, c, func_8007DE78]
+      - [0x6E6A0, asm]
       # Phase 5EF: int setter typed by accepted getter 8007DEB0.
       - [0x6E6A4, c, func_8007DEA4]
       - [0x6E6B0, c, func_8007DEB0]

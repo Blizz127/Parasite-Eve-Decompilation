@@ -275,6 +275,13 @@ unsigned-byte result from `func_8007FC08`, preserving the required byte mask.
 The full rebuild, public verifier, and all packed-span checks are exact at 450
 leaves.
 
+## Matching leaf — func_8007DE78 (2026-09-01)
+
+`func_8007DE78` is now a registered ten-word exact C leaf. It calls
+`func_8007E334` and then `func_8007E514` through a shared minimal frame. The
+full rebuild, public verifier, and all packed-span checks are exact at 451
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
