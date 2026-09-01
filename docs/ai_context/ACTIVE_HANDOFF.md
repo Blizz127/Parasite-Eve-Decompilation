@@ -632,6 +632,14 @@ the low three bits of `D_800BCF88` equal four and writes the Boolean result to
 the caller's indirect result slot. The full rebuild, public verifier, and
 packed-span checks are exact at 506 leaves.
 
+## Matching leaves — func_80017C54 and func_80017C8C (2026-09-01)
+
+`func_80017C54` and `func_80017C8C` are now registered fourteen-word exact C
+leaves. Both forward signed, signed, and unsigned halfwords to `func_800661EC`;
+their only behavioral difference is the fourth argument (zero versus eight).
+The full rebuild, public verifier, and packed-span checks are exact at 508
+leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

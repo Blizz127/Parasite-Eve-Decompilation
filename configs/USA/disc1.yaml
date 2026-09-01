@@ -75,6 +75,9 @@ segments:
       # Phase 5EO: signed-halfword double-deref call and true return.
       - [0x8020, c, func_80017820]
       - [0x804C, asm]
+      # Probe: signed/signed/unsigned halfword call forwarding wrappers.
+      - [0x8454, c, func_80017C54]
+      - [0x848C, c, func_80017C8C]
       # Probe: D_800BCF88 mode-4 predicate result writer.
       - [0x84C4, c, func_80017CC4]
       - [0x84E8, asm]
