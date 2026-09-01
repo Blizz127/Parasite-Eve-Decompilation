@@ -712,6 +712,13 @@ checks are exact at 523 leaves.
 The full rebuild, public verifier, and packed-span checks are exact at 524
 leaves.
 
+## Matching leaf — func_8008C270 (2026-09-01)
+
+`func_8008C270` is now a registered eight-word exact C leaf. It is the
+companion signed-byte setter: it clears `D_8009D21E` and writes the shifted
+byte to `D_8009D2CC`, using the same retail `$v0` load-delay schedule. The full
+rebuild, public verifier, and packed-span checks are exact at 525 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
