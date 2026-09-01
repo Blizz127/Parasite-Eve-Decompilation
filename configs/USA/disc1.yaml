@@ -1027,12 +1027,19 @@ segments:
       - [0x71C08, asm]
       - [0x71EF4, c, func_800816F4]
       - [0x71F14, asm]
+      # Phase 5EF: D_8009B708 integer exchange.
+      - [0x7265C, c, func_80081E5C]
+      - [0x72670, asm]
       - [0x72AAC, c, func_800822AC]
       # Phase 5BD: C leaf func_800870E0 — VRAM 0x800870E0, size 0x10.
       # File span 0x778E0–0x778F0 exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_8009D24C. Plain -O1 matches.
       # Mid-72ABC carve: prefix 0x4E24, C 0x10, resume 778F0.s 0x598C.
       - [0x72ABC, asm]
+      # Phase 5EF: adjacent integer exchanges D_800B8AB0/+4/+8.
+      - [0x72CB4, c, func_800824B4]
+      - [0x72CC8, c, func_800824C8]
+      - [0x72CDC, c, func_800824DC]
       - [0x72CF0, c, func_800824F0]
       - [0x72D14, asm]
       - [0x72D34, c, func_80082534]

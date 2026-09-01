@@ -234,6 +234,14 @@ verifier, and all packed-span checks are exact at 435 leaves.
 input and stores the resulting unsigned halfword to `D_800F3420`. The full
 rebuild, public verifier, and all packed-span checks are exact at 436 leaves.
 
+## Matching leaves — integer exchanges (2026-09-01)
+
+`func_80081E5C`, `func_800824B4`, `func_800824C8`, and `func_800824DC` are
+now registered five-word exact C leaves. Each loads an integer global, stores
+its input through a pointer pinned to `$v1` in the return delay slot, then
+returns the old value. The full rebuild, public verifier, and all packed-span
+checks are exact at 440 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
