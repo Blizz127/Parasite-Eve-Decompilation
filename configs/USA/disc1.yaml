@@ -1302,7 +1302,9 @@ segments:
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: B76E8 prefix 0xE18, C 0x2C, resume B852C.s 0x98.
       - [0xB8500, c, func_800C7D00]
-      - [0xB852C, asm]
+      # Phase 5EQ: fixed-buffer dispatch wrapper.
+      - [0xB852C, c, func_800C7D2C]
+      - [0xB8554, asm]
       # Phase 5EC: mid-B3368 hole — sb+ret0 func_800C7DC4 (Phase 5I rematch)
       # abuts 5EB return-0 twins. Resume 0xEDC (= 0xB85C4 - 0xB76E8);
       # resume B85E4.s 0x484 (= 0xB8A68 - 0xB85E4).
