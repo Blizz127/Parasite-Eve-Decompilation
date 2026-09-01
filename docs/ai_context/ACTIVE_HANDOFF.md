@@ -771,6 +771,12 @@ and packed-span checks are exact at 531 leaves.
 nullable `D_800B8AB8` callback with the low byte of its argument. The full
 rebuild and packed-span checks are exact at 532 leaves.
 
+## Matching leaf — func_80016DF8 (2026-09-01)
+
+`func_80016DF8` is now a registered nine-word exact C leaf. It sets
+`0x20000000` in the `+0x98` state flags of `D_8009D2F0`, then returns `1`.
+The full rebuild and packed-span checks are exact at 533 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

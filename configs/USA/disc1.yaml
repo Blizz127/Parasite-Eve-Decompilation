@@ -72,6 +72,8 @@ segments:
       # 0x80012850, file 0x3050, size 0x3D0. Resume generated asm at 0x3420.
       - [0x3050, c, func_80012850]
       - [0x3420, asm]
+      - [0x75F8, c, func_80016DF8]
+      - [0x761C, asm]
       # Phase 5EO: signed-halfword double-deref call and true return.
       - [0x8020, c, func_80017820]
       - [0x804C, asm]
