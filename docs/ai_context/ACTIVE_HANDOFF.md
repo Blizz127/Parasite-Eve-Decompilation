@@ -583,6 +583,13 @@ using the retail `value &= value - 1` loop, stores the count through its second
 pointer slot, and returns one. The full rebuild, public verifier, and
 packed-span checks are exact at 499 leaves.
 
+## Matching leaf — func_8001A1A8 (2026-09-01)
+
+`func_8001A1A8` is now a registered 18-word exact C leaf. It retains its
+descriptor across `func_8005186C`, writes the result through the descriptor's
+second pointer slot, and returns one. The full rebuild, public verifier, and
+packed-span checks are exact at 500 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

@@ -238,6 +238,8 @@ segments:
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.
       - [0xA524, c, func_80019D24]
       - [0xA544, asm]
+      # Probe: call-and-store wrapper retaining descriptor across the call.
+      - [0xA9A8, c, func_8001A1A8]
       # Probe: state bit-24 setter with retail $v0/$a0 allocation.
       - [0xA9F0, c, func_8001A1F0]
       - [0xAA14, asm]
