@@ -661,6 +661,13 @@ exact C leaves for the `D_8009D2E8` flag word: a caller-supplied mask clear,
 a read to an indirect result slot, and a caller-supplied OR update. The full
 rebuild, public verifier, and packed-span checks are exact at 513 leaves.
 
+## Matching leaves — func_80017A24 and func_80017A50 (2026-09-01)
+
+`func_80017A24` and `func_80017A50` are now registered exact C leaves. They
+respectively write a selected source bit to the destination slot and set that
+bit in the source word using the shared three-pointer argument layout. The
+full rebuild, public verifier, and packed-span checks are exact at 515 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

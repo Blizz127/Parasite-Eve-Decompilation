@@ -75,6 +75,9 @@ segments:
       # Phase 5EO: signed-halfword double-deref call and true return.
       - [0x8020, c, func_80017820]
       - [0x804C, asm]
+      # Probe: indexed bit-test and bit-set wrappers.
+      - [0x8224, c, func_80017A24]
+      - [0x8250, c, func_80017A50]
       # Probe: D_8009D2E8 mask clear, reader, and OR update wrappers.
       - [0x8278, c, func_80017A78]
       - [0x82A4, c, func_80017AA4]
