@@ -734,6 +734,14 @@ existing store-delay-slot profile preserves retail's final `sw` in the `jr`
 delay slot. The full rebuild, public verifier, and packed-span checks are
 exact at 527 leaves.
 
+## Matching leaf — func_80084AE8 (2026-09-01)
+
+`func_80084AE8` is now a registered fourteen-word exact C leaf. It maps either
+of two `D_800A5B70` entry addresses to slots `0x10` and `0x20`, returning
+`0xFF` when neither matches. Pinning the entry, index, and slot locals to
+retail's `$v1`, `$a1`, and `$a2` preserves the loop schedule. The full rebuild,
+public verifier, and packed-span checks are exact at 528 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one
