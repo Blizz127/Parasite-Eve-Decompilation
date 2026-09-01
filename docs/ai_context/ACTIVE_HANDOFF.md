@@ -92,6 +92,14 @@ the wrapper at `[0x60BF4, 0x60C1C)` and resumes generated assembly afterward.
 The full rebuild, public verifier, and all packed-span checks are exact at
 414 leaves.
 
+## Matching leaf — func_800504F4 (2026-09-01)
+
+`func_800504F4` is now a registered 10-word exact C leaf. It forwards the
+two GP-relative words at `D_8009CF44` and `D_8009CF48` to `func_80042020`.
+It uses the existing era `-O2 -G8` profile, which reproduces retail's two
+loads before the call frame. The full rebuild, public verifier, and all
+packed-span checks are exact at 415 leaves.
+
 ## PE-B54K-AM — CdlReadS registration prefix (2026-08-31)
 
 The 30-word production prefix of `func_80081314` now applies both mode bits
