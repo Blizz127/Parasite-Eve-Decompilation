@@ -640,6 +640,13 @@ their only behavioral difference is the fourth argument (zero versus eight).
 The full rebuild, public verifier, and packed-span checks are exact at 508
 leaves.
 
+## Matching leaf — func_80017CE8 (2026-09-01)
+
+`func_80017CE8` is now a registered twelve-word exact C leaf. It invokes
+`func_800665A0` on the `D_8009D254+0x28` state subrecord with both remaining
+arguments set to minus one. The full rebuild, public verifier, and packed-span
+checks are exact at 509 leaves.
+
 ## Matching leaf — func_800534CC (2026-09-01)
 
 `func_800534CC` is now a registered six-word exact C leaf. It returns one

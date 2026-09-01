@@ -80,7 +80,8 @@ segments:
       - [0x848C, c, func_80017C8C]
       # Probe: D_800BCF88 mode-4 predicate result writer.
       - [0x84C4, c, func_80017CC4]
-      - [0x84E8, asm]
+      # Probe: D_8009D254 state subrecord initialization wrapper.
+      - [0x84E8, c, func_80017CE8]
       # Probe: D_800BCF88 low-three-bit replacement with 0x80.
       - [0x8518, c, func_80017D18]
       # Probe: signed-halfword transfer to D_8009D2F0+0x224.
