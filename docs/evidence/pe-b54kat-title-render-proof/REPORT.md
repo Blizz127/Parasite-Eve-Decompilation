@@ -84,7 +84,12 @@ memory-card poll `func_800425DC` is an explicit recorded boundary and the
 slot records of `D_800A0ED4` stay as `func_80042538` initialised them (no
 card).  This diff is therefore the memory-card boundary, not the title
 translation; it is documented here and the menu state is not claimed exact.
-A cardless retail rerun is recorded below when available.
+A cardless retail rerun (scratch config via a HOME override, both cards
+marked not inserted) was attempted; the emulator hung with the movie still
+active, so no cardless menu reference exists.  The reference emulator
+honours `~/.config/pcsx-redux/pcsx.json` unless HOME is overridden; the
+user's configuration file was not modified (mtime 2026-09-01 17:21, before
+any capture).
 
 Heatmaps (local, not committed: they contain the rendered frame):
 `scratchpad/heat_title.png` (all grey), `scratchpad/heat_menu.png` (669 red
