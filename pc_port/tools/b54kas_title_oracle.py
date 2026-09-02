@@ -44,6 +44,8 @@ SPANS = {
     "leaf_8019319C": (0x8019319C, 0x801931BC, "35d5b997c39024fb277cd3e709dddc260c16995db976f305f7316e1952a7115b"),
     "leaf_801931BC": (0x801931BC, 0x80193200, "7dee274602c8252507abb86d170fb5d85d0a5857e8163422422efb59f0fe7487"),
     "leaf_80193200": (0x80193200, 0x80193254, "39d79d014444c540ce5ab7e6c69e680282cb89793bffa7c19300a7726a2e4774"),
+    "exit_80191410": (0x80191410, 0x80191548, "56760df8649a14491528bf9ee04633aac889fc90c9d3f9da18be0f53bae85cb4"),
+    "exit_80191724": (0x80191724, 0x801918F8, "4293951edcd9e30490754a1c5809fc6039c5dce353cfc33a1feb75b37d557adf"),
 }
 IMAGE_BASE, IMAGE_TABLE, KIND_PARAMS = 0x80193254, 0x80193258, 0x801D0D5C
 W, H = 320, 240
@@ -181,6 +183,14 @@ def main():
     off.pop("PE_PORT_SKIP_FMV", None)
     strict_off = run([str(port), "--headless", "--disc-image", str(disc), "--strict-stubs"], 1, off)
     need(default["cut"] in strict_off, "flag-off frontier moved")
+
+    new_game = strict_frontier(root, "skip_fmv_new_game")
+    driven = run([str(port), "--headless", "--disc-image", str(disc), "--max-frames", "900",
+                  "--pad", "8@560-563", "--pad", "4000@700-703"], 0, on)
+    need(f"[STUB:BOOTSTRAP_RET] {new_game['cut']}" in driven and
+         "stop_reason=unresolved-boundary" in driven,
+         "Start+Cross did not reach the configured New Game boundary")
+    print(f"  OK input: Start then Cross exits the title loop at {new_game['cut']}")
 
     vram = pathlib.Path(a.keep_vram) if a.keep_vram else root / "pc_port/build/b54kas_title.vram"
     run([str(port), "--headless", "--disc-image", str(disc), "--max-frames", "620",

@@ -8,6 +8,12 @@
     "skip_fmv": {
       "cut": "func_800425DC",
       "caller": "func_801909B4"
+    },
+    "skip_fmv_new_game": {
+      "cut": "func_8005E6F0_func_800752AC_cut",
+      "caller": "func_8005E6F0",
+      "input": "--pad 8@560-563 --pad 4000@700-703 (Start, then Cross on New Game)",
+      "mode": "non-strict with PE_PORT_SKIP_FMV=1 (the recorded func_800425DC boundary precedes it in strict mode)"
     }
   },
   "fmv_bypass": {

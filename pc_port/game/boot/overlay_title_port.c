@@ -90,7 +90,10 @@ static int32_t LoadS32(pe_addr_t a) { return (int32_t)PE_LoadU32(a); }
 static void StoreS16(pe_addr_t a, int32_t v) { PE_StoreU16(a, (uint16_t)v); }
 static void StoreS32(pe_addr_t a, int32_t v) { PE_StoreU32(a, (uint32_t)v); }
 
-static pe_addr_t FindKind(int kind)
+pe_addr_t PE_Title_FindKind(int kind);
+static pe_addr_t FindKind(int kind) { return PE_Title_FindKind(kind); }
+
+pe_addr_t PE_Title_FindKind(int kind)
 {
     pe_addr_t node = PE_LoadU32(GA_TASK_ACTIVE_HEAD);
     while (node != 0u && LoadS32(node + T_KIND) != kind)

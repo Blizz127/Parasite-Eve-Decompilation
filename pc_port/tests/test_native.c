@@ -18947,6 +18947,109 @@ static void test_B54KAT_fill_rect16(void)
     PASS();
 }
 
+/* ── B54K-AU — title loop exit and the exe frame-flip pair ──────────── */
+extern int PE_Overlay_TitleExit(void);
+extern void func_8005E6F0(void);
+extern void func_8005E788(int mode);
+
+static void B54KAU_Seed(int32_t row)
+{
+    pe_addr_t k7;
+    ResetTestState();
+    HostFB_Init();
+    PE_GPU_Init();
+    B54KR_SeedGpuStatic();
+    TitleTestPool();
+    TitleTestImage(7, 0x801E8000u, 126, 24, 0x80u);
+    TitleTestParams(7, 0x74, row, 0);
+    k7 = func_8018FBC0(7);
+    PE_StoreU32(TT_ACTIVE, k7);
+    PE_StoreU32(TT_ACTIVE_T, k7);
+    PE_StoreU32(TT_PEND, 0u); PE_StoreU32(TT_PEND_T, 0u);
+    PE_StoreU32(0x801D1380u, 1001u);
+    PE_StoreU32(0x8009D120u, 0u);          /* no OT: flip pair stays inert */
+    PE_StoreU32(0x800ACDDCu, 1u);
+    memset(PE_Translate(0x800A0ED4u, 0x830u), 0, 0x830u);
+    memset(PE_Translate(0x801D1498u, 0xE0u), 0xC3, 0xE0u);   /* saved templates */
+    memset(PE_Translate(0x800BCDC8u, 0xE0u), 0x11, 0xE0u);   /* live templates */
+    PE_StoreU32(0x800A76A0u, 0u); PE_StoreU32(0x800A76B8u, 0u);
+}
+
+static void test_B54KAU_title_exit_new_game(void)
+{
+    uint32_t i;
+    TEST("B54KAU_title_exit_new_game");
+    B54KAU_Seed(0xA0);
+    ASSERT(PE_Overlay_TitleExit() == -1 && PE_Port_ShouldStop() &&
+           CountOrderLog("func_80042798") == 1,
+           "New Game row did not stop at the event-cleanup boundary");
+    ASSERT(PE_LoadU32(0x800A76B8u) == 1u && PE_LoadU32(0x800A76A0u) == 1u &&
+           PE_LoadU32(0x800A76A8u) == 0x1499700u,
+           "records 2/0 not initialised (func_80036E34/DF8)");
+    for (i = 0; i < 0x5Cu; i++)
+        ASSERT(PE_LoadU8(0x800BCDC8u + i) == 0xC3u && PE_LoadU8(0x800BCE24u + i) == 0xC3u,
+               "DrawEnv templates not restored");
+    for (i = 0; i < 0x14u; i++)
+        ASSERT(PE_LoadU8(0x800BCE80u + i) == 0xC3u || i == 0x0Au || i == 0x0Bu,
+               "DispEnv template 0 not restored");
+    ASSERT(PE_LoadU16(0x800BCE9Eu) == 8u && PE_LoadU16(0x800BCE8Au) == 8u,
+           "screen y halfwords differ ($s0 = 8)");
+    ASSERT(CountOrderLog("func_801909B4_80191548_load_arm_cut") == 0 &&
+           CountOrderLog("func_801909B4_80190BCC_attract_restart_cut") == 0,
+           "New Game took a cut arm");
+    PASS();
+}
+
+static void test_B54KAU_title_exit_other_rows(void)
+{
+    TEST("B54KAU_title_exit_other_rows");
+    B54KAU_Seed(0xC8);
+    ASSERT(PE_Overlay_TitleExit() == -1 && CountOrderLog("func_80042798") == 1 &&
+           PE_LoadU32(0x800A76B8u) == 0u && PE_LoadU16(0x800BCE9Eu) == 8u,
+           "row 0xC8 did not take the selection-3 arm to the cleanup boundary");
+    B54KAU_Seed(0xB4);
+    ASSERT(PE_Overlay_TitleExit() == -1 && CountOrderLog("func_80042798") == 1 &&
+           PE_LoadU32(0x800A76B8u) == 0u,
+           "Continue without a card did not take the selection-3 arm");
+    B54KAU_Seed(0x8C);
+    ASSERT(PE_Overlay_TitleExit() == -1 && PE_Port_ShouldStop() &&
+           CountOrderLog("func_801909B4_80191548_load_arm_cut") == 1,
+           "load arm not an explicit cut");
+    B54KAU_Seed(0xA0);
+    PE_StoreU32(0x801D1380u, 1000u);
+    ASSERT(PE_Overlay_TitleExit() == -1 &&
+           CountOrderLog("func_801909B4_80190BCC_attract_restart_cut") == 1,
+           "attract timeout not an explicit cut");
+    PASS();
+}
+
+static void test_B54KAU_frame_flip_pair(void)
+{
+    TEST("B54KAU_frame_flip_pair");
+    ResetTestState();
+    HostFB_Init();
+    PE_StoreU32(0x8009D120u, 0u);
+    PE_StoreU32(0x800ACDDCu, 1u);
+    PE_StoreU32(0x800A21F4u + 120u, 0x80123400u);
+    PE_StoreU32(0x800A21F0u + 120u, 0x80125000u);
+    func_8005E6F0();
+    ASSERT(PE_LoadU32(0x8009D108u) == 1u && PE_LoadU32(0x8009D0FCu) == 0x800A2180u + 120u &&
+           PE_LoadU32(0x8009D104u) == 0x80123400u && PE_LoadU32(0x8009D100u) == 0x80123400u &&
+           PE_LoadU32(0x8009D118u) == 0x80125000u && PE_LoadU32(0x8009D11Cu) == 0x80125004u &&
+           !PE_Port_ShouldStop(), "D_8009D120 == 0 arm differs");
+    func_8005E788(2);
+    ASSERT(!PE_Port_ShouldStop() && g_stub_order_count == 0, "E788 not inert without an OT");
+    PE_StoreU32(0x8009D120u, 1u);
+    PE_StoreU32(0x8009D108u, 1u);
+    PE_StoreU32(0x800A21F0u, 0x80126000u);
+    func_8005E6F0();
+    ASSERT(PE_LoadU32(0x8009D108u) == 0u && PE_LoadU32(0x8009D118u) == 0x80126000u &&
+           PE_Port_ShouldStop() &&
+           CountOrderLog("func_8005E6F0_func_800752AC_cut") == 1,
+           "OT arm did not toggle the index and cut at ClearOTagR");
+    PASS();
+}
+
 static void test_disc_open_rejects_bad_size(void) {
     TEST("disc_open_rejects_bad_size");
     uint8_t buf[2352 * 2];
@@ -34177,6 +34280,9 @@ int main(void)
     test_B54KAS_title_input_start_and_confirm();
     test_B54KAT_pad_delivery();
     test_B54KAT_fill_rect16();
+    test_B54KAU_title_exit_new_game();
+    test_B54KAU_title_exit_other_rows();
+    test_B54KAU_frame_flip_pair();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();

@@ -105,10 +105,21 @@ rejects).  A Start hold at VSync 560 opens the menu
 (kind 2 fades out, kinds 3/4/5/6/7 spawn).  Suite 1002/1002 normal and
 ASan/UBSan.
 
-**Exact next boundary**: `func_800425DC` (libcard poll) for strict parity
-of the title loop; `func_801909B4_80191410_cut` (menu selection /
-attract restart) for the production path; `func_80192934` if the movie is
-ever to be played rather than bypassed.
+**B54K-AU (title exit)**: the loop exit `[0x80191410,0x80191548)` +
+`[0x80191724,0x801918F8)` and the exe flip pair `func_8005E6F0/8005E788`
+are translated (`docs/evidence/pe-b54kau-title-exit/REPORT.md`).  Driven
+with `--pad 8@560-563 --pad 4000@700-703` (Start, then Cross on New Game)
+the port exits the title loop and stops at
+`func_8005E6F0_func_800752AC_cut` (ClearOTagR, DMA6) — frontier entry
+`skip_fmv_new_game`.  Behind it: `func_800753B4` DrawOTag, the
+`func_8005C1EC(0)` zero path (`func_80042798` event cleanup), and the
+still HOST_ADAPTED `func_8006E9A0` fade loop before the dispatcher sets
+`D_8009D280 = 0xA80830C8`.
+
+**Exact next boundary**: `func_800752AC` ClearOTagR (a DMA6 ordering-table
+provider, the first gameplay-facing hardware path) then `func_800753B4`;
+`func_800425DC` (libcard poll) for strict parity of the title loop;
+`func_80192934` if the movie is ever to be played rather than bypassed.
 
 ## Native field-runtime library boundary (2026-08-31)
 

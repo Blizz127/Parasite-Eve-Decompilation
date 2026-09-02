@@ -45,6 +45,14 @@ extern void func_80190064(void);
 extern pe_addr_t func_8018FBC0(int kind);
 extern void func_800425DC(void);
 extern void func_8003EB04(void);
+extern void func_8005E588(void);
+extern void func_8005E6F0(void);
+extern void func_8005E788(int mode);
+extern void func_80036E34(void);
+extern void func_80036DF8(void);
+extern int func_80042770(int slot);
+extern pe_addr_t PE_Title_FindKind(int kind);
+int PE_Overlay_TitleExit(void);
 
 static void CopyGuestBytes(pe_addr_t destination, pe_addr_t source,
                            uint32_t size)
@@ -284,10 +292,82 @@ int func_801909B4(void)
         } while ((int32_t)PE_LoadU32(GA_ATTRACT_COUNTER) < 1000);
     }
 
-    /* 0x80191410: loop exit — selection processing / attract restart. */
-    Bootstrap_ReturnVoid("func_801909B4_80191410_cut", "func_801909B4");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return -1;
+    return PE_Overlay_TitleExit();
+}
+
+/*
+ * B54K-AU — [0x80191410,0x80191548) and [0x80191724,0x801918F8): the title
+ * loop exit.  Display off, MoveImage/ClearImage, syncs, the exe frame-flip
+ * pair, then the selection from the kind-7 row: 0xA0 New Game (records 2
+ * and 0 initialised, $s2 = 1), 0xB4 Continue without a card slot or any
+ * row >= 0xB5 ($s2 = 3).  The card/load arm [0x80191548,0x80191724) and
+ * the attract restart (`bltz $s2, 0x80190BCC`) are named cuts.  On return
+ * the DrawEnv/DispEnv templates are restored from the overlay copies and
+ * D_800BCE9E/D_800BCE8A take $s0 = 8 (set at 0x80191488).
+ */
+int PE_Overlay_TitleExit(void)
+{
+    RECT move_rect, clear_rect;
+    int selection = -1;
+
+    func_80074D28(0);
+    move_rect.x = 0x2C0; move_rect.y = 0; move_rect.w = 0xA0; move_rect.h = 0x100;
+    (void)func_8007512C(&move_rect, 0x140, 0);
+    if (PE_Port_ShouldStop())
+        return -1;
+    clear_rect.x = 0; clear_rect.y = 0; clear_rect.w = 0x140; clear_rect.h = 480;
+    func_80074F44(&clear_rect, 0, 0, 0);
+    func_80074DC0(0);
+    func_80073A44(0);
+    func_80073A44(0);
+    func_8005E588();
+    func_8005E6F0();
+    if (PE_Port_ShouldStop())
+        return -1;
+    func_8005E788(2);
+    if (PE_Port_ShouldStop())
+        return -1;
+
+    if ((int32_t)PE_LoadU32(GA_ATTRACT_COUNTER) >= 1001) {
+        pe_addr_t item = PE_Title_FindKind(7);
+        int32_t row;
+        if (item == 0u) {
+            Bootstrap_ReturnVoid("func_801909B4_801914E8_null_kind7_cut", "func_801909B4");
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return -1;
+        }
+        row = (int16_t)PE_LoadU16(item + 6u);
+        if (row == 0xA0) {
+            selection = 1;
+            func_80036E34();
+            func_80036DF8();
+        } else if (row >= 0xB5) {
+            selection = 3;
+        } else if (row == 0xB4 && func_80042770(0) == 0 && func_80042770(1) == 0) {
+            selection = 3;
+        } else {
+            Bootstrap_ReturnVoid1("func_801909B4_80191548_load_arm_cut", "func_801909B4",
+                                  (uint32_t)row);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return -1;
+        }
+    }
+    if (selection < 0) {
+        Bootstrap_ReturnVoid("func_801909B4_80190BCC_attract_restart_cut", "func_801909B4");
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return -1;
+    }
+    CopyGuestBytes(GA_DRAWENV_SOURCE_0, GA_DRAWENV_COPY_0, 0x5Cu);
+    CopyGuestBytes(GA_DRAWENV_SOURCE_1, GA_DRAWENV_COPY_1, 0x5Cu);
+    CopyGuestBytes(GA_DISPENV_SOURCE_0, GA_DISPENV_COPY_0, 0x14u);
+    CopyGuestBytes(GA_DISPENV_SOURCE_1, GA_DISPENV_COPY_1, 0x14u);
+    PE_StoreU16(0x800BCE9Eu, 8u);
+    PE_StoreU16(0x800BCE8Au, 8u);
+    func_8005C1EC(0);
+    if (PE_Port_ShouldStop())
+        return -1;          /* func_80042798 event cleanup: named boundary */
+    func_8005E57C(0);
+    return selection;
 }
 
 /*
