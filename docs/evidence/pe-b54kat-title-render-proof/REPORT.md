@@ -3,6 +3,27 @@
 Status: **FIRST INTERACTIVE SCREEN EXACT; POST-START MENU DIFFERS ONLY IN
 THE MEMORY-CARD-DEPENDENT REGION (documented, not called done)**.
 
+## Deviation from the retail boot path
+
+Every native result below runs with `PE_PORT_SKIP_FMV=1`.  Retail plays
+`\\FMV1\\FMV001.STR;1` before the title; the port bypasses the player
+(B54K-AQ) because CdlReadS delivery, MDEC decode and XA are not
+implemented.  "Boots to the title" here therefore means "boots to the title
+with the movie bypassed"; with the flag off the port still stops at
+`func_80081314_func_8007F0C8_cut`.  The retail reference frames were taken
+after retail's own pad-skip of the same movie.
+
+## Presentation discipline
+
+The windowed presentation hook (`LivePresentHook` in `port_main.c`) is
+read-only against guest state: it reads the active DispEnv row through
+`PE_LoadU32`/`PE_LoadU16`, reads VRAM through `PE_GPU_ReadVRAM`, and writes
+only a host RGB buffer.  The one guest write on the interactive path is the
+pad adapter's per-VSync refresh of the two PadInitDirect buffers
+(`0x800BE9A0`/`0x800BE9C2`), which stands in for the retail kernel pad
+driver; the headless proofs above use the same adapter with scheduled
+holds, never the window.
+
 ## Native artefacts
 
 ```text
