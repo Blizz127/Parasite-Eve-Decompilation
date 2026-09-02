@@ -31,6 +31,7 @@ static PEPortDmaIrqCheckpointTrace g_port_dma_irq_checkpoint_trace;
  * specific callee just requested a stop.  Callers that need that must
  * compare this epoch across the call instead. */
 static unsigned g_port_stop_epoch;
+static int g_port_skip_fmv = 0;
 
 void PE_Port_RunControlReset(void)
 {
@@ -43,8 +44,19 @@ void PE_Port_RunControlReset(void)
     g_port_quit_poll = NULL;
     g_port_stop_reason = PE_PORT_STOP_NONE;
     g_port_dma_irq_checkpoint_enabled = 1;
+    g_port_skip_fmv = 0;
     memset(&g_port_dma_irq_checkpoint_trace, 0,
            sizeof(g_port_dma_irq_checkpoint_trace));
+}
+
+void PE_Port_SetSkipFmv(int enabled)
+{
+    g_port_skip_fmv = enabled != 0;
+}
+
+int PE_Port_SkipFmv(void)
+{
+    return g_port_skip_fmv;
 }
 
 void PE_Port_SetDmaIrqCheckpointEnabled(int enabled)

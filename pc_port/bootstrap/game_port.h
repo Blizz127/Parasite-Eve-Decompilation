@@ -37,6 +37,12 @@ typedef struct PEPortDmaIrqCheckpointTrace {
 } PEPortDmaIrqCheckpointTrace;
 
 void PE_Port_RunControlReset(void);
+/* B54K-AQ: explicit movie-player bypass flag (PE_PORT_SKIP_FMV / --skip-fmv).
+ * Off by default and after every RunControlReset.  When on, func_801924F8
+ * logs func_801924F8_fmv_bypass and returns retail's normal value without
+ * touching guest memory. */
+void PE_Port_SetSkipFmv(int enabled);
+int  PE_Port_SkipFmv(void);
 void PE_Port_SetFrameLimit(int frames);
 void PE_Port_SetMainIterationLimit(int iterations);
 void PE_Port_SetQuitPoll(PEPortQuitPoll poll);

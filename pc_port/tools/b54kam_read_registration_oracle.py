@@ -2,6 +2,9 @@
 """Independent B54K-AM oracle for func_80081314's registration prefix."""
 from __future__ import annotations
 import argparse, hashlib, os, pathlib, struct, subprocess
+import sys as _sys
+_sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from pe_frontier import strict_frontier  # frontier name lives in configs/frontier.json
 
 EXE_SHA1 = "452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 PEIMG_SHA1 = "146c0ce7308bf9fdc2ba5a84230e198db0663f3b"
@@ -57,8 +60,8 @@ def main() -> None:
     out=run([str(tests)],0,env)
     require("B54KAM_read_registration_prefix... PASS" in out and "0 failed" in out,"focused controls")
     strict=run([str(port),"--headless","--disc-image",str(disc),"--strict-stubs"],1)
-    require("func_80081314_func_8007F0C8_cut" in strict and
-            "called from: func_80081314" in strict,"strict frontier")
+    require(strict_frontier(root)["cut"] in strict and
+            ("called from: " + strict_frontier(root)["caller"]) in strict,"strict frontier")
     print("  OK native: registration only; strict boundary before low-level issue")
     print("\nB54K-AM read-registration oracle: PASS.")
 

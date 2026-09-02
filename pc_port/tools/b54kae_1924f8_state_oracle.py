@@ -9,6 +9,9 @@ import os
 import pathlib
 import struct
 import subprocess
+import sys as _sys
+_sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from pe_frontier import strict_frontier  # frontier name lives in configs/frontier.json
 
 EXE_SHA1 = "452fb033f2eaa4b18aa20a5bca60b8125af3a37b"
 PEIMG_SHA1 = "146c0ce7308bf9fdc2ba5a84230e198db0663f3b"
@@ -131,8 +134,8 @@ def main() -> None:
          "called from: func_801924F8" in strict) or
         ("func_801924F8_80192770_cut" in strict and
          "called from: func_801924F8" in strict) or
-        ("func_80081314_func_8007F0C8_cut" in strict and
-         "called from: func_80081314" in strict) or
+        (strict_frontier(root)["cut"] in strict and
+         ("called from: " + strict_frontier(root)["caller"]) in strict) or
         ("func_8010C0FC" in strict and
          "called from: func_8010BE3C" in strict)
     )

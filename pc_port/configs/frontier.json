@@ -1,0 +1,19 @@
+{
+  "_comment": "Single source of truth for the strict-mode production frontier. Oracles read this file; no oracle hardcodes a cut name. 'default' is the real-disc strict stop with the movie player active; 'skip_fmv' is the stop when PE_PORT_SKIP_FMV=1 bypasses func_801924F8.",
+  "strict_frontier": {
+    "default": {
+      "cut": "func_80081314_func_8007F0C8_cut",
+      "caller": "func_80081314"
+    },
+    "skip_fmv": {
+      "cut": "func_800425DC",
+      "caller": "func_801909B4"
+    }
+  },
+  "fmv_bypass": {
+    "flag_env": "PE_PORT_SKIP_FMV",
+    "flag_cli": "--skip-fmv",
+    "order_log_entry": "func_801924F8_fmv_bypass",
+    "return_value": 1
+  }
+}

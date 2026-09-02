@@ -7,6 +7,16 @@
  * 6cdaa4c16368ca81f53aeb6d194eca170cb13116b7476ad2e1e42f24d5aa9918.
  * Supersedes strict frontier func_801924F8_80192790_cut.
  * Supersedes strict frontier func_801924F8_801927A0_cut.
+ *
+ * B54K-AQ movie bypass: when PE_Port_SkipFmv() is set (PE_PORT_SKIP_FMV=1
+ * or --skip-fmv, never a compile-time default) the player logs
+ * func_801924F8_fmv_bypass and returns 1, retail's normal return value
+ * (delay-slot `addiu $v0,$zero,1` at 0x80192874 before the success tail).
+ * It writes no guest memory: the sole caller ignores $v0 and reads
+ * D_800B0DBA/D_800B0DBC, which func_80191FB8 left at 1/0, so retail's own
+ * `blez` at 0x80192E2C exits the frame loop.  The retail guard at
+ * 0x80192504 (index >= 47 returns 0) still precedes the bypass.
+ * Evidence: docs/evidence/pe-b54kaq-boot-path-map/REPORT.md.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -27,6 +37,12 @@ int func_801924F8(int index)
 
     if (record_index >= 47u)
         return 0;
+
+    if (PE_Port_SkipFmv()) {
+        Stub_Record("func_801924F8_fmv_bypass", "FMV_BYPASS");
+        Trace_Direct("func_801924F8_fmv_bypass");
+        return 1;
+    }
 
     PE_StoreU8(0x800B0DBFu, (uint8_t)index);
     record = 0x801D0E00u + (uint32_t)record_index * 20u;
