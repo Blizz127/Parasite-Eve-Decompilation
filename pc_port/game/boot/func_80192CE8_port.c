@@ -9,7 +9,15 @@
  * contains arena + ((D_80093162-D_80093160)<<11). B54K-Z completes that
  * callee; B54K-AA enters the next call and its authenticated prefix.
  *
- * The remainder after the call at 0x80192E00 is not approximated here.
+ * B54K-AR continues past the movie call with the retail frame-loop entry
+ * [0x80192E08,0x80192E3C): the caller ignores the player's $v0 and reads
+ * D_800B0DBA / D_800B0DBC.  When the frame count is not positive the loop is
+ * skipped (this is the PE_PORT_SKIP_FMV path: func_80191FB8 left 1/0) and
+ * the exit [0x80192F60,0x80192F98) clears flag 0x200 and returns $s3 = 0.
+ * The per-frame step func_80192934 (237 words) and everything after it in
+ * the loop body (completion / pad-skip arms) are not translated; the first
+ * such call is the named cut func_80192CE8_func_80192934_cut.
+ * Evidence: docs/evidence/pe-b54kaq-boot-path-map/REPORT.md.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -21,8 +29,11 @@
 #define GA_PEIMG_LBA       0x800B0DD8u
 #define GA_OVERLAY_FLAGS   0x800B0CD8u
 #define GA_RECORD_BASE     0x801D0E04u
+#define GA_MOVIE_ACTIVE    0x800B0DBAu
+#define GA_MOVIE_FRAMES    0x800B0DBCu
 
 extern int PE_func_80191FB8_Values(int count, const pe_addr_t *sources);
+extern void func_8003EB04(void);
 
 int func_80192CE8(int index)
 {
@@ -72,7 +83,21 @@ retry_issue:
     if (PE_Port_ShouldStop())
         return -1;
 
-    Bootstrap_ReturnVoid("func_80192CE8_80192E08_cut", "func_80192CE8");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return -1;
+    /* 0x80192E10 lbu D_800B0DBA; 0x80192E24 lh D_800B0DBC (loop head). */
+    if (PE_LoadU8(GA_MOVIE_ACTIVE) != 0u) {
+        while ((int16_t)PE_LoadU16(GA_MOVIE_FRAMES) > 0) {
+            func_8003EB04();
+            /* 0x80192E3C jal func_80192934: per-frame movie step. */
+            Bootstrap_ReturnVoid("func_80192CE8_func_80192934_cut",
+                                 "func_80192CE8");
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return -1;
+        }
+    }
+
+    /* 0x80192F60..0x80192F74: clear the movie-sequence flag; $s3 is 0 unless
+     * the untranslated pad-skip arm ran. */
+    PE_StoreU32(GA_OVERLAY_FLAGS,
+                PE_LoadU32(GA_OVERLAY_FLAGS) & ~0x200u);
+    return 0;
 }

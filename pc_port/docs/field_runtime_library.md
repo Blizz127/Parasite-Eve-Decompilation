@@ -38,7 +38,11 @@ The production CLI is the authoritative worked example.
 This interface packages only behavior already present and tested. In
 particular it does not provide a generic scene scheduler, fabricate m0360i,
 write `persist[0] |= 4`, or claim a complete Day 1 field runtime. The current
-strict frontier is `func_80081314_func_8007F0C8_cut`, immediately after the
+strict frontier (movie active) is `func_80081314_func_8007F0C8_cut`; with the
+runtime flag `PE_PORT_SKIP_FMV=1` (`PE_Port_SetSkipFmv`) the movie player is
+bypassed and the frontier is `func_800425DC` in the overlay title loop, whose
+frame the consumer can render (see `pc_port/configs/frontier.json`).  The
+default frontier sits immediately after the
 authenticated libpress MDEC reset, table submissions, channel-1
 `DecDCToutCallback` registration, 64-record pool initialization, and
 stream-control setup, CD idle-wait, blocking CdlSetloc, and CdlReadS callback

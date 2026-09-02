@@ -6,6 +6,7 @@
  */
 
 #include "psx_compat.h"
+#include "pe_pad.h"
 #include "host_framebuffer.h"
 #include "host_window.h"
 #include "stub_registry.h"
@@ -40,6 +41,10 @@ static struct {
     int lzcr_oracle_dump;
     int callback_oracle_dump;
     int dma_checkpoint_report;
+    int skip_fmv;
+    const char *vram_dump;
+    const char *pad_holds[8];
+    int pad_hold_count;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
     .screenshot = NULL, .trace_path = NULL,
@@ -49,7 +54,8 @@ static struct {
     .max_frames = 0, .max_main_iterations = 0,
     .disc_image = NULL, .disc_load_test = 0, .rng_oracle_dump = 0,
     .lzcr_oracle_dump = 0, .callback_oracle_dump = 0,
-    .dma_checkpoint_report = 0,
+    .dma_checkpoint_report = 0, .skip_fmv = 0,
+    .vram_dump = NULL, .pad_holds = {NULL}, .pad_hold_count = 0,
 };
 
 static int ParsePositiveLimit(const char *option, const char *value) {
@@ -77,6 +83,12 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--lzcr-oracle-dump"))     g_opts.lzcr_oracle_dump = 1;
         else if (!strcmp(a, "--callback-oracle-dump")) g_opts.callback_oracle_dump = 1;
         else if (!strcmp(a, "--dma-checkpoint-report")) g_opts.dma_checkpoint_report = 1;
+        else if (!strcmp(a, "--skip-fmv"))             g_opts.skip_fmv = 1;
+        else if (i+1<argc && !strcmp(a, "--vram-dump"))       g_opts.vram_dump = argv[++i];
+        else if (i+1<argc && !strcmp(a, "--pad")) {
+            if (g_opts.pad_hold_count >= 8) { fprintf(stderr, "too many --pad\n"); exit(1); }
+            g_opts.pad_holds[g_opts.pad_hold_count++] = argv[++i];
+        }
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--trace"))           g_opts.trace_path = argv[++i];
         else if (i+1<argc && !strcmp(a, "--hold-ms"))         g_opts.hold_ms = atoi(argv[++i]);
@@ -369,6 +381,12 @@ int main(int argc, char **argv) {
     Bootstrap_Init();
     HostFB_Init();
     PE_Port_RunControlReset();
+    /* B54K-AQ: runtime-only movie bypass; never a compile-time default. */
+    {
+        const char *skip_env = getenv("PE_PORT_SKIP_FMV");
+        if (g_opts.skip_fmv || (skip_env && strcmp(skip_env, "1") == 0))
+            PE_Port_SetSkipFmv(1);
+    }
     PE_Port_SetFrameLimit(g_opts.max_frames);
     PE_Port_SetMainIterationLimit(g_opts.max_main_iterations);
     if (g_strict_stubs) Bootstrap_EnableStrict();
@@ -407,6 +425,23 @@ int main(int argc, char **argv) {
             return 1;
         }
         fprintf(stderr, "[DISC] boot executable loaded into guest RAM\n");
+
+        /* B54K-AT: deliver a connected, idle digital pad each VSync and any
+         * scheduled holds ("--pad <hexmask>@<firstVSync>-<lastVSync>"). */
+        PE_Pad_Reset();
+        PE_Pad_Enable(1);
+        for (int p = 0; p < g_opts.pad_hold_count; p++) {
+            unsigned mask, first, last;
+            if (sscanf(g_opts.pad_holds[p], "%x@%u-%u", &mask, &first, &last) != 3 ||
+                PE_Pad_ScheduleHold((uint16_t)mask, first, last) != 0) {
+                fprintf(stderr, "bad --pad '%s' (want hexmask@first-last)\n",
+                        g_opts.pad_holds[p]);
+                TraceClose();
+                PE_Disc_Close(disc);
+                PE_RamDestroy();
+                return 1;
+            }
+        }
     }
 
     TraceEvent("native_executable_start");
@@ -492,6 +527,22 @@ int main(int argc, char **argv) {
     if (HostFB_WritePPM(sp) == 0)
         fprintf(stderr, "[SCREENSHOT] %s (%dx%d)\n", sp, PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
 
+    if (g_opts.vram_dump) {
+        FILE *vf = fopen(g_opts.vram_dump, "wb");
+        if (vf) {
+            for (uint32_t y = 0; y < 512u; y++) {
+                for (uint32_t x = 0; x < 1024u; x++) {
+                    uint16_t px = 0;
+                    (void)PE_GPU_ReadVRAM(x, y, &px);
+                    fputc(px & 0xFF, vf);
+                    fputc(px >> 8, vf);
+                }
+            }
+            fclose(vf);
+            fprintf(stderr, "[VRAM] %s (1024x512x16, pad deliveries=%u)\n",
+                    g_opts.vram_dump, PE_Pad_DeliveryCount());
+        }
+    }
     Stub_PrintSummary();
     int vs, ds, pr, mk; HostFB_GetState(&vs, &ds, &pr, &mk);
     fprintf(stderr, "[FB] vsyncs=%d drawsyncs=%d presents=%d mask=%d main_iters=%d\n",

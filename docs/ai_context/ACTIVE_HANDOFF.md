@@ -38,6 +38,68 @@ one of these lines:
   `docs/ai_context/PROMPT_TEMPLATE.md`. Named branches in the prompt,
   worktree path included, always.
 
+## B54K-AQ/AS/AT — movie bypass, title screen, retail frame parity (2026-09-01)
+
+**Boot-path map** (`docs/evidence/pe-b54kaq-boot-path-map/REPORT.md`): the
+sole movie call is `func_80192CE8(1)` at `0x80190D84` in the overlay main
+`func_801909B4`, guarded by `D_800B0DCD & 1`; `func_80192CE8` calls the
+player `func_801924F8` once at `0x80192E00`, ignores its `$v0` (retail
+returns 1 from the success tail), and drives the remaining frames itself
+through `func_80192934` while `D_800B0DBA != 0`.  One movie (FMV001.STR)
+plays before the title; the attract timeout (1000 title frames) replays the
+sequence.  The first input consumer is `func_80190064` inside the title loop
+`[0x801911C0,0x80191410)`; the screen is a 320x240 24-bit frame composed on
+the CPU (background 480x204 at VRAM y 0x14/0x104, sprites blended into a
+packed region at `env+0x8080`, LoadImage of the dirty rect).
+
+**Bypass contract**: `PE_PORT_SKIP_FMV=1` / `--skip-fmv` only (runtime,
+`PE_Port_SetSkipFmv`, off after every `PE_Port_RunControlReset`).  In
+`func_801924F8`, after the retail `index >= 47` guard, log
+`func_801924F8_fmv_bypass` and return 1; no memory writes.  The caller then
+exits its frame loop on retail's own `blez` (`D_800B0DBC == 0`).  Residual:
+`D_800B0DBA` stays 1 (retail leaves 0); no reader on the title path depends
+on it.  With the flag off strict still stops at
+`func_80081314_func_8007F0C8_cut`.
+
+**Frontier config**: `pc_port/configs/frontier.json` is the single source
+of both strict frontier names; oracles read it via
+`pc_port/tools/pe_frontier.py`.
+
+```text
+default   func_80081314_func_8007F0C8_cut  called from func_80081314
+skip_fmv  func_800425DC                    called from func_801909B4
+```
+
+**Translated** (`docs/evidence/pe-b54kas-title-system/REPORT.md`): the
+movie caller's frame-loop entry/exit, the post-movie environment block, the
+title loop with its task pool, `func_8018F2F4/F468/F7F0/F958/FBC0/FD04/FE1C`,
+`func_80190064`, the eight task leaves, and exe helpers `func_8005E038`,
+`func_80042770`, `func_8003FFCC`, `func_800525EC/8005267C`.  Explicit
+boundaries: `func_800425DC` (memory-card poll, records and continues — the
+skip_fmv strict frontier), `func_8006DF50` SE playback (recorded),
+`func_80192934`, and the loop exit `func_801909B4_80191410_cut`.
+
+**Host adapters added**: `platform/pe_pad.c` delivers a connected idle
+digital pad (and scheduled holds, `--pad <hexmask>@<first>-<last>` VSync
+indices) into the retail PadInitDirect buffers each VSync; guest RAM used to
+hold zeros there, which decodes as every button pressed.  `func_80074F44`
+(ClearImage) now also fills VRAM with GP0(02h) semantics
+(`PE_GPU_FillRect16`).  `--vram-dump <path>` writes the 1024x512x16 VRAM.
+
+**Render proof** (`docs/evidence/pe-b54kat-title-render-proof/REPORT.md`):
+`PE_PORT_SKIP_FMV=1 --max-frames 620 --vram-dump` gives both display
+buffers byte-identical to the oracle's independent title model
+(SHA-256 `033ae52b…f61ab`) and to the PCSX-Redux retail capture after its
+16-line display framing offset (0/76800 pixels differ over the 224 captured
+rows; negative control rejects).  A Start hold at VSync 560 opens the menu
+(kind 2 fades out, kinds 3/4/5/6/7 spawn).  Suite 1002/1002 normal and
+ASan/UBSan.
+
+**Exact next boundary**: `func_800425DC` (libcard poll) for strict parity
+of the title loop; `func_801909B4_80191410_cut` (menu selection /
+attract restart) for the production path; `func_80192934` if the movie is
+ever to be played rather than bypassed.
+
 ## Native field-runtime library boundary (2026-08-31)
 
 The reusable CMake target `pe_field_runtime` now produces

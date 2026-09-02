@@ -7,6 +7,7 @@
  */
 
 #include "host_framebuffer.h"
+#include "pe_pad.h"
 #include "game_port.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,6 +68,8 @@ void HostFB_SetDispMask(int mask)
 void HostFB_VSync(int mode)
 {
     fb_vsync_count++;
+    /* B54K-AT: the retail pad driver refreshes its buffers per VSync. */
+    PE_Pad_Deliver((uint32_t)fb_vsync_count);
     (void)mode;
 }
 

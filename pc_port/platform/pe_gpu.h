@@ -176,6 +176,12 @@ int PE_GPU_LatchDMACompletionFlag(uint32_t dma_channel);
  * does not wrap; wrapping belongs to the GP0 image-transfer operation. */
 int PE_GPU_ReadVRAM(uint32_t x, uint32_t y, uint16_t *pixel);
 
+/* GP0(02h) FillVRAM value semantics: x rounded down to 16, width rounded up
+ * to 16, y/height masked to 9 bits, 15-bit colour, pixels outside VRAM
+ * dropped.  Used by the ClearImage adapter (B54K-AT). */
+void PE_GPU_FillRect16(uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+                       uint8_t r, uint8_t g, uint8_t b);
+
 uint32_t PE_GPU_VSyncQuery(void);
 void PE_GPU_VBlankStep(void);
 

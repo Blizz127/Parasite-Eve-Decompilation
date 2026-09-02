@@ -8,6 +8,7 @@
  */
 
 #include "psx_compat.h"
+#include "pe_pad.h"
 #include "pe_port_compat.h"
 #include "host_framebuffer.h"
 #include "game_port.h"
@@ -18556,6 +18557,396 @@ static void test_B54KAM_read_registration_prefix(void)
     PASS();
 }
 
+/* B54K-AQ — flag-gated movie bypass at the player entry.  Both states are
+ * exercised: on (bypass logs one entry, returns retail's 1, writes nothing)
+ * and off (the retail prefix runs and stops at the unchanged CdlReadS cut). */
+static void test_B54KAQ_fmv_bypass_flag_on(void)
+{
+    TEST("B54KAQ_fmv_bypass_flag_on");
+    ResetTestState();
+    PE_Port_SetSkipFmv(1);
+    PE_StoreU8(0x800B0DBFu, 0xA5u);
+    PE_StoreU8(0x800B0DBBu, 0x5Au);
+    PE_StoreU32(0x801D11ACu, 0xDEADBEEFu);
+    PE_StoreU8(0x800B0DBAu, 1u);
+    PE_StoreU16(0x800B0DBCu, 0u);
+    ASSERT(PE_Port_SkipFmv() == 1, "flag did not latch");
+    ASSERT(func_801924F8(1) == 1, "bypass did not return retail's normal value 1");
+    ASSERT(CountOrderLog("func_801924F8_fmv_bypass") == 1 &&
+           g_stub_order_count == 1,
+           "bypass did not log exactly one order-log entry");
+    ASSERT(!PE_Port_ShouldStop(), "bypass requested a stop");
+    ASSERT(PE_LoadU8(0x800B0DBFu) == 0xA5u &&
+           PE_LoadU8(0x800B0DBBu) == 0x5Au &&
+           PE_LoadU32(0x801D11ACu) == 0xDEADBEEFu &&
+           PE_LoadU8(0x800B0DBAu) == 1u &&
+           PE_LoadU16(0x800B0DBCu) == 0u,
+           "bypass wrote guest memory");
+    /* The retail guard (index >= 47 returns 0) still precedes the bypass. */
+    ASSERT(func_801924F8(47) == 0 &&
+           CountOrderLog("func_801924F8_fmv_bypass") == 1,
+           "guard ordering changed under the flag");
+    PASS();
+}
+
+static void test_B54KAQ_fmv_bypass_flag_off(void)
+{
+    DiscFixture fx;
+    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
+    const pe_addr_t suffix = 0x801F0000u;
+
+    TEST("B54KAQ_fmv_bypass_flag_off");
+    ResetTestState();
+    ASSERT(PE_Port_SkipFmv() == 0, "flag is not off after reset");
+    HostFB_Init();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    PE_StoreU32(record, suffix);
+    PE_StoreU8(record + 4u, 0u);
+    PE_StoreU16(record + 10u, 17u);
+    PE_StoreU16(record + 12u, 33u);
+    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
+    PE_StoreU32(0x801D0DE8u, 0x80122000u);
+    PE_StoreU32(0x801D0DECu, 0x80132000u);
+    PE_StoreU32(0x801D0DF0u, 0x80173000u);
+    PE_StoreU32(0x801D0DF4u, 0x80175000u);
+    PE_StoreU32(0x801D0DFCu, 0x801E0000u);
+    PE_StoreU32(0x800ACDDCu, 1u);
+    ASSERT(func_801924F8(21) == 0 &&
+           CountOrderLog("func_801924F8_fmv_bypass") == 0 &&
+           CountOrderLog("func_80081314_func_8007F0C8_cut") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "flag-off path did not run the retail prefix to the CdlReadS cut");
+    ASSERT(PE_LoadU8(0x800B0DBFu) == 21u, "retail prefix stores missing with flag off");
+    FxFree(&fx);
+    PASS();
+}
+
+/* ── B54K-AS/AT — overlay title system, pad delivery, VRAM fill ─────── */
+extern pe_addr_t func_8018FBC0(int kind);
+extern void func_8018F468(void);
+extern void func_80190064(void);
+extern uint32_t func_8005E038(void);
+extern int func_8003FFCC(void);
+extern void PE_Overlay_UploadDirtyRect(void);
+
+#define TT_POOL      0x801D11CCu
+#define TT_FREE      0x801D136Cu
+#define TT_ACTIVE    0x801D1370u
+#define TT_ACTIVE_T  0x801D1374u
+#define TT_PEND      0x801D1378u
+#define TT_PEND_T    0x801D137Cu
+#define TT_ENV_PAIR  0x801D11BCu
+#define TT_ENV       0x801D11C4u
+#define TT_ENV_IDX   0x801D11C8u
+#define TT_COUNTER   0x801D1380u
+#define TT_IMG_BASE  0x80193254u
+#define TT_IMG_TABLE 0x80193258u
+#define TT_PARAMS    0x801D0D5Cu
+
+static void TitleTestPool(void)
+{
+    pe_addr_t node = TT_POOL;
+    while (node < TT_POOL + 0x16Cu) {
+        PE_StoreU32(node, node + 0x34u);
+        node += 0x34u;
+    }
+    PE_StoreU32(node, 0u);
+    PE_StoreU32(TT_FREE, TT_POOL);
+    PE_StoreU32(TT_PEND_T, 0u);
+    PE_StoreU32(TT_PEND, 0u);
+    PE_StoreU32(TT_ACTIVE_T, 0u);
+    PE_StoreU32(TT_ACTIVE, 0u);
+}
+
+/* Synthetic image header for `kind` at `where`: width units, height, fill. */
+static void TitleTestImage(int kind, pe_addr_t where, int16_t units, int16_t h,
+                           uint8_t fill)
+{
+    uint32_t bytes = (uint32_t)units * 2u * (uint32_t)h;
+    PE_StoreU32(TT_IMG_TABLE + (uint32_t)kind * 4u, where - TT_IMG_BASE);
+    PE_StoreU16(where + 0x10u, (uint16_t)units);
+    PE_StoreU16(where + 0x12u, (uint16_t)h);
+    memset(PE_Translate(where + 0x14u, bytes), fill, bytes);
+}
+
+static void TitleTestParams(int kind, int32_t x, int32_t y, int32_t c)
+{
+    PE_StoreU32(TT_PARAMS + (uint32_t)kind * 12u, (uint32_t)x);
+    PE_StoreU32(TT_PARAMS + (uint32_t)kind * 12u + 4u, (uint32_t)y);
+    PE_StoreU32(TT_PARAMS + (uint32_t)kind * 12u + 8u, (uint32_t)c);
+}
+
+static void test_B54KAS_title_pool_spawn(void)
+{
+    pe_addr_t node;
+
+    TEST("B54KAS_title_pool_spawn");
+    ResetTestState();
+    TitleTestPool();
+    TitleTestImage(1, 0x801E0000u, 216, 24, 0x80u);
+    TitleTestParams(1, 0x58, 0xB4, -1);
+    node = func_8018FBC0(1);
+    ASSERT(node == TT_POOL && PE_LoadU32(TT_FREE) == TT_POOL + 0x34u &&
+           PE_LoadU32(TT_PEND) == node && PE_LoadU32(TT_PEND_T) == node &&
+           PE_LoadU32(TT_ACTIVE) == 0u && PE_LoadU32(node) == 0u,
+           "free/pending list bookkeeping differs");
+    ASSERT(PE_LoadU32(node + 0x2Cu) == 1u &&
+           PE_LoadU32(node + 0x18u) == 0x801E0000u &&
+           (int16_t)PE_LoadU16(node + 0x04u) == 0x58 &&
+           (int16_t)PE_LoadU16(node + 0x06u) == 0xB4 &&
+           (int16_t)PE_LoadU16(node + 0x08u) == 144 &&
+           (int16_t)PE_LoadU16(node + 0x0Au) == 24,
+           "kind/image/geometry differ (w = units*2/3)");
+    ASSERT(PE_LoadU32(node + 0x0Cu) == 0x80192FE8u &&
+           PE_LoadU32(node + 0x10u) == 0x8018F7F0u &&
+           PE_LoadU32(node + 0x14u) == 0u &&
+           (int32_t)PE_LoadU32(node + 0x20u) == 0xB4 &&
+           (int32_t)PE_LoadU32(node + 0x24u) == -0x10 &&
+           (int32_t)PE_LoadU32(node + 0x28u) == -1 &&
+           PE_LoadU32(node + 0x1Cu) == 0u && PE_LoadU32(node + 0x30u) == 0u,
+           "callback/parameter fields differ");
+    (void)func_8018FBC0(2);
+    ASSERT(PE_LoadU32(node) == TT_POOL + 0x34u &&
+           PE_LoadU32(TT_PEND_T) == TT_POOL + 0x34u &&
+           PE_LoadU32(TT_FREE) == TT_POOL + 0x68u,
+           "second spawn did not append");
+    PASS();
+}
+
+static void test_B54KAS_title_fade_sequence(void)
+{
+    pe_addr_t node, env = 0x80120000u;
+    int frame;
+
+    TEST("B54KAS_title_fade_sequence");
+    ResetTestState();
+    TitleTestPool();
+    TitleTestImage(0, 0x80150000u, 480, 204, 0x10u);
+    TitleTestImage(1, 0x801F0000u, 216, 24, 0x80u);
+    TitleTestImage(2, 0x801F4000u, 162, 24, 0x80u);
+    TitleTestParams(1, 0x58, 0xB4, -1);
+    TitleTestParams(2, 0x68, 0xC8, 0);
+    PE_StoreU32(TT_ENV_PAIR, env);
+    PE_StoreU32(TT_ENV_PAIR + 4u, env + 0x1C080u);
+    PE_StoreU32(TT_ENV, env);
+    PE_StoreU32(TT_ENV_IDX, 1u);
+    memset(PE_Translate(env, 0x80u), 0, 0x80u);
+    node = func_8018FBC0(1);
+    PE_StoreU32(node + 0x14u, 0x8019319Cu);
+    /* pending -> active, as the loop tail does */
+    PE_StoreU32(TT_ACTIVE, node);
+    PE_StoreU32(TT_ACTIVE_T, node);
+    PE_StoreU32(TT_PEND, 0u);
+    PE_StoreU32(TT_PEND_T, 0u);
+
+    for (frame = 1; frame <= 20; frame++) {
+        int32_t b_before = (int32_t)PE_LoadU32(node + 0x24u);
+        int32_t expect_b = b_before + (b_before != 0 ? 1 : 0);
+        int32_t shifted = b_before << 4;
+        int32_t expect_level = shifted < 0 ? shifted + 0x100 : 0x100 - shifted;
+        func_8018F468();
+        ASSERT(!PE_Port_ShouldStop(), "compositor requested a stop");
+        ASSERT((int32_t)PE_LoadU32(node + 0x24u) == expect_b &&
+               (int32_t)PE_LoadU32(node + 0x1Cu) == expect_level &&
+               (int16_t)PE_LoadU16(node + 0x06u) == 0xB4 + b_before &&
+               PE_LoadU32(node + 0x30u) == 0u,
+               "fade step differs from the retail update");
+        if (expect_b == -1) {
+            pe_addr_t spawned = PE_LoadU32(TT_PEND);
+            ASSERT(spawned != 0u && PE_LoadU32(spawned + 0x2Cu) == 2u &&
+                   PE_LoadU32(spawned + 0x18u) == 0x801F4000u,
+                   "handler at B == C did not spawn kind 2");
+        } else if (expect_b < -1) {
+            ASSERT(PE_LoadU32(TT_PEND) == 0u, "kind 2 spawned early");
+        }
+    }
+    ASSERT((int32_t)PE_LoadU32(node + 0x24u) == 0 &&
+           (int32_t)PE_LoadU32(node + 0x1Cu) == 0x100 &&
+           (int16_t)PE_LoadU16(node + 0x06u) == 0xB4,
+           "fade did not settle at alpha 0x100");
+    ASSERT((int16_t)PE_LoadU16(env + 0x78u) == 0x58 &&
+           (int16_t)PE_LoadU16(env + 0x7Au) == 0xB4 &&
+           (int16_t)PE_LoadU16(env + 0x7Cu) == 144 &&
+           (int16_t)PE_LoadU16(env + 0x7Eu) == 24 &&
+           (int16_t)PE_LoadU16(env + 0x74u) == 144,
+           "sprite union rect differs");
+    PASS();
+}
+
+static void test_B54KAS_title_compositor_bytes(void)
+{
+    pe_addr_t node, env = 0x80120000u, buf = 0x80120000u + 0x8080u;
+    pe_addr_t bg = 0x80150000u, sprite = 0x801F0000u;
+    uint32_t i;
+    RECT expect_rect;
+    uint16_t px;
+
+    TEST("B54KAS_title_compositor_bytes");
+    ResetTestState();
+    PE_GPU_Init();
+    func_8007ED58();
+    B54KR_SeedGpuStatic();
+    TitleTestPool();
+    /* background: byte value = row number of the 24-bit image (y - 0x14) */
+    TitleTestImage(0, bg, 480, 204, 0u);
+    for (i = 0; i < 204u; i++)
+        memset(PE_Translate(bg + 0x14u + i * 960u, 960u), (int)(0x20u + i), 960u);
+    /* sprite: 6 units = 4 px, 2 rows; word 0 of row 0 transparent (zero) */
+    TitleTestImage(1, sprite, 6, 2, 0x70u);
+    PE_StoreU32(sprite + 0x14u, 0u);
+    TitleTestParams(1, 8, 0x22, -1);
+    PE_StoreU32(TT_ENV_PAIR, env);
+    PE_StoreU32(TT_ENV_PAIR + 4u, env + 0x1C080u);
+    PE_StoreU32(TT_ENV, env);
+    PE_StoreU32(TT_ENV_IDX, 0u);          /* second display half: +0xF0 */
+    memset(PE_Translate(env, 0x80u), 0, 0x80u);
+    memset(PE_Translate(buf, 64u), 0xEE, 64u);
+    node = func_8018FBC0(1);
+    PE_StoreU32(node + 0x0Cu, 0u);       /* no update: hold alpha */
+    PE_StoreU32(node + 0x1Cu, 0x100u);
+    PE_StoreU32(TT_ACTIVE, node);
+    PE_StoreU32(TT_ACTIVE_T, node);
+    PE_StoreU32(TT_PEND, 0u);
+    PE_StoreU32(TT_PEND_T, 0u);
+
+    func_8018F468();
+    ASSERT((int16_t)PE_LoadU16(env + 0x70u) == 8 &&
+           (int16_t)PE_LoadU16(env + 0x72u) == 0x22 &&
+           (int16_t)PE_LoadU16(env + 0x74u) == 4 &&
+           (int16_t)PE_LoadU16(env + 0x76u) == 2,
+           "dirty rect differs");
+    /* packed region: 2 rows x 12 bytes; row 0 word 0 keeps the background
+     * (0x20 + (0x22 - 0x14) = 0x2E), everything else max(bg, 0x70) = 0x70 */
+    for (i = 0; i < 24u; i++) {
+        uint8_t expect = (i < 4u) ? 0x2Eu : 0x70u;
+        ASSERT(PE_LoadU8(buf + i) == expect, "packed region bytes differ");
+    }
+    ASSERT(PE_LoadU8(buf + 24u) == 0xEEu, "compositor wrote past the region");
+    /* upload: x = 8*3/2 = 12, y = 0x22 + 0xF0, w = 4*3/2 = 6 halfwords, h = 2 */
+    PE_Overlay_UploadDirtyRect();
+    expect_rect.x = 12; expect_rect.y = 0x112; expect_rect.w = 6; expect_rect.h = 2;
+    ASSERT(PE_GPU_ReadVRAM(12, 0x112, &px) && px == 0x2E2Eu, "VRAM word 0 differs");
+    ASSERT(PE_GPU_ReadVRAM(14, 0x112, &px) && px == 0x7070u, "VRAM word 2 differs");
+    ASSERT(PE_GPU_ReadVRAM(17, 0x113, &px) && px == 0x7070u, "VRAM last word differs");
+    ASSERT(PE_GPU_ReadVRAM(18, 0x113, &px) && px == 0u, "upload overran the rect");
+    (void)expect_rect;
+    PASS();
+}
+
+static void test_B54KAS_title_input_start_and_confirm(void)
+{
+    pe_addr_t k1, k2, k7;
+
+    TEST("B54KAS_title_input_start_and_confirm");
+    ResetTestState();
+    TitleTestPool();
+    TitleTestImage(1, 0x801E0000u, 216, 24, 0x80u);
+    TitleTestImage(2, 0x801E4000u, 162, 24, 0x80u);
+    TitleTestImage(7, 0x801E8000u, 126, 24, 0x80u);
+    TitleTestParams(1, 0x58, 0xB4, -1);
+    TitleTestParams(2, 0x68, 0xC8, 0);
+    TitleTestParams(7, 0x74, 0xB4, 0);
+    k1 = func_8018FBC0(1);
+    k2 = func_8018FBC0(2);
+    PE_StoreU32(TT_ACTIVE, PE_LoadU32(TT_PEND));
+    PE_StoreU32(TT_ACTIVE_T, PE_LoadU32(TT_PEND_T));
+    PE_StoreU32(TT_PEND, 0u); PE_StoreU32(TT_PEND_T, 0u);
+    PE_StoreU32(k1 + 0x24u, 0u);
+    PE_StoreU32(k2 + 0x1Cu, 0x81u);
+    PE_StoreU32(0x801D11B8u, 0u);
+    PE_StoreU32(0x801D1380u, 77u);
+    PE_StoreU32(0x800B0E08u, 0u);        /* no SE handle: no SPU boundary */
+
+    /* D_8009D26C bit 0x4 is Start after func_8005E038 (-> 0x800). */
+    PE_StoreU32(0x8009D26Cu, 0x4u);
+    ASSERT(func_8005E038() == 0x800u, "pad remap of Start differs");
+    func_80190064();
+    ASSERT(!PE_Port_ShouldStop(), "input handler requested a stop");
+    ASSERT((int32_t)PE_LoadU32(k1 + 0x24u) == 1 &&
+           (int32_t)PE_LoadU32(k1 + 0x28u) == 8 &&
+           PE_LoadU32(k1 + 0x14u) == 0x801931BCu &&
+           PE_LoadU32(0x801D1380u) == 0u &&
+           PE_LoadU32(0x801D11B8u) == 0x800u,
+           "Start edge did not arm the kind-1 task");
+    /* held Start is not an edge; nothing changes */
+    PE_StoreU32(k1 + 0x28u, 9u);
+    func_80190064();
+    ASSERT((int32_t)PE_LoadU32(k1 + 0x28u) == 9, "held Start re-armed");
+    /* fade-in below 0x81 blocks Start */
+    PE_StoreU32(0x801D11B8u, 0u);
+    PE_StoreU32(k1 + 0x24u, 0u);
+    PE_StoreU32(k2 + 0x1Cu, 0x80u);
+    func_80190064();
+    ASSERT(PE_LoadU32(k1 + 0x24u) == 0u, "Start accepted before the fade");
+
+    /* confirm (D26C 0x20000000 -> 0x20) with the cursor item at a menu row */
+    ResetTestState();
+    TitleTestPool();
+    TitleTestImage(5, 0x801E0000u, 126, 24, 0x80u);
+    TitleTestImage(6, 0x801E4000u, 126, 24, 0x80u);
+    TitleTestImage(7, 0x801E8000u, 126, 24, 0x80u);
+    TitleTestParams(5, 0x74, 0xB4, 0);
+    TitleTestParams(6, 0x74, 0x8C, 0);
+    TitleTestParams(7, 0x74, 0xB4, 0);
+    k7 = func_8018FBC0(7);
+    (void)func_8018FBC0(5);
+    (void)func_8018FBC0(6);
+    PE_StoreU32(TT_ACTIVE, PE_LoadU32(TT_PEND));
+    PE_StoreU32(TT_ACTIVE_T, PE_LoadU32(TT_PEND_T));
+    PE_StoreU32(TT_PEND, 0u); PE_StoreU32(TT_PEND_T, 0u);
+    PE_StoreU32(PE_LoadU32(k7) + 0x0Cu, 0u);            /* kind 5 idle */
+    PE_StoreU16(k7 + 0x06u, 0xA0u);
+    PE_StoreU32(0x801D1380u, 5u);
+    PE_StoreU32(0x8009D26Cu, 0x20000000u);
+    memset(PE_Translate(0x800A0ED4u, 0x830u), 0, 0x830u);   /* no card */
+    ASSERT(func_8003FFCC() == 0, "empty slots reported a save");
+    func_80190064();
+    ASSERT(!PE_Port_ShouldStop() && PE_LoadU32(0x801D1380u) == 0x3E9u,
+           "confirm did not end the title loop");
+    PASS();
+}
+
+static void test_B54KAT_pad_delivery(void)
+{
+    TEST("B54KAT_pad_delivery");
+    ResetTestState();
+    PE_Pad_Reset();
+    memset(PE_Translate(0x800BE9A0u, 0x44u), 0, 0x44u);
+    PE_Pad_Deliver(1u);
+    ASSERT(PE_LoadU32(0x800BE9A0u) == 0u, "disabled delivery wrote the buffer");
+    PE_Pad_Enable(1);
+    ASSERT(PE_Pad_ScheduleHold(PE_PAD_START, 5u, 6u) == 0, "schedule failed");
+    PE_Pad_Deliver(4u);
+    ASSERT(PE_LoadU8(0x800BE9A0u) == 0x00u && PE_LoadU8(0x800BE9A1u) == 0x41u &&
+           PE_LoadU16(0x800BE9A2u) == 0xFFFFu &&
+           PE_LoadU8(0x800BE9C2u) == 0xFFu && PE_LoadU16(0x800BE9C4u) == 0xFFFFu,
+           "idle digital pad / absent port 2 differ");
+    PE_Pad_Deliver(5u);
+    ASSERT(PE_LoadU16(0x800BE9A2u) == 0xFFF7u, "Start hold not delivered active-low");
+    PE_Pad_Deliver(7u);
+    ASSERT(PE_LoadU16(0x800BE9A2u) == 0xFFFFu && PE_Pad_DeliveryCount() == 3u,
+           "hold did not release");
+    PE_Pad_Reset();
+    PASS();
+}
+
+static void test_B54KAT_fill_rect16(void)
+{
+    uint16_t px;
+    TEST("B54KAT_fill_rect16");
+    ResetTestState();
+    PE_GPU_Init();
+    PE_GPU_FillRect16(5u, 3u, 17u, 2u, 0xFFu, 0x00u, 0x80u);
+    ASSERT(PE_GPU_ReadVRAM(0u, 3u, &px) && px == (0x1Fu | (0x10u << 10)),
+           "x not rounded down to 16 or colour differs");
+    ASSERT(PE_GPU_ReadVRAM(31u, 4u, &px) && px != 0u, "width not rounded up to 16");
+    ASSERT(PE_GPU_ReadVRAM(32u, 4u, &px) && px == 0u, "fill overran the width");
+    ASSERT(PE_GPU_ReadVRAM(0u, 5u, &px) && px == 0u, "fill overran the height");
+    PASS();
+}
+
 static void test_disc_open_rejects_bad_size(void) {
     TEST("disc_open_rejects_bad_size");
     uint8_t buf[2352 * 2];
@@ -33778,6 +34169,14 @@ int main(void)
     test_B54KAJ_stream_control_initializer();
     test_B54KAL_blocking_setloc_arm();
     test_B54KAM_read_registration_prefix();
+    test_B54KAQ_fmv_bypass_flag_on();
+    test_B54KAQ_fmv_bypass_flag_off();
+    test_B54KAS_title_pool_spawn();
+    test_B54KAS_title_fade_sequence();
+    test_B54KAS_title_compositor_bytes();
+    test_B54KAS_title_input_start_and_confirm();
+    test_B54KAT_pad_delivery();
+    test_B54KAT_fill_rect16();
     test_read_guard_busy();
     test_read_guard_not_ready();
     test_read_guard_queue();

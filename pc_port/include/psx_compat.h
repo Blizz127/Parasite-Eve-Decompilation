@@ -11,6 +11,7 @@
 #include "stub_registry.h"
 #include "pe_guest_ram.h"
 #include "pe_callback.h"
+#include "pe_gpu.h"
 #include "pe_bootstrap.h"
 #include "pe_port_compat.h"
 #include <stdint.h>
@@ -100,7 +101,12 @@ int func_80074DC0(int mode);
 int func_80075358(pe_addr_t packet);
 int PE_func_80075358_Transient(const uint32_t *words, uint8_t count);
 static inline void func_80074F44(RECT *r, uint8_t rv, uint8_t g, uint8_t b) {
-    if (r) HostFB_ClearImage(r->x, r->y, r->w, r->h, rv, g, b);
+    if (r) {
+        HostFB_ClearImage(r->x, r->y, r->w, r->h, rv, g, b);
+        /* B54K-AT: retail ClearImage reaches VRAM as GP0(02h). */
+        PE_GPU_FillRect16((uint32_t)r->x, (uint32_t)r->y, (uint32_t)r->w,
+                          (uint32_t)r->h, rv, g, b);
+    }
 }
 static inline void func_800755F0(void *e) { (void)e; HostFB_Present(); }
 static inline void func_800752AC(void *o, int n) {

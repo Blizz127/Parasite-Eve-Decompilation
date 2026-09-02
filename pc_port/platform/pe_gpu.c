@@ -774,6 +774,29 @@ int PE_GPU_ReadVRAM(uint32_t x, uint32_t y, uint16_t *pixel)
     return 1;
 }
 
+void PE_GPU_FillRect16(uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+                       uint8_t r, uint8_t g, uint8_t b)
+{
+    uint16_t colour = (uint16_t)((r >> 3) | ((g >> 3) << 5) | ((b >> 3) << 10));
+    uint32_t x0 = x & 0x3F0u;
+    uint32_t y0 = y & 0x1FFu;
+    uint32_t width = ((w & 0x3FFu) + 0x0Fu) & ~0x0Fu;
+    uint32_t height = h & 0x1FFu;
+    uint32_t row, col;
+
+    for (row = 0; row < height; row++) {
+        uint32_t yy = y0 + row;
+        if (yy >= PE_GPU_VRAM_HEIGHT)
+            break;
+        for (col = 0; col < width; col++) {
+            uint32_t xx = x0 + col;
+            if (xx >= PE_GPU_VRAM_WIDTH)
+                break;
+            g_gpu.vram[yy * PE_GPU_VRAM_WIDTH + xx] = colour;
+        }
+    }
+}
+
 uint32_t PE_GPU_VSyncQuery(void)
 {
     return g_gpu.state.vsync_count;

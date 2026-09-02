@@ -21,6 +21,7 @@ set(PLATFORM_SRCS
     platform/pe_gte.c
     platform/pe_mdec.c
     platform/pe_libetc.c
+    platform/pe_pad.c
     platform/pe_libgpu.c
     platform/pe_libsnd.c
     platform/pe_spu_dma.c
@@ -213,6 +214,8 @@ set(GAME_SRCS
     game/boot/func_8010BE3C_port.c
     game/boot/func_80190660_port.c
     game/boot/func_801909B4_port.c
+    game/boot/overlay_title_port.c
+    game/boot/title_exe_helpers_port.c
     game/boot/func_801918F8_port.c
     game/boot/func_80191FB8_port.c
     game/boot/func_801924F8_port.c

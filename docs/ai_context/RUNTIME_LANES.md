@@ -1,6 +1,6 @@
 # Runtime lanes — current-state reconciliation
 
-Status date: 2026-08-31. This file is the maintained cross-lane status; the
+Status date: 2026-09-01. This file is the maintained cross-lane status; the
 native library boundary and strict frontier below were revalidated from the
 authoritative grind worktree after B54K-AM.
 
@@ -60,7 +60,9 @@ link it. This is a packaging/API boundary, not a complete Day 1 claim. Its
 strict real-disc execution frontier is:
 
 ```text
-func_80081314_func_8007F0C8_cut from func_80081314
+default  (movie active): func_80081314_func_8007F0C8_cut from func_80081314
+skip_fmv (PE_PORT_SKIP_FMV=1): func_800425DC from func_801909B4 — the first
+title-loop frame; the title screen renders and answers Start (B54K-AQ/AS/AT)
 func_80030894 and func_8006AD40 are complete; the authenticated overlay path
 and both calls to complete func_801918F8 execute first; filename construction,
 the real FMV file search, movie-state setup, DecDCTReset, its two retail table
