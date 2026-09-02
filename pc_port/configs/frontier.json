@@ -15,5 +15,26 @@
     "flag_cli": "--skip-fmv",
     "order_log_entry": "func_801924F8_fmv_bypass",
     "return_value": 1
+  },
+  "host_adapters": {
+    "_comment": "Stand-ins for retail kernel/hardware paths that every native proof drives through. Each is a frontier of its own, not an implementation detail.",
+    "pad_delivery": {
+      "file": "pc_port/platform/pe_pad.c",
+      "stands_in_for": "kernel PadInitDirect driver refresh of 0x800BE9A0/0x800BE9C2 each VSync",
+      "guest_writes": "the two 0x22-byte pad buffers only",
+      "real_path_exercised_by_any_proof": false
+    },
+    "clearimage_vram_fill": {
+      "file": "pc_port/include/psx_compat.h func_80074F44",
+      "stands_in_for": "libgpu ClearImage -> GPU queue -> GP0(02h)",
+      "guest_writes": "VRAM rectangle only",
+      "real_path_exercised_by_any_proof": false
+    },
+    "windowed_presentation": {
+      "file": "pc_port/src/port_main.c LivePresentHook",
+      "stands_in_for": "CRT output of the active DispEnv",
+      "guest_writes": "none (reads DispEnv row and VRAM)",
+      "real_path_exercised_by_any_proof": false
+    }
   }
 }

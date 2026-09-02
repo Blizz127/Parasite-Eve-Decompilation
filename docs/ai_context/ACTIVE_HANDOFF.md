@@ -38,6 +38,15 @@ one of these lines:
   `docs/ai_context/PROMPT_TEMPLATE.md`. Named branches in the prompt,
   worktree path included, always.
 
+## Standing rule — counts come from the tool, never from memory (2026-09-01)
+
+Never type a suite count, oracle count, or pixel count into a document.
+Paste the producing line verbatim (`Results: N run, N passed, 0 failed`
+from `pe-native-tests`; the `diff:` line from `pe_title_frame_compare.py`;
+the `ORACLES pass=.. fail=..` line from a sweep).  A reviewer-supplied "64
+new tests" that no tool printed was caught only because the registration
+trail (986 -> 994 -> 1003 registrations across Aug 29 - Sep 1) was recounted.
+
 ## B54K-AQ/AS/AT — movie bypass, title screen, retail frame parity (2026-09-01)
 
 **Boot-path map** (`docs/evidence/pe-b54kaq-boot-path-map/REPORT.md`): the
@@ -90,8 +99,9 @@ hold zeros there, which decodes as every button pressed.  `func_80074F44`
 `PE_PORT_SKIP_FMV=1 --max-frames 620 --vram-dump` gives both display
 buffers byte-identical to the oracle's independent title model
 (SHA-256 `033ae52b…f61ab`) and to the PCSX-Redux retail capture after its
-16-line display framing offset (0/76800 pixels differ over the 224 captured
-rows; negative control rejects).  A Start hold at VSync 560 opens the menu
+16-line display framing offset (0/71680 compared pixels differ over the 224
+captured rows, 16 native rows below the capture black; negative control
+rejects).  A Start hold at VSync 560 opens the menu
 (kind 2 fades out, kinds 3/4/5/6/7 spawn).  Suite 1002/1002 normal and
 ASan/UBSan.
 

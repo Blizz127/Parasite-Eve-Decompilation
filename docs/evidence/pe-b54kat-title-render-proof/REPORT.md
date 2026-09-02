@@ -75,12 +75,17 @@ the capture to be black, and demands exact equality elsewhere.
 ```text
 pe_title_frame_compare.py title620.vram retail_title.raw --retail-row-offset 16 \
     --negative retail_menu.raw
-diff: 0 pixels / 0 bytes of 76800 pixels (rows compared: 224)
-negative control diff: 3189 pixels / 9006 bytes (must be > 0)
+diff: 0 pixels / 0 bytes of 71680 compared pixels (224 rows x 320); 16 native rows below the capture checked black
+negative control diff: 3189 pixels / 9006 bytes of 71680 (must be > 0)
 RESULT: EXACT | negative control REJECTS
 ```
 
-Exact over every captured row; the negative control (the retail menu frame
+Exact over every captured row (the denominator is the 224 captured rows,
+not the 240-row buffer; the 16 uncaptured native rows are separately
+required to be black).  The ByteModel oracle is downstream of the same
+image-format assumptions as the port, so it is a data-path consistency
+check, not an independent gate: the Redux byte-compare is the load-bearing
+gate.  The negative control (the retail menu frame
 against the native title) is rejected.
 
 ## Result 2 — Start press, next state (menu)
@@ -88,9 +93,9 @@ against the native title) is rejected.
 ```text
 pe_title_frame_compare.py menu760.vram retail_menu.raw --retail-row-offset 16 \
     --negative retail_title.raw
-diff: 669 pixels / 1705 bytes of 76800 pixels (rows compared: 224)
+diff: 669 pixels / 1705 bytes of 71680 compared pixels (224 rows x 320); 16 native rows below the capture checked black
    differing native rows 187..216, columns 128..187
-negative control diff: 3138 pixels / 8810 bytes (must be > 0)
+negative control diff: 3138 pixels / 8810 bytes of 71680 (must be > 0)
 RESULT: MISMATCH | negative control REJECTS
 ```
 

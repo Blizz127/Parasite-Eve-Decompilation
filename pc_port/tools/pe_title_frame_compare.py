@@ -96,12 +96,13 @@ def main() -> None:
         print(f"retail rows 0..{off-1} non-black bytes: {head_nonblack} (must be 0); "
               f"native rows {rows_compared}..{H-1} must be black")
     px, by = compare(port, redux, pathlib.Path(a.heatmap) if a.heatmap else None, rows_compared)
-    print(f"diff: {px} pixels / {by} bytes of {W*H} pixels (rows compared: {rows_compared})")
+    print(f"diff: {px} pixels / {by} bytes of {W*rows_compared} compared pixels "
+          f"({rows_compared} rows x {W}); {off} native rows below the capture checked black")
     ok = px == 0 and head_nonblack == 0
     if a.negative:
         neg, _, _ = shift_retail(load_redux(pathlib.Path(a.negative)), a.retail_row_offset)
         npx, nby = compare(port, neg, pathlib.Path(a.negative_heatmap) if a.negative_heatmap else None, rows_compared)
-        print(f"negative control diff: {npx} pixels / {nby} bytes (must be > 0)")
+        print(f"negative control diff: {npx} pixels / {nby} bytes of {W*rows_compared} (must be > 0)")
         ok = ok and npx > 0
     print("RESULT:", "EXACT" if px == 0 else "MISMATCH", "| negative control",
           ("REJECTS" if a.negative and npx > 0 else ("ACCEPTS(!)" if a.negative else "n/a")))
