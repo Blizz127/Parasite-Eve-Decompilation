@@ -43,7 +43,8 @@ void HostWindow_Close(void);
 extern int g_host_window_open;
 
 /* Active-low Sony digital word from X11 keys. Idle is 0xFFFF.
- * Cross is XK_Return / XK_space / XK_z / XK_x (raw 0x4000). */
+ * Cross is XK_space / XK_z / XK_x (raw 0x4000); Start is XK_Return / XK_s
+ * (raw 0x0008); arrows are the d-pad. */
 uint16_t HostWindow_PadRaw(void);
 
 #endif

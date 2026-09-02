@@ -25,6 +25,8 @@ typedef unsigned long KeySym;
 #define XK_x      0x0078
 #define XK_Z      0x005A
 #define XK_X      0x0058
+#define XK_s      0x0073
+#define XK_S      0x0053
 #define KeyPress    2
 #define KeyRelease  3
 #define ButtonPress 4
@@ -195,9 +197,11 @@ int HostWindow_Poll(void)
             KeySym ks = XLookupKeysym(&ev.xkey, 0);
             uint16_t bit = 0;
             if (ks == XK_Escape) { g_close_requested = 1; return 1; }
-            if (ks == XK_Return || ks == XK_space || ks == XK_z ||
+            if (ks == XK_space || ks == XK_z ||
                 ks == XK_x || ks == XK_Z || ks == XK_X)
                 bit = 0x4000u;
+            else if (ks == XK_Return || ks == XK_s || ks == XK_S)
+                bit = 0x0008u;          /* Start */
             else if (ks == XK_Up)
                 bit = 0x0010u;
             else if (ks == XK_Right)

@@ -38,6 +38,8 @@ void PE_Pad_SetBuffers(pe_addr_t pad1, pe_addr_t pad2);
  * success, -1 when the schedule table is full. */
 int  PE_Pad_ScheduleHold(uint16_t buttons, uint32_t first, uint32_t last);
 uint16_t PE_Pad_ButtonsAt(uint32_t vsync_index);
+/* Live host input (active-high raw mask), OR-ed into every delivery. */
+void PE_Pad_SetLiveButtons(uint16_t buttons);
 /* Write both buffers for this VSync.  No-op while disabled. */
 void PE_Pad_Deliver(uint32_t vsync_index);
 uint32_t PE_Pad_DeliveryCount(void);

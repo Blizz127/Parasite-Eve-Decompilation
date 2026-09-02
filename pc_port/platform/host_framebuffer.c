@@ -53,11 +53,19 @@ void HostFB_ClearImage(int x, int y, int w, int h, uint8_t r, uint8_t g, uint8_t
     }
 }
 
+static void (*fb_present_hook)(void);
+
+void HostFB_SetPresentHook(void (*hook)(void))
+{
+    fb_present_hook = hook;
+}
+
 void HostFB_Present(void)
 {
     if (!PE_Port_FramePresentationAllowed()) return;
     fb_presented++;
     PE_Port_FramePresented(fb_presented);
+    if (fb_present_hook) fb_present_hook();
 }
 
 void HostFB_SetDispMask(int mask)

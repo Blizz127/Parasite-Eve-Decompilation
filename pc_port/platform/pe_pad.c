@@ -8,6 +8,7 @@ static pe_addr_t g_pad2 = 0x800BE9C2u;
 static PePadHold g_holds[PE_PAD_MAX_HOLDS];
 static int g_hold_count;
 static uint32_t g_deliveries;
+static uint16_t g_live_buttons;
 
 void PE_Pad_Reset(void)
 {
@@ -16,6 +17,7 @@ void PE_Pad_Reset(void)
     g_pad2 = 0x800BE9C2u;
     g_hold_count = 0;
     g_deliveries = 0;
+    g_live_buttons = 0;
 }
 
 void PE_Pad_Enable(int enabled) { g_pad_enabled = enabled != 0; }
@@ -38,9 +40,11 @@ int PE_Pad_ScheduleHold(uint16_t buttons, uint32_t first, uint32_t last)
     return 0;
 }
 
+void PE_Pad_SetLiveButtons(uint16_t buttons) { g_live_buttons = buttons; }
+
 uint16_t PE_Pad_ButtonsAt(uint32_t vsync_index)
 {
-    uint16_t buttons = 0;
+    uint16_t buttons = g_live_buttons;
     int i;
     for (i = 0; i < g_hold_count; i++) {
         if (vsync_index >= g_holds[i].first && vsync_index <= g_holds[i].last)

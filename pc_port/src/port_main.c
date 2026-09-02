@@ -7,6 +7,7 @@
 
 #include "psx_compat.h"
 #include "pe_pad.h"
+#include "pe_gpu.h"
 #include "host_framebuffer.h"
 #include "host_window.h"
 #include "stub_registry.h"
@@ -17,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <limits.h>
 
 extern void func_8001220C(void);
@@ -356,6 +358,33 @@ static int RunCallbackOracleDump(void) {
     return 0;
 }
 
+/* ── Windowed live presentation (B54K-AT) ───────────────────────────── */
+static uint8_t g_live_rgb[PE_PORT_FB_WIDTH * PE_PORT_FB_HEIGHT * 3];
+
+/* Show the 24-bit display buffer named by the active overlay DispEnv
+ * (env + 0x5C, disp.y) from VRAM, feed keyboard input into the pad
+ * adapter, and pace to ~60 Hz.  Escape/close requests a stop. */
+static void LivePresentHook(void)
+{
+    uint32_t y0 = 0;
+    pe_addr_t env = PE_LoadU32(0x801D11C4u);
+    if (env >= 0x80000000u && env + 0x60u < 0x80200000u)
+        y0 = PE_LoadU16(env + 0x5Cu + 2u) & 0x1FFu;
+    for (uint32_t y = 0; y < PE_PORT_FB_HEIGHT; y++) {
+        uint8_t *dst = g_live_rgb + y * PE_PORT_FB_WIDTH * 3;
+        for (uint32_t x = 0; x < PE_PORT_FB_WIDTH * 3 / 2; x++) {
+            uint16_t px = 0;
+            (void)PE_GPU_ReadVRAM(x, y0 + y, &px);
+            dst[x * 2] = (uint8_t)(px & 0xFF);
+            dst[x * 2 + 1] = (uint8_t)(px >> 8);
+        }
+    }
+    HostWindow_Blit(g_live_rgb, PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
+    (void)HostWindow_Poll();
+    PE_Pad_SetLiveButtons((uint16_t)~HostWindow_PadRaw());
+    usleep(16000);
+}
+
 /* ── Title overlay ──────────────────────────────────────────────────── */
 static void UpdateTitle(const char *phase, const char *func) {
     if (!g_opts.debug_overlay || !g_host_window_open) return;
@@ -485,8 +514,10 @@ int main(int argc, char **argv) {
         int h = PE_PORT_FB_HEIGHT * g_opts.scale;
         if (HostWindow_Open(dpy, w, h, g_opts.window_title, g_opts.scale) != 0)
             use_window = 0;
-        else
+        else {
             PE_Port_SetQuitPoll(HostWindow_Poll);
+            HostFB_SetPresentHook(LivePresentHook);
+        }
     }
 
     if (g_opts.direct_clear_test) {

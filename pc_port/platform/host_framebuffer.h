@@ -10,6 +10,9 @@
 void HostFB_Init(void);
 void HostFB_ClearImage(int x, int y, int w, int h, uint8_t r, uint8_t g, uint8_t b);
 void HostFB_Present(void);
+/* Optional host callback invoked on every accepted presentation (windowed
+ * display, pacing, live input).  NULL disables it. */
+void HostFB_SetPresentHook(void (*hook)(void));
 void HostFB_SetDispMask(int mask);
 void HostFB_VSync(int mode);
 void HostFB_DrawSync(int mode);
