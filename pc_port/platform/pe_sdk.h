@@ -147,6 +147,8 @@ int  func_8007ED58(void);            /* Cd reset + state clear (returns 1) */
 int  func_8007FBF0(int idx);         /* CdStatus lane getter D_8009B574[idx] */
 int  func_8007F72C(void);            /* CdReady */
 int  func_8007F778(void);            /* CdReady queue-depth getter D_800A3608 */
+void func_800870F0(uint32_t a0);
+int32_t func_80191B64(pe_addr_t a0);
 int  func_80080CC8(int v);           /* exchange D_8009AFC0 */
 int  func_8007F7A8(void);            /* getter D_8009B590 */
 int  func_80080C48(pe_addr_t fp);    /* CdPosToInt: BCD mm/ss/ff @fp → LBA */

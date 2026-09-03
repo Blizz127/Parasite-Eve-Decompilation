@@ -275,6 +275,26 @@ moves. src/YAML untouched; count stays 560. Evidence:
 `docs/evidence/pe-b558-cd-controller/REPORT.md`; oracle:
 `pc_port/tools/pe_b558_cd_controller_oracle.py`.
 
+## PE-MV1a — 870F0 translated + 801924F8 tail to the 7A88C frontier (2026-09-03)
+
+`func_800870F0` (42 words) transcribed (`870F0_port.c`): `[D2C0] & 2`
+predicate, `((2903 * a0) >> 13) & 0xFF` scale chain (proven x256 in
+the oracle), four `sb` per arm, tail call to the `func_8007A88C`
+named stop. `func_80191B64` transcribed (`91B64_port.c`, scratch
+`0x801FFF20+`); `func_8007C484` transcribed into `7A214_port.c`;
+74F44 needed nothing (pre-existing ClearImage wrapper — duplicate
+deleted). `func_801924F8` tail transcribed in place (`cdready_wait`
+re-poll, 870F0 issue, BD4C stop for MV1b, E0 poll + give-up
+re-issue, got_frame entry-stop at C89C with `s3 = 0` sole-caller
+evidence); old `801927B0_cut` deleted. Strict disc run now stops
+at `func_8007A88C` from `func_800870F0` (whole translated boot
+travelled). B54KAD/AE migrated to the new boundary, intent
+intact. Suite 1064/1064 disc twice, 1046/1 env/17 gateless;
+CTest 2/2; fresh ASan/UBSan CTest 2/2 zero diagnostics. Oracle:
+`pc_port/tools/pe_mv1a_870f0_oracle.py` (green). Evidence:
+`docs/evidence/pe-mv1a-870f0-tail/REPORT.md`. Leaves 560; no
+src/YAML changes. Next: MV1b (BD4C/C89C decoders, 7A88C callee).
+
 ## Run summary 2026-09-03 — field-frame run (this session)
 
 - Landed: Rung A (FTE1 frame tail, matched 70E54/42FE8, 560 leaves)

@@ -133,3 +133,49 @@ void func_8007C394(uint32_t sector)
     }
     PE_StoreU32(0x800BE9ECu, (uint32_t)(i + idx));
 }
+
+/*
+ * Phase 6E-MV1a — func_8007C484 (21 words, 0x8007C484..0x8007C538):
+ * stream-record slot poll worker.  Pure guest-RAM bookkeeping, no
+ * calls.  a0/a1 are output pointers (slot address, slot pointer).
+ * Delay-slot subtleties: the C4C8-branch delay ALWAYS clears
+ * [BE9EC] (even when the slot is left untouched), C4C8 recomputes
+ * the slot from the cleared index, and both bne-taken exits return
+ * via the `v0 = 1` delay slot.  Returns 1 unless a state-2 slot was
+ * promoted to 4 with the computed addresses published (0).
+ */
+int func_8007C484(pe_addr_t dst_a, pe_addr_t dst_b)
+{
+    uint32_t base = PE_LoadU32(GA_RECORD_BASE);
+    pe_addr_t slot = (pe_addr_t)(base +
+                                 (PE_LoadU32(GA_ACTIVE_INDEX)
+                                  << RECORD_SHIFT));
+
+    if (PE_LoadU16(slot) == 1u) {
+        /* The C4C8-branch delay clears [BE9EC] first, then a nonzero
+         * [C0DBC] also clears the slot; C4C8 recomputes the slot
+         * from the cleared index (slot 0). */
+        PE_StoreU32(GA_ACTIVE_INDEX, 0u);
+        if (PE_LoadU32(0x800C0DBCu) != 0u)
+            PE_StoreU16(slot, 0u);
+        slot = (pe_addr_t)(base +
+                           (PE_LoadU32(GA_ACTIVE_INDEX)
+                            << RECORD_SHIFT));
+    }
+    /* C4E0: */
+    if (PE_LoadU16(slot) != 2u)
+        return 1;
+    PE_StoreU16(slot, 4u);
+    {
+        uint32_t count = PE_LoadU32(GA_RECORD_COUNT);
+        uint32_t active = PE_LoadU32(GA_ACTIVE_INDEX);
+        pe_addr_t a0 = (pe_addr_t)(base + (count << RECORD_SHIFT));
+        uint32_t v1 = active << 6;
+        v1 -= active;
+        v1 <<= 5;
+        a0 = (pe_addr_t)(a0 + v1);
+        PE_StoreU32(dst_a, (uint32_t)a0);
+        PE_StoreU32(dst_b, (uint32_t)slot);
+    }
+    return 0;
+}

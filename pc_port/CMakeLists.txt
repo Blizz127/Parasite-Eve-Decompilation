@@ -224,6 +224,8 @@ set(GAME_SRCS
     game/boot/func_801924F8_port.c
     game/boot/func_80081314_port.c
     game/boot/func_80192CE8_port.c
+    game/boot/func_800870F0_port.c
+    game/boot/func_80191B64_port.c
 )
 
 set(FIELD_RUNTIME_SRCS

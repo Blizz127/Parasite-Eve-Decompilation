@@ -12,6 +12,14 @@
 #include "game_port.h"
 #include "pe_sdk.h"
 
+static void func_8010BD4C(pe_addr_t a0, uint32_t a1)
+{
+    (void)a0;
+    (void)a1;
+    Bootstrap_ReturnVoid("func_8010BD4C", "func_801924F8");
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+}
+
 int func_801924F8(int index)
 {
     uint16_t record_index = (uint16_t)index;
@@ -86,6 +94,7 @@ int func_801924F8(int index)
     func_8007C304(1u, (int32_t)(int16_t)PE_LoadU16(record + 6u),
                   -1, 0u, 0u);
 
+cdready_wait:
     do {
         while (func_8007F72C() != 1) {
         }
@@ -101,9 +110,58 @@ int func_801924F8(int index)
     if (PE_Port_ShouldStop())
         return 0;
     if (status == 0)
+        goto cdready_wait; /* B0-exhaustion: re-poll. */
+    /* B8: v0 = [146C]; a1 = film id; mode = 3. */
+    func_800870F0(PE_LoadU8(0x800B0DBEu));
+    if (PE_Port_ShouldStop())
         return 0;
-
-    Bootstrap_ReturnVoid("func_801924F8_801927B0_cut", "func_801924F8");
+    /* D0: RLE frame decode (2000 records at D0DF8). Decoder is MV1b. */
+    func_8010BD4C(PE_LoadU32(0x801D0DF8u), 2000u);
+    if (PE_Port_ShouldStop())
+        return 0;
+e0_poll:
+    /* E0: poll the streaming slot table; s0 = 2000 tries. */
+    {
+        uint32_t s0 = 2000u;
+        int32_t s1;
+        for (;;) {
+            uint32_t left;
+            s1 = func_80191B64(0x801D1464u);
+            left = s0 - 1u;
+            s0 = left;
+            if (s1 != 0)
+                goto got_frame;
+            if (((left << 16) & 0xFFFFFFFFu) != 0u)
+                continue;
+            break;
+        }
+    }
+    /* Give-up path: copy D0DC4 to D0DDC, CD-ready waits, re-issue Setloc
+     * (loc word D0DDC, s2 = READY_FROM_CALLER -1) + ReadN(480), reset s0.
+     * The beqz delay (li s0,2000) runs on both outcomes, so s0 is always
+     * 2000 here: status 0 reaches the 9289C wait, nonzero reaches E0. */
+    for (;;) {
+        PE_StoreU32(0x801D0DDCu, PE_LoadU32(0x801D0DC4u));
+        while (func_8007F72C() != -1) {
+        }
+        while (func_8007F778() != 0) {
+        }
+        func_80080D5C(2, 0x801D0DDCu, 0u);
+        status = func_80081314(0x801D0DDCu, 480u);
+        if (PE_Port_ShouldStop())
+            return 0;
+        if (status == 0)
+            break;
+        goto e0_poll;
+    }
+    goto cdready_wait;
+got_frame:
+    /* 80192814: s1 nonzero. The frame path computes a1 = lw[s3 + ([146C]^1)*4]
+     * with s3 = 0 (sole-caller value, see above): a KUSEG vector-range load
+     * the port cannot execute, and hands (s1, a1) to the MV1b decoder.
+     * Stop at the decoder entry; the post-decode half (EC: v0 = 1, clear
+     * DBD, B0DBC = 1, B0DBA++) resumes in MV1b with the decoder. */
+    Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8");
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }
