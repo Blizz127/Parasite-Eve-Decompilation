@@ -92,3 +92,44 @@ void func_8007C304(uint32_t mode, int32_t start,
     PE_StoreU32(GA_STATE_5D54, 0u);
     PE_StoreU32(GA_STREAM_AUXILIARY, auxiliary);
 }
+
+/*
+ * Stream-record index update [0x8007C394,0x8007C43C), 19 words,
+ * asm/disc1/6C93C.s.  Pure record math, no callees: computes a
+ * magic-divide index from the sector id against the record base
+ * (D_800C0DC8 + D_800C20C4 * 32), zeroes that many 32-byte records
+ * when the indexed record's status halfword is 4, then publishes the
+ * end index to D_800BE9EC.  The multiply is signed (MIPS mult) and
+ * the shifts are arithmetic — transcribed with int32_t/int64_t so
+ * the bit behavior holds on every host.
+ */
+void func_8007C394(uint32_t sector)
+{
+    int32_t diff = (int32_t)(sector - (uint32_t)(PE_LoadU32(0x800C0DC8u) +
+                             (PE_LoadU32(0x800C20C4u) << 5)));
+    int32_t q = diff >> 2;
+    /* MIPS mult is signed: the constant is negative as int32. */
+    int64_t prod = (int64_t)q * (int64_t)(int32_t)0x82082083;
+    int32_t v = (int32_t)(prod >> 32) + q;
+    int32_t idx;
+    pe_addr_t rec;
+    int32_t status;
+    int32_t count;
+    int32_t i = 0;
+
+    v >>= 8;
+    idx = v - (diff >> 31);
+    rec = PE_LoadU32(0x800C0DC8u) + (uint32_t)idx * 32u;
+    status = (int32_t)(int16_t)PE_LoadU16(rec);
+    if (status != 4)
+        return;
+    count = (int32_t)(int16_t)PE_LoadU16(rec + 6u);
+    if (count > 0) {
+        for (i = 0; i < count; i++) {
+            pe_addr_t r = PE_LoadU32(0x800C0DC8u) +
+                          (uint32_t)(i + idx) * 32u;
+            PE_StoreU16(r, 0u);
+        }
+    }
+    PE_StoreU32(0x800BE9ECu, (uint32_t)(i + idx));
+}

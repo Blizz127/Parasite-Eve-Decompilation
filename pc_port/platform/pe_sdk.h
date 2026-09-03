@@ -159,6 +159,12 @@ int  func_80082314(void);            /* PVD verify; result word D_800B28F8 */
 int  func_80081414(pe_addr_t fp, const char *name); /* DsSearchFile */
 int  func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int sectors);
 int  func_800811E4(pe_addr_t fp);    /* read poll: 0 done, -1 timeout */
+pe_addr_t func_8007E6B0(void);       /* request-slot ring allocator */
+void func_80080950(pe_addr_t dst, pe_addr_t src); /* 4-byte copy-or-clear */
+void func_8007C214(void);            /* streaming DMA-completion callback */
+void func_8007C394(uint32_t sector); /* stream-record index update */
+int  func_8007F0C8(uint32_t mode, pe_addr_t loc, int count, uint32_t a3,
+                    pe_addr_t buf);  /* CdlReadS queue issue */
 char *func_800719F4(char *destination, const char *source); /* BIOS A(15h) strcat */
 void func_8010BE3C(int mode);         /* libpress DecDCTReset wrapper */
 

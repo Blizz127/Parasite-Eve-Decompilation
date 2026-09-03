@@ -79,6 +79,8 @@
 #include "pe_sdk.h"
 #include "pe_disc.h"
 #include "host_framebuffer.h"
+#include "game_port.h"
+#include "pe_bootstrap.h"
 
 /* B54K-AL: value-only controller location for the proven synchronous
  * CdlSetloc arm.  This is host hardware state, not planted guest state. */
@@ -384,6 +386,202 @@ int func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int sectors)
     PE_StoreU32(0x8009B6C4u, (uint32_t)vs);
     PE_StoreU32(0x8009B6D4u, 1u);
     return 1;
+}
+
+/* ── Batch 4: CdlReadS queue issue (evidence noted per function) ─────── */
+
+/* func_8007E6B0 — request-slot ring allocator (asm/disc1/6E6C0.s, 21
+ * words).  Eight 0x18-byte descriptors at D_800A3540; slot index is
+ * (D_800A3600 + D_800A3608) mod 8 with retail's single subtract (no
+ * wrap-around loop — transcribed exactly).  Returns 0 when the queue
+ * count D_800A3608 reaches 8 (signed compare). */
+pe_addr_t func_8007E6B0(void)
+{
+    uint32_t count = PE_LoadU32(0x800A3608u);
+    uint32_t idx;
+
+    if ((int32_t)count >= 8)
+        return 0;
+    idx = PE_LoadU32(0x800A3600u) + count;
+    if (idx >= 8u)
+        idx -= 8u;
+    return 0x800A3540u + idx * 0x18u;
+}
+
+/* func_80080950 — 4-byte copy-or-clear helper (asm/disc1/71150.s, 18
+ * words).  src != 0: copies 4 bytes src -> dst when dst != 0, else
+ * nothing.  src == 0: clears one byte at dst when dst != 0.  Callers
+ * discard the result. */
+void func_80080950(pe_addr_t dst, pe_addr_t src)
+{
+    uint32_t i;
+
+    if (src == 0u) {
+        if (dst != 0u)
+            PE_StoreU8(dst, 0u);
+        return;
+    }
+    if (dst == 0u)
+        return;
+    for (i = 0u; i < 4u; i++)
+        PE_StoreU8(dst + i, PE_LoadU8(src + (pe_addr_t)i));
+}
+
+/* func_8007C214 — streaming DMA-completion callback (asm/disc1/6C93C.s,
+ * 35 words).  Publishes status 2 to the active 32-byte stream record
+ * (D_800C0DC8 + D_800BE9E4 * 32), copies the record's sector word to
+ * D_800A3490, advances D_800BE9E4 to D_800BE998, chains the
+ * D_800B0CC8 callback when set, then clears D_800B89F4.
+ *
+ * The D_800B0CC8 chain is a proven-dead arm on every path that reaches
+ * here: func_8007C304 (the only writer in the translated tree) is
+ * called with callback = 0 by the movie prefix, so the register reads
+ * 0 and retail skips the jalr (beqz).  The nonzero arm is an honest
+ * boundary, not a silent skip. */
+void func_8007C214(void)
+{
+    uint32_t idx = PE_LoadU32(0x800BE9E4u);
+    pe_addr_t rec = PE_LoadU32(0x800C0DC8u) + idx * 32u;
+    uint32_t cb;
+
+    PE_StoreU16(rec, 2u);
+    memcpy(PE_Translate(0x800A3490u, 4u),
+           PE_TranslateConst(rec + 0x1Cu, 4u), 4u);
+    PE_StoreU32(0x800A3494u, PE_LoadU32(rec + 8u));
+    PE_StoreU32(0x800BE9E4u, PE_LoadU32(0x800BE998u));
+    cb = PE_LoadU32(0x800B0CC8u);
+    if (cb != 0u) {
+        Bootstrap_ReturnVoid("func_8007C214_B0CC8_chain", "func_8007C214");
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return;
+    }
+    PE_StoreU32(0x800B89F4u, 0u);
+}
+
+/* Guest scratch holding the CdlLOC copy for func_8007F0C8's slot word.
+ * Retail keeps those 4 bytes on its own stack (sp+0x31) and stores the
+ * stack address into the command packet; a host stack address has no
+ * guest meaning, so the bytes live at this documented scratch address
+ * (same pattern as PE_698D4_CDLFILE) and the packet carries its guest
+ * address.  Content is the verbatim location bytes, never invented. */
+#define PE_7F0C8_LOC 0x801FFE80u
+
+/* func_8007F0C8 — CdlReadS queue issue (asm/disc1/6F684.s, ~130 words).
+ * Retail args: a0 = mode byte, a1 = CdlLOC*, a2 = sector count,
+ * a3 = per-packet word, stack = destination buffer (-1 = streaming,
+ * no buffer).  Queues up to 4 command packets: validates the BCD
+ * location (negative LBA fails), gates count to 3..27 via the retail
+ * jump-table range check (both arms are instruction-identical past
+ * their labels — mechanically diffed — so one transcription serves),
+ * fills one 0x18 descriptor per packet (sequence from D_8009B53C with
+ * the FFFFFFFF -> 1 wrap guard), bumps D_800A3608 per packet, then the
+ * F394 completion selector checks lane == 1 and the head descriptor
+ * against the sequence.
+ *
+ * Frame layout is transcribed exactly (four 16-byte packets at
+ * sp+0x10, location bytes at sp+0x31, loc pointer at sp+0x38).
+ * The per-iteration gate reads slot+8 (sp+0x48/0x58/0x68/0x78):
+ * slot3+8 is a proven retail zero (cleared, never stored) and the
+ * rest is retail's own spilled registers — zero-canonicalized here.
+ * Hence the 80950 arm is structurally transcribed but never fires
+ * in-port; the loc-pointer word at slot2+8 belongs to the Setloc
+ * hardware packet and feeds only the collapsed controller chain.
+ * All canonicalized bytes feed nothing translated readers consume.
+ *
+ * The selector tail (func_8007E8F4 -> func_8007FB44 -> func_8007FCFC ->
+ * func_8007B558 controller dispatch, then the func_8007C564 delivery
+ * state machine behind the func_800813E8 completion callback) is
+ * unrepresented: on a passing selector the port records the
+ * func_8007F0C8_completion_selector boundary with lanes untouched
+ * (still idle) and completion pending, exactly like retail mid-stream.
+ * Returns the sequence on the cut path (retail returns it after the
+ * discarded 7E8F4 call). */
+int func_8007F0C8(uint32_t mode, pe_addr_t loc, int count, uint32_t a3,
+                  pe_addr_t buf)
+{
+    /* sp+0x10 base; packets at +0x00/+0x10/+0x20/+0x30. */
+    uint8_t fr[0x60];
+    uint32_t lba;
+    uint32_t seq;
+    uint32_t k;
+    uint32_t i;
+
+    for (i = 0u; i < sizeof(fr); i++)
+        fr[i] = 0u;
+    fr[0x00] = 9u;
+    fr[0x10] = 0x0Eu;
+    fr[0x11] = (uint8_t)(mode & 0xFFu);
+    /* fr[0x18] keeps the pre-call zero (lba placeholder). */
+    lba = (uint32_t)func_80080C48(loc);
+    if ((int32_t)lba < 0)
+        return 0;
+    fr[0x20] = 2u;
+    /* Unaligned store pair (swl sp+0x34 / swr sp+0x31) lands the 4
+     * location bytes at sp+0x31..sp+0x34. */
+    for (i = 0u; i < 4u; i++) {
+        uint8_t b = PE_LoadU8(loc + (pe_addr_t)i);
+        fr[0x31u + i] = b;
+        PE_StoreU8(PE_7F0C8_LOC + (pe_addr_t)i, b);
+    }
+    fr[0x28] = (uint8_t)(PE_7F0C8_LOC & 0xFFu);
+    fr[0x29] = (uint8_t)((PE_7F0C8_LOC >> 8) & 0xFFu);
+    fr[0x2A] = (uint8_t)((PE_7F0C8_LOC >> 16) & 0xFFu);
+    fr[0x2B] = (uint8_t)((PE_7F0C8_LOC >> 24) & 0xFFu);
+    /* Jump-table range gate: (count & 0xFF) - 3 < 25 unsigned. */
+    if ((uint32_t)(((uint32_t)(count & 0xFF)) - 3u) >= 25u)
+        return 0;
+    fr[0x30] = (uint8_t)(count & 0xFF);
+    fr[0x3C] = (uint8_t)(a3 & 0xFFu);
+    fr[0x3D] = (uint8_t)((a3 >> 8) & 0xFFu);
+    fr[0x3E] = (uint8_t)((a3 >> 16) & 0xFFu);
+    fr[0x3F] = (uint8_t)((a3 >> 24) & 0xFFu);
+    /* Queue capacity: D_800A3608 + 4 < 9. */
+    if (PE_LoadU32(0x800A3608u) + 4u >= 9u)
+        return 0;
+    seq = PE_LoadU32(0x8009B53Cu) + 1u;
+    if (seq == 0u)
+        seq = 1u;
+    PE_StoreU32(0x8009B53Cu, seq);
+    for (k = 0u; k < 4u; k++) {
+        uint8_t *sl = fr + 0x30u + k * 16u;
+        pe_addr_t desc = func_8007E6B0();
+        uint32_t w;
+
+        if (desc == 0u)
+            return 0;
+        PE_StoreU32(desc, seq);
+        PE_StoreU8(desc + 4u, sl[0]);
+        w = (uint32_t)sl[8] | ((uint32_t)sl[9] << 8) |
+            ((uint32_t)sl[10] << 16) | ((uint32_t)sl[11] << 24);
+        if (w == 0u) {
+            PE_StoreU32(desc + 0xCu, 0u);
+        } else {
+            /* func_80080950 copy arm, inlined: the source is a stack
+             * address with no guest meaning, so the proven 4-byte
+             * copy runs here; standalone 80950 stays exact for its
+             * guest-addressed callers. */
+            for (i = 0u; i < 4u; i++)
+                PE_StoreU8(desc + 5u + (pe_addr_t)i, sl[1 + i]);
+            PE_StoreU32(desc + 0xCu, desc + 5u);
+        }
+        w = (uint32_t)sl[12] | ((uint32_t)sl[13] << 8) |
+            ((uint32_t)sl[14] << 16) | ((uint32_t)sl[15] << 24);
+        PE_StoreU32(desc + 0x10u, w);
+        PE_StoreU32(desc + 0x14u, (uint32_t)buf);
+        PE_StoreU32(0x800A3608u, PE_LoadU32(0x800A3608u) + 1u);
+    }
+    /* F394 completion selector, transcribed exactly. */
+    if (func_8007FBF0(0) != 1)
+        return 0;
+    {
+        uint32_t head = PE_LoadU32(0x800A3604u);
+        if (PE_LoadU32(0x800A3540u + head * 24u) != seq)
+            return 0;
+    }
+    Bootstrap_ReturnVoid("func_8007F0C8_completion_selector",
+                         "func_8007F0C8");
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    return (int)seq;
 }
 
 /* func_800811E4 — poll; 0 done, -1 timeout (>1200 vsyncs), else pending. */

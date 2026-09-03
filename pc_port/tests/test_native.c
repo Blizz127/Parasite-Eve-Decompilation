@@ -1634,8 +1634,8 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x800A801Cu) == 1u &&
            PE_LoadU32(0x800B0CCCu) == 0u &&
            PE_LoadU32(0x8009B574u) == 1u &&
-           PE_LoadU32(0x800A3608u) == 0u &&
-           CountOrderLog("func_80081314_func_8007F0C8_cut") == 1 &&
+           PE_LoadU32(0x800A3608u) == 4u &&
+           CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "DecDCToutCallback registration or following cut differs");
 
@@ -18232,7 +18232,7 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_80081314_func_8007F0C8_cut") == 1 &&
+           CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18270,7 +18270,7 @@ static void test_B54KAE_movie_state_setup(void)
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_80081314_func_8007F0C8_cut") == 1 &&
+           CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
@@ -18550,13 +18550,17 @@ static void test_B54KAM_read_registration_prefix(void)
     ResetTestState();
     PE_StoreU32(0x800A8020u, 0xA5A5A5A5u);
     PE_StoreU32(0x800B8AB4u, 0x12345678u);
+    /* Zeroed CdlLOC reads LBA -150: the queue issue fails, the previous
+     * callbacks are restored (824F0(old B8AB4), 824C8(0)), and the port
+     * returns 0 with no boundary — the exact retail restore arm. */
     ASSERT(func_80081314(loc, 0x1E0u) == 0 &&
-           PE_Port_ShouldStop() &&
-           CountOrderLog("func_80081314_func_8007F0C8_cut") == 1,
-           "read setup did not stop at the low-level command boundary");
+           !PE_Port_ShouldStop() &&
+           CountOrderLog("func_80081314_func_8007F0C8_cut") == 0 &&
+           CountOrderLog("func_8007F0C8_completion_selector") == 0,
+           "failed issue must take the silent restore arm");
     ASSERT(PE_LoadU32(0x800A8020u) == 0u &&
-           PE_LoadU32(PE_DMA_CallbackSlotAddress(3u)) == 0x8007C214u &&
-           PE_LoadU32(0x800B8AB4u) == 0x800813E8u &&
+           PE_LoadU32(PE_DMA_CallbackSlotAddress(3u)) == 0x12345678u &&
+           PE_LoadU32(0x800B8AB4u) == 0u &&
            PE_GPU_ReadDICR() == 0x00880000u,
            "mode branch or callback registrations differ");
     ASSERT(CountOrderLog("func_80074520_dma_indirect_call") == 0,
@@ -19169,6 +19173,213 @@ static void test_698D4_bootstrap_disc_reset_isolation(void) {
 
     func_800698D4();
     ASSERT(PE_LoadU32(0x800A802Cu) == 0x30u, "archive R not re-seeded");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase CDQ1 — CdlReadS queue issue rung (func_8007F0C8 + small fry).
+ * Retail: asm/disc1/6E6C0.s (7E6B0), asm/disc1/71150.s (80950),
+ * asm/disc1/6C93C.s (7C214, 7C394), asm/disc1/6F684.s (7F0C8).
+ * No disc needed: the queue math is validated against synthetic guest
+ * state; the F394 completion selector (not sector delivery) is the
+ * boundary, so sector payloads never enter these tests.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void test_CDQ1_7E6B0_ring(void) {
+    TEST("CDQ1_7E6B0_ring");
+    ResetTestState();
+    func_8007ED58(); /* clears A3600/A3604/A3608 */
+    ASSERT(func_8007E6B0() == 0x800A3540u, "slot 0 base differs");
+    /* single subtract, not modulo: head 6 + count 3 -> slot 1 */
+    PE_StoreU32(0x800A3600u, 6u);
+    PE_StoreU32(0x800A3608u, 3u);
+    ASSERT(func_8007E6B0() == 0x800A3540u + 1u * 0x18u,
+           "single-subtract wrap differs");
+    /* head 0 + count 7 -> slot 7 (last valid) */
+    PE_StoreU32(0x800A3600u, 0u);
+    PE_StoreU32(0x800A3608u, 7u);
+    ASSERT(func_8007E6B0() == 0x800A3540u + 7u * 0x18u,
+           "slot 7 address differs");
+    /* count 8 -> full, 0 (signed compare) */
+    PE_StoreU32(0x800A3608u, 8u);
+    ASSERT(func_8007E6B0() == 0u, "full queue must return 0");
+    PASS();
+}
+
+static void test_CDQ1_80950_arms(void) {
+    TEST("CDQ1_80950_arms");
+    ResetTestState();
+    PE_StoreU32(0x801FFF00u, 0xA5A5A5A5u);
+    PE_StoreU32(0x801FFF04u, 0x11223344u);
+    /* copy arm: 4 bytes src -> dst */
+    func_80080950(0x801FFF00u, 0x801FFF04u);
+    ASSERT(PE_LoadU32(0x801FFF00u) == 0x11223344u, "4-byte copy differs");
+    /* clear arm: src == 0 clears one byte */
+    func_80080950(0x801FFF00u, 0u);
+    ASSERT(PE_LoadU8(0x801FFF00u) == 0u &&
+           PE_LoadU32(0x801FFF00u) == 0x11223300u,
+           "single-byte clear differs");
+    /* null arms are silent no-ops */
+    func_80080950(0u, 0x801FFF04u);
+    func_80080950(0u, 0u);
+    PASS();
+}
+
+static void test_CDQ1_7C214_publish(void) {
+    TEST("CDQ1_7C214_publish");
+    ResetTestState();
+    /* synthetic stream record file: base + 2 records of 32 bytes */
+    PE_StoreU32(0x800C0DC8u, 0x801F0000u);
+    PE_StoreU32(0x800BE9E4u, 1u);
+    PE_StoreU32(0x800BE998u, 7u);
+    PE_StoreU16(0x801F0020u, 9u);
+    PE_StoreU32(0x801F0028u, 0xDEADBEEFu);
+    PE_StoreU32(0x801F003Cu, 0x04030201u);
+    PE_StoreU32(0x800B0CC8u, 0u); /* chain dead: retail skips the jalr */
+    PE_StoreU32(0x800B89F4u, 0xA5A5A5A5u);
+    func_8007C214();
+    ASSERT(PE_LoadU16(0x801F0020u) == 2u, "record status publish differs");
+    ASSERT(PE_LoadU32(0x800A3490u) == 0x04030201u, "sector word copy differs");
+    ASSERT(PE_LoadU32(0x800A3494u) == 0xDEADBEEFu, "record word store differs");
+    ASSERT(PE_LoadU32(0x800BE9E4u) == 7u, "index advance differs");
+    ASSERT(PE_LoadU32(0x800B89F4u) == 0u, "active-flag clear differs");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "dead chain arm must not stop");
+    PASS();
+}
+
+static void test_CDQ1_7C214_chain_boundary(void) {
+    TEST("CDQ1_7C214_chain_boundary");
+    ResetTestState();
+    PE_StoreU32(0x800C0DC8u, 0x801F0000u);
+    PE_StoreU32(0x800BE9E4u, 0u);
+    PE_StoreU32(0x800BE998u, 0u);
+    PE_StoreU32(0x800B0CC8u, 0x80070000u); /* nonzero: retail would jalr */
+    func_8007C214();
+    ASSERT(CountOrderLog("func_8007C214_B0CC8_chain") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "live chain arm must record the exact boundary");
+    PASS();
+}
+
+static void test_CDQ1_7C394_math(void) {
+    /* The sector id is base-relative: idx ~= (sector - base)/4000, so
+     * sector = base + 4000 addresses record 1 in these fixtures. */
+    const pe_addr_t base = 0x801F0000u;
+    TEST("CDQ1_7C394_math");
+    ResetTestState();
+    PE_StoreU32(0x800C0DC8u, base);
+    PE_StoreU32(0x800C20C4u, 0u);
+    PE_StoreU32(0x800BE9ECu, 0xA5A5A5A5u);
+    /* status != 4: early return, index untouched */
+    PE_StoreU16(base + 32u, 3u);
+    func_8007C394(base + 4000u);
+    ASSERT(PE_LoadU32(0x800BE9ECu) == 0xA5A5A5A5u,
+           "non-4 status must return early");
+    /* status == 4, count 0: publishes index, zeroes nothing */
+    PE_StoreU16(base + 32u, 4u);
+    PE_StoreU16(base + 32u + 6u, 0u);
+    func_8007C394(base + 4000u);
+    ASSERT(PE_LoadU32(0x800BE9ECu) == 1u, "index publish differs");
+    /* status == 4, count 2: zeroes two records, publishes end.
+     * idx 2 addresses base+64; the loop clears base+64 and base+96. */
+    PE_StoreU16(base + 64u, 4u);
+    PE_StoreU16(base + 64u + 6u, 2u);
+    PE_StoreU16(base + 96u, 0xBEEFu);
+    func_8007C394(base + 4064u);
+    ASSERT(PE_LoadU16(base + 96u) == 0u &&
+           PE_LoadU32(0x800BE9ECu) == 4u, "record zero range differs");
+    PASS();
+}
+
+static void test_CDQ1_7F0C8_gates(void) {
+    TEST("CDQ1_7F0C8_gates");
+    ResetTestState();
+    func_8007ED58();
+    /* zeroed CdlLOC -> CdPosToInt = -150 -> negative LBA fails */
+    ASSERT(func_8007F0C8(0x1Bu, 0x801FFF00u, 27, 0u, 0xFFFFFFFFu) == 0,
+           "negative LBA must fail");
+    /* valid BCD loc: mm=00 ss=02 ff=02 -> LBA 2 */
+    PE_StoreU8(0x801FFF00u, 0x00u);
+    PE_StoreU8(0x801FFF01u, 0x02u);
+    PE_StoreU8(0x801FFF02u, 0x02u);
+    PE_StoreU8(0x801FFF03u, 0x00u);
+    ASSERT(func_80080C48(0x801FFF00u) == 2, "loc setup must read LBA 2");
+    /* count gate: 2 and 28 fail (range is 3..27) */
+    ASSERT(func_8007F0C8(0x1Bu, 0x801FFF00u, 2, 0u, 0xFFFFFFFFu) == 0,
+           "count 2 must fail");
+    ASSERT(func_8007F0C8(0x1Bu, 0x801FFF00u, 28, 0u, 0xFFFFFFFFu) == 0,
+           "count 28 must fail");
+    /* queue capacity: count 5 + 4 > 8 fails */
+    PE_StoreU32(0x800A3608u, 5u);
+    ASSERT(func_8007F0C8(0x1Bu, 0x801FFF00u, 27, 0u, 0xFFFFFFFFu) == 0,
+           "full queue must fail");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "gated failures must not stop");
+    PASS();
+}
+
+static void test_CDQ1_7F0C8_queue_and_selector(void) {
+    TEST("CDQ1_7F0C8_queue_and_selector");
+    ResetTestState();
+    func_8007ED58(); /* lane 1, queue 0, head 0, seq 0 */
+    PE_StoreU8(0x801FFF00u, 0x00u);
+    PE_StoreU8(0x801FFF01u, 0x02u);
+    PE_StoreU8(0x801FFF02u, 0x02u);
+    PE_StoreU8(0x801FFF03u, 0x00u);
+    ASSERT(func_8007F0C8(0x1Bu, 0x801FFF00u, 27, 0u, 0xFFFFFFFFu) == 1,
+           "queue issue must return sequence 1");
+    ASSERT(PE_LoadU32(0x800A3608u) == 4u, "queue count must advance by 4");
+    ASSERT(PE_LoadU32(0x8009B53Cu) == 1u, "sequence must advance to 1");
+    /* descriptor 0 carries the real packet: seq, count, zero gate, a3.
+     * The gate word (slot3+8 = sp+0x48) is a proven retail zero — the
+     * loc-pointer packet word lives at slot2+8 and feeds only the
+     * collapsed controller chain — so desc+0xC is 0, never the ptr. */
+    ASSERT(PE_LoadU32(0x800A3540u) == 1u, "desc0 seq differs");
+    ASSERT(PE_LoadU8(0x800A3544u) == 27u, "desc0 cmd differs");
+    ASSERT(PE_LoadU32(0x800A354Cu) == 0u, "desc0 gate must be the zero arm");
+    ASSERT(PE_LoadU32(0x800A3550u) == 0u, "desc0 data differs");
+    ASSERT(PE_LoadU32(0x800A3554u) == 0xFFFFFFFFu, "desc0 buf differs");
+    /* loc bytes staged verbatim at the documented scratch */
+    ASSERT(PE_LoadU8(0x801FFE80u) == 0x00u &&
+           PE_LoadU8(0x801FFE81u) == 0x02u &&
+           PE_LoadU8(0x801FFE82u) == 0x02u,
+           "loc scratch copy differs");
+    /* completion selector is the exact boundary; lanes untouched */
+    ASSERT(CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "passing selector must record the exact boundary");
+    ASSERT(PE_LoadU32(0x8009B574u) == 1u, "lane must stay idle at boundary");
+    PASS();
+}
+
+static void test_CDQ1_81314_full(void) {
+    TEST("CDQ1_81314_full");
+    ResetTestState();
+    func_8007ED58();
+    PE_StoreU8(0x801FFF00u, 0x00u);
+    PE_StoreU8(0x801FFF01u, 0x02u);
+    PE_StoreU8(0x801FFF02u, 0x02u);
+    PE_StoreU8(0x801FFF03u, 0x00u);
+    PE_StoreU32(0x800B8AB4u, 0x11111111u);
+    ASSERT(func_80081314(0x801FFF00u, 0x1E0u) == 1,
+           "streaming issue must return the sequence");
+    /* registration effects: A8020 (0x1E0 has bit 0x20 -> 0),
+     * data callback installed, DMA slot 3 armed is covered by prefix
+     * tests; the queue boundary is the stop. */
+    ASSERT(PE_LoadU32(0x800A8020u) == 0u, "stream flag store differs");
+    ASSERT(PE_LoadU32(0x800B8AB4u) == 0x800813E8u,
+           "completion callback install differs");
+    ASSERT(CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "issue must end at the selector boundary");
+    /* zero-issue arm restores the previous callbacks and returns 0 */
+    ResetTestState();
+    func_8007ED58();
+    PE_StoreU32(0x800B8AB4u, 0x22222222u);
+    ASSERT(func_80081314(0x801FFF00u, 0x1E0u) == 0,
+           "failed issue must return 0");
+    ASSERT(PE_LoadU32(0x800B8AB4u) == 0u, "restore store differs");
     PASS();
 }
 
@@ -34014,6 +34225,16 @@ int main(void)
     test_698D4_bootstrap_archive_seeded();
     test_698D4_bootstrap_malformed_archive_returns_zero();
     test_698D4_bootstrap_disc_reset_isolation();
+
+    /* Phase CDQ1: CdlReadS queue issue rung (8 tests) */
+    test_CDQ1_7E6B0_ring();
+    test_CDQ1_80950_arms();
+    test_CDQ1_7C214_publish();
+    test_CDQ1_7C214_chain_boundary();
+    test_CDQ1_7C394_math();
+    test_CDQ1_7F0C8_gates();
+    test_CDQ1_7F0C8_queue_and_selector();
+    test_CDQ1_81314_full();
 
     /* Phase 6E-B16: func_8006A9E4 streaming load rung (13 tests) */
     test_6E6A8_sector_forward();

@@ -132,6 +132,7 @@ extern void func_8010C0D8(pe_addr_t callback); /* DecDCToutCallback */
 extern void func_8007A214(pe_addr_t record_base, uint32_t record_count);
 extern void func_8007C304(uint32_t mode, int32_t start,
                           int32_t end, pe_addr_t callback, uint32_t auxiliary);
+extern void func_8007C394(uint32_t sector);
 static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
 /* func_8006E1C0 is REAL (Phase 6E-B51):
  * game/boot/func_8006E1C0_port.c — packed texture-entry LoadImage
