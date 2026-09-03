@@ -83,6 +83,9 @@ static int PE_Disc_CheckCue(const char *bin_path)
     {
         char *dot = strrchr(cue, '.');
         char *slash = strrchr(cue, '/');
+        /* Windows separators: a backslash also ends the directory part. */
+        char *backslash = strrchr(cue, '\\');
+        if (backslash && (!slash || backslash > slash)) slash = backslash;
         if (dot && (!slash || dot > slash)) {
             strcpy(dot, ".cue");
         } else {

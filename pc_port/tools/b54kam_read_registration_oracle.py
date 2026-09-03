@@ -45,10 +45,12 @@ def main() -> None:
     print("  OK retail: complete wrappers; 30-word registration prefix; CdlReadS path")
 
     src=(root/"pc_port/game/boot/func_80081314_port.c").read_text()
+    libcd=(root/"pc_port/platform/pe_libcd.c").read_text()
     require("mode & 0x100u" in src and "mode & 0x20u" in src and
             "func_800824F0(0x8007C214u)" in src and
             "func_800824C8(0x800813E8u)" in src and
-            "func_80081314_func_8007F0C8_cut" in src,
+            "func_8007F0C8(mode & 0xFFu, location, 0x1Bu, 0u" in src and
+            "func_8007F0C8_completion_selector" in libcd,
             "native registration prefix")
     tests=a.tests or root/"pc_port/build/pe-native-tests"
     port=a.port or root/"pc_port/build/parasite-eve-port"
@@ -57,9 +59,9 @@ def main() -> None:
     out=run([str(tests)],0,env)
     require("B54KAM_read_registration_prefix... PASS" in out and "0 failed" in out,"focused controls")
     strict=run([str(port),"--headless","--disc-image",str(disc),"--strict-stubs"],1)
-    require("func_80081314_func_8007F0C8_cut" in strict and
-            "called from: func_80081314" in strict,"strict frontier")
-    print("  OK native: registration only; strict boundary before low-level issue")
+    require("func_8007F0C8_completion_selector" in strict and
+            "called from: func_8007F0C8" in strict,"strict frontier")
+    print("  OK native: registration plus real queue issue; strict boundary pre-delivery")
     print("\nB54K-AM read-registration oracle: PASS.")
 
 if __name__ == "__main__": main()

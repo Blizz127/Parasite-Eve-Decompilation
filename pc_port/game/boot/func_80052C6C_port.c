@@ -281,7 +281,7 @@ void func_80052C6C(void) {
                  * through PE_Translate — simpler and correct for little-endian. */
                 const void *src = PE_TranslateConst(rec, 32u);
                 void *dst = PE_Translate(dest, 32u);
-                __builtin_memcpy(dst, src, 32u);
+                memcpy(dst, src, 32u);
             }
 
             PE_StoreU8(dest + 9u, 0u);       /* clear byte at offset 9 */

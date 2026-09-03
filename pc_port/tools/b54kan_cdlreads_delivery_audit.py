@@ -29,7 +29,10 @@ def main():
          (0xA4620000).to_bytes(4,"little") in dma,
          "DMA callback status 2 publication")
     src=(root/"pc_port/game/boot/func_80081314_port.c").read_text()
-    need("func_80081314_func_8007F0C8_cut" in src and
+    libcd=(root/"pc_port/platform/pe_libcd.c").read_text()
+    need("func_80081314_func_8007F0C8_cut" not in src and
+         "func_8007F0C8(mode & 0xFFu, location, 0x1Bu, 0u" in src and
+         "func_8007F0C8_completion_selector" in libcd and
          "func_8007C214(" not in src and "func_800813E8(" not in src,
          "native boundary or fabricated callback")
     print("  OK retail: 583-word CD parser and distinct 35-word DMA callback")

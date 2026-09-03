@@ -128,8 +128,8 @@ def main() -> None:
             "stream state, widths, and bit-mask controls")
     strict = run([str(port), "--headless", "--disc-image", str(disc),
                   "--strict-stubs"], 1)
-    require("func_80081314_func_8007F0C8_cut" in strict and
-            "called from: func_80081314" in strict,
+    require("func_8007F0C8_completion_selector" in strict and
+            "called from: func_8007F0C8" in strict,
             "strict path did not reach the post-setup cut")
     print("  OK runtime: focused state/width controls")
     print("  OK production: strict path continues through the CD idle wait")

@@ -188,7 +188,10 @@ set(GAME_SRCS
     game/boot/func_8006E1C0_port.c
     game/boot/func_8007506C_port.c
     game/boot/func_8007512C_port.c
+    game/boot/func_80042798_port.c
+    game/boot/func_800752AC_port.c
     game/boot/func_80075358_port.c
+    game/boot/func_800753B4_port.c
     game/boot/func_80076664_port.c
     game/boot/func_80073CF4_port.c
     game/boot/func_800746A0_port.c
@@ -249,11 +252,23 @@ target_compile_definitions(pe_field_runtime PUBLIC
 
 # The command-line host is one consumer of the static runtime.  Its window
 # backend remains outside the library so non-X11 consumers do not inherit it.
+# Window backend is per-OS: X11/dlopen on POSIX, Win32 GDI on Windows.
+# Both implement the same platform/host_window.h interface.
+if(WIN32)
+    set(HOST_WINDOW_SRC platform/host_window_win32.c)
+else()
+    set(HOST_WINDOW_SRC platform/host_window.c)
+endif()
+
 add_executable(parasite-eve-port
     src/port_main.c
-    platform/host_window.c
+    ${HOST_WINDOW_SRC}
 )
-target_link_libraries(parasite-eve-port PRIVATE pe_field_runtime dl)
+target_link_libraries(parasite-eve-port PRIVATE pe_field_runtime)
+if(NOT WIN32)
+    # POSIX X11 backend resolves dlopen/dlsym from libdl.
+    target_link_libraries(parasite-eve-port PRIVATE dl)
+endif()
 
 target_compile_definitions(parasite-eve-port PRIVATE
     PE_PORT_HEADLESS=1
@@ -261,7 +276,9 @@ target_compile_definitions(parasite-eve-port PRIVATE
     PE_PORT_FB_HEIGHT=240
 )
 
-if(PE_PORT_SANITIZERS)
+# GCC/Clang-style sanitizer flags; MSVC uses /fsanitize=address instead,
+# so these only apply to non-MSVC toolchains.
+if(PE_PORT_SANITIZERS AND NOT MSVC)
     target_compile_options(pe_field_runtime PRIVATE
         -fsanitize=address,undefined
         -fno-omit-frame-pointer
@@ -292,7 +309,7 @@ if(BUILD_TESTS)
     )
     target_link_libraries(pe-field-runtime-link-test PRIVATE pe_field_runtime)
 
-    if(PE_PORT_SANITIZERS)
+    if(PE_PORT_SANITIZERS AND NOT MSVC)
         target_compile_options(pe-native-tests PRIVATE
             -fsanitize=address,undefined
             -fno-omit-frame-pointer

@@ -88,7 +88,9 @@ def main():
     need("static bool PE_Disc_ReadRaw" in source and
          "PE_Disc_ReadRaw" not in header,
          "raw stream reader remains private")
-    need("func_80081314_func_8007F0C8_cut" in boot,
+    libcd=(root/"pc_port/platform/pe_libcd.c").read_text()
+    need("func_80081314_func_8007F0C8_cut" not in boot and
+         "func_8007F0C8_completion_selector" in libcd,
          "strict frontier moved without delivery implementation")
 
     print("  OK retail video: Mode-2 Form-1 / 2048-byte data")
