@@ -466,7 +466,61 @@ void func_8007C214(void)
  * address.  Content is the verbatim location bytes, never invented. */
 #define PE_7F0C8_LOC 0x801FFE80u
 
+/* Phase 6E-CDS1 completion-selector preliminaries, called by the
+ * func_8007F0C8 tail below (asm/disc1/6E6C0.s:855, asm/disc1/7018C.s:144).
+ *
+ * func_8007E8F4 (28 words, 0x8007E8F4..0x8007E964):
+ * completion-queue predicate.  Gate lane == 1 via func_8007FBF0(0),
+ * address the head record (0x800A3540 + 24 * D_800A3604, the *24 built
+ * as sll-1/addu/sll-3 exactly like the 7F0C8 tail), return 0 on a null
+ * head, else (func_8007FB44(rec.byte4, rec.word+0xC) != 0). */
+int func_8007E8F4(void)
+{
+    uint32_t head;
+    pe_addr_t rec;
+
+    if (func_8007FBF0(0) != 1)
+        return 0;
+    head = PE_LoadU32(0x800A3604u);
+    rec = 0x800A3540u + head * 24u;
+    if (PE_LoadU32(rec) == 0u)
+        return 0;
+    return func_8007FB44(PE_LoadU8(rec + 4u), PE_LoadU32(rec + 0xCu)) != 0;
+}
+
+/* Phase 6E-CDS1 — func_8007FB44 (31 words, 0x8007FB44..0x8007FBC0):
+ * completion-dispatch predicate.  Returns 0 while the interrupt-flag
+ * word D_8009B598 is positive, while the init word D_8009B554 is zero,
+ * or while the lane word D_8009B574 is not 1.  Otherwise latches
+ * 0x1F @ D_8009B570, lane 2 @ D_8009B574, 0xB @ D_8009B578 (the 0xB
+ * store sits in the jal delay slot, ahead of the call) and issues
+ * func_8007FCFC(cmd & 0xFF, data, 0x8009B598, 0x8009B554), returning
+ * its value.  Incoming a2/a3 are passed through: 7FCFC ignores them
+ * (it zeroes a2 itself ahead of the 7B558 call). */
+int func_8007FB44(uint32_t cmd, uint32_t data)
+{
+    if ((int32_t)PE_LoadU32(0x8009B598u) > 0)
+        return 0;
+    if (PE_LoadU32(0x8009B554u) == 0u)
+        return 0;
+    if (PE_LoadU32(0x8009B574u) != 1u)
+        return 0;
+    PE_StoreU32(0x8009B570u, 0x1Fu);
+    PE_StoreU32(0x8009B574u, 2u);
+    PE_StoreU32(0x8009B578u, 0xBu);
+    /* func_8007FCFC (74 words: 7B9EC/80950/7B558 controller dispatch
+     * over drive-state bytes) is control-heavy, so it is the new named
+     * stop.  Production stops here; the 0 below is never consumed past
+     * the stop. */
+    Bootstrap_ReturnVoid("func_8007FCFC", "func_8007FB44");
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    (void)cmd;
+    (void)data;
+    return 0;
+}
+
 /* func_8007F0C8 — CdlReadS queue issue (asm/disc1/6F684.s, ~130 words).
+ *
  * Retail args: a0 = mode byte, a1 = CdlLOC*, a2 = sector count,
  * a3 = per-packet word, stack = destination buffer (-1 = streaming,
  * no buffer).  Queues up to 4 command packets: validates the BCD
@@ -488,14 +542,14 @@ void func_8007C214(void)
  * hardware packet and feeds only the collapsed controller chain.
  * All canonicalized bytes feed nothing translated readers consume.
  *
- * The selector tail (func_8007E8F4 -> func_8007FB44 -> func_8007FCFC ->
- * func_8007B558 controller dispatch, then the func_8007C564 delivery
- * state machine behind the func_800813E8 completion callback) is
- * unrepresented: on a passing selector the port records the
- * func_8007F0C8_completion_selector boundary with lanes untouched
- * (still idle) and completion pending, exactly like retail mid-stream.
- * Returns the sequence on the cut path (retail returns it after the
- * discarded 7E8F4 call). */
+ * The selector tail runs the real Phase 6E-CDS1 preliminaries above:
+ * both non-passing arms return the sequence (retail's delay slots move
+ * $s5 to $v0), and the passing arm calls func_8007E8F4 (result
+ * discarded) before returning the sequence.  Past 7FB44 the new named
+ * stop is func_8007FCFC (the 7B558 controller dispatch and the 7C564
+ * delivery state machine behind the 7F0C8 completion callback stay
+ * unrepresented); lanes are untouched at the new boundary (still idle)
+ * and completion stays pending, exactly like retail mid-stream. */
 int func_8007F0C8(uint32_t mode, pe_addr_t loc, int count, uint32_t a3,
                   pe_addr_t buf)
 {
@@ -581,17 +635,17 @@ int func_8007F0C8(uint32_t mode, pe_addr_t loc, int count, uint32_t a3,
         PE_StoreU32(desc + 0x14u, (uint32_t)buf);
         PE_StoreU32(0x800A3608u, PE_LoadU32(0x800A3608u) + 1u);
     }
-    /* F394 completion selector, transcribed exactly. */
+    /* F394 completion selector, transcribed exactly: both non-passing
+     * arms fall through with seq in $v0 (the addu delay slots), and the
+     * passing arm issues the real func_8007E8F4 (result discarded). */
     if (func_8007FBF0(0) != 1)
-        return 0;
+        return (int)seq;
     {
         uint32_t head = PE_LoadU32(0x800A3604u);
         if (PE_LoadU32(0x800A3540u + head * 24u) != seq)
-            return 0;
+            return (int)seq;
     }
-    Bootstrap_ReturnVoid("func_8007F0C8_completion_selector",
-                         "func_8007F0C8");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    (void)func_8007E8F4();
     return (int)seq;
 }
 

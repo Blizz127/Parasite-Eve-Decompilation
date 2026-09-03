@@ -1634,9 +1634,11 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x800B0CC8u) == 0u &&
            PE_LoadU32(0x800A801Cu) == 1u &&
            PE_LoadU32(0x800B0CCCu) == 0u &&
-           PE_LoadU32(0x8009B574u) == 1u &&
+           PE_LoadU32(0x8009B570u) == 0x1Fu &&
+           PE_LoadU32(0x8009B574u) == 2u &&
+           PE_LoadU32(0x8009B578u) == 0xBu &&
            PE_LoadU32(0x800A3608u) == 4u &&
-           CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
+           CountOrderLog("func_8007FCFC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "DecDCToutCallback registration or following cut differs");
 
@@ -18285,7 +18287,7 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
+           CountOrderLog("func_8007FCFC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18323,7 +18325,7 @@ static void test_B54KAE_movie_state_setup(void)
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
+           CountOrderLog("func_8007FCFC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
@@ -19416,11 +19418,14 @@ static void test_CDQ1_7F0C8_queue_and_selector(void) {
            PE_LoadU8(0x801FFE81u) == 0x02u &&
            PE_LoadU8(0x801FFE82u) == 0x02u,
            "loc scratch copy differs");
-    /* completion selector is the exact boundary; lanes untouched */
-    ASSERT(CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
+    /* func_8007FCFC is the exact boundary; the real 7E8F4 -> 7FB44 run
+     * latched 0x1F/lane-2/0xB ahead of it (retail stores, now live). */
+    ASSERT(CountOrderLog("func_8007FCFC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "passing selector must record the exact boundary");
-    ASSERT(PE_LoadU32(0x8009B574u) == 1u, "lane must stay idle at boundary");
+    ASSERT(PE_LoadU32(0x8009B574u) == 2u, "7FB44 lane latch differs");
+    ASSERT(PE_LoadU32(0x8009B570u) == 0x1Fu, "7FB44 0x1F latch differs");
+    ASSERT(PE_LoadU32(0x8009B578u) == 0xBu, "7FB44 0xB latch differs");
     PASS();
 }
 
@@ -19441,7 +19446,7 @@ static void test_CDQ1_81314_full(void) {
     ASSERT(PE_LoadU32(0x800A8020u) == 0u, "stream flag store differs");
     ASSERT(PE_LoadU32(0x800B8AB4u) == 0x800813E8u,
            "completion callback install differs");
-    ASSERT(CountOrderLog("func_8007F0C8_completion_selector") == 1 &&
+    ASSERT(CountOrderLog("func_8007FCFC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "issue must end at the selector boundary");
     /* zero-issue arm restores the previous callbacks and returns 0 */
@@ -19451,6 +19456,127 @@ static void test_CDQ1_81314_full(void) {
     ASSERT(func_80081314(0x801FFF00u, 0x1E0u) == 0,
            "failed issue must return 0");
     ASSERT(PE_LoadU32(0x800B8AB4u) == 0u, "restore store differs");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-CDS1 — func_8007F0C8 completion-selector tail + func_8007E8F4
+ * / func_8007FB44 dispatch predicates.  Retail returns the queue
+ * sequence from BOTH non-passing tail arms (the delay slots move $s5
+ * to $v0); the passing arm issues the real 7E8F4 (result discarded).
+ * 7FB44 latches 0x1F @ D_8009B570, lane 2 @ D_8009B574, 0xB @
+ * D_8009B578, then the control-heavy func_8007FCFC is the named stop.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void CDS1_Issue(void)
+{
+    PE_StoreU8(0x801FFF00u, 0x00u);
+    PE_StoreU8(0x801FFF01u, 0x02u);
+    PE_StoreU8(0x801FFF02u, 0x02u);
+    PE_StoreU8(0x801FFF03u, 0x00u);
+}
+
+static void test_CDS1_selector_lane_gate_returns_seq(void)
+{
+    TEST("CDS1_selector_lane_gate_returns_seq");
+    ResetTestState();
+    func_8007ED58(); /* lane 1, queue 0, head 0, seq 0 */
+    PE_StoreU32(0x8009B574u, 0u); /* FBF0(0) != 1: first arm */
+    CDS1_Issue();
+    ASSERT(func_8007F0C8(0x1Bu, 0x801FFF00u, 27, 0u, 0xFFFFFFFFu) == 1,
+           "lane-gated issue must still return sequence 1");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "lane-gated arm must not stop");
+    ASSERT(CountOrderLog("func_8007FCFC") == 0,
+           "lane-gated arm must not dispatch");
+    ASSERT(PE_LoadU32(0x8009B570u) == 0u, "lane-gated arm latched");
+    PASS();
+}
+
+static void test_CDS1_selector_head_mismatch_returns_seq(void)
+{
+    TEST("CDS1_selector_head_mismatch_returns_seq");
+    ResetTestState();
+    func_8007ED58();
+    PE_StoreU32(0x800A3604u, 5u); /* head -> zeroed slot 5: second arm */
+    CDS1_Issue();
+    ASSERT(func_8007F0C8(0x1Bu, 0x801FFF00u, 27, 0u, 0xFFFFFFFFu) == 1,
+           "head-mismatched issue must still return sequence 1");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "head-mismatched arm must not stop");
+    ASSERT(CountOrderLog("func_8007FCFC") == 0,
+           "head-mismatched arm must not dispatch");
+    PASS();
+}
+
+static void test_CDS1_7e8f4_null_head_returns_zero(void)
+{
+    TEST("CDS1_7e8f4_null_head_returns_zero");
+    ResetTestState();
+    func_8007ED58(); /* lane 1; ClearState zeroed the 8 descriptors */
+    ASSERT(func_8007E8F4() == 0, "null head must return 0");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "null head must not stop");
+    ASSERT(CountOrderLog("func_8007FCFC") == 0,
+           "null head must not dispatch");
+    PASS();
+}
+
+static void test_CDS1_7e8f4_live_head_dispatches(void)
+{
+    TEST("CDS1_7e8f4_live_head_dispatches");
+    ResetTestState();
+    func_8007ED58();
+    PE_StoreU32(0x800A3540u, 7u); /* head seq; head index stays 0 */
+    PE_StoreU8(0x800A3544u, 0x1Bu);
+    PE_StoreU32(0x800A354Cu, 0xA5A5A5A5u);
+    ASSERT(func_8007E8F4() == 0, "dispatch truncates at the 7FCFC stop");
+    ASSERT(CountOrderLog("func_8007FCFC") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "live head must reach the 7FCFC boundary");
+    ASSERT(PE_LoadU32(0x8009B570u) == 0x1Fu, "0x1F latch differs");
+    ASSERT(PE_LoadU32(0x8009B574u) == 2u, "lane latch differs");
+    ASSERT(PE_LoadU32(0x8009B578u) == 0xBu, "0xB latch differs");
+    PASS();
+}
+
+static void test_CDS1_7fb44_early_arms(void)
+{
+    TEST("CDS1_7fb44_early_arms");
+    ResetTestState();
+    func_8007ED58(); /* 9B598=0, 9B554=1, lane 9B574=1 */
+    PE_StoreU32(0x8009B598u, 5u); /* positive flag: first arm */
+    ASSERT(func_8007FB44(0x1Bu, 0xDEADu) == 0, "flag arm must return 0");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "flag arm must not stop");
+    PE_StoreU32(0x8009B598u, 0u);
+    PE_StoreU32(0x8009B554u, 0u); /* zero init: second arm */
+    ASSERT(func_8007FB44(0x1Bu, 0xDEADu) == 0, "init arm must return 0");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "init arm must not stop");
+    PE_StoreU32(0x8009B554u, 1u);
+    PE_StoreU32(0x8009B574u, 0u); /* lane != 1: third arm */
+    ASSERT(func_8007FB44(0x1Bu, 0xDEADu) == 0, "lane arm must return 0");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "lane arm must not stop");
+    ASSERT(PE_LoadU32(0x8009B570u) == 0u &&
+           PE_LoadU32(0x8009B574u) == 0u &&
+           PE_LoadU32(0x8009B578u) == 0u, "early arm latched");
+    PASS();
+}
+
+static void test_CDS1_7fb44_negative_flag_passes(void)
+{
+    TEST("CDS1_7fb44_negative_flag_passes");
+    ResetTestState();
+    func_8007ED58();
+    /* bgtz is signed: 0x80000000 is negative, so the flag gate passes
+     * and the issue reaches the 7FCFC boundary. */
+    PE_StoreU32(0x8009B598u, 0x80000000u);
+    ASSERT(func_8007FB44(0x1Bu, 0xDEADu) == 0, "stop must return 0");
+    ASSERT(CountOrderLog("func_8007FCFC") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "negative flag must still dispatch");
     PASS();
 }
 
@@ -35078,6 +35204,14 @@ int main(void)
     test_CDQ1_7F0C8_gates();
     test_CDQ1_7F0C8_queue_and_selector();
     test_CDQ1_81314_full();
+
+    /* Phase 6E-CDS1 — completion-selector tail + predicates (6 tests). */
+    test_CDS1_selector_lane_gate_returns_seq();
+    test_CDS1_selector_head_mismatch_returns_seq();
+    test_CDS1_7e8f4_null_head_returns_zero();
+    test_CDS1_7e8f4_live_head_dispatches();
+    test_CDS1_7fb44_early_arms();
+    test_CDS1_7fb44_negative_flag_passes();
 
     /* Phase 6E-B16: func_8006A9E4 streaming load rung (13 tests) */
     test_6E6A8_sector_forward();

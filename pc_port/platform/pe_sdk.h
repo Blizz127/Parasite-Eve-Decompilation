@@ -165,6 +165,8 @@ void func_8007C214(void);            /* streaming DMA-completion callback */
 void func_8007C394(uint32_t sector); /* stream-record index update */
 int  func_8007F0C8(uint32_t mode, pe_addr_t loc, int count, uint32_t a3,
                     pe_addr_t buf);  /* CdlReadS queue issue */
+int  func_8007E8F4(void);            /* completion-queue predicate */
+int  func_8007FB44(uint32_t cmd, uint32_t data); /* completion-dispatch */
 char *func_800719F4(char *destination, const char *source); /* BIOS A(15h) strcat */
 void func_8010BE3C(int mode);         /* libpress DecDCTReset wrapper */
 

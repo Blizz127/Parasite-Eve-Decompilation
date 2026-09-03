@@ -403,9 +403,11 @@ int func_8006AD40(void)
     func_80074DC0(0);
     (void)func_80074A44(1);
     func_80073A44(0);
-    /* DISP_ENV stride is 20 bytes; the index at 0x800ACDDC addresses the
-     * guest pair, so the guest address is base + 20 * index. */
-    func_800755F0(0x800BCE80u + PE_LoadU32(0x800ACDDCu) * 20u);
+    /* Retail (asm/disc1/5B1E4.s:633-635) indexes the guest pair by
+     * D_8009CDDC (*20 via sll/addu/sll), not by 0x800ACDDC: the old
+     * host-pointer form read a wild index silently, the guest-address
+     * form needs the retail index. */
+    func_800755F0(0x800BCE80u + PE_LoadU32(0x8009CDDCu) * 20u);
     func_80074D28(1);
 
     /* 0x8006B2C0..0x8006B32C: exact-width state reset.  The flag tests

@@ -221,6 +221,25 @@ uses for live blit+poll. 5 `PRS1_` tests; suite 1048 run / 1030 passed
 --max-frames 1 --screenshot` is byte-deterministic across runs.
 Evidence: `docs/evidence/pe-prs1-dispenv-present/REPORT.md`.
 
+## PE-CDS1 — CD completion-selector tail translated; stop at func_8007FCFC (2026-09-03)
+
+Both 7F0C8 non-passing tail arms return the queue sequence (retail
+delay-slot `addu $v0,$s5,$zero`), verified word-for-word; the passing
+arm runs the real `func_8007E8F4` → `func_8007FB44` (28/31 words,
+`pe_libcd.c`), which latches 0x1F/lane-2/0xB and stops at the
+control-heavy `func_8007FCFC` (74 words, 7B9EC/7B558 dispatch — new
+named stop, 7B558/7C564 out of scope). Old
+`7F0C8_completion_selector` boundary deleted. 6 `CDS1_` tests;
+migrated CDQ1×2, B54KAD/AE, B54KY to the new stop (+ live latches).
+Incidental: 6AD40 indexed the DISPENV pair by wild `[0x800ACDDC]`
+(strict-run FATAL); retail uses CDDC — fixed. src/ attempts for
+7E8F4/7FB44 parked (shared-lui coloring; count stays 560). Suite
+1054 run / 1036 passed / 1 env failure / 17 skipped, 1054/1054 with
+disc; ASan 100% with disc env, zero diagnostics; strict stops at
+`func_8007FCFC` from `func_8007FB44`, zero HOST_ADAPTED. Evidence:
+`docs/evidence/pe-cds1-selector-tail/REPORT.md`; oracle:
+`pc_port/tools/pe_cds1_selector_tail_oracle.py`.
+
 ## Main-lane YAML build authority (merged 2026-09-01)
 
 `configs/USA/disc1.yaml` owns Disc-1 span edges, source/object mapping, trim
