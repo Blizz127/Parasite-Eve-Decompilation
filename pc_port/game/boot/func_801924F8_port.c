@@ -115,7 +115,12 @@ cdready_wait:
     func_800870F0(PE_LoadU8(0x800B0DBEu));
     if (PE_Port_ShouldStop())
         return 0;
-    /* D0: RLE frame decode (2000 records at D0DF8). Decoder is MV1b. */
+    /* D0: RLE frame decode (2000 records at D0DF8).  Transcribed and
+     * verified on the real stream in MV1b, but reverted to the named
+     * stop: the E0 poll behind it needs the 7C564 delivery pump
+     * (slots never populate, lane never reaches -1), so live BD4C
+     * hangs B54KY and strict production in the give-up wait.
+     * Reland with delivery. */
     func_8010BD4C(PE_LoadU32(0x801D0DF8u), 2000u);
     if (PE_Port_ShouldStop())
         return 0;

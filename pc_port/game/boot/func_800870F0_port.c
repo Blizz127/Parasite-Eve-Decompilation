@@ -14,6 +14,7 @@
 #include "game_port.h"
 #include "pe_sdk.h"
 #include "pe_bootstrap.h"
+#include "pe_cdreg.h"
 
 #define MV_D2C0 0x8009D2C0u
 #define MV_D1C8 0x8009D1C8u
@@ -21,11 +22,30 @@
 #define MV_D1CA 0x8009D1CAu
 #define MV_D1CB 0x8009D1CBu
 
-void func_8007A88C(pe_addr_t p)
+/* Phase 6E-MV1b — func_8007B964 (34 words, 0x8007B964..0x8007B9EC):
+ * CD command-poke block.  Pushes the four latch bytes at p (the
+ * 870F0 scaler output) plus the 2/3/0x20 tags through the CD
+ * pointer tables ([B27C]/[B284]/[B288]/[B280]), shadow-routed by
+ * CD0.  Returns 0 (addu in the jr delay slot); the sole caller
+ * ignores it. */
+void func_8007B964(pe_addr_t p)
 {
-    (void)p;
-    Bootstrap_ReturnVoid("func_8007A88C", "func_800870F0");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    PE_CdStoreU8(PE_LoadU32(0x8009B27Cu), 2u);
+    PE_CdStoreU8(PE_LoadU32(0x8009B284u), PE_LoadU8(p + 0u));
+    PE_CdStoreU8(PE_LoadU32(0x8009B288u), PE_LoadU8(p + 1u));
+    PE_CdStoreU8(PE_LoadU32(0x8009B27Cu), 3u);
+    PE_CdStoreU8(PE_LoadU32(0x8009B280u), PE_LoadU8(p + 2u));
+    PE_CdStoreU8(PE_LoadU32(0x8009B284u), PE_LoadU8(p + 3u));
+    PE_CdStoreU8(PE_LoadU32(0x8009B288u), 0x20u);
+}
+
+/* func_8007A88C proper is 8 words (0x8007A88C..0x8007A8AC, from the
+ * splitter gap): call 7B964, return 1.  The 870F0 caller ignores
+ * the result. */
+int func_8007A88C(pe_addr_t p)
+{
+    func_8007B964(p);
+    return 1;
 }
 
 void func_800870F0(uint32_t a0)

@@ -18313,7 +18313,12 @@ static void test_B54KAD_fmv2_filename_threshold(void)
 
     ASSERT(func_801924F8(21) == 0 &&
            CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8007A88C") == 1 &&
+           CountOrderLog("func_8010BD4C") == 1 &&
+           PE_CdLoadU8(0x1F801800u) == 3u &&
+           PE_CdLoadU8(0x1F801801u) == 0u &&
+           PE_CdLoadU8(0x1F801802u) == 0u &&
+           PE_CdLoadU8(0x1F801803u) == 0x20u &&
+           PE_CdLoadU32(0x1F801020u) == 0x1325u &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18353,7 +18358,12 @@ static void test_B54KAE_movie_state_setup(void)
 
     ASSERT(func_801924F8(21) == 0 &&
            CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8007A88C") == 1 &&
+           CountOrderLog("func_8010BD4C") == 1 &&
+           PE_CdLoadU8(0x1F801800u) == 3u &&
+           PE_CdLoadU8(0x1F801801u) == 0u &&
+           PE_CdLoadU8(0x1F801802u) == 0u &&
+           PE_CdLoadU8(0x1F801803u) == 0x20u &&
+           PE_CdLoadU32(0x1F801020u) == 0x1325u &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),

@@ -1,8 +1,7 @@
 /*
  * Phase 6E-MV1a — func_80191B64 (152 words, 0x80191B64..0x80191DC0,
  * PE.IMG overlay): movie-issue poll worker.  Transcribed; every jal
- * target is translated (7F72C/7F7A8/719E4/7C484/870F0/74F44 — the
- * last two carry their own named stops).
+ * target is translated (7F72C/7F7A8/719E4/7C484/870F0/74F44).
  *
  * Frame temporaries (sp+16/sp+20/sp+24[RECT]) become the rung
  * scratch cells below: sp+16 takes 7C484's dst_a output and is read
@@ -11,9 +10,10 @@
  * the matched leaf takes no address — so sp+16 is unwritten until
  * 7C484; 719E4 takes the literal 1, set in the jal delay slot.)
  *
- * Delay-slot notes: the BB0-loop delays re-set a0 (harmless); the
- * 7C484!=0 arm decrements s0 in its delay (the 2000-countdown runs
- * even on success); the C84 store is skipped by the second bnez
+ * Delay-slot notes: the BB0 beqz delay decrements s0 on every pass
+ * (zero breaks to BD0, nonzero retries to the DB0 return-0); the
+ * bnez delay re-sets a0 = sp+16 for retries; the C84 store is
+ * skipped by the second bnez
  * (only the first condition latches [DBD]); D00 stores h=480 on
  * both rect arms (w = [B0DBB] ? 480 : 320); the D38 signed path
  * keeps full 32-bit wrap so the low half matches the srl chain.
@@ -46,11 +46,17 @@ int func_80191B64(pe_addr_t state)
         if ((uint32_t)v1 != (uint32_t)PE_LoadU16(0x800B0DD4u))
             func_800719E4(1u);
     }
-    /* BB0 poll: 7C484(sp+16, sp+20), countdown on zero. */
+    /* BB0 poll: 7C484(sp+16, sp+20).  The beqz delay decrements s0
+     * on every pass: zero breaks to BD0, nonzero retries until the
+     * 2000-countdown exhausts (DB0: return 0).  (First-pass a0 is a
+     * retail quirk — 1 or stale unless a delay slot set sp+16; the
+     * port always passes the scratch cell, matching every retry.
+     * The quirk only matters on first-pass promote, which needs
+     * lane-1 + a changed 7F7A8 head to even reach.) */
     for (;;) {
         v0 = func_8007C484(MV1_SP16, MV1_SP20);
         s0--;
-        if (v0 != 0)
+        if (v0 == 0)
             break;
         if (s0 == 0u)
             return 0;

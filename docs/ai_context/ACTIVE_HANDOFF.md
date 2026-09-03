@@ -295,6 +295,24 @@ CTest 2/2; fresh ASan/UBSan CTest 2/2 zero diagnostics. Oracle:
 `docs/evidence/pe-mv1a-870f0-tail/REPORT.md`. Leaves 560; no
 src/YAML changes. Next: MV1b (BD4C/C89C decoders, 7A88C callee).
 
+## PE-MV1b — 7A88C/7B964 live; BB0 fix; BD4C parked on delivery (2026-09-03)
+
+7A88C (8w, splitter gap) + 7B964 (34w, CD command-poke through
+the shadow) live in `870F0_port.c`; B54KAD/AE pin the shadow
+bytes (3,0,0,0x20 + mailbox 0x1325). 91B64 BB0 inversion fixed
+against the overlay bytes (zero proceeds, nonzero retries to
+the DB0 return-0). BD4C transcribed + verified on the real
+B54KY stream (2239 ops, full 69632-byte frame) but REVERTED to
+its stop: E0 give-up needs the 7C564 delivery pump (no state-2
+slots, lane never -1 — no producer in the translated tree), so
+live BD4C hung B54KY/strict in give-up. Reland transcription +
+plant design preserved in
+`docs/evidence/pe-mv1b-7b964-bd4c/REPORT.md`. Strict frontier
+stays `func_8010BD4C`. Suite 1064/1064 disc twice, 1046/1
+env/17 gateless; CTest 2/2; ASan 2/2 clean; MV1a oracle green.
+Leaves 560; no src/YAML changes. Next: 7C564 delivery pump
+(per-sector 7C214 + lane -1), then BD4C reland → C89C → movie.
+
 ## Run summary 2026-09-03 — field-frame run (this session)
 
 - Landed: Rung A (FTE1 frame tail, matched 70E54/42FE8, 560 leaves)
