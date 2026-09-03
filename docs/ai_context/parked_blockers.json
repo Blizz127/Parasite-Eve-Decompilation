@@ -385,10 +385,10 @@
   },
   {
    "id": "mv1c-c89c-unknowable-inputs",
-   "status": "PARKED-UNKNOWABLE-CALLER-INPUTS",
-   "note": "func_8010C89C (movie VLC decoder) fully mapped: resumable VLC, 11 static state words, COP0 IEc touch, exits 0/1. Transcription parked on two unknowable caller inputs: a1 = lw[arg+4], a KUSEG/low-RAM BIOS word (byte-exact in disasm; value needs a low-RAM/BIOS model or a measured value), and a2 = func_80191FB8 exit leftover, chased two levels down (91FB8 epilogue returns the second MoveImage call result; MoveImage path A on retail args returns its [[D_80095744]+8]-callee exit-a2, path B inherits entry-a2 with ret -1) with runtime-pointer resolution still pending at level 3. No structural-only transcription per the BB0 lesson.",
+   "status": "RESOLVED-FORENSIC-ERROR-INPUTS-MODELED",
+   "note": "SUPERSEDED 2026-09-03: both unknowables were forensic errors (see Correction record in evidence). Tail sets s3=0x801D1464 so a1=[0x801D1464+([146C]^1)*4] (first pass [0x801D1468]=[0x801D0DEC] movie-buf pointer); call site loads a2=[0x801D0DF8]; entry-a3 dead (C89C computes a3=a2+0x10000). State area corrected to 0x8011EB8C..0x8011EBB4. Transcription rung unblocked on inputs.",
    "evidence": "docs/evidence/pe-mv1c-c89c-map/NOTE.md",
-   "next": "Decide the [4]-blocker scope (low-RAM model vs measured BIOS value); deeper a2 chase has zero payoff until then. Then: C89C transcription, EC, movie playback, field load, Aya playable."
+   "next": "Transcribe C89C + got_frame/EC tail with real strict-path inputs; dual-model + resume-equivalence verification."
   }
  ]
 }

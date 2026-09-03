@@ -375,7 +375,18 @@ two levels (91FB8 epilogue returns the 2nd MoveImage result; MoveImage
 path A on retail args returns its [[D_80095744]+8]-callee exit-a2, path B
 inherits entry-a2 with ret -1); level 3 needs runtime-pointer resolution
 — parked under new blocker `mv1c-c89c-unknowable-inputs`. TEMP probe
-residue found un-reverted and reverted; tree clean.
+residue found un-reverted and reverted; tree clean. CORRECTION
+(2026-09-03, same session): both C89C "unknowables" were forensic
+errors. The verified tail (correct disc carve: PE.IMG extent 1013 +
+`0x3D2`, oracle anchors match) sets `s3 = 0x801D1464` @`801927C0`
+(the "s3 = 0 triple-proof" covered 80192CE8's lifetime, not the
+tail's), loads `a2 = [0x801D0DF8]` @`80192814`, `a1` @`8019284C`,
+`a0 = s1` in the `jal C89C` delay slot; C89C kills entry-`a3`
+(`a3 = a2+0x10000` @`8010C8A8`). First pass:
+`a1 = [0x801D1468]` = movie-buf pointer — no BIOS word, no
+low-RAM model needed. State area is `0x8011EB8C..` (not `0x8012`).
+Blocker marked RESOLVED; full Correction record in
+`pe-mv1c-c89c-map/NOTE.md`. Next: transcribe C89C + got_frame/EC.
 
 ## Run summary 2026-09-03 — field-frame run (this session)
 
