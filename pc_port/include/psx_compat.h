@@ -98,15 +98,14 @@ static inline void func_80073A44(int m)  { HostFB_VSync(m); }
 static inline void func_80074D28(int m)  { HostFB_SetDispMask(m); }
 int func_80074DC0(int mode);
 int func_80075358(pe_addr_t packet);
+int func_800753B4(pe_addr_t ot);
 int PE_func_80075358_Transient(const uint32_t *words, uint8_t count);
 static inline void func_80074F44(RECT *r, uint8_t rv, uint8_t g, uint8_t b) {
     if (r) HostFB_ClearImage(r->x, r->y, r->w, r->h, rv, g, b);
 }
 static inline void func_800755F0(void *e) { (void)e; HostFB_Present(); }
-static inline void func_800752AC(void *o, int n) {
-    Bootstrap_ReturnVoid("ClearOTagR", "func_8006E9A0");
-    (void)o; (void)n;
-}
+/* func_800752AC (ClearOTagR) and func_80076354 (jtb[11] OTC worker) are
+ * REAL translations: game/boot/func_800752AC_port.c (Phase 6E-OTC1). */
 
 /* ── BOOTSTRAP_RET — func_8001220C callees ────────────────────────── */
 /* func_8006AD40 is complete through its normal return (Phase 6E-B54K-M).
@@ -245,6 +244,9 @@ typedef struct {
 extern void      PE_Pump_TraceReset(void);
 extern uint64_t  PE_Pump_EntryCount(void);
 extern void      PE_Pump_GetTrace(PeGpuPumpTrace *out);
+extern void func_800752AC(pe_addr_t ot, int n);
+extern void func_80076354(pe_addr_t ot, int n);
+extern void func_80042798(void);
 extern int  func_80076C34(pe_addr_t worker, pe_addr_t argument,
                           int32_t copy_bytes, uint32_t auxiliary);
 extern int  func_80076B98(pe_addr_t packet, uint32_t auxiliary);

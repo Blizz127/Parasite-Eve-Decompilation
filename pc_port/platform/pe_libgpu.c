@@ -395,15 +395,22 @@ pe_addr_t func_80075424(pe_addr_t env)
     PE_StoreU32(dr, PE_LoadU32(dr) | 0x00FFFFFFu);
 
     jtb = PE_LoadU32(jtb_pointer);
-    dispatch = PE_LoadU32(jtb + 8u);
-    worker = PE_LoadU32(jtb + 0x18u);
-    if (dispatch == dispatch_identity && worker == worker_identity) {
-        (void)func_80076C34(worker, dr, 0x40, 0u);
-    } else {
+    if (!PE_RangeIsRam(jtb, 0x20u)) {
         (void)Bootstrap_ReturnInt4Indirect(
-            "func_80076C34", "func_80075424", 0, dispatch,
-            worker, dr, 0x40u, 0u, NULL, 0u);
+            "func_80076C34", "func_80075424", 0, 0u,
+            0u, dr, 0x40u, 0u, NULL, 0u);
         PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    } else {
+        dispatch = PE_LoadU32(jtb + 8u);
+        worker = PE_LoadU32(jtb + 0x18u);
+        if (dispatch == dispatch_identity && worker == worker_identity) {
+            (void)func_80076C34(worker, dr, 0x40, 0u);
+        } else {
+            (void)Bootstrap_ReturnInt4Indirect(
+                "func_80076C34", "func_80075424", 0, dispatch,
+                worker, dr, 0x40u, 0u, NULL, 0u);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        }
     }
     if (PE_Port_ShouldStop())
         return env;
@@ -415,17 +422,53 @@ pe_addr_t func_80075424(pe_addr_t env)
 
 void func_800754E4(pe_addr_t ot, pe_addr_t env)
 {
+    const pe_addr_t jtb_pointer = 0x80095744u;
+    const pe_addr_t dispatch_identity = 0x80076C34u;
+    const pe_addr_t worker_identity = 0x80076B98u;
     pe_addr_t dr;
+    pe_addr_t jtb;
+    pe_addr_t dispatch;
+    pe_addr_t worker;
     uint32_t tag;
 
     if (env == 0u || !PE_RangeIsRam(env, 0x5Cu))
         return;
-    if (PE_LoadU8(0x8009574Eu) >= 2u)
+    /* Debug print only at level >= 2 (7506C pattern: record, stop,
+     * return — retail prints then continues; the draw below is the
+     * residual).  Previously this returned without printing. */
+    if (PE_LoadU8(0x8009574Eu) >= 2u) {
+        pe_addr_t print_target = PE_LoadU32(0x80095748u);
+        Bootstrap_ReturnVoid4Indirect(
+            "func_80071A74", "func_800754E4", print_target,
+            0x80011954u, ot, env, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
         return;
+    }
     dr = env + 0x1Cu;
     func_80075EE0(dr, env);
     tag = PE_LoadU32(dr);
     PE_StoreU32(dr, (tag & 0xFF000000u) | (ot & 0x00FFFFFFu));
-    /* jalr jtb[2](jtb[6], dr, 0x40, 0) is 76C34(76B98). Not this cut. */
+    /* jalr jtb[2](jtb[6], dr, 0x40, 0): the Phase 6E-DRW1 completion of
+     * this cut, mirroring func_80075424 above. */
+    jtb = PE_LoadU32(jtb_pointer);
+    if (!PE_RangeIsRam(jtb, 0x20u)) {
+        (void)Bootstrap_ReturnInt4Indirect(
+            "func_80076C34", "func_800754E4", 0, 0u,
+            0u, dr, 0x40u, 0u, NULL, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    } else {
+        dispatch = PE_LoadU32(jtb + 8u);
+        worker = PE_LoadU32(jtb + 0x18u);
+        if (dispatch == dispatch_identity && worker == worker_identity) {
+            (void)func_80076C34(worker, dr, 0x40, 0u);
+        } else {
+            (void)Bootstrap_ReturnInt4Indirect(
+                "func_80076C34", "func_800754E4", 0, dispatch,
+                worker, dr, 0x40u, 0u, NULL, 0u);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        }
+    }
+    if (PE_Port_ShouldStop())
+        return;
     memcpy(PE_Translate(0x8009575Cu, 0x5Cu), PE_Translate(env, 0x5Cu), 0x5Cu);
 }

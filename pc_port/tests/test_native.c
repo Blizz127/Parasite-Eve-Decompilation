@@ -834,9 +834,9 @@ static void test_B54KQ_prerequisite_setters_and_reset(void)
     PASS();
 }
 
-static void test_B54KQ_5C1EC_zero_path_is_named_boundary(void)
+static void test_B54KQ_5C1EC_zero_path_translated_walk(void)
 {
-    TEST("B54KQ_5C1EC_zero_path_is_named_boundary");
+    TEST("B54KQ_5C1EC_zero_path_translated_walk");
     ResetTestState();
     PE_StoreU32(0x8009D030u, 7u);
     PE_StoreU32(0x800B0CD8u, 0x1234C001u);
@@ -845,11 +845,12 @@ static void test_B54KQ_5C1EC_zero_path_is_named_boundary(void)
            "zero path did not execute its pre-call scalar clear");
     ASSERT(PE_LoadU32(0x800B0CD8u) == 0x1234C001u,
            "zero path fabricated the post-cleanup flag clear");
-    ASSERT(g_stub_order_count == 1 &&
-           strcmp(g_stub_order_log[0], "func_80042798") == 0,
-           "zero path did not expose func_80042798");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "zero path boundary stop reason differs");
+    ASSERT(g_stub_order_count == 0,
+           "quiet walk logged a stub");
+    ASSERT(g_bootstrap_arg4_call_count == 0,
+           "quiet walk recorded a boundary");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "quiet walk stopped");
     PASS();
 }
 
@@ -10181,6 +10182,8 @@ static void test_BTL41_66B60_and_18EB4(void) {
 static void test_BTL41_6E9A0_calls_66B60(void) {
     TEST("BTL41_6E9A0_calls_66B60");
     ResetTestState();
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
     g_bootstrap_disc = 1;
     HostFB_Init();
     func_8006A8D4();
@@ -10188,11 +10191,37 @@ static void test_BTL41_6E9A0_calls_66B60(void) {
     PE_StoreU16(0x800BCFEAu, 0x20u);
     PE_StoreU16(0x800BCFECu, 0x30u);
     func_8006E9A0(0);
-    ASSERT(PE_LoadU8(0x800BCFEEu) == 2u, "boot CFEE=2");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 1u, "real loop did not reach CFEE=1");
     ASSERT(PE_LoadU16(0x800BCFE8u) == 0xFFu, "boot CFE8");
     ASSERT(PE_LoadU16(0x800BCFF6u) == 2u, "boot CFF6=2");
-    ASSERT(PE_LoadU16(0x800BCFF8u) == 1u, "one 68E24 tick");
+    ASSERT(PE_LoadU16(0x800BCFF8u) == 2u, "two 68E24 ticks to expiry");
     ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+static void test_FD1_6E9A0_real_loop_fills_arena_ot(void) {
+    pe_addr_t ot;
+    TEST("FD1_6E9A0_real_loop_fills_arena_ot");
+    ResetTestState();
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
+    g_bootstrap_disc = 1;
+    HostFB_Init();
+    func_8006A8D4();
+    D_8009D280 = 0;
+    func_8006E9A0(0);
+    /* The loop's OT is the arena table entry, not the adapter NULL:
+     * CDDC=0 reads the self-referential table base, and ClearOTagR's
+     * terminator tail lands on it. */
+    ot = PE_LoadU32(0x800B0E38u);
+    ASSERT(ot == 0x801229A0u, "arena OT pointer differs");
+    ASSERT(PE_LoadU32(ot) == 0x0009580Cu, "arena OT head not terminated");
+    ASSERT(PE_LoadU32(ot + 4u) == (ot & 0x00FFFFFFu), "arena OT chain differs");
+    ASSERT(PE_LoadU32(0x8009580Cu) == 0x004957F8u, "stub node differs");
+    ASSERT(PE_LoadU8(0x800BCFEEu) == 1u, "fade did not complete");
+    ASSERT(D_8009D280 == 0u, "arg 0 dispatched");
+    ASSERT(CountOrderLog("func_800752AC_null_ot_skip") == 0,
+           "real loop took the NULL-OT skip");
     PASS();
 }
 
@@ -11915,6 +11944,9 @@ static void test_BTL88_754e4_setdrawenv(void) {
 
     TEST("BTL88_754e4_setdrawenv");
     ResetTestState();
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x8009570Cu, 0x80076C34u); /* jtb[2]: DRW1 production arm */
+    PE_StoreU32(0x8009571Cu, 0x80076B98u); /* jtb[6]: chain walk */
     HostFB_Init();
     func_8003E754(0x140, 0xE0);
     func_800754E4(ot, env);
@@ -17949,6 +17981,8 @@ static void test_6E834_strict_crosses_flushcache(void) {
 static void test_6E9A0_dispatch_arg1(void) {
     TEST("6E9A0_dispatch_arg1");
     ResetTestState();
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
     g_bootstrap_disc = 1;
     HostFB_Init();
     D_8009D280 = 0;
@@ -17964,6 +17998,8 @@ static void test_6E9A0_dispatch_arg1(void) {
 static void test_6E9A0_dispatch_arg3(void) {
     TEST("6E9A0_dispatch_arg3");
     ResetTestState();
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
     g_bootstrap_disc = 1;
     HostFB_Init();
     D_8009D280 = 0;
@@ -18023,6 +18059,8 @@ static void test_translated_functions_not_in_bootstrap(void) {
 static void test_first_clear_path_reached(void) {
     TEST("first_clear_path_available");
     ResetTestState();
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
     g_bootstrap_disc = 1;
 
     /* func_8006E9A0 is the direct-clear function. Verify it runs.
@@ -33477,6 +33515,478 @@ static void test_VIS1_artifacts_match_authority(void)
     fclose(file); PASS();
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-TOK1 — New-Game / arg-3 token identities through the retail
+ * unpacker (func_8006E2D0) and index (func_8006E454).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+static void TOK1_SeedCharset(void)
+{
+    static const unsigned char charset[] =
+        "0123456789abcdefghiklmnoprstuvwy";
+    unsigned int i;
+    for (i = 0; i < 32u; i++)
+        PE_StoreU8(0x800930B4u + i, charset[i]);
+}
+
+static void test_TOK1_m0431i_new_game_token(void)
+{
+    pe_addr_t dest = 0x80121000u;
+    TEST("TOK1_m0431i_new_game_token");
+    ResetTestState();
+    TOK1_SeedCharset();
+    func_8006E2D0(dest, 0xA80830C8u);
+    ASSERT(PE_LoadU8(dest) == 'M', "M");
+    ASSERT(PE_LoadU8(dest + 1u) == '0', "0");
+    ASSERT(PE_LoadU8(dest + 2u) == '4', "4");
+    ASSERT(PE_LoadU8(dest + 3u) == '3', "3");
+    ASSERT(PE_LoadU8(dest + 4u) == '1', "1");
+    ASSERT(PE_LoadU8(dest + 5u) == 'I', "I");
+    ASSERT(PE_LoadU8(dest + 6u) == 0u, "NUL");
+    ASSERT(func_8006E454(dest) == 431, "atoi 431");
+    PASS();
+}
+
+static void test_FLD1_6B4F8_m0431i_load(void) {
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest0 = 0x80120000u;
+    pe_addr_t dest1 = 0x80140000u;
+    pe_addr_t dest2 = 0x801A0000u;
+    pe_addr_t name = 0x80122180u;
+
+    TEST_RETAIL_DISC1("FLD1_6B4F8_m0431i_load");
+    ResetTestState();
+    TOK1_SeedCharset();
+    PE_StoreU32(0x80093378u + 430u * 8u, 0x182CFu);
+    PE_StoreU32(0x80093378u + 430u * 8u + 4u, 0x01200911u);
+    func_8006E2D0(name, 0xA80830C8u);
+    ASSERT(PE_LoadU8(name + 2u) == (uint8_t)'4', "4");
+    ASSERT(PE_LoadU8(name + 3u) == (uint8_t)'3', "3");
+    ASSERT(PE_LoadU8(name + 4u) == (uint8_t)'1', "1");
+    ASSERT(func_8006E454(name) == 431, "atoi 431");
+
+    err[0] = 0;
+    disc = BTL6_OpenDisc1(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+    func_8007ED58();
+    PE_Disc_SetActive(disc);
+    PE_StoreU32(0x800B0DD8u, 1013u);
+    PE_StoreU32(0x800B0CD8u + 0x194u, dest0);
+    PE_StoreU32(0x800B0CD8u + 0x168u, dest1);
+    PE_StoreU32(0x800B0CD8u + 0x18Cu, dest2);
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x8009570Cu, 0x80076C34u);
+    PE_StoreU32(0x80095724u, 0x80076664u);
+    ASSERT(func_8006B4F8_dest_load_cut(0xA80830C8u) == 1, "load");
+    ASSERT(PE_LoadU32(dest0) == 0x8064u, "chunk0 w0");
+    ASSERT(PE_LoadU32(dest1) == 0x4050u, "chunk1 w0");
+    ASSERT(PE_LoadU32(dest2) == 0x8A1Cu, "chunk2 w0");
+    ASSERT(PE_LoadU32(dest2 + 4u) == 0x89B4u, "chunk2 w1");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+static void test_TOK1_m0353i_arg3_token(void)
+{
+    pe_addr_t dest = 0x80121000u;
+    TEST("TOK1_m0353i_arg3_token");
+    ResetTestState();
+    TOK1_SeedCharset();
+    func_8006E2D0(dest, 0xA80651C8u);
+    ASSERT(PE_LoadU8(dest) == 'M', "M");
+    ASSERT(PE_LoadU8(dest + 1u) == '0', "0");
+    ASSERT(PE_LoadU8(dest + 2u) == '3', "3");
+    ASSERT(PE_LoadU8(dest + 3u) == '5', "5");
+    ASSERT(PE_LoadU8(dest + 4u) == '3', "3");
+    ASSERT(PE_LoadU8(dest + 5u) == 'I', "I");
+    ASSERT(PE_LoadU8(dest + 6u) == 0u, "NUL");
+    ASSERT(func_8006E454(dest) == 353, "atoi 353");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-DRW1 — DrawOTag (753B4) + multi-node 76B98 chain walk.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define DRW1_OT_BASE 0x801F1000u
+
+static void DRW1_SeedDispatch(void)
+{
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x8009570Cu, 0x80076C34u); /* jtb[2] dispatch */
+    PE_StoreU32(0x8009571Cu, 0x80076B98u); /* jtb[6] worker */
+    PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11] OTC worker */
+    PE_StoreU8(0x8009574Eu, 0u);
+}
+
+static void test_DRW1_drawotag_empty_chain(void)
+{
+    const pe_addr_t ot = DRW1_OT_BASE;
+    PeGpuState gpu;
+    int result;
+    TEST("DRW1_drawotag_empty_chain");
+    ResetTestState();
+    DRW1_SeedDispatch();
+    PE_GPU_WriteDPCR(0x33333333u);
+    func_800752AC(ot, 4);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "clear stopped");
+    result = func_800753B4(ot);
+    ASSERT(result == 0, "draw result differs");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "draw stopped");
+    ASSERT(g_stub_order_count == 0, "draw logged a stub");
+    ASSERT(g_bootstrap_arg4_call_count == 0, "draw recorded a boundary");
+    /* The cleared chain submits zero packets: stub nodes carry size 0,
+     * and the out-of-RAM tail ends the walk silently. */
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.gp1_dma_direction == 2u, "DMA direction not programmed");
+    ASSERT(gpu.draw_mode_count == 0u && gpu.drawing_offset_count == 0u,
+           "empty chain submitted packets");
+    /* Read-only walk: the guest table is byte-identical. */
+    ASSERT(PE_LoadU32(ot) == 0x0009580Cu, "OT head moved");
+    ASSERT(PE_LoadU32(ot + 4u) == (ot & 0x00FFFFFFu), "OT link moved");
+    ASSERT(PE_LoadU32(0x8009580Cu) == 0x004957F8u, "stub node moved");
+    ASSERT(PE_LoadU32(0x80095874u) == 0u && PE_LoadU32(0x80095878u) == 0u,
+           "direct issue touched the ring");
+    PASS();
+}
+
+static void test_DRW1_drawotag_dispatch_boundary(void)
+{
+    TEST("DRW1_drawotag_dispatch_boundary");
+    ResetTestState();
+    DRW1_SeedDispatch();
+    PE_StoreU32(0x8009570Cu, 0xDEADBEEFu);
+    ASSERT(func_800753B4(DRW1_OT_BASE) == 0, "dirty dispatch result differs");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "dirty dispatch did not stop");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "dispatch not recorded");
+
+    ResetTestState();
+    ASSERT(func_800753B4(DRW1_OT_BASE) == 0, "null jtb result differs");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "null jtb did not stop");
+    PASS();
+}
+
+static void test_DRW1_chain_two_env_nodes(void)
+{
+    const pe_addr_t node1 = 0x801F2000u;
+    const pe_addr_t node2 = 0x801F2100u;
+    PeGpuState gpu;
+    TEST("DRW1_chain_two_env_nodes");
+    ResetTestState();
+    PE_StoreU32(node1, 0x02000000u | (node2 & 0x00FFFFFFu));
+    PE_StoreU32(node1 + 4u, 0xE1000000u);
+    PE_StoreU32(node1 + 8u, 0xE3000000u);
+    PE_StoreU32(node2, 0x01FFFFFFu);
+    PE_StoreU32(node2 + 4u, 0xE5000000u);
+    (void)func_80076B98(node1, 0u);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "chain stopped");
+    ASSERT(g_bootstrap_arg4_call_count == 0, "chain recorded a boundary");
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.gp1_dma_direction == 2u, "DMA direction differs");
+    ASSERT(gpu.draw_mode_count == 1u, "E1 not submitted");
+    ASSERT(gpu.drawing_area_top_left_count == 1u, "E3 not submitted");
+    ASSERT(gpu.drawing_offset_count == 1u, "E5 not submitted");
+    ASSERT(gpu.gp0_state == PE_GPU_GP0_IDLE, "parser not idle at end");
+    /* Read-only: both nodes byte-identical after the walk. */
+    ASSERT(PE_LoadU32(node1) == (0x02000000u | (node2 & 0x00FFFFFFu)),
+           "node1 tag moved");
+    ASSERT(PE_LoadU32(node2) == 0x01FFFFFFu, "node2 tag moved");
+    ASSERT(PE_LoadU32(node2 + 4u) == 0xE5000000u, "node2 word moved");
+    PASS();
+}
+
+static void test_DRW1_chain_unknown_word_bounds(void)
+{
+    const pe_addr_t node1 = 0x801F2000u;
+    const pe_addr_t node2 = 0x801F2100u;
+    const BootstrapArgCall4 *call;
+    PeGpuState gpu;
+    TEST("DRW1_chain_unknown_word_bounds");
+    ResetTestState();
+    PE_StoreU32(node1, 0x01000000u | (node2 & 0x00FFFFFFu));
+    PE_StoreU32(node1 + 4u, 0xE1000000u);
+    PE_StoreU32(node2, 0x01FFFFFFu);
+    PE_StoreU32(node2 + 4u, 0x28000000u);
+    (void)func_80076B98(node1, 0u);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "unknown word did not stop");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "cut not recorded once");
+    call = &g_bootstrap_arg4_calls[0];
+    ASSERT(strcmp(call->symbol, "func_80076B98_packet_cut") == 0,
+           "cut symbol differs");
+    ASSERT(call->arg0 == node2 && call->arg3 == 0x28000000u,
+           "cut identity differs");
+    /* The first node's packet was already submitted: hardware DMA is
+     * progressive, not transactional. */
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.draw_mode_count == 1u, "node1 packet missing");
+    ASSERT(PE_LoadU32(node1 + 4u) == 0xE1000000u, "node1 word moved");
+    ASSERT(PE_LoadU32(node2 + 4u) == 0x28000000u, "node2 word moved");
+    PASS();
+}
+
+static void test_DRW1_fill_command_renders(void)
+{
+    PeGpuState gpu;
+    uint16_t pixel;
+    TEST("DRW1_fill_command_renders");
+    ResetTestState();
+    PE_GPU_Init();
+    ASSERT(PE_GPU_WriteGP0(0x020000FFu), "fill command rejected");
+    ASSERT(PE_GPU_WriteGP0((20u << 16) | 10u), "fill coords rejected");
+    ASSERT(PE_GPU_WriteGP0((3u << 16) | 4u), "fill size rejected");
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.fill_count == 1u, "fill not completed");
+    ASSERT(gpu.gp0_state == PE_GPU_GP0_IDLE, "parser not idle");
+    ASSERT(gpu.fill_command == 0x020000FFu, "fill command differs");
+    ASSERT(PE_GPU_ReadVRAM(10u, 20u, &pixel) && pixel == 0x7C00u,
+           "fill pixel differs");
+    ASSERT(PE_GPU_ReadVRAM(13u, 22u, &pixel) && pixel == 0x7C00u,
+           "fill corner differs");
+    ASSERT(PE_GPU_ReadVRAM(14u, 20u, &pixel) && pixel == 0u,
+           "fill overflowed");
+    PASS();
+}
+
+static void test_DRW1_754e4_level2_prints(void)
+{
+    const pe_addr_t env = 0x80122000u;
+    const BootstrapArgCall4 *call;
+    TEST("DRW1_754e4_level2_prints");
+    ResetTestState();
+    DRW1_SeedDispatch();
+    PE_StoreU8(0x8009574Eu, 2u);
+    PE_StoreU32(0x80095748u, 0x80071A74u);
+    PE_StoreU32(0x8009575Cu, 0xA5A5A5A5u);
+    func_800754E4(DRW1_OT_BASE, env);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "level-2 print did not stop");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "print not recorded");
+    call = &g_bootstrap_arg4_calls[0];
+    ASSERT(call->target == 0x80071A74u, "print target differs");
+    ASSERT(call->arg0 == 0x80011954u, "print name differs");
+    ASSERT(call->arg1 == DRW1_OT_BASE && call->arg2 == env, "print args differ");
+    ASSERT(PE_LoadU32(0x8009575Cu) == 0xA5A5A5A5u, "draw ran past the print");
+    ASSERT(PE_LoadU32(env + 0x1Cu) == 0u, "tag splice ran past the print");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-EV1 — func_80042798 event-record cleanup walk (2 records at
+ * D_800A0ED4+1 / +0x419, stride 0x418; tags 8/10 fire 72774 then stamp
+ * word -1 / tag 12).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define EV1_BASE 0x800A0ED4u
+#define EV1_REC1 (EV1_BASE + 0x419u)
+
+static void test_EV1_quiet_walk_leaves_table(void)
+{
+    TEST("EV1_quiet_walk_leaves_table");
+    ResetTestState();
+    PE_StoreU8(EV1_BASE, 0xAAu);
+    PE_StoreU8(EV1_BASE + 0x418u, 0xBBu);
+    PE_StoreU8(EV1_BASE + 1u, 0x77u);
+    PE_StoreU32(EV1_BASE + 0xCu, 0xCCCCCCCCu);
+    PE_StoreU8(EV1_REC1, 0x77u);
+    PE_StoreU32(EV1_REC1 + 0xBu, 0xDDDDDDDDu);
+    PE_StoreU8(EV1_BASE + 0x830u, 0xEEu);
+    func_80042798();
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "quiet walk stopped");
+    ASSERT(g_stub_order_count == 0, "quiet walk logged a stub");
+    ASSERT(g_bootstrap_arg4_call_count == 0, "quiet walk hit the callee");
+    ASSERT(PE_LoadU8(EV1_BASE + 1u) == 0x77u, "record0 tag moved");
+    ASSERT(PE_LoadU32(EV1_BASE + 0xCu) == 0xCCCCCCCCu, "record0 word moved");
+    ASSERT(PE_LoadU8(EV1_REC1) == 0x77u, "record1 tag moved");
+    ASSERT(PE_LoadU32(EV1_REC1 + 0xBu) == 0xDDDDDDDDu, "record1 word moved");
+    ASSERT(PE_LoadU8(EV1_BASE) == 0xAAu, "flag view byte 0 moved");
+    ASSERT(PE_LoadU8(EV1_BASE + 0x418u) == 0xBBu, "flag view byte moved");
+    ASSERT(PE_LoadU8(EV1_BASE + 0x830u) == 0xEEu, "end canary moved");
+    PASS();
+}
+
+static void test_EV1_single_hit_stamps_and_bounds(void)
+{
+    const BootstrapArgCall4 *call;
+    TEST("EV1_single_hit_stamps_and_bounds");
+    ResetTestState();
+    PE_StoreU8(EV1_BASE + 1u, 8u);
+    PE_StoreU32(EV1_BASE + 0xCu, 0x12345678u);
+    PE_StoreU8(EV1_REC1, 0x77u);
+    PE_StoreU32(EV1_REC1 + 0xBu, 0xBBBBBBBBu);
+    func_80042798();
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "hit did not stop at the callee");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "callee not recorded once");
+    call = &g_bootstrap_arg4_calls[0];
+    ASSERT(strcmp(call->symbol, "func_80072774") == 0, "callee symbol differs");
+    ASSERT(strcmp(call->caller, "func_80042798") == 0, "caller differs");
+    ASSERT(call->target == 0x80072774u, "callee target differs");
+    ASSERT(call->arg0 == 0x12345678u, "handle arg differs");
+    ASSERT(PE_LoadU32(EV1_BASE + 0xCu) == 0xFFFFFFFFu, "word not invalidated");
+    ASSERT(PE_LoadU8(EV1_BASE + 1u) == 12u, "tag not advanced");
+    ASSERT(PE_LoadU8(EV1_REC1) == 0x77u, "record1 tag moved");
+    ASSERT(PE_LoadU32(EV1_REC1 + 0xBu) == 0xBBBBBBBBu, "record1 word moved");
+    PASS();
+}
+
+static void test_EV1_both_tags_hit(void)
+{
+    TEST("EV1_both_tags_hit");
+    ResetTestState();
+    PE_StoreU8(EV1_BASE + 1u, 10u);
+    PE_StoreU32(EV1_BASE + 0xCu, 0x11111111u);
+    PE_StoreU8(EV1_REC1, 8u);
+    PE_StoreU32(EV1_REC1 + 0xBu, 0x22222222u);
+    func_80042798();
+    ASSERT(g_bootstrap_arg4_call_count == 2, "both hits not recorded");
+    ASSERT(g_bootstrap_arg4_calls[0].arg0 == 0x11111111u, "first handle differs");
+    ASSERT(g_bootstrap_arg4_calls[1].arg0 == 0x22222222u, "second handle differs");
+    ASSERT(PE_LoadU32(EV1_BASE + 0xCu) == 0xFFFFFFFFu, "record0 word differs");
+    ASSERT(PE_LoadU8(EV1_BASE + 1u) == 12u, "record0 tag differs");
+    ASSERT(PE_LoadU32(EV1_REC1 + 0xBu) == 0xFFFFFFFFu, "record1 word differs");
+    ASSERT(PE_LoadU8(EV1_REC1) == 12u, "record1 tag differs");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-OTC1 — ClearOTagR (func_800752AC) + jtb[11] OTC worker
+ * (func_80076354): synchronous hardware-pattern fill, terminator tail.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define OTC1_OT_BASE 0x801F0000u
+#define OTC1_OT_N    0x1000
+
+static void OTC1_SeedDispatch(void)
+{
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11] exact worker */
+    PE_StoreU8(0x8009574Eu, 0u);           /* debug level 0: skip print */
+}
+
+static void test_OTC1_clearotagr_fill_and_tail(void)
+{
+    const pe_addr_t ot = OTC1_OT_BASE;
+    const int n = OTC1_OT_N;
+    uint32_t q0;
+    int i;
+    TEST("OTC1_clearotagr_fill_and_tail");
+    ResetTestState();
+    OTC1_SeedDispatch();
+    PE_GPU_WriteDPCR(0x33333333u);
+    PE_StoreU32(0x80095888u, 0u);
+    PE_StoreU32(0x8009588Cu, 0u);
+    for (i = 0; i < n; i++)
+        PE_StoreU32(ot + (uint32_t)i * 4u, 0xA5A5A5A5u);
+    PE_StoreU32(ot - 4u, 0x5A5A5A5Au);
+    PE_StoreU32(ot + (uint32_t)n * 4u, 0x5A5A5A5Au);
+    PE_StoreU32(0x8009580Cu, 0u);
+    q0 = PE_GPU_VSyncQuery();
+    func_800752AC(ot, n);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "production-shape clear stopped");
+    ASSERT(g_stub_order_count == 0, "production-shape clear logged a stub");
+    /* Terminator tail: OT[0] links the stub node; the node is the end. */
+    ASSERT(PE_LoadU32(ot) == 0x0009580Cu, "OT[0] stub link differs");
+    ASSERT(PE_LoadU32(0x8009580Cu) == 0x004957F8u, "stub node differs");
+    /* OTC pattern: every entry above the base points at its predecessor. */
+    for (i = 1; i < n; i++) {
+        uint32_t want = (ot + (uint32_t)(i - 1) * 4u) & 0x00FFFFFFu;
+        if (PE_LoadU32(ot + (uint32_t)i * 4u) != want) {
+            FAIL("OTC chain entry differs");
+            return;
+        }
+    }
+    ASSERT(PE_LoadU32(ot - 4u) == 0x5A5A5A5Au, "low canary moved");
+    ASSERT(PE_LoadU32(ot + (uint32_t)n * 4u) == 0x5A5A5A5Au,
+           "high canary moved");
+    /* Non-memory retail effects: DPCR enable, deadline, one wait poll. */
+    ASSERT(PE_GPU_ReadDPCR() == (0x33333333u | 0x08000000u), "DPCR RMW differs");
+    ASSERT(PE_LoadU32(0x80095888u) == q0 + 0xF0u, "deadline differs");
+    ASSERT(PE_LoadU32(0x8009588Cu) == 1u, "wait-poll count differs");
+    PASS();
+}
+
+static void test_OTC1_clearotagr_null_ot_skip(void)
+{
+    TEST("OTC1_clearotagr_null_ot_skip");
+    ResetTestState();
+    OTC1_SeedDispatch();
+    PE_GPU_WriteDPCR(0x33333333u);
+    PE_StoreU32(0x8009580Cu, 0u);
+    func_800752AC(0u, OTC1_OT_N);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "adapter NULL-OT skip stopped production");
+    ASSERT(CountOrderLog("func_800752AC_null_ot_skip") == 1,
+           "adapter NULL-OT skip not logged");
+    ASSERT(PE_GPU_ReadDPCR() == (0x33333333u | 0x08000000u),
+           "skip dropped the DPCR enable");
+    ASSERT(PE_LoadU32(0x8009588Cu) == 1u, "skip dropped the wait poll");
+    ASSERT(PE_LoadU32(0x8009580Cu) == 0u, "skip fabricated the tail");
+    PASS();
+}
+
+static void test_OTC1_clearotagr_debug_print_boundary(void)
+{
+    const pe_addr_t ot = OTC1_OT_BASE;
+    TEST("OTC1_clearotagr_debug_print_boundary");
+    ResetTestState();
+    OTC1_SeedDispatch();
+    PE_StoreU8(0x8009574Eu, 2u);
+    PE_StoreU32(0x80095748u, 0x80071A74u);
+    PE_StoreU32(ot, 0xA5A5A5A5u);
+    func_800752AC(ot, 4);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "level-2 print did not stop");
+    ASSERT(g_bootstrap_arg4_call_count == 1, "print call not recorded");
+    ASSERT(g_bootstrap_arg4_calls[0].target == 0x80071A74u,
+           "print target differs");
+    ASSERT(g_bootstrap_arg4_calls[0].arg0 == 0x80011910u,
+           "print name differs");
+    ASSERT(PE_LoadU32(ot) == 0xA5A5A5A5u, "print path touched the OT");
+    PASS();
+}
+
+static void test_OTC1_clearotagr_dirty_jtb_boundary(void)
+{
+    const pe_addr_t ot = OTC1_OT_BASE;
+    TEST("OTC1_clearotagr_dirty_jtb_boundary");
+    ResetTestState();
+    OTC1_SeedDispatch();
+    PE_StoreU32(0x80095730u, 0xDEADBEEFu);
+    PE_StoreU32(ot, 0xA5A5A5A5u);
+    func_800752AC(ot, 4);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "dirty jtb[11] did not stop");
+    ASSERT(PE_LoadU32(ot) == 0xA5A5A5A5u, "dirty dispatch touched the OT");
+    PASS();
+}
+
+static void test_OTC1_clearotagr_small_table(void)
+{
+    const pe_addr_t ot = 0x801F4000u;
+    TEST("OTC1_clearotagr_small_table");
+    ResetTestState();
+    OTC1_SeedDispatch();
+    PE_StoreU32(ot, 0xA5A5A5A5u);
+    PE_StoreU32(ot + 4u, 0xA5A5A5A5u);
+    PE_StoreU32(ot + 8u, 0xA5A5A5A5u);
+    PE_StoreU32(ot + 12u, 0xA5A5A5A5u);
+    func_800752AC(ot, 4);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "n=4 clear stopped");
+    ASSERT(PE_LoadU32(ot) == 0x0009580Cu, "n=4 OT[0] differs");
+    ASSERT(PE_LoadU32(ot + 4u) == (ot & 0x00FFFFFFu), "n=4 OT[1] differs");
+    ASSERT(PE_LoadU32(ot + 8u) == ((ot + 4u) & 0x00FFFFFFu),
+           "n=4 OT[2] differs");
+    ASSERT(PE_LoadU32(ot + 12u) == ((ot + 8u) & 0x00FFFFFFu),
+           "n=4 OT[3] differs");
+    PASS();
+}
+
 /* ── main ────────────────────────────────────────────────────────────── */
 #include <stdlib.h>
 #include <string.h>
@@ -33518,7 +34028,7 @@ int main(void)
     test_B49_bounded_runs_repeat();
     test_B54KR_801909B4_strict_reaches_overlay_init();
     test_B54KQ_prerequisite_setters_and_reset();
-    test_B54KQ_5C1EC_zero_path_is_named_boundary();
+    test_B54KQ_5C1EC_zero_path_translated_walk();
     test_B54KR_gpu_move_overlap_wrap_and_zero_geometry();
     test_B54KR_gpu_move_rejections_are_mutation_free();
     test_B54KR_moveimage_wrapper_packet_and_direct_dispatch();
@@ -33903,6 +34413,7 @@ int main(void)
     test_BTL40_18BEC_sets_bit20();
     test_BTL41_66B60_and_18EB4();
     test_BTL41_6E9A0_calls_66B60();
+    test_FD1_6E9A0_real_loop_fills_arena_ot();
     test_BTL42_1A1F0_sets_bit01000000();
     test_BTL43_176FC_equal_and_range();
     test_BTL44_18954_and_18164();
@@ -34718,6 +35229,33 @@ int main(void)
     test_B53B_vblank_dma_ready_independence();
     test_B53B_max_geometry();
     test_B53B_authority_separation_guard();
+
+    /* Phase 6E-TOK1 — New-Game token identities (2 tests). */
+    test_TOK1_m0431i_new_game_token();
+    test_TOK1_m0353i_arg3_token();
+
+    /* Phase 6E-FLD1 — M0431I field-entry chunk load (1 test, retail disc). */
+    test_FLD1_6B4F8_m0431i_load();
+
+    /* Phase 6E-DRW1 — DrawOTag chain walk (5 tests). */
+    test_DRW1_drawotag_empty_chain();
+    test_DRW1_drawotag_dispatch_boundary();
+    test_DRW1_chain_two_env_nodes();
+    test_DRW1_chain_unknown_word_bounds();
+    test_DRW1_fill_command_renders();
+    test_DRW1_754e4_level2_prints();
+
+    /* Phase 6E-EV1 — 42798 event-record cleanup walk (3 tests). */
+    test_EV1_quiet_walk_leaves_table();
+    test_EV1_single_hit_stamps_and_bounds();
+    test_EV1_both_tags_hit();
+
+    /* Phase 6E-OTC1 — ClearOTagR synchronous OTC fill (5 tests). */
+    test_OTC1_clearotagr_fill_and_tail();
+    test_OTC1_clearotagr_null_ot_skip();
+    test_OTC1_clearotagr_debug_print_boundary();
+    test_OTC1_clearotagr_dirty_jtb_boundary();
+    test_OTC1_clearotagr_small_table();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

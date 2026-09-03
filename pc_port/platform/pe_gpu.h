@@ -40,7 +40,9 @@ typedef enum {
     PE_GPU_GP0_IMAGE_DATA,
     PE_GPU_GP0_RECT_EXPECT_POSITION,
     PE_GPU_GP0_RECT_EXPECT_UV_CLUT,
-    PE_GPU_GP0_RECT_EXPECT_SIZE
+    PE_GPU_GP0_RECT_EXPECT_SIZE,
+    PE_GPU_GP0_FILL_EXPECT_POSITION,
+    PE_GPU_GP0_FILL_EXPECT_SIZE
 } PeGpuGp0State;
 
 /* Read-only snapshot.  Every address is a 32-bit guest address; no native
@@ -83,6 +85,14 @@ typedef struct {
     uint32_t rectangle_uv_clut;
     uint32_t rectangle_size;
     uint64_t rectangle_count;
+
+    /* Last completed GP0(02h) VRAM fill. Represented subset: raw 15-bit
+     * color write clamped to VRAM, no mask-bit set, drawing area and
+     * offset ignored. In-progress packet words stay parser-private. */
+    uint32_t fill_command;
+    uint32_t fill_position;
+    uint32_t fill_size;
+    uint64_t fill_count;
 
     pe_addr_t dma2_madr;
     uint32_t dma2_bcr;

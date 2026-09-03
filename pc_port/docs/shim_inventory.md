@@ -29,7 +29,7 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 | `func_8001220C` | - | 187 | `bootstrap/func_8001220C_port.c` |
 | `func_800698D4` | - | - | `bootstrap/func_800698D4_port.c` |
 | `func_8006E834` | - | 91 | `bootstrap/func_8006E834_port.c` |
-| `func_8006E9A0` | - | - | `bootstrap/func_8006E9A0_port.c` |
+| `func_8006E9A0` | 0x234 | 141 | `bootstrap/func_8006E9A0_port.c` (de-adapted Phase 6E-FD1; `70E54` still a stub boundary) |
 | `func_8003E610` | 0x70 | 28 | `game/boot/func_8003E610_port.c` |
 | `func_8003E680` | 0xD4 | 53 | `game/boot/func_8003E680_port.c` |
 | `func_8006A5BC` | 0x90 | 36 | `game/boot/func_8006A5BC_port.c` |
@@ -588,7 +588,10 @@ never native function pointers.
 ### func_8006E9A0 callees (7)
 - `func_8005E588`
 - `func_80066B60(int)`
-- `ClearOTagR`
+- ~~`ClearOTagR`~~ — TRANSLATED (Phase 6E-OTC1:
+  `game/boot/func_800752AC_port.c`; synchronous OTC fill + tail; the
+  NULL-OT skip remains only as a guard — the 6E9A0 loop passes the real
+  arena OT since Phase 6E-FD1)
 - `func_80068E24`
 - `func_80070E54`
 - ~~`func_80038D1C`~~ — TRANSLATED (Phase 6E-B15, shared with 3E680;
@@ -851,4 +854,4 @@ read-only image): `func_8007F72C` (CdReady), `func_8007F778`,
   all seven required-state `func_8005B91C` calls
 - `func_80087090` — SPU upload retry wrapper
 - `func_800749D8` — display environment setup (currently memset stub)
-- `func_800752AC` (ClearOTagR) — ordering table clear
+- ~~`func_800752AC` (ClearOTagR)~~ — TRANSLATED (Phase 6E-OTC1)

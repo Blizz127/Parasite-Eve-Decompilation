@@ -56,6 +56,128 @@ still `NEEDS_ARTIFACT`. Evidence:
 `docs/evidence/pe-field-runtime-library/REPORT.md`; consumer notes:
 `pc_port/docs/field_runtime_library.md`.
 
+## PE-OTC1 — ClearOTagR translated + DrawOTag decision (2026-09-02)
+
+`func_800752AC` (43w) + its `jtb[11]` worker `func_80076354` (56w) are now
+translated in `pc_port/game/boot/func_800752AC_port.c`. Static data proves
+the worker programs DMA6/OTC (`D_80095864/68/6C/70` =
+`1F8010E0/E4/E8/F0`); native performs the hardware terminator fill
+synchronously (`OT[i] = OT[i-1] & 0xFFFFFF`, tail `*ot = 0x0009580C` /
+`D_8009580C = 0x004957F8`) and completes during the first wait poll.
+DPCR goes through the shared PE_GPU authority. The boot adapter's NULL-OT
+is a logged no-stop skip until adapter removal. 5 focused tests; full
+normal suite 1015 run / 998 passed / 1 pre-existing environmental failure
+(B54KY missing disc path, identical on base) / 16 skipped; ASan/UBSan
+(leak check off, sandbox ptrace) zero diagnostics. Evidence:
+`docs/evidence/pe-otc1-clearotagr/REPORT.md`; oracle:
+`pc_port/tools/pe_otc1_clearotagr_oracle.py`. The four 6E9A0-calling tests
+now seed `jtb[11]` for the production arm. Landed incidentally: an
+unguarded `jtb` deref crashed the suite (buffered output hid the site;
+`stdbuf -o0` used after); all guest-pointer derefs are now range-checked.
+
+`pc_port/docs/drawotag_decision.md` records the DrawOTag rule before any
+DrawOTag work: guest builds the OT in guest RAM, host walks it read-only
+at the existing `jtb[2]` dispatch; adapting DrawOTag would make field work
+unbounded and break read-only presentation. It also flags the known
+level-`>= 2` early-return defect in the partial `func_800754E4` port
+(retail prints then continues) for the DrawOTag rung.
+
+Byte-accuracy pass (same day): every retail word of both bodies re-audited
+against the EXE bytes — one real fix (77404-prefix stores `polls+1`
+BEFORE the limit test, as retail orders it), all 15 load-bearing
+immediates now machine-checked in the oracle, tail constants re-derived
+bit-by-bit (`0x004957F8` / `0x0009580C`). Explicitly NOT a matching leaf:
+no `src/` code added or claimed; the era/docker byte-exact gate is unrunnable
+in this session (no mipsel toolchain, `cc1` seccomp-killed, docker denied).
+Incidental: `asm/disc1/66B54.s` hex comment at `0x80076390` misprints the
+`sll` word (`80101000` vs EXE `00101080`) — mnemonic assembles correctly,
+comments are not authority.
+
+## PE-EV1 — func_80042798 translated (2026-09-02)
+
+44-word event-record cleanup walk now translated in
+`pc_port/game/boot/func_80042798_port.c`: two records at `D_800A0ED4+1` /
+`+0x419` (stride `0x418`), tags 8/10 fire the `0xB0`-vector trampoline
+`func_80072774` (narrowed callee boundary) then stamp word `-1` / tag 12.
+Fits the translated `func_80042538` lifecycle (memsets the block, writes
+the two `-1` sentinels this walk consumes). The 5C1EC zero path calls the
+real walk; its test migrated to `_translated_walk`. 3 focused tests; full
+suite 1018 run / 1001 passed / same single pre-existing environmental
+failure / 16 skipped. Evidence: `docs/evidence/pe-ev1-42798-cleanup/REPORT.md`;
+oracle: `pc_port/tools/pe_ev1_42798_oracle.py`.
+
+## PE-FD1 — func_8006E9A0 adapter removed (2026-09-02)
+
+First adapter removed rather than catalogued. The HOST_ADAPTED
+single-pass stand-in is now the retail-faithful translation of the
+141-word matched leaf `src/func_8006E9A0.c` in
+`pc_port/bootstrap/func_8006E9A0_port.c`: display init, republished
+19-store arena, `5E588` + `66B60(2)`, the real
+`do/ClearOTagR(lookup[CDDC])/68E24/70E54/while(CFEE&3 != 1)` loop, and
+the arg-1 `0xA80830C8` / arg-3 dispatch. Termination proven: 66B60 arms
+2/arg/0 unconditionally, 68E24 counts down to CFEE=1 (2 iterations in
+fixtures). `70E54` stays a stub boundary inside the loop — the honestly
+exposed next New-Game rung; strict production unaffected (frontier stops
+inside 801909B4 first). `BTL41_6E9A0` migrated to the retail contract;
+new `FD1_` test proves the arena-OT fill. Full suite 1019 run / 1002
+passed / same single pre-existing environmental failure / 16 skipped.
+Evidence: `docs/evidence/pe-fd1-6e9a0-loop/REPORT.md`.
+
+## PE-TOK1 — token 0xA80830C8 is M0431I (2026-09-02)
+
+The New-Game token unpacks through the retail `6E2D0`/`6E454` pair to
+name `M0431I`, index 431, package slot 430 (`rel 0x182CF`,
+`packed 0x01200911`: 17+9+18 PE.IMG sectors into overlay
+`+0x194`/`+0x168`/`+0x18C` via the translated `dest_load_cut`). Arg-3
+token `0xA80651C8` is `M0353I` (slot 352). Decode reuses the
+BTL150-proven 5-bit scheme, validated against both proven tokens;
+route is the 1220C else arm (`0xA80830C8 < 0xA9400048`,
+`!= 0xA8000048`) into the field tick's dest-change latch. Two focused
+tests run the retail unpacker itself. Full suite 1021 run / 1004 passed
+/ same single pre-existing environmental failure / 16 skipped.
+Evidence: `docs/evidence/pe-tok1-m0431i/REPORT.md`; oracle:
+`pc_port/tools/pe_tok1_m0431i_oracle.py`. Incidental: the unpack
+charset is 32 entries (`...r-w` + `y` at 31; no j/q/x/z) — the oracle
+pins all 32.
+
+## PE-FLD1 — M0431I field entry proven (2026-09-02)
+
+`dest_load_cut(0xA80830C8)` loads the New-Game map through translated
+machinery with zero new port code: 17+9+18 sectors from `B0DD8+0x182CF`
+into the overlay dests, heads `0x8064`/`0x4050`/`0x8A1C`/`0x89B4`
+(mirror-BTL63 disc-gated test, skips without the image). Expected heads
+derived from the user-supplied Disc 1 image at 2352+24 layout; the
+method was validated by reproducing all three `m0367i` heads first.
+With `PE_DISC1_BIN` set (env only, no repo/`local/` changes) the FULL
+suite is green: 1022/1022/0/0. Standard gateless-disc gate unchanged:
+1022 run / 1004 passed / 1 pre-existing environmental failure / 17
+skipped. Evidence: `docs/evidence/pe-fld1-m0431i-entry/REPORT.md`.
+
+## PE-DRW1 — DrawOTag read-only chain walk + FILL (2026-09-02)
+
+Per the decision note: `753B4` translated (28w, worker passes through
+to `76C34`); `76B98` generalized from single terminal packet to the
+multi-node DMA walk (head validates pre-GP1, later nodes progressive,
+size-0/zilch links and out-of-RAM tails end silently, unknown shapes
+stay named cuts, no cycle guard — retail hangs identically);
+`754E4`'s deferred dispatch completed + its inverted level gate fixed
+(7506C pattern); GP0(02h) FILL implemented (every `isbg` DR_ENV ends in
+one — no field frame draws without it) with `fill_*` telemetry. 6
+focused tests; BTL88 now runs the production arm (draw executes, FILL
+renders). Incidents fixed along the way: `jtb[6]` seeded at the wrong
+slot in my own fixture, unguarded `jtb` derefs in `754E4`/`75424`, and
+a zero-tag spin on uninitialized links. Full suite 1028 run / 1010
+passed / same single pre-existing environmental failure / 17 skipped;
+ASan/UBSan zero diagnostics. The vis1 `float_in_path` defect list
+targets the `native/` tree, which is not in this repo — the in-repo
+answer is this rung (fixed-point-hostile doubles never entered the
+walk; all coordinates stay integer words into the parser).
+Evidence: `docs/evidence/pe-drw1-drawotag-walk/REPORT.md`; oracle:
+`pc_port/tools/pe_drw1_drawotag_oracle.py`.
+
+Next: field frames through the tick (`70E54` stub still bounds the
+fade/field present), then the theatre.
+
 ## Main-lane YAML build authority (merged 2026-09-01)
 
 `configs/USA/disc1.yaml` owns Disc-1 span edges, source/object mapping, trim

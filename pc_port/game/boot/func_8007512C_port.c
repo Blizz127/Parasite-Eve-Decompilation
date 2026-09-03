@@ -7,10 +7,22 @@
  * func_80076B98.  It does not traverse the neighboring func_80076C10 shim.
  *
  * func_80076B98 is the complete 18-word linked-list DMA worker at
- * 0x80076B98..0x80076BDF. Native resolves a single, terminal GPU packet:
- * GP0(80h) keeps its synchronous MoveImage path, while drawing-environment
- * words traverse the generic GP0 parser. Multi-node ordering tables remain an
- * explicit boundary; no guest instruction stream is interpreted.
+ * 0x80076B98..0x80076BDF (Phase 6E-DRW1 extends it from a single terminal
+ * packet to the multi-node ordering-table walk, per
+ * pc_port/docs/drawotag_decision.md: the guest builds the table, the host
+ * walks it read-only).  Retail programs GP1(04h)=2, DMA2 MADR=packet,
+ * BCR=0, CHCR=0x01000401 once, and the channel walks 24-bit links to the
+ * 0xFFFFFF terminator, forwarding each node's count words after its tag.
+ * Native performs that walk synchronously: GP0(80h) keeps its MoveImage
+ * path, drawing-environment words traverse the generic GP0 parser, and
+ * any other shape stays a mutation-free named cut.  A next-address at or
+ * above guest RAM ends the walk silently after its node's words are sent:
+ * retail provably survives the stub-tail jump every cleared-OT draw, so
+ * termination (not traversal) is the faithful observable, and size-0
+ * stub nodes submit nothing either way.  A zero tag (uninitialized link,
+ * which retail never writes) ends the walk the same way.  No other cycle
+ * guard exists in retail and none is added: only corrupt nonzero links
+ * could cycle, and retail hangs on those identically.
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -29,13 +41,95 @@ static int IsGp0EnvironmentWord(uint32_t word)
     return word == 0u || (opcode >= 0xE1u && opcode <= 0xE6u);
 }
 
-int func_80076B98(pe_addr_t packet, uint32_t auxiliary)
+/* Validate one chain node without submitting it: representable span,
+ * word count within the authenticated bound, and a MoveImage shape or
+ * all-environment words.  Reports through the single-node boundary name
+ * so earlier cuts keep their identity. */
+static int DRW1_ValidateNode(pe_addr_t node, uint32_t tag, uint32_t count,
+                             uint32_t auxiliary)
 {
-    uint32_t tag;
-    uint32_t count;
     uint32_t command;
     uint32_t i;
-    size_t packet_bytes;
+    size_t node_bytes = ((size_t)count + 1u) * 4u;
+
+    /* Size-0 nodes are the OTC empty-bucket links: nothing to send, just
+     * follow the link.  (Single-node terminal size-0 was previously cut;
+     * no test plants it, and hardware sends nothing either way.) */
+    if (count > 15u || !PE_RangeIsRam(node, node_bytes)) {
+        (void)Bootstrap_ReturnInt4Indirect(
+            "func_80076B98_packet_cut", "func_80076B98", 0, 0u,
+            node, tag, count, auxiliary, NULL, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return 0;
+    }
+    if (count == 0u)
+        return 1;
+    command = PE_LoadU32(node + 4u);
+    if (count == 4u && command == 0x80000000u)
+        return 1;
+    /* Structural walk: environment singles, or GP0(02h) FILL triples
+     * (command + coords + size, the shape SetDrawEnv emits).  FILL
+     * payload words are data, accepted positionally; a truncated FILL
+     * stays a cut — retail emits complete triples only. */
+    i = 0u;
+    while (i < count) {
+        uint32_t word = PE_LoadU32(node + 4u + i * 4u);
+        if (IsGp0EnvironmentWord(word)) {
+            i++;
+            continue;
+        }
+        if ((word & 0xFF000000u) == 0x02000000u && i + 2u < count) {
+            i += 3u;
+            continue;
+        }
+        (void)Bootstrap_ReturnInt4Indirect(
+            "func_80076B98_packet_cut", "func_80076B98", 0, 0u,
+            node, tag, i, word, NULL, 0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return 0;
+    }
+    return 1;
+}
+
+/* Submit one validated node: MoveImage shape through its synchronous
+ * path, otherwise word-by-word through the generic GP0 parser. */
+static int DRW1_SubmitNode(pe_addr_t node, uint32_t tag, uint32_t count)
+{
+    uint32_t i;
+
+    if (count == 4u && PE_LoadU32(node + 4u) == 0x80000000u) {
+        if (!PE_GPU_MoveImage(PE_LoadU32(node + 8u),
+                              PE_LoadU32(node + 12u),
+                              PE_LoadU32(node + 16u))) {
+            (void)Bootstrap_ReturnInt4Indirect(
+                "func_80076B98_gpu_move_cut", "func_80076B98", 0, 0u,
+                node, PE_LoadU32(node + 8u),
+                PE_LoadU32(node + 12u), PE_LoadU32(node + 16u),
+                NULL, 0u);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        }
+        return 1;
+    }
+
+    for (i = 0u; i < count; i++) {
+        uint32_t word = PE_LoadU32(node + 4u + i * 4u);
+
+        if (!PE_GPU_WriteGP0(word)) {
+            (void)Bootstrap_ReturnInt4Indirect(
+                "func_80076B98_gp0_packet_cut", "func_80076B98", 0, 0u,
+                node, i, word, tag, NULL, 0u);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int func_80076B98(pe_addr_t packet, uint32_t auxiliary)
+{
+    pe_addr_t node;
+    uint32_t tag;
+    uint32_t count;
     PeGpuState gpu;
 
     (void)auxiliary; /* retail worker never reads a1 */
@@ -47,70 +141,46 @@ int func_80076B98(pe_addr_t packet, uint32_t auxiliary)
         return 0;
     }
 
-    tag = PE_LoadU32(packet);
+    /* Head node validates before the worker's GP1 write, keeping
+     * rejected shapes mutation-free exactly as before. */
+    node = packet;
+    tag = PE_LoadU32(node);
     count = tag >> 24;
-    packet_bytes = ((size_t)count + 1u) * 4u;
-    if ((tag & 0x00FFFFFFu) != 0x00FFFFFFu || count == 0u ||
-        count > 15u || !PE_RangeIsRam(packet, packet_bytes)) {
-        (void)Bootstrap_ReturnInt4Indirect(
-            "func_80076B98_packet_cut", "func_80076B98", 0, 0u,
-            packet, tag, count, auxiliary, NULL, 0u);
-        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    if (!DRW1_ValidateNode(node, tag, count, auxiliary))
         return 0;
-    }
-    command = PE_LoadU32(packet + 4u);
-
-    /* Validate the whole represented node before the worker's GP1 write.
-     * This keeps rejected packet shapes mutation-free. */
-    if (!(count == 4u && command == 0x80000000u)) {
-        for (i = 0u; i < count; i++) {
-            if (!IsGp0EnvironmentWord(
-                    PE_LoadU32(packet + 4u + i * 4u))) {
-                (void)Bootstrap_ReturnInt4Indirect(
-                    "func_80076B98_packet_cut", "func_80076B98", 0, 0u,
-                    packet, tag, i, PE_LoadU32(packet + 4u + i * 4u),
-                    NULL, 0u);
-                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-                return 0;
-            }
-        }
-    }
 
     /* Retail writes GP1(04h)=2, DMA2 MADR=packet, BCR=0, then
-     * CHCR=0x01000401.  The represented one-packet list is synchronous in
+     * CHCR=0x01000401.  The represented list is synchronous in
      * the native GPU authority, so it creates no request-mode DMA token. */
     if (!PE_GPU_WriteGP1(0x04000002u)) {
         (void)Bootstrap_ReturnInt4Indirect(
             "func_80076B98_gp1_cut", "func_80076B98", 0, 0u,
-            packet, tag, command, auxiliary, NULL, 0u);
+            node, tag, PE_LoadU32(node + 4u), auxiliary, NULL, 0u);
         PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
         return 0;
     }
 
-    if (count == 4u && command == 0x80000000u) {
-        if (!PE_GPU_MoveImage(PE_LoadU32(packet + 8u),
-                              PE_LoadU32(packet + 12u),
-                              PE_LoadU32(packet + 16u))) {
-            (void)Bootstrap_ReturnInt4Indirect(
-                "func_80076B98_gpu_move_cut", "func_80076B98", 0, 0u,
-                packet, PE_LoadU32(packet + 8u),
-                PE_LoadU32(packet + 12u), PE_LoadU32(packet + 16u),
-                NULL, 0u);
-            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-        }
-        return 0;
-    }
+    /* Chain walk: submit, then follow the 24-bit link.  Later nodes
+     * validate-then-submit progressively, as the hardware DMA would;
+     * only the head keeps the validate-before-program order.  A zero tag
+     * is an uninitialized link (retail never writes one: OTC, AddPrim,
+     * and tail links are all nonzero); it ends the walk silently rather
+     * than spinning on address zero, which no valid chain can name. */
+    for (;;) {
+        uint32_t next;
 
-    for (i = 0u; i < count; i++) {
-        uint32_t word = PE_LoadU32(packet + 4u + i * 4u);
-
-        if (!PE_GPU_WriteGP0(word)) {
-            (void)Bootstrap_ReturnInt4Indirect(
-                "func_80076B98_gp0_packet_cut", "func_80076B98", 0, 0u,
-                packet, i, word, tag, NULL, 0u);
-            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        if (!DRW1_SubmitNode(node, tag, count))
             return 0;
-        }
+        next = tag & 0x00FFFFFFu;
+        if (next == 0x00FFFFFFu || next >= 0x00200000u)
+            break;
+        node = 0x80000000u | next;
+        tag = PE_LoadU32(node);
+        if (tag == 0u)
+            break;
+        count = tag >> 24;
+        if (!DRW1_ValidateNode(node, tag, count, auxiliary))
+            return 0;
     }
     PE_GPU_GetState(&gpu);
     if (gpu.gp0_state != PE_GPU_GP0_IDLE) {

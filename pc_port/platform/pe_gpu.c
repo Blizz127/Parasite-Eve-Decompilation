@@ -20,6 +20,8 @@ typedef struct {
     uint32_t rectangle_command;
     uint32_t rectangle_position;
     uint32_t rectangle_uv_clut;
+    uint32_t fill_command;
+    uint32_t fill_position;
     uint16_t vram[PE_GPU_VRAM_PIXELS];
 } PeGpuAuthority;
 
@@ -66,6 +68,8 @@ static void ResetParser(void)
     g_gpu.rectangle_command = 0;
     g_gpu.rectangle_position = 0;
     g_gpu.rectangle_uv_clut = 0;
+    g_gpu.fill_command = 0;
+    g_gpu.fill_position = 0;
 }
 
 static void ResetHardwareState(void)
@@ -287,6 +291,39 @@ static int TexturedRectangle4ModeSupported(void)
            (g_gpu.state.draw_mode & 0x800u) == 0u;
 }
 
+/* Execution-proven GP0(02h) subset. Raw 15-bit color write clamped to
+ * VRAM: no mask-bit set, drawing area and offset ignored (subset). */
+static void DrawFillRectangle(uint32_t size)
+{
+    uint32_t command = g_gpu.fill_command;
+    uint32_t red = ((command >> 16) & 0xFFu) >> 3;
+    uint32_t green = ((command >> 8) & 0xFFu) >> 3;
+    uint32_t blue = (command & 0xFFu) >> 3;
+    uint16_t pixel =
+        (uint16_t)(red | (green << 5) | (blue << 10));
+    uint32_t origin_x = g_gpu.fill_position & 0x3FFu;
+    uint32_t origin_y = (g_gpu.fill_position >> 16) & 0x1FFu;
+    uint32_t width = size & 0x3FFu;
+    uint32_t height = (size >> 16) & 0x1FFu;
+    uint32_t row;
+
+    for (row = 0u; row < height; row++) {
+        uint32_t destination_y = origin_y + row;
+        uint32_t column;
+
+        if (destination_y >= (uint32_t)PE_GPU_VRAM_HEIGHT)
+            continue;
+        for (column = 0u; column < width; column++) {
+            uint32_t destination_x = origin_x + column;
+
+            if (destination_x >= (uint32_t)PE_GPU_VRAM_WIDTH)
+                continue;
+            g_gpu.vram[destination_y * PE_GPU_VRAM_WIDTH +
+                       destination_x] = pixel;
+        }
+    }
+}
+
 int PE_GPU_WriteGP0(uint32_t value)
 {
     uint64_t pixels;
@@ -355,6 +392,12 @@ int PE_GPU_WriteGP0(uint32_t value)
             g_gpu.state.gp0_state = PE_GPU_GP0_RECT_EXPECT_POSITION;
             return 1;
         }
+        if ((value & 0xFF000000u) == 0x02000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.fill_command = value;
+            g_gpu.state.gp0_state = PE_GPU_GP0_FILL_EXPECT_POSITION;
+            return 1;
+        }
         return 0;
 
     case PE_GPU_GP0_EXPECT_POSITION:
@@ -409,6 +452,22 @@ int PE_GPU_WriteGP0(uint32_t value)
         g_gpu.state.rectangle_uv_clut = g_gpu.rectangle_uv_clut;
         g_gpu.state.rectangle_size = value;
         g_gpu.state.rectangle_count++;
+        ResetParser();
+        return 1;
+
+    case PE_GPU_GP0_FILL_EXPECT_POSITION:
+        if (g_gpu.state.dma2_active) return 0;
+        g_gpu.fill_position = value;
+        g_gpu.state.gp0_state = PE_GPU_GP0_FILL_EXPECT_SIZE;
+        return 1;
+
+    case PE_GPU_GP0_FILL_EXPECT_SIZE:
+        if (g_gpu.state.dma2_active) return 0;
+        DrawFillRectangle(value);
+        g_gpu.state.fill_command = g_gpu.fill_command;
+        g_gpu.state.fill_position = g_gpu.fill_position;
+        g_gpu.state.fill_size = value;
+        g_gpu.state.fill_count++;
         ResetParser();
         return 1;
     }
