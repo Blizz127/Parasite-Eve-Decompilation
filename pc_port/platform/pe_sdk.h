@@ -149,6 +149,15 @@ int  func_8007F72C(void);            /* CdReady */
 int  func_8007F778(void);            /* CdReady queue-depth getter D_800A3608 */
 void func_800870F0(uint32_t a0);
 void func_8010BD4C(pe_addr_t dst, uint32_t count);
+int  func_8010C89C(uint32_t a0, pe_addr_t a1, pe_addr_t a2,
+                   uint32_t a3); /* VLC frame decoder; a3 dead */
+typedef struct PeC89CTelemetry {
+    uint32_t a0;                 /* entry cursor (0 = resume) */
+    pe_addr_t a1;                /* entry arena */
+    pe_addr_t a2;                /* entry table word */
+    int ret;                     /* exit code (0 pad, 1 bound) */
+} PeC89CTelemetry;
+void PE_C89C_GetTelemetry(PeC89CTelemetry *out); /* host-only, never guest */
 void func_8007C214(void);
 int func_8007A88C(pe_addr_t p);
 void func_8007B964(pe_addr_t p);

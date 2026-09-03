@@ -1526,6 +1526,153 @@ static void test_B54KX_nonzero_phase_remains_state_driven(void)
     PASS();
 }
 
+/* Phase 6E-MV1d — func_8010C89C unit vectors. Scratch bases live in
+ * mapped RAM (ResetTestState zeroes everything, so [EB8C] is planted
+ * explicitly — the file-seeded 0x00FFFFFF only exists after the real
+ * 38-sector load). Expected values are the oracle model's outputs
+ * (pc_port/tools/pe_mv1d_c89c_oracle.py MV1D_* vectors). */
+#define MV1D_S 0x80150000u
+#define MV1D_A 0x80151000u
+#define MV1D_T 0x80152000u
+#define MV1D_EB8C 0x8011EB8Cu
+#define MV1D_EB90 0x8011EB90u
+#define MV1D_EBB4 0x8011EBB4u
+
+static void test_MV1D_c89c_pad(void)
+{
+    TEST("MV1D_c89c_pad");
+    ResetTestState();
+    PE_StoreU32(MV1D_EB8C, 0x00FFFFFFu);
+    PE_StoreU32(MV1D_S, 0x00000001u);
+    PE_StoreU16(MV1D_S + 4u, 0u);
+    PE_StoreU16(MV1D_S + 6u, 0u);
+    PE_StoreU16(MV1D_S + 8u, 0x7FC0u);
+    PE_StoreU16(MV1D_S + 10u, 0u);
+    ASSERT(func_8010C89C(MV1D_S, MV1D_A, MV1D_T, 0u) == 0 &&
+           PE_LoadU32(MV1D_EBB4) == MV1D_A + 8u &&
+           PE_LoadU32(MV1D_A) == 1u &&
+           PE_LoadU16(MV1D_A + 2u) == 0u &&
+           PE_LoadU16(MV1D_A + 4u) == 0xFE00u &&
+           PE_LoadU16(MV1D_A + 6u) == 0xFE00u,
+           "MV1D_PAD footprint differs");
+    PASS();
+}
+
+static void test_MV1D_c89c_bound(void)
+{
+    TEST("MV1D_c89c_bound");
+    ResetTestState();
+    PE_StoreU32(MV1D_EB8C, 0u);
+    PE_StoreU32(MV1D_S, 0u);
+    PE_StoreU16(MV1D_S + 4u, 0u);
+    PE_StoreU16(MV1D_S + 6u, 0u);
+    PE_StoreU16(MV1D_S + 8u, 0u);
+    PE_StoreU16(MV1D_S + 10u, 0u);
+    PE_StoreU16(MV1D_S + 12u, 0x1234u);
+    ASSERT(func_8010C89C(MV1D_S, MV1D_A, MV1D_T, 0u) == 1 &&
+           PE_LoadU32(MV1D_EB90) == MV1D_S + 12u &&
+           PE_LoadU32(MV1D_EB90 + 4u) == MV1D_A + 6u &&
+           PE_LoadU32(MV1D_EB90 + 8u) == 0u &&
+           PE_LoadU32(MV1D_EB90 + 12u) == 10u &&
+           PE_LoadU32(MV1D_EBB4) == MV1D_A + 4u,
+           "MV1D_BOUND footprint differs");
+    PASS();
+}
+
+static void test_MV1D_c89c_pad3ff(void)
+{
+    TEST("MV1D_c89c_pad3ff");
+    ResetTestState();
+    PE_StoreU32(MV1D_EB8C, 0x00FFFFFFu);
+    PE_StoreU32(MV1D_S, 0u);
+    PE_StoreU16(MV1D_S + 4u, 0u);
+    PE_StoreU16(MV1D_S + 6u, 3u);
+    PE_StoreU16(MV1D_S + 8u, 0xFFC0u);
+    PE_StoreU16(MV1D_S + 10u, 0u);
+    ASSERT(func_8010C89C(MV1D_S, MV1D_A, MV1D_T, 0u) == 0 &&
+           PE_LoadU32(MV1D_EBB4) == MV1D_A + 4u &&
+           PE_LoadU32(MV1D_A) == 0u &&
+           PE_LoadU16(MV1D_A + 2u) == 0u,
+           "MV1D_PAD3FF footprint differs");
+    PASS();
+}
+
+static void test_MV1D_c89c_table(void)
+{
+    TEST("MV1D_c89c_table");
+    ResetTestState();
+    PE_StoreU32(MV1D_EB8C, 0u);
+    PE_StoreU32(MV1D_S, 0u);
+    PE_StoreU16(MV1D_S + 4u, 0u);
+    PE_StoreU16(MV1D_S + 6u, 3u);
+    PE_StoreU16(MV1D_S + 8u, 0x0100u);
+    PE_StoreU16(MV1D_S + 10u, 0u);
+    PE_StoreU16(MV1D_S + 12u, 0x00BBu);
+    PE_StoreU16(MV1D_T + 0x404u, 16u);
+    PE_StoreU16(MV1D_T + 0x406u, 8u);
+    ASSERT(func_8010C89C(MV1D_S, MV1D_A, MV1D_T, 0u) == 1 &&
+           PE_LoadU32(MV1D_EB90) == MV1D_S + 14u &&
+           PE_LoadU32(MV1D_EB90 + 4u) == MV1D_A + 6u &&
+           PE_LoadU32(MV1D_EB90 + 8u) == 0xBB00u &&
+           PE_LoadU32(MV1D_EB90 + 12u) == 8u &&
+           PE_LoadU32(MV1D_EB90 + 20u) == 2u &&
+           PE_LoadU32(MV1D_EB90 + 24u) == 0xFFFFFF01u &&
+           PE_LoadU32(MV1D_EBB4) == MV1D_A + 4u &&
+           PE_LoadU16(MV1D_A + 4u) == 4u,
+           "MV1D_TABLE footprint differs");
+    PASS();
+}
+
+static void test_MV1D_c89c_main(void)
+{
+    int i;
+    TEST("MV1D_c89c_main");
+    ResetTestState();
+    PE_StoreU32(MV1D_EB8C, 3u);
+    for (i = 0; i < 12; i++)
+        PE_StoreU8(MV1D_S + (uint32_t)i, 0u);
+    PE_StoreU32(MV1D_T + 0x800u, 0xFE000003u);
+    PE_StoreU32(MV1D_T + 0x804u, 0u);
+    ASSERT(func_8010C89C(MV1D_S, MV1D_A, MV1D_T, 0u) == 1 &&
+           PE_LoadU32(MV1D_EB90) == MV1D_S + 14u &&
+           PE_LoadU32(MV1D_EB90 + 4u) == MV1D_A + 10u &&
+           PE_LoadU32(MV1D_EB90 + 8u) == 0u &&
+           PE_LoadU32(MV1D_EB90 + 12u) == 7u &&
+           PE_LoadU32(MV1D_EB90 + 20u) == 0u &&
+           PE_LoadU32(MV1D_EBB4) == MV1D_A + 4u &&
+           PE_LoadU32(MV1D_A) == 0u &&
+           PE_LoadU16(MV1D_A + 4u) == 0u &&
+           PE_LoadU16(MV1D_A + 6u) == 0xFE00u &&
+           PE_LoadU16(MV1D_A + 8u) == 0u,
+           "MV1D_MAIN footprint differs");
+    PASS();
+}
+
+static void test_MV1D_c89c_resume(void)
+{
+    TEST("MV1D_c89c_resume");
+    ResetTestState();
+    PE_StoreU32(MV1D_EB8C, 0u);
+    PE_StoreU32(MV1D_S, 0u);
+    PE_StoreU16(MV1D_S + 4u, 0u);
+    PE_StoreU16(MV1D_S + 6u, 0u);
+    PE_StoreU16(MV1D_S + 8u, 0u);
+    PE_StoreU16(MV1D_S + 10u, 0u);
+    PE_StoreU16(MV1D_S + 12u, 0x1234u);
+    PE_StoreU32(MV1D_T + 0x800u, 0xFE000000u);
+    PE_StoreU32(MV1D_T + 0x804u, 0u);
+    ASSERT(func_8010C89C(MV1D_S, MV1D_A, MV1D_T, 0u) == 1,
+           "MV1D_RESUME part 1 differs");
+    ASSERT(func_8010C89C(0u, 0u, MV1D_T, 0u) == 1 &&
+           PE_LoadU32(MV1D_EB90) == MV1D_S + 14u &&
+           PE_LoadU32(MV1D_EB90 + 4u) == MV1D_A + 10u &&
+           PE_LoadU32(MV1D_EB90 + 8u) == 0x12340u &&
+           PE_LoadU32(MV1D_EB90 + 12u) == 4u &&
+           PE_LoadU32(MV1D_EB90 + 20u) == 0u,
+           "MV1D_RESUME part 2 footprint differs");
+    PASS();
+}
+
 static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
 {
     PE_Disc *disc;
@@ -34862,6 +35009,12 @@ int main(void)
     test_B54KW_environment_clip_offset_and_mask();
     test_B54KX_overlay_loop_cardinality_and_endpoint();
     test_B54KX_nonzero_phase_remains_state_driven();
+    test_MV1D_c89c_pad();
+    test_MV1D_c89c_bound();
+    test_MV1D_c89c_pad3ff();
+    test_MV1D_c89c_table();
+    test_MV1D_c89c_main();
+    test_MV1D_c89c_resume();
     test_B54KY_192CE8_real_disc_issue_poll_and_boundary();
     test_B54KY_saved_bit_zero_skips_disc_prefix();
     test_B54KZ_191FB8_two_source_and_skip_second_move();

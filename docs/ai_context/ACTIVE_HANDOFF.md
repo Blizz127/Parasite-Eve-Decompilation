@@ -3,6 +3,34 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-MV1d — func_8010C89C VLC decoder transcribed; frontier held (2026-09-03)
+
+`func_8010C89C` (overlay `0x8010C89C..0x8010CBF8`, ~225w, resumable
+VLC-style block decoder) is now transcribed in
+`pc_port/game/boot/func_8010C89C_port.c`, proven by
+`pc_port/tools/pe_mv1d_c89c_oracle.py` (module carve SHA + call-site
+anchors + an independent decoder model over 6 vectors incl.
+resume-equivalence) and 6 `MV1D_` tests. It is deliberately NOT wired
+live into `func_801924F8`'s `got_frame` tail: the decoder's output is
+bounded only by the VLC stream's own pad/terminator codes, and the
+streaming pump does not yet deliver a fully MDEC-ready STR frame at
+`s1` (Stage-1b), so decoding the current partial frame overruns the
+2 MiB guest RAM (`PE_StoreU16 @ 0x80200000`). The production path keeps
+its honest boundary stop at the decoder entry; strict real-disc
+frontier is unchanged: `func_8010C89C` from `func_801924F8`. The prior
+session's `/tmp/c89c_*` debug dump ("REVERT BEFORE COMMIT") is removed.
+Suite: 1070/1070 with disc; 1052/1/17 gateless (the 1 = pre-existing
+B54KY env case); ASan/UBSan CTest 2/2 with disc; oracle green. Leaves
+560; no src/YAML changes. Evidence: `docs/evidence/pe-mv1d-c89c/REPORT.md`.
+Next: Stage 1b STR/MDEC frame delivery so the decoder can go live and
+the frontier moves into the `func_80192CE8` media loop after `0x80192E08`.
+
+This is rung 0 of the boot->FMV->title->New Game->M0431I playable
+ladder (plan `boot-to-theater_playable_ladder`); the remaining stages
+(MDEC video pipeline, title/menu overlay translation, pad substrate,
+field entry, field tick + collision, GTE/GPU presentation) are each
+multi-rung retail-accurate efforts tracked in that plan.
+
 ## MACHINE / WORKTREE TOPOLOGY (read before running or committing anything)
 
 One GitHub remote, several checkouts, one build environment. Every

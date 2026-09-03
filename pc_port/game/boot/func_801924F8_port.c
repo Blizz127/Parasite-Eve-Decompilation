@@ -24,6 +24,7 @@ int func_801924F8(int index)
     uint32_t display_buffer;
     char filename[32] = "";
     int status;
+    int32_t s1 = 0; /* E0 poll result; live into got_frame (retail $s1) */
 
     if (record_index >= 47u)
         return 0;
@@ -123,7 +124,6 @@ e0_poll:
      * the first poll, so cadence beyond that is unobservable. */
     {
         uint32_t s0 = 2000u;
-        int32_t s1;
         for (;;) {
             uint32_t left;
             func_8007C214();
@@ -157,19 +157,24 @@ e0_poll:
     }
     goto cdready_wait;
 got_frame:
-    /* 80192814: s1 nonzero. Byte-verified blockers (CDQ2d/MV1c-map):
-     * s3 = 0 (80192CE8 zeroes; full-function scan of 801924F8:
-     * one spill, zero sets) and [146C] = 0 (prefix zeroes; sole
-     * writer), so a1 = lw[4] — a BIOS-resident vector word no
-     * game code writes (zero absolute low-RAM stores in EXE and
-     * all overlay dumps). The port cannot execute the load, so
-     * stop at the decoder entry before it (the [B0DBC]++ and
-     * [146C] = 1 stores stay deferred too). C89C itself is fully
-     * mapped (resumable VLC, 11 static state words, COP0 IEc
-     * touch, exits 0/1) in docs/evidence/pe-mv1c-c89c-map/NOTE.md;
-     * its a2 table base is also unresolved (192CE8 dump ends
-     * before the jal). The post-decode half (EC: v0 = 1, clear
-     * DBD, B0DBC = 1, B0DBA++) resumes with the decoder. */
+    /* 80192814: s1 nonzero.  The got_frame tail (verified against the
+     * authenticated ov133 carve, docs/evidence/pe-mv1c-c89c-map/NOTE.md)
+     * bumps [B0DBC], toggles [146C], loads a1 = [0x801D1464 +
+     * ([146C]^1)<<2], a2 = [0x801D0DF8], and calls the VLC decoder
+     * func_8010C89C(a0 = s1) before 7C394 and the EC stores.
+     *
+     * MV1d landed the decoder itself (func_8010C89C_port.c) as a
+     * transcription proven by its unit vectors + oracle
+     * (pc_port/tools/pe_mv1d_c89c_oracle.py).  It is NOT wired live
+     * into this production tail yet: the decoder's output cursor is
+     * bounded only by the VLC stream's own pad/terminator codes, so a
+     * valid STR video frame terminates in-bounds, but the streaming
+     * pump does not yet deliver a fully MDEC-ready frame at s1 (that is
+     * the Stage-1b STR/MDEC pipeline).  Feeding the decoder the current
+     * partial frame marches a1 past the 2 MiB guest RAM.  Until the
+     * real frame is delivered, the production path stops honestly at
+     * the decoder boundary rather than decoding unvalidated input. */
+    (void)s1;
     Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8");
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
