@@ -38,10 +38,19 @@ lane-writer hunts must follow pointer bases, not immediates.
   record setup on the B54KY path (80192CE8 directly — check
   prefix callers for the initializer).
 
+## Measurement (B54KY, BD4C boundary, TEMP probe, reverted)
+
+`C0DC8=80142100 BE9E4=0 BE998=0 BE9EC=0 B0CC8=0 B89F4=0
+A8020=0 B574=2`: the real 91FB8 layout provides the record
+base, indices are zero, the 7C214 chain arm is dead (no stop),
+lane issued. A single 7C214 pump publishes state 2 to record 0
+(`BE9E4` stays 0), which is exactly what E0's first 91B64 poll
+needs for got_frame — give-up (and lane -1) never reached on
+this path. AD/AE (synthetic) need the MV1B plant (`C0DC8` to a
+scratch record) or 7C214 publishes to address 0.
+
 ## Next concrete steps
 
-1. Trace B0's 81314 streaming arm on B54KY state: confirm
-   callbacks installed, record `[C0DC8]/[BE9E4]/[BE998]`.
-2. Prototype the pump (7C214 per E0 poll batch) behind the
+1. Prototype the pump (7C214 per E0 poll batch) behind the
    existing MV1B plant design; observe got_frame.
-3. Only then: BD4C reland → C89C → movie.
+2. Only then: BD4C reland → C89C → movie.

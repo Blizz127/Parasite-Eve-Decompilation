@@ -335,6 +335,13 @@ path); E0 success needs 7C214 invocation cadence with record
 setup, B0's 81314 arm already installs it. Evidence:
 `docs/evidence/pe-cdq2-delivery-firewall/CDQ2b-pump-first.md`.
 
+CDQ2c (2026-09-03, probe reverted, tree clean): B54KY state at
+the BD4C boundary is `C0DC8=80142100, indices 0, B0CC8=0,
+B574=2` — a single 7C214 pump publishes state 2 with no stop,
+and E0's first poll then takes got_frame (give-up/-1 never
+reached). AD/AE need the MV1B plant for the pump. Next rung:
+prototype the pump → BD4C reland → C89C.
+
 ## Run summary 2026-09-03 — field-frame run (this session)
 
 - Landed: Rung A (FTE1 frame tail, matched 70E54/42FE8, 560 leaves)
