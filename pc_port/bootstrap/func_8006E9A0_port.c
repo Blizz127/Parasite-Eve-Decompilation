@@ -114,7 +114,7 @@ int func_8006E9A0(int arg)
 
     /* 4. Poll loop until (D_800BCFEE & 3) == 1 */
     do {
-        uint32_t cddc = (uint32_t)D_8009CDDC;
+        uint32_t cddc = PE_LoadU32(0x8009CDDCu); /* gp+0x6C; 70E54 flips it */
         pe_addr_t ot = PE_LoadU32(GA_OT_TABLE + cddc * 4u);
         func_800752AC(ot, GA_OT_COUNT);         /* ClearOTagR */
         func_80068E24();

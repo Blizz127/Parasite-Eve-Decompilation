@@ -511,16 +511,24 @@ int func_8007F0C8(uint32_t mode, pe_addr_t loc, int count, uint32_t a3,
     fr[0x00] = 9u;
     fr[0x10] = 0x0Eu;
     fr[0x11] = (uint8_t)(mode & 0xFFu);
-    /* fr[0x18] keeps the pre-call zero (lba placeholder). */
+    /* 0x8007F144/0x8007F150: the jal delay slot stores $v0 = sp+0x21
+     * (the address of the mode byte) into packet 1's gate word
+     * (sp+0x28 = fr[0x18]).  The queue loop only tests that word for
+     * zero before the 80950 copy of bytes 1..4, so the port keeps a
+     * nonzero marker: the stack address has no guest meaning.
+     * (Previously left zero, which skipped the SetMode copy arm.) */
+    fr[0x18] = 1u;
     lba = (uint32_t)func_80080C48(loc);
     if ((int32_t)lba < 0)
         return 0;
     fr[0x20] = 2u;
     /* Unaligned store pair (swl sp+0x34 / swr sp+0x31) lands the 4
-     * location bytes at sp+0x31..sp+0x34. */
+     * location bytes at sp+0x31..sp+0x34 = fr[0x21..0x24]: bytes 1..4
+     * of the SetLoc packet (fr base is sp+0x10).  Previously written at
+     * fr[0x31..] (Phase FTE1 ASan audit). */
     for (i = 0u; i < 4u; i++) {
         uint8_t b = PE_LoadU8(loc + (pe_addr_t)i);
-        fr[0x31u + i] = b;
+        fr[0x21u + i] = b;
         PE_StoreU8(PE_7F0C8_LOC + (pe_addr_t)i, b);
     }
     fr[0x28] = (uint8_t)(PE_7F0C8_LOC & 0xFFu);
@@ -543,7 +551,10 @@ int func_8007F0C8(uint32_t mode, pe_addr_t loc, int count, uint32_t a3,
         seq = 1u;
     PE_StoreU32(0x8009B53Cu, seq);
     for (k = 0u; k < 4u; k++) {
-        uint8_t *sl = fr + 0x30u + k * 16u;
+        /* 0x8007F1AC: $s4 = sp+0x10 = fr[0]; packets walk +0x10 for
+         * $s6 = 4 entries (9, 0x0E, 2, command).  A +0x30 base here
+         * read past the frame on the fourth pass (ASan, Phase FTE1). */
+        uint8_t *sl = fr + k * 16u;
         pe_addr_t desc = func_8007E6B0();
         uint32_t w;
 

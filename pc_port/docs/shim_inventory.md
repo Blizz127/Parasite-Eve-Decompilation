@@ -29,7 +29,10 @@ call.  Independent checks live in `tools/b21_bzero_oracle.py` and
 | `func_8001220C` | - | 187 | `bootstrap/func_8001220C_port.c` |
 | `func_800698D4` | - | - | `bootstrap/func_800698D4_port.c` |
 | `func_8006E834` | - | 91 | `bootstrap/func_8006E834_port.c` |
-| `func_8006E9A0` | 0x234 | 141 | `bootstrap/func_8006E9A0_port.c` (de-adapted Phase 6E-FD1; `70E54` still a stub boundary) |
+| `func_8006E9A0` | 0x234 | 141 | `bootstrap/func_8006E9A0_port.c` (de-adapted Phase 6E-FD1; `70E54` real since Phase FTE1) |
+| `func_80070E54` | 0x158 | 86 | `game/boot/func_80070E54_port.c` (Phase FTE1; matched leaf `src/func_80070E54.c`) |
+| `func_80042FE8` | 0x50 | 20 | `game/boot/func_80070E54_port.c` (Phase FTE1; matched leaf `src/func_80042FE8.c`) |
+| `func_8006EBE4` | 0x18 | 6 | `game/boot/func_80070E54_port.c` (Phase FTE1; matched leaf `src/func_8006EBE4.c`) |
 | `func_8003E610` | 0x70 | 28 | `game/boot/func_8003E610_port.c` |
 | `func_8003E680` | 0xD4 | 53 | `game/boot/func_8003E680_port.c` |
 | `func_8006A5BC` | 0x90 | 36 | `game/boot/func_8006A5BC_port.c` |
@@ -593,7 +596,9 @@ never native function pointers.
   NULL-OT skip remains only as a guard — the 6E9A0 loop passes the real
   arena OT since Phase 6E-FD1)
 - `func_80068E24`
-- `func_80070E54`
+- ~~`func_80070E54`~~ — TRANSLATED (Phase FTE1:
+  `game/boot/func_80070E54_port.c`; frame tail DrawSync/42FE8/VSync/
+  74A44/PutDispEnv/PutDrawEnv-or-DrawOTagEnv/CDDC flip)
 - ~~`func_80038D1C`~~ — TRANSLATED (Phase 6E-B15, shared with 3E680;
   see the func_8003E680 callees section)
 

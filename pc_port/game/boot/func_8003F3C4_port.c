@@ -23,12 +23,11 @@
  *
  * jal E01BC @ 3F578. Live E21A4<=0 early-outs. E026C/E03A0
  * are not this cut.
- * 70E54 live prefix @ 3F590: DrawSync(0), 42FE8 out
- * (gp+0x168!=6), VSync(2), ResetGraph(1),
- * PutDispEnv(BCE80+20*CDDC), 6EC08 status.
- * Live 6EC08==0 and B0CD8&0x200==0 runs 754E4
- * software (75EE0 + 71A34 memcpy) then flips
- * guest CDDC. 76C34(76B98) is not this cut.
+ * jal 70E54 @ 3F590 is the real frame tail since Phase FTE1
+ * (game/boot/func_80070E54_port.c): DrawSync(0), 42FE8,
+ * VSync(2|4), 74A44(1), PutDispEnv(BCE80+20*CDDC), then
+ * PutDrawEnv or DrawOTagEnv -> 754E4 -> 76C34(76B98) walk,
+ * and the guest CDDC flip.
  * 3F5EC VSync(2) then 6A0E8 @ 3F640. Live D1A0&0x10
  * early-out. 66C7C/6A25C are not live.
  * 3F684 D1C4==D280 loops to 3EB04 in retail; this cut
@@ -250,20 +249,11 @@ void func_8003F3C4(void)
         func_800E01BC();
         func_800661CC();
         func_80068E24();
-        func_80074DC0(0);
-        func_80073A44(2);
-        func_80074A44(1);
-        func_800755F0(PE_Translate(
-            0x800BCE80u + PE_LoadU32(0x8009CDDCu) * 20u, 0x14u));
-        if (func_8006EC08() == 0 &&
-            (PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u) {
-            /* 754E4 DrawOTagEnv(B0E38[CDDC]+0x3FFC, BCDC8+92*CDDC).
-             * 76C34 GPU enqueue is not this cut. */
-            cddc = PE_LoadU32(0x8009CDDCu);
-            func_800754E4(PE_LoadU32(0x800B0E38u + cddc * 4u) + 0x3FFCu,
-                          0x800BCDC8u + 92u * cddc);
-            PE_StoreU32(0x8009CDDCu, cddc == 0u);
-        }
+        /* jal 70E54 @ 0x8003F590: the real frame tail (Phase FTE1,
+         * game/boot/func_80070E54_port.c) — DrawSync, 42FE8, VSync,
+         * 74A44(1), PutDispEnv, then PutDrawEnv or DrawOTagEnv through
+         * the 754E4 -> 76C34(76B98) chain walk, and the CDDC flip. */
+        func_80070E54();
         func_80073A44(2);
         func_8006A0E8();
     }

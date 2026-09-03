@@ -10184,6 +10184,8 @@ static void test_BTL41_6E9A0_calls_66B60(void) {
     ResetTestState();
     PE_StoreU32(0x80095744u, 0x80095704u);
     PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
+    PE_StoreU32(0x8009570Cu, 0x80076C34u); /* jtb[2]: 70E54 draw dispatch */
+    PE_StoreU32(0x8009571Cu, 0x80076B98u); /* jtb[6]: chain-walk worker */
     g_bootstrap_disc = 1;
     HostFB_Init();
     func_8006A8D4();
@@ -10205,6 +10207,8 @@ static void test_FD1_6E9A0_real_loop_fills_arena_ot(void) {
     ResetTestState();
     PE_StoreU32(0x80095744u, 0x80095704u);
     PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
+    PE_StoreU32(0x8009570Cu, 0x80076C34u); /* jtb[2]: 70E54 draw dispatch */
+    PE_StoreU32(0x8009571Cu, 0x80076B98u); /* jtb[6]: chain-walk worker */
     g_bootstrap_disc = 1;
     HostFB_Init();
     func_8006A8D4();
@@ -17983,6 +17987,8 @@ static void test_6E9A0_dispatch_arg1(void) {
     ResetTestState();
     PE_StoreU32(0x80095744u, 0x80095704u);
     PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
+    PE_StoreU32(0x8009570Cu, 0x80076C34u); /* jtb[2]: 70E54 draw dispatch */
+    PE_StoreU32(0x8009571Cu, 0x80076B98u); /* jtb[6]: chain-walk worker */
     g_bootstrap_disc = 1;
     HostFB_Init();
     D_8009D280 = 0;
@@ -18000,6 +18006,8 @@ static void test_6E9A0_dispatch_arg3(void) {
     ResetTestState();
     PE_StoreU32(0x80095744u, 0x80095704u);
     PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
+    PE_StoreU32(0x8009570Cu, 0x80076C34u); /* jtb[2]: 70E54 draw dispatch */
+    PE_StoreU32(0x8009571Cu, 0x80076B98u); /* jtb[6]: chain-walk worker */
     g_bootstrap_disc = 1;
     HostFB_Init();
     D_8009D280 = 0;
@@ -18038,8 +18046,10 @@ static void test_translated_functions_not_in_bootstrap(void) {
     func_8006A5BC();
     func_8003E610();
     func_8003E680();
+    (void)func_8006EBE4();
+    func_80042FE8();                /* CED8 == 0: gate closed, no dispatch */
 
-    /* The six translated functions should NOT appear as BOOTSTRAP_RET
+    /* The translated functions should NOT appear as BOOTSTRAP_RET
      * stubs — they are real translated code. */
     for (int i = 0; i < g_stub_count; i++) {
         const char *sym = g_stub_registry[i].symbol;
@@ -18048,7 +18058,10 @@ static void test_translated_functions_not_in_bootstrap(void) {
             strcmp(sym, "func_8006A64C") == 0 ||
             strcmp(sym, "func_8006A5BC") == 0 ||
             strcmp(sym, "func_8003E610") == 0 ||
-            strcmp(sym, "func_8003E680") == 0) {
+            strcmp(sym, "func_8003E680") == 0 ||
+            strcmp(sym, "func_80070E54") == 0 ||
+            strcmp(sym, "func_80042FE8") == 0 ||
+            strcmp(sym, "func_8006EBE4") == 0) {
             FAIL("translated function found in bootstrap registry");
             return;
         }
@@ -18061,6 +18074,8 @@ static void test_first_clear_path_reached(void) {
     ResetTestState();
     PE_StoreU32(0x80095744u, 0x80095704u);
     PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 production arm */
+    PE_StoreU32(0x8009570Cu, 0x80076C34u); /* jtb[2]: 70E54 draw dispatch */
+    PE_StoreU32(0x8009571Cu, 0x80076B98u); /* jtb[6]: chain-walk worker */
     g_bootstrap_disc = 1;
 
     /* func_8006E9A0 is the direct-clear function. Verify it runs.
@@ -19369,15 +19384,33 @@ static void test_CDQ1_7F0C8_queue_and_selector(void) {
            "queue issue must return sequence 1");
     ASSERT(PE_LoadU32(0x800A3608u) == 4u, "queue count must advance by 4");
     ASSERT(PE_LoadU32(0x8009B53Cu) == 1u, "sequence must advance to 1");
-    /* descriptor 0 carries the real packet: seq, count, zero gate, a3.
-     * The gate word (slot3+8 = sp+0x48) is a proven retail zero — the
-     * loc-pointer packet word lives at slot2+8 and feeds only the
-     * collapsed controller chain — so desc+0xC is 0, never the ptr. */
+    /* Retail walks the four 16-byte packets from sp+0x10 upward
+     * (0x8007F1AC: $s4 = sp+0x10; 0x8007F298: +0x10 per pass; $s6 = 4):
+     * descriptor 0 = command 9, 1 = SetMode 0x0E, 2 = SetLoc 2 with the
+     * loc bytes copied through the 80950 arm, 3 = the ReadS command
+     * with a3.  (The pre-FTE1 port started at sp+0x40 and expected the
+     * ReadS packet in descriptor 0; ASan caught the frame overrun.) */
     ASSERT(PE_LoadU32(0x800A3540u) == 1u, "desc0 seq differs");
-    ASSERT(PE_LoadU8(0x800A3544u) == 27u, "desc0 cmd differs");
+    ASSERT(PE_LoadU8(0x800A3544u) == 9u, "desc0 cmd differs");
     ASSERT(PE_LoadU32(0x800A354Cu) == 0u, "desc0 gate must be the zero arm");
     ASSERT(PE_LoadU32(0x800A3550u) == 0u, "desc0 data differs");
     ASSERT(PE_LoadU32(0x800A3554u) == 0xFFFFFFFFu, "desc0 buf differs");
+    /* packet 1's gate is sp+0x21 (the mode byte address, 0x8007F150):
+     * nonzero, so the 80950 arm copies mode + 3 zero bytes to desc+5. */
+    ASSERT(PE_LoadU32(0x800A3558u) == 1u && PE_LoadU8(0x800A355Cu) == 0x0Eu &&
+           PE_LoadU8(0x800A355Du) == 0x1Bu && PE_LoadU8(0x800A355Eu) == 0u &&
+           PE_LoadU32(0x800A3564u) == 0x800A355Du &&
+           PE_LoadU32(0x800A3568u) == 0u,
+           "desc1 SetMode packet differs");
+    ASSERT(PE_LoadU32(0x800A3570u) == 1u && PE_LoadU8(0x800A3574u) == 2u &&
+           PE_LoadU32(0x800A357Cu) == 0x800A3575u &&
+           PE_LoadU8(0x800A3575u) == 0x00u && PE_LoadU8(0x800A3576u) == 0x02u &&
+           PE_LoadU8(0x800A3577u) == 0x02u && PE_LoadU8(0x800A3578u) == 0x00u,
+           "desc2 SetLoc packet differs");
+    ASSERT(PE_LoadU32(0x800A3588u) == 1u && PE_LoadU8(0x800A358Cu) == 27u &&
+           PE_LoadU32(0x800A3594u) == 0u && PE_LoadU32(0x800A3598u) == 0u &&
+           PE_LoadU32(0x800A359Cu) == 0xFFFFFFFFu,
+           "desc3 ReadS packet differs");
     /* loc bytes staged verbatim at the documented scratch */
     ASSERT(PE_LoadU8(0x801FFE80u) == 0x00u &&
            PE_LoadU8(0x801FFE81u) == 0x02u &&
@@ -33776,6 +33809,157 @@ static void test_DRW1_754e4_level2_prints(void)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-FTE1 — func_80070E54 frame tail (real translation), 42FE8
+ * LoadImage wrapper gate, 6EBE4 status halfword.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define FTE1_OT 0x801F1000u
+
+static void FTE1_Seed(void)
+{
+    HostFB_Init();
+    PE_GPU_Init();
+    DRW1_SeedDispatch();
+    PE_GPU_WriteDPCR(0x33333333u);
+    func_800752AC(FTE1_OT, 0x1000);
+    PE_StoreU32(0x800B0E38u, FTE1_OT);   /* B0CD8+0x160: OT[CDDC=0] */
+    PE_StoreU32(0x800B0E3Cu, FTE1_OT);   /* OT[CDDC=1] */
+    PE_StoreU32(0x8009CDDCu, 0u);
+}
+
+static void test_FTE1_flag_clear_vsync2_drawotagenv(void)
+{
+    int vs0, ds0, p0, vs1, ds1, p1;
+    PeGpuState gpu;
+    TEST("FTE1_flag_clear_vsync2_drawotagenv");
+    ResetTestState();
+    FTE1_Seed();
+    HostFB_GetState(&vs0, &ds0, &p0, NULL);
+    func_80070E54();
+    HostFB_GetState(&vs1, &ds1, &p1, NULL);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "tail stopped");
+    ASSERT(g_bootstrap_arg4_call_count == 0, "tail recorded a boundary");
+    ASSERT(ds1 == ds0 + 1, "DrawSync(0)");
+    ASSERT(vs1 == vs0 + 1, "VSync(2) once");
+    ASSERT(p1 == p0 + 1, "PutDispEnv present");
+    /* DrawOTagEnv splices the OT tail (ot+0x3FFC) into the env link. */
+    ASSERT((PE_LoadU32(0x800BCDC8u + 0x1Cu) & 0x00FFFFFFu) ==
+           ((FTE1_OT + 0x3FFCu) & 0x00FFFFFFu), "env link is not the OT tail");
+    PE_GPU_GetState(&gpu);
+    ASSERT(gpu.gp1_dma_direction == 2u, "chain walk did not program DMA");
+    ASSERT(gpu.draw_mode_count >= 1u, "env packet not submitted");
+    ASSERT(PE_LoadU32(0x8009CDDCu) == 1u, "CDDC did not flip to 1");
+    PASS();
+}
+
+static void test_FTE1_flag_set_vsync4_mask_putdrawenv(void)
+{
+    int vs0, vs1, m1;
+    TEST("FTE1_flag_set_vsync4_mask_putdrawenv");
+    ResetTestState();
+    FTE1_Seed();
+    PE_StoreU32(0x800B0CD8u, 0x200u);
+    PE_StoreU8(0x800B0DBAu, 1u);
+    PE_StoreU16(0x800B0DBCu, 3u);      /* 6EBE4 = 3 >= 3 -> SetDispMask(1) */
+    PE_StoreU8(0x800B0DBBu, 0u);       /* 6EC08 = 1 -> PutDrawEnv */
+    HostFB_GetState(&vs0, NULL, NULL, NULL);
+    func_80070E54();
+    HostFB_GetState(&vs1, NULL, NULL, &m1);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "tail stopped");
+    ASSERT(vs1 == vs0 + 1, "VSync(4) once");
+    ASSERT(m1 == 1, "SetDispMask(1) not applied");
+    ASSERT((PE_LoadU32(0x800BCDC8u + 0x1Cu) & 0x00FFFFFFu) == 0x00FFFFFFu,
+           "PutDrawEnv link is not terminal");
+    ASSERT(PE_LoadU32(0x8009CDDCu) == 1u, "CDDC did not flip");
+    PASS();
+}
+
+static void test_FTE1_flag_set_status_below_3_keeps_mask(void)
+{
+    int m0, m1;
+    TEST("FTE1_flag_set_status_below_3_keeps_mask");
+    ResetTestState();
+    FTE1_Seed();
+    PE_StoreU32(0x800B0CD8u, 0x200u);
+    PE_StoreU8(0x800B0DBAu, 1u);
+    PE_StoreU16(0x800B0DBCu, 2u);      /* 6EBE4 = 2 < 3 -> no mask */
+    HostFB_GetState(NULL, NULL, NULL, &m0);
+    func_80070E54();
+    HostFB_GetState(NULL, NULL, NULL, &m1);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "tail stopped");
+    ASSERT(m1 == m0, "mask changed below status 3");
+    /* Flag set forces PutDrawEnv regardless of 6EC08. */
+    ASSERT((PE_LoadU32(0x800BCDC8u + 0x1Cu) & 0x00FFFFFFu) == 0x00FFFFFFu,
+           "flag-set path did not take PutDrawEnv");
+    PASS();
+}
+
+static void test_FTE1_status_nonzero_putdrawenv(void)
+{
+    TEST("FTE1_status_nonzero_putdrawenv");
+    ResetTestState();
+    FTE1_Seed();
+    PE_StoreU8(0x800B0DBAu, 1u);
+    PE_StoreU16(0x800B0DBCu, 1u);
+    PE_StoreU8(0x800B0DBBu, 0u);       /* 6EC08 = 1, flag clear */
+    func_80070E54();
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "tail stopped");
+    ASSERT((PE_LoadU32(0x800BCDC8u + 0x1Cu) & 0x00FFFFFFu) == 0x00FFFFFFu,
+           "status!=0 did not take PutDrawEnv");
+    PASS();
+}
+
+static void test_FTE1_cddc_double_buffer_flip(void)
+{
+    TEST("FTE1_cddc_double_buffer_flip");
+    ResetTestState();
+    FTE1_Seed();
+    func_80070E54();
+    ASSERT(PE_LoadU32(0x8009CDDCu) == 1u, "first flip");
+    func_80070E54();
+    ASSERT(PE_LoadU32(0x8009CDDCu) == 0u, "second flip");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "tail stopped");
+    /* Second pass used env[1] at BCDC8+92 and OT[1]. */
+    ASSERT((PE_LoadU32(0x800BCDC8u + 92u + 0x1Cu) & 0x00FFFFFFu) ==
+           ((FTE1_OT + 0x3FFCu) & 0x00FFFFFFu), "env[1] link differs");
+    PASS();
+}
+
+static void test_FTE1_42fe8_gate_and_rect(void)
+{
+    TEST("FTE1_42fe8_gate_and_rect");
+    ResetTestState();
+    DRW1_SeedDispatch();
+    PE_StoreU32(0x8009CED8u, 5u);
+    func_80042FE8();
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "gate!=6 acted");
+    ASSERT(CountOrderLog("func_80076C34") == 0, "gate!=6 dispatched");
+    /* gate == 6 with a dirty jtb[2]: LoadImage reaches the centralized
+     * indirect boundary carrying the retail rect {0,0x1E0,0x100,CEDC}. */
+    PE_StoreU32(0x8009CED8u, 6u);
+    PE_StoreU32(0x8009CEDCu, 0x20u);
+    PE_StoreU32(0x800B0E54u, 0x80100000u);
+    PE_StoreU32(0x8009570Cu, 0xDEADBEEFu);
+    func_80042FE8();
+    ASSERT(CountOrderLog("func_80076C34") == 1,
+           "gate==6 did not reach the LoadImage dispatch boundary");
+    PASS();
+}
+
+static void test_FTE1_6ebe4_status_halfword(void)
+{
+    TEST("FTE1_6ebe4_status_halfword");
+    ResetTestState();
+    ASSERT(func_8006EBE4() == -1, "inactive -> -1");
+    PE_StoreU8(0x800B0DBAu, 1u);
+    PE_StoreU16(0x800B0DBCu, 5u);
+    ASSERT(func_8006EBE4() == 5, "active -> halfword");
+    PE_StoreU16(0x800B0DBCu, 0xFFFEu);
+    ASSERT(func_8006EBE4() == -2, "signed halfword");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
  * Phase 6E-EV1 — func_80042798 event-record cleanup walk (2 records at
  * D_800A0ED4+1 / +0x419, stride 0x418; tags 8/10 fire 72774 then stamp
  * word -1 / tag 12).
@@ -35244,6 +35428,15 @@ int main(void)
     test_DRW1_chain_unknown_word_bounds();
     test_DRW1_fill_command_renders();
     test_DRW1_754e4_level2_prints();
+
+    /* Phase 6E-FTE1 — 70E54 frame tail, 42FE8 gate, 6EBE4 (7 tests). */
+    test_FTE1_flag_clear_vsync2_drawotagenv();
+    test_FTE1_flag_set_vsync4_mask_putdrawenv();
+    test_FTE1_flag_set_status_below_3_keeps_mask();
+    test_FTE1_status_nonzero_putdrawenv();
+    test_FTE1_cddc_double_buffer_flip();
+    test_FTE1_42fe8_gate_and_rect();
+    test_FTE1_6ebe4_status_halfword();
 
     /* Phase 6E-EV1 — 42798 event-record cleanup walk (3 tests). */
     test_EV1_quiet_walk_leaves_table();

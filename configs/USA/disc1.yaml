@@ -527,6 +527,9 @@ segments:
       - [0x33720, c, func_80042F20]
       - [0x33738, c, func_80042F38]
       - [0x33744, asm]
+      # Phase FTE1: LoadImage wrapper (VRAM 0x80042FE8, size 0x50), era -O2 -G8;
+      # 43038 follows directly.
+      - [0x337E8, c, func_80042FE8]
       - [0x33838, c, func_80043038]
       - [0x3384C, asm]
       - [0x33A40, c, func_80043240]
@@ -928,6 +931,10 @@ segments:
       # Two-phase subsystem teardown wrapper: era -O2 -G0.
       - [0x60BF4, c, func_800703F4]
       - [0x60C1C, asm]
+      # Phase FTE1: frame tail (VRAM 0x80070E54, size 0x158), era -O2 -G8;
+      # resume 617AC.s.
+      - [0x61654, c, func_80070E54]
+      - [0x617AC, asm]
       # Phase 5EZ: conditional offset-0xC pointer helper.
       - [0x62144, c, func_80071944]
       - [0x62164, asm]

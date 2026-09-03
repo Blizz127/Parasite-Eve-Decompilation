@@ -175,8 +175,36 @@ walk; all coordinates stay integer words into the parser).
 Evidence: `docs/evidence/pe-drw1-drawotag-walk/REPORT.md`; oracle:
 `pc_port/tools/pe_drw1_drawotag_oracle.py`.
 
-Next: field frames through the tick (`70E54` stub still bounds the
-fade/field present), then the theatre.
+Next: VRAM→host presentation at PutDispEnv (PRS1), then the CD
+completion-selector tail (CDS1) so the strict run passes the first
+CdlReadS, then field frames, then the theatre.
+
+## PE-FTE1 — func_80070E54 frame tail matched + translated; field tick routed (2026-09-03)
+
+Two new byte-exact leaves on era `-O2 -G8`: `func_80070E54` (86w, carve
+`0x61654`, resume `0x617AC`) and `func_80042FE8` (20w, carve `0x337E8`).
+Docker gate EXACT SHA-1 `452fb033…37b`, `verify_us.sh` PASS, **560
+leaves** (was 558). Levers: unknown-size-array externs keep `D_800B0CD8`
+/ `D_800B0E54` out of sdata under `-G8`; the OT pointer is
+`D_800B0CD8[0x58 + CDDC]` (retail reuses the `$a0` base for
+`lw 0x160($v0)`); the 6EC08 test is a `(signed char)` cast (`sll 24`).
+Native: `pc_port/game/boot/func_80070E54_port.c` translates 70E54 /
+42FE8 / 6EBE4; the `psx_compat.h` 70E54 stub is gone, the 6E9A0 fade
+loop runs the real tail (guest-RAM `D_8009CDDC`, same word the 3F3C4
+port flips), and `func_8003F3C4_port.c` calls the real 70E54 at the
+retail `0x8003F590` site instead of an inline prefix — the field tick's
+draw now goes DrawOTagEnv → 754E4 → 76C34(76B98) walk. 7 `FTE1_` tests;
+stub guard pins the three names; 6E9A0 fixtures seed `jtb[2]/[6]`.
+Incidental (ASan): `func_8007F0C8` (CDQ1) walked its packet frame from
+`+0x30` and read past it; retail walks `sp+0x10` upward for 4 packets
+(9, 0x0E, 2, cmd), the loc bytes land at `fr[0x21..0x24]`, and packet
+1's gate word is the nonzero `sp+0x21` address — all three fixed, the
+CDQ1 queue test now asserts the retail descriptor layout. Suite: 1043
+run / 1025 passed / 1 pre-existing env failure / 17 skipped; with
+`PE_DISC1_BIN` 1043/1043; ASan/UBSan zero diagnostics. Strict real-disc
+run still stops at `func_8007F0C8_completion_selector`. Evidence:
+`docs/evidence/pe-fte1-70e54-frame-tail/REPORT.md`; oracle:
+`pc_port/tools/pe_fte1_70e54_oracle.py`.
 
 ## Main-lane YAML build authority (merged 2026-09-01)
 

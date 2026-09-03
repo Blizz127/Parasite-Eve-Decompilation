@@ -132,7 +132,11 @@ extern void func_8007A214(pe_addr_t record_base, uint32_t record_count);
 extern void func_8007C304(uint32_t mode, int32_t start,
                           int32_t end, pe_addr_t callback, uint32_t auxiliary);
 extern void func_8007C394(uint32_t sector);
-static inline void func_80070E54(void)   { Bootstrap_ReturnVoid("func_80070E54", "func_8006E9A0"); }
+/* func_80070E54 / func_80042FE8 / func_8006EBE4 are REAL translations
+ * (game/boot/func_80070E54_port.c, Phase FTE1). */
+extern void func_80070E54(void);
+extern void func_80042FE8(void);
+extern int  func_8006EBE4(void);
 /* func_8006E1C0 is REAL (Phase 6E-B51):
  * game/boot/func_8006E1C0_port.c — packed texture-entry LoadImage
  * dispatcher (68 retail words).  Phase 6E-B52 translates its two
