@@ -313,6 +313,17 @@ env/17 gateless; CTest 2/2; ASan 2/2 clean; MV1a oracle green.
 Leaves 560; no src/YAML changes. Next: 7C564 delivery pump
 (per-sector 7C214 + lane -1), then BD4C reland → C89C → movie.
 
+CDQ2 analysis (2026-09-03, no source changes): 7C564 fully
+mapped (583w, all exits → `[B374]` status, callees
+7A488/7CE80(pure)/7CEAC(HW spins)/7C444/7C214-conditional) but
+contains NO lane write and NO -1 — transcribing it alone does
+not unblock E0. Handlers 7F7E8/7F88C also lane-clean. Only ONE
+absolute-addressed lane-area store in the EXE (B570); all lane
+writes are `$gp`-relative (BIOS `$gp`, no `lui $gp` found).
+Next rung must find the -1 writer first (gp-relative analysis),
+then design the E0 pump, then reland. Evidence:
+`docs/evidence/pe-cdq2-delivery-firewall/NOTE.md`.
+
 ## Run summary 2026-09-03 — field-frame run (this session)
 
 - Landed: Rung A (FTE1 frame tail, matched 70E54/42FE8, 560 leaves)
