@@ -382,6 +382,13 @@
    "note": "func_8007FB44 @ file 0x70344 (31 words, 0x8007FB44..0x8007FBC0) is the CD completion-dispatch predicate, translated in pc_port/platform/pe_libcd.c (Phase 6E-CDS1) with the same oracle. Two era -O2 -G0 phrasings tried (-G0 and -G8; direct negative-index stores; explicit gate locals + hoisted a3): the three gate loads/branches match, but cc1 rematerializes the D_8009B598 base with a fresh lui for the 0x1F/2/0xB store block instead of reusing $a2/$a3 with small offsets, diverging the last 6 words. No YAML/build/verifier integration; matching count remains 560.",
    "evidence": "docs/evidence/pe-cds1-selector-tail/REPORT.md (section: src attempts)",
    "next": "Retry only with a lifetime/coloring lever that keeps $a2 ($a2-0x44 in $a3) live from the gate loads into the store block without a second lui."
+  },
+  {
+   "id": "mv1c-c89c-unknowable-inputs",
+   "status": "PARKED-UNKNOWABLE-CALLER-INPUTS",
+   "note": "func_8010C89C (movie VLC decoder) fully mapped: resumable VLC, 11 static state words, COP0 IEc touch, exits 0/1. Transcription parked on two unknowable caller inputs: a1 = lw[arg+4], a KUSEG/low-RAM BIOS word (byte-exact in disasm; value needs a low-RAM/BIOS model or a measured value), and a2 = func_80191FB8 exit leftover, chased two levels down (91FB8 epilogue returns the second MoveImage call result; MoveImage path A on retail args returns its [[D_80095744]+8]-callee exit-a2, path B inherits entry-a2 with ret -1) with runtime-pointer resolution still pending at level 3. No structural-only transcription per the BB0 lesson.",
+   "evidence": "docs/evidence/pe-mv1c-c89c-map/NOTE.md",
+   "next": "Decide the [4]-blocker scope (low-RAM model vs measured BIOS value); deeper a2 chase has zero payoff until then. Then: C89C transcription, EC, movie playback, field load, Aya playable."
   }
  ]
 }

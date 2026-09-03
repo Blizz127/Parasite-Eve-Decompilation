@@ -370,7 +370,12 @@ via 7C394/EB90/COP0) with its proof obligations. TEMP dump
 probe reverted; suite 1064/1064 after revert. Evidence:
 `pe-mv1c-c89c-map/NOTE.md`. Next: `[4]`-blocker decision
 (low-RAM model vs measured BIOS value) or EC-side progress
-(7C394-after-C89C needs C89C first — same blocker).
+(7C394-after-C89C needs C89C first — same blocker). Follow-up: a2 chased
+two levels (91FB8 epilogue returns the 2nd MoveImage result; MoveImage
+path A on retail args returns its [[D_80095744]+8]-callee exit-a2, path B
+inherits entry-a2 with ret -1); level 3 needs runtime-pointer resolution
+— parked under new blocker `mv1c-c89c-unknowable-inputs`. TEMP probe
+residue found un-reverted and reverted; tree clean.
 
 ## Run summary 2026-09-03 — field-frame run (this session)
 

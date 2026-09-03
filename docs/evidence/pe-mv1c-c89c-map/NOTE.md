@@ -90,3 +90,30 @@ stores also stay deferred — retail order preserved on reland.
   proof the display path never reads the a1 output. NOT
   attempted — structural-only verification per the BB0
   lesson.
+
+## Level 2: MoveImage (8007512C) — second leftover hop
+
+Retail `MoveImage` (full body read from `asm/disc1/654C8.s`) has a single
+exit (`800751DC`) with TWO entry paths:
+
+- **Path B** (branches `beqz`@80075164 / `j`@8007517C, delay `v0 = -1`):
+  `a2` UNWRITTEN on this path → inherits the **entry `a2`**, returns `-1`.
+- **Path A** (`bnez`@80075174 taken → falls out of `jalr $v0`@800751C4):
+  `a2 = 0x14` is set (`addiu`@800751A0) then clobbered by the callee at
+  `v0 = [[D_80095744]+8]` → a **second leftover level** (callee-exit `a2`).
+
+Per-call paths for 91FB8's two calls (retail args):
+
+| call | RECT (x,y,w,h) | `[s0+4]`=y | `[s0+6]`=h | path | exit a2 |
+|---|---|---|---|---|---|
+| 1st (a2=`0x200`) | 320,0,192,256 | 0 | 64 | **B** (`beqz` taken) | entry `a2` = `0x200`, ret `-1` |
+| 2nd (a2=`0x100`) | 0,448,320,64 | 448 | 64 | **A** (`bnez` taken) | `[[D_80095744]+8]`-callee-exit `a2` |
+
+In-port `[D_80095744] = 0x80095704` (immutable GPU-table base; seeded the
+same in `test_native.c`), so level 2 = whatever function the word at
+`0x8009570C` points to at runtime — a third leftover level with
+runtime-pointer resolution. **Parked here** (blocker
+`mv1c-c89c-unknowable-inputs`): each level costs a full epilogue+path
+analysis while `a1 = [arg+4]` (the KUSEG/low-RAM word) still blocks ANY
+C89C transcription, so deeper a2 work has zero payoff until the `[4]`
+scope decision lands.
