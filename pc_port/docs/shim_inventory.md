@@ -158,7 +158,7 @@ never native function pointers.
 | `func_80074D28` | SetDispMask | `HostFB_SetDispMask()` |
 | `func_80074DC0` | DrawSync | translated `func_80077294` queue/DMA drain plus `HostFB_DrawSync()` telemetry (B54K-S) |
 | `func_80074F44` | ClearImage | `HostFB_ClearImage()` |
-| `func_800755F0` | PutDispEnv/Present | `HostFB_Present()` |
+| `func_800755F0` | PutDispEnv/Present | `HostFB_PresentDispEnv()` (guest DISPENV disp RECT → VRAM window copy; retail GP1 body untranslated) |
 
 ## HOST_ADAPTED
 

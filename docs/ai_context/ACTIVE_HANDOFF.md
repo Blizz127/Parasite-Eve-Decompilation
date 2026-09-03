@@ -206,6 +206,21 @@ run still stops at `func_8007F0C8_completion_selector`. Evidence:
 `docs/evidence/pe-fte1-70e54-frame-tail/REPORT.md`; oracle:
 `pc_port/tools/pe_fte1_70e54_oracle.py`.
 
+## PE-PRS1 — VRAM → host framebuffer display presentation (2026-09-03)
+
+`func_800755F0` (PutDispEnv) is now the host display authority:
+`HostFB_PresentDispEnv(guest env)` copies the DISPENV disp-RECT VRAM
+window through `PE_GPU_ReadVRAM` + `HostVRAM_DecodePixel` (mask off →
+black; budget kept; zero guest writes; no retail words translated, so
+no oracle — retail's 318-word GP1 body stays out of scope). All six
+call sites pass guest addresses; `game_port` gained a present hook
+(`PE_Port_SetPresentHook`, cleared on reset) that windowed `port_main`
+uses for live blit+poll. 5 `PRS1_` tests; suite 1048 run / 1030 passed
+/ 1 pre-existing env failure / 17 skipped, 1048/1048 with
+`PE_DISC1_BIN`; ASan/UBSan zero diagnostics; `--bootstrap-disc
+--max-frames 1 --screenshot` is byte-deterministic across runs.
+Evidence: `docs/evidence/pe-prs1-dispenv-present/REPORT.md`.
+
 ## Main-lane YAML build authority (merged 2026-09-01)
 
 `configs/USA/disc1.yaml` owns Disc-1 span edges, source/object mapping, trim

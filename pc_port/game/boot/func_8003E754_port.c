@@ -61,5 +61,5 @@ void func_8003E754(int w, int h)
     PE_StoreU8(0x800BCE3Fu, 0);             /* buf1 b0 */
 
     D_8009CDDC = 0;
-    func_800755F0(D_800BCE80);              /* PutDispEnv(buf0) */
+    func_800755F0(0x800BCE80u);            /* PutDispEnv(buf0) */
 }

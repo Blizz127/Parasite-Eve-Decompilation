@@ -75,7 +75,7 @@ void func_80070E54(void)
     }
     func_80074A44(1);
     cddc = PE_LoadU32(0x8009CDDCu);
-    func_800755F0(PE_Translate(0x800BCE80u + cddc * 20u, 0x14u));
+    func_800755F0(0x800BCE80u + cddc * 20u);
     if ((int8_t)func_8006EC08() != 0 ||
         (PE_LoadU32(0x800B0CD8u) & 0x200u) != 0u) {
         cddc = PE_LoadU32(0x8009CDDCu);

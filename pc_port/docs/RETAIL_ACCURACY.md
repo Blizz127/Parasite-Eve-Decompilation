@@ -80,4 +80,5 @@ translated function may regress to a stub.
 4. Disc-gated suite green with a local image.
 5. Framebuffer/trace equality against hardware or emulator capture
    (capture harness does not exist yet — this is the last missing piece
-   even after 1–4).
+   even after 1–4; Phase 6E-PRS1 wired the host present path to copy the
+   guest DISPENV VRAM window, but no capture comparison exists).

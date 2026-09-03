@@ -472,3 +472,13 @@ void func_800754E4(pe_addr_t ot, pe_addr_t env)
         return;
     memcpy(PE_Translate(0x8009575Cu, 0x5Cu), PE_Translate(env, 0x5Cu), 0x5Cu);
 }
+
+/* Phase 6E-PRS1 — func_800755F0 (PutDispEnv) display authority.
+ * Retail's 318-word GP1 body is out of scope to translate; the host
+ * display is the hardware authority, so this cut reads the DISPENV disp
+ * RECT from guest RAM and copies that VRAM window into the host
+ * framebuffer.  Read-only on guest state. */
+void func_800755F0(pe_addr_t env)
+{
+    HostFB_PresentDispEnv(env);
+}

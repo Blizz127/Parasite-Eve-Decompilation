@@ -54,6 +54,14 @@ static struct {
     .dma_checkpoint_report = 0,
 };
 
+/* Phase 6E-PRS1 live-window present hook: blit the newest host pixels and
+ * poll for close/Escape.  Host data only; never touches guest state. */
+static void PresentHook_BlitWindow(void)
+{
+    HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
+    (void)HostWindow_Poll();
+}
+
 static int ParsePositiveLimit(const char *option, const char *value) {
     char *end = NULL;
     long parsed = strtol(value, &end, 10);
@@ -454,8 +462,10 @@ int main(int argc, char **argv) {
         int h = PE_PORT_FB_HEIGHT * g_opts.scale;
         if (HostWindow_Open(dpy, w, h, g_opts.window_title, g_opts.scale) != 0)
             use_window = 0;
-        else
+        else {
             PE_Port_SetQuitPoll(HostWindow_Poll);
+            PE_Port_SetPresentHook(PresentHook_BlitWindow);
+        }
     }
 
     if (g_opts.direct_clear_test) {
@@ -489,6 +499,7 @@ int main(int argc, char **argv) {
             HostWindow_Run(2000);
         }
         PE_Port_SetQuitPoll(NULL);
+        PE_Port_SetPresentHook(NULL);
         HostWindow_Close();
     }
 

@@ -22,6 +22,7 @@ static int g_port_frame_limit = 0;
 static int g_port_main_iteration_limit = 0;
 static int g_port_frame_budget_reached = 0;
 static PEPortQuitPoll g_port_quit_poll = NULL;
+static PEPortPresentHook g_port_present_hook = NULL;
 static PEPortStopReason g_port_stop_reason = PE_PORT_STOP_NONE;
 static int g_port_dma_irq_checkpoint_enabled = 1;
 static PEPortDmaIrqCheckpointTrace g_port_dma_irq_checkpoint_trace;
@@ -41,6 +42,7 @@ void PE_Port_RunControlReset(void)
     g_port_main_iteration_limit = 0;
     g_port_frame_budget_reached = 0;
     g_port_quit_poll = NULL;
+    g_port_present_hook = NULL;
     g_port_stop_reason = PE_PORT_STOP_NONE;
     g_port_dma_irq_checkpoint_enabled = 1;
     memset(&g_port_dma_irq_checkpoint_trace, 0,
@@ -144,6 +146,16 @@ void PE_Port_SetMainIterationLimit(int iterations)
 void PE_Port_SetQuitPoll(PEPortQuitPoll poll)
 {
     g_port_quit_poll = poll;
+}
+
+void PE_Port_SetPresentHook(PEPortPresentHook hook)
+{
+    g_port_present_hook = hook;
+}
+
+void PE_Port_InvokePresentHook(void)
+{
+    if (g_port_present_hook) g_port_present_hook();
 }
 
 void PE_Port_RequestStop(PEPortStopReason reason)

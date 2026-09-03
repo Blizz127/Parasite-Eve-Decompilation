@@ -33960,6 +33960,154 @@ static void test_FTE1_6ebe4_status_halfword(void)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-PRS1 — VRAM -> host framebuffer display presentation.
+ * func_800755F0 (PutDispEnv) is the host display authority: it reads the
+ * DISPENV disp RECT from guest RAM and copies that VRAM window into the
+ * host framebuffer.  No retail words are translated by this rung (the
+ * 318-word GP1 body stays untranslated), so there is no byte oracle;
+ * these tests pin the mapping against the GPU model instead.  The
+ * 0x020000FF FILL renders pixel 0x7C00, which decodes to {0, 0, 255}.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define PRS1_ENV 0x801F0000u
+
+static int PRS1_Fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+{
+    if (!PE_GPU_WriteGP0(0x020000FFu)) return 0;
+    if (!PE_GPU_WriteGP0((y << 16) | x)) return 0;
+    if (!PE_GPU_WriteGP0((h << 16) | w)) return 0;
+    return 1;
+}
+
+static void PRS1_SeedEnv(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+{
+    PE_StoreU16(PRS1_ENV, x);
+    PE_StoreU16(PRS1_ENV + 2u, y);
+    PE_StoreU16(PRS1_ENV + 4u, w);
+    PE_StoreU16(PRS1_ENV + 6u, h);
+}
+
+static int PRS1_PixelIs(uint32_t x, uint32_t y, uint8_t r, uint8_t g,
+                        uint8_t b)
+{
+    const uint8_t *p =
+        HostFB_GetPixels() + ((size_t)y * PE_PORT_FB_WIDTH + x) * 3u;
+    return p[0] == r && p[1] == g && p[2] == b;
+}
+
+static void test_PRS1_dispenv_window_copy(void)
+{
+    int presented = 0;
+    TEST("PRS1_dispenv_window_copy");
+    ResetTestState();
+    HostFB_Init();
+    PE_GPU_Init();
+    ASSERT(PRS1_Fill(10u, 20u, 64u, 32u), "fill rejected");
+    PRS1_SeedEnv(0u, 0u, 320u, 240u);
+    HostFB_SetDispMask(1);
+    func_800755F0(PRS1_ENV);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "present stopped");
+    HostFB_GetState(NULL, NULL, &presented, NULL);
+    ASSERT(presented == 1, "present not counted");
+    ASSERT(PRS1_PixelIs(10u, 20u, 0u, 0u, 255u), "filled pixel not copied");
+    ASSERT(PRS1_PixelIs(73u, 51u, 0u, 0u, 255u), "fill corner not copied");
+    ASSERT(PRS1_PixelIs(0u, 0u, 0u, 0u, 0u), "unfilled pixel not black");
+    ASSERT(PRS1_PixelIs(100u, 100u, 0u, 0u, 0u), "far pixel not black");
+    PASS();
+}
+
+static void test_PRS1_dispenv_offset_window(void)
+{
+    TEST("PRS1_dispenv_offset_window");
+    ResetTestState();
+    HostFB_Init();
+    PE_GPU_Init();
+    ASSERT(PRS1_Fill(10u, 20u, 64u, 32u), "fill rejected");
+    PRS1_SeedEnv(12u, 22u, 4u, 4u);
+    HostFB_SetDispMask(1);
+    func_800755F0(PRS1_ENV);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "present stopped");
+    /* fb(0,0) shows VRAM(12,22): the x/y origin maps, not just sizes. */
+    ASSERT(PRS1_PixelIs(0u, 0u, 0u, 0u, 255u), "window origin not mapped");
+    ASSERT(PRS1_PixelIs(3u, 3u, 0u, 0u, 255u), "window corner not mapped");
+    ASSERT(PRS1_PixelIs(4u, 0u, 0u, 0u, 0u), "copy overflowed its width");
+    PASS();
+}
+
+static void test_PRS1_mask_off_presents_black(void)
+{
+    int presented = 0;
+    TEST("PRS1_mask_off_presents_black");
+    ResetTestState();
+    HostFB_Init();
+    PE_GPU_Init();
+    ASSERT(PRS1_Fill(10u, 20u, 64u, 32u), "fill rejected");
+    PRS1_SeedEnv(0u, 0u, 320u, 240u);
+    HostFB_ClearImage(0, 0, PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT,
+                      255u, 255u, 255u);
+    HostFB_SetDispMask(0);
+    func_800755F0(PRS1_ENV);
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "present stopped");
+    HostFB_GetState(NULL, NULL, &presented, NULL);
+    ASSERT(presented == 1, "blanked present not counted");
+    ASSERT(PRS1_PixelIs(10u, 20u, 0u, 0u, 0u), "filled pixel not blanked");
+    ASSERT(PRS1_PixelIs(0u, 0u, 0u, 0u, 0u), "poison pixel not blanked");
+    PASS();
+}
+
+static void test_PRS1_frame_budget_stops_present(void)
+{
+    int presented = 0;
+    TEST("PRS1_frame_budget_stops_present");
+    ResetTestState();
+    HostFB_Init();
+    PE_GPU_Init();
+    ASSERT(PRS1_Fill(10u, 20u, 64u, 32u), "fill rejected");
+    PRS1_SeedEnv(0u, 0u, 320u, 240u);
+    HostFB_SetDispMask(1);
+    PE_Port_SetFrameLimit(1);
+    func_800755F0(PRS1_ENV);
+    HostFB_GetState(NULL, NULL, &presented, NULL);
+    ASSERT(presented == 1, "first present not counted");
+    ASSERT(PRS1_PixelIs(10u, 20u, 0u, 0u, 255u), "first copy differs");
+    func_800755F0(PRS1_ENV);
+    HostFB_GetState(NULL, NULL, &presented, NULL);
+    ASSERT(presented == 1, "budget did not stop the second present");
+    ASSERT(PE_Port_ShouldStop() == 1, "frame budget did not stop");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_FRAME_LIMIT,
+           "frame-limit reason lost");
+    PASS();
+}
+
+static int prs1_hook_count = 0;
+
+static void PRS1_Hook(void)
+{
+    prs1_hook_count++;
+}
+
+static void test_PRS1_present_hook_fires_and_resets(void)
+{
+    TEST("PRS1_present_hook_fires_and_resets");
+    ResetTestState();
+    HostFB_Init();
+    PE_GPU_Init();
+    ASSERT(PRS1_Fill(10u, 20u, 4u, 4u), "fill rejected");
+    PRS1_SeedEnv(0u, 0u, 320u, 240u);
+    HostFB_SetDispMask(1);
+    prs1_hook_count = 0;
+    PE_Port_SetPresentHook(PRS1_Hook);
+    func_800755F0(PRS1_ENV);
+    ASSERT(prs1_hook_count == 1, "hook did not fire on present");
+    HostFB_Present();
+    ASSERT(prs1_hook_count == 2, "hook did not fire on legacy present");
+    PE_Port_RunControlReset();
+    func_800755F0(PRS1_ENV);
+    ASSERT(prs1_hook_count == 2, "reset did not clear the hook");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
  * Phase 6E-EV1 — func_80042798 event-record cleanup walk (2 records at
  * D_800A0ED4+1 / +0x419, stride 0x418; tags 8/10 fire 72774 then stamp
  * word -1 / tag 12).
@@ -35437,6 +35585,13 @@ int main(void)
     test_FTE1_cddc_double_buffer_flip();
     test_FTE1_42fe8_gate_and_rect();
     test_FTE1_6ebe4_status_halfword();
+
+    /* Phase 6E-PRS1 — VRAM -> host framebuffer presentation (5 tests). */
+    test_PRS1_dispenv_window_copy();
+    test_PRS1_dispenv_offset_window();
+    test_PRS1_mask_off_presents_black();
+    test_PRS1_frame_budget_stops_present();
+    test_PRS1_present_hook_fires_and_resets();
 
     /* Phase 6E-EV1 — 42798 event-record cleanup walk (3 tests). */
     test_EV1_quiet_walk_leaves_table();

@@ -55,7 +55,7 @@ int func_8006E9A0(int arg)
     /* 1. Display init */
     func_80073A44(0);                           /* VSync(0) */
     func_80074D28(0);                           /* SetDispMask(0) */
-    func_800755F0(D_800BCE80);                  /* PutDispEnv */
+    func_800755F0(0x800BCE80u);                /* PutDispEnv */
 
     rect.x = 0;
     rect.y = 0;

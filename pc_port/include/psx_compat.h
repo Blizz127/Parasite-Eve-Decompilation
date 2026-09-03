@@ -103,7 +103,10 @@ int PE_func_80075358_Transient(const uint32_t *words, uint8_t count);
 static inline void func_80074F44(RECT *r, uint8_t rv, uint8_t g, uint8_t b) {
     if (r) HostFB_ClearImage(r->x, r->y, r->w, r->h, rv, g, b);
 }
-static inline void func_800755F0(void *e) { (void)e; HostFB_Present(); }
+/* func_800755F0 (PutDispEnv) is REAL (Phase 6E-PRS1):
+ * platform/pe_libgpu.c — host display authority over the guest DISPENV
+ * disp RECT (guest address in, VRAM window out). */
+extern void func_800755F0(pe_addr_t env);
 /* func_800752AC (ClearOTagR) and func_80076354 (jtb[11] OTC worker) are
  * REAL translations: game/boot/func_800752AC_port.c (Phase 6E-OTC1). */
 

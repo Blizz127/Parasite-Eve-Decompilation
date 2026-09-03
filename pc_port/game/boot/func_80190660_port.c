@@ -200,7 +200,7 @@ int func_80190660(void)
     (void)func_80075424(environment);
     if (PE_Port_ShouldStop())
         return -1;
-    func_800755F0((void *)(uintptr_t)(environment + 0x5Cu));
+    func_800755F0(environment + 0x5Cu);
 
     }
 

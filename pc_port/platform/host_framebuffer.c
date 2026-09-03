@@ -8,6 +8,9 @@
 
 #include "host_framebuffer.h"
 #include "game_port.h"
+#include "host_vram.h"
+#include "pe_guest_ram.h"
+#include "pe_gpu.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,6 +60,40 @@ void HostFB_Present(void)
     if (!PE_Port_FramePresentationAllowed()) return;
     fb_presented++;
     PE_Port_FramePresented(fb_presented);
+    PE_Port_InvokePresentHook();
+}
+
+void HostFB_PresentDispEnv(pe_addr_t env)
+{
+    uint32_t dx = (uint32_t)PE_LoadU16(env);
+    uint32_t dy = (uint32_t)PE_LoadU16(env + 2u);
+    uint32_t dw = (uint32_t)PE_LoadU16(env + 4u);
+    uint32_t dh = (uint32_t)PE_LoadU16(env + 6u);
+    uint32_t row, col;
+
+    if (!PE_Port_FramePresentationAllowed()) return;
+    if (fb_mask) {
+        if (dw > (uint32_t)PE_PORT_FB_WIDTH)  dw = (uint32_t)PE_PORT_FB_WIDTH;
+        if (dh > (uint32_t)PE_PORT_FB_HEIGHT) dh = (uint32_t)PE_PORT_FB_HEIGHT;
+        for (row = 0u; row < dh; row++) {
+            for (col = 0u; col < dw; col++) {
+                uint16_t pixel = 0u;
+                uint8_t *dst = fb + ((size_t)row * PE_PORT_FB_WIDTH + col) * 3u;
+                if (PE_GPU_ReadVRAM(dx + col, dy + row, &pixel)) {
+                    HostVRAM_DecodePixel(pixel, dst);
+                } else {
+                    dst[0] = 0u;
+                    dst[1] = 0u;
+                    dst[2] = 0u;
+                }
+            }
+        }
+    } else {
+        memset(fb, 0, sizeof(fb));
+    }
+    fb_presented++;
+    PE_Port_FramePresented(fb_presented);
+    PE_Port_InvokePresentHook();
 }
 
 void HostFB_SetDispMask(int mask)

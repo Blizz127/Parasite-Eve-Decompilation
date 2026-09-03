@@ -40,6 +40,13 @@ void PE_Port_RunControlReset(void);
 void PE_Port_SetFrameLimit(int frames);
 void PE_Port_SetMainIterationLimit(int iterations);
 void PE_Port_SetQuitPoll(PEPortQuitPoll poll);
+/* Live-window present hook (Phase 6E-PRS1).  The host framebuffer invokes
+ * the installed hook after counting each presentation so a windowed run
+ * can blit the newest pixels without polling guest state.  The hook runs
+ * on host data only and must never touch guest RAM/VRAM. */
+typedef void (*PEPortPresentHook)(void);
+void PE_Port_SetPresentHook(PEPortPresentHook hook);
+void PE_Port_InvokePresentHook(void);
 void PE_Port_RequestStop(PEPortStopReason reason);
 int  PE_Port_BeginMainIteration(void);
 int  PE_Port_ShouldStop(void);

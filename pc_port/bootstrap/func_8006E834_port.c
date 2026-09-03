@@ -25,7 +25,7 @@ extern void func_80086FF8(void);
 extern void func_800726C4(void);
 extern void func_80073A44(int a);
 extern void func_80074D28(int a);
-extern void func_800755F0(void *env);
+extern void func_800755F0(pe_addr_t env);
 /* func_80072714/func_80072724 (pe_libetc.c), func_800749D8 (pe_libgpu.c)
  * and func_8006E6D4/func_800811E4 (pe_libcd.c) are real implementations
  * (Phase 6E-A) via pe_sdk.h. */
@@ -82,6 +82,6 @@ retry:
     func_80074D28(0);
     func_800749D8(PE_6E834_ENV_ADDR, 0, 0, 0x140, 0xF0);
     PE_StoreU8(PE_6E834_ENV_ADDR + 0x11u, 1);   /* isrgb24 = 1 */
-    func_800755F0(PE_Translate(PE_6E834_ENV_ADDR, 0x14));
+    func_800755F0(PE_6E834_ENV_ADDR);
     return 0;
 }
