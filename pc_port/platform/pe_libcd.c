@@ -508,16 +508,11 @@ int func_8007FB44(uint32_t cmd, uint32_t data)
         return 0;
     PE_StoreU32(0x8009B570u, 0x1Fu);
     PE_StoreU32(0x8009B574u, 2u);
+    /* B598 andi a0,a0,0xFF; jal 7FCFC with the 0xB store in the delay
+     * slot (Phase 6E-WIRE: the controller chain is live — 7FCFC,
+     * 7B558, 7B010, 7B9EC transcribed, prints/callbacks/AAB4 stop). */
     PE_StoreU32(0x8009B578u, 0xBu);
-    /* func_8007FCFC (74 words: 7B9EC/80950/7B558 controller dispatch
-     * over drive-state bytes) is control-heavy, so it is the new named
-     * stop.  Production stops here; the 0 below is never consumed past
-     * the stop. */
-    Bootstrap_ReturnVoid("func_8007FCFC", "func_8007FB44");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    (void)cmd;
-    (void)data;
-    return 0;
+    return func_8007FCFC(cmd & 0xFFu, data);
 }
 
 /* Phase 6E-B558 — func_80073DE8 (4 words, 0x80073DE8..0x80073DF8):
@@ -529,28 +524,22 @@ unsigned short func_80073DE8(void)
 }
 
 /* Phase 6E-B558 — func_8007B9EC (53 words, 0x8007B9EC..0x8007BAC0):
- * CD latch block.  All effects are guest-RAM stores through the
- * D_8009B27C/B280/B284/B288/B28C/B294 pointer tables (no hardware
- * registers), so the block is transcribed — except the BA14 poll,
- * whose loop rewrites the very tag it tests (retail spins until a CD
- * interrupt, collapsed in-port, releases it).  A set tag is an
- * honest hardware-wait stop, never a spin.  Callers discard the
- * result (retail leaves 0x1325 in $v0). */
+ * CD hardware-handshake block, NOT transcribable (Phase 6E-WIRE
+ * finding): the EXE image pre-initializes the pointer tables to CD
+ * registers ([B27C] = 0x1F801800, [B280] = 0x1F801801, [B284] =
+ * 0x1F801802, [B288] = 0x1F801803, [B28C] = 0x1F801020 — read back
+ * from the SHA-1-exact EXE), and the very first effect (B9F8
+ * `sb 1 @ [[B27C]]`) pokes hardware; the BA14 spin loop rewrites
+ * the tags it tests until a CD interrupt releases it.  Only the
+ * BA70 tail touches RAM ([B296]/[B295]/[B294] = 0/0/2), but it
+ * runs last, so no prefix is transcribable without reordering.
+ * Named stop at entry; every caller discards the result (retail's
+ * 0x1325 $v0 is consumed by none of 7FCFC/7B010/7B558 — the
+ * timeout arms overwrite $v0 = -1 in their jump delay slots). */
 void func_8007B9EC(void)
 {
-    PE_StoreU8(PE_LoadU32(0x8009B27Cu), 1u);
-    if ((PE_LoadU8(PE_LoadU32(0x8009B288u)) & 7u) != 0u) {
-        Bootstrap_ReturnVoid("func_8007B9EC_hw_poll", "func_8007B9EC");
-        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-        return;
-    }
-    PE_StoreU8(0x8009B296u, 0u);
-    PE_StoreU8(0x8009B295u, PE_LoadU8(0x8009B296u));
-    PE_StoreU8(0x8009B294u, 2u);
-    PE_StoreU8(PE_LoadU32(0x8009B27Cu), 0u);
-    PE_StoreU8(PE_LoadU32(0x8009B288u), 0u);
-    /* $v0 = 0x1325 lands in the jr delay slot. */
-    PE_StoreU32(PE_LoadU32(0x8009B28Cu), 0x1325u);
+    Bootstrap_ReturnVoid("func_8007B9EC", "func_8007FCFC/8007B010/8007B558");
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
 }
 
 /* Phase 6E-B558 — func_8007AAB4 (351 words) is the CD acknowledge-poll
@@ -723,9 +712,10 @@ int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
             return -2;
         }
     }
-    /* B618: 7B010(0, 0) for side effects; return ignored.  (Live: the
-     * 7FCFC-issued 7B9EC tail primed [B294] = 2, so 7B010 takes its
-     * B21C arm and returns 2 instead of spinning.) */
+    /* B618: 7B010(0, 0) for side effects; return ignored.  (WIRE:
+     * 7B9EC is an entry stop with no effects, so callers plant
+     * [B294] = 2 for the B21C arm in tests; live, [B294] is
+     * whatever the drive state holds.) */
     (void)func_8007B010(0u, 0u);
     {
         uint32_t v1 = s1 & 0xFFu;
@@ -985,8 +975,9 @@ int func_8007FCFC(uint32_t cmd, uint32_t data)
  * The selector tail runs the real Phase 6E-CDS1 preliminaries above:
  * both non-passing arms return the sequence (retail's delay slots move
  * $s5 to $v0), and the passing arm calls func_8007E8F4 (result
- * discarded) before returning the sequence.  Past 7FB44 the new named
- * stop is func_8007FCFC (the 7B558 controller dispatch and the 7C564
+ * discarded) before returning the sequence.  Past 7FB44 the live
+ * 7FCFC chain runs through the 7B9EC entry stop (Phase 6E-WIRE;
+ * the 7B558 controller dispatch and the 7C564
  * delivery state machine behind the 7F0C8 completion callback stay
  * unrepresented); lanes are untouched at the new boundary (still idle)
  * and completion stays pending, exactly like retail mid-stream. */

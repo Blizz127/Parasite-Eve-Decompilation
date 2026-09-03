@@ -240,6 +240,24 @@ disc; ASan 100% with disc env, zero diagnostics; strict stops at
 `docs/evidence/pe-cds1-selector-tail/REPORT.md`; oracle:
 `pc_port/tools/pe_cds1_selector_tail_oracle.py`.
 
+## PE-WIRE — 7FB44 wired live; new frontier at func_8007B9EC (2026-09-03)
+
+One boundary removed: 7FB44 calls the real 7FCFC (retail has no
+`sltu` there — it lives in 7E8F4). First live run died on
+`PE_StoreU8 @ 0x1F801800`: the EXE pre-initializes the pointer
+tables to CD registers (B27C/B280/B284/B288 = 0x1F801800-03,
+B28C = 0x1F801020, read back from the SHA-1 EXE), so 7B9EC's
+first effect pokes hardware and only its RAM tail runs last —
+reverted to an entry stop (no caller consumes the 0x1325).
+Strict exit 1 at `func_8007B9EC` from
+`func_8007FCFC/8007B010/8007B558` (NOT 7C564 — next rung is the
+CD-register handshake). Non-strict aborts honestly at the first
+hardware touch; PPM unchanged 3912/76800. 7 sites migrated
+(B558_PlantChain; B54KY keeps real state, 7B9EC == 2 via the
+B010-timeout trail, 801918F8 arg4 assert caller-scoped). Suite
+1064/1064 disc twice; CTest + ASan 2/2. Evidence:
+`docs/evidence/pe-wire-7fb44-live/REPORT.md`.
+
 ## PE-B558 — CD command-issue controller translated; stop stays at func_8007FCFC (2026-09-03)
 
 Second attempt (G6): `func_8007FCFC` (74w) + `func_8007B558` (259w)
@@ -262,7 +280,8 @@ moves. src/YAML untouched; count stays 560. Evidence:
 - Landed: Rung A (FTE1 frame tail, matched 70E54/42FE8, 560 leaves)
   + Rung D (3F3C4 routed), Rung B (PRS1 VRAM→fb present + hook),
   Rung C (CDS1 selector tail, stop at 7FCFC), RUNGE analysis,
-  B558 controller chain (stop stays at 7FCFC). Repaired:
+  B558 controller chain, WIRE (7FB44 live, frontier 7B9EC).
+  Repaired:
   stale `DISC1_MATCHING_STATUS.md` (verify_us.sh PASS again).
 - Parked with reason: src/ 7E8F4/7FB44 (shared-lui coloring, G6;
   `parked_blockers.json`). Next rung: wire 7FB44 → real 7FCFC,
@@ -270,15 +289,14 @@ moves. src/YAML untouched; count stays 560. Evidence:
   callback (RUNGE unblock list).
 - Final stops: strict exit 1
   `FATAL: strict-stubs — first unresolved BOOTSTRAP_RET provider:
-  func_8007FCFC / called from: func_8007FB44`; non-strict exit 0
-  `[STUB:BOOTSTRAP_RET] func_8007FCFC (first invocation)`,
-  `[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0 main_iters=1`,
-  `[HOST] stop_reason=unresolved-boundary`, screenshot
-  `/tmp/pe-b558-final.ppm` 320x240 non-black 3912 of 76800
-  (identical to the RUNGE baseline; direct-fb fills, all presents
-  blanked). Zero `HOST_ADAPTED` lines. Field frames NOT reached:
-  the stop lands in boot media streaming, before any New-Game
-  menu.
+  func_8007B9EC / called from: func_8007FCFC/8007B010/8007B558`;
+  non-strict aborts honestly at the hardware wall
+  (`FATAL: PE_StoreU8: invalid guest address 0x1F801800`, B558 B6A0
+  through the real table — no guards invented). Screenshot
+  `/tmp/pe-wire-final.ppm` 320x240 non-black 3912 of 76800
+  (identical to baseline; CD commands don't draw). Zero
+  `HOST_ADAPTED` lines. Field frames NOT reached: the frontier is
+  the CD-register handshake now, before any New-Game menu.
 - Suites: `Results: 1064 run, 1046 passed, 1 failed, 17 skipped`
   (gateless; 1 = pre-existing B54KY env case),
   `Results: 1064 run, 1064 passed, 0 failed, 0 skipped` (disc,
@@ -291,7 +309,7 @@ moves. src/YAML untouched; count stays 560. Evidence:
   to the 7FCFC frontier, present hook executed without crash; no
   still frame held (strict aborts at the boundary).
 - Commits (all pushed): `93479c0` FTE1, `c8af84e` status-doc,
-  `0cd55ad` PRS1, `0958845` CDS1, Rung-E docs, B558 (this).
+  `0cd55ad` PRS1, `0958845` CDS1, Rung-E docs, B558, WIRE (this).
 
 ## Main-lane YAML build authority (merged 2026-09-01)
 

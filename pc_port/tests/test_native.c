@@ -88,6 +88,19 @@ static int CountOrderLog(const char *symbol) {
     return n;
 }
 
+/* Phase 6E-WIRE: live-chain plant helpers (defined beside the B558
+ * tests; the CD chain dereferences the pointer tables on every path,
+ * and the fast B010 arm keeps synthetic runs deterministic). */
+#define B558_S0 0x801FFE00u /* [B27C] target */
+#define B558_S1 0x801FFE10u /* [B280] target */
+#define B558_S2 0x801FFE20u /* [B284] target */
+#define B558_S3 0x801FFE30u /* [B288] target */
+#define B558_S4 0x801FFE40u /* [B28C] target */
+#define B558_D  0x801FFE50u /* command-data bytes */
+#define B558_B  0x801FFE60u /* copy-destination buffer */
+static void B558_PlantPointers(void);
+static void B558_PlantChain(void);
+
 /* ── Helper: reset all test state ────────────────────────────────────── */
 static void ResetTestState(void) {
     g_stub_count = 0;
@@ -1532,6 +1545,10 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     ResetTestState();
     HostFB_Init();
     func_8007ED58();
+    /* WIRE: the dispatch runs live; scratch pointers are a harness
+     * accommodation (the EXE pre-initializes them to CD hardware).
+     * All drive-state words stay real-disc values. */
+    B558_PlantPointers();
     PE_Disc_SetActive(disc);
     D_800B0DD8 = 1013u;
     D_80011614 = 0x8018EFF0u;
@@ -1601,8 +1618,18 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU16(0x800BCDC8u + 4u) == 320u &&
            PE_LoadU16(0x800BCE24u + 4u) == 320u,
            "func_801918F8 wide display-pair state differs");
-    ASSERT(g_bootstrap_arg4_call_count == 0,
-           "translated func_801918F8 remained a provider");
+    /* WIRE: the live chain prints through 71A74 (arg4-logged), so the
+     * log is no longer empty at this point.  The intent — 801918F8
+     * itself makes no provider calls — is pinned by caller instead. */
+    {
+        int i;
+        int foreign = 0;
+        for (i = 0; i < g_bootstrap_arg4_call_count; i++)
+            if (strcmp(g_bootstrap_arg4_calls[i].caller,
+                       "func_801918F8") == 0)
+                foreign = 1;
+        ASSERT(!foreign, "translated func_801918F8 remained a provider");
+    }
     ASSERT(PE_LoadU32(0x801D0DDCu) == PE_LoadU32(0x801D0DC4u) &&
            PE_LoadU32(0x801D1464u) == 0x80122D00u &&
            PE_LoadU32(0x801D1468u) == 0x80132700u &&
@@ -1638,7 +1665,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x8009B574u) == 2u &&
            PE_LoadU32(0x8009B578u) == 0xBu &&
            PE_LoadU32(0x800A3608u) == 4u &&
-           CountOrderLog("func_8007FCFC") == 1 &&
+           CountOrderLog("func_8007B9EC") == 2 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "DecDCToutCallback registration or following cut differs");
 
@@ -18285,9 +18312,10 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     PE_StoreU32(record, suffix);
     PE_StoreU32(0x801D0DFCu, 0x801E0000u);
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
+    B558_PlantChain(); /* WIRE: the 7FB44 dispatch now runs live */
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_8007FCFC") == 1 &&
+           CountOrderLog("func_8007B9EC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
@@ -18323,9 +18351,10 @@ static void test_B54KAE_movie_state_setup(void)
     PE_StoreU32(0x801D0DFCu, 0x801E0000u);
     PE_StoreU32(0x800ACDDCu, 1u);
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
+    B558_PlantChain(); /* WIRE: the 7FB44 dispatch now runs live */
 
     ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_8007FCFC") == 1 &&
+           CountOrderLog("func_8007B9EC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
@@ -19378,6 +19407,7 @@ static void test_CDQ1_7F0C8_queue_and_selector(void) {
     TEST("CDQ1_7F0C8_queue_and_selector");
     ResetTestState();
     func_8007ED58(); /* lane 1, queue 0, head 0, seq 0 */
+    B558_PlantChain(); /* WIRE: desc0 data is 0, chain runs live */
     PE_StoreU8(0x801FFF00u, 0x00u);
     PE_StoreU8(0x801FFF01u, 0x02u);
     PE_StoreU8(0x801FFF02u, 0x02u);
@@ -19418,9 +19448,10 @@ static void test_CDQ1_7F0C8_queue_and_selector(void) {
            PE_LoadU8(0x801FFE81u) == 0x02u &&
            PE_LoadU8(0x801FFE82u) == 0x02u,
            "loc scratch copy differs");
-    /* func_8007FCFC is the exact boundary; the real 7E8F4 -> 7FB44 run
-     * latched 0x1F/lane-2/0xB ahead of it (retail stores, now live). */
-    ASSERT(CountOrderLog("func_8007FCFC") == 1 &&
+    /* WIRE: the 7FCFC dispatch runs live; the 7B9EC entry stop is
+     * the exact boundary.  The real 7E8F4 -> 7FB44 run latches
+     * 0x1F/lane-2/0xB ahead of it (retail stores, still live). */
+    ASSERT(CountOrderLog("func_8007B9EC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "passing selector must record the exact boundary");
     ASSERT(PE_LoadU32(0x8009B574u) == 2u, "7FB44 lane latch differs");
@@ -19433,6 +19464,7 @@ static void test_CDQ1_81314_full(void) {
     TEST("CDQ1_81314_full");
     ResetTestState();
     func_8007ED58();
+    B558_PlantChain(); /* WIRE: the selector dispatch now runs live */
     PE_StoreU8(0x801FFF00u, 0x00u);
     PE_StoreU8(0x801FFF01u, 0x02u);
     PE_StoreU8(0x801FFF02u, 0x02u);
@@ -19446,7 +19478,7 @@ static void test_CDQ1_81314_full(void) {
     ASSERT(PE_LoadU32(0x800A8020u) == 0u, "stream flag store differs");
     ASSERT(PE_LoadU32(0x800B8AB4u) == 0x800813E8u,
            "completion callback install differs");
-    ASSERT(CountOrderLog("func_8007FCFC") == 1 &&
+    ASSERT(CountOrderLog("func_8007B9EC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "issue must end at the selector boundary");
     /* zero-issue arm restores the previous callbacks and returns 0 */
@@ -19465,7 +19497,8 @@ static void test_CDQ1_81314_full(void) {
  * sequence from BOTH non-passing tail arms (the delay slots move $s5
  * to $v0); the passing arm issues the real 7E8F4 (result discarded).
  * 7FB44 latches 0x1F @ D_8009B570, lane 2 @ D_8009B574, 0xB @
- * D_8009B578, then the control-heavy func_8007FCFC is the named stop.
+ * D_8009B578, then the live func_8007FCFC chain runs through the
+ * 7B9EC entry stop (Phase 6E-WIRE).
  * ═══════════════════════════════════════════════════════════════════════ */
 
 static void CDS1_Issue(void)
@@ -19527,16 +19560,26 @@ static void test_CDS1_7e8f4_live_head_dispatches(void)
     TEST("CDS1_7e8f4_live_head_dispatches");
     ResetTestState();
     func_8007ED58();
+    B558_PlantChain(); /* WIRE: the dispatch runs live past 7B9EC */
     PE_StoreU32(0x800A3540u, 7u); /* head seq; head index stays 0 */
     PE_StoreU8(0x800A3544u, 0x1Bu);
-    PE_StoreU32(0x800A354Cu, 0xA5A5A5A5u);
-    ASSERT(func_8007E8F4() == 0, "dispatch truncates at the 7FCFC stop");
-    ASSERT(CountOrderLog("func_8007FCFC") == 1 &&
+    /* WIRE: data must be mapped (80950 copies 4 bytes live). */
+    PE_StoreU32(0x800A354Cu, B558_D);
+    PE_StoreU8(B558_D, 0x11u);
+    PE_StoreU8(B558_D + 1u, 0x22u);
+    PE_StoreU8(B558_D + 2u, 0x33u);
+    PE_StoreU8(B558_D + 3u, 0x44u);
+    ASSERT(func_8007E8F4() == 1, "live dispatch must return 1");
+    ASSERT(CountOrderLog("func_8007B9EC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "live head must reach the 7FCFC boundary");
+           "live head must cross the 7B9EC boundary");
     ASSERT(PE_LoadU32(0x8009B570u) == 0x1Fu, "0x1F latch differs");
     ASSERT(PE_LoadU32(0x8009B574u) == 2u, "lane latch differs");
     ASSERT(PE_LoadU32(0x8009B578u) == 0xBu, "0xB latch differs");
+    ASSERT(PE_LoadU8(0x8009B558u) == 0x1Bu, "[B558] latch differs");
+    ASSERT(PE_LoadU32(0x8009B598u) == 0x1Eu, "[B598] latch differs");
+    ASSERT(PE_LoadU8(0x8009B580u) == 0x1Bu, "[B580] latch differs");
+    ASSERT(PE_LoadU32(0x8009B559u) == 0x44332211u, "80950 copy differs");
     PASS();
 }
 
@@ -19571,12 +19614,16 @@ static void test_CDS1_7fb44_negative_flag_passes(void)
     ResetTestState();
     func_8007ED58();
     /* bgtz is signed: 0x80000000 is negative, so the flag gate passes
-     * and the issue reaches the 7FCFC boundary. */
+     * and the issue runs the live chain (data must be mapped: 80950
+     * copies 4 bytes). */
     PE_StoreU32(0x8009B598u, 0x80000000u);
-    ASSERT(func_8007FB44(0x1Bu, 0xDEADu) == 0, "stop must return 0");
-    ASSERT(CountOrderLog("func_8007FCFC") == 1 &&
+    B558_PlantChain();
+    PE_StoreU32(B558_D, 0xDEADu);
+    ASSERT(func_8007FB44(0x1Bu, B558_D) == 1, "live issue must return 1");
+    ASSERT(CountOrderLog("func_8007B9EC") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "negative flag must still dispatch");
+    ASSERT(PE_LoadU8(0x8009B580u) == 0x1Bu, "[B580] latch differs");
     PASS();
 }
 
@@ -19590,14 +19637,6 @@ static void test_CDS1_7fb44_negative_flag_passes(void)
  * 0x801FFF00 CDQ1/CDS1 cells.
  * ═══════════════════════════════════════════════════════════════════════ */
 
-#define B558_S0 0x801FFE00u /* [B27C] target */
-#define B558_S1 0x801FFE10u /* [B280] target */
-#define B558_S2 0x801FFE20u /* [B284] target */
-#define B558_S3 0x801FFE30u /* [B288] target */
-#define B558_S4 0x801FFE40u /* [B28C] target */
-#define B558_D  0x801FFE50u /* command-data bytes */
-#define B558_B  0x801FFE60u /* copy-destination buffer */
-
 /* Plant the six CD pointer-table words at scratch (7B9EC/B010/B558
  * dereference every one of them on the exercised paths). */
 static void B558_PlantPointers(void)
@@ -19607,6 +19646,18 @@ static void B558_PlantPointers(void)
     PE_StoreU32(0x8009B284u, B558_S2);
     PE_StoreU32(0x8009B288u, B558_S3);
     PE_StoreU32(0x8009B28Cu, B558_S4);
+}
+
+/* Full live-chain plant for synthetic tests: scratch pointers (the
+ * EXE pre-initializes them to CD hardware, which the port cannot
+ * touch), [B294] = 2 for the fast B010 B21C arm, [AFC0] = 0 to
+ * skip the debug prints, 73DE8 source 0 to skip the AAB4 loop. */
+static void B558_PlantChain(void)
+{
+    B558_PlantPointers();
+    PE_StoreU8(0x8009B294u, 2u);
+    PE_StoreU32(0x8009AFC0u, 0u);
+    PE_StoreU16(0x800945E6u, 0u);
 }
 
 static void test_B558_73de8_getter(void)
@@ -19623,22 +19674,21 @@ static void test_B558_73de8_getter(void)
     PASS();
 }
 
-static void test_B558_7b9ec_transcribe(void)
+static void test_B558_7b9ec_boundary(void)
 {
-    TEST("B558_7b9ec_transcribe");
+    TEST("B558_7b9ec_boundary");
     ResetTestState();
     B558_PlantPointers();
-    PE_StoreU8(B558_S3, 0u); /* tag bits clear: skip the hw-poll stop */
-    PE_StoreU8(B558_S0, 0xAAu);
+    /* Phase 6E-WIRE: the EXE pre-initializes the tables to CD
+     * registers, so the block stops at entry before any effect —
+     * even with scratch pointers planted, nothing is stored. */
+    PE_StoreU8(0x8009B294u, 0xAAu);
     func_8007B9EC();
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
-           "clear tag must not stop");
-    ASSERT(PE_LoadU8(0x8009B296u) == 0u, "B296 latch differs");
-    ASSERT(PE_LoadU8(0x8009B295u) == 0u, "B295 latch differs");
-    ASSERT(PE_LoadU8(0x8009B294u) == 2u, "B294 latch differs");
-    ASSERT(PE_LoadU8(B558_S0) == 0u, "S0 tag must clear");
-    ASSERT(PE_LoadU8(B558_S3) == 0u, "S3 tag must clear");
-    ASSERT(PE_LoadU32(B558_S4) == 0x1325u, "S4 v0 differs");
+    ASSERT(CountOrderLog("func_8007B9EC") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "7B9EC must record the entry boundary");
+    ASSERT(PE_LoadU8(0x8009B294u) == 0xAAu, "entry stop must store nothing");
+    ASSERT(PE_LoadU8(B558_S0) == 0u, "entry stop must not touch tables");
     PASS();
 }
 
@@ -19761,11 +19811,16 @@ static void test_B558_7fcfc_zero_data_wrapper(void)
     PE_StoreU8(B558_S3, 0u);
     PE_StoreU32(0x8009AFC0u, 0u);
     PE_StoreU16(0x800945E6u, 0u);
+    /* Phase 6E-WIRE: 7B9EC stops at entry, the wrapper continues
+     * past it (CDS1 pattern); [B294] = 2 keeps the inner B010 on
+     * its fast B21C arm. */
+    PE_StoreU8(0x8009B294u, 2u);
     /* data == 0, cmd 9 (not 7/8): [B558] = 9 always (FD28 delay
      * slot), [B560] = 0, [B598] = 0x1E (B5A4 table zero). */
     ASSERT(func_8007FCFC(9u, 0u) == 1, "wrapper must return 1");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
-           "wrapper path must not stop");
+    ASSERT(CountOrderLog("func_8007B9EC") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "wrapper must cross the 7B9EC boundary");
     ASSERT(PE_LoadU8(0x8009B558u) == 9u, "[B558] latch differs");
     ASSERT(PE_LoadU32(0x8009B560u) == 0u, "[B560] must be 0");
     ASSERT(PE_LoadU32(0x8009B598u) == 0x1Eu, "[B598] must be 0x1E");
@@ -19782,11 +19837,13 @@ static void test_B558_7fcfc_eight_arm_guarded(void)
     PE_StoreU8(B558_S3, 0u);
     PE_StoreU32(0x8009AFC0u, 0u);
     PE_StoreU16(0x800945E6u, 0u);
+    PE_StoreU8(0x8009B294u, 2u); /* WIRE: fast inner B010 */
     /* [B58B] == 1: the FDC0 beq skips the relatch — [B558] stays 8. */
     PE_StoreU8(0x8009B58Bu, 1u);
     ASSERT(func_8007FCFC(8u, 0u) == 1, "guarded 8-arm must return 1");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
-           "guarded 8-arm must not stop");
+    ASSERT(CountOrderLog("func_8007B9EC") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "guarded 8-arm must cross the 7B9EC boundary");
     ASSERT(PE_LoadU8(0x8009B558u) == 8u,
            "guarded 8-arm must not relatch [B558]");
     ASSERT(PE_LoadU8(0x8009B580u) == 8u, "[B580] latch differs");
@@ -19796,6 +19853,7 @@ static void test_B558_7fcfc_eight_arm_guarded(void)
     PE_StoreU8(B558_S3, 0u);
     PE_StoreU32(0x8009AFC0u, 0u);
     PE_StoreU16(0x800945E6u, 0u);
+    PE_StoreU8(0x8009B294u, 2u); /* WIRE: fast inner B010 */
     PE_StoreU8(0x8009B58Bu, 0u);
     ASSERT(func_8007FCFC(8u, 0u) == 1, "firing 8-arm must return 1");
     ASSERT(PE_LoadU8(0x8009B558u) == 1u,
@@ -19813,11 +19871,13 @@ static void test_B558_7fcfc_seven_arm(void)
     PE_StoreU8(B558_S3, 0u);
     PE_StoreU32(0x8009AFC0u, 0u);
     PE_StoreU16(0x800945E6u, 0u);
+    PE_StoreU8(0x8009B294u, 2u); /* WIRE: fast inner B010 */
     /* [B58B] == 1: 7-arm relatches [B558] = 1, zeroes [B560]. */
     PE_StoreU8(0x8009B58Bu, 1u);
     ASSERT(func_8007FCFC(7u, 0u) == 1, "7-arm must return 1");
-    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
-           "7-arm must not stop");
+    ASSERT(CountOrderLog("func_8007B9EC") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "7-arm must cross the 7B9EC boundary");
     ASSERT(PE_LoadU8(0x8009B558u) == 1u,
            "7-arm must relatch [B558] = 1");
     ASSERT(PE_LoadU32(0x8009B560u) == 0u, "7-arm [B560] differs");
@@ -35471,7 +35531,7 @@ int main(void)
 
     /* Phase 6E-B558 — CD controller chain (10 tests). */
     test_B558_73de8_getter();
-    test_B558_7b9ec_transcribe();
+    test_B558_7b9ec_boundary();
     test_B558_7aab4_boundary();
     test_B558_7b010_status_arms();
     test_B558_7b558_b5bc_gate();
