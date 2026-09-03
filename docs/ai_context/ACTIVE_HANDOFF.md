@@ -240,6 +240,37 @@ disc; ASan 100% with disc env, zero diagnostics; strict stops at
 `docs/evidence/pe-cds1-selector-tail/REPORT.md`; oracle:
 `pc_port/tools/pe_cds1_selector_tail_oracle.py`.
 
+## Run summary 2026-09-03 — field-frame run (this session)
+
+- Landed: Rung A (FTE1 frame tail, matched 70E54/42FE8, 560 leaves)
+  + Rung D (3F3C4 routed), Rung B (PRS1 VRAM→fb present + hook),
+  Rung C (CDS1 selector tail, stop at 7FCFC). Repaired: stale
+  `DISC1_MATCHING_STATUS.md` (verify_us.sh PASS again).
+- Parked with reason: src/ 7E8F4/7FB44 (shared-lui coloring, G6;
+  `parked_blockers.json`); Rung E 7FCFC translation (74w,
+  control-heavy, needs the ~200-word 7B558 controller — analysis
+  in `docs/evidence/pe-runge-7fcfc-stop/REPORT.md`).
+- Final stops: strict
+  `FATAL: strict-stubs — first unresolved BOOTSTRAP_RET provider:
+  func_8007FCFC / called from: func_8007FB44`; non-strict
+  `[HOST] stop_reason=unresolved-boundary`, stub summary
+  `implemented: 0, host-adapted: 0, bootstrap-return: 1,
+  unsupported: 0`, `[FB] presents=483 mask=0`, screenshot non-black
+  3912 of 76800 (direct-fb fills; all presents blanked). Zero
+  `HOST_ADAPTED` lines. Field frames NOT reached: the stop lands in
+  boot media streaming, before any New-Game menu.
+- Suites: `Results: 1054 run, 1036 passed, 1 failed, 17 skipped`
+  (gateless; 1 = pre-existing B54KY env case),
+  `Results: 1054 run, 1054 passed, 0 failed, 0 skipped` (disc).
+  ASan/UBSan CTest with disc: `100% tests passed, 0 tests failed
+  out of 2`, zero diagnostics. Oracles green: otc1, ev1, tok1,
+  drw1, fte1, cds1 (fail-once proven). Leaf count 560.
+- Windowed smoke (`DISPLAY=:10.0`): window opened 640x480, boot ran
+  to the 7FCFC frontier, present hook executed without crash; no
+  still frame held (strict aborts at the boundary).
+- Commits (all pushed): `93479c0` FTE1, `c8af84e` status-doc,
+  `0cd55ad` PRS1, `0958845` CDS1, plus the Rung-E docs commit.
+
 ## Main-lane YAML build authority (merged 2026-09-01)
 
 `configs/USA/disc1.yaml` owns Disc-1 span edges, source/object mapping, trim
