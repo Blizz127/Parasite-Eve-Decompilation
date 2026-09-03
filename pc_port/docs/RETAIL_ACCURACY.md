@@ -59,6 +59,13 @@ translated function may regress to a stub.
   retail mount loop would spin forever, so the port bounds it and exits
   loudly. With a disc (real or fixture) the loop is retail logic and the
   bound is unreachable.
+- **E0 delivery pump** (`func_801924F8_port.c`, CDQ2d): retail populates
+  streaming slots via DMA-completion interrupts during the E0 poll spin;
+  the port has no async interrupts, so the tail fires the installed
+  `func_8007C214` completion callback once per poll (the 7ED58
+  synchronous-delivery precedent). E0 takes got_frame on the first poll,
+  so cadence beyond that is unobservable; the give-up path behind it is
+  byte-identical retail logic.
 
 ## Blocked (needs inputs absent from a clean checkout)
 

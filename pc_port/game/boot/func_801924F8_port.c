@@ -12,14 +12,6 @@
 #include "game_port.h"
 #include "pe_sdk.h"
 
-static void func_8010BD4C(pe_addr_t a0, uint32_t a1)
-{
-    (void)a0;
-    (void)a1;
-    Bootstrap_ReturnVoid("func_8010BD4C", "func_801924F8");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-}
-
 int func_801924F8(int index)
 {
     uint16_t record_index = (uint16_t)index;
@@ -115,22 +107,26 @@ cdready_wait:
     func_800870F0(PE_LoadU8(0x800B0DBEu));
     if (PE_Port_ShouldStop())
         return 0;
-    /* D0: RLE frame decode (2000 records at D0DF8).  Transcribed and
-     * verified on the real stream in MV1b, but reverted to the named
-     * stop: the E0 poll behind it needs the 7C564 delivery pump
-     * (slots never populate, lane never reaches -1), so live BD4C
-     * hangs B54KY and strict production in the give-up wait.
-     * Reland with delivery. */
+    /* D0: RLE frame decode (2000 records at D0DF8).  Relanded in
+     * CDQ2d with the E0 delivery pump (see below). */
     func_8010BD4C(PE_LoadU32(0x801D0DF8u), 2000u);
     if (PE_Port_ShouldStop())
         return 0;
 e0_poll:
-    /* E0: poll the streaming slot table; s0 = 2000 tries. */
+    /* E0: poll the streaming slot table; s0 = 2000 tries.  The
+     * delivery pump fires the DMA-completion callback once per
+     * poll: retail populates streaming slots via DMA-completion
+     * interrupts during this spin (7C214, installed by 81314's
+     * streaming arm), and the port — with no async interrupts —
+     * delivers synchronously instead (the 7ED58 synchronous-reset
+     * precedent).  One completion per poll; E0 takes got_frame on
+     * the first poll, so cadence beyond that is unobservable. */
     {
         uint32_t s0 = 2000u;
         int32_t s1;
         for (;;) {
             uint32_t left;
+            func_8007C214();
             s1 = func_80191B64(0x801D1464u);
             left = s0 - 1u;
             s0 = left;
@@ -161,11 +157,19 @@ e0_poll:
     }
     goto cdready_wait;
 got_frame:
-    /* 80192814: s1 nonzero. The frame path computes a1 = lw[s3 + ([146C]^1)*4]
-     * with s3 = 0 (sole-caller value, see above): a KUSEG vector-range load
-     * the port cannot execute, and hands (s1, a1) to the MV1b decoder.
-     * Stop at the decoder entry; the post-decode half (EC: v0 = 1, clear
-     * DBD, B0DBC = 1, B0DBA++) resumes in MV1b with the decoder. */
+    /* 80192814: s1 nonzero. Byte-verified blockers (CDQ2d/MV1c-map):
+     * s3 = 0 (80192CE8 zeroes; full-function scan of 801924F8:
+     * one spill, zero sets) and [146C] = 0 (prefix zeroes; sole
+     * writer), so a1 = lw[4] — a BIOS-resident vector word no
+     * game code writes (zero absolute low-RAM stores in EXE and
+     * all overlay dumps). The port cannot execute the load, so
+     * stop at the decoder entry before it (the [B0DBC]++ and
+     * [146C] = 1 stores stay deferred too). C89C itself is fully
+     * mapped (resumable VLC, 11 static state words, COP0 IEc
+     * touch, exits 0/1) in docs/evidence/pe-mv1c-c89c-map/NOTE.md;
+     * its a2 table base is also unresolved (192CE8 dump ends
+     * before the jal). The post-decode half (EC: v0 = 1, clear
+     * DBD, B0DBC = 1, B0DBA++) resumes with the decoder. */
     Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8");
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;

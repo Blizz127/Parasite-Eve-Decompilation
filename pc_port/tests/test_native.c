@@ -1588,12 +1588,18 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     ASSERT(PE_LoadU8(0x800B0DBAu) == 1u &&
            PE_LoadU8(0x800B0DBEu) == 0x98u &&
            PE_LoadU16(0x800B0DBCu) == 0u &&
-           PE_LoadU16(0x801D11B0u) == 0xFFFFu &&
            memcmp(PE_TranslateConst(0x801D1384u, 0x28u),
                   expected_disp, 0x28u) == 0 &&
            memcmp(PE_TranslateConst(0x801D13ACu, 0xB8u),
                   expected_draw, 0xB8u) == 0,
            "func_80191FB8 flags or environment copies differ");
+    /* CDQ2d: the live E0 poll latches through 91B64 — C44 sets
+     * the [DBD] movie byte (record word 0 < 0xFFFF limit) and
+     * the taken C8C publishes [D111B0] = record word (0).
+     * Retail makes the same stores on the same inputs. */
+    ASSERT(PE_LoadU8(0x801D0DBDu) == 1u &&
+           PE_LoadU16(0x801D11B0u) == 0u,
+           "E0 poll slot-valid latches differ");
     PE_GPU_GetState(&gpu);
     ASSERT(gpu.move_count == 2u &&
            gpu.move_source == 0x01C00000u &&
@@ -1663,6 +1669,8 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x8009B578u) == 0xBu &&
            PE_LoadU32(0x800A3608u) == 4u &&
            CountOrderLog("func_8007B9EC") == 0 &&
+           CountOrderLog("func_8010C89C") == 1 &&
+           PE_LoadU16(PE_LoadU32(0x801D0DFCu)) == 4u &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "DecDCToutCallback registration or following cut differs");
 
@@ -18294,6 +18302,25 @@ static void FxFree(DiscFixture *fx) {
     fx->disc = NULL;
 }
 
+/* Phase 6E-CDQ2d: streaming state the prefix does not provide.
+ * The prefix owns [D111AC] (record pointer) and [C0DC8] (via the
+ * 7A214 pool initializer, which also zeroes all record states),
+ * so only prefix-untouched cells are planted: the slot-valid
+ * limit (steers 91B64 past its 870F0 re-entry with w = 0), a
+ * mapped 70 KB decode buffer at 0x801B0000 (BD4C's XOR pass
+ * footprint), and the FF FF RLE terminator at the overlay
+ * source (zero-byte decode).  The E0 pump's 7C214 publishes the
+ * state-2 record itself (7C484 promotes it; 91B64 publishes it;
+ * the E0 loop takes got_frame).  Relied-upon zeros (slot words,
+ * D0DE0/D0DE2, record halves) come from ResetTestState. */
+static void CDQ2d_PlantStream(void)
+{
+    PE_StoreU16(0x801D11B0u, 1u);
+    PE_StoreU32(0x801D0DF8u, 0x801B0000u);
+    PE_StoreU8(0x8010CBFCu, 0xFFu);
+    PE_StoreU8(0x8010CBFDu, 0xFFu);
+}
+
 static void test_B54KAD_fmv2_filename_threshold(void)
 {
     DiscFixture fx;
@@ -18310,10 +18337,12 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     PE_StoreU32(0x801D0DFCu, 0x801E0000u);
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
     B558_PlantChain(); /* CD0: the 7FB44 dispatch now runs live */
+    CDQ2d_PlantStream(); /* pump publishes; E0 takes got_frame */
 
     ASSERT(func_801924F8(21) == 0 &&
            CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8010BD4C") == 1 &&
+           CountOrderLog("func_8010C89C") == 1 &&
+           PE_LoadU16(0x801E0000u) == 4u &&
            PE_CdLoadU8(0x1F801800u) == 3u &&
            PE_CdLoadU8(0x1F801801u) == 0u &&
            PE_CdLoadU8(0x1F801802u) == 0u &&
@@ -18355,10 +18384,12 @@ static void test_B54KAE_movie_state_setup(void)
     PE_StoreU32(0x800ACDDCu, 1u);
     memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
     B558_PlantChain(); /* CD0: the 7FB44 dispatch now runs live */
+    CDQ2d_PlantStream(); /* pump publishes; E0 takes got_frame */
 
     ASSERT(func_801924F8(21) == 0 &&
            CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8010BD4C") == 1 &&
+           CountOrderLog("func_8010C89C") == 1 &&
+           PE_LoadU16(0x801E0000u) == 4u &&
            PE_CdLoadU8(0x1F801800u) == 3u &&
            PE_CdLoadU8(0x1F801801u) == 0u &&
            PE_CdLoadU8(0x1F801802u) == 0u &&

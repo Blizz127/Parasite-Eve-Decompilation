@@ -342,6 +342,36 @@ and E0's first poll then takes got_frame (give-up/-1 never
 reached). AD/AE need the MV1B plant for the pump. Next rung:
 prototype the pump → BD4C reland → C89C.
 
+CDQ2d (2026-09-03): pump live (7C214 once per E0 poll,
+interrupt-surrogate, 3rd bounded adaptation in
+RETAIL_ACCURACY.md); BD4C relanded verbatim; E0 takes
+got_frame poll 1 on synthetic AND real paths (B54KY pins
+C89C == 1, record promoted to 4, `[DBD]`/`[D111B0]` latches).
+Strict frontier `func_8010C89C` from `func_801924F8`. Suite
+1064/1064 disc twice, 1046/1 env/17 gateless; CTest 2/2;
+ASan 2/2 clean; MV1a oracle green. Evidence:
+`docs/evidence/pe-cdq2d-e0-pump/REPORT.md` (+
+`pe-mv1c-c89c-map/NOTE.md`: C89C fully mapped — resumable VLC,
+11 static state words, COP0 IEc touch, exits 0/1 — parked on
+inputs: `a1 = lw[4]` BIOS word proven byte-exact, `a2` caller
+setup undumped). Leaves 560; no src/YAML changes. Next: s1
+`[4]`-blocker (BIOS/low-RAM model or measured value), then
+C89C transcription → EC → movie.
+
+MV1c-forensics (2026-09-03): s1-path byte-verified from the
+tail dump (`lbu→xori→sb→sll→addu s3→lw a1`); `s3 = 0`
+triple-proven (zero + full-function one-spill scan +
+post-jal `move v0,s3`); `jal 801924F8` at `80192E00` leaves
+`a1`/`a2`/`a3` as 80191FB8's exit leftovers — C89C has TWO
+unknowable inputs, transcription parked per the BB0 lesson
+(structural-only verification refused). Bit-bucket hypothesis
+recorded (KUSEG low RAM never read post-boot; real handoff
+via 7C394/EB90/COP0) with its proof obligations. TEMP dump
+probe reverted; suite 1064/1064 after revert. Evidence:
+`pe-mv1c-c89c-map/NOTE.md`. Next: `[4]`-blocker decision
+(low-RAM model vs measured BIOS value) or EC-side progress
+(7C394-after-C89C needs C89C first — same blocker).
+
 ## Run summary 2026-09-03 — field-frame run (this session)
 
 - Landed: Rung A (FTE1 frame tail, matched 70E54/42FE8, 560 leaves)
