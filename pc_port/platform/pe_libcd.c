@@ -82,6 +82,7 @@
 #include "game_port.h"
 #include "pe_bootstrap.h"
 #include "pe_gpu.h"
+#include "pe_cdreg.h"
 
 /* B54K-AL: value-only controller location for the proven synchronous
  * CdlSetloc arm.  This is host hardware state, not planted guest state. */
@@ -524,22 +525,34 @@ unsigned short func_80073DE8(void)
 }
 
 /* Phase 6E-B558 — func_8007B9EC (53 words, 0x8007B9EC..0x8007BAC0):
- * CD hardware-handshake block, NOT transcribable (Phase 6E-WIRE
- * finding): the EXE image pre-initializes the pointer tables to CD
+ * CD latch block, transcribed through the CD-register shadow
+ * (Phase 6E-CD0): the EXE pre-initializes the pointer tables to CD
  * registers ([B27C] = 0x1F801800, [B280] = 0x1F801801, [B284] =
  * 0x1F801802, [B288] = 0x1F801803, [B28C] = 0x1F801020 — read back
- * from the SHA-1-exact EXE), and the very first effect (B9F8
- * `sb 1 @ [[B27C]]`) pokes hardware; the BA14 spin loop rewrites
- * the tags it tests until a CD interrupt releases it.  Only the
- * BA70 tail touches RAM ([B296]/[B295]/[B294] = 0/0/2), but it
- * runs last, so no prefix is transcribable without reordering.
- * Named stop at entry; every caller discards the result (retail's
- * 0x1325 $v0 is consumed by none of 7FCFC/7B010/7B558 — the
- * timeout arms overwrite $v0 = -1 in their jump delay slots). */
+ * from the SHA-1-exact EXE), so every table-derived access routes
+ * via PE_CdLoad/PE_CdStore (address decoding, not adaptation:
+ * hardware routes these addresses to the controller too).  The
+ * shadow resets to 0 (quiescent: no interrupt pending), so the
+ * BA14 tag test reads clear and the block completes exactly as
+ * retail does on an acknowledged command; a SET tag stays an
+ * honest hardware-wait stop, never a spin (it can only arise from
+ * a future write — the safety valve for latch semantics).
+ * Callers discard the result (retail leaves 0x1325 in $v0). */
 void func_8007B9EC(void)
 {
-    Bootstrap_ReturnVoid("func_8007B9EC", "func_8007FCFC/8007B010/8007B558");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    PE_CdStoreU8(PE_LoadU32(0x8009B27Cu), 1u);
+    if ((PE_CdLoadU8(PE_LoadU32(0x8009B288u)) & 7u) != 0u) {
+        Bootstrap_ReturnVoid("func_8007B9EC_hw_poll", "func_8007B9EC");
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return;
+    }
+    PE_StoreU8(0x8009B296u, 0u);
+    PE_StoreU8(0x8009B295u, PE_LoadU8(0x8009B296u));
+    PE_StoreU8(0x8009B294u, 2u);
+    PE_CdStoreU8(PE_LoadU32(0x8009B27Cu), 0u);
+    PE_CdStoreU8(PE_LoadU32(0x8009B288u), 0u);
+    /* $v0 = 0x1325 lands in the jr delay slot. */
+    PE_CdStoreU32(PE_LoadU32(0x8009B28Cu), 0x1325u);
 }
 
 /* Phase 6E-B558 — func_8007AAB4 (351 words) is the CD acknowledge-poll
@@ -712,10 +725,10 @@ int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
             return -2;
         }
     }
-    /* B618: 7B010(0, 0) for side effects; return ignored.  (WIRE:
-     * 7B9EC is an entry stop with no effects, so callers plant
-     * [B294] = 2 for the B21C arm in tests; live, [B294] is
-     * whatever the drive state holds.) */
+    /* B618: 7B010(0, 0) for side effects; return ignored.  (The
+     * 7FCFC-issued 7B9EC tail primes [B294] = 2 through the shadow,
+     * so 7B010 takes its B21C arm and returns 2 instead of
+     * spinning.) */
     (void)func_8007B010(0u, 0u);
     {
         uint32_t v1 = s1 & 0xFFu;
@@ -747,7 +760,7 @@ int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
             uint32_t base = v1 + 0x100u;
             uint32_t ent = ao + base;
             uint32_t lim;
-            PE_StoreU8(b27c, 0u);
+            PE_CdStoreU8(b27c, 0u);
             lim = PE_LoadU32(ent);
             ao = 0u;
             if ((int32_t)lim > 0) {
@@ -756,7 +769,7 @@ int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
                 /* B6D0: latch data bytes through [B284]; trip count
                  * is the table word (a1 stays constant). */
                 for (;;) {
-                    PE_StoreU8(b284, PE_LoadU8(s0 + i));
+                    PE_CdStoreU8(b284, PE_LoadU8(s0 + i));
                     lim = PE_LoadU32(ent);
                     i++;
                     if (!((int32_t)i < (int32_t)lim))
@@ -768,7 +781,7 @@ int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
         {
             uint32_t b280 = PE_LoadU32(0x8009B280u);
             PE_StoreU8(0x8009AFD5u, (uint8_t)s1);
-            PE_StoreU8(b280, (uint8_t)s1);
+            PE_CdStoreU8(b280, (uint8_t)s1);
             if (s2 != 0u)
                 return 0;
         }

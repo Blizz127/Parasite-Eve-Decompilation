@@ -27,6 +27,7 @@
 #include "pe_mdec.h"
 #include "pe_irq.h"
 #include "pe_irq_delivery.h"
+#include "pe_cdreg.h"
 #include "game_port.h"
 
 static int      g_irq_lock_depth;
@@ -297,6 +298,7 @@ void PE_Sdk_ResetState(void)
     PE_SpuDma_Reset();
     PE_GPU_Init();
     PE_MDEC_Init();
+    PE_CdReg_Reset();
     /* Host/platform reset cancels an IRQ that can no longer be delivered. */
     PE_StoreU32(0x8009D24Cu, 0);
     PE_StoreU32(0x8009B434u, 0);

@@ -26,6 +26,7 @@ set(PLATFORM_SRCS
     platform/pe_libsnd.c
     platform/pe_spu_dma.c
     platform/pe_libcard.c
+    platform/pe_cdreg.c
     platform/pe_libcd.c
     platform/pe_disc.c
     platform/pe_save.c
