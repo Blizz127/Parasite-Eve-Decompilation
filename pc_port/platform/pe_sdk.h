@@ -167,6 +167,13 @@ int  func_8007F0C8(uint32_t mode, pe_addr_t loc, int count, uint32_t a3,
                     pe_addr_t buf);  /* CdlReadS queue issue */
 int  func_8007E8F4(void);            /* completion-queue predicate */
 int  func_8007FB44(uint32_t cmd, uint32_t data); /* completion-dispatch */
+unsigned short func_80073DE8(void);  /* D_800945E6 halfword getter */
+void func_8007B9EC(void);            /* CD latch block */
+int  func_8007AAB4(void);            /* CD acknowledge-poll worker (stop) */
+int  func_8007B010(uint32_t cmdi, pe_addr_t buf); /* CD status-poll prefix */
+int  func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
+                   uint32_t mode);   /* CD command-issue controller */
+int  func_8007FCFC(uint32_t cmd, uint32_t data); /* CD issue wrapper */
 char *func_800719F4(char *destination, const char *source); /* BIOS A(15h) strcat */
 void func_8010BE3C(int mode);         /* libpress DecDCTReset wrapper */
 

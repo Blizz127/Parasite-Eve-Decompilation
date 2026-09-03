@@ -240,36 +240,58 @@ disc; ASan 100% with disc env, zero diagnostics; strict stops at
 `docs/evidence/pe-cds1-selector-tail/REPORT.md`; oracle:
 `pc_port/tools/pe_cds1_selector_tail_oracle.py`.
 
+## PE-B558 — CD command-issue controller translated; stop stays at func_8007FCFC (2026-09-03)
+
+Second attempt (G6): `func_8007FCFC` (74w) + `func_8007B558` (259w)
++ `func_8007B010` (160w) + `func_8007B9EC`/`73DE8` transcribed in
+`pe_libcd.c`; attempt 1 misread four retail details, corrected
+word-by-word (7FCFC always-latch via FD28 delay slot, conditional
+8-arm via FDC0 beq, B010 entry-hoist with B258→B090 restart, B558
+B74C explicit branch + timeout-print a2 = AFDC[[AFD5]]). 10
+`B558_` native tests (latches, arms, both print arg sets, wrapper
+end-to-end returning 1 with `[B580] = [B558]`, no stop on any
+exercised path); oracle extended with the B558 prologue/gate
+spot-words (fail-once proven, exit 1 perturbed / 0 restored). The
+CDS1 stop is NOT flipped: 7FB44 still stops, so no existing test
+moves. src/YAML untouched; count stays 560. Evidence:
+`docs/evidence/pe-b558-cd-controller/REPORT.md`; oracle:
+`pc_port/tools/pe_b558_cd_controller_oracle.py`.
+
 ## Run summary 2026-09-03 — field-frame run (this session)
 
 - Landed: Rung A (FTE1 frame tail, matched 70E54/42FE8, 560 leaves)
   + Rung D (3F3C4 routed), Rung B (PRS1 VRAM→fb present + hook),
-  Rung C (CDS1 selector tail, stop at 7FCFC). Repaired: stale
-  `DISC1_MATCHING_STATUS.md` (verify_us.sh PASS again).
+  Rung C (CDS1 selector tail, stop at 7FCFC), RUNGE analysis,
+  B558 controller chain (stop stays at 7FCFC). Repaired:
+  stale `DISC1_MATCHING_STATUS.md` (verify_us.sh PASS again).
 - Parked with reason: src/ 7E8F4/7FB44 (shared-lui coloring, G6;
-  `parked_blockers.json`); Rung E 7FCFC translation (74w,
-  control-heavy, needs the ~200-word 7B558 controller — analysis
-  in `docs/evidence/pe-runge-7fcfc-stop/REPORT.md`).
-- Final stops: strict
+  `parked_blockers.json`). Next rung: wire 7FB44 → real 7FCFC,
+  then the 583-word 7C564 delivery machine behind the completion
+  callback (RUNGE unblock list).
+- Final stops: strict exit 1
   `FATAL: strict-stubs — first unresolved BOOTSTRAP_RET provider:
-  func_8007FCFC / called from: func_8007FB44`; non-strict
-  `[HOST] stop_reason=unresolved-boundary`, stub summary
-  `implemented: 0, host-adapted: 0, bootstrap-return: 1,
-  unsupported: 0`, `[FB] presents=483 mask=0`, screenshot non-black
-  3912 of 76800 (direct-fb fills; all presents blanked). Zero
-  `HOST_ADAPTED` lines. Field frames NOT reached: the stop lands in
-  boot media streaming, before any New-Game menu.
-- Suites: `Results: 1054 run, 1036 passed, 1 failed, 17 skipped`
+  func_8007FCFC / called from: func_8007FB44`; non-strict exit 0
+  `[STUB:BOOTSTRAP_RET] func_8007FCFC (first invocation)`,
+  `[FB] vsyncs=486 drawsyncs=1445 presents=483 mask=0 main_iters=1`,
+  `[HOST] stop_reason=unresolved-boundary`, screenshot
+  `/tmp/pe-b558-final.ppm` 320x240 non-black 3912 of 76800
+  (identical to the RUNGE baseline; direct-fb fills, all presents
+  blanked). Zero `HOST_ADAPTED` lines. Field frames NOT reached:
+  the stop lands in boot media streaming, before any New-Game
+  menu.
+- Suites: `Results: 1064 run, 1046 passed, 1 failed, 17 skipped`
   (gateless; 1 = pre-existing B54KY env case),
-  `Results: 1054 run, 1054 passed, 0 failed, 0 skipped` (disc).
-  ASan/UBSan CTest with disc: `100% tests passed, 0 tests failed
-  out of 2`, zero diagnostics. Oracles green: otc1, ev1, tok1,
-  drw1, fte1, cds1 (fail-once proven). Leaf count 560.
+  `Results: 1064 run, 1064 passed, 0 failed, 0 skipped` (disc,
+  twice). Normal CTest with disc:
+  `100% tests passed, 0 tests failed out of 2`. Fresh ASan/UBSan
+  CTest with disc: `100% tests passed, 0 tests failed out of 2`,
+  zero diagnostics. Oracles green: otc1, ev1, tok1, drw1, fte1,
+  cds1, b558 (fail-once proven). Leaf count 560.
 - Windowed smoke (`DISPLAY=:10.0`): window opened 640x480, boot ran
   to the 7FCFC frontier, present hook executed without crash; no
   still frame held (strict aborts at the boundary).
 - Commits (all pushed): `93479c0` FTE1, `c8af84e` status-doc,
-  `0cd55ad` PRS1, `0958845` CDS1, plus the Rung-E docs commit.
+  `0cd55ad` PRS1, `0958845` CDS1, Rung-E docs, B558 (this).
 
 ## Main-lane YAML build authority (merged 2026-09-01)
 

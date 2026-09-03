@@ -81,6 +81,7 @@
 #include "host_framebuffer.h"
 #include "game_port.h"
 #include "pe_bootstrap.h"
+#include "pe_gpu.h"
 
 /* B54K-AL: value-only controller location for the proven synchronous
  * CdlSetloc arm.  This is host hardware state, not planted guest state. */
@@ -517,6 +518,445 @@ int func_8007FB44(uint32_t cmd, uint32_t data)
     (void)cmd;
     (void)data;
     return 0;
+}
+
+/* Phase 6E-B558 — func_80073DE8 (4 words, 0x80073DE8..0x80073DF8):
+ * already a matching src/ leaf (src/func_80073DE8.c): 16-bit unsigned
+ * getter for D_800945E6.  Ported as the same guest halfword read. */
+unsigned short func_80073DE8(void)
+{
+    return PE_LoadU16(0x800945E6u);
+}
+
+/* Phase 6E-B558 — func_8007B9EC (53 words, 0x8007B9EC..0x8007BAC0):
+ * CD latch block.  All effects are guest-RAM stores through the
+ * D_8009B27C/B280/B284/B288/B28C/B294 pointer tables (no hardware
+ * registers), so the block is transcribed — except the BA14 poll,
+ * whose loop rewrites the very tag it tests (retail spins until a CD
+ * interrupt, collapsed in-port, releases it).  A set tag is an
+ * honest hardware-wait stop, never a spin.  Callers discard the
+ * result (retail leaves 0x1325 in $v0). */
+void func_8007B9EC(void)
+{
+    PE_StoreU8(PE_LoadU32(0x8009B27Cu), 1u);
+    if ((PE_LoadU8(PE_LoadU32(0x8009B288u)) & 7u) != 0u) {
+        Bootstrap_ReturnVoid("func_8007B9EC_hw_poll", "func_8007B9EC");
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return;
+    }
+    PE_StoreU8(0x8009B296u, 0u);
+    PE_StoreU8(0x8009B295u, PE_LoadU8(0x8009B296u));
+    PE_StoreU8(0x8009B294u, 2u);
+    PE_StoreU8(PE_LoadU32(0x8009B27Cu), 0u);
+    PE_StoreU8(PE_LoadU32(0x8009B288u), 0u);
+    /* $v0 = 0x1325 lands in the jr delay slot. */
+    PE_StoreU32(PE_LoadU32(0x8009B28Cu), 0x1325u);
+}
+
+/* Phase 6E-B558 — func_8007AAB4 (351 words) is the CD acknowledge-poll
+ * worker behind both B178 loops below.  Beyond this rung's box; the
+ * call sites record the boundary and truncate its result to 0 (the
+ * loops then take their s0==0 exits, exactly as retail does on a
+ * zero return). */
+int func_8007AAB4(void)
+{
+    Bootstrap_ReturnVoid("func_8007AAB4", "func_8007B010/8007B558");
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    return 0;
+}
+
+/* Phase 6E-B558 — func_8007B010 (160 words, 0x8007B010..0x8007B290):
+ * CD status-poll prefix.  B044-B08C run once: VSync(-1), then
+ * [A3478] = VsRet+0x3C0 deadline, [A347C] = 0 countdown,
+ * [A3480] = 0x80011BA0.  The B090 poll exits on its first pass
+ * in-port (deadline ahead of a fresh query; countdown far below
+ * 0x3C0000), so the B0DC timeout arm is transcribed but unreachable
+ * without a 960-frame VsRet jump or a 0x3C0000-poll countdown; the
+ * B258 restart returns to the B090 poll, NOT to the entry stores
+ * (retail-exact).  VSync returns void in-port, so retail's consumed
+ * $v0 is the vsync-counter query after each call — the honest host
+ * equivalent of the hardware frame counter. */
+int func_8007B010(uint32_t cmdi, pe_addr_t buf)
+{
+    uint32_t vs;
+
+    /* B044-B08C entry (once, outside the poll loop). */
+    func_80073A44(-1);
+    vs = PE_GPU_VSyncQuery();
+    PE_StoreU32(0x800A3478u, vs + 0x3C0u);
+    PE_StoreU32(0x800A347Cu, 0u);
+    PE_StoreU32(0x800A3480u, 0x80011BA0u);
+    for (;;) {
+        /* B090 VSync poll. */
+        {
+            uint32_t now;
+            int timeout = 0;
+            func_80073A44(-1);
+            now = PE_GPU_VSyncQuery();
+            if ((int32_t)PE_LoadU32(0x800A3478u) < (int32_t)now) {
+                timeout = 1;
+            } else {
+                uint32_t c = PE_LoadU32(0x800A347Cu);
+                PE_StoreU32(0x800A347Cu, c + 1u);
+                if ((int32_t)0x3C0000 < (int32_t)c)
+                    timeout = 1;
+            }
+            if (timeout) {
+                /* B0DC timeout arm (unreachable in-port as analyzed). */
+                uint32_t a0b;
+                uint32_t v0b;
+                Bootstrap_ReturnVoid("func_80073C5C", "func_8007B010");
+                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                a0b = PE_LoadU8(0x8009B294u);
+                v0b = PE_LoadU8(0x8009B295u);
+                Bootstrap_ReturnVoid4Indirect(
+                    "func_80071A74", "func_8007B010", 0x80071A74u,
+                    0x80011B28u, PE_LoadU32(0x800A3480u),
+                    (uintptr_t)PE_LoadU32(0x8009AFDCu +
+                                          (PE_LoadU8(0x8009AFD5u) * 4u)),
+                    (uintptr_t)PE_LoadU32(0x8009B05Cu + (a0b * 4u)));
+                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                (void)v0b;
+                func_8007B9EC();
+                return -1;
+            }
+        }
+        /* B144 normal (v0 = 0); the B148 delay slot forces v0 = -1. */
+        if (func_80073DE8() != 0u) {
+            /* B178 7AAB4 loop.  The stub truncates to 0, so the first
+             * pass takes the B1F0 exit exactly as retail does on a
+             * zero return; the jalr callback arms stay transcribed
+             * below for nonzero returns. */
+            uint32_t s1 = PE_LoadU8(PE_LoadU32(0x8009B27Cu)) & 3u;
+            for (;;) {
+                uint32_t s0 = (uint32_t)func_8007AAB4();
+                pe_addr_t cb;
+                if (s0 == 0u)
+                    break;
+                if ((s0 & 4u) != 0u) {
+                    cb = PE_LoadU32(0x8009AFB8u);
+                    if (cb != 0u) {
+                        Bootstrap_ReturnVoid4Indirect(
+                            "func_8007B010_afb8_callback",
+                            "func_8007B010", cb,
+                            (uintptr_t)PE_LoadU8(0x8009B295u),
+                            0x800A3468u, 0u, 0u);
+                        PE_Port_RequestStop(
+                            PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                        return 0;
+                    }
+                }
+                if ((s0 & 2u) == 0u)
+                    continue;
+                cb = PE_LoadU32(0x8009AFB4u);
+                if (cb == 0u)
+                    continue;
+                Bootstrap_ReturnVoid4Indirect(
+                    "func_8007B010_afb4_callback", "func_8007B010", cb,
+                    (uintptr_t)PE_LoadU8(0x8009B294u), 0x800A3460u,
+                    0u, 0u);
+                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                return 0;
+            }
+            PE_StoreU8(PE_LoadU32(0x8009B27Cu), (uint8_t)s1);
+        }
+        /* B200: a2 = [B294] & 0xFF; B21C iff a2 == 2 or a2 == 5. */
+        {
+            uint32_t a2 = PE_LoadU8(0x8009B294u) & 0xFFu;
+            uint32_t v0 = 5u;
+            if (a2 == 2u || a2 == v0) {
+                PE_StoreU8(0x8009B294u, 2u);
+                if (buf != 0u) {
+                    uint32_t i;
+                    for (i = 0u; i < 8u; i++)
+                        PE_StoreU8(buf + i, PE_LoadU8(0x800A3460u + i));
+                }
+                return (int)a2;
+            }
+            /* B258: restart the poll iff cmd is zero, else return 0. */
+            if (cmdi == 0u)
+                continue;
+            return 0;
+        }
+    }
+}
+
+/* Phase 6E-B558 — func_8007B558 (259 words, 0x8007B558..0x8007B964):
+ * CD command-issue controller.  Register plan: s1 = cmd (a0), s0 =
+ * data (a1), s6 = dst (a2), s2 = mode (a3); setup (when [B294] == 0)
+ * rebinds s5 = &AFDC, s3 = &B05C, s2 = &B294, s4 = s2 + 1.  The live
+ * path ([B294] == 0, 7FCFC args) runs prefix stores + 7B010 + the
+ * B674 dispatch and returns 0 at B70C (s2 = &B294 is never 0); the
+ * B714 wait region only serves a3 == 0 callers with [B294] != 0.
+ * VSync's consumed $v0 is the counter query (see 7B010).  Print and
+ * BIOS sites record + stop and continue exactly as retail orders
+ * them; unknowable continuations (guest-code callbacks) unwind 0. */
+int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
+                  uint32_t mode)
+{
+    uint32_t s1 = cmd;
+    uint32_t s0 = data;
+    uint32_t s6 = dst;
+    uint32_t s2 = mode;
+
+    /* B5B4 print: skipped while [AFC0] < 2 (production is 0). */
+    if ((int32_t)PE_LoadU32(0x8009AFC0u) >= 2) {
+        Bootstrap_ReturnVoid4Indirect(
+            "func_80071A74", "func_8007B558", 0x80071A74u, 0x80011BB4u,
+            PE_LoadU32(0x8009AFDCu + ((cmd & 0xFFu) * 4u)),
+            (uintptr_t)s6, (uintptr_t)s2);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    }
+    /* B5BC table check.  a0 is 0 at B618 on every path (B5D8 delay). */
+    {
+        uint32_t v0 = PE_LoadU32(0x8009B1FCu + ((cmd & 0xFFu) * 4u));
+        if (v0 != 0u && s0 == 0u) {
+            uint32_t v1 = (cmd & 0xFFu) * 4u;
+            if ((int32_t)PE_LoadU32(0x8009AFC0u) <= 0)
+                return -2;
+            Bootstrap_ReturnVoid4Indirect(
+                "func_80071A74", "func_8007B558", 0x80071A74u,
+                0x80011BBCu,
+                PE_LoadU32(0x8009AFDCu + v1),
+                (uintptr_t)s6, (uintptr_t)s2);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return -2;
+        }
+    }
+    /* B618: 7B010(0, 0) for side effects; return ignored.  (Live: the
+     * 7FCFC-issued 7B9EC tail primed [B294] = 2, so 7B010 takes its
+     * B21C arm and returns 2 instead of spinning.) */
+    (void)func_8007B010(0u, 0u);
+    {
+        uint32_t v1 = s1 & 0xFFu;
+        if (v1 == 2u) {
+            uint32_t i;
+            for (i = 0u; i < 4u; i++) {
+                /* B638: copy 4 data bytes to D_8009AFD0. */
+                PE_StoreU8(0x8009AFD0u + i, PE_LoadU8(s0 + i));
+            }
+            v1 = s1 & 0xFFu;
+        }
+        if (v1 == 0xEu)
+            PE_StoreU8(0x8009AFD4u, PE_LoadU8(s0));
+    }
+    /* B674 dispatch. */
+    {
+        uint32_t v1 = s1 & 0xFFu;
+        uint32_t ao = v1 * 4u;
+        uint32_t b294 = 0x8009B294u;
+        uint32_t t;
+        PE_StoreU8(b294, 0u);
+        t = PE_LoadU32(0x8009B0FCu + ao);
+        v1 = 0x8009B0FCu;
+        if (t != 0u)
+            PE_StoreU8(b294 + 1u, 0u);
+        /* B6A0 */
+        {
+            uint32_t b27c = PE_LoadU32(0x8009B27Cu);
+            uint32_t base = v1 + 0x100u;
+            uint32_t ent = ao + base;
+            uint32_t lim;
+            PE_StoreU8(b27c, 0u);
+            lim = PE_LoadU32(ent);
+            ao = 0u;
+            if ((int32_t)lim > 0) {
+                uint32_t b284 = PE_LoadU32(0x8009B284u);
+                uint32_t i = 0u;
+                /* B6D0: latch data bytes through [B284]; trip count
+                 * is the table word (a1 stays constant). */
+                for (;;) {
+                    PE_StoreU8(b284, PE_LoadU8(s0 + i));
+                    lim = PE_LoadU32(ent);
+                    i++;
+                    if (!((int32_t)i < (int32_t)lim))
+                        break;
+                }
+            }
+        }
+        /* B6F8 */
+        {
+            uint32_t b280 = PE_LoadU32(0x8009B280u);
+            PE_StoreU8(0x8009AFD5u, (uint8_t)s1);
+            PE_StoreU8(b280, (uint8_t)s1);
+            if (s2 != 0u)
+                return 0;
+        }
+        /* B714 wait region: a3 == 0 callers only (B70C returned
+         * for the rest).  [A3478]/[A347C]/[A3480] are stored, then
+         * B74C tests lbu [B294]: nonzero skips the setup + B76C
+         * wait straight to the B8EC copy (unreachable past the
+         * B674 zeroing on every path here, kept retail-exact).
+         * The B8DC -> B76C edge makes this an outer hardware-wait
+         * cycle: each pass is one VSync poll, bounded by the B7B8
+         * countdown ([A347C] past 0x3C0000, each pass just counter
+         * bumps in-port).  Retail-exact; terminates. */
+        {
+            uint32_t vs;
+            func_80073A44(-1);
+            vs = PE_GPU_VSyncQuery();
+            PE_StoreU32(0x800A3478u, vs + 0x3C0u);
+            PE_StoreU32(0x800A347Cu, 0u);
+            PE_StoreU32(0x800A3480u, 0x80011BCCu);
+            /* B74C: bnez [B294] -> B8EC (a2 = s6 in the delay slot). */
+            s2 = 0x8009B294u;
+            if (PE_LoadU8(s2) == 0u) {
+            /* B754 setup (s5 = &AFDC, s3 = &B05C, s2 = &B294,
+             * s4 = s2 + 1) is hardcoded at the use sites below. */
+            for (;;) {
+                /* B76C single poll. */
+                uint32_t now;
+                int timeout = 0;
+                func_80073A44(-1);
+                now = PE_GPU_VSyncQuery();
+                if ((int32_t)PE_LoadU32(0x800A3478u) < (int32_t)now) {
+                    timeout = 1;
+                } else {
+                    uint32_t c = PE_LoadU32(0x800A347Cu);
+                    PE_StoreU32(0x800A347Cu, c + 1u);
+                    if ((int32_t)0x3C0000 < (int32_t)c)
+                        timeout = 1;
+                }
+                if (timeout) {
+                    /* B7B8 timeout arm. */
+                    Bootstrap_ReturnVoid("func_80073C5C",
+                                         "func_8007B558");
+                    PE_Port_RequestStop(
+                        PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                    {
+                        uint32_t a0b = PE_LoadU8(s2);
+                        Bootstrap_ReturnVoid4Indirect(
+                            "func_80071A74", "func_8007B558",
+                            0x80071A74u, 0x80011B28u,
+                            PE_LoadU32(0x800A3480u),
+                            (uintptr_t)PE_LoadU32(0x8009AFDCu +
+                                                  (PE_LoadU8(0x8009AFD5u) *
+                                                   4u)),
+                            (uintptr_t)PE_LoadU32(0x8009B05Cu +
+                                                  (a0b * 4u)));
+                        PE_Port_RequestStop(
+                            PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                    }
+                    func_8007B9EC();
+                    return -1;
+                }
+                /* B820 (v0 = 0); the B824 delay slot forces v0 = -1.
+                 * 73DE8() == 0 skips the latch block for B8DC. */
+                if (func_80073DE8() != 0u) {
+                uint32_t s1b =
+                    PE_LoadU8(PE_LoadU32(0x8009B27Cu)) & 3u;
+                for (;;) {
+                    uint32_t s0b = (uint32_t)func_8007AAB4();
+                    pe_addr_t cb;
+                    if (s0b == 0u)
+                        break;
+                    if ((s0b & 4u) != 0u) {
+                        cb = PE_LoadU32(0x8009AFB8u);
+                        if (cb != 0u) {
+                            Bootstrap_ReturnVoid4Indirect(
+                                "func_8007B558_afb8_callback",
+                                "func_8007B558", cb,
+                                (uintptr_t)PE_LoadU8(s2 + 1u),
+                                0x800A3468u, 0u, 0u);
+                            PE_Port_RequestStop(
+                                PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                            return 0;
+                        }
+                    }
+                    if ((s0b & 2u) == 0u)
+                        continue;
+                    cb = PE_LoadU32(0x8009AFB4u);
+                    if (cb == 0u)
+                        continue;
+                    Bootstrap_ReturnVoid4Indirect(
+                        "func_8007B558_afb4_callback",
+                        "func_8007B558", cb,
+                        (uintptr_t)PE_LoadU8(s2), 0x800A3460u,
+                        0u, 0u);
+                    PE_Port_RequestStop(
+                        PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                    return 0;
+                }
+                    PE_StoreU8(PE_LoadU32(0x8009B27Cu), (uint8_t)s1b);
+                }
+                /* B8DC: [B294] == 0 cycles the outer B76C loop. */
+                if (PE_LoadU8(s2) == 0u)
+                    continue;
+                break;
+            }
+            } /* end B74C-zero (B754 setup + B76C wait) */
+            /* B8EC: copy 8 bytes A3460 -> dst unless dst == 0. */
+            if (s6 != 0u) {
+                uint32_t i;
+                for (i = 0u; i < 8u; i++)
+                    PE_StoreU8(s6 + i, PE_LoadU8(0x800A3460u + i));
+            }
+            /* B918: [B294] == 5 -> -1 else 0. */
+            return (PE_LoadU8(0x8009B294u) == 5u) ? -1 : 0;
+        }
+    }
+}
+
+/* Phase 6E-B558 — func_8007FCFC (74 words, 0x8007FCFC..0x8007FE24):
+ * CD issue wrapper.  Runs the real latch block, the byte machine
+ * over D_8009B558/B59C/B598 ([B558] = cmd always — the FD28 store
+ * sits in the beqz delay slot; the 8-arm relatches [B558] = 1 and
+ * zeroes [B560] only when [B58B] != 1; the 7-arm relatches
+ * [B558] = [B58B] = 1 and zeroes [B560]), then issues
+ * func_8007B558(lbu[B558], lw[B560], 0, 1): nonzero controller
+ * return zeroes B59C/B598 and returns 0 (the bnez delay slot zeroes
+ * $v0 first), else latches [B580] = [B558] and returns 1.
+ * Incoming a2/a3 are ignored by retail (a2 is zeroed ahead of the
+ * call). */
+int func_8007FCFC(uint32_t cmd, uint32_t data)
+{
+    uint32_t s0 = cmd;
+    uint32_t s2 = data;
+
+    func_8007B9EC();
+    /* FD28: sb cmd @ [B558] — delay slot, executes on both arms. */
+    PE_StoreU8(0x8009B558u, (uint8_t)s0);
+    if (s2 != 0u) {
+        func_80080950(0x8009B559u, s2);
+        PE_StoreU32(0x8009B560u, 0x8009B559u);
+    } else {
+        PE_StoreU32(0x8009B560u, 0u);
+    }
+    {
+        uint32_t b = PE_LoadU8(0x8009B558u);
+        uint32_t w = PE_LoadU32(0x8009B5A4u + (b * 4u));
+        PE_StoreU32(0x8009B598u, (w != 0u) ? 0x3C0u : 0x1Eu);
+    }
+    {
+        uint32_t b = PE_LoadU8(0x8009B558u);
+        /* FD88: sw zero @ [B59C] — delay slot, executes always. */
+        PE_StoreU32(0x8009B59Cu, 0u);
+        if (b == 7u) {
+            uint32_t t = PE_LoadU8(0x8009B58Bu);
+            if (t == 1u) {
+                PE_StoreU8(0x8009B558u, (uint8_t)t);
+                PE_StoreU32(0x8009B560u, 0u);
+            }
+        } else if (b == 8u) {
+            /* FDC0 beq skips the relatch when [B58B] == 1; the
+             * FDC8 store falls into FDCC ([B560] = 0). */
+            if (PE_LoadU8(0x8009B58Bu) != 1u) {
+                PE_StoreU8(0x8009B558u, 1u);
+                PE_StoreU32(0x8009B560u, 0u);
+            }
+        }
+    }
+    {
+        int r = func_8007B558(PE_LoadU8(0x8009B558u),
+                              PE_LoadU32(0x8009B560u), 0u, 1u);
+        if (r != 0) {
+            PE_StoreU32(0x8009B59Cu, 0u);
+            PE_StoreU32(0x8009B598u, 0u);
+            return 0;
+        }
+        PE_StoreU8(0x8009B580u, PE_LoadU8(0x8009B558u));
+        return 1;
+    }
 }
 
 /* func_8007F0C8 — CdlReadS queue issue (asm/disc1/6F684.s, ~130 words).

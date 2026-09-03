@@ -19581,6 +19581,262 @@ static void test_CDS1_7fb44_negative_flag_passes(void)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+ * Phase 6E-B558 — func_8007FCFC issue wrapper, func_8007B558 command
+ * controller, func_8007B010 status-poll prefix, func_8007B9EC latch
+ * block, func_80073DE8 getter.  Retail-exact transcriptions in
+ * pc_port/platform/pe_libcd.c; the oracle pins the six windows, the
+ * full jal chain and the load-bearing immediates against the
+ * SHA-1-exact EXE.  Scratch lives at 0x801FFE00+, clear of the
+ * 0x801FFF00 CDQ1/CDS1 cells.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+#define B558_S0 0x801FFE00u /* [B27C] target */
+#define B558_S1 0x801FFE10u /* [B280] target */
+#define B558_S2 0x801FFE20u /* [B284] target */
+#define B558_S3 0x801FFE30u /* [B288] target */
+#define B558_S4 0x801FFE40u /* [B28C] target */
+#define B558_D  0x801FFE50u /* command-data bytes */
+#define B558_B  0x801FFE60u /* copy-destination buffer */
+
+/* Plant the six CD pointer-table words at scratch (7B9EC/B010/B558
+ * dereference every one of them on the exercised paths). */
+static void B558_PlantPointers(void)
+{
+    PE_StoreU32(0x8009B27Cu, B558_S0);
+    PE_StoreU32(0x8009B280u, B558_S1);
+    PE_StoreU32(0x8009B284u, B558_S2);
+    PE_StoreU32(0x8009B288u, B558_S3);
+    PE_StoreU32(0x8009B28Cu, B558_S4);
+}
+
+static void test_B558_73de8_getter(void)
+{
+    TEST("B558_73de8_getter");
+    ResetTestState();
+    /* Unsigned halfword: bit15 set must not sign-extend. */
+    PE_StoreU16(0x800945E6u, 0x8001u);
+    ASSERT(func_80073DE8() == 0x8001u, "73DE8 must return the raw halfword");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "getter must not stop");
+    PE_StoreU16(0x800945E6u, 0x1325u);
+    ASSERT(func_80073DE8() == 0x1325u, "73DE8 must track the word");
+    PASS();
+}
+
+static void test_B558_7b9ec_transcribe(void)
+{
+    TEST("B558_7b9ec_transcribe");
+    ResetTestState();
+    B558_PlantPointers();
+    PE_StoreU8(B558_S3, 0u); /* tag bits clear: skip the hw-poll stop */
+    PE_StoreU8(B558_S0, 0xAAu);
+    func_8007B9EC();
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "clear tag must not stop");
+    ASSERT(PE_LoadU8(0x8009B296u) == 0u, "B296 latch differs");
+    ASSERT(PE_LoadU8(0x8009B295u) == 0u, "B295 latch differs");
+    ASSERT(PE_LoadU8(0x8009B294u) == 2u, "B294 latch differs");
+    ASSERT(PE_LoadU8(B558_S0) == 0u, "S0 tag must clear");
+    ASSERT(PE_LoadU8(B558_S3) == 0u, "S3 tag must clear");
+    ASSERT(PE_LoadU32(B558_S4) == 0x1325u, "S4 v0 differs");
+    PASS();
+}
+
+static void test_B558_7aab4_boundary(void)
+{
+    TEST("B558_7aab4_boundary");
+    ResetTestState();
+    ASSERT(func_8007AAB4() == 0, "AAB4 stop must unwind 0");
+    ASSERT(CountOrderLog("func_8007AAB4") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "AAB4 must record the boundary");
+    PASS();
+}
+
+static void test_B558_7b010_status_arms(void)
+{
+    uint32_t q;
+    uint32_t i;
+    TEST("B558_7b010_status_arms");
+    ResetTestState();
+    PE_StoreU16(0x800945E6u, 0u); /* 73DE8 == 0: skip the latch block */
+    PE_StoreU8(0x8009B294u, 2u);
+    q = PE_GPU_VSyncQuery();
+    ASSERT(func_8007B010(9u, 0u) == 2, "B21C arm must return [B294]");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "B21C arm must not stop");
+    ASSERT(PE_LoadU8(0x8009B294u) == 2u, "B21C must store 2");
+    ASSERT(PE_LoadU32(0x800A3478u) == q + 0x3C0u, "A3478 deadline differs");
+    ASSERT(PE_LoadU32(0x800A347Cu) == 1u, "A347C countdown differs");
+    ASSERT(PE_LoadU32(0x800A3480u) == 0x80011BA0u, "A3480 differs");
+    /* buf copy arm: 8 bytes A3460 -> dst, return 5. */
+    for (i = 0u; i < 8u; i++)
+        PE_StoreU8(0x800A3460u + i, (uint8_t)(0xC0u + i));
+    PE_StoreU8(0x8009B294u, 5u);
+    ASSERT(func_8007B010(9u, B558_B) == 5, "copy arm must return 5");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "copy arm must not stop");
+    ASSERT(PE_LoadU8(0x8009B294u) == 2u, "copy arm must store 2, not 5");
+    for (i = 0u; i < 8u; i++)
+        ASSERT(PE_LoadU8(B558_B + i) == (uint8_t)(0xC0u + i),
+               "copy byte differs");
+    /* Neither-2-nor-5 with nonzero cmd returns 0 without spinning. */
+    PE_StoreU8(0x8009B294u, 9u);
+    ASSERT(func_8007B010(9u, 0u) == 0, "B258 nonzero-cmd must return 0");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "B258 arm must not stop");
+    PASS();
+}
+
+static void test_B558_7b558_b5bc_gate(void)
+{
+    TEST("B558_7b558_b5bc_gate");
+    ResetTestState();
+    B558_PlantPointers();
+    PE_StoreU32(0x8009AFC0u, 0u); /* skip the entry print */
+    /* Table set + null data + AFC0 <= 0: blez takes the -2 exit. */
+    PE_StoreU32(0x8009B1FCu + (0x20u * 4u), 7u);
+    ASSERT(func_8007B558(0x20u, 0u, 0u, 0u) == -2,
+           "B5BC gate must return -2");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "B5BC gate must not stop");
+    ASSERT(CountOrderLog("func_80071A74") == 0,
+           "B5BC gate must not print");
+    PASS();
+}
+
+static void test_B558_7b558_print_then_minus2(void)
+{
+    TEST("B558_7b558_print_then_minus2");
+    ResetTestState();
+    B558_PlantPointers();
+    PE_StoreU32(0x8009AFC0u, 5u); /* entry print fires */
+    PE_StoreU32(0x8009B1FCu + (0x20u * 4u), 7u); /* table set */
+    PE_StoreU32(0x8009AFDCu + (0x20u * 4u), 0xA5A5A5A5u);
+    ASSERT(func_8007B558(0x20u, 0u, 0u, 0u) == -2,
+           "print path must still return -2");
+    ASSERT(CountOrderLog("func_80071A74") == 2 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "both prints must record the boundary");
+    ASSERT(g_bootstrap_arg4_call_count == 2, "two indirect calls differ");
+    ASSERT(strcmp(g_bootstrap_arg4_calls[0].symbol, "func_80071A74") == 0 &&
+           g_bootstrap_arg4_calls[0].target == 0x80071A74u &&
+           g_bootstrap_arg4_calls[0].arg0 == 0x80011BB4u &&
+           g_bootstrap_arg4_calls[0].arg1 == 0xA5A5A5A5u &&
+           g_bootstrap_arg4_calls[0].arg2 == 0u &&
+           g_bootstrap_arg4_calls[0].arg3 == 0u,
+           "entry print args differ");
+    ASSERT(strcmp(g_bootstrap_arg4_calls[1].symbol, "func_80071A74") == 0 &&
+           g_bootstrap_arg4_calls[1].arg0 == 0x80011BBCu &&
+           g_bootstrap_arg4_calls[1].arg1 == 0xA5A5A5A5u,
+           "table print args differ");
+    PASS();
+}
+
+static void test_B558_7b558_dispatch_returns_zero(void)
+{
+    TEST("B558_7b558_dispatch_returns_zero");
+    ResetTestState();
+    B558_PlantPointers();
+    PE_StoreU32(0x8009AFC0u, 0u);
+    PE_StoreU16(0x800945E6u, 0u); /* inner B010 skips its latch block */
+    PE_StoreU8(0x8009B294u, 2u); /* inner B010 takes its B21C arm */
+    /* cmd 0x20 dodges the v1 == 2 / v1 == 0xE arms; tables stay 0. */
+    ASSERT(func_8007B558(0x20u, B558_D, 0u, 7u) == 0,
+           "dispatch must return 0 for nonzero mode");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "dispatch must not stop");
+    ASSERT(PE_LoadU8(0x8009AFD5u) == 0x20u, "AFD5 latch differs");
+    ASSERT(PE_LoadU8(B558_S1) == 0x20u, "S1 latch differs");
+    ASSERT(PE_LoadU8(B558_S0) == 0u, "S0 tag must clear");
+    ASSERT(PE_LoadU8(0x8009B294u) == 0u, "B294 must clear");
+    PASS();
+}
+
+static void test_B558_7fcfc_zero_data_wrapper(void)
+{
+    TEST("B558_7fcfc_zero_data_wrapper");
+    ResetTestState();
+    B558_PlantPointers();
+    PE_StoreU8(B558_S3, 0u);
+    PE_StoreU32(0x8009AFC0u, 0u);
+    PE_StoreU16(0x800945E6u, 0u);
+    /* data == 0, cmd 9 (not 7/8): [B558] = 9 always (FD28 delay
+     * slot), [B560] = 0, [B598] = 0x1E (B5A4 table zero). */
+    ASSERT(func_8007FCFC(9u, 0u) == 1, "wrapper must return 1");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "wrapper path must not stop");
+    ASSERT(PE_LoadU8(0x8009B558u) == 9u, "[B558] latch differs");
+    ASSERT(PE_LoadU32(0x8009B560u) == 0u, "[B560] must be 0");
+    ASSERT(PE_LoadU32(0x8009B598u) == 0x1Eu, "[B598] must be 0x1E");
+    ASSERT(PE_LoadU32(0x8009B59Cu) == 0u, "[B59C] must be 0");
+    ASSERT(PE_LoadU8(0x8009B580u) == 9u, "[B580] latch differs");
+    PASS();
+}
+
+static void test_B558_7fcfc_eight_arm_guarded(void)
+{
+    TEST("B558_7fcfc_eight_arm_guarded");
+    ResetTestState();
+    B558_PlantPointers();
+    PE_StoreU8(B558_S3, 0u);
+    PE_StoreU32(0x8009AFC0u, 0u);
+    PE_StoreU16(0x800945E6u, 0u);
+    /* [B58B] == 1: the FDC0 beq skips the relatch — [B558] stays 8. */
+    PE_StoreU8(0x8009B58Bu, 1u);
+    ASSERT(func_8007FCFC(8u, 0u) == 1, "guarded 8-arm must return 1");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "guarded 8-arm must not stop");
+    ASSERT(PE_LoadU8(0x8009B558u) == 8u,
+           "guarded 8-arm must not relatch [B558]");
+    ASSERT(PE_LoadU8(0x8009B580u) == 8u, "[B580] latch differs");
+    /* [B58B] == 0: relatch fires — [B558] = 1, [B560] = 0. */
+    ResetTestState();
+    B558_PlantPointers();
+    PE_StoreU8(B558_S3, 0u);
+    PE_StoreU32(0x8009AFC0u, 0u);
+    PE_StoreU16(0x800945E6u, 0u);
+    PE_StoreU8(0x8009B58Bu, 0u);
+    ASSERT(func_8007FCFC(8u, 0u) == 1, "firing 8-arm must return 1");
+    ASSERT(PE_LoadU8(0x8009B558u) == 1u,
+           "firing 8-arm must relatch [B558] = 1");
+    ASSERT(PE_LoadU32(0x8009B560u) == 0u, "firing 8-arm [B560] differs");
+    ASSERT(PE_LoadU8(0x8009B580u) == 1u, "[B580] latch differs");
+    PASS();
+}
+
+static void test_B558_7fcfc_seven_arm(void)
+{
+    TEST("B558_7fcfc_seven_arm");
+    ResetTestState();
+    B558_PlantPointers();
+    PE_StoreU8(B558_S3, 0u);
+    PE_StoreU32(0x8009AFC0u, 0u);
+    PE_StoreU16(0x800945E6u, 0u);
+    /* [B58B] == 1: 7-arm relatches [B558] = 1, zeroes [B560]. */
+    PE_StoreU8(0x8009B58Bu, 1u);
+    ASSERT(func_8007FCFC(7u, 0u) == 1, "7-arm must return 1");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "7-arm must not stop");
+    ASSERT(PE_LoadU8(0x8009B558u) == 1u,
+           "7-arm must relatch [B558] = 1");
+    ASSERT(PE_LoadU32(0x8009B560u) == 0u, "7-arm [B560] differs");
+    ASSERT(PE_LoadU8(0x8009B580u) == 1u, "[B580] latch differs");
+    /* [B58B] == 0: 7-arm leaves [B558] = 7. */
+    ResetTestState();
+    B558_PlantPointers();
+    PE_StoreU8(B558_S3, 0u);
+    PE_StoreU32(0x8009AFC0u, 0u);
+    PE_StoreU16(0x800945E6u, 0u);
+    PE_StoreU8(0x8009B58Bu, 0u);
+    ASSERT(func_8007FCFC(7u, 0u) == 1, "cold 7-arm must return 1");
+    ASSERT(PE_LoadU8(0x8009B558u) == 7u,
+           "cold 7-arm must keep [B558] = 7");
+    ASSERT(PE_LoadU8(0x8009B580u) == 7u, "[B580] latch differs");
+    PASS();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
  * Phase 6E-B16 — func_8006A9E4 PE.IMG streaming resource load rung
  * (plus its three translated dependencies: func_8006E6A8 issue wrapper,
  * func_8006E7E8 completion poll, func_8006E498 archive lookup)
@@ -35212,6 +35468,18 @@ int main(void)
     test_CDS1_7e8f4_live_head_dispatches();
     test_CDS1_7fb44_early_arms();
     test_CDS1_7fb44_negative_flag_passes();
+
+    /* Phase 6E-B558 — CD controller chain (10 tests). */
+    test_B558_73de8_getter();
+    test_B558_7b9ec_transcribe();
+    test_B558_7aab4_boundary();
+    test_B558_7b010_status_arms();
+    test_B558_7b558_b5bc_gate();
+    test_B558_7b558_print_then_minus2();
+    test_B558_7b558_dispatch_returns_zero();
+    test_B558_7fcfc_zero_data_wrapper();
+    test_B558_7fcfc_eight_arm_guarded();
+    test_B558_7fcfc_seven_arm();
 
     /* Phase 6E-B16: func_8006A9E4 streaming load rung (13 tests) */
     test_6E6A8_sector_forward();
