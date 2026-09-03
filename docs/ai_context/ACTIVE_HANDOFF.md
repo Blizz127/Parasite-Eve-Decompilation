@@ -324,6 +324,17 @@ Next rung must find the -1 writer first (gp-relative analysis),
 then design the E0 pump, then reland. Evidence:
 `docs/evidence/pe-cdq2-delivery-firewall/NOTE.md`.
 
+CDQ2b (2026-09-03, no source changes): retail 7FB44 bytes prove
+lane access is pointer-base + small offset
+(`a2=&B598`: `[B554]=[a2-0x44]`, `[B574]=[a2-0x24]`,
+`[B570]=[a3+0x1C]`, `[B578]=[a3+0x24]` in the jal delay slot)
+— prior scans were structurally blind; `$gp` is dynamic
+(`addiu $gp,$a2,imm`), killing static gp analysis. REFRAME:
+pump first (-1 may be error recovery never taken on the happy
+path); E0 success needs 7C214 invocation cadence with record
+setup, B0's 81314 arm already installs it. Evidence:
+`docs/evidence/pe-cdq2-delivery-firewall/CDQ2b-pump-first.md`.
+
 ## Run summary 2026-09-03 — field-frame run (this session)
 
 - Landed: Rung A (FTE1 frame tail, matched 70E54/42FE8, 560 leaves)
