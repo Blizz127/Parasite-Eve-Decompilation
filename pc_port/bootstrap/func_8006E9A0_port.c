@@ -36,6 +36,8 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "game_port.h"
+#include "stub_registry.h"
 #include <string.h>
 
 #define GA_D_800F34F8  0x800F34F8u
@@ -119,6 +121,19 @@ int func_8006E9A0(int arg)
         func_800752AC(ot, GA_OT_COUNT);         /* ClearOTagR */
         func_80068E24();
         func_80070E54();
+        /* Frame/quit budgets must be able to leave this retail-unbounded
+         * fade; skip-movie also breaks out so New Game can publish. */
+        if (PE_Port_ShouldStop())
+            break;
+        if (PE_Port_SkipMovie() &&
+            (PE_LoadU8(GA_D_800BCFEE) & 3u) != 1u) {
+            /* HOST_ADAPTED: after the first fade tick, force the
+             * 66B60(2) completion so skip-movie is not stuck if a
+             * later tail re-arms CFEE.  Retail would wait it out. */
+            PE_StoreU8(GA_D_800BCFEE, 1u);
+            Stub_Record("func_8006E9A0_skip_movie_fade", "HOST_ADAPTED");
+            break;
+        }
     } while ((PE_LoadU8(GA_D_800BCFEE) & 3u) != 1u);
 
     /* 5. Post-loop */

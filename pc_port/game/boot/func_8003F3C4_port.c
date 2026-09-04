@@ -44,6 +44,7 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "game_port.h"
 
 #define GA_D_800BE9A2 0x800BE9A2u
 #define GA_D_800BCEA8 0x800BCEA8u
@@ -167,7 +168,15 @@ static void pe_3f3c4_ce90_once(void)
     if (PE_LoadU32(GA_D_8009CE90) != 0u)
         return;
     chunk = PE_LoadU32(GA_OVERLAY + 0x18Cu);
-    if (pe_3f3c4_kseg(chunk) && PE_LoadU32(GA_D_800B162C) == 0u)
+    /* The pre-publish exists for callers that plant chunk 2 directly.  It
+     * must not run on a dest buffer whose pointer is valid but whose
+     * contents were never loaded (first New-Game tick before 6B4F8): the
+     * header walk would follow garbage offsets.  overlay+0x944 == 0 with a
+     * nonzero header word at chunk+4 is the "planted, not yet published"
+     * shape; dest_change's own load path publishes for everything else. */
+    if (pe_3f3c4_kseg(chunk) && PE_LoadU32(GA_D_800B162C) == 0u &&
+        PE_LoadU32(GA_OVERLAY + 0x944u) == 0u &&
+        pe_3f3c4_kseg(chunk + (PE_LoadU32(chunk + 4u) & 0x003FFFFFu)))
         func_8006B4F8_12574_publish_cut();
     stream = func_8003F074_371b0_a0();
     if (pe_3f3c4_kseg(stream))
@@ -213,6 +222,8 @@ static void pe_3f3c4_host_pad(void)
 
     if (pe_3f3c4_message_state2())
         raw = 0xBFFFu;
+    else if (PE_Port_HasPadSource())
+        raw = PE_Port_ReadPadRaw();
     else {
         raw = PE_LoadU16(GA_D_800BE9A2);
         if (raw == 0u)
@@ -221,57 +232,172 @@ static void pe_3f3c4_host_pad(void)
     PE_StoreU16(GA_D_800BE9A2, raw);
 }
 
+/*
+ * PE-FT1 — full func_8003F3C4 control flow (retail 0x8003F3C4..0x8003F754,
+ * asm/disc1/2F174.s), replacing the BTL38 live-sites cut.  Register map:
+ * s0 = &D_800B0CD8 (overlay word), s2 = &D_800B0CEA, s1 = &D_800BCFE8,
+ * gp+0x34 = D_8009CDA4 (frame counter), gp+0x430 = D_8009D1A0,
+ * gp+0x454 = D_8009D1C4, gp+0x510 = D_8009D280, gp+0x68 = D_8009CDD8.
+ *
+ * Host adaptations, both pre-existing and documented:
+ *  - 3F074 is the dest-change / 371B0 cut pair, not the whole function.
+ *  - The 3F684 `beq D1C4,D280 -> 3F404` inner loop is one pass per 1220C
+ *    tick: 1220C stores D1C4=D280 before every jal and re-dispatches here
+ *    while D280 is unchanged, so the host main loop (with its stop/frame
+ *    policy) stands in for the retail inner loop.  The exit epilogue at
+ *    3F68C therefore runs when D280 moved during this pass.
+ *  - Host pad before 3EB04 (retail idle raw is 0xFFFF).
+ *  - No mid-tick stop polling: as before, every reached site runs and the
+ *    1220C caller honors a latched stop at its next continuation point.
+ * The overlay message path (3F51C: 122040 / 121A00 / 6E60C) lives in the
+ * disc-loaded field code and is an honest boundary if 6EC08 selects it.
+ */
+#define GA_D_8009CDA4 0x8009CDA4u   /* gp+0x34 frame counter */
+#define GA_D_8009CDD8 0x8009CDD8u
+#define GA_D_8009CDDC 0x8009CDDCu
+#define GA_D_8009D1F4 0x8009D1F4u
+#define GA_D_8009D238 0x8009D238u
+#define GA_D_8009D26C 0x8009D26Cu
+#define GA_D_800B0CEA 0x800B0CEAu
+#define GA_D_800BCFE8 0x800BCFE8u
+#define GA_OT_TABLE   0x800B0E38u   /* s0 + 0x160 */
+
 void func_8003F3C4(void)
 {
     uint32_t bits;
-    uint32_t cddc;
     uint32_t dest0;
     uint32_t d1a0;
+    uint32_t a1;
+    uint32_t a0;
 
     dest0 = D_8009D280;
-    pe_3f3c4_ce90_once();
+    /* 3F3D4 jal 3F074.  Retail order inside 3F074: 6B35C + 6B4F8 dest
+     * load (3F088) precede the 3F244 371B0 site; loading first is also
+     * what makes the first New-Game tick sound, because ce90_once reads
+     * the chunk-2 header the load has just filled. */
     pe_3f3c4_dest_change();
+    pe_3f3c4_ce90_once();
+    /* 3F3E8: `bne D1C4, D280 -> 3F68C`.  1220C stores D1C4 = D280
+     * immediately before the jal, so on entry D1C4 == dest0; the snapshot
+     * is compared instead of the native D_8009D1C4 so tests that drive the
+     * tick directly (stale D1C4) keep the 1220C contract.  A dest that
+     * 3F074 already moved skips straight to the epilogue. */
+    if (dest0 != D_8009D280)
+        goto epilogue;
+
+    /* .L8003F404 */
+    PE_StoreU32(GA_D_8009CDD8, 0u);
+    PE_StoreU8(GA_D_800B0CEA, 0u);            /* jal delay slot */
     pe_3f3c4_host_pad();
     func_8003EB04();
+
+    /* 3F414..3F484: D1A0 &= ~0x30, then the optional 0x10/0x20 select. */
+    a1 = D_8009D1A0;
+    a0 = a1 & ~0x30u;
+    D_8009D1A0 = a0;
+    PE_StoreU32(0x8009D1A0u, a0);
+    if ((PE_LoadU32(0x800B0CD8u) & 0x8000u) == 0u &&
+        PE_LoadU32(GA_D_8009CDA4) != 0u &&
+        (PE_LoadU32(GA_D_8009D1F4) & 0x4u) != 0u &&
+        (PE_LoadU32(GA_D_8009D238) & 0xB0002380u) == 0u) {
+        d1a0 = ((a1 & 1u) != 0u ? (a0 | 0x20u) : (a0 | 0x10u)) ^ 1u;
+        D_8009D1A0 = d1a0;
+        PE_StoreU32(0x8009D1A0u, d1a0);
+    }
+
+    /* .L8003F488: D1A0 bit 0 skips the whole update/draw to VSync(2). */
+    if ((D_8009D1A0 & 1u) != 0u) {
+        func_80073A44(2);                      /* .L8003F5EC */
+        goto after_draw;
+    }
+    /* 3F4A4: per-frame ClearOTagR(OT[CDDC], 0x1000) unless bit 9. */
+    if ((PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u) {
+        uint32_t cddc = PE_LoadU32(GA_D_8009CDDC);
+        func_800752AC(PE_LoadU32(GA_OT_TABLE + cddc * 4u), 0x1000);
+    }
+    /* .L8003F4D0 — D_8009D250 is the native global 3E680 zeroes. */
+    D_8009D250++;
     func_80065400();
     func_80035558_walk_cut();
     bits = PE_LoadU32(0x800B0CD8u);
-    /* 3F500 andi 0x100 / bnez 3F5F4: skip draw, not jr. */
-    if ((bits & 0x100u) == 0u) {
-        /* 3F50C: live 6EC08==0 skips overlay 122040/121A00/6E60C. */
-        (void)func_8006EC08();
-        bits = PE_LoadU32(0x800B0CD8u);
-        if ((bits & 0x200u) != 0u)
-            return;
+    /* 3F500 andi 0x100 / bnez 3F5F4: skip update+draw, not jr. */
+    if ((bits & 0x100u) != 0u)
+        goto after_draw;
+    /* 3F50C: 6EC08 low byte nonzero selects the overlay message path. */
+    if ((func_8006EC08() & 0xFFu) != 0u) {
+        Bootstrap_ReturnVoid("func_80122040", "func_8003F3C4");
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return;
+    }
+    /* .L8003F54C */
+    if ((PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u) {
         func_80068CE0();
         func_80037870();
         func_800661A4();
         func_800E01BC();
         func_800661CC();
         func_80068E24();
-        /* jal 70E54 @ 0x8003F590: the real frame tail (Phase FTE1,
-         * game/boot/func_80070E54_port.c) — DrawSync, 42FE8, VSync,
-         * 74A44(1), PutDispEnv, then PutDrawEnv or DrawOTagEnv through
-         * the 754E4 -> 76C34(76B98) chain walk, and the CDDC flip. */
-        func_80070E54();
-        func_80073A44(2);
-        func_8006A0E8();
     }
-    /* 1220C stores D1C4=D280 before the jal. Tests that call
-     * 3F3C4 directly may have a stale D1C4; dest0 is that entry
-     * snapshot. Exit epilogue only if D280 changed this tick. */
-    if (dest0 != D_8009D280) {
-        func_80074DC0(0);
-        func_80087024();
-        func_8003DFC8(1);
-        func_800696F0();
-        /* 3F6F0: D1A0 = (D1A0|0x40) & ~0x3800; B0CD8 |= 2, &=~0x800. */
-        d1a0 = (D_8009D1A0 | 0x40u) & ~0x3800u;
-        D_8009D1A0 = d1a0;
-        PE_StoreU32(0x8009D1A0u, d1a0);
-        bits = (PE_LoadU32(0x800B0CD8u) | 2u) & ~0x800u;
-        PE_StoreU32(0x800B0CD8u, bits);
-        if ((bits & 0x200u) != 0u)
-            PE_StoreU32(0x800B0CD8u, (bits | 2u) & 0xFFFF7DFFu);
+    /* .L8003F590: the real frame tail (Phase FTE1,
+     * game/boot/func_80070E54_port.c) — DrawSync, 42FE8, VSync,
+     * 74A44(1), PutDispEnv, then PutDrawEnv or DrawOTagEnv through the
+     * 754E4 -> 76C34(76B98) chain walk, and the CDDC flip. */
+    func_80070E54();
+    /* 3F598..3F5E4: first frame only, BCFE8 == 0x00FF00FF / +4 == 0xFF /
+     * +6 bit 6 -> 66C7C(0xF). */
+    if (PE_LoadU32(GA_D_8009CDA4) == 0u &&
+        PE_LoadU32(GA_D_800BCFE8) == 0x00FF00FFu &&
+        (int16_t)PE_LoadU16(GA_D_800BCFE8 + 4u) == 0xFF &&
+        (PE_LoadU8(GA_D_800BCFE8 + 6u) & 0x40u) != 0u) {
+        (void)func_80066C7C(0xFu);
+    }
+
+after_draw:
+    /* .L8003F5F4: pad-combo player-death 6A25C unless bits 9/14. */
+    if ((PE_LoadU32(0x800B0CD8u) & 0x4200u) == 0u &&
+        (PE_LoadU32(GA_D_8009D26C) & 0x0F000006u) == 0x0F000006u) {
+        func_8006A25C();
+    }
+    /* .L8003F62C */
+    if ((PE_LoadU32(0x800B0CD8u) & 0x100u) == 0u)
+        func_8006A0E8();
+    /* .L8003F648: frame counter; D1A0 bit 13 with overlay bit 11 exits. */
+    PE_StoreU32(GA_D_8009CDA4, PE_LoadU32(GA_D_8009CDA4) + 1u);
+    if ((D_8009D1A0 & 0x2000u) != 0u &&
+        (PE_LoadU32(0x800B0CD8u) & 0x800u) != 0u)
+        goto epilogue;
+    /* .L8003F678: retail loops to 3F404 while D1C4 == D280 (host: one
+     * pass per 1220C tick, see header).  Entry D1C4 == dest0. */
+    if (dest0 == D_8009D280)
+        return;
+
+epilogue:
+    /* .L8003F68C */
+    if ((PE_LoadU32(0x800B0CD8u) & 0x200u) != 0u) {
+        RECT rect;
+
+        rect.x = 0;
+        rect.y = 0;
+        rect.w = 0x140;
+        rect.h = 0x1C0;
+        func_80074F44(&rect, 0, 0, 1);         /* ClearImage */
+    }
+    /* .L8003F6CC */
+    func_80074DC0(0);
+    func_80087024();
+    func_8003DFC8(1);
+    func_800696F0();
+    /* 3F6EC..3F738: D1A0 = (D1A0|0x40) & ~0x3800; B0CD8 = (B0CD8|2) &
+     * ~0x800, then if bit 9 was set B0CD8 = (that|2) & 0xFFFF7DFF. */
+    d1a0 = (D_8009D1A0 | 0x40u) & ~0x3800u;
+    D_8009D1A0 = d1a0;
+    PE_StoreU32(0x8009D1A0u, d1a0);
+    {
+        uint32_t v1 = PE_LoadU32(0x800B0CD8u) | 2u;
+        uint32_t v0 = v1 & ~0x800u;
+
+        PE_StoreU32(0x800B0CD8u, v0);
+        if ((v1 & 0x200u) != 0u)
+            PE_StoreU32(0x800B0CD8u, (v0 | 2u) & 0xFFFF7DFFu);
     }
 }

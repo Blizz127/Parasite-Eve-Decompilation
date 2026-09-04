@@ -10,6 +10,7 @@
 #include "host_vram.h"
 #include "host_window.h"
 #include "stub_registry.h"
+#include "pe_bootstrap.h"
 #include "game_port.h"
 #include "pe_sdk.h"
 #include "pe_disc.h"
@@ -41,6 +42,8 @@ static struct {
     int lzcr_oracle_dump;
     int callback_oracle_dump;
     int dma_checkpoint_report;
+    int skip_movie;
+    int boundary_report;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
     .screenshot = NULL, .vram_screenshot = NULL, .vram_raw = NULL,
@@ -52,6 +55,7 @@ static struct {
     .disc_image = NULL, .disc_load_test = 0, .rng_oracle_dump = 0,
     .lzcr_oracle_dump = 0, .callback_oracle_dump = 0,
     .dma_checkpoint_report = 0,
+    .skip_movie = 0, .boundary_report = 0,
 };
 
 /* Phase 6E-PRS1 live-window present hook: blit the newest host pixels and
@@ -87,6 +91,8 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--lzcr-oracle-dump"))     g_opts.lzcr_oracle_dump = 1;
         else if (!strcmp(a, "--callback-oracle-dump")) g_opts.callback_oracle_dump = 1;
         else if (!strcmp(a, "--dma-checkpoint-report")) g_opts.dma_checkpoint_report = 1;
+        else if (!strcmp(a, "--skip-movie"))           g_opts.skip_movie = 1;
+        else if (!strcmp(a, "--boundary-report"))      g_opts.boundary_report = 1;
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--vram-screenshot")) g_opts.vram_screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--vram-raw"))        g_opts.vram_raw = argv[++i];
@@ -383,6 +389,7 @@ int main(int argc, char **argv) {
     PE_Port_RunControlReset();
     PE_Port_SetFrameLimit(g_opts.max_frames);
     PE_Port_SetMainIterationLimit(g_opts.max_main_iterations);
+    PE_Port_SetSkipMovie(g_opts.skip_movie);
     if (g_strict_stubs) Bootstrap_EnableStrict();
 
     /* Phase 6E-A: real Disc 1 image, read-only (never copied or staged). */
@@ -465,6 +472,7 @@ int main(int argc, char **argv) {
         else {
             PE_Port_SetQuitPoll(HostWindow_Poll);
             PE_Port_SetPresentHook(PresentHook_BlitWindow);
+            PE_Port_SetPadSource(HostWindow_PadRaw);
         }
     }
 
@@ -532,6 +540,21 @@ int main(int argc, char **argv) {
             vs, ds, pr, mk, g_port_main_iterations);
     fprintf(stderr, "[HOST] stop_reason=%s\n",
             PE_Port_StopReasonName(PE_Port_GetStopReason()));
+    {
+        PeGpuState gpu;
+
+        PE_GPU_GetState(&gpu);
+        fprintf(stderr,
+                "[GPU] fills=%llu mono_rects=%llu tex_rects=%llu moves=%llu "
+                "draw_mode_writes=%llu last_mono=0x%08X@0x%08X size=0x%08X\n",
+                (unsigned long long)gpu.fill_count,
+                (unsigned long long)gpu.mono_rectangle_count,
+                (unsigned long long)gpu.rectangle_count,
+                (unsigned long long)gpu.move_count,
+                (unsigned long long)gpu.draw_mode_count,
+                gpu.mono_rectangle_command, gpu.mono_rectangle_position,
+                gpu.mono_rectangle_size);
+    }
     if (g_opts.dma_checkpoint_report) {
         PEPortDmaIrqCheckpointTrace checkpoint;
 
@@ -544,6 +567,33 @@ int main(int argc, char **argv) {
                 (unsigned long long)checkpoint.service_calls,
                 (unsigned long long)checkpoint.last_captured_token,
                 (unsigned long long)checkpoint.last_serviced_token);
+    }
+
+    if (g_opts.boundary_report) {
+        /* Recorded boundary/indirect-call arguments, oldest first.  This is
+         * the census view of exactly which guest shape a named cut refused
+         * (e.g. the GP0 word a DrawOTag node carried), so frontier work can
+         * be scoped from evidence rather than guessed. */
+        fprintf(stderr, "[BOUNDARY_REPORT] %d recorded arg4 call(s)%s\n",
+                g_bootstrap_arg4_call_count,
+                g_bootstrap_arg4_call_count >= BOOTSTRAP_MAX_ARG4_CALLS
+                    ? " (log full; later calls dropped)" : "");
+        for (int i = 0; i < g_bootstrap_arg4_call_count; i++) {
+            const BootstrapArgCall4 *c = &g_bootstrap_arg4_calls[i];
+            fprintf(stderr,
+                    "[BOUNDARY_REPORT] %3d %s <- %s target=0x%08lX "
+                    "a0=0x%08lX a1=0x%08lX a2=0x%08lX a3=0x%08lX",
+                    i, c->symbol, c->caller,
+                    (unsigned long)c->target, (unsigned long)c->arg0,
+                    (unsigned long)c->arg1, (unsigned long)c->arg2,
+                    (unsigned long)c->arg3);
+            if (c->payload_size) {
+                fprintf(stderr, " payload=");
+                for (uint32_t k = 0; k < c->payload_size; k++)
+                    fprintf(stderr, "%02X", c->payload[k]);
+            }
+            fprintf(stderr, "\n");
+        }
     }
 
     TraceEvent("shutdown_end"); TraceClose();

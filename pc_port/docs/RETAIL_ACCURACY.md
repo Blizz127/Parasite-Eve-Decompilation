@@ -66,6 +66,18 @@ translated function may regress to a stub.
   synchronous-delivery precedent). E0 takes got_frame on the first poll,
   so cadence beyond that is unobservable; the give-up path behind it is
   byte-identical retail logic.
+- **Skip-movie New Game** (`func_801909B4_port.c`, `--skip-movie`):
+  after the overlay prefix, return selector 1 so `func_8006E9A0(1)`
+  publishes `0xA80830C8` without running the 480-frame logo, `FMV001`,
+  or the untranslated title menu. Opt-in only; default boot still
+  stops at the movie decoder. Not a claim that those scenes ran.
+  `func_8006E9A0`'s fade poll honors the host stop and, under
+  `--skip-movie` only, forces `CFEE=1` after the first tick so a
+  re-armed fade cannot trap the New-Game publish.
+- **Pad source** (`PE_Port_SetPadSource`): windowed `port_main` installs
+  `HostWindow_PadRaw` so the field tick writes active-low Sony bits to
+  `D_800BE9A2` before `func_8003EB04`. Stands in for libpad/`StartPAD`;
+  the mapper itself is still the retail digital cut.
 
 ## Blocked (needs inputs absent from a clean checkout)
 

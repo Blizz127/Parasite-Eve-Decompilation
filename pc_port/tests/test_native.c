@@ -14,6 +14,7 @@
 #include "game_port.h"
 #include "stub_registry.h"
 #include "pe_disc.h"
+#include "pe_guest_image.h"
 #include "pe_spu_dma.h"
 #include "pe_gpu.h"
 #include "pe_cdreg.h"
@@ -396,6 +397,21 @@ static void test_B49_bounded_runs_repeat(void)
                "repeat stop reason changed");
     }
     PASS();
+}
+
+/* PE-FT1: func_8003F3C4 performs retail's per-frame
+ * ClearOTagR(OT[CDDC], 0x1000) at 0x8003F4C8, which dispatches through
+ * jtb[11].  PE_RamReset zeros the static retail jtb pointer, so tests that
+ * drive the field tick plant the OTC1 production arm exactly as the 6E9A0
+ * tests do; without it the tick honestly stops at the jtb boundary. */
+static void FT1_SeedOtcJtb(void)
+{
+    PE_StoreU32(0x80095744u, 0x80095704u);
+    PE_StoreU32(0x80095730u, 0x80076354u); /* jtb[11]: OTC1 worker */
+    /* OT[0]/OT[1] at the retail arena addresses 6E9A0 publishes
+     * (0x80120D08 + 0x1C98 / + 0x5C98), so the clear has a real table. */
+    PE_StoreU32(0x800B0E38u, 0x801229A0u);
+    PE_StoreU32(0x800B0E3Cu, 0x801269A0u);
 }
 
 static void B54KR_SeedGpuStatic(void)
@@ -10279,6 +10295,7 @@ static void test_BTL38_68E24_cfee6_expires(void) {
 static void test_BTL38_3F3C4_fade_and_mailbox(void) {
     TEST("BTL38_3F3C4_fade_and_mailbox");
     ResetTestState();
+    FT1_SeedOtcJtb();
     pe_btl38_plant_fade_slot();
     PE_StoreU32(0x800B0CD8u, 0x40002000u);
     PE_StoreU8(0x800BCFEEu, 6u);
@@ -11179,6 +11196,7 @@ static void test_BTL59_17A50_and_3F3C4_pad(void) {
     ASSERT(PE_LoadU32(dest) == 0x10u, "bit 4 not bit 2");
 
     ResetTestState();
+    FT1_SeedOtcJtb();
     HostFB_Init();
     func_8003E974();
     D_8009D1A0 = 0u;
@@ -11946,6 +11964,7 @@ static void test_BTL76_67a78_67294_outs(void) {
 static void test_BTL77_3F3C4_661cc_offset(void) {
     TEST("BTL77_3F3C4_661cc_offset");
     ResetTestState();
+    FT1_SeedOtcJtb();
     btl69_plant_rsin0();
     PE_StoreU32(0x800B0CD8u, 0x40000000u);
     PE_StoreU16(0x800BCF94u, 1u);
@@ -11965,6 +11984,7 @@ static void test_BTL78_3F3C4_70e54_prefix(void) {
 
     TEST("BTL78_3F3C4_70e54_prefix");
     ResetTestState();
+    FT1_SeedOtcJtb();
     HostFB_Init();
     btl69_plant_rsin0();
     PE_StoreU32(0x800B0CD8u, 0x40000000u);
@@ -11997,6 +12017,7 @@ static void test_BTL80_70e54_putdispenv(void) {
 
     TEST("BTL80_70e54_putdispenv");
     ResetTestState();
+    FT1_SeedOtcJtb();
     HostFB_Init();
     btl69_plant_rsin0();
     PE_StoreU32(0x800B0CD8u, 0x40000000u);
@@ -12042,6 +12063,7 @@ extern void func_800696F0(void);
 static void test_BTL83_70e54_cddc_flip(void) {
     TEST("BTL83_70e54_cddc_flip");
     ResetTestState();
+    FT1_SeedOtcJtb();
     HostFB_Init();
     btl69_plant_rsin0();
     PE_StoreU32(0x800B0CD8u, 0x40000000u);
@@ -12076,6 +12098,7 @@ static void test_BTL85_3dfc8_dest_change(void) {
 
     TEST("BTL85_3dfc8_dest_change");
     ResetTestState();
+    FT1_SeedOtcJtb();
     HostFB_Init();
     btl69_plant_rsin0();
     PE_StoreU32(0x800B0CD8u, 0x40000000u);
@@ -12864,6 +12887,7 @@ static void test_BTL102_3f3c4_bit100_stable_skips_dest_change(void)
 {
     TEST("BTL102_3f3c4_bit100_stable_skips_dest_change");
     ResetTestState();
+    FT1_SeedOtcJtb();
     HostFB_Init();
     btl69_plant_rsin0();
     D_8009D1A0 = 0x4000u;
@@ -12886,6 +12910,7 @@ static void test_BTL102_death_tick_3f3c4_dest_change(void)
 
     TEST("BTL102_death_tick_3f3c4_dest_change");
     ResetTestState();
+    FT1_SeedOtcJtb();
     HostFB_Init();
     btl69_plant_rsin0();
     PE_StoreU32(aya, rec);
@@ -34248,6 +34273,68 @@ static void test_FLD1_6B4F8_m0431i_load(void) {
     PASS();
 }
 
+static uint16_t SKIP1_PadRight(void)
+{
+    return 0xFFDFu; /* active-low Sony RIGHT */
+}
+
+static void test_SKIP1_909B4_returns_new_game(void)
+{
+    TEST("SKIP1_909B4_returns_new_game");
+    ResetTestState();
+    HostFB_Init();
+    B54KQ_SeedOverlayPrefix(0x13u);
+    PE_Port_SetSkipMovie(1);
+    ASSERT(func_801909B4() == 1, "skip selector");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE, "no boundary");
+    ASSERT(CountOrderLog("func_801909B4_skip_movie_new_game") == 1,
+           "HOST_ADAPTED skip recorded");
+    ASSERT(CountOrderLog("func_80192CE8") == 0, "movie not entered");
+    PASS();
+}
+
+static void test_PAD1_source_writes_BE9A2(void)
+{
+    TEST("PAD1_source_writes_BE9A2");
+    ResetTestState();
+    HostFB_Init();
+    func_8003E974();
+    D_8009D1A0 = 0u;
+    PE_StoreU32(0x800B0CD8u, 0x40000000u);
+    PE_Port_SetPadSource(SKIP1_PadRight);
+    func_8003F3C4();
+    ASSERT(PE_LoadU16(0x800BE9A2u) == 0xFFDFu, "pad source raw");
+    ASSERT(PE_LoadU32(0x8009D26C) != 0u, "3EB04 mapped a held bit");
+    PASS();
+}
+
+static void test_SKIP1_1220C_publishes_new_game(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    pe_addr_t dest2;
+
+    TEST_RETAIL_DISC1("SKIP1_1220C_publishes_new_game");
+    ResetTestState();
+    HostFB_Init();
+    err[0] = 0;
+    disc = BTL6_OpenDisc1(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+    PE_Disc_SetActive(disc);
+    ASSERT(PE_GuestImage_LoadExe(disc, err, sizeof(err)) == 0, err);
+    PE_Port_SetSkipMovie(1);
+    PE_Port_SetFrameLimit(12);
+    func_8001220C();
+    ASSERT(D_8009D280 == 0xA80830C8u, "New Game token");
+    dest2 = PE_LoadU32(0x800B0CD8u + 0x18Cu);
+    ASSERT(dest2 >= 0x80000000u && dest2 < 0x80200000u - 8u,
+           "chunk2 dest");
+    ASSERT(PE_LoadU32(dest2) == 0x8A1Cu, "M0431I chunk2");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
 static void test_TOK1_m0353i_arg3_token(void)
 {
     pe_addr_t dest = 0x80121000u;
@@ -36221,6 +36308,9 @@ int main(void)
 
     /* Phase 6E-FLD1 — M0431I field-entry chunk load (1 test, retail disc). */
     test_FLD1_6B4F8_m0431i_load();
+    test_SKIP1_909B4_returns_new_game();
+    test_SKIP1_1220C_publishes_new_game();
+    test_PAD1_source_writes_BE9A2();
 
     /* Phase 6E-DRW1 — DrawOTag chain walk (5 tests). */
     test_DRW1_drawotag_empty_chain();

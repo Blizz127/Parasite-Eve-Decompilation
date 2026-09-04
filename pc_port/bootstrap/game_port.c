@@ -32,10 +32,41 @@ static PEPortDmaIrqCheckpointTrace g_port_dma_irq_checkpoint_trace;
  * specific callee just requested a stop.  Callers that need that must
  * compare this epoch across the call instead. */
 static unsigned g_port_stop_epoch;
+static int g_port_skip_movie = 0;
+static PEPortPadSource g_port_pad_source = NULL;
+
+void PE_Port_SetSkipMovie(int enabled)
+{
+    g_port_skip_movie = enabled != 0;
+}
+
+int PE_Port_SkipMovie(void)
+{
+    return g_port_skip_movie;
+}
+
+void PE_Port_SetPadSource(PEPortPadSource source)
+{
+    g_port_pad_source = source;
+}
+
+int PE_Port_HasPadSource(void)
+{
+    return g_port_pad_source != NULL;
+}
+
+uint16_t PE_Port_ReadPadRaw(void)
+{
+    if (g_port_pad_source == NULL)
+        return 0xFFFFu;
+    return g_port_pad_source();
+}
 
 void PE_Port_RunControlReset(void)
 {
     g_port_stop_epoch = 0;
+    g_port_skip_movie = 0;
+    g_port_pad_source = NULL;
     g_port_stop_requested = 0;
     g_port_main_iterations = 0;
     g_port_frame_limit = 0;

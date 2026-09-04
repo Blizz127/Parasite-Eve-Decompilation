@@ -68,6 +68,27 @@ PEPortDmaIrqCheckpointResult PE_Port_ServiceDmaIrqCheckpoint(void);
 void PE_Port_DmaIrqCheckpointTraceReset(void);
 void PE_Port_GetDmaIrqCheckpointTrace(PEPortDmaIrqCheckpointTrace *out);
 
+/* Host dev entry (plan: skip the opening FMV to reach the field first).
+ * When enabled, func_801909B4 does NOT invoke the movie driver
+ * func_80192CE8(1); instead it returns the New-Game selector so the real
+ * func_8006E9A0(1) publishes the field token 0xA80830C8 and the main loop
+ * dispatches into the field tick.  This bypasses the untranslated title
+ * menu and the STR/MDEC movie pipeline; it is a documented HOST_ADAPTED
+ * shortcut, never a claim that the retail movie/title ran. */
+void PE_Port_SetSkipMovie(int enabled);
+int  PE_Port_SkipMovie(void);
+
+/* Host pad fill for D_800BE9A2 (active-low Sony bits).  Retail writes
+ * this from libpad/StartPAD at VSync; the port has no SIO, so a source
+ * installed here is polled at the field-tick pad site (before 3EB04).
+ * Windowed runs install HostWindow_PadRaw; tests/headless may install a
+ * scripted source.  NULL source leaves guest RAM unchanged except the
+ * existing idle-zero → 0xFFFF normalize. */
+typedef uint16_t (*PEPortPadSource)(void);
+void PE_Port_SetPadSource(PEPortPadSource source);
+int  PE_Port_HasPadSource(void);
+uint16_t PE_Port_ReadPadRaw(void);
+
 /* Trace helper available to game code */
 void Trace_Direct(const char *event);
 

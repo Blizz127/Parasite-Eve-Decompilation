@@ -3,6 +3,20 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-SKIP1 — skip-movie New Game → M0431I (2026-09-03)
+
+`--skip-movie` now skips the 480-frame logo, `FMV001`, and the
+untranslated title tail: `func_801909B4` returns 1, `func_8006E9A0(1)`
+publishes `0xA80830C8`, and the first field tick's dest-change loads
+M0431I (chunk2 head `0x8A1C` proven by `SKIP1_1220C_publishes_new_game`).
+The 6E9A0 fade poll honors the host stop and, under skip-movie only,
+forces `CFEE=1` after the first tick. Windowed runs write
+`HostWindow_PadRaw` into `D_800BE9A2` before `3EB04`. Default boot
+(no flag) is unchanged (frontier still `func_8010C89C`). Suite
+1073/1073 with disc; 1054/1/18 gateless (1 = B54KY env). Evidence:
+`docs/evidence/pe-skip1-new-game/REPORT.md`. Next: field spawn / walk
+presentation in M0431I. FMV/title deferred until Aya is playable.
+
 ## PE-MV1d — func_8010C89C VLC decoder transcribed; frontier held (2026-09-03)
 
 `func_8010C89C` (overlay `0x8010C89C..0x8010CBF8`, ~225w, resumable

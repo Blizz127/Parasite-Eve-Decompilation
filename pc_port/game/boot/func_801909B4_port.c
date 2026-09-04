@@ -12,6 +12,7 @@
  */
 #include "psx_compat.h"
 #include "game_port.h"
+#include "stub_registry.h"
 
 #include <string.h>
 
@@ -109,6 +110,19 @@ int func_801909B4(void)
     func_80074DC0(0);
     func_80073A44(0);
     func_80073A44(0);
+
+    if (PE_Port_SkipMovie()) {
+        /* HOST_ADAPTED dev entry (--skip-movie): skip the 480-frame logo
+         * fade, the opening FMV (func_80192CE8), and the untranslated
+         * title/menu tail.  Return the New-Game selector so
+         * func_8006E9A0(1) publishes 0xA80830C8 and the next main
+         * dispatch is the field tick.  Retail only reaches that after
+         * FMV001 + the title Confirm; none of those ran here. */
+        (void)saved_bit;
+        Stub_Record("func_801909B4_skip_movie_new_game", "HOST_ADAPTED");
+        Trace_Direct("skip_movie_new_game_selector");
+        return 1;
+    }
 
     if (PE_LoadU32(0x8009D1BCu) == 0u) {
         PE_StoreU32(0x8009D1BCu, 1u);
