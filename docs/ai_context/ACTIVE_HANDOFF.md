@@ -37,6 +37,9 @@ missing `74520` body.
 2. `Trace_Direct("func_80192934_enter")` before `BFA0`.
 3. Fold dig REPORT. No admit-gate / cursor ±32. No Day2-complete claim.
 
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**.
+Tip on `cursor/74520-dma-indirect-6f51` (PR #41 → movie tip / PR #38).
+
 **Next boot→Day2:** Matt retest — expect STOP rename to **`func_80191DC8`**
 (and `func_80192934_enter` in TRACE). Prefer Decomp title-overlay leaf for
 `[0x80191DC8,0x80191FB8)` (124 words, ends at `91FB8`). Do **not** blind-alias
