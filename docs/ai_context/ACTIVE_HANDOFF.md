@@ -3,6 +3,25 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158: B0CD0 cleared without BFRD after 158x (2026-09-09)
+
+Live Disc1 on tip **`331c945`** (DAY2-158x) **FAILED** — same ~319×
+`func_80192934_enter` silent hang; no `CD_B0CD0_dma1_starved` /
+`CD_B0CD0_retry_unresolved`.
+
+158x idle-DMA1 catch-up was the right direction (DMA1 already idle so
+`91DC8` never BFRD'd). Residual: catch-up gated `7C564` on A801C, then
+**always cleared B0CD0**, so a skipped/failed BFRD left `sector_pending`
+with the latch gone; pe_cdreg hold → silent hang. `retry_unresolved` checked
+`b0cd0 && pending` *after* the clear → dead.
+
+**Fix (dig/b0cd0-no-bfrd):** always call `func_8007C564`; clear B0CD0 only
+when pending is gone; else STOP `CD_B0CD0_retry_unresolved`. Evidence:
+`docs/evidence/pe-day2-158-b0cd0-no-bfrd/REPORT.md`.
+
+Next boot→Day2: Matt Disc1 — BFRD progress past ~319, or named
+`CD_B0CD0_retry_unresolved` (then dig that early-out). Linux-first.
+
 ## DAY2-158x: B0CD0 idle-DMA1 Pump catch-up (2026-09-09)
 
 Live Disc1 on tip **`733a8dc`** (DAY2-158w) **FAILED retest** — same hang as 158v:

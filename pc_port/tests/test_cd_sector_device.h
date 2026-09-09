@@ -171,8 +171,9 @@ static void test_DAY2_cd_b0cd0_pump_stall(void)
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }
 
-/* DAY2-158x: when B0CD0 owns sector_pending but DMA1 is already idle,
- * Pump must catch up with 7C564 (91DC8 miss / B0DBB gate) — not hang. */
+/* DAY2-158 dig/b0cd0-no-bfrd (post-158x): idle catch-up must not clear B0CD0
+ * without BFRD. B89F4==1 makes 7C564 return before BFRD — Pump must STOP
+ * CD_B0CD0_retry_unresolved (158x cleared the latch and silent-hung). */
 static void test_DAY2_cd_b0cd0_pump_retry_idle_dma1(void)
 {
     TEST("DAY2_cd_b0cd0_pump_retry_idle_dma1");
@@ -193,12 +194,16 @@ static void test_DAY2_cd_b0cd0_pump_retry_idle_dma1(void)
     PE_MDEC_ClearDmaChannels();
     PE_MDEC_GetState(&mdec);
     ASSERT(!(mdec.dma1_chcr&0x01000000u),"dma1 must be idle for catch-up arm");
-    /* Deferred BFRD latch; DMA1 idle ⇒ 158x Pump catch-up (no silent hang). */
+    PE_StoreU32(0x800B89F4u,1u); /* 7C564 top early-out — no BFRD */
+    PE_StoreU32(0x800A801Cu,0u); /* 158x skipped 7C564 when A801C clear */
     PE_StoreU16(0x800B0CD0u,1u);
     HostFB_PumpCdProgress();
-    ASSERT(!PE_Port_ShouldStop(),"idle-dma1 B0CD0 catch-up must not STOP");
     ASSERT(CountOrderLog("CD_B0CD0_pump_retry")==1,"expected pump_retry TRACE");
-    ASSERT((int16_t)PE_LoadU16(0x800B0CD0u)==0,"catch-up clears B0CD0");
+    ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_B0CD0_retry_unresolved")==1,
+           "failed BFRD must named-STOP, not clear B0CD0 and silent-hang");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending && (int16_t)PE_LoadU16(0x800B0CD0u),
+           "pending+B0CD0 retained until a real BFRD");
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }
 
