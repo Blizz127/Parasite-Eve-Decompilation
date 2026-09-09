@@ -12,6 +12,7 @@ void func_80121A00(void);
 void func_80121004(int buffer, int wide);
 int func_80121270(pe_addr_t state);
 void func_801214D4(void);
+void func_80191DC8(void); /* title DecDCTout DMA1 callback */
 int func_80122040(void);
 void func_80122354(void);
 int func_80121C04(int id);
