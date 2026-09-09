@@ -215,6 +215,9 @@ after_frame:
         if (s3 == 0)
             return 1;
 
+        /* Dig aid: sticky D0DBD from first 91B64 was ending FMV after the
+         * first media-loop frame (pe-day2-158-909b4-early-title-cut). */
+        Trace_Direct("func_80192934_dbd_abort");
         PE_StoreU8(0x800B0DBAu, (uint8_t)(PE_LoadU8(0x800B0DBAu) - 1u));
         func_8010C0D8(0u);
         if (PE_Port_ShouldStop())
