@@ -1,7 +1,25 @@
 # ACTIVE HANDOFF
 
+## PE-92CE8/92934 — media loop + live C89C on Stage-1b (2026-09-09)
+
+Integrated parked post-E08 `func_80192CE8` media loop and `func_80192934`
+body onto PR38 tip `5754473` (DAY2-158f). `92934` got-frame now calls live
+`func_8010C89C` + `func_8007C394` behind the same Stage-1b pad /
+`TakeStreamFrameReady` gate as `924F8`. Evidence:
+`docs/evidence/pe-92ce8-post-e08/`, `docs/evidence/pe-92934-media-worker/`.
+Branch: `cursor/92ce8-92934-media-loop`.
+
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
+
+## PE-92CE8/92934 — media loop + live C89C on Stage-1b (2026-09-09)
+
+Integrated parked post-E08 `func_80192CE8` media loop and `func_80192934`
+body onto PR38 tip `5754473` (DAY2-158f). `92934` got-frame now calls live
+`func_8010C89C` + `func_8007C394` behind the same Stage-1b pad /
+`TakeStreamFrameReady` gate as `924F8`. Evidence:
+`docs/evidence/pe-92ce8-post-e08/`, `docs/evidence/pe-92934-media-worker/`.
+Branch: `cursor/92ce8-92934-media-loop`.
 
 ## ACTIVE OBJECTIVE: decompile all Day 1 and Day 2; implement/fix Day 1
 
