@@ -73,6 +73,36 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158f: last-chunk StreamFrameReady so live C89C can run (2026-09-09)
+
+Tip was already past `5223ecd` (`7a41ea1` DAY2-158d/e). This rung fixes
+the Stage-1b **admission** bug that still blocked live C89C:
+
+Demuxed bodies at `s1` are **VLC bitstreams**. STR magic `0x80010160`
+lives in the 32-byte sector header, not at the published payload cursor.
+Admitting on magic-at-body was wrong; real last-chunk frames would still
+hit `Stage1b_pad_terminated_frame`.
+
+Fix: when E0 promotes because `D_800B89F4==1` (retail last video chunk),
+latch `PE_Port_NoteStreamFrameReady`. `got_frame` runs C89C on immediate
+pad **or** that latch. Fixture `ArmStreamPromote` alone does **not** latch
+— non-pad synthetic bodies still Stage-1b-stop (MV1d gate preserved).
+**No `a1` clamp.**
+
+Also refreshed stale `docs/generated/NATIVE_PORT_STATUS.md` (CI
+`native-progress`).
+
+Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad,
+B54K_C89C_last_chunk_frame_ready, MV1D_c89c_*, DAY2_movie_player.
+
+**Next boot→Day2:** Matt retest tip past Stage-1b with live last-chunk
+delivery; then `func_80192CE8` media-loop remainder / multi-sector STR.
+
+Claims: last-chunk promote admits live C89C; wrong STR-magic-at-body
+gate removed; MV1d non-pad fixture gate kept. Non-claims: Day2 complete;
+Stage-1b done on live Disc1 until Matt retests; retail STR golden;
+published runtime 128 unchanged. Linux-first.
+
 ## DAY2-158e: movie_player autonomous first frame (2026-09-09)
 
 `DAY2_movie_player` enabled-device path was red at `movie_retry_wait` /

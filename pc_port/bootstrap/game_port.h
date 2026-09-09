@@ -102,6 +102,15 @@ uint16_t PE_Port_ReadPadRaw(void);
 void PE_Port_ArmStreamPromote(void);
 int  PE_Port_ConsumeStreamPromote(void);
 
+/* Stage-1b complete-frame latch for got_frame C89C admission.
+ * Set when E0 promotes because D_800B89F4 was set (retail last video
+ * chunk), or by tests that simulate that last-chunk publication.
+ * Demuxed bodies at s1 are VLC bitstreams — they do NOT start with STR
+ * magic 0x80010160 (that lives in the 32-byte sector header). Pad-exit
+ * probes still cover synthetic plants; this latch covers live frames. */
+void PE_Port_NoteStreamFrameReady(void);
+int  PE_Port_TakeStreamFrameReady(void);
+
 /* Trace helper available to game code */
 void Trace_Direct(const char *event);
 

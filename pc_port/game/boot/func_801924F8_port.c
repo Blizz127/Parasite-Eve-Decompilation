@@ -15,13 +15,15 @@
 /* Stage-1b / MV1d readiness: admit a stream cursor that is safe for
  * live C89C without clamping a1.
  *
- * 1) Immediate pad-exit header (CDQ2d synthetic plant / MV1D_PAD):
- *    count-3 < 0 → t5==0, bits>>22 == 0x1FF; or PAD3FF bits>>22 == 0x3FF.
- * 2) Retail STR video-chunk magic 0x80010160 at the assembled body
- *    (DAY2 complete-frame / 7C564 last-chunk publication). Real frames
- *    pad-exit after content; the magic marks a demuxed MDEC-ready body.
+ * Immediate pad-exit header (CDQ2d synthetic plant / MV1D_PAD):
+ * count-3 < 0 → t5==0, bits>>22 == 0x1FF; or PAD3FF bits>>22 == 0x3FF.
+ *
+ * Live last-chunk frames are admitted separately via
+ * PE_Port_TakeStreamFrameReady (set when E0 promotes on B89F4). Demuxed
+ * bodies at s1 are VLC bitstreams — STR magic 0x80010160 lives in the
+ * 32-byte sector header, not at the published payload cursor.
  */
-static int c89c_stream_is_ready(uint32_t stream)
+static int c89c_stream_is_immediate_pad(uint32_t stream)
 {
     uint16_t count_hw;
     uint16_t bits_hi;
@@ -32,8 +34,6 @@ static int c89c_stream_is_ready(uint32_t stream)
 
     if (stream == 0u || !PE_RangeIsRam((pe_addr_t)stream, 12u))
         return 0;
-    if (PE_LoadU32((pe_addr_t)stream) == 0x80010160u)
-        return 1;
     count_hw = PE_LoadU16((pe_addr_t)(stream + 6u));
     bits_hi = PE_LoadU16((pe_addr_t)(stream + 8u));
     bits_lo = PE_LoadU16((pe_addr_t)(stream + 10u));
@@ -165,12 +165,19 @@ e0_poll:
              * and tripped MV1d. Fixtures arm PE_Port_ArmStreamPromote
              * because 7A214 clears B89F4 after the plant. Live Disc1
              * never arms that — HostFB_VSync(-1) advances CD/DMA until
-             * 7C564 sets B89F4. */
-            if (PE_LoadU32(0x800B89F4u) == 1u ||
-                PE_Port_ConsumeStreamPromote())
-                func_8007C214();
-            else
-                HostFB_VSync(-1);
+             * 7C564 sets B89F4. A B89F4 promote also latches
+             * StreamFrameReady so got_frame may run C89C on the demuxed
+             * VLC body (not an immediate pad). */
+            {
+                int last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
+                if (last_chunk || PE_Port_ConsumeStreamPromote()) {
+                    if (last_chunk)
+                        PE_Port_NoteStreamFrameReady();
+                    func_8007C214();
+                } else {
+                    HostFB_VSync(-1);
+                }
+            }
             s1 = func_80191B64(0x801D1464u);
             left = s0 - 1u;
             s0 = left;
@@ -217,21 +224,22 @@ got_frame:
      * C89C without a pad-terminated / Stage-1b-ready frame at s1 lets
      * the output cursor walk off the 2MiB window
      * (docs/evidence/pe-mv1d-c89c/REPORT.md).  Not a random 1220C buffer
-     * bug.  Stage-1b: E0 promotes only when B89F4 marks a last-chunk frame;
-     * C89C runs when the body is STR-magic or synthetic pad-ready.
-     * Do not clamp a1. */
+     * bug.  Stage-1b: E0 promotes only when B89F4 marks a last-chunk frame
+     * (or a fixture surrogate arm); C89C runs on immediate pad OR when
+     * that last-chunk latch is set. Do not clamp a1. */
     {
         uint16_t count = PE_LoadU16(0x800B0DBCu);
         uint32_t flip = (uint32_t)PE_LoadU8(0x801D146Cu) ^ 1u;
         pe_addr_t out;
         pe_addr_t table;
         uint32_t stream = (uint32_t)s1;
+        int frame_ready = PE_Port_TakeStreamFrameReady();
 
         PE_StoreU16(0x800B0DBCu, (uint16_t)(count + 1u));
         out = (pe_addr_t)PE_LoadU32(0x801D1464u + flip * 4u);
         PE_StoreU8(0x801D146Cu, (uint8_t)flip);
         table = (pe_addr_t)PE_LoadU32(0x801D0DF8u);
-        if (!c89c_stream_is_ready(stream)) {
+        if (!c89c_stream_is_immediate_pad(stream) && !frame_ready) {
             Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame",
                                  "func_801924F8");
             PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);

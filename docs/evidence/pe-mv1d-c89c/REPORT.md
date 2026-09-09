@@ -47,26 +47,25 @@
 
 Live Disc1 on Bazzite with ungated C89C aborted at `PE_StoreU16` @
 `0x80200000` — confirming this report's MV1d trap. Production
-`func_801924F8` got_frame now **gates** C89C on Stage-1b readiness
-(immediate pad or STR magic `0x80010160`). Non-ready streams take a named
-Stage-1b boundary stop. **Do not clamp a1.**
+`func_801924F8` got_frame now **gates** C89C until Stage-1b readiness:
+immediate pad **or** last-chunk `StreamFrameReady` (latched when E0
+promotes on `D_800B89F4`). Non-ready streams take a named Stage-1b
+boundary stop. **Do not clamp a1.**
 
 Bazzite retest of `5223ecd` (gate + still-unconditional E0 promote): CLEAN
-stop at `Stage1b_pad_terminated_frame` — MV1d fixed. DAY2-158d then gates
-E0 promote on `B89F4` / fixture `PE_Port_ArmStreamPromote` so incomplete
-bodies are not published; live last-chunk delivery remains the unlock for
-real STR frames at `s1`.
+stop at `Stage1b_pad_terminated_frame` — MV1d fixed. DAY2-158d gates E0
+promote on `B89F4` / fixture arm. DAY2-158f latches frame-ready on
+last-chunk promote so demuxed VLC bodies (not STR magic at `s1`) can run
+C89C. STR magic `0x80010160` is sector-header-only, not the payload cursor.
 
-## Production wiring (DAY2-158b/c/d — gated)
+## Production wiring (DAY2-158b/c/d/f — gated)
 
-`func_801924F8` got_frame calls live C89C only when the stream is
-Stage-1b-ready (pad or STR magic). Non-ready frames take
-`Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)` +
-`PE_PORT_STOP_UNRESOLVED_BOUNDARY`. E0 promotes only on last-chunk
-`B89F4` or fixture surrogate arm. The decoder's output cursor is still
-bounded only by VLC pad/terminator codes: a valid STR frame terminates
-in-bounds. **Do not clamp a1.** Ungated decode of partial frames still
-marches past `PE_StoreU16 @ 0x80200000` — that is why the gate exists.
+`func_801924F8` got_frame calls live C89C only when the stream is an
+immediate pad exit **or** last-chunk `StreamFrameReady` is latched.
+Non-ready frames take `Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)`
++ `PE_PORT_STOP_UNRESOLVED_BOUNDARY`. E0 promotes only on last-chunk
+`B89F4` or fixture surrogate arm. **Do not clamp a1.** Ungated decode of
+partial frames still marches past `PE_StoreU16 @ 0x80200000`.
 
 ## Verify block
 
