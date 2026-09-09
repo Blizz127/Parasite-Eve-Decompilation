@@ -19,7 +19,10 @@ static void MOVPLY_SeedRecord(unsigned id,unsigned wide)
     strcpy(PE_Translate(0x80130130u,16u),"PE.IMG;1");
     PE_StoreU32(0x80122438u+id*20u,0x80130130u);   /* record[0] is the name */
     PE_StoreU8(record+4u,(uint8_t)wide);
-    PE_StoreU16(record+6u,0x1234u);                /* stream end LBA */
+    /* record+6 → C304 start → D_800B6918: 7C564's first-sector frame
+     * filter compares this to the STR header frame word (rec+8). Must
+     * match MOVPLY_PlantStreamSector's frame number (1), not an LBA. */
+    PE_StoreU16(record+6u,1u);
     PE_StoreU16(record+8u,0x7FFFu);                /* frame limit */
     PE_StoreU16(record+0xAu,0x5678u);              /* slice x */
     PE_StoreU16(record+0xCu,0x300u);               /* slice y */
@@ -115,6 +118,7 @@ static void test_DAY2_movie_player(void)
         ASSERT(FxBuild(&fx,0),"player fixture");
         MOVPLY_PlantStreamSector(&fx);
         PE_Disc_SetActive(fx.disc);CdDeviceSeed();
+        B54KR_SeedGpuStatic(); /* ClearImage jtb for 121270 dim refresh */
         ASSERT(PE_CdReg_EnableDevice(7u) && func_8007EC14()==1,
             "player startup");
         for(unsigned tick=0;tick<10u && PE_LoadU32(0x8009B574u)!=1u &&

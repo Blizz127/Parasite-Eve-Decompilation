@@ -73,6 +73,31 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158e: movie_player autonomous first frame (2026-09-09)
+
+`DAY2_movie_player` enabled-device path was red at `movie_retry_wait` /
+then FATAL `PE_LoadU32@0xC`. Two fixture bugs, both with evidence:
+
+1. `MOVPLY_SeedRecord` planted `record+6 = 0x1234` labeled "stream end
+   LBA". `func_8007C304` stores that word in `D_800B6918`; `7C564`'s
+   first-sector filter compares it to the STR header frame number
+   (`rec+8`). Planted frame is `1`, so every sector was rejected
+   (`A3520=1` but `status0=0` / `BE998=0`). Fixed: `record+6 = 1`.
+2. After accept, `121270` dim-refresh calls `ClearImage` (`74F44`), which
+   loads `D_80095744→jtb+12`. Fixture never seeded the GPU jtb → load at
+   `0xC`. Fixed: `B54KR_SeedGpuStatic()` on the enabled-device path.
+
+Focused Linux: `DAY2_movie_player` PASS (early returns, search boundary,
+CdlModeSM boundary, autonomous first-frame handoff).
+
+**Next boot→Day2:** live Disc1 full STR frames (9 chunks → `B89F4`) so
+`801924F8` C89C runs past Stage-1b; then `func_80192CE8` media-loop
+remainder. Multi-sector STR through the player chain still open.
+
+Claims: movie_player autonomous first frame green on fixture ISO.
+Non-claims: Day2 complete; Stage-1b done on live Disc1; retail STR golden;
+published runtime 128 unchanged. Linux-first.
+
 ## DAY2-158d: Stage-1b E0 promote + STR-ready C89C gate (2026-09-09)
 
 ### Bazzite retest of `5223ecd` (Matt) — CLEAN Stage-1b stop
