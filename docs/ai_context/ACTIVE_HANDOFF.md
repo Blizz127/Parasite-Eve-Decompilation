@@ -3,6 +3,45 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158p: live `74520_dma_indirect` = unbound title `91DC8` (2026-09-09)
+
+Live Bazzite Disc1 on tip **`50b2a58`** (DAY2-158o):
+
+```text
+e0_promote → got_frame →
+c89c_tel calls=1 ret=0 pad=1 out=7300 w0=38000720 admit=ready
+→ [STUB:BOOTSTRAP_RET] func_80074520_dma_indirect_call
+stop_reason=unresolved-boundary
+```
+
+`post_movie_title_cut` is gone (158o `DBA++`). New frontier is **not** a
+missing `74520` body.
+
+**Decomp dig (CLOSED on inventing/expanding `74520`):**
+`dig/74520-dma-indirect` @ `546c9b9` folded →
+`docs/evidence/pe-day2-158-74520-dma/REPORT.md`
+
+- `func_80074520` = complete `trapIntrDMA` (B53I-B2, 96 words) — DICR scan +
+  `jalr` DMA table slot.
+- Slot 1 still holds title DecDCTout **`0x80191DC8`** (924F8 /
+  B54K-AH registration). Player `0x801214D4` is already dispatched; title
+  leaf is not.
+- Chain: C89C frame-1 → `92934` (DBA≥2) → `BFA0`/`C01C` → MDEC DMA1 →
+  `74520` → unbound `91DC8` → misnamed `dma_indirect_call` STOP.
+- `92934` had no entry TRACE (looked unreached).
+
+**On tip (wire-only — no invented `91DC8` guest body, no `74520` rewrite):**
+
+1. `DispatchDmaCallback`: `0x80191DC8` → named boundary `func_80191DC8`
+   (same arm shape as `1214D4`; body waits PE.IMG carve / Decomp matched C).
+2. `Trace_Direct("func_80192934_enter")` before `BFA0`.
+3. Fold dig REPORT. No admit-gate / cursor ±32. No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest — expect STOP rename to **`func_80191DC8`**
+(and `func_80192934_enter` in TRACE). Prefer Decomp title-overlay leaf for
+`[0x80191DC8,0x80191FB8)` (124 words, ends at `91FB8`). Do **not** blind-alias
+`214D4`. Linux-first.
+
 ## DAY2-158o: live C89C EOF pad dig + first-frame DBA++ for multi-frame (2026-09-09)
 
 Live Bazzite Disc1 on tip **`a03d599`** (DAY2-158n):
@@ -53,6 +92,7 @@ Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**
 `cursor/c89c-pad-post-movie-6f51` (PR #40).
 
 **Next boot→Day2:** Matt retest tip — expect more than one `c89c_tel` /
+
 got_frame before title cut (or a later named stop inside 92934). Prefer
 Decomp leaves for 924F8 EC bytes. Linux-first.
 

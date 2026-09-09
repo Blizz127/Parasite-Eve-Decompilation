@@ -73,6 +73,11 @@ int func_80192934(void)
     if (PE_LoadU8(0x800B0DBAu) < 2u)
         return 0;
 
+    /* Dig aid (pe-day2-158-74520-dma): entry had no TRACE, so live dumps
+     * looked like "92934 skipped" while the post-DBA++ path stopped inside
+     * the first BFA0/C01C → 74520 → 91DC8 cycle. */
+    Trace_Direct("func_80192934_enter");
+
     /* ---- body @ 0x80192960 ---- */
     if (PE_LoadU8(0x801D0DC0u) == 2u) {
         int8_t buf_sel = (int8_t)((PE_LoadU32(0x800ACDDCu) ^ 1u) << 24 >> 24);
