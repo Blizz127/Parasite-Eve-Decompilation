@@ -3,6 +3,36 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## AUD1-FOLD E3–E6: score callees into host path (2026-09-09)
+
+Continued on `cursor/audio-score-fold-4797` / PR #39. Remote
+`cursor/audio-score-leaves-85f74-862f4-8db7c` tip was still AUD1-E2 at fold
+time; host ports taken from khasinski matching/candidate C (semantic, not
+byte-match). Movie/PR #38 untouched.
+
+**Folded into pe_akao_tick / pe_spu_voice**
+- `87AA8` Spu_UpdateVoiceRegisters (slides/LFOs → voice+0xF4; raises dirty)
+- `87FA0` stream twin shares that body until a distinct donor lands
+- `89328` Akao_ProcessVoiceQueue (8900C/89250 still stubbed inside)
+- `89724` Spu_VoiceMaskCompose
+- `89784` key-off flush (khasinski Akao_SetVoicePitch body → Spu key-off)
+- ApplyPending **pitch bit `0x10`** (`AKAO_VOICE_PARAM_PITCH`) publishes
+  `voice+0x44>>16` to SPU pitch
+
+**Still stubbed / open**
+- `8E8D0` / `8F0D0` sample bytecode (needs seq opcode tables)
+- `8D844` SPU_StepReverbLoad (no donor on remote tip)
+- `8900C` / `89250` StepVoiceNote / UpdateVoiceEnvelopes
+
+**Claims / non-claims**
+- Claim: score tick runs real voice-register slides + key-off flush + pitch
+  publish; DAY2_spu_* 5/5 and DAY2_akao_tick green on Linux.
+- Non-claim: Day2-complete, mix-exact, retail speaker, EXACT SHA-1, bytecode
+  note advance, reverb-load fidelity.
+
+Verify: `PE_TEST_FILTER=DAY2_spu` / `DAY2_akao_tick`; `ctest` 8/8.
+Contract: `docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`.
+
 ## AUD1-FOLD: audio-score leaves → native host path (2026-09-09)
 
 Folded Decomp Bot tip `cursor/audio-score-leaves-85f74-862f4-8db7c` (AUD1-E0…

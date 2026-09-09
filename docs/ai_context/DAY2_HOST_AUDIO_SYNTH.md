@@ -1,53 +1,40 @@
-# Host SPU synthesis + score fold (AUD1-E0 / E1 / E2 / fold)
+# Host SPU synthesis + score fold (AUD1-E0 … E6 fold)
 
-Stage AUD1-E0 adds the first bounded host audio path on top of the existing
-`pe_spu_dma.c` SPU-RAM image and register window. Stage AUD1-E1 adds a guest
-voice→SPU register bridge. Stage AUD1-E2 adds matching-intent `func_80085F74`
-(SpuSetCommonAttr) / `func_800862F4` (SpuSetVoiceAttr), host `func_8008DB7C`
-(Akao_Tick) with stubbed callees, and renames the pending-bit publisher to
-`PE_SpuVoice_ApplyPending`. This fold lands that stack into the native score
-path (`PE_Event_ServiceAudioCommands` → `8DB7C` → dirty-voice publish →
-`HostFB_VSync` mix) without waiting on Decomp Bot flush leaves.
+Stage AUD1-E0 adds host ADPCM synth + PulseAudio. E1 adds the guest→SPU
+bridge. E2 adds matching-intent `85F74`/`862F4` and host `8DB7C`. This fold
+adds host semantic ports for Akao callees that were still stubs (E3–E6 scope):
+`87AA8`/`87FA0`, `89328`, `89724`, `89784`, plus ApplyPending pitch bit
+`0x10`. Remote Decomp Bot tip was still E2 at fold time; donors are khasinski
+matching/candidate C (not byte-match).
 
 Mix-exact reverb and bytecode sample loaders remain open. **No Day2-complete
 claim.**
 
 ## What is now audible (when enabled)
 
-- `pe_spu_synth.c` decodes PSX ADPCM blocks from SPU RAM for keyed SPU
-  voices (register key-on/off at offsets `0x188` / `0x18A` relative to
-  `0x1F801C00`). Linear interpolation only (DEBT-SYS0-002).
-- `pe_host_audio.c` submits mixed stereo s16 PCM at 44100 Hz through
-  PulseAudio (`libpulse-simple.so.0` via dlopen) when a windowed run starts.
-- `HostFB_VSync` mixes one NTSC frame quantum (`736` samples) after
-  `PE_Event_ServiceAudioCommands`.
-- `PE_SpuScore_ApplyDirtyVoices` publishes guest voice `+0xF4` pending bits
-  (instrument-init `0x1FF80` cluster) to SPU registers when `D_8009D2C4` bit
-  `0x100` is set (`audio_dirty`).
-- Host `func_8008DB7C` advances score tempo / voice timers / slides and still
-  drains command RAM via `func_8008CA84` (beyond RAM-only queue consumers).
+- `pe_spu_synth.c` / `pe_host_audio.c` as in E0.
+- `PE_SpuScore_ApplyDirtyVoices` publishes volume, **pitch (`0x10`)**, start,
+  ADSR, key-on/off pending bits when `D_8009D2C4` bit `0x100` is set.
+- Host `func_8008DB7C` advances tempo/timers/slides and runs:
+  - `87AA8`/`87FA0` voice-register slides (dirty → synth publish)
+  - `89328` voice-queue scaffolding (`8900C`/`89250` still no-op)
+  - `89784` key-off flush via `89724` mask compose
+  - command drain via `8CA84`
 
-Set `PE_AUDIO_DISABLE=1` to force silent host output. Headless CI and builds
-without PulseAudio continue to run; synthesis is still hashed in native tests.
+Set `PE_AUDIO_DISABLE=1` to force silent host output.
 
 ## What remains silent / unported
 
-- Akao_Tick callees still stubbed on host — bank walks run but do not advance
-  samples: `89328`, `8E8D0`/`8F0D0`, `87AA8`/`87FA0`, `89724` (related),
-  flush pair `8D844`/`89784` (Decomp Bot still working).
-- Related score holes not yet folded: `8900C` / `89250`.
-- ADSR envelopes, Gaussian interpolation, reverb/type-5 wet path.
-- Full-tree EXACT SHA-1 for the new matching leaves (needs retail EXE + jtbl
-  pool strip). Matching-intent `src/func_80085F74.c` / `862F4.c` /
-  `8DB7C.c` are rebuild leaves; native links the PE-RAM ports under
-  `pc_port/platform/`.
+- `8E8D0` / `8F0D0` — sample/bytecode step (seq opcode tables)
+- `8D844` — SPU_StepReverbLoad
+- `8900C` / `89250` — StepVoiceNote / UpdateVoiceEnvelopes
+- ADSR envelopes fidelity, Gaussian interpolation, reverb/type-5 wet path
+- Full-tree EXACT SHA-1 for matching leaves
 
 ## Verification
 
-- `PE_TEST_FILTER=DAY2_spu_synth` — ADPCM mix hash + `HostFB_VSync` hook.
-- `PE_TEST_FILTER=DAY2_spu_voice_bridge` — guest voice dirty publish → key-on
-  → non-silent mix hash.
-- `PE_TEST_FILTER=DAY2_akao_tick` — tempo / timer / slide scaffolding advances.
-- Windowed `parasite-eve-port` logs `[AUDIO] host PCM output enabled` when
-  PulseAudio opens; audible output still requires retail sample data in SPU
-  RAM and keyed voices (not claimed by RAM-only tests).
+- `PE_TEST_FILTER=DAY2_spu` — mode/dma/synth/voice_bridge (5 PASS)
+- `PE_TEST_FILTER=DAY2_akao_tick` — tempo/slides + 87AA8 dirty + pitch `0x10`
+- Windowed `parasite-eve-port` may log `[AUDIO] host PCM output enabled`;
+  audible output still needs retail sample data in SPU RAM (not claimed by
+  RAM-only tests).
