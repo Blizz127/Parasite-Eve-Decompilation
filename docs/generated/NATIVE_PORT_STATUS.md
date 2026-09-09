@@ -11,12 +11,12 @@
   25 platform, plus the explicit
   port entry/global/callback units)
 - `pe_field_runtime` library target: **PRESENT**
-- Native test inventory: **1352** total —
-  **1306** artifact-independent and
+- Native test inventory: **1353** total —
+  **1307** artifact-independent and
   **46** requiring a legally supplied Disc 1 fixture
-- Public normal/sanitizer requirement: **1306 pass,
+- Public normal/sanitizer requirement: **1307 pass,
   46 explicitly tagged skips, 0 failures**
-- Private full requirement with Disc 1 configured: **1352 / 1352**
+- Private full requirement with Disc 1 configured: **1353 / 1353**
 - Production-reachable semantic-function count: **UNMEASURED** — no
   authoritative runtime reachability counter exists yet; this must not be
   replaced by the matching-leaf count.

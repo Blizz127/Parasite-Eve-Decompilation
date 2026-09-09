@@ -472,8 +472,13 @@ void func_8007C214(void)
         PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
         return;
     }
-    if (PE_LoadU32(0x800B89F4u) == 1u)
+    if (PE_LoadU32(0x800B89F4u) == 1u) {
+        /* Authenticated last-chunk delivery (DAY2-158j/k). Pump-time
+         * 7C564→7C214 clears B89F4 before E0's promote arm; latch here
+         * so got_frame may admit C89C without inventing overlay bytes. */
         PE_Port_NoteStreamFrameReady();
+        Trace_Direct("func_8007C214_last_chunk");
+    }
     PE_StoreU32(0x800B89F4u, 0u);
 }
 

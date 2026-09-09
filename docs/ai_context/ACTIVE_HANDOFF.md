@@ -73,6 +73,48 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158k: early-demux gate + Decomp Stage1b diagnosis (2026-09-09)
+
+Decomp Bot diagnosis of live `Stage1b_pad_terminated_frame` on tip
+**`1fa9a48`** (pre-158j):
+
+- STOP is in **`924F8` got_frame** — **not** `92934` yet
+- `91B64` gave nonzero `s1`, but not an immediate pad and
+  `TakeStreamFrameReady` was 0
+- never latched on a B89F4 promote
+- got_frame can fire without `e0_promote` → demux publishing early
+  (`7C484` promotes a status-2 slot published during pump)
+- Decomp is digging `7C484`/`91B64` next — prefer those leaves when they
+  land; do not invent overlay bytes
+
+Fix on this tip (builds on 158j last-chunk latch in `7C214`):
+
+1. E0 admits `got_frame` only when `s1` is an immediate pad **or**
+   `PeekStreamFrameReady` (latched by `7C214` on `B89F4==1`) — else
+   named-stop `Stage1b_early_demux_publish` before got_frame/C89C.
+2. Pump-time last-chunk latch also emits TRACE `e0_promote` so live logs
+   show promote before got_frame.
+3. TRACE `func_8007C214_last_chunk` on the latch site.
+4. CD device enable retained. **No `a1` clamp.** **924F8 got_frame is
+   the live wall — do not treat 92934 as the frontier yet.**
+
+Tests: `Stage1b_early_demux_publish_named_stop`;
+`B54K_C89C_gated_until_pad` expects early-demux name.
+
+**Next boot→Day2:** Matt retest tip; expect either live C89C after
+authenticated last-chunk (`e0_promote` / `7C214_last_chunk` → got_frame)
+or a clearer `Stage1b_early_demux_publish` if demux still races without
+latch. Fold Decomp `7C484`/`91B64` leaves when authenticated.
+
+Focused Linux: Stage1b*, B54K_C89C*, CDQ1_7C214*, B54KAD/AE, MV1D_c89c*,
+DAY2_movie_player — PASS. Full suite: **1353** run / **1307** pass /
+0 fail / 46 skip.
+
+Claims: Decomp diagnosis recorded; early-demux named stop; 158j latch
+kept as authenticated delivery. Non-claims: Day2 complete; Stage-1b done
+on live until retest; `92934` live frontier; retail STR golden; published
+runtime 128 unchanged. Linux-first.
+
 ## DAY2-158j: 7C214 last-chunk latches StreamFrameReady (2026-09-09)
 
 Live Bazzite Disc1 on tip **`1fa9a48` (DAY2-158i) CONFIRMED progress**:
@@ -100,17 +142,14 @@ publish and E0 promote. E0 no longer Notes separately. New test
 `CDQ1_7C214_last_chunk_latches_frame_ready`; last-chunk C89C fixture
 latches via `7C214`. CD device enable retained. **No `a1` clamp.**
 
+**Follow-up:** Decomp diagnosis + early-demux gate → see DAY2-158k.
+
 Focused Linux: CDQ1_7C214*, B54K_C89C*, B54KAD/AE, Stage1b_cd_device*,
 HostFB_PumpCdProgress*, MV1D_c89c*, DAY2_movie_player, B54K_92934 — all
 PASS. Status regenerated: **1352** tests / **1306** artifact-independent.
 
-**Next boot→Day2:** Matt retest tip past `Stage1b_pad_terminated_frame`;
-expect live C89C admit or the next named STOP after `got_frame` (not that
-Stage-1b pad name). Prefer authenticated Decomp leaves / PE.IMG carve —
-do not invent overlay bytes.
-
-Claims: live 1fa9a48 TRACE recorded; pump-time 7C214 last-chunk admits
-C89C. Non-claims: Day2 complete; Stage-1b done on live until retest of
+**Next boot→Day2:** superseded by 158k.
+Non-claims: Day2 complete; Stage-1b done on live until retest of
 this tip; retail STR golden; published runtime 128 unchanged. Linux-first.
 
 ## DAY2-158i: enable CD device on disc-image + E0 named diagnostics (2026-09-09)

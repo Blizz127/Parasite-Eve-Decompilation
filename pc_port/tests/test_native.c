@@ -19144,17 +19144,19 @@ static void test_B54K_C89C_gated_until_pad(void)
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
     B558_PlantChain();
     CDQ2d_PlantStream();
-    /* Live Disc1 path: pump publishes a body that is not pad-terminated.
-     * MV1d: ungated C89C walks past 0x80200000. Gate must stop at Stage-1b
-     * instead of decoding or clamping a1. */
+    /* Live Disc1 path: pump publishes a body that is not pad-terminated
+     * and was not last-chunk latched (fixture ArmStreamPromote alone).
+     * Decomp on 1fa9a48: 91B64 can return that slot without e0_promote —
+     * E0 must Stage1b-stop as early demux, not decode or clamp a1. */
     PE_StoreU16(0x801E0808u, 0u);
 
     ASSERT(func_801924F8(21) == 0 &&
            PE_Port_ShouldStop() &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
-           CountOrderLog("Stage1b_pad_terminated_frame") == 1 &&
+           CountOrderLog("Stage1b_early_demux_publish") == 1 &&
+           CountOrderLog("Stage1b_pad_terminated_frame") == 0 &&
            CountOrderLog("func_8010C89C") == 0,
-           "non-pad stream must Stage-1b-gate C89C (no a1 clamp)");
+           "non-pad early demux must Stage-1b-gate C89C (no a1 clamp)");
     FxFree(&fx);
     PASS();
 }
@@ -20240,6 +20242,40 @@ static void test_CDQ1_7C214_last_chunk_latches_frame_ready(void) {
            "B89F4==1 publish must latch StreamFrameReady");
     ASSERT(!PE_Port_TakeStreamFrameReady(),
            "TakeStreamFrameReady must consume the latch");
+    PASS();
+}
+
+/* DAY2-158k: 91B64 nonzero without pad/latch is early demux — named stop
+ * before got_frame (Decomp diagnosis of live 1fa9a48 Stage1b_pad). */
+static void test_Stage1b_early_demux_publish_named_stop(void)
+{
+    DiscFixture fx;
+    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
+    const pe_addr_t suffix = 0x801F0000u;
+
+    TEST("Stage1b_early_demux_publish_named_stop");
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    PE_StoreU32(record, suffix);
+    PE_StoreU32(0x801D0DFCu, 0x801E0000u);
+    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
+    B558_PlantChain();
+    CDQ2d_PlantStream();
+    PE_StoreU32(0x801E0800u, 0x11111111u);
+    PE_StoreU16(0x801E0804u, 0u);
+    PE_StoreU16(0x801E0806u, 0u);
+    PE_StoreU16(0x801E0808u, 0u);
+    PE_StoreU16(0x801E080Au, 0u);
+    /* ArmStreamPromote publishes status-2 without B89F4 last-chunk latch. */
+    ASSERT(func_801924F8(21) == 0 &&
+           PE_Port_ShouldStop() &&
+           CountOrderLog("Stage1b_early_demux_publish") == 1 &&
+           CountOrderLog("func_8010C89C") == 0,
+           "early demux without last-chunk latch must named-stop");
+    FxFree(&fx);
     PASS();
 }
 
@@ -39485,6 +39521,7 @@ int main(void)
     test_B54K_C89C_last_chunk_frame_ready();
     test_B54K_92934_dba_early_gate();
     test_Stage1b_cd_device_disabled_named_stop();
+    test_Stage1b_early_demux_publish_named_stop();
     test_B54KAF_dec_dct_reset_wrapper();
     test_B54KAG_mdec_table_upload();
     test_B54KAH_dec_dct_out_callback_registration();

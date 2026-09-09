@@ -113,6 +113,11 @@ void PE_Port_NoteStreamFrameReady(void)
     g_port_stream_frame_ready = 1;
 }
 
+int PE_Port_PeekStreamFrameReady(void)
+{
+    return g_port_stream_frame_ready;
+}
+
 int PE_Port_TakeStreamFrameReady(void)
 {
     int ready = g_port_stream_frame_ready;

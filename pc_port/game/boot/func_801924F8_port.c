@@ -175,9 +175,12 @@ e0_poll:
              * HostFB_PumpCdProgress can advance sectors until 7C564 sets
              * B89F4. StreamFrameReady is latched inside 7C214 when
              * B89F4==1 (covers pump-time 7C564→7C214 as well as this
-             * promote arm). */
+             * promote arm). Decomp Bot on 1fa9a48: got_frame can fire
+             * without e0_promote when 7C484 demuxes a status-2 slot
+             * published during pump — gate got_frame on pad or latch. */
             {
                 int last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
+                int ready_before = PE_Port_PeekStreamFrameReady();
                 if (last_chunk || PE_Port_ConsumeStreamPromote()) {
                     Trace_Direct("func_801924F8_e0_promote");
                     func_8007C214();
@@ -190,13 +193,31 @@ e0_poll:
                     return 0;
                 } else {
                     HostFB_PumpCdProgress();
+                    /* Pump-time 7C564→7C214 last-chunk ≡ promote for TRACE
+                     * (B89F4 already cleared; latch lives in 7C214). */
+                    if (!ready_before && PE_Port_PeekStreamFrameReady())
+                        Trace_Direct("func_801924F8_e0_promote");
                 }
             }
             s1 = func_80191B64(0x801D1464u);
             left = s0 - 1u;
             s0 = left;
-            if (s1 != 0)
+            if (s1 != 0) {
+                /* Decomp: 91B64 nonzero without B89F4 promote / latch is
+                 * early demux publish — do not enter got_frame / C89C.
+                 * Immediate pad (fixtures) or StreamFrameReady (last-
+                 * chunk 7C214) required. 924F8 got_frame is the wall —
+                 * not 92934 yet. */
+                if (!c89c_stream_is_immediate_pad((uint32_t)s1) &&
+                    !PE_Port_PeekStreamFrameReady()) {
+                    Trace_Direct("func_801924F8_early_demux");
+                    Bootstrap_ReturnVoid("Stage1b_early_demux_publish",
+                                         "func_801924F8");
+                    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                    return 0;
+                }
                 goto got_frame;
+            }
             if (((left << 16) & 0xFFFFFFFFu) != 0u)
                 continue;
             break;

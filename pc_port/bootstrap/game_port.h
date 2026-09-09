@@ -110,6 +110,7 @@ int  PE_Port_ConsumeStreamPromote(void);
  * 32-byte sector header). Pad-exit probes still cover synthetic plants;
  * this latch covers live frames. */
 void PE_Port_NoteStreamFrameReady(void);
+int  PE_Port_PeekStreamFrameReady(void);
 int  PE_Port_TakeStreamFrameReady(void);
 
 /* Trace helper available to game code */
