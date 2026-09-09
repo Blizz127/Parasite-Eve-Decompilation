@@ -6,8 +6,9 @@
  * Leaving it unserviced eventually overwrites Aya's B8A20 battle record.
  *
  * This supplies command dispatch and voice allocation/control. Score
- * interpretation (8DB7C's voice ticks) remains unported. Bounded host ADPCM
- * synthesis (pe_spu_synth.c) is separate from score bytecode. The host event
+ * interpretation (8DB7C's voice ticks) remains unported. Partial guest→SPU
+ * publish (pe_spu_voice.c) runs after command drain; score bytecode is still
+ * separate. The host event
  * service below invokes only the
  * command portion of that timer, and does not claim the full callback.
  */

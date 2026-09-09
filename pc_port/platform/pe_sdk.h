@@ -163,6 +163,9 @@ int  PE_Event_ConsumeSpuDma(int handle);
 /* Host scheduling of the command-RAM portion of the audio timer. */
 void PE_Event_ServiceAudioCommands(void);
 void func_8008CA84(void);
+void func_80087798(uint32_t voice_index, uint32_t vol_left, uint32_t vol_right);
+void func_80085F74(pe_addr_t voice);
+void PE_SpuScore_ApplyDirtyVoices(void);
 
 /* ── libgpu (pc_port/platform/pe_libgpu.c) ──────────────────────────── */
 pe_addr_t func_80074924(pe_addr_t env, int x, int y, int w, int h); /* SetDefDrawEnv */

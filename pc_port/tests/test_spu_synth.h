@@ -1,4 +1,5 @@
 #include "pe_spu_synth.h"
+#include "pe_spu_voice.h"
 #include "pe_spu_dma.h"
 #include "host_framebuffer.h"
 
@@ -33,6 +34,31 @@ static void seed_test_tone(void)
     PE_SpuRegister_StoreU16(0x02u, 0x3FFFu); /* vol R */
     PE_SpuRegister_StoreU16(0x04u, 0x1000u); /* pitch 1.0 */
     PE_SpuRegister_StoreU16(0x06u, 0x0202u); /* start 0x1010 bytes >> 3 */
+}
+
+static void test_DAY2_spu_voice_bridge(void)
+{
+    pe_addr_t voice = 0x800BC000u;
+    TEST("DAY2_spu_voice_bridge");
+    seed_test_tone();
+    PE_StoreU32(voice, 0x80010000u);
+    PE_StoreU32(voice + 0xF4u, 0x1FF80u);
+    PE_StoreU16(voice + 0x76u, 0x3FFFu);
+    PE_StoreU16(voice + 0x78u, 0x3FFFu);
+    PE_StoreU32(voice + 0x44u, 0x10000000u);
+    PE_StoreU32(voice + 0xF8u, 0x1010u);
+    PE_StoreU16(voice + 0x10Eu, 0x00C0u);
+    PE_StoreU16(voice + 0x110u, 0x0000u);
+    PE_StoreU32(0x800BCD50u, 0x1000u);
+    PE_StoreU32(0x8009D2C4u, 0x100u);
+    PE_SpuScore_ApplyDirtyVoices();
+    ASSERT(PE_LoadU32(voice + 0xF4u) == 0u, "85F74 clears applied flags");
+    ASSERT(PE_SpuRegister_LoadU16(0x04u) == 0x1000u, "pitch published");
+    ASSERT(PE_SpuRegister_LoadU16(0x06u) == 0x0202u, "start published");
+    ASSERT(PE_SpuSynth_ActiveVoiceCount() == 1u, "key-on reaches synthesis");
+    ASSERT(PE_SpuSynth_HashMix(128u) != UINT64_C(0x8857F8C2912F2615),
+           "bridged voice produces non-silent mix");
+    PASS();
 }
 
 static void test_DAY2_spu_synth(void)

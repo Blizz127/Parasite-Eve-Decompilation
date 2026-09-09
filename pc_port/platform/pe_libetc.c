@@ -23,6 +23,7 @@
 #include "psx_compat.h"
 #include "pe_sdk.h"
 #include "pe_spu_dma.h"
+#include "pe_spu_voice.h"
 #include "pe_gpu.h"
 #include "pe_mdec.h"
 #include "pe_irq.h"
@@ -330,12 +331,14 @@ void PE_Event_ServiceAudioCommands(void)
 {
     /* Host adaptation: the frame wait supplies the missing timer service.
      * Preserve registration, EnableEvent, critical-section and producer
-     * gates. This is 8DB7C's 8E1F0..8E208 command portion only; its music
-     * sequencing is not implemented by this service. Host ADPCM synthesis is
-     * driven from HostFB_VSync after this call (AUD1-E0). */
+     * gates. Command drain matches 8E1F0..8E208; dirty-voice publish is a
+     * partial 85F74 stand-in for the unported 8DB7C score bytecode path.
+     * Host ADPCM synthesis runs from HostFB_VSync after this (AUD1-E0/E1). */
     if (g_audio_event_enabled && !g_irq_lock_depth &&
-        !PE_LoadU32(0x8009D268u) && !PE_Port_ShouldStop())
+        !PE_LoadU32(0x8009D268u) && !PE_Port_ShouldStop()) {
         func_8008CA84();
+        PE_SpuScore_ApplyDirtyVoices();
+    }
 }
 
 void PE_Sdk_ResetState(void)
