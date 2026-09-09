@@ -216,6 +216,11 @@ void PE_SpuVoice_ApplyPending(pe_addr_t voice)
                       PE_LoadU16(voice + 0x78u));
         applied |= 0x2u;
     }
+    /* AKAO_VOICE_PARAM_PITCH = 1<<4 — AUD1-E6 host publish. */
+    if (flags & 0x10u) {
+        spu_half_store(reg + 4u, (uint16_t)(PE_LoadU32(voice + 0x44u) >> 16));
+        applied |= 0x10u;
+    }
     if (flags & 0x40u) {
         spu_half_store(reg + 4u, (uint16_t)(PE_LoadU32(voice + 0x44u) >> 16));
         applied |= 0x40u;

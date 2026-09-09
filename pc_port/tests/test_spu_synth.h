@@ -124,6 +124,30 @@ static void test_DAY2_akao_tick(void)
     ASSERT((PE_LoadU32(st + 0x28u) & 0xFFFFu) ==
                ((acc_before + 0x100u) & 0xFFFFu),
            "tempo accumulator advances then masks low half");
+    /* 87AA8: pitch-slide countdown on voice; cross 0xFFE00000 so F4 dirties. */
+    PE_StoreU16(voice + 0x72u, 2u);
+    PE_StoreU32(voice + 0x44u, 0x10000000u);
+    PE_StoreU32(voice + 0x48u, 0x00200000u);
+    PE_StoreU32(voice + 0xF4u, 0u);
+    PE_StoreU32(0x8009D2C4u, 0u);
+    func_80087AA8(voice, 1u);
+    ASSERT(PE_LoadU16(voice + 0x72u) == 1u, "87AA8 decrements pitch slide");
+    ASSERT(PE_LoadU32(voice + 0x44u) == 0x10200000u, "87AA8 applies pitch delta");
+    ASSERT((PE_LoadU32(voice + 0xF4u) & 3u) != 0u, "87AA8 marks volume pending");
+    ASSERT((PE_LoadU32(0x8009D2C4u) & 0x100u) != 0u, "87AA8 raises audio_dirty");
+    /* E6 pitch bit 0x10 publishes through ApplyPending. */
+    {
+        pe_addr_t sv = 0x800BC000u;
+        seed_test_tone();
+        PE_StoreU32(sv, 0x80010000u);
+        PE_StoreU32(sv + 0xF4u, 0x10u);
+        PE_StoreU32(sv + 0x44u, 0x12340000u);
+        PE_StoreU32(0x800BCD50u, 0x1000u);
+        PE_StoreU32(0x8009D2C4u, 0x100u);
+        PE_SpuScore_ApplyDirtyVoices();
+        ASSERT(PE_LoadU32(sv + 0xF4u) == 0u, "pitch bit 0x10 cleared");
+        ASSERT(PE_SpuRegister_LoadU16(0x04u) == 0x1234u, "pitch bit publishes");
+    }
     ASSERT(!PE_Port_ShouldStop() && !g_stub_order_count,
            "Akao_Tick scaffolding runs without stub stops");
     PASS();
