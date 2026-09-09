@@ -92,8 +92,8 @@ boundary stop (`Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)` +
 `PE_PORT_STOP_UNRESOLVED_BOUNDARY`). Durable unlock remains Stage-1b frame
 delivery so real STR frames can pass the gate without inventing clamps.
 
-Focused Linux: B54KAD, B54KAE, B54KAG, MV1D_c89c_* PASS. Live Disc1 should
-now stop cleanly at Stage-1b (not `0x80200000`).
+Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad, MV1D_c89c_* PASS.
+Live Disc1 should now stop cleanly at Stage-1b (not `0x80200000`).
 
 **Next boot→Day2:** Stage-1b STR/MDEC frame delivery at `s1`, then
 `func_80192CE8` media-loop remainder. Parallel red: DAY2_movie_player
