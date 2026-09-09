@@ -3,6 +3,25 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DIG `mdec-decode-busy`: why 158s failed on Disc1 (2026-09-09)
+
+Live tip **`42978a5`** still `MDEC_decode_busy` after `92934`×2 / C89C
+`calls=2 out=11140`. Evidence:
+`docs/evidence/pe-day2-158-mdec-decode-busy/REPORT.md`.
+
+**Root cause:** 158s supersede required “no DMA in flight”, but live
+`DecDCTin` reaches `MdecBeginCommand` only from `PE_MDEC_Service`’s DMA0
+arm with `dma0_active` set (and usually DMA1 already armed by `92934`
+`BFA0`→`C01C` before Service). Those flags are the *new* command, not a
+drain of the `91DC8`-final orphan. Idle-`FE00` drain also cannot clear
+non-pad RLE / partial pixels left after final-slice. 158s unit test used
+`BeginDecode`+`ClearDmaChannels` (false green).
+
+**Draft fix on `dig/mdec-decode-busy`:** when `dma0_active &&
+g_input_pending`, supersede orphan residue. Focused
+`PE_TEST_FILTER=DAY2_mdec` → 2 pass. Awaiting Matt Disc1 retest — no
+Day2-complete claim.
+
 ## DAY2-158s: clear `MDEC_decode_busy` orphan after 91DC8 final (2026-09-09)
 
 Live Disc1 on tip **`d827581`** (DAY2-158r):

@@ -91,5 +91,58 @@ static void test_DAY2_mdec_dma(void)
         ASSERT(PE_MDEC_ReadPixels(0x80160000u,64u) && !PE_Port_ShouldStop(),
                "158s superseding decode drain");
     }
+    /* Dig: live 92934 shape — BFA0 then C01C before Service, with non-FE00
+     * orphan residue. 158s false-green BeginDecode path missed this; tip
+     * 42978a5 still STOP'd MDEC_decode_busy on Disc1 after 92934×2. */
+    {
+        ResetTestState();
+        PE_MDEC_Init();
+        for(unsigned i=0;i<33u;i++) {
+            PE_StoreU32(0x8010DA0Cu+i*4u,MDECPIX_quant[i]);
+            PE_StoreU32(0x8010DA90u+i*4u,MDECPIX_scale[i]);
+        }
+        func_8010BE3C(0);
+        PE_MDEC_ClearDmaChannels();
+        PE_MDEC_WriteControl(0x60000000u);
+        PE_GPU_WriteDPCR(PE_GPU_ReadDPCR()|0x88u);
+        /* Prior command with real RLE left unread (not leading FE00).
+         * Use 0x20 words so BFA0→SubmitInputTable has blocks>=1 (8-word
+         * commands round to 0 blocks and STOP as MDEC_input_short). */
+        PE_StoreU32(0x80140000u,0x28000020u);
+        for(unsigned i=0;i<64u;i++) PE_StoreU16(0x80140004u+i*2u,0xFE00u);
+        PE_StoreU16(0x80140004u,(uint16_t)((8u<<10u)|64u));
+        PE_StoreU16(0x80140006u,(uint16_t)((1u<<10u)|0u)); /* non-pad orphan */
+        PE_StoreU16(0x80140008u,0xFE00u);
+        ASSERT(PE_MDEC_BeginDecode(0x80140000u),"dig orphan first BeginDecode");
+        /* 92934: next DecDCTin via BFA0, then DecDCTout, then host Service. */
+        PE_StoreU32(0x80140100u,0x28000020u);
+        for(unsigned i=0;i<64u;i++) PE_StoreU16(0x80140104u+i*2u,0xFE00u);
+        PE_StoreU16(0x80140104u,(uint16_t)((8u<<10u)|0u));
+        PE_StoreU16(0x80140106u,0xFE00u);
+        func_8010BFA0(0x80140100u,0u);
+        ASSERT(!PE_Port_ShouldStop(),"dig BFA0 before Service");
+        func_8010C01C(0x80160000u,32u);
+        ASSERT(!PE_Port_ShouldStop(),"dig C01C before Service");
+        {
+            PeMdecState mid;
+            PE_MDEC_GetState(&mid);
+            ASSERT(mid.dma0_active && (mid.dma1_chcr&0x01000000u),
+                   "dig expected dma0 pending + dma1 armed before Service");
+        }
+        /* Gate DMA1 so this case only proves DecDCTin orphan supersede
+         * under live dma0_active+armed-dma1 flags (not output length). */
+        {
+            uint32_t dpcr=PE_GPU_ReadDPCR();
+            PE_GPU_WriteDPCR(dpcr&~0x80u);
+            (void)PE_MDEC_Service();
+            PE_GPU_WriteDPCR(dpcr);
+        }
+        ASSERT(!PE_Port_ShouldStop() && CountOrderLog("MDEC_decode_busy")==0,
+               "dig live BFA0/C01C/Service orphan hit MDEC_decode_busy");
+        PE_MDEC_GetState(&state);
+        ASSERT(!state.dma0_active && (state.dma1_chcr&0x01000000u) &&
+               state.completed_upload_count>=1u,
+               "dig Service did not commit superseding DecDCTin");
+    }
     PASS();
 }

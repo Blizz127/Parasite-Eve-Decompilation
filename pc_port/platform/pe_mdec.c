@@ -119,16 +119,25 @@ static int MdecMacroblock(void)
 }
 /* C89C end-fills with FE00; ReadPixels only skips that after a DMA1 drain.
  * Title 91DC8's final-slice arm stops issuing DecDCTout once the bank
- * rectangle is covered, so trailing FE00 (or any orphaned remainder after
- * 1494) can still sit in the input FIFO. Retail C308 would wait on command
- * busy; without another DecDCTout that wait cannot make progress. Drain
- * idle FE00 here so a padding-only remainder is not "busy". If a new
- * DecDCTin arrives with non-padding residue and no DMA in flight, supersede
- * the orphaned prior command (DAY2-158s).
+ * rectangle is covered, so trailing FE00 / unread RLE / partial pixels can
+ * still sit in the FIFO (DAY2-158s). Retail C308 would wait on command busy;
+ * without another DecDCTout that wait cannot make progress.
  *
- * Do NOT clear g_decode_valid when the FIFO drains: HostFB_VSync gates
- * DMA IRQ delivery on PE_MDEC_HasDecode(); clearing before 1214D4/91DC8
- * runs drops the final-slice frame-complete store. */
+ * DAY2-158s drained idle FE00 and superseded when "no DMA in flight". That
+ * never matched live DecDCTin: BFA0 → SubmitInputTable sets dma0_active +
+ * g_input_pending, 92934 then C01C-arms DMA1, and only later HostFB
+ * Service commits via MdecBeginCommand — so dma0_active is ALWAYS set on
+ * the live path (and dma1 often already armed for the *new* frame). The
+ * 158s unit test used BeginDecode + ClearDmaChannels (false green).
+ *
+ * Dig fix: when Service is committing this new DMA0 upload (dma0_active &&
+ * g_input_pending), supersede prior orphan residue; the in-flight DMA0/1
+ * flags belong to the new DecDCTin/DecDCTout, not a drain of the old
+ * command. BeginDecode with no pending upload still STOP if DMA1 is busy.
+ *
+ * Do NOT clear g_decode_valid on idle FE00 drain alone: HostFB_VSync gates
+ * DMA IRQ on PE_MDEC_HasDecode(); clearing before 1214D4/91DC8 drops the
+ * final-slice frame-complete store. */
 static void MdecConsumeIdlePadding(void)
 {
     if(g_pixel_pos!=g_pixel_count) return;
@@ -142,6 +151,13 @@ static int MdecDecodeResidue(void)
     return g_input_pos<g_input_count || g_pixel_pos<g_pixel_count;
 }
 
+static void MdecSupersedeOrphan(void)
+{
+    g_input_pos=g_input_count;
+    g_pixel_pos=g_pixel_count;
+    g_decode_valid=0;
+}
+
 static int MdecBeginCommand(uint32_t command,pe_addr_t source)
 {
     uint32_t words=command&0xFFFFu;
@@ -150,13 +166,15 @@ static int MdecBeginCommand(uint32_t command,pe_addr_t source)
     if((g_tables&required_tables)!=required_tables) return MdecBoundary("MDEC_missing_tables",g_tables);
     if(!PE_RangeIsRam(source,words*4u)) return MdecBoundary("MDEC_input_range",source);
     if(MdecDecodeResidue()) {
-        int dma_busy=g_mdec.dma0_active ||
-                      ((g_mdec.dma1_chcr&0x01000000u)!=0u);
-        if(dma_busy) return MdecBoundary("MDEC_decode_busy",g_input_pos);
-        /* No DMA left to drain the orphan — supersede for the new DecDCTin. */
-        g_input_pos=g_input_count;
-        g_pixel_pos=g_pixel_count;
-        g_decode_valid=0;
+        /* Live path: Service DMA0 arm committing a new DecDCTin. */
+        if(g_mdec.dma0_active && g_input_pending) {
+            MdecSupersedeOrphan();
+        } else if(g_mdec.dma0_active || (g_mdec.dma1_chcr&0x01000000u)) {
+            return MdecBoundary("MDEC_decode_busy",g_input_pos);
+        } else {
+            /* BeginDecode / idle orphan — no DMA left to drain it. */
+            MdecSupersedeOrphan();
+        }
     }
     g_decode_command=command;g_input_count=words*2u;g_input_pos=0;g_pixel_pos=g_pixel_count=0;g_macroblocks=0;g_decode_valid=1;
     for(unsigned i=0;i<g_input_count;i++) g_input[i]=PE_LoadU16(source+i*2u);
