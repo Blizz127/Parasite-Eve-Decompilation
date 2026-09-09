@@ -331,7 +331,8 @@ void PE_Event_ServiceAudioCommands(void)
     /* Host adaptation: the frame wait supplies the missing timer service.
      * Preserve registration, EnableEvent, critical-section and producer
      * gates. This is 8DB7C's 8E1F0..8E208 command portion only; its music
-     * sequencing and SPU synthesis are not implemented by this service. */
+     * sequencing is not implemented by this service. Host ADPCM synthesis is
+     * driven from HostFB_VSync after this call (AUD1-E0). */
     if (g_audio_event_enabled && !g_irq_lock_depth &&
         !PE_LoadU32(0x8009D268u) && !PE_Port_ShouldStop())
         func_8008CA84();

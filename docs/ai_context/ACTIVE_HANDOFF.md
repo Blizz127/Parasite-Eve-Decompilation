@@ -111,6 +111,23 @@ chain), 14E30 real path, old 80191DC8 callback, libpress wait fidelity
 and scope-wide opening→Day2 acceptance. Full user goal open; published
 runtime 128 unchanged.
 
+## DAY1/DAY2-158: host SPU synthesis slice AUD1-E0 (2026-09-09)
+
+First bounded host-audio path on the existing `pe_spu_dma` SPU-RAM/register
+model. `pe_spu_synth.c` decodes keyed-voice ADPCM from SPU RAM (linear
+interpolation; DEBT-SYS0-002). `pe_host_audio.c` submits 44100 Hz stereo PCM
+through PulseAudio when windowed (`PE_AUDIO_DISABLE=1` forces silent output).
+`HostFB_VSync` mixes 736 samples/frame after `PE_Event_ServiceAudioCommands`.
+
+**Audible when:** PulseAudio opens and retail samples are present in SPU RAM
+with voices keyed via register writes. **Still silent:** score sequencing
+(`8DB7C`), guest voice→SPU attribute writers (`85F74`/`862F4`/`85A64`),
+ADSR/reverb/Gaussian fidelity, AKAO/seq26/27 without the score bridge.
+
+`PE_TEST_FILTER=DAY2_spu_synth` PASS (ADPCM mix hash + VSync hook). Contract:
+`docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`. No matching-decomp or retail
+playback claim.
+
 Autonomous-stream evidence (probed 2026-09-09, change NOT landed): with the
 device's 0x50 read-mode guard narrowed to 0x10 (mode bit6 = CdlModeRT per
 the Psy-Q SDK; 7C564's own software header/channel filtering proves the

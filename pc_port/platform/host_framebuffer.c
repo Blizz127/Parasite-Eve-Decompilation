@@ -12,6 +12,8 @@
 #include "pe_guest_ram.h"
 #include "pe_gpu.h"
 #include "pe_spu_dma.h"
+#include "pe_spu_synth.h"
+#include "pe_host_audio.h"
 #include "pe_sdk.h"
 #include "pe_cdreg.h"
 #include "pe_mdec.h"
@@ -163,7 +165,14 @@ void HostFB_VSync(int mode)
      * This is an approximate device clock, not a cycle-accurate CPU model. */
     int device=PE_CdReg_DeviceEnabled();
     if(device && (mode<0 || mode==1)) HostFB_DeviceTime(1024u);
-    if (mode >= 0) PE_Event_ServiceAudioCommands();
+    if (mode >= 0) {
+        PE_Event_ServiceAudioCommands();
+        if (!PE_Port_ShouldStop()) {
+            int16_t pcm[PE_SPU_SYNTH_FRAME_SAMPLES * 2u];
+            PE_SpuSynth_Render(pcm, PE_SPU_SYNTH_FRAME_SAMPLES);
+            PE_HostAudio_Submit(pcm, PE_SPU_SYNTH_FRAME_SAMPLES);
+        }
+    }
     /* Negative VSync is a counter query and mode 1 queries elapsed scan
      * lines. Waiting modes advance the shared 60 Hz clock used by menus. */
     if (mode>=0 && mode!=1) {

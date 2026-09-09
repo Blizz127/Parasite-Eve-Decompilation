@@ -13,7 +13,8 @@
  * effects are class 2 collapses enumerated below.
  *
  * Audio command RAM is now consumed through the enabled host event.
- * Full score sequencing and audible SPU synthesis remain unported.
+ * Score sequencing remains unported. Bounded host ADPCM synthesis and optional
+ * PulseAudio output live in pe_spu_synth.c / pe_host_audio.c (AUD1-E0).
  *
  * Retained hardware/SDK adaptations:
  *   - func_8007D9F8 (SPU DMA upload in func_80085E54): B48A records the

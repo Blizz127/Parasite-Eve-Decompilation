@@ -28,6 +28,8 @@ set(PLATFORM_SRCS
     platform/pe_libgpu.c
     platform/pe_libsnd.c
     platform/pe_spu_dma.c
+    platform/pe_spu_synth.c
+    platform/pe_host_audio.c
     platform/pe_libcard.c
     platform/pe_cdreg.c
     platform/pe_libcd.c
