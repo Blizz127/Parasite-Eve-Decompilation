@@ -147,7 +147,9 @@ static void test_DAY2_cd_b0cd0_pump_stall(void)
     ASSERT(CdSectorReply(response,1)==1u,"b0cd0 first data response");
     PE_CdReg_GetDeviceState(&st);
     ASSERT(st.sector_pending,"sector must remain pending before BFRD");
-    /* Simulate 7C564 A801C+DMA1 early-out (retail sets B0CD0, no BFRD). */
+    /* Simulate 7C564 A801C+DMA1 early-out (retail sets B0CD0, no BFRD).
+     * Arm DMA1 so Pump takes the stall path (158x catch-up is idle-DMA1 only). */
+    ASSERT(PE_MDEC_SubmitOutput(0x80160000u,32u),"arm dma1 for stall");
     PE_StoreU16(0x800B0CD0u,1u);
     PE_StoreU8(0x800B0DBBu,1u);
     HostFB_PumpCdProgress();
@@ -168,3 +170,36 @@ static void test_DAY2_cd_b0cd0_pump_stall(void)
     ASSERT(st.sectors==2u,"cadence resumes after B0CD0 drain");
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }
+
+/* DAY2-158x: when B0CD0 owns sector_pending but DMA1 is already idle,
+ * Pump must catch up with 7C564 (91DC8 miss / B0DBB gate) — not hang. */
+static void test_DAY2_cd_b0cd0_pump_retry_idle_dma1(void)
+{
+    TEST("DAY2_cd_b0cd0_pump_retry_idle_dma1");
+    DiscFixture fx={0};uint8_t response[5];
+    PeCdDeviceState st;
+    PeMdecState mdec;
+    ResetTestState();ASSERT(FxBuild(&fx,0),"b0cd0 retry fixture");PE_Disc_SetActive(fx.disc);
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"b0cd0 retry attachment");
+    {
+        uint8_t loc[]={0u,2u,0x20u};
+        CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
+        CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
+    }
+    PE_CdReg_ServiceDevice(451584u);
+    ASSERT(CdSectorReply(response,1)==1u,"retry first data response");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending,"sector pending before catch-up");
+    PE_MDEC_ClearDmaChannels();
+    PE_MDEC_GetState(&mdec);
+    ASSERT(!(mdec.dma1_chcr&0x01000000u),"dma1 must be idle for catch-up arm");
+    /* Deferred BFRD latch; DMA1 idle ⇒ 158x Pump catch-up (no silent hang). */
+    PE_StoreU16(0x800B0CD0u,1u);
+    HostFB_PumpCdProgress();
+    ASSERT(!PE_Port_ShouldStop(),"idle-dma1 B0CD0 catch-up must not STOP");
+    ASSERT(CountOrderLog("CD_B0CD0_pump_retry")==1,"expected pump_retry TRACE");
+    ASSERT((int16_t)PE_LoadU16(0x800B0CD0u)==0,"catch-up clears B0CD0");
+    PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
+}
+
+

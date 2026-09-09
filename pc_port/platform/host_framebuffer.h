@@ -25,8 +25,8 @@ void HostFB_VSync(int mode);
  * Use this when spinning until D_800B89F4 marks a last video chunk so the
  * E0 2000-try window can finish a multi-sector STR frame. Does not bump the
  * VSync counter (retail's VSync(-1) is a query).
- * DAY2-158w: stalls CD cadence while B0CD0 owns an unread sector_pending
- * (7C564 DMA1 defer) so Pump does not race BFRD / hang without retry IRQ. */
+ * DAY2-158x: stall while B0CD0+pending & DMA1 busy; idle-DMA1 catch-up calls
+ * 7C564 (91DC8 miss / B0DBB gate); DMA1-busy timeout → CD_B0CD0_dma1_starved. */
 void HostFB_PumpCdProgress(void);
 void HostFB_DrawSync(int mode);
 int  HostFB_WritePPM(const char *path);

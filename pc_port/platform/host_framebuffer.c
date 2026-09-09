@@ -13,6 +13,7 @@
 #include "pe_gpu.h"
 #include "pe_spu_dma.h"
 #include "pe_sdk.h"
+#include "pe_bootstrap.h"
 #include "pe_cdreg.h"
 #include "pe_mdec.h"
 #include "pe_irq_delivery.h"
@@ -183,27 +184,72 @@ void HostFB_PumpCdProgress(void)
     /* Same Spu/MDEC preamble as VSync, then one non-XA sector period so a
      * single E0 poll can retire a pending CD sector (pe_cdreg
      * CdSectorCycles: 451584 non-XA / 225792 XA). */
+    static uint32_t s_b0cd0_dma1_stalls;
+    PeMdecState mdec;
+    PeCdDeviceState cd;
+    int b0cd0, pending, dma1_busy;
+
     (void)PE_SpuDma_Service();
     if(PE_MDEC_HasDecode() && PE_GPU_DMA2Pending())
         (void)PE_Port_ServiceDmaIrqCheckpoint();
     (void)PE_MDEC_Service();
-    /* DAY2-158w dig/cd-sector-overrun: also service IRQs when B0CD0 is set so
-     * 91DC8/1214D4 can retry 7C564 after a DMA1-busy defer (HasDecode may
-     * already be false on a final-slice orphan). */
-    if(PE_MDEC_HasDecode() || (int16_t)PE_LoadU16(0x800B0CD0u))
+    /* DAY2-158x: after MDEC may have completed DMA1, run the DMA IRQ
+     * checkpoint (not only ServiceDeviceIrq) so 74520→91DC8 can run even
+     * when HasDecode is false. 158w only widened ServiceDeviceIrq; live
+     * tip 733a8dc still hung ~319×92934 with BFRD never arriving. */
+    b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
+    if(PE_MDEC_HasDecode() || b0cd0) {
+        (void)PE_Port_ServiceDmaIrqCheckpoint();
         HostFB_ServiceDeviceIrq();
-    if(PE_Port_ShouldStop()) return;
-    /* 7C564 A801C+DMA1 early-out sets B0CD0 without BFRD; AAB4 already
-     * cleared INT1, so pe_cdreg still has sector_pending. Advancing another
-     * sector period here raced into CD_device_sector_overrun (158v hold
-     * alone hung ~319×92934 with no BFRD). Stall CD cadence until the
-     * existing DMA1→B0CD0 retry drains it — do not invent a dual-sector
-     * buffer. */
-    if((int16_t)PE_LoadU16(0x800B0CD0u)) {
-        PeCdDeviceState st;
-        PE_CdReg_GetDeviceState(&st);
-        if(st.sector_pending) return;
     }
+    if(PE_Port_ShouldStop()) return;
+
+    PE_CdReg_GetDeviceState(&cd);
+    pending = cd.sector_pending != 0;
+    PE_MDEC_GetState(&mdec);
+    dma1_busy = (mdec.dma1_chcr & 0x01000000u) != 0;
+    b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
+
+    if(b0cd0 && pending) {
+        if(!dma1_busy) {
+            /* DMA1 is idle but B0CD0 still owns an unread sector: either
+             * 91DC8 never ran (IRQ delivery miss) or its B0DBB gate skipped
+             * the 7C564 retry (16bpp / post-XOR format 0). Retail's only
+             * reopen of that deferred BFRD is the DMA1 callback; host catch-up
+             * calls the same 7C564 leaf — no dual-sector invent. */
+            s_b0cd0_dma1_stalls = 0u;
+            Bootstrap_ReturnVoid1("CD_B0CD0_pump_retry","CD_device",cd.next_lba);
+            if(PE_LoadU32(0x800A801Cu)) {
+                func_8007C564();
+                if(PE_Port_ShouldStop()) return;
+            }
+            PE_StoreU16(0x800B0CD0u, 0u);
+            PE_CdReg_GetDeviceState(&cd);
+            pending = cd.sector_pending != 0;
+            b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
+            if(b0cd0 && pending) {
+                Bootstrap_ReturnVoid1("CD_B0CD0_retry_unresolved", "CD_device",
+                                      cd.next_lba);
+                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                return;
+            }
+        } else {
+            /* Still waiting on DecDCTout DMA — retail defers here. If Service
+             * cannot retire DMA1 (bitstream starved for the pending sector),
+             * convert the live silent hang into a named STOP. */
+            s_b0cd0_dma1_stalls++;
+            if(s_b0cd0_dma1_stalls >= 64u) {
+                Bootstrap_ReturnVoid1("CD_B0CD0_dma1_starved", "CD_device",
+                                      cd.next_lba);
+                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                return;
+            }
+            return;
+        }
+    } else {
+        s_b0cd0_dma1_stalls = 0u;
+    }
+
     if(PE_CdReg_DeviceEnabled())
         HostFB_DeviceTime(451584u);
 }

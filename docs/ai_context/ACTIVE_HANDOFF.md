@@ -3,6 +3,39 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158x: B0CD0 idle-DMA1 Pump catch-up (2026-09-09)
+
+Live Disc1 on tip **`733a8dc`** (DAY2-158w) **FAILED retest** — same hang as 158v:
+
+```text
+~319× func_80192934_enter
+no CD_device_sector_overrun
+no new TRACE/STOP through 80s+
+```
+
+158w IRQ widen + Pump stall did **not** clear live hang; BFRD still never
+arrived.
+
+**Deeper cause:** dig assumed DMA1 completion → `91DC8` → `7C564` BFRD.
+Live can leave `B0CD0` + `sector_pending` with **DMA1 already idle** (IRQ
+miss, or `91DC8` B0DBB gate skips retry after format XOR / 16bpp). Pump then
+stalled forever waiting for a callback that will not reopen BFRD.
+
+**Fix (`HostFB_PumpCdProgress`):**
+1. After `PE_MDEC_Service`, run `PE_Port_ServiceDmaIrqCheckpoint` when B0CD0
+   (not only `ServiceDeviceIrq`).
+2. If `B0CD0 && sector_pending && !dma1_busy` → Trace `CD_B0CD0_pump_retry`,
+   call `func_8007C564` when A801C set, clear B0CD0 (same leaf as 91DC8).
+3. If DMA1 stays busy ≥64 Pump stalls → named STOP `CD_B0CD0_dma1_starved`.
+4. Keep pe_cdreg hold. Tests: stall (dma1 armed) + idle-dma1 catch-up.
+
+Linux: **1356 run / 1310 pass / 0 fail / 46 skip**.
+
+**Next boot→Day2:** Matt Disc1 — expect C89C ≫319 / progress, or named
+`CD_B0CD0_*` STOP (not silent hang). No Day2-complete claim. Linux-first.
+
+## DAY2-158w: B0CD0 pump stall + IRQ retry (dig fold) (2026-09-09)
+
 ## DAY2-158w: B0CD0 pump stall + IRQ retry (dig fold) (2026-09-09)
 
 Live Disc1 on tip **`222bd95b`** (DAY2-158v / PR #42):
@@ -28,8 +61,7 @@ service IRQs when B0CD0 is set so `91DC8`/`1214D4` can retry → BFRD.
 Linux: **1355 run / 1309 pass / 0 fail / 46 skip** (new B0CD0 stall test).
 Branch `cursor/cd-sector-backpressure-6f51` → PR #42.
 
-**Next boot→Day2:** Matt Disc1 — expect C89C `calls`≫319 / progress past
-old hang, or name the next honest STOP. No Day2-complete claim. Linux-first.
+**Live retest on `733a8dc`: FAILED** — hang unchanged (see DAY2-158x).
 
 ## DAY2-158v: CD pending-sector backpressure (2026-09-09)
 
