@@ -6,7 +6,8 @@
  *   89328 Akao_ProcessVoiceQueue, 89724 Spu_VoiceMaskCompose,
  *   89784 key-off flush (khasinski Akao_SetVoicePitch body).
  * Still stubbed (no usable donor on the audio tip at fold time):
- *   8E8D0/8F0D0 sample bytecode, 8D844 reverb-load step, 8900C/89250.
+ *   8E8D0/8F0D0 sample bytecode, 8D844 reverb-load step, 8900C StepVoiceNote.
+ * 89250 UpdateVoiceEnvelopes is hosted from khasinski voice_envelopes.c.
  */
 #include "pe_sdk.h"
 #include "pe_spu_voice.h"
@@ -30,9 +31,9 @@ static void spu_write_key_on(uint32_t mask)
     PE_SpuRegister_StoreU16(0x18Au, (uint16_t)((mask >> 16) & 0xFFFFu));
 }
 
-/* 8900C / 89250 — remaining score holes; keep no-op until Decomp Bot lands. */
-static void stub_step_voice_note(pe_addr_t voices, uint32_t active, uint32_t restart,
-                                 pe_addr_t key_on_out)
+/* 8900C Akao_StepVoiceNote — still open (no donor on remote tip). */
+static void func_8008900C(pe_addr_t voices, uint32_t active, uint32_t restart,
+                          pe_addr_t key_on_out)
 {
     (void)voices;
     (void)active;
@@ -40,9 +41,46 @@ static void stub_step_voice_note(pe_addr_t voices, uint32_t active, uint32_t res
     (void)key_on_out;
 }
 
-static void stub_update_voice_envelopes(uint32_t blocked)
+/* Akao_RemoveVoice — clear assigned_voice_index (== voice_index) → 0x18. */
+static void akao_remove_voice(pe_addr_t base, uint32_t voice_index)
 {
-    (void)blocked;
+    unsigned i;
+    pe_addr_t p = base + 0xF0u;
+    for (i = 0; i < 0x18u; i++) {
+        if (PE_LoadU32(p) == voice_index)
+            PE_StoreU32(p, 0x18u);
+        p += 0x11Cu;
+    }
+}
+
+/* Akao_UpdateVoiceEnvelopes — func_80089250 (khasinski voice_envelopes.c). */
+static void func_80089250(uint32_t blocked)
+{
+    pe_addr_t st = PE_LoadU32(0x8009D2C8u);
+    uint32_t protected_mask = blocked;
+    uint32_t voice_index;
+    uint32_t bit;
+
+    if (st && st >= 0x80000000u && st < 0x80200000u) {
+        protected_mask |= (PE_LoadU32(st + 4u) & PE_LoadU32(st + 0xCu)) |
+                          (PE_LoadU32(st + 0x6Cu) & PE_LoadU32(st + 0x74u));
+    }
+
+    bit = 1u;
+    for (voice_index = 0; voice_index < 0x18u; voice_index++, bit <<= 1) {
+        if (protected_mask & bit) {
+            /* Protected voices keep full envelope in the guest table path;
+             * host synth has no ENV table — skip. */
+            continue;
+        }
+        {
+            uint16_t env = PE_SpuRegister_LoadU16(voice_index * 0x10u + 0xCu);
+            if (env == 0u) {
+                akao_remove_voice(0x800B8AC0u, voice_index);
+                akao_remove_voice(0x800BA560u, voice_index);
+            }
+        }
+    }
 }
 
 /* Spu_VoiceMaskCompose — func_80089724 (khasinski matching C). */
@@ -316,7 +354,7 @@ void func_80089328(void)
 
     if (((PE_LoadU32(st + 4u) & PE_LoadU32(st + 0x10u)) |
          (PE_LoadU32(st + 0x6Cu) & PE_LoadU32(st + 0x78u))) != 0u)
-        stub_update_voice_envelopes(blocked_mask);
+        func_80089250(blocked_mask);
 
     st = PE_LoadU32(0x8009D2C8u);
     secondary_pending = (PE_LoadU32(st + 0x6Cu) & PE_LoadU32(st + 0x7Cu)) &
@@ -324,9 +362,9 @@ void func_80089328(void)
     secondary_restart = (secondary_pending & PE_LoadU32(st + 0x74u)) & ~blocked_mask;
     if ((secondary_pending & PE_LoadU32(st + 0x70u)) != 0u) {
         PE_StoreU32(0x8009D2C8u, st + 0x68u);
-        stub_step_voice_note(0x800BA560u,
-                             secondary_pending & PE_LoadU32(st + 0x70u),
-                             secondary_restart, key_on_scratch);
+        func_8008900C(0x800BA560u,
+                      secondary_pending & PE_LoadU32(st + 0x70u),
+                      secondary_restart, key_on_scratch);
         st = PE_LoadU32(0x8009D2C8u);
         PE_StoreU32(0x8009D2C8u, st - 0x68u);
         secondary_pending &= ~PE_LoadU32(st - 0x68u + 8u);
@@ -340,8 +378,8 @@ void func_80089328(void)
     primary_restart = (primary_pending & PE_LoadU32(st + 0xCu)) &
                       ~(secondary_restart | blocked_mask);
     if ((primary_pending & PE_LoadU32(st + 8u)) != 0u) {
-        stub_step_voice_note(0x800B8AC0u, primary_pending & PE_LoadU32(st + 8u),
-                             primary_restart, key_on_scratch);
+        func_8008900C(0x800B8AC0u, primary_pending & PE_LoadU32(st + 8u),
+                      primary_restart, key_on_scratch);
         st = PE_LoadU32(0x8009D2C8u);
         primary_pending &= ~PE_LoadU32(st + 8u);
         PE_StoreU32(st + 0x10u, PE_LoadU32(st + 0x10u) & ~PE_LoadU32(st + 8u));
@@ -350,14 +388,14 @@ void func_80089328(void)
     if (secondary_pending != 0u) {
         st = PE_LoadU32(0x8009D2C8u);
         PE_StoreU32(0x8009D2C8u, st + 0x68u);
-        stub_step_voice_note(0x800BA560u, secondary_pending,
-                             secondary_restart & ~primary_restart, key_on_scratch);
+        func_8008900C(0x800BA560u, secondary_pending,
+                      secondary_restart & ~primary_restart, key_on_scratch);
         PE_StoreU32(PE_LoadU32(0x8009D2C8u) + 0x10u, 0);
         PE_StoreU32(0x8009D2C8u, PE_LoadU32(0x8009D2C8u) - 0x68u);
     }
     if (primary_pending != 0u) {
-        stub_step_voice_note(0x800B8AC0u, primary_pending, primary_restart,
-                             key_on_scratch);
+        func_8008900C(0x800B8AC0u, primary_pending, primary_restart,
+                      key_on_scratch);
         PE_StoreU32(PE_LoadU32(0x8009D2C8u) + 0x10u, 0);
     }
 
