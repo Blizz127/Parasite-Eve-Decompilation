@@ -73,6 +73,44 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158d: Stage-1b E0 promote + STR-ready C89C gate (2026-09-09)
+
+### Bazzite retest of `5223ecd` (Matt) — CLEAN Stage-1b stop
+
+Live Disc1 on tip `5223ecd` (DAY2-158c gate, unconditional E0 promote)
+stops cleanly at `Stage1b_pad_terminated_frame` — MV1d `PE_StoreU16` @
+`0x80200000` is fixed by the gate. Confirmed: not a random `1220C` buffer
+bug. **Do not clamp `a1`.**
+
+### Stage-1b pump (this tip)
+
+Unconditional E0 `7C214` every poll published incomplete bodies (MV1d
+trap). Retail arms DMA3→`7C214` only when last video chunk sets
+`D_800B89F4` (`7CEAC`/`7C564`). E0 now:
+
+1. Promote when `B89F4==1` (live last-chunk), **or** when a fixture armed
+   `PE_Port_ArmStreamPromote` (`7A214` clears `B89F4` after the plant).
+2. Else `HostFB_VSync(-1)` so CD/DMA can finish the frame.
+
+`got_frame` admits C89C when the body is immediate pad **or** retail STR
+video magic `0x80010160` (complete demuxed frame; DAY2 complete-frame
+oracle). Non-ready → named Stage-1b stop. Magic admit is safe only with
+last-chunk/fixture promote — first-chunk incomplete bodies also start
+with that magic.
+
+Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad,
+B54K_C89C_str_magic_ready, MV1D_c89c_* .
+
+**Next boot→Day2:** live Disc1 must assemble full STR frames (9 video
+chunks → `B89F4`) so C89C runs for real past Stage-1b; then
+`func_80192CE8` media-loop remainder. Parallel red: DAY2_movie_player
+autonomous first frame.
+
+Claims: Matt clean Stage1b stop on `5223ecd` recorded; E0 last-chunk /
+fixture-surrogate promote; STR-magic readiness beside pad; no a1 clamp.
+Non-claims: Day2 complete; Stage-1b done on live Disc1; retail STR golden;
+movie_player autonomous green; published runtime 128 unchanged. Linux-first.
+
 ## DAY2-158c: gate C89C on pad-terminated frame (MV1d trap) (2026-09-09)
 
 ### Diagnosis (Matt / Bazzite live Disc1 abort — confirmed)
@@ -93,7 +131,8 @@ boundary stop (`Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)` +
 delivery so real STR frames can pass the gate without inventing clamps.
 
 Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad, MV1D_c89c_* PASS.
-Live Disc1 should now stop cleanly at Stage-1b (not `0x80200000`).
+Bazzite retest of `5223ecd`: CLEAN stop at `Stage1b_pad_terminated_frame`
+(MV1d fixed) — see DAY2-158d for the promote follow-up.
 
 **Next boot→Day2:** Stage-1b STR/MDEC frame delivery at `s1`, then
 `func_80192CE8` media-loop remainder. Parallel red: DAY2_movie_player

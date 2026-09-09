@@ -94,6 +94,14 @@ void PE_Port_SetPadSource(PEPortPadSource source);
 int  PE_Port_HasPadSource(void);
 uint16_t PE_Port_ReadPadRaw(void);
 
+/* Stage-1b fixture promote arm for func_801924F8's E0 pump.
+ * Retail last-chunk sets D_800B89F4 before DMA3 → 7C214; fixtures plant a
+ * body then call 7A214, which clears B89F4. Arming here survives that clear
+ * so the pump can publish status 2 once without unconditional live promote.
+ * Live Disc1 never arms this — it waits for B89F4 / VBlank. */
+void PE_Port_ArmStreamPromote(void);
+int  PE_Port_ConsumeStreamPromote(void);
+
 /* Trace helper available to game code */
 void Trace_Direct(const char *event);
 

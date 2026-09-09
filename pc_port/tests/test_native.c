@@ -18991,13 +18991,16 @@ static void CDQ2d_PlantStream(void)
     PE_StoreU32(0x801D0DECu, 0x80132000u);
     /* Pad-exit VLC frame at the 7C484-published stream body
      * (record_base 0x801E0000 + count 0x40 << 5 = 0x801E0800), so the
-     * live C89C call terminates without marching past guest RAM. */
+     * live C89C call terminates without marching past guest RAM.
+     * ArmStreamPromote: 7A214 clears B89F4; the fixture surrogate lets
+     * E0 publish status 2 once without unconditional live promote. */
     PE_StoreU32(0x8011EB8Cu, 0x00FFFFFFu);
     PE_StoreU32(0x801E0800u, 0x00000001u);
     PE_StoreU16(0x801E0804u, 0u);
     PE_StoreU16(0x801E0806u, 0u);
     PE_StoreU16(0x801E0808u, 0x7FC0u);
     PE_StoreU16(0x801E080Au, 0u);
+    PE_Port_ArmStreamPromote();
 }
 
 static void test_B54KAD_fmv2_filename_threshold(void)
@@ -19150,6 +19153,49 @@ static void test_B54K_C89C_gated_until_pad(void)
            CountOrderLog("Stage1b_pad_terminated_frame") == 1 &&
            CountOrderLog("func_8010C89C") == 0,
            "non-pad stream must Stage-1b-gate C89C (no a1 clamp)");
+    FxFree(&fx);
+    PASS();
+}
+
+
+static void test_B54K_C89C_str_magic_ready(void)
+{
+    DiscFixture fx;
+    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
+    const pe_addr_t suffix = 0x801F0000u;
+
+    TEST("B54K_C89C_str_magic_ready");
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    PE_StoreU32(record, suffix);
+    PE_StoreU32(0x801D0DFCu, 0x801E0000u);
+    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
+    B558_PlantChain();
+    CDQ2d_PlantStream();
+    /* Retail demuxed body starts with STR video magic; Stage-1b admits
+     * this without requiring an immediate pad symbol. */
+    PE_StoreU32(0x801E0800u, 0x80010160u);
+    PE_StoreU16(0x801E0804u, 0u);
+    PE_StoreU16(0x801E0806u, 0u);
+    PE_StoreU16(0x801E0808u, 0x7FC0u);
+    PE_StoreU16(0x801E080Au, 0u);
+
+    {
+        PeC89CTelemetry c89c;
+        ASSERT(func_801924F8(21) == 0 &&
+               !PE_Port_ShouldStop() &&
+               CountOrderLog("Stage1b_pad_terminated_frame") == 0 &&
+               CountOrderLog("func_8010C89C") == 0 &&
+               PE_LoadU8(0x801D146Cu) == 1u &&
+               PE_LoadU16(0x800B0DBCu) == 1u,
+               "STR-magic body did not complete live C89C got_frame");
+        PE_C89C_GetTelemetry(&c89c);
+        ASSERT(c89c.a0 == 0x801E0800u && c89c.ret == 0,
+               "STR-magic C89C entry/exit differs");
+    }
     FxFree(&fx);
     PASS();
 }
@@ -39345,6 +39391,7 @@ int main(void)
     test_B54KAD_fmv2_filename_threshold();
     test_B54KAE_movie_state_setup();
     test_B54K_C89C_gated_until_pad();
+    test_B54K_C89C_str_magic_ready();
     test_B54KAF_dec_dct_reset_wrapper();
     test_B54KAG_mdec_table_upload();
     test_B54KAH_dec_dct_out_callback_registration();

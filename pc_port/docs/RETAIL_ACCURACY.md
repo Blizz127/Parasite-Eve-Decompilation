@@ -59,13 +59,16 @@ translated function may regress to a stub.
   retail mount loop would spin forever, so the port bounds it and exits
   loudly. With a disc (real or fixture) the loop is retail logic and the
   bound is unreachable.
-- **E0 delivery pump** (`func_801924F8_port.c`, CDQ2d): retail populates
-  streaming slots via DMA-completion interrupts during the E0 poll spin;
-  the port has no async interrupts, so the tail fires the installed
-  `func_8007C214` completion callback once per poll (the 7ED58
-  synchronous-delivery precedent). E0 takes got_frame on the first poll,
-  so cadence beyond that is unobservable; the give-up path behind it is
-  byte-identical retail logic.
+- **E0 delivery pump** (`func_801924F8_port.c`, CDQ2d / Stage-1b): retail
+  populates streaming slots via DMA-completion interrupts during the E0
+  poll spin (`7C214` on last video chunk when `D_800B89F4` is set). The
+  port has no async interrupts, so the tail fires `func_8007C214` when
+  `B89F4` is set, or when a fixture arms `PE_Port_ArmStreamPromote`
+  (because `7A214` clears `B89F4` after the plant). Otherwise
+  `HostFB_VSync(-1)` advances CD/DMA so `7C564` can finish the frame.
+  Unconditional per-poll promote published incomplete bodies (MV1d).
+  E0 still takes got_frame on the first successful promote; the give-up
+  path behind it is byte-identical retail logic.
 - **Skip-movie New Game** (`func_801909B4_port.c`, `--skip-movie`):
   after the overlay prefix, return selector 1 so `func_8006E9A0(1)`
   publishes `0xA80830C8` without running the 480-frame logo, `FMV001`,

@@ -47,20 +47,25 @@
 
 Live Disc1 on Bazzite with ungated C89C aborted at `PE_StoreU16` @
 `0x80200000` — confirming this report's MV1d trap. Production
-`func_801924F8` got_frame now **gates** C89C on an immediate pad-exit
-probe (synthetic CDQ2d plant still runs). Non-pad streams take a named
-Stage-1b boundary stop. **Do not clamp a1.** Stage-1b frame delivery is
-still required for real STR frames.
+`func_801924F8` got_frame now **gates** C89C on Stage-1b readiness
+(immediate pad or STR magic `0x80010160`). Non-ready streams take a named
+Stage-1b boundary stop. **Do not clamp a1.**
 
-## Production wiring (DAY2-158b/c — gated)
+Bazzite retest of `5223ecd` (gate + still-unconditional E0 promote): CLEAN
+stop at `Stage1b_pad_terminated_frame` — MV1d fixed. DAY2-158d then gates
+E0 promote on `B89F4` / fixture `PE_Port_ArmStreamPromote` so incomplete
+bodies are not published; live last-chunk delivery remains the unlock for
+real STR frames at `s1`.
 
-`func_801924F8` got_frame calls live C89C only when the stream's first
-VLC symbol is an immediate pad exit (DAY2-158c). Non-pad / non-Stage-1b
-frames take `Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)` +
-`PE_PORT_STOP_UNRESOLVED_BOUNDARY`. The decoder's output cursor is still
+## Production wiring (DAY2-158b/c/d — gated)
+
+`func_801924F8` got_frame calls live C89C only when the stream is
+Stage-1b-ready (pad or STR magic). Non-ready frames take
+`Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)` +
+`PE_PORT_STOP_UNRESOLVED_BOUNDARY`. E0 promotes only on last-chunk
+`B89F4` or fixture surrogate arm. The decoder's output cursor is still
 bounded only by VLC pad/terminator codes: a valid STR frame terminates
-in-bounds, but the pump does not yet deliver MDEC-ready frames at `s1`
-(Stage-1b). **Do not clamp a1.** Ungated decode of partial frames still
+in-bounds. **Do not clamp a1.** Ungated decode of partial frames still
 marches past `PE_StoreU16 @ 0x80200000` — that is why the gate exists.
 
 ## Verify block
