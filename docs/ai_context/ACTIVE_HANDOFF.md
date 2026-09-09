@@ -128,8 +128,8 @@ B54K_C89C_str_magic_ready, MV1D_c89c_* .
 
 **Next boot→Day2:** live Disc1 must assemble full STR frames (9 video
 chunks → `B89F4`) so C89C runs for real past Stage-1b; then
-`func_80192CE8` media-loop remainder. Parallel red: DAY2_movie_player
-autonomous first frame.
+`func_80192CE8` media-loop remainder. Parallel: DAY2_movie_player
+autonomous first frame landed in DAY2-158e.
 
 Claims: Matt clean Stage1b stop on `5223ecd` recorded; E0 last-chunk /
 fixture-surrogate promote; STR-magic readiness beside pad; no a1 clamp.
