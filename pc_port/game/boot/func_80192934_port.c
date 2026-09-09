@@ -23,6 +23,7 @@
 #include "psx_compat.h"
 #include "game_port.h"
 #include "pe_sdk.h"
+#include "pe_cdreg.h"
 #include "pe_port_compat.h"
 #include "host_framebuffer.h"
 
@@ -105,6 +106,17 @@ int func_80192934(void)
     poll_left = 0x7d0; /* 2000 */
 poll_again:
     for (;;) {
+        /* Host stand-in for DMA3 IRQ progress during the 91B64 spin —
+         * same last-chunk promote / PumpCdProgress shape as 924F8 E0.
+         * Without it, multi-frame after the first-frame DBA++ cannot
+         * assemble the next STR body (live one-frame wall). */
+        {
+            int last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
+            if (last_chunk || PE_Port_ConsumeStreamPromote())
+                func_8007C214();
+            else if (PE_CdReg_DeviceEnabled())
+                HostFB_PumpCdProgress();
+        }
         frame = func_80191B64(pair_base);
         if (PE_Port_ShouldStop())
             return 0;

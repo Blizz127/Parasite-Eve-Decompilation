@@ -1874,8 +1874,9 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     ASSERT(PE_LoadU32(0x8010BCF8u) == 7u &&
            PE_LoadU32(0x8010BCFCu) == 0x4345444Du,
            "authenticated 38-sector PE.IMG payload was not loaded");
-    /* Post-E08 media loop: DBA==1 → 92934 early-return 0 → clear stream
-     * pointers + DBA, then clear overlay 0x200 (pe-92ce8-post-e08). */
+    /* Post-E08 media loop: after first-frame DBA++ (1→2), 92934 body
+     * runs; eventual status==0 / DBA clear still zeroes stream pointers
+     * + DBA and clears overlay 0x200 (pe-92ce8-post-e08). */
     ASSERT(PE_LoadU32(0x801D0DE8u) == 0u &&
            PE_LoadU32(0x801D0DECu) == 0u &&
            PE_LoadU32(0x801D0DFCu) == 0u &&
@@ -19185,6 +19186,39 @@ static void test_B54K_92934_dba_early_gate(void)
     PASS();
 }
 
+/* Live a03d599 hdr=0002/00200280: count@+6=2 → t2=−1, bits>>22=0 ≠ 0x1FF
+ * → NOT immediate pad; admit=ready was correct. out=7300 = FMV001 frame-1
+ * RLE (DAY2_MOVIE_COMPLETE_FRAMES) = normal EOF pad, not a no-op. */
+static void test_DAY2_158o_live_hdr_not_immediate_pad(void)
+{
+    pe_addr_t stream = 0x80150000u;
+    uint16_t count_hw;
+    uint16_t bits_hi;
+    uint16_t bits_lo;
+    uint32_t v0;
+    uint32_t sym;
+    int32_t t2;
+    int is_pad;
+
+    TEST("DAY2_158o_live_hdr_not_immediate_pad");
+    ResetTestState();
+    PE_StoreU32(stream, 0x11111111u);
+    PE_StoreU16(stream + 4u, 0u);
+    PE_StoreU16(stream + 6u, 0x0002u);       /* live hdr_count */
+    PE_StoreU16(stream + 8u, 0x0020u);       /* live hdr_bits hi */
+    PE_StoreU16(stream + 10u, 0x0280u);      /* live hdr_bits lo */
+    count_hw = PE_LoadU16(stream + 6u);
+    bits_hi = PE_LoadU16(stream + 8u);
+    bits_lo = PE_LoadU16(stream + 10u);
+    t2 = (int32_t)count_hw - 3;
+    v0 = ((uint32_t)bits_hi << 16) | (uint32_t)bits_lo;
+    sym = v0 >> 22;
+    is_pad = (t2 < 0) ? ((sym ^ 0x1FFu) == 0u) : ((sym ^ 0x3FFu) == 0u);
+    ASSERT(t2 == -1 && v0 == 0x00200280u && sym == 0u && !is_pad,
+           "live a03d599 hdr must not classify as immediate pad");
+    PASS();
+}
+
 static void test_Stage1b_cd_device_disabled_named_stop(void)
 {
     DiscFixture fx;
@@ -19262,6 +19296,9 @@ static void test_B54K_C89C_last_chunk_frame_ready(void)
     PE_StoreU32(0x801F011Cu, 0u);
     PE_StoreU32(0x800B89F4u, 1u);
     func_8007C214();
+    /* Boot path: 91FB8 leaves DBA==1; first-frame EC must bump to 2 so
+     * 92934's DBA<2 gate no longer aborts the media loop. */
+    PE_StoreU8(0x800B0DBAu, 1u);
 
     {
         PeC89CTelemetry c89c;
@@ -19279,6 +19316,8 @@ static void test_B54K_C89C_last_chunk_frame_ready(void)
                c89c.a0_in_ram == 1u && c89c.a1_in_ram == 1u &&
                c89c.a2_in_ram == 1u,
                "last-chunk C89C telemetry counts/validity differ");
+        ASSERT(PE_LoadU8(0x800B0DBAu) == 2u,
+               "got_frame DBA++ from 91FB8's 1 must yield 2");
     }
     FxFree(&fx);
     PASS();
@@ -39533,6 +39572,7 @@ int main(void)
     test_B54K_C89C_gated_until_pad();
     test_B54K_C89C_last_chunk_frame_ready();
     test_B54K_92934_dba_early_gate();
+    test_DAY2_158o_live_hdr_not_immediate_pad();
     test_Stage1b_cd_device_disabled_named_stop();
     test_Stage1b_early_demux_publish_named_stop();
     test_B54KAF_dec_dct_reset_wrapper();

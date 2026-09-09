@@ -109,8 +109,12 @@ retry_issue:
         if (PE_Port_ShouldStop())
             return -1;
 
-        /* Retail tests the low byte of the return via sll 24. */
+        /* Retail tests the low byte of the return via sll 24.
+         * status==0 covers both 92934's DBA<2 early gate (boot after
+         * 91FB8 when first-frame forgot DBA++) and the abort teardown
+         * return — either clears stream pointers + DBA. */
         if (((uint32_t)status << 24) == 0u) {
+            Trace_Direct("func_80192CE8_media_clear");
             pe_92ce8_clear_stream();
         } else if (PE_LoadU32(GA_PAD_HELD) & 0x20000004u) {
             PE_StoreU8(GA_DBA, (uint8_t)(PE_LoadU8(GA_DBA) - 1u));

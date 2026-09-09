@@ -3,6 +3,54 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158o: live C89C EOF pad dig + first-frame DBA++ for multi-frame (2026-09-09)
+
+Live Bazzite Disc1 on tip **`a03d599`** (DAY2-158n):
+
+```text
+e0_promote → got_frame →
+c89c_tel calls=1 ret=0 pad=1 bound=0
+  a0=80142900 a1=80132700 a2=80162100 out=7300
+  hdr=0002/00200280 admit=ready
+→ STUB func_801909B4_post_movie_title_cut
+```
+
+**C89C dig (CLOSED — no admit-gate patch, no cursor ±32):**
+
+Decomp Bot **`dig/c89c-pad-vs-body` @ `fbb9a9f`** folded:
+`docs/evidence/pe-day2-158-c89c-pad-vs-body/REPORT.md`
+
+- `hdr=0002/00200280`: count@+6=2 → `t2=−1`, `sym=bits>>22=0 ≠ 0x1FF` →
+  **not** immediate pad; `admit=ready` was correct.
+- `s1=0x80142900` is **VLC body** (7C564 copies sector+32; word0.lo≈`0x0720`,
+  not STR `0x0160`).
+- `out=7300` = FMV001 frame-1 RLE (`DAY2_MOVIE_COMPLETE_FRAMES`) →
+  **normal EOF pad**, not a no-op.
+- Also: `docs/evidence/pe-day2-158o-c89c-eof-pad/REPORT.md`
+
+**Why one frame then title-cut:** `91FB8` leaves `DBA=1`; prior `924F8` EC
+stores omitted `DBA++`, so `92934` early-returned 0 → media clear →
+`post_movie_title_cut`. Twin: player `80121C04` does `DBA++` after first
+C89C.
+
+**Fix on tip:**
+
+1. `924F8` got_frame EC: `DBD=0`, **`DBA++`**, `DBC=1` (player-twin;
+   PE.IMG EC-byte confirm still preferred when Decomp lands it).
+2. `92934` poll: last-chunk `7C214` / `PumpCdProgress` (E0 shape) so
+   multi-frame can assemble.
+3. `92CE8`: TRACE `func_80192CE8_media_clear` on status-0 clear.
+4. Test `DAY2_158o_live_hdr_not_immediate_pad`; last-chunk latch asserts
+   `DBA` 1→2.
+
+`post_movie_title_cut` **kept** until title/menu at `0x80191120` is
+translated — clearing the premature one-frame path is the multi-frame
+chase, not a New-Game HOST_ADAPTED skip. No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip — expect more than one `c89c_tel` /
+got_frame before title cut (or a later named stop inside 92934). Prefer
+Decomp leaves for 924F8 EC bytes. Linux-first.
+
 ## ACTIVE OBJECTIVE: decompile all Day 1 and Day 2; implement/fix Day 1
 
 Current user goal (2026-09-08): "decompile all of day 1 and day 2 implement

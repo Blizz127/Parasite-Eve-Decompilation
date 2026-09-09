@@ -217,6 +217,7 @@ typedef struct PeC89CTelemetry {
     uint32_t out_bytes;          /* a1_end - a1 (0 if end < start) */
     uint16_t hdr_count;          /* fresh-entry stream+6 halfword */
     uint32_t hdr_bits;           /* fresh-entry (hi<<16)|lo at +8/+10 */
+    uint32_t hdr_word0;          /* fresh-entry lw(a0+0); lo≈RLE extent */
 } PeC89CTelemetry;
 void PE_C89C_GetTelemetry(PeC89CTelemetry *out); /* host-only, never guest */
 void PE_C89C_ResetTelemetry(void);               /* host-only, never guest */

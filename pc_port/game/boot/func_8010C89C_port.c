@@ -95,6 +95,7 @@ int func_8010C89C(uint32_t a0, pe_addr_t a1, pe_addr_t a2, uint32_t a3)
     g_c89c_telemetry.a2_in_ram = PE_RangeIsRam(a2, 4u) ? 1u : 0u;
     g_c89c_telemetry.hdr_count = 0u;
     g_c89c_telemetry.hdr_bits = 0u;
+    g_c89c_telemetry.hdr_word0 = 0u;
 
     /* C89C: t1 = [EB8C] (bnez delay slot: both paths). */
     t1 = PE_LoadU32(GA_VLC_STATE);
@@ -129,6 +130,7 @@ int func_8010C89C(uint32_t a0, pe_addr_t a1, pe_addr_t a2, uint32_t a3)
     t2 = (int32_t)PE_LoadU16(a0 + 6u);
     v0 = PE_LoadU16(a0 + 8u);
     v1 = (int32_t)PE_LoadU16(a0 + 10u);
+    g_c89c_telemetry.hdr_word0 = t1;
     g_c89c_telemetry.hdr_count = (uint16_t)t2;
     g_c89c_telemetry.hdr_bits =
         ((uint32_t)v0 << 16) | (uint32_t)(uint16_t)v1;

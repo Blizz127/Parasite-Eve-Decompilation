@@ -294,20 +294,21 @@ got_frame:
          * skipped — this leaf has no Trace_Direct, only telemetry.
          * Surface call counts / pad|bound / out|table validity here. */
         {
-            char tel[192];
+            char tel[224];
             PeC89CTelemetry t;
             int c89c_ret = func_8010C89C(stream, out, table, 0u);
             PE_C89C_GetTelemetry(&t);
             snprintf(tel, sizeof(tel),
                      "c89c_tel calls=%u ret=%d pad=%u bound=%u "
                      "a0=%08x a1=%08x a2=%08x a0ram=%u a1ram=%u a2ram=%u "
-                     "out=%u hdr=%04x/%08x admit=%s",
+                     "out=%u hdr=%04x/%08x w0=%08x admit=%s",
                      (unsigned)t.calls, t.ret,
                      (unsigned)t.pad_exits, (unsigned)t.bound_exits,
                      (unsigned)t.a0, (unsigned)t.a1, (unsigned)t.a2,
                      (unsigned)t.a0_in_ram, (unsigned)t.a1_in_ram,
                      (unsigned)t.a2_in_ram, (unsigned)t.out_bytes,
                      (unsigned)t.hdr_count, (unsigned)t.hdr_bits,
+                     (unsigned)t.hdr_word0,
                      frame_ready ? "ready" : "pad");
             Trace_Direct(tel);
             (void)c89c_ret;
@@ -315,7 +316,15 @@ got_frame:
         if (PE_Port_ShouldStop())
             return 0;
         func_8007C394(stream);
+        /* EC stores — twin of movie-player 80121C04 first-frame exit
+         * (DAY2_MOVIE_UPDATER: 23F5=0 / B0DBA++ / B0DBC=1). Without the
+         * DBA bump, 91FB8's DBA==1 leaves 92934 early-returning 0 and the
+         * post-E08 media loop clears the stream after this single frame
+         * (live a03d599 → post_movie_title_cut). PE.IMG byte confirm of
+         * the title-overlay EC block still preferred when Decomp lands it. */
         PE_StoreU8(0x800B0DBDu, 0u);
+        PE_StoreU8(0x800B0DBAu,
+                   (uint8_t)(PE_LoadU8(0x800B0DBAu) + 1u));
         PE_StoreU16(0x800B0DBCu, 1u);
     }
     return 0;
