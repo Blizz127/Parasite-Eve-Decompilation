@@ -27,6 +27,9 @@ race, not a missing Decomp leaf / multi-sector invent.
 `docs/evidence/pe-day2-158-cd-sector-overrun/REPORT.md`. Test:
 `DAY2_cd_sector_device` backpressure + catch-up.
 
+Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Branch
+`cursor/cd-sector-backpressure-6f51` → PR into #38 tip.
+
 **Next boot→Day2:** Matt Disc1 — expect movie to continue past old overrun
 (C89C `calls`≫319) or name the next honest boundary. No Day2-complete
 claim. Linux-first.
