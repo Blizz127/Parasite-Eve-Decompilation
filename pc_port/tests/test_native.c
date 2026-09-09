@@ -1818,7 +1818,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     uint8_t expected_disp[0x28];
     uint8_t expected_draw[0xB8];
     char err[256];
-    TEST("B54KY_192CE8_real_disc_issue_poll_and_boundary");
+    TEST_RETAIL_DISC1("B54KY_192CE8_real_disc_issue_poll_and_boundary");
 
     err[0] = 0;
     disc = BTL6_OpenDisc1(err, sizeof(err));

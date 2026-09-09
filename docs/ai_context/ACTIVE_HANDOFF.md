@@ -140,7 +140,12 @@ CMake while `linked_native_sources` still required it. Config now uses a null
 frontier label + exclusive end `0x800314E4`; tooling accepts complete frontiers
 and optional `PORT_SRCS`/`FIELD_RUNTIME_SRCS`. Regenerated
 `NATIVE_PORT_STATUS.md` / `NATIVE_CANDIDATE_PRIORITY.md` for the AUD1 platform
-units and new tests (316 linked TUs / 1147 cases).
+units and new tests (316 linked TUs). A follow-up CI failure was the
+artifact-independent suite gate: two disc-backed tests (`B54KY_192CE8`,
+`DAY2_movie_complete_frame`) used `TEST()` so they failed without
+`local/pe_disc1.path`, and the inventory counted only `test_native.c`
+(1147) against the binary (1348). Both are now `TEST_RETAIL_DISC1`;
+`native_metrics.py` counts included `test_*.h` cases (1348/1302/46).
 
 Autonomous-stream evidence (probed 2026-09-09, change NOT landed): with the
 device's 0x50 read-mode guard narrowed to 0x10 (mode bit6 = CdlModeRT per
