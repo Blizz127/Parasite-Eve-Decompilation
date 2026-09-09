@@ -73,6 +73,15 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158f CI follow-up: retail-Disc skips + metrics include headers (2026-09-09)
+
+`native-progress` failed on tip `5754473` with 2 failed / count desync:
+`B54KY_192CE8…` and `DAY2_movie_complete_frame` used plain `TEST()` and
+FAILed without Disc1 instead of `TEST_RETAIL_DISC1` skip. Metrics only
+scanned `test_native.c`, missing `#include "test_*.h"` cases (1149 vs
+1348). Both tagged; `native_metrics.collect_test_source_text` flattens
+includes. Artifact-independent: 1348 run / 1302 pass / 0 fail / 46 skip.
+
 ## DAY2-158f: last-chunk StreamFrameReady so live C89C can run (2026-09-09)
 
 Tip was already past `5223ecd` (`7a41ea1` DAY2-158d/e). This rung fixes
