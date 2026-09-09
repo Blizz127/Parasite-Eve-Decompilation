@@ -3,6 +3,37 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## AUD1-FOLD: audio-score leaves → native host path (2026-09-09)
+
+Folded Decomp Bot tip `cursor/audio-score-leaves-85f74-862f4-8db7c` (AUD1-E0…
+E2) onto fold branch `cursor/audio-score-fold-4797` **without** rewriting
+movie/Stage-1b tip `cursor/movie-autonomous-stream-6f51` (PR #38).
+
+**Folded into pc_port score/voice path**
+- Host SPU ADPCM synth + PulseAudio (`pe_spu_synth` / `pe_host_audio`)
+- Guest voice→SPU bridge + real `85F74`/`862F4` from `pe_stream` init
+- Host `func_8008DB7C` (Akao_Tick) from `PE_Event_ServiceAudioCommands`, then
+  `PE_SpuScore_ApplyDirtyVoices`; command drain still via `8CA84`
+- Matching-intent rebuild leaves under `src/` (85F74/862F4/8DB7C); native
+  links PE-RAM ports, not those TUs
+- Focused tests: `DAY2_spu_synth`, `DAY2_spu_voice_bridge`, `DAY2_akao_tick`
+
+**Claims / non-claims**
+- Claim: score tempo/timers/slides advance beyond RAM-only queue drain when
+  the audio event is enabled; dirty voices can key synth.
+- Non-claim: Day2-complete, mix-exact, retail speaker, EXACT SHA-1 rebuild,
+  sample-advancing bytecode (callees stubbed), disc assets.
+
+**Remaining audio holes (do not wait forever on Decomp Bot)**
+- Flush pair still in flight: `8D844` / `89784` (host stubs in `pe_akao_tick`)
+- Sample/bytecode callees stubbed: `89328`, `87AA8`/`87FA0`, `8E8D0`/`8F0D0`,
+  related `89724`
+- Related score holes not folded: `8900C` / `89250`
+- ADSR / Gaussian / reverb still open
+
+Contract: `docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`. Linux verify first.
+Movie autonomous-stream work continues on PR #38 in parallel.
+
 ## AUD1-E2: audio score leaves 85F74 / 862F4 / 8DB7C (2026-09-09)
 
 Adopted khasinski Psy-Q donors for `func_80085F74` (SpuSetCommonAttr) and

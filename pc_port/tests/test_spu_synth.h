@@ -83,3 +83,46 @@ static void test_DAY2_spu_synth(void)
            "HostFB_VSync advances synthesis");
     PASS();
 }
+
+/* Akao_Tick (8DB7C) advances score state beyond the 8CA84 command drain.
+ * Callees 87AA8/8E8D0/89328/8D844/89784 remain host stubs — this proves the
+ * bank-walk / tempo / slide scaffolding, not sample-advancing bytecode. */
+static void test_DAY2_akao_tick(void)
+{
+    pe_addr_t st = 0x800B6980u;
+    pe_addr_t voice = 0x800B8AC0u;
+    uint32_t acc_before;
+    TEST("DAY2_akao_tick");
+    ResetTestState();
+    PE_SpuDma_Reset();
+    PE_StoreU32(0x8009D2C8u, st);
+    PE_StoreU32(0x8009D268u, 0u);
+    PE_StoreU32(0x8009D22Cu, 0u);
+    PE_StoreU32(0x8009D2DCu, 4u); /* force tempo-overflow tick path */
+    PE_StoreU8(0x8009D2D2u, 0u);  /* scale_tempo identity */
+    PE_StoreU32(st + 4u, 1u);     /* primary active mask bit0 */
+    PE_StoreU32(st + 0x1Cu, 0u);
+    PE_StoreU32(st + 0x6Cu, 0u);
+    PE_StoreU16(st + 0x22u, 0x100u);
+    PE_StoreU32(st + 0x28u, 0u);
+    PE_StoreU16(st + 0x52u, 3u);  /* pitch slide countdown */
+    PE_StoreU32(st + 0x20u, 0x10u);
+    PE_StoreU32(st + 0x24u, 0x5u);
+    PE_StoreU16(st + 0x58u, 0u);
+    PE_StoreU16(st + 0x60u, 0u);
+    PE_StoreU16(voice + 0x56u, 5u);
+    PE_StoreU16(voice + 0x58u, 9u);
+    PE_StoreU32(0x800BCD50u, 0u);
+    acc_before = PE_LoadU32(st + 0x28u);
+    func_8008DB7C();
+    ASSERT(PE_LoadU16(voice + 0x56u) == 4u, "primary voice note timer decrements");
+    ASSERT(PE_LoadU16(voice + 0x58u) == 8u, "primary voice gate timer decrements");
+    ASSERT(PE_LoadU16(st + 0x52u) == 2u, "pitch slide countdown decrements");
+    ASSERT(PE_LoadU32(st + 0x20u) == 0x15u, "pitch slide applies delta");
+    ASSERT((PE_LoadU32(st + 0x28u) & 0xFFFFu) ==
+               ((acc_before + 0x100u) & 0xFFFFu),
+           "tempo accumulator advances then masks low half");
+    ASSERT(!PE_Port_ShouldStop() && !g_stub_order_count,
+           "Akao_Tick scaffolding runs without stub stops");
+    PASS();
+}

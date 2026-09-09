@@ -12,9 +12,11 @@
  * Classification: 1 for the guest-state transcription; the SPU/DMA hardware
  * effects are class 2 collapses enumerated below.
  *
- * Audio command RAM is now consumed through the enabled host event.
- * Score sequencing remains unported. Bounded host ADPCM synthesis and optional
- * PulseAudio output live in pe_spu_synth.c / pe_host_audio.c (AUD1-E0).
+ * Audio command RAM is consumed through the enabled host event via full
+ * Akao_Tick (8DB7C in pe_akao_tick.c) plus PE_SpuScore_ApplyDirtyVoices.
+ * Bounded host ADPCM synthesis / optional PulseAudio live in pe_spu_synth.c /
+ * pe_host_audio.c (AUD1-E0). Sample-advancing score callees (87AA8/8E8D0/…)
+ * remain stubbed — bank/tempo scaffolding advances; bytecode does not.
  *
  * Retained hardware/SDK adaptations:
  *   - func_8007D9F8 (SPU DMA upload in func_80085E54): B48A records the

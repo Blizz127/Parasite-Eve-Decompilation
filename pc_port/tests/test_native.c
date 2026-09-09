@@ -40006,6 +40006,7 @@ int main(void)
     test_DAY2_spu_mode();
     test_DAY2_spu_voice_bridge();
     test_DAY2_spu_synth();
+    test_DAY2_akao_tick();
     test_DAY2_music_consumer();
     test_DAY1_animation_sound_register();
     test_DAY1_m0034i_modes();
