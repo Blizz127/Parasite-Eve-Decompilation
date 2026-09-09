@@ -25,8 +25,9 @@ direct `BeginDecode` (`dma0=0`) — false green. Prefer Decomp leaves; no
 
 **Fix (`pe_mdec.c`):** clear `dma0_active` / CHCR busy **before**
 `BeginCommand` on DMA0 completion (words already in hand). Keep idle-`FE00`
-drain + no-DMA supersede. TRACE `MDEC_decode_busy_dma0`/`dma1`/`both` if
-busy still fires. Test: `DAY2_mdec_dma` BFA0→Service orphan path (158t).
+drain + no-DMA supersede. Busy dig: encode dma0/dma1 in boundary value
+(no `Trace_Direct` — not linked into every `pe_field_runtime` consumer).
+Test: `DAY2_mdec_dma` BFA0→Service orphan path (158t).
 
 Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Tip on
 `cursor/movie-autonomous-stream-6f51` (PR #38). Evidence:
