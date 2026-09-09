@@ -15,6 +15,7 @@
 #include "pe_sdk.h"
 #include "pe_disc.h"
 #include "pe_guest_image.h"
+#include "pe_cdreg.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -430,6 +431,18 @@ int main(int argc, char **argv) {
             return 1;
         }
         fprintf(stderr, "[DISC] boot executable loaded into guest RAM\n");
+        /* Mounted-disc command device: required for HostFB_PumpCdProgress /
+         * streaming DMA (7C564→B89F4). Stage147/148 keep enable explicit —
+         * tests opt in; production --disc-image must as well or E0 burns
+         * empty polls then hangs in the give-up 7F72C busy-wait under
+         * 1220C (live Bazzite on 737f10e/7a6984b). */
+        if (!PE_CdReg_EnableDevice(7u)) {
+            fprintf(stderr,
+                    "[DISC] CD command device already enabled or attach failed\n");
+        } else {
+            fprintf(stderr, "[DISC] CD command device enabled (mask=7)\n");
+            TraceEvent("cd_command_device_enabled");
+        }
     }
 
     TraceEvent("native_executable_start");

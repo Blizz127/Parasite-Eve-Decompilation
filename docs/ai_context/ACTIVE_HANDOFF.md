@@ -73,6 +73,32 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158i: enable CD device on disc-image + E0 named diagnostics (2026-09-09)
+
+Live Bazzite on tip **`7a6984b`** still nested under `func_8001220C` (~1m)
+with the same sparse TRACE as `737f10e` — no named STOP. Decomp Bot rebased
+media-loop to **`b3e8ee1`** on `737f10e`; port C for `92CE8`/`92934` is
+**byte-identical** to `7a6984b` (tip remains source of truth; only evidence
+REPORT wording differed).
+
+Root cause: `HostFB_PumpCdProgress` is a no-op unless
+`PE_CdReg_DeviceEnabled()`. Production `--disc-image` never called
+`PE_CdReg_EnableDevice` (Stage147/148 keep enable explicit; only tests opted
+in). E0 therefore burned 2000 empty polls, then hung in the give-up
+`while (CdReady() != -1)` busy-wait with **no host pump** — silent nest
+under `1220C`.
+
+Fix: `port_main` enables the mounted-disc command device (mask 7) after EXE
+load. E0 else-arm named-stops `Stage1b_cd_device_disabled` when device-off
+and no fixture arm. CD-ready / give-up spins call `HostFB_PumpCdProgress`.
+Trace markers: `e0_poll` / `e0_promote` / `e0_giveup` / `got_frame`. New
+test `Stage1b_cd_device_disabled_named_stop`. B54KY Disc1 attaches device.
+
+**Next boot→Day2:** Matt retest tip; expect TRACE past `e0_poll` toward
+`e0_promote`/`got_frame` or a named Stage-1b/cut STOP — not a silent nest.
+Non-claims: Day2 complete; Stage-1b done on live until retest; retail STR
+golden; published runtime 128 unchanged. Linux-first.
+
 ## DAY2-158h: fold Decomp Bot 92CE8/92934 media loop onto tip (2026-09-09)
 
 Decomp Bot branch `cursor/92ce8-92934-media-loop` tip is still **`5a4ba27`**

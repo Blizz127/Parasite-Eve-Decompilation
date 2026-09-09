@@ -1832,6 +1832,8 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
      * All drive-state words stay real-disc values. */
     B558_PlantPointers();
     PE_Disc_SetActive(disc);
+    ASSERT(PE_CdReg_EnableDevice(7u),
+           "Disc1 CD command device attach failed");
     D_800B0DD8 = 1013u;
     D_80011614 = 0x8018EFF0u;
     D_80093164[0] = 0x03D2u;
@@ -19169,6 +19171,46 @@ static void test_B54K_92934_dba_early_gate(void)
     ASSERT(func_80192934() == 0 && !PE_Port_ShouldStop() &&
            PE_LoadU8(0x800B0DBAu) == 1u,
            "DBA==1 early return must not mutate DBA");
+    PASS();
+}
+
+static void test_Stage1b_cd_device_disabled_named_stop(void)
+{
+    DiscFixture fx;
+    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
+    const pe_addr_t suffix = 0x801F0000u;
+
+    TEST("Stage1b_cd_device_disabled_named_stop");
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    /* Deliberately do NOT EnableDevice or ArmStreamPromote: E0 must
+     * name Stage1b_cd_device_disabled instead of nesting forever. */
+    PE_StoreU32(record, suffix);
+    PE_StoreU32(0x801D0DFCu, 0x801E0000u);
+    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
+    B558_PlantChain();
+    /* Minimal plant without ArmStreamPromote (unlike CDQ2d_PlantStream). */
+    PE_StoreU16(0x801D11B0u, 1u);
+    PE_StoreU32(0x801D0DF8u, 0x801B0000u);
+    PE_StoreU8(0x8010CBFCu, 0xFFu);
+    PE_StoreU8(0x8010CBFDu, 0xFFu);
+    PE_StoreU32(0x8011EB8Cu, 0x00FFFFFFu);
+    PE_StoreU32(0x801E0800u, 0x00000001u);
+    PE_StoreU16(0x801E0804u, 0u);
+    PE_StoreU16(0x801E0806u, 0u);
+    PE_StoreU16(0x801E0808u, 0xFE00u);
+    PE_StoreU16(0x801E080Au, 0u);
+
+    ASSERT(func_801924F8(21) == 0 &&
+           PE_Port_ShouldStop() &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
+           CountOrderLog("Stage1b_cd_device_disabled") == 1 &&
+           CountOrderLog("Stage1b_pad_terminated_frame") == 0,
+           "device-off E0 must named-stop, not hang or Stage-1b-pad");
+    FxFree(&fx);
     PASS();
 }
 
@@ -39411,6 +39453,7 @@ int main(void)
     test_B54K_C89C_gated_until_pad();
     test_B54K_C89C_last_chunk_frame_ready();
     test_B54K_92934_dba_early_gate();
+    test_Stage1b_cd_device_disabled_named_stop();
     test_B54KAF_dec_dct_reset_wrapper();
     test_B54KAG_mdec_table_upload();
     test_B54KAH_dec_dct_out_callback_registration();

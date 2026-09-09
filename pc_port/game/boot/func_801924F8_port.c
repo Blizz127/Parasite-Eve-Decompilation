@@ -11,6 +11,8 @@
 #include "psx_compat.h"
 #include "game_port.h"
 #include "pe_sdk.h"
+#include "pe_cdreg.h"
+#include "host_framebuffer.h"
 
 /* Stage-1b / MV1d readiness: admit a stream cursor that is safe for
  * live C89C without clamping a1.
@@ -123,6 +125,10 @@ int func_801924F8(int index)
 cdready_wait:
     do {
         while (func_8007F72C() != 1) {
+            /* Host stand-in for CD IRQ progress during ready spin. */
+            HostFB_PumpCdProgress();
+            if (PE_Port_ShouldStop())
+                return 0;
         }
     } while (func_8007F778() != 0);
 
@@ -155,6 +161,7 @@ e0_poll:
      * delivers synchronously instead (the 7ED58 synchronous-reset
      * precedent).  One completion per poll; E0 takes got_frame on
      * the first poll, so cadence beyond that is unobservable. */
+    Trace_Direct("func_801924F8_e0_poll");
     {
         uint32_t s0 = 2000u;
         for (;;) {
@@ -164,19 +171,24 @@ e0_poll:
              * Unconditional 7C214 every poll published incomplete bodies
              * and tripped MV1d. Fixtures arm PE_Port_ArmStreamPromote
              * because 7A214 clears B89F4 after the plant. Live Disc1
-             * never arms that — HostFB_PumpCdProgress advances one CD
-             * sector per poll until 7C564 sets B89F4. (VSync(-1) alone
-             * only moves 1024 device cycles; a sector needs ~225k–451k,
-             * so E0's 2000-try window could not finish a multi-sector
-             * STR frame and live Bazzite stayed nested under 1220C.)
-             * A B89F4 promote also latches StreamFrameReady so got_frame
-             * may run C89C on the demuxed VLC body (not an immediate pad). */
+             * needs PE_CdReg_EnableDevice (port_main --disc-image) so
+             * HostFB_PumpCdProgress can advance sectors until 7C564 sets
+             * B89F4. A B89F4 promote also latches StreamFrameReady so
+             * got_frame may run C89C on the demuxed VLC body. */
             {
                 int last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
                 if (last_chunk || PE_Port_ConsumeStreamPromote()) {
                     if (last_chunk)
                         PE_Port_NoteStreamFrameReady();
+                    Trace_Direct("func_801924F8_e0_promote");
                     func_8007C214();
+                } else if (!PE_CdReg_DeviceEnabled()) {
+                    /* Device-off: PumpCdProgress cannot retire sectors —
+                     * named stop instead of a silent 1220C nest. */
+                    Bootstrap_ReturnVoid("Stage1b_cd_device_disabled",
+                                         "func_801924F8");
+                    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                    return 0;
                 } else {
                     HostFB_PumpCdProgress();
                 }
@@ -191,6 +203,7 @@ e0_poll:
             break;
         }
     }
+    Trace_Direct("func_801924F8_e0_giveup");
     /* Give-up path: copy D0DC4 to D0DDC, CD-ready waits, re-issue Setloc
      * (loc word D0DDC, s2 = READY_FROM_CALLER -1) + ReadN(480), reset s0.
      * The beqz delay (li s0,2000) runs on both outcomes, so s0 is always
@@ -198,8 +211,14 @@ e0_poll:
     for (;;) {
         PE_StoreU32(0x801D0DDCu, PE_LoadU32(0x801D0DC4u));
         while (func_8007F72C() != -1) {
+            HostFB_PumpCdProgress();
+            if (PE_Port_ShouldStop())
+                return 0;
         }
         while (func_8007F778() != 0) {
+            HostFB_PumpCdProgress();
+            if (PE_Port_ShouldStop())
+                return 0;
         }
         func_80080D5C(2, 0x801D0DDCu, 0u);
         status = func_80081314(0x801D0DDCu, 480u);
@@ -211,6 +230,7 @@ e0_poll:
     }
     goto cdready_wait;
 got_frame:
+    Trace_Direct("func_801924F8_got_frame");
     /* 80192814: s1 nonzero.  Retail got_frame tail (ov133 carve,
      * docs/evidence/pe-mv1c-c89c-map/NOTE.md): bump [B0DBC], load
      * a1 = [0x801D1464 + ([146C]^1)*4] then toggle [146C] (first pass

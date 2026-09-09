@@ -66,9 +66,12 @@ translated function may regress to a stub.
   `B89F4` is set, or when a fixture arms `PE_Port_ArmStreamPromote`
   (because `7A214` clears `B89F4` after the plant). Otherwise
   `HostFB_PumpCdProgress` advances one CD sector (~451584 device cycles)
-  so `7C564` can finish the frame. Plain `HostFB_VSync(-1)` only moves
-  1024 cycles and cannot retire a sector inside E0's 2000-try window.
-  Unconditional per-poll promote published incomplete bodies (MV1d).
+  so `7C564` can finish the frame — **requires** `PE_CdReg_EnableDevice`
+  (production `--disc-image` enables it after EXE load; Stage147/148 keep
+  enable explicit). Plain `HostFB_VSync(-1)` only moves 1024 cycles.
+  Device-off + no fixture arm takes named `Stage1b_cd_device_disabled`
+  instead of nesting under `1220C`. CD-ready / give-up busy-waits also
+  pump. Unconditional per-poll promote published incomplete bodies (MV1d).
   E0 still takes got_frame on the first successful promote; the give-up
   path behind it is byte-identical retail logic.
 - **Skip-movie New Game** (`func_801909B4_port.c`, `--skip-movie`):
