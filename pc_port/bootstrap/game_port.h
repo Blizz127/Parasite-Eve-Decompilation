@@ -94,6 +94,25 @@ void PE_Port_SetPadSource(PEPortPadSource source);
 int  PE_Port_HasPadSource(void);
 uint16_t PE_Port_ReadPadRaw(void);
 
+/* Stage-1b fixture promote arm for func_801924F8's E0 pump.
+ * Retail last-chunk sets D_800B89F4 before DMA3 → 7C214; fixtures plant a
+ * body then call 7A214, which clears B89F4. Arming here survives that clear
+ * so the pump can publish status 2 once without unconditional live promote.
+ * Live Disc1 never arms this — it waits for B89F4 / VBlank. */
+void PE_Port_ArmStreamPromote(void);
+int  PE_Port_ConsumeStreamPromote(void);
+
+/* Stage-1b complete-frame latch for got_frame C89C admission.
+ * Set by func_8007C214 when D_800B89F4==1 (retail last video chunk —
+ * E0 promote or 7C564 during PumpCdProgress), or by tests that
+ * simulate that publication. Demuxed bodies at s1 are VLC bitstreams —
+ * they do NOT start with STR magic 0x80010160 (that lives in the
+ * 32-byte sector header). Pad-exit probes still cover synthetic plants;
+ * this latch covers live frames. */
+void PE_Port_NoteStreamFrameReady(void);
+int  PE_Port_PeekStreamFrameReady(void);
+int  PE_Port_TakeStreamFrameReady(void);
+
 /* Trace helper available to game code */
 void Trace_Direct(const char *event);
 

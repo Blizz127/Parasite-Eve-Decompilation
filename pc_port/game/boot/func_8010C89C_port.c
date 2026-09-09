@@ -23,22 +23,27 @@
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"
+#include <string.h>
 
 #define GA_VLC_STATE      0x8011EB8Cu   /* saved t1 (bound half-count) */
 #define GA_VLC_SAVED      0x8011EB90u   /* 9 saved regs (resume image) */
 #define GA_VLC_BOUND      0x8011EBB4u   /* saved output bound t1 */
 
 /* Host-side entry/exit telemetry (never guest authority: the MDEC
- * payload-fingerprint precedent). Lets tests observe the entry
- * triple and the exit code for oracle cross-checks. */
+ * payload-fingerprint precedent). Lets tests and live Disc1 TRACE
+ * observe call counts, pad vs bound exits, and out/table validity —
+ * quiet logs are NOT proof the decoder never ran (no Trace_Direct
+ * inside this leaf; surfacing is the caller's job). */
 static PeC89CTelemetry g_c89c_telemetry;
+
+void PE_C89C_ResetTelemetry(void)
+{
+    memset(&g_c89c_telemetry, 0, sizeof(g_c89c_telemetry));
+}
 
 void PE_C89C_GetTelemetry(PeC89CTelemetry *out)
 {
-    out->a0 = g_c89c_telemetry.a0;
-    out->a1 = g_c89c_telemetry.a1;
-    out->a2 = g_c89c_telemetry.a2;
-    out->ret = g_c89c_telemetry.ret;
+    *out = g_c89c_telemetry;
 }
 
 /* Bit-buffer refill (retail C9CC/CAA0/CAE4/CA4C, identical shape):
@@ -58,16 +63,39 @@ static void c89c_refill(uint32_t *v0, int32_t *v1, pe_addr_t *a0,
     *v1 = low;
 }
 
+static void c89c_note_exit(pe_addr_t a1_entry, pe_addr_t a1_now, int ret)
+{
+    g_c89c_telemetry.ret = ret;
+    g_c89c_telemetry.a1_end = a1_now;
+    if (a1_now >= a1_entry)
+        g_c89c_telemetry.out_bytes = (uint32_t)(a1_now - a1_entry);
+    else
+        g_c89c_telemetry.out_bytes = 0u;
+    if (ret == 0)
+        g_c89c_telemetry.pad_exits++;
+    else
+        g_c89c_telemetry.bound_exits++;
+}
+
 int func_8010C89C(uint32_t a0, pe_addr_t a1, pe_addr_t a2, uint32_t a3)
 {
     uint32_t t0, t1, t3, t4, v0;
     uint32_t t7, t8, t9;
     int32_t t2, t5, v1, at;
     pe_addr_t t6, tab, a3t;
+    pe_addr_t a1_entry = a1;
     (void)a3; /* dead on entry: recomputed below before first use */
+    g_c89c_telemetry.calls++;
     g_c89c_telemetry.a0 = a0;
     g_c89c_telemetry.a1 = a1;
     g_c89c_telemetry.a2 = a2;
+    g_c89c_telemetry.a0_in_ram =
+        (a0 != 0u && PE_RangeIsRam((pe_addr_t)a0, 12u)) ? 1u : 0u;
+    g_c89c_telemetry.a1_in_ram = PE_RangeIsRam(a1, 4u) ? 1u : 0u;
+    g_c89c_telemetry.a2_in_ram = PE_RangeIsRam(a2, 4u) ? 1u : 0u;
+    g_c89c_telemetry.hdr_count = 0u;
+    g_c89c_telemetry.hdr_bits = 0u;
+    g_c89c_telemetry.hdr_word0 = 0u;
 
     /* C89C: t1 = [EB8C] (bnez delay slot: both paths). */
     t1 = PE_LoadU32(GA_VLC_STATE);
@@ -102,6 +130,10 @@ int func_8010C89C(uint32_t a0, pe_addr_t a1, pe_addr_t a2, uint32_t a3)
     t2 = (int32_t)PE_LoadU16(a0 + 6u);
     v0 = PE_LoadU16(a0 + 8u);
     v1 = (int32_t)PE_LoadU16(a0 + 10u);
+    g_c89c_telemetry.hdr_word0 = t1;
+    g_c89c_telemetry.hdr_count = (uint16_t)t2;
+    g_c89c_telemetry.hdr_bits =
+        ((uint32_t)v0 << 16) | (uint32_t)(uint16_t)v1;
     t2 -= 3;
     t4 <<= 10;                  /* bltz delay: always executes */
     if (t2 >= 0)
@@ -265,7 +297,7 @@ pad_exit:                       /* CB84: pad with FE00 to the bound */
     }
     /* CBAC-CBBC: mfc0 Status, OR 0x20000, mtc0. CPU status/cache
      * effects are not modeled here; this is not an IEc (bit0) write. */
-    g_c89c_telemetry.ret = 0;
+    c89c_note_exit(a1_entry, a1, 0);
     return 0;                   /* CBC0 delay: v0 = 0 */
 
 bound_exit:                     /* CBC8: save the 9-word image */
@@ -278,6 +310,6 @@ bound_exit:                     /* CBC8: save the 9-word image */
     PE_StoreU32(GA_VLC_SAVED + 24u, t7);
     PE_StoreU32(GA_VLC_SAVED + 28u, t8);
     PE_StoreU32(GA_VLC_SAVED + 32u, t9);
-    g_c89c_telemetry.ret = 1;
+    c89c_note_exit(a1_entry, a1, 1);
     return 1;                   /* CBF8 delay: v0 = 1 */
 }

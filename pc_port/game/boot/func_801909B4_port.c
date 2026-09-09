@@ -170,6 +170,21 @@ int func_801909B4(void)
         return -1;
     }
 
-    (void)func_80192CE8(1);
-    return -1; /* prefix stops at func_80191FB8; retail retains s2 */
+    {
+        int movie = func_80192CE8(1);
+        if (PE_Port_ShouldStop())
+            return -1;
+        /* Retail continues into the title/menu tail after FMV001. This
+         * port returns the movie selector to main; with D_8009D280 still
+         * 0xA9400048, func_8006E9A0(0) does not publish a new token, so
+         * 1220C re-dispatches 909B4 forever (live Bazzite 04c8078:
+         * hundreds of e0_poll/got_frame with silent C89C). Named cut
+         * instead of that spin — title/menu remains untranslated. */
+        Bootstrap_ReturnVoid4Indirect(
+            "func_801909B4_post_movie_title_cut", "func_801909B4",
+            0x80191120u, (uint32_t)movie, environment0, environment1,
+            saved_bit);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return -1;
+    }
 }

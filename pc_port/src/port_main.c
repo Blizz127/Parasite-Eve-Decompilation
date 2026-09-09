@@ -15,6 +15,7 @@
 #include "pe_sdk.h"
 #include "pe_disc.h"
 #include "pe_guest_image.h"
+#include "pe_cdreg.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -430,6 +431,18 @@ int main(int argc, char **argv) {
             return 1;
         }
         fprintf(stderr, "[DISC] boot executable loaded into guest RAM\n");
+        /* Mounted-disc command device: required for HostFB_PumpCdProgress /
+         * streaming DMA (7C564→B89F4). Stage147/148 keep enable explicit —
+         * tests opt in; production --disc-image must as well or E0 burns
+         * empty polls then hangs in the give-up 7F72C busy-wait under
+         * 1220C (live Bazzite on 737f10e/7a6984b). */
+        if (!PE_CdReg_EnableDevice(7u)) {
+            fprintf(stderr,
+                    "[DISC] CD command device already enabled or attach failed\n");
+        } else {
+            fprintf(stderr, "[DISC] CD command device enabled (mask=7)\n");
+            TraceEvent("cd_command_device_enabled");
+        }
     }
 
     TraceEvent("native_executable_start");
@@ -544,6 +557,39 @@ int main(int argc, char **argv) {
             vs, ds, pr, mk, g_port_main_iterations);
     fprintf(stderr, "[HOST] stop_reason=%s\n",
             PE_Port_StopReasonName(PE_Port_GetStopReason()));
+    /* DAY2-158 dig: quiet TRACE ≠ skipped C89C. Dump host telemetry so
+     * live Disc1 shows a0/a1/a2/ret (+counts) after the poll/got_frame
+     * spin — pad-exit vs live out/table. Not a got_frame gate patch. */
+    {
+        PeC89CTelemetry c89c;
+        char tel[224];
+
+        PE_C89C_GetTelemetry(&c89c);
+        snprintf(tel, sizeof(tel),
+                 "c89c_tel_final calls=%u ret=%d pad=%u bound=%u "
+                 "a0=%08x a1=%08x a2=%08x a0ram=%u a1ram=%u a2ram=%u "
+                 "out=%u hdr=%04x/%08x w0=%08x",
+                 (unsigned)c89c.calls, c89c.ret,
+                 (unsigned)c89c.pad_exits, (unsigned)c89c.bound_exits,
+                 (unsigned)c89c.a0, (unsigned)c89c.a1, (unsigned)c89c.a2,
+                 (unsigned)c89c.a0_in_ram, (unsigned)c89c.a1_in_ram,
+                 (unsigned)c89c.a2_in_ram, (unsigned)c89c.out_bytes,
+                 (unsigned)c89c.hdr_count, (unsigned)c89c.hdr_bits,
+                 (unsigned)c89c.hdr_word0);
+        TraceEvent(tel);
+        fprintf(stderr,
+                "[C89C] calls=%u ret=%d pad_exits=%u bound_exits=%u "
+                "a0=0x%08x a1=0x%08x a2=0x%08x out_bytes=%u "
+                "a0ram=%u a1ram=%u a2ram=%u hdr=0x%04x/0x%08x w0=0x%08x\n",
+                (unsigned)c89c.calls, c89c.ret,
+                (unsigned)c89c.pad_exits, (unsigned)c89c.bound_exits,
+                (unsigned)c89c.a0, (unsigned)c89c.a1, (unsigned)c89c.a2,
+                (unsigned)c89c.out_bytes,
+                (unsigned)c89c.a0_in_ram, (unsigned)c89c.a1_in_ram,
+                (unsigned)c89c.a2_in_ram,
+                (unsigned)c89c.hdr_count, (unsigned)c89c.hdr_bits,
+                (unsigned)c89c.hdr_word0);
+    }
     {
         PeGpuState gpu;
 

@@ -54,11 +54,33 @@ def optional_cmake_sources(text: str, variable: str) -> list[str]:
     return cmake_sources(text, variable)
 
 
+def collect_test_source_text(root: Path, test_source: Path) -> str:
+    """Flatten test_native.c plus its quoted local headers for TEST counts.
+
+    Many cases live in `#include "test_*.h"` bodies; counting only the
+    outer .c under-counts the suite and desyncs the artifact-independent
+    gate from the real binary.
+    """
+    base = root / test_source
+    text = base.read_text(encoding="utf-8")
+    parts = [text]
+    seen = {test_source.name}
+    for match in re.finditer(r'^\s*#include\s+"([^"]+)"', text, re.MULTILINE):
+        name = match.group(1)
+        if name in seen:
+            continue
+        seen.add(name)
+        header = base.parent / name
+        if header.is_file():
+            parts.append(header.read_text(encoding="utf-8"))
+    return "\n".join(parts)
+
+
 def derive_metrics(root: Path = ROOT) -> dict[str, Any]:
     source = (root / SOURCE).read_text(encoding="utf-8")
     evidence = (root / EVIDENCE).read_text(encoding="utf-8")
     cmake = (root / CMAKE).read_text(encoding="utf-8")
-    tests = (root / TEST_SOURCE).read_text(encoding="utf-8")
+    tests = collect_test_source_text(root, TEST_SOURCE)
 
     full = one(
         r"Full retail body:\s*\*\s*(\d+) words / 0x[0-9A-Fa-f]+ bytes, "

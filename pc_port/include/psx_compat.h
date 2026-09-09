@@ -129,6 +129,9 @@ extern int func_80191FB8(int count, pe_addr_t source_list);
 extern int PE_func_80191FB8_Values(int count, const pe_addr_t *sources);
 extern int func_801924F8(int index);
 extern int func_80192CE8(int index);
+extern int func_80192934(void);
+extern void func_80192C48(void);
+extern void func_80192C9C(int flag);
 extern int func_80190660(void);
 extern void func_8010C0D8(pe_addr_t callback); /* DecDCToutCallback */
 extern void func_8007A214(pe_addr_t record_base, uint32_t record_count);
