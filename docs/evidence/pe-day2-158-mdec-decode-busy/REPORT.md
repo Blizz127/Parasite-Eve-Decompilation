@@ -49,8 +49,8 @@ Live path is `92934` → `BFA0` → `PE_MDEC_SubmitInputTable` (sets
 2. **158t:** on DMA0 completion in `Service`, clear `dma0_active` / CHCR busy
    **before** `BeginCommand` (words already in hand). Completing DecDCTin
    must not block orphan supersede.
-3. TRACE dig aids: `MDEC_decode_busy_dma0` / `_dma1` / `_both` if busy still
-   fires.
+3. Busy dig: encode dma0/dma1 flags in the `MDEC_decode_busy` boundary value
+   (no `Trace_Direct` — not linked into every field-runtime consumer).
 4. Test: `DAY2_mdec_dma` adds BFA0→Service orphan path (158t).
 
 No game CFG invent; no admit-gate / cursor ±32; `909B4` unchanged.

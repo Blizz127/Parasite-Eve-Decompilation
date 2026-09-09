@@ -120,9 +120,7 @@ static void test_DAY2_mdec_dma(void)
         PE_StoreU16(0x80140106u,0xFE00u);
         func_8010BFA0(0x80140100u,0u);
         HostFB_VSync(-1);
-        ASSERT(!PE_Port_ShouldStop() &&
-               CountOrderLog("MDEC_decode_busy")==0 &&
-               CountOrderLog("MDEC_decode_busy_dma0")==0,
+        ASSERT(!PE_Port_ShouldStop() && CountOrderLog("MDEC_decode_busy")==0,
                "158t BFA0/Service path still MDEC_decode_busy");
         ASSERT(PE_MDEC_ReadPixels(0x80160000u,64u) && !PE_Port_ShouldStop(),
                "158t superseding BFA0 decode drain");

@@ -153,10 +153,11 @@ static int MdecBeginCommand(uint32_t command,pe_addr_t source)
         int dma0=g_mdec.dma0_active;
         int dma1=(g_mdec.dma1_chcr&0x01000000u)!=0u;
         if(dma0 || dma1) {
-            /* Dig aid for live Disc1: which DMA arm blocked supersede. */
-            Trace_Direct(dma0&&dma1?"MDEC_decode_busy_both":
-                         dma0?"MDEC_decode_busy_dma0":"MDEC_decode_busy_dma1");
-            return MdecBoundary("MDEC_decode_busy",g_input_pos);
+            /* Encode which DMA arm blocked supersede in the boundary value
+             * (bit31=dma0, bit30=dma1); Trace_Direct is not linked into
+             * every pe_field_runtime consumer. */
+            return MdecBoundary("MDEC_decode_busy",
+                g_input_pos|((uint32_t)dma0<<31)|((uint32_t)dma1<<30));
         }
         /* No DMA left to drain the orphan — supersede for the new DecDCTin. */
         g_input_pos=g_input_count;
