@@ -20345,11 +20345,28 @@ static void test_CDS1_7fb44_negative_flag_passes(void)
  * The shadow routes them; tests observe production values. */
 static void B558_PlantPointers(void)
 {
+    /* EXE-image CD register pointer tables (not runtime SDK writers).
+     * Proven against the SHA-1 retail Disc1 EXE / gameover fade seed
+     * dump: B27C family for the command/status path, B32C..B35C for
+     * the stream reader (7C564/7CEAC) and StreamOutputChcr. */
     PE_StoreU32(0x8009B27Cu, 0x1F801800u);
     PE_StoreU32(0x8009B280u, 0x1F801801u);
     PE_StoreU32(0x8009B284u, 0x1F801802u);
     PE_StoreU32(0x8009B288u, 0x1F801803u);
     PE_StoreU32(0x8009B28Cu, 0x1F801020u);
+    PE_StoreU32(0x8009B32Cu, 0x1F801800u);
+    PE_StoreU32(0x8009B330u, 0x1F801801u);
+    PE_StoreU32(0x8009B334u, 0x1F801802u);
+    PE_StoreU32(0x8009B338u, 0x1F801803u);
+    PE_StoreU32(0x8009B33Cu, 0x1F801018u);
+    PE_StoreU32(0x8009B340u, 0x1F801020u);
+    PE_StoreU32(0x8009B344u, 0x1F8010F0u);
+    PE_StoreU32(0x8009B348u, 0x1F8010F4u);
+    PE_StoreU32(0x8009B34Cu, 0x1F801098u);
+    PE_StoreU32(0x8009B350u, 0x1F801090u);
+    PE_StoreU32(0x8009B354u, 0x1F8010A8u);
+    PE_StoreU32(0x8009B358u, 0x1F8010A0u);
+    PE_StoreU32(0x8009B35Cu, 0x1F8010B8u);
 }
 
 /* Full live-chain plant for synthetic tests: production tables plus

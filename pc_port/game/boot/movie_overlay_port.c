@@ -415,6 +415,11 @@ int func_80121C04(int id)
                 next=(pe_addr_t)func_80121270(arena);
                 if(PE_Port_ShouldStop()) return 0;
                 if(next) break;
+                /* Hardware advances CD DMA/IRQ while the CPU spins on
+                 * 121270; HostFB_VSync is the host asynchronous-progress
+                 * stand-in (same adaptation as the updater's poll). */
+                HostFB_VSync(-1);
+                if(PE_Port_ShouldStop()) return 0;
             }
             if(next) {
                 uint32_t flip=PE_LoadU8(0x801228D4u)^1u;
@@ -427,7 +432,7 @@ int func_80121C04(int id)
                 PE_StoreU8(0x801223F5u,0u);
                 PE_StoreU8(0x800B0DBAu,(uint8_t)(PE_LoadU8(0x800B0DBAu)+1u));
                 PE_StoreU16(0x800B0DBCu,1u);
-                return 0;
+                return 1;
             }
             /* Retail repeats the Setloc/ReadS retry until the stream
              * delivers.  Without a modeled physical stream delivering

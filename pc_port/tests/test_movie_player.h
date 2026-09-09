@@ -1,15 +1,15 @@
-/* DAY2-157: complete movie player 121C04.
+/* DAY2-158: complete movie player 121C04 with autonomous physical stream.
  * Original control-flow authority: pe_movie_player_oracle.py (20 graphs:
  * 4 early returns and 16 full setup/search/decode graphs with explicit
  * SDK/search/frame providers). The native test executes the real
  * SDK/disc implementations. The disabled-device run stops at the recorded
  * movie_player_search_wait boundary. The enabled-device run really
  * searches the fixture ISO, completes Setloc through the stage155 queue,
- * installs the 1214D4/7C214/813E8 streaming callbacks, and then stops at
- * the recorded CD_device_read_mode device boundary when the mode-0x1E0
- * ReadS reaches the device model (read modes with 0x50 bits are the
- * recorded XA-mode frontier; the autonomous stream delivery they would
- * start is the next integration frontier). */
+ * installs the 1214D4/7C214/813E8 streaming callbacks, issues mode-0x1E0
+ * ReadS (CdlModeRT bit6 allowed; CdlModeSM bit4 still a device boundary),
+ * and drives device → DMA3 → 7C564 → 7C214 → status-2 → 121270 → C89C
+ * through the physical chain. EXE-image DMA pointer words are planted by
+ * CdDeviceSeed/B558_PlantPointers after ResetTestState. */
 static void MOVPLY_SeedRecord(unsigned id,unsigned wide)
 {
     pe_addr_t record=0x80122438u+id*20u;
@@ -20,6 +20,7 @@ static void MOVPLY_SeedRecord(unsigned id,unsigned wide)
     PE_StoreU32(0x80122438u+id*20u,0x80130130u);   /* record[0] is the name */
     PE_StoreU8(record+4u,(uint8_t)wide);
     PE_StoreU16(record+6u,0x1234u);                /* stream end LBA */
+    PE_StoreU16(record+8u,0x7FFFu);                /* frame limit */
     PE_StoreU16(record+0xAu,0x5678u);              /* slice x */
     PE_StoreU16(record+0xCu,0x300u);               /* slice y */
     PE_StoreU32(0x80122420u,0x80160000u);          /* RLE arenas */
@@ -37,6 +38,25 @@ static void MOVPLY_SeedRecord(unsigned id,unsigned wide)
     PE_StoreU8(0x800B0DBEu,0x98u);
     PE_StoreU8(0x800B0DBAu,3u);
     PE_StoreU16(0x800B0DBCu,0u);
+}
+
+/* One-chunk STR video sector at the PE.IMG extent the player searches.
+ * Header layout matches DAY2_cd_dma / opening-STR evidence (magic 0x160,
+ * channel nibble 0, part 0 of 1, frame 1, 320x240). Payload is left as
+ * the fixture pattern; C89C exits via the zeroed EB8C bound (caller
+ * ignores the return). */
+static void MOVPLY_PlantStreamSector(DiscFixture *fx)
+{
+    uint8_t *raw=fx->img+FX_PEIMG_LBA*2352u;
+    unsigned i;
+    for(i=0;i<32u;i++) raw[24u+i]=0;
+    raw[24]=0x60;raw[25]=1;          /* magic 0x0160 */
+    raw[26]=1;raw[27]=0x80;          /* +2 = 0x8001 → channel 0 */
+    raw[28]=0;raw[29]=0;             /* part index 0 */
+    raw[30]=1;raw[31]=0;             /* parts in frame = 1 */
+    raw[32]=1;raw[33]=0;             /* frame number 1 */
+    raw[24u+16u]=320&0xFF;raw[24u+17u]=(uint8_t)(320>>8); /* width */
+    raw[24u+18u]=240&0xFF;raw[24u+19u]=(uint8_t)(240>>8); /* height */
 }
 
 static void test_DAY2_movie_player(void)
@@ -66,13 +86,34 @@ static void test_DAY2_movie_player(void)
      * the record pointer are in place. */
     ASSERT(PE_LoadU8(0x800B0DBFu)==0u && PE_LoadU8(0x800B0DBBu)==1u &&
         PE_LoadU32(0x801227E4u)==0x80122438u,"player setup prefix state");
-    /* Enabled device: real ISO search, Setloc and ReadS issue, then the
-     * decode retry stops at the recorded boundary because the modeled
-     * physical stream does not deliver state-2 records yet. */
+    /* CdlModeSM (bit4) remains an explicit device frontier. */
+    {
+        DiscFixture fx={0};uint8_t mode=0x10u;
+        ResetTestState();
+        ASSERT(FxBuild(&fx,0),"player SM fixture");
+        PE_Disc_SetActive(fx.disc);CdDeviceSeed();
+        ASSERT(PE_CdReg_EnableDevice(7u),"player SM attachment");
+        PE_CdReg_WriteU8(PE_CDREG_BASE,0u);
+        PE_CdReg_WriteU8(PE_CDREG_BASE+2u,mode);
+        PE_CdReg_WriteU8(PE_CDREG_BASE+1u,14u);
+        PE_CdReg_ServiceDevice(0xC4E1u);
+        PE_CdReg_WriteU8(PE_CDREG_BASE,1u);
+        PE_CdReg_WriteU8(PE_CDREG_BASE+3u,7u);
+        PE_CdReg_WriteU8(PE_CDREG_BASE,0u);
+        PE_CdReg_WriteU8(PE_CDREG_BASE+1u,27u);
+        PE_CdReg_ServiceDevice(0xC4E1u);
+        ASSERT(PE_Port_ShouldStop() &&
+            CountOrderLog("CD_device_read_mode")==1,
+            "CdlModeSM must remain a read-mode boundary");
+        FxFree(&fx);
+    }
+    /* Enabled device: real ISO search, Setloc/ReadS, autonomous stream
+     * delivery through 7C564/7C214, first-frame handoff. */
     {
         DiscFixture fx={0};
         ResetTestState();
         ASSERT(FxBuild(&fx,0),"player fixture");
+        MOVPLY_PlantStreamSector(&fx);
         PE_Disc_SetActive(fx.disc);CdDeviceSeed();
         ASSERT(PE_CdReg_EnableDevice(7u) && func_8007EC14()==1,
             "player startup");
@@ -80,30 +121,28 @@ static void test_DAY2_movie_player(void)
             !PE_Port_ShouldStop();tick++) HostFB_VSync(0);
         ASSERT(PE_LoadU32(0x8009B574u)==1u,"player SDK ready");
         MOVPLY_SeedRecord(0u,1u);
-        /* Retail's SDK DMA register pointer for the stream handler's
-         * MDEC-output busy check (StreamOutputChcr routes the physical
-         * identity through pe_mdec's DMA1 owner). */
-        PE_StoreU32(0x8009B34Cu,0x1F801098u);
-        ASSERT(func_80121C04(0)==0 && PE_Port_ShouldStop(),
-            "player read-mode stop");
-        ASSERT(g_stub_order_count>=1u &&
-            strcmp(g_stub_order_log[0],"CD_device_read_mode")==0,
-            "player read-mode boundary identity");
+        ASSERT(func_80121C04(0)==1 && !PE_Port_ShouldStop() &&
+            !g_stub_order_count,"player autonomous first frame");
         /* The search really resolved the fixture file and the start
          * Setloc really completed through the queue. */
         ASSERT(PE_LoadU32(0x801223FCu)!=0u && PE_LoadU32(0x80122414u)!=0u,
             "player search result missing");
-        /* 81314 installed the streaming callbacks before the device
-         * boundary. */
+        /* 81314 installed the streaming callbacks; they remain after
+         * the successful first-frame handoff. */
         ASSERT(PE_LoadU32(0x800B8AB4u)==0x800813E8u &&
             func_800824F0(0u)==0x8007C214u,
             "player stream callbacks");
-        ASSERT(PE_LoadU8(0x800B0DBAu)==3u && PE_LoadU16(0x800B0DBCu)==0u,
-            "player no early handoff");
-        ASSERT(PE_LoadU8(0x801228D4u)==0u && PE_LoadU8(0x801228E0u)==0u &&
+        /* Oracle success graph: B0DBA 3→4, B0DBC=1, bank flip, no end. */
+        ASSERT(PE_LoadU8(0x800B0DBAu)==4u && PE_LoadU16(0x800B0DBCu)==1u &&
+            PE_LoadU8(0x801223F5u)==0u && PE_LoadU8(0x801228D4u)==1u,
+            "player first-frame handoff state");
+        ASSERT(PE_LoadU8(0x801228E0u)==0u &&
             PE_LoadU16(0x801228E2u)==0x5678u &&
             PE_LoadU16(0x801228E4u)==0x3F0u &&
             PE_LoadU16(0x801228F8u)==0x18u,"player slice geometry");
+        /* Stream published a completed record then 7C394 released it. */
+        ASSERT(PE_LoadU16(0x80150000u)==0u || PE_LoadU16(0x80150000u)==4u,
+            "player stream record after release");
         PE_MDEC_GetState(&mdec);
         ASSERT(mdec.upload_count>=1u,"player libpress tables");
         FxFree(&fx);
