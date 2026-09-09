@@ -3,7 +3,7 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
-## DAY2-158: B0CD0 cleared without BFRD after 158x (2026-09-09)
+## DAY2-158y: fold dig/b0cd0-no-bfrd (clear B0CD0 only after BFRD) (2026-09-09)
 
 Live Disc1 on tip **`331c945`** (DAY2-158x) **FAILED** — same ~319×
 `func_80192934_enter` silent hang; no `CD_B0CD0_dma1_starved` /
@@ -15,9 +15,16 @@ Live Disc1 on tip **`331c945`** (DAY2-158x) **FAILED** — same ~319×
 with the latch gone; pe_cdreg hold → silent hang. `retry_unresolved` checked
 `b0cd0 && pending` *after* the clear → dead.
 
-**Fix (dig/b0cd0-no-bfrd):** always call `func_8007C564`; clear B0CD0 only
-when pending is gone; else STOP `CD_B0CD0_retry_unresolved`. Evidence:
-`docs/evidence/pe-day2-158-b0cd0-no-bfrd/REPORT.md`.
+**Fix FOLDED** — Decomp dig `dig/b0cd0-no-bfrd` @ `4026de2` cherry-picked
+onto PR #42: always call `func_8007C564`; clear B0CD0 only when pending is
+gone; else STOP `CD_B0CD0_retry_unresolved`. Evidence:
+`docs/evidence/pe-day2-158-b0cd0-no-bfrd/REPORT.md`. Tests: idle catch-up
+expects named STOP when B89F4 early-outs BFRD (A801C clear).
+
+Linux: **1356 run / 1310 pass / 0 fail / 46 skip** (idle-dma1 catch-up
+test now asserts named STOP when BFRD early-outs).
+
+Branch `cursor/cd-sector-backpressure-6f51` → PR #42. Tip tagged **DAY2-158y**.
 
 Next boot→Day2: Matt Disc1 — BFRD progress past ~319, or named
 `CD_B0CD0_retry_unresolved` (then dig that early-out). Linux-first.
