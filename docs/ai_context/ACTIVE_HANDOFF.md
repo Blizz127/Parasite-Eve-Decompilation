@@ -102,6 +102,12 @@ CD device enable retained. **No `a1` clamp.** No Day2-complete claim.
 **Next boot→Day2:** Matt retest tip; expect `c89c_tel calls=…` then
 `func_801909B4_post_movie_title_cut` (not a silent e0_poll spin).
 
+Linux: **1353** / **1307** pass / 0 fail / 46 skip. Claims: Decomp
+quiet-log correction recorded; live `c89c_tel` TRACE; spin boundary
+remains post-movie cut. Non-claims: Day2 complete; title/menu done;
+pad-vs-real decode proven on live until retest; `92934` frontier;
+retail STR golden; published runtime 128 unchanged.
+
 ## DAY2-158l: live C89C TRACE + post-movie title cut (2026-09-09)
 
 Live Bazzite Disc1 on tip **`04c8078` (DAY2-158k) — NEW STATE**:
