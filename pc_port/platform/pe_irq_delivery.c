@@ -123,6 +123,14 @@ static PeIrqServiceResult DispatchDmaCallback(pe_addr_t handler)
         func_801214D4();
         return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;
     }
+    /* Title-overlay DecDCTout (DMA slot 1 from 924F8). 74520 itself is
+     * complete trapIntrDMA — live STOP was this unbound handler, not a
+     * missing 74520 body (docs/evidence/pe-day2-158-74520-dma). Wire the
+     * arm now; guest leaf body waits on Decomp PE.IMG carve — do not
+     * invent a 214D4 twin here. */
+    if (handler == 0x80191DC8u) {
+        return GuestDirectBoundary("func_80191DC8", "func_80074520");
+    }
     if (handler == 0x8007C214u) {
         func_8007C214();
         return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;
