@@ -47,6 +47,11 @@ C89C.
 translated — clearing the premature one-frame path is the multi-frame
 chase, not a New-Game HOST_ADAPTED skip. No Day2-complete claim.
 
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**
+(`./pc_port/build/pe-native-tests`). Tip **`4bfff15`** on
+`cursor/movie-autonomous-stream-6f51` (PR #38) and
+`cursor/c89c-pad-post-movie-6f51` (PR #40).
+
 **Next boot→Day2:** Matt retest tip — expect more than one `c89c_tel` /
 got_frame before title cut (or a later named stop inside 92934). Prefer
 Decomp leaves for 924F8 EC bytes. Linux-first.
