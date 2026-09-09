@@ -3,6 +3,22 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158v: CD_device_sector_overrun after 158u MDEC clear (2026-09-09)
+
+Live Disc1 post-158u: C89C calls=319 out=101510, GPU fills=318, then
+CD_device_sector_overrun at pe_cdreg.c:134.
+
+Root cause (existing decomp): 7C564 A801C+DMA1 early-out sets B0CD0 without
+BFRD; 7AAB4 already cleared INT1, so g_sector_pending remains.
+HostFB_PumpCdProgress then advances another sector period -> STOP. Retail
+recovery is DMA1 callback (91DC8/1214D4) retrying 7C564 when DBB&&B0CD0.
+
+Smallest fix (draft on dig/cd-sector-overrun): Pump stalls CD cadence while
+B0CD0 owns sector_pending; IRQ service also runs when B0CD0 set. No
+dual-sector invent. Evidence: docs/evidence/pe-day2-158-cd-sector-overrun/REPORT.md.
+
+Next boot->Day2: Matt Disc1 past ~319 C89C / expect next named wall. Linux-first.
+
 ## DAY2-158u: supersede on live DMA0 commit (Decomp dig) (2026-09-09)
 
 Decomp dig **CLOSED** — `dig/mdec-decode-busy` @ `bf8ab79` applied on PR #38.

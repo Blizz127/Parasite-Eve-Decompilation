@@ -158,7 +158,7 @@ void HostFB_VSync(int mode)
     if(PE_MDEC_HasDecode() && PE_GPU_DMA2Pending())
         (void)PE_Port_ServiceDmaIrqCheckpoint();
     (void)PE_MDEC_Service();
-    if(PE_MDEC_HasDecode()) HostFB_ServiceDeviceIrq();
+    if(PE_MDEC_HasDecode() || (int16_t)PE_LoadU16(0x800B0CD0u)) HostFB_ServiceDeviceIrq();
     /* Deterministic host CPU-work quantum, including busy counter queries.
      * This is an approximate device clock, not a cycle-accurate CPU model. */
     int device=PE_CdReg_DeviceEnabled();
@@ -187,7 +187,22 @@ void HostFB_PumpCdProgress(void)
     if(PE_MDEC_HasDecode() && PE_GPU_DMA2Pending())
         (void)PE_Port_ServiceDmaIrqCheckpoint();
     (void)PE_MDEC_Service();
-    if(PE_MDEC_HasDecode()) HostFB_ServiceDeviceIrq();
+    /* DAY2-158 dig/cd-sector-overrun: also service IRQs when B0CD0 is set so
+     * 91DC8/1214D4 can retry 7C564 after a DMA1-busy defer (HasDecode may
+     * already be false on a final-slice orphan). */
+    if(PE_MDEC_HasDecode() || (int16_t)PE_LoadU16(0x800B0CD0u))
+        HostFB_ServiceDeviceIrq();
+    if(PE_Port_ShouldStop()) return;
+    /* 7C564 A801C+DMA1 early-out sets B0CD0 without BFRD; AAB4 already
+     * cleared INT1, so pe_cdreg still has sector_pending. Advancing another
+     * sector period here is the live CD_device_sector_overrun. Stall CD
+     * cadence until the existing DMA1→B0CD0 retry drains it — do not invent
+     * a dual-sector buffer. */
+    if((int16_t)PE_LoadU16(0x800B0CD0u)) {
+        PeCdDeviceState st;
+        PE_CdReg_GetDeviceState(&st);
+        if(st.sector_pending) return;
+    }
     if(PE_CdReg_DeviceEnabled())
         HostFB_DeviceTime(451584u);
 }

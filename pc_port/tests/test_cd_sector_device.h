@@ -107,3 +107,41 @@ static void test_HostFB_PumpCdProgress_sector_scale(void)
            "sector data-ready after pump");
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }
+
+/* DAY2-158 dig/cd-sector-overrun: 7C564 DMA1 defer leaves sector_pending +
+ * B0CD0 after INT1 ack; PumpCdProgress must stall CD time (not overrun). */
+static void test_DAY2_cd_b0cd0_pump_stall(void)
+{
+    TEST("DAY2_cd_b0cd0_pump_stall");
+    DiscFixture fx={0};uint8_t response[5];
+    PeCdDeviceState st;
+    ResetTestState();ASSERT(FxBuild(&fx,0),"b0cd0 fixture");PE_Disc_SetActive(fx.disc);
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"b0cd0 attachment");
+    {
+        uint8_t loc[]={0u,2u,0x20u};
+        CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
+        CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
+    }
+    PE_CdReg_ServiceDevice(451584u);
+    ASSERT(CdSectorReply(response,1)==1u,"b0cd0 first data response");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending,"sector must remain pending before BFRD");
+    /* Simulate 7C564 A801C+DMA1 early-out (retail sets B0CD0, no BFRD). */
+    PE_StoreU16(0x800B0CD0u,1u);
+    PE_StoreU8(0x800B0DBBu,1u);
+    HostFB_PumpCdProgress();
+    ASSERT(!PE_Port_ShouldStop(),"B0CD0+pending must not CD_device_sector_overrun");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sectors==1u && st.sector_pending,"pump must stall cadence while B0CD0 owns pending");
+    /* Clear retry latch as 91DC8 would after a successful 7C564; BFRD drains. */
+    PE_StoreU16(0x800B0CD0u,0u);
+    PE_CdReg_WriteU8(PE_CDREG_BASE,0u);PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0u);
+    PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0x80u);
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(!st.sector_pending,"BFRD clears sector_pending");
+    HostFB_PumpCdProgress();
+    ASSERT(!PE_Port_ShouldStop(),"post-BFRD pump must deliver next sector");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sectors==2u,"cadence resumes after B0CD0 drain");
+    PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
+}

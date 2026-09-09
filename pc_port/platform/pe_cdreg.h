@@ -70,7 +70,7 @@ typedef struct {
     uint32_t enabled,commands,responses;
     uint32_t next_lba,sectors,data_remaining;
     uint8_t reading;
-    uint8_t mode,muted,command_log[16],response_log[16];
+    uint8_t mode,muted,sector_pending,command_log[16],response_log[16];
 } PeCdDeviceState;
 void PE_CdReg_GetDeviceState(PeCdDeviceState *out);
 /* Applied ATV0..3: L->L, L->R, R->R, R->L. Register state, not audio mixing. */
