@@ -212,27 +212,25 @@ void HostFB_PumpCdProgress(void)
 
     if(b0cd0 && pending) {
         if(!dma1_busy) {
-            /* DMA1 is idle but B0CD0 still owns an unread sector: either
-             * 91DC8 never ran (IRQ delivery miss) or its B0DBB gate skipped
-             * the 7C564 retry (16bpp / post-XOR format 0). Retail's only
-             * reopen of that deferred BFRD is the DMA1 callback; host catch-up
-             * calls the same 7C564 leaf — no dual-sector invent. */
+            /* DMA1 idle but B0CD0 still owns an unread sector: 91DC8 miss or
+             * B0DBB gate skipped 7C564. DAY2-158x catch-up called 7C564 only
+             * when A801C set, then always cleared B0CD0 — so a skipped/failed
+             * BFRD left sector_pending with the latch gone; pe_cdreg hold then
+             * silent-hung ~319×92934 (retry_unresolved never fired). Always
+             * call 7C564 (leaf owns A801C+DMA1 early-out, like 91DC8); clear
+             * B0CD0 only after pending is gone; else named STOP. */
             s_b0cd0_dma1_stalls = 0u;
             Bootstrap_ReturnVoid1("CD_B0CD0_pump_retry","CD_device",cd.next_lba);
-            if(PE_LoadU32(0x800A801Cu)) {
-                func_8007C564();
-                if(PE_Port_ShouldStop()) return;
-            }
-            PE_StoreU16(0x800B0CD0u, 0u);
+            func_8007C564();
+            if(PE_Port_ShouldStop()) return;
             PE_CdReg_GetDeviceState(&cd);
-            pending = cd.sector_pending != 0;
-            b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
-            if(b0cd0 && pending) {
+            if(cd.sector_pending) {
                 Bootstrap_ReturnVoid1("CD_B0CD0_retry_unresolved", "CD_device",
                                       cd.next_lba);
                 PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
                 return;
             }
+            PE_StoreU16(0x800B0CD0u, 0u);
         } else {
             /* Still waiting on DecDCTout DMA — retail defers here. If Service
              * cannot retire DMA1 (bitstream starved for the pending sector),
