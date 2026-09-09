@@ -178,6 +178,20 @@ void HostFB_VSync(int mode)
     (void)mode;
 }
 
+void HostFB_PumpCdProgress(void)
+{
+    /* Same Spu/MDEC preamble as VSync, then one non-XA sector period so a
+     * single E0 poll can retire a pending CD sector (pe_cdreg
+     * CdSectorCycles: 451584 non-XA / 225792 XA). */
+    (void)PE_SpuDma_Service();
+    if(PE_MDEC_HasDecode() && PE_GPU_DMA2Pending())
+        (void)PE_Port_ServiceDmaIrqCheckpoint();
+    (void)PE_MDEC_Service();
+    if(PE_MDEC_HasDecode()) HostFB_ServiceDeviceIrq();
+    if(PE_CdReg_DeviceEnabled())
+        HostFB_DeviceTime(451584u);
+}
+
 void HostFB_DrawSync(int mode)
 {
     fb_drawsync_count++;

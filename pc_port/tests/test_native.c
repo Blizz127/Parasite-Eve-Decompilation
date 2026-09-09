@@ -40107,6 +40107,7 @@ int main(void)
     test_DAY2_cd_ack();
     test_DAY2_cd_device();
     test_DAY2_cd_sector_device();
+    test_HostFB_PumpCdProgress_sector_scale();
     test_DAY2_cd_dma();
     test_DAY2_mdec_pixels();
     test_DAY2_mdec_dma();

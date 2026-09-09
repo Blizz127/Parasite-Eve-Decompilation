@@ -78,3 +78,32 @@ static void test_DAY2_cd_sector_device(void)
     ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_device_sector_overrun")==1,"unimplemented multi-sector buffering must stop");
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }
+
+/* DAY2-158g: HostFB_PumpCdProgress retires one non-XA sector per call;
+ * HostFB_VSync(-1) alone advances only 1024 cycles and cannot. */
+static void test_HostFB_PumpCdProgress_sector_scale(void)
+{
+    TEST("HostFB_PumpCdProgress_sector_scale");
+    DiscFixture fx={0};uint8_t response[5];
+    PeCdDeviceState before,after_vsync,after_pump;
+    ResetTestState();ASSERT(FxBuild(&fx,0),"pump fixture");PE_Disc_SetActive(fx.disc);
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"pump attachment");
+    {
+        uint8_t loc[]={0u,2u,0x20u};
+        CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
+        CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
+    }
+    PE_CdReg_GetDeviceState(&before);
+    ASSERT(before.reading && before.sectors==0u,"read armed before pump");
+    HostFB_VSync(-1);
+    PE_CdReg_GetDeviceState(&after_vsync);
+    ASSERT(after_vsync.sectors==0u,
+           "VSync(-1) must not retire a 451584-cycle sector");
+    HostFB_PumpCdProgress();
+    PE_CdReg_GetDeviceState(&after_pump);
+    ASSERT(after_pump.sectors==1u && after_pump.next_lba==before.next_lba+1u,
+           "PumpCdProgress must retire one sector");
+    ASSERT(CdSectorReply(response,1)==1u && response[0]==0x22u,
+           "sector data-ready after pump");
+    PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
+}

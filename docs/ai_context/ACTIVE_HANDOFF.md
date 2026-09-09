@@ -73,6 +73,40 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158g: live Stage-1b observation + E0 sector-scale CD pump (2026-09-09)
+
+Matt / Bazzite Disc1 on tip **`5754473`**: process stayed alive **2+ minutes
+under `func_8001220C`** with **no** `Stage1b_pad_terminated_frame` and **no**
+MV1d abort. Prior immediate Stage-1b stop is gone in practice.
+
+Mechanical reading (this env has no Disc1 carve): after DAY2-158d/f, E0 waits
+with `HostFB_VSync(-1)` for `D_800B89F4` before promoting. That query only
+advances **1024** device cycles; one CD sector costs **225792/451584**. E0's
+2000-try window therefore cannot finish a multi-sector STR frame, so live
+stays nested under `1220C` (909B4→92CE8→924F8 E0) without reaching got_frame
+admission — matching a long-lived run without Stage-1b/MV1d names.
+
+Fix on this tip: E0 else-arm calls **`HostFB_PumpCdProgress`** (one non-XA
+sector period through the same device/IRQ path as waiting VSync). Promote
+gate unchanged (`B89F4` / fixture arm only). New test
+`HostFB_PumpCdProgress_sector_scale`. **No `a1` clamp.**
+
+Decomp Bot **92CE8 / 92934 drafts are not present** in this agent environment
+(no draft files, no Decomp Bot cloud agent, empty `rom/image/`). Cannot extend
+`func_80192CE8` past `func_80192CE8_80192E08_cut` without authenticated overlay
+bytes. Named cut after first successful 924F8 return remains that boundary.
+
+**Next boot→Day2:** Matt retest tip with sector-scale E0 pump; expect either
+live C89C / Stage-1b admit then `func_80192CE8_80192E08_cut`, or whatever
+named stop the run reports. Integrate 92CE8/92934 remainder only when Decomp
+Bot drafts or PE.IMG overlay carve are available.
+
+Claims: live 5754473 observation recorded; E0 wait pumps one sector/poll;
+VSync(-1) insufficiency evidenced by cycle math + sector-scale test.
+Non-claims: Day2 complete; Stage-1b done on live Disc1 until Matt retests
+this tip; 92CE8 media-loop remainder translated; retail STR golden; published
+runtime 128 unchanged. Linux-first.
+
 ## DAY2-158f CI follow-up: retail-Disc skips + metrics include headers (2026-09-09)
 
 `native-progress` failed on tip `5754473` with 2 failed / count desync:

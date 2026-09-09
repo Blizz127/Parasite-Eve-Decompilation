@@ -65,7 +65,9 @@ translated function may regress to a stub.
   port has no async interrupts, so the tail fires `func_8007C214` when
   `B89F4` is set, or when a fixture arms `PE_Port_ArmStreamPromote`
   (because `7A214` clears `B89F4` after the plant). Otherwise
-  `HostFB_VSync(-1)` advances CD/DMA so `7C564` can finish the frame.
+  `HostFB_PumpCdProgress` advances one CD sector (~451584 device cycles)
+  so `7C564` can finish the frame. Plain `HostFB_VSync(-1)` only moves
+  1024 cycles and cannot retire a sector inside E0's 2000-try window.
   Unconditional per-poll promote published incomplete bodies (MV1d).
   E0 still takes got_frame on the first successful promote; the give-up
   path behind it is byte-identical retail logic.

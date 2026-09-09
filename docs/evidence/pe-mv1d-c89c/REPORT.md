@@ -58,13 +58,18 @@ promote on `B89F4` / fixture arm. DAY2-158f latches frame-ready on
 last-chunk promote so demuxed VLC bodies (not STR magic at `s1`) can run
 C89C. STR magic `0x80010160` is sector-header-only, not the payload cursor.
 
+DAY2-158g: Bazzite on `5754473` stayed alive 2+ minutes under `1220C` with
+no Stage-1b/MV1d abort. E0 wait now uses `HostFB_PumpCdProgress` (one
+sector/poll) instead of `HostFB_VSync(-1)` (1024 cycles only).
+
 ## Production wiring (DAY2-158b/c/d/f — gated)
 
 `func_801924F8` got_frame calls live C89C only when the stream is an
 immediate pad exit **or** last-chunk `StreamFrameReady` is latched.
 Non-ready frames take `Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)`
 + `PE_PORT_STOP_UNRESOLVED_BOUNDARY`. E0 promotes only on last-chunk
-`B89F4` or fixture surrogate arm. **Do not clamp a1.** Ungated decode of
+`B89F4` or fixture surrogate arm; otherwise `HostFB_PumpCdProgress`
+advances one CD sector per poll. **Do not clamp a1.** Ungated decode of
 partial frames still marches past `PE_StoreU16 @ 0x80200000`.
 
 ## Verify block

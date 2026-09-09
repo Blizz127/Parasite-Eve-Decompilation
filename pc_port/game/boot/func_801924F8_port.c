@@ -164,10 +164,13 @@ e0_poll:
              * Unconditional 7C214 every poll published incomplete bodies
              * and tripped MV1d. Fixtures arm PE_Port_ArmStreamPromote
              * because 7A214 clears B89F4 after the plant. Live Disc1
-             * never arms that — HostFB_VSync(-1) advances CD/DMA until
-             * 7C564 sets B89F4. A B89F4 promote also latches
-             * StreamFrameReady so got_frame may run C89C on the demuxed
-             * VLC body (not an immediate pad). */
+             * never arms that — HostFB_PumpCdProgress advances one CD
+             * sector per poll until 7C564 sets B89F4. (VSync(-1) alone
+             * only moves 1024 device cycles; a sector needs ~225k–451k,
+             * so E0's 2000-try window could not finish a multi-sector
+             * STR frame and live Bazzite stayed nested under 1220C.)
+             * A B89F4 promote also latches StreamFrameReady so got_frame
+             * may run C89C on the demuxed VLC body (not an immediate pad). */
             {
                 int last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
                 if (last_chunk || PE_Port_ConsumeStreamPromote()) {
@@ -175,7 +178,7 @@ e0_poll:
                         PE_Port_NoteStreamFrameReady();
                     func_8007C214();
                 } else {
-                    HostFB_VSync(-1);
+                    HostFB_PumpCdProgress();
                 }
             }
             s1 = func_80191B64(0x801D1464u);
