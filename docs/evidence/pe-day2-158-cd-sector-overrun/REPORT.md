@@ -1,47 +1,71 @@
-# DAY2-158v: `CD_device_sector_overrun` → pending-sector backpressure
+# DAY2-158 — `CD_device_sector_overrun` / B0CD0 pump stall
 
-## Live wall (Matt Disc1 tip `a899b2d` / DAY2-158u)
+Status: **DIG FOLDED** (`dig/cd-sector-overrun` @ `355af810`) as **DAY2-158w**.
+No dual-sector buffer invent; no silent overwrite of unread sectors.
 
-MDEC supersede dig cleared `MDEC_decode_busy`. New stop after ~319 FMV frames:
+## Live chronology
 
-```text
-C89C calls=319 ret=0 pad=319 out=101510
-many func_80192934_enter
-GPU fills=318
-STUB: CD_device_sector_overrun
-stop_reason=unresolved-boundary
+| Tip | Result |
+|-----|--------|
+| `a899b2d` (158u) | Past MDEC; STOP `CD_device_sector_overrun` after C89C×319 |
+| `222bd95b` (158v / PR #42) | Overrun cleared; **hang** ~319× `func_80192934_enter`, no TRACE/STOP (90s/180s budgets) |
+
+158v pe_cdreg hold alone: pump stalls until BFRD, but BFRD never arrives when
+`7C564` took the A801C+DMA1 early-out (B0CD0 set, INT1 already acked by AAB4).
+
+## Retail contract (existing decomp — not invented)
+
+`func_8007C564` (`cd_stream_port.c`):
+
+1. Early return if `D_800B89F4 == 1`.
+2. **DMA1 early-out:** if `D_800A801C` and MDEC DMA1 CHCR busy:
+   - store **`D_800B0CD0 = 1`** (retry latch)
+   - `StreamAdvanceMemory` / `9B374=1`
+   - **return without BFRD / without DMA3**
+3. Otherwise BFRD (`+3 ← 0x80`) then DMA3 body copy.
+
+Title `func_80191DC8` / player `func_801214D4`:
+
+```c
+if ((int8_t)PE_LoadU8(0x800B0DBBu) && (int16_t)PE_LoadU16(0x800B0CD0u)) {
+    func_8007C564();
+    PE_StoreU16(0x800B0CD0u, 0u);
+}
 ```
 
-## Site
+MDEC output busy **defers** stream work via B0CD0; DMA1 callback **retries**.
 
-`pc_port/platform/pe_cdreg.c` — `PE_CdReg_ServiceDevice` sector publish path:
+## Why host Pump raced / hung
 
-Previously: if `g_sector_pending` when the next sector period elapsed →
-`CdDeviceBoundary("CD_device_sector_overrun")` + STOP.
+`func_8007AAB4` acknowledges CD INT1 **before** the data-callback chain reaches
+`813E8` → `7C564`. DMA1 early-out leaves:
 
-Cause: single-sector model + `HostFB_PumpCdProgress` retiring one full
-non-XA period (`451584` cycles) per E0/`92934` poll can outrun
-INT1 → BFRD → DMA3 drain. After hundreds of successful frames the race
-hits; STOP was an artificial host-pump wall, not a missing Decomp leaf.
+- `g_sector_pending == 1` (no BFRD)
+- response tag clear (already acked)
+- `B0CD0 == 1` (retry scheduled)
 
-## Fix
+`HostFB_PumpCdProgress` previously always advanced one sector period and only
+serviced device IRQs when `PE_MDEC_HasDecode()`. After a final-slice orphan,
+HasDecode can be false while B0CD0 is set → **no** `91DC8` retry → no BFRD.
 
-Prefer **backpressure** over multi-sector invent or silent overwrite:
+- Pre-158v: next cadence → `CD_device_sector_overrun` STOP.
+- 158v hold-only: cadence holds forever → live hang at ~319×92934.
 
-- While `g_sector_pending`, do **not** publish, do **not** STOP.
-- Leave `g_read_cycles == 0` so the next `ServiceDevice` retries after BFRD
-  clears pending (catch-up publish).
-- Fall through to `PE_CdReg_ServiceDMA3` / IRQ assert as before.
+## Fix (DAY2-158w — dig draft applied)
 
-No Decomp leaf change — device model only. `CD_device_sector_overrun` is
-retired as a STOP name; tests assert it does not fire.
+In `HostFB_PumpCdProgress` / VSync IRQ preamble:
 
-## Tests
+1. Always run `PE_MDEC_Service()`.
+2. Service device IRQs when `HasDecode` **or** signed `B0CD0` pending.
+3. If `B0CD0` still owns `sector_pending` after that drain attempt, **return
+   without** `HostFB_DeviceTime` — stall CD cadence until DMA1→B0CD0 retry
+   clears the sector.
 
-`DAY2_cd_sector_device`: hold while pending → BFRD drain → catch-up second
-sector. `HostFB_PumpCdProgress_sector_scale` unchanged.
+Keep pe_cdreg single-sector **hold** (no STOP while pending) as VSync-path
+safety. Expose `sector_pending` on `PE_CdReg_GetDeviceState`. Test:
+`DAY2_cd_b0cd0_pump_stall`.
 
 ## Not claimed
 
-Movie finish, Day2-complete, retail overrun-bit fidelity, or multi-sector
-hardware queues.
+Movie finish, Day2-complete, dual-sector HW queues, or retail overrun-bit
+fidelity. Matt Disc1: expect C89C ≫319 or the next *named* wall.

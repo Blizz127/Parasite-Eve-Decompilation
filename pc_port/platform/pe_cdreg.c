@@ -35,7 +35,7 @@ static void CdClearData(void)
 }
 
 
-void PE_CdReg_GetDeviceState(PeCdDeviceState *out) { *out=g_device;out->data_remaining=g_data_size-g_data_pos; }
+void PE_CdReg_GetDeviceState(PeCdDeviceState *out) { *out=g_device;out->data_remaining=g_data_size-g_data_pos;out->sector_pending=(uint8_t)(g_sector_pending!=0); }
 int PE_CdReg_DeviceEnabled(void) { return g_device.enabled!=0; }
 static void CdDeviceBoundary(const char *name,uint32_t value)
 {

@@ -3,6 +3,34 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158w: B0CD0 pump stall + IRQ retry (dig fold) (2026-09-09)
+
+Live Disc1 on tip **`222bd95b`** (DAY2-158v / PR #42):
+
+```text
+no CD_device_sector_overrun (90s / 180s)
+~319× func_80192934_enter — hang, no further TRACE/STOP (timeout kill)
+```
+
+158v pe_cdreg hold cleared the STOP but left **stall without BFRD**.
+
+**Decomp dig FOLDED** — `dig/cd-sector-overrun` @ `355af810`:
+`7C564` A801C+DMA1 early-out sets `B0CD0` without BFRD after AAB4 cleared
+INT1; Pump must stall CD cadence while B0CD0 owns `sector_pending`, and must
+service IRQs when B0CD0 is set so `91DC8`/`1214D4` can retry → BFRD.
+
+**Fix on tip:**
+1. `HostFB_PumpCdProgress` / VSync: IRQ service if `HasDecode || B0CD0`.
+2. Pump: if `B0CD0 && sector_pending` → return before `DeviceTime`.
+3. Expose `sector_pending` on `GetDeviceState`. Keep pe_cdreg hold.
+4. Test `DAY2_cd_b0cd0_pump_stall`. Evidence report folded.
+
+Linux: **1355 run / 1309 pass / 0 fail / 46 skip** (new B0CD0 stall test).
+Branch `cursor/cd-sector-backpressure-6f51` → PR #42.
+
+**Next boot→Day2:** Matt Disc1 — expect C89C `calls`≫319 / progress past
+old hang, or name the next honest STOP. No Day2-complete claim. Linux-first.
+
 ## DAY2-158v: CD pending-sector backpressure (2026-09-09)
 
 Live Disc1 on tip **`a899b2d`** (DAY2-158u) **SUCCESS past `MDEC_decode_busy`:**
@@ -30,9 +58,7 @@ race, not a missing Decomp leaf / multi-sector invent.
 Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Branch
 `cursor/cd-sector-backpressure-6f51` → PR into #38 tip.
 
-**Next boot→Day2:** Matt Disc1 — expect movie to continue past old overrun
-(C89C `calls`≫319) or name the next honest boundary. No Day2-complete
-claim. Linux-first.
+**Next:** see DAY2-158w (live hang on 158v tip; dig fold).
 
 ## DAY2-158u: supersede on live DMA0 commit (Decomp dig) (2026-09-09)
 
