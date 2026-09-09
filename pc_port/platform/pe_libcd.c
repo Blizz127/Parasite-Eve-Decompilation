@@ -452,6 +452,14 @@ void func_8007C214(void)
     uint32_t idx = PE_LoadU32(0x800BE9E4u);
     pe_addr_t rec = PE_LoadU32(0x800C0DC8u) + idx * 32u;
     uint32_t cb;
+    /* DAY2-158i hypothesis: last-chunk completion is the honest
+     * StreamFrameReady latch site. E0 only Notes when it still sees
+     * B89F4==1 before calling us; HostFB_PumpCdProgress can run
+     * 7C564→DMA3 IRQ→here first, clearing B89F4 so E0 never latches
+     * while 91B64 still publishes a state-2 body → Stage1b stop.
+     * Latch only on exact B89F4==1 (same predicate as E0); only after
+     * the chain-dead path that clears the flag. */
+    int was_last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
 
     PE_StoreU16(rec, 2u);
     memcpy(PE_Translate(0x800A3490u, 4u),
@@ -465,6 +473,8 @@ void func_8007C214(void)
         return;
     }
     PE_StoreU32(0x800B89F4u, 0u);
+    if (was_last_chunk)
+        PE_Port_NoteStreamFrameReady();
 }
 
 /* Guest scratch holding the CdlLOC copy for func_8007F0C8's slot word.

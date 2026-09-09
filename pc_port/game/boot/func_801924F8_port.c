@@ -173,8 +173,10 @@ e0_poll:
              * because 7A214 clears B89F4 after the plant. Live Disc1
              * needs PE_CdReg_EnableDevice (port_main --disc-image) so
              * HostFB_PumpCdProgress can advance sectors until 7C564 sets
-             * B89F4. A B89F4 promote also latches StreamFrameReady so
-             * got_frame may run C89C on the demuxed VLC body. */
+             * B89F4. Primary StreamFrameReady latch is in 7C214 when it
+             * clears B89F4==1 (Pump may IRQ-deliver 7C214 before E0 sees
+             * the flag). E0 still Notes on observed B89F4 as a redundant
+             * path for the rare case E0 calls 7C214 itself. */
             {
                 int last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
                 if (last_chunk || PE_Port_ConsumeStreamPromote()) {
