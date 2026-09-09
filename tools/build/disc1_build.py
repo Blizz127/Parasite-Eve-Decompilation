@@ -24,6 +24,7 @@ GENERATED = Path("build/generated")
 EXE = Path("build/extracted/disc1/SLUS_006.62")
 ERA_CPP = Path("tools/era/gcc-2.7.2-psx/cpp")
 ERA_CC1 = Path("tools/era/gcc-2.7.2-psx/cc1")
+ERA_GCC_281 = Path("tools/era/gcc-2.8.1-psx")
 MASPSX = Path("tools/era/maspsx/maspsx.py")
 TRIM = Path("tools/trim_elf_section_pad.py")
 AS_FLAGS = ["-EL", "-mips1", "-mabi=32"]
@@ -233,26 +234,34 @@ def force_absolute_symbols(assembly: Path, specification: str) -> None:
     assembly.write_text(text, encoding="utf-8")
 
 
-def strip_dispatch_rodata(object_path: Path, symbol: str) -> None:
-    if not re.fullmatch(r"jtbl_[0-9A-Fa-f]{8}", symbol):
-        raise BuildError(
-            f"MASPSX_DISPATCH_FOLD {symbol!r} is not jtbl_<vram-hex>"
-        )
+def strip_dispatch_rodata(object_path: Path, symbol_spec: str) -> None:
+    symbols = [part.strip() for part in symbol_spec.split(",") if part.strip()]
+    if not symbols:
+        raise BuildError("MASPSX_DISPATCH_FOLD is empty")
+    for symbol in symbols:
+        if not re.fullmatch(r"jtbl_[0-9A-Fa-f]{8}", symbol):
+            raise BuildError(
+                f"MASPSX_DISPATCH_FOLD {symbol!r} is not jtbl_<vram-hex>"
+            )
     pool_source = "".join(
         path.read_text(encoding="utf-8")
         for path in sorted((ROOT / "asm/disc1/data").glob("*.rodata.s"))
     )
-    block = re.search(
-        rf"dlabel {re.escape(symbol)}\n(.*?)enddlabel {re.escape(symbol)}",
-        pool_source,
-        re.DOTALL,
-    )
-    if not block:
-        raise BuildError(f"pool source has no {symbol} block")
-    literals = re.findall(r"\.word\s+(0x[0-9A-Fa-f]+)", block.group(1))
-    if len(literals) < 2:
-        raise BuildError(f"{symbol} pool block has no literal words")
-    expected_size = len(literals) * 4
+    all_literals: list[str] = []
+    for symbol in symbols:
+        block = re.search(
+            rf"dlabel {re.escape(symbol)}\n(.*?)enddlabel {re.escape(symbol)}",
+            pool_source,
+            re.DOTALL,
+        )
+        if not block:
+            raise BuildError(f"pool source has no {symbol} block")
+        literals = re.findall(r"\.word\s+(0x[0-9A-Fa-f]+)", block.group(1))
+        if len(literals) < 2:
+            raise BuildError(f"{symbol} pool block has no literal words")
+        all_literals.extend(literals)
+    expected_size = len(all_literals) * 4
+    symbol = ",".join(symbols)
 
     data = bytearray(object_path.read_bytes())
     if data[:4] != b"\x7fELF":
@@ -312,9 +321,9 @@ def strip_dispatch_rodata(object_path: Path, symbol: str) -> None:
         "<I", data, header(symbol_table_index) + 16
     )[0]
     words = relocation_size // 8
-    if words != len(literals):
+    if words != len(all_literals):
         raise BuildError(
-            f"{words} dispatch relocs != {len(literals)} pool words for {symbol}"
+            f"{words} dispatch relocs != {len(all_literals)} pool words for {symbol}"
         )
     for index in range(words):
         relocation_at, relocation_info = struct.unpack_from(
@@ -376,6 +385,17 @@ def compile_era(unit: dict[str, Any], tools: Toolchain) -> None:
     output = ROOT / unit["object"]
     leaf_environment = os.environ.copy()
     leaf_environment.update(unit["environment"])
+    gcc_dir = unit["environment"].get("ERA_GCC_DIR")
+    if gcc_dir:
+        era_cpp = ROOT / gcc_dir / "cpp"
+        era_cc1 = ROOT / gcc_dir / "cc1"
+    else:
+        era_cpp = ROOT / ERA_CPP
+        era_cc1 = ROOT / ERA_CC1
+    if not era_cpp.is_file() or not era_cc1.is_file():
+        raise BuildError(
+            f"era toolchain missing for {unit['name']}: {era_cpp} / {era_cc1}"
+        )
     with tempfile.TemporaryDirectory(prefix="pe-era-") as temporary:
         temp = Path(temporary)
         preprocessed = temp / "x.i"
@@ -383,14 +403,14 @@ def compile_era(unit: dict[str, Any], tools: Toolchain) -> None:
         expanded = temp / "xm.s"
         with preprocessed.open("wb") as stream:
             run(
-                [str(ROOT / ERA_CPP), str(source)],
+                [str(era_cpp), str(source)],
                 env=leaf_environment,
                 stdout=stream,
                 stderr=subprocess.DEVNULL,
             )
         run(
             [
-                str(ROOT / ERA_CC1),
+                str(era_cc1),
                 "-quiet",
                 *unit["flags"],
                 str(preprocessed),

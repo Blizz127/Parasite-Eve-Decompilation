@@ -3,6 +3,58 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## AUD1-FOLD: merge Decomp Bot AUD1-E3..E8 tip 98e0bf0 (2026-09-09)
+
+Reconciled on `cursor/audio-score-fold-4797` / PR #39 from
+`origin/cursor/audio-score-leaves-85f74-862f4-8db7c` @ `98e0bf0`. Prefer tip
+**matching guest leaves** + tip host Akao path over earlier host-only folds.
+Movie/PR #38 untouched. Movie/boot `92CE8`/`92934` left uncommitted on the tip
+— **not** pulled into this fold.
+
+**Guest leaves (yaml-carved, semantic; byte-match not claimed)**
+- E3: `87AA8` / `87FA0` — `src/func_80087AA8.c`, `src/func_80087FA0.c`
+- E4: `8E8D0` / `8F0D0` — seq bytecode + SetVoiceInstrument
+- E5: `89328` (+ `89724` in same TU)
+- E6: `89784` / `8D844`
+- E7: `8900C` / `89218` (RemoveVoice + UpdateVoiceEnvelopes 89250)
+- E8: `878F0` + ADSR prereqs `87798`/`8780C`/`8783C`/`87864` + `89F08`
+
+**Host path (tip `pe_akao_tick` / ApplyPending / synth)**
+- Real PE-RAM ports for the above; ApplyPending prefers `voice+0xF0` HW index,
+  pitch `0x10` from `+0x30`/LFO, ADSR1/ADSR2 compose; synth ENVX ADSR machine
+  (mix amplitude still unscaled — DAY2_spu_* hashes unchanged)
+- Exported wrappers for tests: `8900C` / `878F0` / `89F08`
+
+**Named-asm parked:** `88344` Akao_SetVoiceKeyOff (empty host stub; flush is
+`89784`).
+
+**Claims / non-claims**
+- Claim: fold is no longer host-only inventing leaves — guest `src/` + yaml
+  carves from tip; Linux `DAY2_spu_*` / `DAY2_akao_tick` green; YAML matching-C
+  count **578**.
+- Non-claim: Day2-complete, mix-exact, retail speaker, EXACT SHA-1, `88344`.
+
+Verify: `PE_TEST_FILTER=DAY2_spu` / `DAY2_akao_tick`; `ctest` 8/8;
+`scripts/verify_us.sh --public`. Contract: `docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`.
+
+
+## AUD1-E2: audio score leaves 85F74 / 862F4 / 8DB7C (2026-09-09)
+
+Adopted khasinski Psy-Q donors for `func_80085F74` (SpuSetCommonAttr) and
+`func_800862F4` (SpuSetVoiceAttr) under `src/` with era GCC **2.8.1** profiles
+(`era_281_o2_g0_spu_*`) + multi-symbol `MASPSX_DISPATCH_FOLD`. Structural
+`.text` match vs fade-dump/EXE oracle (reloc immediates excluded); full-tree
+Retail `SLUS_006.62` restored (`452fb033…`); full-tree SHA still needs split jtbl pool. `func_8008DB7C`
+(Akao_Tick) landed as semantic C in `src/` (byte-match not claimed; khasinski
+still asm) and as host PE-RAM port `pe_akao_tick.c`. pe_stream now calls real
+85F74/862F4; `PE_Event_ServiceAudioCommands` runs `func_8008DB7C` then
+`PE_SpuScore_ApplyDirtyVoices`. Misnamed host "85F74" pending publisher renamed
+to `PE_SpuVoice_ApplyPending`.
+
+Evidence: era 2.8.1 structural compare of 0x16C / 0x37C leaves vs
+`pc_port/tests/retail_gameover_fade_cases.h` oracle (nops filled). Next after
+E5: `89328` landed; next `8D844` / `89784`; `verify_us.sh` for EXACT SHA on Psy-Q leaves.
+
 ## ACTIVE OBJECTIVE: decompile all Day 1 and Day 2; implement/fix Day 1
 
 Current user goal (2026-09-08): "decompile all of day 1 and day 2 implement
@@ -110,6 +162,42 @@ chain), 14E30 real path, old 80191DC8 callback, libpress wait fidelity
 (C03C/C078/C308/C39C/C430), XA filter/audio, hardware pixel validation,
 and scope-wide opening→Day2 acceptance. Full user goal open; published
 runtime 128 unchanged.
+
+## DAY1/DAY2-158: host SPU synthesis + voice bridge AUD1-E0/E1 (2026-09-09)
+
+First bounded host-audio path on the existing `pe_spu_dma` SPU-RAM/register
+model. **AUD1-E0:** `pe_spu_synth.c` decodes keyed-voice ADPCM (linear
+interpolation; DEBT-SYS0-002); `pe_host_audio.c` submits 44100 Hz PCM via
+PulseAudio when windowed (`PE_AUDIO_DISABLE=1` forces silent output);
+`HostFB_VSync` mixes 736 samples/frame after audio service. **AUD1-E1:**
+`pe_spu_voice.c` implements retail `func_80087798` and a partial
+`func_80085F74` plus `PE_SpuScore_ApplyDirtyVoices`, called after
+`func_8008CA84` when `D_8009D2C4` bit `0x100` is set — publishing
+instrument-init guest voice state to SPU registers and key-on for synthesis.
+
+**Audible when:** PulseAudio opens, SPU RAM holds sample data, and a command
+path marks a voice dirty (`audio_dirty`) so the bridge can key it. **Still
+silent / unported:** `8DB7C` score bytecode ticks, full `85F74` table paths,
+`862F4`/`85A64` boot wiring, ADSR/reverb/Gaussian fidelity, AKAO/seq26/27
+without per-tick score advancement.
+
+`PE_TEST_FILTER=DAY2_spu_synth` and `DAY2_spu_voice_bridge` PASS. Contract:
+`docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`. No matching-decomp, mix-exact, or
+retail speaker claim.
+
+CI fix (same PR): `native-progress` failed because `port_priority.json` still
+claimed the obsolete `func_80030894_L9_cut` while metrics report a complete
+body (`production_frontier=null`), and because `PORT_SRCS` was removed from
+CMake while `linked_native_sources` still required it. Config now uses a null
+frontier label + exclusive end `0x800314E4`; tooling accepts complete frontiers
+and optional `PORT_SRCS`/`FIELD_RUNTIME_SRCS`. Regenerated
+`NATIVE_PORT_STATUS.md` / `NATIVE_CANDIDATE_PRIORITY.md` for the AUD1 platform
+units and new tests (316 linked TUs). A follow-up CI failure was the
+artifact-independent suite gate: two disc-backed tests (`B54KY_192CE8`,
+`DAY2_movie_complete_frame`) used `TEST()` so they failed without
+`local/pe_disc1.path`, and the inventory counted only `test_native.c`
+(1147) against the binary (1348). Both are now `TEST_RETAIL_DISC1`;
+`native_metrics.py` counts included `test_*.h` cases (1348/1302/46).
 
 Autonomous-stream evidence (probed 2026-09-09, change NOT landed): with the
 device's 0x50 read-mode guard narrowed to 0x10 (mode bit6 = CdlModeRT per

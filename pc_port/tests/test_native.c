@@ -1818,7 +1818,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     uint8_t expected_disp[0x28];
     uint8_t expected_draw[0xB8];
     char err[256];
-    TEST("B54KY_192CE8_real_disc_issue_poll_and_boundary");
+    TEST_RETAIL_DISC1("B54KY_192CE8_real_disc_issue_poll_and_boundary");
 
     err[0] = 0;
     disc = BTL6_OpenDisc1(err, sizeof(err));
@@ -35289,6 +35289,7 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_spu_mode_register.h"
 #include "test_spu_dma_event.h"
 #include "test_spu_mode.h"
+#include "test_spu_synth.h"
 #include "test_music_consumer.h"
 #include "test_animation_sound_register.h"
 #include "test_m0034i_modes.h"
@@ -40003,6 +40004,9 @@ int main(void)
     test_DAY2_spu_mode_register();
     test_DAY2_spu_dma_event();
     test_DAY2_spu_mode();
+    test_DAY2_spu_voice_bridge();
+    test_DAY2_spu_synth();
+    test_DAY2_akao_tick();
     test_DAY2_music_consumer();
     test_DAY1_animation_sound_register();
     test_DAY1_m0034i_modes();

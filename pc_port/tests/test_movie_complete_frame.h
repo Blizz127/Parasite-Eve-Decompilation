@@ -1,7 +1,7 @@
 #include "retail_movie_complete_frame_cases.h"
 static void test_DAY2_movie_complete_frame(void)
 {
-    TEST("DAY2_movie_complete_frame");
+    TEST_RETAIL_DISC1("DAY2_movie_complete_frame");
     char err[256]={0};uint8_t raw[2352];
     PE_Disc *disc=BTL6_OpenDisc1(err,sizeof(err));
     ASSERT(disc!=NULL,err[0]?err:"opening movie disc unavailable");

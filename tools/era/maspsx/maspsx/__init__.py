@@ -399,6 +399,42 @@ def load_immediate_double(line: str):
     return res
 
 
+
+def is_coff_directive(line: str):
+    # skip coff directives - gnu as does not like them
+    if not line.startswith("."):
+        return False
+    return (
+        line.startswith(".def	")
+        or line.startswith(".begin	")
+        or line.startswith(".bend	")
+    )
+
+
+
+
+class PassthroughProcessor:
+
+    def __init__(self, lines: List[str]):
+        self.lines = [x.strip() for x in lines]
+
+    def process_lines(self) -> List[str]:
+        res = []
+
+        for line in self.lines:
+            res += self.process_line(line)
+
+        return res
+
+    def process_line(self, line: str):
+        res = []
+
+        if not is_coff_directive(line):
+            res.append(line)
+
+        return res
+
+
 class MaspsxProcessor:
     is_reorder = True
     skip_instructions = 0
@@ -413,6 +449,7 @@ class MaspsxProcessor:
         expand_li=False,
         nop_at_expansion=False,
         nop_mflo_mfhi=True,
+        nop_lw_lw=False,
         sltu_at=False,
         addiu_at=False,
         div_uses_tge=False,
@@ -433,6 +470,7 @@ class MaspsxProcessor:
 
         self.nop_at_expansion = nop_at_expansion
         self.nop_mflo_mfhi = nop_mflo_mfhi
+        self.nop_lw_lw = nop_lw_lw
 
         self.sltu_at = sltu_at
         self.addiu_at = addiu_at
@@ -460,10 +498,22 @@ class MaspsxProcessor:
         # rodata pool table symbol for cc1-local $L<n> switch-table
         # labels in compound loads/stores. See docs/design/
         # switch_table_ownership.md.
-        self.dispatch_fold_symbol = (
+        # Comma-separated symbols map in order of first encounter of each
+        # distinct $L label (multi-switch leaves such as Spu_SetVoiceAttr).
+        raw_fold = (
             dispatch_fold_symbol
             or os.environ.get("MASPSX_DISPATCH_FOLD") or None
         )
+        if raw_fold:
+            self.dispatch_fold_symbols = [
+                part.strip() for part in raw_fold.split(",") if part.strip()
+            ]
+        else:
+            self.dispatch_fold_symbols = []
+        self.dispatch_fold_symbol = (
+            self.dispatch_fold_symbols[0] if self.dispatch_fold_symbols else None
+        )
+        self._dispatch_fold_local_map: dict[str, str] = {}
 
         self.bss_entries: dict[str, int] = {}
         self.sbss_entries: dict[str, int] = {}
@@ -1009,10 +1059,20 @@ class MaspsxProcessor:
                 # substituted; gate-off keeps every prior behavior.
                 if (
                     self.three_word_symbol_store
-                    and self.dispatch_fold_symbol
+                    and self.dispatch_fold_symbols
                     and re.match(r"^\$L\d+$", operand)
                 ):
-                    operand = self.dispatch_fold_symbol
+                    if operand not in self._dispatch_fold_local_map:
+                        idx = len(self._dispatch_fold_local_map)
+                        if idx >= len(self.dispatch_fold_symbols):
+                            raise Exception(
+                                "MASPSX_DISPATCH_FOLD has fewer symbols than "
+                                f"local switch tables (need >{idx})"
+                            )
+                        self._dispatch_fold_local_map[operand] = (
+                            self.dispatch_fold_symbols[idx]
+                        )
+                    operand = self._dispatch_fold_local_map[operand]
                 if self.addiu_at:
                     # LOCAL PATCH: three_word_symbol_store gate (extended from
                     # stores to loads) — when enabled and not a compound macro

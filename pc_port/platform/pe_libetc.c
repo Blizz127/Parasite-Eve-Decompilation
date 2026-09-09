@@ -23,6 +23,7 @@
 #include "psx_compat.h"
 #include "pe_sdk.h"
 #include "pe_spu_dma.h"
+#include "pe_spu_voice.h"
 #include "pe_gpu.h"
 #include "pe_mdec.h"
 #include "pe_irq.h"
@@ -330,11 +331,14 @@ void PE_Event_ServiceAudioCommands(void)
 {
     /* Host adaptation: the frame wait supplies the missing timer service.
      * Preserve registration, EnableEvent, critical-section and producer
-     * gates. This is 8DB7C's 8E1F0..8E208 command portion only; its music
-     * sequencing and SPU synthesis are not implemented by this service. */
+     * gates. Full Akao_Tick (8DB7C) includes the 8E1F0..8E208 command drain;
+     * PE_SpuVoice_ApplyPending still publishes dirty bits until 87AA8 lands.
+     * Host ADPCM synthesis runs from HostFB_VSync after this (AUD1-E0/E2). */
     if (g_audio_event_enabled && !g_irq_lock_depth &&
-        !PE_LoadU32(0x8009D268u) && !PE_Port_ShouldStop())
-        func_8008CA84();
+        !PE_LoadU32(0x8009D268u) && !PE_Port_ShouldStop()) {
+        func_8008DB7C();
+        PE_SpuScore_ApplyDirtyVoices();
+    }
 }
 
 void PE_Sdk_ResetState(void)

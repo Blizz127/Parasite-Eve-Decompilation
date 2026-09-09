@@ -31,6 +31,7 @@
  * pointer is retained or written to guest state.
  */
 #include "pe_spu_dma.h"
+#include "pe_spu_synth.h"
 #include "psx_compat.h"
 #include "pe_sdk.h"
 
@@ -75,6 +76,7 @@ void PE_SpuDma_Reset(void)
     memset(g_spu_registers, 0, sizeof(g_spu_registers));
     memset(&g_dma, 0, sizeof(g_dma));
     g_order = 0;
+    PE_SpuSynth_Reset();
 }
 
 int PE_SpuDma_InstallIrq(pe_addr_t handler)
@@ -207,6 +209,16 @@ uint8_t PE_SpuRam_LoadU8(uint32_t address)
     return g_spu_ram[address];
 }
 
+void PE_SpuRam_StoreU8(uint32_t address, uint8_t value)
+{
+    if (address >= PE_SPU_RAM_SIZE) {
+        fprintf(stderr, "FATAL: SPU RAM address 0x%08X is out of range\n",
+                address);
+        abort();
+    }
+    g_spu_ram[address] = value;
+}
+
 uint16_t PE_SpuRegister_LoadU16(uint32_t offset)
 {
     if ((offset & 1u) || offset >= 0x200u) abort();
@@ -217,4 +229,5 @@ void PE_SpuRegister_StoreU16(uint32_t offset, uint16_t value)
 {
     if ((offset & 1u) || offset >= 0x200u) abort();
     g_spu_registers[offset / 2u] = value;
+    PE_SpuSynth_OnRegisterWrite(offset, value);
 }
