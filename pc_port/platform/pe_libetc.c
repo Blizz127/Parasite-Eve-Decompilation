@@ -331,12 +331,12 @@ void PE_Event_ServiceAudioCommands(void)
 {
     /* Host adaptation: the frame wait supplies the missing timer service.
      * Preserve registration, EnableEvent, critical-section and producer
-     * gates. Command drain matches 8E1F0..8E208; dirty-voice publish is a
-     * partial 85F74 stand-in for the unported 8DB7C score bytecode path.
-     * Host ADPCM synthesis runs from HostFB_VSync after this (AUD1-E0/E1). */
+     * gates. Full Akao_Tick (8DB7C) includes the 8E1F0..8E208 command drain;
+     * PE_SpuVoice_ApplyPending still publishes dirty bits until 87AA8 lands.
+     * Host ADPCM synthesis runs from HostFB_VSync after this (AUD1-E0/E2). */
     if (g_audio_event_enabled && !g_irq_lock_depth &&
         !PE_LoadU32(0x8009D268u) && !PE_Port_ShouldStop()) {
-        func_8008CA84();
+        func_8008DB7C();
         PE_SpuScore_ApplyDirtyVoices();
     }
 }

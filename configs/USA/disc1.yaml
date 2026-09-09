@@ -1297,6 +1297,15 @@ segments:
       # retail alignment nops before the next real function at 0x765F4.
       - [0x765C4, c, func_80085DC4]
       - [0x765E8, asm]
+      # AUD1-MATCH: Psy-Q SpuSetCommonAttr (func_80085F74) — VRAM 0x80085F74,
+      # size 0x37C. Era GCC 2.8.1 -O2 -G0 -mno-split-addresses + three-word
+      # DISPATCH_FOLD jtbl_800120BC,jtbl_800120DC. Mid-765E8 carve.
+      - [0x76774, c, func_80085F74]
+      - [0x76AF0, asm]
+      # AUD1-MATCH: Psy-Q SpuSetVoiceAttr (func_800862F4) — VRAM 0x800862F4,
+      # size 0x16C. Same era profile; DISPATCH_FOLD jtbl_800120FC,jtbl_8001211C.
+      - [0x76AF4, c, func_800862F4]
+      - [0x76C60, asm]
       - [0x778E0, c, func_800870E0]
       - [0x778F0, asm]
       # Phase 5EK: D_8009D270 unsigned-int flags setters (READY-FROM-BITWISE).
@@ -1362,6 +1371,10 @@ segments:
       # Phase 5DB: C leaf func_8008D820 — file 0x7E020, size 0x24.
       - [0x7E020, c, func_8008D820]
       - [0x7E044, asm]
+      # AUD1-MATCH: Akao_Tick score sequencer (func_8008DB7C) — VRAM 0x8008DB7C,
+      # size 0x6C0. Semantic C for host score path; byte-match not claimed.
+      - [0x7E37C, c, func_8008DB7C]
+      - [0x7EA3C, asm]
       # Phase 5K: C leaf func_8008F694 — VRAM 0x8008F694, size 0x14.
       # File span 0x7FE94–0x7FEA8 exclusive. Increment *(unsigned int *)arg0 by 2.
       - [0x7FE94, c, func_8008F694]

@@ -1,12 +1,12 @@
 # Host SPU synthesis slice (AUD1-E0 / AUD1-E1)
 
 Stage AUD1-E0 adds the first bounded host audio path on top of the existing
-`pe_spu_dma.c` SPU-RAM image and register window. Stage AUD1-E1 adds a
-**partial** guest voice→SPU register bridge (`func_80087798`, partial
-`func_80085F74`, `PE_SpuScore_ApplyDirtyVoices`) wired into
-`PE_Event_ServiceAudioCommands` after command drain. It does **not** port the
-retail `func_8008DB7C` score bytecode sequencer, `func_800862F4` init, or
-mix-exact reverb.
+`pe_spu_dma.c` SPU-RAM image and register window. Stage AUD1-E1 adds a guest
+voice→SPU register bridge. Stage AUD1-E2 adds matching-intent `func_80085F74`
+(SpuSetCommonAttr) / `func_800862F4` (SpuSetVoiceAttr), host `func_8008DB7C`
+(Akao_Tick) with stubbed callees, and renames the pending-bit publisher to
+`PE_SpuVoice_ApplyPending`. Mix-exact reverb and bytecode sample loaders remain
+open.
 
 ## What is now audible (when enabled)
 
@@ -26,11 +26,11 @@ without PulseAudio continue to run; synthesis is still hashed in native tests.
 
 ## What remains silent / unported
 
-- Score bytecode interpretation (`8DB7C` / `8E4E8` voice ticks).
-- Full `func_80085F74` instrument-table paths and `func_800862F4` boot init.
+- Akao_Tick callees (`89328` / `8E8D0` / `87AA8` / `87FA0` / `8D844` /
+  `89784`) still stubbed on host — bank walks run but do not advance samples.
 - ADSR envelopes, Gaussian interpolation, reverb/type-5 wet path.
-- AKAO/seq26/27 music playback without score bytecode advancing sample
-  addresses each tick.
+- Full-tree EXACT SHA-1 for the new matching leaves (needs retail EXE + jtbl
+  pool strip).
 
 ## Verification
 

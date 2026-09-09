@@ -15,6 +15,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ERA="$ROOT/tools/era"
 GCC_URL="https://github.com/decompals/old-gcc/releases/download/0.17/gcc-2.7.2-psx.tar.gz"
 GCC_DIR="$ERA/gcc-2.7.2-psx"
+GCC281_URL="https://github.com/decompals/old-gcc/releases/download/0.17/gcc-2.8.1-psx.tar.gz"
+GCC281_DIR="$ERA/gcc-2.8.1-psx"
 MASPSX_REPO="https://github.com/mkst/maspsx"
 
 mkdir -p "$ERA"
@@ -30,6 +32,19 @@ else
     rm -f "$tmp"
     [[ -x "$GCC_DIR/cc1" ]] || { echo "ERROR: cc1 missing after extract" >&2; exit 1; }
     echo "OK  installed $GCC_DIR"
+fi
+
+if [[ -x "$GCC281_DIR/cc1" && -x "$GCC281_DIR/cpp" ]]; then
+    echo "OK  era gcc 2.8.1 present: $GCC281_DIR"
+else
+    echo "Fetching gcc-2.8.1-psx ..."
+    mkdir -p "$GCC281_DIR"
+    tmp="$(mktemp)"
+    curl -fsSL -o "$tmp" "$GCC281_URL"
+    tar xzf "$tmp" -C "$GCC281_DIR"
+    rm -f "$tmp"
+    [[ -x "$GCC281_DIR/cc1" ]] || { echo "ERROR: 2.8.1 cc1 missing after extract" >&2; exit 1; }
+    echo "OK  installed $GCC281_DIR"
 fi
 
 # Repo-tracked files under tools/era/maspsx (un-ignored via .gitignore

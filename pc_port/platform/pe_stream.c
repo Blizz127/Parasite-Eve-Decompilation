@@ -23,10 +23,8 @@
  *   - func_8007DB24(-1) (SPU heap query in func_80085EB4): host SPU-heap
  *     model starts at 0x1010 after SsInit (deterministic); only the store
  *     to D_8009B414 is guest-visible and the caller discards the return.
- *   - func_80085F74 / func_800862F4 (voice attribute/parameter setters in
- *     func_80085290): write through the voice-table base D_8009B3FC, which
- *     is installed by the collapsed SPU hardware init; not reproducible on
- *     host (same situation as D_8009B784 in pe_save.c).
+ *   - func_80085F74 / func_800862F4: now called for real when D_8009B3FC
+ *     points at the host SPU register window (pe_spu_voice.c).
  *   - func_8008CB54/func_8008CF70/func_80085A64 (streaming-mode command +
  *     SPU voice key off/on in func_80085290): SPU configuration/voice hardware paths, still deferred. This does not
  *     include 8CA84, whose command and channel RAM effects are native.
@@ -244,7 +242,7 @@ static void PE_Stream_StateInit(void)
     PE_StoreU16(0x800C0DACu, 0);
     PE_StoreU32(0x800C0DB0u, 0);
     PE_StoreU32(0x800C0DB4u, 0);
-    /* func_80085F74 — voice-attribute applier: collapsed (see header) */
+    func_80085F74(0x800C0D90u); /* SpuSetCommonAttr */
     PE_StoreU32(0x8009D268u, 0);
     PE_StoreU32(0x8009D22Cu, 0);
     PE_StoreU32(0x8009D2B8u, 0);
@@ -261,7 +259,7 @@ static void PE_Stream_StateInit(void)
         PE_StoreU32(s0 + 0xA0u, 0x18u);
         PE_StoreU16(s0 + 0x04u, 0);
         PE_StoreU32(s0 + 0x00u, 0);
-        /* func_800862F4(i, 0, 0, 0, 0) — voice-param setter: collapsed */
+        func_800862F4(i, 0, 0, 0, 0);
     }
     for (i = 0; i < 0x18; i++) {
         s0 = 0x800B8AC0u + 0x50u + (uint32_t)(0x18 + i) * 0x11Cu;
@@ -269,7 +267,8 @@ static void PE_Stream_StateInit(void)
         PE_StoreU32(s0 + 0xA0u, 0x18u);
         PE_StoreU16(s0 + 0x04u, 0);
         PE_StoreU32(s0 + 0x00u, 0);
-        /* func_800862F4(0x18 + i, 0, 0, 0, 0) — collapsed */
+        /* Retail Spu_SetVoiceAttr uses the 0..23 voice index, not 0x18+i. */
+        func_800862F4(i, 0, 0, 0, 0);
     }
     /* 12-entry channel block at 0x800BC03C, i = 0xC..0x17 */
     for (i = 0xC; i < 0x18; i++) {

@@ -114,6 +114,32 @@
         "MASPSX_DISPATCH_FOLD": "jtbl_80010000"
       }
     },
+    "era_281_o2_g0_spu_common": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0",
+        "-mno-split-addresses"
+      ],
+      "environment": {
+        "ERA_GCC_DIR": "tools/era/gcc-2.8.1-psx",
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_800120BC,jtbl_800120DC"
+      }
+    },
+    "era_281_o2_g0_spu_voice": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0",
+        "-mno-split-addresses"
+      ],
+      "environment": {
+        "ERA_GCC_DIR": "tools/era/gcc-2.8.1-psx",
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_800120FC,jtbl_8001211C"
+      }
+    },
     "modern_o1_g0": {
       "toolchain": "modern",
       "flags": []
@@ -237,6 +263,12 @@
     ],
     "era_o2_g8_vm_dispatch": [
       "func_80012850"
+    ],
+    "era_281_o2_g0_spu_common": [
+      "func_80085F74"
+    ],
+    "era_281_o2_g0_spu_voice": [
+      "func_800862F4"
     ],
     "modern_o1_g0": [
       "func_80017E9C",

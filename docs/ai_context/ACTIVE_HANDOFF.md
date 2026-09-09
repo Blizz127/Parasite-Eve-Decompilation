@@ -3,6 +3,26 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## AUD1-E2: audio score leaves 85F74 / 862F4 / 8DB7C (2026-09-09)
+
+Adopted khasinski Psy-Q donors for `func_80085F74` (SpuSetCommonAttr) and
+`func_800862F4` (SpuSetVoiceAttr) under `src/` with era GCC **2.8.1** profiles
+(`era_281_o2_g0_spu_*`) + multi-symbol `MASPSX_DISPATCH_FOLD`. Structural
+`.text` match vs fade-dump/EXE oracle (reloc immediates excluded); full-tree
+SHA-1 still needs a real `SLUS_006.62` + split jtbl pool. `func_8008DB7C`
+(Akao_Tick) landed as semantic C in `src/` (byte-match not claimed; khasinski
+still asm) and as host PE-RAM port `pe_akao_tick.c`. pe_stream now calls real
+85F74/862F4; `PE_Event_ServiceAudioCommands` runs `func_8008DB7C` then
+`PE_SpuScore_ApplyDirtyVoices`. Misnamed host "85F74" pending publisher renamed
+to `PE_SpuVoice_ApplyPending`.
+
+Evidence: era 2.8.1 structural compare of 0x16C / 0x37C leaves vs
+`pc_port/tests/retail_gameover_fade_cases.h` oracle (nops filled). Host
+`func_800862F4` clamps voice to 0..23 (retail voice index, not the old
+pe_stream misread of second-bank as 0x18+i). pe-native-tests 1302/0 +
+ctest 8/8 green. Next: real EXE `verify_us.sh` for EXACT SHA, port
+87AA8/8E8D0/89328 callees, audible score with bank data.
+
 ## ACTIVE OBJECTIVE: decompile all Day 1 and Day 2; implement/fix Day 1
 
 Current user goal (2026-09-08): "decompile all of day 1 and day 2 implement
