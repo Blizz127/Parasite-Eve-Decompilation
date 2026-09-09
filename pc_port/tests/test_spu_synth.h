@@ -103,11 +103,12 @@ static void test_DAY2_akao_tick(void)
     PE_StoreU32(st + 4u, 1u);     /* primary active mask bit0 */
     PE_StoreU32(st + 0x1Cu, 0u);
     PE_StoreU32(st + 0x6Cu, 0u);
+    /* +0x20 is a word; tempo half sits at +0x22 — seed word first, then tempo. */
+    PE_StoreU32(st + 0x20u, 0x10u);
+    PE_StoreU32(st + 0x24u, 0x5u);
     PE_StoreU16(st + 0x22u, 0x100u);
     PE_StoreU32(st + 0x28u, 0u);
     PE_StoreU16(st + 0x52u, 3u);  /* pitch slide countdown */
-    PE_StoreU32(st + 0x20u, 0x10u);
-    PE_StoreU32(st + 0x24u, 0x5u);
     PE_StoreU16(st + 0x58u, 0u);
     PE_StoreU16(st + 0x60u, 0u);
     PE_StoreU16(voice + 0x56u, 5u);
@@ -118,7 +119,8 @@ static void test_DAY2_akao_tick(void)
     ASSERT(PE_LoadU16(voice + 0x56u) == 4u, "primary voice note timer decrements");
     ASSERT(PE_LoadU16(voice + 0x58u) == 8u, "primary voice gate timer decrements");
     ASSERT(PE_LoadU16(st + 0x52u) == 2u, "pitch slide countdown decrements");
-    ASSERT(PE_LoadU32(st + 0x20u) == 0x15u, "pitch slide applies delta");
+    ASSERT(PE_LoadU16(st + 0x20u) == 0x15u, "pitch slide applies delta");
+    ASSERT(PE_LoadU16(st + 0x22u) == 0x100u, "tempo half preserved beside slide word");
     ASSERT((PE_LoadU32(st + 0x28u) & 0xFFFFu) ==
                ((acc_before + 0x100u) & 0xFFFFu),
            "tempo accumulator advances then masks low half");
