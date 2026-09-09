@@ -207,4 +207,38 @@ static void test_DAY2_cd_b0cd0_pump_retry_idle_dma1(void)
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }
 
+/* DAY2-158 dig/b0cd0-catchup-miss: live 6cbeb1ee never entered b0cd0&&pending
+ * catch-up (zero CD_B0CD0_* TRACE). 91DC8 always-clears B0CD0 after 7C564;
+ * orphan pending must still idle-catch-up and named-STOP on B89F4 early-out. */
+static void test_DAY2_cd_b0cd0_pump_orphan_pending(void)
+{
+    TEST("DAY2_cd_b0cd0_pump_orphan_pending");
+    DiscFixture fx={0};uint8_t response[5];
+    PeCdDeviceState st;
+    PeMdecState mdec;
+    ResetTestState();ASSERT(FxBuild(&fx,0),"orphan pending fixture");PE_Disc_SetActive(fx.disc);
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"orphan attachment");
+    {
+        uint8_t loc[]={0u,2u,0x20u};
+        CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
+        CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
+    }
+    PE_CdReg_ServiceDevice(451584u);
+    ASSERT(CdSectorReply(response,1)==1u,"orphan first data response");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending,"sector pending before orphan catch-up");
+    PE_MDEC_ClearDmaChannels();
+    PE_MDEC_GetState(&mdec);
+    ASSERT(!(mdec.dma1_chcr&0x01000000u),"dma1 idle");
+    PE_StoreU32(0x800B89F4u,1u); /* 7C564 early-out — no BFRD */
+    PE_StoreU16(0x800B0CD0u,0u); /* latch already cleared (91DC8 shape) */
+    HostFB_PumpCdProgress();
+    ASSERT(CountOrderLog("CD_B0CD0_pump_retry")==1,
+           "orphan pending must enter pump_retry without B0CD0");
+    ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_B0CD0_retry_unresolved")==1,
+           "orphan failed BFRD must named-STOP, not silent hold");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending,"pending retained until real BFRD");
+    PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
+}
 

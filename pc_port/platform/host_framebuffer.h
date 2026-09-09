@@ -25,9 +25,10 @@ void HostFB_VSync(int mode);
  * Use this when spinning until D_800B89F4 marks a last video chunk so the
  * E0 2000-try window can finish a multi-sector STR frame. Does not bump the
  * VSync counter (retail's VSync(-1) is a query).
- * DAY2-158x/b0cd0-no-bfrd: stall while B0CD0+pending & DMA1 busy (starve
- * STOP); idle-DMA1 always calls 7C564 and clears B0CD0 only after BFRD —
- * else CD_B0CD0_retry_unresolved (158x cleared latch without BFRD). */
+ * DAY2-158y/catchup-miss: stall while B0CD0+pending & DMA1 busy (starve
+ * STOP); idle-DMA1 catch-up on sector_pending alone (B0CD0 optional — 91DC8
+ * may clear latch without BFRD); clear B0CD0 only after BFRD else
+ * CD_B0CD0_retry_unresolved. IRQ gate also follows pending. */
 void HostFB_PumpCdProgress(void);
 void HostFB_DrawSync(int mode);
 int  HostFB_WritePPM(const char *path);

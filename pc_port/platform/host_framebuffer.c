@@ -197,8 +197,15 @@ void HostFB_PumpCdProgress(void)
      * checkpoint (not only ServiceDeviceIrq) so 74520→91DC8 can run even
      * when HasDecode is false. 158w only widened ServiceDeviceIrq; live
      * tip 733a8dc still hung ~319×92934 with BFRD never arriving. */
+    /* Read pending before the IRQ gate: live Disc1 on 6cbeb1ee spun ~319×
+     * 92934 with zero CD_B0CD0_* TRACE — catch-up required b0cd0&&pending,
+     * but unread sectors are owned by sector_pending. B0CD0 is only the
+     * DMA1-defer latch; 91DC8 retail always clears it after 7C564 even when
+     * BFRD was skipped, and some 7C564 early-outs never set it. */
+    PE_CdReg_GetDeviceState(&cd);
+    pending = cd.sector_pending != 0;
     b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
-    if(PE_MDEC_HasDecode() || b0cd0) {
+    if(PE_MDEC_HasDecode() || b0cd0 || pending) {
         (void)PE_Port_ServiceDmaIrqCheckpoint();
         HostFB_ServiceDeviceIrq();
     }
@@ -210,40 +217,35 @@ void HostFB_PumpCdProgress(void)
     dma1_busy = (mdec.dma1_chcr & 0x01000000u) != 0;
     b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
 
-    if(b0cd0 && pending) {
-        if(!dma1_busy) {
-            /* DMA1 idle but B0CD0 still owns an unread sector: 91DC8 miss or
-             * B0DBB gate skipped 7C564. DAY2-158x catch-up called 7C564 only
-             * when A801C set, then always cleared B0CD0 — so a skipped/failed
-             * BFRD left sector_pending with the latch gone; pe_cdreg hold then
-             * silent-hung ~319×92934 (retry_unresolved never fired). Always
-             * call 7C564 (leaf owns A801C+DMA1 early-out, like 91DC8); clear
-             * B0CD0 only after pending is gone; else named STOP. */
-            s_b0cd0_dma1_stalls = 0u;
-            Bootstrap_ReturnVoid1("CD_B0CD0_pump_retry","CD_device",cd.next_lba);
-            func_8007C564();
-            if(PE_Port_ShouldStop()) return;
-            PE_CdReg_GetDeviceState(&cd);
-            if(cd.sector_pending) {
-                Bootstrap_ReturnVoid1("CD_B0CD0_retry_unresolved", "CD_device",
-                                      cd.next_lba);
-                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-                return;
-            }
-            PE_StoreU16(0x800B0CD0u, 0u);
-        } else {
-            /* Still waiting on DecDCTout DMA — retail defers here. If Service
-             * cannot retire DMA1 (bitstream starved for the pending sector),
-             * convert the live silent hang into a named STOP. */
-            s_b0cd0_dma1_stalls++;
-            if(s_b0cd0_dma1_stalls >= 64u) {
-                Bootstrap_ReturnVoid1("CD_B0CD0_dma1_starved", "CD_device",
-                                      cd.next_lba);
-                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-                return;
-            }
+    if(pending && !dma1_busy) {
+        /* Idle-DMA1 catch-up on pending alone (158y required B0CD0 too).
+         * Orphan pending after 91DC8 clear-without-BFRD / non-defer early-out
+         * must still call 7C564; else pe_cdreg hold silent-hangs. Keep
+         * busy-DMA1 stall only when B0CD0 marks a retail defer. */
+        s_b0cd0_dma1_stalls = 0u;
+        Bootstrap_ReturnVoid1("CD_B0CD0_pump_retry","CD_device",cd.next_lba);
+        func_8007C564();
+        if(PE_Port_ShouldStop()) return;
+        PE_CdReg_GetDeviceState(&cd);
+        if(cd.sector_pending) {
+            Bootstrap_ReturnVoid1("CD_B0CD0_retry_unresolved", "CD_device",
+                                  cd.next_lba);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
             return;
         }
+        PE_StoreU16(0x800B0CD0u, 0u);
+    } else if(b0cd0 && pending && dma1_busy) {
+        /* Still waiting on DecDCTout DMA — retail defers here. If Service
+         * cannot retire DMA1 (bitstream starved for the pending sector),
+         * convert the live silent hang into a named STOP. */
+        s_b0cd0_dma1_stalls++;
+        if(s_b0cd0_dma1_stalls >= 64u) {
+            Bootstrap_ReturnVoid1("CD_B0CD0_dma1_starved", "CD_device",
+                                  cd.next_lba);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return;
+        }
+        return;
     } else {
         s_b0cd0_dma1_stalls = 0u;
     }

@@ -3,6 +3,23 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158z dig: B0CD0 catch-up miss / orphan pending (2026-09-09)
+
+Live Disc1 on **`6cbeb1ee`** (DAY2-158y) **FAILED** — same ~319×92934 silent
+hang; **zero** `CD_B0CD0_*` TRACE (catch-up arm never entered).
+
+Root cause: catch-up required `b0cd0 && pending`, but unread ownership is
+`sector_pending`. `91DC8` retail always clears B0CD0 after `7C564` (even on
+failed BFRD); non-defer early-outs never set B0CD0. Orphan pending → pe_cdreg
+hold → silent spin. IRQ gate also ignored pending.
+
+**Fix on `dig/b0cd0-catchup-miss`:** IRQ gate follows pending; idle catch-up
+on `pending && !dma1_busy` (B0CD0 optional); keep DMA1-busy stall when B0CD0.
+Evidence: `docs/evidence/pe-day2-158-b0cd0-catchup-miss/REPORT.md`.
+Test: `DAY2_cd_b0cd0_pump_orphan_pending`.
+
+Next: fold onto PR #42 / Matt Disc1. Linux-first.
+
 ## DAY2-158y: fold dig/b0cd0-no-bfrd (clear B0CD0 only after BFRD) (2026-09-09)
 
 Live Disc1 on tip **`331c945`** (DAY2-158x) **FAILED** — same ~319×
