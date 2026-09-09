@@ -1872,7 +1872,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            "func_80191FB8 one-source pointer layout differs");
     ASSERT(PE_LoadU8(0x800B0DBAu) == 1u &&
            PE_LoadU8(0x800B0DBEu) == 0x98u &&
-           PE_LoadU16(0x800B0DBCu) == 0u &&
+           PE_LoadU16(0x800B0DBCu) == 1u &&
            memcmp(PE_TranslateConst(0x801D1384u, 0x28u),
                   expected_disp, 0x28u) == 0 &&
            memcmp(PE_TranslateConst(0x801D13ACu, 0xB8u),
@@ -1955,8 +1955,11 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x8009B578u) == 0xBu &&
            PE_LoadU32(0x800A3608u) == 4u &&
            CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8010C89C") == 1 &&
+           CountOrderLog("func_8010C89C") == 0 &&
            PE_LoadU16(PE_LoadU32(0x801D0DFCu)) == 4u &&
+           PE_LoadU8(0x801D146Cu) == 1u &&
+           PE_LoadU16(0x800B0DBCu) == 1u &&
+           CountOrderLog("func_80192CE8_80192E08_cut") == 1 &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
            "DecDCToutCallback registration or following cut differs");
 
@@ -18983,6 +18986,18 @@ static void CDQ2d_PlantStream(void)
     PE_StoreU32(0x801D0DF8u, 0x801B0000u);
     PE_StoreU8(0x8010CBFCu, 0xFFu);
     PE_StoreU8(0x8010CBFDu, 0xFFu);
+    /* Arena pair for the got_frame a1 load (first pass uses [1468]). */
+    PE_StoreU32(0x801D0DE8u, 0x80122000u);
+    PE_StoreU32(0x801D0DECu, 0x80132000u);
+    /* Pad-exit VLC frame at the 7C484-published stream body
+     * (record_base 0x801E0000 + count 0x40 << 5 = 0x801E0800), so the
+     * live C89C call terminates without marching past guest RAM. */
+    PE_StoreU32(0x8011EB8Cu, 0x00FFFFFFu);
+    PE_StoreU32(0x801E0800u, 0x00000001u);
+    PE_StoreU16(0x801E0804u, 0u);
+    PE_StoreU16(0x801E0806u, 0u);
+    PE_StoreU16(0x801E0808u, 0x7FC0u);
+    PE_StoreU16(0x801E080Au, 0u);
 }
 
 static void test_B54KAD_fmv2_filename_threshold(void)
@@ -19003,17 +19018,28 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     B558_PlantChain(); /* CD0: the 7FB44 dispatch now runs live */
     CDQ2d_PlantStream(); /* pump publishes; E0 takes got_frame */
 
-    ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8010C89C") == 1 &&
-           PE_LoadU16(0x801E0000u) == 4u &&
-           PE_CdLoadU8(0x1F801800u) == 3u &&
-           PE_CdLoadU8(0x1F801801u) == 0u &&
-           PE_CdLoadU8(0x1F801802u) == 0u &&
-           PE_CdLoadU8(0x1F801803u) == 0x20u &&
-           PE_CdLoadU32(0x1F801020u) == 0x1325u &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "index 21 did not reach the exact post-reset boundary");
+    {
+        PeC89CTelemetry c89c;
+        ASSERT(func_801924F8(21) == 0 &&
+               CountOrderLog("func_8007B9EC") == 0 &&
+               CountOrderLog("func_8010C89C") == 0 &&
+               PE_LoadU16(0x801E0000u) == 4u &&
+               PE_CdLoadU8(0x1F801800u) == 3u &&
+               PE_CdLoadU8(0x1F801801u) == 0u &&
+               PE_CdLoadU8(0x1F801802u) == 0u &&
+               PE_CdLoadU8(0x1F801803u) == 0x20u &&
+               PE_CdLoadU32(0x1F801020u) == 0x1325u &&
+               !PE_Port_ShouldStop() &&
+               PE_LoadU8(0x801D146Cu) == 1u &&
+               PE_LoadU16(0x800B0DBCu) == 1u &&
+               PE_LoadU8(0x800B0DBDu) == 0u,
+               "index 21 did not complete the live C89C got_frame tail");
+        PE_C89C_GetTelemetry(&c89c);
+        ASSERT(c89c.a0 == 0x801E0800u &&
+               c89c.a1 == 0x80132000u &&
+               c89c.a2 == 0x801B0000u,
+               "index 21 C89C entry args differ");
+    }
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
            PE_LoadU32(0x801D0DC8u) == FX_FMV018_SIZE &&
            memcmp(PE_TranslateConst(0x801D0DCCu, 13u),
@@ -19050,23 +19076,34 @@ static void test_B54KAE_movie_state_setup(void)
     B558_PlantChain(); /* CD0: the 7FB44 dispatch now runs live */
     CDQ2d_PlantStream(); /* pump publishes; E0 takes got_frame */
 
-    ASSERT(func_801924F8(21) == 0 &&
-           CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8010C89C") == 1 &&
-           PE_LoadU16(0x801E0000u) == 4u &&
-           PE_CdLoadU8(0x1F801800u) == 3u &&
-           PE_CdLoadU8(0x1F801801u) == 0u &&
-           PE_CdLoadU8(0x1F801802u) == 0u &&
-           PE_CdLoadU8(0x1F801803u) == 0x20u &&
-           PE_CdLoadU32(0x1F801020u) == 0x1325u &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "movie state setup did not reach the exact post-reset boundary");
+    {
+        PeC89CTelemetry c89c;
+        ASSERT(func_801924F8(21) == 0 &&
+               CountOrderLog("func_8007B9EC") == 0 &&
+               CountOrderLog("func_8010C89C") == 0 &&
+               PE_LoadU16(0x801E0000u) == 4u &&
+               PE_CdLoadU8(0x1F801800u) == 3u &&
+               PE_CdLoadU8(0x1F801801u) == 0u &&
+               PE_CdLoadU8(0x1F801802u) == 0u &&
+               PE_CdLoadU8(0x1F801803u) == 0x20u &&
+               PE_CdLoadU32(0x1F801020u) == 0x1325u &&
+               !PE_Port_ShouldStop() &&
+               PE_LoadU8(0x801D146Cu) == 1u &&
+               PE_LoadU16(0x800B0DBCu) == 1u &&
+               PE_LoadU8(0x800B0DBDu) == 0u,
+               "movie state setup did not complete the live C89C got_frame tail");
+        PE_C89C_GetTelemetry(&c89c);
+        ASSERT(c89c.a0 == 0x801E0800u &&
+               c89c.a1 == 0x80132000u &&
+               c89c.a2 == 0x801B0000u,
+               "movie state setup C89C entry args differ");
+    }
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
                   PE_TranslateConst(0x801D0DC4u, 4u), 4u) == 0,
            "CdlLOC copy differs");
     ASSERT(PE_LoadU32(0x801D1464u) == 0x80122000u &&
            PE_LoadU32(0x801D1468u) == 0x80132000u &&
-           PE_LoadU8(0x801D146Cu) == 0u &&
+           PE_LoadU8(0x801D146Cu) == 1u &&
            PE_LoadU32(0x801D1470u) == 0x80173000u &&
            PE_LoadU32(0x801D1474u) == 0x80175000u &&
            PE_LoadU8(0x801D1478u) == 0u,

@@ -157,25 +157,32 @@ e0_poll:
     }
     goto cdready_wait;
 got_frame:
-    /* 80192814: s1 nonzero.  The got_frame tail (verified against the
-     * authenticated ov133 carve, docs/evidence/pe-mv1c-c89c-map/NOTE.md)
-     * bumps [B0DBC], toggles [146C], loads a1 = [0x801D1464 +
-     * ([146C]^1)<<2], a2 = [0x801D0DF8], and calls the VLC decoder
-     * func_8010C89C(a0 = s1) before 7C394 and the EC stores.
-     *
-     * MV1d landed the decoder itself (func_8010C89C_port.c) as a
-     * transcription proven by its unit vectors + oracle
-     * (pc_port/tools/pe_mv1d_c89c_oracle.py).  It is NOT wired live
-     * into this production tail yet: the decoder's output cursor is
-     * bounded only by the VLC stream's own pad/terminator codes, so a
-     * valid STR video frame terminates in-bounds, but the streaming
-     * pump does not yet deliver a fully MDEC-ready frame at s1 (that is
-     * the Stage-1b STR/MDEC pipeline).  Feeding the decoder the current
-     * partial frame marches a1 past the 2 MiB guest RAM.  Until the
-     * real frame is delivered, the production path stops honestly at
-     * the decoder boundary rather than decoding unvalidated input. */
-    (void)s1;
-    Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    /* 80192814: s1 nonzero.  Retail got_frame tail (ov133 carve,
+     * docs/evidence/pe-mv1c-c89c-map/NOTE.md): bump [B0DBC], load
+     * a1 = [0x801D1464 + ([146C]^1)*4] then toggle [146C] (first pass
+     * loads [0x801D1468]), a2 = [0x801D0DF8], jal func_8010C89C(a0=s1,
+     * a1, a2, 0), then jal func_8007C394(s1) and the EC stores
+     * (sb 0,[B0DBD] @801928F8; sh 1,[B0DBC] @80192908).  The decoder
+     * itself was transcribed in MV1d; this wires the production call
+     * path.  The intervening slice-wait between 7C394 and the EC
+     * stores is not yet expanded here — EC runs immediately so the
+     * control frontier can leave the old C89C stub. */
+    {
+        uint16_t count = PE_LoadU16(0x800B0DBCu);
+        uint32_t flip = (uint32_t)PE_LoadU8(0x801D146Cu) ^ 1u;
+        pe_addr_t out;
+        pe_addr_t table;
+
+        PE_StoreU16(0x800B0DBCu, (uint16_t)(count + 1u));
+        out = (pe_addr_t)PE_LoadU32(0x801D1464u + flip * 4u);
+        PE_StoreU8(0x801D146Cu, (uint8_t)flip);
+        table = (pe_addr_t)PE_LoadU32(0x801D0DF8u);
+        (void)func_8010C89C((uint32_t)s1, out, table, 0u);
+        if (PE_Port_ShouldStop())
+            return 0;
+        func_8007C394((uint32_t)s1);
+        PE_StoreU8(0x800B0DBDu, 0u);
+        PE_StoreU16(0x800B0DBCu, 1u);
+    }
     return 0;
 }

@@ -73,6 +73,33 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY1/DAY2-158b: wire live func_8010C89C into 801924F8 got_frame (2026-09-09)
+
+Live Disc1 + Decomp Bot confirmed the prior unresolved-boundary stop after
+`func_8001220C` was the intentional stub in `func_801924F8`'s `got_frame`
+(`Bootstrap_ReturnVoid("func_8010C89C", …)`), not a missing CMake leaf —
+`func_8010C89C_port.c` was already built. Production tail now matches the
+ov133 call-site order: bump `[B0DBC]`, load `a1` from
+`[0x801D1464+([146C]^1)*4]` then toggle `[146C]` (first pass → `[1468]`),
+`a2=[0x801D0DF8]`, `func_8010C89C(s1,a1,a2,0)`, `func_8007C394(s1)`, EC
+`[B0DBD]=0` / `[B0DBC]=1`. The 7C394→EC slice-wait is not expanded yet
+(EC runs immediately).
+
+Synthetic B54KAD/AE: CDQ2d plants a pad-exit VLC frame at the published
+stream body plus arena/table words so C89C terminates in-bounds.
+Assertions moved from Bootstrap order-log + unresolved stop to C89C
+telemetry + completed got_frame state (`146C==1`, `B0DBC==1`, no stop).
+Focused Linux: B54KAD, B54KAE, MV1D_c89c_* PASS. Full suite still shows
+pre-existing DAY2_movie_player autonomous-first-frame red and disc-gated
+skips where `local/pe_disc1.path` is absent.
+
+Claims: 924F8→C89C production call path is live; synthetic got_frame
+completes past the old C89C stub. Non-claims: Day2 complete; retail STR
+golden decode; 7C394→EC slice-wait fidelity; windowed Disc1 boot past the
+new frontier (no disc image in this environment); DAY2_movie_player
+autonomous stream green; published runtime 128 unchanged. Windows
+packaging not touched (Linux-first).
+
 ## DAY1/DAY2-158: XA RT mode + autonomous movie stream (2026-09-09)
 
 Previous157 stopped the enabled-device player at `CD_device_read_mode` for
