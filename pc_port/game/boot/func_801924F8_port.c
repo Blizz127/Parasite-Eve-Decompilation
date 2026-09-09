@@ -288,7 +288,17 @@ got_frame:
             PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
             return 0;
         }
-        (void)func_8010C89C(stream, out, table, 0u);
+        /* Live 04c8078: got_frame looped with no C89C in the TRACE log —
+         * the decoder is live (no stub name). Emit enter/done so Bazzite
+         * can see real C89C progress past Stage-1b admit. */
+        Trace_Direct(frame_ready ? "func_8010C89C_enter_ready"
+                                 : "func_8010C89C_enter_pad");
+        {
+            int c89c_ret = func_8010C89C(stream, out, table, 0u);
+            Trace_Direct(c89c_ret == 0 ? "func_8010C89C_done_pad"
+                                      : "func_8010C89C_done_bound");
+            (void)c89c_ret;
+        }
         if (PE_Port_ShouldStop())
             return 0;
         func_8007C394(stream);

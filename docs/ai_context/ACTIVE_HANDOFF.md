@@ -73,6 +73,37 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158l: live C89C TRACE + post-movie title cut (2026-09-09)
+
+Live Bazzite Disc1 on tip **`04c8078` (DAY2-158k) — NEW STATE**:
+
+- `Stage1b_pad_terminated_frame` GONE
+- Exactly 1× `func_801924F8_e0_promote`
+- Tight loop: `e0_poll` / `got_frame` / `func_8007C214_last_chunk`
+  (hundreds; process alive ~1m+)
+- ZERO C89C / Stage1b / STUB / `stop_reason` in the log
+
+Root cause (not a too-strict gate): got_frame **admits** and calls live
+`func_8010C89C` (no stub name → invisible in TRACE). Then `92CE8`
+returns 0 to `909B4`, which returned that 0 to `1220C`.
+`func_8006E9A0(0)` does **not** publish a new `D_8009D280` token, so
+main re-dispatches `909B4`→movie forever.
+
+Fix:
+
+1. TRACE `func_8010C89C_enter_ready|pad` + `done_pad|bound` in 924F8
+   got_frame so live proves decoder entry/exit.
+2. After saved-bit `92CE8` returns, named-stop
+   `func_801909B4_post_movie_title_cut` (title/menu untranslated) —
+   ends the re-dispatch spin. **924F8 got_frame remains the Stage-1b
+   wall for demux; post-movie cut is the next named STOP past first
+   frame.** Prefer Decomp `7C484`/`91B64` leaves when they land.
+
+CD device enable retained. **No `a1` clamp.** No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip; expect C89C enter/done TRACE then
+`func_801909B4_post_movie_title_cut` (not an e0_poll spin).
+
 ## DAY2-158k: early-demux gate + Decomp Stage1b diagnosis (2026-09-09)
 
 Decomp Bot diagnosis of live `Stage1b_pad_terminated_frame` on tip
