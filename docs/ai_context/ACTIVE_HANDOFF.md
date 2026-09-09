@@ -94,9 +94,10 @@ Fix on this tip (builds on 158j last-chunk latch in `7C214`):
    named-stop `Stage1b_early_demux_publish` before got_frame/C89C.
 2. Pump-time last-chunk latch also emits TRACE `e0_promote` so live logs
    show promote before got_frame.
-3. TRACE `func_8007C214_last_chunk` on the latch site.
-4. CD device enable retained. **No `a1` clamp.** **924F8 got_frame is
+3. CD device enable retained. **No `a1` clamp.** **924F8 got_frame is
    the live wall — do not treat 92934 as the frontier yet.**
+   (`Trace_Direct` stays out of `pe_libcd` — field-runtime-only link
+   targets do not provide it; pump-path TRACE is `e0_promote` in 924F8.)
 
 Tests: `Stage1b_early_demux_publish_named_stop`;
 `B54K_C89C_gated_until_pad` expects early-demux name.

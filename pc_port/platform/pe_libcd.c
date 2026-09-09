@@ -475,9 +475,10 @@ void func_8007C214(void)
     if (PE_LoadU32(0x800B89F4u) == 1u) {
         /* Authenticated last-chunk delivery (DAY2-158j/k). Pump-time
          * 7C564→7C214 clears B89F4 before E0's promote arm; latch here
-         * so got_frame may admit C89C without inventing overlay bytes. */
+         * so got_frame may admit C89C without inventing overlay bytes.
+         * TRACE lives in 924F8 (e0_promote) — pe_field_runtime must not
+         * call Trace_Direct (undefined in disc-loader / transition tests). */
         PE_Port_NoteStreamFrameReady();
-        Trace_Direct("func_8007C214_last_chunk");
     }
     PE_StoreU32(0x800B89F4u, 0u);
 }
