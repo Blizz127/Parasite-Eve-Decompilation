@@ -133,6 +133,15 @@ without per-tick score advancement.
 `docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`. No matching-decomp, mix-exact, or
 retail speaker claim.
 
+CI fix (same PR): `native-progress` failed because `port_priority.json` still
+claimed the obsolete `func_80030894_L9_cut` while metrics report a complete
+body (`production_frontier=null`), and because `PORT_SRCS` was removed from
+CMake while `linked_native_sources` still required it. Config now uses a null
+frontier label + exclusive end `0x800314E4`; tooling accepts complete frontiers
+and optional `PORT_SRCS`/`FIELD_RUNTIME_SRCS`. Regenerated
+`NATIVE_PORT_STATUS.md` / `NATIVE_CANDIDATE_PRIORITY.md` for the AUD1 platform
+units and new tests (316 linked TUs / 1147 cases).
+
 Autonomous-stream evidence (probed 2026-09-09, change NOT landed): with the
 device's 0x50 read-mode guard narrowed to 0x10 (mode bit6 = CdlModeRT per
 the Psy-Q SDK; 7C564's own software header/channel filtering proves the
