@@ -165,6 +165,27 @@ static void test_DAY2_akao_tick(void)
                "8900C marks pitch+key pending");
         ASSERT(PE_LoadU16(voice + 0x10Cu) == 0x1000u, "8900C/89218 writes pitch");
     }
+    /* E8: WriteVoiceParam ADSR + ENVX via ApplyPending / 89F08. */
+    {
+        pe_addr_t sv = 0x800BC000u;
+        pe_addr_t env_out = 0x800B002Cu;
+        seed_test_tone();
+        PE_StoreU32(sv, 0x80010000u);
+        PE_StoreU32(sv + 0xF0u, 0u); /* assigned voice index 0 */
+        PE_StoreU32(sv + 0xF4u, 0x900u); /* attack mode+rate */
+        PE_StoreU32(sv + 0x100u, 0u);    /* attack mode */
+        PE_StoreU16(sv + 0x10Eu, 0x00C0u); /* attack rate */
+        PE_StoreU32(0x800BCD50u, 0x1000u);
+        PE_StoreU32(0x8009D2C4u, 0x100u);
+        PE_SpuScore_ApplyDirtyVoices();
+        ASSERT(PE_LoadU32(sv + 0xF4u) == 0u, "E8 ADSR flags cleared");
+        ASSERT(PE_SpuRegister_LoadU16(0x08u) == 0xC000u,
+               "E8 WriteVoiceParam attack rate into ADSR1");
+        PE_SpuRegister_StoreU16(0x0Cu, 0x1234u);
+        func_80089F08(0u, env_out);
+        ASSERT(PE_LoadU16(env_out) == 0x1234u, "E8 ENVX reads voice0 envelope");
+        func_80088344(sv, 1u); /* named stub must link */
+    }
     ASSERT(!PE_Port_ShouldStop() && !g_stub_order_count,
            "Akao_Tick scaffolding runs without stub stops");
     PASS();

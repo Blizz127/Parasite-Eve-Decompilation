@@ -3,6 +3,31 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## AUD1-FOLD E8: 878F0 WriteVoiceParam + 89F08 ENVX (2026-09-09)
+
+Continued on `cursor/audio-score-fold-4797` / PR #39. Remote
+`cursor/audio-score-leaves-85f74-862f4-8db7c` tip still AUD1-E2 — no E8 push
+to pull; host ports from khasinski `Akao_WriteVoiceParam` /
+`SpuGetVoiceEnvelope` (semantic). Movie/PR #38 untouched.
+
+**Folded**
+- `878F0` Akao_WriteVoiceParam — ADSR/pitch/vol/start/loop via VoiceParams at
+  `voice+0xF0`; ApplyPending routes safe ADSR bits through it
+- `89F08` SpuGetVoiceEnvelope (ENVX at `voice*0x10+0xC`); `89250` uses it and
+  writes `g_AkaoVoiceEnvelopeTable` at `0x800B002C`
+- Host ApplyPending / synth path wired for the above
+
+**Named-asm left:** `88344` Akao_SetVoiceKeyOff — empty host stub; score
+key-off flush remains `89784`.
+
+**Flag conflicts kept** (host bridge vs khasinski VoiceParams): `0x80`
+pitch vs START, `0x400` start vs RELEASE_MODE, `0x1000`/`0x2000` key-on/off
+vs DECAY/SUSTAIN_RATE — those bits stay on the host bridge paths.
+
+**Still open:** `8E8D0`/`8F0D0`, `8D844`. No Day2-complete claim.
+
+Verify: `PE_TEST_FILTER=DAY2_spu` / `DAY2_akao_tick`; `ctest` 8/8.
+
 ## AUD1-FOLD E7: 8900C / 89218 / 89250 into host path (2026-09-09)
 
 Continued on `cursor/audio-score-fold-4797` / PR #39. Remote audio tip still

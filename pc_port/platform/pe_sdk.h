@@ -168,6 +168,9 @@ void func_80087798(uint32_t voice_index, uint32_t vol_left, uint32_t vol_right);
 void func_80085F74(pe_addr_t attr);
 void func_800862F4(int voice, uint16_t left, uint16_t right, int16_t left_mode,
                    uint16_t right_mode);
+void func_800878F0(int voice_index, pe_addr_t params);
+void func_80089F08(uint32_t voice_index, pe_addr_t env_out);
+void func_80088344(pe_addr_t voice, uint32_t voice_mask); /* named-asm stub */
 void func_80087AA8(pe_addr_t voice, uint32_t mask);
 void func_80087FA0(pe_addr_t voice, uint32_t mask);
 void func_8008900C(pe_addr_t voices, uint32_t active, uint32_t restart,

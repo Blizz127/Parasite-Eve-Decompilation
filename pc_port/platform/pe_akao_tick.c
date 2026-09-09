@@ -1,11 +1,13 @@
 /*
- * Host Akao_Tick (func_8008DB7C) + score callees (AUD1-E3..E7 fold).
+ * Host Akao_Tick (func_8008DB7C) + score callees (AUD1-E3..E8 fold).
  *
  * Semantic PE-RAM ports from khasinski donors / candidates (not byte-match):
  *   87AA8 Spu_UpdateVoiceRegisters, 87FA0 stream twin (shared body),
  *   89328 Akao_ProcessVoiceQueue, 89724 Spu_VoiceMaskCompose,
  *   89784 key-off flush, 8900C StepVoiceNote, 89218 depth scale,
- *   89250 UpdateVoiceEnvelopes.
+ *   89250 UpdateVoiceEnvelopes (via 89F08 ENVX).
+ * E8 voice path lives in pe_spu_voice.c (878F0 WriteVoiceParam + 89F08).
+ * Named-asm left: 88344 Akao_SetVoiceKeyOff (empty host stub below).
  * Still stubbed: 8E8D0/8F0D0 sample bytecode, 8D844 reverb-load step.
  * Remote audio tip was still E2 at fold time — donors from khasinski.
  */
@@ -177,10 +179,13 @@ static void akao_remove_voice(pe_addr_t base, uint32_t voice_index)
     }
 }
 
-/* Akao_UpdateVoiceEnvelopes — func_80089250 (khasinski voice_envelopes.c). */
+/* Akao_UpdateVoiceEnvelopes — func_80089250 (khasinski voice_envelopes.c).
+ * Envelope scratch table at 0x800B002C (g_AkaoVoiceEnvelopeTable); ENVX via
+ * func_80089F08. */
 static void func_80089250(uint32_t blocked)
 {
     pe_addr_t st = PE_LoadU32(0x8009D2C8u);
+    pe_addr_t envelope = 0x800B002Cu;
     uint32_t protected_mask = blocked;
     uint32_t voice_index;
     uint32_t bit;
@@ -193,17 +198,15 @@ static void func_80089250(uint32_t blocked)
     bit = 1u;
     for (voice_index = 0; voice_index < 0x18u; voice_index++, bit <<= 1) {
         if (protected_mask & bit) {
-            /* Protected voices keep full envelope in the guest table path;
-             * host synth has no ENV table — skip. */
-            continue;
-        }
-        {
-            uint16_t env = PE_SpuRegister_LoadU16(voice_index * 0x10u + 0xCu);
-            if (env == 0u) {
+            PE_StoreU16(envelope, 0x7FFFu);
+        } else {
+            func_80089F08(voice_index, envelope);
+            if (PE_LoadU16(envelope) == 0u) {
                 akao_remove_voice(0x800B8AC0u, voice_index);
                 akao_remove_voice(0x800BA560u, voice_index);
             }
         }
+        envelope += 8u;
     }
 }
 
@@ -555,6 +558,17 @@ void func_80089328(void)
     key_on_mask = PE_LoadU32(key_on_scratch);
     if (key_on_mask != 0u)
         spu_write_key_on(key_on_mask);
+}
+
+/*
+ * Akao_SetVoiceKeyOff — func_80088344. Still named-asm on the matching side;
+ * host keeps an empty stub so the symbol stays resolvable. Key-off flush for
+ * the score path is func_80089784 (already hosted).
+ */
+void func_80088344(pe_addr_t voice, uint32_t voice_mask)
+{
+    (void)voice;
+    (void)voice_mask;
 }
 
 /* Sample bytecode step — still open (needs seq opcode tables). */
