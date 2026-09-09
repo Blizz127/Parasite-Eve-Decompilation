@@ -5,7 +5,7 @@
  *   func_80085F74 = SpuSetCommonAttr (common/master/CD/external regs)
  *   func_800862F4 = SpuSetVoiceAttr (per-voice volume)
  * PE_SpuVoice_ApplyPending publishes guest voice+0xF4 pending bits (host
- * stand-in until Spu_UpdateVoiceRegisters / full 8DB7C callees land).
+ * publisher for voice +0xF4 bits set by 87AA8/87FA0/8E8D0/89328/8D844/8900C).
  */
 #ifndef PE_SPU_VOICE_H
 #define PE_SPU_VOICE_H

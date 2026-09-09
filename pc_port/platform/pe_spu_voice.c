@@ -201,7 +201,14 @@ void PE_SpuVoice_ApplyPending(pe_addr_t voice)
     flags = PE_LoadU32(voice + 0xF4u);
     if (!flags)
         return;
-    idx = guest_voice_index(voice);
+    /* Prefer sequencer-assigned HW index (+0xF0) from StepVoiceNote. */
+    {
+        uint32_t hw = PE_LoadU32(voice + 0xF0u);
+        if (hw < 24u)
+            idx = (int)hw;
+        else
+            idx = guest_voice_index(voice);
+    }
     if (idx < 0 || idx >= 24)
         return;
     reg = (uint32_t)idx * 0x10u;
@@ -216,6 +223,19 @@ void PE_SpuVoice_ApplyPending(pe_addr_t voice)
                       PE_LoadU16(voice + 0x78u));
         applied |= 0x2u;
     }
+    /* AUD1-E6: pitch pending (0x10) from 8D844 / 87AA8 LFO / pitch slides. */
+    if (flags & 0x10u) {
+        uint32_t base = PE_LoadU32(voice + 0x30u);
+        uint32_t slide = PE_LoadU32(voice + 0x34u);
+        int32_t lfo = (int16_t)PE_LoadU16(voice + 0xE8u);
+        uint16_t out;
+        if ((base & 0xFFFF0000u) != 0u || slide != 0u)
+            out = (uint16_t)((int32_t)((base + slide) >> 16) + lfo);
+        else
+            out = (uint16_t)((int32_t)(base & 0xFFFFu) + lfo);
+        spu_half_store(reg + 4u, out);
+        applied |= 0x10u;
+    }
     if (flags & 0x40u) {
         spu_half_store(reg + 4u, (uint16_t)(PE_LoadU32(voice + 0x44u) >> 16));
         applied |= 0x40u;
@@ -224,15 +244,52 @@ void PE_SpuVoice_ApplyPending(pe_addr_t voice)
         spu_half_store(reg + 4u, (uint16_t)(PE_LoadU32(voice + 0x44u) >> 16));
         applied |= 0x80u;
     }
-    if (flags & 0x400u) {
+    /* Retail START_ADDR is 0x80; host bridge also accepted 0x400 historically. */
+    if (flags & (0x80u | 0x400u)) {
         spu_half_store(reg + 6u, (uint16_t)(PE_LoadU32(voice + 0xF8u) >> 3));
-        applied |= 0x400u;
+        applied |= flags & (0x80u | 0x400u);
     }
-    if (flags & 0x800u) {
-        spu_half_store(reg + 8u, PE_LoadU16(voice + 0x10Eu));
-        spu_half_store(reg + 0xAu, PE_LoadU16(voice + 0x110u));
-        applied |= 0x800u;
+    /* AUD1-E8: compose ADSR1/ADSR2 from voice+0xF0 overlay when ADSR bits set. */
+    if (flags & 0x1FF80u) {
+        pe_addr_t p = voice + 0xF0u;
+        uint16_t adsr1 = PE_SpuRegister_LoadU16(reg + 8u);
+        uint16_t adsr2 = PE_SpuRegister_LoadU16(reg + 0xAu);
+        if (flags & 0x900u) {
+            uint32_t rate = PE_LoadU16(p + 0x1Eu);
+            uint32_t mode = PE_LoadU32(p + 0x10u);
+            adsr1 = (uint16_t)((adsr1 & 0x00FFu) |
+                               (((mode >> 2) << 15) | (rate << 8)));
+        }
+        if (flags & 0x1000u) {
+            uint32_t rate = PE_LoadU16(p + 0x20u);
+            adsr1 = (uint16_t)((adsr1 & 0xFF0Fu) | (rate << 4));
+        }
+        if (flags & 0x8000u) {
+            uint32_t level = PE_LoadU16(p + 0x22u);
+            adsr1 = (uint16_t)((adsr1 & 0xFFF0u) | (level & 0xFu));
+        }
+        if (flags & 0x2200u) {
+            uint32_t rate = PE_LoadU16(p + 0x24u);
+            uint32_t mode = PE_LoadU32(p + 0x14u);
+            adsr2 = (uint16_t)((adsr2 & 0x3Fu) |
+                               (((mode >> 1) << 14) | (rate << 6)));
+        }
+        if (flags & 0x4400u) {
+            uint32_t rate = PE_LoadU16(p + 0x26u);
+            uint32_t mode = PE_LoadU32(p + 0x18u);
+            adsr2 = (uint16_t)((adsr2 & 0xFFC0u) |
+                               (((mode >> 2) << 5) | (rate & 0x1Fu)));
+        }
+        /* Legacy packed halfword shortcut when only 0x800 set. */
+        if ((flags & 0x800u) && !(flags & 0x900u)) {
+            adsr1 = PE_LoadU16(voice + 0x10Eu);
+            adsr2 = PE_LoadU16(voice + 0x110u);
+        }
+        spu_half_store(reg + 8u, adsr1);
+        spu_half_store(reg + 0xAu, adsr2);
+        applied |= flags & 0x1FF80u;
     }
+    /* Host bridge: bit 0x1000 still keys on (ProcessVoiceQueue path separate). */
     if ((flags & 0x2000u) && !(flags & 0x1000u)) {
         if (idx < 16)
             spu_half_store(0x18Au, (uint16_t)(spu_half_load(0x18Au) | (1u << idx)));
@@ -249,8 +306,6 @@ void PE_SpuVoice_ApplyPending(pe_addr_t voice)
                            (uint16_t)(spu_half_load(0x18Au) | (1u << (idx - 16))));
         applied |= 0x1000u;
     }
-    if (flags & 0x1FF80u)
-        applied |= flags & 0x1FF80u;
     PE_StoreU32(voice + 0xF4u, flags & ~applied);
 }
 

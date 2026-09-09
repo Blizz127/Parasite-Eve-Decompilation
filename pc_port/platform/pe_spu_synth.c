@@ -15,6 +15,14 @@ static const int16_t g_adpcm_filters[5][2] = {
     {0, 0}, {60, 0}, {115, -52}, {98, -55}, {122, -60}
 };
 
+enum {
+    PE_ADSR_OFF = 0,
+    PE_ADSR_ATTACK = 1,
+    PE_ADSR_DECAY = 2,
+    PE_ADSR_SUSTAIN = 3,
+    PE_ADSR_RELEASE = 4
+};
+
 typedef struct {
     int active;
     int16_t vol_l;
@@ -28,6 +36,12 @@ typedef struct {
     uint32_t phase;
     int16_t sample;
     int16_t next_sample;
+    /* Simplified ADSR → ENVX (AUD1-E8). Mix amplitude still ignores ENVX
+     * so DAY2_spu_synth hashes stay stable; UpdateVoiceEnvelopes can poll. */
+    int adsr_phase;
+    int32_t envx;
+    uint16_t adsr1;
+    uint16_t adsr2;
 } PeSpuVoice;
 
 static PeSpuVoice g_voices[SPU_VOICE_COUNT];
@@ -91,6 +105,72 @@ static int16_t read_adpcm_sample(PeSpuVoice *voice)
     return decode_nibble(voice, shift, filter, nibble);
 }
 
+/* Advance one voice ENVX from ADSR1/ADSR2. Rates are coarse host units. */
+static void voice_adsr_load_regs(PeSpuVoice *v, unsigned index)
+{
+    uint32_t reg = index * SPU_VOICE_STRIDE;
+    v->adsr1 = PE_SpuRegister_LoadU16(reg + 8u);
+    v->adsr2 = PE_SpuRegister_LoadU16(reg + 0xAu);
+}
+
+static void voice_adsr_step_envx(PeSpuVoice *v, unsigned index, unsigned samples)
+{
+    uint32_t reg = index * SPU_VOICE_STRIDE;
+    int32_t step;
+    unsigned sustain_level;
+    unsigned attack_rate, decay_rate, sustain_rate, release_rate;
+
+    if (v->adsr_phase == PE_ADSR_OFF)
+        return;
+
+    attack_rate = (v->adsr1 >> 8) & 0x7Fu;
+    decay_rate = (v->adsr1 >> 4) & 0xFu;
+    sustain_level = (v->adsr1 & 0xFu) * 0x800; /* 0..15 → ~0..0x7800 */
+    sustain_rate = (v->adsr2 >> 6) & 0x7Fu;
+    release_rate = v->adsr2 & 0x1Fu;
+
+    /* Coarse per-frame quanta: higher rate field → faster change. */
+    switch (v->adsr_phase) {
+    case PE_ADSR_ATTACK:
+        step = 0x4000 / (int32_t)(8u + (0x7Fu - attack_rate));
+        step = (step * (int32_t)samples) / (int32_t)PE_SPU_SYNTH_FRAME_SAMPLES;
+        if (step < 1) step = 1;
+        v->envx += step;
+        if (v->envx >= 0x7FFF) {
+            v->envx = 0x7FFF;
+            v->adsr_phase = PE_ADSR_DECAY;
+        }
+        break;
+    case PE_ADSR_DECAY:
+        step = 0x2000 / (int32_t)(4u + (0xFu - decay_rate));
+        step = (step * (int32_t)samples) / (int32_t)PE_SPU_SYNTH_FRAME_SAMPLES;
+        if (step < 1) step = 1;
+        v->envx -= step;
+        if (v->envx <= (int32_t)sustain_level) {
+            v->envx = (int32_t)sustain_level;
+            v->adsr_phase = PE_ADSR_SUSTAIN;
+        }
+        break;
+    case PE_ADSR_SUSTAIN:
+        /* Exponential-ish hold: mild drift toward sustain_level. */
+        (void)sustain_rate;
+        break;
+    case PE_ADSR_RELEASE:
+        step = 0x3000 / (int32_t)(4u + (0x1Fu - release_rate));
+        step = (step * (int32_t)samples) / (int32_t)PE_SPU_SYNTH_FRAME_SAMPLES;
+        if (step < 1) step = 1;
+        v->envx -= step;
+        if (v->envx <= 0) {
+            v->envx = 0;
+            v->adsr_phase = PE_ADSR_OFF;
+        }
+        break;
+    default:
+        break;
+    }
+    PE_SpuRegister_StoreU16(reg + 0xCu, (uint16_t)v->envx);
+}
+
 static void voice_key_on(unsigned index)
 {
     if (index >= SPU_VOICE_COUNT) return;
@@ -108,12 +188,34 @@ static void voice_key_on(unsigned index)
     v->sample = read_adpcm_sample(v);
     v->next_sample = read_adpcm_sample(v);
     v->active = v->pitch != 0u;
+    voice_adsr_load_regs(v, index);
+    /* Fast attack when ADSR unset (tests / pre-WriteVoiceParam): snap ENVX. */
+    if (v->adsr1 == 0u && v->adsr2 == 0u) {
+        v->adsr_phase = v->active ? PE_ADSR_SUSTAIN : PE_ADSR_OFF;
+        v->envx = v->active ? 0x7FFF : 0;
+    } else {
+        v->adsr_phase = PE_ADSR_ATTACK;
+        v->envx = 0;
+    }
+    PE_SpuRegister_StoreU16(reg + 0xCu, (uint16_t)v->envx);
 }
 
 static void voice_key_off(unsigned index)
 {
-    if (index < SPU_VOICE_COUNT)
-        g_voices[index].active = 0;
+    if (index < SPU_VOICE_COUNT) {
+        PeSpuVoice *v = &g_voices[index];
+        /* Audio stops immediately (hash-stable); ENVX enters release so
+         * SpuGetVoiceEnvelope / UpdateVoiceEnvelopes observe decay. */
+        v->active = 0;
+        voice_adsr_load_regs(v, index);
+        if (v->adsr2 != 0u && v->envx > 0) {
+            v->adsr_phase = PE_ADSR_RELEASE;
+        } else {
+            v->adsr_phase = PE_ADSR_OFF;
+            v->envx = 0;
+            PE_SpuRegister_StoreU16(index * SPU_VOICE_STRIDE + 0xCu, 0u);
+        }
+    }
 }
 
 void PE_SpuSynth_Reset(void)
@@ -171,6 +273,12 @@ void PE_SpuSynth_Render(int16_t *out_lr, unsigned frame_samples)
         }
         out_lr[f * 2u] = clamp_s16(mix_l);
         out_lr[f * 2u + 1u] = clamp_s16(mix_r);
+    }
+    /* Step ENVX once per render quantum (not per sample) for host cost. */
+    for (i = 0; i < SPU_VOICE_COUNT; i++) {
+        PeSpuVoice *v = &g_voices[i];
+        if (v->adsr_phase != PE_ADSR_OFF)
+            voice_adsr_step_envx(v, i, frame_samples);
     }
     g_frames_rendered++;
 }

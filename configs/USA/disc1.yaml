@@ -1324,25 +1324,58 @@ segments:
       - [0x77F44, c, func_80087744]
       - [0x77F60, c, func_80087760]
       - [0x77F7C, c, func_8008777C]
-      - [0x77F98, asm]
+      # AUD1-E8: AkaoSpuVoice_SetVolume (func_80087798) — VRAM 0x80087798 /
+      # size 0x24. ADSR/ENVX write path prerequisite.
+      - [0x77F98, c, func_80087798]
       # Phase 5FY: hardware halfword setter func_800877BC — VRAM 0x800877BC,
       # size 0x18, era -O2 -G0. Mid-77C28 carve: prefix 0x394, C 0x18,
       # trailing asm resumes at 77FD4.
       - [0x77FBC, c, func_800877BC]
       - [0x77FD4, c, func_800877D4]
       - [0x77FF0, c, func_800877F0]
-      - [0x7800C, asm]
+      # AUD1-E8: ADSR Attack/Decay/SustainLevel setters (8780C/8783C/87864).
+      - [0x7800C, c, func_8008780C]
+      - [0x7803C, c, func_8008783C]
+      - [0x78064, c, func_80087864]
       # Volume campaign: adjacent per-voice SPU bitfield update, era -O2 -G0.
       - [0x7808C, c, func_8008788C]
       # Volume campaign: per-voice SPU halfword bitfield update, era -O2 -G0.
       - [0x780C0, c, func_800878C0]
-      - [0x780F0, asm]
+      # AUD1-E8: Akao_WriteVoiceParam (func_800878F0) — VRAM 0x800878F0 /
+      # size 0x1B8. Publishes volume/pitch/start/loop/ADSR to SPU. khasinski
+      # donor cleaned; byte-match not claimed.
+      - [0x780F0, c, func_800878F0]
+      # AUD1-E3: Spu_UpdateVoiceRegisters (func_80087AA8) — VRAM 0x80087AA8,
+      # size 0x4F8. Semantic C for host score path; byte-match not claimed.
+      - [0x782A8, c, func_80087AA8]
+      # AUD1-E3: Spu_TickVoiceEnvelopes (func_80087FA0) — VRAM 0x80087FA0,
+      # size 0x3A4. Stream-bank sibling of 87AA8.
+      - [0x787A0, c, func_80087FA0]
+      - [0x78B44, asm]
+      # AUD1-E7: Akao_StepVoiceNote (func_8008900C) — VRAM 0x8008900C /
+      # size 0x20C. Semantic C from retail; byte-match not claimed.
+      - [0x7980C, c, func_8008900C]
+      # AUD1-E7: Akao_RemoveVoice (89218) + Akao_UpdateVoiceEnvelopes (89250)
+      # — file 0x79A18 / size 0x110. khasinski voice_envelopes cleaned.
+      - [0x79A18, c, func_80089218]
+      # AUD1-E5: Akao_ProcessVoiceQueue (func_80089328) — VRAM 0x80089328,
+      # size 0x3FC (+ Spu_VoiceMaskCompose 0x80089724 in same TU through 0x45C).
+      # Semantic C from khasinski donor; byte-match not claimed.
+      - [0x79B28, c, func_80089328]
+      # AUD1-E6: Akao_SetVoicePitch / key-off flush (func_80089784) —
+      # VRAM 0x80089784 / size 0x1DC. khasinski candidate cleaned; byte-match
+      # not claimed.
+      - [0x79F84, c, func_80089784]
       - [0x7A160, c, func_80089960]
       - [0x7A180, asm]
       - [0x7A328, c, func_80089B28]
       - [0x7A348, asm]
       - [0x7A4F0, c, func_80089CF0]
       - [0x7A510, asm]
+      # AUD1-E8: SpuGetVoiceEnvelope (func_80089F08) — VRAM 0x80089F08 /
+      # size 0x1C. ENVX read for UpdateVoiceEnvelopes. khasinski s_gvex shape.
+      - [0x7A708, c, func_80089F08]
+      - [0x7A724, asm]
       # Phase 5EG-readers: func_8008AB1C — VRAM 0x8008AB1C, size 0x80.
       # Pins D_8009D240 as unsigned short * and D_8009D260 as unsigned char *
       # via lhu / unscaled addu. Era -O1 -G0.
@@ -1370,11 +1403,21 @@ segments:
       - [0x7DFD0, asm]
       # Phase 5DB: C leaf func_8008D820 — file 0x7E020, size 0x24.
       - [0x7E020, c, func_8008D820]
-      - [0x7E044, asm]
+      # AUD1-E6: SPU_StepReverbLoad (func_8008D844) — VRAM 0x8008D844 /
+      # size 0x338. Semantic C from retail; khasinski still asm; byte-match
+      # not claimed.
+      - [0x7E044, c, func_8008D844]
       # AUD1-MATCH: Akao_Tick score sequencer (func_8008DB7C) — VRAM 0x8008DB7C,
       # size 0x6C0. Semantic C for host score path; byte-match not claimed.
       - [0x7E37C, c, func_8008DB7C]
       - [0x7EA3C, asm]
+      # AUD1-E4: Akao_StepSampleLoader / seq bytecode (func_8008E8D0) —
+      # VRAM 0x8008E8D0 / size 0x800. Jumptables D_8009CCF0 / D_8009C8F0.
+      # Semantic C; byte-match not claimed (opcode handlers still asm).
+      - [0x7F0D0, c, func_8008E8D0]
+      # SeqOp_SetVoiceInstrument (func_8008F0D0) — VRAM 0x8008F0D0 / size 0xA8.
+      - [0x7F8D0, c, func_8008F0D0]
+      - [0x7F978, asm]
       # Phase 5K: C leaf func_8008F694 — VRAM 0x8008F694, size 0x14.
       # File span 0x7FE94–0x7FEA8 exclusive. Increment *(unsigned int *)arg0 by 2.
       - [0x7FE94, c, func_8008F694]

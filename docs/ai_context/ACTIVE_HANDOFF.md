@@ -3,13 +3,103 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## AUD1-E8: WriteVoiceParam 878F0 + SpuGetVoiceEnvelope 89F08 (2026-09-09)
+
+Landed semantic `src/func_800878F0.c` (Akao_WriteVoiceParam, VRAM 0x800878F0 /
+file 0x780F0 / size 0x1B8) from khasinski `Akao_SpuVoiceRegisters.c` (pins
+stripped) plus prerequisite setters `87798` / `8780C` / `8783C` / `87864`.
+Also `src/func_80089F08.c` (SpuGetVoiceEnvelope, VRAM 0x80089F08 / file 0x7A708 /
+size 0x1C). Yaml-carved in `configs/USA/disc1.yaml`. Host `pe_akao_tick`
+WriteVoiceParam now follows retail AKAO_VOICE_PARAM_* flags (ADSR attack/
+decay/sustain/release bitfields); `pe_spu_voice` ApplyPending composes
+ADSR1/ADSR2; `pe_spu_synth` advances ENVX via a simplified ADSR state machine
+(mix amplitude still unscaled — DAY2_spu_* hashes unchanged). Byte-match not
+claimed. Do not touch C89C/VLC (PR #38) or movie/boot (92CE8/924F8/92934).
+Still asm: `Akao_SetVoiceKeyOff` (88344).
+
+## AUD1-E7: StepVoiceNote 8900C + UpdateVoiceEnvelopes 89250 (2026-09-09)
+
+Landed semantic `src/func_8008900C.c` (Akao_StepVoiceNote, VRAM 0x8008900C /
+file 0x7980C / size 0x20C) and `src/func_80089218.c` (RemoveVoice 89218 +
+UpdateVoiceEnvelopes 89250, file 0x79A18 / size 0x110). Envelope-table HW
+alloc at `D_800B002C`, pending cluster `0x1FF93`, ENVX poll via 89F08.
+Yaml-carved in `configs/USA/disc1.yaml`. Host PE-RAM ports in `pe_akao_tick.c`
+replace simplified/no-op stubs; `pe_spu_synth` mirrors ENVX on key on/off;
+`PE_SpuVoice_ApplyPending` prefers voice `+0xF0`. Byte-match not claimed.
+Do not touch C89C/VLC (PR #38) or movie/boot (92CE8/924F8/92934).
+
+## AUD1-E6: flush stubs 8D844 / 89784 (2026-09-09)
+
+Landed semantic `src/func_8008D844.c` (SPU_StepReverbLoad, VRAM 0x8008D844 /
+file 0x7E044 / size 0x338) and `src/func_80089784.c` (Akao_SetVoicePitch /
+key-off flush, VRAM 0x80089784 / file 0x79F84 / size 0x1DC). 89784 from
+khasinski `candidates/main/akao/misc.c` (register-asm cleaned); 8D844
+transcribed from retail (khasinski still asm). Yaml-carved in
+`configs/USA/disc1.yaml`. Host PE-RAM ports replace stubs in
+`pe_akao_tick.c`; ApplyPending gains pitch bit `0x10`. Byte-match not claimed.
+Do not touch C89C/VLC (PR #38) or movie/boot (92CE8/924F8/92934).
+
+## AUD1-E5: Akao_ProcessVoiceQueue func_80089328 (2026-09-09)
+
+Landed cleaned khasinski-donor `Akao_ProcessVoiceQueue` as semantic
+`src/func_80089328.c` (VRAM 0x80089328 / file 0x79B28 / size 0x3FC; sibling
+`func_80089724` Spu_VoiceMaskCompose in same TU through ~0x45C to 0x80089784).
+Yaml-carved in `configs/USA/disc1.yaml`. Host PE-RAM port replaces the stub in
+`pc_port/platform/pe_akao_tick.c`: mask bookkeeping + simplified StepVoiceNote
+(8900C) key-on accumulate, stream-bank pending, noise-clock/1AA + reverb/noise/FM
+enable writes; bit `0x100` left set so `PE_SpuScore_ApplyDirtyVoices` still
+publishes. UpdateVoiceEnvelopes (89250) host no-op. Byte-match not claimed.
+
+Still stubbed on host: `8D844` / `89784` (reverb load / pitch flush). Do not
+touch C89C/VLC (PR #38).
+
+## PE-92CE8/92934 — media loop re-land + 92934 body draft (2026-09-09)
+
+Restored matched `func_80192CE8` post-E08 media loop
+`[0x80192E08,0x80192F98)` after parallel-audio revert (full fn SHA
+`ed89408b…`). Evidence: `docs/evidence/pe-92ce8-post-e08/`.
+`func_80192934` body from `0x80192960` drafted in
+`func_80192934_port.c` with authentic carve
+(`docs/evidence/pe-92934-media-worker/`, 197w SHA `9a88d506…`).
+**Live C89C not wired** — got-frame stops at
+`func_80192934_8010C89C_cut` (Stage-1b). Documented stubs: 918F8,
+0BFA0, C01C, 91B64, C89C(cut), 7C394, CD reissue, abort/92C48.
+Do not re-wire live C89C into 924F8. Audio 8E8D0 left alone.
+
+## AUD1-E4: seq bytecode func_8008E8D0 (2026-09-09)
+
+Landed semantic `src/func_8008E8D0.c` (VRAM 0x8008E8D0 / file 0x7F0D0 /
+size 0x800) — Akao seq bytecode interpreter when voice `+0x56` hits 0.
+Jumptables `D_8009CCF0` (FC sub-ops) / `D_8009C8F0` (ops ≥0xA0). Also carved
+`src/func_8008F0D0.c` (SeqOp_SetVoiceInstrument, 0xA8). Host PE-RAM port
+replaces the stub in `pc_port/platform/pe_akao_tick.c` (note duration table +
+simplified note-on / instrument apply; high-ops best-effort). Byte-match not
+claimed — most opcode handlers remain asm. Retail EXE restored
+(`SHA-1 452fb033…37b`).
+
+E5 landed `89328`. Still stubbed on host: `8D844` / `89784`. Do not touch C89C/VLC (PR #38).
+
+## AUD1-E3: score voice tickers 87AA8 / 87FA0 (2026-09-09)
+
+Landed khasinski-candidate `Spu_UpdateVoiceRegisters` as semantic
+`src/func_80087AA8.c` (VRAM 0x80087AA8 / file 0x782A8 / size 0x4F8) and stream
+sibling `src/func_80087FA0.c` (0x80087FA0 / 0x787A0 / 0x3A4). Both carved into
+`configs/USA/disc1.yaml`. Host PE-RAM ports replace the no-op stubs in
+`pc_port/platform/pe_akao_tick.c`; they advance pitch/volume/pan slides + LFOs
+and set voice `+0xF4` pending bits for `PE_SpuScore_ApplyDirtyVoices`. Calls
+existing `func_80089960` / `func_80089CF0` (audio_dirty). Byte-match not
+claimed.
+
+E3 tickers landed; E4 ports `8E8D0`; E5 ports `89328`. Remaining host stubs:
+`8D844` / `89784`. Do not duplicate C89C/VLC work on PR #38.
+
 ## AUD1-E2: audio score leaves 85F74 / 862F4 / 8DB7C (2026-09-09)
 
 Adopted khasinski Psy-Q donors for `func_80085F74` (SpuSetCommonAttr) and
 `func_800862F4` (SpuSetVoiceAttr) under `src/` with era GCC **2.8.1** profiles
 (`era_281_o2_g0_spu_*`) + multi-symbol `MASPSX_DISPATCH_FOLD`. Structural
 `.text` match vs fade-dump/EXE oracle (reloc immediates excluded); full-tree
-SHA-1 still needs a real `SLUS_006.62` + split jtbl pool. `func_8008DB7C`
+Retail `SLUS_006.62` restored (`452fb033…`); full-tree SHA still needs split jtbl pool. `func_8008DB7C`
 (Akao_Tick) landed as semantic C in `src/` (byte-match not claimed; khasinski
 still asm) and as host PE-RAM port `pe_akao_tick.c`. pe_stream now calls real
 85F74/862F4; `PE_Event_ServiceAudioCommands` runs `func_8008DB7C` then
@@ -17,11 +107,8 @@ still asm) and as host PE-RAM port `pe_akao_tick.c`. pe_stream now calls real
 to `PE_SpuVoice_ApplyPending`.
 
 Evidence: era 2.8.1 structural compare of 0x16C / 0x37C leaves vs
-`pc_port/tests/retail_gameover_fade_cases.h` oracle (nops filled). Host
-`func_800862F4` clamps voice to 0..23 (retail voice index, not the old
-pe_stream misread of second-bank as 0x18+i). pe-native-tests 1302/0 +
-ctest 8/8 green. Next: real EXE `verify_us.sh` for EXACT SHA, port
-87AA8/8E8D0/89328 callees, audible score with bank data.
+`pc_port/tests/retail_gameover_fade_cases.h` oracle (nops filled). Next after
+E5: `89328` landed; next `8D844` / `89784`; `verify_us.sh` for EXACT SHA on Psy-Q leaves.
 
 ## ACTIVE OBJECTIVE: decompile all Day 1 and Day 2; implement/fix Day 1
 

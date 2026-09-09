@@ -5,8 +5,13 @@ Stage AUD1-E0 adds the first bounded host audio path on top of the existing
 voice→SPU register bridge. Stage AUD1-E2 adds matching-intent `func_80085F74`
 (SpuSetCommonAttr) / `func_800862F4` (SpuSetVoiceAttr), host `func_8008DB7C`
 (Akao_Tick) with stubbed callees, and renames the pending-bit publisher to
-`PE_SpuVoice_ApplyPending`. Mix-exact reverb and bytecode sample loaders remain
-open.
+`PE_SpuVoice_ApplyPending`. Stage AUD1-E3 ports `func_80087AA8` /
+`func_80087FA0` (slide/LFO tickers that dirty voice `+0xF4`). Mix-exact reverb
+`8E8D0` seq bytecode is semantic-ported (AUD1-E4); `89328` key/mask prep
+semantic-ported (AUD1-E5); `8D844`/`89784` reverb-load / key-off flush
+semantic-ported (AUD1-E6); `8900C`/`89250` StepVoiceNote + envelope
+update semantic-ported (AUD1-E7); `878F0`/`89F08` WriteVoiceParam +
+ENVX read semantic-ported (AUD1-E8).
 
 ## What is now audible (when enabled)
 
@@ -26,9 +31,11 @@ without PulseAudio continue to run; synthesis is still hashed in native tests.
 
 ## What remains silent / unported
 
-- Akao_Tick callees (`89328` / `8E8D0` / `87AA8` / `87FA0` / `8D844` /
-  `89784`) still stubbed on host — bank walks run but do not advance samples.
-- ADSR envelopes, Gaussian interpolation, reverb/type-5 wet path.
+- Akao_Tick callees `89328` / `8E8D0` / `8D844` / `89784` / `8900C` / `89250`
+  / `878F0` / `89F08` semantic host ports landed — key/mask prep + bytecode +
+  HW voice alloc + retail ADSR flag publish + ENVX poll/release.
+- Host ENVX now follows a simplified ADSR state machine (mix still unscaled).
+  Gaussian interpolation, reverb/type-5 wet path, and `88344` still open.
 - Full-tree EXACT SHA-1 for the new matching leaves (needs retail EXE + jtbl
   pool strip).
 
