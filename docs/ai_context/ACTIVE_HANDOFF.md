@@ -26,6 +26,10 @@ body (`pe-day2-158-74520-dma`, already folded).
 3. `Trace_Direct("func_80192934_enter")` kept from 158p.
 4. No admit-gate / cursor ±32. No Day2-complete claim.
 
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**;
+`PE_TEST_FILTER=B54KAH` → 1 pass. Tip after fold+wire on
+`cursor/movie-autonomous-stream-6f51` (PR #38).
+
 **Next boot→Day2:** Matt Disc1 retest past old `74520_dma_indirect_call`
 — expect title slice continue / final-slice / `7506C` upload and further
 multi-frame `92934` / `c89c_tel`. Linux-first.
