@@ -104,6 +104,11 @@ CD device enable retained. **No `a1` clamp.** No Day2-complete claim.
 **Next boot→Day2:** Matt retest tip; expect C89C enter/done TRACE then
 `func_801909B4_post_movie_title_cut` (not an e0_poll spin).
 
+Linux: **1353** run / **1307** pass / 0 fail / 46 skip. Claims: live
+04c8078 spin explained; C89C TRACE; post-movie named cut. Non-claims:
+Day2 complete; title/menu done; Stage-1b demux golden; `92934` live
+frontier; retail STR golden; published runtime 128 unchanged.
+
 ## DAY2-158k: early-demux gate + Decomp Stage1b diagnosis (2026-09-09)
 
 Decomp Bot diagnosis of live `Stage1b_pad_terminated_frame` on tip
