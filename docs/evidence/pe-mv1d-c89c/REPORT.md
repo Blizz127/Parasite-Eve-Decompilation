@@ -43,22 +43,25 @@
   assert the pad footprint, bound-exit save image, 0x3FF pad, table
   extract, main-loop marker (`0xFE00`), and resume paths.
 
-## NOT wired live into production (honest frontier held)
+## DAY2-158c follow-up (2026-09-09)
 
-The decoder's output cursor is bounded only by the VLC stream's own
-pad/terminator codes: a valid STR video frame terminates in-bounds,
-but the streaming pump does not yet deliver a fully MDEC-ready frame at
-`s1` (that is the Stage-1b STR/MDEC pipeline). Feeding the decoder the
-current partial frame marches the output pointer past the 2 MiB guest
-RAM (`PE_StoreU16 @ 0x80200000`). So `func_801924F8`'s `got_frame` tail
-keeps its honest boundary stop at the decoder entry
-(`Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8")` +
-`PE_PORT_STOP_UNRESOLVED_BOUNDARY`) instead of decoding unvalidated
-input. The strict real-disc frontier is therefore unchanged:
-`func_8010C89C` from `func_801924F8`.
+Live Disc1 on Bazzite with ungated C89C aborted at `PE_StoreU16` @
+`0x80200000` — confirming this report's MV1d trap. Production
+`func_801924F8` got_frame now **gates** C89C on an immediate pad-exit
+probe (synthetic CDQ2d plant still runs). Non-pad streams take a named
+Stage-1b boundary stop. **Do not clamp a1.** Stage-1b frame delivery is
+still required for real STR frames.
 
-The in-progress `/tmp/c89c_*` debug dump that the prior session left in
-`func_801924F8_port.c` ("REVERT BEFORE COMMIT") is removed.
+## Production wiring (DAY2-158b/c — gated)
+
+`func_801924F8` got_frame calls live C89C only when the stream's first
+VLC symbol is an immediate pad exit (DAY2-158c). Non-pad / non-Stage-1b
+frames take `Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)` +
+`PE_PORT_STOP_UNRESOLVED_BOUNDARY`. The decoder's output cursor is still
+bounded only by VLC pad/terminator codes: a valid STR frame terminates
+in-bounds, but the pump does not yet deliver MDEC-ready frames at `s1`
+(Stage-1b). **Do not clamp a1.** Ungated decode of partial frames still
+marches past `PE_StoreU16 @ 0x80200000` — that is why the gate exists.
 
 ## Verify block
 

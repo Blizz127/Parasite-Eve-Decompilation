@@ -73,6 +73,37 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158c: gate C89C on pad-terminated frame (MV1d trap) (2026-09-09)
+
+### Diagnosis (Matt / Bazzite live Disc1 abort — confirmed)
+
+`PE_StoreU16` @ `0x80200000` after `func_8001220C` on tip with live
+`func_8010C89C` is the **known MV1d trap**, not a random `1220C` buffer
+bug. Guest RAM ends at `0x80200000`. Wiring C89C without Stage-1b
+STR/MDEC-ready / pad-terminated frames at `s1` lets the output cursor
+walk off the 2MiB window (`docs/evidence/pe-mv1d-c89c/REPORT.md`).
+
+### Chosen fix (no a1 clamp)
+
+Gate the production `got_frame` call in `func_801924F8`: invoke C89C only
+when the stream's first VLC symbol is an immediate pad exit (same shape
+as the synthetic CDQ2d plant / MV1D_PAD). Otherwise honest named Stage-1b
+boundary stop (`Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)` +
+`PE_PORT_STOP_UNRESOLVED_BOUNDARY`). Durable unlock remains Stage-1b frame
+delivery so real STR frames can pass the gate without inventing clamps.
+
+Focused Linux: B54KAD, B54KAE, B54KAG, MV1D_c89c_* PASS. Live Disc1 should
+now stop cleanly at Stage-1b (not `0x80200000`).
+
+**Next boot→Day2:** Stage-1b STR/MDEC frame delivery at `s1`, then
+`func_80192CE8` media-loop remainder. Parallel red: DAY2_movie_player
+autonomous first frame (separate from this abort).
+
+Claims: MV1d root cause recorded; C89C gated on pad-terminated frames;
+synthetic pad path still completes. Non-claims: Day2 complete; Stage-1b
+done; retail STR golden; movie_player autonomous green; published runtime
+128 unchanged. Linux-first.
+
 ## DAY1/DAY2-158b: wire live func_8010C89C into 801924F8 got_frame (2026-09-09)
 
 ### Live stop evidence (Matt / Bazzite, published PE-DAY2-128)

@@ -12,6 +12,34 @@
 #include "game_port.h"
 #include "pe_sdk.h"
 
+/* MV1d readiness probe: true when the first VLC symbol at `stream` is an
+ * immediate pad exit (CB84).  Matches CDQ2d_PlantStream / MV1D_PAD
+ * (count-3 < 0 → t5==0, bits>>22 == 0x1FF) and MV1D_PAD3FF (count-3 >= 0
+ * → t5!=0, bits>>22 == 0x3FF).  Not a substitute for Stage-1b STR/MDEC
+ * delivery — only admits frames that cannot walk the output cursor past
+ * PE_RAM_END.  Do not clamp a1. */
+static int c89c_stream_is_immediate_pad(uint32_t stream)
+{
+    uint16_t count_hw;
+    uint16_t bits_hi;
+    uint16_t bits_lo;
+    uint32_t v0;
+    uint32_t sym;
+    int32_t t2;
+
+    if (stream == 0u || !PE_RangeIsRam((pe_addr_t)stream, 12u))
+        return 0;
+    count_hw = PE_LoadU16((pe_addr_t)(stream + 6u));
+    bits_hi = PE_LoadU16((pe_addr_t)(stream + 8u));
+    bits_lo = PE_LoadU16((pe_addr_t)(stream + 10u));
+    t2 = (int32_t)count_hw - 3;
+    v0 = ((uint32_t)bits_hi << 16) | (uint32_t)bits_lo;
+    sym = v0 >> 22;
+    if (t2 < 0)
+        return (sym ^ 0x1FFu) == 0u;
+    return (sym ^ 0x3FFu) == 0u;
+}
+
 int func_801924F8(int index)
 {
     uint16_t record_index = (uint16_t)index;
@@ -166,21 +194,37 @@ got_frame:
      * itself was transcribed in MV1d; this wires the production call
      * path.  The intervening slice-wait between 7C394 and the EC
      * stores is not yet expanded here — EC runs immediately so the
-     * control frontier can leave the old C89C stub. */
+     * control frontier can leave the old C89C stub.
+     *
+     * DAY2-158c gate (Bazzite PE_StoreU16@0x80200000): live Disc1 aborts
+     * are the known MV1d trap — guest RAM ends at 0x80200000; wiring
+     * C89C without a pad-terminated / Stage-1b-ready frame at s1 lets
+     * the output cursor walk off the 2MiB window
+     * (docs/evidence/pe-mv1d-c89c/REPORT.md).  Not a random 1220C buffer
+     * bug.  Chosen fix: gate C89C until the stream's first VLC symbol is
+     * pad (synthetic CDQ2d plant).  Do not clamp a1.  Stage-1b frame
+     * delivery remains the durable unlock for real STR frames. */
     {
         uint16_t count = PE_LoadU16(0x800B0DBCu);
         uint32_t flip = (uint32_t)PE_LoadU8(0x801D146Cu) ^ 1u;
         pe_addr_t out;
         pe_addr_t table;
+        uint32_t stream = (uint32_t)s1;
 
         PE_StoreU16(0x800B0DBCu, (uint16_t)(count + 1u));
         out = (pe_addr_t)PE_LoadU32(0x801D1464u + flip * 4u);
         PE_StoreU8(0x801D146Cu, (uint8_t)flip);
         table = (pe_addr_t)PE_LoadU32(0x801D0DF8u);
-        (void)func_8010C89C((uint32_t)s1, out, table, 0u);
+        if (!c89c_stream_is_immediate_pad(stream)) {
+            Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame",
+                                 "func_801924F8");
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
+        }
+        (void)func_8010C89C(stream, out, table, 0u);
         if (PE_Port_ShouldStop())
             return 0;
-        func_8007C394((uint32_t)s1);
+        func_8007C394(stream);
         PE_StoreU8(0x800B0DBDu, 0u);
         PE_StoreU16(0x800B0DBCu, 1u);
     }

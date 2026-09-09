@@ -19122,6 +19122,39 @@ static void test_B54KAE_movie_state_setup(void)
     PASS();
 }
 
+static void test_B54K_C89C_gated_until_pad(void)
+{
+    DiscFixture fx;
+    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
+    const pe_addr_t suffix = 0x801F0000u;
+
+    TEST("B54K_C89C_gated_until_pad");
+    ResetTestState();
+    HostFB_Init();
+    func_8007ED58();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    PE_Disc_SetActive(fx.disc);
+    PE_StoreU32(record, suffix);
+    PE_StoreU32(0x801D0DFCu, 0x801E0000u);
+    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
+    B558_PlantChain();
+    CDQ2d_PlantStream();
+    /* Live Disc1 path: pump publishes a body that is not pad-terminated.
+     * MV1d: ungated C89C walks past 0x80200000. Gate must stop at Stage-1b
+     * instead of decoding or clamping a1. */
+    PE_StoreU16(0x801E0808u, 0u);
+
+    ASSERT(func_801924F8(21) == 0 &&
+           PE_Port_ShouldStop() &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
+           CountOrderLog("Stage1b_pad_terminated_frame") == 1 &&
+           CountOrderLog("func_8010C89C") == 0,
+           "non-pad stream must Stage-1b-gate C89C (no a1 clamp)");
+    FxFree(&fx);
+    PASS();
+}
+
+
 static void test_B54KAF_dec_dct_reset_wrapper(void)
 {
     const uint32_t mode1_dpcr = 0xA5A55A5Au;
@@ -39311,6 +39344,7 @@ int main(void)
     test_dssearch_missing();
     test_B54KAD_fmv2_filename_threshold();
     test_B54KAE_movie_state_setup();
+    test_B54K_C89C_gated_until_pad();
     test_B54KAF_dec_dct_reset_wrapper();
     test_B54KAG_mdec_table_upload();
     test_B54KAH_dec_dct_out_callback_registration();
