@@ -3,9 +3,9 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
-## DAY2-158t: `MDEC_decode_busy` via BFA0/Service dma0 (2026-09-09)
+## DAY2-158u: dma1 armed by C01C must not block supersede (2026-09-09)
 
-Live Disc1 on tip **`42978a5`** (DAY2-158s) — **fix DID NOT CLEAR THE WALL**:
+Live Disc1 on tip **`b82ab62`** (DAY2-158t) — **STILL FAILS**:
 
 ```text
 92934_enter ×2
@@ -13,21 +13,20 @@ STUB: MDEC_decode_busy
 C89C final: calls=2 out=11140
 ```
 
-Identical shape to `d827581` before 158s. Idle-`FE00` drain / direct
-`BeginDecode` supersede never ran on the live path.
+dma0-clear before BeginCommand did not clear the wall.
 
-**Dig:** live `92934` → `BFA0` → `SubmitInputTable` sets `dma0_active=1`,
-then `Service` called `MdecBeginCommand` **while `dma0_active` still 1**.
-Any non-padding residue (mid-MB pixels / unread bitstream after `91DC8`
-final-slice) took `MDEC_decode_busy` before supersede. 158s unit test used
-direct `BeginDecode` (`dma0=0`) — false green. Prefer Decomp leaves; no
-`74520`/`909B4` invent.
+**Dig:** live `92934` programs `BFA0` then `C01C` before Service, so
+`dma1_chcr` is already armed for the **new** DecDCTout when BeginCommand
+runs for the new DecDCTin. Treating dma1 as busy blocked supersede (158t
+false green on BFA0-only test). Prefer Decomp leaves; no `74520`/`909B4`
+invent.
 
-**Fix (`pe_mdec.c`):** clear `dma0_active` / CHCR busy **before**
-`BeginCommand` on DMA0 completion (words already in hand). Keep idle-`FE00`
-drain + no-DMA supersede. Busy dig: encode dma0/dma1 in boundary value
-(no `Trace_Direct` — not linked into every `pe_field_runtime` consumer).
-Test: `DAY2_mdec_dma` BFA0→Service orphan path (158t).
+**Fix (`pe_mdec.c`):**
+1. Only dma0 still-active blocks supersede; dma1 concurrent with new C01C
+   does not.
+2. fprintf busy boundary value (`dma0`/`dma1`/`pos`) on Disc1 path; log
+   `MDEC_orphan_supersede_dma1` when superseding with dma1 armed.
+3. Test: `DAY2_mdec_dma` BFA0→C01C→Service orphan path (158u).
 
 Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Tip on
 `cursor/movie-autonomous-stream-6f51` (PR #38). Evidence:
@@ -35,6 +34,22 @@ Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Tip on
 
 **Next boot→Day2:** Matt Disc1 — expect past `MDEC_decode_busy` with C89C
 `calls≥3` / `out=12804`. No Day2-complete claim. Linux-first.
+
+## DAY2-158t: `MDEC_decode_busy` via BFA0/Service dma0 (2026-09-09)
+
+Live Disc1 on tip **`42978a5`** (DAY2-158s) — **FIX DID NOT CLEAR THE WALL**:
+
+```text
+92934_enter ×2
+STUB: MDEC_decode_busy
+C89C final: calls=2 out=11140
+```
+
+**158t fix (insufficient live):** clear `dma0_active` before BeginCommand on
+DMA0 completion. **SUPERSEDED by DAY2-158u** (live BFA0→C01C arms dma1
+before BeginCommand). Live retest on `b82ab62` still identical busy wall.
+
+**Next:** see DAY2-158u.
 
 ## DAY2-158s: clear `MDEC_decode_busy` orphan after 91DC8 final (2026-09-09)
 
