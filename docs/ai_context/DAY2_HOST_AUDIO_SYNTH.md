@@ -27,7 +27,8 @@ Set `PE_AUDIO_DISABLE=1` to force silent host output.
 
 - `8E8D0` / `8F0D0` — sample/bytecode step (seq opcode tables)
 - `8D844` — SPU_StepReverbLoad
-- `8900C` / `89250` — StepVoiceNote / UpdateVoiceEnvelopes
+- `8900C` / `89218` — StepVoiceNote (and related small leaf)
+- `89250` UpdateVoiceEnvelopes is hosted (ENVX → voice free)
 - ADSR envelopes fidelity, Gaussian interpolation, reverb/type-5 wet path
 - Full-tree EXACT SHA-1 for matching leaves
 

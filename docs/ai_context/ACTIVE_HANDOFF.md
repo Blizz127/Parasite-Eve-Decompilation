@@ -22,7 +22,10 @@ byte-match). Movie/PR #38 untouched.
 **Still stubbed / open**
 - `8E8D0` / `8F0D0` sample bytecode (needs seq opcode tables)
 - `8D844` SPU_StepReverbLoad (no donor on remote tip)
-- `8900C` / `89250` StepVoiceNote / UpdateVoiceEnvelopes
+- `8900C` StepVoiceNote / related `89218` (no donor on remote tip)
+
+**Also folded (E7-ahead from khasinski)**
+- `89250` UpdateVoiceEnvelopes (ENVX read → clear assigned voice when silent)
 
 **Claims / non-claims**
 - Claim: score tick runs real voice-register slides + key-off flush + pitch
