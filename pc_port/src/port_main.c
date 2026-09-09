@@ -557,6 +557,37 @@ int main(int argc, char **argv) {
             vs, ds, pr, mk, g_port_main_iterations);
     fprintf(stderr, "[HOST] stop_reason=%s\n",
             PE_Port_StopReasonName(PE_Port_GetStopReason()));
+    /* DAY2-158 dig: quiet TRACE ≠ skipped C89C. Dump host telemetry so
+     * live Disc1 shows a0/a1/a2/ret (+counts) after the poll/got_frame
+     * spin — pad-exit vs live out/table. Not a got_frame gate patch. */
+    {
+        PeC89CTelemetry c89c;
+        char tel[192];
+
+        PE_C89C_GetTelemetry(&c89c);
+        snprintf(tel, sizeof(tel),
+                 "c89c_tel_final calls=%u ret=%d pad=%u bound=%u "
+                 "a0=%08x a1=%08x a2=%08x a0ram=%u a1ram=%u a2ram=%u "
+                 "out=%u hdr=%04x/%08x",
+                 (unsigned)c89c.calls, c89c.ret,
+                 (unsigned)c89c.pad_exits, (unsigned)c89c.bound_exits,
+                 (unsigned)c89c.a0, (unsigned)c89c.a1, (unsigned)c89c.a2,
+                 (unsigned)c89c.a0_in_ram, (unsigned)c89c.a1_in_ram,
+                 (unsigned)c89c.a2_in_ram, (unsigned)c89c.out_bytes,
+                 (unsigned)c89c.hdr_count, (unsigned)c89c.hdr_bits);
+        TraceEvent(tel);
+        fprintf(stderr,
+                "[C89C] calls=%u ret=%d pad_exits=%u bound_exits=%u "
+                "a0=0x%08x a1=0x%08x a2=0x%08x out_bytes=%u "
+                "a0ram=%u a1ram=%u a2ram=%u hdr=0x%04x/0x%08x\n",
+                (unsigned)c89c.calls, c89c.ret,
+                (unsigned)c89c.pad_exits, (unsigned)c89c.bound_exits,
+                (unsigned)c89c.a0, (unsigned)c89c.a1, (unsigned)c89c.a2,
+                (unsigned)c89c.out_bytes,
+                (unsigned)c89c.a0_in_ram, (unsigned)c89c.a1_in_ram,
+                (unsigned)c89c.a2_in_ram,
+                (unsigned)c89c.hdr_count, (unsigned)c89c.hdr_bits);
+    }
     {
         PeGpuState gpu;
 

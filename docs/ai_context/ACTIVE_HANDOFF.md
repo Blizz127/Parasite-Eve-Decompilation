@@ -73,6 +73,32 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158n: fold Decomp got_frame quiet-log evidence + live C89C dump (2026-09-09)
+
+Decomp Bot dig **CLOSED** on `dig/got-frame-c89c-skip` @ **`4f335cd`** —
+**do not patch got_frame gates** until live telemetry is reviewed.
+
+Folded evidence:
+`docs/evidence/pe-day2-158-gotframe-no-c89c/REPORT.md`
+
+Findings (Decomp): quiet log ≠ skipped C89C; on `04c8078` got_frame always
+calls live `func_8010C89C` unless STOP; decoder has no Trace — only
+`PE_C89C_GetTelemetry` (`a0`/`a1`/`a2`/`ret`).
+
+Observability already on tip (158m) + this rung:
+
+1. Per-got_frame `c89c_tel` TRACE: calls, ret, pad/bound, a0/a1/a2, RAM
+   flags, out_bytes, hdr.
+2. Shutdown dump: `c89c_tel_final` TRACE + `[C89C] …` stderr with the same
+   fields so live Disc1 always surfaces pad-exit vs live out/table after
+   the poll/got_frame spin.
+
+**No got_frame gate patch.** Prefer Decomp leaves when they land.
+CD device enable retained. No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip; capture `c89c_tel` / `[C89C]` dump;
+then dig pad-vs-body or outer re-entry from those numbers — not admit gates.
+
 ## DAY2-158m: live C89C telemetry surface + Decomp quiet-log correction (2026-09-09)
 
 Decomp Bot correction on the **`04c8078`** spin — do **not** treat missing
