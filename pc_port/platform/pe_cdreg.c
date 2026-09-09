@@ -107,7 +107,10 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
                     if(!valid) {response[0]|=1u;response[1]=0x10u;size=2;tag=5;}
                     else {g_target_lba=frame-150u;g_target_pending=1;}
                 } else if(g_command==6u || g_command==27u) {
-                    if(g_device.mode&0x50u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
+                    /* Bit4 = CdlModeSize0 remains unimplemented. Bit6 =
+                     * CdlModeRT is allowed: the drive delivers raw
+                     * sectors and 7C564 applies software filtering. */
+                    if(g_device.mode&0x10u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
                     if(g_target_pending) {g_device.next_lba=g_target_lba;g_target_pending=0;}
                     g_device.reading=1;g_read_cycles=CdSectorCycles();
                 } else if(g_command==9u || g_command==21u || g_command==22u) {
@@ -126,7 +129,7 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
     }
     if(was_reading && g_device.reading && !g_read_cycles && !g_phase &&
        !g_response_tag && g_response_pos==g_response_size) {
-        if(g_device.mode&0x50u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
+        if(g_device.mode&0x10u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
         if(g_sector_pending) {CdDeviceBoundary("CD_device_sector_overrun",g_device.next_lba);return;}
         if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
             CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;

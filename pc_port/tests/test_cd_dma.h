@@ -30,6 +30,9 @@ static void test_DAY2_cd_dma(void)
         PE_StoreU32(0x8009B338u,PE_CDREG_BASE+3u);PE_StoreU32(0x8009B33Cu,PE_CDREG_BUS_CONTROL);
         PE_StoreU32(0x8009B340u,PE_CDREG_MAILBOX);PE_StoreU32(0x8009B344u,0x1F8010F0u);PE_StoreU32(0x8009B348u,0x1F8010F4u);
         PE_StoreU32(0x8009B34Cu,0x1F801098u);PE_StoreU32(0x8009B35Cu,PE_CDREG_DMA3+8u);
+        /* Day2-158: CdDeviceSeed/B558_PlantPointers already plants this
+         * EXE .data set; the explicit stores above remain the oracle for
+         * the manual 7C564 pump path. */
         PE_StoreU32(0x800C0DC8u,0x80150000u);PE_StoreU32(0x800C20C4u,8u);PE_StoreU32(0x800A801Cu,!chopped);
         (void)func_800824F0(0x8007C214u);
         PE_GPU_WriteDICR(0x00800000u);

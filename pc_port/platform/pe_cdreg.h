@@ -4,9 +4,13 @@
  * pointer tables, which the EXE image pre-initializes to CD hardware
  * registers ([B27C] = 0x1F801800, [B280] = 0x1F801801, [B284] =
  * 0x1F801802, [B288] = 0x1F801803, [B28C] = 0x1F801020 — read back
- * from the SHA-1-exact Disc 1 EXE). This file owns that address
- * range (DICR precedent: peripheral state stays in one authority,
- * translations call it explicitly, no second copy).
+ * from the SHA-1-exact Disc 1 EXE). The stream/DMA companion table
+ * D_8009B32C..D_8009B35C is the same EXE .data provenance (not a
+ * CdInit/runtime writer): REG0/2/3, bus control, mailbox, DPCR/DICR,
+ * DMA1 CHCR, DMA3 CHCR — see B558_PlantPointers and the gameover-fade
+ * EXE seed cases. This file owns that address range (DICR precedent:
+ * peripheral state stays in one authority, translations call it
+ * explicitly, no second copy).
  *
  * Disabled-device semantics (Phase 6E-CD0, evidence in
  * docs/evidence/pe-cd0-reg-shadow/REPORT.md):

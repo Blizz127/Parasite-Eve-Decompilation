@@ -1,15 +1,15 @@
-/* DAY2-157: complete movie player 121C04.
+/* DAY2-157/158: complete movie player 121C04.
  * Original control-flow authority: pe_movie_player_oracle.py (20 graphs:
  * 4 early returns and 16 full setup/search/decode graphs with explicit
  * SDK/search/frame providers). The native test executes the real
  * SDK/disc implementations. The disabled-device run stops at the recorded
  * movie_player_search_wait boundary. The enabled-device run really
  * searches the fixture ISO, completes Setloc through the stage155 queue,
- * installs the 1214D4/7C214/813E8 streaming callbacks, and then stops at
- * the recorded CD_device_read_mode device boundary when the mode-0x1E0
- * ReadS reaches the device model (read modes with 0x50 bits are the
- * recorded XA-mode frontier; the autonomous stream delivery they would
- * start is the next integration frontier). */
+ * installs the 1214D4/7C214/813E8 streaming callbacks, issues mode-0x1E0
+ * ReadS (CdlModeRT bit6 allowed; Size0 bit4 remains the device boundary),
+ * and then stops at movie_retry_wait because the fixture PE.IMG sectors
+ * are not valid STR frames for 121270 → C89C. Autonomous status-2
+ * delivery with crafted STR sectors is covered by DAY2_cd_xa_stream. */
 static void MOVPLY_SeedRecord(unsigned id,unsigned wide)
 {
     pe_addr_t record=0x80122438u+id*20u;
@@ -66,9 +66,9 @@ static void test_DAY2_movie_player(void)
      * the record pointer are in place. */
     ASSERT(PE_LoadU8(0x800B0DBFu)==0u && PE_LoadU8(0x800B0DBBu)==1u &&
         PE_LoadU32(0x801227E4u)==0x80122438u,"player setup prefix state");
-    /* Enabled device: real ISO search, Setloc and ReadS issue, then the
-     * decode retry stops at the recorded boundary because the modeled
-     * physical stream does not deliver state-2 records yet. */
+    /* Enabled device: real ISO search, Setloc and mode-0x1E0 ReadS issue
+     * through CdlModeRT. Fixture PE.IMG is not a STR stream, so the
+     * first-frame poll exhausts into movie_retry_wait. */
     {
         DiscFixture fx={0};
         ResetTestState();
@@ -80,24 +80,24 @@ static void test_DAY2_movie_player(void)
             !PE_Port_ShouldStop();tick++) HostFB_VSync(0);
         ASSERT(PE_LoadU32(0x8009B574u)==1u,"player SDK ready");
         MOVPLY_SeedRecord(0u,1u);
-        /* Retail's SDK DMA register pointer for the stream handler's
-         * MDEC-output busy check (StreamOutputChcr routes the physical
-         * identity through pe_mdec's DMA1 owner). */
-        PE_StoreU32(0x8009B34Cu,0x1F801098u);
         ASSERT(func_80121C04(0)==0 && PE_Port_ShouldStop(),
-            "player read-mode stop");
+            "player retry stop");
         ASSERT(g_stub_order_count>=1u &&
-            strcmp(g_stub_order_log[0],"CD_device_read_mode")==0,
-            "player read-mode boundary identity");
+            strcmp(g_stub_order_log[0],"movie_retry_wait")==0,
+            "player retry boundary identity");
         /* The search really resolved the fixture file and the start
          * Setloc really completed through the queue. */
         ASSERT(PE_LoadU32(0x801223FCu)!=0u && PE_LoadU32(0x80122414u)!=0u,
             "player search result missing");
-        /* 81314 installed the streaming callbacks before the device
-         * boundary. */
+        /* 81314 installed the streaming callbacks before the retry
+         * boundary; EXE-planted DMA pointers stayed live. */
         ASSERT(PE_LoadU32(0x800B8AB4u)==0x800813E8u &&
             func_800824F0(0u)==0x8007C214u,
             "player stream callbacks");
+        ASSERT(PE_LoadU32(0x8009B32Cu)==0x1F801800u &&
+            PE_LoadU32(0x8009B34Cu)==0x1F801098u &&
+            PE_LoadU32(0x8009B35Cu)==0x1F8010B8u,
+            "player EXE DMA pointer table");
         ASSERT(PE_LoadU8(0x800B0DBAu)==3u && PE_LoadU16(0x800B0DBCu)==0u,
             "player no early handoff");
         ASSERT(PE_LoadU8(0x801228D4u)==0u && PE_LoadU8(0x801228E0u)==0u &&

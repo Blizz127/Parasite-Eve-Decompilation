@@ -73,7 +73,49 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY1/DAY2-158: CdlModeRT + EXE DMA pointer seeds + autonomous stream (2026-09-09)
+
+Previous157 ported movie player121C04; ReadS mode0x1E0 stopped at
+`CD_device_read_mode` because the device rejected bit6, and autonomous
+7C564 faulted on null `D_8009B32C..9B35C` when that guard was narrowed
+in a probe.
+
+Provenance (not CdInit / not the movie path): the SHA-1-exact Disc1 EXE
+`.data` pre-initializes the stream/DMA companion table the same way as
+`B27C..B28C` (WIRE report + gameover-fade EXE seed cases).
+`B558_PlantPointers` / `CdDeviceSeed` now plant:
+
+`9B32C=1F801800`, `9B334=+2`, `9B338=+3`, `9B33C=1F801018`,
+`9B340=1F801020`, `9B344/48=1F8010F0/F4`, `9B34C=1F801098`,
+`9B35C=1F8010B8`.
+
+Device policy: allow Psy-Q `CdlModeRT` (bit6); keep `CdlModeSize0`
+(bit4) as `CD_device_read_mode`. Movie `81314(...,0x1E0)` low byte
+`0xE0` = Size1|RT|Speed now delivers sectors. Docs:
+`DAY2_CD_XA_READ_MODE.md` (also notes khasinski `dma_execute` pointer
+views as corroboration only — not copied).
+
+Tests: sector device covers mode `0xE0` FIFO + Size0 reject;
+`DAY2_cd_xa_stream` opens `81314(...,0x1E0)` on a crafted STR sector and
+asserts autonomous device→IRQ→7C564→7C214→record status2 (payload +
+location); movie player enabled path advances to `movie_retry_wait`
+(fixture `PE.IMG` is not STR). Tagged disc-gated
+`DAY2_movie_complete_frame` + `B54KY_192CE8` as `TEST_RETAIL_DISC1`
+(public suite no longer fails without a fixture).
+
+Normal build warning-free. Focused `PE_TEST_FILTER=DAY2_` :
+35 PASS / 1312 skip / 1347 total (no disc). Full native
+1301 PASS / 46 skip / 0 fail; CTest 8/8 in ~30s
+(`local/live/ctest-day2-158*.log`).
+
+Next: wire player/updater real-path frames once fixture/STR delivery
+feeds `121270`→`C89C` (or mount real opening STR); `14E30`; old
+`80191DC8` callback; libpress wait fidelity; XA filter/audio; hardware
+pixel validation; scope-wide opening→Day2 acceptance. Full user goal
+open; published runtime128 unchanged.
+
 ## DAY1/DAY2-157: movie player 121C04 ported (2026-09-09)
+
 
 Previous156 was verified updater validation plus the GPU DMA2 parallelism
 fix, all jobs terminal. Ported the 271-word movie player 80121C04 in

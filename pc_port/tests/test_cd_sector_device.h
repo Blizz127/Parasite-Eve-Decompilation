@@ -69,7 +69,32 @@ static void test_DAY2_cd_sector_device(void)
         loc[2]=0x7Au;CdSectorCommand(2u,loc,3);
         ASSERT(CdSectorReply(response,2)==5u && response[0]==3u && response[1]==0x10u,"invalid BCD must report parameter value error");
     }
+    /* CdlModeRT (bit6): drive delivers raw Size1 sectors; Size0 (bit4)
+     * remains the recorded unsupported read-mode boundary. */
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"XA RT attachment");
+    {
+        uint8_t mode=0xE0u,loc[]={0u,2u,0x20u},response[5];
+        CdSectorCommand(14u,&mode,1);ASSERT(CdSectorReply(response,1)==3u,"XA SetMode ack");
+        CdSectorCommand(2u,loc,3);ASSERT(CdSectorReply(response,1)==3u,"XA Setloc ack");
+        CdSectorCommand(27u,NULL,0);ASSERT(CdSectorReply(response,1)==3u,"XA ReadS ack");
+        PE_CdReg_ServiceDevice(225792u);
+        ASSERT(CdSectorReply(response,1)==1u && response[0]==0x22u,"XA RT data-ready");
+        PE_CdReg_WriteU8(PE_CDREG_BASE,0u);PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0u);
+        PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0x80u);
+        for(unsigned i=0;i<2340u;i++)
+            ASSERT(PE_CdReg_ReadU8(PE_CDREG_BASE+2u)==fx.img[20u*2352u+12u+i],"XA RT FIFO byte");
+        PeCdDeviceState xa;PE_CdReg_GetDeviceState(&xa);
+        ASSERT(xa.mode==0xE0u && xa.sectors==1u && !PE_Port_ShouldStop(),"XA RT device state");
+    }
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"Size0 reject attachment");
+    {
+        uint8_t mode=0x10u,response[5];
+        CdSectorCommand(14u,&mode,1);ASSERT(CdSectorReply(response,1)==3u,"Size0 SetMode ack");
+        CdSectorCommand(27u,NULL,0);
+        ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_device_read_mode")==1,"Size0 must stay a read-mode boundary");
+    }
     /* Unread data is retained; no silent sector substitution on overrun. */
+    PE_Port_RunControlReset();
     PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"overrun attachment");
     uint8_t loc[]={0u,2u,0x20u};CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
     CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);

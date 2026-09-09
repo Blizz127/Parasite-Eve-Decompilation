@@ -58,7 +58,16 @@ def derive_metrics(root: Path = ROOT) -> dict[str, Any]:
     source = (root / SOURCE).read_text(encoding="utf-8")
     evidence = (root / EVIDENCE).read_text(encoding="utf-8")
     cmake = (root / CMAKE).read_text(encoding="utf-8")
-    tests = (root / TEST_SOURCE).read_text(encoding="utf-8")
+    test_native = (root / TEST_SOURCE).read_text(encoding="utf-8")
+    # TEST() cases live in test_native.c and its included test_*.h headers.
+    tests = test_native
+    tests_dir = root / TEST_SOURCE.parent
+    for include in re.findall(r'#include\s+"([^"]+)"', test_native):
+        if not include.startswith("test_") or not include.endswith(".h"):
+            continue
+        header = tests_dir / include
+        if header.is_file():
+            tests += header.read_text(encoding="utf-8")
 
     full = one(
         r"Full retail body:\s*\*\s*(\d+) words / 0x[0-9A-Fa-f]+ bytes, "

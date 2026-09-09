@@ -17,10 +17,12 @@ Timing remains approximate. Each service call publishes at most one response;
 command acknowledgments serialize with sector responses. Seek/Pause completion
 uses the existing deterministic100000-cycle delay. Mechanical seek latency,
 error correction/retries, multi-sector hardware queues, pregap/end-of-disc
-behavior, CDDA/XA decoding and mode bit4 behavior are not implemented. Unsupported
-read modes, unread pending-sector overflow, out-of-image locations/reads and
-FIFO underflow stop explicitly. The model retains one pending sector plus an
-independent requested FIFO. It does not claim hardware overrun fidelity.
+behavior, CDDA/XA decoding and mode bit4 (CdlModeSize0) behavior are not
+implemented. Stage158 allows CdlModeRT (bit6); see DAY2_CD_XA_READ_MODE.md.
+Unsupported read modes (Size0), unread pending-sector overflow, out-of-image
+locations/reads and FIFO underflow stop explicitly. The model retains one
+pending sector plus an independent requested FIFO. It does not claim hardware
+overrun fidelity.
 
 `test_cd_sector_device.h` checks raw bounds and every byte of consecutive
 sectors in both size/speed modes, delayed arrival, BFRD/DRQ, separate seek/pause

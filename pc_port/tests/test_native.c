@@ -1818,7 +1818,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     uint8_t expected_disp[0x28];
     uint8_t expected_draw[0xB8];
     char err[256];
-    TEST("B54KY_192CE8_real_disc_issue_poll_and_boundary");
+    TEST_RETAIL_DISC1("B54KY_192CE8_real_disc_issue_poll_and_boundary");
 
     err[0] = 0;
     disc = BTL6_OpenDisc1(err, sizeof(err));
@@ -20342,7 +20342,10 @@ static void test_CDS1_7fb44_negative_flag_passes(void)
  * ═══════════════════════════════════════════════════════════════════════ */
 
 /* Plant the production table initializers (EXE .data: CD registers).
- * The shadow routes them; tests observe production values. */
+ * The shadow routes them; tests observe production values. Provenance
+ * is the SHA-1-exact Disc 1 EXE image — these words are not written by
+ * CdInit or the movie path at runtime (WIRE report + gameover-fade
+ * EXE seed cases). */
 static void B558_PlantPointers(void)
 {
     PE_StoreU32(0x8009B27Cu, 0x1F801800u);
@@ -20350,6 +20353,17 @@ static void B558_PlantPointers(void)
     PE_StoreU32(0x8009B284u, 0x1F801802u);
     PE_StoreU32(0x8009B288u, 0x1F801803u);
     PE_StoreU32(0x8009B28Cu, 0x1F801020u);
+    /* Stream/DMA companion table used by 7C564/7CEAC/StreamOutputChcr. */
+    PE_StoreU32(0x8009B32Cu, 0x1F801800u);
+    PE_StoreU32(0x8009B330u, 0x1F801801u);
+    PE_StoreU32(0x8009B334u, 0x1F801802u);
+    PE_StoreU32(0x8009B338u, 0x1F801803u);
+    PE_StoreU32(0x8009B33Cu, 0x1F801018u);
+    PE_StoreU32(0x8009B340u, 0x1F801020u);
+    PE_StoreU32(0x8009B344u, 0x1F8010F0u);
+    PE_StoreU32(0x8009B348u, 0x1F8010F4u);
+    PE_StoreU32(0x8009B34Cu, 0x1F801098u);
+    PE_StoreU32(0x8009B35Cu, 0x1F8010B8u);
 }
 
 /* Full live-chain plant for synthetic tests: production tables plus
@@ -35255,6 +35269,7 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_cd_device.h"
 #include "test_cd_sector_device.h"
 #include "test_cd_dma.h"
+#include "test_cd_xa_stream.h"
 #include "test_mdec_pixels.h"
 #include "test_mdec_dma.h"
 #include "test_movie_complete_frame.h"
@@ -39969,6 +39984,7 @@ int main(void)
     test_DAY2_cd_device();
     test_DAY2_cd_sector_device();
     test_DAY2_cd_dma();
+    test_DAY2_cd_xa_stream();
     test_DAY2_mdec_pixels();
     test_DAY2_mdec_dma();
     test_DAY2_movie_complete_frame();
