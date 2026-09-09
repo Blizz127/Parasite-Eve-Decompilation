@@ -19232,16 +19232,25 @@ static void test_B54K_C89C_last_chunk_frame_ready(void)
     B558_PlantChain();
     CDQ2d_PlantStream();
     /* Demuxed s1 bodies are VLC bitstreams, not STR magic and not an
-     * immediate pad. Last-chunk B89F4 promote latches StreamFrameReady
-     * so live C89C may run; simulate that latch here. EB8C=0 forces the
-     * bound exit so a non-pad body cannot walk off RAM. */
+     * immediate pad. Latch StreamFrameReady via production 7C214 with
+     * B89F4==1 (pump-time publish path from live 1fa9a48), not the test
+     * helper alone. Fixture ArmStreamPromote still publishes the movie
+     * slot for 91B64. EB8C=0 forces the bound exit. */
     PE_StoreU32(0x801E0800u, 0x11111111u);
     PE_StoreU16(0x801E0804u, 0u);
     PE_StoreU16(0x801E0806u, 0u);
     PE_StoreU16(0x801E0808u, 0u);
     PE_StoreU16(0x801E080Au, 0u);
     PE_StoreU32(0x8011EB8Cu, 0u);
-    PE_Port_NoteStreamFrameReady();
+    PE_StoreU32(0x800C0DC8u, 0x801F0100u);
+    PE_StoreU32(0x800BE9E4u, 0u);
+    PE_StoreU32(0x800BE998u, 0u);
+    PE_StoreU32(0x800B0CC8u, 0u);
+    PE_StoreU16(0x801F0100u, 1u);
+    PE_StoreU32(0x801F0108u, 0u);
+    PE_StoreU32(0x801F011Cu, 0u);
+    PE_StoreU32(0x800B89F4u, 1u);
+    func_8007C214();
 
     {
         PeC89CTelemetry c89c;
@@ -19251,7 +19260,7 @@ static void test_B54K_C89C_last_chunk_frame_ready(void)
                CountOrderLog("func_8010C89C") == 0 &&
                PE_LoadU8(0x801D146Cu) == 1u &&
                PE_LoadU16(0x800B0DBCu) == 1u,
-               "last-chunk latch did not complete live C89C got_frame");
+               "last-chunk 7C214 latch did not complete live C89C got_frame");
         PE_C89C_GetTelemetry(&c89c);
         ASSERT(c89c.a0 == 0x801E0800u && c89c.ret == 1,
                "last-chunk C89C entry/bound-exit differs");
@@ -20207,8 +20216,30 @@ static void test_CDQ1_7C214_publish(void) {
     ASSERT(PE_LoadU32(0x800A3494u) == 0xDEADBEEFu, "record word store differs");
     ASSERT(PE_LoadU32(0x800BE9E4u) == 7u, "index advance differs");
     ASSERT(PE_LoadU32(0x800B89F4u) == 0u, "active-flag clear differs");
+    ASSERT(!PE_Port_TakeStreamFrameReady(),
+           "sentinel B89F4 must not latch StreamFrameReady");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
            "dead chain arm must not stop");
+    PASS();
+}
+
+/* DAY2-158j: pump-time 7C564→7C214 clears B89F4 before E0's promote arm
+ * can Note; latch must live in 7C214 when B89F4==1 so got_frame admits
+ * live C89C (Bazzite 1fa9a48: e0_poll → got_frame without e0_promote). */
+static void test_CDQ1_7C214_last_chunk_latches_frame_ready(void) {
+    TEST("CDQ1_7C214_last_chunk_latches_frame_ready");
+    ResetTestState();
+    PE_StoreU32(0x800C0DC8u, 0x801F0000u);
+    PE_StoreU32(0x800BE9E4u, 0u);
+    PE_StoreU32(0x800BE998u, 0u);
+    PE_StoreU32(0x800B0CC8u, 0u);
+    PE_StoreU32(0x800B89F4u, 1u);
+    func_8007C214();
+    ASSERT(PE_LoadU32(0x800B89F4u) == 0u, "last-chunk clear differs");
+    ASSERT(PE_Port_TakeStreamFrameReady(),
+           "B89F4==1 publish must latch StreamFrameReady");
+    ASSERT(!PE_Port_TakeStreamFrameReady(),
+           "TakeStreamFrameReady must consume the latch");
     PASS();
 }
 
@@ -39485,6 +39516,7 @@ int main(void)
     test_CDQ1_7E6B0_ring();
     test_CDQ1_80950_arms();
     test_CDQ1_7C214_publish();
+    test_CDQ1_7C214_last_chunk_latches_frame_ready();
     test_CDQ1_7C214_chain_boundary();
     test_CDQ1_7C394_math();
     test_CDQ1_7F0C8_gates();

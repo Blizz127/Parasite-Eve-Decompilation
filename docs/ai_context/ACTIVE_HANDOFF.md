@@ -73,6 +73,46 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158j: 7C214 last-chunk latches StreamFrameReady (2026-09-09)
+
+Live Bazzite Disc1 on tip **`1fa9a48` (DAY2-158i) CONFIRMED progress**:
+
+```
+[DISC] CD command device enabled (mask=7)
+[TRACE] func_801924F8_e0_poll
+[TRACE] func_801924F8_got_frame
+[STUB:BOOTSTRAP_RET] Stage1b_pad_terminated_frame (first invocation)
+[HOST] stop_reason=unresolved-boundary
+```
+
+Silent `1220C` nest is gone. CD device enable stays. No `e0_promote`
+between `e0_poll` and `got_frame`.
+
+Root cause: during `HostFB_PumpCdProgress`, `func_8007C564` can set
+`B89F4=1` and call `func_8007C214()` while `C0DB8` is set. `7C214`
+publishes status 2 and **clears** `B89F4` before E0's next poll. E0 then
+sees a ready slot via `91B64` → `got_frame` without the promote arm, so
+`StreamFrameReady` was never latched → Stage1b pad gate.
+
+Fix: latch `PE_Port_NoteStreamFrameReady` inside `func_8007C214` when
+`B89F4==1` (exact; sentinel nonzero must not admit). Covers pump-time
+publish and E0 promote. E0 no longer Notes separately. New test
+`CDQ1_7C214_last_chunk_latches_frame_ready`; last-chunk C89C fixture
+latches via `7C214`. CD device enable retained. **No `a1` clamp.**
+
+Focused Linux: CDQ1_7C214*, B54K_C89C*, B54KAD/AE, Stage1b_cd_device*,
+HostFB_PumpCdProgress*, MV1D_c89c*, DAY2_movie_player, B54K_92934 — all
+PASS. Status regenerated: **1352** tests / **1306** artifact-independent.
+
+**Next boot→Day2:** Matt retest tip past `Stage1b_pad_terminated_frame`;
+expect live C89C admit or the next named STOP after `got_frame` (not that
+Stage-1b pad name). Prefer authenticated Decomp leaves / PE.IMG carve —
+do not invent overlay bytes.
+
+Claims: live 1fa9a48 TRACE recorded; pump-time 7C214 last-chunk admits
+C89C. Non-claims: Day2 complete; Stage-1b done on live until retest of
+this tip; retail STR golden; published runtime 128 unchanged. Linux-first.
+
 ## DAY2-158i: enable CD device on disc-image + E0 named diagnostics (2026-09-09)
 
 Live Bazzite on tip **`7a6984b`** still nested under `func_8001220C` (~1m)
@@ -94,8 +134,10 @@ and no fixture arm. CD-ready / give-up spins call `HostFB_PumpCdProgress`.
 Trace markers: `e0_poll` / `e0_promote` / `e0_giveup` / `got_frame`. New
 test `Stage1b_cd_device_disabled_named_stop`. B54KY Disc1 attaches device.
 
-**Next boot→Day2:** Matt retest tip; expect TRACE past `e0_poll` toward
-`e0_promote`/`got_frame` or a named Stage-1b/cut STOP — not a silent nest.
+**Live follow-up (1fa9a48):** Matt confirmed device enable + TRACE through
+`got_frame` then `Stage1b_pad_terminated_frame` — see DAY2-158j.
+
+**Next boot→Day2:** superseded by 158j (chase pad gate / 7C214 latch).
 Non-claims: Day2 complete; Stage-1b done on live until retest; retail STR
 golden; published runtime 128 unchanged. Linux-first.
 

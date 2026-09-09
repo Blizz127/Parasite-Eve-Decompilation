@@ -103,11 +103,12 @@ void PE_Port_ArmStreamPromote(void);
 int  PE_Port_ConsumeStreamPromote(void);
 
 /* Stage-1b complete-frame latch for got_frame C89C admission.
- * Set when E0 promotes because D_800B89F4 was set (retail last video
- * chunk), or by tests that simulate that last-chunk publication.
- * Demuxed bodies at s1 are VLC bitstreams — they do NOT start with STR
- * magic 0x80010160 (that lives in the 32-byte sector header). Pad-exit
- * probes still cover synthetic plants; this latch covers live frames. */
+ * Set by func_8007C214 when D_800B89F4==1 (retail last video chunk —
+ * E0 promote or 7C564 during PumpCdProgress), or by tests that
+ * simulate that publication. Demuxed bodies at s1 are VLC bitstreams —
+ * they do NOT start with STR magic 0x80010160 (that lives in the
+ * 32-byte sector header). Pad-exit probes still cover synthetic plants;
+ * this latch covers live frames. */
 void PE_Port_NoteStreamFrameReady(void);
 int  PE_Port_TakeStreamFrameReady(void);
 

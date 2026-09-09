@@ -21,7 +21,7 @@
  * count-3 < 0 → t5==0, bits>>22 == 0x1FF; or PAD3FF bits>>22 == 0x3FF.
  *
  * Live last-chunk frames are admitted separately via
- * PE_Port_TakeStreamFrameReady (set when E0 promotes on B89F4). Demuxed
+ * PE_Port_TakeStreamFrameReady (latched in 7C214 when B89F4==1). Demuxed
  * bodies at s1 are VLC bitstreams — STR magic 0x80010160 lives in the
  * 32-byte sector header, not at the published payload cursor.
  */
@@ -173,13 +173,12 @@ e0_poll:
              * because 7A214 clears B89F4 after the plant. Live Disc1
              * needs PE_CdReg_EnableDevice (port_main --disc-image) so
              * HostFB_PumpCdProgress can advance sectors until 7C564 sets
-             * B89F4. A B89F4 promote also latches StreamFrameReady so
-             * got_frame may run C89C on the demuxed VLC body. */
+             * B89F4. StreamFrameReady is latched inside 7C214 when
+             * B89F4==1 (covers pump-time 7C564→7C214 as well as this
+             * promote arm). */
             {
                 int last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
                 if (last_chunk || PE_Port_ConsumeStreamPromote()) {
-                    if (last_chunk)
-                        PE_Port_NoteStreamFrameReady();
                     Trace_Direct("func_801924F8_e0_promote");
                     func_8007C214();
                 } else if (!PE_CdReg_DeviceEnabled()) {
