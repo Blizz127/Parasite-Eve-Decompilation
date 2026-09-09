@@ -73,6 +73,39 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY1/DAY2-158: XA RT mode + autonomous movie stream (2026-09-09)
+
+Previous157 stopped the enabled-device player at `CD_device_read_mode` for
+mode 0x1E0 (0x50-bit guard). Provenance for the stream DMA pointer table:
+those words are EXE-image data (same class as the B27C CD register table),
+not a runtime SDK/movie writer — dump evidence in
+`retail_gameover_fade_cases.h` at 9B32C..9B35C. `B558_PlantPointers` /
+`CdDeviceSeed` now re-plant the full table after `ResetTestState`.
+
+Device change: ReadN/ReadS guard narrowed from `mode&0x50` to `mode&0x10`.
+CdlModeRT (bit6) is allowed so movie mode 0xE0/0x1E0 delivers raw sectors;
+7C564 keeps software header/channel filtering. CdlModeSM (bit4) remains
+the explicit `CD_device_read_mode` frontier (covered by the player test).
+
+Player fixes required for the physical chain: success path returns 1
+(oracle/`regs[2]==1`), and the first-frame 121270 poll calls
+`HostFB_VSync(-1)` so CD DMA/IRQ advance while the CPU spins (updater
+already had this host adaptation). Fixture plants a one-chunk STR sector
+at the searched PE.IMG LBA.
+
+Native DAY2_movie_player: early returns, disabled-device search boundary,
+CdlModeSM boundary, and enabled-device autonomous path where search/Setloc/
+ReadS run, callbacks stay installed, and first-frame handoff reaches
+B0DBA 3→4 / B0DBC=1 / bank flip without a stop. C89C uses the zeroed EB8C
+bound exit on the synthetic payload (not a retail STR decode golden).
+
+Next: multi-sector STR frames through the same chain, updater retry
+enabled-device completion, 14E30 real path, libpress wait fidelity, XA
+filter/audio (bit4), hardware pixel validation, and scope-wide
+opening→Day2 acceptance. Full user goal open; published runtime 128
+unchanged. PR #37 (host SPU synth) remains open/unmerged and is not
+required for this stream slice.
+
 ## DAY1/DAY2-157: movie player 121C04 ported (2026-09-09)
 
 Previous156 was verified updater validation plus the GPU DMA2 parallelism
