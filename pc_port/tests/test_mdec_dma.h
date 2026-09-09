@@ -91,5 +91,41 @@ static void test_DAY2_mdec_dma(void)
         ASSERT(PE_MDEC_ReadPixels(0x80160000u,64u) && !PE_Port_ShouldStop(),
                "158s superseding decode drain");
     }
+    /* DAY2-158t: live path is BFA0→SubmitInputTable→Service, not direct
+     * BeginDecode. 158s missed that Service called BeginCommand with
+     * dma0_active still 1, so supersede never ran. */
+    {
+        ResetTestState();
+        HostFB_Init();
+        PE_MDEC_Init();
+        for(unsigned i=0;i<33u;i++) {
+            PE_StoreU32(0x8010DA0Cu+i*4u,MDECPIX_quant[i]);
+            PE_StoreU32(0x8010DA90u+i*4u,MDECPIX_scale[i]);
+        }
+        func_8010BE3C(0);
+        PE_MDEC_ClearDmaChannels();
+        /* 32-word commands so SubmitInputTable block count is non-zero. */
+        PE_StoreU32(0x80140000u,0x28000020u);
+        for(unsigned i=0;i<64u;i++) PE_StoreU16(0x80140004u+i*2u,0xFE00u);
+        PE_StoreU16(0x80140004u,(uint16_t)((8u<<10u)|64u));
+        PE_StoreU16(0x80140006u,0xFE00u);
+        func_8010BFA0(0x80140000u,0u);
+        HostFB_VSync(-1);
+        ASSERT(!PE_Port_ShouldStop() && PE_MDEC_HasDecode(),
+               "158t first BFA0/Service did not begin decode");
+        /* No C01C / DecDCTout — residue left, like 91DC8 final-slice. */
+        PE_StoreU32(0x80140100u,0x28000020u);
+        for(unsigned i=0;i<64u;i++) PE_StoreU16(0x80140104u+i*2u,0xFE00u);
+        PE_StoreU16(0x80140104u,(uint16_t)((8u<<10u)|0u));
+        PE_StoreU16(0x80140106u,0xFE00u);
+        func_8010BFA0(0x80140100u,0u);
+        HostFB_VSync(-1);
+        ASSERT(!PE_Port_ShouldStop() &&
+               CountOrderLog("MDEC_decode_busy")==0 &&
+               CountOrderLog("MDEC_decode_busy_dma0")==0,
+               "158t BFA0/Service path still MDEC_decode_busy");
+        ASSERT(PE_MDEC_ReadPixels(0x80160000u,64u) && !PE_Port_ShouldStop(),
+               "158t superseding BFA0 decode drain");
+    }
     PASS();
 }

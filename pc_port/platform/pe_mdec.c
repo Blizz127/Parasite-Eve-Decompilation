@@ -150,9 +150,14 @@ static int MdecBeginCommand(uint32_t command,pe_addr_t source)
     if((g_tables&required_tables)!=required_tables) return MdecBoundary("MDEC_missing_tables",g_tables);
     if(!PE_RangeIsRam(source,words*4u)) return MdecBoundary("MDEC_input_range",source);
     if(MdecDecodeResidue()) {
-        int dma_busy=g_mdec.dma0_active ||
-                      ((g_mdec.dma1_chcr&0x01000000u)!=0u);
-        if(dma_busy) return MdecBoundary("MDEC_decode_busy",g_input_pos);
+        int dma0=g_mdec.dma0_active;
+        int dma1=(g_mdec.dma1_chcr&0x01000000u)!=0u;
+        if(dma0 || dma1) {
+            /* Dig aid for live Disc1: which DMA arm blocked supersede. */
+            Trace_Direct(dma0&&dma1?"MDEC_decode_busy_both":
+                         dma0?"MDEC_decode_busy_dma0":"MDEC_decode_busy_dma1");
+            return MdecBoundary("MDEC_decode_busy",g_input_pos);
+        }
         /* No DMA left to drain the orphan — supersede for the new DecDCTin. */
         g_input_pos=g_input_count;
         g_pixel_pos=g_pixel_count;
@@ -173,14 +178,20 @@ int PE_MDEC_Service(void)
     int completed=0;
     if(PE_Port_ShouldStop()) return 0;
     if(g_mdec.dma0_active && (g_mdec.control_last_write&0x40000000u) && (PE_GPU_ReadDPCR()&8u)) {
+        /* DMA0 words are already in hand. Clear active BEFORE BeginCommand
+         * so orphan supersede is not blocked by this completing transfer —
+         * live 92934 BFA0 always arrives here with dma0_active=1 (DAY2-158t;
+         * 158s direct-BeginDecode test missed that path). */
+        g_mdec.dma0_active=0;
+        g_mdec.dma0_chcr&=~0x01000000u;
         if(g_input_pending) {
             uint32_t available=(g_mdec.dma0_bcr>>16u)*32u;
             if((g_mdec.command_last_write&0xFFFFu)>available) return MdecBoundary("MDEC_input_short",available);
             if(!MdecBeginCommand(g_mdec.command_last_write,g_mdec.dma0_madr)) return 0;
         }
-        g_input_pending=0;g_mdec.dma0_active=0;g_mdec.completed_upload_count++;
+        g_input_pending=0;g_mdec.completed_upload_count++;
         g_mdec.dma0_madr+=(g_mdec.dma0_bcr>>16u)*128u;
-        g_mdec.dma0_bcr&=0xFFFFu;g_mdec.dma0_chcr&=~0x01000000u;
+        g_mdec.dma0_bcr&=0xFFFFu;
         (void)PE_GPU_LatchDMACompletionFlag(0u);completed=1;
     }
     if((g_mdec.dma1_chcr&0x01000000u) && g_decode_valid && !g_input_pending &&
