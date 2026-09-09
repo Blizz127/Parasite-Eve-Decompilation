@@ -320,9 +320,16 @@ got_frame:
          * (DAY2_MOVIE_UPDATER: 23F5=0 / B0DBA++ / B0DBC=1). Without the
          * DBA bump, 91FB8's DBA==1 leaves 92934 early-returning 0 and the
          * post-E08 media loop clears the stream after this single frame
-         * (live a03d599 → post_movie_title_cut). PE.IMG byte confirm of
-         * the title-overlay EC block still preferred when Decomp lands it. */
+         * (live a03d599 → post_movie_title_cut).
+         *
+         * Title end-flag twin: 91B64 latches 801D0DBD during first E0 when
+         * 801D11B0 is still 0xFFFF (CDQ2d / retail-matching). 92934 aborts
+         * when that byte stays 1 — live 28ed6b6: C89C×2 then media_clear.
+         * Player clears 223F5 here; clear D0DBD too. Retail B0DBD=0 at
+         * 801928F8 kept (oracle A0200DBD). PE.IMG dump of the 7C394→EC
+         * gap still preferred (docs/evidence/pe-day2-158-909b4-early-title-cut). */
         PE_StoreU8(0x800B0DBDu, 0u);
+        PE_StoreU8(0x801D0DBDu, 0u);
         PE_StoreU8(0x800B0DBAu,
                    (uint8_t)(PE_LoadU8(0x800B0DBAu) + 1u));
         PE_StoreU16(0x800B0DBCu, 1u);
