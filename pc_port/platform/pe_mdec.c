@@ -6,7 +6,6 @@
 #include "pe_bootstrap.h"
 #include "pe_irq_delivery.h"
 
-#include <stdio.h>
 #include <string.h>
 
 #define MDEC_DMA_CHCR_INPUT 0x01000201u
@@ -25,14 +24,6 @@ static uint32_t g_pixel_pos,g_pixel_count;
 
 static int MdecBoundary(const char *name,uint32_t value)
 {
-    /* Disc1 dig: live logs only showed the stub name; print busy encoding
-     * (bit31=dma0 bit30=dma1, low bits=g_input_pos). */
-    if(name && name[0]=='M' && strstr(name,"decode_busy")!=NULL) {
-        fprintf(stderr,
-                "[STUB:BOOTSTRAP_RET] %s value=0x%08X dma0=%u dma1=%u pos=%u\n",
-                name,(unsigned)value,(unsigned)((value>>31)&1u),
-                (unsigned)((value>>30)&1u),(unsigned)(value&0x3FFFFFFFu));
-    }
     Bootstrap_ReturnVoid1(name,"MDEC_decode",value);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return 0;
 }
@@ -128,23 +119,25 @@ static int MdecMacroblock(void)
 }
 /* C89C end-fills with FE00; ReadPixels only skips that after a DMA1 drain.
  * Title 91DC8's final-slice arm stops issuing DecDCTout once the bank
- * rectangle is covered, so trailing FE00 (or any orphaned remainder after
- * 1494) can still sit in the input FIFO. Retail C308 would wait on command
- * busy; without another DecDCTout that wait cannot make progress. Drain
- * idle FE00 here so a padding-only remainder is not "busy". If a new
- * DecDCTin arrives with non-padding residue, supersede the orphaned prior
- * command (DAY2-158s/u).
+ * rectangle is covered, so trailing FE00 / unread RLE / partial pixels can
+ * still sit in the FIFO (DAY2-158s). Retail C308 would wait on command busy;
+ * without another DecDCTout that wait cannot make progress.
  *
- * Do NOT clear g_decode_valid when the FIFO drains: HostFB_VSync gates
- * DMA IRQ delivery on PE_MDEC_HasDecode(); clearing before 1214D4/91DC8
- * runs drops the final-slice frame-complete store.
+ * DAY2-158s drained idle FE00 and superseded when "no DMA in flight". That
+ * never matched live DecDCTin: BFA0 → SubmitInputTable sets dma0_active +
+ * g_input_pending, 92934 then C01C-arms DMA1, and only later HostFB
+ * Service commits via MdecBeginCommand — so dma0_active is ALWAYS set on
+ * the live path (and dma1 often already armed for the *new* frame). The
+ * 158s unit test used BeginDecode + ClearDmaChannels (false green).
  *
- * DAY2-158u: live 92934 always programs BFA0 then C01C before Service.
- * That arms dma1_chcr for the *new* DecDCTout before BeginCommand runs
- * for the new DecDCTin. Treating dma1 as "busy" blocked supersede even
- * after 158t cleared dma0 — identical live wall. dma1 pending for the
- * concurrent new C01C must not block starting the new decode; same
- * Service call then drains that dma1 against the new command. */
+ * Dig fix: when Service is committing this new DMA0 upload (dma0_active &&
+ * g_input_pending), supersede prior orphan residue; the in-flight DMA0/1
+ * flags belong to the new DecDCTin/DecDCTout, not a drain of the old
+ * command. BeginDecode with no pending upload still STOP if DMA1 is busy.
+ *
+ * Do NOT clear g_decode_valid on idle FE00 drain alone: HostFB_VSync gates
+ * DMA IRQ on PE_MDEC_HasDecode(); clearing before 1214D4/91DC8 drops the
+ * final-slice frame-complete store. */
 static void MdecConsumeIdlePadding(void)
 {
     if(g_pixel_pos!=g_pixel_count) return;
@@ -158,6 +151,13 @@ static int MdecDecodeResidue(void)
     return g_input_pos<g_input_count || g_pixel_pos<g_pixel_count;
 }
 
+static void MdecSupersedeOrphan(void)
+{
+    g_input_pos=g_input_count;
+    g_pixel_pos=g_pixel_count;
+    g_decode_valid=0;
+}
+
 static int MdecBeginCommand(uint32_t command,pe_addr_t source)
 {
     uint32_t words=command&0xFFFFu;
@@ -166,25 +166,15 @@ static int MdecBeginCommand(uint32_t command,pe_addr_t source)
     if((g_tables&required_tables)!=required_tables) return MdecBoundary("MDEC_missing_tables",g_tables);
     if(!PE_RangeIsRam(source,words*4u)) return MdecBoundary("MDEC_input_range",source);
     if(MdecDecodeResidue()) {
-        int dma0=g_mdec.dma0_active;
-        int dma1=(g_mdec.dma1_chcr&0x01000000u)!=0u;
-        /* Only a still-active DMA0 input blocks supersede. dma1 is often
-         * already armed by the matching C01C for *this* new DecDCTin
-         * (92934 BFA0→C01C→Service); that must not look like an old drain. */
-        if(dma0) {
-            return MdecBoundary("MDEC_decode_busy",
-                g_input_pos|((uint32_t)dma0<<31)|((uint32_t)dma1<<30));
+        /* Live path: Service DMA0 arm committing a new DecDCTin. */
+        if(g_mdec.dma0_active && g_input_pending) {
+            MdecSupersedeOrphan();
+        } else if(g_mdec.dma0_active || (g_mdec.dma1_chcr&0x01000000u)) {
+            return MdecBoundary("MDEC_decode_busy",g_input_pos);
+        } else {
+            /* BeginDecode / idle orphan — no DMA left to drain it. */
+            MdecSupersedeOrphan();
         }
-        if(dma1) {
-            fprintf(stderr,
-                    "MDEC_orphan_supersede_dma1 pos=%u count=%u pix=%u/%u\n",
-                    (unsigned)g_input_pos,(unsigned)g_input_count,
-                    (unsigned)g_pixel_pos,(unsigned)g_pixel_count);
-        }
-        /* Supersede orphaned prior command for the new DecDCTin. */
-        g_input_pos=g_input_count;
-        g_pixel_pos=g_pixel_count;
-        g_decode_valid=0;
     }
     g_decode_command=command;g_input_count=words*2u;g_input_pos=0;g_pixel_pos=g_pixel_count=0;g_macroblocks=0;g_decode_valid=1;
     for(unsigned i=0;i<g_input_count;i++) g_input[i]=PE_LoadU16(source+i*2u);
@@ -201,20 +191,14 @@ int PE_MDEC_Service(void)
     int completed=0;
     if(PE_Port_ShouldStop()) return 0;
     if(g_mdec.dma0_active && (g_mdec.control_last_write&0x40000000u) && (PE_GPU_ReadDPCR()&8u)) {
-        /* DMA0 words are already in hand. Clear active BEFORE BeginCommand
-         * so orphan supersede is not blocked by this completing transfer —
-         * live 92934 BFA0 always arrives here with dma0_active=1 (DAY2-158t;
-         * 158s direct-BeginDecode test missed that path). */
-        g_mdec.dma0_active=0;
-        g_mdec.dma0_chcr&=~0x01000000u;
         if(g_input_pending) {
             uint32_t available=(g_mdec.dma0_bcr>>16u)*32u;
             if((g_mdec.command_last_write&0xFFFFu)>available) return MdecBoundary("MDEC_input_short",available);
             if(!MdecBeginCommand(g_mdec.command_last_write,g_mdec.dma0_madr)) return 0;
         }
-        g_input_pending=0;g_mdec.completed_upload_count++;
+        g_input_pending=0;g_mdec.dma0_active=0;g_mdec.completed_upload_count++;
         g_mdec.dma0_madr+=(g_mdec.dma0_bcr>>16u)*128u;
-        g_mdec.dma0_bcr&=0xFFFFu;
+        g_mdec.dma0_bcr&=0xFFFFu;g_mdec.dma0_chcr&=~0x01000000u;
         (void)PE_GPU_LatchDMACompletionFlag(0u);completed=1;
     }
     if((g_mdec.dma1_chcr&0x01000000u) && g_decode_valid && !g_input_pending &&
