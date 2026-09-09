@@ -107,6 +107,7 @@ static void ResetTestState(void) {
     g_bootstrap_disc = 0;
     g_strict_stubs = 0;
     PE_Port_RunControlReset();
+    PE_C89C_ResetTelemetry();
     PE_RamReset();                  /* zero-fill guest RAM between tests */
     PE_Sdk_ResetState();            /* host-owned GTE/IRQ/event state    */
     Bootstrap_ClearSequences();     /* drop scripted provider sequences   */
@@ -1677,6 +1678,8 @@ static void test_B54KX_nonzero_phase_remains_state_driven(void)
 
 static void test_MV1D_c89c_pad(void)
 {
+    PeC89CTelemetry tel;
+
     TEST("MV1D_c89c_pad");
     ResetTestState();
     PE_StoreU32(MV1D_EB8C, 0x00FFFFFFu);
@@ -1692,6 +1695,12 @@ static void test_MV1D_c89c_pad(void)
            PE_LoadU16(MV1D_A + 4u) == 0xFE00u &&
            PE_LoadU16(MV1D_A + 6u) == 0xFE00u,
            "MV1D_PAD footprint differs");
+    PE_C89C_GetTelemetry(&tel);
+    ASSERT(tel.calls == 1u && tel.pad_exits == 1u && tel.bound_exits == 0u &&
+           tel.ret == 0 && tel.a0_in_ram == 1u && tel.a1_in_ram == 1u &&
+           tel.a2_in_ram == 1u && tel.hdr_count == 0u &&
+           tel.hdr_bits == 0x7FC00000u && tel.out_bytes == 8u,
+           "MV1D_PAD telemetry counts/validity differ");
     PASS();
 }
 
@@ -19266,6 +19275,10 @@ static void test_B54K_C89C_last_chunk_frame_ready(void)
         PE_C89C_GetTelemetry(&c89c);
         ASSERT(c89c.a0 == 0x801E0800u && c89c.ret == 1,
                "last-chunk C89C entry/bound-exit differs");
+        ASSERT(c89c.calls >= 1u && c89c.bound_exits >= 1u &&
+               c89c.a0_in_ram == 1u && c89c.a1_in_ram == 1u &&
+               c89c.a2_in_ram == 1u,
+               "last-chunk C89C telemetry counts/validity differ");
     }
     FxFree(&fx);
     PASS();

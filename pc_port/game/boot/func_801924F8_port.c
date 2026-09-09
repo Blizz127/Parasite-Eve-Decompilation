@@ -14,6 +14,8 @@
 #include "pe_cdreg.h"
 #include "host_framebuffer.h"
 
+#include <stdio.h>
+
 /* Stage-1b / MV1d readiness: admit a stream cursor that is safe for
  * live C89C without clamping a1.
  *
@@ -288,15 +290,26 @@ got_frame:
             PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
             return 0;
         }
-        /* Live 04c8078: got_frame looped with no C89C in the TRACE log —
-         * the decoder is live (no stub name). Emit enter/done so Bazzite
-         * can see real C89C progress past Stage-1b admit. */
-        Trace_Direct(frame_ready ? "func_8010C89C_enter_ready"
-                                 : "func_8010C89C_enter_pad");
+        /* Decomp: quiet "no C89C" in TRACE is NOT proof the decoder
+         * skipped — this leaf has no Trace_Direct, only telemetry.
+         * Surface call counts / pad|bound / out|table validity here. */
         {
+            char tel[192];
+            PeC89CTelemetry t;
             int c89c_ret = func_8010C89C(stream, out, table, 0u);
-            Trace_Direct(c89c_ret == 0 ? "func_8010C89C_done_pad"
-                                      : "func_8010C89C_done_bound");
+            PE_C89C_GetTelemetry(&t);
+            snprintf(tel, sizeof(tel),
+                     "c89c_tel calls=%u ret=%d pad=%u bound=%u "
+                     "a0=%08x a1=%08x a2=%08x a0ram=%u a1ram=%u a2ram=%u "
+                     "out=%u hdr=%04x/%08x admit=%s",
+                     (unsigned)t.calls, t.ret,
+                     (unsigned)t.pad_exits, (unsigned)t.bound_exits,
+                     (unsigned)t.a0, (unsigned)t.a1, (unsigned)t.a2,
+                     (unsigned)t.a0_in_ram, (unsigned)t.a1_in_ram,
+                     (unsigned)t.a2_in_ram, (unsigned)t.out_bytes,
+                     (unsigned)t.hdr_count, (unsigned)t.hdr_bits,
+                     frame_ready ? "ready" : "pad");
+            Trace_Direct(tel);
             (void)c89c_ret;
         }
         if (PE_Port_ShouldStop())

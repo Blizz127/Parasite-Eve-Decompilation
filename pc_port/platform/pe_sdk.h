@@ -206,9 +206,20 @@ typedef struct PeC89CTelemetry {
     uint32_t a0;                 /* entry cursor (0 = resume) */
     pe_addr_t a1;                /* entry arena */
     pe_addr_t a2;                /* entry table word */
-    int ret;                     /* exit code (0 pad, 1 bound) */
+    int ret;                     /* last exit code (0 pad, 1 bound) */
+    uint32_t calls;              /* total invocations since reset */
+    uint32_t pad_exits;          /* CB84 pad-exit count */
+    uint32_t bound_exits;        /* CBC8 bound-exit count */
+    uint32_t a0_in_ram;          /* 1 if entry stream cursor in guest RAM */
+    uint32_t a1_in_ram;          /* 1 if entry arena in guest RAM */
+    uint32_t a2_in_ram;          /* 1 if entry table word in guest RAM */
+    pe_addr_t a1_end;            /* arena cursor after last exit */
+    uint32_t out_bytes;          /* a1_end - a1 (0 if end < start) */
+    uint16_t hdr_count;          /* fresh-entry stream+6 halfword */
+    uint32_t hdr_bits;           /* fresh-entry (hi<<16)|lo at +8/+10 */
 } PeC89CTelemetry;
 void PE_C89C_GetTelemetry(PeC89CTelemetry *out); /* host-only, never guest */
+void PE_C89C_ResetTelemetry(void);               /* host-only, never guest */
 void func_8007C214(void);
 int func_8007A88C(pe_addr_t p);
 void func_8007B964(pe_addr_t p);

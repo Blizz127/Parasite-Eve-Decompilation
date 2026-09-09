@@ -73,6 +73,35 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158m: live C89C telemetry surface + Decomp quiet-log correction (2026-09-09)
+
+Decomp Bot correction on the **`04c8078`** spin — do **not** treat missing
+C89C TRACE as “decoder never ran”:
+
+- got_frame always calls `func_8010C89C` unless it STOPs
+- C89C has **no** `Trace_Direct` — only `PE_C89C_GetTelemetry`
+- Quiet “no C89C” in the log can still mean the decoder ran
+- Decomp is checking telemetry / out / table live vs instant pad-exit
+
+Fix on tip (builds on 158l post-movie cut + enter TRACE):
+
+1. Expand `PeC89CTelemetry`: `calls`, `pad_exits`, `bound_exits`,
+   `a0/a1/a2_in_ram`, `a1_end`/`out_bytes`, `hdr_count`/`hdr_bits`;
+   `PE_C89C_ResetTelemetry` from `ResetTestState`.
+2. After got_frame C89C, TRACE one `c89c_tel …` line with those fields
+   so live Disc1 shows pad vs bound, out size, and pointer validity.
+   TRACE stays in 924F8 (not inside C89C / pe_libcd — field-runtime
+   link rule).
+3. Forever poll/got_frame spin after one `e0_promote`: still explained
+   by `909B4` returning movie `0` → `6E9A0(0)` leaves `D280` → main
+   re-dispatches; `func_801909B4_post_movie_title_cut` (158l) is the
+   named boundary. Prefer Decomp `7C484`/`91B64` leaves when they land.
+
+CD device enable retained. **No `a1` clamp.** No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip; expect `c89c_tel calls=…` then
+`func_801909B4_post_movie_title_cut` (not a silent e0_poll spin).
+
 ## DAY2-158l: live C89C TRACE + post-movie title cut (2026-09-09)
 
 Live Bazzite Disc1 on tip **`04c8078` (DAY2-158k) — NEW STATE**:
