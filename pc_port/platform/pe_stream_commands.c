@@ -5,12 +5,10 @@
  * does not wrap: the timer normally drains these between game frames.
  * Leaving it unserviced eventually overwrites Aya's B8A20 battle record.
  *
- * This supplies command dispatch and voice allocation/control. Score
- * interpretation (8DB7C's voice ticks) remains unported. Partial guest→SPU
- * publish (pe_spu_voice.c) runs after command drain; score bytecode is still
- * separate. The host event
- * service below invokes only the
- * command portion of that timer, and does not claim the full callback.
+ * This supplies command dispatch and voice allocation/control. Score tick
+ * (8DB7C) plus 87AA8/87FA0 / 8E8D0 / 89328 ports live in pe_akao_tick.c;
+ * 8D844/89784 flush ported (AUD1-E6). Partial guest→SPU publish
+ * (pe_spu_voice.c) runs after command drain.
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"

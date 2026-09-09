@@ -135,56 +135,58 @@ static void test_DAY2_akao_tick(void)
     ASSERT(PE_LoadU32(voice + 0x44u) == 0x10200000u, "87AA8 applies pitch delta");
     ASSERT((PE_LoadU32(voice + 0xF4u) & 3u) != 0u, "87AA8 marks volume pending");
     ASSERT((PE_LoadU32(0x8009D2C4u) & 0x100u) != 0u, "87AA8 raises audio_dirty");
-    /* E6 pitch bit 0x10 publishes through ApplyPending. */
+    /* E6 pitch bit 0x10 — tip ApplyPending uses +0x30 base (>>16) + LFO. */
     {
         pe_addr_t sv = 0x800BC000u;
         seed_test_tone();
         PE_StoreU32(sv, 0x80010000u);
+        PE_StoreU32(sv + 0xF0u, 0u);
         PE_StoreU32(sv + 0xF4u, 0x10u);
-        PE_StoreU32(sv + 0x44u, 0x12340000u);
+        PE_StoreU32(sv + 0x30u, 0x12340000u);
+        PE_StoreU32(sv + 0x34u, 0u);
+        PE_StoreU16(sv + 0xE8u, 0);
         PE_StoreU32(0x800BCD50u, 0x1000u);
         PE_StoreU32(0x8009D2C4u, 0x100u);
         PE_SpuScore_ApplyDirtyVoices();
         ASSERT(PE_LoadU32(sv + 0xF4u) == 0u, "pitch bit 0x10 cleared");
         ASSERT(PE_SpuRegister_LoadU16(0x04u) == 0x1234u, "pitch bit publishes");
     }
-    /* 8900C: StepVoiceNote walks active mask and applies KeyOn-shaped publish. */
+    /* 8900C: tip StepVoiceNote — pending track + gated restart → key-on. */
     {
         pe_addr_t key_scratch = 0x800BCD74u;
         PE_StoreU32(key_scratch, 0);
-        PE_StoreU32(voice + 0x38u, 0x10u); /* pitch-flag path */
-        PE_StoreU32(voice + 0x30u, 0x1000u);
-        PE_StoreU16(voice + 0xE8u, 0);
-        PE_StoreU16(voice + 0x36u, 0);
-        PE_StoreU16(voice + 0x3Cu, 0); /* depth off */
-        PE_StoreU32(voice + 0xF4u, 0);
+        PE_StoreU32(st + 0x10u, 1u); /* gated = active & st+0x10 */
+        PE_StoreU32(voice + 0xF0u, 0x18u);
+        PE_StoreU32(voice + 0xF4u, 0x10u); /* must be pending */
+        PE_StoreU32(0x8009D2B8u, 0u);
         PE_StoreU32(0x8009D2C4u, 0);
         func_8008900C(0x800B8AC0u, 1u, 1u, key_scratch);
         ASSERT(PE_LoadU32(key_scratch) == 1u, "8900C records restart key-on");
-        ASSERT((PE_LoadU32(voice + 0xF4u) & 0x1010u) != 0u,
-               "8900C marks pitch+key pending");
-        ASSERT(PE_LoadU16(voice + 0x10Cu) == 0x1000u, "8900C/89218 writes pitch");
+        ASSERT(PE_LoadU32(voice + 0xF0u) == 0u, "8900C assigns HW index 0");
+        ASSERT((PE_LoadU32(0x8009D2C4u) & 0x100u) != 0u, "8900C raises dirty");
+        /* WriteVoiceParam inside 8900C clears F4 after publishing. */
+        ASSERT(PE_LoadU32(voice + 0xF4u) == 0u, "8900C WriteVoiceParam clears F4");
     }
-    /* E8: WriteVoiceParam ADSR + ENVX via ApplyPending / 89F08. */
+    /* E8: ADSR via ApplyPending + ENVX 89F08; 88344 stays named parked stub. */
     {
         pe_addr_t sv = 0x800BC000u;
         pe_addr_t env_out = 0x800B002Cu;
         seed_test_tone();
         PE_StoreU32(sv, 0x80010000u);
-        PE_StoreU32(sv + 0xF0u, 0u); /* assigned voice index 0 */
+        PE_StoreU32(sv + 0xF0u, 0u);
         PE_StoreU32(sv + 0xF4u, 0x900u); /* attack mode+rate */
-        PE_StoreU32(sv + 0x100u, 0u);    /* attack mode */
-        PE_StoreU16(sv + 0x10Eu, 0x00C0u); /* attack rate */
+        PE_StoreU32(sv + 0x100u, 0u);
+        PE_StoreU16(sv + 0x10Eu, 0x00C0u);
         PE_StoreU32(0x800BCD50u, 0x1000u);
         PE_StoreU32(0x8009D2C4u, 0x100u);
         PE_SpuScore_ApplyDirtyVoices();
         ASSERT(PE_LoadU32(sv + 0xF4u) == 0u, "E8 ADSR flags cleared");
         ASSERT(PE_SpuRegister_LoadU16(0x08u) == 0xC000u,
-               "E8 WriteVoiceParam attack rate into ADSR1");
+               "E8 attack rate into ADSR1");
         PE_SpuRegister_StoreU16(0x0Cu, 0x1234u);
         func_80089F08(0u, env_out);
         ASSERT(PE_LoadU16(env_out) == 0x1234u, "E8 ENVX reads voice0 envelope");
-        func_80088344(sv, 1u); /* named stub must link */
+        func_80088344(sv, 1u);
     }
     ASSERT(!PE_Port_ShouldStop() && !g_stub_order_count,
            "Akao_Tick scaffolding runs without stub stops");

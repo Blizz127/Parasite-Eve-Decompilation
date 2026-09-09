@@ -1,33 +1,12 @@
 /*
  * Guest voice → SPU register bridge + Psy-Q SpuSetCommonAttr / SpuSetVoiceAttr.
  *
- * PE_SpuVoice_ApplyPending publishes guest voice+0xF4 pending bits.
- * AUD1-E8: func_800878F0 (Akao_WriteVoiceParam) + func_80089F08 (ENVX).
- * func_80088344 (Akao_SetVoiceKeyOff) remains named-asm / host stub elsewhere.
+ * PE_SpuVoice_ApplyPending is the host stand-in for pending voice+0xF4 publish
+ * (previously mislabeled as func_80085F74). Real func_80085F74 is SpuSetCommonAttr.
  */
 #include "pe_spu_voice.h"
 #include "pe_spu_dma.h"
 #include "psx_compat.h"
-
-/* khasinski AKAO_VOICE_PARAM_* bit layout (VoiceParams.flags at voice+0xF4). */
-#define VP_VOLUME_L          0x0001u
-#define VP_VOLUME_R          0x0002u
-#define VP_VOLUME            (VP_VOLUME_L | VP_VOLUME_R)
-#define VP_PITCH             0x0010u
-#define VP_START_ADDR        0x0080u
-#define VP_ADSR_ATTACK_MODE  0x0100u
-#define VP_ADSR_SUSTAIN_MODE 0x0200u
-#define VP_ADSR_RELEASE_MODE 0x0400u
-#define VP_ADSR_ATTACK_RATE  0x0800u
-#define VP_ADSR_DECAY_RATE   0x1000u
-#define VP_ADSR_SUSTAIN_RATE 0x2000u
-#define VP_ADSR_RELEASE_RATE 0x4000u
-#define VP_ADSR_SUSTAIN_LVL  0x8000u
-#define VP_LOOP_ADDR         0x10000u
-#define VP_ADSR_ATTACK       (VP_ADSR_ATTACK_MODE | VP_ADSR_ATTACK_RATE)
-#define VP_ADSR_SUSTAIN      (VP_ADSR_SUSTAIN_MODE | VP_ADSR_SUSTAIN_RATE)
-#define VP_ADSR_RELEASE      (VP_ADSR_RELEASE_MODE | VP_ADSR_RELEASE_RATE)
-#define VP_ADSR_DECAY_SUSTAIN (VP_ADSR_DECAY_RATE | VP_ADSR_SUSTAIN_LVL)
 
 static int guest_voice_index(pe_addr_t voice)
 {
@@ -64,153 +43,6 @@ void func_80087798(uint32_t voice_index, uint32_t vol_left, uint32_t vol_right)
     uint32_t reg = voice_index * 0x10u;
     spu_half_store(reg, (uint16_t)(vol_left & 0x7FFFu));
     spu_half_store(reg + 2u, (uint16_t)(vol_right & 0x7FFFu));
-}
-
-/* SpuGetVoiceEnvelope — func_80089F08 (ENVX at voice*0x10+0xC). */
-void func_80089F08(uint32_t voice_index, pe_addr_t env_out)
-{
-    uint16_t env;
-    if (voice_index >= 24u)
-        return;
-    env = spu_half_load(voice_index * 0x10u + 0xCu);
-    if (env_out >= 0x80000000u && env_out < 0x80200000u)
-        PE_StoreU16(env_out, env);
-}
-
-static void spu_set_pitch(uint32_t index, uint32_t value)
-{
-    spu_half_store(index * 0x10u + 4u, (uint16_t)(value & 0xFFFFu));
-}
-
-static void spu_set_start(uint32_t index, uint32_t value)
-{
-    spu_half_store(index * 0x10u + 6u, (uint16_t)((value >> 3) & 0xFFFFu));
-}
-
-static void spu_set_loop(uint32_t index, uint32_t value)
-{
-    spu_half_store(index * 0x10u + 0xEu, (uint16_t)((value >> 3) & 0xFFFFu));
-}
-
-static void spu_set_adsr_attack(uint32_t index, uint32_t rate, uint32_t mode)
-{
-    uint32_t reg = index * 0x10u + 8u;
-    uint16_t cur = spu_half_load(reg);
-    uint32_t value = ((mode >> 2) << 15) | ((rate & 0xFFu) << 8);
-    spu_half_store(reg, (uint16_t)((cur & 0xFFu) | value));
-}
-
-static void spu_set_adsr_decay(uint32_t index, uint32_t rate)
-{
-    uint32_t reg = index * 0x10u + 8u;
-    uint16_t cur = spu_half_load(reg);
-    spu_half_store(reg, (uint16_t)((cur & 0xFF0Fu) | ((rate & 0xFu) << 4)));
-}
-
-static void spu_set_adsr_sustain_level(uint32_t index, uint32_t level)
-{
-    uint32_t reg = index * 0x10u + 8u;
-    uint16_t cur = spu_half_load(reg);
-    spu_half_store(reg, (uint16_t)((cur & 0xFFF0u) | (level & 0xFu)));
-}
-
-static void spu_set_adsr_sustain_rate(uint32_t index, uint32_t rate, uint32_t mode)
-{
-    uint32_t reg = index * 0x10u + 0xAu;
-    uint16_t cur = spu_half_load(reg);
-    uint32_t value = ((mode >> 1) << 14) | ((rate & 0x7Fu) << 6);
-    spu_half_store(reg, (uint16_t)((cur & 0x3Fu) | value));
-}
-
-static void spu_set_adsr_release(uint32_t index, uint32_t rate, uint32_t mode)
-{
-    uint32_t reg = index * 0x10u + 0xAu;
-    uint16_t cur = spu_half_load(reg);
-    uint32_t value = ((mode >> 2) << 5) | (rate & 0x1Fu);
-    spu_half_store(reg, (uint16_t)((cur & 0xFFC0u) | value));
-}
-
-/*
- * Akao_WriteVoiceParam — func_800878F0.
- * params points at AkaoVoiceParams (guest): flags@+4, start@+8, loop@+C,
- * ADSR modes/rates, pitch@+0x1C, volumes@+0x28. Clears handled flag bits.
- */
-void func_800878F0(int voice_index, pe_addr_t params)
-{
-    uint32_t flags;
-    uint32_t cur;
-
-    if (voice_index < 0 || voice_index >= 24 || !params)
-        return;
-    flags = PE_LoadU32(params + 4u);
-    if (!flags)
-        return;
-
-    if (flags & VP_PITCH) {
-        spu_set_pitch((uint32_t)voice_index, PE_LoadU16(params + 0x1Cu));
-        cur = PE_LoadU32(params + 4u) & ~VP_PITCH;
-        PE_StoreU32(params + 4u, cur);
-        if (!cur)
-            return;
-        flags = cur;
-    }
-    if (flags & VP_VOLUME) {
-        func_80087798((uint32_t)voice_index, (uint32_t)(int16_t)PE_LoadU16(params + 0x28u),
-                      (uint32_t)(int16_t)PE_LoadU16(params + 0x2Au));
-        cur = PE_LoadU32(params + 4u) & ~VP_VOLUME;
-        PE_StoreU32(params + 4u, cur);
-        if (!cur)
-            return;
-        flags = cur;
-    }
-    if (flags & VP_START_ADDR) {
-        spu_set_start((uint32_t)voice_index, PE_LoadU32(params + 8u));
-        cur = PE_LoadU32(params + 4u) & ~VP_START_ADDR;
-        PE_StoreU32(params + 4u, cur);
-        if (!cur)
-            return;
-        flags = cur;
-    }
-    if (flags & VP_LOOP_ADDR) {
-        spu_set_loop((uint32_t)voice_index, PE_LoadU32(params + 0xCu));
-        cur = PE_LoadU32(params + 4u) & ~VP_LOOP_ADDR;
-        PE_StoreU32(params + 4u, cur);
-        if (!cur)
-            return;
-        flags = cur;
-    }
-    if (flags & VP_ADSR_SUSTAIN) {
-        spu_set_adsr_sustain_rate((uint32_t)voice_index, PE_LoadU16(params + 0x24u),
-                                  (uint32_t)PE_LoadU32(params + 0x14u));
-        cur = PE_LoadU32(params + 4u) & ~VP_ADSR_SUSTAIN;
-        PE_StoreU32(params + 4u, cur);
-        if (!cur)
-            return;
-        flags = cur;
-    }
-    if (flags & VP_ADSR_ATTACK) {
-        spu_set_adsr_attack((uint32_t)voice_index, PE_LoadU16(params + 0x1Eu),
-                            (uint32_t)PE_LoadU32(params + 0x10u));
-        cur = PE_LoadU32(params + 4u) & ~VP_ADSR_ATTACK;
-        PE_StoreU32(params + 4u, cur);
-        if (!cur)
-            return;
-        flags = cur;
-    }
-    if (flags & VP_ADSR_RELEASE) {
-        spu_set_adsr_release((uint32_t)voice_index, PE_LoadU16(params + 0x26u),
-                             (uint32_t)PE_LoadU32(params + 0x18u));
-        cur = PE_LoadU32(params + 4u) & ~VP_ADSR_RELEASE;
-        PE_StoreU32(params + 4u, cur);
-        if (!cur)
-            return;
-        flags = cur;
-    }
-    if (flags & VP_ADSR_DECAY_SUSTAIN) {
-        spu_set_adsr_decay((uint32_t)voice_index, PE_LoadU16(params + 0x20u));
-        spu_set_adsr_sustain_level((uint32_t)voice_index, PE_LoadU16(params + 0x22u));
-    }
-    PE_StoreU32(params + 4u, 0);
 }
 
 /* Retail SpuSetVoiceAttr — func_800862F4. */
@@ -369,7 +201,14 @@ void PE_SpuVoice_ApplyPending(pe_addr_t voice)
     flags = PE_LoadU32(voice + 0xF4u);
     if (!flags)
         return;
-    idx = guest_voice_index(voice);
+    /* Prefer sequencer-assigned HW index (+0xF0) from StepVoiceNote. */
+    {
+        uint32_t hw = PE_LoadU32(voice + 0xF0u);
+        if (hw < 24u)
+            idx = (int)hw;
+        else
+            idx = guest_voice_index(voice);
+    }
     if (idx < 0 || idx >= 24)
         return;
     reg = (uint32_t)idx * 0x10u;
@@ -384,9 +223,17 @@ void PE_SpuVoice_ApplyPending(pe_addr_t voice)
                       PE_LoadU16(voice + 0x78u));
         applied |= 0x2u;
     }
-    /* AKAO_VOICE_PARAM_PITCH = 1<<4 — AUD1-E6 host publish. */
+    /* AUD1-E6: pitch pending (0x10) from 8D844 / 87AA8 LFO / pitch slides. */
     if (flags & 0x10u) {
-        spu_half_store(reg + 4u, (uint16_t)(PE_LoadU32(voice + 0x44u) >> 16));
+        uint32_t base = PE_LoadU32(voice + 0x30u);
+        uint32_t slide = PE_LoadU32(voice + 0x34u);
+        int32_t lfo = (int16_t)PE_LoadU16(voice + 0xE8u);
+        uint16_t out;
+        if ((base & 0xFFFF0000u) != 0u || slide != 0u)
+            out = (uint16_t)((int32_t)((base + slide) >> 16) + lfo);
+        else
+            out = (uint16_t)((int32_t)(base & 0xFFFFu) + lfo);
+        spu_half_store(reg + 4u, out);
         applied |= 0x10u;
     }
     if (flags & 0x40u) {
@@ -397,29 +244,52 @@ void PE_SpuVoice_ApplyPending(pe_addr_t voice)
         spu_half_store(reg + 4u, (uint16_t)(PE_LoadU32(voice + 0x44u) >> 16));
         applied |= 0x80u;
     }
-    if (flags & 0x400u) {
+    /* Retail START_ADDR is 0x80; host bridge also accepted 0x400 historically. */
+    if (flags & (0x80u | 0x400u)) {
         spu_half_store(reg + 6u, (uint16_t)(PE_LoadU32(voice + 0xF8u) >> 3));
-        applied |= 0x400u;
+        applied |= flags & (0x80u | 0x400u);
     }
-    /*
-     * AUD1-E8: ADSR modes/rates/loop via WriteVoiceParam (VoiceParams at
-     * voice+0xF0). Excluded bit conflicts with this host bridge:
-     *   0x80  host legacy pitch (khasinski START_ADDR)
-     *   0x400 host start publish (khasinski RELEASE_MODE)
-     *   0x1000/0x2000 host key-on/off (khasinski DECAY/SUSTAIN_RATE)
-     */
-    {
-        uint32_t wp = flags & (0x100u | 0x200u | 0x800u | 0x4000u | 0x8000u |
-                               0x10000u);
-        if (wp) {
-            uint32_t saved = flags;
-            PE_StoreU32(voice + 0xF4u, wp);
-            func_800878F0(idx, voice + 0xF0u);
-            applied |= wp;
-            flags = (saved & ~wp) | PE_LoadU32(voice + 0xF4u);
-            PE_StoreU32(voice + 0xF4u, flags);
+    /* AUD1-E8: compose ADSR1/ADSR2 from voice+0xF0 overlay when ADSR bits set. */
+    if (flags & 0x1FF80u) {
+        pe_addr_t p = voice + 0xF0u;
+        uint16_t adsr1 = PE_SpuRegister_LoadU16(reg + 8u);
+        uint16_t adsr2 = PE_SpuRegister_LoadU16(reg + 0xAu);
+        if (flags & 0x900u) {
+            uint32_t rate = PE_LoadU16(p + 0x1Eu);
+            uint32_t mode = PE_LoadU32(p + 0x10u);
+            adsr1 = (uint16_t)((adsr1 & 0x00FFu) |
+                               (((mode >> 2) << 15) | (rate << 8)));
         }
+        if (flags & 0x1000u) {
+            uint32_t rate = PE_LoadU16(p + 0x20u);
+            adsr1 = (uint16_t)((adsr1 & 0xFF0Fu) | (rate << 4));
+        }
+        if (flags & 0x8000u) {
+            uint32_t level = PE_LoadU16(p + 0x22u);
+            adsr1 = (uint16_t)((adsr1 & 0xFFF0u) | (level & 0xFu));
+        }
+        if (flags & 0x2200u) {
+            uint32_t rate = PE_LoadU16(p + 0x24u);
+            uint32_t mode = PE_LoadU32(p + 0x14u);
+            adsr2 = (uint16_t)((adsr2 & 0x3Fu) |
+                               (((mode >> 1) << 14) | (rate << 6)));
+        }
+        if (flags & 0x4400u) {
+            uint32_t rate = PE_LoadU16(p + 0x26u);
+            uint32_t mode = PE_LoadU32(p + 0x18u);
+            adsr2 = (uint16_t)((adsr2 & 0xFFC0u) |
+                               (((mode >> 2) << 5) | (rate & 0x1Fu)));
+        }
+        /* Legacy packed halfword shortcut when only 0x800 set. */
+        if ((flags & 0x800u) && !(flags & 0x900u)) {
+            adsr1 = PE_LoadU16(voice + 0x10Eu);
+            adsr2 = PE_LoadU16(voice + 0x110u);
+        }
+        spu_half_store(reg + 8u, adsr1);
+        spu_half_store(reg + 0xAu, adsr2);
+        applied |= flags & 0x1FF80u;
     }
+    /* Host bridge: bit 0x1000 still keys on (ProcessVoiceQueue path separate). */
     if ((flags & 0x2000u) && !(flags & 0x1000u)) {
         if (idx < 16)
             spu_half_store(0x18Au, (uint16_t)(spu_half_load(0x18Au) | (1u << idx)));
@@ -436,8 +306,6 @@ void PE_SpuVoice_ApplyPending(pe_addr_t voice)
                            (uint16_t)(spu_half_load(0x18Au) | (1u << (idx - 16))));
         applied |= 0x1000u;
     }
-    if (flags & 0x1FF80u)
-        applied |= flags & 0x1FF80u;
     PE_StoreU32(voice + 0xF4u, flags & ~applied);
 }
 

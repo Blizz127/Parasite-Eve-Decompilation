@@ -3,107 +3,40 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
-## AUD1-FOLD E8: 878F0 WriteVoiceParam + 89F08 ENVX (2026-09-09)
+## AUD1-FOLD: merge Decomp Bot AUD1-E3..E8 tip 98e0bf0 (2026-09-09)
 
-Continued on `cursor/audio-score-fold-4797` / PR #39. Remote
-`cursor/audio-score-leaves-85f74-862f4-8db7c` tip still AUD1-E2 — no E8 push
-to pull; host ports from khasinski `Akao_WriteVoiceParam` /
-`SpuGetVoiceEnvelope` (semantic). Movie/PR #38 untouched.
+Reconciled on `cursor/audio-score-fold-4797` / PR #39 from
+`origin/cursor/audio-score-leaves-85f74-862f4-8db7c` @ `98e0bf0`. Prefer tip
+**matching guest leaves** + tip host Akao path over earlier host-only folds.
+Movie/PR #38 untouched. Movie/boot `92CE8`/`92934` left uncommitted on the tip
+— **not** pulled into this fold.
 
-**Folded**
-- `878F0` Akao_WriteVoiceParam — ADSR/pitch/vol/start/loop via VoiceParams at
-  `voice+0xF0`; ApplyPending routes safe ADSR bits through it
-- `89F08` SpuGetVoiceEnvelope (ENVX at `voice*0x10+0xC`); `89250` uses it and
-  writes `g_AkaoVoiceEnvelopeTable` at `0x800B002C`
-- Host ApplyPending / synth path wired for the above
+**Guest leaves (yaml-carved, semantic; byte-match not claimed)**
+- E3: `87AA8` / `87FA0` — `src/func_80087AA8.c`, `src/func_80087FA0.c`
+- E4: `8E8D0` / `8F0D0` — seq bytecode + SetVoiceInstrument
+- E5: `89328` (+ `89724` in same TU)
+- E6: `89784` / `8D844`
+- E7: `8900C` / `89218` (RemoveVoice + UpdateVoiceEnvelopes 89250)
+- E8: `878F0` + ADSR prereqs `87798`/`8780C`/`8783C`/`87864` + `89F08`
 
-**Named-asm left:** `88344` Akao_SetVoiceKeyOff — empty host stub; score
-key-off flush remains `89784`.
+**Host path (tip `pe_akao_tick` / ApplyPending / synth)**
+- Real PE-RAM ports for the above; ApplyPending prefers `voice+0xF0` HW index,
+  pitch `0x10` from `+0x30`/LFO, ADSR1/ADSR2 compose; synth ENVX ADSR machine
+  (mix amplitude still unscaled — DAY2_spu_* hashes unchanged)
+- Exported wrappers for tests: `8900C` / `878F0` / `89F08`
 
-**Flag conflicts kept** (host bridge vs khasinski VoiceParams): `0x80`
-pitch vs START, `0x400` start vs RELEASE_MODE, `0x1000`/`0x2000` key-on/off
-vs DECAY/SUSTAIN_RATE — those bits stay on the host bridge paths.
-
-**Still open:** `8E8D0`/`8F0D0`, `8D844`. No Day2-complete claim.
-
-Verify: `PE_TEST_FILTER=DAY2_spu` / `DAY2_akao_tick`; `ctest` 8/8.
-
-## AUD1-FOLD E7: 8900C / 89218 / 89250 into host path (2026-09-09)
-
-Continued on `cursor/audio-score-fold-4797` / PR #39. Remote audio tip still
-AUD1-E2 at fold time; host ports from khasinski KeyOn / SCALE_DEPTH /
-voice_envelopes shapes (semantic). Movie/PR #38 untouched.
-
-**Folded**
-- `8900C` Akao_StepVoiceNote — bank walk + KeyOn-shaped per-voice publish
-- `89218` pitch depth scale helper
-- `89250` UpdateVoiceEnvelopes (already hosted; kept)
-
-**Still open:** `8E8D0`/`8F0D0`, `8D844`. No Day2-complete claim.
-
-Also fixed stale `DISC1_MATCHING_STATUS.md` (public verify gate).
-
-## AUD1-FOLD E3–E6: score callees into host path (2026-09-09)
-
-Continued on `cursor/audio-score-fold-4797` / PR #39. Remote
-`cursor/audio-score-leaves-85f74-862f4-8db7c` tip was still AUD1-E2 at fold
-time; host ports taken from khasinski matching/candidate C (semantic, not
-byte-match). Movie/PR #38 untouched.
-
-**Folded into pe_akao_tick / pe_spu_voice**
-- `87AA8` Spu_UpdateVoiceRegisters (slides/LFOs → voice+0xF4; raises dirty)
-- `87FA0` stream twin shares that body until a distinct donor lands
-- `89328` Akao_ProcessVoiceQueue (8900C/89250 still stubbed inside)
-- `89724` Spu_VoiceMaskCompose
-- `89784` key-off flush (khasinski Akao_SetVoicePitch body → Spu key-off)
-- ApplyPending **pitch bit `0x10`** (`AKAO_VOICE_PARAM_PITCH`) publishes
-  `voice+0x44>>16` to SPU pitch
-
-**Still stubbed / open**
-- `8E8D0` / `8F0D0` sample bytecode (needs seq opcode tables)
-- `8D844` SPU_StepReverbLoad (no donor on remote tip)
-
-**E7 (same PR):** `8900C`/`89218`/`89250` hosted — see section above.
+**Named-asm parked:** `88344` Akao_SetVoiceKeyOff (empty host stub; flush is
+`89784`).
 
 **Claims / non-claims**
-- Claim: score tick runs real voice-register slides + key-off flush + pitch
-  publish; DAY2_spu_* 5/5 and DAY2_akao_tick green on Linux.
-- Non-claim: Day2-complete, mix-exact, retail speaker, EXACT SHA-1, bytecode
-  note advance, reverb-load fidelity.
+- Claim: fold is no longer host-only inventing leaves — guest `src/` + yaml
+  carves from tip; Linux `DAY2_spu_*` / `DAY2_akao_tick` green; YAML matching-C
+  count **578**.
+- Non-claim: Day2-complete, mix-exact, retail speaker, EXACT SHA-1, `88344`.
 
-Verify: `PE_TEST_FILTER=DAY2_spu` / `DAY2_akao_tick`; `ctest` 8/8.
-Contract: `docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`.
+Verify: `PE_TEST_FILTER=DAY2_spu` / `DAY2_akao_tick`; `ctest` 8/8;
+`scripts/verify_us.sh --public`. Contract: `docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`.
 
-## AUD1-FOLD: audio-score leaves → native host path (2026-09-09)
-
-Folded Decomp Bot tip `cursor/audio-score-leaves-85f74-862f4-8db7c` (AUD1-E0…
-E2) onto fold branch `cursor/audio-score-fold-4797` **without** rewriting
-movie/Stage-1b tip `cursor/movie-autonomous-stream-6f51` (PR #38).
-
-**Folded into pc_port score/voice path**
-- Host SPU ADPCM synth + PulseAudio (`pe_spu_synth` / `pe_host_audio`)
-- Guest voice→SPU bridge + real `85F74`/`862F4` from `pe_stream` init
-- Host `func_8008DB7C` (Akao_Tick) from `PE_Event_ServiceAudioCommands`, then
-  `PE_SpuScore_ApplyDirtyVoices`; command drain still via `8CA84`
-- Matching-intent rebuild leaves under `src/` (85F74/862F4/8DB7C); native
-  links PE-RAM ports, not those TUs
-- Focused tests: `DAY2_spu_synth`, `DAY2_spu_voice_bridge`, `DAY2_akao_tick`
-
-**Claims / non-claims**
-- Claim: score tempo/timers/slides advance beyond RAM-only queue drain when
-  the audio event is enabled; dirty voices can key synth.
-- Non-claim: Day2-complete, mix-exact, retail speaker, EXACT SHA-1 rebuild,
-  sample-advancing bytecode (callees stubbed), disc assets.
-
-**Remaining audio holes (do not wait forever on Decomp Bot)**
-- Flush pair still in flight: `8D844` / `89784` (host stubs in `pe_akao_tick`)
-- Sample/bytecode callees stubbed: `89328`, `87AA8`/`87FA0`, `8E8D0`/`8F0D0`,
-  related `89724`
-- Related score holes not folded: `8900C` / `89250`
-- ADSR / Gaussian / reverb still open
-
-Contract: `docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`. Linux verify first.
-Movie autonomous-stream work continues on PR #38 in parallel.
 
 ## AUD1-E2: audio score leaves 85F74 / 862F4 / 8DB7C (2026-09-09)
 
@@ -111,7 +44,7 @@ Adopted khasinski Psy-Q donors for `func_80085F74` (SpuSetCommonAttr) and
 `func_800862F4` (SpuSetVoiceAttr) under `src/` with era GCC **2.8.1** profiles
 (`era_281_o2_g0_spu_*`) + multi-symbol `MASPSX_DISPATCH_FOLD`. Structural
 `.text` match vs fade-dump/EXE oracle (reloc immediates excluded); full-tree
-SHA-1 still needs a real `SLUS_006.62` + split jtbl pool. `func_8008DB7C`
+Retail `SLUS_006.62` restored (`452fb033…`); full-tree SHA still needs split jtbl pool. `func_8008DB7C`
 (Akao_Tick) landed as semantic C in `src/` (byte-match not claimed; khasinski
 still asm) and as host PE-RAM port `pe_akao_tick.c`. pe_stream now calls real
 85F74/862F4; `PE_Event_ServiceAudioCommands` runs `func_8008DB7C` then
@@ -119,11 +52,8 @@ still asm) and as host PE-RAM port `pe_akao_tick.c`. pe_stream now calls real
 to `PE_SpuVoice_ApplyPending`.
 
 Evidence: era 2.8.1 structural compare of 0x16C / 0x37C leaves vs
-`pc_port/tests/retail_gameover_fade_cases.h` oracle (nops filled). Host
-`func_800862F4` clamps voice to 0..23 (retail voice index, not the old
-pe_stream misread of second-bank as 0x18+i). pe-native-tests 1302/0 +
-ctest 8/8 green. Next: real EXE `verify_us.sh` for EXACT SHA, port
-87AA8/8E8D0/89328 callees, audible score with bank data.
+`pc_port/tests/retail_gameover_fade_cases.h` oracle (nops filled). Next after
+E5: `89328` landed; next `8D844` / `89784`; `verify_us.sh` for EXACT SHA on Psy-Q leaves.
 
 ## ACTIVE OBJECTIVE: decompile all Day 1 and Day 2; implement/fix Day 1
 
