@@ -3,6 +3,30 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158r: clear sticky `801D0DBD` after first C89C (2026-09-09)
+
+Live after DAY2-158q (`28ed6b6` / `ee9e1f5`): C89C×2 `out=11140`,
+`92934_enter` → `92CE8_media_clear` → `func_801909B4_post_movie_title_cut`.
+
+**Decomp dig CLOSED** — `dig/909b4-early-title-cut` @ `7c71bb8` folded:
+`docs/evidence/pe-day2-158-909b4-early-title-cut/REPORT.md`
+
+- `909B4` is the **designed** post-`92CE8` wall — do **not** widen that stub.
+- Early exit: first `91B64` latches `801D0DBD=1` (`11B0=0xFFFF`); `924F8` EC
+  cleared only `800B0DBD`, so first `92934` success aborts (`DBA--` → clear →
+  `media_clear` → title-cut).
+- Player twin: `21C04` clears `223F5=0` on first-frame exit.
+
+**Fix on tip (Decomp draft applied):**
+
+1. `924F8` got_frame EC: also `PE_StoreU8(0x801D0DBDu, 0u)` (keep `B0DBD=0`).
+2. `92934`: TRACE `func_80192934_dbd_abort` on the abort arm.
+3. No admit-gate / cursor ±32 / `909B4` widen. No Day2-complete claim.
+
+**Next boot→Day2:** Matt Disc1 — expect C89C `calls≥3` / `out=12804` before
+the next wall (still expect eventual `post_movie_title_cut` when movie ends).
+Linux-first.
+
 ## DAY2-158q: wire title DecDCTout `func_80191DC8` (2026-09-09)
 
 Live Bazzite Disc1 on tip **`50b2a58`** stopped at
@@ -32,7 +56,8 @@ Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**;
 
 **Next boot→Day2:** Matt Disc1 retest past old `74520_dma_indirect_call`
 — expect title slice continue / final-slice / `7506C` upload and further
-multi-frame `92934` / `c89c_tel`. Linux-first.
+multi-frame `92934` / `c89c_tel`. Linux-first. **SUPERSEDED by DAY2-158r**
+(sticky D0DBD early title-cut).
 
 ## DAY2-158p: live `74520_dma_indirect` = unbound title `91DC8` (2026-09-09)
 
