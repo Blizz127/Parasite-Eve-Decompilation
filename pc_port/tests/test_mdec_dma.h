@@ -125,5 +125,45 @@ static void test_DAY2_mdec_dma(void)
         ASSERT(PE_MDEC_ReadPixels(0x80160000u,64u) && !PE_Port_ShouldStop(),
                "158t superseding BFA0 decode drain");
     }
+    /* DAY2-158u: live 92934 programs BFA0 then C01C before Service, so
+     * dma1_chcr is already armed for the *new* DecDCTout when BeginCommand
+     * runs. Treating dma1 as busy blocked supersede (158t false green). */
+    {
+        ResetTestState();
+        HostFB_Init();
+        PE_MDEC_Init();
+        for(unsigned i=0;i<33u;i++) {
+            PE_StoreU32(0x8010DA0Cu+i*4u,MDECPIX_quant[i]);
+            PE_StoreU32(0x8010DA90u+i*4u,MDECPIX_scale[i]);
+        }
+        func_8010BE3C(0);
+        PE_MDEC_ClearDmaChannels();
+        PE_StoreU32(0x80140000u,0x28000020u);
+        for(unsigned i=0;i<64u;i++) PE_StoreU16(0x80140004u+i*2u,0xFE00u);
+        PE_StoreU16(0x80140004u,(uint16_t)((8u<<10u)|64u));
+        PE_StoreU16(0x80140006u,0xFE00u);
+        func_8010BFA0(0x80140000u,0u);
+        HostFB_VSync(-1);
+        ASSERT(!PE_Port_ShouldStop() && PE_MDEC_HasDecode(),
+               "158u first BFA0 did not begin decode");
+        /* Leave residue, then second frame with retail BFA0→C01C→Service.
+         * C01C needs ≥32 words (one DMA block = 128B = two 8bpp MBs). */
+        PE_StoreU32(0x80140100u,0x28000020u);
+        for(unsigned i=0;i<64u;i++) PE_StoreU16(0x80140104u+i*2u,0xFE00u);
+        PE_StoreU16(0x80140104u,(uint16_t)((8u<<10u)|0u));
+        PE_StoreU16(0x80140106u,0xFE00u);
+        PE_StoreU16(0x80140108u,(uint16_t)((8u<<10u)|0u));
+        PE_StoreU16(0x8014010Au,0xFE00u);
+        func_8010BFA0(0x80140100u,0u);
+        func_8010C01C(0x80160000u,32u);
+        HostFB_VSync(-1);
+        ASSERT(CountOrderLog("MDEC_decode_busy")==0 && !PE_Port_ShouldStop(),
+               "158u BFA0+C01C path still MDEC_decode_busy");
+        {
+            PeMdecState st; PE_MDEC_GetState(&st);
+            ASSERT(st.completed_output_count>=1u && !(st.dma1_chcr&0x01000000u),
+                   "158u new DecDCTout did not complete after supersede");
+        }
+    }
     PASS();
 }

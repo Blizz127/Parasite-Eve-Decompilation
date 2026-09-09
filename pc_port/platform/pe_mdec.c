@@ -6,6 +6,7 @@
 #include "pe_bootstrap.h"
 #include "pe_irq_delivery.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #define MDEC_DMA_CHCR_INPUT 0x01000201u
@@ -24,6 +25,14 @@ static uint32_t g_pixel_pos,g_pixel_count;
 
 static int MdecBoundary(const char *name,uint32_t value)
 {
+    /* Disc1 dig: live logs only showed the stub name; print busy encoding
+     * (bit31=dma0 bit30=dma1, low bits=g_input_pos). */
+    if(name && name[0]=='M' && strstr(name,"decode_busy")!=NULL) {
+        fprintf(stderr,
+                "[STUB:BOOTSTRAP_RET] %s value=0x%08X dma0=%u dma1=%u pos=%u\n",
+                name,(unsigned)value,(unsigned)((value>>31)&1u),
+                (unsigned)((value>>30)&1u),(unsigned)(value&0x3FFFFFFFu));
+    }
     Bootstrap_ReturnVoid1(name,"MDEC_decode",value);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return 0;
 }
@@ -123,12 +132,19 @@ static int MdecMacroblock(void)
  * 1494) can still sit in the input FIFO. Retail C308 would wait on command
  * busy; without another DecDCTout that wait cannot make progress. Drain
  * idle FE00 here so a padding-only remainder is not "busy". If a new
- * DecDCTin arrives with non-padding residue and no DMA in flight, supersede
- * the orphaned prior command (DAY2-158s).
+ * DecDCTin arrives with non-padding residue, supersede the orphaned prior
+ * command (DAY2-158s/u).
  *
  * Do NOT clear g_decode_valid when the FIFO drains: HostFB_VSync gates
  * DMA IRQ delivery on PE_MDEC_HasDecode(); clearing before 1214D4/91DC8
- * runs drops the final-slice frame-complete store. */
+ * runs drops the final-slice frame-complete store.
+ *
+ * DAY2-158u: live 92934 always programs BFA0 then C01C before Service.
+ * That arms dma1_chcr for the *new* DecDCTout before BeginCommand runs
+ * for the new DecDCTin. Treating dma1 as "busy" blocked supersede even
+ * after 158t cleared dma0 — identical live wall. dma1 pending for the
+ * concurrent new C01C must not block starting the new decode; same
+ * Service call then drains that dma1 against the new command. */
 static void MdecConsumeIdlePadding(void)
 {
     if(g_pixel_pos!=g_pixel_count) return;
@@ -152,14 +168,20 @@ static int MdecBeginCommand(uint32_t command,pe_addr_t source)
     if(MdecDecodeResidue()) {
         int dma0=g_mdec.dma0_active;
         int dma1=(g_mdec.dma1_chcr&0x01000000u)!=0u;
-        if(dma0 || dma1) {
-            /* Encode which DMA arm blocked supersede in the boundary value
-             * (bit31=dma0, bit30=dma1); Trace_Direct is not linked into
-             * every pe_field_runtime consumer. */
+        /* Only a still-active DMA0 input blocks supersede. dma1 is often
+         * already armed by the matching C01C for *this* new DecDCTin
+         * (92934 BFA0→C01C→Service); that must not look like an old drain. */
+        if(dma0) {
             return MdecBoundary("MDEC_decode_busy",
                 g_input_pos|((uint32_t)dma0<<31)|((uint32_t)dma1<<30));
         }
-        /* No DMA left to drain the orphan — supersede for the new DecDCTin. */
+        if(dma1) {
+            fprintf(stderr,
+                    "MDEC_orphan_supersede_dma1 pos=%u count=%u pix=%u/%u\n",
+                    (unsigned)g_input_pos,(unsigned)g_input_count,
+                    (unsigned)g_pixel_pos,(unsigned)g_pixel_count);
+        }
+        /* Supersede orphaned prior command for the new DecDCTin. */
         g_input_pos=g_input_count;
         g_pixel_pos=g_pixel_count;
         g_decode_valid=0;
