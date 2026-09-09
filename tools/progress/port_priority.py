@@ -23,7 +23,13 @@ ROW_RE = re.compile(
 sys.path.insert(0, str(ROOT / "tools" / "build"))
 sys.path.insert(0, str(ROOT / "tools" / "progress"))
 from disc1_plan import PlanError, build_plan  # noqa: E402
-from native_metrics import CMAKE, MetricsError, cmake_sources, derive_metrics  # noqa: E402
+from native_metrics import (  # noqa: E402
+    CMAKE,
+    MetricsError,
+    cmake_sources,
+    derive_metrics,
+    optional_cmake_sources,
+)
 
 
 class PriorityError(RuntimeError):
@@ -46,7 +52,12 @@ def load_config(root: Path) -> dict[str, Any]:
     frontier = config.get("active_frontier")
     if not isinstance(frontier, dict):
         raise PriorityError(f"{CONFIG}: active_frontier must be an object")
-    for key in ("label", "owner", "first_excluded_pc", "evidence"):
+    # Complete-body frontiers use label=null (matches native_metrics when
+    # production_frontier is None). Cut frontiers still require a label string.
+    label = frontier.get("label")
+    if label is not None and (not isinstance(label, str) or not label):
+        raise PriorityError(f"{CONFIG}: active_frontier.label must be a string or null")
+    for key in ("owner", "first_excluded_pc", "evidence"):
         if not isinstance(frontier.get(key), str) or not frontier[key]:
             raise PriorityError(f"{CONFIG}: active_frontier.{key} is required")
     if not re.fullmatch(FUNC, frontier["owner"]):
@@ -58,11 +69,20 @@ def load_config(root: Path) -> dict[str, Any]:
     callees = frontier.get("remaining_direct_callees")
     if (
         not isinstance(callees, list)
-        or not callees
         or any(not isinstance(name, str) or not re.fullmatch(FUNC, name) for name in callees)
         or len(callees) != len(set(callees))
     ):
-        raise PriorityError(f"{CONFIG}: remaining_direct_callees must be unique functions")
+        raise PriorityError(
+            f"{CONFIG}: remaining_direct_callees must be a list of unique functions"
+        )
+    if label is None and callees:
+        raise PriorityError(
+            f"{CONFIG}: complete frontier (label null) must list no remaining callees"
+        )
+    if label is not None and not callees:
+        raise PriorityError(
+            f"{CONFIG}: cut frontier requires at least one remaining_direct_callee"
+        )
     if not (root / frontier["evidence"]).is_file():
         raise PriorityError(f"{CONFIG}: missing frontier evidence {frontier['evidence']}")
     return config
@@ -141,9 +161,9 @@ def function_bodies(text: str) -> dict[str, str]:
 
 def linked_native_sources(root: Path) -> list[Path]:
     cmake = (root / CMAKE).read_text(encoding="utf-8")
-    variables = ("PORT_SRCS", "PLATFORM_SRCS", "BOOTSTRAP_SRCS", "GAME_SRCS")
     names: list[str] = []
-    for variable in variables:
+    names.extend(optional_cmake_sources(cmake, "PORT_SRCS"))
+    for variable in ("PLATFORM_SRCS", "BOOTSTRAP_SRCS", "GAME_SRCS"):
         names.extend(cmake_sources(cmake, variable))
     unique = list(dict.fromkeys(names))
     paths = [root / "pc_port" / name for name in unique]
@@ -277,8 +297,15 @@ def status_markdown(result: dict[str, Any]) -> str:
         f"- Active classified Tier-2 candidates: **{result['active_candidates']}** "
         f"({result['pool_rows_already_integrated']} historical rows already integrated)",
         f"- Production root: **`{result['production_root']}`**",
-        f"- Active frontier: **`{frontier['label']}`** at "
-        f"`{frontier['first_excluded_pc']}` in `{frontier['owner']}`",
+        (
+            f"- Active frontier: **none inside `{frontier['owner']}` (complete body)** "
+            f"(window ends at `{frontier['first_excluded_pc']}`)"
+            if frontier["label"] is None
+            else (
+                f"- Active frontier: **`{frontier['label']}`** at "
+                f"`{frontier['first_excluded_pc']}` in `{frontier['owner']}`"
+            )
+        ),
         "",
         "The order is lexicographic: direct frontier dependency, unresolved native",
         "reference, statically production-reachable linked implementation, native",

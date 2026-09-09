@@ -75,8 +75,16 @@ changes existing before this task are retained in the build, including the
 
 ## DAY1/DAY2-158b: wire live func_8010C89C into 801924F8 got_frame (2026-09-09)
 
-Live Disc1 + Decomp Bot confirmed the prior unresolved-boundary stop after
-`func_8001220C` was the intentional stub in `func_801924F8`'s `got_frame`
+### Live stop evidence (Matt / Bazzite, published PE-DAY2-128)
+
+Windowed Disc1 on published **PE-DAY2-128** opens, then stops at unresolved
+bootstrap stub **`func_8010C89C`** after **`func_8001220C`** (movie VLC). That
+published channel does **not** include this branch tip — runtime 128 still
+carries the intentional got_frame stub. Immediate playable-progress blocker
+for Matt is therefore: build/run a Linux binary from PR #38 tip
+(`cursor/movie-autonomous-stream-6f51`), not 128.
+
+Decomp Bot + live path confirmed the stub lived in `func_801924F8` got_frame
 (`Bootstrap_ReturnVoid("func_8010C89C", …)`), not a missing CMake leaf —
 `func_8010C89C_port.c` was already built. Production tail now matches the
 ov133 call-site order: bump `[B0DBC]`, load `a1` from
@@ -93,12 +101,22 @@ Focused Linux: B54KAD, B54KAE, MV1D_c89c_* PASS. Full suite still shows
 pre-existing DAY2_movie_player autonomous-first-frame red and disc-gated
 skips where `local/pe_disc1.path` is absent.
 
-Claims: 924F8→C89C production call path is live; synthetic got_frame
-completes past the old C89C stub. Non-claims: Day2 complete; retail STR
-golden decode; 7C394→EC slice-wait fidelity; windowed Disc1 boot past the
-new frontier (no disc image in this environment); DAY2_movie_player
-autonomous stream green; published runtime 128 unchanged. Windows
-packaging not touched (Linux-first).
+Also repaired Disc1-authority `native-progress` (pre-existing on main):
+`func_80030894` body is complete, so `configs/USA/port_priority.json` now
+carries `label: null` / empty remaining callees, and `port_priority.py`
+accepts optional `PORT_SRCS`. Progress unit tests OK.
+
+**Next boot→Day2 stop after this tip:** `func_80192CE8_80192E08_cut` (media
+loop remainder after jal 924F8). Needs overlay carve / Decomp Bot for the
+~100-word tail; no Disc1 image in this agent environment to window-verify.
+
+Claims: 924F8→C89C production call path is live on this tip; synthetic
+got_frame completes past the old C89C stub; progress tooling agrees
+30894 is complete. Non-claims: Day2 complete; retail STR golden decode;
+7C394→EC slice-wait fidelity; windowed Disc1 boot on Matt's machine until
+he runs this tip (128 still stubs); DAY2_movie_player autonomous stream
+green; published runtime 128 unchanged. Windows packaging not touched
+(Linux-first).
 
 ## DAY1/DAY2-158: XA RT mode + autonomous movie stream (2026-09-09)
 
