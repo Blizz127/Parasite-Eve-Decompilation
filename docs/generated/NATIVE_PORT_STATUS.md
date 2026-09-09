@@ -5,18 +5,18 @@
 - Production frontier: **none inside `func_80030894` (complete body)**
 - Implemented retail window: **788 / 788 words
   (100.00%)**, `0x80030894..0x800314E4`
-- Linked native translation units: **313**
-  (279 game,
+- Linked native translation units: **314**
+  (280 game,
   9 bootstrap,
   25 platform, plus the explicit
   port entry/global/callback units)
 - `pe_field_runtime` library target: **PRESENT**
-- Native test inventory: **1349** total —
-  **1303** artifact-independent and
+- Native test inventory: **1350** total —
+  **1304** artifact-independent and
   **46** requiring a legally supplied Disc 1 fixture
-- Public normal/sanitizer requirement: **1303 pass,
+- Public normal/sanitizer requirement: **1304 pass,
   46 explicitly tagged skips, 0 failures**
-- Private full requirement with Disc 1 configured: **1349 / 1349**
+- Private full requirement with Disc 1 configured: **1350 / 1350**
 - Production-reachable semantic-function count: **UNMEASURED** — no
   authoritative runtime reachability counter exists yet; this must not be
   replaced by the matching-leaf count.

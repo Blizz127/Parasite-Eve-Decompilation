@@ -1855,22 +1855,24 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     memcpy(expected_disp, PE_TranslateConst(0x800BCE80u, 0x28u), 0x28u);
     memcpy(expected_draw, PE_TranslateConst(0x800BCDC8u, 0xB8u), 0xB8u);
 
-    ASSERT(func_80192CE8(1) == -1,
-           "func_80192CE8 prefix retained result differs");
-    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x00100201u &&
+    ASSERT(func_80192CE8(1) == 0,
+           "func_80192CE8 complete media-loop return differs");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x00100001u &&
            PE_LoadU8(0x801D0E18u) == 1u,
-           "busy-bit or indexed-record write differs");
+           "busy-bit clear or indexed-record write differs");
     ASSERT(PE_LoadU32(0x8010BCF8u) == 7u &&
            PE_LoadU32(0x8010BCFCu) == 0x4345444Du,
            "authenticated 38-sector PE.IMG payload was not loaded");
-    ASSERT(PE_LoadU32(0x801D0DE8u) == 0x80122D00u &&
-           PE_LoadU32(0x801D0DECu) == 0x80132700u &&
-           PE_LoadU32(0x801D0DFCu) == 0x80142100u &&
-           PE_LoadU32(0x801D0DF8u) == 0x80162100u &&
-           PE_LoadU32(0x801D0DF0u) == 0x80173100u &&
-           PE_LoadU32(0x801D0DF4u) == 0x80175E00u,
-           "func_80191FB8 one-source pointer layout differs");
-    ASSERT(PE_LoadU8(0x800B0DBAu) == 1u &&
+    /* Post-E08 media loop: DBA==1 → 92934 early-return 0 → clear stream
+     * pointers + DBA, then clear overlay 0x200 (pe-92ce8-post-e08). */
+    ASSERT(PE_LoadU32(0x801D0DE8u) == 0u &&
+           PE_LoadU32(0x801D0DECu) == 0u &&
+           PE_LoadU32(0x801D0DFCu) == 0u &&
+           PE_LoadU32(0x801D0DF8u) == 0u &&
+           PE_LoadU32(0x801D0DF0u) == 0u &&
+           PE_LoadU32(0x801D0DF4u) == 0u,
+           "post-E08 stream pointer clear differs");
+    ASSERT(PE_LoadU8(0x800B0DBAu) == 0u &&
            PE_LoadU8(0x800B0DBEu) == 0x98u &&
            PE_LoadU16(0x800B0DBCu) == 1u &&
            memcmp(PE_TranslateConst(0x801D1384u, 0x28u),
@@ -1940,7 +1942,6 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            mdec.uploads[1].payload_fnv1a64 == UINT64_C(0x457F63592600EA19),
            "real-disc MDEC reset or table submissions differ");
     ASSERT(PE_LoadU32(PE_DMA_CallbackSlotAddress(1u)) == 0x80191DC8u &&
-           PE_LoadU32(0x800C0DC8u) == PE_LoadU32(0x801D0DFCu) &&
            PE_LoadU32(0x800C20C4u) == 0x40u &&
            PE_LoadU32(0x800C0DC0u) == 1u &&
            PE_LoadU32(0x800B6918u) ==
@@ -1956,12 +1957,11 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x800A3608u) == 4u &&
            CountOrderLog("func_8007B9EC") == 0 &&
            CountOrderLog("func_8010C89C") == 0 &&
-           PE_LoadU16(PE_LoadU32(0x801D0DFCu)) == 4u &&
+           CountOrderLog("func_80192CE8_80192E08_cut") == 0 &&
            PE_LoadU8(0x801D146Cu) == 1u &&
            PE_LoadU16(0x800B0DBCu) == 1u &&
-           CountOrderLog("func_80192CE8_80192E08_cut") == 1 &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "DecDCToutCallback registration or following cut differs");
+           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "DecDCToutCallback registration or post-E08 completion differs");
 
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
@@ -19157,6 +19157,20 @@ static void test_B54K_C89C_gated_until_pad(void)
     PASS();
 }
 
+static void test_B54K_92934_dba_early_gate(void)
+{
+    TEST("B54K_92934_dba_early_gate");
+    ResetTestState();
+    /* Retail entry: DBA < 2 returns 0 without body work (boot after 91FB8). */
+    PE_StoreU8(0x800B0DBAu, 0u);
+    ASSERT(func_80192934() == 0 && !PE_Port_ShouldStop(),
+           "DBA==0 early return differs");
+    PE_StoreU8(0x800B0DBAu, 1u);
+    ASSERT(func_80192934() == 0 && !PE_Port_ShouldStop() &&
+           PE_LoadU8(0x800B0DBAu) == 1u,
+           "DBA==1 early return must not mutate DBA");
+    PASS();
+}
 
 static void test_B54K_C89C_last_chunk_frame_ready(void)
 {
@@ -39396,6 +39410,7 @@ int main(void)
     test_B54KAE_movie_state_setup();
     test_B54K_C89C_gated_until_pad();
     test_B54K_C89C_last_chunk_frame_ready();
+    test_B54K_92934_dba_early_gate();
     test_B54KAF_dec_dct_reset_wrapper();
     test_B54KAG_mdec_table_upload();
     test_B54KAH_dec_dct_out_callback_registration();

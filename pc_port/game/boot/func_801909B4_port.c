@@ -170,6 +170,5 @@ int func_801909B4(void)
         return -1;
     }
 
-    (void)func_80192CE8(1);
-    return -1; /* prefix stops at func_80191FB8; retail retains s2 */
+    return func_80192CE8(1); /* retail retains 92CE8 result (s3) */
 }

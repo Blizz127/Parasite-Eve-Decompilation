@@ -73,6 +73,28 @@ launcher update to see the new placement. Full Day 1/Day 2 goal remains open. La
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
 
+## DAY2-158h: fold Decomp Bot 92CE8/92934 media loop onto tip (2026-09-09)
+
+Decomp Bot branch `cursor/92ce8-92934-media-loop` tip is still **`5a4ba27`**
+(based on `5754473`, not rebased past that onto `737f10e`). Folded those
+authenticated leaves onto PR38 tip anyway: post-E08 `func_80192CE8` media
+loop + `func_80192934` (+ siblings `92C48`/`92C9C`) with Stage-1b-gated live
+C89C. Evidence: `docs/evidence/pe-92ce8-post-e08/`,
+`docs/evidence/pe-92934-media-worker/` (carve SHA-256 + `.s.txt`).
+
+Boot path after `91FB8` leaves `DBA==1`, so `92934` early-returns 0, the
+media loop clears stream pointers + `0x200`, and `92CE8` returns 0 — the
+old `func_80192CE8_80192E08_cut` is gone. B54KY Disc1 expectations updated
+for that completion. Sector-scale E0 pump (158g) retained.
+
+Matt’s live Bazzite retest of `737f10e` was already running when this fold
+landed; next named stop after E0 pump + this tip should be past `92CE8`
+(title/menu / next unresolved), not the E08 cut.
+
+**Next boot→Day2:** Matt reports STOP on tip-with-158h; chase that name.
+Non-claims: Day2 complete; Stage-1b done on live until retest of this tip;
+retail STR golden; published runtime 128 unchanged. Linux-first.
+
 ## DAY2-158g: live Stage-1b observation + E0 sector-scale CD pump (2026-09-09)
 
 Matt / Bazzite Disc1 on tip **`5754473`**: process stayed alive **2+ minutes
