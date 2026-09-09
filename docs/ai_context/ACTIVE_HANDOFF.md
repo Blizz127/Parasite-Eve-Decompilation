@@ -36,8 +36,6 @@ Linux: **1356 run / 1310 pass / 0 fail / 46 skip**.
 
 ## DAY2-158w: B0CD0 pump stall + IRQ retry (dig fold) (2026-09-09)
 
-## DAY2-158w: B0CD0 pump stall + IRQ retry (dig fold) (2026-09-09)
-
 Live Disc1 on tip **`222bd95b`** (DAY2-158v / PR #42):
 
 ```text
