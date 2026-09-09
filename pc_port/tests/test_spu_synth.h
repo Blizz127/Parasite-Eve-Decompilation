@@ -148,6 +148,23 @@ static void test_DAY2_akao_tick(void)
         ASSERT(PE_LoadU32(sv + 0xF4u) == 0u, "pitch bit 0x10 cleared");
         ASSERT(PE_SpuRegister_LoadU16(0x04u) == 0x1234u, "pitch bit publishes");
     }
+    /* 8900C: StepVoiceNote walks active mask and applies KeyOn-shaped publish. */
+    {
+        pe_addr_t key_scratch = 0x800BCD74u;
+        PE_StoreU32(key_scratch, 0);
+        PE_StoreU32(voice + 0x38u, 0x10u); /* pitch-flag path */
+        PE_StoreU32(voice + 0x30u, 0x1000u);
+        PE_StoreU16(voice + 0xE8u, 0);
+        PE_StoreU16(voice + 0x36u, 0);
+        PE_StoreU16(voice + 0x3Cu, 0); /* depth off */
+        PE_StoreU32(voice + 0xF4u, 0);
+        PE_StoreU32(0x8009D2C4u, 0);
+        func_8008900C(0x800B8AC0u, 1u, 1u, key_scratch);
+        ASSERT(PE_LoadU32(key_scratch) == 1u, "8900C records restart key-on");
+        ASSERT((PE_LoadU32(voice + 0xF4u) & 0x1010u) != 0u,
+               "8900C marks pitch+key pending");
+        ASSERT(PE_LoadU16(voice + 0x10Cu) == 0x1000u, "8900C/89218 writes pitch");
+    }
     ASSERT(!PE_Port_ShouldStop() && !g_stub_order_count,
            "Akao_Tick scaffolding runs without stub stops");
     PASS();

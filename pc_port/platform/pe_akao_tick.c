@@ -1,13 +1,13 @@
 /*
- * Host Akao_Tick (func_8008DB7C) + score callees (AUD1-E3..E6 fold).
+ * Host Akao_Tick (func_8008DB7C) + score callees (AUD1-E3..E7 fold).
  *
  * Semantic PE-RAM ports from khasinski donors / candidates (not byte-match):
  *   87AA8 Spu_UpdateVoiceRegisters, 87FA0 stream twin (shared body),
  *   89328 Akao_ProcessVoiceQueue, 89724 Spu_VoiceMaskCompose,
- *   89784 key-off flush (khasinski Akao_SetVoicePitch body).
- * Still stubbed (no usable donor on the audio tip at fold time):
- *   8E8D0/8F0D0 sample bytecode, 8D844 reverb-load step, 8900C StepVoiceNote.
- * 89250 UpdateVoiceEnvelopes is hosted from khasinski voice_envelopes.c.
+ *   89784 key-off flush, 8900C StepVoiceNote, 89218 depth scale,
+ *   89250 UpdateVoiceEnvelopes.
+ * Still stubbed: 8E8D0/8F0D0 sample bytecode, 8D844 reverb-load step.
+ * Remote audio tip was still E2 at fold time — donors from khasinski.
  */
 #include "pe_sdk.h"
 #include "pe_spu_voice.h"
@@ -31,14 +31,138 @@ static void spu_write_key_on(uint32_t mask)
     PE_SpuRegister_StoreU16(0x18Au, (uint16_t)((mask >> 16) & 0xFFFFu));
 }
 
-/* 8900C Akao_StepVoiceNote — still open (no donor on remote tip). */
-static void func_8008900C(pe_addr_t voices, uint32_t active, uint32_t restart,
-                          pe_addr_t key_on_out)
+/* 89218 — pitch depth scale helper (~56B; khasinski SCALE_DEPTH shape). */
+static int func_80089218(int value, pe_addr_t voice)
 {
-    (void)voices;
-    (void)active;
-    (void)restart;
-    (void)key_on_out;
+    int depth = (int)(PE_LoadU16(voice + 0x3Cu) & 0xFFu);
+    if ((PE_LoadU32(voice + 0x2Cu) & 0x02000000u) == 0u && depth != 0) {
+        if (depth < 0x80)
+            value += (value * depth) >> 7;
+        else
+            value = (value * depth) >> 8;
+    }
+    return value;
+}
+
+static int advance_env_sample(pe_addr_t voice, uint32_t table_off)
+{
+    pe_addr_t table = PE_LoadU32(voice + table_off);
+    int sample = 0;
+    if (table < 0x80000000u || table >= 0x80200000u)
+        return 0;
+    if (PE_LoadU16(table) == 0u && PE_LoadU16(table + 2u) == 0u) {
+        table += (uint32_t)(int16_t)PE_LoadU16(table + 4u) * 2u;
+        PE_StoreU32(voice + table_off, table);
+    }
+    sample = (int16_t)PE_LoadU16(table);
+    PE_StoreU32(voice + table_off, table + 2u);
+    return sample;
+}
+
+/* Per-voice note/envelope publish (khasinski Akao_SetVoiceKeyOn body). */
+static void step_one_voice_note(pe_addr_t voice, uint32_t voice_mask)
+{
+    uint32_t flags = PE_LoadU32(voice + 0x38u);
+    int base_volume =
+        ((int16_t)PE_LoadU16(voice + 0x46u) * (PE_LoadU16(voice + 0x6Cu) >> 8)) >>
+        7;
+    int value;
+    int sample;
+    uint32_t f4_before = PE_LoadU32(voice + 0xF4u);
+
+    if ((flags & 1u) != 0u) {
+        uint16_t c = (uint16_t)(PE_LoadU16(voice + 0x8Eu) - 1u);
+        PE_StoreU16(voice + 0x8Eu, c);
+        if (c == 0u) {
+            PE_StoreU16(voice + 0x8Eu, PE_LoadU16(voice + 0x8Cu));
+            sample = advance_env_sample(voice, 0x1Cu);
+            value = (PE_LoadU16(voice + 0x92u) * sample) >> 16;
+            if (value != (int16_t)PE_LoadU16(voice + 0xE8u)) {
+                PE_StoreU16(voice + 0xE8u, (uint16_t)value);
+                PE_StoreU32(voice + 0xF4u, PE_LoadU32(voice + 0xF4u) | 0x10u);
+                if (value >= 0)
+                    PE_StoreU16(voice + 0xE8u, (uint16_t)(value << 1));
+            }
+        }
+    }
+    if ((flags & 2u) != 0u) {
+        uint16_t c = (uint16_t)(PE_LoadU16(voice + 0xA2u) - 1u);
+        PE_StoreU16(voice + 0xA2u, c);
+        if (c == 0u) {
+            PE_StoreU16(voice + 0xA2u, PE_LoadU16(voice + 0xA0u));
+            sample = advance_env_sample(voice, 0x20u);
+            value = base_volume * (PE_LoadU16(voice + 0xA6u) >> 8);
+            value = ((value << 9) >> 16) * sample;
+            value >>= 15;
+            if (value != (int16_t)PE_LoadU16(voice + 0xEAu)) {
+                PE_StoreU16(voice + 0xEAu, (uint16_t)value);
+                PE_StoreU32(voice + 0xF4u, PE_LoadU32(voice + 0xF4u) | 3u);
+            }
+        }
+    }
+    if ((flags & 4u) != 0u) {
+        uint16_t c = (uint16_t)(PE_LoadU16(voice + 0xB0u) - 1u);
+        PE_StoreU16(voice + 0xB0u, c);
+        if (c == 0u) {
+            PE_StoreU16(voice + 0xB0u, PE_LoadU16(voice + 0xAEu));
+            sample = advance_env_sample(voice, 0x24u);
+            value = ((PE_LoadU16(voice + 0xB4u) >> 8) * sample) >> 15;
+            if (value != (int16_t)PE_LoadU16(voice + 0xECu)) {
+                PE_StoreU16(voice + 0xECu, (uint16_t)value);
+                PE_StoreU32(voice + 0xF4u, PE_LoadU32(voice + 0xF4u) | 3u);
+            }
+        }
+    }
+    if ((flags & 0x20u) != 0u)
+        PE_StoreU32(voice + 0xF4u, PE_LoadU32(voice + 0xF4u) | 3u);
+
+    if ((PE_LoadU32(voice + 0xF4u) & 3u) != 0u) {
+        /* Host mono mix into staged L/R halves (pan tables optional). */
+        base_volume += (int16_t)PE_LoadU16(voice + 0xEAu);
+        PE_StoreU16(voice + 0x118u, (uint16_t)base_volume);
+        PE_StoreU16(voice + 0x11Au, (uint16_t)base_volume);
+    }
+
+    if ((flags & 0x10u) != 0u) {
+        value = (int)PE_LoadU32(voice + 0x30u) + (int16_t)PE_LoadU16(voice + 0xE8u) +
+                (int16_t)PE_LoadU16(voice + 0x36u);
+        value = func_80089218(value, voice);
+        PE_StoreU16(voice + 0x10Cu, (uint16_t)(value & 0x3FFFu));
+        PE_StoreU32(voice + 0xF4u, PE_LoadU32(voice + 0xF4u) | 0x10u);
+    } else if ((PE_LoadU32(voice + 0xF4u) & 0x10u) != 0u) {
+        value = (int)PE_LoadU32(voice + 0x30u) + (int16_t)PE_LoadU16(voice + 0xE8u) +
+                (int16_t)PE_LoadU16(voice + 0x36u);
+        value = func_80089218(value, voice);
+        PE_StoreU16(voice + 0x10Cu, (uint16_t)(value & 0x3FFFu));
+    }
+
+    (void)voice_mask;
+    if (PE_LoadU32(voice + 0xF4u) != f4_before)
+        mark_audio_dirty(0x100u);
+}
+
+/* Akao_StepVoiceNote — func_8008900C (bank walk + KeyOn-shaped per-voice). */
+void func_8008900C(pe_addr_t voices, uint32_t active, uint32_t restart,
+                   pe_addr_t key_on_out)
+{
+    uint32_t bit = 1u;
+    pe_addr_t voice = voices;
+    uint32_t key_on = PE_LoadU32(key_on_out);
+
+    while (active) {
+        if (active & bit) {
+            step_one_voice_note(voice, bit);
+            if (restart & bit) {
+                key_on |= bit;
+                PE_StoreU32(voice + 0xF4u, PE_LoadU32(voice + 0xF4u) | 0x1000u);
+                mark_audio_dirty(0x100u);
+            }
+            active ^= bit;
+        }
+        voice += 0x11Cu;
+        bit <<= 1;
+    }
+    PE_StoreU32(key_on_out, key_on);
 }
 
 /* Akao_RemoveVoice — clear assigned_voice_index (== voice_index) → 0x18. */

@@ -3,6 +3,21 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## AUD1-FOLD E7: 8900C / 89218 / 89250 into host path (2026-09-09)
+
+Continued on `cursor/audio-score-fold-4797` / PR #39. Remote audio tip still
+AUD1-E2 at fold time; host ports from khasinski KeyOn / SCALE_DEPTH /
+voice_envelopes shapes (semantic). Movie/PR #38 untouched.
+
+**Folded**
+- `8900C` Akao_StepVoiceNote — bank walk + KeyOn-shaped per-voice publish
+- `89218` pitch depth scale helper
+- `89250` UpdateVoiceEnvelopes (already hosted; kept)
+
+**Still open:** `8E8D0`/`8F0D0`, `8D844`. No Day2-complete claim.
+
+Also fixed stale `DISC1_MATCHING_STATUS.md` (public verify gate).
+
 ## AUD1-FOLD E3–E6: score callees into host path (2026-09-09)
 
 Continued on `cursor/audio-score-fold-4797` / PR #39. Remote
