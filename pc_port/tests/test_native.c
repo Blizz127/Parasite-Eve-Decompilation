@@ -40290,6 +40290,7 @@ int main(void)
     test_HostFB_PumpCdProgress_sector_scale();
     test_DAY2_cd_b0cd0_pump_stall();
     test_DAY2_cd_b0cd0_pump_retry_idle_dma1();
+    test_DAY2_cd_b0cd0_pump_orphan_pending();
     test_DAY2_cd_dma();
     test_DAY2_mdec_pixels();
     test_DAY2_mdec_dma();
