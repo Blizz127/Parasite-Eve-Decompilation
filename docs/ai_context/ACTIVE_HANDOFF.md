@@ -3,11 +3,43 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158v: CD pending-sector backpressure (2026-09-09)
+
+Live Disc1 on tip **`a899b2d`** (DAY2-158u) **SUCCESS past `MDEC_decode_busy`:**
+
+```text
+C89C calls=319 ret=0 pad=319 out=101510
+many func_80192934_enter
+GPU fills=318
+STUB: CD_device_sector_overrun
+stop_reason=unresolved-boundary
+```
+
+MDEC supersede dig worked. New wall: `CD_device_sector_overrun` after ~319
+FMV frames.
+
+**Cause:** `pe_cdreg` single-sector pending + `HostFB_PumpCdProgress` can
+retire a full sector period before INT1→BFRD→DMA3 drains. STOP was host-pump
+race, not a missing Decomp leaf / multi-sector invent.
+
+**Fix (`pe_cdreg.c`):** while `g_sector_pending`, hold next publish (leave
+`g_read_cycles==0`); catch up after BFRD. No overwrite; no STOP. Evidence:
+`docs/evidence/pe-day2-158-cd-sector-overrun/REPORT.md`. Test:
+`DAY2_cd_sector_device` backpressure + catch-up.
+
+**Next boot→Day2:** Matt Disc1 — expect movie to continue past old overrun
+(C89C `calls`≫319) or name the next honest boundary. No Day2-complete
+claim. Linux-first.
+
 ## DAY2-158u: supersede on live DMA0 commit (Decomp dig) (2026-09-09)
 
 Decomp dig **CLOSED** — `dig/mdec-decode-busy` @ `bf8ab79` applied on PR #38.
 
-Live Disc1 on tip **`b82ab62`** (and 158s/`42978a5`) still:
+**Live Disc1 on tip `a899b2d`: SUCCESS** — past `MDEC_decode_busy`; C89C
+`calls=319` `out=101510`, GPU fills=318; wall moved to
+`CD_device_sector_overrun` (see DAY2-158v).
+
+Prior retests on **`b82ab62`** / 158s/`42978a5` still:
 
 ```text
 92934_enter ×2
@@ -34,8 +66,7 @@ Test: live-shaped BFA0→C01C→Service case in `DAY2_mdec_dma`.
 Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Tip on
 `cursor/movie-autonomous-stream-6f51` (PR #38).
 
-**Next boot→Day2:** Matt Disc1 — expect C89C `calls≥3` / `out=12804`. No
-Day2-complete claim. Linux-first.
+**Next:** see DAY2-158v.
 
 ## DAY2-158s: clear `MDEC_decode_busy` orphan after 91DC8 final (2026-09-09)
 

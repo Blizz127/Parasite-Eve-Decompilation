@@ -69,13 +69,33 @@ static void test_DAY2_cd_sector_device(void)
         loc[2]=0x7Au;CdSectorCommand(2u,loc,3);
         ASSERT(CdSectorReply(response,2)==5u && response[0]==3u && response[1]==0x10u,"invalid BCD must report parameter value error");
     }
-    /* Unread data is retained; no silent sector substitution on overrun. */
-    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"overrun attachment");
+    /* Unread sector is retained via backpressure — no silent overwrite, no
+     * STOP. Host PumpCdProgress may outrun BFRD; hold until drain, then
+     * catch up on the next service (DAY2-158v). */
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"backpressure attachment");
     uint8_t loc[]={0u,2u,0x20u};CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
     CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
-    PE_CdReg_ServiceDevice(451584u);ASSERT(CdSectorReply(response,1)==1u,"overrun first data response");
-    PE_CdReg_ServiceDevice(451584u);
-    ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_device_sector_overrun")==1,"unimplemented multi-sector buffering must stop");
+    PE_CdReg_ServiceDevice(451584u);ASSERT(CdSectorReply(response,1)==1u,"backpressure first data response");
+    {
+        PeCdDeviceState held;
+        PE_CdReg_GetDeviceState(&held);
+        ASSERT(held.sectors==1u && held.next_lba==21u,"first sector published");
+        PE_CdReg_ServiceDevice(451584u);
+        ASSERT(!PE_Port_ShouldStop() && CountOrderLog("CD_device_sector_overrun")==0,
+               "pending sector holds without STOP");
+        PE_CdReg_GetDeviceState(&held);
+        ASSERT(held.sectors==1u && held.next_lba==21u,
+               "second sector not published while pending");
+        PE_CdReg_WriteU8(PE_CDREG_BASE,0u);PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0u);
+        PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0x80u);
+        for(unsigned i=0;i<2340u;i++) (void)PE_CdReg_ReadU8(PE_CDREG_BASE+2u);
+        PE_CdReg_ServiceDevice(1u);
+        ASSERT(CdSectorReply(response,1)==1u && response[0]==0x22u,
+               "catch-up publish after BFRD");
+        PE_CdReg_GetDeviceState(&held);
+        ASSERT(held.sectors==2u && held.next_lba==22u && !PE_Port_ShouldStop(),
+               "second sector published after drain");
+    }
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }
 
