@@ -54,6 +54,29 @@ def optional_cmake_sources(text: str, variable: str) -> list[str]:
     return cmake_sources(text, variable)
 
 
+def count_native_tests(root: Path, test_source: str) -> tuple[int, int]:
+    """Count TEST / TEST_RETAIL_DISC1 across test_native.c and its headers.
+
+    Cases live in included test_*.h files as well as the runner. Inventory
+    must match the binary or the artifact-independent gate rejects a green
+    suite for a count mismatch.
+    """
+    texts = [test_source]
+    include_dir = root / TEST_SOURCE.parent
+    for match in re.finditer(r'#include\s+"([^"]+)"', test_source):
+        name = match.group(1)
+        if not name.startswith("test_") or not name.endswith(".h"):
+            continue
+        path = include_dir / name
+        if not path.is_file():
+            raise MetricsError(f"native test include is missing: {name}")
+        texts.append(path.read_text(encoding="utf-8"))
+    combined = "\n".join(texts)
+    ordinary = len(re.findall(r'\bTEST\("', combined))
+    retail = len(re.findall(r'\bTEST_RETAIL_DISC1\("', combined))
+    return ordinary, retail
+
+
 def derive_metrics(root: Path = ROOT) -> dict[str, Any]:
     source = (root / SOURCE).read_text(encoding="utf-8")
     evidence = (root / EVIDENCE).read_text(encoding="utf-8")
@@ -145,8 +168,7 @@ def derive_metrics(root: Path = ROOT) -> dict[str, Any]:
         re.search(r"add_library\s*\(\s*pe_field_runtime\b", cmake)
     )
 
-    ordinary_tests = len(re.findall(r'\bTEST\("', tests))
-    retail_disc_tests = len(re.findall(r'\bTEST_RETAIL_DISC1\("', tests))
+    ordinary_tests, retail_disc_tests = count_native_tests(root, tests)
     static_tests = ordinary_tests + retail_disc_tests
     if static_tests == 0:
         raise MetricsError("no native TEST() cases found")

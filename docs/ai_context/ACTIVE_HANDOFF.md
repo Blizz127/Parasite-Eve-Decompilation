@@ -111,6 +111,42 @@ chain), 14E30 real path, old 80191DC8 callback, libpress wait fidelity
 and scope-wide opening→Day2 acceptance. Full user goal open; published
 runtime 128 unchanged.
 
+## DAY1/DAY2-158: host SPU synthesis + voice bridge AUD1-E0/E1 (2026-09-09)
+
+First bounded host-audio path on the existing `pe_spu_dma` SPU-RAM/register
+model. **AUD1-E0:** `pe_spu_synth.c` decodes keyed-voice ADPCM (linear
+interpolation; DEBT-SYS0-002); `pe_host_audio.c` submits 44100 Hz PCM via
+PulseAudio when windowed (`PE_AUDIO_DISABLE=1` forces silent output);
+`HostFB_VSync` mixes 736 samples/frame after audio service. **AUD1-E1:**
+`pe_spu_voice.c` implements retail `func_80087798` and a partial
+`func_80085F74` plus `PE_SpuScore_ApplyDirtyVoices`, called after
+`func_8008CA84` when `D_8009D2C4` bit `0x100` is set — publishing
+instrument-init guest voice state to SPU registers and key-on for synthesis.
+
+**Audible when:** PulseAudio opens, SPU RAM holds sample data, and a command
+path marks a voice dirty (`audio_dirty`) so the bridge can key it. **Still
+silent / unported:** `8DB7C` score bytecode ticks, full `85F74` table paths,
+`862F4`/`85A64` boot wiring, ADSR/reverb/Gaussian fidelity, AKAO/seq26/27
+without per-tick score advancement.
+
+`PE_TEST_FILTER=DAY2_spu_synth` and `DAY2_spu_voice_bridge` PASS. Contract:
+`docs/ai_context/DAY2_HOST_AUDIO_SYNTH.md`. No matching-decomp, mix-exact, or
+retail speaker claim.
+
+CI fix (same PR): `native-progress` failed because `port_priority.json` still
+claimed the obsolete `func_80030894_L9_cut` while metrics report a complete
+body (`production_frontier=null`), and because `PORT_SRCS` was removed from
+CMake while `linked_native_sources` still required it. Config now uses a null
+frontier label + exclusive end `0x800314E4`; tooling accepts complete frontiers
+and optional `PORT_SRCS`/`FIELD_RUNTIME_SRCS`. Regenerated
+`NATIVE_PORT_STATUS.md` / `NATIVE_CANDIDATE_PRIORITY.md` for the AUD1 platform
+units and new tests (316 linked TUs). A follow-up CI failure was the
+artifact-independent suite gate: two disc-backed tests (`B54KY_192CE8`,
+`DAY2_movie_complete_frame`) used `TEST()` so they failed without
+`local/pe_disc1.path`, and the inventory counted only `test_native.c`
+(1147) against the binary (1348). Both are now `TEST_RETAIL_DISC1`;
+`native_metrics.py` counts included `test_*.h` cases (1348/1302/46).
+
 Autonomous-stream evidence (probed 2026-09-09, change NOT landed): with the
 device's 0x50 read-mode guard narrowed to 0x10 (mode bit6 = CdlModeRT per
 the Psy-Q SDK; 7C564's own software header/channel filtering proves the

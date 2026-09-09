@@ -3,15 +3,10 @@
   "production_root": "func_8001220C",
   "candidate_pool": "docs/evidence/volume-campaign-20260831/TIER2_CLASSES.md",
   "active_frontier": {
-    "label": "func_80030894_L9_cut",
+    "label": null,
     "owner": "func_80030894",
-    "first_excluded_pc": "0x800311EC",
-    "remaining_direct_callees": [
-      "func_800370DC",
-      "func_80077AA4",
-      "func_8005DADC",
-      "func_80077A64"
-    ],
+    "first_excluded_pc": "0x800314E4",
+    "remaining_direct_callees": [],
     "evidence": "docs/evidence/pe-b54kb6-30894-l9/REPORT.md"
   }
 }

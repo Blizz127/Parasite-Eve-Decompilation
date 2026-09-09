@@ -23,7 +23,13 @@ ROW_RE = re.compile(
 sys.path.insert(0, str(ROOT / "tools" / "build"))
 sys.path.insert(0, str(ROOT / "tools" / "progress"))
 from disc1_plan import PlanError, build_plan  # noqa: E402
-from native_metrics import CMAKE, MetricsError, cmake_sources, derive_metrics  # noqa: E402
+from native_metrics import (  # noqa: E402
+    CMAKE,
+    MetricsError,
+    cmake_sources,
+    derive_metrics,
+    optional_cmake_sources,
+)
 
 
 class PriorityError(RuntimeError):
@@ -46,9 +52,13 @@ def load_config(root: Path) -> dict[str, Any]:
     frontier = config.get("active_frontier")
     if not isinstance(frontier, dict):
         raise PriorityError(f"{CONFIG}: active_frontier must be an object")
-    for key in ("label", "owner", "first_excluded_pc", "evidence"):
+    for key in ("owner", "first_excluded_pc", "evidence"):
         if not isinstance(frontier.get(key), str) or not frontier[key]:
             raise PriorityError(f"{CONFIG}: active_frontier.{key} is required")
+    label = frontier.get("label")
+    # null label means the owner has a complete native body (no production cut).
+    if label is not None and (not isinstance(label, str) or not label):
+        raise PriorityError(f"{CONFIG}: active_frontier.label must be a string or null")
     if not re.fullmatch(FUNC, frontier["owner"]):
         raise PriorityError(f"{CONFIG}: invalid active_frontier.owner")
     try:
@@ -58,11 +68,18 @@ def load_config(root: Path) -> dict[str, Any]:
     callees = frontier.get("remaining_direct_callees")
     if (
         not isinstance(callees, list)
-        or not callees
         or any(not isinstance(name, str) or not re.fullmatch(FUNC, name) for name in callees)
         or len(callees) != len(set(callees))
     ):
         raise PriorityError(f"{CONFIG}: remaining_direct_callees must be unique functions")
+    if label is None and callees:
+        raise PriorityError(
+            f"{CONFIG}: complete frontiers (null label) must have empty remaining_direct_callees"
+        )
+    if label is not None and not callees:
+        raise PriorityError(
+            f"{CONFIG}: cut frontiers require at least one remaining_direct_callee"
+        )
     if not (root / frontier["evidence"]).is_file():
         raise PriorityError(f"{CONFIG}: missing frontier evidence {frontier['evidence']}")
     return config
@@ -141,9 +158,12 @@ def function_bodies(text: str) -> dict[str, str]:
 
 def linked_native_sources(root: Path) -> list[Path]:
     cmake = (root / CMAKE).read_text(encoding="utf-8")
-    variables = ("PORT_SRCS", "PLATFORM_SRCS", "BOOTSTRAP_SRCS", "GAME_SRCS")
     names: list[str] = []
-    for variable in variables:
+    # PORT_SRCS is historical; pe_field_runtime now owns explicit units plus
+    # PLATFORM/BOOTSTRAP/GAME. optional_* tolerates a missing PORT_SRCS block.
+    names.extend(optional_cmake_sources(cmake, "PORT_SRCS"))
+    names.extend(optional_cmake_sources(cmake, "FIELD_RUNTIME_SRCS"))
+    for variable in ("PLATFORM_SRCS", "BOOTSTRAP_SRCS", "GAME_SRCS"):
         names.extend(cmake_sources(cmake, variable))
     unique = list(dict.fromkeys(names))
     paths = [root / "pc_port" / name for name in unique]
@@ -209,6 +229,10 @@ def derive_priority(root: Path = ROOT) -> dict[str, Any]:
         metrics["implemented_window"]["end"], 16
     ):
         raise PriorityError("priority frontier PC disagrees with implemented window")
+    if metrics["implementation_kind"] == "complete" and frontier["label"] is not None:
+        raise PriorityError("complete native body cannot retain a production cut label")
+    if metrics["implementation_kind"] == "prefix" and frontier["label"] is None:
+        raise PriorityError("prefix native body requires a production cut label")
 
     plan = build_plan(root=root)
     c_names = {unit["name"] for unit in plan["units"] if unit["kind"] == "c"}
@@ -277,21 +301,35 @@ def status_markdown(result: dict[str, Any]) -> str:
         f"- Active classified Tier-2 candidates: **{result['active_candidates']}** "
         f"({result['pool_rows_already_integrated']} historical rows already integrated)",
         f"- Production root: **`{result['production_root']}`**",
-        f"- Active frontier: **`{frontier['label']}`** at "
-        f"`{frontier['first_excluded_pc']}` in `{frontier['owner']}`",
-        "",
-        "The order is lexicographic: direct frontier dependency, unresolved native",
-        "reference, statically production-reachable linked implementation, native",
-        "call-graph distance/reference count, retail fan-in, and only then word count.",
-        "Static reachability is a scheduling signal, not proof that a runtime path has",
-        "executed. Current production-reachable semantic coverage remains separately",
-        "reported as unmeasured.",
-        "",
-        "## Frontier dependency closure",
-        "",
-        "| function | matching C | native linked | statically reachable |",
-        "|---|---:|---:|---:|",
     ]
+    if frontier["label"]:
+        lines.append(
+            f"- Active frontier: **`{frontier['label']}`** at "
+            f"`{frontier['first_excluded_pc']}` in `{frontier['owner']}`"
+        )
+    else:
+        lines.append(
+            f"- Active frontier: **none (complete `{frontier['owner']}` body)** "
+            f"ending at `{frontier['first_excluded_pc']}`"
+        )
+    lines.extend(
+        [
+            "",
+            "The order is lexicographic: direct frontier dependency, unresolved native",
+            "reference, statically production-reachable linked implementation, native",
+            "call-graph distance/reference count, retail fan-in, and only then word count.",
+            "Static reachability is a scheduling signal, not proof that a runtime path has",
+            "executed. Current production-reachable semantic coverage remains separately",
+            "reported as unmeasured.",
+            "",
+            "## Frontier dependency closure",
+            "",
+            "| function | matching C | native linked | statically reachable |",
+            "|---|---:|---:|---:|",
+        ]
+    )
+    if not result["frontier_dependencies"]:
+        lines.append("| *(none — complete body)* | — | — | — |")
     for dep in result["frontier_dependencies"]:
         lines.append(
             f"| `{dep['name']}` | {'yes' if dep['matching_c'] else 'no'} | "

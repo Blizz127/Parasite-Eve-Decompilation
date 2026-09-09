@@ -15,6 +15,7 @@
 #include "pe_sdk.h"
 #include "pe_disc.h"
 #include "pe_guest_image.h"
+#include "pe_host_audio.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -389,6 +390,7 @@ int main(int argc, char **argv) {
     PE_Callback_Init();
     Bootstrap_Init();
     HostFB_Init();
+    PE_HostAudio_Init();
     PE_Port_RunControlReset();
     PE_Port_SetFrameLimit(g_opts.max_frames);
     PE_Port_SetMainIterationLimit(g_opts.max_main_iterations);
@@ -477,6 +479,8 @@ int main(int argc, char **argv) {
             PE_Port_SetQuitPoll(HostWindow_Poll);
             PE_Port_SetPresentHook(PresentHook_BlitWindow);
             PE_Port_SetPadSource(HostWindow_PadRaw);
+            if (PE_HostAudio_Start() == 0)
+                fprintf(stderr, "[AUDIO] host PCM output enabled\n");
         }
     }
 
@@ -512,6 +516,7 @@ int main(int argc, char **argv) {
         }
         PE_Port_SetQuitPoll(NULL);
         PE_Port_SetPresentHook(NULL);
+        PE_HostAudio_Stop();
         HostWindow_Close();
     }
 
@@ -603,6 +608,7 @@ int main(int argc, char **argv) {
     }
 
     TraceEvent("shutdown_end"); TraceClose();
+    PE_HostAudio_Shutdown();
     PE_Disc_Close(disc);
     PE_RamDestroy();
     return 0;

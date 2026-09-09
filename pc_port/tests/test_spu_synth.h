@@ -1,0 +1,85 @@
+#include "pe_spu_synth.h"
+#include "pe_spu_voice.h"
+#include "pe_spu_dma.h"
+#include "host_framebuffer.h"
+
+/* 128-byte ADPCM block: shift=0 (12), filter=0, alternating nibbles 1/0. */
+static const uint8_t k_test_adpcm_block[128] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+    0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10
+};
+
+static void seed_test_tone(void)
+{
+    unsigned i;
+    ResetTestState();
+    PE_SpuDma_Reset();
+    for (i = 0; i < sizeof(k_test_adpcm_block); i++)
+        PE_SpuRam_StoreU8(0x1010u + i, k_test_adpcm_block[i]);
+    PE_SpuRegister_StoreU16(0x00u, 0x3FFFu); /* vol L */
+    PE_SpuRegister_StoreU16(0x02u, 0x3FFFu); /* vol R */
+    PE_SpuRegister_StoreU16(0x04u, 0x1000u); /* pitch 1.0 */
+    PE_SpuRegister_StoreU16(0x06u, 0x0202u); /* start 0x1010 bytes >> 3 */
+}
+
+static void test_DAY2_spu_voice_bridge(void)
+{
+    pe_addr_t voice = 0x800BC000u;
+    TEST("DAY2_spu_voice_bridge");
+    seed_test_tone();
+    PE_StoreU32(voice, 0x80010000u);
+    PE_StoreU32(voice + 0xF4u, 0x1FF80u);
+    PE_StoreU16(voice + 0x76u, 0x3FFFu);
+    PE_StoreU16(voice + 0x78u, 0x3FFFu);
+    PE_StoreU32(voice + 0x44u, 0x10000000u);
+    PE_StoreU32(voice + 0xF8u, 0x1010u);
+    PE_StoreU16(voice + 0x10Eu, 0x00C0u);
+    PE_StoreU16(voice + 0x110u, 0x0000u);
+    PE_StoreU32(0x800BCD50u, 0x1000u);
+    PE_StoreU32(0x8009D2C4u, 0x100u);
+    PE_SpuScore_ApplyDirtyVoices();
+    ASSERT(PE_LoadU32(voice + 0xF4u) == 0u, "85F74 clears applied flags");
+    ASSERT(PE_SpuRegister_LoadU16(0x04u) == 0x1000u, "pitch published");
+    ASSERT(PE_SpuRegister_LoadU16(0x06u) == 0x0202u, "start published");
+    ASSERT(PE_SpuSynth_ActiveVoiceCount() == 1u, "key-on reaches synthesis");
+    ASSERT(PE_SpuSynth_HashMix(128u) != UINT64_C(0x8857F8C2912F2615),
+           "bridged voice produces non-silent mix");
+    PASS();
+}
+
+static void test_DAY2_spu_synth(void)
+{
+    uint64_t hash;
+    TEST("DAY2_spu_synth");
+    seed_test_tone();
+    ASSERT(PE_SpuSynth_ActiveVoiceCount() == 0u, "idle before key-on");
+    PE_SpuRegister_StoreU16(0x188u, 1u);
+    ASSERT(PE_SpuSynth_ActiveVoiceCount() == 1u, "voice 0 keyed on");
+    hash = PE_SpuSynth_HashMix(256u);
+    ASSERT(hash == UINT64_C(0xA1C1894DE517A255),
+           "keyed ADPCM mix hash");
+    PE_SpuRegister_StoreU16(0x18Au, 1u);
+    ASSERT(PE_SpuSynth_ActiveVoiceCount() == 0u, "voice 0 keyed off");
+    ASSERT(PE_SpuSynth_HashMix(64u) == UINT64_C(0x8857F8C2912F2615),
+           "silent mix after key-off");
+    seed_test_tone();
+    PE_SpuRegister_StoreU16(0x188u, 1u);
+    HostFB_VSync(0);
+    ASSERT(PE_SpuSynth_FramesRendered() >= 1u,
+           "HostFB_VSync advances synthesis");
+    PASS();
+}
