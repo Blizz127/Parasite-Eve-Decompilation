@@ -23,6 +23,9 @@ Live after DAY2-158q (`28ed6b6` / `ee9e1f5`): C89C×2 `out=11140`,
 2. `92934`: TRACE `func_80192934_dbd_abort` on the abort arm.
 3. No admit-gate / cursor ±32 / `909B4` widen. No Day2-complete claim.
 
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**.
+Tip on `cursor/movie-autonomous-stream-6f51` (PR #38).
+
 **Next boot→Day2:** Matt Disc1 — expect C89C `calls≥3` / `out=12804` before
 the next wall (still expect eventual `post_movie_title_cut` when movie ends).
 Linux-first.
