@@ -3,6 +3,33 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158q: wire title DecDCTout `func_80191DC8` (2026-09-09)
+
+Live Bazzite Disc1 on tip **`50b2a58`** stopped at
+`func_80074520_dma_indirect_call` after first C89C (`out=7300`). Dig closed:
+that STOP is unbound DMA1 handler **`0x80191DC8`**, not a missing `74520`
+body (`pe-day2-158-74520-dma`, already folded).
+
+**Decomp leaf READY** — `dig/91dc8-decdctout` @ `3336743` folded:
+
+- `pc_port/game/boot/func_80191DC8_port.c` — matched structural twin of
+  `1214D4` on title BSS (`801D14xx` / `0DC0` / `918F8`)
+- VA `[0x80191DC8,0x80191FB8)` 124 words; SHA-256
+  `d4d36c74fdae7ccb189a0d98c170806fc84b1fe24c700a447bee5eafbd941086`
+- Evidence: `docs/evidence/pe-day2-158-91dc8/` (REPORT + carve bin/s/meta)
+
+**On tip (PR #38):**
+
+1. `DispatchDmaCallback`: `0x80191DC8` → `func_80191DC8()` (same return
+   shape as `1214D4`). **No** `74520` rewrite; **no** retarget to `1214D4`.
+2. Host-only `PE_MDEC_HasDecode` cut mirrors player.
+3. `Trace_Direct("func_80192934_enter")` kept from 158p.
+4. No admit-gate / cursor ±32. No Day2-complete claim.
+
+**Next boot→Day2:** Matt Disc1 retest past old `74520_dma_indirect_call`
+— expect title slice continue / final-slice / `7506C` upload and further
+multi-frame `92934` / `c89c_tel`. Linux-first.
+
 ## DAY2-158p: live `74520_dma_indirect` = unbound title `91DC8` (2026-09-09)
 
 Live Bazzite Disc1 on tip **`50b2a58`** (DAY2-158o):
@@ -44,7 +71,7 @@ same commits on `cursor/74520-dma-indirect-6f51` (PR #41).
 **Next boot→Day2:** Matt retest — expect STOP rename to **`func_80191DC8`**
 (and `func_80192934_enter` in TRACE). Prefer Decomp title-overlay leaf for
 `[0x80191DC8,0x80191FB8)` (124 words, ends at `91FB8`). Do **not** blind-alias
-`214D4`. Linux-first.
+`214D4`. Linux-first. **SUPERSEDED by DAY2-158q** (real leaf wired).
 
 ## DAY2-158o: live C89C EOF pad dig + first-frame DBA++ for multi-frame (2026-09-09)
 
