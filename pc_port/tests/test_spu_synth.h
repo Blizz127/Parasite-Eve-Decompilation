@@ -154,6 +154,7 @@ static void test_DAY2_akao_tick(void)
     /* 8900C: tip StepVoiceNote — pending track + gated restart → key-on. */
     {
         pe_addr_t key_scratch = 0x800BCD74u;
+        PE_StoreU32(0x8009D2C8u, st); /* seed_test_tone / ResetTestState clears this */
         PE_StoreU32(key_scratch, 0);
         PE_StoreU32(st + 0x10u, 1u); /* gated = active & st+0x10 */
         PE_StoreU32(voice + 0xF0u, 0x18u);

@@ -197,7 +197,9 @@ static void voice_key_on(unsigned index)
         v->adsr_phase = PE_ADSR_ATTACK;
         v->envx = 0;
     }
-    PE_SpuRegister_StoreU16(reg + 0xCu, (uint16_t)v->envx);
+    /* ENVX register publish is deferred to Render (voice_adsr_step_envx).
+     * CD fixtures bulk-copy the SPU window via PE_SpuRegister_StoreU16 and
+     * must not observe key-on side effects in ENVX halfwords. */
 }
 
 static void voice_key_off(unsigned index)
@@ -205,7 +207,7 @@ static void voice_key_off(unsigned index)
     if (index < SPU_VOICE_COUNT) {
         PeSpuVoice *v = &g_voices[index];
         /* Audio stops immediately (hash-stable); ENVX enters release so
-         * SpuGetVoiceEnvelope / UpdateVoiceEnvelopes observe decay. */
+         * SpuGetVoiceEnvelope / UpdateVoiceEnvelopes observe decay after Render. */
         v->active = 0;
         voice_adsr_load_regs(v, index);
         if (v->adsr2 != 0u && v->envx > 0) {
@@ -213,8 +215,8 @@ static void voice_key_off(unsigned index)
         } else {
             v->adsr_phase = PE_ADSR_OFF;
             v->envx = 0;
-            PE_SpuRegister_StoreU16(index * SPU_VOICE_STRIDE + 0xCu, 0u);
         }
+        /* No ENVX register write here — same CD bulk-copy constraint as key-on. */
     }
 }
 
