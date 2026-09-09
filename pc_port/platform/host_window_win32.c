@@ -10,10 +10,14 @@
  * Pad mapping mirrors the X11 backend exactly:
  *   Cross  = Return / Space / Z / X  (raw 0x4000)
  *   Up/Right/Down/Left               (raw 0x10/0x20/0x40/0x80)
+ *   Circle/Triangle/Square = C/V/S; L1/R1 = Q/E; L2/R2 = 1/3
+ *   Select/Start = Tab/P
  *   Escape or window-close           (close requested)
  */
 
 #include "host_window.h"
+#include "host_frame_pacer.h"
+#include "host_window_scale.h"
 
 /* GetTickCount64 needs Vista+ declarations on older MinGW defaults. */
 #ifndef _WIN32_WINNT
@@ -41,6 +45,11 @@ static int      g_close_requested = 0;
 
 int g_host_window_open = 0;
 static uint16_t g_sony_held = 0;
+static HostFramePacer g_pacer;
+static HANDLE g_frame_timer;
+static LARGE_INTEGER g_clock_frequency;
+static int g_fast_forward;
+static char g_title[512];
 
 /* Translate a virtual-key code to a Sony pad bit (0 = unmapped). */
 static uint16_t vk_to_pad_bit(UINT vk)
@@ -55,6 +64,15 @@ static uint16_t vk_to_pad_bit(UINT vk)
     case VK_RIGHT: return 0x0020u;
     case VK_DOWN:  return 0x0040u;
     case VK_LEFT:  return 0x0080u;
+    case 'C':      return 0x2000u;
+    case 'V':      return 0x1000u;
+    case 'S':      return 0x8000u;
+    case 'Q':      return 0x0400u;
+    case 'E':      return 0x0800u;
+    case '1':      return 0x0100u;
+    case '3':      return 0x0200u;
+    case VK_TAB:   return 0x0001u;
+    case 'P':      return 0x0008u;
     default:       return 0u;
     }
 }
@@ -82,12 +100,24 @@ static LRESULT CALLBACK PE_WndProc(HWND hwnd, UINT msg,
         return 1;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
+        if (wparam==VK_F6) {
+            if (!(lparam & ((LPARAM)1 << 30))) {
+                g_fast_forward=!g_fast_forward;
+                ZeroMemory(&g_pacer,sizeof(g_pacer));
+                HostWindow_SetTitle(NULL);
+                fprintf(stderr,"[WINDOW] %s (F6 toggles speed)\n",g_fast_forward?"Fast-forward":"Normal speed: 59.94 Hz");
+            }
+            return 0;
+        }
         if (wparam == VK_ESCAPE) { g_close_requested = 1; return 0; }
         g_sony_held |= vk_to_pad_bit((UINT)wparam);
         return 0;
     case WM_KEYUP:
     case WM_SYSKEYUP:
         g_sony_held &= (uint16_t)~vk_to_pad_bit((UINT)wparam);
+        return 0;
+    case WM_KILLFOCUS:
+        g_sony_held = 0;
         return 0;
     case WM_CLOSE:
         g_close_requested = 1;
@@ -109,7 +139,7 @@ int HostWindow_Open(const char *display, int width, int height,
 {
     WNDCLASSA wc;
     RECT rc;
-    DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+    DWORD style = WS_OVERLAPPEDWINDOW;
     (void)display; /* no display string on Windows */
 
     if (scale < 1) scale = 1;
@@ -163,7 +193,16 @@ int HostWindow_Open(const char *display, int width, int height,
     UpdateWindow(g_hwnd);
 
     g_close_requested = 0;
+    g_sony_held = 0;
+    g_fast_forward = 0;
+    ZeroMemory(&g_pacer,sizeof(g_pacer));
+    QueryPerformanceFrequency(&g_clock_frequency);
+    /* Windows 10 1803+ supports high-resolution timers; older hosts use
+     * the same deadline schedule with the ordinary waitable timer. */
+    g_frame_timer=CreateWaitableTimerExA(NULL,NULL,0x2u,TIMER_ALL_ACCESS);
+    if (!g_frame_timer) g_frame_timer=CreateWaitableTimerA(NULL,FALSE,NULL);
     g_host_window_open = 1;
+    HostWindow_SetTitle(title);
     fprintf(stderr, "[WINDOW] %dx%d (fb %dx%d) title='%s'\n",
             g_win_w, g_win_h, g_fb_w, g_fb_h, title ? title : "PE");
     return 0;
@@ -171,28 +210,21 @@ int HostWindow_Open(const char *display, int width, int height,
 
 void HostWindow_Blit(const uint8_t *rgb, int fb_w, int fb_h)
 {
-    int scale_x, scale_y, ox, oy;
     HDC hdc;
-
-    if (!g_hwnd || !g_imgbuf || !rgb) return;
-    if (fb_w <= 0 || fb_h <= 0) return;
-    scale_x = g_win_w / fb_w;
-    scale_y = g_win_h / fb_h;
-    if (scale_x < 1) scale_x = 1;
-    if (scale_y < 1) scale_y = 1;
-    for (oy = 0; oy < g_win_h; oy++) {
-        int sy = oy / scale_y;
-        uint8_t *dst;
-        if (sy >= fb_h) sy = fb_h - 1;
-        dst = g_imgbuf + (size_t)oy * (size_t)g_win_w * 4u;
-        for (ox = 0; ox < g_win_w; ox++) {
-            int sx = ox / scale_x;
-            const uint8_t *src;
-            if (sx >= fb_w) sx = fb_w - 1;
-            src = rgb + ((size_t)sy * (size_t)fb_w + (size_t)sx) * 3u;
-            *dst++ = src[2]; *dst++ = src[1]; *dst++ = src[0]; *dst++ = 0;
-        }
+    RECT client;
+    int width, height;
+    if (!g_hwnd || !g_imgbuf || !rgb || fb_w <= 0 || fb_h <= 0) return;
+    if (!GetClientRect(g_hwnd, &client)) return;
+    width = client.right; height = client.bottom;
+    if (width <= 0 || height <= 0) return;
+    if (width != g_win_w || height != g_win_h) {
+        uint8_t *buffer = realloc(g_imgbuf, (size_t)width * (size_t)height * 4u);
+        if (!buffer) { g_close_requested = 1; return; }
+        g_imgbuf = buffer; g_win_w = width; g_win_h = height;
+        g_bmi.bmiHeader.biWidth = width;
+        g_bmi.bmiHeader.biHeight = -height;
     }
+    HostWindow_ScaleBGRA(g_imgbuf, g_win_w, g_win_h, rgb, fb_w, fb_h);
     hdc = GetDC(g_hwnd);
     if (hdc) {
         paint_window(hdc);
@@ -202,7 +234,10 @@ void HostWindow_Blit(const uint8_t *rgb, int fb_w, int fb_h)
 
 void HostWindow_SetTitle(const char *title)
 {
-    if (g_hwnd && title) SetWindowTextA(g_hwnd, title);
+    char label[560];
+    if (title) snprintf(g_title,sizeof(g_title),"%s",title);
+    snprintf(label,sizeof(label),"%s [%s]",g_title,g_fast_forward?"Fast-forward":"Normal speed");
+    if (g_hwnd) SetWindowTextA(g_hwnd,label);
 }
 
 int HostWindow_Poll(void)
@@ -224,6 +259,36 @@ uint16_t HostWindow_PadRaw(void)
     return (uint16_t)(~g_sony_held);
 }
 
+static uint64_t monotonic_ns(void)
+{
+    LARGE_INTEGER counter;
+    uint64_t ticks,frequency=(uint64_t)g_clock_frequency.QuadPart;
+    QueryPerformanceCounter(&counter);ticks=(uint64_t)counter.QuadPart;
+    return (ticks/frequency)*UINT64_C(1000000000)+
+           ((ticks%frequency)*UINT64_C(1000000000))/frequency;
+}
+
+int HostWindow_Pace(void)
+{
+    uint64_t deadline;
+    if (g_fast_forward) return HostWindow_Poll();
+    if (!g_frame_timer || !g_clock_frequency.QuadPart) return 1;
+    deadline=HostFramePacer_Deadline(&g_pacer,monotonic_ns());
+    for (;;) {
+        uint64_t now,remaining;
+        LARGE_INTEGER due;
+        if (HostWindow_Poll()) return 1;
+        if (g_fast_forward) return 0;
+        now=monotonic_ns();
+        if (now>=deadline) return 0;
+        remaining=deadline-now;
+        if (remaining>4000000u) remaining=4000000u;
+        due.QuadPart=-(LONGLONG)((remaining+99u)/100u);
+        if (!SetWaitableTimer(g_frame_timer,&due,0,NULL,NULL,FALSE)) return 1;
+        if (WaitForSingleObject(g_frame_timer,INFINITE)!=WAIT_OBJECT_0) return 1;
+    }
+}
+
 int HostWindow_Run(int milliseconds)
 {
     ULONGLONG start = GetTickCount64();
@@ -241,6 +306,8 @@ int HostWindow_Run(int milliseconds)
 
 void HostWindow_Close(void)
 {
+    if (g_frame_timer) {CloseHandle(g_frame_timer);g_frame_timer=NULL;}
+    g_sony_held = 0;
     if (g_hwnd) {
         DestroyWindow(g_hwnd);
         g_hwnd = NULL;

@@ -148,17 +148,22 @@ int func_8007EC14(void)
 {
     /* func_80080940 — src C leaf getter D_8009B554 */
     if (PE_LoadU32(0x8009B554u) != 0) {
-        return (int)PE_LoadU32(0x8009B554u);
+        return 0; /* EC2C delay slot: already initialized. */
     }
     PE_Cd_ClearState();
-    /* func_8007F994 — CD low-level init; guest-visible effects: */
-    PE_StoreU32(0x800A36A8u, 0);
-    PE_StoreU32(0x800A36A4u, 0);
-    PE_StoreU32(0x800A36A0u, 0);
-    PE_StoreU32(0x8009AFB4u, 0x80080164u);
-    PE_StoreU32(0x8009AFB8u, 0x80080778u);
-    PE_StoreU32(0x8009AFD8u, 1);
-    PE_StoreU32(0x8009B554u, 1);
+    if (PE_CdReg_DeviceEnabled()) {
+        (void)func_8007F994();
+        if (PE_Port_ShouldStop()) return 0;
+    } else {
+        /* func_8007F994 — CD low-level init; guest-visible effects: */
+        PE_StoreU32(0x800A36A8u, 0);
+        PE_StoreU32(0x800A36A4u, 0);
+        PE_StoreU32(0x800A36A0u, 0);
+        PE_StoreU32(0x8009AFB4u, 0x80080164u);
+        PE_StoreU32(0x8009AFB8u, 0x80080778u);
+        PE_StoreU32(0x8009AFD8u, 1);
+        PE_StoreU32(0x8009B554u, 1);
+    }
     /* handler installs (overwrite the lowlevel zeros) */
     PE_StoreU32(0x800A36A4u, 0x8007E964u);
     PE_StoreU32(0x800A36A8u, 0x8007F88Cu);
@@ -256,7 +261,8 @@ int func_80080C48(pe_addr_t fp)
 }
 
 /* func_80080D5C is the blocking command wrapper at [0x80080D5C,
- * 0x80080DC4).  The native substrate currently implements only its proven
+ * 0x80080DC4). With the device enabled it uses the original queue/poll
+ * graph shared with80DC4. With the device disabled, retain the legacy proven
  * production arm: command 2, named CdlSetloc by the retail executable's own
  * command-name table.  The complete movie caller never reads its eight-byte
  * response buffer, so result==0 deliberately avoids fabricating controller
@@ -264,6 +270,7 @@ int func_80080C48(pe_addr_t fp)
  * mutation-free boundary rather than false successes. */
 int func_80080D5C(int command, pe_addr_t param, pe_addr_t result)
 {
+    if (PE_CdReg_DeviceEnabled()) return func_80080DC4(command,param,result);
     PE_Disc *d;
     uint8_t m, s, f;
     int lba;
@@ -555,16 +562,84 @@ void func_8007B9EC(void)
     PE_CdStoreU32(PE_LoadU32(0x8009B28Cu), 0x1325u);
 }
 
-/* Phase 6E-B558 — func_8007AAB4 (351 words) is the CD acknowledge-poll
- * worker behind both B178 loops below.  Beyond this rung's box; the
- * call sites record the boundary and truncate its result to 0 (the
- * loops then take their s0==0 exits, exactly as retail does on a
- * zero return). */
+/* 7AAB4..7B010: original 343-word CD interrupt acknowledge worker.
+ * Response FIFO/status accesses use the CD register authority. Diagnostic
+ * calls and unknown jump-table targets remain explicit boundaries. */
 int func_8007AAB4(void)
 {
-    Bootstrap_ReturnVoid("func_8007AAB4", "func_8007B010/8007B558");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return 0;
+    uint8_t response[8]={0};
+    unsigned count=0,tag,flags=0;
+    pe_addr_t interrupt;
+    PE_CdStoreU8(PE_LoadU32(0x8009B27Cu),1u);
+    interrupt=PE_LoadU32(0x8009B288u);
+    tag=PE_CdLoadU8(interrupt)&7u;
+    if(!tag) return 0;
+    for(;;) {
+        unsigned observed=PE_CdLoadU8(interrupt)&7u;
+        if(tag==observed) break;
+        tag=PE_CdLoadU8(interrupt)&7u;
+    }
+    while(count<8u && (PE_CdLoadU8(PE_LoadU32(0x8009B27Cu))&0x20u))
+        response[count++]=PE_CdLoadU8(PE_LoadU32(0x8009B280u));
+    PE_CdStoreU8(PE_LoadU32(0x8009B27Cu),1u);
+    PE_CdStoreU8(PE_LoadU32(0x8009B288u),7u);
+    PE_CdStoreU8(PE_LoadU32(0x8009B284u),7u);
+    if(tag!=3u || PE_LoadU32(0x8009B17Cu+PE_LoadU8(0x8009AFD5u)*4u)) {
+        if(!(PE_LoadU32(0x8009AFC4u)&0x10u) && (response[0]&0x10u))
+            PE_StoreU32(0x8009AFCCu,PE_LoadU32(0x8009AFCCu)+1u);
+        flags=response[0]&0x1Du;
+        PE_StoreU32(0x8009AFC4u,response[0]);
+        PE_StoreU32(0x8009AFC8u,response[1]);
+    }
+    if(tag==5u && (int32_t)PE_LoadU32(0x8009AFC0u)>0) {
+        Bootstrap_ReturnVoid1("func_80071A74","func_8007AAB4",0x80011B44u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return 0;
+    }
+    if(tag<1u || tag>5u) {
+        Bootstrap_ReturnVoid1("func_80073C5C","func_8007AAB4",0x80011B6Cu);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return 0;
+    }
+    switch(PE_LoadU32(0x80011B8Cu+(tag-1u)*4u)) {
+    case 0x8007AD10u: {
+        int result=2;
+        unsigned status=5u;
+        if(!flags) {
+            if(PE_LoadU32(0x8009B07Cu+PE_LoadU8(0x8009AFD5u)*4u)) {
+                status=3u;result=1;
+            } else status=2u;
+        }
+        PE_StoreU8(0x8009B294u,(uint8_t)status);
+        for(unsigned i=0;i<8;i++) PE_StoreU8(0x800A3460u+i,response[i]);
+        return result;
+    }
+    case 0x8007AE10u:
+        PE_StoreU8(0x8009B294u,flags?5u:2u);
+        for(unsigned i=0;i<8;i++) PE_StoreU8(0x800A3460u+i,response[i]);
+        return 2;
+    case 0x8007AE5Cu:
+        if(flags && count==1u) flags=0u;
+        PE_StoreU8(0x8009B295u,flags?5u:1u);
+        for(unsigned i=0;i<8;i++) PE_StoreU8(0x800A3468u+i,response[i]);
+        PE_CdStoreU8(PE_LoadU32(0x8009B27Cu),0u);
+        PE_CdStoreU8(PE_LoadU32(0x8009B288u),0u);
+        return 4;
+    case 0x8007AEDCu:
+        PE_StoreU8(0x8009B296u,4u);
+        PE_StoreU8(0x8009B295u,PE_LoadU8(0x8009B296u));
+        for(unsigned i=0;i<8;i++) PE_StoreU8(0x800A3470u+i,response[i]);
+        for(unsigned i=0;i<8;i++) PE_StoreU8(0x800A3468u+i,response[i]);
+        return 4;
+    case 0x8007AF5Cu:
+        PE_StoreU8(0x8009B295u,5u);
+        PE_StoreU8(0x8009B294u,PE_LoadU8(0x8009B295u));
+        for(unsigned i=0;i<8;i++) PE_StoreU8(0x800A3460u+i,response[i]);
+        for(unsigned i=0;i<8;i++) PE_StoreU8(0x800A3468u+i,response[i]);
+        return 6;
+    default:
+        Bootstrap_ReturnVoid4Indirect("func_8007AAB4_jump_table","func_8007AAB4",
+            PE_LoadU32(0x80011B8Cu+(tag-1u)*4u),0u,0u,0u,0u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return 0;
+    }
 }
 
 /* Phase 6E-B558 — func_8007B010 (160 words, 0x8007B010..0x8007B290):
@@ -625,13 +700,12 @@ int func_8007B010(uint32_t cmdi, pe_addr_t buf)
         }
         /* B144 normal (v0 = 0); the B148 delay slot forces v0 = -1. */
         if (func_80073DE8() != 0u) {
-            /* B178 7AAB4 loop.  The stub truncates to 0, so the first
-             * pass takes the B1F0 exit exactly as retail does on a
-             * zero return; the jalr callback arms stay transcribed
-             * below for nonzero returns. */
-            uint32_t s1 = PE_LoadU8(PE_LoadU32(0x8009B27Cu)) & 3u;
+            /* B178 consumes actual acknowledge results until the interrupt
+             * worker returns zero; unresolved diagnostics propagate. */
+            uint32_t s1 = PE_CdLoadU8(PE_LoadU32(0x8009B27Cu)) & 3u;
             for (;;) {
                 uint32_t s0 = (uint32_t)func_8007AAB4();
+                if (PE_Port_ShouldStop()) return 0;
                 pe_addr_t cb;
                 if (s0 == 0u)
                     break;
@@ -660,7 +734,7 @@ int func_8007B010(uint32_t cmdi, pe_addr_t buf)
                 PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
                 return 0;
             }
-            PE_StoreU8(PE_LoadU32(0x8009B27Cu), (uint8_t)s1);
+            PE_CdStoreU8(PE_LoadU32(0x8009B27Cu), (uint8_t)s1);
         }
         /* B200: a2 = [B294] & 0xFF; B21C iff a2 == 2 or a2 == 5. */
         {
@@ -730,6 +804,7 @@ int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
      * so 7B010 takes its B21C arm and returns 2 instead of
      * spinning.) */
     (void)func_8007B010(0u, 0u);
+    if (PE_Port_ShouldStop()) return 0;
     {
         uint32_t v1 = s1 & 0xFFu;
         if (v1 == 2u) {
@@ -847,10 +922,11 @@ int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
                  * 73DE8() == 0 skips the latch block for B8DC. */
                 if (func_80073DE8() != 0u) {
                 uint32_t s1b =
-                    PE_LoadU8(PE_LoadU32(0x8009B27Cu)) & 3u;
+                    PE_CdLoadU8(PE_LoadU32(0x8009B27Cu)) & 3u;
                 for (;;) {
                     uint32_t s0b = (uint32_t)func_8007AAB4();
                     pe_addr_t cb;
+                    if (PE_Port_ShouldStop()) return 0;
                     if (s0b == 0u)
                         break;
                     if ((s0b & 4u) != 0u) {
@@ -880,7 +956,7 @@ int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
                         PE_PORT_STOP_UNRESOLVED_BOUNDARY);
                     return 0;
                 }
-                    PE_StoreU8(PE_LoadU32(0x8009B27Cu), (uint8_t)s1b);
+                    PE_CdStoreU8(PE_LoadU32(0x8009B27Cu), (uint8_t)s1b);
                 }
                 /* B8DC: [B294] == 0 cycles the outer B76C loop. */
                 if (PE_LoadU8(s2) == 0u)
@@ -917,6 +993,7 @@ int func_8007FCFC(uint32_t cmd, uint32_t data)
     uint32_t s2 = data;
 
     func_8007B9EC();
+    if (PE_Port_ShouldStop()) return 0;
     /* FD28: sb cmd @ [B558] — delay slot, executes on both arms. */
     PE_StoreU8(0x8009B558u, (uint8_t)s0);
     if (s2 != 0u) {
@@ -952,6 +1029,7 @@ int func_8007FCFC(uint32_t cmd, uint32_t data)
     {
         int r = func_8007B558(PE_LoadU8(0x8009B558u),
                               PE_LoadU32(0x8009B560u), 0u, 1u);
+        if (PE_Port_ShouldStop()) return 0;
         if (r != 0) {
             PE_StoreU32(0x8009B59Cu, 0u);
             PE_StoreU32(0x8009B598u, 0u);

@@ -130,7 +130,8 @@ int func_80012850(pe_addr_t args)
         r = (a != b) ? 1u : 0u;
         break;
     case 0x0F:
-        r = (uint32_t)(sa * sb);
+        /* Original mult/mflo retains the low word, including overflow. */
+        r = a * b;
         break;
     case 0x10:
         if (b == 0u || (b == 0xFFFFFFFFu && a == 0x80000000u))

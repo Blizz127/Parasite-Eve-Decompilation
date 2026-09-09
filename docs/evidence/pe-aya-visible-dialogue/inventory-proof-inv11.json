@@ -1,0 +1,46 @@
+{
+  "run": "INV11 visible native window, ordinary keyboard controls",
+  "ammo_after_restore": {
+    "weapon_saved": 6,
+    "reserve": 6,
+    "weapon_live": 6
+  },
+  "menu_head": "0x0",
+  "overlay": "0x40000002",
+  "name": "104830ffffffffff",
+  "history": "0x800a1aa0",
+  "medicine": {
+    "item": 6,
+    "before_hp": 14,
+    "after_live_hp": 45,
+    "after_saved_hp": 45,
+    "remaining_inventory": [
+      256,
+      257,
+      258,
+      512,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "ordinary_moved_slot": 6,
+    "item_use_frame": 45926
+  },
+  "return_after_medicine": {
+    "menu_head": "0x0",
+    "input": "0x0",
+    "before_position": [
+      22609920,
+      -72810496,
+      41484288
+    ],
+    "after_position": [
+      21626880,
+      -72810496,
+      41484288
+    ]
+  }
+}

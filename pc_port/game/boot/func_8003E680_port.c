@@ -11,8 +11,7 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 
-extern unsigned int D_8009D1C4, D_8009D280, D_8009D1A0, D_8009D250;
-extern int D_8009CDDC;
+extern unsigned int D_8009D1C4, D_8009D250;
 extern void func_80070D10(void);
 extern unsigned int func_80070D6C(void);
 extern void func_8003E974(void);
@@ -34,7 +33,7 @@ void func_8003E680(void)
     D_8009D280 = 0;
     D_8009D1A0 = 0;
     D_8009D250 = 0;
-    D_8009CDDC = 0;
+    PE_StoreU32(0x8009CDDCu,0);
     func_80070D10();
     for (i = 0; i < 0x7D0; i++) {
         func_80070D6C();

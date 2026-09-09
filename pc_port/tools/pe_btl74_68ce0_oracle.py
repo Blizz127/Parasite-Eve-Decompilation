@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PE-BTL74 — 68CE0 sequencer + 65674 D1A0 early-out."""
+"""PE-BTL74 — 68CE0 sequencer + 65674 D1A0 mask audit."""
 from __future__ import annotations
 
 import hashlib
@@ -46,7 +46,8 @@ def main() -> int:
     require(jal_target(load_u32(blob, 0x80068CF8)) == 0x80067E1C, "67E1C")
     require(load_u32(blob, 0x80065674) == 0x3C02800A, "65674 lui")
     require(load_u32(blob, 0x80065678) == 0x8C42D1A0, "lw D1A0")
-    require(load_u32(blob, 0x80065684) == 0x1440009D, "bne D1A0")
+    require(load_u32(blob, 0x80065680) == 0x30420104, "andi D1A0, 0x104")
+    require(load_u32(blob, 0x80065684) == 0x1440009D, "bne masked D1A0")
     require((0x8006590C - 0x80065674) // 4 == 166, "65674 166w")
     require(
         window_sha(blob, 0x80065674, 0x8006590C)
@@ -58,7 +59,7 @@ def main() -> int:
         == "55c7dbcc38c18c7b8b301364bb8b12c52bbc9767435489f34f2f3683bacb8e5b",
         "68CE0 sha",
     )
-    print("PASS: 68CE0 18w; 65674 D1A0 bne; 67E1C next")
+    print("PASS: 68CE0 18w; 65674 D1A0 & 0x104 gate; 67E1C next")
     return 0
 
 

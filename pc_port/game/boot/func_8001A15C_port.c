@@ -32,11 +32,11 @@ int32_t func_80079FB4(int32_t a0, int32_t a1)
     sign_x = 0;
     if (a1 < 0) {
         sign_y = 1;
-        a1 = -a1;
+        a1 = (int32_t)(0u - (uint32_t)a1);
     }
     if (a0 < 0) {
         sign_x = 1;
-        a0 = -a0;
+        a0 = (int32_t)(0u - (uint32_t)a0);
     }
     if (a1 == 0 && a0 == 0)
         return 0;
@@ -46,7 +46,7 @@ int32_t func_80079FB4(int32_t a0, int32_t a1)
             denom = a1 >> 10;
             quot = (denom != 0) ? (a0 / denom) : 0;
         } else {
-            quot = (a1 != 0) ? ((a0 << 10) / a1) : 0;
+            quot = (a1 != 0) ? ((int32_t)((uint32_t)a0 << 10) / a1) : 0;
         }
         idx = (uint32_t)quot << 1;
         angle = (int32_t)(int16_t)PE_LoadU16(GA_D_8009A6EC + idx);
@@ -55,7 +55,7 @@ int32_t func_80079FB4(int32_t a0, int32_t a1)
             denom = a0 >> 10;
             quot = (denom != 0) ? (a1 / denom) : 0;
         } else {
-            quot = (a0 != 0) ? ((a1 << 10) / a0) : 0;
+            quot = (a0 != 0) ? ((int32_t)((uint32_t)a1 << 10) / a0) : 0;
         }
         idx = (uint32_t)quot << 1;
         angle = 1024 - (int32_t)(int16_t)PE_LoadU16(GA_D_8009A6EC + idx);

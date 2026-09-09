@@ -1,5 +1,5 @@
 /*
- * Phase 6E-B43/B44 — func_8005218C, prefix-only translation.
+ * Phase 6E-B43/B44, completed in EQP1 — func_8005218C stat update.
  *
  * The complete retail body is 155 instructions / 0x26C bytes at
  * 0x8005218C..0x800523F7 (exclusive end 0x800523F8), executable file
@@ -10,13 +10,11 @@
  * True top-level ABI: void func_8005218C(void).  All five executable
  * callers use a nop call delay slot and ignore the returned register.
  *
- * B44 translates all seven func_8005B91C calls and their required output
- * words.  Production now executes the independently proven B43 logic through
- * the delay slot of its final unresolved func_80052F24 call.  That delay slot
- * stores the selected byte to record+0x26; the centralized boundary then
- * stops before func_80052F24's own required state effects or any post-call
- * B43 instruction.  The native local represents retail sp+0x10 and is never
- * converted to pe_addr_t or written into guest RAM.
+ * B44 translates all seven func_8005B91C calls and their output words.
+ * EQP1 completes capacity publication through 52F24 and the final level
+ * store, independently checked through the entire retail 2F76C call graph.
+ * The native local represents retail sp+0x10 and is never converted to a
+ * guest address or written into guest RAM.
  */
 #include "psx_compat.h"
 
@@ -115,8 +113,8 @@ void func_8005218C(void)
         {
             uint8_t value = PE_LoadU8(selected + 0x07u);
             PE_StoreU16(record + 0x26u, value);
-            Bootstrap_ReturnVoid1("func_80052F24", "func_8005218C",
-                                  value);
+            func_80052F24(value);
+            PE_StoreU16(record + 4u, (uint16_t)(PE_LoadU8(0x800C0E0Au) + 1u));
             return;
         }
         }

@@ -13,7 +13,8 @@
  * 40+). BTL1 m0005i 40/41/42/50–52 therefore do NOT hit this leaf.
  * Jal sites of 2FF78: 0x80018194 (0x5A) and 0x80018200 (0xCE).
  *
- * ROM: dest = *D_8009D254. Binary-search switch on tag&0xFF:
+ * ROM: dest = *(*D_8009D254). Binary-search switch on tag&0xFF.
+ * The lw a2,0(v0) at8002FF88 follows Aya's actor-to-stats pointer:
  *
  *   0  sw +0x00     1  sh +0x04     2  sh +0x06     3  sw +0x08
  *   4  sh +0x0C     5  sh +0x0E     6  sh +0x10    10  sh +0x1C
@@ -35,6 +36,11 @@ void func_8002FF78(unsigned int tag, unsigned int value)
 
     t = (uint8_t)(tag & 0xFFu);
     obj = PE_LoadU32(GA_D_8009D254);
+    /* Preserve physical RAM aliases, including the unconditional read at0
+     * when Aya is absent and the command only changes the global tag255. */
+    if (obj < 0x200000u) obj |= 0x80000000u;
+    obj = PE_LoadU32(obj);
+    if (obj < 0x200000u) obj |= 0x80000000u;
     switch (t) {
         case 0:  PE_StoreU32(obj + 0x00u, value); break;
         case 1:  PE_StoreU16(obj + 0x04u, (uint16_t)value); break;

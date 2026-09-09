@@ -66,8 +66,8 @@ void func_80042798(void)
                 "func_80072774", "func_80042798", 0, GA_EV_CALLEE,
                 handle, 0u, 0u, 0u, NULL, 0u);
             PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-            PE_StoreU32(cursor + 0xBu, 0xFFFFFFFFu);
-            PE_StoreU8(cursor, GA_EV_TAG_DONE);
+            /* Original suffix requires the callee to return. */
+            return;
         }
         cursor += GA_EV_STRIDE;
     }

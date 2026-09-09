@@ -1,0 +1,17 @@
+{
+  "ability": "Heal 1",
+  "frame": 18514,
+  "input": "ordinary keyboard in visible native window",
+  "before": {
+    "live_hp": 17,
+    "saved_hp": 17,
+    "pe_fixed": 5242880,
+    "record": "0x800b8a20"
+  },
+  "after": {
+    "live_hp": 45,
+    "saved_hp": 45,
+    "pe_fixed": 1310720,
+    "record": "0x800b8a20"
+  }
+}

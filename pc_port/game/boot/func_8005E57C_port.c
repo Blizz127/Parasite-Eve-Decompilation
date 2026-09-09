@@ -11,3 +11,9 @@ void func_8005E57C(int value)
 {
     PE_StoreU32(0x8009D120u, (uint32_t)value);
 }
+
+/* Matched three-word leaf: standalone menu background source. */
+void func_8005E6E4(int value)
+{
+    PE_StoreU32(0x8009D134u, (uint32_t)value);
+}

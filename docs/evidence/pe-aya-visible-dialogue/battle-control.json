@@ -1,0 +1,97 @@
+{
+  "date": "2026-09-04",
+  "run": "STG7 visible native X11 window, GDB launched as parent",
+  "binary_sha256": "1aafa1bd73d257e86e7493b60efa1cd5bd5b2a5fa8f3ceaf80d5601169a8ed1d",
+  "window_title": "Parasite Eve - Live Native Port",
+  "display": ":10.0",
+  "input_method": "xdotool arrows and Return; no guest state or position writes",
+  "first_active_battle_frame": 35190,
+  "last_observed_active_battle_frame": 39660,
+  "observed_active_frames": 4470,
+  "before_left_arrow": {
+    "aya_position": [
+      22.0,
+      -1111.0,
+      868.0
+    ],
+    "aya_velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "aya_command": 4,
+    "input_mask": "0x4",
+    "battle_mode": 0,
+    "loader_bytes": {
+      "0x9cee1": 0,
+      "0x9cef2": 0,
+      "0x9cef3": 0,
+      "0x9cef4": 0
+    },
+    "effect_registry_0x75": "0x80190b44",
+    "effect_slot": "0x801861a0",
+    "effect_descriptor": "0x80190b44",
+    "effect_callback_unported": "0x80190a6c"
+  },
+  "after_one_second_left_arrow_and_release": {
+    "aya_position": [
+      1349.5,
+      -1111.0,
+      868.0
+    ],
+    "aya_velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "aya_command": 4,
+    "input_mask": "0x4",
+    "battle_mode": 0,
+    "loader_bytes": {
+      "0x9cee1": 0,
+      "0x9cef2": 0,
+      "0x9cef3": 0,
+      "0x9cef4": 0
+    },
+    "effect_registry_0x75": "0x80190b44",
+    "effect_slot": "0x801861a0",
+    "effect_descriptor": "0x80190b44",
+    "effect_callback_unported": "0x80190a6c"
+  },
+  "after_right_arrow_and_return": {
+    "aya_position": [
+      -158.0,
+      -1111.0,
+      868.0
+    ],
+    "aya_velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "aya_command": 4,
+    "input_mask": "0x4",
+    "battle_mode": 0,
+    "loader_bytes": {
+      "0x9cee1": 0,
+      "0x9cef2": 0,
+      "0x9cef3": 0,
+      "0x9cef4": 0
+    },
+    "effect_registry_0x75": "0x80190b44",
+    "effect_slot": "0x801861a0",
+    "effect_descriptor": "0x80190b44",
+    "effect_callback_unported": "0x80190a6c"
+  },
+  "remaining_limits": [
+    "Battle HUD and loaded effect callback 80190A6C remain unported; full combat is not verified.",
+    "Return did not produce an attack menu.",
+    "Actor-to-actor collision is not implemented."
+  ],
+  "tests": {
+    "normal_ctest": "2/2 passed",
+    "asan_ubsan_ctest": "2/2 passed",
+    "native_cases": 1109,
+    "skipped": 0
+  }
+}

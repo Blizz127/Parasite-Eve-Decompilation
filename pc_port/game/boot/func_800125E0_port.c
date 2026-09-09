@@ -73,7 +73,11 @@ void func_8002F76C(pe_addr_t actor)
     PE_StoreU32(actor, GA_D_800B8A20);
     PE_StoreU32(GA_D_800B8A88, GA_D_800B0CB0);
     PE_StoreU32(GA_D_800B8A8C, GA_D_8009D1B0);
-    /* jal 5218C / 51980 / 51E64: not this cut. */
+    /* These resource words are relative offsets; zero is not a null pointer.
+     * Original2F76C always executes all three initialization calls. */
+    func_8005218C();
+    func_80051980(0, PE_LoadU32(GA_D_800B8A88));
+    func_80051E64(PE_LoadU32(GA_D_800B8A8C));
 }
 
 static pe_addr_t pe_kseg0(pe_addr_t addr)
@@ -120,6 +124,86 @@ void func_8001266C(void)
         PE_StoreU32(GA_D_800B6A80 + i * 4u, 0u);
 }
 
+/* Resource-bearing constructor continuation. Retail 3529C..35520.
+ * Builds model-instance state and double-buffered polygon packets.
+ * Full pose propagation remains partial in the 3D834 callees.
+ * An unpublished heap remains outside this continuation (isolated fixtures). */
+static void pe_35038_resource_state(pe_addr_t actor, unsigned int build_packets)
+{
+    pe_addr_t obj = PE_LoadU32(actor + 0x1ACu);
+    pe_addr_t heap = PE_LoadU32(0x800B0E4Cu);
+    pe_addr_t storage;
+    pe_addr_t instance = actor + 0x1B4u;
+    uint32_t size;
+    uint32_t type = PE_LoadU8(actor + 0xCu);
+    uint32_t command;
+    int skipped;
+
+    if (!PE_RangeIsRam(obj, 0x1Cu) || !PE_RangeIsRam(heap, 18400u))
+        return;
+    if (actor == PE_LoadU32(GA_D_8009D254)) {
+        command = 21u;
+    } else {
+        for (command = 0u; command < 48u; command++) {
+            if (PE_LoadU32(0x800B0E98u + type * 192u + command * 4u))
+                break;
+        }
+    }
+    if (command < 48u && PE_LoadU32(0x800B0E98u + type * 192u + command * 4u))
+        func_8001A680_command_cut(actor, command);
+
+    size = PE_LoadU8(obj + 3u) * 12u + PE_LoadU8(obj + 2u) * 32u;
+    if (build_packets)
+        size += PE_LoadU16(obj) * 8u + 0x50u;
+    storage = func_800362B8(size);
+    PE_StoreU32(actor + 0x278u, storage);
+    if (!build_packets)
+        PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0x600000A0u);
+    if (!PE_RangeIsRam(storage, size))
+        return;
+    func_8003D050_prefix_cut(instance, obj, storage + 0x50u, build_packets);
+    func_8003D050_ptr14_cut(instance, obj);
+    {
+        pe_addr_t end = func_8003D050_packets(instance);
+        if (build_packets) {
+            int x = 0x3C0, y = 0x100, palette_y = 0x1C0, adjust = 2;
+            if (type != 0u) {
+                pe_addr_t field = PE_LoadU32(0x800B0E64u);
+                pe_addr_t header = field + PE_LoadU32(field + 4u);
+                uint32_t packed = PE_LoadU32(header + 12u);
+                pe_addr_t table = field + (packed & 0x3FFFFFu);
+                uint32_t index, count = packed >> 22;
+                for (index = 0u; index < count; index++) {
+                    if (PE_LoadU8(table + index * 12u + 7u) == type)
+                        break;
+                }
+                packed = PE_LoadU32(table + index * 12u + 8u);
+                x = (packed >> 6) & 0x3C0u;
+                y = (packed >> 9) & 0x180u;
+                palette_y = ((packed >> 18) & 0xFFu) + 0x1C0u;
+                adjust = (packed >> 8) & 15u;
+            }
+            if (adjust > 0)
+                func_8003D94C(instance, x, y, 0, palette_y);
+        }
+        skipped = func_8003D050_post_3d94c_skip_cut(instance, end);
+    }
+    func_800794C4(instance + 0x2Cu, instance + 0x34u);
+    PE_StoreU8(instance + 0x8Cu, 0xFFu);
+    func_8003C5D8(instance, 50);
+    func_8003D050_epilogue_cut(instance, skipped);
+    if (PE_LoadU32(actor + 0x1B0u)) {
+        PE_StoreU8(actor + 0x23Cu, 0x80u);
+        PE_StoreU8(actor + 0x23Du, 0x0Cu);
+        PE_StoreU8(actor + 0x23Eu, 0x18u);
+        func_8006698C(instance);
+        func_8003D834(instance, PE_LoadU32(actor + 0x1B0u),
+                     (int16_t)PE_LoadU16(actor + 0x16u), 0x800BEA40u);
+        PE_StoreU16(PE_LoadU32(instance) + 0x14u,
+                    (uint16_t)((int16_t)PE_LoadU16(actor + 0x224u) * 2));
+    }
+}
+
 pe_addr_t func_80035038(pe_addr_t desc, pe_addr_t parent, unsigned int a2)
 {
     pe_addr_t actor;
@@ -130,7 +214,6 @@ pe_addr_t func_80035038(pe_addr_t desc, pe_addr_t parent, unsigned int a2)
     unsigned int i;
     uint32_t id;
 
-    (void)a2;
     actor = PE_LoadU32(GA_D_8009D2AC);
     if (actor == 0u)
         return 0;
@@ -221,7 +304,7 @@ pe_addr_t func_80035038(pe_addr_t desc, pe_addr_t parent, unsigned int a2)
         PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0xE0u);
         return actor;
     }
-    /* +0x1AC != 0: 1A680 / 362B8 / 3D050 not this cut. */
+    pe_35038_resource_state(actor, a2);
     return actor;
 }
 

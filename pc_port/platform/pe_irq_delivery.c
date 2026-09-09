@@ -8,6 +8,8 @@
  * func_80074520: 0x80074520..0x8007469F,  96 words, semantic void ABI.
  */
 #include "pe_irq_delivery.h"
+#include "pe_sdk.h"
+#include "pe_callback.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -17,6 +19,8 @@
 #include "pe_gpu.h"
 #include "pe_guest_ram.h"
 #include "pe_spu_dma.h"
+#include "pe_cdreg.h"
+#include "pe_mdec.h"
 #include "psx_compat.h"
 
 #define GA_IRQ_RESET_GUARD        0x800945E4u
@@ -97,12 +101,14 @@ static PeIrqServiceResult GuestDirectBoundary(const char *symbol,
 static uint32_t ReadRepresentedDmaMadr(uint32_t channel)
 {
     /* Retail reads DMA_BASE + channel*0x10 for all channels 0..6.  B2
-     * routes the two DMA register authorities that the port represents;
+     * routes the GPU, CD and SPU DMA register authorities;
      * all other channel register blocks remain in their reset-zero state.
      * This is read-only routing, not a callback or DMA-state mirror. */
+    if(channel<2u) {PeMdecState state;PE_MDEC_GetState(&state);return channel?state.dma1_madr:state.dma0_madr;}
     if (channel == 2u) {
         return PE_GPU_ReadDMA2MADR();
     }
+    if (channel == 3u) return PE_CdReg_ReadU32(PE_CDREG_DMA3);
     if (channel == 4u) {
         return PE_SpuDma_ReadMADR();
     }
@@ -113,6 +119,14 @@ static PeIrqServiceResult DispatchDmaCallback(pe_addr_t handler)
 {
     int retail_returned;
 
+    if(handler==0x801214D4u) {
+        func_801214D4();
+        return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;
+    }
+    if (handler == 0x8007C214u) {
+        func_8007C214();
+        return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;
+    }
     if (handler == GA_DMA2_PUMP_HANDLER) {
         g_trace.dma_callback_istat = PE_IRQ_ReadStatus();
         g_trace.dma_callback_dicr = PE_GPU_ReadDICR();
@@ -220,6 +234,13 @@ void func_80074520(void)
 
 static PeIrqServiceResult DispatchCpuCallback(pe_addr_t handler)
 {
+    if (handler == 0x8007C13Cu) {
+        func_8007C13C();
+        return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;
+    }
+    if (handler == 0x8007440Cu) {
+        return PE_Callback_DispatchChecked()?PE_IRQ_SERVICE_RETURNED:PE_IRQ_SERVICE_BOUNDARY;
+    }
     if (handler == GA_CPU_DMA_HANDLER) {
         return PE_func_80074520_Dispatch();
     }
@@ -239,6 +260,7 @@ PeIrqServiceResult PE_IRQ_ServicePendingForGeneration(
     if (generation != PE_IRQ_Generation()) {
         return PE_IRQ_SERVICE_STALE;
     }
+    if(PE_Irq_LockDepth()!=0)return PE_IRQ_SERVICE_RETURNED;
     /* Masked status is hardware-pending but does not enter the retail CPU
      * exception dispatcher. */
     if ((uint16_t)(PE_IRQ_ReadStatus() & PE_IRQ_GetMask()) == 0u) {

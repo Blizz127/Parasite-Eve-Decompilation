@@ -98,6 +98,27 @@ static pe_addr_t pe_6b4f8_rel(pe_addr_t base, uint32_t packed)
     return base + (PE_LoadU32(base + (packed & MASK_22) + 4u) & MASK_24);
 }
 
+/* 6B968..6BA08: publish the loaded room's effect-module descriptors.
+ * Entries 8..84 use the main dispatch table; 85+ use E1044. Existing
+ * descriptors take precedence. M0005 exports Eve's effect 0x75 here. */
+void func_8006B4F8_bind_effects(pe_addr_t base)
+{
+    pe_addr_t header=base+(PE_LoadU32(base+4u)&MASK_22);
+    uint32_t packed=PE_LoadU32(header+4u), i;
+    pe_addr_t entry=base+(packed&MASK_22);
+    for (i=0; i<(packed>>22); i++,entry+=12u) {
+        uint32_t code=PE_LoadU8(entry+7u);
+        pe_addr_t slot;
+        if (code>=8u && code<0x55u)
+            slot=PE_LoadU32(0x800942E0u)+code*4u;
+        else if (code>=0x55u)
+            slot=0x800E1044u+(code-0x55u)*4u;
+        else continue;
+        if (PE_LoadU32(slot)==0u)
+            PE_StoreU32(slot,PE_LoadU32(entry+8u));
+    }
+}
+
 void func_8006B4F8_12574_publish_cut(void)
 {
     pe_addr_t s4;
@@ -150,6 +171,7 @@ void func_8006B4F8_12574_publish_cut(void)
                     s4 + (PE_LoadU32(rec + 4u) & MASK_24));
         rec += 8u;
     }
+    func_8006B4F8_bind_effects(s4);
 }
 
 static int pe_6b4f8_issue_poll(int lba, pe_addr_t dest, int sectors)
@@ -241,12 +263,18 @@ int func_8006B4F8_dest_load_cut(uint32_t token)
     lba = (int)(PE_LoadU32(GA_D_800B0DD8) + rel);
     if (!pe_6b4f8_issue_poll(lba, dest0, (int)sec0))
         return 0;
+    /* Retail overlaps each next CD request with the preceding chunk's
+     * texture walk (6B61C / 6B700), before polling completion. The host
+     * 6E6D4 copies all sectors during issue, so consume the old chunk
+     * before that synchronous copy can overwrite a shared staging arena. */
+    pe_6b4f8_e1c0_loop(dest0);
+    func_80074DC0(0); /* drain guest-backed GPU sources before CD reuse */
     if (!pe_6b4f8_issue_poll(lba + (int)sec0, dest1, (int)sec1))
         return 0;
-    pe_6b4f8_e1c0_loop(dest0);
+    pe_6b4f8_e1c0_loop(dest1);
+    func_80074DC0(0);
     if (!pe_6b4f8_issue_poll(lba + (int)sec0 + (int)sec1, dest2, (int)sec2))
         return 0;
-    pe_6b4f8_e1c0_loop(dest1);
     func_80072714();
     func_800726C4();
     func_80072724();
@@ -373,9 +401,11 @@ static void pe_6b4f8_ce2_hdr0c(void)
  * 6B35C + 6B4F8 (CE2 / hdr+0x0C / Writer A) then the 3F09C..3F27C
  * tail: D224/D308 serials, 34FC4, 1266C, 6BE4C, 6BECC until 0,
  * 6C4C4(CE4), 6C5BC until 0, 1A918, 125E0.
- * Native still plants +0xEC=4 so 6BECC takes the already-ported
- * state-4 load; that is not a 1266C/6BECC swap. 6BD68 / 3F758 /
- * 68B94 / 371B0 / E0060 stay deferred. Does not plant mode 7/9/10.
+ * 6BE4C selects 6BECC's texture/model reload through the retail flag;
+ * bypassing its texture states leaves Aya transparent. 68B94 is the
+ * 677FC tile-publish cut (65B70/655D4/RTPS suffix deferred).
+ * 6BD68 / 3F758 / E0060 stay deferred. Does not plant
+ * mode 7/9/10.
  */
 int func_8003F074_dest_ready_cut(uint32_t token)
 {
@@ -386,11 +416,12 @@ int func_8003F074_dest_ready_cut(uint32_t token)
         return 0;
     if (PE_LoadU32(GA_OVERLAY + 0x18Cu) >= 0x80000000u)
         pe_6b4f8_ce2_hdr0c();
-    PE_StoreU8(GA_OVERLAY + 0xECu, 4u);
     PE_StoreU32(0x8009D224u, 1u);
     PE_StoreU16(0x8009D308u, 1u);
     func_80034FC4();
     func_8001266C();
+    /* 3F1D8 jal 68B94 — publishes rec+0x30/+0x34 SPRT lists. */
+    (void)func_80068B94();
     (void)func_8006BE4C();
     guard = 0;
     while (func_8006BECC() == 1 && guard < 32)
@@ -400,8 +431,14 @@ int func_8003F074_dest_ready_cut(uint32_t token)
     while (func_8006C5BC() == 1 && guard < 16)
         guard++;
     func_8001A918();
+    /* Retail 3F244..3F278: rebind message data at every field entry.
+     * Keeping CE90 from the prior field can point into a new NPC model. */
+    func_800371B0(func_8003F074_371b0_a0());
     if (PE_LoadU32(GA_OVERLAY + 0x944u) >= 0x80000000u)
         func_800125E0();
+    /* 3F074 after-poll: DrawSync already ran; SetDispMask(1) so
+     * PutDispEnv copies the VRAM display window instead of blanking. */
+    func_80074D28(1);
     return 1;
 }
 

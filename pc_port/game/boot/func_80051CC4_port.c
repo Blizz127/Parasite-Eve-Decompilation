@@ -36,9 +36,8 @@
  *        15     -> word 0x800A1B34 = 0xFFFFFFFE
  *      All other command values are no-ops.  The loop uses the retail
  *      signed index<count comparison; count is an unsigned byte (0..255).
- *   6. Invoke prefix-translated func_8005218C(). B44 translates all seven
- *      func_8005B91C outputs; its remaining conditional func_80052F24 call
- *      stays behind the centralized boundary.
+ *   6. Invoke func_8005218C(). B44 translates all seven stat outputs;
+ *      EQP1 completes the capacity and level publication.
  *   7. func_80052E30(0), then func_80052E30(saved), preserving the retail
  *      resource-buffer restore order and all partial state at a boundary.
  *
@@ -51,8 +50,7 @@
  * checked PE_LoadU8 operations at result+0x14 and result+0x15+i. There are
  * no direct hardware/SDK calls, callbacks, multiplication, division,
  * unaligned access, host pointers in guest RAM, clamping, fallback pointers,
- * or low-address mirrors.  The body itself does not poll or block, although
- * the remaining unresolved dependency retains its unknown blocking behavior.
+ * or low-address mirrors. The complete call graph does not poll or block.
  *
  * Classification: 1 — translated retail resource/table initialization.
  */

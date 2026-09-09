@@ -32,6 +32,7 @@
  */
 #include "pe_spu_dma.h"
 #include "psx_compat.h"
+#include "pe_sdk.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +45,7 @@
 #define GA_D_8009B454 0x8009B454u
 
 static uint8_t g_spu_ram[PE_SPU_RAM_SIZE];
+static uint16_t g_spu_registers[0x100];
 static PeSpuDmaState g_dma;
 static uint64_t g_order;
 
@@ -70,6 +72,7 @@ static int RoundDmaSize(uint32_t requested_size, uint32_t *dma_size)
 void PE_SpuDma_Reset(void)
 {
     memset(g_spu_ram, 0, sizeof(g_spu_ram));
+    memset(g_spu_registers, 0, sizeof(g_spu_registers));
     memset(&g_dma, 0, sizeof(g_dma));
     g_order = 0;
 }
@@ -90,7 +93,8 @@ int PE_SpuDma_Begin(pe_addr_t source, uint32_t destination,
     if (!g_dma.irq_installed ||
         g_dma.irq_handler != PE_SPU_DMA_IRQ_HANDLER ||
         g_dma.pending ||
-        callback != PE_SPU_DMA_CALLBACK ||
+        (callback != PE_SPU_DMA_CALLBACK &&
+         (callback != 0 || !PE_Event_SpuDmaEnabled())) ||
         (source & 3u) != 0 ||
         (destination & 7u) != 0 ||
         requested_size > PE_SPU_DMA_MAX_REQUEST ||
@@ -144,8 +148,18 @@ int PE_SpuDma_Service(void)
      * application callback.  The IRQ handler reads the live guest slot. */
     g_dma.pending = 0;
     g_dma.event_count++;
+    /* Original DMA IRQ clears transfer-control bits before dispatch. */
+    pe_addr_t registers = PE_LoadU32(0x8009B3FCu);
+    if ((registers & 0x1FFFFFFFu) == 0x1F801C00u)
+        PE_SpuRegister_StoreU16(0x1AAu, PE_SpuRegister_LoadU16(0x1AAu) & 0xFFCFu);
+    else if (PE_RangeIsRam(registers, 0x200u))
+        PE_StoreU16(registers + 0x1AAu, PE_LoadU16(registers + 0x1AAu) & 0xFFCFu);
     callback = PE_LoadU32(GA_D_8009B434);
     if (callback == 0) {
+        if (PE_Event_DeliverSpuDma()) {
+            g_dma.callback_order = ++g_order;
+            return 1;
+        }
         fprintf(stderr,
                 "FATAL: SPU DMA IRQ event-object delivery is unresolved\n");
         abort();
@@ -191,4 +205,16 @@ uint8_t PE_SpuRam_LoadU8(uint32_t address)
         abort();
     }
     return g_spu_ram[address];
+}
+
+uint16_t PE_SpuRegister_LoadU16(uint32_t offset)
+{
+    if ((offset & 1u) || offset >= 0x200u) abort();
+    return g_spu_registers[offset / 2u];
+}
+
+void PE_SpuRegister_StoreU16(uint32_t offset, uint16_t value)
+{
+    if ((offset & 1u) || offset >= 0x200u) abort();
+    g_spu_registers[offset / 2u] = value;
 }

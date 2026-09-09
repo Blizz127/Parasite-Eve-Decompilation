@@ -53,8 +53,8 @@
 #define GA_OVERLAY    0x800B0CD8u
 #define REC_STRIDE    56u
 
-extern unsigned int D_8009D280;
-extern unsigned int D_8009D1A0;
+
+
 extern void func_80068CE0(void);
 extern void func_80087024(void);
 extern void func_800661A4(void);
@@ -67,32 +67,54 @@ void func_8003DFC8(int a0)
     (void)a0;
 }
 
+static void effect_module_finish(unsigned int code)
+{
+    pe_addr_t table = PE_LoadU32(0x800942E0u);
+    pe_addr_t descriptor = PE_LoadU32(table + code * 4u);
+    pe_addr_t callback;
+    if (!descriptor) return;
+    callback = PE_LoadU32(descriptor + 24u);
+    if (!callback) return;
+    /* These eight original module finalizers are jr ra / move v0,zero.
+     * Their arguments are unused; 696F0 does not initialize a0 here. */
+    switch (callback) {
+    case 0x800C7DD4u: case 0x800C8F18u: case 0x800C9C10u:
+    case 0x800CA7A8u: case 0x800CD970u: case 0x800CCF90u:
+    case 0x800CE1ECu: case 0x800CBFB4u:
+        return;
+    default:
+        (void)PE_EffectCallback(callback, (int32_t)code, 0u, 0u);
+    }
+}
+
+/* SEW16: original 121 words, 800696F0..800698D4. Finish modules before
+ * their overlay is replaced, then clear registry entries (not descriptors). */
 void func_800696F0(void)
 {
     unsigned int i;
-    pe_addr_t table;
-    pe_addr_t slot;
-    pe_addr_t p;
-
-    /* D1A0&0x80 first-half jalr walk is not this cut.
-     * Live 0x4000 skips it and still runs the 6984C tail. */
+    pe_addr_t table = PE_LoadU32(0x800942E0u);
+    if (D_8009D1A0 & 0x80u) {
+        pe_addr_t package, header, entry;
+        uint32_t packed;
+        for (i = 0; i < 8u; i++) effect_module_finish(i);
+        effect_module_finish(0x55u);
+        package = PE_LoadU32(0x800B0E64u);
+        header = package + PE_LoadU32(package + 4u);
+        packed = PE_LoadU32(header + 4u);
+        entry = package + (packed & 0x3FFFFFu);
+        for (i = 0; i < (PE_LoadU32(header + 4u) >> 22u); i++, entry += 12u) {
+            unsigned int code = PE_LoadU8(entry + 7u);
+            if (code - 8u < 0x4Du) effect_module_finish(code);
+        }
+        D_8009D1A0 &= ~0x80u;
+    }
     table = PE_LoadU32(0x800942E0u);
     if (table != 0u && PE_RangeIsRam(table, 0x55u * 4u)) {
-        for (i = 8u; i < 0x55u; i++) {
-            slot = PE_LoadU32(table + i * 4u);
-            if (slot != 0u)
-                PE_StoreU32(slot, 0u);
-        }
+        for (i = 8u; i < 0x55u; i++)
+            PE_StoreU32(table + i * 4u, 0u);
     }
-    p = 0x800E10BCu;
-    if (PE_RangeIsRam(p, (0x68u - 0x1Eu) * 4u)) {
-        for (i = 0x1Eu; i < 0x68u; i++) {
-            slot = PE_LoadU32(p);
-            if (slot != 0u)
-                PE_StoreU32(slot, 0u);
-            p += 4u;
-        }
-    }
+    for (i = 0x1Eu; i < 0x68u; i++)
+        PE_StoreU32(0x800E1044u + i * 4u, 0u);
 }
 
 void func_8006A0E8(void)
@@ -104,17 +126,90 @@ void func_8006A0E8(void)
     /* PutDrawEnv / SetDrawArea body is not this cut. */
 }
 
-/*
- * PE-BTL92 — func_800E01BC record walk.
- * 44 words 0x800E01BC..0x800E026C, SHA-256 87f953d4…7cd8.
- * lh E21A4, lw E2800, blez return. Live count is 0.
- * E026C/E03A0 are not this cut.
- */
+/* Original E01BC..E0808: effect walk, animation/fade, projected FT4. */
+#include "pe_sdk.h"
+static void park_effect_draw(void)
+{
+    const pe_addr_t scratch=0x1F800000u;
+    uint32_t offset=PE_LoadU32(0x8009CDD8u),bank=PE_LoadU32(0x8009CDDCu),xy,z;
+    pe_addr_t packet=PE_LoadU32(0x800B0E58u+bank*4u)+offset;
+    PE_StoreU32(0x8009CDD8u,offset+40u);
+    PE_GTE_LoadRT(PE_LoadU32(scratch+52u));
+    PE_GTE_SetV0((int16_t)PE_LoadU16(scratch+36u),(int16_t)PE_LoadU16(scratch+38u),(int16_t)PE_LoadU16(scratch+40u));
+    PE_GTE_RTPS_coordinates(&xy,&z);
+    PE_StoreU8(packet+3u,9);PE_StoreU8(packet+7u,0x2E);
+    for(unsigned i=0;i<3;i++)PE_StoreU8(packet+4u+i,PE_LoadU8(scratch+24u+i));
+    PE_StoreU16(packet+14u,PE_LoadU16(scratch+30u));
+    PE_StoreU16(packet+22u,PE_LoadU16(scratch+34u));
+    for(unsigned i=0;i<4;i++) {
+        PE_StoreU8(packet+12u+i*8u,(uint8_t)(PE_LoadU8(scratch+28u)+(i&1u)*16u));
+        PE_StoreU8(packet+13u+i*8u,(uint8_t)(PE_LoadU8(scratch+29u)+(i>>1u)*16u));
+    }
+    PE_StoreU32(scratch,xy);PE_StoreU32(scratch+4u,z);
+    uint32_t scale=PE_LoadU32(PE_LoadU32(0x800BCFA8u));
+    int32_t numerator=(int32_t)((PE_LoadU32(scratch+44u)<<5u)*scale);
+    int32_t denominator=(int32_t)((z<<4u)+scale);
+    if(!denominator || (numerator==INT32_MIN && denominator==-1)) {
+        Bootstrap_ReturnVoid("func_800E051C_original_division_trap","func_800E051C");
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return;
+    }
+    int32_t half=(numerator/denominator)>>1;
+    for(unsigned i=0;i<4;i++) {
+        PE_StoreU16(packet+8u+i*8u,(uint16_t)((xy&65535u)+((i&1u)?(uint32_t)half:0u-(uint32_t)half)));
+        PE_StoreU16(packet+10u+i*8u,(uint16_t)((xy>>16u)+((i&2u)?(uint32_t)half:0u-(uint32_t)half)));
+    }
+    pe_addr_t ot=PE_LoadU32(0x800B0E38u+PE_LoadU32(0x8009CDDCu)*4u)+(z&~3u)-32u;
+    PE_StoreU32(packet,(PE_LoadU32(packet)&0xFF000000u)|(PE_LoadU32(ot)&0xFFFFFFu));
+    PE_StoreU32(ot,(PE_LoadU32(ot)&0xFF000000u)|(packet&0xFFFFFFu));
+}
+static void park_effect_tick(pe_addr_t slot,unsigned mode)
+{
+    const pe_addr_t scratch=0x1F800000u;
+    if(!PE_LoadU8(slot))return;
+    PE_StoreU16(scratch+30u,mode?0x7713:0x77D3);PE_StoreU16(scratch+34u,0x34);
+    PE_StoreU8(scratch+28u,mode?0xC0:PE_LoadU8(slot+3u));PE_StoreU8(scratch+29u,mode?0xCA:0xD0);
+    for(unsigned i=0;i<3;i++)PE_StoreU16(scratch+36u+i*2u,PE_LoadU16(slot+4u+i*2u));
+    PE_StoreU32(scratch+52u,PE_LoadU32(0x800BCFA4u));
+    PE_StoreU32(scratch+44u,(uint32_t)(int32_t)(int16_t)PE_LoadU16(slot+14u));
+    for(unsigned i=0;i<3;i++) {
+        int color=mode?(int)PE_LoadU8(slot+16u+i)-(int16_t)PE_LoadU16(slot+12u):128;
+        PE_StoreU8(scratch+24u+i,(uint8_t)(color<0?0:color));
+    }
+    if(mode) {
+        uint16_t value=(uint16_t)(PE_LoadU16(slot+12u)+(PE_LoadU8(slot)==1?(int)PE_LoadU8(slot+1u):-(int)PE_LoadU8(slot+1u)));
+        PE_StoreU16(slot+12u,value);
+        if(PE_LoadU8(slot)==1) {
+            if((int16_t)value>=256){PE_StoreU16(slot+12u,255);PE_StoreU8(slot,2);}
+        } else if((int16_t)value<0) {
+            PE_StoreU8(slot,0);PE_StoreU16(slot+12u,0);
+            PE_StoreU16(0x800E21A4u,(uint16_t)(PE_LoadU16(0x800E21A4u)-1u));return;
+        }
+    } else {
+        if(PE_LoadU8(slot)!=1)return;
+        if(PE_LoadU8(slot+2u))PE_StoreU8(slot+2u,(uint8_t)(PE_LoadU8(slot+2u)-1u));
+        else {
+            uint8_t frame=(uint8_t)(PE_LoadU8(slot+3u)+16u);
+            PE_StoreU8(slot+3u,frame);PE_StoreU8(slot+2u,PE_LoadU8(slot+1u));
+            if(frame>=49u) {
+                PE_StoreU8(slot,0);PE_StoreU8(slot+3u,0);
+                PE_StoreU16(0x800E21A4u,(uint16_t)(PE_LoadU16(0x800E21A4u)-1u));return;
+            }
+        }
+    }
+    park_effect_draw();
+}
 void func_800E01BC(void)
 {
-    if ((int16_t)PE_LoadU16(0x800E21A4u) <= 0)
-        return;
-    /* count>0 walk is not this cut. */
+    int processed=0;pe_addr_t slot=PE_LoadU32(0x800E2800u);
+    if((int16_t)PE_LoadU16(0x800E21A4u)<=0)return;
+    do {
+        if(PE_LoadU8(slot)) {
+            unsigned mode=PE_LoadU8(slot+10u);
+            if(mode<=1u)park_effect_tick(slot,mode);
+            processed++;
+        }
+        slot-=20u;
+    } while(processed<(int16_t)PE_LoadU16(0x800E21A4u));
 }
 
 int func_8006EC08(void)
@@ -136,6 +231,7 @@ int func_8006EC08(void)
 }
 
 static uint32_t pe_3f3c4_loaded_dest;
+static uint64_t pe_3f3c4_ram_generation;
 
 static int pe_3f3c4_kseg(pe_addr_t p)
 {
@@ -213,17 +309,21 @@ static void pe_3f3c4_dest_change(void)
 /*
  * Host pad before 3EB04. Retail idle raw is 0xFFFF. Host RAM
  * zero after reset is uninitialized, not all-buttons-pressed.
- * State-2 Cross is deterministic confirm (Watch cursor 0), not
- * a planted D1F4 for type-5 0x0D.
+ * A registered window pad source owns input, including dialogue. The
+ * deterministic state-2 confirm remains only for callers without a source.
  */
 static void pe_3f3c4_host_pad(void)
 {
     uint16_t raw;
 
-    if (pe_3f3c4_message_state2())
-        raw = 0xBFFFu;
-    else if (PE_Port_HasPadSource())
+    if (PE_Port_HasPadSource()) {
+        /* BIOS pad buffer: successful reply, ID 41h (digital, one word).
+         * The window supplies buttons only; never retain an analog ID. */
+        PE_StoreU16(0x800BE9A0u,0x4100u);
         raw = PE_Port_ReadPadRaw();
+    }
+    else if (pe_3f3c4_message_state2())
+        raw = 0xBFFFu;
     else {
         raw = PE_LoadU16(GA_D_800BE9A2);
         if (raw == 0u)
@@ -270,6 +370,12 @@ void func_8003F3C4(void)
     uint32_t a1;
     uint32_t a0;
 
+    /* A destination cached against a previous RAM image is not loaded
+     * after reset, even when New Game chooses the same token. */
+    if (pe_3f3c4_ram_generation != PE_RamGeneration()) {
+        pe_3f3c4_loaded_dest = 0u;
+        pe_3f3c4_ram_generation = PE_RamGeneration();
+    }
     dest0 = D_8009D280;
     /* 3F3D4 jal 3F074.  Retail order inside 3F074: 6B35C + 6B4F8 dest
      * load (3F088) precede the 3F244 371B0 site; loading first is also
@@ -325,9 +431,14 @@ void func_8003F3C4(void)
         goto after_draw;
     /* 3F50C: 6EC08 low byte nonzero selects the overlay message path. */
     if ((func_8006EC08() & 0xFFu) != 0u) {
-        Bootstrap_ReturnVoid("func_80122040", "func_8003F3C4");
-        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-        return;
+        int movie=func_80122040();
+        if (PE_Port_ShouldStop()) return;
+        if ((uint8_t)movie) goto frame_tail;
+        func_80121A00();
+        if (PE_Port_ShouldStop()) return;
+        func_8006E60C();
+        if (PE_Port_ShouldStop()) return;
+        goto loop_tail;
     }
     /* .L8003F54C */
     if ((PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u) {
@@ -342,6 +453,7 @@ void func_8003F3C4(void)
      * game/boot/func_80070E54_port.c) — DrawSync, 42FE8, VSync,
      * 74A44(1), PutDispEnv, then PutDrawEnv or DrawOTagEnv through the
      * 754E4 -> 76C34(76B98) chain walk, and the CDDC flip. */
+frame_tail:
     func_80070E54();
     /* 3F598..3F5E4: first frame only, BCFE8 == 0x00FF00FF / +4 == 0xFF /
      * +6 bit 6 -> 66C7C(0xF). */
@@ -368,6 +480,7 @@ after_draw:
         goto epilogue;
     /* .L8003F678: retail loops to 3F404 while D1C4 == D280 (host: one
      * pass per 1220C tick, see header).  Entry D1C4 == dest0. */
+loop_tail:
     if (dest0 == D_8009D280)
         return;
 

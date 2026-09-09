@@ -35,6 +35,7 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 #include "pe_sdk.h"
+#include "game_port.h"
 #include "pe_guest_ram.h"
 
 extern int func_80074A44(int mode);
@@ -75,7 +76,9 @@ void func_80070E54(void)
     }
     func_80074A44(1);
     cddc = PE_LoadU32(0x8009CDDCu);
+    uint32_t epoch=PE_Port_StopEpoch();
     func_800755F0(0x800BCE80u + cddc * 20u);
+    if(PE_Port_StopEpoch()!=epoch)return;
     if ((int8_t)func_8006EC08() != 0 ||
         (PE_LoadU32(0x800B0CD8u) & 0x200u) != 0u) {
         cddc = PE_LoadU32(0x8009CDDCu);

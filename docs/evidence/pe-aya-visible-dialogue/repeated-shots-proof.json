@@ -1,0 +1,23 @@
+{
+  "input": "ordinary visible arrows and Cross only; no guest progress/stat writes",
+  "shots": [
+    "11558",
+    "12349",
+    "12365",
+    "12678",
+    "12694",
+    "14533",
+    "14592"
+  ],
+  "aya": {
+    "HP": 45,
+    "max_HP": 45,
+    "AT": 9000,
+    "AT_speed": 50
+  },
+  "eve_HP": 999995,
+  "audio_queue": 0,
+  "message": 50,
+  "mode": 0,
+  "remaining_boundary": "VM 96 / 800192C8 after scripted retreat; enemy attacks and completion unverified"
+}

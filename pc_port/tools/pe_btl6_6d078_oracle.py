@@ -96,7 +96,9 @@ def main() -> int:
     require(jal_target(load_u32(data, 0x8006D158)) == FN_6CDA4, "0x29 jal 6CDA4")
     require(jal_target(load_u32(data, 0x8006D200)) == FN_6CDA4, "0x2B jal 6CDA4")
     require(load_u32(data, 0x8006D178) == 0x8E420024, "0x2A lw +0x24")
-    require(load_u32(data, 0x8006D180) == 0x00021582, "0x2A srl 16")
+    require(load_u32(data, 0x8006D180) == 0x00021582, "0x2A srl 22")
+    require(((load_u32(data, 0x8006D180) >> 6) & 31) == 22,
+            "packed sound count occupies bits 22..31")
     require(load_u32(data, 0x8006D184) == 0x0062102A, "0x2A slt index,count")
     require(load_u32(data, 0x8006D19C) == 0x30420010, "0x2A andi 0x10")
     require(load_u32(data, 0x8006D1A8) == 0x94820004, "0x2A lhu +4")
@@ -141,7 +143,7 @@ def main() -> int:
 
     print(
         "PASS: 6D078 117w sha256; +0xF3 JT 0/28/29/2A/2B; state0 sb 0x28; "
-        "0x2A srl16/andi10/lhu+4; 0x2B a0=3; 87414 D270=2 ret0; "
+        "0x2A srl22/andi10/lhu+4; 0x2B a0=3; 87414 D270=2 ret0; "
         "0x28/29/2B jal 6CDA4; no +0xE; sole jal from 6D60C 0x2E"
     )
     return 0

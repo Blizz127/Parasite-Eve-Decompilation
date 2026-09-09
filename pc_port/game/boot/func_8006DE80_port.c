@@ -15,27 +15,104 @@
  *
  * Death-arm jal @ 0x8001F430 uses a0=0x46B and is not this cut.
  *
- * 6DED4 packs the SVECTOR and jals 6DFA8 (GTE / 79244) then
- * 6DF50 (6E514 lookup + 86608). 79244 and 86608 are not ported.
- * Do not invent those stores. dest==0 is the live BTL99 fixture.
+ * Spatial pan/attenuation and the sound lookup/queue are now native.
+ * The transient SVECTOR and projected position use native storage.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "pe_sdk.h"
+#include "game_port.h"
 
 #define GA_D_800B0E08 0x800B0E08u
 
-void func_8006DED4(pe_addr_t dest, int id, int a1, int x, int y, int z)
+/* Complete 6E514 lookup: the header packs a 10-bit count and 22-bit
+ * offset; each 12-byte sound entry carries its ID at +A. */
+pe_addr_t func_8006E514(pe_addr_t package, uint32_t id)
 {
-    (void)id;
-    (void)a1;
-    (void)x;
-    (void)y;
-    (void)z;
-    (void)dest;
+    uint32_t packed=PE_LoadU32(package+PE_LoadU32(package+4u)+0x2Cu);
+    uint32_t count=packed>>22u, i;
+    pe_addr_t entry=package+(packed&0x3FFFFFu);
+    for (i=0;i<count;i++,entry+=12u)
+        if (PE_LoadU16(entry+10u)==id)
+            return package+(PE_LoadU32(entry+4u)&0xFFFFFFu);
+    return 0u;
+}
+
+int32_t func_8006DF50(pe_addr_t package, uint32_t id, uint32_t key,
+                     uint32_t pan, uint32_t volume)
+{
+    pe_addr_t sound=func_8006E514(package,id);
+    return sound ? func_80086608(sound,key,pan,volume) : -1;
+}
+
+static int spatial_sound(int16_t x, int16_t y, int16_t z, uint32_t *pan, uint32_t *volume)
+{
+    uint32_t screen,depth;
+    int32_t distance,near=PE_LoadU16(0x800B0DD0u),far=PE_LoadU16(0x800B0DD2u);
+    int32_t extent=far-near, attenuation,level,spread;
+    func_800661A4(); PE_GTE_LoadRT(PE_LoadU32(0x800BCFA4u));
+    g_pe_gte.h=(int32_t)PE_LoadU32(PE_LoadU32(0x800BCFA8u));
+    PE_GTE_SetV0(x,y,z); PE_GTE_RTPS_coordinates(&screen,&depth);
+    func_800661CC();
+    *pan=(uint32_t)(((int16_t)screen+40)*128/400+64);
+    if (*pan>=256u) *pan=255u;
+    distance=(int32_t)(depth>>2u);
+    if (distance<near) distance=near;
+    else if (distance>far) distance=far;
+    if (!extent) {
+        Bootstrap_ReturnVoid("func_8006DFA8_zero_depth_extent","func_8006DED4");
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY); return 0;
+    }
+    distance=far-distance;
+    attenuation=(int32_t)((uint32_t)distance*(uint32_t)distance);
+    attenuation=(int32_t)((int64_t)attenuation/extent);
+    spread=(int32_t)PE_LoadU8(0x800B0DCFu)-PE_LoadU8(0x800B0DCEu);
+    level=(int32_t)((uint32_t)attenuation*(uint32_t)spread);
+    level=(int32_t)((int64_t)level/extent)+PE_LoadU8(0x800B0DCEu);
+    *volume=(uint32_t)level; if (*volume>=128u) *volume=127u;
+    return 1;
+}
+
+int func_8006DFA8(pe_addr_t position, pe_addr_t pan, pe_addr_t volume)
+{
+    uint32_t p,v;
+    if (spatial_sound((int16_t)PE_LoadU16(position),(int16_t)PE_LoadU16(position+2u),
+                      (int16_t)PE_LoadU16(position+4u),&p,&v)) {
+        PE_StoreU32(pan,p); PE_StoreU32(volume,v);
+    }
+    return 0;
+}
+
+int32_t func_8006DED4(pe_addr_t dest, int id, int a1, int x, int y, int z)
+{
+    uint32_t pan,volume;
+    /* An absent package cannot produce a sound. Early resource-free
+     * native fixtures also have no camera or attenuation configuration. */
+    if (!dest) return -1;
+    if (spatial_sound((int16_t)x,(int16_t)y,(int16_t)z,&pan,&volume))
+        return func_8006DF50(dest,(uint32_t)id,(uint32_t)a1,pan,volume);
+    return -1;
 }
 
 void func_8006DE80(int id, int a1, int x, int y, int z)
 {
     func_8006DED4(PE_LoadU32(GA_D_800B0E08), id, a1,
                   (int)(int16_t)x, (int)(int16_t)y, (int)(int16_t)z);
+}
+
+int32_t func_8006DD38(uint32_t index,uint32_t key,int32_t x,int32_t y,int32_t z)
+{
+    uint32_t pan,volume;
+    if (!spatial_sound((int16_t)x,(int16_t)y,(int16_t)z,&pan,&volume)) return 0;
+    if (PE_LoadU8(0x800B0CE8u))
+        return func_80086608(PE_LoadU32(0x800B0E0Cu+index*4u),key,pan,volume);
+    return 0;
+}
+
+/* Paired field-PE sound request, original6DDCC. */
+int32_t func_8006DDCC(int id,int key,int x,int y,int z)
+{
+    int32_t result=func_8006DED4(PE_LoadU32(GA_D_800B0E08),id,key,x,y,z);
+    func_8006DED4(PE_LoadU32(GA_D_800B0E08),(int32_t)((uint32_t)id+1u),key,x,y,z);
+    return result;
 }

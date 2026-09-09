@@ -1,0 +1,32 @@
+{
+  "input": "Ordinary keyboard events in visible X11 window 48234497; read-only GDB snapshots",
+  "weapon_indices": [
+    0,
+    2,
+    0
+  ],
+  "armor_index": 1,
+  "armor_checks": [
+    "open",
+    "right/left input leaves focus on equipped item",
+    "select already equipped item",
+    "cancel replacement",
+    "cancel equipment",
+    "close main menu"
+  ],
+  "position_before": [
+    22609920,
+    -72810496,
+    41484288
+  ],
+  "position_after": [
+    22609920,
+    -72810496,
+    39190528
+  ],
+  "game_state_writes": false,
+  "weapon_property_checks": [
+    "Down focuses property list6",
+    "Up returns to equipped list5"
+  ]
+}

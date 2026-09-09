@@ -1,0 +1,74 @@
+{
+  "run": "INV17 visible native window",
+  "input_method": "ordinary keyboard only, no guest state writes",
+  "healing": {
+    "frame": 11097,
+    "before": 42,
+    "after": 45,
+    "effect_frame": 11117,
+    "medicine_id": 6
+  },
+  "shots": [
+    11405,
+    12165,
+    12181,
+    12448,
+    12464,
+    12731,
+    12790
+  ],
+  "scripted_exit": [
+    12938
+  ],
+  "before_movement": {
+    "hp_live": 17,
+    "hp_saved": 17,
+    "input": "0x0",
+    "position": [
+      345.0,
+      -1111.0,
+      633.0
+    ],
+    "message": 60,
+    "message_state": 0,
+    "inventory": [
+      256,
+      257,
+      258,
+      512,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "command_queue": 0
+  },
+  "after_movement": {
+    "hp_live": 17,
+    "hp_saved": 17,
+    "input": "0x0",
+    "position": [
+      345.0,
+      -1111.0,
+      538.0
+    ],
+    "message": 60,
+    "message_state": 0,
+    "inventory": [
+      256,
+      257,
+      258,
+      512,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "command_queue": 0
+  },
+  "native_boundaries": []
+}

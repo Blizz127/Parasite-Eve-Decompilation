@@ -222,7 +222,8 @@ void func_80030894(void)
             PE_StoreU8(packet + 6u, 0x32u);
             PE_StoreU16(packet + 0x0Cu, 0x38u);
             PE_StoreU16(packet + 0x0Eu, 3u);
-            func_80077BC4(packet);
+            /* 30B50 passes s0 (the gauge), not s1 (its background). */
+            func_80077BC4(state);
 
             func_800370DC(sprt, tpage_sprt);
             PE_StoreU8(sprt_tail + 0x0Cu, 0xC8u);

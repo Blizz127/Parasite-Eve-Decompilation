@@ -1,0 +1,91 @@
+{
+  "build": "INV14",
+  "input": "Ordinary keyboard only; no guest state writes",
+  "stage": "performance-inv14.png shows backdrop and three performers",
+  "before_use": {
+    "hp": 42,
+    "maximum_hp": 45,
+    "at": 9000,
+    "aya_command": 4,
+    "command_index": 0,
+    "queued": 0,
+    "items": [
+      256,
+      257,
+      258,
+      512,
+      6,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "battle_mode": 1
+  },
+  "before_heal": {
+    "hp": 42,
+    "maximum_hp": 45,
+    "at": 0,
+    "aya_command": 4,
+    "command_index": 0,
+    "queued": 1,
+    "items": [
+      256,
+      257,
+      258,
+      512,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "battle_mode": 0
+  },
+  "after_heal": {
+    "hp": 45,
+    "maximum_hp": 45,
+    "at": 0,
+    "aya_command": 4,
+    "command_index": 0,
+    "queued": 1,
+    "items": [
+      256,
+      257,
+      258,
+      512,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "battle_mode": 0
+  },
+  "stop": {
+    "hp": 45,
+    "maximum_hp": 45,
+    "at": 50,
+    "aya_command": 4,
+    "command_index": 1,
+    "queued": 1,
+    "items": [
+      256,
+      257,
+      258,
+      512,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "battle_mode": 0
+  },
+  "heal_frame": 15696,
+  "limitation": "Replay stopped on unported healing particle callback 800D4C24; battle continuation is not yet verified."
+}

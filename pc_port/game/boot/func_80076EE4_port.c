@@ -172,19 +172,21 @@ static int PumpDispatchWorker(pe_addr_t worker, pe_addr_t argument,
     g_pump_trace.dicr_at_worker = PE_GPU_ReadStoredDICR();
     g_pump_trace.chcr_at_worker = PE_GPU_ReadDMA2CHCR();
 
-    if (worker == GPU_LOADIMAGE_WORKER) {
+    if (worker == GPU_LOADIMAGE_WORKER || worker==0x800768A0u) {
         unsigned stop_epoch = PE_Port_StopEpoch();
 
-        (void)func_80076664(argument, auxiliary);
+        if (worker==0x800768A0u) (void)func_800768A0(argument,auxiliary);
+        else (void)func_80076664(argument, auxiliary);
         if (PE_Port_StopEpoch() != stop_epoch) return 0;
         g_pump_trace.worker_returned = 1;
         return 1;
     }
 
-    if (worker == GPU_LINKED_LIST_WORKER) {
+    if (worker == GPU_LINKED_LIST_WORKER || worker == 0x80076434u) {
         unsigned stop_epoch = PE_Port_StopEpoch();
 
-        (void)func_80076B98(argument, auxiliary);
+        if (worker == 0x80076434u) (void)func_80076434(argument,auxiliary);
+        else (void)func_80076B98(argument, auxiliary);
         if (PE_Port_StopEpoch() != stop_epoch) return 0;
         g_pump_trace.worker_returned = 1;
         return 1;

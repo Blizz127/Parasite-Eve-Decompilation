@@ -12,9 +12,10 @@
  * 0x6A slot. table[0x55]+8 = 0x800D4698.
  *
  * D4698 a1==0 writes slot → 0x800F32D0 and slot+0x0C →
- * 0x800E2368, then jalrs *(slot+0x8C)+0x30. Live CE49C
- * left +0x8C=0; kuseg 0x30 is the KSEG0 word at
- * 0x80000030 (zero). Jalr skipped. Return 0.
+ * 0x800E2368, then jalrs *(slot+0x8C)+0x30. The early
+ * resource-free fixture left +0x8C=0. STG7 restores room
+ * exports, so M0005 now supplies descriptor 80190B44 and
+ * callback 80190A6C, now native through the effect callback dispatcher.
  *
  * Unknown jalr targets are not invented.
  */
@@ -35,22 +36,15 @@ int func_800D4698(pe_addr_t slot, unsigned int mode, unsigned int a2,
     pe_addr_t fn_addr;
     uint32_t fn;
 
-    (void)a2;
-    (void)a3;
-    (void)extra0;
-    (void)extra1;
-    if (mode != 0u)
-        return 0;
-
+    if (mode != 0u) return 0;
     rec = PE_LoadU32(slot + 0x8Cu);
     PE_StoreU32(GA_D_800F32D0, slot);
     PE_StoreU32(GA_D_800E2368, slot + 0x0Cu);
     fn_addr = rec + 0x30u;
-    if (fn_addr < 0x80000000u)
-        fn_addr |= 0x80000000u;
+    if (fn_addr<0x200000u) fn_addr|=0x80000000u;
     fn = PE_LoadU32(fn_addr);
-    if (fn != 0u)
-        return 0;
+    PE_EffectCallback_SetExtra1(extra1);   /* retail a3 for overlay callbacks */
+    if (fn) PE_StoreU32(slot+0x14u,(uint32_t)PE_EffectCallback(fn,(int32_t)a2,a3,extra0));
     return 0;
 }
 
@@ -97,7 +91,11 @@ int func_8006F6D4(unsigned int index, unsigned int mode, unsigned int a2,
         PE_StoreU32(out2, PE_LoadU32(slot + 4u));
     }
 
-    if (fn == GA_FN_D4698)
+    if (fn == 0x8018F020u && PE_MirrorOverlay())
+        (void)PE_MirrorCommand(slot, mode, a2, out0, out1);
+    else if (fn == GA_FN_D4698)
         (void)func_800D4698(slot, mode, a2, out0, out1, out2);
+    else if (fn==0x800C9B3Cu || fn==0x800CD89Cu)
+        (void)func_800C2AF0(slot,(int32_t)mode,(int32_t)a2,out0);
     return 0;
 }

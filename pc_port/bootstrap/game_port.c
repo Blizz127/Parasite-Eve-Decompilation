@@ -33,6 +33,7 @@ static PEPortDmaIrqCheckpointTrace g_port_dma_irq_checkpoint_trace;
  * compare this epoch across the call instead. */
 static unsigned g_port_stop_epoch;
 static int g_port_skip_movie = 0;
+static int g_port_skip_opening_menu = 0;
 static PEPortPadSource g_port_pad_source = NULL;
 
 void PE_Port_SetSkipMovie(int enabled)
@@ -43,6 +44,16 @@ void PE_Port_SetSkipMovie(int enabled)
 int PE_Port_SkipMovie(void)
 {
     return g_port_skip_movie;
+}
+
+void PE_Port_SetSkipOpeningMenu(int enabled)
+{
+    g_port_skip_opening_menu = enabled != 0;
+}
+
+int PE_Port_SkipOpeningMenu(void)
+{
+    return g_port_skip_opening_menu;
 }
 
 void PE_Port_SetPadSource(PEPortPadSource source)
@@ -66,6 +77,7 @@ void PE_Port_RunControlReset(void)
 {
     g_port_stop_epoch = 0;
     g_port_skip_movie = 0;
+    g_port_skip_opening_menu = 0;
     g_port_pad_source = NULL;
     g_port_stop_requested = 0;
     g_port_main_iterations = 0;

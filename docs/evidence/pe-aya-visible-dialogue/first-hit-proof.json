@@ -1,0 +1,11 @@
+{
+  "method": "Native visible ATK15 replay, normal keyboard target selection and confirmation, read-only RAM/frame captures.",
+  "shot_frame": 15480,
+  "damage_frame": 15481,
+  "ammo_before": 6,
+  "ammo_after": 5,
+  "eve_hp_before": 1000040,
+  "eve_hp_after": 1000034,
+  "script_result": "First-hit Eve script advanced to mode 7; battle completion still unproven.",
+  "health_note": "The high initial HP is set by the original introductory script; no debug HP writes were performed."
+}

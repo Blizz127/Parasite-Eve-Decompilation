@@ -1,0 +1,43 @@
+# Mounted-disc sector delivery
+
+Stage149 adds bounds-checked raw-sector access to the existing disc owner and
+connects Setloc, SeekL/SeekP, ReadN/ReadS and Pause to the explicitly enabled
+CD command device. The byte data port now consumes distinct bytes from the
+mounted image. Data reaches SDK notification RAM through the existing source2
+interrupt dispatcher, acknowledgment worker and data callback.
+
+The protocol follows [PSX-SPX CDROM](https://psx-spx.consoledev.net/cdromdrive/):
+Setloc accepts three packed-BCD fields; reads acknowledge with INT3 and announce
+sectors with INT1; Pause acknowledges then completes with INT2. Data request
+BFRD exposes 2048 bytes at raw offset24 or 2340 bytes at offset12, depending on
+mode bit5. DRQ clears after the FIFO drains. Single/double-speed scheduling uses
+75/150 sectors per second. Invalid BCD returns INT5 with parameter error10.
+
+Timing remains approximate. Each service call publishes at most one response;
+command acknowledgments serialize with sector responses. Seek/Pause completion
+uses the existing deterministic100000-cycle delay. Mechanical seek latency,
+error correction/retries, multi-sector hardware queues, pregap/end-of-disc
+behavior, CDDA/XA decoding and mode bit4 behavior are not implemented. Unsupported
+read modes, unread pending-sector overflow, out-of-image locations/reads and
+FIFO underflow stop explicitly. The model retains one pending sector plus an
+independent requested FIFO. It does not claim hardware overrun fidelity.
+
+`test_cd_sector_device.h` checks raw bounds and every byte of consecutive
+sectors in both size/speed modes, delayed arrival, BFRD/DRQ, separate seek/pause
+responses, invalid BCD and the bounded-buffer stop. A separate integration
+sequence calls public initialization and SDK Setloc/ReadS, advances host VSync
+queries, checks SDK data-ready publication and consumes the mounted sector.
+No test provides command returns or writes SDK completion fields. The original
+table extractor now also pins26 command-completion jump targets. These are
+protocol/integration tests, not a new original-code control-flow oracle.
+
+DMA3 and the stream reader's physical header/body transfer remain disconnected.
+Next connect those transfers, then MDEC output and movie player/updater/loader.
+Default device activation and complete opening-through-Day2 acceptance remain
+outstanding; Day1 is not yet verified100% complete. Runtime128 stays published.
+
+Validation: normal and ASan/UBSan focused suites each pass41 DAY2 groups
+(1297 skipped,1338 total). Full CTest passes8/8 in135.89s, including1338/1338
+native groups with0 skipped. Final builds are warning-free; authenticated
+table regeneration/check, Python compilation and scoped whitespace pass.
+Logs: `local/live/*day2-149*.log`.

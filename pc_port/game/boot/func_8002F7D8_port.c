@@ -12,7 +12,7 @@
  * Opcode 0x6F jump table D_800910A0[0x6F] @ 0x8009125C = wrapper
  * func_80018954, which loads a0 = *(D_8009D2F0) (current actor) and
  * jal this leaf. Sole jal of 2F7D8 is 0x80018964. Internal jal
- * func_8001A680 @ 0x8002F924 (unresolved; bootstrap-recorded).
+ * func_8001A680 @ 0x8002F924 now starts the native command clip.
  *
  * ROM (same 7×220 SlotRecord as matching 2F9CC/2F970):
  *
@@ -32,9 +32,8 @@
  *   return                         # table full: no store
  *
  * Stack staging cannot alias rodata/BSS, so the port copies
- * template → body in the same 16+8 store order. func_8001A680 is
- * not translated this rung (77 jal sites); the call is recorded
- * through Bootstrap_ReturnVoid4.
+ * template → body in the same 16+8 store order. ATK21 restores the
+ * full command selection, including linked child animation.
  *
  * BTL1: D_800A5D58 inUse==1 after 0x6F
  * (docs/evidence/pe-btl0-field-battle-handoff/).
@@ -87,8 +86,7 @@ void func_8002F7D8(pe_addr_t actor)
 
         if ((PE_LoadU32(actor + 0x98u) & 0x2000u) == 0u) {
             PE_StoreU32(body + 0x18u, body + 0x1Cu);
-            Bootstrap_ReturnVoid4("func_8001A680", "func_8002F7D8",
-                                  actor, 2u, 0u, 0u);
+            func_8001A680_command_cut(actor,2u);
             PE_StoreU8(GA_D_8009D2A0,
                        (uint8_t)((PE_LoadU8(GA_D_8009D2A0) + 1u) & 0xFFu));
         }

@@ -30,17 +30,14 @@
  * it routes through the centralized boundary, so strict mode stops at its
  * first invocation — a valid frontier advance.
  *
- * D_8009D1A0 note: the port represents this one global as a host scalar
- * (Phase 6D-S legacy, pe_globals.c) — the same storage func_8003E680
- * clears — so the |= uses that storage, not a duplicate.  All other state
- * here is guest-RAM-backed via PE_StoreU32.
+ * D_8009D1A0 now shares the original guest-memory word with input and battle.
  *
  * Classification: TRANSLATED retail initialization logic.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 
-extern unsigned int D_8009D1A0;   /* host-represented (6D-S), see note above */
+
 
 /* $gp-resolved scalar addresses (retail $gp = 0x8009CD70) */
 #define GA_3E974_GP474   0x8009D1E4u

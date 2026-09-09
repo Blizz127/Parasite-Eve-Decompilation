@@ -1,0 +1,43 @@
+{
+  "run": "NAM12 visible replay, with name entry enabled",
+  "normal_input_only": true,
+  "guest_state_writes": false,
+  "shot_frames": [
+    18159,
+    18915,
+    18931,
+    19201,
+    19217,
+    19512,
+    19571
+  ],
+  "scripted_exit_frame": 19719,
+  "message": 60,
+  "input_mask": 0,
+  "HP": 18,
+  "max_HP": 45,
+  "saved_HP": 18,
+  "saved_ammo": 5,
+  "sound_queue": 0,
+  "body_slots": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "position_before": [
+    345.0,
+    -1111.0,
+    633.0
+  ],
+  "position_after": [
+    140.0,
+    -1111.0,
+    633.0
+  ],
+  "movement": "Right held for 800 ms, then released",
+  "name": "104830ffffffffff"
+}

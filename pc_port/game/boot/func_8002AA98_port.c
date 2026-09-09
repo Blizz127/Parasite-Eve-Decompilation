@@ -28,6 +28,7 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "game_port.h"
 
 #define GA_D_8009D254 0x8009D254u
 #define GA_D_8009D278 0x8009D278u
@@ -299,6 +300,16 @@ void func_8002B29C(void)
         return;
     }
     if (phase == 3u) {
+        /* Retail 2B78C..2B7E8 starts both fades before phase 4 waits
+         * for their busy bytes. Advancing only the timer stranded a
+         * naturally defeated Aya with +0x252 still set. */
+        if (!PE_LoadU8(GA_D_8009CE70)) {
+            aya = PE_LoadU32(GA_D_8009D254);
+            func_8003C5D8(aya + 0x1B4u, 60);
+            PE_StoreU16(aya + 0x250u, PE_LoadU16(aya + 0x250u) | 2u);
+            func_8003C5D8(0x800B0CECu, 60);
+            PE_StoreU16(0x800B0D88u, PE_LoadU16(0x800B0D88u) | 2u);
+        }
         func_8002B29C_timer_advance(60u);
         return;
     }
@@ -334,14 +345,35 @@ void func_8002B29C(void)
  *      (6A674) skips 6CDA4; bit4 clear returns 0 →
  *      295E4, mode=9, B0CD8&=~0x8000. Do not plant 0x41.
  */
-/*
- * 2F300 named cut: jal 293F4(0) then sw mode 2 @ 2F570.
- * HUD sb storm / 1A680 / 6DE80 / 5218C stay deferred.
- */
+/* Full 2F300 victory initialization, retaining the historical entry name. */
+static void victory_rgb(pe_addr_t at,uint8_t r,uint8_t g,uint8_t b)
+{ PE_StoreU8(at,r); PE_StoreU8(at+1u,g); PE_StoreU8(at+2u,b); }
+
 void func_8002F300_mode2_cut(void)
 {
-    func_800293F4_hp_cut();
+    static const pe_addr_t hp[]={0x800B00ECu,0x800B00FCu,0x800B0110u,0x800B0120u};
+    static const pe_addr_t at[]={0x800B0134u,0x800B0144u,0x800B017Cu,0x800B018Cu};
+    static const pe_addr_t pe[]={0x800B0158u,0x800B0168u,0x800B01A0u,0x800B01B0u};
+    pe_addr_t aya;
+    unsigned i;
+    func_800293F4(0u);
+    for (i=0;i<4;i++) {
+        victory_rgb(hp[i],0u,70u,130u); victory_rgb(hp[i]+8u,159u,255u,249u);
+        victory_rgb(at[i],0u,130u,54u); victory_rgb(at[i]+8u,74u,255u,59u);
+        victory_rgb(pe[i],255u,61u,129u); victory_rgb(pe[i]+8u,131u,19u,1u);
+    }
+    victory_rgb(0x800B692Cu,159u,255u,249u); victory_rgb(0x800B6948u,159u,255u,249u);
     PE_StoreU32(GA_D_8009D28C, 2u);
+    PE_StoreU32(GA_D_8009D2E8,PE_LoadU32(GA_D_8009D2E8)|1u);
+    aya=PE_LoadU32(GA_D_8009D254);
+    PE_StoreU32(aya+0x68u,0u); PE_StoreU32(aya+0x6Cu,0u); PE_StoreU32(aya+0x70u,0u);
+    PE_StoreU32(aya+0x98u,PE_LoadU32(aya+0x98u)&~0x100u);
+    PE_StoreU32(GA_D_800B0CD8,PE_LoadU32(GA_D_800B0CD8)|0x8000u);
+    if (!(D_8009D1A0&0x1800u)) {
+        func_8001A680_command_cut(aya,20u);
+        func_8006DE80(0x45B,0,(int16_t)PE_LoadU16(aya+0x2Au),
+            (int16_t)PE_LoadU16(aya+0x2Eu),(int16_t)PE_LoadU16(aya+0x32u));
+    }
 }
 
 /*
@@ -461,4 +493,144 @@ void func_8002A7F8_mode3_cut(void)
         return;
     }
     func_8002B29C();
+}
+
+/* Original 2B94C..2BC90 (19DE4.s): mode4 cleanup and mode10 publication. */
+void func_8002B94C(void)
+{
+    pe_addr_t actor,aya,record;
+    uint32_t flags;
+    uint8_t phase=PE_LoadU8(GA_D_8009CE74);
+    if (phase==0u) {
+        PE_StoreU8(0x8009D244u,0);
+        (void)func_800701B4();
+        if (PE_Port_ShouldStop()) return;
+        actor=PE_LoadU32(0x8009D20Cu);
+        while (actor) {
+            record=PE_LoadU32(actor);
+            if (record) {
+                if (actor==PE_LoadU32(GA_D_8009D254)) {
+                    func_8003C5D8(0x800B0CECu,30);
+                    PE_StoreU16(0x800B0D88u,PE_LoadU16(0x800B0D88u)|2u);
+                    aya=PE_LoadU32(GA_D_8009D254);
+                    PE_StoreU16(aya+0x250u,PE_LoadU16(aya+0x250u)|2u);
+                } else {
+                    func_8001A680_command_cut(actor,(uint16_t)(int16_t)(int8_t)PE_LoadU8(record+6u));
+                    if (PE_Port_ShouldStop()) return;
+                    PE_StoreU32(actor+0x68u,0);PE_StoreU32(actor+0x6Cu,0);PE_StoreU32(actor+0x70u,0);
+                    PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)|0x1000u);
+                    flags=PE_LoadU32(actor+0x98u);
+                    if ((flags&0x40000000u) && !PE_LoadU8(PE_LoadU32(actor)+0xAFu)) {
+                        PE_StoreU32(actor+0x98u,flags|0x10u);PE_StoreU32(actor,0);
+                    }
+                }
+                func_8003C5D8(actor+0x1B4u,30);
+            } else if (PE_LoadU32(actor+0x18Cu)) func_8003C5D8(actor+0x1B4u,30);
+            if (PE_Port_ShouldStop()) return;
+            actor=PE_LoadU32(actor+4u);
+        }
+        PE_StoreU8(GA_D_8009CE74,(uint8_t)(PE_LoadU8(GA_D_8009CE74)+1u));
+    } else if (phase==1u) {
+        aya=PE_LoadU32(GA_D_8009D254);
+        if (PE_LoadU8(aya+0x252u) || PE_LoadU8(0x800B0D8Au)) return;
+        func_800293F4(0);
+        if (PE_Port_ShouldStop()) return;
+        actor=PE_LoadU32(0x8009D20Cu);
+        PE_StoreU8(GA_D_8009CE74,(uint8_t)(PE_LoadU8(GA_D_8009CE74)+1u));
+        aya=PE_LoadU32(GA_D_8009D254);
+        while (actor) {
+            if (actor!=aya && (PE_LoadU32(actor) || PE_LoadU32(actor+0x18Cu)))
+                PE_StoreU16(actor+0x250u,PE_LoadU16(actor+0x250u)|2u);
+            actor=PE_LoadU32(actor+4u);
+        }
+    } else if (phase==2u) {
+        unsigned ready=1;
+        actor=PE_LoadU32(0x8009D20Cu);aya=PE_LoadU32(GA_D_8009D254);
+        while (actor) {
+            if (actor!=aya && (PE_LoadU32(actor) || PE_LoadU32(actor+0x18Cu))) {
+                flags=PE_LoadU32(actor+0x98u);
+                if (!PE_LoadU8(actor+0x252u) || (flags&0x40u)) {
+                    PE_StoreU32(actor,0);PE_StoreU32(actor+0x98u,flags|0x10u);
+                } else ready=0;
+            }
+            actor=PE_LoadU32(actor+4u);
+        }
+        if (ready) {
+            func_800866A4(0,255);
+            if (PE_Port_ShouldStop()) return;
+            func_800703F4();
+            if (PE_Port_ShouldStop()) return;
+            PE_StoreU8(GA_D_8009CE74,(uint8_t)(PE_LoadU8(GA_D_8009CE74)+1u));
+        }
+    } else if (phase==3u) {
+        if (func_8006D60C(0)==1 || PE_Port_ShouldStop()) return;
+        func_8002F9CC();
+        if (PE_Port_ShouldStop()) return;
+        func_8001A680_command_cut(PE_LoadU32(GA_D_8009D254),21);
+        if (PE_Port_ShouldStop()) return;
+        func_800295E4();
+        if (PE_Port_ShouldStop()) return;
+        PE_StoreU32(GA_D_8009D28C,10u);
+    }
+}
+
+/* Original 2F0B0..2F300 (19DE4.s): mode5 cleanup and mode11 publication. */
+void func_8002F0B0(void)
+{
+    pe_addr_t actor,aya,record;
+    uint32_t flags;
+    uint8_t phase=PE_LoadU8(GA_D_8009CE74);
+    if (phase==0u) {
+        actor=PE_LoadU32(GA_D_8009D20C);
+        PE_StoreU8(0x8009D244u,0);
+        while (actor) {
+            if (actor!=PE_LoadU32(GA_D_8009D254)) {
+                record=PE_LoadU32(actor);
+                if (record || PE_LoadU32(actor+0x18Cu)) {
+                    if (record) {
+                        func_8001A680_command_cut(actor,(uint16_t)(int16_t)(int8_t)PE_LoadU8(record+6u));
+                        if (PE_Port_ShouldStop()) return;
+                        PE_StoreU32(actor+0x68u,0);PE_StoreU32(actor+0x6Cu,0);PE_StoreU32(actor+0x70u,0);
+                        PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)|0x1000u);
+                        flags=PE_LoadU32(actor+0x98u);
+                        if ((flags&0x40000000u) && !PE_LoadU8(PE_LoadU32(actor)+0xAFu)) {
+                            PE_StoreU32(actor+0x98u,flags|0x10u);PE_StoreU32(actor,0);
+                        }
+                    }
+                    func_8003C5D8(actor+0x1B4u,30);
+                    if (PE_Port_ShouldStop()) return;
+                    PE_StoreU16(actor+0x250u,PE_LoadU16(actor+0x250u)|2u);
+                }
+            }
+            actor=PE_LoadU32(actor+4u);
+        }
+        PE_StoreU8(GA_D_8009CE74,(uint8_t)(PE_LoadU8(GA_D_8009CE74)+1u));
+    } else if (phase==1u) {
+        unsigned ready=1;
+        actor=PE_LoadU32(GA_D_8009D20C);aya=PE_LoadU32(GA_D_8009D254);
+        while (actor) {
+            if (actor!=aya && (PE_LoadU32(actor) || PE_LoadU32(actor+0x18Cu))) {
+                flags=PE_LoadU32(actor+0x98u);
+                if (!PE_LoadU8(actor+0x252u) || (flags&0x40u)) {
+                    PE_StoreU32(actor,0);PE_StoreU32(actor+0x98u,flags|0x10u);
+                } else ready=0;
+            }
+            actor=PE_LoadU32(actor+4u);
+        }
+        if (ready) {
+            func_800703F4();
+            if (PE_Port_ShouldStop()) return;
+            PE_StoreU8(GA_D_8009CE74,(uint8_t)(PE_LoadU8(GA_D_8009CE74)+1u));
+        }
+    } else if (phase==2u) {
+        if (func_8006D60C(0)==1 || PE_Port_ShouldStop()) return;
+        func_8002F9CC();
+        if (PE_Port_ShouldStop()) return;
+        func_8001A680_command_cut(PE_LoadU32(GA_D_8009D254),21);
+        if (PE_Port_ShouldStop()) return;
+        func_800295E4();
+        if (PE_Port_ShouldStop()) return;
+        PE_StoreU32(GA_D_8009D28C,11u);
+        func_800293F4(0);
+    }
 }

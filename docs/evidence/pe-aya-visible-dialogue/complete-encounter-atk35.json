@@ -1,0 +1,69 @@
+{
+  "run": "ATK35 visible native replay",
+  "normal_input_only": true,
+  "guest_state_writes": false,
+  "shot_frames": [
+    10874,
+    11681,
+    11697,
+    11984,
+    12000,
+    12267,
+    12326
+  ],
+  "damage_frames": [
+    10875,
+    11682,
+    11698,
+    11985,
+    12001,
+    12268,
+    12327
+  ],
+  "beam_frames": [
+    10733,
+    11554,
+    11845,
+    12128
+  ],
+  "aya_hp_sequence": [
+    45,
+    42,
+    35,
+    25,
+    18
+  ],
+  "scripted_exit_requested_frame": 12474,
+  "reaction_present_frame": 11164,
+  "mode": 12,
+  "input_mask": 0,
+  "HP": 18,
+  "max_HP": 45,
+  "saved_HP": 18,
+  "loaded_ammo": 5,
+  "saved_ammo": 5,
+  "sound_queue": 0,
+  "actor_pool_in_use": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "ordinary_Right_key_held_ms": 800,
+  "position_before": [
+    345.0,
+    -1111.0,
+    633.0
+  ],
+  "position_after": [
+    120.0,
+    -1111.0,
+    633.0
+  ],
+  "remaining": "Name entry and menu paths are unfinished; this proves the first encounter and return to movement with both sides attacking.",
+  "saved_weapon_record": "800C0EAC",
+  "host_inventory_index": "800C0E48"
+}

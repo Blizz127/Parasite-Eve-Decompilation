@@ -1,0 +1,42 @@
+{
+  "run": "NAM12 visible native app on DISPLAY :10.0",
+  "controls": "Ordinary Return, Circle (C), arrows and Start (P); no guest RAM/stat/progression writes",
+  "checks": [
+    {
+      "action": "added",
+      "name": "AyaA",
+      "encoded": "10483010",
+      "focus": "0x800a2520"
+    },
+    {
+      "action": "deleted",
+      "name": "Aya",
+      "encoded": "104830",
+      "focus": "0x800a2520"
+    },
+    {
+      "action": "default-focus",
+      "name": "AyaF",
+      "encoded": "10483015",
+      "focus": "0x800a2370"
+    },
+    {
+      "action": "default",
+      "name": "Aya",
+      "encoded": "104830",
+      "focus": "0x800a2370"
+    },
+    {
+      "action": "end-focus",
+      "name": "Aya",
+      "encoded": "104830",
+      "focus": "0x800a2400"
+    }
+  ],
+  "after_end": {
+    "menu_head": "0x0",
+    "field_menu_flag": false,
+    "message": 12,
+    "name": "104830ffffffffff"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "run": "INV15 visible native window",
+  "input": "ordinary keyboard only; no guest state writes",
+  "heal_frame": 26425,
+  "hp_before": 38,
+  "hp_after": 45,
+  "item_consumed": 6,
+  "effect_frame": 26445,
+  "particles_and_rings": "visually verified",
+  "subsequent_shot_frames": [
+    28221,
+    28958,
+    28974,
+    29230,
+    29246,
+    29466,
+    29525
+  ],
+  "ending": "Aya naturally defeated; phase 4 stalled because phase 3 did not start fades. Not a completed encounter."
+}

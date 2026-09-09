@@ -22,7 +22,7 @@ extern void func_8006A5BC(void);
 extern void func_8006A64C(void);
 extern void func_8006A9E4(void);
 extern int func_8006AD40(void);
-extern void func_8006ECEC(void);
+extern int func_8006ECEC(void);
 extern void func_8006F044(void);
 extern int  func_8006E834(void);
 extern void func_80069B08(int);
@@ -36,7 +36,7 @@ extern void func_80073A44(int mode);
 extern void func_80074D28(int mask);
 
 /* D_800B0CD8 is a guest-RAM lvalue macro (psx_compat.h) */
-extern unsigned int D_8009D280;
+
 extern unsigned int D_8009D1C4;
 extern unsigned int D_800A7918;
 
@@ -173,7 +173,9 @@ void func_8001220C(void)
             } else {
                 if (v == 0xA8000048u) {
                     func_8006ECEC();
+                    if (PE_Port_ShouldStop()) return;
                     PE_Port_ScratchpadCall(func_8019234C);
+                    if (PE_Port_ShouldStop()) return;
                     *data |= 0x1;
                 } else {
                     func_8003F3C4();

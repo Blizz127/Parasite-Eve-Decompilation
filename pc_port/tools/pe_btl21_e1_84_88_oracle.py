@@ -54,6 +54,16 @@ def main() -> int:
     require(load_u32(data, 0x800910A0 + 0x84 * 4) == 0x80018E84, "table[0x84]")
     require(load_u32(data, 0x80018E94) == 0xA422D020, "sh D020")
     require(load_u32(data, 0x80018EA8) == 0xA422D022, "sh D022")
+    for lui_pc, store_pc, expected in (
+        (0x80018E90, 0x80018E94, 0x800BD020),
+        (0x80018EA4, 0x80018EA8, 0x800BD022),
+    ):
+        lui, store = load_u32(data, lui_pc), load_u32(data, store_pc)
+        require(lui >> 16 == 0x3C01, "yaw address LUI $at")
+        low = store & 0xFFFF
+        signed_low = low - 0x10000 if low & 0x8000 else low
+        address = (((lui & 0xFFFF) << 16) + signed_low) & 0xFFFFFFFF
+        require(address == expected, "yaw store includes signed low address half")
     require((0x80018F74 - 0x80018F54) // 4 == 8, "18F54 8w")
     require(
         window_sha(data, 0x80018F54, 0x80018F74)
@@ -62,7 +72,7 @@ def main() -> int:
     )
     require(load_u32(data, 0x800910A0 + 0x88 * 4) == 0x80018F54, "table[0x88]")
     require(load_u32(data, 0x80018F64) == 0x304200BF, "andi 0xBF")
-    print("PASS: 0xE1 sb BCFFC; 0x84 sh D020/D022; 0x88 BCFEE&=~0x40; all v0=1")
+    print("PASS: 0xE1 sb BCFFC; 0x84 sh 800BD020/800BD022 (signed low half); 0x88 BCFEE&=~0x40; all v0=1")
     return 0
 
 

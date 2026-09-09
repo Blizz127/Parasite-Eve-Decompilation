@@ -27,6 +27,7 @@
 
 extern void func_8005E57C(int value);
 extern void func_8005C1EC(int enabled);
+extern void func_8005E6E4(int value);
 extern void func_80042538(void);
 extern int func_80190660(void);
 extern int func_80192CE8(int index);
@@ -36,6 +37,36 @@ static void CopyGuestBytes(pe_addr_t destination, pe_addr_t source,
 {
     memcpy(PE_Translate(destination, size),
            PE_TranslateConst(source, size), size);
+}
+
+/* Original nonnegative-selector exit, 0x801916DC..0x801918C8.
+ * The movie-skip entry still needs the title's ordinary teardown: its
+ * standalone renderer and card timer must not survive into the field.
+ * The current screen Y survives the saved-environment restoration. */
+static int FinishTitleMenu(int selector)
+{
+    RECT clear_rect = {0, 0, 320, 480};
+    uint16_t screen_y;
+
+    func_80074D28(0);
+    func_8005E6E4(0);
+    func_80074F44(&clear_rect, 0, 0, 0);
+    func_80074DC0(0);
+    if (PE_Port_ShouldStop())
+        return -1;
+    screen_y = PE_LoadU16(GA_DISPENV_SOURCE_0 + 10u);
+
+    CopyGuestBytes(GA_DRAWENV_SOURCE_0, GA_DRAWENV_COPY_0, 0x5Cu);
+    CopyGuestBytes(GA_DRAWENV_SOURCE_1, GA_DRAWENV_COPY_1, 0x5Cu);
+    CopyGuestBytes(GA_DISPENV_SOURCE_0, GA_DISPENV_COPY_0, 0x14u);
+    CopyGuestBytes(GA_DISPENV_SOURCE_1, GA_DISPENV_COPY_1, 0x14u);
+    PE_StoreU16(GA_DISPENV_SOURCE_1 + 10u, screen_y);
+    PE_StoreU16(GA_DISPENV_SOURCE_0 + 10u, screen_y);
+    func_8005C1EC(0);
+    if (PE_Port_ShouldStop())
+        return -1;
+    func_8005E57C(0);
+    return selector;
 }
 
 int func_801909B4(void)
@@ -117,11 +148,12 @@ int func_801909B4(void)
          * title/menu tail.  Return the New-Game selector so
          * func_8006E9A0(1) publishes 0xA80830C8 and the next main
          * dispatch is the field tick.  Retail only reaches that after
-         * FMV001 + the title Confirm; none of those ran here. */
+         * FMV001 + the title Confirm; none of those ran here.  Execute
+         * its original exit before returning to the New-Game caller. */
         (void)saved_bit;
         Stub_Record("func_801909B4_skip_movie_new_game", "HOST_ADAPTED");
         Trace_Direct("skip_movie_new_game_selector");
-        return 1;
+        return FinishTitleMenu(1);
     }
 
     if (PE_LoadU32(0x8009D1BCu) == 0u) {

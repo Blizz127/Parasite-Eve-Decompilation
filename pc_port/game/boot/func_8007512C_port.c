@@ -46,7 +46,7 @@ static int IsGp0EnvironmentWord(uint32_t word)
  * all-environment words.  Reports through the single-node boundary name
  * so earlier cuts keep their identity. */
 static int DRW1_ValidateNode(pe_addr_t node, uint32_t tag, uint32_t count,
-                             uint32_t auxiliary)
+                             pe_addr_t previous_node)
 {
     uint32_t command;
     uint32_t i;
@@ -54,11 +54,13 @@ static int DRW1_ValidateNode(pe_addr_t node, uint32_t tag, uint32_t count,
 
     /* Size-0 nodes are the OTC empty-bucket links: nothing to send, just
      * follow the link.  (Single-node terminal size-0 was previously cut;
-     * no test plants it, and hardware sends nothing either way.) */
+     * no test plants it, and hardware sends nothing either way.)
+     * The record's a3 is the node whose link led here (0 for the head), so
+     * a boundary report can name the writer of a corrupt link. */
     if (count > 15u || !PE_RangeIsRam(node, node_bytes)) {
         (void)Bootstrap_ReturnInt4Indirect(
             "func_80076B98_packet_cut", "func_80076B98", 0, 0u,
-            node, tag, count, auxiliary, NULL, 0u);
+            node, tag, count, previous_node, NULL, 0u);
         PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
         return 0;
     }
@@ -67,19 +69,21 @@ static int DRW1_ValidateNode(pe_addr_t node, uint32_t tag, uint32_t count,
     command = PE_LoadU32(node + 4u);
     if (count == 4u && command == 0x80000000u)
         return 1;
-    /* Structural walk: environment singles, or GP0(02h) FILL triples
-     * (command + coords + size, the shape SetDrawEnv emits).  FILL
-     * payload words are data, accepted positionally; a truncated FILL
-     * stays a cut — retail emits complete triples only. */
+    /* Structural walk over the node's command stream.  Each command word
+     * must be one the GPU substrate can execute from idle, and its payload
+     * words (accepted positionally as data) must fit the node — retail
+     * emits complete primitives only, so a truncated one stays a cut.  The
+     * length comes from the substrate itself (PE_GPU_GP0_PacketWords), so a
+     * primitive is admitted here exactly when submission can execute it. */
     i = 0u;
     while (i < count) {
         uint32_t word = PE_LoadU32(node + 4u + i * 4u);
-        if (IsGp0EnvironmentWord(word)) {
-            i++;
-            continue;
-        }
-        if ((word & 0xFF000000u) == 0x02000000u && i + 2u < count) {
-            i += 3u;
+        uint32_t words = PE_GPU_GP0_PacketWords(word);
+
+        if (words == 0u && IsGp0EnvironmentWord(word))
+            words = 1u;
+        if (words != 0u && i + words <= count) {
+            i += words;
             continue;
         }
         (void)Bootstrap_ReturnInt4Indirect(
@@ -146,7 +150,7 @@ int func_80076B98(pe_addr_t packet, uint32_t auxiliary)
     node = packet;
     tag = PE_LoadU32(node);
     count = tag >> 24;
-    if (!DRW1_ValidateNode(node, tag, count, auxiliary))
+    if (!DRW1_ValidateNode(node, tag, count, 0u))
         return 0;
 
     /* Retail writes GP1(04h)=2, DMA2 MADR=packet, BCR=0, then
@@ -168,18 +172,20 @@ int func_80076B98(pe_addr_t packet, uint32_t auxiliary)
      * than spinning on address zero, which no valid chain can name. */
     for (;;) {
         uint32_t next;
+        pe_addr_t previous_node;
 
         if (!DRW1_SubmitNode(node, tag, count))
             return 0;
         next = tag & 0x00FFFFFFu;
         if (next == 0x00FFFFFFu || next >= 0x00200000u)
             break;
+        previous_node = node;
         node = 0x80000000u | next;
         tag = PE_LoadU32(node);
         if (tag == 0u)
             break;
         count = tag >> 24;
-        if (!DRW1_ValidateNode(node, tag, count, auxiliary))
+        if (!DRW1_ValidateNode(node, tag, count, previous_node))
             return 0;
     }
     PE_GPU_GetState(&gpu);

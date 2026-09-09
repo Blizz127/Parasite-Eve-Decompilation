@@ -1,0 +1,10 @@
+{
+  "binary_sha256": "3bfcd7f5928bfdf18130af9ccf4094b7ae6a47f71450e5538ce1940a9699ade0",
+  "run": "sewers28",
+  "battle_start": 47020,
+  "stop_frame": 49014,
+  "hp_at_stop": 4,
+  "stop": "VM36/80013E84 at801D94D4",
+  "flash_fix": "DAY1-11",
+  "scope": "Live progression past prior flash boundary; battle victory and pixel equality to retail not established"
+}

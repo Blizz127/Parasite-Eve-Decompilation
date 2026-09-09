@@ -185,6 +185,12 @@ void PE_Disc_Close(PE_Disc *d)
 
 /* ── Reads ──────────────────────────────────────────────────────────── */
 
+bool PE_Disc_ReadRawSector(const PE_Disc *d, uint32_t lba,
+                           uint8_t out[PE_DISC_RAW_SECTOR])
+{
+    return d && out && PE_Disc_ReadRaw((PE_Disc *)d, lba, out);
+}
+
 bool PE_Disc_ReadUserSector(const PE_Disc *d, uint32_t lba,
                             uint8_t out[PE_DISC_USER_SECTOR])
 {

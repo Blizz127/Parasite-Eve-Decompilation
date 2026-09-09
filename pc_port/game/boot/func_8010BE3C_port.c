@@ -53,3 +53,19 @@ void func_8010C0D8(pe_addr_t callback)
 {
     (void)func_80073CF4(1u, callback);
 }
+
+/* BFA0..C01C: DecDCTin edits only output-depth/high-bit command flags. */
+void func_8010BFA0(pe_addr_t command_block,uint32_t mode)
+{
+    uint32_t command=PE_LoadU32(command_block);
+    command=(mode&1u)?command&~0x08000000u:command|0x08000000u;
+    PE_StoreU32(command_block,command);
+    command=(mode&2u)?command|0x02000000u:command&~0x02000000u;
+    PE_StoreU32(command_block,command);
+    (void)PE_MDEC_SubmitInputTable(command_block,PE_LoadU16(command_block));
+}
+/* C01C wrapper plus C27C..C308: wait, round down to32-word blocks, issue. */
+void func_8010C01C(pe_addr_t destination,uint32_t words)
+{
+    (void)PE_MDEC_SubmitOutput(destination,words);
+}

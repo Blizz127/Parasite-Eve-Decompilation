@@ -11,22 +11,15 @@
 
 /* ── Host-owned scalar globals (plain data, no pointer arithmetic) ──── */
 
-int       D_8009CDDC = 0;
-uint32_t  D_8009D280 = 0;
+
 uint32_t  D_8009D1C4 = 0;
 uint32_t  D_800A7918 = 0;
-unsigned int D_8009D1A0, D_8009D250;
+unsigned int D_8009D250;
 unsigned short D_80093164[4] = {0};
 
 /* func_80052C6C state globals (host-side, reset by PE_Sdk_ResetState) */
 unsigned int D_8009D018 = 0;
 unsigned int D_8009D03C = 0;
-unsigned int D_8009D048 = 0;
-unsigned int D_8009D04C = 0;
-unsigned int D_8009D050 = 0;
-unsigned int D_8009D054 = 0;
-unsigned int D_8009D058 = 0;
-unsigned int D_8009D064 = 0;
 
 /* ── D_80011614 — retail guest pointer, held host-side as pe_addr_t ────
  *

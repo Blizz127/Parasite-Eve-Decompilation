@@ -11,7 +11,7 @@
  * CFE8/EA/EC toward CFF0/F2/F4 by CFF8/(CFF6-1), writes the
  * CDDC slot, then CFF8++. When CFF8>=CFF6, CFEE=0 if CFEE&4
  * else CFEE=1. Other CFEE&3 values copy CFE8/EA/EC and skip
- * the timer. Host skips retail div-break.
+ * the timer. Retail clamps the denominator positive, making div-break unreachable.
  *
  * Live type-0 0x86 sets CFEE=6, CFF6=60, CFF8=0. 0x9C waits
  * until (CFEE&3)<2.
@@ -32,15 +32,6 @@
 #define GA_D_8009CDDC 0x8009CDDCu
 #define GA_D_800B0E38 0x800B0E38u
 
-static int pe_68e24_div(int num, int den)
-{
-    if (den == 0)
-        return 0;
-    if (den == -1 && num == (int)0x80000000)
-        return 0;
-    return num / den;
-}
-
 static uint8_t pe_68e24_lerp(pe_addr_t cur_a, pe_addr_t dest_a,
                              int32_t t, int32_t den)
 {
@@ -49,7 +40,12 @@ static uint8_t pe_68e24_lerp(pe_addr_t cur_a, pe_addr_t dest_a,
 
     cur = (int32_t)(int16_t)PE_LoadU16(cur_a);
     dest = (int32_t)(int16_t)PE_LoadU16(dest_a);
-    return (uint8_t)(dest + pe_68e24_div((cur - dest) * t, den));
+    /* Original mult/mflo wraps before signed div. den is clamped to at
+     * least1 by the caller, so neither retail division trap is reachable. */
+    uint32_t product = (uint32_t)(cur - dest) * (uint32_t)t;
+    int64_t signed_product = product < 0x80000000u
+        ? (int64_t)product : (int64_t)product - INT64_C(0x100000000);
+    return (uint8_t)(dest + signed_product / den);
 }
 
 static void pe_68e24_link(unsigned int cddc)

@@ -33,6 +33,14 @@
 static const uint16_t kResetGraphW[3] = { 0x0400, 0x0400, 0x0400 };
 static const uint16_t kResetGraphH[3] = { 0x0200, 0x0200, 0x0400 };
 
+/* 77AC4..77B00: AddPrim preserves both tag high bytes. */
+void func_80077AC4(pe_addr_t ot, pe_addr_t packet)
+{
+    PE_StoreU32(packet,(PE_LoadU32(packet)&0xFF000000u)
+                      |(PE_LoadU32(ot)&0x00FFFFFFu));
+    PE_StoreU32(ot,(PE_LoadU32(ot)&0xFF000000u)|(packet&0x00FFFFFFu));
+}
+
 /* func_80077144 collapsed: modes 0/1/3/5 write DMA2 CHCR=0x401 and perform
  * DPCR = DPCR | 0x800 before their mode-specific GPU work.  Retain the exact
  * DPCR RMW here at its retail owner.  The canonical first lifecycle already
@@ -298,6 +306,40 @@ static uint32_t func_800762BC(pe_addr_t tw)
     return 0xE2000000u | x | y | w | h;
 }
 
+void PE_SetTexWindowValues75B4C(pe_addr_t packet,const int16_t rect[4])
+{
+    uint32_t word=0u;
+    if (rect) {
+        uint32_t x=(((uint32_t)rect[0]&255u)>>3u)<<10u;
+        uint32_t y=(((uint32_t)rect[1]&255u)>>3u)<<15u;
+        uint32_t w=((0u-(uint32_t)rect[2])&255u)>>3u;
+        uint32_t h=(((0u-(uint32_t)rect[3])&255u)>>3u)<<5u;
+        word=0xE2000000u|x|y|w|h;
+    }
+    PE_StoreU8(packet+3u,2u);PE_StoreU32(packet+4u,word);PE_StoreU32(packet+8u,0u);
+}
+
+void func_80075B4C(pe_addr_t packet,pe_addr_t rect)
+{
+    PE_StoreU8(packet+3u,2u);PE_StoreU32(packet+4u,func_800762BC(rect));PE_StoreU32(packet+8u,0u);
+}
+
+void PE_SetDrawAreaValues75B84(pe_addr_t packet,const int16_t rect[4])
+{
+    PE_StoreU8(packet+3u,2u);
+    PE_StoreU32(packet+4u,pe_clip_cmd(0xE3000000u,rect[0],rect[1]));
+    PE_StoreU32(packet+8u,pe_clip_cmd(0xE4000000u,
+        (int16_t)((uint16_t)rect[0]+(uint16_t)rect[2]-1u),
+        (int16_t)((uint16_t)rect[1]+(uint16_t)rect[3]-1u)));
+}
+
+void func_80075B84(pe_addr_t packet,pe_addr_t rect)
+{
+    int16_t values[4];unsigned i;
+    for (i=0;i<4;i++) values[i]=(int16_t)PE_LoadU16(rect+i*2u);
+    PE_SetDrawAreaValues75B84(packet,values);
+}
+
 static void func_80075EE0(pe_addr_t dr, pe_addr_t env)
 {
     int16_t clip_x = (int16_t)PE_LoadU16(env);
@@ -473,12 +515,84 @@ void func_800754E4(pe_addr_t ot, pe_addr_t env)
     memcpy(PE_Translate(0x8009575Cu, 0x5Cu), PE_Translate(env, 0x5Cu), 0x5Cu);
 }
 
-/* Phase 6E-PRS1 — func_800755F0 (PutDispEnv) display authority.
- * Retail's 318-word GP1 body is out of scope to translate; the host
- * display is the hardware authority, so this cut reads the DISPENV disp
- * RECT from guest RAM and copies that VRAM window into the host
- * framebuffer.  Read-only on guest state. */
-void func_800755F0(pe_addr_t env)
+/* DAY1-31: original 76434..76664 ClearImage worker. The SDK wrapper's
+ * queued RECT is guest-owned and the original clamps it in place before
+ * building either the quick-fill packet or the drawing-area save/restore
+ * chain. GPUREAD info3/4/5 below are the platform drawing-state contract. */
+static uint16_t clear_dimension(uint16_t value, pe_addr_t limit)
 {
-    HostFB_PresentDispEnv(env);
+    if ((int16_t)value<0) return 0;
+    if ((int32_t)(int16_t)PE_LoadU16(limit)-1 < (int16_t)value)
+        return (uint16_t)(PE_LoadU16(limit)-1u);
+    return value;
+}
+
+static int clear_worker(pe_addr_t rect, uint32_t color, uint32_t *words)
+{
+    const pe_addr_t packet=0x800A3300u,restore=0x800A3328u;
+    uint32_t mode;
+    if (words) {
+        uint16_t w=clear_dimension((uint16_t)words[1],0x80095750u);
+        uint16_t h=clear_dimension((uint16_t)(words[1]>>16u),0x80095752u);
+        words[1]=(uint32_t)w|((uint32_t)h<<16u);
+    } else {
+        PE_StoreU16(rect+4u,clear_dimension(PE_LoadU16(rect+4u),0x80095750u));
+        PE_StoreU16(rect+6u,clear_dimension(PE_LoadU16(rect+6u),0x80095752u));
+    }
+    if (((words?words[0]:PE_LoadU16(rect))&63u) ||
+        ((words?words[1]:PE_LoadU16(rect+4u))&63u)) {
+        PeGpuState gpu;
+        PE_StoreU32(packet,0x080A3328u);
+        PE_StoreU32(packet+16u,0xE6000000u);
+        PE_StoreU32(packet+4u,0xE3000000u);
+        PE_StoreU32(packet+8u,0xE4FFFFFFu);
+        PE_StoreU32(packet+12u,0xE5000000u);
+        mode=0xE1000000u|(PE_GPU_ReadStatus()&0x7FFu)|((color>>31u)<<10u);
+        PE_StoreU32(packet+24u,0x60000000u|(color&0xFFFFFFu));
+        PE_StoreU32(packet+20u,mode);
+        PE_StoreU32(packet+28u,(words?words[0]:PE_LoadU32(rect)));
+        {
+            uint32_t size=(words?words[1]:PE_LoadU32(rect+4u));
+            PE_StoreU32(restore,0x03FFFFFFu);
+            PE_StoreU32(packet+32u,size);
+        }
+        PE_GPU_GetState(&gpu);
+        PE_StoreU32(restore+4u,0xE3000000u|(gpu.drawing_area_top_left&0xFFFFFu));
+        PE_StoreU32(restore+8u,0xE4000000u|(gpu.drawing_area_bottom_right&0xFFFFFu));
+        PE_StoreU32(restore+12u,0xE5000000u|(gpu.drawing_offset&0x3FFFFFu));
+    } else {
+        PE_StoreU32(packet,0x05FFFFFFu);
+        PE_StoreU32(packet+4u,0xE6000000u);
+        mode=0xE1000000u|(PE_GPU_ReadStatus()&0x7FFu)|((color>>31u)<<10u);
+        PE_StoreU32(packet+12u,0x02000000u|(color&0xFFFFFFu));
+        PE_StoreU32(packet+8u,mode);
+        PE_StoreU32(packet+16u,(words?words[0]:PE_LoadU32(rect)));
+        PE_StoreU32(packet+20u,(words?words[1]:PE_LoadU32(rect+4u)));
+    }
+    (void)func_80076B98(packet,0u);
+    return 0;
+}
+
+int func_80076434(pe_addr_t rect, uint32_t color)
+{return clear_worker(rect,color,NULL);}
+
+int PE_ClearImageInline8(uint32_t words[2], uint32_t color)
+{return clear_worker(0u,color,words);}
+
+/* Original74F44..74FD4. Native caller RECT remains live through dispatch;
+ * queued work owns a guest copy, while direct issue clamps this RECT. */
+int func_80074F44(RECT *rect, uint8_t red, uint8_t green, uint8_t blue)
+{
+    pe_addr_t table,worker,target;
+    uint32_t color=(uint32_t)red|((uint32_t)green<<8u)|((uint32_t)blue<<16u);
+    unsigned epoch=PE_Port_StopEpoch();
+    func_80074E28(0x800118BCu,rect);
+    if (PE_Port_StopEpoch()!=epoch) return 0;
+    table=PE_LoadU32(0x80095744u);
+    worker=PE_LoadU32(table+12u);target=PE_LoadU32(table+8u);
+    if (target==0x80076C34u) return PE_DispatchClearRect(worker,rect,color);
+    (void)Bootstrap_ReturnInt4Indirect("func_80076C34","func_80074F44",0,
+        target,worker,0u,8u,color,rect,sizeof(*rect));
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    return 0;
 }

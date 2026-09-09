@@ -78,6 +78,11 @@ void PE_Port_GetDmaIrqCheckpointTrace(PEPortDmaIrqCheckpointTrace *out);
 void PE_Port_SetSkipMovie(int enabled);
 int  PE_Port_SkipMovie(void);
 
+/* Opt-in demo shortcut for M0010's EF(0) menu after Aya's profile.
+ * Preserve existing defaults; the full 16F10/4DCA4 menu is not translated. */
+void PE_Port_SetSkipOpeningMenu(int enabled);
+int  PE_Port_SkipOpeningMenu(void);
+
 /* Host pad fill for D_800BE9A2 (active-low Sony bits).  Retail writes
  * this from libpad/StartPAD at VSync; the port has no SIO, so a source
  * installed here is polled at the field-tick pad site (before 3EB04).

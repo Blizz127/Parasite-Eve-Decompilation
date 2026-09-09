@@ -1,0 +1,50 @@
+{
+  "run": "INV20 visible native window, second retry",
+  "input_method": "ordinary keyboard only, no guest state writes",
+  "healing": {
+    "medicine_id": 6,
+    "frame": 11048,
+    "before": 40,
+    "after": 45,
+    "effect_frame": 11068
+  },
+  "shots": [
+    11356,
+    12129,
+    12145,
+    12424,
+    12440,
+    12738,
+    12797
+  ],
+  "scripted_exit": [
+    12945
+  ],
+  "before_movement": {
+    "hp_live": 17,
+    "hp_saved": 17,
+    "input": "0x0",
+    "position": [
+      345.0,
+      -1111.0,
+      633.0
+    ],
+    "message": 60,
+    "message_state": 0,
+    "menu_mask": "0x7f"
+  },
+  "after_movement": {
+    "hp_live": 17,
+    "hp_saved": 17,
+    "input": "0x0",
+    "position": [
+      345.0,
+      -1111.0,
+      593.0
+    ],
+    "message": 60,
+    "message_state": 0,
+    "menu_mask": "0x7f"
+  },
+  "native_boundaries": []
+}

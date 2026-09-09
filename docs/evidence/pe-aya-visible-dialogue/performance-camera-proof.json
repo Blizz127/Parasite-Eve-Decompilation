@@ -1,0 +1,35 @@
+{
+  "ATK14": {
+    "camera_flags": "0x79",
+    "scroll_xy": [
+      160,
+      400
+    ],
+    "geometry_xy": [
+      160,
+      -32
+    ],
+    "pan_step_duration": [
+      1,
+      1
+    ],
+    "message": 20
+  },
+  "ATK15": {
+    "camera_flags": "0x7c",
+    "scroll_xy": [
+      160,
+      112
+    ],
+    "geometry_xy": [
+      160,
+      112
+    ],
+    "pan_step_duration": [
+      2,
+      1
+    ],
+    "message": 20
+  },
+  "method": "Read-only snapshots of native visible game; ordinary keyboard replay; no guest state changes."
+}

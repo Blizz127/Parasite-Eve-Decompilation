@@ -9,13 +9,22 @@
 /* ── Internal state ─────────────────────────────────────────────────── */
 
 static uint8_t *g_pe_ram = NULL;
+static uint64_t g_pe_ram_generation;
+static uint8_t g_pe_scratchpad[PE_SCRATCHPAD_SIZE];
+
+uint64_t PE_RamGeneration(void)
+{
+    return g_pe_ram_generation;
+}
 
 /* ── Lifecycle ──────────────────────────────────────────────────────── */
 
 void PE_RamInit(void)
 {
     if (g_pe_ram) return;  /* already initialized */
+    ++g_pe_ram_generation;
     g_pe_ram = (uint8_t *)calloc(1, PE_RAM_SIZE);
+    memset(g_pe_scratchpad,0,sizeof(g_pe_scratchpad));
     if (!g_pe_ram) {
         fprintf(stderr, "FATAL: PE_RamInit: cannot allocate %u bytes\n",
                 PE_RAM_SIZE);
@@ -29,7 +38,9 @@ void PE_RamReset(void)
         PE_RamInit();
         return;
     }
+    ++g_pe_ram_generation;
     memset(g_pe_ram, 0, PE_RAM_SIZE);
+    memset(g_pe_scratchpad,0,sizeof(g_pe_scratchpad));
 }
 
 void PE_RamDestroy(void)
@@ -71,6 +82,14 @@ bool PE_AddAddress(pe_addr_t base, uint32_t delta, pe_addr_t *result)
     return true;
 }
 
+bool PE_RangeIsScratchpad(pe_addr_t address, size_t size)
+{
+    /* Only KUSEG and KSEG0 aliases, as on the PS1:
+     * https://psx-spx.consoledev.net/memorymap/#scratchpad */
+    uint32_t offset=(address&0x7FFFFFFFu)-PE_SCRATCHPAD_BASE;
+    return offset<PE_SCRATCHPAD_SIZE && size<=PE_SCRATCHPAD_SIZE-offset;
+}
+
 /* ── Translation ────────────────────────────────────────────────────── */
 
 static inline uint8_t *translate_impl(pe_addr_t address, size_t size,
@@ -80,6 +99,8 @@ static inline uint8_t *translate_impl(pe_addr_t address, size_t size,
         fprintf(stderr, "FATAL: %s: guest RAM not initialized\n", caller);
         abort();
     }
+    if (PE_RangeIsScratchpad(address,size))
+        return g_pe_scratchpad+((address&0x7FFFFFFFu)-PE_SCRATCHPAD_BASE);
     if (!PE_RangeIsRam(address, size)) {
         fprintf(stderr, "FATAL: %s: invalid guest address 0x%08X size %zu\n",
                 caller, address, size);

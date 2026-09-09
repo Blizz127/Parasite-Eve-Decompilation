@@ -1,34 +1,5 @@
-/*
- * PE-BTL98/99 — live 1D340 path through 1F704 and 1F814.
- *
- * Authority: build/disc1.candidate.exe SHA-1
- * 452fb033f2eaa4b18aa20a5bca60b8125af3a37b. Retail BTL83
- * capture: 299CC jal 1D340 @ 0x8002A4FC a0=1, then 1F704
- * ra=0x8001F5F0 stores HP 40→39. No matching src/ C.
- *
- * 1D340 this cut:
- *   a0!=0 ATB: record+0x10 += +0x24 (delay-slot sh at 1D3A4)
- *   plus the 0xC0/0x100 speed adjust. Walk D20C skipping Aya
- *   and +0x98 bit 0x10. record+0x4C bit 0x4000 (ROM gate at
- *   1E780) jals 1F4D4(actor). Death is not at 1F4D4.
- *   After a real 1F704 leaves HP<=0, the 1F078 / 1F080
- *   arm stores mode 3, 4D4=0, 1A680(19), 1F4B0, and
- *   6DE80(0x46B). HUD sb storm / 21D4C / 374E8 / 62F9C
- *   / 67CBC stay deferred.
- *
- * 1F4D4 this cut: through 1F704, then if remaining HP!=0
- * jal 1F814(actor) and maybe sw actor → D1D0. 20288 stays
- * deferred.
- *
- * 1F814: Aya+0x0E in 6..15 takes jtbl 0x800106E4
- * (D29A/D29B/gp+0x528/D29C). Default path jals 305C8 then
- * 1A680(D254, facing cmd) then 6DE80(0x46A, 0, Aya+0x2A/2E/32).
- * 6DED4 → 6DFA8 / 6DF50 stay fail-closed.
- *
- * 71A54 is BIOS A(2Fh) rand (3-word trampoline, SHA-256
- * db6da112…cffa). Used after s0 is already computed in the
- * jal delay slot; first retail delta is s0=1.
- */
+/* Original player battle tick, damage and hit reactions (AB74.s).
+ * Restores hit acknowledgement, contact recovery, PE timing and HUD colors. */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 
@@ -49,20 +20,17 @@
 
 static uint32_t s_bios_rand_seed = 1u;
 
+/* BIOS A(30h) srand, paired with A(2Fh) rand below.
+ * https://psx-spx.consoledev.net/kernelbios/#bios-misc-functions */
+void func_80071A64(uint32_t seed)
+{
+    s_bios_rand_seed = seed;
+}
+
 unsigned int func_80071A54(void)
 {
     s_bios_rand_seed = s_bios_rand_seed * 0x41C64E6Du + 0x3039u;
     return (s_bios_rand_seed >> 16) & 0x7FFFu;
-}
-
-static uint32_t pe_u32_div20(uint32_t n)
-{
-    return (uint32_t)(((uint64_t)n * 0xCCCCCCDFull) >> 34);
-}
-
-static uint32_t pe_u32_mul3_div10(uint32_t n)
-{
-    return (uint32_t)(((uint64_t)(n * 3u) * 0x66666667ull) >> 34);
 }
 
 int32_t func_800305C8(pe_addr_t attacker, pe_addr_t target)
@@ -149,186 +117,248 @@ int32_t func_8001F814(pe_addr_t actor)
 
 void func_8001F4D4(pe_addr_t actor)
 {
-    pe_addr_t rec;
-    pe_addr_t body;
-    pe_addr_t weapon;
-    pe_addr_t tbl;
-    pe_addr_t aya;
-    uint32_t flags;
-    uint32_t def;
-    uint32_t a2;
-    uint32_t kind;
-    uint32_t word;
-    int s0;
-    int16_t hp;
-    uint32_t rnd;
-    uint32_t rem;
-    uint32_t thresh;
-    int64_t prod;
-
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (rec == 0u || actor == 0u)
-        return;
-    body = PE_LoadU32(actor);
-    if (body == 0u)
-        return;
-    weapon = PE_LoadU32(body + 0x18u);
-    if (weapon == 0u)
-        return;
-
-    flags = PE_LoadU32(rec + 0x4Cu);
-    def = pe_u32_div20(PE_LoadU16(rec + 0x20u));
-    if (flags & 0x1000u)
-        def = pe_u32_mul3_div10(def);
-    if (flags & 0x100u)
-        def = pe_u32_mul3_div10(def);
-
-    kind = (PE_LoadU32(body) >> 21) & 7u;
-    tbl = PE_LoadU32(rec + 0x6Cu);
-    word = (tbl != 0u) ? PE_LoadU32(tbl) : 0u;
-    if (kind < 3u) {
-        uint8_t elem;
-
-        a2 = word & 0x3FFu;
-        elem = PE_LoadU8(weapon + 0x0Eu);
-        if (elem == 0u)
-            PE_StoreU8(weapon, 4u);
-        else if (elem != 1u)
-            PE_StoreU8(weapon, 3u);
-    } else {
-        a2 = (word >> 10) & 0x3FFu;
+    pe_addr_t rec=PE_LoadU32(GA_D_8009D278),body=PE_LoadU32(actor);
+    pe_addr_t action=PE_LoadU32(body+24u),armor=PE_LoadU32(rec+108u);
+    uint32_t flags=PE_LoadU32(rec+76u),defense=PE_LoadU16(rec+32u)/5u;
+    uint32_t equipment=PE_LoadU32(armor),kind=(PE_LoadU32(body)>>21u)&7u;
+    int32_t damage,critical;
+    if (flags&0x1000u) defense=((uint16_t)defense*3u)/10u;
+    if (flags&0x100u) defense=((uint16_t)defense*3u)/10u;
+    if (kind<3u) {
+        unsigned element=PE_LoadU8(action+14u);
+        if (!element) PE_StoreU8(action,4u);
+        else if (element!=1u) PE_StoreU8(action,3u);
     }
-
-    s0 = (int)PE_LoadU16(weapon + 0x0Cu) - (int)def - (int)a2;
-    rnd = func_80071A54();
-    /* 0x51EB851F signed /100; remainder vs (lbu+0x90)*(100-hi). */
-    prod = (int64_t)(int32_t)rnd * (int64_t)(int32_t)0x51EB851F;
-    rem = (uint32_t)rnd - (uint32_t)((int)(prod >> 37) * 100);
-    thresh = ((uint32_t)PE_LoadU8(body + 0x90u) *
-              (100u - ((word >> 20) & 0xFFu))) / 100u;
-    if (rem < thresh) {
-        s0 = (s0 * 3) / 2;
-        PE_StoreU32(rec + 0x4Cu, flags | 0x8000u);
-        flags |= 0x8000u;
+    damage=(int32_t)PE_LoadU16(action+12u)-(uint16_t)defense-
+        (int32_t)((equipment>>(kind<3u?0u:10u))&1023u);
+    critical=(int32_t)PE_LoadU8(body+144u)*(100-(int32_t)((equipment>>20u)&255u))/100;
+    if ((int32_t)(func_80071A54()%100u)<critical) {
+        damage=damage*3/2;PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)|0x8000u);
     }
+    if (!(PE_LoadU32(rec+76u)&0x200u)) {
+        if ((int32_t)PE_LoadU32(rec+52u)>0) damage/=2;
+        if (damage>0) {
+            if (PE_LoadU8(action+1u)==10u) damage/=2;
+            PE_StoreU16(rec+12u,(uint16_t)(PE_LoadU16(rec+12u)-damage));
+        }
+        if ((int16_t)PE_LoadU16(rec+12u)) {
+            (void)func_8001F814(actor);
+            if (!(PE_LoadU32(PE_LoadU32(GA_D_8009D254)+152u)&0x100u))
+                PE_StoreU32(GA_D_8009D1D0,actor);
+        }
+    } else if (damage>0) {
+        int32_t cost;
+        if (PE_LoadU8(action+1u)==10u) damage/=2;
+        cost=(int32_t)(PE_LoadU32(rec+40u)<<2u)/(int16_t)PE_LoadU16(rec+28u);
+        PE_StoreU32(rec+8u,PE_LoadU32(rec+8u)-(uint32_t)damage*(uint32_t)cost);
+    }
+    if (PE_LoadU8(PE_LoadU32(body+24u)+1u)) func_80020288(body);
+}
 
-    if (flags & 0x200u)
-        return;
-    if ((int)PE_LoadU32(rec + 0x34u) > 0)
-        s0 >>= 1;
-    if (s0 <= 0)
-        return;
-    if (PE_LoadU8(weapon + 1u) == 10u)
-        s0 >>= 1;
-    hp = (int16_t)PE_LoadU16(rec + 0x0Cu);
-    hp = (int16_t)(hp - (int16_t)s0);
-    PE_StoreU16(rec + 0x0Cu, (uint16_t)hp);
+static void player_stop_motion(void)
+{
+    pe_addr_t actor=PE_LoadU32(GA_D_8009D254);
+    unsigned i;
+    for (i=0;i<3;i++) PE_StoreU32(actor+104u+i*4u,0u);
+}
 
-    /* 1F708: remaining HP!=0 → 1F814; HP==0 skips to 1F7D8. */
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (rec != 0u && (int16_t)PE_LoadU16(rec + 0x0Cu) != 0) {
-        (void)func_8001F814(actor);
-        aya = PE_LoadU32(GA_D_8009D254);
-        if (aya != 0u && (PE_LoadU32(aya + 0x98u) & 0x100u) == 0u)
-            PE_StoreU32(GA_D_8009D1D0, actor);
+static void player_quad_colors(pe_addr_t first,unsigned phase,unsigned empty)
+{
+    static const uint8_t colors[2][3][3]={
+        {{0,130,54},{74,255,59},{37,193,57}},
+        {{255,61,129},{131,19,1},{193,40,65}}
+    };
+    unsigned vertex,channel;
+    for (vertex=0;vertex<4;vertex++) {
+        unsigned color=(phase&1u)?2u:((vertex&1u)^(phase>>1u));
+        for (channel=0;channel<3;channel++)
+            PE_StoreU8(first+vertex*8u+channel,colors[empty][color][channel]);
     }
 }
 
-static void func_8001D340_1f078_arm(void)
+static void player_reset_pe_colors(unsigned empty)
 {
-    pe_addr_t aya;
-    pe_addr_t rec;
-    uint32_t v;
-
-    aya = PE_LoadU32(GA_D_8009D254);
-    if (aya != 0u) {
-        PE_StoreU32(aya + 0x68u, 0u);
-        PE_StoreU32(aya + 0x6Cu, 0u);
-        PE_StoreU32(aya + 0x70u, 0u);
-    }
-    v = PE_LoadU32(GA_D_8009D1AC);
-    PE_StoreU32(GA_D_8009D1AC, v & ~0x300u);
-    PE_StoreU32(GA_D_8009D28C, 3u);
-    PE_StoreU8(GA_D_8009D1CE, 0u);
-    if (aya != 0u)
-        func_8006DE80(0x46B, 0,
-                      (int)(int16_t)PE_LoadU16(aya + 0x2Au),
-                      (int)(int16_t)PE_LoadU16(aya + 0x2Eu),
-                      (int)(int16_t)PE_LoadU16(aya + 0x32u));
-    PE_StoreU8(GA_D_8009D244, 0u);
-    D_8009D1A0 &= ~4u;
-    PE_StoreU32(GA_D_8009D1A0, PE_LoadU32(GA_D_8009D1A0) & ~4u);
-    v = PE_LoadU32(GA_D_8009D2E8);
-    PE_StoreU32(GA_D_8009D2E8, v | 1u);
-    if (aya != 0u)
-        func_8001A680_command_cut(aya, 19u);
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (rec != 0u)
-        PE_StoreU16(rec + 0x0Cu, 0u);
+    unsigned bank;
+    for (bank=0;bank<2;bank++) player_quad_colors(0x800B0134u+empty*36u+bank*72u,0u,empty);
 }
 
-void func_8001D340(unsigned int a0)
+static void player_reset_at_colors(void)
 {
-    pe_addr_t rec;
-    pe_addr_t aya;
-    pe_addr_t actor;
-    uint32_t flags;
-    uint16_t atb;
-    uint16_t spd;
-    uint16_t sum;
-    uint32_t c0;
-    int did_1f4d4;
+    static const pe_addr_t starts[]={0x800B00ECu,0x800B0110u};
+    static const uint8_t left[]={0,70,130},right[]={159,255,249};
+    unsigned bank,vertex,channel;
+    for (bank=0;bank<2;bank++) {
+        for (vertex=0;vertex<4;vertex++) for (channel=0;channel<3;channel++)
+            PE_StoreU8(starts[bank]+vertex*8u+channel,(vertex&1u)?right[channel]:left[channel]);
+        for (channel=0;channel<3;channel++) PE_StoreU8(0x800B692Cu+bank*28u+channel,right[channel]);
+    }
+}
 
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (rec == 0u)
-        return;
+static void player_damage_number(void)
+{
+    pe_addr_t rec=PE_LoadU32(GA_D_8009D278),actor=PE_LoadU32(GA_D_8009D254);
+    if ((int16_t)PE_LoadU16(rec+12u)>(int16_t)PE_LoadU16(rec+28u)) return;
+    PE_StoreU16(rec+80u,(uint16_t)(PE_LoadU16(rec+14u)-PE_LoadU16(rec+12u)));
+    PE_StoreU16(rec+82u,PE_LoadU16(actor+528u));PE_StoreU16(rec+84u,PE_LoadU16(actor+530u));
+    PE_StoreU8(rec+86u,30u);
+    PE_StoreU8(rec+87u,PE_LoadU16(rec+80u)?(uint8_t)((PE_LoadU32(rec+76u)>>14u)&2u):0u);
+    PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)&~0x8000u);
+}
 
-    if ((a0 & 0xFFu) != 0u) {
-        atb = PE_LoadU16(rec + 0x10u);
-        spd = PE_LoadU16(rec + 0x24u);
-        sum = (uint16_t)(atb + spd);
-        flags = PE_LoadU32(rec + 0x4Cu);
-        c0 = flags & 0xC0u;
-        PE_StoreU16(rec + 0x10u, sum);
-        if (c0 == 0x40u || c0 == 0x80u) {
-            uint32_t v = (uint32_t)spd << 1u;
-            int hi = (int)(((int64_t)(int32_t)v * (int64_t)(int32_t)0x66666667)
-                           >> 32);
-            int adj = (hi >> 1) - (v >> 31);
-            PE_StoreU16(rec + 0x10u, (uint16_t)(sum - (uint16_t)adj));
-        } else if (flags & 0x100u) {
-            PE_StoreU16(rec + 0x10u, (uint16_t)(sum + (spd >> 1)));
+static void player_cancel_attacks(void)
+{
+    if ((int8_t)func_80021054()!=PE_LoadU8(0x8009D1D4u)) {
+        static const pe_addr_t indices[]={0x8009D200u,0x8009D2FCu};
+        unsigned i;
+        for (i=0;i<2;i++) if (PE_LoadU32(indices[i])!=UINT32_MAX) {
+            (void)func_8006F6D4((int32_t)PE_LoadU32(indices[i]),0,0,2,0,0);
+            PE_StoreU32(indices[i],UINT32_MAX);
         }
     }
+    func_80021D4C();
+}
 
-    flags = PE_LoadU32(rec + 0x4Cu);
-    if ((flags & 0x00800000u) != 0u || (flags & 0x00180000u) != 0u)
-        return;
+void func_80020CE4(void)
+{
+    pe_addr_t rec=PE_LoadU32(GA_D_8009D278);
+    PE_StoreU32(GA_D_8009D2E8,PE_LoadU32(GA_D_8009D2E8)&~1u);
+    PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)&~0x10000u);
+    player_stop_motion();
+    func_8001A680_command_cut(PE_LoadU32(GA_D_8009D254),PE_LoadU8(rec+18u));
+}
 
-    did_1f4d4 = 0;
-    aya = PE_LoadU32(GA_D_8009D254);
-    actor = PE_LoadU32(GA_D_8009D20C);
-    while (actor != 0u) {
-        pe_addr_t body;
-        pe_addr_t next;
-
-        next = PE_LoadU32(actor + 4u);
-        if (actor != aya &&
-            (PE_LoadU32(actor + 0x98u) & 0x10u) == 0u) {
-            body = PE_LoadU32(actor);
-            if (body != 0u && PE_LoadU32(body + 0x18u) != 0u &&
-                (flags & 0x4000u) != 0u) {
-                func_8001F4D4(actor);
-                did_1f4d4 = 1;
-                break;
+void func_8001D340(unsigned int mode)
+{
+    pe_addr_t rec=PE_LoadU32(GA_D_8009D278),actor=PE_LoadU32(GA_D_8009D254);
+    uint32_t flags,phase=PE_LoadU32(0x8009D1E8u)&3u;
+    if ((mode&255u)!=0u) {
+        if (!(D_8009D1A0&0x100u)) {
+            unsigned speed=PE_LoadU16(rec+36u),at=PE_LoadU16(rec+16u)+speed;
+            flags=PE_LoadU32(rec+76u);
+            if ((flags&0xC0u)==0x40u || (flags&0xC0u)==0x80u) at-=speed*2u/5u;
+            else if (flags&0x100u) at+=speed/2u;
+            PE_StoreU16(rec+16u,(uint16_t)at);
+            if ((int32_t)PE_LoadU32(rec+8u)<(int32_t)PE_LoadU32(rec+40u) && !(flags&0x2600u)) {
+                int32_t delay=(int32_t)(PE_LoadU32(rec+48u)-3u),rate;
+                if (delay<=0) delay=1;
+                PE_StoreU32(rec+48u,(uint32_t)delay);
+                rate=(int32_t)(PE_LoadU32(rec+44u)-(uint32_t)((int32_t)PE_LoadU32(rec+40u)/(int32_t)((uint32_t)delay*100u)));
+                if (rate<0x1999) rate=0x1999;
+                PE_StoreU32(rec+44u,(uint32_t)rate);PE_StoreU32(rec+8u,PE_LoadU32(rec+8u)+(uint32_t)rate);
+                if ((int32_t)PE_LoadU32(rec+8u)>=(int32_t)PE_LoadU32(rec+40u)) {
+                    PE_StoreU32(rec+52u,240u);
+                    if (PE_LoadU32(0x800B0E08u)) func_8006DF50(PE_LoadU32(0x800B0E08u),0x455,0,128,127);
+                }
             }
         }
-        actor = next;
+        if ((mode&255u)==1u) {
+            unsigned cmd=PE_LoadU8(actor+14u);
+            int move=cmd>=14u;
+            if (cmd==PE_LoadU8(rec+18u) || cmd==5u) {
+                move=1;
+                if ((PE_LoadU32(PE_LoadU32(rec+108u)+4u)&0x4000u) &&
+                    (PE_LoadU32(rec+76u)&0x4000u) && (int8_t)func_80021054()>0) move=cmd>=14u;
+            }
+            PE_StoreU32(GA_D_8009D2E8,move?PE_LoadU32(GA_D_8009D2E8)&~1u:PE_LoadU32(GA_D_8009D2E8)|1u);
+        }
+    } else PE_StoreU32(GA_D_8009D2E8,PE_LoadU32(GA_D_8009D2E8)|1u);
+    if ((int32_t)PE_LoadU32(rec+8u)<0) PE_StoreU32(rec+8u,0u);
+    if (PE_LoadU32(rec+76u)&0x2000u) {
+        player_quad_colors(0x800B0158u+PE_LoadU32(0x8009CDDCu)*72u,phase,1u);
+        if (PE_LoadU8(actor+14u)!=18u) func_8001A680_command_cut(actor,18u);
+        if ((int8_t)PE_LoadU8(0x8009CE30u)==90) {
+            func_8001A680_command_cut(actor,PE_LoadU8(rec+18u));
+            PE_StoreU8(0x8009CE30u,0u);PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)&~0x2000u);
+            PE_StoreU32(rec+8u,65536u);player_reset_pe_colors(1u);
+        } else {
+            PE_StoreU8(0x8009CE30u,(uint8_t)(PE_LoadU8(0x8009CE30u)+1u));player_stop_motion();
+        }
     }
-
-    /* 1F078 lh +0x0C / 1F080 bgtz. Only after a real 1F704. */
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (did_1f4d4 && rec != 0u &&
-        (int16_t)PE_LoadU16(rec + 0x0Cu) <= 0)
-        func_8001D340_1f078_arm();
+    if (!(D_8009D1A0&0x100u)) {
+        if ((int32_t)PE_LoadU32(rec+52u)>0) {
+            PE_StoreU32(rec+52u,PE_LoadU32(rec+52u)-1u);
+            if (PE_LoadU32(rec+52u)) {
+                player_quad_colors(0x800B0134u+PE_LoadU32(0x8009CDDCu)*72u,phase,0u);
+                if ((int32_t)PE_LoadU32(rec+8u)<(int32_t)PE_LoadU32(rec+40u)) PE_StoreU32(rec+52u,0u);
+            }
+            if (!PE_LoadU32(rec+52u)) player_reset_pe_colors(0u);
+        }
+        flags=PE_LoadU32(rec+76u);
+        if (flags&0x800000u) {
+            uint8_t timer=(uint8_t)(PE_LoadU8(0x8009D234u)-1u);
+            PE_StoreU8(0x8009D234u,timer);
+            if ((int8_t)timer<=0) PE_StoreU32(rec+76u,flags&~0x800000u);
+        } else if (!(flags&0x180000u)) {
+            pe_addr_t enemy=PE_LoadU32(GA_D_8009D20C);
+            for (;enemy;enemy=PE_LoadU32(enemy+4u)) {
+                pe_addr_t body=PE_LoadU32(enemy),action;
+                if (enemy==actor || !body || (PE_LoadU32(enemy+152u)&16u)) continue;
+                action=PE_LoadU32(body+24u);
+                if (action && (PE_LoadU32(rec+76u)&0x4000u)) {
+                    if ((int32_t)PE_LoadU32(body)<0 && (unsigned)(PE_LoadU8(action)-1u)<2u) {
+                        unsigned kind=(PE_LoadU32(body)>>21u)&7u;
+                        if (kind<3u) func_8006DCE4(PE_LoadU16(body+182u+kind*2u),0u,
+                            (int16_t)PE_LoadU16(enemy+616u),(int16_t)PE_LoadU16(enemy+618u),(int16_t)PE_LoadU16(enemy+620u));
+                        PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)|0x10000000u);
+                        func_8001F4D4(enemy);player_stop_motion();
+                        PE_StoreU32(body,PE_LoadU32(body)&0x7FFFFFFFu);
+                        PE_StoreU16(body+156u,(uint16_t)(PE_LoadU16(body+156u)+1u));
+                        PE_StoreU8(0x8009CE34u,90u);PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)|0x1000000u);
+                    }
+                    player_damage_number();
+                }
+                if ((PE_LoadU32(enemy+152u)&0x2000000u) && !(PE_LoadU32(rec+76u)&0x1000000u) &&
+                    (int32_t)PE_LoadU32(body+16u)>0) {
+                    if (!(PE_LoadU32(rec+76u)&0x200u)) PE_StoreU16(rec+12u,(uint16_t)(PE_LoadU16(rec+12u)-PE_LoadU8(body+146u)));
+                    PE_StoreU8(0x8009CE34u,90u);PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)|0x1000000u);
+                    player_damage_number();player_stop_motion();
+                    PE_StoreU32(actor+152u,PE_LoadU32(actor+152u)&~0xC0000u);
+                    PE_StoreU16(rec+74u,(uint16_t)func_8001F814(enemy));
+                    PE_StoreU8(rec+73u,PE_LoadU8(body+147u));PE_StoreU8(rec+72u,6u);
+                }
+            }
+            if ((int16_t)PE_LoadU16(rec+12u)<(int16_t)PE_LoadU16(rec+14u)) {
+                player_damage_number();PE_StoreU16(rec+14u,PE_LoadU16(rec+12u));
+            }
+        }
+        PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)&~0x4000u);
+        if ((int8_t)PE_LoadU8(rec+72u)) {
+            if ((PE_LoadU32(actor+152u)&0xC0000u) || !PE_LoadU8(rec+73u)) {
+                PE_StoreU32(actor+152u,PE_LoadU32(actor+152u)&~0xC0000u);
+                PE_StoreU8(rec+72u,0u);PE_StoreU8(rec+73u,0u);
+            } else {
+                unsigned speed=PE_LoadU8(rec+73u);int32_t angle=(int16_t)PE_LoadU16(rec+74u);
+                PE_StoreU32(actor+40u,PE_LoadU32(actor+64u)+((uint32_t)func_80077CF4(angle)*speed<<4u));
+                PE_StoreU32(actor+48u,PE_LoadU32(actor+72u)+((uint32_t)func_80077DC4(angle)*speed<<4u));
+                PE_StoreU8(rec+73u,(uint8_t)((int32_t)speed-(int32_t)speed/(int8_t)PE_LoadU8(rec+72u)));
+                PE_StoreU8(rec+72u,(uint8_t)(PE_LoadU8(rec+72u)-1u));
+            }
+        }
+        func_8001F9C4();
+    }
+    if (PE_LoadU8(rec+86u)) {func_80032B0C(0u,rec+80u);PE_StoreU8(rec+86u,(uint8_t)(PE_LoadU8(rec+86u)-1u));}
+    if ((int16_t)PE_LoadU16(rec+14u)<(int16_t)PE_LoadU16(rec+12u)) {
+        PE_StoreU16(rec+88u,(uint16_t)(PE_LoadU16(rec+12u)-PE_LoadU16(rec+14u)));
+        PE_StoreU16(rec+90u,PE_LoadU16(actor+528u));PE_StoreU16(rec+92u,(uint16_t)(PE_LoadU16(actor+530u)-8u));
+        PE_StoreU8(rec+94u,30u);PE_StoreU8(rec+95u,1u);PE_StoreU16(rec+14u,PE_LoadU16(rec+12u));
+    }
+    if (PE_LoadU8(rec+94u)) {func_80032B0C(0u,rec+88u);PE_StoreU8(rec+94u,(uint8_t)(PE_LoadU8(rec+94u)-1u));}
+    if (PE_LoadU8(rec+102u)) {func_80032B0C(0u,rec+96u);PE_StoreU8(rec+102u,(uint8_t)(PE_LoadU8(rec+102u)-1u));}
+    PE_StoreU16(rec+14u,PE_LoadU16(rec+12u));
+    if ((int32_t)PE_LoadU32(rec+8u)<=0) {
+        PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)|0x2000u);player_cancel_attacks();
+    }
+    if (PE_LoadU32(GA_D_8009D28C)==1u) {player_reset_at_colors();player_reset_pe_colors(0u);}
+    if ((int16_t)PE_LoadU16(rec+12u)>0) return;
+    player_stop_motion();player_reset_at_colors();player_reset_pe_colors(0u);player_reset_pe_colors(1u);
+    if (PE_LoadU32(rec+76u)&0x10000u) func_80020CE4();
+    func_800374E8();player_cancel_attacks();
+    PE_StoreU32(GA_D_8009D1AC,PE_LoadU32(GA_D_8009D1AC)&~0x300u);
+    PE_StoreU32(GA_D_8009D28C,3u);PE_StoreU8(GA_D_8009D1CE,0u);
+    func_8006DE80(0x46B,0,(int16_t)PE_LoadU16(actor+42u),(int16_t)PE_LoadU16(actor+46u),(int16_t)PE_LoadU16(actor+50u));
+    PE_StoreU8(GA_D_8009D244,0u);func_80062F9C();
+    if (PE_LoadU32(0x800BCF88u)&0x2000u) func_80067CBC();
+    D_8009D1A0&=~4u;PE_StoreU32(GA_D_8009D1A0,PE_LoadU32(GA_D_8009D1A0)&~4u);
+    PE_StoreU32(GA_D_8009D2E8,PE_LoadU32(GA_D_8009D2E8)|1u);
+    func_8001A680_command_cut(actor,19u);PE_StoreU16(rec+12u,0u);
 }

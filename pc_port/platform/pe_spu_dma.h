@@ -36,7 +36,7 @@ typedef struct {
     pe_addr_t callback_at_issue;
     uint64_t event_count;
     uint64_t data_order;
-    uint64_t callback_order;
+    uint64_t callback_order; /* callback invocation or event delivery order */
 } PeSpuDmaState;
 
 /* Host lifecycle.  Reset cancels a pending event and clears SPU RAM. */
@@ -48,12 +48,14 @@ int PE_SpuDma_InstallIrq(pe_addr_t handler);
 /* Record one mode-0 DMA4 transfer.  Returns 0 without mutation if the IRQ
  * is absent, another transfer is pending, an address is unaligned/out of
  * range, or the rounded DMA byte count cannot be represented safely.  The
- * 16-bit SPU transfer address wraps modulo the 512 KiB SPU RAM size. */
+ * 16-bit SPU transfer address wraps modulo the 512 KiB SPU RAM size.
+ * A zero callback requires the enabled SPU completion event registration. */
 int PE_SpuDma_Begin(pe_addr_t source, uint32_t destination,
                     uint32_t requested_size, pe_addr_t callback);
 
-/* Deliver at most one pending DMA interrupt.  Data becomes visible in SPU
- * RAM before the callback is dispatched.  Returns 1 if an event ran. */
+/* Deliver at most one pending DMA interrupt. Data becomes visible in SPU
+ * RAM before the live callback is dispatched or its zero-callback event
+ * is delivered. Returns 1 if an interrupt ran. */
 int PE_SpuDma_Service(void);
 
 /* Retail func_80085174 wait adaptation.  The service call represents the
@@ -65,6 +67,8 @@ void PE_SpuDma_GetState(PeSpuDmaState *out);
  * DMA dispatcher uses this value without becoming a second DMA4 owner. */
 pe_addr_t PE_SpuDma_ReadMADR(void);
 uint8_t PE_SpuRam_LoadU8(uint32_t address);
+uint16_t PE_SpuRegister_LoadU16(uint32_t offset);
+void PE_SpuRegister_StoreU16(uint32_t offset, uint16_t value);
 
 #ifdef __cplusplus
 }

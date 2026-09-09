@@ -1,27 +1,8 @@
-/*
- * PE-BTL53 — 35558 epilogue event pump 69594 / 6F8EC / D4704
- * (translated retail, not matching src/). Authority:
- * build/disc1.candidate.exe SHA-1
- * 452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
- *
- * 69594: 50 words 0x80069594..0x8006965C, SHA-256 b182bcd8…ac47.
- * Sole TEXT jal 35558 @ 0x80035B2C. If D1A0&0x80, walks
- * slots 0..10 through 6F8EC. 661A4/661CC GTE bracket and
- * the 6F9F0 follow-up are not this cut.
- *
- * 6F8EC: 65 words 0x8006F8EC..0x8006F9F0, SHA-256 659a9a3e…6563.
- * Jalrs table[remap(slot+1)]+0xC. Live 0x75 → D4704.
- *
- * D4704: 83 words 0x800D4704..0x800D4850, SHA-256 4090a71a…62ef.
- * Writes F32D0/E2368. Eight records at slot+0x2C are 0xFFFF
- * after D4620, so the GTE/jalr body is skipped. 6DC18 when
- * slot+0x19!=0 is not this cut (live +0x19=0).
- *
- * This pump does not write 2FAF8 clip rec=4. That producer
- * is 1F4D4 @ 1F5A4 (slot+0x18). Do not invent rec=4.
- */
+/* Original first effect-pool draw/update pump (69594 / 6F8EC).
+ * D4704 and 6F9F0 are implemented with the room-effect VM. */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "game_port.h"
 
 #define GA_D_800942E0 0x800942E0u
 #define GA_D_800942E4 0x800942E4u
@@ -30,23 +11,7 @@
 #define GA_D_800E2368 0x800E2368u
 #define GA_FN_D4704   0x800D4704u
 
-extern unsigned int D_8009D1A0;
 
-int func_800D4704(pe_addr_t slot)
-{
-    unsigned int i;
-    pe_addr_t rec;
-
-    PE_StoreU32(GA_D_800F32D0, slot);
-    PE_StoreU32(GA_D_800E2368, slot + 0x0Cu);
-    rec = slot + 0x2Cu;
-    for (i = 0; i < 8u; i++) {
-        if (PE_LoadU16(rec) != 0xFFFFu)
-            return 0;
-        rec += 0x0Cu;
-    }
-    return 0;
-}
 
 int func_8006F8EC(unsigned int index)
 {
@@ -88,16 +53,30 @@ int func_8006F8EC(unsigned int index)
         return -1;
     if (fn == GA_FN_D4704)
         return func_800D4704(slot);
-    return 0;
+    if (fn==0x800C9B68u || fn==0x800CD8C8u) return PE_EffectStackWeaponDraw(fn,slot);
+    PE_EffectStackInvalidate();
+    return PE_EffectCallback(fn,2,slot,0u);
 }
 
 int func_80069594(void)
 {
     unsigned int i;
 
-    if ((D_8009D1A0 & 0x80u) == 0u)
-        return 0;
-    for (i = 0; i < 11u; i++)
+    if ((D_8009D1A0 & 0x80u) == 0u) {
+        PE_EffectStackInvalidate();return 0;
+    }
+    PE_EffectStackBegin();
+    func_800661A4();
+    for (i = 0; i < 11u; i++) {
         (void)func_8006F8EC(i);
-    return 0;
+        if(PE_Port_ShouldStop())break;
+    }
+    func_800661CC();
+    if ((D_8009D1A0&4u) || PE_Port_ShouldStop()) {PE_EffectStackEnd();return 0;}
+    for (i=0;i<11u;i++) {
+        unsigned code=PE_LoadU8(PE_LoadU32(GA_D_800942E4)+i*0xA0Cu+1u);
+        if (!(D_8009D1A0&0x100u) || (code-0x55u)<0x1Eu)
+            (void)func_8006F9F0(i);
+    }
+    PE_EffectStackEnd();return 0;
 }

@@ -14,6 +14,9 @@ option(PE_PORT_SANITIZERS "Build with AddressSanitizer and UBSan" OFF)
 # Source lists
 set(PLATFORM_SRCS
     platform/host_framebuffer.c
+    platform/pe_dispenv.c
+    platform/pe_timer1.c
+    platform/pe_vsync.c
     platform/host_vram.c
     platform/pe_guest_ram.c
     platform/pe_gpu.c
@@ -31,6 +34,7 @@ set(PLATFORM_SRCS
     platform/pe_disc.c
     platform/pe_save.c
     platform/pe_stream.c
+    platform/pe_stream_commands.c
     platform/func_80071A24_port.c
     platform/func_800719E4_port.c
     platform/pe_guest_image.c
@@ -43,6 +47,7 @@ set(BOOTSTRAP_SRCS
     bootstrap/func_800725DC_port.c
     bootstrap/func_8006E9A0_port.c
     bootstrap/func_8006E834_port.c
+    bootstrap/func_8006ECEC_port.c
     bootstrap/func_800698D4_port.c
     bootstrap/func_8001220C_port.c
 )
@@ -50,6 +55,13 @@ set(BOOTSTRAP_SRCS
 set(GAME_SRCS
     game/boot/func_8003E610_port.c
     game/boot/func_8003E680_port.c
+    game/boot/func_80071A84_port.c
+    game/boot/func_80072334_port.c
+    game/boot/func_80041108_port.c
+    game/boot/func_800405A4_port.c
+    game/boot/func_80015AF0_port.c
+    game/boot/func_80019DB8_port.c
+    game/boot/func_8003E91C_port.c
     game/boot/func_8003E754_port.c
     game/boot/func_8003E944_port.c
     game/boot/func_8003E974_port.c
@@ -63,6 +75,40 @@ set(GAME_SRCS
     game/boot/func_80066B60_port.c
     game/boot/func_8006F39C_port.c
     game/boot/func_8006F6D4_port.c
+    game/boot/func_800D413C_port.c
+    game/boot/func_800D751C_port.c
+    game/boot/func_800C2414_port.c
+    game/boot/func_800C3B04_port.c
+    game/boot/func_800C9C20_port.c
+    game/boot/func_800CEE20_port.c
+    game/boot/func_8018F330_port.c
+    game/boot/m0013i_effect_port.c
+    game/boot/m0023i_effect_port.c
+    game/boot/mirror_effect_port.c
+    game/boot/field_item_pickup_port.c
+    game/boot/actor_contact_port.c
+    game/boot/func_800CEB8C_port.c
+    game/boot/func_800C71E4_port.c
+    game/boot/func_80062D2C_port.c
+    game/boot/func_8004DD64_port.c
+    game/boot/func_8004DF74_port.c
+    game/boot/func_8005C498_port.c
+    game/boot/func_800438EC_port.c
+    game/boot/func_80043B0C_port.c
+    game/boot/func_800512AC_port.c
+    game/boot/func_8005DCEC_port.c
+    game/boot/func_80055760_port.c
+    game/boot/func_80044924_port.c
+    game/boot/func_8004F910_port.c
+    game/boot/func_800452C0_port.c
+    game/boot/func_8005112C_port.c
+    game/boot/func_80026824_port.c
+    game/boot/func_80044B0C_port.c
+    game/boot/func_8005E12C_port.c
+    game/boot/func_8005EED4_port.c
+    game/boot/func_80061C34_port.c
+    game/boot/func_800638D8_port.c
+    game/boot/func_80063E0C_port.c
     game/boot/func_8002FAF8_port.c
     game/boot/func_80014228_port.c
     game/boot/func_80069594_port.c
@@ -77,11 +123,36 @@ set(GAME_SRCS
     game/boot/func_80017018_port.c
     game/boot/func_800181CC_port.c
     game/boot/func_80015DAC_port.c
+    game/boot/func_80191854_port.c
+    game/boot/func_8018F55C_port.c
+    game/boot/func_80195994_port.c
+    game/boot/func_80196498_port.c
+    game/boot/func_80192030_port.c
+    game/boot/func_8018F344_port.c
+    game/boot/func_8018F05C_port.c
+    game/boot/func_80190D3C_port.c
+    game/boot/func_80192800_port.c
+    game/boot/transition_ordering_table_port.c
+    game/boot/pe_controller_sdk_port.c
+    game/boot/func_80197BA0_port.c
+    game/boot/func_8019A318_port.c
+    game/boot/func_801995BC_port.c
+    game/boot/func_8019B1D0_port.c
+    game/boot/func_80079384_port.c
+    game/boot/func_8018F92C_port.c
+    game/boot/func_80193478_port.c
+    game/boot/func_801942FC_port.c
+    game/boot/func_801904B0_port.c
+    game/boot/movie_overlay_port.c
+    game/boot/cd_stream_port.c
+    game/boot/func_80191DE8_port.c
+    game/boot/func_80190998_port.c
     game/boot/func_80012850_port.c
     game/boot/func_80016910_port.c
     game/boot/func_8001A374_port.c
     game/boot/func_8001735C_port.c
     game/boot/func_80015240_port.c
+    game/boot/func_80014BA0_port.c
     game/boot/func_8001A15C_port.c
     game/boot/func_800130B4_port.c
     game/boot/func_800131E8_port.c
@@ -90,10 +161,14 @@ set(GAME_SRCS
     game/boot/func_8006B4F8_port.c
     game/boot/func_800371B0_port.c
     game/boot/func_8001A890_port.c
+    game/boot/func_8001AE40_port.c
     game/boot/func_80034F10_port.c
     game/boot/func_8006536C_port.c
     game/boot/func_800653B8_port.c
     game/boot/func_80065954_port.c
+    game/boot/func_800659F8_port.c
+    game/boot/func_80013988_port.c
+    game/boot/func_80013E84_port.c
     game/boot/func_800659C8_port.c
     game/boot/func_80066800_port.c
     game/boot/func_80017764_port.c
@@ -110,13 +185,19 @@ set(GAME_SRCS
     game/boot/func_8003010C_port.c
     game/boot/func_80030220_port.c
     game/boot/func_800299CC_port.c
+    game/boot/func_80033A40_port.c
     game/boot/func_8001D340_port.c
+    game/boot/func_8001F9C4_port.c
+    game/boot/func_80023E14_port.c
     game/boot/func_8006DE80_port.c
     game/boot/func_80053E6C_port.c
     game/boot/func_8002AA98_port.c
     game/boot/func_80027D14_port.c
+    game/boot/func_8002DC58_port.c
     game/boot/func_8002CF24_port.c
     game/boot/func_800293F4_port.c
+    game/boot/func_8006CDA4_port.c
+    game/boot/func_8006D2B8_port.c
     game/boot/func_80029810_port.c
     game/boot/func_8006C4C4_port.c
     game/boot/func_8003D050_port.c
@@ -141,6 +222,27 @@ set(GAME_SRCS
     game/boot/func_80053968_port.c
     game/boot/func_80053B48_port.c
     game/boot/func_80051CC4_port.c
+    game/boot/func_80051980_port.c
+    game/boot/func_8002156C_port.c
+    game/boot/func_80020F18_port.c
+    game/boot/func_80026FF8_port.c
+    game/boot/func_80025EE8_port.c
+    game/boot/func_80021F38_port.c
+    game/boot/func_80022210_port.c
+    game/boot/func_800D4C24_port.c
+    game/boot/func_80022394_port.c
+    game/boot/func_80024250_port.c
+    game/boot/func_80046574_port.c
+    game/boot/func_8004542C_port.c
+    game/boot/func_80046DFC_port.c
+    game/boot/func_8005B500_port.c
+    game/boot/func_80046ABC_port.c
+    game/boot/func_800515F8_port.c
+    game/boot/func_800236E8_port.c
+    game/boot/func_80028574_port.c
+    game/boot/func_800314E4_port.c
+    game/boot/func_8007041C_port.c
+    game/boot/func_800C22F8_port.c
     game/boot/func_8005218C_port.c
     game/boot/func_8005B91C_port.c
     game/boot/func_800527C8_port.c
@@ -195,6 +297,7 @@ set(GAME_SRCS
     game/boot/func_800753B4_port.c
     game/boot/func_80070E54_port.c
     game/boot/func_80076664_port.c
+    game/boot/func_800768A0_port.c
     game/boot/func_80073CF4_port.c
     game/boot/func_800746A0_port.c
     game/boot/func_80076C34_port.c
@@ -202,6 +305,7 @@ set(GAME_SRCS
     game/boot/func_80077B64_port.c
     game/boot/func_80077BA4_port.c
     game/boot/func_80077BC4_port.c
+    game/boot/func_80077BE4_port.c
     game/boot/func_80077C44_port.c
     game/boot/func_80077C64_port.c
     game/boot/func_80077A64_port.c
@@ -303,6 +407,13 @@ endif()
 # Tests
 option(BUILD_TESTS "Build native port tests" ON)
 if(BUILD_TESTS)
+    if(WIN32)
+        add_executable(pe-win32-input-tests tests/test_win32_input.c platform/host_window_win32.c)
+        target_include_directories(pe-win32-input-tests PRIVATE platform)
+        target_link_libraries(pe-win32-input-tests PRIVATE user32 gdi32)
+        add_test(NAME win32-input COMMAND pe-win32-input-tests)
+        set_tests_properties(win32-input PROPERTIES TIMEOUT 30)
+    endif()
     enable_testing()
     add_executable(pe-native-tests tests/test_native.c)
     target_link_libraries(pe-native-tests PRIVATE pe_field_runtime)
@@ -314,6 +425,81 @@ if(BUILD_TESTS)
         tests/test_field_runtime_link.c
     )
     target_link_libraries(pe-field-runtime-link-test PRIVATE pe_field_runtime)
+
+    if(UNIX AND NOT APPLE)
+        add_executable(pe-disc-loader-tests tests/test_disc_loader_loop.c)
+        target_link_libraries(pe-disc-loader-tests PRIVATE pe_field_runtime)
+        foreach(provider 80087198 80087414 8006E6D4 8006E7E8 800871AC 80087090 800875FC 80087428 800870E0)
+            target_link_options(pe-disc-loader-tests PRIVATE "-Wl,--wrap=func_${provider}")
+        endforeach()
+        if(PE_PORT_SANITIZERS)
+            target_compile_options(pe-disc-loader-tests PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+            target_link_options(pe-disc-loader-tests PRIVATE -fsanitize=address,undefined -static-libasan -static-libubsan)
+        endif()
+        add_test(NAME disc-loader-control-flow COMMAND pe-disc-loader-tests)
+        set_tests_properties(disc-loader-control-flow PROPERTIES TIMEOUT 30)
+    endif()
+
+    if(UNIX AND NOT APPLE)
+        add_executable(pe-music-bank-tests tests/test_music_bank.c)
+        target_link_libraries(pe-music-bank-tests PRIVATE pe_field_runtime)
+        target_link_options(pe-music-bank-tests PRIVATE
+            "-Wl,--wrap=func_8006CDA4" "-Wl,--wrap=func_80086FF8")
+        if(PE_PORT_SANITIZERS)
+            target_compile_options(pe-music-bank-tests PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+            target_link_options(pe-music-bank-tests PRIVATE -fsanitize=address,undefined -static-libasan -static-libubsan)
+        endif()
+        add_test(NAME music-bank-control-flow COMMAND pe-music-bank-tests)
+        set_tests_properties(music-bank-control-flow PROPERTIES TIMEOUT 30)
+
+        add_executable(pe-transition-exit-tests tests/test_transition_exit.c)
+        target_link_libraries(pe-transition-exit-tests PRIVATE pe_field_runtime)
+        foreach(provider HostFB_SetDispMask HostFB_VSync func_80074A44 func_80074F44 func_80074DC0 func_800755F0 func_80086C5C func_8008CBA8 func_80086FF8 func_80087024)
+            target_link_options(pe-transition-exit-tests PRIVATE "-Wl,--wrap=${provider}")
+        endforeach()
+        if(PE_PORT_SANITIZERS)
+            target_compile_options(pe-transition-exit-tests PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+            target_link_options(pe-transition-exit-tests PRIVATE -fsanitize=address,undefined -static-libasan -static-libubsan)
+        endif()
+        add_test(NAME transition-exit-control-flow COMMAND pe-transition-exit-tests)
+        set_tests_properties(transition-exit-control-flow PROPERTIES TIMEOUT 30)
+
+        add_executable(pe-transition-constructor-tests tests/test_transition_constructor.c)
+        target_link_libraries(pe-transition-constructor-tests PRIVATE pe_field_runtime)
+        foreach(provider func_80191854 func_800371B0 func_80078E34 func_80078E64 func_80078FC4 func_80077E64 func_80078FE4)
+            target_link_options(pe-transition-constructor-tests PRIVATE "-Wl,--wrap=${provider}")
+        endforeach()
+        if(PE_PORT_SANITIZERS)
+            target_compile_options(pe-transition-constructor-tests PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+            target_link_options(pe-transition-constructor-tests PRIVATE -fsanitize=address,undefined -static-libasan -static-libubsan)
+        endif()
+        add_test(NAME transition-constructor-control-flow COMMAND pe-transition-constructor-tests)
+        set_tests_properties(transition-constructor-control-flow PROPERTIES TIMEOUT 30)
+
+        add_executable(pe-transition-init-tests tests/test_transition_init.c)
+        target_link_libraries(pe-transition-init-tests PRIVATE pe_field_runtime)
+        foreach(provider func_8019BD78 func_8005BCB0 func_800371A4 func_80191C94)
+            target_link_options(pe-transition-init-tests PRIVATE "-Wl,--wrap=${provider}")
+        endforeach()
+        if(PE_PORT_SANITIZERS)
+            target_compile_options(pe-transition-init-tests PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+            target_link_options(pe-transition-init-tests PRIVATE -fsanitize=address,undefined -static-libasan -static-libubsan)
+        endif()
+        add_test(NAME transition-init-control-flow COMMAND pe-transition-init-tests)
+        set_tests_properties(transition-init-control-flow PROPERTIES TIMEOUT 30)
+
+        add_executable(pe-transition-loader-tests tests/test_transition_loader.c)
+        target_link_libraries(pe-transition-loader-tests PRIVATE pe_field_runtime)
+        foreach(provider HostFB_VSync HostFB_SetDispMask func_8006E6A8 func_8006E7E8 func_8006CDA4 func_8006E6D4 func_800811E4 func_800718D0 func_80074DC0 func_80072714 func_800726C4 func_80072724)
+            target_link_options(pe-transition-loader-tests PRIVATE "-Wl,--wrap=${provider}")
+        endforeach()
+        if(PE_PORT_SANITIZERS)
+            target_compile_options(pe-transition-loader-tests PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+            target_link_options(pe-transition-loader-tests PRIVATE -fsanitize=address,undefined -static-libasan -static-libubsan)
+        endif()
+        add_test(NAME transition-loader-control-flow COMMAND pe-transition-loader-tests)
+        set_tests_properties(transition-loader-control-flow PROPERTIES TIMEOUT 30)
+    endif()
 
     if(PE_PORT_SANITIZERS AND NOT MSVC)
         target_compile_options(pe-native-tests PRIVATE

@@ -11,12 +11,14 @@
  *
  * func_80039B74 — 108w 0x80039B74..0x80039D24, SHA-256
  * 8c66e398…84e7. a1==0 returns immediately (live +0x1B0=0).
- * Nonzero a1 (39D24/39ED4/79754) is not this cut.
+ * INIT1 adds nonzero clips via 39D24/39ED4/79754; scratchpad
+ * overrides outside the decoded joint count remain a named boundary.
  *
  * func_800362B8 — 79w 0x800362B8..0x800363F4, SHA-256
  * c1d94293…b78d. Zero jal. Size-class bank allocator.
  *
- * func_8003A6A8 dest+0==0 jals 3E188 then returns.
+ * func_8003A6A8: POS1 adds the nonempty world/screen anchor path.
+ * dest+0==0 jals 3E188 then returns.
  * 3E188 187w 0x8003E188..0x8003E474, SHA-256 dc4df605…abe7.
  * dest+0x24==0 loads *(0+0x84): BTL-RAM-LOW APPROXIMATION.
  *
@@ -25,6 +27,7 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 #include "pe_sdk.h"
+#include <string.h>
 
 #define GA_D_8009D2F0 0x8009D2F0u
 #define GA_D_8009CE00 0x8009CE00u
@@ -83,14 +86,86 @@ pe_addr_t func_800362B8(unsigned int size)
     return 0u;
 }
 
+/* 39B74 and its 39D24/39ED4 decoders. Scratchpad angle rows are
+ * host temporaries consumed in this call; retained matrices stay in RAM. */
 void func_80039B74(pe_addr_t dest, pe_addr_t clip, int a2, int a3)
 {
-    (void)dest;
-    (void)a2;
+    int16_t angles[256][3];
+    pe_addr_t cursor, matrices;
+    uint32_t frames, trans_stride, rot_stride, count;
+    uint32_t row, axis;
+    int16_t frame = (int16_t)a2;
+    int wide;
     (void)a3;
-    if (clip == 0u)
-        return;
-    /* Nonzero clip: 39ED4/39D24/79754 not this cut. */
+    if (!clip) return;
+    PE_StoreU16(dest + 0x7Cu, PE_LoadU16(clip + 0xAu));
+    PE_StoreU16(dest + 0x74u, PE_LoadU16(clip + 4u));
+    PE_StoreU16(dest + 0x76u, PE_LoadU16(clip + 6u));
+    PE_StoreU16(dest + 0x78u, PE_LoadU16(clip + 8u));
+    wide = (PE_LoadU8(clip) & 3u) == 2u;
+    matrices = PE_LoadU32(dest + 0x84u);
+    PE_StoreU32(dest + 0x58u, matrices);
+    cursor = clip + 12u;
+    frames = PE_LoadU8(clip + 2u);
+    trans_stride = ((frames >> 1) + 1u) * 4u;
+    for (axis = 0; axis < 3u; axis++) {
+        int16_t value;
+        if (PE_LoadU16(cursor)) {
+            value = (int16_t)PE_LoadU16(cursor + 2u);
+            cursor += 4u;
+        } else {
+            value = (int16_t)PE_LoadU16(cursor + 2u + (uint32_t)((int32_t)frame * 2));
+            cursor += trans_stride;
+        }
+        PE_StoreU32(matrices + 20u + axis * 4u, (uint32_t)(int32_t)value);
+    }
+    count = (uint32_t)PE_LoadU8(clip + 1u) + 1u;
+    rot_stride = wide ? trans_stride : ((frames >> 2) + 1u) * 4u;
+    for (row = 0; row < count; row++) {
+        for (axis = 0; axis < 3u; axis++) {
+            uint16_t value;
+            if (wide) {
+                if (PE_LoadU16(cursor)) {
+                    value = PE_LoadU16(cursor + 2u);
+                    cursor += 4u;
+                } else {
+                    value = PE_LoadU16(cursor + 2u + (uint32_t)((int32_t)frame * 2));
+                    cursor += rot_stride;
+                }
+            } else {
+                if (PE_LoadU8(cursor)) {
+                    value = PE_LoadU8(cursor + 1u);
+                    cursor += 4u;
+                } else {
+                    value = PE_LoadU8(cursor + 1u + (uint32_t)(int32_t)frame);
+                    cursor += rot_stride;
+                }
+                value = (uint16_t)(value << 4);
+            }
+            angles[row][axis] = (int16_t)value;
+        }
+        PE_RotMatrix79754(angles[row], matrices + row * 32u);
+    }
+    for (row = 0; row < 2u; row++) {
+        pe_addr_t slot = dest + row * 8u;
+        unsigned int index = PE_LoadU8(slot + 0xA6u);
+        if (!index) continue;
+        /* Indices beyond decoded rows refer to old scratchpad contents;
+         * that unobserved state is not manufactured by this host view. */
+        if (index >= count) {
+            Bootstrap_ReturnVoid("func_80039B74_scratch_index", "func_80039B74");
+            return;
+        }
+        for (axis = 0; axis < 3u; axis++) {
+            uint8_t flags = PE_LoadU8(slot + 0xA7u);
+            uint16_t value = PE_LoadU16(slot + 0xA0u + axis * 2u);
+            if (flags & (8u << axis))
+                angles[index][axis] = (int16_t)value;
+            else if (flags & (1u << axis))
+                angles[index][axis] = (int16_t)((uint16_t)angles[index][axis] + value);
+        }
+        PE_RotMatrix79754(angles[index], PE_LoadU32(dest + 0x58u) + index * 32u);
+    }
 }
 
 static pe_addr_t pe_15240_kseg0(pe_addr_t addr)
@@ -98,10 +173,12 @@ static pe_addr_t pe_15240_kseg0(pe_addr_t addr)
     return 0x80000000u | (addr & 0x1FFFFFu);
 }
 
-void func_8003E188(pe_addr_t dest)
+static uint32_t pe_3a6a8_project_anchor(pe_addr_t joint, pe_addr_t view, pe_addr_t point);
+
+static void pe_3e188_with_view(pe_addr_t dest, pe_addr_t view)
 {
     pe_addr_t parent;
-    pe_addr_t mats;
+    pe_addr_t mats, point;
     int16_t idx;
 
     /* dest+0x24==0 is the live empty-+0x1AC path. Retail loads
@@ -112,9 +189,10 @@ void func_8003E188(pe_addr_t dest)
     mats = pe_15240_kseg0(PE_LoadU32(parent + 0x84u)
                           + (pe_addr_t)idx * 32u);
     PE_GTE_LoadRT(mats);
-    PE_GTE_SetV0((int16_t)PE_LoadU16(dest + 0x2Cu),
-                 (int16_t)PE_LoadU16(dest + 0x2Eu),
-                 (int16_t)PE_LoadU16(dest + 0x30u));
+    point = pe_15240_kseg0(PE_LoadU32(parent + 0x18u) + (uint32_t)(int32_t)idx * 16u);
+    PE_GTE_SetV0((int16_t)PE_LoadU16(point),
+                 (int16_t)PE_LoadU16(point + 2u),
+                 (int16_t)PE_LoadU16(point + 4u));
     PE_GTE_MVMVA(CMD_RTV0);
     PE_StoreU16(dest + 0xA0u, (uint16_t)g_pe_gte.ir[0]);
     PE_StoreU16(dest + 0xA2u, (uint16_t)g_pe_gte.ir[1]);
@@ -125,17 +203,101 @@ void func_8003E188(pe_addr_t dest)
     PE_StoreU16(dest + 0xB4u, (uint16_t)g_pe_gte.ir[0]);
     PE_StoreU16(dest + 0xB6u, (uint16_t)g_pe_gte.ir[1]);
     PE_StoreU16(dest + 0xB8u, (uint16_t)g_pe_gte.ir[2]);
+    PE_StoreU32(dest + 0x64u, pe_3a6a8_project_anchor(mats, view, dest + 0x2Cu));
+    PE_StoreU16(dest + 0x2Cu, (uint16_t)(PE_LoadU16(dest + 0x2Cu) + PE_LoadU16(dest + 0x70u)));
+    PE_StoreU32(dest + 0x5Cu, pe_3a6a8_project_anchor(mats, view, dest + 0x2Cu));
+    PE_StoreU16(dest + 0x2Cu, (uint16_t)(PE_LoadU16(dest + 0x2Cu) - PE_LoadU16(dest + 0x70u)));
     PE_StoreU16(dest + 0x7Cu, PE_LoadU16(parent + 0x7Cu));
     PE_StoreU16(dest + 0x74u, PE_LoadU16(parent + 0x74u));
     PE_StoreU16(dest + 0x76u, PE_LoadU16(parent + 0x76u));
     PE_StoreU16(dest + 0x78u, PE_LoadU16(parent + 0x78u));
 }
 
-void func_8003A6A8(pe_addr_t dest, pe_addr_t unused)
+void func_8003E188(pe_addr_t dest)
 {
-    (void)unused;
-    if (PE_LoadU32(dest) == 0u)
-        func_8003E188(dest);
+    pe_3e188_with_view(dest, GA_B89F8);
+}
+
+/* 3A8C0..3AA88 and 3AA8C..3AC7C: compose view x joint in the
+ * within-call scratch matrix, then project one model anchor. */
+static uint32_t pe_3a6a8_project_anchor(pe_addr_t joint, pe_addr_t view, pe_addr_t point)
+{
+    int16_t rotation[3][3];
+    int32_t translation[3];
+    unsigned int row, col;
+    uint32_t xy, z;
+    PE_GTE_LoadRT(view);
+    for (col = 0u; col < 3u; col++) {
+        PE_GTE_SetIR((int16_t)PE_LoadU16(joint + col * 2u),
+                     (int16_t)PE_LoadU16(joint + 6u + col * 2u),
+                     (int16_t)PE_LoadU16(joint + 12u + col * 2u));
+        PE_GTE_MVMVA(CMD_RTIR);
+        for (row = 0u; row < 3u; row++)
+            rotation[row][col] = (int16_t)g_pe_gte.ir[row];
+    }
+    PE_GTE_SetV0((int16_t)PE_LoadU16(joint + 20u),
+                 (int16_t)PE_LoadU16(joint + 24u),
+                 (int16_t)PE_LoadU16(joint + 28u));
+    PE_GTE_MVMVA(CMD_RTV0);
+    for (row = 0u; row < 3u; row++) translation[row] = g_pe_gte.mac[row];
+    memcpy(g_pe_gte.rt, rotation, sizeof(rotation));
+    memcpy(g_pe_gte.tr, translation, sizeof(translation));
+    PE_GTE_SetV0((int16_t)PE_LoadU16(point),
+                 (int16_t)PE_LoadU16(point + 2u),
+                 (int16_t)PE_LoadU16(point + 4u));
+    PE_GTE_RTPS_coordinates(&xy, &z);
+    return xy;
+}
+
+/* 3A6A8..3AC90: world positions used by scripts plus projected anchors.
+ * Scratchpad temporaries are local; retained coordinates stay in guest RAM. */
+void func_8003A6A8(pe_addr_t dest, pe_addr_t view)
+{
+    pe_addr_t obj = PE_LoadU32(dest);
+    pe_addr_t joints, offset, selected, point;
+    uint32_t index;
+    unsigned int axis;
+    int16_t v[3];
+    if (obj == 0u) {
+        pe_3e188_with_view(dest, view);
+        return;
+    }
+
+    joints = PE_LoadU32(dest + 0x84u);
+    PE_GTE_LoadRT(joints + PE_LoadU16(obj + 0x12u) * 32u);
+    /* Retail gp+0x2A is the Y component of D_8009CD98. */
+    PE_StoreU16(0x8009CD9Au, PE_LoadU16(obj + 0x10u));
+    PE_GTE_SetV0((int16_t)PE_LoadU16(0x8009CD98u),
+                 (int16_t)PE_LoadU16(0x8009CD9Au),
+                 (int16_t)PE_LoadU16(0x8009CD9Cu));
+    PE_GTE_MVMVA(CMD_RTV0);
+    for (axis = 0u; axis < 3u; axis++)
+        PE_StoreU16(dest + 0x68u + axis * 2u, (uint16_t)g_pe_gte.ir[axis]);
+
+    PE_GTE_LoadRT(joints);
+    offset = PE_LoadU32(dest + 0x14u);
+    for (axis = 0u; axis < 3u; axis++)
+        v[axis] = (int16_t)(PE_LoadU16(offset + axis * 2u)
+                            + PE_LoadU16(dest + 0x74u + axis * 2u));
+    PE_GTE_SetV0(v[0], v[1], v[2]);
+    PE_GTE_MVMVA(CMD_RTV0);
+    for (axis = 0u; axis < 3u; axis++)
+        PE_StoreU16(dest + 0x74u + axis * 2u, (uint16_t)g_pe_gte.ir[axis]);
+
+    index = (uint32_t)(int32_t)(int16_t)PE_LoadU16(dest + 0x32u);
+    selected = joints + index * 32u;
+    point = PE_LoadU32(dest + 0x18u) + index * 16u;
+    PE_GTE_LoadRT(selected);
+    PE_GTE_SetV0((int16_t)PE_LoadU16(point),
+                 (int16_t)PE_LoadU16(point + 2u),
+                 (int16_t)PE_LoadU16(point + 4u));
+    PE_GTE_MVMVA(CMD_RTV0);
+    for (axis = 0u; axis < 3u; axis++)
+        PE_StoreU16(dest + 0xB4u + axis * 2u, (uint16_t)g_pe_gte.ir[axis]);
+
+    PE_StoreU32(dest + 0x5Cu,
+                pe_3a6a8_project_anchor(joints, view, PE_LoadU32(dest + 0x1Cu)));
+    PE_StoreU32(dest + 0x64u, pe_3a6a8_project_anchor(selected, view, point));
 }
 
 static void pe_15240_comp_matrix(pe_addr_t actor)
@@ -190,7 +352,7 @@ int func_80015240(pe_addr_t args)
     func_80039B74(dest, PE_LoadU32(actor + 0x1B0u), 0, 1);
     func_8003A088_mode0_walk_cut(dest);
     func_8003A6A8(dest, GA_B89F8);
-    func_8003B97C_empty_cut(dest, GA_BEA40);
+    func_8003B97C_lighting_cut(dest, GA_BEA40);
     func_8003BCE0(dest, 1, (int)(int16_t)PE_LoadU16(GA_D_8009CDDC));
 
     flags = PE_LoadU32(actor + 0x98u);
@@ -198,7 +360,7 @@ int func_80015240(pe_addr_t args)
         uint32_t cddc = PE_LoadU32(GA_D_8009CDDC) ^ 1u;
 
         PE_StoreU32(GA_D_8009CDDC, cddc);
-        func_8003B97C_empty_cut(dest, GA_BEA40);
+        func_8003B97C_lighting_cut(dest, GA_BEA40);
         func_8003BCE0(dest, 1, (int)(int16_t)PE_LoadU16(GA_D_8009CDDC));
         PE_StoreU32(GA_D_8009CDDC, PE_LoadU32(GA_D_8009CDDC) ^ 1u);
         return 1;

@@ -249,7 +249,7 @@ static int func_80076C34_enqueue(pe_addr_t worker, pe_addr_t argument,
 
 static int func_80076C34_prefix(pe_addr_t worker, pe_addr_t argument,
                                 int32_t copy_bytes, uint32_t auxiliary,
-                                const uint32_t *inline8)
+                                uint32_t *inline8)
 {
     uint32_t producer;
     uint32_t consumer;
@@ -321,10 +321,13 @@ direct_issue:
 
     /* 0x80076D38: jalr s3 — the guest command-issue worker, called with
      * a0 = argument (s0) and a1 = auxiliary (s2, delay slot). */
-    if (worker == 0x80076664u) {
+    if (worker == 0x80076664u || worker == 0x800768A0u) {
         unsigned stop_epoch = PE_Port_StopEpoch();
 
-        if (inline8) {
+        if (worker==0x800768A0u) {
+            if (inline8) (void)PE_StoreImageInline8(inline8[0],inline8[1],auxiliary);
+            else (void)func_800768A0(argument,auxiliary);
+        } else if (inline8) {
             (void)PE_func_80076664_Inline8(
                 inline8[0], inline8[1], auxiliary);
         } else {
@@ -349,10 +352,14 @@ direct_issue:
         return 0;
     }
 
-    if (worker == 0x80076B98u) {
+    if (worker == 0x80076B98u || worker == 0x80076434u) {
         unsigned stop_epoch = PE_Port_StopEpoch();
 
-        (void)func_80076B98(argument, auxiliary);
+        if (worker == 0x80076434u) {
+            if (inline8) (void)PE_ClearImageInline8(inline8,auxiliary);
+            else (void)func_80076434(argument,auxiliary);
+        }
+        else (void)func_80076B98(argument, auxiliary);
         if (PE_Port_StopEpoch() != stop_epoch) {
             return 0;
         }
@@ -379,7 +386,7 @@ int PE_func_80076C34_Inline8(pe_addr_t worker,
                              uint32_t argument_word1,
                              uint32_t auxiliary)
 {
-    const uint32_t payload[2] = { argument_word0, argument_word1 };
+    uint32_t payload[2] = { argument_word0, argument_word1 };
 
     /* B52's transient native RECT is converted to two values before this
      * point.  Keep its accepted call evidence without retaining a native
@@ -393,4 +400,16 @@ int PE_func_80076C34_Inline8(pe_addr_t worker,
      * stores the entry's own guest payload address, so no native pointer
      * outlives this call. */
     return func_80076C34_prefix(worker, 0u, 8, auxiliary, payload);
+}
+
+int PE_DispatchClearRect(pe_addr_t worker, RECT *rect, uint32_t color)
+{
+    uint32_t payload[2]={(uint16_t)rect->x|((uint32_t)(uint16_t)rect->y<<16u),
+                        (uint16_t)rect->w|((uint32_t)(uint16_t)rect->h<<16u)};
+    int result;
+    Bootstrap_RecordArg4Indirect("func_80076C34","func_80074F44",0x80076C34u,
+        worker,0u,8u,color,payload,sizeof(payload));
+    result=func_80076C34_prefix(worker,0u,8,color,payload);
+    rect->w=(int16_t)payload[1];rect->h=(int16_t)(payload[1]>>16u);
+    return result;
 }

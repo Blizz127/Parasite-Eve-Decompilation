@@ -25,10 +25,10 @@
  * sw 0 → gp+0x164 (D_8009CED4), sw a0 → gp+0x120.
  *
  * Loop 2 (s4 = 0..1):
- *   DR_MODE+setSprt+append at D_800AEC70 + i*28, mode lhu D_80091680
+ *   DR_MODE+setSprt+append at D_8009EC70 + i*28, mode lhu D_80091680
  *   SetShadeTex(sprt,1); u=0x70 w=0x18 h=0x0C; v=lhu D_8009167A;
  *     clut=lhu D_80091682 at +0x0E
- *   GetTPage(0,0,0,0) then DR_MODE+SetTile+append at D_800AECA8+i*24
+ *   GetTPage(0,0,0,0) then DR_MODE+SetTile+append at D_8009ECA8+i*24
  *   TILE rgb=2,2,2; xy=0,0xAA; wh=0x140,0x36; SetSemiTrans(1)
  * 77CB4 fail jals 719E4(-1). Live packets fit the 17-word budget.
  *
@@ -47,11 +47,11 @@
 #define GA_D_80091680 0x80091680u
 #define GA_D_80091682 0x80091682u
 #define GA_D_800BCEA8 0x800BCEA8u
-#define GA_D_800AEC70 0x800AEC70u
-#define GA_D_800AEC78 0x800AEC78u
-#define GA_D_800AEC86 0x800AEC86u
-#define GA_D_800AECA8 0x800AECA8u
-#define GA_D_800AECB0 0x800AECB0u
+#define GA_D_8009EC70 0x8009EC70u
+#define GA_D_8009EC78 0x8009EC78u
+#define GA_D_8009EC86 0x8009EC86u
+#define GA_D_8009ECA8 0x8009ECA8u
+#define GA_D_8009ECB0 0x8009ECB0u
 
 #define REC_STRIDE 56u
 #define SPRT_STRIDE 28u
@@ -92,30 +92,30 @@ void func_800371B0(pe_addr_t a0)
     PE_StoreU32(GA_D_8009CE90, a0);
 
     for (i = 0; i < 2u; i++) {
-        sprt_head = GA_D_800AEC70 + i * SPRT_STRIDE;
+        sprt_head = GA_D_8009EC70 + i * SPRT_STRIDE;
         func_80077C84(sprt_head, 0u, 1u, PE_LoadU16(GA_D_80091680));
         sprt = sprt_head + 8u;
         func_80077C04(sprt);
         if (func_80077CB4(sprt_head, sprt) != 0)
             func_800719E4((uint32_t)-1);
 
-        sprt = GA_D_800AEC78 + i * SPRT_STRIDE;
+        sprt = GA_D_8009EC78 + i * SPRT_STRIDE;
         func_80077B34(sprt, 1u);
         PE_StoreU8(sprt + 0x0Cu, 0x70u);
         PE_StoreU16(sprt + 0x10u, 0x18u);
         PE_StoreU16(sprt + 0x12u, 0x0Cu);
         PE_StoreU8(sprt + 0x0Du, (uint8_t)PE_LoadU16(GA_D_8009167A));
-        PE_StoreU16(GA_D_800AEC86 + i * SPRT_STRIDE, PE_LoadU16(GA_D_80091682));
+        PE_StoreU16(GA_D_8009EC86 + i * SPRT_STRIDE, PE_LoadU16(GA_D_80091682));
 
         tpage = func_80077A64(0u, 0u, 0u, 0u);
-        tile_head = GA_D_800AECA8 + i * TILE_STRIDE;
+        tile_head = GA_D_8009ECA8 + i * TILE_STRIDE;
         func_80077C84(tile_head, 0u, 1u, tpage & 0xFFFFu);
         tile = tile_head + 8u;
         func_80077C44(tile);
         if (func_80077CB4(tile_head, tile) != 0)
             func_800719E4((uint32_t)-1);
 
-        tile = GA_D_800AECB0 + i * TILE_STRIDE;
+        tile = GA_D_8009ECB0 + i * TILE_STRIDE;
         PE_StoreU8(tile + 4u, 2u);
         PE_StoreU8(tile + 5u, 2u);
         PE_StoreU8(tile + 6u, 2u);

@@ -10,11 +10,8 @@
  * body+0x10<=0 and !(D1A0&0x100) and kind not 1/3 → zero
  * +0x68/6C/70, jal 28E94(actor).
  *
- * 28E94: 317 words. Phase on body+0xAC. Phase 0 decrements D2A0
- * and falls into phase 1. body+0xAF==0 skips to phase 3.
- * Phase 3: +0x98|=0x410, 2F970(actor) nulls the body, then
- * 292EC remaining-enemy tail. 866A4 / 3C5D8 / 3CAEC / 27A08
- * stay deferred.
+ * 28E94 is complete: death clip/fade, linked actors, rewards, drops
+ * and the remaining-enemy gate into 2F300's victory initialization.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
@@ -43,7 +40,7 @@
 #define BODY_REACT    0x4000u
 #define BODY_HITMASK  0x6000u
 
-extern unsigned int D_8009D1A0;
+
 
 void func_8002F970(pe_addr_t p)
 {
@@ -69,126 +66,74 @@ static uint32_t pe_d1a0(void)
 
 void func_80028E94(pe_addr_t actor)
 {
-    pe_addr_t body;
-    uint8_t phase;
-    uint32_t flags;
-    pe_addr_t walk;
-
-    if (actor == 0u)
-        return;
-    body = PE_LoadU32(actor);
-    if (body == 0u)
-        return;
-    phase = PE_LoadU8(body + 0xACu);
+    pe_addr_t body=PE_LoadU32(actor),walk;
+    uint8_t phase=PE_LoadU8(body+0xACu);
+    unsigned i;
     if (phase == 0u) {
-        int8_t busy;
-
-        busy = (int8_t)PE_LoadU8(GA_D_8009D2A0);
-        PE_StoreU8(GA_D_8009D2A0, (uint8_t)(busy - 1));
-        phase = 1u;
-        PE_StoreU8(body + 0xACu, 1u);
+        PE_StoreU8(GA_D_8009D2A0,(uint8_t)(PE_LoadU8(GA_D_8009D2A0)-1u));
+        phase=1u; PE_StoreU8(body+0xACu,1u);
     }
     if (phase == 1u) {
-        if (PE_LoadU8(body + 0xAFu) == 0u) {
-            /* 866A4 sound/CD deferred. */
-            PE_StoreU8(body + 0xACu, 3u);
-            return;
+        if (!PE_LoadU8(body+0xAFu)) {
+            func_800866A4(0u,PE_LoadU32(body+8u));
+            PE_StoreU8(body+0xACu,3u); return;
         }
-        /* AF!=0 clip/3C5D8 path is not this cut. */
+        if (PE_LoadU16(actor+0x16u)<PE_LoadU8(body+0x91u) &&
+            !PE_LoadU8(actor+14u) && (int8_t)PE_LoadU8(body+5u)<2) return;
+        PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)|0x100u);
+        func_8003C5D8(actor+0x1B4u,22);
+        PE_StoreU8(body+0xACu,2u); PE_StoreU8(body+0xADu,0u);
+        PE_StoreU32(actor+0x68u,0u); PE_StoreU32(actor+0x6Cu,0u); PE_StoreU32(actor+0x70u,0u);
+        PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)|0x1000u);
+        func_800866A4(0u,PE_LoadU32(body+8u));
+        for (walk=PE_LoadU32(GA_D_8009D20C);walk;walk=PE_LoadU32(walk+4u))
+            if (!PE_LoadU32(walk) && PE_LoadU32(walk+0x18Cu)==actor)
+                func_8003C5D8(walk+0x1B4u,22);
         return;
     }
-    if (phase == 2u)
+    if (phase == 2u) {
+        uint8_t color=(uint8_t)(-128-(int)PE_LoadU8(body+0xADu)*16);
+        func_8003CAEC(actor+0x1B4u,color,128u,color);
+        if (!color) {
+            PE_StoreU16(actor+0x250u,PE_LoadU16(actor+0x250u)|2u);
+            PE_StoreU8(body+0xACu,3u); PE_StoreU8(body+0xADu,0u);
+        } else {
+            if (!PE_LoadU8(body+0xADu) && PE_LoadU8(body+0xAEu))
+                func_8006DED4(PE_LoadU32(0x800B0E64u),PE_LoadU16(body+0xB4u),0,
+                    (int16_t)PE_LoadU16(actor+0x268u),(int16_t)PE_LoadU16(actor+0x26Au),
+                    (int16_t)PE_LoadU16(actor+0x26Cu));
+            PE_StoreU8(body+0xADu,(uint8_t)(PE_LoadU8(body+0xADu)+1u));
+        }
+        for (walk=PE_LoadU32(GA_D_8009D20C);walk;walk=PE_LoadU32(walk+4u)) {
+            if (PE_LoadU32(walk) || PE_LoadU32(walk+0x18Cu)!=actor) continue;
+            func_8003CAEC(walk+0x1B4u,color,128u,color);
+            if (!color) PE_StoreU16(walk+0x250u,PE_LoadU16(walk+0x250u)|2u);
+        }
         return;
-    if (phase != 3u)
-        return;
-
-    flags = PE_LoadU32(actor + 0x98u) | 0x410u;
-    PE_StoreU32(actor + 0x98u, flags);
+    }
+    if (phase!=3u || (PE_LoadU8(actor+0x252u) && PE_LoadU8(body+0xAFu))) return;
+    PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)|0x410u);
     func_8002F970(actor);
-
-    walk = PE_LoadU32(GA_D_8009D20C);
-    while (walk != 0u) {
-        pe_addr_t next = PE_LoadU32(walk + 4u);
-
-        if (PE_LoadU32(walk) == 0u &&
-            PE_LoadU32(walk + 0x18Cu) == actor) {
-            flags = PE_LoadU32(walk + 0x98u);
-            PE_StoreU32(walk + 0x98u, flags | 0x10u);
+    for (walk=PE_LoadU32(GA_D_8009D20C);walk;walk=PE_LoadU32(walk+4u))
+        if (!PE_LoadU32(walk) && PE_LoadU32(walk+0x18Cu)==actor)
+            PE_StoreU32(walk+0x98u,PE_LoadU32(walk+0x98u)|0x10u);
+    PE_StoreU32(0x8009D304u,PE_LoadU32(0x8009D304u)+PE_LoadU16(body+14u));
+    {
+        int32_t reward=(int32_t)((uint32_t)PE_LoadU16(body+0x98u)-
+            (uint32_t)PE_LoadU16(body+0x9Au)*PE_LoadU16(body+0x9Cu));
+        if (reward>0) PE_StoreU16(0x8009D21Cu,(uint16_t)(PE_LoadU16(0x8009D21Cu)+(uint32_t)reward));
+    }
+    for (i=0;i<10;i++) if (!(int16_t)PE_LoadU16(0x800A7FF0u+i*4u)) {
+        PE_StoreU16(0x800A7FF0u+i*4u,PE_LoadU8(body+0x9Eu)); break;
+    }
+    if ((int16_t)PE_LoadU16(body+0xA0u))
+        for (i=0;i<10;i++) if (!(int16_t)PE_LoadU16(0x800A7FF0u+i*4u)) {
+            PE_StoreU16(0x800A7FF0u+i*4u,PE_LoadU16(body+0xA0u));
+            if ((int16_t)PE_LoadU16(body+0xA2u)>=0)
+                PE_StoreU16(0x800A7FF2u+i*4u,PE_LoadU16(body+0xA2u));
+            break;
         }
-        walk = next;
-    }
-    /* Persist EXP walk: zero +0xA0 skips to 292D8. */
     func_800292EC_victory_ready_cut();
-}
-
-/*
- * PE-BTL109 — 23008 sets D294 so 299CC @ 2A4D4 jals 236E8.
- * weapon+6==8 or ammo (weapon+0x0C & 0x3FF) → D294=1.
- */
-void func_80023008(void)
-{
-    pe_addr_t rec;
-    pe_addr_t weapon;
-    int16_t kind;
-
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (rec == 0u)
-        return;
-    weapon = PE_LoadU32(rec + 0x68u);
-    if (weapon == 0u)
-        return;
-    kind = (int16_t)PE_LoadU16(weapon + 6u);
-    if (kind == 8) {
-        PE_StoreU8(GA_D_8009D294, 1u);
-        return;
-    }
-    if ((PE_LoadU32(weapon + 0x0Cu) & 0x3FFu) != 0u) {
-        PE_StoreU8(GA_D_8009D294, 1u);
-        return;
-    }
-    PE_StoreU8(GA_D_8009D294, 0u);
-}
-
-/*
- * PE-BTL110 — 2312C kinds 6/8/10: clip +0x0F==+0x16 and
- * gp+0xC8/C9==0 jals 23008. 21F38 always reaches 2312C
- * unless Aya+0x0E==12. 21DE0: CE3C!=0 && D1D4<CE3C &&
- * Aya+0x0E>=4 && slot+4<3 → 21F38.
- */
-int func_8002312C(pe_addr_t slot)
-{
-    pe_addr_t aya;
-    uint8_t kind;
-
-    (void)slot;
-    aya = PE_LoadU32(GA_D_8009D254);
-    if (aya == 0u)
-        return 0;
-    kind = PE_LoadU8(aya + 0x0Eu);
-    if (kind < 6u || kind > 11u)
-        return 0;
-    if ((kind & 1u) != 0u)
-        return 0;
-    if ((uint32_t)PE_LoadU8(aya + 0x0Fu) !=
-        (uint32_t)PE_LoadU16(aya + 0x16u))
-        return 0;
-    if (PE_LoadU8(GA_D_8009CE38) != 0u ||
-        PE_LoadU8(GA_D_8009CE39) != 0u)
-        return 0;
-    func_80023008();
-    return 1;
-}
-
-void func_80021F38(void)
-{
-    pe_addr_t aya;
-    pe_addr_t slot;
-
-    aya = PE_LoadU32(GA_D_8009D254);
-    if (aya != 0u && PE_LoadU8(aya + 0x0Eu) == 12u)
-        return;
-    slot = GA_T_800BE830 + ((uint32_t)PE_LoadU8(GA_D_8009D1D4) << 3);
-    (void)func_8002312C(slot);
 }
 
 /*
@@ -222,12 +167,20 @@ int func_80024A3C(void)
         PE_StoreU8(GA_D_8009CE48, 0u);
         aya = PE_LoadU32(GA_D_8009D254);
         if (aya != 0u) {
+            unsigned i;
+            for (i = 0; i < 3; i++) {
+                PE_StoreU32(0x8009E054u + i * 4u, PE_LoadU32(aya + 40u + i * 4u));
+                PE_StoreU16(0x8009CE58u + i * 2u, PE_LoadU16(aya + 56u + i * 2u));
+            }
+            PE_StoreU32(0x8009D2E8u, PE_LoadU32(0x8009D2E8u) & ~4u);
             flags = PE_LoadU32(aya + 0x98u) | 0x80u;
             PE_StoreU32(aya + 0x98u, flags);
             func_8003C5D8(aya + 0x1B4u, 30);
             PE_StoreU16(aya + 0x250u,
                         (uint16_t)(PE_LoadU16(aya + 0x250u) | 2u));
             func_8003C5D8(GA_OVERLAY + 0x14u, 30);
+            PE_StoreU16(0x800B0D88u, (uint16_t)(PE_LoadU16(0x800B0D88u) | 2u));
+            (void)func_800702DC();
             if (PE_LoadU32(0x800942E0u) != 0u) {
                 ev = func_8006F39C(0x6Bu, aya);
                 PE_StoreU32(GA_D_8009D258, (uint32_t)ev);
@@ -237,6 +190,7 @@ int func_80024A3C(void)
         return 0;
     }
     if (phase == 1u) {
+        (void)func_8006C1CC(1);
         aya = PE_LoadU32(GA_D_8009D254);
         if (aya != 0u && PE_LoadU8(aya + 0x252u) != 0u)
             return 0;
@@ -385,89 +339,8 @@ int func_80024A3C(void)
     return 0;
 }
 
-/*
- * PE-BTL116 — 24250 jtbl[19] (tid 406 = 387+19) is the only
- * TEXT OR of rec+0x4C bit 0x80000 (24988/24994). jtbl[0]
- * (tid 387) jumps to 24998 and skips that OR. Do not plant
- * the bit.
- */
-void func_80024250(int index, pe_addr_t actor)
-{
-    pe_addr_t rec;
-    uint32_t word;
-
-    (void)actor;
-    if ((unsigned int)index >= 20u)
-        return;
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (rec == 0u)
-        return;
-    if (index == 19) {
-        word = PE_LoadU32(rec + 0x4Cu);
-        word = (word | 0x80000u) & ~0x200000u;
-        PE_StoreU32(rec + 0x4Cu, word);
-    }
-    if ((int16_t)PE_LoadU16(rec + 0x1Cu) < (int16_t)PE_LoadU16(rec + 0x0Cu))
-        PE_StoreU16(rec + 0x0Cu, PE_LoadU16(rec + 0x1Cu));
-}
-
-/*
- * 22394: lb D2A0. Zero walks/clears targeting (not this cut).
- * rec+0x4C&0x80000 jals 24A3C. When that bit is clear and
- * 0x10000 is clear, 22C78 ORs 0x200000 and jals 24250
- * (tid-387). Slot used in [1,2] blocks unless tid==406.
- */
-void func_80022394(void)
-{
-    pe_addr_t rec;
-    pe_addr_t slot;
-    pe_addr_t actor;
-    pe_addr_t pool;
-    uint32_t flags;
-    int16_t tid;
-    unsigned int used;
-    unsigned int idx;
-
-    if ((int8_t)PE_LoadU8(GA_D_8009D2A0) == 0)
-        return;
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (rec == 0u)
-        return;
-    flags = PE_LoadU32(rec + 0x4Cu);
-    if ((flags & 0x80000u) != 0u) {
-        (void)func_80024A3C();
-        return;
-    }
-    if ((flags & 0x10000u) != 0u)
-        return;
-    slot = GA_T_800BE830 + ((uint32_t)PE_LoadU8(GA_D_8009D1D4) << 3);
-    tid = (int16_t)PE_LoadU16(slot + 4u);
-    idx = PE_LoadU32(0x8009D258u);
-    pool = PE_LoadU32(0x800942E4u);
-    used = 0u;
-    if (pool != 0u && idx < 11u)
-        used = PE_LoadU8(pool + idx * 0xA0Cu);
-    if ((used - 1u) < 2u && tid != 406)
-        return;
-    PE_StoreU32(rec + 0x4Cu, flags | 0x200000u);
-    actor = PE_LoadU32(slot);
-    func_80024250((int)tid - 387, actor);
-}
-
-/*
- * PE-BTL121 — 26824(a0==1) publishes D2A4 into BE830 slot+4.
- * Absolute sh to BE834 are only table zeros (20F7C / 26FA0).
- * a0==1 reads lh D2A4. tid<387 and most [387,407) take 269F4:
- * one slot, actor=D254, tid=D2A4. tid 406 is jtbl[13] @ 2692C:
- * 26FD0, D25C=0, seven RNG slots from AE000[rnd % D2B0].
- * D2A4 itself is 299CC/35558 sh of the 5C498 return.
- */
-#define GA_D_8009D2A4 0x8009D2A4u
+/* Original target pulse reset. Command completion is in26824_port.c. */
 #define GA_D_8009D2B0 0x8009D2B0u
-#define GA_D_8009D2D8 0x8009D2D8u
-#define GA_D_8009CE50 0x8009CE50u
-#define GA_D_8009CE40 0x8009CE40u /* gp+0xD0 */
-#define GA_T_800AE000 0x800AE000u
 
 void func_80026FD0(void)
 {
@@ -475,223 +348,6 @@ void func_80026FD0(void)
         return;
     PE_StoreU8(0x8009CE68u, 0x80u);
     PE_StoreU8(0x8009CE6Cu, (uint8_t)-8);
-}
-
-static void pe_btl121_fill_slot(pe_addr_t actor, uint16_t tid)
-{
-    unsigned int n;
-    pe_addr_t slot;
-    int8_t extra;
-
-    n = PE_LoadU8(GA_D_8009CE3C);
-    slot = GA_T_800BE830 + (n << 3);
-    extra = (int8_t)PE_LoadU8(GA_D_8009D2D8);
-    PE_StoreU32(slot, actor);
-    PE_StoreU16(slot + 4u, tid);
-    PE_StoreU16(slot + 6u, (uint16_t)(int16_t)extra);
-    PE_StoreU8(GA_D_8009CE3C, (uint8_t)(n + 1u));
-}
-
-int func_80026824(int a0)
-{
-    int16_t tid;
-    unsigned int i;
-    unsigned int n;
-    int8_t div;
-    unsigned int rnd;
-    pe_addr_t actor;
-
-    if ((int8_t)a0 != 1)
-        return 0;
-    tid = (int16_t)PE_LoadU16(GA_D_8009D2A4);
-    if (tid <= 0) {
-        PE_StoreU16(GA_D_8009CE50, (uint16_t)tid);
-        return 0;
-    }
-    if (tid == 406) {
-        func_80026FD0();
-        PE_StoreU8(GA_D_8009D25C, 0u);
-        div = (int8_t)PE_LoadU8(GA_D_8009D2B0);
-        for (i = 0u; i < 7u; i++) {
-            actor = 0u;
-            if (div != 0) {
-                rnd = func_80071A54();
-                n = rnd % (unsigned int)(int)div;
-                actor = PE_LoadU32(GA_T_800AE000 + n * 12u);
-            }
-            pe_btl121_fill_slot(actor, (uint16_t)tid);
-        }
-        PE_StoreU8(GA_D_8009D2D8,
-                   (uint8_t)((int8_t)PE_LoadU8(GA_D_8009D2D8) - 1));
-        PE_StoreU8(GA_D_8009CE40, 0u);
-        PE_StoreU16(GA_D_8009CE50, (uint16_t)tid);
-        return 0;
-    }
-    if (tid < 407) {
-        /* 26868 / 269F4. 393-395/397 specials stay deferred
-         * and share this one-slot publish (same D2A4 store). */
-        pe_btl121_fill_slot(PE_LoadU32(GA_D_8009D254), (uint16_t)tid);
-        PE_StoreU8(GA_D_8009D2D8,
-                   (uint8_t)((int8_t)PE_LoadU8(GA_D_8009D2D8) - 1));
-        PE_StoreU8(GA_D_8009CE40, 0u);
-        PE_StoreU16(GA_D_8009CE50, (uint16_t)tid);
-        return 0;
-    }
-    PE_StoreU16(GA_D_8009CE50, (uint16_t)tid);
-    return 0;
-}
-
-void func_80021DE0(void)
-{
-    uint8_t count;
-    uint8_t idx;
-    pe_addr_t aya;
-    pe_addr_t slot;
-    int16_t tid;
-
-    count = PE_LoadU8(GA_D_8009CE3C);
-    idx = PE_LoadU8(GA_D_8009D1D4);
-    if (count == 0u || idx >= count) {
-        PE_StoreU8(GA_D_8009D1D4, 0u);
-        PE_StoreU8(GA_D_8009CE3C, 0u);
-        return;
-    }
-    aya = PE_LoadU32(GA_D_8009D254);
-    if (aya != 0u) {
-        PE_StoreU32(aya + 0x68u, 0u);
-        PE_StoreU32(aya + 0x6Cu, 0u);
-        PE_StoreU32(aya + 0x70u, 0u);
-        if (PE_LoadU8(aya + 0x0Eu) < 4u)
-            return;
-    }
-    slot = GA_T_800BE830 + ((uint32_t)idx << 3);
-    tid = (int16_t)PE_LoadU16(slot + 4u);
-    if (tid < 3)
-        func_80021F38();
-    else if (tid >= 387 && tid < 407)
-        func_80022394();
-}
-
-/*
- * 236E8: 457 words. Live 0x2000 arm: table[D1D4].actor body
- * |= 0x2000 when gp+0xE4==1 and weapon+6 is 6 or 8.
- * 23DE8 clears D294. 21278 / 6DE80 stay deferred.
- */
-void func_800236E8(void)
-{
-    pe_addr_t rec;
-    pe_addr_t weapon;
-    pe_addr_t actor;
-    pe_addr_t body;
-    int16_t kind;
-    uint32_t word;
-    unsigned int idx;
-
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (rec == 0u)
-        return;
-    weapon = PE_LoadU32(rec + 0x68u);
-    if (weapon == 0u)
-        return;
-    kind = (int16_t)PE_LoadU16(weapon + 6u);
-    if (kind != 6 && kind != 8)
-        return;
-    if ((int8_t)PE_LoadU8(GA_D_8009CE54) != 1)
-        return;
-    idx = PE_LoadU8(GA_D_8009D1D4);
-    actor = PE_LoadU32(GA_T_800BE830 + (idx << 3));
-    if (actor == 0u)
-        return;
-    body = PE_LoadU32(actor);
-    if (body == 0u)
-        return;
-    word = PE_LoadU32(body);
-    word = (word & ~BODY_HITMASK) | BODY_HIT;
-    PE_StoreU32(body, word);
-    PE_StoreU8(GA_D_8009D294, 0u);
-}
-
-static int32_t pe_s32_div100(int32_t n)
-{
-    int64_t prod = (int64_t)n * (int64_t)(int32_t)0x51EB851F;
-    int32_t hi = (int32_t)(prod >> 32);
-
-    return (hi >> 5) - (n >> 31);
-}
-
-/*
- * 28574: 437 words. Default path (rec+0x4C bits 8 and 0x10 clear):
- * a1 = ((rec+0x1E)/5 + weapon+0) * ROM[0x800108E4][weapon+0x10&0xf] / 100
- * s0 = a1 - body+0x8C (weapon+6==8 or flags 0x180000).
- * s0<=0 → chip 1 or 2. Always sw body+0x10 -= s0, then
- * body = (body & ~0x6000) | 0x4000. FP bit-8 path fail-closed.
- */
-void func_80028574(pe_addr_t actor)
-{
-    pe_addr_t body;
-    pe_addr_t rec;
-    pe_addr_t weapon;
-    uint32_t flags;
-    uint32_t word;
-    unsigned int idx;
-    uint8_t scale;
-    int32_t atk;
-    int32_t dmg;
-    int32_t hp;
-
-    if (actor == 0u)
-        return;
-    body = PE_LoadU32(actor);
-    if (body == 0u)
-        return;
-    rec = PE_LoadU32(GA_D_8009D278);
-    if (rec == 0u)
-        return;
-    flags = PE_LoadU32(rec + 0x4Cu);
-    if ((flags & 8u) != 0u || (flags & 0x10u) != 0u)
-        return;
-    weapon = PE_LoadU32(rec + 0x68u);
-    if (weapon == 0u)
-        return;
-
-    {
-        static const uint8_t rom_scale[11] = {
-            0, 100, 60, 41, 0, 25, 0, 18, 0, 0, 13
-        };
-        uint32_t atb = PE_LoadU16(rec + 0x1Eu);
-        uint32_t fifth = (uint32_t)(((uint64_t)atb * 0xCCCCCCCDull) >> 34);
-
-        idx = PE_LoadU32(weapon + 0x10u) & 0xFu;
-        scale = (idx < 11u) ? rom_scale[idx] : 0u;
-        atk = (int32_t)fifth + (int32_t)(int16_t)PE_LoadU16(weapon);
-        atk = pe_s32_div100(atk * (int32_t)scale);
-    }
-
-    if ((flags & 0x180000u) != 0u ||
-        (int16_t)PE_LoadU16(weapon + 6u) == 8)
-        dmg = atk - (int32_t)PE_LoadU16(body + 0x8Cu);
-    else {
-        unsigned int div = PE_LoadU32(weapon + 0x10u) & 0xFu;
-
-        if (div == 0u)
-            dmg = atk;
-        else
-            dmg = atk - (int32_t)PE_LoadU16(body + 0x8Cu) / (int)div;
-    }
-
-    if (dmg <= 0) {
-        word = PE_LoadU32(body);
-        dmg = ((word & 0x38000u) == 0x18000u) ? 2 : 1;
-        if ((word & 0xC0000u) == 0xC0000u)
-            PE_StoreU32(body + 0xCCu,
-                        PE_LoadU32(body + 0xCCu) | 0x1000000u);
-    }
-
-    hp = (int32_t)PE_LoadU32(body + 0x10u) - dmg;
-    PE_StoreU32(body + 0x10u, (uint32_t)hp);
-    word = PE_LoadU32(body);
-    word = (word & ~BODY_HITMASK) | BODY_REACT;
-    PE_StoreU32(body, word);
 }
 
 static void pe_27d14_atb(pe_addr_t actor, pe_addr_t body)
@@ -706,7 +362,7 @@ static void pe_27d14_atb(pe_addr_t actor, pe_addr_t body)
         uint16_t sum = (uint16_t)(cur + rate);
 
         if ((PE_LoadU32(body) & 1u) != 0u)
-            sum = (uint16_t)((int)sum - ((int)rate * 8) / 5);
+            sum = (uint16_t)((int)sum - ((int)rate * 2) / 5);
         PE_StoreU16(body + 0x0Cu, sum);
         return;
     }
@@ -733,74 +389,166 @@ static void pe_27d14_dot(pe_addr_t body)
         return;
     }
     tick = (int16_t)PE_LoadU16(body + 0x96u);
-    hp = (int32_t)PE_LoadU32(body + 0x10u) - (int32_t)tick;
+    hp = (int32_t)(PE_LoadU32(body + 0x10u) - (uint32_t)(int32_t)tick);
     PE_StoreU32(body + 0x10u, (uint32_t)hp);
     PE_StoreU32(body, word & 0xFFFFFC1Fu);
 }
 
+/* 36254 restores each of an actor's three script lists from saved PCs. */
+void func_80036254(pe_addr_t actor)
+{
+    unsigned i;
+    for (i=0;i<3;i++) {
+        pe_addr_t task=PE_LoadU32(actor+0xA0u+i*4u);
+        for (;task;task=PE_LoadU32(task+0x24u)) {
+            pe_addr_t pc=PE_LoadU32(task+4u);
+            if (!pc) continue;
+            PE_StoreU32(task,pc);PE_StoreU32(task+0x10u,1u);
+            PE_StoreU16(task+8u,PE_LoadU16(task+8u)&0xFF9Fu);
+        }
+    }
+}
+
+static void pe_27d14_stop(pe_addr_t actor)
+{
+    PE_StoreU32(actor+0x68u,0u);PE_StoreU32(actor+0x6Cu,0u);PE_StoreU32(actor+0x70u,0u);
+}
+
+static void pe_27d14_release_status(pe_addr_t actor, pe_addr_t body)
+{
+    pe_addr_t action;
+    PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)&~0x1000u);
+    func_80036254(actor);
+    action=PE_LoadU32(body+0x18u);
+    if (action) {
+        PE_StoreU8(action,4u);
+        PE_StoreU32(body,PE_LoadU32(body)&0xC0FFFFFFu);
+    }
+}
+
+static void pe_27d14_reaction(pe_addr_t actor, pe_addr_t body)
+{
+    int8_t kind=(int8_t)PE_LoadU8(body+5u);
+    uint32_t flags=PE_LoadU32(body);
+    if (!(flags&14u)) {
+        if (kind) return;
+        if (PE_LoadU8(actor+15u)==PE_LoadU16(actor+26u)) {
+            if (PE_LoadU8(body+0xBCu)==2u && !(flags&0x1800u)) {
+                PE_StoreU8(body+0xBCu,1u);
+                func_8001A680_command_cut(actor,PE_LoadU8(body+0xBDu));
+                if (PE_LoadU8(body+0xBEu)) PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)|0x200u);
+                PE_StoreU32(actor+0x14u,PE_LoadU32(body+0xC0u));
+                PE_StoreU32(actor+0x18u,PE_LoadU32(body+0xC4u));
+                PE_StoreU32(actor+0x1Cu,PE_LoadU32(body+0xC8u));
+            } else func_8001A680_command_cut(actor,(uint16_t)(int16_t)(int8_t)PE_LoadU8(body+6u));
+            PE_StoreU32(body,PE_LoadU32(body)&~BODY_HITMASK);
+            if (!(PE_LoadU32(PE_LoadU32(GA_D_8009D278)+0x4Cu)&0x80000u) &&
+                !(PE_LoadU32(body)&0x1800u)) {
+                PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)&~0x1000u);
+                func_80036254(actor);
+            }
+        } else if (PE_LoadU8(body+0xA4u)>=2u && PE_LoadU8(body+0xA5u)) {
+            int32_t angle=(int16_t)PE_LoadU16(body+0xA8u);
+            uint32_t distance=PE_LoadU16(body+0xA6u);
+            PE_StoreU32(actor+40u,PE_LoadU32(actor+40u)+((distance*(uint32_t)func_80077CF4(angle))<<4u));
+            PE_StoreU32(actor+48u,PE_LoadU32(actor+48u)+((distance*(uint32_t)func_80077DC4(angle))<<4u));
+            PE_StoreU8(body+0xA5u,(uint8_t)(PE_LoadU8(body+0xA5u)-1u));
+        }
+        return;
+    }
+    PE_StoreU32(body,PE_LoadU32(body)&~BODY_HITMASK);
+    if (!kind || (int32_t)PE_LoadU32(body+16u)<=0) return;
+    if (kind==1) actor=PE_LoadU32(actor+0x18Cu);
+    else if (kind==4) {
+        pe_addr_t walk;
+        for (walk=PE_LoadU32(GA_D_8009D20C);walk;walk=PE_LoadU32(walk+4u)) {
+            pe_addr_t other=PE_LoadU32(walk);
+            if (walk!=PE_LoadU32(GA_D_8009D254) && other && (int8_t)PE_LoadU8(other+5u)==4)
+                PE_StoreU16(walk+0x250u,PE_LoadU16(walk+0x250u)|0x20u);
+        }
+        return;
+    }
+    PE_StoreU16(actor+0x250u,PE_LoadU16(actor+0x250u)|0x20u);
+}
+
+/* Full 27D14, including timed status release, hit flashes, damage text,
+ * linked-actor defeat and movement guards. Authority: 120D8.s. */
 void func_80027D14(pe_addr_t actor)
 {
-    pe_addr_t body;
-    pe_addr_t body_keep;
-    int32_t hp;
-    int32_t cap;
+    pe_addr_t body=PE_LoadU32(actor),walk;
+    uint32_t flags,bits;
+    int32_t delta;
     int8_t kind;
-    uint32_t d1a0;
-    uint32_t bits;
-
-    if (actor == 0u)
-        return;
-    body = PE_LoadU32(actor);
-    if (body == 0u)
-        return;
-    body_keep = body;
-
-    hp = (int32_t)PE_LoadU32(body + 0x10u);
-    cap = (int32_t)PE_LoadU32(body + 0x88u);
-    if (cap < hp) {
-        hp = cap;
-        PE_StoreU32(body + 0x10u, (uint32_t)hp);
+    if ((int32_t)PE_LoadU32(body+0x88u)<(int32_t)PE_LoadU32(body+16u))
+        PE_StoreU32(body+16u,PE_LoadU32(body+0x88u));
+    if (!(pe_d1a0()&0x100u)) {
+        if (!PE_LoadU16(body+12u)) {
+            flags=PE_LoadU32(body);
+            if (flags&14u) {
+                flags=(flags&~14u)|((((flags>>1u)-1u)&7u)<<1u);PE_StoreU32(body,flags);
+                if (!(flags&0x180Eu)) pe_27d14_release_status(actor,body);
+            }
+            flags=PE_LoadU32(body);
+            if (flags&0x1800u) {
+                flags=(flags&~0x1800u)|((((flags>>11u)-1u)&3u)<<11u);PE_StoreU32(body,flags);
+                if (!(flags&0x180Eu)) pe_27d14_release_status(actor,body);
+            }
+        }
+        pe_27d14_atb(actor,body);pe_27d14_dot(body);
     }
-
-    d1a0 = pe_d1a0();
-    if ((d1a0 & 0x100u) == 0u) {
-        pe_27d14_atb(actor, body);
-        pe_27d14_dot(body);
+    if (PE_LoadU32(body)&BODY_HITMASK) {
+        (void)func_80027A08(actor);
+        bits=PE_LoadU32(body)&BODY_HITMASK;
+        if (bits==BODY_HIT) {
+            func_80028574(actor);
+            func_8006DCE4(PE_LoadU16(body+0xB0u),0u,(int16_t)PE_LoadU16(actor+0x268u),
+                (int16_t)PE_LoadU16(actor+0x26Au),(int16_t)PE_LoadU16(actor+0x26Cu));
+        } else if (bits==BODY_REACT) pe_27d14_reaction(actor,body);
+        if ((int8_t)PE_LoadU8(body+5u)!=1) pe_27d14_stop(actor);
     }
-
-    /* body&0x6000==0x2000 → 28574. 0x4000 → 28088 clears 0x6000.
-     * 27A08 / 6DCE4 / 1A680 react stay deferred. */
-    bits = PE_LoadU32(body) & BODY_HITMASK;
-    if (bits == BODY_HIT)
-        func_80028574(actor);
-    else if (bits == BODY_REACT)
-        PE_StoreU32(body, PE_LoadU32(body) & ~BODY_HITMASK);
-    kind = (int8_t)PE_LoadU8(body + 5u);
-    if (kind != 1) {
-        PE_StoreU32(actor + 0x68u, 0u);
-        PE_StoreU32(actor + 0x6Cu, 0u);
-        PE_StoreU32(actor + 0x70u, 0u);
+    if ((PE_LoadU32(body)&14u) && (int32_t)PE_LoadU32(body+16u)>0) {
+        pe_27d14_stop(actor);
+        if (!(pe_d1a0()&0x100u))
+            PE_StoreU16(actor+0x3Au,(uint16_t)(((int16_t)PE_LoadU16(actor+0x3Au)+128)%4096));
     }
-    if ((PE_LoadU32(body) & 0x400u) != 0u)
-        PE_StoreU32(body + 0x10u, 0xFFFFFFFFu);
-
-    hp = (int32_t)PE_LoadU32(body + 0x10u);
-    if (hp > 0) {
-        PE_StoreU32(body + 0x14u, (uint32_t)hp);
-        return;
+    if (PE_LoadU32(body)&0x1800u) pe_27d14_stop(actor);
+    if (PE_LoadU32(body)&0x400u) PE_StoreU32(body+16u,0xFFFFFFFFu);
+    delta=(int32_t)(PE_LoadU32(body+20u)-PE_LoadU32(body+16u));
+    if (delta) {
+        PE_StoreU16(body+0xD0u,(uint16_t)(delta<0?0u-(uint32_t)delta:(uint32_t)delta));
+        PE_StoreU8(body+0xD7u,delta<0?1u:(PE_LoadU32(body)&0x38000u)==0x18000u?2u:0u);
+        PE_StoreU16(body+0xD2u,PE_LoadU16(actor+0x218u));
+        PE_StoreU16(body+0xD4u,(uint16_t)(PE_LoadU16(actor+0x21Au)-20u));
+        PE_StoreU8(body+0xD6u,30u);
     }
-    if ((d1a0 & 0x100u) != 0u) {
-        PE_StoreU32(body + 0x14u, (uint32_t)hp);
-        return;
+    if (PE_LoadU8(body+0xD6u)) {
+        func_80032B0C(1u,body+0xD0u);
+        PE_StoreU8(body+0xD6u,(uint8_t)(PE_LoadU8(body+0xD6u)-1u));
     }
-
-    kind = (int8_t)PE_LoadU8(body + 5u);
-    if (kind != 1 && kind != 3) {
-        PE_StoreU32(actor + 0x68u, 0u);
-        PE_StoreU32(actor + 0x6Cu, 0u);
-        PE_StoreU32(actor + 0x70u, 0u);
-        func_80028E94(actor);
+    if ((int32_t)PE_LoadU32(body+16u)<=0 && !(pe_d1a0()&0x100u)) {
+        kind=(int8_t)PE_LoadU8(body+5u);
+        if (kind==1 && !(PE_LoadU32(body)&BODY_HITMASK)) {
+            PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)|0x10u);func_8002F970(actor);
+        }
+        if (kind==4) {
+            if (!(PE_LoadU32(body)&BODY_HITMASK)) { pe_27d14_stop(actor);func_80028E94(actor); }
+        } else if (kind!=1 && kind!=3) { pe_27d14_stop(actor);func_80028E94(actor); }
+        else {
+            for (walk=PE_LoadU32(GA_D_8009D20C);walk;walk=PE_LoadU32(walk+4u)) {
+                pe_addr_t other=PE_LoadU32(walk);
+                int8_t k;
+                if (!other || walk==PE_LoadU32(GA_D_8009D254)) continue;
+                k=(int8_t)PE_LoadU8(other+5u);
+                if (k && k!=2 && k!=4 && (int32_t)PE_LoadU32(other+16u)>0) break;
+            }
+            if (!walk) {
+                if (kind==1) {
+                    PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)|0x10u);func_8002F970(actor);
+                    actor=PE_LoadU32(actor+0x18Cu);
+                }
+                pe_27d14_stop(actor);func_80028E94(actor);
+            }
+        }
     }
-    /* 2854C uses the entry $s1 body even after 2F970 nulls *actor. */
-    PE_StoreU32(body_keep + 0x14u, PE_LoadU32(body_keep + 0x10u));
+    PE_StoreU32(body+20u,PE_LoadU32(body+16u));
 }

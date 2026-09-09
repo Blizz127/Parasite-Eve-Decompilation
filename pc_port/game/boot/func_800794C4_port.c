@@ -27,18 +27,15 @@ static uint32_t pe_794c4_sincos_word(int16_t angle)
     return PE_LoadU32(GA_SINCOS + idx * 4u);
 }
 
-void func_800794C4(pe_addr_t angles, pe_addr_t out)
+void PE_RotMatrix794C4_values(const int16_t angles[3], int16_t out[9])
 {
     int16_t ax, ay, az;
     uint32_t word;
     int t0, t1, t2, t3, t4, t5, t6, t7, t8, t9;
 
-    if (angles == 0u || out == 0u)
-        return;
-
-    ax = (int16_t)PE_LoadU16(angles + 0u);
-    ay = (int16_t)PE_LoadU16(angles + 2u);
-    az = (int16_t)PE_LoadU16(angles + 4u);
+    ax = angles[0];
+    ay = angles[1];
+    az = angles[2];
 
     word = pe_794c4_sincos_word(ax);
     if (ax >= 0) {
@@ -59,15 +56,15 @@ void func_800794C4(pe_addr_t angles, pe_addr_t out)
         t6 = -t4;
         t1 = (int16_t)(word >> 16);
     }
-    PE_StoreU16(out + 4u, (uint16_t)t6);
+    out[2] = (int16_t)t6;
     t8 = (int)((uint32_t)t1 * (uint32_t)t3);
     t6 = (-t8) >> 12;
-    PE_StoreU16(out + 0xAu, (uint16_t)t6);
+    out[5] = (int16_t)t6;
     t8 = (int)((uint32_t)t1 * (uint32_t)t0);
 
     word = pe_794c4_sincos_word(az);
     t6 = t8 >> 12;
-    PE_StoreU16(out + 0x10u, (uint16_t)t6);
+    out[8] = (int16_t)t6;
     if (az >= 0) {
         t5 = (int16_t)word;
         t2 = (int16_t)(word >> 16);
@@ -77,27 +74,74 @@ void func_800794C4(pe_addr_t angles, pe_addr_t out)
     }
 
     t7 = (int)((uint32_t)t2 * (uint32_t)t1);
-    PE_StoreU16(out + 0u, (uint16_t)(t7 >> 12));
+    out[0] = (int16_t)(t7 >> 12);
     t7 = (int)((uint32_t)t5 * (uint32_t)t1);
-    PE_StoreU16(out + 2u, (uint16_t)((-t7) >> 12));
+    out[1] = (int16_t)((-t7) >> 12);
 
     t7 = (int)((uint32_t)t2 * (uint32_t)t4);
     t8 = t7 >> 12;
     t6 = ((int)((uint32_t)t8 * (uint32_t)t3)) >> 12;
     t9 = ((int)((uint32_t)t5 * (uint32_t)t0)) >> 12;
-    PE_StoreU16(out + 6u, (uint16_t)(t9 - t6));
+    out[3] = (int16_t)(t9 - t6);
 
     t7 = ((int)((uint32_t)t8 * (uint32_t)t0)) >> 12;
     t9 = ((int)((uint32_t)t5 * (uint32_t)t3)) >> 12;
-    PE_StoreU16(out + 0xCu, (uint16_t)(t9 + t7));
+    out[6] = (int16_t)(t9 + t7);
 
     t7 = (int)((uint32_t)t5 * (uint32_t)t4);
     t8 = t7 >> 12;
     t6 = ((int)((uint32_t)t8 * (uint32_t)t3)) >> 12;
     t9 = ((int)((uint32_t)t2 * (uint32_t)t0)) >> 12;
-    PE_StoreU16(out + 8u, (uint16_t)(t9 + t6));
+    out[4] = (int16_t)(t9 + t6);
 
     t7 = ((int)((uint32_t)t8 * (uint32_t)t0)) >> 12;
     t9 = ((int)((uint32_t)t2 * (uint32_t)t3)) >> 12;
-    PE_StoreU16(out + 0xEu, (uint16_t)(t9 - t7));
+    out[7] = (int16_t)(t9 - t7);
+}
+
+void func_800794C4(pe_addr_t angles, pe_addr_t out)
+{
+    int16_t input[3],rotation[9];unsigned i;
+    if (!angles || !out) return;
+    for (i=0;i<3;i++) input[i]=(int16_t)PE_LoadU16(angles+i*2u);
+    PE_RotMatrix794C4_values(input,rotation);
+    for (i=0;i<9;i++) PE_StoreU16(out+i*2u,(uint16_t)rotation[i]);
+}
+
+/* 79754, 163 words: alternate Euler order used by animation decoders.
+ * Each multiply retains its low word before arithmetic >>12, as retail. */
+static int32_t pe_79754_mul(int32_t a, int32_t b)
+{
+    return (int32_t)((uint32_t)a * (uint32_t)b) >> 12;
+}
+
+void PE_RotMatrix79754_values(const int16_t angles[3], int16_t out[9])
+{
+    int32_t sn[3], cs[3], xy, yx;
+    unsigned int i;
+    for (i = 0; i < 3; i++) {
+        uint32_t word = pe_794c4_sincos_word(angles[i]);
+        sn[i] = (int16_t)word;
+        if (angles[i] < 0) sn[i] = -sn[i];
+        cs[i] = (int16_t)(word >> 16);
+    }
+    out[5] = (int16_t)-sn[0];
+    out[2] = (int16_t)pe_79754_mul(sn[1], cs[0]);
+    out[8] = (int16_t)pe_79754_mul(cs[1], cs[0]);
+    out[3] = (int16_t)pe_79754_mul(sn[2], cs[0]);
+    out[4] = (int16_t)pe_79754_mul(cs[2], cs[0]);
+    xy = pe_79754_mul(sn[1], sn[0]);
+    out[0] = (int16_t)(pe_79754_mul(cs[1], cs[2]) + pe_79754_mul(xy, sn[2]));
+    out[1] = (int16_t)(-pe_79754_mul(cs[1], sn[2]) + pe_79754_mul(xy, cs[2]));
+    yx = pe_79754_mul(cs[1], sn[0]);
+    out[7] = (int16_t)(pe_79754_mul(sn[1], sn[2]) + pe_79754_mul(yx, cs[2]));
+    out[6] = (int16_t)(-pe_79754_mul(sn[1], cs[2]) + pe_79754_mul(yx, sn[2]));
+}
+
+void PE_RotMatrix79754(const int16_t angles[3], pe_addr_t out)
+{
+    int16_t rotation[9];
+    unsigned i;
+    PE_RotMatrix79754_values(angles, rotation);
+    for (i = 0; i < 9; i++) PE_StoreU16(out + i * 2u, (uint16_t)rotation[i]);
 }

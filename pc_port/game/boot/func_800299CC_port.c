@@ -44,6 +44,7 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "game_port.h"
 
 #define GA_D_8009D278 0x8009D278u /* gp+0x508 current record */
 #define GA_D_8009D28C 0x8009D28Cu /* gp+0x51C mode word */
@@ -112,7 +113,7 @@ void func_800299CC_after_consume_cut(void)
     PE_StoreU32(GA_D_8009D278, PE_LoadU32(aya));
 
     /* 29A5C jal 5C498; 29A68 sh v0, gp+0x534. Before mode!=0. */
-    PE_StoreU16(0x8009D2A4u, (uint16_t)func_8005C498());
+    PE_StoreU16(0x8009D2A4u, (uint16_t)func_8005C498(0x800A76D8u));
 
     if (PE_LoadU32(GA_D_8009D28C) != 0u)
         return;
@@ -185,93 +186,47 @@ int func_8004BB80(pe_addr_t obj, uint32_t a1)
     return 1;
 }
 
-void func_8005E30C(void)
-{
-    pe_addr_t obj;
-
-    /* Type-4 arm: jal 62CC4, jalr obj+0x2C, a1=0x10000.
-     * Enqueue of that event is not this cut; the arm
-     * runs while mode 2 and 4B90C has installed 4BB80. */
-    if (PE_LoadU32(0x8009D28Cu) != 2u)
-        return;
-    obj = func_80062CC4();
-    if (obj == 0u)
-        return;
-    if (PE_LoadU32(obj + 0x2Cu) != GA_CB_4BB80)
-        return;
-    (void)func_8004BB80(obj, 0x10000u);
-}
-
-int func_8005C498(void)
-{
-    if (PE_LoadU32(0x8009CED8u) != 0u)
-        return 0;
-    PE_StoreU32(0x8009D010u, 0u);
-    func_8005E30C();
-    return (int)PE_LoadU32(0x8009D010u);
-}
-
-void func_800512AC(int cmd, pe_addr_t src)
-{
-    uint32_t value;
-
-    if (cmd == 10) {
-        PE_StoreU32(0x8009D010u, 1000u);
-        return;
-    }
-    /* jtbl[1] @ 5130C: v0 = *a1 + 387; sw D010. */
-    if (cmd == 1 && src != 0u) {
-        value = PE_LoadU32(src) + 387u;
-        PE_StoreU32(0x8009D010u, value);
-    }
-}
-
 void func_800512AC_cmd10_cut(void)
 {
     func_800512AC(10, 0u);
 }
 
-/*
- * PE-BTL97 — 2A7F8 mode==6 arm jals 2BC90 (0x8002A9EC).
- * 2BC90 prefix: jal 21D4C / 374E8 not this cut. Retail delay
- * at 2BCA8 sets s1=1, then D2E8|=1, *D254+0x68/6C/70=0,
- * D1A0&=~4. Actor walk 2CD40..2CEDC is not this cut.
- * 2CEE0 tail (fall-through at 2CED8 with s1 still 1):
- * jal 6914C(0); v0==0 → 2CF24 mode 7. Do not store 4D4.
- */
-#define GA_D_8009D2E8 0x8009D2E8u
-
+/* Compatibility entry now runs the complete original mode6 handler. */
 void func_8002BC90_mode6_cut(void)
 {
-    pe_addr_t aya;
-
-    PE_StoreU32(GA_D_8009D2E8, PE_LoadU32(GA_D_8009D2E8) | 1u);
-    aya = PE_LoadU32(GA_D_8009D254);
-    if (aya != 0u) {
-        if (aya < 0x80000000u)
-            aya |= 0x80000000u;
-        PE_StoreU32(aya + 0x68u, 0u);
-        PE_StoreU32(aya + 0x6Cu, 0u);
-        PE_StoreU32(aya + 0x70u, 0u);
-    }
-    D_8009D1A0 &= ~4u;
-    if (func_8006914C(0) == 0)
-        func_8002CF24_mode7_cut();
+    func_8002BC90();
 }
 
-/*
- * PE-BTL106 — 2A7F8 join at 2AA24. Mode 9 has no dedicated
- * compare arm: bne mode,8 → 2AA24. Same join after every
- * arm, including 2B0E8. D1CE&&mode==0 → 34DE0 (not live
- * on 9). 4D4 → 33A40 (2F300 a0=0 clears 4D4). lh 534≠0
- * → 67CBC pad (deferred). Dest is not written here.
- */
+/* Original 34DE0..34F10 timed message and background border. */
+static void pe_controller_status_message(void)
+{
+    unsigned state=PE_LoadU8(0x8009D1CEu);
+    if(state==1u) {
+        const pe_addr_t terminator=0x80122388u; /* Original stack-local -1 list. */
+        PE_StoreU16(terminator,65535u);
+        func_800374E8();
+        func_80037454(func_8005BCB0()?20:97,PE_LoadU8(0x8009CE80u)<2u?15:195,0,0);
+        func_800375E0(0,2u,terminator);
+        state=PE_LoadU8(0x8009D1CEu);
+        PE_StoreU8(0x800BCEA8u,2u);PE_StoreU8(0x8009CE88u,75u);
+        PE_StoreU32(0x800BCEACu,PE_LoadU32(0x8009D1F8u));
+        PE_StoreU8(0x8009D1CEu,(uint8_t)(state+1u));
+        PE_StoreU32(0x800BCEB4u,PE_LoadU32(0x800BCEB4u)|0x02000000u);
+    } else if(state==2u && !PE_LoadU8(0x8009CE88u)) {
+        func_800374E8();PE_StoreU8(0x8009D1CEu,0u);
+    }
+    PE_StoreU8(0x8009CE88u,(uint8_t)(PE_LoadU8(0x8009CE88u)-1u));
+    /* 5E894 stores the menu drawing origin. */
+    PE_StoreU32(0x8009D124u,0u);PE_StoreU32(0x8009D128u,PE_LoadU8(0x8009CE80u)<2u?11u:191u);
+    func_80061C34(320u,20u,0u,0u);
+}
+
+/* Original 2AA24..2AA80 join, with all three conditional calls. */
 void func_8002A7F8_join_cut(void)
 {
-    /*
-     * Retail falls through all three checks. 34DE0 / 33A40 /
-     * 67CBC stay unimplemented; they do not write mode or dest.
-     */
+    if(PE_LoadU8(0x8009D1CEu) && !PE_LoadU32(GA_D_8009D28C))pe_controller_status_message();
+    if(PE_LoadU8(GA_D_8009D244))func_80033A40();
+    if((int16_t)PE_LoadU16(0x8009D2A4u))func_80067CBC();
 }
 
 void func_800299CC_mode_switch_cut(void)
@@ -279,12 +234,25 @@ void func_800299CC_mode_switch_cut(void)
     uint32_t mode;
 
     mode = PE_LoadU32(GA_D_8009D28C);
-    if (mode == 6u)
+    if (mode == 1u) {
+        int8_t next=func_80025EE8_attack_cut();
+        PE_StoreU32(GA_D_8009D28C,(uint32_t)(int32_t)next);
+        if (!next) D_8009D1A0&=~4u;
+    } else if (mode == 6u)
         func_8002BC90_mode6_cut();
     else if (mode == 3u)
         func_8002A7F8_mode3_cut();
     else if (mode == 2u)
         func_8002B0E8();
+    else if (mode == 4u)
+        func_8002B94C();
+    else if (mode == 5u)
+        func_8002F0B0();
+    else if (mode == 7u)
+        func_8002D1F0();
+    else if (mode == 8u)
+        func_8002DC58();
+    if (PE_Port_ShouldStop()) return;
     /* mode 9 and the rest fall through to 2AA24. */
     func_8002A7F8_join_cut();
 }
@@ -308,27 +276,175 @@ int func_80021054(void)
     return (int)(int8_t)PE_LoadU8(GA_D_8009CE3C);
 }
 
+/* 29A84..2A470: ready cue, AT pulse and command-entry input. The return
+ * value is the retail s1 argument subsequently passed to 1D340. */
+uint32_t func_800299CC_ready_input(void)
+{
+    pe_addr_t rec=PE_LoadU32(GA_D_8009D278);
+    pe_addr_t gauge, cursor;
+    uint32_t pressed, bank, phase;
+    static const uint8_t colors[4][2][3]={
+        {{0,70,130},{159,255,249}},{{80,163,190},{80,163,190}},
+        {{159,255,249},{0,70,130}},{{80,163,190},{80,163,190}}};
+    unsigned i;
+    if (!rec || PE_LoadU16(rec+0x10u)<9000u) return 1u;
+    PE_StoreU16(rec+0x10u,9000u);
+    if (!PE_LoadU8(0x8009D288u)) {
+        pe_addr_t sound=PE_LoadU32(0x800B0E08u);
+        func_80071A64(D_8009D250);
+        if (sound) (void)func_8006DF50(sound,0x454u,0u,0x80u,0x7Fu);
+        PE_StoreU8(0x8009D288u,1u);
+    }
+    rec=PE_LoadU32(GA_D_8009D278);
+    if ((PE_LoadU32(rec+0x4Cu)&0x2000u) || !PE_LoadU8(0x8009D2A0u)) return 1u;
+    bank=PE_LoadU32(0x8009CDDCu); phase=D_8009D250&3u;
+    gauge=0x800B00E8u+bank*36u; cursor=0x800B6920u+bank*28u;
+    for (i=0;i<3;i++) {
+        PE_StoreU8(gauge+4u+i,colors[phase][0][i]);
+        PE_StoreU8(gauge+12u+i,colors[phase][1][i]);
+        PE_StoreU8(gauge+20u+i,colors[phase][0][i]);
+        PE_StoreU8(gauge+28u+i,colors[phase][1][i]);
+        PE_StoreU8(cursor+12u+i,colors[phase][1][i]);
+    }
+    if ((int8_t)func_80021054()) return 1u;
+    pressed=PE_LoadU32(0x8009D1F4u);
+    if (pressed&0x200u) PE_StoreU8(0x8009D1F0u,0u);
+    else if (pressed&0x80u) {
+        PE_StoreU8(0x8009D1F0u,1u);func_8005C174(1);func_80067CBC();
+    } else return 1u;
+    func_800866A4(0u,0xFFu);
+    PE_StoreU32(GA_D_8009D28C,1u); PE_StoreU32(0x8009D290u,0u);
+    D_8009D1A0|=4u;
+    PE_StoreU8(0x8009D2B0u,(uint8_t)func_8002156C());
+    func_80020F18();
+    func_80043240(PE_LoadU8(0x8009D2B0u)?0:1);
+    return 0u;
+}
+
+/* 25BD8: enqueue the original automatic counterattack. */
+void func_80025BD8(pe_addr_t enemy)
+{
+    pe_addr_t rec=PE_LoadU32(GA_D_8009D278),weapon=PE_LoadU32(rec+104u);
+    pe_addr_t target=0u,aya=PE_LoadU32(GA_D_8009D254);
+    uint32_t flags=PE_LoadU32(enemy+152u);
+    unsigned i;
+    PE_StoreU8(0x8009D294u,0u);
+    PE_StoreU8(0x8009D1DCu,(uint8_t)(PE_LoadU32(weapon+16u)&15u));
+    for (i=0;i<4;i++) PE_StoreU8(0x8009CE38u+i,PE_LoadU8(weapon+20u+i));
+    if ((flags&0x40000000u) && !PE_LoadU8(PE_LoadU32(enemy)+175u)) {
+        /* The original tests the source's flag again inside this walk. */
+        for (target=PE_LoadU32(GA_D_8009D20C);target;target=PE_LoadU32(target+4u)) {
+            pe_addr_t body=PE_LoadU32(target);
+            if (target!=aya && target!=enemy && body && (int32_t)PE_LoadU32(body+16u)>0 &&
+                PE_LoadU8(target+13u)==PE_LoadU8(enemy+13u) && !(PE_LoadU32(enemy+152u)&0x40000000u)) break;
+        }
+    } else if ((flags&0x6000u) && (int8_t)PE_LoadU8(PE_LoadU32(enemy)+5u)==3) {
+        for (target=PE_LoadU32(GA_D_8009D20C);target;target=PE_LoadU32(target+4u)) {
+            pe_addr_t body=PE_LoadU32(target);
+            if (target!=aya && target!=enemy && body && (int32_t)PE_LoadU32(body+16u)>0 &&
+                PE_LoadU32(target+396u)==enemy && (int8_t)PE_LoadU8(body+5u)==1) break;
+        }
+    } else if (!(flags&0x4000u)) target=enemy;
+    if (!target) return;
+    flags=PE_LoadU32(PE_LoadU32(PE_LoadU32(GA_D_8009D278)+104u)+16u)&0xC0u;
+    if (flags==0x40u || flags==0xC0u) {
+        pe_addr_t command=0x800BE830u+PE_LoadU8(0x8009CE3Cu)*8u;
+        PE_StoreU8(0x8009D1DCu,0u);PE_StoreU32(command,target);PE_StoreU16(command+4u,2u);
+        PE_StoreU16(command+6u,(uint16_t)(int16_t)(int8_t)PE_LoadU8(0x8009D2D8u));
+        PE_StoreU8(0x8009CE3Cu,(uint8_t)(PE_LoadU8(0x8009CE3Cu)+1u));
+    } else while (PE_LoadU8(0x8009D1DCu)) {
+        pe_addr_t command=0x800BE830u+PE_LoadU8(0x8009CE3Cu)*8u;
+        PE_StoreU8(0x8009D1DCu,(uint8_t)(PE_LoadU8(0x8009D1DCu)-1u));
+        PE_StoreU32(command,target);PE_StoreU16(command+4u,1u);
+        PE_StoreU16(command+6u,(uint16_t)(int16_t)(int8_t)PE_LoadU8(0x8009D2D8u));
+        PE_StoreU8(0x8009CE3Cu,(uint8_t)(PE_LoadU8(0x8009CE3Cu)+1u));
+    }
+    func_80021128();rec=PE_LoadU32(GA_D_8009D278);
+    PE_StoreU32(rec+76u,PE_LoadU32(rec+76u)|0x200000u);
+}
+
+void func_800306E0(pe_addr_t enemy)
+{
+    pe_addr_t body=PE_LoadU32(enemy),rec=PE_LoadU32(GA_D_8009D278);
+    int difference;
+    unsigned threshold,multiplier,roll;
+    if ((int32_t)PE_LoadU32(body+16u)<=0) return;
+    difference=(int8_t)(PE_LoadU8(rec+4u)-PE_LoadU8(body+4u));
+    threshold=PE_LoadU16(0x800C0E28u);
+    if (difference>0) multiplier=10u;
+    else if (!difference) {threshold*=3u;multiplier=50u;}
+    else if (difference==-1) {threshold*=3u;multiplier=100u;}
+    else multiplier=50u;
+    roll=func_80071A54()%100u;
+    if (roll*multiplier<threshold) func_80025BD8(enemy);
+}
+
+/* 299CC's 2A5BC..2A7F8 continuation: finish hit/equip animations and
+ * restore the interrupted action at its saved frame. */
+void func_800299CC_player_animation(void)
+{
+    pe_addr_t aya=PE_LoadU32(GA_D_8009D254),rec=PE_LoadU32(GA_D_8009D278);
+    if (PE_LoadU8(aya+15u)==PE_LoadU16(aya+26u) && PE_LoadU8(aya+14u)<4u) {
+        unsigned restore=PE_LoadU16(0x8009D298u);
+        if (!restore) {
+            func_8001A680_command_cut(aya,PE_LoadU8(rec+18u));
+            if (!(PE_LoadU8(0x800B0CE6u)&1u) && !(int8_t)func_80021054() &&
+                !PE_LoadU32(GA_D_8009D28C) &&
+                (PE_LoadU32(PE_LoadU32(PE_LoadU32(GA_D_8009D278)+104u)+16u)&0x8000u)) {
+                pe_addr_t enemy=PE_LoadU32(0x8009D1D0u);
+                if (enemy) {func_800306E0(enemy);PE_StoreU32(0x8009D1D0u,0u);}
+            }
+        } else {
+            if (restore>=2u) PE_StoreU32(aya+152u,PE_LoadU32(aya+152u)|0x100u);
+            PE_StoreU16(0x8009D298u,0u);
+            func_8001A680_command_cut(PE_LoadU32(GA_D_8009D254),PE_LoadU8(0x8009D29Au));
+            aya=PE_LoadU32(GA_D_8009D254);
+            PE_StoreU32(aya+20u,PE_LoadU32(0x8009D29Cu));
+            PE_StoreU32(aya+24u,PE_LoadU32(0x8009D29Cu)-65536u);
+        }
+    }
+    aya=PE_LoadU32(GA_D_8009D254);
+    if (PE_LoadU8(aya+14u)==13u && !(PE_LoadU8(0x800B0CE6u)&1u)) {
+        PE_StoreU8(PE_LoadU32(GA_D_8009D278)+18u,4u);
+        if (PE_LoadU32(aya+152u)&0x100u) {
+            func_8006DE80(0x453,0,(int16_t)PE_LoadU16(aya+42u),
+                (int16_t)PE_LoadU16(aya+46u),(int16_t)PE_LoadU16(aya+50u));
+            aya=PE_LoadU32(GA_D_8009D254);PE_StoreU32(aya+152u,PE_LoadU32(aya+152u)&~0x100u);
+        }
+        aya=PE_LoadU32(GA_D_8009D254);
+        if (PE_LoadU8(aya+15u)==PE_LoadU16(aya+26u)) {
+            func_8001A680_command_cut(aya,PE_LoadU8(PE_LoadU32(GA_D_8009D278)+18u));
+            PE_StoreU32(0x8009D2E8u,PE_LoadU32(0x8009D2E8u)&~1u);
+        }
+    }
+    PE_StoreU32(0x8009D1E8u,PE_LoadU32(0x8009D1E8u)+1u);
+}
+
 void func_800299CC_damage_entry_cut(void)
 {
     pe_addr_t actor;
     pe_addr_t aya;
+    uint32_t update;
 
     if (PE_LoadU32(GA_D_8009D28C) != 0u)
         return;
     if (PE_LoadU8(GA_D_8009D244) == 0u)
         return;
+    update=func_800299CC_ready_input();
     /* 2A470: 21054>0 → 21DE0 (unless 0x4000 && !D1A0.100), then 236E8. */
     if (func_80021054() > 0) {
         pe_addr_t rec = PE_LoadU32(GA_D_8009D278);
         uint32_t flags = (rec != 0u) ? PE_LoadU32(rec + 0x4Cu) : 0u;
 
         if ((flags & 0x4000u) == 0u ||
-            (PE_LoadU32(GA_D_8009D1A0) & 0x100u) != 0u)
+            ((D_8009D1A0|PE_LoadU32(GA_D_8009D1A0)) & 0x100u) != 0u) {
             func_80021DE0();
+            update=2u;
+        }
         if (PE_LoadU8(GA_D_8009D294) != 0u)
             func_800236E8();
     }
-    func_8001D340(1u);
+    func_8001D340(update);
     /* 2A504: walk D20C, jal 27D14 on non-Aya actors with a body. */
     aya = PE_LoadU32(GA_D_8009D254);
     actor = PE_LoadU32(GA_D_8009D20C);
@@ -339,4 +455,6 @@ void func_800299CC_damage_entry_cut(void)
             func_80027D14(actor);
         actor = next;
     }
+    func_800299CC_player_animation();
+    func_8002A7F8_join_cut();
 }

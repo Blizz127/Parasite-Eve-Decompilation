@@ -20,7 +20,8 @@
  *
  * Named cut implemented here: CE2 in [10,14], +0xEE JT gates,
  * EE=0 bit0/bit1 advance, EE=11 ori 1, EE=12→13, EE 8/9/10 return 0.
- * EE 1-7 return 1 without clearing +0xE. EE=13 runs the proven
+ * STG3 implements EE 1-7 texture/weapon reads, uploads and audio polling.
+ * EE=13 runs the proven
  * package-walk prefix then the 0x8006CC20..0x8006CC38 epilogue
  * (andi 0xFC / sb +0xE / sb 0 → +0xEE) after jal 3D834 returns.
  * Blanket +0xE&=0xFC from 0x55 without that EE=13 fall-through
@@ -42,7 +43,7 @@
 #define GA_D2E8     0x8009D2E8u
 #define GA_D254     0x8009D254u
 
-extern unsigned int D_8009D1A0;
+
 
 int func_8006C4C4(int a0)
 {
@@ -244,6 +245,79 @@ int func_8006C5BC(void)
                 continue;
             }
             return func_8006CC68();
+        }
+        /* Retail 6C670..6C9C4: the field weapon/model package reads.
+         * These states must keep polling real disc I/O while a script
+         * waits in opcode 55. Previously EE=1 could never advance. */
+        if (ee == 1u || ee == 4u) {
+            int slot = (int8_t)PE_LoadU8(GA_OVERLAY + 0x0Cu);
+            int index;
+            int result;
+            pe_addr_t dest;
+            if (ee == 1u && (unsigned)(slot - 2) >= 5u) {
+                PE_StoreU8(GA_OVERLAY + 0xEEu, 4u);
+                continue;
+            }
+            index = ee == 1u ? slot + 0x26
+                : (((int)ce2 - 10) / 2) * 8 + slot + 0x16;
+            dest = PE_LoadU32(GA_OVERLAY + (ee == 1u ? 0x194u : 0x158u));
+            {
+                unsigned first = PE_LoadU16(0x800930D8u + (unsigned)index * 2u);
+                unsigned end = PE_LoadU16(0x800930DAu + (unsigned)index * 2u);
+                result = func_8006E6A8((int)PE_LoadU32(GA_OVERLAY + 0x100u)
+                                     + (int)first, dest, (int)(end - first));
+            }
+            if (ee == 1u || (D_8009D1A0 & 2u) == 0u)
+                (void)func_8006CC68();
+            if (result != -1)
+                PE_StoreU8(GA_OVERLAY + 0xEEu, (uint8_t)(ee + 1u));
+            return 1;
+        }
+        if (ee == 2u || ee == 5u) {
+            int result = func_8006E7E8();
+            if (result == -1) {
+                PE_StoreU8(GA_OVERLAY + 0xEEu, (uint8_t)(ee - 1u));
+                return 1;
+            }
+            if (result != 0) {
+                if ((D_8009D1A0 & 2u) == 0u)
+                    (void)func_8006CC68();
+                return 1;
+            }
+            PE_StoreU8(GA_OVERLAY + 0xEEu, (uint8_t)(ee + 1u));
+            continue;
+        }
+        if (ee == 3u) {
+            pe_addr_t pkg = PE_LoadU32(GA_OVERLAY + 0x194u);
+            pe_addr_t section = pkg + PE_LoadU32(pkg + 4u);
+            uint32_t packed = PE_LoadU32(section + 0x28u);
+            pe_addr_t entry = pkg + (packed & 0x3FFFFFu);
+            unsigned i;
+            for (i = 0; i < (packed >> 22); i++, entry += 20u)
+                (void)func_8006E1C0(entry, pkg);
+            PE_StoreU8(GA_OVERLAY + 0xEEu, 4u);
+            continue;
+        }
+        if (ee == 6u) {
+            (void)func_8006C5BC_ee13_prefix_cut();
+            if ((D_8009D1A0 & 2u) != 0u) {
+                PE_StoreU8(GA_OVERLAY + 0xEEu, 7u);
+                return 1;
+            }
+            if ((PE_LoadU8(GA_OVERLAY + 0x0Eu) & 2u) != 0u) {
+                PE_StoreU8(GA_OVERLAY + 0xEEu, 11u);
+                continue;
+            }
+            (void)func_8006CC68();
+            func_8006C5BC_ee13_epilogue_cut();
+            return 0;
+        }
+        if (ee == 7u) {
+            if (func_8006CDA4(1, PE_LoadU8(GA_OVERLAY + 0x10u), 0,
+                             PE_LoadU32(GA_OVERLAY + 0x194u), 0x21, 0) != 0)
+                return 1;
+            PE_StoreU8(GA_OVERLAY + 0xEEu, 11u);
+            continue;
         }
         if (ee == 11u) {
             status = PE_LoadU8(GA_OVERLAY + 0x0Eu);

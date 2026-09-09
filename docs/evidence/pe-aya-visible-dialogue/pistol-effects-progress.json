@@ -1,0 +1,18 @@
+{
+  "run": "ATK34 visible native window, DISPLAY :10.0",
+  "input": "ordinary keyboard, no guest state writes",
+  "events": {
+    "aya_hit_frame": 10733,
+    "beam_present_frame": 10735,
+    "shot_frame": 10762,
+    "eve_damage_frame": 10763,
+    "shot_capture_frame": 10769,
+    "missing_reaction_callback_frame": 11022
+  },
+  "aya_hp": 42,
+  "audio_queue_count": 0,
+  "battle_mode": 7,
+  "pending": "D751C Aya reaction effect; completed fight and naming remain unproven",
+  "comparison_cases": 158,
+  "normal_and_sanitizer_native_cases": 1151
+}

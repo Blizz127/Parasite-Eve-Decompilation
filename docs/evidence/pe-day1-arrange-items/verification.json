@@ -1,0 +1,145 @@
+{
+  "binary_sha256": "07781970f1d297d9a1d8922a5d8dc4e55f6f3e66fb1432d11285059e4592e1ef",
+  "input": "ordinary keyboard input, read-only GDB capture",
+  "events": [
+    {
+      "event": "main-menu",
+      "frame": 18340
+    },
+    {
+      "event": "arrange-menu",
+      "frame": 18510
+    },
+    {
+      "event": "arrange_cancel",
+      "frame": 18540
+    },
+    {
+      "event": "sort-options-0",
+      "frame": 18590
+    },
+    {
+      "event": "sorted",
+      "frame": 18680,
+      "option": 0,
+      "before": [
+        256,
+        257,
+        258,
+        512,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "after": [
+        256,
+        258,
+        257,
+        6,
+        512,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "equipped": [
+        256,
+        257
+      ]
+    },
+    {
+      "event": "sorted-0",
+      "frame": 18690
+    },
+    {
+      "event": "sort-options-1",
+      "frame": 18920
+    },
+    {
+      "event": "sorted",
+      "frame": 19010,
+      "option": 1,
+      "before": [
+        256,
+        258,
+        257,
+        6,
+        512,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "after": [
+        257,
+        6,
+        256,
+        258,
+        512,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "equipped": [
+        256,
+        257
+      ]
+    },
+    {
+      "event": "sorted-1",
+      "frame": 19020
+    },
+    {
+      "event": "sort-options-2",
+      "frame": 19290
+    },
+    {
+      "event": "sorted",
+      "frame": 19380,
+      "option": 2,
+      "before": [
+        257,
+        6,
+        256,
+        258,
+        512,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "after": [
+        6,
+        256,
+        258,
+        257,
+        512,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "equipped": [
+        256,
+        257
+      ]
+    },
+    {
+      "event": "sorted-2",
+      "frame": 19380
+    },
+    {
+      "event": "menu_checks_pass",
+      "frame": 19380
+    }
+  ]
+}

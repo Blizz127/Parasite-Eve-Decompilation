@@ -1,0 +1,9 @@
+Test project /home/blizz/dev/parasite-eve/pc_port/build-asan
+    Start 1: native-tests
+1/2 Test #1: native-tests .....................   Passed   15.31 sec
+    Start 2: field-runtime-link
+2/2 Test #2: field-runtime-link ...............   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =  15.33 sec

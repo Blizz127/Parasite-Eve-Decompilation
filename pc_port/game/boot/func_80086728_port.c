@@ -33,6 +33,7 @@
  */
 #include "psx_compat.h"
 #include "pe_sdk.h"
+#include "pe_port_compat.h"
 
 #define GA_D_800BCD80 0x800BCD80u
 
@@ -60,11 +61,43 @@ void func_80086728(int a0)
  * 85084(*CD84); magic fail returns -1. Stream-complete is
  * not invented.
  */
-void func_80086464(pe_addr_t a0)
+int func_80086464(pe_addr_t a0)
 {
     PE_StoreU32(GA_D_800BCD80, 0x10u);
     PE_StoreU32(GA_D_800BCD84, a0);
+    return func_8008CBA8();
+}
+
+/* 86498..864C8: cmd 0x11, CD84=handle, jal 8CBA8. */
+int func_80086498(pe_addr_t a0)
+{
+    PE_StoreU32(GA_D_800BCD80, 0x11u);
+    PE_StoreU32(GA_D_800BCD84, a0);
+    return func_8008CBA8();
+}
+
+/* 864F8..86564: cmd 0x19 then volume 0xC0 with handle 0.
+ * Returns the first 8CBA8 result. */
+int func_800864F8(pe_addr_t bank, uint32_t volume)
+{
+    int handle;
+
+    PE_StoreU32(GA_D_800BCD80, 0x19u);
+    PE_StoreU32(GA_D_800BCD84, bank);
+    handle = func_8008CBA8();
+    PE_StoreU32(GA_D_800BCD80, 0xC0u);
+    PE_StoreU32(GA_D_800BCD84, volume & 0x7Fu);
+    PE_StoreU32(GA_D_800BCD90, 0);
     (void)func_8008CBA8();
+    return handle;
+}
+
+/* 86770..867AC: cmd 0x90, CD84=a0&0xFFFFFF. */
+int func_80086770(uint32_t a0)
+{
+    PE_StoreU32(GA_D_800BCD80, 0x90u);
+    PE_StoreU32(GA_D_800BCD84, a0 & 0x00FFFFFFu);
+    return func_8008CBA8();
 }
 
 /*
@@ -78,4 +111,67 @@ void func_80086C1C(int a0, int a1)
     PE_StoreU32(GA_D_800BCD84, (unsigned int)a1 & 0x7Fu);
     PE_StoreU32(GA_D_800BCD90, (unsigned int)a0);
     (void)func_8008CBA8();
+}
+
+/* SEW21: original86C5C..86CF8, timed music-volume queue producers. */
+int func_80086C5C(int handle,uint32_t duration,uint32_t volume)
+{
+    PE_StoreU32(0x800BCD80u,0xC1u);
+    PE_StoreU32(0x800BCD84u,duration);
+    PE_StoreU32(0x800BCD88u,volume&0x7Fu);
+    PE_StoreU32(0x800BCD90u,(uint32_t)handle);
+    return func_8008CBA8();
+}
+
+int func_80086CA4(int handle,uint32_t duration,uint32_t first,uint32_t last)
+{
+    PE_StoreU32(0x800BCD80u,0xC2u);
+    PE_StoreU32(0x800BCD84u,duration);
+    PE_StoreU32(0x800BCD88u,first&0x7Fu);
+    PE_StoreU32(0x800BCD8Cu,last&0x7Fu);
+    PE_StoreU32(0x800BCD90u,(uint32_t)handle);
+    return func_8008CBA8();
+}
+
+/* 866A4..866F0: enqueue the battle-ready volume command. */
+void func_800866A4(unsigned int a0, unsigned int a1)
+{
+    PE_StoreU32(GA_D_800BCD80, 0x21u);
+    PE_StoreU32(GA_D_800BCD84, a0 & 0xFFFFu);
+    PE_StoreU32(0x800BCD88u, a1 & 0xFFFFFFu);
+    (void)func_8008CBA8();
+}
+
+/* 86608..866A4: validate the sound bank and enqueue the retail effect
+ * command. 8CBA8 returns its allocated playback handle. */
+int32_t func_80086608(pe_addr_t sound, uint32_t key, uint32_t pan, uint32_t volume)
+{
+    int32_t result=func_80085084(sound);
+    if (result) return result;
+    PE_StoreU32(0x800BCD80u,0x24u);
+    PE_StoreU32(0x800BCD84u,sound+4u);
+    PE_StoreU32(0x800BCD88u,key&0xFFFFFFu);
+    PE_StoreU32(0x800BCD8Cu,pan&0xFFu);
+    PE_StoreU32(0x800BCD90u,volume&0x7Fu);
+    return func_8008CBA8();
+}
+
+/* Original 868F0..86948 / 86A28..86A80: update an existing effect's
+ * volume/pan. The different handle masks are intentional retail behavior. */
+int func_800868F0(uint32_t handle, uint32_t group, uint32_t volume)
+{
+    PE_StoreU32(0x800BCD80u, 0xA0u);
+    PE_StoreU32(0x800BCD84u, handle & 0xFFFFu);
+    PE_StoreU32(0x800BCD88u, group & 0xFFFFFFu);
+    PE_StoreU32(0x800BCD8Cu, volume & 0x7Fu);
+    return func_8008CBA8();
+}
+
+int func_80086A28(uint32_t handle, uint32_t group, uint32_t pan)
+{
+    PE_StoreU32(0x800BCD80u, 0xA2u);
+    PE_StoreU32(0x800BCD84u, handle & 0x3FFu);
+    PE_StoreU32(0x800BCD88u, group & 0xFFFFFFu);
+    PE_StoreU32(0x800BCD8Cu, pan & 0xFFu);
+    return func_8008CBA8();
 }

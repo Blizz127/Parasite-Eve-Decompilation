@@ -77,3 +77,6 @@ local/pe_disc1.path
 /*.csv
 then
 pe-decomp-main-verify/
+
+# live inspection dumps (RAM/RGB snapshots)
+local/live/

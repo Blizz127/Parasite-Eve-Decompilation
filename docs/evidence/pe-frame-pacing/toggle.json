@@ -1,0 +1,11 @@
+{
+  "input": "Physical F6 through XTest, keycode72, visible window50331649",
+  "sequence": [
+    "Normal speed",
+    "Fast-forward",
+    "Normal speed"
+  ],
+  "second_press_held_seconds": 2,
+  "observed_toggle_events": 2,
+  "result": "One toggle per press; holding F6 did not toggle repeatedly"
+}

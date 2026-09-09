@@ -2,8 +2,9 @@
 """PE-BTL6 independent oracle: func_8006CDA4 +0xF0 state machine.
 
 Pins SHA-1-exact EXE. 181 words, no +0xE store. Live 6D078 0x28 is
-a0=1 a1=1: state 0 skips 87198/87414, sb 7, returns 1. State 7 jals
-6E6D4. Does not import production C. Does not claim 6CDA4/6E6D4
+a0=1 a1=1: state 0 skips 87198/87414, sets state7 then continues. State7 jals
+6E6D4. Checks instruction encodings only, not the complete internal loop. See
+pe_disc_loader_loop_oracle.py for full control-flow execution. Does not import production C. Does not claim 6CDA4/6E6D4
 success, 6914C success, mode 7, or 0x55 completion.
 """
 from __future__ import annotations
@@ -97,7 +98,9 @@ def main() -> int:
     require(load_u32(data, 0x8006CEEC) == 0x8F840400, "state7 a0 gp+0x400")
     require(load_u32(data, 0x8006CEF0) == 0x8F850404, "state7 a1 gp+0x404")
     require(load_u32(data, 0x8006CF00) == 0x00A32823, "state7 a1 -= remain")
-    require(load_u32(data, 0x8006CF18) == 0xA24000F0, "state7 -1 sb F0=0")
+    require(load_u32(data, 0x8006CF18) == 0xA24000F0, "state7 zero remaining sb F0=0")
+    require((load_u32(data, 0x8006CF08) & 0xFFFF) * 4 + 0x8006CF0C == 0x8006D00C,
+            "read failure branches to retry/yield, not archive completion")
     require(load_u32(data, 0x8006CF14) == 0xA24200F0, "state7 ok sb F0")
 
     print(

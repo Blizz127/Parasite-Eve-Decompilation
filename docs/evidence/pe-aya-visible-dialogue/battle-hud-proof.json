@@ -1,0 +1,17 @@
+{
+  "build": "HUD2 + EQP1",
+  "entry": "visible native replay, ordinary X11 keyboard input",
+  "AT": 9000,
+  "AT_speed": 50,
+  "HP": 45,
+  "max_HP": 45,
+  "mode": 0,
+  "input_mask": 4,
+  "known_missing": [
+    "attack input and targeting",
+    "Eve effect callback and battle completion",
+    "name selection"
+  ],
+  "normal_ctest": "2/2; 1113 native cases",
+  "sanitizer_ctest": "2/2; 1113 native cases"
+}

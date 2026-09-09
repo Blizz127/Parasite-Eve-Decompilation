@@ -14,20 +14,25 @@
 #include <stdint.h>
 
 /* Open a window.  width/height are the output (client) size.
- * title sets the window title bar.  scale is the integer zoom factor.
+ * title sets the window title bar. scale is the initial integer zoom factor.
  * Returns 0 on success, -1 on failure. */
 int  HostWindow_Open(const char *display, int width, int height,
                      const char *title, int scale);
 
 /* Upload RGB 8:8:8 framebuffer pixels to the window.
  * fb_w/fb_h are the SOURCE framebuffer dimensions (always 320×240).
- * Nearest-neighbor scaling to the window size. */
+ * Nearest-neighbor scaling fits the current client area with black borders
+ * while preserving the source aspect ratio. */
 void HostWindow_Blit(const uint8_t *rgb, int fb_w, int fb_h);
 
 /* Process pending X11 events.  Returns:
  *  0 = normal
  *  1 = close requested (Escape or window-close) */
 int  HostWindow_Poll(void);
+
+/* Wait for the next 60000/1001 Hz presentation deadline while polling input.
+ * Returns 1 on close or a host clock failure, 0 when the frame is due. */
+int  HostWindow_Pace(void);
 
 /* Update the window title (used for debug overlay). */
 void HostWindow_SetTitle(const char *title);

@@ -10,7 +10,7 @@
  *   - func_80071A24(&D_800A5B70, 0x1E0) is BIOS A(28h) block-zero: host memset.
  *   - func_8007E1F4/func_8007E1E4(2, &D_800A5AB0): kernel SysDeqIntRP /
  *     SysEnqIntRP priority-queue manipulation — no guest-RAM effect: no-ops.
- *   - func_80073C84(3, 0): kernel C(0Ah) ChangeClearRCnt — no-op.
+ *   - DAY1-62 restores func_80073C84(3,0) BIOS clear-mode state.
  *   - func_80082CF0 dereferences D_8009B784 (*v1 = -2; v1[1] |= 1).  That
  *     pointer is installed by the collapsed card-controller hardware init
  *     (func_8007DDD4 path in libcard) and names kernel state outside the
@@ -95,7 +95,7 @@ void func_80082534(void)
     func_80072714();                        /* EnterCriticalSection */
     PE_StoreU32(0x8009B75Cu, 0);
     /* SysDeqIntRP/SysEnqIntRP + D_8009B784 block: collapsed (see header) */
-    /* func_80073C84(3, 0) — kernel C(0Ah): no-op */
+    (void)func_80073C84(3u,0u); /* original82CF0 VBlank clear policy */
     func_80072724();                        /* ExitCriticalSection */
     PE_Save_SlotReset(0x800A5B70u);         /* func_80084644(D_8009B758) */
     PE_Save_SlotReset(0x800A5C60u);         /* func_80084644(D_8009B758+0xF0) */

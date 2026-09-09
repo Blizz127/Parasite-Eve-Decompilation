@@ -35,6 +35,9 @@ typedef struct { uint8_t disp[20]; } DISP_ENV;
 #define PE_GUEST_U16(a)  (*(uint16_t *)PE_Translate((a), 2))
 #define PE_GUEST_S16(a)  (*(int16_t  *)PE_Translate((a), 2))
 #define PE_GUEST_U32(a)  (*(uint32_t *)PE_Translate((a), 4))
+/* Shared input/game flags have one guest-memory authority. */
+#define D_8009D1A0 PE_GUEST_U32(0x8009D1A0u)
+#define D_8009D280 PE_GUEST_U32(0x8009D280u)
 #define PE_GUEST_S32(a)  (*(int32_t  *)PE_Translate((a), 4))
 
 #define D_800BCE80     ((DISP_ENV *)PE_Translate(0x800BCE80u, sizeof(DISP_ENV)))
@@ -77,21 +80,20 @@ extern pe_addr_t D_80011614;
 int PE_Globals_AdoptRetailImage(void);
 
 /* ── Host-owned scalar globals (plain data, no pointer arithmetic) ──── */
-extern int       D_8009CDDC;
-extern uint32_t  D_8009D280;
+
 extern uint32_t  D_8009D1C4;
 extern uint32_t  D_800A7918;
 extern unsigned short D_80093164[];
 
-/* func_80052C6C state globals (host-side, extern for test reset) */
+/* Resource-bank pointer/count owners below use canonical guest RAM. */
 extern unsigned int D_8009D018;
 extern unsigned int D_8009D03C;
-extern unsigned int D_8009D048;
-extern unsigned int D_8009D04C;
-extern unsigned int D_8009D050;
-extern unsigned int D_8009D054;
-extern unsigned int D_8009D058;
-extern unsigned int D_8009D064;
+#define D_8009D048 PE_GUEST_U32(0x8009D048u)
+#define D_8009D04C PE_GUEST_U32(0x8009D04Cu)
+#define D_8009D050 PE_GUEST_U32(0x8009D050u)
+#define D_8009D054 PE_GUEST_U32(0x8009D054u)
+#define D_8009D058 PE_GUEST_U32(0x8009D058u)
+#define D_8009D064 PE_GUEST_U32(0x8009D064u)
 
 /* ── SDK IMPLEMENTED ──────────────────────────────────────────────── */
 static inline void func_80073A44(int m)  { HostFB_VSync(m); }
@@ -100,13 +102,11 @@ int func_80074DC0(int mode);
 int func_80075358(pe_addr_t packet);
 int func_800753B4(pe_addr_t ot);
 int PE_func_80075358_Transient(const uint32_t *words, uint8_t count);
-static inline void func_80074F44(RECT *r, uint8_t rv, uint8_t g, uint8_t b) {
-    if (r) HostFB_ClearImage(r->x, r->y, r->w, r->h, rv, g, b);
-}
-/* func_800755F0 (PutDispEnv) is REAL (Phase 6E-PRS1):
- * platform/pe_libgpu.c — host display authority over the guest DISPENV
- * disp RECT (guest address in, VRAM window out). */
-extern void func_800755F0(pe_addr_t env);
+int func_80074F44(RECT *rect, uint8_t red, uint8_t green, uint8_t blue);
+int PE_ClearImageInline8(uint32_t words[2], uint32_t color);
+int PE_DispatchClearRect(pe_addr_t worker, RECT *rect, uint32_t color);
+/* Original PutDispEnv command/state sequence, followed by host presentation. */
+extern pe_addr_t func_800755F0(pe_addr_t env);
 /* func_800752AC (ClearOTagR) and func_80076354 (jtb[11] OTC worker) are
  * REAL translations: game/boot/func_800752AC_port.c (Phase 6E-OTC1). */
 
@@ -115,7 +115,7 @@ extern void func_800755F0(pe_addr_t env);
  * B54K-R enters func_801909B4 after both DMA checkpoints and executes the
  * generic MoveImage path and display setup. B54K-T enters overlay-local
  * func_80190660 and reaches its first DrawPrim call at retail 0x80190860. */
-static inline void func_8006ECEC(void)   { Bootstrap_ReturnVoid("func_8006ECEC", "func_8001220C"); }
+extern int func_8006ECEC(void);
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
 static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
 /* func_8003F3C4 / func_80066B60 / func_80068E24 are REAL native ports
@@ -196,9 +196,12 @@ extern void func_80074E28(pe_addr_t name, const RECT *rect);
 extern int  func_8007512C(const RECT *rect, int destination_x,
                           int destination_y);
 extern int  func_8007506C(const RECT *rect, pe_addr_t data);
+extern int  func_800750CC(const RECT *rect, pe_addr_t data);
 extern pe_addr_t func_800718D0(pe_addr_t tim);
 extern void PE_func_8006AD40_PackFontRecords(void);
 extern int  func_80076664(pe_addr_t rect, pe_addr_t source);
+extern int func_800768A0(pe_addr_t rect,pe_addr_t destination);
+extern int PE_StoreImageInline8(uint32_t position,uint32_t size,pe_addr_t destination);
 extern int  PE_func_80076664_Inline8(uint32_t rect_word0,
                                      uint32_t rect_word1,
                                      pe_addr_t source);
@@ -257,6 +260,7 @@ extern void func_80042798(void);
 extern int  func_80076C34(pe_addr_t worker, pe_addr_t argument,
                           int32_t copy_bytes, uint32_t auxiliary);
 extern int  func_80076B98(pe_addr_t packet, uint32_t auxiliary);
+extern int  func_80076434(pe_addr_t rect, uint32_t color);
 extern int  PE_func_80076C34_Inline8(pe_addr_t worker,
                                      uint32_t argument_word0,
                                      uint32_t argument_word1,
@@ -266,6 +270,9 @@ extern pe_addr_t func_8005332C(int32_t resource_id);
 extern pe_addr_t func_80053968(int32_t resource_id);
 extern int32_t func_80053B48(pe_addr_t record);
 extern void func_80051CC4(void);
+extern void func_80051980(int32_t unused, pe_addr_t out);
+extern void func_80051E64(pe_addr_t out);
+extern void func_80052F24(int32_t capacity);
 extern void func_8005218C(void);
 extern void func_800528F0(void);
 extern void func_8005E588(void);

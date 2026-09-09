@@ -9,6 +9,7 @@
  *   binding map guest function address → host PECallback, full width.
  */
 #include "pe_callback.h"
+#include "game_port.h"
 #include <stdio.h>
 
 #define PE_CALLBACK_MAX_BINDS 16
@@ -125,8 +126,9 @@ void PE_Callback_GetResetTrace(PeCallbackResetTrace *out)
     }
 }
 
-void PE_Callback_Dispatch(void)
+int PE_Callback_DispatchChecked(void)
 {
+    uint32_t epoch=PE_Port_StopEpoch();
     /* func_8007440C: D_800956AC++, then slots 0..7 in order, no args,
      * return values ignored. */
     uint32_t n = PE_LoadU32(PE_CALLBACK_COUNTER_ADDR);
@@ -139,14 +141,21 @@ void PE_Callback_Dispatch(void)
         PECallback fn = Resolve(guest);
         if (fn) {
             fn();
+            if(PE_Port_StopEpoch()!=epoch)return 0;
         } else {
             fprintf(stderr,
                     "[CALLBACK] dispatch: no host binding for guest 0x%08X\n",
                     guest);
             g_err_count++;
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
         }
     }
+    return 1;
 }
+
+void PE_Callback_Dispatch(void)
+{ (void)PE_Callback_DispatchChecked(); }
 
 int PE_Callback_RegistrationCount(void)
 {

@@ -51,6 +51,9 @@ uint32_t PE_Disc_UserSectorCount(const PE_Disc *d);
 
 /* ── Reads (all bounds-checked; false on out-of-range / short data) ─── */
 
+bool PE_Disc_ReadRawSector(const PE_Disc *d, uint32_t lba,
+                           uint8_t out[PE_DISC_RAW_SECTOR]);
+
 bool PE_Disc_ReadUserSector(const PE_Disc *d, uint32_t lba,
                             uint8_t out[PE_DISC_USER_SECTOR]);
 

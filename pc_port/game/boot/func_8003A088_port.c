@@ -6,7 +6,8 @@
  * 452fb033f2eaa4b18aa20a5bca60b8125af3a37b and PE.IMG [428,434).
  *
  * Retail 392 words 0x8003A088..0x8003A6A8. Live dest+0x28 is 0.
- * Walk at 0x8003A3B4: parent bytes from dest+0x20; live [0,1].
+ * Walk at 0x8003A3B4: parent bytes from dest+0x20. POSE1 adds
+ * branch save/restore markers and non-root bone offsets.
  * cop2 0x049E012 = MVMVA sf=1 mx=RT v=IR cv=None lm=0
  * cop2 0x0480012 = MVMVA sf=1 mx=RT v=V0 cv=TR lm=0
  * Integer MAC only (pe_gte). Does not andi 0xFC.
@@ -14,6 +15,7 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 #include "pe_sdk.h"
+#include <string.h>
 
 #define CMD_RTIR  0x049E012u
 #define CMD_RTV0  0x0480012u
@@ -54,8 +56,10 @@ void func_8003A088_mode0_walk_cut(pe_addr_t dest)
     pe_addr_t out;
     pe_addr_t stream;
     int16_t mode;
-    int16_t count;
-    int i;
+    unsigned int count;
+    struct { int16_t rt[3][3]; int32_t tr[3]; } stack[31];
+    unsigned int depth = 0u;
+    unsigned int i;
 
     if (dest == 0u)
         return;
@@ -67,8 +71,8 @@ void func_8003A088_mode0_walk_cut(pe_addr_t dest)
     obj = PE_LoadU32(dest + 0x00u);
     if (obj == 0u)
         return;
-    count = (int16_t)PE_LoadU16(obj + 0x18u);
-    if (count <= 0)
+    count = PE_LoadU16(obj + 0x18u);
+    if (count == 0u)
         return;
 
     PE_GTE_LoadRT(dest + 0x34u);
@@ -82,9 +86,29 @@ void func_8003A088_mode0_walk_cut(pe_addr_t dest)
         pe_addr_t src;
         unsigned col;
 
-        /* Live PE.IMG [428,434) parents are 0,1. Scratchpad ±1/±2 not this cut. */
-        if (parent == -1 || parent == -2)
-            return;
+        /* Retail -1/-2 save and restore rotation/translation without
+         * advancing the output matrix cursor. Host storage represents
+         * the within-call stack at scratchpad +0xC. */
+        if (parent == -1) {
+            if (depth == 31u) {
+                Bootstrap_ReturnVoid("func_8003A088_stack_overflow", "func_8003A088");
+                return;
+            }
+            memcpy(stack[depth].rt, g_pe_gte.rt, sizeof(g_pe_gte.rt));
+            memcpy(stack[depth].tr, g_pe_gte.tr, sizeof(g_pe_gte.tr));
+            depth++;
+            continue;
+        }
+        if (parent == -2) {
+            if (depth == 0u) {
+                Bootstrap_ReturnVoid("func_8003A088_stack_underflow", "func_8003A088");
+                return;
+            }
+            depth--;
+            memcpy(g_pe_gte.rt, stack[depth].rt, sizeof(g_pe_gte.rt));
+            memcpy(g_pe_gte.tr, stack[depth].tr, sizeof(g_pe_gte.tr));
+            continue;
+        }
 
         src = src_base + (pe_addr_t)parent * 32u;
         for (col = 0; col < 3u; col++) {
@@ -103,7 +127,8 @@ void func_8003A088_mode0_walk_cut(pe_addr_t dest)
                          (int16_t)PE_LoadU16(src + 24u),
                          (int16_t)(PE_LoadU32(src + 28u) & 0xFFFFu));
         } else {
-            PE_GTE_SetV0(0, 0, 0);
+            pe_addr_t rec = PE_LoadU32(dest + 0x04u) + (pe_addr_t)parent * 12u;
+            PE_GTE_SetV0(0, 0, (int16_t)PE_LoadU16(rec + 8u));
         }
         PE_GTE_MVMVA(CMD_RTV0);
         PE_StoreU32(out + 20u, (uint32_t)g_pe_gte.mac[0]);
@@ -134,5 +159,49 @@ void func_8003A088_mode0_walk_cut(pe_addr_t dest)
             }
         }
         out += 32u;
+    }
+}
+
+/* 3AC90..3AF14: view x joint transforms, then three-vertex RTPT batches.
+ * The retail loop projects a final complete triple even for count%3 != 0. */
+void func_8003AC90(pe_addr_t dest, pe_addr_t view)
+{
+    pe_addr_t obj = PE_LoadU32(dest);
+    pe_addr_t joint = PE_LoadU32(dest + 0x84u);
+    unsigned int bone, col, row;
+    for (bone = 0; bone < PE_LoadU8(obj + 2u); bone++, joint += 32u) {
+        int16_t rotation[3][3];
+        int32_t translation[3];
+        pe_addr_t rec = PE_LoadU32(dest + 4u) + bone * 12u;
+        PE_GTE_LoadRT(view);
+        for (col = 0; col < 3u; col++) {
+            PE_GTE_SetIR((int16_t)PE_LoadU16(joint + col * 2u),
+                         (int16_t)PE_LoadU16(joint + 6u + col * 2u),
+                         (int16_t)PE_LoadU16(joint + 12u + col * 2u));
+            PE_GTE_MVMVA(CMD_RTIR);
+            for (row = 0; row < 3u; row++) rotation[row][col] = (int16_t)g_pe_gte.ir[row];
+        }
+        PE_GTE_SetV0((int16_t)PE_LoadU16(joint + 20u),
+                     (int16_t)PE_LoadU16(joint + 24u),
+                     (int16_t)PE_LoadU16(joint + 28u));
+        PE_GTE_MVMVA(CMD_RTV0);
+        for (row = 0; row < 3u; row++) translation[row] = g_pe_gte.mac[row];
+        memcpy(g_pe_gte.rt, rotation, sizeof(rotation));
+        memcpy(g_pe_gte.tr, translation, sizeof(translation));
+        if (PE_LoadU8(rec + 4u) == 1u) {
+            unsigned int start = PE_LoadU16(rec), count = PE_LoadU16(rec + 2u), n;
+            pe_addr_t vertices = PE_LoadU32(dest + 8u) + start * 8u;
+            for (n = 0; n < count; n += 3u, vertices += 24u) {
+                uint32_t xy[3], z[3];
+                PE_GTE_SetV0((int16_t)PE_LoadU16(vertices), (int16_t)PE_LoadU16(vertices + 2u), (int16_t)PE_LoadU16(vertices + 4u));
+                PE_GTE_SetV1((int16_t)PE_LoadU16(vertices + 8u), (int16_t)PE_LoadU16(vertices + 10u), (int16_t)PE_LoadU16(vertices + 12u));
+                PE_GTE_SetV2((int16_t)PE_LoadU16(vertices + 16u), (int16_t)PE_LoadU16(vertices + 18u), (int16_t)PE_LoadU16(vertices + 20u));
+                PE_GTE_RTPT_coordinates(xy, z);
+                for (row = 0; row < 3u; row++) {
+                    PE_StoreU32(0x800B1644u + (start + n + row) * 4u, xy[row]);
+                    PE_StoreU32(0x800A636Cu + (start + n + row) * 4u, z[row]);
+                }
+            }
+        }
     }
 }

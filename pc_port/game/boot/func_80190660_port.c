@@ -201,6 +201,7 @@ int func_80190660(void)
     if (PE_Port_ShouldStop())
         return -1;
     func_800755F0(environment + 0x5Cu);
+    if (PE_Port_ShouldStop())return -1;
 
     }
 

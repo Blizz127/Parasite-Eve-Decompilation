@@ -1,0 +1,23 @@
+[
+  {
+    "frames": 300,
+    "mode": "normal",
+    "wall_seconds": 5.370099956999184,
+    "fps_including_startup": 55.864881920678485,
+    "log": "/tmp/pe-pace1-300-normal.log"
+  },
+  {
+    "frames": 600,
+    "mode": "normal",
+    "wall_seconds": 10.137166551998234,
+    "fps_including_startup": 59.18813673646589,
+    "log": "/tmp/pe-pace1-600-normal.log"
+  },
+  {
+    "frames": 600,
+    "mode": "fast",
+    "wall_seconds": 5.967711228004191,
+    "fps_including_startup": 100.5410578823635,
+    "log": "/tmp/pe-pace1-600-fast.log"
+  }
+]

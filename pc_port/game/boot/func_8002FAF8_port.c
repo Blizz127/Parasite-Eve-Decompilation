@@ -7,20 +7,15 @@
  * 224 words 0x8002FAF8..0x8002FE78, SHA-256 67f58732…4673.
  * Sole jal from 0x64 / 184EC. JT D_80010A88 on actor+0x0E.
  *
- * Live type-2 0x64 uses code 3. Retail 2F7D8 1A680(actor,2)
- * leaves +0x0E=2 → JT[2]=2FD74. Host 2F7D8 only records that
- * jal, so tests plant +0x0E. 1A680 sites here use the same
- * Bootstrap_ReturnVoid4 cut as 2F7D8. 6DCE4 (JT 6/8/10/12/14)
- * is not this cut and is not live.
- *
- * Do not invent the record-byte-4 producer.
+ * ATK21 restores all animation calls and the 6DCE4 positional sound
+ * wrapper. The command clip and frame crossings drive record states.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 
 #define GA_D_8009D1A0_BIT 2u
 
-extern unsigned int D_8009D1A0;
+
 
 static unsigned int pe_2faf8_frame(pe_addr_t actor)
 {
@@ -36,8 +31,14 @@ static unsigned int pe_2faf8_frame(pe_addr_t actor)
 
 static void pe_2faf8_1a680(pe_addr_t actor, unsigned int command)
 {
-    Bootstrap_ReturnVoid4("func_8001A680", "func_8002FAF8",
-                          actor, command & 0xFFFFu, 0u, 0u);
+    func_8001A680_command_cut(actor,command&0xFFFFu);
+}
+
+/* 6DCE4 forwards the current battle sound bank and signed coordinates. */
+int32_t func_8006DCE4(unsigned int id, unsigned int group, int x, int y, int z)
+{
+    return func_8006DED4(PE_LoadU32(0x800B0E64u),(int)id,(int)group,
+        (int16_t)x,(int16_t)y,(int16_t)z);
 }
 
 static void pe_2faf8_activate(pe_addr_t slot, pe_addr_t actor,
@@ -125,7 +126,9 @@ int func_8002FAF8(pe_addr_t actor, unsigned int code)
         if (f >= PE_LoadU16(target + 0x1Au) && f < frame) {
             rec = PE_LoadU32(slot + 0x18u);
             pe_2faf8_1a680(target, PE_LoadU8(rec + 3u));
-            /* jal 6DCE4 not this cut (not live; +0x0E=2). */
+            func_8006DCE4(PE_LoadU16(slot+0xB2u),0u,
+                (int16_t)PE_LoadU16(target+0x268u),(int16_t)PE_LoadU16(target+0x26Au),
+                (int16_t)PE_LoadU16(target+0x26Cu));
             PE_StoreU32(target + 0x1Cu, PE_LoadU32(rec + 8u));
             PE_StoreU8(rec, 1u);
         }

@@ -9,7 +9,7 @@
  * D_800BCFFC. v0=1. Live imm 0x54.
  *
  * func_80018E84 — 12 words 0x80018E84..0x80018EB4. sh *arg0 →
- * D_800CD020, sh *arg1 → D_800CD022. v0=1. Live 0x800, 0x800.
+ * D_800BD020, sh *arg1 → D_800BD022. v0=1. Live 0x800, 0x800.
  *
  * func_80018F54 — 8 words 0x80018F54..0x80018F74.
  * D_800BCFEE &= ~0x40. v0=1.
@@ -45,10 +45,25 @@ int func_8001A374(pe_addr_t args)
     return 1;
 }
 
+/* SEW22: E2, original1A390..1A3FC (27 words). Test a fixed-point
+ * position against an embedded script polygon; arg3 is a halfword offset
+ * from the current actor's script base, arg2 is the vertex count. */
+int func_8001A390(pe_addr_t args)
+{
+    pe_addr_t actor=PE_LoadU32(0x8009D2F0u);
+    pe_addr_t polygon=PE_LoadU32(actor+0x9Cu)+
+                     (PE_LoadU32(PE_LoadU32(args+12u))<<1u);
+    int result=func_8001CAB0((int32_t)PE_LoadU32(PE_LoadU32(args)),
+                            (int32_t)PE_LoadU32(PE_LoadU32(args+4u)),
+                            polygon,PE_LoadU16(PE_LoadU32(args+8u)));
+    PE_StoreU32(PE_LoadU32(args+16u),(uint32_t)result);
+    return 1;
+}
+
 int func_80018E84(pe_addr_t args)
 {
-    PE_StoreU16(0x800CD020u, (uint16_t)PE_LoadU32(PE_LoadU32(args)));
-    PE_StoreU16(0x800CD022u, (uint16_t)PE_LoadU32(PE_LoadU32(args + 4u)));
+    PE_StoreU16(0x800BD020u, (uint16_t)PE_LoadU32(PE_LoadU32(args)));
+    PE_StoreU16(0x800BD022u, (uint16_t)PE_LoadU32(PE_LoadU32(args + 4u)));
     return 1;
 }
 

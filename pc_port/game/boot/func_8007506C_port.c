@@ -180,3 +180,16 @@ int func_8007506C(const RECT *rect, pe_addr_t data)
         "func_80076C34", "func_8007506C", 0, target,
         worker, (uintptr_t)rect, 8u, data, rect, sizeof(*rect));
 }
+
+int func_800750CC(const RECT *rect, pe_addr_t data)
+{
+    pe_addr_t table,worker,target;
+    func_80074E28(0x800118E0u,rect);
+    table=PE_LoadU32(GA_GPU_JTB_PTR);worker=PE_LoadU32(table+28u);target=PE_LoadU32(table+8u);
+    if (target==GA_GPU_DISPATCH)
+        return PE_func_80076C34_Inline8(worker,
+            (uint32_t)(uint16_t)rect->x|((uint32_t)(uint16_t)rect->y<<16u),
+            (uint32_t)(uint16_t)rect->w|((uint32_t)(uint16_t)rect->h<<16u),data);
+    return Bootstrap_ReturnInt4Indirect("func_80076C34","func_800750CC",0,target,
+        worker,(uintptr_t)rect,8u,data,rect,sizeof(*rect));
+}

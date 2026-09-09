@@ -43,6 +43,7 @@ static struct {
     int callback_oracle_dump;
     int dma_checkpoint_report;
     int skip_movie;
+    int skip_opening_menu;
     int boundary_report;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
@@ -62,6 +63,7 @@ static struct {
  * poll for close/Escape.  Host data only; never touches guest state. */
 static void PresentHook_BlitWindow(void)
 {
+    if (HostWindow_Pace()) {PE_Port_RequestStop(PE_PORT_STOP_HOST_QUIT);return;}
     HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
     (void)HostWindow_Poll();
 }
@@ -92,6 +94,7 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--callback-oracle-dump")) g_opts.callback_oracle_dump = 1;
         else if (!strcmp(a, "--dma-checkpoint-report")) g_opts.dma_checkpoint_report = 1;
         else if (!strcmp(a, "--skip-movie"))           g_opts.skip_movie = 1;
+        else if (!strcmp(a, "--skip-opening-menu"))    g_opts.skip_opening_menu = 1;
         else if (!strcmp(a, "--boundary-report"))      g_opts.boundary_report = 1;
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--vram-screenshot")) g_opts.vram_screenshot = argv[++i];
@@ -390,6 +393,7 @@ int main(int argc, char **argv) {
     PE_Port_SetFrameLimit(g_opts.max_frames);
     PE_Port_SetMainIterationLimit(g_opts.max_main_iterations);
     PE_Port_SetSkipMovie(g_opts.skip_movie);
+    PE_Port_SetSkipOpeningMenu(g_opts.skip_opening_menu);
     if (g_strict_stubs) Bootstrap_EnableStrict();
 
     /* Phase 6E-A: real Disc 1 image, read-only (never copied or staged). */
@@ -545,12 +549,14 @@ int main(int argc, char **argv) {
 
         PE_GPU_GetState(&gpu);
         fprintf(stderr,
-                "[GPU] fills=%llu mono_rects=%llu tex_rects=%llu moves=%llu "
+                "[GPU] fills=%llu mono_rects=%llu tex_rects=%llu moves=%llu polygons=%llu polygon_pixels=%llu "
                 "draw_mode_writes=%llu last_mono=0x%08X@0x%08X size=0x%08X\n",
                 (unsigned long long)gpu.fill_count,
                 (unsigned long long)gpu.mono_rectangle_count,
                 (unsigned long long)gpu.rectangle_count,
                 (unsigned long long)gpu.move_count,
+                (unsigned long long)gpu.polygon_count,
+                (unsigned long long)gpu.polygon_pixel_count,
                 (unsigned long long)gpu.draw_mode_count,
                 gpu.mono_rectangle_command, gpu.mono_rectangle_position,
                 gpu.mono_rectangle_size);

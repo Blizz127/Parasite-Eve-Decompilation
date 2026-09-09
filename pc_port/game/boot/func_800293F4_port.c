@@ -66,3 +66,36 @@ void func_800293F4_hp_cut(void)
     PE_StoreU32(rec + 0x34u, 0u);
     PE_StoreU16(rec + 0x0Eu, cur);
 }
+
+/* Complete command cancellation / status reset used by battle results.
+ * The initialization-only prefix above retains its historical callers. */
+void func_80021D4C(void)
+{
+    unsigned index=PE_LoadU8(0x8009D1D4u);
+    extern int func_80053D2C(int item);
+    while ((index&255u)<PE_LoadU8(0x8009CE3Cu)) {
+        uint32_t action=PE_LoadU16(0x800BE834u+(index&255u)*8u);
+        if (action-3u<384u) (void)func_80053D2C((int16_t)action-3);
+        index++;
+    }
+    PE_StoreU8(0x8009CE3Cu,0u); PE_StoreU8(0x8009D1D4u,0u);
+    D_8009D1A0&=~0x100u;
+    PE_StoreU32(0x8009D1A0u,PE_LoadU32(0x8009D1A0u)&~0x100u);
+}
+
+void func_800293F4(uint32_t mode)
+{
+    pe_addr_t rec;
+    uint32_t flags;
+    func_800293F4_hp_cut();
+    rec=PE_LoadU32(GA_D_8009D278); flags=PE_LoadU32(rec+0x4Cu);
+    if ((mode&255u)==1u) {
+        PE_StoreU8(0x8009D234u,90u); PE_StoreU8(0x8009D244u,1u); flags|=0x800000u;
+    } else { PE_StoreU8(0x8009D244u,0u); flags&=~0xC00000u; }
+    PE_StoreU32(rec+0x4Cu,flags&0xC0C00000u);
+    PE_StoreU8(rec+0x56u,0u); PE_StoreU8(rec+0x5Eu,0u); PE_StoreU8(rec+0x66u,0u);
+    PE_StoreU32(0x8009D2E8u,PE_LoadU32(0x8009D2E8u)&~0x10u);
+    func_80021D4C(); func_800374E8();
+    PE_StoreU16(0x8009D298u,0u); PE_StoreU8(0x8009D29Au,0u);
+    PE_StoreU8(0x8009D29Bu,0u); PE_StoreU32(0x8009D29Cu,0u);
+}

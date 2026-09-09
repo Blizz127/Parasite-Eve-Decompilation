@@ -219,3 +219,85 @@ int func_80013514(pe_addr_t args)
     PE_StoreU16(task + 8u, (uint16_t)(PE_LoadU16(task + 8u) & 0xFFDFu));
     return 1;
 }
+
+/* ENT2: 136C0..13988 in 3420.s, opcode 44 scripted X/Z movement.
+ * Targets and turning rate latch in the task. Velocity is integrated by
+ * the ordinary actor tick; arrival clamps the position and ends the wait. */
+int func_800136C0(pe_addr_t args)
+{
+    pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+    pe_addr_t task = PE_LoadU32(GA_D_8009D300);
+    uint32_t x = PE_LoadU32(actor + 0x28u), z = PE_LoadU32(actor + 0x30u);
+    uint32_t speed = PE_LoadU32(actor + 0x20u);
+    uint32_t tx, tz, vx, vz;
+    int32_t step, desired, heading, current, delta, dx, dz;
+    int32_t velocity_x, velocity_z, distance_squared, velocity_squared;
+    uint16_t flags = PE_LoadU16(task + 8u);
+
+    if (actor == PE_LoadU32(GA_D_8009D254))
+        speed = func_8003708C(0x50000u, speed);
+    speed = func_8003708C(speed, (uint32_t)PE_LoadU16(actor + 0x26u) << 4);
+    if (!(flags & 0x20u)) {
+        tx = PE_LoadU32(PE_LoadU32(args));
+        tz = PE_LoadU32(PE_LoadU32(args + 4u));
+        if (x == tx && z == tz)
+            return 1;
+        step = (int32_t)PE_LoadU32(PE_LoadU32(args + 8u));
+        PE_StoreU32(task + 0x14u, tx);
+        PE_StoreU32(task + 0x18u, tz);
+        PE_StoreU32(task + 0x1Cu, (uint32_t)step);
+        PE_StoreU16(task + 8u, (uint16_t)(flags | 0x20u));
+    } else {
+        tx = PE_LoadU32(task + 0x14u);
+        tz = PE_LoadU32(task + 0x18u);
+        step = (int32_t)PE_LoadU32(task + 0x1Cu);
+    }
+    desired = (0x1400 - func_80079FB4((int32_t)(z - tz), (int32_t)(x - tx))) & 0xFFF;
+    heading = desired;
+    if (step != 0) {
+        current = (int16_t)PE_LoadU16(actor + 0x3Au);
+        if (current < desired) {
+            delta = desired - current;
+            if (delta < 0x800) {
+                if (step < delta) heading = current + step;
+            } else if (step < delta) {
+                heading = current - step;
+                if (heading < 0 && current + 0x1000 - desired < step)
+                    heading = desired;
+            }
+        } else {
+            delta = current - desired;
+            if (delta < 0x800) {
+                if (step < delta) heading = current - step;
+            } else if (step < delta) {
+                heading = current + step;
+                if (heading >= 0x1001 && desired + 0x1000 - current < step)
+                    heading = desired;
+            }
+        }
+        heading &= 0xFFF;
+        PE_StoreU16(actor + 0x3Au, (uint16_t)heading);
+    }
+    vx = func_8003708C(0u - speed, (uint32_t)func_80077CF4(heading) << 4);
+    vz = func_8003708C(0u - speed, (uint32_t)func_80077DC4(heading) << 4);
+    PE_StoreU32(actor + 0x68u, vx);
+    PE_StoreU32(actor + 0x70u, vz);
+    dx = (int32_t)(tx - x) >> 16;
+    dz = (int32_t)(tz - z) >> 16;
+    velocity_x = (int16_t)(vx >> 16);
+    velocity_z = (int32_t)vz >> 16;
+    distance_squared = (int32_t)((uint32_t)((int64_t)dx * dx) + (uint32_t)((int64_t)dz * dz));
+    velocity_squared = (int32_t)((uint32_t)((int64_t)velocity_x * velocity_x) +
+                                (uint32_t)((int64_t)velocity_z * velocity_z));
+    if (velocity_squared < distance_squared) {
+        PE_StoreU32(GA_D_8009CE00, PE_LoadU32(GA_D_8009CE00) - 20u);
+        PE_StoreU32(task + 0x10u, 1u);
+        return 0;
+    }
+    PE_StoreU32(actor + 0x28u, tx);
+    PE_StoreU32(actor + 0x30u, tz);
+    PE_StoreU32(actor + 0x68u, 0u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU16(task + 8u, (uint16_t)(PE_LoadU16(task + 8u) & ~0x20u));
+    return 1;
+}

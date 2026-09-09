@@ -1,0 +1,15 @@
+{
+  "build": "ATK23",
+  "frame": 9930,
+  "field": "M0005I",
+  "effect_slot": "0x801861a0",
+  "state": 2,
+  "code": 117,
+  "tick": 0,
+  "owner": "0x800bf710",
+  "script_pc": "0x80190ab0",
+  "descriptor": "0x80190b44",
+  "active_children": 1,
+  "first_missing_callback": "8018F330 (mode 0)",
+  "verification": "Ordinary visible replay; debugger stopped before the missing callback. Guest state was only read."
+}

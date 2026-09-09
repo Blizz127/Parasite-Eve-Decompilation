@@ -66,6 +66,8 @@ void      PE_Callback_ResetTable(void);
  * a guest address with no host binding is a visible error (logged and
  * counted), never a silent skip. */
 void      PE_Callback_Dispatch(void);
+/* Return zero when a callback cannot return; later slots remain untouched. */
+int       PE_Callback_DispatchChecked(void);
 
 /* ── Diagnostics ────────────────────────────────────────────────────── */
 

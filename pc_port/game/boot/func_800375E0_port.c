@@ -57,7 +57,7 @@ void func_800375E0(int id, unsigned int mode, pe_addr_t list)
         PE_StoreU8(GA_D_8009CEA0, 0u);
         PE_StoreU8(GA_D_8009CEA4, 0xFFu);
         PE_StoreU8(rec + 8u, (uint8_t)mode);
-        flags &= 0xFFEEFFFFu;
+        flags &= 0xFFCFFFFFu;
         flags &= 0xFFDFFFFFu;
         PE_StoreU32(rec + 0x0Cu, flags);
         if (mode != 0u) {
@@ -80,7 +80,7 @@ void func_800375E0(int id, unsigned int mode, pe_addr_t list)
             dest = rec + 0x1Au + list_i * 6u;
             PE_StoreU8(dest, (uint8_t)(raw - (uint16_t)(quot * 10)));
             digit_i = 0u;
-            while ((quot << 16) != 0) {
+            while (((uint32_t)quot << 16) != 0u) {
                 int32_t next;
                 uint16_t cur;
 

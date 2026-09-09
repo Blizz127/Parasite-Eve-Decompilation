@@ -1,0 +1,24 @@
+{
+  "method": "Read-only capture at visible Present after F614 tick24; ordinary keyboard input; no guest state changes.",
+  "frame": 10029,
+  "effect_slot": "801861A0",
+  "effect_tick": 187,
+  "child": "801861D8",
+  "child_index": 1,
+  "child_tick": 25,
+  "aya_hp": 45,
+  "aya_max_hp": 45,
+  "queued_sounds": 0,
+  "next_boundary": {
+    "frame": 10039,
+    "callback": "8018FDC4",
+    "mode": 0,
+    "data": "8018642C"
+  },
+  "validation": {
+    "original_call_graph_cases": 73,
+    "native_cases": 1142,
+    "normal_ctest": "2/2 passed",
+    "asan_ubsan_ctest": "2/2 passed"
+  }
+}

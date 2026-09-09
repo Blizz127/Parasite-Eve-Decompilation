@@ -50,7 +50,7 @@
 #define GA_800C2022         0x800C2022u
 #define GA_800C1F80         0x800C1F80u   /* 0x800C2022 - 2*81 */
 #define GA_800A1E64         0x800A1E64u
-#define GA_800AD05C         0x800AD05Cu
+#define GA_8009D05C         0x8009D05Cu
 #define GA_800A1F84         0x800A1F84u
 #define GA_800A8034         0x800A8034u
 #define GA_800A8038         0x800A8038u
@@ -79,6 +79,17 @@ unsigned int func_80052F70(void) {
         return b + v2;
     }
     return 50u;
+}
+
+/* Retail 52F24..52F70: publish base inventory capacity and refresh the active
+ * inventory count. A different resource buffer keeps its existing count. */
+void func_80052F24(int32_t capacity)
+{
+    if (capacity >= 51)
+        capacity = 50;
+    PE_StoreU8(GA_800C0E0C, (uint8_t)capacity);
+    if (D_8009D048 == GA_800C0E48)
+        D_8009D050 = func_80052F70();
 }
 
 /* ── func_80052EB0 — two-word state setter, 3 words ────────────────────
@@ -116,7 +127,7 @@ uint32_t func_80052F0C(void) {
  * If a0 == 0 or D_8009D04C == 0:
  *   D_8009D048 = 0x800C0E48
  *   D_8009D050 = func_80052F70()
- *   D_8009D058 = 0x800AD05C
+ *   D_8009D058 = 0x8009D05C (signed addiu at retail 52E90)
  *   D_8009D064 = 2
  *
  * Else (a0 != 0 && D_8009D04C != 0):
@@ -133,7 +144,7 @@ void func_80052E30(uint32_t a0) {
         /* Allocate new path */
         D_8009D048 = GA_800C0E48;
         D_8009D050 = func_80052F70();
-        D_8009D058 = GA_800AD05C;
+        D_8009D058 = GA_8009D05C;
         D_8009D064 = 2u;
     } else {
         /* Reuse existing path */

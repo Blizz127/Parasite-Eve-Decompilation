@@ -27,6 +27,27 @@
 extern "C" {
 #endif
 
+int func_8007B290(uint32_t mode, pe_addr_t result);
+int func_8007A488(uint32_t mode, pe_addr_t result);
+void func_8007C564(void);
+void func_8007C13C(void);
+void func_8007CEAC(uint32_t channel,pe_addr_t address,uint32_t blocks,uint32_t words,
+                    uint32_t control,uint32_t interrupt,uint32_t unused);
+void func_8007F960(uint32_t status, pe_addr_t response);
+int func_8007F994(void);
+int func_8007BAC0(void);
+void func_800812F4(uint32_t mode);
+uint32_t func_80073D58(uint32_t slot, pe_addr_t handler);
+void func_8007FE24(void);
+void func_800800F4(void);
+int func_8007BBFC(void);
+void func_8007FA2C(void);
+void func_8007E5C4(void);
+void func_8007E964(uint32_t status, pe_addr_t response);
+void func_80080164(uint32_t status, pe_addr_t response);
+void func_8007EB88(uint32_t sequence, uint32_t status, pe_addr_t response);
+void func_8007E704(uint32_t status, pe_addr_t response);
+
 /* ── libgte (pc_port/platform/pe_gte.c) ─────────────────────────────── */
 /* cop2 control-register state has no guest-RAM backing; it is host-owned. */
 typedef struct {
@@ -42,12 +63,19 @@ typedef struct {
     int16_t llm[3][3]; /* C2CTRL 8-12 light matrix */
     int16_t lcm[3][3]; /* C2CTRL 16-20 color matrix */
     int32_t bk[3];    /* C2CTRL 13-15 RBK/GBK/BBK */
+    int32_t fc[3];    /* C2CTRL 21-23 RFC/GFC/BFC */
     int32_t ir[3];    /* C2DR 9-11 IR1-3 */
     int32_t mac[3];   /* C2DR 25-27 MAC1-3 */
+    int32_t ir0;      /* C2DR 8 interpolation / depth cue */
+    int32_t mac0;     /* C2DR 24 scalar result */
+    uint32_t otz;     /* C2DR 7 averaged depth */
+    uint32_t sxy[3], sz[4]; /* projection FIFOs */
+    uint32_t projection_flags; /* RTPS/RTPT result; other commands do not retain FLAG here */
     int16_t v0[3];    /* C2DR 0-1 VXY0/VZ0 */
     int16_t v1[3];    /* C2DR 2-3 VXY1/VZ1 */
     int16_t v2[3];    /* C2DR 4-5 VXY2/VZ2 */
     uint32_t rgbc;    /* C2DR 6 RGBC */
+    uint32_t lzcs, lzcr; /* C2DR 30-31 leading-sign-bit source/result */
     uint32_t rgb_fifo[3]; /* C2DR 20-22 RGB0/1/2 */
 } PeGteState;
 extern PeGteState g_pe_gte;
@@ -60,6 +88,7 @@ void func_80079024(int a);           /* SetGeomScreen: H=a */
  * bits equal to the sign bit.  Defined for every input (0 -> 32,
  * 0xFFFFFFFF -> 32); pure arithmetic, no g_pe_gte state. */
 uint32_t PE_GTE_LZCR(uint32_t v);
+void PE_GTE_SetLZCS(uint32_t v);
 
 /* Exact integer MVMVA (psx-spx): no host float.
  * cmd bits: sf@19, mx@17-18, v@15-16, cv@13-14, lm@10. */
@@ -74,10 +103,20 @@ void PE_GTE_SetV2(int16_t vx, int16_t vy, int16_t vz);
 void PE_GTE_SetRGBC(uint32_t rgbc);
 void PE_GTE_SetBK(int32_t rbk, int32_t gbk, int32_t bbk);
 void PE_GTE_MVMVA(uint32_t cmd);
+void PE_GTE_GPF(int sf, int lm);
+void PE_GTE_GPL(int sf, int lm);
+void PE_GTE_OP(int sf, int lm);
 /* Exact integer NCCT (psx-spx COP2 0x118043F). No NCLIP. No host float. */
 void PE_GTE_NCCT(void);
+void PE_GTE_RTPS_coordinates(uint32_t *xy, uint32_t *z);
+void PE_GTE_RTPT_coordinates(uint32_t xy[3], uint32_t z[3]);
+void PE_GTE_AVSZ3(const uint32_t z[3]);
+void PE_GTE_AVSZ4(const uint32_t z[4]);
+int32_t PE_GTE_NCLIP(void);
 
 /* ── libetc (pc_port/platform/pe_libetc.c) ──────────────────────────── */
+void func_80073C74(uint32_t flag); /* BIOS ChangeClearPAD */
+uint32_t func_80073C84(uint32_t counter,uint32_t flag); /* ChangeClearRCnt,0..3 */
 void func_80073C94(void);            /* ResetCallback */
 pe_addr_t func_80073CC4(uint32_t source, pe_addr_t handler);
 pe_addr_t func_800740D0(uint32_t source, pe_addr_t handler);
@@ -118,6 +157,12 @@ void PE_Irq_GetSource0BiosState(PeIrqSource0BiosState *out);
  * Never returns -1 at boot (event classes used never exhaust). */
 int  PE_Event_Open(uint32_t cls, uint32_t spec, uint32_t mode, pe_addr_t handler);
 int  PE_Event_Enable(int handle);
+int  PE_Event_SpuDmaEnabled(void);
+int  PE_Event_DeliverSpuDma(void);
+int  PE_Event_ConsumeSpuDma(int handle);
+/* Host scheduling of the command-RAM portion of the audio timer. */
+void PE_Event_ServiceAudioCommands(void);
+void func_8008CA84(void);
 
 /* ── libgpu (pc_port/platform/pe_libgpu.c) ──────────────────────────── */
 pe_addr_t func_80074924(pe_addr_t env, int x, int y, int w, int h); /* SetDefDrawEnv */
@@ -125,6 +170,10 @@ pe_addr_t func_800749D8(pe_addr_t env, int x, int y, int w, int h); /* SetDefDis
 int       func_80074A44(int mode);   /* ResetGraph */
 int       func_80074BB8(int level);  /* SetGraphDebug */
 pe_addr_t func_80075424(pe_addr_t env); /* PutDrawEnv */
+void PE_SetTexWindowValues75B4C(pe_addr_t packet,const int16_t rect[4]);
+void PE_SetDrawAreaValues75B84(pe_addr_t packet,const int16_t rect[4]);
+void func_80075B4C(pe_addr_t packet,pe_addr_t rect);
+void func_80075B84(pe_addr_t packet,pe_addr_t rect);
 void      func_800754E4(pe_addr_t ot, pe_addr_t env); /* DrawOTagEnv software */
 
 /* ── libsnd (pc_port/platform/pe_libsnd.c) ──────────────────────────── */
@@ -137,6 +186,8 @@ void func_80086FF8(void);            /* stream command 0xF0 */
 void func_80087024(void);            /* stream command 0xF1 */
 void func_8008682C(int a);           /* stream command select */
 int  func_8008CBA8(void);            /* streaming command dispatcher */
+void func_8008D140(pe_addr_t attributes); /* masked SPU mode registers */
+void func_8008CB54(uint32_t mode); /* SPU reverb mode transition */
 
 /* ── libcard (pc_port/platform/pe_libcard.c) ────────────────────────── */
 void func_800409B4(void);            /* InitCARD + StartCARD */
@@ -165,6 +216,11 @@ int32_t func_80191B64(pe_addr_t a0);
 int  func_80080CC8(int v);           /* exchange D_8009AFC0 */
 int  func_8007F7A8(void);            /* getter D_8009B590 */
 int  func_80080C48(pe_addr_t fp);    /* CdPosToInt: BCD mm/ss/ff @fp → LBA */
+uint32_t func_8007EE84(uint32_t command,pe_addr_t param,uint32_t extra,uint32_t callback);
+void func_80080998(pe_addr_t dest,pe_addr_t source);
+int func_8007FC64(pe_addr_t response);
+int func_8007F418(uint32_t sequence,pe_addr_t response);
+int func_80080DC4(int command,pe_addr_t param,pe_addr_t response);
 int  func_80080D5C(int command, pe_addr_t param, pe_addr_t result);
 uint32_t PE_Cd_GetSetlocRaw(void);    /* host telemetry: last proven CdlLOC */
 pe_addr_t func_800824C8(pe_addr_t callback);
@@ -177,6 +233,12 @@ int  func_800811E4(pe_addr_t fp);    /* read poll: 0 done, -1 timeout */
 pe_addr_t func_8007E6B0(void);       /* request-slot ring allocator */
 void func_80080950(pe_addr_t dst, pe_addr_t src); /* 4-byte copy-or-clear */
 void func_8007C214(void);            /* streaming DMA-completion callback */
+pe_addr_t func_8007A930(int32_t lba,pe_addr_t location);
+int32_t func_8007AA34(pe_addr_t location);
+int32_t func_8007C2A0(pe_addr_t location);
+pe_addr_t func_8007A4BC(pe_addr_t callback);
+pe_addr_t func_8007A8EC(pe_addr_t callback);
+void func_8007A2A4(void);
 void func_8007C394(uint32_t sector); /* stream-record index update */
 int  func_8007F0C8(uint32_t mode, pe_addr_t loc, int count, uint32_t a3,
                     pe_addr_t buf);  /* CdlReadS queue issue */
@@ -190,6 +252,8 @@ int  func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
                    uint32_t mode);   /* CD command-issue controller */
 int  func_8007FCFC(uint32_t cmd, uint32_t data); /* CD issue wrapper */
 char *func_800719F4(char *destination, const char *source); /* BIOS A(15h) strcat */
+void func_8010BFA0(pe_addr_t command_block,uint32_t mode);
+void func_8010C01C(pe_addr_t destination,uint32_t words);
 void func_8010BE3C(int mode);         /* libpress DecDCTReset wrapper */
 
 /* ── streaming wrappers (pc_port/game/boot/, Phase 6E-B16) ────────── */

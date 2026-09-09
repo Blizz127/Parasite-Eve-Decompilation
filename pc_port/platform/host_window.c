@@ -6,6 +6,8 @@
  */
 #include "host_window.h"
 #include "host_framebuffer.h"
+#include "host_frame_pacer.h"
+#include "host_window_scale.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,15 +27,19 @@ typedef unsigned long KeySym;
 #define XK_x      0x0078
 #define XK_Z      0x005A
 #define XK_X      0x0058
+#define XK_F6     0xFFC3
 #define KeyPress    2
 #define KeyRelease  3
 #define ButtonPress 4
 #define Expose     12
+#define ConfigureNotify 22
+#define FocusOut    10
 #define ClientMessage 33
 #define NoEventMask 0
 #define KeyPressMask    (1L<<0)
 #define ExposureMask    (1L<<15)
 #define StructureNotifyMask (1L<<17)
+#define FocusChangeMask (1L<<21)
 #define SubstructureNotifyMask (1L<<19)
 
 /* ── Xlib types ─────────────────────────────────────────────────────── */
@@ -52,7 +58,9 @@ typedef struct { int type; unsigned long serial; int send_event; void *display; 
                  int x, y, width, height, count; } XExposeEvent;
 typedef struct { int type; unsigned long serial; int send_event; void *display; Window window;
                  Atom message_type; int format; long data[5]; } XClientMessageEvent;
-typedef union { int type; XAnyEvent xany; XKeyEvent xkey; XExposeEvent xexpose; XClientMessageEvent xclient; long pad[24]; } XEvent;
+typedef struct { int type; unsigned long serial; int send_event; void *display; Window event, window;
+                 int x, y, width, height, border_width; Window above; int override_redirect; } XConfigureEvent;
+typedef union { int type; XConfigureEvent xconfigure; XAnyEvent xany; XKeyEvent xkey; XExposeEvent xexpose; XClientMessageEvent xclient; long pad[24]; } XEvent;
 
 typedef struct { void *ext_data; int depth, bits_per_pixel, scanline_pad; } XImage;
 
@@ -68,9 +76,11 @@ static int   (*XStoreName)(void *, Window, const char *);
 static GC     (*XCreateGC)(void *, Drawable, unsigned long, void *);
 static int   (*XSelectInput)(void *, Window, long);
 static int   (*XNextEvent)(void *, XEvent *);
+static int   (*XPeekEvent)(void *, XEvent *);
 static int   (*XPending)(void *);
 static KeySym (*XLookupKeysym)(XKeyEvent *, int);
 static XImage *(*XCreateImage)(void *, void *, unsigned, int, int, char *, unsigned, unsigned, int, int);
+static int   (*XDestroyImage)(XImage *);
 static int   (*XPutImage)(void *, Drawable, GC, XImage *, int, int, int, int, unsigned, unsigned);
 static int   (*XFlush)(void *);
 static int   (*XDestroyWindow)(void *, Window);
@@ -89,6 +99,9 @@ static int g_close_requested = 0;
 
 int g_host_window_open = 0;
 static uint16_t g_sony_held = 0;
+static HostFramePacer g_pacer;
+static int g_fast_forward, g_speed_key_held;
+static char g_title[512];
 
 static void *xlib_sym(const char *name) {
     void *p = dlsym(g_xlib, name);
@@ -107,14 +120,31 @@ static void bind_all(void) {
     XCreateGC           = xlib_sym("XCreateGC");
     XSelectInput        = xlib_sym("XSelectInput");
     XNextEvent          = xlib_sym("XNextEvent");
+    XPeekEvent          = xlib_sym("XPeekEvent");
     XPending            = xlib_sym("XPending");
     XLookupKeysym       = xlib_sym("XLookupKeysym");
     XCreateImage        = xlib_sym("XCreateImage");
+    XDestroyImage       = xlib_sym("XDestroyImage");
     XPutImage           = xlib_sym("XPutImage");
     XFlush              = xlib_sym("XFlush");
     XDestroyWindow      = xlib_sym("XDestroyWindow");
     XInternAtom         = xlib_sym("XInternAtom");
     XSetWMProtocols     = xlib_sym("XSetWMProtocols");
+}
+
+static int resize_image(int width, int height)
+{
+    if (width <= 0 || height <= 0) return 0;
+    if (g_ximg && width == g_win_w && height == g_win_h) return 0;
+    uint8_t *buffer = calloc((size_t)width * (size_t)height, 4u);
+    if (!buffer) return -1;
+    XImage *image = XCreateImage(g_dpy, NULL, 24, 2, 0, (char *)buffer,
+                                 width, height, 32, 0);
+    if (!image) { free(buffer); return -1; }
+    if (g_ximg) XDestroyImage(g_ximg); /* owns its pixel buffer */
+    g_ximg = image; g_imgbuf = buffer;
+    g_win_w = width; g_win_h = height;
+    return 0;
 }
 
 int HostWindow_Open(const char *display, int width, int height,
@@ -137,17 +167,19 @@ int HostWindow_Open(const char *display, int width, int height,
 
     g_win = XCreateSimpleWindow(g_dpy, root, 200, 200, g_win_w, g_win_h,
                                  4, 0xFFFFFF, 0xFFFFFF);
-    XStoreName(g_dpy, g_win, title);
-    XSelectInput(g_dpy, g_win, ExposureMask | KeyPressMask | (1L<<1) | StructureNotifyMask);
+    g_fast_forward=0;g_speed_key_held=0;
+    HostWindow_SetTitle(title);
+    XSelectInput(g_dpy, g_win, ExposureMask | KeyPressMask | (1L<<1) | StructureNotifyMask | FocusChangeMask);
     g_wm_delete = XInternAtom(g_dpy, "WM_DELETE_WINDOW", 0);
     XSetWMProtocols(g_dpy, g_win, &g_wm_delete, 1);
     XMapWindow(g_dpy, g_win);
 
     g_gc = XCreateGC(g_dpy, g_win, 0, NULL);
-    g_imgbuf = calloc(g_win_w * g_win_h, 4);
-    g_ximg = XCreateImage(g_dpy, NULL, 24, 2, 0, (char *)g_imgbuf, g_win_w, g_win_h, 32, 0);
+    if (resize_image(g_win_w, g_win_h) != 0) { HostWindow_Close(); return -1; }
 
     g_close_requested = 0;
+    g_sony_held = 0;
+    memset(&g_pacer,0,sizeof(g_pacer));
     g_host_window_open = 1;
 
     XFlush(g_dpy);
@@ -158,29 +190,18 @@ int HostWindow_Open(const char *display, int width, int height,
 
 void HostWindow_Blit(const uint8_t *rgb, int fb_w, int fb_h)
 {
-    if (!g_ximg || !g_imgbuf) return;
-    int scale_x = g_win_w / fb_w;
-    int scale_y = g_win_h / fb_h;
-    if (scale_x < 1) scale_x = 1;
-    if (scale_y < 1) scale_y = 1;
-    for (int oy = 0; oy < g_win_h; oy++) {
-        int sy = oy / scale_y;
-        if (sy >= fb_h) sy = fb_h - 1;
-        uint8_t *dst = g_imgbuf + oy * g_win_w * 4;
-        for (int ox = 0; ox < g_win_w; ox++) {
-            int sx = ox / scale_x;
-            if (sx >= fb_w) sx = fb_w - 1;
-            const uint8_t *src = rgb + (sy * fb_w + sx) * 3;
-            *dst++ = src[2]; *dst++ = src[1]; *dst++ = src[0]; *dst++ = 0;
-        }
-    }
+    if (!g_ximg || !g_imgbuf || !rgb || fb_w <= 0 || fb_h <= 0) return;
+    HostWindow_ScaleBGRA(g_imgbuf, g_win_w, g_win_h, rgb, fb_w, fb_h);
     XPutImage(g_dpy, g_win, g_gc, g_ximg, 0, 0, 0, 0, g_win_w, g_win_h);
     XFlush(g_dpy);
 }
 
 void HostWindow_SetTitle(const char *title)
 {
-    if (g_dpy && g_win) { XStoreName(g_dpy, g_win, title); XFlush(g_dpy); }
+    char label[560];
+    if (title) snprintf(g_title,sizeof(g_title),"%s",title);
+    snprintf(label,sizeof(label),"%s [%s]",g_title,g_fast_forward?"Fast-forward":"Normal speed");
+    if (g_dpy && g_win) { XStoreName(g_dpy, g_win, label); XFlush(g_dpy); }
 }
 
 int HostWindow_Poll(void)
@@ -191,9 +212,34 @@ int HostWindow_Poll(void)
         XNextEvent(g_dpy, &ev);
         if (ev.type == Expose) {
             /* Redraw: blit current framebuffer again (caller does this) */
+        } else if (ev.type == ConfigureNotify) {
+            if (resize_image(ev.xconfigure.width, ev.xconfigure.height) != 0) {
+                fprintf(stderr, "[WINDOW] resize allocation failed\n");
+                g_close_requested = 1;
+                return 1;
+            }
+        } else if (ev.type == FocusOut) {
+            g_sony_held = 0;
+            g_speed_key_held = 0;
         } else if (ev.type == KeyPress || ev.type == KeyRelease) {
             KeySym ks = XLookupKeysym(&ev.xkey, 0);
             uint16_t bit = 0;
+            if (ks == XK_F6) {
+                /* X11 auto-repeat may synthesize release/press pairs. */
+                if (ev.type==KeyRelease && XPending(g_dpy)) {
+                    XEvent next;XPeekEvent(g_dpy,&next);
+                    if (next.type==KeyPress && next.xkey.keycode==ev.xkey.keycode &&
+                        next.xkey.time==ev.xkey.time) continue;
+                }
+                if (ev.type==KeyPress && !g_speed_key_held) {
+                    g_fast_forward=!g_fast_forward;
+                    memset(&g_pacer,0,sizeof(g_pacer));
+                    HostWindow_SetTitle(NULL);
+                    fprintf(stderr,"[WINDOW] %s (F6 toggles speed)\n",g_fast_forward?"Fast-forward":"Normal speed: 59.94 Hz");
+                }
+                g_speed_key_held=ev.type==KeyPress;
+                continue;
+            }
             if (ks == XK_Escape) { g_close_requested = 1; return 1; }
             if (ks == XK_Return || ks == XK_space || ks == XK_z ||
                 ks == XK_x || ks == XK_Z || ks == XK_X)
@@ -206,6 +252,24 @@ int HostWindow_Poll(void)
                 bit = 0x0040u;
             else if (ks == XK_Left)
                 bit = 0x0080u;
+            else if (ks == 'c' || ks == 'C')
+                bit = 0x2000u; /* Circle */
+            else if (ks == 'v' || ks == 'V')
+                bit = 0x1000u; /* Triangle */
+            else if (ks == 's' || ks == 'S')
+                bit = 0x8000u; /* Square */
+            else if (ks == 'q' || ks == 'Q')
+                bit = 0x0400u; /* L1 */
+            else if (ks == 'e' || ks == 'E')
+                bit = 0x0800u; /* R1 */
+            else if (ks == '1')
+                bit = 0x0100u; /* L2 */
+            else if (ks == '3')
+                bit = 0x0200u; /* R2 */
+            else if (ks == 0xFF09u)
+                bit = 0x0001u; /* Tab: Select */
+            else if (ks == 'p' || ks == 'P')
+                bit = 0x0008u; /* Start */
             if (bit != 0u) {
                 if (ev.type == KeyPress)
                     g_sony_held |= bit;
@@ -222,6 +286,34 @@ int HostWindow_Poll(void)
 uint16_t HostWindow_PadRaw(void)
 {
     return (uint16_t)(~g_sony_held);
+}
+
+static int monotonic_ns(uint64_t *out)
+{
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC,&now)!=0) {perror("[WINDOW] monotonic clock");return 0;}
+    *out=(uint64_t)now.tv_sec*UINT64_C(1000000000)+(uint64_t)now.tv_nsec;
+    return 1;
+}
+
+int HostWindow_Pace(void)
+{
+    uint64_t now,deadline;
+    if (g_fast_forward) return HostWindow_Poll();
+    if (!monotonic_ns(&now)) return 1;
+    deadline=HostFramePacer_Deadline(&g_pacer,now);
+    for (;;) {
+        struct timespec delay;
+        uint64_t remaining;
+        if (HostWindow_Poll() || !monotonic_ns(&now)) return 1;
+        if (g_fast_forward) return 0;
+        if (now>=deadline) return 0;
+        remaining=deadline-now;
+        delay.tv_sec=0;
+        delay.tv_nsec=(long)(remaining>4000000u?4000000u:remaining);
+        /* Recheck the absolute deadline after interruptions and oversleep. */
+        (void)nanosleep(&delay,NULL);
+    }
 }
 
 int HostWindow_Run(int milliseconds)
@@ -244,7 +336,8 @@ int HostWindow_Run(int milliseconds)
 
 void HostWindow_Close(void)
 {
-    free(g_imgbuf); g_imgbuf = NULL; g_ximg = NULL;
+    if (g_ximg) XDestroyImage(g_ximg);
+    g_imgbuf = NULL; g_ximg = NULL;
     g_gc = 0; g_win = 0;
     if (g_dpy) { XCloseDisplay(g_dpy); g_dpy = NULL; }
     if (g_xlib) { dlclose(g_xlib); g_xlib = NULL; }

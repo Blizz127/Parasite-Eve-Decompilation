@@ -66,6 +66,92 @@ void func_8003D050_ptr14_cut(pe_addr_t dest, pe_addr_t obj)
     PE_StoreU32(dest + 0x20u, cursor);
 }
 
+/* Retail 3D0F0..3D5A4: packet headers and UV payloads. The returned
+ * cursor is s1 at 3D5D8; packet coordinates/colors remain for pose/draw. */
+pe_addr_t func_8003D050_packets(pe_addr_t dest)
+{
+    static const uint8_t stride[4] = {52, 40, 36, 28};
+    static const uint8_t code[4] = {0x3C, 0x34, 0x38, 0x30};
+    static const uint8_t semi_type[4] = {11, 16, 21, 26};
+    pe_addr_t obj = PE_LoadU32(dest);
+    pe_addr_t packet = PE_LoadU32(dest + 0x54u);
+    pe_addr_t geometry = PE_LoadU32(dest + 0x10u);
+    pe_addr_t uv;
+    unsigned int kind, i, bank, vertex;
+    if (!PE_LoadU16(dest + 0xBAu))
+        return packet;
+    for (kind = 0; kind < 4u; kind++) {
+        unsigned int count = PE_LoadU16(obj + 8u + kind * 2u);
+        for (i = 0; i < count; i++, geometry += 12u) {
+            uint8_t command = code[kind];
+            if (PE_LoadU8(geometry + 3u) == semi_type[kind])
+                command |= 2u;
+            for (bank = 0; bank < 2u; bank++, packet += stride[kind]) {
+                PE_StoreU8(packet + 3u, (uint8_t)(stride[kind] / 4u - 1u));
+                PE_StoreU8(packet + 7u, command);
+            }
+        }
+    }
+    uv = PE_LoadU32(dest + 0x20u) + ((PE_LoadU16(obj + 0x18u) + 3u) & ~3u);
+    {
+        pe_addr_t cursor = PE_LoadU32(dest + 0x54u);
+        for (kind = 0; kind < 2u; kind++) {
+            unsigned int vertices = 4u - kind;
+            unsigned int count = PE_LoadU16(obj + 8u + kind * 2u);
+            for (i = 0; i < count; i++, uv += vertices * 4u) {
+                for (bank = 0; bank < 2u; bank++, cursor += stride[kind]) {
+                    for (vertex = 0; vertex < vertices; vertex++) {
+                        PE_StoreU8(cursor + 12u + vertex * 12u, PE_LoadU8(uv + vertex * 4u));
+                        PE_StoreU8(cursor + 13u + vertex * 12u, PE_LoadU8(uv + vertex * 4u + 1u));
+                    }
+                    PE_StoreU16(cursor + 14u, PE_LoadU16(uv + 2u));
+                    PE_StoreU16(cursor + 26u, PE_LoadU16(uv + 6u));
+                }
+            }
+        }
+    }
+    return packet;
+}
+
+/* Retail 3D94C..3DBE4. a3 is unused by the original leaf. */
+void func_8003D94C(pe_addr_t dest, int x, int y, int unused, int palette_y)
+{
+    pe_addr_t packet = PE_LoadU32(dest + 0x54u);
+    pe_addr_t obj = PE_LoadU32(dest);
+    int sx = (int16_t)x, sy = (int16_t)y;
+    int page = ((sx >> 6) - 8) * 2 + (sy >> 7) + (sy >> 8) * 30;
+    uint32_t page_delta;
+    uint32_t clut_delta = (uint32_t)palette_y * 64u - 0x7080u;
+    unsigned int kind, i, bank, vertex;
+    (void)unused;
+    if (sx == 0x3C0) {
+        if (PE_LoadU16(packet + 26u) == 31u)
+            return;
+        page_delta = (uint32_t)((int16_t)page >> 1);
+    } else {
+        page_delta = (uint32_t)page >> 1;
+    }
+    for (kind = 0; kind < 2u; kind++) {
+        unsigned int count = PE_LoadU16(obj + 8u + kind * 2u);
+        unsigned int stride = kind ? 40u : 52u;
+        for (i = 0; i < count; i++) {
+            for (bank = 0; bank < 2u; bank++, packet += stride) {
+                uint32_t adjustment = page_delta;
+                if (sy == 128) {
+                    if (PE_LoadU8(packet + 13u) >= 128u)
+                        adjustment++;
+                    for (vertex = 0; vertex < 4u - kind; vertex++) {
+                        pe_addr_t v = packet + 13u + vertex * 12u;
+                        PE_StoreU8(v, (uint8_t)(PE_LoadU8(v) + 128u));
+                    }
+                }
+                PE_StoreU16(packet + 26u, (uint16_t)(PE_LoadU16(packet + 26u) + adjustment));
+                PE_StoreU16(packet + 14u, (uint16_t)(PE_LoadU16(packet + 14u) + clut_delta));
+            }
+        }
+    }
+}
+
 int func_8003D050_post_3d94c_skip_cut(pe_addr_t dest, pe_addr_t stream)
 {
     pe_addr_t obj;
@@ -155,7 +241,7 @@ void func_8003D050_epilogue_cut(pe_addr_t dest, int skipped)
     PE_StoreU16(dest + 0x28u, 0u);
     PE_StoreU32(dest + 0x24u, 0u);
     PE_StoreU16(dest + 0x2Au, 0u);
-    PE_StoreU8(dest + 0x9Fu, (uint8_t)D_8009CDDC);
+    PE_StoreU8(dest + 0x9Fu, (uint8_t)PE_LoadU32(0x8009CDDCu));
     obj = PE_LoadU32(dest + 0x00u);
     if (obj != 0u) {
         half = PE_LoadU16(obj + 6u);
@@ -176,7 +262,7 @@ void func_8003D050_epilogue_cut(pe_addr_t dest, int skipped)
 /*
  * PE-BTL119 — 3D834 (68 words). a1==0 skips the clip bind and
  * jals 3A088. Both arms 3DFD8(B1638, dest+52, 1), 3B97C, two
- * 3BCE0 with D_8009CDDC toggled. 39B74 is a no-op when clip=0.
+ * 3BCE0 with PE_LoadU32(0x8009CDDCu) toggled. 39B74 is a no-op when clip=0.
  */
 #define GA_B1638  0x800B1638u
 #define GA_91A38  0x80091A38u
@@ -195,9 +281,9 @@ void func_8003D834(pe_addr_t dest, pe_addr_t clip, int a2, pe_addr_t bea40)
         func_8003DFD8(GA_91A38, dest + 52u, 1);
         func_80039B74(dest, clip, (int)(int16_t)a2, 0);
     }
-    func_8003A088_mode0_empty_cut(dest);
+    func_8003A088_mode0_walk_cut(dest);
     func_8003DFD8(GA_B1638, dest + 52u, 1);
-    func_8003B97C_empty_cut(dest, bea40);
+    func_8003B97C_lighting_cut(dest, bea40);
     half = (int16_t)PE_LoadU16(GA_9CDDC);
     func_8003BCE0(dest, 1, (int)half);
     word = PE_LoadU32(GA_9CDDC) ^ 1u;

@@ -24,10 +24,13 @@ typedef uint32_t pe_addr_t;
 #define PE_RAM_BASE  0x80000000u
 #define PE_RAM_SIZE  0x00200000u    /* 2 MiB */
 #define PE_RAM_END   (PE_RAM_BASE + PE_RAM_SIZE)
+#define PE_SCRATCHPAD_BASE 0x1F800000u
+#define PE_SCRATCHPAD_SIZE 0x400u
 
 /* ── Lifecycle ──────────────────────────────────────────────────────── */
 
 void  PE_RamInit(void);       /* one-time allocation, deterministic zero-fill */
+uint64_t PE_RamGeneration(void); /* invalidates host caches after init/reset */
 void  PE_RamReset(void);      /* zero-fill the existing allocation (allocates if needed) */
 void  PE_RamDestroy(void);    /* free internal allocation  */
 
@@ -35,6 +38,9 @@ void  PE_RamDestroy(void);    /* free internal allocation  */
 
 bool  PE_AddressIsRam(pe_addr_t address);
 bool  PE_RangeIsRam(pe_addr_t address, size_t size);
+/* PS1 fast RAM is a separate 1 KiB authority at 1F800000/9F800000.
+ * It is not main RAM or a DMA source; BF800000 is not a valid alias. */
+bool  PE_RangeIsScratchpad(pe_addr_t address, size_t size);
 
 /* Add a delta to a guest address with overflow checking.
  * Returns false and sets result=0 on overflow or out-of-range. */
@@ -42,7 +48,7 @@ bool  PE_AddAddress(pe_addr_t base, uint32_t delta, pe_addr_t *result);
 
 /* ── Translation to host pointer ────────────────────────────────────── */
 
-/* Call only after validating the range.  Never hold the pointer across
+/* Accepts validated main RAM or scratchpad. Never hold the pointer across
  * store operations that might invalidate the translation. */
 void       *PE_Translate(pe_addr_t address, size_t size);
 const void *PE_TranslateConst(pe_addr_t address, size_t size);

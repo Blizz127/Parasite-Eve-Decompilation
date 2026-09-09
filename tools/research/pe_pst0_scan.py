@@ -291,7 +291,11 @@ def parse_script_command(data: bytes, offset: int, end: int) -> tuple[dict, int]
     size = 8 + argc * 4
     if offset + size > end:
         return None
-    modes = tuple((header >> (17 + index * 3)) & 7 for index in range(argc))
+    # Original17018 switches to the second header word after argument4.
+    second = _u32le(data, offset + 4)
+    modes = tuple(((header >> (17 + index * 3)) if index < 5
+                   else (second >> ((index - 5) * 3))) & 7
+                  for index in range(argc))
     args = struct.unpack_from(f"<{argc}I", data, offset + 8) if argc else ()
     return (
         {

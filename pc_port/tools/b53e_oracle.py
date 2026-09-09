@@ -481,10 +481,10 @@ class Machine:
         self.regs[2] = u32(expected.result)
         return resume_pc
 
-    def run(self, rect: int, source: int, max_steps: int = 100000) -> int:
+    def run(self, rect: int, source: int, max_steps: int = 100000, *, entry: int = WORKER) -> int:
         self.regs[4] = u32(rect)
         self.regs[5] = u32(source)
-        pc = WORKER
+        pc = entry
 
         while self.steps < max_steps:
             word = self.fetch(pc)

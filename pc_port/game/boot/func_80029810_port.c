@@ -8,13 +8,15 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "game_port.h"
+#include "pe_sdk.h"
 
 #define GA_RECORD_P       0x8009D278u
 #define GA_ACTOR_P        0x8009D254u
 #define GA_COMMAND_TABLE  0x800B0E98u
 #define GA_VALUE_D27C     0x8009D27Cu
 #define GA_OVERLAY        0x800B0CD8u
-#define CALLBACK_2D268    0x8002D268u
+#define CALLBACK_1D268    0x8001D268u /* lui8002 + signed addiuD268 */
 
 /*
  * ROM 0x8006C140..0x8006C174 (Writer B clip loop inside func_8006BECC
@@ -62,14 +64,17 @@ extern int func_8006E7E8(void);
 #define MASK_24_BECC   0x00FFFFFFu
 
 /*
- * PE-BTL90 — func_8006BECC dest-enter Writer B (states 4/5/6).
+ * func_8006BECC — character texture and model loading, 6BECC..6C1CC.
  *
+ * States 1/2 load and poll the texture package at overlay+0x194 from
+ * D_800930D8[CE2+3]..[CE2+4]. State 3 uploads its counted +0x28 entries.
  * State 4 @ 0x8006C068: 6E6A8 into overlay+0x154 from
  * D_800930D8[CE2+8]..[CE2+9] + D_800B0DD8.
  * State 5 @ 0x8006C0AC: 6E7E8 poll; -1 retries state 4.
  * State 6 @ 0x8006C0E4: 6C118 B0E70[0] + 6C140 type-0 bind,
  * CE3=CE2, +0xEC=0, overlay &= ~0x200000, return 0.
- * Other states stay fail-closed (return 1).
+ * State 0 selects reload on overlay&0x200000, otherwise binds the
+ * retained model. State 2 also observes the retail actor-transition gate.
  */
 int func_8006BECC(void)
 {
@@ -79,7 +84,6 @@ int func_8006BECC(void)
     pe_addr_t package;
     pe_addr_t section;
     uint32_t packed;
-    uint32_t count;
     uint16_t start;
     uint16_t end;
     int status;
@@ -96,10 +100,62 @@ int func_8006BECC(void)
             /* State 1 reloads dest+0x194. No dest means nothing to do. */
             if (PE_LoadU32(GA_OVERLAY + 0x194u) < 0x80000000u)
                 return 0;
+            state = 1u;
+        } else {
+            state = 6u;
+        }
+        PE_StoreU8(GA_OVERLAY + 0xECu, state);
+    }
+
+    if (state == 1u) {
+        pe_addr_t texture = PE_LoadU32(GA_OVERLAY + 0x194u);
+        if (texture < 0x80000000u)
+            return 0;
+        start = PE_LoadU16(GA_D_800930D8 + (uint32_t)(ce2 + 3u) * 2u);
+        end = PE_LoadU16(GA_D_800930D8 + (uint32_t)(ce2 + 4u) * 2u);
+        lba = (int)(PE_LoadU32(GA_D_800B0DD8) + start);
+        status = func_8006E6A8(lba, texture, (int)end - (int)start);
+        if (status != -1)
+            PE_StoreU8(GA_OVERLAY + 0xECu, 2u);
+        return 1;
+    }
+
+    if (state == 2u) {
+        uint32_t flags;
+        status = func_8006E7E8();
+        if (status == -1) {
             PE_StoreU8(GA_OVERLAY + 0xECu, 1u);
             return 1;
         }
-        state = 6u;
+        if (status != 0)
+            return 1;
+        flags = PE_LoadU32(GA_OVERLAY);
+        if ((flags & 0x20000u) != 0u) {
+            if ((flags & 0x80000u) == 0u && PE_LoadU8(0x8009D25Cu) < 2u)
+                return 1;
+            PE_StoreU32(GA_OVERLAY, flags | 0x40000u);
+        }
+        state = 3u;
+        PE_StoreU8(GA_OVERLAY + 0xECu, state);
+    }
+
+    if (state == 3u) {
+        pe_addr_t texture = PE_LoadU32(GA_OVERLAY + 0x194u);
+        pe_addr_t metadata = texture + PE_LoadU32(texture + 4u);
+        pe_addr_t entry;
+        uint32_t issued = 0u;
+        packed = PE_LoadU32(metadata + 0x28u);
+        entry = texture + (packed & MASK_22_BECC);
+        while (issued < (PE_LoadU32(metadata + 0x28u) >> 22)) {
+            func_8006E1C0(entry, texture);
+            entry += 0x14u;
+            issued++;
+        }
+        /* The host CD adapter copies on issue. Finish these guest-backed
+         * uploads before later loaders can reuse the staging package. */
+        func_80074DC0(0);
+        state = 4u;
+        PE_StoreU8(GA_OVERLAY + 0xECu, state);
     }
 
     if (state == 4u) {
@@ -128,7 +184,7 @@ int func_8006BECC(void)
     }
 
     if (state != 6u)
-        return 1;
+        return 0;
 
     package = dest;
     if (package < 0x80000000u)
@@ -151,6 +207,14 @@ int func_8006BECC(void)
     return 0;
 }
 
+/* Original command headers can use physical RAM addresses, including zero.
+ * Preserve the published pointer and map only its byte read to native RAM. */
+static uint8_t pe_command_frame_count(pe_addr_t resource)
+{
+    if (resource < 0x200000u) resource |= 0x80000000u;
+    return PE_LoadU8(resource + 2u);
+}
+
 void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)
 {
     unsigned int type;
@@ -167,7 +231,84 @@ void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)
     flags = PE_LoadU32(actor + 0x98u) & ~0x200u;
     PE_StoreU32(actor + 0x98u, flags);
     PE_StoreU8(actor + 0x0Fu,
-               (uint8_t)((PE_LoadU8(resource + 2u) - 1u) & 0xFFu));
+               (uint8_t)((pe_command_frame_count(resource) - 1u) & 0xFFu));
+    if (PE_LoadU32(actor+0x98u)&0x100000u) {
+        pe_addr_t child=PE_LoadU32(0x8009D20Cu);
+        while (child) {
+            if (PE_LoadU32(child+0x18Cu)==actor && (PE_LoadU32(child+0x98u)&0x200000u))
+                func_8001A680_command_cut(child,command&0xFFFFu);
+            child=PE_LoadU32(child+4u);
+        }
+    }
+}
+
+/* 1A784..1A890: select a clip without restarting it when unchanged,
+ * and propagate the selection to attached actors that share animation. */
+void func_8001A784(pe_addr_t actor, unsigned int command)
+{
+    pe_addr_t child;
+    uint32_t flags;
+    if (PE_LoadU8(actor + 0xEu) != (command & 0xFFFFu)) {
+        unsigned int type = PE_LoadU8(actor + 0xCu);
+        pe_addr_t resource;
+        /* Unlike 1A680, this local reset must not restart descendants.
+         * Each descendant makes its own unchanged-command check below. */
+        PE_StoreU32(actor + 0x14u, 0u);
+        PE_StoreU32(actor + 0x18u, 0u);
+        PE_StoreU8(actor + 0xEu, (uint8_t)command);
+        resource = PE_LoadU32(GA_COMMAND_TABLE + type * 192u
+                             + (command & 0xFFFFu) * 4u);
+        PE_StoreU32(actor + 0x1B0u, resource);
+        PE_StoreU8(actor + 0xFu, (uint8_t)(pe_command_frame_count(resource) - 1u));
+    }
+    flags = PE_LoadU32(actor + 0x98u) & ~0x200u;
+    PE_StoreU32(actor + 0x98u, flags);
+    if (!(flags & 0x100000u)) return;
+    for (child = PE_LoadU32(0x8009D20Cu); child;
+         child = PE_LoadU32(child + 4u)) {
+        if (PE_LoadU32(child + 0x18Cu) == actor &&
+            (PE_LoadU32(child + 0x98u) & 0x200000u))
+            func_8001A784(child, command & 0xFFFFu);
+    }
+}
+
+/* Original 6A318..6A5BC: emit sound records crossed since the previous tick.
+ * First four records are Aya-only; later records match actor type and ID too.
+ * The current endpoint is excluded, the previous endpoint is included. */
+int32_t func_8006A318(pe_addr_t actor)
+{
+    int32_t current, previous, speed;
+    unsigned i;
+    if (!actor) return -1;
+    current = PE_LoadU16(actor + 0x16u);
+    previous = PE_LoadU16(actor + 0x1Au);
+    speed = (int32_t)PE_LoadU32(actor + 0x1Cu);
+    if (speed > 0 && current < previous)
+        current += PE_LoadU8(actor + 0xFu) + 1;
+    else if (speed < 0 && previous < current)
+        current -= PE_LoadU8(actor + 0xFu) + 1;
+    for (i = 0; i < 4u + PE_LoadU8(0x800B0CE9u); ++i) {
+        pe_addr_t record = 0x80094488u + i * 8u;
+        int32_t frame;
+        uint32_t sound;
+        if (i < 4u) {
+            if (actor != PE_LoadU32(0x8009D254u) ||
+                (PE_LoadU32(0x8009D1A0u) & 2u) ||
+                (PE_LoadU32(0x800B0CD8u) & 0x800000u)) continue;
+        } else if (PE_LoadU8(record) != PE_LoadU8(actor + 0xCu) ||
+                   PE_LoadU8(record + 1u) != PE_LoadU8(actor + 0xDu)) continue;
+        if (PE_LoadU8(record + 2u) != PE_LoadU8(actor + 0xEu)) continue;
+        frame = PE_LoadU8(record + 3u);
+        if (!((speed > 0 && previous <= frame && frame < current) ||
+              (speed < 0 && current < frame && frame <= previous))) continue;
+        sound = PE_LoadU16(record + 4u + PE_LoadU8(0x800B0CEAu) * 2u);
+        if (sound)
+            func_8006DCE4(sound, 0u,
+                (int16_t)PE_LoadU16(actor + 0x2Au),
+                (int16_t)PE_LoadU16(actor + 0x2Eu),
+                (int16_t)PE_LoadU16(actor + 0x32u));
+    }
+    return 0;
 }
 
 /*
@@ -175,8 +316,9 @@ void func_8001A680_command_cut(pe_addr_t actor, unsigned int command)
  *
  * 117 words 0x8001A4AC..0x8001A680, SHA-256 53d93b57…2174.
  * Callers: self @ 1A4E4, 35558 @ 35B84 (D254) and 35BEC (D20C).
- * Jals 6A318 and 1A784 only when actor+0x18C != 0; 125E0 zeros
- * that pointer, so those callees are not this cut.
+ * 6A318 processes sound events unconditionally before frame stores.
+ * Linked actors select the parent command via 1A784 and copy its frame.
+ * Arithmetic is checked against original execution by animation_tick_oracle.
  *
  * Clears +0x98 bit 3, sets bit 0x800000, copies +0x14 → +0x18.
  * +0x1A is the high half of that copy, so it lags +0x16 by one
@@ -207,8 +349,9 @@ void func_8001A4AC(pe_addr_t actor)
     if (child != 0u) {
         if ((PE_LoadU32(child + 0x98u) & 0x800000u) == 0u)
             func_8001A4AC(child);
-        /* jal 6A318 not this cut. */
+
     }
+    func_8006A318(actor);
     flags = (PE_LoadU32(actor + 0x98u) & ~8u) | 0x800000u;
     PE_StoreU32(actor + 0x98u, flags);
     cur = PE_LoadU32(actor + 0x14u);
@@ -219,12 +362,25 @@ void func_8001A4AC(pe_addr_t actor)
     if ((flags & 0x200u) != 0u && (cur >> 16) == dest)
         return;
     if (flags & 0x200000u) {
-        /* jal 1A784; copy child+0x14. Not this cut. */
+        child = PE_LoadU32(actor + 0x18Cu);
+        func_8001A784(actor, PE_LoadU8(child + 0xEu));
+        child = PE_LoadU32(actor + 0x18Cu);
+        PE_StoreU32(actor + 0x14u, PE_LoadU32(child + 0x14u));
         return;
     }
     speed = PE_LoadU32(actor + 0x1Cu);
     next = cur + speed;
     target = dest << 16;
+    /* Original checks strict target crossing before wrapping the clip. */
+    scur = (int32_t)cur;
+    snext = (int32_t)next;
+    starget = (int32_t)target;
+    if ((flags & 0x200u) &&
+        ((scur < starget && starget < snext) ||
+         (starget < scur && snext < starget))) {
+        PE_StoreU32(actor + 0x14u, target);
+        return;
+    }
     cap = PE_LoadU8(actor + 0x0Fu);
     if ((int32_t)next >> 16 > (int32_t)cap) {
         uint32_t denom;
@@ -232,11 +388,12 @@ void func_8001A4AC(pe_addr_t actor)
         denom = cap + 1u;
         if (denom == 0u)
             return;
-        next = (((int32_t)next >> 16) / (int32_t)denom) << 16;
+        next = (uint32_t)(((int32_t)next >> 16) % (int32_t)denom) << 16;
         cur = 0u;
         flags |= 8u;
         PE_StoreU32(actor + 0x98u, flags);
     } else if ((int32_t)next < 0) {
+        cur = cap << 16;
         next += (cap + 1u) << 16;
         flags |= 8u;
         PE_StoreU32(actor + 0x98u, flags);
@@ -249,24 +406,14 @@ void func_8001A4AC(pe_addr_t actor)
     scur = (int32_t)cur;
     snext = (int32_t)next;
     starget = (int32_t)target;
-    if ((scur < starget && starget < snext)
-        || (starget < scur && snext < starget))
+    if ((scur <= starget && starget < snext)
+        || (starget <= scur && snext < starget))
         PE_StoreU32(actor + 0x14u, target);
     else
         PE_StoreU32(actor + 0x14u, next);
 }
 
-/*
- * R3000 Kuseg/KSEG0 2 MiB RAM mirror. 209F0 has no null check on
- * D278+0x68. After 29810, D278 is *D254 = slot body (0x6F / 2F7D8
- * copies D_800109B0). That template +0x68 is 0; TEXT has no non-zero
- * sw to D278+0x68 or *D254+0x68. Actor+0x68 is a different field
- * (35038 / 35558 motion; opcode D2F0 stores).
- *
- * APPROXIMATION: bytes at physical 0+6 are not in the EXE. Host
- * guest RAM is zero there. Replace when a post-boot RAM image of
- * the exception-vector area is recovered. Not an invented pointer.
- */
+/* R3000 Kuseg/KSEG0 RAM mirror used by these original actor routines. */
 static pe_addr_t pe_kseg0(pe_addr_t addr)
 {
     return 0x80000000u | (addr & 0x1FFFFFu);
@@ -284,15 +431,9 @@ static const uint8_t k_209f0_scale[9] = {
     0x00, 0x0A, 0x08, 0x0A, 0x08, 0x08, 0x04, 0x0A, 0x14
 };
 
-/*
- * 209F0. D278 sb +0x12=4 .. +0x19=11, sh +0x24 = (lhu+0x22 *
- * scale[lbu(obj+6)]) / 10, copy 5-byte row to obj+0x14.. and
- * sw row[4] to obj+8, jal 6C4C4(lh(obj+6)). obj = lw(D278+0x68)
- * through Kuseg. Slot-body +0x68 is 0 (109B0). 6C4C4 a0 is
- * lh(obj+6). APPROXIMATION: host RAM[6]==0. D1A0 bit1 still
- * sets +0xE bit1 regardless of a0 (ROM).
- */
-void func_800209F0_cut(void)
+/* Complete 209F0 with the two immutable executable tables above. The
+ * historical cut name below remains an alias for existing translated callers. */
+void func_800209F0(void)
 {
     pe_addr_t record;
     pe_addr_t obj;
@@ -305,11 +446,13 @@ void func_800209F0_cut(void)
     record = PE_LoadU32(GA_RECORD_P);
     obj = pe_kseg0(PE_LoadU32(record + 0x68u));
     idx = PE_LoadU8(obj + 6u);
-    scale = (idx < 9u) ? k_209f0_scale[idx] : 0u;
-    row = (idx < 9u) ? &k_209f0_row[idx * 5u] : k_209f0_row;
+    if (idx >= 9u) abort(); /* Original tables have nine weapon categories. */
+    scale = k_209f0_scale[idx];
+    row = &k_209f0_row[idx * 5u];
     prod = (int)PE_LoadU16(record + 0x22u) * (int)scale;
     hi = (int)(((long long)prod * 0x66666667LL) >> 32);
     PE_StoreU8(record + 0x12u, 4u);
+    PE_StoreU16(record + 0x24u, (uint16_t)(hi >> 2));
     PE_StoreU8(record + 0x13u, 5u);
     PE_StoreU8(record + 0x14u, 6u);
     PE_StoreU8(record + 0x17u, 7u);
@@ -317,7 +460,6 @@ void func_800209F0_cut(void)
     PE_StoreU8(record + 0x18u, 9u);
     PE_StoreU8(record + 0x16u, 10u);
     PE_StoreU8(record + 0x19u, 11u);
-    PE_StoreU16(record + 0x24u, (uint16_t)(hi >> 2));
     PE_StoreU8(obj + 0x14u, row[0]);
     PE_StoreU8(obj + 0x15u, row[1]);
     PE_StoreU8(obj + 0x16u, row[2]);
@@ -326,11 +468,10 @@ void func_800209F0_cut(void)
     (void)func_8006C4C4((int)(int16_t)PE_LoadU16(obj + 6u));
 }
 
-/*
- * 30640. lw D278+0x68, lw obj+0x10, and 0x10000. Slot-body
- * +0x68=0; APPROXIMATION host RAM+0x10=0 skips 71A54. That arm
- * is not invented.
- */
+void func_800209F0_cut(void) {func_800209F0();}
+
+/* Full retail 30640 (matching src/func_80030640.c): First Strike's
+ * chance to start with full AT is based on speed and the BIOS RNG. */
 void func_80030640_cut(void)
 {
     pe_addr_t record;
@@ -340,7 +481,8 @@ void func_80030640_cut(void)
     obj = pe_kseg0(PE_LoadU32(record + 0x68u));
     if ((PE_LoadU32(obj + 0x10u) & 0x00010000u) == 0u)
         return;
-    Bootstrap_ReturnVoid("func_80071A54", "func_80030640_cut");
+    if (func_80071A54() % 100u < PE_LoadU16(record + 0x22u))
+        PE_StoreU16(record + 0x10u,9000u);
 }
 
 /*
@@ -389,7 +531,7 @@ void func_80029810_after_hp_cut(unsigned int encounter)
 
     func_80030640_cut();
     actor = PE_LoadU32(GA_ACTOR_P);
-    PE_StoreU32(actor + 0x194u, CALLBACK_2D268);
+    PE_StoreU32(actor + 0x194u, CALLBACK_1D268);
     source = PE_LoadU32(actor + 0x238u);
     PE_StoreU16(GA_VALUE_D27C,
                 (uint16_t)(PE_LoadU32(source + 0x18u) - 100u));
@@ -570,8 +712,9 @@ void func_8006D60C_state2C_cut(void)
  * 6D6EC → F2=45. 6A674 stores +0xE8=-1 and +0xEA/+0xEB=0,
  * so 45 increments the index and 50 skips 6CDA4. jtbl[64]
  * at 6D9E8 with overlay bit 4 clear sb F2=0 and returns 0.
- * Do not plant F2=0x41. Bit 4 set on 64 parks (86FF8 / 62
- * stay deferred). 86C5C on the 6D6EC bit-4 arm is not this
+ * Do not plant F2=0x41. ATK20 restores the state64 timer and
+ * music-stop completion; ambient reload 62/51 remains explicit.
+ * 86C5C on the 6D6EC bit-4 arm is not this
  * cut; F2 still becomes 45.
  */
 static void func_8006D60C_state0_common(void)
@@ -628,8 +771,22 @@ static int func_8006D60C_state40_cut(void)
     unsigned int word;
 
     word = PE_LoadU32(GA_OVERLAY);
-    if ((word & 4u) != 0u)
-        return 1;
+    if (word & 4u) {
+        int32_t timer=(int32_t)PE_LoadU32(GA_GP_420);
+        if (timer>0) {
+            PE_StoreU32(GA_GP_420,(uint32_t)(timer-1));
+            return 1;
+        }
+        func_80086FF8();
+        word=PE_LoadU32(GA_OVERLAY);
+        if (word & 0x40u) {
+            PE_StoreU32(GA_OVERLAY,word&~0x40u);
+            PE_StoreU8(GA_OVERLAY+0xF2u,0x3Eu);
+            /* Ambient-track reload (3E/33) is still an unresolved path. */
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 1;
+        }
+    }
     PE_StoreU8(GA_OVERLAY + 0xF2u, 0u);
     PE_StoreU32(GA_OVERLAY, word & ~4u);
     return 0;
@@ -719,7 +876,7 @@ int func_800144FC_state38_cut(void)
 extern int func_8006E6A8(int lba, pe_addr_t dest, int sectors);
 extern int func_8006E7E8(void);
 extern pe_addr_t func_8006E498(pe_addr_t base, uint32_t key);
-extern unsigned int D_8009D1A0;
+
 
 #define GA_930E2  0x800930E2u
 #define GA_930E4  0x800930E4u
@@ -848,9 +1005,9 @@ int func_8006914C(int a0)
         dest = PE_LoadU32(GA_OVERLAY + 0x194u);
         block = dest + PE_LoadU32(dest + 4u);
         word = PE_LoadU32(block + 0x28u);
-        count = (int)(word >> 16);
+        count = (int)(word >> 22); /* 69488: ten-bit entry count */
         if (count > 0) {
-            entry = dest + (word & 0xFFFFu);
+            entry = dest + (word & 0x3FFFFFu);
             for (i = 0; i < count; i++) {
                 (void)func_8006E1C0(entry, dest);
                 entry += 0x14u;
@@ -880,7 +1037,8 @@ int func_8006914C(int a0)
         PE_StoreU32(GA_OVERLAY, PE_LoadU32(GA_OVERLAY) & 0xFFFFFFF7u);
         return 0;
     }
-    return 1;
+    /* Original69198/691B4: other state values return zero. */
+    return 0;
 }
 
 /*
@@ -894,19 +1052,6 @@ int func_800144FC_state39_cut(void)
         return 0;
     PE_StoreU8(GA_OVERLAY + 0xF4u, 0x3Au);
     return 0;
-}
-
-/*
- * BIOS A(0x30) std_out_puts trampoline (3 words at 0x80071A64).
- * 29810 passes lw D_8009D250. Live boot value is 0; puts(0) has no
- * guest stores. Nonzero a0 stays an honest boundary — no invented
- * console/battle state.
- */
-void func_80071A64(pe_addr_t str)
-{
-    if (str == 0u)
-        return;
-    Bootstrap_ReturnVoid1("func_80071A64", "func_80029810", str);
 }
 
 /*
@@ -967,7 +1112,7 @@ void func_80029810_cut(unsigned int encounter)
     func_80029810_prologue_cut();
     func_80020EFC();
     func_80029810_remainder_cut();
-    func_80071A64(PE_LoadU32(0x8009D250u));
+    func_80071A64(D_8009D250);
     func_800293F4_hp_cut();
     func_80029810_after_hp_cut(encounter);
 }
@@ -1062,7 +1207,7 @@ int func_80087414(void)
  * No +0xE store. State 0: sw 0 → gp+0x5C, sb 0x28, re-dispatch.
  * State 0x28 jals 6CDA4(1,1,0,lw +0x194,0x21,0); v0==1 returns 1.
  * v0!=1 && +0x10>=2 sb 0x29 return 1; else sb 0x2A and re-dispatch.
- * 0x2A walks D_800B0E64 records (8B, count = word24>>16). Empty
+ * 0x2A walks D_800B0E64 records (8B, count = word24>>22). Empty
  * or exhausted → sb 0 return 0. bit0x10 && lhu+4>=2 → sb 0x2B.
  * 0x2B jals 6CDA4(3,lhu+4,lhu+6,…). 87198 is not stubbed.
  */
@@ -1087,7 +1232,7 @@ static pe_addr_t func_8006D078_rec(unsigned int index, unsigned int *count_out)
     s2 = base + PE_LoadU32(base + 4u);
     word24 = PE_LoadU32(s2 + 0x24u);
     if (count_out)
-        *count_out = word24 >> 16;
+        *count_out = word24 >> 22; /* 6D180: srl v0,v0,22 */
     return base + (word24 & 0x3FFFFFu) + index * 8u;
 }
 
@@ -1186,142 +1331,122 @@ int func_8006D078(void)
 extern int func_8006E6D4(int lba_base, int lba_off, pe_addr_t dest, int size);
 extern int func_8006E7E8(void);
 
-/*
- * func_8006CDA4 is 181 words (0x8006CDA4..0x8006D078). +0xF0 JT
- * 0x80011428: 0 / 7 / 8 / 9 / 0xA; 1-6 unused. No +0xE store.
- * Live 6D078 0x28 is a0=1 a1=1: state 0 fills gp+0x400/404/408 from
- * D_8009317C + D_800B0DD8, skips 87198, sb 7, returns 1. a0==0
- * (6D60C F2=0x2F, a1=lb +0xE1=0x0D) calls 87198 (D_8009D270=1)
- * after the same table fill. a0==3 calls 87414 (D_8009D270=2).
- * Dest is lw overlay+0x194. State 7 jals real 6E6D4 with the retail
- * sector count (B54K-AC corrected the former host-byte adaptation;
- * state 9's sll 11 independently proves the unit). -1 sb 0 return 0;
- * else sb 8 return 1. State 8 jals
- * real 6E7E8: -1 sb 7, pending stays 8, 0 sb 9. State 9 live a0=1
- * jals real 87090(dest, 0); -1 sb 0, else sb 0xA and parks.
- * State 0xA jals real 870E0 (return D_8009D24C). -1 sb 0;
- * busy stays 0xA; 0 subtracts gp+0x40C from remain and sb 7.
- * 870E0 does not store; DMA-complete is not invented here.
- */
-void func_8006CDA4_state0_a0eq1_cut(int a1)
-{
-    unsigned int idx;
-    unsigned int half0;
-    unsigned int half6;
-    unsigned int lba;
+/* Complete6CDA4 control flow lives in func_8006CDA4_port.c. */
 
-    idx = ((unsigned int)a1) << 1;
-    half0 = PE_LoadU16(GA_XA_TABLE + 4u + idx);
-    half6 = PE_LoadU16(GA_XA_TABLE + idx + 6u);
-    lba = PE_LoadU32(GA_PEIMG_LBA) + PE_LoadU32(GA_XA_TABLE) + half0;
-    PE_StoreU32(GA_GP_404, half6 - half0);
-    PE_StoreU32(GA_GP_408, half6 - half0);
-    PE_StoreU32(GA_GP_400, lba);
-    PE_StoreU8(GA_OVERLAY + 0xF0u, 7u);
+/* 871AC..87414, plus 8A02C: stream a music sample bank in disc-sized
+ * chunks. The first AKAO chunk carries instrument descriptors; later
+ * chunks append sample bytes at the saved SPU address. */
+int func_800871AC(pe_addr_t buffer, uint32_t bytes)
+{
+    uint32_t size, destination;
+    if (PE_LoadU32(0x8009D270u)&1u) {
+        uint32_t count, total, offset, i, bank_flags;
+        pe_addr_t descriptors, player, dest_table;
+        if (func_80085084(buffer)) return -1;
+        total=PE_LoadU32(buffer+0x14u);
+        offset=PE_LoadU32(buffer+0x18u);
+        count=PE_LoadU32(buffer+0x1Cu);
+        count=(count ? count : 256u)-offset;
+        descriptors=buffer+0x40u;
+        size=bytes-0x40u-count*64u;
+        if (size>total) size=total;
+        destination=0x8000u;
+        player=PE_LoadU32(0x8009D2C8u);
+        bank_flags=PE_LoadU32(0x8009CDE8u)&~0x100u;
+        if (count<49u && player) {
+            pe_addr_t slot=PE_LoadU32(player+0x6Cu) ? player+0x68u : player;
+            if (PE_LoadU32(slot+4u) && !(PE_LoadU32(slot)&0x100u)) {
+                destination=0x38000u;
+                bank_flags|=0x100u;
+            }
+        }
+        PE_StoreU32(0x8009CDE8u,bank_flags);
+        func_80085EB4(destination);
+        func_800850F4(descriptors+count*64u,size);
+        PE_StoreU32(0x8009D2BCu,destination+size);
+        PE_StoreU32(0x8009D2E4u,total-size);
+        /* 8A02C relocates two sample addresses per 64-byte instrument. */
+        offset=destination-PE_LoadU32(descriptors);
+        for (i=0;i<count;i++) {
+            pe_addr_t d=descriptors+i*64u;
+            PE_StoreU32(d,PE_LoadU32(d)+offset);
+            PE_StoreU32(d+4u,PE_LoadU32(d+4u)+offset);
+        }
+        dest_table=0x800B2900u+(destination==0x8000u ? 0x800u : 0x1400u);
+        for (i=0;i<count*16u;i++)
+            PE_StoreU32(dest_table+i*4u,PE_LoadU32(descriptors+i*4u));
+        PE_StoreU32(0x8009D270u,PE_LoadU32(0x8009D270u)&~1u);
+    } else {
+        destination=PE_LoadU32(0x8009D2BCu);
+        size=PE_LoadU32(0x8009D2E4u);
+        if (size>bytes) size=bytes;
+        func_80085EB4(destination);
+        func_800850F4(buffer,size);
+        PE_StoreU32(0x8009D2BCu,destination+size);
+        PE_StoreU32(0x8009D2E4u,PE_LoadU32(0x8009D2E4u)-size);
+    }
+    return (int32_t)PE_LoadU32(0x8009D2E4u);
 }
 
-int func_8006CDA4_state7_cut(pe_addr_t dest, int stack_len)
+static void pe_audio_bank_descriptors(pe_addr_t source, uint32_t destination,
+                                      uint32_t count, pe_addr_t table)
 {
-    unsigned int remain;
-    unsigned int chunk;
-    int issued;
-
-    remain = PE_LoadU32(GA_GP_408);
-    if (remain == 0u) {
-        PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
-        return 0;
+    uint32_t offset=destination-PE_LoadU32(source), i;
+    for (i=0;i<count;i++) {
+        pe_addr_t d=source+i*64u;
+        PE_StoreU32(d,PE_LoadU32(d)+offset);
+        PE_StoreU32(d+4u,PE_LoadU32(d+4u)+offset);
     }
-    chunk = remain;
-    if ((unsigned int)stack_len < remain)
-        chunk = (unsigned int)stack_len;
-    PE_StoreU32(GA_GP_40C, chunk);
-    issued = func_8006E6D4((int)PE_LoadU32(GA_GP_400),
-                           (int)(PE_LoadU32(GA_GP_404) - remain), dest,
-                           (int)chunk);
-    if (issued == -1) {
-        PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
-        return 0;
-    }
-    PE_StoreU8(GA_OVERLAY + 0xF0u, 8u);
-    return 1;
+    for (i=0;i<count*16u;i++)
+        PE_StoreU32(table+i*4u,PE_LoadU32(source+i*4u));
 }
 
-int func_8006CDA4_state8_cut(void)
+/* 87428..875FC: the same chunk protocol for a battle sound bank. */
+int func_80087428(unsigned bank, pe_addr_t buffer, uint32_t bytes)
 {
-    int st;
-
-    st = func_8006E7E8();
-    if (st == -1) {
-        PE_StoreU8(GA_OVERLAY + 0xF0u, 7u);
-        return 1;
+    uint32_t size, destination;
+    if (PE_LoadU32(0x8009D270u)&2u) {
+        uint32_t count,total,offset;
+        pe_addr_t descriptors=buffer+0x40u;
+        if (func_80085084(buffer)) return -1;
+        total=PE_LoadU32(buffer+0x14u);
+        offset=PE_LoadU32(buffer+0x18u);
+        count=PE_LoadU32(buffer+0x1Cu);
+        count=(count ? count : 256u)-offset;
+        size=bytes-0x40u-count*64u;
+        if (size>total) size=total;
+        destination=0x4F000u+bank*0xA000u;
+        func_80085EB4(destination);
+        func_800850F4(descriptors+count*64u,size);
+        PE_StoreU32(0x8009D1ECu,destination+size);
+        PE_StoreU32(0x8009D204u,total-size);
+        pe_audio_bank_descriptors(descriptors,destination,count,0x800B4D00u+bank*1024u);
+        PE_StoreU32(0x8009D270u,PE_LoadU32(0x8009D270u)&~2u);
+    } else {
+        destination=PE_LoadU32(0x8009D1ECu);
+        size=PE_LoadU32(0x8009D204u);
+        if (size>bytes) size=bytes;
+        func_80085EB4(destination);
+        func_800850F4(buffer,size);
+        PE_StoreU32(0x8009D1ECu,destination+size);
+        PE_StoreU32(0x8009D204u,PE_LoadU32(0x8009D204u)-size);
     }
-    if (st != 0)
-        return 1;
-    PE_StoreU8(GA_OVERLAY + 0xF0u, 9u);
-    return 1;
+    return (int32_t)PE_LoadU32(0x8009D204u);
 }
 
-int func_8006CDA4_state9_a0eq1_cut(pe_addr_t dest)
+/* 875FC..87708: small, complete effect bank in slot zero or one. */
+int func_800875FC(unsigned bank, pe_addr_t buffer)
 {
-    int uploaded;
-
-    uploaded = func_80087090(dest, 0);
-    if (uploaded == -1) {
-        PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
-        return 1;
-    }
-    PE_StoreU8(GA_OVERLAY + 0xF0u, 0xAu);
-    return 1;
-}
-
-int func_8006CDA4_stateA_cut(void)
-{
-    int st;
-    unsigned int remain;
-    unsigned int chunk;
-
-    st = func_800870E0();
-    if (st == -1) {
-        PE_StoreU8(GA_OVERLAY + 0xF0u, 0u);
-        return 1;
-    }
-    if (st != 0)
-        return 1;
-    remain = PE_LoadU32(GA_GP_408);
-    chunk = PE_LoadU32(GA_GP_40C);
-    PE_StoreU32(GA_GP_408, remain - chunk);
-    PE_StoreU8(GA_OVERLAY + 0xF0u, 7u);
-    return 1;
-}
-
-int func_8006CDA4(int a0, int a1, int a2, pe_addr_t a3, int stack_len,
-                  int stack_flag)
-{
-    unsigned int f0;
-
-    (void)a2;
-    (void)stack_flag;
-    f0 = PE_LoadU8(GA_OVERLAY + 0xF0u);
-    if (f0 >= 11u)
-        return 1;
-    if (f0 == 0u) {
-        func_8006CDA4_state0_a0eq1_cut(a1);
-        if (a0 == 0)
-            (void)func_80087198();
-        else if (a0 == 3)
-            (void)func_80087414();
-        return 1;
-    }
-    if (f0 == 7u)
-        return func_8006CDA4_state7_cut(a3, stack_len);
-    if (f0 == 8u)
-        return func_8006CDA4_state8_cut();
-    if (f0 == 9u) {
-        if (a0 == 1)
-            return func_8006CDA4_state9_a0eq1_cut(a3);
-        return 1;
-    }
-    if (f0 == 10u)
-        return func_8006CDA4_stateA_cut();
-    return 1;
+    uint32_t count,offset,destination;
+    pe_addr_t descriptors=buffer+0x40u;
+    if (bank&~1u) return 1;
+    if (func_80085084(buffer)) return -1;
+    count=PE_LoadU32(buffer+0x1Cu);
+    offset=PE_LoadU32(buffer+0x18u);
+    count=(count ? count : 256u)-offset;
+    destination=0x68000u+bank*8192u;
+    func_80085EB4(destination);
+    func_800850F4(descriptors+count*64u,PE_LoadU32(buffer+0x14u));
+    pe_audio_bank_descriptors(descriptors,destination,count,0x800B4900u+bank*1024u);
+    return 0;
 }

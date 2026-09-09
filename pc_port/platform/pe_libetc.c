@@ -26,12 +26,18 @@
 #include "pe_gpu.h"
 #include "pe_mdec.h"
 #include "pe_irq.h"
+#include "pe_timer1.h"
 #include "pe_irq_delivery.h"
 #include "pe_cdreg.h"
 #include "game_port.h"
 
 static int      g_irq_lock_depth;
 static uint32_t g_next_event_handle = 0x100;
+static int g_audio_event_handle;
+static int g_audio_event_enabled;
+static int g_spu_event_handle;
+static int g_spu_event_enabled;
+static int g_spu_event_delivered;
 
 #define GA_IRQ_RESET_BLOCK          0x800945E4u
 #define GA_IRQ_RESET_BLOCK_BYTES    0x00001068u
@@ -52,17 +58,19 @@ static PeIrqSource0BiosState g_source0_bios = {
     .vblank_clear_mode = 0u,
 };
 static uint64_t g_source0_setup_order;
+static uint32_t g_timer_clear_mode[3];
 
 static void ResetSource0BiosState(void)
 {
     memset(&g_source0_bios, 0, sizeof(g_source0_bios));
     g_source0_setup_order = 0u;
+    memset(g_timer_clear_mode,0,sizeof(g_timer_clear_mode));
 }
 
 /* Exact B(5Bh) ChangeClearPAD host equivalent needed by source 0.  Value 0
  * passes VBlank processing to the lower-priority module; value 1 completes
  * it in the Pad/Card driver.  The retail ABI is void. */
-static void ChangeClearPadB1(uint32_t flag)
+void func_80073C74(uint32_t flag)
 {
     g_source0_bios.pad_clear_mode = flag;
     g_source0_bios.pad_calls++;
@@ -77,8 +85,17 @@ static void ChangeClearPadB1(uint32_t flag)
 
 /* Exact C(0Ah) ChangeClearRCnt(3, flag) host equivalent needed by source 0.
  * Counter 3 is the BIOS VBlank lane.  No timer/IRQ service is implemented. */
-static uint32_t ChangeClearVBlankB1(uint32_t counter, uint32_t flag)
+uint32_t func_80073C84(uint32_t counter, uint32_t flag)
 {
+    if(counter<3u) {
+        uint32_t previous=g_timer_clear_mode[counter];
+        g_timer_clear_mode[counter]=flag;
+        return previous;
+    }
+    if(counter!=3u) {
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return 0;
+    }
     uint32_t previous = g_source0_bios.vblank_clear_mode;
     g_source0_bios.vblank_clear_mode = flag;
     g_source0_bios.vblank_calls++;
@@ -100,7 +117,7 @@ void PE_Irq_GetSource0BiosState(PeIrqSource0BiosState *out)
     }
 }
 
-/* B53I-B1 translates only the execution-proven source-0/source-3 paths of
+/* B53I-B1 translates the execution-proven source-0/source-2/source-3 paths of
  * retail func_800740D0.  Other sources have additional BIOS side effects
  * (4,5,6) or unchecked table arithmetic and remain an explicit boundary. */
 pe_addr_t func_800740D0(uint32_t source, pe_addr_t handler)
@@ -111,7 +128,7 @@ pe_addr_t func_800740D0(uint32_t source, pe_addr_t handler)
     uint16_t restored_mask;
     uint16_t source_bit;
 
-    if (source != 0u && source != 3u) {
+    if (source != 0u && source != 2u && source != 3u) {
         pe_addr_t result = (pe_addr_t)Bootstrap_ReturnInt4Indirect(
             "func_800740D0_source_cut", "func_800740D0", 0,
             0x800740D0u, source, handler, 0u, 0u, NULL, 0u);
@@ -151,8 +168,8 @@ pe_addr_t func_800740D0(uint32_t source, pe_addr_t handler)
 
     if (source == 0u) {
         uint32_t removing = handler == 0u;
-        ChangeClearPadB1(removing);
-        (void)ChangeClearVBlankB1(3u, removing);
+        func_80073C74(removing);
+        (void)func_80073C84(3u, removing);
     }
 
     (void)PE_IRQ_ExchangeMask(restored_mask);
@@ -188,6 +205,8 @@ void func_80073C94(void)
     /* 0x80073EC0 delay slot publishes the guard immediately before the
      * source-0 initializer. */
     PE_StoreU16(GA_IRQ_RESET_GUARD, 1u);
+    /* 743D0: timer1 mode write precedes counter/table clear. */
+    PE_Timer1_InitializeVBlankCounter();
     PE_Callback_ResetTable();
 
     /* func_800743B4 -> func_80073CC4(0, func_8007440C). */
@@ -262,21 +281,73 @@ int PE_Irq_LockDepth(void)
 
 int PE_Event_Open(uint32_t cls, uint32_t spec, uint32_t mode, pe_addr_t handler)
 {
-    (void)cls; (void)spec; (void)mode; (void)handler;
-    return (int)g_next_event_handle++;
+    int handle = (int)g_next_event_handle++;
+    if (cls == 0xF0000009u && spec == 0x20u && mode == 0x2000u && !handler) {
+        g_spu_event_handle = handle;
+        g_spu_event_enabled = 0;
+        g_spu_event_delivered = 0;
+    }
+    if (cls == 0xF2000002u && spec == 2u && mode == 0x1000u &&
+        handler == 0x8008E23Cu) {
+        g_audio_event_handle = handle;
+        g_audio_event_enabled = 0;
+    }
+    return handle;
 }
 
 int PE_Event_Enable(int handle)
 {
-    (void)handle;
+    if (g_spu_event_handle && handle == g_spu_event_handle)
+        g_spu_event_enabled = 1;
+    if (g_audio_event_handle && handle == g_audio_event_handle)
+        g_audio_event_enabled = 1;
     return 1;
+}
+
+int PE_Event_SpuDmaEnabled(void)
+{
+    return g_spu_event_handle && g_spu_event_enabled;
+}
+
+int PE_Event_DeliverSpuDma(void)
+{
+    /* Original 7D614's callback-free arm calls DeliverEvent(F0000009,20).
+     * Delivery records completion only after the DMA provider copies data. */
+    if (!PE_Event_SpuDmaEnabled()) return 0;
+    g_spu_event_delivered = 1;
+    return 1;
+}
+
+int PE_Event_ConsumeSpuDma(int handle)
+{
+    if (!PE_Event_SpuDmaEnabled() || handle != g_spu_event_handle ||
+        !g_spu_event_delivered) return 0;
+    g_spu_event_delivered = 0;
+    return 1;
+}
+
+void PE_Event_ServiceAudioCommands(void)
+{
+    /* Host adaptation: the frame wait supplies the missing timer service.
+     * Preserve registration, EnableEvent, critical-section and producer
+     * gates. This is 8DB7C's 8E1F0..8E208 command portion only; its music
+     * sequencing and SPU synthesis are not implemented by this service. */
+    if (g_audio_event_enabled && !g_irq_lock_depth &&
+        !PE_LoadU32(0x8009D268u) && !PE_Port_ShouldStop())
+        func_8008CA84();
 }
 
 void PE_Sdk_ResetState(void)
 {
     g_irq_lock_depth = 0;
     g_next_event_handle = 0x100;
+    g_audio_event_handle = 0;
+    g_audio_event_enabled = 0;
+    g_spu_event_handle = 0;
+    g_spu_event_enabled = 0;
+    g_spu_event_delivered = 0;
     PE_IRQ_Reset();
+    PE_Timer1_Reset();
     PE_IRQ_DeliveryTraceReset();
     ResetSource0BiosState();
 
@@ -329,4 +400,10 @@ void PE_Sdk_ResetState(void)
     D_8009D054 = 0;
     D_8009D058 = 0;
     D_8009D064 = 0;
+}
+
+/* 73D58..73D88: canonical installed VBlank slot-setter wrapper. */
+uint32_t func_80073D58(uint32_t slot, pe_addr_t handler)
+{
+    return PE_Callback_SetSlot(slot,handler);
 }

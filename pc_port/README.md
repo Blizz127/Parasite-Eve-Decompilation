@@ -1,6 +1,84 @@
 # Parasite Eve Native PC Port — Phase 6E-B54K-Q
 
+DAY1-13 restores the original hit-origin and particle/spark initialization
+callbacks:90 original/native cases pass, including weapon-VM creation and
+sound requests. Normal and sanitizer CTest each5/5; Windows crossbuild passes.
+Hit drawing, the fresh rehearsal replay and fullDay1 remain unfinished.
+
+
 **Goal:** Retail-accurate native PC port of Parasite Eve (PSX, NTSC-U SLUS-006.62).
+
+**DAY1-12 update (2026-09-06):** Restored script36 actor tracking and
+approach, reached during the rehearsal fight. 840 original/native steps and
+captured-state handler/VM comparisons pass. Normal and sanitizer suites
+pass5/5; Windows cross-build passes. A fresh live replay of this command
+remains necessary. Full Day1 and final publication are unfinished.
+
+**DAY1-11 update (2026-09-06):** Rehearsal flashes now retain the original
+shared stack values written by concurrent pistol casing and muzzle draws.
+644 original/native pump frames pass in normal and sanitizer builds; a
+64-frame comparison using captured rehearsal RAM matches all defined
+non-stack bytes. Live run28 passed the flash boundary and reached the next script command.
+
+**DAY1-10 update (2026-09-06):** Arrange Items now opens, draws, sorts and
+returns normally. Its carried/storage sorting helpers preserve the original
+quicksort behavior and equipped-item identities. All 542 original/native
+comparisons pass in normal and sanitizer builds; full CTest passes 5/5 on
+both. Windows runtime crossbuild passes; execution remains untested. Live
+run27 verifies all three sort options and cancellation, then uses Medicine1
+and continues the Day1 route. [Menu evidence](../docs/evidence/pe-day1-arrange-items/README.md).
+Full Day1 accuracy is still unfinished; the launcher release remains DAY1-9.
+
+**Working tree progress (2026-09-05):** the visible native opening now
+renders the stage backdrop, all three performers and staircase. The pending
+scripted camera pan that blacked out the scene and cropped the actors is
+restored. Auditorium collision, stair access and the battle transition work.
+Name entry supports normal letter selection, backspace, Default and End.
+The first Eve fight completes through normal targeting and firing, including
+reload, Eve's attacks, her scripted retreat and restored field movement.
+
+The latest INV11 visible replay also opens the field inventory, transfers and
+saves ammo, rearranges an item, then uses Medicine 1 after the fight. Aya's
+live and saved HP rise from14 to45, the medicine is consumed, and closing the
+menu restores movement. Seven shot events and the full stage view were
+captured in that same run. Normal and ASan/UBSan CTest pass2/2 each,
+1,187 native test groups through PACE1 battle-menu commands, medicine
+animation/healing and its particles/rings, equipment command completion and
+escape judgement, PE reservations, costs and availability, and the game-over
+fade transition. The PE menu, ability application, and battle command lifecycle
+are also checked against 503 original-executable cases.
+
+The INV17 visible replay consumed Medicine 1, healed Aya from 42 to 45,
+rendered its particles and rings, then completed Eve's fight with seven shots.
+Eve's scripted retreat, final dialogue and restored movement were verified.
+The preceding run also exposed a missing game-over fade start, now restored
+and checked against the original executable; the full defeat flow still needs
+a fresh visible verification.
+PE menu/application/command execution are native; full Liberation presentation
+and several ability effects remain unfinished. PE is excluded by the story menu
+mask during the opening Eve encounter. The INV20 visible replay completed
+that fight, then opened Heal 1 after PE unlocked: live and saved HP17→45,
+PE80→20, with normal confirmation and return to field control.
+Equipment page construction, filtering, cursor restoration, and stat comparisons
+match232 original-executable cases. Ordinary weapon/armor selection,
+cancellation and confirmation now match215 additional original cases and are
+wired into the main menu. The INV22 visible replay completed the fight,
+then equipped Club 1 and restored M84F, exercised the armor page, and
+returned to normal movement. Status/config/upgrade pages remain unfinished. Audio command processing prevents queue corruption;
+full music sequencing and audible SPU synthesis remain unported.
+See
+`../docs/ai_context/ACTIVE_HANDOFF.md` for current status
+and `../docs/evidence/pe-aya-visible-dialogue/REPORT.md` for screenshots.
+The milestone and counts below describe the earlier merged baseline.
+
+Window controls: arrows move; Enter/Space/Z/X = Cross; C = Circle;
+V = Triangle; S = Square; Q/E = L1/R1; 1/3 = L2/R2;
+Tab = Select; P = Start; Escape closes the window.
+Resizing or maximizing scales the full game image to fit while keeping its
+original 4:3 aspect ratio; unused space has black borders.
+F6 toggles normal speed (60000/1001 Hz) and uncapped fast-forward; the window
+title shows the active mode. Normal is the default. Frame waits use a monotonic
+clock and poll input; long pauses discard the timing backlog.
 
 **Metrics authority:** the merged tree generates and cross-checks current
 native status from the implementation, CMake source graph, test inventory,

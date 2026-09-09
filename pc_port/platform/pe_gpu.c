@@ -9,6 +9,7 @@
  * counter.  Hardware progress occurs only through explicit API calls.
  */
 #include "pe_gpu.h"
+#include "pe_timer1.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -22,6 +23,11 @@ typedef struct {
     uint32_t rectangle_uv_clut;
     uint32_t fill_command;
     uint32_t fill_position;
+    uint32_t mono_rectangle_command;
+    uint32_t mono_rectangle_position;
+    uint32_t polygon_words[12];
+    uint32_t polygon_received;
+    uint32_t polygon_expected;
     uint16_t vram[PE_GPU_VRAM_PIXELS];
 } PeGpuAuthority;
 
@@ -58,6 +64,7 @@ static void CommitStoredDICR(uint32_t stored)
 
 static void ResetParser(void)
 {
+    g_gpu.state.status &= ~PE_GPU_STATUS_READY_READ;
     g_gpu.state.gp0_state = PE_GPU_GP0_IDLE;
     g_gpu.state.image_x = 0;
     g_gpu.state.image_y = 0;
@@ -70,6 +77,18 @@ static void ResetParser(void)
     g_gpu.rectangle_uv_clut = 0;
     g_gpu.fill_command = 0;
     g_gpu.fill_position = 0;
+    g_gpu.mono_rectangle_command = 0;
+    g_gpu.mono_rectangle_position = 0;
+    g_gpu.polygon_received = g_gpu.polygon_expected = 0u;
+}
+
+static void ResetDisplayRegisters(void)
+{
+    g_gpu.state.display_start=0;
+    g_gpu.state.display_horizontal_range=0xC00200u;
+    g_gpu.state.display_vertical_range=0x40010u;
+    g_gpu.state.display_mode=0;
+    g_gpu.state.status&=~0x7F4000u;
 }
 
 static void ResetHardwareState(void)
@@ -80,7 +99,9 @@ static void ResetHardwareState(void)
     g_gpu.order_counter = 0;
     g_gpu.event_serial = event_serial;
     g_gpu.state.status = PE_GPU_STATUS_READY_GP0;
+    g_gpu.state.hblank_level=g_gpu.state.vblank_level=1;
     g_gpu.state.dma2_chcr = PE_GPU_DMA2_CHCR_IDLE;
+    ResetDisplayRegisters();
     ResetParser();
 }
 
@@ -93,6 +114,16 @@ void PE_GPU_Init(void)
 void PE_GPU_Reset(void)
 {
     ResetHardwareState();
+}
+
+/* GPUSTAT readback of GP0 E1/E6, including texpage commands embedded
+ * in textured polygons. The register shares bits with the draw state. */
+static void UpdateDrawingStatus(void)
+{
+    g_gpu.state.status=(g_gpu.state.status&~0x9FFFu) |
+        (g_gpu.state.draw_mode&0x7FFu) |
+        ((g_gpu.state.draw_mode&0x800u)<<4u) |
+        ((g_gpu.state.mask_setting&3u)<<11u);
 }
 
 uint32_t PE_GPU_ReadStatus(void)
@@ -111,6 +142,7 @@ void PE_GPU_SetReady(int ready)
 
 static void FinishImage(void)
 {
+    g_gpu.state.status &= ~PE_GPU_STATUS_READY_READ;
     g_gpu.state.gp0_state = PE_GPU_GP0_IDLE;
     g_gpu.state.image_remaining_pixels = 0;
 }
@@ -148,6 +180,31 @@ static void WriteImageWord(uint32_t value)
     }
 }
 
+static uint16_t ReadImagePixel(void)
+{
+    uint32_t ordinal,x,y;uint16_t pixel;
+    if (g_gpu.state.gp0_state!=PE_GPU_GP0_READ_DATA || !g_gpu.state.image_remaining_pixels) return 0u;
+    ordinal=g_gpu.state.image_current_pixel;
+    x=(g_gpu.state.image_x+ordinal%g_gpu.state.image_width)&(PE_GPU_VRAM_WIDTH-1u);
+    y=(g_gpu.state.image_y+ordinal/g_gpu.state.image_width)&(PE_GPU_VRAM_HEIGHT-1u);
+    pixel=g_gpu.vram[y*PE_GPU_VRAM_WIDTH+x];
+    g_gpu.state.image_current_pixel++;g_gpu.state.image_remaining_pixels--;
+    if (!g_gpu.state.image_remaining_pixels) FinishImage();
+    return pixel;
+}
+
+static uint32_t ReadImageWord(void)
+{
+    uint32_t low=ReadImagePixel();
+    return low|((uint32_t)ReadImagePixel()<<16u);
+}
+
+int PE_GPU_ReadGP0(uint32_t *value)
+{
+    if (!value || g_gpu.state.dma2_active || g_gpu.state.gp0_state!=PE_GPU_GP0_READ_DATA) return 0;
+    *value=ReadImageWord();return 1;
+}
+
 static int32_t SignExtend11(uint32_t value)
 {
     value &= 0x7FFu;
@@ -183,10 +240,15 @@ static uint16_t ModulateTextureColor(uint16_t texture, uint32_t command)
                       (texture & 0x8000u));
 }
 
-/* Execution-proven GP0(64h) subset. Rectangles do not dither. The E2h..E6h
+static uint16_t BlendSemiTransparent(uint16_t back, uint16_t front);
+
+/* GP0 textured rectangles. Raw-texture variants preserve texel RGB; blending
+ * requires both command bit 25 and texel bit 15. Rectangles do not dither.
+ * https://psx-spx.consoledev.net/graphicsprocessingunitgpu/
+ * The E2h..E6h
  * environment is applied only after the corresponding command has actually
  * been observed; this preserves the pre-PutDrawEnv physical-clip behavior. */
-static void DrawTexturedRectangle4(uint32_t size)
+static void DrawTexturedRectangle(uint32_t size)
 {
     uint32_t draw_mode = g_gpu.state.draw_mode;
     uint32_t width = size & 0x3FFu;
@@ -250,13 +312,23 @@ static void DrawTexturedRectangle4(uint32_t size)
                 (flip_x ? (0u - column) : column)) & 0xFFu;
             if (g_gpu.state.texture_window_count != 0u)
                 texture_u = ApplyTextureWindow(texture_u, 1);
-            packed = g_gpu.vram[
-                ((texture_y + texture_v) &
-                 (PE_GPU_VRAM_HEIGHT - 1u)) * PE_GPU_VRAM_WIDTH +
-                ((texture_x + texture_u / 4u) &
-                 (PE_GPU_VRAM_WIDTH - 1u))];
-            palette_index =
-                (packed >> ((texture_u & 3u) * 4u)) & 0xFu;
+            if (((draw_mode >> 7) & 3u) == 1u) {
+                packed = g_gpu.vram[
+                    ((texture_y + texture_v) &
+                     (PE_GPU_VRAM_HEIGHT - 1u)) * PE_GPU_VRAM_WIDTH +
+                    ((texture_x + texture_u / 2u) &
+                     (PE_GPU_VRAM_WIDTH - 1u))];
+                palette_index =
+                    (packed >> ((texture_u & 1u) * 8u)) & 0xFFu;
+            } else {
+                packed = g_gpu.vram[
+                    ((texture_y + texture_v) &
+                     (PE_GPU_VRAM_HEIGHT - 1u)) * PE_GPU_VRAM_WIDTH +
+                    ((texture_x + texture_u / 4u) &
+                     (PE_GPU_VRAM_WIDTH - 1u))];
+                palette_index =
+                    (packed >> ((texture_u & 3u) * 4u)) & 0xFu;
+            }
             texture_color = g_gpu.vram[
                 clut_y * PE_GPU_VRAM_WIDTH +
                 ((clut_x + palette_index) &
@@ -273,8 +345,11 @@ static void DrawTexturedRectangle4(uint32_t size)
                     (g_gpu.state.mask_setting & 2u) != 0u &&
                     (*destination & 0x8000u) != 0u)
                     continue;
-                result = ModulateTextureColor(texture_color,
-                                              g_gpu.rectangle_command);
+                result = (g_gpu.rectangle_command & 0x01000000u) ?
+                    texture_color : ModulateTextureColor(texture_color,
+                                                         g_gpu.rectangle_command);
+                if ((g_gpu.rectangle_command & 0x02000000u) && (texture_color & 0x8000u))
+                    result = BlendSemiTransparent(*destination, result) | (texture_color & 0x8000u);
                 if (g_gpu.state.mask_setting_count != 0u &&
                     (g_gpu.state.mask_setting & 1u) != 0u)
                     result |= 0x8000u;
@@ -284,44 +359,384 @@ static void DrawTexturedRectangle4(uint32_t size)
     }
 }
 
-static int TexturedRectangle4ModeSupported(void)
+static int TexturedRectangleIndexedModeSupported(void)
 {
-    /* Bits 7-8 select 4/8/15bpp; bit 11 selects a second-MiB Y base. */
-    return (g_gpu.state.draw_mode & 0x180u) == 0u &&
-           (g_gpu.state.draw_mode & 0x800u) == 0u;
+    /* Variable and fixed rectangles use the same E1h texture depth.
+     * Both indexed depths are implemented; 15bpp and the second-MiB
+     * Y base remain outside the represented rectangle subset. */
+    uint32_t depth = (g_gpu.state.draw_mode >> 7) & 3u;
+
+    return depth <= 1u && (g_gpu.state.draw_mode & 0x800u) == 0u;
 }
 
-/* Execution-proven GP0(02h) subset. Raw 15-bit color write clamped to
- * VRAM: no mask-bit set, drawing area and offset ignored (subset). */
+/* GP0(02h), console VRAM: 16-pixel horizontal alignment/rounding,
+ * independent X/Y wrapping, and RGB888 -> RGB555 without mask bits.
+ * Drawing area, offset and E6 mask controls do not affect quick fills. */
 static void DrawFillRectangle(uint32_t size)
 {
     uint32_t command = g_gpu.fill_command;
-    uint32_t red = ((command >> 16) & 0xFFu) >> 3;
+    uint32_t red = (command & 0xFFu) >> 3;
     uint32_t green = ((command >> 8) & 0xFFu) >> 3;
-    uint32_t blue = (command & 0xFFu) >> 3;
+    uint32_t blue = ((command >> 16) & 0xFFu) >> 3;
     uint16_t pixel =
         (uint16_t)(red | (green << 5) | (blue << 10));
-    uint32_t origin_x = g_gpu.fill_position & 0x3FFu;
+    uint32_t origin_x = g_gpu.fill_position & 0x3F0u;
     uint32_t origin_y = (g_gpu.fill_position >> 16) & 0x1FFu;
-    uint32_t width = size & 0x3FFu;
+    uint32_t width = ((size & 0x3FFu) + 15u) & ~15u;
     uint32_t height = (size >> 16) & 0x1FFu;
     uint32_t row;
 
     for (row = 0u; row < height; row++) {
-        uint32_t destination_y = origin_y + row;
+        uint32_t destination_y = (origin_y + row) & 0x1FFu;
         uint32_t column;
 
-        if (destination_y >= (uint32_t)PE_GPU_VRAM_HEIGHT)
-            continue;
         for (column = 0u; column < width; column++) {
-            uint32_t destination_x = origin_x + column;
+            uint32_t destination_x = (origin_x + column) & 0x3FFu;
 
-            if (destination_x >= (uint32_t)PE_GPU_VRAM_WIDTH)
-                continue;
             g_gpu.vram[destination_y * PE_GPU_VRAM_WIDTH +
                        destination_x] = pixel;
         }
     }
+}
+
+/* GP0 command-word semi-transparency (bit 25) blends the incoming color
+ * against the framebuffer with the GP0(E1h) ABR mode (bits 5-6):
+ *   0: B/2 + F/2    1: B + F    2: B - F    3: B + F/4
+ * evaluated per 5-bit channel with saturation, as the hardware does.
+ * The result keeps the destination's mask bit untouched; the caller
+ * decides whether GP0(E6h) forces it. */
+static uint16_t BlendSemiTransparent(uint16_t back, uint16_t front)
+{
+    uint32_t abr = (g_gpu.state.draw_mode >> 5) & 3u;
+    uint16_t result = 0u;
+    unsigned shift;
+
+    for (shift = 0u; shift < 15u; shift += 5u) {
+        int32_t b = (int32_t)((back >> shift) & 0x1Fu);
+        int32_t f = (int32_t)((front >> shift) & 0x1Fu);
+        int32_t v;
+
+        switch (abr) {
+        case 0u:  v = b / 2 + f / 2; break;
+        case 1u:  v = b + f;         break;
+        case 2u:  v = b - f;         break;
+        default:  v = b + f / 4;     break;
+        }
+        if (v < 0) v = 0;
+        if (v > 31) v = 31;
+        result |= (uint16_t)((uint32_t)v << shift);
+    }
+    return result;
+}
+
+/* Drawing-area clip for the observed GP0(E3h)/(E4h) registers.  Before both
+ * have been seen only the physical VRAM bound applies (the same
+ * pre-PutDrawEnv rule the textured rectangle path uses). */
+static int PixelInDrawingArea(int32_t x, int32_t y)
+{
+    if (x < 0 || y < 0 || x >= (int32_t)PE_GPU_VRAM_WIDTH ||
+        y >= (int32_t)PE_GPU_VRAM_HEIGHT)
+        return 0;
+    if (g_gpu.state.drawing_area_top_left_count == 0u ||
+        g_gpu.state.drawing_area_bottom_right_count == 0u)
+        return 1;
+    return (uint32_t)x >= (g_gpu.state.drawing_area_top_left & 0x3FFu) &&
+           (uint32_t)x <= (g_gpu.state.drawing_area_bottom_right & 0x3FFu) &&
+           (uint32_t)y >=
+               ((g_gpu.state.drawing_area_top_left >> 10) & 0x1FFu) &&
+           (uint32_t)y <=
+               ((g_gpu.state.drawing_area_bottom_right >> 10) & 0x1FFu);
+}
+
+/* GP0 24-bit color word (0x00BBGGRR) to the 15-bit VRAM format. */
+static uint16_t Color24To15(uint32_t command)
+{
+    return (uint16_t)(((command & 0xFFu) >> 3) |
+                      (((command >> 8) & 0xFFu) >> 3) << 5 |
+                      (((command >> 16) & 0xFFu) >> 3) << 10);
+}
+
+/* Untextured rectangle opcodes 60h..7Bh (bit 26 clear).  Bits 27-28 pick
+ * the size class; bit 25 selects semi-transparency.  Rectangles are not
+ * dithered, and the drawing offset (E5h) applies once observed. */
+static uint32_t MonoRectangleFixedSize(uint32_t command)
+{
+    switch ((command >> 27) & 3u) {
+    case 1u: return 1u | (1u << 16);
+    case 2u: return 8u | (8u << 16);
+    case 3u: return 16u | (16u << 16);
+    default: return 0u;   /* variable: size word follows */
+    }
+}
+
+static void DrawMonoRectangle(uint32_t size)
+{
+    uint32_t command = g_gpu.mono_rectangle_command;
+    uint16_t color = Color24To15(command);
+    int semi_transparent = (command & 0x02000000u) != 0u;
+    uint32_t width = size & 0x3FFu;
+    uint32_t height = (size >> 16) & 0x1FFu;
+    int32_t origin_x = SignExtend11(g_gpu.mono_rectangle_position);
+    int32_t origin_y = SignExtend11(g_gpu.mono_rectangle_position >> 16);
+    int check_mask = g_gpu.state.mask_setting_count != 0u &&
+                     (g_gpu.state.mask_setting & 2u) != 0u;
+    int set_mask = g_gpu.state.mask_setting_count != 0u &&
+                   (g_gpu.state.mask_setting & 1u) != 0u;
+    uint32_t row;
+
+    if (g_gpu.state.drawing_offset_count != 0u) {
+        origin_x += SignExtend11(g_gpu.state.drawing_offset);
+        origin_y += SignExtend11(g_gpu.state.drawing_offset >> 11);
+    }
+
+    for (row = 0u; row < height; row++) {
+        int32_t y = origin_y + (int32_t)row;
+        uint32_t column;
+
+        for (column = 0u; column < width; column++) {
+            int32_t x = origin_x + (int32_t)column;
+            uint16_t *destination;
+            uint16_t result;
+
+            if (!PixelInDrawingArea(x, y))
+                continue;
+            destination = &g_gpu.vram[(uint32_t)y * PE_GPU_VRAM_WIDTH +
+                                      (uint32_t)x];
+            if (check_mask && (*destination & 0x8000u) != 0u)
+                continue;
+            result = semi_transparent ?
+                BlendSemiTransparent(*destination, color) : color;
+            if (set_mask)
+                result |= 0x8000u;
+            *destination = result;
+        }
+    }
+    g_gpu.state.mono_rectangle_command = command;
+    g_gpu.state.mono_rectangle_position = g_gpu.mono_rectangle_position;
+    g_gpu.state.mono_rectangle_size = width | (height << 16);
+    g_gpu.state.mono_rectangle_count++;
+}
+
+/* POLY1: integer affine polygon rasterization. Packet formats and draw
+ * attributes follow psx-spx GPU Render Polygon Commands. Edge/interpolation
+ * rounding remains a native implementation pending hardware image comparison. */
+typedef struct {
+    int32_t x, y, u, v;
+    int32_t color[3];
+} PePolygonVertex;
+
+static int64_t PolygonEdge(const PePolygonVertex *a, const PePolygonVertex *b, int32_t x, int32_t y)
+{
+    return (int64_t)(b->x-a->x)*(y-a->y) - (int64_t)(b->y-a->y)*(x-a->x);
+}
+
+static int PolygonTopLeft(const PePolygonVertex *a, const PePolygonVertex *b)
+{
+    return b->y < a->y || (b->y == a->y && b->x > a->x);
+}
+
+static uint16_t PolygonTexel(uint32_t u, uint32_t v, uint32_t clut)
+{
+    uint32_t mode = g_gpu.state.draw_mode;
+    uint32_t depth = (mode >> 7) & 3u;
+    uint32_t tx = (mode & 15u) * 64u, ty = ((mode >> 4) & 1u) * 256u;
+    uint16_t packed;
+    unsigned int index;
+    u = ApplyTextureWindow(u & 255u, 1);
+    v = ApplyTextureWindow(v & 255u, 0);
+    ty = (ty + v) & 511u;
+    if (depth >= 2u) return g_gpu.vram[ty * 1024u + ((tx + u) & 1023u)];
+    packed = g_gpu.vram[ty * 1024u + ((tx + (u >> (depth ? 1u : 2u))) & 1023u)];
+    index = depth ? (packed >> ((u & 1u) * 8u)) & 255u : (packed >> ((u & 3u) * 4u)) & 15u;
+    return g_gpu.vram[((clut >> 6) & 511u) * 1024u + (((clut & 63u) * 16u + index) & 1023u)];
+}
+
+static void DrawPolygonTriangle(PePolygonVertex a, PePolygonVertex b, PePolygonVertex c,
+                                uint32_t command, uint32_t clut)
+{
+    static const int8_t dither[4][4] = {{-4,0,-3,1},{2,-2,3,-1},{-3,1,-4,0},{3,-1,2,-2}};
+    int64_t area = PolygonEdge(&a,&b,c.x,c.y);
+    int32_t minx, maxx, miny, maxy, x, y;
+    int textured = (command & 0x04000000u) != 0u;
+    int raw = textured && (command & 0x01000000u);
+    int dithering = (g_gpu.state.draw_mode & 0x200u) && !raw &&
+                    (textured || (command & 0x10000000u));
+    if (!area) return;
+    if (area < 0) { PePolygonVertex temp = b; b = c; c = temp; area = -area; }
+    minx = a.x < b.x ? a.x : b.x; if (c.x < minx) minx = c.x;
+    maxx = a.x > b.x ? a.x : b.x; if (c.x > maxx) maxx = c.x;
+    miny = a.y < b.y ? a.y : b.y; if (c.y < miny) miny = c.y;
+    maxy = a.y > b.y ? a.y : b.y; if (c.y > maxy) maxy = c.y;
+    if (maxx-minx >= 1024 || maxy-miny >= 512) return;
+    if (minx < 0) minx = 0;
+    if (maxx > 1023) maxx = 1023;
+    if (miny < 0) miny = 0;
+    if (maxy > 511) maxy = 511;
+    for (y = miny; y <= maxy; y++) {
+        for (x = minx; x <= maxx; x++) {
+            int64_t w0 = PolygonEdge(&b,&c,x,y), w1 = PolygonEdge(&c,&a,x,y), w2 = PolygonEdge(&a,&b,x,y);
+            uint16_t texture = 0u, color = 0u, *pixel;
+            unsigned int channel;
+            if (w0 < 0 || (w0 == 0 && !PolygonTopLeft(&b,&c)) ||
+                w1 < 0 || (w1 == 0 && !PolygonTopLeft(&c,&a)) ||
+                w2 < 0 || (w2 == 0 && !PolygonTopLeft(&a,&b)) || !PixelInDrawingArea(x,y)) continue;
+            pixel = &g_gpu.vram[(uint32_t)y * 1024u + (uint32_t)x];
+            if ((g_gpu.state.mask_setting & 2u) && (*pixel & 0x8000u)) continue;
+            if (textured) {
+                uint32_t u = (uint32_t)((w0*a.u + w1*b.u + w2*c.u) / area);
+                uint32_t v = (uint32_t)((w0*a.v + w1*b.v + w2*c.v) / area);
+                texture = PolygonTexel(u,v,clut);
+                if (texture == 0u) continue;
+            }
+            if (raw) color = texture;
+            else {
+                for (channel = 0u; channel < 3u; channel++) {
+                    int value = (int)((w0*a.color[channel] + w1*b.color[channel] + w2*c.color[channel]) / area);
+                    if (textured) value = (int)(((texture >> (channel*5u)) & 31u) * (unsigned int)value) >> 4;
+                    if (dithering) value += dither[y & 3][x & 3];
+                    if (value < 0) value = 0;
+                    if (value > 255) value = 255;
+                    color |= (uint16_t)((unsigned int)(value >> 3) << (channel*5u));
+                }
+                color |= texture & 0x8000u;
+            }
+            if ((command & 0x02000000u) && (!textured || (texture & 0x8000u)))
+                color = BlendSemiTransparent(*pixel,color) | (texture & 0x8000u);
+            if (g_gpu.state.mask_setting & 1u) color |= 0x8000u;
+            *pixel = color;
+            g_gpu.state.polygon_pixel_count++;
+        }
+    }
+}
+
+static void DrawPolygon(void)
+{
+    PePolygonVertex vertices[4];
+    uint32_t command = g_gpu.polygon_words[0], clut = 0u;
+    uint32_t color = command;
+    unsigned int i, ch, cursor = 1u, count = (command & 0x08000000u) ? 4u : 3u;
+    for (i = 0; i < count; i++) {
+        uint32_t xy, uv;
+        if (i && (command & 0x10000000u)) color = g_gpu.polygon_words[cursor++];
+        xy = g_gpu.polygon_words[cursor++];
+        vertices[i].x = SignExtend11(xy) + SignExtend11(g_gpu.state.drawing_offset);
+        vertices[i].y = SignExtend11(xy >> 16) + SignExtend11(g_gpu.state.drawing_offset >> 11);
+        vertices[i].u = vertices[i].v = 0;
+        for (ch=0; ch<3u; ch++) vertices[i].color[ch] = (color >> (ch*8u)) & 255u;
+        if (command & 0x04000000u) {
+            uv = g_gpu.polygon_words[cursor++];
+            vertices[i].u = uv & 255u; vertices[i].v = (uv >> 8) & 255u;
+            if (i == 0u) clut = uv >> 16;
+            if (i == 1u) {
+                g_gpu.state.draw_mode = (g_gpu.state.draw_mode & ~0x9FFu) | ((uv >> 16) & 0x9FFu);
+                UpdateDrawingStatus();
+            }
+        }
+    }
+    DrawPolygonTriangle(vertices[0],vertices[1],vertices[2],command,clut);
+    if (count == 4u) DrawPolygonTriangle(vertices[1],vertices[2],vertices[3],command,clut);
+    g_gpu.state.polygon_count++;
+}
+
+/* Two-vertex lines include both endpoints, dither even with a flat color,
+ * and use the same draw-area, mask and ABR registers as polygons.
+ * Command layout: https://psx-spx.consoledev.net/graphicsprocessingunitgpu/
+ * Fixed-point coverage conventions (32 fractional coordinate bits, 12
+ * color bits, directional tie bias) cross-checked against DuckStation's
+ * gpu_sw_rasterizer.inl. This native DDA uses no host graphics API. */
+static void DrawLine(void)
+{
+    static const int8_t dither[4][4]={{-4,0,-3,1},{2,-2,3,-1},{-3,1,-4,0},{3,-1,2,-2}};
+    const int64_t unit=INT64_C(4294967296);
+    uint32_t command=g_gpu.polygon_words[0];
+    uint32_t colors[2]={command,command};
+    uint32_t xy[2]={g_gpu.polygon_words[1],g_gpu.polygon_words[2]};
+    int32_t ends[2][2], delta[2], span, axis, step, ch;
+    int64_t origin[2], increment[2];
+    int32_t rgb[3], rgb_step[3];
+    if (command&0x10000000u) {
+        colors[1]=g_gpu.polygon_words[2]; xy[1]=g_gpu.polygon_words[3];
+    }
+    for (axis=0;axis<2;axis++) {
+        int32_t offset=SignExtend11(g_gpu.state.drawing_offset>>(axis*11));
+        ends[0][axis]=SignExtend11(xy[0]>>(axis*16))+offset;
+        ends[1][axis]=SignExtend11(xy[1]>>(axis*16))+offset;
+        delta[axis]=ends[1][axis]-ends[0][axis];
+        if (delta[axis]<0) delta[axis]=-delta[axis];
+    }
+    g_gpu.state.line_count++;
+    if (delta[0]>=1024 || delta[1]>=512) return;
+    span=delta[0]>delta[1]?delta[0]:delta[1];
+    if (span && ends[0][0]>=ends[1][0]) {
+        uint32_t color=colors[0]; colors[0]=colors[1]; colors[1]=color;
+        for (axis=0;axis<2;axis++) {
+            int32_t coord=ends[0][axis]; ends[0][axis]=ends[1][axis]; ends[1][axis]=coord;
+        }
+    }
+    for (axis=0;axis<2;axis++) {
+        int32_t distance=ends[1][axis]-ends[0][axis];
+        int64_t numerator=(int64_t)distance*unit;
+        if (span && distance) numerator+=distance>0?span-1:1-span;
+        increment[axis]=span?numerator/span:0;
+        origin[axis]=(int64_t)ends[0][axis]*unit+unit/2;
+        if (axis==0 || increment[axis]<0) origin[axis]-=1024;
+    }
+    for (ch=0;ch<3;ch++) {
+        int32_t first=(colors[0]>>(ch*8))&255u, last=(colors[1]>>(ch*8))&255u;
+        rgb[ch]=first*4096+2048; rgb_step[ch]=span?(last-first)*4096/span:0;
+    }
+    for (step=0;step<=span;step++) {
+        int32_t x=SignExtend11((uint32_t)(origin[0]>>32));
+        int32_t y=SignExtend11((uint32_t)(origin[1]>>32));
+        if (PixelInDrawingArea(x,y)) {
+            uint16_t *pixel=&g_gpu.vram[(uint32_t)y*1024u+(uint32_t)x], color=0;
+            if (!(g_gpu.state.mask_setting&2u) || !(*pixel&0x8000u)) {
+                for (ch=0;ch<3;ch++) {
+                    int32_t value=rgb[ch]>>12;
+                    if (g_gpu.state.draw_mode&0x200u) value+=dither[y&3][x&3];
+                    if (value<0) value=0;
+                    if (value>255) value=255;
+                    color|=(uint16_t)((uint32_t)(value>>3)<<(ch*5));
+                }
+                if (command&0x02000000u) color=BlendSemiTransparent(*pixel,color);
+                if (g_gpu.state.mask_setting&1u) color|=0x8000u;
+                *pixel=color; g_gpu.state.line_pixel_count++;
+            }
+        }
+        for (axis=0;axis<2;axis++) origin[axis]+=increment[axis];
+        for (ch=0;ch<3;ch++) rgb[ch]+=rgb_step[ch];
+    }
+}
+
+uint32_t PE_GPU_GP0_PacketWords(uint32_t command)
+{
+    uint32_t opcode = command >> 24;
+
+    if (command == 0u)
+        return 1u;
+    if (opcode >= 0xE1u && opcode <= 0xE6u)
+        return 1u;
+    if (opcode == 0x02u)
+        return 3u;
+    if ((opcode & 0xE0u) == 0x20u) {
+        uint32_t vertices = (opcode & 8u) ? 4u : 3u;
+        return 1u + vertices + ((opcode & 4u) ? vertices : 0u) + ((opcode & 16u) ? vertices - 1u : 0u);
+    }
+    if ((opcode & 0xE8u) == 0x40u)
+        return (opcode & 0x10u) ? 4u : 3u;
+    if ((opcode & 0xE0u) == 0x60u) {
+        if ((opcode & 0x04u) == 0u)   /* untextured: cmd, xy, [size] */
+            return MonoRectangleFixedSize(command) != 0u ? 2u : 3u;
+        /* Structural length only.  Whether the texture depth/page is
+         * executable is decided at execution against the draw mode in
+         * force *then* (E1h may precede it in the same packet). */
+        if ((opcode & 0xFCu) == 0x64u)
+            return 4u;                 /* variable 4bpp: cmd, xy, uv, size */
+        if ((opcode & 0xFCu) == 0x7Cu)
+            return 3u;                 /* SPRT_16: cmd, xy, uv/clut */
+        return 0u;
+    }
+    return 0u;
 }
 
 int PE_GPU_WriteGP0(uint32_t value)
@@ -331,7 +746,26 @@ int PE_GPU_WriteGP0(uint32_t value)
     if ((g_gpu.state.status & PE_GPU_STATUS_READY_GP0) == 0) return 0;
 
     switch (g_gpu.state.gp0_state) {
+    case PE_GPU_GP0_POLYGON_DATA:
+    case PE_GPU_GP0_LINE_DATA:
+        g_gpu.polygon_words[g_gpu.polygon_received++] = value;
+        if (g_gpu.polygon_received == g_gpu.polygon_expected) {
+            if (g_gpu.state.gp0_state==PE_GPU_GP0_LINE_DATA) DrawLine();
+            else DrawPolygon();
+            g_gpu.state.gp0_state = PE_GPU_GP0_IDLE;
+        }
+        return 1;
     case PE_GPU_GP0_IDLE:
+        if ((value & 0xE0000000u) == 0x20000000u ||
+            (value & 0xE8000000u) == 0x40000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.polygon_words[0] = value;
+            g_gpu.polygon_received = 1u;
+            g_gpu.polygon_expected = PE_GPU_GP0_PacketWords(value);
+            g_gpu.state.gp0_state = (value & 0x40000000u) ?
+                PE_GPU_GP0_LINE_DATA : PE_GPU_GP0_POLYGON_DATA;
+            return 1;
+        }
         if (value == 0u) {
             if (g_gpu.state.dma2_active) return 0;
             g_gpu.state.nop_count++;
@@ -347,9 +781,15 @@ int PE_GPU_WriteGP0(uint32_t value)
             g_gpu.state.gp0_state = PE_GPU_GP0_EXPECT_POSITION;
             return 1;
         }
+        if ((value&0xE0000000u)==0xC0000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.state.gp0_state=PE_GPU_GP0_READ_EXPECT_POSITION;
+            return 1;
+        }
         if ((value & 0xFF000000u) == 0xE1000000u) {
             if (g_gpu.state.dma2_active) return 0;
             g_gpu.state.draw_mode = value;
+            UpdateDrawingStatus();
             g_gpu.state.draw_mode_count++;
             return 1;
         }
@@ -380,12 +820,22 @@ int PE_GPU_WriteGP0(uint32_t value)
         if ((value & 0xFF000000u) == 0xE6000000u) {
             if (g_gpu.state.dma2_active) return 0;
             g_gpu.state.mask_setting = value;
+            UpdateDrawingStatus();
             g_gpu.state.mask_setting_count++;
             return 1;
         }
-        if ((value & 0xFF000000u) == 0x64000000u) {
+        if ((value & 0xFC000000u) == 0x64000000u) {
             if (g_gpu.state.dma2_active ||
-                !TexturedRectangle4ModeSupported()) {
+                !TexturedRectangleIndexedModeSupported()) {
+                return 0;
+            }
+            g_gpu.rectangle_command = value;
+            g_gpu.state.gp0_state = PE_GPU_GP0_RECT_EXPECT_POSITION;
+            return 1;
+        }
+        if ((value & 0xFC000000u) == 0x7C000000u) {
+            if (g_gpu.state.dma2_active ||
+                !TexturedRectangleIndexedModeSupported()) {
                 return 0;
             }
             g_gpu.rectangle_command = value;
@@ -398,8 +848,28 @@ int PE_GPU_WriteGP0(uint32_t value)
             g_gpu.state.gp0_state = PE_GPU_GP0_FILL_EXPECT_POSITION;
             return 1;
         }
+        if ((value & 0xE4000000u) == 0x60000000u) {
+            if (g_gpu.state.dma2_active) return 0;
+            g_gpu.mono_rectangle_command = value;
+            g_gpu.state.gp0_state = PE_GPU_GP0_MONO_RECT_EXPECT_POSITION;
+            return 1;
+        }
         return 0;
 
+    case PE_GPU_GP0_READ_EXPECT_POSITION:
+        g_gpu.state.image_x=value&(PE_GPU_VRAM_WIDTH-1u);
+        g_gpu.state.image_y=(value>>16u)&(PE_GPU_VRAM_HEIGHT-1u);
+        g_gpu.state.gp0_state=PE_GPU_GP0_READ_EXPECT_SIZE;
+        return 1;
+    case PE_GPU_GP0_READ_EXPECT_SIZE:
+        g_gpu.state.image_width=(((value&65535u)-1u)&(PE_GPU_VRAM_WIDTH-1u))+1u;
+        g_gpu.state.image_height=(((value>>16u)-1u)&(PE_GPU_VRAM_HEIGHT-1u))+1u;
+        g_gpu.state.image_current_pixel=0u;
+        g_gpu.state.image_remaining_pixels=g_gpu.state.image_width*g_gpu.state.image_height;
+        g_gpu.state.gp0_state=PE_GPU_GP0_READ_DATA;
+        g_gpu.state.status|=PE_GPU_STATUS_READY_READ;
+        return 1;
+    case PE_GPU_GP0_READ_DATA:return 0;
     case PE_GPU_GP0_EXPECT_POSITION:
         g_gpu.state.image_x = value & 0xFFFFu;
         g_gpu.state.image_y = value >> 16;
@@ -438,15 +908,29 @@ int PE_GPU_WriteGP0(uint32_t value)
         g_gpu.state.gp0_state = PE_GPU_GP0_RECT_EXPECT_UV_CLUT;
         return 1;
 
-    case PE_GPU_GP0_RECT_EXPECT_UV_CLUT:
+    case PE_GPU_GP0_RECT_EXPECT_UV_CLUT: {
+        uint32_t opcode;
+
         if (g_gpu.state.dma2_active) return 0;
         g_gpu.rectangle_uv_clut = value;
+        opcode = g_gpu.rectangle_command >> 24;
+        if ((opcode & 0xFCu) == 0x7Cu) {
+            DrawTexturedRectangle(0x00100010u);
+            g_gpu.state.rectangle_command = g_gpu.rectangle_command;
+            g_gpu.state.rectangle_position = g_gpu.rectangle_position;
+            g_gpu.state.rectangle_uv_clut = g_gpu.rectangle_uv_clut;
+            g_gpu.state.rectangle_size = 0x00100010u;
+            g_gpu.state.rectangle_count++;
+            ResetParser();
+            return 1;
+        }
         g_gpu.state.gp0_state = PE_GPU_GP0_RECT_EXPECT_SIZE;
         return 1;
+    }
 
     case PE_GPU_GP0_RECT_EXPECT_SIZE:
         if (g_gpu.state.dma2_active) return 0;
-        DrawTexturedRectangle4(value);
+        DrawTexturedRectangle(value);
         g_gpu.state.rectangle_command = g_gpu.rectangle_command;
         g_gpu.state.rectangle_position = g_gpu.rectangle_position;
         g_gpu.state.rectangle_uv_clut = g_gpu.rectangle_uv_clut;
@@ -470,6 +954,27 @@ int PE_GPU_WriteGP0(uint32_t value)
         g_gpu.state.fill_count++;
         ResetParser();
         return 1;
+
+    case PE_GPU_GP0_MONO_RECT_EXPECT_POSITION: {
+        uint32_t fixed;
+
+        if (g_gpu.state.dma2_active) return 0;
+        g_gpu.mono_rectangle_position = value;
+        fixed = MonoRectangleFixedSize(g_gpu.mono_rectangle_command);
+        if (fixed == 0u) {
+            g_gpu.state.gp0_state = PE_GPU_GP0_MONO_RECT_EXPECT_SIZE;
+            return 1;
+        }
+        DrawMonoRectangle(fixed);
+        ResetParser();
+        return 1;
+    }
+
+    case PE_GPU_GP0_MONO_RECT_EXPECT_SIZE:
+        if (g_gpu.state.dma2_active) return 0;
+        DrawMonoRectangle(value);
+        ResetParser();
+        return 1;
     }
 
     return 0;
@@ -477,9 +982,25 @@ int PE_GPU_WriteGP0(uint32_t value)
 
 int PE_GPU_WriteGP1(uint32_t value)
 {
+    unsigned op=value>>24;
+    if(op>=5 && op<=8) {
+        if(g_gpu.state.display_command_count<4)
+            g_gpu.state.display_commands[g_gpu.state.display_command_count]=value;
+        g_gpu.state.display_command_count++;
+        if(op==5)g_gpu.state.display_start=value&0x7FFFFu;
+        if(op==6)g_gpu.state.display_horizontal_range=value&0xFFFFFFu;
+        if(op==7)g_gpu.state.display_vertical_range=value&0xFFFFFu;
+        if(op==8) {
+            g_gpu.state.display_mode=value&255u;
+            g_gpu.state.status=(g_gpu.state.status&~0x7F4000u) |
+                ((value&0x3Fu)<<17) | ((value&0x40u)<<10) | ((value&0x80u)<<7);
+        }
+        return 1;
+    }
     switch (value) {
     case 0x00000000u: /* reset GPU: represented subset */
         if (g_gpu.state.dma2_active) return 0;
+        ResetDisplayRegisters();
         ResetParser();
         g_gpu.state.gp1_dma_direction = 0;
         g_gpu.state.status |= PE_GPU_STATUS_READY_GP0;
@@ -496,6 +1017,9 @@ int PE_GPU_WriteGP1(uint32_t value)
         return 1;
     case 0x04000002u: /* DMA CPU -> GP0 */
         g_gpu.state.gp1_dma_direction = 2;
+        return 1;
+    case 0x04000003u: /* DMA GPUREAD -> CPU */
+        g_gpu.state.gp1_dma_direction = 3;
         return 1;
     default:
         return 0;
@@ -640,12 +1164,13 @@ int PE_GPU_DMA2Issue(pe_addr_t madr, uint32_t bcr, uint32_t chcr)
     uint32_t words;
     uint64_t bytes;
     uint32_t required_words;
+    int readback=chcr==PE_GPU_DMA2_CHCR_STORE;
 
     if (g_gpu.state.dma2_active ||
-        g_gpu.state.gp0_state != PE_GPU_GP0_IMAGE_DATA ||
-        g_gpu.state.gp1_dma_direction != 2u ||
+        g_gpu.state.gp0_state != (readback?PE_GPU_GP0_READ_DATA:PE_GPU_GP0_IMAGE_DATA) ||
+        g_gpu.state.gp1_dma_direction != (readback?3u:2u) ||
         (g_gpu.state.dpcr & PE_GPU_DMA2_DPCR_ENABLE) == 0 ||
-        chcr != PE_GPU_DMA2_CHCR_LOAD ||
+        (!readback && chcr != PE_GPU_DMA2_CHCR_LOAD) ||
         (madr & 3u) != 0 ||
         (bcr & 0xFFFFu) != 0x10u) {
         return 0;
@@ -723,7 +1248,9 @@ int PE_GPU_ServiceDMA2Completion(uint64_t event_token)
 
     source = g_gpu.state.dma2_source;
     for (i = 0; i < g_gpu.state.dma2_word_count; i++) {
-        WriteImageWord(PE_LoadU32(source + i * 4u));
+        if (g_gpu.state.dma2_chcr==PE_GPU_DMA2_CHCR_STORE)
+            PE_StoreU32(source+i*4u,ReadImageWord());
+        else WriteImageWord(PE_LoadU32(source + i * 4u));
     }
     if (g_gpu.state.image_remaining_pixels != 0) {
         return 0;
@@ -836,6 +1363,30 @@ int PE_GPU_ReadVRAM(uint32_t x, uint32_t y, uint16_t *pixel)
 uint32_t PE_GPU_VSyncQuery(void)
 {
     return g_gpu.state.vsync_count;
+}
+
+int PE_GPU_SetHBlank(int level,PeIrqGeneration generation)
+{
+    if(generation!=PE_IRQ_Generation())return 0;
+    uint8_t next=level!=0;
+    if(next && !g_gpu.state.hblank_level) {
+        g_gpu.state.hblank_edge_count++;
+        (void)PE_Timer1_HBlankEdge(generation);
+    }
+    g_gpu.state.hblank_level=next;
+    return 1;
+}
+int PE_GPU_SetVBlank(int level,PeIrqGeneration generation)
+{
+    if(generation!=PE_IRQ_Generation())return 0;
+    uint8_t next=level!=0;
+    if(next && !g_gpu.state.vblank_level) {
+        g_gpu.state.vblank_edge_count++;
+        (void)PE_Timer1_VBlankEdge(generation);
+        (void)PE_IRQ_AssertSourcesForGeneration(1u,generation);
+    }
+    g_gpu.state.vblank_level=next;
+    return 1;
 }
 
 void PE_GPU_VBlankStep(void)

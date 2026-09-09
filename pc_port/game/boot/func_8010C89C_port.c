@@ -14,8 +14,8 @@
  * ([EB8C] = 0x00FFFFFF: effectively no loop bound, so frames end
  * through the pad exit).  Exits: pad (CB84, returns 0, the normal
  * end-of-frame) and bound (CBC8, returns 1).  The caller ignores
- * the return.  COP0 Status IEc set (CBAC) is skipped with comment:
- * no port meaning under synchronous delivery (E0-pump precedent).
+ * the return.  COP0 Status bit17 set (CBAC) is not modeled by this RAM worker.
+ * This port does not establish CPU cache/status fidelity.
  *
  * Shift-count care: MIPS sllv/srlv consume the low 5 bits, so
  * counts above 31 are masked (&31) — exact, not a change.  All
@@ -263,8 +263,8 @@ pad_exit:                       /* CB84: pad with FE00 to the bound */
         PE_StoreU16(a1, 0xFE00u);    /* CBA0 */
         a1 += 2u;               /* CBA8 delay */
     }
-    /* CBAC-CBBC: mfc0 Status, set IEc, mtc0 — skipped with comment
-     * (no port meaning under synchronous delivery). */
+    /* CBAC-CBBC: mfc0 Status, OR 0x20000, mtc0. CPU status/cache
+     * effects are not modeled here; this is not an IEc (bit0) write. */
     g_c89c_telemetry.ret = 0;
     return 0;                   /* CBC0 delay: v0 = 0 */
 

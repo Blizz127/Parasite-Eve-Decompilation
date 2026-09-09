@@ -1,0 +1,43 @@
+{
+  "run": "ATK20 visible native replay",
+  "normal_input_only": true,
+  "scripted_exit_requested_frame": 12248,
+  "mode": 12,
+  "input_mask": 0,
+  "HP": 45,
+  "max_HP": 45,
+  "saved_HP": 45,
+  "loaded_ammo": 5,
+  "saved_ammo": 5,
+  "sound_queue": 0,
+  "actor_pool_in_use": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "ordinary_Right_key_held_ms": 500,
+  "position_before": [
+    345.0,
+    -1111.0,
+    633.0
+  ],
+  "position_after": [
+    125.0,
+    -1111.0,
+    633.0
+  ],
+  "shot_frames": [
+    10277,
+    11024,
+    11040,
+    11517,
+    11533,
+    12041,
+    12100
+  ],
+  "limitation": "Eve attack callbacks and naming remain incomplete; scripted retreat and return to field control verified."
+}

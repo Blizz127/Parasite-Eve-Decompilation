@@ -25,8 +25,9 @@
  * (D20C walk when that bit is clear; skip +0x98 & 0x800040).
  * PE-BTL124 takes 35C2C jal 360B4's proven +0x98
  * `and 0xFF7FFFFF` (clear the 1A4AC-this-frame bit) and the
- * 35C34 walk `and 0xEFFFFFFF`. 360B4's 6FE14 child tail,
- * 36448, and 12774 stay deferred. 6C5BC @ 35B24, 661CC @
+ * 35C34 walk `and 0xEFFFFFFF`. SEW18 adds the full 36448
+ * actor-contact pass and 12774 task retirement. 360B4's 6FE14
+ * child tail stays deferred. 6C5BC @ 35B24, 661CC @
  * 35B34 stay deferred. PE-BTL120 takes the dest tick at
  * 35AE0: jal 3AF14(actor+0x1B4) when +0x98 bit 0x40 is
  * clear. 3AC90 / 3A6A8 / 6698C / 68014 stay deferred. Not M2.
@@ -43,6 +44,7 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "game_port.h"
 #include "pe_sdk.h"
 
 #define GA_D_8009D20C 0x8009D20Cu
@@ -110,7 +112,7 @@ static void pe_actor_integrate_motion(pe_addr_t actor)
                 PE_LoadU32(actor + 0x30u) + PE_LoadU32(actor + 0x60u));
 }
 
-extern unsigned int D_8009D1A0;
+
 
 void func_800361F4(pe_addr_t actor)
 {
@@ -321,9 +323,30 @@ void func_800710A4(pe_addr_t actor, pe_addr_t codep)
     pe_walk_digital_apply(actor, scaled);
 }
 
+/* 716A4..71754: field/battle idle share velocity clearing, while battle
+ * selects the current equipment record's idle clip without restarting it. */
+void func_800716A4(pe_addr_t actor, pe_addr_t codep)
+{
+    uint32_t idle = (D_8009D1A0 & 2u)
+        ? PE_LoadU8(PE_LoadU32(actor) + 0x12u) : 0x15u;
+    if (PE_LoadU32(codep) == idle) return;
+    if (D_8009D1A0 & 2u) func_8001A784(actor, idle);
+    else func_8001A680_command_cut(actor, idle);
+    PE_StoreU32(actor + 0x68u, 0u);
+    PE_StoreU32(actor + 0x6Cu, 0u);
+    PE_StoreU32(actor + 0x70u, 0u);
+    PE_StoreU32(codep, (D_8009D1A0 & 2u)
+        ? PE_LoadU8(PE_LoadU32(actor) + 0x12u) : 0x15u);
+}
+
 static void pe_3999c_jalr(uint32_t fn, pe_addr_t actor, pe_addr_t codep)
 {
-    if (fn == GA_FN_7136C)
+    /* Field idle, 71034..710A4 in 617AC.s. Changing from walk to idle
+     * clears velocity before the frame's integration; otherwise key-up
+     * left Aya moving indefinitely because this default callback was absent. */
+    if (fn == 0x80071034u || fn == 0x800716A4u)
+        func_800716A4(actor, codep);
+    else if (fn == GA_FN_7136C)
         func_8007136C(actor, codep);
     else if (fn == GA_FN_710A4)
         func_800710A4(actor, codep);
@@ -336,7 +359,7 @@ static void pe_3999c_jalr(uint32_t fn, pe_addr_t actor, pe_addr_t codep)
  * Sole TEXT caller 35C84 @ 35D14. Indexes table[*a2], not actor+0
  * (399C0 is lw 0(s2); s2=a2). BTL67 host-guard on actor+0 is
  * REJECTED. Record+0xC jalr of 710A4/7136C is this cut;
- * 71034/716A4/71754 are not.
+ * STG6 also handles 71034/716A4 idle. 71754 remains unported.
  */
 void func_8003999C(pe_addr_t actor, pe_addr_t table, pe_addr_t codep)
 {
@@ -435,21 +458,90 @@ void func_80035C84(pe_addr_t actor)
     pe_actor_integrate_motion(actor);
 }
 
+/* Retail 357B4..35988: publish the current actor world transform before
+ * bone traversal. Translation uses signed integer halves of 16.16 pose. */
+static void pe_actor_refresh_model_transform(pe_addr_t actor)
+{
+    pe_addr_t matrix = actor + 0x1E8u;
+    unsigned int axis, row;
+    int16_t scale = (int16_t)PE_LoadU16(actor + 0x26u);
+    for (axis = 0; axis < 3u; axis++) {
+        PE_StoreU32(matrix + 20u + axis * 4u,
+            (uint32_t)(int32_t)(int16_t)PE_LoadU16(actor + 0x2Au + axis * 4u));
+        PE_StoreU16(actor + 0x1E0u + axis * 2u, PE_LoadU16(actor + 0x38u + axis * 2u));
+    }
+    func_800794C4(actor + 0x1E0u, matrix);
+    PE_GTE_LoadRT(matrix);
+    for (axis = 0; axis < 3u; axis++) {
+        int16_t v[3] = {0,0,0};
+        v[axis] = scale;
+        PE_GTE_SetIR(v[0],v[1],v[2]);
+        PE_GTE_MVMVA(0x049E012u);
+        for (row = 0; row < 3u; row++)
+            PE_StoreU16(matrix + row * 6u + axis * 2u, (uint16_t)g_pe_gte.ir[row]);
+    }
+    PE_GTE_SetV0(0,0,0);
+    PE_GTE_MVMVA(0x0480012u);
+    for (axis = 0; axis < 3u; axis++)
+        PE_StoreU32(matrix + 20u + axis * 4u, (uint32_t)g_pe_gte.ir[axis]);
+}
+
 void func_80035558_walk_cut(void)
 {
     pe_addr_t actor;
     pe_addr_t fn;
 
-    if (D_8009D1A0 & 4u)
-        return;
-
-    actor = PE_LoadU32(GA_D_8009D20C);
+    /* Menu pause skips actor callbacks, not battle input or rendering.
+     * Retail 35574 branches to 355B4, before the call to 299CC. */
+    actor = (D_8009D1A0 & 4u) ? 0u : PE_LoadU32(GA_D_8009D20C);
     while (actor != 0u) {
         fn = PE_LoadU32(actor + 0x190u);
         if (fn == GA_VT_35E04)
             func_80035E04(actor);
         else if (fn == GA_VT_35C84)
             func_80035C84(actor);
+        actor = PE_LoadU32(actor + 4u);
+    }
+
+    /* Retail 355E8 updates battle state after actor callbacks and before
+     * floor resolution and model projection (damage can change poses). */
+    if (D_8009D1A0 & 2u) {
+        func_800299CC_consume_cut();
+        func_800299CC_after_consume_cut();
+        if (PE_LoadU32(0x8009D28Cu) != 0u ||
+            PE_LoadU8(0x8009D244u) == 0u)
+            func_800299CC_mode_switch_cut();
+        else
+            func_800299CC_damage_entry_cut();
+    } else if (!(PE_LoadU32(0x800B0CD8u)&0x200u)) {
+        PE_FieldMenuFrame();
+        if (PE_Port_ShouldStop()) return;
+    }
+
+    /* 356F0: constrain integrated positions before projecting models. */
+    if (!(D_8009D1A0 & 4u)) func_8001A9F8_floor_cut();
+    (void)func_80066268();
+    /* 35708..3579C: follow Aya, or the first resource-bearing actor
+     * during the stage play, using this view's camera limits. */
+    actor = PE_LoadU32(GA_D_8009D254);
+    if (!actor) {
+        actor = PE_LoadU32(GA_D_8009D20C);
+        while (actor && !PE_LoadU32(actor + 0x1ACu))
+            actor = PE_LoadU32(actor + 4u);
+    }
+    if (actor)
+        (void)func_80065E48_position((int32_t)PE_LoadU32(actor + 0x28u),
+            (int32_t)(PE_LoadU32(actor + 0x2Cu)
+              - ((uint32_t)(int32_t)(int16_t)PE_LoadU16(0x800BCFFEu) << 16)),
+            (int32_t)PE_LoadU32(actor + 0x30u));
+    else
+        (void)func_80065E48_position(0,0,0);
+    func_800661A4();
+    actor = PE_LoadU32(GA_D_8009D20C);
+    while (actor != 0u) {
+        if ((PE_LoadU32(actor + 0x98u) & 0x10040u) == 0u
+            && PE_RangeIsRam(PE_LoadU32(actor + 0x238u), 32u))
+            pe_actor_refresh_model_transform(actor);
         actor = PE_LoadU32(actor + 4u);
     }
 
@@ -462,23 +554,29 @@ void func_80035558_walk_cut(void)
         if (!(actor == PE_LoadU32(GA_D_8009D254)
               && (PE_LoadU32(GA_D_800B0CD8) & 0x40000u) != 0u)) {
             flags = PE_LoadU32(actor + 0x98u);
-            if ((flags & 0x40u) == 0u && (flags & 0x20000000u) == 0u)
-                (void)func_8003AF14(actor + 0x1B4u, 0u);
+            if ((flags & 0x40u) == 0u) {
+                pe_addr_t instance = actor + 0x1B4u;
+                /* Resource-bearing 35A80..35AE4 continuation. Empty
+                 * instance fixtures remain outside model projection. */
+                if (PE_LoadU32(instance) != 0u
+                    && PE_RangeIsRam(PE_LoadU32(instance + 0x84u), 32u)) {
+                    func_8006698C(instance);
+                    func_80039B74(instance, PE_LoadU32(actor + 0x1B0u),
+                                 (int16_t)PE_LoadU16(actor + 0x16u), 1);
+                    func_8003A088_mode0_walk_cut(instance);
+                    func_8003A6A8(instance, 0x800B89F8u);
+                    if ((flags & 0x20000000u) == 0u)
+                        func_8003AC90(instance, 0x800B89F8u);
+                }
+                if ((flags & 0x20000000u) == 0u)
+                    (void)func_8003AF14(instance, 0x800B89F8u);
+            }
         }
         actor = PE_LoadU32(actor + 4u);
     }
 
-    if (D_8009D1A0 & 2u) {
-        func_800299CC_consume_cut();
-        func_800299CC_after_consume_cut();
-        /* 29A6C mode!=0 and 29A7C 4D4==0 both go to 2A7F8.
-         * mode==0 && 4D4!=0 falls through to jal 1D340 @ 2A4FC. */
-        if (PE_LoadU32(0x8009D28Cu) != 0u ||
-            PE_LoadU8(0x8009D244u) == 0u)
-            func_800299CC_mode_switch_cut();
-        else
-            func_800299CC_damage_entry_cut();
-    }
+    /* 35B24: keep the actor/weapon package loader moving between maps. */
+    (void)func_8006C5BC();
     func_80069594();
 
     /* ROM 0x80035B44: D1A0&4 skips 1A4AC, 36448, 12774, 360B4. */
@@ -500,6 +598,13 @@ void func_80035558_walk_cut(void)
             actor = PE_LoadU32(actor + 4u);
         }
     }
+
+    /* Original 35C10 rechecks the pause flag after animation callbacks. */
+    if (D_8009D1A0 & 4u)
+        return;
+    /* Original 35C1C / 35C24: generate proximity tasks and reclaim finished ones. */
+    func_80036448();
+    func_80012774();
 
     /*
      * ROM 0x80035C2C jal 360B4 prefix: lw +0x98 / and

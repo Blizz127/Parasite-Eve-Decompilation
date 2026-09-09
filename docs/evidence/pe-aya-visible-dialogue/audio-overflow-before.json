@@ -1,0 +1,68 @@
+{
+  "source": "read-only ATK17 visible process capture; game paused under GDB tty 85517",
+  "aya_record": "800B8A20",
+  "queued_commands": 31,
+  "warning": "Aya HP/AT is corrupted by audio FIFO overflow; this is not evidence of enemy damage.",
+  "overflow_entries": [
+    {
+      "index": 27,
+      "address": "800B89F4",
+      "words": [
+        "00000024",
+        "800F8508",
+        "00000000",
+        "0000007F",
+        "00000063",
+        "00000407",
+        "0000001A",
+        "000002C8",
+        "00000EDE"
+      ]
+    },
+    {
+      "index": 28,
+      "address": "800B8A18",
+      "words": [
+        "00000024",
+        "800F8378",
+        "00000000",
+        "00000080",
+        "0000007F",
+        "00000024",
+        "05040000",
+        "070A0806",
+        "00000B09"
+      ]
+    },
+    {
+      "index": 29,
+      "address": "800B8A3C",
+      "words": [
+        "00000024",
+        "800F8378",
+        "00000000",
+        "00000080",
+        "0000007F",
+        "00000409",
+        "000000F0",
+        "00000000",
+        "000A000F"
+      ]
+    },
+    {
+      "index": 30,
+      "address": "800B8A60",
+      "words": [
+        "00000024",
+        "800F8378",
+        "00000000",
+        "00000080",
+        "0000007F",
+        "0000040A",
+        "00000000",
+        "00000000",
+        "00000000"
+      ]
+    }
+  ]
+}

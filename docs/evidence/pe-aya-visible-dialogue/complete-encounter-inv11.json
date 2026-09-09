@@ -1,0 +1,34 @@
+{
+  "run": "INV11 visible native window",
+  "shots": [
+    26073,
+    26985,
+    27001,
+    27374,
+    27390,
+    27767,
+    27826
+  ],
+  "scripted_exit": [
+    27974
+  ],
+  "hp_live": 14,
+  "hp_saved": 14,
+  "ammo_saved": 5,
+  "input": "0x0",
+  "message": 60,
+  "message_state": 0,
+  "inventory": [
+    256,
+    257,
+    258,
+    512,
+    6,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "queue": 0
+}

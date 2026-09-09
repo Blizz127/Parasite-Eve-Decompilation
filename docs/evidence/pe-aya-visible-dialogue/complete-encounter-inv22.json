@@ -1,0 +1,29 @@
+{
+  "run": "INV22 second visible attempt, same process following first-attempt defeat",
+  "window_title": "Parasite Eve - Equipment verification",
+  "name": "Aya accepted with ordinary keys",
+  "stage_evidence": "performance-inv22.png",
+  "medicine": {
+    "frame": 29844,
+    "hp_before": 42,
+    "hp_after": 45,
+    "effect_frame": 29864
+  },
+  "shot_frames": [
+    30149,
+    30988,
+    31004,
+    31353,
+    31369,
+    31718,
+    31797
+  ],
+  "eve_exit_frame": 31945,
+  "completion_message": 60,
+  "message_state": 0,
+  "hp_saved": 10,
+  "hp_live": 10,
+  "native_stops": false,
+  "game_state_writes": false,
+  "equipment_evidence": "equipment-use-inv22.json"
+}

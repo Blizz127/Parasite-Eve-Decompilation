@@ -12,7 +12,7 @@
  *   0: if (D_8009D26C & mask) == mask then *arg2=1 else 0
  *   1: if (D_8009D1F4 & mask) == mask then *arg2=1 else 0
  *   2: if (D_8009D1E4 & mask) == mask then *arg2=1 else 0
- *   3: COP2 FLAG + D_800A7770 table; not this cut
+ *   3: held-mask check, destructive LZCR mask write, hold-counter lookup
  *   else: no store
  *
  * Live type-5 +0x2FC: code 1, mask 0x100, dest local[4].
@@ -20,6 +20,7 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "pe_sdk.h"
 
 #define GA_D_8009D26C 0x8009D26Cu
 #define GA_D_8009D1F4 0x8009D1F4u
@@ -33,8 +34,27 @@ int func_800130B4(pe_addr_t args)
     pe_addr_t dest;
 
     code = PE_LoadU32(PE_LoadU32(args));
-    if (code >= 3u)
+    if (code > 3u)
         return 1;
+    if (code == 3u) {
+        pe_addr_t mask_arg = PE_LoadU32(args + 4u);
+        flags = PE_LoadU32(GA_D_8009D26C);
+        mask = PE_LoadU32(mask_arg);
+        if ((flags & mask) != mask) {
+            PE_StoreU32(PE_LoadU32(args + 8u), 0u);
+            return 1;
+        }
+        PE_GTE_SetLZCS(mask);
+        uint32_t index = 31u;
+        if (mask != 0x80000000u) {
+            PE_StoreU32(PE_LoadU32(args + 4u), g_pe_gte.lzcr);
+            /* Reload after swc2: arguments may alias the pointer bank. */
+            index -= PE_LoadU32(PE_LoadU32(args + 4u));
+        }
+        dest = PE_LoadU32(args + 8u);
+        PE_StoreU32(dest, PE_LoadU32(0x800A7770u + (index << 2)));
+        return 1;
+    }
 
     mask = PE_LoadU32(PE_LoadU32(args + 4u));
     dest = PE_LoadU32(args + 8u);

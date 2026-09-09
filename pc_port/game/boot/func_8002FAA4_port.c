@@ -48,3 +48,19 @@ void func_8002FAA4(pe_addr_t actor, unsigned int index,
     PE_StoreU8(p16 + 3u, (uint8_t)b3);
     PE_StoreU16(p16 + 0xCu, (uint16_t)half_c);
 }
+
+/* SEW20: original 2FAD8 (8 words) and B0 wrapper198C4 (16 words).
+ * Write both full-width timing fields in the indexed attack record. */
+void func_8002FAD8(pe_addr_t actor,unsigned int index,uint32_t first,uint32_t last)
+{
+    pe_addr_t record=PE_LoadU32(actor)+(index&255u)*16u+0x1Cu;
+    PE_StoreU32(record+4u,first);
+    PE_StoreU32(record+8u,last);
+}
+
+int func_800198C4(pe_addr_t args)
+{
+    func_8002FAD8(PE_LoadU32(0x8009D2F0u),PE_LoadU8(PE_LoadU32(args)),
+                 PE_LoadU32(PE_LoadU32(args+4u)),PE_LoadU32(PE_LoadU32(args+8u)));
+    return 1;
+}

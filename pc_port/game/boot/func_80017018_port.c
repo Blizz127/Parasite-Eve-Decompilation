@@ -30,11 +30,19 @@
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
  * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0xC1 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22 / 0x43 / 0x52 / 0x53 / 0xA6 / 0x2A / 0x87 / 0x31 / 0x94 / 0xC7 / 0xAD / 0xAE / 0xB2 / 0x8B / 0x89 / 0x95 / 0x03 / 0xB8 / 0xC6 / 0x55 / 0xCF. 0x1C and 0x1F are the already-ported
- * mailbox leaves. Other table slots are not this cut (return 0
- * = advance). Not M2.
+ * mailbox leaves. SEW1 adds 0x5C / 0x5D (matching src/ leaves
+ * 182C0 / 182E0) and 0x93 (190BC). Any other table slot is an
+ * EXPLICIT boundary: the opcode PC is retained in the task and
+ * PE_PORT_STOP_UNRESOLVED_BOUNDARY is requested. Retail jalr's the
+ * table entry; silently yielding left the task with delay 0 and
+ * suspended it forever (observed: Eve's under-stage script at
+ * 801A074C op 5D never resumed, so Aya's poll of m19 never ended).
+ * Not M2.
  */
+#include <stdio.h>
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "game_port.h"
 
 #define GA_D_8009D300 0x8009D300u
 #define GA_D_8009D2F0 0x8009D2F0u
@@ -120,6 +128,8 @@
 #define GA_OPAD       0x80019748u
 #define GA_OPB2       0x80019798u
 #define GA_OPAE       0x80019728u
+#define GA_OPAC       0x800196E8u
+#define GA_OPE3       0x8001A3FCu
 #define GA_OP8B       0x80018080u
 #define GA_OP89       0x80017FF0u
 #define GA_OP95       0x800192B8u
@@ -133,7 +143,7 @@
 /* Host stand-in for 17410's stack s16 = -1. APPROXIMATION. */
 #define GA_375E0_LIST 0x80120F20u
 
-extern unsigned int D_8009D1A0;
+
 extern int func_80013300(pe_addr_t args);
 extern int func_800144FC(pe_addr_t args);
 
@@ -563,9 +573,9 @@ int func_800187C0(pe_addr_t args)
     (void)func_8006F6D4(PE_LoadU32(PE_LoadU32(args)),
                         0u,
                         PE_LoadU32(PE_LoadU32(args + 4u)),
-                        PE_LoadU32(args + 8u),
-                        PE_LoadU32(args + 12u),
-                        PE_LoadU32(args + 16u));
+                        PE_LoadU32(PE_LoadU32(args + 8u)),
+                        PE_LoadU32(PE_LoadU32(args + 12u)),
+                        PE_LoadU32(PE_LoadU32(args + 16u)));
     return 1;
 }
 
@@ -813,6 +823,27 @@ int func_80019728(pe_addr_t args)
     return 1;
 }
 
+/* AC/196E8 and E3/1A3FC, 16 retail words each (9EE8.s, AB74.s).
+ * Register halfword-offset lists in the current actor's script and their
+ * 16-bit lengths. The stage's battle controller executes these together. */
+int func_800196E8(pe_addr_t args)
+{
+    pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+    uint32_t offset = PE_LoadU32(PE_LoadU32(args));
+    PE_StoreU32(0x8009D2F8u, PE_LoadU32(actor + 0x9Cu) + (offset << 1));
+    PE_StoreU16(0x8009D264u, (uint16_t)PE_LoadU32(PE_LoadU32(args + 4u)));
+    return 1;
+}
+
+int func_8001A3FC(pe_addr_t args)
+{
+    pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+    uint32_t offset = PE_LoadU32(PE_LoadU32(args));
+    PE_StoreU32(0x8009D248u, PE_LoadU32(actor + 0x9Cu) + (offset << 1));
+    PE_StoreU16(0x8009D1CCu, (uint16_t)PE_LoadU32(PE_LoadU32(args + 4u)));
+    return 1;
+}
+
 /*
  * PE-BTL61 — opcode 0x8B typed tagged-read 18080.
  *
@@ -889,6 +920,14 @@ int func_800192B8(pe_addr_t args)
     return 1;
 }
 
+/* VM96 requests the scripted battle exit; 2DC58 completes it as mode12. */
+int func_800192C8(pe_addr_t args)
+{
+    (void)args;
+    PE_StoreU32(GA_D_8009D28C,8u);
+    return 1;
+}
+
 /*
  * PE-BTL64 — opcode 0x03 camera-request 17C54.
  *
@@ -910,8 +949,248 @@ int func_80017C54(pe_addr_t args)
     return 1;
 }
 
+/* Media waits: retail 18FDC (29 words) and 19060 (19 words).
+ * Retry the same instruction next tick while the media owner is active.
+ * 190AC is the retail two-word return-1 leaf. */
+extern int func_8006EC08(void);
+extern int func_8006EBE4(void);
+
+static int pe_script_media_wait(pe_addr_t args, int status_wait)
+{
+    if (status_wait && (int16_t)func_8006EBE4() ==
+            (int32_t)PE_LoadU32(PE_LoadU32(args)))
+        return 1;
+    if ((uint8_t)func_8006EC08() == 0u)
+        return 1;
+    PE_StoreU32(GA_D_8009CE00,
+                PE_LoadU32(GA_D_8009CE00) - (status_wait ? 12u : 8u));
+    PE_StoreU32(PE_LoadU32(GA_D_8009D300) + 0x10u, 1u);
+    return 0;
+}
+
+/* PC of the opcode being dispatched (set by the main loop) so an
+ * unported table slot can retain it instead of advancing past it. */
+static pe_addr_t g_pe_17018_opcode_pc;
+
+/* C5/CC model attachment and D4/D5/D6 animation attachment.
+ * These original routines can dereference physical RAM zero; canonicalize
+ * only those accesses without changing global guest address policy. */
+static pe_addr_t attachment_ram(pe_addr_t p)
+{
+    return p < 0x200000u ? p | 0x80000000u : p;
+}
+
+static int pe_attachment_command(pe_addr_t fn, pe_addr_t args)
+{
+    pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0), parent, node;
+    if (fn == 0x80019170u || fn == 0x80019F04u || fn == 0x80015108u) {
+        uint32_t type = PE_LoadU32(PE_LoadU32(args));
+        if (!type) parent = PE_LoadU32(GA_D_8009D254);
+        else {
+            parent = PE_LoadU32(0x8009D20Cu);
+            while (parent) {
+                if (PE_LoadU8(parent + 0xCu) == type &&
+                    PE_LoadU8(parent + 0xDu) == PE_LoadU32(PE_LoadU32(args + 4u)) &&
+                    !(PE_LoadU32(parent + 0x98u) & 0x10u)) break;
+                parent = PE_LoadU32(parent + 4u);
+            }
+        }
+        if (!parent) return 1;
+        if (fn == 0x80015108u) {
+            pe_addr_t model = actor + 0x1B4u, source = parent + 0x1B4u, record;
+            int32_t index = (int16_t)PE_LoadU16(PE_LoadU32(args + 8u));
+            /* Original3DF50 binds an anchor and clears the object pointer,
+             * selecting 3A6A8's parent-joint (3E188) transform path. */
+            PE_StoreU16(model + 0x32u, (uint16_t)index);
+            PE_StoreU32(model, 0u);
+            PE_StoreU32(model + 0x24u, source);
+            record = attachment_ram(PE_LoadU32(source + 0x18u) + (uint32_t)index * 16u);
+            PE_StoreU16(model + 0x70u, PE_LoadU16(record + 6u));
+            PE_StoreU16(model + 0x2Cu, PE_LoadU16(record));
+            PE_StoreU16(model + 0x2Eu, PE_LoadU16(record + 2u));
+            PE_StoreU16(model + 0x30u, (uint16_t)(PE_LoadU16(record + 4u) + PE_LoadU16(model + 0x70u)));
+            func_8003A6A8(PE_LoadU32(GA_D_8009D2F0) + 0x1B4u, 0x800B89F8u);
+            actor = PE_LoadU32(GA_D_8009D2F0);
+            PE_StoreU32(actor + 0x18Cu, parent);
+            PE_StoreU32(actor + 0x28u, (uint32_t)PE_LoadU16(actor + 0x254u) << 16);
+            PE_StoreU32(actor + 0x2Cu, (uint32_t)PE_LoadU16(actor + 0x256u) << 16);
+            PE_StoreU32(actor + 0x30u, (uint32_t)PE_LoadU16(actor + 0x258u) << 16);
+            PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0x2000u);
+        } else if (fn == 0x80019170u) {
+            pe_addr_t model = actor + 0x1B4u;
+            uint32_t kind = PE_LoadU8(attachment_ram(PE_LoadU32(model)) + 2u);
+            uint16_t joint = PE_LoadU16(PE_LoadU32(args + 8u));
+            /* Original3E0A4. Joint stores preserve the signed halfword bits. */
+            PE_StoreU32(model + 0x24u, parent + 0x1B4u);
+            PE_StoreU16(model + 0x28u, kind == 2u ? 3u : 1u);
+            PE_StoreU16(model + 0x2Au, joint);
+            PE_StoreU32(PE_LoadU32(GA_D_8009D2F0) + 0x18Cu, parent);
+        } else {
+            PE_StoreU32(actor + 0x18Cu, parent);
+            PE_StoreU32(parent + 0x98u, PE_LoadU32(parent + 0x98u) | 0x100000u);
+            PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | 0x600000u);
+        }
+        return 1;
+    }
+    if (fn == 0x80019260u) {
+        pe_addr_t model = actor + 0x1B4u;
+        pe_addr_t data = attachment_ram(PE_LoadU32(model));
+        /* Original3E0D0 clears the link before reading the model kind. */
+        PE_StoreU32(model + 0x24u, 0u);
+        PE_StoreU16(model + 0x28u, PE_LoadU8(data + 2u) == 2u ? 2u : 0u);
+        PE_StoreU32(PE_LoadU32(GA_D_8009D2F0) + 0x18Cu, 0u);
+        return 1;
+    }
+    if (fn == 0x80019FE0u) {
+        uint32_t flags = PE_LoadU32(actor + 0x98u);
+        node = PE_LoadU32(0x8009D20Cu);
+        PE_StoreU32(actor + 0x18Cu, 0u);
+        PE_StoreU32(actor + 0x98u, flags & ~0x600000u);
+        for (; node; node = PE_LoadU32(node + 4u))
+            if (node != actor && PE_LoadU32(node + 0x18Cu) == PE_LoadU32(actor + 0x18Cu))
+                return 1;
+        /* Original reloads the already-cleared pointer, even on this tail. */
+        parent = attachment_ram(PE_LoadU32(PE_LoadU32(GA_D_8009D2F0) + 0x18Cu));
+        PE_StoreU32(parent + 0x98u, PE_LoadU32(parent + 0x98u) & ~0x100000u);
+        return 1;
+    }
+    node = PE_LoadU32(0x8009D20Cu);
+    PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) & ~0x100000u);
+    for (; node; node = PE_LoadU32(node + 4u)) {
+        if (PE_LoadU32(node + 0x18Cu) == actor) {
+            uint32_t flags = PE_LoadU32(node + 0x98u);
+            PE_StoreU32(node + 0x18Cu, 0u);
+            PE_StoreU32(node + 0x98u, flags & ~0x600000u);
+        }
+    }
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
+    if (fn == 0x80015108u || fn == 0x80019170u || fn == 0x80019260u || fn == 0x80019F04u ||
+        fn == 0x80019FE0u || fn == 0x8001A064u)
+        return pe_attachment_command(fn, args);
+    if (fn == 0x800192C8u)
+        return func_800192C8(args);
+    if (fn == 0x8001930Cu)
+        return func_8001930C(args);
+    if (fn == 0x80017EFCu || fn == 0x80017F20u) {
+        /* 4F/50: matching leaves pause/resume this actor's animation. */
+        pe_addr_t actor=PE_LoadU32(GA_D_8009D2F0);
+        uint32_t flags=PE_LoadU32(actor+0x98u);
+        PE_StoreU32(actor+0x98u,fn==0x80017EFCu?flags|0x100u:flags&~0x100u);
+        return 1;
+    }
+    if (fn == 0x8001967Cu) { /* 32: matching func_8001967C.c. */
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+        PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) & ~0x80u);
+        return 1;
+    }
+    if (fn == 0x80018D50u || fn == 0x80018DD4u) {
+        /* STG1: 9550.s, opcodes 80/81 toggle a walkmesh record's bit 7.
+         * Flat records are 22 bytes; sloped records are 28 bytes. */
+        uint32_t index = PE_LoadU32(PE_LoadU32(args));
+        uint32_t stride = PE_LoadU32(0x8009D1D8u) ? 28u : 22u;
+        pe_addr_t mesh = PE_LoadU32(0x8009D1FCu);
+        pe_addr_t record = PE_LoadU32(mesh + 0x1Cu) + index * stride;
+        uint8_t flags = PE_LoadU8(record);
+        PE_StoreU8(record, fn == 0x80018D50u ? (uint8_t)(flags | 0x80u)
+                                           : (uint8_t)(flags & 0x7Fu));
+        return 1;
+    }
+    if (fn == 0x800136C0u)
+        return func_800136C0(args);
+    if (fn == 0x80018F74u) { /* 1B: 9774.s, 18F74..18FDC. */
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+        int32_t value = (int32_t)PE_LoadU32(PE_LoadU32(args)) >> 4;
+        PE_StoreU16(actor + 0x26u, (uint16_t)value);
+        if (actor == PE_LoadU32(GA_D_8009D254)) {
+            /* Retail wraps the two shifts/add before dividing toward zero. */
+            int32_t scaled = (int32_t)((uint32_t)value * 384u);
+            PE_StoreU16(0x800BCFFEu, (uint16_t)(scaled / 4096));
+        }
+        return 1;
+    }
+    if (fn == 0x80016F10u) {
+        /* Optional demo shortcut; ordinary play executes the original
+         * two-frame name-entry handshake below. */
+        if (PE_Port_SkipOpeningMenu() && D_8009D280 == 0xA8001048u &&
+            PE_LoadU32(GA_D_8009D254) != 0u &&
+            PE_LoadU32(GA_D_8009D2F0) == PE_LoadU32(GA_D_8009D254) &&
+            PE_LoadU32(PE_LoadU32(args)) == 0u) {
+            Stub_Record("func_80016F10_skip_opening_menu", "HOST_ADAPTED");
+            return 1;
+        }
+        return func_80016F10(args);
+    }
+    if (fn == 0x800182A0u) { /* opcode 5B: matching leaf */
+        PE_StoreU32(0x800BCF88u, PE_LoadU32(0x800BCF88u) & ~0xC0u);
+        return 1;
+    }
+    if (fn == 0x80017AC0u) { /* opcode 2D: matching leaf */
+        PE_StoreU32(GA_D_8009D2E8,
+            PE_LoadU32(GA_D_8009D2E8) | PE_LoadU32(PE_LoadU32(args)));
+        return 1;
+    }
+    if (fn == 0x80019450u) { /* opcode 9D: retail 13 words */
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+        uint32_t diameter = (uint32_t)((int16_t)PE_LoadU16(actor + 0x224u) * 2);
+        uint32_t product = diameter * PE_LoadU32(PE_LoadU32(args));
+        PE_StoreU16(PE_LoadU32(actor + 0x1B4u) + 0x14u,
+                     (uint16_t)((int32_t)product >> 16));
+        return 1;
+    }
+    if (fn == 0x80018B98u || fn == 0x80018C58u) {
+        uint32_t index = PE_LoadU32(PE_LoadU32(args));
+        uint32_t value = PE_LoadU32(PE_LoadU32(args + 4u));
+        if (fn == 0x80018B98u)
+            func_80065954(index, value);
+        else
+            func_800659C8(index, value);
+        return 1;
+    }
+    if (fn == 0x80018B68u) { /* 6590C: 18-word camera slot setter */
+        pe_addr_t container = PE_LoadU32(0x800B1624u);
+        pe_addr_t slot = container + PE_LoadU32(container + 0x10u)
+            + (PE_LoadU32(PE_LoadU32(args)) << 4);
+        uint32_t value = PE_LoadU8(slot + 4u)
+            | (PE_LoadU32(PE_LoadU32(args + 4u)) << 16);
+        uint8_t flags = PE_LoadU8(slot);
+        PE_StoreU16(slot + 0xAu, 0u);
+        PE_StoreU8(slot, (uint8_t)(flags | 2u));
+        PE_StoreU32(slot + 4u, value);
+        return 1;
+    }
+
+    if (fn == 0x80019CECu) { /* CD: 19CEC..19D24, adopt animated world position. */
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+        PE_StoreU32(actor + 0x28u, (uint32_t)PE_LoadU16(actor + 0x21Cu) << 16);
+        PE_StoreU32(actor + 0x30u, (uint32_t)PE_LoadU16(actor + 0x220u) << 16);
+        PE_StoreU32(actor + 0x2Cu, (uint32_t)PE_LoadU16(actor + 0x21Eu) << 16);
+        return 1;
+    }
+
+    if (fn == 0x80014E30u) {
+        /* HOST_ADAPTED --skip-movie: opcode 35 loads the movie
+         * overlay and calls 1216C4/121C04/1223A8. Skip before its
+         * display disable and arena overwrites; retail returns 1. */
+        if (PE_Port_SkipMovie()) {
+            Stub_Record("func_80014E30_skip_movie", "HOST_ADAPTED");
+            return 1;
+        }
+        Bootstrap_ReturnVoid("func_80014E30", "func_80017018");
+        PE_StoreU32(GA_D_8009CE00, PE_LoadU32(GA_D_8009CE00) - 12u);
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+        return 0;
+    }
+    if (fn == 0x800190ACu)
+        return 1;
+    if (fn == 0x80018FDCu)
+        return pe_script_media_wait(args, 1);
+    if (fn == 0x80019060u)
+        return pe_script_media_wait(args, 0);
+
     if (fn == GA_OP0)
         return func_80017294(args);
     if (fn == GA_OP1)
@@ -1006,10 +1285,14 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_800176FC(args);
     if (fn == GA_OP6F)
         return func_80018954(args);
+    if (fn == 0x8001A390u)
+        return func_8001A390(args);
     if (fn == GA_OP5A)
         return func_80018164(args);
     if (fn == GA_OPB7)
         return func_80018A48(args);
+    if (fn == 0x800198C4u)
+        return func_800198C4(args);
     if (fn == GA_OP70)
         return func_8001897C(args);
     if (fn == GA_OP59)
@@ -1048,6 +1331,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80018F0C(args);
     if (fn == GA_OP31)
         return func_80017BB4_btl1_cut(args);
+    if (fn == 0x800194B0u) return func_800194B0(args);
+    if (fn == 0x80015BACu) return func_80015BAC(args);
     if (fn == GA_OP94)
         return func_80019154(args);
     if (fn == GA_OPC7)
@@ -1058,6 +1343,10 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80019798(args);
     if (fn == GA_OPAE)
         return func_80019728(args);
+    if (fn == GA_OPAC)
+        return func_800196E8(args);
+    if (fn == GA_OPE3)
+        return func_8001A3FC(args);
     if (fn == GA_OP8B)
         return func_80018080(args);
     if (fn == GA_OP89)
@@ -1074,7 +1363,253 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_800144FC(args);
     if (fn == GA_OPCF)
         return func_80019D24(args);
-    /* Unported / empty table slot: not this cut. Advance. */
+    if (fn == 0x800182C0u) { /* 5C: matching src/func_800182C0.c */
+        PE_StoreU32(0x800BCF88u, PE_LoadU32(0x800BCF88u) | 0xC0u);
+        return 1;
+    }
+    if (fn == 0x800182E0u) { /* 5D: matching src/func_800182E0.c */
+        PE_StoreU32(PE_LoadU32(GA_D_8009D2F0) + 0x20u,
+                    PE_LoadU32(PE_LoadU32(args)));
+        return 1;
+    }
+    if (fn == 0x800190BCu) {
+        /* 93: 190BC..19154 (38 words). 3C5D8(actor+0x1B4, (s16)*arg0);
+         * actor+0x250 |= 2; when the actor is the camera target D254,
+         * also 3C5D8(B0CEC, (s16)*arg0) and B0D88 |= 2. v0=1. */
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+        int value = (int)(int16_t)PE_LoadU16(PE_LoadU32(args));
+        func_8003C5D8(actor + 0x1B4u, value);
+        PE_StoreU16(actor + 0x250u, (uint16_t)(PE_LoadU16(actor + 0x250u) | 2u));
+        if (actor == PE_LoadU32(GA_D_8009D254)) {
+            func_8003C5D8(0x800B0CECu, value);
+            PE_StoreU16(0x800B0D88u, (uint16_t)(PE_LoadU16(0x800B0D88u) | 2u));
+        }
+        return 1;
+    }
+    /* SEW2: matching src/ leaves wired by table entry. Each is the retail
+     * body from src/func_<addr>.c (era-matched); args are VM_FRAME pointers. */
+    if (fn == 0x80016FE0u) { /* F0: 16FE0 — *arg0 = (D2E8 & 1) ? 0 : 1 (EXE words) */
+        PE_StoreU32(PE_LoadU32(args), (PE_LoadU32(GA_D_8009D2E8) & 1u) ? 0u : 1u);
+        return 1;
+    }
+    if (fn == 0x800176E0u) { /* 19: *arg0 = u16(task+0xA) */
+        PE_StoreU32(PE_LoadU32(args), PE_LoadU16(PE_LoadU32(GA_D_8009D300) + 0xAu));
+        return 1;
+    }
+    if (fn == 0x80017968u) { /* 25: *arg0 = u16(actor+0x24) */
+        PE_StoreU32(PE_LoadU32(args), PE_LoadU16(PE_LoadU32(GA_D_8009D2F0) + 0x24u));
+        return 1;
+    }
+    if (fn == 0x80017928u) { /* 26: *arg0 = u8(actor+0xD) */
+        PE_StoreU32(PE_LoadU32(args), PE_LoadU8(PE_LoadU32(GA_D_8009D2F0) + 0xDu));
+        return 1;
+    }
+    if (fn == 0x80017948u) { /* 27: u8(actor+0xD) = *arg0 */
+        PE_StoreU8(PE_LoadU32(GA_D_8009D2F0) + 0xDu, (uint8_t)PE_LoadU32(PE_LoadU32(args)));
+        return 1;
+    }
+    if (fn == 0x80017A24u) { /* 29: *arg2 = *arg0 & (1 << *arg1) */
+        PE_StoreU32(PE_LoadU32(args + 8u), PE_LoadU32(PE_LoadU32(args))
+                    & (1u << (PE_LoadU32(PE_LoadU32(args + 4u)) & 31u)));
+        return 1;
+    }
+    if (fn == 0x80017A78u) { /* 2B: D2E8 &= ~*arg0 */
+        PE_StoreU32(GA_D_8009D2E8, PE_LoadU32(GA_D_8009D2E8) & ~PE_LoadU32(PE_LoadU32(args)));
+        return 1;
+    }
+    if (fn == 0x80017AA4u) { /* 2C: *arg0 = D2E8 */
+        PE_StoreU32(PE_LoadU32(args), PE_LoadU32(GA_D_8009D2E8));
+        return 1;
+    }
+    if (fn == 0x80017D3Cu) { /* 3E: s16(actor+0x224) = upper halfword of *arg0 */
+        PE_StoreU16(PE_LoadU32(GA_D_8009D2F0) + 0x224u, PE_LoadU16(PE_LoadU32(args) + 2u));
+        return 1;
+    }
+    if (fn == 0x80017C8Cu) { /* 46: 661EC((s16)*a0, (s16)*a1, (u16)*a2, 8) */
+        (void)func_800661EC((int)(int16_t)PE_LoadU16(PE_LoadU32(args)),
+                            (int)(int16_t)PE_LoadU16(PE_LoadU32(args + 4u)),
+                            (unsigned int)PE_LoadU16(PE_LoadU32(args + 8u)), 8u);
+        return 1;
+    }
+    if (fn == 0x80017CC4u) { /* 47: *arg0 = ((BCF88 & 7) == 4) */
+        PE_StoreU32(PE_LoadU32(args), (PE_LoadU32(0x800BCF88u) & 7u) == 4u ? 1u : 0u);
+        return 1;
+    }
+    if (fn == 0x80017D18u) { /* 49: BCF88 = (BCF88 & ~7) | 0x80 */
+        PE_StoreU32(0x800BCF88u, (PE_LoadU32(0x800BCF88u) & ~7u) | 0x80u);
+        return 1;
+    }
+    if (fn == 0x80017EA4u) { /* 4D: actor+0x1C = *arg0 */
+        PE_StoreU32(PE_LoadU32(GA_D_8009D2F0) + 0x1Cu, PE_LoadU32(PE_LoadU32(args)));
+        return 1;
+    }
+    if (fn == 0x80018754u) { /* 69: D_800A76C4 |= 4 */
+        PE_StoreU32(0x800A76C4u, PE_LoadU32(0x800A76C4u) | 4u);
+        return 1;
+    }
+    if (fn == 0x80017FDCu) { /* 8A: D28C = 5 */
+        PE_StoreU32(GA_D_8009D28C, 5u);
+        return 1;
+    }
+    if (fn == 0x80017E9Cu || fn == 0x80019050u || fn == 0x80019058u ||
+        fn == 0x800190B4u) /* 4C / 8D / 8E / 90: return-1 twins */
+        return 1;
+    if (fn == 0x800193B8u) { /* 99: 703F4() */
+        func_800703F4();
+        return 1;
+    }
+    if (fn == 0x80019298u) { /* CA: u16(actor+0x1E6) = *arg0 */
+        PE_StoreU16(PE_LoadU32(GA_D_8009D2F0) + 0x1E6u, (uint16_t)PE_LoadU32(PE_LoadU32(args)));
+        return 1;
+    }
+    {
+        /* actor+0x98 flag leaves: 37 |=0x4000, 39 &=~0x4000, 42 &=~0x40,
+         * 50 &=~0x100, 78 &=~0x20, B9 &=~1, BA |=1, C2 &=~0x400,
+         * C8 &=~0x20000, C9 |=0x20000. */
+        uint32_t set = 0u, clear = 0u;
+        if (fn == 0x800196A0u) set = 0x4000u;
+        else if (fn == 0x800196C4u) clear = 0x4000u;
+        else if (fn == 0x80017DC0u) clear = 0x40u;
+        else if (fn == 0x80017F20u) clear = 0x100u;
+        else if (fn == 0x80018BC8u) clear = 0x20u;
+        else if (fn == 0x80019904u) clear = 1u;
+        else if (fn == 0x80019928u) set = 1u;
+        else if (fn == 0x80019AE4u) clear = 0x400u;
+        else if (fn == 0x80019C04u) clear = 0x20000u;
+        else if (fn == 0x80019C28u) set = 0x20000u;
+        if (set | clear) {
+            pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+            PE_StoreU32(actor + 0x98u, (PE_LoadU32(actor + 0x98u) | set) & ~clear);
+            return 1;
+        }
+    }
+    if (fn == 0x80019A9Cu || fn == 0x800199F8u) { /* BE &=~8, C0 &=~0x10 on u16 actor+0x250 */
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+        uint16_t clear = fn == 0x80019A9Cu ? 8u : 0x10u;
+        PE_StoreU16(actor + 0x250u, (uint16_t)(PE_LoadU16(actor + 0x250u) & ~clear));
+        return 1;
+    }
+    /* SEW3: leaves whose callees now live in func_800659F8_port.c. */
+    if (fn == 0x80017820u) { /* 23: 3746C((s16)*a0) close message by id */
+        func_8003746C((int)(int16_t)PE_LoadU16(PE_LoadU32(args)));
+        return 1;
+    }
+    if (fn == 0x80018B00u) { /* 72: 67678(*a0, *a1) */
+        (void)func_80067678(PE_LoadU32(PE_LoadU32(args)), PE_LoadU32(PE_LoadU32(args + 4u)));
+        return 1;
+    }
+    if (fn == 0x80018C88u) { /* 7C: 659F8(*a0, *a1) */
+        (void)func_800659F8(PE_LoadU32(PE_LoadU32(args)), PE_LoadU32(PE_LoadU32(args + 4u)));
+        return 1;
+    }
+    if (fn == 0x80018CB8u) { /* 7D: 65A60(*a0, *a1, *a2) */
+        (void)func_80065A60(PE_LoadU32(PE_LoadU32(args)), PE_LoadU32(PE_LoadU32(args + 4u)),
+                            PE_LoadU32(PE_LoadU32(args + 8u)));
+        return 1;
+    }
+    if (fn == 0x80018CF0u || fn == 0x80018D20u) { /* 7E: 65A9C(*a0, *a1); 7F: 65A9C(*a0, ~*a1) */
+        uint32_t bits = PE_LoadU32(PE_LoadU32(args + 4u));
+        (void)func_80065A9C(PE_LoadU32(PE_LoadU32(args)), fn == 0x80018D20u ? ~bits : bits);
+        return 1;
+    }
+    if (fn == 0x80015AF0u) return func_80015AF0(args); /* E7 */
+    if (fn == 0x800197D0u) { func_800375B4(); return 1; } /* B4 */
+    if (fn == 0x800197F0u) { func_800375C4(); return 1; } /* B5 */
+    if (fn == 0x8001994Cu || fn == 0x8001998Cu) { /* BB: 676CC(4 args); BC: 67730(4 args) */
+        uint32_t a0 = PE_LoadU32(PE_LoadU32(args)), a1 = PE_LoadU32(PE_LoadU32(args + 4u));
+        uint32_t a2 = PE_LoadU32(PE_LoadU32(args + 8u)), a3 = PE_LoadU32(PE_LoadU32(args + 12u));
+        if (fn == 0x8001994Cu) (void)func_800676CC(a0, a1, a2, a3);
+        else                   (void)func_80067730(a0, a1, a2, a3);
+        return 1;
+    }
+    if (fn == 0x80019D44u) { /* D0: 37454(4 x u16 args) */
+        func_80037454(PE_LoadU16(PE_LoadU32(args)), PE_LoadU16(PE_LoadU32(args + 4u)),
+                      PE_LoadU16(PE_LoadU32(args + 8u)), PE_LoadU16(PE_LoadU32(args + 12u)));
+        return 1;
+    }
+    if (fn == 0x80019C4Cu || fn == 0x80015648u) {
+        /* CB: 19C4C..19CEC (40 words). Heading from the current actor to
+         * the 16.16 point (*a0, *a1): v = 79FB4((z - tz) >> 16,
+         * (x - tx) >> 16); v = 0x1400 - v; if (v >= 0x1001) v -= 0x1000;
+         * v -= (s16)actor+0x3A; if (v < 0) v += 0x1000; *a2 = v. v0=1.
+         * 45: 15648..15790 (82 words): same math toward an ACTOR — *a0 == 0
+         * selects D_8009D254, otherwise the first D20C-list actor with
+         * +0xC == *a0, +0xD == *a1 and !(+0x98 & 0x10); none -> *a2 = -1. */
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+        uint32_t tx, tz;
+        int32_t dx, dz, v;
+        if (fn == 0x80019C4Cu) {
+            tx = PE_LoadU32(PE_LoadU32(args));
+            tz = PE_LoadU32(PE_LoadU32(args + 4u));
+        } else {
+            uint32_t type = PE_LoadU32(PE_LoadU32(args));
+            pe_addr_t found;
+            if (type == 0u) {
+                found = PE_LoadU32(GA_D_8009D254);
+            } else {
+                uint32_t idb = PE_LoadU32(PE_LoadU32(args + 4u));
+                found = PE_LoadU32(GA_D_8009D20C);
+                while (found != 0u) {
+                    if (PE_LoadU8(found + 0x0Cu) == (uint8_t)type &&
+                        PE_LoadU8(found + 0x0Du) == (uint8_t)idb &&
+                        (PE_LoadU32(found + 0x98u) & 0x10u) == 0u)
+                        break;
+                    found = PE_LoadU32(found + 4u);
+                }
+            }
+            if (found == 0u) {
+                PE_StoreU32(PE_LoadU32(args + 8u), 0xFFFFFFFFu);
+                return 1;
+            }
+            tx = PE_LoadU32(found + 0x28u);
+            tz = PE_LoadU32(found + 0x30u);
+        }
+        dx = (int32_t)(PE_LoadU32(actor + 0x28u) - tx) >> 16;
+        dz = (int32_t)(PE_LoadU32(actor + 0x30u) - tz) >> 16;
+        v = 0x1400 - func_80079FB4(dz, dx);
+        if (v >= 0x1001) v -= 0x1000;
+        v -= (int32_t)(int16_t)PE_LoadU16(actor + 0x3Au);
+        if (v < 0) v += 0x1000;
+        PE_StoreU32(PE_LoadU32(args + 8u), (uint32_t)v);
+        return 1;
+    }
+    if (fn == 0x80018864u) { /* 6D: matching C — 6F820(*a0, 0, *a1) write */
+        (void)func_8006F820(PE_LoadU32(PE_LoadU32(args)), 0u, PE_LoadU32(PE_LoadU32(args + 4u)));
+        return 1;
+    }
+    if (fn == 0x80018894u) { /* 6E: matching C — 6F820(*a0, 1, a1 pointer) read */
+        (void)func_8006F820(PE_LoadU32(PE_LoadU32(args)), 1u, PE_LoadU32(args + 4u));
+        return 1;
+    }
+    if (fn == 0x80019768u) { /* AF: matching C — 1ACE0(actor, (u16)*a0) */
+        func_8001ACE0(PE_LoadU32(GA_D_8009D2F0), PE_LoadU16(PE_LoadU32(args)));
+        return 1;
+    }
+    /* SEW8: game/boot/func_80013988_port.c */
+    if (fn == 0x8001787Cu) return func_8001787C(args);   /* 18 */
+    if (fn == 0x80014BA0u) return func_80014BA0(args);   /* 76 */
+    if (fn == 0x80013E84u) return func_80013E84(args);   /* 36 */
+    if (fn == 0x80014FD8u) return func_80014FD8(args);   /* 92 */
+    if (fn == 0x800155FCu) return func_800155FC(args);   /* A5 */
+    if (fn == 0x80019B08u) return func_80019B08(args);   /* C3 */
+    if (fn == 0x80013988u) return func_80013988(args);   /* DB */
+    if (fn == 0x80017CE8u) return func_80017CE8(args);   /* 48 */
+    if (fn == 0x800199CCu) { /* BF: 199CC (11w) actor+0x250 |= 0x10; u16 actor+0x24E = *a0 */
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+        PE_StoreU16(actor + 0x250u, (uint16_t)(PE_LoadU16(actor + 0x250u) | 0x10u));
+        PE_StoreU16(actor + 0x24Eu, (uint16_t)PE_LoadU32(PE_LoadU32(args)));
+        return 1;
+    }
+    if (fn == 0x80019DB8u)return func_80019DB8(args);
+    if (fn == 0x80019DF4u)return func_80019DF4(args);
+    /* Unported / empty table slot: explicit boundary. Retail would jalr
+     * the entry; yielding here left the task suspended (delay 0). Retain
+     * the opcode PC so the stop report names the exact script word. */
+    fprintf(stderr, "[VM] unported script opcode fn=0x%08X at pc=0x%08X actor=0x%08X\n",
+            (unsigned)fn, (unsigned)g_pe_17018_opcode_pc,
+            (unsigned)PE_LoadU32(GA_D_8009D2F0));
+    PE_StoreU32(GA_D_8009CE00, g_pe_17018_opcode_pc);
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
     return 0;
 }
 
@@ -1176,6 +1711,7 @@ void func_80017018(void)
                 if (i == 4u)
                     kinds = word2;
             }
+            g_pe_17018_opcode_pc = pc;
             again = pe_17018_dispatch(PE_LoadU32(GA_D_800910A0 + op * 4u),
                                       GA_VM_FRAME);
             if (again)

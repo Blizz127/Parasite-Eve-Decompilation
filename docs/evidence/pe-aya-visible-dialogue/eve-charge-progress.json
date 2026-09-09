@@ -1,0 +1,117 @@
+{
+  "method": "Read-only snapshots of visible native app; ordinary keyboard input; no guest state changes.",
+  "frame": 10086,
+  "next_callback": "8018F614",
+  "next_mode": 0,
+  "effect_slot": "801861A0",
+  "effect_tick": 162,
+  "first_child_tick": 162,
+  "particle_pool": "8018623C",
+  "particles": [
+    {
+      "active": 1,
+      "tick": 162
+    },
+    {
+      "active": 1,
+      "tick": 161
+    },
+    {
+      "active": 1,
+      "tick": 160
+    },
+    {
+      "active": 1,
+      "tick": 159
+    },
+    {
+      "active": 1,
+      "tick": 158
+    },
+    {
+      "active": 1,
+      "tick": 157
+    },
+    {
+      "active": 1,
+      "tick": 156
+    },
+    {
+      "active": 1,
+      "tick": 155
+    },
+    {
+      "active": 1,
+      "tick": 154
+    },
+    {
+      "active": 1,
+      "tick": 153
+    },
+    {
+      "active": 1,
+      "tick": 152
+    },
+    {
+      "active": 1,
+      "tick": 151
+    },
+    {
+      "active": 1,
+      "tick": 150
+    },
+    {
+      "active": 1,
+      "tick": 149
+    },
+    {
+      "active": 1,
+      "tick": 148
+    },
+    {
+      "active": 1,
+      "tick": 147
+    },
+    {
+      "active": 1,
+      "tick": 146
+    },
+    {
+      "active": 1,
+      "tick": 145
+    },
+    {
+      "active": 1,
+      "tick": 144
+    },
+    {
+      "active": 1,
+      "tick": 143
+    },
+    {
+      "active": 1,
+      "tick": 142
+    },
+    {
+      "active": 1,
+      "tick": 141
+    },
+    {
+      "active": 1,
+      "tick": 140
+    },
+    {
+      "active": 1,
+      "tick": 139
+    }
+  ],
+  "aya_hp": 45,
+  "aya_max_hp": 45,
+  "queued_sounds": 0,
+  "validation": {
+    "original_call_graph_cases": 125,
+    "native_cases": 1141,
+    "normal_ctest": "2/2 passed",
+    "asan_ubsan_ctest": "2/2 passed"
+  }
+}

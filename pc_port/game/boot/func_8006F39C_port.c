@@ -21,6 +21,7 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "game_port.h"
 
 #define GA_D_800B0CD8 0x800B0CD8u
 #define GA_D_800942E0 0x800942E0u
@@ -136,7 +137,17 @@ int func_8006F39C(unsigned int code, pe_addr_t userdata)
     PE_StoreU32(slot + 8u, userdata);
     if (code == 0x55u)
         (void)func_800CE49C(slot, extra);
-    if (fn == GA_FN_D4620)
+    if (fn == 0x8018EFFCu && PE_MirrorOverlay())
+        (void)PE_MirrorInit(slot);
+    else if (fn == GA_FN_D4620)
         func_800D4620(slot);
+    else if (fn == 0x800C9A70u)
+        (void)func_800C9A70(slot);
+    else if (fn == 0x800CD728u)
+        (void)func_800CD728(slot);
+    else {
+        Bootstrap_ReturnVoid("func_8006F39C_constructor", "func_8006F39C");
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    }
     return index;
 }
