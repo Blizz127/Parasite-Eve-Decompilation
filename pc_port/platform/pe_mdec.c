@@ -117,6 +117,31 @@ static int MdecMacroblock(void)
     }
     g_macroblocks++;return 1;
 }
+/* C89C end-fills with FE00; ReadPixels only skips that after a DMA1 drain.
+ * Title 91DC8's final-slice arm stops issuing DecDCTout once the bank
+ * rectangle is covered, so trailing FE00 (or any orphaned remainder after
+ * 1494) can still sit in the input FIFO. Retail C308 would wait on command
+ * busy; without another DecDCTout that wait cannot make progress. Drain
+ * idle FE00 here so a padding-only remainder is not "busy". If a new
+ * DecDCTin arrives with non-padding residue and no DMA in flight, supersede
+ * the orphaned prior command (DAY2-158s).
+ *
+ * Do NOT clear g_decode_valid when the FIFO drains: HostFB_VSync gates
+ * DMA IRQ delivery on PE_MDEC_HasDecode(); clearing before 1214D4/91DC8
+ * runs drops the final-slice frame-complete store. */
+static void MdecConsumeIdlePadding(void)
+{
+    if(g_pixel_pos!=g_pixel_count) return;
+    while(g_input_pos<g_input_count && g_input[g_input_pos]==0xFE00u)
+        g_input_pos++;
+}
+
+static int MdecDecodeResidue(void)
+{
+    MdecConsumeIdlePadding();
+    return g_input_pos<g_input_count || g_pixel_pos<g_pixel_count;
+}
+
 static int MdecBeginCommand(uint32_t command,pe_addr_t source)
 {
     uint32_t words=command&0xFFFFu;
@@ -124,7 +149,15 @@ static int MdecBeginCommand(uint32_t command,pe_addr_t source)
     unsigned required_tables=((command>>27u)&3u)<2u?5u:7u;
     if((g_tables&required_tables)!=required_tables) return MdecBoundary("MDEC_missing_tables",g_tables);
     if(!PE_RangeIsRam(source,words*4u)) return MdecBoundary("MDEC_input_range",source);
-    if(g_input_pos<g_input_count || g_pixel_pos<g_pixel_count) return MdecBoundary("MDEC_decode_busy",g_input_pos);
+    if(MdecDecodeResidue()) {
+        int dma_busy=g_mdec.dma0_active ||
+                      ((g_mdec.dma1_chcr&0x01000000u)!=0u);
+        if(dma_busy) return MdecBoundary("MDEC_decode_busy",g_input_pos);
+        /* No DMA left to drain the orphan — supersede for the new DecDCTin. */
+        g_input_pos=g_input_count;
+        g_pixel_pos=g_pixel_count;
+        g_decode_valid=0;
+    }
     g_decode_command=command;g_input_count=words*2u;g_input_pos=0;g_pixel_pos=g_pixel_count=0;g_macroblocks=0;g_decode_valid=1;
     for(unsigned i=0;i<g_input_count;i++) g_input[i]=PE_LoadU16(source+i*2u);
     return 1;
@@ -157,6 +190,7 @@ int PE_MDEC_Service(void)
         g_mdec.dma1_madr=(g_mdec.dma1_madr+g_output_bytes)&0xFFFFFFu;
         g_mdec.dma1_bcr&=0xFFFFu;g_mdec.dma1_chcr&=~0x01000000u;
         g_mdec.completed_output_count++;g_output_bytes=0;
+        MdecConsumeIdlePadding();
         (void)PE_GPU_LatchDMACompletionFlag(1u);completed=1;
     }
     if(completed) (void)PE_IRQ_BridgeDICRRisingEdge(PE_IRQ_Generation());

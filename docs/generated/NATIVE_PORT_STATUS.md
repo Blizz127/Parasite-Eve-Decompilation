@@ -5,8 +5,8 @@
 - Production frontier: **none inside `func_80030894` (complete body)**
 - Implemented retail window: **788 / 788 words
   (100.00%)**, `0x80030894..0x800314E4`
-- Linked native translation units: **314**
-  (280 game,
+- Linked native translation units: **315**
+  (281 game,
   9 bootstrap,
   25 platform, plus the explicit
   port entry/global/callback units)

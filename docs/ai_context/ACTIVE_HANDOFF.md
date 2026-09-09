@@ -3,6 +3,40 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-158s: clear `MDEC_decode_busy` orphan after 91DC8 final (2026-09-09)
+
+Live Disc1 on tip **`d827581`** (DAY2-158r):
+
+```text
+e0_promote → got_frame → c89c#1 out=7300
+92934_enter ×2
+STUB: MDEC_decode_busy
+C89C final: calls=2 out=11140
+NO post_movie_title_cut / NO media_clear
+```
+
+Sticky `D0DBD` fix worked. New wall: host `MDEC_decode_busy` on the second
+`92934` `BFA0`/`DecDCTin`.
+
+**Cause:** title `91DC8` final-slice stops `DecDCTout` once the bank rect is
+covered; C89C `FE00` pad / orphaned FIFO residue still sat in `pe_mdec`.
+Retail `C308` would wait, but without another `DecDCTout` it cannot drain —
+host STOP was the loud equivalent. Evidence:
+`docs/evidence/pe-day2-158-mdec-decode-busy/REPORT.md`.
+
+**Fix (`pe_mdec.c`):** drain idle `FE00` after DMA1 / before busy check
+(**keep** `g_decode_valid` — `HostFB_VSync` gates DMA IRQ on
+`PE_MDEC_HasDecode()`; clearing it dropped final-slice `1214D4`/`91DC8`
+frame-complete). Padding-only remainder is not busy; non-padding orphan
+with **no** DMA → supersede; DMA still active → `MDEC_decode_busy`.
+No `74520`/`909B4` invent; no admit-gate / cursor ±32. No Day2-complete claim.
+
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**.
+Tip on `cursor/movie-autonomous-stream-6f51` (PR #38).
+
+**Next boot→Day2:** Matt Disc1 — expect C89C `calls≥3` / `out=12804` before
+the next wall (still expect eventual `post_movie_title_cut`). Linux-first.
+
 ## DAY2-158r: clear sticky `801D0DBD` after first C89C (2026-09-09)
 
 Live after DAY2-158q (`28ed6b6` / `ee9e1f5`): C89C×2 `out=11140`,

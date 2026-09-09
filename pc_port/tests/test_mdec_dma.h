@@ -60,5 +60,36 @@ static void test_DAY2_mdec_dma(void)
         }
         ASSERT(B54KR_PixelIs(31u,40u,0u) && B54KR_PixelIs(32u+width*2u,40u,0u),"movie upload exceeded frame rectangle");
     }
+    /* DAY2-158s: orphaned prior decode (91DC8 final stopped DecDCTout
+     * with FIFO residue) must not STOP the next DecDCTin as
+     * MDEC_decode_busy when no DMA remains in flight. */
+    {
+        ResetTestState();
+        PE_MDEC_Init();
+        for(unsigned i=0;i<33u;i++) {
+            PE_StoreU32(0x8010DA0Cu+i*4u,MDECPIX_quant[i]);
+            PE_StoreU32(0x8010DA90u+i*4u,MDECPIX_scale[i]);
+        }
+        func_8010BE3C(0);
+        /* Table uploads leave dma0_active; clear channel so orphan case is
+         * "no DMA in flight" like post-final-slice title path. */
+        PE_MDEC_ClearDmaChannels();
+        PE_StoreU32(0x80140000u,0x28000008u);
+        for(unsigned i=0;i<16u;i++) PE_StoreU16(0x80140004u+i*2u,0xFE00u);
+        PE_StoreU16(0x80140004u,(uint16_t)((8u<<10u)|64u));
+        PE_StoreU16(0x80140006u,0xFE00u);
+        ASSERT(PE_MDEC_BeginDecode(0x80140000u),"158s orphan first submit");
+        /* No ReadPixels / DecDCTout - title final-slice arm can leave the
+         * prior command resident while 92934 advances to the next BFA0. */
+        PE_StoreU32(0x80140100u,0x28000008u);
+        for(unsigned i=0;i<16u;i++) PE_StoreU16(0x80140104u+i*2u,0xFE00u);
+        PE_StoreU16(0x80140104u,(uint16_t)((8u<<10u)|0u));
+        PE_StoreU16(0x80140106u,0xFE00u);
+        ASSERT(PE_MDEC_BeginDecode(0x80140100u) && !PE_Port_ShouldStop() &&
+               CountOrderLog("MDEC_decode_busy")==0,
+               "158s orphan residue blocked next DecDCTin");
+        ASSERT(PE_MDEC_ReadPixels(0x80160000u,64u) && !PE_Port_ShouldStop(),
+               "158s superseding decode drain");
+    }
     PASS();
 }
