@@ -3,6 +3,15 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PAUSE / RESUME (Matt — other PCs)
+
+**Paused 2026-09-09** at tip `fe461f6c` (or this commit) **DAY2-158z**.
+
+- Branch: `cursor/cd-sector-backpressure-6f51` → https://github.com/Blizz127/Parasite-Eve-Decompilation/pull/42
+- Movie base PR #38 still at `a899b2d` (DAY2-158u); CD backpressure work lives on PR #42 tip (includes movie base + CD fixes)
+- **Next resume:** Disc1 retest DAY2-158z — expect `CD_B0CD0_pump_retry` TRACE; past ~319 C89C or named `CD_B0CD0_retry_unresolved`. Bazzite was offline mid-retest; 158y failed silent 319 with zero `CD_B0CD0_*`.
+- **Pull recipe (other PCs):** `git fetch && git checkout cursor/cd-sector-backpressure-6f51 && git pull`
+
 ## DAY2-158z: fold dig/b0cd0-catchup-miss (orphan pending) (2026-09-09)
 
 Live Disc1 on **`6cbeb1ee`** (DAY2-158y) **FAILED** — same ~319×92934 silent
