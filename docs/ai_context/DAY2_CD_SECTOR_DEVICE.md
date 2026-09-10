@@ -18,13 +18,17 @@ command acknowledgments serialize with sector responses. Seek/Pause completion
 uses the existing deterministic100000-cycle delay. Mechanical seek latency,
 error correction/retries, multi-sector hardware queues, pregap/end-of-disc
 behavior, CDDA/XA decoding and mode bit4 behavior are not implemented. Unsupported
-read modes, unread pending-sector overflow, out-of-image locations/reads and
-FIFO underflow stop explicitly. The model retains one pending sector plus an
-independent requested FIFO. It does not claim hardware overrun fidelity.
+read modes, out-of-image locations/reads and FIFO underflow stop explicitly.
+Unread pending-sector cases hold (backpressure) until BFRD clears the sector —
+`HostFB_PumpCdProgress` can outrun INT1→BFRD→DMA3 on live FMV; STOP-on-overrun
+was retired as an artificial wall (DAY2-158v). DAY2-158y folds dig/b0cd0-no-bfrd: always 7C564, clear B0CD0 only after BFRD else CD_B0CD0_retry_unresolved (158x cleared latch without BFRD → silent hang). DMA1-busy wait times out as CD_B0CD0_dma1_starved. DAY2-158w/158x folds dig/cd-sector-overrun: while B0CD0 owns sector_pending, HostFB_PumpCdProgress stalls DeviceTime and still services IRQs so 91DC8 can BFRD (158v hold-only hung live). The model retains one pending
+sector plus an independent requested FIFO. It does not invent multi-sector
+hardware queues or claim hardware overrun-bit fidelity.
 
 `test_cd_sector_device.h` checks raw bounds and every byte of consecutive
 sectors in both size/speed modes, delayed arrival, BFRD/DRQ, separate seek/pause
-responses, invalid BCD and the bounded-buffer stop. A separate integration
+responses, invalid BCD and pending-sector backpressure (hold + catch-up after
+BFRD). A separate integration
 sequence calls public initialization and SDK Setloc/ReadS, advances host VSync
 queries, checks SDK data-ready publication and consumes the mounted sector.
 No test provides command returns or writes SDK completion fields. The original

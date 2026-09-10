@@ -11,6 +11,43 @@
 #include "psx_compat.h"
 #include "game_port.h"
 #include "pe_sdk.h"
+#include "pe_cdreg.h"
+#include "host_framebuffer.h"
+
+#include <stdio.h>
+
+/* Stage-1b / MV1d readiness: admit a stream cursor that is safe for
+ * live C89C without clamping a1.
+ *
+ * Immediate pad-exit header (CDQ2d synthetic plant / MV1D_PAD):
+ * count-3 < 0 → t5==0, bits>>22 == 0x1FF; or PAD3FF bits>>22 == 0x3FF.
+ *
+ * Live last-chunk frames are admitted separately via
+ * PE_Port_TakeStreamFrameReady (latched in 7C214 when B89F4==1). Demuxed
+ * bodies at s1 are VLC bitstreams — STR magic 0x80010160 lives in the
+ * 32-byte sector header, not at the published payload cursor.
+ */
+static int c89c_stream_is_immediate_pad(uint32_t stream)
+{
+    uint16_t count_hw;
+    uint16_t bits_hi;
+    uint16_t bits_lo;
+    uint32_t v0;
+    uint32_t sym;
+    int32_t t2;
+
+    if (stream == 0u || !PE_RangeIsRam((pe_addr_t)stream, 12u))
+        return 0;
+    count_hw = PE_LoadU16((pe_addr_t)(stream + 6u));
+    bits_hi = PE_LoadU16((pe_addr_t)(stream + 8u));
+    bits_lo = PE_LoadU16((pe_addr_t)(stream + 10u));
+    t2 = (int32_t)count_hw - 3;
+    v0 = ((uint32_t)bits_hi << 16) | (uint32_t)bits_lo;
+    sym = v0 >> 22;
+    if (t2 < 0)
+        return (sym ^ 0x1FFu) == 0u;
+    return (sym ^ 0x3FFu) == 0u;
+}
 
 int func_801924F8(int index)
 {
@@ -90,6 +127,10 @@ int func_801924F8(int index)
 cdready_wait:
     do {
         while (func_8007F72C() != 1) {
+            /* Host stand-in for CD IRQ progress during ready spin. */
+            HostFB_PumpCdProgress();
+            if (PE_Port_ShouldStop())
+                return 0;
         }
     } while (func_8007F778() != 0);
 
@@ -122,21 +163,69 @@ e0_poll:
      * delivers synchronously instead (the 7ED58 synchronous-reset
      * precedent).  One completion per poll; E0 takes got_frame on
      * the first poll, so cadence beyond that is unobservable. */
+    Trace_Direct("func_801924F8_e0_poll");
     {
         uint32_t s0 = 2000u;
         for (;;) {
             uint32_t left;
-            func_8007C214();
+            /* Stage-1b promote: retail arms DMA3 IRQ (→7C214) only on
+             * the last video chunk (7CEAC interrupt=last → B89F4).
+             * Unconditional 7C214 every poll published incomplete bodies
+             * and tripped MV1d. Fixtures arm PE_Port_ArmStreamPromote
+             * because 7A214 clears B89F4 after the plant. Live Disc1
+             * needs PE_CdReg_EnableDevice (port_main --disc-image) so
+             * HostFB_PumpCdProgress can advance sectors until 7C564 sets
+             * B89F4. StreamFrameReady is latched inside 7C214 when
+             * B89F4==1 (covers pump-time 7C564→7C214 as well as this
+             * promote arm). Decomp Bot on 1fa9a48: got_frame can fire
+             * without e0_promote when 7C484 demuxes a status-2 slot
+             * published during pump — gate got_frame on pad or latch. */
+            {
+                int last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
+                int ready_before = PE_Port_PeekStreamFrameReady();
+                if (last_chunk || PE_Port_ConsumeStreamPromote()) {
+                    Trace_Direct("func_801924F8_e0_promote");
+                    func_8007C214();
+                } else if (!PE_CdReg_DeviceEnabled()) {
+                    /* Device-off: PumpCdProgress cannot retire sectors —
+                     * named stop instead of a silent 1220C nest. */
+                    Bootstrap_ReturnVoid("Stage1b_cd_device_disabled",
+                                         "func_801924F8");
+                    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                    return 0;
+                } else {
+                    HostFB_PumpCdProgress();
+                    /* Pump-time 7C564→7C214 last-chunk ≡ promote for TRACE
+                     * (B89F4 already cleared; latch lives in 7C214). */
+                    if (!ready_before && PE_Port_PeekStreamFrameReady())
+                        Trace_Direct("func_801924F8_e0_promote");
+                }
+            }
             s1 = func_80191B64(0x801D1464u);
             left = s0 - 1u;
             s0 = left;
-            if (s1 != 0)
+            if (s1 != 0) {
+                /* Decomp: 91B64 nonzero without B89F4 promote / latch is
+                 * early demux publish — do not enter got_frame / C89C.
+                 * Immediate pad (fixtures) or StreamFrameReady (last-
+                 * chunk 7C214) required. 924F8 got_frame is the wall —
+                 * not 92934 yet. */
+                if (!c89c_stream_is_immediate_pad((uint32_t)s1) &&
+                    !PE_Port_PeekStreamFrameReady()) {
+                    Trace_Direct("func_801924F8_early_demux");
+                    Bootstrap_ReturnVoid("Stage1b_early_demux_publish",
+                                         "func_801924F8");
+                    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                    return 0;
+                }
                 goto got_frame;
+            }
             if (((left << 16) & 0xFFFFFFFFu) != 0u)
                 continue;
             break;
         }
     }
+    Trace_Direct("func_801924F8_e0_giveup");
     /* Give-up path: copy D0DC4 to D0DDC, CD-ready waits, re-issue Setloc
      * (loc word D0DDC, s2 = READY_FROM_CALLER -1) + ReadN(480), reset s0.
      * The beqz delay (li s0,2000) runs on both outcomes, so s0 is always
@@ -144,8 +233,14 @@ e0_poll:
     for (;;) {
         PE_StoreU32(0x801D0DDCu, PE_LoadU32(0x801D0DC4u));
         while (func_8007F72C() != -1) {
+            HostFB_PumpCdProgress();
+            if (PE_Port_ShouldStop())
+                return 0;
         }
         while (func_8007F778() != 0) {
+            HostFB_PumpCdProgress();
+            if (PE_Port_ShouldStop())
+                return 0;
         }
         func_80080D5C(2, 0x801D0DDCu, 0u);
         status = func_80081314(0x801D0DDCu, 480u);
@@ -157,25 +252,87 @@ e0_poll:
     }
     goto cdready_wait;
 got_frame:
-    /* 80192814: s1 nonzero.  The got_frame tail (verified against the
-     * authenticated ov133 carve, docs/evidence/pe-mv1c-c89c-map/NOTE.md)
-     * bumps [B0DBC], toggles [146C], loads a1 = [0x801D1464 +
-     * ([146C]^1)<<2], a2 = [0x801D0DF8], and calls the VLC decoder
-     * func_8010C89C(a0 = s1) before 7C394 and the EC stores.
+    Trace_Direct("func_801924F8_got_frame");
+    /* 80192814: s1 nonzero.  Retail got_frame tail (ov133 carve,
+     * docs/evidence/pe-mv1c-c89c-map/NOTE.md): bump [B0DBC], load
+     * a1 = [0x801D1464 + ([146C]^1)*4] then toggle [146C] (first pass
+     * loads [0x801D1468]), a2 = [0x801D0DF8], jal func_8010C89C(a0=s1,
+     * a1, a2, 0), then jal func_8007C394(s1) and the EC stores
+     * (sb 0,[B0DBD] @801928F8; sh 1,[B0DBC] @80192908).  The decoder
+     * itself was transcribed in MV1d; this wires the production call
+     * path.  The intervening slice-wait between 7C394 and the EC
+     * stores is not yet expanded here — EC runs immediately so the
+     * control frontier can leave the old C89C stub.
      *
-     * MV1d landed the decoder itself (func_8010C89C_port.c) as a
-     * transcription proven by its unit vectors + oracle
-     * (pc_port/tools/pe_mv1d_c89c_oracle.py).  It is NOT wired live
-     * into this production tail yet: the decoder's output cursor is
-     * bounded only by the VLC stream's own pad/terminator codes, so a
-     * valid STR video frame terminates in-bounds, but the streaming
-     * pump does not yet deliver a fully MDEC-ready frame at s1 (that is
-     * the Stage-1b STR/MDEC pipeline).  Feeding the decoder the current
-     * partial frame marches a1 past the 2 MiB guest RAM.  Until the
-     * real frame is delivered, the production path stops honestly at
-     * the decoder boundary rather than decoding unvalidated input. */
-    (void)s1;
-    Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+     * DAY2-158c gate (Bazzite PE_StoreU16@0x80200000): live Disc1 aborts
+     * are the known MV1d trap — guest RAM ends at 0x80200000; wiring
+     * C89C without a pad-terminated / Stage-1b-ready frame at s1 lets
+     * the output cursor walk off the 2MiB window
+     * (docs/evidence/pe-mv1d-c89c/REPORT.md).  Not a random 1220C buffer
+     * bug.  Stage-1b: E0 promotes only when B89F4 marks a last-chunk frame
+     * (or a fixture surrogate arm); C89C runs on immediate pad OR when
+     * that last-chunk latch is set. Do not clamp a1. */
+    {
+        uint16_t count = PE_LoadU16(0x800B0DBCu);
+        uint32_t flip = (uint32_t)PE_LoadU8(0x801D146Cu) ^ 1u;
+        pe_addr_t out;
+        pe_addr_t table;
+        uint32_t stream = (uint32_t)s1;
+        int frame_ready = PE_Port_TakeStreamFrameReady();
+
+        PE_StoreU16(0x800B0DBCu, (uint16_t)(count + 1u));
+        out = (pe_addr_t)PE_LoadU32(0x801D1464u + flip * 4u);
+        PE_StoreU8(0x801D146Cu, (uint8_t)flip);
+        table = (pe_addr_t)PE_LoadU32(0x801D0DF8u);
+        if (!c89c_stream_is_immediate_pad(stream) && !frame_ready) {
+            Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame",
+                                 "func_801924F8");
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
+        }
+        /* Decomp: quiet "no C89C" in TRACE is NOT proof the decoder
+         * skipped — this leaf has no Trace_Direct, only telemetry.
+         * Surface call counts / pad|bound / out|table validity here. */
+        {
+            char tel[224];
+            PeC89CTelemetry t;
+            int c89c_ret = func_8010C89C(stream, out, table, 0u);
+            PE_C89C_GetTelemetry(&t);
+            snprintf(tel, sizeof(tel),
+                     "c89c_tel calls=%u ret=%d pad=%u bound=%u "
+                     "a0=%08x a1=%08x a2=%08x a0ram=%u a1ram=%u a2ram=%u "
+                     "out=%u hdr=%04x/%08x w0=%08x admit=%s",
+                     (unsigned)t.calls, t.ret,
+                     (unsigned)t.pad_exits, (unsigned)t.bound_exits,
+                     (unsigned)t.a0, (unsigned)t.a1, (unsigned)t.a2,
+                     (unsigned)t.a0_in_ram, (unsigned)t.a1_in_ram,
+                     (unsigned)t.a2_in_ram, (unsigned)t.out_bytes,
+                     (unsigned)t.hdr_count, (unsigned)t.hdr_bits,
+                     (unsigned)t.hdr_word0,
+                     frame_ready ? "ready" : "pad");
+            Trace_Direct(tel);
+            (void)c89c_ret;
+        }
+        if (PE_Port_ShouldStop())
+            return 0;
+        func_8007C394(stream);
+        /* EC stores — twin of movie-player 80121C04 first-frame exit
+         * (DAY2_MOVIE_UPDATER: 23F5=0 / B0DBA++ / B0DBC=1). Without the
+         * DBA bump, 91FB8's DBA==1 leaves 92934 early-returning 0 and the
+         * post-E08 media loop clears the stream after this single frame
+         * (live a03d599 → post_movie_title_cut).
+         *
+         * Title end-flag twin: 91B64 latches 801D0DBD during first E0 when
+         * 801D11B0 is still 0xFFFF (CDQ2d / retail-matching). 92934 aborts
+         * when that byte stays 1 — live 28ed6b6: C89C×2 then media_clear.
+         * Player clears 223F5 here; clear D0DBD too. Retail B0DBD=0 at
+         * 801928F8 kept (oracle A0200DBD). PE.IMG dump of the 7C394→EC
+         * gap still preferred (docs/evidence/pe-day2-158-909b4-early-title-cut). */
+        PE_StoreU8(0x800B0DBDu, 0u);
+        PE_StoreU8(0x801D0DBDu, 0u);
+        PE_StoreU8(0x800B0DBAu,
+                   (uint8_t)(PE_LoadU8(0x800B0DBAu) + 1u));
+        PE_StoreU16(0x800B0DBCu, 1u);
+    }
     return 0;
 }

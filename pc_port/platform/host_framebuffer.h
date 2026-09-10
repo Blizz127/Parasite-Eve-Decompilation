@@ -20,6 +20,16 @@ void HostFB_Present(void);
 void HostFB_PresentDispEnv(pe_addr_t env);
 void HostFB_SetDispMask(int mask);
 void HostFB_VSync(int mode);
+/* Sector-scale CD/DMA host tick for movie E0 waits. VSync(-1) only advances
+ * 1024 device cycles; one CD sector costs 225792 (XA) or 451584 (non-XA).
+ * Use this when spinning until D_800B89F4 marks a last video chunk so the
+ * E0 2000-try window can finish a multi-sector STR frame. Does not bump the
+ * VSync counter (retail's VSync(-1) is a query).
+ * DAY2-158y/catchup-miss: stall while B0CD0+pending & DMA1 busy (starve
+ * STOP); idle-DMA1 catch-up on sector_pending alone (B0CD0 optional — 91DC8
+ * may clear latch without BFRD); clear B0CD0 only after BFRD else
+ * CD_B0CD0_retry_unresolved. IRQ gate also follows pending. */
+void HostFB_PumpCdProgress(void);
 void HostFB_DrawSync(int mode);
 int  HostFB_WritePPM(const char *path);
 const uint8_t *HostFB_GetPixels(void);

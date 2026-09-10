@@ -3,6 +3,347 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PAUSE / RESUME (Matt — other PCs)
+
+**Paused 2026-09-09** at tip `fe461f6c` (or this commit) **DAY2-158z**.
+
+- Branch: `cursor/cd-sector-backpressure-6f51` → https://github.com/Blizz127/Parasite-Eve-Decompilation/pull/42
+- Movie base PR #38 still at `a899b2d` (DAY2-158u); CD backpressure work lives on PR #42 tip (includes movie base + CD fixes)
+- **Next resume:** Disc1 retest DAY2-158z — expect `CD_B0CD0_pump_retry` TRACE; past ~319 C89C or named `CD_B0CD0_retry_unresolved`. Bazzite was offline mid-retest; 158y failed silent 319 with zero `CD_B0CD0_*`.
+- **Pull recipe (other PCs):** `git fetch && git checkout cursor/cd-sector-backpressure-6f51 && git pull`
+
+## DAY2-158z: fold dig/b0cd0-catchup-miss (orphan pending) (2026-09-09)
+
+Live Disc1 on **`6cbeb1ee`** (DAY2-158y) **FAILED** — same ~319×92934 silent
+hang; **zero** `CD_B0CD0_*` TRACE (catch-up arm never entered).
+
+Root cause: catch-up required `b0cd0 && pending`, but unread ownership is
+`sector_pending`. `91DC8` retail always clears B0CD0 after `7C564` (even on
+failed BFRD); non-defer early-outs never set B0CD0. Orphan pending → pe_cdreg
+hold → silent spin. IRQ gate also ignored pending.
+
+**Fix FOLDED** — Decomp dig `dig/b0cd0-catchup-miss` @ `10f80fef`
+cherry-picked onto PR #42: IRQ/catch-up follow `sector_pending`; idle
+catch-up on `pending && !dma1_busy` (B0CD0 optional); busy stall only when
+B0CD0; clear B0CD0 only after BFRD else named unresolved. Evidence:
+`docs/evidence/pe-day2-158-b0cd0-catchup-miss/REPORT.md`.
+Test: `DAY2_cd_b0cd0_pump_orphan_pending`.
+
+Linux: **1357 run / 1311 pass / 0 fail / 46 skip** (new orphan-pending
+catch-up test).
+
+Branch `cursor/cd-sector-backpressure-6f51` → PR #42. Tip tagged **DAY2-158z**.
+
+Next boot→Day2: Matt Disc1 — expect `CD_B0CD0_pump_retry` TRACE and either
+BFRD past ~319 or named `CD_B0CD0_retry_unresolved`. Linux-first.
+
+## DAY2-158y: fold dig/b0cd0-no-bfrd (clear B0CD0 only after BFRD) (2026-09-09)
+
+Live Disc1 on tip **`331c945`** (DAY2-158x) **FAILED** — same ~319×
+`func_80192934_enter` silent hang; no `CD_B0CD0_dma1_starved` /
+`CD_B0CD0_retry_unresolved`.
+
+158x idle-DMA1 catch-up was the right direction (DMA1 already idle so
+`91DC8` never BFRD'd). Residual: catch-up gated `7C564` on A801C, then
+**always cleared B0CD0**, so a skipped/failed BFRD left `sector_pending`
+with the latch gone; pe_cdreg hold → silent hang. `retry_unresolved` checked
+`b0cd0 && pending` *after* the clear → dead.
+
+**Fix FOLDED** — Decomp dig `dig/b0cd0-no-bfrd` @ `4026de2` cherry-picked
+onto PR #42: always call `func_8007C564`; clear B0CD0 only when pending is
+gone; else STOP `CD_B0CD0_retry_unresolved`. Evidence:
+`docs/evidence/pe-day2-158-b0cd0-no-bfrd/REPORT.md`. Tests: idle catch-up
+expects named STOP when B89F4 early-outs BFRD (A801C clear).
+
+Linux: **1356 run / 1310 pass / 0 fail / 46 skip** (idle-dma1 catch-up
+test now asserts named STOP when BFRD early-outs).
+
+Branch `cursor/cd-sector-backpressure-6f51` → PR #42. Tip tagged **DAY2-158y**.
+
+Next boot→Day2: Matt Disc1 — BFRD progress past ~319, or named
+`CD_B0CD0_retry_unresolved` (then dig that early-out). Linux-first.
+
+## DAY2-158x: B0CD0 idle-DMA1 Pump catch-up (2026-09-09)
+
+**FAILED live on `331c945`** — see DAY2-158y. Idle-DMA1 catch-up direction
+was right (`DBB==0` / DMA1 idle so `91DC8` never BFRD'd), but A801C gate +
+unconditional B0CD0 clear made catch-up silent-hang. Superseded by dig fold.
+
+## DAY2-158w: B0CD0 pump stall + IRQ retry (dig fold) (2026-09-09)
+
+Live Disc1 on tip **`222bd95b`** (DAY2-158v / PR #42):
+
+```text
+no CD_device_sector_overrun (90s / 180s)
+~319× func_80192934_enter — hang, no further TRACE/STOP (timeout kill)
+```
+
+158v pe_cdreg hold cleared the STOP but left **stall without BFRD**.
+
+**Decomp dig FOLDED** — `dig/cd-sector-overrun` @ `355af810`:
+`7C564` A801C+DMA1 early-out sets `B0CD0` without BFRD after AAB4 cleared
+INT1; Pump must stall CD cadence while B0CD0 owns `sector_pending`, and must
+service IRQs when B0CD0 is set so `91DC8`/`1214D4` can retry → BFRD.
+
+**Fix on tip:**
+1. `HostFB_PumpCdProgress` / VSync: IRQ service if `HasDecode || B0CD0`.
+2. Pump: if `B0CD0 && sector_pending` → return before `DeviceTime`.
+3. Expose `sector_pending` on `GetDeviceState`. Keep pe_cdreg hold.
+4. Test `DAY2_cd_b0cd0_pump_stall`. Evidence report folded.
+
+Linux: **1355 run / 1309 pass / 0 fail / 46 skip** (new B0CD0 stall test).
+Branch `cursor/cd-sector-backpressure-6f51` → PR #42.
+
+**Live retest on `733a8dc`: FAILED** — hang unchanged (see DAY2-158x).
+
+## DAY2-158v: CD pending-sector backpressure (2026-09-09)
+
+Live Disc1 on tip **`a899b2d`** (DAY2-158u) **SUCCESS past `MDEC_decode_busy`:**
+
+```text
+C89C calls=319 ret=0 pad=319 out=101510
+many func_80192934_enter
+GPU fills=318
+STUB: CD_device_sector_overrun
+stop_reason=unresolved-boundary
+```
+
+MDEC supersede dig worked. New wall: `CD_device_sector_overrun` after ~319
+FMV frames.
+
+**Cause:** `pe_cdreg` single-sector pending + `HostFB_PumpCdProgress` can
+retire a full sector period before INT1→BFRD→DMA3 drains. STOP was host-pump
+race, not a missing Decomp leaf / multi-sector invent.
+
+**Fix (`pe_cdreg.c`):** while `g_sector_pending`, hold next publish (leave
+`g_read_cycles==0`); catch up after BFRD. No overwrite; no STOP. Evidence:
+`docs/evidence/pe-day2-158-cd-sector-overrun/REPORT.md`. Test:
+`DAY2_cd_sector_device` backpressure + catch-up.
+
+Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Branch
+`cursor/cd-sector-backpressure-6f51` → PR into #38 tip.
+
+**Next:** see DAY2-158w (live hang on 158v tip; dig fold).
+
+## DAY2-158u: supersede on live DMA0 commit (Decomp dig) (2026-09-09)
+
+Decomp dig **CLOSED** — `dig/mdec-decode-busy` @ `bf8ab79` applied on PR #38.
+
+**Live Disc1 on tip `a899b2d`: SUCCESS** — past `MDEC_decode_busy`; C89C
+`calls=319` `out=101510`, GPU fills=318; wall moved to
+`CD_device_sector_overrun` (see DAY2-158v).
+
+Prior retests on **`b82ab62`** / 158s/`42978a5` still:
+
+```text
+92934_enter ×2
+STUB: MDEC_decode_busy
+C89C final: calls=2 out=11140
+```
+
+**Why 158s/158t missed live:** `MdecBeginCommand` runs from Service’s DMA0
+arm with `dma0_active` already set (and often dma1 armed by this frame’s
+`C01C`). Those flags are the **incoming** DecDCTin/DecDCTout, not prior
+orphan drain. Idle-`FE00` cannot clear non-pad RLE after `91DC8` final.
+
+**Fix (`pe_mdec.c` busy predicate — do not clear dma1):**
+- If residue and `dma0_active && g_input_pending` → supersede orphan, commit
+  new DecDCTin (live Service DMA0 commit shape).
+- Else if `dma0_active || dma1 busy` → `MDEC_decode_busy` (BeginDecode /
+  other busy).
+- Else supersede (idle BeginDecode orphan).
+- Service clears `dma0_active` **after** BeginCommand (dig), not before.
+
+Evidence: `docs/evidence/pe-day2-158-mdec-decode-busy/REPORT.md`.
+Test: live-shaped BFA0→C01C→Service case in `DAY2_mdec_dma`.
+
+Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Tip on
+`cursor/movie-autonomous-stream-6f51` (PR #38).
+
+**Next:** see DAY2-158v.
+
+## DAY2-158s: clear `MDEC_decode_busy` orphan after 91DC8 final (2026-09-09)
+
+Live Disc1 on tip **`d827581`** (DAY2-158r):
+
+```text
+e0_promote → got_frame → c89c#1 out=7300
+92934_enter ×2
+STUB: MDEC_decode_busy
+C89C final: calls=2 out=11140
+NO post_movie_title_cut / NO media_clear
+```
+
+Sticky `D0DBD` fix worked. New wall: host `MDEC_decode_busy` on the second
+`92934` `BFA0`/`DecDCTin`.
+
+**Cause (partial):** title `91DC8` final-slice stops `DecDCTout`; C89C `FE00`
+/ orphan FIFO residue sat in `pe_mdec`. Evidence:
+`docs/evidence/pe-day2-158-mdec-decode-busy/REPORT.md`.
+
+**158s fix (insufficient live):** drain idle `FE00`; supersede when no DMA.
+**Keep** `g_decode_valid` (`HostFB_VSync` gates DMA IRQ on
+`PE_MDEC_HasDecode()`). Linux 1354/1308/0/46. **SUPERSEDED by DAY2-158t**
+(live BFA0/Service still busy with `dma0_active`).
+
+**Next:** see DAY2-158t.
+
+## DAY2-158r: clear sticky `801D0DBD` after first C89C (2026-09-09)
+
+Live after DAY2-158q (`28ed6b6` / `ee9e1f5`): C89C×2 `out=11140`,
+`92934_enter` → `92CE8_media_clear` → `func_801909B4_post_movie_title_cut`.
+
+**Decomp dig CLOSED** — `dig/909b4-early-title-cut` @ `7c71bb8` folded:
+`docs/evidence/pe-day2-158-909b4-early-title-cut/REPORT.md`
+
+- `909B4` is the **designed** post-`92CE8` wall — do **not** widen that stub.
+- Early exit: first `91B64` latches `801D0DBD=1` (`11B0=0xFFFF`); `924F8` EC
+  cleared only `800B0DBD`, so first `92934` success aborts (`DBA--` → clear →
+  `media_clear` → title-cut).
+- Player twin: `21C04` clears `223F5=0` on first-frame exit.
+
+**Fix on tip (Decomp draft applied):**
+
+1. `924F8` got_frame EC: also `PE_StoreU8(0x801D0DBDu, 0u)` (keep `B0DBD=0`).
+2. `92934`: TRACE `func_80192934_dbd_abort` on the abort arm.
+3. No admit-gate / cursor ±32 / `909B4` widen. No Day2-complete claim.
+
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**.
+Tip on `cursor/movie-autonomous-stream-6f51` (PR #38).
+
+**Next boot→Day2:** Matt Disc1 — expect C89C `calls≥3` / `out=12804` before
+the next wall (still expect eventual `post_movie_title_cut` when movie ends).
+Linux-first.
+
+## DAY2-158q: wire title DecDCTout `func_80191DC8` (2026-09-09)
+
+Live Bazzite Disc1 on tip **`50b2a58`** stopped at
+`func_80074520_dma_indirect_call` after first C89C (`out=7300`). Dig closed:
+that STOP is unbound DMA1 handler **`0x80191DC8`**, not a missing `74520`
+body (`pe-day2-158-74520-dma`, already folded).
+
+**Decomp leaf READY** — `dig/91dc8-decdctout` @ `3336743` folded:
+
+- `pc_port/game/boot/func_80191DC8_port.c` — matched structural twin of
+  `1214D4` on title BSS (`801D14xx` / `0DC0` / `918F8`)
+- VA `[0x80191DC8,0x80191FB8)` 124 words; SHA-256
+  `d4d36c74fdae7ccb189a0d98c170806fc84b1fe24c700a447bee5eafbd941086`
+- Evidence: `docs/evidence/pe-day2-158-91dc8/` (REPORT + carve bin/s/meta)
+
+**On tip (PR #38):**
+
+1. `DispatchDmaCallback`: `0x80191DC8` → `func_80191DC8()` (same return
+   shape as `1214D4`). **No** `74520` rewrite; **no** retarget to `1214D4`.
+2. Host-only `PE_MDEC_HasDecode` cut mirrors player.
+3. `Trace_Direct("func_80192934_enter")` kept from 158p.
+4. No admit-gate / cursor ±32. No Day2-complete claim.
+
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**;
+`PE_TEST_FILTER=B54KAH` → 1 pass. Tip after fold+wire on
+`cursor/movie-autonomous-stream-6f51` (PR #38).
+
+**Next boot→Day2:** Matt Disc1 retest past old `74520_dma_indirect_call`
+— expect title slice continue / final-slice / `7506C` upload and further
+multi-frame `92934` / `c89c_tel`. Linux-first. **SUPERSEDED by DAY2-158r**
+(sticky D0DBD early title-cut).
+
+## DAY2-158p: live `74520_dma_indirect` = unbound title `91DC8` (2026-09-09)
+
+Live Bazzite Disc1 on tip **`50b2a58`** (DAY2-158o):
+
+```text
+e0_promote → got_frame →
+c89c_tel calls=1 ret=0 pad=1 out=7300 w0=38000720 admit=ready
+→ [STUB:BOOTSTRAP_RET] func_80074520_dma_indirect_call
+stop_reason=unresolved-boundary
+```
+
+`post_movie_title_cut` is gone (158o `DBA++`). New frontier is **not** a
+missing `74520` body.
+
+**Decomp dig (CLOSED on inventing/expanding `74520`):**
+`dig/74520-dma-indirect` @ `546c9b9` folded →
+`docs/evidence/pe-day2-158-74520-dma/REPORT.md`
+
+- `func_80074520` = complete `trapIntrDMA` (B53I-B2, 96 words) — DICR scan +
+  `jalr` DMA table slot.
+- Slot 1 still holds title DecDCTout **`0x80191DC8`** (924F8 /
+  B54K-AH registration). Player `0x801214D4` is already dispatched; title
+  leaf is not.
+- Chain: C89C frame-1 → `92934` (DBA≥2) → `BFA0`/`C01C` → MDEC DMA1 →
+  `74520` → unbound `91DC8` → misnamed `dma_indirect_call` STOP.
+- `92934` had no entry TRACE (looked unreached).
+
+**On tip (wire-only — no invented `91DC8` guest body, no `74520` rewrite):**
+
+1. `DispatchDmaCallback`: `0x80191DC8` → named boundary `func_80191DC8`
+   (same arm shape as `1214D4`; body waits PE.IMG carve / Decomp matched C).
+2. `Trace_Direct("func_80192934_enter")` before `BFA0`.
+3. Fold dig REPORT. No admit-gate / cursor ±32. No Day2-complete claim.
+
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**.
+Tip **`cbdad5c5`** on `cursor/movie-autonomous-stream-6f51` (PR #38);
+same commits on `cursor/74520-dma-indirect-6f51` (PR #41).
+
+**Next boot→Day2:** Matt retest — expect STOP rename to **`func_80191DC8`**
+(and `func_80192934_enter` in TRACE). Prefer Decomp title-overlay leaf for
+`[0x80191DC8,0x80191FB8)` (124 words, ends at `91FB8`). Do **not** blind-alias
+`214D4`. Linux-first. **SUPERSEDED by DAY2-158q** (real leaf wired).
+
+## DAY2-158o: live C89C EOF pad dig + first-frame DBA++ for multi-frame (2026-09-09)
+
+Live Bazzite Disc1 on tip **`a03d599`** (DAY2-158n):
+
+```text
+e0_promote → got_frame →
+c89c_tel calls=1 ret=0 pad=1 bound=0
+  a0=80142900 a1=80132700 a2=80162100 out=7300
+  hdr=0002/00200280 admit=ready
+→ STUB func_801909B4_post_movie_title_cut
+```
+
+**C89C dig (CLOSED — no admit-gate patch, no cursor ±32):**
+
+Decomp Bot **`dig/c89c-pad-vs-body` @ `fbb9a9f`** folded:
+`docs/evidence/pe-day2-158-c89c-pad-vs-body/REPORT.md`
+
+- `hdr=0002/00200280`: count@+6=2 → `t2=−1`, `sym=bits>>22=0 ≠ 0x1FF` →
+  **not** immediate pad; `admit=ready` was correct.
+- `s1=0x80142900` is **VLC body** (7C564 copies sector+32; word0.lo≈`0x0720`,
+  not STR `0x0160`).
+- `out=7300` = FMV001 frame-1 RLE (`DAY2_MOVIE_COMPLETE_FRAMES`) →
+  **normal EOF pad**, not a no-op.
+- Also: `docs/evidence/pe-day2-158o-c89c-eof-pad/REPORT.md`
+
+**Why one frame then title-cut:** `91FB8` leaves `DBA=1`; prior `924F8` EC
+stores omitted `DBA++`, so `92934` early-returned 0 → media clear →
+`post_movie_title_cut`. Twin: player `80121C04` does `DBA++` after first
+C89C.
+
+**Fix on tip:**
+
+1. `924F8` got_frame EC: `DBD=0`, **`DBA++`**, `DBC=1` (player-twin;
+   PE.IMG EC-byte confirm still preferred when Decomp lands it).
+2. `92934` poll: last-chunk `7C214` / `PumpCdProgress` (E0 shape) so
+   multi-frame can assemble.
+3. `92CE8`: TRACE `func_80192CE8_media_clear` on status-0 clear.
+4. Test `DAY2_158o_live_hdr_not_immediate_pad`; last-chunk latch asserts
+   `DBA` 1→2.
+
+`post_movie_title_cut` **kept** until title/menu at `0x80191120` is
+translated — clearing the premature one-frame path is the multi-frame
+chase, not a New-Game HOST_ADAPTED skip. No Day2-complete claim.
+
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**
+(`./pc_port/build/pe-native-tests`). Tip **`4bfff15`** on
+`cursor/movie-autonomous-stream-6f51` (PR #38) and
+`cursor/c89c-pad-post-movie-6f51` (PR #40).
+
+**Next boot→Day2:** Matt retest tip — expect more than one `c89c_tel` /
+
+got_frame before title cut (or a later named stop inside 92934). Prefer
+Decomp leaves for 924F8 EC bytes. Linux-first.
+
 ## ACTIVE OBJECTIVE: decompile all Day 1 and Day 2; implement/fix Day 1
 
 Current user goal (2026-09-08): "decompile all of day 1 and day 2 implement
@@ -72,6 +413,479 @@ placed under In Development in launcher 0.9.87. Users must install the
 launcher update to see the new placement. Full Day 1/Day 2 goal remains open. Launcher working-tree
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
+
+## DAY2-158n: fold Decomp got_frame quiet-log evidence + live C89C dump (2026-09-09)
+
+Decomp Bot dig **CLOSED** on `dig/got-frame-c89c-skip` @ **`4f335cd`** —
+**do not patch got_frame gates** until live telemetry is reviewed.
+
+Folded evidence:
+`docs/evidence/pe-day2-158-gotframe-no-c89c/REPORT.md`
+
+Findings (Decomp): quiet log ≠ skipped C89C; on `04c8078` got_frame always
+calls live `func_8010C89C` unless STOP; decoder has no Trace — only
+`PE_C89C_GetTelemetry` (`a0`/`a1`/`a2`/`ret`).
+
+Observability already on tip (158m) + this rung:
+
+1. Per-got_frame `c89c_tel` TRACE: calls, ret, pad/bound, a0/a1/a2, RAM
+   flags, out_bytes, hdr.
+2. Shutdown dump: `c89c_tel_final` TRACE + `[C89C] …` stderr with the same
+   fields so live Disc1 always surfaces pad-exit vs live out/table after
+   the poll/got_frame spin.
+
+**No got_frame gate patch.** Prefer Decomp leaves when they land.
+CD device enable retained. No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip; capture `c89c_tel` / `[C89C]` dump;
+then dig pad-vs-body or outer re-entry from those numbers — not admit gates.
+
+## DAY2-158m: live C89C telemetry surface + Decomp quiet-log correction (2026-09-09)
+
+Decomp Bot correction on the **`04c8078`** spin — do **not** treat missing
+C89C TRACE as “decoder never ran”:
+
+- got_frame always calls `func_8010C89C` unless it STOPs
+- C89C has **no** `Trace_Direct` — only `PE_C89C_GetTelemetry`
+- Quiet “no C89C” in the log can still mean the decoder ran
+- Decomp is checking telemetry / out / table live vs instant pad-exit
+
+Fix on tip (builds on 158l post-movie cut + enter TRACE):
+
+1. Expand `PeC89CTelemetry`: `calls`, `pad_exits`, `bound_exits`,
+   `a0/a1/a2_in_ram`, `a1_end`/`out_bytes`, `hdr_count`/`hdr_bits`;
+   `PE_C89C_ResetTelemetry` from `ResetTestState`.
+2. After got_frame C89C, TRACE one `c89c_tel …` line with those fields
+   so live Disc1 shows pad vs bound, out size, and pointer validity.
+   TRACE stays in 924F8 (not inside C89C / pe_libcd — field-runtime
+   link rule).
+3. Forever poll/got_frame spin after one `e0_promote`: still explained
+   by `909B4` returning movie `0` → `6E9A0(0)` leaves `D280` → main
+   re-dispatches; `func_801909B4_post_movie_title_cut` (158l) is the
+   named boundary. Prefer Decomp `7C484`/`91B64` leaves when they land.
+
+CD device enable retained. **No `a1` clamp.** No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip; expect `c89c_tel calls=…` then
+`func_801909B4_post_movie_title_cut` (not a silent e0_poll spin).
+
+Linux: **1353** / **1307** pass / 0 fail / 46 skip. Claims: Decomp
+quiet-log correction recorded; live `c89c_tel` TRACE; spin boundary
+remains post-movie cut. Non-claims: Day2 complete; title/menu done;
+pad-vs-real decode proven on live until retest; `92934` frontier;
+retail STR golden; published runtime 128 unchanged.
+
+## DAY2-158l: live C89C TRACE + post-movie title cut (2026-09-09)
+
+Live Bazzite Disc1 on tip **`04c8078` (DAY2-158k) — NEW STATE**:
+
+- `Stage1b_pad_terminated_frame` GONE
+- Exactly 1× `func_801924F8_e0_promote`
+- Tight loop: `e0_poll` / `got_frame` / `func_8007C214_last_chunk`
+  (hundreds; process alive ~1m+)
+- ZERO C89C / Stage1b / STUB / `stop_reason` in the log
+
+Root cause (not a too-strict gate): got_frame **admits** and calls live
+`func_8010C89C` (no stub name → invisible in TRACE). Then `92CE8`
+returns 0 to `909B4`, which returned that 0 to `1220C`.
+`func_8006E9A0(0)` does **not** publish a new `D_8009D280` token, so
+main re-dispatches `909B4`→movie forever.
+
+Fix:
+
+1. TRACE `func_8010C89C_enter_ready|pad` + `done_pad|bound` in 924F8
+   got_frame so live proves decoder entry/exit.
+2. After saved-bit `92CE8` returns, named-stop
+   `func_801909B4_post_movie_title_cut` (title/menu untranslated) —
+   ends the re-dispatch spin. **924F8 got_frame remains the Stage-1b
+   wall for demux; post-movie cut is the next named STOP past first
+   frame.** Prefer Decomp `7C484`/`91B64` leaves when they land.
+
+CD device enable retained. **No `a1` clamp.** No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip; expect C89C enter/done TRACE then
+`func_801909B4_post_movie_title_cut` (not an e0_poll spin).
+
+Linux: **1353** run / **1307** pass / 0 fail / 46 skip. Claims: live
+04c8078 spin explained; C89C TRACE; post-movie named cut. Non-claims:
+Day2 complete; title/menu done; Stage-1b demux golden; `92934` live
+frontier; retail STR golden; published runtime 128 unchanged.
+
+## DAY2-158k: early-demux gate + Decomp Stage1b diagnosis (2026-09-09)
+
+Decomp Bot diagnosis of live `Stage1b_pad_terminated_frame` on tip
+**`1fa9a48`** (pre-158j):
+
+- STOP is in **`924F8` got_frame** — **not** `92934` yet
+- `91B64` gave nonzero `s1`, but not an immediate pad and
+  `TakeStreamFrameReady` was 0
+- never latched on a B89F4 promote
+- got_frame can fire without `e0_promote` → demux publishing early
+  (`7C484` promotes a status-2 slot published during pump)
+- Decomp is digging `7C484`/`91B64` next — prefer those leaves when they
+  land; do not invent overlay bytes
+
+Fix on this tip (builds on 158j last-chunk latch in `7C214`):
+
+1. E0 admits `got_frame` only when `s1` is an immediate pad **or**
+   `PeekStreamFrameReady` (latched by `7C214` on `B89F4==1`) — else
+   named-stop `Stage1b_early_demux_publish` before got_frame/C89C.
+2. Pump-time last-chunk latch also emits TRACE `e0_promote` so live logs
+   show promote before got_frame.
+3. CD device enable retained. **No `a1` clamp.** **924F8 got_frame is
+   the live wall — do not treat 92934 as the frontier yet.**
+   (`Trace_Direct` stays out of `pe_libcd` — field-runtime-only link
+   targets do not provide it; pump-path TRACE is `e0_promote` in 924F8.)
+
+Tests: `Stage1b_early_demux_publish_named_stop`;
+`B54K_C89C_gated_until_pad` expects early-demux name.
+
+**Next boot→Day2:** Matt retest tip; expect either live C89C after
+authenticated last-chunk (`e0_promote` / `7C214_last_chunk` → got_frame)
+or a clearer `Stage1b_early_demux_publish` if demux still races without
+latch. Fold Decomp `7C484`/`91B64` leaves when authenticated.
+
+Focused Linux: Stage1b*, B54K_C89C*, CDQ1_7C214*, B54KAD/AE, MV1D_c89c*,
+DAY2_movie_player — PASS. Full suite: **1353** run / **1307** pass /
+0 fail / 46 skip.
+
+Claims: Decomp diagnosis recorded; early-demux named stop; 158j latch
+kept as authenticated delivery. Non-claims: Day2 complete; Stage-1b done
+on live until retest; `92934` live frontier; retail STR golden; published
+runtime 128 unchanged. Linux-first.
+
+## DAY2-158j: 7C214 last-chunk latches StreamFrameReady (2026-09-09)
+
+Live Bazzite Disc1 on tip **`1fa9a48` (DAY2-158i) CONFIRMED progress**:
+
+```
+[DISC] CD command device enabled (mask=7)
+[TRACE] func_801924F8_e0_poll
+[TRACE] func_801924F8_got_frame
+[STUB:BOOTSTRAP_RET] Stage1b_pad_terminated_frame (first invocation)
+[HOST] stop_reason=unresolved-boundary
+```
+
+Silent `1220C` nest is gone. CD device enable stays. No `e0_promote`
+between `e0_poll` and `got_frame`.
+
+Root cause: during `HostFB_PumpCdProgress`, `func_8007C564` can set
+`B89F4=1` and call `func_8007C214()` while `C0DB8` is set. `7C214`
+publishes status 2 and **clears** `B89F4` before E0's next poll. E0 then
+sees a ready slot via `91B64` → `got_frame` without the promote arm, so
+`StreamFrameReady` was never latched → Stage1b pad gate.
+
+Fix: latch `PE_Port_NoteStreamFrameReady` inside `func_8007C214` when
+`B89F4==1` (exact; sentinel nonzero must not admit). Covers pump-time
+publish and E0 promote. E0 no longer Notes separately. New test
+`CDQ1_7C214_last_chunk_latches_frame_ready`; last-chunk C89C fixture
+latches via `7C214`. CD device enable retained. **No `a1` clamp.**
+
+**Follow-up:** Decomp diagnosis + early-demux gate → see DAY2-158k.
+
+Focused Linux: CDQ1_7C214*, B54K_C89C*, B54KAD/AE, Stage1b_cd_device*,
+HostFB_PumpCdProgress*, MV1D_c89c*, DAY2_movie_player, B54K_92934 — all
+PASS. Status regenerated: **1352** tests / **1306** artifact-independent.
+
+**Next boot→Day2:** superseded by 158k.
+Non-claims: Day2 complete; Stage-1b done on live until retest of
+this tip; retail STR golden; published runtime 128 unchanged. Linux-first.
+
+## DAY2-158i: enable CD device on disc-image + E0 named diagnostics (2026-09-09)
+
+Live Bazzite on tip **`7a6984b`** still nested under `func_8001220C` (~1m)
+with the same sparse TRACE as `737f10e` — no named STOP. Decomp Bot rebased
+media-loop to **`b3e8ee1`** on `737f10e`; port C for `92CE8`/`92934` is
+**byte-identical** to `7a6984b` (tip remains source of truth; only evidence
+REPORT wording differed).
+
+Root cause: `HostFB_PumpCdProgress` is a no-op unless
+`PE_CdReg_DeviceEnabled()`. Production `--disc-image` never called
+`PE_CdReg_EnableDevice` (Stage147/148 keep enable explicit; only tests opted
+in). E0 therefore burned 2000 empty polls, then hung in the give-up
+`while (CdReady() != -1)` busy-wait with **no host pump** — silent nest
+under `1220C`.
+
+Fix: `port_main` enables the mounted-disc command device (mask 7) after EXE
+load. E0 else-arm named-stops `Stage1b_cd_device_disabled` when device-off
+and no fixture arm. CD-ready / give-up spins call `HostFB_PumpCdProgress`.
+Trace markers: `e0_poll` / `e0_promote` / `e0_giveup` / `got_frame`. New
+test `Stage1b_cd_device_disabled_named_stop`. B54KY Disc1 attaches device.
+
+**Live follow-up (1fa9a48):** Matt confirmed device enable + TRACE through
+`got_frame` then `Stage1b_pad_terminated_frame` — see DAY2-158j.
+
+**Next boot→Day2:** superseded by 158j (chase pad gate / 7C214 latch).
+Non-claims: Day2 complete; Stage-1b done on live until retest; retail STR
+golden; published runtime 128 unchanged. Linux-first.
+
+## DAY2-158h: fold Decomp Bot 92CE8/92934 media loop onto tip (2026-09-09)
+
+Decomp Bot branch `cursor/92ce8-92934-media-loop` tip is still **`5a4ba27`**
+(based on `5754473`, not rebased past that onto `737f10e`). Folded those
+authenticated leaves onto PR38 tip anyway: post-E08 `func_80192CE8` media
+loop + `func_80192934` (+ siblings `92C48`/`92C9C`) with Stage-1b-gated live
+C89C. Evidence: `docs/evidence/pe-92ce8-post-e08/`,
+`docs/evidence/pe-92934-media-worker/` (carve SHA-256 + `.s.txt`).
+
+Boot path after `91FB8` leaves `DBA==1`, so `92934` early-returns 0, the
+media loop clears stream pointers + `0x200`, and `92CE8` returns 0 — the
+old `func_80192CE8_80192E08_cut` is gone. B54KY Disc1 expectations updated
+for that completion. Sector-scale E0 pump (158g) retained.
+
+Matt’s live Bazzite retest of `737f10e` was already running when this fold
+landed; next named stop after E0 pump + this tip should be past `92CE8`
+(title/menu / next unresolved), not the E08 cut.
+
+**Next boot→Day2:** Matt reports STOP on tip-with-158h; chase that name.
+Non-claims: Day2 complete; Stage-1b done on live until retest of this tip;
+retail STR golden; published runtime 128 unchanged. Linux-first.
+
+## DAY2-158g: live Stage-1b observation + E0 sector-scale CD pump (2026-09-09)
+
+Matt / Bazzite Disc1 on tip **`5754473`**: process stayed alive **2+ minutes
+under `func_8001220C`** with **no** `Stage1b_pad_terminated_frame` and **no**
+MV1d abort. Prior immediate Stage-1b stop is gone in practice.
+
+Mechanical reading (this env has no Disc1 carve): after DAY2-158d/f, E0 waits
+with `HostFB_VSync(-1)` for `D_800B89F4` before promoting. That query only
+advances **1024** device cycles; one CD sector costs **225792/451584**. E0's
+2000-try window therefore cannot finish a multi-sector STR frame, so live
+stays nested under `1220C` (909B4→92CE8→924F8 E0) without reaching got_frame
+admission — matching a long-lived run without Stage-1b/MV1d names.
+
+Fix on this tip: E0 else-arm calls **`HostFB_PumpCdProgress`** (one non-XA
+sector period through the same device/IRQ path as waiting VSync). Promote
+gate unchanged (`B89F4` / fixture arm only). New test
+`HostFB_PumpCdProgress_sector_scale`. **No `a1` clamp.**
+
+Decomp Bot **92CE8 / 92934 drafts are not present** in this agent environment
+(no draft files, no Decomp Bot cloud agent, empty `rom/image/`). Cannot extend
+`func_80192CE8` past `func_80192CE8_80192E08_cut` without authenticated overlay
+bytes. Named cut after first successful 924F8 return remains that boundary.
+
+**Next boot→Day2:** Matt retest tip with sector-scale E0 pump; expect either
+live C89C / Stage-1b admit then `func_80192CE8_80192E08_cut`, or whatever
+named stop the run reports. Integrate 92CE8/92934 remainder only when Decomp
+Bot drafts or PE.IMG overlay carve are available.
+
+Claims: live 5754473 observation recorded; E0 wait pumps one sector/poll;
+VSync(-1) insufficiency evidenced by cycle math + sector-scale test.
+Non-claims: Day2 complete; Stage-1b done on live Disc1 until Matt retests
+this tip; 92CE8 media-loop remainder translated; retail STR golden; published
+runtime 128 unchanged. Linux-first.
+
+## DAY2-158f CI follow-up: retail-Disc skips + metrics include headers (2026-09-09)
+
+`native-progress` failed on tip `5754473` with 2 failed / count desync:
+`B54KY_192CE8…` and `DAY2_movie_complete_frame` used plain `TEST()` and
+FAILed without Disc1 instead of `TEST_RETAIL_DISC1` skip. Metrics only
+scanned `test_native.c`, missing `#include "test_*.h"` cases (1149 vs
+1348). Both tagged; `native_metrics.collect_test_source_text` flattens
+includes. Artifact-independent: 1348 run / 1302 pass / 0 fail / 46 skip.
+
+## DAY2-158f: last-chunk StreamFrameReady so live C89C can run (2026-09-09)
+
+Tip was already past `5223ecd` (`7a41ea1` DAY2-158d/e). This rung fixes
+the Stage-1b **admission** bug that still blocked live C89C:
+
+Demuxed bodies at `s1` are **VLC bitstreams**. STR magic `0x80010160`
+lives in the 32-byte sector header, not at the published payload cursor.
+Admitting on magic-at-body was wrong; real last-chunk frames would still
+hit `Stage1b_pad_terminated_frame`.
+
+Fix: when E0 promotes because `D_800B89F4==1` (retail last video chunk),
+latch `PE_Port_NoteStreamFrameReady`. `got_frame` runs C89C on immediate
+pad **or** that latch. Fixture `ArmStreamPromote` alone does **not** latch
+— non-pad synthetic bodies still Stage-1b-stop (MV1d gate preserved).
+**No `a1` clamp.**
+
+Also refreshed stale `docs/generated/NATIVE_PORT_STATUS.md` (CI
+`native-progress`).
+
+Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad,
+B54K_C89C_last_chunk_frame_ready, MV1D_c89c_*, DAY2_movie_player.
+
+**Next boot→Day2:** Matt retest tip past Stage-1b with live last-chunk
+delivery; then `func_80192CE8` media-loop remainder / multi-sector STR.
+
+Claims: last-chunk promote admits live C89C; wrong STR-magic-at-body
+gate removed; MV1d non-pad fixture gate kept. Non-claims: Day2 complete;
+Stage-1b done on live Disc1 until Matt retests; retail STR golden;
+published runtime 128 unchanged. Linux-first.
+
+## DAY2-158e: movie_player autonomous first frame (2026-09-09)
+
+`DAY2_movie_player` enabled-device path was red at `movie_retry_wait` /
+then FATAL `PE_LoadU32@0xC`. Two fixture bugs, both with evidence:
+
+1. `MOVPLY_SeedRecord` planted `record+6 = 0x1234` labeled "stream end
+   LBA". `func_8007C304` stores that word in `D_800B6918`; `7C564`'s
+   first-sector filter compares it to the STR header frame number
+   (`rec+8`). Planted frame is `1`, so every sector was rejected
+   (`A3520=1` but `status0=0` / `BE998=0`). Fixed: `record+6 = 1`.
+2. After accept, `121270` dim-refresh calls `ClearImage` (`74F44`), which
+   loads `D_80095744→jtb+12`. Fixture never seeded the GPU jtb → load at
+   `0xC`. Fixed: `B54KR_SeedGpuStatic()` on the enabled-device path.
+
+Focused Linux: `DAY2_movie_player` PASS (early returns, search boundary,
+CdlModeSM boundary, autonomous first-frame handoff).
+
+**Next boot→Day2:** live Disc1 full STR frames (9 chunks → `B89F4`) so
+`801924F8` C89C runs past Stage-1b; then `func_80192CE8` media-loop
+remainder. Multi-sector STR through the player chain still open.
+
+Claims: movie_player autonomous first frame green on fixture ISO.
+Non-claims: Day2 complete; Stage-1b done on live Disc1; retail STR golden;
+published runtime 128 unchanged. Linux-first.
+
+## DAY2-158d: Stage-1b E0 promote + STR-ready C89C gate (2026-09-09)
+
+### Bazzite retest of `5223ecd` (Matt) — CLEAN Stage-1b stop
+
+Live Disc1 on tip `5223ecd` (DAY2-158c gate, unconditional E0 promote)
+stops cleanly at `Stage1b_pad_terminated_frame` — MV1d `PE_StoreU16` @
+`0x80200000` is fixed by the gate. Confirmed: not a random `1220C` buffer
+bug. **Do not clamp `a1`.**
+
+### Stage-1b pump (this tip)
+
+Unconditional E0 `7C214` every poll published incomplete bodies (MV1d
+trap). Retail arms DMA3→`7C214` only when last video chunk sets
+`D_800B89F4` (`7CEAC`/`7C564`). E0 now:
+
+1. Promote when `B89F4==1` (live last-chunk), **or** when a fixture armed
+   `PE_Port_ArmStreamPromote` (`7A214` clears `B89F4` after the plant).
+2. Else `HostFB_VSync(-1)` so CD/DMA can finish the frame.
+
+`got_frame` admits C89C when the body is immediate pad **or** retail STR
+video magic `0x80010160` (complete demuxed frame; DAY2 complete-frame
+oracle). Non-ready → named Stage-1b stop. Magic admit is safe only with
+last-chunk/fixture promote — first-chunk incomplete bodies also start
+with that magic.
+
+Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad,
+B54K_C89C_str_magic_ready, MV1D_c89c_* .
+
+**Next boot→Day2:** live Disc1 must assemble full STR frames (9 video
+chunks → `B89F4`) so C89C runs for real past Stage-1b; then
+`func_80192CE8` media-loop remainder. Parallel: DAY2_movie_player
+autonomous first frame landed in DAY2-158e.
+
+Claims: Matt clean Stage1b stop on `5223ecd` recorded; E0 last-chunk /
+fixture-surrogate promote; STR-magic readiness beside pad; no a1 clamp.
+Non-claims: Day2 complete; Stage-1b done on live Disc1; retail STR golden;
+movie_player autonomous green; published runtime 128 unchanged. Linux-first.
+
+## DAY2-158c: gate C89C on pad-terminated frame (MV1d trap) (2026-09-09)
+
+### Diagnosis (Matt / Bazzite live Disc1 abort — confirmed)
+
+`PE_StoreU16` @ `0x80200000` after `func_8001220C` on tip with live
+`func_8010C89C` is the **known MV1d trap**, not a random `1220C` buffer
+bug. Guest RAM ends at `0x80200000`. Wiring C89C without Stage-1b
+STR/MDEC-ready / pad-terminated frames at `s1` lets the output cursor
+walk off the 2MiB window (`docs/evidence/pe-mv1d-c89c/REPORT.md`).
+
+### Chosen fix (no a1 clamp)
+
+Gate the production `got_frame` call in `func_801924F8`: invoke C89C only
+when the stream's first VLC symbol is an immediate pad exit (same shape
+as the synthetic CDQ2d plant / MV1D_PAD). Otherwise honest named Stage-1b
+boundary stop (`Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)` +
+`PE_PORT_STOP_UNRESOLVED_BOUNDARY`). Durable unlock remains Stage-1b frame
+delivery so real STR frames can pass the gate without inventing clamps.
+
+Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad, MV1D_c89c_* PASS.
+Bazzite retest of `5223ecd`: CLEAN stop at `Stage1b_pad_terminated_frame`
+(MV1d fixed) — see DAY2-158d for the promote follow-up.
+
+**Next boot→Day2:** Stage-1b STR/MDEC frame delivery at `s1`, then
+`func_80192CE8` media-loop remainder. Parallel red: DAY2_movie_player
+autonomous first frame (separate from this abort).
+
+Claims: MV1d root cause recorded; C89C gated on pad-terminated frames;
+synthetic pad path still completes. Non-claims: Day2 complete; Stage-1b
+done; retail STR golden; movie_player autonomous green; published runtime
+128 unchanged. Linux-first.
+
+## DAY1/DAY2-158b: wire live func_8010C89C into 801924F8 got_frame (2026-09-09)
+
+### Live stop evidence (Matt / Bazzite, published PE-DAY2-128)
+
+Windowed Disc1 on published **PE-DAY2-128** opens, then stops at unresolved
+bootstrap stub **`func_8010C89C`** after **`func_8001220C`** (movie VLC). That
+published channel does **not** include this branch tip — runtime 128 still
+carries the intentional got_frame stub. Immediate playable-progress blocker
+for Matt is therefore: build/run a Linux binary from PR #38 tip
+(`cursor/movie-autonomous-stream-6f51`), not 128.
+
+Decomp Bot + live path confirmed the stub lived in `func_801924F8` got_frame
+(`Bootstrap_ReturnVoid("func_8010C89C", …)`), not a missing CMake leaf —
+`func_8010C89C_port.c` was already built. Production tail now matches the
+ov133 call-site order: bump `[B0DBC]`, load `a1` from
+`[0x801D1464+([146C]^1)*4]` then toggle `[146C]` (first pass → `[1468]`),
+`a2=[0x801D0DF8]`, `func_8010C89C(s1,a1,a2,0)`, `func_8007C394(s1)`, EC
+`[B0DBD]=0` / `[B0DBC]=1`. The 7C394→EC slice-wait is not expanded yet
+(EC runs immediately).
+
+Synthetic B54KAD/AE: CDQ2d plants a pad-exit VLC frame at the published
+stream body plus arena/table words so C89C terminates in-bounds.
+Assertions moved from Bootstrap order-log + unresolved stop to C89C
+telemetry + completed got_frame state (`146C==1`, `B0DBC==1`, no stop).
+Focused Linux: B54KAD, B54KAE, MV1D_c89c_* PASS. Full suite still shows
+pre-existing DAY2_movie_player autonomous-first-frame red and disc-gated
+skips where `local/pe_disc1.path` is absent.
+
+Also repaired Disc1-authority `native-progress` (pre-existing on main):
+`func_80030894` body is complete, so `configs/USA/port_priority.json` now
+carries `label: null` / empty remaining callees, and `port_priority.py`
+accepts optional `PORT_SRCS`. Progress unit tests OK.
+
+**Next boot→Day2 stop after this tip:** `func_80192CE8_80192E08_cut` (media
+loop remainder after jal 924F8). Needs overlay carve / Decomp Bot for the
+~100-word tail; no Disc1 image in this agent environment to window-verify.
+
+Claims: 924F8→C89C production call path is live on this tip; synthetic
+got_frame completes past the old C89C stub; progress tooling agrees
+30894 is complete. Non-claims: Day2 complete; retail STR golden decode;
+7C394→EC slice-wait fidelity; windowed Disc1 boot on Matt's machine until
+he runs this tip (128 still stubs); DAY2_movie_player autonomous stream
+green; published runtime 128 unchanged. Windows packaging not touched
+(Linux-first).
+
+## DAY1/DAY2-158: XA RT mode + autonomous movie stream (2026-09-09)
+
+Previous157 stopped the enabled-device player at `CD_device_read_mode` for
+mode 0x1E0 (0x50-bit guard). Provenance for the stream DMA pointer table:
+those words are EXE-image data (same class as the B27C CD register table),
+not a runtime SDK/movie writer — dump evidence in
+`retail_gameover_fade_cases.h` at 9B32C..9B35C. `B558_PlantPointers` /
+`CdDeviceSeed` now re-plant the full table after `ResetTestState`.
+
+Device change: ReadN/ReadS guard narrowed from `mode&0x50` to `mode&0x10`.
+CdlModeRT (bit6) is allowed so movie mode 0xE0/0x1E0 delivers raw sectors;
+7C564 keeps software header/channel filtering. CdlModeSM (bit4) remains
+the explicit `CD_device_read_mode` frontier (covered by the player test).
+
+Player fixes required for the physical chain: success path returns 1
+(oracle/`regs[2]==1`), and the first-frame 121270 poll calls
+`HostFB_VSync(-1)` so CD DMA/IRQ advance while the CPU spins (updater
+already had this host adaptation). Fixture plants a one-chunk STR sector
+at the searched PE.IMG LBA.
+
+Native DAY2_movie_player: early returns, disabled-device search boundary,
+CdlModeSM boundary, and enabled-device autonomous path where search/Setloc/
+ReadS run, callbacks stay installed, and first-frame handoff reaches
+B0DBA 3→4 / B0DBC=1 / bank flip without a stop. C89C uses the zeroed EB8C
+bound exit on the synthetic payload (not a retail STR decode golden).
+
+Next: multi-sector STR frames through the same chain, updater retry
+enabled-device completion, 14E30 real path, libpress wait fidelity, XA
+filter/audio (bit4), hardware pixel validation, and scope-wide
+opening→Day2 acceptance. Full user goal open; published runtime 128
+unchanged. PR #37 (host SPU synth) remains open/unmerged and is not
+required for this stream slice.
 
 ## DAY1/DAY2-157: movie player 121C04 ported (2026-09-09)
 

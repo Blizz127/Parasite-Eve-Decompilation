@@ -442,6 +442,14 @@ void func_80080950(pe_addr_t dst, pe_addr_t src)
  * D_800A3490, advances D_800BE9E4 to D_800BE998, chains the
  * D_800B0CC8 callback when set, then clears D_800B89F4.
  *
+ * Port Stage-1b: when D_800B89F4 is exactly 1 (retail last-chunk latch
+ * from 7C564/7CEAC), note StreamFrameReady before the clear. Live Disc1
+ * often publishes during HostFB_PumpCdProgress (7C564 → 7C214 while
+ * C0DB8 is set), so E0's next poll sees a status-2 slot without ever
+ * taking the B89F4 promote arm — without this latch, got_frame hits
+ * Stage1b_pad_terminated_frame. Exact ==1 only: tests plant sentinel
+ * nonzero values that must not admit C89C.
+ *
  * The D_800B0CC8 chain is a proven-dead arm on every path that reaches
  * here: func_8007C304 (the only writer in the translated tree) is
  * called with callback = 0 by the movie prefix, so the register reads
@@ -463,6 +471,14 @@ void func_8007C214(void)
         Bootstrap_ReturnVoid("func_8007C214_B0CC8_chain", "func_8007C214");
         PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
         return;
+    }
+    if (PE_LoadU32(0x800B89F4u) == 1u) {
+        /* Authenticated last-chunk delivery (DAY2-158j/k). Pump-time
+         * 7C564→7C214 clears B89F4 before E0's promote arm; latch here
+         * so got_frame may admit C89C without inventing overlay bytes.
+         * TRACE lives in 924F8 (e0_promote) — pe_field_runtime must not
+         * call Trace_Direct (undefined in disc-loader / transition tests). */
+        PE_Port_NoteStreamFrameReady();
     }
     PE_StoreU32(0x800B89F4u, 0u);
 }

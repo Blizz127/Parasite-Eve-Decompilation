@@ -1,0 +1,12 @@
+{
+  "func_va": "0x80191DC8",
+  "func_end": "0x80191FB8",
+  "size": "0x1f0",
+  "words": 124,
+  "sha256": "d4d36c74fdae7ccb189a0d98c170806fc84b1fe24c700a447bee5eafbd941086",
+  "overlay_sha1": "a0b604ead810592dd9a8d74f7c74fe94151f4d32",
+  "peimg_sha1": "146c0ce7308bf9fdc2ba5a84230e198db0663f3b",
+  "overlay_lba": "[0x03D2,0x0457)",
+  "load_va": "0x8018EFF0",
+  "peimg_off": "0x1ebdd8"
+}

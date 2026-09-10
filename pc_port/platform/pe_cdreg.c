@@ -35,7 +35,7 @@ static void CdClearData(void)
 }
 
 
-void PE_CdReg_GetDeviceState(PeCdDeviceState *out) { *out=g_device;out->data_remaining=g_data_size-g_data_pos; }
+void PE_CdReg_GetDeviceState(PeCdDeviceState *out) { *out=g_device;out->data_remaining=g_data_size-g_data_pos;out->sector_pending=(uint8_t)(g_sector_pending!=0); }
 int PE_CdReg_DeviceEnabled(void) { return g_device.enabled!=0; }
 static void CdDeviceBoundary(const char *name,uint32_t value)
 {
@@ -107,7 +107,11 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
                     if(!valid) {response[0]|=1u;response[1]=0x10u;size=2;tag=5;}
                     else {g_target_lba=frame-150u;g_target_pending=1;}
                 } else if(g_command==6u || g_command==27u) {
-                    if(g_device.mode&0x50u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
+                    /* Bit4 (CdlModeSM / XA filter) remains an explicit frontier.
+                     * Bit6 (CdlModeRT) is allowed: retail movie mode 0xE0/0x1E0
+                     * sets RT so the drive delivers every raw sector; 7C564's
+                     * own header/channel checks perform the software filter. */
+                    if(g_device.mode&0x10u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
                     if(g_target_pending) {g_device.next_lba=g_target_lba;g_target_pending=0;}
                     g_device.reading=1;g_read_cycles=CdSectorCycles();
                 } else if(g_command==9u || g_command==21u || g_command==22u) {
@@ -126,16 +130,22 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
     }
     if(was_reading && g_device.reading && !g_read_cycles && !g_phase &&
        !g_response_tag && g_response_pos==g_response_size) {
-        if(g_device.mode&0x50u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
-        if(g_sector_pending) {CdDeviceBoundary("CD_device_sector_overrun",g_device.next_lba);return;}
-        if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
-            CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;
+        if(g_device.mode&0x10u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
+        /* Backpressure: hold the next publish while an unread sector waits
+         * for BFRD. HostFB_PumpCdProgress can retire a full sector period
+         * before INT1→BFRD→DMA3 drains; STOP-on-overrun was an artificial
+         * wall after ~319 live FMV frames (DAY2-158v). Leave g_read_cycles
+         * at 0 so the next service retries after BFRD clears pending. */
+        if(!g_sector_pending) {
+            if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
+                CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;
+            }
+            g_device.next_lba++;g_device.sectors++;g_sector_pending=1;g_read_cycles=CdSectorCycles();
+            uint8_t status=CdDeviceStatus();
+            if(!PE_CdReg_PushResponse(1u,&status,1u)) {CdDeviceBoundary("CD_device_response_queue",1u);return;}
+            if(g_device.responses<16u) g_device.response_log[g_device.responses]=1u;
+            g_device.responses++;
         }
-        g_device.next_lba++;g_device.sectors++;g_sector_pending=1;g_read_cycles=CdSectorCycles();
-        uint8_t status=CdDeviceStatus();
-        if(!PE_CdReg_PushResponse(1u,&status,1u)) {CdDeviceBoundary("CD_device_response_queue",1u);return;}
-        if(g_device.responses<16u) g_device.response_log[g_device.responses]=1u;
-        g_device.responses++;
     }
     PE_CdReg_ServiceDMA3();
     if(g_response_tag&g_response_mask) PE_IRQ_AssertSources(4u);

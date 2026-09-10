@@ -69,12 +69,176 @@ static void test_DAY2_cd_sector_device(void)
         loc[2]=0x7Au;CdSectorCommand(2u,loc,3);
         ASSERT(CdSectorReply(response,2)==5u && response[0]==3u && response[1]==0x10u,"invalid BCD must report parameter value error");
     }
-    /* Unread data is retained; no silent sector substitution on overrun. */
-    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"overrun attachment");
+    /* Unread sector is retained via backpressure — no silent overwrite, no
+     * STOP. Host PumpCdProgress may outrun BFRD; hold until drain, then
+     * catch up on the next service (DAY2-158v). */
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"backpressure attachment");
     uint8_t loc[]={0u,2u,0x20u};CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
     CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
-    PE_CdReg_ServiceDevice(451584u);ASSERT(CdSectorReply(response,1)==1u,"overrun first data response");
-    PE_CdReg_ServiceDevice(451584u);
-    ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_device_sector_overrun")==1,"unimplemented multi-sector buffering must stop");
+    PE_CdReg_ServiceDevice(451584u);ASSERT(CdSectorReply(response,1)==1u,"backpressure first data response");
+    {
+        PeCdDeviceState held;
+        PE_CdReg_GetDeviceState(&held);
+        ASSERT(held.sectors==1u && held.next_lba==21u,"first sector published");
+        PE_CdReg_ServiceDevice(451584u);
+        ASSERT(!PE_Port_ShouldStop() && CountOrderLog("CD_device_sector_overrun")==0,
+               "pending sector holds without STOP");
+        PE_CdReg_GetDeviceState(&held);
+        ASSERT(held.sectors==1u && held.next_lba==21u,
+               "second sector not published while pending");
+        PE_CdReg_WriteU8(PE_CDREG_BASE,0u);PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0u);
+        PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0x80u);
+        for(unsigned i=0;i<2340u;i++) (void)PE_CdReg_ReadU8(PE_CDREG_BASE+2u);
+        PE_CdReg_ServiceDevice(1u);
+        ASSERT(CdSectorReply(response,1)==1u && response[0]==0x22u,
+               "catch-up publish after BFRD");
+        PE_CdReg_GetDeviceState(&held);
+        ASSERT(held.sectors==2u && held.next_lba==22u && !PE_Port_ShouldStop(),
+               "second sector published after drain");
+    }
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }
+
+/* DAY2-158g: HostFB_PumpCdProgress retires one non-XA sector per call;
+ * HostFB_VSync(-1) alone advances only 1024 cycles and cannot. */
+static void test_HostFB_PumpCdProgress_sector_scale(void)
+{
+    TEST("HostFB_PumpCdProgress_sector_scale");
+    DiscFixture fx={0};uint8_t response[5];
+    PeCdDeviceState before,after_vsync,after_pump;
+    ResetTestState();ASSERT(FxBuild(&fx,0),"pump fixture");PE_Disc_SetActive(fx.disc);
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"pump attachment");
+    {
+        uint8_t loc[]={0u,2u,0x20u};
+        CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
+        CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
+    }
+    PE_CdReg_GetDeviceState(&before);
+    ASSERT(before.reading && before.sectors==0u,"read armed before pump");
+    HostFB_VSync(-1);
+    PE_CdReg_GetDeviceState(&after_vsync);
+    ASSERT(after_vsync.sectors==0u,
+           "VSync(-1) must not retire a 451584-cycle sector");
+    HostFB_PumpCdProgress();
+    PE_CdReg_GetDeviceState(&after_pump);
+    ASSERT(after_pump.sectors==1u && after_pump.next_lba==before.next_lba+1u,
+           "PumpCdProgress must retire one sector");
+    ASSERT(CdSectorReply(response,1)==1u && response[0]==0x22u,
+           "sector data-ready after pump");
+    PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
+}
+
+/* DAY2-158w dig/cd-sector-overrun: 7C564 DMA1 defer leaves sector_pending +
+ * B0CD0 after INT1 ack; PumpCdProgress must stall CD time and still allow
+ * BFRD progress (158v hold-only hung live ~319×92934 with no BFRD). */
+static void test_DAY2_cd_b0cd0_pump_stall(void)
+{
+    TEST("DAY2_cd_b0cd0_pump_stall");
+    DiscFixture fx={0};uint8_t response[5];
+    PeCdDeviceState st;
+    ResetTestState();ASSERT(FxBuild(&fx,0),"b0cd0 fixture");PE_Disc_SetActive(fx.disc);
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"b0cd0 attachment");
+    {
+        uint8_t loc[]={0u,2u,0x20u};
+        CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
+        CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
+    }
+    PE_CdReg_ServiceDevice(451584u);
+    ASSERT(CdSectorReply(response,1)==1u,"b0cd0 first data response");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending,"sector must remain pending before BFRD");
+    /* Simulate 7C564 A801C+DMA1 early-out (retail sets B0CD0, no BFRD).
+     * Arm DMA1 so Pump takes the stall path (158x catch-up is idle-DMA1 only). */
+    ASSERT(PE_MDEC_SubmitOutput(0x80160000u,32u),"arm dma1 for stall");
+    PE_StoreU16(0x800B0CD0u,1u);
+    PE_StoreU8(0x800B0DBBu,1u);
+    HostFB_PumpCdProgress();
+    ASSERT(!PE_Port_ShouldStop() && CountOrderLog("CD_device_sector_overrun")==0,
+           "B0CD0+pending must not CD_device_sector_overrun");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sectors==1u && st.sector_pending,
+           "pump must stall cadence while B0CD0 owns pending");
+    /* Clear retry latch as 91DC8 would after a successful 7C564; BFRD drains. */
+    PE_StoreU16(0x800B0CD0u,0u);
+    PE_CdReg_WriteU8(PE_CDREG_BASE,0u);PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0u);
+    PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0x80u);
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(!st.sector_pending,"BFRD clears sector_pending");
+    HostFB_PumpCdProgress();
+    ASSERT(!PE_Port_ShouldStop(),"post-BFRD pump must deliver next sector");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sectors==2u,"cadence resumes after B0CD0 drain");
+    PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
+}
+
+/* DAY2-158 dig/b0cd0-no-bfrd (post-158x): idle catch-up must not clear B0CD0
+ * without BFRD. B89F4==1 makes 7C564 return before BFRD — Pump must STOP
+ * CD_B0CD0_retry_unresolved (158x cleared the latch and silent-hung). */
+static void test_DAY2_cd_b0cd0_pump_retry_idle_dma1(void)
+{
+    TEST("DAY2_cd_b0cd0_pump_retry_idle_dma1");
+    DiscFixture fx={0};uint8_t response[5];
+    PeCdDeviceState st;
+    PeMdecState mdec;
+    ResetTestState();ASSERT(FxBuild(&fx,0),"b0cd0 retry fixture");PE_Disc_SetActive(fx.disc);
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"b0cd0 retry attachment");
+    {
+        uint8_t loc[]={0u,2u,0x20u};
+        CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
+        CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
+    }
+    PE_CdReg_ServiceDevice(451584u);
+    ASSERT(CdSectorReply(response,1)==1u,"retry first data response");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending,"sector pending before catch-up");
+    PE_MDEC_ClearDmaChannels();
+    PE_MDEC_GetState(&mdec);
+    ASSERT(!(mdec.dma1_chcr&0x01000000u),"dma1 must be idle for catch-up arm");
+    PE_StoreU32(0x800B89F4u,1u); /* 7C564 top early-out — no BFRD */
+    PE_StoreU32(0x800A801Cu,0u); /* 158x skipped 7C564 when A801C clear */
+    PE_StoreU16(0x800B0CD0u,1u);
+    HostFB_PumpCdProgress();
+    ASSERT(CountOrderLog("CD_B0CD0_pump_retry")==1,"expected pump_retry TRACE");
+    ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_B0CD0_retry_unresolved")==1,
+           "failed BFRD must named-STOP, not clear B0CD0 and silent-hang");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending && (int16_t)PE_LoadU16(0x800B0CD0u),
+           "pending+B0CD0 retained until a real BFRD");
+    PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
+}
+
+/* DAY2-158 dig/b0cd0-catchup-miss: live 6cbeb1ee never entered b0cd0&&pending
+ * catch-up (zero CD_B0CD0_* TRACE). 91DC8 always-clears B0CD0 after 7C564;
+ * orphan pending must still idle-catch-up and named-STOP on B89F4 early-out. */
+static void test_DAY2_cd_b0cd0_pump_orphan_pending(void)
+{
+    TEST("DAY2_cd_b0cd0_pump_orphan_pending");
+    DiscFixture fx={0};uint8_t response[5];
+    PeCdDeviceState st;
+    PeMdecState mdec;
+    ResetTestState();ASSERT(FxBuild(&fx,0),"orphan pending fixture");PE_Disc_SetActive(fx.disc);
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"orphan attachment");
+    {
+        uint8_t loc[]={0u,2u,0x20u};
+        CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
+        CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
+    }
+    PE_CdReg_ServiceDevice(451584u);
+    ASSERT(CdSectorReply(response,1)==1u,"orphan first data response");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending,"sector pending before orphan catch-up");
+    PE_MDEC_ClearDmaChannels();
+    PE_MDEC_GetState(&mdec);
+    ASSERT(!(mdec.dma1_chcr&0x01000000u),"dma1 idle");
+    PE_StoreU32(0x800B89F4u,1u); /* 7C564 early-out — no BFRD */
+    PE_StoreU16(0x800B0CD0u,0u); /* latch already cleared (91DC8 shape) */
+    HostFB_PumpCdProgress();
+    ASSERT(CountOrderLog("CD_B0CD0_pump_retry")==1,
+           "orphan pending must enter pump_retry without B0CD0");
+    ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_B0CD0_retry_unresolved")==1,
+           "orphan failed BFRD must named-STOP, not silent hold");
+    PE_CdReg_GetDeviceState(&st);
+    ASSERT(st.sector_pending,"pending retained until real BFRD");
+    PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
+}
+

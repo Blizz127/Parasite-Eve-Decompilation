@@ -13,6 +13,7 @@
 #include "pe_gpu.h"
 #include "pe_spu_dma.h"
 #include "pe_sdk.h"
+#include "pe_bootstrap.h"
 #include "pe_cdreg.h"
 #include "pe_mdec.h"
 #include "pe_irq_delivery.h"
@@ -158,7 +159,7 @@ void HostFB_VSync(int mode)
     if(PE_MDEC_HasDecode() && PE_GPU_DMA2Pending())
         (void)PE_Port_ServiceDmaIrqCheckpoint();
     (void)PE_MDEC_Service();
-    if(PE_MDEC_HasDecode()) HostFB_ServiceDeviceIrq();
+    if(PE_MDEC_HasDecode() || (int16_t)PE_LoadU16(0x800B0CD0u)) HostFB_ServiceDeviceIrq();
     /* Deterministic host CPU-work quantum, including busy counter queries.
      * This is an approximate device clock, not a cycle-accurate CPU model. */
     int device=PE_CdReg_DeviceEnabled();
@@ -176,6 +177,81 @@ void HostFB_VSync(int mode)
     }
     fb_vsync_count++;
     (void)mode;
+}
+
+void HostFB_PumpCdProgress(void)
+{
+    /* Same Spu/MDEC preamble as VSync, then one non-XA sector period so a
+     * single E0 poll can retire a pending CD sector (pe_cdreg
+     * CdSectorCycles: 451584 non-XA / 225792 XA). */
+    static uint32_t s_b0cd0_dma1_stalls;
+    PeMdecState mdec;
+    PeCdDeviceState cd;
+    int b0cd0, pending, dma1_busy;
+
+    (void)PE_SpuDma_Service();
+    if(PE_MDEC_HasDecode() && PE_GPU_DMA2Pending())
+        (void)PE_Port_ServiceDmaIrqCheckpoint();
+    (void)PE_MDEC_Service();
+    /* DAY2-158x: after MDEC may have completed DMA1, run the DMA IRQ
+     * checkpoint (not only ServiceDeviceIrq) so 74520→91DC8 can run even
+     * when HasDecode is false. 158w only widened ServiceDeviceIrq; live
+     * tip 733a8dc still hung ~319×92934 with BFRD never arriving. */
+    /* Read pending before the IRQ gate: live Disc1 on 6cbeb1ee spun ~319×
+     * 92934 with zero CD_B0CD0_* TRACE — catch-up required b0cd0&&pending,
+     * but unread sectors are owned by sector_pending. B0CD0 is only the
+     * DMA1-defer latch; 91DC8 retail always clears it after 7C564 even when
+     * BFRD was skipped, and some 7C564 early-outs never set it. */
+    PE_CdReg_GetDeviceState(&cd);
+    pending = cd.sector_pending != 0;
+    b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
+    if(PE_MDEC_HasDecode() || b0cd0 || pending) {
+        (void)PE_Port_ServiceDmaIrqCheckpoint();
+        HostFB_ServiceDeviceIrq();
+    }
+    if(PE_Port_ShouldStop()) return;
+
+    PE_CdReg_GetDeviceState(&cd);
+    pending = cd.sector_pending != 0;
+    PE_MDEC_GetState(&mdec);
+    dma1_busy = (mdec.dma1_chcr & 0x01000000u) != 0;
+    b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
+
+    if(pending && !dma1_busy) {
+        /* Idle-DMA1 catch-up on pending alone (158y required B0CD0 too).
+         * Orphan pending after 91DC8 clear-without-BFRD / non-defer early-out
+         * must still call 7C564; else pe_cdreg hold silent-hangs. Keep
+         * busy-DMA1 stall only when B0CD0 marks a retail defer. */
+        s_b0cd0_dma1_stalls = 0u;
+        Bootstrap_ReturnVoid1("CD_B0CD0_pump_retry","CD_device",cd.next_lba);
+        func_8007C564();
+        if(PE_Port_ShouldStop()) return;
+        PE_CdReg_GetDeviceState(&cd);
+        if(cd.sector_pending) {
+            Bootstrap_ReturnVoid1("CD_B0CD0_retry_unresolved", "CD_device",
+                                  cd.next_lba);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return;
+        }
+        PE_StoreU16(0x800B0CD0u, 0u);
+    } else if(b0cd0 && pending && dma1_busy) {
+        /* Still waiting on DecDCTout DMA — retail defers here. If Service
+         * cannot retire DMA1 (bitstream starved for the pending sector),
+         * convert the live silent hang into a named STOP. */
+        s_b0cd0_dma1_stalls++;
+        if(s_b0cd0_dma1_stalls >= 64u) {
+            Bootstrap_ReturnVoid1("CD_B0CD0_dma1_starved", "CD_device",
+                                  cd.next_lba);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return;
+        }
+        return;
+    } else {
+        s_b0cd0_dma1_stalls = 0u;
+    }
+
+    if(PE_CdReg_DeviceEnabled())
+        HostFB_DeviceTime(451584u);
 }
 
 void HostFB_DrawSync(int mode)

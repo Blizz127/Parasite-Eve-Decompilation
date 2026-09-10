@@ -30,6 +30,12 @@
  *   XA/CD-DA decoding and sample mixing are not implemented by this module.
  * - Stages147-149 add explicit mounted-disc command/response/sector FIFO
  *   service. See DAY2_CD_SECTOR_DEVICE.md for supported paths and limits.
+ * - Stage158 allows CdlModeRT (mode bit6) on ReadN/ReadS. CdlModeSM
+ *   (bit4) remains an explicit CD_device_read_mode boundary. The EXE
+ *   image also pre-initializes the stream DMA pointer table at
+ *   D_8009B32C..D_8009B35C (CD index/request, bus control, DICR/DPCR,
+ *   DMA1 CHCR, DMA3 CHCR) — the same provenance as the B27C family;
+ *   tests re-plant those words after ResetTestState zeroes RAM.
  */
 #ifndef PE_CDREG_H
 #define PE_CDREG_H
@@ -64,7 +70,7 @@ typedef struct {
     uint32_t enabled,commands,responses;
     uint32_t next_lba,sectors,data_remaining;
     uint8_t reading;
-    uint8_t mode,muted,command_log[16],response_log[16];
+    uint8_t mode,muted,sector_pending,command_log[16],response_log[16];
 } PeCdDeviceState;
 void PE_CdReg_GetDeviceState(PeCdDeviceState *out);
 /* Applied ATV0..3: L->L, L->R, R->R, R->L. Register state, not audio mixing. */

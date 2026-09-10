@@ -35,6 +35,8 @@ static unsigned g_port_stop_epoch;
 static int g_port_skip_movie = 0;
 static int g_port_skip_opening_menu = 0;
 static PEPortPadSource g_port_pad_source = NULL;
+static int g_port_stream_promote_armed = 0;
+static int g_port_stream_frame_ready = 0;
 
 void PE_Port_SetSkipMovie(int enabled)
 {
@@ -79,6 +81,8 @@ void PE_Port_RunControlReset(void)
     g_port_skip_movie = 0;
     g_port_skip_opening_menu = 0;
     g_port_pad_source = NULL;
+    g_port_stream_promote_armed = 0;
+    g_port_stream_frame_ready = 0;
     g_port_stop_requested = 0;
     g_port_main_iterations = 0;
     g_port_frame_limit = 0;
@@ -90,6 +94,35 @@ void PE_Port_RunControlReset(void)
     g_port_dma_irq_checkpoint_enabled = 1;
     memset(&g_port_dma_irq_checkpoint_trace, 0,
            sizeof(g_port_dma_irq_checkpoint_trace));
+}
+
+void PE_Port_ArmStreamPromote(void)
+{
+    g_port_stream_promote_armed = 1;
+}
+
+int PE_Port_ConsumeStreamPromote(void)
+{
+    int armed = g_port_stream_promote_armed;
+    g_port_stream_promote_armed = 0;
+    return armed;
+}
+
+void PE_Port_NoteStreamFrameReady(void)
+{
+    g_port_stream_frame_ready = 1;
+}
+
+int PE_Port_PeekStreamFrameReady(void)
+{
+    return g_port_stream_frame_ready;
+}
+
+int PE_Port_TakeStreamFrameReady(void)
+{
+    int ready = g_port_stream_frame_ready;
+    g_port_stream_frame_ready = 0;
+    return ready;
 }
 
 void PE_Port_SetDmaIrqCheckpointEnabled(int enabled)
