@@ -207,7 +207,9 @@
       "func_80050020",
       "func_80052894",
       "func_800528C4",
-      "func_8005DC28"
+      "func_8005DC28",
+      "func_8007A400",
+      "func_8007A434"
     ],
     "era_o2_g0_passthrough_load": [
       "func_80076B44",

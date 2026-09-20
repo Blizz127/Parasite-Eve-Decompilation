@@ -81,6 +81,10 @@ segments:
       - [0x7B1C, asm]
       - [0x7BF4, c, func_800173F4]
       - [0x7C10, asm]
+      # func_800176B8 — VRAM 0x800176B8, size 0x28, file 0x7EB8-0x7EE0.
+      # OR *arg[0] into field 0x98 of pointer global D_8009D2F0; return 1.
+      # Default era_o2_g0.
+      - [0x7EB8, c, func_800176B8]
       - [0x7EE0, c, func_800176E0]
       - [0x7EFC, asm]
       - [0x7FAC, c, func_800177AC]
@@ -696,6 +700,11 @@ segments:
       - [0x41CF8, c, func_800514F8]
       - [0x41D04, c, func_80051504]
       - [0x41D10, asm]
+      # func_80051684 — VRAM 0x80051684, size 0x30, file 0x41E84-0x41EB4.
+      # Two-level guarded store value<<16 into +8 of (*D_8009D254)->[0].
+      # Default era_o2_g0. Resume asm at 0x41EB4.
+      - [0x41E84, c, func_80051684]
+      - [0x41EB4, asm]
       - [0x42034, c, func_80051834]
       # Phase 5FT: dynamic bit setter; era -O2 -G0 with $v0/$v1 pointer/mask pins.
       - [0x4204C, c, func_8005184C]
@@ -1105,7 +1114,11 @@ segments:
       - [0x6ABEC, c, func_8007A3EC]
       # Tier-2 continuation: CdReady forwarding wrapper func_8007A488.
       # Former 0x6AC00 asm span: prefix 0x68, C 0x20, C 0x20, closes at 0x6ACA8.
-      - [0x6AC00, asm]
+      # func_8007A400 / func_8007A434 — bounded pointer-table getters
+      # (file 0x6AC00-0x6AC34-0x6AC68) with the D_800119CC string fallback;
+      # three-word $at indexed load (era_o2_g0_three_word).
+      - [0x6AC00, c, func_8007A400]
+      - [0x6AC34, c, func_8007A434]
       # Phase 5EF: direct func_8007B010 forwarding wrapper.
       - [0x6AC68, c, func_8007A468]
       - [0x6AC88, c, func_8007A488]

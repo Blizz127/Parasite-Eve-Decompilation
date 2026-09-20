@@ -64,3 +64,35 @@ that same register; era compares the unmasked `$a0` with `slti`:
 
 First mismatch `0x0004`. The `if (i < 3) … return 0` and `if (i >= 3) return 0`
 phrasings both diverge; parked.
+
+## Batch 3 additions
+
+### func_8006A2E8 (file 0x5AAE8, size 0x30)
+
+Bounded `< 0x10` triple store (sh/sh/sb) returning 0. Era fills the `beqz`
+delay slot with `addu v0,a1,zero`, shifting the whole tail one word:
+
+```text
+0x0004: retail 10400008 (beqz +8)  cand 10400007 (beqz +7)
+0x0024: retail A0220DB1 (sb)       cand 03E00008 (jr ra)
+```
+
+`-O1 -G0` and `-fno-delayed-branch` did not close it. Parked.
+
+### func_80018E84 (file 0x9684, size 0x30)
+
+Two double-deref stores to D_800BD020/D_800BD022, return 1. Retail orders
+load-store-load-store; era hoists the second pointer load:
+
+```text
+0x0004: retail 00000000 (nop)      cand 8C830004 (lw v1,4(a0))
+0x0018: retail 00000000 (nop)      cand 8C620000 (lw v0,0(v1))
+```
+
+`volatile` on the destination globals did not prevent the hoist. Parked.
+
+### func_8007E594 (file 0x6ED94, size 0x30)
+
+Zero word 0, byte 4, a four-byte countdown-clear at 5..8, then words
+0xC/0x10/0x14. Era does not produce retail's descending pointer loop
+(`addiu v0,a0,3` / `sb 5(v0)` / `addiu v0,v0,-1`). 11 words differ. Parked.
