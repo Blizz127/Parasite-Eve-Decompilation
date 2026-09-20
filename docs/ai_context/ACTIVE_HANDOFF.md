@@ -10,6 +10,19 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PARENT MERGE VERIFICATION: 724 matching C leaves (2026-09-20)
+
+Merged `agent/xapolish` (`6b8422b8`), `agent/decomp101` (`d347a0c7`),
+`agent/decomp100` (`cf54d3d5`) and `agent/decomp102` (`8cc44747`) onto the
+working branch; post-merge decomp-port regeneration `1a92d3f2` (3 TUs became
+src-backed: `func_80019260`/`func_80019CEC`/`func_8006599C`; orphan manifest
+19 entries).  Fresh parent build after a re-split: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (724
+registered C leaves)`, `VERIFY_US=PASS` ("all 724 packed C spans equal
+retail", plan `1048 = 724 c + 322 asm + 2 rodata`).  `pc_port` CTest **11/11**,
+`pe-native-tests` **1402/1402**, `gen_decomp_ports.py --check --allow-orphans`
+**OK**.  Coverage **724/4516 (16.03%)**.
+
 ## XA-FIDELITY: gaussian resample + CD-XA volume chain (2026-09-20)
 
 Branch `agent/xapolish` from `ec097017`.  Closes the named XA gaps (a) linear
