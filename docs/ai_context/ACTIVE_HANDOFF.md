@@ -37,6 +37,14 @@ worktree fails `route-boot-day2` until the git-ignored `build/pe_card1.mcr`
 fixture is copied in (blank card -> slot list retries -> menu mode never
 clears).  See `docs/evidence/pe-save-page/REPORT.md`.
 
+**Parent verification of merge `a37d29ed` (2026-09-20):** retail rebuild after
+the merge is **EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**,
+`VERIFY_US=PASS`, 709 c + 321 asm + 2 rodata, "all 709 packed C spans equal
+retail".  `pc_port` CTest **11/11**, `pe-native-tests` **1394/1394**.  Live
+`PE_CARD=build/pe_card1.mcr --headless --route-pad --max-frames 80000` reaches
+`stop_reason=frame-limit` with **0 `[STUB:BOOTSTRAP_RET]`** and 0
+`BOUNDARY_REPORT`s; story/token still `0x48`/`A8002048`.
+
 ## POST-MENU CARD BOUNDARY SOLVED: full-card write abort is real retail code (2026-09-20)
 
 Branch `agent/post-menu-card` from `e4931e6b`.  The `[STUB:BOOTSTRAP_RET] card
