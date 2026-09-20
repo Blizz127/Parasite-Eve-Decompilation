@@ -10,6 +10,33 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-B0CD0-catchup-reland: overrun STOP -> held pending + named stop (2026-09-20)
+
+Branch `agent/b0cd0-catchup` from `05dc2b21`. Evidence:
+`docs/evidence/pe-day2-158-b0cd0-catchup-reland/REPORT.md`.
+
+Re-landed the DAY2-158v/z B0CD0 catch-up onto the current
+`HostFB_StreamTick` pipeline (no whole-file revert):
+
+- `pe_cdreg`: a still-unread sector at the next read period now **holds** the
+  next publish (DAY2-158v backpressure), no `CD_device_sector_overrun` STOP.
+  `PeCdDeviceState.sector_pending` is surfaced.
+- `HostFB_DeviceTime` first services the DMA/CPU IRQ paths whenever decode,
+  B0CD0, or `sector_pending` is present, so the guest's own
+  `91DC8`/`1214D4 -> 7C564 -> BFRD` retires the sector; a pending sector that
+  never clears is bounded into the named `CD_B0CD0_pending_unresolved`.
+- Rejected by measurement: a direct host `func_8007C564()` catch-up reads an
+  unpopulated FIFO (`CD_device_data_underflow`); clearing the FIFO on Stop
+  makes the guest spin silently in its media-loop retry. Neither is merged.
+
+Live (real Disc1, headless, no `--skip-movie`):
+`CD_device_sector_overrun` -> `CD_B0CD0_pending_unresolved`, 318 -> 319 media
+steps, exit 0 (no hang). Residual `[STUCK]` state: `reading=0`, one unread
+sector after the guest's closing Stop; the retail reader has no reason to BFRD
+it. That guest-side media-loop completion is the next frontier.
+Tests: **1376 run / 1376 passed** (`DAY2_cd_sector_device` updated to the hold
+contract).
+
 ## SESSION STATUS 2026-09-20 — verified state snapshot
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
