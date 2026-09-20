@@ -33,8 +33,9 @@ points at the attic Disc 1 image.
 `pe-route-boot-day2-tests` **14/14 ordered Day-1 milestones** (frontier
 `m0004i` mod4 `pc=0x801B6CC8`), executed path invokes only 4 HOST_ADAPTED stubs
 and **0 UNSUPPORTED**. `pe-transition-outer-tests` 5/5.
-`pe-decomp-port-tests`: 190/190 src-backed generated TUs regenerate
-byte-for-byte, 82 orphans allowlisted.
+`pe-decomp-port-tests`: all 272 generated TUs reproduce from `src/` authority
+(229 src-backed regenerate byte-for-byte, 43 real orphans allowlisted; the 628
+leaves restored authority for 39 that were orphaned). Full CTest 11/11.
 
 **Live port.** Real Disc 1 boots and renders. `--route-pad` autopilot (windowed)
 plays Day 1: opera house, first battle, field rooms. `--headless --route-pad`
