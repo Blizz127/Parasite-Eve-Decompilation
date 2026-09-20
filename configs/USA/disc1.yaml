@@ -184,7 +184,9 @@ segments:
       - [0x8F18, c, func_80018718]
       # Phase 600: bit-2 setter with retail $v1 global-pointer allocation.
       - [0x8F54, c, func_80018754]
-      - [0x8F74, asm]
+      # func_80018774 — VRAM 0x80018774, size 0x4C, file 0x8F74-0x8FC0.
+      - [0x8F74, c, func_80018774]
+      - [0x8FC0, asm]
       - [0x9064, c, func_80018864]
       - [0x9094, c, func_80018894]
       - [0x90C4, asm]
@@ -353,6 +355,11 @@ segments:
       # *(a0[1]) = D_800A76A4[*(int *)a0[0]].field_00 (12-byte records); return 1.
       - [0xA5B8, c, func_80019DB8]
       - [0xA5F4, asm]
+      # func_8001A0CC — VRAM 0x8001A0CC, size 0x48, file 0xA8CC-0xA914.
+      - [0xA8CC, c, func_8001A0CC]
+      # func_8001A114 — VRAM 0x8001A114, size 0x48, file 0xA914-0xA95C.
+      - [0xA914, c, func_8001A114]
+      - [0xA95C, asm]
       # Probe: call-and-store wrapper retaining descriptor across the call.
       - [0xA9A8, c, func_8001A1A8]
       # Probe: state bit-24 setter with retail $v0/$a0 allocation.
@@ -647,6 +654,9 @@ segments:
       # Phase 5ES: first loop-as-volume leaf; era -O2 -G0, no $gp.
       # Mid-340EC carve: prefix 0x861C, C 0x38 (14 words), resume 3C740.s 0x10E4.
       - [0x340EC, asm]
+      # func_80044DCC — VRAM 0x80044DCC, size 0x48, file 0x355CC-0x35614.
+      - [0x355CC, c, func_80044DCC]
+      - [0x35614, asm]
       # Tier-2 B: callback registration wrapper for func_80047040;
       # two independent exact-start stores, era -O2 -G0, first phrasing.
       - [0x379BC, c, func_800471BC]
@@ -675,6 +685,8 @@ segments:
       - [0x3C4E8, asm]
       - [0x3C708, c, func_8004BF08]
       - [0x3C740, asm]
+      # func_8004C594 — VRAM 0x8004C594, size 0x48, file 0x3CD94-0x3CDDC.
+      - [0x3CD94, c, func_8004C594]
       # Phase 5EJ: constant handle construction and dispatch.
       - [0x3CDDC, c, func_8004C5DC]
       - [0x3CE08, asm]
@@ -691,6 +703,9 @@ segments:
       - [0x3DA98, asm]
       - [0x3DCA0, c, func_8004D4A0]
       - [0x3DCC4, asm]
+      # func_8004D690 — VRAM 0x8004D690, size 0x44, file 0x3DE90-0x3DED4.
+      - [0x3DE90, c, func_8004D690]
+      - [0x3DED4, asm]
       # Phase 5EJ: sibling constant handle construction and dispatch.
       - [0x3E1D8, c, func_8004D9D8]
       - [0x3E204, asm]
@@ -738,7 +753,9 @@ segments:
       - [0x401A0, asm]
       # decomp-continue-4: func_80052E30(1) + func_800638D8 handler registration.
       - [0x40568, c, func_8004FD68]
-      - [0x405A4, asm]
+      # func_8004FDA4 — VRAM 0x8004FDA4, size 0x44, file 0x405A4-0x405E8.
+      - [0x405A4, c, func_8004FDA4]
+      - [0x405E8, asm]
       - [0x40730, c, func_8004FF30]
       # Adjacent wrapper func_8004FF58 consumes 0x28 from the 0xC8 span.
       - [0x40758, c, func_8004FF58]
@@ -779,9 +796,13 @@ segments:
       - [0x40F28, c, func_80050728]
       - [0x40F48, asm]
       - [0x413E8, c, func_80050BE8]
-      - [0x41408, asm]
+      # func_80050C08 — VRAM 0x80050C08, size 0x48, file 0x41408-0x41450.
+      - [0x41408, c, func_80050C08]
       - [0x41450, c, func_80050C50]
-      - [0x41470, asm]
+      # func_80050C70 — VRAM 0x80050C70, size 0x44, file 0x41470-0x414B4.
+      - [0x41470, c, func_80050C70]
+      # func_80050CB4 — VRAM 0x80050CB4, size 0x44, file 0x414B4-0x414F8.
+      - [0x414B4, c, func_80050CB4]
       - [0x414F8, c, func_80050CF8]
       # Phase 5AF: C leaf func_80050D18 — VRAM 0x80050D18, size 0x8.
       # File span 0x41518–0x41520 exclusive. Empty jr/nop stub (second mid-2A0C).
@@ -883,6 +904,9 @@ segments:
       # gp-relative D_8009D058 bit test (0x2E8($gp)); era -O2 -G8.
       - [0x467E0, c, func_80055FE0]
       - [0x4680C, asm]
+      # func_80057C10 — VRAM 0x80057C10, size 0x44, file 0x48410-0x48454.
+      - [0x48410, c, func_80057C10]
+      - [0x48454, asm]
       # GP-relative halfword take-and-clear helper: era -O2 -G8.
       - [0x48518, c, func_80057D18]
       - [0x48530, asm]
@@ -1067,6 +1091,9 @@ segments:
       # the shared symbolic base across all byte stores.
       - [0x5E348, c, func_8006DB48]
       - [0x5E39C, asm]
+      # func_8006E454 — VRAM 0x8006E454, size 0x44, file 0x5EC54-0x5EC98.
+      - [0x5EC54, c, func_8006E454]
+      - [0x5EC98, asm]
       # func_8006E6A8 — VRAM 0x8006E6A8, size 0x2C, file 0x5EEA8-0x5EED4.
       # func_8006E6D4(arg0, 0, arg1, arg2) forwarding wrapper.
       - [0x5EEA8, c, func_8006E6A8]
@@ -1508,6 +1535,9 @@ segments:
       # Phase 5EF: return-and-clear int state flag.
       - [0x734DC, c, func_80082CDC]
       - [0x734F0, asm]
+      # func_80082DBC — VRAM 0x80082DBC, size 0x44, file 0x735BC-0x73600.
+      - [0x735BC, c, func_80082DBC]
+      - [0x73600, asm]
       # Phase 5CK: C leaf func_800835A4 — file 0x73DA4, size 0xC.
       - [0x73DA4, c, func_800835A4]
       # Phase 5CL: C leaf func_800835B0 — file 0x73DB0, size 0x10.
@@ -1698,8 +1728,17 @@ segments:
       # Prefix of 77C28.s is 0x36F4 (= 0x7B31C - 0x77C28); resume 7B39C.s 0x1EE0.
       - [0x7B31C, c, func_8008AB1C]
       - [0x7B39C, asm]
+      # func_8008B084 — VRAM 0x8008B084, size 0x44, file 0x7B884-0x7B8C8.
+      - [0x7B884, c, func_8008B084]
+      - [0x7B8C8, asm]
+      # func_8008B124 — VRAM 0x8008B124, size 0x44, file 0x7B924-0x7B968.
+      - [0x7B924, c, func_8008B124]
+      - [0x7B968, asm]
       - [0x7B9D0, c, func_8008B1D0]
       - [0x7B9FC, asm]
+      # func_8008B580 — VRAM 0x8008B580, size 0x38, file 0x7BD80-0x7BDB8.
+      - [0x7BD80, c, func_8008B580]
+      - [0x7BDB8, asm]
       # Probe: signed-byte state-word setter with paired halfword clear.
       - [0x7C96C, c, func_8008C16C]
       - [0x7C98C, asm]
@@ -1727,6 +1766,9 @@ segments:
       # Phase 5DB: C leaf func_8008D820 — file 0x7E020, size 0x24.
       - [0x7E020, c, func_8008D820]
       - [0x7E044, asm]
+      # func_8008F178 — VRAM 0x8008F178, size 0x38, file 0x7F978-0x7F9B0.
+      - [0x7F978, c, func_8008F178]
+      - [0x7F9B0, asm]
       # func_8008F4E8 — VRAM 0x8008F4E8, file 0x7FCE8, size 0x2C.
       # Advance the cursor, latch *old <<8 into +0x6C, set +0xF4 bits 0/1;
       # era -O1 -G0 (the -O2 schedule hoists the flags load).
@@ -1903,6 +1945,9 @@ segments:
       # Probe: D_800E2248 high-halfword predicate.
       - [0xB3368, c, func_800C2B68]
       - [0xB3390, asm]
+      # func_800C653C — VRAM 0x800C653C, size 0x48, file 0xB6D3C-0xB6D84.
+      - [0xB6D3C, c, func_800C653C]
+      - [0xB6D84, asm]
       # Tier-2 probe: adjacent unsigned-halfword global setters.
       # Prefix 0x4358 (= 0xB76C0 - 0xB3368), then C spans 0x18 + 0x10.
       - [0xB76C0, c, func_800C6EC0]
