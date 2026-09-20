@@ -61,6 +61,64 @@ must be a real **array** (`short sp[3]`) or cc1 DCEs the element stores whose
 addresses are not directly taken; and the `extern T *volatile G` declaration is
 the established way to force two independent loads of a pointer global (see
 `src/func_80067678.c`).
+## WAVE-6 SLICE C (`agent/wave6-c`, 2026-09-20): 884 -> 890, executed-path functions
+
+**Branch `agent/wave6-c`, worktree `/tmp/pe-agent-w13`, base `abbf2838`.**
+Baseline gate re-run first: `scripts/split_us.sh` + `build_us.sh` +
+`verify_us.sh` reported `EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (884 registered C leaves)`, `VERIFY_US=PASS`.
+
+Landed six executed-path leaves, confirmed by a fresh complete build
+(commit `1603a5fc`):
+
+- `func_80017588` (file 0x7D88, 0x130) — `era_o2_g8`. Actor action-relative
+  cursor update over a two-pointer descriptor. `D_8009D2F0` stays absolute as
+  an incomplete array; `D_8009D300` is the gp+0x590 scalar.
+- `func_80050878` (0x41078, 0x130) — `era_o2_g8`. Equipment-page action
+  dispatcher. **The 12-byte row table must be a struct**
+  (`typedef struct { int v[3]; } Row;`) with an explicit `Row *table =
+  D_80092234;` local so the base is materialised at entry and `i*12` is
+  associated before `arg0*4`; plus `int selected = D_8009CF04;` inside case 0
+  to keep the index in `$s0` and free `$s1` for `action`.
+- `func_8005FA3C` / `func_8005FB74` / `func_8005FDF0` / `func_8005FF28`
+  (0x5023C/0x50374/0x505F0/0x50728, 0x138/0x138/0x138/0x144) — profile
+  **`era_o2_g8_expand_div`** = `-O2 -G8` + `MASPSX_EXPAND_DIV=1` (new; the -G8
+  sibling of `era_o2_g0_expand_div`). The 2/3/4-digit signed decimal emitters
+  contain a signed division; retail carries the full checked-div
+  (`bnez; break 7; ...; break 6; mflo`) sequence, which needs the gate.
+
+Reusable findings:
+
+- **`MASPSX_EXPAND_DIV=1` is required for any `-G8` leaf with an unchecked
+  `div`**: retail's build emitted the explicit divide-by-zero traps. This is
+  the same gate `func_8003C5D8` already used at `-G0`.
+- **The suppressed-leading-zero argument must be the ternary
+  `func_8005F874(i < digits - 1 && digit == 0 ? -1 : digit)`**, not an
+  `if`/nested `if` and not an explicit `lt` local. Only the ternary makes the
+  scheduler hoist the `slt i < digits-1` ahead of the `div` and fill the
+  loop-back delay slot; every other shape leaves the `slt` after `mflo`
+  (14 diffs, 1 word moved).
+- **A two-arm prefix must be an `if/else if` chain** (`value < 0` /
+  `value > 0`) for `func_8005FF28`: cc1 merges the common tail into one
+  `func_8005EB64` call site. `value != 0` gives a single `beqz` test; a
+  precomputed `glyph` ternary re-tests `value < 0`.
+- The `int *p = &D_8009D128; *p = D_8009D128;` idiom (from `func_800605F8`)
+  is required in all four emitters for the redundant gp+0x3B8 self-store.
+
+Fresh build after the carve: `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (890
+registered C leaves)`, plan `1295 spans = 890 c + 403 asm + 2 rodata`,
+`VERIFY_US=PASS`. Evidence under `docs/evidence/wave6-c/`.
+
+Four targets parked (see `wave6c-*` ids in `parked_blockers.json`):
+`func_800542A0` (inlined `func_8005332C` needs `entry` live in both `$v1` and
+`$a1`; cc1 uses `$v1` only, best 38 diffs), `func_800C2EAC` (cc1 cross-jumps
+the common case suffixes and balances the switch tree; retail keeps a linear
+chain, best 32), `func_8006CC68` (retail materialises the overlay base into
+`$s0` at entry with frame 0x20; cc1 grows it to 0x28, best 35) and
+`func_80020F18` (D_800BE830/34 clear loop needs both a base+offset register and
+the indexed symbol at-forms, best 38). Stop condition reached (4 consecutive
+parks); `func_800C9EA8` (0xBA6A8) was not attempted.
 
 ## agent/bigfish-1d340 (2026-09-20): `func_8001D340` NOT matched — but proven un-carveable
 
