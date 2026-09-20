@@ -1022,6 +1022,10 @@ segments:
       # Phase 5FF: command-word builder with two flag bits and a masked field.
       - [0x66950, c, func_80076150]
       - [0x66970, asm]
+      # func_800762A0 — VRAM 0x800762A0, size 0x1C, file 0x66AA0-0x66ABC.
+      # GPU primitive packer: (a0 & 0x7FF) | 0xE5000000 | ((a1 & 0x7FF) << 11).
+      - [0x66AA0, c, func_800762A0]
+      - [0x66ABC, asm]
       # Phase 5BU: C leaf func_8007633C — VRAM 0x8007633C, size 0x18.
       # Pointer double-deref on D_80095854 (lui/lw/nop/lw0/jr/nop).
       - [0x66B3C, c, func_8007633C]
@@ -1031,6 +1035,10 @@ segments:
       # symbol+register load form (MASPSX_PASSTHROUGH_SYMBOL_LOAD).
       - [0x67344, c, func_80076B44]
       - [0x67358, asm]
+      # func_80076BE0 — VRAM 0x80076BE0, size 0x30, file 0x673E0-0x67410.
+      # Tag the word through D_80095854 with 0x10000000, then return the low
+      # 24 bits of *D_80095850.
+      - [0x673E0, c, func_80076BE0]
       # Phase 5EK: four-argument forwarding wrapper with a zero third field.
       - [0x67410, c, func_80076C10]
       - [0x67434, asm]
@@ -1443,6 +1451,13 @@ segments:
       - [0x77FD4, c, func_800877D4]
       - [0x77FF0, c, func_800877F0]
       - [0x7800C, asm]
+      # func_8008783C — VRAM 0x8008783C, size 0x28, file 0x7803C-0x78064.
+      # Per-voice SPU register 0x1F801C08 + (voice<<4): replace the 0x00F0 field
+      # (non-volatile access so the store fills the jr delay slot).
+      - [0x7803C, c, func_8008783C]
+      # func_80087864 — VRAM 0x80087864, size 0x28, file 0x78064-0x7808C.
+      # Same register: replace the low 4 bits.
+      - [0x78064, c, func_80087864]
       # Volume campaign: adjacent per-voice SPU bitfield update, era -O2 -G0.
       - [0x7808C, c, func_8008788C]
       # Volume campaign: per-voice SPU halfword bitfield update, era -O2 -G0.

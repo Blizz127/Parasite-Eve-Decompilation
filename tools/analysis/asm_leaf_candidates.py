@@ -58,7 +58,8 @@ def collect(asm_dir: str) -> list[dict]:
                     g = GLABEL_RE.match(line)
                     if g and g.group(1) == pending[0]:
                         cur = {"name": pending[0], "size": pending[1], "unit": unit,
-                               "jal": 0, "gp": 0, "words": 0, "nops": 0, "bios": 0}
+                               "jal": 0, "gp": 0, "words": 0, "nops": 0, "bios": 0,
+                               "c2": 0}
                         rows.append(cur)
                     pending = None
                     continue
@@ -80,6 +81,10 @@ def collect(asm_dir: str) -> list[dict]:
                     # BIOS/SDK register-indirect call stub (jr $t2): not
                     # expressible as ordinary C, so not a quick-win candidate.
                     cur["bios"] += 1
+                if mnemonic.endswith("c2"):
+                    # GTE/cop2 move/load/store (lwc2/swc2/mtc2/ctc2/mfc2/cfc2):
+                    # handwritten asm, not ordinary C.
+                    cur["c2"] += 1
                 if "$gp" in operands:
                     cur["gp"] += 1
     return rows
@@ -100,11 +105,11 @@ def main() -> int:
         return 1
 
     leaves = [r for r in rows
-              if r["jal"] == 0 and r["gp"] == 0 and r["bios"] == 0
+              if r["jal"] == 0 and r["gp"] == 0 and r["bios"] == 0 and r["c2"] == 0
               and r["size"] <= args.max_size and r["words"] > r["nops"]]
     leaves.sort(key=lambda r: (r["size"], r["name"]))
     total_bytes = sum(r["size"] for r in leaves)
-    print(f"call-free, gp-free, non-BIOS, non-nop functions <= 0x{args.max_size:X}: "
+    print(f"call-free, gp-free, non-BIOS, non-GTE, non-nop functions <= 0x{args.max_size:X}: "
           f"{len(leaves)} / {total_bytes} bytes")
     print(f"(of {len(rows)} non-matching functions total)\n")
     for r in leaves[: args.limit]:
