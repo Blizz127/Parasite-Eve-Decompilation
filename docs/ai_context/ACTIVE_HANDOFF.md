@@ -250,7 +250,7 @@ floating upstream cannot break it again), and a `pe-mipsel` distrobox (Debian
 trixie, binutils 2.44) that `build_us.sh` auto-detects. `local/pe_disc1.path`
 points at the attic Disc 1 image.
 
-**Tests.** `pe-native-tests` **1391 run / 1391 passed / 0 failed / 0 skipped**.
+**Tests.** `pe-native-tests` **1392 run / 1392 passed / 0 failed / 0 skipped**.
 `pe-route-boot-day2-tests` **27/27 ordered Day-1 milestones** to the
 `m0020i` save/load menu (42000 frames, frame-limit stop), executed path invokes
 only 4 HOST_ADAPTED stubs and **0 UNSUPPORTED**. The harness now applies the
@@ -290,14 +290,22 @@ now ported (`agent/save-write`: `func_80042020`/`42170` entries, `func_80040B80`
 `func_80071A14`), so the handler runs: name formatted, block assembled, record
 armed. `agent/card-write` then wired `func_80041108` states 3..11 to the libcard
 API (open/write/close/read/erase, plus a new BIOS `B(0x45h)` erase), so the save
-is **actually written**: `build/pe_card1.mcr` holds entry 0 `BASLUS-00662000`
-(state 0x51, size 8192; name at the psx-spx +0x0A offset) and the route reaches
-`stop_reason=frame-limit` with **no unresolved-boundary stop**. `func_8004FE58`
-gained a guarded "invalidated slot -> row disabled" return so the menu can keep
-drawing. With `PE_CARD=empty` the route instead runs with zero
-`[STUB:BOOTSTRAP_RET]` stops. Story is still `0x48` because the slot list keeps
-drawing "Unused File" — the state-2 writer and `func_800424B4` reader use
-different dirent conventions (see open work) — **no card success is faked**.
+is **actually written**: `build/pe_card1.mcr` holds entry 0 (state 0x51, size
+8192) and the route reaches `stop_reason=frame-limit` with **no
+unresolved-boundary stop**. `agent/menu-exit` then fixed the real dirent bug:
+`pe_card_name_from_guest` capped the guest name at 20 bytes BEFORE stripping
+the `buXX:` device prefix, so the stored name lost its variant/slot tail. Retail
+`firstfile2`'s direntry is `00h 14h` filename / `14h` attr / `18h` size / `1Ch`
+next / `20h` sector; stripping the prefix first and copying 20 bytes gives
+`name[0x12]=0x30` and `name[0x13]=0x41`, and retail state 2's
+`record + dirent[0x13]*0x44 - 0x1128` (`0x8004135C`) then lands exactly on
+`func_800424B4`'s base `0x800A0EF0 + card*0x418 + item*0x44` iff
+`dirent[0x13] == 0x41 + item`. `func_8004FE58` keeps a guarded "invalidated
+slot -> row disabled" return. With `PE_CARD=empty` the route instead runs with
+zero `[STUB:BOOTSTRAP_RET]` stops. Story is still `0x48`: `func_800425DC` is
+entered every frame but an early host `PE_Port_StopEpoch` guard returns before
+`func_80041108`, and the menu result `[0x8009D010]` stays 0 (see open work) —
+**no card success or menu exit is faked**.
 
 **Movie/FMV path.** The opening STR frame decodes in-bounds (DAY2-159b), the
 post-E08 media loop is re-landed (DAY2-159c, carve SHA-256 `77218c9c…`), and
@@ -311,17 +319,19 @@ silent hang. **Not a full unlock:** at the stop the guest has issued a closing
 Stop with one sector unread (`reading=0`), so the retail reader has no reason
 to BFRD it; that guest-side media-loop completion is the next frontier.
 
-**Open work / next frontiers.** (1) **make the saved file visible to the save
-menu.** The card write is now wired (`agent/card-write`): `func_80041108` states
-3..11 drive the libcard API (open/write/close/read/erase + new BIOS `B(0x45h)`
-erase), the route reaches `stop_reason=frame-limit` with no boundary stop, and
-`build/pe_card1.mcr` really contains entry 0 `BASLUS-00662000` (state 0x51, size
-8192; name at the psx-spx +0x0A offset). But the slot list still draws "Unused
-File", so the menu never leaves and story stays `0x48`: state 2 writes the slot
-entry at `record + dirent[0x13]*0x44 - 0x1128` (retail `0x8004135C`) while the
-menu reads `func_800424B4` = `0x800A0EF0 + card*0x418 + item*0x44` (retail
-`0x80042518`) — the two dirent conventions need reconciling from the retail SDK
-layout, not a guess. The recorded `--route-pad` sequence also goes idle over the
+**Open work / next frontiers.** (1) **make the menu leave / set the menu
+result.** The dirent bug is fixed (`agent/menu-exit`): the name is stripped of
+its `buXX:` prefix before the 20-byte copy, so the saved slot carries
+`name[0x12]=0x30`/`name[0x13]=0x41` and state 2's write lands on
+`func_800424B4`'s entry. Story still stays `0x48` because `func_800425DC` is
+entered every frame but an early host `PE_Port_StopEpoch` guard returns before
+`func_80041108` (which runs only 34 times, ending state 12); the menu result
+`[0x8009D010]` is never set, `[0x800A1864]=0`, `[0x800A1840]=0xFFFFFFFF`, and
+injecting a single button press is not enough. Next: instrument the
+`func_800425DC` epoch guards to find which call
+(`func_800405A4(1)`/`func_800405A4(0)`/`func_80041108`) bumps the stop epoch and
+whether the host guard is a false early-out vs a real unported boundary; then
+set `[0x8009D010]`. The recorded `--route-pad` sequence also goes idle over the
 save-menu segment (only the Cross auto-pulse fires), so exit inputs may need
 adding to the route data; (2) the guest-side media-loop completion
 after the ~319-step FMV media loop;
