@@ -68,9 +68,9 @@ contract).
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**637**
-registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 637 packed C
-spans equal retail). Coverage: 637/4586 functions (13.89%). Remaining queue:
-**1751 non-matching functions / 615,592 bytes**, ranked in `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
+registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 649 packed C
+spans equal retail). Coverage: 649/4576 functions (14.18%). Remaining queue:
+**1740 non-matching functions / 614,992 bytes**, ranked in `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
 `python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
 1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
 code queue.
@@ -83,7 +83,7 @@ floating upstream cannot break it again), and a `pe-mipsel` distrobox (Debian
 trixie, binutils 2.44) that `build_us.sh` auto-detects. `local/pe_disc1.path`
 points at the attic Disc 1 image.
 
-**Tests.** `pe-native-tests` **1376 run / 1376 passed / 0 failed / 0 skipped**.
+**Tests.** `pe-native-tests` **1377 run / 1377 passed / 0 failed / 0 skipped**.
 `pe-route-boot-day2-tests` **27/27 ordered Day-1 milestones** to the
 `m0020i` save/load menu (42000 frames, frame-limit stop), executed path invokes
 only 4 HOST_ADAPTED stubs and **0 UNSUPPORTED**. The harness now applies the
@@ -100,15 +100,18 @@ drives the same route at full speed (headless present hook ticks `g_frame`;
 commit `0ae2a69`) to **frame ~38000, story `0x48`** (Day-1 field `M0020I`).
 Walls cleared this session, in order: inventory-help ids 36-39
 (`func_8004C608`, oracle-proven); the BIOS `B0(0Bh)` TestEvent drain
-(`func_800405A4`, kernel event table in `pe_libetc.c`); then the empty-slot
+(`func_800405A4`, kernel event table in `pe_libetc.c`); the empty-slot
 memory-card kernel (`agent/card-kernel`: BIOS `B(07h)` DeliverEvent +
 `_card_info`/`_card_load`/`_new_card`/`_card_write` reporting the psx-spx `0x11`
-timeout through the documented events, in `pe_libcard.c`). **The route now runs
-to the 42000 frame limit with ZERO `[STUB:BOOTSTRAP_RET]` stops** (only the
-pre-existing `func_80076C34` GPU boundary reports). It does not yet leave the
-save/load menu — the empty card slot makes the menu retry — so story stays
-`0x48`. Card-present/file ops remain named boundaries; **no card success is
-faked**.
+timeout); then a **present 128 KiB memory-card model** (`agent/card-present`:
+`.mcr`-backed header/directory with the psx-spx XOR layout and success events,
+`PE_CARD=empty` for the old path). With the present card the status-machine loop
+is gone and the game opens its **Select Slot save menu**, then stops at the named
+`card operation unresolved call` (`func_800727B4`, libcard `firstfile`). With
+`PE_CARD=empty` the route instead runs to the 42000 frame limit with zero
+`[STUB:BOOTSTRAP_RET]` stops. Either way story stays `0x48`; the libcard file
+API and `func_80041108` post-call states are named boundaries — **no card
+success is faked**.
 
 **Movie/FMV path.** The opening STR frame decodes in-bounds (DAY2-159b), the
 post-E08 media loop is re-landed (DAY2-159c, carve SHA-256 `77218c9c…`), and
@@ -122,12 +125,14 @@ silent hang. **Not a full unlock:** at the stop the guest has issued a closing
 Stop with one sector unread (`reading=0`), so the retail reader has no reason
 to BFRD it; that guest-side media-loop completion is the next frontier.
 
-**Open work / next frontiers.** (1) leave the save/load menu: a card-present
-model from a real `.mcr` image (directory + file open/read/write/close), or the
-game's no-card prompt/back-out (`func_800425DC` A1864 timeout notice), so the
-route moves past story `0x48`; (2) the guest-side media-loop completion after
-the ~319-step FMV media loop; (3) carve the ranked large functions from the
-worklist. **Disc 2 is code-identical:** this session
+**Open work / next frontiers.** (1) the libcard file API veneers
+(`func_80072734/54/64/74/84/94/B4`: open/read/write/close/format/nextfile/
+firstfile) backed by the present-card image, plus the `func_80041108` post-call
+directory/file state graph (`CARD_OPERATION_CONTRACT.md`), so the Select Slot
+menu can enumerate/create/read/write a save and the route passes story `0x48`;
+(2) the guest-side media-loop completion after the ~319-step FMV media loop;
+(3) carve the ranked large functions from the worklist. **Disc 2 is
+code-identical:** this session
 re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
 `SLUS_006.62` (both SHA-1 `452fb033…`); `configs/USA/disc2.yaml` already
 records that `PE.IMG` is identical too, so the decompilation/port covers disc
