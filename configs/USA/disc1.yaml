@@ -102,7 +102,11 @@ segments:
       - [0x7FC8, asm]
       # Phase 5EO: signed-halfword double-deref call and true return.
       - [0x8020, c, func_80017820]
-      - [0x804C, asm]
+      # func_8001784C — VRAM 0x8001784C, size 0x30, file 0x804C-0x807C.
+      # Two +0x18/+0x1C field copies out of the gp-relative D_8009D300 record
+      # pointer (0x590($gp)); era -O2 -G8.
+      - [0x804C, c, func_8001784C]
+      - [0x807C, asm]
       # Probe: D_8009D2F0 byte and halfword field readers/writer.
       - [0x8128, c, func_80017928]
       - [0x8148, c, func_80017948]
@@ -375,6 +379,12 @@ segments:
       - [0xACAC, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
+      # func_80021054 — VRAM 0x80021054, size 0x2C, file 0x11854-0x11880.
+      # Keep bit 16 -> -1 else the gp-relative signed byte D_8009CE3C
+      # (0xCC($gp)); D_8009D278 stays absolute via an incomplete-array
+      # declaration. era -O2 -G8.
+      - [0x11854, c, func_80021054]
+      - [0x11880, asm]
       # VOLUME-110: C leaf func_80021850 — VRAM 0x80021850, size 0x88
       # (34 words). Swap two 12-byte records selected by signed-byte indices.
       # Era -O2 -G0 matches on the first natural aggregate-copy phrasing.
@@ -869,7 +879,10 @@ segments:
       - [0x44AA0, asm]
       # Volume campaign: gp-backed bitset setter, era -O2 -G8.
       - [0x467B4, c, func_80055FB4]
-      - [0x467E0, asm]
+      # func_80055FE0 — VRAM 0x80055FE0, size 0x2C, file 0x467E0-0x4680C.
+      # gp-relative D_8009D058 bit test (0x2E8($gp)); era -O2 -G8.
+      - [0x467E0, c, func_80055FE0]
+      - [0x4680C, asm]
       # GP-relative halfword take-and-clear helper: era -O2 -G8.
       - [0x48518, c, func_80057D18]
       - [0x48530, asm]
@@ -1143,10 +1156,26 @@ segments:
       # Unsigned-byte global getter on D_8009574E; plain -O1 matches.
       - [0x654B8, c, func_80074CB8]
       - [0x654C8, asm]
+      # func_800755BC — VRAM 0x800755BC, size 0x34, file 0x65DBC-0x65DF0.
+      # Forward to func_80071A34 with a fixed 0x5C size, return arg0;
+      # era -O2 -G0 with the epilogue stack restore in the `jr $ra` slot.
+      - [0x65DBC, c, func_800755BC]
+      - [0x65DF0, asm]
+      # func_80075AE8 — VRAM 0x80075AE8, size 0x34, file 0x662E8-0x6631C.
+      # Twin of 755BC with size 0x14; same epilogue-slot fill.
+      - [0x662E8, c, func_80075AE8]
       # func_80075B1C — VRAM 0x80075B1C, size 0x30, file 0x6631C-0x6634C.
       # Call the +0x38 method of *D_80095744; return its sign bit. era_o2_g0.
       - [0x6631C, c, func_80075B1C]
-      - [0x6634C, asm]
+      # func_80075B4C — VRAM 0x80075B4C, size 0x38, file 0x6634C-0x66384.
+      # Marker + call; era -O2 -G0 with the epilogue stack restore filled into
+      # the `jr $ra` delay slot (MASPSX_FILL_EPILOGUE_DELAY_SLOT=1).
+      - [0x6634C, c, func_80075B4C]
+      - [0x66384, asm]
+      # func_80075C04 — VRAM 0x80075C04, size 0x40, file 0x66404-0x66444.
+      # Marker + signed-halfword call; same epilogue-slot fill.
+      - [0x66404, c, func_80075C04]
+      - [0x66444, asm]
       # func_80075C6C — VRAM 0x80075C6C, size 0x28, file 0x6646C-0x66494.
       # GPU primitive packer: +3 = 2, +4 = 0xE6000001/0 by a1, +8 = 0.
       - [0x6646C, c, func_80075C6C]
@@ -1323,6 +1352,11 @@ segments:
       - [0x6E4AC, asm]
       - [0x6E514, c, func_8007DD14]
       - [0x6E538, asm]
+      # func_8007DD74 — VRAM 0x8007DD74, size 0x34, file 0x6E574-0x6E5A8.
+      # Two-call forwarding wrapper; era -O2 -G0 with the epilogue stack
+      # restore filled into the `jr $ra` delay slot.
+      - [0x6E574, c, func_8007DD74]
+      - [0x6E5A8, asm]
       # decomp-continue-4: SDK enter/exit void wrapper.
       - [0x6E640, c, func_8007DE40]
       # Phase 5EF: two-call void wrapper.

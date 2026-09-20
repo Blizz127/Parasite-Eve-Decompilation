@@ -85,6 +85,16 @@
         "MASPSX_FILL_INDEXED_STORE_DELAY_SLOT": "1"
       }
     },
+    "era_o2_g0_fill_epilogue_delay_slot": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_FILL_EPILOGUE_DELAY_SLOT": "1"
+      }
+    },
     "era_o2_g0_three_word": {
       "toolchain": "era",
       "flags": [
@@ -215,6 +225,13 @@
     "era_o2_g0_expand_div": [
       "func_8003C5D8"
     ],
+    "era_o2_g0_fill_epilogue_delay_slot": [
+      "func_80075B4C",
+      "func_80075C04",
+      "func_8007DD74",
+      "func_800755BC",
+      "func_80075AE8"
+    ],
     "era_o2_g0_fill_store_delay_slot": [
       "func_80074A14",
       "func_8007A3EC",
@@ -297,7 +314,10 @@
       "func_80064C30",
       "func_800653B8",
       "func_80042FE8",
-      "func_80070E54"
+      "func_80070E54",
+      "func_8001784C",
+      "func_80021054",
+      "func_80055FE0"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
