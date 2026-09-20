@@ -946,6 +946,14 @@ segments:
       # Phase 5FA: conditional offset-0x14 pointer helper.
       - [0x621C4, c, func_800719C4]
       - [0x621E4, asm]
+      # agent/decompile-100: D_8009566C vtable dispatch family (6 leaves).
+      - [0x64494, c, func_80073C94]
+      - [0x644C4, c, func_80073CC4]
+      - [0x644F4, c, func_80073CF4]
+      - [0x64524, asm]
+      - [0x64558, c, func_80073D58]
+      - [0x64588, c, func_80073D88]
+      - [0x645B8, c, func_80073DB8]
       - [0x645E8, c, func_80073DE8]
       # Phase 5BX: C leaf func_80073DF8 — VRAM 0x80073DF8, size 0x18.
       # Halfword pointer deref on D_80095674 (lui/lw/nop/lhu0/jr/nop).
