@@ -12,6 +12,8 @@
 #include "pe_guest_ram.h"
 #include "pe_gpu.h"
 #include "pe_spu_dma.h"
+#include "pe_spu.h"
+#include "pe_audio.h"
 #include "pe_sdk.h"
 #include "pe_cdreg.h"
 #include "pe_mdec.h"
@@ -38,6 +40,20 @@ static int     fb_drawsync_count = 0;
 static uint32_t fb_vsync_timer = 0;      /* 0x80094578 (1F801110 low half) */
 static uint32_t fb_vsync_baseline = 0;   /* 0x8009457C, 16-bit scanline latch */
 
+/* Audio renders exactly one vblank per presented frame.  Both present entry
+ * points (HostFB_Present and HostFB_PresentDispEnv) advance fb_presented, so
+ * chasing that counter keeps the cadence correct even when a frame uses the
+ * DispEnv path.  Host-only state; no guest RAM is touched. */
+static int fb_audio_rendered = 0;
+
+static void HostFB_ServiceAudio(void)
+{
+    while (fb_audio_rendered < fb_presented) {
+        PE_Spu_RenderVBlank();
+        fb_audio_rendered++;
+    }
+}
+
 /* ── public API ───────────────────────────────────────────────────────── */
 
 void HostFB_Init(void)
@@ -50,6 +66,7 @@ void HostFB_Init(void)
     fb_drawsync_count = 0;
     fb_vsync_timer = 0;
     fb_vsync_baseline = 0;
+    fb_audio_rendered = 0;
 }
 
 void HostFB_ClearImage(int x, int y, int w, int h, uint8_t r, uint8_t g, uint8_t b)
@@ -78,6 +95,7 @@ void HostFB_Present(void)
     fb_presented++;
     PE_Port_FramePresented(fb_presented);
     PE_Port_InvokePresentHook();
+    HostFB_ServiceAudio();
 }
 
 void HostFB_PresentDispEnv(pe_addr_t env)
@@ -122,6 +140,7 @@ void HostFB_PresentDispEnv(pe_addr_t env)
     fb_presented++;
     PE_Port_FramePresented(fb_presented);
     PE_Port_InvokePresentHook();
+    HostFB_ServiceAudio();
 }
 
 void HostFB_SetDispMask(int mask)

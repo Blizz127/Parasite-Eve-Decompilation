@@ -17,6 +17,8 @@
 #include "pe_cdreg.h"
 #include "pe_guest_image.h"
 #include "pe_route_pad.h"
+#include "pe_audio.h"
+#include "pe_spu.h"
 #include "pe_port_compat.h"
 #include "pe_guest_ram.h"
 #include <stdio.h>
@@ -563,6 +565,13 @@ int main(int argc, char **argv) {
     PE_Callback_Init();
     Bootstrap_Init();
     HostFB_Init();
+    PE_Audio_InitFromEnv();
+    if (getenv("PE_AUDIO_SELFTEST") && getenv("PE_AUDIO_SELFTEST")[0] != '\0' &&
+        getenv("PE_AUDIO_SELFTEST")[0] != '0') {
+        fprintf(stderr, "[AUDIO] pipeline self-test: 1s synthetic ADPCM tone "
+                        "(not retail audio)\n");
+        PE_Spu_SelfTest(PE_AUDIO_SAMPLE_RATE);
+    }
     PE_Port_RunControlReset();
     PE_Port_SetFrameLimit(g_opts.max_frames);
     PE_Port_SetMainIterationLimit(g_opts.max_main_iterations);
@@ -812,6 +821,13 @@ int main(int argc, char **argv) {
         }
     }
 
+    if (getenv("PE_SPU_DEBUG") || getenv("PE_AUDIO_WAV")) {
+        unsigned rw = 0, ko = 0, kf = 0;
+        PE_Spu_GetStats(&rw, &ko, &kf);
+        fprintf(stderr, "[SPU] reg_writes=%u key_ons=%u key_offs=%u active=%d\n",
+                rw, ko, kf, PE_Spu_ActiveVoiceCount());
+    }
+    PE_Audio_Shutdown();
     TraceEvent("shutdown_end"); TraceClose();
     PE_Disc_Close(disc);
     PE_RamDestroy();

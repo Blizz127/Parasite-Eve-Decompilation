@@ -67,6 +67,9 @@ void PE_SpuDma_GetState(PeSpuDmaState *out);
  * DMA dispatcher uses this value without becoming a second DMA4 owner. */
 pe_addr_t PE_SpuDma_ReadMADR(void);
 uint8_t PE_SpuRam_LoadU8(uint32_t address);
+/* Host-side seed for tests/diagnostics.  The retail CPU cannot write SPU RAM
+ * directly; DMA4 is the real path and remains the model's only transfer. */
+void PE_SpuRam_StoreU8(uint32_t address, uint8_t value);
 uint16_t PE_SpuRegister_LoadU16(uint32_t offset);
 void PE_SpuRegister_StoreU16(uint32_t offset, uint16_t value);
 

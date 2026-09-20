@@ -35294,6 +35294,7 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_music_payload.h"
 #include "test_spu_mode_register.h"
 #include "test_spu_dma_event.h"
+#include "test_audio.h"
 #include "test_spu_mode.h"
 #include "test_music_consumer.h"
 #include "test_animation_sound_register.h"
@@ -40223,6 +40224,12 @@ int main(void)
     test_DAY2_spu_mode_register();
     test_DAY2_spu_dma_event();
     test_DAY2_spu_mode();
+    test_DAY2_spu_adpcm_shift0();
+    test_DAY2_spu_adpcm_filter1();
+    test_DAY2_spu_adpcm16();
+    test_DAY2_spu_voice_mix();
+    test_DAY2_spu_disabled_silent();
+    test_DAY2_audio_wav_sink();
     test_DAY2_music_consumer();
     test_DAY1_animation_sound_register();
     test_DAY1_m0034i_modes();
