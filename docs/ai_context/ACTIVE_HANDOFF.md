@@ -10,6 +10,53 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DECOMPILATION INFRASTRUCTURE + COVERAGE CEILING (parent, 2026-09-20)
+
+Baseline unchanged at **768 matching C leaves**, EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (re-verified this session in a clean
+worktree: build `EXACT MATCH`, `VERIFY_US=PASS`, all 768 packed C spans equal
+retail).
+
+**The honest denominator.** `asm/disc1` holds 1622 sized `nonmatching`
+functions (604,300 B) + 447 sizeless data symbols. With the 768 matched
+leaves, the code inventory is **2390 functions / 642,972 bytes**, so coverage
+is **32.1% of functions but only 6.0% of code bytes** — the landed leaves
+average 50 B while the remaining queue averages 373 B. The `4459` figure in
+older entries is not a function count; stop quoting it.
+
+**What can still become C.** `tools/analysis/triage_m2c.py` ran m2c over every
+remaining function: **1371 are C-draftable (463,920 B, 76.8%)**, 119 are
+handwritten assembly that no C compiler can emit through cc1+maspsx (79,948 B;
+GTE `ctc2`/`cop2` sequences and BIOS `syscall` trampolines), and 132 are
+m2c-hard (115 jump-table heavy, 17 other unmodelled opcodes). The ceiling for
+further matching C leaves is therefore ~1371, not 1622. Full write-up:
+`docs/ai_context/DECOMP_COVERAGE_CEILING.md`.
+
+**Cheapest remaining leaves.** 836 of the 1622 remaining functions (342,820 B,
+56.7% of remaining bytes) already have a behavioural spec transcribed in
+`pc_port/`; `tools/analysis/port_backed_worklist.py` produces the ranked list.
+
+**New triage tooling** (all committed, all drafting aids — `scripts/build_us.sh`
+remains the only matching authority):
+- `scripts/setup_m2c.sh` — pinned m2c (`708d2d2c`) under git-ignored `tools/era/`.
+- `tools/analysis/m2c_leaf.py` — one function → m2c candidate C.
+- `tools/analysis/auto_leaf.py` — m2c → normalise → sweep all 12 era profiles.
+- `tools/analysis/port_backed_worklist.py` — worklist ∩ `pc_port` bodies.
+- `tools/analysis/triage_m2c.py` — classify all remaining bodies.
+- `tools/analysis/auto_leaf.py` must wrap comparisons in
+  `distrobox enter pe-mipsel`; **host-side `try_leaf.py` fails with a missing
+  `mipsel-linux-gnu-as`, which is easy to misread as a byte mismatch.** Harness
+  sanity check: `try_leaf.py src/func_8006DBE0.c 0x5E3E0 0x38` → `WORDS MATCH`.
+
+**Open port frontier (unclaimed).** `tools/progress/native_metrics.py` reports
+`reachable_semantic_functions: UNMEASURED — no authoritative production-run
+reachability counter exists`, yet `PORT_GOAL_AND_PLAN.md` requires reporting
+*C-only executed-path coverage*. Fix: build the pc_port with
+`-finstrument-functions` (or emit a per-function entry hook from
+`gen_decomp_ports.py`), map hit addresses to the 2390 guest function
+boundaries, and report executed-path split of decompiled-C vs port
+transcription vs unresolved boundary.
+
 ## SESSION STATUS 2026-09-20 (latest): 768 matching C leaves; FMV completes (2026-09-20)
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
