@@ -354,7 +354,8 @@ segments:
       # func_80019DB8 — VRAM 0x80019DB8, size 0x3C, file 0xA5B8-0xA5F4.
       # *(a0[1]) = D_800A76A4[*(int *)a0[0]].field_00 (12-byte records); return 1.
       - [0xA5B8, c, func_80019DB8]
-      - [0xA5F4, asm]
+      - [0xA5F4, c, func_80019DF4]
+      - [0xA704, asm]
       # func_8001A0CC — VRAM 0x8001A0CC, size 0x48, file 0xA8CC-0xA914.
       - [0xA8CC, c, func_8001A0CC]
       # func_8001A114 — VRAM 0x8001A114, size 0x48, file 0xA914-0xA95C.
@@ -536,6 +537,8 @@ segments:
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.
       - [0x2E02C, c, func_8003D82C]
       - [0x2E034, asm]
+      - [0x2E3E4, c, func_8003DBE4]
+      - [0x2E508, asm]
       # Volume 103: signed-index 16-byte-record initializer; era -O2 -G0.
       - [0x2E750, c, func_8003DF50]
       # Phase 5AE: C leaf func_8003DFC8 — VRAM 0x8003DFC8, size 0x8.
@@ -1350,7 +1353,12 @@ segments:
       - [0x6B0EC, c, func_8007A8EC]
       # Phase 5EF: direct func_8007BDDC forwarding wrapper.
       - [0x6B110, c, func_8007A910]
-      - [0x6B130, asm]
+      # func_8007A930 — VRAM 0x8007A930, size 0x104, file 0x6B130-0x6B234.
+      # Signed BCD digit pack: BCD(t%75) / BCD((t/75)%60) / BCD(t/4500)
+      # with t = arg0 + 0x96, written arg1[2..0]; returns arg1 (the pointer
+      # return frees $a1 for the 0x88888889 magic). Default era_o2_g0.
+      - [0x6B130, c, func_8007A930]
+      - [0x6B234, asm]
       # func_8007B964 — VRAM 0x8007B964, size 0x88, file 0x6C164-0x6C1EC.
       # Six staged byte writes to SPU-style pointer globals; returns 0.
       # Default era_o2_g0. Resume asm at 0x6C1EC.
@@ -1491,7 +1499,11 @@ segments:
       - [0x71304, c, func_80080B04]
       # Phase 5EF: direct func_8007BDDC forwarding wrapper.
       - [0x71324, c, func_80080B24]
-      - [0x71344, asm]
+      # func_80080B44 — VRAM 0x80080B44, size 0x104, file 0x71344-0x71448.
+      # Instruction-identical twin of func_8007A930 (same BCD digit pack).
+      # Default era_o2_g0. Resume asm at 0x71448.
+      - [0x71344, c, func_80080B44]
+      - [0x71448, asm]
       # Phase 5EF: signed state/count exchange; same D_8009AFC0 evidence.
       - [0x714C8, c, func_80080CC8]
       - [0x714DC, asm]
@@ -1969,6 +1981,10 @@ segments:
       - [0xB85D4, c, func_800C7DD4]
       - [0xB85DC, c, func_800C7DDC]
       - [0xB85E4, asm]
+      - [0xB8650, c, func_800C7E50]
+      - [0xB8760, c, func_800C7F60]
+      - [0xB8864, asm]
+      - [0xB895C, c, func_800C815C]
       # Phase 5T: C leaf func_800C8268 — VRAM 0x800C8268, size 0x8.
       # File span 0xB8A68–0xB8A70 exclusive. Empty jr/nop stub.
       - [0xB8A68, c, func_800C8268]
@@ -1983,7 +1999,7 @@ segments:
       - [0xB9480, c, func_800C8C80]
       - [0xB94BC, c, func_800C8CBC]
       - [0xB94F8, c, func_800C8CF8]
-      - [0xB9534, asm]
+      - [0xB9534, c, func_800C8D34]
       # Tier-2 W callback: exact-start table entry at 0xD11DC. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: B9480 prefix 0x1C4, C 0x2C, resume B9670.s 0x98.
@@ -1995,6 +2011,8 @@ segments:
       - [0xB9718, c, func_800C8F18]
       - [0xB9720, c, func_800C8F20]
       - [0xB9728, asm]
+      - [0xB98A4, c, func_800C90A4]
+      - [0xB99A8, asm]
       # Phase 5U: C leaf func_800C9260 — VRAM 0x800C9260, size 0x8.
       # File span 0xB9A60–0xB9A68 exclusive. Empty jr/nop stub.
       - [0xB9A60, c, func_800C9260]
@@ -2022,6 +2040,7 @@ segments:
       # Phase 5GT: return-zero stub twin, era -O2 -G0.
       - [0xBA418, c, func_800C9C18]
       - [0xBA420, asm]
+      - [0xBA59C, c, func_800C9D9C]
       # Phase 5V: C leaf func_800C9EA0 — VRAM 0x800C9EA0, size 0x8.
       # File span 0xBA6A0–0xBA6A8 exclusive. Empty jr/nop stub.
       - [0xBA6A0, c, func_800C9EA0]
@@ -2047,6 +2066,9 @@ segments:
       # Phase 5GV: return-zero stub twin, era -O2 -G0.
       - [0xBAFB0, c, func_800CA7B0]
       - [0xBAFB8, asm]
+      - [0xBB134, c, func_800CA934]
+      - [0xBB238, asm]
+      - [0xBB3C8, c, func_800CABC8]
       # Phase 5W: C leaf func_800CACD4 — VRAM 0x800CACD4, size 0x8.
       # File span 0xBB4D4–0xBB4DC exclusive. Empty jr/nop stub.
       - [0xBB4D4, c, func_800CACD4]

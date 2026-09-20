@@ -84,6 +84,57 @@ retail", plan `1048 = 724 c + 322 asm + 2 rodata`).  `pc_port` CTest **11/11**,
 `pe-native-tests` **1402/1402**, `gen_decomp_ports.py --check --allow-orphans`
 **OK**.  Coverage **724/4516 (16.03%)**.
 
+## agent-decomp104 (slice 5, ranks 425-752) — 12 leaves matched (2026-09-20)
+
+Branch `agent/decomp104` from `d2ae6879`; worktree `/tmp/pe-agent-decomp104`.
+Baseline reproduced (724 c, EXACT SHA-1, `VERIFY_US=PASS`).  Final fresh build:
+**EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**,
+`Matching claim: YES (736 registered C leaves)`, `VERIFY_US=PASS`
+(plan `1063 = 736 c + 325 asm + 2 rodata`).  Commit range
+`d2ae6879..d2db5710`.
+
+New leaves: `func_8007A930`/`func_80080B44` (BCD digit-pack twins),
+`func_80019DF4`, `func_8003DBE4`, `func_800C7E50`, `func_800C7F60`,
+`func_800C815C`, `func_800C8D34`, `func_800C90A4`, `func_800C9D9C`,
+`func_800CA934`, `func_800CABC8`.
+
+**New levers (all proven this session).**
+1. **Return type/value selects register coloring.** `func_8007A930`/`80B44`
+   as `void` gave a word-for-word identical instruction sequence with *rotated*
+   coloring; declaring `unsigned char *` and `return arg1;` makes era cc1 copy
+   the output pointer into `$v0` early (retail `addu $v0,$a1,$zero`), freeing
+   `$a1` for the `0x88888889` magic → byte-exact.  Same mechanism gives
+   `func_80019DF4` (`return 1;`) and `func_800C8D34` (`return 0;`).
+2. **Aggregate-typed destination parameter is a coloring/scheduling lever**
+   (`func_800C815C`: `struct Sprite *a2` flips the `D_800E279C` reload from
+   `$v0`+extra load-delay nop to `$a0` scheduled into the `lhu` slot).
+3. **Pointer-temp placement between stores controls base lifetime**
+   (`func_800C7F60`: `op = D_800E279C;` must sit *between* the 2nd and 3rd sum
+   stores to colour the base `$a0` and fill the load-delay slot).
+4. **Call-in-`%` preservation** (`func_800C7E50`: keep `func_80071A54()` inline
+   in the `%` expression; binding it to an `int` local inserts a `$v0→$a0` copy).
+5. **Bitfield union for `srl`+`andi` same-register coloring** (found on
+   `func_8002FE78`; that leaf is parked — see below).
+6. **Jump-table leaves need `ERA_ASPSX_VER=2.30`** (3-word indexed symbol load).
+7. **Statement order selects both constant hoisting and store order**
+   (`func_800C8D34`: moving `D_800E22F0 = 0;` up next to `D_800E22F2 = 0x80;`
+   made cc1 hoist `$a1=0x80` into retail's slot *and* re-emit the two halfword
+   stores in retail's order).
+
+**Triage caveat:** `try_leaf.py` zeroes relocation words, so two different
+symbol-store instructions whose only difference is the symbol/immediate are
+treated as equal. `func_800C8D34` and `func_8002FE78` both passed try_leaf but
+failed the full build. For symbol-store-heavy leaves, verify with
+`scripts/build_us.sh` (or compare the object's reloc-symbol sequence).
+
+Slice note: every body is 0xE4-0x1A4 (57-105 words); 10/328 contain COP2.
+Parks: `func_8002FE78` (retail's switch table sits at file 0x12C8, which a C
+leaf cannot place), `func_80078CC4` (era cc1 never emits register-register
+`multu; mflo`), `func_8008B698` (base split), `func_800C6FA0` (MMIO base /
+second-pointer address form), `func_80019170` (loop rotation).  Details:
+`docs/evidence/agent-decomp104/REPORT.md`,
+`docs/ai_context/parked_blockers.json` (`slice5-medium-leaf-cc1-baseschedule-parks`).
+
 ## XA-FIDELITY: gaussian resample + CD-XA volume chain (2026-09-20)
 
 Branch `agent/xapolish` from `ec097017`.  Closes the named XA gaps (a) linear

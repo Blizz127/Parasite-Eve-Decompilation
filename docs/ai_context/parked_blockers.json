@@ -398,6 +398,7 @@
    "next": "Reopen only with a general maspsx delay-slot-fill lever for non-store instructions before 'j $31'/'jal' (retail ASPSX 2.21 fills these; the vendored maspsx only has store-specific gates), or an addressing-form lever that keeps a symbol base live across multiple stores; the $gp readers need a separate gp-base/model investigation (_gp = 0x8009CD60)."
   },
   {
+<<<<<<< HEAD
    "id": "aspsx-sprestore-delay-slot",
    "status": "OPEN",
    "note": "agent-decomp103: cc1 2.7 always emits the stack restore before jr $31 (`addiu $sp,$sp,N` / `jr` / `nop`); retail ASPSX moves it into the delay slot (`jr` / `addiu $sp,$sp,N`). Both shapes exist in retail, so a fix must be a per-leaf maspsx env flag, e.g. MASPSX_FILL_SPRESTORE_DELAY_SLOT=1, mirroring MASPSX_FILL_STORE_DELAY_SLOT. func_800755BC/func_80075AE8 triage to exactly the 2 swapped epilogue words; agent-decomp102 parked func_80075B4C/func_8007DD74/func_80075C04 for this same divergence. 117 of the 913 slice-6 functions carry this hard epilogue shape (jr $ra immediately followed by addiu $sp,$sp,-N). Counter-example that must stay unfilled: matched func_80090AAC (0x812AC).",
@@ -409,6 +410,13 @@
     "func_80075C04"
    ],
    "evidence": "docs/evidence/agent-decomp103/REPORT.md"
+=======
+   "id": "slice5-medium-leaf-cc1-baseschedule-parks",
+   "status": "PARKED-CC1-ADDRESS-FORM/SCHEDULE",
+   "note": "agent-decomp104 slice-5 sweep (branch agent/decomp104, base d2ae6879, ranks 425-752, all bodies 57-105 words) matched 12 leaves (724->736). Residual parks after two serious attempts each, with byte-level divergence: (1) func_80078CC4 @ file 0x694C4/0x138 (unrolled 9-short 16.16 scale): retail reads each packed word with `lw` + `andi 0xFFFF; sll 16; sra 16` and multiplies with MULTU (funct 0x19, raw EXE 0x694E4=0x012B0019); era cc1 folds `(short)(x&0xFFFF)` into a sign-extending `lh` and emits `mult` (funct 0x18), never a register-register `multu; mflo`. ~12 source shapes + full flag matrix (-O0..-O3/-Os, -G0/-G8, sched2, cse/strength-reduce, ASPSX gates) produced zero candidates. Already ported in pc_port/game/boot/func_800CEE20_port.c. (2) func_800C6FA0 @ file 0xB77A0/0xF8 scratchpad volume scaler: retail keeps mmio base 0x1F800000 + 0x30 and a second pointer q=p+2 (-1(q)/0(q)); cc1 folds the full 0x1F800030 constant with offset 0 or rotates registers, 46-62 words differ. (3) func_8008B698 @ file 0x7BE98/0xE8 two-way record scan: cc1 strength-reduces the record base into (p-0x1C, p) where retail keeps one base p with offsets 0/-0x1C/-0x80/-0xC8; 53 words differ. (4) func_80019170 @ file 0x9970/0xF0 list-search predicate: loop rotation + a0/a2 copy skew, 36-52 words differ. (5) func_8007D074/800625B8/80048F24/80056B24/8008068C inspected and judged out of quick reach (gp-relative globals, $at-absolute store blocks, indirect jalr). Bonus verified but not carved (12-leaf cap): func_800CABC8 @ 0xBB3C8/0x10C matches the func_800C7F60 template with a trailing 0x224 store.",
+   "evidence": "docs/evidence/agent-decomp104/REPORT.md",
+   "next": "Reopen func_80078CC4 only with a toolchain path that emits a register-register `multu; mflo` (or a per-leaf maspsx post-pass). Reopen the address-form parks only with a lever that forces a single base + negative offsets. Carve func_800CABC8 (template ready). The return-type lever (return the argument retail leaves in $v0), the aggregate-typed destination pointer, and the pointer-temp-between-stores placement are now proven and should be tried first on instruction-identical-coloring-rotated near-matches."
+>>>>>>> agent/decomp104
   }
  ]
 }
