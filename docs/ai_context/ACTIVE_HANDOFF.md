@@ -10,6 +10,43 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## SESSION STATUS 2026-09-20 (latest): 768 matching C leaves; FMV completes (2026-09-20)
+
+**Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**768**
+registered C leaves)"; `scripts/verify_us.sh` → **VERIFY_US=PASS** (all 768
+packed C spans equal retail). Coverage **768/4459 functions (17.22%)**; ~341
+asm units / ~604 KB remain. Generator check OK. This session went 560 → 768
+leaves.
+
+**Port.** `pc_port` build OK, full **CTest 11/11**, `pe-native-tests`
+**1404/1404**.
+- **Opening FMV now completes.** `agent/fmv-eof` proved `0xFE00` is the MDEC
+  end-of-data RLE code and that retail `func_8010C89C` end-fills DecDCTin with
+  it, so the port's `MDEC_missing_block` at the last DecDCTout was an artifact.
+  `MdecBlock` now decodes an all-zero block when exhaustion is at a block
+  boundary and still raises `MDEC_unterminated_block` mid-block. Verified live:
+  `--max-frames 4000` → `stop_reason=frame-limit`, **0 boundaries / 0 bootstrap
+  stubs**, 3512 media steps, one `dbd_abort` + one `media_clear`, 4395 XA
+  sectors decoded. Evidence `docs/evidence/fmv-eof/REPORT.md`.
+- **Disc-1 route** (`--route-pad --max-frames 80000`): frame-limit, 0 bootstrap
+  stubs, token `A8001148` (m0012i), story `0x48`; only non-stopping
+  `func_80076C34` GPU boundary reports.
+- **Disc-2 boot:** 0 stubs, frame-limit; the retail disc-change screen renders.
+
+**Integration fix (parent).** The 709→768 merges left the port uncompilable and
+`DAY1_card_status` failing: `gen_decomp_ports.collect_defined_symbols` did not
+strip C comments, so a trailing comment between a parameter list and the body
+brace (e.g. `int func_8007DDC4(pe_addr_t port) /* B0(50h) */`) hid the
+definition and callers fell back to loud boundaries. Fixed by stripping comments
+before the scan (regenerated), declaring `func_800762A0` for its generated
+caller, and making it non-static.
+
+**Open frontiers.** `func_8004AD9C` file-menu page / `m0020i` story advance past
+`0x48`; physical-address-0 RAM-read fidelity; XA polish (gaussian resampling,
+mono/8-bit live, XA volume); disc-2 stream handling; the size-ranked matching
+worklist.
+
 ## PARENT MERGE VERIFICATION: 762 matching C leaves + port frontiers (2026-09-20)
 
 Merged `agent/decomp105` (`581dc2f5`), `agent/decomp103` (`72de651a`),
