@@ -222,8 +222,8 @@ contract).
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**709**
 registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 709 packed C
-spans equal retail). Coverage: 709/4512 functions (15.71%). Remaining queue:
-**1681 non-matching functions / 611,668 bytes**, ranked in
+spans equal retail). Coverage: 709/4516 functions (15.70%). Remaining queue:
+**1680 non-matching functions / 611,412 bytes**, ranked in
 `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
 `python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
 1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
