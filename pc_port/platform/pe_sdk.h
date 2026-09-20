@@ -196,13 +196,17 @@ void func_8008CB54(uint32_t mode); /* SPU reverb mode transition */
 /* ── libcard (pc_port/platform/pe_libcard.c) ────────────────────────── */
 void func_800409B4(void);            /* InitCARD + StartCARD */
 /* Card kernel operations that the retail BIOS veneers at asm/disc1/6E538.s
- * forward to.  The port models the documented empty-slot completion; the
- * canonical declarations for translated callers live in pe_port_compat.h. */
+ * forward to.  The port models a host-backed memory-card image and, when
+ * `PE_CARD=empty`, the documented empty-slot completion; the canonical
+ * declarations for translated callers live in pe_port_compat.h. */
 int  func_8007DD44(int port);        /* A0(ABh) _card_info */
 int  func_8007DD54(int port);        /* A0(ACh) _card_load */
 int  func_8007DDC4(pe_addr_t port);  /* B0(50h) _new_card */
 int  func_8007DDB4(pe_addr_t port, int sector, pe_addr_t src); /* B0(4Eh) _card_write */
 void PE_Card_OpenEvents(void);       /* open+enable the 8 card events (test hook) */
+int  PE_Card_IsPresent(void);        /* resolved presence of the host image */
+void PE_Card_SetPresent(int present);/* force present/empty (test hook) */
+void PE_Card_Reset(void);            /* re-resolve presence on next query */
 
 /* ── libcd (pc_port/platform/pe_libcd.c) ────────────────────────────── */
 int  func_8007EC14(void);            /* CdInit */
