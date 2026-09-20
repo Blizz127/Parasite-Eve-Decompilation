@@ -20,6 +20,13 @@
 #      2.21/addiu_at, select the ASPSX 2.30 three-word lui/addu/op-%lo form
 #      instead of lui/addiu/addu/op-0. Compound semicolon lines retain the
 #      legacy expansion. Default OFF: opt in per leaf.
+#   3. dispatch_fold symbol retarget (ctor arg, or env MASPSX_DISPATCH_FOLD=<sym>,
+#      enabled only alongside three_word_symbol_store): substitute the shared
+#      rodata pool table `<sym>` for cc1's local switch-table labels. Covers
+#      both the compound indexed form (`lw $r,$L<n>($b)`) and the LICM-hoisted
+#      materialised form (cc1 `la $r,$L<n>`, or an explicit
+#      `lui $r,%hi($L<n>)` / `addiu $r,$r,%lo($L<n>)` pair).
+#      Default OFF: opt in per leaf; the dead local table is stripped build-side.
 import struct
 import os
 import re
@@ -1025,6 +1032,35 @@ class MaspsxProcessor:
 
         if line.startswith("$L"):
             return [line]
+
+        # LOCAL PATCH (switch dispatch retarget, materialised form): when a
+        # `switch` sits inside a loop, cc1's LICM hoists the loop-invariant
+        # table base out of the loop instead of keeping the compound indexed
+        # load handled below, so the `$L<digits>` label never appears as a
+        # load/store addend and the FOLD gate cannot see it. cc1 emits that
+        # hoisted base as `la $r,$L<n>`, which GNU as later expands to
+        # `lui $r,%hi($L<n>)` / `addiu $r,$r,%lo($L<n>)` — i.e. after maspsx,
+        # so the %hi/%lo form must be caught here too for callers that feed
+        # cc1's own pair. Under the SAME THREE_WORD + FOLD gates that guard
+        # the compound retarget, substitute the configured shared rodata pool
+        # table for a compiler-local label in `la $r,$L<n>` and in %hi()/%lo()
+        # operands, so the materialised dispatch resolves against the pool
+        # copy. Named symbols, offset addends, and plain `$L` uses (branch
+        # targets, the table definition itself) are never substituted; with
+        # either gate off the line is untouched.
+        if self.three_word_symbol_store and self.dispatch_fold_symbol:
+            line = re.sub(
+                r"%(hi|lo)\(\$L\d+\)",
+                lambda match: f"%{match.group(1)}({self.dispatch_fold_symbol})",
+                line,
+            )
+            line = re.sub(
+                r"(\bla\s+\$[a-z0-9]+,\s*)\$L\d+(\s*)$",
+                lambda match: (
+                    f"{match.group(1)}{self.dispatch_fold_symbol}{match.group(2)}"
+                ),
+                line,
+            )
 
         actual_r_dest = None
         is_macro = ";" in line

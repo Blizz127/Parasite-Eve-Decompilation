@@ -1051,6 +1051,19 @@ segments:
       # Phase 5ET: loop-as-volume leaf func_8005186C; era -O2 -G0, no $gp.
       - [0x4206C, c, func_8005186C]
       - [0x420A8, asm]
+      # func_80051CC4 — VRAM 0x80051CC4, size 0x134, file 0x424C4-0x425F8.
+      # Resource command-state initializer: 7-word clear loop, then scan
+      # record[0x14] command bytes and dispatch on (byte & 0x1F) through the
+      # shared rodata pool table jtbl_800111F8. The switch sits inside the
+      # scan loop, so cc1 emits the LICM-hoisted MATERIALISED dispatch
+      # (lui/addiu $t6,%hi/%lo($L<n>) hoisted before the loop); the
+      # materialised-form extension to MASPSX_DISPATCH_FOLD retargets those
+      # two words at the pool table. era -O2 -G8 (D_8009D018 is small data:
+      # `sw $zero,0x2A8($gp)`) + MASPSX_THREE_WORD_SYMBOL_STORE=1 +
+      # MASPSX_DISPATCH_FOLD=jtbl_800111F8 (era_o2_g8_dispatch_800111f8).
+      # Prefix asm 0x41C; resume asm at 0x425F8.
+      - [0x424C4, c, func_80051CC4]
+      - [0x425F8, asm]
       # Phase 5AQ: C leaf func_80051E48 — VRAM 0x80051E48, size 0x10.
       # File span 0x42648–0x42658 exclusive. Pure address-return leaf:
       # lui $v0,%hi(D_800A1B30); addiu $v0,$v0,%lo(D_800A1B30); jr $ra; nop.
