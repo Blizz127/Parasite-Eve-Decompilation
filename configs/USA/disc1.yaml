@@ -1732,6 +1732,9 @@ segments:
       # Phase 5DB: C leaf func_8008D820 — file 0x7E020, size 0x24.
       - [0x7E020, c, func_8008D820]
       - [0x7E044, asm]
+      # func_8008F178 — VRAM 0x8008F178, size 0x38, file 0x7F978-0x7F9B0.
+      - [0x7F978, c, func_8008F178]
+      - [0x7F9B0, asm]
       # func_8008F4E8 — VRAM 0x8008F4E8, file 0x7FCE8, size 0x2C.
       # Advance the cursor, latch *old <<8 into +0x6C, set +0xF4 bits 0/1;
       # era -O1 -G0 (the -O2 schedule hoists the flags load).
