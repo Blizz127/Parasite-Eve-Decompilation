@@ -345,7 +345,10 @@ segments:
       # func_80019D84 — VRAM 0x80019D84, size 0x34, file 0xA584-0xA5B8.
       # func_800375E0(**a0, 1, buf[-1]) with a 0x10-byte stack halfword buffer.
       - [0xA584, c, func_80019D84]
-      - [0xA5B8, asm]
+      # func_80019DB8 — VRAM 0x80019DB8, size 0x3C, file 0xA5B8-0xA5F4.
+      # *(a0[1]) = D_800A76A4[*(int *)a0[0]].field_00 (12-byte records); return 1.
+      - [0xA5B8, c, func_80019DB8]
+      - [0xA5F4, asm]
       # Probe: call-and-store wrapper retaining descriptor across the call.
       - [0xA9A8, c, func_8001A1A8]
       # Probe: state bit-24 setter with retail $v0/$a0 allocation.
