@@ -127,7 +127,7 @@ floating upstream cannot break it again), and a `pe-mipsel` distrobox (Debian
 trixie, binutils 2.44) that `build_us.sh` auto-detects. `local/pe_disc1.path`
 points at the attic Disc 1 image.
 
-**Tests.** `pe-native-tests` **1377 run / 1377 passed / 0 failed / 0 skipped**.
+**Tests.** `pe-native-tests` **1383 run / 1383 passed / 0 failed / 0 skipped**.
 `pe-route-boot-day2-tests` **27/27 ordered Day-1 milestones** to the
 `m0020i` save/load menu (42000 frames, frame-limit stop), executed path invokes
 only 4 HOST_ADAPTED stubs and **0 UNSUPPORTED**. The harness now applies the
@@ -175,12 +175,20 @@ firstfile) backed by the present-card image, plus the `func_80041108` post-call
 directory/file state graph (`CARD_OPERATION_CONTRACT.md`), so the Select Slot
 menu can enumerate/create/read/write a save and the route passes story `0x48`;
 (2) the guest-side media-loop completion after the ~319-step FMV media loop;
-(3) **audio: the port has NO host audio output backend at all** — there is no
-SDL/ALSA/`snd_pcm`/`/dev/dsp` sink anywhere under `pc_port/`, and
-`pe_libsnd.c` only models SDK event/DMA plumbing. The SPU is a DMA-timing model,
-not a voice mixer, and XA-ADPCM (CD mode bit4, `CdlModeSM`) is still an explicit
-`CD_device_read_mode` boundary. A full SPU voice/ADSR + XA decode + host sink
-is unbuilt; (4) carve the ranked large functions from the worklist. **Disc 2 is
+(3) **audio: the host path now exists but the live route is silent.** Merged
+`agent/audio-spu`: `pe_audio.{c,h}` (NULL / RIFF-WAVE 16-bit 44.1 kHz sink +
+optional `PE_AUDIO_HAVE_LIVE` stub) and `pe_spu.{c,h}` (24-voice mixer: psx-spx
+SPU-ADPCM decode, loop flags/ENDX, pitch counter + linear interp, shift/step
+ADSR, voice/main volumes, SPUCNT gate), fed by `PE_SpuRegister_StoreU16` and
+rendered one vblank per presented frame; `PE_AUDIO_WAV`, `PE_AUDIO_SELFTEST`.
+**Honest limit:** a live 38000-frame Day-1 run writes 328 SPU registers but
+keys **no** voice (`key_ons=0`), so live output is silent — the score/instrument
+key-on path `func_8008A068`/`8AE94`/`8B040` is unported and `func_8007D1D4`/
+`func_8007DAE0` are still no-ops in `pe_libsnd.c`; the selftest tone proves
+decode→mix→sink. Named gaps: gaussian interpolation (linear used), volume
+sweep, noise/pitch-mod/reverb, and XA-ADPCM (CD `CdlModeSM` bit4 boundary
+unchanged). No retail audio golden exists; (4) carve the ranked large functions
+from the worklist. **Disc 2 is
 code-identical:** this session
 re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
 `SLUS_006.62` (both SHA-1 `452fb033…`); `configs/USA/disc2.yaml` already
