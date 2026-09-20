@@ -10,6 +10,44 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## RECOVERY 2: byte-exact rebuild restored, maspsx pinned, EXACT SHA-1 (2026-09-20)
+
+Two upstream-drift bugs in the era toolchain were blocking all matching
+verification:
+
+1. `scripts/setup_era.sh` cloned **floating upstream maspsx**, whose `maspsx.py`
+   no longer matches the repo-tracked, locally patched
+   `maspsx/__init__.py`: it now imports `PassthroughProcessor` (upstream
+   025620f, #135) and passes a `nop_lw_lw` ctor arg (upstream e3d5916, #137)
+   the vendored file does not accept. Fixed by adding upstream's
+   `PassthroughProcessor` to the tracked file (marked LOCAL PATCH/compat) and
+   pinning the clone to upstream commit
+   `025620f1e61248ad4a775c2929ec86f754973597` with a
+   `tools/era/maspsx/.maspsx-commit` stamp, so re-runs are idempotent and
+   self-healing.
+2. This host had no mipsel toolchain and no root. Set up (all local-only,
+   git-ignored): `build/extracted/disc1` from the retail image (SHA-1
+   `452fb033…`, matches the config authority), `asm/disc1` via
+   `scripts/split_us.sh` (847 spans: 560 C, 285 asm, 2 rodata), and a
+   `pe-mipsel` distrobox (Debian trixie, binutils 2.44) that `build_us.sh`
+   auto-detects.
+
+**Verified:** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (560
+registered C leaves)". Coverage: 560/4659 functions (12.02%), 1.25% of code
+bytes — the single `asm/C5060` unit is 1,218,464 bytes (67% of unmatched code),
+so carving it is the whole route to byte-100%.
+
+**Live port:** `--route-pad` autopilot renders Day 1 (opera house, first
+battle, field rooms) through story `0x48` / frame ~20000, then aborts (windowed
+only; headless to 80000 frames does not hit it) with
+`FATAL: PE_LoadU8: invalid guest address 0x00000000`. Backtrace (gdb):
+`translate_impl` ← `PE_LoadU8` ← `func_80016910_key2900_cut` ← `func_80017018`
+← `func_80035558_walk_cut` ← `func_8003F3C4` ← `func_8001220C` ← `main`.
+`func_80016910_key2900_cut`'s `pe_e00cc` does
+`PE_LoadU8(PE_LoadU32(0x800E2800))` before checking the slot pointer, so a null
+effect-list head reaches `PE_LoadU8(0)`.
+
 ## RECOVERY: integrate the uncommitted decomp-port refactor (2026-09-19)
 
 The working tree carried an **unfinished 09-11/09-12 refactor** that did not
