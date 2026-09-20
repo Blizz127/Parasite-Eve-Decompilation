@@ -1296,7 +1296,54 @@ segments:
       # era -O2 -G0, exact first phrasing. The 0xC resume begins with
       # retail alignment nops before the next real function at 0x765F4.
       - [0x765C4, c, func_80085DC4]
+      # agent/decompile-100: CD command wrapper family (41 matching leaves).
+      # Sets D_800BCD80 and D_800BCD84..90 from masked args, then calls
+      # func_8008CBA8. Unmatched neighbours stay asm.
       - [0x765E8, asm]
+      - [0x76C64, c, func_80086464]
+      - [0x76C98, c, func_80086498]
+      - [0x76CCC, c, func_800864CC]
+      - [0x76CF8, asm]
+      - [0x76D68, c, func_80086568]
+      - [0x76DA4, c, func_800865A4]
+      - [0x76E08, asm]
+      - [0x76EA4, c, func_800866A4]
+      - [0x76EF0, c, func_800866F0]
+      - [0x76F28, c, func_80086728]
+      - [0x76F70, c, func_80086770]
+      - [0x76FB0, c, func_800867B0]
+      - [0x76FE4, c, func_800867E4]
+      - [0x7702C, c, func_8008682C]
+      - [0x77074, c, func_80086874]
+      - [0x770AC, c, func_800868AC]
+      - [0x770F0, c, func_800868F0]
+      - [0x77148, c, func_80086948]
+      - [0x771AC, c, func_800869AC]
+      - [0x771E4, c, func_800869E4]
+      - [0x77228, c, func_80086A28]
+      - [0x77280, c, func_80086A80]
+      - [0x772E4, c, func_80086AE4]
+      - [0x7731C, c, func_80086B1C]
+      - [0x77360, c, func_80086B60]
+      - [0x773B8, c, func_80086BB8]
+      - [0x7741C, c, func_80086C1C]
+      - [0x7745C, c, func_80086C5C]
+      - [0x774A4, c, func_80086CA4]
+      - [0x774F8, c, func_80086CF8]
+      - [0x7752C, c, func_80086D2C]
+      - [0x77568, c, func_80086D68]
+      - [0x775AC, c, func_80086DAC]
+      - [0x775E4, c, func_80086DE4]
+      - [0x77624, c, func_80086E24]
+      - [0x77670, c, func_80086E70]
+      - [0x776A8, c, func_80086EA8]
+      - [0x776E8, c, func_80086EE8]
+      - [0x77734, c, func_80086F34]
+      - [0x7776C, c, func_80086F6C]
+      - [0x777AC, c, func_80086FAC]
+      - [0x777F8, c, func_80086FF8]
+      - [0x77824, c, func_80087024]
+      - [0x77850, asm]
       - [0x778E0, c, func_800870E0]
       - [0x778F0, asm]
       # Phase 5EK: D_8009D270 unsigned-int flags setters (READY-FROM-BITWISE).
@@ -1501,7 +1548,11 @@ segments:
       # Volume carve at B944C; remaining resume reaches C8F08 at B9708.
       - [0xB93C0, asm]
       - [0xB944C, c, func_800C8C4C]
-      - [0xB9480, asm]
+      # agent/decompile-100: timer/latch family (3 contiguous, 0x3C each).
+      - [0xB9480, c, func_800C8C80]
+      - [0xB94BC, c, func_800C8CBC]
+      - [0xB94F8, c, func_800C8CF8]
+      - [0xB9534, asm]
       # Tier-2 W callback: exact-start table entry at 0xD11DC. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: B9480 prefix 0x1C4, C 0x2C, resume B9670.s 0x98.
@@ -1524,7 +1575,9 @@ segments:
       # (0x10 total), resume BA420.s 0x280 (= 0xBA6A0 - 0xBA420).
       - [0xBA174, asm]
       - [0xBA200, c, func_800C9A00]
-      - [0xBA234, asm]
+      # agent/decompile-100: timer/latch family (0x3C).
+      - [0xBA234, c, func_800C9A34]
+      - [0xBA270, asm]
       # Tier-2 W callback: exact-start table entry at 0xD12C4. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: BA234 prefix 0x108, C 0x2C, resume BA368.s 0x98.
@@ -1574,7 +1627,11 @@ segments:
       # C 0x8 + resume 0xFC4 (= 0xBD780 - 0xBC7BC) = 0xFCC.
       - [0xBC330, asm]
       - [0xBC3BC, c, func_800CBBBC]
-      - [0xBC3F0, asm]
+      # agent/decompile-100: timer/latch family (3 contiguous, 0x3C each).
+      - [0xBC3F0, c, func_800CBBF0]
+      - [0xBC42C, c, func_800CBC2C]
+      - [0xBC468, c, func_800CBC68]
+      - [0xBC4A4, asm]
       # Tier-2 W callback: exact-start table entry at 0xD1558. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: BC3F0 prefix 0x2F0, C 0x2C, resume BC70C.s 0x98.
@@ -1615,7 +1672,9 @@ segments:
       - [0xBDD9C, c, func_800CD59C]
       # Phase 5CT: C leaf func_800CD5A4 — file 0xBDDA4, size 0xC.
       - [0xBDDA4, c, func_800CD5A4]
-      - [0xBDDB0, asm]
+      # agent/decompile-100: timer/latch family (0x3C).
+      - [0xBDDB0, c, func_800CD5B0]
+      - [0xBDDEC, asm]
       # Phase 5CU: C leaf func_800CD71C — file 0xBDF1C, size 0xC.
       - [0xBDF1C, c, func_800CD71C]
       # Phase 5ED: mid-BDF28 hole — sb+ret0 func_800CD960.
@@ -1673,6 +1732,10 @@ segments:
       - [0xBF0F0, asm]
       # Phase 5ED: mid-BEC9C hole — sb+ret0 func_800D4850.
       - [0xC5050, c, func_800D4850]
+      # agent/decompile-100: exact byte-twin of func_8005186C (file 0xD0444,
+      # VRAM 0x800DFC44, size 0x3C). Carve: C5060 prefix, C 0x3C, resume D0480.
       - [0xC5060, asm]
+      - [0xD0444, c, func_800DFC44]
+      - [0xD0480, asm]
   # End of file: 0x1EE800 = 2,025,472 bytes (verified size).
   - [0x1EE800]
