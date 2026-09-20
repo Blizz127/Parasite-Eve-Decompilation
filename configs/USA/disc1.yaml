@@ -1018,6 +1018,9 @@ segments:
       # func_8006599C — VRAM 0x8006599C, size 0x2C, file 0x5619C-0x561C8.
       # Signed halfword at D_800B1624 + D_800B1624->0x10 + (arg0 << 4) + 6.
       - [0x5619C, c, func_8006599C]
+      # func_800659C8 — VRAM 0x800659C8, size 0x30, file 0x561C8-0x561F8.
+      # arg1 >> 8 stored to header-indexed halfword +8; return 0.
+      - [0x561C8, c, func_800659C8]
       # func_80065A9C — VRAM 0x80065A9C, size 0x38, file 0x5629C-0x562D4.
       # *p |= arg1 & 0x30 at D_800B1624 + D_800B1624->0x10 + (arg0 << 4);
       # volatile pointer keeps retail's double header load.
