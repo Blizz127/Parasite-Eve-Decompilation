@@ -203,21 +203,41 @@ static uint16_t RoutePadSource(void)
     return mask;
 }
 
+/* Route bookkeeping shared by the windowed and headless present hooks.  The
+ * route pad table is indexed by g_frame, and g_frame advances once per
+ * presented frame.  Headless runs present the framebuffer too (HostFB_Present
+ * -> PE_Port_InvokePresentHook), but only the windowed hook used to tick the
+ * counter, so a headless --route-pad run never left stage 1 — its pads were
+ * constant and the route could not be exercised without a display.  Ticking
+ * here makes the same sequence run headless at full speed.  Host data only;
+ * never touches guest state. */
+static void RoutePadTick(void)
+{
+    if (!g_opts.route_pad)
+        return;
+    g_frame++;
+    RecordSewerVictory();
+    if ((g_frame % 500) == 0)
+        fprintf(stderr, "[ROUTE] frame=%d token=%08X story=%08X victories=%u\n",
+                g_frame, (unsigned)D_8009D280,
+                (unsigned)PE_LoadU32(0x800A7918u), g_sewer_victories);
+}
+
 /* Phase 6E-PRS1 live-window present hook: blit the newest host pixels and
  * poll for close/Escape.  Host data only; never touches guest state. */
 static void PresentHook_BlitWindow(void)
 {
-    if (g_opts.route_pad) {
-        g_frame++;
-        RecordSewerVictory();
-        if ((g_frame % 500) == 0)
-            fprintf(stderr, "[ROUTE] frame=%d token=%08X story=%08X victories=%u\n",
-                    g_frame, (unsigned)D_8009D280,
-                    (unsigned)PE_LoadU32(0x800A7918u), g_sewer_victories);
-    }
+    RoutePadTick();
     if (HostWindow_Pace()) {PE_Port_RequestStop(PE_PORT_STOP_HOST_QUIT);return;}
     HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
     (void)HostWindow_Poll();
+}
+
+/* Headless present hook used for --route-pad: the route must advance without
+ * a display, but there is no window to blit or poll. */
+static void PresentHook_RouteHeadless(void)
+{
+    RoutePadTick();
 }
 
 static int ParsePositiveLimit(const char *option, const char *value) {
@@ -662,6 +682,8 @@ int main(int argc, char **argv) {
         PE_Port_SetSkipMovie(1);
         PE_Port_SetSkipOpeningMenu(1);
         PE_Port_SetPadSource(RoutePadSource);
+        if (!use_window)
+            PE_Port_SetPresentHook(PresentHook_RouteHeadless);
         fprintf(stderr,
                 "[ROUTE] --route-pad: full Day-1/Day-2 pad sequence (%u pairs) "
                 "+ sewer/M34 pilot + skip-movie + skip-opening-menu\n",
