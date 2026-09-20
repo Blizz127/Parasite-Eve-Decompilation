@@ -118,6 +118,10 @@ static void ResetTestState(void) {
     PE_3EAC8_RecordReset();         /* drop recorded provider arguments   */
     D_80011614 = D_80011614_BOOTSTRAP;
     memset(D_80093164, 0, 4u * sizeof(D_80093164[0]));
+    /* Card presence is host-modelled; default native fixtures to the empty
+     * slot the card oracles pin.  Present-model tests call PE_Card_Reset()
+     * plus PE_Card_IsPresent() with their own PE_CARD_IMAGE. */
+    PE_Card_SetPresent(0);
 }
 
 /* Controller replies required by the complete input handler. Older digital
@@ -40271,6 +40275,7 @@ int main(void)
     test_DAY1_exit_menu_input();
     test_DAY1_card_confirmation();
     test_DAY1_card_status();
+    test_DAY1_card_present_kernel();
     test_DAY1_card_operation();
     test_DAY1_card_driver();
     test_DAY1_card_cleanup();

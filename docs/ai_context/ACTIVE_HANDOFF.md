@@ -10,6 +10,33 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## CARD-PRESENT: host-backed memory card; route frontier moves to the save menu (2026-09-20)
+
+Branch `agent/card-present` from `5cf6b196`. `pc_port/platform/pe_libcard.c`
+now models a **present** 128 KiB memory card backed by a raw host image
+(psx-spx `Memory Card Data Format`: 16 blocks x 8 KiB; header `"MC"` + XOR;
+directory frames with A0h free state + XOR; `PE_CARD_IMAGE`, default
+git-ignored `build/pe_card1.mcr`, formatted on first use).  The three kernel
+operations deliver the documented success events (`F4000001h,0004h` ->
+A1820 for `_card_info`/`_card_load`; `F0000011h,0004h` -> A182C for
+`_card_write`), with `PE_CARD=empty` preserving the old eject/err timeout and
+its status-machine loop.
+
+Verified: `pe-native-tests` **1377/1377** (new `DAY1_card_present_kernel`
+pins format checksum, success events, frame persistence and sector
+validation; `DAY1_card_status` still pins the empty oracle); the card
+oracles PASS; `PE_CARD=empty` still runs to the 42000 frame limit.
+
+**Frontier:** with a present card the empty-slot infinite loop is gone — the
+record is accepted (`record+8=04`, `record+1=02`, `A182C=1`) and the game
+opens its **"Select Slot"** save menu.  The route then stops at
+`[STUB:BOOTSTRAP_RET] card operation unresolved call`: `func_80041108` state
+2 reaches `func_800727B4` (`firstfile`).  Progress past story `0x48` now
+needs (1) the libcard file API veneers (`func_80072734`/`54`/`64`/`74`/`84`/
+`94`/`B4`) and (2) the `func_80041108` post-call state graph in
+`docs/ai_context/CARD_OPERATION_CONTRACT.md`, which is still pre-call only.
+Evidence: `docs/evidence/pe-card-present-kernel/REPORT.md`.
+
 ## DAY2-B0CD0-catchup-reland: overrun STOP -> held pending + named stop (2026-09-20)
 
 Branch `agent/b0cd0-catchup` from `05dc2b21`. Evidence:

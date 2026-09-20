@@ -72,6 +72,10 @@ pc_port/build-*/
 # Local disc pointer used by native battle oracles (path only; never the BIN)
 local/pe_disc1.path
 
+# Host memory-card images (never commit; PE_CARD_IMAGE default is in build/)
+*.mcr
+*.mcd
+
 # Agent scratch / local verify trees (leaves lane)
 .claude/
 .mimocode/
