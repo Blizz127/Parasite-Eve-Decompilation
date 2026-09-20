@@ -2008,6 +2008,11 @@ segments:
       # Probe: D_800E2248 high-halfword predicate.
       - [0xB3368, c, func_800C2B68]
       - [0xB3390, asm]
+      # func_800C2FF0 — sprite rectangle corner emitter, VRAM 0x800C2FF0,
+      # file 0xB37F0, size 0xA8 (42 words). era -O2 -G0; scaled corners and
+      # their negations in locals, byte-minus-one values stored last.
+      # Mid-B3390 carve: prefix 0x460, C 0xA8, then func_800C3098.
+      - [0xB37F0, c, func_800C2FF0]
       # func_800C3098 — display-mode selector + D_800E27AC refresh, VRAM
       # 0x800C3098, file 0xB3898, size 0x9C (39 words). era -O2 -G0;
       # void return (retail leaves the callee's $v0 in place, any
