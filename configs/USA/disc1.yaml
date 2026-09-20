@@ -761,6 +761,21 @@ segments:
       # for func_80050308; era -O2 -G0, exact first phrasing.
       - [0x37CA8, c, func_800474A8]
       - [0x37CD0, asm]
+      # C leaf func_8004905C — VRAM 0x8004905C, size 0x54, file 0x3985C-0x398B0.
+      # File-menu open: prime the menu cursor, then hand D_8009CF30*0x14+0x48
+      # and D_8009CF68 to the menu helpers. era -O2 -G8 (gp-relative scalars).
+      - [0x3985C, c, func_8004905C]
+      - [0x398B0, asm]
+      # C leaf func_8004AF3C — VRAM 0x8004AF3C, size 0x68, file 0x3B73C-0x3B7A4.
+      # Save/load file-menu page 0x21: allocate/bind a node and install the
+      # +0x2C/+0x30 callbacks. era -O2 -G0.
+      - [0x3B73C, c, func_8004AF3C]
+      - [0x3B7A4, asm]
+      # C leaf func_8004B03C — VRAM 0x8004B03C, size 0x68, file 0x3B83C-0x3B8A4.
+      # Save/load file-menu page 0x23, same skeleton as func_8004AF3C with the
+      # 0x23 callbacks. era -O2 -G0.
+      - [0x3B83C, c, func_8004B03C]
+      - [0x3B8A4, asm]
       # Tier-2 B: independently referenced callback-registration wrapper
       # for func_80050438; era -O2 -G0, exact first phrasing.
       - [0x3BD34, c, func_8004B534]
@@ -1012,7 +1027,22 @@ segments:
       - [0x48518, c, func_80057D18]
       - [0x48530, asm]
       - [0x486CC, c, func_80057ECC]
-      - [0x486D8, asm]
+      # C leaf func_80057ED8 — VRAM 0x80057ED8, size 0x3C, file 0x486D8-0x48714.
+      # Signed-index clamp over the halfword table D_800A1FD4; the count is the
+      # gp-relative scalar D_8009D078 (0x308($gp)). era -O2 -G8 +
+      # ERA_ASPSX_VER=2.30 (three-word lui/addu/lh-%lo indexed load).
+      - [0x486D8, c, func_80057ED8]
+      - [0x48714, asm]
+      # C leaf func_80058E08 — VRAM 0x80058E08, size 0x3C, file 0x49608-0x49644.
+      # Twin of func_80057ED8 over D_8009D044 / D_800A1E00. era -O2 -G8 +
+      # ERA_ASPSX_VER=2.30 (three-word indexed halfword load).
+      - [0x49608, c, func_80058E08]
+      - [0x49644, asm]
+      # C leaf func_80059EC8 — VRAM 0x80059EC8, size 0x40, file 0x4A6C8-0x4A708.
+      # Two-entry store pair; indexed stores need ERA_ASPSX_VER=2.30
+      # (lui/addu/sw-%lo) while D_8009D048 stays gp-relative. era -O2 -G8.
+      - [0x4A6C8, c, func_80059EC8]
+      - [0x4A708, asm]
       - [0x4C090, c, func_8005B890]
       - [0x4C09C, c, func_8005B89C]
       - [0x4C0A8, asm]
@@ -1339,6 +1369,25 @@ segments:
       # Unsigned-byte global getter on D_8009574E; plain -O1 matches.
       - [0x654B8, c, func_80074CB8]
       - [0x654C8, asm]
+      # C leaf func_80074DC0 — VRAM 0x80074DC0, size 0x68, file 0x655C0-0x65628.
+      # Conditional global hook D_80095748 then the +0x3C *D_80095744 method.
+      # era -O2 -G0 + MASPSX_FILL_EPILOGUE_DELAY_SLOT.
+      - [0x655C0, c, func_80074DC0]
+      - [0x65628, asm]
+      # C leaf func_8007506C — VRAM 0x8007506C, size 0x60, file 0x6586C-0x658CC.
+      # Register D_800118D4 then dispatch through *D_80095744's +0x8 method.
+      # era -O2 -G0 + MASPSX_FILL_EPILOGUE_DELAY_SLOT.
+      - [0x6586C, c, func_8007506C]
+      # C leaf func_800750CC — VRAM 0x800750CC, size 0x60, file 0x658CC-0x6592C.
+      # Same dispatcher over D_800118E0's +0x1C handle field.
+      # era -O2 -G0 + MASPSX_FILL_EPILOGUE_DELAY_SLOT.
+      - [0x658CC, c, func_800750CC]
+      - [0x6592C, asm]
+      # C leaf func_80075358 — VRAM 0x80075358, size 0x5C, file 0x65B58-0x65BB4.
+      # Two *D_80095744 calls (+0x3C then +0x14) with arg0[3] latched across.
+      # era -O2 -G0 + MASPSX_FILL_EPILOGUE_DELAY_SLOT.
+      - [0x65B58, c, func_80075358]
+      - [0x65BB4, asm]
       # func_800755BC — VRAM 0x800755BC, size 0x34, file 0x65DBC-0x65DF0.
       # Forward to func_80071A34 with a fixed 0x5C size, return arg0;
       # era -O2 -G0 with the epilogue stack restore in the `jr $ra` slot.
@@ -1475,6 +1524,11 @@ segments:
       # Folded quarter-wave sine lookup. era_o2_g0_three_word.
       - [0x68530, c, func_80077D30]
       - [0x685C0, asm]
+      # C leaf func_8007A244 — VRAM 0x8007A244, size 0x60, file 0x6AA44-0x6AAA4.
+      # Reset a block of absolute globals around a func_8007C444(0,D_800C20C4)
+      # call, returning its result. era -O2 -G0.
+      - [0x6AA44, c, func_8007A244]
+      - [0x6AAA4, asm]
       # Phase 5BK: C leaf func_8007A324 — VRAM 0x8007A324, size 0x10.
       # Unsigned-byte global getter on D_8009AFC4; plain -O1 matches.
       - [0x6AB24, c, func_8007A324]

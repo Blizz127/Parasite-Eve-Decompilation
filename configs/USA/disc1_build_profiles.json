@@ -122,6 +122,16 @@
         "-G8"
       ]
     },
+    "era_o2_g8_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30"
+      }
+    },
     "era_o2_g8_force_d8009d2e8_absolute": {
       "toolchain": "era",
       "flags": [
@@ -276,7 +286,11 @@
       "func_8007DD74",
       "func_800755BC",
       "func_80075AE8",
-      "func_80075C94"
+      "func_80075C94",
+      "func_80074DC0",
+      "func_80075358",
+      "func_8007506C",
+      "func_800750CC"
     ],
     "era_o2_g0_fill_store_delay_slot": [
       "func_80074A14",
@@ -375,10 +389,16 @@
       "func_800339A0",
       "func_80038910",
       "func_8005E4E4",
-      "func_8005E518"
+      "func_8005E518",
+      "func_8004905C"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
+    ],
+    "era_o2_g8_aspsx_230": [
+      "func_80057ED8",
+      "func_80058E08",
+      "func_80059EC8"
     ],
     "era_o2_g8_three_word": [
       "func_8001266C",
