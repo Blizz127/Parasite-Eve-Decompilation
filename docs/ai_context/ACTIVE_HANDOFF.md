@@ -220,9 +220,9 @@ contract).
 ## SESSION STATUS 2026-09-20 — verified state snapshot
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**708**
-registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 708 packed C
-spans equal retail). Coverage: 708/4517 functions (15.67%). Remaining queue:
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**709**
+registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 709 packed C
+spans equal retail). Coverage: 709/4512 functions (15.71%). Remaining queue:
 **1681 non-matching functions / 611,668 bytes**, ranked in
 `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
 `python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
