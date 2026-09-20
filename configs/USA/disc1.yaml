@@ -670,6 +670,13 @@ segments:
       # stays in $s0. Head of 35614.s; resume 35698.s 0x2324.
       - [0x35614, c, func_80044E14]
       - [0x35698, asm]
+      # func_80046ABC — allocate + wire two render objects, VRAM
+      # 0x80046ABC, file 0x372BC, size 0x9C (39 words). era -O2 -G0
+      # (also exact on -G8); char* object pointers keep the callback
+      # stores through $s0/$s1. Mid-35698 carve: prefix 0x1C24, C 0x9C,
+      # resume 37358.s 0x664.
+      - [0x372BC, c, func_80046ABC]
+      - [0x37358, asm]
       # Tier-2 B: callback registration wrapper for func_80047040;
       # two independent exact-start stores, era -O2 -G0, first phrasing.
       - [0x379BC, c, func_800471BC]
