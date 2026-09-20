@@ -174,7 +174,7 @@ segments:
       # Phase 5GE: D_8009D2F0 flag-0x20 clearer, era -O2 -G0.
       - [0x93C8, c, func_80018BC8]
       - [0x93EC, c, func_80018BEC]
-      - [0x9410, asm]
+      - [0x9410, c, func_80018C10]
       # Phase 5GG: two-reader call wrapper, era -O2 -G0.
       - [0x9458, c, func_80018C58]
       # Phase 5GH: two-reader call wrapper, era -O2 -G0.
@@ -233,7 +233,10 @@ segments:
       # int func_800438C0(int); return 1. Era -O2 -G0 (no $gp references).
       # Mid-9ADC carve: prefix 0x1A8, C 0x2C, resume 9CB0.s to 9FD0.
       - [0x9C84, c, func_80019484]
-      - [0x9CB0, asm]
+      # agent/decompile-100: deref-forward-store pair (0x9CB0/0x9CF8).
+      - [0x9CB0, c, func_800194B0]
+      - [0x9CF8, c, func_800194F8]
+      - [0x9D40, asm]
       # Probe: bit-13 setter with retail $v1 global-pointer allocation.
       - [0x9E18, c, func_80019618]
       # Probe: companion bit-13 clearer with retail $v0/$a0 allocation.
@@ -792,7 +795,12 @@ segments:
       - [0x4E410, c, func_8005DC10]
       # Global-offset byte-table getter: era -O2 -G0.
       - [0x4E428, c, func_8005DC28]
-      - [0x4E44C, asm]
+      # agent/decompile-100: indexed table lookup quartet (field +4/+8/+0xC/+0x10).
+      - [0x4E44C, c, func_8005DC4C]
+      - [0x4E49C, c, func_8005DC9C]
+      - [0x4E4EC, c, func_8005DCEC]
+      - [0x4E53C, c, func_8005DD3C]
+      - [0x4E58C, asm]
       # Global word plus record-base helper: era -O2 -G0.
       - [0x4E670, c, func_8005DE70]
       - [0x4E688, asm]
@@ -941,6 +949,14 @@ segments:
       # Phase 5FA: conditional offset-0x14 pointer helper.
       - [0x621C4, c, func_800719C4]
       - [0x621E4, asm]
+      # agent/decompile-100: D_8009566C vtable dispatch family (6 leaves).
+      - [0x64494, c, func_80073C94]
+      - [0x644C4, c, func_80073CC4]
+      - [0x644F4, c, func_80073CF4]
+      - [0x64524, asm]
+      - [0x64558, c, func_80073D58]
+      - [0x64588, c, func_80073D88]
+      - [0x645B8, c, func_80073DB8]
       - [0x645E8, c, func_80073DE8]
       # Phase 5BX: C leaf func_80073DF8 — VRAM 0x80073DF8, size 0x18.
       # Halfword pointer deref on D_80095674 (lui/lw/nop/lhu0/jr/nop).
@@ -1300,6 +1316,10 @@ segments:
       # Sets D_800BCD80 and D_800BCD84..90 from masked args, then calls
       # func_8008CBA8. Unmatched neighbours stay asm.
       - [0x765E8, asm]
+      # agent/decompile-100: selector + change-guarded setter.
+      - [0x76714, c, func_80085F14]
+      - [0x76744, c, func_80085F44]
+      - [0x76768, asm]
       - [0x76C64, c, func_80086464]
       - [0x76C98, c, func_80086498]
       - [0x76CCC, c, func_800864CC]
@@ -1428,6 +1448,13 @@ segments:
       # File span 0x804B4–0x804BC exclusive. Zero halfword at arg0+0x82.
       - [0x804B4, c, func_8008FCB4]
       - [0x804BC, asm]
+      # agent/decompile-100: flag-clear/status-set trio (0x24 each).
+      - [0x806D8, c, func_8008FED8]
+      - [0x806FC, asm]
+      - [0x80854, c, func_80090054]
+      - [0x80878, asm]
+      - [0x80978, c, func_80090178]
+      - [0x8099C, asm]
       # Phase 5O: C leaf func_800904A0 — VRAM 0x800904A0, size 0xC.
       # File span 0x80CA0–0x80CAC exclusive. Store 1 at halfword arg0+0x84.
       - [0x80CA0, c, func_800904A0]
