@@ -582,6 +582,9 @@ segments:
       - [0x27DE0, asm]
       - [0x28064, c, func_80037864]
       - [0x28070, asm]
+      # func_80038910 — VRAM 0x80038910, size 0x30, file 0x29110-0x29140.
+      # Six-argument gp-relative record seed (u16 x3, u8 x4). era -O2 -G8.
+      - [0x29110, c, func_80038910]
       - [0x29140, c, func_80038940]
       - [0x29154, asm]
       # func_80038CE4 — VRAM 0x80038CE4, size 0x28, file 0x294E4-0x2950C.
@@ -1064,6 +1067,10 @@ segments:
       - [0x4E914, c, func_8005E114]
       - [0x4E920, c, func_8005E120]
       - [0x4E92C, asm]
+      # func_8005E4E4 / func_8005E518 — gp-guarded call result masked to a bit
+      # and normalised to 0/1. era -O2 -G8.
+      - [0x4ECE4, c, func_8005E4E4]
+      - [0x4ED18, c, func_8005E518]
       # GP-guarded worker call returning zero when inactive: era -O2 -G8.
       - [0x4ED4C, c, func_8005E54C]
       - [0x4ED7C, c, func_8005E57C]
@@ -1166,13 +1173,22 @@ segments:
       # Block init of the D_800BCF88..D_800BD028 scratch struct. era_o2_g0.
       - [0x56370, c, func_80065B70]
       - [0x56438, asm]
+      # func_80067B40 — VRAM 0x80067B40, size 0x34, file 0x58340-0x58374.
+      # Store a0/0 to D_800BCFFA/B, then masked-OR 0x400 into D_800BCF88 via a
+      # local pointer. Default era_o2_g0.
+      - [0x58340, c, func_80067B40]
+      - [0x58374, asm]
       # func_8006A25C — game-over destination saver, VRAM 0x8006A25C,
       # file 0x5AA5C, size 0x8C (35 words). era -O2 -G0; shared $a0 base
       # for D_800B0CD8 (local pointer) and the void-return tail order
       # `D_800A77F4 = t; D_8009D280 = 0xA9400048; *p |= 0x100;`.
-      # Mid-56438 carve: prefix 0x4624, C 0x8C, resume 5AAE8.s 0x2D4.
+      # Mid-56438 carve: prefix 0x4624, C 0x8C.
       - [0x5AA5C, c, func_8006A25C]
-      - [0x5AAE8, asm]
+      # func_8006A2E8 — VRAM 0x8006A2E8, size 0x30, file 0x5AAE8-0x5AB18.
+      # Bounded (a1 < 0x10) broadcast of a u16 copy to two u16 and one u8
+      # globals. era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1.
+      - [0x5AAE8, c, func_8006A2E8]
+      - [0x5AB18, asm]
       # Phase 5EZ: C leaf func_8006A5BC — VRAM 0x8006A5BC, size 0x90 (36 words).
       # Boot init with two VSync-polled wait loops (VSync = func_80073A44,
       # SDK). era -O1 -G0: per-use $s0=1 materialization (in 86FF8's delay
@@ -1241,6 +1257,15 @@ segments:
       # Signed-halfword indexed offset reader: era -O2 -G0.
       - [0x5F46C, c, func_8006EC6C]
       - [0x5F484, asm]
+      # func_8006F224 — VRAM 0x8006F224, size 0xA0, file 0x5FA24-0x5FAC4.
+      # Free-slot search over the two id arenas D_800942E4/D_800942E8
+      # (pointer globals, strides 0xA0C/0x10C). Default era_o2_g0.
+      - [0x5FA24, c, func_8006F224]
+      # func_8006F2C4 — VRAM 0x8006F2C4, size 0xD8, file 0x5FAC4-0x5FB9C.
+      # Id-arena record reset (00 FF FF FF at +0..+3, zeroed +4/+8); voice-table
+      # clear + volume-flag bit when handler byte is 0x72. Default era_o2_g0.
+      - [0x5FAC4, c, func_8006F2C4]
+      - [0x5FB9C, asm]
       # Two-phase subsystem teardown wrapper: era -O2 -G0.
       - [0x60BF4, c, func_800703F4]
       - [0x60C1C, asm]
@@ -1326,7 +1351,10 @@ segments:
       # func_80075C6C — VRAM 0x80075C6C, size 0x28, file 0x6646C-0x66494.
       # GPU primitive packer: +3 = 2, +4 = 0xE6000001/0 by a1, +8 = 0.
       - [0x6646C, c, func_80075C6C]
-      - [0x66494, asm]
+      # func_80075C94 - VRAM 0x80075C94, size 0x54, file 0x66494-0x664E8.
+      # Descriptor writer; era -O2 -G0 + fill-epilogue-delay-slot.
+      - [0x66494, c, func_80075C94]
+      - [0x664E8, asm]
       # Phase 5FF: command-word builder with two flag bits and a masked field.
       - [0x66950, c, func_80076150]
       - [0x66970, asm]
@@ -1429,7 +1457,10 @@ segments:
       - [0x684EC, asm]
       # decomp-continue-4: sign-abs wrapper around func_80077D30.
       - [0x684F4, c, func_80077CF4]
-      - [0x68530, asm]
+      # func_80077D30 - VRAM 0x68530, size 0x90, file 0x68530-0x685C0.
+      # Folded quarter-wave sine lookup. era_o2_g0_three_word.
+      - [0x68530, c, func_80077D30]
+      - [0x685C0, asm]
       # Phase 5BK: C leaf func_8007A324 — VRAM 0x8007A324, size 0x10.
       # Unsigned-byte global getter on D_8009AFC4; plain -O1 matches.
       - [0x6AB24, c, func_8007A324]
@@ -1486,6 +1517,11 @@ segments:
       # Tier-2 probe: three-word state setter func_8007C544.
       # Former 0x6C93C asm span: prefix 0x408, C 0x1C, resume 0x1944.
       - [0x6C93C, asm]
+      # func_8007C444 — VRAM 0x8007C444, size 0x34, file 0x6CC44-0x6CC78.
+      # Bottom-tested clear of `a1` 0x20-byte records based at D_800C0DC8 + a0.
+      # Default era_o2_g0.
+      - [0x6CC44, c, func_8007C444]
+      - [0x6CC78, asm]
       - [0x6CD44, c, func_8007C544]
       # Phase 5EF: zero-argument func_8007D074 forwarding wrapper.
       - [0x6CD60, asm]
@@ -1496,6 +1532,11 @@ segments:
       - [0x6D6AC, asm]
       - [0x6D854, c, func_8007D054]
       - [0x6D874, asm]
+      # func_8007DBC8 — VRAM 0x8007DBC8, size 0x3C, file 0x6E3C8-0x6E404.
+      # u16 table read via pointer global D_8009B3FC, optional `<< D_8009B424`
+      # when a1 != -1. Default era_o2_g0.
+      - [0x6E3C8, c, func_8007DBC8]
+      - [0x6E404, asm]
       # func_8007DC5C / func_8007DC84 — RMW on the word at pointer global
       # D_8009B410 (file 0x6E45C-0x6E484-0x6E4AC): clear bits 24-27, set
       # 0x20000000 / 0x22000000. Default era_o2_g0. Resume asm at 0x6E4AC.
@@ -1529,6 +1570,10 @@ segments:
       - [0x6E848, asm]
       - [0x6E8C0, c, func_8007E0C0]
       - [0x6E8F8, asm]
+      # func_8007E594 — VRAM 0x8007E594, size 0x30, file 0x6ED94-0x6EDC4.
+      # 0x18-byte descriptor clear by downward pointer loop. Default era_o2_g0.
+      - [0x6ED94, c, func_8007E594]
+      - [0x6EDC4, asm]
       # Phase 5EF: direct func_8007FB04 forwarding wrapper.
       - [0x6F664, c, func_8007EE64]
       - [0x6F684, asm]
@@ -1661,6 +1706,11 @@ segments:
       # Phase 5EF: direct func_80082DBC forwarding wrapper.
       - [0x72D54, c, func_80082554]
       - [0x72D74, asm]
+      # func_80082ADC — VRAM 0x80082ADC, size 0x2C, file 0x732DC-0x73308.
+      # Install two callback pointers plus two zero words around D_800A5AB4
+      # through a barrier-held base register. Default era_o2_g0.
+      - [0x732DC, c, func_80082ADC]
+      - [0x73308, asm]
       # Phase 5EF: return-and-clear int state flag.
       - [0x734DC, c, func_80082CDC]
       - [0x734F0, asm]
@@ -1802,7 +1852,11 @@ segments:
       - [0x777AC, c, func_80086FAC]
       - [0x777F8, c, func_80086FF8]
       - [0x77824, c, func_80087024]
-      - [0x77850, asm]
+      # func_80087050 — VRAM 0x80087050, size 0x40, file 0x77850-0x77890.
+      # Poll/test the low bit of the volatile global D_8009D2E0; a0==0 waits
+      # for it to clear then returns 0. Default era_o2_g0.
+      - [0x77850, c, func_80087050]
+      - [0x77890, asm]
       - [0x778E0, c, func_800870E0]
       - [0x778F0, asm]
       # Phase 5EK: D_8009D270 unsigned-int flags setters (READY-FROM-BITWISE).
@@ -1889,6 +1943,9 @@ segments:
       # Probe: companion signed-byte state-word setter.
       - [0x7CA70, c, func_8008C270]
       - [0x7CA90, asm]
+      # func_8008C6D0 - VRAM 0x8008C6D0, size 0x3C, file 0x7CED0-0x7CF0C.
+      # Word store then OR 3 across a 0x18-record table. Default era_o2_g0.
+      - [0x7CED0, c, func_8008C6D0]
       # Probe: D_8009D2C8 halfword setter in the return delay slot.
       - [0x7CF0C, c, func_8008C70C]
       - [0x7CF20, asm]
@@ -1910,6 +1967,10 @@ segments:
       # Phase 5DB: C leaf func_8008D820 — file 0x7E020, size 0x24.
       - [0x7E020, c, func_8008D820]
       - [0x7E044, asm]
+      # func_8008E7F4 - VRAM 0x8008E7F4, size 0x4C, file 0x7EFF4-0x7F040.
+      # Unsigned halfword compare + dispatch. Default era_o2_g0.
+      - [0x7EFF4, c, func_8008E7F4]
+      - [0x7F040, asm]
       # func_8008F178 — VRAM 0x8008F178, size 0x38, file 0x7F978-0x7F9B0.
       - [0x7F978, c, func_8008F178]
       - [0x7F9B0, asm]
@@ -2017,7 +2078,9 @@ segments:
       # Phase 5S: C leaf func_800906B4 — VRAM 0x800906B4, size 0x30.
       # File span 0x80EB4–0x80EE4 exclusive. Stream byte + flag ORs at +0x38/+0xF4.
       - [0x80EB4, c, func_800906B4]
-      - [0x80EE4, asm]
+      # func_800906E4 - VRAM 0x800906E4, size 0x38, file 0x80EE4-0x80F1C.
+      # Indexed byte load + flag RMW; era_o2_g0_three_word.
+      - [0x80EE4, c, func_800906E4]
       # func_8009071C — VRAM 0x8009071C, size 0x38, file 0x80F1C-0x80F54.
       # Ring-buffer insert of *a0 at +4+4*idx; clear +0x62+2*idx. era_o2_g0.
       - [0x80F1C, c, func_8009071C]
@@ -2235,6 +2298,17 @@ segments:
       # C 0x8 + resume 0xFBC (= 0xBD780 - 0xBC7C4) = 0xFC4.
       - [0xBC7BC, c, func_800CBFBC]
       - [0xBC7C4, asm]
+      # func_800CCA40 - VRAM 0x800CCA40, size 0x38, file 0xBD240-0xBD278.
+      # Byte/halfword step + arm flag. Default era_o2_g0.
+      - [0xBD240, c, func_800CCA40]
+      # func_800CCA78 - VRAM 0x800CCA78, size 0x38, file 0xBD278-0xBD2B0.
+      # Twin of 800CCA40 (6/0xB4 step). Default era_o2_g0.
+      - [0xBD278, c, func_800CCA78]
+      - [0xBD2B0, asm]
+      # func_800CCB6C - VRAM 0x800CCB6C, size 0x3C, file 0xBD36C-0xBD3A8.
+      # Twin (8/0x1A4 step) with byte clamp. Default era_o2_g0.
+      - [0xBD36C, c, func_800CCB6C]
+      - [0xBD3A8, asm]
       # Tier-2 W callback: exact-start table entry at 0xD16A4. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: BC7C4 prefix 0xEF8, C 0x2C, resume BD6E8.s 0x98.

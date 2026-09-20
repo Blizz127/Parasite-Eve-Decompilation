@@ -275,7 +275,8 @@
       "func_80075C04",
       "func_8007DD74",
       "func_800755BC",
-      "func_80075AE8"
+      "func_80075AE8",
+      "func_80075C94"
     ],
     "era_o2_g0_fill_store_delay_slot": [
       "func_80074A14",
@@ -320,7 +321,10 @@
       "func_8007A400",
       "func_8007A434",
       "func_800858E8",
-      "func_800428D4"
+      "func_800428D4",
+      "func_8006A2E8",
+      "func_800906E4",
+      "func_80077D30"
     ],
     "era_o2_g0_passthrough_load": [
       "func_80076B44",
@@ -368,7 +372,10 @@
       "func_80026FD0",
       "func_8004F464",
       "func_80064C54",
-      "func_800339A0"
+      "func_800339A0",
+      "func_80038910",
+      "func_8005E4E4",
+      "func_8005E518"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
