@@ -10,11 +10,9 @@
  * docs/ai_context/PC_PORT_FROM_DECOMP.md.
  */
 #include "pe_guest_decomp.h"
-/* boundary: func_8007DDB4 has no pc_port implementation yet */
-#define func_8007DDB4(...) PE_D_COMP_BOUNDARY3("func_8007DDB4", 0x8007DDB4u, __VA_ARGS__)
-
-/* boundary: func_8007DDC4 has no pc_port implementation yet */
-#define func_8007DDC4(...) PE_D_COMP_BOUNDARY1("func_8007DDC4", 0x8007DDC4u, __VA_ARGS__)
+/* func_8007DDB4 and func_8007DDC4 now have real host implementations in
+ * pc_port/platform/pe_libcard.c (empty-slot card kernel model), so this
+ * wrapper calls them instead of stopping at loud boundaries. */
 
 void func_8007DD74(pe_addr_t pe_a0)
 {
