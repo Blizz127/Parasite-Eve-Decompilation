@@ -180,7 +180,9 @@ segments:
       - [0x8F18, c, func_80018718]
       # Phase 600: bit-2 setter with retail $v1 global-pointer allocation.
       - [0x8F54, c, func_80018754]
-      - [0x8F74, asm]
+      # func_80018774 — VRAM 0x80018774, size 0x4C, file 0x8F74-0x8FC0.
+      - [0x8F74, c, func_80018774]
+      - [0x8FC0, asm]
       - [0x9064, c, func_80018864]
       - [0x9094, c, func_80018894]
       - [0x90C4, asm]
