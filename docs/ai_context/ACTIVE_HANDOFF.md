@@ -125,9 +125,9 @@ contract).
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**655**
-registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 655 packed C
-spans equal retail). Coverage: 655/4570 functions (14.33%). Remaining queue:
-**1734 non-matching functions / 614,748 bytes**, ranked in
+registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 679 packed C
+spans equal retail). Coverage: 679/4546 functions (14.94%). Remaining queue:
+**1710 non-matching functions / 613,356 bytes**, ranked in
 `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
 `python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
 1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
@@ -154,7 +154,7 @@ floating upstream cannot break it again), and a `pe-mipsel` distrobox (Debian
 trixie, binutils 2.44) that `build_us.sh` auto-detects. `local/pe_disc1.path`
 points at the attic Disc 1 image.
 
-**Tests.** `pe-native-tests` **1383 run / 1383 passed / 0 failed / 0 skipped**.
+**Tests.** `pe-native-tests` **1384 run / 1384 passed / 0 failed / 0 skipped**.
 `pe-route-boot-day2-tests` **27/27 ordered Day-1 milestones** to the
 `m0020i` save/load menu (42000 frames, frame-limit stop), executed path invokes
 only 4 HOST_ADAPTED stubs and **0 UNSUPPORTED**. The harness now applies the
@@ -162,8 +162,8 @@ same recorded `kDay1RoutePads` sequence as the interactive autopilot (shared
 `PeRoutePad_ParseSequence`/`ApplySequence` in `pe_route_pad.h`), so it follows
 the live route instead of parking at `m0004i`. `pe-transition-outer-tests` 5/5.
 `pe-decomp-port-tests`: all 272 generated TUs reproduce from `src/` authority
-(229 src-backed regenerate byte-for-byte, 37 real orphans allowlisted; the
-new leaves restored authority for 39 that were orphaned). Full CTest 11/11.
+(all src-backed TUs regenerate byte-for-byte, 28 real orphans allowlisted; the
+new leaves keep restoring orphan authority). Full CTest 11/11.
 
 **Live port.** Real Disc 1 boots and renders. `--route-pad` autopilot (windowed)
 plays Day 1: opera house, first battle, field rooms. `--headless --route-pad`
