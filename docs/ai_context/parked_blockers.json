@@ -472,6 +472,24 @@
    "lane": "agent/pb-multiunit",
    "target": "func_800C2D0C (VRAM 0x800C2D0C, file 0xB350C, size 0x94, unit B3390)",
    "note": "Mount-table slot writer + counter. Best candidate 18/37 words differ on era -O2 -G0. Structure and pointer arithmetic are exact (idx*6, `addu v0,v1,v0` via `extern unsigned int D_800F34F4` + `(unsigned char *)(idx + D_800F34F4)`, three reloads preserved by the store-aliasing). Remaining divergences: (a) retail materializes the D_800E2248 field into `$a0` with `addu a0,v0,zero` and reuses it for `out + arg2`; cc1 rematerializes the same `lh 4($a1)` as `lhu a0,4($a1)` for the phi-init instead of the register copy under every phrasing tried (single var, val+out pair, short/int out, ternary, if/else, register `asm()` pins on $2/$4). (b) consequently the later `out + arg2` lands in `$v1` not `$a0`, and the early `lui a1,%hi(D_800E2248)` is scheduled one slot later (a nop fills its place). Approaches tried and rejected: pointer vs integer base, idx/index+base operand order, return type int/unsigned char, n as int vs unsigned char, tern/if/plain branchless forms. No yaml/src change landed."
+  },
+  {
+   "id": "pb-wave2-b-8004542C",
+   "status": "PARKED-REGISTER-ALLOCATION",
+   "lane": "agent/wave2-b",
+   "target": "func_8004542C (VRAM 0x8004542C, file 0x35C2C, size 0xF0, unit 35698)",
+   "note": "Equipment-page window builder (port spec pc_port/game/boot/func_8004542C_port.c). Best candidate (build/scratch/f4542C_v3.c) is instruction-count exact (240/240) with only 9 differing words, all register-allocation/scheduling: retail keeps the hoisted gp flag 0x1AC($gp) in $v1 and materialises the three callback addresses one at a time into $v0, doing `move s0,v0` (list home) at 0x38; cc1 under -O2 -G8 instead puts the flag in $a0 and the addresses in $v1/$v0 and sinks `move s0,v0` to 0x50, then stores through $v1. Sources tried: direct global condition, local `int flag` read after the two allocations (v3, closest), read before the callback stores, -fschedule-insns2, MASPSX_THREE_WORD_SYMBOL_STORE=1, ERA_ASPSX_VER=2.30, MASPSX_FILL_*_DELAY_SLOT=1. No yaml/src change landed.",
+   "evidence": "build/scratch/f4542C_v3.c; try_leaf vs 0x35C2C 0xF0 -O2 -G8",
+   "next": "Needs a cc1 register-home/CSE lever (flag in $v1, address temps in $v0) or the exact original statement order that makes cc1 hoist the D_8009CE54+0xC8 load above the callback stores without a local."
+  },
+  {
+   "id": "pb-wave2-b-80045EE4",
+   "status": "PARKED-SCHEDULING",
+   "lane": "agent/wave2-b",
+   "target": "func_80045EE4 (VRAM 0x80045EE4, file 0x366E4, size 0xC0, unit 35698)",
+   "note": "Equipment-window variant (same shape as func_8004542C, port spec func_80045EE4_port.c). Best candidate 208 vs 192 bytes (4 extra words). cc1 hoists the `lw 0x64($s0)` RMW load ABOVE the func_8004F9A0 callback store and leaves the flag load 0x1AC($gp) after it, so the ori/store cannot fill the beqz delay slot; retail keeps callback store -> lw 0x64 -> lw gp -> ori -> beqz -> sw(delay). Tried: direct condition, local flag before/after the RMW, `|=` compound form, the four maspsx gates/versions. No yaml/src change landed.",
+   "evidence": "build/scratch/f45EE4.c, build/scratch/f45EE4_v3.c; try_leaf vs 0x366E4 0xC0 -O2 -G8",
+   "next": "Same class as pb-wave2-b-8004542C: prevent cc1 from hoisting the RMW load above the callback store, or make it hoist the gp flag instead so maspsx can fold the store into the beqz delay slot."
   }
  ]
 }
