@@ -499,7 +499,8 @@
       "func_8001A890"
     ],
     "era_o2_g8_three_word_force_d8009d1a0_absolute": [
-      "func_80021D4C"
+      "func_80021D4C",
+      "func_8003E974"
     ],
     "era_o2_g8_vm_dispatch": [
       "func_80012850"

@@ -881,6 +881,54 @@
    ],
    "evidence": "agent/base-mat investigation report (0 commits; worktree clean at 74a5382b)",
    "next": "Do NOT re-attempt these with a maspsx gate - it was prototyped and measured (320B/46 diffs -> 304B/43 diffs, all positional). Reopen only with a compiler-level lever (a patched cc1, or a different cc1 build) or by finding a C shape that changes the liveness so the base must be callee-saved."
+  },
+  {
+   "id": "wave7a-35D1C-func_8004551C-reorg-dup-delay-slot",
+   "status": "PARKED-CODEGEN",
+   "note": "func_8004551C (file 0x35D1C, size 0x154) equipment status-window digit emitter, era -O2 -G8. The ONLY residual is retail's nop in the func_80062CC4 call delay slot at +0x7C: cc1 emits `beq $2,$0,$L9 / li $4,0x1E` (arg setup copied into the branch delay slot) AND keeps the original `li $4,0x1E` in the jal delay slot, so one redundant instruction; retail keeps the copy in the beq slot and nops the jal slot. Confirmed in raw cc1 output (reorg duplication), not a maspsx artifact. A nested `if`, a named `sel` local, -fno-thread-jumps, -fno-cse-follow-jumps, -fschedule-insns2, -O1/-O3 and aspsx 2.30 all leave the duplicate. No existing maspsx gate removes a filled delay slot.",
+   "evidence": "try_leaf build/wave7a-wip/func_8004551C.c 0x35D1C 0x154 -O2 -G8: 1 differing word (0x007C retail 00000000 vs cand 2404001E)."
+  },
+  {
+   "id": "wave7a-B2C14-func_800C2414-param-counter-home-swap",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_800C2414 (file 0xB2C14, size 0x108) actor-script record dispatcher, era -O2 -G0. Instruction stream otherwise correct; retail keeps arg0 in $s0 and the 16-bit loop counter in $s1, cc1 assigns arg0->$s1 and counter->$s0, so all 16 diffs are the two homes. Declaration order (i before/after rec, counter init before/after the pointer stores) does not change it; `register short i asm(\"$17\")` and `register char *arg0 asm(\"$16\")` both make cc1 exit 33. The v-version (`short i; int v; v=i<<16`) DOES give the right homes but adds a loop-carried `sll` before the compare.",
+   "evidence": "try_leaf build/wave7a-wip/func_800C2414.c 0xB2C14 0x108 -O2 -G0: 16 diffs all s0<->s1; v-version 14 diffs."
+  },
+  {
+   "id": "wave7a-6F414-func_8007EC14-base-materialisation-wall",
+   "status": "PARKED-CODEGEN",
+   "note": "func_8007EC14 (file 0x6F414, size 0x144) render-list initialiser, era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1. The three indexed D_800A3515/25/35 stores match with the gate; the blockers are the D_800B8AB0 and D_800A3510 clear blocks: retail materialises the base (`lui %hi; addiu %lo; sw $0,0/4/8(base)` and `sw $0,0x20/0x10/0(base)` + three sb), cc1 2.7.2 folds the base back into per-store SYM+off macros (6 vs 5 words and 12 vs 8 words). A local `int *b=(int*)D_800B8AB0;` is folded to the same macros; incomplete-array form gives la+off(base) which is the wrong shape. This is the known-open cc1 base-materialisation wall.",
+   "evidence": "try_leaf build/wave7a-wip/func_8007EC14.c 0x6F414 0x144 -O2 -G0 MASPSX_THREE_WORD_SYMBOL_STORE=1: 30 diffs; raw cc1 emits sw $0,D_800B8AB0+0/+4/+8."
+  },
+  {
+   "id": "wave7a-11928-func_80021128-absolute-globals-schedule",
+   "status": "PARKED-CODEGEN",
+   "note": "func_80021128 (file 0x11928, size 0x150) actor-state step selector, era -O2 -G8 + MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D278,D_8009D254. Addressing fixed (both pointers must be forced absolute). Residual is scheduling/allocator: retail inserts a load-use nop after `lw a0,0x68(v0)` before `lh v1,6(a0)` while cc1 schedules the pair adjacent, and retail keeps the reloaded descriptor in $v1/$a0 where cc1 uses $a0/$a1, shifting the else block by two words. Inlining vs a kind/flags local, aspsx 2.30 and -fschedule-insns2 do not close it.",
+   "evidence": "try_leaf build/wave7a-wip/func_80021128.c 0x11928 0x150 -O2 -G8 --force-absolute D_8009D278,D_8009D254: 38 diffs."
+  },
+  {
+   "id": "wave7a-36D74-func_80046574-cross-jump",
+   "status": "PARKED-CODEGEN",
+   "note": "func_80046574 (file 0x36D74, size 0x14C) equipment confirmation, era -O2 -G8. Semantics/control flow exact; cc1 cross-jumps the two identical func_80062A34(2,5) tails into one shared block (retail keeps two separate call sites, the second fed by `bnez; addiu a1,5`), and the branch layout puts the D_8009CF18==0 arm first. 50 diffs. Same cross-jump family as func_80059534 / func_800C2EAC.",
+   "evidence": "try_leaf build/wave7a-wip/func_80046574.c 0x36D74 0x14C -O2 -G8: 50 diffs."
+  },
+  {
+   "id": "wave7a-58374-func_80067B74-record-addressing-schedule",
+   "status": "PARKED-CODEGEN",
+   "note": "func_80067B74 (file 0x58374, size 0x148) fade-in ramp, era -O2 -G0 + MASPSX_EXPAND_DIV=1. The checked signed division matches. Retail reads D_800B1624 twice (lw a1; lw a0) and keeps the record base in a0 with `lw v1,0x30(a0)` / `lhu a2,0x26(a0)`; cc1 (char* or struct source, volatile or not) folds the record offset into a rec+0x26 base and schedules the header fields around the step subtraction, shifting the whole loop (44-47 diffs). Homes: retail step->$a3, record->$a0, counts->$t1/$a2; cc1 differs.",
+   "evidence": "try_leaf build/wave7a-wip/func_80067B74.c 0x58374 0x148 -O2 -G0 MASPSX_EXPAND_DIV=1: 44 diffs (char*) / 47 (struct)."
+  },
+  {
+   "id": "wave7a-648D0-func_800740D0-allocation-schedule",
+   "status": "PARKED-CODEGEN",
+   "note": "func_800740D0 (file 0x648D0, size 0x148) D_800945E8 slot-bit setter, era -O2 -G0. Semantics exact; cc1 computes the base-4 alias a2 in the first beq delay slot where retail computes it in the table-enabled beqz delay, uses $v0 rather than retail's $a0 as the record pointer, and schedules the slot stores differently (51 diffs). The two same-address halfword updates must stay distinct (a2+0x30 on the set path, base+0x2C on the clear path).",
+   "evidence": "try_leaf build/wave7a-wip/func_800740D0.c 0x648D0 0x148 -O2 -G0: 51 diffs."
+  },
+  {
+   "id": "wave7a-49D34-func_80059534-cross-jump",
+   "status": "PARKED-CODEGEN",
+   "note": "func_80059534 (file 0x49D34, size 0x158) equipment-selection commit, era -O2 -G8. Signedness fix (signed char D_800C0E20[]) restores retail's lb/bltz; the two-home `short t = tv;` copy is needed for `addu a1,v1` + func_8005DB44's second arg. Residual is cross-jumping: cc1 merges the D_800C0E20-0x1F74 and D_8009DE64 arms into one shared addu tail (retail has two inline j...;addu sites) and the arm layout/delay slots shift (46 diffs).",
+   "evidence": "try_leaf build/wave7a-wip/func_80059534.c 0x49D34 0x158 -O2 -G8: 46 diffs."
   }
  ]
 }
