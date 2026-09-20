@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""Emit the matching C leaves for the CD-command wrapper family in 765E8.s.
+
+The family sets the command word D_800BCD80, stores up to four masked
+arguments into consecutive words D_800BCD84..D_800BCD90, then issues
+func_8008CBA8(). Every member was triaged with tools/analysis/try_leaf.py and
+proved by scripts/build_us.sh (see docs/evidence/agent-decompile-100-cd-wrappers).
+
+Run from the repository root:  python3 tools/analysis/gen_cd_wrappers.py
+"""
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+# name: (file_offset, size, cmd, [(slot, expr), ...], params)
+TABLE = [
+    ("func_80086464", 0x76C64, 0x34, 0x10, [("84", "a0")], ["a0"]),
+    ("func_80086498", 0x76C98, 0x34, 0x11, [("84", "a0")], ["a0"]),
+    ("func_800864CC", 0x76CCC, 0x2C, 0x40, [], []),
+    ("func_80086568", 0x76D68, 0x3C, 0x12, [("84", "a0"), ("88", "a1")], ["a0", "a1"]),
+    ("func_800865A4", 0x76DA4, 0x64, 0x20,
+     [("84", "a0 & 0x3FF"), ("88", "a1 & 0xFFFFFF"),
+      ("8C", "a2 & 0xFF"), ("90", "a3 & 0x7F")], ["a0", "a1", "a2", "a3"]),
+    ("func_800866A4", 0x76EA4, 0x4C, 0x21,
+     [("84", "a0 & 0xFFFF"), ("88", "a1 & 0xFFFFFF")], ["a0", "a1"]),
+    ("func_800866F0", 0x76EF0, 0x38, 0x30, [("84", "a0 & 0x3FF")], ["a0"]),
+    ("func_80086770", 0x76F70, 0x40, 0x90, [("84", "a0 & 0xFFFFFF")], ["a0"]),
+    ("func_800867B0", 0x76FB0, 0x34, 0x92, [("84", "a0")], ["a0"]),
+    ("func_80086874", 0x77074, 0x38, 0xA8, [("84", "a0 & 0x7F")], ["a0"]),
+    ("func_800868AC", 0x770AC, 0x44, 0xA9,
+     [("84", "a0 & 0xFF"), ("88", "a1 & 0x7F")], ["a0", "a1"]),
+    ("func_800868F0", 0x770F0, 0x58, 0xA0,
+     [("84", "a0 & 0xFFFF"), ("88", "a1 & 0xFFFFFF"), ("8C", "a2 & 0x7F")],
+     ["a0", "a1", "a2"]),
+    ("func_80086948", 0x77148, 0x64, 0xA1,
+     [("84", "a0 & 0xFFFF"), ("88", "a1 & 0xFFFFFF"),
+      ("8C", "a2 & 0xFF"), ("90", "a3 & 0x7F")], ["a0", "a1", "a2", "a3"]),
+    ("func_800869AC", 0x771AC, 0x38, 0xAA, [("84", "a0 & 0xFF")], ["a0"]),
+    ("func_800869E4", 0x771E4, 0x44, 0xAB,
+     [("84", "a0 & 0xFF"), ("88", "a1 & 0xFF")], ["a0", "a1"]),
+    ("func_80086A28", 0x77228, 0x58, 0xA2,
+     [("84", "a0 & 0x3FF"), ("88", "a1 & 0xFFFFFF"), ("8C", "a2 & 0xFF")],
+     ["a0", "a1", "a2"]),
+    ("func_80086A80", 0x77280, 0x64, 0xA3,
+     [("84", "a0 & 0x3FF"), ("88", "a1 & 0xFFFFFF"),
+      ("8C", "a2 & 0xFF"), ("90", "a3 & 0xFF")], ["a0", "a1", "a2", "a3"]),
+    ("func_80086AE4", 0x772E4, 0x38, 0xAC, [("84", "a0 & 0xFF")], ["a0"]),
+    ("func_80086B1C", 0x7731C, 0x44, 0xAD,
+     [("84", "a0 & 0xFF"), ("88", "a1 & 0xFF")], ["a0", "a1"]),
+    ("func_80086B60", 0x77360, 0x58, 0xA4,
+     [("84", "a0 & 0xFFFF"), ("88", "a1 & 0xFFFFFF"), ("8C", "a2 & 0xFF")],
+     ["a0", "a1", "a2"]),
+    ("func_80086BB8", 0x773B8, 0x64, 0xA5,
+     [("84", "a0 & 0xFFFF"), ("88", "a1 & 0xFFFFFF"),
+      ("8C", "a2 & 0xFF"), ("90", "a3 & 0xFF")], ["a0", "a1", "a2", "a3"]),
+    ("func_80086C1C", 0x7741C, 0x40, 0xC0,
+     [("84", "a1 & 0x7F"), ("90", "a0")], ["a0", "a1"]),
+    ("func_80086C5C", 0x7745C, 0x48, 0xC1,
+     [("84", "a1"), ("88", "a2 & 0x7F"), ("90", "a0")], ["a0", "a1", "a2"]),
+    ("func_80086CA4", 0x774A4, 0x54, 0xC2,
+     [("84", "a1"), ("88", "a2 & 0x7F"), ("8C", "a3 & 0x7F"), ("90", "a0")],
+     ["a0", "a1", "a2", "a3"]),
+    ("func_80086CF8", 0x774F8, 0x34, 0xC8, [("84", "a0")], ["a0"]),
+    ("func_80086D2C", 0x7752C, 0x3C, 0xC9, [("84", "a0"), ("88", "a1")], ["a0", "a1"]),
+    ("func_80086D68", 0x77568, 0x44, 0xCA,
+     [("84", "a0"), ("88", "a1"), ("8C", "a2")], ["a0", "a1", "a2"]),
+    ("func_80086DAC", 0x775AC, 0x38, 0xD0, [("84", "a0 & 0xFF")], ["a0"]),
+    ("func_80086DE4", 0x775E4, 0x40, 0xD1,
+     [("84", "a0"), ("88", "a1 & 0xFF")], ["a0", "a1"]),
+    ("func_80086E24", 0x77624, 0x4C, 0xD2,
+     [("84", "a0"), ("88", "a1 & 0xFF"), ("8C", "a2 & 0xFF")], ["a0", "a1", "a2"]),
+    ("func_80086E70", 0x77670, 0x38, 0xD4, [("84", "a0 & 0xFF")], ["a0"]),
+    ("func_80086EA8", 0x776A8, 0x40, 0xD5,
+     [("84", "a0"), ("88", "a1 & 0xFF")], ["a0", "a1"]),
+    ("func_80086EE8", 0x776E8, 0x4C, 0xD6,
+     [("84", "a0"), ("88", "a1 & 0xFF"), ("8C", "a2 & 0xFF")], ["a0", "a1", "a2"]),
+    ("func_80086F34", 0x77734, 0x38, 0xD8, [("84", "a0 & 0xFF")], ["a0"]),
+    ("func_80086F6C", 0x7776C, 0x40, 0xD9,
+     [("84", "a0"), ("88", "a1 & 0xFF")], ["a0", "a1"]),
+    ("func_80086FAC", 0x777AC, 0x4C, 0xDA,
+     [("84", "a0"), ("88", "a1 & 0xFF"), ("8C", "a2 & 0xFF")], ["a0", "a1", "a2"]),
+    ("func_80086FF8", 0x777F8, 0x2C, 0xF0, [], []),
+    ("func_80087024", 0x77824, 0x2C, 0xF1, [], []),
+]
+
+# Conditional-command members: a0 == 1 / 2 / other selects the command.
+COND = [
+    ("func_80086728", 0x76F28, 0x48, 0x81, 0x82, 0x80),
+    ("func_800867E4", 0x76FE4, 0x48, 0x9B, 0x9D, 0x99),
+    ("func_8008682C", 0x7702C, 0x48, 0x9A, 0x9C, 0x98),
+]
+
+PRELUDE = """/* CD command wrapper: select command and issue via func_8008CBA8.
+ * VRAM 0x{vram:08X} / file 0x{off:X} / size 0x{size:X}.
+ * Generated by tools/analysis/gen_cd_wrappers.py from the disassembly. */
+extern unsigned int D_800BCD80;
+extern unsigned int D_800BCD84;
+extern unsigned int D_800BCD88;
+extern unsigned int D_800BCD8C;
+extern unsigned int D_800BCD90;
+extern void func_8008CBA8(void);
+
+"""
+
+
+def emit(name, off, size, cmd, stores, params):
+    body = [f"void {name}({', '.join('unsigned int ' + p for p in params) if params else 'void'}) {{"]
+    body.append(f"    D_800BCD80 = 0x{cmd:X};")
+    for slot, expr in stores:
+        body.append(f"    D_800BCD{slot} = {expr};")
+    body.append("    func_8008CBA8();")
+    body.append("}")
+    Path(ROOT / "src" / f"{name}.c").write_text(
+        PRELUDE.format(vram=0x8000F800 + off, off=off, size=size) + "\n".join(body) + "\n")
+
+
+def emit_cond(name, off, size, c1, c2, c3):
+    body = f"""void {name}(unsigned int a0) {{
+    unsigned int v0;
+
+    switch (a0) {{
+    case 1:
+        v0 = 0x{c1:X};
+        break;
+    case 2:
+        v0 = 0x{c2:X};
+        break;
+    default:
+        v0 = 0x{c3:X};
+        break;
+    }}
+    D_800BCD80 = v0;
+    func_8008CBA8();
+}}
+"""
+    Path(ROOT / "src" / f"{name}.c").write_text(
+        PRELUDE.format(vram=0x8000F800 + off, off=off, size=size) + body)
+
+
+if __name__ == "__main__":
+    for row in TABLE:
+        emit(*row)
+    for row in COND:
+        emit_cond(*row)
+    print("emitted", len(TABLE) + len(COND), "sources")
