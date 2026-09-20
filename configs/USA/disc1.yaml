@@ -84,7 +84,10 @@ segments:
       - [0x7AFC, c, func_800172FC]
       - [0x7B1C, asm]
       - [0x7BF4, c, func_800173F4]
-      - [0x7C10, asm]
+      # func_80017410 — VRAM 0x80017410, size 0x34, file 0x7C10-0x7C44.
+      # func_800375E0(**a0, 0, buf[-1]) with a 0x10-byte stack halfword buffer.
+      - [0x7C10, c, func_80017410]
+      - [0x7C44, asm]
       # func_800176B8 — VRAM 0x800176B8, size 0x28, file 0x7EB8-0x7EE0.
       # OR *arg[0] into field 0x98 of pointer global D_8009D2F0; return 1.
       # Default era_o2_g0.
@@ -316,7 +319,10 @@ segments:
       - [0xA524, c, func_80019D24]
       # Probe: four-halfword forwarding wrapper.
       - [0xA544, c, func_80019D44]
-      - [0xA584, asm]
+      # func_80019D84 — VRAM 0x80019D84, size 0x34, file 0xA584-0xA5B8.
+      # func_800375E0(**a0, 1, buf[-1]) with a 0x10-byte stack halfword buffer.
+      - [0xA584, c, func_80019D84]
+      - [0xA5B8, asm]
       # Probe: call-and-store wrapper retaining descriptor across the call.
       - [0xA9A8, c, func_8001A1A8]
       # Probe: state bit-24 setter with retail $v0/$a0 allocation.
@@ -605,6 +611,13 @@ segments:
       # func_800504BC; era -O2 -G0, exact first phrasing.
       - [0x3BD5C, c, func_8004B55C]
       - [0x3BD84, asm]
+      # func_8004BC80 — VRAM 0x8004BC80, size 0x34, file 0x3C480-0x3C4B4.
+      # Allocate command 0x16 and install func_8004BCB4 at +0x30. era_o2_g0.
+      - [0x3C480, c, func_8004BC80]
+      # func_8004BCB4 — VRAM 0x8004BCB4, size 0x34, file 0x3C4B4-0x3C4E8.
+      # func_8005E8A4(0,4); func_8005F594(func_8005DC4C(0x19)). era_o2_g0.
+      - [0x3C4B4, c, func_8004BCB4]
+      - [0x3C4E8, asm]
       - [0x3C708, c, func_8004BF08]
       - [0x3C740, asm]
       # Phase 5EJ: constant handle construction and dispatch.
