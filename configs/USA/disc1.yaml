@@ -235,7 +235,10 @@ segments:
       # Mid-98BC carve: prefix 0x1FC, C×2, resume 9ADC.s to 9C84.
       - [0x9AB8, c, func_800192B8]
       - [0x9AC8, c, func_800192C8]
-      - [0x9ADC, asm]
+      # func_800192DC — VRAM 0x800192DC, size 0x30, file 0x9ADC-0x9B0C.
+      # func_8006FC18(**a0, D_8009D2F0, 0); return 1. era_o2_g0.
+      - [0x9ADC, c, func_800192DC]
+      - [0x9B0C, asm]
       # Phase 5EF: call-and-return-one wrapper around func_800703F4.
       - [0x9BB8, c, func_800193B8]
       - [0x9BD8, asm]
@@ -409,6 +412,9 @@ segments:
       # Phase 5FP-370A8: fixed-point quotient helper, era -O2 -G0.
       # Mid-26C48 carve: prefix 0xC60, C 0x14, resume 278BC.s.
       - [0x26C48, asm]
+      # func_80036DC8 — VRAM 0x80036DC8, size 0x30, file 0x275C8-0x275F8.
+      # Three-call init sequence 36DF8/36E34/36E58. era_o2_g0.
+      - [0x275C8, c, func_80036DC8]
       # func_80036DF8 — VRAM 0x80036DF8, size 0x3C, file 0x275F8-0x27634.
       # volatile two-store flag protocol for D_800A76A8/A4/A0. era_o2_g0.
       - [0x275F8, c, func_80036DF8]
@@ -826,6 +832,9 @@ segments:
       - [0x4C974, asm]
       - [0x4CC88, c, func_8005C488]
       - [0x4CC98, asm]
+      # func_8005D940 — VRAM 0x8005D940, size 0x30, file 0x4E140-0x4E170.
+      # Fill an 8-byte record from D_8009D280, then submit it. era_o2_g0.
+      - [0x4E140, c, func_8005D940]
       # Volume campaign: signed-threshold gp state selector; size 0x24,
       # era -O2 -G8.
       - [0x4E170, c, func_8005D970]
@@ -1042,6 +1051,10 @@ segments:
       # Unsigned-byte global getter on D_8009574E; plain -O1 matches.
       - [0x654B8, c, func_80074CB8]
       - [0x654C8, asm]
+      # func_80075B1C — VRAM 0x80075B1C, size 0x30, file 0x6631C-0x6634C.
+      # Call the +0x38 method of *D_80095744; return its sign bit. era_o2_g0.
+      - [0x6631C, c, func_80075B1C]
+      - [0x6634C, asm]
       # func_80075C6C — VRAM 0x80075C6C, size 0x28, file 0x6646C-0x66494.
       # GPU primitive packer: +3 = 2, +4 = 0xE6000001/0 by a1, +8 = 0.
       - [0x6646C, c, func_80075C6C]
