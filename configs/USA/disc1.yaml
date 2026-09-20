@@ -284,7 +284,9 @@ segments:
       - [0x9EA0, c, func_800196A0]
       # Probe: companion state bit-14 clearer with retail $v0/$a0 allocation.
       - [0x9EC4, c, func_800196C4]
-      - [0x9EE8, asm]
+      # func_800196E8 — VRAM 0x800196E8, size 0x40, file 0x9EE8-0x9F28.
+      # D_8009D2F8 = (short *)(D_8009D2F0->0x9C) + *a0[0]; D_8009D264 = *a0[1].
+      - [0x9EE8, c, func_800196E8]
       # Probe: isolated global bit-2 setter with retail $at store address.
       - [0x9F28, c, func_80019728]
       # Probe: companion global bit-2 clearer with retail $at store address.
