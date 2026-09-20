@@ -140,6 +140,9 @@ segments:
       - [0x85C0, c, func_80017DC0]
       - [0x85E4, c, func_80017DE4]
       - [0x8620, asm]
+      # func_80017E68 — VRAM 0x80017E68, size 0x34, file 0x8668-0x869C.
+      # Mask-subset predicate: *(a0[1]) = ((D_8009D2F0->0x98 & *a0[0]) == *a0[0]).
+      - [0x8668, c, func_80017E68]
       # Phase 5AK: C leaf func_80017E9C — VRAM 0x80017E9C, size 0x8.
       # File span 0x869C–0x86A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).
