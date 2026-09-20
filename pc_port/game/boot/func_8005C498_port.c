@@ -19,13 +19,16 @@ void func_8004DCA4(uint32_t mode)
     func_8005DE88();
     if (func_80062A34(1u,13u) || func_80062A34(1u,23u)) return;
     if (mode) {
-        /* Retail 0x8004DCE4: mode != 0 calls func_80054294 (D_8009D068); a
-         * return of 0 runs the single direct func_8005C488() call in the whole
-         * EXE (close: D_8009D034=1 -> func_8005C498 -> func_800512AC(9) ->
-         * D_8009D010 = UINT32_MAX).  A non-zero return keeps the menu open and
-         * runs the unported func_80048918(0,-2,-1). */
+        /* Retail 0x8004DCE4: s0 != 0 calls func_80054294 (gp+0x2F8 =
+         * D_8009D068).  When it returns 0 the game CLOSES the card menu via
+         * func_8005C488 -> D_8009D034=1 -> func_8005C498 -> func_800512AC(9)
+         * -> D_8009D010=UINT32_MAX.  NOTE: this is the inventory-rename close
+         * path, reached only from func_80016F10 (0x80016F10), which the
+         * Day-1 --route-pad route never calls; the save menu's own exit is
+         * func_8004D2DC event&0x40.  Kept retail-faithful rather than a
+         * blanket boundary. */
         if (func_80054294() == 0) { func_8005C488(); return; }
-        menu_boundary("func_8004DCA4_48918");
+        menu_boundary("func_8004DCA4_48918");   /* unported func_80048918(0,-2,-1) */
         return;
     }
     func_8004DD64(-1);

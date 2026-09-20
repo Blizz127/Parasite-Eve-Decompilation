@@ -2,7 +2,12 @@
  * No guest positions, resources, story or commands are supplied.
  * Provenance: docs/ai_context/DAY2_REHEARSAL_ROUTE.md.
  * First 86 pairs: supplies and entry. Remaining 665: raw battle pads.
- * Automatic Cross pulses are suppressed during [42713,45041).
+ * Automatic Cross pulses are suppressed during [42713,45041) and
+ * [38620,42000).  The second window is the Day-1 save point: the
+ * automatic Cross at 38611 opens the save menu, and Circle must then be
+ * PRESSED TWICE: the first 0x40 is consumed by the slot-list window
+ * (func_8004D6D4) and only the second reaches the file menu
+ * (func_8004D2DC).  See docs/evidence/pe-save-menu-close/REPORT.md.
  * Two sewer suffixes extend the prefix through both hallway victories. */
 #include "route_sewer_pads.h"
 #include "route_second_sewer_pads.h"
@@ -21,7 +26,7 @@ static const char kDay1RoutePads[] =
     "34150:BFFF,34152:FFFF,34190:DFFF,34192:FFFF,34220:DFFF,34222:FFFF,"
     "35000:FF7F,35040:FFBF,35064:FF7F,35080:FFBF,35104:FF7F,35112:FFBF,"
     "35128:FF7F,35136:FFBF,35144:FF7F,35176:FFBF,35224:FFFF,36500:FFDF,"
-    "36532:FFBF,36612:FFDF,36868:FFFF,38000:FFDF,38090:FFEF,38610:FFFF,"
+    "36532:FFBF,36612:FFDF,36868:FFFF,38000:FFDF,38090:FFEF,38610:FFFF,38620:DFFF,38630:FFFF,38640:DFFF,38650:FFFF,"
     "42000:FFEF,42400:FFFF,42713:FFFF,42715:BFFF,42716:FFFF,42723:BFFF,"
     "42724:FFFF,42731:BFFF,42732:FFFF,42739:BFFF,42740:FFFF,42747:BFFF,"
     "42748:FFFF,42755:BFFF,42756:FFFF,42763:BFFF,42764:FFFF,42771:BFFF,"

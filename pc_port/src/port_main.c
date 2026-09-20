@@ -87,6 +87,11 @@ static int g_route_frame;
 static int g_frame;
 static unsigned g_sewer_victories, g_sewer_enemy_peak[3];
 static int g_pulse_end = 33620, g_pulse_resume = 35300;
+/* Second, independent periodic-Cross suppression window.  The first one
+ * ([PE_ROUTE_PULSE_END, PE_ROUTE_PULSE_RESUME)) covers the recorded battle
+ * gap; this one covers the Day-1 save point, where an automatic Cross
+ * re-opens the file menu the instant the script's Circle press closes it. */
+static int g_pulse2_begin = 38620, g_pulse2_end = 42000;
 static int g_exact_pad_begin = 42713, g_exact_pad_end = 45041;
 static int g_sewer_pad_begin = 50500, g_sewer_pad_end = 51200;
 static int g_second_sewer_pad_begin = 52344, g_second_sewer_pad_end = 54500;
@@ -194,6 +199,7 @@ static uint16_t RoutePadSource(void)
         !(g_frame>=g_sewer_pad_begin && g_frame<g_sewer_pad_end) &&
         !(g_frame>=g_second_sewer_pad_begin && g_frame<g_second_sewer_pad_end) &&
         !(g_frame>=g_supply_pad_begin && g_frame<g_supply_pad_end) &&
+        !(g_frame>=g_pulse2_begin && g_frame<g_pulse2_end) &&
         (g_frame<g_pulse_end || g_frame>=g_pulse_resume) && (g_frame%g_route_pad.period)==3)
         mask&=g_route_pad.pulse;
     mask=RouteRewardSewerPilot(mask);
@@ -685,6 +691,20 @@ int main(int argc, char **argv) {
          * untranslated title/menu is still in front of the field and no pad
          * can get past it. */
         PeRoutePad_ConfigFromEnv(&g_route_pad);
+        {
+            /* Host-only probe hooks: let the periodic-Cross suppression
+             * window be moved without a rebuild while the route is
+             * exercised (the save point at ~38612 needs the autopilot to
+             * stop pulsing Cross so the menu stays closed). */
+            const char *pe = getenv("PE_ROUTE_PULSE_END");
+            const char *pr = getenv("PE_ROUTE_PULSE_RESUME");
+            const char *b2 = getenv("PE_ROUTE_PULSE2_BEGIN");
+            const char *e2 = getenv("PE_ROUTE_PULSE2_END");
+            if (pe && pe[0]) g_pulse_end = atoi(pe);
+            if (pr && pr[0]) g_pulse_resume = atoi(pr);
+            if (b2 && b2[0]) g_pulse2_begin = atoi(b2);
+            if (e2 && e2[0]) g_pulse2_end = atoi(e2);
+        }
         g_route_frame = 0;
         g_frame = 0;
         g_sewer_victories = 0;
