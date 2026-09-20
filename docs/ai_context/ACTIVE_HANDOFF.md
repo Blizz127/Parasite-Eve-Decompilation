@@ -7,6 +7,61 @@
 
 # ACTIVE HANDOFF
 
+## WAVE-6 SLICE A (`agent/wave6-a`, 2026-09-20): 884 -> 888, executed-path functions
+
+**Branch `agent/wave6-a`, worktree `/tmp/pe-agent-w11`.** Baseline gate re-run
+first: `scripts/split_us.sh` (host) + `build_us.sh` + `verify_us.sh`
+(pe-mipsel) reported `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (884
+registered C leaves)`, `VERIFY_US=PASS`. Final fresh build after all carves:
+same EXACT SHA-1, `Matching claim: YES (888 registered C leaves)`, plan
+`1292 spans = 888 c + 402 asm + 2 rodata`, `VERIFY_US=PASS`.
+
+Landed four executed-path targets (commits `94e45f7f`, `f08a41e8`):
+
+- `func_80068D28` (0x59528, 0xFC) — display-record data initializer. Default
+  `era_o2_g0`. **Lever:** the **indexed access form** `base[i*0x10 + n]` makes
+  cc1 keep `base` in `$a2` and seed the two running record/entry pointers at
+  `base`; the explicit `rec += 0x10` form folds `+0x36`/`+0x54` into them and
+  fails. The two trailing stores are base-relative (`*(short*)(base+0x6E/0x70)`)
+  so `move v0,zero` precedes them and the 0x70 store fills the `jr` delay slot.
+- `func_8004BB80` (0x3C380, 0x100) — score/mode gate. Profile
+  **`era_o2_g8_aspsx_230`**. **Levers:** the gp score pair at `0x278/0x27C($gp)`
+  (`0x8009CFE8/EC`) has **no symbol** — it is the unnamed gap above
+  `D_8009CFB0`, addressed as `*(int*)((char*)&D_8009CFB0 + 0x38/0x3C)`;
+  `D_800C0E00` must be an **incomplete array** to stay absolute in the `-G8`
+  unit; aspsx **2.30** removes the `<2.30` nop between a load and the expanded
+  `$at` store.
+- `func_80065260` (0x55A60, 0x10C) — two-stage weighted ratio update. **New
+  profile `era_o2_g0_expand_div_aspsx_230`** (`-O2 -G0` + `ERA_ASPSX_VER=2.30`
+  + `MASPSX_EXPAND_DIV=1`). **Levers:** the two signed `div` blocks need
+  `EXPAND_DIV`; retail's `mflo` interlocks need aspsx 2.30 (they appear only at
+  >=2.30); the `f34` load must precede the NULL check; **home pins**
+  `register Rec *a1 asm("$5"); register int v1 asm("$3");` closed it (pin sweep:
+  only `{$5,$3}` matched, all other subsets 6-18 words off).
+- `func_8006E1C0` (0x5E9C0, 0x110) — packed colour/vertex emit. Default
+  `era_o2_g0`. **Lever:** the packed word at `+0x0C` overlaps the byte at
+  `+0x0F` (and `+0x04`/`+0x07`), so the record must be a `char *` with explicit
+  offset casts; a struct gives the wrong offsets.
+
+Five targets were **parked** (`wave6a-*` ids in `parked_blockers.json`):
+`func_8001CAB0` (51 — branch layout + `$t3/$t4/$t2` homes), `func_80067D18` (44 —
+inner `p+4` anchor fold + watermark home), `func_8007ED58` (26 — cc1 uses
+per-store absolute `$at` stores and strength-reduces the indexed loop instead
+of keeping a base register / re-materialised `$at`), `func_80036F7C` (52 — cc1
+collapses the `(v1&1)&&!(v1&4)` tests into `(v1&5)==1` and coalesces the four
+induction pointers), `func_800C9C8C` (15 — cc1 hoists `addiu $a1,$sp,0x10`
+one instruction early and uses `$v1` instead of `$v0` for the actor pointer).
+Stop condition reached (four consecutive parks).
+
+**Reusable notes from this slice:** `func_80078C34` takes **three** args
+(matched siblings `func_800C9D9C/90A4/ABC8/CA934`), so the `$a3 = mfhi` left by
+a preceding `%` is **not** an argument; a stack scratch buffer passed to a call
+must be a real **array** (`short sp[3]`) or cc1 DCEs the element stores whose
+addresses are not directly taken; and the `extern T *volatile G` declaration is
+the established way to force two independent loads of a pointer global (see
+`src/func_80067678.c`).
+
 ## agent/bigfish-1d340 (2026-09-20): `func_8001D340` NOT matched — but proven un-carveable
 
 **Branch `agent/bigfish-1d340`, worktree `/tmp/pe-agent-bigfish`.** Baseline gate
