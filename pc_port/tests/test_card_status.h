@@ -7,6 +7,10 @@ static void test_DAY1_card_status(void)
     static const uint32_t timers[]={0,1,2,0xFFFFFFFFu,0x80000000u,0x7FFFFFFFu,0x80000001u,99};
     for(unsigned n=0;n<4096;n++) {
         ResetTestState();
+        /* Register the real card events (mode 1000h) the way func_800409B4
+         * does, so the empty-slot kernel completion executes its callback
+         * and latches the status flag the machine polls. */
+        PE_Card_OpenEvents();
         for(unsigned i=0;i<0xA00;i++)PE_StoreU8(0x800A0ED4u+i,0xA5);
         unsigned index=n/2048;pe_addr_t record=0x800A0ED4u+index*0x418u;
         PE_StoreU8(record,flags[n/512%4]);PE_StoreU8(record+8u,states[n%8]);PE_StoreU8(record+1u,operations[n/32%3]);

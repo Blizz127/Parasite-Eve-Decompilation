@@ -334,6 +334,17 @@ def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_c
                 assert count<=3 and b'%' not in fmt.replace(b'%d',b''), 'unsupported BIOS printf format'
                 values=tuple(v if v<0x80000000 else v-0x100000000 for v in r[5:5+count])
                 r[2]=len(fmt % values)
+            elif r[9] == 0xAB:
+                # A(ABh) _card_info(port).  Empty slot: psx-spx _card_status
+                # 11h (failed/timeout, no cartridge), surfaced to the
+                # higher-level device events as F4000001h,2000h ("card err
+                # eject"), whose callback func_80042C14 latches A1828.
+                struct.pack_into('<I', ram, 0xA1828, 1)
+                r[2] = 0
+            elif r[9] == 0xAC:
+                # A(ACh) _card_load(port).  Same empty-slot eject report.
+                struct.pack_into('<I', ram, 0xA1828, 1)
+                r[2] = 0
             else: raise AssertionError(f'unsupported BIOS service {r[9]:X} from {r[31]:08X} in test oracle')
             pc=r[31]
             continue
@@ -344,6 +355,22 @@ def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_c
                 # never set the ready flag, so the kernel returns 0 here.
                 # https://www.problemkaputt.de/psxspx-bios-event-functions.htm
                 r[2] = 0
+            elif r[9] == 0x50:
+                # B(50h) _new_card(): clears the card-change latch only; no
+                # completion event and no documented return value.
+                r[2] = 0
+            elif r[9] == 0x4E:
+                # B(4Eh) _card_write(port,sector,src).  psx-spx: returns
+                # 1=okay or 0=failed on invalid sector numbers; sectors
+                # 0..3FFh are valid and 400h is accepted by the retail BUG.
+                # The empty slot fails asynchronously (lower-level
+                # F0000011h,2000h "err"), whose callback func_80042C64
+                # latches A1834.
+                if r[5] > 0x400:
+                    r[2] = 0
+                else:
+                    struct.pack_into('<I', ram, 0xA1834, 1)
+                    r[2] = 1
             else:
                 raise AssertionError(f'unsupported BIOS B service {r[9]:X} from {r[31]:08X} in test oracle')
             pc = r[31]

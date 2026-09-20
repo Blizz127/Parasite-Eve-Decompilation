@@ -158,6 +158,9 @@ void PE_Irq_GetSource0BiosState(PeIrqSource0BiosState *out);
  * Never returns -1 at boot (event classes used never exhaust). */
 int  PE_Event_Open(uint32_t cls, uint32_t spec, uint32_t mode, pe_addr_t handler);
 int  PE_Event_Enable(int handle);
+/* BIOS B(07h) DeliverEvent host adapter for the callback events the port
+ * delivers; executes a mode-1000h callback or marks a mode-2000h event ready. */
+int  PE_Event_Deliver(uint32_t cls, uint32_t spec);
 int  PE_Event_SpuDmaEnabled(void);
 int  PE_Event_DeliverSpuDma(void);
 int  PE_Event_ConsumeSpuDma(int handle);
@@ -192,6 +195,14 @@ void func_8008CB54(uint32_t mode); /* SPU reverb mode transition */
 
 /* ── libcard (pc_port/platform/pe_libcard.c) ────────────────────────── */
 void func_800409B4(void);            /* InitCARD + StartCARD */
+/* Card kernel operations that the retail BIOS veneers at asm/disc1/6E538.s
+ * forward to.  The port models the documented empty-slot completion; the
+ * canonical declarations for translated callers live in pe_port_compat.h. */
+int  func_8007DD44(int port);        /* A0(ABh) _card_info */
+int  func_8007DD54(int port);        /* A0(ACh) _card_load */
+int  func_8007DDC4(pe_addr_t port);  /* B0(50h) _new_card */
+int  func_8007DDB4(pe_addr_t port, int sector, pe_addr_t src); /* B0(4Eh) _card_write */
+void PE_Card_OpenEvents(void);       /* open+enable the 8 card events (test hook) */
 
 /* ── libcd (pc_port/platform/pe_libcd.c) ────────────────────────────── */
 int  func_8007EC14(void);            /* CdInit */

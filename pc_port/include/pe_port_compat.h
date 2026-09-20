@@ -18,6 +18,16 @@ void func_80122354(void);
 int func_80121C04(int id);
 void func_8006E60C(void);
 
+/* ── Card kernel BIOS veneers (host adapters in pe_libcard.c) ────────
+ * A0 ABh _card_info, A0 ACh _card_load, B0 50h _new_card, B0 4Eh
+ * _card_write, and the retail wrapper B0 50h+B0 4Eh.  The port models the
+ * documented empty slot; see pe_libcard.c. */
+int func_8007DD44(int port);
+int func_8007DD54(int port);
+int func_8007DDC4(pe_addr_t port);
+int func_8007DDB4(pe_addr_t port, int sector, pe_addr_t src);
+void func_8007DD74(pe_addr_t port);
+
 /* ── Boot Rung globals (guest-address backed) ─────────────────────── */
 /* D_800B0CD8..D_800B0CEB, D_800B0DD4, D_80094488/D_8009448C are guest-RAM
  * lvalue macros defined in psx_compat.h — no externs here. */

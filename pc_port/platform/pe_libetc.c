@@ -52,8 +52,41 @@ typedef struct {
     int      enabled;
     int      ready;
     uint32_t mode;
+    uint32_t cls;       /* OpenEvent class (event identity for delivery) */
+    uint32_t spec;      /* OpenEvent spec                          */
+    pe_addr_t handler;  /* OpenEvent callback address (mode 1000h) */
 } PeEventSlot;
 static PeEventSlot g_event_slots[PE_EVENT_TABLE_SIZE];
+
+/* Card event handlers (retail func_80042BD8..func_80042C64, opened by
+ * func_800409B4 with mode 1000h).  A mode-1000h delivery executes the
+ * callback; the port models synchronous delivery here, at the point the
+ * retail kernel would deliver, because the card status machine polls the
+ * callback's guest flag on its next invocation.  Each handler is a verified
+ * matching leaf under pc_port/game/decomp/. */
+extern int func_80042BD8(void);
+extern int func_80042BEC(void);
+extern int func_80042C00(void);
+extern int func_80042C14(void);
+extern int func_80042C28(void);
+extern int func_80042C3C(void);
+extern int func_80042C50(void);
+extern int func_80042C64(void);
+
+static int PE_Event_InvokeHandler(pe_addr_t handler)
+{
+    switch (handler) {
+    case 0x80042BD8u: (void)func_80042BD8(); return 1;
+    case 0x80042BECu: (void)func_80042BEC(); return 1;
+    case 0x80042C00u: (void)func_80042C00(); return 1;
+    case 0x80042C14u: (void)func_80042C14(); return 1;
+    case 0x80042C28u: (void)func_80042C28(); return 1;
+    case 0x80042C3Cu: (void)func_80042C3C(); return 1;
+    case 0x80042C50u: (void)func_80042C50(); return 1;
+    case 0x80042C64u: (void)func_80042C64(); return 1;
+    default: return 0;
+    }
+}
 
 #define GA_IRQ_RESET_BLOCK          0x800945E4u
 #define GA_IRQ_RESET_BLOCK_BYTES    0x00001068u
@@ -304,6 +337,9 @@ int PE_Event_Open(uint32_t cls, uint32_t spec, uint32_t mode, pe_addr_t handler)
         g_event_slots[slot].enabled = 0;
         g_event_slots[slot].ready = 0;
         g_event_slots[slot].mode = mode;
+        g_event_slots[slot].cls = cls;
+        g_event_slots[slot].spec = spec;
+        g_event_slots[slot].handler = handler;
     }
     if (cls == 0xF0000009u && spec == 0x20u && mode == 0x2000u && !handler) {
         g_spu_event_handle = handle;
@@ -351,6 +387,31 @@ int func_800726F4(int event)
         return 0;
     g_event_slots[slot].ready = 0;
     return 1;
+}
+
+/* BIOS B(07h) DeliverEvent host adapter, scoped to the callback-mode events
+ * the port itself delivers.  Retail matches the first enabled, open event
+ * with the requested (class, spec): a mode-2000h event is marked ready, and
+ * a mode-1000h event executes its callback and stays busy.  Returns nonzero
+ * when a matching enabled event consumed the delivery. */
+int PE_Event_Deliver(uint32_t cls, uint32_t spec)
+{
+    unsigned slot;
+    for (slot = 0; slot < PE_EVENT_TABLE_SIZE; slot++) {
+        PeEventSlot *event = &g_event_slots[slot];
+        if (!event->used || !event->enabled)
+            continue;
+        if (event->cls != cls || event->spec != spec)
+            continue;
+        if (event->mode == 0x1000u)
+            return PE_Event_InvokeHandler(event->handler);
+        if (event->mode == 0x2000u) {
+            event->ready = 1;
+            return 1;
+        }
+        return 0;
+    }
+    return 0;
 }
 
 int PE_Event_SpuDmaEnabled(void)
