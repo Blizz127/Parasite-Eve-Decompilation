@@ -11,16 +11,20 @@
 
 #include "pe_guest_decomp.h"
 
-#define D_8009B05C PE_DECOMP_ARRAY(0x8009B05Cu, unsigned int)
 #define D_800119CC PE_DECOMP_ARRAY(0x800119CCu, unsigned char)
+#define D_8009B05C PE_DECOMP_ARRAY(0x8009B05Cu, unsigned char *)
 
 /* ── verbatim matching leaf (src/func_8007A434.c) ───────────────────────── */
 
+/* VRAM 0x8007A434 / file 0x6AC34 / size 0x34.
+ * Pointer-table lookup with 0x7 bound; fallback is the D_800119CC string. */
 /* shimmed by pe_guest_decomp.h: D_8009B05C */
 /* shimmed by pe_guest_decomp.h: D_800119CC */
-unsigned int func_8007A434(unsigned int a0) {
-    unsigned int i = a0 & 0xFF;
-    if (i >= 7) return (unsigned int)D_800119CC;
-    return D_8009B05C[i];
+
+unsigned char *func_8007A434(unsigned int index) {
+    index &= 0xFF;
+    if (index >= 7)
+        return D_800119CC;
+    return D_8009B05C[index];
 }
 
