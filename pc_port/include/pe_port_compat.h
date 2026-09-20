@@ -314,6 +314,35 @@ void func_8006269C(pe_addr_t node);
 void func_80062F3C(uint32_t id);
 void func_80064E90(pe_addr_t node);
 void func_800647D0(pe_addr_t node,int32_t items);
+/* PE-SAVE-PAGE: func_80043DA4 command 5 (file save/load page) and the two
+ * list-rendering callbacks its 0x21/0x23 sub-pages install.  See
+ * game/boot/func_8004AD9C_port.c and game/boot/func_8005D994_port.c. */
+void func_8004AD9C(pe_addr_t owner);
+int32_t func_8004AE1C(pe_addr_t page,uint32_t event);
+void func_8004AF3C(pe_addr_t owner);
+int32_t func_8004AFA4(pe_addr_t page,uint32_t event);
+void func_8004B03C(pe_addr_t owner);
+int32_t func_8004B0A4(pe_addr_t page,uint32_t event);
+void func_8004B13C(pe_addr_t owner);
+void func_8004B214(pe_addr_t node);
+int32_t func_8004B394(pe_addr_t page,uint32_t event);
+void func_8004B584(pe_addr_t owner);
+int32_t func_8004B650(pe_addr_t window,uint32_t event);
+/* PE-SAVE-PAGE: draw wrappers that are matched src/ leaves, generated under
+ * game/decomp. */
+void func_8004FF30(int32_t slot);
+void func_8004FF58(int32_t slot);
+void func_8004FF80(int32_t slot);
+void func_8004B534(int32_t slot);
+void func_8004B55C(int32_t slot);
+void func_8005D994(int32_t mode);
+void func_8005247C(void);
+void func_80050C50(int32_t value);
+void func_80050C70(int32_t slot);
+void func_80050CB4(int32_t slot);
+void func_800504BC(int32_t a0);
+/* Matched src/ leaf used by the 0x2E page draw callback (game/decomp). */
+int func_8005E54C(void);
 /* PE-CARD-MENU: func_80041108 state-2 continuations (see
  * game/boot/func_8004D4C4_port.c). */
 int32_t func_8004D4C4(uint32_t idx,uint32_t items);

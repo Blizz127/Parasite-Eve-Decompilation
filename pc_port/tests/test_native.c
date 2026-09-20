@@ -38735,6 +38735,111 @@ static void test_OTC1_clearotagr_small_table(void)
     PASS();
 }
 
+/* PE-SAVE-PAGE — func_80043DA4 command 5, 37CD0.s / 3BD84.s.
+ *
+ * The page entry installs its input handler at +0x2C and its draw callback at
+ * +0x30; every confirm case builds the sub-page whose own callback pair is
+ * pinned here.  The confirm selection is func_80063428(list) =
+ * list[+0x34]*list[+0x48] + list[+0x44], so with a one-column list spec the
+ * column field at +0x44 selects the jump-table case directly. */
+static pe_addr_t savepage_build(void)
+{
+    PE_RamInit();
+    func_80062F9C();
+    /* func_8005DAB4(0x20) list spec: columns 1 at +8, visible 4 at +12.  A
+     * zeroed columns field makes func_800647D0 trap, as retail does. */
+    PE_StoreU32(0x80092C88u+8u,1u);
+    PE_StoreU32(0x80092C88u+12u,4u);
+    func_8004AD9C(0x11223344u);
+    return func_80062A34(1u,0x20u);
+}
+
+static void test_SAVEPAGE_8004AD9C_entry(void)
+{
+    pe_addr_t window,node;
+    TEST("SAVEPAGE_8004AD9C_entry_callbacks_owner_and_rows");
+    window=savepage_build();
+    ASSERT(window!=0u,"0x20 save page window not registered");
+    ASSERT(PE_LoadU32(window+4u)==0x11223344u,"page owner not stored at +4");
+    ASSERT(PE_LoadU32(window+44u)==0x8004AE1Cu,"page input handler not at +0x2C");
+    ASSERT(PE_LoadU32(window+48u)==0u,"0x20 page must not install a +0x30 draw");
+    node=func_80062A20(window,0u);
+    ASSERT(node!=0u,"0x20 save page has no child list");
+    ASSERT(PE_LoadU32(node+48u)==0x8004FF30u,"list draw callback not at +0x30");
+    ASSERT(PE_LoadU32(node+88u)==4u,"func_800647D0(node,4) rows");
+    /* Nothing selected: selected==-1 skips the whole jump table and still
+     * reports the event handled. */
+    PE_StoreU32(node+68u,UINT32_MAX);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"confirm with no selection");
+    PASS();
+}
+
+static void test_SAVEPAGE_8004AE1C_slot_pages(void)
+{
+    pe_addr_t window,node,page,list;
+    TEST("SAVEPAGE_8004AE1C_confirm_builds_the_four_slot_pages");
+    /* case 0 -> 0x21 */
+    window=savepage_build();node=func_80062A20(window,0u);
+    PE_StoreU32(node+68u,0u);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"case 0 confirm return");
+    page=func_80062A34(1u,0x21u);
+    ASSERT(page!=0u,"case 0 did not build the 0x21 page");
+    ASSERT(PE_LoadU32(page+44u)==0x8004AFA4u,"0x21 input handler");
+    list=func_80062A20(page,0u);
+    ASSERT(list!=0u && PE_LoadU32(list+48u)==0x8004FF58u,"0x21 draw callback");
+    /* cancel destroys the page */
+    ASSERT(func_8004AFA4(page,0x40u)==1,"0x21 cancel return");
+    ASSERT(func_80062A34(1u,0x21u)==0u,"0x21 cancel did not unlink the page");
+
+    /* case 1 -> 0x23 */
+    window=savepage_build();node=func_80062A20(window,0u);
+    PE_StoreU32(node+68u,1u);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"case 1 confirm return");
+    page=func_80062A34(1u,0x23u);
+    ASSERT(page!=0u,"case 1 did not build the 0x23 page");
+    ASSERT(PE_LoadU32(page+44u)==0x8004B0A4u,"0x23 input handler");
+    list=func_80062A20(page,0u);
+    ASSERT(list!=0u && PE_LoadU32(list+48u)==0x8004FF80u,"0x23 draw callback");
+
+    /* case 2 -> 0x2E with the nested 0x31 list */
+    window=savepage_build();node=func_80062A20(window,0u);
+    PE_StoreU32(node+68u,2u);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"case 2 confirm return");
+    page=func_80062A34(1u,0x2Eu);
+    ASSERT(page!=0u,"case 2 did not build the 0x2E page");
+    ASSERT(PE_LoadU32(page+44u)==0x8004B394u,"0x2E input handler");
+    ASSERT(PE_LoadU32(page+48u)==0x8004B214u,"0x2E draw callback");
+    ASSERT(PE_LoadU32(page+76u)==0x800922D4u,"0x2E +0x4C row table");
+    ASSERT(PE_LoadU32(page+64u)==1u,"0x2E +0x40 flag");
+    list=func_80062A34(2u,0x31u);
+    ASSERT(list!=0u,"0x2E did not build the nested 0x31 list");
+    ASSERT(PE_LoadU32(list+48u)==0x8004B55Cu,"0x31 draw callback");
+    {
+        pe_addr_t list2e=func_80062A34(2u,0x2Eu);
+        ASSERT(list2e!=0u,"0x2E list node missing");
+        ASSERT(PE_LoadU32(list2e+124u)==list && PE_LoadU32(list+120u)==list2e,
+               "0x2E/0x31 sibling links");
+        ASSERT(PE_LoadU32(list2e+40u)==1u,"0x2E list +0x28 flag");
+    }
+
+    /* case 3 -> 0x38 modal page; it also republishes the alarm timer */
+    window=savepage_build();node=func_80062A20(window,0u);
+    PE_StoreU32(node+68u,3u);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"case 3 confirm return");
+    page=func_80062A34(1u,0x38u);
+    ASSERT(page!=0u,"case 3 did not build the 0x38 page");
+    ASSERT(PE_LoadU32(page+44u)==0x8004B650u,"0x38 input handler");
+    ASSERT(PE_LoadU32(page+48u)==0x8004B5DCu,"0x38 draw callback");
+    ASSERT(PE_LoadU32(0x8009CFE4u)==(uint32_t)func_8005E884(),
+           "0x38 did not republish the alarm timer");
+    /* up/down adjust the timer and cancel restores it, each handled */
+    ASSERT(func_8004B650(page,0x1000u)==1,"0x38 up return");
+    ASSERT(func_8004B650(page,0x4000u)==1,"0x38 down return");
+    ASSERT(func_8004B650(page,0x10000u)==1,"0x38 confirm return");
+    ASSERT(func_8004B650(page,0x40u)==1,"0x38 cancel return");
+    PASS();
+}
+
 /* ── main ────────────────────────────────────────────────────────────── */
 #include <stdlib.h>
 #include <string.h>
@@ -40348,6 +40453,10 @@ int main(void)
     /* Decomp-derived port regression (8 tests). */
     test_DECOMP_all();
     test_DECOMPPTR_all();
+
+    /* PE-SAVE-PAGE — func_80043DA4 command 5 file save/load page (2 tests). */
+    test_SAVEPAGE_8004AD9C_entry();
+    test_SAVEPAGE_8004AE1C_slot_pages();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

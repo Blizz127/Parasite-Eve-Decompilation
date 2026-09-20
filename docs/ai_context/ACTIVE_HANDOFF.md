@@ -10,6 +10,33 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
+
+Branch `agent/4ad9c-savepage` from `160137a4`.  The field main-menu handler no
+longer stops at `Bootstrap_ReturnVoid("func_8004AD9C", ...)` for command 5.
+16 non-matching functions (`func_8004AD9C`, `func_8004AE1C`, the four slot
+pages and their handlers, `func_8005D994`, `func_8005247C`,
+`func_80050C70/50CB4`) are transcribed from 37CD0.s / 3BD84.s / 4E194.s /
+42664.s / 41470.s and registered in the `func_80063E0C` input and
+`func_800638D8` draw switches.  The five one-line list-draw wrappers
+(`func_8004FF30/58/80`, `func_8004B534/B55C`, matched `src/` leaves) are
+transcribed with the callback guest address spelled out, because the
+decomp-port generator turns a function-pointer argument into a bare
+designator.
+
+Verified: `pe-native-tests` 1394/1394 (2 new SAVEPAGE tests), CTest 11/11,
+`route-boot-day2` PASS 27/27, `gen_decomp_ports.py --check --allow-orphans`
+OK.  Only `pc_port/` changed, so the retail SHA is untouched.
+
+**Important:** instrumenting the route shows `func_80043DA4` handles exactly
+one confirm in 42000 frames and it is `command == 0`; command 5 and the whole
+new page tree are invoked **zero** times.  The m0020i "save/load menu" is the
+memory-card flow (`func_8004D6D4`/`func_8004D2DC`), not this file menu, so this
+port is a fidelity fix but **not** the `local[4]==3` gate.  Also: a fresh
+worktree fails `route-boot-day2` until the git-ignored `build/pe_card1.mcr`
+fixture is copied in (blank card -> slot list retries -> menu mode never
+clears).  See `docs/evidence/pe-save-page/REPORT.md`.
+
 ## CARD-WRITE WIRING: the save is written to the card (2026-09-20)
 
 Branch `agent/card-write` from `a598ddd0`.  `func_80041108`'s states 3..11 now

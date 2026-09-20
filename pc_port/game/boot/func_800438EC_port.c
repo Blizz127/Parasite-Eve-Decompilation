@@ -83,6 +83,7 @@ int func_80043DA4(pe_addr_t window,uint32_t event)
             func_80046378(func_80062A34(2u,5u),0u);
         }
         else if (command==4) func_800512AC(8,0u);
+        else if (command==5) func_8004AD9C(list);
         else if (command==6) func_80046DFC(list,0u);
         else {
             static const char *const pages[]={"func_80044174","func_80046ABC",
