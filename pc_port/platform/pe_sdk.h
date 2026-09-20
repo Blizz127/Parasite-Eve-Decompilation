@@ -209,6 +209,14 @@ typedef struct PeC89CTelemetry {
     int ret;                     /* exit code (0 pad, 1 bound) */
 } PeC89CTelemetry;
 void PE_C89C_GetTelemetry(PeC89CTelemetry *out); /* host-only, never guest */
+/* Host-only delivery telemetry (never guest authority).  func_8007C214 is
+ * the streaming DMA-completion callback; it is a *complete-frame* publish
+ * only when D_800B89F4 is still set, which func_8007C564 does exactly once,
+ * on the last video chunk.  A non-device surrogate publish (test fixtures)
+ * leaves this false, so func_801924F8 keeps its honest decoder boundary
+ * instead of decoding an unpopulated body. */
+int  PE_Movie_LastPublishComplete(void);
+void PE_Movie_ResetPublishState(void);
 void func_8007C214(void);
 int func_8007A88C(pe_addr_t p);
 void func_8007B964(pe_addr_t p);

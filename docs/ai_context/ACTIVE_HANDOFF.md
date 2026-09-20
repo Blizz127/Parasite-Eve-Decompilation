@@ -46,7 +46,37 @@ only; headless to 80000 frames does not hit it) with
 ← `func_80035558_walk_cut` ← `func_8003F3C4` ← `func_8001220C` ← `main`.
 `func_80016910_key2900_cut`'s `pe_e00cc` does
 `PE_LoadU8(PE_LoadU32(0x800E2800))` before checking the slot pointer, so a null
-effect-list head reaches `PE_LoadU8(0)`.
+effect-list head reaches `PE_LoadU8(0)`. **Fixed** (commit 83600b4): retail
+`func_8003F074` calls `func_800E0060` at `0x8003F284` (after `func_800125E0`,
+before `func_80074DC0`/`func_80074D28`); `func_8003F074_dest_ready_cut` now
+does the same. `pe-native-tests` 1374/1374 after the change; live windowed
+route re-verification in progress.
+
+## DAY2-159b: production movie frame delivers complete; C89C in bounds (2026-09-19)
+
+**Landed.** The opening FMV now decodes for real; the live wall moved off the
+`func_8010C89C` stub to the `func_80192CE8` media-loop remainder.
+
+- **Root cause (two):** (1) the decomp-port refactor dropped
+  `PE_CdReg_EnableDevice(7u)` from `port_main`, so the production drive model
+  was inert; (2) E0 called `func_8007C214()` directly, publishing a state-2
+  record with an all-zero body without ever running the assembly chain
+  (`data-ready IRQ -> 813E8 -> 7C564 -> arm DMA3 -> 7C214`).
+- **Invariant:** `7C214` is a *complete-frame* publish iff `D_800B89F4` is
+  still set (`7C564` sets it only on the frame's last chunk). Host-only
+  `PE_Movie_LastPublishComplete()` captures it.
+- **Fix:** enable the device; E0 pumps `HostFB_StreamTick()` on the device path
+  (direct `7C214` kept for device-less fixtures); `got_frame` runs the
+  authenticated retail tail (C89C + `7C394` + EC stores) but only for a
+  complete publish, and range-checks the arena/table first.
+- **Test:** `DAY2_movie_production_frame` calls the real `func_801924F8(0)` on
+  Disc 1 `\FMV1\FMV001.STR;1`, asserts pad-exit decode in bounds and the
+  frame-1 input/output hashes; verified to FAIL when the pump is reverted.
+- **Suite:** 1375 run / 1375 passed / 0 failed / 0 skipped.
+- Evidence: `docs/evidence/pe-cd-movie-frame-delivery/REPORT.md`.
+- **Next:** the `func_80192CE8` post-`0x80192E08` media loop (frame upload /
+  multi-frame) is the live frontier. Non-claims: no rendered frame, no pixel
+  golden, runtime 128 unchanged.
 
 ## RECOVERY: integrate the uncommitted decomp-port refactor (2026-09-19)
 

@@ -35262,6 +35262,7 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_movie_updater.h"
 #include "test_movie_player.h"
 #include "test_movie_autonomous.h"
+#include "test_movie_production.h"
 #include "test_cd_command_queue.h"
 #include "test_cd_lowlevel_init.h"
 #include "test_cd_startup_helpers.h"
@@ -40187,6 +40188,7 @@ int main(void)
     test_DAY2_movie_updater();
     test_DAY2_movie_player();
     test_DAY2_movie_autonomous();
+    test_DAY2_movie_production_frame();
     test_DAY2_movie_multiframe();
     test_DAY2_cd_command_queue();
     test_DAY2_cd_lowlevel_init();

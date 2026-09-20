@@ -14,6 +14,7 @@
 #include "game_port.h"
 #include "pe_sdk.h"
 #include "pe_disc.h"
+#include "pe_cdreg.h"
 #include "pe_guest_image.h"
 #include "pe_route_pad.h"
 #include "pe_port_compat.h"
@@ -583,6 +584,19 @@ int main(int argc, char **argv) {
             return 1;
         }
         fprintf(stderr, "[DISC] boot executable loaded into guest RAM\n");
+        /* Mounted-disc command device: required for the streaming DMA path
+         * (7C564 -> B89F4) that assembles a movie frame.  Stage147/148 keep
+         * enable explicit for tests; production --disc-image must opt in too
+         * or the E0 poll has no device to advance and never publishes a
+         * populated frame.  Restored after the decomp-port refactor dropped
+         * it (DAY2-158i evidence). */
+        if (!PE_CdReg_EnableDevice(7u)) {
+            fprintf(stderr,
+                    "[DISC] CD command device already enabled or attach failed\n");
+        } else {
+            fprintf(stderr, "[DISC] CD command device enabled (mask=7)\n");
+            TraceEvent("cd_command_device_enabled");
+        }
     }
 
     TraceEvent("native_executable_start");
