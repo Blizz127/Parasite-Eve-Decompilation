@@ -272,6 +272,17 @@
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
         "MASPSX_DISPATCH_FOLD": "jtbl_800C2128"
       }
+    },
+    "era_o2_g0_expand_div_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30",
+        "MASPSX_EXPAND_DIV": "1"
+      }
     }
   },
   "assignments": {
@@ -670,10 +681,14 @@
       "func_800438EC",
       "func_80044174",
       "func_800447F0",
-      "func_80059F08"
+      "func_80059F08",
+      "func_8004BB80"
     ],
     "era_o2_g0_dispatch_800c2128": [
       "func_800C3238"
+    ],
+    "era_o2_g0_expand_div_aspsx_230": [
+      "func_80065260"
     ]
   }
 }
