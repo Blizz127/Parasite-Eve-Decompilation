@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "generated_by": "tools/progress/exec_coverage.py",
+  "binary": "pc_port/build-coverage/parasite-eve-port",
+  "binary_sha256": "39f69938dfa6e4ba0bac94568c75ee99a4e0a632680eab55605e4fe0c4536d09",
+  "guest_boundary_map": {
+    "total": 2393,
+    "decompiled_c": 810,
+    "asm_functions": 1583
+  },
+  "primary": "route",
+  "runs": {
+    "route": {
+      "label": "route",
+      "hits_file": "docs/evidence/exec-coverage/route_exec_coverage.txt",
+      "boundaries_file": "docs/evidence/exec-coverage/route_exec_coverage_boundaries.txt",
+      "executed_host_functions": 1350,
+      "executed_guest_functions": 710,
+      "decompiled_c": 237,
+      "pc_port_only": 473,
+      "unmapped_guest_functions": 6,
+      "executed_host_helpers": 624,
+      "decompiled_c_share_percent": 33.38,
+      "unresolved_boundary_events": 0,
+      "unresolved_boundary_guest_functions": [],
+      "unresolved_boundary_unattributed_events": 0
+    },
+    "movie": {
+      "label": "movie",
+      "hits_file": "docs/evidence/exec-coverage/movie_exec_coverage.txt",
+      "boundaries_file": "docs/evidence/exec-coverage/movie_exec_coverage_boundaries.txt",
+      "executed_host_functions": 568,
+      "executed_guest_functions": 229,
+      "decompiled_c": 91,
+      "pc_port_only": 138,
+      "unmapped_guest_functions": 18,
+      "executed_host_helpers": 309,
+      "decompiled_c_share_percent": 39.74,
+      "unresolved_boundary_events": 0,
+      "unresolved_boundary_guest_functions": [],
+      "unresolved_boundary_unattributed_events": 0
+    }
+  }
+}

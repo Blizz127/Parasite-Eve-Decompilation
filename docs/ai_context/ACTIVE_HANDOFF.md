@@ -139,6 +139,35 @@ Parked this slice (all in `docs/ai_context/parked_blockers.json`):
 load-hoist scheduling), `pb-wave2-b-80013300` (2-word independent-load
 order), `pb-wave2-b-8003335C` / `pb-wave2-b-80031D6C` (cc1 LICM hoists the
 table bases out of the loop; retail re-materialises them per iteration).
+## Executed-path coverage counter landed (agent/exec-coverage, 2026-09-20)
+
+Built the missing production-run reachability counter. `cmake -S pc_port -B
+pc_port/build-coverage -DPE_EXEC_COVERAGE=ON` compiles `pe_field_runtime` with
+`-finstrument-functions` and a host-only `__cyg_profile_func_enter` counter
+(`pc_port/platform/pe_exec_coverage.c`); a constructor registers an `atexit`
+dump so a normal run writes `build/exec_coverage.txt` (one host entry address
+per line) and `build/exec_coverage_boundaries.txt`. Normal builds are untouched
+(no counter symbol, `game_port.c.o` byte-identical, CTest 11/11).
+
+`tools/progress/exec_coverage.py` resolves the hits with `nm` against the
+coverage binary and maps them onto the 2393 guest-function boundaries derived
+from `configs/USA/disc1.yaml` (810 `c` spans) + `asm/disc1/*.s` (1583
+`nonmatching` functions).
+
+Measured at `6e27fbdd` on the canonical route
+(`--headless --route-pad --max-frames 80000`): stop `frame-limit`, token
+`A8001148`, story `0x48`, 0 bootstrap stubs — **710 executed guest functions,
+237 (33.38%) backed by a decompiled C leaf, 473 pc_port-only, 6 dynamic
+overlays outside the static map, 0 unresolved loud boundaries**. Opening FMV
+(`--headless --max-frames 2000`): 229 executed, 91 (39.74%) C. The counter's
+boundary half was validated separately (187 events, 4 guest culprits).
+`tools/progress/native_metrics.py --json` now reports
+`reachable_semantic_functions: MEASURED` from
+`docs/evidence/exec-coverage/coverage.json`. Full write-up:
+`docs/evidence/exec-coverage/REPORT.md`. Coverage-build CTest: 11/11.
+
+Local-only prerequisites (git-ignored): `scripts/extract_us.sh 1` +
+`scripts/split_us.sh` produce `asm/disc1/`; both need the retail image.
 
 ## SESSION STATUS (parent, 2026-09-20): 810 matching C leaves, port green
 

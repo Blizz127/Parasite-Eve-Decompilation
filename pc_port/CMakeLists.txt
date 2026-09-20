@@ -11,6 +11,18 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Sanitizer option
 option(PE_PORT_SANITIZERS "Build with AddressSanitizer and UBSan" OFF)
 
+# Production-run reachability counter (executed-path coverage).  OFF is the
+# normal build: the field runtime keeps its usual performance and emits no
+# coverage files.  ON adds platform/pe_exec_coverage.c and compiles the field
+# runtime with GCC's -finstrument-functions; every entered function reaches
+# __cyg_profile_func_enter(), which records host function addresses.  Parse the
+# dump with tools/progress/exec_coverage.py.  See
+# docs/evidence/exec-coverage/REPORT.md.
+option(PE_EXEC_COVERAGE "Instrument the field runtime and dump executed function addresses" OFF)
+if(PE_EXEC_COVERAGE AND MSVC)
+    message(FATAL_ERROR "PE_EXEC_COVERAGE uses GCC/Clang -finstrument-functions and is not supported by MSVC")
+endif()
+
 # Source lists
 set(PLATFORM_SRCS
     platform/host_framebuffer.c
@@ -375,6 +387,13 @@ set(FIELD_RUNTIME_SRCS
     ${DECOMP_SRCS}
 )
 
+# The coverage counter is a runtime source only in an instrumented build.  It
+# defines __cyg_profile_func_enter/exit, so it must not be instrumented itself
+# (the hook functions also carry __attribute__((no_instrument_function))).
+if(PE_EXEC_COVERAGE)
+    list(APPEND FIELD_RUNTIME_SRCS platform/pe_exec_coverage.c)
+endif()
+
 # The static runtime is the reusable product boundary.  It contains the
 # translated retail graph and its host-safe providers, but not the CLI entry
 # point or the X11 presentation adapter.  Creating this target does not claim
@@ -392,6 +411,23 @@ target_compile_definitions(pe_field_runtime PUBLIC
     PE_PORT_FB_WIDTH=320
     PE_PORT_FB_HEIGHT=240
 )
+
+# Coverage build: instrument every runtime translation unit.  -fno-inline and
+# -fno-optimize-sibling-calls keep one real symbol/entry per function and keep
+# the enter/exit shadow stack balanced; -g aids post-run symbol inspection.
+# The counter TU is excluded from instrumentation so its own frames never feed
+# back into the hook.
+if(PE_EXEC_COVERAGE)
+    target_compile_definitions(pe_field_runtime PRIVATE PE_EXEC_COVERAGE=1)
+    target_compile_options(pe_field_runtime PRIVATE
+        -finstrument-functions
+        -fno-inline
+        -fno-optimize-sibling-calls
+        -g
+    )
+    set_source_files_properties(platform/pe_exec_coverage.c
+        PROPERTIES COMPILE_OPTIONS "-fno-instrument-functions")
+endif()
 
 # The command-line host is one consumer of the static runtime.  Its window
 # backend remains outside the library so non-X11 consumers do not inherit it.
