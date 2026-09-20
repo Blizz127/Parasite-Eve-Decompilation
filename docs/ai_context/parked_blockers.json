@@ -643,6 +643,16 @@
    "note": "func_800404A8 (file 0x30CA8, size 0xFC, 63 words) unit 307CC: inventory help idle-decay helper. Two selector arrays D_800A0EDC/D_800A12F4 (stride 0x418) reload the watchdog D_800A1844 to 0xC and mark D_800A1848/D_800A184C when the selector byte is 2 or 3; if a marked slot's selector is not 4 the watchdog is clamped to at most 4 and both marks cleared; returns watchdog>0. Semantics complete. Using era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 makes the `D_800A0EDC[offset]` load emit retail's 3-word `lui $at,%hi; addu $at,$at,$a0; lbu %lo($at)` form. BLOCKER: two residuals. (1) The loop entry constants 0xC/$t0 and 1/$a3 are materialised after mark/$a1 and offset/$a0 in cc1's prologue, retail has them first (`move a2,zero; li t0,0xC; li a3,1; la a1,...; lw v0,...; move a0,zero`). (2) The watchdog clamp tail is a branch-polarity/register residual: retail loads the watchdog into $a0, then `slti v0,a0,5; beqz v0,L; addiu v1,zero,4` (delay) `addu v1,a0,zero; L: sw v1,...; sw $zero,4(a1); sw $zero,0(a1)`, whereas cc1 loads into $v1 and emits `slti v0,v1,5; bnez v0,L; nop; li v1,4`. Register pins on slot/$a2, mark/$a1, offset/$a0 fixed the loop portion but not these two.",
    "evidence": "try_leaf on /tmp/f404a8{,b,c,d}.c vs file 0x30CA8 size 0xFC, era -O2 -G0 (+MASPSX_THREE_WORD_SYMBOL_STORE=1: best 18 diffs, retail 256 bytes vs candidate 272). Declaration-order and assignment-order sweeps all colour mark=$a0/offset=$a1 until pinned.",
    "next": "Retry only with a source shape that hoists 0xC/1 before the mark/offset setup and that colours the clamp temp into $a0 with a `beqz`/delay-slot-`li` shape."
+  },
+  {
+   "id": "bigfish-8001D340-whole-function-only",
+   "status": "PARKED-REGISTER-ALLOCATION (single prologue/epilogue; un-carveable)",
+   "note": "func_8001D340 (file 0xDB40, size 0x2194, 2149 instructions, 168 basic blocks) is the largest remaining nonmatching function and is on the executed-path priority list. It has exactly ONE prologue (addiu sp,-0x328), ONE epilogue and ONE jr $ra, so the prefix/resume yaml-carve technique used elsewhere CANNOT split it: it must be matched whole or stay asm. Best candidate docs/evidence/bigfish-1d340/func_8001D340_m2c_typed_frame.c compiles and is 1032 words off (-O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1) vs 1928 for the port-derived form; words 0x0000-0x0010 match. CFG, field widths, unrolled colour stores and the frame are in place, so the remaining work is register allocation only. Retail's 0x328 frame is 0x310 bytes of never-accessed local space; it needs the phantom address-taken local (same cc1 lever as func_800C6EF8). -G0 is correct (-G8 loses 1498 words).",
+   "members": [
+    "func_8001D340"
+   ],
+   "evidence": "docs/evidence/bigfish-1d340/REPORT.md (168-block table, 6 regions, field-width map, type_m2c.py)",
+   "next": "Do NOT task anyone to carve it. Iterate R1->R6 from func_8001D340_m2c_typed_frame.c; first fix the entry block (word 0x14: m2c uses andi $v1,$s0,0xFF where retail keeps $v0; word 0x28 branch displacement is 8 words short). Colour blocks need hand-unrolled stores with a per-store D_8009CDDC reload because cc1 2.7.2 does not unroll at -O2."
   }
  ]
 }
