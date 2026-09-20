@@ -1,0 +1,169 @@
+blocks 168
+  0 0x0DB40  0x8001D340 sz=0x30   n=12         | addiu $sp, $sp, -0x328       | addiu $s2, $a0, 0x4C
+  1 0x0DB70  0x8001D370 sz=0x18   n=6          | lui $v0, %hi(D_8009D1A0)     | andi $v1, $s0, 0xFF
+  2 0x0DB88  0x8001D388 sz=0x20   n=8          | lhu $v1, 0x10($a0)           | sh $a1, 0x10($a0)
+  3 0x0DBA8  0x8001D3A8 sz=0xC    n=3          | addiu $v0, $zero, 0x80       | nop 
+  4 0x0DBB4  0x8001D3B4 sz=0x2C   n=11  .L8001D3B4 | lui $v0, (0x66666667 >> 16)  | subu $v0, $a1, $v0
+  5 0x0DBE0  0x8001D3E0 sz=0xC    n=3   .L8001D3E0 | andi $v0, $a2, 0x100         | nop 
+  6 0x0DBEC  0x8001D3EC sz=0x10   n=4          | lhu $v0, 0x24($a0)           | addu $v0, $a1, $v0
+  7 0x0DBFC  0x8001D3FC sz=0x4    n=1   .L8001D3FC | sh $v0, 0x10($a0)            | sh $v0, 0x10($a0)
+  8 0x0DC00  0x8001D400 sz=0x24   n=9   .L8001D400 | lui $a1, %hi(D_8009D278)     | nop 
+  9 0x0DC24  0x8001D424 sz=0x14   n=5          | lw $v0, 0x0($s2)             | nop 
+ 10 0x0DC38  0x8001D438 sz=0x14   n=5          | lw $v0, 0x30($a1)            | sw $v0, 0x30($a1)
+ 11 0x0DC4C  0x8001D44C sz=0x8    n=2          | addiu $v0, $zero, 0x1        | sw $v0, 0x30($a1)
+ 12 0x0DC54  0x8001D454 sz=0x2C   n=11  .L8001D454 | lw $v1, 0x30($a1)            | nop 
+ 13 0x0DC80  0x8001D480 sz=0x4    n=1          | break 7                      | break 7
+ 14 0x0DC84  0x8001D484 sz=0xC    n=3   .L8001D484 | addiu $at, $zero, -0x1       | lui $at, (0x80000000 >> 16)
+ 15 0x0DC90  0x8001D490 sz=0x8    n=2          | bne $v1, $at, .L8001D49C     | nop 
+ 16 0x0DC98  0x8001D498 sz=0x4    n=1          | break 6                      | break 6
+ 17 0x0DC9C  0x8001D49C sz=0x20   n=8   .L8001D49C | mflo $v1                     | addiu $v0, $zero, 0x1999
+ 18 0x0DCBC  0x8001D4BC sz=0x4    n=1          | sw $v0, 0x2C($a1)            | sw $v0, 0x2C($a1)
+ 19 0x0DCC0  0x8001D4C0 sz=0x30   n=12  .L8001D4C0 | lui $a0, %hi(D_8009D278)     | addiu $v0, $zero, 0xF0
+ 20 0x0DCF0  0x8001D4F0 sz=0x1C   n=7          | lui $a0, %hi(D_800B0E08)     | addiu $a1, $zero, 0x455
+ 21 0x0DD0C  0x8001D50C sz=0x18   n=6          | addu $a2, $zero, $zero       | sw $v0, 0x10($sp)
+ 22 0x0DD24  0x8001D524 sz=0x4    n=1   .L8001D524 | andi $v1, $s0, 0xFF          | andi $v1, $s0, 0xFF
+ 23 0x0DD28  0x8001D528 sz=0xC    n=3   .L8001D528 | addiu $v0, $zero, 0x1        | nop 
+ 24 0x0DD34  0x8001D534 sz=0x24   n=9          | lui $v0, %hi(D_8009D254)     | addiu $v0, $zero, 0x5
+ 25 0x0DD58  0x8001D558 sz=0x8    n=2          | bne $a0, $v0, .L8001D5B8     | nop 
+ 26 0x0DD60  0x8001D560 sz=0x1C   n=7   .L8001D560 | lw $v0, 0x6C($v1)            | nop 
+ 27 0x0DD7C  0x8001D57C sz=0x14   n=5          | lw $v0, 0x4C($v1)            | nop 
+ 28 0x0DD90  0x8001D590 sz=0x8    n=2          | jal func_80021054            | nop 
+ 29 0x0DD98  0x8001D598 sz=0xC    n=3          | sll $v0, $v0, 24             | nop 
+ 30 0x0DDA4  0x8001D5A4 sz=0x14   n=5   .L8001D5A4 | lui $v0, %hi(D_8009D2E8)     | and $v0, $v0, $v1
+ 31 0x0DDB8  0x8001D5B8 sz=0x20   n=8   .L8001D5B8 | lui $v0, %hi(D_8009D254)     | addiu $v1, $zero, -0x2
+ 32 0x0DDD8  0x8001D5D8 sz=0x10   n=4          | lui $v0, %hi(D_8009D2E8)     | and $v0, $v0, $v1
+ 33 0x0DDE8  0x8001D5E8 sz=0x10   n=4   .L8001D5E8 | lui $v0, %hi(D_8009D2E8)     | ori $v0, $v0, 0x1
+ 34 0x0DDF8  0x8001D5F8 sz=0x8    n=2   .L8001D5F8 | lui $at, %hi(D_8009D2E8)     | sw $v0, %lo(D_8009D2E8)($at)
+ 35 0x0DE00  0x8001D600 sz=0x1C   n=7   .L8001D600 | lui $v1, %hi(D_8009D278)     | nop 
+ 36 0x0DE1C  0x8001D61C sz=0x4    n=1          | sw $zero, 0x8($v1)           | sw $zero, 0x8($v1)
+ 37 0x0DE20  0x8001D620 sz=0x14   n=5   .L8001D620 | lw $v0, 0x0($s2)             | nop 
+ 38 0x0DE34  0x8001D634 sz=0x18   n=6          | lui $v0, %hi(D_8009D1E8)     | addiu $v0, $zero, 0x1
+ 39 0x0DE4C  0x8001D64C sz=0x1B0  n=108        | addiu $t1, $zero, 0xFF       | sll $v0, $v1, 3
+ 40 0x0DFFC  0x8001D7FC sz=0x8    n=2   .L8001D7FC | bne $v1, $v0, .L8001D9A8     | addiu $v0, $zero, 0x2
+ 41 0x0E004  0x8001D804 sz=0x1A4  n=105        | addiu $a2, $zero, 0xC1       | sll $v0, $v1, 3
+ 42 0x0E1A8  0x8001D9A8 sz=0x8    n=2   .L8001D9A8 | bne $v1, $v0, .L8001DB60     | addiu $v0, $zero, 0x3
+ 43 0x0E1B0  0x8001D9B0 sz=0x1B0  n=108        | addiu $t1, $zero, 0x83       | sll $v0, $v1, 3
+ 44 0x0E360  0x8001DB60 sz=0x8    n=2   .L8001DB60 | bne $v1, $v0, .L8001DD1C     | addiu $a2, $zero, 0xC1
+ 45 0x0E368  0x8001DB68 sz=0x1A0  n=104        | addiu $a1, $zero, 0x28       | sll $v0, $v1, 3
+ 46 0x0E508  0x8001DD08 sz=0x14   n=5   .L8001DD08 | addu $v0, $v0, $v1           | sb $a0, %lo(D_800B0172)($at)
+ 47 0x0E51C  0x8001DD1C sz=0x1C   n=7   .L8001DD1C | lui $a0, %hi(D_8009D254)     | nop 
+ 48 0x0E538  0x8001DD38 sz=0x8    n=2          | jal func_8001A680            | addiu $a1, $zero, 0x12
+ 49 0x0E540  0x8001DD40 sz=0x10   n=4   .L8001DD40 | lb $v1, 0xC0($gp)            | addu $a0, $v1, $zero
+ 50 0x0E550  0x8001DD50 sz=0x1C   n=7          | lui $v0, %hi(D_8009D278)     | nop 
+ 51 0x0E56C  0x8001DD6C sz=0x104  n=65         | addiu $v1, $zero, -0x2001    | nop 
+ 52 0x0E670  0x8001DE70 sz=0x1C   n=7   .L8001DE70 | lui $v1, %hi(D_8009D254)     | sw $zero, 0x70($v1)
+ 53 0x0E68C  0x8001DE8C sz=0x18   n=6   .L8001DE8C | lui $v0, %hi(D_8009D1A0)     | nop 
+ 54 0x0E6A4  0x8001DEA4 sz=0x1C   n=7          | lui $v1, %hi(D_8009D278)     | addiu $v0, $v0, -0x1
+ 55 0x0E6C0  0x8001DEC0 sz=0x8    n=2          | beqz $v0, .L8001E5EC         | sw $v0, 0x34($v1)
+ 56 0x0E6C8  0x8001DEC8 sz=0x18   n=6          | lui $v0, %hi(D_8009D1E8)     | addiu $v0, $zero, 0x1
+ 57 0x0E6E0  0x8001DEE0 sz=0x1AC  n=107        | addiu $t0, $zero, 0x82       | sll $v0, $v1, 3
+ 58 0x0E88C  0x8001E08C sz=0x8    n=2   .L8001E08C | bne $v1, $v0, .L8001E238     | addiu $v0, $zero, 0x2
+ 59 0x0E894  0x8001E094 sz=0x1A4  n=105        | addiu $a2, $zero, 0x25       | sll $v0, $v1, 3
+ 60 0x0EA38  0x8001E238 sz=0x8    n=2   .L8001E238 | bne $v1, $v0, .L8001E3EC     | addiu $v0, $zero, 0x3
+ 61 0x0EA40  0x8001E240 sz=0x1AC  n=107        | addiu $t0, $zero, 0x4A       | sll $v0, $v1, 3
+ 62 0x0EBEC  0x8001E3EC sz=0x8    n=2   .L8001E3EC | bne $v1, $v0, .L8001E5A8     | addiu $a2, $zero, 0x25
+ 63 0x0EBF4  0x8001E3F4 sz=0x1A0  n=104        | addiu $a1, $zero, 0xC1       | sll $v0, $v1, 3
+ 64 0x0ED94  0x8001E594 sz=0x14   n=5   .L8001E594 | addu $v0, $v0, $v1           | sb $a0, %lo(D_800B014E)($at)
+ 65 0x0EDA8  0x8001E5A8 sz=0x24   n=9   .L8001E5A8 | lui $a0, %hi(D_8009D278)     | nop 
+ 66 0x0EDCC  0x8001E5CC sz=0x4    n=1          | sw $zero, 0x34($a0)          | sw $zero, 0x34($a0)
+ 67 0x0EDD0  0x8001E5D0 sz=0x1C   n=7   .L8001E5D0 | lui $v0, %hi(D_8009D278)     | nop 
+ 68 0x0EDEC  0x8001E5EC sz=0xD4   n=53  .L8001E5EC | addiu $a2, $zero, 0x82       | sb $v0, %lo(D_800B0196)($at)
+ 69 0x0EEC0  0x8001E6C0 sz=0x14   n=5   .L8001E6C0 | lw $v1, 0x0($s2)             | lui $v0, (0x180000 >> 16)
+ 70 0x0EED4  0x8001E6D4 sz=0x24   n=9          | lui $v0, %hi(D_8009D234)     | lui $v1, (0xFF7FFFFF >> 16)
+ 71 0x0EEF8  0x8001E6F8 sz=0x14   n=5          | lw $v0, 0x0($s2)             | sw $v0, 0x0($s2)
+ 72 0x0EF0C  0x8001E70C sz=0xC    n=3   .L8001E70C | and $v0, $v1, $v0            | nop 
+ 73 0x0EF18  0x8001E718 sz=0x14   n=5          | lui $s0, %hi(D_8009D20C)     | nop 
+ 74 0x0EF2C  0x8001E72C sz=0x4    n=1          | lui $s3, (0x1000000 >> 16)   | lui $s3, (0x1000000 >> 16)
+ 75 0x0EF30  0x8001E730 sz=0x14   n=5   .L8001E730 | lui $v0, %hi(D_8009D254)     | nop 
+ 76 0x0EF44  0x8001E744 sz=0x10   n=4          | lw $v1, 0x0($s0)             | nop 
+ 77 0x0EF54  0x8001E754 sz=0x14   n=5          | lw $v0, 0x98($s0)            | addu $s1, $v1, $zero
+ 78 0x0EF68  0x8001E768 sz=0x10   n=4          | lw $a0, 0x18($s1)            | nop 
+ 79 0x0EF78  0x8001E778 sz=0x14   n=5          | lw $v0, 0x0($s2)             | nop 
+ 80 0x0EF8C  0x8001E78C sz=0x10   n=4          | lw $v1, 0x0($s1)             | nop 
+ 81 0x0EF9C  0x8001E79C sz=0x18   n=6          | lbu $v0, 0x0($a0)            | srl $v0, $v1, 21
+ 82 0x0EFB4  0x8001E7B4 sz=0x10   n=4          | andi $v1, $v0, 0x7           | sll $v0, $v1, 1
+ 83 0x0EFC4  0x8001E7C4 sz=0x20   n=8          | addu $v0, $v0, $s1           | sw $v0, 0x10($sp)
+ 84 0x0EFE4  0x8001E7E4 sz=0x18   n=6   .L8001E7E4 | addu $a0, $s0, $zero         | sw $v0, 0x0($s2)
+ 85 0x0EFFC  0x8001E7FC sz=0x48   n=18         | lui $a0, (0x7FFFFFFF >> 16)  | sw $v1, 0x0($s2)
+ 86 0x0F044  0x8001E844 sz=0x24   n=9   .L8001E844 | lui $a0, %hi(D_8009D278)     | addu $a1, $v1, $zero
+ 87 0x0F068  0x8001E868 sz=0x48   n=18         | lhu $v0, 0xE($a0)            | nop 
+ 88 0x0F0B0  0x8001E8B0 sz=0x8    n=2          | j .L8001E8CC                 | sb $zero, 0x57($a1)
+ 89 0x0F0B8  0x8001E8B8 sz=0x14   n=5   .L8001E8B8 | lw $v0, 0x4C($a1)            | sb $v0, 0x57($a1)
+ 90 0x0F0CC  0x8001E8CC sz=0x1C   n=7   .L8001E8CC | lui $a0, %hi(D_8009D278)     | sw $v0, 0x4C($a0)
+ 91 0x0F0E8  0x8001E8E8 sz=0x14   n=5   .L8001E8E8 | lw $v0, 0x98($s0)            | nop 
+ 92 0x0F0FC  0x8001E8FC sz=0x14   n=5          | lw $v1, 0x0($s2)             | nop 
+ 93 0x0F110  0x8001E910 sz=0x10   n=4          | lw $v0, 0x10($s1)            | andi $v0, $v1, 0x200
+ 94 0x0F120  0x8001E920 sz=0x8    n=2          | bnez $v0, .L8001E948         | addiu $v0, $zero, 0x5A
+ 95 0x0F128  0x8001E928 sz=0x20   n=8          | lui $a0, %hi(D_8009D278)     | addiu $v0, $zero, 0x5A
+ 96 0x0F148  0x8001E948 sz=0x30   n=12  .L8001E948 | sb $v0, 0xC4($gp)            | addu $a1, $v1, $zero
+ 97 0x0F178  0x8001E978 sz=0x48   n=18         | lhu $v0, 0xE($a0)            | nop 
+ 98 0x0F1C0  0x8001E9C0 sz=0x8    n=2          | j .L8001E9DC                 | sb $zero, 0x57($a1)
+ 99 0x0F1C8  0x8001E9C8 sz=0x14   n=5   .L8001E9C8 | lw $v0, 0x4C($a1)            | sb $v0, 0x57($a1)
+100 0x0F1DC  0x8001E9DC sz=0x1C   n=7   .L8001E9DC | lui $a0, %hi(D_8009D278)     | sw $v0, 0x4C($a0)
+101 0x0F1F8  0x8001E9F8 sz=0x30   n=12  .L8001E9F8 | lui $a1, (0xFFF3FFFF >> 16)  | sw $v1, 0x98($v0)
+102 0x0F228  0x8001EA28 sz=0x2C   n=11         | lui $v1, %hi(D_8009D278)     | sb $v0, 0x48($v1)
+103 0x0F254  0x8001EA54 sz=0x10   n=4   .L8001EA54 | lw $s0, 0x4($s0)             | nop 
+104 0x0F264  0x8001EA64 sz=0x28   n=10  .L8001EA64 | lui $a0, %hi(D_8009D278)     | addu $a2, $v1, $zero
+105 0x0F28C  0x8001EA8C sz=0x14   n=5          | lh $v0, 0x1C($a0)            | subu $v0, $a1, $a2
+106 0x0F2A0  0x8001EAA0 sz=0x40   n=16         | lui $v1, %hi(D_8009D254)     | nop 
+107 0x0F2E0  0x8001EAE0 sz=0x8    n=2          | j .L8001EAFC                 | sb $zero, 0x57($a1)
+108 0x0F2E8  0x8001EAE8 sz=0x14   n=5   .L8001EAE8 | lw $v0, 0x4C($a1)            | sb $v0, 0x57($a1)
+109 0x0F2FC  0x8001EAFC sz=0x1C   n=7   .L8001EAFC | lui $a0, %hi(D_8009D278)     | sw $v0, 0x4C($a0)
+110 0x0F318  0x8001EB18 sz=0x18   n=6   .L8001EB18 | lui $v1, %hi(D_8009D278)     | sh $v0, 0xE($v1)
+111 0x0F330  0x8001EB30 sz=0x2C   n=11  .L8001EB30 | lw $v0, 0x0($s2)             | lui $v0, (0xC0000 >> 16)
+112 0x0F35C  0x8001EB5C sz=0x20   n=8          | lui $a1, %hi(D_8009D254)     | lui $v0, (0xFFF3FFFF >> 16)
+113 0x0F37C  0x8001EB7C sz=0x10   n=4          | lbu $v0, 0x49($v1)           | lui $v0, (0xFFF3FFFF >> 16)
+114 0x0F38C  0x8001EB8C sz=0x20   n=8   .L8001EB8C | ori $v0, $v0, (0xFFF3FFFF &  | sb $zero, 0x49($v0)
+115 0x0F3AC  0x8001EBAC sz=0xC    n=3   .L8001EBAC | lh $a0, 0x4A($v1)            | nop 
+116 0x0F3B8  0x8001EBB8 sz=0x44   n=17         | lui $a1, %hi(D_8009D278)     | nop 
+117 0x0F3FC  0x8001EBFC sz=0x50   n=20         | lui $a0, %hi(D_8009D278)     | nop 
+118 0x0F44C  0x8001EC4C sz=0x4    n=1          | break 7                      | break 7
+119 0x0F450  0x8001EC50 sz=0xC    n=3   .L8001EC50 | addiu $at, $zero, -0x1       | lui $at, (0x80000000 >> 16)
+120 0x0F45C  0x8001EC5C sz=0x8    n=2          | bne $v1, $at, .L8001EC68     | nop 
+121 0x0F464  0x8001EC64 sz=0x4    n=1          | break 6                      | break 6
+122 0x0F468  0x8001EC68 sz=0x2C   n=11  .L8001EC68 | mflo $v0                     | sb $v0, 0x48($v1)
+123 0x0F494  0x8001EC94 sz=0x8    n=2   .L8001EC94 | jal func_8001F9C4            | nop 
+124 0x0F49C  0x8001EC9C sz=0x1C   n=7   .L8001EC9C | lui $a1, %hi(D_8009D278)     | addu $a0, $zero, $zero
+125 0x0F4B8  0x8001ECB8 sz=0x8    n=2          | jal func_80032B0C            | addiu $a1, $a1, 0x50
+126 0x0F4C0  0x8001ECC0 sz=0x1C   n=7          | lui $v1, %hi(D_8009D278)     | sb $v0, 0x56($v1)
+127 0x0F4DC  0x8001ECDC sz=0x24   n=9   .L8001ECDC | lui $a0, %hi(D_8009D278)     | addu $a1, $v1, $zero
+128 0x0F500  0x8001ED00 sz=0x58   n=22         | lui $v1, %hi(D_8009D254)     | sh $v0, 0xE($v1)
+129 0x0F558  0x8001ED58 sz=0x1C   n=7   .L8001ED58 | lui $a1, %hi(D_8009D278)     | addu $a0, $zero, $zero
+130 0x0F574  0x8001ED74 sz=0x8    n=2          | jal func_80032B0C            | addiu $a1, $a1, 0x58
+131 0x0F57C  0x8001ED7C sz=0x24   n=9          | lui $v1, %hi(D_8009D278)     | lw $a1, %lo(D_8009D278)($a1)
+132 0x0F5A0  0x8001EDA0 sz=0x14   n=5   .L8001EDA0 | nop                          | addu $a0, $zero, $zero
+133 0x0F5B4  0x8001EDB4 sz=0x8    n=2          | jal func_80032B0C            | addiu $a1, $a1, 0x60
+134 0x0F5BC  0x8001EDBC sz=0x1C   n=7          | lui $v1, %hi(D_8009D278)     | sb $v0, 0x66($v1)
+135 0x0F5D8  0x8001EDD8 sz=0x20   n=8   .L8001EDD8 | lui $v0, %hi(D_8009D278)     | sh $v1, 0xE($v0)
+136 0x0F5F8  0x8001EDF8 sz=0x14   n=5          | lw $v0, 0x0($s2)             | sw $v0, 0x0($s2)
+137 0x0F60C  0x8001EE0C sz=0x18   n=6          | sll $v0, $v0, 24             | addiu $s0, $zero, -0x1
+138 0x0F624  0x8001EE24 sz=0x14   n=5          | lui $a0, %hi(D_8009D200)     | addu $a1, $zero, $zero
+139 0x0F638  0x8001EE38 sz=0x14   n=5          | addu $a2, $zero, $zero       | sw $zero, 0x14($sp)
+140 0x0F64C  0x8001EE4C sz=0x8    n=2          | lui $at, %hi(D_8009D200)     | sw $s0, %lo(D_8009D200)($at)
+141 0x0F654  0x8001EE54 sz=0x14   n=5   .L8001EE54 | lui $a0, %hi(D_8009D2FC)     | addu $a1, $zero, $zero
+142 0x0F668  0x8001EE68 sz=0x14   n=5          | addu $a2, $zero, $zero       | sw $zero, 0x14($sp)
+143 0x0F67C  0x8001EE7C sz=0x8    n=2          | lui $at, %hi(D_8009D2FC)     | sw $s0, %lo(D_8009D2FC)($at)
+144 0x0F684  0x8001EE84 sz=0x8    n=2   .L8001EE84 | jal func_80021D4C            | nop 
+145 0x0F68C  0x8001EE8C sz=0x14   n=5   .L8001EE8C | lui $v1, %hi(D_8009D28C)     | addiu $a2, $zero, 0x46
+146 0x0F6A0  0x8001EEA0 sz=0x1CC  n=115        | addiu $a1, $zero, 0x82       | sb $v1, %lo(D_800B0196)($at)
+147 0x0F86C  0x8001F06C sz=0x1C   n=7   .L8001F06C | lui $v0, %hi(D_8009D278)     | addiu $a2, $zero, 0x46
+148 0x0F888  0x8001F088 sz=0x2C8  n=178        | addiu $a1, $zero, 0x82       | nop 
+149 0x0FB50  0x8001F350 sz=0x8    n=2          | jal func_80020CE4            | nop 
+150 0x0FB58  0x8001F358 sz=0x8    n=2   .L8001F358 | jal func_800374E8            | nop 
+151 0x0FB60  0x8001F360 sz=0x8    n=2          | jal func_80021054            | nop 
+152 0x0FB68  0x8001F368 sz=0x18   n=6          | sll $v0, $v0, 24             | addiu $s0, $zero, -0x1
+153 0x0FB80  0x8001F380 sz=0x14   n=5          | lui $a0, %hi(D_8009D200)     | addu $a1, $zero, $zero
+154 0x0FB94  0x8001F394 sz=0x14   n=5          | addu $a2, $zero, $zero       | sw $zero, 0x14($sp)
+155 0x0FBA8  0x8001F3A8 sz=0x8    n=2          | lui $at, %hi(D_8009D200)     | sw $s0, %lo(D_8009D200)($at)
+156 0x0FBB0  0x8001F3B0 sz=0x14   n=5   .L8001F3B0 | lui $a0, %hi(D_8009D2FC)     | addu $a1, $zero, $zero
+157 0x0FBC4  0x8001F3C4 sz=0x14   n=5          | addu $a2, $zero, $zero       | sw $zero, 0x14($sp)
+158 0x0FBD8  0x8001F3D8 sz=0x8    n=2          | lui $at, %hi(D_8009D2FC)     | sw $s0, %lo(D_8009D2FC)($at)
+159 0x0FBE0  0x8001F3E0 sz=0x8    n=2   .L8001F3E0 | jal func_80021D4C            | nop 
+160 0x0FBE8  0x8001F3E8 sz=0x50   n=20         | addiu $a0, $zero, 0x46B      | sw $v0, 0x10($sp)
+161 0x0FC38  0x8001F438 sz=0x10   n=4          | lui $at, %hi(D_8009D244)     | nop 
+162 0x0FC48  0x8001F448 sz=0x18   n=6          | lui $v0, %hi(D_800BCF88)     | addiu $a2, $zero, -0x5
+163 0x0FC60  0x8001F460 sz=0x8    n=2          | jal func_80067CBC            | nop 
+164 0x0FC68  0x8001F468 sz=0x4    n=1          | addiu $a2, $zero, -0x5       | addiu $a2, $zero, -0x5
+165 0x0FC6C  0x8001F46C sz=0x38   n=14  .L8001F46C | lui $a0, %hi(D_8009D254)     | addiu $a1, $zero, 0x13
+166 0x0FCA4  0x8001F4A4 sz=0x10   n=4          | lui $v0, %hi(D_8009D278)     | sh $zero, 0xC($v0)
+167 0x0FCB4  0x8001F4B4 sz=0x20   n=8   .L8001F4B4 | lw $ra, 0x320($sp)           | nop 

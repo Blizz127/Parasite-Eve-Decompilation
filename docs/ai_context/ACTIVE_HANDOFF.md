@@ -7,6 +7,32 @@
 
 # ACTIVE HANDOFF
 
+## agent/bigfish-1d340 (2026-09-20): `func_8001D340` NOT matched — but proven un-carveable
+
+**Branch `agent/bigfish-1d340`, worktree `/tmp/pe-agent-bigfish`.** Baseline gate
+re-run first: `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh` reported
+`EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (870 registered C leaves)`, `VERIFY_US=PASS`. No leaf was
+added; nothing in `configs/` or `src/` changed.
+
+`func_8001D340` (player battle tick, file 0xDB40, size 0x2194 = 8,596 B, 2,149
+instructions, 168 basic blocks) is **not carveable into partial yaml spans**:
+it has exactly one prologue (`addiu $sp,$sp,-0x328`), one epilogue
+(`addiu $sp,$sp,0x328`), and one `jr $ra`. The repo's prefix/resume carve trick
+(the `configs/USA/disc1.yaml` 2A0C/3420/38B4 pattern) requires self-contained
+nested functions; there are none here. **It must be matched whole.**
+
+The full structural map (168-block table with offset/size/region/purpose, field
+widths, six regions R1-R6), the closest compiling candidate
+(`docs/evidence/bigfish-1d340/func_8001D340_candidate.c`, port-derived: 3,152 B,
+1,927-1,931 differing words across five era profiles), and the m2c skeleton that
+should seed the next attempt (`func_8001D340_m2c_draft.c`, correct CFG but
+untyped struct locals) are in `docs/evidence/bigfish-1d340/REPORT.md`.
+Key blocker: the colour tables need hand-unrolled stores with a per-store
+`D_8009CDDC` reload (cc1 2.7.2 does not unroll loops at -O2), and the entry
+block must be fixed first (`s0=mode`, `s2=rec+0x4C`, no early `phase`/`actor`
+load) or the global allocator perturbs all 2,149 instructions.
+
 ## PARENT STATUS (2026-09-20): 870 matching C leaves; executed-path C-share 37.18%
 
 **Matching decomp: 768 -> 870 (+102) this session.** Fresh `scripts/split_us.sh`
