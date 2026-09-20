@@ -1085,6 +1085,13 @@ segments:
       # Block init of the D_800BCF88..D_800BD028 scratch struct. era_o2_g0.
       - [0x56370, c, func_80065B70]
       - [0x56438, asm]
+      # func_80066BD8 — scrolling-backdrop window setup, VRAM 0x80066BD8,
+      # file 0x573D8, size 0xA4 (41 words). era -O2 -G0; unsigned short
+      # arg4 with an int `v = arg4 & 0xFFFF`, nested early-return so the
+      # `bltz` targets the store-1 block. Mid-56438 carve: prefix 0xFA0,
+      # C 0xA4, resume 5747C.s 0x35E0.
+      - [0x573D8, c, func_80066BD8]
+      - [0x5747C, asm]
       # func_8006A25C — game-over destination saver, VRAM 0x8006A25C,
       # file 0x5AA5C, size 0x8C (35 words). era -O2 -G0; shared $a0 base
       # for D_800B0CD8 (local pointer) and the void-return tail order
