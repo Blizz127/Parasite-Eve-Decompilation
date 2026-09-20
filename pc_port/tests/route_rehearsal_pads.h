@@ -8,6 +8,16 @@
  * PRESSED TWICE: the first 0x40 is consumed by the slot-list window
  * (func_8004D6D4) and only the second reaches the file menu
  * (func_8004D2DC).  See docs/evidence/pe-save-menu-close/REPORT.md.
+ *
+ * The 38620 Circle is dispatched with the menu focus list briefly empty during
+ * the top-menu -> sub-window hand-off and is consumed with no callback, so it
+ * is lost: the surviving 38640 press cancels the slot list (func_8004D6D4
+ * event 0x40) and a THIRD press at 38650 is what reaches the top menu and
+ * clears the field-menu mode.  Without it the slot list closes but the top
+ * menu stays up and the field-menu mode bit is still set at the frame limit.
+ * (The D_8009D0EC input lock is NOT the cause: a full-run trace reports it 0
+ * on every call.)  Measured with the pad/event traces in
+ * docs/evidence/pe-save-menu-e7-semantics/REPORT.md.
  * Two sewer suffixes extend the prefix through both hallway victories. */
 #include "route_sewer_pads.h"
 #include "route_second_sewer_pads.h"
@@ -26,7 +36,7 @@ static const char kDay1RoutePads[] =
     "34150:BFFF,34152:FFFF,34190:DFFF,34192:FFFF,34220:DFFF,34222:FFFF,"
     "35000:FF7F,35040:FFBF,35064:FF7F,35080:FFBF,35104:FF7F,35112:FFBF,"
     "35128:FF7F,35136:FFBF,35144:FF7F,35176:FFBF,35224:FFFF,36500:FFDF,"
-    "36532:FFBF,36612:FFDF,36868:FFFF,38000:FFDF,38090:FFEF,38610:FFFF,38620:DFFF,38630:FFFF,38640:DFFF,38650:FFFF,"
+    "36532:FFBF,36612:FFDF,36868:FFFF,38000:FFDF,38090:FFEF,38610:FFFF,38620:DFFF,38630:FFFF,38640:DFFF,38645:FFFF,38650:DFFF,38655:FFFF,"
     "42000:FFEF,42400:FFFF,42713:FFFF,42715:BFFF,42716:FFFF,42723:BFFF,"
     "42724:FFFF,42731:BFFF,42732:FFFF,42739:BFFF,42740:FFFF,42747:BFFF,"
     "42748:FFFF,42755:BFFF,42756:FFFF,42763:BFFF,42764:FFFF,42771:BFFF,"
