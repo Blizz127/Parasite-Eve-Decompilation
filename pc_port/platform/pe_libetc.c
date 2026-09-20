@@ -23,6 +23,7 @@
 #include "psx_compat.h"
 #include "pe_sdk.h"
 #include "pe_spu_dma.h"
+#include "pe_spu.h"
 #include "pe_gpu.h"
 #include "pe_mdec.h"
 #include "pe_irq.h"
@@ -478,6 +479,7 @@ void PE_Sdk_ResetState(void)
     }
 
     PE_SpuDma_Reset();
+    PE_Spu_Reset();
     PE_GPU_Init();
     PE_MDEC_Init();
     PE_CdReg_Reset();

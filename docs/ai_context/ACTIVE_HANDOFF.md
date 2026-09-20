@@ -10,6 +10,36 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## AUDIO-SPU: host sink + 24-voice SPU mixer (2026-09-20)
+
+Branch `agent/audio-spu` from `abcdc2bd`.  The port had **no audio output path
+at all**; it now has one:
+
+- `pc_port/platform/pe_audio.{h,c}` — sink abstraction: NULL, RIFF/WAVE
+  (16-bit stereo 44100 Hz, header sizes patched per block), and a compile-time
+  `PE_AUDIO_HAVE_LIVE` stub (no audio dev library is assumed).
+- `pc_port/platform/pe_spu.{h,c}` — 24-voice mixer: psx-spx SPU-ADPCM decode
+  (shift/filter prediction tables), loop flags, pitch counter, linear
+  interpolation, shift/step ADSR, fixed voice/main volumes, SPUCNT
+  enable/unmute gate.
+- `pe_spu_dma.c` routes every `PE_SpuRegister_StoreU16` through the voice model
+  (key-on/off edges) and adds a host `PE_SpuRam_StoreU8` seed.
+- `host_framebuffer.c` renders one vblank (735 samples) per presented frame;
+  `port_main.c` opens `PE_AUDIO_WAV=<path>` and flushes on exit.
+
+Verified: `pe-native-tests` **1383/1383** (+6 audio vectors), full CTest 11/11.
+
+**Honest status:** the live route's WAV is *silent* — over 38000 frames the
+guest writes SPU mode/reverb registers (`reg_writes=328`) but **keys no voice**
+(`key_ons=0`), because the score/instrument key-on path is not reached
+(`func_8008A068`/`8AE94`/`8B040` are unported; see
+`DAY2_MUSIC_START_CONSUMERS.md`).  A synthetic `PE_AUDIO_SELFTEST=1` tone proves
+the decoded→mixed→sunk path in a live run.  Gaps: gaussian interpolation
+(linear used), volume sweep, noise/pitch-mod/reverb, XA-ADPCM (CD bit4 boundary
+unchanged).  No retail audio golden exists.  `func_8007D1D4`/`func_8007DAE0`
+remain no-ops and must be re-implemented once the guest key-on path runs.
+Evidence: `docs/evidence/pe-audio-spu-host-sink/REPORT.md`.
+
 ## CARD-PRESENT: host-backed memory card; route frontier moves to the save menu (2026-09-20)
 
 Branch `agent/card-present` from `5cf6b196`. `pc_port/platform/pe_libcard.c`
