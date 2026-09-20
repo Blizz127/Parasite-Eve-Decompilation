@@ -72,6 +72,10 @@ segments:
       # 0x80012850, file 0x3050, size 0x3D0. Resume generated asm at 0x3420.
       - [0x3050, c, func_80012850]
       - [0x3420, asm]
+      # decomp-continue-4: three-word reader-call wrapper (int/short/short),
+      # file 0x62B8, size 0x38.
+      - [0x62B8, c, func_80015AB8]
+      - [0x62F0, asm]
       - [0x75F8, c, func_80016DF8]
       - [0x761C, c, func_80016E1C]
       - [0x7640, asm]
@@ -181,7 +185,7 @@ segments:
       - [0x917C, asm]
       # Phase 5GC: two-reader call wrapper, era -O2 -G0.
       - [0x9300, c, func_80018B00]
-      - [0x9330, asm]
+      - [0x9330, c, func_80018B30]
       # Phase 5GD: two-reader call wrapper twin, era -O2 -G0.
       - [0x9368, c, func_80018B68]
       - [0x9398, c, func_80018B98]
@@ -244,7 +248,8 @@ segments:
       - [0x9B0C, asm]
       # Phase 5EF: call-and-return-one wrapper around func_800703F4.
       - [0x9BB8, c, func_800193B8]
-      - [0x9BD8, asm]
+      - [0x9BD8, c, func_800193D8]
+      - [0x9C10, asm]
       # func_80019450 — VRAM 0x80019450, size 0x34, file 0x9C50-0x9C84.
       # (2*sign16(+0x224)) * **a0 >> 16 at short (+0x1B4)+0x14. era_o2_g0.
       - [0x9C50, c, func_80019450]
@@ -335,6 +340,11 @@ segments:
       # Probe: companion state bit-1 clearer with retail $v0/$a0 allocation.
       - [0xAB50, c, func_8001A350]
       - [0xAB74, asm]
+      # decomp-continue-4: two result-store wrappers (func_8005401C/52F70
+      # result stored through *a0[0]; return 1).
+      - [0xAC3C, c, func_8001A43C]
+      - [0xAC74, c, func_8001A474]
+      - [0xACAC, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
       # VOLUME-110: C leaf func_80021850 — VRAM 0x80021850, size 0x88
@@ -703,6 +713,8 @@ segments:
       - [0x40A2C, asm]
       - [0x40A60, c, func_80050260]
       - [0x40A80, asm]
+      # decomp-continue-4: func_8005E8A4(0,1) then func_80064C54(a0+0x33).
+      - [0x40CBC, c, func_800504BC]
       # GP-relative two-global forwarding wrapper: era -O2 -G8.
       - [0x40CF4, c, func_800504F4]
       # Adjacent GP-relative two-global forwarding wrapper: era -O2 -G8.
@@ -1102,6 +1114,10 @@ segments:
       # Phase 5EK: four-argument forwarding wrapper with a zero third field.
       - [0x67410, c, func_80076C10]
       - [0x67434, asm]
+      # decomp-continue-4: func_800773D0 — VSync(-1)-based timestamp pair
+      # (D_80095888 = VSync(-1)+0xF0, D_8009588C = 0). Plain -O2 -G0.
+      - [0x67BD0, c, func_800773D0]
+      - [0x67C04, asm]
       # Phase 5EL: register func_80076EE4 for mode two.
       - [0x68200, c, func_80077A00]
       # Phase 5DA: C leaf func_80077A28 — file 0x68228, size 0x24.
@@ -1232,6 +1248,8 @@ segments:
       - [0x6E4AC, asm]
       - [0x6E514, c, func_8007DD14]
       - [0x6E538, asm]
+      # decomp-continue-4: SDK enter/exit void wrapper.
+      - [0x6E640, c, func_8007DE40]
       # Phase 5EF: two-call void wrapper.
       - [0x6E678, c, func_8007DE78]
       - [0x6E6A0, asm]
@@ -1243,6 +1261,13 @@ segments:
       # lui/lw/jr/nop on D_800A3608. Plain -O1 matches.
       # Mid-6E6C0 carve: prefix 0x18B8, C 0x10, resume 6FF88.s 0xD2F4.
       - [0x6E6C0, asm]
+      # decomp-continue-4: three-call forwarder (7E1B4 / 73C74(0) / 7E204),
+      # returns 1. Plain -O2 -G0 matches.
+      - [0x6E7E0, c, func_8007DFE0]
+      - [0x6E810, c, func_8007E010]
+      - [0x6E848, asm]
+      - [0x6E8C0, c, func_8007E0C0]
+      - [0x6E8F8, asm]
       # Phase 5EF: direct func_8007FB04 forwarding wrapper.
       - [0x6F664, c, func_8007EE64]
       - [0x6F684, asm]
@@ -1337,6 +1362,9 @@ segments:
       # Phase 5EM: byte-typed forwarding wrapper with two zero tail fields.
       - [0x71534, c, func_80080D34]
       - [0x7155C, asm]
+      # decomp-continue-4: mode-2 forwarder to func_80081D74(handler, -1).
+      - [0x71764, c, func_80080F64]
+      - [0x71798, asm]
       # Phase 5EF: callback exchange proven by jalr reader sites.
       - [0x71A54, c, func_80081254]
       # Tier-2 probe: range-guarded state setter func_800812F4.
