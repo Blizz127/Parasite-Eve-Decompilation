@@ -446,7 +446,16 @@ segments:
       - [0x20210, c, func_8002FA10]
       - [0x202A4, c, func_8002FAA4]
       - [0x202D8, c, func_8002FAD8]
+      # func_8003010C — opcode 0x59 slot tagged reader, VRAM 0x8003010C,
+      # size 0x114 (69 words). idx=(tag&0xFF)-0x29, sltiu 0x5A guards a
+      # 90-index switch through the shared rodata pool table jtbl_80010B28;
+      # sentinel -1000 in $v1, shared epilogue. era -O2 -G0 +
+      # MASPSX_THREE_WORD_SYMBOL_STORE=1 + MASPSX_DISPATCH_FOLD=jtbl_80010B28
+      # (profile era_o2_g0_dispatch_80010b28). Carve of 202F8.s: prefix 0x614,
+      # C 0x114, resume 20A20.s 0x314 to 20D34.
       - [0x202F8, asm]
+      - [0x2090C, c, func_8003010C]
+      - [0x20A20, asm]
       # func_80030534 — 2D distance helper, VRAM 0x80030534, size 0x50
       # (20 words). era -O2 -G0 + maspsx --aspsx-version=2.30 (mflo/mult
       # two-instruction gap nop). Mid-20210 carve: prefix 0xB24, C 0x50,

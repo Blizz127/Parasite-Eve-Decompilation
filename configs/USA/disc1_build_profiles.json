@@ -154,6 +154,17 @@
         "MASPSX_DISPATCH_FOLD": "jtbl_80010000"
       }
     },
+    "era_o2_g0_dispatch_80010b28": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010B28"
+      }
+    },
     "modern_o1_g0": {
       "toolchain": "modern",
       "flags": []
@@ -503,6 +514,9 @@
     ],
     "modern_o1_g8_no_tree_ter": [
       "func_80052F0C"
+    ],
+    "era_o2_g0_dispatch_80010b28": [
+      "func_8003010C"
     ]
   }
 }
