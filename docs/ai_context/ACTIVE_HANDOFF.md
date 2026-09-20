@@ -82,10 +82,12 @@ in `parked_blockers.json` (`wave5a-*` ids): `func_8007B9EC` (shared symbolic
 across ~20 stores), `func_80069594` (dual-global load interleave), 
 `func_8003DFD8` (record-copy base selection: retail uses +0x1C with negative
 offsets, cc1 splits to +0x18/+0x1C), `func_8005415C` (scheduled value copy
-`addu $a1,$v1` + load-delay), `func_8005E788` (array vs DCE, $s0=0xFFF
-strength-reduction placement, and `sh` into an unfilled `jal` delay slot —
-the fill-store gates only cover `sw`), `func_8006DC18` (loop-invariant
-constant hoisting into $s0-$s6).
+`addu $a1,$v1` + load-delay), `func_8005E788` (array vs DCE and $s0=0xFFF
+strength-reduction placement — CORRECTED: its `sh $v0,0x16($sp)` in a `jal`
+slot is a register-offset store that cc1 already fills, so the leaf needed
+source-shape fixes, not a gate; landed by `agent/fill-jal`), `func_8006DC18`
+(loop-invariant constant hoisting into $s0-$s6 — NOT fixable at the maspsx
+level; it is a cc1 LICM/rematerialisation decision).
 ## WAVE-5 SLICE B (2026-09-20): 870 -> 873 matching C leaves
 
 **Branch `agent/wave5-b`, worktree `/tmp/pe-agent-w9`, base `74d7dd41`.**
@@ -181,7 +183,37 @@ retail's two distinct `$s1 = -1` arms and drops the `j`), `func_80082314`
 order reversed and the `-3` constants CSE'd). `func_8001CAB0` was not
 attempted.
 
-## PARENT STATUS (2026-09-20): 884 matching C leaves; executed-path C-share 37.18%
+## PARENT STATUS (2026-09-20): 890 matching C leaves; executed-path C-share 39.72%
+
+**Matching decomp: 768 -> 890 (+122) this session.** Fresh split + build +
+verify on the merged tree: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (890
+registered C leaves)`, `VERIFY_US=PASS`, plan `1294 spans = 890 c + 402 asm + 2
+rodata`. maspsx unit tests 201 OK.
+
+**Executed-path C-share (DERIVED, see the note in
+`docs/evidence/exec-coverage/EXECUTED_PRIORITY.md`):** reclassifying the
+recorded 864-leaf hit set against the current yaml gives route **282/710 =
+39.72%** (was 37.18%) and movie **100/229 = 43.67%**. The executed guest graph
+is unchanged, so this is exact for the share, but it is derived rather than
+re-measured — the coverage binary sha256 still refers to the 864-leaf snapshot.
+
+**Third per-leaf toolchain gate: `MASPSX_FILL_JAL_DELAY_SLOT`** (default OFF,
+`agent/fill-jal`). It fills a `jal` delay slot from a preceding ABSOLUTE
+symbol-store macro (`sw/sh/sb $r,SYM`, never gp-relative, never register-offset
+— cc1 already fills those). Disc1 scan: 18 `jal` slots hold an `$at` store, 17
+in this exact shape. **Narrowness proof: enabling it globally is NOT exact** —
+`func_8006E9A0` needs its absolute store pre-`jal` (0x234 would shrink to
+0x230) — so it must stay per-leaf. Nine tests; build byte-identical with it off.
+
+**m2c drafts are now width-typed and `$gp`-resolved** (`c87f835a`): the generated
+type context types each `D_` symbol by the width retail actually loads/stores
+through it, and `saved_reg_gp->unkNNN` is rewritten to the real `D_<vram>` at
+`0x8009CD70+offset` with pointer-typed declarations where m2c dereferences it.
+An agent measured this class of change as nearly halving the diff on an 8.6 KB
+function. m2c is still only a drafting aid.
+
+## (previous) ## PARENT STATUS (2026-09-20): 884 matching C leaves; executed-path C-share 37.18%
 
 **Matching decomp: 768 -> 884 (+116) this session.** Fresh `scripts/split_us.sh`
 + `build_us.sh` + `verify_us.sh` on the merged tree: **EXACT SHA-1
