@@ -198,6 +198,17 @@
         "MASPSX_DISPATCH_FOLD": "jtbl_80010B28"
       }
     },
+    "era_o2_g8_dispatch_800111f8": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_800111F8"
+      }
+    },
     "modern_o1_g0": {
       "toolchain": "modern",
       "flags": []
@@ -622,6 +633,9 @@
     ],
     "era_o2_g0_dispatch_80010080": [
       "func_80012E7C"
+    ],
+    "era_o2_g8_dispatch_800111f8": [
+      "func_80051CC4"
     ],
     "era_o2_g8_passthrough_load": [
       "func_800556E8"
