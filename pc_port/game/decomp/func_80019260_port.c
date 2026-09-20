@@ -11,7 +11,7 @@
 
 #include "pe_guest_decomp.h"
 
-#define D_8009D2F0 PE_DECOMP_PTRGLOBAL(0x8009D2F0u, unsigned char)
+#define D_8009D2F0 PE_DECOMP_PTRGLOBAL(0x8009D2F0u, int)
 
 /* boundary: func_8003E0D0 has no pc_port implementation yet */
 #define func_8003E0D0(...) PE_D_COMP_BOUNDARY1("func_8003E0D0", 0x8003E0D0u, __VA_ARGS__)
@@ -19,11 +19,13 @@
 
 /* ── verbatim matching leaf (src/func_80019260.c) ───────────────────────── */
 
+/* VRAM 0x80019260 / file 0x9A60 / size 0x38. */
 /* shimmed by pe_guest_decomp.h: D_8009D2F0 */
 /* shimmed by pe_guest_decomp.h: func_8003E0D0 */
+
 int func_80019260(void) {
-    func_8003E0D0(D_8009D2F0 + 0x1B4);
-    *(unsigned int *)(D_8009D2F0 + 0x18C) = 0;
+    func_8003E0D0((char *)D_8009D2F0 + 0x1B4);
+    *(int *)((char *)D_8009D2F0 + 0x18C) = 0;
     return 1;
 }
 

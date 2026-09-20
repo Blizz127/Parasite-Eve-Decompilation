@@ -11,10 +11,19 @@
 
 #include "pe_guest_decomp.h"
 
-#define D_800B1624 PE_DECOMP_PTRGLOBAL(0x800B1624u, unsigned char *volatile)
+#define D_800B1624 PE_DECOMP_SCALAR(0x800B1624u, Header *volatile)
 
 /* ── verbatim matching leaf (src/func_8006599C.c) ───────────────────────── */
 
+/* VRAM 0x8006599C / file 0x5619C / size 0x2C. */
+typedef struct {
+    char pad[0x10];
+    int field_10;
+} Header;
+
 /* shimmed by pe_guest_decomp.h: D_800B1624 */
-short func_8006599C(int a0){return *(short *)(D_800B1624 + *(int *)(D_800B1624 + 0x10) + (a0 << 4) + 6);}
+
+int func_8006599C(int arg0) {
+    return *(short *)((char *)D_800B1624 + D_800B1624->field_10 + (arg0 << 4) + 6);
+}
 
