@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -40,6 +41,13 @@ def main() -> int:
     ap.add_argument("size", type=lambda s: int(s, 0))
     ap.add_argument("--flags", default="-O2 -G0")
     ap.add_argument("--env", action="append", default=[])
+    ap.add_argument(
+        "--force-absolute",
+        default="",
+        help="comma-separated symbols whose '.extern SYM, N' directive the "
+        "cc1 assembly must have stripped before maspsx (mirrors the build's "
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS leaf environment).",
+    )
     ap.add_argument("--keep", action="store_true")
     args = ap.parse_args()
 
@@ -62,6 +70,22 @@ def main() -> int:
                 stderr=subprocess.DEVNULL)
         run([str(ERA_CC1), "-quiet", *flags, str(pre), "-o", str(asm)], env=env,
             stderr=subprocess.DEVNULL)
+        # Mirror tools/build/disc1_build.py's MASPSX_FORCE_ABSOLUTE_SYMBOLS:
+        # drop the named symbols' ".extern SYM, N" so maspsx treats them as
+        # absolute rather than small-data-relative.  A separate output file
+        # keeps the cc1 assembly available for inspection with --keep.
+        if args.force_absolute:
+            text = asm.read_text(encoding="utf-8", errors="replace")
+            for symbol in args.force_absolute.split(","):
+                symbol = symbol.strip()
+                if not symbol:
+                    continue
+                text = re.sub(
+                    rf"\t\.extern\t{re.escape(symbol)}, \d+\n", "", text
+                )
+            absolute = tmp / "x.absolute.s"
+            absolute.write_text(text, encoding="utf-8")
+            asm = absolute
         aspsx = env.get("ERA_ASPSX_VER", "2.21")
         cmd = [sys.executable, str(MASPSX), f"--aspsx-version={aspsx}",
                "--dont-expand-li"]
