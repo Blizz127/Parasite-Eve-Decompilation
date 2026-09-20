@@ -424,6 +424,13 @@
    "lane": "agent/pb-multiunit",
    "target": "func_800C2D0C (VRAM 0x800C2D0C, file 0xB350C, size 0x94, unit B3390)",
    "note": "Mount-table slot writer + counter. Best candidate 18/37 words differ on era -O2 -G0. Structure and pointer arithmetic are exact (idx*6, `addu v0,v1,v0` via `extern unsigned int D_800F34F4` + `(unsigned char *)(idx + D_800F34F4)`, three reloads preserved by the store-aliasing). Remaining divergences: (a) retail materializes the D_800E2248 field into `$a0` with `addu a0,v0,zero` and reuses it for `out + arg2`; cc1 rematerializes the same `lh 4($a1)` as `lhu a0,4($a1)` for the phi-init instead of the register copy under every phrasing tried (single var, val+out pair, short/int out, ternary, if/else, register `asm()` pins on $2/$4). (b) consequently the later `out + arg2` lands in `$v1` not `$a0`, and the early `lui a1,%hi(D_800E2248)` is scheduled one slot later (a nop fills its place). Approaches tried and rejected: pointer vs integer base, idx/index+base operand order, return type int/unsigned char, n as int vs unsigned char, tern/if/plain branchless forms. No yaml/src change landed."
+  },
+  {
+   "id": "pb-multiunit-8006F224",
+   "status": "PARKED",
+   "lane": "agent/pb-multiunit",
+   "target": "func_8006F224 (VRAM 0x8006F224, file 0x5FA24, size 0xA0, unit 5F484)",
+   "note": "Two-loop 0x10C/0xA0C record-table scanner returning a slot index. Best candidates 28/40 words differ on era -O2 -G0. Control flow matches (sltiu 0xC0 gate, -0x46/0xF gate, two loops, -1 sentinel, v1+0xB offset, a1=v1 else branch) but cc1 (a) rotates the second `while (*a0 != 0)` loop to a bottom test (`bnez` back-edge) where retail keeps the top test with `beqz` to the found-exit, and (b) permutes registers: retail keeps result in $a1, counter $v1, pointer $a0; our builds put result in $a2, counter $a1, pointer $v1. The m2c `goto loop_4` / `goto loop_10` rotation form and natural `while` forms both fail; declaration-order and init-placement variants (a1 first/after, v1=0 after the early-return gate) shift the permutation but do not close it (28-31 diffs). Not landed."
   }
  ]
 }
