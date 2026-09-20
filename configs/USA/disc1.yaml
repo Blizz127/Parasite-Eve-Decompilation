@@ -664,7 +664,12 @@ segments:
       - [0x340EC, asm]
       # func_80044DCC — VRAM 0x80044DCC, size 0x48, file 0x355CC-0x35614.
       - [0x355CC, c, func_80044DCC]
-      - [0x35614, asm]
+      # func_80044E14 — slot teardown helper, VRAM 0x80044E14, file
+      # 0x35614, size 0x84 (33 words). era -O2 -G0; the table reload is
+      # spelled as the array expression D_8009CFA0[idx] so the pointer
+      # stays in $s0. Head of 35614.s; resume 35698.s 0x2324.
+      - [0x35614, c, func_80044E14]
+      - [0x35698, asm]
       # Tier-2 B: callback registration wrapper for func_80047040;
       # two independent exact-start stores, era -O2 -G0, first phrasing.
       - [0x379BC, c, func_800471BC]

@@ -11,7 +11,7 @@
 | --- | --- |
 | `try_leaf.py src/func_8006BE4C.c 0x5C64C 0x80 --flags "-O2 -G0"` | `WORDS MATCH` |
 | `bash scripts/build_us.sh` | `EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (770 registered C leaves)` |
-| `bash scripts/verify_us.sh` | `VERIFY_US_PASS` |
+| `bash scripts/verify_us.sh` | `VERIFY_US=PASS` |
 
 ## Semantics
 
