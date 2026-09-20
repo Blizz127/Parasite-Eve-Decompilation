@@ -82,9 +82,22 @@ def main() -> int:
         rel = subprocess.run(["mipsel-linux-gnu-objdump", "-r", str(obj)],
                              check=True, stdout=subprocess.PIPE,
                              stderr=subprocess.DEVNULL).stdout.decode()
-        reloc = [int(line.split()[0], 16)
-                 for line in rel.splitlines()
-                 if len(line.split()) >= 2 and line.split()[1].startswith("R_MIPS")]
+        # Only .text relocations index the .text binary.  objdump -r also
+        # lists .pdr/.rel/.data relocations, whose offsets are unrelated to
+        # .text; folding those in used to zero arbitrary .text words (a .pdr
+        # entry at offset 0 masked the first instruction) and could hide a
+        # real difference — a false "match".
+        reloc = []
+        section = ""
+        for line in rel.splitlines():
+            s = line.strip()
+            if s.startswith("RELOCATION RECORDS FOR"):
+                section = s
+                continue
+            parts = s.split()
+            if (len(parts) >= 2 and parts[1].startswith("R_MIPS")
+                    and "[.text]" in section):
+                reloc.append(int(parts[0], 16))
         retail = bytearray(retail)
         for off in reloc:
             candidate[off:off + 4] = b"\0\0\0\0"
