@@ -2008,6 +2008,13 @@ segments:
       # Probe: D_800E2248 high-halfword predicate.
       - [0xB3368, c, func_800C2B68]
       - [0xB3390, asm]
+      # func_800C2E08 — clear active 6-byte records + flag, VRAM 0x800C2E08,
+      # file 0xB3608, size 0xA4 (41 words). era -O2 -G0; D_800F34F4 as an
+      # integer, staged flag temp (no if-conversion), mask locals ordered
+      # between i and off. Mid-B3390 carve: prefix 0x278, C 0xA4,
+      # resume B36AC.s 0x144, then func_800C2FF0.
+      - [0xB3608, c, func_800C2E08]
+      - [0xB36AC, asm]
       # func_800C2FF0 — sprite rectangle corner emitter, VRAM 0x800C2FF0,
       # file 0xB37F0, size 0xA8 (42 words). era -O2 -G0; scaled corners and
       # their negations in locals, byte-minus-one values stored last.
