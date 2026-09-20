@@ -1907,6 +1907,7 @@ segments:
       - [0xB8650, c, func_800C7E50]
       - [0xB8760, c, func_800C7F60]
       - [0xB8864, asm]
+      - [0xB895C, c, func_800C815C]
       # Phase 5T: C leaf func_800C8268 — VRAM 0x800C8268, size 0x8.
       # File span 0xB8A68–0xB8A70 exclusive. Empty jr/nop stub.
       - [0xB8A68, c, func_800C8268]
