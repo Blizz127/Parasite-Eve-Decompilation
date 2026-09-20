@@ -1085,6 +1085,13 @@ segments:
       # Block init of the D_800BCF88..D_800BD028 scratch struct. era_o2_g0.
       - [0x56370, c, func_80065B70]
       - [0x56438, asm]
+      # func_8006A25C — game-over destination saver, VRAM 0x8006A25C,
+      # file 0x5AA5C, size 0x8C (35 words). era -O2 -G0; shared $a0 base
+      # for D_800B0CD8 (local pointer) and the void-return tail order
+      # `D_800A77F4 = t; D_8009D280 = 0xA9400048; *p |= 0x100;`.
+      # Mid-56438 carve: prefix 0x4624, C 0x8C, resume 5AAE8.s 0x2D4.
+      - [0x5AA5C, c, func_8006A25C]
+      - [0x5AAE8, asm]
       # Phase 5EZ: C leaf func_8006A5BC — VRAM 0x8006A5BC, size 0x90 (36 words).
       # Boot init with two VSync-polled wait loops (VSync = func_80073A44,
       # SDK). era -O1 -G0: per-use $s0=1 materialization (in 86FF8's delay
