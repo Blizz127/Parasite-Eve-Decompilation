@@ -743,7 +743,9 @@ segments:
       - [0x401A0, asm]
       # decomp-continue-4: func_80052E30(1) + func_800638D8 handler registration.
       - [0x40568, c, func_8004FD68]
-      - [0x405A4, asm]
+      # func_8004FDA4 — VRAM 0x8004FDA4, size 0x44, file 0x405A4-0x405E8.
+      - [0x405A4, c, func_8004FDA4]
+      - [0x405E8, asm]
       - [0x40730, c, func_8004FF30]
       # Adjacent wrapper func_8004FF58 consumes 0x28 from the 0xC8 span.
       - [0x40758, c, func_8004FF58]
