@@ -10,6 +10,29 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## SAVE-MENU-INPUT: func_8004D978 + func_8004D6D4 ported (2026-09-20)
+
+Branch `agent/menu-input` from `85d1e76d`.  The Day-1 autopilot's
+`[STUB:BOOTSTRAP_RET] PE_MenuInputCallback` stop for the slot-list handler
+`func_8004D6D4` (169 words, `3DCC4.s`) is cleared by translating it and its
+only unported callee `func_8004D978` (24 words) from the retail bytes into
+`pc_port/game/boot/func_8004D4C4_port.c`, and wiring
+`menu_callback` (`func_80063E0C_port.c`) plus the `func_80042B50` delayed
+callbacks `0x800504F4`/`0x8005051C` (`func_8005C498_port.c`).
+
+Live route (real Disc 1, present `.mcr`, `--headless --route-pad
+--max-frames 42000`): before, stop at `PE_MenuInputCallback` frame 38500 /
+story `0x48`; after, **frame-limit 42000** with the only remaining boundary
+being the unported save-write handler `func_80042020` (loud decomp boundary,
+does not stop).  `pe-native-tests` 1384/1384, CTest 11/11, card oracles PASS.
+Evidence: `docs/evidence/pe-save-menu-input/REPORT.md`.
+
+**Next:** port the save/load write chain `func_80042020` (0x150) /
+`func_80042170` (0xB8) and their unported callees `func_8005C25C` (0x118) /
+`func_80040B80` (0x400) against the libcard file API (plus the
+`PE_FormatterFrame` caller-stack ABI), so the slot-list confirm completes and
+the route leaves the menu past story `0x48`.
+
 ## AUDIO-SPU: host sink + 24-voice SPU mixer (2026-09-20)
 
 Branch `agent/audio-spu` from `abcdc2bd`.  The port had **no audio output path

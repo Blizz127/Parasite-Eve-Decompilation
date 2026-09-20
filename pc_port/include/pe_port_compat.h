@@ -272,6 +272,10 @@ void func_80046334(void);
 void func_8004F464(void);
 void func_8005C488(void);
 void func_80042B6C(void);
+/* func_80042B50 delayed-callback targets installed by func_8004D6D4 (slot-list
+ * confirm/unable): the save/load ability handlers in game/decomp. */
+void func_800504F4(void);
+void func_8005051C(void);
 void func_800339A0(uint32_t style);
 void func_80042D40(void);
 void func_80042F44(void);
@@ -314,6 +318,10 @@ void func_800647D0(pe_addr_t node,int32_t items);
 int32_t func_8004D4C4(uint32_t idx,uint32_t items);
 void func_8004D298(uint32_t index);
 void func_8004D690(pe_addr_t node);
+/* Slot-list input/handler (func_8004D4C4's +0x2C callback) and the prompt
+ * window builder it uses; see game/boot/func_8004D4C4_port.c. */
+int32_t func_8004D6D4(pe_addr_t window,uint32_t event);
+void func_8004D978(uint32_t value);
 pe_addr_t func_800424B4(uint32_t card,int32_t item);
 void func_8004FEEC(pe_addr_t list);
 int func_8004FE58(pe_addr_t item);
