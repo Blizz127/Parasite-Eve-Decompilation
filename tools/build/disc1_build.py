@@ -437,8 +437,14 @@ def compile_era(unit: dict[str, Any], tools: Toolchain) -> None:
             sys.executable,
             str(ROOT / MASPSX),
             f"--aspsx-version={aspsx_version}",
-            "--dont-expand-li",
         ]
+        # Most retail leaves want cc1's `li` left alone (GNU as expands it to
+        # addiu). A few were compiled with the immediate materialised as
+        # `ori $r,$zero,imm` instead; those leaves opt in per-leaf with
+        # MASPSX_EXPAND_LI=1 in their build profile, exactly like
+        # MASPSX_EXPAND_DIV below. Default is unchanged.
+        if unit["environment"].get("MASPSX_EXPAND_LI") != "1":
+            maspsx_command.append("--dont-expand-li")
         if unit["environment"].get("MASPSX_EXPAND_DIV") == "1":
             maspsx_command.append("--expand-div")
         maspsx_command.append(str(assembly))

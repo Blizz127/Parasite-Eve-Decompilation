@@ -87,8 +87,11 @@ def main() -> int:
             absolute.write_text(text, encoding="utf-8")
             asm = absolute
         aspsx = env.get("ERA_ASPSX_VER", "2.21")
-        cmd = [sys.executable, str(MASPSX), f"--aspsx-version={aspsx}",
-               "--dont-expand-li"]
+        cmd = [sys.executable, str(MASPSX), f"--aspsx-version={aspsx}"]
+        # Mirror disc1_build.py: `li` is left alone unless the leaf opts in
+        # with MASPSX_EXPAND_LI=1 (retail `ori $r,$zero,imm` scalar loads).
+        if env.get("MASPSX_EXPAND_LI") != "1":
+            cmd.append("--dont-expand-li")
         if env.get("MASPSX_EXPAND_DIV") == "1":
             cmd.append("--expand-div")
         cmd.append(str(asm))
