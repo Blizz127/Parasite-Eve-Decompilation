@@ -7,6 +7,45 @@
 
 # ACTIVE HANDOFF
 
+## PARENT STATUS (2026-09-20): 870 matching C leaves; executed-path C-share 37.18%
+
+**Matching decomp: 768 -> 870 (+102) this session.** Fresh `scripts/split_us.sh`
++ `build_us.sh` + `verify_us.sh` on the merged tree: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (870
+registered C leaves)`, `VERIFY_US=PASS`, plan `1268 spans = 870 c + 396 asm + 2
+rodata`.
+
+**Executed-path coverage (the metric the project goal demands).** Re-measured at
+864 leaves with the instrumented build (coverage binary sha256 `337152bd…`):
+
+| run | executed guest fns | decompiled C | C share | pc_port-only | unresolved boundaries |
+|---|---:|---:|---:|---:|---:|
+| route `--route-pad --max-frames 80000` | 710 | 264 | **37.18%** | 446 | 0 |
+| movie `--max-frames 2000` (opening FMV) | 229 | 94 | **41.05%** | 135 | 0 |
+
+The two runs executed the same guest graph as the 810-leaf snapshot; the C-share
+rose 237 -> 264. `docs/evidence/exec-coverage/EXECUTED_PRIORITY.md` ranks the
+route's 446 pc_port-only functions by retail size (216,840 bytes) — **that list,
+not the raw worklist, is the highest-value decomp queue**, because the run
+already reaches those functions. Commands to reproduce are in
+`docs/evidence/exec-coverage/REPORT.md`.
+
+**Two new toolchain levers, both per-leaf and default-off** (full build
+re-verified EXACT after each):
+- `MASPSX_DISPATCH_FOLD` now also retargets the MATERIALISED table form
+  (`la $r,$L<n>` and `%hi/%lo($L<n>)`, commit `086f5ec7` + 12 tests). Landed
+  `func_80051CC4`; usable by any leaf whose switch base LICM hoists.
+- `MASPSX_EXPAND_LI=1` omits `--dont-expand-li` for one leaf, so retail's
+  `ori $r,$zero,imm` scalar loads can be reproduced (`8db69a00`). Retried on the
+  60C1C RNG trio and found **necessary but not sufficient** — those stay parked
+  for register-home/delay-slot reasons, and `func_80070DD0` is handwritten.
+
+**Merge tooling.** Always merge agent branches with
+`python3 tools/analysis/merge_agent_branch.py <branch> -m "<msg>"`. It applies
+the per-file resolver, regenerates the status doc, and validates yaml offset
+monotonicity + JSON validity + `disc1_plan --check` before committing. Hand
+merging is what left `parked_blockers.json` invalid twice earlier in the session.
+
 ## WAVE-4 LEAF SLICE A (2026-09-20): 864 -> 868 matching C leaves
 
 **Branch `agent/wave4-a`, worktree `/tmp/pe-agent-w6`.** Baseline gate re-run
