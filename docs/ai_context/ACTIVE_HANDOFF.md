@@ -82,6 +82,28 @@ the `0x199` arm), `func_80022210` (cc1 phantom `.frame vars=8` local inflates
 the frame to 0x28 vs retail 0x20). Details in `parked_blockers.json`. Untried
 targets remain: `func_800218D8`, `func_80026600`, `func_80028C48`,
 `func_80021AF8`, `func_80022D7C`.
+## SESSION STATUS 2026-09-20 (pb-19de4): 770 matching C leaves; ACAC port-backed slice
+
+**Branch `agent/pb-19de4`, worktree `/tmp/pe-agent-pb19de4`.** Baseline 768.
+Landed two port-backed leaves in the ACAC unit, each confirmed by a fresh
+`scripts/build_us.sh` + `scripts/verify_us.sh` in the `pe-mipsel` box:
+
+- `func_8001A890` (768 → 769), file `0xB090`/0x88, bootstrap state clear.
+  `era_o2_g8_three_word`: `-O2 -G8` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`. cc1
+  already emits `sh $0,D_8009CE0C($3)`; the default ASPSX 2.21 `addiu_at`
+  expansion grows it to four words, while the gate selects retail's three-word
+  `lui $at,%hi / addu $at,$at,$idx / sh %lo($at)`.
+- `func_8001D268` (769 → 770), file `0xDA68`/0xD8, actor contact part scan.
+  `era_o2_g0`; signed `slti` needs an `(int)` cast, `i = 0` must precede the
+  short sign-extend, and `part == value` fixes the `bne` operand order.
+
+Final: `RESULT: EXACT MATCH` / `452fb033...`, `Matching claim: YES (770
+registered C leaves)`, `VERIFY_US=PASS`. Parked with byte-level notes in
+`docs/ai_context/parked_blockers.json` ("pb19de4-acac-19de4-parks"):
+`func_80020D50`, `func_800201DC`, `func_8001A918`, `func_8002F658` — all
+schedule/register-coloring divergences (`func_800201DC` and `func_8002F658`
+have the exact retail instruction multiset). `func_8001F814` not re-attempted
+(m2c failure; pb-dispatch owns it).
 
 ## SESSION STATUS 2026-09-20 (latest): 768 matching C leaves; FMV completes (2026-09-20)
 ## SESSION STATUS 2026-09-20 (agent/pb-small): 774 matching C leaves (+6)

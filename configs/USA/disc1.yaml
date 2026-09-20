@@ -389,6 +389,20 @@ segments:
       - [0xAC3C, c, func_8001A43C]
       - [0xAC74, c, func_8001A474]
       - [0xACAC, asm]
+      # func_8001A890 — VRAM 0x8001A890, size 0x88, file 0xB090-0xB118.
+      # Bootstrap state clear (gp-relative scalars + two indexed halfword
+      # tables). The indexed stores need maspsx's three-word symbol-store
+      # form (lui $at,%hi / addu $at,$at,$idx / sh %lo($at)); the default
+      # 2.21 addiu_at expansion grows each loop store by one word.
+      # era -O2 -G8 + MASPSX_THREE_WORD_SYMBOL_STORE=1.
+      - [0xB090, c, func_8001A890]
+      - [0xB118, asm]
+      # func_8001D268 — VRAM 0x8001D268, size 0xD8, file 0xDA68-0xDB40.
+      # Actor contact part scan (argument-only, no symbol/gp addressing).
+      # era -O2 -G0; signed slti via an int cast, and the retail branch keeps
+      # $a3 as the first bne operand (part == value).
+      - [0xDA68, c, func_8001D268]
+      - [0xDB40, asm]
       - [0x116FC, c, func_80020EFC]
       - [0x11718, asm]
       # func_80021054 — VRAM 0x80021054, size 0x2C, file 0x11854-0x11880.
