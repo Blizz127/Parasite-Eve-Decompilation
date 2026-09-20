@@ -75,7 +75,22 @@ def main() -> int:
         raw = tmp / "x.bin"
         run(["mipsel-linux-gnu-objcopy", "-O", "binary", "--only-section=.text",
              str(obj), str(raw)])
-        candidate = raw.read_bytes()
+        candidate = bytearray(raw.read_bytes())
+        # Zero every word the object leaves for the linker (HI16/LO16 pairs and
+        # jal/j targets) in BOTH images, so a standalone leaf can be compared
+        # before the real link resolves symbols.
+        rel = subprocess.run(["mipsel-linux-gnu-objdump", "-r", str(obj)],
+                             check=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.DEVNULL).stdout.decode()
+        reloc = [int(line.split()[0], 16)
+                 for line in rel.splitlines()
+                 if len(line.split()) >= 2 and line.split()[1].startswith("R_MIPS")]
+        retail = bytearray(retail)
+        for off in reloc:
+            candidate[off:off + 4] = b"\0\0\0\0"
+            retail[off:off + 4] = b"\0\0\0\0"
+        retail = bytes(retail)
+        candidate = bytes(candidate)
 
     print(f"retail   {len(retail):5d} bytes")
     print(f"candidate{len(candidate):5d} bytes")
