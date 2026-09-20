@@ -102,3 +102,54 @@ static void test_DAY1_card_present_kernel(void)
     remove(path);
     PASS();
 }
+
+/* libcard file API: create/write/close then firstfile/nextfile and
+ * open(read)/read must round-trip the same bytes and size. */
+static void test_DAY1_card_file_api(void)
+{
+    static const char *path = "/tmp/pe_card_file_api_test.mcr";
+    static const char *fname = "BASLUS-006620000000A";
+    uint8_t in[200];
+    pe_addr_t name = 0x80150000u, buf = 0x80151000u, dirent = 0x80152000u;
+    int fd, i;
+
+    TEST("DAY1_card_file_api");
+    ResetTestState();
+    remove(path);
+    setenv("PE_CARD_IMAGE", path, 1);
+    PE_Card_Reset();
+    PE_Card_SetPresent(1);
+
+    ASSERT(func_80072784(0) == 1, "format must succeed on a present card");
+    for (i = 0; i <= 20; i++)
+        PE_StoreU8(name + (pe_addr_t)i, (uint8_t)fname[i]);
+
+    fd = func_80072734(name, 0x200);
+    ASSERT(fd >= 0, "open(create) must return a handle");
+    for (i = 0; i < 200; i++) {
+        in[i] = (uint8_t)(i * 7 + 3);
+        PE_StoreU8(buf + (pe_addr_t)i, in[i]);
+    }
+    ASSERT(func_80072764(fd, buf, 200) == 200, "write must store all 200 bytes");
+    ASSERT(func_80072774(fd) == 0, "close(write) must succeed");
+
+    ASSERT(func_800727B4(0, dirent) == dirent,
+           "firstfile must return the created file");
+    for (i = 0; i < 20; i++)
+        if (PE_LoadU8(dirent + (pe_addr_t)i) != (uint8_t)fname[i]) break;
+    ASSERT(i == 20, "firstfile name must match");
+    ASSERT(PE_LoadU32(dirent + 0x18u) == 200u, "firstfile size must be 200");
+    ASSERT(func_80072794(dirent) == 0, "nextfile must end after one file");
+
+    fd = func_80072734(name, 1);
+    ASSERT(fd >= 0, "open(read) must return a handle");
+    ASSERT(func_80072754(fd, buf, 200) == 200, "read must return all 200 bytes");
+    for (i = 0; i < 200; i++)
+        if (PE_LoadU8(buf + (pe_addr_t)i) != in[i]) break;
+    ASSERT(i == 200, "read data must round-trip");
+    ASSERT(func_80072774(fd) == 0, "close(read) must succeed");
+
+    remove(path);
+    PE_Card_Reset();   /* re-resolve from the default image for later tests */
+    PASS();
+}

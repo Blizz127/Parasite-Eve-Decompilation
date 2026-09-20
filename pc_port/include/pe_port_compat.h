@@ -28,6 +28,21 @@ int func_8007DDC4(pe_addr_t port);
 int func_8007DDB4(pe_addr_t port, int sector, pe_addr_t src);
 void func_8007DD74(pe_addr_t port);
 
+/* ── libcard file API, host adapters in pe_libcard.c ─────────────────
+ * BIOS B0 32h open / 33h lseek / 34h read / 35h write / 36h close /
+ * 41h format / 42h firstfile / 43h nextfile, plus the A0 18h memcmp the
+ * card-operation directory scan uses. */
+int  func_80072734(pe_addr_t name, int mode);
+int  func_80072744(int fd, int offset, int whence);
+int  func_80072754(int fd, pe_addr_t buf, int len);
+int  func_80072764(int fd, pe_addr_t buf, int len);
+int  func_80072774(int fd);
+int  func_80072784(pe_addr_t dev);
+pe_addr_t func_800727B4(pe_addr_t dirspec, pe_addr_t dirent);
+pe_addr_t func_80072794(pe_addr_t dirent);
+int  func_80071A04(pe_addr_t a, pe_addr_t b, int n);
+int32_t func_8004D27C(void);
+
 /* ── Boot Rung globals (guest-address backed) ─────────────────────── */
 /* D_800B0CD8..D_800B0CEB, D_800B0DD4, D_80094488/D_8009448C are guest-RAM
  * lvalue macros defined in psx_compat.h — no externs here. */

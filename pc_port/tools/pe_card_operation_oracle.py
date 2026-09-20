@@ -3,8 +3,15 @@
 import hashlib,struct,sys
 from pe_battle_hud_oracle import ROOT,execute
 from pe_transition_loader_oracle import fnv
-STOPS={0x8017FFF0,0x80071A84,0x800727B4,0x80072754,0x80072764,0x80072774}
+STOPS={0x8017FFF0,0x80071A84,0x80072754,0x80072764,0x80072774,0x8004D4C4,0x8004D298}
 RANGES=((0xA0ED4,0xA00),(0x92224,4),(0x92230,4),(0x160000,16),(0x9D154,16))
+def firstfile_hook(ram,regs):
+ # No open file table in RAM (0x150/0x154 are zero), so the original
+ # func_800727B4 returns 0 after its directory scan.  The native port
+ # implements it as a host function with no guest stack frame, so model the
+ # return value here rather than executing the callee frame.
+ regs[2]=0
+ return regs[31]
 def boundary(r,regs):
  if not regs[31]:return 0,0,[0]*4,0
  word=struct.unpack_from('<I',r,(regs[31]-8)&0x1FFFFF)[0]
@@ -41,7 +48,7 @@ def main():
  assert hashlib.sha256(ex[0x41108-0xF800:0x42020-0xF800]).hexdigest()=='a9033ae5110fc414ffe13fa229fc7ffe9bc17a9e563eae68fc8e49b712fd3c6a'
  cases=[];seen=set()
  for n in range(8192):
-  r,index=fixture(ex,n);regs=execute(r,0x80041108,(index,),stop_at=STOPS,visited_pcs=seen)
+  r,index=fixture(ex,n);regs=execute(r,0x80041108,(index,),stop_at=STOPS,visited_pcs=seen,hook_at={0x800727B4:firstfile_hook})
   target,mask,args,fifth=boundary(r,regs);h=fnv(b''.join(r[a:a+size] for a,size in RANGES));cases.append((target,mask,args,fifth,h))
  assert {0x800411D0,0x80041248,0x80041260,0x80041300,0x80041628,0x800417AC,0x80041800,0x80041A7C,0x80041B3C,0x80041C30}<=seen
  out=['/* Original operation effects and known call arguments; stack addresses unresolved. */','static const struct {uint32_t target,mask,args[4],fifth;uint64_t hash;} DAY1_card_operation_cases[]={']

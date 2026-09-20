@@ -10,9 +10,6 @@
  * docs/ai_context/PC_PORT_FROM_DECOMP.md.
  */
 #include "pe_guest_decomp.h"
-/* boundary: func_80071A04 has no pc_port implementation yet */
-#define func_80071A04(...) PE_D_COMP_BOUNDARY3("func_80071A04", 0x80071A04u, __VA_ARGS__)
-
 int func_800816F4(pe_addr_t pe_left, pe_addr_t pe_right)
 {
     /* verbatim body (src/func_800816F4.c) */

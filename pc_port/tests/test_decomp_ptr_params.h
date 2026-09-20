@@ -216,20 +216,26 @@ static void test_DECOMPPTR_display_node_clear(void)
 /* ── 7. boundary receives the guest addresses, not host pointers ────── */
 static void test_DECOMPPTR_boundary_guest_addresses(void)
 {
+    unsigned i;
     TEST("DECOMPPTR_boundary_guest_addresses");
     PE_Decomp_ResetBoundaries();
     Bootstrap_ResetArg4CallLog();
 
+    /* func_80071A04 is now the real libcard A0(18h) memcmp, so the leaf's
+     * guest addresses forward into a real 12-byte comparison instead of a
+     * recorded boundary shim. */
+    for (i = 0; i < 12u; i++) {
+        PE_StoreU8(0x80160000u + i, (uint8_t)(0x10u + i));
+        PE_StoreU8(0x80170000u + i, (uint8_t)(0x10u + i));
+    }
     ASSERT(func_800816F4(0x80160000u, 0x80170000u) == 1,
-           "the boundary returns 0, so the == 0 compare must be true");
-    ASSERT(PE_Decomp_BoundaryCount() == 1 &&
-           strcmp(PE_Decomp_BoundaryName(0), "func_80071A04") == 0,
-           "func_80071A04 must be the recorded boundary");
-    ASSERT(g_bootstrap_arg4_call_count == 1 &&
-           g_bootstrap_arg4_calls[0].arg0 == 0x80160000u &&
-           g_bootstrap_arg4_calls[0].arg1 == 0x80170000u &&
-           g_bootstrap_arg4_calls[0].arg2 == 12u,
-           "the forwarded arguments must be the guest addresses and size 12");
+           "equal 12-byte names must compare equal");
+    ASSERT(PE_Decomp_BoundaryCount() == 0,
+           "func_80071A04 is implemented, so no boundary is recorded");
+
+    PE_StoreU8(0x80170005u, 0x7Fu);
+    ASSERT(func_800816F4(0x80160000u, 0x80170000u) == 0,
+           "a differing byte must compare unequal");
     PASS();
 }
 

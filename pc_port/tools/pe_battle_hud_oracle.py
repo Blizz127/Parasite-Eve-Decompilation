@@ -30,7 +30,7 @@ def signed(n):
     return n - 0x100000000 if n & 0x80000000 else n
 
 
-def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_control=None, initial_cop_data=None, bios_seed=1, instruction_budget=100000, strict_gte_flags=False, final_gte=None, visited_pcs=None, scratchpad=None, stop_pc=None):
+def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_control=None, initial_cop_data=None, bios_seed=1, instruction_budget=100000, strict_gte_flags=False, final_gte=None, visited_pcs=None, scratchpad=None, stop_pc=None, hook_at=None):
     r = [0] * 32
     r[28], r[29] = 0x8009CD70, 0x801FF000
     r[4:4+min(len(args),4)] = args[:4]
@@ -308,6 +308,15 @@ def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_c
             if final_gte is not None:
                 final_gte.update(data=cop_data[:], control=cop_control[:])
             return r
+        if hook_at and pc in hook_at:
+            # Simulate a leaf call with no guest stack frame: the handler sets
+            # the return value in r[2] (and any modelled RAM) and execution
+            # resumes at the caller's return address.  Used where the native
+            # port implements the callee as a host function, so no guest stack
+            # frame exists to match.
+            nxt = hook_at[pc](ram, r)
+            pc = r[31] if nxt is None else nxt
+            continue
         if pc == 0xA0:
             if r[9] == 0x2B:
                 start=r[4]&0x1FFFFF
