@@ -742,6 +742,13 @@ segments:
       # stays in $s0. Head of 35614.s; resume 35698.s 0x2324.
       - [0x35614, c, func_80044E14]
       - [0x35698, asm]
+      # func_80046ABC — allocate + wire two render objects, VRAM
+      # 0x80046ABC, file 0x372BC, size 0x9C (39 words). era -O2 -G0
+      # (also exact on -G8); char* object pointers keep the callback
+      # stores through $s0/$s1. Mid-35698 carve: prefix 0x1C24, C 0x9C,
+      # resume 37358.s 0x664.
+      - [0x372BC, c, func_80046ABC]
+      - [0x37358, asm]
       # Tier-2 B: callback registration wrapper for func_80047040;
       # two independent exact-start stores, era -O2 -G0, first phrasing.
       - [0x379BC, c, func_800471BC]
@@ -1173,6 +1180,13 @@ segments:
       # Block init of the D_800BCF88..D_800BD028 scratch struct. era_o2_g0.
       - [0x56370, c, func_80065B70]
       - [0x56438, asm]
+      # func_80066BD8 — scrolling-backdrop window setup, VRAM 0x80066BD8,
+      # file 0x573D8, size 0xA4 (41 words). era -O2 -G0; unsigned short
+      # arg4 with an int `v = arg4 & 0xFFFF`, nested early-return so the
+      # `bltz` targets the store-1 block. Mid-56438 carve: prefix 0xFA0,
+      # C 0xA4, resume 5747C.s 0x35E0.
+      - [0x573D8, c, func_80066BD8]
+      - [0x5747C, asm]
       # func_80067B40 — VRAM 0x80067B40, size 0x34, file 0x58340-0x58374.
       # Store a0/0 to D_800BCFFA/B, then masked-OR 0x400 into D_800BCF88 via a
       # local pointer. Default era_o2_g0.
@@ -2157,6 +2171,25 @@ segments:
       # Probe: D_800E2248 high-halfword predicate.
       - [0xB3368, c, func_800C2B68]
       - [0xB3390, asm]
+      # func_800C2E08 — clear active 6-byte records + flag, VRAM 0x800C2E08,
+      # file 0xB3608, size 0xA4 (41 words). era -O2 -G0; D_800F34F4 as an
+      # integer, staged flag temp (no if-conversion), mask locals ordered
+      # between i and off. Mid-B3390 carve: prefix 0x278, C 0xA4,
+      # resume B36AC.s 0x144, then func_800C2FF0.
+      - [0xB3608, c, func_800C2E08]
+      - [0xB36AC, asm]
+      # func_800C2FF0 — sprite rectangle corner emitter, VRAM 0x800C2FF0,
+      # file 0xB37F0, size 0xA8 (42 words). era -O2 -G0; scaled corners and
+      # their negations in locals, byte-minus-one values stored last.
+      # Mid-B3390 carve: prefix 0x460, C 0xA8, then func_800C3098.
+      - [0xB37F0, c, func_800C2FF0]
+      # func_800C3098 — display-mode selector + D_800E27AC refresh, VRAM
+      # 0x800C3098, file 0xB3898, size 0x9C (39 words). era -O2 -G0;
+      # void return (retail leaves the callee's $v0 in place, any
+      # short/int return adds andi/sll/sra extension).
+      # Mid-B3390 carve: prefix 0x508, C 0x9C, resume B3934.s 0x39C8.
+      - [0xB3898, c, func_800C3098]
+      - [0xB3934, asm]
       # func_800C653C — VRAM 0x800C653C, size 0x48, file 0xB6D3C-0xB6D84.
       - [0xB6D3C, c, func_800C653C]
       - [0xB6D84, asm]
