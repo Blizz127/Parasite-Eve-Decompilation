@@ -63,6 +63,11 @@ and **0 UNSUPPORTED**. `pe-transition-outer-tests` 5/5.
 `pe-decomp-port-tests`: all 272 generated TUs reproduce from `src/` authority
 (229 src-backed regenerate byte-for-byte, 43 real orphans allowlisted; the 628
 leaves restored authority for 39 that were orphaned). Full CTest 11/11.
+**Harness gap:** despite its name, `test_route_boot_day2.c` asserts only the
+Day-1 prefix (through `m0377i`/`m0004i`, `ROUTE_FRAME_LIMIT 8000`); the live
+autopilot runs to the Day-1 Theater field `M0064I` (token `A8002048`, story
+`0x48`) and then the card boundary. Later Day-1 beats and Day-2 milestones are
+not yet asserted.
 
 **Live port.** Real Disc 1 boots and renders. `--route-pad` autopilot (windowed)
 plays Day 1: opera house, first battle, field rooms. `--headless --route-pad`
