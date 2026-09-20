@@ -924,6 +924,12 @@ segments:
       # gp-relative D_8009D058 bit test (0x2E8($gp)); era -O2 -G8.
       - [0x467E0, c, func_80055FE0]
       - [0x4680C, asm]
+      # func_80056C14 — 32-byte-stride halfword table getter, VRAM
+      # 0x80056C14, file 0x47414, size 0x2C (11 words). era -O2 -G0 +
+      # MASPSX_PASSTHROUGH_SYMBOL_LOAD=1 (folds %lo into the indexed lhu).
+      # Mid-4680C carve: prefix 0xC08, C 0x2C, resume 47440.s 0xF30.
+      - [0x47414, c, func_80056C14]
+      - [0x47440, asm]
       # func_80057B70 — per-object update/registration dispatcher, VRAM
       # 0x80057B70, file 0x48370, size 0xA0 (40 words). era -O2 -G8
       # (D_8009D028 at gp+0x2B8). Mid-4680C carve: prefix 0x1B64,
