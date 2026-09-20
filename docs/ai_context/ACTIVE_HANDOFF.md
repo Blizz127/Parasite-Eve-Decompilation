@@ -181,7 +181,24 @@ retail's two distinct `$s1 = -1` arms and drops the `j`), `func_80082314`
 order reversed and the `-3` constants CSE'd). `func_8001CAB0` was not
 attempted.
 
-## PARENT STATUS (2026-09-20): 870 matching C leaves; executed-path C-share 37.18%
+## PARENT STATUS (2026-09-20): 884 matching C leaves; executed-path C-share 37.18%
+
+**Matching decomp: 768 -> 884 (+116) this session.** Fresh `scripts/split_us.sh`
++ `build_us.sh` + `verify_us.sh` on the merged tree: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (884
+registered C leaves)`, `VERIFY_US=PASS`, plan `1287 spans = 884 c + 401 asm + 2
+rodata`. Wave 5 landed 18 executed-path leaves (`wave5-a` 5, `wave5-b` 3,
+`wave5-c` 6) by working `docs/evidence/exec-coverage/EXECUTED_PRIORITY.md`
+instead of the raw size-ranked worklist.
+
+**func_8001D340 is proven un-carveable and parked.** The 8,596-byte battle tick
+has exactly one prologue, one epilogue and one `jr $ra`, so the prefix/resume
+yaml-carve technique cannot split it — it must be matched whole or stay asm.
+`docs/evidence/bigfish-1d340/REPORT.md` has a 168-block map and a compiling
+candidate that is 1032 words off (register allocation only); do not task anyone
+to carve it again.
+
+## (previous) PARENT STATUS: 870 matching C leaves; executed-path C-share 37.18%
 
 **Matching decomp: 768 -> 870 (+102) this session.** Fresh `scripts/split_us.sh`
 + `build_us.sh` + `verify_us.sh` on the merged tree: **EXACT SHA-1
