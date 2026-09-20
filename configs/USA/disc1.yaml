@@ -786,7 +786,8 @@ segments:
       - [0x40F28, c, func_80050728]
       - [0x40F48, asm]
       - [0x413E8, c, func_80050BE8]
-      - [0x41408, asm]
+      # func_80050C08 — VRAM 0x80050C08, size 0x48, file 0x41408-0x41450.
+      - [0x41408, c, func_80050C08]
       - [0x41450, c, func_80050C50]
       - [0x41470, asm]
       - [0x414F8, c, func_80050CF8]
