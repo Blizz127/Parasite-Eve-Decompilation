@@ -9,8 +9,11 @@ many of those are backed by a decompiled C leaf (`src/<name>.c`, i.e. a `c`
 span in `configs/USA/disc1.yaml`), how many are backed by a pc_port
 transcription only, and how many hit an unresolved loud boundary.
 
-Worktree: `/tmp/pe-agent-coverage`, branch `agent/exec-coverage`, base commit
-`6e27fbdd`.
+Worktree: `/tmp/pe-agent-covrefresh`, branch `agent/cov-refresh`, base commit
+`0789c2e3` (the merge that took the retail build to 864 registered C leaves).
+
+This snapshot was refreshed at 864 C leaves. The previous snapshot was pinned
+to the 810-leaf binary; see §3 for what changed.
 
 ---
 
@@ -78,13 +81,18 @@ Standard library only. It:
 ### Boundary map derived at this commit
 
 `python3 tools/build/disc1_plan.py --check`:
-`disc1 plan: 1177 spans (810 c, 365 asm, 2 rodata)`.
+`disc1 plan: 1260 spans (864 c, 394 asm, 2 rodata)`.
 
 | source | functions |
 | --- | --- |
-| `configs/USA/disc1.yaml` `c` spans (decompiled C leaves) | 810 |
-| `asm/disc1/*.s` `nonmatching` functions (no C leaf yet) | 1583 |
+| `configs/USA/disc1.yaml` `c` spans (decompiled C leaves) | 864 |
+| `asm/disc1/*.s` `nonmatching` functions (no C leaf yet) | 1529 |
 | **total distinct guest functions** | **2393** |
+
+The total is unchanged from the 810-leaf snapshot (2393): matching a leaf does
+not add a guest function, it moves one address from the `asm` bucket to the `c`
+bucket. Here 54 previously-asm functions became C leaves (810 → 864, and
+1583 → 1529 asm), so the same 2393 functions are now better covered in C.
 
 The project docs quote *2390 functions*; that is a slightly older snapshot.
 This tool derives the number from the yaml + split rather than hard-coding it,
@@ -106,11 +114,13 @@ cmake -S pc_port -B pc_port/build-coverage -DPE_EXEC_COVERAGE=ON
 cmake --build pc_port/build-coverage -j 12
 ```
 
-Route run (Day-1/Day-2 autopilot, skip-movie, headless, 80000-frame budget):
+Route run (Day-1/Day-2 autopilot; `--route-pad` implies skip-movie and
+skip-opening-menu; headless, 80000-frame budget). The counter writes straight
+to the committed evidence files:
 
 ```sh
-PE_EXEC_COVERAGE_OUT=/tmp/route_cov.txt \
-PE_EXEC_COVERAGE_BOUNDARIES=/tmp/route_bnd.txt \
+PE_EXEC_COVERAGE_OUT="$PWD/docs/evidence/exec-coverage/route_exec_coverage.txt" \
+PE_EXEC_COVERAGE_BOUNDARIES="$PWD/docs/evidence/exec-coverage/route_exec_coverage_boundaries.txt" \
 ./pc_port/build-coverage/parasite-eve-port \
   --disc-image "$(cat local/pe_disc1.path)" \
   --headless --route-pad --max-frames 80000 \
@@ -120,15 +130,15 @@ PE_EXEC_COVERAGE_BOUNDARIES=/tmp/route_bnd.txt \
 Opening-movie run (real Disc 1, headless, no `--skip-movie`):
 
 ```sh
-PE_EXEC_COVERAGE_OUT=/tmp/movie_cov.txt \
-PE_EXEC_COVERAGE_BOUNDARIES=/tmp/movie_bnd.txt \
+PE_EXEC_COVERAGE_OUT="$PWD/docs/evidence/exec-coverage/movie_exec_coverage.txt" \
+PE_EXEC_COVERAGE_BOUNDARIES="$PWD/docs/evidence/exec-coverage/movie_exec_coverage_boundaries.txt" \
 ./pc_port/build-coverage/parasite-eve-port \
   --disc-image "$(cat local/pe_disc1.path)" \
   --headless --max-frames 2000 \
   --trace /tmp/movie_cov_trace.log
 ```
 
-Classify and write the committed artifact:
+Classify and write the committed artifacts (names + priority ranking included):
 
 ```sh
 python3 tools/progress/exec_coverage.py \
@@ -137,7 +147,8 @@ python3 tools/progress/exec_coverage.py \
   --primary route \
   --run route:docs/evidence/exec-coverage/route_exec_coverage.txt:docs/evidence/exec-coverage/route_exec_coverage_boundaries.txt \
   --run movie:docs/evidence/exec-coverage/movie_exec_coverage.txt:docs/evidence/exec-coverage/movie_exec_coverage_boundaries.txt \
-  --json-out docs/evidence/exec-coverage/coverage.json
+  --json-out docs/evidence/exec-coverage/coverage.json \
+  --priority-out docs/evidence/exec-coverage/EXECUTED_PRIORITY.md
 ```
 
 The raw hit sets and boundary logs are committed next to this report; the
@@ -153,24 +164,47 @@ token `A8001148`, story `0x48`, 0 bootstrap stubs, 0 unported opcodes.
 
 | run | host fns entered | executed guest fns | decompiled C leaf | C share | pc_port-only | not in static map | unresolved-boundary fns |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| route (`--route-pad --max-frames 80000`) | 1350 | **710** | **237** | **33.38%** | 473 | 6 | **0** |
-| movie (`--max-frames 2000`, opening FMV) | 568 | **229** | **91** | **39.74%** | 138 | 18 | **0** |
+| route (`--route-pad --max-frames 80000`) | 1350 | **710** | **264** | **37.18%** | 446 | 6 | **0** |
+| movie (`--max-frames 2000`, opening FMV) | 568 | **229** | **94** | **41.05%** | 135 | 18 | **0** |
+
+The executed guest-function counts are unchanged from the 810-leaf snapshot
+(710 route / 229 movie): the same guest graph runs, but 27 more of the route's
+executed functions (237 → 264) and 3 more of the movie's (91 → 94) are now
+backed by a decompiled C leaf instead of a pc_port transcription.
 
 * `executed guest fns` counts distinct guest functions from the boundary map
   whose `func_XXXXXXXX` port symbol was entered at least once.
 * `decompiled C leaf` counts those whose VMA is a `c` span; every one of the
-  route's 237 was cross-checked to have `src/<name>.c` present (0 missing).
+  route's 264 and the movie's 94 was cross-checked to have `src/<name>.c`
+  present (0 missing in either run).
 * `not in static map` are dynamically loaded room/overlay functions transcribed
-  in `pc_port` (e.g. `func_8018F018`, `func_8018F330`, `func_8018F614`,
-  `func_8018FB84`, `func_8018FDC4`, `func_801909B4` on the route) — the static
-  retail-image boundary map cannot see them.
+  in `pc_port`. The route's six are `func_8018F018`, `func_8018F330`,
+  `func_8018F614`, `func_8018FB84`, `func_8018FDC4`, `func_801909B4`; the
+  movie's eighteen include the whole FMV pipeline
+  (`func_801924F8`, `func_8010C89C`, `func_80192934`, `func_80192CE8`, …) — the
+  static retail-image boundary map cannot see them.
 * Both runs' executed paths contained **no unresolved loud boundary**
   (`PE_PORT_STOP_UNRESOLVED_BOUNDARY`), so the third requested number is 0 for
   both. That is the honest executed-path result, not a missing measurement.
+  Both runs ended at `stop_reason=frame-limit`: the route reached all 80000
+  frames (token `A8001148`, story `0x48`, 0 bootstrap stubs), and the movie run
+  reached all 2000 frames.
 
 The movie run genuinely drove the movie pipeline: `func_801924F8` (production
 movie frame), `func_8010C89C` (VLC decoder), `func_8007C564` / `func_8007C214`
 (stream assembly) and `func_80192934` / `func_80192CE8` are all in its hit set.
+
+### Per-function names and next-match priority
+
+`coverage.json` now also records the names behind every count, per run:
+`executed_guest_function_names`, `decompiled_c_names`, `pc_port_only_names` and
+`unmapped_guest_names` (sorted). Counts are unchanged; the names are additive.
+
+[`EXECUTED_PRIORITY.md`](EXECUTED_PRIORITY.md) ranks the route's 446
+pc_port-only functions by descending retail size — the functions the route
+already reaches that are still transcribed, so matching them raises the
+executed C-share rather than only the leaf count. Top of the list:
+`func_8001D340` (8596 bytes), `func_8002BC90` (5472), `func_8002DC58` (5208).
 
 ### Unresolved-boundary counter validation (non-zero case)
 
@@ -189,6 +223,9 @@ guest functions** — `func_801214D4`, `func_80121C04`, `func_80122040`
 (dynamic movie overlays, not in the static map) and `func_80080DC4` (static
 `asm` span, 0x68 bytes). The recorded stacks are exact
 (`PE_Port_RequestStop <- func_801214D4`), confirming the attribution.
+Re-run against the 864-leaf coverage binary it reproduced exactly (187 events,
+same 4 functions), so the boundary half of the counter is unchanged by the
+refresh.
 
 `native_metrics.py --json` now reports the route run as the primary measured
 value:
@@ -198,10 +235,13 @@ value:
   "status": "MEASURED",
   "primary_run": "route",
   "guest_boundary_map_total": 2393,
+  "guest_boundary_map_decompiled_c": 864,
+  "guest_boundary_map_asm": 1529,
   "executed_guest_functions": 710,
-  "decompiled_c": 237,
-  "decompiled_c_share_percent": 33.38,
-  "pc_port_only": 473,
+  "decompiled_c": 264,
+  "decompiled_c_share_percent": 37.18,
+  "pc_port_only": 446,
+  "unmapped_guest_functions": 6,
   "unresolved_boundary_functions": 0
 }
 ```
@@ -235,34 +275,37 @@ value:
 
 ## 5. Verification
 
-Normal, uninstrumented configuration (golden rule):
+Normal, uninstrumented configuration (golden rule), rebuilt from the 864-leaf
+tree for this refresh:
 
 ```
-cmake -S pc_port -B pc_port/build -DCMAKE_BUILD_TYPE=Release
-cmake --build pc_port/build -j 12          # 21 warnings (unchanged from baseline)
-cd pc_port/build && ctest                  # 11/11 PASS
+cmake -S pc_port -B pc_port/build
+cmake --build pc_port/build -j 12          # 21 warnings (unchanged)
+cd pc_port/build && ctest                  # 11/11 PASS (110.76 s)
 ```
 
-* `build/CMakeFiles/pe_field_runtime.dir/bootstrap/game_port.c.o` is
-  **byte-for-byte identical** before and after this change (SHA-256
-  `f2d2fa134807df123e5af15920fdeb36c72c76eb10b17bb14368d69d614ad55f`);
-  the boundary hook is entirely behind `#ifdef PE_EXEC_COVERAGE`.
 * `nm pc_port/build/parasite-eve-port | grep __cyg_profile_func` → no matches
   (no counter in the normal build).
+* `build/CMakeFiles/pe_field_runtime.dir/bootstrap/game_port.c.o` SHA-256
+  `0cf7858500f3909b1fddb6a2720c7b91db06f0dadcfdac2899665d0d93c70d4f`; the
+  boundary hook is entirely behind `#ifdef PE_EXEC_COVERAGE`, so the default
+  build can never compile it.
 * `python3 tools/progress/test_progress.py` → 4/4 OK.
-* `python3 tools/progress/native_metrics.py --check-status` → PASS.
+* `python3 tools/progress/native_metrics.py --check-status` → PASS
+  (`native frontier=complete coverage=788/788 linked_tus=337
+  field_runtime=present tests=1405`).
 
-Coverage configuration:
-
-```
-cd pc_port/build-coverage && ctest           # 11/11 PASS (280.63 s)
-```
-
-Instrumentation adds no build warnings beyond the normal build's 21.
+Coverage configuration (instrumented, `-DPE_EXEC_COVERAGE=ON`): builds cleanly
+with no warning class beyond the normal build's 21 and produced both runs and
+the boundary-validation test above. `cd pc_port/build-coverage && ctest` →
+11/11 PASS (339.25 s). The coverage binary SHA-256 is
+`337152bde25ecf6c7b1295972f96e6d9e420b6e00e2e0efc9eee62771cd5543d`.
 
 ---
 
 ## 6. Files
+
+Original mechanism (previous snapshot):
 
 | file | change |
 | --- | --- |
@@ -274,3 +317,16 @@ Instrumentation adds no build warnings beyond the normal build's 21.
 | `tools/progress/native_metrics.py` | reads `coverage.json`; reports MEASURED instead of UNMEASURED |
 | `docs/generated/NATIVE_PORT_STATUS.md` | regenerated |
 | `docs/evidence/exec-coverage/*` | this report, raw hit sets, boundary logs, `coverage.json` |
+
+This refresh (864-leaf snapshot) — no change to the counter, instrumentation,
+CMake or `native_metrics.py`:
+
+| file | change |
+| --- | --- |
+| `docs/evidence/exec-coverage/route_exec_coverage.txt`, `movie_exec_coverage.txt` | re-measured hit sets |
+| `docs/evidence/exec-coverage/route_exec_coverage_boundaries.txt`, `movie_exec_coverage_boundaries.txt` | re-measured (still 0 events each) |
+| `docs/evidence/exec-coverage/coverage.json` | regenerated: new `binary_sha256`, 864-leaf boundary map, refreshed counts, plus per-run name lists |
+| `docs/evidence/exec-coverage/EXECUTED_PRIORITY.md` | new: route pc_port-only functions ranked by retail size |
+| `docs/evidence/exec-coverage/REPORT.md` | refreshed numbers for both runs |
+| `tools/progress/exec_coverage.py` | additive: per-run function-name lists and `--priority-out` (counts unchanged) |
+| `docs/generated/NATIVE_PORT_STATUS.md` | regenerated from the refreshed `coverage.json` |

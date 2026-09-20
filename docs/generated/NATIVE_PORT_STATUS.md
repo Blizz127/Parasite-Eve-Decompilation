@@ -17,7 +17,7 @@
 - Public normal/sanitizer requirement: **1361 pass,
   44 explicitly tagged skips, 0 failures**
 - Private full requirement with Disc 1 configured: **1405 / 1405**
-- Executed-path (C-only) reachability, `route` run: **710** guest functions executed, of which **237** (33.38%) are backed by a decompiled C leaf and **473** by a pc_port transcription only; **0** hit an unresolved loud boundary. Guest-function boundary map: **2393** functions. See [`docs/evidence/exec-coverage/REPORT.md`](../evidence/exec-coverage/REPORT.md).
+- Executed-path (C-only) reachability, `route` run: **710** guest functions executed, of which **264** (37.18%) are backed by a decompiled C leaf and **446** by a pc_port transcription only; **0** hit an unresolved loud boundary. Guest-function boundary map: **2393** functions. See [`docs/evidence/exec-coverage/REPORT.md`](../evidence/exec-coverage/REPORT.md).
 
 Evidence: [`docs/evidence/pe-b54kb6-30894-l9/REPORT.md`](../evidence/pe-b54kb6-30894-l9/REPORT.md).
 Regenerate/check with `python3 tools/progress/native_metrics.py --write-status`
