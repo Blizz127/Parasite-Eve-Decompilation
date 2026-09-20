@@ -7,6 +7,59 @@
 
 # ACTIVE HANDOFF
 
+## WAVE-7 SLICE C (`agent/wave7-c`, 2026-09-20): 902 -> 905, executed-path functions
+
+**Branch `agent/wave7-c`, worktree `/tmp/pe-agent-w16`.** Baseline gate re-run
+first: `split_us.sh` (host) + `build_us.sh` + `verify_us.sh` (pe-mipsel)
+reported `EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (902 registered C leaves)`, `VERIFY_US=PASS`. Final fresh
+build after the carves: same EXACT SHA-1, `Matching claim: YES (905 registered
+C leaves)`, plan `1313 spans = 905 c + 406 asm + 2 rodata`, `VERIFY_US=PASS`.
+
+Landed three executed-path leaves (commits `b6d0ea0b`, `4b6f0394`):
+
+- `func_800C2B90` (0xB3390, 0x17C) — weapon-slot record lookup + callback
+  dispatch. Default `era_o2_g0`. **Levers:** `D_800F34F4`/`D_800F3330` are
+  integer bases; the three `func_800C6CE0` calls are genuinely separate
+  short-circuit calls; `func_800C2D0C` prototyped with an **`unsigned short`
+  first parameter** so the caller emits the `andi $a0,$s1,0xFFFF` that cc1
+  fills into the branch delay slots; the four incoming arguments are copied
+  into locals in **save order (slot, sizes, callbacks, code)** so cc1 emits
+  retail's `$s2,$s3,$s4,$s0` prologue (ABI-order locals leave 6 words swapped).
+- `func_80035C84` (0x26484, 0x180) — pose snapshot + view-code publish +
+  motion integrate. Profile **`era_o2_g8_aspsx_230`**. **Levers:**
+  `D_8009D254` is `int **` (retail does the extra `lw $v0,0($v0)`);
+  `D_800943C0` absolute via an incomplete array; the view-code mask must be
+  staged in a **local `v`** before the unconditional `sp10 = a->f0E` (an
+  inline `(*D_8009D254)->...` reference reorders the pointer chain); and the
+  final `+0x2C` result must be **kept in a local and returned**
+  (`r = a->f2C + a->f5C; a->f2C = r; ...; return r;`) — `return a->f2C;`
+  makes cc1 emit a fresh reload (+16 bytes).
+- `func_80066800` (0x57000, 0x18C) — 52-byte view-record apply. Default
+  `era_o2_g0`. **New reusable lever: `*volatile` on a pointer global forces
+  cc1 to reload the pointer before every store through it.** Retail reloads
+  `D_800BCFA4` before all twelve stores and loads `D_800B1624` twice at entry;
+  a plain pointer lets cc1 hoist the base and drops ~19 words (320 vs 396 B).
+  Also: cc1 2.7.2 does **not** unroll a constant 9-trip copy loop — the nine
+  halfword copies must be written out literally.
+
+**Reusable notes:** (1) `extern T *volatile G` is the general lever for a
+retail function whose asm is a repeated `lui/lw` + store pair over a pointer
+global, and for forcing two independent loads of one pointer global in one
+expression. (2) When retail returns a value it just stored through a field,
+`return X->f;` reloads — keep the computed value in a local instead. (3) cc1
+2.7.2 does not unroll short constant loops.
+
+Three targets were **parked** (`wave7c-*` ids in `parked_blockers.json`):
+`func_80062830` (63 — entry PUSH needs both D_8009D124/D128 materialised
+before either store; $s1 save in the beqz delay slot), `func_80014228` (63 —
+no-call leaf; cc1 cross-jumps the two `*d->fC = -1; return 1` sites and hoists
+the null check, changing all following branch offsets), `func_80057654` (68 —
+register homes: retail keeps the looked-up halfword in `$v1` and copies to
+`$a1`, and keeps the loop-invariant `8` in `$s3` across the
+`func_8005415C` call). Slice stopped at three parks (the remaining listed
+targets each need the same kind of allocator/scheduler iteration).
+
 ## PARENT STATUS (2026-09-20): 902 matching C leaves; executed-path C-share 42.25%
 
 **Matching decomp: 768 -> 902 (+134) this session.** Fresh split + build +
