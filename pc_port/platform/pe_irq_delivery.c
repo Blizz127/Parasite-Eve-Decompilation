@@ -123,6 +123,14 @@ static PeIrqServiceResult DispatchDmaCallback(pe_addr_t handler)
         func_801214D4();
         return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;
     }
+    /* Title-overlay DecDCTout DMA1 callback.  func_801924F8 registers it
+     * with func_8010C0D8(0x80191DC8); it is the structural twin of the
+     * player's 0x801214D4 (same return shape, title BSS).  Carve:
+     * docs/evidence/pe-day2-158-91dc8/ (124 words). */
+    if (handler == 0x80191DC8u) {
+        func_80191DC8();
+        return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;
+    }
     if (handler == 0x8007C214u) {
         func_8007C214();
         return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;

@@ -11,9 +11,11 @@
  * Body from 0x80192960: 918F8 flip / BFA0 / C01C / 91B64 poll /
  * C89C+7C394 on got-frame / CD reissue / 1494 wait / abort teardown.
  *
- * LIVE C89C WIRED (2026-09-09): PR38 tip DAY2-158f Stage-1b last-chunk
- * StreamFrameReady admits decoder frames. got-frame mirrors 924F8:
- * immediate pad OR TakeStreamFrameReady, then C89C + 7C394.
+ * LIVE C89C WIRED (DAY2-159c): got-frame mirrors func_801924F8's
+ * authenticated tail — E0-style delivery pump on the device path, and the
+ * same complete-frame gate (`PE_Movie_LastPublishComplete()`) before
+ * entering func_8010C89C + func_8007C394.  A surrogate publish keeps the
+ * named boundary instead of decoding an unpopulated body (MV1d trap).
  *
  * Documented callees:
  *   918F8 / 0BFA0 / C01C / 91B64 / C89C / 7C394 — ported
@@ -92,11 +94,19 @@ int func_80192934(void)
     poll_left = 0x7d0; /* 2000 */
 poll_again:
     for (;;) {
-        /* Delivery pump mirrors func_801924F8's E0 poll: retail
-         * populates streaming slots via the DMA3-completion callback
-         * (7C214) during this spin, and the port delivers synchronously
-         * because it has no async interrupts. */
-        func_8007C214();
+        /* Delivery pump mirrors func_801924F8's E0 poll.  On a real
+         * drive the port advances the modeled CD device one poll
+         * quantum at a time (HostFB_StreamTick -> PE_CdReg_ServiceDevice
+         * + IRQ service), driving the retail chain data-ready IRQ ->
+         * 813E8 -> 7C564 -> DMA3 -> 7C214, which publishes a complete
+         * record as state 2.  Test fixtures with no device call
+         * func_8007C214 directly (the documented synchronous-delivery
+         * surrogate); that publish is not a last-chunk delivery, so the
+         * got-frame gate below keeps the honest decoder boundary. */
+        if (PE_CdReg_DeviceEnabled())
+            HostFB_StreamTick();
+        else
+            func_8007C214();
         frame = func_80191B64(pair_base);
         if (PE_Port_ShouldStop())
             return 0;
@@ -109,17 +119,50 @@ poll_again:
         goto after_frame;
     }
 
-    /* got-frame @ 0x80192A68 — the decoder tail is not wired here.
-     * func_80192CE8 stops at its 80192E08 cut before it ever calls this
-     * worker, and func_801924F8 carries the authenticated got-frame tail
-     * and stops at the decoder boundary for the same reason: a partial
-     * STR frame would march func_8010C89C's output cursor past the 2 MiB
-     * guest window (MV1d trap).  Keep the same honest boundary rather
-     * than decode unvalidated input. */
-    (void)frame;
-    Bootstrap_ReturnVoid("func_8010C89C", "func_80192934");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return 0;
+    /* got-frame @ 0x80192A68 — authenticated C89C tail, same gate as
+     * func_801924F8.  Retail bumps DBC, toggles 146C, loads
+     * a1 = [0x801D1464 + (146C^1)<<2], a2 = [0x801D0DF8], then calls the
+     * VLC decoder func_8010C89C(a0 = s1) and func_8007C394(s1).  The
+     * decoder's output cursor is bounded only by the VLC stream's own
+     * pad/terminator codes, so it must only ever see a complete STR
+     * frame: a partial body walks a1 past the 2 MiB guest window (MV1d
+     * trap).  PE_Movie_LastPublishComplete() is true only when the
+     * published record came from a last video chunk; a surrogate publish
+     * that did not keeps the named boundary instead of decoding an
+     * unpopulated body.
+     *
+     * Unlike 924F8, retail 92934 has NO EC stores here: after 7C394 it
+     * falls straight into the success path with status16 = 0. */
+    {
+        uint16_t count = PE_LoadU16(0x800B0DBCu);
+        uint32_t next_flip = (uint32_t)PE_LoadU8(0x801D146Cu) ^ 1u;
+        pe_addr_t out;
+        pe_addr_t table;
+        uint32_t stream = (uint32_t)frame;
+
+        if (!PE_Movie_LastPublishComplete()) {
+            Bootstrap_ReturnVoid("func_8010C89C", "func_80192934");
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
+        }
+        PE_StoreU16(0x800B0DBCu, (uint16_t)(count + 1u));
+        PE_StoreU8(0x801D146Cu, (uint8_t)next_flip);
+        out = (pe_addr_t)PE_LoadU32(pair_base + next_flip * 4u);
+        table = (pe_addr_t)PE_LoadU32(0x801D0DF8u);
+        if (!PE_RangeIsRam((pe_addr_t)stream, 2u) ||
+            !PE_RangeIsRam(out, 0x11000u) ||
+            !PE_RangeIsRam(table, 0x10800u)) {
+            Bootstrap_ReturnVoid("func_8010C89C_arena", "func_80192934");
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
+        }
+        (void)func_8010C89C(stream, out, table, 0u);
+        if (PE_Port_ShouldStop())
+            return 0;
+        func_8007C394(stream);
+        status16 = 0;
+        /* fall through to the success path at after_frame */
+    }
 
 after_frame:
     /* CD reissue when 91B64 poll exhausted (status16 == -1). */

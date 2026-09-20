@@ -10,6 +10,28 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-159c: re-land func_80192CE8 post-E08 media loop + 91DC8 dispatch (2026-09-20)
+
+Branch `agent/92ce8-media-loop` from `980ffab`. The authenticated post-E08
+loop `[0x80192E08,0x80192F98)` (100 words, SHA-256
+`77218c9c335f6b4a24416a39d21d09876d7bc9f74778fefb26d28d501dbfd01a`) is back
+in `func_80192CE8_port.c` — transcribed from
+`docs/evidence/pe-92ce8-post-e08/`, including the 0x80192EE8 reload of
+`(int16)D_800B0DBC` on the abort path. `func_80192934`'s got-frame now
+mirrors `func_801924F8`: device-path `HostFB_StreamTick()` pump, the
+`PE_Movie_LastPublishComplete()` gate before `func_8010C89C`, ranged checks,
+no EC stores (retail 92934 has none). New discriminating test
+`DAY2_92ce8_media_loop_tail` PASSes re-landed and FAILs on the cut.
+
+Live Disc1 headless: wall moved from the `func_8010C89C` gate to
+`func_80074520_dma_indirect_call` (unbound `0x80191DC8`), then — after wiring
+the ported title DecDCTout twin in `DispatchDmaCallback` — to
+`MDEC_decode_busy` after two `func_80192934_enter` entries. Evidence:
+`docs/evidence/pe-day2-159c-media-loop/REPORT.md`. Suite **1376/1376**.
+
+Next: the `MDEC_decode_busy` host predicate (DAY2-158u supersede family), then
+the media loop's pad-held abort path. Non-claims: FMV plays through; Day 2.
+
 ## RECOVERY 2: byte-exact rebuild restored, maspsx pinned, EXACT SHA-1 (2026-09-20)
 
 Two upstream-drift bugs in the era toolchain were blocking all matching
