@@ -1436,6 +1436,13 @@ segments:
       # prefix 0x5468, C 0x80, resume 5C6CC.s 0x1C7C.
       - [0x5C64C, c, func_8006BE4C]
       - [0x5C6CC, asm]
+      # func_8006C4C4 — VRAM 0x8006C4C4, size 0xF8, file 0x5CCC4-0x5CDBC.
+      # Frame/voice state setter: on arg0 == -1 reseeds D_800B0CE4/CE6 from
+      # CE5, then ORs the D_800B0CD8 record flags and records the new index.
+      # Default era_o2_g0; the CE6 update must be `D_800B0CE6 |= 3` (a temp
+      # there swaps $v0/$a0 relative to retail).
+      - [0x5CCC4, c, func_8006C4C4]
+      - [0x5CDBC, asm]
       # Wave3-B: func_8006D24C — VRAM 0x8006D24C, size 0x6C, file
       # 0x5DA4C-0x5DAB8. Clears six signed-byte state globals to -1, masks
       # 0xF0 out of D_800B0CD8, then calls func_80086FF8. era -O2 -G0.
@@ -2471,6 +2478,13 @@ segments:
       # Mid-B3390 carve: prefix 0x508, C 0x9C, resume B3934.s 0x39C8.
       - [0xB3898, c, func_800C3098]
       - [0xB3934, asm]
+      # func_800C3238 — VRAM 0x800C3238, size 0xEC, file 0xB3A38-0xB3B24.
+      # Selector-byte dispatcher: maps D_800F33B8 selector 0..4 onto the
+      # D_800F337A / D_800E224C pair, then stores func_80077A64(...) into
+      # D_800E27AC. Uses the shared switch table jtbl_800C2128; profile
+      # era_o2_g0_dispatch_800c2128 (THREE_WORD + DISPATCH_FOLD).
+      - [0xB3A38, c, func_800C3238]
+      - [0xB3B24, asm]
       # func_800C653C — VRAM 0x800C653C, size 0x48, file 0xB6D3C-0xB6D84.
       - [0xB6D3C, c, func_800C653C]
       - [0xB6D84, asm]

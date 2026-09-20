@@ -261,6 +261,17 @@
       "environment": {
         "ERA_ASPSX_VER": "2.30"
       }
+    },
+    "era_o2_g0_dispatch_800c2128": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_800C2128"
+      }
     }
   },
   "assignments": {
@@ -657,6 +668,9 @@
       "func_800438EC",
       "func_80044174",
       "func_800447F0"
+    ],
+    "era_o2_g0_dispatch_800c2128": [
+      "func_800C3238"
     ]
   }
 }
