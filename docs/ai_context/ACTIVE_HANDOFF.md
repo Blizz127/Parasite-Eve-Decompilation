@@ -346,6 +346,18 @@ reads `[0x800A1A14]` (written only by `func_80042264`). The port uses
 `0x800A1854`/`0x800A185C`, and the card oracles transcribe those addresses
 (`pe_card_operation_oracle.py:44`), so fixing the port to retail's globals
 requires regenerating the oracles first;
+**Cancel-input experiment (2026-09-20, negative but narrowing):** I injected a
+Circle/0xDFFF cancel into the recorded route sequence over frames 39000..41900
+(a temporary `PE_ROUTE_POST_MASK` probe, removed). `func_8004D6D4` then
+receives **145× event 0x40 (cancel) + 278× 0x10000 (confirm)** instead of
+confirm only, so the cancel DOES reach the slot list — but story/token stay
+`0x48`/`A8002048`. `func_800512AC` is still called only twice (cmd=10 then
+cmd=9; cmd=10 sets `[0x8009D010]=1000`, consumed before the cmd=9 entry), and
+with the cancel the run extends to ~frame 44000 before stopping at the same
+`card operation unresolved call` boundary. Triangle/Start/Select/Square sweeps
+change nothing. So the missing step is NOT simply a route exit button — it is
+in the menu teardown/result path (state 9's notice -> slot-list focus ->
+`func_800512AC(10)` consumption -> field resume);
 (2) the guest-side media-loop completion
 after the ~319-step FMV media loop;
 (3) **audio: FMV XA audio is now audible.** `agent/music-keyon` made SPU init
