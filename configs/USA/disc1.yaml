@@ -1085,7 +1085,9 @@ segments:
       - [0x64494, c, func_80073C94]
       - [0x644C4, c, func_80073CC4]
       - [0x644F4, c, func_80073CF4]
-      - [0x64524, asm]
+      # func_80073D24 — VRAM 0x80073D24, size 0x34, file 0x64524-0x64558.
+      # Indirect call through D_8009566C->0x14 with (4, arg0).
+      - [0x64524, c, func_80073D24]
       - [0x64558, c, func_80073D58]
       - [0x64588, c, func_80073D88]
       - [0x645B8, c, func_80073DB8]
