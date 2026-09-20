@@ -286,22 +286,22 @@ loops at story `0x48`; the live `format_name` path also needs the card-operation
 oracle to supply a guest frame for states 4/5/6/11 (without it `DAY1_card_operation`
 fails). Then the route can pass `0x48`; (2) the guest-side media-loop completion
 after the ~319-step FMV media loop;
-(3) **audio: SPU init is real now, but the retail main EXE never keys a voice
-in gameplay.** `agent/music-keyon` translated `func_8007D1D4` (SPU init),
-`func_8007DAE0` (register write), `func_8007D454` (transfer port) and
-`func_8007DCAC` into `pe_spu_init.c` and wired them into `func_8007D054`.  A
-live 42000-frame run now reports `[SPU] reg_writes=541 key_ons=24 key_offs=24`
-(the SsInit all-voice KON/KOFF reset pulse), up from 0.  **But a full scan of
-`asm/disc1/*.s` finds no other KON (`0x188`/`0x18A`) writer**: the music-start
-consumers `func_8008A068`/`8AE94`/`8B040` drive score/instrument structures
-and call the SDK voice-parameter writers (`func_80087798` etc.), which write
-volume/pitch/ADSR only.  So the live WAV stays **silent** (peak 0) — audible
-music needs XA/CD-DA (CD `CdlModeSM` bit4) or an overlay SPU driver, not the
-main-EXE music path.  Also fixed a real `pe_spu.c` bug: the KON/KOFF high
-halfword walked voices 16..31 (`g_voices[24..31]` OOB); now bounded to 24.
-Evidence: `docs/evidence/pe-music-keyon/REPORT.md`.  Named gaps unchanged:
-gaussian interpolation (linear used), volume sweep, noise/pitch-mod/reverb,
-XA-ADPCM.  No retail audio golden; (4) carve the ranked large functions
+(3) **audio: FMV XA audio is now audible.** `agent/music-keyon` made SPU init
+real (`func_8007D1D4`/`7DAE0`/`7D454`/`7DCAC` in `pe_spu_init.c`; live
+`reg_writes=541 key_ons=24 key_offs=24`), but proved the main EXE has **no
+gameplay KON writer**, so the score path alone stays silent. `agent/xa-audio`
+then added `pe_xa.{c,h}`: 4/8-bit CD-XA ADPCM (psx-spx filter tables, the
+18x128-byte Form-2 sound-group layout, subheader/coding-info classification)
+resampled to the 44100 Hz sink; `pe_cdreg` consumes every raw sector (the drive
+decodes XA independently of BFRD) and `pe_spu` mixes the XA ring into the
+vblank buffer. **Live opening FMV (real Disc 1): 399 XA sectors / 804,384
+frames decoded, WAV peak 19491 (RMS 1283)** — audible audio where the port was
+silent. The skip-movie `--route-pad` run decodes 0 XA sectors (field music is
+not on the XA stream path), which is expected. Named gaps: linear resampling
+(not the hardware gaussian), mono/18900 Hz and 8-bit paths not live-exercised,
+XA volume/`ATV0..3` not applied, noise/pitch-mod/reverb. Evidence:
+`docs/evidence/pe-music-keyon/REPORT.md`, `docs/evidence/pe-xa-audio/REPORT.md`.
+No retail audio golden; (4) carve the ranked large functions
 from the worklist. **Disc 2 is
 code-identical:** this session
 re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
