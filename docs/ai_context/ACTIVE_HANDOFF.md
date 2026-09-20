@@ -10,6 +10,26 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DECOMP100 SLICE-1 TRIAGE: 0 leaves, slice is out of C-leaf range (2026-09-20)
+
+Branch `agent/decomp100` from `ec097017` (worklist ranks 1–36, the 36 largest
+remaining functions). Baseline reproduced exactly (709 c leaves, EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `VERIFY_US=PASS`). **No new leaf
+was registered** — every top-36 function is 2–9× the largest C leaf this
+project has matched (976 B / 244 words, `func_80012850`). A deep attempt on
+`func_80024250` (rank 30, 507 words, jump-table switch) matched the first
+0x2F4 bytes byte-for-byte (head + cases 0–6) then hit a sched2/global-alloc
+wall in case 7 (retail materialises `a3/a1/t0/t1 = ~0x8000/~0x10000/~0x20000/
+~0x40000` contiguously; era cc1 interleaves the `li $4,~0x1000`), which no
+flag or source shape moved. 7 of the 36 (ranks 16/19/22/31/33/34/36) are
+GTE/COP2 functions and have no C path at all (era `cc1` has no GTE codegen;
+no matched leaf contains a COP2 word). Full table, per-class blockers and the
+`func_80024250` divergence are in
+`docs/evidence/agent-decomp100/REPORT.md` (+ `func_80024250.wip.c`).
+Recommendation: re-slice ranks 1–36 into medium functions for parallel agents;
+decide a GTE policy before ranking the COP2 leaves. Tooling gap: `try_leaf.py`
+cannot exercise `MASPSX_FORCE_ABSOLUTE_SYMBOLS` (emulate it or add a flag).
+
 ## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
 
 Branch `agent/4ad9c-savepage` from `160137a4`.  The field main-menu handler no
