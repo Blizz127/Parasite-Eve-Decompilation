@@ -644,6 +644,9 @@ segments:
       # Phase 5ES: first loop-as-volume leaf; era -O2 -G0, no $gp.
       # Mid-340EC carve: prefix 0x861C, C 0x38 (14 words), resume 3C740.s 0x10E4.
       - [0x340EC, asm]
+      # func_80044DCC — VRAM 0x80044DCC, size 0x48, file 0x355CC-0x35614.
+      - [0x355CC, c, func_80044DCC]
+      - [0x35614, asm]
       # Tier-2 B: callback registration wrapper for func_80047040;
       # two independent exact-start stores, era -O2 -G0, first phrasing.
       - [0x379BC, c, func_800471BC]
