@@ -317,6 +317,8 @@ void func_8004D690(pe_addr_t node);
 pe_addr_t func_800424B4(uint32_t card,int32_t item);
 void func_8004FEEC(pe_addr_t list);
 int func_8004FE58(pe_addr_t item);
+void func_800434C0(pe_addr_t item);
+pe_addr_t func_8005DD8C(int32_t index);
 extern void func_800622B0(int a0);
 extern int func_800614AC(int a0);
 extern void func_8004B90C(void);

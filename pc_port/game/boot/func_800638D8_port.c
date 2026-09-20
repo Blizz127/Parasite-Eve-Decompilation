@@ -65,6 +65,7 @@ static void menu_draw_callback(pe_addr_t fn,uint32_t value)
     case 0x8004D690u:func_8004D690(value);break;
     case 0x8004FEECu:func_8004FEEC(value);break;
     case 0x8004FE58u:func_8004FE58(value);break;
+    case 0x800434C0u:func_800434C0(value);break;
     case 0x8004C608u:func_8004C608(value);break;
     case 0x80050F10u:func_80050F10(value);break;
     case 0x80050F64u:func_80050F64(value);break;
