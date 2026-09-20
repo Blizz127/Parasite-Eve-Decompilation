@@ -89,6 +89,8 @@ int func_8004D030(pe_addr_t window,uint32_t event)
             if (callback==0x80062F9Cu) func_80062F9C();
             else if (callback==0x8005C488u) func_8005C488();
             else if (callback==0x80042910u) func_80042910();
+            else if (callback==0x800428D4u) func_800428D4();
+            else if (callback==0x80042228u) func_80042228();
             else if (callback==0x80042928u) {
                 unsigned epoch=PE_Port_StopEpoch();func_80042928();
                 if(PE_Port_StopEpoch()!=epoch)return 1;
