@@ -11,15 +11,18 @@
 
 #include "pe_guest_decomp.h"
 
-#define D_80095854 PE_DECOMP_PTRGLOBAL(0x80095854u, unsigned int)
+#define D_80095854 PE_DECOMP_SCALAR(0x80095854u, unsigned int)
 #define D_800A3348 PE_DECOMP_ARRAY(0x800A3348u, unsigned char)
 
 /* ── verbatim matching leaf (src/func_80076B20.c) ───────────────────────── */
 
+/* func_80076B20 - VRAM 0x80076B20, file 0x67320, size 0x24.
+ * Publish a0 through the D_80095854 pointer and tag D_800A3348[a0>>24]. */
 /* shimmed by pe_guest_decomp.h: D_80095854 */
 /* shimmed by pe_guest_decomp.h: D_800A3348 */
+
 void func_80076B20(unsigned int a0) {
-    *D_80095854 = a0;
-    D_800A3348[a0 >> 24] = a0;
+    *(unsigned int *)D_80095854 = a0;
+    D_800A3348[a0 >> 24] = (unsigned char)a0;
 }
 

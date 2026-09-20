@@ -190,9 +190,9 @@ contract).
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**655**
-registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 699 packed C
-spans equal retail). Coverage: 699/4526 functions (15.44%). Remaining queue:
-**1690 non-matching functions / 612,216 bytes**, ranked in
+registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 701 packed C
+spans equal retail). Coverage: 701/4524 functions (15.50%). Remaining queue:
+**1688 non-matching functions / 612,136 bytes**, ranked in
 `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
 `python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
 1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
@@ -219,7 +219,7 @@ floating upstream cannot break it again), and a `pe-mipsel` distrobox (Debian
 trixie, binutils 2.44) that `build_us.sh` auto-detects. `local/pe_disc1.path`
 points at the attic Disc 1 image.
 
-**Tests.** `pe-native-tests` **1385 run / 1385 passed / 0 failed / 0 skipped**.
+**Tests.** `pe-native-tests` **1391 run / 1391 passed / 0 failed / 0 skipped**.
 `pe-route-boot-day2-tests` **27/27 ordered Day-1 milestones** to the
 `m0020i` save/load menu (42000 frames, frame-limit stop), executed path invokes
 only 4 HOST_ADAPTED stubs and **0 UNSUPPORTED**. The harness now applies the
