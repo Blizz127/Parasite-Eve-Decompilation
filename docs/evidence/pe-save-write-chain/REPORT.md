@@ -66,7 +66,11 @@ named boundary.
 ctest                                      -> 11/11 passed
 card oracles (status/operation/operation_frame/driver) -> PASS (4096/8192/1280/96)
 python3 tools/analysis/gen_decomp_ports.py --check --allow-orphans -> check: OK
+bash scripts/build_us.sh                   -> EXACT SHA-1 452fb033… (679 registered C leaves)
 ```
+
+The matching build is unaffected (only `pc_port/` and the port-only generator
+changed).
 
 Live route, exact before/after (real Disc 1, present `.mcr`, headless,
 `--route-pad --max-frames 42000`):
