@@ -72,6 +72,17 @@ segments:
       # 0x80012850, file 0x3050, size 0x3D0. Resume generated asm at 0x3420.
       - [0x3050, c, func_80012850]
       - [0x3420, asm]
+      # func_80012E7C — selector-driven triple copy from D_8009D2F0, VRAM
+      # 0x80012E7C, size 0x238 (142 words). sel = **ctx < 7 dispatches
+      # through shared rodata pool table jtbl_80010080 (7 cases, each
+      # reloading *D_8009D2F0 per store); case 5 uses signed halfword
+      # sources. D_8009D2F0 is loaded absolutely -> era -O2 -G0 +
+      # MASPSX_THREE_WORD_SYMBOL_STORE=1 +
+      # MASPSX_DISPATCH_FOLD=jtbl_80010080 (profile
+      # era_o2_g0_dispatch_80010080). Carve of 3420.s: prefix 0x25C, C
+      # 0x238, resume 38B4.s 0x2A04 to 62B8.
+      - [0x367C, c, func_80012E7C]
+      - [0x38B4, asm]
       # decomp-continue-4: three-word reader-call wrapper (int/short/short),
       # file 0x62B8, size 0x38.
       - [0x62B8, c, func_80015AB8]
