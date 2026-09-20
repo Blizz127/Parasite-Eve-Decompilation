@@ -907,6 +907,11 @@ segments:
       # gp-relative D_8009D058 bit test (0x2E8($gp)); era -O2 -G8.
       - [0x467E0, c, func_80055FE0]
       - [0x4680C, asm]
+      # func_80056C14 — VRAM 0x80056C14, size 0x2C, file 0x47414-0x47440.
+      # Bounded (a0 < 3) guard over a u16 table at D_800A1E6E (byte stride 0x20).
+      # era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 (three-word indexed load).
+      - [0x47414, c, func_80056C14]
+      - [0x47440, asm]
       # func_80057C10 — VRAM 0x80057C10, size 0x44, file 0x48410-0x48454.
       - [0x48410, c, func_80057C10]
       - [0x48454, asm]
@@ -1075,6 +1080,16 @@ segments:
       # Block init of the D_800BCF88..D_800BD028 scratch struct. era_o2_g0.
       - [0x56370, c, func_80065B70]
       - [0x56438, asm]
+      # func_80067B40 — VRAM 0x80067B40, size 0x34, file 0x58340-0x58374.
+      # Store a0/0 to D_800BCFFA/B, then masked-OR 0x400 into D_800BCF88 via a
+      # local pointer. Default era_o2_g0.
+      - [0x58340, c, func_80067B40]
+      - [0x58374, asm]
+      # func_8006A2E8 — VRAM 0x8006A2E8, size 0x30, file 0x5AAE8-0x5AB18.
+      # Bounded (a1 < 0x10) broadcast of a u16 copy to two u16 and one u8
+      # globals. era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1.
+      - [0x5AAE8, c, func_8006A2E8]
+      - [0x5AB18, asm]
       # Phase 5EZ: C leaf func_8006A5BC — VRAM 0x8006A5BC, size 0x90 (36 words).
       # Boot init with two VSync-polled wait loops (VSync = func_80073A44,
       # SDK). era -O1 -G0: per-use $s0=1 materialization (in 86FF8's delay
@@ -1381,6 +1396,11 @@ segments:
       # Tier-2 probe: three-word state setter func_8007C544.
       # Former 0x6C93C asm span: prefix 0x408, C 0x1C, resume 0x1944.
       - [0x6C93C, asm]
+      # func_8007C444 — VRAM 0x8007C444, size 0x34, file 0x6CC44-0x6CC78.
+      # Bottom-tested clear of `a1` 0x20-byte records based at D_800C0DC8 + a0.
+      # Default era_o2_g0.
+      - [0x6CC44, c, func_8007C444]
+      - [0x6CC78, asm]
       - [0x6CD44, c, func_8007C544]
       # Phase 5EF: zero-argument func_8007D074 forwarding wrapper.
       - [0x6CD60, asm]
