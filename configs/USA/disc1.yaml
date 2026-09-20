@@ -1284,6 +1284,11 @@ segments:
       - [0x4ED88, asm]
       - [0x4EEE4, c, func_8005E6E4]
       - [0x4EEF0, asm]
+      # func_8005E788 — VRAM 0x8005E788, size 0xC8, file 0x4EF88-0x4F050.
+      # GP-guarded render-clip setup: a RECT array plus a 0xFFF-word-indexed
+      # tail pointer. era -O2 -G8 (no maspsx gate needed: the jal-slot store is
+      # a plain register-offset `sh` that cc1's own reorg already schedules).
+      - [0x4EF88, c, func_8005E788]
       # func_8005E850 — VRAM 0x8005E850, size 0x34, file 0x4F050-0x4F084.
       # Offset both args by signed-byte globals, then forward. era_o2_g0.
       - [0x4F050, c, func_8005E850]
