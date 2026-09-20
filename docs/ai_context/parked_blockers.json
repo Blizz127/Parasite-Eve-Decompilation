@@ -868,6 +868,19 @@
    "status": "PARKED-ALLOCATION",
    "note": "func_800131E8 (file 0x39E8, size 0x118) unit 38B4: script-VM opcode 0x12 task fork. Zero `jal`: func_80012700 is fully inlined at both call sites, with a different field-store order from the standalone matched func_80012700 (branch A: prev/next zeroed, 0xC/4 zeroed, active=1, serial, flags=0, entry last; branch B: entry early). Two explicit hand-expanded copies were attempted; retail computes imm/pc separately inside each arm and keeps the freelist task in $t0 (arm A) / $a1 with parent in $a2 (arm B). Candidate 320 vs 288 bytes and diverges from word 0; not close enough to pin.",
    "evidence": "try_leaf build/wave6b-wip/func_800131E8.c 0x39E8 0x118 -O2 -G0 (320 vs 288 bytes, >40 diffs)"
+  },
+  {
+   "id": "symbol-base-materialisation-is-cc1-not-maspsx",
+   "status": "CLOSED-AVENUE (compiler-level, not fixable in maspsx)",
+   "note": "Four executed-path targets (func_8007FCFC 0x704FC, func_80074E28 0x65628, func_8006CC68 0x5D468, func_80020F18 0x11718) were thought to need a maspsx gate that materialises a repeated global base register instead of emitting `SYM+off` macros. A dedicated investigation reconstructed func_8007FCFC from asm and drove era cpp/cc1 directly: cc1 2.7.2 DOES materialise bases and use register-relative offsets in parts of the function, and the residual is register ALLOCATION, not macro shape. With the strongest possible base-mat post-pass plus the existing THREE_WORD gate and a hoisted base, the middle block and the entire tail match retail instruction-for-instruction and the whole residual is the top block: retail keeps &D_8009B558 in callee-saved $s1 (data in $s2) across a `jal`, while cc1 keeps it in caller-saved $v1 and emits `lui $at; sw $16,8($at)`. Reusing $v1 after the call would read a clobbered register (wrong code) and choosing $s1 requires re-running regalloc with prologue saves. func_80074E28 is worse: cc1 materialises no base at all. Root cause is a genuine difference between the repo's old-gcc cc1 and retail's Psy-Q ccpsx in SYMBOL+const address legitimation. Flag sweep (-mno-abicalls, -G4/-G8, -O1/-O3, -fno-strength-reduce, -fno-cse-follow-jumps, -fno-delayed-branch) changes nothing.",
+   "members": [
+    "func_8007FCFC",
+    "func_80074E28",
+    "func_8006CC68",
+    "func_80020F18"
+   ],
+   "evidence": "agent/base-mat investigation report (0 commits; worktree clean at 74a5382b)",
+   "next": "Do NOT re-attempt these with a maspsx gate - it was prototyped and measured (320B/46 diffs -> 304B/43 diffs, all positional). Reopen only with a compiler-level lever (a patched cc1, or a different cc1 build) or by finding a C shape that changes the liveness so the base must be callee-saved."
   }
  ]
 }
