@@ -302,19 +302,12 @@ def build_body(src_text, data_syms, boundary_callees, declared):
             continue
         out_lines.append(raw)
     body = "\n".join(out_lines)
-    # A data symbol that opens a bare argument list is forwarded as the guest
-    # address, not as the shim macro's lvalue.  This replacement is textual
-    # and therefore also rewrites the leaf's own ROM comments, matching the
-    # original generator (a symbol followed by `+`, as in
-    # `(D_8009D2F0 + 0x98)`, is an expression and is left alone).
-    for sym in data_syms:
-        body = re.sub(
-            r"\(%s(?=\s*[,)])" % re.escape(sym),
-            "((pe_addr_t)0x%su" % sym_addr(sym),
-            body,
-        )
     # A data symbol passed to a callee parameter that is itself a guest
-    # address is also forwarded as the address.
+    # address is forwarded as the address (see rewrite_data_args, which keys
+    # off the callee prototype or a boundary edge).  The previous blanket
+    # textual rewrite of every bare first argument is gone: it turned scalar
+    # value arguments such as func_80042020(D_8009CF44, ...) into the data
+    # symbol's address regardless of the callee's signature.
     return rewrite_data_args(
         body, boundary_callees, collect_proto_flags(src_text), set(data_syms)
     )

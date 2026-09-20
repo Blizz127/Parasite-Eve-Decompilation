@@ -118,9 +118,23 @@ void func_8004FEEC(pe_addr_t list)
  * otherwise "entry type == 1 and entry[0x29] == func_8003FFBC()". */
 int func_8004FE58(pe_addr_t item)
 {
-    pe_addr_t entry = func_800424B4(
-        PE_LoadU32(PE_LoadU32(0x8009CEF4u) + 0x24u) - 0x25u, (int32_t)item);
+    uint32_t card = PE_LoadU32(PE_LoadU32(0x8009CEF4u) + 0x24u) - 0x25u;
+    pe_addr_t entry = func_800424B4(card, (int32_t)item);
 
+    /* Retail assumes the row's entry exists.  The port can observe a missing
+     * entry while the save-write state machine (func_80041108 states 3..11, not
+     * yet ported) has the selected slot invalidated and the menu still draws,
+     * so guard the lookup instead of faulting on PE_LoadU8(0). */
+    if (entry == 0u) {
+        static int warned;
+        if (!warned) {
+            warned = 1;
+            fprintf(stderr, "[SAVEWRITE] func_8004FE58: missing slot entry "
+                    "(card=%u item=%d); treating row as disabled\n",
+                    (unsigned)card, (int32_t)item);
+        }
+        return 0;
+    }
     if (PE_LoadU32(0x8009CF50u) != 0u)
         return (PE_LoadU8(entry) ^ 3u) != 0u;
     if (PE_LoadU8(entry) != 1u) return 0;

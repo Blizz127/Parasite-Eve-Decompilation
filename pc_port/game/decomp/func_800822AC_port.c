@@ -17,7 +17,7 @@
 
 /* Phase 5BC: fifty-second matching C leaf (mid-71150 carve).
  * VRAM 0x800822AC / file 0x72AAC / size 0x10.
- * Original: lui $v0,%hi((pe_addr_t)0x8009B70Cu); lw $v0,%lo((pe_addr_t)0x8009B70Cu)($v0);
+ * Original: lui $v0,%hi(D_8009B70C); lw $v0,%lo(D_8009B70C)($v0);
  *           jr $ra; nop
  * 32-bit global getter; plain Phase 4J -O1 emits the exact four words.
  */

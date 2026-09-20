@@ -10,6 +10,48 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## SAVE-WRITE-CHAIN: func_80042020/42170/5C25C/40B80 ported (2026-09-20)
+
+Branch `agent/save-write` from `d7d6e35b`. The save-write handler and block
+assembly are now real hand-translations (nonmatching), so the route's
+`func_80042020` boundary is gone.
+
+- `game/boot/func_80042020_port.c` — save entry `func_80042020(card,slot)` and
+  load entry `func_80042170(card,slot)`.
+- `game/boot/func_80040B80_port.c` — builds the 0x2000-byte card block in
+  `D_8009EED0` and stores the CRC-16/CCITT (`0x1021`) as `~crc`; also
+  `func_8005DE70`.
+- `game/boot/func_8003F800_port.c` — appends the record's extra fields.
+- `game/boot/func_8005C25C_port.c` — status-word/play-time gathering.
+- `game/boot/func_80040210_port.c` — Shift-JIS fullwidth formatter
+  `func_8004006C`, play-time split `func_80040210`, `func_8005DE08`,
+  `func_80043474`, `func_8005D940`.
+- `platform/func_80071A14_port.c` — BIOS A(19h) `strcpy`.
+
+`PE_FormatterFrame` needs a caller stack; the port uses scratch
+`0x801FF600` (free 0x801FF040..0x801FFE00 band).
+
+**Generator fix:** `tools/analysis/gen_decomp_ports.py` no longer rewrites every
+bare-first-argument data symbol to its address; it keys off the callee
+prototype/boundary edge. Without this, `func_800504F4` emitted
+`func_80042020((pe_addr_t)0x8009CF44u, ...)` instead of the value. 21 generated
+TUs changed (comments, plus the scalar-arg fixes).
+
+**Guard:** `func_8004FE58` returns "row disabled" on a null slot-entry lookup
+(retail assumes non-null); the port can see null while `func_80041108` states
+3..11 are unported and the menu still draws. No stub widened.
+
+**Verified:** `pe-native-tests` 1384/1384; CTest 11/11; card oracles PASS;
+`gen_decomp_ports.py --check --allow-orphans` OK; live route before/after:
+`[STUB:BOOTSTRAP_RET] func_80042020` → `[STUB:BOOTSTRAP_RET] card operation
+unresolved call` (`func_80041108` `format_name`, target `0x80071A84`), frame
+38500 story `0x48`, exit 0. Evidence:
+`docs/evidence/pe-save-write-chain/REPORT.md`.
+
+**Next:** wire `func_80041108` states 3..11 (live `format_name`) to the libcard
+file API (`func_80072734` open / `func_80072754` read / `func_80072774` close)
+so the write completes and the route leaves the save menu.
+
 ## SAVE-MENU-INPUT: func_8004D978 + func_8004D6D4 ported (2026-09-20)
 
 Branch `agent/menu-input` from `85d1e76d`.  The Day-1 autopilot's

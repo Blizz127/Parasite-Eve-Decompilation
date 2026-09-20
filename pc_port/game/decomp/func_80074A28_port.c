@@ -17,7 +17,7 @@
 
 /* Phase 5AX: forty-seventh matching C leaf (mid-645F8 carve).
  * VRAM 0x80074A28 / file 0x65228 / size 0x10.
- * Original: lui $v0,%hi((pe_addr_t)0x800956ECu); lw $v0,%lo((pe_addr_t)0x800956ECu)($v0);
+ * Original: lui $v0,%hi(D_800956EC); lw $v0,%lo(D_800956EC)($v0);
  *           jr $ra; nop
  * 32-bit global getter; plain Phase 4J -O1 emits the exact four words.
  *

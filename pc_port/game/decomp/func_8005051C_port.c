@@ -14,10 +14,6 @@
 #define D_8009CF44 PE_DECOMP_SCALAR(0x8009CF44u, int)
 #define D_8009CF48 PE_DECOMP_SCALAR(0x8009CF48u, int)
 
-/* boundary: func_80042170 has no pc_port implementation yet */
-#define func_80042170(...) PE_D_COMP_BOUNDARY2("func_80042170", 0x80042170u, __VA_ARGS__)
-
-
 /* ── verbatim matching leaf (src/func_8005051C.c) ───────────────────────── */
 
 /* shimmed by pe_guest_decomp.h: D_8009CF44 */
@@ -26,6 +22,6 @@
 /* shimmed by pe_guest_decomp.h: func_80042170 */
 
 void func_8005051C(void) {
-    func_80042170((pe_addr_t)0x8009CF44u, D_8009CF48);
+    func_80042170(D_8009CF44, D_8009CF48);
 }
 
