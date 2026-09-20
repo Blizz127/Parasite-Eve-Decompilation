@@ -247,6 +247,7 @@ class Model:
         t1 = ram.lu32(t0)
         at = s32(t1 & 0xFF)
         if t1 == 0:
+            self.cov.add("main_zero_second_table")
             st["v0"] = (st["v0"] << 8) & M
             st["v1"] = st["v1"] + 8
             self.refill(st, ram, "t0")
@@ -254,6 +255,10 @@ class Model:
             t0 = (t0 + self.a3) & M
             t1 = ram.lu32(t0)
             t3 = 0
+            # CAD4 is the delay slot of the `b CADC` rejoin: it recomputes
+            # at = t1 & 0xFF from THIS second-table word.  The pre-branch at
+            # came from the zero first word and must not be reused.
+            at = s32(t1 & 0xFF)
         else:
             self.cov.add("main_nonzero")
             t3 = ram.lu32(t0 + 4)

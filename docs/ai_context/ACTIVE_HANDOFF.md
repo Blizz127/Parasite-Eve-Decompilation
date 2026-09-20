@@ -10,6 +10,33 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## OPENING FMV COMPLETES: two guest transcription fixes (2026-09-20)
+
+Branch `agent/fmvloop` from `ec097017`.  The real Disc 1 opening movie
+(FMV001, record limit 2077) now plays to its true end and the game leaves the
+movie state.  Two independent transcription bugs blocked it:
+
+1. `pc_port/game/boot/func_8010C89C_port.c` — the CA7C main loop's zero-first-
+   table escape reused the pre-branch `at`; retail CAD4 re-reads
+   `at = t1 & 0xFF` from the **second** table word.  Without it the bitstream
+   desynchronised on escape-using frames, emitting ~2x the declared RLE extent
+   (FMV001 frame 319: 101510 vs 51076) and overflowing the `A+0xFA00` RLE arena
+   into the record pool at `A+0x1F400`, which stalled the CD reader at ~319
+   frames (`CD_B0CD0_pending_unresolved`).
+2. `pc_port/game/boot/func_80191B64_port.c` — C44's completion latch must also
+   fire on reaching/exceeding the record limit (`!(w < rec[8])`), not only on a
+   frame-number regression.  Retail sets `D_801D0DBD` in the C84 fall-through;
+   the old transcription had no store there, so `D_800B0DBD`/`D_801D0DBD` never
+   latched at `w == 2077` and the reader ran past EOF.
+
+Live before/after: 319 → **2078** `func_80192934_enter`; stop
+`CD_B0CD0_pending_unresolved` → **`MDEC_missing_block`** (new downstream
+frontier), with `func_80192934_dbd_abort` + `func_80192CE8_media_clear` firing;
+XA 399→2600 sectors; WAV peak 19491→31766.  Verified: native 1396/1396 (2 new
+non-vacuous real-disc regressions), CTest 11/11, `gen_decomp_ports.py --check
+--allow-orphans` OK.  Only `pc_port/` changed (retail SHA untouched).  See
+`docs/evidence/pe-fmv-media-loop/REPORT.md`.
+
 ## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
 
 Branch `agent/4ad9c-savepage` from `160137a4`.  The field main-menu handler no

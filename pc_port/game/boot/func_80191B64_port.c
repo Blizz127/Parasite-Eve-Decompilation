@@ -93,7 +93,13 @@ int func_80191B64(pe_addr_t state)
             uint32_t rec = PE_LoadU32(0x801D11ACu);
             uint32_t rh = (uint32_t)(int32_t)(int16_t)PE_LoadU16(
                 rec + 8u);
-            v0 = (w < rh) ? 1 : 0;
+            /* C7C: bnez (w < rh) skips the store; the not-taken arm falls
+             * through to C84 with v0 = 1 in the delay slot, so the latch is
+             * set once the frame reaches/exceeds the record limit.  The
+             * store is the C84 body, not the C8C join. */
+            v0 = 1;
+            if (!(w < rh))
+                PE_StoreU8(0x801D0DBDu, 1u);
         }
         (void)v0;
     }
