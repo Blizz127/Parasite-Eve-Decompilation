@@ -13,6 +13,8 @@
 
 /* ── verbatim matching leaf (src/func_8004BCB4.c) ───────────────────────── */
 
+/* VRAM 0x8004BCB4 / file 0x3C4B4 / size 0x34.
+ * Set a message option then submit text id 0x19. */
 /* shimmed by pe_guest_decomp.h: func_8005E8A4 */
 /* shimmed by pe_guest_decomp.h: func_8005DC4C */
 /* shimmed by pe_guest_decomp.h: func_8005F594 */

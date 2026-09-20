@@ -10,19 +10,19 @@
  * docs/ai_context/PC_PORT_FROM_DECOMP.md.
  */
 #include "pe_guest_decomp.h"
-void func_8008A02C(pe_addr_t pe_a0, unsigned int a1, int a2)
+void func_8008A02C(pe_addr_t pe_a0, int a1, int a2)
 {
-    unsigned int *host_a0 = (unsigned int *)PE_Translate(pe_a0, 1);
+    unsigned char *host_a0 = (unsigned char *)PE_Translate(pe_a0, 1);
     /* verbatim body (src/func_8008A02C.c) */
 
-    unsigned int *p = host_a0 + 1;
-    unsigned int d = a1 - *host_a0;
+    int delta = a1 - *(int *)host_a0;
+    unsigned char *p = host_a0 + 4;
     do {
-        *host_a0 += d;
-        *p += d;
-        host_a0 += 0x10;
-        p += 0x10;
+        *(int *)host_a0 += delta;
+        host_a0 += 0x40;
+        *(int *)p += delta;
+        p += 0x40;
         a2--;
-    } while (a2);
+    } while (a2 != 0);
 
 }
