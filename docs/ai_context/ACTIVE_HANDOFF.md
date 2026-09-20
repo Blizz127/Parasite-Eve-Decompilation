@@ -104,6 +104,37 @@ registered C leaves)`, `VERIFY_US=PASS`. Parked with byte-level notes in
 schedule/register-coloring divergences (`func_800201DC` and `func_8002F658`
 have the exact retail instruction multiset). `func_8001F814` not re-attempted
 (m2c failure; pb-dispatch owns it).
+## SESSION STATUS 2026-09-20 (agent/pb-dispatch): 768 -> 771 matching C leaves
+
+**Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**771**
+registered C leaves)"; `scripts/verify_us.sh` → **VERIFY_US=PASS** (all 771
+packed C spans equal retail). Branch `agent/pb-dispatch` (base `af9cf9f8`);
+cherry-picked the parent build fix `7dffce11` (odd-word dispatch-table pad).
+
+**Landed 3 jtbl-dispatch leaves** (files absolute; each has a
+`docs/evidence/pb-dispatch/<name>/REPORT.md`):
+
+| leaf | file/size | table (words) | profile |
+|---|---|---|---|
+| `func_8002FE78` | 0x20678 / 0x100 | `jtbl_80010AC8` (23, odd) | `era_o2_g0_dispatch_80010ac8` |
+| `func_8003010C` | 0x2090C / 0x114 | `jtbl_80010B28` (90) | `era_o2_g0_dispatch_80010b28` |
+| `func_80012E7C` | 0x367C / 0x238 | `jtbl_80010080` (7, odd) | `era_o2_g0_dispatch_80010080` |
+
+Levers: `MASPSX_THREE_WORD_SYMBOL_STORE=1` + `MASPSX_DISPATCH_FOLD=jtbl_<vram>`
+(3-word `lui $at/addu/lw %lo($at)` dispatch against the shared pool) with era
+`-O2 -G0`; `ret = x >> n; ret &= m;` (not the one-expression form) to keep the
+shift/mask destination in the `ret` register; explicit 2-byte struct pads; and
+declaring a source pointer as `unsigned char *` (not an array) when cc1
+otherwise emits `la $4` and maspsx renders a 3-word materialisation.
+
+**Parked 4 targets** (details + exact divergences in
+`docs/ai_context/parked_blockers.json` id `pb-dispatch-jtbl-parks`; WIPs under
+`docs/evidence/pb-dispatch/`): `func_80051CC4` (loop-nested switch → LICM
+materialises the table base; `MASPSX_DISPATCH_FOLD` does not retarget that
+form — C was otherwise byte-exact), plus `func_80053D2C`, `func_8001F814`,
+`func_800144FC` (cc1 register-home/CSE divergences, frames 0x28 vs retail
+0x20).
 
 ## SESSION STATUS 2026-09-20 (latest): 768 matching C leaves; FMV completes (2026-09-20)
 ## SESSION STATUS 2026-09-20 (agent/pb-small): 774 matching C leaves (+6)
