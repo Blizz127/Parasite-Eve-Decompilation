@@ -392,6 +392,13 @@ its `pages[]` in `pc_port/game/boot/func_800438EC_port.c`). Same room/story
 either way, so the open window is both more faithful and the longer route.
 `docs/evidence/pe-menu-close-parity/REPORT.md`.
 
+**Parent verification (2026-09-20, merged main `cd5ba828`):** a fresh-card
+`--headless --route-pad --max-frames 80000` run reaches the frame limit
+(`stop_reason=frame-limit`) with **0 `[STUB:BOOTSTRAP_RET]`** and no stopping
+boundary — the only reports are the non-stopping GPU `func_80076C34`
+`BOUNDARY_REPORT`s. Screenshot `build/artifacts/route_80000_frames_2026-09-20.png`
+shows the menu closed and Aya live in `m0020i`.
+
 **But story stays `0x48` / token `A8002048`:** `m0020i` is a *separate*
 blocker. With the menu closed the field is genuinely alive again — the script
 VM dispatches ~26 opcodes/frame and Aya's position tracks the recorded pads
