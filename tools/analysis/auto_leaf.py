@@ -68,6 +68,12 @@ typedef double f64;
 """
 
 # Profiles worth sweeping first: the ones that actually matched leaves before.
+# Profile sweep order. `all` (the default) sweeps every `era` profile in
+# configs/USA/disc1_build_profiles.json, `-G0` family first because it matches
+# most leaves. This list only used to name a fixed dozen, which made the tool
+# report "no profile matched" for the large `-G8` (gp-relative) family — a
+# false negative that cost agents real time. Keep it as an ordering hint, not
+# an allowlist.
 DEFAULT_PROFILES = [
     "era_o2_g0",
     "era_o1_g0",
@@ -87,6 +93,21 @@ DEFAULT_PROFILES = [
 def load_profiles() -> dict[str, dict]:
     path = ROOT / "configs/USA/disc1_build_profiles.json"
     return json.loads(path.read_text())["profiles"]
+
+
+def all_era_profiles(profiles: dict[str, dict]) -> list[str]:
+    """Every era profile, with DEFAULT_PROFILES' order kept at the front.
+
+    The `modern_*` profiles use the host compiler, which this project does not
+    use for matching leaves, so they are excluded.
+    """
+    era = sorted(
+        name
+        for name, body in profiles.items()
+        if body.get("toolchain", "era") == "era"
+    )
+    ordered = [p for p in DEFAULT_PROFILES if p in profiles]
+    return ordered + [p for p in era if p not in ordered]
 
 
 def normalise(text: str) -> str:
@@ -163,11 +184,10 @@ def main() -> int:
     if args.limit:
         names = names[: args.limit]
 
-    chosen = (
-        [p.strip() for p in args.profiles.split(",") if p.strip()]
-        if args.profiles
-        else DEFAULT_PROFILES
-    )
+    if args.profiles:
+        chosen = [p.strip() for p in args.profiles.split(",") if p.strip()]
+    else:
+        chosen = all_era_profiles(profiles)
     for p in chosen:
         if p not in profiles:
             print(f"unknown profile {p}", file=sys.stderr)
