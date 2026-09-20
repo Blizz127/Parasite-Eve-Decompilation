@@ -82,6 +82,16 @@ static uint32_t   g_last_tok;
 static int        g_first_story_frame = -1;
 static int        g_milestone_hits;
 
+/* m0020i save/load-menu exit observation.  PE_FieldMenuFrame sets
+ * D_8009D1A0 bit 2 while the field menu (the save/load menu) is up and
+ * clears it once the menu result is nonzero.  The recorded sequence confirms
+ * the top menu into "save" at ~38612 and the autopilot presses Circle at
+ * 38620/38640, so the mode bit must be clear again by ~38660. */
+#define PE_MENU_EXIT_FRAME       38600
+#define PE_MENU_EXIT_DONE_FRAME  38660
+static int        g_menu_exit_seen_open;
+static int        g_menu_exit_last_open;
+
 /* Deterministic four-stage pad source.
  *
  * Stage 1 (frames < SWITCH=5400): hold 0xFFEF + periodic Cross.  This is the
@@ -182,8 +192,9 @@ static uint16_t RoutePadSource(void)
         !(g_frame >= 50500 && g_frame < 51200) &&
         !(g_frame >= 52344 && g_frame < 54500) &&
         !(g_frame >= 54500 && g_frame < 62000) &&
-        (g_frame < 33620 || g_frame >= 35300) &&
-        (g_frame % g_pad.period) == 3)
+        PeRoutePad_PulseAllowed(g_frame, g_pad.period,
+                                PE_ROUTE_PULSE_OFF1_BEGIN, PE_ROUTE_PULSE_OFF1_END,
+                                PE_ROUTE_PULSE_OFF2_BEGIN, PE_ROUTE_PULSE_OFF2_END))
         mask &= g_pad.pulse;
     return mask;
 }
@@ -252,6 +263,11 @@ static void RouteHook(void)
 
     if (g_first_story_frame < 0)
         g_first_story_frame = g_frame;
+
+    if (g_frame >= PE_MENU_EXIT_FRAME && (PE_LoadU32(0x8009D1A0u) & 4u)) {
+        g_menu_exit_seen_open = 1;
+        g_menu_exit_last_open = g_frame;
+    }
 
     story = PE_LoadU32(GA_PERSIST74);
     tok   = GA_TOKEN;
@@ -387,6 +403,8 @@ static PEPortStopReason RunRoute(int frame_limit)
     g_last_tok = 0u;
     g_first_story_frame = -1;
     g_milestone_hits = 0;
+    g_menu_exit_seen_open = 0;
+    g_menu_exit_last_open = 0;
     err[0] = 0;
     disc = OpenRouteDisc(err, sizeof(err));
     if (!disc) {
@@ -713,6 +731,19 @@ int main(void)
      * (m0020i); there the empty card slot makes the menu retry, so the actor
      * frontier PC is 0 — pin reaching m0020i and stopping at the frame limit
      * instead of the old m0004i park. */
+    /* The m0020i save/load menu must actually close.  Confirming the top menu
+     * into "save" happens at ~38612; the recorded sequence then presses Circle
+     * at 38620 (cancel the slot list: func_8004D6D4 event 0x40) and 38640
+     * (close the menu: func_8004D2DC event 0x40 -> func_800512AC(9,0) ->
+     * D_8009D010 nonzero), after which PE_FieldMenuFrame clears D_8009D1A0
+     * bit 2.  Without the second pulse-suppression window the top menu is
+     * re-confirmed every 8 frames and the mode bit never clears. */
+    if (g_menu_exit_seen_open && g_menu_exit_last_open >= PE_MENU_EXIT_DONE_FRAME) {
+        printf("FAIL: m0020i save/load menu never closed "
+               "(field-menu mode still set at frame %d)\n", g_menu_exit_last_open);
+        return 1;
+    }
+
     if (reached == MILESTONE_COUNT) {
         if (GA_TOKEN == 0xA8002048u || TraceSawToken(0xA8002048u) >= 0) {
             printf("PASS: boot -> Day-1 rooms -> m0020i save/load menu "

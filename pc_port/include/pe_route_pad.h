@@ -60,6 +60,59 @@
 #define PE_ROUTE_PAD_DN_LEFT_MASK2 0xFFAFu
 #define PE_ROUTE_PAD_CROSS_PERIOD  8
 
+/*
+ * Automatic-Cross-pulse suppression windows.
+ *
+ * The autopilot pulse is "mash confirm": every `period` frames it presses
+ * Cross.  It has to be switched off wherever mashing would undo what the
+ * route is doing, so two windows are recorded:
+ *
+ *   [33620, 35300)  the m0004i segment, which the recorded sequence covers
+ *                   with explicit held buttons.
+ *   [38620, ...)    the Day-1 save point.  The automatic Cross at 38611
+ *                   opens the save menu; the recorded sequence then presses
+ *                   Circle twice -- 38620 is consumed by the slot-list window
+ *                   (func_8004D6D4 event 0x40) and 38640 reaches the file
+ *                   menu (func_8004D2DC event 0x40 -> func_8005C1EC(0) ->
+ *                   func_800512AC(9,0) -> D_8009D010 nonzero ->
+ *                   PE_FieldMenuFrame clears the field-menu mode).  With the
+ *                   pulse still on the top menu is re-confirmed every 8
+ *                   frames and the menu never closes.
+ *
+ * BOTH consumers -- the interactive --route-pad port and the boot -> Day-2
+ * harness -- must apply the identical rule, so they share
+ * PeRoutePad_PulseAllowed(); the harness previously carried only the first
+ * window and therefore stopped reproducing the port at the save point.
+ *
+ * Bounds are inclusive-begin / exclusive-end.  The second window is open
+ * ended on purpose: ending it anywhere in the recorded tail re-enables
+ * invented Cross mashing, which re-enters the file menu.  With the window
+ * closed at 42000 the port stops at the "card operation unresolved call"
+ * boundary at ~f=44300; left open, it runs to ~f=61500 before stopping at the
+ * unported file-menu page func_8004AD9C.  Same room either way, so the open
+ * window is both more faithful and the longer route.
+ */
+#define PE_ROUTE_PULSE_OFF1_BEGIN 33620
+#define PE_ROUTE_PULSE_OFF1_END   35300
+#define PE_ROUTE_PULSE_OFF2_BEGIN 38620
+#define PE_ROUTE_PULSE_OFF2_END   0x7FFFFFFF
+
+/* True when the automatic Cross pulse may be applied on `frame`.  Callers
+ * only differ in how they source the window bounds (compiled defaults vs.
+ * PE_ROUTE_PULSE* overrides). */
+static inline int PeRoutePad_PulseAllowed(int frame, int period,
+                                          int off1_begin, int off1_end,
+                                          int off2_begin, int off2_end)
+{
+    if (period < 1 || (frame % period) != 3)
+        return 0;
+    if (frame >= off1_begin && frame < off1_end)
+        return 0;
+    if (frame >= off2_begin && frame < off2_end)
+        return 0;
+    return 1;
+}
+
 #define PE_ROUTE_PAD_SWITCH_FRAME   5400
 #define PE_ROUTE_PAD_SWITCH2_FRAME  6040
 #define PE_ROUTE_PAD_SWITCH3_FRAME  6989
