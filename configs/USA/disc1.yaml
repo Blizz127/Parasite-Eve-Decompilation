@@ -775,6 +775,12 @@ segments:
       # aspsx 2.30; gp+0x180/0x188/0x18C are D_8009CEF0/F8/FC.
       - [0x340EC, c, func_800438EC]
       - [0x341D8, asm]
+      # func_80044174 — help/menu node-pair allocation, VRAM 0x80044174,
+      # file 0x34974, size 0x100 (64 words). era -O2 -G8 + aspsx 2.30;
+      # the final (v-1)>>8 temp is pinned to $v1 (`register ... asm`),
+      # which is the only way to match retail's in-place sra.
+      - [0x34974, c, func_80044174]
+      - [0x34A74, asm]
       # func_800447F0 — menu row/scroll update, VRAM 0x800447F0, file
       # 0x34FF0, size 0x134 (77 words). era -O2 -G8 + aspsx 2.30; the
       # (state+0x58 - state+0x38) - state+0x5C result must be a switch so

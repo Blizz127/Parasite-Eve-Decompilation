@@ -22,13 +22,6 @@
    "next": "Retry only with a lever that colors the surviving p[i] value into $s1 and the counter into $s2."
   },
   {
-   "id": "pbw3a-44174-shift-reg",
-   "status": "PARKED-ALLOCATION",
-   "note": "func_80044174 (file 0x34974, size 0x100, 64 words) unit 340EC: help/menu node-pair allocation. Byte-exact except the last three words. Retail: `v--; f44 = v & 1; f48 = (v>>1)&0x7F; v1 = v>>8; sw f48; sw v1,f5C` (shift result in $v1). cc1: `f44 = v&1; f48 = (v>>1)&0x7F; v0 = v>>8; sw f48; sw v0,f5C` (shift result in $v0). Semantically identical; only the destination register of the >>8 differs (retail 00031A03 sra v1,v1,8 vs cand 00031203 sra v0,v1,8, and the matching sw). Reordering the statements, splitting into lo/hi locals, and `v >>= 8; f5C = v` were all tried (the last moves v itself to $a0 and breaks the branch).",
-   "evidence": "try_leaf on src/func_80044174.c variants vs file 0x34974 size 0x100, era -O2 -G8 ERA_ASPSX_VER=2.30. 3 diffs at 0xDC/0xE0/0xE4. WIP: build/wave3-a-wip/func_80044174.c.",
-   "next": "Retry only with a lever that keeps the result of `v >> 8` in $v1 rather than reusing $v0."
-  },
-  {
    "id": "pbw3a-439D8-sched",
    "status": "PARKED-SCHEDULING",
    "note": "func_800439D8 (file 0x341D8, size 0x134, 77 words) unit 340EC: three 62D2C descriptor nodes (kinds 0x12/0x18/0x2D) + seven func_8005B91C rows + D_8009CF68 = *D_800C0E10. The three-node callback/data assignment order is decoded (n1->f30=43B0C, n1->f4C=D_80092258; n2->f30=4905C; n3->f30=43C64, n3->f4C=D_80092298). BLOCKER: retail keeps the first 62D2C result in $v0 and emits an extra `addu v1,v0,zero` at 0x30 before the second call, then loads the five loop pointers (s4/s1/s0/s3/s2) after the third call; cc1 keeps n1/n2 in different registers, drops the v1 copy, and hoists the pointer `la`s, shifting the whole prologue (43 diffs).",
