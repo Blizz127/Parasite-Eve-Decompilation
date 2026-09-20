@@ -239,7 +239,12 @@ OFF): `MASPSX_THREE_WORD_SYMBOL_STORE`, `MASPSX_PASSTHROUGH_SYMBOL_LOAD`,
 `MASPSX_FILL_STORE_DELAY_SLOT`, `MASPSX_FILL_INDEXED_STORE_DELAY_SLOT`, and
 (newest) `MASPSX_FILL_REGISTER_STORE_DELAY_SLOT` — the last reorders a plain
 `sh $r,off($base)` immediately before a bare `j $31` into the return delay
-slot (pure reorder, no address synthesis). Evidence:
+slot (pure reorder, no address synthesis). (e) The **operand type of `%`** is a
+codegen lever: retail's unsigned constant-division sequence
+(`multu $a3,0x88888889` / `mfhi` / `srl 5`) only appears with `unsigned int`
+operands; `int` inserts the signed sign-correction sequence (12 extra words).
+This is how `func_80036E7C` matched (709th leaf, 0 differing words). Evidence:
+`docs/evidence/agent-36e7c/REPORT.md`,
 `docs/evidence/agent-decompile-continue-2-20260920/REPORT.md`,
 `docs/evidence/agent-decompile-ba3/REPORT.md`; triaged non-matches with
 first-mismatch words are parked under `nonmatch/`. **Small-function pool is
