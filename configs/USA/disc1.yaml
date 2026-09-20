@@ -83,6 +83,19 @@ segments:
       # 0x238, resume 38B4.s 0x2A04 to 62B8.
       - [0x367C, c, func_80012E7C]
       - [0x38B4, asm]
+      # func_80014DA0 — 4x8-byte vertex copy to a stack polygon then
+      # func_8001CAB0 hit test. VRAM 0x80014DA0, file 0x55A0, size 0x90
+      # (36 words). era -O2 -G8; the loop must keep the destination pointer
+      # assignment before the source pointer (`dst = buf; src = arg0;`) or
+      # cc1 puts the stack buffer in $v1 and every load swaps.
+      - [0x55A0, c, func_80014DA0]
+      - [0x5630, asm]
+      # func_800155FC — mode-7 gate. VRAM 0x800155FC, file 0x5DFC, size 0x4C.
+      # era -O2 -G8: 0x90($gp) is D_8009CDF8+8 and 0x590($gp) is the scalar
+      # pointer D_8009D300; D_800BCF88 is outside the $gp window so it is
+      # declared as an incomplete array to stay absolute.
+      - [0x5DFC, c, func_800155FC]
+      - [0x5E48, asm]
       # decomp-continue-4: three-word reader-call wrapper (int/short/short),
       # file 0x62B8, size 0x38.
       - [0x62B8, c, func_80015AB8]

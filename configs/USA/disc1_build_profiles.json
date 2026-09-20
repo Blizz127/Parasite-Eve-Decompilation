@@ -380,7 +380,9 @@
       "func_80045110",
       "func_800451D0",
       "func_800453E8",
-      "func_80046334"
+      "func_80046334",
+      "func_80014DA0",
+      "func_800155FC"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"

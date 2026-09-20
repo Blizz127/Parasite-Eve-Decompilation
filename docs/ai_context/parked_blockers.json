@@ -490,6 +490,33 @@
    "note": "Equipment-window variant (same shape as func_8004542C, port spec func_80045EE4_port.c). Best candidate 208 vs 192 bytes (4 extra words). cc1 hoists the `lw 0x64($s0)` RMW load ABOVE the func_8004F9A0 callback store and leaves the flag load 0x1AC($gp) after it, so the ori/store cannot fill the beqz delay slot; retail keeps callback store -> lw 0x64 -> lw gp -> ori -> beqz -> sw(delay). Tried: direct condition, local flag before/after the RMW, `|=` compound form, the four maspsx gates/versions. No yaml/src change landed.",
    "evidence": "build/scratch/f45EE4.c, build/scratch/f45EE4_v3.c; try_leaf vs 0x366E4 0xC0 -O2 -G8",
    "next": "Same class as pb-wave2-b-8004542C: prevent cc1 from hoisting the RMW load above the callback store, or make it hoist the gp flag instead so maspsx can fold the store into the beqz delay slot."
+  },
+  {
+   "id": "pb-wave2-b-80013300",
+   "status": "PARKED-LOAD-SCHEDULING",
+   "lane": "agent/wave2-b",
+   "target": "func_80013300 (VRAM 0x80013300, file 0x3B00, size 0xE8, unit 38B4)",
+   "note": "Slot-flag setter / mode gate. Best candidate build/scratch/f13300_v7.c (and the ternary v13) is instruction-count exact (240/240) with only 2 differing words: in the `unk1C >= 0` branch retail loads 0x14(a0) into $v0 first and 0x18(a0) into $v1 (sltu v0,v0,v1), while cc1 loads the same two words in the opposite instruction order into the same registers. The comparison semantics and the sltu/branch are byte-identical; only the two independent load slots are swapped. The else branch matches exactly. Explicit temp/pointer forms shift register homes and get worse (v2/v8/v9/v10/v12 3-24 diffs). Profiles probed: -O1 -G8, -O2 -G8 (+ -fschedule-insns2 / -fno-schedule-insns / -fno-strength-reduce / -fno-expensive-optimizations / -fno-peephole / -fno-delayed-branch). No yaml/src change landed.",
+   "evidence": "build/scratch/f13300_v7.c, f13300_v13.c; try_leaf vs 0x3B00 0xE8 -O2 -G8",
+   "next": "Needs a cc1 load-scheduling lever that orders a dependent symbol-offset load pair; the register homes already match."
+  },
+  {
+   "id": "pb-wave2-b-8003335C",
+   "status": "PARKED-LICM-AND-STRENGTH-REDUCTION",
+   "lane": "agent/wave2-b",
+   "target": "func_8003335C (VRAM 0x8003335C, file 0x23B5C, size 0xD4, unit 20EE0)",
+   "note": "Per-slot init loop writing D_8009EC40[i] fields from byte tables D_8009E974/E975/E976 plus a D_8009EC4E halfword. 3 params: arg0 object (a0), arg1 unused, arg2 row selector (a2) - declaring only two params puts the selector in a1 and breaks everything. Candidate build/scratch/f3335C.c: 224 vs 212 bytes. cc1 LICM hoists the lui/addiu base of all four tables into $t2-$t5 before the loop; retail hoists only D_8009EC40 into $t1 and re-materialises each of D_8009E974/E975/E976 inside the loop as `lui $at; addu $at,$at,$v1; lbu %lo(...)`. The idx*0x1C and idx*0x16C strength-reduction sequences are otherwise correct. No yaml/src change landed.",
+   "evidence": "build/scratch/f3335C.c; try_leaf vs 0x23B5C 0xD4 -O2 -G8",
+   "next": "Find a cc1 knob that suppresses loop-invariant base hoisting for the table symbols (retail keeps the per-iteration $at form), or reconstruct the original source so the bases are not loop-invariant."
+  },
+  {
+   "id": "pb-wave2-b-80031D6C",
+   "status": "PARKED-REGISTER-ALLOCATION",
+   "lane": "agent/wave2-b",
+   "target": "func_80031D6C (VRAM 0x80031D6C, file 0x2256C, size 0xFC, unit 20EE0)",
+   "note": "3-iteration transform of D_8009E358 slots using the absolute count D_8009CDDC and the D_8009E360/E362 byte tables, ending in func_80077AC4. Candidate build/scratch/f31D6C.c is 304 vs 252 bytes: cc1 allocates an extra callee-saved register (s4) and hoists the D_8009E358/D_800B0E38 bases, changing the prologue save order and every subsequent register home. Retail frame 0x28 with s0-s3; candidate needs s0-s4. No yaml/src change landed.",
+   "evidence": "build/scratch/f31D6C.c; try_leaf vs 0x2256C 0xFC -O2 -G8",
+   "next": "Same class as pb-wave2-b-8003335C: keep the table bases non-loop-invariant and reduce the live range so cc1 does not need a fifth callee-saved register."
   }
  ]
 }
