@@ -694,6 +694,13 @@ segments:
       - [0x307AC, c, func_8003FFAC]
       - [0x307BC, c, func_8003FFBC]
       - [0x307CC, asm]
+      # wave4-a: card-subsystem boot init (8 event opens + handle enables +
+      # selector clear). VRAM 0x800409B4, file 0x311B4, size 0x1CC (115 words).
+      # era_o2_g0_three_word: the D_800A0ED4[j] clear store needs the 3-word
+      # $at form; the clear index must be a second variable so cc1 keeps it in
+      # call-clobbered $v0 instead of reusing the callee-saved enable counter.
+      - [0x311B4, c, func_800409B4]
+      - [0x31380, asm]
       # wave4-a: card-record load entry. VRAM 0x80042170, file 0x32970,
       # size 0xB8 (46 words). era -O2 -G0; the `*(s0+0x18)` store must be
       # first so cc1 hoists `la $a0,D_8009EED0` after the func_80042798 call.
