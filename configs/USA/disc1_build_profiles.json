@@ -162,6 +162,7 @@
     "era_o1_g0": [
       "func_8003E680",
       "func_8006A5BC",
+      "func_80085174",
       "func_80089F28",
       "func_8008AB1C"
     ],
@@ -210,11 +211,13 @@
       "func_800528C4",
       "func_8005DC28",
       "func_8007A400",
-      "func_8007A434"
+      "func_8007A434",
+      "func_800858E8"
     ],
     "era_o2_g0_passthrough_load": [
       "func_80076B44",
-      "func_8007FBF0"
+      "func_8007FBF0",
+      "func_80085918"
     ],
     "era_o2_g8": [
       "func_800177AC",
