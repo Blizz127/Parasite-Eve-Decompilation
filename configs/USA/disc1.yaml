@@ -430,6 +430,8 @@ segments:
       - [0x202A4, c, func_8002FAA4]
       - [0x202D8, c, func_8002FAD8]
       - [0x202F8, asm]
+      - [0x20678, c, func_8002FE78]
+      - [0x20778, asm]
       # func_80030534 — 2D distance helper, VRAM 0x80030534, size 0x50
       # (20 words). era -O2 -G0 + maspsx --aspsx-version=2.30 (mflo/mult
       # two-instruction gap nop). Mid-20210 carve: prefix 0xB24, C 0x50,
