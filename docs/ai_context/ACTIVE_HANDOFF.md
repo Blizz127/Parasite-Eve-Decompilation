@@ -308,7 +308,11 @@ re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
 `SLUS_006.62` (both SHA-1 `452fb033…`); `configs/USA/disc2.yaml` already
 records that `PE.IMG` is identical too, so the decompilation/port covers disc
 2's code and overlays. Only the FMV/XA streams and volume metadata differ, so
-disc-2 work is disc-image/stream handling, not translation.
+disc-2 work is disc-image/stream handling, not translation. **Disc 2 boots
+verified:** `--disc-image <Disc 2>.bin --skip-movie --skip-opening-menu
+--max-frames 600` opens the drive, loads the EXE, and renders 600 frames
+(`[GPU] fills=597 polygons=529332 polygon_pixels=8532436`, one non-stopping
+`func_80069B08` decomp boundary).
 
 ## CARD-EVENT: TestEvent (B0 0Bh) implemented; route past the event drain (2026-09-20)
 
