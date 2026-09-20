@@ -112,3 +112,59 @@ static void test_DAY2_movie_production_frame(void)
     PE_Disc_Close(disc);
     PASS();
 }
+
+/* DAY2-159c: func_80192CE8's post-E08 media tail is present and runs.
+ *
+ * Index >= 47 makes func_801924F8 return at its record-range guard without
+ * touching stream state, so func_80191FB8's D_800B0DBC = 0 survives and the
+ * post-E08 loop's `(int16)D_800B0DBC <= 0` guard is taken on the first
+ * check.  That exercises the tail's control flow and epilogue without the
+ * movie/pad/DMA chain:
+ *   - the call returns 0 rather than the removed named cut's -1,
+ *   - no stop is requested,
+ *   - overlay bit 0x200 is cleared.
+ * Re-cutting the loop at 0x80192E08 (Bootstrap_ReturnVoid cut +
+ * RequestStop) fails every assertion below: -1, stop requested, bit set. */
+static void test_DAY2_92ce8_media_loop_tail(void)
+{
+    char err[256] = {0};
+    PE_Disc *disc;
+
+    TEST("DAY2_92ce8_media_loop_tail");
+    disc = BTL6_OpenDisc1(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+
+    ResetTestState();
+    DAY1_SeedDisplayDispatch();
+    HostFB_Init();
+    func_8007ED58();
+    B558_PlantPointers();
+    PE_Disc_SetActive(disc);
+
+    /* B54KY: load the 133-sector PE.IMG overlay (the prefix authority). */
+    D_800B0DD8 = 1013u;
+    D_80011614 = 0x8018EFF0u;
+    D_80093164[0] = 0x03D2u;
+    D_80093164[1] = 0x0457u;
+    ASSERT(func_8006E834() == 0, "retail 133-sector overlay load");
+    B54KR_SeedGpuStatic();
+    PE_StoreU32(0x800B0DD8u, 1013u);
+    PE_StoreU32(0x8001160Cu, 0x8010BCF8u);
+    PE_StoreU32(0x80011610u, 0x80120D00u);
+    PE_StoreU16(0x8009315Eu, 0x039Fu);
+    PE_StoreU16(0x80093160u, 0x03C5u);
+    PE_StoreU16(0x80093162u, 0x03C9u);
+    PE_StoreU32(0x800B0CD8u, 0x00100001u);
+    PE_StoreU8(0x801D0E18u, 0xA5u);
+
+    /* Entry sets 0x200, the tail's epilogue clears it. */
+    ASSERT(func_80192CE8(47) == 0 && !PE_Port_ShouldStop(),
+           "post-E08 media tail did not run to the epilogue");
+    ASSERT((PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u,
+           "media-loop epilogue did not clear overlay bit 0x200");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
+           "media tail requested a stop");
+
+    PE_Disc_Close(disc);
+    PASS();
+}

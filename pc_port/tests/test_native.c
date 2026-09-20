@@ -40189,6 +40189,7 @@ int main(void)
     test_DAY2_movie_player();
     test_DAY2_movie_autonomous();
     test_DAY2_movie_production_frame();
+    test_DAY2_92ce8_media_loop_tail();
     test_DAY2_movie_multiframe();
     test_DAY2_cd_command_queue();
     test_DAY2_cd_lowlevel_init();
