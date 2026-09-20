@@ -115,32 +115,12 @@
         "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
       }
     },
-    "era_o2_g8_passthrough_load": {
-      "toolchain": "era",
-      "flags": [
-        "-O2",
-        "-G8"
-      ],
-      "environment": {
-        "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
-      }
-    },
     "era_o2_g8": {
       "toolchain": "era",
       "flags": [
         "-O2",
         "-G8"
       ]
-    },
-    "era_o2_g8_aspsx_230": {
-      "toolchain": "era",
-      "flags": [
-        "-O2",
-        "-G8"
-      ],
-      "environment": {
-        "ERA_ASPSX_VER": "2.30"
-      }
     },
     "era_o2_g8_force_d8009d2e8_absolute": {
       "toolchain": "era",
@@ -162,6 +142,17 @@
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
       }
     },
+    "era_o2_g8_three_word_force_d8009d1a0_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_8009D1A0"
+      }
+    },
     "era_o2_g8_vm_dispatch": {
       "toolchain": "era",
       "flags": [
@@ -172,6 +163,39 @@
         "MASPSX_EXPAND_DIV": "1",
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
         "MASPSX_DISPATCH_FOLD": "jtbl_80010000"
+      }
+    },
+    "era_o2_g0_dispatch_80010080": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010080"
+      }
+    },
+    "era_o2_g0_dispatch_80010ac8": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010AC8"
+      }
+    },
+    "era_o2_g0_dispatch_80010b28": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010B28"
       }
     },
     "modern_o1_g0": {
@@ -207,48 +231,24 @@
         "-fno-tree-ter"
       ]
     },
-    "era_o2_g8_three_word_force_d8009d1a0_absolute": {
+    "era_o2_g8_passthrough_load": {
       "toolchain": "era",
       "flags": [
         "-O2",
         "-G8"
       ],
       "environment": {
-        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
-        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_8009D1A0"
+        "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
       }
     },
-    "era_o2_g0_dispatch_80010080": {
+    "era_o2_g8_aspsx_230": {
       "toolchain": "era",
       "flags": [
         "-O2",
-        "-G0"
+        "-G8"
       ],
       "environment": {
-        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
-        "MASPSX_DISPATCH_FOLD": "jtbl_80010080"
-      }
-    },
-    "era_o2_g0_dispatch_80010ac8": {
-      "toolchain": "era",
-      "flags": [
-        "-O2",
-        "-G0"
-      ],
-      "environment": {
-        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
-        "MASPSX_DISPATCH_FOLD": "jtbl_80010AC8"
-      }
-    },
-    "era_o2_g0_dispatch_80010b28": {
-      "toolchain": "era",
-      "flags": [
-        "-O2",
-        "-G0"
-      ],
-      "environment": {
-        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
-        "MASPSX_DISPATCH_FOLD": "jtbl_80010B28"
+        "ERA_ASPSX_VER": "2.30"
       }
     }
   },
@@ -356,9 +356,6 @@
       "func_80085918",
       "func_80056C14"
     ],
-    "era_o2_g8_passthrough_load": [
-      "func_800556E8"
-    ],
     "era_o2_g8": [
       "func_800177AC",
       "func_800176E0",
@@ -395,29 +392,41 @@
       "func_8001784C",
       "func_80021054",
       "func_80055FE0",
-      "func_800339A0",
-      "func_80057B70",
       "func_80017294",
       "func_80026FD0",
       "func_8004F464",
       "func_80064C54",
+      "func_800339A0",
       "func_80038910",
       "func_8005E4E4",
       "func_8005E518",
+      "func_8004F798",
+      "func_8004F7D8",
+      "func_800501C8",
+      "func_8005022C",
+      "func_80050308",
+      "func_800509A8",
+      "func_80060528",
+      "func_8006055C",
+      "func_80060590",
+      "func_800605C4",
+      "func_800605F8",
+      "func_800500A8",
+      "func_8005010C",
+      "func_80050178",
+      "func_80057B70",
       "func_8004905C"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
     ],
-    "era_o2_g8_aspsx_230": [
-      "func_80057ED8",
-      "func_80058E08",
-      "func_80059EC8"
-    ],
     "era_o2_g8_three_word": [
       "func_8001266C",
       "func_80029388",
       "func_8001A890"
+    ],
+    "era_o2_g8_three_word_force_d8009d1a0_absolute": [
+      "func_80021D4C"
     ],
     "era_o2_g8_vm_dispatch": [
       "func_80012850"
@@ -596,9 +605,6 @@
     "modern_o1_g8_no_tree_ter": [
       "func_80052F0C"
     ],
-    "era_o2_g8_three_word_force_d8009d1a0_absolute": [
-      "func_80021D4C"
-    ],
     "era_o2_g0_dispatch_80010b28": [
       "func_8003010C"
     ],
@@ -607,6 +613,14 @@
     ],
     "era_o2_g0_dispatch_80010080": [
       "func_80012E7C"
+    ],
+    "era_o2_g8_passthrough_load": [
+      "func_800556E8"
+    ],
+    "era_o2_g8_aspsx_230": [
+      "func_80057ED8",
+      "func_80058E08",
+      "func_80059EC8"
     ]
   }
 }
