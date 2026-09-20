@@ -1098,6 +1098,11 @@ segments:
       # the shared symbolic base across all byte stores.
       - [0x5E348, c, func_8006DB48]
       - [0x5E39C, asm]
+      # func_8006DBE0 — VRAM 0x8006DBE0, size 0x38, file 0x5E3E0-0x5E418.
+      # Two-entry signed-byte search over D_800B0CD8+0xDC stride 2; returns the
+      # index or -1. era -O2 -G0.
+      - [0x5E3E0, c, func_8006DBE0]
+      - [0x5E418, asm]
       # func_8006E454 — VRAM 0x8006E454, size 0x44, file 0x5EC54-0x5EC98.
       - [0x5EC54, c, func_8006E454]
       - [0x5EC98, asm]
@@ -1726,6 +1731,11 @@ segments:
       # Volume campaign: per-voice SPU halfword bitfield update, era -O2 -G0.
       - [0x780C0, c, func_800878C0]
       - [0x780F0, asm]
+      # func_80089218 — VRAM 0x80089218, size 0x38, file 0x79A18-0x79A50.
+      # Walks 0x18 records at stride 0x11C from a0+0xF0 and rewrites the first
+      # word of each record matching a1 with 0x18. era -O2 -G0.
+      - [0x79A18, c, func_80089218]
+      - [0x79A50, asm]
       - [0x7A160, c, func_80089960]
       - [0x7A180, asm]
       - [0x7A328, c, func_80089B28]
