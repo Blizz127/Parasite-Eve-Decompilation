@@ -227,14 +227,20 @@ static void voice_key_off(int index)
 void PE_Spu_OnRegisterWrite(uint32_t offset, uint16_t value)
 {
     g_stat_reg_writes++;
+    /* Only 24 voices exist.  The high halfword still has 16 bits on hardware;
+     * bits 8..15 select non-existent voices 24..31 and must be ignored — the
+     * retail init writes 0xFFFF to both KOFF halves, so an unbounded walk here
+     * would index g_voices[24..31]. */
     if (offset == SPU_KON_LO || offset == SPU_KON_HI) {
         int base = (offset == SPU_KON_LO) ? 0 : 16;
         for (int b = 0; b < 16; b++)
-            if (value & (uint16_t)(1u << b)) voice_key_on(base + b);
+            if ((value & (uint16_t)(1u << b)) && base + b < PE_SPU_VOICE_COUNT)
+                voice_key_on(base + b);
     } else if (offset == SPU_KOFF_LO || offset == SPU_KOFF_HI) {
         int base = (offset == SPU_KOFF_LO) ? 0 : 16;
         for (int b = 0; b < 16; b++)
-            if (value & (uint16_t)(1u << b)) voice_key_off(base + b);
+            if ((value & (uint16_t)(1u << b)) && base + b < PE_SPU_VOICE_COUNT)
+                voice_key_off(base + b);
     }
 }
 

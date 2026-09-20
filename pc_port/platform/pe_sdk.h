@@ -184,6 +184,12 @@ void      func_800754E4(pe_addr_t ot, pe_addr_t env); /* DrawOTagEnv software */
 void func_8007D054(void);            /* SsInit wrapper (tail-call 7D074(0)) */
 void func_8007D15C(void);            /* SPU IRQ event install */
 
+/* ── SPU init/register translation (pc_port/platform/pe_spu_init.c) ─── */
+void func_8007D1D4(int arg);         /* SPU hardware init (arg 0 = full) */
+void func_8007DAE0(int reg, uint16_t value, int shifted); /* SPU reg write */
+void func_8007D454(pe_addr_t src, int count); /* SPU transfer-port write */
+void func_8007DCAC(void);            /* SPU busy-wait */
+
 /* ── streaming (pc_port/platform/pe_stream.c) ───────────────────────── */
 void func_80085644(void);            /* streaming bring-up */
 void func_80086FF8(void);            /* stream command 0xF0 */

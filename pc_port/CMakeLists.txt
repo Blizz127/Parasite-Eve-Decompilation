@@ -30,6 +30,7 @@ set(PLATFORM_SRCS
     platform/pe_spu_dma.c
     platform/pe_spu.c
     platform/pe_audio.c
+    platform/pe_spu_init.c
     platform/pe_libcard.c
     platform/pe_cdreg.c
     platform/pe_libcd.c

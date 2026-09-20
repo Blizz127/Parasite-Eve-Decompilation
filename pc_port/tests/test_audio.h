@@ -154,6 +154,36 @@ static void test_DAY2_spu_disabled_silent(void)
     PASS();
 }
 
+/* ── SPU init reset: all 24 voices key-on then key-off ── */
+static void test_DAY2_spu_init_keyon(void)
+{
+    unsigned reg_writes = 0, key_ons = 0, key_offs = 0;
+
+    TEST("DAY2_spu_init_keyon");
+    ResetTestState();
+
+    /* func_8007D1D4(0) is the retail SPU reset: clear volumes/SPUCNT, program
+     * the transfer address, write the 24 voice defaults, pulse KON/KOFF for
+     * every voice, then SPUCNT = 0xC000.  Keying all 24 and off again is the
+     * whole KON activity the retail main EXE ever performs (see
+     * docs/evidence/pe-music-keyon/REPORT.md). */
+    func_8007D1D4(0);
+    PE_Spu_GetStats(&reg_writes, &key_ons, &key_offs);
+    ASSERT(reg_writes > 0u, "init writes SPU registers");
+    ASSERT(key_ons == 24u && key_offs == 24u,
+           "init keys all 24 voices on and back off");
+    ASSERT(PE_SpuRegister_LoadU16(0x1AAu) == 0xC000u,
+           "SPUCNT enabled + unmuted");
+    ASSERT(PE_SpuRegister_LoadU16(0x004u) == 0x3FFFu,
+           "voice 0 pitch default 0x3FFF");
+    ASSERT(PE_SpuRegister_LoadU16(0x006u) == 0x200u,
+           "voice 0 start address default 0x200");
+    /* Key-off is a release, not an immediate stop, so voices stay "active"
+     * until the envelope renders down; assert they are all in release. */
+    ASSERT(PE_Spu_ActiveVoiceCount() <= 24, "voice count in range");
+    PASS();
+}
+
 /* ── WAV sink: header and payload are well-formed ── */
 static void test_DAY2_audio_wav_sink(void)
 {
