@@ -140,6 +140,9 @@ segments:
       - [0x85C0, c, func_80017DC0]
       - [0x85E4, c, func_80017DE4]
       - [0x8620, asm]
+      # func_80017E68 — VRAM 0x80017E68, size 0x34, file 0x8668-0x869C.
+      # Mask-subset predicate: *(a0[1]) = ((D_8009D2F0->0x98 & *a0[0]) == *a0[0]).
+      - [0x8668, c, func_80017E68]
       # Phase 5AK: C leaf func_80017E9C — VRAM 0x80017E9C, size 0x8.
       # File span 0x869C–0x86A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).
@@ -207,7 +210,10 @@ segments:
       - [0x9550, asm]
       # Phase 5GL: one-reader call wrapper, era -O2 -G0.
       - [0x9658, c, func_80018E58]
-      - [0x9684, asm]
+      # func_80018E84 — VRAM 0x80018E84, size 0x30, file 0x9684-0x96B4.
+      # Two word-loads stored as halfwords into D_800BD020/D_800BD022; return 1.
+      # era -O1 -G0 + ERA_ASPSX_VER=2.30 (volatile loads keep the wide lw).
+      - [0x9684, c, func_80018E84]
       # Phase 5GM: unsigned-halfword reader wrapper, era -O2 -G0.
       - [0x96B4, c, func_80018EB4]
       # Phase 5GN: unsigned-halfword reader wrapper twin, era -O2 -G0.
@@ -237,6 +243,9 @@ segments:
       - [0x98BC, asm]
       - [0x9954, c, func_80019154]
       - [0x9970, asm]
+      # func_80019260 — VRAM 0x80019260, size 0x38, file 0x9A60-0x9A98.
+      # func_8003E0D0(D_8009D2F0 + 0x1B4); D_8009D2F0->0x18C = 0; return 1.
+      - [0x9A60, c, func_80019260]
       - [0x9A98, c, func_80019298]
       # Phase 5EJ: D_8009D28C int-state setters (READY-FROM-READER).
       # func_800192B8 / func_800192C8 — set state 0/8, return 1; sizes 0x10 / 0x14.
@@ -275,7 +284,9 @@ segments:
       - [0x9EA0, c, func_800196A0]
       # Probe: companion state bit-14 clearer with retail $v0/$a0 allocation.
       - [0x9EC4, c, func_800196C4]
-      - [0x9EE8, asm]
+      # func_800196E8 — VRAM 0x800196E8, size 0x40, file 0x9EE8-0x9F28.
+      # D_8009D2F8 = (short *)(D_8009D2F0->0x9C) + *a0[0]; D_8009D264 = *a0[1].
+      - [0x9EE8, c, func_800196E8]
       # Probe: isolated global bit-2 setter with retail $at store address.
       - [0x9F28, c, func_80019728]
       # Probe: companion global bit-2 clearer with retail $at store address.
@@ -323,6 +334,10 @@ segments:
       # Probe: state bit-17 setter with retail $v0/$a0 allocation.
       - [0xA428, c, func_80019C28]
       - [0xA44C, asm]
+      # func_80019CEC — VRAM 0x80019CEC, size 0x38, file 0xA4EC-0xA524.
+      # Sign-extend the three halfwords at +0x21C/+0x21E/+0x220 into the
+      # word fields +0x28/+0x2C/+0x30; return 1.
+      - [0xA4EC, c, func_80019CEC]
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.
       - [0xA524, c, func_80019D24]
       # Probe: four-halfword forwarding wrapper.
@@ -330,7 +345,10 @@ segments:
       # func_80019D84 — VRAM 0x80019D84, size 0x34, file 0xA584-0xA5B8.
       # func_800375E0(**a0, 1, buf[-1]) with a 0x10-byte stack halfword buffer.
       - [0xA584, c, func_80019D84]
-      - [0xA5B8, asm]
+      # func_80019DB8 — VRAM 0x80019DB8, size 0x3C, file 0xA5B8-0xA5F4.
+      # *(a0[1]) = D_800A76A4[*(int *)a0[0]].field_00 (12-byte records); return 1.
+      - [0xA5B8, c, func_80019DB8]
+      - [0xA5F4, asm]
       # Probe: call-and-store wrapper retaining descriptor across the call.
       - [0xA9A8, c, func_8001A1A8]
       # Probe: state bit-24 setter with retail $v0/$a0 allocation.
@@ -342,7 +360,14 @@ segments:
       - [0xAB2C, c, func_8001A32C]
       # Probe: companion state bit-1 clearer with retail $v0/$a0 allocation.
       - [0xAB50, c, func_8001A350]
-      - [0xAB74, asm]
+      # func_8001A374 — VRAM 0x8001A374, size 0x1C, file 0xAB74-0xAB90.
+      # D_800BCFFC = **a0 (byte store of a word load); return 1.
+      - [0xAB74, c, func_8001A374]
+      - [0xAB90, asm]
+      # func_8001A3FC — VRAM 0x8001A3FC, size 0x40, file 0xABFC-0xAC3C.
+      # D_8009D248 = (char *)((void **)D_8009D2F0)[0x9C/4] + *a0[0]*2;
+      # D_8009D1CC = *a0[1]; return 1.
+      - [0xABFC, c, func_8001A3FC]
       # decomp-continue-4: two result-store wrappers (func_8005401C/52F70
       # result stored through *a0[0]; return 1).
       - [0xAC3C, c, func_8001A43C]
@@ -990,6 +1015,18 @@ segments:
       - [0x556B4, asm]
       - [0x55BB8, c, func_800653B8]
       - [0x55C00, asm]
+      # func_8006599C — VRAM 0x8006599C, size 0x2C, file 0x5619C-0x561C8.
+      # Signed halfword at D_800B1624 + D_800B1624->0x10 + (arg0 << 4) + 6.
+      - [0x5619C, c, func_8006599C]
+      # func_800659C8 — VRAM 0x800659C8, size 0x30, file 0x561C8-0x561F8.
+      # arg1 >> 8 stored to header-indexed halfword +8; return 0.
+      - [0x561C8, c, func_800659C8]
+      - [0x561F8, asm]
+      # func_80065A9C — VRAM 0x80065A9C, size 0x38, file 0x5629C-0x562D4.
+      # *p |= arg1 & 0x30 at D_800B1624 + D_800B1624->0x10 + (arg0 << 4);
+      # volatile pointer keeps retail's double header load.
+      - [0x5629C, c, func_80065A9C]
+      - [0x562D4, asm]
       # func_80065B70 — VRAM 0x80065B70, size 0xC8, file 0x56370-0x56438.
       # Block init of the D_800BCF88..D_800BD028 scratch struct. era_o2_g0.
       - [0x56370, c, func_80065B70]
@@ -1017,6 +1054,10 @@ segments:
       # the shared symbolic base across all byte stores.
       - [0x5E348, c, func_8006DB48]
       - [0x5E39C, asm]
+      # func_8006E6A8 — VRAM 0x8006E6A8, size 0x2C, file 0x5EEA8-0x5EED4.
+      # func_8006E6D4(arg0, 0, arg1, arg2) forwarding wrapper.
+      - [0x5EEA8, c, func_8006E6A8]
+      - [0x5EED4, asm]
       # Phase 5FM-redo: C leaf func_8006E7E8 — VRAM 0x8006E7E8, size 0x4C
       # (19 words). VSync poll helper: calls func_800811E4 (asm callee),
       # tests -1/0 via (unsigned)(ret+1) < 2, clears 0xFEFFBFFF mask in
@@ -1060,7 +1101,9 @@ segments:
       - [0x64494, c, func_80073C94]
       - [0x644C4, c, func_80073CC4]
       - [0x644F4, c, func_80073CF4]
-      - [0x64524, asm]
+      # func_80073D24 — VRAM 0x80073D24, size 0x34, file 0x64524-0x64558.
+      # Indirect call through D_8009566C->0x14 with (4, arg0).
+      - [0x64524, c, func_80073D24]
       - [0x64558, c, func_80073D58]
       - [0x64588, c, func_80073D88]
       - [0x645B8, c, func_80073DB8]
@@ -1776,7 +1819,10 @@ segments:
       # cleared; the final indexed store fills the jr delay slot.
       - [0x81220, c, func_80090A20]
       - [0x81264, c, func_80090A64]
-      - [0x812AC, asm]
+      # func_80090AAC — VRAM 0x80090AAC, size 0x40, file 0x812AC-0x812EC.
+      # func_8009059C(); func_800905C4(arg0, arg1); with an s0/s1 save frame.
+      - [0x812AC, c, func_80090AAC]
+      - [0x812EC, asm]
       - [0x81330, c, func_80090B30]
       - [0x8135C, asm]
       - [0x813A0, c, func_80090BA0]

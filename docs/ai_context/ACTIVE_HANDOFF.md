@@ -85,6 +85,42 @@ Recommendation: re-slice ranks 1–36 into medium functions for parallel agents;
 decide a GTE policy before ranking the COP2 leaves. Tooling gap: `try_leaf.py`
 cannot exercise `MASPSX_FORCE_ABSOLUTE_SYMBOLS` (emulate it or add a flag).
 
+## SLICE-6 SMALL-FUNCTION SWEEP: 709 → 723 matching C leaves (2026-09-20)
+
+Branch `agent/decomp102` from `58ffdd4b`, worktree `/tmp/pe-agent-decomp102`.
+**14 new leaves** from worklist slice 6 (ranks 753-1680), all small (0x1C-0x40).
+Final fresh build: **EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**,
+`Matching claim: YES (723 registered C leaves)`, `VERIFY_US=PASS`
+(plan `1046 spans = 723 c + 321 asm + 2 rodata`). Commit range `58ffdd4b..4986f3e8`.
+
+New profile **`era_o1_g0_aspsx_230`** (`-O1 -G0` + `ERA_ASPSX_VER=2.30`) and 13
+leaves added to the existing `era_o2_g0_aspsx_230`.
+
+**New levers:**
+1. **`ERA_ASPSX_VER=2.30` for small symbolic stores.** ASPSX < 2.30 (maspsx
+   `nop_at_expansion=True`) injects a `nop` before a symbol-store macro's `$at`
+   expansion; retail's small store macros in this region have none and place
+   `lui $at` directly after the producing load. 13/14 leaves use
+   `era_o2_g0_aspsx_230`; one (`func_80018E84`) uses `era_o1_g0_aspsx_230`.
+2. **`volatile` on a structure pointer** is a CSE/width lever: it reproduces
+   retail's *double* `D_800B1624` header load (`func_80065A9C`/`6599C`/`659C8`)
+   and keeps a full `lw` where cc1 would narrow to `lhu` for a truncating store
+   (`func_80018E84`).
+3. **Statement order selects independent-load scheduling** (`func_80019CEC`:
+   write 0x21C/0x21E/0x220 to get cc1's 0x21C/0x220/0x21E).
+
+Leaves: `func_80017E68`, `func_80018E84`, `func_80019260`, `func_800196E8`,
+`func_80019CEC`, `func_80019DB8`, `func_8001A374`, `func_8001A3FC`,
+`func_80073D24`, `func_80090AAC`, `func_80065A9C`, `func_8006599C`,
+`func_800659C8`, `func_8006E6A8`. Full table + 30 parked leaves with exact
+instruction divergences: `docs/evidence/agent-decomp102/REPORT.md`.
+
+**Note for the next slice-6 agent:** the slice still has ~910 functions; the
+remaining easy small leaves are largely (a) `$gp`-relative readers (no matched
+leaf uses `$gp` yet — gp base is `0x8009CD60`, so `0x590($gp)` = `D_8009D2F0`)
+and (b) frames whose `jr` delay slot is filled with `addiu $sp` (cc1 2.7.2
+emits the teardown *before* the jump; e.g. `func_80075B4C`/`7DD74`).
+
 ## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
 
 Branch `agent/4ad9c-savepage` from `160137a4`.  The field main-menu handler no
