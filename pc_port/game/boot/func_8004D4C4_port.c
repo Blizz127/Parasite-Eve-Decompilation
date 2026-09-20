@@ -19,8 +19,12 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "pe_sdk.h"
 
 extern void func_8005DE88(void);
+/* Matching decomp leaves without a shared prototype. */
+extern void func_8003FFAC(int value);
+extern int  func_80042964(int index);
 
 /* func_8004D4C4(idx, items) — continue path slot-list constructor.
  * Retail order: look up the (2,0x24) parent, allocate the list node, allocate
@@ -122,4 +126,135 @@ int func_8004FE58(pe_addr_t item)
     if (PE_LoadU8(entry) != 1u) return 0;
     return (uint32_t)((PE_LoadU8(entry + 0x29u) ^
                        (uint8_t)func_8003FFBC()) < 1u);
+}
+
+/* func_8004D978(value) — build the three-line prompt/notice window.  Retail
+ * 0x8004D978..0x8004D9D8 (24 words): allocate a (0x27) node under the
+ * func_80062CC4() parent, install the func_8004DA04 draw callback at +0x30 and
+ * the func_8004DA9C input callback at +0x2C, realise it, then publish value to
+ * D_8009D000 (gp+0x290). */
+void func_8004D978(uint32_t value)
+{
+    pe_addr_t node = func_80062D2C(0x27u, func_80062CC4(), 0u, 1u);
+
+    PE_StoreU32(node + 0x30u, 0x8004DA04u);
+    PE_StoreU32(node + 0x2Cu, 0x8004DA9Cu);
+    func_80062CB8(node);
+    PE_StoreU32(0x8009D000u, value);
+}
+
+/* func_8004D6D4(window, event) — slot-list window input/handler.  Retail
+ * 0x8004D6D4..0x8004D978 (169 words); this is the +0x2C callback the slot-list
+ * constructor func_8004D4C4 installs.  `event` is the menu event mask:
+ *   0x40     close/cancel the window (func_80062F3C(0x3F) teardown, return 1)
+ *   0x10000  confirm/select an entry
+ * gp = 0x8009CD70, so 0x1D4/0x1D8/0x1DC/0x1E0(gp) are D_8009CF44/48/4C/50:
+ * the selected record index, the func_8006346C result, the entry type byte,
+ * and the string base whose zero selects the unable/notice paths.
+ *
+ * The confirm path looks up the slot entry via func_800424B4; type 2 (occupied)
+ * either opens the 0x45 load/overwrite prompt (fewer than 0xF files) or runs
+ * the func_8004CE28 notice; a zero string base runs the 0x46 unable notice.
+ * The generic continue path builds the (0x29) sub-list with its layout and
+ * publishes the func_80050544 scroll callback.  Every terminal arm returns 1
+ * through func_800525EC (handled) or func_800526C4 (unable). */
+int32_t func_8004D6D4(pe_addr_t window, uint32_t event)
+{
+    pe_addr_t list = func_80062A20(window, 0u);
+    pe_addr_t entry;
+    int32_t selected;
+
+    if ((event & 0x40u) != 0u) {
+        func_80062F3C(0x3Fu);
+        func_80062F1C(window);
+        func_80042A10();
+        func_80052634();
+        return 1;
+    }
+    if ((event & 0x10000u) == 0u)
+        return 1;
+
+    selected = func_8006346C(list);
+    PE_StoreU32(0x8009CF48u, (uint32_t)selected);
+    if (selected < 0)
+        goto unable;
+
+    entry = func_800424B4(PE_LoadU32(0x8009CF44u), selected);
+    if (entry == 0u)
+        goto unable;
+
+    {
+        uint32_t string_base = PE_LoadU32(0x8009CF50u);
+
+        if (string_base == 0u && PE_LoadU8(entry) == 2u)
+            goto unable;
+        PE_StoreU32(0x8009CF4Cu, PE_LoadU8(entry));
+        if (string_base == 0u)
+            goto notice_46;
+    }
+
+    func_8003FFAC((int)PE_LoadU32(0x8009CFF8u));
+
+    if (PE_LoadU32(0x8009CF4Cu) == 2u) {
+        if (func_80042964((int)PE_LoadU32(0x8009CF44u)) < 0xF) {
+            func_80062F3C(0x1Fu);
+            func_8004D978(0x45u);
+            func_80042B50(0x800504F4u);
+        } else if (func_80062A34(1u, 0x28u) == 0u) {
+            func_8004CE28(PE_LoadU32(0x8009CF44u) + 0x47u,
+                          PE_LoadU32(0x8009CF50u) + 0x42u);
+        }
+        goto done;
+    }
+
+    /* Generic continue arm: build the (0x29) sub-list and its layout. */
+    {
+        pe_addr_t row = func_80062D2C(0x29u, list, 0u, 1u);
+        pe_addr_t child = func_8006322C(0x29u, row, row);
+        uint32_t text;
+        int32_t width;
+
+        PE_StoreU32(row + 0x30u, 0x80044E14u);
+        PE_StoreU32(row + 0x2Cu, 0x80044E98u);
+        PE_StoreU32(child + 0x30u, 0x8004F950u);
+        PE_StoreU32(0x8009CF14u, 0x6Cu);
+        func_80062CB8(child);
+        PE_StoreU32(child + 0x44u, 1u);      /* retail: sw in the jal delay slot */
+        func_80052E30(PE_LoadU32(0x8009CF10u));
+
+        PE_StoreU8(0x800A1980u, 0xFFu);
+        text = func_8005DC4C(0x44u);
+        func_80052C08(0x800A1980u, text);
+        PE_StoreU32(0x8009CFA0u, 0u);
+
+        /* Width is measured once; below 0x78 it is clamped up, otherwise the
+         * measurement is repeated and its result used (retail calls
+         * func_8005F1A0 a second time). */
+        width = (int32_t)func_8005F1A0(0x800A1980u);
+        if (width >= 0x78)
+            width = (int32_t)func_8005F1A0(0x800A1980u);
+        else
+            width = 0x78;
+        PE_StoreU32(row + 0x34u, (uint32_t)(width + 0x14));
+        PE_StoreU32(row + 0x38u, 0x32u);
+        PE_StoreU32(row + 0x18u, (uint32_t)((0x12C - width) >> 1));
+        PE_StoreU32(child + 0x18u,
+                    (uint32_t)(((int32_t)PE_LoadU32(row + 0x34u) - 0x80) >> 1));
+        PE_StoreU32(0x8009CFA8u, 0x80050544u);
+        PE_StoreU32(child + 0x1Cu, PE_LoadU32(row + 0x38u) - 0x14u);
+    }
+    goto done;
+
+notice_46:
+    func_80062F3C(0x1Fu);
+    func_8004D978(0x46u);
+    func_80042B50(0x8005051Cu);
+
+done:
+    func_800525EC();
+    return 1;
+
+unable:
+    func_800526C4();
+    return 1;
 }
