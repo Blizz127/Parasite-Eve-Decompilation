@@ -7,6 +7,37 @@
 
 # ACTIVE HANDOFF
 
+## agent/bigfish-1d340 (2026-09-20): `func_8001D340` NOT matched — but proven un-carveable
+
+**Branch `agent/bigfish-1d340`, worktree `/tmp/pe-agent-bigfish`.** Baseline gate
+re-run first: `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh` reported
+`EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (870 registered C leaves)`, `VERIFY_US=PASS`. No leaf was
+added; nothing in `configs/` or `src/` changed.
+
+`func_8001D340` (player battle tick, file 0xDB40, size 0x2194 = 8,596 B, 2,149
+instructions, 168 basic blocks) is **not carveable into partial yaml spans**:
+it has exactly one prologue (`addiu $sp,$sp,-0x328`), one epilogue
+(`addiu $sp,$sp,0x328`), and one `jr $ra`. The repo's prefix/resume carve trick
+(the `configs/USA/disc1.yaml` 2A0C/3420/38B4 pattern) requires self-contained
+nested functions; there are none here. **It must be matched whole.**
+
+The full structural map (168-block table with offset/size/region/purpose, field
+widths, six regions R1-R6) is in `docs/evidence/bigfish-1d340/REPORT.md`. The
+best candidate now **compiles and its prologue matches byte-for-byte**:
+`docs/evidence/bigfish-1d340/func_8001D340_m2c_typed_frame.c` (m2c CFG +
+width-typed field accesses + `u8 phantom[0x2B8]`) reports **1032 differing
+words** under `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`, and words
+0x0000-0x0010 are exact. **New lever confirmed:** retail's 0x328 frame is 0x310
+bytes of never-accessed local space (only saved regs 0x310-0x324 + one outgoing
+arg at `0x10($sp)` are touched), so a phantom address-taken local
+(`u8 phantom[0x2B8]; (void)phantom;`) is required to make cc1 emit it — same
+trick as `func_800C6EF8`. First real divergence is word 0x14 (`andi $v0` vs
+`andi $v1`). The port-derived candidate
+(`func_8001D340_candidate.c`) is structurally wrong (helper loops vs retail's
+hand-unrolled colour stores, eager `phase`/`actor` loads): 1928 diffs; use it
+only for the field-offset spec, not as a skeleton.
+
 ## PARENT STATUS (2026-09-20): 870 matching C leaves; executed-path C-share 37.18%
 
 **Matching decomp: 768 -> 870 (+102) this session.** Fresh `scripts/split_us.sh`

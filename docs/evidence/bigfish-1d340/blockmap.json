@@ -1,0 +1,1820 @@
+[
+ {
+  "i": 0,
+  "off": "0x0DB40",
+  "vram": "0x8001D340",
+  "size": "0x30",
+  "n": 12,
+  "labels": [],
+  "term": "addiu $s2, $a0, 0x4C",
+  "first": "addiu $sp, $sp, -0x328"
+ },
+ {
+  "i": 1,
+  "off": "0x0DB70",
+  "vram": "0x8001D370",
+  "size": "0x18",
+  "n": 6,
+  "labels": [],
+  "term": "andi $v1, $s0, 0xFF",
+  "first": "lui $v0, %hi(D_8009D1A0)"
+ },
+ {
+  "i": 2,
+  "off": "0x0DB88",
+  "vram": "0x8001D388",
+  "size": "0x20",
+  "n": 8,
+  "labels": [],
+  "term": "sh $a1, 0x10($a0)",
+  "first": "lhu $v1, 0x10($a0)"
+ },
+ {
+  "i": 3,
+  "off": "0x0DBA8",
+  "vram": "0x8001D3A8",
+  "size": "0xC",
+  "n": 3,
+  "labels": [],
+  "term": "nop ",
+  "first": "addiu $v0, $zero, 0x80"
+ },
+ {
+  "i": 4,
+  "off": "0x0DBB4",
+  "vram": "0x8001D3B4",
+  "size": "0x2C",
+  "n": 11,
+  "labels": [
+   ".L8001D3B4"
+  ],
+  "term": "subu $v0, $a1, $v0",
+  "first": "lui $v0, (0x66666667 >> 16)"
+ },
+ {
+  "i": 5,
+  "off": "0x0DBE0",
+  "vram": "0x8001D3E0",
+  "size": "0xC",
+  "n": 3,
+  "labels": [
+   ".L8001D3E0"
+  ],
+  "term": "nop ",
+  "first": "andi $v0, $a2, 0x100"
+ },
+ {
+  "i": 6,
+  "off": "0x0DBEC",
+  "vram": "0x8001D3EC",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "addu $v0, $a1, $v0",
+  "first": "lhu $v0, 0x24($a0)"
+ },
+ {
+  "i": 7,
+  "off": "0x0DBFC",
+  "vram": "0x8001D3FC",
+  "size": "0x4",
+  "n": 1,
+  "labels": [
+   ".L8001D3FC"
+  ],
+  "term": "sh $v0, 0x10($a0)",
+  "first": "sh $v0, 0x10($a0)"
+ },
+ {
+  "i": 8,
+  "off": "0x0DC00",
+  "vram": "0x8001D400",
+  "size": "0x24",
+  "n": 9,
+  "labels": [
+   ".L8001D400"
+  ],
+  "term": "nop ",
+  "first": "lui $a1, %hi(D_8009D278)"
+ },
+ {
+  "i": 9,
+  "off": "0x0DC24",
+  "vram": "0x8001D424",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "nop ",
+  "first": "lw $v0, 0x0($s2)"
+ },
+ {
+  "i": 10,
+  "off": "0x0DC38",
+  "vram": "0x8001D438",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "sw $v0, 0x30($a1)",
+  "first": "lw $v0, 0x30($a1)"
+ },
+ {
+  "i": 11,
+  "off": "0x0DC4C",
+  "vram": "0x8001D44C",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "sw $v0, 0x30($a1)",
+  "first": "addiu $v0, $zero, 0x1"
+ },
+ {
+  "i": 12,
+  "off": "0x0DC54",
+  "vram": "0x8001D454",
+  "size": "0x2C",
+  "n": 11,
+  "labels": [
+   ".L8001D454"
+  ],
+  "term": "nop ",
+  "first": "lw $v1, 0x30($a1)"
+ },
+ {
+  "i": 13,
+  "off": "0x0DC80",
+  "vram": "0x8001D480",
+  "size": "0x4",
+  "n": 1,
+  "labels": [],
+  "term": "break 7",
+  "first": "break 7"
+ },
+ {
+  "i": 14,
+  "off": "0x0DC84",
+  "vram": "0x8001D484",
+  "size": "0xC",
+  "n": 3,
+  "labels": [
+   ".L8001D484"
+  ],
+  "term": "lui $at, (0x80000000 >> 16)",
+  "first": "addiu $at, $zero, -0x1"
+ },
+ {
+  "i": 15,
+  "off": "0x0DC90",
+  "vram": "0x8001D490",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "nop ",
+  "first": "bne $v1, $at, .L8001D49C"
+ },
+ {
+  "i": 16,
+  "off": "0x0DC98",
+  "vram": "0x8001D498",
+  "size": "0x4",
+  "n": 1,
+  "labels": [],
+  "term": "break 6",
+  "first": "break 6"
+ },
+ {
+  "i": 17,
+  "off": "0x0DC9C",
+  "vram": "0x8001D49C",
+  "size": "0x20",
+  "n": 8,
+  "labels": [
+   ".L8001D49C"
+  ],
+  "term": "addiu $v0, $zero, 0x1999",
+  "first": "mflo $v1"
+ },
+ {
+  "i": 18,
+  "off": "0x0DCBC",
+  "vram": "0x8001D4BC",
+  "size": "0x4",
+  "n": 1,
+  "labels": [],
+  "term": "sw $v0, 0x2C($a1)",
+  "first": "sw $v0, 0x2C($a1)"
+ },
+ {
+  "i": 19,
+  "off": "0x0DCC0",
+  "vram": "0x8001D4C0",
+  "size": "0x30",
+  "n": 12,
+  "labels": [
+   ".L8001D4C0"
+  ],
+  "term": "addiu $v0, $zero, 0xF0",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 20,
+  "off": "0x0DCF0",
+  "vram": "0x8001D4F0",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [],
+  "term": "addiu $a1, $zero, 0x455",
+  "first": "lui $a0, %hi(D_800B0E08)"
+ },
+ {
+  "i": 21,
+  "off": "0x0DD0C",
+  "vram": "0x8001D50C",
+  "size": "0x18",
+  "n": 6,
+  "labels": [],
+  "term": "sw $v0, 0x10($sp)",
+  "first": "addu $a2, $zero, $zero"
+ },
+ {
+  "i": 22,
+  "off": "0x0DD24",
+  "vram": "0x8001D524",
+  "size": "0x4",
+  "n": 1,
+  "labels": [
+   ".L8001D524"
+  ],
+  "term": "andi $v1, $s0, 0xFF",
+  "first": "andi $v1, $s0, 0xFF"
+ },
+ {
+  "i": 23,
+  "off": "0x0DD28",
+  "vram": "0x8001D528",
+  "size": "0xC",
+  "n": 3,
+  "labels": [
+   ".L8001D528"
+  ],
+  "term": "nop ",
+  "first": "addiu $v0, $zero, 0x1"
+ },
+ {
+  "i": 24,
+  "off": "0x0DD34",
+  "vram": "0x8001D534",
+  "size": "0x24",
+  "n": 9,
+  "labels": [],
+  "term": "addiu $v0, $zero, 0x5",
+  "first": "lui $v0, %hi(D_8009D254)"
+ },
+ {
+  "i": 25,
+  "off": "0x0DD58",
+  "vram": "0x8001D558",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "nop ",
+  "first": "bne $a0, $v0, .L8001D5B8"
+ },
+ {
+  "i": 26,
+  "off": "0x0DD60",
+  "vram": "0x8001D560",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001D560"
+  ],
+  "term": "nop ",
+  "first": "lw $v0, 0x6C($v1)"
+ },
+ {
+  "i": 27,
+  "off": "0x0DD7C",
+  "vram": "0x8001D57C",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "nop ",
+  "first": "lw $v0, 0x4C($v1)"
+ },
+ {
+  "i": 28,
+  "off": "0x0DD90",
+  "vram": "0x8001D590",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "nop ",
+  "first": "jal func_80021054"
+ },
+ {
+  "i": 29,
+  "off": "0x0DD98",
+  "vram": "0x8001D598",
+  "size": "0xC",
+  "n": 3,
+  "labels": [],
+  "term": "nop ",
+  "first": "sll $v0, $v0, 24"
+ },
+ {
+  "i": 30,
+  "off": "0x0DDA4",
+  "vram": "0x8001D5A4",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001D5A4"
+  ],
+  "term": "and $v0, $v0, $v1",
+  "first": "lui $v0, %hi(D_8009D2E8)"
+ },
+ {
+  "i": 31,
+  "off": "0x0DDB8",
+  "vram": "0x8001D5B8",
+  "size": "0x20",
+  "n": 8,
+  "labels": [
+   ".L8001D5B8"
+  ],
+  "term": "addiu $v1, $zero, -0x2",
+  "first": "lui $v0, %hi(D_8009D254)"
+ },
+ {
+  "i": 32,
+  "off": "0x0DDD8",
+  "vram": "0x8001D5D8",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "and $v0, $v0, $v1",
+  "first": "lui $v0, %hi(D_8009D2E8)"
+ },
+ {
+  "i": 33,
+  "off": "0x0DDE8",
+  "vram": "0x8001D5E8",
+  "size": "0x10",
+  "n": 4,
+  "labels": [
+   ".L8001D5E8"
+  ],
+  "term": "ori $v0, $v0, 0x1",
+  "first": "lui $v0, %hi(D_8009D2E8)"
+ },
+ {
+  "i": 34,
+  "off": "0x0DDF8",
+  "vram": "0x8001D5F8",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001D5F8"
+  ],
+  "term": "sw $v0, %lo(D_8009D2E8)($at)",
+  "first": "lui $at, %hi(D_8009D2E8)"
+ },
+ {
+  "i": 35,
+  "off": "0x0DE00",
+  "vram": "0x8001D600",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001D600"
+  ],
+  "term": "nop ",
+  "first": "lui $v1, %hi(D_8009D278)"
+ },
+ {
+  "i": 36,
+  "off": "0x0DE1C",
+  "vram": "0x8001D61C",
+  "size": "0x4",
+  "n": 1,
+  "labels": [],
+  "term": "sw $zero, 0x8($v1)",
+  "first": "sw $zero, 0x8($v1)"
+ },
+ {
+  "i": 37,
+  "off": "0x0DE20",
+  "vram": "0x8001D620",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001D620"
+  ],
+  "term": "nop ",
+  "first": "lw $v0, 0x0($s2)"
+ },
+ {
+  "i": 38,
+  "off": "0x0DE34",
+  "vram": "0x8001D634",
+  "size": "0x18",
+  "n": 6,
+  "labels": [],
+  "term": "addiu $v0, $zero, 0x1",
+  "first": "lui $v0, %hi(D_8009D1E8)"
+ },
+ {
+  "i": 39,
+  "off": "0x0DE4C",
+  "vram": "0x8001D64C",
+  "size": "0x1B0",
+  "n": 108,
+  "labels": [],
+  "term": "sll $v0, $v1, 3",
+  "first": "addiu $t1, $zero, 0xFF"
+ },
+ {
+  "i": 40,
+  "off": "0x0DFFC",
+  "vram": "0x8001D7FC",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001D7FC"
+  ],
+  "term": "addiu $v0, $zero, 0x2",
+  "first": "bne $v1, $v0, .L8001D9A8"
+ },
+ {
+  "i": 41,
+  "off": "0x0E004",
+  "vram": "0x8001D804",
+  "size": "0x1A4",
+  "n": 105,
+  "labels": [],
+  "term": "sll $v0, $v1, 3",
+  "first": "addiu $a2, $zero, 0xC1"
+ },
+ {
+  "i": 42,
+  "off": "0x0E1A8",
+  "vram": "0x8001D9A8",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001D9A8"
+  ],
+  "term": "addiu $v0, $zero, 0x3",
+  "first": "bne $v1, $v0, .L8001DB60"
+ },
+ {
+  "i": 43,
+  "off": "0x0E1B0",
+  "vram": "0x8001D9B0",
+  "size": "0x1B0",
+  "n": 108,
+  "labels": [],
+  "term": "sll $v0, $v1, 3",
+  "first": "addiu $t1, $zero, 0x83"
+ },
+ {
+  "i": 44,
+  "off": "0x0E360",
+  "vram": "0x8001DB60",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001DB60"
+  ],
+  "term": "addiu $a2, $zero, 0xC1",
+  "first": "bne $v1, $v0, .L8001DD1C"
+ },
+ {
+  "i": 45,
+  "off": "0x0E368",
+  "vram": "0x8001DB68",
+  "size": "0x1A0",
+  "n": 104,
+  "labels": [],
+  "term": "sll $v0, $v1, 3",
+  "first": "addiu $a1, $zero, 0x28"
+ },
+ {
+  "i": 46,
+  "off": "0x0E508",
+  "vram": "0x8001DD08",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001DD08"
+  ],
+  "term": "sb $a0, %lo(D_800B0172)($at)",
+  "first": "addu $v0, $v0, $v1"
+ },
+ {
+  "i": 47,
+  "off": "0x0E51C",
+  "vram": "0x8001DD1C",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001DD1C"
+  ],
+  "term": "nop ",
+  "first": "lui $a0, %hi(D_8009D254)"
+ },
+ {
+  "i": 48,
+  "off": "0x0E538",
+  "vram": "0x8001DD38",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "addiu $a1, $zero, 0x12",
+  "first": "jal func_8001A680"
+ },
+ {
+  "i": 49,
+  "off": "0x0E540",
+  "vram": "0x8001DD40",
+  "size": "0x10",
+  "n": 4,
+  "labels": [
+   ".L8001DD40"
+  ],
+  "term": "addu $a0, $v1, $zero",
+  "first": "lb $v1, 0xC0($gp)"
+ },
+ {
+  "i": 50,
+  "off": "0x0E550",
+  "vram": "0x8001DD50",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [],
+  "term": "nop ",
+  "first": "lui $v0, %hi(D_8009D278)"
+ },
+ {
+  "i": 51,
+  "off": "0x0E56C",
+  "vram": "0x8001DD6C",
+  "size": "0x104",
+  "n": 65,
+  "labels": [],
+  "term": "nop ",
+  "first": "addiu $v1, $zero, -0x2001"
+ },
+ {
+  "i": 52,
+  "off": "0x0E670",
+  "vram": "0x8001DE70",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001DE70"
+  ],
+  "term": "sw $zero, 0x70($v1)",
+  "first": "lui $v1, %hi(D_8009D254)"
+ },
+ {
+  "i": 53,
+  "off": "0x0E68C",
+  "vram": "0x8001DE8C",
+  "size": "0x18",
+  "n": 6,
+  "labels": [
+   ".L8001DE8C"
+  ],
+  "term": "nop ",
+  "first": "lui $v0, %hi(D_8009D1A0)"
+ },
+ {
+  "i": 54,
+  "off": "0x0E6A4",
+  "vram": "0x8001DEA4",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [],
+  "term": "addiu $v0, $v0, -0x1",
+  "first": "lui $v1, %hi(D_8009D278)"
+ },
+ {
+  "i": 55,
+  "off": "0x0E6C0",
+  "vram": "0x8001DEC0",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "sw $v0, 0x34($v1)",
+  "first": "beqz $v0, .L8001E5EC"
+ },
+ {
+  "i": 56,
+  "off": "0x0E6C8",
+  "vram": "0x8001DEC8",
+  "size": "0x18",
+  "n": 6,
+  "labels": [],
+  "term": "addiu $v0, $zero, 0x1",
+  "first": "lui $v0, %hi(D_8009D1E8)"
+ },
+ {
+  "i": 57,
+  "off": "0x0E6E0",
+  "vram": "0x8001DEE0",
+  "size": "0x1AC",
+  "n": 107,
+  "labels": [],
+  "term": "sll $v0, $v1, 3",
+  "first": "addiu $t0, $zero, 0x82"
+ },
+ {
+  "i": 58,
+  "off": "0x0E88C",
+  "vram": "0x8001E08C",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001E08C"
+  ],
+  "term": "addiu $v0, $zero, 0x2",
+  "first": "bne $v1, $v0, .L8001E238"
+ },
+ {
+  "i": 59,
+  "off": "0x0E894",
+  "vram": "0x8001E094",
+  "size": "0x1A4",
+  "n": 105,
+  "labels": [],
+  "term": "sll $v0, $v1, 3",
+  "first": "addiu $a2, $zero, 0x25"
+ },
+ {
+  "i": 60,
+  "off": "0x0EA38",
+  "vram": "0x8001E238",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001E238"
+  ],
+  "term": "addiu $v0, $zero, 0x3",
+  "first": "bne $v1, $v0, .L8001E3EC"
+ },
+ {
+  "i": 61,
+  "off": "0x0EA40",
+  "vram": "0x8001E240",
+  "size": "0x1AC",
+  "n": 107,
+  "labels": [],
+  "term": "sll $v0, $v1, 3",
+  "first": "addiu $t0, $zero, 0x4A"
+ },
+ {
+  "i": 62,
+  "off": "0x0EBEC",
+  "vram": "0x8001E3EC",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001E3EC"
+  ],
+  "term": "addiu $a2, $zero, 0x25",
+  "first": "bne $v1, $v0, .L8001E5A8"
+ },
+ {
+  "i": 63,
+  "off": "0x0EBF4",
+  "vram": "0x8001E3F4",
+  "size": "0x1A0",
+  "n": 104,
+  "labels": [],
+  "term": "sll $v0, $v1, 3",
+  "first": "addiu $a1, $zero, 0xC1"
+ },
+ {
+  "i": 64,
+  "off": "0x0ED94",
+  "vram": "0x8001E594",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001E594"
+  ],
+  "term": "sb $a0, %lo(D_800B014E)($at)",
+  "first": "addu $v0, $v0, $v1"
+ },
+ {
+  "i": 65,
+  "off": "0x0EDA8",
+  "vram": "0x8001E5A8",
+  "size": "0x24",
+  "n": 9,
+  "labels": [
+   ".L8001E5A8"
+  ],
+  "term": "nop ",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 66,
+  "off": "0x0EDCC",
+  "vram": "0x8001E5CC",
+  "size": "0x4",
+  "n": 1,
+  "labels": [],
+  "term": "sw $zero, 0x34($a0)",
+  "first": "sw $zero, 0x34($a0)"
+ },
+ {
+  "i": 67,
+  "off": "0x0EDD0",
+  "vram": "0x8001E5D0",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001E5D0"
+  ],
+  "term": "nop ",
+  "first": "lui $v0, %hi(D_8009D278)"
+ },
+ {
+  "i": 68,
+  "off": "0x0EDEC",
+  "vram": "0x8001E5EC",
+  "size": "0xD4",
+  "n": 53,
+  "labels": [
+   ".L8001E5EC"
+  ],
+  "term": "sb $v0, %lo(D_800B0196)($at)",
+  "first": "addiu $a2, $zero, 0x82"
+ },
+ {
+  "i": 69,
+  "off": "0x0EEC0",
+  "vram": "0x8001E6C0",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001E6C0"
+  ],
+  "term": "lui $v0, (0x180000 >> 16)",
+  "first": "lw $v1, 0x0($s2)"
+ },
+ {
+  "i": 70,
+  "off": "0x0EED4",
+  "vram": "0x8001E6D4",
+  "size": "0x24",
+  "n": 9,
+  "labels": [],
+  "term": "lui $v1, (0xFF7FFFFF >> 16)",
+  "first": "lui $v0, %hi(D_8009D234)"
+ },
+ {
+  "i": 71,
+  "off": "0x0EEF8",
+  "vram": "0x8001E6F8",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "sw $v0, 0x0($s2)",
+  "first": "lw $v0, 0x0($s2)"
+ },
+ {
+  "i": 72,
+  "off": "0x0EF0C",
+  "vram": "0x8001E70C",
+  "size": "0xC",
+  "n": 3,
+  "labels": [
+   ".L8001E70C"
+  ],
+  "term": "nop ",
+  "first": "and $v0, $v1, $v0"
+ },
+ {
+  "i": 73,
+  "off": "0x0EF18",
+  "vram": "0x8001E718",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "nop ",
+  "first": "lui $s0, %hi(D_8009D20C)"
+ },
+ {
+  "i": 74,
+  "off": "0x0EF2C",
+  "vram": "0x8001E72C",
+  "size": "0x4",
+  "n": 1,
+  "labels": [],
+  "term": "lui $s3, (0x1000000 >> 16)",
+  "first": "lui $s3, (0x1000000 >> 16)"
+ },
+ {
+  "i": 75,
+  "off": "0x0EF30",
+  "vram": "0x8001E730",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001E730"
+  ],
+  "term": "nop ",
+  "first": "lui $v0, %hi(D_8009D254)"
+ },
+ {
+  "i": 76,
+  "off": "0x0EF44",
+  "vram": "0x8001E744",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "nop ",
+  "first": "lw $v1, 0x0($s0)"
+ },
+ {
+  "i": 77,
+  "off": "0x0EF54",
+  "vram": "0x8001E754",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "addu $s1, $v1, $zero",
+  "first": "lw $v0, 0x98($s0)"
+ },
+ {
+  "i": 78,
+  "off": "0x0EF68",
+  "vram": "0x8001E768",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "nop ",
+  "first": "lw $a0, 0x18($s1)"
+ },
+ {
+  "i": 79,
+  "off": "0x0EF78",
+  "vram": "0x8001E778",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "nop ",
+  "first": "lw $v0, 0x0($s2)"
+ },
+ {
+  "i": 80,
+  "off": "0x0EF8C",
+  "vram": "0x8001E78C",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "nop ",
+  "first": "lw $v1, 0x0($s1)"
+ },
+ {
+  "i": 81,
+  "off": "0x0EF9C",
+  "vram": "0x8001E79C",
+  "size": "0x18",
+  "n": 6,
+  "labels": [],
+  "term": "srl $v0, $v1, 21",
+  "first": "lbu $v0, 0x0($a0)"
+ },
+ {
+  "i": 82,
+  "off": "0x0EFB4",
+  "vram": "0x8001E7B4",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "sll $v0, $v1, 1",
+  "first": "andi $v1, $v0, 0x7"
+ },
+ {
+  "i": 83,
+  "off": "0x0EFC4",
+  "vram": "0x8001E7C4",
+  "size": "0x20",
+  "n": 8,
+  "labels": [],
+  "term": "sw $v0, 0x10($sp)",
+  "first": "addu $v0, $v0, $s1"
+ },
+ {
+  "i": 84,
+  "off": "0x0EFE4",
+  "vram": "0x8001E7E4",
+  "size": "0x18",
+  "n": 6,
+  "labels": [
+   ".L8001E7E4"
+  ],
+  "term": "sw $v0, 0x0($s2)",
+  "first": "addu $a0, $s0, $zero"
+ },
+ {
+  "i": 85,
+  "off": "0x0EFFC",
+  "vram": "0x8001E7FC",
+  "size": "0x48",
+  "n": 18,
+  "labels": [],
+  "term": "sw $v1, 0x0($s2)",
+  "first": "lui $a0, (0x7FFFFFFF >> 16)"
+ },
+ {
+  "i": 86,
+  "off": "0x0F044",
+  "vram": "0x8001E844",
+  "size": "0x24",
+  "n": 9,
+  "labels": [
+   ".L8001E844"
+  ],
+  "term": "addu $a1, $v1, $zero",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 87,
+  "off": "0x0F068",
+  "vram": "0x8001E868",
+  "size": "0x48",
+  "n": 18,
+  "labels": [],
+  "term": "nop ",
+  "first": "lhu $v0, 0xE($a0)"
+ },
+ {
+  "i": 88,
+  "off": "0x0F0B0",
+  "vram": "0x8001E8B0",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "sb $zero, 0x57($a1)",
+  "first": "j .L8001E8CC"
+ },
+ {
+  "i": 89,
+  "off": "0x0F0B8",
+  "vram": "0x8001E8B8",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001E8B8"
+  ],
+  "term": "sb $v0, 0x57($a1)",
+  "first": "lw $v0, 0x4C($a1)"
+ },
+ {
+  "i": 90,
+  "off": "0x0F0CC",
+  "vram": "0x8001E8CC",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001E8CC"
+  ],
+  "term": "sw $v0, 0x4C($a0)",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 91,
+  "off": "0x0F0E8",
+  "vram": "0x8001E8E8",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001E8E8"
+  ],
+  "term": "nop ",
+  "first": "lw $v0, 0x98($s0)"
+ },
+ {
+  "i": 92,
+  "off": "0x0F0FC",
+  "vram": "0x8001E8FC",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "nop ",
+  "first": "lw $v1, 0x0($s2)"
+ },
+ {
+  "i": 93,
+  "off": "0x0F110",
+  "vram": "0x8001E910",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "andi $v0, $v1, 0x200",
+  "first": "lw $v0, 0x10($s1)"
+ },
+ {
+  "i": 94,
+  "off": "0x0F120",
+  "vram": "0x8001E920",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "addiu $v0, $zero, 0x5A",
+  "first": "bnez $v0, .L8001E948"
+ },
+ {
+  "i": 95,
+  "off": "0x0F128",
+  "vram": "0x8001E928",
+  "size": "0x20",
+  "n": 8,
+  "labels": [],
+  "term": "addiu $v0, $zero, 0x5A",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 96,
+  "off": "0x0F148",
+  "vram": "0x8001E948",
+  "size": "0x30",
+  "n": 12,
+  "labels": [
+   ".L8001E948"
+  ],
+  "term": "addu $a1, $v1, $zero",
+  "first": "sb $v0, 0xC4($gp)"
+ },
+ {
+  "i": 97,
+  "off": "0x0F178",
+  "vram": "0x8001E978",
+  "size": "0x48",
+  "n": 18,
+  "labels": [],
+  "term": "nop ",
+  "first": "lhu $v0, 0xE($a0)"
+ },
+ {
+  "i": 98,
+  "off": "0x0F1C0",
+  "vram": "0x8001E9C0",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "sb $zero, 0x57($a1)",
+  "first": "j .L8001E9DC"
+ },
+ {
+  "i": 99,
+  "off": "0x0F1C8",
+  "vram": "0x8001E9C8",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001E9C8"
+  ],
+  "term": "sb $v0, 0x57($a1)",
+  "first": "lw $v0, 0x4C($a1)"
+ },
+ {
+  "i": 100,
+  "off": "0x0F1DC",
+  "vram": "0x8001E9DC",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001E9DC"
+  ],
+  "term": "sw $v0, 0x4C($a0)",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 101,
+  "off": "0x0F1F8",
+  "vram": "0x8001E9F8",
+  "size": "0x30",
+  "n": 12,
+  "labels": [
+   ".L8001E9F8"
+  ],
+  "term": "sw $v1, 0x98($v0)",
+  "first": "lui $a1, (0xFFF3FFFF >> 16)"
+ },
+ {
+  "i": 102,
+  "off": "0x0F228",
+  "vram": "0x8001EA28",
+  "size": "0x2C",
+  "n": 11,
+  "labels": [],
+  "term": "sb $v0, 0x48($v1)",
+  "first": "lui $v1, %hi(D_8009D278)"
+ },
+ {
+  "i": 103,
+  "off": "0x0F254",
+  "vram": "0x8001EA54",
+  "size": "0x10",
+  "n": 4,
+  "labels": [
+   ".L8001EA54"
+  ],
+  "term": "nop ",
+  "first": "lw $s0, 0x4($s0)"
+ },
+ {
+  "i": 104,
+  "off": "0x0F264",
+  "vram": "0x8001EA64",
+  "size": "0x28",
+  "n": 10,
+  "labels": [
+   ".L8001EA64"
+  ],
+  "term": "addu $a2, $v1, $zero",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 105,
+  "off": "0x0F28C",
+  "vram": "0x8001EA8C",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "subu $v0, $a1, $a2",
+  "first": "lh $v0, 0x1C($a0)"
+ },
+ {
+  "i": 106,
+  "off": "0x0F2A0",
+  "vram": "0x8001EAA0",
+  "size": "0x40",
+  "n": 16,
+  "labels": [],
+  "term": "nop ",
+  "first": "lui $v1, %hi(D_8009D254)"
+ },
+ {
+  "i": 107,
+  "off": "0x0F2E0",
+  "vram": "0x8001EAE0",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "sb $zero, 0x57($a1)",
+  "first": "j .L8001EAFC"
+ },
+ {
+  "i": 108,
+  "off": "0x0F2E8",
+  "vram": "0x8001EAE8",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001EAE8"
+  ],
+  "term": "sb $v0, 0x57($a1)",
+  "first": "lw $v0, 0x4C($a1)"
+ },
+ {
+  "i": 109,
+  "off": "0x0F2FC",
+  "vram": "0x8001EAFC",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001EAFC"
+  ],
+  "term": "sw $v0, 0x4C($a0)",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 110,
+  "off": "0x0F318",
+  "vram": "0x8001EB18",
+  "size": "0x18",
+  "n": 6,
+  "labels": [
+   ".L8001EB18"
+  ],
+  "term": "sh $v0, 0xE($v1)",
+  "first": "lui $v1, %hi(D_8009D278)"
+ },
+ {
+  "i": 111,
+  "off": "0x0F330",
+  "vram": "0x8001EB30",
+  "size": "0x2C",
+  "n": 11,
+  "labels": [
+   ".L8001EB30"
+  ],
+  "term": "lui $v0, (0xC0000 >> 16)",
+  "first": "lw $v0, 0x0($s2)"
+ },
+ {
+  "i": 112,
+  "off": "0x0F35C",
+  "vram": "0x8001EB5C",
+  "size": "0x20",
+  "n": 8,
+  "labels": [],
+  "term": "lui $v0, (0xFFF3FFFF >> 16)",
+  "first": "lui $a1, %hi(D_8009D254)"
+ },
+ {
+  "i": 113,
+  "off": "0x0F37C",
+  "vram": "0x8001EB7C",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "lui $v0, (0xFFF3FFFF >> 16)",
+  "first": "lbu $v0, 0x49($v1)"
+ },
+ {
+  "i": 114,
+  "off": "0x0F38C",
+  "vram": "0x8001EB8C",
+  "size": "0x20",
+  "n": 8,
+  "labels": [
+   ".L8001EB8C"
+  ],
+  "term": "sb $zero, 0x49($v0)",
+  "first": "ori $v0, $v0, (0xFFF3FFFF & 0xFFFF)"
+ },
+ {
+  "i": 115,
+  "off": "0x0F3AC",
+  "vram": "0x8001EBAC",
+  "size": "0xC",
+  "n": 3,
+  "labels": [
+   ".L8001EBAC"
+  ],
+  "term": "nop ",
+  "first": "lh $a0, 0x4A($v1)"
+ },
+ {
+  "i": 116,
+  "off": "0x0F3B8",
+  "vram": "0x8001EBB8",
+  "size": "0x44",
+  "n": 17,
+  "labels": [],
+  "term": "nop ",
+  "first": "lui $a1, %hi(D_8009D278)"
+ },
+ {
+  "i": 117,
+  "off": "0x0F3FC",
+  "vram": "0x8001EBFC",
+  "size": "0x50",
+  "n": 20,
+  "labels": [],
+  "term": "nop ",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 118,
+  "off": "0x0F44C",
+  "vram": "0x8001EC4C",
+  "size": "0x4",
+  "n": 1,
+  "labels": [],
+  "term": "break 7",
+  "first": "break 7"
+ },
+ {
+  "i": 119,
+  "off": "0x0F450",
+  "vram": "0x8001EC50",
+  "size": "0xC",
+  "n": 3,
+  "labels": [
+   ".L8001EC50"
+  ],
+  "term": "lui $at, (0x80000000 >> 16)",
+  "first": "addiu $at, $zero, -0x1"
+ },
+ {
+  "i": 120,
+  "off": "0x0F45C",
+  "vram": "0x8001EC5C",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "nop ",
+  "first": "bne $v1, $at, .L8001EC68"
+ },
+ {
+  "i": 121,
+  "off": "0x0F464",
+  "vram": "0x8001EC64",
+  "size": "0x4",
+  "n": 1,
+  "labels": [],
+  "term": "break 6",
+  "first": "break 6"
+ },
+ {
+  "i": 122,
+  "off": "0x0F468",
+  "vram": "0x8001EC68",
+  "size": "0x2C",
+  "n": 11,
+  "labels": [
+   ".L8001EC68"
+  ],
+  "term": "sb $v0, 0x48($v1)",
+  "first": "mflo $v0"
+ },
+ {
+  "i": 123,
+  "off": "0x0F494",
+  "vram": "0x8001EC94",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001EC94"
+  ],
+  "term": "nop ",
+  "first": "jal func_8001F9C4"
+ },
+ {
+  "i": 124,
+  "off": "0x0F49C",
+  "vram": "0x8001EC9C",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001EC9C"
+  ],
+  "term": "addu $a0, $zero, $zero",
+  "first": "lui $a1, %hi(D_8009D278)"
+ },
+ {
+  "i": 125,
+  "off": "0x0F4B8",
+  "vram": "0x8001ECB8",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "addiu $a1, $a1, 0x50",
+  "first": "jal func_80032B0C"
+ },
+ {
+  "i": 126,
+  "off": "0x0F4C0",
+  "vram": "0x8001ECC0",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [],
+  "term": "sb $v0, 0x56($v1)",
+  "first": "lui $v1, %hi(D_8009D278)"
+ },
+ {
+  "i": 127,
+  "off": "0x0F4DC",
+  "vram": "0x8001ECDC",
+  "size": "0x24",
+  "n": 9,
+  "labels": [
+   ".L8001ECDC"
+  ],
+  "term": "addu $a1, $v1, $zero",
+  "first": "lui $a0, %hi(D_8009D278)"
+ },
+ {
+  "i": 128,
+  "off": "0x0F500",
+  "vram": "0x8001ED00",
+  "size": "0x58",
+  "n": 22,
+  "labels": [],
+  "term": "sh $v0, 0xE($v1)",
+  "first": "lui $v1, %hi(D_8009D254)"
+ },
+ {
+  "i": 129,
+  "off": "0x0F558",
+  "vram": "0x8001ED58",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001ED58"
+  ],
+  "term": "addu $a0, $zero, $zero",
+  "first": "lui $a1, %hi(D_8009D278)"
+ },
+ {
+  "i": 130,
+  "off": "0x0F574",
+  "vram": "0x8001ED74",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "addiu $a1, $a1, 0x58",
+  "first": "jal func_80032B0C"
+ },
+ {
+  "i": 131,
+  "off": "0x0F57C",
+  "vram": "0x8001ED7C",
+  "size": "0x24",
+  "n": 9,
+  "labels": [],
+  "term": "lw $a1, %lo(D_8009D278)($a1)",
+  "first": "lui $v1, %hi(D_8009D278)"
+ },
+ {
+  "i": 132,
+  "off": "0x0F5A0",
+  "vram": "0x8001EDA0",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001EDA0"
+  ],
+  "term": "addu $a0, $zero, $zero",
+  "first": "nop "
+ },
+ {
+  "i": 133,
+  "off": "0x0F5B4",
+  "vram": "0x8001EDB4",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "addiu $a1, $a1, 0x60",
+  "first": "jal func_80032B0C"
+ },
+ {
+  "i": 134,
+  "off": "0x0F5BC",
+  "vram": "0x8001EDBC",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [],
+  "term": "sb $v0, 0x66($v1)",
+  "first": "lui $v1, %hi(D_8009D278)"
+ },
+ {
+  "i": 135,
+  "off": "0x0F5D8",
+  "vram": "0x8001EDD8",
+  "size": "0x20",
+  "n": 8,
+  "labels": [
+   ".L8001EDD8"
+  ],
+  "term": "sh $v1, 0xE($v0)",
+  "first": "lui $v0, %hi(D_8009D278)"
+ },
+ {
+  "i": 136,
+  "off": "0x0F5F8",
+  "vram": "0x8001EDF8",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "sw $v0, 0x0($s2)",
+  "first": "lw $v0, 0x0($s2)"
+ },
+ {
+  "i": 137,
+  "off": "0x0F60C",
+  "vram": "0x8001EE0C",
+  "size": "0x18",
+  "n": 6,
+  "labels": [],
+  "term": "addiu $s0, $zero, -0x1",
+  "first": "sll $v0, $v0, 24"
+ },
+ {
+  "i": 138,
+  "off": "0x0F624",
+  "vram": "0x8001EE24",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "addu $a1, $zero, $zero",
+  "first": "lui $a0, %hi(D_8009D200)"
+ },
+ {
+  "i": 139,
+  "off": "0x0F638",
+  "vram": "0x8001EE38",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "sw $zero, 0x14($sp)",
+  "first": "addu $a2, $zero, $zero"
+ },
+ {
+  "i": 140,
+  "off": "0x0F64C",
+  "vram": "0x8001EE4C",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "sw $s0, %lo(D_8009D200)($at)",
+  "first": "lui $at, %hi(D_8009D200)"
+ },
+ {
+  "i": 141,
+  "off": "0x0F654",
+  "vram": "0x8001EE54",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001EE54"
+  ],
+  "term": "addu $a1, $zero, $zero",
+  "first": "lui $a0, %hi(D_8009D2FC)"
+ },
+ {
+  "i": 142,
+  "off": "0x0F668",
+  "vram": "0x8001EE68",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "sw $zero, 0x14($sp)",
+  "first": "addu $a2, $zero, $zero"
+ },
+ {
+  "i": 143,
+  "off": "0x0F67C",
+  "vram": "0x8001EE7C",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "sw $s0, %lo(D_8009D2FC)($at)",
+  "first": "lui $at, %hi(D_8009D2FC)"
+ },
+ {
+  "i": 144,
+  "off": "0x0F684",
+  "vram": "0x8001EE84",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001EE84"
+  ],
+  "term": "nop ",
+  "first": "jal func_80021D4C"
+ },
+ {
+  "i": 145,
+  "off": "0x0F68C",
+  "vram": "0x8001EE8C",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001EE8C"
+  ],
+  "term": "addiu $a2, $zero, 0x46",
+  "first": "lui $v1, %hi(D_8009D28C)"
+ },
+ {
+  "i": 146,
+  "off": "0x0F6A0",
+  "vram": "0x8001EEA0",
+  "size": "0x1CC",
+  "n": 115,
+  "labels": [],
+  "term": "sb $v1, %lo(D_800B0196)($at)",
+  "first": "addiu $a1, $zero, 0x82"
+ },
+ {
+  "i": 147,
+  "off": "0x0F86C",
+  "vram": "0x8001F06C",
+  "size": "0x1C",
+  "n": 7,
+  "labels": [
+   ".L8001F06C"
+  ],
+  "term": "addiu $a2, $zero, 0x46",
+  "first": "lui $v0, %hi(D_8009D278)"
+ },
+ {
+  "i": 148,
+  "off": "0x0F888",
+  "vram": "0x8001F088",
+  "size": "0x2C8",
+  "n": 178,
+  "labels": [],
+  "term": "nop ",
+  "first": "addiu $a1, $zero, 0x82"
+ },
+ {
+  "i": 149,
+  "off": "0x0FB50",
+  "vram": "0x8001F350",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "nop ",
+  "first": "jal func_80020CE4"
+ },
+ {
+  "i": 150,
+  "off": "0x0FB58",
+  "vram": "0x8001F358",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001F358"
+  ],
+  "term": "nop ",
+  "first": "jal func_800374E8"
+ },
+ {
+  "i": 151,
+  "off": "0x0FB60",
+  "vram": "0x8001F360",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "nop ",
+  "first": "jal func_80021054"
+ },
+ {
+  "i": 152,
+  "off": "0x0FB68",
+  "vram": "0x8001F368",
+  "size": "0x18",
+  "n": 6,
+  "labels": [],
+  "term": "addiu $s0, $zero, -0x1",
+  "first": "sll $v0, $v0, 24"
+ },
+ {
+  "i": 153,
+  "off": "0x0FB80",
+  "vram": "0x8001F380",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "addu $a1, $zero, $zero",
+  "first": "lui $a0, %hi(D_8009D200)"
+ },
+ {
+  "i": 154,
+  "off": "0x0FB94",
+  "vram": "0x8001F394",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "sw $zero, 0x14($sp)",
+  "first": "addu $a2, $zero, $zero"
+ },
+ {
+  "i": 155,
+  "off": "0x0FBA8",
+  "vram": "0x8001F3A8",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "sw $s0, %lo(D_8009D200)($at)",
+  "first": "lui $at, %hi(D_8009D200)"
+ },
+ {
+  "i": 156,
+  "off": "0x0FBB0",
+  "vram": "0x8001F3B0",
+  "size": "0x14",
+  "n": 5,
+  "labels": [
+   ".L8001F3B0"
+  ],
+  "term": "addu $a1, $zero, $zero",
+  "first": "lui $a0, %hi(D_8009D2FC)"
+ },
+ {
+  "i": 157,
+  "off": "0x0FBC4",
+  "vram": "0x8001F3C4",
+  "size": "0x14",
+  "n": 5,
+  "labels": [],
+  "term": "sw $zero, 0x14($sp)",
+  "first": "addu $a2, $zero, $zero"
+ },
+ {
+  "i": 158,
+  "off": "0x0FBD8",
+  "vram": "0x8001F3D8",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "sw $s0, %lo(D_8009D2FC)($at)",
+  "first": "lui $at, %hi(D_8009D2FC)"
+ },
+ {
+  "i": 159,
+  "off": "0x0FBE0",
+  "vram": "0x8001F3E0",
+  "size": "0x8",
+  "n": 2,
+  "labels": [
+   ".L8001F3E0"
+  ],
+  "term": "nop ",
+  "first": "jal func_80021D4C"
+ },
+ {
+  "i": 160,
+  "off": "0x0FBE8",
+  "vram": "0x8001F3E8",
+  "size": "0x50",
+  "n": 20,
+  "labels": [],
+  "term": "sw $v0, 0x10($sp)",
+  "first": "addiu $a0, $zero, 0x46B"
+ },
+ {
+  "i": 161,
+  "off": "0x0FC38",
+  "vram": "0x8001F438",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "nop ",
+  "first": "lui $at, %hi(D_8009D244)"
+ },
+ {
+  "i": 162,
+  "off": "0x0FC48",
+  "vram": "0x8001F448",
+  "size": "0x18",
+  "n": 6,
+  "labels": [],
+  "term": "addiu $a2, $zero, -0x5",
+  "first": "lui $v0, %hi(D_800BCF88)"
+ },
+ {
+  "i": 163,
+  "off": "0x0FC60",
+  "vram": "0x8001F460",
+  "size": "0x8",
+  "n": 2,
+  "labels": [],
+  "term": "nop ",
+  "first": "jal func_80067CBC"
+ },
+ {
+  "i": 164,
+  "off": "0x0FC68",
+  "vram": "0x8001F468",
+  "size": "0x4",
+  "n": 1,
+  "labels": [],
+  "term": "addiu $a2, $zero, -0x5",
+  "first": "addiu $a2, $zero, -0x5"
+ },
+ {
+  "i": 165,
+  "off": "0x0FC6C",
+  "vram": "0x8001F46C",
+  "size": "0x38",
+  "n": 14,
+  "labels": [
+   ".L8001F46C"
+  ],
+  "term": "addiu $a1, $zero, 0x13",
+  "first": "lui $a0, %hi(D_8009D254)"
+ },
+ {
+  "i": 166,
+  "off": "0x0FCA4",
+  "vram": "0x8001F4A4",
+  "size": "0x10",
+  "n": 4,
+  "labels": [],
+  "term": "sh $zero, 0xC($v0)",
+  "first": "lui $v0, %hi(D_8009D278)"
+ },
+ {
+  "i": 167,
+  "off": "0x0FCB4",
+  "vram": "0x8001F4B4",
+  "size": "0x20",
+  "n": 8,
+  "labels": [
+   ".L8001F4B4"
+  ],
+  "term": "nop ",
+  "first": "lw $ra, 0x320($sp)"
+ }
+]
