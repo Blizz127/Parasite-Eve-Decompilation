@@ -1058,6 +1058,7 @@ pe_addr_t func_8005DB44(unsigned int index);
 unsigned int func_80052F70(void);
 int32_t func_8005415C(int32_t index);
 int32_t func_80054288(void);
+int32_t func_80054294(void);
 int32_t func_800556E8(int32_t index);
 int32_t func_80058E08(int32_t index);
 int32_t func_80057ED8(int32_t index);

@@ -18,7 +18,16 @@ void func_8004DCA4(uint32_t mode)
     pe_addr_t help;
     func_8005DE88();
     if (func_80062A34(1u,13u) || func_80062A34(1u,23u)) return;
-    if (mode) {menu_boundary("func_8004DCA4_inventory_rename");return;}
+    if (mode) {
+        /* Retail 0x8004DCE4: mode != 0 calls func_80054294 (D_8009D068); a
+         * return of 0 runs the single direct func_8005C488() call in the whole
+         * EXE (close: D_8009D034=1 -> func_8005C498 -> func_800512AC(9) ->
+         * D_8009D010 = UINT32_MAX).  A non-zero return keeps the menu open and
+         * runs the unported func_80048918(0,-2,-1). */
+        if (func_80054294() == 0) { func_8005C488(); return; }
+        menu_boundary("func_8004DCA4_48918");
+        return;
+    }
     func_8004DD64(-1);
     if (!func_80062A34(1u,19u)) {
         help=func_80062D2C(19u,0u,0u,0u);PE_StoreU32(help+48u,0x8004C608u);
