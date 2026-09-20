@@ -1115,6 +1115,10 @@ segments:
       # Pointer double-deref on D_80095854 (lui/lw/nop/lw0/jr/nop).
       - [0x66B3C, c, func_8007633C]
       - [0x66B54, asm]
+      # func_80076B20 — VRAM 0x80076B20, file 0x67320, size 0x24.
+      # Publishes a0 through D_80095854 and tags D_800A3348[a0>>24]; the
+      # indexed store fills the jr delay slot (MASPSX_FILL_INDEXED_STORE_DELAY_SLOT).
+      - [0x67320, c, func_80076B20]
       # func_80076B44 — VRAM 0x80076B44, size 0x14, file 0x67344-0x67358.
       # Byte-table getter D_800A3348[a0] using the destination-register
       # symbol+register load form (MASPSX_PASSTHROUGH_SYMBOL_LOAD).
