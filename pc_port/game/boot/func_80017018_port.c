@@ -1131,6 +1131,23 @@ static int pe_attachment_command(pe_addr_t fn, pe_addr_t args)
     return 1;
 }
 
+/*
+ * PE-BTL180 / script opcode 0xF0 — func_80016FE0
+ * VRAM 0x80016FE0 / file 0x77E0 / size 0x38, matching src/func_80016FE0.c.
+ * Writes 0 or 1 through *a0 as a function of D_8009D2E8 bit 0:
+ *   if (D_8009D2E8 & 1) **a0 = 0; else **a0 = 1;  return 1.
+ * Authority: retail 0x800910A0[0xF0] == 0x80016FE0.  This slot was an
+ * explicit unresolved boundary before; scripts that poll the flag (the
+ * m0012i background tasks park on it) would have stopped the port.
+ */
+int func_80016FE0(pe_addr_t args)
+{
+    pe_addr_t dst = PE_LoadU32(args);
+
+    PE_StoreU32(dst, (PE_LoadU32(GA_D_8009D2E8) & 1u) ? 0u : 1u);
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == 0x80015108u || fn == 0x80019170u || fn == 0x80019260u || fn == 0x80019F04u ||
@@ -1201,6 +1218,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         PE_StoreU32(0x800BCF88u, PE_LoadU32(0x800BCF88u) & ~0xC0u);
         return 1;
     }
+    if (fn == 0x80016FE0u)   /* opcode 0xF0: matching src/func_80016FE0.c */
+        return func_80016FE0(args);
     if (fn == 0x80017AC0u) { /* opcode 2D: matching leaf */
         PE_StoreU32(GA_D_8009D2E8,
             PE_LoadU32(GA_D_8009D2E8) | PE_LoadU32(PE_LoadU32(args)));

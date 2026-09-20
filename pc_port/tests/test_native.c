@@ -9590,6 +9590,54 @@ static void test_BTL27_type0_9b_then_14(void) {
     PASS();
 }
 
+/*
+ * Script opcode 0xF0 (D_800910A0[0xF0] == 0x80016FE0, matching
+ * src/func_80016FE0.c): write 0/1 through the decoded arg as a function of
+ * D_8009D2E8 bit 0.  Retail encoding observed in the m0012i field bank at
+ * 0x801A6460 (word 0x000220F0: op 0xF0, argc 1, kind 1 -> actor+0xAC).
+ * Before this leaf was wired the dispatch fell through to the unresolved
+ * boundary, so any script parked on the flag stopped the port.
+ */
+static void test_VM_opcode_F0_D8009D2E8_flag(void) {
+    pe_addr_t task   = 0x80124000u;
+    pe_addr_t actor  = 0x80125000u;
+    pe_addr_t script = 0x80126000u;
+
+    TEST("VM_opcode_F0_D8009D2E8_flag");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+
+    PE_StoreU32(0x800910A0u + 0xF0u * 4u, 0x80016FE0u);
+    PE_StoreU32(0x800910A0u + 0x01u * 4u, 0x800172BCu);
+    PE_StoreU32(script + 0x00u, 0x000220F0u); /* op F0, argc 1, kind 1 */
+    PE_StoreU32(script + 0x04u, 0u);
+    PE_StoreU32(script + 0x08u, 0u);          /* arg0 imm 0 -> actor+0xAC */
+    PE_StoreU32(script + 0x0Cu, 0x00000001u); /* op 1: yields (returns 0) */
+
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(actor + 0xACu, 0xDEADBEEFu);
+    PE_StoreU32(task + 0x00u, script);
+    PE_StoreU32(task + 0x08u, 0u);
+    PE_StoreU32(task + 0x10u, 1u);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU32(0x8009D300u, task);
+
+    PE_StoreU32(0x8009D2E8u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(actor + 0xACu) == 0u, "bit set -> 0");
+    ASSERT(PE_LoadU32(task) == script + 0x14u, "pc advanced past F0");
+
+    PE_StoreU32(task + 0x00u, script);
+    PE_StoreU32(task + 0x10u, 1u);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(actor + 0xACu, 0xDEADBEEFu);
+    PE_StoreU32(0x8009D2E8u, 0u);
+    func_80017018();
+    ASSERT(PE_LoadU32(actor + 0xACu) == 1u, "bit clear -> 1");
+    PASS();
+}
+
 static void test_BTL27_type3_double_miss_yields(void) {
     pe_addr_t hdr = 0x80121000u;
     pe_addr_t script = 0x80123000u;
@@ -39251,6 +39299,7 @@ int main(void)
     test_BTL27_15240_type0_empty();
     test_BTL27_type0_9b_then_14();
     test_BTL27_type3_double_miss_yields();
+    test_VM_opcode_F0_D8009D2E8_flag();
     test_BTL28_12E7C_and_79FB4_zero();
     test_BTL28_type5_0c_d9_zero_pose();
     test_BTL29_1784C_task_words();
