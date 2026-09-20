@@ -693,6 +693,9 @@ segments:
       - [0x3DA98, asm]
       - [0x3DCA0, c, func_8004D4A0]
       - [0x3DCC4, asm]
+      # func_8004D690 — VRAM 0x8004D690, size 0x44, file 0x3DE90-0x3DED4.
+      - [0x3DE90, c, func_8004D690]
+      - [0x3DED4, asm]
       # Phase 5EJ: sibling constant handle construction and dispatch.
       - [0x3E1D8, c, func_8004D9D8]
       - [0x3E204, asm]
