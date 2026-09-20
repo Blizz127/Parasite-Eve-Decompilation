@@ -27,6 +27,24 @@
 #      materialised form (cc1 `la $r,$L<n>`, or an explicit
 #      `lui $r,%hi($L<n>)` / `addiu $r,$r,%lo($L<n>)` pair).
 #      Default OFF: opt in per leaf; the dead local table is stripped build-side.
+#   4. fill_jal_delay_slot (ctor arg, or env MASPSX_FILL_JAL_DELAY_SLOT=1):
+#      same macro scheduling trick as (1) but for an absolute `sw/sh/sb $r,SYM`
+#      store macro immediately preceding a `jal SYM` call, rather than a bare
+#      `j $31` return. cc1 emits `<store> / jal` with the macro opaque to its
+#      delay-slot filler; ASPSX expanded the macro and moved the store half into
+#      the call delay slot:  lui $at,%hi(SYM) / jal SYM / op $r,%lo(SYM)($at).
+#      ROM evidence (Parasite Eve disc1): 18 jal delay slots carry an $at store;
+#      17 are the `%lo(SYM)($at)` macro form with the matching
+#      `lui $at,%hi(SYM)` immediately before the call.  Verified specimens:
+#      0x800740AC `sh $zero,%lo(D_800945E6)($at)` in func_80073F00 and
+#      0x80076EA0 `sw $v0,%lo(D_80095874)($at)` in func_80076C34; the remaining
+#      15 are `sw` sites in other disc1 functions.  The eighteenth is a
+#      large-offset `-0x2004($at)` variant outside this gate's shape.  Plain
+#      register-offset stores need no gate: cc1's own reorg already schedules
+#      those into jal slots (899 in disc1).
+#      Deliberately distinct from (1): that gate is `sw`-only and keys on a bare
+#      `j $31`, so it never fires here and its behaviour is unchanged.
+#      Default OFF: opt in per leaf.
 import struct
 import os
 import re
@@ -465,6 +483,7 @@ class MaspsxProcessor:
         use_comm_section=False,
         use_comm_for_lcomm=False,
         fill_store_delay_slot=False,
+        fill_jal_delay_slot=False,
         fill_indexed_store_delay_slot=False,
         fill_register_store_delay_slot=False,
         fill_epilogue_delay_slot=False,
@@ -497,6 +516,14 @@ class MaspsxProcessor:
         self.fill_store_delay_slot = (
             fill_store_delay_slot
             or os.environ.get("MASPSX_FILL_STORE_DELAY_SLOT") == "1"
+        )
+        # LOCAL PATCH: same macro scheduling as fill_store_delay_slot, but for
+        # an absolute `sw/sh/sb $r,SYM` store macro immediately preceding a
+        # `jal SYM` call: emit `lui $at,%hi(SYM) / jal SYM / op %lo(SYM)($at)`.
+        # Separate, default-OFF gate; the `j $31` behaviour above is untouched.
+        self.fill_jal_delay_slot = (
+            fill_jal_delay_slot
+            or os.environ.get("MASPSX_FILL_JAL_DELAY_SLOT") == "1"
         )
         # LOCAL PATCH: fill the return delay slot of a *bare* `j $31` with a
         # preceding INDEXED symbolic store (`sb/sh/sw $r,SYM($base)`), emitting
@@ -760,6 +787,25 @@ class MaspsxProcessor:
             op, *rest = line.split()
             return op == "j" and rest == ["$31"]
         return False
+
+    def _next_line_jal_target(self) -> str:
+        # LOCAL PATCH helper: when the next non-blank, non-comment input line is
+        # exactly `jal <symbol>`, return the target operand; otherwise "".  Like
+        # _next_line_is_return_jump it deliberately does NOT skip `.set` or label
+        # lines: a label between the store and the call means the store is
+        # conditional / in another basic block, and a cc1 `.set noreorder` block
+        # means cc1 already scheduled the call itself.
+        i = self.line_index + 1
+        while i < len(self.lines):
+            line = self.lines[i]
+            if line == "" or line.startswith("#"):
+                i += 1
+                continue
+            op, *rest = line.split()
+            if op == "jal" and len(rest) == 1 and not rest[0].startswith("$"):
+                return rest[0]
+            return ""
+        return ""
 
     def _is_stack_restore(self, operands: str) -> bool:
         # LOCAL PATCH helper: `$sp,$sp,<imm>` (epilogue stack deallocation).
@@ -1270,6 +1316,31 @@ class MaspsxProcessor:
                             f"{op}\t{r_dest},%lo({operand})($at)",
                             ".set\tat",
                             "# FILL_STORE_DELAY_SLOT END",
+                        ]
+                    )
+                    self.skip_instructions = 1
+                elif (
+                    self.fill_jal_delay_slot
+                    and op in store_mnemonics
+                    and self._next_line_jal_target()
+                ):
+                    # LOCAL PATCH: same macro scheduling as
+                    # FILL_STORE_DELAY_SLOT above, but the consumer is a `jal`
+                    # call rather than a bare `j $31`. ASPSX expanded the macro
+                    # and moved the store half into the call delay slot:
+                    #   lui $at,%hi(SYM) / jal SYM / op $r,%lo(SYM)($at)
+                    # Consuming the `jal` line via skip_instructions also
+                    # suppresses the nop maspsx would otherwise append for it.
+                    # Default OFF; the jr gate above is not touched.
+                    res.extend(
+                        [
+                            "# FILL_JAL_DELAY_SLOT START",
+                            ".set\tnoat",
+                            f"lui\t$at,%hi({operand})",
+                            f"jal\t{self._next_line_jal_target()}",
+                            f"{op}\t{r_dest},%lo({operand})($at)",
+                            ".set\tat",
+                            "# FILL_JAL_DELAY_SLOT END",
                         ]
                     )
                     self.skip_instructions = 1

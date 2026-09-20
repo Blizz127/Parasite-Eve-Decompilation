@@ -680,11 +680,6 @@
    "note": "func_8005415C (file 0x4495C, 0xC0, 48 words) unit 43CE4: sprite-descriptor resolver through a live pointer table. Retail keeps the table value in $v1, copies it to $a1 (`addu $a1,$v1,$zero`) before clobbering $v1 with the `sll v1,v1,5` base computation, and places the table `lh` with a trailing load-delay nop. cc1 hoists the sll, omits the copy and re-schedules both chains. -G8 is required and correct (gp count/pointer); aspsx 2.30 does not change it. Best: 34 differing words at -O2 -G8."
   },
   {
-   "id": "wave5a-4EF88-func_8005E788-rect-schedule-and-strength-reduction",
-   "status": "PARKED-CC1-SCHEDULE/REGALLOC",
-   "note": "func_8005E788 (file 0x4EF88, 0xC8, 50 words) unit 4EEF0: render-clip setup. Three residuals: (1) the four outgoing rect shorts must be one address-taken object (an array), else cc1 DCEs the un-addressed fields; with the array the stores are correct. (2) retai sets $s0=0xFFF in the `arg0==1` branch delay slot and later strength-reduces the index to `sll $a0,$s0,2; addu`; an `int n=0xFFF` local moves the assignment and shifts the whole tail. (3) the last rect store must fill the `jal` delay slot; maspsx leaves `sh` stores pre-jal (the fill-store gates only cover `sw`/epilogue). Best: 29 differing words."
-  },
-  {
    "id": "wave5a-5E418-func_8006DC18-loop-invariant-hoist",
    "status": "PARKED-LICM-AND-STRENGTH-REDUCTION",
    "note": "func_8006DC18 (file 0x5E418, 0xCC, 51 words) unit 5E418: archive scan loop with func_8006E498 call. Retail hoists all five masks/keys (0x73DECD80 cursor, 0x1FFC00, 0xD0000, 0xFFE00000, 0x20000000) plus arg0 and the D_800B0E64 base into callee-saved $s0-$s6 before the loop, so the loop body is only call + compare + two delay-slot increments. cc1 rematerialises the cheap constants inside the loop and keeps only the cursor/base live. Best: 40 differing words at -O2 -G0."
