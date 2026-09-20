@@ -13,20 +13,20 @@ python3 tools/analysis/triage_m2c.py --jobs 8
 
 ## The denominator
 
-`asm/disc1/*.s` contains exactly **1583** `nonmatching <name>, <size>` function
-boundaries (599,460 bytes) and 447 sizeless `nonmatching <name>` data
-symbols. With the **813** functions already registered as `c` spans in
+`asm/disc1/*.s` contains exactly **1529** `nonmatching <name>, <size>` function
+boundaries (593,392 bytes) and 447 sizeless `nonmatching <name>` data
+symbols. With the **864** functions already registered as `c` spans in
 `configs/USA/disc1.yaml`, the code inventory is:
 
 | | functions | bytes |
 |---|---:|---:|
-| matched C leaves | 813 | 43,816 |
-| remaining | 1,583 | 599,460 |
-| **total code** | **2,396** | **643,276** |
+| matched C leaves | 864 | 49,592 |
+| remaining | 1,529 | 593,392 |
+| **total code** | **2,393** | **642,984** |
 
-So current coverage is **33.9% of functions** but only **6.8% of code bytes** —
-the leaves landed so far are small (avg 54 B) while the remaining queue is
-dominated by large routines (avg 379 B). Byte coverage is the honest progress
+So current coverage is **36.1% of functions** but only **7.7% of code bytes** —
+the leaves landed so far are small (avg 57 B) while the remaining queue is
+dominated by large routines (avg 388 B). Byte coverage is the honest progress
 metric for "100% decompiled"; the `4459` figure quoted in older handoff entries
 is not a function count and should not be used.
 
@@ -52,8 +52,8 @@ guaranteed by splat, not by C matching.
 ## Cheapest leaves: functions that already have a port body
 
 `pc_port/` holds 579 hand-written `*_port.c` files transcribed from retail so
-the native port can run. **797 of the 1583 remaining functions (338,116 bytes,
-56.4% of remaining bytes) already have such a body**, i.e. their semantics are
+the native port can run. **743 of the 1529 remaining functions (332,048 bytes,
+56.0% of remaining bytes) already have such a body**, i.e. their semantics are
 written down and only the era-cc1 re-expression is missing. Ranked list:
 
 ```sh
