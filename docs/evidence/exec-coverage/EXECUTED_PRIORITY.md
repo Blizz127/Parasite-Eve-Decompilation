@@ -36,19 +36,19 @@ pc_port-only bytes (all 446 functions): **216,840**.
 
 Retail sizes come from the `nonmatching <name>, <size>` lines in `asm/disc1/*.s` (the same boundary map `exec_coverage.py` uses). Regenerate with the same command that writes `coverage.json`, adding `--priority-out docs/evidence/exec-coverage/EXECUTED_PRIORITY.md`.
 
-## Derived reclassification at 884 leaves (NOT a re-measured run)
+## Derived reclassification at 902 leaves (NOT a re-measured run)
 
-The executed guest graph does not change when a function becomes a matching C leaf,
-so the C-share can be updated exactly by reclassifying the recorded hit set against the
-current `configs/USA/disc1.yaml`. This is a DERIVED number; the binary sha256 and the raw
-hit logs above still correspond to the 864-leaf snapshot. Re-run the coverage build to
-re-measure independently.
+The executed guest graph does not change when a function becomes a matching C leaf, so the
+C-share can be updated exactly by reclassifying the recorded hit set against the current
+`configs/USA/disc1.yaml`. This is a DERIVED number; the binary sha256 and the raw hit logs
+above still correspond to the 864-leaf snapshot. Re-run the coverage build to re-measure.
 
-| run | executed | C at 864 | C at 884 | share at 884 |
+| run | executed | C at 864 | C at 902 | share at 902 |
 |---|---:|---:|---:|---:|
-| route | 710 | 264 (37.18%) | 282 | **39.72%** |
-| movie | 229 | 94 (41.05%) | 100 | **43.67%** |
+| route | 710 | 264 (37.18%) | 300 | **42.25%** |
 
-Newly matched and executed (route, 18): `func_800181CC`, `func_8001897C`, `func_800409B4`, `func_8004FA10`, `func_800509E0`, `func_80051CC4`, `func_800527C8`, `func_80059F08`, `func_8005C498`, `func_8005E038`, `func_8005F27C`, `func_8006C4C4`, `func_8007BAC0`, `func_800825C0`, `func_80085644`, `func_800C3238`, `func_800C6EF8`, `func_800C6F4C`
+Newly matched and executed (route, 36): `func_80017588`, `func_800181CC`, `func_8001897C`, `func_8003D834`, `func_800409B4`, `func_8004620C`, `func_8004AE1C`, `func_8004BB80`, `func_8004FA10`, `func_80050878`, `func_800509E0`, `func_80051CC4`, `func_800527C8`, `func_80059F08`, `func_8005C498`, `func_8005E038`, `func_8005E788`, `func_8005F27C`, `func_8005FA3C`, `func_8005FB74`, `func_8005FDF0`, `func_8005FF28`, `func_80065260`, `func_80068D28`, `func_8006C4C4`, `func_8006E1C0`, `func_800701B4`, `func_800702DC`, `func_8007BAC0`, `func_800825C0`, `func_80085644`, `func_800C22F8`, `func_800C3238`, `func_800C6EF8`, `func_800C6F4C`, `func_800CEB8C`
 
-Newly matched and executed (movie, 6): `func_800409B4`, `func_80051CC4`, `func_800527C8`, `func_8007BAC0`, `func_800825C0`, `func_80085644`
+| movie | 229 | 94 (41.05%) | 102 | **44.54%** |
+
+Newly matched and executed (movie, 8): `func_800409B4`, `func_80051CC4`, `func_800527C8`, `func_80068D28`, `func_8006E1C0`, `func_8007BAC0`, `func_800825C0`, `func_80085644`
