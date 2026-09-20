@@ -994,6 +994,12 @@ segments:
       - [0x44A88, c, func_80054288]
       - [0x44A94, c, func_80054294]
       - [0x44AA0, asm]
+      # func_800556E8 — bounds-checked signed halfword getter, VRAM
+      # 0x800556E8, file 0x45EE8, size 0x3C (15 words). era -O2 -G8 +
+      # MASPSX_PASSTHROUGH_SYMBOL_LOAD=1 (gp count + indexed lh %lo).
+      # Mid-44AA0 carve: prefix 0x1448, C 0x3C, resume 45F24.s 0x890.
+      - [0x45EE8, c, func_800556E8]
+      - [0x45F24, asm]
       # Volume campaign: gp-backed bitset setter, era -O2 -G8.
       - [0x467B4, c, func_80055FB4]
       # func_80055FE0 — VRAM 0x80055FE0, size 0x2C, file 0x467E0-0x4680C.
@@ -1005,6 +1011,11 @@ segments:
       # era_o2_g0 + MASPSX_PASSTHROUGH_SYMBOL_LOAD=1 (3-word indexed load).
       - [0x47414, c, func_80056C14]
       - [0x47440, asm]
+      # func_80057B70 — per-object update/registration dispatcher, VRAM
+      # 0x80057B70, file 0x48370, size 0xA0 (40 words). era -O2 -G8
+      # (D_8009D028 at gp+0x2B8). Mid-4680C carve: prefix 0x1B64,
+      # C 0xA0, ends at func_80057C10.
+      - [0x48370, c, func_80057B70]
       # func_80057C10 — VRAM 0x80057C10, size 0x44, file 0x48410-0x48454.
       - [0x48410, c, func_80057C10]
       - [0x48454, asm]
@@ -1192,6 +1203,12 @@ segments:
       # local pointer. Default era_o2_g0.
       - [0x58340, c, func_80067B40]
       - [0x58374, asm]
+      # func_80068CE0 — six-stage subsystem refresh, VRAM 0x80068CE0,
+      # file 0x594E0, size 0x48 (18 words). era -O2 -G0; six ordered
+      # calls then `return 0`. Mid-5747C carve: prefix 0x2064, C 0x48,
+      # resume 59528.s 0x1534.
+      - [0x594E0, c, func_80068CE0]
+      - [0x59528, asm]
       # func_8006A25C — game-over destination saver, VRAM 0x8006A25C,
       # file 0x5AA5C, size 0x8C (35 words). era -O2 -G0; shared $a0 base
       # for D_800B0CD8 (local pointer) and the void-return tail order
