@@ -7,6 +7,51 @@
 
 # ACTIVE HANDOFF
 
+## SESSION STATUS (parent, 2026-09-20): 810 matching C leaves, port green
+
+**Matching decomp: 768 -> 810 (+42) this session.** Fresh `scripts/split_us.sh`
++ `scripts/build_us.sh` + `scripts/verify_us.sh` on the merged tree:
+**EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES
+(810 registered C leaves)`, `VERIFY_US=PASS` (all 810 packed C spans equal
+retail), plan `1177 spans = 810 c + 365 asm + 2 rodata`.
+
+Landed by six parallel worktree agents, one commit each with evidence under
+`docs/evidence/<agent>/<name>/REPORT.md`:
+
+| agent | leaves | notes |
+|---|---|---|
+| `agent/pb-small` | 6 | small leaves; 9 GTE/COP2 targets parked as SKIP |
+| `agent/pb-120d8` | 2 | `-O2 -G8` gp-relative unit; parks 3 |
+| `agent/pb-multiunit` | 9 | mid-size across 8 units |
+| `agent/pb-19de4` | 2 | ACAC; parks 4 |
+| `agent/pb-dispatch` | 3 | jump-table functions |
+| `agent/decompile-continue-10` | 20 | reconstructed 15 orphan `pc_port/game/decomp` bodies back into `src/` |
+
+**Port.** `pc_port` builds clean and **CTest 11/11** after regenerating
+`pc_port/game/decomp` for the new leaves. Two generator gaps were fixed on the
+way (see `8d4e96b6`): extern array symbols were rewritten but never bound, and
+`func_80075C94` called two helpers that were `static` in `pe_libgpu.c` (now
+exported). `agent/file-menu` added the missing script-opcode `0xF0` handler for
+`D_800910A0[0xF0] == 0x80016FE0` (+ regression test) and proved the story-`0x48`
+frontier is a pad/geometry problem, not a fidelity gap: `m0020i` must set
+`persist[24] & 0x20` via the item-`0xC8` pickup, which the scripted route never
+satisfies (`docs/evidence/pe-story-048-frontier/REPORT.md`).
+
+**Tooling added** (all drafting aids; `build_us.sh` remains the only matching
+authority): m2c pipeline (`scripts/setup_m2c.sh`, `tools/analysis/m2c_leaf.py`,
+`auto_leaf.py`), worklist joins (`port_backed_worklist.py`, `triage_m2c.py`),
+and a central build fix for odd-word dispatch tables (`7dffce11` +
+`tools/build/test_disc1_build.py`). **`try_leaf.py` must run inside
+`distrobox enter pe-mipsel`** — on the host it dies with a missing
+`mipsel-linux-gnu-as` that looks like a byte mismatch.
+
+**Next.** Coverage is now 810 of 2390 code functions (33.9%) but still only ~7%
+of code bytes; the queue is 1,612 functions / ~600 KB. Highest-yield targets are
+the 836 remaining functions that already have a behavioural spec in `pc_port/`
+(`python3 tools/analysis/port_backed_worklist.py`). The unclaimed port frontier
+is a production-run reachability counter for the C-only executed-path coverage
+the project goal requires — see DECOMP_COVERAGE_CEILING below.
+
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
