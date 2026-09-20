@@ -10,6 +10,40 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## SLICE-6 TOOLING LEVERS: 724 → 732 matching C leaves (2026-09-20)
+
+Branch `agent/decomp105` from `d2ae6879`, worktree `/tmp/pe-agent-decomp105`.
+Baseline reproduced exactly (724 leaves, EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`). **+8 leaves**, final fresh build
+**EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**,
+`Matching claim: YES (732 registered C leaves)`, `VERIFY_US=PASS`
+(plan `1060 = 732 c + 326 asm + 2 rodata`). 91/732 leaves now use gp.
+
+1. **Return-delay-slot stack restore — new maspsx lever.** cc1 2.7.2 emits
+   `addu/addiu $sp,$sp,N` *before* the bare `j $31` with no nop slot; ASPSX
+   hoists it into the slot. New opt-in env **`MASPSX_FILL_EPILOGUE_DELAY_SLOT=1`**
+   (`tools/era/maspsx/maspsx/__init__.py`, pure reorder, default OFF; new
+   `tests/test_fill_epilogue_delay_slot.py`; 180 maspsx tests pass). New profile
+   **`era_o2_g0_fill_epilogue_delay_slot`**. Leaves:
+   `func_80075B4C`/`75C04`/`7DD74`/`755BC`/`75AE8`. Worklist scan: **202**
+   remaining functions share this `jr $ra`/`addiu $sp` shape.
+2. **`$gp`-relative readers — premise was stale; lever already exists.** No
+   maspsx change needed: compile with **`-G8`** (cc1 emits `.extern SYM,<size>`
+   for scalar externs; maspsx passes the bare `lw/sw $r,SYM` through because its
+   driver gets no `-G`; **GNU as defaults to `-G8`** and relaxes `.extern`-sized
+   symbols to `%gp_rel`; the linker resolves against `_gp`). **Retail `$gp` base
+   is `0x8009CD70`** (crt0 `62DB0`: `lui/addiu $gp,D_8009CD70`), *not*
+   0x8009CD60 — so `0x590($gp)` = `D_8009D300`. 88/724 leaves already used gp
+   (`func_800124F8`, `func_80055FB4`, …). Keep a same-size symbol absolute with
+   an **incomplete-array** declaration (`extern int *D_8009D278[];` → no
+   `.extern` size). New leaves (all `era_o2_g8`): `func_8001784C`
+   (`0x590($gp)`), `func_80021054` (`0xCC($gp)`, `signed char`), `func_80055FE0`
+   (`0x2E8($gp)`; signed `1 << …`).
+
+Commit range `d2ae6879..<docs>`. Full recipes, evidence and negative results
+(`func_8005E4E4`/`5E518` bit-test fold / register choice):
+`docs/evidence/agent-decomp105/REPORT.md`.
+
 ## PARENT MERGE VERIFICATION: 724 matching C leaves (2026-09-20)
 
 Merged `agent/xapolish` (`6b8422b8`), `agent/decomp101` (`d347a0c7`),
