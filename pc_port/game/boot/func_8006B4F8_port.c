@@ -436,6 +436,14 @@ int func_8003F074_dest_ready_cut(uint32_t token)
     func_800371B0(func_8003F074_371b0_a0());
     if (PE_LoadU32(GA_OVERLAY + 0x944u) >= 0x80000000u)
         func_800125E0();
+    /* 3F284 jal func_800E0060 — reset the effect-slot pool and point the
+     * D_800E2800 head at D_800B0E5C-0x14.  This was deferred (comment at
+     * the top of this function), which left the head NULL: the first
+     * effect command on the sewer route (pe_e00cc via
+     * func_80016910_key2900_cut, key 2400/2402) then did
+     * PE_LoadU8(PE_LoadU32(0x800E2800)) == PE_LoadU8(0) and aborted.
+     * Retail order is 125E0 (3F27C) then E0060 (3F284). */
+    func_800E0060();
     /* 3F074 after-poll: DrawSync already ran; SetDispMask(1) so
      * PutDispEnv copies the VRAM display window instead of blanking. */
     func_80074D28(1);
