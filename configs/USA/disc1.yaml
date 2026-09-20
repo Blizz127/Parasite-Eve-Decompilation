@@ -296,6 +296,8 @@ segments:
       # Segment-head carve: C 0x20, resume A010.s size 0x3D4 to A3E4.
       - [0x9FF0, c, func_800197F0]
       - [0xA010, asm]
+      # decomp-continue-4: func_8002FAD8(D_8009D2F0, byte, int, int); return 1.
+      - [0xA0C4, c, func_800198C4]
       # Probe: state bit-0 clearer with retail $v0/$a0 allocation.
       - [0xA104, c, func_80019904]
       # Probe: state bit-0 setter through retail's $v1-loaded record.

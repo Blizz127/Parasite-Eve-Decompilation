@@ -1,4 +1,4 @@
-# agent/decompile-continue-4 — 19 new byte-exact matching C leaves (679 -> 698)
+# agent/decompile-continue-4 — 20 new byte-exact matching C leaves (679 -> 699)
 
 Branch `agent/decompile-continue-4`, worktree `/tmp/pe-agent-decomp5`, base
 `df538f07`. Every leaf below is proved by the rebuild harness, not by
@@ -11,11 +11,11 @@ distrobox enter pe-mipsel -- bash -lc 'cd /tmp/pe-agent-decomp5 && bash scripts/
   RESULT: EXACT MATCH
   orig SHA-1: 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
   cand SHA-1: 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
-  Matching claim: YES (698 registered C leaves)
+  Matching claim: YES (699 registered C leaves)
 
 distrobox enter pe-mipsel -- bash -lc 'cd /tmp/pe-agent-decomp5 && bash scripts/verify_us.sh'
   VERIFY_US=PASS
-  PASS all 698 packed C spans equal retail
+  PASS all 699 packed C spans equal retail
 ```
 
 ## Leaves
@@ -41,6 +41,7 @@ distrobox enter pe-mipsel -- bash -lc 'cd /tmp/pe-agent-decomp5 && bash scripts/
 | `func_80042228` | 0x32A28 | 0x3C | `func_80062F3C(0x26/0x25/0x24)` then `func_800512AC(0xC,0)` | `-O2 -G0` |
 | `func_80042928` | 0x33128 | 0x3C | `func_8004298C(D_800A1860-1,1)` then clears two globals | `-O2 -G0` |
 | `func_80077CF4` | 0x684F4 | 0x3C | sign-abs wrapper around `func_80077D30((a0<0?-a0:a0)&0xFFF)` | `-O2 -G0` |
+| `func_800198C4` | 0xA0C4 | 0x40 | `func_8002FAD8(D_8009D2F0, byte, int, int)`; return 1 | `-O2 -G0` |
 
 Each leaf has `src/<name>.c` with the matching-authority SHA-1 in its header and
 a `c` carve in `configs/USA/disc1.yaml`.
