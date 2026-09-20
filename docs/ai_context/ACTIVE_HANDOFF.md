@@ -126,6 +126,60 @@ stay in `$s0`), `func_8005F1A0` (17 — char/masked home swap),
 `func_800CE78C` (26 — nine-word frame), `func_80018080`, `func_8007C13C`,
 `func_80076354`, `func_800518A8`. Stop condition reached (well over four
 consecutive parks).
+## WAVE-5 LEAF SLICE C (2026-09-20): 870 -> 876, executed-path functions
+
+**Branch `agent/wave5-c`, worktree `/tmp/pe-agent-w10`.** Baseline gate re-run
+first: `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh` reported
+`EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (870 registered C leaves)`, `VERIFY_US=PASS`.
+
+Landed six of the twelve executed-path targets, confirmed by a fresh complete
+build in `pe-mipsel`:
+
+- `func_8007BAC0` (file 0x6C2C0, 0xF0) — profile
+  **era_o2_g0_fill_epilogue_delay_slot** (`-O2 -G0` +
+  `MASPSX_FILL_EPILOGUE_DELAY_SLOT=1`). Sequenced SPU/voice init; a 4-byte
+  stack scratch array reproduces the 8-byte frame, and the gate moves
+  `addu $sp,$sp,8` into the `jr $ra` delay slot.
+- `func_800509E0` (0x411E0, 0xF8), `func_8005C498` (0x4CC98, 0xFC),
+  `func_8004FA10` (0x40210, 0xE8) — **era_o2_g8**.
+- `func_8006C4C4` (0x5CCC4, 0xF8) — default era_o2_g0.
+- `func_800C3238` (0xB3A38, 0xEC) — new profile
+  **era_o2_g0_dispatch_800c2128**.
+
+Fresh build after the carve: `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (876
+registered C leaves)`, plan `1278 spans = 876 c + 400 asm + 2 rodata`,
+`VERIFY_US=PASS`. Commits `6e5ef089` (4 leaves) and `b3cd6da3` (2 leaves).
+Evidence under `docs/evidence/wave5-c/<name>/REPORT.md`.
+
+**The executed-path call wrappers are `-O2 -G8`.** A `0xNNN($gp)` access
+needs the *containing* symbol declared as a **scalar** so it stays
+small-data-relative (`0x1AC($gp) = D_8009CF1C`, `0x1B0($gp) = D_8009CF20`,
+`0x184($gp) = D_8009CEF4`, `0x2C0/0x2C4/0x2BC($gp) =
+D_8009D030/34/2C`). A symbol that must stay absolute inside that same `-G8`
+unit is an **incomplete array** (`extern signed char D_800C0E20[];`,
+`extern int D_8009D1E0[];`). `func_800509E0` additionally needs the two
+signed-byte reads routed through a temporary (`temp = ...; var = temp;`)
+and one reused pointer variable for both `func_80062A34(2,6)/(2,5)` results.
+
+**Two more source-shape levers:**
+- `D_800B0CE6 |= 3;` (compound) instead of
+  `temp = D_800B0CE6 | 3; D_800B0CE6 = temp;` swaps cc1's `$v0`/`$a0`
+  colouring in `func_8006C4C4` — the temp form leaves 6 words differing.
+- A `switch` whose table cc1 emits as the compound `lw $r,$L<n>($b)` form
+  needs **both** `MASPSX_THREE_WORD_SYMBOL_STORE=1` and
+  `MASPSX_DISPATCH_FOLD=jtbl_<addr>`; either one alone gives the four-word
+  expansion and shifts every offset (`func_800C3238`, `jtbl_800C2128`).
+
+Five targets parked (see `wave5c-*` ids in `parked_blockers.json`; WIP
+sources are in the git-ignored `build/wave5c-wip/`): `func_800851A8`
+(pointer-walk `$s0` reuse), `func_8008068C` (cc1 constant-folds the
+D_8009B558 base instead of materialising `$a2`), `func_8004FB48` (cc1 merges
+retail's two distinct `$s1 = -1` arms and drops the `j`), `func_80082314`
+(func_800822AC arm + D_800B28F8 spin layout) and `func_800D70C0` (stack-local
+order reversed and the `-3` constants CSE'd). `func_8001CAB0` was not
+attempted.
 
 ## PARENT STATUS (2026-09-20): 870 matching C leaves; executed-path C-share 37.18%
 
