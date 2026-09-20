@@ -1098,6 +1098,13 @@ segments:
       - [0x5B0D4, c, func_8006A8D4]
       # Mid-5B1E4 carve: prefix 0x3164, C 0x54, resume 5E39C.s.
       - [0x5B1E4, asm]
+      # func_8006BE4C — mount state-changed flag setter, VRAM 0x8006BE4C,
+      # file 0x5C64C, size 0x80 (32 words). era -O2 -G0; local
+      # `unsigned int *p = &D_800B0CD8` forces retail's shared base
+      # register ($a2) for the read-modify-write. Mid-5B1E4 carve:
+      # prefix 0x5468, C 0x80, resume 5C6CC.s 0x1C7C.
+      - [0x5C64C, c, func_8006BE4C]
+      - [0x5C6CC, asm]
       # Volume campaign: byte-field updater and flag setter over D_800B0CD8.
       # Era -O2 -G0; union layout preserves the word-backed flag field and
       # the shared symbolic base across all byte stores.
