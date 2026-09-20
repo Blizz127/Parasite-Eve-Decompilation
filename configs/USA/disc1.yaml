@@ -553,6 +553,30 @@ segments:
       # Phase 5FS-33A2C: D_8009D244 byte-flag setter, era -O2 -G0.
       - [0x2422C, c, func_80033A2C]
       - [0x24240, asm]
+      # func_80034FC4 — 14-slot actor freelist init, VRAM 0x80034FC4,
+      # file 0x257C4, size 0x74 (29 words). era -O2 -G8 + aspsx 2.30
+      # (byte-offset induction keeps the 3-word lui/addu/sw %lo store;
+      # D_800C0B14 must stay absolute via an incomplete array).
+      - [0x257C4, c, func_80034FC4]
+      - [0x25838, asm]
+      # func_80035E04 — per-actor pose snapshot + motion integrate, VRAM
+      # 0x80035E04, file 0x26604, size 0x150 (84 words). era -O2 -G8 +
+      # aspsx 2.30; D_8009D1A0 stays absolute via an incomplete array.
+      - [0x26604, c, func_80035E04]
+      # func_80035F54 — recursive actor contact-pose restore, VRAM
+      # 0x80035F54, file 0x26754, size 0xC8 (50 words). era -O2 -G8 +
+      # aspsx 2.30; D_8009D20C is the gp+0x49C list head.
+      - [0x26754, c, func_80035F54]
+      - [0x2681C, asm]
+      # func_800361F4 — publish actor + 3 slots, VRAM 0x800361F4, file
+      # 0x269F4, size 0x60 (24 words). era -O2 -G8 + aspsx 2.30;
+      # D_8009D2F0 is gp+0x580, D_8009D300 stays absolute.
+      - [0x269F4, c, func_800361F4]
+      # func_80036254 — rebind the three +0xA0 task lists, VRAM
+      # 0x80036254, file 0x26A54, size 0x64 (25 words). era -O2 -G8 +
+      # aspsx 2.30.
+      - [0x26A54, c, func_80036254]
+      - [0x26AB8, asm]
       # Phase 5FG: search-and-clear over the 16-entry D_800A7624 table.
       # era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 (indexed lw AND sw
       # route through the gate; first leaf exercising the load path).
@@ -746,7 +770,11 @@ segments:
       - [0x340E0, c, func_800438E0]
       # Phase 5ES: first loop-as-volume leaf; era -O2 -G0, no $gp.
       # Mid-340EC carve: prefix 0x861C, C 0x38 (14 words), resume 3C740.s 0x10E4.
-      - [0x340EC, asm]
+      # func_800438EC — boot/menu node setup + 9-bit flag count, VRAM
+      # 0x800438EC, file 0x340EC, size 0xEC (59 words). era -O2 -G8 +
+      # aspsx 2.30; gp+0x180/0x188/0x18C are D_8009CEF0/F8/FC.
+      - [0x340EC, c, func_800438EC]
+      - [0x341D8, asm]
       # func_80044DCC — VRAM 0x80044DCC, size 0x48, file 0x355CC-0x35614.
       - [0x355CC, c, func_80044DCC]
       # func_80044E14 — slot teardown helper, VRAM 0x80044E14, file

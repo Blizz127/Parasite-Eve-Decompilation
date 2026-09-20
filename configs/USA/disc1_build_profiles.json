@@ -627,7 +627,13 @@
     "era_o2_g8_aspsx_230": [
       "func_80057ED8",
       "func_80058E08",
-      "func_80059EC8"
+      "func_80059EC8",
+      "func_80034FC4",
+      "func_80035E04",
+      "func_80035F54",
+      "func_800361F4",
+      "func_80036254",
+      "func_800438EC"
     ]
   }
 }
