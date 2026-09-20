@@ -174,7 +174,7 @@ segments:
       # Phase 5GE: D_8009D2F0 flag-0x20 clearer, era -O2 -G0.
       - [0x93C8, c, func_80018BC8]
       - [0x93EC, c, func_80018BEC]
-      - [0x9410, asm]
+      - [0x9410, c, func_80018C10]
       # Phase 5GG: two-reader call wrapper, era -O2 -G0.
       - [0x9458, c, func_80018C58]
       # Phase 5GH: two-reader call wrapper, era -O2 -G0.
@@ -233,7 +233,10 @@ segments:
       # int func_800438C0(int); return 1. Era -O2 -G0 (no $gp references).
       # Mid-9ADC carve: prefix 0x1A8, C 0x2C, resume 9CB0.s to 9FD0.
       - [0x9C84, c, func_80019484]
-      - [0x9CB0, asm]
+      # agent/decompile-100: deref-forward-store pair (0x9CB0/0x9CF8).
+      - [0x9CB0, c, func_800194B0]
+      - [0x9CF8, c, func_800194F8]
+      - [0x9D40, asm]
       # Probe: bit-13 setter with retail $v1 global-pointer allocation.
       - [0x9E18, c, func_80019618]
       # Probe: companion bit-13 clearer with retail $v0/$a0 allocation.
