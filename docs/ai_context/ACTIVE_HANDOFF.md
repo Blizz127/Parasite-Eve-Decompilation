@@ -40,10 +40,10 @@ contract).
 ## SESSION STATUS 2026-09-20 — verified state snapshot
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**628**
-registered C leaves)"; `scripts/verify_us.sh` also PASSes. Coverage: 628/4593
-functions (13.67%). Remaining queue: **1759 non-matching functions / 615,912
-bytes**, ranked in `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**637**
+registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 637 packed C
+spans equal retail). Coverage: 637/4586 functions (13.89%). Remaining queue:
+**1751 non-matching functions / 615,592 bytes**, ranked in `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
 `python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
 1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
 code queue.
@@ -61,8 +61,8 @@ points at the attic Disc 1 image.
 `m0004i` mod4 `pc=0x801B6CC8`), executed path invokes only 4 HOST_ADAPTED stubs
 and **0 UNSUPPORTED**. `pe-transition-outer-tests` 5/5.
 `pe-decomp-port-tests`: all 272 generated TUs reproduce from `src/` authority
-(229 src-backed regenerate byte-for-byte, 43 real orphans allowlisted; the 628
-leaves restored authority for 39 that were orphaned). Full CTest 11/11.
+(229 src-backed regenerate byte-for-byte, 43 real orphans allowlisted; the
+new leaves restored authority for 39 that were orphaned). Full CTest 11/11.
 **Harness gap:** despite its name, `test_route_boot_day2.c` asserts only the
 Day-1 prefix (through `m0377i`/`m0004i`, `ROUTE_FRAME_LIMIT 8000`); the live
 autopilot runs to the Day-1 Theater field `M0064I` (token `A8002048`, story
