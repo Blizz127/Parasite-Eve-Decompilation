@@ -57,17 +57,15 @@ trixie, binutils 2.44) that `build_us.sh` auto-detects. `local/pe_disc1.path`
 points at the attic Disc 1 image.
 
 **Tests.** `pe-native-tests` **1376 run / 1376 passed / 0 failed / 0 skipped**.
-`pe-route-boot-day2-tests` **14/14 ordered Day-1 milestones** (frontier
-`m0004i` mod4 `pc=0x801B6CC8`), executed path invokes only 4 HOST_ADAPTED stubs
-and **0 UNSUPPORTED**. `pe-transition-outer-tests` 5/5.
+`pe-route-boot-day2-tests` **27/27 ordered Day-1 milestones** to the
+`m0020i` save/load menu (42000 frames, frame-limit stop), executed path invokes
+only 4 HOST_ADAPTED stubs and **0 UNSUPPORTED**. The harness now applies the
+same recorded `kDay1RoutePads` sequence as the interactive autopilot (shared
+`PeRoutePad_ParseSequence`/`ApplySequence` in `pe_route_pad.h`), so it follows
+the live route instead of parking at `m0004i`. `pe-transition-outer-tests` 5/5.
 `pe-decomp-port-tests`: all 272 generated TUs reproduce from `src/` authority
-(229 src-backed regenerate byte-for-byte, 43 real orphans allowlisted; the
+(229 src-backed regenerate byte-for-byte, 37 real orphans allowlisted; the
 new leaves restored authority for 39 that were orphaned). Full CTest 11/11.
-**Harness gap:** despite its name, `test_route_boot_day2.c` asserts only the
-Day-1 prefix (through `m0377i`/`m0004i`, `ROUTE_FRAME_LIMIT 8000`); the live
-autopilot runs to the Day-1 Theater field `M0064I` (token `A8002048`, story
-`0x48`) and then the card boundary. Later Day-1 beats and Day-2 milestones are
-not yet asserted.
 
 **Live port.** Real Disc 1 boots and renders. `--route-pad` autopilot (windowed)
 plays Day 1: opera house, first battle, field rooms. `--headless --route-pad`
