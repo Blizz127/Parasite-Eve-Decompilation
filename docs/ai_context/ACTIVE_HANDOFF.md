@@ -7,6 +7,34 @@
 
 # ACTIVE HANDOFF
 
+## agent/wave2-b (2026-09-20): 810 -> 817 matching C leaves
+
+Landed 7 leaves across units 35698 and 38B4 on `agent/wave2-b`; not merged
+(parent verifies). Commits `f0424d01` (5 leaves, 810->815) and `df536dfb`
+(2 leaves, 815->817). Fresh `scripts/build_us.sh` prints **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (817
+registered C leaves)`, `scripts/verify_us.sh` = `VERIFY_US=PASS`, plan
+`1189 spans = 817 c + 370 asm + 2 rodata`.
+
+Landed: `func_80044E98`, `func_80045110`, `func_800451D0`, `func_800453E8`,
+`func_80046334` (unit 35698) and `func_80014DA0`, `func_800155FC` (unit 38B4),
+all `era_o2_g8` (`-O2 -G8`), reports under
+`docs/evidence/wave2-b/<name>/REPORT.md`.
+
+**Reusable lever:** a `0xNNN($gp)` reference into a splat-contiguous data
+block needs the *containing* symbol declared as a **scalar**
+(`extern int D_8009CFA0;` + `*(int *)((char *)&D_8009CFA0 + off)`), which
+emits `.extern SYM, 4` and keeps the access small-data-relative. The array
+form (`extern int D_8009CFA0[]` or a sized array) emits an absolute
+`lui`/`lw` pair instead. Conversely, a symbol that must stay absolute inside
+a `-G8` build is declared as an **incomplete array** (no `.extern SYM, N`).
+
+Parked this slice (all in `docs/ai_context/parked_blockers.json`):
+`pb-wave2-b-8004542C` / `pb-wave2-b-80045EE4` (register allocation /
+load-hoist scheduling), `pb-wave2-b-80013300` (2-word independent-load
+order), `pb-wave2-b-8003335C` / `pb-wave2-b-80031D6C` (cc1 LICM hoists the
+table bases out of the loop; retail re-materialises them per iteration).
+
 ## SESSION STATUS (parent, 2026-09-20): 810 matching C leaves, port green
 
 **Matching decomp: 768 -> 810 (+42) this session.** Fresh `scripts/split_us.sh`
