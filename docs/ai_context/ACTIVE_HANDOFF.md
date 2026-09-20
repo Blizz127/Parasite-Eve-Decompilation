@@ -249,7 +249,12 @@ This is how `func_80036E7C` matched (709th leaf, 0 differing words). Evidence:
 `docs/evidence/agent-decompile-ba3/REPORT.md`; triaged non-matches with
 first-mismatch words are parked under `nonmatch/`. **Small-function pool is
 exhausted** (last runs found 0 new leaves); the remaining queue is the
-size-ranked medium/large functions.
+size-ranked medium/large functions. (f) Loop **source shape controls rotation/
+peeling**: `while (*s1 != 0xFFFF) { a1++; if (a1 >= 8) break; s1 += 0xC; }`
+makes cc1 rotate/peel; the inverted `for (a1 = 0; a1 < 8; a1++) { if (*s1 ==
+0xFFFF) break; s1 += 0xC; } if (a1 == 8) return;` gives retail's test-at-top
+shape (reduced `func_800D401C` from 63 to 43 differing words; not yet matched).
+Evidence: `docs/evidence/agent-d401c/REPORT.md`.
 **Build hygiene:** run `build_us.sh` INSIDE the `pe-mipsel` distrobox (a
 host-side run spawns one container per `as` call and is ~10x slower), and do a
 fully clean `build/` when the layout looks stale — a leftover object produced a
