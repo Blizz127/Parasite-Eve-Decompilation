@@ -16,11 +16,13 @@
 
 /* ── verbatim matching leaf (src/func_80085918.c) ───────────────────────── */
 
+/* VRAM 0x80085918 / file 0x76118 / size 0x34.
+ * AND the complement of the indexed word into D_8009B7CC[1]. */
 /* shimmed by pe_guest_decomp.h: D_8009B7CC */
 /* shimmed by pe_guest_decomp.h: D_8009B7D4 */
-int func_80085918(unsigned int a0) {
-    unsigned int i = a0 & 0xFFFF;
-    D_8009B7CC[1] &= ~D_8009B7D4[i];
+int func_80085918(int a0) {
+    int idx = a0 & 0xFFFF;
+    D_8009B7CC[1] &= ~D_8009B7D4[idx];
     return 1;
 }
 

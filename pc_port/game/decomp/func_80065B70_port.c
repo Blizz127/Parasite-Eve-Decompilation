@@ -12,6 +12,7 @@
 #include "pe_guest_decomp.h"
 
 #define D_800BCF88 PE_DECOMP_SCALAR(0x800BCF88u, int)
+#define D_800BD028 PE_DECOMP_SCALAR(0x800BD028u, int)
 #define D_800BCFFC PE_DECOMP_SCALAR(0x800BCFFCu, char)
 #define D_800BCFFE PE_DECOMP_SCALAR(0x800BCFFEu, short)
 #define D_800BD027 PE_DECOMP_SCALAR(0x800BD027u, char)
@@ -32,16 +33,17 @@
 #define D_800BD022 PE_DECOMP_SCALAR(0x800BD022u, short)
 #define D_800BD020 PE_DECOMP_SCALAR(0x800BD020u, short)
 #define D_800BD024 PE_DECOMP_SCALAR(0x800BD024u, char)
-#define D_800BD028 PE_DECOMP_SCALAR(0x800BD028u, int)
 
 /* ── verbatim matching leaf (src/func_80065B70.c) ───────────────────────── */
 
+/* VRAM 0x80065B70 / file 0x56370 / size 0xC8.
+ * Block init of the D_800BCF88..D_800BD028 overlay scratch structure. */
 /* shimmed by pe_guest_decomp.h: D_800BCF88 */
 /* shimmed by pe_guest_decomp.h: D_800BCFFC */
 /* shimmed by pe_guest_decomp.h: D_800BCFFE */
-/* shimmed by pe_guest_decomp.h: D_800BD027, (pe_addr_t)0x800BD026u, D_800BD025 */
-/* shimmed by pe_guest_decomp.h: D_800BCF8C, (pe_addr_t)0x800BCF90u, D_800BCF94, (pe_addr_t)0x800BCF98u, D_800BCF9C, D_800BCFA0 */
-/* shimmed by pe_guest_decomp.h: D_800BCFA4, (pe_addr_t)0x800BCFA8u, D_800BCFAC, (pe_addr_t)0x800BCFB0u, D_800BCFB4 */
+/* shimmed by pe_guest_decomp.h: D_800BD027, D_800BD026, D_800BD025 */
+/* shimmed by pe_guest_decomp.h: D_800BCF8C, D_800BCF90, D_800BCF94, D_800BCF98, D_800BCF9C, D_800BCFA0 */
+/* shimmed by pe_guest_decomp.h: D_800BCFA4, D_800BCFA8, D_800BCFAC, D_800BCFB0, D_800BCFB4 */
 /* shimmed by pe_guest_decomp.h: D_800BCFFD */
 /* shimmed by pe_guest_decomp.h: D_800BD022, D_800BD020 */
 /* shimmed by pe_guest_decomp.h: D_800BD024 */
@@ -53,17 +55,11 @@ int func_80065B70(int a0, int a1) {
     D_800BD027 = 0xFF;
     D_800BD026 = 0xFF;
     D_800BD025 = 0xFF;
-    D_800BCF8C = 0;
-    D_800BCF90 = 0;
-    D_800BCF94 = 0;
-    D_800BCF98 = 0;
-    D_800BCF9C = 0;
-    D_800BCFA0 = 0;
+    D_800BCF8C = 0; D_800BCF90 = 0; D_800BCF94 = 0;
+    D_800BCF98 = 0; D_800BCF9C = 0; D_800BCFA0 = 0;
     D_800BCFA4 = a0;
     D_800BCFA8 = a1;
-    D_800BCFAC = 0;
-    D_800BCFB0 = 0;
-    D_800BCFB4 = 0;
+    D_800BCFAC = 0; D_800BCFB0 = 0; D_800BCFB4 = 0;
     D_800BCFFD = 0;
     D_800BD022 = 0;
     D_800BD020 = 0;

@@ -16,7 +16,7 @@ void func_80075C6C(pe_addr_t pe_a0, int a1)
     /* verbatim body (src/func_80075C6C.c) */
 
     host_a0[3] = 2;
-    *(int *)(host_a0 + 4) = a1 ? 0xE6000001u : 0xE6000000u;
+    *(int *)(host_a0 + 4) = a1 ? 0xE6000001 : 0xE6000000;
     *(int *)(host_a0 + 8) = 0;
 
 }
