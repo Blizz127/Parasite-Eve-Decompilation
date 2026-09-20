@@ -7,6 +7,58 @@
 
 # ACTIVE HANDOFF
 
+## WAVE-7 SLICE A (`agent/wave7-a`, 2026-09-20): 902 -> 904, executed-path functions
+
+**Branch `agent/wave7-a`, worktree `/tmp/pe-agent-w14`.** Baseline gate re-run
+first: `scripts/split_us.sh` (host) + `build_us.sh` + `verify_us.sh`
+(pe-mipsel) reported `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (902
+registered C leaves)`, `VERIFY_US=PASS`.
+
+Landed two executed-path leaves, confirmed by a fresh complete build
+(commit `88790708`; status doc `docs/generated/DISC1_MATCHING_STATUS.md`
+regenerated in a follow-up commit):
+
+- `func_800CE688` (file 0xBEE88, size 0x104) — effect-slot callback list
+  update. Default `era_o2_g0`. **Levers:** the 8-byte dead local
+  (`int tmp[2]; (void)tmp;`) reproduces retail's reserved frame slot;
+  `char *slot = arg0 + 0xC;` must carry its initializer on the declaration
+  (a separate assignment is scheduled into the `blez` delay slot and swaps
+  the whole prologue save/init order); `register int stride asm("$21")` pins
+  retail's `$s5` home (with `$s4` for the count) — pinning **both** `$s4` and
+  `$s5` makes cc1 exit 33.
+- `func_8003E974` (file 0x2F174, size 0x154) — SPU/voice mask reset. Profile
+  **reused** `era_o2_g8_three_word_force_d8009d1a0_absolute` (`-O2 -G8` +
+  `MASPSX_THREE_WORD_SYMBOL_STORE=1` +
+  `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D1A0`). Retail addresses
+  `D_8009D1A0` absolutely although it is gp+0x430, so it must be a plain
+  scalar with the force-absolute env; declaring it an incomplete array gives
+  `la`+`0($r)` instead. The five other state words stay gp-relative.
+
+Fresh build after the carves: `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (904
+registered C leaves)`, plan `1312 spans = 904 c + 406 asm + 2 rodata`,
+`VERIFY_US=PASS`. Evidence under `docs/evidence/wave7-a/`.
+
+Eight targets parked with full divergence notes (`wave7a-*` ids in
+`parked_blockers.json`; WIP sources in the git-ignored `build/wave7a-wip/`):
+`func_8004551C` (1 word — cc1's reorg duplicates the `func_80062CC4` argument
+into the `beq` delay slot *and* leaves the original in the `jal` delay slot;
+retail nops the jal slot; no existing maspsx gate removes a filled delay
+slot), `func_800C2414` (16 — arg0/counter `$s0`/`$s1` home swap, unmovable by
+declaration order and both pin attempts make cc1 exit 33), `func_8007EC14`
+(the known base-materialisation wall for the `D_800B8AB0`/`D_800A3510` clear
+blocks), `func_80021128` (38 — load-use nop placement + descriptor homes),
+`func_80046574` (50 — cross-jump merges the two `func_80062A34(2,5)` tails),
+`func_80067B74` (44 — record-base addressing + schedule), `func_800740D0`
+(51 — allocation/schedule) and `func_80059534` (46 — cross-jump merges the
+two index arms). Stop condition reached. `func_800143B0` and `func_800C9EA8`
+were not attempted.
+
+**Reusable note:** a **`signed char D_800C0E20[];`** declaration is required
+where retail emits `lb`/`bltz` on the index byte — plain `char` is unsigned
+in this cc1 and silently drops the sign test.
+
 ## PARENT STATUS (2026-09-20): 902 matching C leaves; executed-path C-share 42.25%
 
 **Matching decomp: 768 -> 902 (+134) this session.** Fresh split + build +
