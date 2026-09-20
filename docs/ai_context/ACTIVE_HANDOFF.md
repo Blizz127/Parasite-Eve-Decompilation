@@ -7,6 +7,32 @@
 
 # ACTIVE HANDOFF
 
+## wave-2 leaf slice A (`agent/wave2-a`, 2026-09-20): 810 -> 825 (+15)
+
+**Fresh `scripts/split_us.sh` + `scripts/build_us.sh` + `scripts/verify_us.sh`:
+EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES
+(825 registered C leaves)`, `VERIFY_US=PASS`, plan `1194 spans = 825 c + 367
+asm + 2 rodata`.** No parks. Commits `90636a20` (12 leaves) and `790b6056`
+(3 leaves) on branch `agent/wave2-a`, reports under
+`docs/evidence/wave2-a/<name>/REPORT.md`.
+
+Landed: `func_8004F798` `func_8004F7D8` `func_800501C8` `func_8005022C`
+`func_80050308` `func_800509A8` `func_80050B48` (units 3FC90/408A8/40A2C/40A80/
+40F48) and `func_80060528` `func_8006055C` `func_80060590` `func_800605C4`
+`func_800605F8` (unit 50074), then `func_800500A8` `func_8005010C`
+`func_80050178` (unit 408A8; its former asm span is now fully C).
+
+Two reusable findings:
+
+- Most of these leaves need **`-O2 -G8`** (registered under `era_o2_g8` in
+  `configs/USA/disc1_build_profiles.json`); the auto_leaf sweep only tries the
+  default `-G0`-family profiles against the m2c `saved_reg_gp` draft, so its
+  "no profile matched" here was an addressing-mode gap, not a real miss.
+- The five 50074 wrappers inline `func_8005E8A4(n, 0)`. A literal
+  `D_8009D128 += 0` is folded away by cc1 while retail keeps the redundant
+  load/store; the `int *p = &D_8009D128; *p = D_8009D128;` pointer idiom
+  (same lever as `src/func_80067B40.c`) reproduces it byte-exactly.
+
 ## SESSION STATUS (parent, 2026-09-20): 810 matching C leaves, port green
 
 **Matching decomp: 768 -> 810 (+42) this session.** Fresh `scripts/split_us.sh`
