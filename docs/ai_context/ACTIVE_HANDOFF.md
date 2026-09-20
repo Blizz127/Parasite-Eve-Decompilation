@@ -30,10 +30,13 @@ non-zero 233712 -> 233689 of 588735.  Tests: `pe-native-tests` **1402/1402**
 mono/18900/8-bit resample lengths, ATV/CD-volume gating), CTest 11/11,
 `gen_decomp_ports.py --check --allow-orphans` OK.  Fail-on-pre-change proven by
 reverting the 8-bit offset (3 failures) and the volume application
-(`XA_volume_matrix` fails).  No retail audio golden: psx-spx + unit vectors,
-not byte-accurate.  Note: DuckStation's CDROM models the XA upsampler as a
-7-phase FIR, not the gaussian — documented in the report.  Evidence:
-`docs/evidence/pe-xa-fidelity/REPORT.md`.
+(`XA_volume_matrix` fails).  A raw Disc 1 scan finds **only** 4-bit stereo
+37800 Hz XA (13452 sectors), so mono/18900/8-bit are synthetic-only.  Retail
+rebuild after the change: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, 709 C leaves.  No retail audio
+golden: psx-spx + unit vectors, not byte-accurate.  Note: DuckStation's CDROM
+models the XA upsampler as a 7-phase FIR, not the gaussian — documented in the
+report.  Evidence: `docs/evidence/pe-xa-fidelity/REPORT.md`.
 
 ## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
 

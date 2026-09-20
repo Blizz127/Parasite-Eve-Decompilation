@@ -30,7 +30,8 @@ volume.  (d) noise/pitch-mod/reverb stay out of scope.
 - **8-bit XA sound-group layout** — DuckStation `CDROM::DecodeXAADPCMChunks()`
   (<https://github.com/stenzek/duckstation/blob/master/src/core/cdrom.cpp>):
   parameter bytes at `+4`, then 28 little-endian 32-bit words at `+16`; byte
-  `N` of each word is sub-block `N`'s sample.  (See "Corrections".)
+  `N` of each word is sub-block `N`'s sample (corrected in this change — see
+  "What changed").
 - **Honest caveat (not implemented):** DuckStation's *CDROM* module models the
   37800->44100 XA upsampler as a 7-phase, 29-tap "zigzag" FIR and the 18900
   path with a separate Mednafen-derived interpolator — i.e. the CD-audio
@@ -120,6 +121,14 @@ New non-vacuous vectors (all 14 XA tests pass; 8 new):
 - `XA_volume_matrix` — identity/mono/zero ATV, zero CD volume, SPUCNT bit0/bit14
   gating, double ATV, half CD volume.
 
+**Real-disc coverage scan.**  A raw scan of the whole Disc 1 image (210685
+sectors, `submode & 04h` = XA audio, classified by `codinginfo`) finds **13452
+XA audio sectors, every one of them 4-bit stereo 37800 Hz** (`ci` bit0=1,
+bit1=0, bit2=0).  The mono, 18900 Hz and 8-bit paths therefore have **no
+real-disc case on this title**; they are verified with the synthetic
+psx-spx/DuckStation-layout vectors above.  The live FMV case (399 sectors) is
+4-bit stereo 37800 and is covered by the before/after WAV.
+
 **Fail-on-pre-change demonstration** (temporarily reverting each change and
 rebuilding):
 
@@ -130,8 +139,10 @@ rebuilding):
 - the gaussian function/table did not exist before, so `XA_gauss_*` are new
   coverage rather than regressions.
 
-Only `pc_port/` code changed, so the retail tree is untouched; see the
-handoff for the retail SHA-1 re-verification.
+Retail rebuild after the change (in the `pe-mipsel` distrobox,
+`bash scripts/build_us.sh`): **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (709
+registered C leaves)".
 
 ## Honest limits
 
