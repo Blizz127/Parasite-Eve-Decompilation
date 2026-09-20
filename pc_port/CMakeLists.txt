@@ -294,6 +294,7 @@ set(GAME_SRCS
     game/boot/func_80070D10_port.c
     game/boot/func_80070D6C_port.c
     game/boot/func_80070DD0_port.c
+    game/boot/func_80069B08_port.c
     game/boot/func_8006A5BC_port.c
     game/boot/func_8006A64C_port.c
     game/boot/func_8006A674_port.c

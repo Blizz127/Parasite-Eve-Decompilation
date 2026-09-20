@@ -58,7 +58,10 @@ static void CdDeviceCommand(uint8_t command)
         if(command==10u && g_command==10u) {g_parameter_count=0;return;}
         CdDeviceBoundary("CD_device_busy_command",command);return;
     }
-    if(command!=2u && command!=6u && command!=9u && command!=21u && command!=22u && command!=27u && command!=1u && command!=10u && command!=11u && command!=12u && command!=14u && command!=15u && command!=19u) {
+    /* 8 (Stop) shares Pause's modelled effect: end the read and re-ack; the
+     * host drive has no motor/seek state to distinguish them.  func_80069B08
+     * issues it after its PE.IMG reads. */
+    if(command!=2u && command!=6u && command!=8u && command!=9u && command!=21u && command!=22u && command!=27u && command!=1u && command!=10u && command!=11u && command!=12u && command!=14u && command!=15u && command!=19u) {
         CdDeviceBoundary("CD_device_unported_command",command);return;
     }
     if(g_device.commands<16u) g_device.command_log[g_device.commands]=command;
@@ -115,7 +118,7 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
                      * opens ReadS with mode 0x1E0 (double speed + XA + 2340). */
                     if(g_target_pending) {g_device.next_lba=g_target_lba;g_target_pending=0;}
                     g_device.reading=1;g_read_cycles=CdSectorCycles();
-                } else if(g_command==9u || g_command==21u || g_command==22u) {
+                } else if(g_command==8u || g_command==9u || g_command==21u || g_command==22u) {
                     g_device.reading=0;g_phase=2;g_remaining_cycles=0x100000u;
                 }
                 else if(g_command==11u) g_device.muted=1u;

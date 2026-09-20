@@ -1,0 +1,6 @@
+[DBG] mode=1 lba=000003f5 d0=8018efe8 d1=801ed800 t=0000 0047 0048 0057
+[DBG] read0 done
+[DBG] read1 done
+[DBG] state=0 timer=180 cddc=1 ready=1 queue=0 status=02 B0DCD=02
+[DBG] state=1 timer=180 cddc=0 ready=2 queue=1 status=02 B0DCD=02
+[DBG] state=1 timer=180 cddc=1 ready=2 queue=1 status=02 B0DCD=02
