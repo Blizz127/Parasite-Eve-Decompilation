@@ -10,6 +10,35 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PARENT MERGE VERIFICATION: 762 matching C leaves + port frontiers (2026-09-20)
+
+Merged `agent/decomp105` (`581dc2f5`), `agent/decomp103` (`72de651a`),
+`agent/decomp104` (`71038759`), `agent/dispatch69b08` (`cebc480f`),
+`agent/fmvloop` (`0c2800b3`) and `agent/m0020i` (`86c72ed1`) onto the working
+branch; post-merge decomp-port regeneration and the `func_800762A0` /
+`func_8007DD74` link fixes ride `1cdc1f8f` + `71038759`.  Fresh clean
+split/build/verify: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (762
+registered C leaves)`, `VERIFY_US=PASS` ("all 762 packed C spans equal
+retail", plan `1102 = 762 c + 338 asm + 2 rodata`, SHA-256 `04c128e1…`).
+Coverage **762/4501 (16.93%)**.  `pc_port`: build OK, CTest **11/11**,
+`pe-native-tests` **1404/1404**, `gen_decomp_ports.py --check --allow-orphans`
+**OK**.
+
+Live port outcomes re-measured on the merged tree:
+- **Disc-1 route** (`PE_CARD=build/pe_card1.mcr --headless --route-pad
+  --max-frames 80000`): `stop_reason=frame-limit`, **token `A8001148`**
+  (`m0012i`; m0020i's only room transfer now fires at f=20655), story still
+  `0x48`, **0** `[STUB:BOOTSTRAP_RET]`, **0** `BOUNDARY_REPORT`.
+- **Opening FMV** (real Disc 1, no `--skip-movie`, 90000 frames):
+  `func_80192934_enter` **2078** (all 2077 frames), `func_80192934_dbd_abort`
+  + `func_80192CE8_media_clear` fire; new frontier is the single
+  `MDEC_missing_block` bootstrap stub → `stop_reason=unresolved-boundary`.
+- **Disc-2 boot** (`--skip-movie --skip-opening-menu --max-frames 600`):
+  0 bootstrap stubs, `frame-limit`, `polygons=0` — the retail disc-change
+  screen, which `func_80069B08` now honestly draws (the old 529332-polygon
+  render was the stub skipping that screen).
+
 ## SLICE-6 TOOLING LEVERS: 724 → 732 matching C leaves (2026-09-20)
 
 Branch `agent/decomp105` from `d2ae6879`, worktree `/tmp/pe-agent-decomp105`.
