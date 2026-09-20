@@ -117,7 +117,11 @@ extern pe_addr_t func_800755F0(pe_addr_t env);
  * func_80190660 and reaches its first DrawPrim call at retail 0x80190860. */
 extern int func_8006ECEC(void);
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
-static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
+/* func_80069B08 is a REAL native port
+ * (game/boot/func_80069B08_port.c) — the boot disc/status screen state
+ * machine.  The former Bootstrap_ReturnVoid inline stub was removed once
+ * its two CD reads and every state-machine callee had real ports. */
+extern void func_80069B08(int d);
 /* func_8003F3C4 / func_80066B60 / func_80068E24 are REAL native ports
  * (game/boot/func_8003F3C4_port.c, func_80066B60_port.c,
  * func_80068E24_port.c). Prototypes live in pe_port_compat.h. */

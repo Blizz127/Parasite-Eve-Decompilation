@@ -10,6 +10,27 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## PE-69B08: boot boundary is the retail disc-change screen (2026-09-20)
+
+Branch `agent/dispatch69b08` from `58ffdd4b`.  `func_80069B08`
+(`asm/disc1/56438.s`, 0x5E0) is now transcribed in full
+(`pc_port/game/boot/func_80069B08_port.c`) and the `psx_compat.h`
+`Bootstrap_ReturnVoid` stub is gone; `pe_cdreg.c` gained the CdlStop (8)
+wiring its first command needs.  **The function is the disc-change /
+"insert the correct disc" screen**, not a load step: state 2 holds on the
+CD status byte's `CdlStatShellOpen` (`0x10`), then state 4 completes only
+when `func_800698D4`'s disc identity matches the dispatch mode.  The
+Disc-2 verification image is the mismatch case (`D_800A7918==0` → mode 1,
+Disc 2 inserted), so the run now reaches `frame-limit` with the disc-change
+screen on screen and **`polygons=0`** instead of the stub baseline's
+529332 — a faithful behaviour change, not a fake.  A documented host bound
+(`PE_Port_ShouldStop()` in the state loop, same precedent as
+`func_8001220C`'s `PE_PORT_DISC_WAIT_LIMIT`) keeps it from hanging.
+Verified: CTest 11/11, `pe-native-tests` 1394/1394,
+`gen_decomp_ports.py --check --allow-orphans` OK, Disc-1 route
+`frame-limit` with 0 bootstrap stubs.  Evidence:
+`docs/evidence/pe-69b08-dispatch/REPORT.md`.
+
 ## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
 
 Branch `agent/4ad9c-savepage` from `160137a4`.  The field main-menu handler no
