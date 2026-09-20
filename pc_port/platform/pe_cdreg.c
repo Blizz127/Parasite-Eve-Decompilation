@@ -3,6 +3,7 @@
 #include "pe_cdreg.h"
 
 #include "pe_guest_ram.h"
+#include "pe_xa.h"
 #include "pe_disc.h"
 #include "pe_gpu.h"
 #include "pe_irq.h"
@@ -141,6 +142,10 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
                 if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
                     CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;
                 }
+                /* CD-XA: the drive's decoder plays XA audio itself, in real
+                 * time, independent of the CPU/BFRD path.  Feed the sector to
+                 * the host XA decoder so FMV/music audio reaches the sink. */
+                (void)PE_Xa_ConsumeSector(g_sector);
                 g_device.next_lba++;g_device.sectors++;g_sector_pending=1;g_read_cycles=CdSectorCycles();
                 uint8_t status=CdDeviceStatus();
                 if(!PE_CdReg_PushResponse(1u,&status,1u)) {CdDeviceBoundary("CD_device_response_queue",1u);return;}

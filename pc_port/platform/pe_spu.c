@@ -3,6 +3,7 @@
  */
 #include "pe_spu.h"
 #include "pe_audio.h"
+#include "pe_xa.h"
 #include "pe_spu_dma.h"
 
 #include <string.h>
@@ -389,6 +390,7 @@ int PE_Spu_ActiveVoiceCount(void)
 void PE_Spu_RenderVBlank(void)
 {
     PE_Spu_Render(g_audio_buf, PE_AUDIO_SAMPLES_PER_VBLANK);
+    PE_Xa_Mix(g_audio_buf, PE_AUDIO_SAMPLES_PER_VBLANK);
     if (PE_Audio_IsOpen())
         PE_Audio_Write(g_audio_buf, PE_AUDIO_SAMPLES_PER_VBLANK);
 }
