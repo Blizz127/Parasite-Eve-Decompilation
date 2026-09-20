@@ -7,6 +7,43 @@
 
 # ACTIVE HANDOFF
 
+## PARENT STATUS (2026-09-20): 846 matching C leaves, port green
+
+**Matching decomp: 768 -> 846 (+78) this session**, verified on the merged tree
+by a fresh `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh`:
+
+- **EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**
+- `Matching claim: YES (846 registered C leaves)`
+- `VERIFY_US=PASS` — all 846 packed C spans equal retail
+- plan `1231 spans = 846 c + 383 asm + 2 rodata`
+
+Landed by wave-1 agents (`pb-small` 6, `pb-120d8` 2, `pb-multiunit` 13,
+`pb-19de4` 2, `pb-dispatch` 3, `decompile-continue-10` 20) and wave-2 agents
+(`wave2-a` 15, `wave2-b` 7, `wave2-c` 14). Every leaf has a
+`docs/evidence/<agent>/<name>/REPORT.md`. The wave-2/3 agents' own entries sit
+directly below this one.
+
+**Port.** `pc_port` builds clean and **CTest 11/11** at 846. The decomp-port
+generator is consistent (`--check OK`). Disc-1 headless route
+(`--route-pad --max-frames 80000 --disc-image "<disc1>"`) advances through the
+known frontier at token `A8001148` / story `0x48`. **The port requires
+`--disc-image`; without it the run aborts early with
+`PE_LoadU32: invalid guest address 0x0000000C` — that is a usage error, not a
+regression.**
+
+**Merge tooling.** `tools/analysis/merge_agent_branch.py` merges an agent branch
+and resolves the recurring conflicts per file (offset-ordered `disc1.yaml`
+union, single-owner profile union, blocker union by id, handoff concatenation,
+keep-ours for duplicate `src` leaves and parent tooling), regenerates the status
+doc from the plan, and validates yaml offset monotonicity + JSON validity +
+`disc1_plan --check` before committing. Six unit tests in
+`tools/analysis/test_merge_agent_branch.py`. Use it instead of hand-merging:
+hand-merging is what left `parked_blockers.json` invalid twice this session.
+
+**Queue.** 1547 functions / 596,220 bytes remain; 761 of them still have a
+behavioural spec in `pc_port/`. See `DECOMP_COVERAGE_CEILING.md` for the honest
+denominator and the ~1335 C-matchable ceiling.
+
 ## wave-2 leaf slice A (`agent/wave2-a`, 2026-09-20): 810 -> 825 (+15)
 
 **Fresh `scripts/split_us.sh` + `scripts/build_us.sh` + `scripts/verify_us.sh`:
