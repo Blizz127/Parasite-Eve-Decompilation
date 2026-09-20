@@ -86,12 +86,12 @@ static int g_route_frame;
 #define GA_TOKEN D_8009D280
 static int g_frame;
 static unsigned g_sewer_victories, g_sewer_enemy_peak[3];
-static int g_pulse_end = 33620, g_pulse_resume = 35300;
-/* Second, independent periodic-Cross suppression window.  The first one
- * ([PE_ROUTE_PULSE_END, PE_ROUTE_PULSE_RESUME)) covers the recorded battle
- * gap; this one covers the Day-1 save point, where an automatic Cross
- * re-opens the file menu the instant the script's Circle press closes it. */
-static int g_pulse2_begin = 38620, g_pulse2_end = 42000;
+/* Automatic Cross-pulse suppression windows (see pe_route_pad.h).  The first
+ * covers the recorded battle gap; the second covers the Day-1 save point,
+ * where an automatic Cross re-opens the file menu the instant the script's
+ * Circle press closes it.  Named for the half-open OFF interval each one is. */
+static int g_pulse_end = PE_ROUTE_PULSE_OFF1_BEGIN, g_pulse_resume = PE_ROUTE_PULSE_OFF1_END;
+static int g_pulse2_begin = PE_ROUTE_PULSE_OFF2_BEGIN, g_pulse2_end = PE_ROUTE_PULSE_OFF2_END;
 static int g_exact_pad_begin = 42713, g_exact_pad_end = 45041;
 static int g_sewer_pad_begin = 50500, g_sewer_pad_end = 51200;
 static int g_second_sewer_pad_begin = 52344, g_second_sewer_pad_end = 54500;
@@ -199,8 +199,9 @@ static uint16_t RoutePadSource(void)
         !(g_frame>=g_sewer_pad_begin && g_frame<g_sewer_pad_end) &&
         !(g_frame>=g_second_sewer_pad_begin && g_frame<g_second_sewer_pad_end) &&
         !(g_frame>=g_supply_pad_begin && g_frame<g_supply_pad_end) &&
-        !(g_frame>=g_pulse2_begin && g_frame<g_pulse2_end) &&
-        (g_frame<g_pulse_end || g_frame>=g_pulse_resume) && (g_frame%g_route_pad.period)==3)
+        PeRoutePad_PulseAllowed(g_frame, g_route_pad.period,
+                                g_pulse_end, g_pulse_resume,
+                                g_pulse2_begin, g_pulse2_end))
         mask&=g_route_pad.pulse;
     mask=RouteRewardSewerPilot(mask);
     if (getenv("PE_ROUTE_DEBUG") && (g_frame % 500) == 0)
