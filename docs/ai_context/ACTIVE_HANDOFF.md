@@ -131,7 +131,12 @@ firstfile) backed by the present-card image, plus the `func_80041108` post-call
 directory/file state graph (`CARD_OPERATION_CONTRACT.md`), so the Select Slot
 menu can enumerate/create/read/write a save and the route passes story `0x48`;
 (2) the guest-side media-loop completion after the ~319-step FMV media loop;
-(3) carve the ranked large functions from the worklist. **Disc 2 is
+(3) **audio: the port has NO host audio output backend at all** — there is no
+SDL/ALSA/`snd_pcm`/`/dev/dsp` sink anywhere under `pc_port/`, and
+`pe_libsnd.c` only models SDK event/DMA plumbing. The SPU is a DMA-timing model,
+not a voice mixer, and XA-ADPCM (CD mode bit4, `CdlModeSM`) is still an explicit
+`CD_device_read_mode` boundary. A full SPU voice/ADSR + XA decode + host sink
+is unbuilt; (4) carve the ranked large functions from the worklist. **Disc 2 is
 code-identical:** this session
 re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
 `SLUS_006.62` (both SHA-1 `452fb033…`); `configs/USA/disc2.yaml` already
