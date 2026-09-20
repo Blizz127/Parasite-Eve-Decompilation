@@ -1922,7 +1922,7 @@ segments:
       - [0xB9480, c, func_800C8C80]
       - [0xB94BC, c, func_800C8CBC]
       - [0xB94F8, c, func_800C8CF8]
-      - [0xB9534, asm]
+      - [0xB9534, c, func_800C8D34]
       # Tier-2 W callback: exact-start table entry at 0xD11DC. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: B9480 prefix 0x1C4, C 0x2C, resume B9670.s 0x98.
