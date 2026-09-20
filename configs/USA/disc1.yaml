@@ -425,6 +425,9 @@ segments:
       - [0x28070, asm]
       - [0x29140, c, func_80038940]
       - [0x29154, asm]
+      # func_80038CE4 — VRAM 0x80038CE4, size 0x28, file 0x294E4-0x2950C.
+      # Double index into the byte table at *D_80091A28.
+      - [0x294E4, c, func_80038CE4]
       # Phase 5BQ: C leaf func_80038D0C — VRAM 0x80038D0C, size 0x10.
       # Nonzero test of D_80091A1C (lui/lbu/jr/sltu); plain -O1 matches.
       - [0x2950C, c, func_80038D0C]
@@ -1450,7 +1453,7 @@ segments:
       - [0x77FBC, c, func_800877BC]
       - [0x77FD4, c, func_800877D4]
       - [0x77FF0, c, func_800877F0]
-      - [0x7800C, asm]
+      - [0x7800C, c, func_8008780C]
       # func_8008783C — VRAM 0x8008783C, size 0x28, file 0x7803C-0x78064.
       # Per-voice SPU register 0x1F801C08 + (voice<<4): replace the 0x00F0 field
       # (non-volatile access so the store fills the jr delay slot).
