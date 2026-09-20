@@ -675,6 +675,8 @@ segments:
       - [0x3C4E8, asm]
       - [0x3C708, c, func_8004BF08]
       - [0x3C740, asm]
+      # func_8004C594 — VRAM 0x8004C594, size 0x48, file 0x3CD94-0x3CDDC.
+      - [0x3CD94, c, func_8004C594]
       # Phase 5EJ: constant handle construction and dispatch.
       - [0x3CDDC, c, func_8004C5DC]
       - [0x3CE08, asm]
