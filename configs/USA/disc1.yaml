@@ -1294,7 +1294,12 @@ segments:
       - [0x6B0EC, c, func_8007A8EC]
       # Phase 5EF: direct func_8007BDDC forwarding wrapper.
       - [0x6B110, c, func_8007A910]
-      - [0x6B130, asm]
+      # func_8007A930 — VRAM 0x8007A930, size 0x104, file 0x6B130-0x6B234.
+      # Signed BCD digit pack: BCD(t%75) / BCD((t/75)%60) / BCD(t/4500)
+      # with t = arg0 + 0x96, written arg1[2..0]; returns arg1 (the pointer
+      # return frees $a1 for the 0x88888889 magic). Default era_o2_g0.
+      - [0x6B130, c, func_8007A930]
+      - [0x6B234, asm]
       # func_8007B964 — VRAM 0x8007B964, size 0x88, file 0x6C164-0x6C1EC.
       # Six staged byte writes to SPU-style pointer globals; returns 0.
       # Default era_o2_g0. Resume asm at 0x6C1EC.
