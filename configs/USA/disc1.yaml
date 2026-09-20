@@ -413,6 +413,15 @@ segments:
       # gp-relative. Mid-120D8 carve: prefix 0x474, C 0x94, resume 125E0.s.
       - [0x1254C, c, func_80021D4C]
       - [0x125E0, asm]
+      # C leaf func_800254BC — VRAM 0x800254BC, size 0xAC (43 words).
+      # Command dispatch: latch D_8009D254[0] into D_8009D278 and play
+      # effect 0x453 unless D_8009D1A0 bit 1; command 0x197 runs the
+      # cancel pair + record byte 0x12 = 13, 0x198 runs func_80021AF8.
+      # Direct table indexing (no cached base local) gives retail's
+      # load-delay slot and store-before-jal schedule. era -O2 -G0.
+      # Mid-125E0 carve: prefix asm 0x36DC, C 0xAC, resume 15D68.s.
+      - [0x15CBC, c, func_800254BC]
+      - [0x15D68, asm]
       # func_80026FD0 — VRAM 0x80026FD0, size 0x28, file 0x177D0-0x177F8.
       # If signed byte D_8009D2B0 != 0, store 0x80/-8 to 0xF8/0xFC($gp).
       # D_8009D2B0 stays absolute via an incomplete array. era_o2_g8.

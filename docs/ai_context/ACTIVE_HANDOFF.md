@@ -56,6 +56,32 @@ reachability counter exists`, yet `PORT_GOAL_AND_PLAN.md` requires reporting
 `gen_decomp_ports.py`), map hit addresses to the 2390 guest function
 boundaries, and report executed-path split of decompiled-C vs port
 transcription vs unresolved boundary.
+## PB-120D8: 768 -> 770 matching C leaves (agent/pb-120d8)
+
+Landed two retail leaves in unit `120D8`, fresh build EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `VERIFY_US=PASS` (770 C spans):
+`func_80021D4C` (0x1254C, 0x94, commit `3bda667c`) and `func_800254BC`
+(0x15CBC, 0xAC, commit `d8080685`). Evidence under `docs/evidence/pb-120d8/`.
+
+**Working flags for this unit: `-O2 -G8`** (bytes gp-relative, words absolute),
+with `MASPSX_THREE_WORD_SYMBOL_STORE=1` for indexed-symbol loads and per-leaf
+`MASPSX_FORCE_ABSOLUTE_SYMBOLS`/build-profile assignment for the absolute words
+(new profile `era_o2_g8_three_word_force_d8009d1a0_absolute`). Two reusable
+levers: (1) the **rotated-loop** shape is written as an explicit
+`goto test; body: ...; test: if (cond) goto body;` with the loop-invariant
+global in a *reloaded local* (load before the `goto`, reload after the call) —
+a natural `while` compiles top-tested and does not match; (2) **direct table
+indexing** (no cached base local) is what makes cc1 put the dependent load in
+a load-delay slot and hoist the store before the `jal`
+(`func_800254BC`).
+
+Parked (3 consecutive, list stopped): `func_80023008` (delay-slot constant
+placement: `li $a0,0x46C` early vs cc1 sinking it; 288 vs 292), `func_80021DE0`
+(post-call reloaded-gp-byte colored `$v1` instead of `$a0`; 4-word residual in
+the `0x199` arm), `func_80022210` (cc1 phantom `.frame vars=8` local inflates
+the frame to 0x28 vs retail 0x20). Details in `parked_blockers.json`. Untried
+targets remain: `func_800218D8`, `func_80026600`, `func_80028C48`,
+`func_80021AF8`, `func_80022D7C`.
 
 ## SESSION STATUS 2026-09-20 (latest): 768 matching C leaves; FMV completes (2026-09-20)
 ## SESSION STATUS 2026-09-20 (agent/pb-small): 774 matching C leaves (+6)
