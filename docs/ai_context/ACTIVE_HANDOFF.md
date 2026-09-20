@@ -58,7 +58,12 @@ better current boundary. Solving it means re-landing the B0CD0 catch-up onto
 **Open work / next frontiers.** (1) inventory-help ids 36-39
 (`func_8004C608`, 0x648 bytes, `asm/disc1/3CE08.s`); (2) re-land the B0CD0
 catch-up onto `HostFB_StreamTick` (see CD experiment above); (3) carve the
-ranked large functions from the worklist; (4) disc 2 has no coverage yet.
+ranked large functions from the worklist. **Disc 2 is code-identical:** this
+session re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
+`SLUS_006.62` (both SHA-1 `452fb033…`); `configs/USA/disc2.yaml` already
+records that `PE.IMG` is identical too, so the decompilation/port covers disc
+2's code and overlays. Only the FMV/XA streams and volume metadata differ, so
+disc-2 work is disc-image/stream handling, not translation.
 
 ## DAY2-159c: re-land func_80192CE8 post-E08 media loop + 91DC8 dispatch (2026-09-20)
 
