@@ -10,6 +10,33 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## agent-decomp101 (slice 2, ranks 37-109) — 1 leaf matched (2026-09-20)
+
+Branch `agent/decomp101` from `58ffdd4b`.  Worktree `/tmp/pe-agent-decomp101`.
+Baseline and final both rebuild **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `VERIFY_US=PASS`, **710**
+registered C leaves.
+
+- **Matched `func_8008D140`** (VRAM 0x8008D140, file 0x7D940, size 0x4D0):
+  32-way unrolled dirty-bit halfword copy, `-O2 -G0`.  cc1 only
+  materialises the "flag word is zero" test once (`sltiu $a2,$a1,1`) when it
+  is a named local (`unsigned int zero = (flags == 0);`); inlining
+  `flags == 0` into each `||` makes cc1 emit a per-statement `beqz $a1`.
+  Commit `4c90986c` (also carries the regenerated
+  `docs/generated/DISC1_MATCHING_STATUS.md` — `verify_us.sh` step 3 requires
+  it).
+- **Parked `func_80087AA8`** (0x782A8, 318 words): faithful transcription;
+  block-local temporaries fixed blocks 1/3/5, `register ... asm("$N")` pins
+  fixed 1/3/5 exactly, but block 2 (`f60`) and block 4 (`f74`) keep a
+  scheduling/coloring skew (see `docs/evidence/agent-decomp101/REPORT.md`).
+- **Parked `func_800334AC`** (0x23CAC, 317 words, `-O2 -G8`): nine unrolled
+  record-submit blocks; retail keeps `obj` in `$s1` and materialises
+  `$s4 = obj+0x4C`, candidate uses `$s3` and folds the pointer.  `sel` pin
+  did not take.
+
+23 of the 73 slice-2 functions contain GTE ops and no matched leaf uses GTE,
+so those were out of reach for this pass.
+
 ## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
 
 Branch `agent/4ad9c-savepage` from `160137a4`.  The field main-menu handler no
