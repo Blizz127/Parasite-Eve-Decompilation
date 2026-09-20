@@ -59,6 +59,11 @@ void Trace_Direct(const char *event) { (void)event; }
 #define GA_TOKEN     D_8009D280
 
 #define MAX_TRACE 256
+/* The harness intentionally drives only the shared pe_route_pad.h table; it
+ * does NOT include port_main's RouteRewardSewerPilot, so the actor parks at
+ * the m0004i frontier (~frame 7900).  The live autopilot continues to M0020I
+ * because it adds the sewer/M34 pilot; extending this limit does not advance
+ * the harness (verified at 22000: same 14 milestones, stuck at m0004i). */
 #define ROUTE_FRAME_LIMIT 8000
 
 typedef struct RouteTrace {

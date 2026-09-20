@@ -552,7 +552,12 @@ if(BUILD_TESTS)
         target_link_libraries(pe-route-boot-day2-tests PRIVATE pe_field_runtime)
         target_include_directories(pe-route-boot-day2-tests PRIVATE ${CMAKE_SOURCE_DIR}/tests)
         add_test(NAME route-boot-day2-control-flow COMMAND pe-route-boot-day2-tests)
-        set_tests_properties(route-boot-day2-control-flow PROPERTIES TIMEOUT 180)
+        # The harness resolves the retail disc through local/pe_disc1.path,
+        # which is relative to the repo root — not the build directory.  Without
+        # this it silently SKIPs under CTest and the route is never exercised.
+        set_tests_properties(route-boot-day2-control-flow PROPERTIES
+            TIMEOUT 300
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/..)
     endif()
 
     if(PE_PORT_SANITIZERS AND NOT MSVC)
