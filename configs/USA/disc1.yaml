@@ -876,9 +876,14 @@ segments:
       # Second wrapper consumes the complete remaining 0x28 span.
       - [0x40860, c, func_80050060]
       - [0x40888, c, func_80050088]
-      # Tier-2 callback wrapper func_80050204.  Former 0x408A8 span:
-      # prefix 0x15C, C 0x28, resume 0x34 (closure 0x1B8).
-      - [0x408A8, asm]
+      # Tier-2 callback wrapper func_80050204.  Former 0x408A8 span is now
+      # fully consumed by three consecutive C leaves.
+      # func_800500A8 — VRAM 0x800500A8, size 0x64, file 0x408A8-0x4090C. era_o2_g8.
+      - [0x408A8, c, func_800500A8]
+      # func_8005010C — VRAM 0x8005010C, size 0x6C, file 0x4090C-0x40978. era_o2_g8.
+      - [0x4090C, c, func_8005010C]
+      # func_80050178 — VRAM 0x80050178, size 0x50, file 0x40978-0x409C8. era_o2_g8.
+      - [0x40978, c, func_80050178]
       # func_800501C8 — VRAM 0x800501C8, size 0x3C, file 0x409C8-0x40A04. era_o2_g8.
       - [0x409C8, c, func_800501C8]
       - [0x40A04, c, func_80050204]
