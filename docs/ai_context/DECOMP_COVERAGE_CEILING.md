@@ -1,6 +1,6 @@
 # Decompilation coverage ceiling (Disc 1)
 
-Measured 2026-09-20 with `tools/analysis/triage_m2c.py`, `tools/analysis/port_backed_worklist.py`
+Measured 2026-09-20 (refreshed after the 813-leaf merge) with `tools/analysis/triage_m2c.py`, `tools/analysis/port_backed_worklist.py`
 and `tools/analysis/asm_function_worklist.py` against the retail SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. Regenerate with:
 
@@ -13,20 +13,20 @@ python3 tools/analysis/triage_m2c.py --jobs 8
 
 ## The denominator
 
-`asm/disc1/*.s` contains exactly **1622** `nonmatching <name>, <size>` function
-boundaries (604,300 bytes) and **447** sizeless `nonmatching <name>` data
-symbols. With the **768** functions already registered as `c` spans in
+`asm/disc1/*.s` contains exactly **1583** `nonmatching <name>, <size>` function
+boundaries (599,460 bytes) and 447 sizeless `nonmatching <name>` data
+symbols. With the **813** functions already registered as `c` spans in
 `configs/USA/disc1.yaml`, the code inventory is:
 
 | | functions | bytes |
 |---|---:|---:|
-| matched C leaves | 768 | 38,672 |
-| remaining | 1,622 | 604,300 |
-| **total code** | **2,390** | **642,972** |
+| matched C leaves | 813 | 43,816 |
+| remaining | 1,583 | 599,460 |
+| **total code** | **2,396** | **643,276** |
 
-So current coverage is **32.1% of functions** but only **6.0% of code bytes** —
-the 768 landed so far are small leaves (avg 50 B) while the remaining queue is
-dominated by large routines (avg 373 B). Byte coverage is the honest progress
+So current coverage is **33.9% of functions** but only **6.8% of code bytes** —
+the leaves landed so far are small (avg 54 B) while the remaining queue is
+dominated by large routines (avg 379 B). Byte coverage is the honest progress
 metric for "100% decompiled"; the `4459` figure quoted in older handoff entries
 is not a function count and should not be used.
 
@@ -39,12 +39,12 @@ can be made to emit through `cc1`+`maspsx` (bare `ctc2`/`cop2` GTE moves,
 
 | verdict | functions | bytes | share of remaining bytes |
 |---|---:|---:|---:|
-| `draftable` (m2c produces C) | 1,371 | 463,920 | 76.8% |
-| `handwritten` (not C-matchable) | 119 | 79,948 | 13.2% |
-| `m2c-error` (jump-table heavy, m2c gave up) | 115 | — | — |
-| `unknown-instr` (other unmodelled opcodes) | 17 | — | — |
+| `draftable` (m2c produces C) | 1,335 | 460,180 | 76.8% |
+| `handwritten` (not C-matchable) | 119 | 79,948 | 13.3% |
+| `m2c-error` (jump-table heavy, m2c gave up) | 112 | 58,156 | 9.7% |
+| `unknown-instr` (other unmodelled opcodes) | 17 | 1,176 | 0.2% |
 
-**Ceiling:** at most ~1,371 further matching C leaves exist. The ~119
+**Ceiling:** at most ~1,335 further matching C leaves exist. The ~119
 handwritten functions must stay `asm` in the yaml; they are glue (GTE
 load/store sequences, BIOS syscall stubs) and their byte-exactness is already
 guaranteed by splat, not by C matching.
@@ -52,8 +52,8 @@ guaranteed by splat, not by C matching.
 ## Cheapest leaves: functions that already have a port body
 
 `pc_port/` holds 579 hand-written `*_port.c` files transcribed from retail so
-the native port can run. **836 of the 1622 remaining functions (342,820 bytes,
-56.7% of remaining bytes) already have such a body**, i.e. their semantics are
+the native port can run. **797 of the 1583 remaining functions (338,116 bytes,
+56.4% of remaining bytes) already have such a body**, i.e. their semantics are
 written down and only the era-cc1 re-expression is missing. Ranked list:
 
 ```sh
