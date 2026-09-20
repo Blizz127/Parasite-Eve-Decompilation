@@ -17,7 +17,7 @@
 
 /* Phase 5BI: fifty-eighth matching C leaf (mid-70428 carve).
  * VRAM 0x8007FC54 / file 0x70454 / size 0x10.
- * Original: lui $v0,%hi((pe_addr_t)0x8009B56Cu); lbu $v0,%lo((pe_addr_t)0x8009B56Cu)($v0);
+ * Original: lui $v0,%hi(D_8009B56C); lbu $v0,%lo(D_8009B56C)($v0);
  *           jr $ra; nop
  */
 /* shimmed by pe_guest_decomp.h: D_8009B56C */

@@ -327,6 +327,27 @@ void func_8004FEEC(pe_addr_t list);
 int func_8004FE58(pe_addr_t item);
 void func_800434C0(pe_addr_t item);
 pe_addr_t func_8005DD8C(int32_t index);
+/* PE-SAVEWRITE: memory-card save/load buffer formatters (nonmatching
+ * hand-translations; see game/boot/func_80040210_port.c). */
+void func_8004006C(pe_addr_t dest, pe_addr_t format);
+pe_addr_t func_80040210(int32_t idx, int32_t time);
+pe_addr_t func_8005DE08(int a0);
+int func_80043474(int a0);
+int func_8005D940(void);
+/* BIOS A(19h) strcpy trampoline (platform/func_80071A14_port.c). */
+pe_addr_t func_80071A14(pe_addr_t dst, pe_addr_t src);
+/* PE-SAVEWRITE: save/load write chain (nonmatching hand-translations). */
+void func_8003F800(void);
+void func_80040B80(pe_addr_t record);
+void func_8005C25C(void);
+int func_8005DE70(void);
+void func_80042020(int card, int slot);
+int32_t func_80042170(int card, int32_t slot);
+int func_800614A0(void);
+int func_800438E0(void);
+int func_800527B4(void);
+int func_80064A48(void);
+signed char func_8005E884(void);
 extern void func_800622B0(int a0);
 extern int func_800614AC(int a0);
 extern void func_8004B90C(void);

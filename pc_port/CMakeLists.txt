@@ -39,6 +39,7 @@ set(PLATFORM_SRCS
     platform/pe_stream.c
     platform/pe_stream_commands.c
     platform/func_80071A24_port.c
+    platform/func_80071A14_port.c
     platform/func_800719E4_port.c
     platform/pe_guest_image.c
     platform/pe_guest_decomp.c
@@ -62,6 +63,11 @@ set(GAME_SRCS
     game/boot/func_80071A84_port.c
     game/boot/func_80072334_port.c
     game/boot/func_80041108_port.c
+    game/boot/func_80040210_port.c
+    game/boot/func_80040B80_port.c
+    game/boot/func_8003F800_port.c
+    game/boot/func_8005C25C_port.c
+    game/boot/func_80042020_port.c
     game/boot/func_8004D4C4_port.c
     game/boot/func_800434C0_port.c
     game/boot/func_800405A4_port.c
