@@ -2572,7 +2572,15 @@ segments:
       - [0xB3350, c, func_800C2B50]
       # Probe: D_800E2248 high-halfword predicate.
       - [0xB3368, c, func_800C2B68]
-      - [0xB3390, asm]
+      # func_800C2B90 — weapon-slot record lookup + callback dispatch, VRAM
+      # 0x800C2B90, file 0xB3390, size 0x17C (95 words). era -O2 -G0. Levers:
+      # D_800F34F4/D_800F3330 are integer bases; the three func_800C6CE0 calls
+      # are genuinely separate short-circuit calls; the arg-copy locals are
+      # assigned in save order (slot, sizes, callbacks, code) so cc1 allocates
+      # $s2,$s3,$s4,$s0 in retail's prologue order. Mid-B3390 carve: prefix
+      # 0x17C, resume 0xB350C.
+      - [0xB3390, c, func_800C2B90]
+      - [0xB350C, asm]
       # func_800C2E08 — clear active 6-byte records + flag, VRAM 0x800C2E08,
       # file 0xB3608, size 0xA4 (41 words). era -O2 -G0; D_800F34F4 as an
       # integer, staged flag temp (no if-conversion), mask locals ordered
