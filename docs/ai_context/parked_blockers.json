@@ -1,6 +1,41 @@
 {
  "blockers": [
   {
+   "id": "wave3b-5e418-6dce4-wrapper-stackarg",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_8006DCE4 (file 0x5E4E4, 0x54, 21 words) and its twin func_8006DE80 (file 0x5E680, 0x54) unit 5E418: thin ABI wrappers forwarding to func_8006DED4(package, a0, a1, (short)a2, (short)a3, (short)a4) with package = D_800B0E64 / D_800B0E08. Semantics fully decoded; func_8006DED4 itself landed as a wave3-b leaf. Two independent residuals: (1) the 5th (stack) argument is converted with retail `lw $2,48($sp); sll $2,16; sra $2,16` but cc1 narrows the load to `lh $2,48($sp)`. The only phrasing that restored the `lw` was `int v = *(int *)&a4; return f(..., (short)v);`, but it also forces cc1 to save BOTH $a0 and $a1 (`move $3,$4; move $8,$5; ... move $5,$3; move $6,$8`) where retail saves only $a1 (`move $3,$5; ... move $5,$4; move $6,$3`). (2) Tested declarings for the callee prototype (short/int/unsigned params), wrapper param types, `(short)(a4 & 0xFFFF)`, `(short)(a4 << 16 >> 16)`, `short z = a4`, `int v = a4`, `int *p = &a4`, `int v = *(int *)&a4`, explicit shift/multiply tricks, and reordered arguments; every non-pointer form yields `lh`, and every `lw` form yields the double-save rotation.",
+   "evidence": "try_leaf on src/func_8006DCE4.c and variants /tmp/pe-dbg/{v1..v10,w1..w3,e1,e3}.c vs file 0x5E4E4 size 0x54, era -O2 -G0; cc1 asm dumped to /tmp/pe-dbg/*.s. Best diff 13 words; retail 84 bytes vs candidate 80.",
+   "next": "Retry only with a lever that keeps the incoming word-sized stack slot load (`lw`) without adding a second callee-saved argument copy."
+  },
+  {
+   "id": "wave3b-5747c-67a78-hoisted-offset-load",
+   "status": "PARKED-SCHEDULING",
+   "note": "func_80067A78 (file 0x58278, 0xC8, 50 words) unit 5747C: shifts D_800B1624+0x38/+0x3A by (D_800BCF8C-0xA0)/(D_800BCF8E-0x70), then walks the +6 count of 0x38-stride records at +0x14, calling func_80067294 for entries with byte0&2 and byte+0x24 == D_800BCFFD. Semantics complete. Residual: cc1 hoists the `*(int *)(w+0x14)` record-offset load above the two halfword stores to +0x38/+0x3A (candidate `lw a0,0x14(v1)` at 0x28; retail loads it at 0x58 after both stores) and hoists the loop counter `i=0`. Retail order is store 0x38, load +0x2E, store 0x3A, load +0x14. Tested: plain form, `volatile int` on the offset load, `volatile unsigned short *w` with `volatile int` offset, and reordered statement lists; the volatile forms reorder the whole prologue badly, the plain form keeps the hoist.",
+   "evidence": "try_leaf on src/func_80067A78.c and /tmp/pe-dbg/67a78{v,w}.c vs file 0x58278 size 0xC8, era -O2 -G0. Best diff 8 words (retail 200 bytes, candidate 208).",
+   "next": "Retry only with a lever that pins the +0x14 integer load after the two +0x38/+0x3A halfword stores without making the header accesses volatile."
+  },
+  {
+   "id": "wave3b-5e418-6ddcc-callee-saved-count",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_8006DDCC (file 0x5E5CC, 0xB4, 45 words) unit 5E418: paired sound request, func_8006DED4(package,id,a1,(short)a2,(short)a3,(short)a4) then the same with id+1, returning the first result. Semantics complete. Retail frame 0x38 with seven saves incl. `$s3 = &D_800B0E08` materialized once and reused via `lw a0,0(s3)`, and keeps the three (short) casts in $s2/$s1/$s0 live across both calls. cc1 always uses one fewer callee-saved register: it re-materializes the package global per call (lui/lw, no address register) and/or folds the first call's result over a cast home. Tested: short/int params, short/int locals for the casts, `unsigned char **package = &D_800B0E08;` + `*package` (restores the address register but shifts s2/s1), and inline vs local casts. Best diff 176 vs 180 bytes.",
+   "evidence": "try_leaf on src/func_8006DDCC.c and /tmp/pe-dbg/ddcc{2,3,4}.c vs file 0x5E5CC size 0xB4, era -O2 -G0; asm dumped to /tmp/pe-dbg/ddcc3.s.",
+   "next": "Retry only with a lever that forces the &D_800B0E08 address register AND keeps all three truncated coordinates in distinct callee-saved registers."
+  },
+  {
+   "id": "wave3b-5fb9c-6f8ec-record-register",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_8006F8EC (file 0x600EC, 0x104, 65 words) unit 5FB9C: same arena lookup as func_8006F820 (landed), then requires record byte 0 or 1 to be (byte-1)<2, rejects handler byte >= 0xC0 (-0x11), clamps to 0x55, indexes D_800942E0, null entry -0x12, dispatches handler at +0xC (null -> -1). Semantics complete; all branch layouts match after writing the (byte-1)<2 test positively. Residual: cc1 carries the record pointer in $v1 (`addu $v1,$v1,$v0; lbu $v0,0($v1)`) where retail overwrites the dead $a0 (`addu $a0,$v1,$v0; lbu $v0,0($a0)`), a 3-word length difference (272 vs 260).",
+   "evidence": "try_leaf on src/func_8006F8EC.c and /tmp/pe-dbg/f8ec2.c vs file 0x600EC size 0x104, era -O2 -G0.",
+   "next": "Retry only with a lever that colors the record base into $a0 after the arena addition."
+  },
+  {
+   "id": "wave3b-5747c-671c8-clamp-alloc",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_800671C8 (file 0x579C8, 0xCC, 51 words) unit 5747C: 56-byte record pan clamp. Semantics complete and cross-checked against pc_port/game/boot/func_800671C8_port.c (X=(short)(lhu(rec+8)+x), Y=(short)(lhu(rec+0xA)+y), symmetric min-then-max clamps against (short)rec+0x10/0x12 and +0x14/0x16, page=(page+(lw(rec)>>20))&0xFFF, sh +0xC/+0xE, rec = (rec & 0xFFF000FF)|(page<<8)). Residual: cc1 loads the +(rec+0x10) clamp bound early and carries the record base in $t1 instead of retail's $t0, shifting the whole body; retail keeps the full int px in $t1 while the signed short lives in $v1. A first draft reached 13 differing words (208 vs 204 bytes) with the record base, clamps and page arithmetic all in place.",
+   "evidence": "try_leaf on src/func_800671C8.c vs file 0x579C8 size 0xCC, era -O2 -G0.",
+   "next": "Retry with the px/py int-vs-short split expressed exactly as retail (int result in $t1, signed short in $v1) and the +0x10/+0x14 bound loads scheduled after the +8/+0xA sums."
+  },
+  {
    "id": "pb120d8-22210-phantom-frame",
    "status": "PARKED-FRAME-ALLOCATION",
    "note": "func_80022210 (file 0x12A10, 0x184, 97 words) unit 120D8: post-command weapon action. Semantics decoded and complete. Flags: era -O2 -G8 with D_8009D254/D_8009D278/D_8009D1A0 forced absolute; MASPSX_THREE_WORD_SYMBOL_STORE=1 (both indexed D_800BE834 loads are the 3-word lui/addu/op-%lo form). Block 1: if (D_8009D278->0x4C & 0x200000) { func_8001A680(D_8009D254,14); func_8006DE80(0x4B3,0,aya->2A,aya->2E,aya->32); D_8009D1A0|=0x100; D_8009D278->0x4C &= ~0x200000; }. Block 2: if (aya->0xF == aya->0x1A) { func_8001A680(aya, D_8009D278[0x12]); D_8009D278->0x4C|=0x200000; func_80023E14(lh(table+D_8009D1D4*8)-3); func_8006F39C(0x55,D_8009D254); D_8009D1D4+=1; if ((u32)(lhu(table+(D_8009D1D4&0xFF)*8)-3) >= 0x194 || aya->0xE < 4) D_8009D1A0 &= ~0x100; }. BLOCKER: cc1 allocates a PHANTOM 8-byte local (`.frame vars=8`) that is never stored, pushing the frame to 0x28 and the saves to 0x20/0x24; retail is frame 0x20 with saves at 0x18/0x1C (args=24, vars=0, regs=8). The phantom appears only when the second block contains BOTH the func_80023E14/func_8006F39C calls AND the `(next-3) >= 0x194` comparison (bisection: block-2 with the calls but no compare -> vars=0; with the compare but not both calls -> vars=0; with both -> vars=8). It is independent of the condition phrasing (`||`, nested if, early-return, goto), of the table element type (short/unsigned short/char-array with *8), of idx/next locals vs inline, and of -O2/-O1/-fschedule-insns2/-fno-schedule-insns. Register-ordering residuals that remain once the frame is hand-corrected: retail puts the reloaded index in $a0 (block 1 already exact up to there); cc1 uses $2/$v1. No source phrasing tested removes the phantom.",
