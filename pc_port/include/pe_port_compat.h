@@ -812,6 +812,9 @@ void func_8004D5CC(uint32_t index);
 /* Explicit original caller stack and incoming s0..s7/ra; stops at unresolved BIOS. */
 uint32_t PE_FormatterFrame(pe_addr_t destination, pe_addr_t format, uint32_t arg0, uint32_t arg1, pe_addr_t caller_sp, const uint32_t saved[9]);
 pe_addr_t func_80072334(pe_addr_t destination,pe_addr_t source,uint32_t count);
+/* BIOS A(1Bh) strlen / A(2Eh) memchr, the formatter "%s" measurers. */
+uint32_t func_80072314(pe_addr_t src);
+pe_addr_t func_80072324(pe_addr_t src,int32_t scanbyte,uint32_t len);
 void PE_CardCleanupFrame(pe_addr_t record, pe_addr_t caller_sp, const uint32_t incoming[32]);
 void PE_CardOperationFrame(uint32_t index, pe_addr_t caller_sp, const uint32_t incoming[32]);
 void func_80041108(uint32_t index);

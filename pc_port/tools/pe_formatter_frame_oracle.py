@@ -36,13 +36,13 @@ def main():
   struct.pack_into('<I',r,(stack+16)&0x1FFFFF,args[2])
   initial={16+i:0x13570000+i*0x1111 for i in range(8)}
   initial[29]=stack
-  regs=execute(r,0x80071A84,(destination,0x80140000,args[0],args[1]),initial_regs=initial,stop_at=(0x80072314,0x80072324),visited_pcs=seen)
+  regs=execute(r,0x80071A84,(destination,0x80140000,args[0],args[1]),initial_regs=initial,stop_at=(),visited_pcs=seen)
   target=0
   if regs[31]:
    ins=struct.unpack_from('<I',r,(regs[31]-8)&0x1FFFFF)[0];target=0x80000000|((ins&0x3FFFFFF)<<2)
-   assert target in (0x80072314,0x80072324)
+   raise AssertionError(f'unexpected boundary {target:08X}')
   else:assert r[(destination+regs[2])&0x1FFFFF]==0
-  boundary=[regs[4],0,regs[6] if target==0x80072324 else 0]
+  boundary=[0,0,0]
   h=14695981039346656037
   for start,size in RANGES:h=fnv(r[start:start+size],h)
   a=','.join(f'0x{v:X}u' for v in args);b=','.join(f'0x{v:X}u' for v in boundary)
@@ -52,5 +52,5 @@ def main():
  out.append('};');header='\n'.join(out)+'\n';p=ROOT/'pc_port/tests/retail_formatter_frame_cases.h'
  if '--write-header' in sys.argv:p.write_text(header)
  else:assert p.read_text()==header
- print(f'PASS {n} original formatter frame executions, including explicit string BIOS stops')
+ print(f'PASS {n} original formatter frame executions, with the A(1Bh)/A(2Eh) string BIOS modelled')
 if __name__=='__main__':main()

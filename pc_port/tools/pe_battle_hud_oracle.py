@@ -318,7 +318,23 @@ def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_c
             pc = r[31] if nxt is None else nxt
             continue
         if pc == 0xA0:
-            if r[9] == 0x2B:
+            if r[9] == 0x1B:
+                # BIOS A(1Bh) strlen(src) -> length.  Reached through the
+                # retail thunks func_80072314 (formatter "%s" without a
+                # precision); psx-spx BIOS String Functions.
+                start=r[4]&0x1FFFFF;n=0
+                while ram[start+n]:n+=1
+                r[2]=n
+            elif r[9] == 0x2E:
+                # BIOS A(2Eh) memchr(src,scanbyte,len) -> pointer to the first
+                # matching byte within len, else 0.  The formatter calls it as
+                # memchr(src,0,precision) via func_80072324; psx-spx BIOS
+                # Memory Fill/Copy/Compare.
+                start=r[4]&0x1FFFFF;c=r[5]&0xFF;n=r[6];p=0
+                for i in range(n):
+                    if ram[start+i]==c:p=r[4]+i;break
+                r[2]=p
+            elif r[9] == 0x2B:
                 start=r[4]&0x1FFFFF
                 ram[start:start+r[6]]=bytes((r[5]&255,))*r[6]
                 r[2]=r[4]
