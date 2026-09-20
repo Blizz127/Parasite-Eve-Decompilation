@@ -10,6 +10,37 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## CARD-WRITE WIRING: the save is written to the card (2026-09-20)
+
+Branch `agent/card-write` from `a598ddd0`.  `func_80041108`'s states 3..11 now
+drive the ported libcard file API on the present-card path instead of stopping
+at the formatter/open/read/write/close boundaries:
+
+- Added BIOS `B(0x45h)` `erase(filename)` to `pe_libcard.c` (chain release +
+  entry clear + persist).
+- Live path: format via `PE_FormatterFrame` (scratch `0x801FF600`), then the
+  retail continuation — state 4 `open(0x10200)`+close, state 6 `open(2)`, state
+  9 write 0x2000 in 0x400 chunks, close, state 3 refresh (`open(1)` → read 0x80
+  → close+copy), state 11 `open(1)`+close+format+erase, state 10 load close.
+  Shared retry/failure tail via `func_80040F80`.
+- Fixed `pe_card_name_from_guest`: the card stores the filename without the
+  `buXX:` prefix; the game matches `dirent` against `[0x80092224]+6`.
+- The no-card path keeps the original first unresolved call (formatter), so
+  `DAY1_card_operation`/`DAY1_card_driver` and all card oracles still pass.
+
+Verified: `pe-native-tests` 1385/1385, CTest 11/11, card oracles PASS.  Live
+`--route-pad` with a present `.mcr` writes entry 0 = `BASLUS-00662000`,
+state `0x51`, size `0x2000`, and reaches `stop_reason=frame-limit` with no
+unresolved-boundary stop.
+
+**Remaining (pre-existing, separate):** the slot list still draws "Unused
+File", so the menu never leaves and story stays `0x48`.  State 2 writes the
+entry at `record + dirent[0x13]*0x44 - 0x1128` (retail 0x8004135C), but the menu
+reads `func_800424B4` = `0x800A0EF0 + card*0x418 + item*0x44`; reconciling the
+host dirent layout (currently a 20-byte name at +0x00..+0x13) with the game's
+`dirent[0x13]` convention is the next step.  Evidence:
+`docs/evidence/pe-card-write-wiring/REPORT.md`.
+
 ## SAVE-WRITE-CHAIN: func_80042020/42170/5C25C/40B80 ported (2026-09-20)
 
 Branch `agent/save-write` from `d7d6e35b`. The save-write handler and block

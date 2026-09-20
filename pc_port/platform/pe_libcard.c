@@ -502,7 +502,8 @@ pe_addr_t func_80072794(pe_addr_t dirent)
 
 static void pe_card_name_from_guest(pe_addr_t name, uint8_t out[20])
 {
-    uint32_t i;
+    uint32_t i, colon = 20u;
+
     for (i = 0; i < 20u; i++) {
         uint8_t c = PE_LoadU8(name + i);
         out[i] = c;
@@ -513,6 +514,21 @@ static void pe_card_name_from_guest(pe_addr_t name, uint8_t out[20])
     }
     for (; i < 20u; i++)
         out[i] = 0u;
+    /* Strip the leading device specifier ("bu00:", "bu10:", ...): the card
+     * stores only the filename part.  The game's directory match compares the
+     * card name against its own name template *after* the 5-char "buXX:"
+     * prefix (state 2: dirent vs [0x80092224]+6), so a stored name that keeps
+     * the prefix never matches and the slot reads as unused. */
+    for (i = 0; i < 6u && out[i] != 0u; i++) {
+        if (out[i] == ':') { colon = i; break; }
+    }
+    if (colon < 20u) {
+        uint32_t j;
+        for (j = 0; colon + 1u + j < 20u; j++)
+            out[j] = out[colon + 1u + j];
+        for (; j < 20u; j++)
+            out[j] = 0u;
+    }
 }
 
 int func_80072734(pe_addr_t name, int mode)
@@ -679,4 +695,41 @@ int func_80072784(pe_addr_t dev)
     (void)pe_card_save();
     g_card_dir_init = 0;
     return 1;
+}
+
+/* BIOS B(45h) erase(filename) — delete a file on the device.  Releases the
+ * entry's data-block chain, clears the directory entry, and persists the image.
+ * Returns 1=okay, 0=failed (psx-spx: B(45h)). */
+int func_800727A4(pe_addr_t name)
+{
+    uint8_t want[20];
+    uint32_t i;
+
+    if (!PE_Card_IsPresent() || name == 0u || !PE_RangeIsRam(name, 1u))
+        return 0;
+    pe_card_name_from_guest(name, want);
+    for (i = 0; i < PE_CARD_DIR_ENTRIES; i++) {
+        uint8_t *e;
+        uint32_t block;
+        if (!pe_card_entry_used(i))
+            continue;
+        e = pe_card_entry_ptr(i);
+        if (memcmp(e + 0x0A, want, 20u) != 0)
+            continue;
+        block = pe_card_rd16(e + 0x08);
+        while (block != 0u && block != PE_CARD_BLOCK_END &&
+               block < PE_CARD_BLOCKS && pe_card_block_used(block)) {
+            uint8_t *h = pe_card_block_ptr(block);
+            uint32_t next = pe_card_rd16(h + 0x08);
+            pe_card_wr32(h, PE_CARD_STATE_FREE);
+            pe_card_sync_frame(h);
+            block = next;
+        }
+        memset(e, 0, PE_CARD_FRAME_BYTES);
+        pe_card_sync_frame(e);
+        g_card_dirty = 1;
+        (void)pe_card_save();
+        return 1;
+    }
+    return 0;
 }
