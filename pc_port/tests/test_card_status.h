@@ -23,7 +23,8 @@ static void test_DAY1_card_status(void)
         ASSERT(hash==DAY1_card_status_cases[n].hash,"card status effects differ from original");
         ASSERT((unsigned)PE_Port_ShouldStop()==DAY1_card_status_cases[n].stopped,"card status stop differs");
         if(DAY1_card_status_cases[n].stopped) {
-            ASSERT(g_bootstrap_arg4_call_count==1 && g_bootstrap_arg4_calls[0].target==0x800726F4u &&
+            ASSERT(g_bootstrap_arg4_call_count==1 &&
+                   g_bootstrap_arg4_calls[0].target==DAY1_card_status_cases[n].target &&
                    g_bootstrap_arg4_calls[0].arg0==DAY1_card_status_cases[n].argument,"card status BIOS frontier differs");
         } else ASSERT(!g_stub_order_count,"returning card status path logged a stub");
     }

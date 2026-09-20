@@ -30,7 +30,7 @@ def signed(n):
     return n - 0x100000000 if n & 0x80000000 else n
 
 
-def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_control=None, initial_cop_data=None, bios_seed=1, instruction_budget=100000, strict_gte_flags=False, final_gte=None, visited_pcs=None, scratchpad=None):
+def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_control=None, initial_cop_data=None, bios_seed=1, instruction_budget=100000, strict_gte_flags=False, final_gte=None, visited_pcs=None, scratchpad=None, stop_pc=None):
     r = [0] * 32
     r[28], r[29] = 0x8009CD70, 0x801FF000
     r[4:4+min(len(args),4)] = args[:4]
@@ -303,6 +303,8 @@ def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_c
     pc = entry
     for _ in range(instruction_budget):
         if pc == 0 or pc in stop_at:
+            if stop_pc is not None and pc != 0:
+                stop_pc.append(pc)
             if final_gte is not None:
                 final_gte.update(data=cop_data[:], control=cop_control[:])
             return r
@@ -334,6 +336,17 @@ def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_c
                 r[2]=len(fmt % values)
             else: raise AssertionError(f'unsupported BIOS service {r[9]:X} from {r[31]:08X} in test oracle')
             pc=r[31]
+            continue
+        if pc == 0xB0:
+            if r[9] == 0x0B:
+                # BIOS B(0Bh) TestEvent.  The retail card events opened by
+                # func_800409B4 use mode 1000h (callback), and callback events
+                # never set the ready flag, so the kernel returns 0 here.
+                # https://www.problemkaputt.de/psxspx-bios-event-functions.htm
+                r[2] = 0
+            else:
+                raise AssertionError(f'unsupported BIOS B service {r[9]:X} from {r[31]:08X} in test oracle')
+            pc = r[31]
             continue
         if visited_pcs is not None: visited_pcs.add(pc)
         jump = step(pc)

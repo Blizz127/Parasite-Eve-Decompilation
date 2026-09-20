@@ -125,6 +125,7 @@ uint16_t func_80073E10(uint16_t new_mask); /* I_MASK exchange (PE_IRQ authority)
 int  func_80072714(void);            /* EnterCriticalSection */
 void func_80072724(void);            /* ExitCriticalSection */
 void func_800726C4(void);            /* BIOS A0(44h) FlushCache host adapter */
+int  func_800726F4(int event);       /* BIOS B0(0Bh) TestEvent host adapter */
 int  PE_Irq_LockDepth(void);         /* diagnostic: current critical depth */
 
 /* B53I-B1 bounded host equivalents of source 0's BIOS auto-ack controls.
