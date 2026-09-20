@@ -1911,6 +1911,9 @@ segments:
       # Probe: D_800E2248 high-halfword predicate.
       - [0xB3368, c, func_800C2B68]
       - [0xB3390, asm]
+      # func_800C653C — VRAM 0x800C653C, size 0x48, file 0xB6D3C-0xB6D84.
+      - [0xB6D3C, c, func_800C653C]
+      - [0xB6D84, asm]
       # Tier-2 probe: adjacent unsigned-halfword global setters.
       # Prefix 0x4358 (= 0xB76C0 - 0xB3368), then C spans 0x18 + 0x10.
       - [0xB76C0, c, func_800C6EC0]
