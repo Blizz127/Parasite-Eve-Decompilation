@@ -236,9 +236,47 @@ hoist the `D_8009CDDC*0x48` base; cc1 must re-load the index after each store
 
 ## 4. Closest C so far and its exact diff
 
-Two candidates are saved under this directory.
+Three candidates are saved under this directory:
 
-### 4a. Compiling candidate — `func_8001D340_candidate.c`
+| file | source of structure | status | best diff |
+|---|---|---|---|
+| `func_8001D340_m2c_typed_frame.c` | m2c CFG + width-typed fields + phantom frame | **compiles; frame 0x328 matched** | **1032 words** (`-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`) |
+| `func_8001D340_m2c_typed.c` | m2c CFG + width-typed fields | compiles, no phantom frame | 1146 words (`-O2 -G0`) |
+| `func_8001D340_candidate.c` | port SPEC | compiles, wrong structure | 1928 words (`-O2 -G0`) |
+
+### 4a. Best candidate — `func_8001D340_m2c_typed_frame.c`
+
+The m2c skeleton with each `BASE->unkNN` rewritten to a width-correct absolute
+access (`RB/RH/RW/RS/RSW/RP` macros; widths read from the retail load/store
+opcodes), plus a **phantom local `u8 phantom[0x2B8]; (void)phantom;`**. Retail's
+0x328 frame is 0x310 bytes of *never-accessed* local space (the only stack
+accesses in the whole function are the five saved registers at 0x310-0x324 and
+one outgoing argument at `0x10($sp)`), so the frame size has to be manufactured.
+`phantom[0x2B8]` makes cc1 report `vars=760, regs=5/0, args=24`, i.e. exactly
+`frame=0x328`. This is the same cc1 "phantom frame" lever already used on
+`func_800C6EF8`.
+
+```
+try_leaf.py docs/evidence/bigfish-1d340/func_8001D340_m2c_typed_frame.c 0xDB40 0x2194
+  -O2 -G0 : retail 8596 B, candidate 8736 B, 1140 differing words
+  -O1 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 : 1032 differing words  <-- best
+  -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 : 1032 differing words
+```
+
+With the frame aligned, **words 0x0000-0x0010 now match byte-for-byte** (prologue
++ `s2=rec+0x4C` delay slot). The first divergence is word 0x0014: retail
+`320200FF` (`andi $v0,$s0,0xFF`) vs candidate `320300FF` (`andi $v1,$s0,0xFF`)
+— m2c materialises `mode&0xFF` in `$v1` where retail keeps it in `$v0`. The next
+differences are the same class of allocation shifts (`0x28: 1040009F` vs
+`10600092`, `beqz $v0` vs `beqz $v1`) plus a shorter early straight-line run
+(branch displacement `0x69` vs `0x61` at word 0x40).
+
+### 4b. `func_8001D340_m2c_typed.c`
+
+Same transform without the phantom local (frame 0x70). Diff 1146 words under
+`-O2 -G0`; useful when isolating frame effects from allocation effects.
+
+### 4c. Port-derived candidate — `func_8001D340_candidate.c`
 
 Derived from the behavioural SPEC `pc_port/game/boot/func_8001D340_port.c`
 with the `PE_Load*/PE_Store*` accessors expanded to direct typed accesses so it
@@ -278,15 +316,16 @@ Structural reasons the port candidate cannot be iterated into a match:
    conservative-aliasing signature the repo already documented as a
    CSE/`volatile` lever; the port's helper-loop structure hides it.
 
-### 4b. Closest structural C — `func_8001D340_m2c_draft.c`
+### 4d. Raw m2c output — `func_8001D340_m2c_draft.c`
 
 The raw `python3 tools/analysis/m2c_leaf.py --print func_8001D340` output (647
 lines). It recovers the true control flow, all 168 blocks, every field offset
-and the unrolled colour stores, so it is **the right skeleton** for the next
-attempt. It does **not** compile as emitted because m2c models `D_8009D278` /
+and the unrolled colour stores, so it is the source of the typed skeletons in
+4a/4b. It does **not** compile as emitted because m2c models `D_8009D278` /
 `D_8009D254` / `D_8009D20C` as struct pointers but declares the locals
 (`void *var_s0`, `void *temp_v1_6`) without the matching struct types, and it
-writes `D_8009D278 + 0x4C` where it means a byte offset. To make it compile:
+writes `D_8009D278 + 0x4C` where it means a byte offset. `func_8001D340_m2c_typed*.c`
+is the mechanical fix-up; to regenerate it the substitutions are:
 
 * declare `extern u8 *D_8009D278, *D_8009D254, *D_8009D20C;`
 * define three structs (`Rec`, `Actor`, `Node`+`Body`) with the field widths in
@@ -316,38 +355,50 @@ union or explicit byte-offset macros are required.)
 | `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh` baseline | PASS, EXACT SHA-1, 870 leaves |
 | `m2c_leaf.py --print func_8001D340` | 647-line draft; correct CFG, not compilable as emitted (untyped struct locals) |
 | `try_leaf.py` on port-derived typed candidate, 5 profiles (-O2/-O1, -G0/-G8, expand-div, three-word) | 1927-1931 differing words in every profile; no profile moves the frame/entry divergence |
+| width-typed m2c skeleton (`m2c_typed.c`) | compiles; 1146 differing words (-O2 -G0), 1038 with three-word |
+| **phantom frame `u8 phantom[0x2B8]`** on the typed skeleton | **frame becomes exactly 0x328; words 0x0000-0x0010 match; best diff 1032** |
+| `MASPSX_THREE_WORD_SYMBOL_STORE=1` on the typed skeleton | -114 words (1146 -> 1032) |
+| `MASPSX_EXPAND_DIV=1` on the typed skeleton | 1141 (no gain at this stage) |
+| `-O2 -G8` on the typed skeleton | frame 7280 B / 1498 diffs — retail uses absolute (`lui`) addressing for the colour tables, so `-G0` is correct |
 | partial-span carve analysis | ruled out by construction: one prologue / one epilogue / one `jr $ra` |
 | delay-slot-aware block split | 168 blocks (vs 196 naive) — delay slots folded into the branching block |
 
 ## 6. Recommendation for the next attempt
 
-Do **not** try to carve. Attack it whole, and do it as follows:
+Do **not** try to carve. Attack it whole, starting from
+`func_8001D340_m2c_typed_frame.c` (compiles, frame already 0x328, words
+0x0000-0x0010 matching, 1032 differing words) and iterate:
 
-1. Start from `func_8001D340_m2c_draft.c` (accurate CFG + field offsets), not
-   from the port (wrong structure). Type the three structs using the width
-   table above; compile it to establish a real whole-function baseline size
-   (expected ~8.5 KB). The m2c draft already contains the unrolled colour stores
-   and the exact block order, so the remaining work is register allocation, not
-   control flow.
-2. Fix the **entry block first** and freeze it. Retail's first 12 instructions
-   are: `addiu sp,-0x328`; `sw s0,0x310`; `addu s0,a0`; `lui a0,%hi(D_8009D278)`;
-   `lw a0,%lo(...)`; `andi v0,s0,0xFF`; `sw ra,0x320`; `sw s3,0x31C`;
-   `sw s2,0x318`; `sw s1,0x314`; `beqz v0,0x8001D5E8`; delay `addiu s2,a0,0x4C`.
-   Nothing else can match until the frame is 0x328 and `s0=$a0`, `s2=rec+0x4C`.
-   In C terms: keep `mode` in `$s0`, `rec` in `$a0`/`$s2`, do **not** load
-   `phase` or `actor` before the `mode&0xFF`/`D_8009D1A0` gates.
+1. The remaining work is **register allocation only** — the CFG, the field
+   widths, the unrolled colour stores and the frame are all in place. Do not
+   re-derive control flow.
+2. Fix the **entry block first** and freeze it. With the phantom frame, words
+   0x00-0x10 already match: `addiu sp,-0x328`; `sw s0,0x310`; `addu s0,a0`;
+   `lui a0,%hi(D_8009D278)`; `lw a0,%lo(...)`; `andi v0,s0,0xFF`; `sw ra,0x320`;
+   `sw s3,0x31C`; `sw s2,0x318`; `sw s1,0x314`; `beqz v0,0x8001D5E8`; delay
+   `addiu s2,a0,0x4C`. The first real divergence is word 0x14: m2c puts
+   `mode&0xFF` in `$v1` (`andi $v1,$s0,0xFF`), retail keeps it in `$v0`. Make
+   `rec->unk4C`/`rec->unk8` reads use the value already in `$v0`, or reorder the
+   `D_8009D1A0` load so the `andi` lands in `$v0`. Note the branch at word 0x28
+   is already 8 words shorter in the candidate — closing an early straight-line
+   gap will re-align all later branch displacements.
 3. Then proceed region by region (R1 -> R6). Region boundaries are branch
    targets, so each region can be diffed independently by an `asm` splice:
    temporarily emit the matched prefix as C and leave the rest as `.s`, using
    `try_leaf` on the prefix *only for triage* — remember no prefix span can be
    registered, this is purely to localise regressions.
-4. Expect `MASPSX_EXPAND_DIV=1` to matter in R1 (the `rec+0x28 /
-   (rec+0x30*0x64)` division emits the retail signed-division sequence with the
-   `break 6/7` guards) and in R6; verify per region.
+4. `MASPSX_THREE_WORD_SYMBOL_STORE=1` is **on** for this leaf (it removes ~114
+   words, i.e. the colour-table `sb` sequences want the three-word store form).
+   Profile it as `era_o2_g0_three_word` when it is eventually registered.
 5. The per-store `D_8009CDDC` reload in the colour blocks (R2/R3a/R5) will
    need either a `volatile` index or an explicit recomputed base per store —
    the `volatile`-on-structure-pointer lever already proven in this repo
-   (ACTIVE_HANDOFF, `func_800762A0` note) is the candidate mechanism.
+   (ACTIVE_HANDOFF, `func_800762A0` note) is the candidate mechanism. The typed
+   skeleton already reproduces the reload shape, so diff those blocks to
+   confirm.
+6. Keep the phantom frame: retail's 0x328 frame is 0x310 bytes of never-accessed
+   local space. If a future edit shrinks the frame, re-tune `phantom[]` so cc1
+   reports `vars + 0x2C == 0x328`.
 
 Realistic assessment: this is a multi-session leaf. A whole match needs the
 entry + all 6 regions byte-exact simultaneously because cc1's allocator is

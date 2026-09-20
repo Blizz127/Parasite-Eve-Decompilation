@@ -23,15 +23,20 @@ it has exactly one prologue (`addiu $sp,$sp,-0x328`), one epilogue
 nested functions; there are none here. **It must be matched whole.**
 
 The full structural map (168-block table with offset/size/region/purpose, field
-widths, six regions R1-R6), the closest compiling candidate
-(`docs/evidence/bigfish-1d340/func_8001D340_candidate.c`, port-derived: 3,152 B,
-1,927-1,931 differing words across five era profiles), and the m2c skeleton that
-should seed the next attempt (`func_8001D340_m2c_draft.c`, correct CFG but
-untyped struct locals) are in `docs/evidence/bigfish-1d340/REPORT.md`.
-Key blocker: the colour tables need hand-unrolled stores with a per-store
-`D_8009CDDC` reload (cc1 2.7.2 does not unroll loops at -O2), and the entry
-block must be fixed first (`s0=mode`, `s2=rec+0x4C`, no early `phase`/`actor`
-load) or the global allocator perturbs all 2,149 instructions.
+widths, six regions R1-R6) is in `docs/evidence/bigfish-1d340/REPORT.md`. The
+best candidate now **compiles and its prologue matches byte-for-byte**:
+`docs/evidence/bigfish-1d340/func_8001D340_m2c_typed_frame.c` (m2c CFG +
+width-typed field accesses + `u8 phantom[0x2B8]`) reports **1032 differing
+words** under `-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`, and words
+0x0000-0x0010 are exact. **New lever confirmed:** retail's 0x328 frame is 0x310
+bytes of never-accessed local space (only saved regs 0x310-0x324 + one outgoing
+arg at `0x10($sp)` are touched), so a phantom address-taken local
+(`u8 phantom[0x2B8]; (void)phantom;`) is required to make cc1 emit it — same
+trick as `func_800C6EF8`. First real divergence is word 0x14 (`andi $v0` vs
+`andi $v1`). The port-derived candidate
+(`func_8001D340_candidate.c`) is structurally wrong (helper loops vs retail's
+hand-unrolled colour stores, eager `phase`/`actor` loads): 1928 diffs; use it
+only for the field-offset spec, not as a skeleton.
 
 ## PARENT STATUS (2026-09-20): 870 matching C leaves; executed-path C-share 37.18%
 
