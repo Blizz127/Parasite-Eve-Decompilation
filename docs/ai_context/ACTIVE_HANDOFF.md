@@ -66,28 +66,34 @@ leaves restored authority for 39 that were orphaned). Full CTest 11/11.
 
 **Live port.** Real Disc 1 boots and renders. `--route-pad` autopilot (windowed)
 plays Day 1: opera house, first battle, field rooms. `--headless --route-pad`
-now drives the same route at full speed (headless present hook ticks `g_frame`;
-commit `0ae2a69`) and runs to **frame ~38000, story `0x48`** before the next
-wall: `[MENU] Unported help selection 36` → `[STUB:BOOTSTRAP_RET]
-func_8004C608` (the inventory-help window's switch lacks ids 36-39). Before
-that, the FMV path was unblocked: the opening STR frame now decodes in-bounds
-(DAY2-159b), the post-E08 media loop is re-landed (DAY2-159c, carve SHA-256
-`77218c9c…`), and the DAY2-158u MDEC orphan-supersede host model was re-landed
-(`pe_mdec.c`, commit `c977ab9`). Live FMV (real Disc 1, headless, no
-`--skip-movie`) now runs past `MDEC_decode_busy` through ~320
-`func_80192934_enter` entries and stops honestly at
-`CD_device_sector_overrun`. **CD experiment:** restoring the pre-refactor
-`pe_cdreg.c` (54b814a, the DAY2-158v/w/z backpressure + B0CD0 model) makes that
-run HANG silently instead, because the B0CD0 catch-up lived in the removed
-`HostFB_PumpCdProgress` (now `HostFB_StreamTick`); the explicit STOP is the
-better current boundary. Solving it means re-landing the B0CD0 catch-up onto
-`HostFB_StreamTick` with the new complete-frame delivery, not just pe_cdreg.
+drives the same route at full speed (headless present hook ticks `g_frame`;
+commit `0ae2a69`) to **frame ~38000, story `0x48`**. Walls cleared this session,
+in order: inventory-help ids 36-39 (`func_8004C608`, oracle-proven) then the
+BIOS `B0(0Bh)` TestEvent drain (`func_800405A4`, kernel event table in
+`pe_libetc.c`). The route now stops at the next real named boundary,
+`card _card_info A0(AB) kernel call` (`func_8007DD44`); `_card_load`/
+`_new_card`/`_card_write` are named per-target too. Card I/O completion is
+IRQ-level card-event delivery the port does not model; **no card success is
+faked**.
 
-**Open work / next frontiers.** (1) inventory-help ids 36-39
-(`func_8004C608`, 0x648 bytes, `asm/disc1/3CE08.s`); (2) re-land the B0CD0
-catch-up onto `HostFB_StreamTick` (see CD experiment above); (3) carve the
-ranked large functions from the worklist. **Disc 2 is code-identical:** this
-session re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
+**Movie/FMV path.** The opening STR frame decodes in-bounds (DAY2-159b), the
+post-E08 media loop is re-landed (DAY2-159c, carve SHA-256 `77218c9c…`), and
+the DAY2-158u MDEC orphan-supersede host model is back (`pe_mdec.c`, `c977ab9`).
+Live FMV (real Disc 1, headless, no `--skip-movie`) now runs past
+`MDEC_decode_busy`, and the CD pending-sector catch-up is re-landed on
+`HostFB_StreamTick` (`HostFB_CdServicePending`, `pe_cdreg` 158v backpressure):
+the run reaches ~319 `func_80192934_enter` entries and stops at the **bounded,
+named** `CD_B0CD0_pending_unresolved` — no `CD_device_sector_overrun`, no
+silent hang. **Not a full unlock:** at the stop the guest has issued a closing
+Stop with one sector unread (`reading=0`), so the retail reader has no reason
+to BFRD it; that guest-side media-loop completion is the next frontier.
+
+**Open work / next frontiers.** (1) the memory-card kernel/controller model (or
+an evidence-based no-card path) for `_card_info`/`_card_load`/`_new_card`/
+`_card_write`, including the spec-0x100 timeout events; (2) the guest-side
+media-loop completion after the ~319-step FMV media loop; (3) carve the ranked
+large functions from the worklist. **Disc 2 is code-identical:** this session
+re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
 `SLUS_006.62` (both SHA-1 `452fb033…`); `configs/USA/disc2.yaml` already
 records that `PE.IMG` is identical too, so the decompilation/port covers disc
 2's code and overlays. Only the FMV/XA streams and volume metadata differ, so
