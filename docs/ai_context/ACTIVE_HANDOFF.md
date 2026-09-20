@@ -177,7 +177,7 @@ floating upstream cannot break it again), and a `pe-mipsel` distrobox (Debian
 trixie, binutils 2.44) that `build_us.sh` auto-detects. `local/pe_disc1.path`
 points at the attic Disc 1 image.
 
-**Tests.** `pe-native-tests` **1384 run / 1384 passed / 0 failed / 0 skipped**.
+**Tests.** `pe-native-tests` **1385 run / 1385 passed / 0 failed / 0 skipped**.
 `pe-route-boot-day2-tests` **27/27 ordered Day-1 milestones** to the
 `m0020i` save/load menu (42000 frames, frame-limit stop), executed path invokes
 only 4 HOST_ADAPTED stubs and **0 UNSUPPORTED**. The harness now applies the
