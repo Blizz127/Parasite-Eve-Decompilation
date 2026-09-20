@@ -360,7 +360,10 @@ segments:
       - [0xAB2C, c, func_8001A32C]
       # Probe: companion state bit-1 clearer with retail $v0/$a0 allocation.
       - [0xAB50, c, func_8001A350]
-      - [0xAB74, asm]
+      # func_8001A374 — VRAM 0x8001A374, size 0x1C, file 0xAB74-0xAB90.
+      # D_800BCFFC = **a0 (byte store of a word load); return 1.
+      - [0xAB74, c, func_8001A374]
+      - [0xAB90, asm]
       # decomp-continue-4: two result-store wrappers (func_8005401C/52F70
       # result stored through *a0[0]; return 1).
       - [0xAC3C, c, func_8001A43C]
