@@ -520,6 +520,8 @@ segments:
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.
       - [0x2E02C, c, func_8003D82C]
       - [0x2E034, asm]
+      - [0x2E3E4, c, func_8003DBE4]
+      - [0x2E508, asm]
       # Volume 103: signed-index 16-byte-record initializer; era -O2 -G0.
       - [0x2E750, c, func_8003DF50]
       # Phase 5AE: C leaf func_8003DFC8 — VRAM 0x8003DFC8, size 0x8.
