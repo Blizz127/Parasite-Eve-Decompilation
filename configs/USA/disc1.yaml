@@ -1694,6 +1694,9 @@ segments:
       # Prefix of 77C28.s is 0x36F4 (= 0x7B31C - 0x77C28); resume 7B39C.s 0x1EE0.
       - [0x7B31C, c, func_8008AB1C]
       - [0x7B39C, asm]
+      # func_8008B084 — VRAM 0x8008B084, size 0x44, file 0x7B884-0x7B8C8.
+      - [0x7B884, c, func_8008B084]
+      - [0x7B8C8, asm]
       - [0x7B9D0, c, func_8008B1D0]
       - [0x7B9FC, asm]
       # Probe: signed-byte state-word setter with paired halfword clear.
