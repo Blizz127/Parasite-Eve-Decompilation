@@ -208,7 +208,11 @@ main_loop:                      /* CA7C */
         t0 += a3t;
         t1 = PE_LoadU32(t0);
         t3 = 0u;                /* CACC */
-        /* CAD4 delay (at = t1 & 0xFF) already equals at: t1 kept */
+        /* CAD4 is the delay slot of the `b CADC` that rejoins the common
+         * shift: it re-reads at = t1 & 0xFF from THIS second-table word.
+         * The first t1 was the zero that selected this arm, so reusing the
+         * pre-branch at would shift v0 by 0 and desync the bitstream. */
+        at = (int32_t)(t1 & 0xFFu);
     } else {
         t3 = PE_LoadU32(t0 + 4u);   /* CAD8 */
     }

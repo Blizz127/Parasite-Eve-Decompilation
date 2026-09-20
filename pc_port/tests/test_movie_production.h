@@ -168,3 +168,132 @@ static void test_DAY2_92ce8_media_loop_tail(void)
     PE_Disc_Close(disc);
     PASS();
 }
+
+/* Regression — func_8010C89C's CA7C zero-first-table escape arm.
+ *
+ * At CA7C the decoder looks the symbol up in the first table.  When that
+ * word is zero it takes the CA98 escape: shift in eight more bits, look
+ * up the *second* table at a3, and then shift v0 by the second word's low
+ * byte.  CAD4 is the delay slot of the `b CADC` rejoin and re-reads
+ * `at = t1 & 0xFF` from that second word; the pre-branch `at` belongs to
+ * the zero first word and must not be reused.  The older transcription
+ * kept the stale `at`, so those frames shifted v0 by 0 and desynchronised
+ * the bitstream, emitting ~2x the declared RLE extent.
+ *
+ * FMV001 frame 319 (opening movie, LBA 192926..) drives this arm.  The
+ * declared extent is 51076 bytes; the buggy decoder wrote 101510 bytes,
+ * which overflowed the 0xFA00 RLE arena into the record pool at
+ * A+0x1F400 and stalled the guest reader.  The canary past the declared
+ * extent is the non-vacuous guard: the pre-fix decoder overwrites it. */
+static void test_DAY2_c89c_second_table_escape(void)
+{
+    char err[256] = {0};
+    uint8_t raw[2352];
+    PE_Disc *disc;
+    unsigned chunks = 0;
+    uint32_t declared;
+
+    TEST("DAY2_c89c_second_table_escape");
+    disc = BTL6_OpenDisc1(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "opening movie disc unavailable");
+
+    ResetTestState();
+    for (unsigned sector = 0; sector < 38u; sector++) {
+        ASSERT(PE_Disc_ReadRawSector(disc, 1940u + sector, raw),
+               "libpress sector read");
+        memcpy(PE_Translate(0x8010BCF8u + sector * 2048u, 2048u),
+               raw + 24, 2048u);
+    }
+    func_8010BD4C(0x80130000u, 0u);
+
+    /* Assemble FMV001 frame 319 exactly as the production reader does:
+     * the nine video chunks' 2016-byte bodies, skipping the interleaved
+     * XA sector. */
+    for (unsigned lba = 192926u; lba < 192926u + 32u && chunks < 9u; lba++) {
+        ASSERT(PE_Disc_ReadRawSector(disc, lba, raw), "frame 319 sector read");
+        if (!(raw[24] == 0x60u && raw[25] == 1u))
+            continue;
+        ASSERT((uint16_t)(raw[32] | (raw[33] << 8)) == 319u,
+               "frame 319 chunk sequence");
+        memcpy(PE_Translate(0x80150000u + chunks * 2016u, 2016u),
+               raw + 56, 2016u);
+        chunks++;
+    }
+    ASSERT(chunks == 9u, "frame 319 video chunk count");
+
+    declared = ((PE_LoadU32(0x80150000u) & 0xFFFFu) << 2) + 4u;
+    ASSERT(declared == 51076u, "frame 319 declared RLE extent");
+    memset(PE_Translate(0x80160000u, declared + 64u), 0xCD, declared + 64u);
+    ASSERT(func_8010C89C(0x80150000u, 0x80160000u, 0x80130000u, 0u) == 0 &&
+           !PE_Port_ShouldStop(),
+           "frame 319 VLC failed to terminate");
+    ASSERT(PE_LoadU32(0x8011EBB4u) == 0x80160000u + declared,
+           "frame 319 output bound differs");
+    for (unsigned i = 0; i < 64u; i++)
+        ASSERT(PE_LoadU8(0x80160000u + declared + i) == 0xCDu,
+               "C89C wrote past the declared RLE extent");
+
+    PE_Disc_Close(disc);
+    PASS();
+}
+
+/* Regression — func_80191B64's C44 record-limit completion latch.
+ *
+ * Retail C44 is: if (w < D_801D11B0) latch D_801D0DBD; else if !(w <
+ * rec[8]) fall through and latch too.  A stream frame number w therefore
+ * sets the movie end-flag when it regresses below the last published
+ * frame OR reaches/exceeds the record's frame limit.  The older
+ * transcription only latched on the regression, so the opening movie
+ * (record limit 2077) never completed and the reader ran past EOF.
+ *
+ * The second pass pins the true retail moment: w == record limit. */
+static void test_DAY2_91b64_record_limit_latch(void)
+{
+    const pe_addr_t pool = 0x80150000u;
+    const pe_addr_t rec  = 0x80151000u;
+
+    TEST("DAY2_91b64_record_limit_latch");
+    ResetTestState();
+    DAY1_SeedDisplayDispatch();
+    HostFB_Init();
+    func_8007ED58();
+    B558_PlantPointers();
+    PE_GPU_Init();
+    func_80073C94();
+    B54KR_SeedGpuStatic();
+    MOVAU_SeedRegisterPointers();
+
+    PE_StoreU32(0x800C0DC8u, pool);
+    PE_StoreU32(0x800C20C4u, 64u);
+    PE_StoreU16(pool, 2u);          /* state 2 -> 7C484 got-frame      */
+    PE_StoreU16(pool + 16u, 320u);
+    PE_StoreU16(pool + 18u, 240u);
+    PE_StoreU32(0x801D11ACu, rec);
+    PE_StoreU16(rec + 8u, 200u);    /* rec[8] = record frame limit     */
+
+    /* Below the limit: w >= lim (so the regression arm is skipped) but
+     * w < rh, so retail leaves the latch clear. */
+    PE_StoreU32(0x800BE9ECu, 0u);
+    PE_StoreU32(0x800C0DBCu, 0u);
+    PE_StoreU32(pool + 8u, 100u);   /* w                               */
+    PE_StoreU16(0x801D11B0u, 99u);  /* lim                             */
+    PE_StoreU8(0x801D0DBDu, 0u);
+    (void)func_80191B64(0x801D1464u);
+    ASSERT(!PE_Port_ShouldStop(), "91B64 stopped below the limit");
+    ASSERT(PE_LoadU8(0x801D0DBDu) == 0u,
+           "frame below the record limit latched the end flag");
+
+    /* At the limit: the true retail completion moment. */
+    PE_StoreU32(0x800BE9ECu, 0u);
+    PE_StoreU32(0x800C0DBCu, 0u);
+    PE_StoreU16(pool, 2u);
+    PE_StoreU32(pool + 8u, 200u);   /* w == rh                         */
+    PE_StoreU16(0x801D11B0u, 199u);
+    PE_StoreU8(0x801D0DBDu, 0u);
+    (void)func_80191B64(0x801D1464u);
+    ASSERT(!PE_Port_ShouldStop(), "91B64 stopped on the limit pass");
+    ASSERT(PE_LoadU8(0x801D0DBDu) == 1u,
+           "record-limit frame did not latch the end flag");
+
+    PASS();
+}
