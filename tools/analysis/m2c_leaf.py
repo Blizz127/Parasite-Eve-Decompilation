@@ -174,7 +174,12 @@ def main() -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         dest = out_dir / f"{name}.c"
         dest.write_text(text)
-        print(f"{name}: {unit}.s -> {dest.relative_to(ROOT)}")
+        try:
+            shown = dest.relative_to(ROOT)
+        except ValueError:
+            # --out-dir may point outside the repo; relative_to would raise.
+            shown = dest
+        print(f"{name}: {unit}.s -> {shown}")
         if args.try_leaf:
             run_try_leaf(name, dest, index)
 
