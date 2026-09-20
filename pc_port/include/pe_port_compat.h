@@ -40,6 +40,7 @@ int  func_80072774(int fd);
 int  func_80072784(pe_addr_t dev);
 pe_addr_t func_800727B4(pe_addr_t dirspec, pe_addr_t dirent);
 pe_addr_t func_80072794(pe_addr_t dirent);
+int  func_800727A4(pe_addr_t name);   /* BIOS B(45h) erase(filename) */
 int  func_80071A04(pe_addr_t a, pe_addr_t b, int n);
 int32_t func_8004D27C(void);
 
