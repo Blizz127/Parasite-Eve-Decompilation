@@ -75,12 +75,19 @@ segments:
       - [0x75F8, c, func_80016DF8]
       - [0x761C, c, func_80016E1C]
       - [0x7640, asm]
+      # func_80016FE0 — VRAM 0x80016FE0, size 0x38, file 0x77E0-0x7818.
+      # Store 0/1 through *a0 by D_8009D2E8 bit 0; return 1. era_o2_g0.
+      - [0x77E0, c, func_80016FE0]
+      - [0x7818, asm]
       - [0x7ABC, c, func_800172BC]
       - [0x7AE0, c, func_800172E0]
       - [0x7AFC, c, func_800172FC]
       - [0x7B1C, asm]
       - [0x7BF4, c, func_800173F4]
-      - [0x7C10, asm]
+      # func_80017410 — VRAM 0x80017410, size 0x34, file 0x7C10-0x7C44.
+      # func_800375E0(**a0, 0, buf[-1]) with a 0x10-byte stack halfword buffer.
+      - [0x7C10, c, func_80017410]
+      - [0x7C44, asm]
       # func_800176B8 — VRAM 0x800176B8, size 0x28, file 0x7EB8-0x7EE0.
       # OR *arg[0] into field 0x98 of pointer global D_8009D2F0; return 1.
       # Default era_o2_g0.
@@ -160,6 +167,9 @@ segments:
       - [0x8B00, asm]
       - [0x8D6C, c, func_8001856C]
       - [0x8D98, asm]
+      # func_80018718 — VRAM 0x80018718, size 0x3C, file 0x8F18-0x8F54.
+      # Store 1/0 through *a0 by D_800A76C4 bit 2; return 1. era_o2_g0.
+      - [0x8F18, c, func_80018718]
       # Phase 600: bit-2 setter with retail $v1 global-pointer allocation.
       - [0x8F54, c, func_80018754]
       - [0x8F74, asm]
@@ -228,10 +238,16 @@ segments:
       # Mid-98BC carve: prefix 0x1FC, C×2, resume 9ADC.s to 9C84.
       - [0x9AB8, c, func_800192B8]
       - [0x9AC8, c, func_800192C8]
-      - [0x9ADC, asm]
+      # func_800192DC — VRAM 0x800192DC, size 0x30, file 0x9ADC-0x9B0C.
+      # func_8006FC18(**a0, D_8009D2F0, 0); return 1. era_o2_g0.
+      - [0x9ADC, c, func_800192DC]
+      - [0x9B0C, asm]
       # Phase 5EF: call-and-return-one wrapper around func_800703F4.
       - [0x9BB8, c, func_800193B8]
       - [0x9BD8, asm]
+      # func_80019450 — VRAM 0x80019450, size 0x34, file 0x9C50-0x9C84.
+      # (2*sign16(+0x224)) * **a0 >> 16 at short (+0x1B4)+0x14. era_o2_g0.
+      - [0x9C50, c, func_80019450]
       # Phase 5EJ-outgoing-arg: C func_80019484 — VRAM 0x80019484, size 0x2C.
       # Double-dereference int **arg0 into outgoing $a0, then jal the already-C
       # int func_800438C0(int); return 1. Era -O2 -G0 (no $gp references).
@@ -303,7 +319,10 @@ segments:
       - [0xA524, c, func_80019D24]
       # Probe: four-halfword forwarding wrapper.
       - [0xA544, c, func_80019D44]
-      - [0xA584, asm]
+      # func_80019D84 — VRAM 0x80019D84, size 0x34, file 0xA584-0xA5B8.
+      # func_800375E0(**a0, 1, buf[-1]) with a 0x10-byte stack halfword buffer.
+      - [0xA584, c, func_80019D84]
+      - [0xA5B8, asm]
       # Probe: call-and-store wrapper retaining descriptor across the call.
       - [0xA9A8, c, func_8001A1A8]
       # Probe: state bit-24 setter with retail $v0/$a0 allocation.
@@ -399,6 +418,12 @@ segments:
       # Phase 5FP-370A8: fixed-point quotient helper, era -O2 -G0.
       # Mid-26C48 carve: prefix 0xC60, C 0x14, resume 278BC.s.
       - [0x26C48, asm]
+      # func_80036DC8 — VRAM 0x80036DC8, size 0x30, file 0x275C8-0x275F8.
+      # Three-call init sequence 36DF8/36E34/36E58. era_o2_g0.
+      - [0x275C8, c, func_80036DC8]
+      # func_80036DF8 — VRAM 0x80036DF8, size 0x3C, file 0x275F8-0x27634.
+      # volatile two-store flag protocol for D_800A76A8/A4/A0. era_o2_g0.
+      - [0x275F8, c, func_80036DF8]
       - [0x27634, c, func_80036E34]
       - [0x27658, c, func_80036E58]
       - [0x2767C, asm]
@@ -506,7 +531,10 @@ segments:
       # File span 0x33328–0x33338 exclusive. 32-bit global getter:
       # lui/lw/jr/nop on D_800A1838. Plain -O1 matches.
       # Mid-330D4 carve: prefix 0x254, C 0x10, resume 33338.s 0xAF64.
-      - [0x330D4, asm]
+      # func_800428D4 — VRAM 0x800428D4, size 0x3C, file 0x330D4-0x33110.
+      # State byte D_800A0ED5[(D_800A1860-1)*1048] = 0xD.
+      # Three-word $at indexed store: era_o2_g0_three_word.
+      - [0x330D4, c, func_800428D4]
       # Phase 5EI: func_80042910 — VRAM 0x80042910, size 0x18.
       # Dual clear: D_800A1860 (int) + D_800A1868 (u32 opaque decl). Mid-330D4 carve.
       - [0x33110, c, func_80042910]
@@ -583,6 +611,13 @@ segments:
       # func_800504BC; era -O2 -G0, exact first phrasing.
       - [0x3BD5C, c, func_8004B55C]
       - [0x3BD84, asm]
+      # func_8004BC80 — VRAM 0x8004BC80, size 0x34, file 0x3C480-0x3C4B4.
+      # Allocate command 0x16 and install func_8004BCB4 at +0x30. era_o2_g0.
+      - [0x3C480, c, func_8004BC80]
+      # func_8004BCB4 — VRAM 0x8004BCB4, size 0x34, file 0x3C4B4-0x3C4E8.
+      # func_8005E8A4(0,4); func_8005F594(func_8005DC4C(0x19)). era_o2_g0.
+      - [0x3C4B4, c, func_8004BCB4]
+      - [0x3C4E8, asm]
       - [0x3C708, c, func_8004BF08]
       - [0x3C740, asm]
       # Phase 5EJ: constant handle construction and dispatch.
@@ -703,6 +738,10 @@ segments:
       - [0x41CF8, c, func_800514F8]
       - [0x41D04, c, func_80051504]
       - [0x41D10, asm]
+      # func_800515C0 — VRAM 0x800515C0, size 0x38, file 0x41DC0-0x41DF8.
+      # Latch a0 into *(*D_8009D254)+0xC when present, and into D_800C0E08.
+      - [0x41DC0, c, func_800515C0]
+      - [0x41DF8, asm]
       # func_80051684 — VRAM 0x80051684, size 0x30, file 0x41E84-0x41EB4.
       # Two-level guarded store value<<16 into +8 of (*D_8009D254)->[0].
       # Default era_o2_g0. Resume asm at 0x41EB4.
@@ -806,6 +845,9 @@ segments:
       - [0x4C974, asm]
       - [0x4CC88, c, func_8005C488]
       - [0x4CC98, asm]
+      # func_8005D940 — VRAM 0x8005D940, size 0x30, file 0x4E140-0x4E170.
+      # Fill an 8-byte record from D_8009D280, then submit it. era_o2_g0.
+      - [0x4E140, c, func_8005D940]
       # Volume campaign: signed-threshold gp state selector; size 0x24,
       # era -O2 -G8.
       - [0x4E170, c, func_8005D970]
@@ -1022,6 +1064,14 @@ segments:
       # Unsigned-byte global getter on D_8009574E; plain -O1 matches.
       - [0x654B8, c, func_80074CB8]
       - [0x654C8, asm]
+      # func_80075B1C — VRAM 0x80075B1C, size 0x30, file 0x6631C-0x6634C.
+      # Call the +0x38 method of *D_80095744; return its sign bit. era_o2_g0.
+      - [0x6631C, c, func_80075B1C]
+      - [0x6634C, asm]
+      # func_80075C6C — VRAM 0x80075C6C, size 0x28, file 0x6646C-0x66494.
+      # GPU primitive packer: +3 = 2, +4 = 0xE6000001/0 by a1, +8 = 0.
+      - [0x6646C, c, func_80075C6C]
+      - [0x66494, asm]
       # Phase 5FF: command-word builder with two flag bits and a masked field.
       - [0x66950, c, func_80076150]
       - [0x66970, asm]
@@ -1365,13 +1415,25 @@ segments:
       # Phase 5EH: register reset then dispatch one of two argument pairs.
       - [0x758F4, c, func_800850F4]
       - [0x75934, c, func_80085134]
-      - [0x75974, asm]
+      # func_80085174 — VRAM 0x80085174, size 0x34, file 0x75974-0x759A8.
+      # Wait while D_8009D24C stays 1 after an initial 1. era_o1_g0.
+      - [0x75974, c, func_80085174]
+      - [0x759A8, asm]
       # Phase 5EG-setter: func_80085728 — VRAM 0x80085728, size 0x1C.
       # Dual pre-jr $at store of base / base+0x800 into D_8009D240 / D_8009D260.
       # Types proven by reader func_8008AB1C. Era -O2 -G0.
       # Mid-74FB0 carve: prefix 0xF78, C 0x1C, resume 75F44.s 0x199C.
       - [0x75F28, c, func_80085728]
       - [0x75F44, asm]
+      # func_800858E8 — VRAM 0x800858E8, size 0x30, file 0x760E8-0x76118.
+      # OR indexed word into D_8009B7CC[1]; return idx < 3.
+      # Three-word $at indexed load: era_o2_g0_three_word.
+      - [0x760E8, c, func_800858E8]
+      # func_80085918 — VRAM 0x80085918, size 0x34, file 0x76118-0x7614C.
+      # AND the complement of the indexed word into D_8009B7CC[1].
+      # Destination-register indexed load: era_o2_g0_passthrough_load.
+      - [0x76118, c, func_80085918]
+      - [0x7614C, asm]
       # Tier-2 B: direct-call-proven `func_80073CC4(9, value)` wrapper;
       # era -O2 -G0, exact first phrasing. The 0xC resume begins with
       # retail alignment nops before the next real function at 0x765F4.
@@ -1482,6 +1544,10 @@ segments:
       # era_o1_g0 (retail fills the jr delay slot with the second store).
       - [0x7A728, c, func_80089F28]
       - [0x7A750, asm]
+      # func_8008A02C — VRAM 0x8008A02C, size 0x3C, file 0x7A82C-0x7A868.
+      # Add (a1 - word0) to words 0/1 of each 0x40-byte record. era_o2_g0.
+      - [0x7A82C, c, func_8008A02C]
+      - [0x7A868, asm]
       # Phase 5EG-readers: func_8008AB1C — VRAM 0x8008AB1C, size 0x80.
       # Pins D_8009D240 as unsigned short * and D_8009D260 as unsigned char *
       # via lhu / unscaled addu. Era -O1 -G0.
@@ -1529,7 +1595,10 @@ segments:
       # Advance a cursor, store the fetched byte sign-extended into +0xDE.
       # Default era_o2_g0. Resume asm at 0x803FC.
       - [0x803D4, c, func_8008FBD4]
-      - [0x803FC, asm]
+      # func_8008FBFC — VRAM 0x8008FBFC, size 0x2C, file 0x803FC-0x80428.
+      # Cursor post-increment; sign-extended byte added into +0xDE. era_o2_g0.
+      - [0x803FC, c, func_8008FBFC]
+      - [0x80428, asm]
       # Phase 5N: C leaf func_8008FCB4 — VRAM 0x8008FCB4, size 0x8.
       # File span 0x804B4–0x804BC exclusive. Zero halfword at arg0+0x82.
       - [0x804B4, c, func_8008FCB4]
@@ -1537,7 +1606,10 @@ segments:
       # Same cursor/bite shape as func_8008FBD4, sign-extended into +0xE0.
       # Default era_o2_g0. Resume asm at 0x804E4.
       - [0x804BC, c, func_8008FCBC]
-      - [0x804E4, asm]
+      # func_8008FCE4 — VRAM 0x8008FCE4, size 0x2C, file 0x804E4-0x80510.
+      # Same cursor/bite shape as func_8008FBFC, into +0xE0. era_o2_g0.
+      - [0x804E4, c, func_8008FCE4]
+      - [0x80510, asm]
       # agent/decompile-100: flag-clear/status-set trio (0x24 each).
       - [0x806D8, c, func_8008FED8]
       - [0x806FC, asm]
@@ -1594,6 +1666,10 @@ segments:
       # File span 0x80EB4–0x80EE4 exclusive. Stream byte + flag ORs at +0x38/+0xF4.
       - [0x80EB4, c, func_800906B4]
       - [0x80EE4, asm]
+      # func_8009071C — VRAM 0x8009071C, size 0x38, file 0x80F1C-0x80F54.
+      # Ring-buffer insert of *a0 at +4+4*idx; clear +0x62+2*idx. era_o2_g0.
+      - [0x80F1C, c, func_8009071C]
+      - [0x80F54, asm]
       # func_80090948 — VRAM 0x80090948, size 0x28, file 0x81148-0x81170.
       # Advance a buffer cursor; latch the fetched byte into +0x58/+0x56/+0xD0
       # and clear +0xD2. Default era_o2_g0. Resume asm at 0x81170.
