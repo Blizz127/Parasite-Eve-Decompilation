@@ -11,7 +11,7 @@
 
 #include "pe_guest_decomp.h"
 
-#define D_800A34B0 PE_DECOMP_ARRAY(0x800A34B0u, unsigned char)
+#define D_800A34B0 PE_DECOMP_ARRAY(0x800A34B0u, char)
 
 /* boundary: func_8007E1F4 has no pc_port implementation yet */
 #define func_8007E1F4(...) PE_D_COMP_BOUNDARY2("func_8007E1F4", 0x8007E1F4u, __VA_ARGS__)
@@ -19,10 +19,16 @@
 
 /* ── verbatim matching leaf (src/func_8007E0C0.c) ───────────────────────── */
 
-/* shimmed by pe_guest_decomp.h: D_800A34B0 */
+/*
+ * decomp-continue-4 — func_8007E0C0, file 0x6E8C0, size 0x38.
+ * Critical section around func_8007E1F4(1, D_800A34B0); returns 1.
+ * Matching authority: scripts/build_us.sh EXACT SHA-1
+ * 452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+ */
 /* shimmed by pe_guest_decomp.h: func_80072714 */
 /* shimmed by pe_guest_decomp.h: func_8007E1F4 */
 /* shimmed by pe_guest_decomp.h: func_80072724 */
+/* shimmed by pe_guest_decomp.h: D_800A34B0 */
 int func_8007E0C0(void) {
     func_80072714();
     func_8007E1F4(1, (pe_addr_t)0x800A34B0u);

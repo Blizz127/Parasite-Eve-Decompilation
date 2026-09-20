@@ -190,9 +190,9 @@ contract).
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**655**
-registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 679 packed C
-spans equal retail). Coverage: 679/4546 functions (14.94%). Remaining queue:
-**1710 non-matching functions / 613,356 bytes**, ranked in
+registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 699 packed C
+spans equal retail). Coverage: 699/4526 functions (15.44%). Remaining queue:
+**1690 non-matching functions / 612,216 bytes**, ranked in
 `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
 `python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
 1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
@@ -252,12 +252,19 @@ callbacks `func_8004D4C4`/`4D298`/`4D690`/`424B4`/`4FEEC`/`4FE58` and
 The autopilot now **selects Slot 1 and runs the save interaction**, showing the
 retail **"Saving"** dialog and the "Do not insert or remove Memory Card from
 either slot" warning (screenshot
-`build/artifacts/save_menu_after_input_2026-09-20.png`), and the route reaches
-the **42000 frame limit with `stop_reason=frame-limit`**; the only remaining
-report is the non-stopping decomp boundary `func_80042020` (save-write handler).
-With `PE_CARD=empty` the route instead runs with zero
-`[STUB:BOOTSTRAP_RET]` stops. Story is still `0x48`; the save-write chain is the
-next frontier — **no card success is faked**.
+`build/artifacts/save_menu_after_input_2026-09-20.png`). The save-write chain is
+now ported (`agent/save-write`: `func_80042020`/`42170` entries, `func_80040B80`
+0x2000-byte block + CRC-16/CCITT, `func_8003F800`, `func_8005C25C`,
+`func_80040210` + the Shift-JIS formatter, and the BIOS A(19h) strcpy veneer
+`func_80071A14`), so the handler runs: name formatted, block assembled, record
+armed. The route stop is now `card operation unresolved call` at
+`func_80041108` `format_name` (`func_80071A84`) — the card **write** itself is
+not yet wired into `func_80041108` states 3..11. `func_8004FE58` gained a
+guarded "invalidated slot -> row disabled" return so the menu can keep drawing.
+With `PE_CARD=empty` the route instead runs with zero `[STUB:BOOTSTRAP_RET]`
+stops. Story is still `0x48`; wiring the write to the libcard API (and giving
+the card-operation oracle a guest frame for states 4/5/6/11) is the next
+frontier — **no card success is faked**.
 
 **Movie/FMV path.** The opening STR frame decodes in-bounds (DAY2-159b), the
 post-E08 media loop is re-landed (DAY2-159c, carve SHA-256 `77218c9c…`), and
@@ -271,13 +278,13 @@ silent hang. **Not a full unlock:** at the stop the guest has issued a closing
 Stop with one sector unread (`reading=0`), so the retail reader has no reason
 to BFRD it; that guest-side media-loop completion is the next frontier.
 
-**Open work / next frontiers.** (1) **the save/load write chain**:
-`func_80042020` (0x150, 84w), `func_80042170` (0xB8, 46w), `func_8005C25C`
-(0x118, 70w) and `func_80040B80` (0x400, 256w) are unported, so the slot-list
-confirm schedules `func_80042020` and the menu loops at story `0x48`;
-`func_80071A84` is the already-ported SDK formatter `PE_FormatterFrame` but with
-an explicit caller-stack ABI. Port these against the libcard file API to
-complete the save and pass `0x48`; (2) the guest-side media-loop completion
+**Open work / next frontiers.** (1) **wire the card write**: the save-write
+chain is ported (see live-port above), but `func_80041108` states 3..11 do not
+yet call the libcard file API (`func_80072734` open / `func_80072754` read /
+`func_80072774` close), so the save is assembled but never written and the menu
+loops at story `0x48`; the live `format_name` path also needs the card-operation
+oracle to supply a guest frame for states 4/5/6/11 (without it `DAY1_card_operation`
+fails). Then the route can pass `0x48`; (2) the guest-side media-loop completion
 after the ~319-step FMV media loop;
 (3) **audio: SPU init is real now, but the retail main EXE never keys a voice
 in gameplay.** `agent/music-keyon` translated `func_8007D1D4` (SPU init),
