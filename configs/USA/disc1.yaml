@@ -1673,6 +1673,10 @@ segments:
       - [0xBF0F0, asm]
       # Phase 5ED: mid-BEC9C hole — sb+ret0 func_800D4850.
       - [0xC5050, c, func_800D4850]
+      # agent/decompile-100: exact byte-twin of func_8005186C (file 0xD0444,
+      # VRAM 0x800DFC44, size 0x3C). Carve: C5060 prefix, C 0x3C, resume D0480.
       - [0xC5060, asm]
+      - [0xD0444, c, func_800DFC44]
+      - [0xD0480, asm]
   # End of file: 0x1EE800 = 2,025,472 bytes (verified size).
   - [0x1EE800]
