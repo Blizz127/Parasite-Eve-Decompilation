@@ -891,6 +891,9 @@ segments:
       # Volume campaign: gp-backed bitset setter, era -O2 -G8.
       - [0x467B4, c, func_80055FB4]
       - [0x467E0, asm]
+      # func_80057C10 — VRAM 0x80057C10, size 0x44, file 0x48410-0x48454.
+      - [0x48410, c, func_80057C10]
+      - [0x48454, asm]
       # GP-relative halfword take-and-clear helper: era -O2 -G8.
       - [0x48518, c, func_80057D18]
       - [0x48530, asm]
