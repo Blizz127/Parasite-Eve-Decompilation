@@ -572,6 +572,13 @@ segments:
       # D_800C0B14 must stay absolute via an incomplete array).
       - [0x257C4, c, func_80034FC4]
       - [0x25838, asm]
+      # func_80035C84 — pose snapshot + view-code publish + motion integrate,
+      # VRAM 0x80035C84, file 0x26484, size 0x180 (96 words). era -O2 -G8 +
+      # aspsx 2.30. Levers: (*D_8009D254)->0x4C staged in a local `v` before
+      # `sp10 = a->f0E`; D_800943C0 absolute via an incomplete array; the final
+      # +0x2C result kept in a local `r` and returned (`return a->f2C;` adds a
+      # reload). Mid-25838 carve: prefix 0xC4C, C 0x180, resume func_80035E04.
+      - [0x26484, c, func_80035C84]
       # func_80035E04 — per-actor pose snapshot + motion integrate, VRAM
       # 0x80035E04, file 0x26604, size 0x150 (84 words). era -O2 -G8 +
       # aspsx 2.30; D_8009D1A0 stays absolute via an incomplete array.
@@ -1450,6 +1457,13 @@ segments:
       # Block init of the D_800BCF88..D_800BD028 scratch struct. era_o2_g0.
       - [0x56370, c, func_80065B70]
       - [0x56438, asm]
+      # func_80066800 — apply a 52-byte view record to the published GTE state,
+      # VRAM 0x80066800, file 0x57000, size 0x18C (99 words). era -O2 -G0.
+      # Levers: `*volatile` on both D_800B1624 and D_800BCFA4 (the latter must
+      # reload before every store); the nine halfword copies are written
+      # unrolled. Mid-56438 carve: prefix 0xBC8, C 0x18C, resume 0x5718C.
+      - [0x57000, c, func_80066800]
+      - [0x5718C, asm]
       # func_80066BD8 — scrolling-backdrop window setup, VRAM 0x80066BD8,
       # file 0x573D8, size 0xA4 (41 words). era -O2 -G0; unsigned short
       # arg4 with an int `v = arg4 & 0xFFFF`, nested early-return so the
