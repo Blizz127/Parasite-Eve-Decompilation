@@ -1740,6 +1740,11 @@ segments:
       # Ring-buffer insert of *a0 at +4+4*idx; clear +0x62+2*idx. era_o2_g0.
       - [0x80F1C, c, func_8009071C]
       - [0x80F54, asm]
+      # func_8009090C — VRAM 0x8009090C, file 0x8110C-0x81148, size 0x3C.
+      # Indexed u16 counter bump + table word published through *a0; the
+      # scaled index must be the LEFT operand of the address add to keep
+      # retail's `addu v1,v1,a0`. Default era_o2_g0.
+      - [0x8110C, c, func_8009090C]
       # func_80090948 — VRAM 0x80090948, size 0x28, file 0x81148-0x81170.
       # Advance a buffer cursor; latch the fetched byte into +0x58/+0x56/+0xD0
       # and clear +0xD2. Default era_o2_g0. Resume asm at 0x81170.
