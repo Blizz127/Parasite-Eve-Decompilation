@@ -205,11 +205,17 @@ is gone and the game renders its real **"Select File to Save"** menu (slots +
 `build/artifacts/select_file_to_save_menu_2026-09-20.png`, git-ignored). The
 libcard file API and `func_80041108` state-2 directory enumeration run; the menu
 callbacks `func_8004D4C4`/`4D298`/`4D690`/`424B4`/`4FEEC`/`4FE58` and
-`func_800434C0` (+`func_8005DD8C`) are ported, and the route stop is now
-`PE_MenuInputCallback` (`func_8004D6D4`). With `PE_CARD=empty` the route instead
-runs to the 42000 frame limit with zero `[STUB:BOOTSTRAP_RET]` stops. Story is
-still `0x48`; menu input/handler is the last named boundary — **no card success
-is faked**.
+`func_800434C0` (+`func_8005DD8C`) are ported, then the slot-list input/handler
+`func_8004D978`/`4D6D4` (`agent/menu-input`) plus the menu/delayed callbacks.
+The autopilot now **selects Slot 1 and runs the save interaction**, showing the
+retail **"Saving"** dialog and the "Do not insert or remove Memory Card from
+either slot" warning (screenshot
+`build/artifacts/save_menu_after_input_2026-09-20.png`), and the route reaches
+the **42000 frame limit with `stop_reason=frame-limit`**; the only remaining
+report is the non-stopping decomp boundary `func_80042020` (save-write handler).
+With `PE_CARD=empty` the route instead runs with zero
+`[STUB:BOOTSTRAP_RET]` stops. Story is still `0x48`; the save-write chain is the
+next frontier — **no card success is faked**.
 
 **Movie/FMV path.** The opening STR frame decodes in-bounds (DAY2-159b), the
 post-E08 media loop is re-landed (DAY2-159c, carve SHA-256 `77218c9c…`), and
@@ -223,14 +229,14 @@ silent hang. **Not a full unlock:** at the stop the guest has issued a closing
 Stop with one sector unread (`reading=0`), so the retail reader has no reason
 to BFRD it; that guest-side media-loop completion is the next frontier.
 
-**Open work / next frontiers.** (1) **`func_8004D6D4`** (slot-list input/
-handler, 169 words, `3DCC4.s`) is the last named boundary in the save-menu path;
-all 22 of its callees are ported except `func_8004D978` (24 words), so it is
-port-able. Note `agent/lowmem-kernel` disproved the earlier "low memory
-(0/0x150)" premise: the whole EXE has only six zero-based accesses, all inside
-`func_800727B4` (already host-replaced), and the menu globals are ordinary
-`$gp`-relative data. After that, `func_80041108` states 3..11;
-(2) the guest-side media-loop completion after the ~319-step FMV media loop;
+**Open work / next frontiers.** (1) **the save/load write chain**:
+`func_80042020` (0x150, 84w), `func_80042170` (0xB8, 46w), `func_8005C25C`
+(0x118, 70w) and `func_80040B80` (0x400, 256w) are unported, so the slot-list
+confirm schedules `func_80042020` and the menu loops at story `0x48`;
+`func_80071A84` is the already-ported SDK formatter `PE_FormatterFrame` but with
+an explicit caller-stack ABI. Port these against the libcard file API to
+complete the save and pass `0x48`; (2) the guest-side media-loop completion
+after the ~319-step FMV media loop;
 (3) **audio: the host path now exists but the live route is silent.** Merged
 `agent/audio-spu`: `pe_audio.{c,h}` (NULL / RIFF-WAVE 16-bit 44.1 kHz sink +
 optional `PE_AUDIO_HAVE_LIVE` stub) and `pe_spu.{c,h}` (24-voice mixer: psx-spx
