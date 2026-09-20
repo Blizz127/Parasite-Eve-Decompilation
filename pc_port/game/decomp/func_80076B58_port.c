@@ -12,20 +12,20 @@
 #include "pe_guest_decomp.h"
 int func_80076B58(pe_addr_t pe_a0, int a1)
 {
-    unsigned int *host_D_80095854 = PE_DECOMP_PTRGLOBAL(0x80095854u, unsigned int);
-    unsigned int *host_D_80095850 = PE_DECOMP_PTRGLOBAL(0x80095850u, unsigned int);
-    unsigned int *host_a0 = (unsigned int *)PE_Translate(pe_a0, 1);
+    int *host_D_80095854 = PE_DECOMP_PTRGLOBAL(0x80095854u, int);
+    int *host_D_80095850 = PE_DECOMP_PTRGLOBAL(0x80095850u, int);
+    int *host_a0 = (int *)PE_Translate(pe_a0, 1);
     /* verbatim body (src/func_80076B58.c) */
 
-    int c = a1 - 1;
-    *host_D_80095854 = 0x4000000;
+    int a2 = a1 - 1;
+    *host_D_80095854 = 0x04000000;
     if (a1 != 0) {
         do {
-            unsigned int v = *host_a0;
+            int v = *host_a0;
             host_a0++;
             *host_D_80095850 = v;
-            c--;
-        } while (c != -1);
+            a2--;
+        } while (a2 != -1);
     }
     return 0;
 
