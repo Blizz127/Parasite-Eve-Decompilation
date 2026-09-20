@@ -115,6 +115,16 @@
         "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
       }
     },
+    "era_o2_g8_passthrough_load": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
+      }
+    },
     "era_o2_g8": {
       "toolchain": "era",
       "flags": [
@@ -283,6 +293,9 @@
       "func_8007FBF0",
       "func_80085918",
       "func_80056C14"
+    ],
+    "era_o2_g8_passthrough_load": [
+      "func_800556E8"
     ],
     "era_o2_g8": [
       "func_800177AC",

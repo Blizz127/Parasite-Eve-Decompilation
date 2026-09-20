@@ -918,6 +918,12 @@ segments:
       - [0x44A88, c, func_80054288]
       - [0x44A94, c, func_80054294]
       - [0x44AA0, asm]
+      # func_800556E8 — bounds-checked signed halfword getter, VRAM
+      # 0x800556E8, file 0x45EE8, size 0x3C (15 words). era -O2 -G8 +
+      # MASPSX_PASSTHROUGH_SYMBOL_LOAD=1 (gp count + indexed lh %lo).
+      # Mid-44AA0 carve: prefix 0x1448, C 0x3C, resume 45F24.s 0x890.
+      - [0x45EE8, c, func_800556E8]
+      - [0x45F24, asm]
       # Volume campaign: gp-backed bitset setter, era -O2 -G8.
       - [0x467B4, c, func_80055FB4]
       # func_80055FE0 — VRAM 0x80055FE0, size 0x2C, file 0x467E0-0x4680C.
