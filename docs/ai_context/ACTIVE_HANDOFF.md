@@ -196,11 +196,13 @@ silent hang. **Not a full unlock:** at the stop the guest has issued a closing
 Stop with one sector unread (`reading=0`), so the retail reader has no reason
 to BFRD it; that guest-side media-loop completion is the next frontier.
 
-**Open work / next frontiers.** (1) the libcard file API veneers
-(`func_80072734/54/64/74/84/94/B4`: open/read/write/close/format/nextfile/
-firstfile) backed by the present-card image, plus the `func_80041108` post-call
-directory/file state graph (`CARD_OPERATION_CONTRACT.md`), so the Select Slot
-menu can enumerate/create/read/write a save and the route passes story `0x48`;
+**Open work / next frontiers.** (1) **supply the PS1 low-memory kernel/menu
+substrate** so the slot-list UI runs: `agent/libcard-file-api` implemented the
+whole psx-spx card file API (open/lseek/read/write/close/format/firstfile/
+nextfile + A0(18h) memcmp) and `func_80041108` state-2 directory enumeration, so
+the route's stop moved past `func_800727B4` to `func_8004D4C4`, whose
+continuations read low memory (address 0 / 0x150) the port does not model. Then
+the menu draw callbacks (`func_800434C0`, `func_8004D6D4`) and states 3..11;
 (2) the guest-side media-loop completion after the ~319-step FMV media loop;
 (3) **audio: the host path now exists but the live route is silent.** Merged
 `agent/audio-spu`: `pe_audio.{c,h}` (NULL / RIFF-WAVE 16-bit 44.1 kHz sink +
