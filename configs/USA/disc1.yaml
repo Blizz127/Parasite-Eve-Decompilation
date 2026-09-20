@@ -1078,6 +1078,9 @@ segments:
       # the shared symbolic base across all byte stores.
       - [0x5E348, c, func_8006DB48]
       - [0x5E39C, asm]
+      # func_8006E454 — VRAM 0x8006E454, size 0x44, file 0x5EC54-0x5EC98.
+      - [0x5EC54, c, func_8006E454]
+      - [0x5EC98, asm]
       # func_8006E6A8 — VRAM 0x8006E6A8, size 0x2C, file 0x5EEA8-0x5EED4.
       # func_8006E6D4(arg0, 0, arg1, arg2) forwarding wrapper.
       - [0x5EEA8, c, func_8006E6A8]
