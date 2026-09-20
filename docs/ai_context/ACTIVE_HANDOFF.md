@@ -7,19 +7,37 @@
 
 # ACTIVE HANDOFF
 
-## PARENT STATUS (2026-09-20): 846 matching C leaves, port green
+## PARENT STATUS (2026-09-20): 864 matching C leaves, port green, coverage MEASURED
 
-**Matching decomp: 768 -> 846 (+78) this session**, verified on the merged tree
+**Matching decomp: 768 -> 864 (+96) this session**, verified on the merged tree
 by a fresh `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh`:
 
 - **EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**
-- `Matching claim: YES (846 registered C leaves)`
-- `VERIFY_US=PASS` — all 846 packed C spans equal retail
-- plan `1231 spans = 846 c + 383 asm + 2 rodata`
+- `Matching claim: YES (864 registered C leaves)`
+- `VERIFY_US=PASS` — all 864 packed C spans equal retail
+- plan `1260 spans = 864 c + 394 asm + 2 rodata`
+
+**Executed-path coverage is no longer UNMEASURED.** `agent/exec-coverage` added
+`-finstrument-functions` instrumentation (`PE_EXEC_COVERAGE=ON`), a hit-set
+dump, and `tools/progress/exec_coverage.py`, which maps host hits back to the
+2393 guest boundaries and splits them into decompiled-C / pc_port-only /
+unmapped. `native_metrics.py` now reports
+`reachable_semantic_functions.status == MEASURED`. Its first snapshot (taken at
+810 leaves) measured, on the disc-1 `--route-pad` run: **710 executed guest
+functions, 237 backed by decompiled C (33.38%)**, 473 pc_port-only, 0
+unresolved loud boundaries; opening FMV: 229 executed, 91 C (39.74%). A
+`agent/cov-refresh` pass is re-measuring at 864.
+
+**Disc-1 route at 864**: `--route-pad --max-frames 80000 --disc-image "<disc1>"`
+=> `stop_reason=frame-limit`, token `A8001148`, story `0x48`, **0 invoked
+bootstrap stubs**, 80000 presents. (The port REQUIRES `--disc-image`; without it
+the run aborts with `PE_LoadU32: invalid guest address 0x0000000C` — a usage
+error, not a regression.)
 
 Landed by wave-1 agents (`pb-small` 6, `pb-120d8` 2, `pb-multiunit` 13,
-`pb-19de4` 2, `pb-dispatch` 3, `decompile-continue-10` 20) and wave-2 agents
-(`wave2-a` 15, `wave2-b` 7, `wave2-c` 14). Every leaf has a
+`pb-19de4` 2, `pb-dispatch` 3, `decompile-continue-10` 20), wave-2 agents
+(`wave2-a` 15, `wave2-b` 7, `wave2-c` 14) and wave-3 agents (`wave3-a` 8,
+`wave3-b` 10). Every leaf has a
 `docs/evidence/<agent>/<name>/REPORT.md`. The wave-2/3 agents' own entries sit
 directly below this one.
 
