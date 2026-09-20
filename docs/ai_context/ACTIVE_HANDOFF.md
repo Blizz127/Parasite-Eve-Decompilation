@@ -7,6 +7,56 @@
 
 # ACTIVE HANDOFF
 
+## WAVE-5 LEAF SLICE A (`agent/wave5-a`, 2026-09-20): 870 -> 875 (+5)
+
+**Branch `agent/wave5-a`, worktree `/tmp/pe-agent-w8`.** Baseline gate re-run
+first: `scripts/split_us.sh` (host) + `build_us.sh` + `verify_us.sh` (pe-mipsel)
+reported `EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (870 registered C leaves)`, `VERIFY_US=PASS`.
+
+Landed five executed-path targets, confirmed by a fresh complete build in
+`pe-mipsel` (commit `dde81b15`):
+
+- `func_8001897C` (917C, file 0x917C, 0xCC) — era -O2 -G0. Record-writer
+  wrapper forwarding ten pointer-table fields to `func_8002FA10`. The callee
+  stores a6..a9 as bytes, so declaring those four prototype parameters
+  `signed char` locally (instead of `unsigned char`) makes cc1 emit retail's
+  sign-extending `lb`. Note: the task sheet's 0xD4 size is wrong; splat's size
+  is 0xCC (func_80018A48 starts at 0x9248).
+- `func_800527C8` (42FC8, file 0x42FC8, 0xC4) — profile **era_o2_g8**. Clears
+  the gp-relative D_8009D02C block (interior D_8009D030 has no symbol ->
+  `*(int*)((char*)&D_8009D02C+4)`), runs the reset call chain. `D_800B0CD8`
+  must stay absolute in this -G8 unit -> declare it an incomplete array.
+- `func_800825C0` (72DC0, file 0x72DC0, 0xC0) — era -O2 -G0. Controller-state
+  classifier through `D_8009B738(port)`. **The state classification must be a
+  `switch`** (cases 3/2/6, no default); the nested if/else emits a merged
+  `sltiu` tree, the switch reproduces retail's signed `slti` decision tree.
+- `func_80059F08` (4A708, file 0x4A708, 0xC8) — profile **era_o2_g8_aspsx_230**.
+  Mode-setup selector. gp-relative state block; D_8009D050 = D_8009D04C+4 and
+  D_8009D064 = D_8009D058+0xC; D_8009D090/D_8009D098 stay absolute indexed
+  arrays (incomplete arrays).
+- `func_800181CC` (89CC, file 0x89CC, 0xD4) — era -O2 -G0. Actor-list matcher.
+  **The double-dereferenced key needs an explicit second local (`key = v;`)**
+  before the list walk; without it cc1 allocates the key straight to `$a2` and
+  drops retail's `lw $v0` / `addu $a2,$v0` pair.
+
+Fresh build after the carve: `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (875
+registered C leaves)`, plan `1273 spans = 875 c + 396 asm + 2 rodata`,
+`VERIFY_US=PASS`. Evidence under `docs/evidence/wave5-a/`.
+
+Seven further targets were attempted and **parked** with full divergence notes
+in `parked_blockers.json` (`wave5a-*` ids): `func_8007B9EC` (shared symbolic
+`lui/addiu` base for D_8009B294; numeric address fixes structure but gives
+`ori`), `func_800C9A70` (6-word constant-scheduling: retail keeps 0x80 in $a0
+across ~20 stores), `func_80069594` (dual-global load interleave), 
+`func_8003DFD8` (record-copy base selection: retail uses +0x1C with negative
+offsets, cc1 splits to +0x18/+0x1C), `func_8005415C` (scheduled value copy
+`addu $a1,$v1` + load-delay), `func_8005E788` (array vs DCE, $s0=0xFFF
+strength-reduction placement, and `sh` into an unfilled `jal` delay slot —
+the fill-store gates only cover `sw`), `func_8006DC18` (loop-invariant
+constant hoisting into $s0-$s6).
+
 ## PARENT STATUS (2026-09-20): 870 matching C leaves; executed-path C-share 37.18%
 
 **Matching decomp: 768 -> 870 (+102) this session.** Fresh `scripts/split_us.sh`
