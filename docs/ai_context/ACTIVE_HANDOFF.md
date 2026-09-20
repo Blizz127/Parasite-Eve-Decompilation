@@ -13,10 +13,10 @@ every meaningful change. Prefer shortening over accruing.
 ## SESSION STATUS 2026-09-20 — verified state snapshot
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**610**
-registered C leaves)". Coverage: 610/4659 functions (13.09%). Remaining queue:
-**1776 non-matching functions / 616,924 bytes**, ranked in
-`docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**628**
+registered C leaves)"; `scripts/verify_us.sh` also PASSes. Coverage: 628/4593
+functions (13.67%). Remaining queue: **1759 non-matching functions / 615,912
+bytes**, ranked in `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
 `python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
 1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
 code queue.
