@@ -439,7 +439,11 @@ segments:
       - [0x275F8, c, func_80036DF8]
       - [0x27634, c, func_80036E34]
       - [0x27658, c, func_80036E58]
-      - [0x2767C, asm]
+      # func_80036E7C — VRAM 0x80036E7C, size 0x100, file 0x2767C-0x2777C.
+      # Three (a0[1] % 60) fields packed into a1[0]; unsigned modulo is the
+      # codegen lever (multu 0x88888889 / mfhi / srl 5). era -O2 -G0.
+      - [0x2767C, c, func_80036E7C]
+      - [0x2777C, asm]
       - [0x278A8, c, func_800370A8]
       # Phase 5FQ-370DC: packet setup/submit wrapper, era -O2 -G0.
       # Mid-278BC carve: prefix 0x20, C 0x64, resume 27940.s.
