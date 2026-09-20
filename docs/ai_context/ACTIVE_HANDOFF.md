@@ -335,7 +335,17 @@ every frame; the card state machine simply reaches state 12 and then idles
 `func_8004D9D8`/`func_8004CC50`, the `func_8004D030` notice callbacks
 (`0x8009CFFC`), and `func_800512AC` — to find the exact missing step. The
 recorded `--route-pad` sequence also goes idle over the save-menu segment (only
-the Cross auto-pulse fires), so exit inputs may need adding to the route data;
+the Cross auto-pulse fires), so exit inputs may need adding to the route data.
+**`func_80042264` is NOT this unlock** (`docs/evidence/pe-crc-tail-load-path/REPORT.md`):
+its real entry is `0x80042294` (the ELF symbol names are +0x30 off), it is
+called only from state 7 (`0x80041BE0`), and state 7 is reached only from state
+5 (load, `li v0,7` at `0x80041958`). The save path (state 9 -> 3 -> 8 -> 10)
+never enters it — the port's state-7 boundary never fires on the route. Retail
+globals: state 7/9 tails set `[0x800A1A0C]`/`[0x800A19F0]`; `func_80040F80`
+reads `[0x800A1A14]` (written only by `func_80042264`). The port uses
+`0x800A1854`/`0x800A185C`, and the card oracles transcribe those addresses
+(`pe_card_operation_oracle.py:44`), so fixing the port to retail's globals
+requires regenerating the oracles first;
 (2) the guest-side media-loop completion
 after the ~319-step FMV media loop;
 (3) **audio: FMV XA audio is now audible.** `agent/music-keyon` made SPU init
