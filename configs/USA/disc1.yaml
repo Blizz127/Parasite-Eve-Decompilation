@@ -1636,6 +1636,13 @@ segments:
       # File span 0x7D27C–0x7D284 exclusive. Empty jr/nop stub.
       - [0x7D27C, c, func_8008CA7C]
       - [0x7D284, asm]
+      # agent-decomp101 slice2: func_8008D140 — VRAM 0x8008D140, file
+      # 0x7D940, size 0x4D0 (308 words). 32-way unrolled dirty-bit copy:
+      # for each of 32 flags bits, copy the halfword at arg0+4+2i to
+      # D_8009B3FC[0xE0+i], also copying all when the flag word is zero.
+      # Era -O2 -G0; the zero test is materialized once (explicit local).
+      - [0x7D940, c, func_8008D140]
+      - [0x7DE10, asm]
       # Phase 5BV: C leaf func_8008D7C0 — VRAM 0x8008D7C0, size 0x10.
       # Store D_8009B3A0 into *a0 (lui/lw/jr/sw).
       - [0x7DFC0, c, func_8008D7C0]
