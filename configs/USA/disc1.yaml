@@ -658,7 +658,11 @@ segments:
       # File span 0x2E02C–0x2E034 exclusive. Return-1 stub (jr; addiu $v0,1).
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.
       - [0x2E02C, c, func_8003D82C]
-      - [0x2E034, asm]
+      # wave6-b: C leaf func_8003D834 — VRAM 0x8003D834, file 0x2E034,
+      # size 0x118. Rect init/teardown call wrapper. era -O2 -G0.
+      # Carve: prefix 0x2E034 asm, C 0x2E034, resume 0x2E14C.
+      - [0x2E034, c, func_8003D834]
+      - [0x2E14C, asm]
       - [0x2E3E4, c, func_8003DBE4]
       - [0x2E508, asm]
       # Volume 103: signed-index 16-byte-record initializer; era -O2 -G0.
@@ -1560,6 +1564,13 @@ segments:
       # `bnez a1` store layout. era -O2 -G0.
       - [0x60020, c, func_8006F820]
       - [0x600EC, asm]
+      # wave6-b: C leaf func_800701B4 — VRAM 0x800701B4, file 0x609B4,
+      # size 0x128. Second-half slot scrub loop (indices 0xB..0x15).
+      # era -O2 -G0.
+      - [0x609B4, c, func_800701B4]
+      # wave6-b: C leaf func_800702DC — VRAM 0x800702DC, file 0x60ADC,
+      # size 0x118. First-half slot scrub loop (indices 0..0xA). era -O2 -G0.
+      - [0x60ADC, c, func_800702DC]
       # Two-phase subsystem teardown wrapper: era -O2 -G0.
       - [0x60BF4, c, func_800703F4]
       - [0x60C1C, asm]
@@ -2479,7 +2490,11 @@ segments:
       # VRAM 0x800C22F8; sustained valid MIPS follows.
       # Tier-2 probe: base-publishing indexed setter func_800C2AF0.
       # Former B2AF8 asm span: prefix 0x7F8, C 0x20, resume 0x30.
-      - [0xB2AF8, asm]
+      # wave6-b: C leaf func_800C22F8 — VRAM 0x800C22F8, file 0xB2AF8,
+      # size 0x11C. Weapon-effect slot constructor. era -O2 -G0.
+      # Carve: former 0xB2AF8 asm is replaced by the leaf; resume 0xB2C14.
+      - [0xB2AF8, c, func_800C22F8]
+      - [0xB2C14, asm]
       - [0xB32F0, c, func_800C2AF0]
       # Probe: indexed D_800E2248 address-return helpers.
       - [0xB3310, c, func_800C2B10]
@@ -2762,6 +2777,11 @@ segments:
       - [0xBEC9C, asm]
       - [0xBF070, c, func_800CE870]
       - [0xBF0F0, asm]
+      # wave6-b: C leaf func_800CEB8C — VRAM 0x800CEB8C, file 0xBF38C,
+      # size 0x120. Beam quad geometry builder. era -O2 -G0.
+      # Carve: prefix 0xBF0F0 asm, C 0xBF38C, resume 0xBF4AC.
+      - [0xBF38C, c, func_800CEB8C]
+      - [0xBF4AC, asm]
       # Phase 5ED: mid-BEC9C hole — sb+ret0 func_800D4850.
       - [0xC5050, c, func_800D4850]
       # agent/decompile-100: exact byte-twin of func_8005186C (file 0xD0444,
