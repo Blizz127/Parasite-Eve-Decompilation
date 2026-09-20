@@ -489,6 +489,11 @@ segments:
       # era -O2 -G0. Mid-20210 carve: prefix 0xC30, C 0xA0, resume 20EE0.s.
       - [0x20E40, c, func_80030640]
       - [0x20EE0, asm]
+      # func_800339A0 — battle style row selector, VRAM 0x800339A0,
+      # file 0x241A0, size 0x80 (32 words). era -O2 -G8 (gp-relative
+      # small-data: D_8009CE80/84/86 at gp+0x110/0x114/0x116). Tail of
+      # 20EE0.s; C ends exactly at the already-matched func_80033A20.
+      - [0x241A0, c, func_800339A0]
       - [0x24220, c, func_80033A20]
       # Phase 5FS-33A2C: D_8009D244 byte-flag setter, era -O2 -G0.
       - [0x2422C, c, func_80033A2C]
@@ -686,7 +691,12 @@ segments:
       - [0x340EC, asm]
       # func_80044DCC — VRAM 0x80044DCC, size 0x48, file 0x355CC-0x35614.
       - [0x355CC, c, func_80044DCC]
-      - [0x35614, asm]
+      # func_80044E14 — slot teardown helper, VRAM 0x80044E14, file
+      # 0x35614, size 0x84 (33 words). era -O2 -G0; the table reload is
+      # spelled as the array expression D_8009CFA0[idx] so the pointer
+      # stays in $s0. Head of 35614.s; resume 35698.s 0x2324.
+      - [0x35614, c, func_80044E14]
+      - [0x35698, asm]
       # Tier-2 B: callback registration wrapper for func_80047040;
       # two independent exact-start stores, era -O2 -G0, first phrasing.
       - [0x379BC, c, func_800471BC]
@@ -1114,6 +1124,13 @@ segments:
       # Block init of the D_800BCF88..D_800BD028 scratch struct. era_o2_g0.
       - [0x56370, c, func_80065B70]
       - [0x56438, asm]
+      # func_8006A25C — game-over destination saver, VRAM 0x8006A25C,
+      # file 0x5AA5C, size 0x8C (35 words). era -O2 -G0; shared $a0 base
+      # for D_800B0CD8 (local pointer) and the void-return tail order
+      # `D_800A77F4 = t; D_8009D280 = 0xA9400048; *p |= 0x100;`.
+      # Mid-56438 carve: prefix 0x4624, C 0x8C, resume 5AAE8.s 0x2D4.
+      - [0x5AA5C, c, func_8006A25C]
+      - [0x5AAE8, asm]
       # Phase 5EZ: C leaf func_8006A5BC — VRAM 0x8006A5BC, size 0x90 (36 words).
       # Boot init with two VSync-polled wait loops (VSync = func_80073A44,
       # SDK). era -O1 -G0: per-use $s0=1 materialization (in 86FF8's delay
@@ -1132,6 +1149,13 @@ segments:
       - [0x5B0D4, c, func_8006A8D4]
       # Mid-5B1E4 carve: prefix 0x3164, C 0x54, resume 5E39C.s.
       - [0x5B1E4, asm]
+      # func_8006BE4C — mount state-changed flag setter, VRAM 0x8006BE4C,
+      # file 0x5C64C, size 0x80 (32 words). era -O2 -G0; local
+      # `unsigned int *p = &D_800B0CD8` forces retail's shared base
+      # register ($a2) for the read-modify-write. Mid-5B1E4 carve:
+      # prefix 0x5468, C 0x80, resume 5C6CC.s 0x1C7C.
+      - [0x5C64C, c, func_8006BE4C]
+      - [0x5C6CC, asm]
       # Volume campaign: byte-field updater and flag setter over D_800B0CD8.
       # Era -O2 -G0; union layout preserves the word-backed flag field and
       # the shared symbolic base across all byte stores.
