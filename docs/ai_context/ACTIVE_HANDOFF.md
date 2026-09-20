@@ -10,6 +10,53 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## SESSION STATUS — pb-multiunit lane: 768 → 781 matching C leaves (13 landed)
+
+Branch `agent/pb-multiunit` (worktree `/tmp/pe-agent-pbe`). Mid-size
+`draftable`+`pc_port` slice. `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**781**
+registered C leaves)"; `scripts/verify_us.sh` → **VERIFY_US=PASS**. Baseline
+was re-run fresh before any edit (768, EXACT, PASS).
+
+Landed (ascending size): `func_800339A0`, `func_8006BE4C`, `func_80044E14`,
+`func_8006A25C`, `func_800C3098`, `func_800C2FF0`, `func_800C2E08`,
+`func_80066BD8`, `func_80046ABC`, `func_80057B70`, `func_80056C14`,
+`func_80068CE0`, `func_800556E8`. All have
+`docs/evidence/pb-multiunit/<name>/REPORT.md`.
+
+**Reusable levers found** (worth trying on any mid-size leaf):
+1. **Void return is a real shape.** Two leaves (`func_800C3098`,
+   `func_8006A25C`) only match as `void`: retail stores the callee's `$v0`
+   (or leaves it) and a `short`/`int` return makes cc1 add
+   `andi`/`sll`/`sra` extension.
+2. **Global read-modify-write wants a local pointer.**
+   `unsigned int *p = &GLOBAL; *p |= MASK;` forces cc1 to materialize a
+   shared base register (`$a2`/`$a0`) instead of two independent
+   `lui $at,%lo` absolute accesses (func_8006BE4C, func_8006A25C).
+3. **Table reload: use the ARRAY expression, not a live pointer.**
+   `f(TAB[idx])` keeps the address in `$s0` and the value in `$v0`; a live
+   `int *p` local sinks the load into `$s0` and shifts the epilogue
+   (func_80044E14).
+4. **Staged condition temp defeats if-conversion.**
+   `int f = -(cond); acc |= f;` emits the branchless
+   `and/xor/sltiu/negu/or` retail uses; inlined `acc |= -(cond)` becomes
+   `bne`+`li` (func_800C2E08).
+5. **`MASPSX_PASSTHROUGH_SYMBOL_LOAD=1`** folds `%lo` into an indexed
+   load (`lui $at,%hi; addu $at,$at,$v0; lh/lhu $v0,%lo($at)`). It fixes
+   func_80056C14 (-G0) and func_800556E8; the latter needed a NEW profile
+   `era_o2_g8_passthrough_load` (`-O2 -G8` + the knob) added to
+   `configs/USA/disc1_build_profiles.json`.
+6. `-O2 -G8` (not the `-G0` default) for anything touching a global within
+   the gp window; a `(short)arg` plus gp load often fixes the prologue.
+7. **m2c "no profile matched" is not a dead end** — every leaf here was
+   landed by hand from the m2c draft.
+
+**Parked** (in `docs/ai_context/parked_blockers.json`): `func_800C2D0C`
+(cc1 rematerializes the phi-init field load as `lhu` instead of
+`addu a0,v0,zero`) and `func_8006F224` (loop rotation + register
+permutation). `func_800661CC`/`func_800661A4` are **ctc2/cop2**
+handwritten asm — not C-matchable, do not retry.
+
 ## SESSION STATUS 2026-09-20 (latest): 768 matching C leaves; FMV completes (2026-09-20)
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
