@@ -44,13 +44,21 @@ wall: `[MENU] Unported help selection 36` → `[STUB:BOOTSTRAP_RET]
 func_8004C608` (the inventory-help window's switch lacks ids 36-39). Before
 that, the FMV path was unblocked: the opening STR frame now decodes in-bounds
 (DAY2-159b), the post-E08 media loop is re-landed (DAY2-159c, carve SHA-256
-`77218c9c…`), and the live movie wall is now `MDEC_decode_busy` in the host MDEC
-busy predicate.
+`77218c9c…`), and the DAY2-158u MDEC orphan-supersede host model was re-landed
+(`pe_mdec.c`, commit `c977ab9`). Live FMV (real Disc 1, headless, no
+`--skip-movie`) now runs past `MDEC_decode_busy` through ~320
+`func_80192934_enter` entries and stops honestly at
+`CD_device_sector_overrun`. **CD experiment:** restoring the pre-refactor
+`pe_cdreg.c` (54b814a, the DAY2-158v/w/z backpressure + B0CD0 model) makes that
+run HANG silently instead, because the B0CD0 catch-up lived in the removed
+`HostFB_PumpCdProgress` (now `HostFB_StreamTick`); the explicit STOP is the
+better current boundary. Solving it means re-landing the B0CD0 catch-up onto
+`HostFB_StreamTick` with the new complete-frame delivery, not just pe_cdreg.
 
 **Open work / next frontiers.** (1) inventory-help ids 36-39
-(`func_8004C608`, 0x648 bytes, `asm/disc1/3CE08.s`); (2) the
-`MDEC_decode_busy` supersede-on-DMA0-commit family in `pe_mdec.c`; (3) carve
-the ranked large functions from the worklist; (4) disc 2 has no coverage yet.
+(`func_8004C608`, 0x648 bytes, `asm/disc1/3CE08.s`); (2) re-land the B0CD0
+catch-up onto `HostFB_StreamTick` (see CD experiment above); (3) carve the
+ranked large functions from the worklist; (4) disc 2 has no coverage yet.
 
 ## DAY2-159c: re-land func_80192CE8 post-E08 media loop + 91DC8 dispatch (2026-09-20)
 
