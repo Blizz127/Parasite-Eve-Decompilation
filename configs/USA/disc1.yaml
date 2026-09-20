@@ -120,6 +120,11 @@ segments:
       # func_800375E0(**a0, 0, buf[-1]) with a 0x10-byte stack halfword buffer.
       - [0x7C10, c, func_80017410]
       - [0x7C44, asm]
+      # func_80017588 — VRAM 0x80017588, size 0x130, file 0x7D88-0x7EB8.
+      # Actor action-relative cursor update over the two-pointer descriptor
+      # arg0; D_8009D2F0 is absolute (incomplete array), D_8009D300 gp+0x590.
+      # era_o2_g8.
+      - [0x7D88, c, func_80017588]
       # func_800176B8 — VRAM 0x800176B8, size 0x28, file 0x7EB8-0x7EE0.
       # OR *arg[0] into field 0x98 of pointer global D_8009D2F0; return 1.
       # Default era_o2_g0.
@@ -1025,6 +1030,10 @@ segments:
       - [0x40F08, c, func_80050708]
       - [0x40F28, c, func_80050728]
       - [0x40F48, asm]
+      # func_80050878 — VRAM 0x80050878, size 0x130, file 0x41078-0x411A8.
+      # Equipment-page action dispatcher indexing the 12-byte D_80092234 rows
+      # by D_8009CDA8 and arg0. era_o2_g8.
+      - [0x41078, c, func_80050878]
       # func_800509A8 — VRAM 0x800509A8, size 0x38, file 0x411A8-0x411E0. era_o2_g8.
       - [0x411A8, c, func_800509A8]
       # func_800509E0 — VRAM 0x800509E0, size 0xF8, file 0x411E0-0x412D8.
@@ -1313,6 +1322,24 @@ segments:
       # Boolean-selected GP state initializer: era -O2 -G8.
       - [0x50044, c, func_8005F844]
       - [0x50074, asm]
+      # func_8005FA3C — VRAM 0x8005FA3C, size 0x138, file 0x5023C-0x50374.
+      # Two-digit signed decimal emitter; era_o2_g8_expand_div (-O2 -G8 +
+      # MASPSX_EXPAND_DIV=1) for the checked div and the redundant D_8009D128
+      # self-store kept by the `int *p = &D_8009D128; *p = D_8009D128;` idiom.
+      - [0x5023C, c, func_8005FA3C]
+      # func_8005FB74 — VRAM 0x8005FB74, size 0x138, file 0x50374-0x504AC.
+      # Three-digit signed decimal emitter; era_o2_g8_expand_div.
+      - [0x50374, c, func_8005FB74]
+      - [0x504AC, asm]
+      # func_8005FDF0 — VRAM 0x8005FDF0, size 0x138, file 0x505F0-0x50728.
+      # Four-digit signed decimal emitter; era_o2_g8_expand_div.
+      - [0x505F0, c, func_8005FDF0]
+      # func_8005FF28 — VRAM 0x8005FF28, size 0x144, file 0x50728-0x5086C.
+      # Four-digit signed decimal emitter with forced sign glyph; two distinct
+      # prefix arms share the func_8005EB64 call site.
+      # era_o2_g8_expand_div.
+      - [0x50728, c, func_8005FF28]
+      - [0x5086C, asm]
       # func_80060528..func_800605F8 — five GP pair-bump wrappers, size 0x34 each,
       # file 0x50D28/0x50D5C/0x50D90/0x50DC4/0x50DF8. era_o2_g8.
       - [0x50D28, c, func_80060528]
