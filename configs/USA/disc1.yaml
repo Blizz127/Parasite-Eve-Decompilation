@@ -243,6 +243,9 @@ segments:
       - [0x98BC, asm]
       - [0x9954, c, func_80019154]
       - [0x9970, asm]
+      # func_80019260 — VRAM 0x80019260, size 0x38, file 0x9A60-0x9A98.
+      # func_8003E0D0(D_8009D2F0 + 0x1B4); D_8009D2F0->0x18C = 0; return 1.
+      - [0x9A60, c, func_80019260]
       - [0x9A98, c, func_80019298]
       # Phase 5EJ: D_8009D28C int-state setters (READY-FROM-READER).
       # func_800192B8 / func_800192C8 — set state 0/8, return 1; sizes 0x10 / 0x14.
