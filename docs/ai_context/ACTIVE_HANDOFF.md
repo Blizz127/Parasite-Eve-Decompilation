@@ -7,6 +7,53 @@
 
 # ACTIVE HANDOFF
 
+## wave-3 leaf slice A (`agent/wave3-a`, 2026-09-20): 846 -> 853 (+7)
+
+**Fresh `scripts/split_us.sh` + `scripts/build_us.sh` + `scripts/verify_us.sh`:
+EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES
+(853 registered C leaves)`, `VERIFY_US=PASS`, plan `1242 spans = 853 c + 387
+asm + 2 rodata`.** Commits `171fde78` (6 leaves, 846->852) and the follow-up
+`func_800447F0` commit on branch `agent/wave3-a`; reports under
+`docs/evidence/wave3-a/<name>/REPORT.md`.
+
+Landed: `func_80034FC4` `func_80035E04` `func_80035F54` `func_800361F4`
+`func_80036254` (unit 24240) `func_800438EC` (unit 340EC), then `func_800447F0`
+(unit 340EC). All seven use the `era_o2_g8_aspsx_230` assignment
+(`-O2 -G8` + `ERA_ASPSX_VER=2.30`) in
+`configs/USA/disc1_build_profiles.json`.
+
+Reusable findings:
+
+- **Retail $gp base is 0x8009CD70**, so `0x580($gp) = D_8009D2F0`,
+  `0x180/0x188/0x18C($gp) = D_8009CEF0/F8/FC`, `0x1F8($gp) = D_8009CF68`,
+  `0x1D0($gp) = D_8009CF40`, `0x53C($gp) = D_8009D2AC`, `0x49C($gp) =
+  D_8009D20C`.
+- **`ERA_ASPSX_VER=2.30` is required** for any leaf whose memory op is a
+  `lui %hi / op %lo` pair fed by a preceding load: with the default 2.21
+  config cc1's `#nop` load-delay marker makes maspsx emit `nop` before the
+  `lui`, while retail lets the `lui` fill the delay slot. This alone was the
+  only blocker on `func_800361F4`.
+- **Absolute symbols inside a `-G8` unit** (`D_8009D300`, `D_800C0B14`,
+  `D_8009D1A0`, the `D_800C0E**` bytes) must be declared as incomplete
+  arrays; a scalar declaration lets cc1 place them in gp-relative small data
+  and the whole leaf misses.
+- A splat-contiguous data block's interior symbol (`D_800BEA94` = base+4)
+  has a real symbol at that address; declare and index it directly so cc1
+  emits the 3-word `lui/addu/sw %lo(byte-offset)` store instead of a
+  register-indirect `sw $a0,0($reg)` after strength reduction.
+- `func_800447F0`'s two-case dispatch must be a **`switch`**, not an
+  if/else-if chain: cc1 inverts the chain polarity and lays case 0 out as the
+  fall-through, while `switch` emits retail's `beqz v1 / beq v1,1` order.
+
+Parked (7, WIP sources kept git-ignored at `build/wave3-a-wip/`, full notes
+in `docs/ai_context/parked_blockers.json` under `pbw3a-*`): `func_80034F10`
+(matrix-clear strength reduction), `func_80043B0C` (jal hoisted into a beqz
+delay slot), `func_80043C64` (counter/p[i] register colouring), `func_80044174`
+(3-word shift-destination register), `func_800439D8` (prologue scheduling),
+`func_800327D8` (frame setup vs first global load), `func_800362B8`
+(size->stride branch layout). `func_8003335C` and `func_80031D6C` were not
+attempted (already parked by another agent).
+
 ## wave-2 leaf slice A (`agent/wave2-a`, 2026-09-20): 810 -> 825 (+15)
 
 **Fresh `scripts/split_us.sh` + `scripts/build_us.sh` + `scripts/verify_us.sh`:
