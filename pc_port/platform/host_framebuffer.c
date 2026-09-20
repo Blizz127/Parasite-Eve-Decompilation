@@ -16,6 +16,7 @@
 #include "pe_cdreg.h"
 #include "pe_mdec.h"
 #include "pe_irq_delivery.h"
+#include "pe_bootstrap.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -133,8 +134,68 @@ static void HostFB_ServiceDeviceIrq(void)
     if(!PE_Port_ShouldStop() && !PE_LoadU16(0x800945E6u) && (PE_IRQ_ReadStatus()&PE_IRQ_GetMask()))
         (void)PE_IRQ_ServicePendingForGeneration(PE_IRQ_Generation());
 }
+
+/* DAY2-158z/CD B0CD0 catch-up.  A completed raw sector sits unread behind
+ * sector_pending until the retail data-ready IRQ -> 91DC8/1214D4 -> 7C564 ->
+ * BFRD chain consumes it; B0CD0 is only the DMA1-defer latch, and some 7C564
+ * early-outs never set it.  The plain VSync(-1) tick services that chain only
+ * while MDEC has a decode in flight, so an orphan pending sector would
+ * otherwise stall the stream.  Run this before every modeled device-time
+ * advance and service the DMA/CPU IRQ paths whenever decode, the B0CD0 latch,
+ * or a pending sector is present, so the guest's own reader retires it.  No
+ * host-side direct func_8007C564 call: driving the stream assembler outside
+ * its retail call context reads an unpopulated FIFO (CD_device_data_underflow).
+ * pe_cdreg holds the next publish while pending (no overrun, no dropped
+ * sector); a hold that never clears is bounded here into the named
+ * CD_B0CD0_pending_unresolved rather than a silent hang. */
+static int HostFB_CdServicePending(void)
+{
+    static uint32_t s_pending_ticks;
+    static int s_cd_catchup_active; /* reentrancy guard */
+    PeCdDeviceState cd;
+    int pending, b0cd0;
+
+    /* func_8007C564 -> func_8007A488 -> func_8007B290 polls with
+     * func_80073A44(-1) (HostFB_VSync), which re-enters HostFB_DeviceTime.
+     * That inner tick must let the clock advance instead of recursing. */
+    if (s_cd_catchup_active) return 1;
+    if (PE_Port_ShouldStop()) return 0;
+    s_cd_catchup_active = 1;
+
+    /* Read pending before the IRQ gate: unread ownership is sector_pending. */
+    PE_CdReg_GetDeviceState(&cd);
+    pending = cd.sector_pending != 0;
+    b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
+    if (PE_MDEC_HasDecode() || b0cd0 || pending) {
+        /* DMA checkpoint (not only the CPU IRQ) so 74520->91DC8/1214D4 can
+         * run the retail BFRD even when HasDecode is false. */
+        (void)PE_Port_ServiceDmaIrqCheckpoint();
+        HostFB_ServiceDeviceIrq();
+    }
+    if (PE_Port_ShouldStop()) { s_cd_catchup_active = 0; return 0; }
+
+    PE_CdReg_GetDeviceState(&cd);
+    if (cd.sector_pending) {
+        s_pending_ticks++;
+        if (s_pending_ticks >= 4096u) {
+            Bootstrap_ReturnVoid1("CD_B0CD0_pending_unresolved","CD_device",
+                                  cd.next_lba);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            s_cd_catchup_active = 0; return 0;
+        }
+    } else {
+        s_pending_ticks = 0u;
+    }
+    s_cd_catchup_active = 0;
+    return 1;
+}
+
 static void HostFB_DeviceTime(uint32_t cycles)
 {
+    /* Retire an orphan pending CD sector before advancing the device clock,
+     * so a full read period cannot elapse with the sector unread. */
+    if(!HostFB_CdServicePending()) return;
+    if(PE_Port_ShouldStop()) return;
     /* NTSC host approximation:33868800 CPU cycles/60 frames. Device
      * responses are serviced before the next generated VBlank edge. */
     PE_CdReg_ServiceDevice(cycles);HostFB_ServiceDeviceIrq();

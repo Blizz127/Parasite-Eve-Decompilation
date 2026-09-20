@@ -35,7 +35,7 @@ static void CdClearData(void)
 }
 
 
-void PE_CdReg_GetDeviceState(PeCdDeviceState *out) { *out=g_device;out->data_remaining=g_data_size-g_data_pos; }
+void PE_CdReg_GetDeviceState(PeCdDeviceState *out) { *out=g_device;out->data_remaining=g_data_size-g_data_pos;out->sector_pending=(uint32_t)(g_sector_pending!=0); }
 int PE_CdReg_DeviceEnabled(void) { return g_device.enabled!=0; }
 static void CdDeviceBoundary(const char *name,uint32_t value)
 {
@@ -130,15 +130,23 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
     }
     if(was_reading && g_device.reading && !g_read_cycles) {
         if(!g_phase && !g_response_tag && g_response_pos==g_response_size) {
-            if(g_sector_pending) {CdDeviceBoundary("CD_device_sector_overrun",g_device.next_lba);return;}
-            if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
-                CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;
+            /* Backpressure (DAY2-158v): while an unread sector waits for the
+             * retail BFRD, hold the next publish and leave g_read_cycles at 0
+             * so the next service retries the moment pending clears.  The
+             * host stream pump services the data-ready IRQ path on
+             * sector_pending so 91DC8/1214D4 -> func_8007C564 can consume it;
+             * STOP-on-overrun here was an artificial wall after ~319 live FMV
+             * frames, and silently overwriting would drop a sector. */
+            if(!g_sector_pending) {
+                if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
+                    CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;
+                }
+                g_device.next_lba++;g_device.sectors++;g_sector_pending=1;g_read_cycles=CdSectorCycles();
+                uint8_t status=CdDeviceStatus();
+                if(!PE_CdReg_PushResponse(1u,&status,1u)) {CdDeviceBoundary("CD_device_response_queue",1u);return;}
+                if(g_device.responses<16u) g_device.response_log[g_device.responses]=1u;
+                g_device.responses++;
             }
-            g_device.next_lba++;g_device.sectors++;g_sector_pending=1;g_read_cycles=CdSectorCycles();
-            uint8_t status=CdDeviceStatus();
-            if(!PE_CdReg_PushResponse(1u,&status,1u)) {CdDeviceBoundary("CD_device_response_queue",1u);return;}
-            if(g_device.responses<16u) g_device.response_log[g_device.responses]=1u;
-            g_device.responses++;
         }
     }
     PE_CdReg_ServiceDMA3();
