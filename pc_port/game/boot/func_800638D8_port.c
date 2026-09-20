@@ -61,6 +61,18 @@ static void menu_draw_callback(pe_addr_t fn,uint32_t value)
     case 0x8004905Cu:func_8004905C(value);break;
     case 0x80050748u:func_80050748(value);break;
     case 0x8004F838u:func_8004F838(value);break;
+    /* PE-SAVE-PAGE: file save/load page draw wrappers (matched leaves,
+     * generated under game/decomp) and the renderers they install. */
+    case 0x8004FF30u:func_8004FF30((int32_t)value);break;
+    case 0x8004FF58u:func_8004FF58((int32_t)value);break;
+    case 0x8004FF80u:func_8004FF80((int32_t)value);break;
+    case 0x8004B534u:func_8004B534((int32_t)value);break;
+    case 0x8004B55Cu:func_8004B55C((int32_t)value);break;
+    case 0x8004B214u:func_8004B214(value);break;
+    case 0x80050C50u:func_80050C50((int32_t)value);break;
+    case 0x80050C70u:func_80050C70((int32_t)value);break;
+    case 0x80050CB4u:func_80050CB4((int32_t)value);break;
+    case 0x800504BCu:func_800504BC((int32_t)value);break;
     case 0x8004DF74u:func_8004DF74(value);break;
     case 0x8004D690u:func_8004D690(value);break;
     case 0x8004FEECu:func_8004FEEC(value);break;

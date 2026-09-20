@@ -21,6 +21,12 @@ static uint32_t menu_callback(pe_addr_t fn,uint32_t a0,uint32_t a1,uint32_t a2,u
     case 0x800452C0u:return (uint32_t)func_800452C0(a0,a1);
     case 0x80044B0Cu:return (uint32_t)func_80044B0C(a0,a1);
     case 0x80043DA4u:return (uint32_t)func_80043DA4(a0,a1);
+    /* PE-SAVE-PAGE: file save/load page and its slot sub-pages. */
+    case 0x8004AE1Cu:return (uint32_t)func_8004AE1C(a0,a1);
+    case 0x8004AFA4u:return (uint32_t)func_8004AFA4(a0,a1);
+    case 0x8004B0A4u:return (uint32_t)func_8004B0A4(a0,a1);
+    case 0x8004B394u:return (uint32_t)func_8004B394(a0,a1);
+    case 0x8004B650u:return (uint32_t)func_8004B650(a0,a1);
     case 0x8004D030u:return (uint32_t)func_8004D030(a0,a1);
     case 0x8004D6D4u:return (uint32_t)func_8004D6D4(a0,a1);
     case 0x80044E98u:return (uint32_t)func_80044E98(a0,a1);
