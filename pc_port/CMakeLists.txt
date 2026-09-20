@@ -435,6 +435,20 @@ if(BUILD_TESTS)
     add_executable(pe-native-tests tests/test_native.c)
     target_link_libraries(pe-native-tests PRIVATE pe_field_runtime)
 
+    # Reproducibility of the generated decomp-derived host TUs: every one must
+    # regenerate byte-for-byte from its src/ leaf, and every TU without a
+    # src/ leaf must be on the checked-in orphan allowlist.  Runs the Python
+    # generator, so it needs a Python 3 interpreter; the test is skipped when
+    # none is found (the generator itself documents how to run the check).
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_executable(pe-decomp-port-tests tests/test_decomp_ports_manifest.c)
+        add_test(NAME decomp-port-reproducibility COMMAND pe-decomp-port-tests)
+        set_tests_properties(decomp-port-reproducibility PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/..
+            TIMEOUT 60)
+    endif()
+
     # Small external-consumer contract: this source is intentionally not part
     # of the runtime target and reaches both host substrate and translated
     # retail code only through the archive's public include/link interface.
