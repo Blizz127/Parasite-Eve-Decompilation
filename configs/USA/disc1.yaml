@@ -138,7 +138,8 @@ segments:
       - [0x857C, c, func_80017D7C]
       - [0x859C, c, func_80017D9C]
       - [0x85C0, c, func_80017DC0]
-      - [0x85E4, asm]
+      - [0x85E4, c, func_80017DE4]
+      - [0x8620, asm]
       # Phase 5AK: C leaf func_80017E9C — VRAM 0x80017E9C, size 0x8.
       # File span 0x869C–0x86A4 exclusive. Return-1 stub (jr; addiu $v0,1),
       # second of the seven return-1 twins (shape scratch-proven in 5AJ).
@@ -528,6 +529,9 @@ segments:
       - [0x307AC, c, func_8003FFAC]
       - [0x307BC, c, func_8003FFBC]
       - [0x307CC, asm]
+      # decomp-continue-4: three func_80062F3C(0x26/0x25/0x24) + func_800512AC(0xC,0).
+      - [0x32A28, c, func_80042228]
+      - [0x32A64, asm]
       # func_80042770 — VRAM 0x80042770, size 0x28 (10 words), file
       # span 0x32F70-0x32F98. Byte-table flag read: D_800A0ED4[i*1048] & 1;
       # stride 1048 materializes as ((i*33)*4 - i)*8. Three-word $at
@@ -548,7 +552,7 @@ segments:
       # Phase 5EI: func_80042910 — VRAM 0x80042910, size 0x18.
       # Dual clear: D_800A1860 (int) + D_800A1868 (u32 opaque decl). Mid-330D4 carve.
       - [0x33110, c, func_80042910]
-      - [0x33128, asm]
+      - [0x33128, c, func_80042928]
       # func_80042964 — VRAM 0x80042964, size 0x28, file span 0x33164-0x3318C.
       # Twin of func_80042770 without the mask: return D_800A0EDE[i*1048];
       # stride materializes as ((i*33)*4 - i)*8. era_o2_g0_three_word.
@@ -664,6 +668,10 @@ segments:
       # Tier-2 callback wrapper func_8004EF30.  Former 0x3F17C asm span:
       # prefix 0x5B4, C 0x28, resume 0x4F0 (0x5B4 + 0x28 + 0x4F0 = 0xACC).
       - [0x3F17C, asm]
+      # decomp-continue-4: func_80052E30 + func_800638D8 handler registration.
+      - [0x3F43C, c, func_8004EC3C]
+      - [0x3F478, c, func_8004EC78]
+      - [0x3F4B4, asm]
       - [0x3F730, c, func_8004EF30]
       # Adjacent Tier-2 callback wrapper func_8004F2E4.  Former 0x3F758 span:
       # prefix 0x38C, C 0x28, resume 0x13C (0x38C + 0x28 + 0x13C = 0x4F0).
@@ -687,6 +695,9 @@ segments:
       # Tier-2 callback wrapper func_8004FF30.  Former 0x401A0 span:
       # prefix 0x590, C 0x28, resume 0xC8 (0x590 + 0x28 + 0xC8 = 0x680).
       - [0x401A0, asm]
+      # decomp-continue-4: func_80052E30(1) + func_800638D8 handler registration.
+      - [0x40568, c, func_8004FD68]
+      - [0x405A4, asm]
       - [0x40730, c, func_8004FF30]
       # Adjacent wrapper func_8004FF58 consumes 0x28 from the 0xC8 span.
       - [0x40758, c, func_8004FF58]
@@ -1179,6 +1190,9 @@ segments:
       # the jr-ra delay slot and belongs to this 0x38-byte function.
       - [0x684B4, c, func_80077CB4]
       - [0x684EC, asm]
+      # decomp-continue-4: sign-abs wrapper around func_80077D30.
+      - [0x684F4, c, func_80077CF4]
+      - [0x68530, asm]
       # Phase 5BK: C leaf func_8007A324 — VRAM 0x8007A324, size 0x10.
       # Unsigned-byte global getter on D_8009AFC4; plain -O1 matches.
       - [0x6AB24, c, func_8007A324]

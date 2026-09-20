@@ -1,4 +1,4 @@
-# agent/decompile-continue-4 — 12 new byte-exact matching C leaves (679 -> 691)
+# agent/decompile-continue-4 — 19 new byte-exact matching C leaves (679 -> 698)
 
 Branch `agent/decompile-continue-4`, worktree `/tmp/pe-agent-decomp5`, base
 `df538f07`. Every leaf below is proved by the rebuild harness, not by
@@ -11,11 +11,11 @@ distrobox enter pe-mipsel -- bash -lc 'cd /tmp/pe-agent-decomp5 && bash scripts/
   RESULT: EXACT MATCH
   orig SHA-1: 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
   cand SHA-1: 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
-  Matching claim: YES (691 registered C leaves)
+  Matching claim: YES (698 registered C leaves)
 
 distrobox enter pe-mipsel -- bash -lc 'cd /tmp/pe-agent-decomp5 && bash scripts/verify_us.sh'
   VERIFY_US=PASS
-  PASS all 691 packed C spans equal retail
+  PASS all 698 packed C spans equal retail
 ```
 
 ## Leaves
@@ -34,6 +34,13 @@ distrobox enter pe-mipsel -- bash -lc 'cd /tmp/pe-agent-decomp5 && bash scripts/
 | `func_8007E010` | 0x6E810 | 0x38 | `7E218` / `7E1C4` / `7E0C0`; `D_8009B4AC = 0` | `-O2 -G0` |
 | `func_8007E0C0` | 0x6E8C0 | 0x38 | critical section around `7E1F4(1, D_800A34B0)`; return 1 | `-O2 -G0` |
 | `func_80080F64` | 0x71764 | 0x34 | mode-2 forwarder `func_80081D74(func_80080F98, -1)` | `-O2 -G0` |
+| `func_80017DE4` | 0x85E4 | 0x3C | `func_80037864()` narrowed to `signed char`, stored through `*a0[0]`; return 1 | `-O2 -G0` |
+| `func_8004EC3C` | 0x3F43C | 0x3C | `func_80052E30(0)` then `func_800638D8(a0, func_80050690)` | `-O2 -G0` |
+| `func_8004EC78` | 0x3F478 | 0x3C | `func_80052E30(1)` then `func_800638D8(a0, func_800506E8)` | `-O2 -G0` |
+| `func_8004FD68` | 0x40568 | 0x3C | `func_80052E30(1)` then `func_800638D8(a0, func_80050BE8)` | `-O2 -G0` |
+| `func_80042228` | 0x32A28 | 0x3C | `func_80062F3C(0x26/0x25/0x24)` then `func_800512AC(0xC,0)` | `-O2 -G0` |
+| `func_80042928` | 0x33128 | 0x3C | `func_8004298C(D_800A1860-1,1)` then clears two globals | `-O2 -G0` |
+| `func_80077CF4` | 0x684F4 | 0x3C | sign-abs wrapper around `func_80077D30((a0<0?-a0:a0)&0xFFF)` | `-O2 -G0` |
 
 Each leaf has `src/<name>.c` with the matching-authority SHA-1 in its header and
 a `c` carve in `configs/USA/disc1.yaml`.
