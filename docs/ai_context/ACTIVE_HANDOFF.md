@@ -72,13 +72,17 @@ not yet asserted.
 **Live port.** Real Disc 1 boots and renders. `--route-pad` autopilot (windowed)
 plays Day 1: opera house, first battle, field rooms. `--headless --route-pad`
 drives the same route at full speed (headless present hook ticks `g_frame`;
-commit `0ae2a69`) to **frame ~38000, story `0x48`**. Walls cleared this session,
-in order: inventory-help ids 36-39 (`func_8004C608`, oracle-proven) then the
-BIOS `B0(0Bh)` TestEvent drain (`func_800405A4`, kernel event table in
-`pe_libetc.c`). The route now stops at the next real named boundary,
-`card _card_info A0(AB) kernel call` (`func_8007DD44`); `_card_load`/
-`_new_card`/`_card_write` are named per-target too. Card I/O completion is
-IRQ-level card-event delivery the port does not model; **no card success is
+commit `0ae2a69`) to **frame ~38000, story `0x48`** (Day-1 field `M0020I`).
+Walls cleared this session, in order: inventory-help ids 36-39
+(`func_8004C608`, oracle-proven); the BIOS `B0(0Bh)` TestEvent drain
+(`func_800405A4`, kernel event table in `pe_libetc.c`); then the empty-slot
+memory-card kernel (`agent/card-kernel`: BIOS `B(07h)` DeliverEvent +
+`_card_info`/`_card_load`/`_new_card`/`_card_write` reporting the psx-spx `0x11`
+timeout through the documented events, in `pe_libcard.c`). **The route now runs
+to the 42000 frame limit with ZERO `[STUB:BOOTSTRAP_RET]` stops** (only the
+pre-existing `func_80076C34` GPU boundary reports). It does not yet leave the
+save/load menu — the empty card slot makes the menu retry — so story stays
+`0x48`. Card-present/file ops remain named boundaries; **no card success is
 faked**.
 
 **Movie/FMV path.** The opening STR frame decodes in-bounds (DAY2-159b), the
@@ -93,11 +97,12 @@ silent hang. **Not a full unlock:** at the stop the guest has issued a closing
 Stop with one sector unread (`reading=0`), so the retail reader has no reason
 to BFRD it; that guest-side media-loop completion is the next frontier.
 
-**Open work / next frontiers.** (1) the memory-card kernel/controller model (or
-an evidence-based no-card path) for `_card_info`/`_card_load`/`_new_card`/
-`_card_write`, including the spec-0x100 timeout events; (2) the guest-side
-media-loop completion after the ~319-step FMV media loop; (3) carve the ranked
-large functions from the worklist. **Disc 2 is code-identical:** this session
+**Open work / next frontiers.** (1) leave the save/load menu: a card-present
+model from a real `.mcr` image (directory + file open/read/write/close), or the
+game's no-card prompt/back-out (`func_800425DC` A1864 timeout notice), so the
+route moves past story `0x48`; (2) the guest-side media-loop completion after
+the ~319-step FMV media loop; (3) carve the ranked large functions from the
+worklist. **Disc 2 is code-identical:** this session
 re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
 `SLUS_006.62` (both SHA-1 `452fb033…`); `configs/USA/disc2.yaml` already
 records that `PE.IMG` is identical too, so the decompilation/port covers disc
