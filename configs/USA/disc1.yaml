@@ -198,6 +198,10 @@ segments:
       - [0x87DC, c, func_80017FDC]
       - [0x87F0, c, func_80017FF0]
       - [0x8804, asm]
+      # func_800181CC — VRAM 0x800181CC, size 0xD4, file 0x89CC-0x8AA0.
+      # Actor-list key match; the key needs an explicit copy (key = v) so cc1
+      # keeps it in $v0 and copies to $a2 at the loop preheader.
+      - [0x89CC, c, func_800181CC]
       # Phase 5GA: D_800BCF88 bits-0xC0 clearer, era -O2 -G0.
       - [0x8AA0, c, func_800182A0]
       # Phase 5FZ: D_800BCF88 bits-0xC0 setter, era -O2 -G0.
@@ -220,7 +224,11 @@ segments:
       - [0x90C4, asm]
       # Phase 5EP: global record dispatch and true return.
       - [0x9154, c, func_80018954]
-      - [0x917C, asm]
+      # func_8001897C — VRAM 0x8001897C, size 0xCC, file 0x917C-0x9248.
+      # Record writer: ten pointer-table fields forwarded to func_8002FA10,
+      # era -O2 -G0.  a6..a9 declared signed locally to reproduce retail `lb`.
+      - [0x917C, c, func_8001897C]
+      - [0x9248, asm]
       # Phase 5GC: two-reader call wrapper, era -O2 -G0.
       - [0x9300, c, func_80018B00]
       - [0x9330, c, func_80018B30]
@@ -1110,7 +1118,10 @@ segments:
       # Phase 5EW: C leaf func_80052BCC — VRAM 0x80052BCC, size 0x3C (15 words).
       # Mid-42FC8 carve: prefix 0xC4, C 5288C (0x8), asm 0x338, C 52BCC
       # (0x3C), resume 43408.s 0x2A8.
-      - [0x42FC8, asm]
+      # func_800527C8 — VRAM 0x800527C8, size 0xC4, file 0x42FC8-0x4308C.
+      # era_o2_g8: gp-relative D_8009D02C/D_8009D034 clears; D_800B0CD8
+      # stays absolute via the incomplete-array declaration.
+      - [0x42FC8, c, func_800527C8]
       # Phase 5GW: return-zero stub, era -O2 -G0.
       - [0x4308C, c, func_8005288C]
       # func_80052894 / func_800528C4 — adjacent 12-byte-stride D_800A76A4
@@ -1179,7 +1190,11 @@ segments:
       # Two-entry store pair; indexed stores need ERA_ASPSX_VER=2.30
       # (lui/addu/sw-%lo) while D_8009D048 stays gp-relative. era -O2 -G8.
       - [0x4A6C8, c, func_80059EC8]
-      - [0x4A708, asm]
+      # func_80059F08 — VRAM 0x80059F08, size 0xC8, file 0x4A708-0x4A7D0.
+      # era_o2_g8_aspsx_230: gp-relative state block; D_8009D050 =
+      # D_8009D04C+4 and D_8009D064 = D_8009D058+0xC.
+      - [0x4A708, c, func_80059F08]
+      - [0x4A7D0, asm]
       - [0x4C090, c, func_8005B890]
       - [0x4C09C, c, func_8005B89C]
       - [0x4C0A8, asm]
@@ -1979,6 +1994,11 @@ segments:
       # Phase 5EF: direct func_80082DBC forwarding wrapper.
       - [0x72D54, c, func_80082554]
       - [0x72D74, asm]
+      # func_800825C0 — VRAM 0x800825C0, size 0xC0, file 0x72DC0-0x72E80.
+      # Controller state query through record getter D_8009B738; the state
+      # classification must be a switch so cc1 emits retail's slti tree.
+      - [0x72DC0, c, func_800825C0]
+      - [0x72E80, asm]
       # func_80082ADC — VRAM 0x80082ADC, size 0x2C, file 0x732DC-0x73308.
       # Install two callback pointers plus two zero words around D_800A5AB4
       # through a barrier-held base register. Default era_o2_g0.
