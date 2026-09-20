@@ -22,23 +22,20 @@
 /* ── verbatim matching leaf (src/func_80038910.c) ───────────────────────── */
 
 /*
- * func_80038910 — seed a fixed gp-relative record from 6 arguments.
- *
+ * func_80038910 — seed a fixed gp-relative record from six arguments.
  * VRAM 0x80038910 / file 0x29110 / size 0x30 (12 words).
- * ROM: asm/disc1/28070.s.
  *
  * Args 5 and 6 arrive on the stack (0x10/0x14($sp)); the first four are in
- * $a0..$a3. Every destination is gp-relative (_gp = 0x8009CD70): halfwords at
- * 0x148/0x14C/0x150 and bytes at 0x144/0x154/0x158/0x15C. The literal 1 is
- * materialised into $v1 for the flag byte before the first halfword store.
+ * $a0..$a3. Destinations are gp-relative: halfwords at 0x148/0x14C/0x150 and
+ * bytes at 0x144/0x154/0x158/0x15C. era -O2 -G8.
  */
-/* shimmed by pe_guest_decomp.h: D_8009CEB8 */   /* 0x148($gp) */
-/* shimmed by pe_guest_decomp.h: D_8009CEBC */   /* 0x14C($gp) */
-/* shimmed by pe_guest_decomp.h: D_8009CEC0 */   /* 0x150($gp) */
-/* shimmed by pe_guest_decomp.h: D_8009CEB4 */    /* 0x144($gp) */
-/* shimmed by pe_guest_decomp.h: D_8009CEC4 */    /* 0x154($gp) */
-/* shimmed by pe_guest_decomp.h: D_8009CEC8 */    /* 0x158($gp) */
-/* shimmed by pe_guest_decomp.h: D_8009CECC */    /* 0x15C($gp) */
+/* shimmed by pe_guest_decomp.h: D_8009CEB8 */
+/* shimmed by pe_guest_decomp.h: D_8009CEBC */
+/* shimmed by pe_guest_decomp.h: D_8009CEC0 */
+/* shimmed by pe_guest_decomp.h: D_8009CEB4 */
+/* shimmed by pe_guest_decomp.h: D_8009CEC4 */
+/* shimmed by pe_guest_decomp.h: D_8009CEC8 */
+/* shimmed by pe_guest_decomp.h: D_8009CECC */
 
 void func_80038910(unsigned int a0, unsigned int a1, unsigned int a2,
                    unsigned int a3, unsigned char a4, unsigned char a5) {

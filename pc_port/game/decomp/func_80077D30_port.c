@@ -11,11 +11,19 @@
 
 #include "pe_guest_decomp.h"
 
-#define D_8009489C PE_DECOMP_ARRAY(0x8009489Cu, short)
 #define D_8009589C PE_DECOMP_ARRAY(0x8009589Cu, short)
+#define D_8009489C PE_DECOMP_ARRAY(0x8009489Cu, short)
 
 /* ── verbatim matching leaf (src/func_80077D30.c) ───────────────────────── */
 
+/*
+ * func_80077D30 — quarter-wave sine table lookup returning a signed sample.
+ * VRAM 0x80077D30 / file 0x68530 / size 0x90 (36 words).
+ *
+ * a0 is folded into the first quadrant over the two halfword tables
+ * D_8009589C / D_8009489C; the far quadrants return the negated value.
+ * era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 (three-word indexed load).
+ */
 /* shimmed by pe_guest_decomp.h: D_8009489C */
 /* shimmed by pe_guest_decomp.h: D_8009589C */
 

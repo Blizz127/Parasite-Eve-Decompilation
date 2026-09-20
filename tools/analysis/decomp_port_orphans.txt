@@ -1,18 +1,2 @@
 # pc_port/game/decomp TUs with no matching src/ leaf.
 # Machine-checked by tools/analysis/gen_decomp_ports.py and the decomp-port regression test.
-func_80038910
-func_8005E4E4
-func_8005E518
-func_8006F224
-func_8006F2C4
-func_80075C94
-func_80077D30
-func_8007DBC8
-func_8007E594
-func_80087050
-func_8008C6D0
-func_8008E7F4
-func_800906E4
-func_800CCA40
-func_800CCA78
-func_800CCB6C

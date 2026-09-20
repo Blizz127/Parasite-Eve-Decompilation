@@ -10,10 +10,6 @@
  * docs/ai_context/PC_PORT_FROM_DECOMP.md.
  */
 #include "pe_guest_decomp.h"
-/* verbatim callee declarations */
-extern int func_80076150(int a0, int a1, int a2);
-extern int func_800762BC(int a0);
-
 void func_80075C94(pe_addr_t pe_a0, int a1, int a2, int a3, int a4)
 {
     unsigned char *host_a0 = (unsigned char *)PE_Translate(pe_a0, 1);

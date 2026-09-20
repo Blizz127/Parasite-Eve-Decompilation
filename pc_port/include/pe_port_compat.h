@@ -30,6 +30,10 @@ void func_8007DD74(int arg0);
 /* Defined in platform/pe_libgpu.c and called from generated decomp TUs
  * (src/func_80075C04.c); non-static so the generated caller links to it. */
 uint32_t func_800762A0(int x, int y);
+/* Exported so generated decomp TUs can call the real implementations
+ * instead of falling back to a loud boundary (func_80075C94). */
+uint32_t func_80076150(uint32_t dfe, uint32_t dtd, uint32_t tpage);
+uint32_t func_800762BC(pe_addr_t tw);
 
 /* ── libcard file API, host adapters in pe_libcard.c ─────────────────
  * BIOS B0 32h open / 33h lseek / 34h read / 35h write / 36h close /

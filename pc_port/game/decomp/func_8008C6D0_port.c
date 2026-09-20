@@ -12,14 +12,13 @@
 #include "pe_guest_decomp.h"
 void func_8008C6D0(pe_addr_t pe_a0)
 {
-    unsigned char *host_D_800B8BB4 = PE_DECOMP_ARRAY(0x800B8BB4u, unsigned char);
+    unsigned char *host_D_800B8BB4 = PE_DECOMP_PTRGLOBAL(0x800B8BB4u, unsigned char);
     unsigned int *host_D_8009D2B8 = &PE_DECOMP_SCALAR(0x8009D2B8u, unsigned int);
     unsigned char *host_a0 = (unsigned char *)PE_Translate(pe_a0, 1);
     /* verbatim body (src/func_8008C6D0.c) */
 
     unsigned int i = 0;
     unsigned char *p = host_D_800B8BB4;
-
     (*host_D_8009D2B8) = *(unsigned int *)(host_a0 + 4);
     do {
         *(unsigned int *)p |= 3;

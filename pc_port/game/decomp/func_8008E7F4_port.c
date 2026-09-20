@@ -12,7 +12,6 @@
 #include "pe_guest_decomp.h"
 /* boundary: func_8008E4E8 has no pc_port implementation yet */
 #define func_8008E4E8(...) PE_D_COMP_BOUNDARY2("func_8008E4E8", 0x8008E4E8u, __VA_ARGS__)
-
 /* boundary: func_8008E664 has no pc_port implementation yet */
 #define func_8008E664(...) PE_D_COMP_BOUNDARY2("func_8008E664", 0x8008E664u, __VA_ARGS__)
 

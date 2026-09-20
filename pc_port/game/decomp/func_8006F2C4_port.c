@@ -20,22 +20,15 @@
 /* ── verbatim matching leaf (src/func_8006F2C4.c) ───────────────────────── */
 
 /*
- * func_8006F2C4 — record reset by id (VRAM 0x8006F2C4, file 0x5FAC4,
- * 54 words / 0xD8).
+ * func_8006F2C4 — id-arena record reset.
+ * VRAM 0x8006F2C4 / file 0x5FAC4 / size 0xD8 (54 words).
  *
- * Resolves the record for `idx` in the two id-indexed arenas and clears it:
- *   - ids 0x00..0x0A live in D_800942E4 with stride 0xA0C;
- *   - ids 0x0B..0x15 live in D_800942E8 with stride 0x10C.
- * If the record's language/handler byte (offset 1) is 0x72, it first zeroes
- * seven words of D_800E10A0 (the voice table) and clears bit 16 of the
- * D_800B0CD8 volume flags. Then bytes 0..3 become 00 FF FF FF and the two
- * words at +4/+8 are zeroed. Returns 0, or -1 for an out-of-range id.
- *
- * Both arenas are POINTER globals (retail loads the base with lui+lw), and
- * the stride multiply is emitted from the byte-offset expression, so the
- * arenas are declared `unsigned char *` and addressed with `base + i*stride`.
- *
- * ROM: era gcc-2.7.2-psx -O2 -G0.
+ * ids 0x00..0x0A live in D_800942E4 (stride 0xA0C), 0x0B..0x15 in D_800942E8
+ * (stride 0x10C). If the record's handler byte (offset 1) is 0x72, first zero
+ * seven words of the D_800E10A0 voice table and clear bit 16 of the
+ * D_800B0CD8 volume flags. Then bytes 0..3 become 00 FF FF FF and the words at
+ * +4/+8 are zeroed. Returns 0, or -1 for an out-of-range id. Both arenas are
+ * pointer globals. era -O2 -G0.
  */
 /* shimmed by pe_guest_decomp.h: D_800942E4 */
 /* shimmed by pe_guest_decomp.h: D_800942E8 */

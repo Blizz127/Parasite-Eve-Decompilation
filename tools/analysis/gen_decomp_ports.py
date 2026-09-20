@@ -700,7 +700,9 @@ def rewrite_ptr_body(body, params, globals_):
         if tok in globals_:
             typ, kind = globals_[tok]
             globals_used.add(tok)
-            if kind == "PTRGLOBAL":
+            if kind in ("PTRGLOBAL", "ARRAY"):
+                # An array symbol decays to its base pointer, so it is bound
+                # to the guest base address and used bare (host_X[i], host_X).
                 out.append("host_" + tok)
             else:
                 out.append("(*host_%s)" % tok)
@@ -792,6 +794,12 @@ def generate_ptr(name, src_text, meta, defined):
         if gname not in globals_used:
             continue
         if kind == "PTRGLOBAL":
+            body_out.append(
+                "    %s *host_%s = PE_DECOMP_PTRGLOBAL(0x%su, %s);\n"
+                % (typ, gname, sym_addr(gname), typ)
+            )
+        elif kind == "ARRAY":
+            # `extern T X[];` binds to the guest array base as a T*.
             body_out.append(
                 "    %s *host_%s = PE_DECOMP_PTRGLOBAL(0x%su, %s);\n"
                 % (typ, gname, sym_addr(gname), typ)

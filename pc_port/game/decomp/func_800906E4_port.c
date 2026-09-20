@@ -12,7 +12,7 @@
 #include "pe_guest_decomp.h"
 void func_800906E4(pe_addr_t pe_a0)
 {
-    unsigned char *host_D_800B290C = PE_DECOMP_ARRAY(0x800B290Cu, unsigned char);
+    unsigned char *host_D_800B290C = PE_DECOMP_PTRGLOBAL(0x800B290Cu, unsigned char);
     unsigned char *host_a0 = (unsigned char *)PE_Translate(pe_a0, 1);
     /* verbatim body (src/func_800906E4.c) */
 

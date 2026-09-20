@@ -11,22 +11,20 @@
 
 #include "pe_guest_decomp.h"
 
-#define D_800942E4 PE_DECOMP_PTRGLOBAL(0x800942E4u, unsigned char)
 #define D_800942E8 PE_DECOMP_PTRGLOBAL(0x800942E8u, unsigned char)
+#define D_800942E4 PE_DECOMP_PTRGLOBAL(0x800942E4u, unsigned char)
 
 /* ── verbatim matching leaf (src/func_8006F224.c) ───────────────────────── */
 
 /*
- * func_8006F224 — find a free id slot for a command id (VRAM 0x8006F224,
- * file 0x5FA24, 40 words / 0xA0).
+ * func_8006F224 — find a free id slot for a command id.
+ * VRAM 0x8006F224 / file 0x5FA24 / size 0xA0 (40 words).
  *
- * Rejects ids >= 0xC0 with -1. Ids 0x46..0x54 (the D_800942E8 arena,
- * stride 0x10C) map to slot numbers i+0xB; every other id maps to the
- * D_800942E4 arena (stride 0xA0C) with slot number i. Returns the first
- * slot whose in-use byte is 0, or -1 when the 0xB-entry arena is full.
- * Both arenas are pointer globals (retail emits lui+lw for the base).
- *
- * ROM: era gcc-2.7.2-psx -O2 -G0.
+ * Rejects ids >= 0xC0 with -1. Ids 0x46..0x54 use the D_800942E8 arena
+ * (stride 0x10C) and map to slot i+0xB; every other id uses D_800942E4
+ * (stride 0xA0C) with slot i. Returns the first slot whose in-use byte is 0,
+ * or -1 when the 0xB-entry arena is full. Both arenas are pointer globals
+ * (retail loads the base with lui+lw). era -O2 -G0.
  */
 /* shimmed by pe_guest_decomp.h: D_800942E4 */
 /* shimmed by pe_guest_decomp.h: D_800942E8 */
