@@ -106,6 +106,13 @@ implemented: 0  host-adapted: 4  bootstrap-return: 0  unsupported: 0
 sequence ends there; the hard stop is gone and the frame budget is now the
 only limiter.
 
+A headless `--screenshot` at frame 46200 (just past the abort) renders the
+live `m0020i` save menu over the field scene — "Select File to Save",
+`Slot 1`, and `Used File` rows, i.e. the seven successful saves are now visible
+in the slot list — rather than a black or crashed frame:
+`build/artifacts/post_menu_card_abort_frame46200_2026-09-20.png` (56393/76800
+non-black pixels).
+
 Card image after the fix is unchanged in kind (7 good saves + the partial
 eighth) because the original abort path's erase rebuilds the name with a
 *double* device prefix (`"bu00:" + D_8009EE70`, which already contains
