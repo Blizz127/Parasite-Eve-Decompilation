@@ -234,9 +234,17 @@ MMIO pointer lets cc1 move the final store into the `jr $ra` delay slot
 (`volatile` blocks it and adds a word) — how `func_8008783C`/`func_80087864`
 match. (b) The shift operand must be **unsigned** so cc1 emits `srl`, not
 `sra` (`func_8008780C`). (c) Explicit `hi`/`lo` temporaries force retail's
-evaluation order (`func_800762A0`). Evidence:
-`docs/evidence/agent-decompile-continue-2-20260920/REPORT.md`; 14 triaged
-non-matches with first-mismatch words are parked under `nonmatch/`.
+evaluation order (`func_800762A0`). (d) Per-leaf maspsx gates (all default
+OFF): `MASPSX_THREE_WORD_SYMBOL_STORE`, `MASPSX_PASSTHROUGH_SYMBOL_LOAD`,
+`MASPSX_FILL_STORE_DELAY_SLOT`, `MASPSX_FILL_INDEXED_STORE_DELAY_SLOT`, and
+(newest) `MASPSX_FILL_REGISTER_STORE_DELAY_SLOT` — the last reorders a plain
+`sh $r,off($base)` immediately before a bare `j $31` into the return delay
+slot (pure reorder, no address synthesis). Evidence:
+`docs/evidence/agent-decompile-continue-2-20260920/REPORT.md`,
+`docs/evidence/agent-decompile-ba3/REPORT.md`; triaged non-matches with
+first-mismatch words are parked under `nonmatch/`. **Small-function pool is
+exhausted** (last runs found 0 new leaves); the remaining queue is the
+size-ranked medium/large functions.
 **Build hygiene:** run `build_us.sh` INSIDE the `pe-mipsel` distrobox (a
 host-side run spawns one container per `as` call and is ~10x slower), and do a
 fully clean `build/` when the layout looks stale — a leftover object produced a
