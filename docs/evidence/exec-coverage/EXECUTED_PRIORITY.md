@@ -35,3 +35,20 @@ pc_port-only bytes (all 446 functions): **216,840**.
 | 25 | `func_8003B144` | 1476 | 64548 |
 
 Retail sizes come from the `nonmatching <name>, <size>` lines in `asm/disc1/*.s` (the same boundary map `exec_coverage.py` uses). Regenerate with the same command that writes `coverage.json`, adding `--priority-out docs/evidence/exec-coverage/EXECUTED_PRIORITY.md`.
+
+## Derived reclassification at 884 leaves (NOT a re-measured run)
+
+The executed guest graph does not change when a function becomes a matching C leaf,
+so the C-share can be updated exactly by reclassifying the recorded hit set against the
+current `configs/USA/disc1.yaml`. This is a DERIVED number; the binary sha256 and the raw
+hit logs above still correspond to the 864-leaf snapshot. Re-run the coverage build to
+re-measure independently.
+
+| run | executed | C at 864 | C at 884 | share at 884 |
+|---|---:|---:|---:|---:|
+| route | 710 | 264 (37.18%) | 282 | **39.72%** |
+| movie | 229 | 94 (41.05%) | 100 | **43.67%** |
+
+Newly matched and executed (route, 18): `func_800181CC`, `func_8001897C`, `func_800409B4`, `func_8004FA10`, `func_800509E0`, `func_80051CC4`, `func_800527C8`, `func_80059F08`, `func_8005C498`, `func_8005E038`, `func_8005F27C`, `func_8006C4C4`, `func_8007BAC0`, `func_800825C0`, `func_80085644`, `func_800C3238`, `func_800C6EF8`, `func_800C6F4C`
+
+Newly matched and executed (movie, 6): `func_800409B4`, `func_80051CC4`, `func_800527C8`, `func_8007BAC0`, `func_800825C0`, `func_80085644`
