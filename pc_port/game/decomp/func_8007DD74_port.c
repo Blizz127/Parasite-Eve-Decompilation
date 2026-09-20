@@ -11,13 +11,6 @@
 
 #include "pe_guest_decomp.h"
 
-/* boundary: func_8007DDC4 has no pc_port implementation yet */
-#define func_8007DDC4(...) PE_D_COMP_BOUNDARY1("func_8007DDC4", 0x8007DDC4u, __VA_ARGS__)
-
-/* boundary: func_8007DDB4 has no pc_port implementation yet */
-#define func_8007DDB4(...) PE_D_COMP_BOUNDARY3("func_8007DDB4", 0x8007DDB4u, __VA_ARGS__)
-
-
 /* ── verbatim matching leaf (src/func_8007DD74.c) ───────────────────────── */
 
 /* VRAM 0x8007DD74 / file 0x6E574 / size 0x34.

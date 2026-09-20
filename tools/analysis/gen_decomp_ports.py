@@ -213,6 +213,12 @@ def collect_defined_symbols():
                 text = open(path, encoding="utf-8", errors="replace").read()
             except OSError:
                 continue
+            # Strip comments before scanning: a trailing comment between the
+            # parameter list and the body brace (e.g. `int f(void) /* B0(50h) */`)
+            # otherwise hides the definition and its callers fall back to a
+            # loud boundary even though the function is implemented.
+            text = re.sub(r"/\*.*?\*/", " ", text, flags=re.DOTALL)
+            text = re.sub(r"//[^\n]*", " ", text)
             for m in head_re.finditer(text):
                 name = m.group(1)
                 i = m.end()

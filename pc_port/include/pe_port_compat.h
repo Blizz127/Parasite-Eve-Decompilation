@@ -26,7 +26,10 @@ int func_8007DD44(int port);
 int func_8007DD54(int port);
 int func_8007DDC4(pe_addr_t port);
 int func_8007DDB4(pe_addr_t port, int sector, pe_addr_t src);
-void func_8007DD74(pe_addr_t port);
+void func_8007DD74(int arg0);
+/* Defined in platform/pe_libgpu.c and called from generated decomp TUs
+ * (src/func_80075C04.c); non-static so the generated caller links to it. */
+uint32_t func_800762A0(int x, int y);
 
 /* ── libcard file API, host adapters in pe_libcard.c ─────────────────
  * BIOS B0 32h open / 33h lseek / 34h read / 35h write / 36h close /

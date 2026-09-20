@@ -288,7 +288,7 @@ static uint32_t func_80076150(uint32_t dfe, uint32_t dtd, uint32_t tpage)
     return v1 | v0;
 }
 
-static uint32_t func_800762A0(int x, int y)
+uint32_t func_800762A0(int x, int y)
 {
     return 0xE5000000u | (((uint32_t)y & 0x7FFu) << 11) | ((uint32_t)x & 0x7FFu);
 }
