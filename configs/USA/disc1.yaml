@@ -835,7 +835,12 @@ segments:
       # If the gp word D_8009D008 (0x298($gp)) is set, call func_8004E97C
       # and clear it. era_o2_g8.
       - [0x3FC64, c, func_8004F464]
+      # mid-3FC90 carve: asm prefix 0x3FC90-0x3FF98, then two exact C leaves.
       - [0x3FC90, asm]
+      # func_8004F798 — VRAM 0x8004F798, size 0x40, file 0x3FF98-0x3FFD8. era_o2_g8.
+      - [0x3FF98, c, func_8004F798]
+      # func_8004F7D8 — VRAM 0x8004F7D8, size 0x30, file 0x3FFD8-0x40008. era_o2_g8.
+      - [0x3FFD8, c, func_8004F7D8]
       - [0x40008, c, func_8004F808]
       # Tier-2 callback wrapper func_8004F950.  Former 0x40038 asm span:
       # prefix 0x118, C 0x28, resume 0x6A8 (0x118 + 0x28 + 0x6A8 = 0x7E8).
@@ -874,10 +879,16 @@ segments:
       # Tier-2 callback wrapper func_80050204.  Former 0x408A8 span:
       # prefix 0x15C, C 0x28, resume 0x34 (closure 0x1B8).
       - [0x408A8, asm]
+      # func_800501C8 — VRAM 0x800501C8, size 0x3C, file 0x409C8-0x40A04. era_o2_g8.
+      - [0x409C8, c, func_800501C8]
       - [0x40A04, c, func_80050204]
-      - [0x40A2C, asm]
+      # func_8005022C — VRAM 0x8005022C, size 0x34, file 0x40A2C-0x40A60. era_o2_g8.
+      - [0x40A2C, c, func_8005022C]
       - [0x40A60, c, func_80050260]
       - [0x40A80, asm]
+      # func_80050308 — VRAM 0x80050308, size 0x34, file 0x40B08-0x40B3C. era_o2_g8.
+      - [0x40B08, c, func_80050308]
+      - [0x40B3C, asm]
       # decomp-continue-4: func_8005E8A4(0,1) then func_80064C54(a0+0x33).
       - [0x40CBC, c, func_800504BC]
       # GP-relative two-global forwarding wrapper: era -O2 -G8.
@@ -891,6 +902,12 @@ segments:
       - [0x40F08, c, func_80050708]
       - [0x40F28, c, func_80050728]
       - [0x40F48, asm]
+      # func_800509A8 — VRAM 0x800509A8, size 0x38, file 0x411A8-0x411E0. era_o2_g8.
+      - [0x411A8, c, func_800509A8]
+      - [0x411E0, asm]
+      # func_80050B48 — VRAM 0x80050B48, size 0x4C, file 0x41348-0x41394. era_o2_g0.
+      - [0x41348, c, func_80050B48]
+      - [0x41394, asm]
       - [0x413E8, c, func_80050BE8]
       # func_80050C08 — VRAM 0x80050C08, size 0x48, file 0x41408-0x41450.
       - [0x41408, c, func_80050C08]
@@ -1108,6 +1125,14 @@ segments:
       # Boolean-selected GP state initializer: era -O2 -G8.
       - [0x50044, c, func_8005F844]
       - [0x50074, asm]
+      # func_80060528..func_800605F8 — five GP pair-bump wrappers, size 0x34 each,
+      # file 0x50D28/0x50D5C/0x50D90/0x50DC4/0x50DF8. era_o2_g8.
+      - [0x50D28, c, func_80060528]
+      - [0x50D5C, c, func_8006055C]
+      - [0x50D90, c, func_80060590]
+      - [0x50DC4, c, func_800605C4]
+      - [0x50DF8, c, func_800605F8]
+      - [0x50E2C, asm]
       - [0x51CA0, c, func_800614A0]
       - [0x51CAC, asm]
       - [0x52AB0, c, func_800622B0]
