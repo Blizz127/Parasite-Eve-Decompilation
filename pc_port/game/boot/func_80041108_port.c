@@ -554,21 +554,70 @@ void func_8004D5CC(uint32_t index)
     }
 }
 
+/* Live func_80040F80, translated from asm/disc1/307CC.s 0x80040F80..0x80041108:
+ *   if (D_800A185C) { func_80042228(); return; }
+ *   close the record's open handle and invalidate it;
+ *   if the aborted operation was the state-9 write, rebuild the file name
+ *   (save formatter, then "bu%ld0:%s") and, if a create-open succeeds within
+ *   ten tries, close and erase the partially written file (func_800727A4);
+ *   then run the shared teardown func_8004D5CC(index) and zero the record.
+ * Every callee below is implemented natively (formatter, libcard create/close/
+ * erase, menu teardown), so this path no longer needs a boundary.  A full card
+ * makes the create-open fail all ten times, which is the original "card full"
+ * abort: the erase is skipped and the teardown still runs.
+ *
+ * With no card mounted there is no file description to close or erase, so the
+ * two libcard steps fall back to the recorded libcard boundary the card
+ * oracles pin (the same replay convention the dispatcher uses for an absent
+ * card) and return there, exactly like the recorded original execution. */
 void func_80040F80(pe_addr_t record)
 {
     unsigned epoch=PE_Port_StopEpoch();
+    uint32_t index;
     if(PE_LoadU32(0x800A185Cu)) {func_80042228();return;}
-    uint32_t handle=PE_LoadU32(record+12u);
-    if((int32_t)handle>=0) {
-        operation_boundary("func_80040F80",0x80072774u,handle,0u,0u,0u,1u,0u);return;
+    index=(uint32_t)((int32_t)((record-0x800A0ED4u)*0xC9484E2Bu)>>3);
+    {
+        int32_t handle=(int32_t)PE_LoadU32(record+12u);
+        if(handle>=0) {
+            if(!PE_Card_IsPresent()) {
+                operation_boundary("func_80040F80",0x80072774u,(uint32_t)handle,
+                    0u,0u,0u,1u,0u);return;
+            }
+            (void)func_80072774((int)handle);
+            PE_StoreU32(record+12u,0xFFFFFFFFu);
+        }
     }
     if(PE_LoadU8(record+1u)==9u) {
         uint32_t selected=PE_LoadU8(record+3u);
-        operation_boundary("func_80040F80",0x80071A84u,0x8009EE70u,PE_LoadU32(0x80092224u),
-            record>0x800A0ED4u,PE_LoadU8(record+selected*0x44u+69u)+0x30u,15u,selected+0x41u);return;
+        pe_addr_t full=GA_FMT_SP+0x18u;
+        uint32_t variant=PE_LoadU8(record+selected*0x44u+69u)+0x30u;
+        uint32_t saved[9];
+        int fd=-1;
+        if(!PE_Card_IsPresent()) {
+            operation_boundary("func_80040F80",0x80071A84u,GA_SAVE_NAME,
+                PE_LoadU32(0x80092224u),record>0x800A0ED4u,variant,15u,selected+0x41u);
+            return;
+        }
+        for(unsigned i=0;i<9u;i++)saved[i]=0u;
+        saved[0]=index;saved[2]=record;saved[3]=0xFFFFFFFFu;saved[8]=0x80041048u;
+        PE_StoreU32(GA_FMT_SP+16u,selected+0x41u);
+        (void)PE_FormatterFrame(GA_SAVE_NAME,PE_LoadU32(0x80092224u),
+            record>0x800A0ED4u,variant,GA_FMT_SP,saved);
+        if(PE_Port_StopEpoch()!=epoch)return;
+        for(unsigned i=0;i<8u;i++)saved[i]=PE_LoadU32(GA_FMT_SP-0x250u+0x228u+i*4u);
+        saved[8]=0x80041064u;
+        (void)PE_FormatterFrame(full,0x80010F4Cu,saved[0],GA_SAVE_NAME,GA_FMT_SP,saved);
+        if(PE_Port_StopEpoch()!=epoch)return;
+        for(unsigned tries=0;tries<10u;tries++) {
+            fd=func_80072734(full,1);
+            if(fd!=-1)break;
+        }
+        if(fd!=-1) {
+            (void)func_80072774(fd);
+            (void)func_800727A4(full);
+        }
     }
-    uint32_t product=(record-0x800A0ED4u)*0xC9484E2Bu;
-    func_8004D5CC((uint32_t)((int32_t)product>>3));
+    func_8004D5CC(index);
     if(PE_Port_StopEpoch()!=epoch)return;
     PE_StoreU8(record+1u,0u);PE_StoreU8(record+4u,0u);
     PE_StoreU32(0x800A1854u,0u);PE_StoreU32(0x800A1838u,0u);func_80062CE4();

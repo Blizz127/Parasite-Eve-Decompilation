@@ -10,6 +10,38 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## POST-MENU CARD BOUNDARY SOLVED: full-card write abort is real retail code (2026-09-20)
+
+Branch `agent/post-menu-card` from `e4931e6b`.  The `[STUB:BOOTSTRAP_RET] card
+operation unresolved call` at ~frame 44000 was **not** a missing feature: the
+autopilot had already written seven 2-block saves (slots `A`..`G`), so the
+eighth save genuinely runs out of blocks on a 15-block card and the game runs
+`func_80040F80`, the abort/cleanup path the port still had as a boundary
+(`caller=func_80040F80 target=0x80072774`, `card0_state=9`).
+
+- `game/boot/func_80041108_port.c` — `func_80040F80`
+  (`asm/disc1/307CC.s` 0x80040F80..0x80041108) is now translated in full for
+  the card-present path: close the record handle, and for an aborted state-9
+  write rebuild the name, retry `func_80072734(name,1)` ten times, close +
+  `func_800727A4` (erase) the partial file, then the shared `func_8004D5CC`
+  teardown and record zeroing.  With no card mounted the two libcard steps keep
+  the recorded libcard boundary the card oracles pin.
+  The erase name is built with a *double* device prefix in the original
+  (`"bu%ld0:%s"` over `D_8009EE70`, which already holds `"bu00:..."`), so the
+  BIOS open fails there too and the erase is skipped — reproduced by the
+  regenerated `retail_card_operation_frame_cases.h` hashes.
+- `game/boot/func_80072314_port.c` (new) — BIOS `A(1Bh) strlen` and
+  `A(2Eh) memchr`, the retail thunks `func_80072314`/`func_80072324` that
+  `func_80071A84`'s `%s` conversion used to stop on (psx-spx).  The oracles now
+  model those two BIOS services, so `retail_formatter_frame_cases.h` (64 `%s`
+  cases) and `retail_card_operation_frame_cases.h` (80 cases) were regenerated.
+
+Verified: `pe-native-tests` 1392/1392, CTest 11/11, all touched card/formatter
+oracles PASS, and the live route now runs to `stop_reason=frame-limit` (80000
+frames) with **zero unresolved boundaries and zero bootstrap stubs**.  Story
+stays `0x48` only because the recorded Day-1 pad sequence ends there.
+Evidence: `docs/evidence/pe-post-menu-card-boundary/REPORT.md`.
+
 ## CARD-WRITE WIRING: the save is written to the card (2026-09-20)
 
 Branch `agent/card-write` from `a598ddd0`.  `func_80041108`'s states 3..11 now
