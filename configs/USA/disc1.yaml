@@ -351,6 +351,9 @@ segments:
       # *(a0[1]) = D_800A76A4[*(int *)a0[0]].field_00 (12-byte records); return 1.
       - [0xA5B8, c, func_80019DB8]
       - [0xA5F4, asm]
+      # func_8001A0CC — VRAM 0x8001A0CC, size 0x48, file 0xA8CC-0xA914.
+      - [0xA8CC, c, func_8001A0CC]
+      - [0xA914, asm]
       # Probe: call-and-store wrapper retaining descriptor across the call.
       - [0xA9A8, c, func_8001A1A8]
       # Probe: state bit-24 setter with retail $v0/$a0 allocation.
