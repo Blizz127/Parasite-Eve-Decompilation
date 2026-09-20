@@ -38,6 +38,7 @@
 #include "pe_disc.h"
 #include "pe_guest_image.h"
 #include "pe_route_pad.h"
+#include "route_rehearsal_pads.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,12 +60,11 @@ void Trace_Direct(const char *event) { (void)event; }
 #define GA_TOKEN     D_8009D280
 
 #define MAX_TRACE 256
-/* The harness intentionally drives only the shared pe_route_pad.h table; it
- * does NOT include port_main's RouteRewardSewerPilot, so the actor parks at
- * the m0004i frontier (~frame 7900).  The live autopilot continues to M0020I
- * because it adds the sewer/M34 pilot; extending this limit does not advance
- * the harness (verified at 22000: same 14 milestones, stuck at m0004i). */
-#define ROUTE_FRAME_LIMIT 8000
+/* With the recorded kDay1RoutePads sequence applied, the harness follows the
+ * live autopilot through the later Day-1 rooms and parks in the save/load menu
+ * at ~frame 38495 (empty card slot retries).  Run long enough to assert those
+ * rooms and reach the frame limit. */
+#define ROUTE_FRAME_LIMIT 42000
 
 typedef struct RouteTrace {
     int            frames;
@@ -123,6 +123,8 @@ static int        g_milestone_hits;
  * (shared source of truth; no parallel copy). */
 static int g_route_frames = 0;   /* 0 = use the ROUTE_FRAME_LIMIT default */
 static PeRoutePadConfig g_pad;
+static PeRoutePadStep g_seq[PE_ROUTE_PAD_MAX_STEPS];
+static unsigned g_seq_count;
 
 #define PAD_CROSS  PE_ROUTE_PAD_CROSS
 #define PAD_DOWN   PE_ROUTE_PAD_DOWN
@@ -149,6 +151,13 @@ static void PadConfigFromEnv(void)
     const char *s;
 
     PeRoutePad_ConfigFromEnv(&g_pad);
+    /* Same recorded sequence the interactive --route-pad uses. */
+    if (getenv("PE_ROUTE_PAD_SEQUENCE") && getenv("PE_ROUTE_PAD_SEQUENCE")[0])
+        g_seq_count = PeRoutePad_ParseSequence(getenv("PE_ROUTE_PAD_SEQUENCE"),
+                                               g_seq, PE_ROUTE_PAD_MAX_STEPS);
+    else
+        g_seq_count = PeRoutePad_ParseSequence(kDay1RoutePads, g_seq,
+                                               PE_ROUTE_PAD_MAX_STEPS);
     s = getenv("PE_ROUTE_AYA_EVERY");
     if (s && s[0]) g_pos_dump_every = atoi(s);
     if (g_pos_dump_every < 1) g_pos_dump_every = 1;
@@ -161,7 +170,22 @@ static void PadConfigFromEnv(void)
 
 static uint16_t RoutePadSource(void)
 {
-    return PeRoutePad_Mask(&g_pad, g_frame);
+    uint16_t mask = PeRoutePad_Mask(&g_pad, g_frame);
+
+    /* The recorded kDay1RoutePads sequence is what actually walks Aya through
+     * the later Day-1 rooms; the four-stage table alone parks her at m0004i.
+     * Apply the same sequence and Cross-suppression windows as port_main's
+     * RoutePadSource so the harness and the interactive autopilot drive the
+     * identical input. */
+    mask = PeRoutePad_ApplySequence(g_seq, g_seq_count, g_frame, mask);
+    if (!(g_frame >= 42713 && g_frame < 45041) &&
+        !(g_frame >= 50500 && g_frame < 51200) &&
+        !(g_frame >= 52344 && g_frame < 54500) &&
+        !(g_frame >= 54500 && g_frame < 62000) &&
+        (g_frame < 33620 || g_frame >= 35300) &&
+        (g_frame % g_pad.period) == 3)
+        mask &= g_pad.pulse;
+    return mask;
 }
 
 static void RecordTrace(void)
@@ -438,6 +462,35 @@ static const Milestone kMilestones[] = {
       "m0377i @80195758 assign [1,0x179]; module 5 @80195768 "
       "room_transfer A8067448 (mod1 op77 rect (-211,-4607)-(241,-4114) "
       "at 0x801953C4 hit under PAD4=0xFFAF)" },
+    /* Later Day-1 rooms, reached once the recorded kDay1RoutePads sequence is
+     * applied (the four-stage table alone parks at m0004i).  Tokens decoded
+     * with pc_port/tools/pe_btl14_m0005i_publish_oracle.py's decode_token. */
+    { 1, 0xA80002C8u, "token m0005i (0xA80002C8)",
+      "m0004i walk gate -> m0005i" },
+    { 0, 0x00000028u, "persist[74]=0x28 (m0005i)",
+      "m0005i story write" },
+    { 1, 0xA80663C8u, "token m0367i (0xA80663C8)",
+      "m0005i -> m0367i" },
+    { 1, 0xA80004C8u, "token m0009i (0xA80004C8)",
+      "m0367i -> m0009i" },
+    { 0, 0x00000030u, "persist[74]=0x30 (m0009i)",
+      "m0009i story write" },
+    { 1, 0xA80010C8u, "token m0011i (0xA80010C8)",
+      "m0009i -> m0011i" },
+    { 0, 0x00000038u, "persist[74]=0x38 (m0011i)",
+      "m0011i story write" },
+    { 1, 0xA8001148u, "token m0012i (0xA8001148)",
+      "m0011i -> m0012i" },
+    { 0, 0x00000039u, "persist[74]=0x39 (m0012i)",
+      "m0012i story write" },
+    { 0, 0x00000040u, "persist[74]=0x40 (m0012i)",
+      "m0012i story write" },
+    { 1, 0xA80011C8u, "token m0013i (0xA80011C8)",
+      "m0012i -> m0013i" },
+    { 0, 0x00000048u, "persist[74]=0x48 (m0013i -> m0020i)",
+      "m0013i story write" },
+    { 1, 0xA8002048u, "token m0020i (0xA8002048)",
+      "Day-1 save/load menu room (empty card slot retries here)" },
 };
 
 #define MILESTONE_COUNT ((int)(sizeof(kMilestones) / sizeof(kMilestones[0])))
@@ -655,20 +708,20 @@ int main(void)
     }
 
     /* The route cannot claim more than it proved.  If it stopped before the
-     * documented frontier, say exactly where so a regression is visible.  If
-     * it reached the frontier, pin the frozen task PC too: a regression that
-     * advances further (good) or stalls earlier (bad) both become visible. */
+     * documented frontier, say exactly where so a regression is visible.  The
+     * recorded route now continues past m0004i to the Day-1 save/load menu
+     * (m0020i); there the empty card slot makes the menu retry, so the actor
+     * frontier PC is 0 — pin reaching m0020i and stopping at the frame limit
+     * instead of the old m0004i park. */
     if (reached == MILESTONE_COUNT) {
-        if ((GA_TOKEN == FRONTIER_TOKEN || TraceSawToken(FRONTIER_TOKEN) >= 0) &&
-            FindFrontierPc() != 0u) {
-            printf("PASS: boot -> m0377i bounce -> m0004i route (%d milestones, "
-                   "frontier=m0004i mod4 pc=0x%08X)\n",
-                   MILESTONE_COUNT, FRONTIER_PC);
+        if (GA_TOKEN == 0xA8002048u || TraceSawToken(0xA8002048u) >= 0) {
+            printf("PASS: boot -> Day-1 rooms -> m0020i save/load menu "
+                   "(%d milestones, frames=%d stop=%s)\n",
+                   MILESTONE_COUNT, g_frame, PE_Port_StopReasonName(reason));
             return 0;
         }
-        printf("FAIL: %d milestones reached but frontier moved "
-               "(token=0x%08X frontier_pc=0x%08X)\n",
-               MILESTONE_COUNT, (unsigned)GA_TOKEN, (unsigned)FindFrontierPc());
+        printf("FAIL: %d milestones reached but did not reach m0020i "
+               "(token=0x%08X)\n", MILESTONE_COUNT, (unsigned)GA_TOKEN);
         return 1;
     }
 

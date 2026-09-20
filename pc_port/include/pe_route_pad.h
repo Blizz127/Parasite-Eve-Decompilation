@@ -51,6 +51,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #define PE_ROUTE_PAD_CROSS         0xBFFFu
 #define PE_ROUTE_PAD_DOWN          0xFFEFu
@@ -113,6 +114,60 @@ static inline void PeRoutePad_ConfigFromEnv(PeRoutePadConfig *c)
     s = getenv("PE_ROUTE_PERIOD");
     if (s && s[0]) c->period = atoi(s);
     if (c->period < 1) c->period = 1;
+}
+
+/*
+ * Recorded pad sequence ("frame:mask,frame:mask,...").  This is the same input
+ * the interactive --route-pad port parses from kDay1RoutePads: unlike the
+ * four-stage PeRoutePad_Mask table, it carries the frame-exact held buttons
+ * that walk Aya through the later Day-1 rooms.  Shared here so the route
+ * harness and the port drive the identical sequence.
+ */
+#define PE_ROUTE_PAD_MAX_STEPS 4096
+
+typedef struct PeRoutePadStep {
+    int      frame;
+    uint16_t mask;
+} PeRoutePadStep;
+
+/* Parse strictly-increasing frame:mask pairs.  Returns the number parsed;
+ * stops at the first malformed or out-of-order entry (loud in the caller's
+ * own validation if it cares). */
+static inline unsigned PeRoutePad_ParseSequence(const char *s,
+                                                PeRoutePadStep *steps,
+                                                unsigned cap)
+{
+    unsigned n = 0;
+    while (s && s[0]) {
+        char *end;
+        unsigned long frame, mask;
+        errno = 0;
+        frame = strtoul(s, &end, 10);
+        if (errno || end == s || *end != ':' || frame > 0x7FFFFFFFul ||
+            n == cap || (n && frame <= (unsigned long)steps[n - 1].frame))
+            break;
+        s = end + 1;
+        errno = 0;
+        mask = strtoul(s, &end, 16);
+        if (errno || end == s || mask > 0xFFFFul || (*end && *end != ','))
+            break;
+        steps[n].frame = (int)frame;
+        steps[n].mask = (uint16_t)mask;
+        n++;
+        s = *end ? end + 1 : end;
+    }
+    return n;
+}
+
+/* Apply the latest step at or before `frame`; earlier steps are cumulative
+ * (a step holds until the next one). */
+static inline uint16_t PeRoutePad_ApplySequence(const PeRoutePadStep *steps,
+                                                unsigned count, int frame,
+                                                uint16_t mask)
+{
+    for (unsigned i = 0; i < count && frame >= steps[i].frame; i++)
+        mask = steps[i].mask;
+    return mask;
 }
 
 /*
