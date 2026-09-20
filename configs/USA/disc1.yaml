@@ -958,6 +958,10 @@ segments:
       # Tier-2 callback wrapper func_8004FF30.  Former 0x401A0 span:
       # prefix 0x590, C 0x28, resume 0xC8 (0x590 + 0x28 + 0xC8 = 0x680).
       - [0x401A0, asm]
+      # func_8004FA10 — VRAM 0x8004FA10, size 0xE8, file 0x40210-0x402F8.
+      # Battle-start setup; gp 0x1B0/0x184 = 0x8009CF20/0x8009CEF4. era_o2_g8.
+      - [0x40210, c, func_8004FA10]
+      - [0x402F8, asm]
       # decomp-continue-4: func_80052E30(1) + func_800638D8 handler registration.
       - [0x40568, c, func_8004FD68]
       # func_8004FDA4 — VRAM 0x8004FDA4, size 0x44, file 0x405A4-0x405E8.
@@ -1015,7 +1019,12 @@ segments:
       - [0x40F48, asm]
       # func_800509A8 — VRAM 0x800509A8, size 0x38, file 0x411A8-0x411E0. era_o2_g8.
       - [0x411A8, c, func_800509A8]
-      - [0x411E0, asm]
+      # func_800509E0 — VRAM 0x800509E0, size 0xF8, file 0x411E0-0x412D8.
+      # BGM/SE selector driven by the gp small-data flags 0x1AC/0x1A8
+      # (0x8009CF1C/0x8009CF18) and the absolute bytes D_800C0E20/E22; ends
+      # with the slot-0x44 clear. era_o2_g8.
+      - [0x411E0, c, func_800509E0]
+      - [0x412D8, asm]
       # func_80050B48 — VRAM 0x80050B48, size 0x4C, file 0x41348-0x41394. era_o2_g0.
       - [0x41348, c, func_80050B48]
       - [0x41394, asm]
@@ -1203,7 +1212,12 @@ segments:
       - [0x4C944, c, func_8005C144]
       - [0x4C974, asm]
       - [0x4CC88, c, func_8005C488]
-      - [0x4CC98, asm]
+      # func_8005C498 — VRAM 0x8005C498, size 0xFC, file 0x4CC98-0x4CD94.
+      # Frame-start handler: startup call chain, gp count 0x2C0 (0x8009D030),
+      # gp flag 0x2C4 (0x8009D034), absolute D_8009D1E0, double func_800514F8.
+      # era_o2_g8.
+      - [0x4CC98, c, func_8005C498]
+      - [0x4CD94, asm]
       # func_8005D940 — VRAM 0x8005D940, size 0x30, file 0x4E140-0x4E170.
       # Fill an 8-byte record from D_8009D280, then submit it. era_o2_g0.
       - [0x4E140, c, func_8005D940]
@@ -1785,6 +1799,14 @@ segments:
       # Default era_o2_g0. Resume asm at 0x6C1EC.
       - [0x6C164, c, func_8007B964]
       - [0x6C1EC, asm]
+      # func_8007BAC0 — VRAM 0x8007BAC0, size 0xF0, file 0x6C2C0-0x6C3B0.
+      # Sequenced SPU/voice register init: two conditional 0x3FFF writes to
+      # +0x180/+0x182, then 0x3FFF to +0x1B0/+0x1B2 and 0xC001 to +0x1AA, then
+      # seven byte writes through the D_8009B27C/B280/B284/B288 pointer globals
+      # fed by a 4-byte stack scratch array; returns 0. Needs
+      # era_o2_g0_fill_epilogue_delay_slot for the `jr $ra` delay slot.
+      - [0x6C2C0, c, func_8007BAC0]
+      - [0x6C3B0, asm]
       # Phase 5EF: write-only opaque 32-bit setter.
       - [0x6C930, c, func_8007C130]
       # Tier-2 probe: three-word state setter func_8007C544.

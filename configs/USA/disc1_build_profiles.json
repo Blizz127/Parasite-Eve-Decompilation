@@ -313,7 +313,8 @@
       "func_80074DC0",
       "func_80075358",
       "func_8007506C",
-      "func_800750CC"
+      "func_800750CC",
+      "func_8007BAC0"
     ],
     "era_o2_g0_fill_store_delay_slot": [
       "func_80074A14",
@@ -436,7 +437,10 @@
       "func_8005010C",
       "func_80050178",
       "func_80057B70",
-      "func_8004905C"
+      "func_8004905C",
+      "func_800509E0",
+      "func_8005C498",
+      "func_8004FA10"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
