@@ -1110,6 +1110,12 @@ segments:
       # C 0xA4, resume 5747C.s 0x35E0.
       - [0x573D8, c, func_80066BD8]
       - [0x5747C, asm]
+      # func_80068CE0 — six-stage subsystem refresh, VRAM 0x80068CE0,
+      # file 0x594E0, size 0x48 (18 words). era -O2 -G0; six ordered
+      # calls then `return 0`. Mid-5747C carve: prefix 0x2064, C 0x48,
+      # resume 59528.s 0x1534.
+      - [0x594E0, c, func_80068CE0]
+      - [0x59528, asm]
       # func_8006A25C — game-over destination saver, VRAM 0x8006A25C,
       # file 0x5AA5C, size 0x8C (35 words). era -O2 -G0; shared $a0 base
       # for D_800B0CD8 (local pointer) and the void-return tail order
