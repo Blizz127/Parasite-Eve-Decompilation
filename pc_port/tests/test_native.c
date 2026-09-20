@@ -40287,6 +40287,7 @@ int main(void)
     test_DAY1_card_status();
     test_DAY1_card_present_kernel();
     test_DAY1_card_file_api();
+    test_DAY1_card_device_prefix_name();
     test_DAY1_card_operation();
     test_DAY1_card_driver();
     test_DAY1_card_cleanup();

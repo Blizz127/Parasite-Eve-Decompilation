@@ -153,3 +153,45 @@ static void test_DAY1_card_file_api(void)
     PE_Card_Reset();   /* re-resolve from the default image for later tests */
     PASS();
 }
+
+/* The retail save name is produced by the formatter template
+ * "bu%d0:BASLUS-00662000000%c%c", i.e. a "buXX:" device prefix plus a 20-char
+ * filename whose last two bytes are the variant ('0') and 'A'+slot.  The card
+ * stores only the filename, and the game's directory match reads name[0x12]
+ * (variant) and name[0x13] (slot).  A host that strips the prefix after
+ * capping at 20 bytes loses exactly those two bytes. */
+static void test_DAY1_card_device_prefix_name(void)
+{
+    static const char *path = "/tmp/pe_card_devprefix_test.mcr";
+    static const char *fname = "bu00:BASLUS-006620000000A";
+    pe_addr_t name = 0x80150000u, dirent = 0x80152000u;
+    int fd;
+    unsigned i;
+
+    TEST("DAY1_card_device_prefix_name");
+    ResetTestState();
+    remove(path);
+    setenv("PE_CARD_IMAGE", path, 1);
+    PE_Card_Reset();
+    PE_Card_SetPresent(1);
+
+    for (i = 0; i < 32u; i++)
+        PE_StoreU8(name + (pe_addr_t)i, 0u);
+    for (i = 0; fname[i]; i++)
+        PE_StoreU8(name + (pe_addr_t)i, (uint8_t)fname[i]);
+
+    ASSERT(func_80072784(0) == 1, "format must succeed on a present card");
+    fd = func_80072734(name, 0x200);
+    ASSERT(fd >= 0, "create with a buXX: prefixed name must succeed");
+    ASSERT(func_80072774(fd) == 0, "close(write) must succeed");
+
+    ASSERT(func_800727B4(0, dirent) == dirent,
+           "firstfile must return the created file");
+    ASSERT(PE_LoadU8(dirent + 0x12u) == 0x30u &&
+           PE_LoadU8(dirent + 0x13u) == 0x41u,
+           "device prefix must not truncate the variant/slot name bytes");
+
+    remove(path);
+    PE_Card_Reset();
+    PASS();
+}

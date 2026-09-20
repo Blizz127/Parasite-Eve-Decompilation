@@ -502,33 +502,30 @@ pe_addr_t func_80072794(pe_addr_t dirent)
 
 static void pe_card_name_from_guest(pe_addr_t name, uint8_t out[20])
 {
-    uint32_t i, colon = 20u;
+    uint8_t raw[40];
+    uint32_t i, n = 0u, colon = sizeof(raw), src;
 
-    for (i = 0; i < 20u; i++) {
+    /* Read the whole guest name first: it is "buXX:" (6) + up to 20 filename
+     * chars, so capping at 20 before stripping the device prefix truncated the
+     * last five filename chars — exactly the two the game's directory match
+     * uses (name[0x12]=variant, name[0x13]='A'+slot). */
+    for (i = 0; i < sizeof(raw); i++) {
         uint8_t c = PE_LoadU8(name + i);
-        out[i] = c;
-        if (c == 0u) {
-            i++;
+        raw[i] = c;
+        n = i + 1u;
+        if (c == 0u)
             break;
-        }
     }
-    for (; i < 20u; i++)
-        out[i] = 0u;
     /* Strip the leading device specifier ("bu00:", "bu10:", ...): the card
      * stores only the filename part.  The game's directory match compares the
-     * card name against its own name template *after* the 5-char "buXX:"
-     * prefix (state 2: dirent vs [0x80092224]+6), so a stored name that keeps
-     * the prefix never matches and the slot reads as unused. */
-    for (i = 0; i < 6u && out[i] != 0u; i++) {
-        if (out[i] == ':') { colon = i; break; }
+     * card name against its own name template *after* the "buXX:" prefix
+     * (state 2: dirent vs [0x80092224]+6). */
+    for (i = 0; i < 6u && i < n; i++) {
+        if (raw[i] == ':') { colon = i; break; }
     }
-    if (colon < 20u) {
-        uint32_t j;
-        for (j = 0; colon + 1u + j < 20u; j++)
-            out[j] = out[colon + 1u + j];
-        for (; j < 20u; j++)
-            out[j] = 0u;
-    }
+    src = (colon < n) ? colon + 1u : 0u;
+    for (i = 0; i < 20u; i++)
+        out[i] = (src + i < n) ? raw[src + i] : 0u;
 }
 
 int func_80072734(pe_addr_t name, int mode)
