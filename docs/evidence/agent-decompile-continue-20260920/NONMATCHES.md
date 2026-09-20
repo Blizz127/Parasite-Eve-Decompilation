@@ -105,3 +105,14 @@ slot). Both direct-array and local-pointer phrasings make cc1 re-materialize
 `D_800A5AB4+n` for every store, and the relocation-normalized diff hides the
 extra `lui/addu` pairs behind zeroed words. One non-relocated word differs;
 the address-computation shape differs. Draft at `nonmatch/func_80082ADC.c`.
+
+### Batch 5 additions
+
+- `func_800762A0` (0x66AA0, 0x1C): pack `0xE5000000 | (a0&0x7FF) | ((a1&0x7FF)<<11)`.
+  Era orders the constant/operand materialization differently (3 words differ).
+- `func_80087798` (0x77F98, 0x24): two 0x7FFF-masked stores at 0x1F801C00+index*16.
+  6 words differ; era does not keep the base in `$v0` with `sh` in the delay slot.
+- `func_80038CE4` (0x294E4, 0x28): two-stage byte lookup through D_80091A28.
+  Era hoists/orders the two `lbu`/`addu` pairs differently (3 words differ).
+
+Drafts preserved under `nonmatch/`.
