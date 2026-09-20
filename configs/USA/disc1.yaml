@@ -954,6 +954,10 @@ segments:
       # size 0x20, era -O2 -G0.
       - [0x4E2DC, c, func_8005DADC]
       - [0x4E2FC, asm]
+      # func_8005DB8C — VRAM 0x8005DB8C, size 0x20, file 0x4E38C-0x4E3AC.
+      # Global word plus record-base helper: era -O2 -G0.
+      - [0x4E38C, c, func_8005DB8C]
+      - [0x4E3AC, asm]
       # Global word plus record-base helper: era -O2 -G0.
       - [0x4E3F8, c, func_8005DBF8]
       # Adjacent global word plus record-base helper: era -O2 -G0.
@@ -1205,7 +1209,10 @@ segments:
       # func_80075C04 — VRAM 0x80075C04, size 0x40, file 0x66404-0x66444.
       # Marker + signed-halfword call; same epilogue-slot fill.
       - [0x66404, c, func_80075C04]
-      - [0x66444, asm]
+      # func_80075C44 — VRAM 0x80075C44, size 0x28, file 0x66444-0x6646C.
+      # GPU primitive packer twin of func_80075C6C with flag word 0xE6000002;
+      # +3 = 2, +4 = 0xE6000002/0 by a1 OR (a2 != 0), +8 = 0. era -O2 -G0.
+      - [0x66444, c, func_80075C44]
       # func_80075C6C — VRAM 0x80075C6C, size 0x28, file 0x6646C-0x66494.
       # GPU primitive packer: +3 = 2, +4 = 0xE6000001/0 by a1, +8 = 0.
       - [0x6646C, c, func_80075C6C]
