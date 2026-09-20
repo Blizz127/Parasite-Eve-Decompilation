@@ -19,6 +19,7 @@
 #include "pe_route_pad.h"
 #include "pe_audio.h"
 #include "pe_spu.h"
+#include "pe_xa.h"
 #include "pe_port_compat.h"
 #include "pe_guest_ram.h"
 #include <stdio.h>
@@ -566,6 +567,7 @@ int main(int argc, char **argv) {
     Bootstrap_Init();
     HostFB_Init();
     PE_Audio_InitFromEnv();
+    PE_Xa_Reset();
     if (getenv("PE_AUDIO_SELFTEST") && getenv("PE_AUDIO_SELFTEST")[0] != '\0' &&
         getenv("PE_AUDIO_SELFTEST")[0] != '0') {
         fprintf(stderr, "[AUDIO] pipeline self-test: 1s synthetic ADPCM tone "
@@ -826,6 +828,11 @@ int main(int argc, char **argv) {
         PE_Spu_GetStats(&rw, &ko, &kf);
         fprintf(stderr, "[SPU] reg_writes=%u key_ons=%u key_offs=%u active=%d\n",
                 rw, ko, kf, PE_Spu_ActiveVoiceCount());
+    }
+    if (getenv("PE_XA_DEBUG") || getenv("PE_AUDIO_WAV")) {
+        fprintf(stderr, "[XA] sectors=%llu frames=%llu channels=%u\n",
+                PE_Xa_SectorsDecoded(), PE_Xa_FramesDecoded(),
+                PE_Xa_ActiveChannels());
     }
     PE_Audio_Shutdown();
     TraceEvent("shutdown_end"); TraceClose();
