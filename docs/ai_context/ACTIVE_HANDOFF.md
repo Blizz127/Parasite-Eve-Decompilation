@@ -10,6 +10,33 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## agent-decomp103 (slice 6 round 2, ranks 753-1665) — 18 leaves, 724 → 742 (2026-09-20)
+
+Branch `agent/decomp103` from `d2ae6879`, worktree `/tmp/pe-agent-decomp103`.
+Baseline reproduced (724, EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `VERIFY_US=PASS`). **+18 new
+leaves**, all on the **default `era_o2_g0`** profile (no profile/YAML-profile
+change). Final fresh build on `2df1dbf2`: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (742
+registered C leaves)`, `VERIFY_US=PASS` (`1075 spans = 742 c + 331 asm + 2
+rodata`). Commit range `d2ae6879..2df1dbf2`, one leaf per commit.
+
+**Method fix that unlocked the batch:** slice `glabel … endlabel` (not
+`glabel+1 .. +size/4`) — the latter drops trailing words after an interior
+`.L` label and made six leaves look "close but wrong". Correct spans +
+faithful statement order matched call-wrapper/straight-line shapes outright.
+
+**NEW LEVER (unactioned): ASPSX fills the `jr $31` delay slot with the stack
+restore.** `func_800755BC`/`func_80075AE8` differ by exactly 2 words: retail
+`jr $ra; addiu $sp,$sp,0x18`, cc1 `addiu $sp,$sp,0x18; jr $ra; nop`. Must be
+per-leaf (matched `func_80090AAC` keeps the unfilled form). A maspsx
+`MASPSX_FILL_SPRESTORE_DELAY_SLOT=1` patch would close those two plus 102's
+`func_80075B4C`/`func_8007DD74`/`func_80075C04`; **117 slice-6 functions have
+this hard epilogue shape**. Also confirmed but not committed (18-leaf cap):
+`func_8004FC3C` (0x4043C) `WORDS MATCH` when declared `int` with an explicit
+`return 0;` (hoists `addu $v0,$zero,$zero` into the `beqz` delay slot).
+Full table + 10 parked divergences: `docs/evidence/agent-decomp103/REPORT.md`.
+
 ## PARENT MERGE VERIFICATION: 724 matching C leaves (2026-09-20)
 
 Merged `agent/xapolish` (`6b8422b8`), `agent/decomp101` (`d347a0c7`),

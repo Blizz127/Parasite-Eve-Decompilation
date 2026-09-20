@@ -396,6 +396,19 @@
    "note": "agent-decomp102 slice-6 sweep (branch agent/decomp102, base 58ffdd4b) matched 14 small leaves (709->723); ~30 further small candidates were parked after two attempts with byte-level divergence. Dominant residual classes: (1) return-delay-slot fill -- retail fills the bare 'jr $ra' slot with 'addiu $sp,$sp,+0x18' where cc1 2.7.2 emits the teardown BEFORE the jump (func_80075B4C 0x6634C/0x38, func_8007DD74 0x6E574/0x34, func_80075C04 0x66404/0x40); (2) small symbolic stores -- cc1 folds to the ASPSX 'sw $r,SYM' $at macro instead of a live base register + 'sw $v1,off($v0)' (func_80082ADC 0x732DC/0x2C; func_8005DB8C 0x4E38C/0x20); (3) scheduling of independent halfword loads vs constant materialisation (func_800CC244 0xBCA44, func_800CC284 0xBCA84, func_800CD07C 0xBD87C, func_80067B40 0x58340, func_8007FCBC 0x704BC, func_8006A2E8 0x5AAE8, func_80075C44 0x66444); (4) delay-slot scheduling across a call: retail puts an absolute store or the low half of an 'la' into the jal slot (func_8007FB04 0x70304/0x40, func_8008227C 0x72A7C/0x30); (5) load-delay nop placement vs a loop label (func_80083578 0x73D78/0x28: retail nop before the label, cc1 label before the lhu so maspsx adds a per-iteration nop). Fixed-point helpers func_8003708C/BC/CC use 'ori $at' + 'add'. Non-C: func_80072714/24 are 'syscall 0' veneers; func_80078120 branches outside its nonmatching extent; func_8007E3B4 is a 'jr $v0' rodata jump; 4-byte nop pads are worklist false positives.",
    "evidence": "docs/evidence/agent-decomp102/REPORT.md (table: Parked / not attempted further)",
    "next": "Reopen only with a general maspsx delay-slot-fill lever for non-store instructions before 'j $31'/'jal' (retail ASPSX 2.21 fills these; the vendored maspsx only has store-specific gates), or an addressing-form lever that keeps a symbol base live across multiple stores; the $gp readers need a separate gp-base/model investigation (_gp = 0x8009CD60)."
+  },
+  {
+   "id": "aspsx-sprestore-delay-slot",
+   "status": "OPEN",
+   "note": "agent-decomp103: cc1 2.7 always emits the stack restore before jr $31 (`addiu $sp,$sp,N` / `jr` / `nop`); retail ASPSX moves it into the delay slot (`jr` / `addiu $sp,$sp,N`). Both shapes exist in retail, so a fix must be a per-leaf maspsx env flag, e.g. MASPSX_FILL_SPRESTORE_DELAY_SLOT=1, mirroring MASPSX_FILL_STORE_DELAY_SLOT. func_800755BC/func_80075AE8 triage to exactly the 2 swapped epilogue words; agent-decomp102 parked func_80075B4C/func_8007DD74/func_80075C04 for this same divergence. 117 of the 913 slice-6 functions carry this hard epilogue shape (jr $ra immediately followed by addiu $sp,$sp,-N). Counter-example that must stay unfilled: matched func_80090AAC (0x812AC).",
+   "members": [
+    "func_800755BC",
+    "func_80075AE8",
+    "func_80075B4C",
+    "func_8007DD74",
+    "func_80075C04"
+   ],
+   "evidence": "docs/evidence/agent-decomp103/REPORT.md"
   }
  ]
 }
