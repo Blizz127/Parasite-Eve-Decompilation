@@ -261,6 +261,13 @@ class RunCoverage:
     boundary_events: int = 0
     unresolved_boundary_guest_functions: list[str] = field(default_factory=list)
     unresolved_boundary_unattributed_events: int = 0
+    # Names are what make the metric actionable: they let a reader intersect
+    # "executed but not yet matched" with the pending-decompilation worklist.
+    # Sorted for stable diffs; the counts above remain the authoritative values.
+    executed_guest_function_names: list[str] = field(default_factory=list)
+    decompiled_c_names: list[str] = field(default_factory=list)
+    pc_port_only_names: list[str] = field(default_factory=list)
+    unmapped_guest_names: list[str] = field(default_factory=list)
 
     @property
     def decompiled_c_share_percent(self) -> float:
@@ -285,6 +292,10 @@ class RunCoverage:
                 self.unresolved_boundary_guest_functions,
             "unresolved_boundary_unattributed_events":
                 self.unresolved_boundary_unattributed_events,
+            "executed_guest_function_names": self.executed_guest_function_names,
+            "decompiled_c_names": self.decompiled_c_names,
+            "pc_port_only_names": self.pc_port_only_names,
+            "unmapped_guest_names": self.unmapped_guest_names,
         }
 
 
@@ -310,6 +321,10 @@ def classify_run(
     )
     guest_seen: set[int] = set()
     unmapped_seen: set[int] = set()
+    guest_names: set[str] = set()
+    decompiled_names: set[str] = set()
+    pc_port_only_names: set[str] = set()
+    unmapped_names: set[str] = set()
     for address in read_hits(hits_path):
         run.executed_host_functions += 1
         name = symbols.resolve(address)
@@ -320,20 +335,29 @@ def classify_run(
         if not m:
             run.executed_host_helpers += 1
             continue
-        vma = int(m.group(1)[len("func_"):], 16)
+        func_name = m.group(1)
+        vma = int(func_name[len("func_"):], 16)
         boundary = guest_map.find(vma)
         if boundary is None:
             unmapped_seen.add(vma)
+            unmapped_names.add(func_name)
             continue
         if vma in guest_seen:
             continue
         guest_seen.add(vma)
+        guest_names.add(func_name)
         if boundary.kind == "c":
             run.decompiled_c += 1
+            decompiled_names.add(func_name)
         else:
             run.pc_port_only += 1
+            pc_port_only_names.add(func_name)
     run.executed_guest_functions = len(guest_seen)
     run.unmapped_guest_functions = len(unmapped_seen)
+    run.executed_guest_function_names = sorted(guest_names)
+    run.decompiled_c_names = sorted(decompiled_names)
+    run.pc_port_only_names = sorted(pc_port_only_names)
+    run.unmapped_guest_names = sorted(unmapped_names)
 
     if boundaries_path is not None:
         culprits: set[str] = set()
@@ -381,6 +405,71 @@ def parse_run_spec(spec: str, root: Path) -> tuple[str, Path, Path | None]:
     return label, hits, boundaries
 
 
+def render_priority_markdown(
+    payload: dict[str, Any],
+    guest_map: "GuestMap",
+    top: int = 25,
+) -> str:
+    """Rank the primary run's executed pc_port-only functions by retail size.
+
+    These are guest functions a real run already reaches but which are still
+    transcribed in pc_port rather than backed by a decompiled C leaf, so
+    matching them raises the executed C-share (not just the static leaf count).
+    """
+    primary = payload["primary"]
+    run = payload["runs"][primary]
+    rows: list[tuple[int, str, int]] = []
+    for name in run.get("pc_port_only_names", []):
+        vma = vma_from_name(name)
+        boundary = guest_map.find(vma) if vma is not None else None
+        size = boundary.size if boundary is not None else 0
+        rows.append((size, name, vma or 0))
+    rows.sort(key=lambda row: (-row[0], row[1]))
+    head = rows[:top]
+    total_bytes = sum(row[0] for row in rows)
+
+    lines: list[str] = []
+    lines.append("# Executed priority — pc_port-only functions the route reaches")
+    lines.append("")
+    lines.append(
+        f"Source: the **{primary}** coverage run "
+        f"(`{run['hits_file']}`), classified by `tools/progress/exec_coverage.py` "
+        "against the retail boundary map. Binary "
+        f"`{payload['binary']}` (SHA-256 `{payload['binary_sha256']}`)."
+    )
+    lines.append("")
+    lines.append(
+        f"The route entered **{run['executed_guest_functions']}** distinct guest "
+        f"functions: **{run['decompiled_c']}** backed by a decompiled C leaf "
+        f"({run['decompiled_c_share_percent']:.2f}%) and "
+        f"**{run['pc_port_only']}** backed by a pc_port transcription only. "
+        "The table below ranks the top "
+        f"{len(head)} pc_port-only functions by descending retail size — "
+        "matching them is what moves the executed C-share, because the run "
+        "already reaches them."
+    )
+    lines.append("")
+    lines.append(
+        f"pc_port-only bytes (all {len(rows)} functions): **{total_bytes:,}**."
+    )
+    lines.append("")
+    lines.append("| # | function | retail bytes | running bytes |")
+    lines.append("| ---: | --- | ---: | ---: |")
+    running = 0
+    for index, (size, name, _vma) in enumerate(head, start=1):
+        running += size
+        lines.append(f"| {index} | `{name}` | {size} | {running} |")
+    lines.append("")
+    lines.append(
+        "Retail sizes come from the `nonmatching <name>, <size>` lines in "
+        "`asm/disc1/*.s` (the same boundary map `exec_coverage.py` uses). "
+        "Regenerate with the same command that writes `coverage.json`, adding "
+        "`--priority-out docs/evidence/exec-coverage/EXECUTED_PRIORITY.md`."
+    )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -398,6 +487,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--primary", default=None,
                         help="label native_metrics should quote (default: first run)")
     parser.add_argument("--json-out", type=Path)
+    parser.add_argument("--priority-out", type=Path,
+                        help="write EXECUTED_PRIORITY.md ranking the primary "
+                             "run's pc_port-only functions by retail size")
     parser.add_argument("--print-json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -445,6 +537,10 @@ def main(argv: list[str] | None = None) -> int:
         out = args.json_out if args.json_out.is_absolute() else root / args.json_out
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    if args.priority_out is not None:
+        out = args.priority_out if args.priority_out.is_absolute() else root / args.priority_out
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(render_priority_markdown(payload, guest_map), encoding="utf-8")
     if args.print_json or args.json_out is None:
         print(json.dumps(payload, indent=2))
 
