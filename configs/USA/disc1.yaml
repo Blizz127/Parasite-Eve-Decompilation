@@ -2008,6 +2008,13 @@ segments:
       # Probe: D_800E2248 high-halfword predicate.
       - [0xB3368, c, func_800C2B68]
       - [0xB3390, asm]
+      # func_800C3098 — display-mode selector + D_800E27AC refresh, VRAM
+      # 0x800C3098, file 0xB3898, size 0x9C (39 words). era -O2 -G0;
+      # void return (retail leaves the callee's $v0 in place, any
+      # short/int return adds andi/sll/sra extension).
+      # Mid-B3390 carve: prefix 0x508, C 0x9C, resume B3934.s 0x39C8.
+      - [0xB3898, c, func_800C3098]
+      - [0xB3934, asm]
       # func_800C653C — VRAM 0x800C653C, size 0x48, file 0xB6D3C-0xB6D84.
       - [0xB6D3C, c, func_800C653C]
       - [0xB6D84, asm]
