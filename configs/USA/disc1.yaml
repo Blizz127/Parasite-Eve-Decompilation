@@ -1963,6 +1963,7 @@ segments:
       # Phase 5GT: return-zero stub twin, era -O2 -G0.
       - [0xBA418, c, func_800C9C18]
       - [0xBA420, asm]
+      - [0xBA59C, c, func_800C9D9C]
       # Phase 5V: C leaf func_800C9EA0 — VRAM 0x800C9EA0, size 0x8.
       # File span 0xBA6A0–0xBA6A8 exclusive. Empty jr/nop stub.
       - [0xBA6A0, c, func_800C9EA0]
