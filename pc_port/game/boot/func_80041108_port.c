@@ -241,7 +241,7 @@ static void card_live_close(pe_addr_t record, uint32_t index)
     selected = PE_LoadU8(record + 3u);
     entry = record + selected * 0x44u + 0x1Cu;
     buf = 0x800A1720u + (index << 7);
-    if (PE_LoadU8(entry) == 1u) {
+    if (PE_LoadU8(entry) == PE_LoadU8(record)) {
         PE_StoreU16(entry + 0x24u, PE_LoadU16(buf + 0x28u));
         PE_StoreU16(entry + 0x26u, PE_LoadU16(buf + 0x26u));
         PE_StoreU8(entry + 0x28u, PE_LoadU8(buf + 0x2Au));
@@ -257,7 +257,13 @@ static void card_live_close(pe_addr_t record, uint32_t index)
         PE_StoreU32(entry + 0x18u, PE_LoadU32(buf + 0x14u));
         PE_StoreU32(entry + 0x1Cu, PE_LoadU32(buf + 0x18u));
     }
-    PE_StoreU8(record + 1u, 1u);
+    /* Retail .L80041DF0: `addiu v0,0,1 / sb v0,0x1(a2)` sets the selected slot
+     * entry's +1 flag UNCONDITIONALLY after the copy, where a2 is the entry
+     * (record + selected*0x44 + 0x1C), not the record.  func_80042020 clears it
+     * on the save-write entry; this re-enables the just-written slot for
+     * func_800424B4.  Writing record+1 here set the record state instead and
+     * left the slot permanently disabled. */
+    PE_StoreU8(entry + 1u, 1u);
     {
         uint8_t cursor = (uint8_t)(PE_LoadU8(record + 6u) + 1u);
         uint8_t limit = (uint8_t)(PE_LoadU8(record + 2u) << 1);
