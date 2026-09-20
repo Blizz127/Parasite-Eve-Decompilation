@@ -1555,6 +1555,11 @@ segments:
       # Phase 5CL: C leaf func_800835B0 — file 0x73DB0, size 0x10.
       - [0x73DB0, c, func_800835B0]
       - [0x73DC0, asm]
+      # func_80083790 — VRAM 0x80083790, size 0x38, file 0x73F90-0x73FC8.
+      # Signed-shift packer. era_o2_g0: the shifted byte must stay a signed
+      # expression so cc1 emits `sra` (retail 0x00021043), not `srl`.
+      - [0x73F90, c, func_80083790]
+      - [0x73FC8, asm]
       # Volume campaign: callback func_80083C20, exact-start address stored by
       # func_80083BB8; size 0x1C, era -O2 -G0.
       - [0x74420, c, func_80083C20]
@@ -1814,6 +1819,11 @@ segments:
       # Cursor post-increment; sign-extended byte added into +0xDE. era_o2_g0.
       - [0x803FC, c, func_8008FBFC]
       - [0x80428, asm]
+      # func_8008FC78 — VRAM 0x8008FC78, size 0x3C, file 0x80478-0x804B4.
+      # Cursor post-increment byte into +0x82 (0 -> 0x100); +0xE6 and +0x80
+      # cleared, +0x84 written 1 and returned. Needs era_o1_g0: -O2 reorders
+      # the stores so the +0x84 store no longer fills the return/delay slot.
+      - [0x80478, c, func_8008FC78]
       # Phase 5N: C leaf func_8008FCB4 — VRAM 0x8008FCB4, size 0x8.
       # File span 0x804B4–0x804BC exclusive. Zero halfword at arg0+0x82.
       - [0x804B4, c, func_8008FCB4]
