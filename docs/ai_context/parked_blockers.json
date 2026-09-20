@@ -781,6 +781,30 @@
    "status": "PARKED-ALLOCATION",
    "note": "func_800D70C0 (file 0xC78C0, size 0xF8, 62 words) unit C5060: two-case pan/display request. Semantics recovered (case 1 jitters arg1[0..2] with func_80071A54()&7/&3/&7 and returns 1 once D_800E27EC>=0x12; case 2 copies arg1[0..2] to a 6-byte local pair array and calls func_800CF3AC(&D_800E17E0, buf, D_800E27EC) then func_800D1DEC(&pair, buf, 0x80, 1)). Two independent residuals: (a) cc1 assigns the 8-byte buf local to sp+0x10 and the 6-byte pair array to sp+0x18, exactly reversed from retail (buf sp+0x18, pair sp+0x10) — declaration-order swaps flip it the wrong way and the frame is otherwise exact; (b) in case 1 cc1 CSEs the two `-3` constants into `li $s0,-3`/`addu` (retail keeps two separate `addiu $v1,$v1,-3`), shrinking the leaf to 224 vs 248 bytes. WIP at build/wave5c-wip/func_800D70C0.c.",
    "evidence": "try_leaf src/func_800D70C0.c 0xC78C0 0xF8 -O2 -G0 (224 vs 248 bytes, 20+ diffs)"
+  },
+  {
+   "id": "wave6b-800D401C-slot-search-loop",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_800D401C (file 0xC481C, size 0x120) unit BF0F0: weapon/projectile slot allocator. Semantics fully decoded from retail: eight-slot search (`*s1 != 0xFFFF && ++a1 < 8`, s1 = base+0x20 step 0xC) then header counter increment, halfword stores, D_8009B5A4[sel] table lookup, conditional base reset to base+0x84, then an indirect call through a D_8009B5A4-backed table with D_800F33E0 = slot. Two attempted source shapes both fail early: keeping `while(1){ if(slot==0xFFFF) break; a1++; if(a1>=8) break; s1+=0xC; }` makes cc1 emit `beqz` to a common exit instead of retail's `bnez` back-edge, and the `while (*s1 != 0xFFFF && ++a1 < 8) s1 += 0xC;` rotation variant is worse (67 diffs). Retail also keeps the found-slot index in $a1 and the base/next pointer in $t0/$a1 with a specific field-store order; no tested phrasing matches.",
+   "evidence": "try_leaf build/wave6b-wip/func_800D401C.c 0xC481C 0x120 -O2 -G0 (55 diffs break-loop form; 67 diffs while-form)"
+  },
+  {
+   "id": "wave6b-8007FCFC-symbol-base-materialisation",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_8007FCFC (file 0x704FC, size 0x128) unit 704BC: save-page field initialiser. Retail materialises `a0 = &D_8009B598` and `s1 = &D_8009B558` once and addresses every field with `off(reg)` (e.g. `sw $s0,8($s1)`, `lbu $v0,-0x40($a0)`). cc1 instead emits `sw $r,D_8009B558+8`/`lbu $r,D_8009B598-0x40` symbol macros for every non-zero offset, so every access grows by a word and the layout shifts. Verified cc1 keeps the register form only at offset 0 (`sb $s0,0($s1)`). Tried: plain array pointer, struct pointer (helped the prologue only), volatile pointer, and profile sweep -O1/-O2 x -G0/-G8 x {ASPSX 2.30, PASSTHROUGH_SYMBOL_LOAD, THREE_WORD_SYMBOL_STORE}; best 39 diffs.",
+   "evidence": "try_leaf build/wave6b-wip/vfc.c 0x704FC 0x128 -O2 -G0 (41 diffs); profile sweep best -O2 -G0 + ERA_ASPSX_VER=2.30 (39)"
+  },
+  {
+   "id": "wave6b-80074E28-global-base-and-prologue",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_80074E28 (file 0x65628, size 0x11C) unit 65628: two-rect overlap predicate feeding two indirect D_80095748 calls. Same symbol-base issue as wave6b-8007FCFC: retail materialises `a0 = &D_8009574E` and reuses `2(a0)`/`4(a0)`, cc1 emits `D_8009574E+2` symbol macros; additionally retail places `s0 = arg1` in the `beq` delay slot of the state dispatch while cc1 hoists it before the `lbu`, and the case-1 load order (`lh a1,4(s0)` before `lh v1,2(a0)`) is reversed. Tried plain `unsigned char *q` and a mixed-member struct pointer `q`; both 47 diffs.",
+   "evidence": "try_leaf build/wave6b-wip/func_80074E28.c 0x65628 0x11C -O2 -G0 (47 diffs both shapes)"
+  },
+  {
+   "id": "wave6b-800131E8-inlined-allocator",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_800131E8 (file 0x39E8, size 0x118) unit 38B4: script-VM opcode 0x12 task fork. Zero `jal`: func_80012700 is fully inlined at both call sites, with a different field-store order from the standalone matched func_80012700 (branch A: prev/next zeroed, 0xC/4 zeroed, active=1, serial, flags=0, entry last; branch B: entry early). Two explicit hand-expanded copies were attempted; retail computes imm/pc separately inside each arm and keeps the freelist task in $t0 (arm A) / $a1 with parent in $a2 (arm B). Candidate 320 vs 288 bytes and diverges from word 0; not close enough to pin.",
+   "evidence": "try_leaf build/wave6b-wip/func_800131E8.c 0x39E8 0x118 -O2 -G0 (320 vs 288 bytes, >40 diffs)"
   }
  ]
 }

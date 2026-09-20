@@ -7,6 +7,62 @@
 
 # ACTIVE HANDOFF
 
+## WAVE-6 SLICE B (`agent/wave6-b`, 2026-09-20): 884 -> 891 (+7) executed-path leaves
+
+**Branch `agent/wave6-b`, worktree `/tmp/pe-agent-w12`.** Baseline gate re-run
+first: `scripts/split_us.sh` (host) + `build_us.sh` + `verify_us.sh`
+(pe-mipsel) reported `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (884
+registered C leaves)`, `VERIFY_US=PASS`.
+
+Landed seven of the eleven wave-6-B targets, all confirmed by a fresh complete
+build (commits `97d316d3` +5, `fed073c7` +2), current plan
+`1295 spans = 891 c + 402 asm + 2 rodata`, `VERIFY_US=PASS`:
+
+- `func_8003D834` (0x2E034, 0x118) — era -O2 -G0. Rect init/teardown call
+  wrapper. The third `func_8003BCE0` parameter must be typed `short` so cc1
+  folds the `D_8009CDDC` reads to retail's `lh`.
+- `func_800702DC` (0x60ADC, 0x118) — era -O2 -G0. First-half battle-slot
+  scrub. Loop-back index compare is **signed**, the two range guards
+  **unsigned**; the early exit needs `result = temp_v0; goto out;` with a
+  label the fall-through also reaches, else cc1 duplicates the return copy
+  into the `bnez` delay slot (1 word).
+- `func_800701B4` (0x609B4, 0x128) — era -O2 -G0. Second half of the same
+  scrub with a separate loop counter; `i++` must precede the loop-back test so
+  it lands in the `bnez` delay slot.
+- `func_800C22F8` (0xB2AF8, 0x11C) — era -O2 -G0. Weapon-effect slot
+  constructor. Indexed stores need the **offset first** in the addition tree
+  (`*(unsigned char *)(o + (int)D_800F34F4 + 1)`); the `slot+8` patch target is
+  a double dereference.
+- `func_800CEB8C` (0xBF38C, 0x120) — era -O2 -G0. Beam quad builder. The
+  `short v[4][4]` must be a real array; `register int heading asm("$16")` +
+  `register int dz asm("$6")` pin retail's callee-saved homes (s0=heading,
+  s1=from, s2=to, s3=radius).
+- `func_8004620C` (0x36A0C, 0x128) — era -O2 -G0. Battle state-machine step.
+  One `v0` temp serves both `& 0x1000` and `& 0x40` tests (separate locals get
+  CSE'd); the `s1` selection is **two calls** so gcc cross-jumps them into
+  retail's single `jal` with a0=2 on both arms.
+- `func_8004AE1C` (0x3B61C, 0x120) — **new profile
+  `era_o2_g0_dispatch_8011034`** (`-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`
+  + `MASPSX_DISPATCH_FOLD=jtbl_80011034`). Save/load file-menu page handler,
+  written from the retail assembly (the `pc_port/game/boot/func_8004AD9C_port.c`
+  transcription was spec only). **A sparse switch with only `default:` emits a
+  compare chain; you must add explicit `case 4: case 5:` sharing the default
+  body to make cc1 emit the jump table.**
+
+Parked with full divergence notes in `parked_blockers.json`
+(`wave6b-*` ids): `func_800D401C` (loop back-edge polarity + homes),
+`func_8007FCFC` and `func_80074E28` (cc1 uses `sym+off` macros where retail
+materialises a base register and uses `off(reg)`; best 39/47 diffs after a
+full profile sweep), `func_800131E8` (func_80012700 inlined at both sites with
+a different field order than the standalone leaf).
+
+**Reusable finding:** retail frequently materialises `la $r,&SYM` and then
+uses `off($r)` for every non-zero offset, while cc1 2.7.2 emits
+`sw $r,SYM+off` symbol macros — and it keeps the register form only at offset
+0. Leaves that need the materialised base are currently unpinnable with the
+existing levers. Evidence under `docs/evidence/wave6-b/`.
+
 ## agent/bigfish-1d340 (2026-09-20): `func_8001D340` NOT matched — but proven un-carveable
 
 **Branch `agent/bigfish-1d340`, worktree `/tmp/pe-agent-bigfish`.** Baseline gate
