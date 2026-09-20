@@ -665,7 +665,7 @@ segments:
       - [0x2E02C, c, func_8003D82C]
       # wave6-b: C leaf func_8003D834 — VRAM 0x8003D834, file 0x2E034,
       # size 0x118. Rect init/teardown call wrapper. era -O2 -G0.
-      # Carve: prefix 0x2E034 asm, C 0x2E034, resume 0x2E14C.
+      # Carve: former 0x2E034 asm is replaced by the leaf; resume 0x2E14C.
       - [0x2E034, c, func_8003D834]
       - [0x2E14C, asm]
       - [0x2E3E4, c, func_8003DBE4]
@@ -844,6 +844,10 @@ segments:
       # era -O2 -G8.
       - [0x35BE8, c, func_800453E8]
       - [0x35C2C, asm]
+      # wave6-b: C leaf func_8004620C — VRAM 0x8004620C, file 0x36A0C,
+      # size 0x128. Battle state-machine step (0x1000/0x40 flag handling).
+      # era -O2 -G0.
+      - [0x36A0C, c, func_8004620C]
       # func_80046334 — deferred teardown poll; 0x240($gp) = D_8009CFA0+0x10
       # (scalar) while the absolute byte D_800B0CE6 is declared as an
       # incomplete array so it does not become gp-relative. VRAM
@@ -877,6 +881,10 @@ segments:
       # C leaf func_8004AF3C — VRAM 0x8004AF3C, size 0x68, file 0x3B73C-0x3B7A4.
       # Save/load file-menu page 0x21: allocate/bind a node and install the
       # +0x2C/+0x30 callbacks. era -O2 -G0.
+      # wave6-b: C leaf func_8004AE1C — VRAM 0x8004AE1C, file 0x3B61C,
+      # size 0x120. Save/load file-menu page input handler; 6-entry
+      # jtbl_80011034 confirm dispatch. Profile era_o2_g0_dispatch_8011034.
+      - [0x3B61C, c, func_8004AE1C]
       - [0x3B73C, c, func_8004AF3C]
       - [0x3B7A4, asm]
       # C leaf func_8004B03C — VRAM 0x8004B03C, size 0x68, file 0x3B83C-0x3B8A4.

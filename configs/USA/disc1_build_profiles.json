@@ -122,16 +122,6 @@
         "-G8"
       ]
     },
-    "era_o2_g8_expand_div": {
-      "toolchain": "era",
-      "flags": [
-        "-O2",
-        "-G8"
-      ],
-      "environment": {
-        "MASPSX_EXPAND_DIV": "1"
-      }
-    },
     "era_o2_g8_force_d8009d2e8_absolute": {
       "toolchain": "era",
       "flags": [
@@ -283,6 +273,27 @@
         "MASPSX_DISPATCH_FOLD": "jtbl_800C2128"
       }
     },
+    "era_o2_g0_dispatch_8011034": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80011034"
+      }
+    },
+    "era_o2_g8_expand_div": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_EXPAND_DIV": "1"
+      }
+    },
     "era_o2_g0_expand_div_aspsx_230": {
       "toolchain": "era",
       "flags": [
@@ -334,12 +345,6 @@
     ],
     "era_o2_g0_expand_div": [
       "func_8003C5D8"
-    ],
-    "era_o2_g8_expand_div": [
-      "func_8005FA3C",
-      "func_8005FB74",
-      "func_8005FDF0",
-      "func_8005FF28"
     ],
     "era_o2_g0_fill_epilogue_delay_slot": [
       "func_80075B4C",
@@ -411,8 +416,6 @@
     ],
     "era_o2_g8": [
       "func_800177AC",
-      "func_80017588",
-      "func_80050878",
       "func_800176E0",
       "func_800172E0",
       "func_800172FC",
@@ -480,10 +483,12 @@
       "func_8004905C",
       "func_800509E0",
       "func_8005C498",
-      "func_8005E788",
       "func_8004FA10",
       "func_8005F27C",
-      "func_800527C8"
+      "func_800527C8",
+      "func_80017588",
+      "func_80050878",
+      "func_8005E788"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
@@ -705,6 +710,15 @@
     ],
     "era_o2_g0_dispatch_800c2128": [
       "func_800C3238"
+    ],
+    "era_o2_g0_dispatch_8011034": [
+      "func_8004AE1C"
+    ],
+    "era_o2_g8_expand_div": [
+      "func_8005FA3C",
+      "func_8005FB74",
+      "func_8005FDF0",
+      "func_8005FF28"
     ],
     "era_o2_g0_expand_div_aspsx_230": [
       "func_80065260"
