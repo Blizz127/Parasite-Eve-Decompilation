@@ -31,6 +31,7 @@ int func_800C8D34(void) {
     *(unsigned char **)func_800C22F8() = D_800E0A50;
     D_800E22EC = 0xBD;
     D_800E22ED = 9;
+    D_800E22F0 = 0;
     D_800E22F2 = 0x80;
     D_800E22E8 = 0x80;
     D_800E22E9 = 0x80;
@@ -38,7 +39,6 @@ int func_800C8D34(void) {
     D_800F34AC = 0xAE;
     D_800F34AD = 7;
     D_800F34B0 = -0x32;
-    D_800E22F0 = 0;
     D_800E22EE = 0;
     D_800F34B2 = 0x80;
     D_800F34A8 = 0x50;
