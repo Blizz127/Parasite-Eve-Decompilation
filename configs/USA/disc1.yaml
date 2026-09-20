@@ -83,6 +83,10 @@ segments:
       # Store 0/1 through *a0 by D_8009D2E8 bit 0; return 1. era_o2_g0.
       - [0x77E0, c, func_80016FE0]
       - [0x7818, asm]
+      # func_80017294 — VRAM 0x80017294, size 0x28, file 0x7A94-0x7ABC.
+      # D_8009CE00 (0x90($gp)) = D_8009D2F0->+0x9C + (**a0 << 1); return 1.
+      # era_o2_g8; D_8009D2F0 stays absolute via an incomplete pointer array.
+      - [0x7A94, c, func_80017294]
       - [0x7ABC, c, func_800172BC]
       - [0x7AE0, c, func_800172E0]
       - [0x7AFC, c, func_800172FC]
@@ -400,6 +404,11 @@ segments:
       # 0x938 + 0x88 + 0x7AB0 = prior span 0x8470.
       - [0x12050, c, func_80021850]
       - [0x120D8, asm]
+      # func_80026FD0 — VRAM 0x80026FD0, size 0x28, file 0x177D0-0x177F8.
+      # If signed byte D_8009D2B0 != 0, store 0x80/-8 to 0xF8/0xFC($gp).
+      # D_8009D2B0 stays absolute via an incomplete array. era_o2_g8.
+      - [0x177D0, c, func_80026FD0]
+      - [0x177F8, asm]
       # C leaf func_80029388 — VRAM 0x80029388, size 0x6C (27 words).
       # jal 2F658, then the same 7 x 220-byte SlotRecord in-use clear as
       # 2F9CC (unsigned char counter, sltiu 7, 3-word symbol store), gp
@@ -742,7 +751,11 @@ segments:
       # beqz with constant hoisted into the delay slot, gp store; void leaf.
       # Current 3FB0C carve: prefix 0x13C, C 0x1C, resume 3FC64.s 0x3A4.
       - [0x3FC48, c, func_8004F448]
-      - [0x3FC64, asm]
+      # func_8004F464 — VRAM 0x8004F464, size 0x2C, file 0x3FC64-0x3FC90.
+      # If the gp word D_8009D008 (0x298($gp)) is set, call func_8004E97C
+      # and clear it. era_o2_g8.
+      - [0x3FC64, c, func_8004F464]
+      - [0x3FC90, asm]
       - [0x40008, c, func_8004F808]
       # Tier-2 callback wrapper func_8004F950.  Former 0x40038 asm span:
       # prefix 0x118, C 0x28, resume 0x6A8 (0x118 + 0x28 + 0x6A8 = 0x7E8).
@@ -907,6 +920,11 @@ segments:
       # gp-relative D_8009D058 bit test (0x2E8($gp)); era -O2 -G8.
       - [0x467E0, c, func_80055FE0]
       - [0x4680C, asm]
+      # func_80056C14 — VRAM 0x80056C14, size 0x2C, file 0x47414-0x47440.
+      # kind < 3 ? D_800A1E6E[kind*0x10] : 0.
+      # era_o2_g0 + MASPSX_PASSTHROUGH_SYMBOL_LOAD=1 (3-word indexed load).
+      - [0x47414, c, func_80056C14]
+      - [0x47440, asm]
       # func_80057C10 — VRAM 0x80057C10, size 0x44, file 0x48410-0x48454.
       - [0x48410, c, func_80057C10]
       - [0x48454, asm]
@@ -1054,7 +1072,10 @@ segments:
       # Volume campaign: 12-byte mailbox-record append; era -O2 -G8.
       # Refined 55430 carve: prefix 0x788, C 0x48, resume 55C00.s 0x51BC.
       - [0x55430, c, func_80064C30]
-      - [0x55454, asm]
+      # func_80064C54 — VRAM 0x80064C54, size 0x2C, file 0x55454-0x55480.
+      # func_8005F354(func_8005DC4C(), D_8009D164 (0x3F4($gp))). era_o2_g8.
+      - [0x55454, c, func_80064C54]
+      - [0x55480, asm]
       - [0x55690, c, func_80064E90]
       - [0x556B4, asm]
       - [0x55BB8, c, func_800653B8]
@@ -1605,6 +1626,11 @@ segments:
       # Probe: three-entry callback table initializer.
       - [0x75344, c, func_80084B44]
       - [0x75378, asm]
+      # func_80084F8C — VRAM 0x80084F8C, size 0x2C, file 0x7578C-0x757B8.
+      # (halfword +0xE6 == 0) || (byte +0x46 != 0xFF); the short-circuit
+      # comma form is required to keep the second `beq`. era_o2_g0.
+      - [0x7578C, c, func_80084F8C]
+      - [0x757B8, asm]
       - [0x757C4, c, func_80084FC4]
       - [0x757E4, asm]
       # Phase 5FX: constant-add getter func_80085084 — VRAM 0x80085084,
