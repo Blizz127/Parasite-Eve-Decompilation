@@ -10,7 +10,38 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
-## SESSION STATUS 2026-09-20 (latest): 768 matching C leaves; FMV completes (2026-09-20)
+## SESSION STATUS 2026-09-20 (agent/pb-small): 774 matching C leaves (+6)
+
+**Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**774**
+registered C leaves)"; `scripts/verify_us.sh` → **VERIFY_US=PASS** (all 774
+packed C spans equal retail). Plan `1120 spans = 774 c + 344 asm + 2 rodata`,
+SHA-256 `fdbe958f…`. Commit `6456c832`.
+
+**Six landed port-backed small leaves** (commit `6456c832`, evidence under
+`docs/evidence/pb-small/`):
+- `func_80017294` 0x7A94/0x28 — `era_o2_g8`; `D_8009D2F0` kept absolute via an
+  incomplete pointer array.
+- `func_80026FD0` 0x177D0/0x28 — `era_o2_g8`; constant **types** matter (`u8`
+  dest for `+0x80`, `s8` dest for `-8`).
+- `func_8004F464` 0x3FC64/0x2C — `era_o2_g8`.
+- `func_80056C14` 0x47414/0x2C — `era_o2_g0_passthrough_load`; needs the
+  **ternary** spelling plus `MASPSX_PASSTHROUGH_SYMBOL_LOAD=1`.
+- `func_80064C54` 0x55454/0x2C — `era_o2_g8`.
+- `func_80084F8C` 0x7578C/0x2C — default `era_o2_g0`; `-O1`/`volatile`/flag
+  sweeps do **not** stop cc1 folding the tail into `xori/sltu`; only the
+  short-circuit comma form (`... || (result = 0, byte != 0xFF)`) keeps retail's
+  second `beq`.
+
+**Parked (no matching-C attempt).** Nine of the fifteen worklist targets are
+GTE/COP2 (`ctc2`/`lwc2`/`swc2`/`mfc2`/`cfc2`/`mvmva`/`rtps`): func_80079024,
+80079004, 80078E94, 80078FC4, 80078FE4, 800661CC, 800661A4, 800792D4,
+80079244. Ordinary C cannot express the COP2 side effects and no sanctioned
+intrinsic exists — see `docs/ai_context/parked_blockers.json`
+(`pb-small-gte-cop2-parks`) and `COP2_SDK_SCREEN.md`. `func_8003708C` was
+deliberately not attempted (known `mult;mflo;mfhi` order blocker).
+
+## SESSION STATUS 2026-09-20: 768 matching C leaves; FMV completes (2026-09-20)
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**768**
