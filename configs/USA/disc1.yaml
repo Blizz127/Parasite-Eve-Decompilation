@@ -400,6 +400,15 @@ segments:
       # 0x938 + 0x88 + 0x7AB0 = prior span 0x8470.
       - [0x12050, c, func_80021850]
       - [0x120D8, asm]
+      # C leaf func_80021D4C — VRAM 0x80021D4C, size 0x94 (37 words).
+      # Command-cancel walk of D_800BE834[index] (stride 8, sign-extended
+      # 16-bit action) with the count re-read after each call; explicit
+      # goto/test loop gives retail's j-to-bottom-test rotation. era
+      # -O2 -G8 + MASPSX_THREE_WORD_SYMBOL_STORE=1; D_8009D1A0 forced
+      # absolute (MASPSX_FORCE_ABSOLUTE_SYMBOLS) while the bytes stay
+      # gp-relative. Mid-120D8 carve: prefix 0x474, C 0x94, resume 125E0.s.
+      - [0x1254C, c, func_80021D4C]
+      - [0x125E0, asm]
       # C leaf func_80029388 — VRAM 0x80029388, size 0x6C (27 words).
       # jal 2F658, then the same 7 x 220-byte SlotRecord in-use clear as
       # 2F9CC (unsigned char counter, sltiu 7, 3-word symbol store), gp

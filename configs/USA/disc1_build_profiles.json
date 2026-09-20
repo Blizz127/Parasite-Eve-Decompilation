@@ -142,6 +142,17 @@
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
       }
     },
+    "era_o2_g8_three_word_force_d8009d1a0_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_8009D1A0"
+      }
+    },
     "era_o2_g8_vm_dispatch": {
       "toolchain": "era",
       "flags": [
@@ -326,6 +337,9 @@
     "era_o2_g8_three_word": [
       "func_8001266C",
       "func_80029388"
+    ],
+    "era_o2_g8_three_word_force_d8009d1a0_absolute": [
+      "func_80021D4C"
     ],
     "era_o2_g8_vm_dispatch": [
       "func_80012850"
