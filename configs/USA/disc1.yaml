@@ -1479,7 +1479,14 @@ segments:
       - [0x5F408, asm]
       # Signed-halfword indexed offset reader: era -O2 -G0.
       - [0x5F46C, c, func_8006EC6C]
-      - [0x5F484, asm]
+      # Wave4-B: func_8006EC84 — VRAM 0x8006EC84, size 0x68, file
+      # 0x5F484-0x5F4EC. Bank walk: `count`(a1) slots at `base`(a0), word
+      # offset read from ((int *)base)[(short)i]; each resolved address goes
+      # to func_800718D0. era -O2 -G0. The `(short)i` narrowing is required
+      # for retail's `sll 16 / sra 14` index scaling; a full int index
+      # strength-reduces into an advancing pointer and drops a word.
+      - [0x5F484, c, func_8006EC84]
+      - [0x5F4EC, asm]
       # func_8006F224 — VRAM 0x8006F224, size 0xA0, file 0x5FA24-0x5FAC4.
       # Free-slot search over the two id arenas D_800942E4/D_800942E8
       # (pointer globals, strides 0xA0C/0x10C). Default era_o2_g0.

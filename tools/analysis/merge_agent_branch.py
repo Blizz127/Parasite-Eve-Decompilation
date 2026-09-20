@@ -273,22 +273,23 @@ def main() -> int:
         "merge", "--no-ff", "-m", args.message or f"Merge {args.branch}",
         args.branch, check=False,
     )
-    if merge.returncode == 0:
-        print(merge.stdout.strip() or "already up to date")
-        return 0
-
     paths = unmerged_paths()
-    if not paths:
+    if merge.returncode == 0 and not paths:
+        # Conflict-free merge. Still regenerate and validate: the branch may
+        # have carried its own stale generated doc, and a merge with no
+        # conflicts is exactly when that goes unnoticed.
+        print(merge.stdout.strip() or "merge completed with no conflicts")
+    elif not paths:
         print(merge.stdout, merge.stderr, file=sys.stderr)
         print("merge failed without conflicts; stopping", file=sys.stderr)
         return 1
-
-    print(f"resolving {len(paths)} conflicted path(s):")
-    for path in paths:
-        text = resolve_file(path)
-        (ROOT / path).write_text(text)
-        git("add", path)
-        print(f"  {path}")
+    else:
+        print(f"resolving {len(paths)} conflicted path(s):")
+        for path in paths:
+            text = resolve_file(path)
+            (ROOT / path).write_text(text)
+            git("add", path)
+            print(f"  {path}")
 
     subprocess.run(
         [sys.executable, "tools/build/disc1_plan.py", "--write-status"],
@@ -315,7 +316,17 @@ def main() -> int:
         return 0
 
     msg = args.message or f"Merge {args.branch}"
-    commit = git("commit", "-m", msg, check=False)
+    staged = git("diff", "--cached", "--quiet", check=False).returncode != 0
+    if merge.returncode == 0:
+        # git already created the merge commit; fold the regenerated status
+        # doc into it so the committed count is never stale.
+        if staged:
+            commit = git("commit", "--amend", "--no-edit", check=False)
+        else:
+            print(git("log", "--oneline", "-1").stdout.strip())
+            return 0
+    else:
+        commit = git("commit", "-m", msg, check=False)
     if commit.returncode != 0:
         print(commit.stdout, commit.stderr, file=sys.stderr)
         return 1
