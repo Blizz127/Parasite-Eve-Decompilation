@@ -694,6 +694,17 @@ segments:
       - [0x307AC, c, func_8003FFAC]
       - [0x307BC, c, func_8003FFBC]
       - [0x307CC, asm]
+      # wave4-a: card-subsystem boot init (8 event opens + handle enables +
+      # selector clear). VRAM 0x800409B4, file 0x311B4, size 0x1CC (115 words).
+      # era_o2_g0_three_word: the D_800A0ED4[j] clear store needs the 3-word
+      # $at form; the clear index must be a second variable so cc1 keeps it in
+      # call-clobbered $v0 instead of reusing the callee-saved enable counter.
+      - [0x311B4, c, func_800409B4]
+      - [0x31380, asm]
+      # wave4-a: card-record load entry. VRAM 0x80042170, file 0x32970,
+      # size 0xB8 (46 words). era -O2 -G0; the `*(s0+0x18)` store must be
+      # first so cc1 hoists `la $a0,D_8009EED0` after the func_80042798 call.
+      - [0x32970, c, func_80042170]
       # decomp-continue-4: three func_80062F3C(0x26/0x25/0x24) + func_800512AC(0xC,0).
       - [0x32A28, c, func_80042228]
       - [0x32A64, asm]
@@ -2447,7 +2458,13 @@ segments:
       - [0xB76D8, c, func_800C6ED8]
       # Phase 5EF: absolute unsigned-halfword setter D_800F3420.
       - [0xB76E8, c, func_800C6EE8]
-      - [0xB76F8, asm]
+      # wave4-a: effect-mesh palette copy pair. VRAM 0x800C6EF8/0x800C6F4C,
+      # file 0xB76F8/0xB774C, size 0x54 each (21 words). era -O2 -G0; both
+      # need a cc1 phantom 8-byte frame (dead local aggregate) and the loop
+      # counter pinned to $a1 (default colouring swaps counter/source).
+      - [0xB76F8, c, func_800C6EF8]
+      - [0xB774C, c, func_800C6F4C]
+      - [0xB77A0, asm]
       # Tier-2 W callback: exact-start table entry at 0xD1074. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: B76E8 prefix 0xE18, C 0x2C, resume B852C.s 0x98.

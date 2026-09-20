@@ -7,6 +7,52 @@
 
 # ACTIVE HANDOFF
 
+## WAVE-4 LEAF SLICE A (2026-09-20): 864 -> 868 matching C leaves
+
+**Branch `agent/wave4-a`, worktree `/tmp/pe-agent-w6`.** Baseline gate re-run
+first: `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh` reported
+`EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (864 registered C leaves)`, `VERIFY_US=PASS`.
+
+Landed four leaves, confirmed by a fresh complete build in `pe-mipsel`:
+
+- `func_800C6EF8` (B76F8, file 0xB76F8, 0x54) — palette copy into `D_800E2370`.
+  era -O2 -G0. Needs (a) a **cc1 phantom 8-byte frame**: retail reserves
+  `addiu $sp,$sp,-8` with no stack access, which no flag reproduces, but an
+  address-taken dead aggregate (`int tmp[2]; (void)tmp;`) makes cc1 count
+  `vars=8` and emit the frame pair with zero accesses; and (b) the loop counter
+  pinned to `$a1` (`register int i asm("$5")`) because natural colouring swaps
+  counter/source.
+- `func_800C6F4C` (B76F8, file 0xB774C, 0x54) — reverse copy. Same two levers,
+  plus the loaded word temp must be `int` (a `unsigned short` temp emits `lhu`,
+  retail is `lw`).
+- `func_80042170` (307CC, file 0x32970, 0xB8) — card-record save-load entry.
+  era -O2 -G0. The `*(s0+0x18) = D_8009EED0` store must be the **first** store
+  after `func_80042798()` so cc1 hoists `la $a0,D_8009EED0` immediately after
+  the call and keeps it live to the closing `func_80071A24`.
+- `func_800409B4` (307CC, file 0x311B4, 0x1CC) — card-subsystem boot init: eight
+  unrolled `func_800726E4` event opens, four bring-up calls, an enable loop, then
+  the `D_800A0ED4[0x418]/[0]` selector clear. Profile
+  **era_o2_g0_three_word** (the indexed clear store needs
+  `MASPSX_THREE_WORD_SYMBOL_STORE=1`); the clear loop must use its **own** index
+  variable so cc1 keeps it in `$v0` instead of reusing the callee-saved enable
+  counter.
+
+Fresh build after the carve: `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (868 registered
+C leaves)`, plan `1265 spans = 868 c + 395 asm + 2 rodata`, `VERIFY_US=PASS`.
+Evidence under `docs/evidence/wave4-a/`.
+
+Parked (register colouring / scheduling) in `parked_blockers.json`:
+`func_800C6FA0` and `func_800C70EC` (B76F8, colour-scaling twins; control flow
+and frame exact, retail's two-base `colours`/`colours+2` addressing and prologue
+order not reproducible from any tested source shape) and `func_800404A8`
+(307CC, closest at 18 words; needs `MASPSX_THREE_WORD_SYMBOL_STORE=1` for the
+indexed byte load). Also unstarted in these units: `func_8004006C`,
+`func_80040210`, `func_80042020`, `func_80040F80`, `func_800409B4`,
+`func_8002B0E8`, `func_800295E4`, `func_8002F0B0` (all large, branch-heavy or
+formatter call sites).
+
 ## PARENT STATUS (2026-09-20): 864 matching C leaves, port green, coverage MEASURED
 
 **Matching decomp: 768 -> 864 (+96) this session**, verified on the merged tree
