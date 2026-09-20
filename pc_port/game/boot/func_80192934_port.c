@@ -27,28 +27,9 @@
 #include "pe_port_compat.h"
 #include "host_framebuffer.h"
 
-/* Same Stage-1b pad check as func_801924F8_port.c. */
-static int c89c_stream_is_immediate_pad(uint32_t stream)
-{
-    uint16_t count_hw;
-    uint16_t bits_hi;
-    uint16_t bits_lo;
-    uint32_t v0;
-    uint32_t sym;
-    int32_t t2;
-
-    if (stream == 0u || !PE_RangeIsRam((pe_addr_t)stream, 12u))
-        return 0;
-    count_hw = PE_LoadU16((pe_addr_t)(stream + 6u));
-    bits_hi = PE_LoadU16((pe_addr_t)(stream + 8u));
-    bits_lo = PE_LoadU16((pe_addr_t)(stream + 10u));
-    t2 = (int32_t)count_hw - 3;
-    v0 = ((uint32_t)bits_hi << 16) | (uint32_t)bits_lo;
-    sym = v0 >> 22;
-    if (t2 < 0)
-        return (sym ^ 0x1FFu) == 0u;
-    return (sym ^ 0x3FFu) == 0u;
-}
+/* Same Stage-1b / MV1d honesty as func_801924F8_port.c: the decoder tail
+ * is not entered until a full STR frame is delivered at the published
+ * cursor.  See the got-frame note in the body. */
 
 extern int func_8010C89C(uint32_t a0, pe_addr_t a1, pe_addr_t a2, uint32_t a3);
 extern void func_8007C394(uint32_t stream);
@@ -111,17 +92,11 @@ int func_80192934(void)
     poll_left = 0x7d0; /* 2000 */
 poll_again:
     for (;;) {
-        /* Host stand-in for DMA3 IRQ progress during the 91B64 spin —
-         * same last-chunk promote / PumpCdProgress shape as 924F8 E0.
-         * Without it, multi-frame after the first-frame DBA++ cannot
-         * assemble the next STR body (live one-frame wall). */
-        {
-            int last_chunk = (PE_LoadU32(0x800B89F4u) == 1u);
-            if (last_chunk || PE_Port_ConsumeStreamPromote())
-                func_8007C214();
-            else if (PE_CdReg_DeviceEnabled())
-                HostFB_PumpCdProgress();
-        }
+        /* Delivery pump mirrors func_801924F8's E0 poll: retail
+         * populates streaming slots via the DMA3-completion callback
+         * (7C214) during this spin, and the port delivers synchronously
+         * because it has no async interrupts. */
+        func_8007C214();
         frame = func_80191B64(pair_base);
         if (PE_Port_ShouldStop())
             return 0;
@@ -134,31 +109,17 @@ poll_again:
         goto after_frame;
     }
 
-    /* got-frame @ 0x80192A68 — live C89C (Stage-1b ready / immediate pad) */
-    {
-        uint16_t dbc = (uint16_t)(PE_LoadU16(0x800B0DBCu) + 1u);
-        uint8_t next_flip = (uint8_t)(PE_LoadU8(0x801D146Cu) ^ 1u);
-        pe_addr_t other = PE_LoadU32(pair_base + (uint32_t)next_flip * 4u);
-        pe_addr_t table = PE_LoadU32(0x801D0DF8u);
-        uint32_t stream = (uint32_t)frame;
-        int frame_ready = PE_Port_TakeStreamFrameReady();
-
-        PE_StoreU8(0x801D146Cu, next_flip);
-        PE_StoreU16(0x800B0DBCu, dbc);
-
-        if (!c89c_stream_is_immediate_pad(stream) && !frame_ready) {
-            Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame",
-                                 "func_80192934");
-            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-            return 0;
-        }
-        (void)func_8010C89C(stream, other, table, 0u);
-        if (PE_Port_ShouldStop())
-            return 0;
-        func_8007C394(stream);
-        status16 = 0;
-        /* fall into after_frame success path */
-    }
+    /* got-frame @ 0x80192A68 — the decoder tail is not wired here.
+     * func_80192CE8 stops at its 80192E08 cut before it ever calls this
+     * worker, and func_801924F8 carries the authenticated got-frame tail
+     * and stops at the decoder boundary for the same reason: a partial
+     * STR frame would march func_8010C89C's output cursor past the 2 MiB
+     * guest window (MV1d trap).  Keep the same honest boundary rather
+     * than decode unvalidated input. */
+    (void)frame;
+    Bootstrap_ReturnVoid("func_8010C89C", "func_80192934");
+    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+    return 0;
 
 after_frame:
     /* CD reissue when 91B64 poll exhausted (status16 == -1). */

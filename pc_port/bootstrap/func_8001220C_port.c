@@ -32,7 +32,7 @@ extern void func_8019234C(void);
 extern int  func_801909B4(void);
 extern int  func_8006E9A0(int);
 extern int  func_800698D4(void);
-extern void func_80073A44(int mode);
+extern uint32_t func_80073A44(int mode);
 extern void func_80074D28(int mask);
 
 /* D_800B0CD8 is a guest-RAM lvalue macro (psx_compat.h) */

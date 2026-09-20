@@ -12,7 +12,6 @@ void func_80121A00(void);
 void func_80121004(int buffer, int wide);
 int func_80121270(pe_addr_t state);
 void func_801214D4(void);
-void func_80191DC8(void); /* title DecDCTout DMA1 callback */
 int func_80122040(void);
 void func_80122354(void);
 int func_80121C04(int id);
@@ -181,6 +180,9 @@ extern void func_800653B8(unsigned int payload, unsigned int dest_id,
                           unsigned int extra);
 extern int  func_80065954(unsigned int index, unsigned int enabled);
 extern int  func_800659C8(unsigned int index, unsigned int value);
+/* PE-CH2 opcode-0x9A / 0x71 callees: 16-byte slot fill and 56-byte pan clamp. */
+extern int  func_80065AD4(unsigned int index, unsigned int value, unsigned int count);
+extern int  func_800671C8(pe_addr_t rec, int32_t x, int32_t y, int32_t page);
 /* SEW3 — game/boot/func_800659F8_port.c */
 extern int  func_800659F8(uint32_t index, uint32_t value);
 extern int  func_80065A60(uint32_t index, uint32_t entry, uint32_t value);
@@ -515,6 +517,18 @@ extern void func_80022D7C(pe_addr_t target);
 extern int32_t func_8006DD38(uint32_t index, uint32_t key, int32_t x, int32_t y, int32_t z);
 extern int32_t func_800518A8(pe_addr_t out);
 extern void func_80051510(void);
+/* PE-CH3 field message subsystem (field_message_port.c). */
+extern int func_800515C0(uint32_t value);
+extern int func_80051684(uint32_t value);
+extern int func_800629B0(void);
+extern int32_t func_80057E14(pe_addr_t list);
+extern int func_8005270C(void);
+extern void func_8004BF08(void);
+extern void func_8004BE4C(void);
+extern void func_8005C144(void);
+extern void func_8004BCE8(int32_t arg0);
+extern int func_8005D2B4(int32_t cmd, int32_t a, int32_t b);
+extern int func_80015C7C(pe_addr_t args);
 extern int32_t func_800574A8(void);
 extern int func_800C6CE0(pe_addr_t slot);
 extern pe_addr_t func_800C22F8(pe_addr_t slot);
@@ -701,6 +715,9 @@ extern int func_80018080(pe_addr_t args);
 extern int func_80017FF0(pe_addr_t args);
 extern int func_800192B8(pe_addr_t args);
 extern int func_800192C8(pe_addr_t args);
+extern int func_800192DC(pe_addr_t args);
+extern int func_800193D8(pe_addr_t args);
+extern int func_80018A9C(pe_addr_t args);
 extern void func_8001D340(unsigned int a0);
 extern void func_8001F9C4(void);
 extern void func_800201DC(void);

@@ -897,6 +897,24 @@ ctest --test-dir build --output-on-failure
 # Windowed (requires X11 display)
 DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overlay
 
+# Interactive Day-1 field route (autopilot) — the same route the
+# route-boot-day2 harness proves, driven from the normal windowed binary.
+# --route-pad installs the harness's deterministic 4-stage pad (shared
+# pc_port/include/pe_route_pad.h table) and implies --skip-movie +
+# --skip-opening-menu (the untranslated title/menu is in front of the field,
+# and no pad can get past it).  Without --route-pad the interactive port has
+# no SIO source, so the guest sees no button and cold boot parks at the field
+# prefix; that is an input limit, not a stub.
+# --auto-quit stops (and leaves the room on screen) at the documented
+# executed-route frontier m0004i module 4 (pc=0x801B6CC8).
+DISPLAY=:0 ./parasite-eve-port \
+  --disc-image "/path/disc1.bin" --route-pad --scale 3
+# Expected: m0010i -> m0002i -> m0003i -> m0372i -> m0004i -> m0378i ->
+# m0377i -> m0378i -> m0004i, then "[ROUTE] reached m0004i frontier
+# (pc=0x801B6CC8)" ~7900 route frames.  PE_ROUTE_DEBUG=1 prints a periodic
+# token/story trace.  PE_ROUTE_PAD4=0xFF9F restores the old 3-stage stop at
+# m0377i (stage 4 then continues to hold the stage-3 mask).
+
 # Bounded caller-checkpoint report (B54K-M: expect 2/2/2, token 2)
 ./parasite-eve-port --headless --max-frames 2 --dma-checkpoint-report \
   --disc-image "/path/disc1.bin"

@@ -107,7 +107,6 @@ static void ResetTestState(void) {
     g_bootstrap_disc = 0;
     g_strict_stubs = 0;
     PE_Port_RunControlReset();
-    PE_C89C_ResetTelemetry();
     PE_RamReset();                  /* zero-fill guest RAM between tests */
     PE_Sdk_ResetState();            /* host-owned GTE/IRQ/event state    */
     Bootstrap_ClearSequences();     /* drop scripted provider sequences   */
@@ -1678,8 +1677,6 @@ static void test_B54KX_nonzero_phase_remains_state_driven(void)
 
 static void test_MV1D_c89c_pad(void)
 {
-    PeC89CTelemetry tel;
-
     TEST("MV1D_c89c_pad");
     ResetTestState();
     PE_StoreU32(MV1D_EB8C, 0x00FFFFFFu);
@@ -1695,12 +1692,6 @@ static void test_MV1D_c89c_pad(void)
            PE_LoadU16(MV1D_A + 4u) == 0xFE00u &&
            PE_LoadU16(MV1D_A + 6u) == 0xFE00u,
            "MV1D_PAD footprint differs");
-    PE_C89C_GetTelemetry(&tel);
-    ASSERT(tel.calls == 1u && tel.pad_exits == 1u && tel.bound_exits == 0u &&
-           tel.ret == 0 && tel.a0_in_ram == 1u && tel.a1_in_ram == 1u &&
-           tel.a2_in_ram == 1u && tel.hdr_count == 0u &&
-           tel.hdr_bits == 0x7FC00000u && tel.out_bytes == 8u,
-           "MV1D_PAD telemetry counts/validity differ");
     PASS();
 }
 
@@ -1827,7 +1818,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     uint8_t expected_disp[0x28];
     uint8_t expected_draw[0xB8];
     char err[256];
-    TEST_RETAIL_DISC1("B54KY_192CE8_real_disc_issue_poll_and_boundary");
+    TEST("B54KY_192CE8_real_disc_issue_poll_and_boundary");
 
     err[0] = 0;
     disc = BTL6_OpenDisc1(err, sizeof(err));
@@ -1841,8 +1832,6 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
      * All drive-state words stay real-disc values. */
     B558_PlantPointers();
     PE_Disc_SetActive(disc);
-    ASSERT(PE_CdReg_EnableDevice(7u),
-           "Disc1 CD command device attach failed");
     D_800B0DD8 = 1013u;
     D_80011614 = 0x8018EFF0u;
     D_80093164[0] = 0x03D2u;
@@ -1866,27 +1855,24 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     memcpy(expected_disp, PE_TranslateConst(0x800BCE80u, 0x28u), 0x28u);
     memcpy(expected_draw, PE_TranslateConst(0x800BCDC8u, 0xB8u), 0xB8u);
 
-    ASSERT(func_80192CE8(1) == 0,
-           "func_80192CE8 complete media-loop return differs");
-    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x00100001u &&
+    ASSERT(func_80192CE8(1) == -1,
+           "func_80192CE8 prefix retained result differs");
+    ASSERT(PE_LoadU32(0x800B0CD8u) == 0x00100201u &&
            PE_LoadU8(0x801D0E18u) == 1u,
-           "busy-bit clear or indexed-record write differs");
+           "busy-bit or indexed-record write differs");
     ASSERT(PE_LoadU32(0x8010BCF8u) == 7u &&
            PE_LoadU32(0x8010BCFCu) == 0x4345444Du,
            "authenticated 38-sector PE.IMG payload was not loaded");
-    /* Post-E08 media loop: after first-frame DBA++ (1→2), 92934 body
-     * runs; eventual status==0 / DBA clear still zeroes stream pointers
-     * + DBA and clears overlay 0x200 (pe-92ce8-post-e08). */
-    ASSERT(PE_LoadU32(0x801D0DE8u) == 0u &&
-           PE_LoadU32(0x801D0DECu) == 0u &&
-           PE_LoadU32(0x801D0DFCu) == 0u &&
-           PE_LoadU32(0x801D0DF8u) == 0u &&
-           PE_LoadU32(0x801D0DF0u) == 0u &&
-           PE_LoadU32(0x801D0DF4u) == 0u,
-           "post-E08 stream pointer clear differs");
-    ASSERT(PE_LoadU8(0x800B0DBAu) == 0u &&
+    ASSERT(PE_LoadU32(0x801D0DE8u) == 0x80122D00u &&
+           PE_LoadU32(0x801D0DECu) == 0x80132700u &&
+           PE_LoadU32(0x801D0DFCu) == 0x80142100u &&
+           PE_LoadU32(0x801D0DF8u) == 0x80162100u &&
+           PE_LoadU32(0x801D0DF0u) == 0x80173100u &&
+           PE_LoadU32(0x801D0DF4u) == 0x80175E00u,
+           "func_80191FB8 one-source pointer layout differs");
+    ASSERT(PE_LoadU8(0x800B0DBAu) == 1u &&
            PE_LoadU8(0x800B0DBEu) == 0x98u &&
-           PE_LoadU16(0x800B0DBCu) == 1u &&
+           PE_LoadU16(0x800B0DBCu) == 0u &&
            memcmp(PE_TranslateConst(0x801D1384u, 0x28u),
                   expected_disp, 0x28u) == 0 &&
            memcmp(PE_TranslateConst(0x801D13ACu, 0xB8u),
@@ -1954,6 +1940,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            mdec.uploads[1].payload_fnv1a64 == UINT64_C(0x457F63592600EA19),
            "real-disc MDEC reset or table submissions differ");
     ASSERT(PE_LoadU32(PE_DMA_CallbackSlotAddress(1u)) == 0x80191DC8u &&
+           PE_LoadU32(0x800C0DC8u) == PE_LoadU32(0x801D0DFCu) &&
            PE_LoadU32(0x800C20C4u) == 0x40u &&
            PE_LoadU32(0x800C0DC0u) == 1u &&
            PE_LoadU32(0x800B6918u) ==
@@ -1968,12 +1955,10 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x8009B578u) == 0xBu &&
            PE_LoadU32(0x800A3608u) == 4u &&
            CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8010C89C") == 0 &&
-           CountOrderLog("func_80192CE8_80192E08_cut") == 0 &&
-           PE_LoadU8(0x801D146Cu) == 1u &&
-           PE_LoadU16(0x800B0DBCu) == 1u &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
-           "DecDCToutCallback registration or post-E08 completion differs");
+           CountOrderLog("func_8010C89C") == 1 &&
+           PE_LoadU16(PE_LoadU32(0x801D0DFCu)) == 4u &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "DecDCToutCallback registration or following cut differs");
 
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
@@ -18998,21 +18983,6 @@ static void CDQ2d_PlantStream(void)
     PE_StoreU32(0x801D0DF8u, 0x801B0000u);
     PE_StoreU8(0x8010CBFCu, 0xFFu);
     PE_StoreU8(0x8010CBFDu, 0xFFu);
-    /* Arena pair for the got_frame a1 load (first pass uses [1468]). */
-    PE_StoreU32(0x801D0DE8u, 0x80122000u);
-    PE_StoreU32(0x801D0DECu, 0x80132000u);
-    /* Pad-exit VLC frame at the 7C484-published stream body
-     * (record_base 0x801E0000 + count 0x40 << 5 = 0x801E0800), so the
-     * live C89C call terminates without marching past guest RAM.
-     * ArmStreamPromote: 7A214 clears B89F4; the fixture surrogate lets
-     * E0 publish status 2 once without unconditional live promote. */
-    PE_StoreU32(0x8011EB8Cu, 0x00FFFFFFu);
-    PE_StoreU32(0x801E0800u, 0x00000001u);
-    PE_StoreU16(0x801E0804u, 0u);
-    PE_StoreU16(0x801E0806u, 0u);
-    PE_StoreU16(0x801E0808u, 0x7FC0u);
-    PE_StoreU16(0x801E080Au, 0u);
-    PE_Port_ArmStreamPromote();
 }
 
 static void test_B54KAD_fmv2_filename_threshold(void)
@@ -19033,28 +19003,17 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     B558_PlantChain(); /* CD0: the 7FB44 dispatch now runs live */
     CDQ2d_PlantStream(); /* pump publishes; E0 takes got_frame */
 
-    {
-        PeC89CTelemetry c89c;
-        ASSERT(func_801924F8(21) == 0 &&
-               CountOrderLog("func_8007B9EC") == 0 &&
-               CountOrderLog("func_8010C89C") == 0 &&
-               PE_LoadU16(0x801E0000u) == 4u &&
-               PE_CdLoadU8(0x1F801800u) == 3u &&
-               PE_CdLoadU8(0x1F801801u) == 0u &&
-               PE_CdLoadU8(0x1F801802u) == 0u &&
-               PE_CdLoadU8(0x1F801803u) == 0x20u &&
-               PE_CdLoadU32(0x1F801020u) == 0x1325u &&
-               !PE_Port_ShouldStop() &&
-               PE_LoadU8(0x801D146Cu) == 1u &&
-               PE_LoadU16(0x800B0DBCu) == 1u &&
-               PE_LoadU8(0x800B0DBDu) == 0u,
-               "index 21 did not complete the live C89C got_frame tail");
-        PE_C89C_GetTelemetry(&c89c);
-        ASSERT(c89c.a0 == 0x801E0800u &&
-               c89c.a1 == 0x80132000u &&
-               c89c.a2 == 0x801B0000u,
-               "index 21 C89C entry args differ");
-    }
+    ASSERT(func_801924F8(21) == 0 &&
+           CountOrderLog("func_8007B9EC") == 0 &&
+           CountOrderLog("func_8010C89C") == 1 &&
+           PE_LoadU16(0x801E0000u) == 4u &&
+           PE_CdLoadU8(0x1F801800u) == 3u &&
+           PE_CdLoadU8(0x1F801801u) == 0u &&
+           PE_CdLoadU8(0x1F801802u) == 0u &&
+           PE_CdLoadU8(0x1F801803u) == 0x20u &&
+           PE_CdLoadU32(0x1F801020u) == 0x1325u &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "index 21 did not reach the exact post-reset boundary");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
            PE_LoadU32(0x801D0DC8u) == FX_FMV018_SIZE &&
            memcmp(PE_TranslateConst(0x801D0DCCu, 13u),
@@ -19091,34 +19050,23 @@ static void test_B54KAE_movie_state_setup(void)
     B558_PlantChain(); /* CD0: the 7FB44 dispatch now runs live */
     CDQ2d_PlantStream(); /* pump publishes; E0 takes got_frame */
 
-    {
-        PeC89CTelemetry c89c;
-        ASSERT(func_801924F8(21) == 0 &&
-               CountOrderLog("func_8007B9EC") == 0 &&
-               CountOrderLog("func_8010C89C") == 0 &&
-               PE_LoadU16(0x801E0000u) == 4u &&
-               PE_CdLoadU8(0x1F801800u) == 3u &&
-               PE_CdLoadU8(0x1F801801u) == 0u &&
-               PE_CdLoadU8(0x1F801802u) == 0u &&
-               PE_CdLoadU8(0x1F801803u) == 0x20u &&
-               PE_CdLoadU32(0x1F801020u) == 0x1325u &&
-               !PE_Port_ShouldStop() &&
-               PE_LoadU8(0x801D146Cu) == 1u &&
-               PE_LoadU16(0x800B0DBCu) == 1u &&
-               PE_LoadU8(0x800B0DBDu) == 0u,
-               "movie state setup did not complete the live C89C got_frame tail");
-        PE_C89C_GetTelemetry(&c89c);
-        ASSERT(c89c.a0 == 0x801E0800u &&
-               c89c.a1 == 0x80132000u &&
-               c89c.a2 == 0x801B0000u,
-               "movie state setup C89C entry args differ");
-    }
+    ASSERT(func_801924F8(21) == 0 &&
+           CountOrderLog("func_8007B9EC") == 0 &&
+           CountOrderLog("func_8010C89C") == 1 &&
+           PE_LoadU16(0x801E0000u) == 4u &&
+           PE_CdLoadU8(0x1F801800u) == 3u &&
+           PE_CdLoadU8(0x1F801801u) == 0u &&
+           PE_CdLoadU8(0x1F801802u) == 0u &&
+           PE_CdLoadU8(0x1F801803u) == 0x20u &&
+           PE_CdLoadU32(0x1F801020u) == 0x1325u &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "movie state setup did not reach the exact post-reset boundary");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
                   PE_TranslateConst(0x801D0DC4u, 4u), 4u) == 0,
            "CdlLOC copy differs");
     ASSERT(PE_LoadU32(0x801D1464u) == 0x80122000u &&
            PE_LoadU32(0x801D1468u) == 0x80132000u &&
-           PE_LoadU8(0x801D146Cu) == 1u &&
+           PE_LoadU8(0x801D146Cu) == 0u &&
            PE_LoadU32(0x801D1470u) == 0x80173000u &&
            PE_LoadU32(0x801D1474u) == 0x80175000u &&
            PE_LoadU8(0x801D1478u) == 0u,
@@ -19136,193 +19084,6 @@ static void test_B54KAE_movie_state_setup(void)
     FxFree(&fx);
     PASS();
 }
-
-static void test_B54K_C89C_gated_until_pad(void)
-{
-    DiscFixture fx;
-    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
-    const pe_addr_t suffix = 0x801F0000u;
-
-    TEST("B54K_C89C_gated_until_pad");
-    ResetTestState();
-    HostFB_Init();
-    func_8007ED58();
-    ASSERT(FxBuild(&fx, 1), "fixture build failed");
-    PE_Disc_SetActive(fx.disc);
-    PE_StoreU32(record, suffix);
-    PE_StoreU32(0x801D0DFCu, 0x801E0000u);
-    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
-    B558_PlantChain();
-    CDQ2d_PlantStream();
-    /* Live Disc1 path: pump publishes a body that is not pad-terminated
-     * and was not last-chunk latched (fixture ArmStreamPromote alone).
-     * Decomp on 1fa9a48: 91B64 can return that slot without e0_promote —
-     * E0 must Stage1b-stop as early demux, not decode or clamp a1. */
-    PE_StoreU16(0x801E0808u, 0u);
-
-    ASSERT(func_801924F8(21) == 0 &&
-           PE_Port_ShouldStop() &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
-           CountOrderLog("Stage1b_early_demux_publish") == 1 &&
-           CountOrderLog("Stage1b_pad_terminated_frame") == 0 &&
-           CountOrderLog("func_8010C89C") == 0,
-           "non-pad early demux must Stage-1b-gate C89C (no a1 clamp)");
-    FxFree(&fx);
-    PASS();
-}
-
-static void test_B54K_92934_dba_early_gate(void)
-{
-    TEST("B54K_92934_dba_early_gate");
-    ResetTestState();
-    /* Retail entry: DBA < 2 returns 0 without body work (boot after 91FB8). */
-    PE_StoreU8(0x800B0DBAu, 0u);
-    ASSERT(func_80192934() == 0 && !PE_Port_ShouldStop(),
-           "DBA==0 early return differs");
-    PE_StoreU8(0x800B0DBAu, 1u);
-    ASSERT(func_80192934() == 0 && !PE_Port_ShouldStop() &&
-           PE_LoadU8(0x800B0DBAu) == 1u,
-           "DBA==1 early return must not mutate DBA");
-    PASS();
-}
-
-/* Live a03d599 hdr=0002/00200280: count@+6=2 → t2=−1, bits>>22=0 ≠ 0x1FF
- * → NOT immediate pad; admit=ready was correct. out=7300 = FMV001 frame-1
- * RLE (DAY2_MOVIE_COMPLETE_FRAMES) = normal EOF pad, not a no-op. */
-static void test_DAY2_158o_live_hdr_not_immediate_pad(void)
-{
-    pe_addr_t stream = 0x80150000u;
-    uint16_t count_hw;
-    uint16_t bits_hi;
-    uint16_t bits_lo;
-    uint32_t v0;
-    uint32_t sym;
-    int32_t t2;
-    int is_pad;
-
-    TEST("DAY2_158o_live_hdr_not_immediate_pad");
-    ResetTestState();
-    PE_StoreU32(stream, 0x11111111u);
-    PE_StoreU16(stream + 4u, 0u);
-    PE_StoreU16(stream + 6u, 0x0002u);       /* live hdr_count */
-    PE_StoreU16(stream + 8u, 0x0020u);       /* live hdr_bits hi */
-    PE_StoreU16(stream + 10u, 0x0280u);      /* live hdr_bits lo */
-    count_hw = PE_LoadU16(stream + 6u);
-    bits_hi = PE_LoadU16(stream + 8u);
-    bits_lo = PE_LoadU16(stream + 10u);
-    t2 = (int32_t)count_hw - 3;
-    v0 = ((uint32_t)bits_hi << 16) | (uint32_t)bits_lo;
-    sym = v0 >> 22;
-    is_pad = (t2 < 0) ? ((sym ^ 0x1FFu) == 0u) : ((sym ^ 0x3FFu) == 0u);
-    ASSERT(t2 == -1 && v0 == 0x00200280u && sym == 0u && !is_pad,
-           "live a03d599 hdr must not classify as immediate pad");
-    PASS();
-}
-
-static void test_Stage1b_cd_device_disabled_named_stop(void)
-{
-    DiscFixture fx;
-    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
-    const pe_addr_t suffix = 0x801F0000u;
-
-    TEST("Stage1b_cd_device_disabled_named_stop");
-    ResetTestState();
-    HostFB_Init();
-    func_8007ED58();
-    ASSERT(FxBuild(&fx, 1), "fixture build failed");
-    PE_Disc_SetActive(fx.disc);
-    /* Deliberately do NOT EnableDevice or ArmStreamPromote: E0 must
-     * name Stage1b_cd_device_disabled instead of nesting forever. */
-    PE_StoreU32(record, suffix);
-    PE_StoreU32(0x801D0DFCu, 0x801E0000u);
-    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
-    B558_PlantChain();
-    /* Minimal plant without ArmStreamPromote (unlike CDQ2d_PlantStream). */
-    PE_StoreU16(0x801D11B0u, 1u);
-    PE_StoreU32(0x801D0DF8u, 0x801B0000u);
-    PE_StoreU8(0x8010CBFCu, 0xFFu);
-    PE_StoreU8(0x8010CBFDu, 0xFFu);
-    PE_StoreU32(0x8011EB8Cu, 0x00FFFFFFu);
-    PE_StoreU32(0x801E0800u, 0x00000001u);
-    PE_StoreU16(0x801E0804u, 0u);
-    PE_StoreU16(0x801E0806u, 0u);
-    PE_StoreU16(0x801E0808u, 0xFE00u);
-    PE_StoreU16(0x801E080Au, 0u);
-
-    ASSERT(func_801924F8(21) == 0 &&
-           PE_Port_ShouldStop() &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY &&
-           CountOrderLog("Stage1b_cd_device_disabled") == 1 &&
-           CountOrderLog("Stage1b_pad_terminated_frame") == 0,
-           "device-off E0 must named-stop, not hang or Stage-1b-pad");
-    FxFree(&fx);
-    PASS();
-}
-
-static void test_B54K_C89C_last_chunk_frame_ready(void)
-{
-    DiscFixture fx;
-    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
-    const pe_addr_t suffix = 0x801F0000u;
-
-    TEST("B54K_C89C_last_chunk_frame_ready");
-    ResetTestState();
-    HostFB_Init();
-    func_8007ED58();
-    ASSERT(FxBuild(&fx, 1), "fixture build failed");
-    PE_Disc_SetActive(fx.disc);
-    PE_StoreU32(record, suffix);
-    PE_StoreU32(0x801D0DFCu, 0x801E0000u);
-    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
-    B558_PlantChain();
-    CDQ2d_PlantStream();
-    /* Demuxed s1 bodies are VLC bitstreams, not STR magic and not an
-     * immediate pad. Latch StreamFrameReady via production 7C214 with
-     * B89F4==1 (pump-time publish path from live 1fa9a48), not the test
-     * helper alone. Fixture ArmStreamPromote still publishes the movie
-     * slot for 91B64. EB8C=0 forces the bound exit. */
-    PE_StoreU32(0x801E0800u, 0x11111111u);
-    PE_StoreU16(0x801E0804u, 0u);
-    PE_StoreU16(0x801E0806u, 0u);
-    PE_StoreU16(0x801E0808u, 0u);
-    PE_StoreU16(0x801E080Au, 0u);
-    PE_StoreU32(0x8011EB8Cu, 0u);
-    PE_StoreU32(0x800C0DC8u, 0x801F0100u);
-    PE_StoreU32(0x800BE9E4u, 0u);
-    PE_StoreU32(0x800BE998u, 0u);
-    PE_StoreU32(0x800B0CC8u, 0u);
-    PE_StoreU16(0x801F0100u, 1u);
-    PE_StoreU32(0x801F0108u, 0u);
-    PE_StoreU32(0x801F011Cu, 0u);
-    PE_StoreU32(0x800B89F4u, 1u);
-    func_8007C214();
-    /* Boot path: 91FB8 leaves DBA==1; first-frame EC must bump to 2 so
-     * 92934's DBA<2 gate no longer aborts the media loop. */
-    PE_StoreU8(0x800B0DBAu, 1u);
-
-    {
-        PeC89CTelemetry c89c;
-        ASSERT(func_801924F8(21) == 0 &&
-               !PE_Port_ShouldStop() &&
-               CountOrderLog("Stage1b_pad_terminated_frame") == 0 &&
-               CountOrderLog("func_8010C89C") == 0 &&
-               PE_LoadU8(0x801D146Cu) == 1u &&
-               PE_LoadU16(0x800B0DBCu) == 1u,
-               "last-chunk 7C214 latch did not complete live C89C got_frame");
-        PE_C89C_GetTelemetry(&c89c);
-        ASSERT(c89c.a0 == 0x801E0800u && c89c.ret == 1,
-               "last-chunk C89C entry/bound-exit differs");
-        ASSERT(c89c.calls >= 1u && c89c.bound_exits >= 1u &&
-               c89c.a0_in_ram == 1u && c89c.a1_in_ram == 1u &&
-               c89c.a2_in_ram == 1u,
-               "last-chunk C89C telemetry counts/validity differ");
-        ASSERT(PE_LoadU8(0x800B0DBAu) == 2u,
-               "got_frame DBA++ from 91FB8's 1 must yield 2");
-    }
-    FxFree(&fx);
-    PASS();
-}
-
 
 static void test_B54KAF_dec_dct_reset_wrapper(void)
 {
@@ -20270,64 +20031,8 @@ static void test_CDQ1_7C214_publish(void) {
     ASSERT(PE_LoadU32(0x800A3494u) == 0xDEADBEEFu, "record word store differs");
     ASSERT(PE_LoadU32(0x800BE9E4u) == 7u, "index advance differs");
     ASSERT(PE_LoadU32(0x800B89F4u) == 0u, "active-flag clear differs");
-    ASSERT(!PE_Port_TakeStreamFrameReady(),
-           "sentinel B89F4 must not latch StreamFrameReady");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_NONE,
            "dead chain arm must not stop");
-    PASS();
-}
-
-/* DAY2-158j: pump-time 7C564→7C214 clears B89F4 before E0's promote arm
- * can Note; latch must live in 7C214 when B89F4==1 so got_frame admits
- * live C89C (Bazzite 1fa9a48: e0_poll → got_frame without e0_promote). */
-static void test_CDQ1_7C214_last_chunk_latches_frame_ready(void) {
-    TEST("CDQ1_7C214_last_chunk_latches_frame_ready");
-    ResetTestState();
-    PE_StoreU32(0x800C0DC8u, 0x801F0000u);
-    PE_StoreU32(0x800BE9E4u, 0u);
-    PE_StoreU32(0x800BE998u, 0u);
-    PE_StoreU32(0x800B0CC8u, 0u);
-    PE_StoreU32(0x800B89F4u, 1u);
-    func_8007C214();
-    ASSERT(PE_LoadU32(0x800B89F4u) == 0u, "last-chunk clear differs");
-    ASSERT(PE_Port_TakeStreamFrameReady(),
-           "B89F4==1 publish must latch StreamFrameReady");
-    ASSERT(!PE_Port_TakeStreamFrameReady(),
-           "TakeStreamFrameReady must consume the latch");
-    PASS();
-}
-
-/* DAY2-158k: 91B64 nonzero without pad/latch is early demux — named stop
- * before got_frame (Decomp diagnosis of live 1fa9a48 Stage1b_pad). */
-static void test_Stage1b_early_demux_publish_named_stop(void)
-{
-    DiscFixture fx;
-    const pe_addr_t record = 0x801D0E00u + 21u * 20u;
-    const pe_addr_t suffix = 0x801F0000u;
-
-    TEST("Stage1b_early_demux_publish_named_stop");
-    ResetTestState();
-    HostFB_Init();
-    func_8007ED58();
-    ASSERT(FxBuild(&fx, 1), "fixture build failed");
-    PE_Disc_SetActive(fx.disc);
-    PE_StoreU32(record, suffix);
-    PE_StoreU32(0x801D0DFCu, 0x801E0000u);
-    memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
-    B558_PlantChain();
-    CDQ2d_PlantStream();
-    PE_StoreU32(0x801E0800u, 0x11111111u);
-    PE_StoreU16(0x801E0804u, 0u);
-    PE_StoreU16(0x801E0806u, 0u);
-    PE_StoreU16(0x801E0808u, 0u);
-    PE_StoreU16(0x801E080Au, 0u);
-    /* ArmStreamPromote publishes status-2 without B89F4 last-chunk latch. */
-    ASSERT(func_801924F8(21) == 0 &&
-           PE_Port_ShouldStop() &&
-           CountOrderLog("Stage1b_early_demux_publish") == 1 &&
-           CountOrderLog("func_8010C89C") == 0,
-           "early demux without last-chunk latch must named-stop");
-    FxFree(&fx);
     PASS();
 }
 
@@ -20640,28 +20345,11 @@ static void test_CDS1_7fb44_negative_flag_passes(void)
  * The shadow routes them; tests observe production values. */
 static void B558_PlantPointers(void)
 {
-    /* EXE-image CD register pointer tables (not runtime SDK writers).
-     * Proven against the SHA-1 retail Disc1 EXE / gameover fade seed
-     * dump: B27C family for the command/status path, B32C..B35C for
-     * the stream reader (7C564/7CEAC) and StreamOutputChcr. */
     PE_StoreU32(0x8009B27Cu, 0x1F801800u);
     PE_StoreU32(0x8009B280u, 0x1F801801u);
     PE_StoreU32(0x8009B284u, 0x1F801802u);
     PE_StoreU32(0x8009B288u, 0x1F801803u);
     PE_StoreU32(0x8009B28Cu, 0x1F801020u);
-    PE_StoreU32(0x8009B32Cu, 0x1F801800u);
-    PE_StoreU32(0x8009B330u, 0x1F801801u);
-    PE_StoreU32(0x8009B334u, 0x1F801802u);
-    PE_StoreU32(0x8009B338u, 0x1F801803u);
-    PE_StoreU32(0x8009B33Cu, 0x1F801018u);
-    PE_StoreU32(0x8009B340u, 0x1F801020u);
-    PE_StoreU32(0x8009B344u, 0x1F8010F0u);
-    PE_StoreU32(0x8009B348u, 0x1F8010F4u);
-    PE_StoreU32(0x8009B34Cu, 0x1F801098u);
-    PE_StoreU32(0x8009B350u, 0x1F801090u);
-    PE_StoreU32(0x8009B354u, 0x1F8010A8u);
-    PE_StoreU32(0x8009B358u, 0x1F8010A0u);
-    PE_StoreU32(0x8009B35Cu, 0x1F8010B8u);
 }
 
 /* Full live-chain plant for synthetic tests: production tables plus
@@ -35573,6 +35261,7 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_movie_stream_helpers.h"
 #include "test_movie_updater.h"
 #include "test_movie_player.h"
+#include "test_movie_autonomous.h"
 #include "test_cd_command_queue.h"
 #include "test_cd_lowlevel_init.h"
 #include "test_cd_startup_helpers.h"
@@ -35684,6 +35373,8 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_vblank.h"
 #include "test_timer1.h"
 #include "test_blank_edges.h"
+#include "test_decomp_ports.h"
+#include "test_decomp_ptr_params.h"
 #include "test_script_timer.h"
 #include "test_input_query.h"
 #include "test_fade_wait.h"
@@ -37279,6 +36970,171 @@ static void test_SEW1_opcodes_5c_5d_93(void)
     PASS();
 }
 
+/* Opcode 0x9A (handler 0x800193D8): three pointer args dereferenced and
+ * passed to func_80065AD4.  Live M0091I module 3 args [2,5,0]. */
+static void test_SEW20_opcode_9A_slot_fill(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t container = 0x80110000u;
+    const pe_addr_t slot = container + 0x100u + 2u * 16u;
+    const pe_addr_t mem = 0x800B6A80u;
+    TEST("SEW20_opcode_9A_slot_fill");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0x9Au * 4u, 0x800193D8u);
+    PE_StoreU32(0x800B1624u, container);
+    PE_StoreU32(container + 0x10u, 0x100u);
+    PE_StoreU32(slot + 0xCu, 0x20u);
+    PE_StoreU8(slot + 4u, 0u);      /* low byte read by retail lbu */
+    PE_StoreU8(slot + 5u, 0xCDu);   /* bits 8..15 must be dropped */
+    PE_StoreU32(mem + 0u, 2u);      /* index */
+    PE_StoreU32(mem + 4u, 5u);      /* value */
+    PE_StoreU32(mem + 8u, 3u);      /* count */
+    /* 9A m4(0) m4(1) m4(2) ; 1 */
+    PE_StoreU32(pc, 0x9Au | (3u << 13) | (4u << 17) | (4u << 20) | (4u << 23));
+    PE_StoreU32(pc + 4u, 0u); PE_StoreU32(pc + 8u, 0u);
+    PE_StoreU32(pc + 12u, 1u); PE_StoreU32(pc + 16u, 2u);
+    PE_StoreU32(pc + 20u, 1u);
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "9A is translated");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 28u, "task advanced past 9A and the terminator");
+    ASSERT(PE_LoadU32(slot + 4u) == (5u << 16),
+           "9A published the value word and dropped bits 8..15");
+    ASSERT(PE_LoadU8(slot + 0u) == 6u, "9A OR-ed 6 into the slot flags");
+    ASSERT(PE_LoadU8(slot + 0x20u + 3u * 2u + 1u) == 0xFFu,
+           "9A filled the count-marked entry byte");
+    ASSERT(PE_LoadU16(slot + 0xAu) == 0u, "9A cleared the vertical word");
+    PASS();
+}
+
+/* Opcode 0x71 (handler 0x80018A9C): index*56 record walk + clamp. */
+static void test_SEW21_opcode_71_pan_clamp(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t container = 0x80110000u;
+    const pe_addr_t rec = container + 0x200u + 1u * 56u;
+    const pe_addr_t mem = 0x800B6A80u;
+    TEST("SEW21_opcode_71_pan_clamp");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0x71u * 4u, 0x80018A9Cu);
+    PE_StoreU32(0x800B1624u, container);
+    PE_StoreU32(container + 0x14u, 0x200u);
+    PE_StoreU16(rec + 8u, 10u);
+    PE_StoreU16(rec + 0xAu, 20u);
+    PE_StoreU16(rec + 0x10u, 0u);           /* X min 0 */
+    PE_StoreU16(rec + 0x12u, 5u);           /* X max 5 */
+    PE_StoreU16(rec + 0x14u, 0u);           /* Y min 0 */
+    PE_StoreU16(rec + 0x16u, 100u);         /* Y max 100 */
+    PE_StoreU32(rec, 0x00300000u);          /* page field = 3 */
+    PE_StoreU32(mem + 0u, 1u);
+    PE_StoreU16(mem + 4u, 3u);      /* x, lh low half */
+    PE_StoreU16(mem + 8u, 7u);      /* y, lh low half */
+    PE_StoreU16(mem + 12u, 0x100u); /* page, lh low half */
+    /* 71 m4(0) m4(1) m4(2) m4(3) ; 1 */
+    PE_StoreU32(pc, 0x71u | (4u << 13) | (4u << 17) | (4u << 20) | (4u << 23) | (4u << 26));
+    PE_StoreU32(pc + 4u, 0u); PE_StoreU32(pc + 8u, 0u);
+    PE_StoreU32(pc + 12u, 1u); PE_StoreU32(pc + 16u, 2u);
+    PE_StoreU32(pc + 20u, 3u); PE_StoreU32(pc + 24u, 1u);
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "71 is translated");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 32u, "task advanced past 71 and the terminator");
+    ASSERT((int16_t)PE_LoadU16(rec + 0xCu) == 5, "71 clamped X to the max");
+    ASSERT((int16_t)PE_LoadU16(rec + 0xEu) == 27, "71 clamped Y within range");
+    ASSERT(((PE_LoadU32(rec) >> 8) & 0xFFFu) == 0x103u, "71 accumulated the page field");
+    PASS();
+}
+
+/* Opcode 0xE9 (handler 0x80015C7C): now a real port.  Mirrors the retail
+ * m0351i module 1 `0x456` site exactly: argc 5, modes [0,0,0,1,1] — cmd/a/b are
+ * kind-0 immediate words and operands 3/4 are kind-1 actor words (operand 4 is
+ * not read by the handler).  func_8005D2B4 returns the PE maximum for cmd 0x456
+ * and E9 stores it through *arg3 (the `lw $v1,0xC($s0)` / `sw $v0,0($v1)`). */
+static void test_SEW23_opcode_E9_message_query(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t actor = 0x800BEA90u;
+    const pe_addr_t out_slot = actor + 0xACu;    /* operand 3, kind 1, imm 0 */
+    TEST("SEW23_opcode_E9_message_query");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0xE9u * 4u, 0x80015C7Cu);
+
+    /* Live message record; func_800515F8 reads +0xA (value) and +0x2A (max). */
+    PE_StoreU32(0x8009D254u, 0x80144000u);
+    PE_StoreU32(0x80144000u, 0x80145000u);
+    PE_StoreU16(0x80145000u + 0xAu, 42u);
+    PE_StoreU16(0x80145000u + 0x2Au, 99u);
+    PE_StoreU32(0x8009D014u, 0x800A1AA0u);       /* empty PE-deduction scan */
+
+    /* E9 argc 5, kinds [0,0,0,1,1]: all five 3-bit kinds live in word bits
+     * 17..31 (word2 only carries kinds for args 5..15), so operand 3 is
+     * kind 1 at bits 26..28 and operand 4 at bits 29..31. */
+    PE_StoreU32(pc, 0xE9u | (5u << 13) | (1u << 26) | (1u << 29));
+    PE_StoreU32(pc + 4u, 0u);
+    PE_StoreU32(pc + 8u, 0x456u);
+    PE_StoreU32(pc + 12u, 0u);
+    PE_StoreU32(pc + 16u, 0u);
+    PE_StoreU32(pc + 20u, 0u);   /* operand 3 actor word +0xAC */
+    PE_StoreU32(pc + 24u, 1u);   /* operand 4 actor word +0xB0 (unused) */
+    PE_StoreU32(pc + 28u, 1u);   /* terminating opcode 1 (argc 0) */
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "E9 is translated, not a boundary");
+    ASSERT(PE_LoadU32(out_slot) == 99u, "E9 stored the 0x456 maximum in the actor slot");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 36u, "E9 advanced past its 5-arg frame");
+    PASS();
+}
+
+/* func_8005D2B4 arms 0x453/0x454/0x457 (m0351i query leaves). ----------------- */
+static void test_SEW24_arm_453_454_457(void)
+{
+    TEST("SEW24_arm_453_454_457");
+    ResetTestState();
+    PE_StoreU16(0x800C0E06u, 0xC06Au);
+    ASSERT(func_8005D2B4(0x453, 0, 0) == 0xC06A, "arm 0x453 returns D_800C0E06");
+    func_8005D2B4(0x454, 0x0E08u, 0);
+    ASSERT(PE_LoadU16(0x800C0E08u) == 0x0E08u, "arm 0x454 publishes D_800C0E08");
+    /* arm 0x457 writes (*arg0)<<16 into the live record's +0x8. */
+    PE_StoreU32(0x8009D254u, 0x80100000u);
+    PE_StoreU32(0x80100000u, 0x80101000u);
+    func_8005D2B4(0x457, 0x1234u, 0);
+    ASSERT(PE_LoadU32(0x80101000u + 8u) == 0x12340000u, "arm 0x457 shifted into +0x8");
+    PASS();
+}
+
+/* func_8005D2B4 arm 0x45E (func_8004BCE8) end to end through the window nodes. */
+static void test_SEW25_arm_45E_close_window(void)
+{
+    TEST("SEW25_arm_45E_close_window");
+    ResetTestState();
+    func_80062F9C();
+    PE_StoreU32(0x8009D254u, 0x80100000u);
+    PE_StoreU32(0x80100000u, 0x80101000u);
+    PE_StoreU16(0x80101000u + 0xCu, 7u);
+    PE_StoreU32(0x80101000u + 0x68u, 0u);
+    PE_StoreU16(0x800C0E06u, 0x0064u);
+    PE_StoreU16(0x800C0E0Au, 3u);
+    PE_StoreU32(0x800C0E10u, 0x20u);
+    func_8005D2B4(0x45E, -1, 0);
+    ASSERT(PE_LoadU16(0x800C0E08u) == 7u, "0x45E committed the record +0xC");
+    ASSERT(PE_LoadU32(0x8009CFE8u) == 0u, "0x45E published the window base");
+    ASSERT(PE_LoadU32(0x8009CF60u) == 3u, "0x45E published the page byte");
+    ASSERT(PE_LoadU32(0x8009CF64u) == 0x64u, "0x45E published the 0x64 word");
+    ASSERT(PE_LoadU32(0x8009CF74u) == 0x20u, "negative arg clamps the 0x204 delta to base");
+    ASSERT(PE_LoadU32(0x8009CF84u) == 2u, "0x45E raised the message state to 2");
+    PASS();
+}
+
+/* Every non-m0351i arm is an explicit domain guard: loud, and retail default 0. */
+static void test_SEW26_arm_domain_guard(void)
+{
+    TEST("SEW26_arm_domain_guard");
+    ResetTestState();
+    ASSERT(func_8005D2B4(0x44Cu, 0, 0) == 0, "arm 0x44C is a loud guard, not a guess");
+    ASSERT(func_8005D2B4(0x45Du, 0, 0) == 0, "arm 0x45D is a loud guard, not a guess");
+    ASSERT(func_8005D2B4(0x460u, 0, 0) == 0, "arm 0x460 is a loud guard, not a guess");
+    ASSERT(func_8005D2B4(0x44Bu, 0, 0) == 0, "below-base cmd is a retail miss");
+    ASSERT(func_8005D2B4(0x461u, 0, 0) == 0, "above-base cmd is a retail miss");
+    PASS();
+}
+
 static void test_SEW1_unported_opcode_is_explicit_boundary(void)
 {
     const pe_addr_t pc = 0x80130000u;
@@ -37292,6 +37148,42 @@ static void test_SEW1_unported_opcode_is_explicit_boundary(void)
     ASSERT(PE_Port_ShouldStop(), "unported opcode requests a stop");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY, "stop reason is unresolved-boundary");
     ASSERT(PE_LoadU32(0x8009D310u) == pc, "task retains the unported opcode PC");
+    PASS();
+}
+
+/* Opcode 0x97 (handler 0x800192DC): effect-destroy wrapper used by M0374I
+ * module 2 (`*a0 -> a0`, owner `*(0x8009D2F0)`, force 0).  Closes the last
+ * unported opcode on the M0042I -> M0374I park branch
+ * (docs/evidence/field-vm-opcode-coverage/REPORT.md). */
+static void test_SEW19_opcode_97_effect_destroy(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t actor = 0x800BEA90u;
+    const pe_addr_t slot = 0x80150000u;
+    const pe_addr_t table = 0x80160000u;
+    const pe_addr_t entry = 0x80161000u;
+    const pe_addr_t mem = 0x800B6A80u;
+    TEST("SEW19_opcode_97_effect_destroy");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0x97u * 4u, 0x800192DCu);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x800942E4u, slot);           /* index < 11 -> 0xA0C stride */
+    PE_StoreU32(0x800942E0u, table);
+    PE_StoreU32(table + 3u * 4u, entry);      /* record's destroy kind = slot[1] */
+    PE_StoreU32(entry + 0x14u, 0x800C7DC4u);  /* a matching-C destroy callback */
+    PE_StoreU8(slot + 0u, 1u);                /* in use */
+    PE_StoreU8(slot + 1u, 3u);                /* kind */
+    PE_StoreU32(slot + 8u, actor);            /* owner matches */
+    PE_StoreU32(mem + 56u, 0u);               /* operand word = index 0 */
+    /* 97 m4 (value 14) ; 1 (terminate) */
+    PE_StoreU32(pc, 0x97u | (1u << 13) | (4u << 17));
+    PE_StoreU32(pc + 4u, 0u);
+    PE_StoreU32(pc + 8u, 14u);
+    PE_StoreU32(pc + 12u, 1u);
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "97 is translated");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 20u, "task advanced past 97 and the terminator");
+    ASSERT(PE_LoadU8(slot + 0u) == 0u, "97 cleared the matching effect slot");
     PASS();
 }
 
@@ -39569,12 +39461,6 @@ int main(void)
     test_dssearch_missing();
     test_B54KAD_fmv2_filename_threshold();
     test_B54KAE_movie_state_setup();
-    test_B54K_C89C_gated_until_pad();
-    test_B54K_C89C_last_chunk_frame_ready();
-    test_B54K_92934_dba_early_gate();
-    test_DAY2_158o_live_hdr_not_immediate_pad();
-    test_Stage1b_cd_device_disabled_named_stop();
-    test_Stage1b_early_demux_publish_named_stop();
     test_B54KAF_dec_dct_reset_wrapper();
     test_B54KAG_mdec_table_upload();
     test_B54KAH_dec_dct_out_callback_registration();
@@ -39606,7 +39492,6 @@ int main(void)
     test_CDQ1_7E6B0_ring();
     test_CDQ1_80950_arms();
     test_CDQ1_7C214_publish();
-    test_CDQ1_7C214_last_chunk_latches_frame_ready();
     test_CDQ1_7C214_chain_boundary();
     test_CDQ1_7C394_math();
     test_CDQ1_7F0C8_gates();
@@ -40239,6 +40124,13 @@ int main(void)
     test_SKIP2_opening_script_spawns_aya();
     test_SEW1_opcodes_5c_5d_93();
     test_SEW1_unported_opcode_is_explicit_boundary();
+    test_SEW19_opcode_97_effect_destroy();
+    test_SEW20_opcode_9A_slot_fill();
+    test_SEW21_opcode_71_pan_clamp();
+    test_SEW23_opcode_E9_message_query();
+    test_SEW24_arm_453_454_457();
+    test_SEW25_arm_45E_close_window();
+    test_SEW26_arm_domain_guard();
     test_SEW2_leaf_opcodes();
     test_SEW3_container_leaves();
     test_SEW4_heading_opcode_cb();
@@ -40287,10 +40179,6 @@ int main(void)
     test_DAY2_cd_ack();
     test_DAY2_cd_device();
     test_DAY2_cd_sector_device();
-    test_HostFB_PumpCdProgress_sector_scale();
-    test_DAY2_cd_b0cd0_pump_stall();
-    test_DAY2_cd_b0cd0_pump_retry_idle_dma1();
-    test_DAY2_cd_b0cd0_pump_orphan_pending();
     test_DAY2_cd_dma();
     test_DAY2_mdec_pixels();
     test_DAY2_mdec_dma();
@@ -40298,6 +40186,8 @@ int main(void)
     test_DAY2_movie_stream_helpers();
     test_DAY2_movie_updater();
     test_DAY2_movie_player();
+    test_DAY2_movie_autonomous();
+    test_DAY2_movie_multiframe();
     test_DAY2_cd_command_queue();
     test_DAY2_cd_lowlevel_init();
     test_DAY2_cd_startup_helpers();
@@ -40364,6 +40254,7 @@ int main(void)
     test_DAY1_controller_sdk();
     test_DAY1_game_input();
     test_DAY1_vsync();
+    test_DAY1_host_vsync_contract();
     test_DAY1_vblank();
     test_DAY1_timer1();
     test_DAY1_blank_edges();
@@ -40429,11 +40320,14 @@ int main(void)
     test_EV1_both_tags_hit();
 
     /* Phase 6E-OTC1 — ClearOTagR synchronous OTC fill (5 tests). */
-    test_OTC1_clearotagr_fill_and_tail();
-    test_OTC1_clearotagr_null_ot_skip();
+    test_OTC1_clearotagr_fill_and_tail();    test_OTC1_clearotagr_null_ot_skip();
     test_OTC1_clearotagr_debug_print_boundary();
     test_OTC1_clearotagr_dirty_jtb_boundary();
     test_OTC1_clearotagr_small_table();
+
+    /* Decomp-derived port regression (8 tests). */
+    test_DECOMP_all();
+    test_DECOMPPTR_all();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

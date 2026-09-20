@@ -1,7 +1,43 @@
+> **PROJECT GOAL:** a native PC port in the mould of Ship of Harkinian /
+> the Silent Hill decomp ports, ultimately re-rendered (HD-2D).
+> **Read `docs/ai_context/PORT_GOAL_AND_PLAN.md` before planning any work.**
+> The port is the deliverable; the decompilation is how you get there.
+> Recovered *assembly* is worth nothing to the port -- you cannot run PS1 MIPS
+> on x86. Report C-only executed-path coverage, not just total coverage.
+
 # ACTIVE HANDOFF
 
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
+
+## RECOVERY: integrate the uncommitted decomp-port refactor (2026-09-19)
+
+The working tree carried an **unfinished 09-11/09-12 refactor** that did not
+compile. Recovered and integrated it rather than discarding the work:
+
+1. **`func_80192934_port.c`** still referenced the removed Stage-1b promote
+   latch (`PE_Port_ConsumeStreamPromote`, `PE_Port_TakeStreamFrameReady`,
+   `HostFB_PumpCdProgress`). Rewritten to the surviving stream model: the
+   poll calls `func_8007C214()` directly, and got-frame keeps the same honest
+   `func_8010C89C` boundary as `func_801924F8` (never decode a partial STR
+   frame — the MV1d 2 MiB overflow trap).
+2. **CMake** now builds `platform/pe_guest_decomp.c`, the 272 generated TUs
+   under `game/decomp/` (globbed; the set is generated), the new
+   `game/boot/{field_message,func_80065AD4,func_800671C8,func_8019234C}_port.c`,
+   and two standalone suites (`pe-transition-outer-tests`,
+   `pe-route-boot-day2-tests`).
+3. **Green baseline with the retail disc** (`local/pe_disc1.path` → the attic
+   Disc 1 image; git-ignored): `pe-native-tests` **1374 run / 1374 pass / 0
+   skipped**; `pe-transition-outer-tests` **5/5**;
+   `pe-route-boot-day2-tests` **14/14 ordered Day-1 milestones** (boot →
+   m0010i → m0002i → m0003i → m0372i → m0004i → m0378i/m0377i), frontier
+   `m0004i` mod4 `pc=0x801B6CC8`.
+
+**Open, honestly:** the generated TUs cite
+`tools/analysis/gen_decomp_ports.py` and `docs/ai_context/PC_PORT_FROM_DECOMP.md`,
+neither of which is in this checkout; and 82 of the 272 generated TUs have no
+`src/` leaf here, so their bodies are unverifiable against an in-tree
+authority. Both are tracked work, not claims.
 
 ## DAY2-158z: fold dig/b0cd0-catchup-miss (orphan pending) (2026-09-09)
 

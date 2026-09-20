@@ -38,6 +38,7 @@ set(PLATFORM_SRCS
     platform/func_80071A24_port.c
     platform/func_800719E4_port.c
     platform/pe_guest_image.c
+    platform/pe_guest_decomp.c
 )
 
 set(BOOTSTRAP_SRCS
@@ -334,6 +335,18 @@ set(GAME_SRCS
     game/boot/func_80191DC8_port.c
     game/boot/func_8010BD4C_port.c
     game/boot/func_8010C89C_port.c
+    game/boot/func_8019234C_port.c
+    game/boot/func_80065AD4_port.c
+    game/boot/func_800671C8_port.c
+    game/boot/field_message_port.c
+)
+
+# Decomp-derived host TUs under game/decomp/.  Each file carries one verified
+# matching leaf copied verbatim from src/ plus its host adaptation through
+# pe_guest_decomp.h.  The set is generated, not hand-maintained, so a glob is
+# the honest description; CONFIGURE_DEPENDS re-globs when files appear.
+file(GLOB DECOMP_SRCS CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/game/decomp/*.c
 )
 
 set(FIELD_RUNTIME_SRCS
@@ -342,6 +355,7 @@ set(FIELD_RUNTIME_SRCS
     ${PLATFORM_SRCS}
     ${BOOTSTRAP_SRCS}
     ${GAME_SRCS}
+    ${DECOMP_SRCS}
 )
 
 # The static runtime is the reusable product boundary.  It contains the
@@ -377,6 +391,7 @@ add_executable(parasite-eve-port
     ${HOST_WINDOW_SRC}
 )
 target_link_libraries(parasite-eve-port PRIVATE pe_field_runtime)
+target_include_directories(parasite-eve-port PRIVATE ${CMAKE_SOURCE_DIR}/tests)
 if(NOT WIN32)
     # POSIX X11 backend resolves dlopen/dlsym from libdl.
     target_link_libraries(parasite-eve-port PRIVATE dl)
@@ -501,6 +516,28 @@ if(BUILD_TESTS)
         endif()
         add_test(NAME transition-loader-control-flow COMMAND pe-transition-loader-tests)
         set_tests_properties(transition-loader-control-flow PROPERTIES TIMEOUT 30)
+
+        add_executable(pe-transition-outer-tests tests/test_transition_outer.c)
+        target_link_libraries(pe-transition-outer-tests PRIVATE pe_field_runtime)
+        foreach(provider HostFB_VSync HostFB_SetDispMask PE_TransitionCompactOT
+                func_80037870 func_8003EB04 func_8006A25C func_80071A54 func_80071A64
+                func_80074A44 func_80074DC0 func_800752AC func_800753B4 func_80075424
+                func_800755F0 func_8018F05C func_8018F92C func_80191DE8 func_80191E30
+                func_80191EFC func_80192030 func_80192740 func_80192800 func_80193478
+                func_80193AB0 func_80194108 func_801942FC func_80196498 func_8019BF8C)
+            target_link_options(pe-transition-outer-tests PRIVATE "-Wl,--wrap=${provider}")
+        endforeach()
+        add_test(NAME transition-outer-control-flow COMMAND pe-transition-outer-tests)
+        set_tests_properties(transition-outer-control-flow PROPERTIES TIMEOUT 60)
+
+        # Day 1 -> Day 2 route rehearsal drives the shared entry against a disc
+        # image and reports ordered story milestones.  Skips loudly when no
+        # disc is configured.
+        add_executable(pe-route-boot-day2-tests tests/test_route_boot_day2.c)
+        target_link_libraries(pe-route-boot-day2-tests PRIVATE pe_field_runtime)
+        target_include_directories(pe-route-boot-day2-tests PRIVATE ${CMAKE_SOURCE_DIR}/tests)
+        add_test(NAME route-boot-day2-control-flow COMMAND pe-route-boot-day2-tests)
+        set_tests_properties(route-boot-day2-control-flow PROPERTIES TIMEOUT 180)
     endif()
 
     if(PE_PORT_SANITIZERS AND NOT MSVC)

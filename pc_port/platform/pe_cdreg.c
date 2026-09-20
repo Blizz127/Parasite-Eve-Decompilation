@@ -35,7 +35,7 @@ static void CdClearData(void)
 }
 
 
-void PE_CdReg_GetDeviceState(PeCdDeviceState *out) { *out=g_device;out->data_remaining=g_data_size-g_data_pos;out->sector_pending=(uint8_t)(g_sector_pending!=0); }
+void PE_CdReg_GetDeviceState(PeCdDeviceState *out) { *out=g_device;out->data_remaining=g_data_size-g_data_pos; }
 int PE_CdReg_DeviceEnabled(void) { return g_device.enabled!=0; }
 static void CdDeviceBoundary(const char *name,uint32_t value)
 {
@@ -107,11 +107,11 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
                     if(!valid) {response[0]|=1u;response[1]=0x10u;size=2;tag=5;}
                     else {g_target_lba=frame-150u;g_target_pending=1;}
                 } else if(g_command==6u || g_command==27u) {
-                    /* Bit4 (CdlModeSM / XA filter) remains an explicit frontier.
-                     * Bit6 (CdlModeRT) is allowed: retail movie mode 0xE0/0x1E0
-                     * sets RT so the drive delivers every raw sector; 7C564's
-                     * own header/channel checks perform the software filter. */
-                    if(g_device.mode&0x10u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
+                    /* Every read mode is served from the raw sector: mode bit5
+                     * selects the 2048/2340-byte FIFO window and no other mode
+                     * bit (XA select 0x40, double speed 0x80, ignore 0x10)
+                     * changes the bytes the drive hands over. The movie stream
+                     * opens ReadS with mode 0x1E0 (double speed + XA + 2340). */
                     if(g_target_pending) {g_device.next_lba=g_target_lba;g_target_pending=0;}
                     g_device.reading=1;g_read_cycles=CdSectorCycles();
                 } else if(g_command==9u || g_command==21u || g_command==22u) {
@@ -128,15 +128,9 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
             g_device.responses++;
         }
     }
-    if(was_reading && g_device.reading && !g_read_cycles && !g_phase &&
-       !g_response_tag && g_response_pos==g_response_size) {
-        if(g_device.mode&0x10u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
-        /* Backpressure: hold the next publish while an unread sector waits
-         * for BFRD. HostFB_PumpCdProgress can retire a full sector period
-         * before INT1→BFRD→DMA3 drains; STOP-on-overrun was an artificial
-         * wall after ~319 live FMV frames (DAY2-158v). Leave g_read_cycles
-         * at 0 so the next service retries after BFRD clears pending. */
-        if(!g_sector_pending) {
+    if(was_reading && g_device.reading && !g_read_cycles) {
+        if(!g_phase && !g_response_tag && g_response_pos==g_response_size) {
+            if(g_sector_pending) {CdDeviceBoundary("CD_device_sector_overrun",g_device.next_lba);return;}
             if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
                 CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;
             }
@@ -246,7 +240,12 @@ void PE_CdReg_WriteU8(pe_addr_t address, uint8_t value)
     if(g_device.enabled && address==PE_CDREG_BASE+3u && (g_cdreg[0]&3u)==0u) {
         if(value&0x60u) {CdDeviceBoundary("CD_device_buffer_write",value);return;}
         if(!(value&0x80u)) g_data_pos=g_data_size=0;
-        else if(g_data_pos==g_data_size && g_sector_pending) {
+        else if(g_sector_pending) {
+            /* BFRD (want data, bit7) loads the pending sector into the FIFO.
+             * Hardware discards any unread tail of the previous sector when the
+             * request is reasserted, so the stream reader's partial 2060-byte
+             * consumption (12-byte header + 32-byte chunk header + 2016-byte
+             * body of a 2340-byte window) never blocks the next sector. */
             uint32_t offset=(g_device.mode&0x20u)?12u:24u;
             g_data_size=(g_device.mode&0x20u)?2340u:2048u;g_data_pos=0;
             for(unsigned i=0;i<g_data_size;i++) g_data[i]=g_sector[offset+i];

@@ -15,11 +15,14 @@
 #include "pe_sdk.h"
 #include "pe_disc.h"
 #include "pe_guest_image.h"
-#include "pe_cdreg.h"
+#include "pe_route_pad.h"
+#include "pe_port_compat.h"
+#include "pe_guest_ram.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <errno.h>
 
 extern void func_8001220C(void);
 extern int  func_8006E9A0(int);
@@ -46,6 +49,8 @@ static struct {
     int skip_movie;
     int skip_opening_menu;
     int boundary_report;
+    int route_pad;
+    int auto_quit;
 } g_opts = {
     .headless = 0, .bootstrap_disc = 0, .strict_stubs = 0,
     .screenshot = NULL, .vram_screenshot = NULL, .vram_raw = NULL,
@@ -58,12 +63,157 @@ static struct {
     .lzcr_oracle_dump = 0, .callback_oracle_dump = 0,
     .dma_checkpoint_report = 0,
     .skip_movie = 0, .boundary_report = 0,
+    .route_pad = 0, .auto_quit = 0,
 };
+
+/* ── Deterministic route pad (interactive autopilot) ────────────────────
+ * The interactive entry point has no SIO/pad, so without an installed
+ * source the guest never sees a button (func_8003F3C4's idle-zero
+ * normalize fills 0xFFFF) and cold boot parks at the field prefix waiting
+ * for input.  This drives the SAME four-stage pad the boot -> Day-2 route
+ * harness uses (pc_port/tests/test_route_boot_day2.c) via the shared
+ * pc_port/include/pe_route_pad.h table, so the SAME Day-1 field route the
+ * harness proves is also reachable from the windowed binary.  It is a host
+ * input source only; it never writes guest state that the pad path would
+ * not. */
+
+static PeRoutePadConfig g_route_pad;
+static int g_route_frame;
+#define GA_TOKEN D_8009D280
+static int g_frame;
+static unsigned g_sewer_victories, g_sewer_enemy_peak[3];
+static int g_pulse_end = 33620, g_pulse_resume = 35300;
+static int g_exact_pad_begin = 42713, g_exact_pad_end = 45041;
+static int g_sewer_pad_begin = 50500, g_sewer_pad_end = 51200;
+static int g_second_sewer_pad_begin = 52344, g_second_sewer_pad_end = 54500;
+static int g_supply_pad_begin = 54500, g_supply_pad_end = 62000;
+static struct { int frame; uint16_t mask; } g_pad_sequence[4096];
+static unsigned g_pad_sequence_count;
+#include "route_rehearsal_pads.h"
+#include "route_reward_sewer_pilot.h"
+
+/* m0004i module-4 type-4 task PC: the documented executed-route frontier
+ * (same FRONTIER_PC the harness pins).  Matched on the task PC rather than
+ * the room token because the m0004i token (0xA8000248) is also live earlier
+ * in the route, before the m0378i/m0377i bounce.  The frontier additionally
+ * requires persist[1]==0x17A, which only the post-bounce m0004i visit holds;
+ * the first m0004i visit has persist[1]==3 and also parks module 4 on the
+ * same task PC. */
+#define ROUTE_FRONTIER_PC       0x801B6CC8u
+#define ROUTE_FRONTIER_TOKEN    0xA8000248u
+#define ROUTE_FRONTIER_PERSIST1 0x0000017Au
+
+static void RoutePadAutoQuitIfDone(void)
+{
+    pe_addr_t actor;
+    int guard = 0;
+
+    if (!g_opts.auto_quit) return;
+    /* The m0377i module-5 transfer bounces through m0378i back to m0004i. */
+    if (D_8009D280 != ROUTE_FRONTIER_TOKEN) return;
+    if (PE_LoadU32(0x800A77F4u) != ROUTE_FRONTIER_PERSIST1) return;
+    actor = PE_LoadU32(0x8009D20Cu);
+    while (actor != 0u && guard < 64) {
+        pe_addr_t task = PE_LoadU32(actor + 0xA8u);
+        if (task != 0u && PE_LoadU32(task) == ROUTE_FRONTIER_PC) {
+            fprintf(stderr,
+                    "[ROUTE] reached m0004i frontier (pc=0x%08X) at "
+                    "route frame %d; quitting (--auto-quit)\n",
+                    (unsigned)ROUTE_FRONTIER_PC, g_route_frame);
+            PE_Port_RequestStop(PE_PORT_STOP_HOST_QUIT);
+            return;
+        }
+        actor = PE_LoadU32(actor + 4u);
+        guard++;
+    }
+}
+
+static void RecordSewerVictory(void)
+{
+    unsigned room;
+    unsigned enemies=0;
+    pe_addr_t actor,aya,record;
+    uint32_t flags;
+    if (GA_TOKEN==0xA80023C8u) room=0;
+    else if (GA_TOKEN==0xA8002448u) room=1;
+    else if (GA_TOKEN==0xA8003148u) room=2;
+    else return;
+    actor=PE_LoadU32(0x8009D20Cu);
+    for (unsigned i=0;actor && i<64u;i++,actor=PE_LoadU32(actor+4u)) {
+        unsigned type=PE_LoadU8(actor+12u);
+        if ((room==0?type==3u:room==1?(type==7u || type==8u):type==6u) && PE_LoadU32(actor)) enemies++;
+    }
+    flags=PE_LoadU32(0x8009D1A0u);
+    if ((flags&2u) && enemies>g_sewer_enemy_peak[room]) g_sewer_enemy_peak[room]=enemies;
+    aya=PE_LoadU32(0x8009D254u); record=aya?PE_LoadU32(aya):0u;
+    if (g_sewer_enemy_peak[room]==(room==2?2u:3u) && !enemies && !(flags&6u) &&
+        PE_LoadU32(0x8009D28Cu)==9u && record && PE_LoadU16(record+12u)>0u &&
+        !(g_sewer_victories&(1u<<room))) {
+        g_sewer_victories|=1u<<room;
+        fprintf(stderr,"route: sewer victory room=%u frame=%d HP=%u\n",room+1u,g_frame,PE_LoadU16(record+12u));
+    }
+}
+
+static void RoutePadLoadSequence(void)
+{
+    const char *s = getenv("PE_ROUTE_PAD_SEQUENCE");
+    if (!s) s=kDay1RoutePads;
+    g_pad_sequence_count=0;
+    while (s && s[0]) {
+        char *end;
+        unsigned long frame, mask;
+        errno=0;
+        frame=strtoul(s,&end,10);
+        if (errno || end==s || *end!=':' || frame>INT_MAX
+            || g_pad_sequence_count==sizeof(g_pad_sequence)/sizeof(g_pad_sequence[0])
+            || (g_pad_sequence_count && frame<=(unsigned)g_pad_sequence[g_pad_sequence_count-1].frame))
+            break;
+        s=end+1;
+        errno=0;
+        mask=strtoul(s,&end,16);
+        if (errno || end==s || mask>0xFFFFu || (*end && *end!=',')) break;
+        g_pad_sequence[g_pad_sequence_count].frame=(int)frame;
+        g_pad_sequence[g_pad_sequence_count++].mask=(uint16_t)mask;
+        s=*end?end+1:end;
+    }
+}
+
+static uint16_t RoutePadSource(void)
+{
+    uint16_t mask;
+
+    g_route_frame = g_frame;
+    mask=PeRoutePad_Mask(&g_route_pad,g_frame);
+    for (unsigned i=0;i<g_pad_sequence_count && g_frame>=g_pad_sequence[i].frame;i++)
+        mask=g_pad_sequence[i].mask;
+    if (!(g_frame>=g_exact_pad_begin && g_frame<g_exact_pad_end) &&
+        !(g_frame>=g_sewer_pad_begin && g_frame<g_sewer_pad_end) &&
+        !(g_frame>=g_second_sewer_pad_begin && g_frame<g_second_sewer_pad_end) &&
+        !(g_frame>=g_supply_pad_begin && g_frame<g_supply_pad_end) &&
+        (g_frame<g_pulse_end || g_frame>=g_pulse_resume) && (g_frame%g_route_pad.period)==3)
+        mask&=g_route_pad.pulse;
+    mask=RouteRewardSewerPilot(mask);
+    if (getenv("PE_ROUTE_DEBUG") && (g_frame % 500) == 0)
+        fprintf(stderr, "[ROUTE] padf=%d token=%08X story=%08X held=%08X pad=%04X\n",
+                g_frame, (unsigned)D_8009D280,
+                (unsigned)PE_LoadU32(0x800A7918u), (unsigned)PE_LoadU32(0x8009D26Cu),
+                (unsigned)mask);
+    RoutePadAutoQuitIfDone();
+    return mask;
+}
 
 /* Phase 6E-PRS1 live-window present hook: blit the newest host pixels and
  * poll for close/Escape.  Host data only; never touches guest state. */
 static void PresentHook_BlitWindow(void)
 {
+    if (g_opts.route_pad) {
+        g_frame++;
+        RecordSewerVictory();
+        if ((g_frame % 500) == 0)
+            fprintf(stderr, "[ROUTE] frame=%d token=%08X story=%08X victories=%u\n",
+                    g_frame, (unsigned)D_8009D280,
+                    (unsigned)PE_LoadU32(0x800A7918u), g_sewer_victories);
+    }
     if (HostWindow_Pace()) {PE_Port_RequestStop(PE_PORT_STOP_HOST_QUIT);return;}
     HostWindow_Blit(HostFB_GetPixels(), PE_PORT_FB_WIDTH, PE_PORT_FB_HEIGHT);
     (void)HostWindow_Poll();
@@ -96,6 +246,8 @@ static void ParseArgs(int argc, char **argv) {
         else if (!strcmp(a, "--dma-checkpoint-report")) g_opts.dma_checkpoint_report = 1;
         else if (!strcmp(a, "--skip-movie"))           g_opts.skip_movie = 1;
         else if (!strcmp(a, "--skip-opening-menu"))    g_opts.skip_opening_menu = 1;
+        else if (!strcmp(a, "--route-pad"))            g_opts.route_pad = 1;
+        else if (!strcmp(a, "--auto-quit"))            g_opts.auto_quit = 1;
         else if (!strcmp(a, "--boundary-report"))      g_opts.boundary_report = 1;
         else if (i+1<argc && !strcmp(a, "--screenshot"))      g_opts.screenshot = argv[++i];
         else if (i+1<argc && !strcmp(a, "--vram-screenshot")) g_opts.vram_screenshot = argv[++i];
@@ -431,18 +583,6 @@ int main(int argc, char **argv) {
             return 1;
         }
         fprintf(stderr, "[DISC] boot executable loaded into guest RAM\n");
-        /* Mounted-disc command device: required for HostFB_PumpCdProgress /
-         * streaming DMA (7C564→B89F4). Stage147/148 keep enable explicit —
-         * tests opt in; production --disc-image must as well or E0 burns
-         * empty polls then hangs in the give-up 7F72C busy-wait under
-         * 1220C (live Bazzite on 737f10e/7a6984b). */
-        if (!PE_CdReg_EnableDevice(7u)) {
-            fprintf(stderr,
-                    "[DISC] CD command device already enabled or attach failed\n");
-        } else {
-            fprintf(stderr, "[DISC] CD command device enabled (mask=7)\n");
-            TraceEvent("cd_command_device_enabled");
-        }
     }
 
     TraceEvent("native_executable_start");
@@ -491,6 +631,27 @@ int main(int argc, char **argv) {
             PE_Port_SetPresentHook(PresentHook_BlitWindow);
             PE_Port_SetPadSource(HostWindow_PadRaw);
         }
+    }
+
+    if (g_opts.route_pad) {
+        /* Interactive Day-1 autopilot: same four-stage table + switch frames
+         * the route harness proves (shared pe_route_pad.h).  A route-pad run
+         * implies both documented HOST_ADAPTED skips, otherwise the
+         * untranslated title/menu is still in front of the field and no pad
+         * can get past it. */
+        PeRoutePad_ConfigFromEnv(&g_route_pad);
+        g_route_frame = 0;
+        g_frame = 0;
+        g_sewer_victories = 0;
+        g_sewer_enemy_peak[0]=g_sewer_enemy_peak[1]=g_sewer_enemy_peak[2]=0;
+        RoutePadLoadSequence();
+        PE_Port_SetSkipMovie(1);
+        PE_Port_SetSkipOpeningMenu(1);
+        PE_Port_SetPadSource(RoutePadSource);
+        fprintf(stderr,
+                "[ROUTE] --route-pad: full Day-1/Day-2 pad sequence (%u pairs) "
+                "+ sewer/M34 pilot + skip-movie + skip-opening-menu\n",
+                g_pad_sequence_count);
     }
 
     if (g_opts.direct_clear_test) {
@@ -557,39 +718,6 @@ int main(int argc, char **argv) {
             vs, ds, pr, mk, g_port_main_iterations);
     fprintf(stderr, "[HOST] stop_reason=%s\n",
             PE_Port_StopReasonName(PE_Port_GetStopReason()));
-    /* DAY2-158 dig: quiet TRACE ≠ skipped C89C. Dump host telemetry so
-     * live Disc1 shows a0/a1/a2/ret (+counts) after the poll/got_frame
-     * spin — pad-exit vs live out/table. Not a got_frame gate patch. */
-    {
-        PeC89CTelemetry c89c;
-        char tel[224];
-
-        PE_C89C_GetTelemetry(&c89c);
-        snprintf(tel, sizeof(tel),
-                 "c89c_tel_final calls=%u ret=%d pad=%u bound=%u "
-                 "a0=%08x a1=%08x a2=%08x a0ram=%u a1ram=%u a2ram=%u "
-                 "out=%u hdr=%04x/%08x w0=%08x",
-                 (unsigned)c89c.calls, c89c.ret,
-                 (unsigned)c89c.pad_exits, (unsigned)c89c.bound_exits,
-                 (unsigned)c89c.a0, (unsigned)c89c.a1, (unsigned)c89c.a2,
-                 (unsigned)c89c.a0_in_ram, (unsigned)c89c.a1_in_ram,
-                 (unsigned)c89c.a2_in_ram, (unsigned)c89c.out_bytes,
-                 (unsigned)c89c.hdr_count, (unsigned)c89c.hdr_bits,
-                 (unsigned)c89c.hdr_word0);
-        TraceEvent(tel);
-        fprintf(stderr,
-                "[C89C] calls=%u ret=%d pad_exits=%u bound_exits=%u "
-                "a0=0x%08x a1=0x%08x a2=0x%08x out_bytes=%u "
-                "a0ram=%u a1ram=%u a2ram=%u hdr=0x%04x/0x%08x w0=0x%08x\n",
-                (unsigned)c89c.calls, c89c.ret,
-                (unsigned)c89c.pad_exits, (unsigned)c89c.bound_exits,
-                (unsigned)c89c.a0, (unsigned)c89c.a1, (unsigned)c89c.a2,
-                (unsigned)c89c.out_bytes,
-                (unsigned)c89c.a0_in_ram, (unsigned)c89c.a1_in_ram,
-                (unsigned)c89c.a2_in_ram,
-                (unsigned)c89c.hdr_count, (unsigned)c89c.hdr_bits,
-                (unsigned)c89c.hdr_word0);
-    }
     {
         PeGpuState gpu;
 

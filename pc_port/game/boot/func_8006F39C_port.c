@@ -24,11 +24,64 @@
 #include "game_port.h"
 
 #define GA_D_800B0CD8 0x800B0CD8u
+#define GA_D_800B0DD8 0x800B0DD8u
+#define GA_D_80093162 0x80093162u
+#define GA_D_80011618 0x80011618u
+#define GA_D_800E10A0 0x800E10A0u
 #define GA_D_800942E0 0x800942E0u
 #define GA_D_800942E4 0x800942E4u
 #define GA_D_800942E8 0x800942E8u
 #define GA_D_800E1044 0x800E1044u
 #define GA_FN_D4620   0x800D4620u
+
+extern int func_8006E6A8(int lba, pe_addr_t dest, int sectors);
+extern int func_8006E7E8(void);
+extern int func_80072714(void);
+extern void func_800726C4(void);
+extern void func_80072724(void);
+
+/* Overlay handler descriptors installed into D_800E10A0[0..6] for the CD/XA
+ * prelude ids 0x6C..0x72 (matched src/func_8006F39C.c). */
+static const pe_addr_t overlay_handlers[7] = {
+    0x801F1BD8u, 0x801F1C58u, 0x801F1D00u, 0x801F1D8Cu,
+    0x801F1E18u, 0x801F1EA4u, 0x801F1EF0u
+};
+
+/* The matched leaf's 0x6C..0x72 prelude: when the overlay-handler flag is
+ * clear, stream the D_80093162 offset/size pair from the current mount base
+ * (D_800B0DD8) into D_80011618, polling with a -1 restart, then install the
+ * seven handlers and raise bit 0x10000. */
+static void otag_install_overlay_handlers(void)
+{
+    int r;
+    int i;
+
+    if ((PE_LoadU32(GA_D_800B0CD8) & 0x10000u) != 0u)
+        return;
+
+retry:
+    do {
+        r = func_8006E6A8(
+            PE_LoadU32(GA_D_800B0DD8) + (int)PE_LoadU16(GA_D_80093162),
+            PE_LoadU32(GA_D_80011618),
+            (int)PE_LoadU16(GA_D_80093162 + 2u) -
+                (int)PE_LoadU16(GA_D_80093162));
+    } while (r == -1);
+    for (;;) {
+        r = func_8006E7E8();
+        if (r == 0)
+            break;
+        if (r == -1)
+            goto retry;
+    }
+    (void)func_80072714();
+    func_800726C4();
+    func_80072724();
+    for (i = 0; i < 7; i++)
+        PE_StoreU32(GA_D_800E10A0 + (pe_addr_t)i * 4u, overlay_handlers[i]);
+    PE_StoreU32(GA_D_800B0CD8,
+                PE_LoadU32(GA_D_800B0CD8) | 0x10000u);
+}
 
 void func_800D4620(pe_addr_t slot)
 {
@@ -91,6 +144,9 @@ int func_8006F39C(unsigned int code, pe_addr_t userdata)
     extra = 0u;
     if (code >= 0xC0u)
         return -7;
+
+    if (code >= 0x6Cu && code <= 0x72u)
+        otag_install_overlay_handlers();
 
     (void)func_8006914C(0);
 
