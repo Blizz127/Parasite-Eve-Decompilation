@@ -334,6 +334,10 @@ segments:
       # Probe: state bit-17 setter with retail $v0/$a0 allocation.
       - [0xA428, c, func_80019C28]
       - [0xA44C, asm]
+      # func_80019CEC — VRAM 0x80019CEC, size 0x38, file 0xA4EC-0xA524.
+      # Sign-extend the three halfwords at +0x21C/+0x21E/+0x220 into the
+      # word fields +0x28/+0x2C/+0x30; return 1.
+      - [0xA4EC, c, func_80019CEC]
       # Phase 5EF: call-and-return-one wrapper around func_80033A2C.
       - [0xA524, c, func_80019D24]
       # Probe: four-halfword forwarding wrapper.
