@@ -1501,6 +1501,9 @@ segments:
       # Phase 5EF: return-and-clear int state flag.
       - [0x734DC, c, func_80082CDC]
       - [0x734F0, asm]
+      # func_80082DBC — VRAM 0x80082DBC, size 0x44, file 0x735BC-0x73600.
+      - [0x735BC, c, func_80082DBC]
+      - [0x73600, asm]
       # Phase 5CK: C leaf func_800835A4 — file 0x73DA4, size 0xC.
       - [0x73DA4, c, func_800835A4]
       # Phase 5CL: C leaf func_800835B0 — file 0x73DB0, size 0x10.
