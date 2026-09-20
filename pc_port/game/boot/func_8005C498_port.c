@@ -80,6 +80,7 @@ void func_80042B6C(void)
     case 0x80062F9Cu:func_80062F9C();break;
     case 0x800504F4u:func_800504F4();break;
     case 0x8005051Cu:func_8005051C();break;
+    case 0x80042228u:func_80042228();break;
     default:
         fprintf(stderr,"[MENU] Unported delayed callback %08X\n",callback);
         menu_boundary("func_80042B6C_callback");return;

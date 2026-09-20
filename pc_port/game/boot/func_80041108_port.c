@@ -490,7 +490,13 @@ static void card_operation(uint32_t index,pe_addr_t frame,const uint32_t *incomi
         }
         card_live_close(record,index);return;
     }
-    case 12:return;
+    case 12:
+        /* Retail .L80041FE8: the terminal state runs func_80040F80 only when
+         * the record is not flagged live (record[0] != 1); the live case falls
+         * straight through to the epilogue. */
+        if (PE_LoadU8(record) != 1u)
+            func_80040F80(record);
+        return;
     }
 }
 
@@ -529,6 +535,8 @@ void func_8004D5CC(uint32_t index)
         case 0x80042928u:func_80042928();break;
         case 0x8005C488u:func_8005C488();break;
         case 0x80062F9Cu:func_80062F9C();break;
+        case 0x800428D4u:func_800428D4();break;
+        case 0x80042228u:func_80042228();break;
         default:operation_boundary("func_8004D5CC",callback,0u,0u,0u,0u,0u,0u);return;
         }
         if(PE_Port_StopEpoch()!=epoch)return;
