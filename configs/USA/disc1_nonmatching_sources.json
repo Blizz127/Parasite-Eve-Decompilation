@@ -21,6 +21,10 @@
       "disposition": "in-progress-checkpoint",
       "evidence": "docs/ai_context/ACTIVE_HANDOFF.md"
     },
+    "src/func_8004C608.c": {
+      "disposition": "in-progress-checkpoint",
+      "evidence": "docs/evidence/pe-help-frontier/REPORT.md"
+    },
     "src/func_800725DC.c": {
       "disposition": "accepted-residual",
       "evidence": "docs/acceptance/MATCHING_RESIDUAL_POLICY.md"
