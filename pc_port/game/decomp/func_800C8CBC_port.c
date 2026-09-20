@@ -10,17 +10,17 @@
  * docs/ai_context/PC_PORT_FROM_DECOMP.md.
  */
 #include "pe_guest_decomp.h"
-void func_800C8CBC(int a0, pe_addr_t pe_a1, pe_addr_t pe_a2)
+void func_800C8CBC(pe_addr_t pe_unused, pe_addr_t pe_state, pe_addr_t pe_values)
 {
-    unsigned char *host_a1 = (unsigned char *)PE_Translate(pe_a1, 1);
-    unsigned char *host_a2 = (unsigned char *)PE_Translate(pe_a2, 1);
+    signed char *host_state = (signed char *)PE_Translate(pe_state, 1);
+    unsigned short *host_values = (unsigned short *)PE_Translate(pe_values, 1);
     /* verbatim body (src/func_800C8CBC.c) */
 
-    *(unsigned short *)(host_a2 + 4) -= 8;
-    *(unsigned short *)(host_a2 + 6) += 0x78;
-    if (*(short *)(host_a2 + 4) < 0x14) {
-        *(unsigned short *)(host_a2 + 4) = 0;
-        host_a1[1] = 2;
+    host_values[2] -= 8;
+    host_values[3] += 0x78;
+    if ((short)host_values[2] < 20) {
+        host_values[2] = 0;
+        host_state[1] = 2;
     }
 
 }
