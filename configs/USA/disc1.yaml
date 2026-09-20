@@ -1796,7 +1796,10 @@ segments:
       # cleared; the final indexed store fills the jr delay slot.
       - [0x81220, c, func_80090A20]
       - [0x81264, c, func_80090A64]
-      - [0x812AC, asm]
+      # func_80090AAC — VRAM 0x80090AAC, size 0x40, file 0x812AC-0x812EC.
+      # func_8009059C(); func_800905C4(arg0, arg1); with an s0/s1 save frame.
+      - [0x812AC, c, func_80090AAC]
+      - [0x812EC, asm]
       - [0x81330, c, func_80090B30]
       - [0x8135C, asm]
       - [0x813A0, c, func_80090BA0]
