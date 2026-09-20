@@ -688,6 +688,69 @@
    "id": "wave5a-5E418-func_8006DC18-loop-invariant-hoist",
    "status": "PARKED-LICM-AND-STRENGTH-REDUCTION",
    "note": "func_8006DC18 (file 0x5E418, 0xCC, 51 words) unit 5E418: archive scan loop with func_8006E498 call. Retail hoists all five masks/keys (0x73DECD80 cursor, 0x1FFC00, 0xD0000, 0xFFE00000, 0x20000000) plus arg0 and the D_800B0E64 base into callee-saved $s0-$s6 before the loop, so the loop body is only call + compare + two delay-slot increments. cc1 rematerialises the cheap constants inside the loop and keeps only the cursor/base live. Best: 40 differing words at -O2 -G0."
+  },
+  {
+   "id": "wave5b-65CE4-func_800754E4-caller-saved-setup-schedule",
+   "status": "PARKED-SCHEDULING",
+   "note": "func_800754E4 (file 0x65CE4, 0xD8, 54 words) unit 65BB4. Straight-line sound-bank load: D_8009574E[0]>=2 gates the absolute D_80095748(D_80011954,arg0,arg1) call, then func_80075EE0(arg1+0x1C,arg1), the (arg1->unk1C & 0xFF000000)|(arg0&0xFFFFFF) read-modify-write, the D_80095744 vtable call and func_80071A34(&D_8009574E+0xE,arg1,0x5C). Every instruction is byte-exact except ONE cc1 scheduling choice: retail materialises the vtable call's $a2=0x40 immediately after the func_80075EE0 return (0x74), before the RMW, while cc1 puts it after the RMW (0x94). The rest of the function is identical; the extra placement only shifts the intervening words. With MASPSX_FILL_EPILOGUE_DELAY_SLOT=1 the epilogue (jr $ra / addiu $sp,$sp,0x28) is exact, taking the diff from 11 to 7 words. The D_80095744 base is forced into $v1 with register int* p asm(\"$3\").",
+   "evidence": "try_leaf build/trials/f754E4c.c 0x65CE4 0xD8 --env MASPSX_FILL_EPILOGUE_DELAY_SLOT=1 => 7 differing words (retail 216, candidate 224). Flag sweep -O2/-O1 x -G0/-G8, -fschedule-insns2, -fno-schedule-insns2, -fno-schedule-insns, -fno-expensive-optimizations, -fno-strength-reduce, -fno-gcse: never below 7. Source-shape sweep (literal 0x40 vs int n=0x40 assigned before/after the RMW, separate RMW temps pinned to $4) never moves the $a2 addiu before the RMW.",
+   "next": "Only with a lever that lets cc1 schedule the call-argument constant ahead of an intervening read-modify-write (or hand assembly of the 3-word reorder)."
+  },
+  {
+   "id": "wave5b-48530-func_80057D30-absolute-load-vs-store-form",
+   "status": "PARKED-CODEGEN-DECLARATION-CONFLICT",
+   "note": "func_80057D30 (file 0x48530, 0xE4, 57 words) unit 48530. Card/flag-table clear: two D_8009D048==&D_800C0E48 && D_800C0E22==arg0 guards around a short clear, the D_800C0EAC[(v-0x100)<<5]=0 indexed byte store and three trailing calls. Register homes are solved with register int a0 asm(\"$17\"), int v / int t for the lh->addu pair. Two cc1/maspsx address shapes remain: (a) the indexed store needs MASPSX_THREE_WORD_SYMBOL_STORE=1 (matches at 0x00-0x7F); (b) the D_800C0E22 load is retail's 2-word `lui $2,%hi / lb $2,%lo($2)` but cc1 emits the 3-word `lui $3,%hi / addiu $3,$3,%lo / lb $2,0($3)` whenever D_800C0E22 is an incomplete array. Declaring it a scalar instead fixes the load but changes the D_800C0E48 pointer compare away from the absolute la (0x14) and explodes the diff to 38.",
+   "evidence": "try_leaf build/trials/f57D30b.c (arrays) 0x48530 0xE4 -O2 -G8 => 12 diffs; + MASPSX_THREE_WORD_SYMBOL_STORE=1 => 18 diffs but 0x00-0x7F exact; scalar D_800C0E22 variant (f57D30d/e) => 32-38 diffs. -G8 is required for the retail `lw $3,0x2D8($gp)` D_8009D048 load; D_800C0E48/0xE22/0xEAC are out of gp range and must stay absolute.",
+   "next": "A declaration that gives the absolute scalar load form while keeping the absolute la for &D_800C0E48 in the same -G8 unit (or hand assembly)."
+  },
+  {
+   "id": "wave5b-7022C-func_8007FA2C-callee-saved-struct-base",
+   "status": "PARKED-SCHEDULING-AND-REGISTER-HOME",
+   "note": "func_8007FA2C (file 0x7022C, 0xD8, 68 words) unit 7018C. SDK stream-state initialiser: block 1 clears D_8009B554[0..8] with a 3..0 decrementing byte loop, block 2 clears D_8009B560[0..0xB] with a 7..0 loop, then the D_8009B56C struct fields are set around func_80080B44(0, D_8009B56C+0x16). Pinning block 1/2 ($v0 base, $a0 first cursor, $v0 second cursor, $v1 counter) makes 0x00-0x54 exact, but retail keeps the D_8009B56C base in $s0 across the call (frame 0x18 = ra@0x14 + s0@0x10) while cc1 rematerialises the constant address per store and emits a smaller frame; pinning the base to $s0 shifts the immediate-store order (11 diffs, 288 vs 272 bytes).",
+   "evidence": "try_leaf build/trials/f3c.c 0x7022C 0xD8 => 11 differing words (frame/ra-slot + D_8009B56C block); build/trials/f3b.c with register unsigned char* r asm(\"$16\") => 21 diffs. Unpinned build/trials/f3.c => 16 diffs (blocks 1/2 also wrong).",
+   "next": "A source shape that keeps the constant struct base in a callee-saved register without reordering the field stores relative to the func_80080B44 argument setup."
+  },
+  {
+   "id": "wave5b-4F9A0-func_8005F1A0-char-masked-register-swap",
+   "status": "PARKED-REGISTER-HOME",
+   "note": "func_8005F1A0 (file 0x4F9A0, 0xDC, 55 words) unit 4F6D4. Keypad escape-sequence decoder: loop over the 0xFF-terminated byte string, folding a pending 0x368($gp) escape byte (D_8009D0D8), masking with 0xFF, rejecting >=0xFA, then D_8009CDB0 = (v<0xA || v==0xF)+1 and sum += ((func_8005DC28(v)>>4)&0xF) + D_8009CDB0. Retail homes the loaded byte in $a0, the masked value in $v1 and the escape word in $a1; cc1's natural colouring swaps char/masked ($v1/$a0). Pinning the char to $a0 makes the `andi` masked write land in $a0 too (it should be $v1), and m2c's goto-loop shape is worse.",
+   "evidence": "try_leaf build/trials/f5F1A0.c -O2 -G8 => 37 diffs (220 vs 208 bytes); pinned build/trials/f5F1A0b.c => 17 diffs. m2c goto shape (build/trials/g1.c) 45 diffs, s-only pin (g2.c) 41.",
+   "next": "A source shape that keeps the raw lbu in $a0 and the 0xFF-masked value in $v1 simultaneously (the two are live across the escape fold)."
+  },
+  {
+   "id": "wave5b-BEF8C-func_800CE78C-nine-word-frame",
+   "status": "PARKED-REGISTER-HOME-AND-FRAME",
+   "note": "func_800CE78C (file 0xBEF8C, 0xE4, 57 words) unit BEC9C. Scans a strided record array (stride at arg0+0, count at arg0+4, callback at arg0+8, flags at arg0+0xC, payload at arg0+0x10), saving/restoring D_800E27EC and dispatching the callback with a constantly reloaded D_800E2368->unk8. Retail saves nine words (ra + s7..s0, frame 0x40); cc1's natural colouring coalesces two of the loop counters/pointers and emits an eight-word frame, moving every $sp offset by 4 and swapping the $s4/$s5 homes (offset 0x4C/0x68/0x90/0xA4/0xB0 all differ).",
+   "evidence": "try_leaf build/trials/fCE78C.c 0xBEF8C 0xE4 -O2 -G0 => 26 differing words; retail 228 bytes, candidate 224.",
+   "next": "Force the ninth callee-saved home (or restructure so cc1 needs all of s0-s7) without disturbing the callback argument setup."
+  },
+  {
+   "id": "wave5b-8880-func_80018080-copy-delay-slot",
+   "status": "PARKED-SCHEDULING",
+   "note": "func_80018080 (file 0x8880, 0xE4, 57 words) unit 8804. Early-return node walk: read *(int*)*a, if zero call func_8002FE78(*(u8*)*(a+8)) and store through *(a+0xC); otherwise walk D_8009D20C comparing +0xC/+0xD and the +0x98&0x10 flag, then func_8003010C. Pinning v to $v0 and w to $a1 reproduces retail's lhu-free `addu $a1,$v0,$zero` live-range split, but cc1 schedules that copy into the `j` delay slot in $v1 (retail nops the j and puts the copy in the later beqz slot in $a1).",
+   "evidence": "try_leaf build/trials/f18080b.c 0x8880 0xE4 => 12 differing words; unpinned build/trials/f18080.c => 15.",
+   "next": "A source shape that holds the copy until the D_8009D20C beqz instead of the early j."
+  },
+  {
+   "id": "wave5b-6C93C-func_8007C13C-s-register-homes",
+   "status": "PARKED-REGISTER-HOME",
+   "note": "func_8007C13C (file 0x6C93C, 0xD8, 54 words) unit 6C93C. Pumps func_8007AAB4 until it returns 0, dispatching D_8009AFB8/D_8009AFB4 with D_8009B295[0] and D_8009B295[-1], then restores the low 2 bits of *D_8009B27C. Retail saves five words (ra,s3,s2,s1,s0); cc1 keeps the saved bits in $s1 and rematerialises the string base, emitting only a three-word frame (ra,s1,s0) and extra nops.",
+   "evidence": "try_leaf build/trials/f7C13C.c 0x6C93C 0xD8 -O2 -G0 => 28 diffs; candidate 224 vs retail 216 bytes.",
+   "next": "Force D_8009B27C bits to $s2, the base to $s1 and the base-1 to $s3."
+  },
+  {
+   "id": "wave5b-66B54-func_80076354-s0-s1-swap",
+   "status": "PARKED-REGISTER-HOME-AND-SCHEDULING",
+   "note": "func_80076354 (file 0x66B54, 0xE0, 56 words) unit 66B54. Stream start: OR 0x08000000 into *D_80095870, clear *D_8009586C, store arg0+((arg1*4)-4) and arg1 through D_80095864/D_80095868, launch 0x11000002, call func_800773D0 and spin on func_80077404 while *D_8009586C & 0x01000000. Same 224-byte size but cc1 swaps the saved arg1 ($s1) with the 0x01000000 mask ($s0) and schedules a nop where retail has `addiu` before the *D_8009586C clear.",
+   "evidence": "try_leaf build/trials/f76354.c 0x66B54 0xE0 -O2 -G0 => 30 differing words, both 224 bytes.",
+   "next": "Pin arg1 to $s0 and the mask to $s1, then re-order the clear/la pair."
+  },
+  {
+   "id": "wave5b-420A8-func_800518A8-lhu-store-delay-nop",
+   "status": "PARKED-SCHEDULING",
+   "note": "func_800518A8 (file 0x420A8, 0xD8, 54 words) unit 420A8. Menu confirm handler: if *D_8009D254, read the node, latch node+0xC into D_800C0E08 (u16), and on node+0x68 != 0 run func_80052F0C/func_80052E30 around func_8005332C(D_800C0E20) storing (node->68->0xC & 0x3FF) at +0xA. cc1 emits `lhu $v0,0xC($s0)` then a nop before the absolute `lui $at,%hi(D_800C0E08)`/`sh`, whereas retail hoists the lui straight after the lhu. That one nop shifts every later delay slot and the epilogue.",
+   "evidence": "try_leaf build/trials/f518A8.c 0x420A8 0xD8 => 32 diffs (retail 216, candidate 224). Profile sweep -O2/-O1 x -G0/-G8: best -O2 -G0 at 32; -O2 -G8 42, -O1 -G0 38.",
+   "next": "A source shape that lets the D_800C0E08 base be materialised in the lhu load-delay slot."
   }
  ]
 }

@@ -86,6 +86,46 @@ offsets, cc1 splits to +0x18/+0x1C), `func_8005415C` (scheduled value copy
 strength-reduction placement, and `sh` into an unfilled `jal` delay slot —
 the fill-store gates only cover `sw`), `func_8006DC18` (loop-invariant
 constant hoisting into $s0-$s6).
+## WAVE-5 SLICE B (2026-09-20): 870 -> 873 matching C leaves
+
+**Branch `agent/wave5-b`, worktree `/tmp/pe-agent-w9`, base `74d7dd41`.**
+Baseline gate re-run first: `scripts/split_us.sh` + `build_us.sh` +
+`verify_us.sh` gave `EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (870 registered C leaves)`, `VERIFY_US=PASS`. Final
+fresh build after all three carves: same EXACT SHA-1,
+`Matching claim: YES (873 registered C leaves)`, plan
+`1271 spans = 873 c + 396 asm + 2 rodata`, `VERIFY_US=PASS`.
+
+Landed (evidence `docs/evidence/wave5-b/REPORT.md`):
+
+- `func_80085644` (0x75E44, 0xE4) — CD/stream boot + three ready-poll loops
+  over 0xF2000002. Default `-O2 -G0` (D_8009B7FC/D_8009CDE0 stay absolute
+  despite being in gp range). Commit `eff11fb6`.
+- `func_8005E038` (0x4E838, 0xDC) — menu pad-state bit expander. `-O2 -G0`.
+  Needs a `w = v` live-range split to reproduce the retail redundant
+  `addu $a1,$a0,$zero` (the original stays live for the final `& 4` test),
+  plus `register int y asm("$2")` so the two AND results land in `$v0`
+  instead of coalescing with their sources. Commit `eff11fb6`.
+- `func_8005F27C` (0x4FA7C, 0xD8) — D_8009D12C decoder-stack push/walk/pop.
+  **New profile assignment**: `func_8005F27C` -> `era_o2_g8` (append to
+  `assignments.era_o2_g8`). All homes pinned ($a1 push cursor, $v1 pop
+  cursor, $v0/$a0 saved words). Commit `b9c4dc6f`.
+
+**Reusable lever confirmed:** when cc1's colouring is stable but differs
+from retail by one or two homes, `register T x asm("$N")` closes the leaf
+outright (both `func_8005E038` and `func_8005F27C` matched only after the
+pins). A no-op local copy (`w = v`) is the reliable way to make cc1 keep a
+second live register for a value it would otherwise reuse.
+
+Parked (9, all in `parked_blockers.json`, ids `wave5b-*`): `func_800754E4`
+(7 words — one call-argument constant scheduled one instruction late),
+`func_80057D30` (12 — needs both the 3-word indexed symbol store and the
+2-word absolute scalar load, which the array-vs-scalar declaration cannot
+supply together in one -G8 unit), `func_8007FA2C` (11 — struct base must
+stay in `$s0`), `func_8005F1A0` (17 — char/masked home swap),
+`func_800CE78C` (26 — nine-word frame), `func_80018080`, `func_8007C13C`,
+`func_80076354`, `func_800518A8`. Stop condition reached (well over four
+consecutive parks).
 
 ## PARENT STATUS (2026-09-20): 870 matching C leaves; executed-path C-share 37.18%
 

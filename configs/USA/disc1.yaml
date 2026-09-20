@@ -1267,6 +1267,10 @@ segments:
       # Global word plus record-base helper: era -O2 -G0.
       - [0x4E670, c, func_8005DE70]
       - [0x4E688, asm]
+      # Wave5-B: func_8005E038 — VRAM 0x8005E038, size 0xDC, file
+      # 0x4E838-0x4E914. Menu pad-state bit expander over D_8009D26C.
+      # era -O2 -G0; a1/v0 home pins (see source note).
+      - [0x4E838, c, func_8005E038]
       - [0x4E914, c, func_8005E114]
       - [0x4E920, c, func_8005E120]
       - [0x4E92C, asm]
@@ -1299,6 +1303,11 @@ segments:
       - [0x4F364, asm]
       - [0x4F6C8, c, func_8005EEC8]
       - [0x4F6D4, asm]
+      # Wave5-B: func_8005F27C — VRAM 0x8005F27C, size 0xD8, file
+      # 0x4FA7C-0x4FB54. Push/walk/pop of the D_8009D12C decoder stack
+      # over the 0xFF-delimited string. era_o2_g8.
+      - [0x4FA7C, c, func_8005F27C]
+      - [0x4FB54, asm]
       - [0x4FD94, c, func_8005F594]
       - [0x4FDB8, asm]
       # Boolean-selected GP state initializer: era -O2 -G8.
@@ -2097,6 +2106,11 @@ segments:
       # Wait while D_8009D24C stays 1 after an initial 1. era_o1_g0.
       - [0x75974, c, func_80085174]
       - [0x759A8, asm]
+      # Wave5-B: func_80085644 — VRAM 0x80085644, size 0xE4, file
+      # 0x75E44-0x75F28. CD/stream boot: driver bring-up, buffer 4 =
+      # D_800B6958, D_8009B7FC sizing, then three ready-poll loops.
+      # era -O2 -G0 (D_8009B7FC/D_8009CDE0 stay absolute).
+      - [0x75E44, c, func_80085644]
       # Phase 5EG-setter: func_80085728 — VRAM 0x80085728, size 0x1C.
       # Dual pre-jr $at store of base / base+0x800 into D_8009D240 / D_8009D260.
       # Types proven by reader func_8008AB1C. Era -O2 -G0.
