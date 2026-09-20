@@ -1,0 +1,26 @@
+# func_8006DED4
+
+- **VRAM**: 0x8006DED4
+- **File offset**: 0x5E6D4 (size 0x7C)
+- **Unit**: 5E418
+- **Build profile**: era_o2_g0
+- **Tests**: try_leaf WORDS MATCH; full build_us.sh + verify_us.sh
+- **Status**: landed (wave3-b, agent/wave3-b)
+
+## Behaviour
+Packs (x,y,z) into a local SVec, projects via func_8006DFA8, then func_8006DF50(package,id,key,pan,volume).
+
+## Method
+Read the `glabel`..`endlabel` block in `asm/disc1/5E418.s`, the
+`pc_port` spec where present, and nearby matched `src/func_*.c`. Wrote the
+C leaf, confirmed word-exact with `tools/analysis/try_leaf.py`, then carved
+`configs/USA/disc1.yaml` and re-ran `scripts/split_us.sh` + `scripts/build_us.sh`
++ `scripts/verify_us.sh` inside `pe-mipsel`.
+
+## Evidence
+Fresh complete retail build reported `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b` with the registered C leaf count
+incremented (846 -> 855 across this wave). `VERIFY_US=PASS`.
+
+## Divergences
+none
