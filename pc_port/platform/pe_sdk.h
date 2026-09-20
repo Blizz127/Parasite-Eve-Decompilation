@@ -208,6 +208,19 @@ int  PE_Card_IsPresent(void);        /* resolved presence of the host image */
 void PE_Card_SetPresent(int present);/* force present/empty (test hook) */
 void PE_Card_Reset(void);            /* re-resolve presence on next query */
 
+/* libcard file API (BIOS B0 32h open / 33h lseek / 34h read / 35h write /
+ * 36h close / 41h format / 42h firstfile / 43h nextfile), host-modelled over
+ * the present card image.  Return values follow psx-spx. */
+int  func_80072734(pe_addr_t name, int mode);         /* B0(32h) open */
+int  func_80072744(int fd, int offset, int whence);   /* B0(33h) lseek */
+int  func_80072754(int fd, pe_addr_t buf, int len);   /* B0(34h) read */
+int  func_80072764(int fd, pe_addr_t buf, int len);   /* B0(35h) write */
+int  func_80072774(int fd);                           /* B0(36h) close */
+int  func_80072784(pe_addr_t dev);                    /* B0(41h) format */
+pe_addr_t func_800727B4(pe_addr_t dirspec, pe_addr_t dirent); /* 42h firstfile */
+pe_addr_t func_80072794(pe_addr_t dirent);            /* B0(43h) nextfile */
+int  func_80071A04(pe_addr_t a, pe_addr_t b, int n);  /* A0(18h) memcmp */
+
 /* ── libcd (pc_port/platform/pe_libcd.c) ────────────────────────────── */
 int  func_8007EC14(void);            /* CdInit */
 int  func_8007ED58(void);            /* Cd reset + state clear (returns 1) */

@@ -1,5 +1,8 @@
-/* Original card-operation dispatch and paths through their first unresolved
- * callee. The post-call directory/transfer/retry paths remain unported.
+/* Original card-operation dispatch.  State 2's directory enumeration and
+ * entry scan are native (over the host libcard file API); the slot-list UI
+ * continuation (func_8004D4C4/func_8004D298) needs the PS1 low-memory
+ * kernel/menu substrate and stays an explicit boundary.  Other transfer/retry
+ * paths beyond their first callee remain unported.
  * Boundary payload: known-register mask, then fifth argument when present.
  * Unknown guest-stack arguments are not assigned fabricated guest addresses. */
 #include "psx_compat.h"
@@ -58,13 +61,89 @@ static void card_operation(uint32_t index,pe_addr_t frame,const uint32_t *incomi
         PE_StoreU32(0x800A1838u,1u);
         PE_StoreU8(record+1u,state==13u?14u:PE_LoadU8(record+11u));return;
     }
-    case 2:
+    case 2: {
+        /* Directory enumeration.  The original dirent output is the caller's
+         * frame+20h; a context-free live call has no frame, so reuse the
+         * card's own transient filename buffer (not a fabricated stack
+         * address).  Not a matching leaf: translated from 0x800412C0. */
+        pe_addr_t dirent = incoming ? frame + 0x20u : 0x8009EE70u;
+        pe_addr_t dirspec = PE_LoadU32(0x80092230u);
+        pe_addr_t fname = PE_LoadU32(0x80092224u);
+        int have_name = PE_RangeIsRam(fname + 6u, 12u);
+        uint32_t blocks, i;
+        pe_addr_t de;
+        int can_continue = 0;
+
         PE_StoreU8(PE_LoadU32(0x80092230u)+2u,index+0x30u);
         PE_StoreU8(record+2u,0u);PE_StoreU8(record+3u,0u);PE_StoreU8(record+6u,0u);
         PE_StoreU8(record+4u,0u);PE_StoreU8(record+7u,0u);PE_StoreU8(record+10u,0u);
         for(int i=14;i>=0;i--)PE_StoreU8(record+(uint32_t)i*0x44u+28u,2u);
-        /* a1 is the unresolved original frame's sp+20h. */
-        operation_boundary("func_80041108",0x800727B4u,PE_LoadU32(0x80092230u),incoming?frame+32u:0u,0u,0u,incoming?3u:1u,0u);return;
+
+        if ((de = func_800727B4(dirspec, dirent)) == 0u) {
+            PE_StoreU16(record+0x16u,(uint16_t)(PE_LoadU16(record+0x16u)-1u));
+        } else {
+            do {
+                if (have_name && func_80071A04(dirent, fname+6u, 12) == 0) {
+                    uint32_t slot=PE_LoadU8(dirent+0x13u);
+                    pe_addr_t entry=record+slot*0x44u-0x1128u;
+                    PE_StoreU8(entry,1u);
+                    PE_StoreU8(entry+1u,0u);
+                    PE_StoreU8(entry+0x29u,PE_LoadU8(dirent+0x12u)!=0x30u?1u:0u);
+                    PE_StoreU8(record+4u,1u);
+                }
+                {
+                    int32_t size=(int32_t)PE_LoadU32(dirent+0x18u);
+                    uint8_t b=(uint8_t)(PE_LoadU8(record+0x0Au)+(uint8_t)(size>>13));
+                    PE_StoreU8(record+0x0Au,b);
+                }
+                de=func_80072794(dirent);
+            } while (de != 0u);
+            PE_StoreU16(record+0x16u,0u);
+        }
+
+        if ((int16_t)PE_LoadU16(record+0x16u) > 0)
+            return;
+
+        /* Account entries: type2 becomes read-marker1, others reduce blocks. */
+        blocks = PE_LoadU8(record+0x0Au);
+        for (i=0;i<15u;i++) {
+            pe_addr_t e=record+i*0x44u;
+            if (PE_LoadU8(e+0x1Cu)==2u) PE_StoreU8(e+0x1Du,1u);
+            else blocks=(blocks-1u)&0xFFu;
+        }
+        for (i=0;i<15u && blocks!=0u;i++) {
+            pe_addr_t e=record+(14u-i)*0x44u;
+            if (PE_LoadU8(e+0x1Cu)==2u) { PE_StoreU8(e+0x1Cu,3u); blocks--; }
+        }
+        PE_StoreU8(record+2u,15u);
+
+        if (PE_LoadU32(0x800A186Cu)==0u) {
+            PE_StoreU8(record+1u,15u);
+            PE_StoreU32(0x800A1838u,0u);
+            return;
+        }
+        for (i=0;i<15u;i++) {
+            if (PE_LoadU8(record+i*0x44u+0x1Cu)==1u) { can_continue=1; break; }
+        }
+        if (!can_continue && PE_LoadU8(record+0x0Au)<15u && func_8004D27C()!=0)
+            can_continue=1;
+        if (can_continue) {
+            uint32_t idx;
+            PE_StoreU8(record+1u,3u);
+            PE_StoreU16(record+0x16u,10u);
+            func_80062CE4();
+            idx=(uint32_t)((int32_t)((record-0x800A0ED4u)*0xC9484E2Bu)>>3);
+            /* func_8004D4C4 builds the slot-list window and needs the PS1
+             * low-memory kernel/menu substrate (address 0 / 0x150) the port
+             * does not model, so the continuation stays an explicit boundary
+             * rather than faulting. */
+            operation_boundary("func_80041108",0x8004D4C4u,idx,0u,0u,0u,1u,0u);
+            return;
+        }
+        func_80062CE4();
+        operation_boundary("func_80041108",0x8004D298u,index,0u,0u,0u,1u,0u);
+        return;
+    }
     case 3: {
         uint32_t cursor=PE_LoadU8(record+6u),limit=PE_LoadU8(record+2u)*2u;
         if(cursor<limit) {

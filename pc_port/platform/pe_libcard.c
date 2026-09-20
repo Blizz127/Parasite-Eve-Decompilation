@@ -287,3 +287,396 @@ int func_8007DDB4(pe_addr_t port, int sector, pe_addr_t src)  /* B0(4Eh) _card_w
     (void)PE_Event_Deliver(0xF0000011u, 0x2000u);       /* lower-level I/O err */
     return 1;                                           /* accepted, async fail */
 }
+
+/*
+ * ── libcard file API (BIOS B0 32h..43h) ─────────────────────────────────
+ *
+ * Host model over the present 128 KiB image, following the psx-spx Memory
+ * Card Data Format:
+ *   - block 0, frame 0      : header ("MC" + XOR)
+ *   - block 0, frames 1..15 : the 15 directory entries
+ *   - block b (1..15)       : frame b*64 is the block header (same 128-byte
+ *                             directory-entry layout), frames +1..+63 are data
+ *                             (63 * 128 = 8064 bytes per block)
+ * A directory entry stores a 32-bit allocation state (+0x00), a 32-bit byte
+ * size (+0x04), a 16-bit next-block link (+0x08) and a 20-byte name (+0x0A);
+ * every frame's last byte (+0x7F) is the XOR checksum of +0x00..+0x7E.
+ *
+ * Nothing is faked: an empty or absent image returns the documented failure.
+ */
+#define PE_CARD_BLOCK_FRAMES   64u
+#define PE_CARD_BLOCKS         16u
+#define PE_CARD_DIR_ENTRIES    15u
+#define PE_CARD_BLOCK_DATA     (63u * PE_CARD_FRAME_BYTES)  /* 8064 */
+#define PE_CARD_ENTRY_USED     0x51u
+#define PE_CARD_BLOCK_END      0xFFFFu
+
+typedef struct {
+    int used;
+    int entry;          /* directory entry index 0..14 */
+    uint32_t pos;
+    int writable;
+} PeCardFd;
+
+static PeCardFd g_card_fd[8];
+static int g_card_dir_cursor;
+static pe_addr_t g_card_dir_addr;
+static int g_card_dir_init;
+
+static uint8_t *pe_card_entry_ptr(uint32_t i)
+{
+    return g_card_image + (1u + i) * PE_CARD_FRAME_BYTES;
+}
+
+static uint8_t *pe_card_block_ptr(uint32_t b)
+{
+    return g_card_image + b * PE_CARD_BLOCK_FRAMES * PE_CARD_FRAME_BYTES;
+}
+
+static uint32_t pe_card_rd32(const uint8_t *p)
+{
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
+           ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+static void pe_card_wr32(uint8_t *p, uint32_t v)
+{
+    p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8);
+    p[2] = (uint8_t)(v >> 16); p[3] = (uint8_t)(v >> 24);
+}
+
+static uint16_t pe_card_rd16(const uint8_t *p)
+{
+    return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
+}
+
+static void pe_card_wr16(uint8_t *p, uint16_t v)
+{
+    p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8);
+}
+
+static int pe_card_entry_used(uint32_t i)
+{
+    const uint8_t *e = pe_card_entry_ptr(i);
+    uint32_t st = pe_card_rd32(e);
+    return st != 0u && st != PE_CARD_STATE_FREE;
+}
+
+static int pe_card_block_used(uint32_t b)
+{
+    uint32_t st = pe_card_rd32(pe_card_block_ptr(b));
+    return st != 0u && st != PE_CARD_STATE_FREE;
+}
+
+static void pe_card_sync_frame(uint8_t *frame)
+{
+    frame[0x7F] = pe_card_frame_checksum(frame);
+}
+
+static uint32_t pe_card_entry_size(uint32_t i)
+{
+    return pe_card_rd32(pe_card_entry_ptr(i) + 0x04);
+}
+
+/* Locate the data block holding byte `pos` (0-based) in entry `i`, allocating
+ * and linking fresh blocks as needed when `grow` is set.  Returns 0 on
+ * exhaustion.  The chain lives in each block header +0x08; the directory
+ * entry's +0x08 links the first block. */
+static uint32_t pe_card_resolve_block(uint32_t i, uint32_t pos, int grow)
+{
+    uint8_t *dir = pe_card_entry_ptr(i);
+    uint32_t block = pe_card_rd16(dir + 0x08);
+    uint32_t index = pos / PE_CARD_BLOCK_DATA;
+    uint32_t n;
+
+    if (block == PE_CARD_BLOCK_END || block == 0u || !pe_card_block_used(block)) {
+        if (!grow)
+            return 0u;
+        block = 0u;
+    }
+    if (block == 0u) {
+        for (n = 1u; n < PE_CARD_BLOCKS; n++) {
+            if (!pe_card_block_used(n)) {
+                block = n;
+                break;
+            }
+        }
+        if (block == 0u)
+            return 0u;
+        pe_card_wr32(pe_card_block_ptr(block), PE_CARD_ENTRY_USED);
+        pe_card_wr16(pe_card_block_ptr(block) + 0x08, PE_CARD_BLOCK_END);
+        memcpy(pe_card_block_ptr(block) + 0x0A, dir + 0x0A, 20u);
+        pe_card_sync_frame(pe_card_block_ptr(block));
+        pe_card_wr16(dir + 0x08, (uint16_t)block);
+        pe_card_sync_frame(dir);
+    }
+    for (n = 0; n < index; n++) {
+        uint8_t *h = pe_card_block_ptr(block);
+        uint32_t next = pe_card_rd16(h + 0x08);
+        if (next == PE_CARD_BLOCK_END || next == 0u || !pe_card_block_used(next)) {
+            if (!grow)
+                return 0u;
+            next = 0u;
+            for (uint32_t cand = 1u; cand < PE_CARD_BLOCKS; cand++) {
+                if (!pe_card_block_used(cand)) {
+                    next = cand;
+                    break;
+                }
+            }
+            if (next == 0u)
+                return 0u;
+            pe_card_wr32(pe_card_block_ptr(next), PE_CARD_ENTRY_USED);
+            pe_card_wr16(pe_card_block_ptr(next) + 0x08, PE_CARD_BLOCK_END);
+            memcpy(pe_card_block_ptr(next) + 0x0A, dir + 0x0A, 20u);
+            pe_card_sync_frame(pe_card_block_ptr(next));
+            pe_card_wr16(h + 0x08, (uint16_t)next);
+            pe_card_sync_frame(h);
+        }
+        block = next;
+    }
+    return block;
+}
+
+int func_80071A04(pe_addr_t a, pe_addr_t b, int n)
+{
+    int i;
+    if (n < 0)
+        return 1;
+    for (i = 0; i < n; i++) {
+        uint8_t x = PE_LoadU8(a + (uint32_t)i);
+        uint8_t y = PE_LoadU8(b + (uint32_t)i);
+        if (x != y)
+            return (int)x - (int)y;
+    }
+    return 0;
+}
+
+static pe_addr_t pe_card_fill_dirent(pe_addr_t dirent, uint32_t i)
+{
+    const uint8_t *e = pe_card_entry_ptr(i);
+    uint32_t k;
+    for (k = 0; k < 0x28u; k++)
+        PE_StoreU8(dirent + k, 0u);
+    for (k = 0; k < 20u; k++)
+        PE_StoreU8(dirent + k, e[0x0A + k]);
+    PE_StoreU32(dirent + 0x14u, 0u);                       /* attr */
+    PE_StoreU32(dirent + 0x18u, pe_card_rd32(e + 0x04));   /* size */
+    PE_StoreU32(dirent + 0x1Cu, 0u);
+    PE_StoreU32(dirent + 0x20u, 0u);
+    PE_StoreU32(dirent + 0x24u, 0u);
+    return dirent;
+}
+
+static pe_addr_t pe_card_dir_advance(pe_addr_t dirent)
+{
+    while (g_card_dir_cursor < (int)PE_CARD_DIR_ENTRIES) {
+        uint32_t i = (uint32_t)g_card_dir_cursor++;
+        if (pe_card_entry_used(i))
+            return pe_card_fill_dirent(dirent, i);
+    }
+    return 0u;
+}
+
+pe_addr_t func_800727B4(pe_addr_t dirspec, pe_addr_t dirent)
+{
+    (void)dirspec;
+    if (!PE_Card_IsPresent() || dirent == 0u)
+        return 0u;
+    g_card_dir_cursor = 0;
+    g_card_dir_addr = dirent;
+    g_card_dir_init = 1;
+    return pe_card_dir_advance(dirent);
+}
+
+pe_addr_t func_80072794(pe_addr_t dirent)
+{
+    if (!PE_Card_IsPresent() || dirent == 0u)
+        return 0u;
+    if (!g_card_dir_init || dirent != g_card_dir_addr) {
+        g_card_dir_cursor = 0;
+        g_card_dir_addr = dirent;
+        g_card_dir_init = 1;
+    }
+    return pe_card_dir_advance(dirent);
+}
+
+static void pe_card_name_from_guest(pe_addr_t name, uint8_t out[20])
+{
+    uint32_t i;
+    for (i = 0; i < 20u; i++) {
+        uint8_t c = PE_LoadU8(name + i);
+        out[i] = c;
+        if (c == 0u) {
+            i++;
+            break;
+        }
+    }
+    for (; i < 20u; i++)
+        out[i] = 0u;
+}
+
+int func_80072734(pe_addr_t name, int mode)
+{
+    uint8_t want[20];
+    int entry = -1;
+    int create;
+    uint32_t i;
+    int f;
+
+    if (!PE_Card_IsPresent() || name == 0u || !PE_RangeIsRam(name, 1u))
+        return -1;
+    pe_card_name_from_guest(name, want);
+    for (i = 0; i < PE_CARD_DIR_ENTRIES; i++) {
+        if (!pe_card_entry_used(i))
+            continue;
+        if (memcmp(pe_card_entry_ptr(i) + 0x0A, want, 20u) == 0) {
+            entry = (int)i;
+            break;
+        }
+    }
+    create = (mode & 0x200) != 0 || mode == 2;
+    if (entry < 0) {
+        if (!create)
+            return -1;
+        for (i = 0; i < PE_CARD_DIR_ENTRIES; i++) {
+            if (!pe_card_entry_used(i)) {
+                uint8_t *e = pe_card_entry_ptr(i);
+                memset(e, 0, PE_CARD_FRAME_BYTES);
+                memcpy(e + 0x0A, want, 20u);
+                pe_card_wr32(e + 0x00u, PE_CARD_ENTRY_USED);
+                pe_card_wr32(e + 0x04u, 0u);
+                pe_card_wr16(e + 0x08u, PE_CARD_BLOCK_END);
+                pe_card_sync_frame(e);
+                entry = (int)i;
+                break;
+            }
+        }
+        if (entry < 0)
+            return -1;
+    }
+    for (f = 0; f < 8; f++) {
+        if (!g_card_fd[f].used) {
+            g_card_fd[f].used = 1;
+            g_card_fd[f].entry = entry;
+            g_card_fd[f].pos = 0;
+            g_card_fd[f].writable = create || mode != 1;
+            return f;
+        }
+    }
+    return -1;
+}
+
+int func_80072744(int fd, int offset, int whence)
+{
+    uint32_t size;
+    int32_t base;
+
+    if (fd < 0 || fd >= 8 || !g_card_fd[fd].used)
+        return -1;
+    size = pe_card_entry_size((uint32_t)g_card_fd[fd].entry);
+    if (whence == 1)
+        base = (int32_t)g_card_fd[fd].pos;
+    else if (whence == 2)
+        base = (int32_t)size;
+    else
+        base = 0;
+    base += offset;
+    if (base < 0)
+        base = 0;
+    if ((uint32_t)base > size)
+        base = (int32_t)size;
+    g_card_fd[fd].pos = (uint32_t)base;
+    return (int)base;
+}
+
+int func_80072754(int fd, pe_addr_t buf, int len)
+{
+    PeCardFd *f;
+    uint32_t size, pos, end, done = 0u;
+
+    if (fd < 0 || fd >= 8 || !g_card_fd[fd].used || len < 0)
+        return -1;
+    if (len > 0 && (buf == 0u || !PE_RangeIsRam(buf, (size_t)len)))
+        return -1;
+    f = &g_card_fd[fd];
+    size = pe_card_entry_size((uint32_t)f->entry);
+    pos = f->pos;
+    end = pos + (uint32_t)len;
+    if (end > size)
+        end = size;
+    while (pos < end) {
+        uint32_t block = pe_card_resolve_block((uint32_t)f->entry, pos, 0);
+        uint32_t within = pos % PE_CARD_BLOCK_DATA;
+        uint32_t chunk = PE_CARD_BLOCK_DATA - within;
+        if (chunk > end - pos)
+            chunk = end - pos;
+        if (block == 0u)
+            break;
+        memcpy(PE_Translate(buf + done, chunk),
+               pe_card_block_ptr(block) + PE_CARD_FRAME_BYTES + within, chunk);
+        pos += chunk;
+        done += chunk;
+    }
+    f->pos = pos;
+    return (int)done;
+}
+
+int func_80072764(int fd, pe_addr_t buf, int len)
+{
+    PeCardFd *f;
+    uint32_t size, pos, end, done = 0u;
+
+    if (fd < 0 || fd >= 8 || !g_card_fd[fd].used || !g_card_fd[fd].writable || len < 0)
+        return -1;
+    if (len > 0 && (buf == 0u || !PE_RangeIsRam(buf, (size_t)len)))
+        return -1;
+    f = &g_card_fd[fd];
+    size = pe_card_entry_size((uint32_t)f->entry);
+    pos = f->pos;
+    end = pos + (uint32_t)len;
+    while (pos < end) {
+        uint32_t block = pe_card_resolve_block((uint32_t)f->entry, pos, 1);
+        uint32_t within = pos % PE_CARD_BLOCK_DATA;
+        uint32_t chunk = PE_CARD_BLOCK_DATA - within;
+        if (chunk > end - pos)
+            chunk = end - pos;
+        if (block == 0u)
+            break;
+        memcpy(pe_card_block_ptr(block) + PE_CARD_FRAME_BYTES + within,
+               PE_Translate(buf + done, chunk), chunk);
+        pe_card_sync_frame(pe_card_block_ptr(block));
+        pos += chunk;
+        done += chunk;
+    }
+    if (pos > size) {
+        uint8_t *e = pe_card_entry_ptr((uint32_t)f->entry);
+        pe_card_wr32(e + 0x04u, pos);
+        pe_card_sync_frame(e);
+    }
+    f->pos = pos;
+    return (int)done;
+}
+
+int func_80072774(int fd)
+{
+    if (fd < 0 || fd >= 8 || !g_card_fd[fd].used)
+        return -1;
+    pe_card_sync_frame(pe_card_entry_ptr((uint32_t)g_card_fd[fd].entry));
+    g_card_fd[fd].used = 0;
+    g_card_dirty = 1;
+    (void)pe_card_save();
+    return 0;
+}
+
+int func_80072784(pe_addr_t dev)
+{
+    (void)dev;
+    if (!PE_Card_IsPresent())
+        return 0;
+    for (int f = 0; f < 8; f++)
+        g_card_fd[f].used = 0;
+    pe_card_format();
+    (void)pe_card_save();
+    g_card_dir_init = 0;
+    return 1;
+}

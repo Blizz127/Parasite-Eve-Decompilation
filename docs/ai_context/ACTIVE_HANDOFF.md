@@ -40,6 +40,33 @@ unchanged).  No retail audio golden exists.  `func_8007D1D4`/`func_8007DAE0`
 remain no-ops and must be re-implemented once the guest key-on path runs.
 Evidence: `docs/evidence/pe-audio-spu-host-sink/REPORT.md`.
 
+## LIBCARD-FILE-API: file API + state-2 enumeration; frontier = slot-list UI (2026-09-20)
+
+Branch `agent/libcard-file-api`, base `b28eb1a1`. The card file layer is real:
+
+- **libcard file API** (`pc_port/platform/pe_libcard.c`): B0 32h open / 33h
+  lseek / 34h read / 35h write / 36h close / 41h format / 42h firstfile / 43h
+  nextfile over the present 128 KiB image (psx-spx block/directory layout,
+  chained 8064-byte data blocks, XOR checksums), plus A0 18h `func_80071A04`
+  memcmp. Absent/empty card returns the documented `-1`/`0` — nothing faked.
+- **`func_80041108` state 2** (`pc_port/game/boot/func_80041108_port.c`):
+  translated directory enumeration, 12-byte name match, block accounting,
+  entry scan and continue/unable dispatch. New `DAY1_card_file_api` test.
+- **New frontier:** both state-2 continuations call the slot-list UI
+  (`func_8004D4C4` continue / `func_8004D298` unable), which reads PS1
+  **low memory** (address 0 / 0x150) the port does not model (a fixture faulted
+  `PE_LoadU32(0)`). They are explicit named boundaries. The live route stop is
+  now `func_8004D4C4` instead of `firstfile` (still frame 38500 / story 0x48).
+- **Oracle support:** `pe_battle_hud_oracle.py` gained an optional `hook_at`
+  PC-hook map (default off) so a host-implemented leaf can return without a
+  guest stack frame; both card-operation oracles hook `func_800727B4` to 0 and
+  moved their STOPS to `0x8004D4C4`/`0x8004D298`. Headers regenerated.
+- **Verified:** `pe-native-tests` **1378/1378**, CTest **11/11**, matching
+  rebuild **EXACT SHA-1 452fb033… (649 leaves)**. Evidence:
+  `docs/evidence/pe-libcard-file-api/REPORT.md`.
+- **Next:** model/supply the PS1 low-memory kernel/menu substrate, then the
+  menu draw callbacks (`func_800434C0`, `func_8004D6D4`).
+
 ## CARD-PRESENT: host-backed memory card; route frontier moves to the save menu (2026-09-20)
 
 Branch `agent/card-present` from `5cf6b196`. `pc_port/platform/pe_libcard.c`

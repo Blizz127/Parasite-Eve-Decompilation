@@ -2,11 +2,11 @@
 """Original card dispatcher through formatting to first BIOS/cleanup boundary."""
 import hashlib,struct,sys
 from pe_battle_hud_oracle import ROOT,execute
-from pe_card_operation_oracle import fixture
+from pe_card_operation_oracle import fixture,firstfile_hook
 from pe_transition_loader_oracle import fnv
 RANGES=((0xA0ED4,0xA00),(0x92224,4),(0x92230,4),(0x160000,16),(0x9D154,16),(0x9EE70,96),(0x1FEA00,0x800))
 STATIC=((0x10ED4,160),(0x1161C,220),(0x94528,12))
-STOPS={0x80042228,0x8004D5CC,0x800727B4,0x80072754,0x80072764,0x80072774,0x80072734,0x80072784,0x80072314,0x80072324}
+STOPS={0x80042228,0x8004D5CC,0x8004D4C4,0x8004D298,0x80072754,0x80072764,0x80072774,0x80072734,0x80072784,0x80072314,0x80072324}
 def main():
  ex=(ROOT/'build/disc1.candidate.exe').read_bytes();assert hashlib.sha1(ex).hexdigest()=='452fb033f2eaa4b18aa20a5bca60b8125af3a37b'
  assert hashlib.sha256(ex[0x41108-0xF800:0x42020-0xF800]).hexdigest()=='a9033ae5110fc414ffe13fa229fc7ffe9bc17a9e563eae68fc8e49b712fd3c6a'
@@ -26,7 +26,7 @@ def main():
   if common is None:common=seed
   first=len(patches);patches.extend((a,v) for a,v in seed.items() if v!=common[a])
   initial={16+i:0x13570000+i*0x1111 for i in range(8)};initial[29]=stack;initial[7]=0x13579BDF
-  regs=execute(r,entry,(argument,),initial_regs=initial,stop_at=STOPS,visited_pcs=seen)
+  regs=execute(r,entry,(argument,),initial_regs=initial,stop_at=STOPS,visited_pcs=seen,hook_at={0x800727B4:firstfile_hook})
   target=mask=0;args=[0]*4
   if regs[31]:
    word=struct.unpack_from('<I',r,(regs[31]-8)&0x1FFFFF)[0];assert word>>26==3
