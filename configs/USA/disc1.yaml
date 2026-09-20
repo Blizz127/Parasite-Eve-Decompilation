@@ -1517,6 +1517,11 @@ segments:
       # assignment keeps the call on the fall-through. era -O2 -G0.
       - [0x5E750, c, func_8006DF50]
       - [0x5E7A8, asm]
+      # func_8006E1C0 — packed colour/vertex emit, VRAM 0x8006E1C0, file
+      # 0x5E9C0, size 0x110 (68 words). era -O2 -G0. The packed word at +0x0C
+      # overlaps the byte at +0x0F, so the record is addressed by explicit
+      # offsets rather than a struct.
+      - [0x5E9C0, c, func_8006E1C0]
       # func_8006E2D0 — VRAM 0x8006E2D0, size 0x68, file 0x5EAD0-0x5EB38.
       # Six 5-bit codes (bit 27 down to bit 2) expanded through the
       # D_800930B4 alphabet, upper-casing a..z, then NUL. era -O2 -G0 +
