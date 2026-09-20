@@ -10,6 +10,34 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## XA-FIDELITY: gaussian resample + CD-XA volume chain (2026-09-20)
+
+Branch `agent/xapolish` from `ec097017`.  Closes the named XA gaps (a) linear
+resampling, (b) unverified mono/18900 Hz/8-bit paths, (c) unapplied XA/CD
+volume.  `pc_port/platform/pe_xa.{c,h}` now resample with the psx-spx 4-point
+gaussian (512-entry `gauss` table, `PE_Xa_GaussInterp`, exact integer phase
+accumulator), correct the 8-bit sound-group layout (data is byte `blk` of the
+32-bit word `i` at `+16`; the old code read `+8`), and apply the CD-XA output
+volume chain: ATV0..3 from `pe_cdreg` (psx-spx CDROM bank2/3, `80h`=unity),
+SPU CD input volume `1F801DB0h/DB2h`, SPU main volume `1F801D80h/82h`, gated by
+SPUCNT bit0/bit14.  Retail `func_8007BAC0` sets ATV `{80h,0,80h,0}`, CD volume
+`3FFFh`, SPUCNT `C001h`, so live XA is ~6 dB lower than the old unvolumed mix.
+
+Live opening FMV (real Disc 1, headless 20000 frames): 399 XA sectors /
+804384 frames both before and after; WAV peak 19491 -> 11620, RMS 1283 -> 756,
+non-zero 233712 -> 233689 of 588735.  Tests: `pe-native-tests` **1402/1402**
+(6 -> 14 XA vectors: gaussian taps/normalization/step, 8-bit layout,
+mono/18900/8-bit resample lengths, ATV/CD-volume gating), CTest 11/11,
+`gen_decomp_ports.py --check --allow-orphans` OK.  Fail-on-pre-change proven by
+reverting the 8-bit offset (3 failures) and the volume application
+(`XA_volume_matrix` fails).  A raw Disc 1 scan finds **only** 4-bit stereo
+37800 Hz XA (13452 sectors), so mono/18900/8-bit are synthetic-only.  Retail
+rebuild after the change: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, 709 C leaves.  No retail audio
+golden: psx-spx + unit vectors, not byte-accurate.  Note: DuckStation's CDROM
+models the XA upsampler as a 7-phase FIR, not the gaussian — documented in the
+report.  Evidence: `docs/evidence/pe-xa-fidelity/REPORT.md`.
+
 ## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
 
 Branch `agent/4ad9c-savepage` from `160137a4`.  The field main-menu handler no
