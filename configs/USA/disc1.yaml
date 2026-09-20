@@ -954,6 +954,10 @@ segments:
       # size 0x20, era -O2 -G0.
       - [0x4E2DC, c, func_8005DADC]
       - [0x4E2FC, asm]
+      # func_8005DB8C — VRAM 0x8005DB8C, size 0x20, file 0x4E38C-0x4E3AC.
+      # Global word plus record-base helper: era -O2 -G0.
+      - [0x4E38C, c, func_8005DB8C]
+      - [0x4E3AC, asm]
       # Global word plus record-base helper: era -O2 -G0.
       - [0x4E3F8, c, func_8005DBF8]
       # Adjacent global word plus record-base helper: era -O2 -G0.
@@ -1094,6 +1098,11 @@ segments:
       # the shared symbolic base across all byte stores.
       - [0x5E348, c, func_8006DB48]
       - [0x5E39C, asm]
+      # func_8006DBE0 — VRAM 0x8006DBE0, size 0x38, file 0x5E3E0-0x5E418.
+      # Two-entry signed-byte search over D_800B0CD8+0xDC stride 2; returns the
+      # index or -1. era -O2 -G0.
+      - [0x5E3E0, c, func_8006DBE0]
+      - [0x5E418, asm]
       # func_8006E454 — VRAM 0x8006E454, size 0x44, file 0x5EC54-0x5EC98.
       - [0x5EC54, c, func_8006E454]
       - [0x5EC98, asm]
@@ -1205,7 +1214,10 @@ segments:
       # func_80075C04 — VRAM 0x80075C04, size 0x40, file 0x66404-0x66444.
       # Marker + signed-halfword call; same epilogue-slot fill.
       - [0x66404, c, func_80075C04]
-      - [0x66444, asm]
+      # func_80075C44 — VRAM 0x80075C44, size 0x28, file 0x66444-0x6646C.
+      # GPU primitive packer twin of func_80075C6C with flag word 0xE6000002;
+      # +3 = 2, +4 = 0xE6000002/0 by a1 OR (a2 != 0), +8 = 0. era -O2 -G0.
+      - [0x66444, c, func_80075C44]
       # func_80075C6C — VRAM 0x80075C6C, size 0x28, file 0x6646C-0x66494.
       # GPU primitive packer: +3 = 2, +4 = 0xE6000001/0 by a1, +8 = 0.
       - [0x6646C, c, func_80075C6C]
@@ -1719,6 +1731,11 @@ segments:
       # Volume campaign: per-voice SPU halfword bitfield update, era -O2 -G0.
       - [0x780C0, c, func_800878C0]
       - [0x780F0, asm]
+      # func_80089218 — VRAM 0x80089218, size 0x38, file 0x79A18-0x79A50.
+      # Walks 0x18 records at stride 0x11C from a0+0xF0 and rewrites the first
+      # word of each record matching a1 with 0x18. era -O2 -G0.
+      - [0x79A18, c, func_80089218]
+      - [0x79A50, asm]
       - [0x7A160, c, func_80089960]
       - [0x7A180, asm]
       - [0x7A328, c, func_80089B28]
