@@ -1136,6 +1136,11 @@ segments:
       # Phase 5EF: direct func_8007BDDC forwarding wrapper.
       - [0x6B110, c, func_8007A910]
       - [0x6B130, asm]
+      # func_8007B964 — VRAM 0x8007B964, size 0x88, file 0x6C164-0x6C1EC.
+      # Six staged byte writes to SPU-style pointer globals; returns 0.
+      # Default era_o2_g0. Resume asm at 0x6C1EC.
+      - [0x6C164, c, func_8007B964]
+      - [0x6C1EC, asm]
       # Phase 5EF: write-only opaque 32-bit setter.
       - [0x6C930, c, func_8007C130]
       # Tier-2 probe: three-word state setter func_8007C544.
@@ -1144,6 +1149,11 @@ segments:
       - [0x6CD44, c, func_8007C544]
       # Phase 5EF: zero-argument func_8007D074 forwarding wrapper.
       - [0x6CD60, asm]
+      # func_8007CE80 — VRAM 0x8007CE80, size 0x2C, file 0x6D680-0x6D6AC.
+      # Word copy of `count` elements, rotated to a bottom-tested loop.
+      # Default era_o2_g0. Resume asm at 0x6D6AC.
+      - [0x6D680, c, func_8007CE80]
+      - [0x6D6AC, asm]
       - [0x6D854, c, func_8007D054]
       - [0x6D874, asm]
       # func_8007DC5C / func_8007DC84 — RMW on the word at pointer global
@@ -1499,8 +1509,18 @@ segments:
       # agent/decompile-100: flag-clear/status-set trio (0x24 each).
       - [0x806D8, c, func_8008FED8]
       - [0x806FC, asm]
+      # func_8008FFC0 — VRAM 0x8008FFC0, size 0x24, file 0x807C0-0x807E4.
+      # Advance a buffer cursor, latch the byte before it into +0xA6 << 8.
+      # Default era_o2_g0. Resume asm at 0x807E4.
+      - [0x807C0, c, func_8008FFC0]
+      - [0x807E4, asm]
       - [0x80854, c, func_80090054]
       - [0x80878, asm]
+      # func_800900E4 — VRAM 0x800900E4, size 0x24, file 0x808E4-0x80908.
+      # Same cursor shape as func_8008FFC0, byte << 7 into +0xB4.
+      # Default era_o2_g0. Resume asm at 0x80908.
+      - [0x808E4, c, func_800900E4]
+      - [0x80908, asm]
       - [0x80978, c, func_80090178]
       - [0x8099C, asm]
       # Phase 5O: C leaf func_800904A0 — VRAM 0x800904A0, size 0xC.
@@ -1542,6 +1562,11 @@ segments:
       # File span 0x80EB4–0x80EE4 exclusive. Stream byte + flag ORs at +0x38/+0xF4.
       - [0x80EB4, c, func_800906B4]
       - [0x80EE4, asm]
+      # func_80090948 — VRAM 0x80090948, size 0x28, file 0x81148-0x81170.
+      # Advance a buffer cursor; latch the fetched byte into +0x58/+0x56/+0xD0
+      # and clear +0xD2. Default era_o2_g0. Resume asm at 0x81170.
+      - [0x81148, c, func_80090948]
+      - [0x81170, asm]
       # Phase 5J: C leaf func_80090A0C — VRAM 0x80090A0C, size 0x14.
       # File span 0x8120C–0x81220 exclusive. Bit-clear 0x8 at *(arg0+0x38).
       - [0x8120C, c, func_80090A0C]

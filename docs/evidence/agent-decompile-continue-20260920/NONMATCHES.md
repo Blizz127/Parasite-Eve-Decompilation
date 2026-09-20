@@ -96,3 +96,12 @@ load-store-load-store; era hoists the second pointer load:
 Zero word 0, byte 4, a four-byte countdown-clear at 5..8, then words
 0xC/0x10/0x14. Era does not produce retail's descending pointer loop
 (`addiu v0,a0,3` / `sb 5(v0)` / `addiu v0,v0,-1`). 11 words differ. Parked.
+
+### func_80082ADC (file 0x732DC, size 0x2C) — callback-table install
+
+Retail materializes the table base once (`lui/addiu $v0,D_800A5AB4`) and
+stores by offset (`sw $v1,0($v0)` / `+4` / `-4` / `+8` in the `jr` delay
+slot). Both direct-array and local-pointer phrasings make cc1 re-materialize
+`D_800A5AB4+n` for every store, and the relocation-normalized diff hides the
+extra `lui/addu` pairs behind zeroed words. One non-relocated word differs;
+the address-computation shape differs. Draft at `nonmatch/func_80082ADC.c`.
