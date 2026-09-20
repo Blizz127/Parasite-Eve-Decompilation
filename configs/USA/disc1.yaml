@@ -1488,6 +1488,14 @@ segments:
       # the jr delay slot.
       - [0x59528, c, func_80068D28]
       - [0x59624, asm]
+      # func_8006A0E8 — VRAM 0x8006A0E8, file 0x5A8E8, size 0x174 (93 words).
+      # wave7-b executed-path leaf: D_800B0CD8 0x200 gate + D_8009D1A0
+      # 0x10/0x20 sub-blocks, 92*D_8009CDDC indexed stores into
+      # D_800BCDE0/DF/C8. era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1
+      # (the indexed `sb` becomes lui at/addu at,at,idx/sb %lo(at)); a local
+      # index variable reassigned before each store both avoids cc1's phantom
+      # 16-byte frame slot and reloads D_8009CDDC like retail.
+      - [0x5A8E8, c, func_8006A0E8]
       # func_8006A25C — game-over destination saver, VRAM 0x8006A25C,
       # file 0x5AA5C, size 0x8C (35 words). era -O2 -G0; shared $a0 base
       # for D_800B0CD8 (local pointer) and the void-return tail order
