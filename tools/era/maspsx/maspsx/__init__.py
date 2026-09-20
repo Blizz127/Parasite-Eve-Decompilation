@@ -459,6 +459,7 @@ class MaspsxProcessor:
         use_comm_for_lcomm=False,
         fill_store_delay_slot=False,
         three_word_symbol_store=False,
+        passthrough_symbol_load=False,
         dispatch_fold_symbol=None,
     ):
         self.lines = [x.strip() for x in lines]
@@ -492,6 +493,16 @@ class MaspsxProcessor:
         self.three_word_symbol_store = (
             three_word_symbol_store
             or os.environ.get("MASPSX_THREE_WORD_SYMBOL_STORE") == "1"
+        )
+        # LOCAL PATCH: destination-register symbol+register load form.  Some
+        # ROM leaves keep cc1's `lbu $2,SYM($4)` shape, which GNU as expands
+        # natively as `lui $2,%hi / addu $2,$2,$4 / lbu $2,%lo($2)` (temp =
+        # DESTINATION register).  The default maspsx path forces $at instead;
+        # this gate passes the line through unchanged for the leaves whose ROM
+        # uses the destination-register form.  Per-leaf opt-in via env.
+        self.passthrough_symbol_load = (
+            passthrough_symbol_load
+            or os.environ.get("MASPSX_PASSTHROUGH_SYMBOL_LOAD") == "1"
         )
         # LOCAL PATCH (switch dispatch retarget): substitute the shared
         # rodata pool table symbol for cc1-local $L<n> switch-table
@@ -1050,7 +1061,15 @@ class MaspsxProcessor:
                     and re.match(r"^\$L\d+$", operand)
                 ):
                     operand = self.dispatch_fold_symbol
-                if self.addiu_at:
+                if self.passthrough_symbol_load and not is_macro:
+                    # LOCAL PATCH: destination-register form.  GNU as expands
+                    # `op $r,SYM($b)` as lui $r,%hi / addu $r,$r,$b /
+                    # op $r,%lo($r); pass the cc1 line through for the leaves
+                    # whose ROM uses that temp-register shape instead of $at.
+                    res.append(
+                        f"{line} # DEBUG: passthrough symbol load"
+                    )
+                elif self.addiu_at:
                     # LOCAL PATCH: three_word_symbol_store gate (extended from
                     # stores to loads) — when enabled and not a compound macro
                     # line, emit the ASPSX 2.30 3-word form explicitly with $at

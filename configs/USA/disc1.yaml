@@ -486,6 +486,12 @@ segments:
       - [0x307AC, c, func_8003FFAC]
       - [0x307BC, c, func_8003FFBC]
       - [0x307CC, asm]
+      # func_80042770 — VRAM 0x80042770, size 0x28 (10 words), file
+      # span 0x32F70-0x32F98. Byte-table flag read: D_800A0ED4[i*1048] & 1;
+      # stride 1048 materializes as ((i*33)*4 - i)*8. Three-word $at
+      # indexed load (era_o2_g0_three_word). Resume asm at func_80042798.
+      - [0x32F70, c, func_80042770]
+      - [0x32F98, asm]
       # Phase 5AP: C leaf func_800428C4 — VRAM 0x800428C4, size 0x10.
       # File span 0x330C4–0x330D4 exclusive. Simple global decrement getter.
       - [0x330C4, c, func_800428C4]
@@ -498,6 +504,11 @@ segments:
       # Dual clear: D_800A1860 (int) + D_800A1868 (u32 opaque decl). Mid-330D4 carve.
       - [0x33110, c, func_80042910]
       - [0x33128, asm]
+      # func_80042964 — VRAM 0x80042964, size 0x28, file span 0x33164-0x3318C.
+      # Twin of func_80042770 without the mask: return D_800A0EDE[i*1048];
+      # stride materializes as ((i*33)*4 - i)*8. era_o2_g0_three_word.
+      - [0x33164, c, func_80042964]
+      - [0x3318C, asm]
       - [0x33328, c, func_80042B28]
       # Phase 5EI: func_80042B38 / func_80042B50 — dual-store D_800A1870/1874.
       # Replaces former 33338.s unit entirely (0x34 bytes).
@@ -729,7 +740,13 @@ segments:
       - [0x42FC8, asm]
       # Phase 5GW: return-zero stub, era -O2 -G0.
       - [0x4308C, c, func_8005288C]
-      - [0x43094, asm]
+      # func_80052894 / func_800528C4 — adjacent 12-byte-stride D_800A76A4
+      # accessors (file 0x43094-0x430C4-0x430F0). 52894 returns element/60
+      # (multu 0x88888889 + srl 5); 528C4 stores a1*60 at element index*3.
+      # Both era_o2_g0_three_word. Resume asm at 0x430F0.
+      - [0x43094, c, func_80052894]
+      - [0x430C4, c, func_800528C4]
+      - [0x430F0, asm]
       - [0x433CC, c, func_80052BCC]
       - [0x43408, asm]
       - [0x436B0, c, func_80052EB0]
@@ -1000,6 +1017,11 @@ segments:
       # Pointer double-deref on D_80095854 (lui/lw/nop/lw0/jr/nop).
       - [0x66B3C, c, func_8007633C]
       - [0x66B54, asm]
+      # func_80076B44 — VRAM 0x80076B44, size 0x14, file 0x67344-0x67358.
+      # Byte-table getter D_800A3348[a0] using the destination-register
+      # symbol+register load form (MASPSX_PASSTHROUGH_SYMBOL_LOAD).
+      - [0x67344, c, func_80076B44]
+      - [0x67358, asm]
       # Phase 5EK: four-argument forwarding wrapper with a zero third field.
       - [0x67410, c, func_80076C10]
       - [0x67434, asm]
@@ -1111,6 +1133,12 @@ segments:
       - [0x6CD60, asm]
       - [0x6D854, c, func_8007D054]
       - [0x6D874, asm]
+      # func_8007DC5C / func_8007DC84 — RMW on the word at pointer global
+      # D_8009B410 (file 0x6E45C-0x6E484-0x6E4AC): clear bits 24-27, set
+      # 0x20000000 / 0x22000000. Default era_o2_g0. Resume asm at 0x6E4AC.
+      - [0x6E45C, c, func_8007DC5C]
+      - [0x6E484, c, func_8007DC84]
+      - [0x6E4AC, asm]
       - [0x6E514, c, func_8007DD14]
       - [0x6E538, asm]
       # Phase 5EF: two-call void wrapper.
@@ -1154,8 +1182,10 @@ segments:
       # Phase 5BE: C leaf func_8007FC08 — VRAM 0x8007FC08, size 0x10.
       # File span 0x70408–0x70418 exclusive. Unsigned-byte global getter:
       # lui/lbu/jr/nop on D_8009B580. Plain -O1 matches.
-      # Mid-703F0 carve: prefix 0x18, C 0x10, resume 70418.s 0x94.
-      - [0x703F0, asm]
+      # func_8007FBF0 — VRAM 0x8007FBF0, size 0x18, file span 0x703F0-0x70408.
+      # 32-bit table getter D_8009B574[i] with destination-register
+      # symbol+register load (MASPSX_PASSTHROUGH_SYMBOL_LOAD).
+      - [0x703F0, c, func_8007FBF0]
       - [0x70408, c, func_8007FC08]
       # Phase 5BF: C leaf func_8007FC18 — VRAM 0x8007FC18, size 0x10.
       # File span 0x70418–0x70428 exclusive. Unsigned-byte global getter:
@@ -1401,6 +1431,11 @@ segments:
       - [0x7A348, asm]
       - [0x7A4F0, c, func_80089CF0]
       - [0x7A510, asm]
+      # func_80089F08 — VRAM 0x80089F08, size 0x1C, file 0x7A708-0x7A724.
+      # 16-byte-stride struct field read through pointer global D_8009B3FC:
+      # *out = *(u16 *)(D_8009B3FC + index*16 + 0xC). Default era_o2_g0.
+      - [0x7A708, c, func_80089F08]
+      - [0x7A724, asm]
       # Phase 5EG-readers: func_8008AB1C — VRAM 0x8008AB1C, size 0x80.
       # Pins D_8009D240 as unsigned short * and D_8009D260 as unsigned char *
       # via lhu / unscaled addu. Era -O1 -G0.

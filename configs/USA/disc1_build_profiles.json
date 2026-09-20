@@ -75,6 +75,16 @@
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
       }
     },
+    "era_o2_g0_passthrough_load": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
+      }
+    },
     "era_o2_g8": {
       "toolchain": "era",
       "flags": [
@@ -192,8 +202,16 @@
       "func_8002F9CC",
       "func_800363F4",
       "func_80037548",
+      "func_80042770",
+      "func_80042964",
       "func_80050020",
+      "func_80052894",
+      "func_800528C4",
       "func_8005DC28"
+    ],
+    "era_o2_g0_passthrough_load": [
+      "func_80076B44",
+      "func_8007FBF0"
     ],
     "era_o2_g8": [
       "func_800177AC",
