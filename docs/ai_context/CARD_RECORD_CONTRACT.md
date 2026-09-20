@@ -252,3 +252,27 @@ including prior card regressions. Full normal CTest8/8 PASS76.54s, including1275
 native groups. No build warnings/errors; Python/scoped whitespace PASS. Changes
 remain local. Unresolved BIOS and operation processor prevent full card/menu,
 Day1/Day2, live presentation or release acceptance.
+
+## CARD-EVENT: BIOS B(0Bh) TestEvent host adapter
+
+`func_800726F4` is the BIOS B(0Bh) `TestEvent` veneer (`asm/disc1/621E4.s`),
+called four times per drain by `func_800405A4` (and the sibling event-drain
+helpers `func_800403C8` / `func_80040438`) with every result discarded
+(`asm/disc1/307CC.s`).  Per psx-spx BIOS Event Functions, `TestEvent` returns
+0 while the event is busy/disabled and 1 (consuming readiness) only for a
+ready non-callback event; callback-mode (`1000h`) events never become ready.
+`func_800409B4` opens all eight card events with mode `1000h`, so the retail
+kernel returns 0 for each card `TestEvent`.
+
+`pc_port/platform/pe_libetc.c` now tracks each `PE_Event_Open` slot
+(used/enabled/ready/mode) and implements `func_800726F4` with those rules;
+`PE_Sdk_ResetState` clears the table.  `func_800405A4_port.c` issues the real
+calls and ignores the results, so the drain returns instead of stopping.
+`pe_card_status_oracle.py` (via a new B0 hook in the shared oracle) models the
+same service; the 4096 regenerated cases pin the new first card-kernel
+frontier.  The kernel operations themselves — A0(ABh) `_card_info`,
+A0(ACh) `_card_load`, and B0(50h) `_new_card` + B0(4Eh) `_card_write` under
+`func_8007DD74` — remain nonreturning named boundaries; their completion needs
+the card controller/event model, including the spec-`0x100` timeout events.
+Evidence: `docs/evidence/pe-memory-card-testevent/REPORT.md`.
+

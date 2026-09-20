@@ -65,6 +65,38 @@ records that `PE.IMG` is identical too, so the decompilation/port covers disc
 2's code and overlays. Only the FMV/XA streams and volume metadata differ, so
 disc-2 work is disc-image/stream handling, not translation.
 
+## CARD-EVENT: TestEvent (B0 0Bh) implemented; route past the event drain (2026-09-20)
+
+`func_800405A4` routed the four card-event `TestEvent` drains through one
+nonreturning `card_status_call()` boundary, so the Day-1 `--route-pad`
+autopilot stopped at `[STUB:BOOTSTRAP_RET] card status BIOS call` (frame
+38000 / presents 38495 / story `0x48`).
+
+Retail authority: `func_800726F4` is the B0(0Bh) `TestEvent` veneer
+(`asm/disc1/621E4.s`); `asm/disc1/307CC.s` calls it four times per drain and
+**discards every result**.  The eight card events `func_800409B4`
+(`pe_libcard.c`) opens all use mode `1000h`, and callback events never become
+ready, so the kernel returns 0 there.
+
+Implemented: a kernel event table in `pe_libetc.c` records OpenEvent
+mode/enabled/ready and `func_800726F4` applies the documented TestEvent
+semantics; `func_800405A4_port.c` now issues the real calls and ignores the
+results.  The remaining card kernel calls stay a **nonreturning** boundary,
+now named per target (`card _card_info A0(AB) kernel call`,
+`card _card_load A0(AC) kernel call`, `card _new_card/_card_write kernel
+call`).
+
+**Proof:** `pe_card_status_oracle.py` gained a B0 TestEvent hook and re-pinned
+4096 cases; `./pc_port/build/pe-native-tests` → **1376 run / 1376 passed /
+0 failed / 0 skipped**.  Route now stops at
+`[STUB:BOOTSTRAP_RET] card _card_info A0(AB) kernel call` at the same
+presents 38495 — the old `card status BIOS call` edge is gone.
+Evidence: `docs/evidence/pe-memory-card-testevent/REPORT.md`.
+
+**Next:** model the card kernel/controller or an evidence-based "no card"
+completion path for `_card_info`/`_card_load`/`_new_card`/`_card_write`
+(including the spec-`0x100` timeout events).
+
 ## DAY2-159c: re-land func_80192CE8 post-E08 media loop + 91DC8 dispatch (2026-09-20)
 
 Branch `agent/92ce8-media-loop` from `980ffab`. The authenticated post-E08
