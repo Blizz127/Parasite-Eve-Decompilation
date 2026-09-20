@@ -1015,6 +1015,11 @@ segments:
       - [0x556B4, asm]
       - [0x55BB8, c, func_800653B8]
       - [0x55C00, asm]
+      # func_80065A9C — VRAM 0x80065A9C, size 0x38, file 0x5629C-0x562D4.
+      # *p |= arg1 & 0x30 at D_800B1624 + D_800B1624->0x10 + (arg0 << 4);
+      # volatile pointer keeps retail's double header load.
+      - [0x5629C, c, func_80065A9C]
+      - [0x562D4, asm]
       # func_80065B70 — VRAM 0x80065B70, size 0xC8, file 0x56370-0x56438.
       # Block init of the D_800BCF88..D_800BD028 scratch struct. era_o2_g0.
       - [0x56370, c, func_80065B70]
