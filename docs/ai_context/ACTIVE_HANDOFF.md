@@ -353,7 +353,13 @@ re-opened/re-confirmed the menu every period. The fix adds the Circle presses to
 `m0020i` is a *separate* blocker — Aya is live there (position moves, D1A0
 toggles) but the recorded pads park her and the M0020I key pickup never fires
 (`func_8004F490`/`func_80015BAC` enter 0 times over 45000 frames), so it needs
-new route input or the unported field contact pass (SEW18). **The earlier
+new route input or the unported field contact pass (SEW18). **Extended-run
+finding (parent, 2026-09-20):** raising `--max-frames` to 46000 shows the route
+does not stop at 42000 — it runs on to **~frame 44000**, where a NEW named
+`card operation unresolved call` boundary fires. So the menu fix did clear the
+38500 wall, and the next frontier is that ~44000 card operation (a later
+save/load interaction in the `m0020i` segment) before the M0020I key pickup.
+**The earlier
 `PE_Port_StopEpoch` hypothesis is DISPROVEN** (every `func_800425DC` guard
 instrumented; the epoch stays 0 over a full present-card 42000-frame run).
 **`func_80042264` is NOT this unlock** (`docs/evidence/pe-crc-tail-load-path/REPORT.md`):
