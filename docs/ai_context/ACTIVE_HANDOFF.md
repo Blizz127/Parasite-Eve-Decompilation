@@ -7,6 +7,50 @@
 
 # ACTIVE HANDOFF
 
+## wave-3 leaf slice B (`agent/wave3-b`, 2026-09-20): 846 -> 856 (+10)
+
+**Fresh `scripts/split_us.sh` + `scripts/build_us.sh` + `scripts/verify_us.sh`:
+EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES
+(856 registered C leaves)`, `VERIFY_US=PASS`, plan `1247 spans = 856 c + 389
+asm + 2 rodata`.** Commits `6332f18c` (9 leaves) and `341ffdcd` (F820 + 6 park
+records) on branch `agent/wave3-b`; reports under
+`docs/evidence/wave3-b/<name>/REPORT.md`.
+
+Landed, unit 5747C: `func_80066C7C` `func_80067678` `func_800676CC`
+`func_80067730`; unit 5C6CC: `func_8006D24C`; unit 5E418: `func_8006DD38`
+`func_8006DED4` `func_8006DF50` `func_8006E2D0`; unit 5FB9C: `func_8006F820`.
+
+Reusable findings:
+
+- **`ERA_ASPSX_VER=2.30` (profile `era_o2_g0_aspsx_230`) is required for any
+  leaf whose address generation folds an index into a symbol**, e.g. the
+  `D_800930B4[(a1 >> shift) & 0x1F]` table read in `func_8006E2D0` and the
+  `D_800B0CE8 + index*4` arena load in `func_8006DD38`. With the default aspsx
+  2.21 maspsx expands `%lo(at)` into an extra `addu` (4 words); retail is the
+  3-word `lui/addu/op-%lo` form. Register `func_8006DD38` under
+  `era_o2_g0_aspsx_230` in `configs/USA/disc1_build_profiles.json`.
+- A **shared arena base computed after a call** stays in a caller-saved
+  register only if it is assigned *after* the call; declaring and initializing
+  it before the call spills it to a callee-saved register and grows the frame
+  (`func_8006DD38`: 0x38 vs 0x30). Introduce a second typed pointer
+  (`unsigned char **slot = (unsigned char **)(base + 0x124); slot[index]`) to
+  make cc1 colour the base `$v1` and the scaled index `$v0`.
+- A branch arm's **then/else order must sometimes be written with the
+  condition inverted** to match retail's fall-through. `func_8006F820` needed
+  `if (a0 >= 0xB) large else small` (retail `bnez` to the small block) and
+  `if (a1 == 0) {...} else {...}` (retail `bnez a1` to the store-int block).
+- `extern Header *volatile D_800B1624` reproduces retail's two independent
+  pointer loads in `func_80067678/CC/730`; shifted operands must be
+  `unsigned int` so cc1 emits `srl` rather than `sra`.
+
+Six leaf candidates parked with full divergence notes in
+`docs/ai_context/parked_blockers.json` (`wave3b-*` ids):
+`func_8006DCE4`/`func_8006DE80` (stack-arg `lw` vs `lh` plus double-save
+rotation), `func_80067A78` (hoisted `+0x14` offset load above the `+0x38/+0x3A`
+stores), `func_8006DDCC` (callee-saved register count / missing
+`&D_800B0E08` address home), `func_8006F8EC` (record base in `$v1` vs `$a0`),
+`func_800671C8` (clamp-bound load and `$t0`/`$t1` record-base colouring).
+
 ## wave-2 leaf slice A (`agent/wave2-a`, 2026-09-20): 810 -> 825 (+15)
 
 **Fresh `scripts/split_us.sh` + `scripts/build_us.sh` + `scripts/verify_us.sh`:
