@@ -10,6 +10,38 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## HELP-FRONTIER: func_8004C608 help ids 36..39 (route wall cleared) (2026-09-20)
+
+The Day-1 `--route-pad` autopilot reached frame 38000 at story `0x48` and
+stopped on `[MENU] Unported help selection 36` +
+`[STUB:BOOTSTRAP_RET] func_8004C608`.  The port switch handled ids 0..35 and
+40..60 only.  The four missing jump-table targets (jtbl_8001104C[36..39] =
+0x8004CA38 / 0x8004CAAC / 0x8004CAAC / 0x8004CB38) are now implemented exactly
+in `pc_port/game/boot/func_8004DF74_port.c`; they are the memory-card help
+prompts.  Case 36's callee `func_800404A8` (0x800404A8, 63 words, 307CC.s) had
+no port; it is hand-transcribed in `pc_port/game/boot/func_800404A8_port.c`.
+
+**Proof (behavior):** `pc_port/tools/pe_inventory_help_oracle.py` no longer
+excludes groups 36..39, so the original emulator executes them;
+`pc_port/tests/retail_inventory_help_cases.h` regenerated to 255 cases.
+`./pc_port/build/pe-native-tests` → **1375 run, 1375 passed, 0 failed, 0
+skipped**, including group 36/37/38/39 fingerprints.  **Proof (route):** the
+help stub is gone; the route now advances ~one frame and stops at
+`[STUB:BOOTSTRAP_RET] card status BIOS call` in `func_800405A4`.  The card
+BIOS edge was already the next wall and is unfaked (a temporary diagnostic
+that bypassed only `card_status_call` ran the route clean to the 42000 frame
+limit, proving the card edge is the sole remaining blocker; not committed).
+
+**Matching leaf:** `src/func_8004C608.c` is a complete parked reconstruction
+(not in disc1.yaml).  `tools/analysis/try_leaf.py` best case `-O2 -G0`:
+first mismatch at offset 0x00F4, 210/402 words differ, candidate 1568/1608
+bytes.  Not byte-exact; exact behavior is oracle-proven instead.  Evidence:
+`docs/evidence/pe-help-frontier/REPORT.md`.
+
+**Next:** the memory-card BIOS event/card semantics (handoff:
+CARD_RECORD_CONTRACT / full 41108 operation processor) is the live Day-1 route
+frontier; carving `asm/C5060` remains the byte-100% frontier.
+
 ## RECOVERY 2: byte-exact rebuild restored, maspsx pinned, EXACT SHA-1 (2026-09-20)
 
 Two upstream-drift bugs in the era toolchain were blocking all matching

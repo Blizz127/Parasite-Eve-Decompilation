@@ -179,6 +179,45 @@ void func_8004C608(pe_addr_t window)
     case 58:text=func_8005DD3C(index+53u);break;
     case 59:text=func_8005DD3C(index+(PE_LoadU32(0x8009CF0Cu)==2u?77u:75u));break;
     case 60:text=func_8005DD3C(index+72u-PE_LoadU32(0x8009CF18u)*3u);break;
+    /* Jump-table entries 36/37/38/39 (jtbl_8001104C[36..39] =
+     * 0x8004CA38 / 0x8004CAAC / 0x8004CAAC / 0x8004CB38).  These emit
+     * help text directly through func_8005F5B8 (which is
+     * func_8005F27C(func_8005DC4C(id))) or resolve an archive id into
+     * text; they never set the epilogue's s1. */
+    case 36:
+        if (func_800404A8()) {
+            func_8005E8A4(6,5);
+            func_8005F5B8(0x4Cu);
+            func_8005E8A4(0,0x10);
+            func_8005F5B8(0x4Du);
+        } else {
+            uint32_t flag=(func_80042770(0u)!=0u ||
+                           func_80042770(1u)!=0u)?1u:0u;
+            text=func_8005DC4C(flag|0x4Eu);
+        }
+        break;
+    case 37:case 38:
+        if (PE_LoadU32(0x8009CF50u)) {
+            if (PE_LoadU32(0x8009CFF8u)) {
+                func_8005EB58(0u);
+                func_8005E8A4(6,5);
+                func_8005F5B8(0x58u);
+                func_8005E8A4(0,0x10);
+                func_8005F5B8(0x59u);
+            } else {
+                text=func_8005DC4C(0x5Cu);
+            }
+        } else {
+            text=func_8005DC4C(func_8003FFBC()?0x57u:0x5Bu);
+        }
+        break;
+    case 39:
+        func_8005EB58(0u);
+        func_8005E8A4(6,5);
+        func_8005F5B8(0x50u);
+        func_8005E8A4(0,0x10);
+        func_8005F5B8(0x51u);
+        break;
     default:
         if (id<61u) {
             fprintf(stderr,"[MENU] Unported help selection %u\n",id);
