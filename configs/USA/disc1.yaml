@@ -1501,7 +1501,11 @@ segments:
       # Volume carve at B944C; remaining resume reaches C8F08 at B9708.
       - [0xB93C0, asm]
       - [0xB944C, c, func_800C8C4C]
-      - [0xB9480, asm]
+      # agent/decompile-100: timer/latch family (3 contiguous, 0x3C each).
+      - [0xB9480, c, func_800C8C80]
+      - [0xB94BC, c, func_800C8CBC]
+      - [0xB94F8, c, func_800C8CF8]
+      - [0xB9534, asm]
       # Tier-2 W callback: exact-start table entry at 0xD11DC. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: B9480 prefix 0x1C4, C 0x2C, resume B9670.s 0x98.
@@ -1524,7 +1528,9 @@ segments:
       # (0x10 total), resume BA420.s 0x280 (= 0xBA6A0 - 0xBA420).
       - [0xBA174, asm]
       - [0xBA200, c, func_800C9A00]
-      - [0xBA234, asm]
+      # agent/decompile-100: timer/latch family (0x3C).
+      - [0xBA234, c, func_800C9A34]
+      - [0xBA270, asm]
       # Tier-2 W callback: exact-start table entry at 0xD12C4. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: BA234 prefix 0x108, C 0x2C, resume BA368.s 0x98.
@@ -1574,7 +1580,11 @@ segments:
       # C 0x8 + resume 0xFC4 (= 0xBD780 - 0xBC7BC) = 0xFCC.
       - [0xBC330, asm]
       - [0xBC3BC, c, func_800CBBBC]
-      - [0xBC3F0, asm]
+      # agent/decompile-100: timer/latch family (3 contiguous, 0x3C each).
+      - [0xBC3F0, c, func_800CBBF0]
+      - [0xBC42C, c, func_800CBC2C]
+      - [0xBC468, c, func_800CBC68]
+      - [0xBC4A4, asm]
       # Tier-2 W callback: exact-start table entry at 0xD1558. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: BC3F0 prefix 0x2F0, C 0x2C, resume BC70C.s 0x98.
@@ -1615,7 +1625,9 @@ segments:
       - [0xBDD9C, c, func_800CD59C]
       # Phase 5CT: C leaf func_800CD5A4 — file 0xBDDA4, size 0xC.
       - [0xBDDA4, c, func_800CD5A4]
-      - [0xBDDB0, asm]
+      # agent/decompile-100: timer/latch family (0x3C).
+      - [0xBDDB0, c, func_800CD5B0]
+      - [0xBDDEC, asm]
       # Phase 5CU: C leaf func_800CD71C — file 0xBDF1C, size 0xC.
       - [0xBDF1C, c, func_800CD71C]
       # Phase 5ED: mid-BDF28 hole — sb+ret0 func_800CD960.
