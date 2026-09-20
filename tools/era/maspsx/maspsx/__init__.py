@@ -459,6 +459,7 @@ class MaspsxProcessor:
         use_comm_for_lcomm=False,
         fill_store_delay_slot=False,
         fill_indexed_store_delay_slot=False,
+        fill_register_store_delay_slot=False,
         three_word_symbol_store=False,
         passthrough_symbol_load=False,
         dispatch_fold_symbol=None,
@@ -498,6 +499,16 @@ class MaspsxProcessor:
         self.fill_indexed_store_delay_slot = (
             fill_indexed_store_delay_slot
             or os.environ.get("MASPSX_FILL_INDEXED_STORE_DELAY_SLOT") == "1"
+        )
+        # LOCAL PATCH: fill the return delay slot of a *bare* `j $31` with a
+        # preceding plain register-offset store (`sb/sh/sw $r,off($base)` with a
+        # 16-bit offset).  cc1 leaves the store pre-jr on this shape; retail
+        # ASPSX scheduled it into the slot (ROM leaf func_80087798).  Pure
+        # reorder: emit `j $31` then the store.  Per-leaf opt-in via env;
+        # default OFF.
+        self.fill_register_store_delay_slot = (
+            fill_register_store_delay_slot
+            or os.environ.get("MASPSX_FILL_REGISTER_STORE_DELAY_SLOT") == "1"
         )
         # LOCAL PATCH: the env gate keeps the untracked maspsx.py driver
         # untouched and permits per-leaf selection.
@@ -1267,6 +1278,23 @@ class MaspsxProcessor:
                         "# EXPAND_AT END",
                     ]
                 )
+            elif (
+                self.fill_register_store_delay_slot
+                and r_source
+                and op in store_mnemonics
+                and self._next_line_is_return_jump()
+            ):
+                # LOCAL PATCH: move a plain register-offset store into the bare
+                # `j $31` delay slot (pure reorder; no address synthesis).
+                res.extend(
+                    [
+                        "# REGISTER_FILL_STORE_DELAY_SLOT START",
+                        "j\t$31",
+                        line,
+                        "# REGISTER_FILL_STORE_DELAY_SLOT END",
+                    ]
+                )
+                self.skip_instructions = 1
             else:
                 res.append(line)
 
