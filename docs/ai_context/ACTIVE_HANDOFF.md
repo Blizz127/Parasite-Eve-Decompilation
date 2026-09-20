@@ -67,13 +67,27 @@ contract).
 ## SESSION STATUS 2026-09-20 — verified state snapshot
 
 **Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
-`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**637**
-registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 649 packed C
-spans equal retail). Coverage: 649/4576 functions (14.18%). Remaining queue:
-**1740 non-matching functions / 614,992 bytes**, ranked in `docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**655**
+registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 655 packed C
+spans equal retail). Coverage: 655/4570 functions (14.33%). Remaining queue:
+**1734 non-matching functions / 614,748 bytes**, ranked in
+`docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
 `python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
 1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
 code queue.
+
+**Matching levers found 2026-09-20 (later batch).** (a) A **non-volatile**
+MMIO pointer lets cc1 move the final store into the `jr $ra` delay slot
+(`volatile` blocks it and adds a word) — how `func_8008783C`/`func_80087864`
+match. (b) The shift operand must be **unsigned** so cc1 emits `srl`, not
+`sra` (`func_8008780C`). (c) Explicit `hi`/`lo` temporaries force retail's
+evaluation order (`func_800762A0`). Evidence:
+`docs/evidence/agent-decompile-continue-2-20260920/REPORT.md`; 14 triaged
+non-matches with first-mismatch words are parked under `nonmatch/`.
+**Build hygiene:** run `build_us.sh` INSIDE the `pe-mipsel` distrobox (a
+host-side run spawns one container per `as` call and is ~10x slower), and do a
+fully clean `build/` when the layout looks stale — a leftover object produced a
+spurious one-`jal` NON-MATCH at 0x2A24 that a clean rebuild cleared.
 
 **Environment (all local-only / git-ignored).** `build/extracted/disc1`
 (retail image, SHA-1 `452fb033…`), `asm/disc1` via `scripts/split_us.sh`,
