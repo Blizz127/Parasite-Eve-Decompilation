@@ -1123,7 +1123,10 @@ segments:
       # Byte-table getter D_800A3348[a0] using the destination-register
       # symbol+register load form (MASPSX_PASSTHROUGH_SYMBOL_LOAD).
       - [0x67344, c, func_80076B44]
-      - [0x67358, asm]
+      # func_80076B58 — VRAM 0x80076B58, file 0x67358, size 0x40.
+      # Store 0x04000000 to *D_80095854, then copy a1 words from a0 to
+      # *D_80095850 (do/while with the count in a2); returns 0.
+      - [0x67358, c, func_80076B58]
       # func_80076B98 — VRAM 0x80076B98, file 0x67398, size 0x48.
       # Publish constants/a0 through the four D_8009585x pointer globals; the
       # final indexed store fills the jr delay slot
