@@ -10,6 +10,48 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## SESSION STATUS 2026-09-20 — verified state snapshot
+
+**Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**610**
+registered C leaves)". Coverage: 610/4659 functions (13.09%). Remaining queue:
+**1776 non-matching functions / 616,924 bytes**, ranked in
+`docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
+`python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
+1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
+code queue.
+
+**Environment (all local-only / git-ignored).** `build/extracted/disc1`
+(retail image, SHA-1 `452fb033…`), `asm/disc1` via `scripts/split_us.sh`,
+`tools/era/` via `scripts/setup_era.sh` (maspsx now PINNED to upstream
+`025620f1e61248ad4a775c2929ec86f754973597` + `PassthroughProcessor` compat so
+floating upstream cannot break it again), and a `pe-mipsel` distrobox (Debian
+trixie, binutils 2.44) that `build_us.sh` auto-detects. `local/pe_disc1.path`
+points at the attic Disc 1 image.
+
+**Tests.** `pe-native-tests` **1376 run / 1376 passed / 0 failed / 0 skipped**.
+`pe-route-boot-day2-tests` **14/14 ordered Day-1 milestones** (frontier
+`m0004i` mod4 `pc=0x801B6CC8`), executed path invokes only 4 HOST_ADAPTED stubs
+and **0 UNSUPPORTED**. `pe-transition-outer-tests` 5/5.
+`pe-decomp-port-tests`: 190/190 src-backed generated TUs regenerate
+byte-for-byte, 82 orphans allowlisted.
+
+**Live port.** Real Disc 1 boots and renders. `--route-pad` autopilot (windowed)
+plays Day 1: opera house, first battle, field rooms. `--headless --route-pad`
+now drives the same route at full speed (headless present hook ticks `g_frame`;
+commit `0ae2a69`) and runs to **frame ~38000, story `0x48`** before the next
+wall: `[MENU] Unported help selection 36` → `[STUB:BOOTSTRAP_RET]
+func_8004C608` (the inventory-help window's switch lacks ids 36-39). Before
+that, the FMV path was unblocked: the opening STR frame now decodes in-bounds
+(DAY2-159b), the post-E08 media loop is re-landed (DAY2-159c, carve SHA-256
+`77218c9c…`), and the live movie wall is now `MDEC_decode_busy` in the host MDEC
+busy predicate.
+
+**Open work / next frontiers.** (1) inventory-help ids 36-39
+(`func_8004C608`, 0x648 bytes, `asm/disc1/3CE08.s`); (2) the
+`MDEC_decode_busy` supersede-on-DMA0-commit family in `pe_mdec.c`; (3) carve
+the ranked large functions from the worklist; (4) disc 2 has no coverage yet.
+
 ## DAY2-159c: re-land func_80192CE8 post-E08 media loop + 91DC8 dispatch (2026-09-20)
 
 Branch `agent/92ce8-media-loop` from `980ffab`. The authenticated post-E08
