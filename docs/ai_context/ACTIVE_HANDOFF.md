@@ -351,7 +351,38 @@ retail's two distinct `$s1 = -1` arms and drops the `j`), `func_80082314`
 order reversed and the `-3` constants CSE'd). `func_8001CAB0` was not
 attempted.
 
-## PARENT STATUS (2026-09-20): 890 matching C leaves; executed-path C-share 39.72%
+## PARENT STATUS (2026-09-20): 902 matching C leaves; executed-path C-share 42.25%
+
+**Matching decomp: 768 -> 902 (+134) this session.** Fresh split + build +
+verify on the merged tree: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (902
+registered C leaves)`, `VERIFY_US=PASS`, plan `1309 spans = 902 c + 405 asm + 2
+rodata`. Wave 6 landed 17 executed-path leaves (`wave6-a` 4, `wave6-b` 7,
+`wave6-c` 6).
+
+**Executed-path C-share (DERIVED): route 300/710 =
+42.25%, movie 102/229 = 44.54%.**
+Derived by reclassifying the recorded 864-leaf hit set against the current yaml;
+exact for the share because the executed guest graph is unchanged, but the
+coverage binary sha256 still refers to the 864-leaf snapshot.
+
+**Four per-leaf toolchain gates now exist**, all default-OFF and all proven
+inert with the build byte-identical: `MASPSX_THREE_WORD_SYMBOL_STORE`,
+`MASPSX_DISPATCH_FOLD` (incl. the materialised `la $r,$L<n>` form),
+`MASPSX_EXPAND_LI`, `MASPSX_FILL_JAL_DELAY_SLOT`. Plus profile-level
+`ERA_ASPSX_VER=2.30` and `MASPSX_EXPAND_DIV`. Two new profiles proven this wave:
+`era_o2_g8_expand_div` (any -G8 leaf with a signed division) and
+`era_o2_g0_expand_div_aspsx_230`.
+
+**Known-open codegen wall (4 executed-path targets):** cc1 2.7.2 will not keep a
+materialised base register for a global addressed at several non-zero offsets —
+it emits `sw $r,SYM+off` macros instead of `off(base)` — affecting
+`func_8007FCFC`, `func_80074E28`, `func_8006CC68`, `func_80020F18`. An agent is
+investigating whether a maspsx gate can materialise the base safely.
+`func_8006DC18`'s loop-invariant constant rematerialisation is NOT addressable at
+the maspsx level (it is a cc1 LICM/allocator decision).
+
+## (previous) ## PARENT STATUS (2026-09-20): 890 matching C leaves; executed-path C-share 39.72%
 
 **Matching decomp: 768 -> 890 (+122) this session.** Fresh split + build +
 verify on the merged tree: **EXACT SHA-1
