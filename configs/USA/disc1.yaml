@@ -446,14 +446,22 @@ segments:
       - [0x20210, c, func_8002FA10]
       - [0x202A4, c, func_8002FAA4]
       - [0x202D8, c, func_8002FAD8]
+      # func_8002FE78 — opcode 0x59 tagged field reader, VRAM 0x8002FE78,
+      # size 0x100 (64 words). tag&0xFF<0x17 guards a 23-case switch through
+      # the shared rodata pool table jtbl_80010AC8; sentinel -1000 in $a2,
+      # shared epilogue. era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1 +
+      # MASPSX_DISPATCH_FOLD=jtbl_80010AC8 (profile
+      # era_o2_g0_dispatch_80010ac8). Carve of 202F8.s: prefix 0x380, C
+      # 0x100, resume 20778.s 0x194.
+      - [0x202F8, asm]
+      - [0x20678, c, func_8002FE78]
+      - [0x20778, asm]
       # func_8003010C — opcode 0x59 slot tagged reader, VRAM 0x8003010C,
       # size 0x114 (69 words). idx=(tag&0xFF)-0x29, sltiu 0x5A guards a
       # 90-index switch through the shared rodata pool table jtbl_80010B28;
       # sentinel -1000 in $v1, shared epilogue. era -O2 -G0 +
       # MASPSX_THREE_WORD_SYMBOL_STORE=1 + MASPSX_DISPATCH_FOLD=jtbl_80010B28
-      # (profile era_o2_g0_dispatch_80010b28). Carve of 202F8.s: prefix 0x614,
-      # C 0x114, resume 20A20.s 0x314 to 20D34.
-      - [0x202F8, asm]
+      # (profile era_o2_g0_dispatch_80010b28). Resume 20A20.s 0x314 to 20D34.
       - [0x2090C, c, func_8003010C]
       - [0x20A20, asm]
       # func_80030534 — 2D distance helper, VRAM 0x80030534, size 0x50
