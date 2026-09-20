@@ -323,17 +323,20 @@ to BFRD it; that guest-side media-loop completion is the next frontier.
 result.** The dirent bug is fixed (`agent/menu-exit`): the name is stripped of
 its `buXX:` prefix before the 20-byte copy, so the saved slot carries
 `name[0x12]=0x30`/`name[0x13]=0x41` and state 2's write lands on
-`func_800424B4`'s entry. Story still stays `0x48` because `func_800425DC` is
-entered every frame but an early host `PE_Port_StopEpoch` guard returns before
-`func_80041108` (which runs only 34 times, ending state 12); the menu result
-`[0x8009D010]` is never set, `[0x800A1864]=0`, `[0x800A1840]=0xFFFFFFFF`, and
-injecting a single button press is not enough. Next: instrument the
-`func_800425DC` epoch guards to find which call
-(`func_800405A4(1)`/`func_800405A4(0)`/`func_80041108`) bumps the stop epoch and
-whether the host guard is a false early-out vs a real unported boundary; then
-set `[0x8009D010]`. The recorded `--route-pad` sequence also goes idle over the
-save-menu segment (only the Cross auto-pulse fires), so exit inputs may need
-adding to the route data; (2) the guest-side media-loop completion
+`func_800424B4`'s entry. Story still stays `0x48`: the menu result
+`[0x8009D010]` (written only by `func_800512AC`) is never set,
+`[0x800A1864]=0`, `[0x800A1840]=0xFFFFFFFF`, and a single button press is not
+enough. **The earlier `PE_Port_StopEpoch` hypothesis is DISPROVEN:** I
+instrumented every `func_800425DC` guard over a full 42000-frame present-card
+run and the epoch stays 0 with no bumps, so `func_80041108(1)`/`(0)` are called
+every frame; the card state machine simply reaches state 12 and then idles
+(state 0). Next: trace the post-save close path — state 9's
+`func_8004CC50(0x53,0)` (retail `0x80041C0C`), state 10's
+`func_8004D9D8`/`func_8004CC50`, the `func_8004D030` notice callbacks
+(`0x8009CFFC`), and `func_800512AC` — to find the exact missing step. The
+recorded `--route-pad` sequence also goes idle over the save-menu segment (only
+the Cross auto-pulse fires), so exit inputs may need adding to the route data;
+(2) the guest-side media-loop completion
 after the ~319-step FMV media loop;
 (3) **audio: FMV XA audio is now audible.** `agent/music-keyon` made SPU init
 real (`func_8007D1D4`/`7DAE0`/`7D454`/`7DCAC` in `pe_spu_init.c`; live
