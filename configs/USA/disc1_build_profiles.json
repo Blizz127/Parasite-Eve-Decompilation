@@ -65,6 +65,16 @@
         "MASPSX_FILL_STORE_DELAY_SLOT": "1"
       }
     },
+    "era_o2_g0_fill_indexed_store_delay_slot": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_FILL_INDEXED_STORE_DELAY_SLOT": "1"
+      }
+    },
     "era_o2_g0_three_word": {
       "toolchain": "era",
       "flags": [
@@ -164,7 +174,8 @@
       "func_8006A5BC",
       "func_80085174",
       "func_80089F28",
-      "func_8008AB1C"
+      "func_8008AB1C",
+      "func_8008F4E8"
     ],
     "era_o1_g0_sched2": [
       "func_80052BCC"
@@ -197,6 +208,9 @@
       "func_80084B44",
       "func_80084FC4",
       "func_80085F14"
+    ],
+    "era_o2_g0_fill_indexed_store_delay_slot": [
+      "func_80076B20"
     ],
     "era_o2_g0_three_word": [
       "func_8002F7D8",

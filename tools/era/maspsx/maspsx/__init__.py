@@ -458,6 +458,7 @@ class MaspsxProcessor:
         use_comm_section=False,
         use_comm_for_lcomm=False,
         fill_store_delay_slot=False,
+        fill_indexed_store_delay_slot=False,
         three_word_symbol_store=False,
         passthrough_symbol_load=False,
         dispatch_fold_symbol=None,
@@ -487,6 +488,16 @@ class MaspsxProcessor:
         self.fill_store_delay_slot = (
             fill_store_delay_slot
             or os.environ.get("MASPSX_FILL_STORE_DELAY_SLOT") == "1"
+        )
+        # LOCAL PATCH: fill the return delay slot of a *bare* `j $31` with a
+        # preceding INDEXED symbolic store (`sb/sh/sw $r,SYM($base)`), emitting
+        # `lui $at,%hi / addu $at,$at,$base / j $31 / op $r,%lo($at)`.  This is
+        # distinct from fill_store_delay_slot (absolute `sw $r,SYM` macro):
+        # some ROM leaves (e.g. func_80076B20) keep the indexed store in the
+        # delay slot instead of pre-jr.  Per-leaf opt-in via env; default OFF.
+        self.fill_indexed_store_delay_slot = (
+            fill_indexed_store_delay_slot
+            or os.environ.get("MASPSX_FILL_INDEXED_STORE_DELAY_SLOT") == "1"
         )
         # LOCAL PATCH: the env gate keeps the untracked maspsx.py driver
         # untouched and permits per-leaf selection.
@@ -1204,6 +1215,27 @@ class MaspsxProcessor:
             elif is_addend and r_source:
                 # e.g. sw	$a0,ctlbuf($v0)
                 if (
+                    self.fill_indexed_store_delay_slot
+                    and op in store_mnemonics
+                    and self._next_line_is_return_jump()
+                ):
+                    # LOCAL PATCH: move the indexed symbolic store into the
+                    # bare `j $31` delay slot (ASPSX order:
+                    # lui $at,%hi / addu $at,$at,$b / j $31 / op %lo($at)).
+                    res.extend(
+                        [
+                            "# INDEXED_FILL_STORE_DELAY_SLOT START",
+                            ".set\tnoat",
+                            f"lui\t$at,%hi({operand})",
+                            f"addu\t$at,$at,{r_source}",
+                            "j\t$31",
+                            f"{op}\t{r_dest},%lo({operand})($at)",
+                            ".set\tat",
+                            "# INDEXED_FILL_STORE_DELAY_SLOT END",
+                        ]
+                    )
+                    self.skip_instructions = 1
+                elif (
                     self.addiu_at
                     and op != "la"
                     and (not self.three_word_symbol_store or is_macro)
