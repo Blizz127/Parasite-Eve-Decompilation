@@ -10,6 +10,32 @@
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
 
+## DAY2-159b: production movie frame delivers complete; C89C in bounds (2026-09-19)
+
+**Landed.** The opening FMV now decodes for real; the live wall moved off the
+`func_8010C89C` stub to the `func_80192CE8` media-loop remainder.
+
+- **Root cause (two):** (1) the decomp-port refactor dropped
+  `PE_CdReg_EnableDevice(7u)` from `port_main`, so the production drive model
+  was inert; (2) E0 called `func_8007C214()` directly, publishing a state-2
+  record with an all-zero body without ever running the assembly chain
+  (`data-ready IRQ -> 813E8 -> 7C564 -> arm DMA3 -> 7C214`).
+- **Invariant:** `7C214` is a *complete-frame* publish iff `D_800B89F4` is
+  still set (`7C564` sets it only on the frame's last chunk). Host-only
+  `PE_Movie_LastPublishComplete()` captures it.
+- **Fix:** enable the device; E0 pumps `HostFB_StreamTick()` on the device path
+  (direct `7C214` kept for device-less fixtures); `got_frame` runs the
+  authenticated retail tail (C89C + `7C394` + EC stores) but only for a
+  complete publish, and range-checks the arena/table first.
+- **Test:** `DAY2_movie_production_frame` calls the real `func_801924F8(0)` on
+  Disc 1 `\FMV1\FMV001.STR;1`, asserts pad-exit decode in bounds and the
+  frame-1 input/output hashes; verified to FAIL when the pump is reverted.
+- **Suite:** 1375 run / 1375 passed / 0 failed / 0 skipped.
+- Evidence: `docs/evidence/pe-cd-movie-frame-delivery/REPORT.md`.
+- **Next:** the `func_80192CE8` post-`0x80192E08` media loop (frame upload /
+  multi-frame) is the live frontier. Non-claims: no rendered frame, no pixel
+  golden, runtime 128 unchanged.
+
 ## RECOVERY: integrate the uncommitted decomp-port refactor (2026-09-19)
 
 The working tree carried an **unfinished 09-11/09-12 refactor** that did not

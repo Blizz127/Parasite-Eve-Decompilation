@@ -11,6 +11,12 @@
 #include "psx_compat.h"
 #include "game_port.h"
 #include "pe_sdk.h"
+#include "pe_cdreg.h"
+#include "host_framebuffer.h"
+#include "pe_guest_ram.h"
+
+extern int func_8010C89C(uint32_t a0, pe_addr_t a1, pe_addr_t a2, uint32_t a3);
+extern void func_8007C394(uint32_t sector);
 
 int func_801924F8(int index)
 {
@@ -82,6 +88,7 @@ int func_801924F8(int index)
     func_8010C0D8(0x80191DC8u);
 
     func_8007A214(PE_LoadU32(0x801D0DFCu), 0x40u);
+    PE_Movie_ResetPublishState();
 
     record = PE_LoadU32(0x801D11ACu);
     func_8007C304(1u, (int32_t)(int16_t)PE_LoadU16(record + 6u),
@@ -90,6 +97,9 @@ int func_801924F8(int index)
 cdready_wait:
     do {
         while (func_8007F72C() != 1) {
+            HostFB_StreamTick();
+            if (PE_Port_ShouldStop())
+                return 0;
         }
     } while (func_8007F778() != 0);
 
@@ -114,19 +124,28 @@ cdready_wait:
     if (PE_Port_ShouldStop())
         return 0;
 e0_poll:
-    /* E0: poll the streaming slot table; s0 = 2000 tries.  The
-     * delivery pump fires the DMA-completion callback once per
-     * poll: retail populates streaming slots via DMA-completion
-     * interrupts during this spin (7C214, installed by 81314's
-     * streaming arm), and the port — with no async interrupts —
-     * delivers synchronously instead (the 7ED58 synchronous-reset
-     * precedent).  One completion per poll; E0 takes got_frame on
-     * the first poll, so cadence beyond that is unobservable. */
+    /* E0: poll the streaming slot table; s0 = 2000 tries.  Retail
+     * populates streaming slots asynchronously during this spin: each
+     * data-ready IRQ runs func_8007C564, which assembles one sector,
+     * arms the next DMA3 transfer, and (on the frame's last chunk) sets
+     * D_800B89F4; the last DMA3 completion then runs func_8007C214,
+     * which publishes the record as state 2.  got_frame is therefore
+     * only ever entered with a *complete* frame at the published cursor.
+     *
+     * On a real drive the port advances the modeled CD device one poll
+     * quantum at a time (HostFB_StreamTick -> PE_CdReg_ServiceDevice +
+     * IRQ service), driving that exact retail chain.  Test fixtures that
+     * have no device call func_8007C214 directly (the documented
+     * synchronous-delivery surrogate); that publish is not a last-chunk
+     * delivery, so got_frame keeps the honest decoder boundary. */
     {
         uint32_t s0 = 2000u;
         for (;;) {
             uint32_t left;
-            func_8007C214();
+            if (PE_CdReg_DeviceEnabled())
+                HostFB_StreamTick();
+            else
+                func_8007C214();
             s1 = func_80191B64(0x801D1464u);
             left = s0 - 1u;
             s0 = left;
@@ -144,8 +163,14 @@ e0_poll:
     for (;;) {
         PE_StoreU32(0x801D0DDCu, PE_LoadU32(0x801D0DC4u));
         while (func_8007F72C() != -1) {
+            HostFB_StreamTick();
+            if (PE_Port_ShouldStop())
+                return 0;
         }
         while (func_8007F778() != 0) {
+            HostFB_StreamTick();
+            if (PE_Port_ShouldStop())
+                return 0;
         }
         func_80080D5C(2, 0x801D0DDCu, 0u);
         status = func_80081314(0x801D0DDCu, 480u);
@@ -159,23 +184,55 @@ e0_poll:
 got_frame:
     /* 80192814: s1 nonzero.  The got_frame tail (verified against the
      * authenticated ov133 carve, docs/evidence/pe-mv1c-c89c-map/NOTE.md)
-     * bumps [B0DBC], toggles [146C], loads a1 = [0x801D1464 +
-     * ([146C]^1)<<2], a2 = [0x801D0DF8], and calls the VLC decoder
-     * func_8010C89C(a0 = s1) before 7C394 and the EC stores.
+     * bumps [B0DBC], loads a1 = [0x801D1464 + ([146C]^1)<<2] then
+     * toggles [146C] (first pass loads [0x801D1468]), a2 = [0x801D0DF8],
+     * calls the VLC decoder func_8010C89C(a0 = s1), then func_8007C394
+     * and the EC stores (sb 0,[B0DBD] @801928F8; sh 1,[B0DBC] @80192908).
      *
-     * MV1d landed the decoder itself (func_8010C89C_port.c) as a
-     * transcription proven by its unit vectors + oracle
-     * (pc_port/tools/pe_mv1d_c89c_oracle.py).  It is NOT wired live
-     * into this production tail yet: the decoder's output cursor is
-     * bounded only by the VLC stream's own pad/terminator codes, so a
-     * valid STR video frame terminates in-bounds, but the streaming
-     * pump does not yet deliver a fully MDEC-ready frame at s1 (that is
-     * the Stage-1b STR/MDEC pipeline).  Feeding the decoder the current
-     * partial frame marches a1 past the 2 MiB guest RAM.  Until the
-     * real frame is delivered, the production path stops honestly at
-     * the decoder boundary rather than decoding unvalidated input. */
-    (void)s1;
-    Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+     * The decoder's output cursor is bounded only by the VLC stream's own
+     * pad/terminator codes, so it must only ever see a complete STR frame:
+     * a partial body walks a1 past the 2 MiB guest window (MV1d trap,
+     * docs/evidence/pe-mv1d-c89c/REPORT.md).  The E0 delivery above
+     * guarantees completeness on a real drive; a surrogate publish that
+     * did not come from a last chunk keeps the named boundary instead of
+     * decoding an unpopulated body. */
+    {
+        uint16_t count = PE_LoadU16(0x800B0DBCu);
+        uint32_t flip = (uint32_t)PE_LoadU8(0x801D146Cu) ^ 1u;
+        pe_addr_t out;
+        pe_addr_t table;
+        uint32_t stream = (uint32_t)s1;
+
+        if (!PE_Movie_LastPublishComplete()) {
+            Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8");
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
+        }
+        PE_StoreU16(0x800B0DBCu, (uint16_t)(count + 1u));
+        out = (pe_addr_t)PE_LoadU32(0x801D1464u + flip * 4u);
+        PE_StoreU8(0x801D146Cu, (uint8_t)flip);
+        table = (pe_addr_t)PE_LoadU32(0x801D0DF8u);
+        if (!PE_RangeIsRam((pe_addr_t)stream, 2u) ||
+            !PE_RangeIsRam(out, 0x11000u) ||
+            !PE_RangeIsRam(table, 0x10800u)) {
+            Bootstrap_ReturnVoid("func_8010C89C_arena", "func_801924F8");
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
+        }
+        (void)func_8010C89C(stream, out, table, 0u);
+        if (PE_Port_ShouldStop())
+            return 0;
+        func_8007C394(stream);
+        /* EC stores — twin of movie-player 80121C04 first-frame exit
+         * (DAY2_MOVIE_UPDATER: 23F5=0 / B0DBA++ / B0DBC=1).  Without the
+         * DBA bump, 91FB8's DBA==1 leaves 92934 early-returning 0 and the
+         * post-E08 media loop clears the stream after one frame.  The
+         * 91B64-latched title end-flag 801D0DBD (day2-158r) is cleared
+         * with it, mirroring the player's 223F5=0. */
+        PE_StoreU8(0x800B0DBDu, 0u);
+        PE_StoreU8(0x801D0DBDu, 0u);
+        PE_StoreU8(0x800B0DBAu, (uint8_t)(PE_LoadU8(0x800B0DBAu) + 1u));
+        PE_StoreU16(0x800B0DBCu, 1u);
+    }
     return 0;
 }
