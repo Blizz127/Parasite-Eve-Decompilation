@@ -1188,6 +1188,13 @@ segments:
       # GP-relative halfword table getter: era -O2 -G8.
       - [0x43CCC, c, func_800534CC]
       - [0x43CE4, asm]
+      # wave7-b executed-path leaf func_800536B8 — VRAM 0x800536B8, file
+      # 0x43EB8, size 0x174. era_o2_g8: D_8009D03C (0x2CC), the D_8009D048
+      # pointer (0x2D8) and D_8009D050 (0x2E0) are gp-relative scalars;
+      # D_800BEEAC/D_8009DE64 are absolute incomplete arrays. Home pins $17,
+      # $5, $3, $2 reproduce the stage-1/stage-2 record lookup allocator.
+      - [0x43EB8, c, func_800536B8]
+      - [0x4402C, asm]
       # Decremented record lookup and byte-6 getter: era -O2 -G0.
       - [0x44A1C, c, func_8005421C]
       - [0x44A40, asm]
@@ -1507,6 +1514,14 @@ segments:
       # the jr delay slot.
       - [0x59528, c, func_80068D28]
       - [0x59624, asm]
+      # func_8006A0E8 — VRAM 0x8006A0E8, file 0x5A8E8, size 0x174 (93 words).
+      # wave7-b executed-path leaf: D_800B0CD8 0x200 gate + D_8009D1A0
+      # 0x10/0x20 sub-blocks, 92*D_8009CDDC indexed stores into
+      # D_800BCDE0/DF/C8. era -O2 -G0 + MASPSX_THREE_WORD_SYMBOL_STORE=1
+      # (the indexed `sb` becomes lui at/addu at,at,idx/sb %lo(at)); a local
+      # index variable reassigned before each store both avoids cc1's phantom
+      # 16-byte frame slot and reloads D_8009CDDC like retail.
+      - [0x5A8E8, c, func_8006A0E8]
       # func_8006A25C — game-over destination saver, VRAM 0x8006A25C,
       # file 0x5AA5C, size 0x8C (35 words). era -O2 -G0; shared $a0 base
       # for D_800B0CD8 (local pointer) and the void-return tail order
@@ -2819,7 +2834,13 @@ segments:
       # Phase 5ED: mid-BDF28 hole — sb+ret0 func_800CD960.
       # Prefix 0x238 (= 0xBE160 - 0xBDF28); then CD970/CD978 C stubs
       # (0x10 total), resume BE180.s 0x384 (= 0xBE504 - 0xBE180).
-      - [0xBDF28, asm]
+      # wave7-b executed-path leaf func_800CD728 — VRAM 0x800CD728, file
+      # 0xBDF28, size 0x174. Default era_o2_g0. Calls func_800C22F8 and stores
+      # &D_800E0F6C through the result, then writes ~31 width-typed constants.
+      # The 0x20 literal must live in $a0 (`register int z asm("$4"); z = 0x20;`
+      # as a separate assignment) and the three D_800F33F0/2/4 zero stores must
+      # be issued at the top so the scheduler lands them in retail's slots.
+      - [0xBDF28, c, func_800CD728]
       # Tier-2 W callback: exact-start table entry at 0xD1758. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: BDF28 prefix 0x174, C 0x2C, resume BE0C8.s 0x98.

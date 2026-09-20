@@ -406,7 +406,8 @@
       "func_8006A2E8",
       "func_800906E4",
       "func_80077D30",
-      "func_800409B4"
+      "func_800409B4",
+      "func_8006A0E8"
     ],
     "era_o2_g0_passthrough_load": [
       "func_80076B44",
@@ -488,7 +489,8 @@
       "func_800527C8",
       "func_80017588",
       "func_80050878",
-      "func_8005E788"
+      "func_8005E788",
+      "func_800536B8"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"

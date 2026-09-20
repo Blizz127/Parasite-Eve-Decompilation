@@ -929,6 +929,48 @@
    "status": "PARKED-CODEGEN",
    "note": "func_80059534 (file 0x49D34, size 0x158) equipment-selection commit, era -O2 -G8. Signedness fix (signed char D_800C0E20[]) restores retail's lb/bltz; the two-home `short t = tv;` copy is needed for `addu a1,v1` + func_8005DB44's second arg. Residual is cross-jumping: cc1 merges the D_800C0E20-0x1F74 and D_8009DE64 arms into one shared addu tail (retail has two inline j...;addu sites) and the arm layout/delay slots shift (46 diffs).",
    "evidence": "try_leaf build/wave7a-wip/func_80059534.c 0x49D34 0x158 -O2 -G8: 46 diffs."
+  },
+  {
+   "id": "wave7b-4ED88-func_8005E588-materialised-global-base",
+   "status": "PARKED-CODEGEN",
+   "note": "func_8005E588 (file 0x4ED88, 0x15C, 87 words) menu display-env initializer. Body is byte-exact except the four halfword tail stores: retail `sh $v0,0x6A($s0)` / `-0xE($s0)` / `0x6E($s0)` / `-0xA($s0)` address the materialised `$s0 = &D_800A21F4` with a register offset, while cc1 2.7.2 folds `p + 0x6A` to the symbolic `sh $v0,D_800A21F4+0x6A` macro (`lui $at; sh %lo($at)`), adding 4 extra `lui $at` words (best 8 word diffs, candidate 384 vs retail 356). This is the documented cc1 2.7.2 materialised-base wall (same class as func_8007FCFC/func_80074E28/func_8006CC68/func_80020F18).",
+   "evidence": "try_leaf src/func_8005E588.c 0x4ED88 0x15C (era -O2 -G0): 8 word diffs, all four tail `sh` stores. Tried: plain `char *p` local, `short *p[0x35]`-style indexing, a defined struct type, `register char *p asm(\"$16\")`, and `volatile char *`. In every case the offset-0 store uses `$s0` and the non-zero offsets emit `SYM+off`. Mirror case of the matched func_80068D28, where a dynamic `base[i*0x10+n]` access is what keeps the base in a register.",
+   "next": "Needs the pending maspsx base-register materialisation gate (or a source shape with at least one non-constant offset through the same base)."
+  },
+  {
+   "id": "wave7b-B755C-func_800C6D5C-loop-anchor",
+   "status": "PARKED-CODEGEN",
+   "note": "func_800C6D5C (file 0xB755C, 0x164, 90 words) two back-to-back vertex-offset loops over a caller pointer (12-byte records, then 16-byte records). Semantics complete, but retail's first loop body is anchored at `$a3 = base+0x1B` with offsets -5..0 (payload = base+0x16..0x1B) and cc1 re-bases the same accesses to `base+0x19` (offsets -3..+2), so every loop instruction word differs (best 83 diffs). Retail also carries a second 0xC-stride pointer t2 for the loop-2 base.",
+   "evidence": "try_leaf src/func_800C6D5C.c 0xB755C 0x164 (era -O2 -G0): 83 diffs; the candidate's loop body loads/stores via `$a3 = base+0x19` plus a separate `$t0 = base+0x1B`. Tried char* with -5..0 offsets, a struct with fields at 6..11, and short-pair phrasings.",
+   "next": "Retry with a source shape that makes cc1 anchor the record pointer at the highest payload offset (retail's +0xB / +0xF anchor)."
+  },
+  {
+   "id": "wave7b-43CE4-func_800534E4-compare-chain",
+   "status": "PARKED-CODEGEN",
+   "note": "func_800534E4 (file 0x43CE4, 0x164, 89 words) actor state dispatcher calling func_8005E8C4/EB64/E8A4/F27C/FB74/E914. Retail emits a LINEAR compare chain on `rec[6]` with a dead `j` arm (`blez (c-4)` catches c<=4 before the `bne c,4`), and re-reads `lbu 0x6(s0)` a second time before the func_8005EB64 argument selection. cc1 merges the two unk6 tests, shortens the function to 78 words and reorders the compare tree (best 55 diffs).",
+   "evidence": "try_leaf src/func_800534E4.c 0x43CE4 0x164 (era -O2 -G0): 55 diffs, candidate 78 vs retail 89 words. Tried hoisted `fA` load, combined `(c!=0&&c<8)||c>=0x13` condition, and fresh re-reads.",
+   "next": "Retry if a lever suppresses cc1's cross-jump/merge of the two `rec[6]` tests (or reproduce retail's dead `j` arm with an explicit shared `case`)."
+  },
+  {
+   "id": "wave7b-65244-func_80074A44-switch-alloc",
+   "status": "PARKED-ALLOCATION",
+   "note": "func_80074A44 (file 0x65244, 0x174) switch on `a0 & 7` (cases 0/3 shared, fallthrough to case 5, default) over D_8009574C. Semantics complete; residual is argument-setup order for the func_80071A74 call (retail materialises all three pointers at 0x4C, candidate reuses $s0) and the indexed `lhu %lo(D_800957CC)(v1)` load (candidate folds through `addu`), best 43 diffs.",
+   "evidence": "try_leaf src/func_80074A44.c 0x65244 0x174 (era -O2 -G0): 43 diffs.",
+   "next": "Retry with pinned $s0/$a0..$a2 homes for the shared switch body."
+  },
+  {
+   "id": "wave7b-74CE4-func_800844E4-reloc-hidden-order",
+   "status": "PARKED-CODEGEN",
+   "note": "func_800844E4 (file 0x74CE4, 0x160, 88 words) two-bank display-record arena initializer. A source with `register base asm(\"$16\")`/`register rec asm(\"$4\")`, two empty-asm scheduling fences and a local 0xFF makes try_leaf with MASPSX_FILL_EPILOGUE_DELAY_SLOT=1 report WORDS MATCH, but the LINKED build fails at file 0x74D7C (word 0x98): candidate `lui v0,0x800A` vs retail `lui v0,0x8008` (the func_800847A0 store). try_leaf zeroes every relocation-bearing word, so the whole $at/%hi/%lo function-pointer store block (six D_8009B72x/73x stores plus D_8009B758/748) is invisible to it; only the linked SHA-1 exposes the real scheduling of `func_800847A0`'s address vs the D_800A5B70 base load.",
+   "evidence": "Fresh build_us.sh first-byte diff at 0x74D7C: candidate 0x0A retail 0x08, owner c func_800844E4; SHA-1 61d722b8... not exact. try_leaf reports 0 diffs with the gate. Lesson: relocation-zeroing try_leaf results are not sufficient for leaves whose stores/loads are mostly absolute symbol references — always confirm with the linked build.",
+   "next": "Needs a source shape that keeps the func_800847A0 `la` scheduled before the D_8009B758/748 stores with the retail base load order; verify strictly against asm/disc1/746F8.s, not try_leaf."
+  },
+  {
+   "id": "wave7b-537EC-func_80062FEC-adjacent-load-swap",
+   "status": "PARKED-CODEGEN",
+   "note": "func_80062FEC (file 0x537EC, 0x16C, 91 words) three-loop actor flag refresher. Semantics complete; only residual is one adjacent scheduler swap at the tail: retail emits `lw t0,0x3C(s0)` then `lw a1,0x38(s0)` (the func_80061C34 arg block, load order v0,a0,v1,t0,a1,a2,a3); cc1 emits the $a1 load one slot earlier. ~30 variants (store reordering, temp placement, pin combinations set a0=$4/a1=$5/b1=$2/a2=$6/a3=$7/t0=$8, swapping `func_80062830(s0,a1)`) did not move the pair. Everything else, including the previously-broken `lw v1,0x34` / `or v0,a1,v0` order, is byte-exact.",
+   "evidence": "try_leaf src/func_80062FEC.c 0x537EC 0x16C --flags \"-O2 -G8\": best 2 word diffs (0x120, 0x124).",
+   "next": "Needs the scheduler to prefer t0 before a1 on the last two loads; possibly only reachable with a different cc1 flag."
   }
  ]
 }

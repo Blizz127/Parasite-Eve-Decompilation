@@ -58,6 +58,60 @@ were not attempted.
 **Reusable note:** a **`signed char D_800C0E20[];`** declaration is required
 where retail emits `lb`/`bltz` on the index byte — plain `char` is unsigned
 in this cc1 and silently drops the sign test.
+## WAVE-7 SLICE B (`agent/wave7-b`, 2026-09-20): 902 -> 905, executed-path functions
+
+**Branch `agent/wave7-b`, worktree `/tmp/pe-agent-w15`.** Baseline gate re-run
+first: `scripts/split_us.sh` (host) + `build_us.sh` + `verify_us.sh` (pe-mipsel)
+reported `EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (902 registered C leaves)`, `VERIFY_US=PASS`. Fresh build
+after the carves: same EXACT SHA-1, `Matching claim: YES (905 registered C
+leaves)`, plan `1312 spans = 905 c + 405 asm + 2 rodata`, `VERIFY_US=PASS`.
+
+Landed three executed-path targets (commits `b41ec69b`, `365014dd`):
+
+- `func_8006A0E8` (file 0x5A8E8, 0x174) — D_800B0CD8 0x200 gate plus two
+  D_8009D1A0 sub-blocks writing the `92*D_8009CDDC` slot of the parallel arrays
+  D_800BCDE0/DF/C8. **New profile assignment** `era_o2_g0_three_word`
+  (`-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`). **Two levers:** the gate
+  turns cc1's 4-word indexed symbol store into retail's 3-word
+  `lui at,%hi; addu at,at,idx; sb %lo(sym)(at)`; and a single local index
+  variable **reassigned before each store** (`idx = D_8009CDDC * 0x5C;`) is
+  required — writing `D_800BCDE0[D_8009CDDC*0x5C]` inline makes cc1 reserve a
+  phantom 16-byte stack frame slot (frame 0x30 vs retail 0x20), while the
+  reassigned local keeps `vars=0` and still reloads the global like retail.
+- `func_800536B8` (0x43EB8, 0x174) — era_o2_g8 two-stage record lookup.
+  D_8009D048 is `extern short *` (gp pointer scalar); D_8009D03C/D_8009D050 are
+  gp scalars; D_800BEEAC/D_8009DE64 are incomplete arrays (absolute). Home
+  pins `$17/$5/$3/$2`; the decisive ordering is `t = (void *)(int)v1;` issued
+  BEFORE the 0x100 range test so the copy fills that branch delay slot while
+  `a0 = v1 - 1` still reads `$3`.
+- `func_800CD728` (0xBDF28, 0x174) — era_o2_g0 constant initializer.
+  `register int z asm("$4"); z = 0x20;` as a **separate assignment** (an
+  initializer form is DCE'd) keeps 0x20 in `$a0`; the three `D_800F33F0/2/4 = 0`
+  stores must be issued at the TOP so the scheduler lands them in retail's
+  slots.
+
+**CRITICAL VERIFICATION FINDING:** `tools/analysis/try_leaf.py` zeroes every
+relocation-bearing word in BOTH images, so it CANNOT see the order or target of
+absolute symbol stores/loads (`lui $at,%hi` / `sb|sh|sw %lo($at)` and
+`la $r,SYM`). A `WORDS MATCH` from try_leaf on a leaf whose accesses are mostly
+absolute globals is NOT evidence. `func_800CD728` was first reported green by
+try_leaf while its linked build differed in 6 words (store order); the final
+source was fixed and confirmed by the linked build. `func_800844E4` was parked
+for exactly this: try_leaf green with the epilogue gate, but the linked build
+differs at 0x74D7C (word 0x98). **Always confirm with `build_us.sh`.**
+
+Seven targets were parked with divergence notes in `parked_blockers.json`
+(`wave7b-*` ids): `func_8005E588` (the materialised-global-base wall — retail
+`sh $v0,0x6A($s0)` vs cc1's `SYM+off` macro), `func_800C6D5C` (loop body
+re-anchored from `base+0x1B` to `base+0x19`), `func_800534E4` (cc1 merges the two
+`rec[6]` compare tests and drops retail's dead `j` arm), `func_80074A44`
+(switch-body arg-setup order / indexed load), `func_80079FB4` (div leaf, 80
+diffs), `func_8002156C` (cc1 hoists the D_8009E000/4/8 loop-invariant array
+addresses into callee-saved registers where retail rematerialises `lui at`),
+`func_80073A44` (volatile-stack spin loop matched but the arg0 decision tree
+differs by 8 words), plus `func_80062FEC` (2 diffs, one adjacent t0/a1 load
+swap) and `func_800844E4` (above). Stop condition reached.
 
 ## PARENT STATUS (2026-09-20): 902 matching C leaves; executed-path C-share 42.25%
 
