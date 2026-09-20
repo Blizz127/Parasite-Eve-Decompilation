@@ -5,21 +5,19 @@
 - Production frontier: **none inside `func_80030894` (complete body)**
 - Implemented retail window: **788 / 788 words
   (100.00%)**, `0x80030894..0x800314E4`
-- Linked native translation units: **315**
-  (281 game,
+- Linked native translation units: **337**
+  (297 game,
   9 bootstrap,
-  25 platform, plus the explicit
+  31 platform, plus the explicit
   port entry/global/callback units)
 - `pe_field_runtime` library target: **PRESENT**
-- Native test inventory: **1356** total —
-  **1310** artifact-independent and
-  **46** requiring a legally supplied Disc 1 fixture
-- Public normal/sanitizer requirement: **1310 pass,
-  46 explicitly tagged skips, 0 failures**
-- Private full requirement with Disc 1 configured: **1356 / 1356**
-- Production-reachable semantic-function count: **UNMEASURED** — no
-  authoritative runtime reachability counter exists yet; this must not be
-  replaced by the matching-leaf count.
+- Native test inventory: **1405** total —
+  **1361** artifact-independent and
+  **44** requiring a legally supplied Disc 1 fixture
+- Public normal/sanitizer requirement: **1361 pass,
+  44 explicitly tagged skips, 0 failures**
+- Private full requirement with Disc 1 configured: **1405 / 1405**
+- Executed-path (C-only) reachability, `route` run: **710** guest functions executed, of which **237** (33.38%) are backed by a decompiled C leaf and **473** by a pc_port transcription only; **0** hit an unresolved loud boundary. Guest-function boundary map: **2393** functions. See [`docs/evidence/exec-coverage/REPORT.md`](../evidence/exec-coverage/REPORT.md).
 
 Evidence: [`docs/evidence/pe-b54kb6-30894-l9/REPORT.md`](../evidence/pe-b54kb6-30894-l9/REPORT.md).
 Regenerate/check with `python3 tools/progress/native_metrics.py --write-status`
