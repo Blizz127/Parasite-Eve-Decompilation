@@ -1989,6 +1989,8 @@ segments:
       # Phase 5GV: return-zero stub twin, era -O2 -G0.
       - [0xBAFB0, c, func_800CA7B0]
       - [0xBAFB8, asm]
+      - [0xBB134, c, func_800CA934]
+      - [0xBB238, asm]
       # Phase 5W: C leaf func_800CACD4 — VRAM 0x800CACD4, size 0x8.
       # File span 0xBB4D4–0xBB4DC exclusive. Empty jr/nop stub.
       - [0xBB4D4, c, func_800CACD4]
