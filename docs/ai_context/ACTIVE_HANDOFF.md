@@ -7,6 +7,38 @@
 
 # ACTIVE HANDOFF
 
+## agent/rng-ori (2026-09-20): 60C1C RNG trio retried with MASPSX_EXPAND_LI — 0 landed, 3 parked
+
+Branch `agent/rng-ori` (base `8db69a00`). Baseline re-verified EXACT before and
+after: SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES
+(866 registered C leaves)`, `VERIFY_US=PASS`. No leaf landed; the matching count
+stays **866**. No YAML/profile/build change.
+
+**Verdict: the li gate was necessary but not sufficient.** It removes only the
+scalar `li`→`ori` blocker from the wave4b park note. All three targets are held
+by independent, gate-immune residuals:
+
+- `func_80070D10` (0x61510, 0x5C) — gate + explicit `goto` rotation recover the
+  retail `lui/ori` base and the un-biased 0x40/0x3C offsets, but (a) four
+  constant-offset stores still compile to the `sw $r,SYM+off` → `lui $at; sw`
+  macro instead of `sw $r,off($t0)`, (b) the counter canonicalises to
+  `addiu $5,-1; bne $5,-1` instead of `bnez $5` + decrement-in-delay-slot, and
+  (c) register homes stay a/v-class, not retail's `t0/t3/t4/t5`.
+- `func_80070D6C` (0x6156C, 0x64) — the gate fixes only the two
+  `ori $r,$zero,0x40` cursor wrap words; the t0-t8 register-home /
+  cross-block-scheduling residual from the 2026-08-30 campaign is unchanged.
+- `func_80070DD0` (0x615D0, 0x34) — **handwritten**, parked immediately: it
+  saves `$ra` across `jal func_80070D6C` in caller-saved `$v1` with no stack
+  frame (`or $v1,$zero,$ra` / `or $ra,$zero,$v1`), which no C compiler emits.
+  spimdisasm marks the function and its `sub`/`add` as handwritten.
+
+Evidence: `docs/evidence/rng-ori/REPORT.md` plus the three closest candidate
+sources in that directory. Park records:
+`wave4c-60C1C-func_80070D10-expand-li-insufficient`,
+`wave4c-60C1C-func_80070D6C-expand-li-insufficient`,
+`wave4c-60C1C-func_80070DD0-handwritten`. Next unblocker is a codegen lever for
+base-register constant stores + ASPSX pre-decrement branz, not a flag.
+
 ## PARENT STATUS (2026-09-20): 864 matching C leaves, port green, coverage MEASURED
 
 **Matching decomp: 768 -> 864 (+96) this session**, verified on the merged tree
