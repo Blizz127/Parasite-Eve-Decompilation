@@ -7,14 +7,14 @@
 
 # ACTIVE HANDOFF
 
-## WAVE-4 LEAF SLICE A (2026-09-20): 864 -> 867 matching C leaves
+## WAVE-4 LEAF SLICE A (2026-09-20): 864 -> 868 matching C leaves
 
 **Branch `agent/wave4-a`, worktree `/tmp/pe-agent-w6`.** Baseline gate re-run
 first: `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh` reported
 `EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
 `Matching claim: YES (864 registered C leaves)`, `VERIFY_US=PASS`.
 
-Landed three leaves, confirmed by a fresh complete build in `pe-mipsel`:
+Landed four leaves, confirmed by a fresh complete build in `pe-mipsel`:
 
 - `func_800C6EF8` (B76F8, file 0xB76F8, 0x54) — palette copy into `D_800E2370`.
   era -O2 -G0. Needs (a) a **cc1 phantom 8-byte frame**: retail reserves
@@ -30,10 +30,17 @@ Landed three leaves, confirmed by a fresh complete build in `pe-mipsel`:
   era -O2 -G0. The `*(s0+0x18) = D_8009EED0` store must be the **first** store
   after `func_80042798()` so cc1 hoists `la $a0,D_8009EED0` immediately after
   the call and keeps it live to the closing `func_80071A24`.
+- `func_800409B4` (307CC, file 0x311B4, 0x1CC) — card-subsystem boot init: eight
+  unrolled `func_800726E4` event opens, four bring-up calls, an enable loop, then
+  the `D_800A0ED4[0x418]/[0]` selector clear. Profile
+  **era_o2_g0_three_word** (the indexed clear store needs
+  `MASPSX_THREE_WORD_SYMBOL_STORE=1`); the clear loop must use its **own** index
+  variable so cc1 keeps it in `$v0` instead of reusing the callee-saved enable
+  counter.
 
 Fresh build after the carve: `EXACT SHA-1
-452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (867 registered
-C leaves)`, plan `1263 spans = 867 c + 394 asm + 2 rodata`, `VERIFY_US=PASS`.
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (868 registered
+C leaves)`, plan `1265 spans = 868 c + 395 asm + 2 rodata`, `VERIFY_US=PASS`.
 Evidence under `docs/evidence/wave4-a/`.
 
 Parked (register colouring / scheduling) in `parked_blockers.json`:
