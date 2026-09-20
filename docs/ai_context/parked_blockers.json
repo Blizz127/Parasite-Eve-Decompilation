@@ -653,6 +653,41 @@
    ],
    "evidence": "docs/evidence/bigfish-1d340/REPORT.md (168-block table, 6 regions, field-width map, type_m2c.py)",
    "next": "Do NOT task anyone to carve it. Iterate R1->R6 from func_8001D340_m2c_typed_frame.c; first fix the entry block (word 0x14: m2c uses andi $v1,$s0,0xFF where retail keeps $v0; word 0x28 branch displacement is 8 words short). Colour blocks need hand-unrolled stores with a per-store D_8009CDDC reload because cc1 2.7.2 does not unroll at -O2."
+  },
+  {
+   "id": "wave5a-6C1EC-func_8007B9EC-shared-lui-base",
+   "status": "PARKED-SHARED-LUI-BASE-LIFETIME-COLORING",
+   "note": "func_8007B9EC (file 0x6C1EC, 0xD4, 53 words) unit 6C1EC: CD latch reset. Retail builds D_8009B294 once (lui 0x800A; addiu 0xB294) into $v1 and reuses it for sb zero,2(v1) / lbu v0,2(v1) / sb v0,1(v1) / sb v0,0(v1). A symbolic pointer (`volatile IoCtl7B9EC *p = &D_8009B294`) is folded by cc1 into per-access `lui $at` and never keeps the base; a numeric-address base `(volatile unsigned char *)0x8009B294` DOES keep a single base but materialises it as `lui 0x8009; ori 0xb294` (retail is the symbolic `lui 0x800A; addiu %lo`), hoists it before the spin loop (retail computes it after), and picks $a0 not $v1. Best result -O2 -G0: 9 differing words, all base/register/schedule. No C source shape tested (symbol vs numeric pointer, struct vs array, register asm pin, volatile) reproduced the shared symbolic base at the right program point."
+  },
+  {
+   "id": "wave5a-BA270-func_800C9A70-constant-scheduling",
+   "status": "PARKED-CONTROL-FLOW-CONSTANT-SCHEDULING",
+   "note": "func_800C9A70 (file 0xBA270, 0xCC, 51 words) unit BA270: selector + palette writer, no branches. 16 constant byte/halfword stores to absolute symbols. Retail materialises 0x80 into $a0 immediately after the 0xD9 store and keeps it live across ~20 stores for the two halfword 0x80 writes (D_800E2302, D_800F34C2), while ALSO re-materialising $v1=0x80 for the three byte 0x80 writes (D_800E22F8/9/A). cc1 rematerialises one 0x80 register and reorders, so the six differing words are all constant-load placement. Introducing an explicit `unsigned short c80 = 0x80;` for the halfword pair did not change the result. Best: 6 differing words at -O2 -G0."
+  },
+  {
+   "id": "wave5a-59D94-func_80069594-dual-global-load-interleave",
+   "status": "PARKED-INDEPENDENT-LOAD-SCHEDULING",
+   "note": "func_80069594 (file 0x59D94, 0xCC, 51 words) unit 59528: actor refresh, two 0xB-iteration loops with calls. The second loop's filter has retail loading D_800942E4 (array base) into $v0, D_8009D1A0 into $v1, then addu/andi/lbu with the range subtract scheduled into the flag-branch delay slot. Writing `!(flag & 0x100) || (unsigned)(D_800942E4[off+1]-0x55) < 0x1E` makes cc1 evaluate the flag short-circuit first and reload the array base inside the branch; hoisting the subtract to a local `t` gets the right order but leaves a $v0/$v1 swap and an extra instruction. Best: 23 differing words."
+  },
+  {
+   "id": "wave5a-2E7D8-func_8003DFD8-record-base-selection",
+   "status": "PARKED-CC1-ADDRESS-FORM/SCHEDULE",
+   "note": "func_8003DFD8 (file 0x2E7D8, 0xCC, 51 words) unit 2E7D8: 0x20-byte record copy loop. Retail addresses every field from arg+0x1C with negative offsets (-0x1A..0) plus the +0 base, so one base register per record. cc1 splits the base into arg+0x18 and arg+0x1C (and adds two extra base registers t1/t0), because it re-selects the base per immediate. The phantom 8-byte frame (`int pad[2]; (void)pad;`) and the field order are otherwise exact. Best: 43 differing words, control flow and frame exact."
+  },
+  {
+   "id": "wave5a-4495C-func_8005415C-load-delay-and-value-copy",
+   "status": "PARKED-INDEPENDENT-LOAD-SCHEDULING",
+   "note": "func_8005415C (file 0x4495C, 0xC0, 48 words) unit 43CE4: sprite-descriptor resolver through a live pointer table. Retail keeps the table value in $v1, copies it to $a1 (`addu $a1,$v1,$zero`) before clobbering $v1 with the `sll v1,v1,5` base computation, and places the table `lh` with a trailing load-delay nop. cc1 hoists the sll, omits the copy and re-schedules both chains. -G8 is required and correct (gp count/pointer); aspsx 2.30 does not change it. Best: 34 differing words at -O2 -G8."
+  },
+  {
+   "id": "wave5a-4EF88-func_8005E788-rect-schedule-and-strength-reduction",
+   "status": "PARKED-CC1-SCHEDULE/REGALLOC",
+   "note": "func_8005E788 (file 0x4EF88, 0xC8, 50 words) unit 4EEF0: render-clip setup. Three residuals: (1) the four outgoing rect shorts must be one address-taken object (an array), else cc1 DCEs the un-addressed fields; with the array the stores are correct. (2) retai sets $s0=0xFFF in the `arg0==1` branch delay slot and later strength-reduces the index to `sll $a0,$s0,2; addu`; an `int n=0xFFF` local moves the assignment and shifts the whole tail. (3) the last rect store must fill the `jal` delay slot; maspsx leaves `sh` stores pre-jal (the fill-store gates only cover `sw`/epilogue). Best: 29 differing words."
+  },
+  {
+   "id": "wave5a-5E418-func_8006DC18-loop-invariant-hoist",
+   "status": "PARKED-LICM-AND-STRENGTH-REDUCTION",
+   "note": "func_8006DC18 (file 0x5E418, 0xCC, 51 words) unit 5E418: archive scan loop with func_8006E498 call. Retail hoists all five masks/keys (0x73DECD80 cursor, 0x1FFC00, 0xD0000, 0xFFE00000, 0x20000000) plus arg0 and the D_800B0E64 base into callee-saved $s0-$s6 before the loop, so the loop body is only call + compare + two delay-slot increments. cc1 rematerialises the cheap constants inside the loop and keeps only the cursor/base live. Best: 40 differing words at -O2 -G0."
   }
  ]
 }
