@@ -344,21 +344,39 @@ retail cancel path `func_8004D2DC` (`event & 0x40`) already works, but the
 recorded route lacked the two Circle presses a human makes (the first `0x40` is
 consumed by the slot-list window) and `RoutePadSource`'s periodic auto-Cross
 re-opened/re-confirmed the menu every period. The fix adds the Circle presses to
-`route_rehearsal_pads.h`, a second Cross-suppression window `[38620,42000)` in
-`port_main.c`, and the faithful `func_8004DCA4` -> `func_80054294`/
-`func_8005C488` leg. Verified live: the route now runs to **frame 42000 with
-`stop_reason=frame-limit`** (was stuck inside the menu churn at 38500), the
-`.mcr` holds `BASLUS-006620000000A` (variant/slot at +0x12/+0x13), and no
-`BOOTSTRAP_RET` boundary fires. **But story stays `0x48` / token `A8002048`:**
-`m0020i` is a *separate* blocker — Aya is live there (position moves, D1A0
-toggles) but the recorded pads park her and the M0020I key pickup never fires
-(`func_8004F490`/`func_80015BAC` enter 0 times over 45000 frames), so it needs
-new route input or the unported field contact pass (SEW18). **Extended-run
-finding (parent, 2026-09-20):** raising `--max-frames` to 46000 shows the route
-does not stop at 42000 — it runs on to **~frame 44000**, where a NEW named
-`card operation unresolved call` boundary fires. So the menu fix did clear the
-38500 wall, and the next frontier is that ~44000 card operation (a later
-save/load interaction in the `m0020i` segment) before the M0020I key pickup.
+`route_rehearsal_pads.h`, a second Cross-suppression window now **open ended**
+(`[38620, INT_MAX)`; `agent/menu-exit-parity` @ `2b5d2a8f` merged `3b389c50`
+made it the shared `PeRoutePad_PulseAllowed()` rule so the harness cannot drift,
+and added a guard on the field-menu mode bit), and the faithful `func_8004DCA4`
+-> `func_80054294`/`func_8005C488` leg.
+
+**Correction to the earlier ~44000 frontier:** that `card operation unresolved
+call` stop is an artifact of *bounding* the suppression window at 42000 — the
+recorded tail from 42000 carries explicit pads, so re-enabling the invented
+Cross mash re-enters the file menu. With the window left open the route no
+longer stops there: it runs to **~frame 61500**, where the frontier is the
+unported save/load-menu page `func_8004AD9C` (`func_80043DA4` command 5, see
+its `pages[]` in `pc_port/game/boot/func_800438EC_port.c`). Same room/story
+either way, so the open window is both more faithful and the longer route.
+`docs/evidence/pe-menu-close-parity/REPORT.md`.
+
+**But story stays `0x48` / token `A8002048`:** `m0020i` is a *separate*
+blocker. With the menu closed the field is genuinely alive again — the script
+VM dispatches ~26 opcodes/frame and Aya's position tracks the recorded pads
+(`func_80017018_port.c` is NOT stalled) — yet **no room transition is ever
+requested**: instrumenting the token shows `m0020i` is entered at f=20439 and
+`D_8009D280` never changes again through f=52000, i.e. no `op31`
+(`func_80017BB4`) executes. The concrete gate is Aya's `local[4]`:
+`801A0AE0 OP09_alu subop 0x0B (a==b), a=Aya.local[4], b=3` / `801A0AF8 OP05
+skip-if-zero -> 801A0CC4` guards the block that ends in `801A0BA4 opA7 #=0xC8`
+(item 200) / `801A0BDC opE8 #=0xC8` (pickup dialog). **`opA7` is invoked 0
+times over 52000 frames** and Aya's `local[4]` sits at 1, so the `local[4]==3`
+gate never opens. The room's positional triggers (actors type 4/5/6) loop their
+`op77` rectangle tests; actor 5 reports a hit (`local[4]=1`) for
+f~39000..43000 after the recorded Up input but its condition chain never
+reaches a transition. So `m0020i` needs route input that puts Aya in region 3
+(or the unported field contact pass, SEW18); the M0020I key pickup is real but
+unreached, consistent with `func_8004F490`/`func_80015BAC` entering 0 times.
 **The earlier
 `PE_Port_StopEpoch` hypothesis is DISPROVEN** (every `func_800425DC` guard
 instrumented; the epoch stays 0 over a full present-card 42000-frame run).
