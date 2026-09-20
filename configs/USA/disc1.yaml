@@ -364,6 +364,10 @@ segments:
       # D_800BCFFC = **a0 (byte store of a word load); return 1.
       - [0xAB74, c, func_8001A374]
       - [0xAB90, asm]
+      # func_8001A3FC — VRAM 0x8001A3FC, size 0x40, file 0xABFC-0xAC3C.
+      # D_8009D248 = (char *)((void **)D_8009D2F0)[0x9C/4] + *a0[0]*2;
+      # D_8009D1CC = *a0[1]; return 1.
+      - [0xABFC, c, func_8001A3FC]
       # decomp-continue-4: two result-store wrappers (func_8005401C/52F70
       # result stored through *a0[0]; return 1).
       - [0xAC3C, c, func_8001A43C]
