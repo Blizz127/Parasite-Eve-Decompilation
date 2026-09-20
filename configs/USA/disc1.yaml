@@ -1697,6 +1697,9 @@ segments:
       # func_8008B084 — VRAM 0x8008B084, size 0x44, file 0x7B884-0x7B8C8.
       - [0x7B884, c, func_8008B084]
       - [0x7B8C8, asm]
+      # func_8008B124 — VRAM 0x8008B124, size 0x44, file 0x7B924-0x7B968.
+      - [0x7B924, c, func_8008B124]
+      - [0x7B968, asm]
       - [0x7B9D0, c, func_8008B1D0]
       - [0x7B9FC, asm]
       # Probe: signed-byte state-word setter with paired halfword clear.
