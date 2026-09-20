@@ -462,6 +462,11 @@ segments:
       # era -O2 -G0. Mid-20210 carve: prefix 0xC30, C 0xA0, resume 20EE0.s.
       - [0x20E40, c, func_80030640]
       - [0x20EE0, asm]
+      # func_800339A0 — battle style row selector, VRAM 0x800339A0,
+      # file 0x241A0, size 0x80 (32 words). era -O2 -G8 (gp-relative
+      # small-data: D_8009CE80/84/86 at gp+0x110/0x114/0x116). Tail of
+      # 20EE0.s; C ends exactly at the already-matched func_80033A20.
+      - [0x241A0, c, func_800339A0]
       - [0x24220, c, func_80033A20]
       # Phase 5FS-33A2C: D_8009D244 byte-flag setter, era -O2 -G0.
       - [0x2422C, c, func_80033A2C]
