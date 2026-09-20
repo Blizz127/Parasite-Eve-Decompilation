@@ -210,7 +210,10 @@ segments:
       - [0x9550, asm]
       # Phase 5GL: one-reader call wrapper, era -O2 -G0.
       - [0x9658, c, func_80018E58]
-      - [0x9684, asm]
+      # func_80018E84 — VRAM 0x80018E84, size 0x30, file 0x9684-0x96B4.
+      # Two word-loads stored as halfwords into D_800BD020/D_800BD022; return 1.
+      # era -O1 -G0 + ERA_ASPSX_VER=2.30 (volatile loads keep the wide lw).
+      - [0x9684, c, func_80018E84]
       # Phase 5GM: unsigned-halfword reader wrapper, era -O2 -G0.
       - [0x96B4, c, func_80018EB4]
       # Phase 5GN: unsigned-halfword reader wrapper twin, era -O2 -G0.

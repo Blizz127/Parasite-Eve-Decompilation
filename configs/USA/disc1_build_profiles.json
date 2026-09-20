@@ -28,6 +28,16 @@
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
       }
     },
+    "era_o1_g0_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O1",
+        "-G0"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30"
+      }
+    },
     "era_o2_g0": {
       "toolchain": "era",
       "flags": [
@@ -182,6 +192,9 @@
     ],
     "era_o1_g0_sched2_three_word": [
       "func_8006A674"
+    ],
+    "era_o1_g0_aspsx_230": [
+      "func_80018E84"
     ],
     "era_o2_g0_aspsx_230": [
       "func_80030534",
