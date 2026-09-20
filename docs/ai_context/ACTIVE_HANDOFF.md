@@ -288,14 +288,16 @@ now ported (`agent/save-write`: `func_80042020`/`42170` entries, `func_80040B80`
 0x2000-byte block + CRC-16/CCITT, `func_8003F800`, `func_8005C25C`,
 `func_80040210` + the Shift-JIS formatter, and the BIOS A(19h) strcpy veneer
 `func_80071A14`), so the handler runs: name formatted, block assembled, record
-armed. The route stop is now `card operation unresolved call` at
-`func_80041108` `format_name` (`func_80071A84`) — the card **write** itself is
-not yet wired into `func_80041108` states 3..11. `func_8004FE58` gained a
-guarded "invalidated slot -> row disabled" return so the menu can keep drawing.
-With `PE_CARD=empty` the route instead runs with zero `[STUB:BOOTSTRAP_RET]`
-stops. Story is still `0x48`; wiring the write to the libcard API (and giving
-the card-operation oracle a guest frame for states 4/5/6/11) is the next
-frontier — **no card success is faked**.
+armed. `agent/card-write` then wired `func_80041108` states 3..11 to the libcard
+API (open/write/close/read/erase, plus a new BIOS `B(0x45h)` erase), so the save
+is **actually written**: `build/pe_card1.mcr` holds entry 0 `BASLUS-00662000`
+(state 0x51, size 8192; name at the psx-spx +0x0A offset) and the route reaches
+`stop_reason=frame-limit` with **no unresolved-boundary stop**. `func_8004FE58`
+gained a guarded "invalidated slot -> row disabled" return so the menu can keep
+drawing. With `PE_CARD=empty` the route instead runs with zero
+`[STUB:BOOTSTRAP_RET]` stops. Story is still `0x48` because the slot list keeps
+drawing "Unused File" — the state-2 writer and `func_800424B4` reader use
+different dirent conventions (see open work) — **no card success is faked**.
 
 **Movie/FMV path.** The opening STR frame decodes in-bounds (DAY2-159b), the
 post-E08 media loop is re-landed (DAY2-159c, carve SHA-256 `77218c9c…`), and
@@ -309,13 +311,19 @@ silent hang. **Not a full unlock:** at the stop the guest has issued a closing
 Stop with one sector unread (`reading=0`), so the retail reader has no reason
 to BFRD it; that guest-side media-loop completion is the next frontier.
 
-**Open work / next frontiers.** (1) **wire the card write**: the save-write
-chain is ported (see live-port above), but `func_80041108` states 3..11 do not
-yet call the libcard file API (`func_80072734` open / `func_80072754` read /
-`func_80072774` close), so the save is assembled but never written and the menu
-loops at story `0x48`; the live `format_name` path also needs the card-operation
-oracle to supply a guest frame for states 4/5/6/11 (without it `DAY1_card_operation`
-fails). Then the route can pass `0x48`; (2) the guest-side media-loop completion
+**Open work / next frontiers.** (1) **make the saved file visible to the save
+menu.** The card write is now wired (`agent/card-write`): `func_80041108` states
+3..11 drive the libcard API (open/write/close/read/erase + new BIOS `B(0x45h)`
+erase), the route reaches `stop_reason=frame-limit` with no boundary stop, and
+`build/pe_card1.mcr` really contains entry 0 `BASLUS-00662000` (state 0x51, size
+8192; name at the psx-spx +0x0A offset). But the slot list still draws "Unused
+File", so the menu never leaves and story stays `0x48`: state 2 writes the slot
+entry at `record + dirent[0x13]*0x44 - 0x1128` (retail `0x8004135C`) while the
+menu reads `func_800424B4` = `0x800A0EF0 + card*0x418 + item*0x44` (retail
+`0x80042518`) — the two dirent conventions need reconciling from the retail SDK
+layout, not a guess. The recorded `--route-pad` sequence also goes idle over the
+save-menu segment (only the Cross auto-pulse fires), so exit inputs may need
+adding to the route data; (2) the guest-side media-loop completion
 after the ~319-step FMV media loop;
 (3) **audio: FMV XA audio is now audible.** `agent/music-keyon` made SPU init
 real (`func_8007D1D4`/`7DAE0`/`7D454`/`7DCAC` in `pe_spu_init.c`; live
