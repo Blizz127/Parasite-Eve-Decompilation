@@ -64,6 +64,7 @@ tools/era/maspsx/tests/*
 !tools/era/maspsx/tests/test_three_word_symbol_store.py
 !tools/era/maspsx/tests/test_dispatch_fold.py
 !tools/era/maspsx/tests/test_passthrough_symbol_load.py
+!tools/era/maspsx/tests/test_fill_epilogue_delay_slot.py
 build-port/
 pc_port/build/
 pc_port/build-san/

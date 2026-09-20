@@ -47,6 +47,7 @@ MASPSX_TRACKED=(
     "maspsx/__init__.py"
     "tests/test_fill_store_delay_slot.py"
     "tests/test_three_word_symbol_store.py"
+    "tests/test_fill_epilogue_delay_slot.py"
 )
 
 MASPSX_STAMP="$ERA/maspsx/.maspsx-commit"

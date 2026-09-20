@@ -460,6 +460,7 @@ class MaspsxProcessor:
         fill_store_delay_slot=False,
         fill_indexed_store_delay_slot=False,
         fill_register_store_delay_slot=False,
+        fill_epilogue_delay_slot=False,
         three_word_symbol_store=False,
         passthrough_symbol_load=False,
         dispatch_fold_symbol=None,
@@ -509,6 +510,17 @@ class MaspsxProcessor:
         self.fill_register_store_delay_slot = (
             fill_register_store_delay_slot
             or os.environ.get("MASPSX_FILL_REGISTER_STORE_DELAY_SLOT") == "1"
+        )
+        # LOCAL PATCH: move the epilogue stack restore (`addu/addiu $sp,$sp,N`)
+        # into the delay slot of the immediately following bare `j $31`.  cc1
+        # 2.7.2 emits the restore BEFORE the return jump (it relies on the
+        # assembler's delay-slot scheduler); ASPSX 2.21 hoists it into the slot,
+        # giving `lw $31,.. / lw $sX,.. / j $31 / addiu $sp,$sp,N`.  maspsx
+        # otherwise appends a `nop` slot.  Pure reorder, no address synthesis.
+        # Per-leaf opt-in via env; default OFF.
+        self.fill_epilogue_delay_slot = (
+            fill_epilogue_delay_slot
+            or os.environ.get("MASPSX_FILL_EPILOGUE_DELAY_SLOT") == "1"
         )
         # LOCAL PATCH: the env gate keeps the untracked maspsx.py driver
         # untouched and permits per-leaf selection.
@@ -741,6 +753,10 @@ class MaspsxProcessor:
             op, *rest = line.split()
             return op == "j" and rest == ["$31"]
         return False
+
+    def _is_stack_restore(self, operands: str) -> bool:
+        # LOCAL PATCH helper: `$sp,$sp,<imm>` (epilogue stack deallocation).
+        return re.match(r"^\$sp\s*,\s*\$sp\s*,\s*(0x[0-9A-Fa-f]+|-?\d+)$", operands) is not None
 
     def _uses_gp(self, line: str) -> bool:
         if self.sdata_limit == 0:
@@ -1306,6 +1322,25 @@ class MaspsxProcessor:
         elif op == "move":
             # expand move $2,$16 to addu $2,$16,$zero
             res.append(expand_move(line))
+
+        elif (
+            self.fill_epilogue_delay_slot
+            and op in ("addu", "addiu")
+            and self._is_stack_restore(rest[0])
+            and self._next_line_is_return_jump()
+        ):
+            # LOCAL PATCH: ASPSX hoists the epilogue stack restore into the
+            # delay slot of the return jump; cc1 2.7.2 leaves it pre-jr and
+            # maspsx would otherwise emit a `nop` slot.  Pure reorder.
+            res.extend(
+                [
+                    "# EPILOGUE_FILL_DELAY_SLOT START",
+                    "j\t$31",
+                    line,
+                    "# EPILOGUE_FILL_DELAY_SLOT END",
+                ]
+            )
+            self.skip_instructions = 1
 
         elif op in ("addu", "subu", "sra", "srl", "srr", "sll", "or"):
             # no extra processing required
