@@ -40229,6 +40229,7 @@ int main(void)
     test_DAY2_spu_adpcm16();
     test_DAY2_spu_voice_mix();
     test_DAY2_spu_disabled_silent();
+    test_DAY2_spu_init_keyon();
     test_DAY2_audio_wav_sink();
     test_DAY2_music_consumer();
     test_DAY1_animation_sound_register();

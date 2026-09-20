@@ -46,7 +46,10 @@ void func_8007D054(void)
     int i;
     /* func_8007D074(0): */
     func_80073C94();                        /* ResetCallback */
-    /* func_8007D1D4(0) — SPU hardware init: collapsed no-op */
+    /* func_8007D1D4(0) — SPU hardware init (pe_spu_init.c): clears the
+     * volumes/SPUCNT, programs the transfer address, writes the 24 voice
+     * defaults, pulses KON/KOFF for all voices, then enables SPUCNT. */
+    func_8007D1D4(0);
     /* arg == 0 path: 24 voice-default halfwords 0xC000,
      * 0x8009B3E6 descending to 0x8009B3B8 */
     for (i = 0; i < 24; i++) {
@@ -62,7 +65,9 @@ void func_8007D054(void)
     PE_StoreU32(0x8009B3A8u, 0);
     PE_StoreU32(0x8009B3ACu, 0);
     PE_StoreU32(0x8009B398u, PE_LoadU32(0x8009B46Cu));
-    /* func_8007DAE0(0xD1, D_8009B46C, 0) — SPU register write: collapsed */
+    /* func_8007DAE0(0xD1, D_8009B46C, 0) — SPU register write now reaches
+     * the model (pe_spu_init.c).  reg 0xD1 -> SPU offset 0x1A2. */
+    func_8007DAE0(0xD1, (uint16_t)PE_LoadU32(0x8009B46Cu), 0);
     PE_StoreU32(0x8009B45Cu, 0);
     PE_StoreU32(0x8009B460u, 0);
     PE_StoreU32(0x8009B464u, 0);

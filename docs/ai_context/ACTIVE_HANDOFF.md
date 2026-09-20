@@ -237,19 +237,22 @@ confirm schedules `func_80042020` and the menu loops at story `0x48`;
 an explicit caller-stack ABI. Port these against the libcard file API to
 complete the save and pass `0x48`; (2) the guest-side media-loop completion
 after the ~319-step FMV media loop;
-(3) **audio: the host path now exists but the live route is silent.** Merged
-`agent/audio-spu`: `pe_audio.{c,h}` (NULL / RIFF-WAVE 16-bit 44.1 kHz sink +
-optional `PE_AUDIO_HAVE_LIVE` stub) and `pe_spu.{c,h}` (24-voice mixer: psx-spx
-SPU-ADPCM decode, loop flags/ENDX, pitch counter + linear interp, shift/step
-ADSR, voice/main volumes, SPUCNT gate), fed by `PE_SpuRegister_StoreU16` and
-rendered one vblank per presented frame; `PE_AUDIO_WAV`, `PE_AUDIO_SELFTEST`.
-**Honest limit:** a live 38000-frame Day-1 run writes 328 SPU registers but
-keys **no** voice (`key_ons=0`), so live output is silent — the score/instrument
-key-on path `func_8008A068`/`8AE94`/`8B040` is unported and `func_8007D1D4`/
-`func_8007DAE0` are still no-ops in `pe_libsnd.c`; the selftest tone proves
-decode→mix→sink. Named gaps: gaussian interpolation (linear used), volume
-sweep, noise/pitch-mod/reverb, and XA-ADPCM (CD `CdlModeSM` bit4 boundary
-unchanged). No retail audio golden exists; (4) carve the ranked large functions
+(3) **audio: SPU init is real now, but the retail main EXE never keys a voice
+in gameplay.** `agent/music-keyon` translated `func_8007D1D4` (SPU init),
+`func_8007DAE0` (register write), `func_8007D454` (transfer port) and
+`func_8007DCAC` into `pe_spu_init.c` and wired them into `func_8007D054`.  A
+live 42000-frame run now reports `[SPU] reg_writes=541 key_ons=24 key_offs=24`
+(the SsInit all-voice KON/KOFF reset pulse), up from 0.  **But a full scan of
+`asm/disc1/*.s` finds no other KON (`0x188`/`0x18A`) writer**: the music-start
+consumers `func_8008A068`/`8AE94`/`8B040` drive score/instrument structures
+and call the SDK voice-parameter writers (`func_80087798` etc.), which write
+volume/pitch/ADSR only.  So the live WAV stays **silent** (peak 0) — audible
+music needs XA/CD-DA (CD `CdlModeSM` bit4) or an overlay SPU driver, not the
+main-EXE music path.  Also fixed a real `pe_spu.c` bug: the KON/KOFF high
+halfword walked voices 16..31 (`g_voices[24..31]` OOB); now bounded to 24.
+Evidence: `docs/evidence/pe-music-keyon/REPORT.md`.  Named gaps unchanged:
+gaussian interpolation (linear used), volume sweep, noise/pitch-mod/reverb,
+XA-ADPCM.  No retail audio golden; (4) carve the ranked large functions
 from the worklist. **Disc 2 is
 code-identical:** this session
 re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
