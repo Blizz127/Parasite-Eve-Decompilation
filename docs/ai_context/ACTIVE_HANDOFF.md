@@ -337,26 +337,25 @@ silent hang. **Not a full unlock:** at the stop the guest has issued a closing
 Stop with one sector unread (`reading=0`), so the retail reader has no reason
 to BFRD it; that guest-side media-loop completion is the next frontier.
 
-**Open work / next frontiers.** (1) **`m0020i` after the menu, not the menu
-itself.** The dirent bug is fixed (`agent/menu-exit`): the name is stripped of
-its `buXX:` prefix before the 20-byte copy, so the saved slot carries
-`name[0x12]=0x30`/`name[0x13]=0x41` and state 2's write lands on
-`func_800424B4`'s entry. Then `agent/menu-close` proved the **save-menu exit is
-NOT a port bug but an autopilot input bug**: the retail cancel path works
-end-to-end — `func_8004D2DC` takes its unmodified close branch on a Circle
-*release* (`event & 0x40`) at frame 38640 (`func_8005C1EC(0)` ->
-`func_800512AC(9,0)` -> `[0x8009D010]=UINT32_MAX` -> `func_8005C498` returns
-nonzero -> `PE_FieldMenuFrame` clears the field-menu mode). The old "story stays
-`0x48`" symptom was `port_main.c`'s autopilot auto-Cross pulse
-(`g_frame % period == 3`) re-opening the menu right after Circle closed it;
-suppressing that pulse from frame 38620 onward holds the menu closed to frame
-70000. **The earlier `PE_Port_StopEpoch` hypothesis is DISPROVEN** (every
-`func_800425DC` guard instrumented; the epoch stays 0 over a full present-card
-42000-frame run). **Even with the menu closed the route still sits at token
-`A8002048` / story `0x48` through frame 70000**, so `m0020i` is a *second,
-separate* blocker: trace what the m0020i field script waits on after the menu
-closes. The recorded `--route-pad` sequence also goes idle over the save-menu
-segment (only the Cross auto-pulse fires).
+**Open work / next frontiers.** (1) **`m0020i` field script.** The save flow is
+complete and the Day-1 save menu now CLOSES (merged `agent/menu-close` @
+`a951207e`): the exit was an **autopilot input bug, not a port bug** — the
+retail cancel path `func_8004D2DC` (`event & 0x40`) already works, but the
+recorded route lacked the two Circle presses a human makes (the first `0x40` is
+consumed by the slot-list window) and `RoutePadSource`'s periodic auto-Cross
+re-opened/re-confirmed the menu every period. The fix adds the Circle presses to
+`route_rehearsal_pads.h`, a second Cross-suppression window `[38620,42000)` in
+`port_main.c`, and the faithful `func_8004DCA4` -> `func_80054294`/
+`func_8005C488` leg. Verified live: the route now runs to **frame 42000 with
+`stop_reason=frame-limit`** (was stuck inside the menu churn at 38500), the
+`.mcr` holds `BASLUS-006620000000A` (variant/slot at +0x12/+0x13), and no
+`BOOTSTRAP_RET` boundary fires. **But story stays `0x48` / token `A8002048`:**
+`m0020i` is a *separate* blocker — Aya is live there (position moves, D1A0
+toggles) but the recorded pads park her and the M0020I key pickup never fires
+(`func_8004F490`/`func_80015BAC` enter 0 times over 45000 frames), so it needs
+new route input or the unported field contact pass (SEW18). **The earlier
+`PE_Port_StopEpoch` hypothesis is DISPROVEN** (every `func_800425DC` guard
+instrumented; the epoch stays 0 over a full present-card 42000-frame run).
 **`func_80042264` is NOT this unlock** (`docs/evidence/pe-crc-tail-load-path/REPORT.md`):
 its real entry is `0x80042294` (the ELF symbol names are +0x30 off), it is
 called only from state 7 (`0x80041BE0`), and state 7 is reached only from state
