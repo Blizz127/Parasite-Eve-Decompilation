@@ -177,12 +177,16 @@ memory-card kernel (`agent/card-kernel`: BIOS `B(07h)` DeliverEvent +
 timeout); then a **present 128 KiB memory-card model** (`agent/card-present`:
 `.mcr`-backed header/directory with the psx-spx XOR layout and success events,
 `PE_CARD=empty` for the old path). With the present card the status-machine loop
-is gone and the game opens its **Select Slot save menu**, then stops at the named
-`card operation unresolved call` (`func_800727B4`, libcard `firstfile`). With
-`PE_CARD=empty` the route instead runs to the 42000 frame limit with zero
-`[STUB:BOOTSTRAP_RET]` stops. Either way story stays `0x48`; the libcard file
-API and `func_80041108` post-call states are named boundaries — **no card
-success is faked**.
+is gone and the game renders its real **"Select File to Save"** menu (slots +
+`END`, dressing-room background, `00:00:00` clock; screenshot
+`build/artifacts/select_file_to_save_menu_2026-09-20.png`, git-ignored). The
+libcard file API and `func_80041108` state-2 directory enumeration run; the menu
+callbacks `func_8004D4C4`/`4D298`/`4D690`/`424B4`/`4FEEC`/`4FE58` and
+`func_800434C0` (+`func_8005DD8C`) are ported, and the route stop is now
+`PE_MenuInputCallback` (`func_8004D6D4`). With `PE_CARD=empty` the route instead
+runs to the 42000 frame limit with zero `[STUB:BOOTSTRAP_RET]` stops. Story is
+still `0x48`; menu input/handler is the last named boundary — **no card success
+is faked**.
 
 **Movie/FMV path.** The opening STR frame decodes in-bounds (DAY2-159b), the
 post-E08 media loop is re-landed (DAY2-159c, carve SHA-256 `77218c9c…`), and
@@ -196,13 +200,13 @@ silent hang. **Not a full unlock:** at the stop the guest has issued a closing
 Stop with one sector unread (`reading=0`), so the retail reader has no reason
 to BFRD it; that guest-side media-loop completion is the next frontier.
 
-**Open work / next frontiers.** (1) **supply the PS1 low-memory kernel/menu
-substrate** so the slot-list UI runs: `agent/libcard-file-api` implemented the
-whole psx-spx card file API (open/lseek/read/write/close/format/firstfile/
-nextfile + A0(18h) memcmp) and `func_80041108` state-2 directory enumeration, so
-the route's stop moved past `func_800727B4` to `func_8004D4C4`, whose
-continuations read low memory (address 0 / 0x150) the port does not model. Then
-the menu draw callbacks (`func_800434C0`, `func_8004D6D4`) and states 3..11;
+**Open work / next frontiers.** (1) **`func_8004D6D4`** (slot-list input/
+handler, 169 words, `3DCC4.s`) is the last named boundary in the save-menu path;
+all 22 of its callees are ported except `func_8004D978` (24 words), so it is
+port-able. Note `agent/lowmem-kernel` disproved the earlier "low memory
+(0/0x150)" premise: the whole EXE has only six zero-based accesses, all inside
+`func_800727B4` (already host-replaced), and the menu globals are ordinary
+`$gp`-relative data. After that, `func_80041108` states 3..11;
 (2) the guest-side media-loop completion after the ~319-step FMV media loop;
 (3) **audio: the host path now exists but the live route is silent.** Merged
 `agent/audio-spu`: `pe_audio.{c,h}` (NULL / RIFF-WAVE 16-bit 44.1 kHz sink +
