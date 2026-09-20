@@ -134,6 +134,20 @@ def main() -> int:
 
     print(f"retail   {len(retail):5d} bytes")
     print(f"candidate{len(candidate):5d} bytes")
+    if reloc:
+        # Zeroing the relocation words is what lets a standalone leaf be
+        # compared before the linker resolves symbols, but it also erases the
+        # ORDER and TARGET of every absolute symbol access (`lui $at,%hi(SYM)`
+        # / `sb|sh|sw %lo(SYM)($at)`, `la $r,SYM`). A green result here is
+        # therefore NOT evidence for such a leaf: a wave-7 agent hit exactly
+        # this, with try_leaf reporting a match while the LINKED build differed
+        # in 6 words. Say so loudly rather than let it read as proof.
+        print(
+            f"WARNING  {len(reloc)} relocation word(s) masked: symbol order and "
+            "target are NOT compared. A WORDS MATCH below is not evidence for a "
+            "leaf dominated by absolute symbol accesses — confirm with "
+            "scripts/build_us.sh, which is the only authority."
+        )
     limit = max(len(retail), len(candidate))
     diffs = 0
     for off in range(0, limit, 4):
