@@ -76,5 +76,21 @@ static void test_DAY2_mdec_pixels(void)
     ResetTestState();MdecPixelTables();PE_StoreU32(0x80144000u,0x28000001u);
     PE_StoreU32(0x80144004u,0u);ASSERT(PE_MDEC_BeginDecode(0x80144000u),"MDEC malformed submission");
     ASSERT(!PE_MDEC_ReadPixels(0x80150000u,64u) && PE_Port_ShouldStop() && CountOrderLog("MDEC_unterminated_block")==1 && !PE_LoadU32(0x80150000u),"MDEC malformed block fabricated output");
+    /* Retail C89C end-fills the DecDCTin buffer with 0xFE00 up to GA_VLC_BOUND
+     * (0x8010CB84), so a trailing DecDCTout block that has only end-of-data
+     * left decodes as a zero block rather than a missing-block boundary: the
+     * opening FMV's last DecDCTout drains and the movie completes. */
+    ResetTestState();
+    for(unsigned i=0;i<33u;i++) {
+        PE_StoreU32(0x8010DA0Cu+i*4u,MDECPIX_quant[i]);
+        PE_StoreU32(0x8010DA90u+i*4u,MDECPIX_scale[i]);
+    }
+    func_8010BE3C(0);
+    PE_StoreU32(0x80144000u,0x28000001u);
+    PE_StoreU16(0x80144004u,8u<<10u);PE_StoreU16(0x80144006u,0xFE00u);
+    ASSERT(PE_MDEC_BeginDecode(0x80144000u) && PE_MDEC_ReadPixels(0x80150000u,64u),"MDEC end-of-data first block");
+    ASSERT(PE_MDEC_ReadPixels(0x80150040u,64u) && !PE_Port_ShouldStop() && CountOrderLog("MDEC_missing_block")==0,"MDEC end-of-data trailing block drains");
+    for(unsigned i=0;i<64u;i++) ASSERT(PE_LoadU8(0x80150040u+i)==128u,"MDEC end-of-data trailing block is zero");
+    ASSERT(PE_MDEC_DecodedMacroblocks()==2u,"MDEC end-of-data macroblock count");
     PASS();
 }

@@ -67,7 +67,15 @@ static int MdecBlock(int32_t block[64],const uint8_t quant[64])
     }
     memset(block,0,64u*sizeof(*block));
     while(g_input_pos<g_input_count && g_input[g_input_pos]==0xFE00u) g_input_pos++;
-    if(g_input_pos==g_input_count) return MdecBoundary("MDEC_missing_block",g_input_pos);
+    if(g_input_pos==g_input_count) {
+        /* End of stream, reached at a block boundary after the 0xFE00
+         * end-of-data padding.  Retail keeps producing the macroblocks
+         * DecDCTout asked for, and a block with no remaining data decodes to
+         * zero coefficients, so this is not an error.  Exhaustion in the
+         * middle of a block stays a loud boundary below.
+         * See docs/evidence/fmv-eof/REPORT.md. */
+        MdecIDCT(block);return 1;
+    }
     uint16_t code=g_input[g_input_pos++];unsigned scale=code>>10u,k=0;
     for(;;) {
         int32_t value=MdecSigned(code,10u);
