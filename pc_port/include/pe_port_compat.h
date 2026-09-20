@@ -309,6 +309,18 @@ void func_8006269C(pe_addr_t node);
 void func_80062F3C(uint32_t id);
 void func_80064E90(pe_addr_t node);
 void func_800647D0(pe_addr_t node,int32_t items);
+/* PE-CARD-MENU: func_80041108 state-2 continuations (see
+ * game/boot/func_8004D4C4_port.c). */
+int32_t func_8004D4C4(uint32_t idx,uint32_t items);
+void func_8004D298(uint32_t index);
+void func_8004D690(pe_addr_t node);
+pe_addr_t func_800424B4(uint32_t card,int32_t item);
+void func_8004FEEC(pe_addr_t list);
+int func_8004FE58(pe_addr_t item);
+void func_800434C0(pe_addr_t item);
+pe_addr_t func_8005DD8C(int32_t index);
+extern void func_800622B0(int a0);
+extern int func_800614AC(int a0);
 extern void func_8004B90C(void);
 extern void func_8004B70C(uint32_t a0, uint32_t a1, pe_addr_t a2);
 extern int func_8004BB80(pe_addr_t obj, uint32_t a1);

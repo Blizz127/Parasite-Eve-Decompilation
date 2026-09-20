@@ -61,6 +61,8 @@ set(GAME_SRCS
     game/boot/func_80071A84_port.c
     game/boot/func_80072334_port.c
     game/boot/func_80041108_port.c
+    game/boot/func_8004D4C4_port.c
+    game/boot/func_800434C0_port.c
     game/boot/func_800405A4_port.c
     game/boot/func_80015AF0_port.c
     game/boot/func_80019DB8_port.c
