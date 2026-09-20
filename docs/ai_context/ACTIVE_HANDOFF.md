@@ -182,6 +182,29 @@ non-vacuous real-disc regressions), CTest 11/11, `gen_decomp_ports.py --check
 --allow-orphans` OK.  Only `pc_port/` changed (retail SHA untouched).  See
 `docs/evidence/pe-fmv-media-loop/REPORT.md`.
 
+## M0020I-GATE: the room's only transfer is a door 118 units east of entry (2026-09-20)
+
+Branch `agent/m0020i` from `ec097017`.  `m0020i` (token `0xA8002048`) has
+**exactly one** `op31`: module 4 (actor type 4, serial 5) at package off
+`0x1600` requests `0xA8001148` (`m0012i`) after its `op77` rectangle
+`x[655,851] z[-357,352]`.  Aya enters at `(537,-19)`, but the recorded
+`kDay1RoutePads` walked her **west** immediately, so the baseline token froze
+at `0xA8002048` through frame 80000 (`op31`/`D_8009D280` never moved) — the
+reported symptom.  Fix: two recorded frames `20600:FFDF,21000:FFFF` in
+`pc_port/tests/route_rehearsal_pads.h` walk her east through the door; the
+transfer now fires at **f=20655** and the route ends at `0xA8001148`.
+
+**Still open — story stays `0x48`:** the `local[4]==3` key gate is a separate
+body-contact path.  `local[4]` is Aya's mailbox payload (`op1F`); payload `3`
+is sent only by module 2 (the body's contact script, entry `0x801A1620`) and
+only when `persist[0x18] & 0x200` is set, which the first contact itself sets.
+The port's contact pass creates the body task **once** and never re-arms it
+(live `[CTASK]`/`[CTRET]`), so `opA7` fires 0 times and no key/global24 is
+awarded.  Resolving that needs either a proven re-contact input sequence or a
+look at `func_80036448`/`func_80012774` task re-arm.  Only `pc_port/` + docs
+changed; retail SHA untouched.  Full evidence:
+`docs/evidence/pe-m0020i-gate/REPORT.md`.
+
 ## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
 
 Branch `agent/4ad9c-savepage` from `160137a4`.  The field main-menu handler no

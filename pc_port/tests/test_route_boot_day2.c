@@ -379,6 +379,23 @@ static int TraceSawStory(uint32_t story)
     return -1;
 }
 
+/* m0020i's ONLY room transfer.  The recorded segment enters m0020i from
+ * m0013i at (537,-19) and walks west; the room's module-4 (type-4, serial-5)
+ * 0x77 trigger rectangle is x in [655,851], z in [-357,352], i.e. east of
+ * the entry point, and its opcode 0x31 requests token 0xA8001148 (m0012i).
+ * This finds that token only when it appears AFTER the first m0020i trace
+ * entry, so the earlier m0012i visit (frame ~18000) cannot satisfy it.
+ * Removing the 20600:FFDF / 21000:FFFF pads from kDay1RoutePads makes this
+ * return -1 and the guard below FAIL.  See docs/evidence/pe-m0020i-gate. */
+static int TraceSawTokenAfter(uint32_t token, int after_frame)
+{
+    int i;
+    for (i = 0; i < g_trace_count; i++)
+        if (g_trace[i].token == token && g_trace[i].frames > after_frame)
+            return g_trace[i].frames;
+    return -1;
+}
+
 /*
  * Run the boot spine once and return the stop reason.  The caller owns the
  * trace buffers; this only guarantees deterministic cleanup.
@@ -746,9 +763,19 @@ int main(void)
 
     if (reached == MILESTONE_COUNT) {
         if (GA_TOKEN == 0xA8002048u || TraceSawToken(0xA8002048u) >= 0) {
-            printf("PASS: boot -> Day-1 rooms -> m0020i save/load menu "
-                   "(%d milestones, frames=%d stop=%s)\n",
-                   MILESTONE_COUNT, g_frame, PE_Port_StopReasonName(reason));
+            int m0020i_frame = TraceSawToken(0xA8002048u);
+            int exit_frame = TraceSawTokenAfter(0xA8001148u, m0020i_frame);
+            if (exit_frame < 0) {
+                printf("FAIL: m0020i never took its only room transfer "
+                       "(no token 0xA8001148 after m0020i at frame %d; "
+                       "missing the 20600:FFDF door-walk input)\n",
+                       m0020i_frame);
+                return 1;
+            }
+            printf("PASS: boot -> Day-1 rooms -> m0020i -> room transfer "
+                   "0xA8001148 at f=%d (%d milestones, frames=%d stop=%s)\n",
+                   exit_frame, MILESTONE_COUNT, g_frame,
+                   PE_Port_StopReasonName(reason));
             return 0;
         }
         printf("FAIL: %d milestones reached but did not reach m0020i "

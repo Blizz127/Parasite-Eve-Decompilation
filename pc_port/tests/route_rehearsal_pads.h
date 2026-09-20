@@ -18,14 +18,25 @@
  * (The D_8009D0EC input lock is NOT the cause: a full-run trace reports it 0
  * on every call.)  Measured with the pad/event traces in
  * docs/evidence/pe-save-menu-e7-semantics/REPORT.md.
- * Two sewer suffixes extend the prefix through both hallway victories. */
+ * Two sewer suffixes extend the prefix through both hallway victories.
+ *
+ * m0020i exit (2026-09-20): the recorded m0020i segment walked Aya west from
+ * her entry point (537,-19) and never entered the room's ONLY room-transfer
+ * trigger.  That trigger is module 4 (actor type 4, serial 5): its 0x77
+ * rectangle is x in [655,851], z in [-357,352], and entering it sends 0xFE
+ * to Aya, sets persist[1]=0x14 and runs opcode 0x31 (0x801A1600) to token
+ * 0xA8001148 (m0012i).  The rectangle is 118 map units east of the entry
+ * point, so a short eastward press at m0020i entry walks Aya through the
+ * door.  20600/21000 are those two frames.  See
+ * docs/evidence/pe-m0020i-gate/REPORT.md. */
 #include "route_sewer_pads.h"
 #include "route_second_sewer_pads.h"
 #include "route_sewer_supplies_pads.h"
 static const char kDay1RoutePads[] =
     "8990:FFDF,9140:FFEF,9600:FF7F,10000:FFFF,14000:FF7F,14386:FFFF,"
     "15000:FFDF,17500:FF7F,17580:FFEF,20000:FF7F,20110:FFEF,20350:FF7F,"
-    "20400:FFFF,22500:FFBF,22540:FF7F,22670:FFEF,22730:FFDF,22800:FFEF,"
+    "20400:FFFF,20600:FFDF,21000:FFFF,22500:FFBF,22540:FF7F,22670:FFEF,"
+    "22730:FFDF,22800:FFEF,"
     "23000:FFDF,23010:FFFF,24500:FFBF,24540:FF7F,24548:FFBF,24556:FFDF,"
     "24588:FFBF,24596:FFDF,24652:FFEF,24700:FFFF,26500:FFBF,26520:FFDF,"
     "26585:FFFF,28000:FFDF,28020:FFBF,28395:FF7F,28425:FFFF,30000:FFDF,"
