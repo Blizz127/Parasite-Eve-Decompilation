@@ -764,6 +764,11 @@ void func_8004CFD4(void);
 void func_8004CE28(uint32_t first,uint32_t second);
 void func_80050580(pe_addr_t unused,uint32_t confirmed);
 uint32_t func_80042770(uint32_t index);
+/* func_800404A8 [0x800404A8,0x800405A4): inventory help idle-decay helper
+ * (asm-transcribed, no matching C leaf yet). Returns watchdog>0. */
+uint32_t func_800404A8(void);
+/* func_8003FFBC: 32-bit global getter D_800A1704 (matching decomp leaf). */
+int func_8003FFBC(void);
 uint32_t func_800428C4(void);
 void func_8004DAA4(void);
 int func_80042848(uint32_t index);
