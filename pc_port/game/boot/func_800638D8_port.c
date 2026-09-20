@@ -62,6 +62,9 @@ static void menu_draw_callback(pe_addr_t fn,uint32_t value)
     case 0x80050748u:func_80050748(value);break;
     case 0x8004F838u:func_8004F838(value);break;
     case 0x8004DF74u:func_8004DF74(value);break;
+    case 0x8004D690u:func_8004D690(value);break;
+    case 0x8004FEECu:func_8004FEEC(value);break;
+    case 0x8004FE58u:func_8004FE58(value);break;
     case 0x8004C608u:func_8004C608(value);break;
     case 0x80050F10u:func_80050F10(value);break;
     case 0x80050F64u:func_80050F64(value);break;
@@ -116,6 +119,7 @@ void func_800634D4(pe_addr_t node,pe_addr_t draw,int32_t row,uint32_t dim)
         if (predicate) {
             if (predicate==0x8004FC3Cu) enabled=(uint32_t)func_8004FC3C((int32_t)index++);
             else if (predicate==0x8004FDA4u) enabled=(uint32_t)func_8004FDA4(index++);
+            else if (predicate==0x8004FE58u) enabled=(uint32_t)func_8004FE58((pe_addr_t)index++);
             else {
                 fprintf(stderr,"[MENU] Unported cell predicate %08X index %u\n",predicate,index);
                 Bootstrap_ReturnVoid("PE_MenuCellEnabled","menu cell predicate");

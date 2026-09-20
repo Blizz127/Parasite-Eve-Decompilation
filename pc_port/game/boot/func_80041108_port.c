@@ -133,15 +133,35 @@ static void card_operation(uint32_t index,pe_addr_t frame,const uint32_t *incomi
             PE_StoreU16(record+0x16u,10u);
             func_80062CE4();
             idx=(uint32_t)((int32_t)((record-0x800A0ED4u)*0xC9484E2Bu)>>3);
-            /* func_8004D4C4 builds the slot-list window and needs the PS1
-             * low-memory kernel/menu substrate (address 0 / 0x150) the port
-             * does not model, so the continuation stays an explicit boundary
-             * rather than faulting. */
-            operation_boundary("func_80041108",0x8004D4C4u,idx,0u,0u,0u,1u,0u);
+            /* 0x80041588 jal func_8004D4C4(idx, record+2); the return low
+             * byte is stored at record+5 by the delay slot at 0x80041594.
+             *
+             * The slot-list constructor allocates from the menu node pool
+             * (func_80062F9C's free list at D_8009D158).  The live route has
+             * that pool because boot ran func_80062F9C; the card-operation
+             * oracles replay a recorded execution whose pool state is not
+             * captured, so with an empty pool we keep the recorded named
+             * boundary instead of dereferencing a null free-list head.
+             * (docs/evidence/pe-libcard-file-api/REPORT.md) */
+            if (incoming || PE_LoadU32(0x8009D158u) == 0u) {
+                operation_boundary("func_80041108",0x8004D4C4u,idx,
+                    PE_LoadU8(record+2u),0u,0u,1u,0u);
+                return;
+            }
+            PE_StoreU8(record+5u,
+                (uint8_t)(uint32_t)func_8004D4C4(idx, PE_LoadU8(record+2u)));
             return;
         }
         func_80062CE4();
-        operation_boundary("func_80041108",0x8004D298u,index,0u,0u,0u,1u,0u);
+        /* 0x800415A0 jal func_8004D298(index), then 0x800417AC sets
+         * state=12 and clears D_800A1838 before the epilogue. */
+        if (incoming || PE_LoadU32(0x8009D158u) == 0u) {
+            operation_boundary("func_80041108",0x8004D298u,index,0u,0u,0u,1u,0u);
+            return;
+        }
+        func_8004D298(index);
+        PE_StoreU8(record+1u,12u);
+        PE_StoreU32(0x800A1838u,0u);
         return;
     }
     case 3: {
