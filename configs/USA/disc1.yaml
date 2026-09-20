@@ -924,6 +924,11 @@ segments:
       # gp-relative D_8009D058 bit test (0x2E8($gp)); era -O2 -G8.
       - [0x467E0, c, func_80055FE0]
       - [0x4680C, asm]
+      # func_80057B70 — per-object update/registration dispatcher, VRAM
+      # 0x80057B70, file 0x48370, size 0xA0 (40 words). era -O2 -G8
+      # (D_8009D028 at gp+0x2B8). Mid-4680C carve: prefix 0x1B64,
+      # C 0xA0, ends at func_80057C10.
+      - [0x48370, c, func_80057B70]
       # func_80057C10 — VRAM 0x80057C10, size 0x44, file 0x48410-0x48454.
       - [0x48410, c, func_80057C10]
       - [0x48454, asm]
