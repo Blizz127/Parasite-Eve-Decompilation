@@ -15,10 +15,22 @@ static int32_t list_word(pe_addr_t node,uint32_t offset)
 static void menu_draw_callback(pe_addr_t fn,uint32_t value)
 {
     switch (fn) {
+    case 0x8004BF40u:func_8004BF40();break;
+    case 0x8004FF30u:func_8004FF30(value);break;
+    case 0x8004FFF8u:func_8004FFF8(value);break;
+    case 0x80050D20u:func_80050D20(value);break;
+    case 0x8004FCF8u:func_8004FCF8(value);break;
+    case 0x8004FD68u:func_8004FD68(value);break;
+    case 0x80050B94u:func_80050B94(value);break;
+    case 0x80050BE8u:func_80050BE8(value);break;
+    case 0x8004B970u:func_8004B970();break;
+    case 0x8004BCB4u:func_8004BCB4();break;
+    case 0x8004C520u:func_8004C520();break;
     case 0x8004DA04u:func_8004DA04();break;
     case 0x8004CFD4u:func_8004CFD4();break;
     case 0x8004FDE8u:func_8004FDE8(value);break;
     case 0x80050C08u:func_80050C08((int32_t)value);break;
+    case 0x80050C50u:func_80050C50((int32_t)value);break;
     case 0x8004F644u:func_8004F644();break;
     case 0x8004F798u:func_8004F798();break;
     case 0x8004F7D8u:func_8004F7D8();break;
@@ -71,6 +83,21 @@ static void menu_draw_callback(pe_addr_t fn,uint32_t value)
     case 0x8005010Cu:func_8005010C(value);break;
     case 0x80050178u:func_80050178(value);break;
     case 0x800501C8u:func_800501C8(value);break;
+    /* Field-menu sub-page draws (stored by the func_8004AF3C / B03C / B13C /
+     * B584 constructors).  All are native now except the modal window's own
+     * draw (0x8004B5DC), which is a named boundary. */
+    case 0x8004FF58u:func_8004FF58(value);break;
+    case 0x8004FF80u:func_8004FF80(value);break;
+    case 0x8004B534u:func_8004B534(value);break;
+    case 0x8004B55Cu:func_8004B55C(value);break;
+    case 0x8004B214u:func_8004B214(value);break;   /* equipment window draw */
+    case 0x800504BCu:func_800504BC((int32_t)value);break;
+    case 0x80050438u:func_80050438(value);break;   /* equipment list1 per-cell */
+    /* Per-cell draws the list wrappers pass to func_800638D8 (dispatched here
+     * by func_800634D4's cell loop). */
+    case 0x80050C70u:func_80050C70(value);break;
+    case 0x80050CB4u:func_80050CB4(value);break;
+    case 0x8004B5DCu:func_8004B5DC(value);break;   /* modal window draw */
     default:
         fprintf(stderr,"[MENU] Unported drawing callback %08X\n",fn);
         Bootstrap_ReturnVoid("PE_MenuDrawCallback","menu drawing callback");

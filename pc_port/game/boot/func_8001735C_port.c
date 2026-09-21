@@ -64,6 +64,15 @@
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+static int PeOp77DbgOn(void)
+{
+    static int on = -1;
+    if (on < 0) on = getenv("PE_ROUTE_OP77DBG") != NULL;
+    return on;
+}
 
 #define GA_D_8009D2F0 0x8009D2F0u
 #define GA_D_8009D254 0x8009D254u
@@ -571,6 +580,8 @@ int func_80014DA0(pe_addr_t args)
 {
     unsigned int i;
     int hit;
+    int px = (int)PE_LoadU32(PE_LoadU32(args + 32u));
+    int py = (int)PE_LoadU32(PE_LoadU32(args + 36u));
 
     for (i = 0u; i < 4u; i++) {
         PE_StoreU32(GA_POLY + i * 8u,
@@ -582,5 +593,24 @@ int func_80014DA0(pe_addr_t args)
                         (int)PE_LoadU32(PE_LoadU32(args + 36u)),
                         GA_POLY, 4u);
     PE_StoreU32(PE_LoadU32(args + 40u), (uint32_t)hit);
+    if (PeOp77DbgOn()) {
+        static int32_t prevx, prevy;
+        int32_t vx[4], vy[4];
+        for (i = 0u; i < 4u; i++) {
+            vx[i] = (int32_t)(int16_t)PE_LoadU16(GA_POLY + i * 8u + 2u);
+            vy[i] = (int32_t)(int16_t)PE_LoadU16(GA_POLY + i * 8u + 6u);
+        }
+        fprintf(stderr,
+                "[OP77] pc=%08X px=%d.%04d py=%d.%04d hit=%d "
+                "held=%08X move=(%d,%d) "
+                "v=(%d,%d)(%d,%d)(%d,%d)(%d,%d)\n",
+                (unsigned)PE_LoadU32(0x8009CE00u),
+                px >> 16, (px & 0xFFFF), py >> 16, (py & 0xFFFF), hit,
+                (unsigned)PE_LoadU32(0x8009D26Cu),
+                (px >> 16) - prevx, (py >> 16) - prevy,
+                vx[0], vy[0], vx[1], vy[1], vx[2], vy[2], vx[3], vy[3]);
+        prevx = px >> 16;
+        prevy = py >> 16;
+    }
     return 1;
 }

@@ -701,7 +701,9 @@ int func_8007B010(uint32_t cmdi, pe_addr_t buf)
         /* B144 normal (v0 = 0); the B148 delay slot forces v0 = -1. */
         if (func_80073DE8() != 0u) {
             /* B178 consumes actual acknowledge results until the interrupt
-             * worker returns zero; unresolved diagnostics propagate. */
+             * worker returns zero. The event callbacks are the translated
+             * data-ready leaves, so this poll loop shares the same
+             * dispatcher as 7C13C instead of stopping on an indirect call. */
             uint32_t s1 = PE_CdLoadU8(PE_LoadU32(0x8009B27Cu)) & 3u;
             for (;;) {
                 uint32_t s0 = (uint32_t)func_8007AAB4();
@@ -711,28 +713,21 @@ int func_8007B010(uint32_t cmdi, pe_addr_t buf)
                     break;
                 if ((s0 & 4u) != 0u) {
                     cb = PE_LoadU32(0x8009AFB8u);
-                    if (cb != 0u) {
-                        Bootstrap_ReturnVoid4Indirect(
-                            "func_8007B010_afb8_callback",
-                            "func_8007B010", cb,
-                            (uintptr_t)PE_LoadU8(0x8009B295u),
-                            0x800A3468u, 0u, 0u);
-                        PE_Port_RequestStop(
-                            PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                    if (cb != 0u &&
+                        !PE_Cd_DispatchDataCallback(cb,
+                            (uint32_t)PE_LoadU8(0x8009B295u), 0x800A3468u))
                         return 0;
-                    }
+                    if (PE_Port_ShouldStop()) return 0;
                 }
                 if ((s0 & 2u) == 0u)
                     continue;
                 cb = PE_LoadU32(0x8009AFB4u);
                 if (cb == 0u)
                     continue;
-                Bootstrap_ReturnVoid4Indirect(
-                    "func_8007B010_afb4_callback", "func_8007B010", cb,
-                    (uintptr_t)PE_LoadU8(0x8009B294u), 0x800A3460u,
-                    0u, 0u);
-                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-                return 0;
+                if (!PE_Cd_DispatchDataCallback(cb,
+                        (uint32_t)PE_LoadU8(0x8009B294u), 0x800A3460u))
+                    return 0;
+                if (PE_Port_ShouldStop()) return 0;
             }
             PE_CdStoreU8(PE_LoadU32(0x8009B27Cu), (uint8_t)s1);
         }
@@ -931,30 +926,21 @@ int func_8007B558(uint32_t cmd, uint32_t data, pe_addr_t dst,
                         break;
                     if ((s0b & 4u) != 0u) {
                         cb = PE_LoadU32(0x8009AFB8u);
-                        if (cb != 0u) {
-                            Bootstrap_ReturnVoid4Indirect(
-                                "func_8007B558_afb8_callback",
-                                "func_8007B558", cb,
-                                (uintptr_t)PE_LoadU8(s2 + 1u),
-                                0x800A3468u, 0u, 0u);
-                            PE_Port_RequestStop(
-                                PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                        if (cb != 0u &&
+                            !PE_Cd_DispatchDataCallback(cb,
+                                (uint32_t)PE_LoadU8(s2 + 1u), 0x800A3468u))
                             return 0;
-                        }
+                        if (PE_Port_ShouldStop()) return 0;
                     }
                     if ((s0b & 2u) == 0u)
                         continue;
                     cb = PE_LoadU32(0x8009AFB4u);
                     if (cb == 0u)
                         continue;
-                    Bootstrap_ReturnVoid4Indirect(
-                        "func_8007B558_afb4_callback",
-                        "func_8007B558", cb,
-                        (uintptr_t)PE_LoadU8(s2), 0x800A3460u,
-                        0u, 0u);
-                    PE_Port_RequestStop(
-                        PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-                    return 0;
+                    if (!PE_Cd_DispatchDataCallback(cb,
+                            (uint32_t)PE_LoadU8(s2), 0x800A3460u))
+                        return 0;
+                    if (PE_Port_ShouldStop()) return 0;
                 }
                     PE_CdStoreU8(PE_LoadU32(0x8009B27Cu), (uint8_t)s1b);
                 }

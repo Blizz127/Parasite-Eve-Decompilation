@@ -26,9 +26,9 @@
  * PE-BTL124 takes 35C2C jal 360B4's proven +0x98
  * `and 0xFF7FFFFF` (clear the 1A4AC-this-frame bit) and the
  * 35C34 walk `and 0xEFFFFFFF`. SEW18 adds the full 36448
- * actor-contact pass and 12774 task retirement. 360B4's 6FE14
- * child tail stays deferred. 6C5BC @ 35B24, 661CC @
- * 35B34 stay deferred. PE-BTL120 takes the dest tick at
+ * actor-contact pass and 12774 task retirement. The full 360B4
+ * actor retirement now releases effects and unlinks dead actors. 661CC @
+ * 35B34 restores the projection center after effect updates. PE-BTL120 takes the dest tick at
  * 35AE0: jal 3AF14(actor+0x1B4) when +0x98 bit 0x40 is
  * clear. 3AC90 / 3A6A8 / 6698C / 68014 stay deferred. Not M2.
  *
@@ -486,7 +486,7 @@ static void pe_actor_refresh_model_transform(pe_addr_t actor)
         PE_StoreU32(matrix + 20u + axis * 4u, (uint32_t)g_pe_gte.ir[axis]);
 }
 
-void func_80035558_walk_cut(void)
+static void pe_35558_body(void)
 {
     pe_addr_t actor;
     pe_addr_t fn;
@@ -496,12 +496,19 @@ void func_80035558_walk_cut(void)
     actor = (D_8009D1A0 & 4u) ? 0u : PE_LoadU32(GA_D_8009D20C);
     while (actor != 0u) {
         fn = PE_LoadU32(actor + 0x190u);
-        if (fn == GA_VT_35E04)
+        if (fn == GA_VT_35E04) {
+            PE_M34StackActor(actor);
             func_80035E04(actor);
+            PE_M34StackActor(0u);
+        }
         else if (fn == GA_VT_35C84)
             func_80035C84(actor);
         actor = PE_LoadU32(actor + 4u);
     }
+
+    /* 355C8 skips the whole middle frame body while overlay bit 200 is
+     * set. Actor callbacks have run; final contact/task cleanup still runs. */
+    if (PE_LoadU32(GA_D_800B0CD8)&0x200u) goto final_cleanup;
 
     /* Retail 355E8 updates battle state after actor callbacks and before
      * floor resolution and model projection (damage can change poses). */
@@ -513,13 +520,18 @@ void func_80035558_walk_cut(void)
             func_800299CC_mode_switch_cut();
         else
             func_800299CC_damage_entry_cut();
-    } else if (!(PE_LoadU32(0x800B0CD8u)&0x200u)) {
+    } else {
         PE_FieldMenuFrame();
         if (PE_Port_ShouldStop()) return;
     }
 
+    /* 356D0: small effect-pool movement precedes floor/contact resolution. */
+    (void)func_80069660();
+    if(PE_Port_ShouldStop())return;
+
     /* 356F0: constrain integrated positions before projecting models. */
     if (!(D_8009D1A0 & 4u)) func_8001A9F8_floor_cut();
+    func_8003601C();
     (void)func_80066268();
     /* 35708..3579C: follow Aya, or the first resource-bearing actor
      * during the stage play, using this view's camera limits. */
@@ -578,6 +590,7 @@ void func_80035558_walk_cut(void)
     /* 35B24: keep the actor/weapon package loader moving between maps. */
     (void)func_8006C5BC();
     func_80069594();
+    func_800661CC();
 
     /* ROM 0x80035B44: D1A0&4 skips 1A4AC, 36448, 12774, 360B4. */
     if (D_8009D1A0 & 4u)
@@ -599,6 +612,7 @@ void func_80035558_walk_cut(void)
         }
     }
 
+final_cleanup:
     /* Original 35C10 rechecks the pause flag after animation callbacks. */
     if (D_8009D1A0 & 4u)
         return;
@@ -606,20 +620,22 @@ void func_80035558_walk_cut(void)
     func_80036448();
     func_80012774();
 
-    /*
-     * ROM 0x80035C2C jal 360B4 prefix: lw +0x98 / and
-     * 0xFF7FFFFF / sw. 1A4AC sets bit 0x800000 so a later
-     * walk this frame skips children already ticked; the
-     * clearer must run before the next frame or 0x30 waits
-     * stall. 6FE14 is not this cut.
-     * ROM 0x80035C34 then walks and ands 0xEFFFFFFF.
-     */
+    /* 35C2C retires actors before 35C34 clears the per-frame flag. */
+    func_800360B4();
+    if (PE_Port_ShouldStop()) return;
     actor = PE_LoadU32(GA_D_8009D20C);
     while (actor != 0u) {
         uint32_t flags;
 
-        flags = PE_LoadU32(actor + 0x98u) & ~0x800000u;
+        flags = PE_LoadU32(actor + 0x98u);
         PE_StoreU32(actor + 0x98u, flags & ~0x10000000u);
         actor = PE_LoadU32(actor + 4u);
     }
+}
+
+void func_80035558_walk_cut(void)
+{
+    PE_M34StackField(1);
+    pe_35558_body();
+    PE_M34StackField(0);
 }

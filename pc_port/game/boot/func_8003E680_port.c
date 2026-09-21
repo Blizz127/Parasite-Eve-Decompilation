@@ -11,7 +11,6 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 
-extern unsigned int D_8009D1C4, D_8009D250;
 extern void func_80070D10(void);
 extern unsigned int func_80070D6C(void);
 extern void func_8003E974(void);

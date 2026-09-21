@@ -9,6 +9,8 @@
 #include "pe_irq_delivery.h"
 #include "game_port.h"
 #include "pe_bootstrap.h"
+#include "pe_mdec.h"
+#include "pe_sdk.h"
 
 /* Four controller registers + one result-mailbox word, power-on 0. */
 static uint8_t g_cdreg[PE_CDREG_SIZE];
@@ -27,6 +29,20 @@ static uint8_t g_command_parameters[3];
 static uint8_t g_sector[PE_DISC_RAW_SECTOR],g_data[2340];
 static uint32_t g_data_pos,g_data_size,g_read_cycles,g_target_lba;
 static int g_sector_pending,g_target_pending;
+static int g_in_stream_catchup;
+
+static int CdOutputDmaBusy(void)
+{
+    pe_addr_t reg=PE_LoadU32(0x8009B34Cu);
+    if(reg==0x1F801098u) {
+        PeMdecState st;
+        PE_MDEC_GetState(&st);
+        return (st.dma1_chcr&0x01000000u)!=0;
+    }
+    if(reg && PE_RangeIsRam(reg,4u))
+        return (PE_LoadU32(reg)&0x01000000u)!=0;
+    return 0;
+}
 static uint8_t CdDeviceStatus(void) { return 2u|(g_device.reading?0x20u:0u); }
 static uint32_t CdSectorCycles(void) { return (g_device.mode&0x80u)?225792u:451584u; }
 static void CdClearData(void)
@@ -71,6 +87,16 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
 {
     if(!g_device.enabled || PE_Port_ShouldStop()) return;
     if(PE_Disc_GetActive()!=g_device_disc) {CdDeviceBoundary("CD_device_media_changed",g_command);return;}
+    /* Retry a B0CD0 defer as soon as output DMA is idle, even if an INT1
+     * result is still sitting in the response mailbox. */
+    if(!g_in_stream_catchup && g_sector_pending &&
+       (int16_t)PE_LoadU16(0x800B0CD0u) && PE_LoadU32(0x800A801Cu) &&
+       !CdOutputDmaBusy()) {
+        g_in_stream_catchup=1;
+        func_8007C564();
+        g_in_stream_catchup=0;
+        if(PE_Port_ShouldStop()) return;
+    }
     /* Read cadence is separate from command acknowledgments. A response
      * generated during this service cannot consume the same elapsed time twice. */
     int was_reading=g_device.reading;
@@ -107,7 +133,11 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
                     if(!valid) {response[0]|=1u;response[1]=0x10u;size=2;tag=5;}
                     else {g_target_lba=frame-150u;g_target_pending=1;}
                 } else if(g_command==6u || g_command==27u) {
-                    if(g_device.mode&0x50u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
+                    /* Every read mode is served from the raw sector: mode bit5
+                     * selects the 2048/2340-byte FIFO window and no other mode
+                     * bit (XA select 0x40, double speed 0x80, ignore 0x10)
+                     * changes the bytes the drive hands over. The movie stream
+                     * opens ReadS with mode 0x1E0 (double speed + XA + 2340). */
                     if(g_target_pending) {g_device.next_lba=g_target_lba;g_target_pending=0;}
                     g_device.reading=1;g_read_cycles=CdSectorCycles();
                 } else if(g_command==9u || g_command==21u || g_command==22u) {
@@ -124,18 +154,53 @@ void PE_CdReg_ServiceDevice(uint32_t elapsed_cycles)
             g_device.responses++;
         }
     }
-    if(was_reading && g_device.reading && !g_read_cycles && !g_phase &&
-       !g_response_tag && g_response_pos==g_response_size) {
-        if(g_device.mode&0x50u) {CdDeviceBoundary("CD_device_read_mode",g_device.mode);return;}
-        if(g_sector_pending) {CdDeviceBoundary("CD_device_sector_overrun",g_device.next_lba);return;}
-        if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
-            CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;
+    if(was_reading && g_device.reading && !g_read_cycles) {
+        if(!g_phase && !g_response_tag && g_response_pos==g_response_size) {
+            if(g_sector_pending) {
+                /* DAY2-158 B0CD0 catchup: func_8007C564 defers assembly when
+                 * MDEC output DMA is busy, sets D_800B0CD0, and returns
+                 * without BFRD.  Emitting the next INT1 here was the live-boot
+                 * overrun (catchup-miss).  If output DMA is now idle, retry
+                 * 7C564 so it can BFRD.  Otherwise hold the cadence.  A
+                 * clear unread sector is still an explicit overrun. */
+                if((int16_t)PE_LoadU16(0x800B0CD0u)) {
+                    if(!g_in_stream_catchup && PE_LoadU32(0x800A801Cu) &&
+                       !CdOutputDmaBusy()) {
+                        g_in_stream_catchup=1;
+                        func_8007C564();
+                        g_in_stream_catchup=0;
+                        if(PE_Port_ShouldStop()) return;
+                    }
+                    if(g_sector_pending)
+                        g_read_cycles=CdSectorCycles();
+                    if(g_sector_pending)
+                        ; /* still deferred; do not emit the next sector */
+                    else {
+                        if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
+                            CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;
+                        }
+                        g_device.next_lba++;g_device.sectors++;g_sector_pending=1;g_read_cycles=CdSectorCycles();
+                        {
+                            uint8_t status=CdDeviceStatus();
+                            if(!PE_CdReg_PushResponse(1u,&status,1u)) {CdDeviceBoundary("CD_device_response_queue",1u);return;}
+                            if(g_device.responses<16u) g_device.response_log[g_device.responses]=1u;
+                            g_device.responses++;
+                        }
+                    }
+                } else {
+                    CdDeviceBoundary("CD_device_sector_overrun",g_device.next_lba);return;
+                }
+            } else {
+            if(!PE_Disc_ReadRawSector(g_device_disc,g_device.next_lba,g_sector)) {
+                CdDeviceBoundary("CD_device_sector_read",g_device.next_lba);return;
+            }
+            g_device.next_lba++;g_device.sectors++;g_sector_pending=1;g_read_cycles=CdSectorCycles();
+            uint8_t status=CdDeviceStatus();
+            if(!PE_CdReg_PushResponse(1u,&status,1u)) {CdDeviceBoundary("CD_device_response_queue",1u);return;}
+            if(g_device.responses<16u) g_device.response_log[g_device.responses]=1u;
+            g_device.responses++;
+            }
         }
-        g_device.next_lba++;g_device.sectors++;g_sector_pending=1;g_read_cycles=CdSectorCycles();
-        uint8_t status=CdDeviceStatus();
-        if(!PE_CdReg_PushResponse(1u,&status,1u)) {CdDeviceBoundary("CD_device_response_queue",1u);return;}
-        if(g_device.responses<16u) g_device.response_log[g_device.responses]=1u;
-        g_device.responses++;
     }
     PE_CdReg_ServiceDMA3();
     if(g_response_tag&g_response_mask) PE_IRQ_AssertSources(4u);
@@ -236,7 +301,12 @@ void PE_CdReg_WriteU8(pe_addr_t address, uint8_t value)
     if(g_device.enabled && address==PE_CDREG_BASE+3u && (g_cdreg[0]&3u)==0u) {
         if(value&0x60u) {CdDeviceBoundary("CD_device_buffer_write",value);return;}
         if(!(value&0x80u)) g_data_pos=g_data_size=0;
-        else if(g_data_pos==g_data_size && g_sector_pending) {
+        else if(g_sector_pending) {
+            /* BFRD (want data, bit7) loads the pending sector into the FIFO.
+             * Hardware discards any unread tail of the previous sector when the
+             * request is reasserted, so the stream reader's partial 2060-byte
+             * consumption (12-byte header + 32-byte chunk header + 2016-byte
+             * body of a 2340-byte window) never blocks the next sector. */
             uint32_t offset=(g_device.mode&0x20u)?12u:24u;
             g_data_size=(g_device.mode&0x20u)?2340u:2048u;g_data_pos=0;
             for(unsigned i=0;i<g_data_size;i++) g_data[i]=g_sector[offset+i];

@@ -51,5 +51,37 @@ static void test_DAY2_cd_dma(void)
         PE_CdReg_GetDeviceState(&state);
         ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_dma3_fifo_range")==1 && state.data_remaining==280u && !PE_LoadU32(0x80160000u),"DMA overflow partially transferred");
     }
+    /* Idle B0CD0 pump: busy defer leaves the sector pending; when output
+     * DMA clears, ServiceDevice retries 7C564 instead of overrunning. */
+    ResetTestState();PE_Disc_SetActive(fx.disc);CdDeviceSeed();
+    {
+        uint8_t *raw=fx.img+20u*2352u;
+        for(unsigned i=0;i<2352u;i++) raw[i]=(uint8_t)(i*13u+(i>>8u));
+        for(unsigned i=0;i<32u;i++) raw[24u+i]=0;
+        raw[24]=0x60;raw[25]=1;raw[30]=1;raw[32]=1;
+        ASSERT(PE_CdReg_EnableDevice(7u) && func_8007EC14()==1,"catchup DMA startup");
+        for(unsigned i=0;i<10u && PE_LoadU32(0x8009B574u)!=1u && !PE_Port_ShouldStop();i++) HostFB_VSync(0);
+        PE_StoreU32(0x80140000u,0x00200200u);ASSERT(func_8007FB44(2u,0x80140000u)==1,"catchup Setloc");
+        for(unsigned i=0;i<2048u && PE_LoadU32(0x8009B598u) && !PE_Port_ShouldStop();i++) HostFB_VSync(-1);
+        ASSERT(func_8007FB44(27u,0u)==1,"catchup ReadS");
+        for(unsigned i=0;i<2048u && !PE_LoadU32(0x800A3520u) && !PE_Port_ShouldStop();i++) HostFB_VSync(-1);
+        ASSERT(!PE_Port_ShouldStop() && PE_LoadU32(0x800A3520u)==1u,"catchup sector arrival");
+        PE_StoreU32(0x8009B32Cu,PE_CDREG_BASE);PE_StoreU32(0x8009B334u,PE_CDREG_BASE+2u);
+        PE_StoreU32(0x8009B338u,PE_CDREG_BASE+3u);PE_StoreU32(0x8009B33Cu,PE_CDREG_BUS_CONTROL);
+        PE_StoreU32(0x8009B340u,PE_CDREG_MAILBOX);PE_StoreU32(0x8009B344u,0x1F8010F0u);PE_StoreU32(0x8009B348u,0x1F8010F4u);
+        PE_StoreU32(0x8009B34Cu,0x8013001Cu);PE_StoreU32(0x8013001Cu,0x01000000u);
+        PE_StoreU32(0x8009B35Cu,PE_CDREG_DMA3+8u);
+        PE_StoreU32(0x800C0DC8u,0x80150000u);PE_StoreU32(0x800C20C4u,8u);PE_StoreU32(0x800A801Cu,1u);
+        (void)func_800824F0(0x8007C214u);
+        PE_GPU_WriteDICR(0x00800000u);
+        func_8007C564();
+        ASSERT(!PE_Port_ShouldStop() && PE_LoadU32(0x800B0CD0u)==1u &&
+            PE_LoadU16(0x80150000u)!=3u,"busy defer must set B0CD0 without publishing");
+        PE_StoreU32(0x8013001Cu,0u);
+        PE_CdReg_ServiceDevice(225792u);
+        ASSERT(!PE_Port_ShouldStop(),"idle B0CD0 catchup stopped");
+        ASSERT(PE_LoadU16(0x80150000u)==3u && PE_LoadU32(0x800BE998u)==1u,
+            "idle B0CD0 catchup must assemble the held sector");
+    }
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }

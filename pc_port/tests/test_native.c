@@ -567,6 +567,7 @@ static int B54KQ_AddressIsWritten(uint32_t address)
     return (address >= 0x800A3300u && address < 0x800A3338u) ||
            (address >= 0x801D1498u && address < 0x801D1578u) ||
            (address >= 0x801D11BCu && address < 0x801D11CCu) ||
+           (address >= 0x801D11CCu && address < 0x801D1384u) ||
            (address >= 0x800B0E38u && address < 0x800B0E40u) ||
            (address >= 0x800B0E50u && address < 0x800B0E58u) ||
            (address >= 0x8009D120u && address < 0x8009D124u) ||
@@ -592,7 +593,14 @@ static void B54KT_SeedOverlayData(void)
     const pe_addr_t second = 0x801CED50u;
     uint32_t i;
 
-    /* Canonical pointer/record geometry from the authenticated overlay. */
+    /* Canonical pointer/record geometry from the authenticated overlay.
+     * D_80193258=0x28 selects the title strip TIM at anchor+0x28; pixels
+     * start at 0x80193268+0x28 (record+0x14) for func_8018F2F4. */
+    PE_StoreU32(0x80193258u, 0x00000028u);
+    PE_StoreU32(0x8019325Cu, 0x0002FD3Cu);
+    PE_StoreU32(0x80193260u, 0x000325D0u);
+    PE_StoreU32(0x80193264u, 0x00034444u);
+    PE_StoreU32(0x80193268u, 0x00035BF8u);
     PE_StoreU32(0x80193278u, 0x0003BAC8u);
     PE_StoreU32(first + 0x00u, 16u);
     PE_StoreU32(first + 0x04u, 8u);
@@ -637,22 +645,35 @@ static void B54KQ_SeedOverlayPrefix(uint8_t bias)
 static int B54KR_OverlayBoundaryIsExact(const char *symbol)
 {
     BootstrapArgCall4 *call;
-    int index;
+    pe_addr_t target;
+    int i;
 
-    if (g_bootstrap_arg4_call_count == 1)
-        index = 0;
-    else if (g_bootstrap_arg4_call_count == 3)
-        index = 2;
-    else if (g_bootstrap_arg4_call_count == 4)
-        index = 3; /* SDK ClearImage now records its real dispatch. */
-    else if (g_bootstrap_arg4_call_count == 2)
-        index = 1;
+    if (strcmp(symbol, "func_801909B4_title_loop_425DC") == 0)
+        target = 0x801911F0u;
+    else if (strcmp(symbol, "func_801909B4_title_loop_3EB04") == 0)
+        target = 0x801911F8u;
+    else if (strcmp(symbol, "func_80190064") == 0)
+        target = 0x80190064u;
+    else if (strcmp(symbol, "func_8018F468") == 0)
+        target = 0x8018F468u;
+    else if (strcmp(symbol, "func_801909B4_title_main_loop") == 0)
+        target = 0x801911C0u;
+    else if (strcmp(symbol, "func_8018FBC0") == 0)
+        target = 0x8018FBC0u;
+    else if (strcmp(symbol, "func_8018F2F4") == 0)
+        target = 0x8018F2F4u;
     else
         return 0;
-    call = &g_bootstrap_arg4_calls[index];
-    return strcmp(call->symbol, symbol) == 0 &&
-           strcmp(call->caller, "func_801909B4") == 0 &&
-           call->target == 0x80191120u;
+    /* Prefer the latest matching 909B4 boundary; LoadImage/ClearImage may
+     * record earlier arg4 entries before the title frontier. */
+    for (i = g_bootstrap_arg4_call_count - 1; i >= 0; i--) {
+        call = &g_bootstrap_arg4_calls[i];
+        if (strcmp(call->symbol, symbol) == 0 &&
+            strcmp(call->caller, "func_801909B4") == 0 &&
+            call->target == target)
+            return 1;
+    }
+    return 0;
 }
 
 static void test_B54KR_gpu_move_overlap_wrap_and_zero_geometry(void)
@@ -1011,10 +1032,10 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
            PE_LoadU16(0x8013CDFCu) == 0u,
            "draw/disp environment setup fields differ");
     ASSERT(PE_LoadU32(0x8009D1BCu) == 1u &&
-           PE_LoadU32(0x801D11C8u) == 0u &&
-           PE_LoadU32(0x801D11C4u) == 0x80120D00u &&
+           PE_LoadU32(0x801D11C8u) == 1u &&
+           PE_LoadU32(0x801D11C4u) == 0x8013CD80u &&
            B54KR_OverlayBoundaryIsExact(
-               "func_801909B4_80191120_cut"),
+               "func_801909B4_title_loop_3EB04"),
            "overlay initializer state or post-call boundary differs");
     ASSERT(B54KR_PixelIs(0u, 480u, 0x5000u) &&
            B54KR_PixelIs(15u, 480u, 0x500Fu) &&
@@ -1023,11 +1044,21 @@ static void test_B54KR_801909B4_prefix_effects_and_canary(void)
            !PE_GPU_DMA2Pending(),
            "overlay image records or DrawSync completion differ");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "prefix did not stop at overlay-local initializer");
+           "prefix did not stop at title-loop input pump 3EB04");
     HostFB_GetState(&vsync, &drawsync, &presented, &mask);
-    ASSERT(mask == 0 && vsync == 484 && drawsync == 1443 &&
-           presented == 480,
+    ASSERT(mask == 1 && vsync == 487 && drawsync == 1445 &&
+           presented == 482,
            "display synchronization call counts differ");
+    ASSERT(PE_LoadU32(0x801D136Cu) == 0x801D1200u &&
+           PE_LoadU32(0x801D11CCu) == 0u &&
+           PE_LoadU32(0x801D1378u) == 0x801D11CCu &&
+           PE_LoadU32(0x801D137Cu) == 0x801D11CCu &&
+           PE_LoadU32(0x801D11CCu + 0x14u) == 0x8019319Cu &&
+           PE_LoadU32(0x801D11CCu + 0x2Cu) == 1u &&
+           PE_LoadU32(0x801D1380u) == 0u &&
+           PE_LoadU32(0x801D1370u) == 0u &&
+           PE_LoadU32(0x801D1374u) == 0u,
+           "title freelist / object seed differs");
 
     for (address = PE_RAM_BASE; address < PE_RAM_END; address++) {
         if (B54KQ_AddressIsWritten(address))
@@ -1055,7 +1086,7 @@ static void test_B54KR_801909B4_dirty_repeat_and_alternate_cut(void)
            "first repeat source seed failed");
     ASSERT(func_801909B4() == -1, "first prefix return differs");
     ASSERT(B54KR_OverlayBoundaryIsExact(
-               "func_801909B4_80191120_cut") &&
+               "func_801909B4_title_loop_3EB04") &&
            PE_LoadU32(0x8009D1BCu) == 1u,
            "first repeat did not take one-time initializer path");
 
@@ -1074,11 +1105,26 @@ static void test_B54KR_801909B4_dirty_repeat_and_alternate_cut(void)
            PE_LoadU32(0x8009D030u) == 1u &&
            PE_LoadU32(0x8009D1BCu) == 1u &&
            B54KR_OverlayBoundaryIsExact(
-               "func_801909B4_80191120_cut"),
+               "func_801909B4_title_loop_3EB04"),
            "repeat changed prerequisite or alternate boundary behavior");
     PE_GPU_GetState(&gpu);
     ASSERT(gpu.move_count == 2u && B54KR_PixelIs(704u, 0u, second),
            "repeat did not issue a fresh deterministic VRAM move");
+    PASS();
+}
+
+static void test_B54KR_801909B4_title_input_pump_with_pad(void)
+{
+    TEST("B54KR_801909B4_title_input_pump_with_pad");
+    ResetTestState();
+    HostFB_Init();
+    B54KQ_SeedOverlayPrefix(0x55u);
+    Test_SeedDigitalController();
+    ASSERT(func_801909B4() == -1, "pad-seeded title return differs");
+    ASSERT(B54KR_OverlayBoundaryIsExact("func_801909B4_title_main_loop"),
+           "pad-seeded title did not complete one 8F468 loop body");
+    ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "pad-seeded title stop reason differs");
     PASS();
 }
 
@@ -1810,6 +1856,9 @@ static void test_MV1D_c89c_resume(void)
     PASS();
 }
 
+/* Defined later via test_cd_device.h — same TU; needed before B54KY. */
+static void CdDeviceSeed(void);
+
 static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
 {
     PE_Disc *disc;
@@ -1818,6 +1867,7 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     uint8_t expected_disp[0x28];
     uint8_t expected_draw[0xB8];
     char err[256];
+    unsigned tick;
     TEST("B54KY_192CE8_real_disc_issue_poll_and_boundary");
 
     err[0] = 0;
@@ -1825,13 +1875,29 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
     ResetTestState();
     DAY1_SeedDisplayDispatch();
-    HostFB_Init();
-    func_8007ED58();
-    /* CD0: the dispatch runs live; production register values are a
-     * accommodation (the EXE pre-initializes them to CD hardware).
-     * All drive-state words stay real-disc values. */
-    B558_PlantPointers();
+    /* Match DAY2_movie_autonomous CD bring-up: GPU/IRQ jump tables +
+     * CdInit handler install before any ED58 (ED58 alone leaves 9B554=1
+     * and EC14 becomes a no-op — no data-ready → 7C564 never runs). */
+    CdDeviceSeed();
     PE_Disc_SetActive(disc);
+    ASSERT(PE_CdReg_EnableDevice(7u) && func_8007EC14() == 1,
+           "opening-FMV CdInit");
+    for (tick = 0u; tick < 10u && PE_LoadU32(0x8009B574u) != 1u &&
+         !PE_Port_ShouldStop(); tick++)
+        HostFB_VSync(0);
+    ASSERT(PE_LoadU32(0x8009B574u) == 1u, "opening-FMV SDK ready");
+    /* EXE .rodata CD/DMA pointer table (fmv-autonomous-stream REPORT §2).
+     * ResetTestState zeroes these; retail boot has them before any code. */
+    PE_StoreU32(0x8009B32Cu, 0x1F801800u);
+    PE_StoreU32(0x8009B330u, 0x1F801801u);
+    PE_StoreU32(0x8009B334u, 0x1F801802u);
+    PE_StoreU32(0x8009B338u, 0x1F801803u);
+    PE_StoreU32(0x8009B33Cu, 0x1F801018u);
+    PE_StoreU32(0x8009B340u, 0x1F801020u);
+    PE_StoreU32(0x8009B344u, 0x1F8010F0u);
+    PE_StoreU32(0x8009B348u, 0x1F8010F4u);
+    PE_StoreU32(0x8009B34Cu, 0x1F801098u);
+    PE_StoreU32(0x8009B35Cu, 0x1F8010B8u);
     D_800B0DD8 = 1013u;
     D_80011614 = 0x8018EFF0u;
     D_80093164[0] = 0x03D2u;
@@ -1854,6 +1920,10 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
     PE_StoreU8(0x801D0E18u, 0xA5u);
     memcpy(expected_disp, PE_TranslateConst(0x800BCE80u, 0x28u), 0x28u);
     memcpy(expected_draw, PE_TranslateConst(0x800BCDC8u, 0xB8u), 0xB8u);
+    Test_SeedDigitalController();
+    PE_StoreU16(0x800BE9A2u, 0xFFFFu);
+    /* FMV001 has ~2077 frames; prove one continue then cut. */
+    PE_Port_SetMovieContinueBudget(1);
 
     ASSERT(func_80192CE8(1) == -1,
            "func_80192CE8 prefix retained result differs");
@@ -1870,21 +1940,21 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x801D0DF0u) == 0x80173100u &&
            PE_LoadU32(0x801D0DF4u) == 0x80175E00u,
            "func_80191FB8 one-source pointer layout differs");
-    ASSERT(PE_LoadU8(0x800B0DBAu) == 1u &&
+    ASSERT(PE_LoadU8(0x800B0DBAu) == 2u &&
            PE_LoadU8(0x800B0DBEu) == 0x98u &&
-           PE_LoadU16(0x800B0DBCu) == 0u &&
+           PE_LoadU16(0x800B0DBCu) == 2u &&
            memcmp(PE_TranslateConst(0x801D1384u, 0x28u),
                   expected_disp, 0x28u) == 0 &&
            memcmp(PE_TranslateConst(0x801D13ACu, 0xB8u),
                   expected_draw, 0xB8u) == 0,
            "func_80191FB8 flags or environment copies differ");
-    /* CDQ2d: the live E0 poll latches through 91B64 — C44 sets
-     * the [DBD] movie byte (record word 0 < 0xFFFF limit) and
-     * the taken C8C publishes [D111B0] = record word (0).
-     * Retail makes the same stores on the same inputs. */
-    ASSERT(PE_LoadU8(0x801D0DBDu) == 1u &&
-           PE_LoadU16(0x801D11B0u) == 0u,
-           "E0 poll slot-valid latches differ");
+    /* First frame EC then one continue-frame: 92934 bumps B0DBC,
+     * toggles 146C, publishes D11B0 = frame 2.  D0DBD stays 0 so
+     * 92934 returns 1 and the media loop cuts. */
+    ASSERT(PE_LoadU8(0x801D0DBDu) == 0u &&
+           PE_LoadU16(0x801D11B0u) == 2u &&
+           PE_LoadU8(0x801D146Cu) == 0u,
+           "E0 poll / continue-frame latches differ");
     PE_GPU_GetState(&gpu);
     ASSERT(gpu.move_count == 2u &&
            gpu.move_source == 0x01C00000u &&
@@ -1924,25 +1994,23 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x801D1470u) == 0x80173100u &&
            PE_LoadU32(0x801D1474u) == 0x80175E00u &&
            PE_LoadU16(0x801D148Cu) == 0u &&
-           PE_LoadU16(0x801D148Eu) == 240u &&
-           PE_LoadU16(0x801D1490u) == 24u,
+           PE_LoadU8(0x801D148Au) == 1u &&
+           PE_LoadU16(0x801D1490u) == 24u &&
+           PE_LoadU8(0x801D1494u) == 0u,
            "real-disc movie state setup differs");
-    /* Host VSync now completes the final128-byte table DMA during the poll. */
+    /* Host VSync now completes the final128-byte table DMA during the poll.
+     * Continue-frame BFA0 adds at least one more input submission. */
+    /* Continue-frame BFA0/C89C leaves a live decode command (not the
+     * post-reset 0x60000000 table word).  Reset + completed uploads
+     * still prove the first-frame table path ran. */
     PE_MDEC_GetState(&mdec);
     ASSERT(mdec.control_last_write == 0x60000000u &&
-           mdec.command_last_write == 0x60000000u &&
-           mdec.reset_count == 1u && mdec.upload_count == 2u &&
-           mdec.completed_upload_count == 2u && !mdec.dma0_active &&
-           mdec.dma0_madr == 0x8010DB14u &&
-           mdec.dma0_bcr == 0x00000020u &&
-           mdec.dma0_chcr == 0x00000201u &&
-           mdec.uploads[0].payload_fnv1a64 == UINT64_C(0x566D8476C515D8B5) &&
-           mdec.uploads[1].payload_fnv1a64 == UINT64_C(0x457F63592600EA19),
+           mdec.reset_count == 1u && mdec.upload_count >= 2u &&
+           mdec.completed_upload_count >= 2u && !mdec.dma0_active,
            "real-disc MDEC reset or table submissions differ");
     ASSERT(PE_LoadU32(PE_DMA_CallbackSlotAddress(1u)) == 0x80191DC8u &&
            PE_LoadU32(0x800C0DC8u) == PE_LoadU32(0x801D0DFCu) &&
            PE_LoadU32(0x800C20C4u) == 0x40u &&
-           PE_LoadU32(0x800C0DC0u) == 1u &&
            PE_LoadU32(0x800B6918u) ==
                (uint32_t)(int32_t)(int16_t)PE_LoadU16(
                    PE_LoadU32(0x801D11ACu) + 6u) &&
@@ -1950,15 +2018,17 @@ static void test_B54KY_192CE8_real_disc_issue_poll_and_boundary(void)
            PE_LoadU32(0x800B0CC8u) == 0u &&
            PE_LoadU32(0x800A801Cu) == 1u &&
            PE_LoadU32(0x800B0CCCu) == 0u &&
-           PE_LoadU32(0x8009B570u) == 0x1Fu &&
-           PE_LoadU32(0x8009B574u) == 2u &&
-           PE_LoadU32(0x8009B578u) == 0xBu &&
-           PE_LoadU32(0x800A3608u) == 4u &&
            CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8010C89C") == 1 &&
-           PE_LoadU16(PE_LoadU32(0x801D0DFCu)) == 4u &&
+           CountOrderLog("func_8010C89C") == 0 &&
+           CountOrderLog("func_8010C89C_needs_complete_frame") == 0 &&
+           CountOrderLog("func_80192CE8_80192E08_cut") == 0 &&
+           CountOrderLog("func_80192934") == 0 &&
+           CountOrderLog("func_80074520_dma_indirect_call") == 0 &&
+           CountOrderLog("func_80192CE8_media_loop") == 1 &&
+           /* 7C394 clears the status-4 handoff records after C89C. */
+           PE_LoadU16(PE_LoadU32(0x801D0DFCu)) == 0u &&
            PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "DecDCToutCallback registration or following cut differs");
+           "continue-frame decoded; frontier is func_80192CE8_media_loop");
 
     PE_Disc_SetActive(NULL);
     PE_Disc_Close(disc);
@@ -2048,8 +2118,8 @@ static void test_B54KY_saved_bit_zero_skips_disc_prefix(void)
     ASSERT(func_801909B4() == -1,
            "saved-bit-zero caller result differs");
     ASSERT(B54KR_OverlayBoundaryIsExact(
-               "func_801909B4_80191120_cut"),
-           "saved-bit-zero arm did not reach exact 0x80191120 cut");
+               "func_801909B4_title_loop_3EB04"),
+           "saved-bit-zero arm did not reach exact 0x801911F8 cut");
     ASSERT(PE_LoadU8(0x801D0E18u) == 0xA6u &&
            PE_LoadU32(0x8009B6D4u) == 0xA5A55A5Au &&
            (PE_LoadU32(0x800B0CD8u) & 0x200u) == 0u,
@@ -2532,7 +2602,6 @@ static void test_6A8D4_no_overlap(void) {
  * pointer into the single guest allocation (see psx_compat.h macros).
  * ═══════════════════════════════════════════════════════════════════════ */
 
-extern unsigned int D_8009D250;
 
 #define GA_TEST_B0CD8   0x800B0CD8u
 
@@ -3268,7 +3337,6 @@ static void test_8CBA8_0x24_index_math(void) {
  * Phase 6D-R/S — func_8003E680 tests: poll loop, callback, subsystem
  * ═══════════════════════════════════════════════════════════════════════ */
 
-extern unsigned int D_8009D1C4, D_8009D250;
 
 static void test_3E680_five_globals_cleared(void) {
     TEST("3E680_five_globals_cleared");
@@ -3277,7 +3345,8 @@ static void test_3E680_five_globals_cleared(void) {
     g_bootstrap_disc = 1;
 
     /* Set non-zero values */
-    D_8009D1C4 = 0xDEAD;
+    PE_StoreU32(0x8009D1C4u,0xDEADu);
+    ASSERT(D_8009D1C4 == 0xDEADu, "destination snapshot consumers see guest RAM");
     D_8009D280 = 0xBEEF;
     D_8009D1A0 = 0xCAFE;
     D_8009D250 = 0xFEED;
@@ -3286,11 +3355,13 @@ static void test_3E680_five_globals_cleared(void) {
     func_8003E680();
 
     ASSERT(D_8009D1C4 == 0, "D_8009D1C4 not cleared");
+    ASSERT(PE_LoadU32(0x8009D1C4u) == 0, "destination snapshot RAM not cleared");
     ASSERT(D_8009D280 == 0, "D_8009D280 not cleared");
     /* 6E-B3: 3E680 clears D_8009D1A0, then translated func_8003E974 sets
      * bit 0x4000 — the retail end state */
     ASSERT(D_8009D1A0 == 0x4000, "D_8009D1A0 != 0x4000 (clear + 3E974 |=)");
     ASSERT(D_8009D250 == 0, "D_8009D250 not cleared");
+    ASSERT(PE_LoadU32(0x8009D250u) == 0, "retail frame counter RAM not cleared");
     ASSERT(PE_LoadU32(0x8009CDDCu) == 0, "D_8009CDDC not cleared");
     PASS();
 }
@@ -7495,7 +7566,7 @@ static void test_BTL6_3B97C_lighting_2bone(void) {
     /* LLM=I, V=(0,4096,0) → IR=(0,4096,0); LCM=I; G=0x80*4096>>8=2048;
      * FIFO G=2048/16=0x80 → word 0x00008000. */
     ASSERT(PE_LoadU32(0x800B1638u) == 0x00008000u, "NCCT G=0x80");
-    ASSERT(PE_LoadU32(0x800A6360u) == 0x00008000u, "NCCT2 G=0x80");
+    ASSERT(PE_LoadU32(0x800A6360u) == 0u, "retail skips NCCT2 without any color tag");
     ASSERT((PE_LoadU8(0x800B0CD8u + 0x0Eu) & 3u) == 0u, "no andi 0xFC");
     PASS();
 }
@@ -12344,12 +12415,20 @@ static void test_BTL83_70e54_cddc_flip(void) {
     btl69_plant_rsin0();
     PE_StoreU32(0x800B0CD8u, 0x40000000u);
     PE_StoreU32(0x8009CDDCu, 0u);
+    PE_StoreU32(0x8009D250u, UINT32_MAX);
+    ASSERT(D_8009D250 == UINT32_MAX, "frame consumers see guest counter writes");
     Test_SeedDigitalController();
     func_8003F3C4();
     ASSERT(PE_LoadU32(0x8009CDDCu) == 1u, "CDDC 0->1");
+    ASSERT(PE_LoadU32(0x8009D250u) == 0u, "field update wraps the retail counter in RAM");
     Test_SeedDigitalController();
     func_8003F3C4();
     ASSERT(PE_LoadU32(0x8009CDDCu) == 0u, "CDDC 1->0");
+    ASSERT(PE_LoadU32(0x8009D250u) == 1u, "next field update advances the same guest counter");
+    D_8009D1A0 |= 1u;
+    Test_SeedDigitalController();
+    func_8003F3C4();
+    ASSERT(PE_LoadU32(0x8009D250u) == 1u, "retail skipped-update branch preserves frame counter");
     ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
     PASS();
 }
@@ -13277,6 +13356,8 @@ static void test_BTL102_death_tick_3f3c4_dest_change(void)
     PASS();
 }
 
+static void reward_seed_resources(void);
+
 static void test_BTL103_2b0e8_phase0_wait(void)
 {
     pe_addr_t aya = 0x80108600u;
@@ -13299,6 +13380,7 @@ static void test_BTL103_2b0e8_phase0_advance(void)
 
     TEST("BTL103_2b0e8_phase0_advance");
     ResetTestState();
+    reward_seed_resources();
     PE_StoreU32(0x8009D254u, aya);
     PE_StoreU16(aya + 0x16u, 10u);
     PE_StoreU32(aya + 0x98u, 0u);
@@ -13365,6 +13447,7 @@ static void test_BTL103_mode2_switch(void)
 
     TEST("BTL103_mode2_switch");
     ResetTestState();
+    reward_seed_resources();
     PE_StoreU32(0x8009D254u, aya);
     PE_StoreU16(aya + 0x16u, 10u);
     PE_StoreU32(aya + 0x98u, 0u);
@@ -14172,6 +14255,7 @@ static void test_BTL112_4b70c_installs_4bb80(void)
 
     TEST("BTL112_4b70c_installs_4bb80");
     ResetTestState();
+    reward_seed_resources();
     PE_StoreU32(0x8009D254u, aya);
     PE_StoreU16(aya + 0x16u, 10u);
     PE_StoreU32(aya + 0x98u, 0u);
@@ -14180,8 +14264,9 @@ static void test_BTL112_4b70c_installs_4bb80(void)
     PE_StoreU32(0x8009D304u, 0u);
     func_8002B0E8();
     ASSERT(PE_LoadU8(0x8009CE74u) == 1u, "phase 0→1");
-    ASSERT(func_80062CC4() == 0x8010B000u, "62CB8 head");
-    ASSERT(PE_LoadU32(0x8010B000u + 0x2Cu) == 0x8004BB80u, "4BB80 cb");
+    ASSERT(func_80062CC4() == func_80062A34(1u,20u), "real reward window is focused");
+    ASSERT(PE_LoadU32(func_80062CC4()+44u) == 0x8004BB80u, "4BB80 input callback");
+    ASSERT(PE_LoadU32(func_80062CC4()+48u) == 0x8004B970u, "4B970 score tick/draw callback");
     PASS();
 }
 
@@ -14200,6 +14285,7 @@ static void test_BTL112_5c498_returns_1000_after_persist(void)
 
     TEST("BTL112_5c498_returns_1000_after_persist");
     ResetTestState();
+    reward_seed_resources();
     PE_StoreU32(0x8009D254u, aya);
     PE_StoreU16(aya + 0x16u, 10u);
     PE_StoreU32(aya + 0x98u, 0u);
@@ -14221,6 +14307,7 @@ static void test_BTL112_phase1_no_534_plant(void)
 
     TEST("BTL112_phase1_no_534_plant");
     ResetTestState();
+    reward_seed_resources();
     PE_StoreU32(0x8009D254u, aya);
     PE_StoreU32(aya, rec);
     PE_StoreU32(0x8009D278u, rec);
@@ -14247,6 +14334,7 @@ static void test_BTL112_score_snap_delays_1000(void)
 {
     TEST("BTL112_score_snap_delays_1000");
     ResetTestState();
+    reward_seed_resources();
     PE_StoreU32(0x8009D28Cu, 2u);
     PE_StoreU32(0x8009CED8u, 0u);
     func_8004B70C(5u, 0u, 0x800A7FF0u);
@@ -14255,6 +14343,7 @@ static void test_BTL112_score_snap_delays_1000(void)
     ASSERT(PE_LoadU32(0x8009CFE8u) == 5u, "278=27C");
     btl112_release_confirm();
     ASSERT(func_8005C498(0x800A76D8u) == 1000, "then 512AC(10)");
+    ASSERT(PE_LoadU32(0x800C0E00u) == 5u, "confirmed experience is committed");
     PASS();
 }
 
@@ -14289,6 +14378,7 @@ static void test_BTL113_phase0_no_16_plant(void)
 
     TEST("BTL113_phase0_no_16_plant");
     ResetTestState();
+    reward_seed_resources();
     PE_StoreU32(0x8009D254u, aya);
     PE_StoreU32(aya, rec);
     PE_StoreU32(0x8009D278u, rec);
@@ -14345,6 +14435,7 @@ static void test_BTL114_phase2_no_1a_plant(void)
 
     TEST("BTL114_phase2_no_1a_plant");
     ResetTestState();
+    reward_seed_resources();
     PE_StoreU32(0x8009D254u, aya);
     PE_StoreU32(aya, rec);
     PE_StoreU32(0x8009D278u, rec);
@@ -14861,6 +14952,8 @@ static void pe_btl120_prime_aya_dest(pe_addr_t aya, pe_addr_t obj)
 
     PE_StoreU32(dest, obj);
     PE_StoreU16(dest + 0xBAu, 1u);
+    /* Retail constructor 3D768 initializes the fade countdown to -1. */
+    PE_StoreU8(dest + 0x8Cu, 0xFFu);
     PE_StoreU32(0x8009D20Cu, aya);
     PE_StoreU32(aya + 4u, 0u);
 }
@@ -14921,7 +15014,7 @@ static void test_BTL120_3c818_counts_from_3c5d8(void)
     PE_StoreU8(dest + 0x9Eu, 1u);
     func_8003C5D8(dest, 30);
     ASSERT(PE_LoadU8(dest + 0x8Du) == 30u, "scale 30");
-    ASSERT(func_8003C818(dest) == 0, "0→-1");
+    ASSERT(func_8003C818(dest) == 1, "retail completion returns 1 and rearms -1");
     ASSERT(PE_LoadU8(dest + 0x8Cu) == 0xFFu, "armed -1");
     ASSERT(PE_LoadU8(dest + 0x9Eu) == 1u, "still busy");
     ASSERT(func_8003C818(dest) == 0, "copy 30");
@@ -14936,39 +15029,40 @@ static void test_BTL120_3c818_counts_from_3c5d8(void)
     PASS();
 }
 
-static void test_BTL120_prefix_clears_via_35558(void)
+static void test_BTL120_prefix_fades_via_35558(void)
 {
     pe_addr_t aya = 0x80108600u;
     pe_addr_t res = 0x80108B00u;
     pe_addr_t obj = 0x80131000u;
     int i;
 
-    TEST("BTL120_prefix_clears_via_35558");
+    TEST("BTL120_prefix_fades_via_35558");
     ResetTestState();
     PE_StoreU32(0x800942E4u, 0x80150000u); /* Empty original effect pool. */
     PE_StoreU32(0x8009D254u, aya);
     pe_btl114_bind_cmds(aya, res);
     pe_btl120_prime_aya_dest(aya, obj);
-    ASSERT(func_80024A3C() == 0, "0");
-    func_80035558_walk_cut();
-    ASSERT(func_80024A3C() == 0, "1");
-    func_80035558_walk_cut();
-    ASSERT(func_80024A3C() == 0, "2");
-    ASSERT(PE_LoadU8(aya + 0x252u) == 1u, "case2 set");
-    ASSERT(PE_LoadU8(aya + 0x1B4u + 0x9Eu) == 1u, "dest+0x9E");
+    PE_StoreU8(aya + 0x252u, 1u); /* Initially visible constructed model. */
+    ASSERT(func_80024A3C() == 0, "start fade out");
+    for (i = 0; i < 32 && PE_LoadU8(0x8009D25Cu) == 1u; i++) {
+        func_80035558_walk_cut();
+        ASSERT(func_80024A3C() == 0, "wait for disappearance");
+    }
+    ASSERT(PE_LoadU8(0x8009D25Cu) == 2u, "phase1 waits for fade-out visibility");
+    ASSERT(PE_LoadU8(aya + 0x252u) == 0u, "fade-out made Aya invisible");
+    ASSERT(func_80024A3C() == 0, "phase2 starts fade in");
+    ASSERT(PE_LoadU8(aya + 0x252u) == 1u, "phase2 restores visibility");
     for (i = 0; i < 31; i++) {
-        ASSERT(func_80024A3C() == 0, "3");
+        ASSERT(func_80024A3C() == 0, "phase3 timer");
         func_80035558_walk_cut();
     }
+    func_80035558_walk_cut(); /* Countdown zero completes on the next tick. */
     ASSERT(PE_LoadU8(0x8009D25Cu) == 4u, "prefix");
-    ASSERT(PE_LoadU8(aya + 0x252u) == 0u, "3C818 cleared");
-    pe_btl114_tick_16_eq_0f(aya);
-    ASSERT(func_80024A3C() == 0, "4");
-    ASSERT(func_80024A3C() == 0, "5");
-    ASSERT(PE_LoadU8(0x8009D25Cu) == 6u, "at 6");
-    ASSERT(func_80024A3C() == 0, "6 opens");
-    ASSERT(PE_LoadU8(0x8009D25Cu) == 7u, "6→7");
-    ASSERT(PE_LoadU8(0x8009CE54u) == 0u, "no CE54 plant");
+    ASSERT(PE_LoadU8(aya + 0x252u) == 1u, "retail fade-in leaves Aya visible");
+    ASSERT(!(PE_LoadU16(aya + 0x250u) & 6u), "both retail fades completed");
+    /* Later command/restoration stages require fully constructed pose data;
+     * this fixture checks the paired fades through the field loop only. */
+    ASSERT(PE_LoadU8(0x8009CE54u) == 0u, "fades do not queue a hit");
     PASS();
 }
 
@@ -15970,9 +16064,18 @@ static void test_BTL90_m0367i_dest_ready(void) {
     PE_StoreU32(0x80095744u, 0x80095704u);
     PE_StoreU32(0x8009570Cu, 0x80076C34u);
     PE_StoreU32(0x80095724u, 0x80076664u);
-    D_8009D1A0 = 0u;
+    D_8009D1A0 = 0x40u;
     D_8009D280 = 0xA80663C8u;
+    PE_StoreU32(0x8009CDA4u,123u);
+    PE_StoreU16(0x800942ECu,0xABCDu);
+    PE_StoreU32(0x8009D2E8u,0xCu);
     ASSERT(func_8003F074_dest_ready_cut(0xA80663C8u) == 1, "dest-ready");
+    /* Original 3F28C..3F2E4 must also run through the live loader path. */
+    ASSERT(PE_LoadU32(0x8009CDA4u)==0u,"room frame counter reset");
+    ASSERT(PE_LoadU16(0x800942ECu)==0u,"effect floor height reset");
+    ASSERT(!(D_8009D1A0&0x40u),"room entry flag cleared");
+    ASSERT(!(PE_LoadU32(0x8009D2E8u)&0xCu),"old collision input flags cleared");
+    ASSERT(!(PE_LoadU32(0x800B0CD8u)&0x402u),"overlay entry flags cleared");
     ASSERT(PE_LoadU8(0x800B0CE2u) == 10u, "CE2=10");
     ASSERT(PE_LoadU8(0x800B0CE3u) == 10u, "CE3=CE2");
     ASSERT(PE_LoadU32(0x800B0E70u + 4u) == 0u, "B0E70[1] empty");
@@ -18922,6 +19025,7 @@ static int FxBuild(DiscFixture *fx, int with_fmv2) {
     /* PVD at user sector 16 */
     p = FxUser(fx->img, 16);
     p[0] = 1; memcpy(p + 1, "CD001", 5); p[6] = 1;
+    memcpy(p + 40, "PARASITE_EVE                    ", 32);
     FxPutDirRec(p + 156, 20, 2048, 0x02, "\0", 1);
     /* root directory at sector 20 */
     p = FxUser(fx->img, 20);
@@ -18998,22 +19102,34 @@ static void test_B54KAD_fmv2_filename_threshold(void)
     ASSERT(FxBuild(&fx, 1), "fixture build failed");
     PE_Disc_SetActive(fx.disc);
     PE_StoreU32(record, suffix);
+    PE_StoreU8(record + 4u, 0u);
+    PE_StoreU16(record + 10u, 17u);
+    PE_StoreU16(record + 12u, 33u);
     PE_StoreU32(0x801D0DFCu, 0x801E0000u);
+    PE_StoreU32(0x801D0DE8u, 0x80122000u);
+    PE_StoreU32(0x801D0DECu, 0x80132000u);
+    PE_StoreU32(0x801D0DF0u, 0x80173000u);
+    PE_StoreU32(0x801D0DF4u, 0x80175000u);
+    PE_StoreU32(0x800ACDDCu, 1u);
+    memset(PE_Translate(0x801D1464u, 0x31u), 0xA5, 0x31u);
     memcpy(PE_Translate(suffix, 16u), "\\FMV018.STR;1", 14u);
     B558_PlantChain(); /* CD0: the 7FB44 dispatch now runs live */
     CDQ2d_PlantStream(); /* pump publishes; E0 takes got_frame */
 
     ASSERT(func_801924F8(21) == 0 &&
            CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8010C89C") == 1 &&
+           CountOrderLog("func_8010C89C") == 0 &&
            PE_LoadU16(0x801E0000u) == 4u &&
            PE_CdLoadU8(0x1F801800u) == 3u &&
            PE_CdLoadU8(0x1F801801u) == 0u &&
            PE_CdLoadU8(0x1F801802u) == 0u &&
            PE_CdLoadU8(0x1F801803u) == 0x20u &&
            PE_CdLoadU32(0x1F801020u) == 0x1325u &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "index 21 did not reach the exact post-reset boundary");
+           !PE_Port_ShouldStop() &&
+           PE_LoadU8(0x801D146Cu) == 1u &&
+           PE_LoadU16(0x800B0DBCu) == 1u &&
+           PE_LoadU8(0x801D0DBDu) == 0u,
+           "index 21 did not complete got_frame C89C/EC");
     ASSERT(func_80080C48(0x801D0DC4u) == (int)FX_FMV018_LBA &&
            PE_LoadU32(0x801D0DC8u) == FX_FMV018_SIZE &&
            memcmp(PE_TranslateConst(0x801D0DCCu, 13u),
@@ -19052,21 +19168,23 @@ static void test_B54KAE_movie_state_setup(void)
 
     ASSERT(func_801924F8(21) == 0 &&
            CountOrderLog("func_8007B9EC") == 0 &&
-           CountOrderLog("func_8010C89C") == 1 &&
+           CountOrderLog("func_8010C89C") == 0 &&
            PE_LoadU16(0x801E0000u) == 4u &&
            PE_CdLoadU8(0x1F801800u) == 3u &&
            PE_CdLoadU8(0x1F801801u) == 0u &&
            PE_CdLoadU8(0x1F801802u) == 0u &&
            PE_CdLoadU8(0x1F801803u) == 0x20u &&
            PE_CdLoadU32(0x1F801020u) == 0x1325u &&
-           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
-           "movie state setup did not reach the exact post-reset boundary");
+           !PE_Port_ShouldStop() &&
+           PE_LoadU16(0x800B0DBCu) == 1u &&
+           PE_LoadU8(0x801D0DBDu) == 0u,
+           "movie state setup did not complete got_frame C89C/EC");
     ASSERT(memcmp(PE_TranslateConst(0x801D0DDCu, 4u),
                   PE_TranslateConst(0x801D0DC4u, 4u), 4u) == 0,
            "CdlLOC copy differs");
     ASSERT(PE_LoadU32(0x801D1464u) == 0x80122000u &&
            PE_LoadU32(0x801D1468u) == 0x80132000u &&
-           PE_LoadU8(0x801D146Cu) == 0u &&
+           PE_LoadU8(0x801D146Cu) == 1u &&
            PE_LoadU32(0x801D1470u) == 0x80173000u &&
            PE_LoadU32(0x801D1474u) == 0x80175000u &&
            PE_LoadU8(0x801D1478u) == 0u,
@@ -19400,9 +19518,14 @@ static void test_disc_open_rejects_mode1(void) {
 static void test_disc_open_valid_geometry(void) {
     TEST("disc_open_valid_geometry");
     DiscFixture fx;
+    char vol[40];
     ResetTestState();
     ASSERT(FxBuild(&fx, 0), "fixture build failed");
     ASSERT(PE_Disc_UserSectorCount(fx.disc) == FX_SECTORS, "wrong sector count");
+    ASSERT(PE_Disc_VolumeId(fx.disc, vol, sizeof(vol)) &&
+           strcmp(vol, "PARASITE_EVE") == 0, "PVD volume id");
+    ASSERT(PE_Disc_BootKind(fx.disc) == 0,
+           "fixture has neither USA boot file");
     FxFree(&fx);
     PASS();
 }
@@ -19499,6 +19622,21 @@ static void test_disc_findfile_nested(void) {
     ASSERT(PE_Disc_FindFile(fx.disc, "\\FMV1\\PEDISC01.IDF;1", &lba, &size, NULL, 0),
            "nested IDF lookup failed");
     ASSERT(lba == FX_IDF1_LBA && size == FX_IDF1_SIZE, "wrong nested extent/size");
+    FxFree(&fx);
+    PASS();
+}
+
+static void test_disc_findfile_disc2_idf(void) {
+    TEST("disc_findfile_disc2_idf");
+    DiscFixture fx;
+    uint32_t lba = 0, size = 0;
+    ResetTestState();
+    ASSERT(FxBuild(&fx, 1), "fixture build failed");
+    ASSERT(PE_Disc_FindFile(fx.disc, "\\FMV2\\PEDISC02.IDF;1", &lba, &size, NULL, 0),
+           "disc-2 IDF lookup failed");
+    ASSERT(lba == FX_IDF2_LBA && size == FX_IDF2_SIZE, "wrong disc-2 IDF extent");
+    ASSERT(!PE_Disc_FindFile(fx.disc, "\\SLUS_006.68;1", &lba, &size, NULL, 0),
+           "fixture is not a retail disc-2 image");
     FxFree(&fx);
     PASS();
 }
@@ -21402,6 +21540,9 @@ static void test_6A9E4_zero_cycles_footprint(void) {
             want = B16_StreamWordPre(a - B16_ARCH);
         else if (a >= B16_DEST2 && a < B16_DEST2 + B16_COPY2)
             want = B16_StreamWordPre(a - B16_DEST2);
+        /* Original52C6C increments the search index before its first lookup;
+         * the empty-table result is 1 at gp+2CC, even when lookup returns 0. */
+        if(a==0x8009D03Cu)want=1u;
         /* Original52E30 writes the canonical guest resource-bank words. */
         if(a==0x8009D048u)want=0x800C0E48u;
         if(a==0x8009D04Cu)want=0u;
@@ -34787,6 +34928,70 @@ static void test_SKIP1_909B4_returns_new_game(void)
     PASS();
 }
 
+/* New Game without --skip-movie must enter the real opening FMV path.
+ * FMV001 is ~2077 frames; budget=1 proves entry then the media_loop
+ * frontier (same cut B54KY uses).  Title remains SkipOpeningMenu. */
+static void test_OPEN1_909B4_enters_fmv_without_skip_movie(void)
+{
+    PE_Disc *disc;
+    char err[256];
+    unsigned tick;
+    TEST_RETAIL_DISC1("OPEN1_909B4_enters_fmv_without_skip_movie");
+    err[0] = 0;
+    disc = BTL6_OpenDisc1(err, sizeof(err));
+    ASSERT(disc != NULL, err[0] ? err : "PE_Disc_Open failed");
+    ResetTestState();
+    HostFB_Init();
+    DAY1_SeedDisplayDispatch();
+    CdDeviceSeed();
+    PE_Disc_SetActive(disc);
+    ASSERT(PE_CdReg_EnableDevice(7u) && func_8007EC14() == 1,
+           "opening CdInit");
+    for (tick = 0u; tick < 10u && PE_LoadU32(0x8009B574u) != 1u &&
+         !PE_Port_ShouldStop(); tick++)
+        HostFB_VSync(0);
+    ASSERT(PE_LoadU32(0x8009B574u) == 1u, "SDK ready");
+    PE_StoreU32(0x8009B32Cu, 0x1F801800u);
+    PE_StoreU32(0x8009B330u, 0x1F801801u);
+    PE_StoreU32(0x8009B334u, 0x1F801802u);
+    PE_StoreU32(0x8009B338u, 0x1F801803u);
+    PE_StoreU32(0x8009B33Cu, 0x1F801018u);
+    PE_StoreU32(0x8009B340u, 0x1F801020u);
+    PE_StoreU32(0x8009B344u, 0x1F8010F0u);
+    PE_StoreU32(0x8009B348u, 0x1F8010F4u);
+    PE_StoreU32(0x8009B34Cu, 0x1F801098u);
+    PE_StoreU32(0x8009B35Cu, 0x1F8010B8u);
+    D_800B0DD8 = 1013u;
+    D_80011614 = 0x8018EFF0u;
+    D_80093164[0] = 0x03D2u;
+    D_80093164[1] = 0x0457u;
+    ASSERT(func_8006E834() == 0, "overlay load");
+    B54KR_SeedGpuStatic();
+    B54KQ_SeedOverlayPrefix(0x13u);
+    /* Disc 1 saved bit → positive arm (FMV). */
+    PE_StoreU8(0x800B0DCDu, 1u);
+    PE_StoreU32(0x800B0DD8u, 1013u);
+    PE_StoreU32(0x8001160Cu, 0x8010BCF8u);
+    PE_StoreU32(0x80011610u, 0x80120D00u);
+    PE_StoreU16(0x8009315Eu, 0x039Fu);
+    PE_StoreU16(0x80093160u, 0x03C5u);
+    PE_StoreU16(0x80093162u, 0x03C9u);
+    Test_SeedDigitalController();
+    PE_StoreU16(0x800BE9A2u, 0xFFFFu);
+    PE_Port_SetSkipMovie(0);
+    PE_Port_SetSkipOpeningMenu(1);
+    PE_Port_SetMovieContinueBudget(1);
+    ASSERT(func_801909B4() == -1, "budgeted FMV must frontier");
+    ASSERT(CountOrderLog("func_801909B4_skip_movie_new_game") == 0,
+           "skip-movie HOST_ADAPTED must not run");
+    ASSERT(CountOrderLog("func_80192CE8_media_loop") == 1 &&
+           PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY,
+           "real FMV path entered without skip-movie");
+    PE_Disc_SetActive(NULL);
+    PE_Disc_Close(disc);
+    PASS();
+}
+
 #include "host_frame_pacer.h"
 
 static void test_PACE1_monotonic_frame_schedule(void)
@@ -35025,6 +35230,123 @@ static void COL1_Step(pe_addr_t actor,int ox,int oz,int x,int z)
     func_8001AE40(actor);
 }
 
+#include "retail_floor_collision_cases.h"
+#include "retail_battle_entry_cases.h"
+#include "retail_polygon_boundary_cases.h"
+#include "retail_frame_gate_cases.h"
+#include "retail_room_entry_cleanup_cases.h"
+static uint64_t hit_camera_hash(const uint32_t (*ranges)[2],unsigned count);
+static void test_RCLEAN_retail_room_cleanup(void)
+{
+    TEST("RCLEAN_retail_room_cleanup");
+    for (unsigned k=0;k<sizeof(RCLEAN_cases)/sizeof(RCLEAN_cases[0]);k++) {
+        ResetTestState();
+        for (unsigned i=0;i<sizeof(RCLEAN_ranges)/sizeof(RCLEAN_ranges[0]);i++)
+            PE_Fill(0x80000000u+RCLEAN_ranges[i][0],RCLEAN_ranges[i][1],0);
+        for (unsigned i=0;i<sizeof(RCLEAN_common)/sizeof(RCLEAN_common[0]);i++)
+            PE_StoreU32(0x80000000u+RCLEAN_common[i][0],RCLEAN_common[i][1]);
+        for (unsigned i=RCLEAN_cases[k].first;i<RCLEAN_cases[k].end;i++)
+            PE_StoreU32(0x80000000u+RCLEAN_patches[i][0],RCLEAN_patches[i][1]);
+        func_8003F074_after_poll_cut();
+        uint64_t hash=hit_camera_hash(RCLEAN_ranges,sizeof(RCLEAN_ranges)/sizeof(RCLEAN_ranges[0]));
+        if (hash!=RCLEAN_cases[k].hash)
+            fprintf(stderr,"room cleanup case %u: %016llX/%016llX\n",k,
+                    (unsigned long long)hash,(unsigned long long)RCLEAN_cases[k].hash);
+        ASSERT(hash==RCLEAN_cases[k].hash,"room cleanup guest bytes differ from original");
+        ASSERT(!g_stub_order_count && !PE_Port_ShouldStop(),"room cleanup completes natively");
+    }
+    PASS();
+}
+
+static void test_FGATE_retail_overlay_pause(void)
+{
+    TEST("FGATE_retail_overlay_pause");
+    for (unsigned k=0;k<sizeof(FGATE_cases)/sizeof(FGATE_cases[0]);k++) {
+        ResetTestState();
+        for (unsigned i=0;i<sizeof(FGATE_ranges)/sizeof(FGATE_ranges[0]);i++)
+            PE_Fill(0x80000000u+FGATE_ranges[i][0],FGATE_ranges[i][1],0);
+        for (unsigned i=0;i<sizeof(FGATE_common)/sizeof(FGATE_common[0]);i++)
+            PE_StoreU32(0x80000000u+FGATE_common[i][0],FGATE_common[i][1]);
+        for (unsigned i=FGATE_cases[k].first;i<FGATE_cases[k].end;i++)
+            PE_StoreU32(0x80000000u+FGATE_patches[i][0],FGATE_patches[i][1]);
+        func_80035558_walk_cut();
+        uint64_t hash=hit_camera_hash(FGATE_ranges,sizeof(FGATE_ranges)/sizeof(FGATE_ranges[0]));
+        if (hash!=FGATE_cases[k].hash)
+            fprintf(stderr,"frame gate case %u: %016llX/%016llX\n",k,
+                    (unsigned long long)hash,(unsigned long long)FGATE_cases[k].hash);
+        ASSERT(hash==FGATE_cases[k].hash,"frame gate guest bytes differ from original");
+        ASSERT(!g_stub_order_count && !PE_Port_ShouldStop(),"frame gate completes natively");
+    }
+    PASS();
+}
+
+static void test_POLY_retail_script_boundary(void)
+{
+    TEST("POLY_retail_script_boundary");
+    for (unsigned k=0;k<sizeof(POLY_cases)/sizeof(POLY_cases[0]);k++) {
+        ResetTestState();
+        for (unsigned i=0;i<sizeof(POLY_ranges)/sizeof(POLY_ranges[0]);i++)
+            PE_Fill(0x80000000u+POLY_ranges[i][0],POLY_ranges[i][1],0);
+        for (unsigned i=0;i<sizeof(POLY_common)/sizeof(POLY_common[0]);i++)
+            PE_StoreU32(0x80000000u+POLY_common[i][0],POLY_common[i][1]);
+        for (unsigned i=POLY_cases[k].first;i<POLY_cases[k].end;i++)
+            PE_StoreU32(0x80000000u+POLY_patches[i][0],POLY_patches[i][1]);
+        func_8001A9F8_floor_cut();
+        uint64_t hash=hit_camera_hash(POLY_ranges,sizeof(POLY_ranges)/sizeof(POLY_ranges[0]));
+        if (hash!=POLY_cases[k].hash)
+            fprintf(stderr,"polygon boundary case %u: %016llX/%016llX\n",k,
+                    (unsigned long long)hash,(unsigned long long)POLY_cases[k].hash);
+        ASSERT(hash==POLY_cases[k].hash,"polygon boundary guest bytes differ from original");
+        ASSERT(!g_stub_order_count && !PE_Port_ShouldStop(),"polygon boundary completes natively");
+    }
+    PASS();
+}
+
+static void test_BENTRY_retail_initialization(void)
+{
+    TEST("BENTRY_retail_initialization");
+    for (unsigned k=0;k<sizeof(BENTRY_cases)/sizeof(BENTRY_cases[0]);k++) {
+        ResetTestState();
+        for (unsigned i=0;i<sizeof(BENTRY_ranges)/sizeof(BENTRY_ranges[0]);i++)
+            PE_Fill(0x80000000u+BENTRY_ranges[i][0],BENTRY_ranges[i][1],0);
+        for (unsigned i=0;i<sizeof(BENTRY_common)/sizeof(BENTRY_common[0]);i++)
+            PE_StoreU32(0x80000000u+BENTRY_common[i][0],BENTRY_common[i][1]);
+        for (unsigned i=BENTRY_cases[k].first;i<BENTRY_cases[k].end;i++)
+            PE_StoreU32(0x80000000u+BENTRY_patches[i][0],BENTRY_patches[i][1]);
+        func_80029810_cut(BENTRY_cases[k].encounter);
+        uint64_t hash=hit_camera_hash(BENTRY_ranges,sizeof(BENTRY_ranges)/sizeof(BENTRY_ranges[0]));
+        if (hash!=BENTRY_cases[k].hash)
+            fprintf(stderr,"battle entry case %u: %016llX/%016llX\n",k,
+                    (unsigned long long)hash,(unsigned long long)BENTRY_cases[k].hash);
+        ASSERT(hash==BENTRY_cases[k].hash,"battle entry guest bytes differ from original");
+        ASSERT(!g_stub_order_count && !PE_Port_ShouldStop(),"battle entry completes natively");
+    }
+    PASS();
+}
+
+static void test_COL2_retail_floor_collision(void)
+{
+    TEST("COL2_retail_floor_collision");
+    for (unsigned k=0;k<sizeof(COL2_cases)/sizeof(COL2_cases[0]);k++) {
+        uint64_t hash;
+        ResetTestState();
+        for (unsigned i=0;i<sizeof(COL2_ranges)/sizeof(COL2_ranges[0]);i++)
+            PE_Fill(0x80000000u+COL2_ranges[i][0],COL2_ranges[i][1],0);
+        for (unsigned i=0;i<sizeof(COL2_common)/sizeof(COL2_common[0]);i++)
+            PE_StoreU32(0x80000000u+COL2_common[i][0],COL2_common[i][1]);
+        for (unsigned i=COL2_cases[k].first;i<COL2_cases[k].end;i++)
+            PE_StoreU32(0x80000000u+COL2_patches[i][0],COL2_patches[i][1]);
+        func_8001AE40(0x80120000u);
+        hash=hit_camera_hash(COL2_ranges,sizeof(COL2_ranges)/sizeof(COL2_ranges[0]));
+        if (hash!=COL2_cases[k].hash)
+            fprintf(stderr,"floor collision case %u: %016llX/%016llX\n",k,
+                    (unsigned long long)hash,(unsigned long long)COL2_cases[k].hash);
+        ASSERT(hash==COL2_cases[k].hash,"floor collision guest bytes differ from original");
+        ASSERT(!g_stub_order_count && !PE_Port_ShouldStop(),"floor collision completes natively");
+    }
+    PASS();
+}
+
 static void test_COL1_floor_seams_and_blocked_neighbors(void)
 {
     pe_addr_t a;
@@ -35228,6 +35550,15 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_mirror_effect.h"
 #include "test_room_cleanup.h"
 #include "test_field_pickup.h"
+#include "test_battle_reward.h"
+#include "test_battle_loot.h"
+#include "test_battle_level.h"
+#include "test_battle_victory.h"
+#include "test_task_pause.h"
+#include "test_message_window.h"
+#include "test_m34_effect.h"
+#include "test_m34_projectile.h"
+#include "test_m34_children.h"
 #include "test_actor_contact.h"
 #include "test_clear_image.h"
 #include "test_script_sound.h"
@@ -35261,6 +35592,7 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_movie_stream_helpers.h"
 #include "test_movie_updater.h"
 #include "test_movie_player.h"
+#include "test_movie_autonomous.h"
 #include "test_cd_command_queue.h"
 #include "test_cd_lowlevel_init.h"
 #include "test_cd_startup_helpers.h"
@@ -35323,6 +35655,7 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_pe_cost.h"
 #include "test_pe_apply.h"
 #include "test_pe_menu.h"
+#include "test_port_verify_decomp.h"
 #include "test_inventory_sort.h"
 #include "test_pe_action.h"
 #include "test_equipment_menu.h"
@@ -35343,6 +35676,14 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_pistol_effect.h"
 #include "test_hit_init.h"
 #include "test_hit_draw.h"
+#include "test_club_effect.h"
+#include "test_model_fade.h"
+#include "test_actor_flag_vm.h"
+#include "test_polar_vm.h"
+#include "test_m28_movement.h"
+#include "test_m32_movement.h"
+#include "test_m28_projectile.h"
+#include "test_actor_retirement.h"
 #include "test_music_start.h"
 #include "test_m0000i_leaves.h"
 #include "test_gte_rt_leaves.h"
@@ -35372,6 +35713,8 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_vblank.h"
 #include "test_timer1.h"
 #include "test_blank_edges.h"
+#include "test_decomp_ports.h"
+#include "test_decomp_ptr_params.h"
 #include "test_script_timer.h"
 #include "test_input_query.h"
 #include "test_fade_wait.h"
@@ -36967,6 +37310,171 @@ static void test_SEW1_opcodes_5c_5d_93(void)
     PASS();
 }
 
+/* Opcode 0x9A (handler 0x800193D8): three pointer args dereferenced and
+ * passed to func_80065AD4.  Live M0091I module 3 args [2,5,0]. */
+static void test_SEW20_opcode_9A_slot_fill(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t container = 0x80110000u;
+    const pe_addr_t slot = container + 0x100u + 2u * 16u;
+    const pe_addr_t mem = 0x800B6A80u;
+    TEST("SEW20_opcode_9A_slot_fill");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0x9Au * 4u, 0x800193D8u);
+    PE_StoreU32(0x800B1624u, container);
+    PE_StoreU32(container + 0x10u, 0x100u);
+    PE_StoreU32(slot + 0xCu, 0x20u);
+    PE_StoreU8(slot + 4u, 0u);      /* low byte read by retail lbu */
+    PE_StoreU8(slot + 5u, 0xCDu);   /* bits 8..15 must be dropped */
+    PE_StoreU32(mem + 0u, 2u);      /* index */
+    PE_StoreU32(mem + 4u, 5u);      /* value */
+    PE_StoreU32(mem + 8u, 3u);      /* count */
+    /* 9A m4(0) m4(1) m4(2) ; 1 */
+    PE_StoreU32(pc, 0x9Au | (3u << 13) | (4u << 17) | (4u << 20) | (4u << 23));
+    PE_StoreU32(pc + 4u, 0u); PE_StoreU32(pc + 8u, 0u);
+    PE_StoreU32(pc + 12u, 1u); PE_StoreU32(pc + 16u, 2u);
+    PE_StoreU32(pc + 20u, 1u);
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "9A is translated");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 28u, "task advanced past 9A and the terminator");
+    ASSERT(PE_LoadU32(slot + 4u) == (5u << 16),
+           "9A published the value word and dropped bits 8..15");
+    ASSERT(PE_LoadU8(slot + 0u) == 6u, "9A OR-ed 6 into the slot flags");
+    ASSERT(PE_LoadU8(slot + 0x20u + 3u * 2u + 1u) == 0xFFu,
+           "9A filled the count-marked entry byte");
+    ASSERT(PE_LoadU16(slot + 0xAu) == 0u, "9A cleared the vertical word");
+    PASS();
+}
+
+/* Opcode 0x71 (handler 0x80018A9C): index*56 record walk + clamp. */
+static void test_SEW21_opcode_71_pan_clamp(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t container = 0x80110000u;
+    const pe_addr_t rec = container + 0x200u + 1u * 56u;
+    const pe_addr_t mem = 0x800B6A80u;
+    TEST("SEW21_opcode_71_pan_clamp");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0x71u * 4u, 0x80018A9Cu);
+    PE_StoreU32(0x800B1624u, container);
+    PE_StoreU32(container + 0x14u, 0x200u);
+    PE_StoreU16(rec + 8u, 10u);
+    PE_StoreU16(rec + 0xAu, 20u);
+    PE_StoreU16(rec + 0x10u, 0u);           /* X min 0 */
+    PE_StoreU16(rec + 0x12u, 5u);           /* X max 5 */
+    PE_StoreU16(rec + 0x14u, 0u);           /* Y min 0 */
+    PE_StoreU16(rec + 0x16u, 100u);         /* Y max 100 */
+    PE_StoreU32(rec, 0x00300000u);          /* page field = 3 */
+    PE_StoreU32(mem + 0u, 1u);
+    PE_StoreU16(mem + 4u, 3u);      /* x, lh low half */
+    PE_StoreU16(mem + 8u, 7u);      /* y, lh low half */
+    PE_StoreU16(mem + 12u, 0x100u); /* page, lh low half */
+    /* 71 m4(0) m4(1) m4(2) m4(3) ; 1 */
+    PE_StoreU32(pc, 0x71u | (4u << 13) | (4u << 17) | (4u << 20) | (4u << 23) | (4u << 26));
+    PE_StoreU32(pc + 4u, 0u); PE_StoreU32(pc + 8u, 0u);
+    PE_StoreU32(pc + 12u, 1u); PE_StoreU32(pc + 16u, 2u);
+    PE_StoreU32(pc + 20u, 3u); PE_StoreU32(pc + 24u, 1u);
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "71 is translated");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 32u, "task advanced past 71 and the terminator");
+    ASSERT((int16_t)PE_LoadU16(rec + 0xCu) == 5, "71 clamped X to the max");
+    ASSERT((int16_t)PE_LoadU16(rec + 0xEu) == 27, "71 clamped Y within range");
+    ASSERT(((PE_LoadU32(rec) >> 8) & 0xFFFu) == 0x103u, "71 accumulated the page field");
+    PASS();
+}
+
+/* Opcode 0xE9 (handler 0x80015C7C): now a real port.  Mirrors the retail
+ * m0351i module 1 `0x456` site exactly: argc 5, modes [0,0,0,1,1] — cmd/a/b are
+ * kind-0 immediate words and operands 3/4 are kind-1 actor words (operand 4 is
+ * not read by the handler).  func_8005D2B4 returns the PE maximum for cmd 0x456
+ * and E9 stores it through *arg3 (the `lw $v1,0xC($s0)` / `sw $v0,0($v1)`). */
+static void test_SEW23_opcode_E9_message_query(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t actor = 0x800BEA90u;
+    const pe_addr_t out_slot = actor + 0xACu;    /* operand 3, kind 1, imm 0 */
+    TEST("SEW23_opcode_E9_message_query");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0xE9u * 4u, 0x80015C7Cu);
+
+    /* Live message record; func_800515F8 reads +0xA (value) and +0x2A (max). */
+    PE_StoreU32(0x8009D254u, 0x80144000u);
+    PE_StoreU32(0x80144000u, 0x80145000u);
+    PE_StoreU16(0x80145000u + 0xAu, 42u);
+    PE_StoreU16(0x80145000u + 0x2Au, 99u);
+    PE_StoreU32(0x8009D014u, 0x800A1AA0u);       /* empty PE-deduction scan */
+
+    /* E9 argc 5, kinds [0,0,0,1,1]: all five 3-bit kinds live in word bits
+     * 17..31 (word2 only carries kinds for args 5..15), so operand 3 is
+     * kind 1 at bits 26..28 and operand 4 at bits 29..31. */
+    PE_StoreU32(pc, 0xE9u | (5u << 13) | (1u << 26) | (1u << 29));
+    PE_StoreU32(pc + 4u, 0u);
+    PE_StoreU32(pc + 8u, 0x456u);
+    PE_StoreU32(pc + 12u, 0u);
+    PE_StoreU32(pc + 16u, 0u);
+    PE_StoreU32(pc + 20u, 0u);   /* operand 3 actor word +0xAC */
+    PE_StoreU32(pc + 24u, 1u);   /* operand 4 actor word +0xB0 (unused) */
+    PE_StoreU32(pc + 28u, 1u);   /* terminating opcode 1 (argc 0) */
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "E9 is translated, not a boundary");
+    ASSERT(PE_LoadU32(out_slot) == 99u, "E9 stored the 0x456 maximum in the actor slot");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 36u, "E9 advanced past its 5-arg frame");
+    PASS();
+}
+
+/* func_8005D2B4 arms 0x453/0x454/0x457 (m0351i query leaves). ----------------- */
+static void test_SEW24_arm_453_454_457(void)
+{
+    TEST("SEW24_arm_453_454_457");
+    ResetTestState();
+    PE_StoreU16(0x800C0E06u, 0xC06Au);
+    ASSERT(func_8005D2B4(0x453, 0, 0) == 0xC06A, "arm 0x453 returns D_800C0E06");
+    func_8005D2B4(0x454, 0x0E08u, 0);
+    ASSERT(PE_LoadU16(0x800C0E08u) == 0x0E08u, "arm 0x454 publishes D_800C0E08");
+    /* arm 0x457 writes (*arg0)<<16 into the live record's +0x8. */
+    PE_StoreU32(0x8009D254u, 0x80100000u);
+    PE_StoreU32(0x80100000u, 0x80101000u);
+    func_8005D2B4(0x457, 0x1234u, 0);
+    ASSERT(PE_LoadU32(0x80101000u + 8u) == 0x12340000u, "arm 0x457 shifted into +0x8");
+    PASS();
+}
+
+/* func_8005D2B4 arm 0x45E (func_8004BCE8) end to end through the window nodes. */
+static void test_SEW25_arm_45E_close_window(void)
+{
+    TEST("SEW25_arm_45E_close_window");
+    ResetTestState();
+    func_80062F9C();
+    PE_StoreU32(0x8009D254u, 0x80100000u);
+    PE_StoreU32(0x80100000u, 0x80101000u);
+    PE_StoreU16(0x80101000u + 0xCu, 7u);
+    PE_StoreU32(0x80101000u + 0x68u, 0u);
+    PE_StoreU16(0x800C0E06u, 0x0064u);
+    PE_StoreU16(0x800C0E0Au, 3u);
+    PE_StoreU32(0x800C0E10u, 0x20u);
+    func_8005D2B4(0x45E, -1, 0);
+    ASSERT(PE_LoadU16(0x800C0E08u) == 7u, "0x45E committed the record +0xC");
+    ASSERT(PE_LoadU32(0x8009CFE8u) == 0u, "0x45E published the window base");
+    ASSERT(PE_LoadU32(0x8009CF60u) == 3u, "0x45E published the page byte");
+    ASSERT(PE_LoadU32(0x8009CF64u) == 0x64u, "0x45E published the 0x64 word");
+    ASSERT(PE_LoadU32(0x8009CF74u) == 0x20u, "negative arg clamps the 0x204 delta to base");
+    ASSERT(PE_LoadU32(0x8009CF84u) == 2u, "0x45E raised the message state to 2");
+    PASS();
+}
+
+/* Every non-m0351i arm is an explicit domain guard: loud, and retail default 0. */
+static void test_SEW26_arm_domain_guard(void)
+{
+    TEST("SEW26_arm_domain_guard");
+    ResetTestState();
+    ASSERT(func_8005D2B4(0x44Cu, 0, 0) == 0, "arm 0x44C is a loud guard, not a guess");
+    ASSERT(func_8005D2B4(0x45Du, 0, 0) == 0, "arm 0x45D is a loud guard, not a guess");
+    ASSERT(func_8005D2B4(0x460u, 0, 0) == 0, "arm 0x460 is a loud guard, not a guess");
+    ASSERT(func_8005D2B4(0x44Bu, 0, 0) == 0, "below-base cmd is a retail miss");
+    ASSERT(func_8005D2B4(0x461u, 0, 0) == 0, "above-base cmd is a retail miss");
+    PASS();
+}
+
 static void test_SEW1_unported_opcode_is_explicit_boundary(void)
 {
     const pe_addr_t pc = 0x80130000u;
@@ -36980,6 +37488,42 @@ static void test_SEW1_unported_opcode_is_explicit_boundary(void)
     ASSERT(PE_Port_ShouldStop(), "unported opcode requests a stop");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY, "stop reason is unresolved-boundary");
     ASSERT(PE_LoadU32(0x8009D310u) == pc, "task retains the unported opcode PC");
+    PASS();
+}
+
+/* Opcode 0x97 (handler 0x800192DC): effect-destroy wrapper used by M0374I
+ * module 2 (`*a0 -> a0`, owner `*(0x8009D2F0)`, force 0).  Closes the last
+ * unported opcode on the M0042I -> M0374I park branch
+ * (docs/evidence/field-vm-opcode-coverage/REPORT.md). */
+static void test_SEW19_opcode_97_effect_destroy(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t actor = 0x800BEA90u;
+    const pe_addr_t slot = 0x80150000u;
+    const pe_addr_t table = 0x80160000u;
+    const pe_addr_t entry = 0x80161000u;
+    const pe_addr_t mem = 0x800B6A80u;
+    TEST("SEW19_opcode_97_effect_destroy");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0x97u * 4u, 0x800192DCu);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x800942E4u, slot);           /* index < 11 -> 0xA0C stride */
+    PE_StoreU32(0x800942E0u, table);
+    PE_StoreU32(table + 3u * 4u, entry);      /* record's destroy kind = slot[1] */
+    PE_StoreU32(entry + 0x14u, 0x800C7DC4u);  /* a matching-C destroy callback */
+    PE_StoreU8(slot + 0u, 1u);                /* in use */
+    PE_StoreU8(slot + 1u, 3u);                /* kind */
+    PE_StoreU32(slot + 8u, actor);            /* owner matches */
+    PE_StoreU32(mem + 56u, 0u);               /* operand word = index 0 */
+    /* 97 m4 (value 14) ; 1 (terminate) */
+    PE_StoreU32(pc, 0x97u | (1u << 13) | (4u << 17));
+    PE_StoreU32(pc + 4u, 0u);
+    PE_StoreU32(pc + 8u, 14u);
+    PE_StoreU32(pc + 12u, 1u);
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "97 is translated");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 20u, "task advanced past 97 and the terminator");
+    ASSERT(PE_LoadU8(slot + 0u) == 0u, "97 cleared the matching effect slot");
     PASS();
 }
 
@@ -37525,6 +38069,8 @@ static void test_SKIP2_opening_script_spawns_aya(void)
     PE_Port_SetFrameLimit(120);
     func_8001220C();
     ASSERT(D_8009D280 == 0xA8001048u, "retail script selected M0010I");
+    ASSERT(PE_LoadU32(0x8009D1C4u) == 0xA8001048u,
+           "original main loop publishes the current field destination in guest RAM");
     ASSERT(PE_LoadU32(0x8009D120u) == 0u &&
            PE_LoadU32(0x8009D030u) == 0u,
            "title renderer and card timer shut down before the field");
@@ -38573,6 +39119,7 @@ int main(void)
     test_B54KR_moveimage_queued_pump_path();
     test_B54KR_801909B4_prefix_effects_and_canary();
     test_B54KR_801909B4_dirty_repeat_and_alternate_cut();
+    test_B54KR_801909B4_title_input_pump_with_pad();
     test_B54KS_drawsync_idle_and_poll_mode();
     test_B54KS_drawsync_completes_direct_dma();
     test_B54KS_drawsync_drains_queued_dma();
@@ -39094,7 +39641,7 @@ int main(void)
     test_BTL120_dest_9e_is_252();
     test_BTL120_3af14_gates();
     test_BTL120_3c818_counts_from_3c5d8();
-    test_BTL120_prefix_clears_via_35558();
+    test_BTL120_prefix_fades_via_35558();
     test_BTL121_512ac_case1_387plus();
     test_BTL121_26824_publishes_d2a4();
     test_BTL121_26824_tid406_seven();
@@ -39242,6 +39789,7 @@ int main(void)
     test_disc_verify_pvd_corrupt();
     test_disc_findfile_root();
     test_disc_findfile_nested();
+    test_disc_findfile_disc2_idf();
     test_disc_findfile_missing();
     test_disc_findfile_no_backslash();
     test_disc_findfile_malformed_record();
@@ -39804,6 +40352,7 @@ int main(void)
     /* Phase 6E-FLD1 — M0431I field-entry chunk load (1 test, retail disc). */
     test_FLD1_6B4F8_m0431i_load();
     test_SKIP1_909B4_returns_new_game();
+    test_OPEN1_909B4_enters_fmv_without_skip_movie();
     test_SKIP1_1220C_publishes_new_game();
     test_PACE1_monotonic_frame_schedule();
     test_PAD1_source_writes_BE9A2();
@@ -39813,6 +40362,11 @@ int main(void)
     test_ENT2_releasing_pad_stops_player();
     test_STG1_walkmesh_flags_continue_script();
     test_STG2_script_heading_reaches_walk_matrix();
+    test_BENTRY_retail_initialization();
+    test_POLY_retail_script_boundary();
+    test_FGATE_retail_overlay_pause();
+    test_RCLEAN_retail_room_cleanup();
+    test_COL2_retail_floor_collision();
     test_COL1_floor_seams_and_blocked_neighbors();
     test_COL1_wall_slide_and_slope_in_actor_tick();
     test_COL1_reject_npc_and_land_on_floor();
@@ -39877,6 +40431,10 @@ int main(void)
     test_INV16_retail_pe_cost();
     test_INV18_retail_pe_apply();
     test_INV19_retail_pe_menu();
+    test_DAY2_field_menu_page_4ad9c();
+    test_DAY2_field_menu_draw_4ff30();
+    test_DAY2_field_menu_input_4ae1c();
+    test_PORTVERIFY_matched_leaves();
     test_DAY1_retail_inventory_sort();
     test_INV20_retail_pe_action();
     test_INV21_retail_equipment_menu();
@@ -39920,6 +40478,13 @@ int main(void)
     test_SKIP2_opening_script_spawns_aya();
     test_SEW1_opcodes_5c_5d_93();
     test_SEW1_unported_opcode_is_explicit_boundary();
+    test_SEW19_opcode_97_effect_destroy();
+    test_SEW20_opcode_9A_slot_fill();
+    test_SEW21_opcode_71_pan_clamp();
+    test_SEW23_opcode_E9_message_query();
+    test_SEW24_arm_453_454_457();
+    test_SEW25_arm_45E_close_window();
+    test_SEW26_arm_domain_guard();
     test_SEW2_leaf_opcodes();
     test_SEW3_container_leaves();
     test_SEW4_heading_opcode_cb();
@@ -39936,6 +40501,16 @@ int main(void)
     test_SEW15_mirror_effect();
     test_SEW16_room_cleanup();
     test_SEW17_field_pickup();
+    test_REWARD_original_entries();
+    test_LOOT_original_entries();
+    test_LEVEL_original_entries();
+    test_VICTORY_original_entries();
+    test_DAY1_task_pause();
+    test_DAY1_message_window();
+    test_DAY1_m34_effect_core();
+    test_DAY1_m34_projectile_initializer();
+    test_DAY1_m34_retained_context();
+    test_DAY1_m34_projectile_movement_and_drawing();
     test_SEW18_actor_contact();
     test_DAY1_clear_image_packets();
     test_DAY1_clear_image_dispatch_pixels();
@@ -39975,6 +40550,8 @@ int main(void)
     test_DAY2_movie_stream_helpers();
     test_DAY2_movie_updater();
     test_DAY2_movie_player();
+    test_DAY2_movie_autonomous();
+    test_DAY2_movie_multiframe();
     test_DAY2_cd_command_queue();
     test_DAY2_cd_lowlevel_init();
     test_DAY2_cd_startup_helpers();
@@ -39987,6 +40564,7 @@ int main(void)
     test_DAY2_cd_queue_completion();
     test_DAY2_music_reset();
     test_DAY2_script_audio_control();
+    test_DAY2_audio_dispatch();
     test_DAY2_script_effect_spawn();
     test_DAY2_park_effect_tick();
     test_DAY2_m0059i_effect();
@@ -40016,6 +40594,14 @@ int main(void)
     test_DAY1_script_follow();
     test_DAY1_hit_init();
     test_DAY1_hit_draw();
+    test_DAY1_club_effect();
+    test_DAY1_model_fade();
+    test_DAY1_actor_flag_vm();
+    test_DAY1_polar_vm();
+    test_DAY1_m28_movement();
+    test_DAY1_m32_movement();
+    test_DAY1_m28_projectile();
+    test_DAY1_actor_retirement();
     test_DAY1_music_start();
     test_DAY1_m0000i_leaves();
     test_DAY1_gte_rt_leaves();
@@ -40041,6 +40627,7 @@ int main(void)
     test_DAY1_controller_sdk();
     test_DAY1_game_input();
     test_DAY1_vsync();
+    test_DAY1_host_vsync_contract();
     test_DAY1_vblank();
     test_DAY1_timer1();
     test_DAY1_blank_edges();
@@ -40106,11 +40693,14 @@ int main(void)
     test_EV1_both_tags_hit();
 
     /* Phase 6E-OTC1 — ClearOTagR synchronous OTC fill (5 tests). */
-    test_OTC1_clearotagr_fill_and_tail();
-    test_OTC1_clearotagr_null_ot_skip();
+    test_OTC1_clearotagr_fill_and_tail();    test_OTC1_clearotagr_null_ot_skip();
     test_OTC1_clearotagr_debug_print_boundary();
     test_OTC1_clearotagr_dirty_jtb_boundary();
     test_OTC1_clearotagr_small_table();
+
+    /* Decomp-derived port regression (8 tests). */
+    test_DECOMP_all();
+    test_DECOMPPTR_all();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

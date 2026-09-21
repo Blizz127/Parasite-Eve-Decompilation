@@ -15,6 +15,10 @@
  * 12-byte table walk (BTL18). SEW19 restores keys300 and350..353
  * with their complete native sound call graphs. DAY1-15 wires
  * EA200/201/203/204 through original 6D2B8 and 86464/86498/864F8/86770.
+ * DAY2 audio dispatch restores EA301/303/401/402/405/409. Matched
+ * 86948 and 80AC4 are linked from the generated decomp ports. Other
+ * unhandled non-default EA cases still need recovery; this is not the
+ * complete 727-word dispatcher.
  *
  * func_800173F4 — 7 words 0x800173F4..0x80017410. Zero jal.
  * *arg0 = *arg1; v0=1.
@@ -266,6 +270,17 @@ int func_80015DAC_default_cut(pe_addr_t args)
     }
     if (key>=205u && key<=207u)
         return ea_music_volume(args,key);
+    /* Original162F0/16338: stop an effect, or fade its volume. The
+     * duration is doubled before the matching 86948 leaf masks it to8 bits. */
+    if (key == 301u) {
+        func_800866A4(ea_value(args, 1), ea_value(args, 2));
+        return 1;
+    }
+    if (key == 303u) {
+        func_80086948((int)ea_value(args, 1), (int)ea_value(args, 2),
+                       (int)(ea_value(args, 3) << 1u), (int)ea_value(args, 4));
+        return 1;
+    }
     /* Original16384/164CC: EA305 scales duration before the audio leaf. */
     if (key==305u) {
         (void)func_800868AC(ea_value(args,1)<<1u,ea_value(args,2));
@@ -279,6 +294,35 @@ int func_80015DAC_default_cut(pe_addr_t args)
         return ea_sound(args,key);
     if (key == 217u) {
         func_8006D24C();
+        return 1;
+    }
+    /* Original166E0..16780: load a bank without starting playback.
+     * Busy retries leave the output operand untouched, rewind this EA word,
+     * and delay its task. Completed loads publish the signed slot/status. */
+    if (key == 401u || key == 402u) {
+        int result = func_8006D2B8((int)ea_value(args, 1), 1, key == 402u,
+                                    GA_EA_SLOT, ea_value(args, 2) == 0u);
+        if (result == 1)
+            return ea_music_yield((uint32_t)result);
+        PE_StoreU32(PE_LoadU32(args + 20u), PE_LoadU32(GA_EA_SLOT));
+        return 1;
+    }
+    if (key == 405u) {
+        /* Original16780: select the second animation-sound bank this frame. */
+        PE_StoreU8(0x800B0CEAu, 1u);
+        return 1;
+    }
+    if (key == 409u) {
+        /* Original16870: stack-local CD gains [volume,0,volume,0].
+         * The host scratch is disjoint from the loader's slot above. */
+        const pe_addr_t gains = GA_EA_SLOT + 4u;
+        uint8_t volume = (uint8_t)ea_value(args, 1);
+        PE_StoreU8(gains + 3u, 0u);
+        PE_StoreU8(gains + 1u, 0u);
+        PE_StoreU8(0x800B0DBEu, volume);
+        PE_StoreU8(gains + 2u, volume);
+        PE_StoreU8(gains, volume);
+        (void)func_80080AC4(gains);
         return 1;
     }
     if (key == 406u || key == 407u)

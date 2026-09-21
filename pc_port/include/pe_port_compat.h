@@ -12,7 +12,9 @@ void func_80121A00(void);
 void func_80121004(int buffer, int wide);
 int func_80121270(pe_addr_t state);
 void func_801214D4(void);
+void func_80191DC8(void);
 int func_80122040(void);
+int func_80192934(void);
 void func_80122354(void);
 int func_80121C04(int id);
 void func_8006E60C(void);
@@ -20,7 +22,8 @@ void func_8006E60C(void);
 /* ── Boot Rung globals (guest-address backed) ─────────────────────── */
 /* D_800B0CD8..D_800B0CEB, D_800B0DD4, D_80094488/D_8009448C are guest-RAM
  * lvalue macros defined in psx_compat.h — no externs here. */
-extern unsigned int D_8009D250;
+/* D_8009D250 is also guest-backed: frame updates, RNG/menu readers and
+ * captured original-code probes must observe the same counter word. */
 
 /* ── Arena pointers — guest-RAM lvalue macros (Phase 6E-B16) ────────
  * The 19-slot retail arena pointer table lives INSIDE the D_800B0CD8
@@ -180,6 +183,9 @@ extern void func_800653B8(unsigned int payload, unsigned int dest_id,
                           unsigned int extra);
 extern int  func_80065954(unsigned int index, unsigned int enabled);
 extern int  func_800659C8(unsigned int index, unsigned int value);
+/* PE-CH2 opcode-0x9A / 0x71 callees: 16-byte slot fill and 56-byte pan clamp. */
+extern int  func_80065AD4(unsigned int index, unsigned int value, unsigned int count);
+extern int  func_800671C8(pe_addr_t rec, int32_t x, int32_t y, int32_t page);
 /* SEW3 — game/boot/func_800659F8_port.c */
 extern int  func_800659F8(uint32_t index, uint32_t value);
 extern int  func_80065A60(uint32_t index, uint32_t entry, uint32_t value);
@@ -214,6 +220,8 @@ extern pe_addr_t func_80012700(pe_addr_t entry, unsigned int a1);
 void func_80012774(void);
 void func_80035F54(pe_addr_t actor);
 void func_80036448(void);
+void func_800360B4(void);
+void func_8003601C(void);
 void func_8001D268(pe_addr_t actor,int32_t own_part,pe_addr_t other,int32_t part);
 extern int  func_80017BB4_btl1_cut(pe_addr_t args);
 extern int  func_800177AC(pe_addr_t args);
@@ -280,6 +288,48 @@ void func_8006269C(pe_addr_t node);
 void func_80062F3C(uint32_t id);
 void func_80064E90(pe_addr_t node);
 void func_800647D0(pe_addr_t node,int32_t items);
+/* Field menu page constructor reached from func_80043DA4 command 5. */
+void func_8004AD9C(pe_addr_t owner);
+/* Tier-2 wrapper the page stores into the list callback slot +0x30; it enters
+ * the generic list renderer func_800638D8 with the per-cell draw 0x80050C50. */
+void func_8004FF30(pe_addr_t slot);
+/* Field-menu input tree the 4AD9C page installs into window+0x2C (0x8004AE1C)
+ * and its sub-page constructors / handlers / draws (jtbl_80011034 cases 0..5). */
+int func_8004AE1C(pe_addr_t node, uint32_t event);
+void func_8004AF3C(pe_addr_t owner);
+int func_8004AFA4(pe_addr_t node, uint32_t event);
+void func_8004B03C(pe_addr_t owner);
+int func_8004B0A4(pe_addr_t node, uint32_t event);
+void func_8004B13C(pe_addr_t owner);
+void func_8004B584(pe_addr_t owner);
+/* Tier-2 draw wrappers the sub-page constructors store in list+0x30; each
+ * enters func_800638D8 with its own per-cell draw callback. */
+void func_8004FF58(pe_addr_t slot);
+void func_8004FF80(pe_addr_t slot);
+void func_8004B534(pe_addr_t slot);
+void func_8004B55C(pe_addr_t slot);
+void func_80050C70(pe_addr_t node);
+void func_80050CB4(pe_addr_t node);
+/* Field-menu Equipment sub-page (0x8004AE1C case 2): window draw +0x30,
+ * window input +0x2C, and the list1 per-cell draw reached through
+ * func_8004B534 -> func_800638D8.  Also the modal sub-page (case 3) handler. */
+void func_8004B214(pe_addr_t node);
+int func_8004B394(pe_addr_t node, uint32_t event);
+int func_8004B650(pe_addr_t node, uint32_t event);
+void func_80050438(pe_addr_t index);
+/* Field-menu close page: the 0x8004AE1C case-4/5 arm and its heal commit. */
+void func_8005D994(int32_t index);
+void func_8005247C(void);
+/* Packed-colour lane helpers the equipment page reads/writes (D_8009D14C). */
+int func_8005E54C(void);
+int func_800614A0(void);
+int func_800614AC(int a0);
+/* Field-menu modal sub-page (0x8004AE1C case 3) window draw and its two
+ * original font/sprite leaves. */
+void func_8004B5DC(pe_addr_t node);
+void func_8005FCAC(int32_t value);
+void func_8005ED18(uint32_t icon, uint32_t mode);
+void func_800527C0(void);
 extern void func_8004B90C(void);
 extern void func_8004B70C(uint32_t a0, uint32_t a1, pe_addr_t a2);
 extern int func_8004BB80(pe_addr_t obj, uint32_t a1);
@@ -419,6 +469,24 @@ extern int func_800D4C24(int32_t mode,pe_addr_t data);
 extern int func_800D4928(int32_t mode,pe_addr_t data);
 extern int func_800DF87C(int32_t mode,pe_addr_t data);
 extern void PE_WeaponCallback(pe_addr_t fn,pe_addr_t slot,pe_addr_t rec,pe_addr_t data);
+int PE_M34BossEffectOverlay(void);
+void PE_M34BossProjectileInit(pe_addr_t data,const int32_t retained[6]);
+int PE_M34BossEffectInit(pe_addr_t slot);
+int PE_M34BossEffectCommand(pe_addr_t slot,uint32_t mode,uint32_t index,uint32_t value,uint32_t extra0,uint32_t extra1);
+void PE_M34StackField(int begin);
+void PE_M34StackActor(pe_addr_t actor);
+void PE_M34StackVm(int begin);
+void PE_M34StackOpcode(pe_addr_t fn);
+void PE_M34StackInvalidate(void);
+void PE_M34StackClipSound(pe_addr_t body,pe_addr_t actor,uint32_t volume);
+void PE_M34StackConstruct(uint32_t code);
+void PE_M34StackCallback(pe_addr_t fn);
+void PE_M34StackPointQuad(const int16_t vertices[4][4]);
+int PE_M34StackRead(int32_t retained[6]);
+int PE_M34BossEffectCleanup(pe_addr_t slot);
+int PE_M34BossEffectDraw(pe_addr_t slot);
+int PE_M34BossEffectUpdate(pe_addr_t slot);
+int PE_M34BossEffectChild(pe_addr_t fn,pe_addr_t slot,pe_addr_t rec,pe_addr_t data);
 extern int func_800C2414(pe_addr_t slot,pe_addr_t table);
 extern int func_800C251C(pe_addr_t slot,pe_addr_t table);
 extern int func_800C2758(pe_addr_t slot,pe_addr_t callbacks,pe_addr_t sizes);
@@ -479,6 +547,8 @@ extern int func_8006DB48(uint32_t slot, uint32_t id, uint32_t handle, uint32_t v
 extern int func_8006DB9C(int32_t id);
 extern int func_8006DBE0(int32_t id);
 extern void func_800866A4(unsigned int a0, unsigned int a1);
+extern void func_80086948(int handle, int group, int duration, int volume);
+extern int func_80080AC4(pe_addr_t gains);
 extern int func_80085084(pe_addr_t buffer);
 extern int32_t func_80086608(pe_addr_t sound, uint32_t key, uint32_t pan, uint32_t volume);
 extern pe_addr_t func_8006E514(pe_addr_t package, uint32_t id);
@@ -514,6 +584,47 @@ extern void func_80022D7C(pe_addr_t target);
 extern int32_t func_8006DD38(uint32_t index, uint32_t key, int32_t x, int32_t y, int32_t z);
 extern int32_t func_800518A8(pe_addr_t out);
 extern void func_80051510(void);
+/* PE-CH3 field message subsystem (field_message_port.c). */
+extern int func_800515C0(uint32_t value);
+extern int func_80051684(uint32_t value);
+extern int func_800629B0(void);
+extern int32_t func_80057E14(pe_addr_t list);
+extern int func_8005270C(void);
+extern void func_8004BF08(void);
+extern void func_8004BE4C(void);
+int32_t func_8005B8A8(int32_t experience, pe_addr_t table);
+int32_t func_80051DF8(int32_t index);
+int32_t func_80057ECC(void);
+void func_80052764(void);
+void func_8004B970(void);
+void func_8004BC80(void);
+void func_8004BCB4(void);
+void func_8004C4B4(uint32_t ability);
+void func_8004C520(void);
+int func_80055668(uint32_t level);
+int func_8004C1E0(pe_addr_t window, uint32_t event);
+int32_t func_8005382C(int32_t count);
+void func_80048654(void);
+void func_8004BF40(void);
+void func_800437B4(uint32_t index);
+void func_8005BA78(int32_t table_number,int32_t key,pe_addr_t remaining_out,pe_addr_t fraction_out);
+void func_8006062C(int32_t remaining,int32_t fraction);
+void func_8004FFF8(pe_addr_t list);
+void func_80050D20(uint32_t index);
+void func_8004FCF8(pe_addr_t list);
+void func_8004FD68(pe_addr_t list);
+void func_80050B94(uint32_t index);
+void func_80050BE8(uint32_t index);
+void func_80057F14(uint32_t index);
+int func_80058030(uint32_t first_list,int32_t first,uint32_t second_list,int32_t second);
+void func_80058454(void);
+void func_80058670(void);
+int func_80048838(pe_addr_t window,uint32_t event);
+void func_80063D78(pe_addr_t list, int32_t column, int32_t row);
+extern void func_8005C144(void);
+extern void func_8004BCE8(int32_t arg0);
+extern int func_8005D2B4(int32_t cmd, int32_t a, int32_t b);
+extern int func_80015C7C(pe_addr_t args);
 extern int32_t func_800574A8(void);
 extern int func_800C6CE0(pe_addr_t slot);
 extern pe_addr_t func_800C22F8(pe_addr_t slot);
@@ -565,6 +676,8 @@ extern void func_8001AE40(pe_addr_t actor);
 extern void func_8001A9F8_floor_cut(void);
 extern int func_80065E48_position(int32_t x, int32_t y, int32_t z);
 extern void func_80017018(void);
+int func_80018300(pe_addr_t args);
+int func_80018364(pe_addr_t args);
 extern int func_80017294(pe_addr_t args);
 extern int func_800172BC(pe_addr_t args);
 extern int func_800172E0(pe_addr_t args);
@@ -645,6 +758,20 @@ extern int func_800677FC(pe_addr_t prim_base, pe_addr_t *cursor);
 extern int func_80068B94(void);
 extern int32_t func_80077CF4(int32_t angle);
 extern int32_t func_80077DC4(int32_t angle);
+extern int func_8001A214(pe_addr_t args);
+extern int PE_M28MovementOverlay(void);
+extern int PE_M28MovementInit(pe_addr_t slot);
+extern int PE_M28MovementCommand(pe_addr_t slot, uint32_t mode, uint32_t command,
+                                 uint32_t a, uint32_t b, uint32_t c);
+extern int PE_M28MovementUpdate(pe_addr_t slot);
+extern int PE_M28MovementCleanup(pe_addr_t slot);
+extern int PE_M32MovementOverlay(void);
+extern int PE_M32MovementInit(pe_addr_t slot);
+extern int PE_M32MovementCommand(pe_addr_t slot, uint32_t mode, uint32_t command,
+                               uint32_t a, uint32_t b, uint32_t c);
+extern int PE_M32MovementUpdate(pe_addr_t slot);
+extern int func_80069660(void);
+extern int PE_M28ProjectileMain(int32_t mode,pe_addr_t data,pe_addr_t extra);
 extern int func_80018EE0(pe_addr_t args);
 extern int func_80017988(pe_addr_t args);
 extern int func_80019618(pe_addr_t args);
@@ -675,6 +802,7 @@ extern int func_800184EC(pe_addr_t args);
 extern int func_8002FAF8(pe_addr_t actor, unsigned int code);
 extern int func_80014228(pe_addr_t args);
 extern int func_80017410(pe_addr_t args);
+extern int func_80019D84(pe_addr_t args);
 extern int func_800177C8(pe_addr_t args);
 extern int func_80037548(int needle);
 extern void func_800375E0(int id, unsigned int mode, pe_addr_t list);
@@ -700,6 +828,9 @@ extern int func_80018080(pe_addr_t args);
 extern int func_80017FF0(pe_addr_t args);
 extern int func_800192B8(pe_addr_t args);
 extern int func_800192C8(pe_addr_t args);
+extern int func_800192DC(pe_addr_t args);
+extern int func_800193D8(pe_addr_t args);
+extern int func_80018A9C(pe_addr_t args);
 extern void func_8001D340(unsigned int a0);
 extern void func_8001F9C4(void);
 extern void func_800201DC(void);
@@ -745,6 +876,8 @@ void func_8004CFD4(void);
 void func_8004CE28(uint32_t first,uint32_t second);
 void func_80050580(pe_addr_t unused,uint32_t confirmed);
 uint32_t func_80042770(uint32_t index);
+uint32_t func_8003FFCC(void);
+void func_80190064(void);
 uint32_t func_800428C4(void);
 void func_8004DAA4(void);
 int func_80042848(uint32_t index);
@@ -756,6 +889,9 @@ void func_8004298C(uint32_t index,uint32_t mode);
 void func_80042A10(void);
 int func_8004FDA4(uint32_t index);
 void func_80050C08(int32_t index);
+/* Per-cell draw of the field-menu list (generated decomp port, 0x80050C50);
+ * reached only through func_8004FF30 -> func_800638D8. */
+void func_80050C50(int32_t value);
 void func_8004FDE8(pe_addr_t list);
 int func_80015AF0(pe_addr_t args);
 extern void func_8001F4D4(pe_addr_t actor);
@@ -765,6 +901,7 @@ extern int32_t func_8006DDCC(int id,int key,int x,int y,int z);
 extern void func_80051770(int32_t ability);
 extern void func_8006DE80(int id, int a1, int x, int y, int z);
 extern int32_t func_8006DED4(pe_addr_t dest, int id, int a1, int x, int y, int z);
+int32_t PE_SpatialSoundRequest(pe_addr_t dest,int id,int key,int x,int y,int z,uint32_t *computed_volume);
 extern int32_t func_8006DCE4(unsigned int id, unsigned int group, int x, int y, int z);
 extern unsigned int func_80071A54(void);
 extern int32_t func_8002156C(void);
@@ -838,6 +975,11 @@ extern pe_addr_t func_8003D050_packets(pe_addr_t dest);
 extern void func_8003D94C(pe_addr_t dest, int x, int y, int unused, int palette_y);
 extern int func_8003D050_post_3d94c_skip_cut(pe_addr_t dest, pe_addr_t stream);
 extern void func_8003D050_epilogue_cut(pe_addr_t dest, int skipped);
+extern int func_8003C638(pe_addr_t dest);
+extern void func_8003CCB0(pe_addr_t dest, int enabled);
+extern void func_8003CEF8(pe_addr_t dest, int mode);
+extern void func_8003B708(pe_addr_t dest, int bank);
+extern void func_8003C0B4(pe_addr_t dest, int level, uint32_t red, uint32_t green, uint32_t blue);
 extern void func_8003C5D8(pe_addr_t dest, int a1);
 extern int func_8003C818(pe_addr_t dest);
 extern void func_8003B144(pe_addr_t dest);
@@ -944,6 +1086,16 @@ void PE_EffectStackBegin(void);
 void PE_EffectStackEnd(void);
 void PE_EffectStackInvalidate(void);
 int PE_EffectStackWeaponDraw(pe_addr_t fn,pe_addr_t slot);
+int PE_EffectStackWeaponUpdate(pe_addr_t fn,pe_addr_t slot);
+void PE_EffectStackWeaponUpdateCall(void);
+int func_800CE084(pe_addr_t slot);
+int func_800CE144(int slot);
+int func_800CE16C(pe_addr_t slot);
+void func_800CE1FC(void);
+void func_800CE2B4(pe_addr_t data);
+void func_800CE3B4(pe_addr_t data);
+void func_800CE464(unsigned int unused,pe_addr_t record);
+void func_800CE470(pe_addr_t unused,pe_addr_t record,pe_addr_t data);
 void PE_EffectStackWeaponCallback(pe_addr_t fn,pe_addr_t data);
 int func_8018F330(int32_t mode, pe_addr_t data);
 int func_8018F018(int32_t mode, pe_addr_t data);
@@ -1018,6 +1170,9 @@ int func_80044E98(pe_addr_t window,uint32_t event);
 int func_80053D2C(int arg);
 pe_addr_t func_800532B4(uint32_t id);
 int func_800194B0(pe_addr_t args);
+int func_80019540(pe_addr_t args);
+int func_8004C34C(uint32_t item);
+void func_80055E14(void);
 int func_80015BAC(pe_addr_t args);
 void func_8004F490(uint32_t item);
 void func_8004F644(void);
@@ -1108,6 +1263,8 @@ void func_80050178(pe_addr_t node);
 void func_800501C8(pe_addr_t node);
 void func_80062830(pe_addr_t node);
 void func_80062FEC(void);
+/* Equipment sub-page list2 per-cell draw (generated matching port). */
+void func_800504BC(int a0);
 void func_8005E8A4(int32_t x,int32_t y);
 void func_8005E8C4(void);
 void func_8005E914(void);
@@ -1153,6 +1310,8 @@ void func_800D0728(pe_addr_t position,int32_t inner,int32_t outer,int32_t segmen
     int32_t brightness,int32_t abr);
 uint32_t func_80078004(uint32_t value);
 uint32_t func_80078134(pe_addr_t input, pe_addr_t output);
+/* Host view of 78134's stack-local input/output vectors. */
+int PE_NormalizeVectorRetail(const int32_t in[3], int32_t out[3], uint32_t *length);
 pe_addr_t func_800787D4(pe_addr_t a, pe_addr_t b, pe_addr_t out);
 pe_addr_t func_800799E4(pe_addr_t angles, pe_addr_t out);
 void func_8018F05C(void);
@@ -1213,6 +1372,7 @@ void func_800C3B04(pe_addr_t style);
 void func_800CDD0C(pe_addr_t slot,pe_addr_t rec,pe_addr_t data);
 void func_800CDE90(pe_addr_t slot,pe_addr_t rec,pe_addr_t data);
 void PE_EffectQuadC42A4(pe_addr_t style,PeEffectMatrix *matrix,unsigned billboard);
+int PE_EffectPointQuadC61A8(const int16_t point[3],const PeEffectMatrix *matrix);
 void func_800C42A4(pe_addr_t style,pe_addr_t matrix,unsigned billboard);
 void func_800CEDA8(int32_t texture);
 void func_800C9C20(pe_addr_t slot,pe_addr_t rec,pe_addr_t data);

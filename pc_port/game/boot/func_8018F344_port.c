@@ -6,7 +6,7 @@
 #include "pe_sdk.h"
 #include "game_port.h"
 
-static int normalize(const int32_t in[3],int32_t out[3],uint32_t *length)
+int PE_NormalizeVectorRetail(const int32_t in[3],int32_t out[3],uint32_t *length)
 {
     uint32_t sum=0,leading,index;
     int shift;
@@ -37,7 +37,7 @@ uint32_t func_80078134(pe_addr_t input,pe_addr_t output)
 {
     int32_t in[3],out[3];uint32_t length=0;
     for(unsigned i=0;i<3;i++)in[i]=(int32_t)PE_LoadU32(input+i*4u);
-    if(!normalize(in,out,&length))return 0;
+    if(!PE_NormalizeVectorRetail(in,out,&length))return 0;
     for(unsigned i=0;i<3;i++)PE_StoreU32(output+i*4u,(uint32_t)out[i]);
     return length;
 }
@@ -60,13 +60,13 @@ void func_8018F344(pe_addr_t matrix,pe_addr_t eye,pe_addr_t target,pe_addr_t up)
     int32_t delta[3],forward[3],vertical[3],product[3],right[3],down[3];
     uint32_t length;
     for(unsigned i=0;i<3;i++)delta[i]=(int16_t)PE_LoadU16(target+i*2u)-(int16_t)PE_LoadU16(eye+i*2u);
-    if(!normalize(delta,forward,&length))return;
+    if(!PE_NormalizeVectorRetail(delta,forward,&length))return;
     for(unsigned i=0;i<3;i++)vertical[i]=(int32_t)PE_LoadU32(up+i*4u);
     if(forward[2]==vertical[2])forward[2]=(int32_t)((uint32_t)forward[2]+1u);
     cross(forward,vertical,product);
-    if(!normalize(product,right,&length))return;
+    if(!PE_NormalizeVectorRetail(product,right,&length))return;
     cross(forward,right,product);
-    if(!normalize(product,down,&length))return;
+    if(!PE_NormalizeVectorRetail(product,down,&length))return;
     for(unsigned i=0;i<3;i++)PE_StoreU16(matrix+i*2u,(uint16_t)right[i]);
     for(unsigned i=0;i<3;i++)PE_StoreU16(matrix+6u+i*2u,(uint16_t)down[i]);
     for(unsigned i=0;i<3;i++)PE_StoreU16(matrix+12u+i*2u,(uint16_t)forward[i]);

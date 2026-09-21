@@ -166,6 +166,49 @@ static void test_DAY2_movie_updater(void)
         ASSERT(mdec.upload_count==1u && mdec.output_count==1u,
             "updater retry prior submissions");
     }
+    /* Enabled-device readiness/Setloc retry completion: the acquisition
+     * timeout repositions through 7C2A0 (D_800A3490 -> LBA 1), re-issues
+     * Setloc through the real 80D5C -> 80DC4 queue with the stack response
+     * buffer, opens the stream through 81314(location, 0x1E0), and the
+     * physical stream delivers the frame so 121270 hands it off. The
+     * fixture sector at LBA 1 carries the retail Form-1 chunk header with a
+     * zero payload (a benign decoder input). */
+    for(k=0u;k<2u;k++) {
+        DiscFixture fx={0};
+        ResetTestState();
+        ASSERT(FxBuild(&fx,0),"updater retry delivery fixture");
+        CdStreamWriteVideoSector(fx.img,1u,0u,1u,0x1234u,0);
+        func_80073C94();B54KR_SeedGpuStatic();  /* 121270 clear-rect dispatch */
+        PE_Disc_SetActive(fx.disc);CdDeviceSeed();
+        ASSERT(PE_CdReg_EnableDevice(7u) && func_8007EC14()==1,
+            "updater retry delivery startup");
+        for(unsigned tick=0;tick<10u && PE_LoadU32(0x8009B574u)!=1u &&
+            !PE_Port_ShouldStop();tick++) HostFB_VSync(0);
+        ASSERT(PE_LoadU32(0x8009B574u)==1u,"updater retry delivery SDK ready");
+        MOVUPD_SeedSuccess(k);
+        CdStreamSeedRegisters();
+        PE_StoreU16(0x80150000u,0u);              /* no ready record */
+        PE_StoreU8(0x800B0DBAu,2u);
+        PE_StoreU16(0x800B0DBCu,65535u);
+        PE_StoreU8(0x801223F5u,0u);
+        PE_StoreU8(0x801223F8u,0u);
+        PE_StoreU8(0x801228FCu,1u);
+        PE_StoreU32(0x800A3490u,0x00000200u);
+        PE_StoreU8(0x800A3493u,0x77u);
+        PE_StoreU32(0x800A3494u,0x12345678u);
+        PE_StoreU32(0x800A8020u,0u);
+        ASSERT(func_80122040()==1 && !PE_Port_ShouldStop() &&
+            !g_stub_order_count,"updater retry delivery stopped");
+        ASSERT(PE_LoadU32(0x80122414u)==0x11010200u,
+            "updater retry delivery stream position");
+        ASSERT(PE_LoadU32(0x800A3494u)==0x1234u,
+            "updater retry delivery record promote");
+        ASSERT(PE_LoadU8(0x800B0DBAu)==2u &&
+            PE_LoadU16(0x800B0DBCu)==0u &&
+            PE_LoadU8(0x801228D4u)==(uint8_t)(k^1u) &&
+            PE_LoadU8(0x801228FCu)==0u,"updater retry delivery state");
+        FxFree(&fx);
+    }
     /* Abort helper 22354: decrement, sound stop, MDEC unregister,
      * stream teardown, then Pause. Device disabled stops at the
      * recorded CD_command_wait boundary (stage 155: Pause needs the

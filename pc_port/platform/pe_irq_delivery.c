@@ -123,6 +123,10 @@ static PeIrqServiceResult DispatchDmaCallback(pe_addr_t handler)
         func_801214D4();
         return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;
     }
+    if (handler == 0x80191DC8u) {
+        func_80191DC8();
+        return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;
+    }
     if (handler == 0x8007C214u) {
         func_8007C214();
         return PE_Port_ShouldStop()?PE_IRQ_SERVICE_BOUNDARY:PE_IRQ_SERVICE_RETURNED;

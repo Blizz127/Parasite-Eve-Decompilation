@@ -85,6 +85,8 @@ set(GAME_SRCS
     game/boot/m0013i_effect_port.c
     game/boot/m0023i_effect_port.c
     game/boot/mirror_effect_port.c
+    game/boot/m34_boss_effect_port.c
+    game/boot/m28_movement_port.c
     game/boot/field_item_pickup_port.c
     game/boot/actor_contact_port.c
     game/boot/func_800CEB8C_port.c
@@ -171,6 +173,8 @@ set(GAME_SRCS
     game/boot/func_80013E84_port.c
     game/boot/func_800659C8_port.c
     game/boot/func_80066800_port.c
+    game/boot/func_80065AD4_port.c
+    game/boot/func_800671C8_port.c
     game/boot/func_80017764_port.c
     game/boot/func_80065400_port.c
     game/boot/func_80012700_port.c
@@ -184,6 +188,7 @@ set(GAME_SRCS
     game/boot/func_8002FE78_port.c
     game/boot/func_8003010C_port.c
     game/boot/func_80030220_port.c
+    game/boot/battle_reward_port.c
     game/boot/func_800299CC_port.c
     game/boot/func_80033A40_port.c
     game/boot/func_8001D340_port.c
@@ -201,6 +206,7 @@ set(GAME_SRCS
     game/boot/func_80029810_port.c
     game/boot/func_8006C4C4_port.c
     game/boot/func_8003D050_port.c
+    game/boot/func_8003C638_port.c
     game/boot/func_8003C5D8_port.c
     game/boot/func_8006698C_port.c
     game/boot/func_8003DFD8_port.c
@@ -223,6 +229,7 @@ set(GAME_SRCS
     game/boot/func_80053B48_port.c
     game/boot/func_80051CC4_port.c
     game/boot/func_80051980_port.c
+    game/boot/field_message_port.c
     game/boot/func_8002156C_port.c
     game/boot/func_80020F18_port.c
     game/boot/func_80026FF8_port.c
@@ -237,12 +244,37 @@ set(GAME_SRCS
     game/boot/func_80046DFC_port.c
     game/boot/func_8005B500_port.c
     game/boot/func_80046ABC_port.c
+    game/boot/func_8004AD9C_port.c
+    game/boot/func_8004FF30_port.c
+    game/boot/func_8004AE1C_port.c
+    game/boot/func_8004AF3C_port.c
+    game/boot/func_8004AFA4_port.c
+    game/boot/func_8004B03C_port.c
+    game/boot/func_8004B0A4_port.c
+    game/boot/func_8004B13C_port.c
+    game/boot/func_8004B584_port.c
+    game/boot/func_8004FF58_port.c
+    game/boot/func_8004FF80_port.c
+    game/boot/func_8004B534_port.c
+    game/boot/func_8004B55C_port.c
+    game/boot/func_80050C70_port.c
+    game/boot/func_80050CB4_port.c
+    game/boot/func_8004B214_port.c
+    game/boot/func_8004B394_port.c
+    game/boot/func_8004B650_port.c
+    game/boot/func_80050438_port.c
+    game/boot/func_8005D994_port.c
+    game/boot/func_8005247C_port.c
+    game/boot/func_8004B5DC_port.c
+    game/boot/func_8005FCAC_port.c
+    game/boot/func_8005ED18_port.c
     game/boot/func_800515F8_port.c
     game/boot/func_800236E8_port.c
     game/boot/func_80028574_port.c
     game/boot/func_800314E4_port.c
     game/boot/func_8007041C_port.c
     game/boot/func_800C22F8_port.c
+    game/boot/func_800CE084_port.c
     game/boot/func_8005218C_port.c
     game/boot/func_8005B91C_port.c
     game/boot/func_800527C8_port.c
@@ -322,10 +354,19 @@ set(GAME_SRCS
     game/boot/func_80030894_port.c
     game/boot/func_8010BE3C_port.c
     game/boot/func_80190660_port.c
+    game/boot/func_8018F2F4_port.c
+    game/boot/func_8018F468_port.c
+    game/boot/func_8018FBC0_port.c
+    game/boot/func_80190064_port.c
     game/boot/func_801909B4_port.c
+    game/boot/func_80192FE8_port.c
+    game/boot/func_8019319C_port.c
+    game/boot/func_8019234C_port.c
     game/boot/func_801918F8_port.c
     game/boot/func_80191FB8_port.c
     game/boot/func_801924F8_port.c
+    game/boot/func_80191DC8_port.c
+    game/boot/func_80192934_port.c
     game/boot/func_80081314_port.c
     game/boot/func_80192CE8_port.c
     game/boot/func_800870F0_port.c
@@ -334,12 +375,29 @@ set(GAME_SRCS
     game/boot/func_8010C89C_port.c
 )
 
+# Decomp-derived port TUs (pc_port/game/decomp/*.c).  They are generated from
+# the verified matching C leaves in src/ by tools/analysis/gen_decomp_ports.py;
+# the glob keeps the manifest honest as matching advances.  A generated TU that
+# would collide with an existing pc_port definition is never written (see the
+# generator's conflict report), so every name here has exactly one provider.
+file(GLOB DECOMP_SRCS CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/game/decomp/*_port.c
+)
+# 50BE8's matching leaf has an implicit live a0. The native reward callback
+# supplies that argument explicitly; keep the generated matching source intact.
+list(REMOVE_ITEM DECOMP_SRCS "${CMAKE_SOURCE_DIR}/game/decomp/func_80050BE8_port.c")
+list(SORT DECOMP_SRCS)
+list(LENGTH DECOMP_SRCS PE_DECOMP_TU_COUNT)
+message(STATUS "pe: ${PE_DECOMP_TU_COUNT} decomp-derived port TUs")
+
 set(FIELD_RUNTIME_SRCS
     src/pe_globals.c
     platform/pe_callback.c
+    platform/pe_guest_decomp.c
     ${PLATFORM_SRCS}
     ${BOOTSTRAP_SRCS}
     ${GAME_SRCS}
+    ${DECOMP_SRCS}
 )
 
 # The static runtime is the reusable product boundary.  It contains the
@@ -375,6 +433,7 @@ add_executable(parasite-eve-port
     ${HOST_WINDOW_SRC}
 )
 target_link_libraries(parasite-eve-port PRIVATE pe_field_runtime)
+target_include_directories(parasite-eve-port PRIVATE ${CMAKE_SOURCE_DIR}/tests)
 if(NOT WIN32)
     # POSIX X11 backend resolves dlopen/dlsym from libdl.
     target_link_libraries(parasite-eve-port PRIVATE dl)
@@ -441,6 +500,19 @@ if(BUILD_TESTS)
     endif()
 
     if(UNIX AND NOT APPLE)
+        add_executable(pe-ambient-reload-tests tests/test_ambient_reload.c)
+        target_link_libraries(pe-ambient-reload-tests PRIVATE pe_field_runtime)
+        target_link_options(pe-ambient-reload-tests PRIVATE
+            "-Wl,--wrap=func_8006CDA4" "-Wl,--wrap=func_80086FF8"
+            "-Wl,--wrap=func_8006D2B8" "-Wl,--wrap=func_80086464"
+            "-Wl,--wrap=func_80086C5C" "-Wl,--wrap=func_8006DB48")
+        if(PE_PORT_SANITIZERS)
+            target_compile_options(pe-ambient-reload-tests PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+            target_link_options(pe-ambient-reload-tests PRIVATE -fsanitize=address,undefined -static-libasan -static-libubsan)
+        endif()
+        add_test(NAME ambient-reload-control-flow COMMAND pe-ambient-reload-tests)
+        set_tests_properties(ambient-reload-control-flow PROPERTIES TIMEOUT 30)
+
         add_executable(pe-music-bank-tests tests/test_music_bank.c)
         target_link_libraries(pe-music-bank-tests PRIVATE pe_field_runtime)
         target_link_options(pe-music-bank-tests PRIVATE
@@ -487,6 +559,29 @@ if(BUILD_TESTS)
         endif()
         add_test(NAME transition-init-control-flow COMMAND pe-transition-init-tests)
         set_tests_properties(transition-init-control-flow PROPERTIES TIMEOUT 30)
+
+        add_executable(pe-transition-outer-tests tests/test_transition_outer.c)
+        target_link_libraries(pe-transition-outer-tests PRIVATE pe_field_runtime)
+        foreach(provider func_80196498 func_80191DE8 HostFB_VSync HostFB_SetDispMask func_80071A64 func_80071A54 func_8003EB04 func_8006A25C func_801942FC func_8018F05C func_8018F92C func_80194108 func_80192740 func_80192800 func_80193478 func_80191E30 func_80191EFC func_80037870 func_80074DC0 func_80193AB0 func_80074A44 func_80075424 func_800755F0 func_800753B4 func_800752AC func_8019BF8C func_80192030 PE_TransitionCompactOT)
+            target_link_options(pe-transition-outer-tests PRIVATE "-Wl,--wrap=${provider}")
+        endforeach()
+        if(PE_PORT_SANITIZERS)
+            target_compile_options(pe-transition-outer-tests PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+            target_link_options(pe-transition-outer-tests PRIVATE -fsanitize=address,undefined -static-libasan -static-libubsan)
+        endif()
+        add_test(NAME transition-outer-control-flow COMMAND pe-transition-outer-tests)
+        set_tests_properties(transition-outer-control-flow PROPERTIES TIMEOUT 30)
+
+        # End-to-end boot -> Day-2 route harness (control-flow/state traversal).
+        # Split into its own binary: it drives the whole boot spine for 52k
+        # frames, which is far too slow to sit in the default unit suite.
+        add_executable(pe-route-boot-day2-tests tests/test_route_boot_day2.c)
+        target_link_libraries(pe-route-boot-day2-tests PRIVATE pe_field_runtime)
+        add_test(NAME route-boot-day2-control-flow COMMAND pe-route-boot-day2-tests)
+        set_tests_properties(route-boot-day2-control-flow PROPERTIES
+            TIMEOUT 600
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/..
+        )
 
         add_executable(pe-transition-loader-tests tests/test_transition_loader.c)
         target_link_libraries(pe-transition-loader-tests PRIVATE pe_field_runtime)

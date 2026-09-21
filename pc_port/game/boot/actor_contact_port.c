@@ -48,6 +48,68 @@ static void contact_restore(pe_addr_t actor)
     PE_StoreU32(actor+0x1A4u,floor);
 }
 
+/* Retail 3601C..360B4: one list pass, preserving parent/child ordering.
+ * Flag400000 copies the parent's pose before model projection. */
+void func_8003601C(void)
+{
+    for (pe_addr_t actor=PE_LoadU32(0x8009D20Cu);actor;actor=PE_LoadU32(actor+4u)) {
+        pe_addr_t parent=PE_LoadU32(actor+0x18Cu);
+        if (!parent || !(PE_LoadU32(actor+0x98u)&0x400000u)) continue;
+        for (unsigned i=0;i<3u;i++)
+            PE_StoreU32(actor+40u+i*4u,PE_LoadU32(PE_LoadU32(actor+0x18Cu)+40u+i*4u));
+        for (unsigned i=0;i<3u;i++)
+            PE_StoreU16(actor+56u+i*2u,PE_LoadU16(PE_LoadU32(actor+0x18Cu)+56u+i*2u));
+    }
+}
+
+/* Retail 360B4..361F4, including effect release and actor free-list writes.
+ * 363F4 removes the first matching model allocation. 3D82C is the original
+ * two-instruction return-one leaf and has no memory effects. */
+void func_800360B4(void)
+{
+    pe_addr_t actor=PE_LoadU32(0x8009D20Cu);
+    while (actor) {
+        uint32_t flags=PE_LoadU32(actor+0x98u);
+        pe_addr_t parent=PE_LoadU32(actor+0x18Cu);
+        PE_StoreU32(actor+0x98u,flags&0xFF7FFFFFu);
+        if ((flags&16u) || (parent && (PE_LoadU32(parent+0x98u)&16u))) {
+            pe_addr_t next,previous,free_head;
+            (void)func_8006FE14(actor);
+            if (PE_Port_ShouldStop()) return;
+            next=PE_LoadU32(actor+4u);
+            if (actor==PE_LoadU32(0x8009D254u)) {
+                PE_StoreU32(0x8009D254u,0u);
+                PE_StoreU32(0x8009D2E8u,PE_LoadU32(0x8009D2E8u)&0xFFFFFFF2u);
+            }
+            if (PE_LoadU32(actor+0x1ACu)) {
+                pe_addr_t allocation=PE_LoadU32(actor+0x278u);
+                for (unsigned i=0;i<16u;i++) {
+                    pe_addr_t entry=0x800A7624u+i*8u;
+                    if (PE_LoadU32(entry)==allocation) {PE_StoreU32(entry,0u);break;}
+                }
+            }
+            previous=PE_LoadU32(actor+8u);
+            if (!previous) {
+                free_head=PE_LoadU32(0x8009D2ACu);
+                PE_StoreU32(0x8009D2ACu,actor);
+                PE_StoreU32(0x8009D20Cu,PE_LoadU32(actor+4u));
+                /* Retail also stores through physical 8 when next is zero. */
+                PE_StoreU32((next<0x200000u?next|0x80000000u:next)+8u,0u);
+                PE_StoreU32(actor+4u,free_head);
+            } else {
+                PE_StoreU32(previous+4u,PE_LoadU32(actor+4u));
+                if (PE_LoadU32(actor+4u))
+                    PE_StoreU32(PE_LoadU32(actor+4u)+8u,PE_LoadU32(actor+8u));
+                free_head=PE_LoadU32(0x8009D2ACu);
+                PE_StoreU32(0x8009D2ACu,actor);
+                PE_StoreU32(actor+4u,free_head);
+            }
+            PE_StoreU16(0x8009D2A6u,(uint16_t)(PE_LoadU16(0x8009D2A6u)-1u));
+            actor=next;
+        } else actor=PE_LoadU32(actor+4u);
+    }
+}
+
 void func_80035F54(pe_addr_t actor)
 {
     pe_addr_t parent=PE_LoadU32(actor+0x18Cu);

@@ -3,7 +3,7 @@
 ## Canonical target
 
 **Disc 1's `SLUS_006.62` is the single canonical executable target.**
-Disc 2's `SLUS_006.68` is byte-identical (SHA-1
+Disc 2's `SLUS_006.68` is byte-identical to disc 1's `SLUS_006.62` (SHA-1
 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b` for both, verified 2026-07-04 —
 see `docs/disc_info.md` and `docs/reverse_engineering_notes.md`), so every
 split, symbol, and eventual rebuild result applies to both discs.

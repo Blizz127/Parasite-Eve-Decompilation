@@ -19,7 +19,15 @@
     },
     "src/func_8006A9E4.c": {
       "disposition": "in-progress-checkpoint",
-      "evidence": "docs/ai_context/ACTIVE_HANDOFF.md"
+      "evidence": "docs/evidence/func-8006A9E4/PARK.md"
+    },
+    "src/func_80069B08.c": {
+      "disposition": "in-progress-checkpoint",
+      "evidence": "docs/evidence/func-80069B08/PARK.md"
+    },
+    "src/func_8006AD40.c": {
+      "disposition": "in-progress-checkpoint",
+      "evidence": "docs/evidence/func-8006AD40/PARK.md"
     },
     "src/func_800725DC.c": {
       "disposition": "accepted-residual",

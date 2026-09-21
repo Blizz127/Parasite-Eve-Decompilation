@@ -32,50 +32,6 @@ void func_8003C5D8(pe_addr_t dest, int a1)
     PE_StoreU8(dest + 0x93u, (uint8_t)quot);
 }
 
-/*
- * PE-BTL120 — 3C818 dest fade (178w 0x8003C818..0x8003CAE0)
- * and 3AF14 dest tick (140w 0x8003AF14..0x8003B144).
- *
- * Aya+0x1B4 is an embedded dest, so dest+0x9E IS Aya+0x252
- * and dest+0x9C IS Aya+0x250. 24A3C case 2's sb 1 at +0x252
- * is the dest busy byte. The EXE has no sb $0,594(actor);
- * the zero store is sb $0,158(dest) at 3C87C when +0x8C==1.
- *
- * 3C818 +0x8C machine:
- *   0  → sb -1, return (no decrement)
- *   1  → dest+0x9E=0, then +0x8C--
- *  <0  → copy +0x8D → +0x8C, then --
- *  >=2 → 3CCB0/color deferred, then --
- * 3B97C / 3BCE0 / 3CCB0 / 3CEF8 stay deferred.
- *
- * 3AF14: dest+0==0 or lh +0xBA==0 return. dest+0x9C&2
- * jals 3C818 (case 0/5 +0x250|=2). DRAW1 adds 3B144 submission;
- * 3C2E0 / 3C638 remain deferred.
- */
-int func_8003C818(pe_addr_t dest)
-{
-    int8_t phase;
-
-    if (dest == 0u)
-        return 0;
-    if (PE_LoadU32(dest) == 0u)
-        return 0;
-    if ((int16_t)PE_LoadU16(dest + 0xBAu) == 0)
-        return 0;
-
-    phase = (int8_t)PE_LoadU8(dest + 0x8Cu);
-    if (phase == 0) {
-        PE_StoreU8(dest + 0x8Cu, 0xFFu);
-        return 0;
-    }
-    if (phase == 1)
-        PE_StoreU8(dest + 0x9Eu, 0u);
-    else if (phase < 0)
-        PE_StoreU8(dest + 0x8Cu, PE_LoadU8(dest + 0x8Du));
-    PE_StoreU8(dest + 0x8Cu, (uint8_t)(PE_LoadU8(dest + 0x8Cu) - 1u));
-    return 0;
-}
-
 /* 3B144..3B708: projected GT4/GT3/G4/G3 packet submission. NCLIP
  * uses signed screen coordinates and a wrapping 32-bit MAC0 result. */
 void func_8003B144(pe_addr_t dest)
@@ -207,15 +163,38 @@ int func_8003AF14(pe_addr_t dest, pe_addr_t scratch)
         return 0;
 
     flags = PE_LoadU16(dest + 0x9Cu);
-    /* Retail 3AF88: floor clip before the packet build. */
-    if ((flags & 0x10u) != 0u)
-        func_8003C2E0(dest, (int)(int16_t)PE_LoadU16(dest + 0x9Au), scratch);
-    /* Model packet storage is absent in isolated pre-constructor cuts. */
+    if (flags & 0x800u) {
+        func_8003CEF8(dest, 0); func_8003CCB0(dest, 0);
+        PE_StoreU16(dest + 0x9Cu, PE_LoadU16(dest + 0x9Cu) & 0xF7FFu);
+    }
+    if (PE_LoadU16(dest + 0x9Cu) & 0x10u)
+        func_8003C2E0(dest, (int16_t)PE_LoadU16(dest + 0x9Au), scratch);
+    /* Isolated pre-constructor tests have no packet storage. */
     if (PE_LoadU8(dest + 0x9Eu) == 1u
         && PE_RangeIsRam(PE_LoadU32(dest + 0x54u), 4u))
         func_8003B144(dest);
-    if ((flags & 2u) != 0u)
-        return func_8003C818(dest);
-    /* 3C638 (+0x9C&4 without bit 1) deferred. */
+    flags = PE_LoadU16(dest + 0x9Cu);
+    if (flags & 0x20u) {
+        func_8003B708(dest, (int16_t)PE_LoadU16(0x8009CDDCu));
+        PE_StoreU8(dest + 0x9Fu, PE_LoadU32(0x8009CDDCu) == 0u);
+        PE_StoreU16(dest + 0x9Cu, (PE_LoadU16(dest + 0x9Cu) & 0xFFDFu) | 0x40u);
+    } else if (flags & 0x40u) {
+        func_8003B708(dest, PE_LoadU8(dest + 0x9Fu));
+        PE_StoreU16(dest + 0x9Cu, PE_LoadU16(dest + 0x9Cu) & 0xFFBFu);
+    }
+    flags = PE_LoadU16(dest + 0x9Cu);
+    if (flags & 2u) {
+        if ((int16_t)func_8003C818(dest))
+            PE_StoreU16(dest + 0x9Cu, (PE_LoadU16(dest + 0x9Cu) & 0xFFFDu) | 0x200u);
+    } else if (flags & 4u) {
+        if ((int16_t)func_8003C638(dest))
+            PE_StoreU16(dest + 0x9Cu, PE_LoadU16(dest + 0x9Cu) & 0xFFFBu);
+    } else if (flags & 9u) {
+        func_8003B97C_lighting_cut(dest, 0x800BEA40u);
+        if (!(flags & 8u)) func_8003BCE0(dest, 0, (int16_t)PE_LoadU16(0x8009CDDCu));
+    }
+    if (PE_LoadU16(dest + 0x9Cu) & 8u)
+        func_8003C0B4(dest, (int16_t)PE_LoadU16(dest + 0x9Au),
+            PE_LoadU8(dest + 0x97u), PE_LoadU8(dest + 0x98u), PE_LoadU8(dest + 0x99u));
     return 0;
 }

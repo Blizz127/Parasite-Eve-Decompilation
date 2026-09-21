@@ -24,11 +24,10 @@
 #include "psx_compat.h"
 #include "pe_guest_ram.h"
 
-/* ── gp-relative state globals (host-side, extern for test reset) ── */
-/* These were originally `static` but that creates a host/guest split-brain:
- * ResetTestState (PE_RamReset) cannot clear them, causing stale values
- * to leak between tests.  Making them extern allows pe_globals.c to own
- * the storage and tests to reset via PE_Sdk_ResetState. */
+/* GP-relative state is shared with the translated reward/menu graph.
+ * D_8009D03C, like the buffer words below, is a guest-RAM lvalue: 57E14
+ * consumes the original store at 52C6C's search completion. A separate host
+ * copy incorrectly remapped ordinary ammunition rewards as temporary items. */
 
 /* D_8009D018: read by func_80051E58, used by func_80052F70 */
 /* D_8009D03C: record count / search result index */

@@ -1,14 +1,14 @@
-/* Field floor collision, from retail AB74.s:
+/* Field floor collision, from retail AF84.s:
  * 1AE40 movement/height, 1B5FC neighboring-edge search, 1C164 triangle
  * crossing, and 1C7DC wall slide. Uses the map's 22/28-byte triangles,
  * shared edge records and actor radius; no scene-specific barriers.
  *
- * Native adaptation: recheck edges each tick instead of 1AE40's cached
- * last-wall shortcut. Actor/object collision (1D170) remains separate.
+ * Includes 1AE40's cached-wall gate and 1D170's script polygon boundary.
  * Invalid/absent mesh records are ignored for resource-free VM fixtures.
  */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
+#include "pe_sdk.h"
 
 #define MESH_P  0x8009D1FCu
 #define PLANES  0x8009D1D8u
@@ -166,7 +166,7 @@ static void floor_slide(pe_addr_t actor)
     int32_t radius = PE_LoadU16(RADIUS);
     unsigned step, dir;
     PE_StoreU32(INPUT, PE_LoadU32(INPUT) | 8u);
-    for (step=0; step <= (unsigned)radius+2u; step++) {
+    for (step=0;;step++) {
         for (dir=0; dir<4u; dir++) {
             uint32_t x=base_x, z=base_z, offset=step<<16;
             int32_t distance;
@@ -184,9 +184,6 @@ static void floor_slide(pe_addr_t actor)
             }
         }
     }
-    /* Degenerate edge data cannot leave the native loop unbounded. */
-    PE_StoreU32(actor+0x28u,old_x);
-    PE_StoreU32(actor+0x30u,old_z);
 }
 
 /* 1C164: follow only neighbors crossed by this movement segment. */
@@ -223,6 +220,31 @@ static pe_addr_t floor_crossing(pe_addr_t rec, pe_addr_t previous,
     return 0;
 }
 
+/* 1AF50..1B174: retain the previous wall while moving toward it within
+ * its extent. The first xmax test deliberately uses z, not z-radius;
+ * the retail branch is asymmetric. Extent differences wrap to s16. */
+static int floor_cached_wall(int32_t x, int32_t z, int32_t old_x, int32_t old_z)
+{
+    int32_t current, previous;
+    int32_t radius=PE_LoadU16(RADIUS);
+    int32_t xmax=floor_s16(0x8009CE1Cu), xmin=floor_s16(0x8009CE20u);
+    int32_t zmax=floor_s16(0x8009CE24u), zmin=floor_s16(0x8009CE28u);
+    int32_t width=(int16_t)(xmax-xmin), height=(int16_t)(zmax-zmin);
+    g_pe_gte.sxy[0]=PE_LoadU32(WALL);
+    g_pe_gte.sxy[1]=PE_LoadU32(WALL+4u);
+    g_pe_gte.sxy[2]=(uint16_t)x | ((uint32_t)(uint16_t)z<<16);
+    current=PE_GTE_NCLIP();
+    g_pe_gte.sxy[2]=(uint16_t)old_x | ((uint32_t)(uint16_t)old_z<<16);
+    previous=PE_GTE_NCLIP();
+    if ((int32_t)((uint32_t)current^(uint32_t)previous)>=0
+        && floor_abs(previous)<floor_abs(current)) return 0;
+    if (xmax<x-radius && (height<width || zmax<z || z+radius<zmin)) return 0;
+    if (x+radius<xmin && (height<width || zmax<z-radius || z+radius<zmin)) return 0;
+    if (zmax<z-radius && (width<height || xmax<x-radius || x+radius<xmin)) return 0;
+    if (z+radius<zmin && (width<height || xmax<x-radius || x+radius<xmin)) return 0;
+    return 1;
+}
+
 void func_8001AE40(pe_addr_t actor)
 {
     pe_addr_t rec = PE_LoadU32(actor+0x1A4u);
@@ -241,9 +263,13 @@ void func_8001AE40(pe_addr_t actor)
     PE_StoreU32(actor+0x1A8u,rec);
     PE_StoreU16(RADIUS,(uint16_t)((int32_t)((uint32_t)PE_LoadU16(actor+0x224u)
                                       * PE_LoadU16(actor+0x26u)) / 4096));
-    if (is_aya) PE_StoreU32(INPUT,PE_LoadU32(INPUT)&~8u);
-    floor_clear_visited();
-    pass=floor_edges(x,z,rec,0);
+    pass=0;
+    if (!is_aya || !(PE_LoadU32(INPUT)&8u)
+        || !floor_cached_wall(x,z,old_x,old_z)) {
+        if (is_aya) PE_StoreU32(INPUT,PE_LoadU32(INPUT)&~8u);
+        floor_clear_visited();
+        pass=floor_edges(x,z,rec,0);
+    }
     if (!pass) {
         unsigned wall;
         if (!is_aya) goto reject;
@@ -266,11 +292,14 @@ void func_8001AE40(pe_addr_t actor)
     }
     if (!func_8001C614(rec,x,z)) {
         rec=floor_crossing(rec,0,x,z,old_x,old_z,0);
-        if (!rec) goto reject;
     }
+    /* Retail does not reject a zero crossing result (1B3A0). Its following
+     * loads use physical RAM at address zero; retain the zero result when
+     * publishing the triangle pointer, translating only the record reads. */
+    pe_addr_t height_rec=rec?rec:PE_RAM_BASE;
     if (PE_LoadU32(PLANES)) {
-        pe_addr_t plane=PE_LoadU32(PLANES)+PE_LoadU16(rec+2u)*12u;
-        uint32_t y=PE_LoadU32(rec+4u)
+        pe_addr_t plane=PE_LoadU32(PLANES)+PE_LoadU16(height_rec+2u)*12u;
+        uint32_t y=PE_LoadU32(height_rec+4u)
             - func_8003708C(PE_LoadU32(plane),PE_LoadU32(actor+0x28u))
             - func_8003708C(PE_LoadU32(plane+8u),PE_LoadU32(actor+0x30u));
         y=func_8003708C(y,PE_LoadU32(plane+4u));
@@ -284,7 +313,7 @@ void func_8001AE40(pe_addr_t actor)
             }
         }
     } else {
-        unsigned layer=PE_LoadU8(rec+1u);
+        unsigned layer=PE_LoadU8(height_rec+1u);
         pe_addr_t entry=PE_LoadU32(PE_LoadU32(0x8009CE08u)+layer*4u);
         int32_t height=floor_s16(entry);
         if (flags&2u) {
@@ -309,8 +338,103 @@ reject:
     PE_StoreU32(actor+0x98u,PE_LoadU32(actor+0x98u)|0x80000u);
 }
 
+/* 1CE88: radius contact with the closed script polygon. Coordinates are
+ * signed high halves of 16.16 points; return the contacted edge's index. */
+static int floor_polygon_contact(int32_t x, int32_t z, pe_addr_t points, unsigned count)
+{
+    /* Original's two unused endpoint reads precede this empty-list return. */
+    if (!count) return -1;
+    int32_t px=floor_s16(points+count*8u-6u);
+    int32_t pz=floor_s16(points+count*8u-2u);
+    int32_t radius=PE_LoadU16(RADIUS);
+    for (unsigned i=0;i<count;i++) {
+        int32_t qx=floor_s16(points+i*8u+2u), qz=floor_s16(points+i*8u+6u);
+        int32_t dx=px-qx, dz=pz-qz, ax=x-qx, az=z-qz;
+        int32_t in[3]={dx,0,dz}, normal[3];
+        uint32_t sum;
+        int32_t length, distance, along;
+        px=qx; pz=qz;
+        if ((qx<x-radius && qx+dx<x-radius) ||
+            (x+radius<qx && x+radius<qx+dx) ||
+            (qz<z-radius && qz+dz<z-radius) ||
+            (z+radius<qz && z+radius<qz+dz)) continue;
+        length=(int32_t)func_80078004((uint32_t)floor_add(floor_mul(dx,dx),floor_mul(dz,dz)));
+        distance=floor_abs(floor_div(floor_sub(floor_mul(az,dx),floor_mul(ax,dz)),length));
+        if (radius<distance) continue;
+        if (!PE_NormalizeVectorRetail(in,normal,&sum)) return -1;
+        along=(int32_t)(func_8003708C((uint32_t)normal[0]<<4,(uint32_t)ax<<16)
+                      +func_8003708C((uint32_t)normal[2]<<4,(uint32_t)az<<16));
+        if (along<0) {
+            along=floor_add(floor_mul(ax,ax),floor_mul(az,az));
+            if (floor_mul(radius,radius)<along) continue;
+        }
+        if (length<(along>>16)) {
+            ax=x-(qx+dx); az=z-(qz+dz);
+            if (floor_mul(radius,radius)<floor_add(floor_mul(ax,ax),floor_mul(az,az))) continue;
+        }
+        return (int)i;
+    }
+    return -1;
+}
+
+/* 1CBA0: project onto the contacted edge, then search +x,-x,+z,-z
+ * by increasing whole units until radius clearance is strict. */
+static void floor_polygon_slide(pe_addr_t actor, pe_addr_t points, unsigned count, int edge)
+{
+    pe_addr_t point=points+(uint32_t)edge*8u;
+    int32_t qx=floor_s16(point+2u), qz=floor_s16(point+6u);
+    pe_addr_t previous=edge>0?point-8u:points+(count-1u)*8u;
+    int32_t px=floor_s16(previous+2u), pz=floor_s16(previous+6u);
+    int32_t in[3]={qx-px,0,qz-pz}, normal[3];
+    uint32_t sum, tx, tz, along, base_x, base_z;
+    int32_t dx=px-qx, dz=pz-qz, length, radius=PE_LoadU16(RADIUS);
+    if (!PE_NormalizeVectorRetail(in,normal,&sum)) return;
+    tx=(uint32_t)normal[0]<<4; tz=(uint32_t)normal[2]<<4;
+    along=func_8003708C(tx,PE_LoadU32(actor+0x28u)-PE_LoadU32(actor+0x40u))
+         +func_8003708C(tz,PE_LoadU32(actor+0x30u)-PE_LoadU32(actor+0x48u));
+    base_x=PE_LoadU32(actor+0x40u)+func_8003708C(tx,along);
+    base_z=PE_LoadU32(actor+0x48u)+func_8003708C(tz,along);
+    length=(int32_t)func_80078004((uint32_t)floor_add(floor_mul(dx,dx),floor_mul(dz,dz)));
+    for (unsigned step=0;;step++) {
+        for (unsigned dir=0;dir<4u;dir++) {
+            uint32_t x=base_x,z=base_z,offset=step<<16;
+            if (dir==0) x+=offset;
+            else if (dir==1) x-=offset;
+            else if (dir==2) z+=offset;
+            else z-=offset;
+            int32_t distance=floor_abs(floor_div(floor_sub(
+                floor_mul(((int32_t)z>>16)-qz,dx),
+                floor_mul(((int32_t)x>>16)-qx,dz)),length));
+            if (radius<distance) {
+                PE_StoreU32(actor+0x28u,x);
+                PE_StoreU32(actor+0x30u,z);
+                return;
+            }
+        }
+    }
+}
+
+/* Complete 1D170 call graph, enabled by D2E8 bit 4 at 1AA0C. */
+static void floor_polygon_boundary(void)
+{
+    pe_addr_t actor=PE_LoadU32(AYA),points=PE_LoadU32(0x8009D2F8u);
+    unsigned count=PE_LoadU16(0x8009D264u);
+    int32_t radius=floor_mul(PE_LoadU16(actor+0x224u),PE_LoadU16(actor+0x26u));
+    if (radius<0) radius=floor_add(radius,4095);
+    PE_StoreU16(RADIUS,(uint16_t)(radius>>12));
+    int edge=(int16_t)floor_polygon_contact(floor_s16(actor+0x2Au),floor_s16(actor+0x32u),points,count);
+    if (edge<0) return;
+    floor_polygon_slide(actor,points,count,edge);
+    if ((int16_t)floor_polygon_contact(floor_s16(actor+0x2Au),floor_s16(actor+0x32u),points,count)>=0) {
+        PE_StoreU32(actor+0x28u,PE_LoadU32(actor+0x40u));
+        PE_StoreU32(actor+0x2Cu,PE_LoadU32(actor+0x44u));
+        PE_StoreU32(actor+0x30u,PE_LoadU32(actor+0x48u));
+    }
+}
+
 void func_8001A9F8_floor_cut(void)
 {
+    if (PE_LoadU32(INPUT)&4u) floor_polygon_boundary();
     pe_addr_t actor=PE_LoadU32(0x8009D20Cu);
     while (actor) {
         if (!(PE_LoadU32(actor+0x98u)&0x80u)) func_8001AE40(actor);

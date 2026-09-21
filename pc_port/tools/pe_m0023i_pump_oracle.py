@@ -18,6 +18,12 @@ for bank in (0,1):
  for weapon in ((1,),(2,),(1,2),(2,1)):
   CASES.append(dict(entry=0,bank=bank,pause=4,weapon=weapon,age=255,after=True))
   CASES.append(dict(entry=0,bank=bank,pause=4,weapon=weapon,age=10,no_particles=True))
+for bank in (0,1):
+ for after in (False,True):
+  for program in ('delay','loop','stop'):
+   for club in (False,True):
+    CASES.append(dict(entry=0,bank=bank,pause=4,weapon=(),age=0,
+                     after=after,active_updates=program,club=club))
 FRAMES=14
 
 def fixture(exe,overlay,c):
@@ -73,11 +79,27 @@ def fixture(exe,overlay,c):
    put(weapon+128+i*6,struct.pack('<BBHh',code,1,0,i*64))
    put(weapon+512+i*64,wr[0x143200:0x143230])
    put(weapon+513+i*64,bytes(((c['age']+i)&255,)))
+  if c.get('active_updates'):
+   # Empty weapon/impact lists still run C251C and C2758. Their shallow
+   # frames preserve the preceding room-update writer at pump SP-0xA4.
+   for slot,script in ((weapon,0x151E40),(hit,0x151E60)):
+    put(slot+128,bytes(384));sw(slot+8,struct.unpack_from('<I',r,0x9D254)[0])
+    sw(slot+120,0x80000000+script)
+    program=(0xFFFFFFFF,) if c['active_updates']=='stop' else (
+        0x00100012,0x00200003,0x00020001,0x30FC0000)
+    for j,op in enumerate(program):sw(script+j*4,op)
+    if c['active_updates']=='delay':sh(slot+12,5)
+  if c.get('club'):
+   # CE144/CE16C use the same shared loops and shallow frame depths.
+   # Leave the second slot inactive and use the original club descriptor.
+   put(hit,b'\0');put(weapon+1,b'\x06')
+   sw(0x151C18,0x80151DA0);sw(0x151DAC,0x800CE144);sw(0x151DB0,0x800CE16C)
+   put(0xE0FB4,exe[0xE0FB4-0x10000+0x800:0xE1044-0x10000+0x800])
   assert struct.unpack_from('<I',r,0x9CDDC)[0]==c['bank']
  return r,s,(),ctrl
 
 def frame_input(r,c,frame):
- flags=0x80|(0x100 if 'weapon' in c else 0)|(c['pause'] if 4<=frame<=6 else 0)
+ flags=0x80|(0x100 if 'weapon' in c and not c.get('active_updates') else 0)|(c['pause'] if 4<=frame<=6 else 0)
  struct.pack_into('<I',r,0x9D1A0,flags);struct.pack_into('<I',r,0x9CDD8,0)
  # Fresh GPU output storage per fixture frame; effect data and borrowed CPU
  # stack bytes persist. This avoids comparing old undefined packet padding

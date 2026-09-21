@@ -54,6 +54,33 @@ def optional_cmake_sources(text: str, variable: str) -> list[str]:
     return cmake_sources(text, variable)
 
 
+def collect_test_translation_unit(root: Path, text: str, rel: Path) -> str:
+    """Concatenate a C translation unit with its local quoted #includes.
+
+    The native suite's cases live in `test_native.c` and the `test_*.h`
+    headers it pulls in, so a static count that only reads the main file
+    under-reports the expected run count.  Includes are resolved relative to
+    the including file; system includes (`<...>`) and missing files are left
+    alone.  Each file contributes once, which matches a single TU compile.
+    """
+    parts: list[str] = []
+
+    def walk(current: Path) -> None:
+        if current in seen:
+            return
+        seen.add(current)
+        body = current.read_text(encoding="utf-8")
+        parts.append(body)
+        for name in re.findall(r'#\s*include\s+"([^"]+)"', body):
+            candidate = (current.parent / name).resolve()
+            if candidate.is_file() and candidate not in seen:
+                walk(candidate)
+
+    seen: set[Path] = set()
+    walk((root / rel).resolve())
+    return "\n".join(parts)
+
+
 def derive_metrics(root: Path = ROOT) -> dict[str, Any]:
     source = (root / SOURCE).read_text(encoding="utf-8")
     evidence = (root / EVIDENCE).read_text(encoding="utf-8")
@@ -145,14 +172,18 @@ def derive_metrics(root: Path = ROOT) -> dict[str, Any]:
         re.search(r"add_library\s*\(\s*pe_field_runtime\b", cmake)
     )
 
-    ordinary_tests = len(re.findall(r'\bTEST\("', tests))
-    retail_disc_tests = len(re.findall(r'\bTEST_RETAIL_DISC1\("', tests))
+    # Tests are spread across test_native.c and the test_*.h headers it includes
+    # (transitively).  Count in the full include closure or the expected run
+    # count silently drifts below the cases the binary actually registers.
+    test_text = collect_test_translation_unit(root, tests, TEST_SOURCE)
+    ordinary_tests = len(re.findall(r'\bTEST\("', test_text))
+    retail_disc_tests = len(re.findall(r'\bTEST_RETAIL_DISC1\("', test_text))
     static_tests = ordinary_tests + retail_disc_tests
     if static_tests == 0:
         raise MetricsError("no native TEST() cases found")
     if retail_disc_tests == 0:
         raise MetricsError("no explicitly tagged retail-Disc native tests found")
-    if not re.search(r"tests_run\+\+", tests):
+    if not re.search(r"tests_run\+\+", test_text):
         raise MetricsError("TEST() no longer visibly increments tests_run")
 
     return {

@@ -1,15 +1,13 @@
 /*
- * Phase 6E-B54K-Y — retail prefix of overlay-local func_80192CE8.
+ * Phase 6E-B54K-Y — overlay-local func_80192CE8.
  *
- * Authenticated range: [0x80192CE8,0x80192DFC), 69 words, SHA-256
- * 0670dc9a913589495f623812b226d1ac665ca7984a6cbbe15efc7c200c038855.
- * The prefix marks the indexed 20-byte record, performs the first table-
- * selected PE.IMG read with the retail retry/poll CFG, balances the cache
- * critical section, and enters func_80191FB8(1, sp+0x10).  The stack word
- * contains arena + ((D_80093162-D_80093160)<<11). B54K-Z completes that
- * callee; B54K-AA enters the next call and its authenticated prefix.
- *
- * The remainder after the call at 0x80192E00 is not approximated here.
+ * Complete retail function: [0x80192CE8,0x80192F98), 172 words, SHA-256
+ * ed89408bffde43742781c89f1d16b7a98c52dc165b67cafd62cfdcf9319e03e7.
+ * Translated through first-frame setup (91FB8 + 924F8), 3EB04, the
+ * continue-frame worker (92934), skip check, and 70E54.  Finite host
+ * budgets (PE_Port_SetMovieContinueBudget) stop at
+ * func_80192CE8_media_loop; default -1 runs until B0DBA==0.  Epilogue
+ * clears busy bit 0x200 on D_800B0CD8 and returns $s3 (0 unless skip).
  */
 #include "psx_compat.h"
 #include "game_port.h"
@@ -24,12 +22,24 @@
 
 extern int PE_func_80191FB8_Values(int count, const pe_addr_t *sources);
 
+static void ClearMovieArenas(void)
+{
+    PE_StoreU32(0x801D0DE8u, 0u);
+    PE_StoreU32(0x801D0DECu, 0u);
+    PE_StoreU32(0x801D0DFCu, 0u);
+    PE_StoreU32(0x801D0DF8u, 0u);
+    PE_StoreU32(0x801D0DF0u, 0u);
+    PE_StoreU32(0x801D0DF4u, 0u);
+    PE_StoreU8(0x800B0DBAu, 0u);
+}
+
 int func_80192CE8(int index)
 {
     uint16_t start;
     uint16_t end;
     uint32_t stream;
     int status;
+    int result = 0;
 
     PE_StoreU32(GA_OVERLAY_FLAGS,
                 PE_LoadU32(GA_OVERLAY_FLAGS) | 0x200u);
@@ -72,7 +82,65 @@ retry_issue:
     if (PE_Port_ShouldStop())
         return -1;
 
-    Bootstrap_ReturnVoid("func_80192CE8_80192E08_cut", "func_80192CE8");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return -1;
+    /* 80192E08: enter media loop when B0DBA != 0. */
+    if (PE_LoadU8(0x800B0DBAu) != 0u) {
+        for (;;) {
+            int16_t decoded;
+            int step;
+
+            decoded = (int16_t)PE_LoadU16(0x800B0DBCu);
+            if (decoded <= 0)
+                break;
+
+            if (!PE_Port_ConsumeMovieContinue()) {
+                Bootstrap_ReturnVoid("func_80192CE8_media_loop",
+                                     "func_80192CE8");
+                PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+                return -1;
+            }
+
+            func_8003EB04();
+            if (PE_Port_ShouldStop())
+                return -1;
+
+            step = func_80192934();
+            if (PE_Port_ShouldStop())
+                return -1;
+
+            if ((uint8_t)step == 0u) {
+                ClearMovieArenas();
+            } else if (PE_LoadU32(0x8009D26Cu) & 0x20000004u) {
+                PE_StoreU8(0x800B0DBAu,
+                           (uint8_t)(PE_LoadU8(0x800B0DBAu) - 1u));
+                func_800870F0(0u);
+                if (PE_Port_ShouldStop())
+                    return -1;
+                func_8010C0D8(0u);
+                if (PE_Port_ShouldStop())
+                    return -1;
+                func_8007A2A4();
+                if (PE_Port_ShouldStop())
+                    return -1;
+                (void)func_80080DC4(9, 0u, 0u);
+                decoded = (int16_t)PE_LoadU16(0x800B0DBCu);
+                ClearMovieArenas();
+                if (decoded < 1400) {
+                    (void)func_80073A44(0);
+                    func_80074D28(0);
+                }
+                result = 1;
+            }
+
+            func_80070E54();
+            if (PE_Port_ShouldStop())
+                return -1;
+            if (PE_LoadU8(0x800B0DBAu) == 0u)
+                break;
+        }
+    }
+
+    /* 80192F60: clear overlay busy bit 0x200 and return $s3. */
+    PE_StoreU32(GA_OVERLAY_FLAGS,
+                PE_LoadU32(GA_OVERLAY_FLAGS) & ~0x200u);
+    return result;
 }

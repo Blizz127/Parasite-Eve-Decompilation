@@ -78,10 +78,27 @@ void PE_Port_GetDmaIrqCheckpointTrace(PEPortDmaIrqCheckpointTrace *out);
 void PE_Port_SetSkipMovie(int enabled);
 int  PE_Port_SkipMovie(void);
 
+/* Host-only continue-frame budget for opening/field movie media loops.
+ * -1 (default) = unlimited retail loop.  N > 0 allows N func_80192934 /
+ * continue-frame iterations before the named media_loop frontier.  0
+ * cuts before the next continue.  ResetTestState / RunControlReset
+ * restore -1. */
+void PE_Port_SetMovieContinueBudget(int continues);
+int  PE_Port_MovieContinueBudget(void);
+/* Returns 1 if another continue-frame is allowed; if a finite budget
+ * remains it is decremented.  Returns 0 when budget is exhausted. */
+int  PE_Port_ConsumeMovieContinue(void);
+
 /* Opt-in demo shortcut for M0010's EF(0) menu after Aya's profile.
  * Preserve existing defaults; the full 16F10/4DCA4 menu is not translated. */
 void PE_Port_SetSkipOpeningMenu(int enabled);
 int  PE_Port_SkipOpeningMenu(void);
+
+/* Title-loop card pump: allow Psy-Q TestEvent (0x800726F4) to return
+ * "no event" without PE_PORT_STOP so func_800425DC can complete one
+ * frame.  DAY1_card_status keeps the default stop path (flag clear). */
+void PE_Port_SetCardTestEventHostReturn(int enabled);
+int  PE_Port_CardTestEventHostReturn(void);
 
 /* Host pad fill for D_800BE9A2 (active-low Sony bits).  Retail writes
  * this from libpad/StartPAD at VSync; the port has no SIO, so a source

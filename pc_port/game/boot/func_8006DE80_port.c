@@ -83,15 +83,23 @@ int func_8006DFA8(pe_addr_t position, pe_addr_t pan, pe_addr_t volume)
     return 0;
 }
 
-int32_t func_8006DED4(pe_addr_t dest, int id, int a1, int x, int y, int z)
+int32_t PE_SpatialSoundRequest(pe_addr_t dest,int id,int a1,int x,int y,int z,uint32_t *computed_volume)
 {
     uint32_t pan,volume;
+    PE_M34StackInvalidate();
     /* An absent package cannot produce a sound. Early resource-free
      * native fixtures also have no camera or attenuation configuration. */
     if (!dest) return -1;
-    if (spatial_sound((int16_t)x,(int16_t)y,(int16_t)z,&pan,&volume))
+    if (spatial_sound((int16_t)x,(int16_t)y,(int16_t)z,&pan,&volume)) {
+        if(computed_volume)*computed_volume=volume;
         return func_8006DF50(dest,(uint32_t)id,(uint32_t)a1,pan,volume);
+    }
     return -1;
+}
+
+int32_t func_8006DED4(pe_addr_t dest,int id,int a1,int x,int y,int z)
+{
+    return PE_SpatialSoundRequest(dest,id,a1,x,y,z,NULL);
 }
 
 void func_8006DE80(int id, int a1, int x, int y, int z)

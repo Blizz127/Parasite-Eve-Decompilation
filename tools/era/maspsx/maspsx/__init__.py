@@ -20,6 +20,46 @@
 #      2.21/addiu_at, select the ASPSX 2.30 three-word lui/addu/op-%lo form
 #      instead of lui/addiu/addu/op-0. Compound semicolon lines retain the
 #      legacy expansion. Default OFF: opt in per leaf.
+#   3. fill_epilogue_delay_slot (ctor arg, or env
+#      MASPSX_FILL_EPILOGUE_DELAY_SLOT=1): schedule the frame deallocation
+#      (`addu $sp,$sp,N` / `addiu $sp,$sp,N`) into the delay slot of a
+#      following bare `j $31`. cc1 only fills the return slot itself when no
+#      callee-saved restore immediately precedes the jump; with restores it
+#      emits the stack adjust before the `j` and GNU as leaves a nop. ASPSX's
+#      reorder-mode scheduler moves it into the slot. ROM evidence (Parasite
+#      Eve disc1): func_800811E4 (ra/s0/s1 restores) fills at 0x8008124c/50;
+#      the 58 G0-matched leaves that already fill do so in cc1 itself (no
+#      restores), so this stays opt-in and flag-off is byte-identical.
+#      Default OFF: opt in per leaf.
+#   4. symbol_load_dest_temp (ctor arg, or env
+#      MASPSX_SYMBOL_LOAD_DEST_TEMP=1): for compound indexed symbolic
+#      loads of the form `op $d,SYM($b)` under ASPSX 2.21/addiu_at, emit the
+#      naive GNU-as expansion using the DESTINATION register as the address
+#      temp (lui $d,%hi(SYM) / addu $d,$d,$b / op $d,%lo(SYM)($d)) instead of
+#      maspsx's lui $at / addiu $at,%lo / addu $at,$at,$b / op $d,0($at).
+#      The same gate also covers an indexed symbolic STORE that immediately
+#      precedes a `j $31`: ROM emits the 3-word $at materialization before the
+#      jump and schedules the store into the delay slot
+#      (lui $at,%hi(SYM) / addu $at,$at,$b / j $31 / op $src,%lo(SYM)($at)).
+#      ROM evidence (Parasite Eve disc1): func_80076B44
+#      (`lui $v0,%hi(D_800A3348)` / `addu $v0,$v0,$a0` / `lbu $v0,%lo(...)($v0)`)
+#      and func_80076B20 (same shape with an `sb` in the jr delay slot).
+#      Default OFF: opt in per leaf; flag-off is byte-identical.
+#   5. symbol_at_temp (ctor arg, or env MASPSX_SYMBOL_AT_TEMP=1): for compound
+#      indexed symbolic loads/stores of the form `op $d,SYM($b)` under ASPSX
+#      2.21/addiu_at, emit the 3-word $at form WITH the %lo displacement kept
+#      (lui $at,%hi(SYM) / addu $at,$at,$b / op $d,%lo(SYM)($at)) instead of
+#      maspsx's legacy 4-word lui/addiu/addu/op-0($at). Unlike patch 4 this
+#      uses the assembler temporary rather than the destination register, so
+#      it also covers sign-extended loads and narrower stores. Env may also
+#      be a comma list of symbol names (e.g. MASPSX_SYMBOL_AT_TEMP=jtbl_80011388)
+#      to apply the 3-word $at form to those operands only; other indexed
+#      symbolic ops keep the legacy 4-word expansion. ROM evidence
+#      (Parasite Eve disc1): func_80042770/func_80042964
+#      (lui $at,%hi(D_800A0ED4) / addu $at,$at,$v0 / lbu $v0,%lo(...)($at));
+#      4658 non-$at indexed accesses exist in the split asm, most of which are
+#      this shape with a wider register pair than patch 4 can reach.
+#      Default OFF: opt in per leaf; flag-off is byte-identical.
 import struct
 import os
 import re
@@ -421,7 +461,10 @@ class MaspsxProcessor:
         use_comm_section=False,
         use_comm_for_lcomm=False,
         fill_store_delay_slot=False,
+        fill_epilogue_delay_slot=False,
         three_word_symbol_store=False,
+        symbol_load_dest_temp=False,
+        symbol_at_temp=False,
         dispatch_fold_symbol=None,
     ):
         self.lines = [x.strip() for x in lines]
@@ -450,12 +493,39 @@ class MaspsxProcessor:
             fill_store_delay_slot
             or os.environ.get("MASPSX_FILL_STORE_DELAY_SLOT") == "1"
         )
+        # LOCAL PATCH: opt-in epilogue stack-adjust into the return delay slot.
+        self.fill_epilogue_delay_slot = (
+            fill_epilogue_delay_slot
+            or os.environ.get("MASPSX_FILL_EPILOGUE_DELAY_SLOT") == "1"
+        )
         # LOCAL PATCH: the env gate keeps the untracked maspsx.py driver
         # untouched and permits per-leaf selection.
         self.three_word_symbol_store = (
             three_word_symbol_store
             or os.environ.get("MASPSX_THREE_WORD_SYMBOL_STORE") == "1"
         )
+        # LOCAL PATCH: naive dest-register address temp for compound indexed
+        # symbolic loads/stores (see patch log entry 4).
+        self.symbol_load_dest_temp = (
+            symbol_load_dest_temp
+            or os.environ.get("MASPSX_SYMBOL_LOAD_DEST_TEMP") == "1"
+        )
+        # LOCAL PATCH: 3-word $at address temp that keeps the %lo displacement
+        # for compound indexed symbolic loads/stores (see patch log entry 5).
+        # MASPSX_SYMBOL_AT_TEMP=1 (or ctor True) applies to every indexed
+        # symbolic operand; a comma list restricts the rewrite to those names.
+        raw_at_temp = os.environ.get("MASPSX_SYMBOL_AT_TEMP")
+        if symbol_at_temp or raw_at_temp == "1":
+            self.symbol_at_temp = True
+            self.symbol_at_temp_only = None
+        elif raw_at_temp and raw_at_temp not in ("0", "false"):
+            self.symbol_at_temp = True
+            self.symbol_at_temp_only = set(
+                s for s in raw_at_temp.split(",") if s
+            )
+        else:
+            self.symbol_at_temp = False
+            self.symbol_at_temp_only = None
         # LOCAL PATCH (switch dispatch retarget): substitute the shared
         # rodata pool table symbol for cc1-local $L<n> switch-table
         # labels in compound loads/stores. See docs/design/
@@ -655,6 +725,16 @@ class MaspsxProcessor:
             i += 1
 
         return ""  # warn user?
+
+    def _symbol_at_temp_applies(self, operand: str) -> bool:
+        # LOCAL PATCH helper for patch 5: True when the 3-word $at+%lo form
+        # should rewrite this indexed symbolic operand. A None allow-list
+        # means every symbol (MASPSX_SYMBOL_AT_TEMP=1 / ctor True).
+        if not self.symbol_at_temp:
+            return False
+        if self.symbol_at_temp_only is None:
+            return True
+        return operand in self.symbol_at_temp_only
 
     def _next_line_is_return_jump(self) -> bool:
         # LOCAL PATCH helper: True when the next non-blank, non-comment input
@@ -953,6 +1033,29 @@ class MaspsxProcessor:
 
         op, *rest = line.split()
 
+        # LOCAL PATCH: fill the return delay slot with the epilogue frame
+        # deallocation. Opt-in; see the patch log at the top of this file.
+        if (
+            self.fill_epilogue_delay_slot
+            and op in ("addu", "addiu")
+            and len(rest) == 1
+            and rest[0].startswith("$sp,$sp,")
+            and self._next_line_is_return_jump()
+        ):
+            frame = rest[0].split(",")[2]
+            res.extend(
+                [
+                    "# FILL_EPILOGUE_DELAY_SLOT START",
+                    ".set\tnoreorder",
+                    "j\t$31",
+                    f"addiu\t$sp,$sp,{frame}",
+                    ".set\treorder",
+                    "# FILL_EPILOGUE_DELAY_SLOT END",
+                ]
+            )
+            self.skip_instructions = 1
+            return res
+
         if op in load_mnemonics:
             r_source, r_dest, operand, is_addend, needs_expanding = parse_load_or_store(
                 " ".join(rest)
@@ -1003,26 +1106,69 @@ class MaspsxProcessor:
                 # three-word gate and the operand is a compiler-local
                 # label ($L<digits> — cc1's own switch table), substitute
                 # <sym> (the shared rodata pool table) for the local
-                # label, producing retail's 3-word indexed-symbol
-                # dispatch against the pool copy; the now-dead local
-                # table is stripped build-side. Named symbols are never
-                # substituted; gate-off keeps every prior behavior.
+                # label; named symbols are never substituted and gate-off
+                # keeps every prior behavior.
                 if (
                     self.three_word_symbol_store
                     and self.dispatch_fold_symbol
                     and re.match(r"^\$L\d+$", operand)
                 ):
                     operand = self.dispatch_fold_symbol
-                if self.addiu_at:
-                    # LOCAL PATCH: three_word_symbol_store gate (extended from
-                    # stores to loads) — when enabled and not a compound macro
-                    # line, emit the ASPSX 2.30 3-word form explicitly with $at
-                    # (lui $at,%hi / addu $at,$at,$b / op %lo($at)). NOT a bare
-                    # pass-through: GNU as expands lw $r,SYM($b) with the
-                    # DESTINATION register as temp (lui $r/addu $r,$r,$b/
-                    # lw $r,0($r)), not $at — ROM-proven divergence at
-                    # func_800363F4/80036448. Compound lines retain legacy.
-                    if not self.three_word_symbol_store or is_macro:
+                dest_temp_used = (
+                    self.symbol_load_dest_temp
+                    and not is_macro
+                    and not re.match(r"^-?(0x[0-9A-Fa-f]+|\d+)$", operand)
+                )
+                # LOCAL PATCH (patch 5): 3-word $at address temp, %lo kept.
+                at_temp_used = (
+                    self._symbol_at_temp_applies(operand)
+                    and not is_macro
+                    and not re.match(r"^-?(0x[0-9A-Fa-f]+|\d+)$", operand)
+                )
+                if at_temp_used:
+                    res.extend(
+                        [
+                            "# SYMBOL_AT_TEMP START",
+                            ".set\tnoat",
+                            f"lui\t$at,%hi({operand})",
+                            f"addu\t$at,$at,{r_source}",
+                            f"{op}\t{r_dest},%lo({operand})($at)",
+                            ".set\tat",
+                            "# SYMBOL_AT_TEMP END",
+                        ]
+                    )
+                # LOCAL PATCH (patch 4): naive dest-register address temp.
+                if dest_temp_used and not at_temp_used:
+                    res.extend(
+                        [
+                            "# DEST_TEMP START",
+                            ".set\tnoat",
+                            f"lui\t{r_dest},%hi({operand})",
+                            f"addu\t{r_dest},{r_dest},{r_source}",
+                            f"{op}\t{r_dest},%lo({operand})({r_dest})",
+                            ".set\tat",
+                            "# DEST_TEMP END",
+                        ]
+                    )
+                if dest_temp_used or at_temp_used:
+                    pass
+                elif self.addiu_at and not self.three_word_symbol_store:
+                    res.extend(
+                        [
+                            "# EXPAND_AT START",
+                            ".set\tnoat",
+                            f"lui\t$at,%hi({operand})",
+                            f"addiu\t$at,$at,%lo({operand})",
+                            f"addu\t$at,$at,{r_source}",
+                            f"{op}\t{r_dest},0x0($at)",
+                            ".set\tat",
+                            "# EXPAND_AT END",
+                        ]
+                    )
+                elif self.addiu_at and self.three_word_symbol_store:
+                    # Compound macro lines keep the legacy lui/addiu/addu
+                    # expansion; standalone lines use the 3-word $at form.
+                    if is_macro:
                         res.extend(
                             [
                                 "# EXPAND_AT START",
@@ -1147,7 +1293,51 @@ class MaspsxProcessor:
                     res.append(line)
             elif is_addend and r_source:
                 # e.g. sw	$a0,ctlbuf($v0)
-                if (
+                # LOCAL PATCH (patch 4 store arm): a bare indexed symbolic
+                # store that immediately precedes a `j $31` in ROM emits the
+                # 3-word $at materialization BEFORE the jump and schedules the
+                # store itself into the delay slot:
+                #   lui $at,%hi(SYM) / addu $at,$at,$b / j $31 /
+                #   op $src,%lo(SYM)($at)
+                # ROM: func_80076B20 tail (sb $a0,%lo(D_800A3348)($at) in the
+                # jr delay slot). Everything else keeps the legacy path.
+                store_at_temp_used = (
+                    self._symbol_at_temp_applies(operand)
+                    and not is_macro
+                    and not re.match(r"^-?(0x[0-9A-Fa-f]+|\d+)$", operand)
+                )
+                if store_at_temp_used:
+                    res.extend(
+                        [
+                            "# SYMBOL_AT_TEMP STORE START",
+                            ".set\tnoat",
+                            f"lui\t$at,%hi({operand})",
+                            f"addu\t$at,$at,{r_source}",
+                            f"{op}\t{r_dest},%lo({operand})($at)",
+                            ".set\tat",
+                            "# SYMBOL_AT_TEMP STORE END",
+                        ]
+                    )
+                elif (
+                    self.symbol_load_dest_temp
+                    and not is_macro
+                    and not re.match(r"^-?(0x[0-9A-Fa-f]+|\d+)$", operand)
+                    and self._next_line_is_return_jump()
+                ):
+                    res.extend(
+                        [
+                            "# DEST_TEMP STORE_FILL START",
+                            ".set\tnoat",
+                            f"lui\t$at,%hi({operand})",
+                            f"addu\t$at,$at,{r_source}",
+                            "j\t$31",
+                            f"{op}\t{r_dest},%lo({operand})($at)",
+                            ".set\tat",
+                            "# DEST_TEMP STORE_FILL END",
+                        ]
+                    )
+                    self.skip_instructions = 1
+                elif (
                     self.addiu_at
                     and op != "la"
                     and (not self.three_word_symbol_store or is_macro)

@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0xC1 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22 / 0x43 / 0x52 / 0x53 / 0xA6 / 0x2A / 0x87 / 0x31 / 0x94 / 0xC7 / 0xAD / 0xAE / 0xB2 / 0x8B / 0x89 / 0x95 / 0x03 / 0xB8 / 0xC6 / 0x55 / 0xCF. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0xC1 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22 / 0x43 / 0x52 / 0x53 / 0xA6 / 0x2A / 0x87 / 0x31 / 0x94 / 0xC7 / 0xAD / 0xAE / 0xB2 / 0x8B / 0x89 / 0x95 / 0x03 / 0xB8 / 0xC6 / 0x55 / 0xCF / 0x97 / 0x9A / 0x71. 0x1C and 0x1F are the already-ported
  * mailbox leaves. SEW1 adds 0x5C / 0x5D (matching src/ leaves
  * 182C0 / 182E0) and 0x93 (190BC). Any other table slot is an
  * EXPLICIT boundary: the opcode PC is retained in the task and
@@ -619,6 +619,19 @@ int func_80017410(pe_addr_t args)
     return 1;
 }
 
+/* Opcode D1: full 13 retail words 80019D84..80019DB8.
+ * SHA-256 ccc7772c1178a03639fcbb9b6f3958fd16f58c0d7775664c52ededbab50b45b4.
+ * Opens the signed message ID using the configured window geometry.
+ * The guest temporary holds the original stack list's -1 terminator.
+ */
+int func_80019D84(pe_addr_t args)
+{
+    PE_StoreU16(GA_375E0_LIST, 0xFFFFu);
+    func_800375E0((int)(int16_t)PE_LoadU16(PE_LoadU32(args)), 1u,
+                  GA_375E0_LIST);
+    return 1;
+}
+
 /*
  * PE-BTL54 — opcode 0x22 message-poll 177C8.
  *
@@ -929,6 +942,71 @@ int func_800192C8(pe_addr_t args)
 }
 
 /*
+ * opcode 0x97 — handler 0x800192DC..0x8001930C (retail 14 words).
+ *
+ *   800192E4  lw   v0,0(a0)          ; v0  = *args0
+ *   800192E8  lui  a1,0x800A
+ *   800192EC  lw   a1,-0x2D10(a1)    ; a1  = *(0x8009D2F0)   owner actor
+ *   800192F0  lw   a0,0(v0)          ; a0  = **args0          effect index
+ *   800192F4  jal  8006FC18
+ *   800192F8  addu a2,zero,zero      ; a2  = 0                delay slot
+ *   lw ra / li v0,1 / jr ra / addiu sp
+ *
+ * Live M0374I module 2 (PC 0x801C5D00): args [14]. M0374I is on the M0042I
+ * route (docs/ai_context/DAY1_DAY2_TRANSITIONS.md §6), so this closes a real
+ * Day-2 park-path opcode. func_8006FC18 is the already-ported effect-destroy
+ * leaf (game/boot/func_80020F18_port.c:28); this cut is a pure wrapper.
+ * Evidence: docs/evidence/field-vm-opcode-coverage/REPORT.md.
+ */
+int func_800192DC(pe_addr_t args)
+{
+    uint32_t index = PE_LoadU32(PE_LoadU32(args));
+    (void)func_8006FC18(index, PE_LoadU32(GA_D_8009D2F0), 0u);
+    return 1;
+}
+
+/*
+ * opcode 0x9A — handler 0x800193D8..0x80019410 (retail 14 words).
+ *
+ *   lw a0,0(a0) ; lw v1,4(a0arg) ; lw a2,8(a0arg)
+ *   a0=*a0 ; a1=*v1 ; a2=*a2 ; jal func_80065AD4 ; v0=1
+ *
+ * Live M0091I module 3 (Day-2 terminal room), two uses args [2,5,0].
+ * Evidence: docs/evidence/field-vm-opcode-coverage/REPORT.md.
+ */
+int func_800193D8(pe_addr_t args)
+{
+    uint32_t a0 = PE_LoadU32(PE_LoadU32(args));
+    uint32_t a1 = PE_LoadU32(PE_LoadU32(args + 4u));
+    uint32_t a2 = PE_LoadU32(PE_LoadU32(args + 8u));
+    (void)func_80065AD4(a0, a1, a2);
+    return 1;
+}
+
+/*
+ * opcode 0x71 — handler 0x80018A9C..0x80018B00 (retail 25 words).
+ *
+ *   container = *(D_800B1624)
+ *   rec = container + *(container+0x14) + *arg0 * 56      ; 3*8*7 = 56
+ *   a1 = (int16)*arg1 ; a2 = (int16)*arg2 ; a3 = (int16)*arg3
+ *   jal func_800671C8(rec, a1, a2, a3) ; v0=1
+ *
+ * Live M0191I module 1 (park lane, not on the M0042I route).
+ * Evidence: docs/evidence/field-vm-opcode-coverage/REPORT.md.
+ */
+int func_80018A9C(pe_addr_t args)
+{
+    pe_addr_t container = PE_LoadU32(0x800B1624u);
+    pe_addr_t rec = container + PE_LoadU32(container + 0x14u)
+                  + PE_LoadU32(PE_LoadU32(args)) * 56u;
+    int32_t x = (int16_t)PE_LoadU16(PE_LoadU32(args + 4u));
+    int32_t y = (int16_t)PE_LoadU16(PE_LoadU32(args + 8u));
+    int32_t page = (int16_t)PE_LoadU16(PE_LoadU32(args + 12u));
+    (void)func_800671C8(rec, x, y, page);
+    return 1;
+}
+
+/*
  * PE-BTL64 — opcode 0x03 camera-request 17C54.
  *
  * 14 words 0x80017C54..0x80017C8C, SHA-256
@@ -971,6 +1049,54 @@ static int pe_script_media_wait(pe_addr_t args, int status_wait)
 /* PC of the opcode being dispatched (set by the main loop) so an
  * unported table slot can retain it instead of advancing past it. */
 static pe_addr_t g_pe_17018_opcode_pc;
+
+/* Original 18300..183E8: suspend/resume the actor's three task chains.
+ * Access aliases preserve physical RAM addresses, including actor zero. */
+static pe_addr_t script_task_ram(pe_addr_t p)
+{
+    return p < 0x200000u ? p | 0x80000000u : p;
+}
+
+int func_80018300(pe_addr_t args)
+{
+    pe_addr_t current = PE_LoadU32(GA_D_8009D300);
+    pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+    (void)args;
+    for (unsigned i = 0; i < 3; i++) {
+        pe_addr_t task = PE_LoadU32(script_task_ram(actor + 0xA0u + i * 4u));
+        while (task) {
+            if (task != current)
+                PE_StoreU16(script_task_ram(task + 8u),
+                            PE_LoadU16(script_task_ram(task + 8u)) | 0x40u);
+            task = PE_LoadU32(script_task_ram(task + 0x24u));
+        }
+    }
+    return 1;
+}
+
+int func_80018364(pe_addr_t args)
+{
+    pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+    (void)args;
+    for (unsigned i = 0; i < 3; i++) {
+        pe_addr_t task = PE_LoadU32(script_task_ram(actor + 0xA0u + i * 4u));
+        while (task) {
+            unsigned flags = PE_LoadU16(script_task_ram(task + 8u));
+            if (flags & 0x40u) {
+                pe_addr_t saved = PE_LoadU32(script_task_ram(task + 4u));
+                PE_StoreU16(script_task_ram(task + 8u), flags & 0xFFBFu);
+                if (saved) {
+                    flags = PE_LoadU16(script_task_ram(task + 8u));
+                    PE_StoreU32(script_task_ram(task), saved);
+                    PE_StoreU32(script_task_ram(task + 0x10u), 1u);
+                    PE_StoreU16(script_task_ram(task + 8u), flags & 0xFFDFu);
+                }
+            }
+            task = PE_LoadU32(script_task_ram(task + 0x24u));
+        }
+    }
+    return 1;
+}
 
 /* C5/CC model attachment and D4/D5/D6 animation attachment.
  * These original routines can dereference physical RAM zero; canonicalize
@@ -1066,15 +1192,25 @@ static int pe_attachment_command(pe_addr_t fn, pe_addr_t args)
     return 1;
 }
 
-static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
+static int pe_17018_dispatch_body(pe_addr_t fn, pe_addr_t args)
 {
+    if (fn == 0x80018300u) return func_80018300(args);
+    if (fn == 0x80018364u) return func_80018364(args);
     if (fn == 0x80015108u || fn == 0x80019170u || fn == 0x80019260u || fn == 0x80019F04u ||
         fn == 0x80019FE0u || fn == 0x8001A064u)
         return pe_attachment_command(fn, args);
     if (fn == 0x800192C8u)
         return func_800192C8(args);
+    if (fn == 0x800192DCu)
+        return func_800192DC(args);
+    if (fn == 0x800193D8u)
+        return func_800193D8(args);
+    if (fn == 0x80018A9Cu)
+        return func_80018A9C(args);
     if (fn == 0x8001930Cu)
         return func_8001930C(args);
+    if (fn == 0x80015C7Cu)   /* opcode 0xE9: field message query/close */
+        return func_80015C7C(args);
     if (fn == 0x80017EFCu || fn == 0x80017F20u) {
         /* 4F/50: matching leaves pause/resume this actor's animation. */
         pe_addr_t actor=PE_LoadU32(GA_D_8009D2F0);
@@ -1253,6 +1389,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80012E7C(args);
     if (fn == GA_OPD9)
         return func_8001A15C(args);
+    if (fn == 0x8001A214u)
+        return func_8001A214(args);
     if (fn == GA_OP24)
         return func_8001784C(args);
     if (fn == GA_OP11)
@@ -1299,6 +1437,11 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_80018004(args);
     if (fn == GA_OP12)
         return func_800131E8(args);
+    if (fn == 0x800176B8u) { /* op13: matching src/func_800176B8.c */
+        pe_addr_t actor = PE_LoadU32(GA_D_8009D2F0);
+        PE_StoreU32(actor + 0x98u, PE_LoadU32(actor + 0x98u) | PE_LoadU32(PE_LoadU32(args)));
+        return 1;
+    }
     if (fn == GA_OP6A)
         return func_80018774(args);
     if (fn == GA_OP4B)
@@ -1307,6 +1450,12 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return func_800143B0(args);
     if (fn == GA_OP6B)
         return func_800187C0(args);
+    if (fn == 0x80018818u) {
+        (void)func_8006F6D4(PE_LoadU32(PE_LoadU32(args)), 1u,
+            PE_LoadU32(PE_LoadU32(args + 4u)), PE_LoadU32(args + 8u),
+            PE_LoadU32(args + 12u), PE_LoadU32(args + 16u));
+        return 1;
+    }
     if (fn == GA_OP64)
         return func_800184EC(args);
     if (fn == GA_OP0E)
@@ -1332,6 +1481,7 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
     if (fn == GA_OP31)
         return func_80017BB4_btl1_cut(args);
     if (fn == 0x800194B0u) return func_800194B0(args);
+    if (fn == 0x80019540u) return func_80019540(args);
     if (fn == 0x80015BACu) return func_80015BAC(args);
     if (fn == GA_OP94)
         return func_80019154(args);
@@ -1522,6 +1672,7 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         else                   (void)func_80067730(a0, a1, a2, a3);
         return 1;
     }
+    if (fn == 0x80019D84u) return func_80019D84(args); /* D1 */
     if (fn == 0x80019D44u) { /* D0: 37454(4 x u16 args) */
         func_80037454(PE_LoadU16(PE_LoadU32(args)), PE_LoadU16(PE_LoadU32(args + 4u)),
                       PE_LoadU16(PE_LoadU32(args + 8u)), PE_LoadU16(PE_LoadU32(args + 12u)));
@@ -1613,6 +1764,14 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
     return 0;
 }
 
+static int pe_17018_dispatch(pe_addr_t fn,pe_addr_t args)
+{
+    PE_M34StackOpcode(fn);
+    int result=pe_17018_dispatch_body(fn,args);
+    PE_M34StackOpcode(0u);
+    return result;
+}
+
 static void pe_17018_walk_next(void)
 {
     pe_addr_t next;
@@ -1621,7 +1780,7 @@ static void pe_17018_walk_next(void)
     PE_StoreU32(GA_D_8009D300, next);
 }
 
-void func_80017018(void)
+static void pe_17018_run(void)
 {
     pe_addr_t task;
     pe_addr_t actor;
@@ -1720,4 +1879,11 @@ void func_80017018(void)
         PE_StoreU32(task, PE_LoadU32(GA_D_8009CE00));
         pe_17018_walk_next();
     }
+}
+
+void func_80017018(void)
+{
+    PE_M34StackVm(1);
+    pe_17018_run();
+    PE_M34StackVm(0);
 }

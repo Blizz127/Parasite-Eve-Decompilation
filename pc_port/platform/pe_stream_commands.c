@@ -463,6 +463,26 @@ static int audio_command(pe_addr_t callback, pe_addr_t entry)
         PE_StoreU32(0x8009D2C8u, state);
         break;
     }
+    case 0x8008B780u: {
+        /* A1 / 8B780..8B900: ramp selected effect voices. Group overlap
+         * takes precedence over handle equality. The full duration is
+         * tested for zero, then its signed low halfword is the divisor. */
+        uint32_t active=PE_LoadU32(0x800BCD50u),group=PE_LoadU32(entry+8u);
+        for (unsigned i=0;i<12u;i++) {
+            pe_addr_t voice=0x800BC000u+i*0x11Cu;
+            if (!(active&(0x1000u<<i))) continue;
+            if (group ? !(PE_LoadU32(voice+0x2Cu)&group) :
+                        PE_LoadU32(voice+0x28u)!=PE_LoadU32(entry+4u)) continue;
+            uint32_t duration=PE_LoadU32(entry+12u);
+            if (!duration) duration=1u;
+            int32_t delta=(int16_t)(((PE_LoadU32(entry+16u)&127u)<<8)-PE_LoadU16(voice+0xD8u));
+            int32_t divisor=(int16_t)duration;
+            if (!divisor) {PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return 0;}
+            PE_StoreU16(voice+0x74u,(uint16_t)duration);
+            PE_StoreU16(voice+0xDAu,(uint16_t)(delta/divisor));
+        }
+        break;
+    }
     case 0x8008B978u: {
         /* A9: fade every active, unprotected effect voice. The original
          * tests the full duration for zero, then divides by its signed

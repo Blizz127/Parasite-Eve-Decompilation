@@ -126,9 +126,11 @@ int func_8002FAF8(pe_addr_t actor, unsigned int code)
         if (f >= PE_LoadU16(target + 0x1Au) && f < frame) {
             rec = PE_LoadU32(slot + 0x18u);
             pe_2faf8_1a680(target, PE_LoadU8(rec + 3u));
-            func_8006DCE4(PE_LoadU16(slot+0xB2u),0u,
+            uint32_t volume=UINT32_MAX;
+            (void)PE_SpatialSoundRequest(PE_LoadU32(0x800B0E64u),PE_LoadU16(slot+0xB2u),0u,
                 (int16_t)PE_LoadU16(target+0x268u),(int16_t)PE_LoadU16(target+0x26Au),
-                (int16_t)PE_LoadU16(target+0x26Cu));
+                (int16_t)PE_LoadU16(target+0x26Cu),&volume);
+            PE_M34StackClipSound(slot,target,volume);
             PE_StoreU32(target + 0x1Cu, PE_LoadU32(rec + 8u));
             PE_StoreU8(rec, 1u);
         }

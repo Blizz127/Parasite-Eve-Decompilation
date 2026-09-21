@@ -421,7 +421,7 @@ void func_8003F3C4(void)
         uint32_t cddc = PE_LoadU32(GA_D_8009CDDC);
         func_800752AC(PE_LoadU32(GA_OT_TABLE + cddc * 4u), 0x1000);
     }
-    /* .L8003F4D0 — D_8009D250 is the native global 3E680 zeroes. */
+    /* .L8003F4D0 — update the same guest word that 3E680 zeroes. */
     D_8009D250++;
     func_80065400();
     func_80035558_walk_cut();

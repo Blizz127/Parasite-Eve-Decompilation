@@ -69,9 +69,24 @@ static void test_DAY2_cd_sector_device(void)
         loc[2]=0x7Au;CdSectorCommand(2u,loc,3);
         ASSERT(CdSectorReply(response,2)==5u && response[0]==3u && response[1]==0x10u,"invalid BCD must report parameter value error");
     }
-    /* Unread data is retained; no silent sector substitution on overrun. */
-    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"overrun attachment");
+    /* DAY2-158 B0CD0 catchup: func_8007C564 defers with D_800B0CD0 set and
+     * no BFRD.  Hold the unread sector across the next cadence. */
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"catchup attachment");
     uint8_t loc[]={0u,2u,0x20u};CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
+    CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
+    PE_CdReg_ServiceDevice(451584u);ASSERT(CdSectorReply(response,1)==1u,"catchup first data response");
+    PE_StoreU16(0x800B0CD0u,1u);
+    PE_CdReg_ServiceDevice(451584u);
+    {
+        PeCdDeviceState held;
+        PE_CdReg_GetDeviceState(&held);
+        ASSERT(!PE_Port_ShouldStop() && held.sectors==1u,
+            "B0CD0 catchup must hold the unread sector, not overrun");
+    }
+    /* Unread data is retained; no silent sector substitution on overrun. */
+    PE_StoreU16(0x800B0CD0u,0u);
+    PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"overrun attachment");
+    CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
     CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
     PE_CdReg_ServiceDevice(451584u);ASSERT(CdSectorReply(response,1)==1u,"overrun first data response");
     PE_CdReg_ServiceDevice(451584u);

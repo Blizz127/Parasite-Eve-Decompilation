@@ -397,7 +397,7 @@ int func_80121C04(int id)
             if(PE_Port_ShouldStop()) return 0;
             if(func_80081314(0x801223FCu,0x1E0u)) break;
         }
-        HostFB_VSync(-1);
+        HostFB_StreamTick();
         if(!PE_CdReg_DeviceEnabled() || ++cycles==0x100u) {
             Bootstrap_ReturnVoid("movie_player_start_wait","func_80121C04");
             PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return 0;
@@ -411,10 +411,18 @@ int func_80121C04(int id)
         pe_addr_t arena=0x801228CCu,table=PE_LoadU32(0x80122430u),next=0u;
         unsigned cycles=0u;
         for(;;) {
+            /* Retail polls these 2000 iterations while the 2x drive keeps
+             * streaming in real time.  The guest's poll batch stands for far
+             * more CPU time than a 1024-cycle counter query, so advance the
+             * modeled device with the stream-wait quantum; otherwise only
+             * ~3 sectors arrive inside the retry budget and the player
+             * restarts mid-frame from sector 0. */
             for(unsigned attempts=0x7D0u;attempts;attempts--) {
                 next=(pe_addr_t)func_80121270(arena);
                 if(PE_Port_ShouldStop()) return 0;
                 if(next) break;
+                HostFB_StreamTick();
+                if(PE_Port_ShouldStop()) return 0;
             }
             if(next) {
                 uint32_t flip=PE_LoadU8(0x801228D4u)^1u;
@@ -430,11 +438,12 @@ int func_80121C04(int id)
                 return 0;
             }
             /* Retail repeats the Setloc/ReadS retry until the stream
-             * delivers.  Without a modeled physical stream delivering
-             * records, the enabled-device loop cannot make progress;
-             * keep the recorded boundary visible after a bounded number
-             * of original retry cycles (same host-safety rationale as
-             * the 80DC4 poll bound) instead of hanging the host. */
+             * delivers.  The modeled drive now delivers a whole frame
+             * within the first poll batch, so this arm is only reached
+             * when the device is enabled but genuinely not delivering;
+             * keep the recorded boundary after a bounded number of
+             * original retry cycles (same host-safety rationale as the
+             * 80DC4 poll bound) instead of hanging the host. */
             if(PE_CdReg_DeviceEnabled() && ++cycles==0x100u) {
                 Bootstrap_ReturnVoid("movie_retry_wait","func_80121C04");
                 PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
@@ -448,7 +457,7 @@ int func_80121C04(int id)
                     if(PE_Port_ShouldStop()) return 0;
                     if(func_80081314(0x80122414u,0x1E0u)) break;
                 }
-                HostFB_VSync(-1);
+                HostFB_StreamTick();
                 if(!PE_CdReg_DeviceEnabled()) {
                     Bootstrap_ReturnVoid("movie_retry_wait","func_80121C04");
                     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);

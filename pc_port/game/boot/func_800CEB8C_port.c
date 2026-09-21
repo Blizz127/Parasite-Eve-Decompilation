@@ -114,6 +114,30 @@ int func_800C62DC(pe_addr_t point,pe_addr_t triangle)
     return effect_triangle(p,v);
 }
 
+/* Full C61A8..C62DC (77 words), including C653C..C6584 (18 words).
+ * 78C34 rotates each quad vertex; the original flattens Y to zero and adds
+ * X/Z translation with halfword wrapping before testing both triangles. */
+int PE_EffectPointQuadC61A8(const int16_t point[3],const PeEffectMatrix *matrix)
+{
+    int16_t vertices[4][4]={{0}};
+    for(unsigned k=0;k<4;k++) {
+        for(unsigned i=0;i<9;i++)g_pe_gte.rt[i/3u][i%3u]=matrix->r[i];
+        pe_addr_t v=0x800F3310u+k*8u;
+        PE_GTE_SetV0((int16_t)PE_LoadU16(v),(int16_t)PE_LoadU16(v+2u),(int16_t)PE_LoadU16(v+4u));
+        PE_GTE_MVMVA(0x486012u);
+        for(unsigned i=0;i<3;i++)vertices[k][i]=(int16_t)g_pe_gte.ir[i];
+    }
+    for(unsigned k=0;k<4;k++) {
+        vertices[k][0]=(int16_t)((uint32_t)(uint16_t)vertices[k][0]+(uint32_t)matrix->t[0]);
+        vertices[k][1]=0;
+        vertices[k][2]=(int16_t)((uint32_t)(uint16_t)vertices[k][2]+(uint32_t)matrix->t[2]);
+    }
+    PE_M34StackPointQuad(vertices);
+    int first=effect_triangle(point,vertices);
+    int second=effect_triangle(point,vertices+1);
+    return (first|second)!=0;
+}
+
 static int effect_quad(const int16_t v[4][4])
 {
     pe_addr_t aya=PE_LoadU32(0x8009D254u);

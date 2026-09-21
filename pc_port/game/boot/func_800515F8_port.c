@@ -17,11 +17,25 @@ int32_t PE_MenuPEValues(int32_t *maximum)
 
 int32_t func_800515F8(pe_addr_t maximum)
 {
-    int32_t value,limit;
-    pe_addr_t actor=PE_LoadU32(0x8009D254u);
-    if (!actor || !PE_LoadU32(actor)) return 0;
-    value=PE_MenuPEValues(&limit);
-    if (maximum) PE_StoreU32(maximum<0x200000u?maximum|0x80000000u:maximum,(uint32_t)limit);
+    pe_addr_t record, e, end;
+    int32_t value;
+    if (!PE_LoadU32(0x8009D254u)) return 0;
+    record = PE_LoadU32(PE_LoadU32(0x8009D254u));
+    if (!record) return 0;
+    value = (int16_t)PE_LoadU16(record + 0xAu);
+    end = PE_LoadU32(0x8009D014u);
+    for (e = 0x800A1AA0u; e < end; e += 0x24u)
+        if (PE_LoadU32(e) == 1u)
+            value -= PE_LoadU32(e + 8u);
+    if (maximum) {
+        /* The oracle fixture (and some retail callers) hand in a KUSEG alias of
+         * low RAM (0x0015FA40).  On hardware KUSEG and KSEG0 alias the same
+         * physical bytes; the host RAM model only maps KSEG0 (+ scratchpad),
+         * so substitute the alias.  This is address translation, not behavior. */
+        pe_addr_t where = maximum;
+        if (where < 0x200000u) where |= 0x80000000u;
+        PE_StoreU32(where, (uint32_t)(int32_t)(int16_t)PE_LoadU16(record + 0x2Au));
+    }
     return value;
 }
 

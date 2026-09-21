@@ -34,6 +34,8 @@ static PEPortDmaIrqCheckpointTrace g_port_dma_irq_checkpoint_trace;
 static unsigned g_port_stop_epoch;
 static int g_port_skip_movie = 0;
 static int g_port_skip_opening_menu = 0;
+static int g_port_card_testevent_host_return = 0;
+static int g_port_movie_continue_budget = -1;
 static PEPortPadSource g_port_pad_source = NULL;
 
 void PE_Port_SetSkipMovie(int enabled)
@@ -46,6 +48,26 @@ int PE_Port_SkipMovie(void)
     return g_port_skip_movie;
 }
 
+void PE_Port_SetMovieContinueBudget(int continues)
+{
+    g_port_movie_continue_budget = continues;
+}
+
+int PE_Port_MovieContinueBudget(void)
+{
+    return g_port_movie_continue_budget;
+}
+
+int PE_Port_ConsumeMovieContinue(void)
+{
+    if (g_port_movie_continue_budget < 0)
+        return 1;
+    if (g_port_movie_continue_budget == 0)
+        return 0;
+    g_port_movie_continue_budget--;
+    return 1;
+}
+
 void PE_Port_SetSkipOpeningMenu(int enabled)
 {
     g_port_skip_opening_menu = enabled != 0;
@@ -54,6 +76,16 @@ void PE_Port_SetSkipOpeningMenu(int enabled)
 int PE_Port_SkipOpeningMenu(void)
 {
     return g_port_skip_opening_menu;
+}
+
+void PE_Port_SetCardTestEventHostReturn(int enabled)
+{
+    g_port_card_testevent_host_return = enabled != 0;
+}
+
+int PE_Port_CardTestEventHostReturn(void)
+{
+    return g_port_card_testevent_host_return;
 }
 
 void PE_Port_SetPadSource(PEPortPadSource source)
@@ -78,6 +110,8 @@ void PE_Port_RunControlReset(void)
     g_port_stop_epoch = 0;
     g_port_skip_movie = 0;
     g_port_skip_opening_menu = 0;
+    g_port_card_testevent_host_return = 0;
+    g_port_movie_continue_budget = -1;
     g_port_pad_source = NULL;
     g_port_stop_requested = 0;
     g_port_main_iterations = 0;

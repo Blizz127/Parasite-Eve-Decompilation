@@ -77,10 +77,11 @@ static void finish_projectile(pe_addr_t data)
     if (sound!=-1) func_800866A4((uint32_t)sound,0);
 }
 
-int PE_M0013I_Main(int32_t mode,pe_addr_t data,pe_addr_t extra)
+static int projectile_main(int32_t mode,pe_addr_t data,pe_addr_t extra,
+                           pe_addr_t joint_vector,pe_addr_t angle_vector,pe_addr_t particle_callback)
 {
     int16_t angles[4];unsigned i;
-    for (i=0;i<4;i++) angles[i]=lh(0x8018EFFCu+i*2u);
+    for (i=0;i<4;i++) angles[i]=lh(angle_vector+i*2u);
     if (mode==0) {
         int32_t kind=lh(PE_LoadU32(0x800E2368u)+18u);
         for (i=0;i<3;i++) PE_StoreU16(data+i*2u,PE_LoadU16(owner()+0x268u+i*2u));
@@ -90,13 +91,13 @@ int PE_M0013I_Main(int32_t mode,pe_addr_t data,pe_addr_t extra)
             PE_StoreU16(data+12u,(uint16_t)func_800D3F64(0x565u,(uint32_t)func_800D3FD8()));
         } else if (kind==1) PE_StoreU16(data+14u,0);
         else if (kind==2) PE_StoreU16(data+14u,(uint16_t)PE_LoadU32(extra+4u));
-        return (int)func_800CE560(pool(),12,16,0x8018F004u);
+        return (int)func_800CE560(pool(),12,16,particle_callback);
     }
     if (mode==1) {
         int32_t state=lh(data+8u);
         PE_StoreU16(data+10u,(uint16_t)(PE_LoadU16(data+10u)+1u));
         if (state==0) {
-            func_800CE8F0(owner(),PE_LoadU32(extra+8u)?0:25,0x8018EFF4u,data);
+            func_800CE8F0(owner(),PE_LoadU32(extra+8u)?0:25,joint_vector,data);
             PE_StoreU16(data+16u,(uint16_t)(func_80077CF4(lh(data+10u)*1024/52)*3/2));
             PE_StoreU16(data+18u,(uint16_t)(lh(data+16u)/48));
             if ((int32_t)PE_LoadU32(0x800E27ECu)%3==0) emit_particle(data);
@@ -161,4 +162,16 @@ int PE_M0013I_Main(int32_t mode,pe_addr_t data,pe_addr_t extra)
         texture_setup(0);
     }
     return 0;
+}
+
+int PE_M0013I_Main(int32_t mode,pe_addr_t data,pe_addr_t extra)
+{
+    return projectile_main(mode,data,extra,0x8018EFF4u,0x8018EFFCu,0x8018F004u);
+}
+
+/* M0028I 801924F8..80193148 matches M0013I 8018F004..8018FC54
+ * after internal jumps and these three address references are relocated. */
+int PE_M28ProjectileMain(int32_t mode,pe_addr_t data,pe_addr_t extra)
+{
+    return projectile_main(mode,data,extra,0x8018F1CCu,0x8018F1D4u,0x801924F8u);
 }

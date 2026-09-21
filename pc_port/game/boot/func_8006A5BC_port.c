@@ -15,7 +15,7 @@ extern void func_80087024(void);
 extern void func_8008682C(int a);
 extern int  func_8007ED58(void);
 extern int  func_8007F72C(void);
-extern void func_80073A44(int a);   /* VSync (SDK) */
+extern uint32_t func_80073A44(int a);   /* VSync (SDK) */
 extern int  func_8007F7A8(void);    /* already C, 5EL */
 /* D_800B0DD4 is a guest-RAM lvalue macro (psx_compat.h) */
 

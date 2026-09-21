@@ -156,3 +156,36 @@ was rejected by the strict test interpreter on unsupported NCCT flag command
 strict checking was retained. Log `m0023i-run27-field-stack-writers.log`.
 The64-frame pump comparisons and prior run24 field traces remain the scope
 of the completed original-execution evidence.
+
+## 2026-09-12: empty weapon updates preserve the preceding room writer
+
+A new connected supplied route stopped at44942 with AyaHP29 and EveHP1000006.
+The room update had written knownZ, but func6F9F0 unconditionally invalidated
+tracking before empty C9B90/CD8F0 update slots. Original69594 instruction
+traces on the captured RAM establish:
+
+| Call / writer | Original stack relationship |
+| --- | --- |
+| 69594 | entrySP801FF000 |
+| Room update F3C8 | entrySP801FEF98 |
+| CE934 `sw zero,0x24(sp)` | writes801FEF5C, the borrowed Z word |
+| Weapon C9B90 / CD8F0 | entrySP801FEFC8; wrapper20 / C251C28 / C275848-byte frames |
+| Flash F710 | entrySP801FEFA0; borrowed vectorSP-48 =801FEF58..5D |
+
+Empty child lists and VM programs without constructors do not reach that
+six-byte region. C6CE0, C2DA0 and original C2E08 are leaves. The update
+wrapper now preserves tracking through these graphs. C2B90 construction
+and PE_WeaponCallback entry still invalidate it under weapon-update context;
+unknown deeper writers are not assigned guessed values.
+
+Twelve new histories cover both GPU banks, both slot orders and active empty
+weapon/impact delay, loop and stop programs. All **58 histories /812 frames**
+pass original execution and native comparison. The fresh-generation unknown-Z
+assertion still passes. Logs are `/tmp/pe-empty-weapon-pump-{oracle,native}.log`.
+Full Release native tests pass1380/1380. Existing packet masks are unchanged;
+this is defined-byte comparison, not an assertion about undefined padding.
+
+Replaying the same connected pad sequence now reaches49000 without this
+boundary (`/tmp/pe-empty-weapon-replay.log`); Eve's remaining6HP and empty
+gun are a gameplay frontier. See [route evidence](DAY2_REHEARSAL_ROUTE.md)
+for supplies, ordinary healing and remaining encounter work.

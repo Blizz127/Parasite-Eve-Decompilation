@@ -8,6 +8,47 @@ static void CdDeviceSeed(void)
     for(unsigned i=0;i<26;i++) PE_StoreU32(0x80011D0Cu+i*4u,CDDEV_command_jumps[i]);
     for(unsigned i=0;i<5;i++) PE_StoreU32(0x80011B8Cu+i*4u,CDACK_jumps[i]);
 }
+
+/* Store-handler and DMA register pointers the stream state machine reaches
+ * through the retail .rodata constants (asm/disc1/data/818A0.rodata.s).
+ * CdDeviceSeed()/B558_PlantPointers() already planted the B27C command
+ * family; these are the data/BFRD/bus/index/mailbox/DMA family the 7C564
+ * assembly and the 7CEAC DMA3 issue use. Plain pointer values, not planted
+ * guest state. Shared by the movie player and movie updater fixtures. */
+static void CdStreamSeedRegisters(void)
+{
+    PE_StoreU32(0x8009B34Cu,0x1F801098u);   /* MDEC DMA1 CHCR (busy check) */
+    PE_StoreU32(0x8009B32Cu,0x1F801800u);   /* index/status   */
+    PE_StoreU32(0x8009B334u,0x1F801802u);   /* data FIFO      */
+    PE_StoreU32(0x8009B338u,0x1F801803u);   /* BFRD / IRQ     */
+    PE_StoreU32(0x8009B33Cu,0x1F801018u);   /* bus control    */
+    PE_StoreU32(0x8009B340u,0x1F801020u);   /* result mailbox */
+    PE_StoreU32(0x8009B344u,0x1F8010F0u);   /* DPCR           */
+    PE_StoreU32(0x8009B348u,0x1F8010F4u);   /* DICR           */
+    PE_StoreU32(0x8009B35Cu,0x1F8010B8u);   /* DMA3 CHCR      */
+}
+
+/* Write the retail Form-1 video chunk header (raw+24: chunk magic 0x0160,
+ * 0x8001 channel selector, chunk index, total chunks, frame word) into one
+ * fixture sector. payload 0 leaves the rest of the sector zero (a benign
+ * decoder input); payload 1 fills MOVAU's deterministic pattern so the
+ * assembled 2016-byte slice can be byte-compared with the on-disc bytes. */
+static void CdStreamWriteVideoSector(uint8_t *img,uint32_t lba,uint32_t chunk,
+                                    uint32_t chunks,uint32_t frame,int payload)
+{
+    uint8_t *raw=img+(size_t)lba*PE_DISC_RAW_SECTOR;
+    for(unsigned i=0;i<PE_DISC_RAW_SECTOR;i++) raw[i]=0u;
+    raw[16]=0u;raw[17]=0u;raw[18]=0x48u;raw[19]=0u;
+    raw[20]=0u;raw[21]=0u;raw[22]=0x48u;raw[23]=0u;
+    raw[24]=0x60u;raw[25]=0x01u;      /* chunk magic 0x0160 */
+    raw[26]=0x01u;raw[27]=0x80u;      /* 0x8001: channel selector low bits 0 */
+    raw[28]=(uint8_t)chunk;raw[29]=0u;
+    raw[30]=(uint8_t)chunks;raw[31]=0u;
+    raw[32]=(uint8_t)frame;raw[33]=(uint8_t)(frame>>8);
+    raw[34]=(uint8_t)(frame>>16);raw[35]=(uint8_t)(frame>>24);
+    if(payload) for(unsigned i=36u;i<PE_DISC_USER_SECTOR;i++)
+        raw[24u+i]=(uint8_t)(i*13u+5u);
+}
 static void test_DAY2_cd_device(void)
 {
     TEST("DAY2_cd_device");

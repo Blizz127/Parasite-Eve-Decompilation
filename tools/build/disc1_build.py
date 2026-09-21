@@ -122,6 +122,19 @@ def find_toolchain() -> Toolchain:
             **{key: str(value) for key, value in resolved.items()},
         )
 
+    # Tree-local unprivileged install (scripts/setup_mipsel_host.sh); its bin/
+    # shims carry the LD_LIBRARY_PATH the relocated Debian cross libs need.
+    local_bin = ROOT / "tools/mipsel-host/bin"
+    if local_bin.is_dir():
+        os.environ["PATH"] = f"{local_bin}{os.pathsep}{os.environ.get('PATH', '')}"
+        resolved = {key: shutil.which(value) for key, value in names.items()}
+        if all(resolved.values()):
+            return Toolchain(
+                runner=(),
+                note="repo-local tools/mipsel-host/bin",
+                **{key: str(value) for key, value in resolved.items()},
+            )
+
     distrobox = shutil.which("distrobox")
     if distrobox:
         listed = run(
@@ -137,8 +150,9 @@ def find_toolchain() -> Toolchain:
                 **names,
             )
     raise BuildError(
-        "mipsel-linux-gnu toolchain not found; run inside pe-mipsel-img or "
-        "install binutils-mipsel-linux-gnu and gcc-mipsel-linux-gnu"
+        "mipsel-linux-gnu toolchain not found; run inside pe-mipsel-img, "
+        "install binutils-mipsel-linux-gnu and gcc-mipsel-linux-gnu, or run "
+        "scripts/setup_mipsel_host.sh for a rootless tree-local install"
     )
 
 

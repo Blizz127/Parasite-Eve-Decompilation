@@ -24,7 +24,7 @@ static void ATK19_SeedAudio(const int64_t *c)
         PE_StoreU32(a+0x2Cu,i%3u==0u?0u:(i%3u==1u?0xFFu:0x2000000u));
         PE_StoreU32(a+0x38u,c[8]?0x100000u:0u);
         PE_StoreU32(a+0x50u,(uint32_t)(c[9]>=0?c[9]+i:c[9]));
-        if(c[0]==0xA9)PE_StoreU16(a+0xD8u,(uint16_t)(i*7919u+0x8000u));
+        if(c[0]==0xA1 || c[0]==0xA9)PE_StoreU16(a+0xD8u,(uint16_t)(i*7919u+0x8000u));
     }
     for(i=0;i<16;i++)PE_StoreU8(0x800B2900u+i,(uint8_t)(i*17u+3u));
     for(i=0;i<112;i++)PE_StoreU8(0x800B8A20u+i,(uint8_t)(i+0x60u));
@@ -33,7 +33,7 @@ static void ATK19_SeedAudio(const int64_t *c)
     PE_StoreU32(0x800B8628u,(uint32_t)c[0]);
     PE_StoreU32(0x800B862Cu,c[0]==0x24?0x80148000u:(c[0]==0xC0?0x1F3u:(uint32_t)c[5]));
     PE_StoreU32(0x800B8630u,(uint32_t)c[4]);PE_StoreU32(0x800B8634u,(uint32_t)c[10]);
-    PE_StoreU32(0x800B8638u,(c[0]==0xC0||c[0]==0xC1||c[0]==0xC2)?(uint32_t)c[7]:0x7Fu);
+    PE_StoreU32(0x800B8638u,(c[0]==0xC0||c[0]==0xC1||c[0]==0xC2||c[0]==0xA1)?(uint32_t)c[7]:0x7Fu);
     PE_StoreU32(0x800B863Cu,(uint32_t)c[5]);
     for(i=0;i<sizeof(ATK19_audio_callbacks)/sizeof(ATK19_audio_callbacks[0]);i++)
         PE_StoreU32(0x8009C0C0u+ATK19_audio_callbacks[i][0]*4u,ATK19_audio_callbacks[i][1]);
@@ -59,6 +59,12 @@ static void test_ATK19_retail_audio_commands(void)
         ATK19_SeedAudio(c);func_8008CA84();
         ASSERT(PE_Port_ShouldStop(),"A9 signed-zero duration must stop at original DIV");
         ASSERT(hit_camera_hash(ranges,sizeof(ranges)/sizeof(ranges[0]))==DAY1_audio_fade_faults[k].hash,"A9 BREAK prefix differs from original");
+    }
+    for(k=0;k<sizeof(DAY1_audio_selected_fade_faults)/sizeof(DAY1_audio_selected_fade_faults[0]);k++){
+        int64_t c[]={0xA1,0xFFF000,0,0,DAY1_audio_selected_fade_faults[k].group,0x405,0,127,0,7,DAY1_audio_selected_fade_faults[k].duration};
+        ATK19_SeedAudio(c);func_8008CA84();
+        ASSERT(PE_Port_ShouldStop(),"A1 signed-zero duration must stop at original DIV");
+        ASSERT(hit_camera_hash(ranges,sizeof(ranges)/sizeof(ranges[0]))==DAY1_audio_selected_fade_faults[k].hash,"A1 BREAK prefix differs from original");
     }
     PASS();
 }

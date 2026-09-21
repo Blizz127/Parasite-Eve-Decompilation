@@ -47,6 +47,15 @@ void func_8007E964(uint32_t status, pe_addr_t response);
 void func_80080164(uint32_t status, pe_addr_t response);
 void func_8007EB88(uint32_t sequence, uint32_t status, pe_addr_t response);
 void func_8007E704(uint32_t status, pe_addr_t response);
+/* Address-keyed data-ready callback dispatcher owned by cd_stream_port.c.
+ * Retail dispatches D_8009AFB8 / D_8009AFB4 / D_800A36A4 / D_800B8AB4
+ * through indirect calls; the translated-tree targets are native leaves, so
+ * every poll loop that consumes func_8007AAB4 events (7C13C, 7B010, 7B558,
+ * 7E964, 7F88C) shares this one dispatcher instead of stopping. Returns 1
+ * when the target was handled, 0 when the default arm raised the explicit
+ * unresolved-callback boundary. */
+int PE_Cd_DispatchDataCallback(pe_addr_t target, uint32_t status,
+                              pe_addr_t response);
 
 /* ── libgte (pc_port/platform/pe_gte.c) ─────────────────────────────── */
 /* cop2 control-register state has no guest-RAM backing; it is host-owned. */

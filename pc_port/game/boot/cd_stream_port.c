@@ -787,22 +787,32 @@ static void func_80080778(uint32_t status,pe_addr_t response)
         CdDataCallback(PE_LoadU32(0x800A36A8u),status,response);
 }
 
-static void CdDataCallback(pe_addr_t target,uint32_t status,pe_addr_t response)
+/* Address-keyed data-ready callback dispatcher. Every poll loop that
+ * consumes func_8007AAB4 events reaches the same retail callback set
+ * (D_8009AFB8 / D_8009AFB4 / D_800A36A4 / D_800B8AB4); the translated tree
+ * has a native leaf for each of them, so the loops share this dispatcher
+ * instead of each raising its own indirect-callback boundary. Returns 1 when
+ * the target was handled and 0 when the default arm stopped. */
+int PE_Cd_DispatchDataCallback(pe_addr_t target,uint32_t status,pe_addr_t response)
 {
     switch(target) {
-    case 0x8007F960u:func_8007F960(status,response);return;
-    case 0x8007E964u:func_8007E964(status,response);return;
-    case 0x80080164u:func_80080164(status,response);return;
-    case 0x80080778u:func_80080778(status,response);return;
-    case 0x8007F88Cu:func_8007F88C(status,response);return;
+    case 0x8007F960u:func_8007F960(status,response);return 1;
+    case 0x8007E964u:func_8007E964(status,response);return 1;
+    case 0x80080164u:func_80080164(status,response);return 1;
+    case 0x80080778u:func_80080778(status,response);return 1;
+    case 0x8007F88Cu:func_8007F88C(status,response);return 1;
     case 0x800813E8u:
         /* Original8-word wrapper ignores incoming arguments. */
-        func_8007C564();return;
+        func_8007C564();return 1;
     default:
         Bootstrap_ReturnVoid4Indirect("CD_data_callback","CD_data_dispatch",
             target,status,response,0u,0u);
-        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return;
+        PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);return 0;
     }
+}
+static void CdDataCallback(pe_addr_t target,uint32_t status,pe_addr_t response)
+{
+    (void)PE_Cd_DispatchDataCallback(target,status,response);
 }
 
 void func_8007C13C(void)

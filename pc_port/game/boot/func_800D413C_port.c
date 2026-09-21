@@ -15,7 +15,8 @@ void PE_EffectCallback_SetExtra1(uint32_t extra1) { g_pe_effect_extra1 = extra1;
  * Track their writers, including the retained joint Z on paused frames.
  * Unknown call graphs invalidate the bytes instead of supplying a position. */
 enum { EFFECT_STACK_NONE,EFFECT_STACK_INIT,EFFECT_STACK_UPDATE,EFFECT_STACK_DRAW,
-       EFFECT_STACK_PARTICLE_UPDATE,EFFECT_STACK_PARTICLE_DRAW,EFFECT_STACK_WEAPON_DRAW };
+       EFFECT_STACK_PARTICLE_UPDATE,EFFECT_STACK_PARTICLE_DRAW,EFFECT_STACK_WEAPON_DRAW,
+       EFFECT_STACK_WEAPON_UPDATE };
 static struct { uint64_t generation;unsigned active,context,known;int16_t position[3]; } effect_stack;
 void PE_EffectStackInvalidate(void) { effect_stack.known=0; }
 void PE_EffectStackBegin(void)
@@ -31,14 +32,31 @@ void PE_EffectStackEnd(void) { effect_stack.active=0;effect_stack.context=EFFECT
 int PE_EffectStackWeaponDraw(pe_addr_t fn,pe_addr_t slot)
 {
     unsigned saved=effect_stack.context;effect_stack.context=EFFECT_STACK_WEAPON_DRAW;
-    int result=fn==0x800C9B68u?func_800C9B68(slot):func_800CD8C8(slot);
+    int result=fn==0x800C9B68u?func_800C9B68(slot):
+        fn==0x800CE144u?func_800CE144((int32_t)slot):func_800CD8C8(slot);
     effect_stack.context=saved;return result;
+}
+int PE_EffectStackWeaponUpdate(pe_addr_t fn,pe_addr_t slot)
+{
+    /* At the 69594 update depth, C9B90/CD8F0/CE16C and their C251C/C2758
+     * frames do not reach the flash's borrowed six bytes. Empty child
+     * lists and bytecode without a constructor therefore preserve them.
+     * Deeper callbacks remain unknown until their stack writers are bound. */
+    unsigned saved=effect_stack.context;effect_stack.context=EFFECT_STACK_WEAPON_UPDATE;
+    int result=fn==0x800C9B90u?func_800C9B90(slot):
+        fn==0x800CE16Cu?func_800CE16C(slot):func_800CD8F0(slot);
+    effect_stack.context=saved;return result;
+}
+void PE_EffectStackWeaponUpdateCall(void)
+{
+    if(effect_stack.active && effect_stack.context==EFFECT_STACK_WEAPON_UPDATE)
+        effect_stack.known=0;
 }
 void PE_EffectStackWeaponCallback(pe_addr_t fn,pe_addr_t data)
 {
     if(!effect_stack.active || effect_stack.context!=EFFECT_STACK_WEAPON_DRAW)return;
     switch(fn) {
-    case 0x800C9EA0u:case 0x800CDD04u:return; /* Original empty leaves. */
+    case 0x800C9EA0u:case 0x800CDD04u:case 0x800CE3ACu:return; /* Original empty leaves. */
     case 0x800C9EA8u:
         /* C9ED8/DC/F8: casing angles at sp+30 overlap the borrowed vector. */
         effect_stack.position[0]=0;effect_stack.position[1]=0;
@@ -67,6 +85,7 @@ static int m0023i_code(void)
 
 int PE_EffectCallback(pe_addr_t fn, int32_t mode, pe_addr_t data, pe_addr_t extra)
 {
+    PE_M34StackCallback(fn);
     (void)data; (void)extra;
     int rehearsal=m0023i_code();
     if(effect_stack.active && (!rehearsal || effect_stack.context==EFFECT_STACK_INIT ||
@@ -76,6 +95,29 @@ int PE_EffectCallback(pe_addr_t fn, int32_t mode, pe_addr_t data, pe_addr_t extr
         if (fn==0x8018F0F0u) return PE_MirrorDraw(data);
         if (fn==0x8018EFF4u || fn==0x8018F1A4u || fn==0x8018F1BCu) return 0;
         if (fn==0x8018F1ACu) {PE_StoreU8(data,4u);return 0;}
+    }
+    if (PE_M34BossEffectOverlay()) {
+        if(fn==0x8018F0E4u)return PE_M34BossEffectDraw(data);
+        if(fn==0x8018F12Cu)return PE_M34BossEffectUpdate(data);
+        if(fn==0x8018F1B8u)return PE_M34BossEffectCleanup(data);
+        if(fn==0x8018F23Cu || fn==0x8018F244u)return 0;
+    }
+    if (PE_M32MovementOverlay()) {
+        if (fn==0x801917ECu) return PE_M32MovementUpdate(data);
+        if (fn==0x80192090u) return PE_M28MovementCleanup(data);
+        if (fn==0x80191504u || fn==0x801917E4u || fn==0x801920ECu) return 0;
+    }
+    if (PE_M28MovementOverlay()) {
+        if (fn==0x80192700u) return PE_M28ProjectileMain(mode,data,extra);
+        if (fn==0x801924F8u) return PE_M0013I_Particle(mode,data);
+        if (fn==0x801917FCu) return PE_M28MovementUpdate(data);
+        if (fn==0x801920A0u) return PE_M28MovementCleanup(data);
+        if (fn==0x80191514u || fn==0x801917F4u || fn==0x801920FCu) return 0;
+        if (fn==0x80193148u) {
+            PE_StoreU32(0x80193288u,data);PE_StoreU32(0x8019328Cu,extra);
+            PE_StoreU32(0x80193290u,g_pe_effect_extra1);
+            return (int32_t)0x80193288u;
+        }
     }
     /* Overlay addresses are reused: identify M0013I's main prologue
      * before dispatching either of its callbacks. */
@@ -439,11 +481,9 @@ int func_8006F9F0(unsigned index)
     entry=PE_LoadU32(PE_LoadU32(0x800942E0u)+(code<85u?code:85u)*4u);
     if (!entry) return -21;
     fn=PE_LoadU32(entry+16u);if (!fn) return -1;
-    if(fn!=0x800D413Cu)PE_EffectStackInvalidate();
     if (fn==0x800D413Cu) result=func_800D413C(slot);
-    else if (fn==0x800C9B90u) result=func_800C9B90(slot);
-    else if (fn==0x800CD8F0u) result=func_800CD8F0(slot);
-    else result=PE_EffectCallback(fn,1,slot,0u);
+    else if (fn==0x800C9B90u || fn==0x800CD8F0u || fn==0x800CE16Cu) result=PE_EffectStackWeaponUpdate(fn,slot);
+    else {PE_EffectStackInvalidate();result=PE_EffectCallback(fn,1,slot,0u);}
     PE_StoreU32(slot+4u,PE_LoadU32(slot+4u)+1u);
     return result;
 }

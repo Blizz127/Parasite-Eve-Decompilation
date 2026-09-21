@@ -77,3 +77,23 @@ int func_8001A15C(pe_addr_t args)
     PE_StoreU32(PE_LoadU32(args + 8u), (uint32_t)func_80079FB4(a, b));
     return 1;
 }
+
+/* Opcode DD, original 8001A214..8001A2F0: polar offset from actor X/Z.
+ * Preserve signed-halfword angle reduction, wrapped fixed-point arithmetic,
+ * and store/load order when script operands alias one another. */
+int func_8001A214(pe_addr_t args)
+{
+    int32_t angle = (int16_t)(0x1400u - PE_LoadU32(PE_LoadU32(args + 4u)));
+    uint32_t radius = 0u - PE_LoadU32(PE_LoadU32(args));
+    uint32_t x = func_8003708C(radius, (uint32_t)func_80077DC4(angle) << 4u);
+    PE_StoreU32(PE_LoadU32(args + 8u), x);
+    uint32_t z = func_8003708C(radius, (uint32_t)func_80077CF4(angle) << 4u);
+    PE_StoreU32(PE_LoadU32(args + 12u), z);
+    pe_addr_t dst = PE_LoadU32(args + 8u);
+    pe_addr_t actor = PE_LoadU32(0x8009D2F0u);
+    PE_StoreU32(dst, PE_LoadU32(dst) + PE_LoadU32(actor + 0x28u));
+    dst = PE_LoadU32(args + 12u);
+    actor = PE_LoadU32(0x8009D2F0u);
+    PE_StoreU32(dst, PE_LoadU32(dst) + PE_LoadU32(actor + 0x30u));
+    return 1;
+}

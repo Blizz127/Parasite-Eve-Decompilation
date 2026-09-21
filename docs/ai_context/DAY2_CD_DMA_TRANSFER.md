@@ -41,6 +41,23 @@ The first integration attempt failed because test reset detached the disc;
 the fixture now reattaches it after reset. Full Day1/Day2 and opening-through-
 Day2 acceptance are not established. Runtime128 remains published.
 
+## Command-poll data-ready dispatch (shared dispatcher)
+
+`func_8007B010` (B178 loop) and `func_8007B558` (B820 loop) both consume
+`func_8007AAB4` acknowledge events and then dispatch `D_8009AFB8` /
+`D_8009AFB4`. Those callbacks have native translations (80778, 80164, 7F88C,
+7E964, 7F960, 813E8) already reached by `func_8007C13C`, so the two poll loops
+now call the same address-keyed dispatcher
+`PE_Cd_DispatchDataCallback` (`cd_stream_port.c`, declared in
+`platform/pe_sdk.h`) instead of each raising its own
+`func_8007B010_afb8_callback` / `func_8007B558_afb4_callback`-style
+indirection boundary. Observable effect: a `func_80080D5C` → `func_80080DC4`
+blocking command wait that already has a pending data-ready event runs the
+real 80778 → 7F88C → 813E8 → `func_8007C564` chain (assembling or dropping
+the sector) rather than stopping; `DAY2_movie_player`'s non-video arm asserts
+that `movie_retry_wait` is the only stub logged. The default arm of the
+dispatcher is unchanged and still stops on an unknown target.
+
 Validation: normal and ASan/UBSan focused runs pass42 DAY2 groups with1297
 skipped (1339 total). Full CTest passes8/8 in126.97s, including1339/1339 native
 groups with0 skipped. Final builds are warning-free; original oracle/check,

@@ -9,6 +9,14 @@
         "-G0"
       ]
     },
+    "era_o1_g0_no_delayed_branch": {
+      "toolchain": "era",
+      "flags": [
+        "-O1",
+        "-G0",
+        "-fno-delayed-branch"
+      ]
+    },
     "era_o1_g0_sched2": {
       "toolchain": "era",
       "flags": [
@@ -65,6 +73,16 @@
         "MASPSX_FILL_STORE_DELAY_SLOT": "1"
       }
     },
+    "era_o2_g0_fill_epilogue_delay_slot": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_FILL_EPILOGUE_DELAY_SLOT": "1"
+      }
+    },
     "era_o2_g0_three_word": {
       "toolchain": "era",
       "flags": [
@@ -73,6 +91,26 @@
       ],
       "environment": {
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
+      }
+    },
+    "era_o2_g0_symbol_at_temp": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_SYMBOL_AT_TEMP": "1"
+      }
+    },
+    "era_o2_g0_symbol_load_dest_temp": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_SYMBOL_LOAD_DEST_TEMP": "1"
       }
     },
     "era_o2_g8": {
@@ -92,6 +130,16 @@
         "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_8009D2E8"
       }
     },
+    "era_o2_g8_force_descriptor_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_800A1F84,D_800C0E48,D_8009D05C"
+      }
+    },
     "era_o2_g8_three_word": {
       "toolchain": "era",
       "flags": [
@@ -100,6 +148,16 @@
       ],
       "environment": {
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
+      }
+    },
+    "era_o2_g8_force_d8009d2f0_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_8009D2F0"
       }
     },
     "era_o2_g8_vm_dispatch": {
@@ -146,16 +204,62 @@
         "8",
         "-fno-tree-ter"
       ]
+    },
+    "era_o2_g8_symbol_at_temp": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_SYMBOL_AT_TEMP": "1"
+      }
+    },
+    "era_o2_g8_force_d800bd024_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_800BD024"
+      }
+    },
+    "era_o2_g8_force_d800bcfee_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_800BCFEE"
+      }
+    },
+    "era_o2_g8_force_3f3c4_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_8009CDD8,D_8009D1F4,D_8009D238,D_8009CDDC,D_8009D250,D_8009D26C,D_800B0CEA,D_800B0CD8,D_800BCFE8"
+      }
+    },
+    "era_o2_g8_fill_epilogue_delay_slot": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_FILL_EPILOGUE_DELAY_SLOT": "1"
+      }
     }
   },
   "assignments": {
     "era_o1_g0": [
-      "func_8003E680",
-      "func_8006A5BC",
+      "func_8005DB44",
       "func_8008AB1C"
-    ],
-    "era_o1_g0_sched2": [
-      "func_80052BCC"
     ],
     "era_o1_g0_sched2_three_word": [
       "func_8006A674"
@@ -185,6 +289,28 @@
       "func_80084B44",
       "func_80084FC4"
     ],
+    "era_o2_g0_fill_epilogue_delay_slot": [
+      "func_80074D28",
+      "func_80074DC0",
+      "func_8007506C",
+      "func_800750CC",
+      "func_800751E4",
+      "func_800752AC",
+      "func_80075358",
+      "func_800753B4",
+      "func_80075424",
+      "func_800754E4",
+      "func_800755BC",
+      "func_80075AE8",
+      "func_80075B4C",
+      "func_80075B84",
+      "func_80075C04",
+      "func_80075C94",
+      "func_8007DD74",
+      "func_8007F72C",
+      "func_800811E4",
+      "func_800828F4"
+    ],
     "era_o2_g0_three_word": [
       "func_8002F7D8",
       "func_8002F970",
@@ -192,44 +318,71 @@
       "func_800363F4",
       "func_80037548",
       "func_80050020",
-      "func_8005DC28"
+      "func_8005DC28",
+      "func_800374E8"
     ],
     "era_o2_g8": [
-      "func_800177AC",
-      "func_800176E0",
-      "func_800172E0",
-      "func_800172FC",
       "func_800124F8",
       "func_800125E0",
       "func_80012700",
       "func_80012774",
-      "func_800197D0",
+      "func_800172E0",
+      "func_800172FC",
+      "func_800176E0",
+      "func_800177AC",
+      "func_8001784C",
+      "func_80021054",
+      "func_80026FD0",
+      "func_80038910",
+      "func_80042FE8",
       "func_800438C0",
       "func_8004E94C",
+      "func_8004F7D8",
+      "func_800501C8",
+      "func_8005022C",
+      "func_80050308",
       "func_800504F4",
       "func_8005051C",
+      "func_800509A8",
       "func_80051060",
-      "func_800534CC",
+      "func_8005270C",
+      "func_80052764",
       "func_80052790",
+      "func_800534CC",
       "func_80055FB4",
       "func_80057D18",
       "func_8005BEE8",
       "func_8005C144",
       "func_8005D970",
-      "func_8005E8A4",
       "func_8005E54C",
+      "func_8005E8A4",
+      "func_8005E8C4",
+      "func_8005E914",
       "func_8005E968",
       "func_8005F594",
       "func_8005F844",
       "func_80062A34",
+      "func_80062F3C",
       "func_80063158",
       "func_80064C30",
+      "func_80064C54",
       "func_800653B8",
-      "func_80042FE8",
-      "func_80070E54"
+      "func_80070E54",
+      "func_80060528",
+      "func_8006055C",
+      "func_80060590",
+      "func_800605C4",
+      "func_800605F8",
+      "func_800631DC",
+      "func_8005E4E4",
+      "func_8005E518"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
+    ],
+    "era_o2_g8_force_d8009d2f0_absolute": [
+      "func_80017294",
+      "func_8001731C"
     ],
     "era_o2_g8_three_word": [
       "func_8001266C",
@@ -411,6 +564,48 @@
     ],
     "modern_o1_g8_no_tree_ter": [
       "func_80052F0C"
+    ],
+    "era_o2_g0_symbol_at_temp": [
+      "func_80042770",
+      "func_800428D4",
+      "func_80042964",
+      "func_800528C4",
+      "func_80056C14",
+      "func_80077D30",
+      "func_80077DC4",
+      "func_8007A400",
+      "func_8007A434",
+      "func_800858E8",
+      "func_800906E4"
+    ],
+    "era_o2_g0_symbol_load_dest_temp": [
+      "func_80076B20",
+      "func_80076B44",
+      "func_8007FBF0",
+      "func_80085918"
+    ],
+    "era_o2_g8_force_descriptor_absolute": [
+      "func_80052E30"
+    ],
+    "era_o2_g8_symbol_at_temp": [
+      "func_800556E8",
+      "func_80057ED8",
+      "func_80058E08"
+    ],
+    "era_o1_g0_no_delayed_branch": [
+      "func_80078C94"
+    ],
+    "era_o2_g8_force_d800bd024_absolute": [
+      "func_80042EDC"
+    ],
+    "era_o2_g8_force_d800bcfee_absolute": [
+      "func_80019410"
+    ],
+    "era_o2_g8_force_3f3c4_absolute": [
+      "func_8003F3C4"
+    ],
+    "era_o2_g8_fill_epilogue_delay_slot": [
+      "func_80062F9C"
     ]
   }
 }

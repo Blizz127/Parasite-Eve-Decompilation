@@ -8,6 +8,8 @@
 static uint32_t menu_callback(pe_addr_t fn,uint32_t a0,uint32_t a1,uint32_t a2,uint32_t a3)
 {
     switch (fn) {
+    case 0x80048838u:return (uint32_t)func_80048838(a0,a1);
+    case 0x80058030u:return (uint32_t)func_80058030(a0,(int32_t)a1,a2,(int32_t)a3);
     case 0x8004DA9Cu:return (uint32_t)func_8004DA9C();
     case 0x8004D2DCu:return (uint32_t)func_8004D2DC(a0,a1);
     case 0x8004F730u:return (uint32_t)func_8004F730(a0,a1);
@@ -31,6 +33,16 @@ static uint32_t menu_callback(pe_addr_t fn,uint32_t a0,uint32_t a1,uint32_t a2,u
     case 0x8004E074u:return (uint32_t)func_8004E074(a0,a1);
     case 0x8004E2E4u:return (uint32_t)func_8004E2E4(a0,a1);
     case 0x8004BB80u:return (uint32_t)func_8004BB80(a0,a1);
+    case 0x8004C1E0u:return (uint32_t)func_8004C1E0(a0,a1);
+    /* Field-menu tree rooted at 0x8004AE1C (jtbl_80011034).  Every input
+     * handler the tree installs is native now: the page handler, the four
+     * sub-page constructors, and the Items/Escape/Equipment/Modal handlers.
+     * The Equipment draw side lives in menu_draw_callback (0x8004B214). */
+    case 0x8004AE1Cu:return (uint32_t)func_8004AE1C(a0,a1);
+    case 0x8004AFA4u:return (uint32_t)func_8004AFA4(a0,a1);
+    case 0x8004B0A4u:return (uint32_t)func_8004B0A4(a0,a1);
+    case 0x8004B394u:return (uint32_t)func_8004B394(a0,a1);
+    case 0x8004B650u:return (uint32_t)func_8004B650(a0,a1);
     default:
         fprintf(stderr,"[MENU] Unported input callback %08X\n",fn);
         Bootstrap_ReturnVoid("PE_MenuInputCallback","menu input callback");

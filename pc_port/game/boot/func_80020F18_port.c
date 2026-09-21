@@ -9,8 +9,11 @@
 
 static pe_addr_t effect_slot(uint32_t index)
 {
-    return index<11u ? PE_LoadU32(0x800942E4u)+index*0xA0Cu :
-                       PE_LoadU32(0x800942E8u)+(index-11u)*0x10Cu;
+    pe_addr_t slot=index<11u ? PE_LoadU32(0x800942E4u)+index*0xA0Cu :
+                              PE_LoadU32(0x800942E8u)+(index-11u)*0x10Cu;
+    /* Retirement also runs before the pools are initialized. Retail reads
+     * physical RAM in that case; preserve the read through its cached alias. */
+    return slot<0x200000u ? slot|0x80000000u : slot;
 }
 
 static void clear_effect_slot(pe_addr_t slot)
@@ -43,7 +46,17 @@ int32_t func_8006FC18(uint32_t index, pe_addr_t owner, uint32_t force)
     case 0x800CA798u: case 0x800CD960u: case 0x800CCF80u:
     case 0x800CE1DCu: case 0x800CBFA4u: case 0x800D4850u:
         PE_StoreU8(slot,4u); break;
+    case 0x80192090u:
+    case 0x801920A0u:
+        if ((fn==0x80192090u && PE_M32MovementOverlay()) ||
+            (fn==0x801920A0u && PE_M28MovementOverlay())) {
+            (void)PE_M28MovementCleanup(slot); break;
+        }
+        /* fall through */
     default:
+        if(fn==0x8018F1B8u && PE_M34BossEffectOverlay()) {
+            (void)PE_M34BossEffectCleanup(slot);break;
+        }
         (void)Bootstrap_ReturnInt4Indirect("effect_destroy_callback", "func_8006FC18",
             -1,fn,slot,owner,force,0u,NULL,0u);
         PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);

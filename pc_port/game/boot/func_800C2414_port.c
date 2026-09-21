@@ -44,8 +44,17 @@ static void weapon_hit_child(pe_addr_t data,int particles)
 void PE_WeaponCallback(pe_addr_t fn,pe_addr_t slot,pe_addr_t rec,pe_addr_t data)
 {
     unsigned i;
+    PE_EffectStackWeaponUpdateCall();
+    PE_M34StackCallback(fn);
     (void)slot;
+    if(PE_M34BossEffectOverlay() && PE_M34BossEffectChild(fn,slot,rec,data))return;
     switch (fn) {
+    case 0x800CE1FCu:func_800CE1FC();return;
+    case 0x800CE2B4u:func_800CE2B4(data);return;
+    case 0x800CE3B4u:func_800CE3B4(data);return;
+    case 0x800CE3ACu:return; /* Original empty draw leaf. */
+    case 0x800CE464u:func_800CE464(slot,rec);return;
+    case 0x800CE470u:func_800CE470(slot,rec,data);return;
     case 0x800CD980u:weapon_hit_origin();return;
     case 0x800CDA5Cu:weapon_hit_child(data,1);return;
     case 0x800CDC24u:weapon_hit_child(data,0);return;
@@ -150,6 +159,7 @@ int func_800C2E08(void)
 
 pe_addr_t func_800C2B90(pe_addr_t slot,unsigned code,pe_addr_t sizes,pe_addr_t callbacks)
 {
+    PE_EffectStackWeaponUpdateCall();
     unsigned i;
     int kind;
     pe_addr_t rec,data,fn;

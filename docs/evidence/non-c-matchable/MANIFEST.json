@@ -1,0 +1,1370 @@
+{
+  "total_spans": 1695,
+  "counts": {
+    "alignment-filler": 33,
+    "gte-inline": 5,
+    "handwritten-cop": 22,
+    "handwritten-gte-wrapper": 107,
+    "handwritten-jr-t2": 53,
+    "handwritten-syscall": 2
+  },
+  "words": {
+    "alignment-filler": 33,
+    "gte-inline": 192,
+    "handwritten-cop": 123,
+    "handwritten-gte-wrapper": 19958,
+    "handwritten-jr-t2": 163,
+    "handwritten-syscall": 8
+  },
+  "spans": {
+    "alignment-filler": [
+      {
+        "name": "func_8003E60C",
+        "vram": "0x8003E60C",
+        "size": "0x4",
+        "file": "asm/disc1/2EE0C.s"
+      },
+      {
+        "name": "func_800744C8",
+        "vram": "0x800744C8",
+        "size": "0x4",
+        "file": "asm/disc1/64CC8.s"
+      },
+      {
+        "name": "func_80074770",
+        "vram": "0x80074770",
+        "size": "0x4",
+        "file": "asm/disc1/64F70.s"
+      },
+      {
+        "name": "func_80074A38",
+        "vram": "0x80074A38",
+        "size": "0x4",
+        "file": "asm/disc1/65238.s"
+      },
+      {
+        "name": "func_80077A4C",
+        "vram": "0x80077A4C",
+        "size": "0x4",
+        "file": "asm/disc1/6824C.s"
+      },
+      {
+        "name": "func_80077AA0",
+        "vram": "0x80077AA0",
+        "size": "0x4",
+        "file": "asm/disc1/682A0.s"
+      },
+      {
+        "name": "func_80077ABC",
+        "vram": "0x80077ABC",
+        "size": "0x4",
+        "file": "asm/disc1/682BC.s"
+      },
+      {
+        "name": "func_80077B00",
+        "vram": "0x80077B00",
+        "size": "0x4",
+        "file": "asm/disc1/68300.s"
+      },
+      {
+        "name": "func_80077B2C",
+        "vram": "0x80077B2C",
+        "size": "0x4",
+        "file": "asm/disc1/6832C.s"
+      },
+      {
+        "name": "func_80077B5C",
+        "vram": "0x80077B5C",
+        "size": "0x4",
+        "file": "asm/disc1/6835C.s"
+      },
+      {
+        "name": "func_80077B78",
+        "vram": "0x80077B78",
+        "size": "0x4",
+        "file": "asm/disc1/68378.s"
+      },
+      {
+        "name": "func_80077B98",
+        "vram": "0x80077B98",
+        "size": "0x4",
+        "file": "asm/disc1/68398.s"
+      },
+      {
+        "name": "func_80077BB8",
+        "vram": "0x80077BB8",
+        "size": "0x4",
+        "file": "asm/disc1/683B8.s"
+      },
+      {
+        "name": "func_80077BD8",
+        "vram": "0x80077BD8",
+        "size": "0x4",
+        "file": "asm/disc1/683D8.s"
+      },
+      {
+        "name": "func_80077BF8",
+        "vram": "0x80077BF8",
+        "size": "0x4",
+        "file": "asm/disc1/683F8.s"
+      },
+      {
+        "name": "func_80077C18",
+        "vram": "0x80077C18",
+        "size": "0x4",
+        "file": "asm/disc1/68418.s"
+      },
+      {
+        "name": "func_80077C38",
+        "vram": "0x80077C38",
+        "size": "0x4",
+        "file": "asm/disc1/68438.s"
+      },
+      {
+        "name": "func_80077C58",
+        "vram": "0x80077C58",
+        "size": "0x4",
+        "file": "asm/disc1/68458.s"
+      },
+      {
+        "name": "func_80077C78",
+        "vram": "0x80077C78",
+        "size": "0x4",
+        "file": "asm/disc1/68478.s"
+      },
+      {
+        "name": "func_80077CB0",
+        "vram": "0x80077CB0",
+        "size": "0x4",
+        "file": "asm/disc1/684B0.s"
+      },
+      {
+        "name": "func_80077CEC",
+        "vram": "0x80077CEC",
+        "size": "0x4",
+        "file": "asm/disc1/684EC.s"
+      },
+      {
+        "name": "func_80077DC0",
+        "vram": "0x80077DC0",
+        "size": "0x4",
+        "file": "asm/disc1/685C0.s"
+      },
+      {
+        "name": "func_8007C560",
+        "vram": "0x8007C560",
+        "size": "0x4",
+        "file": "asm/disc1/6CD60.s"
+      },
+      {
+        "name": "func_8007DD38",
+        "vram": "0x8007DD38",
+        "size": "0x4",
+        "file": "asm/disc1/6E538.s"
+      },
+      {
+        "name": "func_8007DEA0",
+        "vram": "0x8007DEA0",
+        "size": "0x4",
+        "file": "asm/disc1/6E6A0.s"
+      },
+      {
+        "name": "func_8007F98C",
+        "vram": "0x8007F98C",
+        "size": "0x4",
+        "file": "asm/disc1/7018C.s"
+      },
+      {
+        "name": "func_80081310",
+        "vram": "0x80081310",
+        "size": "0x4",
+        "file": "asm/disc1/71B10.s"
+      },
+      {
+        "name": "func_80081408",
+        "vram": "0x80081408",
+        "size": "0x4",
+        "file": "asm/disc1/71C08.s"
+      },
+      {
+        "name": "func_80083EF8",
+        "vram": "0x80083EF8",
+        "size": "0x4",
+        "file": "asm/disc1/746F8.s"
+      },
+      {
+        "name": "func_80084B40",
+        "vram": "0x80084B40",
+        "size": "0x4",
+        "file": "asm/disc1/75340.s"
+      },
+      {
+        "name": "func_80085DE8",
+        "vram": "0x80085DE8",
+        "size": "0x4",
+        "file": "asm/disc1/765E8.s"
+      },
+      {
+        "name": "func_80085F68",
+        "vram": "0x80085F68",
+        "size": "0x4",
+        "file": "asm/disc1/76768.s"
+      },
+      {
+        "name": "func_80089F24",
+        "vram": "0x80089F24",
+        "size": "0x4",
+        "file": "asm/disc1/7A724.s"
+      }
+    ],
+    "handwritten-cop": [
+      {
+        "name": "func_80078EB4",
+        "vram": "0x80078EB4",
+        "size": "0x10",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078EC4",
+        "vram": "0x80078EC4",
+        "size": "0x10",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078ED4",
+        "vram": "0x80078ED4",
+        "size": "0x10",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078EE4",
+        "vram": "0x80078EE4",
+        "size": "0x20",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078F04",
+        "vram": "0x80078F04",
+        "size": "0x14",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078F18",
+        "vram": "0x80078F18",
+        "size": "0x14",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078F2C",
+        "vram": "0x80078F2C",
+        "size": "0xC",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078F38",
+        "vram": "0x80078F38",
+        "size": "0x14",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078F4C",
+        "vram": "0x80078F4C",
+        "size": "0x18",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078F64",
+        "vram": "0x80078F64",
+        "size": "0x14",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078F78",
+        "vram": "0x80078F78",
+        "size": "0x14",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078F8C",
+        "vram": "0x80078F8C",
+        "size": "0x14",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078FA0",
+        "vram": "0x80078FA0",
+        "size": "0xC",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078FAC",
+        "vram": "0x80078FAC",
+        "size": "0xC",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078FB8",
+        "vram": "0x80078FB8",
+        "size": "0xC",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079024",
+        "vram": "0x80079024",
+        "size": "0xC",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079034",
+        "vram": "0x80079034",
+        "size": "0x28",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_8007905C",
+        "vram": "0x8007905C",
+        "size": "0x28",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_800790C0",
+        "vram": "0x800790C0",
+        "size": "0x24",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079134",
+        "vram": "0x80079134",
+        "size": "0x20",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079154",
+        "vram": "0x80079154",
+        "size": "0x24",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079228",
+        "vram": "0x80079228",
+        "size": "0x18",
+        "file": "asm/disc1/68664.s"
+      }
+    ],
+    "handwritten-gte-wrapper": [
+      {
+        "name": "func_80035558",
+        "vram": "0x80035558",
+        "size": "0x72C",
+        "file": "asm/disc1/24240.s"
+      },
+      {
+        "name": "func_8003A088",
+        "vram": "0x8003A088",
+        "size": "0x620",
+        "file": "asm/disc1/2A19C.s"
+      },
+      {
+        "name": "func_8003A6A8",
+        "vram": "0x8003A6A8",
+        "size": "0x5E8",
+        "file": "asm/disc1/2A19C.s"
+      },
+      {
+        "name": "func_8003AC90",
+        "vram": "0x8003AC90",
+        "size": "0x284",
+        "file": "asm/disc1/2A19C.s"
+      },
+      {
+        "name": "func_8003B144",
+        "vram": "0x8003B144",
+        "size": "0x5C4",
+        "file": "asm/disc1/2A19C.s"
+      },
+      {
+        "name": "func_8003B97C",
+        "vram": "0x8003B97C",
+        "size": "0x364",
+        "file": "asm/disc1/2A19C.s"
+      },
+      {
+        "name": "func_8003C0B4",
+        "vram": "0x8003C0B4",
+        "size": "0x22C",
+        "file": "asm/disc1/2A19C.s"
+      },
+      {
+        "name": "func_8003C2E0",
+        "vram": "0x8003C2E0",
+        "size": "0x2F8",
+        "file": "asm/disc1/2A19C.s"
+      },
+      {
+        "name": "func_8003E188",
+        "vram": "0x8003E188",
+        "size": "0x2EC",
+        "file": "asm/disc1/2E8FC.s"
+      },
+      {
+        "name": "func_8003F758",
+        "vram": "0x8003F758",
+        "size": "0x40",
+        "file": "asm/disc1/2F174.s"
+      },
+      {
+        "name": "func_8003F798",
+        "vram": "0x8003F798",
+        "size": "0x68",
+        "file": "asm/disc1/2F174.s"
+      },
+      {
+        "name": "func_80015240",
+        "vram": "0x80015240",
+        "size": "0x3BC",
+        "file": "asm/disc1/3420.s"
+      },
+      {
+        "name": "func_80065E48",
+        "vram": "0x80065E48",
+        "size": "0x35C",
+        "file": "asm/disc1/56438.s"
+      },
+      {
+        "name": "func_800661A4",
+        "vram": "0x800661A4",
+        "size": "0x28",
+        "file": "asm/disc1/56438.s"
+      },
+      {
+        "name": "func_800661CC",
+        "vram": "0x800661CC",
+        "size": "0x20",
+        "file": "asm/disc1/56438.s"
+      },
+      {
+        "name": "func_800665A0",
+        "vram": "0x800665A0",
+        "size": "0x260",
+        "file": "asm/disc1/56438.s"
+      },
+      {
+        "name": "func_8006698C",
+        "vram": "0x8006698C",
+        "size": "0x1D4",
+        "file": "asm/disc1/56438.s"
+      },
+      {
+        "name": "func_80066CE8",
+        "vram": "0x80066CE8",
+        "size": "0x278",
+        "file": "asm/disc1/56438.s"
+      },
+      {
+        "name": "func_80068014",
+        "vram": "0x80068014",
+        "size": "0x68C",
+        "file": "asm/disc1/58374.s"
+      },
+      {
+        "name": "func_80068B94",
+        "vram": "0x80068B94",
+        "size": "0x14C",
+        "file": "asm/disc1/58374.s"
+      },
+      {
+        "name": "func_8006DFA8",
+        "vram": "0x8006DFA8",
+        "size": "0x218",
+        "file": "asm/disc1/5E7A8.s"
+      },
+      {
+        "name": "func_8007041C",
+        "vram": "0x8007041C",
+        "size": "0x8F4",
+        "file": "asm/disc1/60C1C.s"
+      },
+      {
+        "name": "func_80078194",
+        "vram": "0x80078194",
+        "size": "0xC0",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078254",
+        "vram": "0x80078254",
+        "size": "0xE8",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078344",
+        "vram": "0x80078344",
+        "size": "0x50",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078394",
+        "vram": "0x80078394",
+        "size": "0x50",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_800783E4",
+        "vram": "0x800783E4",
+        "size": "0x88",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_8007846C",
+        "vram": "0x8007846C",
+        "size": "0x88",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_800784F4",
+        "vram": "0x800784F4",
+        "size": "0x60",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078554",
+        "vram": "0x80078554",
+        "size": "0x7C",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_800785D4",
+        "vram": "0x800785D4",
+        "size": "0x10C",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_800786E4",
+        "vram": "0x800786E4",
+        "size": "0xE8",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_800787D4",
+        "vram": "0x800787D4",
+        "size": "0x160",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078934",
+        "vram": "0x80078934",
+        "size": "0x160",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078A94",
+        "vram": "0x80078A94",
+        "size": "0xA4",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078B38",
+        "vram": "0x80078B38",
+        "size": "0xA4",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078BE4",
+        "vram": "0x80078BE4",
+        "size": "0x50",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078C34",
+        "vram": "0x80078C34",
+        "size": "0x5C",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078E04",
+        "vram": "0x80078E04",
+        "size": "0x30",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078E34",
+        "vram": "0x80078E34",
+        "size": "0x30",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078E64",
+        "vram": "0x80078E64",
+        "size": "0x30",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078E94",
+        "vram": "0x80078E94",
+        "size": "0x20",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078FC4",
+        "vram": "0x80078FC4",
+        "size": "0x20",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80078FE4",
+        "vram": "0x80078FE4",
+        "size": "0x20",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079004",
+        "vram": "0x80079004",
+        "size": "0x18",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079084",
+        "vram": "0x80079084",
+        "size": "0x3C",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_800790E4",
+        "vram": "0x800790E4",
+        "size": "0x28",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_8007910C",
+        "vram": "0x8007910C",
+        "size": "0x28",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079178",
+        "vram": "0x80079178",
+        "size": "0x58",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_800791D0",
+        "vram": "0x800791D0",
+        "size": "0x58",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079244",
+        "vram": "0x80079244",
+        "size": "0x2C",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079274",
+        "vram": "0x80079274",
+        "size": "0x54",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_800792D4",
+        "vram": "0x800792D4",
+        "size": "0x28",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079304",
+        "vram": "0x80079304",
+        "size": "0x78",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079384",
+        "vram": "0x80079384",
+        "size": "0x88",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_80079414",
+        "vram": "0x80079414",
+        "size": "0xB0",
+        "file": "asm/disc1/68664.s"
+      },
+      {
+        "name": "func_8001AE40",
+        "vram": "0x8001AE40",
+        "size": "0x7BC",
+        "file": "asm/disc1/AF84.s"
+      },
+      {
+        "name": "func_800C3324",
+        "vram": "0x800C3324",
+        "size": "0x7E0",
+        "file": "asm/disc1/B3390.s"
+      },
+      {
+        "name": "func_800C3B04",
+        "vram": "0x800C3B04",
+        "size": "0x7A0",
+        "file": "asm/disc1/B3390.s"
+      },
+      {
+        "name": "func_800C42A4",
+        "vram": "0x800C42A4",
+        "size": "0x6F8",
+        "file": "asm/disc1/B3390.s"
+      },
+      {
+        "name": "func_800C499C",
+        "vram": "0x800C499C",
+        "size": "0x4B4",
+        "file": "asm/disc1/B3390.s"
+      },
+      {
+        "name": "func_800C4FC4",
+        "vram": "0x800C4FC4",
+        "size": "0x574",
+        "file": "asm/disc1/B3390.s"
+      },
+      {
+        "name": "func_800C5538",
+        "vram": "0x800C5538",
+        "size": "0x508",
+        "file": "asm/disc1/B3390.s"
+      },
+      {
+        "name": "func_800C5A40",
+        "vram": "0x800C5A40",
+        "size": "0x470",
+        "file": "asm/disc1/B3390.s"
+      },
+      {
+        "name": "func_800C62DC",
+        "vram": "0x800C62DC",
+        "size": "0x260",
+        "file": "asm/disc1/B3390.s"
+      },
+      {
+        "name": "func_800C689C",
+        "vram": "0x800C689C",
+        "size": "0x284",
+        "file": "asm/disc1/B3390.s"
+      },
+      {
+        "name": "func_800C71E4",
+        "vram": "0x800C71E4",
+        "size": "0x8FC",
+        "file": "asm/disc1/B76F8.s"
+      },
+      {
+        "name": "func_800C83A0",
+        "vram": "0x800C83A0",
+        "size": "0x4D0",
+        "file": "asm/disc1/B8A70.s"
+      },
+      {
+        "name": "func_800C9398",
+        "vram": "0x800C9398",
+        "size": "0x4D0",
+        "file": "asm/disc1/B9A68.s"
+      },
+      {
+        "name": "func_800C9FD8",
+        "vram": "0x800C9FD8",
+        "size": "0x4D0",
+        "file": "asm/disc1/BA6A8.s"
+      },
+      {
+        "name": "func_800CAE0C",
+        "vram": "0x800CAE0C",
+        "size": "0x944",
+        "file": "asm/disc1/BB4DC.s"
+      },
+      {
+        "name": "func_800CE8F0",
+        "vram": "0x800CE8F0",
+        "size": "0xE4",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800CE9D4",
+        "vram": "0x800CE9D4",
+        "size": "0x114",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800CEAE8",
+        "vram": "0x800CEAE8",
+        "size": "0xA4",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800CEE20",
+        "vram": "0x800CEE20",
+        "size": "0x58C",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800CF5B0",
+        "vram": "0x800CF5B0",
+        "size": "0xA8",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800CF658",
+        "vram": "0x800CF658",
+        "size": "0xA0",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800CF844",
+        "vram": "0x800CF844",
+        "size": "0x264",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800CFB7C",
+        "vram": "0x800CFB7C",
+        "size": "0x178",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D004C",
+        "vram": "0x800D004C",
+        "size": "0x6DC",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D0728",
+        "vram": "0x800D0728",
+        "size": "0x760",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D0E88",
+        "vram": "0x800D0E88",
+        "size": "0x4FC",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D1384",
+        "vram": "0x800D1384",
+        "size": "0x75C",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D1DEC",
+        "vram": "0x800D1DEC",
+        "size": "0x318",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D2104",
+        "vram": "0x800D2104",
+        "size": "0x26C",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D2370",
+        "vram": "0x800D2370",
+        "size": "0x48C",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D27FC",
+        "vram": "0x800D27FC",
+        "size": "0x35C",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D2B58",
+        "vram": "0x800D2B58",
+        "size": "0x5BC",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D3114",
+        "vram": "0x800D3114",
+        "size": "0x9E8",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D3BC8",
+        "vram": "0x800D3BC8",
+        "size": "0x39C",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D4704",
+        "vram": "0x800D4704",
+        "size": "0x14C",
+        "file": "asm/disc1/BF0F0.s"
+      },
+      {
+        "name": "func_800D5290",
+        "vram": "0x800D5290",
+        "size": "0x608",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800D5A00",
+        "vram": "0x800D5A00",
+        "size": "0x2E4",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800D6514",
+        "vram": "0x800D6514",
+        "size": "0x508",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800D751C",
+        "vram": "0x800D751C",
+        "size": "0x248",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800D8388",
+        "vram": "0x800D8388",
+        "size": "0x304",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800D868C",
+        "vram": "0x800D868C",
+        "size": "0x2EC",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800D927C",
+        "vram": "0x800D927C",
+        "size": "0x2D8",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800D96F4",
+        "vram": "0x800D96F4",
+        "size": "0x398",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800D9A8C",
+        "vram": "0x800D9A8C",
+        "size": "0x3D0",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800DA1FC",
+        "vram": "0x800DA1FC",
+        "size": "0x3D8",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800DB25C",
+        "vram": "0x800DB25C",
+        "size": "0x398",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800DB6BC",
+        "vram": "0x800DB6BC",
+        "size": "0x3E0",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800DC058",
+        "vram": "0x800DC058",
+        "size": "0x564",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800DD9E4",
+        "vram": "0x800DD9E4",
+        "size": "0x38C",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800DE0A8",
+        "vram": "0x800DE0A8",
+        "size": "0x700",
+        "file": "asm/disc1/C5060.s"
+      },
+      {
+        "name": "func_800E051C",
+        "vram": "0x800E051C",
+        "size": "0x2EC",
+        "file": "asm/disc1/C5060.s"
+      }
+    ],
+    "handwritten-jr-t2": [
+      {
+        "name": "func_800719E4",
+        "vram": "0x800719E4",
+        "size": "0x1C",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80071A04",
+        "vram": "0x80071A04",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80071A14",
+        "vram": "0x80071A14",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80071A24",
+        "vram": "0x80071A24",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80071A34",
+        "vram": "0x80071A34",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80071A44",
+        "vram": "0x80071A44",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80071A54",
+        "vram": "0x80071A54",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80071A64",
+        "vram": "0x80071A64",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80071A74",
+        "vram": "0x80071A74",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072314",
+        "vram": "0x80072314",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072324",
+        "vram": "0x80072324",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_800726B4",
+        "vram": "0x800726B4",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_800726C4",
+        "vram": "0x800726C4",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_800726D4",
+        "vram": "0x800726D4",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_800726E4",
+        "vram": "0x800726E4",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_800726F4",
+        "vram": "0x800726F4",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072704",
+        "vram": "0x80072704",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072734",
+        "vram": "0x80072734",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072744",
+        "vram": "0x80072744",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072754",
+        "vram": "0x80072754",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072764",
+        "vram": "0x80072764",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072774",
+        "vram": "0x80072774",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072784",
+        "vram": "0x80072784",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072794",
+        "vram": "0x80072794",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_800727A4",
+        "vram": "0x800727A4",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072A54",
+        "vram": "0x80072A54",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072A64",
+        "vram": "0x80072A64",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80073A34",
+        "vram": "0x80073A34",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80073C5C",
+        "vram": "0x80073C5C",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80073C74",
+        "vram": "0x80073C74",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80073C84",
+        "vram": "0x80073C84",
+        "size": "0xC",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_8007436C",
+        "vram": "0x8007436C",
+        "size": "0xC",
+        "file": "asm/disc1/64B54.s"
+      },
+      {
+        "name": "func_80074384",
+        "vram": "0x80074384",
+        "size": "0xC",
+        "file": "asm/disc1/64B54.s"
+      },
+      {
+        "name": "func_80074394",
+        "vram": "0x80074394",
+        "size": "0xC",
+        "file": "asm/disc1/64B54.s"
+      },
+      {
+        "name": "func_800743A4",
+        "vram": "0x800743A4",
+        "size": "0xC",
+        "file": "asm/disc1/64B54.s"
+      },
+      {
+        "name": "func_80077A54",
+        "vram": "0x80077A54",
+        "size": "0xC",
+        "file": "asm/disc1/6824C.s"
+      },
+      {
+        "name": "func_8007DD44",
+        "vram": "0x8007DD44",
+        "size": "0xC",
+        "file": "asm/disc1/6E538.s"
+      },
+      {
+        "name": "func_8007DD54",
+        "vram": "0x8007DD54",
+        "size": "0xC",
+        "file": "asm/disc1/6E538.s"
+      },
+      {
+        "name": "func_8007DD64",
+        "vram": "0x8007DD64",
+        "size": "0xC",
+        "file": "asm/disc1/6E538.s"
+      },
+      {
+        "name": "func_8007DDB4",
+        "vram": "0x8007DDB4",
+        "size": "0xC",
+        "file": "asm/disc1/6E538.s"
+      },
+      {
+        "name": "func_8007DDC4",
+        "vram": "0x8007DDC4",
+        "size": "0xC",
+        "file": "asm/disc1/6E538.s"
+      },
+      {
+        "name": "func_8007E1A4",
+        "vram": "0x8007E1A4",
+        "size": "0xC",
+        "file": "asm/disc1/6E6C0.s"
+      },
+      {
+        "name": "func_8007E1B4",
+        "vram": "0x8007E1B4",
+        "size": "0xC",
+        "file": "asm/disc1/6E6C0.s"
+      },
+      {
+        "name": "func_8007E1C4",
+        "vram": "0x8007E1C4",
+        "size": "0xC",
+        "file": "asm/disc1/6E6C0.s"
+      },
+      {
+        "name": "func_8007E1D4",
+        "vram": "0x8007E1D4",
+        "size": "0xC",
+        "file": "asm/disc1/6E6C0.s"
+      },
+      {
+        "name": "func_8007E1E4",
+        "vram": "0x8007E1E4",
+        "size": "0xC",
+        "file": "asm/disc1/6E6C0.s"
+      },
+      {
+        "name": "func_8007E1F4",
+        "vram": "0x8007E1F4",
+        "size": "0xC",
+        "file": "asm/disc1/6E6C0.s"
+      },
+      {
+        "name": "func_8007E314",
+        "vram": "0x8007E314",
+        "size": "0xC",
+        "file": "asm/disc1/6E6C0.s"
+      },
+      {
+        "name": "func_8007E324",
+        "vram": "0x8007E324",
+        "size": "0xC",
+        "file": "asm/disc1/6E6C0.s"
+      },
+      {
+        "name": "func_800857E4",
+        "vram": "0x800857E4",
+        "size": "0xC",
+        "file": "asm/disc1/75F44.s"
+      },
+      {
+        "name": "func_800857F4",
+        "vram": "0x800857F4",
+        "size": "0xC",
+        "file": "asm/disc1/75F44.s"
+      },
+      {
+        "name": "func_80085804",
+        "vram": "0x80085804",
+        "size": "0xC",
+        "file": "asm/disc1/75F44.s"
+      },
+      {
+        "name": "func_8008D7B0",
+        "vram": "0x8008D7B0",
+        "size": "0xC",
+        "file": "asm/disc1/7D284.s"
+      }
+    ],
+    "handwritten-syscall": [
+      {
+        "name": "func_80072714",
+        "vram": "0x80072714",
+        "size": "0x10",
+        "file": "asm/disc1/621E4.s"
+      },
+      {
+        "name": "func_80072724",
+        "vram": "0x80072724",
+        "size": "0x10",
+        "file": "asm/disc1/621E4.s"
+      }
+    ]
+  },
+  "matchable_cop_inline": [
+    {
+      "name": "func_8003EAC8",
+      "vram": "0x8003EAC8",
+      "size": "0x3C",
+      "file": "asm/disc1/2F174.s",
+      "class": "gte-inline"
+    },
+    {
+      "name": "func_800130B4",
+      "vram": "0x800130B4",
+      "size": "0x134",
+      "file": "asm/disc1/3420.s",
+      "class": "gte-inline"
+    },
+    {
+      "name": "func_80077F7C",
+      "vram": "0x80077F7C",
+      "size": "0x80",
+      "file": "asm/disc1/68664.s",
+      "class": "gte-inline"
+    },
+    {
+      "name": "func_80078004",
+      "vram": "0x80078004",
+      "size": "0x84",
+      "file": "asm/disc1/68664.s",
+      "class": "gte-inline"
+    },
+    {
+      "name": "func_80078094",
+      "vram": "0x80078094",
+      "size": "0x8C",
+      "file": "asm/disc1/68664.s",
+      "class": "gte-inline"
+    }
+  ]
+}

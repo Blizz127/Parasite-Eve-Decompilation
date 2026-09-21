@@ -123,6 +123,7 @@ void func_8003B97C_lighting_cut(pe_addr_t dest, pe_addr_t bea40)
 
                     {
                         pe_addr_t color = dest_c + (pe_addr_t)(idx + (unsigned)t2) * 4u;
+                        int colored = 1;
 
                         if (PE_LoadU8(color + 3u) != 0u)
                             PE_GTE_SetRGBC(PE_LoadU32(color));
@@ -130,11 +131,17 @@ void func_8003B97C_lighting_cut(pe_addr_t dest, pe_addr_t bea40)
                             PE_GTE_SetRGBC(PE_LoadU32(color + 4u));
                         else if (PE_LoadU8(color + 11u) != 0u)
                             PE_GTE_SetRGBC(PE_LoadU32(color + 8u));
+                        else
+                            colored = 0;
+                        /* Retail 3BC4C skips the second NCCT and all three
+                         * A6360 stores when the triangle has no color tag. */
+                        if (colored) {
+                            PE_GTE_NCCT();
+                            PE_StoreU32(t0 + 0u, g_pe_gte.rgb_fifo[0]);
+                            PE_StoreU32(t0 + 4u, g_pe_gte.rgb_fifo[1]);
+                            PE_StoreU32(t0 + 8u, g_pe_gte.rgb_fifo[2]);
+                        }
                     }
-                    PE_GTE_NCCT();
-                    PE_StoreU32(t0 + 0u, g_pe_gte.rgb_fifo[0]);
-                    PE_StoreU32(t0 + 4u, g_pe_gte.rgb_fifo[1]);
-                    PE_StoreU32(t0 + 8u, g_pe_gte.rgb_fifo[2]);
 
                     t2 += 3;
                     t1 += 12u;

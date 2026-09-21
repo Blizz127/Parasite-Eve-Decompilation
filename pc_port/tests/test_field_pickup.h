@@ -29,6 +29,9 @@ static void test_SEW17_field_pickup(void)
         case 7:func_8004F7D8();break;
         case 8:func_80062FEC();break;
         case 9:func_8005E30C();break;
+        case 10:result=(uint32_t)func_80019540(a);break;
+        case 11:result=(uint32_t)func_8004C34C(a);break;
+        case 12:func_80055E14();break;
         }
         PE_StoreU32(0x8009D1A0u,D_8009D1A0);
         PE_StoreU32(0x8009D048u,D_8009D048);PE_StoreU32(0x8009D050u,D_8009D050);

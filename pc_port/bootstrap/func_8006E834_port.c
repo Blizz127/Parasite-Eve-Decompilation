@@ -23,7 +23,7 @@ extern unsigned short D_80093164[4];
 
 extern void func_80086FF8(void);
 extern void func_800726C4(void);
-extern void func_80073A44(int a);
+extern uint32_t func_80073A44(int a);
 extern void func_80074D28(int a);
 extern pe_addr_t func_800755F0(pe_addr_t env);
 /* func_80072714/func_80072724 (pe_libetc.c), func_800749D8 (pe_libgpu.c)

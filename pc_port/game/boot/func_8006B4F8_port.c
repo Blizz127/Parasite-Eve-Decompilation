@@ -404,7 +404,8 @@ static void pe_6b4f8_ce2_hdr0c(void)
  * 6BE4C selects 6BECC's texture/model reload through the retail flag;
  * bypassing its texture states leaves Aya transparent. 68B94 is the
  * 677FC tile-publish cut (65B70/655D4/RTPS suffix deferred).
- * 6BD68 / 3F758 / E0060 stay deferred. Does not plant
+ * 6BD68 / 3F758 stay deferred. The existing after-poll graph handles
+ * E0060, room counters, display synchronization and entry flags. Does not plant
  * mode 7/9/10.
  */
 int func_8003F074_dest_ready_cut(uint32_t token)
@@ -430,15 +431,9 @@ int func_8003F074_dest_ready_cut(uint32_t token)
     guard = 0;
     while (func_8006C5BC() == 1 && guard < 16)
         guard++;
-    func_8001A918();
-    /* Retail 3F244..3F278: rebind message data at every field entry.
-     * Keeping CE90 from the prior field can point into a new NPC model. */
-    func_800371B0(func_8003F074_371b0_a0());
-    if (PE_LoadU32(GA_OVERLAY + 0x944u) >= 0x80000000u)
-        func_800125E0();
-    /* 3F074 after-poll: DrawSync already ran; SetDispMask(1) so
-     * PutDispEnv copies the VRAM display window instead of blanking. */
-    func_80074D28(1);
+    /* 3F23C..3F2F8: use the complete existing retail continuation,
+     * including the post-spawn cleanup and room-entry flag resets. */
+    func_8003F074_after_poll_cut();
     return 1;
 }
 

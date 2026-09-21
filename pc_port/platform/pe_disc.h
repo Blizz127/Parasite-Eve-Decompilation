@@ -69,6 +69,15 @@ bool PE_Disc_ReadUserData(const PE_Disc *d, uint32_t lba, uint32_t offset,
  * user sector 16. */
 bool PE_Disc_VerifyPVD(const PE_Disc *d);
 
+/* ISO9660 volume identifier (PVD +40), trimmed.  Empty on a fixture that
+ * has no PVD label. */
+bool PE_Disc_VolumeId(const PE_Disc *d, char *out, size_t out_size);
+
+/* Which USA disc this image is.  1 = SLUS_006.62, 2 = SLUS_006.68,
+ * 0 = neither boot file present (malformed or non-USA).  The two EXEs
+ * are byte-identical; the archives and FMV tracks diverge. */
+int PE_Disc_BootKind(const PE_Disc *d);
+
 /* ISO9660 path lookup.  path must start with '\' and use '\' separators,
  * with the version suffix exactly as stored (e.g. "\PE.IMG;1",
  * "\FMV1\PEDISC01.IDF;1").  At most 8 components, each at most 31 chars

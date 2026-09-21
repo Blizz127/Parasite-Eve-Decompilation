@@ -21,6 +21,13 @@ behavior, CDDA/XA decoding and mode bit4 behavior are not implemented. Unsupport
 read modes, unread pending-sector overflow, out-of-image locations/reads and
 FIFO underflow stop explicitly. The model retains one pending sector plus an
 independent requested FIFO. It does not claim hardware overrun fidelity.
+**DAY2-158 B0CD0 catchup:** when `func_8007C564` defers because MDEC output
+DMA is busy it writes `D_800B0CD0` and returns without BFRD. The device
+holds that unread sector across later cadences while the halfword is
+nonzero. When output DMA is idle and stream option `D_800A801C` is set,
+the same service tick retries `func_8007C564` so the held sector is BFRD'd
+instead of waiting on the movie DMA callback. A clear unread sector is
+still an explicit overrun.
 
 `test_cd_sector_device.h` checks raw bounds and every byte of consecutive
 sectors in both size/speed modes, delayed arrival, BFRD/DRQ, separate seek/pause

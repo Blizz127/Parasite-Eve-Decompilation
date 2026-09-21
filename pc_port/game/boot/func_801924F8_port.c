@@ -11,6 +11,7 @@
 #include "psx_compat.h"
 #include "game_port.h"
 #include "pe_sdk.h"
+#include "host_framebuffer.h"
 
 int func_801924F8(int index)
 {
@@ -25,6 +26,7 @@ int func_801924F8(int index)
     char filename[32] = "";
     int status;
     int32_t s1 = 0; /* E0 poll result; live into got_frame (retail $s1) */
+    int s_frame_complete = 0; /* B89F4 observed before this poll's 7C214 */
 
     if (record_index >= 47u)
         return 0;
@@ -114,24 +116,42 @@ cdready_wait:
     if (PE_Port_ShouldStop())
         return 0;
 e0_poll:
-    /* E0: poll the streaming slot table; s0 = 2000 tries.  The
-     * delivery pump fires the DMA-completion callback once per
-     * poll: retail populates streaming slots via DMA-completion
-     * interrupts during this spin (7C214, installed by 81314's
-     * streaming arm), and the port — with no async interrupts —
-     * delivers synchronously instead (the 7ED58 synchronous-reset
-     * precedent).  One completion per poll; E0 takes got_frame on
-     * the first poll, so cadence beyond that is unobservable. */
+    /* E0: poll the streaming slot table; s0 = 2000 tries.  Retail fills
+     * slots via DMA-completion IRQs (7C214): CEAC enables DMA3 IRQ only
+     * when the sector is the last chunk of a frame (B89F4), so a promote
+     * always means a complete bitstream.  Empty-VLC fixtures keep the
+     * CDQ2d synchronous 7C214 pump.  Real STR advances the CD/IRQ model
+     * with HostFB_StreamTick; IRQ delivery inside that tick may already
+     * run 7C214 and clear B89F4 before this loop samples it — so a
+     * nonzero 91B64 result is also a complete-frame signal (retail only
+     * publishes state-2 after last-chunk promote).  Do NOT call 7C214
+     * every poll: that promotes mid-frame records and overruns C89C. */
     {
         uint32_t s0 = 2000u;
+        int empty_vlc = (PE_LoadU8(0x8010CBFCu) == 0xFFu &&
+                         PE_LoadU8(0x8010CBFDu) == 0xFFu);
         for (;;) {
             uint32_t left;
-            func_8007C214();
+            if (empty_vlc) {
+                s_frame_complete = 1;
+                func_8007C214();
+            } else {
+                HostFB_StreamTick();
+                if (PE_Port_ShouldStop())
+                    return 0;
+                if (PE_LoadU32(0x800B89F4u) != 0u) {
+                    s_frame_complete = 1;
+                    func_8007C214();
+                }
+            }
             s1 = func_80191B64(0x801D1464u);
             left = s0 - 1u;
             s0 = left;
-            if (s1 != 0)
+            if (s1 != 0) {
+                /* Slot ready ⇒ last-chunk promote already happened. */
+                s_frame_complete = 1;
                 goto got_frame;
+            }
             if (((left << 16) & 0xFFFFFFFFu) != 0u)
                 continue;
             break;
@@ -157,25 +177,46 @@ e0_poll:
     }
     goto cdready_wait;
 got_frame:
-    /* 80192814: s1 nonzero.  The got_frame tail (verified against the
-     * authenticated ov133 carve, docs/evidence/pe-mv1c-c89c-map/NOTE.md)
-     * bumps [B0DBC], toggles [146C], loads a1 = [0x801D1464 +
-     * ([146C]^1)<<2], a2 = [0x801D0DF8], and calls the VLC decoder
-     * func_8010C89C(a0 = s1) before 7C394 and the EC stores.
+    /* 80192814..80192930: authenticated got_frame tail (ov133 carve).
+     * Order is load-bearing: a2 from [D0DF8], bump B0DBC into $v1, XOR
+     * toggle [146C] then index s3+bank*4 for a1, store the bumped
+     * B0DBC, jal C89C(a0=s1) / jal 7C394(a0=s1).  Retail then forces
+     * v0=0 and always takes the EC success arm (bne vs -1): clear
+     * [D0DBD], set B0DBC=1, increment B0DBA, epilogue return.
+     * Disassembly evidence: pe_mv1d_c89c_oracle.py callsite anchors +
+     * live PE.IMG carve at 80192814.
      *
-     * MV1d landed the decoder itself (func_8010C89C_port.c) as a
-     * transcription proven by its unit vectors + oracle
-     * (pc_port/tools/pe_mv1d_c89c_oracle.py).  It is NOT wired live
-     * into this production tail yet: the decoder's output cursor is
-     * bounded only by the VLC stream's own pad/terminator codes, so a
-     * valid STR video frame terminates in-bounds, but the streaming
-     * pump does not yet deliver a fully MDEC-ready frame at s1 (that is
-     * the Stage-1b STR/MDEC pipeline).  Feeding the decoder the current
-     * partial frame marches a1 past the 2 MiB guest RAM.  Until the
-     * real frame is delivered, the production path stops honestly at
-     * the decoder boundary rather than decoding unvalidated input. */
-    (void)s1;
-    Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8");
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return 0;
+     * Host gate: C89C runs only when the VLC source is the empty FF FF
+     * fixture terminator (CDQ2d) or E0 observed B89F4 (last chunk).
+     * A live table with a mid-frame s1 overruns guest RAM — hold that
+     * frontier named rather than decoding unvalidated input. */
+    {
+        uint32_t a2 = PE_LoadU32(0x801D0DF8u);
+        uint16_t dbc = (uint16_t)(PE_LoadU16(0x800B0DBCu) + 1u);
+        uint8_t bank = (uint8_t)(PE_LoadU8(0x801D146Cu) ^ 1u);
+        pe_addr_t a1;
+        int empty_vlc = (PE_LoadU8(0x8010CBFCu) == 0xFFu &&
+                         PE_LoadU8(0x8010CBFDu) == 0xFFu);
+
+        PE_StoreU8(0x801D146Cu, bank);
+        PE_StoreU16(0x800B0DBCu, dbc);
+        a1 = (pe_addr_t)PE_LoadU32(0x801D1464u + ((uint32_t)bank << 2));
+        if (!empty_vlc && !s_frame_complete) {
+            Bootstrap_ReturnVoid("func_8010C89C_needs_complete_frame",
+                                 "func_801924F8");
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            return 0;
+        }
+        (void)func_8010C89C((uint32_t)s1, a1, a2, 0u);
+        if (PE_Port_ShouldStop())
+            return 0;
+        func_8007C394((uint32_t)s1);
+        /* EC stores (801928EC): retail's dead v0=0/-1 compare always
+         * lands here after 7C394. */
+        PE_StoreU8(0x801D0DBDu, 0u);
+        PE_StoreU16(0x800B0DBCu, 1u);
+        PE_StoreU8(0x800B0DBAu,
+                   (uint8_t)(PE_LoadU8(0x800B0DBAu) + 1u));
+        return 0;
+    }
 }

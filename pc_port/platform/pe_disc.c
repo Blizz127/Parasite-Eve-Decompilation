@@ -247,6 +247,34 @@ bool PE_Disc_VerifyPVD(const PE_Disc *d)
     return pvd[0] == 1 && memcmp(pvd + 1, "CD001", 5) == 0 && pvd[6] == 1;
 }
 
+bool PE_Disc_VolumeId(const PE_Disc *d, char *out, size_t out_size)
+{
+    uint8_t pvd[PE_DISC_USER_SECTOR];
+    size_t n;
+    if (!d || !out || out_size == 0) return false;
+    if (!PE_Disc_ReadUserSector(d, 16, pvd)) return false;
+    if (pvd[0] != 1 || memcmp(pvd + 1, "CD001", 5) != 0) return false;
+    /* Volume identifier is 32 bytes at PVD+40, space-padded. */
+    n = 32;
+    while (n > 0 && pvd[40 + n - 1] == ' ') n--;
+    if (n >= out_size) n = out_size - 1;
+    memcpy(out, pvd + 40, n);
+    out[n] = '\0';
+    return true;
+}
+
+int PE_Disc_BootKind(const PE_Disc *d)
+{
+    uint32_t lba, size;
+    int disc1, disc2;
+    if (!d) return 0;
+    disc1 = PE_Disc_FindFile(d, "\\SLUS_006.62;1", &lba, &size, NULL, 0);
+    disc2 = PE_Disc_FindFile(d, "\\SLUS_006.68;1", &lba, &size, NULL, 0);
+    if (disc1 && !disc2) return 1;
+    if (disc2 && !disc1) return 2;
+    return 0;
+}
+
 /* Read the root directory record embedded in the PVD (offset 156). */
 static bool PE_Iso_RootRecord(const PE_Disc *d, uint32_t *extent,
                               uint32_t *size)

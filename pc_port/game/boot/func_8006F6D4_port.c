@@ -91,11 +91,17 @@ int func_8006F6D4(unsigned int index, unsigned int mode, unsigned int a2,
         PE_StoreU32(out2, PE_LoadU32(slot + 4u));
     }
 
+    if (fn == 0x8018F0B8u && PE_M34BossEffectOverlay())
+        return PE_M34BossEffectCommand(slot, mode, a2, out0, out1, out2);
+    if (fn == 0x801915ACu && PE_M28MovementOverlay())
+        return PE_M28MovementCommand(slot, mode, a2, out0, out1, out2);
+    if (fn == 0x8019159Cu && PE_M32MovementOverlay())
+        return PE_M32MovementCommand(slot, mode, a2, out0, out1, out2);
     if (fn == 0x8018F020u && PE_MirrorOverlay())
         (void)PE_MirrorCommand(slot, mode, a2, out0, out1);
     else if (fn == GA_FN_D4698)
         (void)func_800D4698(slot, mode, a2, out0, out1, out2);
-    else if (fn==0x800C9B3Cu || fn==0x800CD89Cu)
+    else if (fn==0x800C9B3Cu || fn==0x800CD89Cu || fn==0x800CE118u)
         (void)func_800C2AF0(slot,(int32_t)mode,(int32_t)a2,out0);
     return 0;
 }

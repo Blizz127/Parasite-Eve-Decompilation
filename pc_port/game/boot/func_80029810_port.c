@@ -762,6 +762,14 @@ static int func_8006D60C_state32_cut(void)
                           PE_LoadU32(GA_OVERLAY + 0x194u), 0x21, 0) == 1)
             return 1;
     }
+    if (PE_LoadU32(GA_OVERLAY) & 4u) {
+        int32_t remain=(int32_t)(60u-(PE_LoadU32(GA_CDA4)-PE_LoadU32(GA_GP_41C)));
+        PE_StoreU32(GA_GP_420,(uint32_t)remain);
+        if (remain>=9) {
+            PE_StoreU32(GA_GP_420,8u);
+            func_80086C5C(0,16u,0u);
+        } else if (remain<0) PE_StoreU32(GA_GP_420,0u);
+    }
     PE_StoreU8(GA_OVERLAY + 0xF2u, 0x40u);
     return 0;
 }
@@ -782,13 +790,33 @@ static int func_8006D60C_state40_cut(void)
         if (word & 0x40u) {
             PE_StoreU32(GA_OVERLAY,word&~0x40u);
             PE_StoreU8(GA_OVERLAY+0xF2u,0x3Eu);
-            /* Ambient-track reload (3E/33) is still an unresolved path. */
-            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-            return 1;
+            return -1; /* Retail redispatches immediately to state 3E. */
         }
     }
     PE_StoreU8(GA_OVERLAY + 0xF2u, 0u);
     PE_StoreU32(GA_OVERLAY, word & ~4u);
+    return 0;
+}
+
+/* Retail 6DA98..6DB24. The bank loader's stack output is unused here.
+ * Preserve the borrowed guest word; no persistent output is manufactured. */
+static int func_8006D60C_state33(void)
+{
+    const pe_addr_t slot=0x801FEFE8u;
+    uint32_t saved=PE_LoadU32(slot);
+    int result=func_8006D2B8((int8_t)PE_LoadU8(GA_OVERLAY+0xDCu),1,0,slot,0);
+    PE_StoreU32(slot,saved);
+    if (result==1) return 1;
+    int handle=func_80086464(PE_LoadU32(GA_OVERLAY+0x128u));
+    if (handle==-1) {
+        PE_StoreU8(GA_OVERLAY+0xF2u,0x3Eu);
+        return 1;
+    }
+    func_80086C5C(handle,60u,PE_LoadU8(GA_OVERLAY+0xFEu));
+    if (handle) func_8006DB48(0u,(uint32_t)(int32_t)(int8_t)PE_LoadU8(GA_OVERLAY+0xDCu),
+        (uint32_t)handle,PE_LoadU8(GA_OVERLAY+0xFEu));
+    PE_StoreU8(GA_OVERLAY+0xF2u,0u);
+    PE_StoreU32(GA_OVERLAY,(PE_LoadU32(GA_OVERLAY)&~4u)|0x40u);
     return 0;
 }
 
@@ -856,8 +884,20 @@ int func_8006D60C(int a0)
             f2 = PE_LoadU8(GA_OVERLAY + 0xF2u);
             continue;
         }
-        if (f2 == 0x40u)
-            return func_8006D60C_state40_cut();
+        if (f2 == 0x40u) {
+            int result=func_8006D60C_state40_cut();
+            if (result!=-1) return result;
+            f2=PE_LoadU8(GA_OVERLAY+0xF2u);
+            continue;
+        }
+        if (f2 == 0x3Eu) {
+            if (func_8006CDA4(0,(int8_t)PE_LoadU8(GA_OVERLAY+0xDAu),0,
+                    PE_LoadU32(GA_OVERLAY+0x194u),0x21,0)==1) return 1;
+            PE_StoreU8(GA_OVERLAY+0xF2u,0x33u);
+            f2=0x33u;
+            continue;
+        }
+        if (f2 == 0x33u) return func_8006D60C_state33();
         return 0;
     }
     return 1;
@@ -1113,7 +1153,7 @@ void func_80029810_cut(unsigned int encounter)
     func_80020EFC();
     func_80029810_remainder_cut();
     func_80071A64(D_8009D250);
-    func_800293F4_hp_cut();
+    func_800293F4(0u);
     func_80029810_after_hp_cut(encounter);
 }
 

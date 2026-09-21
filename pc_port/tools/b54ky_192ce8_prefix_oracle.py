@@ -134,8 +134,8 @@ def main() -> None:
     require("retry_issue:" in source and "func_8006E7E8()" in source and
             "PE_func_80191FB8_Values" in source and
             "func_801924F8((int16_t)index)" in source and
-            '"func_801909B4_80191120_cut"' in caller_source and
-            "func_80192CE8(1)" in caller_source,
+            "func_80192CE8(1)" in caller_source and
+            "func_8018F2F4" in caller_source,
             "native branch/prefix wiring")
     require("m0360i" not in source + caller_source and
             "0xA8066048" not in source + caller_source,

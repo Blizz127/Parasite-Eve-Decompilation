@@ -48,6 +48,10 @@ __pycache__/
 include/*.inc
 include/*.h
 
+# Tree-local rootless mipsel-linux-gnu toolchain (scripts/setup_mipsel_host.sh):
+# downloaded/unpacked Debian .debs + shims; never tracked.
+tools/mipsel-host/
+
 # Era compiler toolchain (fetched by scripts/setup_era.sh) — ignore everything,
 # EXCEPT the maspsx package file(s) that carry local patches. Git cannot
 # re-include files inside an ignored directory, so this is written as
@@ -61,8 +65,11 @@ tools/era/maspsx/maspsx/*
 !tools/era/maspsx/tests/
 tools/era/maspsx/tests/*
 !tools/era/maspsx/tests/test_fill_store_delay_slot.py
+!tools/era/maspsx/tests/test_fill_epilogue_delay_slot.py
 !tools/era/maspsx/tests/test_three_word_symbol_store.py
 !tools/era/maspsx/tests/test_dispatch_fold.py
+!tools/era/maspsx/tests/test_symbol_load_dest_temp.py
+!tools/era/maspsx/tests/test_symbol_at_temp.py
 build-port/
 pc_port/build/
 pc_port/build-san/
@@ -80,3 +87,6 @@ pe-decomp-main-verify/
 
 # live inspection dumps (RAM/RGB snapshots)
 local/live/
+
+# Generated decomp-derived port TUs (tools/analysis/gen_decomp_ports.py)
+pc_port/game/decomp/

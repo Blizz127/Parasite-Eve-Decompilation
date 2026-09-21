@@ -103,20 +103,6 @@ int32_t func_80057D18(int32_t index)
     PE_StoreU16(p,0u);return value;
 }
 
-int func_8005833C(int32_t index)
-{
-    int result;int32_t id;pe_addr_t record=0u;
-    if (index<0 || index>=(int32_t)PE_LoadU32(0x8009D078u)) return 1;
-    id=func_80057ED8(index);
-    if ((uint32_t)(id-256)<128u) record=0x800BEEACu+(uint32_t)id*32u;
-    else if ((uint32_t)(id-1)<255u) record=func_8005DB44((uint32_t)(id-1));
-    else if ((uint32_t)(id-512)<9u) record=0x8009DE64u+(uint32_t)id*32u;
-    func_80052E30(0u);
-    result=func_80053B48(item_ram(record));
-    if (!result) PE_StoreU16(0x800A1FD4u+(uint32_t)index*2u,0u);
-    return result;
-}
-
 int func_80057654(int32_t index)
 {
     pe_addr_t record=func_8005332C(index);int enabled;int32_t i,count=0;

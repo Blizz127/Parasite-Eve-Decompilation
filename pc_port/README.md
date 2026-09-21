@@ -1,5 +1,65 @@
 # Parasite Eve Native PC Port — Phase 6E-B54K-Q
 
+**Current route verification (2026-09-13):** The restored battle reward
+screen now renders and processes loot. A shared host/RAM state bug is fixed:
+normal cold boot commits 2 XP and collects 6 ammunition in m0013i. The loot
+functions and item-base initialization pass 198 original/native comparisons,
+plus full-RAM comparisons from the corrected connected reward capture.
+
+The old fixed controller sequence reaches the first sewer battle but loses it;
+its previous 62,000-frame supply result bypassed rewards and remains historical.
+An adaptive input replay defeats that encounter using the normal baton switch,
+completes level-up and loot, and restores field control at frame 52,111 with
+Aya at 27 HP. It then completes the second sewer battle and reaches the sewer
+junction at frame 54,520 with 33 HP and 16 XP. Level drawing passes 183
+original/native cases and an isolated 80-frame animation/confirmation
+comparison. The complete victory handler now passes 83 original/native cases
+plus a captured-phase comparison. The corrected input replay wins M32's
+encounter at frame 57,791 with 35 HP, opens its gate and enters M33 at 58,538.
+Two restored task pause/resume handlers pass 518 original/native cases and
+a captured sequence; the connected replay completes M33's scene and reaches
+the M34 boss encounter. Restored message opcode D1 passes 160 original/native
+cases plus its captured call; the replay starts the fight and reaches frame
+60,271. Effect 8's lifecycle now passes 177 original/native cases and its
+captured constructor call; the replay advances within that frame to the
+projectile initializer (`8018F434`). That initializer is now translated and
+passes 252 original/native cases plus four captured-context variants, with
+its six retained stack values supplied explicitly. Native dispatch now tracks
+the original sound, VM, command and drawing writes that supply those values.
+Five original/native histories match the retained inputs and complete records
+of the first two projectiles, including partial stack writes between them.
+An ordinary-input cold boot executes the five-projectile burst; the current
+controller then loses the fight at frame60,533 and resets to the opening.
+The complete fight still requires verification;
+whole-frame differences remain outside the initializer proof.
+The field counter and main-loop destination snapshot now share their original
+guest-RAM words with all readers.
+Projectile
+movement, trail allocation, drawing and collision now pass 303 original/native
+comparisons, including complete non-stack RAM, GPU packets and scratchpad.
+All 1,398 native tests and all 10 non-route CTest checks pass.
+The full Day 2 route is incomplete.
+
+The rebuilt PSX executable remains byte-identical to retail.
+**Whole-route retail fidelity remains unproved.**
+[M34 retained stack writers](../docs/ai_context/M34_RETAINED_STACK_WRITERS.md).
+[M34 native stack binding](../docs/ai_context/M34_STACK_BINDING.md).
+[M34 continuous frame stack evidence](../docs/ai_context/M34_FRAME_STACK_PRESERVATION.md).
+[Destination snapshot RAM repair](../docs/ai_context/DESTINATION_SNAPSHOT_RAM.md).
+[Guest frame-counter repair](../docs/ai_context/FIELD_FRAME_COUNTER_RAM.md).
+[M34 projectile movement, drawing and collision](../docs/ai_context/M34_PROJECTILE_CHILDREN.md).
+[M34 projectile initializer and stack evidence](../docs/ai_context/M34_PROJECTILE_INITIALIZER.md).
+[M34 effect lifecycle and projectile dependency](../docs/ai_context/M34_BOSS_EFFECT.md).
+[M34 message and effect boundary](../docs/ai_context/MESSAGE_WINDOW_D1.md).
+[Task suspension and M33 progress](../docs/ai_context/SCRIPT_TASK_PAUSE.md).
+[Victory handler restoration](../docs/ai_context/BATTLE_VICTORY_HANDLER.md).
+[Level animation evidence](../docs/ai_context/BATTLE_LEVEL_ANIMATION.md).
+[Current loot evidence](../docs/ai_context/BATTLE_LOOT_SCREEN.md).
+[Reward progression](../docs/ai_context/BATTLE_REWARD_PROGRESSION.md).
+[Historical sewer evidence](../docs/ai_context/DAY1_SEWER_MOVEMENT.md).
+
+Historical update:
+
 DAY1-13 restores the original hit-origin and particle/spark initialization
 callbacks:90 original/native cases pass, including weapon-VM creation and
 sound requests. Normal and sanitizer CTest each5/5; Windows crossbuild passes.
@@ -896,6 +956,24 @@ ctest --test-dir build --output-on-failure
 
 # Windowed (requires X11 display)
 DISPLAY=:10.0 ./parasite-eve-port --bootstrap-disc --hold-ms 5000 --debug-overlay
+
+# Interactive Day-1 field route (autopilot) — the same route the
+# route-boot-day2 harness proves, driven from the normal windowed binary.
+# --route-pad installs the harness's deterministic 4-stage pad (shared
+# pc_port/include/pe_route_pad.h table) and implies --skip-movie +
+# --skip-opening-menu (the untranslated title/menu is in front of the field,
+# and no pad can get past it).  Without --route-pad the interactive port has
+# no SIO source, so the guest sees no button and cold boot parks at the field
+# prefix; that is an input limit, not a stub.
+# --auto-quit stops (and leaves the room on screen) at the documented
+# executed-route frontier m0004i module 4 (pc=0x801B6CC8).
+DISPLAY=:0 ./parasite-eve-port \
+  --disc-image "/path/disc1.bin" --route-pad --scale 3
+# Expected: m0010i -> m0002i -> m0003i -> m0372i -> m0004i -> m0378i ->
+# m0377i -> m0378i -> m0004i, then "[ROUTE] reached m0004i frontier
+# (pc=0x801B6CC8)" ~7900 route frames.  PE_ROUTE_DEBUG=1 prints a periodic
+# token/story trace.  PE_ROUTE_PAD4=0xFF9F restores the old 3-stage stop at
+# m0377i (stage 4 then continues to hold the stage-3 mask).
 
 # Bounded caller-checkpoint report (B54K-M: expect 2/2/2, token 2)
 ./parasite-eve-port --headless --max-frames 2 --dma-checkpoint-report \

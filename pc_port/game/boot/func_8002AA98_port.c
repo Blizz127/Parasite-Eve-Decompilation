@@ -337,7 +337,7 @@ void func_8002B29C(void)
  * 2B0E8 — mode 2 (encounter-end / victory), not player death.
  * Phase on D_8009CE74:
  *   0: wait Aya+0x16==10 or D1A0&0x800; +0x98|=0x100;
- *      703F4 / 67CBC deferred; jal 4B70C; phase++
+ *      703F4 cleanup; 4B70C rewards; 67CBC music flag; phase++
  *   1: wait gp+0x534==1000; phase++; +0x98&=~0x100
  *   2: wait +0x0F==+0x1A; 1A680(0x15) or 0x18 if D1A0&0x1800;
  *      clear 0x1800; phase++
@@ -419,20 +419,20 @@ void func_8002B0E8(void)
 
     phase = PE_LoadU8(GA_D_8009CE74);
     aya = PE_LoadU32(GA_D_8009D254);
-    d1a0 = D_8009D1A0 | PE_LoadU32(GA_D_8009D1A0);
+    d1a0 = PE_LoadU32(GA_D_8009D1A0);
+    if (aya < 0x200000u) aya |= 0x80000000u;
 
     if (phase == 0u) {
-        if (aya == 0u)
-            return;
         if (PE_LoadU16(aya + 0x16u) != 10u && (d1a0 & 0x800u) == 0u)
             return;
         flags = PE_LoadU32(aya + 0x98u);
         PE_StoreU32(aya + 0x98u, flags | 0x100u);
-        /* 703F4 / 67CBC stay deferred. 4B70C installs 4BB80. */
+        func_800703F4();
         func_8004B70C(PE_LoadU32(0x8009D304u),
                       PE_LoadU16(0x8009D21Cu),
                       0x800A7FF0u);
-        PE_StoreU8(GA_D_8009CE74, 1u);
+        func_80067CBC();
+        PE_StoreU8(GA_D_8009CE74, PE_LoadU8(GA_D_8009CE74) + 1u);
         return;
     }
     if (phase == 1u) {
@@ -446,9 +446,7 @@ void func_8002B0E8(void)
         return;
     }
     if (phase == 2u) {
-        if (aya == 0u)
-            return;
-        if (PE_LoadU8(aya + 0x0Fu) != (uint8_t)PE_LoadU16(aya + 0x1Au))
+        if (PE_LoadU8(aya + 0x0Fu) != PE_LoadU16(aya + 0x1Au))
             return;
         if ((d1a0 & 0x1800u) != 0u) {
             d1a0 &= ~0x1800u;
@@ -459,14 +457,14 @@ void func_8002B0E8(void)
             cmd = 0x15u;
         }
         func_8001A680_command_cut(aya, cmd);
-        PE_StoreU8(GA_D_8009CE74, 3u);
+        PE_StoreU8(GA_D_8009CE74, PE_LoadU8(GA_D_8009CE74) + 1u);
         return;
     }
     if (phase != 3u)
         return;
     if (func_8006D60C(0) == 1)
         return;
-    func_800295E4_tail_cut();
+    func_800295E4();
     PE_StoreU32(GA_D_8009D28C, 9u);
     flags = PE_LoadU32(GA_D_800B0CD8) & ~0x8000u;
     PE_StoreU32(GA_D_800B0CD8, flags);

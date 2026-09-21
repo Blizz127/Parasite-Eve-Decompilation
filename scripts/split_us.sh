@@ -153,7 +153,10 @@ echo "Running: $SPLAT split $CONFIG"
 python3 "$ROOT/tools/build/disc1_plan.py" --root "$ROOT" --cleanup-stale-asm
 
 status_after="$(git -C "$ROOT" status --porcelain)"
-new_entries="$(comm -13 <(sort <<<"$status_before") <(sort <<<"$status_after"))"
+# LC_ALL=C is required: comm compares byte-wise while sort honours LC_COLLATE,
+# so under a non-C locale (e.g. en_US.UTF-8) comm reports "not in sorted order"
+# and exits 1, which `set -e` turns into a spurious split failure.
+new_entries="$(LC_ALL=C comm -13 <(LC_ALL=C sort <<<"$status_before") <(LC_ALL=C sort <<<"$status_after"))"
 if [[ -n "$new_entries" ]]; then
     echo "ERROR: the split created files git does not ignore:" >&2
     echo "$new_entries" >&2

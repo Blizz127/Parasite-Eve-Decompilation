@@ -1,7 +1,6055 @@
+## CURRENT 2026-09-21: GOAL 4H #3 — the mesh colour transfer pair (810), port checked again
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+Goal contract: `docs/ai_context/GOAL_4H_QUEUE_ROUND2.md`. Nothing committed.
+
+1. **`func_800C6EF8` and `func_800C6F4C` (0x54 / 21 words each) are matching C.**
+   Mirror word-array transfers between a mesh record and the fixed buffer
+   `D_800E2370`: the record holds a byte offset in its `+8` halfword and a word count
+   in `+0xA`, and the count is **re-read every iteration** (the stores could alias the
+   record), which is why retail keeps `lhu 0xA(a0)` inside the loop. Both `LINK_EXACT`
+   at the default `-O2 -G0`; YAML `[0xB76F8 c][0xB774C c][0xB77A0 asm]`.
+
+2. **The spelling fix: the counter increment belongs in the loop body, before the
+   copy.**
+   ```c
+   while (i < *(unsigned short *)(record + 0xA)) { i++; *dst++ = *src++; }
+   ```
+   Written as a `for (i = 0; i < count; i++)` header the increment is scheduled after
+   the load and exactly three words differ. Sixth source-spelling fix of the session.
+
+3. **Proof.** `disc1_preflight.py --deep` PASS (810 c / 347 asm / 2 rodata);
+   `EXACT_REBUILD_GATE=PASS` with
+   `sha1_orig == sha1_cand == 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+   `VERIFY_SWEEP=PASS leaves=810`, `plan=184dab537bab…`. Report:
+   `docs/evidence/phase5gb-mesh-colour-pair/REPORT.md`.
+
+4. **Metric note (third time).** Plan 808 → **810** c spans, but `funcs` stays
+   **377/980** and `c_words` 6834 — these two sit outside the direct-call closure like
+   the 42E34 cluster and the arena pair. The plan count plus the gate are the evidence.
+
+5. **Port verification, round three.** The port implements both in
+   `pc_port/game/boot/func_800C71E4_port.c` and **agrees exactly**: same source
+   derivation (`mesh + *(u16 *)(mesh + 8)`), same count field re-read every iteration
+   (`PE_LoadU16(mesh+10u)` in the loop condition), same word granularity, mirror
+   operands swapped the same way. The only cosmetic difference is `unsigned i` versus
+   the decompiled `int i`, which the `lhu` / `blez` / `slt` sequence makes equivalent
+   for a 16-bit count — so there is **no signed/unsigned trap at `count >= 0x8000`**
+   for either implementation. `PORTVERIFY_matched_leaves` now pins the pair and covers
+   nine functions.
+
+6. **Next.** `func_800C6FA0` (the effect-level sibling of this pair, 0xF8 = 62 words,
+   already partly present in the port) and the queue from `port_priority.py`.
+
+---
+
+## PRIOR 2026-09-19: GOAL 4H — the arena push/pop pair (808) + port checked again
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+Goal contract: `docs/ai_context/GOAL_4H_QUEUE_CONTINUE.md`. Nothing committed.
+
+1. **`func_8005E8C4` (push, 0x50) and `func_8005E914` (pop, 0x54) are matching C.**
+   They move the arena write cursor `D_8009D12C` (gp+0x3BC) by eight bytes against
+   the window `0x800A2270..0x800A22B0`, exchanging `D_8009D124` / `D_8009D128`
+   (gp+0x3B4 / gp+0x3B8). Both `LINK_EXACT` at `-O2 -G8`; YAML
+   `[0x4F0C4 c func_8005E8C4][0x4F114 c func_8005E914]`.
+
+2. **Two spelling devices, both load-bearing.** Reading both source words into
+   locals *before* the cursor moves keeps the two `lw`s above the stores (inline
+   loads leave the second one below the first store: 7 words off); and declaring the
+   arena bound as a 3-word object pushes it above the `-G8` small-data threshold so
+   its address comes out absolute, as retail has it — the same device as Phase 5FY,
+   again without a `MASPSX_FORCE_ABSOLUTE_SYMBOLS` entry.
+
+3. **Proof.** `disc1_preflight.py --deep` PASS (808 c / 347 asm / 2 rodata);
+   `EXACT_REBUILD_GATE=PASS` with
+   `sha1_orig == sha1_cand == 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+   `VERIFY_SWEEP=PASS leaves=808`, `plan=49257b756e66…`. Report:
+   `docs/evidence/phase5ga-arena-pair/REPORT.md`.
+
+4. **Metric note.** c spans 806 → **808** but `funcs` stays **377/980** and
+   `c_words` 6834: like the 42E34 cluster these two are reached through the menu
+   draw path, not the direct-call closure, so the union metric cannot see them.
+   `port_priority.py` regenerated.
+
+5. **Port verification, round two.** `func_8005E8C4`/`func_8005E914` ↔
+   `pc_port/game/boot/func_8005EED4_port.c`: **agrees** on cursor arithmetic, bounds
+   and word order (the port stores through the documented `menu_ram()` KUSEG
+   mirror). The single difference is that the port elides the `func_800527C0(2)` /
+   `(3)` call on the out-of-bounds path — behaviourally nil, because that retail
+   callee is an empty `jr $ra; nop` stub and the port elides the same call
+   elsewhere with that reason stated (`func_8005ED18_port.c`). What the decomp adds
+   is the previously unrecorded **report codes (2 = push overflow, 3 = pop
+   underflow)** and the arena window. `PORTVERIFY_matched_leaves` now covers seven
+   functions; suite **1405/1405**.
+
+6. **Next.** `func_80077404` (the poll side of the `func_800773D0` timer pair) and
+   the queue top from `port_priority.py`.
+
+---
+
+## PRIOR 2026-09-19: GOAL 6H — three more leaves (806) and the port verified against the decomp
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+Goal contract: `docs/ai_context/GOAL_6H_DECOMP_PORT.md`. Nothing committed.
+
+1. **`func_8005270C` (0x58) closed — the Phase 5FW residual.** The blocker was
+   addressing, not structure: retail computes `&D_800B0E08` once into `$a0`
+   (`lui`+`addiu`) and loads through it twice. Under `-G8` a 4-byte declaration
+   makes cc1 address it gp-relative, and `MASPSX_FORCE_ABSOLUTE_SYMBOLS` only
+   rewrites that into a *fused* `lui`/`lw` — a shape cc1 never emits for a live
+   address register. **Declaring the pointer as a 3-word object** (above the `-G8`
+   threshold) makes cc1 emit the genuine absolute address and it matches with no
+   knob. Element 0 is the same 4-byte pointer, so no emitted access changes.
+
+2. **`func_80052C08` (0x64) and `func_800773D0` (0x34) landed.** The first needed a
+   spelling change: retail's 0xFF-terminator scan carries `addiu dst,dst,1` in the
+   branch delay slot of the *exit* test, so the post-increment form with an
+   explicit step back (`while (*dst++ != 0xFF) { } dst--;`) rotates both loops the
+   way retail does; the pre-increment spelling is 13 words off. `func_800773D0` was
+   word-exact first try (arm the GPU deadline from VSync + `0xF0`, clear the poll
+   word).
+
+3. **Proof.** All three `LINK_EXACT`; `disc1_preflight.py --deep` PASS (806 c / 348
+   asm / 2 rodata); `EXACT_REBUILD_GATE=PASS` twice (804 then 806 spans) with
+   `sha1_orig == sha1_cand == 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+   `VERIFY_SWEEP=PASS`, `plan=87f1d99d909d…`. Report:
+   `docs/evidence/phase5fy-5fz-sixhour/REPORT.md`.
+
+4. **Metrics moved for real this time.** The union grew 979 → **980** (`tierA` 734
+   → 735): `funcs` 374/979 → **377/980**, `c_words` 6776 → **6834**, `asm_funcs`
+   529 → **527**; matching c spans 804 → **806**; `port_priority` 55 → **52**
+   active candidates, new top `func_8005E8C4`.
+
+5. **Port verified against the new decomp** — this is the second half of the goal.
+   Every leaf landed this session has a hand-written port counterpart, and the
+   authoritative C turns them into checked statements;
+   `pc_port/tests/test_port_verify_decomp.h` (`PORTVERIFY_matched_leaves`) pins
+   them in the native suite. Verdicts: `func_80062F3C` ↔ `func_80062D2C_port.c`
+   (`func_80062A34` reproduces the walk — head `0x8009D154`, `+0x20`/`+0x24`,
+   NULL-on-miss); `func_800773D0` ↔ `func_80076C34_port.c` (deadline/poll words);
+   `func_8005270C` ↔ `field_message_port.c`; `func_80052764` ↔
+   `battle_reward_port.c`; `func_80052C08` ↔ `func_8004F910_port.c`. **No semantic
+   drift found**; the only differences are the documented host substitutions
+   (VSync query, sound-package stub) and one factoring difference
+   (`func_80052C08` inlines the copy in retail, the port calls `func_80052BCC`).
+
+6. **Reusable method — try spelling before flags.** Four leaves this session were
+   unblocked by source form, not compiler options: `volatile int *p` (two loads
+   through one address), `int one = 1;` (loop constant hoisted into the entry
+   block), the post-increment scan plus `dst--` (loop rotation), and a non-small
+   declaration (absolute vs forced-absolute addressing).
+
+7. **Next.** `func_8005E8C4` (new queue top); `func_80077404` is the poll side of
+   the `func_800773D0` pair and the natural follow-up in that region.
+
+---
+
+## PRIOR 2026-09-18: `func_80062F3C` matched — queue top cleared, gate PASS (803)
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+
+1. **`func_80062F3C` (24 words / 0x60) is matching C.** Walks the node list rooted
+   at `D_8009D154` (`gp+0x3E4`) for the entry with `+0x20 == 1 && +0x24 == arg`,
+   then calls `func_8006269C` with that node (the cursor stays in `$a0`, so a miss
+   passes NULL). File `src/func_80062F3C.c`, YAML `[0x5373C, c, func_80062F3C]`
+   (the whole former asm span), profile `era_o2_g8` (`-O2 -G8`, already holds
+   `func_80062A34`/`func_80052764`), staged not committed.
+
+2. **The lever was the source, not a flag: `int one = 1;` is load-bearing.** Every
+   structural spelling (pointer casts, struct fields, `for`, nested `if`, volatile
+   head) produced the *same* 6-word prologue difference — retail hoists the loop
+   constant into the entry block (`addiu a1,zero,1` before the guard) and keeps
+   `addiu sp` first, while the naive `== 1` materialises the constant inside the
+   loop body and sinks the frame adjust. Holding the constant in a local gives it a
+   register home and GCC hoists it exactly as retail did. Swapping the comparison
+   operands (`one == x`) flips two `bne` operand orders (2 mismatches), so the
+   operand order matters too. Full attempt table:
+   `docs/evidence/phase5fx-80062f3c/REPORT.md`.
+
+3. **Proof.** `era_link_check.py` → `LINK_EXACT`; `disc1_preflight.py --deep` →
+   PASS (803 c / 348 asm / 2 rodata); `EXACT_REBUILD_GATE=PASS`,
+   `sha1_orig == sha1_cand == 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+   `VERIFY_SWEEP=PASS leaves=803`, `plan=2b52a0ac44ea…`.
+
+4. **Metric.** Unlike the 42E34 cluster, this leaf **is** in the 979-function
+   union, so the numbers move: `funcs` 373→**374/979**, `c_words` 6752→**6776**
+   (+24 = 0x60 exactly), `asm_funcs` 530→**529**. `native_c` stays 258/979.
+
+5. **Reusable lesson for the parked leaves.** `func_8005270C` (0x58, 11/22 words
+   off) has the *same* signature — a value that retail hoists into the entry block
+   (there it is `&D_800B0E08` in `$a0`, not a constant). The thing to try there is a
+   source spelling that gives the address a register home (a named pointer local
+   used for both the test and the argument), exactly as `int one = 1;` did here.
+
+6. **Next.** `func_80052C08` (25 w), `func_800773D0` (13 w), then the queue;
+   `func_8005270C` is the closest parked win.
+
+---
+
+## PRIOR 2026-09-18: 42E34 cluster — four more matching leaves, gate PASS (802)
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+
+Resumed at the top of the repaired candidate queue. The former `[0x42E34, asm]`
+span turned out to be a five-function cluster, and four of the five landed:
+
+1. **`func_80052634` / `func_8005267C` / `func_800526C4` (0x48 each)** — void twins
+   of `func_800525EC` with sound ids `0x44D`/`0x44E`/`0x44F`. The same
+   volatile-pointer form applies unchanged; all three were `LINK_EXACT` at
+   `-O2 -G0` (default `era_o2_g0`) on the first attempt.
+
+2. **`func_80052764` (0x2C)** — the fade-stop companion: if a target is published
+   in `D_8009D01C`, call `func_800866A4(target, 0)` and clear it. `D_8009D01C` is
+   gp-relative (`0x2AC($gp)`), so this leaf uses the existing `era_o2_g8` profile
+   (the neighbouring `func_80052790` is already in that group) — `LINK_EXACT`.
+
+3. **Symbol resolution, reusable.** `_gp = 0x8009CD70` (from the generated
+   `build/abs_syms.ld`), so `_gp + 0x2AC = 0x8009D01C`; that cross-checks against
+   the port's own `GM_D_8009D01C` in `pc_port/game/boot/field_message_port.c`
+   (`/* gp+0x2AC: func_8005270C fade target */`). `disc1_build.py` probe-links
+   first and **auto-derives `D_<addr> = 0x<addr>`** for any undefined `D_` symbol,
+   so naming data globals `D_<their VRAM address>` is all that is required.
+
+4. **Residual — `func_8005270C` (0x58), left as `asm`.** Structure fully
+   understood (the port already implements it in `field_message_port.c`), but the
+   codegen is not matched: retail keeps `&D_800B0E08` in `$a0` across the branch so
+   both loads go through it. Best attempt is the volatile-pointer if/else form at
+   `-O1 -G8` — identical structure (22 instructions, `j`/`nop` over the else arm,
+   `move v0,zero`, one store) but the address is materialised twice, 11/22 words.
+   `MASPSX_SYMBOL_AT_TEMP`, `MASPSX_SYMBOL_LOAD_DEST_TEMP`,
+   `MASPSX_THREE_WORD_SYMBOL_STORE` and `MASPSX_FILL_STORE_DELAY_SLOT` each changed
+   nothing. Details + the attempt table: `docs/evidence/phase5fw-42e34-cluster/REPORT.md`.
+
+5. **Proof.** `disc1_preflight.py --deep` → PASS (802 c / 349 asm / 2 rodata), then
+   `EXACT_REBUILD_GATE=PASS` with
+   `sha1_orig == sha1_cand == 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+   `VERIFY_SWEEP=PASS leaves=802`, `plan=dc4ec73840…`. New sources are staged, not
+   committed.
+
+6. **Metric honesty.** `funcs` stays `373/979` and `asm_funcs` `530/…`: these four
+   leaves are **outside** the 979-function direct-call union, so the coverage
+   metric cannot see them. What moves is the plan (798 → **802** c spans) and the
+   gate. `port_priority.py` regenerated: 60 → **56** active candidates, 111 → 115
+   integrated; new top candidate `func_80062F3C`.
+
+7. **Next.** `func_80062F3C` (24 w), then `func_80052C08` (25 w), `func_800773D0`
+   (13 w); the `func_8005270C` register-allocation puzzle is a known `<8`-mismatch
+   target for a C-spelling hunt.
+
+---
+
+## PRIOR 2026-09-18: route autopilot hand-over — drive to a fight, then play it
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+
+Requested: "start the port and put me to the second Eve fight". Two blockers were
+found; one is environmental, one was a real gap and is now fixed.
+
+1. **Finding — this box has no display.** No Xorg, no Xwayland, no Wayland
+   compositor; `/tmp/.X11-unix` empty; no X11/Wayland sockets (`ss -lx`); `DISPLAY`
+   unset. The port's window backend is X11 (`dlopen` libX11 + `XOpenDisplay`), so no
+   window can be opened here. Everything below was verified `--headless`.
+
+2. **Fixed — the autopilot could not hand the pad back.** `--route-pad` installs
+   `RoutePadSource`, which returned the route mask unconditionally, so the player
+   could only watch a bot play or start from boot. `pc_port/src/port_main.c` now
+   has `--hand-over-at <frame>` (release at a route frame) and `--hand-over-key`
+   (release when the player presses a button; combined with the frame gate this
+   reads "wait for the frame, then my button"). `RouteHandOverReady()` is checked
+   first in `RoutePadSource`; afterwards the pad comes from `HostWindow_PadRaw()`
+   (idle `0xFFFF` with no window, so a headless hand-over just stops driving).
+   Evidence: `docs/evidence/pe-handover-route-pad/REPORT.md`.
+
+3. **Verified run** (`--hand-over-at 52500`): the autopilot booted the retail disc,
+   skipped movie/opening menu, drove Day 1 through the first Eve fight (m0023i) and
+   the first sewer fight (`route: sewer victory room=1 frame=52111 HP=27`), then
+   printed `[ROUTE] hand-over at frame 52500 (--hand-over-at): pad is the player's`
+   — token `m0027i`, `victories=1`, `mode=9`, `stop_reason=frame-limit`, exit 0. The
+   captured 320x240 frame is a live field scene (sewer corridor, Aya lit).
+
+4. **Frame anchors for "the second Eve fight"** (from the recorded pilot): first
+   sewer victory 52111, `m0028i` (second hallway) ~53.0–53.5k, second sewer victory
+   53823. Use `--hand-over-at 53400` to be dropped in the second hallway, or
+   `--hand-over-key` to grab control whenever ready.
+
+5. **Commands.** On a machine with a display:
+
+   ```sh
+   cd /home/blizz/dev/Parasite-Eve-Decompilation
+   ./pc_port/build/parasite-eve-port --route-pad --hand-over-at 53400 \
+     --disc-image "rom/image/Parasite Eve (USA) (Disc 1)/Parasite Eve (USA) (Disc 1).bin"
+   ```
+
+   Cross is Return/Space/Z/X. On a machine without a display add
+   `--headless --max-frames N --screenshot out.ppm` instead.
+
+6. **Scope.** `pc_port/src/port_main.c` is the CLI host and is *not* linked into
+   `pe-native-tests`, so the 1404-case suite and both routes are unaffected; every
+   target builds clean. The hand-over changes only which host source answers the
+   pad poll — no guest state is touched.
+
+---
+
+## PRIOR 2026-09-18: first matching-C leaf registered from the repaired queue — exact rebuild PASS
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+
+The repaired candidate order (`func_800525EC` first) was worked, and the leaf is
+now registered and proven by the exact-rebuild gate.
+
+1. **`func_800525EC` (18 words / 0x48) is matching C.** Menu sound helper:
+   `if (D_800B0E08) func_8006DF50(D_800B0E08, 0x44C, 0x100, 0x80, 0x7F)`. File
+   `src/func_800525EC.c` (staged, not committed); YAML
+   `[0x42DEC, c, func_800525EC]` (mid-42D94 carve: asm prefix 0x58, C 0x48, asm
+   resumes 0x42E34); profile = the YAML default `era_o2_g0` (`-O2 -G0`), so **no
+   per-leaf profile assignment was needed**.
+
+2. **The whole difficulty was codegen, and the sweep is the record.** Retail
+   materialises `&D_800B0E08` once into `$a0` and reads through it twice. A plain
+   `extern int` folds the two reads into one load (16 word mismatches); a plain
+   `volatile int` materialises the address twice (11); reading through a
+   `volatile int *p = &D_800B0E08` gives the single materialisation plus two loads
+   and is **word-exact at `-O2 -G0`** (0 mismatches). Full write-up:
+   `docs/evidence/phase5fv-525ec/REPORT.md`.
+
+3. **Proof.** `era_link_check.py` → `LINK_EXACT` (18/18 words, zero pad);
+   `disc1_preflight.py --deep` → PASS (798 c / 349 asm); then the full gate:
+   `EXACT_REBUILD_GATE=PASS`,
+   `sha1_orig == sha1_cand == 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+   `VERIFY_SWEEP=PASS leaves=798`, `plan=aaaa8873cd47…`.
+
+4. **Metric movement (and non-movement).** `route_coverage.py`: `funcs` 372→**373**
+   /979, `c_words` 6734→**6752**, `asm_funcs` 531→**530**. The *port* metric
+   `native_c` stays **258/979** — different metric, unchanged.
+   `docs/generated/NATIVE_CANDIDATE_PRIORITY.md` regenerated: baseline 797→**798**
+   spans, candidates 61→**60** (the leaf left the pool); top candidate is now
+   `func_8005267C`, its twin (18 words, sound `0x44D`).
+
+5. **Two staging rules the gate enforces** (both hit on the first attempt): a new
+   YAML `c` source must be `git add`-ed (`staging gap — a YAML C source is not
+   git-tracked yet`), and `docs/generated/DISC1_MATCHING_STATUS.md` must be
+   regenerated (`python3 tools/build/disc1_plan.py --write-status`). Nothing is
+   committed — the new source is staged only, matching the repo convention.
+
+6. **Port untouched.** No `pc_port/` change in this step, so the native suite and
+   both routes are unaffected: re-verified full suite **1404/1404**, and the last
+   route runs remain plain 45/57 / pilot 57/57.
+
+7. **Next.** `func_8005267C` is the closest win (same shape, `0x44D`, 18 w), then
+   `func_80062F3C` (24 w), `func_80052C08` (25 w), `func_800773D0` (13 w) from the
+   repaired order. Reusable recipe:
+   `python3 tools/analysis/era_link_check.py src/<name>.c <vram> <size> [flags]`
+   (no YAML edit needed to iterate).
+
+---
+
+## PRIOR 2026-09-18: field-menu tree complete + port-priority tool repaired
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+
+Two things landed: the field-menu tree is now fully native (**zero named
+boundaries**), and the port-priority tool that ranks matching work is repaired and
+now reports the true baseline.
+
+1. **Tree closed.** The last named boundary — the modal window draw
+   `PE_MenuDrawCallback_8004B5DC` — is native, together with its two untranslated
+   callees:
+   - `func_8005FCAC` (81 w) — signed-number printer: icon `0x52` for a negative
+     (2 digits) / `0x89` for a positive (3 digits); leading zeros become a blank
+     (`func_8005F874(-1)`); `x += 5` per cell.
+   - `func_8005ED18` (108 w) — icon/sprite packet builder: reserves 0x28 bytes from
+     the menu packet pool, writes the colour word at `+4` (with `+7 = 0x2C` the GPU
+     command and `+3 = 9` the word count), the UV rectangle, the mode-2 interior
+     UVs, the texture page, then links the packet into the ordering table.
+   - `func_8004B5DC` (29 w) — the modal draw itself: `func_8005E8A4(0x10,0x0A)`,
+     `func_8005FCAC(8 - func_8005E884())`,
+     `func_8005EB58(func_80073A44(-1) & 0x10)`, icon `0x7B`, `func_8005ED18(0x7B,2)`.
+   Grepping the three dispatchers now shows only the *generic* fallback arms
+   (`PE_MenuInputCallback`, `PE_MenuDrawCallback`); no tree-specific symbol remains.
+
+2. **Address-mirror note.** Retail writes the packet through a possibly-null
+   pointer; the PS1 maps low addresses onto the same RAM, but the port's range
+   guard aborts. `func_8005ED18` therefore routes the packet and ordering-table
+   pointers through the hardware KUSEG mirror (`< 0x200000 -> |0x80000000`), the
+   same convention as `menu_ram()` in `func_8005EED4_port.c`: same physical RAM, no
+   abort, identical observable state.
+
+3. **Port-priority tool repaired (two stale inputs).**
+   `tools/progress/port_priority.py` exited with `ERROR: priority frontier label
+   disagrees with generated native metrics`:
+   - `configs/USA/port_priority.json` still described a cut inside
+     `func_80030894`, but that body is **complete** (788/788 words) and
+     `native_metrics` reports `production_frontier = None`. The schema could not
+     express that state; it now accepts `label: null` (with an empty
+     `remaining_direct_callees`, and still requires callees when a label is set),
+     and the generated table renders "none — body is complete".
+   - `linked_native_sources()` still required a `PORT_SRCS` list that the project
+     folded into `PLATFORM/BOOTSTRAP/GAME_SRCS`; it now uses
+     `optional_cmake_sources`, matching `native_metrics`.
+   `--write-status` / `--check-status` now pass, and the regenerated
+   `docs/generated/NATIVE_CANDIDATE_PRIORITY.md` replaced a badly stale table:
+   **matching baseline 797 exact C spans (the stale doc said 411)**, 61 active
+   candidates (was 140), frontier "none". Top matching targets are now
+   `func_800525EC` (18 w), `func_8005267C` (18 w), `func_80062F3C` (24 w),
+   `func_80052C08` (25 w), `func_800773D0` (13 w).
+
+4. **Verification.** Focused `DAY2_field_menu_input_4ae1c` PASS (parts 7–14 cover
+   the modal draw, `func_8005FCAC`'s three cases via the x advance, and
+   `func_8005ED18`'s allocation / colour word / link word). Full suite
+   **1404/1404**. Plain route unchanged (`45/57`, only the four HOST_ADAPTED skips,
+   no unresolved boundary). Pilot unchanged (**57/57 PASS**). Logs:
+   `route_modal_plain.log`, `route_modal_pilot.log`.
+
+5. **Honesty.** `route_coverage.py`: `disc=1 funcs=372/979 native_c=258/979`
+   unchanged — hand TUs derived from asm are not matching-C leaves, and the
+   priority work is tooling. `gen_decomp_ports.py --verify`: 269 TUs, 0 drift.
+   `git diff --check` clean; no game data; no interpreter; nothing committed.
+
+6. **Next.** The real remaining work is (a) matching-C leaves, starting from the
+   repaired candidate order (`func_800525EC` first), and (b) the guarded callback
+   boundaries (`PE_MenuConfirmationCallback`/`PE_MenuNoticeCallback`/
+   `PE_MenuCellEnabled`/`PE_InventorySort*`) that a deeper play session would need.
+   Both routes are bounded by the synthesized pad program
+   (`g_supply_pad_end = 62000`), not by port gaps, so extending play needs new pad
+   capture rather than more stubs.
+
+7. **Matching-leaf recipe + `func_800525EC` head start.** A single leaf can be
+   tested *without* touching `configs/USA/disc1.yaml`:
+
+   ```sh
+   export LD_LIBRARY_PATH="$PWD/tools/mipsel-host/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
+   python3 tools/analysis/era_link_check.py src/func_800525EC.c 0x800525EC 0x48 [flags]
+   ```
+
+   `era_link_check.py` compiles the source, links it at the retail VMA and prints a
+   word-for-word diff against the SHA-1-exact EXE (`ROM` vs `LNK`), so a candidate
+   can be iterated with no YAML/profile edits; only a verified leaf should be
+   registered (`check_leaf.sh` = link check + `disc1_preflight.py --deep`).
+   Findings for `func_800525EC` (18 words / 0x48, `%hi/%lo D_800B0E08`, test,
+   then `func_8006DF50(sound, 0x44C, 0x100, 0x80, 0x7F)`):
+
+   - a plain `extern int D_800B0E08;` gets CSE'd to one load — retail loads the
+     global twice (test into `v0`, reload into `a0` for the call), so the source
+     needs `volatile` (or an equivalent double access);
+   - best attempts (volatile, era cc1) reach **11/18 words** at `-O1 -G0` /
+     `-O1 -G0 -fomit-frame-pointer`, but emit 20 words vs 18: retail keeps
+     `addiu sp` → `lui a0` → `addiu a0` → `sw ra` (mine saves `ra` first) and
+     drops the extra pair. Not yet matched — needs the profile/maspsx knob sweep
+     the era batches use. The experiment's `src/func_800525EC.c` was removed so no
+     unmatched C is left in `src/`.
+
+---
+
+## PRIOR 2026-09-18: field-menu tree closed (equipment / modal / close pages)
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+Goal contract: `docs/ai_context/GOAL_4H_FIELD_MENU_TREE.md`.
+
+The residual named by the previous handoff was the six remaining **named**
+boundary arms in the field-menu dispatchers plus the `func_8004AE1C` case-4/5
+close arm. All are translated now; 363 words of split asm became native hand TUs.
+
+1. **Six new leaves** (one function per file, address/word span quoted in each
+   header):
+   - `func_8004B214` (96 w) — Equipment **window draw** (`window+0x30`): tints the
+     two rows of three lane arrows from the list index and the `func_8005E54C()`
+     pad-focus bits (0x1000 / 0x4000), icons 0x4A/0x4B.
+   - `func_8004B394` (104 w) — Equipment **input** (`window+0x2C`): Up/Down clamp
+     the packed colour byte lane `index*8` (`+2` clamps at 0xE8, `-2` at 0x20)
+     through `func_800614A0/AC`; confirm clears the pair then republishes list0
+     with `-1`; cancel restores `D_8009D260`.
+   - `func_8004B650` (47 w) — Modal input (`window+0x2C`): 0x1000/0x4000 scroll
+     `func_8005E850(0,∓1)` + `func_8005267C`; 0x10000 closes; 0x40 scrolls by
+     `D_8009D264 - func_8005E884()` then closes.
+   - `func_80050438` (33 w) — Equipment list1 per-cell draw (reached through
+     `func_8004B534 -> func_800638D8`): alpha `0x80<<(cell*8)`, text id
+     `cell+0x35`, digit `((D_8009D14C>>(cell*8))&0xFF - 0x20) >> 1` (arithmetic).
+   - `func_8005D994` (62 w) — close page: view bytes 0x32/0x62, `D_800C0E24 =
+     0xFFFFF`, the seven-stat row (index 0 → all 0x3E8), then the commit.
+   - `func_8005247C` (21 w) — commit: `func_8005218C()` then `record+0x1C` →
+     `+0x0E` and `+0x0C` (full heal to the recomputed max).
+
+2. **`func_8004AE1C` case 4/5 is native.** It used to emit the named
+   `PE_MenuInputClose` boundary; it now runs `func_8005D994(index-4)`,
+   `func_80062F1C(node)`, `func_800439D8()`, `func_800525EC()` and falls into the
+   shared tail, which calls `func_800525EC()` a second time (preserved:
+   `asm/disc1/37CD0.s:4122`, the previous increment's comment already flagged it).
+
+3. **Dispatch bug fixed.** The previous increment wired `0x8004B214` into
+   `menu_callback` — the **input** dispatcher. `window+0x30` is the *draw* slot,
+   so the Equipment draw was unreachable and the equipment *input* was routed to
+   the wrong symbol. `0x8004B214` now lives in `menu_draw_callback`; the input
+   dispatcher keeps `0x8004B394`/`0x8004B650` (`window+0x2C`). The route never
+   opens the Equipment page, which is why the latent inversion survived.
+
+4. **Only one named boundary remains in the tree:** `PE_MenuDrawCallback_8004B5DC`
+   (the modal window's own draw). Its callees `func_8005FCAC` (0x144 = 81 w) and
+   `func_8005ED18` (0x1B0 = 108 w) are the next residual.
+
+5. **Verification.** Focused `DAY2_field_menu_input_4ae1c` PASS, with new parts
+   8–12 (equipment draw / up / down / per-cell, equipment confirm + cancel, modal
+   four arms, close page, jump-table case 4). Full suite `1404/1404`. Plain route
+   unchanged: `frames=62000 stop=frame-limit`, 45/57, only the four HOST_ADAPTED
+   skips, no unresolved boundary (`route_tree_plain.log`). Pilot unchanged:
+   57/57 PASS (`route_tree_pilot.log`).
+
+6. **Honesty.** `route_coverage.py --quiet --no-history`: `disc=1 funcs=372/979
+   native_c=258/979` **unchanged** — these are asm-derived hand TUs, not
+   matching-C leaves, so the metric does not move. `gen_decomp_ports.py --verify`:
+   269 TUs, 0 drift. `git diff --check` clean; no game data; no interpreter;
+   nothing committed.
+
+7. **Harness gotcha worth an hour.** These draws allocate from the menu packet
+   pool (`0x8009D100`/`0x8009D104`, `PE_MenuPacketAlloc`). A unit test that calls
+   them directly must seed the pool (`menu4ae1c_draw_setup`) first, otherwise the
+   allocator returns small integers (20, 28) and a packet writer (`func_80077C84`)
+   stores to an invalid guest address and aborts (`FATAL: PE_StoreU8 ... 0x17`).
+   The route always has a seeded pool — harness requirement, not a port bug.
+
+---
+
+## PRIOR 2026-09-18: milestone 55/56 re-pinned — pilot 57/57, Items/Use verified native
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.
+
+The residual named by the previous goal ("milestone 55 normal item use") turned
+out to be a **stale test pin, not a port gap**. The port already runs the whole
+field Items/Use chain natively; the harness could not see it.
+
+1. **The item use is native and correct.** Live trace (`PE_ROUTE_ITEM_TRACE=1`)
+   of the reward pilot: `LOOT_PILOT_HEAL_DONE 58044 hp=53 item4=0` at token
+   `A80030C8` (m0031i) — item7 left slot 4 and HP went 33 → 53. The chain is
+   `func_80044B0C` (menu_callback `0x80044B0C`) → action 0 Use →
+   `func_80057834` → `func_800516B4` → `func_80023E14` (heal 90, then clamp to
+   `record+28`) + `func_80057D30` (remove from inventory). All native.
+   The pistol selection is `LOOT_PILOT_EQUIP_QUEUED 58917 command=407 slot=0`.
+
+2. **Two milestone pins were route-specific and unsatisfiable.**
+   - Row 55 compared HP to the absolute 45 — Aya's **max** HP in the run that
+     authored it. The route now levels her to max 53 (`record+28`), so the pin
+     is "HP is full after the Items/Use" now (strictly stronger).
+   - Row 56 only sampled the gun slot **on the item-use frame**, but the field
+     item use (58044, gun=2) always precedes the equip (58917), so it could
+     never fire. It now observes `0x800BE834==407 && 0x800C0E20==0` after the
+     item7 pickup.
+
+3. **The endpoint pin was stale too.** It required the run to end at the frozen
+   m0031i token/PC with HP45, `persist[1]=0x14E` and `Aya+0x98` bit 0x200 clear.
+   The pilot advances into the **m0032i fight** (that is where milestone 56's
+   equipment command is issued) and cannot park at m0031i: observed endpoint
+   `token=0xA80031C8 pc=0x00000000 hp=27/64 persist1=0x20 aya98=0x600`. The
+   endpoint check now asserts the durable state — persist[74]=0x68, persist[24]
+   bits, C8/C9 retained, item6/7 consumed, chest 0x280 + switch bit4, pistol
+   slot 0, two victories, field control, no unresolved boundary — and prints the
+   observed endpoint on `route: endpoint …`. The room-local bits (persist[1],
+   Aya+0x98) are reported, not required. The frozen m0031i branch is preserved
+   and additionally requires `persist[1]=0x14E`.
+
+4. **Result.** Pilot: `frames=62000 stop=frame-limit story=0x68 token=0xA80031C8`,
+   **57/57 milestones, PASS** (`route_m55c.log`, exit 0). Plain route unchanged:
+   `frames=62000 stop=frame-limit story=0x09 persist1=0x0A token=0xA8000148`,
+   45/57, no unresolved boundary (`route_plain3.log`) — the plain route never
+   drives the sewer battles, so the supply observations stay 00.
+
+5. **Coverage unchanged (honest).** `route_coverage.py --quiet --no-history`:
+   `disc=1 funcs=372/979 c_words=6734 native_c=258/979 native_c_words=27622`.
+   This work is a test-pin correction plus diagnostics; it adds no native leaf.
+   `gen_decomp_ports.py --verify`: 269 TUs, 0 drift.
+
+6. **Diagnostics added** (env-gated, off by default, read-only):
+   `PE_ROUTE_ITEM_TRACE=1` prints `ITEM_TRACE` on every change of token / HP /
+   item slot / gun slot, and the harness always prints the `route: endpoint …`
+   line. `git diff --check` clean; no game data; no interpreter. Next: the
+   equipment and modal sub-pages (`0x8004B214`/`B394`/`B650`/`0x8004B5DC`/
+   `0x80050438`) and the close page (`func_8005D994` + `func_8005247C`), now the
+   only named boundary arms left in the field-menu tree.
+
+---
+
+## PRIOR 2026-09-18: field-menu input tree 0x8004AE1C — plain route boundary closed
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter.
+
+The previous session left the plain disc-1 route stopping on
+`BOOTSTRAP_RET PE_MenuInputCallback` (raw callback `0x8004AE1C`) at
+`frames=61623`. That whole input tree is now native, and the plain route reaches
+the frame cap with **no unresolved boundary stub at all**. `{SCRATCH}` for this
+goal is `/tmp/pe-2nd`.
+
+1. **Executed-path native leaf: `func_8004AE1C`** (72 words,
+   `[0x8004AE1C,0x8004AF3C)`, asm/disc1/37CD0.s) is
+   `pc_port/game/boot/func_8004AE1C_port.c` — the field-menu Items/Escape
+   `menu_callback` (`0x8004AE1C`). Its jump table is retail data, not a guess:
+   `asm/disc1/data/800.rodata.s:1309 jtbl_80011034` =
+   `{0x8004AE84, 0x8004AE94, 0x8004AEA4, 0x8004AEB4, 0x8004AEC4, 0x8004AEC4}`,
+   i.e. cases 0..3 → the four sub-page constructors, 4/5 → the shared close arm,
+   and ≥6 → the `func_800525EC`/return-1 tail (reached **once** for ≥6, **twice**
+   for 4/5 — the same double-`525EC` fall-through is preserved). Test:
+   `DAY2_field_menu_input_4ae1c`.
+
+2. **The sub-page tree is native.** Constructors `func_8004AF3C` (Items, case
+   0), `func_8004B03C` (Escape, case 1), `func_8004B13C` (Equipment, case 2 —
+   two cross-linked lists 0x2E/0x31) and `func_8004B584` (modal, case 3) live in
+   `pc_port/game/boot/`. Input handlers `func_8004AFA4` (Items confirm →
+   `func_80052790` writes `D_8009D020`) and `func_8004B0A4` (Escape confirm →
+   `func_800649D0`). List-draw wrappers `func_8004FF58` / `func_8004FF80` /
+   `func_8004B534` / `func_8004B55C` are hand adapters: a bare `func_*` used as
+   a value is a guest code address, so `gen_decomp_ports.py --check` reports
+   "indirect call through local" (the same E5/E6 class as `func_8004FF30`).
+   Per-cell draws `func_80050C70` (Items) and `func_80050CB4` (Escape) are
+   native and dispatched from `menu_draw_callback`.
+
+3. **Named residuals, not silent skips.** Everything in the tree that is not
+   translated is an explicit named boundary arm: input
+   `PE_MenuInputCallback_8004B214` / `_8004B394` / `_8004B650`, draws
+   `PE_MenuDrawCallback_8004B5DC` and `PE_MenuDrawCell_80050438`, and the
+   case-4/5 close page `PE_MenuInputClose` (needs `func_8005D994`, whose own
+   callee `func_8005247C` is absent).
+
+4. **Route evidence — the boundary moved twice, then closed.**
+   - pre-leaf: `frames=61623 stop=unresolved-boundary story=0x09 persist1=0x0A
+     token=0xA8000148`, 45/57, `PE_MenuInputCallback x1` (raw `0x8004AE1C`).
+   - after 1–2 but before `0x80050C70` was wired into `menu_draw_callback`:
+     still `frames=61623 stop=unresolved-boundary`, but now
+     `PE_MenuDrawCallback x1` with `[MENU] Unported drawing callback 80050C70` —
+     the handler ran natively and the render stopped exactly one level deeper.
+   - final plain run (`route_menu2.log`): `frames=62000 stop=frame-limit
+     story=0x00000009 persist1=0x0000000A token=0xA8000148`, **45/57**,
+     boundary stubs = the four documented HOST_ADAPTED movie/menu skips only
+     (**no unresolved boundary**).
+   - pilot re-run (`route_menu_pilot.log`): `frames=62000 stop=frame-limit
+     story=0x00000068 persist1=0x00000020 token=0xA80031C8`, 55/57, all four
+     HOST_ADAPTED — identical to the pre-leaf pilot; only miss is milestone 55
+     "normal item use restores 45 HP".
+   The route harness gained an env-gated `PE_ROUTE_FRAME_TRACE=1` per-10-frame
+   stderr trace (off by default) so a slow frame-limited run can be told apart
+   from a hang: the 62000-frame run is ~100 frames/s (~11 minutes).
+
+5. **Two coverage numbers (unchanged, must not drop).**
+   `python3 tools/analysis/route_coverage.py --quiet --no-history`:
+   `disc=1 funcs=372/979 c_words=6734 … native_c=258/979 native_c_words=27622`
+   (`plan=5aceb911…`). The whole tree is the indirect-callback subtree that the
+   979-function direct-call union excludes (`ROUTE_COVERAGE.md` §Metric scope),
+   so translating it does not move `native_c` — the honest outcome, not a metric
+   to fudge. `gen_decomp_ports.py --verify`: 269 TUs, 0 drift.
+
+6. **No regression / hygiene.** Full native suite 1404 run / 1404 passed /
+   0 skipped (`/tmp/pe-2nd/native_full2.log`), including all three menu tests,
+   `DAY2_cd_sector_device` and `DAY2_cd_dma`. `git diff --check` clean; no game
+   data added (no ISO/BIN/CUE/CHD/`SLUS_*`); no interpreter. Next holes, in
+   order: milestone 55 normal item use (the pilot's only miss — the Items confirm
+   `func_8004AFA4` is native, so the gap is downstream of it), the
+   equipment/modal sub-pages (`0x8004B214`/`B394`/`B650`/`B5DC`/`0x80050438`),
+   then the close page `func_8005D994` + `func_8005247C`.
+
+---
+
+## PRIOR 2026-09-18: shared CD data-ready dispatcher + field-menu page 4AD9C
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter.
+
+1. **CD/stream gap closed: the command-poll event dispatch now reaches the
+   native data-ready leaves.** `func_8007B010` (B178 loop) and
+   `func_8007B558` (B820 loop) consumed `func_8007AAB4` events and raised an
+   indirection boundary (`func_8007B010_afb8_callback`,
+   `func_8007B558_afb8_callback`, `..._afb4_...`) for callbacks whose
+   translations already exist. They now share one address-keyed dispatcher,
+   `PE_Cd_DispatchDataCallback` (`pc_port/game/boot/cd_stream_port.c`,
+   declared in `pc_port/platform/pe_sdk.h`), with the same target set
+   `func_8007C13C` already used (7F960 / 7E964 / 80164 / 80778 / 7F88C /
+   813E8). Consequence: a blocking command wait (`func_80080D5C` →
+   `func_80080DC4`) that has a pending data-ready event now runs the real
+   chain (80778 → 7F88C → 813E8 → `func_8007C564`) instead of stopping.
+   Tests: `DAY2_movie_player` (see 2) and the unchanged
+   `DAY2_cd_stream`/`DAY2_cd_dispatch`/`DAY2_cd_queue_recovery` oracles.
+
+2. **Movie player 121C04: the enabled-device stream now really delivers.**
+   `DAY2_movie_player` had one enabled-device arm that stopped because the
+   fixture's searched file carried no Form-1 video chunk (the assembler
+   dropped every record), and the docs called that stop a device frontier.
+   The test now has three arms: (a) disabled device → recorded
+   `movie_player_search_wait`; (b) enabled device + non-video fixture → the
+   assembled record is really DMA3'd into the pool (`D_800A34A0==0x80150000`)
+   and then dropped by the stream-start filter (`D_800B6918` != record frame),
+   so the one and only stub is `movie_retry_wait` — no fabricated slice; (c)
+   **enabled device + a real Form-1 chunk whose frame word equals record+6 →
+   the physical stream delivers, 7C214 promotes the record and the first
+   frame is handed off** (`D_800A3494==0x1234`, `D_800B0DBA==4`,
+   `D_800B0DBC==1`, no stop). Arm (c) is the frontier DAY2_MOVIE_UPDATER.md
+   named. `MOVPLY_SeedRecord` now documents that record+6/record+8 are the
+   stream-start/frame-limit words `func_8007C304` publishes into
+   `D_800B6918`/`D_800C0DBC`. **The same frontier is closed for the
+   updater**: `DAY2_movie_updater` gained the enabled-device
+   readiness/Setloc retry completion case — no ready record forces
+   `func_80122040`'s acquisition timeout, 7C2A0 repositions to LBA 1, the
+   real 80D5C → 80DC4 queue issues Setloc *with* the stack response buffer
+   (`D_80122414==0x11010200`), 81314 opens the stream, the physical stream
+   delivers and 121270 hands the frame off (`D_800A3494==0x1234`, bank
+   flipped, `D_800B0DBC` 65535→0, no stub). The fixture helpers
+   `CdStreamSeedRegisters` / `CdStreamWriteVideoSector` live in
+   test_cd_device.h and are shared by both groups.
+
+3. **Executed-path native leaf: `func_8004AD9C`** (32 words,
+   asm/disc1/37CD0.s) is now
+   `pc_port/game/boot/func_8004AD9C_port.c` and is called by the command-5
+   arm of `func_80043DA4` (original call site asm/disc1/340EC.s:487, `jal`
+   with `a0 = list`). It really constructs its window/list through the native
+   0x80062D2C / 0x8006322C / 0x80062CB8 / 0x800647D0 and stores the original
+   guest callback identities (window+0x2C = `0x8004AE1C`, list+0x30 =
+   `0x8004FF30`). Test: `DAY2_field_menu_page_4ad9c`. **Route evidence:** the
+   plain route now reports `PE_MenuDrawCallback x1` as its only boundary stub
+   where it used to report `func_8004AD9C x1`, at the same frame (61593) and
+   the same 45/57 milestones — the boundary moved one level deeper instead of
+   the route stalling on the page constructor. **Named residual:** the list
+   callback 0x8004FF30 (now `PE_MenuDrawCallback`), then the 0x8004AE1C input
+   handler (72 words) and its six sub-pages (still only names in
+   `func_80063E0C_port.c`'s `menu_callback` default arm,
+   `PE_MenuInputCallback`).
+
+4. **Executed-path native leaf: `func_8004FF30`** (10 words,
+   `[0x8004FF30,0x8004FF58)`, matched C leaf `src/func_8004FF30.c`) is now
+   `pc_port/game/boot/func_8004FF30_port.c`: a hand adapter (bare `func_*`
+   used as a value is a guest code address, so `gen_decomp_ports.py` skips
+   the leaf, rules E5/E6 — same class as `func_8004AD9C`) that forwards
+   `slot` to `func_800638D8(slot, 0x80050C50)`. Wired into
+   `func_800638D8_port.c`'s `menu_draw_callback` (`0x8004FF30`, plus the
+   already-ported per-cell draw `0x80050C50`). Test:
+   `DAY2_field_menu_draw_4ff30` — direct wrapper entry, equivalence with
+   `func_800638D8(list, 0x80050C50)` (identical `D_8009D164/168` + packet
+   pool), and the route's `func_80062830(list)` dispatch via slot `+0x30`;
+   the list is parked at zero visible/total rows so no per-cell text draw
+   (which would need the PE.IMG archive) is invoked. **Route evidence:**
+   the plain route's only boundary stub is now `BOOTSTRAP_RET
+   PE_MenuInputCallback x1` at `frames=61623` (was `PE_MenuDrawCallback x1`
+   at 61593) with the same story/persist/token (`0x09`/`0x0A`/`0xA8000148`,
+   m0002i) and the same 45/57 milestones — the boundary moved exactly one
+   level deeper, onto the 0x8004AE1C input handler. Log
+   `route_4ff30.log`. **Named residual:** the 0x8004AE1C input handler tree
+   (72 words + six sub-pages, still only names in the `menu_callback`
+   default arm).
+
+4. **Two coverage numbers (unchanged, must not drop).**
+   `python3 tools/analysis/route_coverage.py --quiet --no-history`:
+   `disc=1 funcs=372/979 c_words=6734 … native_c=258/979 native_c_words=27622`.
+   Honest caveat found while picking leaf 3: the `--top` "remaining asm"
+   list and `native_c` are *filename*-based
+   (`pc_port/game/{boot,decomp}/func_*_port.c`), and the Tier-A closure walks
+   direct calls only. Most `--top` entries already have native definitions in
+   differently-named TUs (`func_80079FB4` in `func_8001A15C_port.c`,
+   `func_8003708C` in `func_80012850_port.c`, `func_80073A44` VSync,
+   `func_80080B44` as the static `PE_Cd_IntToPos`), and the indirect
+   field-menu subtree (including `func_8004AD9C`) is outside the 979-function
+   union, so leaf 3 does not move `native_c`. The number is a lower bound; do
+   not "fix" it to move the metric without deciding that explicitly.
+
+5. **Disc-1 baseline (recorded, not invented).** `{SCRATCH}=/tmp/pe-4h`; the
+   final runs from the frozen tree are `*_final.log` and reproduce the earlier
+   ones exactly (deterministic):
+   - plain `pc_port/build/pe-route-boot-day2-tests` (`route_baseline_final.log`;
+     `route_baseline.log` is the pre-leaf run):
+     `frames=61593 stop=unresolved-boundary story=0x00000009
+     persist1=0x0000000A token=0xA8000148` (m0002i), 45/57 milestones.
+      Before leaf 3 the only boundary stub was `BOOTSTRAP_RET func_8004AD9C
+      x1`; after leaf 3 it is `BOOTSTRAP_RET PE_MenuDrawCallback x1` at the
+      same frame, token and milestone count. After leaf 4 (`func_8004FF30`,
+      `route_4ff30.log`) it is `BOOTSTRAP_RET PE_MenuInputCallback x1` at
+      `frames=61623` — 30 frames further, same story/persist/token
+      (`0x09`/`0x0A`/`0xA8000148`, m0002i) and same 45/57. The plain
+      invocation has never reached m0027i; it needs the pilot below.
+   - `PE_ROUTE_REWARD_PILOT=1 pc_port/build/pe-route-boot-day2-tests`
+     (`route_baseline_pilot_final.log`; `route_baseline_pilot.log` is the
+     earlier run): `frames=62000 stop=frame-limit story=0x00000068
+     persist1=0x00000020 token=0xA80031C8`, 55/57, **all four boundary stubs
+     HOST_ADAPTED (no unresolved boundary)**; missing milestone 55 “normal
+     item use restores 45 HP”. This run reaches the documented pin (token
+     `0xA80023C8` m0027i is in the pass set) with `persist[74]=0x68` and both
+     sewer victories.
+   The baseline doc's command line omitted `PE_ROUTE_REWARD_PILOT=1`; it is
+   corrected there. Harness source still rejects `PE_Disc_BootKind==2`
+   (test_route_boot_day2.c:588), and the in-memory Disc-2 identity fixture
+   (`test_disc_findfile_disc2_idf`, `\FMV2\PEDISC02.IDF;1` → LBA 41) still
+   passes in the full suite, so Disc 2 is not being passed off as Disc 1.
+
+6. **No regression:** full native suite 1403 run / 1403 passed / 0 skipped
+   (`/tmp/pe-4h/native_full4.log`), including `DAY2_cd_sector_device` and
+   `DAY2_cd_dma` (`cd_sector.log`, `cd_dma.log`), `DAY2_movie_player`,
+   `DAY2_movie_updater`, `DAY2_field_menu_page_4ad9c` and the new
+   `DAY2_field_menu_draw_4ff30`. Pilot re-run after leaf 4
+   (`route_4ff30_pilot.log`): `frames=62000 stop=frame-limit
+   story=0x00000068 persist1=0x00000020 token=0xA80031C8`, 55/57, all four
+   boundary stubs HOST_ADAPTED — identical to the pre-leaf pilot.
+   `git diff --check` clean; no game data added (no ISO/BIN/CUE/CHD/SLUS in
+   the tree); no interpreter. Next holes, in order: the 0x8004AE1C
+   field-menu input handler tree (72 words + six sub-pages,
+   `PE_MenuInputCallback`), then the remaining disc-1 route milestones
+   (milestone 55 item use).
+
+---
+
+## PRIOR 2026-09-18: port-first — CD B0CD0 catchup, two coverage numbers, two-disc, HD-2D architecture
+
+The native PC port is the deliverable; matching decomp is the means. Recovered
+assembly is worth zero to the port. No MIPS interpreter.
+
+1. **DAY2-158 B0CD0 catchup-miss (CD driver).** `func_8007C564` defers when
+   MDEC output DMA is busy: it writes `D_800B0CD0` and returns without BFRD.
+   The next ReadN/ReadS cadence used to `CD_device_sector_overrun` the unread
+   sector. `PE_CdReg_ServiceDevice` now **holds** that pending sector while
+   the halfword is set, and when output DMA is idle **retries 7C564** so the
+   held sector is BFRD'd. A clear unread sector still overruns.
+   Tests: `DAY2_cd_sector_device` (hold + overrun), `DAY2_cd_dma` (idle pump
+   assembles). Docs: `docs/ai_context/DAY2_CD_SECTOR_DEVICE.md`.
+   Disc-1 gameplay baseline: `docs/generated/DISC1_GAMEPLAY_BASELINE.md`
+   (`pe-route-boot-day2-tests` → m0027i). The harness rejects a Disc 2 image.
+
+2. **Two coverage numbers.** `python3 tools/analysis/route_coverage.py --quiet`
+   now emits both:
+   - `funcs=` / `c_words=` — matching YAML `c` on the boot→Day-2 route (rebuild)
+   - `native_c=` / `native_c_words=` — executed-path **native** C
+     (`pc_port/game/{boot,decomp}/func_*_port.c`). That second number is what
+     predicts a playable restylable build.
+   Live: `disc=1 funcs=372/979 c_words=6734 … native_c=258/979 native_c_words=27622`.
+   `disc=2` is reserved until a disc-2 route exists.
+
+3. **Two-disc.** `PE_Disc_BootKind` / `PE_Disc_VolumeId` identify
+   SLUS_006.62 vs SLUS_006.68 from the ISO. Boot EXE load already follows
+   `SYSTEM.CNF`. The EXEs are byte-identical; `PE.IMG` and FMV tracks
+   diverge. `PE_Disc_SetActive` is the swap point. No game data in git.
+
+4. **Rendering (verified).** Prerendered TIM plates + real-time characters
+   in an ordering table (no depth buffer). Evidence:
+   `func_800718D0` TIM walker, DrawOTag/`func_80076C34` DMA2.
+   `docs/ai_context/RENDERING_ARCHITECTURE.md`. HD-2D = upscale plates +
+   better models, not re-render whole scenes.
+
+Matching-C parks for `func_8006AD40` / `func_80069B08` stay asm (compiler
+residuals). Do not treat `pc_port/` as matching C.
+
+---
+
+## PRIOR 2026-09-18: M34 = tail weak point + rotated-camera aim; supply52 live
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### M34 solved structurally: break the type-4 tail, aim with a transposed pad
+
+47 supply runs kited the *head*; **not one ever damaged anything**, so M34
+could never end. Two independent root causes are now identified and fixed.
+
+**(1) The objective is the type-4 tail, not the head.** Original M0034I script
+(`PE.IMG` LBA 16597, base `0x8018EFE8`, script blob chunk `0x25B18` / VA
+`0x801B4B00`, 6 modules / 1341 commands; branch base = module start,
+`target = module_base + imm*2`):
+
+- `0x801B5A2C..0x801B5B2C` reads tag `0x2C` (= slot `+0x10` = HP,
+  `func_80030220` case 44), **adds `0xF4240` (1,000,000)** and writes tags
+  `0x2C`/`0x2D`/`0x3C` — that is the “million-point offset”; the real resource
+  HP is 120 (head) / 80 (tail).
+- `0x801B8718` `op 09 sub 9` = `(1000000 < HP)`; `0x801B8730 op 05` loops until
+  **HP ≤ 1,000,000**, then `op 0xCE` zeroes tags `0x2C`/`0x2D`, spawns
+  sub-script `0x19A0`, plays the outro (second `op 0x89` @`0x801B8898`,
+  `op 0x95/0x96`, wait mode `0xC`) and `op 0x31` exits.
+- The HP read is `op 0x8B` @`0x801B8700` with **type = 4**
+  (`func_80018080` walks `D20C` for `actor+0x0C == 4`, `actor+0x0D == 0`).
+- Damage (`func_80028574`) from the live capture
+  (`pe-m34-survival-connected.bin`): aya attack `rec+0x1E`=45, pistol atk 12,
+  `wf&15`=2 → `power = (45/5+12)*scales[2]/100 = 12`,
+  `defense = body+0x8C / shots`:
+
+| actor | type | HP | `+0x8C` def | dmg/hit | hits to 1,000,000 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| head | 3 | 1,000,120 | 200 | **1** | 120 (impossible, 40 rounds) |
+| tail | 4 | 1,000,080 | 6 | **9** | **9** (≈5 x2-shot attacks) |
+- Hit gate `func_80021278`: any `distance>1800` is a hard miss, where
+  `distance = world*1000/range` and `range = weapon+2 = 1071`. So the tail is
+  **unhittable beyond world ≈1928** and reliable within ≈1071. The west lane
+  (x≈-2600, where Aya spawns) is the only firing position.
+
+**(2) The M34 arena camera is rotated, and the pilot's aim silently inverted.**
+Live pads proved `Left`→world south `(0,-1)` and `Down`→world east `(1,0)`,
+i.e. the engine applies the very matrix at `0x800BD000/4` to the pad
+(`M=[[0,-1],[1,0]]`, `M*M=-I`). `RoutePilotAimPad` used the untransposed form,
+so every aim came out **exactly reversed** here (that is why the hunt still
+drifted east and why 47 runs “fled” into the boss). The transposed form
+(`RoutePilotAimPadT`) fixed it: supply50 drove Aya to the west wall with
+`t2=1,055,546` (inside the 1071 reliable band) — the first time any run was in
+firing position. Because the effective convention drifts with the action, the
+hunt now flips transposed/normal whenever 90 frames pass without progress
+toward the lane (`g_m34_aim_t`).
+
+### Pilot state (`pc_port/tests/route_reward_sewer_pilot.h`)
+
+- `tail_hunt` = tail alive & `tailhp>1,000,000` & no heal/equip pending → camp
+  `lane_x≈tx+750`, Z works toward the tail's Z (unpins the north wall) and
+  dodges the head when `h2<600k`; transposed/normal aim is adaptive.
+- `attack_tail` = tail alive, pistol loaded, no heal pending, `t2≤2.5M`,
+  `h2≥250k`. Mode 1 **commits the ATB on the type-4 target** instead of
+  Circle-cancelling, and (supply52 fix) will not Cross until `target==selected`
+  — supply51 proved the old `!can_heal` shortcut committed with `selected=0`
+  and shot the armored **head** (headhp 1000120→1000118, 2 rounds wasted).
+- Stuck-break latch is suppressed while hunting (it was cycling raw cardinal
+  pads and overriding the hunt aim).
+- Diagnostics: `M34_TAIL_HP`, `M34_TAIL_HUNT`, `M34_TAIL_ATK`,
+  `M34_TAIL_BROKEN`, plus `taildmg=`/`headhp=` on the 30f `M34_PILOT` line.
+
+### Story path
+
+- Supply45 (**killed**, `/tmp/pe-m34-pilot-supply45.log`): latch-suspend fix
+  changed nothing — 4 heals, died ~65310, boss HP untouched.
+- Supply46 (no lane logic) → `t2` never fell below 6.6M, died.
+- Supply47 (lane camp, untransposed) → drifted east, `t2` 5.6M, died.
+- Supply48/49 (lane camp + stuck-break suppressed) → still east, died.
+- Supply50 (transposed aim) → **reached the west wall**, `t2=1,055,546`, died
+  pinned at `(-2839,780)` because `hp>24` blocked every mode-1 commit and the
+  Z-dodge pointed into the wall.
+- Supply51 (hp gate removed, adaptive aim, Z unpin) → the ATB did commit but
+  hit the **head** twice (see above), died.
+- Supply52 PID **1554290** → `/tmp/pe-m34-pilot-supply52.log`
+  (`PE_ROUTE_REWARD_PILOT=1`, `PE_ROUTE_FRAMES=100000`). Live. Not at `0x80`.
+  Success signal: `M34_TAIL_HP … dmg=` rising → `M34_TAIL_BROKEN` → script
+  retires the pair → `M0359I`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-17: M34 weak point found — the type-4 tail, not the head; supply46 live
+
+Matching-C lane (bootstrap / main loop). `func_8003F3C4` (field-tick, 229
+words, `0x8003F3C4` / `0x394`) is now a YAML `c` span, `LINK_EXACT` at the
+retail VMA. Profile `era_o2_g8_force_3f3c4_absolute`. Evidence
+`docs/evidence/func-8003F3C4/REPORT.md`. Command:
+
+```
+MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009CDD8,D_8009D1F4,D_8009D238,D_8009CDDC,D_8009D250,D_8009D26C,D_800B0CEA,D_800B0CD8,D_800BCFE8 \
+  tools/analysis/check_leaf.sh func_8003F3C4 0x8003F3C4 0x394 -O2 -G8
+```
+
+`disc1_plan.py --check` → `1147 spans (797 c, 348 asm, 2 rodata)` (includes
+this leaf plus sibling carves). Deep `--only func_8003F3C4` PASS. Full
+`disc1_preflight.py --deep` PASS. `scripts/exact_rebuild.sh --preflight-fast`
+build `EXACT_MATCH`; `scripts/verify_us.sh` `VERIFY_US=PASS`; packed SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+
+### Boot-spine status (direct `jal` from `func_8001220C` + initial PC)
+
+Matched C: `func_8003E610`, `func_8006A5BC`, `func_8006A64C`,
+`func_8003E680`, `func_8006ECEC`, `func_8006F044`, `func_8006E834`,
+`func_8006E9A0`, `func_80074D28`, **`func_8003F3C4`**.
+
+Accepted-residual / PARK (not counted as C): `func_8001220C` (prologue
+save-batching), `func_800725DC` (per-TU skew), `func_800698D4` (dbr
+liveness), `func_80073A44` (prologue-schedule), `func_8006A9E4` (dbr-sched
++ copy-loop encoding; PARK `docs/evidence/func-8006A9E4/PARK.md`,
+still `in-progress-checkpoint` not the 24-leaf ACCEPTED-RESIDUAL list),
+`func_80072534` (handwritten crt0; `docs/evidence/func-80072534/PARK.md`).
+
+`func_80069B08` (376w) has a size-exact draft (`src/func_80069B08.c`,
+1504 bytes / `0x5E0`, frame `0x58`, CD-read loops match) but is **not**
+YAML `c`: prologue save-batching plus jumptable `jtbl_80011388` 3-word
+`$at` form vs patch-5 shrinking other indexed loads. PARK
+`docs/evidence/func-80069B08/PARK.md`, disposition `in-progress-checkpoint`.
+
+`func_8006AD40` draft is **frame-exact 0x30** (inlined CLUT loops, no `$s7`).
+The `0x80` `bnez` delay now carries `addu $v0,$zero,$zero` (test stays in
+`$v0`); work2 skip delay, both CLUT packs, walks, and work4 `jal` delays
+match. Residual is **exactly one extra join `move $2,$0` before the
+epilogue** (1568 vs 1564, 12 word mismatches, all the epilogue shifted by
+one). cc1 2.7.2 will not credit a not-taken-arm delay fill to the taken
+arm, so `return 0` stays at the join. PARK
+`docs/evidence/func-8006AD40/PARK.md`. Not YAML `c`. Overlay jals
+`func_8019234C` / `func_801235DC` / `func_801909B4` are overlay-only.
+
+### Next subsystem after bootstrap/main loop
+
+Disc-1 spine matchable callees are closed or parked. `func_80069B08`
+needs a per-symbol `MASPSX_SYMBOL_AT_TEMP` (or a prologue-interleave
+lever) before it can be `c`. Next subsystem: field VM (`func_80017018` +
+`D_800910A0` handlers).
+
+Do not treat `pc_port/` translations as matching C.
+
+---
+
+## PRIOR 2026-09-17: M34 weak point found — the type-4 tail, not the head; supply46 live
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### M34 is winnable: break the type-4 tail (original script, not a guess)
+
+44 straight supply runs kited the *head* and healed; **none ever tried to
+damage the tail, and none ever won** — because the pilot's M34 branch was
+survival-only (`shoot_floor` 2.2M/3.2M never held; the ATB was
+Circle-cancelled, never committed to an attack).
+
+Reading the **original M0034I script** (`PE.IMG` LBA 16597, base
+`0x8018EFE8`, script blob at chunk `0x25B18` / VA `0x801B4B00`, 6 modules
+1341 commands; module-relative branch base = module start, `target =
+module_base + imm*2`) settles it:
+
+- `0x801B5A2C..0x801B5B2C` (module 3 setup) reads tag `0x2C` (= slot `+0x10`
+  = HP, `func_80030220` case 44), **adds `0xF4240` (1,000,000)**, and writes
+  it to tags `0x2C`/`0x2D`/`0x3C`. That is the observed “million-point
+  offset” — the real resource HP is 120 (head) / 80 (tail).
+- `0x801B8718` `op 09 sub 9` = `(1000000 < HP)`; `0x801B8730 op 05` loops
+  while true and only falls through to `0x801B8758` when **HP ≤ 1,000,000**.
+  `0x801B876C/0x801B8784` (`op 0xCE`) then zero tags `0x2C`/`0x2D` (retire),
+  spawn sub-script `0x19A0`, and continue to the second `op 0x89`
+  (`0x801B8898`), outro `op 0x95/0x96`, wait for mode `0xC`, then
+  `op 0x31` → exit.
+- The HP read is `op 0x8B` at `0x801B8700` with **type = 4**
+  (`func_80018080`: walk `D20C` for `actor+0x0C == 4` and `actor+0x0D == 0`,
+  read tag `0x2C`). So the script polls the **type-4 tail's** HP.
+
+Damage (`func_80028574`) with the live capture (`pe-m34-survival-connected.bin`):
+aya attack `rec+0x1E`=45, pistol atk 12, `wf&15`=2 shots →
+`power = (45/5 + 12)*scales[2]/100 = 12`; `defense = body+0x8C / shots`.
+
+| actor | type | HP | tag `+0x8C` def | dmg/hit | hits to reach 1,000,000 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| head | 3 | 1,000,120 | 200 | **1** | 120 (impossible with 40 rounds) |
+| tail | 4 | 1,000,080 | 6 | **9** | **9** (≈5 attack commands) |
+
+So the alligator is a **weak-point boss**: shoot the stationary tail ~9
+times and the script retires the pair and transfers to `M0359I`. This is the
+first concrete, finite M34 objective found; the prior “kite forever” framing
+was unwinnable by construction.
+
+### Pilot fix (`pc_port/tests/route_reward_sewer_pilot.h`)
+
+- `attack_tail` = tail alive (`body+0x10 > 1,000,000`), pistol loaded,
+  `heal_start/equip_start < 0`, `hp > 24`, `t2 ≤ 1.4M`, `h2 ≥ 400k`.
+- mode 1 (ATB full): `cancel_atb && !attack_tail` — the ATB is now
+  **committed on the type-4 target** (existing target scan already picks
+  type 4; Cross at `%16==3` and `%16==11`) instead of Circle-cancelled.
+- mode 0: fires/reloads on the tail when `t2 ≤ 900k` and `h2 ≥ 450k`.
+- Diagnostics: `M34_TAIL_HP`, `M34_TAIL_ATK`, `M34_TAIL_BROKEN`, and
+  `taildmg=`/`headhp=` on the 30f `M34_PILOT` line.
+
+### Story path
+
+- Supply45 (**ended/killed**, `/tmp/pe-m34-pilot-supply45.log`): the
+  latch-suspend fix changed nothing — 4 heals landed, hp36@64980, died
+  ~65310 (hp13) → `A8001048`@66000 → `A8000148`. Boss HP untouched. Never
+  `0x80`. Confirms the structural (not micro-tuning) diagnosis above.
+- Supply46 PID **1507185** → `/tmp/pe-m34-pilot-supply46.log`
+  (`PE_ROUTE_REWARD_PILOT=1`, `PE_ROUTE_FRAMES=100000`), launched from the
+  repo root (needs `local/pe_disc1.path`). Live. Not at `0x80`.
+  Success signal: `M34_TAIL_HP … dmg=` rising → `M34_TAIL_BROKEN` → the
+  second `op 0x89` / outro / `M0359I`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-17: latch survives ATB flicker; supply45 (4 heals, died 65310)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply44 (**ended**, `/tmp/pe-m34-pilot-supply44.log`): best run yet —
+  **4 heals landed** (8→38@63000; 24→54@63810; 14→44@64230; 6→36@64980),
+  first run still in `A8003248`@65000. Died ~65310 (hp13, h2≈139k) →
+  soft-fail `A8001048`@66000. Never `0x80`.
+- Root: latched stuck-break disarmed within ~15f both times (65097→65115,
+  65216→~65230) with no mode print, no heal, no band exit, no 300u escape.
+  Cause: ATB-full `mode=1` flicker between 30f prints — the old code reset
+  the latch on ANY `mode!=0`/heal frame, while the Circle-cancel itself
+  worked. Aya then vibrated pinned (FF3F/FFCF) while the head closed.
+- Fix in `route_reward_sewer_pilot.h`: latch now **suspends, not resets** —
+  only band exit or 300u net escape clears `w_break`; `mode/heal` frames
+  only pause the override and the window (`w_t0=0`). ATB-cancel and heal
+  nav untouched (heal/equip blocks overwrite mask downstream anyway).
+  Rebuilt `pe-route-boot-day2-tests`.
+- Supply45 PID **1494113** → `/tmp/pe-m34-pilot-supply45.log`
+  (`PE_ROUTE_REWARD_PILOT=1`, `PE_ROUTE_FRAMES=100000`). Live. Not at `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-17: pocket-margin + windowed stuck-break; supply44 (4 heals, died 65310)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply43 (**ended**, `/tmp/pe-m34-pilot-supply43.log`): heals 1–3 all
+  landed (hp8→38@63030; hp7→37@63360; hp18→48@64020). Then 31-dmg hit
+  hp48→17@64050 at h2≈1.9M (ranged), PE starved (pe=7/13), soft-fail
+  `A8001048`@65000 → `A8000148`. Never `0x80`.
+- Root (new, precise): 200f+ pin @(-796,-399) 63450–63660, pads flickering
+  FF3F/FFCF every frame, head closing h2 1.75M→303k, hit hp37→18@63690.
+  Two defects: (1) `az=-399` sat **1u above the old ±400 Z-pocket trigger**,
+  so the east-dominant break never armed and want stayed (1800,-2400) into
+  the east wall; (2) the anchor-reset stuck detector never fired — shove/
+  slide ≥25u kept resetting `stuck_n` (no `M34_STUCK_BREAK` 63391–63970).
+- Fix in `route_reward_sewer_pilot.h`: all Z-pocket triggers ±400 → **±350**
+  (matches stuck band + `z_clear` + ATB-cancel; removes the 350–400 deadband
+  where Aya neither breaks center nor shoots); stuck detector is now a
+  **windowed net-displacement** latch (50f window, <120u → latched cardinal
+  cycle until 300u net escape; oscillation cannot reset it). Rebuilt
+  `pe-route-boot-day2-tests`.
+- Supply44 PID **1474936** → `/tmp/pe-m34-pilot-supply44.log` — **4 heals**,
+  alive in `A8003248`@65000, died ~65310 (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.62: stuck pad-cycle + hug heal floor; supply43 live
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply42 (**340199**) reached **`A8003248`**@63000; early kite cleared
+  north→south better than supply41; heals to hp54 / hp39. Still died pinned
+  @(-749,+412) pad=FFBF → `A8000148` mode=-1@66000. Never `0x80`.
+  Killed **340199**.
+- Fix: when immobile >40f in wall/Z-pocket bands, cycle raw R/U/L/D pads
+  (`M34_STUCK_BREAK`); critical heal hug floor `hp≤8` now `h2≥20k` (was
+  50k — pe=59 starved at h2=24k). Rebuilt `pe-route-boot-day2-tests`.
+- Supply43 PID **351295** → `/tmp/pe-m34-pilot-supply43.log`
+  (`PE_ROUTE_REWARD_PILOT=1`, `PE_ROUTE_FRAMES=100000`). Live. Not at `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.61: east-wall Z-pocket west+center; supply42 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply41 (**331404**) reached **`A8003248`**@63000; heals 8→38@63000 and
+  7→37@63360. Soft-fail `A8001048`@64000. Never `0x80`. Killed **331404**.
+- Root: east-dominant Z-pocket (`want_x=2400`) cleared west→east to
+  **x≈-747**, then camera-mapped pad=FFBF pinned against the east wall in
+  the north pocket @(-747,+735) for ~400f while the head closed.
+- Fix: when `ax>=-1000` and `|az|≥400`, push **west + strong center Z**
+  (`want_x=-1200`, `want_z=±2400`) instead of further east. Rebuilt
+  `pe-route-boot-day2-tests`.
+- Supply42 PID **340199** → `/tmp/pe-m34-pilot-supply42.log` — longer
+  survival then east-wall FFBF pin (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.60: east-dominant Z-pocket + !can_heal shoot; supply41 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply40 (**321169**) re-proved path: m31 heal → `A8003148` →
+  **`A8003248`**@63000. Heals landed (8→38@63000; 7→37@63600;
+  18→48@64050). Soft-fail `A8001048`@65000. Never `0x80`. Killed **321169**.
+- Root: Z center-break used ±2400 with X capped to 800 → AimPad Z-wins and
+  froze on the `|az|≈400` band (south @(-765,-411) then north
+  @(-746,+400) pad=FF9F). After PE spent, `flee_floor=3.2M` also blocked
+  all Cross → heal→pocket-oscillate→chip until pe<60.
+- Fix in `route_reward_sewer_pilot.h`: Z-pocket sites are east-dominant
+  (`want_x=2400`, `want_z=±600`); don't dig deeper into `|az|≥400`;
+  `!can_heal` shoot floor lowered to 1.2M with Z-clear gate. Rebuilt
+  `pe-route-boot-day2-tests`.
+- Supply41 PID **331404** → `/tmp/pe-m34-pilot-supply41.log` — east-wall
+  north-pocket pin (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.59: west-wall skips Z center-break; supply40 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply39 (**312075**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Heal1 landed
+  (8→38@63000; `HEAL_STARVE` is item4=0 noise — PE meter heal). Soft-fail
+  `A8001048`@64000 → `A8000148`. Never `0x80`. Killed **312075**.
+- Root: ungated Z center-break at west wall (`ax<=-2100`) capped
+  `want_x` 2000→800; AimPad(800,-2400)→pad=FF7F Left. Supply38's
+  `want_x=2000` cleared west to x≈-930; supply39 hugged @(-2176,460)
+  pad=FF3F h2≈63k and soft-failed before heal2.
+- Fix in `route_reward_sewer_pilot.h`: all Z center-break sites now also
+  require `ax>-2100` (west corridor keeps pure-east / uncapped X).
+  Rebuilt `pe-route-boot-day2-tests`.
+- Supply40 PID **321169** → `/tmp/pe-m34-pilot-supply40.log` —
+  Z-pocket oscillation after heals (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.58: Z-wall center-break ungated; supply39 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply38 (**306693**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Heals 1–4 landed
+  (8→38@63000; 7→37@63600; 9→39@64050; 18→48@64860). Soft-fail
+  `A8001048`@66000 → `A8000148`. Never `0x80`. Killed **306693**.
+- Root: east-wall `want_z=(az>=hz)?2400` dug further north to
+  **(-735,771)**; polarity (`hz>=az`) blocked center-break because head
+  was south, and `h2>=1M` never armed (freeze at h2≈984k→434k) —
+  pad=FF9F freeze while head closed.
+- Fix in `route_reward_sewer_pilot.h`: any `|az|≥400` with `h2≥200k`
+  forces center-break ±2400 (no polarity / 1M gate) in flee, east-wall
+  re-apply, and corridor final pocket. Rebuilt
+  `pe-route-boot-day2-tests`.
+- Supply39 PID **312075** → `/tmp/pe-m34-pilot-supply39.log` —
+  west-pocket hug after heal1 (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.57: flee-under-ATB-cancel + strong Z break; supply38 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply37 (**299297**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Heal1 hp8→38@63030.
+  Heal2/3/4 all landed (7→37@63690; 9→39@64170; 18→48@64920). Soft-fail
+  `A8001048`@66000 → `A8000148`. Never `0x80`. Killed **299297**.
+- Root: (1) Circle-cancel pulsed `pad=0xDFFF` only — 7/8 frames `FFFF`
+  froze mid-flee south @(-787,-763) then north @(-735,767) while head
+  closed; (2) Z center-break ±600 lost to camera AimPad (east+north →
+  pad Down) and dug az -411→-763.
+- Fix in `route_reward_sewer_pilot.h`: (1) while canceling ATB, keep
+  flee `AimPad` under Circle (`mask&=0xDFFF` on alternate frames);
+  (2) Z-pocket center-break ±2400 with |X| capped so AimPad Z wins.
+  Rebuilt `pe-route-boot-day2-tests`.
+- Supply38 PID **306693** → `/tmp/pe-m34-pilot-supply38.log` —
+  north-pocket freeze after heal4 (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.56: ATB cancel-while-flee + Z reclamp; supply37 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply36 (**287404**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Heal1 landed
+  (hp8→38@63002). Heal2 **never landed**. Soft-fail
+  `A8001048`@64000. Death @63379 hp=0 @(-793,-746). Never `0x80`.
+  Killed **287404**.
+- Root: (1) east-wall branch `ax≥-1100 && hx<ax` overwrote the ±400
+  Z center-break with raw `z_away=-1200` @ax=-983 → dug south to
+  az=-772; (2) AT naturally hit 9000 → mode=1@63160 while still
+  below `flee_floor` (h2≈3.19M < 3.2M); Circle-cancel was gated on
+  `h2≥500k` so keep-fire froze mid-flee → long-range hit hp38→17 →
+  heal2 starved → death.
+- Fix in `route_reward_sewer_pilot.h`: (1) Circle-cancel whenever
+  `h2 < flee_floor` or `|az|≥400` (Z-pocket); keep-fire only past
+  `flee_floor` and clear of Z walls; (2) re-apply Z center-break
+  after the east-wall `want_z` overwrite. Rebuilt
+  `pe-route-boot-day2-tests` via `/tmp/pe-tools` make.
+- Supply37 PID **299297** → `/tmp/pe-m34-pilot-supply37.log` —
+  Circle-only cancel froze N/S pockets despite heals 2–4 (see CURRENT).
+  Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.55: no-shoot-while-flee + south pocket; supply36 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply35 (**275575**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. West-pin fix held
+  (east kite after heal1; no FFCF west freeze). Both PE heals landed
+  (heal1 hp8→38@63002; heal2 hp7→37@63526). Soft-fail
+  `A8001048`@64000. Death @63749 hp=0. Never `0x80`. Killed **275575**.
+- Root: (1) `!can_heal` Cross @h2≈2.8M opened ATB mode=1@63160 while
+  still below `flee_floor` → froze @(-791,-598), long-range hit
+  hp38→7; (2) east kite dug south to az≈-613 (old Z-clamp only at
+  ±700 + head-north polarity blocked push-to-center) → south pocket
+  @(-808,-613) through heal2 → chip hp37→16 → head close → death.
+- Fix in `route_reward_sewer_pilot.h`: (1) never Cross/reload while
+  `h2 < flee_floor`; (2) Z wall flip ±700→±400; when `h2≥1M` break
+  Z-pocket toward arena center even if that closes slightly on head.
+  Rebuilt `pe-route-boot-day2-tests`.
+- Supply36 PID **287404** → `/tmp/pe-m34-pilot-supply36.log` —
+  ATB freeze mid-flee + south pocket; heal2 starved (see CURRENT).
+  Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.54: west-wall hug priority; supply35 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply34 (**259441**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Both PE heals
+  landed again (heal1 hp8→38@63030; heal2 hp19→49@63420). Soft-fail
+  `A8001048`@64000 → `A8000148`. Never `0x80`. Killed **259441**.
+- Root: `h2<400k` both-axis away overrode west-wall east escape —
+  @63420 ax=-2689 hx=-2073 h2=388k → `x_away=-1500` / `z_away=+1200`
+  (NW into walls) pad=**FFCF** freeze @-2825,775 while head closed
+  (h2→24k; hp49→26).
+- Fix in `route_reward_sewer_pilot.h`: west-pinned `ax≤-2100` always
+  keeps east (+ Z-away with north/south wall flip); hug floor only
+  when not west-pinned. Rebuilt `pe-route-boot-day2-tests`.
+- Supply35 PID **275575** → `/tmp/pe-m34-pilot-supply35.log` —
+  south-pocket ATB freeze after both heals (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.53: east-wall polarity; supply34 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply33 (**247052**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. East-rotate fix
+  held: heal1 **landed** (hp8→38@63030); east kite @x≈**-1093**
+  h2≈3.0M. Heal2 **also landed** (hp10→40@63540). Soft-fail
+  `A8001048`@64000 → `A8000148`. Never `0x80`. Killed **247052**.
+- Root: unconditional east-wall bounce `ax≥-1100 → want_x=-400`
+  reversed east flee while head was still west (hx≈-2162@63090;
+  hx≈-1293 h2=167k after heal2) → pad Left into the charge
+  (hp38→10@63360; heal2 chip hp40→21@63600).
+- Fix in `route_reward_sewer_pilot.h`: (1) east-wall bounce only when
+  `hx≥ax` (west is away); else keep east + Z-away; (2) both-axis hug
+  flee widened `h2<150k` → `h2<400k`. Rebuilt
+  `pe-route-boot-day2-tests`.
+- Supply34 PID **259441** → `/tmp/pe-m34-pilot-supply34.log` —
+  west-wall hug into NW corner after both heals (see CURRENT).
+  Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.52: east-rotate + heal2 ATB; supply33 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply32 (**236248**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Heal1 landed
+  (hp8→38@63030). East kite reached x≈**-1210** h2≈912k then pad
+  **FF7F Left** walked west/south → hit hp38→17@63180. Heal2 **starved**
+  on ATB: @63240 hp17 pe64 at=2652 h2=2.0M; @63360 hp13 at=8892
+  h2=26k (108 short of gate 9000). Soft-fail `A8001048`@64000 →
+  `A8000148`. Never `0x80`. No FFDF hug this run. Killed **236248**.
+- Root: (1) tail-rotate skip was `ax≤-1500` only — at ax=-1210 /
+  hx=-2162 / want_x=+952 the rotate flipped east→(-80,-952) and
+  camera AimPad mapped it Left; (2) east bounce needed `h2<900k` so
+  missed at h2=912k; (3) reduced ATB (`2500`) only for `hp≤12`, so
+  chip-damage heal2 at hp13–17 waited for 9000 until head closed.
+- Fix in `route_reward_sewer_pilot.h`: (1) never reverse east flee when
+  `want_x>0 && rx≤0 && (hx<ax || ax≤-1100)`; (2) east bounce when
+  `ax≤-1200 && hx<ax` (no h2 gate) else `h2<1.5M`; (3) `atb_need=2500`
+  and closer h2 floor through `hp≤20`. Rebuilt
+  `pe-route-boot-day2-tests`.
+- Supply33 PID **247052** → `/tmp/pe-m34-pilot-supply33.log` —
+  east-wall bounce into boss after both PE heals (see CURRENT).
+  Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.51: Z-clamp polarity flip; supply32 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply31 (**220778**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Heal1 landed
+  (hp8→38@63030). East kite held @x≈**-1520** h2≈2.2M until head
+  charged. @63330 h2=817k pad=FF3F; @63360 **FFDF freeze**
+  @-1361,-702 h2=20k (ax drifted past bounce `-1400`). Heal2 **armed
+  and landed** (floor 100k worked: `LOOT_PILOT_HEAL`@63407 h2=116756 →
+  hp10→40@63570) but stayed hugged (h2≈70–155k) → soft-fail
+  `A8001048`@64000 → `A8000148`. Never `0x80`. Killed **220778**.
+- Root: supply30 Z-clamp guard had **inverted polarity** —
+  `az≤-700 && want_z<0 && hz≥az` flipped south-flee **north into** a
+  northern head. Bounce also dropped once `ax>-1400`.
+- Fix in `route_reward_sewer_pilot.h`: (1) Z-clamp polarity corrected
+  (`hz≥az` for south push / `hz≤az` for north push) and skipped when
+  `h2<200k`; (2) east bounce widened to `ax≤-1200`; (3) `h2<150k`
+  forces both-axis away-from-head. Rebuilt `pe-route-boot-day2-tests`.
+- Supply32 PID **236248** → `/tmp/pe-m34-pilot-supply32.log` —
+  east-rotate + heal2 ATB starve (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.50: M34 east Z-clamp; supply31 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply30 (**192206**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Heal1 landed
+  (hp8→38@63030). Tail-rotate skip **held** east kite @x≈**-1520**
+  h2≈2.2M. Head charged; `az≤-700` Z-clamp flipped want_z south→north
+  **into** head → pad **FFDF** freeze @-1520,-714; hp38→10. Heal2
+  starved @63420: pe88 **at=9000** but h2=173770 < critical floor 250k
+  and west-pin emergency needed `ax≤-2100`. Soft-fail `A8001048`@64000
+  → `A8000148`. Never `0x80`. Process ended at frame-limit.
+- Fix in `route_reward_sewer_pilot.h`: (1) arena Z clamps only when they
+  do not reverse Z-away from head; (2) east-corridor bounce
+  `ax≤-1400 && h2<900k` → strong east + Z-away; (3) critical heal
+  `hp≤12` h2 floor **100k**; west/east emergency `ax≤-1400 &&
+  h2≥100k`. Rebuilt `pe-route-boot-day2-tests`.
+- Supply31 PID **220778** → `/tmp/pe-m34-pilot-supply31.log` —
+  Z-clamp polarity + hug (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.49: M34 post-heal kite/ATB; supply30 (failed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply29 (**187674**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Heal1 **landed**
+  (`LOOT_PILOT_HEAL`@62820 hp8→38@63030). Post-heal kite: east to
+  x≈**-1668** then **tail-rotate** of flee flipped want east→west/south
+  → back to x≈**-2116** z≈**-761**. Head slam hp38→7@63210. Second heal
+  starved: @63240 hp7 pe64 h2=2.0M but **at=2652<9000**; by
+  at=8892@63360 head closed (h2=42k, hp3). Soft-fail `A8001048`
+  mode=`0xFFFFFFFF`@64000 → `A8000148`. Never `0x80`. Killed **187674**.
+- Fix in `route_reward_sewer_pilot.h`: (1) skip flee tail-rotate when it
+  would reverse an east escape at `ax≤-1500`; (2) critical PE heal
+  (`hp≤12`) ATB gate **2500** (else 9000). Rebuilt
+  `pe-route-boot-day2-tests`.
+- Supply30 PID **192206** → `/tmp/pe-m34-pilot-supply30.log` — east
+  Z-clamp into head + heal2 h2 floor (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.48: M34 hard-Up west-pin; supply29 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply28 (**179062**) re-proved path: m31 heal → `A8003148` →
+  `A80031C8` → **`A8003248`**@63000. Supply27 heal floors **worked**:
+  `LOOT_PILOT_HEAL`@62820 hp8→38@63030; second heal@63183 hp19→49@63360.
+  But hard-pad **Up (FFEF)** drove west **-2344→-2839**, then pinned
+  forever @x=**-2839** pad=FFEF while head closed (-2048→-2753). Soft-fail
+  `A8001048` mode=`0xFFFFFFFF`@64000 → `A8000148`. Never `0x80`.
+  Killed **179062**.
+- Root: pad Up/Down are camera-relative — hard Up mapped **west into the
+  wall**, not world-Z strafe. Also `az≥700` north-clamp flipped Z-away
+  toward the head at pocket Z≈780 when applied before west override.
+- Fix in `route_reward_sewer_pilot.h`: drop hard-pad; west bounce **after**
+  az clamps; at wall (`ax≤-2500`) / head-east corridor keep **strong east
+  + Z-away** via AimPad only. Rebuilt `pe-route-boot-day2-tests`.
+- Supply29 PID **187674** → `/tmp/pe-m34-pilot-supply29.log` — post-heal
+  kite/ATB starve (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.47: M34 heal-cancel bug; supply28 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply27 (**172492**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. Entered M34 hp27 →
+  west pocket x≈**-2344**; first contact `HEAL_STARVE`@62820 hp8
+  **h2=320450** pe=87 at=9000 — **no PE heal ever armed**. Pad stayed
+  **FFDF (Right)** while head sat east (hx≈-2243). Soft-fail
+  `A8001048` mode=`0xFFFFFFFF`@64000 → `A8000148`. Never `0x80`.
+  Killed **172492**.
+- Root causes: (1) AimPad camera-rotated lateral `want` into Right →
+  east-into-boss; (2) emergency heal gate h2≥400k never met at starve
+  h2=320k; (3) **same-frame cancel** `heal_start=-1` when h2<600k made
+  the 400k–599k emergency window impossible.
+- Fix: closer heal floors + cancel only h2<80k/hp>8; hard Up/Down (later
+  proven wrong — see CURRENT). Supply28 tested that heal fix.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.46: M34 east-into-boss; supply27 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply26 (**166836**) re-proved path: m31 `HEAL_DONE`@58044 →
+  `A8003148` → `A80031C8` → **`A8003248`**@63000. PE heal1 hp8→38@63090
+  at x≈**-2297**. Pure-east flee ran **into head** (hx east of aya,
+  h2~0.7–1.1M) → hp38→17@63180; pe rebuilt to 64 but second heal blocked
+  (h2~660k < 1.5M gate). Soft-fail `A8001048` mode=`0xFFFFFFFF`@64000 →
+  `A8000148`. Never `0x80`. Killed **166836**.
+- Fix in `route_reward_sewer_pilot.h`: (1) west pin at **ax≤-2100**: if
+  head is east/close, **strafe Z first** then east (not pure-east into
+  boss); (2) emergency second heal when hp≤20 + west-pinned + h2≥400k;
+  (3) ATB Circle-out threshold matched to -2100. Rebuilt
+  `pe-route-boot-day2-tests`.
+- Supply27 PID **172492** → `/tmp/pe-m34-pilot-supply27.log` —
+  heal-starve soft-fail (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.45: M34 ATB Up-freeze; supply26 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. **Never observed live `0x80` / `M0036I`.**
+
+### Story path
+
+- Supply25 (**153541**) reached **`A8003248`**@62572; PE heal1
+  hp8→38@63090. East bias held x≈**-2316** (not -2700). Then
+  `!can_heal` ATB mode=1 pressed **Up forever** (`target!=selected` →
+  pad FFEF/FFFF) from f=63270→99990; pe frozen ~56; frame budget
+  exhausted. FAIL milestone 55 (item7 already spent earlier — expected
+  miss). Never soft-fail, never `0x80`. Process exited naturally.
+- Fix in `route_reward_sewer_pilot.h`: (1) ATB: Circle-out when
+  west-pinned + `!can_heal`; else Cross when `!can_heal` / target match /
+  nav≥3 (Down toward higher target, not Up-only); (2) pure-east flee
+  `want_x=2000, want_z=0` at ax≤-2300 so AimPad X wins over Z. Rebuilt
+  `pe-route-boot-day2-tests`.
+- Supply26 PID **166836** → `/tmp/pe-m34-pilot-supply26.log` —
+  east-into-boss soft-fail (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.44: M34 west-flee root cause; supply25 (exited)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply24 (**147625**) re-proved full path: m31 `HEAL_DONE`@58044 →
+  `A8003148`@59000 → `A80031C8` → **`A8003248`**@63000. Two mid-M34 PE
+  heals (hp8→38@63150; hp17→47@63510). Then pinned at **x≈-2700** —
+  flee-from-head from ax≈-2300 drove further west (bias only at -2700).
+  After heal2, hp47→16 in ~90f; `!can_heal` + hp≤24 Circle-cancelled all
+  ATB → soft-fail `A8000148` mode=`0xFFFFFFFF`@65000. Never `0x80`.
+  Killed **147625**.
+- Fix in `route_reward_sewer_pilot.h`: (1) west escape from **ax≤-2300**
+  toward arena center (`want_x=1000`, forced Z-strafe — do not let |Z|
+  dominate into the corner); (2) heal-spent fire earlier (h2≥400k / %4)
+  + desperate shots hp>12 h2≥700k; (3) when `!can_heal` keep ATB Cross
+  instead of Circle-cancel at hp≤24. Rebuilt
+  `make pe-route-boot-day2-tests`.
+- Supply25 PID **153541** → `/tmp/pe-m34-pilot-supply25.log` —
+  ATB Up-freeze (see CURRENT). Never `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.43: M34 wall-pin + heal-spent fire; supply24 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply23 (**142891**) re-proved path through M34: m31
+  `HEAL_DONE`@58044 → `A8003148` → `A80031C8` → **`A8003248`**@63000.
+  Two mid-M34 PE heals landed (hp8→38@63120; hp17→47@63450). Then
+  pinned at **pos=-2830** (west wall) while head closed h2≈1.9M→0.16M;
+  `!can_heal` suppressed all ATB Cross → pure kite → hp47→26→2 →
+  soft-fail `A8000148` mode=`0xFFFFFFFF`@65000. Killed **142891**.
+  Never `0x80`.
+- Fix in `route_reward_sewer_pilot.h`: (1) bias flee off arena walls
+  (ax≤-2700 / ≥-1100, az≥700 / ≤-700) + prefer wall-strafe; (2) when
+  heal spent but hp>24, still Cross at h2≥600000 (finishing damage).
+  Rebuilt `make pe-route-boot-day2-tests`.
+- Supply24 PID **147625** → `/tmp/pe-m34-pilot-supply24.log` — reached
+  M34, two PE heals, west-pin death (see CURRENT).
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.42: M34 reached; post-heal kite; supply23 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply22 (**137883**) proved the full post-heal → m32 → **M34** path:
+  `HEAL_DONE`@58044 → `HEAL_EXIT` Circle → **`A8003148`**@58560 →
+  `A80031C8` → **`A8003248`**@63000. Mid-M34 PE heal worked
+  (`LOOT_PILOT_HEAL`@62931 hp8 → hp38@63120 via id0→8→41). Then
+  re-hugged boss at h2≈1.9M, hp38→17, no second heal (PE spent,
+  item7=0) → soft-fail `A8001048` mode=`0xFFFFFFFF`@64000. Killed
+  **137883**. Never `0x80`.
+- Fix: widen M34 flee floor to 3.2M when heal unavailable / hp≤24;
+  stop ATB Cross unless hp>24 **and** can_heal; Circle-cancel ATB
+  sooner; log `LOOT_PILOT_HEAL_STARVE`. Rebuilt
+  `source /tmp/pe-tools/env.sh && make pe-route-boot-day2-tests`.
+- Supply23 PID **142891** → `/tmp/pe-m34-pilot-supply23.log` — reached
+  M34, two PE heals, wall-pin death (see CURRENT).
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.41: post-DONE exit site; supply22 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply21 (**134001**) proved post-heal **menu exit works**:
+  `HEAL_DONE`@58044 → `DFFF` id1→id0→clear → walk → **`A8003148`**@58560
+  (`EQUIP_QUEUED`@58917). Then m32 battle re-armed `LOOT_PILOT_HEAL`@59766
+  with **item7=0** (PE heal); cancel-only inside
+  `RoutePilotItemHealMask` starved PE nav → Circling id0 → soft-fail
+  `A8001048` mode=`0xFFFFFFFF`@61000. Killed **134001**. Never M34 /
+  `A8003248` / `0x80`.
+- Fix split: (1) field post-consume exit is **call-site cancel-only**
+  (`LOOT_PILOT_HEAL_EXIT`, `DFFF` on 28f cadence) — do not navigate;
+  (2) restore `RoutePilotItemHealMask` `!item7` PE/menu nav for m32.
+- Supply22 PID **137883** → `/tmp/pe-m34-pilot-supply22.log` — reached
+  M34 then died (see CURRENT).
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.40: post-heal cancel-only; supply21 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply20 (**129631**) healed again on m31 `A80030C8`:
+  `LOOT_PILOT_HEAL`@57927 → `HEAL_DONE`@58044 (hp33→53, item4=0). Then
+  post-consume exit: id1 `DFFF` → id0 → Down+Cross opened **id=8**;
+  `HEAL_MENU` id=8 pad=`BFFF` (Cross) through f=64000+ — never focus
+  clear / m32 / `A8003148` / `A8003248`. Killed **129631**.
+- Root cause: no-item7 exit path navigated root (Down on id0) and Crossed
+  into id=8; Cross does not dismiss that submenu. `DFFF` had already
+  cancelled id1→id0.
+- Pilot fix (too broad): cancel-only `DFFF` inside
+  `RoutePilotItemHealMask` for all `!item7`. Rebuilt via cmake make.
+- Supply21 PID **134001** → `/tmp/pe-m34-pilot-supply21.log` — exited to
+  `A8003148`, then PE-heal starved (see CURRENT).
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.39: post-heal Circle exit; supply20 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply19 (**125239**) **healed successfully** on m31 `A80030C8`:
+  `LOOT_PILOT_HEAL`@57927 → `HEAL_PULSE` → `HEAL_MENU` id0→1→2 →
+  `HEAL_DONE`@58044 (hp33→53, item4=0). Then stuck: Items focus `id=1`
+  (`focus=800A2520`), `LOOT_PILOT_DISMISS` pad=`FFFF` through f=62400+ —
+  never m32/`A8003148`/`A8003248`. Killed **125239**.
+- Root cause: clearing `heal_start` at `HEAL_DONE` handed the pad to
+  dismiss; Cross on `id=1` re-opens Use and never exits the menu.
+- Pilot fix in `route_reward_sewer_pilot.h`: (1) keep heal ownership after
+  item consume until focus is gone (Circle out via
+  `RoutePilotItemHealMask`); (2) dismiss Circle-only on submenu ids
+  1/2/3/5/7/8. Rebuilt via direct gcc (`/tmp/pe-tools/.../gcc`).
+- Supply20 PID **129631** → `/tmp/pe-m34-pilot-supply20.log` — healed,
+  then stuck id=8 Cross (see CURRENT).
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.38: heal open pulse; supply19 (killed)
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply18 (**119380**) repeated supply17: clear-patch `LOOT_PILOT_HEAL`
+  f=57927 (`pos≈37,1199`, item7, hp33), then pad=`FFFF` through f=84000+ —
+  never `HEAL_MENU`/`HEAL_DONE`, never m32/`A8003248`. Killed **119380**.
+- Dismiss-hold alone was insufficient: focus stayed 0 (Items never opened).
+  Also `d1a0` bit2 chatter routed the m31 block into Circle-only and starved
+  Triangle on those frames.
+- Pilot fix: (1) heal/equip own the pad even when `d1a0&4`; (2) until focus,
+  alternate longer Triangle holds with Circle clears + `LOOT_PILOT_HEAL_PULSE`
+  diagnostics. Rebuilt via direct gcc (cmake libarchive still broken).
+- Supply19 PID **125239** → `/tmp/pe-m34-pilot-supply19.log` — heal path
+  later succeeded; post-heal dismiss stuck (see CURRENT).
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.37: heal dismiss hold; supply18 live
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply17 (**113583**) cleared the door wedge: staged walk reached clear
+  patch, `LOOT_PILOT_HEAL` at f=57927 (`pos≈37,1199`, item7, hp33). Then
+  idled pad=`FFFF` ~f=58000..82000+ — never `HEAL_MENU`/`HEAL_DONE`, never
+  m32/`A8003248`. Killed **113583**.
+- Root cause: m31 field Items opens under `mode=9`+focus; the loot
+  `LOOT_PILOT_DISMISS` early-return ate the menu before
+  `RoutePilotItemHealMask` ran (same failure class as supply15 after arm).
+- Pilot fix: skip mode=9 dismiss while `heal_start>=0` or `equip_start>=0`;
+  re-pulse Triangle every 28f until focus appears. Rebuilt via direct gcc.
+- Supply18 PID **119380** → `/tmp/pe-m34-pilot-supply18.log`
+  (`PE_ROUTE_REWARD_PILOT=1`, `PE_ROUTE_FRAMES=100000`). Not at `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.36: heal-wait X-stage; supply17 live
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply16 (**105522**) reached m31 `A80030C8` with item7 after m334, then
+  wedged at door spawn `(751,2502)` on `LOOT_PILOT_HEAL_WAIT` pad=`FFBF`
+  (~f=57600..100000) — never `HEAL_MENU`/`HEAL_DONE`, never m32/`A8003248`.
+  FAIL milestone 55. Battle-room `LOOT_PILOT_HEAL` at f=51273/52951 on
+  `A80023C8`/`A8002448` was incidental (cleared on leave).
+- Root cause: HEAL_WAIT aimed `(0,1000)` diagonally from the alcove; camera
+  kept only Down held into the wall. Clear-patch arm gate itself was fine.
+- Pilot fix: stage walk — if `az>1300 && abs(ax)>40` then `tx=0,tz=az`
+  (center X), else `tx=0,tz=1000`. Same staging on `HEAL_ABORT`. Log now
+  prints `tx=`. Rebuilt via direct gcc (cmake libarchive broken).
+- Supply17 PID **113583** → `/tmp/pe-m34-pilot-supply17.log`
+  (`PE_ROUTE_REWARD_PILOT=1`, `PE_ROUTE_FRAMES=100000`). Not at `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.35: heal clear-patch gate; supply16 live
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply15 (100294) reached m31 `A80030C8` with item7 but idled at return
+  door `(1020,2615)` pad=FFFF after `LOOT_PILOT_HEAL` ~f=57515 — no
+  `HEAL_MENU`/`HEAL_DONE`, never m32/M34. Killed **100294**.
+- Root cause: heal armed on the m334→m31 transition frame while ax/az were
+  still prior-room coords (`az<2000` gate); spawn then snapped to the door.
+- Pilot fix: arm only near clear patch `abs(ax)<=80 && abs(az-1000)<=200`;
+  abort+walk if heal has no focus off-clear after 40f (`LOOT_PILOT_HEAL_ABORT`).
+- Supply16 PID **105522** → `/tmp/pe-m34-pilot-supply16.log`
+  (`PE_ROUTE_REWARD_PILOT=1`, `PE_ROUTE_FRAMES=100000`). Not at `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.34: m31 door clear + item7; supply15 live
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply13 failed: m32 battle heal stall `id2@row0` Cross, HP17, no M34
+  (killed **88419**). Oracle Use is on **m31 field** `A80030C8`, not m32.
+- Supply14 (95845) held at m334-return door `(1020,2615)` mode=9 with item7;
+  AT gate never armed heal. Killed; pilot now walks to `(0,1000)` then opens
+  Items (no AT requirement); 28f cadence + `use_armed` Circle cancel.
+- Supply15 PID **100294** → `/tmp/pe-m34-pilot-supply15.log`. Not at `0x80`.
+
+### Title / FMV
+
+- Unchanged: frontier **`0x801911C0`**; canary `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.33: item7 Use row2 fix; supply13 live
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply12 **failed** on item7 Use: m32 `A8003148` ~f=59142..70000+ stuck
+  `LOOT_PILOT_HEAL_MENU` id1↔id2 Cross toggle; HP frozen 17; never
+  `A8003248`; no `ROUTE_EXIT` (killed PIDs 77243/77201).
+- Root cause (vs SUPPLY_MENU oracle 61020..61170): Cross on id1@row0 opens
+  Use@row1 (cancel toggle). Correct: **Down to row2** (slot4 item7) → Cross
+  → id2@row0 → Cross (HP12→45). supply11 Up+Cross on id2@row0 was also wrong.
+- Pilot fix in `route_reward_sewer_pilot.h`; m31 field heal gate `hp<45`.
+- Supply13 running PID **88419** → `/tmp/pe-m34-pilot-supply13.log`
+  (`PE_ROUTE_FRAMES=100000`).
+
+### Title / FMV
+
+- Unchanged: body 90064→8F468→merge→present; frontier **`0x801911C0`**
+  continue; canary `0x801911F8`. Next cut: title loop at `0x801911C0`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.32: title 8F468 body; supply12 in sewers
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply12 running (`/tmp/pe-m34-pilot-supply12.log`): theater + sewers;
+  ~f=56000 in m0334. Item7 Use Cross-on-id=2 (no Up). **Later failed:**
+  m32 heal menu id1↔id2 forever.
+
+### Title / FMV
+
+- Ported `func_8018F468` + `func_80192FE8` + `func_8019319C`; one loop body
+  (90064 → 8F468 → list merge → present). Pad-seeded frontier **`0x801911C0`**
+  continue. Canary still `0x801911F8`. Test
+  `B54KR_801909B4_title_input_pump_with_pad` PASS.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.31: supply11 55/57; item7 Use row fix
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply11: through sewers + item7 pickup; **MISS** Use (pilot Up on id=2
+  row1 → stuck row0 Cross) and pistol. 55/57. Log supply11.
+- Fix: Cross immediately on Use id=2. Supply12 → `/tmp/pe-m34-pilot-supply12.log`.
+
+### Title / FMV
+
+- `func_80190064` ported; frontier **`func_8018F468`**.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.30: m0018 diary clear; title → 8018F468
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply11 theater carve-out: m0018 diary completed → **m0319i**
+  (`A80614C8` ~f=39000). Log `/tmp/pe-m34-pilot-supply11.log`. Next: Eve
+  rehearsal → sewer → M34 → `0x80`.
+
+### Title / FMV
+
+- Ported **`func_80190064`** (+ `func_8003FFCC`); pad-seeded title frontier
+  advanced to **`func_8018F468`**. Canary path still `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.29: m0018 diary; theater-field dismiss carve-out
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Supply10: mode=2 dismiss OK; walked m0012→m0020→**m0018** (~f=31000), then
+  mode=9+focus dismiss stole diary pads (stuck A8001448).
+- Fix: no mode=9 dismiss on theater field tokens (m0012/m0020/m0018/m0319).
+- Supply11 → `/tmp/pe-m34-pilot-supply11.log`.
+
+### Title / FMV
+
+- Frontier still **`func_80190064`** (383w overlay; `jal` after `3EB04`).
+  Next callees: `8018F468`. Canary: `0x801911F8`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.15: F434 cleared; M34 combat death / heal gate
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- Writer-snaps run (`/tmp/pe-m34-writer-snaps.log`): **no F434 / WeaponCallback
+  stop**. Aya kited through ~60330–60900, HP 35→14→0 at **f=60901**, then
+  frame-limit at 65000 (`story` collapsed after death). Milestone still 50/57.
+- F434 writer snapshots are the durable fix for the prior `known=0x32` /
+  clobbered `words[]` boundary.
+- New frontier: M34 **combat**. Heal never fired (`LOOT_PILOT_HEAL` absent);
+  gate required `h2>=1800000` while critical HP sat at ~1.3M. Pilot now
+  heals at `hp<=16` regardless of head range, fires denser mid/pocket.
+- Connected re-verify: `/tmp/pe-m34-pilot-heal-crit.log`. Not a win until
+  `story` leaves `0x6C` toward `0x80`.
+
+### Title / FMV
+
+- Frontier still `func_801909B4_title_loop_425DC` @ `0x801911F0`.
+  Opening FMV without skip-movie is live; skip remains on the connected
+  route.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.6: M34 pilot kite/reload; title cut before card pump
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete.
+
+### Story path
+
+- M34 pilot: no heal mid-charge; kite/fire; Cross-reload when empty.
+- Headless `--route-pad` present-hook fix so `g_frame` advances.
+- Verification run (`PE_ROUTE_REWARD_PILOT=1`, 61000 frames): Aya **moves**
+  in M34 (no longer frozen at -873), but stops at **f=60323** on
+  `PE_WeaponCallback` BOOTSTRAP_RET (`story=0x6C`, still m0034i). Not a
+  win; next is bind/allow that weapon callback or avoid the path.
+  Log: `/tmp/pe-m34-pilot-kite-reload.log`.
+
+### Title / FMV
+
+- Title present + `8018FBC0` + loop bank-flip live; frontier
+  `func_801909B4_title_loop_425DC` @ `0x801911F0` (calling `425DC` after
+  `42538` hits card-status BIOS stop — cut before it).
+- `B54KR_801909B4_prefix_effects_and_canary` → **PASS** after that cut.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.5: Title present + object alloc; frontier title loop
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. New Game reaches title setup without skip-movie; title
+main loop remains the named cut (or `--skip-opening-menu`).
+
+### Opening FMV / title
+
+- Ported `func_8018F2F4` (title-bank LoadImage/PutDrawEnv×2) and
+  `func_8018FBC0` (52-byte freelist title object).
+- `func_801909B4` after FMV/restore: `8F2F4` → VSync → SetDispMask(1) →
+  freelist seed → `8FBC0(1)` + callback `0x8019319C` → frontier
+  `0x801911C0` (`func_801909B4_title_main_loop`).
+  `--skip-opening-menu` returns New-Game after present + freelist (before
+  `8FBC0` / title loop).
+- Verified (`PE_TEST_FILTER` / `PE_DISC1_BIN`):
+  - `B54KR_801909B4_prefix_effects_and_canary` → **PASS** (frontier
+    title main loop)
+  - `B54KR_801909B4_dirty_repeat_and_alternate_cut` → PASS
+  - `B54KY_saved_bit_zero_skips_disc_prefix` → PASS
+  - `OPEN1_909B4_enters_fmv_without_skip_movie` → PASS
+  - `B54KY_192CE8_real_disc_issue_poll_and_boundary` → PASS
+- Still required: full FMV001 without continue budget; title main loop
+  (`80190064` / `8018F468` / …); drop route `PE_Port_SetSkipMovie(1)`;
+  XA; cold boot to `persist[74]=0x80`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.4: New Game enters real FMV without skip-movie
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. Opening FMV is reachable from `func_801909B4` without
+`PE_Port_SkipMovie`; title join is still a named cut / opening-menu skip.
+
+### Opening FMV / New Game
+
+- `func_801909B4`: Disc-1 saved bit → `90660` → `92CE8` → post-movie
+  env restore → title join `0x80191120` (`jal 0x8018F2F4`).
+  `--skip-movie` remains HOST_ADAPTED; `--skip-opening-menu` returns
+  New-Game from the title join after a real (or budgeted) FMV.
+- Verified (`PE_DISC1_BIN` + `PE_TEST_FILTER`):
+  - `OPEN1_909B4_enters_fmv_without_skip_movie` → **PASS**
+  - `B54KY_192CE8_real_disc_issue_poll_and_boundary` → PASS
+  - `B54KR_801909B4_prefix_effects_and_canary` → PASS (frontier
+    `func_8018F2F4`)
+- Still required: full FMV001 (~2077 frames) without continue budget;
+  translate or retire title `8018F2F4`; drop skip-movie from connected
+  route; XA; cold boot to `persist[74]=0x80`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.3: continue-frame live; media loop budgeted
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. Opening FMV first frame + continue-frame decode live on
+real Disc 1 FMV001. Production `92CE8` media loop is unlimited by default;
+tests may set `PE_Port_SetMovieContinueBudget(N)`.
+
+### Opening FMV progress
+
+- Ported `func_80191DC8` (DMA1 twin of `214D4`) and `func_80192934`
+  (continue-frame twin of `122040`); IRQ dispatch recognizes `0x80191DC8`.
+- `func_80192CE8` runs `3EB04` → `92934` → skip/`70E54` until `B0DBA==0`.
+  Host budget 0 stops at named `func_80192CE8_media_loop` (B54KY uses 1).
+  FMV001 is ~2077 frames — full play is not a unit-test default.
+- Verified (`PE_DISC1_BIN` + `PE_TEST_FILTER`):
+  - `B54KY_192CE8_real_disc_issue_poll_and_boundary` → **PASS**
+  - `B54KAD_fmv2_filename_threshold` → PASS
+  - `B54KAE_movie_state_setup` → PASS
+  - `DAY2_movie_autonomous` → PASS
+- Still required: drop `PE_Port_SkipMovie` only when New Game stays
+  stop-free through full opening STR; XA; connected route to
+  `persist[74]=0x80`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.2: `92CE8` enters media loop; frontier `func_80192934`
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`). Day 1 is
+**not** complete. Opening FMV first frame decodes live; `func_80192CE8` now
+enters the media loop and cuts at the continue-frame worker.
+
+### Opening FMV progress
+
+- Real Disc 1 FMV001 first frame: live C89C→7C394→EC (`B54KY` PASS).
+- `func_80192CE8` extended past `80192E08`: after `924F8`, if `B0DBA!=0` and
+  `B0DBC>0`, named frontier `func_80192934` (overlay twin of `122040`,
+  ~197 words at `80192934..80192C48`). Pad/`func_8003EB04` seeding is part
+  of that next rung.
+- Verified: `B54KY` / `B54KAD` / `B54KAE` PASS with `PE_DISC1_BIN`.
+- Still required: translate `func_80192934` (+ `3EB04` before it), then
+  drop `PE_Port_SkipMovie` only when New Game stays stop-free; XA; connected
+  route to `persist[74]=0x80`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no commits
+unless asked.
+
+---
+
+## PRIOR 2026-09-15 cont.: Real Disc 1 opening frame decodes through C89C/EC
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`), including
+movies/sounds. Day 1 is **not** complete. Opening-FMV first frame now runs
+live on real FMV001; frontier is the `func_80192CE8` media-loop cut.
+
+### Opening FMV (`func_801924F8` got_frame) — complete first frame
+
+- Authenticated tail `80192814..80192930` runs live
+  `func_8010C89C` → `func_8007C394` → EC on **real Disc 1 FMV001.STR**
+  (9 video chunks + interleaved XA; `B374=10`, `BE998=9`).
+- E0 uses `HostFB_StreamTick`; DMA IRQ may clear `B89F4` inside the tick
+  before the loop samples it — a nonzero `func_80191B64` result is the
+  complete-frame signal (do not `7C214` every poll).
+- B54KY harness needs autonomous-style `CdDeviceSeed` + `func_8007EC14`
+  before stream open (`ED58`-only left `9B554=1` so CdInit was a no-op).
+- Verified (`PE_DISC1_BIN` + `PE_TEST_FILTER`):
+  - `B54KY_192CE8_real_disc_issue_poll_and_boundary` → **PASS**
+    (frontier `func_80192CE8_80192E08_cut`)
+  - `B54KAD_fmv2_filename_threshold` → PASS
+  - `B54KAE_movie_state_setup` → PASS
+  - `DAY2_movie_autonomous` → PASS
+  - `MV1D_c89c` → 6/6 PASS (prior)
+- Still required for skip-free New Game: extend `func_80192CE8` past
+  `80192E08`, then remove `PE_Port_SkipMovie` early-return in
+  `func_801909B4` only when that path does not unresolved-stop. XA still
+  undecoded. Connected cold boot still short of `persist[74]=0x80`.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no
+commits unless asked. No matching `src/` claims this session.
+
+---
+
+## PRIOR 2026-09-15: Opening `got_frame` C89C live for empty-VLC; real STR gated
+
+Goal ACTIVE — Day-1 retail fidelity (boot → `persist[74]=0x80`), including
+movies/sounds. Day 1 is **not** complete. Prior M34 burst work still stands;
+this session advanced the opening-FMV decoder frontier only.
+
+### Opening FMV (`func_801924F8` got_frame)
+
+- Authenticated tail `80192814..80192930` (PE.IMG ov133 carve) is now
+  transcribed through `func_8010C89C` → `func_8007C394` → EC stores
+  (`[D0DBD]=0`, `B0DBC=1`, `B0DBA++`) in
+  `pc_port/game/boot/func_801924F8_port.c`.
+- **Live C89C** when the VLC source is the CDQ2d empty `FF FF` terminator
+  at `0x8010CBFC`, or when E0 observed `B89F4` (last-chunk complete).
+- **Real Disc 1 FMV001** still stops at named boundary
+  `func_8010C89C_needs_complete_frame` (mid-frame promote + live table
+  previously `PE_StoreU16` at `0x80200000`). Not silent decode.
+- Verified (rebuild via pe-tools gcc + archive replace; cmake wrapper
+  missing `libarchive`):
+  - `PE_TEST_FILTER=B54KAD_fmv2_filename_threshold` → PASS
+  - `PE_TEST_FILTER=B54KAE_movie` → PASS
+  - `PE_TEST_FILTER=B54KY_192CE8_real_disc` → PASS (gate stub)
+  - `PE_TEST_FILTER=MV1D_c89c` → 6/6 PASS
+- Still required for skip-free New Game: last-chunk delivery into this
+  E0 path, then `func_80192CE8` past `80192E08`, then remove
+  `PE_Port_SkipMovie` early-return in `func_801909B4` only when that
+  path does not unresolved-stop. XA still undecoded.
+
+See `docs/ai_context/DAY1_FIDELITY_GAPS.md`. Preserve dirty tree; no
+commits unless asked. No matching `src/` claims this session.
+
+---
+
+## PRIOR 2026-09-13: M34 native burst bound and verified; pilot defeat is the next obstacle
+
+Goal ACTIVE. Major production/source/connected progress; fullDay2 and
+whole-route fidelity UNPROVED. All sessions terminal; no pending questions.
+Preserve huge dirty tree; no matching src/asm/YAML/index edits, staging,
+commits or gameplay RAM injection/restores. Copies only isolated oracles.
+
+NEW production: F434 is NOW WIRED through native retained-stack provenance
+in m34_boss_effect_port.c. New PE_M34Stack* APIs in pe_port_compat.h; field
+wrapper35558 scopes persistent6words/knownmask/RAMgeneration, actor35E04
+calls scoped; 17018 scopesVMdepth/opcode. Current22-handler whitelist from
+observedsourcehistory is NOT generalstaticcallgraph/branchproof. Unknown
+handlers/callbacks,nestedVM,generation/overlaychangesinvalidate. Slotowner
+mustmatchesavedcueactor; activefieldrequired. No capturedconstanttuple.
+
+6DE80_port.c PE_SpatialSoundRequest sharesactual6DED4calculationandoptionally
+returnscomputedvolume. 2FAF8actualclipcrossingrecordsvolume/body/targetonce
+afterrequest; no second sound call. Missingpackage/failedcalculationunknown.
+Other6DED4/86608callsinvalidate. 18774->6F39C->6914CidlebranchrecordsS1
+80010690 (original17020/17024constant). M34Command API now6args;6F6D4forwards
+args5/6, storesinprovenancerecord. Tests/coreoraclecallersupdatedto6args.
+Effect/weaponcallbacksnotifyrecord. F434itselfpreservesallsixoriginalwords.
+
+NEWsecond-shotpartialwriters: F830->C61A8 atoriginalF434SP offsets:
+-76lowhalf=vertex2.z(C62A0), highhalfremainsvolume;
+-72whole=vertex3.x/zeroY(C6264/C625C);
+-68lowhalf=vertex3.z(C62B8), highhalfsavedactor;
+-36lowhalf=trailworldZ(FDE4->C42A4 C4544), highhalfsavedVMS1;
+-32/-28whole=F830secondscaledmatrixfirst4elements(78D0C/78D4C).
+SharedPE_EffectPointQuadC61A8 reportsverticesviaPE_M34StackPointQuad;
+M34main/trailrenderersrecordpackedmatrix/worldZ. Partialstorespreservehigh
+halvesandcannotmakeunknownhighhalfknown. AllM34callbacksallowedhere;
+unverifiedweapon/callbackgraphs stillinvalidate. OptionalPE_M34_STACK_TRACE=1
+logsactualwritersandinitializerinputs; no gameplayRAMwrites.
+
+FIRSTbindingcoldboot74410terminalF434secondshot60275(mask0), 3victories
+repeat52111/53823/57791, optional50/57 exit1. ThisisINTERMEDIATEhistorical
+implementationbeforepartialwritebinding. /tmp/pe-m34-bound-projectile-connected.log.
+Captured60270..60275 in day2-victory-evidence/m34-bound-projectile. Lastcapture
+partiallystoppedframe;60274beforesecondinitializerSHA256
+5a6f278b6444d1d883fa8f50c0da9a6530f40144aab7a36f910eb3063b7f5dc8.
+First60271record72bytesmatchesoriginaloracle,captureSHA256
+5a4e42341ff47eff2293eb5505c7e81ad3fe022f90682f80fa3ef849178b1386.
+
+FINALbindingcoldboot49356terminalframe-limit62000,no unresolvedcallbacks.
+Fiveprojectiles60271/60275/60279/60283/60287, actualdynamicinputtupleslogged
+in /tmp/pe-m34-burst-bound-connected.log. Threevictoriesrepeat. Thenreset
+60742story0/title,60746NewGame,60753M0010I. ThisisNOTboss/Day2completion.
+17captures60274..60290 day2-victory-evidence/m34-burst-bound.
+60275bothprojectile72byterecordsmatchsourceoracle.SHA256
+a85adc7cbfe633249f169c30b83069de5f4f76a2468cd4efc3944028ad6a37a1.
+Fourthconnectedinputmatchescontinuousoriginaltarget4exactly.
+
+DEFEATconfirmedbydiagnosticcoldboot35762terminal60800frame-limit,50/57exit1.
+/tmp/pe-m34-burst-outcome.log; envPE_ROUTE_BATTLE_DUMP_BEGIN=60100,
+PE_ROUTE_REWARD_PILOT=1,PE_M34_STACK_TRACE=1,PE_ROUTE_FRAMES=60800,
+PE_ROUTE_RAM_DUMP=pc_port/build/day2-victory-evidence/pe-m34-burst-outcome.bin.
+HP35->25 at60304,->21 at60499,->0/mode3at60533. Ayaessentiallystationary
+(-873,11)untilcontact; PE92, reserve36 remain. First2shotsmiss;shots60405/
+60421reduceenemy0HP1000120->1000118, loadedammo0. Originalmillionoffsetnotbug.
+At60290enemy0actor800BF490body800A5D5CHP1000120type3,pos(-2126,-317),flags80;
+enemy1actor800BF710body800A5E38HP1000080type4,pos(-3354,-109),flags20E0.
+Aya record800B8A20, gun800B0CB0, pistolslot0. Pilot currently onlyadapts
+M27/M28/M32, NOT M34; defaultCrosspulseperiod8 makesherstandstill.
+
+VERIFICATIONcurrentproduction: Release/DebugfullbuildPASS72390/46399;
+1398/1398native0failed/skipped,10/10non-routeCTest62.57secPASS20998.
+Logs/tmp/pe-m34-burst-stack-{build,debug-build,ctest}.log.
+Newnativecontextregression coversdynamicnonzeroargs5/6,partialwordwrites,
+crossframepreservation, unknownweaponcallbacks, nestedVM andresetisolation.
+No productionchangesafterpassingchecks. Docs/diagnostics onlyafterward.
+EXEsbytecmp/SHA1still452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+
+NEWpe_m34_stack_binding_oracle.py usesactualnative35558 andoriginalcounter/
+mailbox/35558 calls on eachcapturedframe, carryingoriginalstack/GTE/scratch
+andnativeprovenance. Nativeisolatedcapturesnotconnectedrestores. 5envelope
+histories(firstvolumes87,0,49,127,127), TWOinputsandfull72byterecordsallmatch,
+10508PCs sourcechecked,79817PASS. Command --end-frame60274 --build-dir
+/tmp/pe-day2-release withdirectoryday2-victory-evidence/m34-burst-window
+(symlinkscaptures60260..70fromm34-destination-window,60271..74fromfirstboundrun).
+Reportnative-stack-binding.jsonSHA256
+3a364c2f16126ffe3a93283888b405119c02ea3719f067b4048d594b0e218034;
+/tmp/pe-m34-burst-stack-oracle.log. IMPORTANT136othernon-stackRAMbytesdiffer
+eachfinalfieldcomparison, alladdressesreported; notfullframe/nativeproof.
+Earlierfirst-only5histories9135PCs140otherbytesdiff,reportinm34-destination-window
+SHA2566fb6b96a1f4d1e597321c228d7ab3174c3f54e34eaba0827854725e5f35c1994.
+
+pe_m34_frame_device_probe.py now --initializersN --instruction-budgetN.
+Fresh60260 --modecontinuous --initializers2 --instruction-budget5000000:
+6995PASS15frames3159708instructions12615PCs; sixwords
+2BB,F821,800B02DD,8001023C,015CFF1A,0 withmixedwritersabove.
+/tmp/pe-m34-second-projectile-stack.jsonSHA256
+f12c887b80cf5eee9ae52bf35b9d0f31fea1221f8800f8fa92973bfd349c6542.
+--initializers4 --instruction-budget8000000:59161PASS23frames4973703insns
+12631PCs,tuple1DF,F91E,800B0248,800101CD,0426FF8E,0 matchingconnected4th.
+/tmp/pe-m34-fourth-projectile-stack.jsonSHA256
+7ca39cef2e81d80c61174a439545e4677de7fdca466fcf3b901333e76a9402bd.
+Allsameexplicitdevice/BIOScontracts; NO BIOSinternal/IRQ/raster/timingproof.
+Fifthconnectedinputnotyetcontinuoussourcecompared.
+
+NEXT: ordinary-inputM34survival/targeting/healingpilot (existing
+pc_port/tests/route_reward_sewer_pilot.h), provefightthenremainingDay2.
+Do not treatstationarypilotdefeatasproductionprogress/completion; noexternal
+impasse. Investigateoriginalenemybody/targetflagsasneeded, noHP/ammo/state
+injection. Newlyencounteredwriters/opcodesmustbeverified; currentbridge
+is scoped,notgeneralstackemulation. Fullframe136bytedifferencesremainopen.
+[M34_STACK_BINDING.md](M34_STACK_BINDING.md) currentproofandlimits.
+
+## PREVIOUS 2026-09-13: destination snapshot repaired; continuous M34 stack history reaches F434
+
+Goal ACTIVE. Production fix and source-history progress; fullDay2/whole-route
+fidelity UNPROVED. All sessions terminal. Preserve dirty tree; no matching
+src/asm/YAML/index edits, staging, commits, gameplay RAM injection or restores.
+
+NEW productionFIX: D_8009D1C4 was another host-only scalar. Captured guestword
+remained0 whileD280=A8003248, causingoriginal3F684loop toexitafteroneframe.
+Nowguestmacroinpsx_compat.h, definitionremovedpe_globals.c, obsoleteexterns
+removed1220C/3E680/native/route tests. Existing1220Cassignmentandbootreset
+publishguestRAM; one-passnativefieldadapterunchanged. Original122CC..122DC
+fourwordsSHA2566922f1d5ecd983d866c65a6fa40ea8c7e920f52cf5c1aeed17f54423450c9177;
+sixboundaryinputsPASS. Existingbootresettestsseed/readguestword; existing
+120frameopeningtestassertsactual1220CguestpublicationA8001048.
+Release/DebugfullbuildPASS18808/86996.1397/1397native0failed/skipped;
+10/10non-routeCTest63.52secPASS55495. Logs/tmp/pe-destination-ram-*.log.
+EXEsbytecmpPASS,SHA1452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+[DESTINATION_SNAPSHOT_RAM.md](DESTINATION_SNAPSHOT_RAM.md).
+
+Freshcoldboot58123terminalexit1existingF434boundary60271,historical50/57;
+threevictoriesrepeat52111/53823/57791. Log/tmp/pe-m34-destination-connected.log.
+Eleven2MBcaptures60260..60270 in
+pc_port/build/day2-victory-evidence/m34-destination-window.
+EachguestD1C4=D280=A8003248. Fullbytecomparisoneachold/newcapturechangesONLY
+9D1C4,9D1C5,9D1C7 (snapshotword); nootherbytechanges.
+60260SHA2569db65a73f20670c91ff8ac3477c5859aea9d060cabff0e4ef66ce4651865b36f.
+60270SHA256c025a97acf805a40a59840d2bed061328b61d63c4aa00ed683429579e0ef23ab.
+
+NEWchecked-inpe_m34_frame_device_probe.py executesoriginalprefix/tail/continuous
+loopwithseparateMMIO4096bytes, explicitDMA6OTCstores, GPU-DMAcompletion,
+GP1readystatus,andVBlank956AC/timer1F801110incrementsevery1024instructions.
+Originalgame/SDKinstructionsnotreplaced. BIOSA0memcpy2Acontractaddedlocally
+viacheckedinspecthook;allBIOScallslogged, memorywriteswatched. NO BIOSinternal
+stack/IRQ/raster/timingproof!InitialCPUstack/GTE/scratchsupplied; capturesonly
+isolateddiagnostics. Sourcecheckeveryexecutedinstruction+delayandcaptured
+followingwordagainstoriginalEXE/M34. ExactSWL/SWRbytemasks.
+
+142oldwindowprefix/tailprobesPASS69207,no6wordwrites. Prefix325/343PCsminSP
+801FEF80;tail1548/1565/1585PCsminSP801FEF50includesactual70E54presentation.
+Reproducepe_m34_window_stack_probe.py DIRECTORY --device-fragments.
+Oldwindowreportindependent-device-frame-writers.jsonSHA256
+66d2cc6ef1be1802a75612085b4f725c4c00249a3724ba8bb9b74ed388e1c83b.
+Fresh22probesPASS14571,reportSHA256
+38f82ac7f795fb2ed5e9516748ab83473d91b19017a49e5e61e1a9c010e7e676.
+
+KEYcontinuousfresh60260capture --mode continuous (NO --caller-snapshot)
+reachesF434after11frames,10891PCs,2271911instructions. CPU/GTE/scratch/RAM
+carriedthroughoriginal3F684backedge,nointermediatecapturesloaded. 34192PASS.
+/tmp/pe-m34-fresh-continuous-device-probe.jsonSHA256
+93170da0c506a9574c056f5138fad0e37c9a26819c43d7b15ea377f8daab1bde.
+EntrySP801FEEE8,lastwriterssameaspriorindependentwindow:
+-76volume87at6E184frameindex0; -72body800A5D5Cat6DED8index0;
+-68actor800BF490at6DEE0index0; -36VMargtable80010690at6916Cindex10;
+-32/-28zeroextraargsatF0C8/F0D0index10.
+Oldcapturevariant --caller-snapshot executesoriginal122CC..122DCfirst;
+periods256/1024/2048allreachsame11frames/tuple10895PCs.24538/84815/13455PASS.
+Logs/tmp/pe-m34-continuous-snapshot-{fast,slow}-device-probe.json anddefault
+/tmp/pe-m34-continuous-snapshot-device-probe.json.
+[M34_FRAME_STACK_PRESERVATION.md](M34_FRAME_STACK_PRESERVATION.md) fullscope.
+
+NEXT: nativebindingstillNOTimplemented,F434unwired. Newcontinuousevidence
+supportsoriginal-callpreservationunderexplicitdevice/BIOScontracts; cannot
+generalizetupletoallprojectiles/interrupts. Trackcomputedspatialvolumeplus
+savedbody/actorinactualscript64contextwithoutduplicatingsoundcall; preserve
+M34commandargs5/6andVMargsavedS1; invalidateunverifiedwriters/contexts.
+All970M34effectwordsalreadytranslated,prior256initializer/303childrenproof
+unchanged. No externalimpasse; continuegoal. Priorwriter/APIlocationsbelow.
+
+## PREVIOUS 2026-09-13: guest frame counter repaired; all six M34 stack writers identified
+
+Goal ACTIVE. This turn made verified production, connected-state and source
+writer-discovery progress. FullDay2/whole-route fidelity still UNPROVED.
+All handles terminal, no pending questions. Preserve huge dirty tree; no
+matching src/asm/YAML/index edits, staging, commits or gameplay RAM injection.
+
+Production FIX: D_8009D250 was a separate host counter while captured guest
+9D250 stayed0. Now PE_GUEST_U32 macro in psx_compat.h, host definition removed
+from pe_globals.c, obsolete externs removed from pe_port_compat.h/3E680/tests.
+Original six-word increment3F4D0..3F4E8 SHA256
+f2ec3d82628422ef69623f94644a1d2b1037a5d8d6374f27655f45765a915b99.
+Six original boundary inputs including wrapping PASS; native actual field
+tick regression starts guestFFFFFFFF ->0 ->1, skipped-update branch preserves1;
+boot reset also asserts guest word0.1397/1397 native,0failed/skipped;
+10/10non-routeCTestPASS62.76sec(native60.78).95879/58249 terminalPASS.
+Logs /tmp/pe-counter-ram-{release-build,debug-build,ctest,lasttest}.log.
+No production changes after final passing checks. Subsequent optional route
+capture logger also builds in Release/Debug full builds:
+/tmp/pe-counter-window-final-{release,debug}-build.log.
+[FIELD_FRAME_COUNTER_RAM.md](FIELD_FRAME_COUNTER_RAM.md) proof.
+
+Fresh coldboot27752 terminalframe60250/frame-limit, three victories repeat
+52111/53823/57791. Capture pe-m34-pistol-counter-connected.bin in
+pc_port/build/day2-victory-evidence, SHA256
+0a089c25504a18693bda7abe8a66892a930c84d9b09ff4d6af6e2fdabaafaa98;
+guestcounterEB54. Pistol children alreadyretired; source35558probe40866
+6381PCs, noneofsixwritten. /tmp/pe-m34-pistol-{counter-connected.log,writers.json}.
+
+Secondcoldboot25934 terminalframe60271 existingF434unresolved boundary;
+three victories repeat, optionalroute50/57. Read-only present-hook RAM window
+60200..60270,71complete2MBfiles, directory
+pc_port/build/day2-victory-evidence/m34-pistol-window.
+New env PE_ROUTE_RAM_WINDOW +_BEGIN/_END in test_route_boot_day2.c onlyreads
+RAM; capture phase insidepresenthook BEFORE remainingframe-tail. No restore.
+Log /tmp/pe-m34-pistol-window-connected.log. All71 original independent
+counter/mailbox/field probes PASS sourcechecks (56889 terminal), using
+pe_m34_effect_stack_probe.py --frame --counter-prefix --watch-entry-sp801FEEE8.
+Reproducer pe_m34_window_stack_probe.py DIRECTORY. Reportinwindowfolder
+independent-field-writers.json SHA256
+cd14f9e26c57c832fc1e8561e23f9d30ac7a4946d4613bd020fcae4bf5a971be.
+Log /tmp/pe-m34-window-writers.log. Independent copied states, supplied initial
+CPUstack/GTE, omittedinput/outerdraw/presentation; NOT continuousretailhistory.
+
+KEY NEW WRITER: originalfieldcallfromcapture60260 executes
+184EC ->2FAF8 ->6DCE4 ->6DED4 ->6DFA8. Allthreepreviouslyunknownwords:
+F434entrySP-76=volume87, writer6E184 at801FEE9C;
+-72=savedcallerS0=800A5D5C bossbody, writer6DED8 at801FEEA0;
+-68=savedcallerS1=800BF490 bossactor, writer6DEE0 at801FEEA4.
+6DED4entrySP801FEEB0,RA6DD28; args package8018EFE8,sound4D7,group0,
+XYZ(-2004,505,-217). Native spatial_sound in func_8006DE80_port.c computes
+volume already; do NOT substitute87 or duplicate sound request. Detailed
+6690PC register trace /tmp/pe-m34-spatial-stack-registers.json; capture60260SHA
+202b8af8828eff8a508189dcf6f9c51c58409759f47f6fab18758d250c407942.
+Independent60261..269calls writenone;60270reachesF434 andonlywriteslastthree:
+-36=80010690 savedVM S1 by6916C; -32/-28=0 commandfifth/sixthF0C8/F0D0.
+CurrentM34commandnativeaccepts4args, needsfaithfulextraargumenttracking.
+[M34_RETAINED_STACK_WRITERS.md](M34_RETAINED_STACK_WRITERS.md) fullscope.
+
+Earlierwindow60200..237 first3writers8CBAC/8CBD8/8CBD0 (sounddispatcher saves
+S1=0,S2=128,RA86684). Casinglateronlywriteslasttwo. SyntheticsourceC9FD8at
+weapon drawdepth(root35558SP-192) showsmuzzlescale78D0C/78D4C canwrite-72/-68,
+but theseareNOTlatestwindowwriters. /tmp/pe-m34-synthetic-{muzzle,casing}-stack.json
+1006/704PCs. Originalouterdraw3F4F8..3F590old60270capture:588PCs,no6wordwrites;
+/tmp/pe-m34-outer-draw-stack.json; excludespresentation,oldcounterincomplete.
+Priorcounter-prefix100callprobe10796 terminaldidnotreachF434 (11789PCs), not
+proof oforiginalhistory. /tmp/pe-m34-counter-history-error.log.
+
+NEXT bindobservedscript64 spatialcuecontext(volume, savedbody/actor) andall
+sixretainedvalues, verifyinterveningcalls preserve/overwrite, invalidateunknown
+contexts. Do not guess tuple orclaimindependentframeprobesprovefullhistory.
+F434 staysUNWIRED; 970effectwords translated and303childrencomparisons remain
+validpriorproof. Laterprojectilescouldhaveotherwriters. No externalimpasse;
+keepgoalactive. EXEsremainbyteidentical SHA1452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+
+## PREVIOUS 2026-09-13: M34 movement/drawing/collision verified; stack binding next
+
+Goal ACTIVE. Previous turn and this turn made verified production/evidence
+progress. Full Day2/whole-route fidelity remain UNPROVED. All handles terminal,
+no pending questions. Preserve dirty tree; no matching src/asm/YAML/index edits,
+staging, commits, checkpoint restores or gameplay RAM injection.
+
+New production: m34_boss_effect_port.c now translates F830..FC54 (265 words),
+FC54..FDD4 (96), FDE4..FEE0 (63), registered in PE_M34BossEffectChild with
+existing overlay guard. All M34 effect words F00C..FF34 (970) now translated;
+F434 STILL UNWIRED because retained stack history is unresolved. New public
+PE_EffectPointQuadC61A8 in func_800CEB8C_port.c translates complete C61A8
+(77 words) plus C653C (18), using existing triangle helper twice. F830 keeps
+five original quads, first-image XYZ-minus-VX behavior, later Y overrides,
+hit flags and owner classification. FC54 retains signed-byte timer modulo,
+both polygon calls, trail allocation, wrapping motion/fade and retirement.
+FDE4 uses full existing C42A4 billboard renderer. No effect callback is skipped.
+
+pe_m34_children_oracle.py --build-dir /tmp/pe-day2-release --write-header:
+303 original/native cases PASS,1540 uniquePCs, full RAM<1FE000 +1024 scratchpad
+bytes compared, original stack excluded. Original executed/following words
+verified; all original compared-RAM changes inside regression hash ranges.
+132 movement,64 trail draw,107 main draw cases;31 hits; main packets0/4/5.
+No callee mocks. Not all GTE register/flag/timing or rasterized pixel proof.
+Generated retail_m34_children_cases.h 17177 lines (run-compressed common words,
+sparse patches); test_m34_children.h included/called by native suite.
+Initial movement/trail oracle196cases917PCsPASS; first standalone harness
+compile omitted game_port.h, fixed include before comparisons. No production
+correction needed after comparisons began. Final oracle52508 terminalPASS.
+Full evidence [M34_PROJECTILE_CHILDREN.md](M34_PROJECTILE_CHILDREN.md).
+
+Release/Debug full builds PASS.1397/1397 native,0failed/skipped;10/10non-route
+CTest PASS61.11sec (native59.08).68132 Release/CTest and91476 Debug terminalPASS.
+Logs /tmp/pe-m34-allchildren-{oracle,tests-build,debug-build,ctest,lasttest}.log.
+Earlier build52865,12929 and movement oracle38766 also terminal. No production
+changes after final checks. git diff --check and Python syntax PASS.
+Retail/candidate EXE SHA1 unchanged452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+
+No new connected replay: source-bound F434 dispatch remains preceding stop at
+60271. Need recover first three retained words at F434 entrySP offsets
+-76/-72/-68 and bind all six using faithful context. Prior full-frame35558
+trace from60270 proved only same-frame -36 saved VM S1=80010690 and -32/-28
+command fifth/sixth arguments. Do NOT substitute guessed zeros. Earlier
+3F404..3F4F8 history probes hit graphics DMA wait (interpreter peripheral limit),
+and100 bare35558 calls from60197 did not reach F434. Do not repeat unchanged
+histories or mock hardware silently. Details/captures in next historical entry
+and M34_PROJECTILE_INITIALIZER.md. Existing M0023I writer-tracking precedent:
+func_800D413C_port.c PE_EffectStack* and M0023I_FLASH_STACK.md, but those six
+bytes have a different stack depth and cannot be reused as M34 values.
+
+## PREVIOUS 2026-09-13: full F434 explicit-stack translation verified; all processes terminal
+
+Goal ACTIVE; verified production/evidence progress. FullDay2/fidelity incomplete.
+PE_M34BossProjectileInit(data,retained6) in m34_boss_effect_port.c translates
+complete255wordsF434..F830. It is NOT YET WIRED TO CONNECTED DISPATCH because
+sixcaller-stacktranslations mustbe suppliedfaithfully. Nozeroassumptions.
+252original/nativecases+4capturedcontext variantsPASS406PCs, fullRAM<1FE000
+(originalstackexcluded), originalsourcewords/delaywords checked, finalGTE
+RT/TR/IR/MAC checked. Generatedcompactheader +newnative testincluded.
+1396/1396native;10/10non-routeCTestPASS62.44sec, Release/DebugbuildsPASS.
+Finalhandles13397oracle,86056CTest,4956Debug allterminalPASS. Logs
+/tmp/pe-m34-projectile-{oracle,tests-build,debug-build,ctest,lasttest}.log.
+[M34_PROJECTILE_INITIALIZER.md](M34_PROJECTILE_INITIALIZER.md) currentproof.
+
+Freshbeforeeffectcoldboot94294 terminalframe60270 frame-limit. Full2MBcapture
+pc_port/build/day2-victory-evidence/pe-m34-before-effect.bin SHA256
+6e2e09c6310e60999a9ce81bea5f51e901a6d44ec3c66348694e7aba189dc584.
+pe_m34_effect_stack_probe.py --frame onthiscaptureexecutesfulloriginal35558
+untilF434:6674prefixPCs;entrySP801FEEE8,data801863A0. Writertracereveals
+retainedoffset-36=80010690writtenby6916C(saveS1),-32/-28=0writtenF0C8/F0D0
+(commandstackfifth/sixthargs). Firstthreeoffsets-76/-72/-68notwritteninframe.
+Output/tmp/pe-m34-fullframe-stack.json (sourcechecks allprefix +7F434variants).
+Earlierconstructor-onlyprobezeros omitted actualsameframewrites. Sourceframe
+stillhas suppliedinitialstack/GTE, notcompleteoriginalboothistoryproof.
+
+Pre-shot49736 terminalframe60190/frame-limit, firstcommandqueuedbutmenu mode1.
+Capturepe-m34-before-shot.bin SHA2564a9d0ac7ccd6621247bc4bb98510855a4a995c8cd4117661d0950fad459edf48.
+Original repeated35558 probe73251 hit instruction budget. Prefix3F404..3F4F8
+with normal digital pad replies also hit budget (61862). Diagnostic52529
+identified phase0 VSync polling:73A44 repeated49990times, lastPCs76408..77410.
+Later probe46970 established graphics DMA wait, not menu-only diagnosis:
+VSync caller RA800773E0, DPCR address1F8010F0. Interpreter lacks peripheral
+completion/timer advancement. No production regression or replacement callee.
+
+Committed-shot coldboot62899 TERMINAL at frame60197/frame-limit, mode0,
+queue2, AT0, HP35, loaded4. Log /tmp/pe-m34-shot-committed.log, full2MB
+pc_port/build/day2-victory-evidence/pe-m34-shot-committed.bin SHA256
+b2e4be2c7cc78f7ece78993b5528a80140748faa2dea1f96ab4bd382413fad41.
+Prefix probe30429 also TERMINAL budget failure in same graphics wait;
+/tmp/pe-m34-committed-prefix-error.log. Bare35558 single call returns normally
+from both60190/60197 captures (diagnostic46970). Committed inner-history34333
+TERMINAL: completed100 calls without F434, then reachability assertion failed;
+/tmp/pe-m34-committed-field-error.log. It omits outer frame preparation/input/
+presentation; no complete original history or source-comparison claim.
+Probe now reports a descriptive reachability error instead of bare assert.
+No live sessions, no pending questions. No production edits after passing
+1396/10checks. S1 at6916C isVM'sjtbl80010690 (17020/17024), notS0.
+
+NEXT: recover earlier writers for retained offsets-76/-72/-68 with relevant
+caller history; three same-frame writers are known but not yet bound in native
+dispatch. Independently translate remaining F830 draw/hit, FC54 movement/trail,
+FDE4 trail draw. FC54 calls existing1CAB0 andC2B90, FDE4 uses existingC42A4.
+Original disassembly /tmp/pe-m34-effect.s. Do not keep repeating unchanged
+inner-field histories or silently mock graphics/DMA to claim retail proof.
+README and M34 effect evidence now link current initializer proof. Preserve
+dirty tree and active goal; no external block, full Day2 still incomplete.
+
+
+## FINAL 2026-09-13: M34 effect lifecycle verified; projectile initializer next
+
+Goal ACTIVE; this goalturn made verified production/control-flow progress and
+new original-code dependency evidence. FullDay2/whole-routefidelity unproved.
+All handles terminal, no pending questions. Preserve dirtytree; no matching
+source/asm/split/index edits, staging, commits or gameplay RAM injection.
+Retail/candidateEXESHA1 unchanged452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+
+New m34_boss_effect_port.c:291words translated overF00C..F434,
+FDD4..FDE4,FEE0..FF34. Lifecycle/commands/posecopies/timers/cleanup; 6F39C,
+6F6D4,6FC18,effect/weaponcallbacks wired withM34sourceguard. 177 original/native
+cases+capturedconstructorPASS534PCs; fullRAM<1FE000 anddefinedreturns, original
+stackexcluded, instructions/followingwords/source andwriterangeschecked.
+F3C4 allocation arm translated butnotfullycompared; leadsuntranslatedF434.
+RemainingF434,F830,FC54,FDE4 explicitlyunported. Do notclaimwholeeffectcomplete.
+Finalproof [M34_BOSS_EFFECT.md](M34_BOSS_EFFECT.md).
+
+FinalRelease/DebugfullbuildsPASS,1395/1395native,10/10non-routeCTestPASS61.36sec
+(native59.36). Logs/tmp/pe-m34-core-verified2-oracle.log and
+/tmp/pe-m34-core-verified-{build,debug-build,ctest,lasttest}.log.
+Finalhandles40977oracle,8371ReleaseCTest,90983Debug allterminalPASS.
+Firstnativefixtureomittedreadonly80190020terminator, ownstuckchild2608277
+SIGTERM;55409CTestfailed. FixedRANGES190020/70 whilekeepingnoiseseed190028/68;
+regenerated177cases andpassedfinalsuite. Priorfixturefailuresarehistory.
+No productionchangesafterfinalpassingchecks.
+
+Connected54166 terminal60271 sameframebutnewnestedboundary:
+[EFFECT] Unported weapon callback8018F434 slot801861A0 record80186226.
+All3victories52111/53823/57791, M33entry58538,M34entry59996 repeat. HP35,
+story6C/arrival21/tokenA8003248. NoM34pilotchanges. Optionalroute50/57.
+Capturepc_port/build/day2-victory-evidence/pe-m34-core-connected.bin (full2MB)
+SHA256 fe8b6a9ba4b02dc3cbb61d35faf4287a06f950acd20d13e698dc653b691c106c.
+Log/tmp/pe-m34-core-connected.log. Constructor boundarypassed; F434next.
+
+NEXT importantfidelitydependency: F434 full255words usesRotMatrix79754,which
+writesrotationonly, thenreads6unwrittenstacktranslationwords atentrySP offsets
+-76,-72,-68,-36,-32,-28. pe_m34_effect_stack_probe.py original-onlyconstructor
+andupdatefromD1capturestopsatF434:entrySP801FEF70,data801863A0,noneof6written
+bytracedsequence. SevenisolatedoriginalF434runs,911PCs,sourceschecked, each
+individual1000perturbationchangespersistentdata+38matrixtranslation.
+Baseline(-1280,993,-1868),offset-76->(-2373,993,-1762),offset-36->(-280,993,-1868).
+Output/tmp/pe-m34-effect-stack-probe.json. This isNOTactualretailstackproof.
+Do NOT substitutezeros andcallitfaithful. Need translatecompleteinitializer,
+remainingchildren,andpreserveoriginalborrowedstackstate fromactualcallerhistory.
+A coldbootcaptureoneframebeforeeffect60270 mayhelp originalcall-history probes;
+newcaptureisjustifiedfornewquestion, notunchangedreplayexpectingprogress.
+SourceoriginalM34C2=/tmp/pe-m34-c2-original.bin LBA16597/100sectors/base8018EFE8
+SHA2560eb2efb10e4779672a00f6da46c2d54f915f1b3e433048513fd08de296eedd5a.
+FullF24C..FF34disassembly /tmp/pe-m34-effect.s. ExistinghelpersC22F8/C2414/
+C251C/C2758/C2B90 available; missingcollisionC61A8 callsC653C (two existing
+C62DCtriangles). HostPeEffectMatrix/PE_EffectQuadC42A4 available fordrawing.
+Keepgoalactive; noexternalblock (stillconcretemissingtranslation/stackwork).
+
+## CURRENT 2026-09-13: M34 effect core verified; corrected fixture regression pending
+
+Goal ACTIVE; prior turn and this turn make verified production/control-flow
+progress. FullDay2/fidelity incomplete. Source/newtests inM34_BOSS_EFFECT.md.
+177original/native cases+capturedconstructorPASS534PCs. Core291sourcewords
+translated; F3C4 allocation arm not completelyverified and F434/F830/FC54/FDE4
+remainuntranslated. Connected54166 terminal60271 nowstops PE_WeaponCallback
+8018F434 slot801861A0 rec80186226, ratherthanconstructor; sameframeprogress.
+Capturepc_port/build/day2-victory-evidence/pe-m34-core-connected.bin SHA256
+fe8b6a9ba4b02dc3cbb61d35faf4287a06f950acd20d13e698dc653b691c106c.
+
+Original-only stackprobe completed911PCs: F434 has sixunwrittenmatrixtranslation
+words atentrySP-76,-72,-68,-36,-32,-28; eachchangespersistentoutputwhenvaried.
+No writers inisolated originalconstructor+update; notactualretailstackproof.
+See pe_m34_effect_stack_probe.py and/tmp/pe-m34-effect-stack-probe.json.
+Do NOT zero native matrices andcallitfaithful. F434 notyettranslated.
+
+Initialoracle36344 terminalfailed fixtureprogramat+80; fixedto+78.
+Correctedoracle69405PASS. InitialnativeCTest55409 child2608277 gotstuck because
+generatedfixtureomittedreadonlyprogramterminator80190020; terminatedonlythat
+ownchildSIGTERM. Debug9377 terminalPASS butoldfixture. Sourceproductionunchanged.
+FixtureRANGESnow190020/70 includesreadonlyterminator. 21737 failed because an
+initial broad replacement also filled that program with fixture noise; fixed
+the noise range back to190028/68. Final40977 oraclePASS177+capture534PCs,
+log/tmp/pe-m34-core-verified2-oracle.log. FirstCTest55409 reapedexit8 (terminated
+test), notpass. LIVE8371 Release rebuild+CTest /tmp/pe-m34-core-verified-build.log
+and/tmp/pe-m34-core-verified-ctest.log; LIVE90983 Debug finalrebuild
+/tmp/pe-m34-core-verified-debug-build.log. Poll thesehandles; others terminal.
+
+## FINAL 2026-09-13: D1 verified; M34 battle reaches effect 8 constructor
+
+Goal ACTIVE. This turn produced verified production and connected progress.
+Full Day 2 and whole-route fidelity remain unproved. All handles terminal;
+no pending questions or running work. D1/80019D84 full13words translated and
+VM dispatch wired; existing375E0 unchanged. 160 original/native cases plus
+captured D1 PASS,91 PCs, complete callee/no mocks. Original stack excluded;
+native temporary120F20 preseededFFFF and included in comparedRAM<1FE000.
+[Full evidence and next work](MESSAGE_WINDOW_D1.md).
+
+Release/Debug builds PASS;1394/1394native,10/10non-routeCTest PASS68.99sec.
+Logs /tmp/pe-d1-{oracle,tests-build,debug-build,ctest,lasttest}.log.
+79922 and88690 terminalPASS. Retail/candidateSHA1 both unchanged
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b. No matching/source/split/index edits,
+staging, commits, gameplay RAM injection or connected checkpoint restoration.
+
+Connected29027 terminal exit1 at60271, stop=unresolved-boundary inM34.
+D1 message finishes, mode0at60111; normalattack60188/60196, loaded4->2.
+Stop func_8006F39C_constructor; story6C/arrival21/tokenA8003248. Threevictories
+repeat52111/53823/57791; M33entry58538/M34entry59996. Same inputpilot, noM34
+adaptation. Optional historical supply milestones50/57, not complete route.
+Log /tmp/pe-d1-connected.log. Complete2097152bytecapture
+pc_port/build/day2-victory-evidence/pe-d1-connected.bin SHA256
+c0917383343f485315fd135ea17797fecb0e0bd74ffced88c9bf4b387cc935e9.
+
+NEXT concrete missing: effectcode8, slot0at801861A0, userdata boss800BF490,
+descriptor8018FF7C via table80094188. Constructor8018F00C..8018F0B8 (43words)
+calls existingfunc800C22F8, assigns8018FF98table, initializes overlaydata80190054..8019006B.
+Descriptor7words:8018F244,8018F00C,8018F0B8,8018F0E4,8018F12C,8018F1B8,8018F23C.
+Fullcallbackfamily NOT EDITED. Need native translation and fullsource oracle.
+Authoritative M34 C2 Disc1LBA16597,100sectors,base8018EFE8; SHA256
+0eb2efb10e4779672a00f6da46c2d54f915f1b3e433048513fd08de296eedd5a.
+Original extracted /tmp/pe-m34-c2-original.bin. Constructor43words SHA256
+3fb78435b95216a969a5cbfbaff4155cce08c8fe67a5126b8b556fb44cd89b8c,
+all matchcapture. Existing 6F39C has explicit knownconstructor dispatch; add
+source-guarded M34 handling, then effectupdate/command dispatch as required.
+Do not rerun unchanged route expecting progress. PriorLIVEentriesbelowhistory.
+
+## CURRENT 2026-09-13: D1 translated; differential PASS, replay running
+
+Goal ACTIVE; full Day 2 and whole-route fidelity remain unproved.
+D1/80019D84 full 13 words implemented and dispatched in17018_port.c; existing
+375E0 callee unchanged. 160 synthetic original/native cases plus captured D1
+PASS,91 instruction PCs; `/tmp/pe-d1-oracle.log`. Generated fixture and native
+test wired. [MESSAGE_WINDOW_D1.md](MESSAGE_WINDOW_D1.md) records proof bounds.
+Release full initial build89824 terminalPASS; oracle19917 terminalPASS.
+LIVE 79922 Release test rebuild then10non-routeCTest, logs
+/tmp/pe-d1-tests-build.log and/tmp/pe-d1-ctest.log.
+LIVE 88690 Debug fullbuild /tmp/pe-d1-debug-build.log.
+LIVE 29027 fresh68000frame coldboot /tmp/pe-d1-connected.log, capture destination
+pc_port/build/day2-victory-evidence/pe-d1-connected.bin. Same prior input pilot,
+no M34 battle additions yet. No gameplay RAM injections/checkpoint restores.
+Poll these existing handles; do not duplicate runs without concrete reason.
+
+## FINAL 2026-09-13: M34 boss encounter reached; next native boundary D1
+
+Previous/current goalturn is verified production and connected progress.
+Goal ACTIVE; full Day2 and whole-route fidelity remain unproved. All handles
+from this turn are terminal; no pending questions or live processes.
+Source taskpause18300/18364 full58words:518cases+capturePASS143PCs.
+Release/Debug builds,1393native and10/10non-routeCTestPASS71.72sec.
+No production edits after these passing checks; M33controller changed only.
+Original/candidateEXESHA1 unchanged452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+
+Final connected31229 terminal at60096, actualunresolvedboundary inM34:
+`[VM] unported script opcode fn=0x80019D84 at pc=0x801B5E0C actor=0x800BF490`.
+Story6C, arrival21, tokenA8003248, battlealreadyinitialized. All3victories
+repeat52111/53823/57791, M33entry58538, scene starts aftermovingwestpast-530.
+Log /tmp/pe-m33-forward-connected.log. Full2MBcapture
+pc_port/build/day2-victory-evidence/pe-m33-forward-connected.bin SHA256
+2d654c4dd8f000bbdc9b3cbc51f9fa02245229c86f968f25e736e0e4dbc33e70.
+No gameplayRAM injection or checkpointrestore; capturesonlyisolatedcomparisons.
+Oldoptional57milestonecheckstill50/57, notcompleteDay2regression.
+
+NEXT: opcodeD1 wrapper19D84..19DB8(13words), afterD0 at801B5DF4 setsgeometry.
+Originalasm: signedlh *arg0; stacklist{-1}; jal375E0(id,1,list);return1.
+ReachedID8 atscript801B5E14. Existing375E0 native full161words in
+func_800375E0_port.c; existingopcode0D func17410 mode0wrapper in17018_port.c
+usesGA_375E0_LIST(80120F20). D1 NOT YET EDITED/VERIFIED. Use original fullcallee
+comparison andcapturedcontext; thennextordinarycoldbootpastmessage/boss.
+D1source dump command addresses19D84..19DB8, existingasm8B00.s is unrelated
+(taskpause); locateD1originalviaEXE orasmA4*. No needredo passedtaskpause work.
+[SCRIPT_TASK_PAUSE.md](SCRIPT_TASK_PAUSE.md) contains currentproof andlinks.
+
+## CURRENT: task pause/resume verified; M33 movement replay running
+
+Goal ACTIVE. This turn has verified production and connected progress.
+Full original18300/18364 (58words),518original/native cases plus captured
+suspend/resume pass;143PCs,fullcomparedRAM<1FE000,originalstackexcluded,
+source/delaywords andalloriginalwrites checked. Firstcapturelookupfailure
+fixed (active task ischainA8). Finaloracle43205 terminalPASS.
+Release/Debugfullbuilds pass;1393native and10/10non-routeCTestPASS71.72sec.
+CTest49441 terminal; Debug95181 terminal. Stablelogs
+/tmp/pe-script-pause-{final-oracle,ctest,lasttest}.log.
+Details [SCRIPT_TASK_PAUSE.md](SCRIPT_TASK_PAUSE.md).
+
+Post-port replay11490 terminal at66000, no unresolvednativecallback, M33
+openingdialoguefinished; Ayaentrance becauseoldpilotCrossonly. Capture
+pc_port/build/day2-victory-evidence/pe-script-pause-connected.bin SHA256
+c5ce742fe02ba8cf91a8a06a9256e04138f2ded44e356e2af9cc2695c3922348.
+Controller nowM33target(-1000,0) plusCross; originalmodule3trigger
+x[-4000,-530],z[-900,900] sendsAya24 at801CE904, leadingmessage15 and
+actor1mailbox11,13,15,27 flow towardM34. M33exit fartherwest leadsM359,
+so stopping at-1000 seeks the storytrigger without running tothat exit.
+**ONLY LIVE session31229**, fresh68000run /tmp/pe-m33-forward-connected.log,
+RAMto pc_port/build/day2-victory-evidence/pe-m33-forward-connected.bin.
+Poll samehandle; do notduplicate/restartuntilterminalorconcretefault.
+LatestDebugroutebuild /tmp/pe-m33-forward-debug-build.log.
+No productionchanges sincepassedtests; onlyM33normalinputcontrollerchanged.
+
+## SESSION 2026-09-13: M33 reached; original task pause/resume translation
+
+Gate control works via southern approach: M33 entry58538; actual stop58549,
+opcode5F/function80018300 at801CDAFC (explicit VM unresolved-boundary).
+Capture `pc_port/build/day2-victory-evidence/pe-m32-control-connected.bin`
+SHA256 f79b6d7b0f4d5b78b9bf1d6cb3ec01b447d46c37fafc28f1f230cfc0b140a5f9.
+Gate persist22=7. Previous initial inspection called it a wait; actual log
+contains explicit `[VM] unported` plus stop=unresolved-boundary.
+
+Translated full original18300(25words),18364(33words) in17018_port.c, dispatch
+and header wired. Pause preserves currenttask and flagsothers40 acrossall3
+chains; resume clears40 even savedPC0, otherwise restoresPC/delay1/clears20.
+PhysicalRAM accesses supported. Original58wordSHA256
+605f5b21d57821f8f56477f5bdf4338132ab895d9345735a23e9b2dcb4527ca0.
+No matching source/YAML/index changes. Production Release route build passes.
+
+New `pe_script_task_pause_oracle.py` compares allRAMbelow1FE000 andreturns,
+checks executed/following instructionbytes and coverageofalloriginalwrites.
+518syntheticcases include fullVMfollowingwait; first run passedthese but
+capturefixtureassumedwronghead(A0; actualA8). Corrected lookupwalksallchains.
+**LIVE oracle session43205** with corrected capture lookup.
+Final log `/tmp/pe-script-pause-final-oracle.log`, writesretail_task_pause_cases.h.
+New test_task_pause.h included/calledtest_native; fullbuild/tests pendingheader.
+**LIVE connected session11490**, coldboot66000: /tmp/pe-script-pause-connected.log,
+RAMto pc_port/build/day2-victory-evidence/pe-script-pause-connected.bin.
+Poll both existing handles; no duplicate runs. Continue actual M33 frontier.
+
+## SESSION 2026-09-13: original M32 floor comparison and control approach
+
+Previous turn was verified production and connected progress; goal remains
+ACTIVE. Full Day2 and whole-route fidelity remain unproved. No agents,
+matching-source/YAML/index edits, staging, commits or gameplay RAM injection.
+Original/candidate EXE authority remains SHA1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+
+`pe_live_floor_compare.py` on the full gate capture passes all16 original/native
+steps (eight directions, retained/cleared cached wall), all RAM below1FE000,
+original stack excluded; executed and following instruction words verified.
+Log `/tmp/pe-m32-gate-floor-compare.log`. No native floor change needed.
+Mesh8019FC20 has90 2D vertices and104 triangles. The captured triangle91
+shares a sloped corner at vertices59(-16928,3578),58(-16831,3698); Aya radius65
+accounts for stopping outside the control area. Triangle90 to the south/west
+is open. An isolated original-only 1AE40 path reaches(-16965,3468) via south3300
+thenwest-16970 thennorth3500, inside the script control rectangle. This is
+an isolated geometry probe, never a connected checkpoint restore.
+
+Pilot now crosses west atz3300 (stage threshold3260), then approaches north
+atx-16970 towardz3520. All battle inputs remain unchanged. **LIVE session33718**
+coldboot64000: `/tmp/pe-m32-control-connected.log`, RAM destination
+`pc_port/build/day2-victory-evidence/pe-m32-control-connected.bin`.
+Release build passed. Poll this same live handle; do not duplicate/restart
+without a terminal result or concrete fault. Next inspect control/gate/M33.
+
+## SESSION 2026-09-13: victory handler restored; all three sewer encounters won
+
+FINAL connected result: all processes terminal, no pending questions. Third
+victory explicitly observed57791 HP35, two type6 bodies spawned then retired,
+mode9andfieldflags. Full2MBcapture at
+pc_port/build/day2-victory-evidence/pe-victory-gate-connected.bin SHA256
+c9c4612dfd6125e4c2b1ad5fa1e1fda6abf13ac73f237b7a02d3e423debe18cc.
+At64000:m32,HP35/max64,XP24,internallevel3(display4),BP28,reserve36,loaded4,
+pistolslot0,flags4080,mode9,focus0; onlyAya hasbodyinactorlist. No unresolved
+nativeboundary,50/57oldoptionalsupplymilestones. Gate remainsclosed:
+persist22=6,2B=2, Aya(-16866,2097,3548),heading1536. Pilotstage1 westward
+motion collidesjustoutside controlrectx[-17050,-16900],z[3400,3650]. Need
+derive valid approach from originalfloor/control script, then followm33.
+Do NOT rerununchangedpilot expectingnewresult. Rotationdiagnostic nowreads
+correctAya+3A (thecompletedgate log readunused+64 and printed0); production
+andcontrollerinputsunchanged by that final logging fix.
+
+Previous goalturn was verified implementation/connected progress. GoalACTIVE;
+fullDay2/whole-route fidelity unproved. No matching source/YAML/index edits,
+staging,commits,restores or gameplayRAM injection. Preserve dirtytree.
+2B0E8 now calls703F4 before4B70C,67CBC after4B70C, andFULL295E4 inphase3.
+Phase2 halfwordcomparison no longertruncates; readsactualRAM flags; postcallee
+phaseincrements reloadoriginalbyte. PhysicalRAM actoraccess restored and
+295E4 actor+194store normalized. Existingdeath-tailhelper remainsothercalls.
+109wordhandler fulloriginal/native comparison:83cases+isolatedcapturedphase,
+1470executedPCs,allcomparedRAM<1FE000,source/delaybytesandwriteranges checked.
+Generatedretail_battle_victory_cases.h/test_battle_victory.h includedinnative.
+Log /tmp/pe-victory-final-oracle.log. [Evidence](BATTLE_VICTORY_HANDLER.md).
+
+Finalregression:1392/1392nativePASS,10/10non-routeCTestPASS69.82sec
+(native67.47). Logs /tmp/pe-victory-verified-{tests-build,ctest,lasttest}.log.
+Oldmode2fixturesneededinitializedempty effectpools; reward_seed_resources
+nowprovides2pools (no gameplayinjection). InitialCTestabortedBTL103phase0
+becausepoolsuninitialized; correctedBTL10/BTL11filteredDebug43+31passed,
+thenfinalReleasebroadPASS. Debug /tmp/pe-victory-debug-test-build.log passed.
+
+Fresh66000run /tmp/pe-victory-forward-connected.{log,bin} repeatsbothvictories,
+m31entry54520,50/57oldmilestones,no unresolvedboundary. M31HP33/maxHP53,
+XP16,level2,BP9,reserve36. CaptureSHA256
+f2729282269ffcca53938116d3996ccaa6b0b817e4a7229a349c7d65de0c17a4.
+Navigationwaitsunchangedat(170,1048,-950). Secondcenteringrun80650alsofinished
+samewait /tmp/pe-victory-center-connected.{log,bin}. Diagnosisfromoriginal
+m31script:actor2waitsmessage10 at8019E600, thenmessage11 beforecontrol eventFF.
+Pilotwithneutral/Crosssuppressed onm31couldnotadvance; notafloorcodeboundary.
+
+Dialoguehandle41878 terminal: message10/11finish, receivesFF, movesx35 but
+controllerdeadzone40 conflictedwithcenteringthreshold30. Navigationhandle93237
+also terminal: reaches x18,z967; z980 threshold conflicts with40-unit arrival
+tolerance. Latest explicit M31 stages consistently use40-unit tolerance.
+Waypoint handle55742 terminal: M32entry55479, firstencounter55831, normal
+pistol equip56021, Heal1 raisesHP21->51 at56336 and11->41 at56863. Aya dies
+57189; restarts57398. No unresolvednativeboundary;50/57oldoptional milestones.
+Capture /tmp/pe-victory-waypoints-connected.bin SHA256
+c04f4b1efb78eaa4a1a7de9eedafff7a4a003ec0f8614f478e01681e497a750f.
+Ranged handle9312 terminal: wider spacing without wall avoidance loses56943,
+at(-16280,3060); two type6 enemiesHP16/34. Diagnostics now select actual living
+bodies from9E000 rather than unrelated type2 script actors, reporting all M32
+enemy positions/HP every60frames. /tmp/pe-victory-ranged-connected.{log,bin}.
+Nearest handle9907 terminal: living Aya25HP, two enemies34HP, battlepaused
+mode1/queue0 from56199 through62000. Capture focus800A2640 is Items sublist3,
+parent list1, parent mainlist0 row0. Healcontroller blindlyconfirmed unexpected
+focus instead of selecting PE. Capture /tmp/pe-victory-nearest-connected.bin
+SHA2565fca56497e4bcc2b101123d0bda76447782680482a785bea32fe85cb99689589.
+Heal-menu handle53833 terminal: recovers from Items3->Items1->root0 row1->PE8,
+then waits atPE confirmation41 from56291. Pilot now confirms41 only when
+originalconfirmationcallback CFA8==80046DBC, selectsfirstcolumnYes.
+Heal-confirm handle80522 terminal: log shows both enemies defeated57631,
+mode2victory57658, fieldmovementby57840 with35HP. Reaches(-16362,3590),
+but gateclosed. RAM capturefailed (zero-bytefile) due/tmpquota, logalsohasgaps;
+do NOT use thatcapture orclaim fullendpointproof. Eight earlier complete
+victorycaptures copied/hashverified to pc_port/build/day2-victory-evidence,
+then /tmp paths replacedwithsymlinks (16MBfreed, evidencepreserved).
+Original M32script /tmp/pe-victory-m32-script.txt: module3 left control rect
+x[-17050,-16900],z[3400,3650], Crossedge100 and facing1500..2600, message13
+choice0 sendsactor0 event0; its async8019BB14 path sets persist22bit1 and
+activatesoriginalgatepolygons. Door module5 rectx[-16600,-16100],z[3333,3636]
+can publishmessage12 ifnotopened. Module4forwardexit remainsz>=3650.
+Gate handle47333 terminal; its fresh64000run keeps nearest-enemy steering,
+retreat800/circle950 and wall avoidance x[-16000,-14000],z[1500,2700]. M32heal
+now selects mainrow1 thenPElist8 row0/col0; cancels unrelated Items/equipment
+submenus viaCircle, neutralwhileothertransientfocus. LogsHEAL_MENU id/row/pad.
+/tmp/pe-victory-gate-connected.log; RAM destination is
+pc_port/build/day2-victory-evidence/pe-victory-gate-connected.bin.
+Adds read-only thirdvictory observer: peak2 type6 bodies, bothretired,livingHP,
+mode9andfieldflags; retains firsttwo via bitmask. Postvictoryifpersist22bit1
+clear, goes(-16400,3500),(-16970,3500),thenfacesnorth+Crossat(-16970,3600).
+Aftergatebit resumesoriginalforwardexit. Source only changes controller
+and read-only diagnostics since83-case proof/full1392+10/10regression.
+Weaponmenunowmoveseitherdirectiontowardtargetrow(pistol0/baton1), respecting
+rememberedselection. M31centersx0 thenz1000 thenwest-1500. M32west-16400thenz3800;
+battlepilotselectspistolwhilebulletsremain,950-distancecircle/attackandHeal1.
+M33nowCrosspulsesforinitialdialogue, butnotreached. Allhandles terminal.
+FinalRelease/Debugroutebuilds pass; /tmp/pe-victory-final-route-builds.log.
+No productionchanges since83-case/full1392+10/10regression.
+
+## SESSION 2026-09-13: level animation restored; both sewer victories and junction
+
+Goal ACTIVE; full Day2 and whole-route retail fidelity remain unproved.
+Six complete original level-draw bodies /1022 words now run natively:
+4BF40,437B4,5BA78,6062C..61044,4FFF8,50D20. Callback dispatcher/header updated.
+183 original/native cases pass,2526 executed PCs. A captured80-frame full-draw
+sequence and confirmation passes,3488 PCs, internallevel2/maxHP53/BP9.
+Source/delay bytes and full compared RAM verified; stack excluded.
+Generatedretail_battle_level_cases.h +test_battle_level.h included in native.
+Release/Debug pass;10/10 CTest excludingoldroute pass70.46sec;1391 native pass.
+Original/candidateEXESHA1 unchanged452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+Details: [BATTLE_LEVEL_ANIMATION.md](BATTLE_LEVEL_ANIMATION.md).
+
+Fresh coldboot /tmp/pe-level-connected.{log,bin}: field-control victory
+**52111**, HP27; reserve0->18 by52080. Framecap57000, m27,Aya(-774,773,-1826),
+mode9,XP8,level2,maxHP53,BP9,reserve18. Oldtimedsuffix openedmenu;46/57milestones,
+no unresolvedboundary. CaptureSHA256
+1a5dd130bd66f894d510590900c106d2077fc41c1d8a91b9c252ffe979d7a5f9.
+
+Controller nowinrepo tests/route_reward_sewer_pilot.h, optin
+PE_ROUTE_REWARD_PILOT=1. Normalinputs only; no gameplayRAM writes/restores.
+Updatedtofightbothm27/m28 andwalk originalm27exit(0,-1250),m28exit(0,450),
+closingmenus viaCircle. M31 neutraluntilnextnavigation. Session99243 terminal:
+**secondsewervictory53823 HP33; m31junctionentry54520**. Atframecap60000,
+no unresolvedboundary,50/57oldmilestones,story68,persist1=1C,tokenA80030C8.
+Aya(170,1048,-950),HP33/maxHP53,XP16,level2,BP9,reserve36,clubslot2,
+flags4000,mode9,focus0. /tmp/pe-level-forward-connected.{log,bin}, SHA256
+f31641d79758f7b262f5a28bdff8d6ccca3e5eb01506de890698f8541e73c40e.
+Pilot sourceSHA256bf20be01d5af60b522a19c76cfa2cd39dabf1fcc6c5810e3dcfb4a978284c48a.
+Alloracles/builds/CTest/replays terminal. Debuglatest /tmp/pe-level-debug-final-build.log.
+No pendingquestions orliveprocesses. Nextcontinuecorrectedm31/forwardroute.
+
+Read-onlyaudit:2B0E8 phase0 stillsilentlyomits703F4(effectcleanup) BEFORE4B70C
+and67CBC AFTER4B70C in func_8002AA98_port.c:431. Bothcalleesalreadytranslated;
+mustrestorewith independentfullhandlercomparison. Originalspan2B0E8..2B29C,
+109words, dumped /tmp/pe-victory-original.txt. Phase2 alsoincorrectlynarrows
+aya+1A halfwordtobyte. Thisturn didnotalterthatcode. Do notclaimwholevictory
+handler/runtimecomplete. Original703F4 cleanupcode in func_80020F18_port.c;
+existing scripted-exit oraclecoversitscallees and effect-pool failures.
+
+## SESSION 2026-09-13: loot restored and first sewer enemy defeat verified
+
+Goal ACTIVE; full Day 2 and whole-route fidelity remain unproved. Preserve the
+large dirty/staged tree; no matching source, YAML or index changes this turn.
+Loot details and exact evidence: [BATTLE_LOOT_SCREEN.md](BATTLE_LOOT_SCREEN.md).
+Ten original complete bodies /758 words restore commands, renderers, manual
+swaps, Take All and equipment finalization. The D_8009D03C host/guest split is
+fixed with a guest-RAM lvalue; real cold boot now collects item1/ammo6, XP2.
+198 original/native cases,4145 executed PCs, and corrected capture sequence
+3437 PCs pass full compared RAM. Release/Debug and10/10 non-route CTest pass;
+1390 native tests. Logs /tmp/pe-loot-verified-{ctest,lasttest,debug-build}.log.
+
+Old fixed route loses first sewer battle and later hits a restart menu at61593;
+this is not the story frontier. Adaptive normal controller inputs in
+/tmp/pe-loot-equip-pilot-route.c switch from empty pistol to baton, defeat
+enemies at51980, and stop at **actual level draw8004BF40 frame52005**, m0027i,
+story68,HP27,XP8, level0->2,maxHP45->53,BP0->9,pendingthreeID1items.
+Capture /tmp/pe-loot-equip-pilot-connected.bin SHA256
+47556529f1ea97f14129e476eac5f1f61d33cb694ea4b2b50191c6eb1bdeb073.
+No connected RAM injection or checkpoint restores. Level drawing implementation
+is now in progress; next evidence must independently compare it, then cold boot
+the adaptive controller again. New full bar disassembly /tmp/pe-level-bar-original.txt
+and /tmp/pe-level-bar-tail.txt:6062C..61044 (646 words).
+
+## SESSION 2026-09-12: reward omission fixed; earlier loot frontier exposed
+
+Goal ACTIVE, full Day2 and whole-route fidelity unproved. This turn is verified
+implementation progress despite the earlier connected stop: the old reward
+handler silently skipped XP and items. No agents, matching src/YAML/index
+changes, gameplay RAM injection, commits, staging or restores. Preserve the
+large dirty tree. No questions pending. No live build/replay processes remain.
+
+**Critical finding:** Previous winning captures (M28, M31, supplies) all have
+C0E00 XP=0 and C0E0A level=0. `func_800299CC_port.c` held explicit reward cuts:
+fake window8010B000, ignored BP/items, no XP store at4BC54, no level/loot branch.
+Do not preserve these bugs to keep the old route green. The effect on later
+combat must be established from a corrected connected replay, not assumed.
+
+**Production changes:** new `pc_port/game/boot/battle_reward_port.c`, 17 complete
+new/replaced entry bodies,854 original words:4B70C/B90C/B970/BB80/BC80/BCB4,
+4C1E0/C4B4/C520,51DF8,52764,5382C,55668,57ECC,5B8A8,63D78,48654.
+Restores realwindows, scoretick, XPpublication, bonusaccumulation, levelcommit
+(NINE halfwords despite SEVEN setup fields), PEunlocknotification, free-slot
+search and lootwindowconstruction. Uses existing HostOut adapter for stacktemps.
+Existing4BE4C/BF08 are reused. Oldthree rewardcuts removed;62CB8/62CC4 preserved.
+CMake,header,input/drawcallbackdispatch registered for implementedcallbacks.
+**Not complete:** leveldraw4BF40 +437B4/5BA78/6062C graph; lootrenderers
+4FD68/50BE8,4FCF8/50B94; input48838/58030/58454/58670 and dependencies.
+The existing dispatcher explicitlystops these callbacks. No replacementnoops.
+2B0E8 itself still documents deferred703F4/67CBC; audit that separately too.
+
+**Oracle:** `pc_port/tools/pe_battle_reward_oracle.py --compare-native
+--build-dir /tmp/pe-day2-release --write-header`:240 cases,19entries (includes
+existing4BE4C/BF08),2500 originalexecutedPCs,PASS. Sourceinstruction/delayslot
+bytes checked; fullRAM below1FE000 compared (originalstackexcluded); ranges
+coveralloriginalwrites; returnvalueschecked. No patchedcalleecontracts.
+FixturesvaryXP/overflow/BP/loot/scoreconfirm/levelcommit/unlocks/inventoryruns/
+cursorbounds. Generated`retail_battle_reward_cases.h`, wrapper
+`test_battle_reward.h`. OldBTL103/112/113/114 phase0tests seededwithreal
+resources; fakeaddressassertions replacedwithid20/callbacks; XPassertadded.
+Log `/tmp/pe-reward-oracle.log`.
+
+**Build/check result:** Release and Debug PASS. Afterupdatedtestbinaryrebuilt,
+10/10CTest EXCLUDING route PASS62.61sec;1389/1389nativePASS60.25sec.
+Logs `/tmp/pe-reward-{tests-build,debug-build,ctest,lasttest}.log`.
+An earlier prematureCTest invocation used staleoldtests whilecompilewaslive;
+its invalidresult was superseded by the completedbuild and full10checkrerun.
+Do notclaimall11green: routefailsasdescribedbelow. Pythoncompile/diffcheckpass.
+Original andcandidateEXE SHA1 both452fb033f2eaa4b18aa20a5bca60b8125af3a37b.
+
+**Current connected frontier (authoritative):** unmodified62000/3158pad route
+stops **frame19301, m0013i/A80011C8, story40,persist1D, missingdraw8004FD68**,
+27/57milestones (nextreturnstory48). Input4BB80 has committed **XP2**; level0,
+maxHP45,BP0, pendingitemcountD078=1. Realid12/13/14windows plusid19help exist.
+FocusA2370,id12list. D304=2,CFE8=CFEC=2,CF60=CF6C=0.
+Capture `/tmp/pe-reward-connected.bin` SHA256
+c5c44cfcb0c96e9ed03064da664733587927fdacc6c9cf8c2f68665dce674da6.
+Read-onlycapture replaylog `/tmp/pe-reward-captured-connected.log`;
+initialsamefrontierlog `/tmp/pe-reward-connected.log`. Bothterminalexit1
+becauseexplicitunresolvedboundary, notgoalblocked.
+PendingremappedA1FD4[0]=519 (0x207); originalA7FF0 halfwords
+[1,FFFF,0,FFFF,0,FFFF,0,FFFF]. Do notassumeFFFFquantityisabug: traceoriginal
+lootprocessingfromthiscapture. Currentfixtureitems6/7 exercisegenericitems;
+actualcapturedremapcaseisnextusefuldifferentialcontext.
+
+**Next action:** implement reached4FD68 /50BE8 andotherlootrenderers, then
+actual48838/58030/58454/58670 selection/transfer/endgraph. Extend original/native
+oraclewith capturedlootcontext. Complete leveldrawing beforeclaimingthatgraph.
+Reruncontroller-onlyroute; revise fixedinputs/outcomes from real progression.
+Oldm32difficulty cannotbe treated as gameplay-only while rewardgraph incomplete.
+
+**Read-only original dumps ready:** `/tmp/pe-reward-original.txt`
+4B70C..4BCB4; `/tmp/pe-reward-level-original.txt`4BE4C..4C34C;
+`/tmp/pe-reward-helpers-original.txt`;`/tmp/pe-reward-more-original.txt`;
+`/tmp/pe-reward-draw-original.txt` (some6062C andother tails incomplete).
+`/tmp/pe-loot-original.txt` ranges48838..48920,4FCF8..4FDE8,
+50B94..50C08,57ECC..58720. Readbefore re-disassembling.
+SourceEXEverified; objdumpenv/commandsinolderhandoff.
+
+**Earlier exploration finished:** circuit69295 andescape70231 terminalexit1,
+72000framesbothendstory9/A8000148afterdeath. Circuitdeath63891; escapeuses
+normalcommand409 (queued63317 and63573) andstillendsrestart.
+Do notcall eitherlive or successful. `/tmp/pe-m32-{circuit,escape}-connected.*`.
+No productionchange camefromthosefailedpilots. Currentrewardfixsupersedes
+usingtheirunchangedXPstateasproof. Read-onlypostM32scriptdecode prepared
+`/tmp/pe-post-m32-rooms.txt` m0033i,m0034i,m0035i,m0036i; decodeddoesnotmeannative.
+
+**Docs current:** `BATTLE_REWARD_PROGRESSION.md` has854wordspans/hashes,
+240caseproof,routefrontier/checklimits. `pc_port/README.md` and
+`DAY1_SEWER_MOVEMENT.md` nowexplicitlyretire theolder62krouteascurrentproof.
+Itsinputsanddetailedhistoricalisolatedevidenceremainintreebelow.
+
+## SESSION 2026-09-12: A9 chest selection verified; supplies route extended
+
+Goal active. Previous turn classified as verified progress (M32/parent poses,
+supplies). This turn implements an actual missing runtime path and advances
+connected proof. Full Day2 remains unproved. No matching source/YAML/index
+changes, no agents, no gameplay RAM injection, no commits/staging/restores.
+
+**A9 complete native graph:** `field_item_pickup_port.c` now has
+- 19540..19618,54words: opcodeA9, taskbit20, first/retry/wait/delay, selected
+  result3..386 and signed-1 cancellation. RewindsCE00 by16 whilewaiting.
+- 4C34C..4C4B4,90words: id1 selectionwindow construction, original callbacks,
+  savedcursor restoration, existingwindow return, storagefilter and itemmode.
+- 55E14..55FB4,104words: storageeligibility bitset, excludes equippedslots,
+  57654restrictions and itemflagsE0. Existing lookup/callback implementations.
+VM19540 dispatch/headerdeclarations added. RoutineSHA256 respectively:
+a5f391afa21ec7167e98fbd012445eea2c9f95483deb314b1dd9e1f03e2d3899,
+a55d2fd773a65f13f93e2edee052fb4a774e786ec676e47ee986bf940230f545,
+5f4347c079d6f4ce59ccddb0dd4700dfba3c4e68f4a8b31533d10d1d6d8592b3.
+
+**Oracle:** `pe_field_pickup_oracle.py` extends74legacycases with110new
+A9/builder/filter cases, total184. `--compare-native --build-dir ...` checks
+all110new returns and fullRAMbelow1FE000, originalstackexcluded. Original
+instruction+delayslotbytes verified; generatedrangescovereveryoriginalwrite.
+`retail_field_pickup_cases.h` regenerated, `test_field_pickup.h` dispatches
+entries10/11/12. AllPASS `/tmp/pe-a9-oracle.log`.
+`--capture-only --capture /tmp/pe-m334-chest-connected.bin --compare-native`
+reconstructs original A9 call operands/context from actual stoppedchest and
+compares both firstwait/windowcreation phases, fullRAMPASS:
+`/tmp/pe-a9-capture-oracle.log`. Capturesneverinjectedintoconnectedroutes.
+
+**Builds/tests before new canonical extension below:** Release/Debug complete;
+all11CTest +1388/1388native PASS150.48s (native67.36s).
+`/tmp/pe-a9-{release-build,debug-build,ctest}.log`. No productioncodechange
+since exceptheadercomment. Extendedcanonicalroute subsequentlypassed157.22s (below).
+MatchingEXE unchangedSHA1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b;
+gitdiffcheck/Pythoncompilepass.
+
+**Connected A9:** `/tmp/pe-a9-chest-connected.{log,bin}`58500frames passed old
+57733stop, menuopen. Sourceoldchestpilot keepsholdingdirection, sooriginal
+menuinputinitial-release latch neverarms (D0E8=0). This was an input issue;
+no gameplay/input code changed to force it. CaptureSHA256
+f291fd6f49a60e87db9c24598cd4d2e4f1898d1e501cbda39cf16d3f70acd6f5.
+`/tmp/pe-a9-selection-route[.c]` releasesallbuttonsfrom57733, Cross57780..57782,
+thenneutral. `/tmp/pe-a9-selection-connected.{log,bin}` completes58500 with
+**inventoryslot0=0, persist71=256, chestflag80cleared, CF00selectionmode0**.
+Original A9 successfullystoresunequippedgun in chest. OnlyfourHOST_ADAPTED
+movie/opening skips. Diagnosticold45milestone/m27assertionfailsbydesign.
+Session10897 finished. CaptureSHA256
+59735adda7e1807e6f7848f0508151a3117fb392c361e0c0e1ada38023d50ab5.
+
+**Supply/menus:** firstreturnattempt `/tmp/pe-supply-menu-connected.*`62000
+stuck(70,269): westtoX0 runsintofirstchest. Correctedstage3 goeswesttoX375,
+southZ-700 thenreturn(0,-1100). `/tmp/pe-supply-return-route[.c]` completes
+62000 inM31, HP45, reserve15, equippedgun0, item7consumed, story68,
+persist1=14E, flagsD1A04000, statuscopy45, keysC8/C9 retained. Normalmenu
+inputs61000..61242 consumeitem7 (HP12->45 at~61150);61500..61832equipgun0.
+No statewrites. CaptureSHA256
+eccd1f5bcabde763875f76389dceb4d4bd0e7d94c880d2232d67175069dd4e2f.
+FrontierM31pc8019E8B8, Aya(1020,1048,2615), actorflags408.
+
+**New canonical regression PASS (session4866 complete):**62000frames/57milestones,
+3158pads. Added `route_sewer_supplies_pads.h`1610rawpairs covering
+[54500,62000); suffixSHA256864ac392b0e256c1b250571c805d3331343ed1f6368d92cc6417f6f7d7567fde
+(comma-separatedwithoutleadingcomma/newline). Existing1548unchanged.
+Capacity4096, optionalPE_ROUTE_SUPPLY_PAD_BEGIN/END. Read-only supplies
+observations pinammo15, switch2Bbit4, item7pickup, consumption/HP45 andgun0.
+Previous two victories stillrequirethreebodiesretiredinoriginalrooms; final
+M31 types7/8arechests soabsencecheckonlyappliestoM28. NewendpointM31/E8B8,
+persist14E/HP45/status45/reserve15/gun0/keys/chest/switchflagsasserted.
+Log `/tmp/pe-supply-fixed-ctest.log`, build `/tmp/pe-supply-fixed-build.log`.
+`/tmp/pe-supply-fixed-lasttest.log` retains fullroute output. Passed157.22s.
+Observations57706ammo,58188switch,58778item7,61153heal45,61683gun0.
+Debug rebuilt afternewroute `/tmp/pe-supply-debug-build.log`; Release ready.
+README/DAY1_SEWER_MOVEMENT updated withnewcanonical and A9 results.
+
+**Supplied M32 attempts completed (no third victory):**
+- `/tmp/pe-supplied-m32-route[.c]`, logs/capture
+  `/tmp/pe-supplied-m32-fixed.{log,bin}`,71000frames, session11689finished.
+  Same965initialpairs from`/tmp/pe-m28-battle-pad.txt`, supplies/menus above.
+  From62000M31centerX0, southZ1000, westX-1500 ->M32entry~62703. M32west
+ 16400then north3800. Battle63058 with45HP/64PE/15reserve/pistol0. Controller
+  firstlivingtarget, follows350distance, backsaway<200/circles200..350.
+  Killsfirstenemy63503, thenHeal1 from10HP. Dies64146 withsecondenemy17HP,
+  9reserve. Ends71000/restartstory9. SHA256
+ 71c5b644448d83e8c2e13efd22d115d6cbd88657df4ea0540e6dbb213bb1e2ae.
+  Earlier9254run aborted62703 becauseTEMPpilotreadAya0duringM32load; fixed
+  actorpresentguard inM32navigation. Runtimewasnotfaulty. Earlierlog
+ `/tmp/pe-supplied-m32-connected.log` yieldedcanonical54500..62000pads.
+- `/tmp/pe-m32-distance-route[.c]`, `/tmp/pe-m32-distance-connected.{log,bin}`,
+ 72000frames,session60506finished. Follows800distance, backsaway<450,
+  clamps awayfromx[-16100,-13800]/z[1450,2800]edges. Stillstuckneareast/north
+  edge; dies63588 withfirstenemy3HP,second34HP. SHA256
+ 3b9b38ae9acde92c3e327a69e3aba7eee646ec0e07e104711ab7654a0a3f6a7e.
+Both losses are pilotoutcomes; no HP/damage/inputbehavioroverrides made.
+
+**ONLY LIVE process: session69295** `/tmp/pe-m32-circuit-route[.c]`,
+`/tmp/pe-m32-circuit-connected.{log,bin}`,72000frames. Same verifiedsupplies
+andmenus. M32battle movement nowcycleswaypoints(-16000,1600),(-16000,2700),
+(-14300,2700),(-14300,1600); advancecornerwithin100units or240frames.
+NormalCross/Heal1 controllerunchanged. LogsM32_CIRCUIT andSUPPLY_FINAL_PAD.
+No RAMwrites. Inspectactualresult; do not assume victory or runtimeblocker.
+Newnative/A9andcanonicalregressionwork is complete andverified; nextwork
+must stillcarrythirdfight and onwardtoactualDay2. Goalremainsactive.
+
+## SESSION 2026-09-12: M32 movement and actor-frame omissions verified
+
+Goal active. Full Day 2 and whole-route retail fidelity remain unproved.
+This turn made verified native progress. No matching source/YAML/index changes,
+no staging/commits/restores, no agents, no gameplay RAM injections.
+
+**Production:** `m28_movement_port.c` now shares init/command/update bodies
+with explicit unsigned relocation: M28=0, M32=FFFFFFF0 (-16). Cleanup and EXE
+arithmetic unchanged. Signature-guarded constructor6F39C, command6F6D4,
+D413C update/noops/cleanup, and 6FC18 destruction dispatch m32's original
+addresses. Full 764-word comparison verifies 21 internal J/JAL targets and
+five stored callback references relocate -16; all other words are identical.
+Original M32 C2 LBA15937/48, SHA256
+cad2f1feb66352c54806de4291c6a7fb28fd610039860a6631aebc93047fffa8.
+Descriptor80192558: 80191504,8019150C,8019159C,801917E4,801917EC,
+80192090,801920EC. `pe_m28_movement_oracle.py --room m0032i` verifies the
+relocation directly and passes **991 original/native cases**. Default M28
+passes **1003**. M32 excludes only 12 M28 room-command cases. New native
+header/test included. Logs `/tmp/pe-m32-movement-oracle.log`,
+`/tmp/pe-m28-relocated-oracle.log`.
+
+`actor_contact_port.c` now implements all38 original words of3601C..360B4:
+one ordered list pass copies position/rotation when flag400000 and parent
+are present, preserving sequential memory access and overlapping poses.
+35558 calls at original356F8, after optional1A9F8 and before66268, including
+paused frames. Lifecycle oracle adds60parent/count/flags/order +6overlap
+cases to467retirement; onecapturedretirement +16contact comparisons retained.
+**550 original/native cases PASS**, `/tmp/pe-parent-sync-oracle.log`.
+Generated533syntheticcases carrykind0retire or2parent, dispatched in test.
+35558 also restores original35B34 ->661CC after6C5BC/69594; this existingleaf
+resets projectioncenter160,112 even when69594's update gate is clear.
+
+**Final builds/tests:** all11CTest + **1388/1388native PASS**,145.87s
+(route145.87/native63.20). Release and Debug complete. Logs:
+`/tmp/pe-frame-complete-{build,ctest}.log`,
+`/tmp/pe-frame-complete-debug-build.log`. Earlier parent-only suite also
+all11passed142.58s `/tmp/pe-parent-sync-all-{ctest,lasttest}.log`.
+Canonical route unchanged:54500frames/49milestones/1548pads, two sewer
+victories51167HP30 and54039HP12. README and DAY1_SEWER_MOVEMENT updated.
+Matching EXE SHA1 remains452fb033f2eaa4b18aa20a5bca60b8125af3a37b;
+plan1145=796C/347asm/2rodata,b50a30290d4d,geometry1EE000. Plan/status,
+Python compile/diffcheck passed. Earlier tracked-source verifier issue remains.
+
+**Connected outcomes (all input-only cold boots):**
+- `/tmp/pe-m32-movement-connected.{log,bin}`: old west approach passes the
+  missing callback57424, Heal1 heals8->38 at57626, death57796/restart58005.
+- `/tmp/pe-m32-north-connected.{log,bin}`: north first hits wallz3602,
+  Aya(-12629,2097,3602),65000frames,no battle/unknowncallback.
+- `/tmp/pe-m32-upper-connected.{log,bin}`: north to3400 thenwest still
+  startsbattle57514, death58044. Lower polygons are enemy AI regions;
+  they do not prove an encounter bypass. Includesparent, predates661CCcall.
+- `/tmp/pe-m32-ground-connected.{log,bin}`: latest library,68000frames.
+  Controller attacks firstlivingenemy only within200XZ/150Y; otherwise
+  perpendicular dodges while airborne. Heal1 through normalmenus heals
+ 12->42 at57615; death57788 thenrestart. Both type6enemies start34HP.
+  No thirdvictory. Source/binary `/tmp/pe-m32-ground-route[.c]`.
+
+M32entry56619: Aya(-12345,2097,2585),12HP/64PE/noammo. West triggers
+battle57351 nearx-13970. Original exit8019C888 ->m33/A80031C8 at
+x[-16680,-16080],z[3650,4000],persist1=20. Scriptbase8019AC98 SHA256
+8da1775b2d07e7083d786fbbbdcdf5e45e3c178429089b16f8d736c0d3cac1cc.
+No inference from a losing pilot justifies changing gameplay values.
+
+**Supply-room probe completed:** session32966 source/binary
+`/tmp/pe-m334-chest-route[.c]`, log/capture
+`/tmp/pe-m334-chest-connected.{log,bin}`. It opens firstchest, persist84=80,
+**reserve ammunition increases0->15** (virtualitem512+A at800A1E6E).
+Inventoryslot4 stays0 because ammunition merges into existing virtualslot3.
+Repeated Cross then reopens the chest for item selection and stops57733 at
+unported **opcodeA9/func80019540**, pc8019292C/actor800BF490. This is an
+actual unresolved boundary, not a completed63000-frame replay. A user-facing
+initial claim of no callback stop was corrected after reading full log.
+
+A9 original19540..19618 (54words): taskD300 flags+8bit20; firstcallsetsbit,
+67CBC, rewindsCE00 by16, sets task+16=1/returns0. Subsequently D2A4 in3..386
+writes value-3 to operand1; signed-1 writes-1; eitherclearstaskbit/returns1.
+Otherwise calls4C34C(operand0), rewinds/delays again. **Not implemented.**
+4C34C..4C4B4 (90words) creates existing itemlist callbacks44444/F8D0/57C54/
+50260/447F0 plus55760/52F70/647D0/4C594/55E14/5B890; routine itself notported.
+
+**Supply continuation completed:** session36323 source
+`/tmp/pe-m334-supplies-route.c`, log/capture
+`/tmp/pe-m334-supplies-connected.{log,bin}` also stops57733 at the sameA9.
+Straight movement toward switch left Aya against chestcollision at(0,245),
+so Crossreopened it. No new runtime code changed; this is knownboundary.
+
+**Corrected navigation completed, no live processes:** session61494,
+`/tmp/pe-m334-waypoints-route[.c]`,
+`/tmp/pe-m334-waypoints-connected.{log,bin}`,65000frames, frame-limit with
+only four existing HOST_ADAPTED movie/opening skips. No unknowncallback.
+Same965initialpads and coldboot. Afterchestflag80, stepssideways to(400,245),
+then(400,1900), then switch(64,2148). Crossgatedtonear intendedswitch/chest,
+but stillpulsed whenD1A0&4 to dismisspickupwindows. Switchpersist2B=4 by58200,
+chest7flag200 by58800. **Inventoryslot4=7, reserve15, HP12**, chests84=280,
+switch2B=4, m334A8063248/story68/persist1=1F, D1A04000. Originalitem07 has
+heal90 property; not yet used. CapturedSHA256
+765af3be311bd78607573bd5ca066e2e73810fc02d682e4203ab1cc5127b1410.
+Probe's old45milestone/m27endpointassertion fails by design at this extended
+endpoint; it is a diagnostic, not a new passingcanonicalregression.
+
+**Immediate next work:** returnpath diagonally toward(0,-1100) getsstuck at
+(685,244) from58920onward. Change stage3 towalkwest toX0 first, then south;
+useordinarymenu to consume item7 and equipcarriedgun0 with15reserveammo,
+thenreturnm31/m32 for thirdfight. All normalcontrollerinputs, noRAMrestores.
+No change made yet. Initial6593run was intentionallyterminatedearly to
+correctpickupwindowCross before completed61494restart. OptionalA9 boundary
+remains unported; movingaway fromopenedchestavoids requestingthat menu.
+
+Original M334 script `/tmp/pe-sewer-forward-rooms.txt`, base80191B90,
+SHA256fb8e97859ff9d92198c759655aacc95e360e4580733de8a8c10d23bba8a28711.
+Room entry(0,474,-640). Firstchest module4 at(-50,474,513), RNGitem0D/02;
+actualentrycapture chooses02. Module5(-411,474,1274) item22/31, chooses31;
+module6(589,474,2058)item1D/1E, chooses1D. Module7—not8—has fixeditem07 at
+(837,474,13), onlyspawned after persist[2B]&4 (switch nearx25..111,z2100..2198).
+Module8 is ambience. Return rectangle x[-676,777],z[-1300,-1000] ->m31,
+persist1=14E. Original item table in capturedRAM baseAB608: item02 kind10hex
+(16decimal), quantity15 at+10; item07 kind0A/heal90 at+12. Item06heal45.
+No item-name string decoding done, so refer to IDs/record properties.
+
+## SESSION 2026-09-12: both sewer victories; m0031i selected audio ramp
+
+Goal active; full Day 2 and whole-route retail fidelity remain unproved.
+This is verified progress through Day 1 prerequisites. No matching C/YAML or
+index changes; no staging, commits, restores, agents, or gameplay RAM cheats.
+
+**Production fixes since the movement/projectile section below:**
+- `func_80020F18_port.c`: guarded801920A0 movement destruction callback.
+  Movement oracle now1003cases PASS; native suite1386/1386 passed afterward.
+- `actor_contact_port.c`: complete original360B4..361F4 actor retirement,
+  replacing the flag-only cut in35558. Releases effects6FE14, clears Aya/input
+  state as needed, releases first model allocation363F4, unlinks active list,
+  pushes free list, decrements count. Original3D82C is return-one/no RAM effects.
+  This fixes the defeated type8 actor's255-unit collision body remaining in
+  the live list and blocking Aya nearz-1917. No collision bypass was added.
+- Effect pool addressing now aliases physical RAM. Cold boot retirement calls
+  6FE14 before pools initialize; retail reads physical8, which previously
+  aborted the native host. Nine new physical/uninitialized pool fixtures pass.
+- `pe_stream_commands.c`: full96-word **8008B780..8008B900**,
+  commandA1 selected effect-volume ramp. Group overlap takes precedence over
+  handle equality; duration default/full-word zero test, signed-low-halfword
+  division and fault prefix preserved. This resolves the m31 boundary below.
+  Routine SHA25629e7f2ce0e7fc181da4e8f3051148e981e0eec846274ec987110fee5721a13f8.
+
+**Retirement evidence:** `pe_actor_retirement_oracle.py` / new native fixture
+`test_actor_retirement.h`:467 synthetic cases +1 captured retirement +16
+captured contact comparisons = **484 original/native cases PASS**. All RAM
+below1FE000 identical, original scratch stack excluded, executed instruction
+and delay-slot source bytes checked, generated ranges cover every original
+write. Moving south5units at the old stuck state is rolled back before
+retirement and accepted afterward in both original and native. Logs:
+`/tmp/pe-retirement-{pool-oracle,contact-oracle}.log`.
+Native regression includes467synthetic cases; latest pre-A1 full native suite
+**1387/1387 PASS60.30s**, `/tmp/pe-retirement-verified-native.log`. Debug complete.
+Audio oracle now964normal FIFO cases (483A1) plus4A1/2A9fault prefixes;
+`/tmp/pe-m31-a1-oracle.log`. Full-RAM captured A1 native/original PASS below
+1FE000: `/tmp/pe-live-a1.log` (temporary script's label still says retirement).
+
+**Connected victory:** `/tmp/pe-retirement-pool-connected.{log,bin}` uses
+old input-only `/tmp/pe-m28-battle-route.c` (no sidestep),965initialpad pairs
+`/tmp/pe-m28-battle-pad.txt`. Reaches62000 without unresolved boundary,
+m28A8002448/story68/persist1=1B, AyaHP12, mode9, D1A04080, menu0,
+overlay40000040/musicF2=0. Both type7 and type8 enemies removed. Status copy
+C0E08=22, clubslot2, keysC8/C9 retained. Capture SHA256
+3484bcb8fa9e8c6921df8ff7ca849933f7e13dddf03098c2132f9757e9a7d3c7.
+The earlier `/tmp/pe-m28-destroy-connected.log` navigator LOST (HP0 at54484,
+restart54752). Its new-room ending was not story progress. That loss predates
+complete retirement; do not confuse it with the verified victory above.
+
+**Canonical regression extended (currently under full-suite validation):**
+`test_route_boot_day2.c` now54500frames/49milestones/1548pads, endpointm28.
+New `route_second_sewer_pads.h` adds587recorded pairs; previous961unchanged.
+Suffix SHA2561d191a3c3caed7f4bfe121e7de6709c307f3878c9bf558f2bc923758fcaad896
+(comma-separated suffix without leadingcomma/newline). Capacity2048. Raw pad
+intervals[42713,45041),[50500,51200),[52344,54500). New env overrides
+PE_ROUTE_SECOND_SEWER_PAD_BEGIN/END. Read-only per-frame battle observations
+require3spawned enemy bodies, no bodies at exit, living Aya, mode9/control.
+First fixed replay `/tmp/pe-second-sewer-fixed.{log,bin}` observed victories
+**51167HP30 /54039HP12**, all49milestones, endpointtaskPC801A5A78. Its old
+status-copy assertion36 failed; actual22 already corrected before full suite.
+No pad change was needed. This first replay alone was not a passing test.
+
+**Forward continuation:** `/tmp/pe-m28-forward-route.c` uses old battlepilot
+then, from54500 in m28 with control, centersX then walks toZ450. Same965input
+prefix. `/tmp/pe-m28-forward-connected.{log,bin}` reached **m31A80030C8 at55387**,
+persist1=1C/story68, then stopped55612 at audioA1 callback8008B780. Capture
+SHA2564867f80a60d736d49faed92f8e81bc2489ba0aef308e3ee77508f99c8706bc9f.
+The native A1 implementation above has now replaced that missing callback.
+
+**Live processes:**
+-24926 `/tmp/pe-m31-a1-connected.{log,bin}` retries the same forward controller
+  after A1,62000frames. Binary `/tmp/pe-m31-a1-route`.
+-79270 all11CTest after A1 and new canonical endpoint:
+  `/tmp/pe-second-sewer-all-ctest.log` (parallel2).
+-91712 Debug rebuild after A1/header/newroute:
+  `/tmp/pe-second-sewer-debug-build.log`.
+Release build complete `/tmp/pe-m31-a1-build.log`. Check actual results next.
+README and `DAY1_SEWER_MOVEMENT.md` still need final current verification updates.
+
+Matching EXE unchanged, candidate/original SHA1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b; plan1145spans796C/347asm/2rodata,
+b50a30290d4d, geometry1EE000. Plan/status, Python compile, gitdiffcheck pass.
+Full repo verifier's earlier tracked-source metadata issue remains. Known
+additional omission: original3601C parent pose synchronization is absent from
+35558; inspected but not changed or tied to the current next boundary.
+
+Latest update: all11CTest and1387/1387native PASS163.72s; route163.72s,
+native72.17s. Final logs `/tmp/pe-second-sewer-all-{ctest,lasttest}.log`.
+Debug complete `/tmp/pe-second-sewer-debug-build.log`. Fixed regression is
+now validated; README and DAY1_SEWER_MOVEMENT have been updated accordingly.
+24926 completed62000 with no unresolved boundary in m31: Aya(170,1048,-950),
+HP12,flags408,D1A04000,mode9/menu0; captureSHA256
+eeb2900eb601d8f8fbd6f421aa7895a4725126f3e22848bcbfa63fe9b8be595c.
+
+**Only live replay50504:** `/tmp/pe-m31-forward-connected.{log,bin}`,
+source/binary `/tmp/pe-m31-forward-route[.c]`. Same965initialpairs and m28
+battlepilot/forward exit. From56000 in m31 with control, centersX then walks
+north toZ2900, then east towardX1500. LogsM31_WALK every120frames. No gameplay
+RAM writes. Frame limit62000. m31's original forward rectangle isx[1300,1800],
+z[2600,3300], transfer8019EB40 -> m0334i/A8063248. Side exitx[-1600,-1400],
+z[800,1250] -> m32/A8003148; backx[-740,740],z[-1150,-1050] ->m28.
+Original script base8019DBE8/SHA2566dcc77b3c1e9378433f2522aee5fdbcc8f42972142b67cd3de8765f7d318d555,
+`/tmp/pe-m0031i-probe.txt` regenerated without the invalid --room option.
+Older live-process entries in this section are completed/historical.
+
+**FINAL CHECKPOINT: no live processes. Goal active, verified progress.**
+All11CTest/1387native and both builds remain green; no production change
+followed the passing suite. Latest required frontier is now the third sewer
+encounter in m0032i, not m31's audio command.
+
+`/tmp/pe-m32-entry-connected.{log,bin}` enters m32/A8003148 at56619 and
+completes62000 without an unresolved stop. Aya(-12345,2097,2585),HP12,
+flags408,D1A04000,story68/persist1=1F. CaptureSHA256
+1cb02041323f60c440654209284240b3289a6af7da06cc566ca475fbf6f75a24.
+Its source/binary `/tmp/pe-m32-entry-route[.c]` follows the original m31 left
+exit: from56000, centerX, north toZ1000, west toX-1500. The earlier m334
+probe completed62000 in that optional side room, entry56922, no unresolved
+boundary; `/tmp/pe-m31-forward-connected.*`, captureSHA256
+d8dfea7fe920c9d35dc02b1e3117c61f073fda1d88c45952db385467035f0b9a.
+Original m334 has only a return transfer to m31; main path is m32 -> m33.
+
+**Latest `/tmp/pe-m33-approach-connected.{log,bin}`** (completed44402):
+input-only source/binary `/tmp/pe-m33-approach-route[.c]`, same965initialpads.
+Adds m32 navigation from57000: west toX-16400, then north toZ3800, and
+reuses the M28 battle/Heal1 pilot when m32 battle flag2 is set. No guest
+positions/HP/story/effect state is supplied. Battle starts57351; replay stops
+**57424 unresolved-boundary**: constructor8019150C is unported, then
+small-pool draw callback**801917E4 mode2** requests stop. AyaHP12,
+(-14586,2097,1828),flags420,D1A04082. CaptureSHA256
+7b0dd263d430b821d885163566ce957394a0e83ede553294f093118553579fb2.
+Main-path m32 exit original8019C888 ->m33/A80031C8 atx[-16680,-16080],
+z[3650,4000]; arrival writespersist1=20. Current controller stops after room
+transfer unless battle continues. M32 script base8019AC98/SHA256
+8da1775b2d07e7083d786fbbbdcdf5e45e3c178429089b16f8d736c0d3cac1cc.
+`/tmp/pe-sewer-forward-rooms.txt` contains m334 and m32 original scripts.
+
+**Read-only next implementation evidence:** M32 C2 is Disc1LBA15937,
+48sectors/98304bytes, SHA256cad2f1feb66352c54806de4291c6a7fb28fd610039860a6631aebc93047fffa8,
+`/tmp/pe-m32-c2.bin`. Effect49 descriptor80192558 has functions
+[80191504,8019150C,8019159C,801917E4,801917EC,80192090,801920EC].
+The complete764-word movement graph m28[80191514,80192104) vs
+m32[80191504,801920F4) is identical except**21internal J/JAL targets and
+5stored callback addresses**, all relocated by-16. Exact check file
+`/tmp/pe-m32-movement-relocation.json`; original CD bytes also match all
+764words in the actual57424capture. Five callback-reference instructions are
+oldPC191550/191714/191758/191884/191C24; new immediates18 84/18 14/1D 08/
+18 84/1D 00 (spaces only for readability). Existing native M28 movement is
+therefore reusable with explicit relocated callback addresses after tests.
+No M32 movement code has been changed yet; do not claim this frontier fixed.
+Likely next: parameterize the existing init/command/update's code addresses
+and add guarded M32 wrappers/dispatch; shared cleanup has no relocated data.
+Cover constructor6F39C, command6F6D4, D413C draw/update/cleanup and6FC18destroy.
+Reuse original/native histories with the M32 overlay/descriptor and preserve
+M28's existing1003-case regression. Full arithmetic/helpers are otherwise
+identical. Known parent-sync3601C omission below still untouched.
+
+## SESSION 2026-09-12: m0028i movement and projectile effects connected
+
+Goal active; full Day 2 and whole-route retail fidelity remain unproved.
+This turn is verified progress. Current work is still Day 1 prerequisites.
+See `docs/ai_context/DAY1_SEWER_MOVEMENT.md` for full evidence and scope.
+
+**Production changes:**
+- New `game/boot/m28_movement_port.c`: complete original effect49 constructor,
+  commands, animation gate, first/resumed movement arcs, apex pause, cleanup,
+  and EXE helpers DFB20/DFB78/DFF80/DFFB8. Uses original C2 overlay authority.
+- `func_8006F39C_port.c`: dispatch m28 constructor and fix small-pool return
+  index to i+11, matching existing original C. This was an actual defect.
+- `func_80017018_port.c`: opcode6C query wrapper passes output addresses.
+- `func_8006F6D4_port.c`: dispatch movement commands and preserve return.
+- `func_80069594_port.c`: original69660 small-pool draw/update loop;
+  `func_80035558_port.c` calls it at original356D0 before floor resolution.
+- `func_800D413C_port.c`: overlay-aware movement, command and projectile
+  callbacks. Command80193148 stores three arguments to193288..193290 and
+  returns80193288. No unknown callback was replaced with a no-op.
+- `m0013i_effect_port.c`: share the existing projectile routine through
+  three explicit address parameters. M13 keeps its original wrapper; new
+  M28 wrapper uses F1CC/F1D4/1924F8. Particle arithmetic is unchanged.
+- CMake/header register the new native file/functions; no matching source
+  or YAML change this turn. No staging, commits, restores, or agents.
+
+**Verification completed:**
+- `pe_m28_movement_oracle.py`: **947 original/native calls/history frames PASS**.
+  Whole RAM below1FE000 compared (VM compatibility frame explicitly excluded),
+  executed code/delay-slot words checked against original EXE/overlay. Original
+  scratch stack/scratchpad/GTE state/timing outside RAM excluded. Generated
+  fixture hashes also assert coverage of all original RAM writes belowcutoff.
+  Native regression `test_m28_movement.h` PASS. Header18844+ lines.
+- `pe_m28_projectile_oracle.py`: complete **788-word relocation proof**:
+  M13 8018F004..8018FC54 vs M28 801924F8..80193148 differ only by18internal
+  jumps and3data references. **120 original/native projectile cases PASS**,
+  including both GPU packet banks and sound/collision/particles. Uses the
+  existing M13 fixture family and its explicit packet-padding exclusions.
+- Current **1386/1386 native tests and all11CTest checks PASS**, total185.87s:
+  `/tmp/pe-m28-final-ctest.log`, `/tmp/pe-m28-final-lasttest.log`.
+  Canonical52k/45milestone/961pad regression PASS129.03s, native54.90s.
+  Release and Debug complete (`/tmp/pe-m28-final-{build,debug-build}.log`).
+- Previous movement-only suite:1385native/all11PASS193.16s (route124.92s),
+  `/tmp/pe-movement-all-{ctest,lasttest}.log`. Historical before projectile.
+- Other logs: `/tmp/pe-movement-oracle-final.log`, `/tmp/pe-movement-native.log`,
+  `/tmp/pe-m28-projectile-{oracle,native}.log`.
+- Candidate/original SHA1 remains452fb033f2eaa4b18aa20a5bca60b8125af3a37b;
+  plan b50a30290d4d =1145spans796C/347asm/2rodata, geometry1EE000.
+  Generated status check, Python compile and gitdiffcheck PASS. Full repository
+  verifier still has the earlier untracked-source metadata issue (two files).
+
+**Connected results:** input-only `/tmp/pe-m28-battle-route.c`, initial965pad
+pairs `/tmp/pe-m28-battle-pad.txt`, 62000frame limit. First build stopped53241
+at command80193148 (`/tmp/pe-m28-movement-connected.*`), next at main80192700
+mode0 (`/tmp/pe-m28-command-connected.*`). Both now translated.
+Latest `/tmp/pe-m28-projectile-connected.{log,bin}` completes **62000 frames
+without an unresolved boundary**. m28A8002448/story68/persist1=1B; AyaHP38,
+PE16, battle active. Type8actor800C0390 is defeated (body0/deathflags6001510).
+Two type7 enemies remain atHP12 each:800C0110/800BFE90. Thus no victory yet.
+Capture SHA256143baf259cc91f2e40d820533d46a4ed837f383e4fccfb1c8402ae73fcc3678b.
+Aya=(8.1629,1153,-1917.1394); remaining enemies near(-656,-3306)/(254,-2877).
+She keeps attacking out of range and becomes stuck on her approach. Battle
+trace's old enemyhp=0 is not actual HP for these types; read body+16.
+
+**Live next replay3436:** `/tmp/pe-m28-navigate-connected.{log,bin}`,
+executable/source `/tmp/pe-m28-navigate-route[.c]`. Same965initialpads/62k.
+Improved input-only controller holds Cross until within200units (except menus),
+keeps Heal1 via normal menus, and sidesteps55frames if moving less than3units
+for45free frames while target is far. Side alternates. LogsM28_ESCAPE and
+M28_FINAL_PAD/M28_HEAL as before. No gameplayRAM writes. All productiontests
+finished; only this exploratory replay is running. Inspect its actual result.
+
+**Read-only floor audit:** temporary `/tmp/pe-live-m28-floor.py` adapts existing
+`pe_live_floor_compare.py` to complete1A9F8 rather than1AE40. Uses latestcapture
+and eight5unit directions, cacheon/off. **16/16 PASS**, every RAM byte below
+1FE000 matches original. `/tmp/pe-m28-battle-floor.log`. This does not prove
+all movement/collision; do not infer the entire frame is correct from it.
+Arena polygon801AB604,4points=(1059,-3905),(1227,-1424),(-1306,-1424),
+(-1122,-3905). Aya radius65/scale4096. Deadtype8 at(-48.39,-2149.77), body0.
+
+Next: finish3436 and try normal input to win remaining fight, then towardm31.
+Earlier frontier details below are historical; effect49/op6C/main now work.
+
+## SESSION 2026-09-12: m0028i opcode DD and next movement-effect boundary
+
+The goal remains active. Full Day 2 and whole-route retail fidelity are
+unproved. The canonical regression still covers the first sewer victory:
+52,000 frames, 45 milestones, 961 pad changes, m0027i / A80023C8, Aya HP30.
+Its latest run passes in 143.74 seconds (part of the current CTest suite).
+
+**New matching C:** `src/func_8001A214.c`, opcode DD, 55 words / 220 bytes.
+Registered at YAML AA14; default era `-O2 -G0`. Leaf link and strong size
+checks pass. All **796 matching C spans pass the full strong sweep**.
+`scripts/build_us.sh` rebuilds the complete candidate byte-identically to
+retail, SHA1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+`disc1_verify.exact_checks` also passes all 796 packed C spans. Plan:
+`b50a30290d4df4e0b10a2798d38c7fbc10b1da3d20f9d8f97e77b134634be131`,
+1145 spans = 796 C + 347 asm + 2 rodata, geometry 1EE000.
+Logs: `/tmp/pe-polar-{match,strong-check,matching-sweep,retail-build,packed-check}.log`.
+The full `scripts/verify_us.sh` stops at its tracked-source metadata gate:
+new `src/func_8001A214.c` and preexisting `src/func_800374E8.c` remain
+untracked. No staging or index changes were made. This is not a byte mismatch.
+Generated status was refreshed to 796 through `disc1_plan.py --write-status`.
+Generated, ignored AA14.s was removed with the plan cleanup tool; its original
+copy is `/tmp/pe-retail-AA14.s`. No other matching source was changed here.
+
+**Native DD:** guest adaptation in `func_8001A15C_port.c`, dispatch in
+`func_80017018_port.c`, declaration in `pe_port_compat.h`. Signed-halfword
+angle reduction and original store/load order preserved. New
+`pe_polar_vm_oracle.py`, `retail_polar_vm_cases.h`, `test_polar_vm.h`:
+**561 original/native full-VM cases pass**, including all operand modes,
+quadrants, wrapping and aliasing, followed by a wait. All original writes
+below 1FE000 are in compared ranges; stack/native VM frame adaptation and
+hardware/timing outside RAM excluded. Filtered native test passes.
+Release and Debug builds complete. All **11 CTest checks pass**, including
+**1384/1384 native tests** (55.87s) and the fixed route (143.74s); total
+201.87s, `/tmp/pe-polar-all-ctest.log`. Native LastTest copied to
+`/tmp/pe-polar-all-lasttest.log`. All sessions from this update completed.
+
+**Connected replay completed:** `/tmp/pe-m28-polar-connected.{log,bin}`,
+executable `/tmp/pe-m28-polar-route`, session 50829. Same 965 initial pad pairs
+in `/tmp/pe-m28-battle-pad.txt`, input-only battle controller source
+`/tmp/pe-m28-battle-route.c`, requested 62,000 frames. No gameplay RAM writes.
+Reaches m28 at 52344, battle at 53073, fade completed 53140. DD passes.
+**Stops 53141**, actor 800C0390 / type8, at two untranslated paths in the
+same VM invocation: effect 49 constructor and opcode **6C / 80018818** at
+script **801A9450**. Aya HP30. The old m27 endpoint assertion also fails
+because this probe advanced into m28; do not interpret it as a regression.
+Capture SHA256 `0e5496adcdd0a514d113e1cf204673bfe0020f0809907e2dda820c512344ada3`.
+Earlier completed `/tmp/pe-m28-flags-connected.*` stopped 53140 at DD
+(801A91D8); op13 itself had passed. No current connected replay is running.
+
+**Next: decompile movement effect 49 and opcode 6C.** The effect controls
+actor movement and completion notification (earlier progress wording called
+it a projectile path before the graph was inspected). Capture slot 8018D024,
+small-pool index 0, code49, userdata800C0390. **Additional proven bug to fix:**
+`func_8006F39C_port.c` returns the local index0 for the small pool, but existing
+matching `src/func_8006F39C.c` returns i+11 for codes46..54. The capture
+confirms local23=0. Correct this along with the constructor; otherwise6F6D4
+resolves the wrong pool even after initialization is translated.
+Descriptor 801931DC: init8019151C, command801915AC, noop801917F4,
+update801917FC, cleanup801920A0. Constructor sets callback80191894;
+command10 changes it to animation gate80191824. Query command25/mode1 stores
+an output pointer at slot+0x10 and writes 1 through it. VM opcode6C passes
+(*arg0,1,*arg1,arg2,arg3,arg4) to existing6F6D4, preserving pointers.
+`/tmp/func_80018818.c` is only an unmatched experiment; do not put in src/.
+Its era check differs in instruction scheduling (`/tmp/pe-event-query-match.log`).
+No production change to opcode6C or effect49 has been made.
+
+Original room C2 overlay extracted read-only: Disc 1 LBA15016, 69 sectors,
+141312 bytes, guest base8018EFE8, `/tmp/pe-m28-c2.bin`, SHA256
+`c15d03313a578f7c7ba07f255345df8e17734e38dd807162426d0bc3a7fd7e94`.
+Code80191514..801931DC is byte-identical between this original data and the
+capture. Disassemblies: `/tmp/pe-m28-projectile-dis.txt` (constructor/commands),
+`/tmp/pe-m28-projectile-update-dis.txt` (updates plus subsequent unrelated
+functions). Effect49 graph is 80191514..801920FC; later code is another effect.
+Main callbacks: animation gate1824..1894; movement1894..1D10; noop1D10;
+second movement1D18..20A0; cleanup20A0..20FC. Unported EXE callees
+800DFF80/800DFFB8/800DFB20/800DFB78 are in C5060.s.
+Command jump table at8018F164, entries0..25. Implement from original overlay,
+not inferred gameplay. Existing6F6D4 ignores unknown callbacks; connecting
+only the constructor will be insufficient. Field effect pump also needs
+exact overlay-aware update dispatch. Keep explicit unresolved boundaries.
+
+Evidence: `docs/evidence/func-8001A214/REPORT.md` and
+`docs/ai_context/DAY1_SEWER_FADES.md`. No agents, commits, staging or restores.
+
 # ACTIVE HANDOFF
 
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
+
+## SESSION 2026-09-12: first sewer battle fade and music reload
+
+Goal active; still Day1 prerequisites, fullDay2/whole fidelity unproved.
+New evidence [DAY1_SEWER_FADES.md](DAY1_SEWER_FADES.md).
+
+Production changes this turn:
+- New `game/boot/func_8003C638_port.c`: fade-in/out, packet modes, model
+  color restoration and height recoloring. `3AF14` now runs its original
+  fade/restore/color dispatch. `3B97C` skips untagged triangle's second NCCT.
+- `func_80029810_port.c`: ambient reload3E/33, state40 redispatch, state32
+  original timer/ramp. Original6D60C provider-control comparison426casesPASS.
+- `pe_model_fade_oracle.py`:125scenarios/381frames nativePASS. Compact2528-line
+  header before removing unused table; current regenerated header is smaller.
+- `pe_live_model_compare.py`:195 captured ticks (3sewer enemies,65each) PASS,
+  allRAM below1FE000identical; scratchstack/scratchpad/GTEstate excluded.
+  `/tmp/pe-live-model-final.log`.
+
+Connected probe `/tmp/pe-sewer-fade-connected.{log,bin}` wins all3enemies,
+AyaHP30, stops51158 at explicitly deferred ambient reload (overlay3E).
+That loader path is now translated. **Completed session1592**,58000frame replay,
+`/tmp/pe-sewer-ambient-connected.{log,bin}`; same758prefix/controller. No boundary:
+AyaHP30 at(119.3301,773,-3067.3823), flags408, D1A04080,battlemode9inactive,
+overlay40000040,F2=0,story68/persist1=1A. First sewer fight/control restored.
+
+Current verification:
+- **1382/1382native tests PASS**, CTest56.55s:
+  `/tmp/pe-sewer-native-verified-ctest.log`,
+  `/tmp/pe-sewer-native-final-lasttest.log`.
+- All381model frames/195captured ticks/426ambient casesPASS.
+- **52000frame /45milestone /961fixedpad route PASS134.33s**,
+  `/tmp/pe-sewer-fixed-final-ctest.log`, `/tmp/pe-sewer-fixed-final.bin`.
+  Other9CTestchecks passed in`/tmp/pe-fade-music-ctest.log`. All11checks green
+  across final targeted reruns. No further tests needed absent new changes.
+- Debug final build complete,`/tmp/pe-sewer-debug-final-build.log`;
+  Release current. Native prefix test now covers fade-out and fade-in through
+  field loop with initially visible model; stops before later animation
+  stages requiring pose data absent from this isolated fixture.
+- New`tests/route_sewer_pads.h`, second exact raw interval[50500,51200),
+  overridesPE_ROUTE_SEWER_PAD_BEGIN/END. kRehearsalRoutePads renamedkDay1RoutePads;
+  suffix concatenated in rehearsal header. Recorded205battlechanges +5
+  travelpairs. Full`/tmp/pe-sewer-victory-fixed-pad.txt` SHA256(no newline)
+  99149fb604b73e56f514f113393f742714111e2779610f6b99a4b4303895b37b.
+  Endpointm27PC80199734,story68/persist1=1A, HP30live/36status-copy,
+  keys/club, all3type3enemybodies/tasksreleased+deathflag1000,
+  D1A0&6clear,overlayF2=0/flags&44=40,battlemode9inactive.
+  SeparateC0E08statuscopy is36evenafterroomtransfer (notliveHP); item/equipment
+  synchronization51510/516B4writes it explicitly. Do not force it to30.
+- Original/candidateSHA1 and disc1plan rechecked unchanged; tracked/new file
+  whitespace and three newPython scriptscompilePASS.
+
+**m28 connected** at52344 via961fixedpads+52000:FFEF,52400:FFFF:
+`/tmp/pe-sewer-next-pad.txt`, `/tmp/pe-sewer-next-connected.{log,bin}`.
+Completed57000frames, no boundary. Story68/persist1=1B, Aya(0,1153,-3455),
+liveHP30/status-copy36,flags408/task0,D1A04000,mode9inactive,cameraidentity.
+Oldm27endpointassertion mismatchisexpected.
+Originalm28`/tmp/pe-m0028i-probe.txt`, base801A4968, SHA256
+c151687a3b08229226eb255dc576bf8fe44b5d1eb22da5b997b8212bbee65df3.
+m28backm27z[-4100,-3939]; sidem29doorsx[950,1110]or[-1110,-950],
+z[-600,-500]; forwardm31x[-300,600],z[300,600]. Multipleenemytriggers.
+Probe tool`pe_m0004i_mod4_probe.py m0028i`.
+
+m28firstbattle probe38141 stopped53078 at **op13 /801A8C8C**, type8actor
+800C0390. Other enemies:type7 actors800BFE90/800C0110 waitop92. Battle starts
+53073,mode7at53076;HP30. `/tmp/pe-m28-battle-connected.{log,bin}`.
+Rawprefix965pairs`/tmp/pe-m28-battle-pad.txt`, requested62000frames.
+Temporary`/tmp/pe-m28-battle-route.c` copiescurrentcanonicalharness and
+reuses input-only controller for m28: approach first living target from
+zero-terminated9E000list, periodicCross, Heal1ifHP<=25/ATready/PE>=60.
+PrintsM28_FINAL_PADchanges; no gameplayRAMwrites. Honorsbothrawpadintervals.
+
+**Newproductionchange after lastgreenchecks:** op13 tableentry800176B8
+alreadyexistsinmatching`src/func_800176B8.c` (10words): actor+98 OR **args,
+return1. Added native VM dispatch branch in`func_80017018_port.c`.
+No matchingfileedited. `pe_actor_flag_vm_oracle.py`75originalfullVMcasesPASS,
+allfiveoperandmodes,high/fullbitmasks,followingwait,neighborpreservation.
+Newtest`test_actor_flag_vm.h`,smallgeneratedheader. Release build and all75
+native comparisonsPASS,`/tmp/pe-actor-flag-{build,native}.log`.
+**Completed28691** same965pad input-only replay withop13connected; stopped53140 at opcode DD:
+`/tmp/pe-m28-flags-connected.{log,bin}`, executable`/tmp/pe-m28-flags-route`.
+Full **1383/1383native suite PASS57.51s**,`/tmp/pe-m28-flags-native-ctest.log`,
+`/tmp/pe-m28-flags-native-lasttest.log`. Original/candidateSHA1andplanunchanged
+recheckedafterop13. **Completed7006** Debugbuild`/tmp/pe-m28-flags-debug-build.log`.
+Capturedm28modelcomparison **195/195PASS**,3actors65ticks each,
+`/tmp/pe-live-m28-model.log`. Togetherwithm27,390capturedticksPASS.
+That replay reached DD at801A91D8; the newer session above supplies its translation. Historical nativecount1383.
+FullDay2unproved. Preserve preexisting dirty/untracked tree.
+
+## SESSION 2026-09-12: rehearsal victory and connected sewer entrance
+
+Goal remains active: full Day2 and whole-game retail fidelity are unproved.
+Current work is still Day1. **m0319i is the rehearsal room**, C9 opens its
+hallway door; actual sewer entrance is m0026i. No gameplay RAM, positions,
+resources, story or command queues are seeded in connected runs.
+
+**Canonical regression passes: 46000 frames /751 fixed pad pairs /41 milestones.**
+Endpoint m0319i A80614C8, module6 PC801A355C, story60, persist1=17,
+Aya HP36 (live/saved), club carried slot2 equipped, both keys retained,
+Medicine consumed, cabinet opened, no battle/menu pause, Aya flags8/task0.
+`route_rehearsal_pads.h` records86 supply/entry pairs +665 final battle pads.
+Automatic Cross is suppressed only during[42713,45041), controlled by
+PE_ROUTE_EXACT_PAD_BEGIN/END. Pad capacity1024. Full751-pair sequence
+`/tmp/pe-victory-full-pad.txt`, SHA256 without trailing newline:
+72d06612ba7360fb8f08e37203ee7ee938cac738d3fd7c7114c9252c2e1d8431.
+
+Validation after all club/runtime changes: Release route CTest PASS121.54s
+(`/tmp/pe-victory-fixed-ctest.log`, capture`/tmp/pe-victory-fixed.bin`).
+Remaining9CTestchecks PASS61.05s, including **1381/1381 native tests**
+(`/tmp/pe-club-final-ctest.log`, `/tmp/pe-club-final-lasttest.log`).
+All10CTestchecks verified in2commands; both Release and Debug builds complete.
+Original/candidate EXEs unchanged, SHA1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b;
+plan1145spans,795C/348asm/2rodata, geometry1EE000, plan3a0f11a72cde rechecked.
+Four existing HOST_ADAPTED movie/menu skips remain. No need to repeat these
+checks absent new production changes.
+
+New production work:
+- Empty C9B90/CD8F0/CE16C weapon updates preserve flash stack bytes. Original
+  CE934 writes Z at801FEF5C; shallow wrappers and shared VM do not touch
+  borrowed801FEF58..5D. Unknown constructors/callbacks still invalidate tracking.
+  Traces`/tmp/pe-stack-writers.log`, `/tmp/pe-club-stack-writers.log`.
+- Club constructor CE084, update CE16C, origin CE1FC, spark CE2B4 and draw
+  CE3B4 translated in`game/boot/func_800CE084_port.c`. Reuses generated matching
+  CE144/CE464/CE470 and shared VM/rendering. Constructor6F39C, parameter6F6D4,
+  callbackC2414, draw69594 and updateD413C dispatch connected.
+- `pe_club_effect_oracle.py`: **61 original/native cases PASS**, compact16k-line
+  fixture header/test. Logs`/tmp/pe-club-oracle-compact.log`, `/tmp/pe-club-native2.log`.
+- `pe_m0023i_pump_oracle.py`: **70 histories /980 original/native frames PASS**,
+  both banks/orders, empty pistol/hit/club updates, delay/loop/stop/pause.
+  Logs`/tmp/pe-club-pump-{oracle,native}.log`. Fresh-generation unknown-Z stop
+  still tested. No guessed vector or extra packet mask introduced.
+
+Connected victory `/tmp/pe-club-stack-replay.{log,bin}` (52000frames):
+ordinary Medicine before battle gives45HP; cabinet gives6 reserve +5 loaded;
+Heal1 queued43669; club switch407 queued44629; club hit44752 changes Eve
+1000006->999990 with AyaHP36; mode8 at44753; story5E/m0367 at45041;
+return m0319/story5F at45525; story60/control restored45653. m0367 returns
+m0319 directly here; earlier predicted m0023 return was wrong. Temporary
+`/tmp/pe-club-route.c` produced pad input only; fixed regression captures it.
+Previous boundaries44942Flash,44733constructor,44744Flash are resolved.
+Detailed evidence/history: [DAY2_REHEARSAL_ROUTE.md](DAY2_REHEARSAL_ROUTE.md).
+
+**Connected sewer entry proved** (`/tmp/pe-sewer-door-connected.{log,bin}`):
+append46500:FF7F,46684:FFEF,47244:FFFF to canonical751 pairs; full754pairs in
+`/tmp/pe-sewer-door-full-pad.txt`. m0026i A8002348 /story68 at47348. At52000,
+Aya(20,1160,-6700), flags408, D1A04000; module0 BF water-sound loop is
+intentional, not a ladder stall. Module2 PC80193DEC waits for exit rectangle
+x[-1600,1600],z[-5600,-5200], then persist1=1A /m0027. No unresolved boundary;
+old rehearsal endpoint mismatch is expected. Original m26 script:
+`/tmp/pe-m0026i-probe.txt`, SHA256
+984abe77e1e423ebdf331e726e9edc0bbb725540180f6fe8eac58d0b48bf70cc.
+
+**First sewer hallway connected:** session32466 completed55000frames,
+`/tmp/pe-sewer-first-connected.{log,bin}`. m0027i A80023C8 at49176,
+story68/persist1=1A; Aya(0,773,-4335), HP36, cameraidentity, D1A04000.
+No unresolvedboundary. Full756pairs`/tmp/pe-sewer-first-full-pad.txt` add
+49000:FFEF,49250:FFFF to sewer-door inputs. M27 script
+`/tmp/pe-m0027i-probe.txt`, SHA256
+919c839e96aad94fc521036f01f84b834c229a364436f605dfb070d0fe117ae3.
+Return m26 rectangle z[-5400,-5000], exit m28 rectangle z[-1400,-1100];
+first enemy trigger around z[-3791,-3648] (module4).
+
+Historical probe68336 completed58000frames; first sewer fight waited on all
+three opcode92 fade-in timers. That missing3C638 path is fixed above.
+`/tmp/pe-sewer-battle-connected.{log,bin}` and758pad prefix remain the
+read-only captured evidence. Temporary controller in`/tmp/pe-sewer-battle-route.c`
+uses normal movement/Cross and Heal1; no guest state writes.
+
+## SESSION 2026-09-12: both theater keys; route reaches completed diary
+
+Previous goal turn was verified progress (room cleanup, 29-milestone route).
+Current input-only cold-boot traversal **collects C8 and C9** and finishes
+m0018i's diary with player control restored. Evidence:
+[DAY2_THEATER_KEYS.md](DAY2_THEATER_KEYS.md). No production runtime code
+changed this turn; collision and interaction already follow the tested
+original graphs. No positions, inventory, persistence or commands seeded.
+
+Observed: first NPC dialogue flag at **22805**, C8 flag at **24758**;
+return m0012i at **28035**, open m0018i door at **30293**, enter **m0018i
+A8001448 at 30356**. Diary story **54 at 33565**, C9/rehearsal-key flag at
+**33596**. At **35000**: story 54, persist[1]=12, persist[24]=010C0220,
+C8/C9 in carried slots 5/6 (800C0E52/54), Aya 800BED10=(-159.9,226.9),
+flags 8, task A8=0, D1A0=4080, module 3 PC 8019E374, matrix BD000 identity.
+`/tmp/pe-both-keys.{log,bin}` is the successful connected capture; its old
+compiled m0020i assertion alone reports exit 1.
+
+The apparent diary animation stall was repeated Cross reopening it. New
+input-only **PE_ROUTE_PULSE_END=33620** stops pulses after pickup. The
+harness default now **35000 frames**, **50 pad pairs**, **34 milestones**;
+requires both keys, their flags, story 54/persist[1]=12, live Aya, cleared
+battle/menu pause and completed diary task. Optional diagnostics include
+m0012i/m0020i/m0018i and persist24 changes; input capacity is 256 pairs.
+CTest timeout scales to 600s for the longer Debug route. Both binaries built.
+Final **35000-frame Release CTest PASS (91.16s)**,
+`/tmp/pe-keys-final2-ctest.log`.
+No full native rerun: production and native tests unchanged since prior
+1380/1380 and 10/10 suite. Full Day 2/fidelity remains unproved.
+
+New reusable **pe_live_floor_compare.py** compares native 1AE40 with original
+MIPS on captured room geometry, checking EXE SHA1 and executed words plus
+branch delay slots. **80 cases PASS**, RAM below 1FE000 identical (top 8 KiB
+scratch stack excluded), `/tmp/pe-live-floor-verified.log`. Command in the
+key evidence doc. Temporary contact 36448 comparisons also match three
+captures. Do not persist captures as repository assets.
+
+m0020i requires two approaches: first dialogue moves animated NPC collision
+center (237,-300,260) → (386,-40,40), while actor origin stays (179,241).
+Second contact must reach the new collision center and face within 45° of
+the origin. `/tmp/pe-key-waypoints.log` records the intermediate positions;
+`/tmp/pe-key-second-contact.bin` has C8. Floor-only path search scripts in
+/tmp are proposal generators; only connected inputs establish traversal.
+
+The 39000-frame rehearsal-door probe completed: `/tmp/pe-rehearsal-entry.{log,bin}`, requested
+39000 frames, log/capture as below. It used the current default sequence plus
+`35000:FFDF,35008:FFBF,35088:FFDF,35270:FFFF,36000:FFDF,36090:FFEF,36610:FFFF`.
+It exits m0018i and returns to m0012i at **35296**, then reaches the rehearsal
+door at position (0,-6035), Aya module 0 PC 801A2A18 opcode 22: a real dialogue
+confirmation wait because Cross is off. C9/bit 80000 is retained. No crash.
+
+The **42000-frame connected probe completed**: resume Cross at 39000,
+rehearsal-door flag 40 at **39005**, enter **m0319i A80614C8 at 39101**.
+Log/capture `/tmp/pe-sewer-resume.{log,bin}`. At 42000: Aya 800BED10=(-120,2855),
+story 54, persist[1]=17, persist[24]=010C0260, D1A0=4080; module 6 PC 801A355C,
+module 5 PC 801A3470, module 7 PC 801A3650. Aya's own task is done.
+Matrix BD000=(-4085,0,301; 0,4096,0; -301,0,-4085), so FFEF walks mostly
+world -z. Probe exit 1 only reflects the deliberately older m0018i assertion.
+No live processes remain. Latest binaries include **PE_ROUTE_PULSE_RESUME**
+(default INT_MAX) and were rebuilt; final post-option 35k CTest passed.
+
+Next input-only proposal: append **42000:FFEF,42400:FFFF**, retain
+**PE_ROUTE_PULSE_RESUME=39000**, extend to 46000. This should approach
+m0319i module 6 rectangle at 801A34B0: x[-1271,1065],z[1265,1349]. At story 54,
+it sends Aya payload 1 at 801A3534, starting the required m0023i encounter.
+That proposal is not yet executed. `/tmp/pe-probe-next.py` extracts current
+default C strings; include the seven sewer-approach pairs listed above
+before these two new pairs. No RAM replay in connected traversal.
+
+Original m0319i script is `/tmp/pe-m0319i-probe.txt`, base 801A202C, SHA256
+33bdbfec502cbf3e6f6d4261548fec3aac746b3f6be571a1a94a85f50bb6bf85.
+At story 54 it spawns Aya (-120,2855), and story gates require the m0023i
+encounter at story 5B before the later m0026i exit (story 68). Do not use the
+static shortest-path m0319i→m0026i edge to bypass that encounter. Additional
+dumps `/tmp/pe-m0023i-probe.txt`, `/tmp/pe-m0026i-probe.txt`.
+
+## SESSION 2026-09-12: room-entry cleanup; connected route reaches m0020i
+
+Live `func_8003F074_dest_ready_cut` now calls the existing complete
+`func_8003F074_after_poll_cut` continuation instead of its partial manual
+copy. Restores E0060 effect cleanup, CDA4/942EC resets, display sync and
+D1A0/D2E8/overlay flag resets. Original `3F23C..3F2F8` is the authority;
+other loader cuts (6BD68/3F758) remain. See
+[DAY2_ROOM_ENTRY_CLEANUP.md](DAY2_ROOM_ENTRY_CLEANUP.md).
+New `pe_room_entry_cleanup_oracle.py --check`: **30 original region pairs
+PASS**, including full E0060 but excluding loader/spawn/display-sync calls.
+Native RCLEAN hashes and live BTL90 reset assertions pass. Full CTest
+**10/10**, native **1380/1380**, zero skips; full suite used the prior
+17500-frame route, which passed in 167.65s. Log
+`/tmp/pe-room-cleanup-ctest.log`, details `/tmp/pe-room-cleanup-full-lasttest.log`.
+Retail candidate cmp/SHA1 remains exact **452fb033f2eaa4b18aa20a5bca60b8125af3a37b**;
+no matching inputs changed.
+
+Input-only continuation centers Aya before m0011i's exit:
+`17500:FF7F,17580:FFEF` enters **m0012i at 17809**, story 39 at 17810,
+**m0013i at 18882** (story 40), back to m0012i at 19366, story 48 at 19457.
+At 20000 Aya is (-52,-4169); room matrix is negative X/Z identity.
+`20000:FF7F,20110:FFEF,20350:FF7F,20400:FFFF` enters **m0020i at 20434**.
+At 22500 token A8002048, story 48, persist1=D, Aya 800BED10 (537,-19), matrix
+identity; module 4 PC 801A1E98. No state/position/inventory seeding or replay.
+The harness defaults now 22500 frames, **29 milestones**, m0020i module 4
+frontier, story 48, persist1=D and battle cleared. Both binaries rebuilt;
+new **22500-frame Release route CTest PASS** (76.85s), log
+`/tmp/pe-m0020-route-ctest.log`.
+Four HOST_ADAPTED movie/menu skip classes remain (skip_movie invoked 3 times).
+**Still Day 1; full start-to-end Day 2 and full fidelity unproved.**
+
+Next: m0020i first key is item C8. Original Aya payload 3 at 801A0AE0 gives
+item via A7/E8 and sets persist24 bit 20 at 801A0BE8..801A0C00, unlocking
+hallway side doors. NPC type 2 at (179,241), radius 100, first contact sets
+bit 200 via dialogue; subsequent Cross with valid heading sends payload 3.
+Main sewer door in m0012i requires persist24 bit 80000, not this first key.
+The direct left/up approach is blocked by furniture: at 24500 Aya (445,81),
+flags 24=01000000, no key. A down/left/up approach also failed (356,-72).
+Upper approach (22500FFEF,22545FF7F,22800FFFF) also stops short at (478,206);
+`/tmp/pe-m0020-key3.{log,bin}`. Lower probe
+`22500:FFBF,22540:FF7F,22630:FFEF,22800:FFFF` ends at (435,66), still no
+key (`/tmp/pe-m0020-key4.{log,bin}`). All four attempts complete normally;
+their positions show the approach is unresolved. Next use read-only
+`PE_ROUTE_AYA_DUMP=1 PE_ROUTE_AYA_EVERY=20` to inspect each intermediate
+waypoint, and compare collision with original code if behavior diverges.
+Do not infer the cause solely from the final position. Baseline m0020i capture is
+`/tmp/pe-m0020-approach.bin`. Original script dumps
+`/tmp/pe-m0012i-probe.txt` and `/tmp/pe-m0020i-probe.txt`; obtain again with
+`python3 pc_port/tools/pe_m0004i_mod4_probe.py m0020i`.
+Room m0020i mesh header 801A295C, vertices 801A29F8 (47), triangles 801A2AB4
+(54, stride 22). Above obstruction, corridor runs from (474,257) through
+(388,118)/(412,257) toward (190,212)/(109,240). Do not bypass collision.
+
+Static next-key evidence: **m0018i** gives item **C9** at `8019D8E8`
+and sets persist[24] bit **80000** at `8019D8F4..8019D90C`; its preceding
+scene advances story to **54** at `8019D834`. Thus the intended key route
+is m0020i first key → m0012i → m0018i second key → m0012i → m0319i.
+This is script evidence, not yet connected traversal. m0018i dump
+`/tmp/pe-m0018i-probe.txt`, base8019CF04, SHA256
+6d45b760f7820cda0e20bd66e55b2b5546009544db8e4c82b7540b88c07d8088.
+
+## SESSION 2026-09-12: retail frame gate; connected route reaches m0011i
+
+Restored original `800355C8 -> 80035C04` overlay-bit-200 gate in
+`func_80035558_walk_cut`. Actor callbacks run first; battle/floor/render/
+resource/animation updates are skipped; final contact/task cleanup retains
+its pause gate. Evidence: [DAY2_FRAME_GATE.md](DAY2_FRAME_GATE.md).
+`pe_frame_gate_oracle.py --check`: **32 original full graphs PASS**, no mocks;
+new FGATE native guest-byte test passes. Full CTest **10/10**, native
+**1379/1379**, zero skips. Logs `/tmp/pe-frame-gate-{ctest,native-full}.log`.
+The full run used the preceding 11000-frame route. The final **17500-frame
+Release route CTest PASS** (46.87s), log `/tmp/pe-m0011-route-ctest.log`;
+both Debug and Release route binaries have been rebuilt. Matching inputs unchanged; cmp/SHA-1 still exact original
+**452fb033f2eaa4b18aa20a5bca60b8125af3a37b**.
+
+Input-only breakthrough: release movement at **10000** and retain periodic
+Cross. Enemy HP crosses the original script's 1000000 threshold at **11432**,
+Aya HP 28; modes 6/7/8 then exit battle. Enter **m0367i at 11913** (story 26),
+return to m0005i at **12205** (story 27), story 28 at **12417**. Hold FF7F at
+**14000**, enter **m0009i at 14386**, release to avoid walking back through
+the doorway. FFDF at **15000** reaches the hole interaction; periodic Cross
+accepts the first option. Story 30 at **15373**, **m0011i at 15434**,
+**story 38 at 16039**. At **17500**, token **A80010C8**, module 3 PC
+**801A097C**, persist[1]=9, Aya **800BED10**, position **01970000/0/007D0000**
+(x407,z125), battle flags4040/D244=0. No positions, story or commands seeded.
+
+Harness default now **17500 frames**, seven continuation pairs:
+`8990:FFDF,9140:FFEF,9600:FF7F,10000:FFFF,14000:FF7F,14386:FFFF,15000:FFDF`.
+It requires **23 observed milestones**, current m0011i/module-3 PC, Aya and
+cleared battle state. The four HOST_ADAPTED movie/menu skips remain.
+**Still Day 1. Full start-to-end Day 2 and whole-game fidelity unproved.**
+
+Next: m0011i module 3 polygon at **801A0800**, x -442..412,z1111..2959,
+transfers to **m0012i A8001148 at 801A0890**. Current x407,z125 is near the
+right wall; raw **FFEF** (held8) moves world +z because BD000 is identity.
+The next connected probe can append `17500:FFEF`; determine whether the
+walkmesh permits this approach. Script dump `/tmp/pe-m0011i-probe.txt`:
+base8019FE3C, module offsets18/6E4/818/994, SHA256
+70156a1575181e93ce5d4c8caab04fa109bf294f7dca9555486680eb6043fbd3.
+
+Temporary diagnostics: `/tmp/pe-battle-stats.c` is a copy of the route harness
+with a read-only present hook logging battle mode/queue/HP/AT/positions. It
+links the Release runtime and is outside production. `/tmp/pe-m0009-hole.log`
+and `.bin` are the connected 17500-frame run; `/tmp/pe-m0009-idle.bin` is the
+15000-frame m0009i state. Exploratory logs exit 1 solely because their old
+compiled assertion expects the active battle. No RAM replay in the route.
+The intermediate 15000-frame m0009i Debug CTest passed (128.50s), log
+`/tmp/pe-m0009-route-ctest.log`. Toolchain: `source /tmp/pe-tools/env.sh`;
+approval never, unrestricted; omit sandbox_permissions. Preserve the large
+existing dirty worktree.
+
+## SESSION 2026-09-12: battle initialization and polygon boundary restored
+
+`func_80029810_cut` now calls the complete retail `func_800293F4(0)` instead
+of only its HP prefix. `func_8001A9F8_floor_cut` now executes the omitted
+D2E8-bit-4 polygon collision graph (`1D170 -> 1CE88/1CBA0`). It uses the
+existing original integer normalizer through a shared host-vector helper.
+Evidence: [DAY2_BATTLE_BOUNDARY.md](DAY2_BATTLE_BOUNDARY.md).
+
+Original oracles: **72 battle-entry graphs + 960 polygon graphs PASS**;
+new native BENTRY/POLY guest-byte checks pass. No original callees mocked.
+Full native CTest **10/10 PASS**, **1378/1378 native tests**, zero skips;
+after extending the harness, the updated 11000-frame route CTest also passes
+(96.98s). Logs `/tmp/pe-polygon-{ctest,route-ctest}.log`. The full run's route
+used the preceding 9600-frame assertion; its replacement was checked separately.
+Synthetic polygons and mathematically generated lookup tables; no captured
+room/RAM assets added. Existing matching candidate rechecked with cmp/SHA-1:
+**452fb033f2eaa4b18aa20a5bca60b8125af3a37b**, exact original. `src/` and
+manifest inputs unchanged; no new matching-C claim.
+
+The previous null-Aya diagnosis is resolved: after starting m0005i's battle,
+the absent polygon collision allowed Aya to enter **m0009i during battle**.
+Its loader clears Aya, and its script waits a frame before recreating her;
+the still-active battle queue then wrote to 00000068. Initialization alone
+did not prevent this. Restoring the original boundary keeps Aya in m0005i
+and the same input completes 11000 frames without the transfer/crash.
+
+Default route now uses `8990:FFDF,9140:FFEF,9600:FF7F` and 11000 frames.
+It enters m0005i at **9300**, starts story **28** at **9766**, and ends at
+**module 6 PC 801B284C**, token **A80002C8**, persist[1]=4, battle active.
+Regression requires 16 observed milestones, Aya, battle bit 2 and the active
+six-point script boundary. Movies/opening menu still have four HOST_ADAPTED
+skips. **This remains Day 1; start-to-end Day 2 is still active/unproved.**
+
+Next: finish this encounter through real controller input and original-code
+comparison. Module-6 loop 801B284C reads type-2 position/stat through 5E/8B;
+local[2] at 11000 is F4265. Default periodic Cross plus held FF7F has not yet
+completed the battle. This section is historical; the subsequent frame-gate correction and battle
+completion are recorded above.
+
+Diagnostics: `PE_ROUTE_PAD_SEQUENCE` supports up to 32 increasing
+frame:hex-mask pairs; empty disables continuation. `PE_ROUTE_RAM_DUMP`
+captures final RAM only, never restores it. `/tmp/pe-polygon-route-end.bin`
+is the natural 11000-frame state; `/tmp/pe-entry-seed.bin` is the pre-battle
+state. Temporary guest-RAM tracing localized the room-clear call; no debug
+instrumentation entered production files. Toolchain: `source /tmp/pe-tools/env.sh`.
+Permission profile unrestricted, approval never; omit sandbox_permissions.
+
+Previous floor collision work remains verified: cached-wall extent/NCLIP,
+unbounded slide clearance, and physical-zero triangle record handling.
+288 original graphs PASS; evidence [DAY2_FLOOR_COLLISION.md](DAY2_FLOOR_COLLISION.md).
+
+## SESSION 2026-09-12: restore six shared Day 2 audio commands
+
+`pc_port/game/boot/func_80015DAC_port.c` now executes EA301/303/401/402/405/409,
+which previously returned success without performing their retail effects.
+These restore effect stop/fade, first/second music-bank preload with the exact
+VM retry/output contract, alternate animation-sound selection, and CD stereo
+gain application. Reuses matched `80086948`/`80080AC4` via generated ports and
+the existing `866A4`, `6D2B8`, and `7B964` graphs. No `src/` or manifest edits.
+
+Evidence: [DAY2_AUDIO_DISPATCH.md](DAY2_AUDIO_DISPATCH.md). New
+`pe_day2_audio_dispatch_oracle.py --check`: **118 original graphs PASS**;
+native compares guest bytes/returns and actual CD gain latches. Full CTest:
+**10/10 PASS**, native **1375/1375**, zero skips. Strong leaf verification:
+**3/3 PASS** (`80086948`, `80080AC4`, `800866A4`). Tool env:
+`source /tmp/pe-tools/env.sh`; legacy compiler needs the approved unsandboxed
+execution because sandboxed 32-bit cpp exits SIGSYS. Logs `/tmp/pe-day2-audio-*`.
+Full `scripts/build_us.sh` also completed: **795 registered C leaves**, 1145
+spans, **EXACT MATCH**; original and packed candidate SHA-1 both
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. This includes remaining assembly
+and is not proof of native Day 2 completion.
+
+Connected route remains **m0004i module 4, pc=801B6CC8**, 14 milestones.
+Input-only probes switching to FFCF at frames 8900/9000 do not cross the left
+door. The former repeatedly collides near x=-1936,z=3376; the latter reaches
+x=-2017,z=2174 just outside the polygon. Next route work: compare retail
+collision/movement and find a valid doorway approach; do not force mailbox,
+position, or story flags. Full Day 2, unskipped playback and retail acceptance
+are still unproved. Previous goal turn classification: progress (existing
+worktree contains the route and decomp additions); this turn adds verified
+native behavior, rather than redefining the goal around passing leaf tests.
+
+## SESSION 2026-09-11: native route frontier `m0377i` → `m0004i` (harness-only)
+
+`pc_port/tests/test_route_boot_day2.c` gained a fourth pad stage
+(`PE_ROUTE_SWITCH3`, default frame 6989, hold `0xFFAF`), replicating the
+`m0378i` diagnostic-probe idiom; `0xFFAF = 0xFF9F & 0xFFEF` walks Aya into
+`m0377i` module-1's op-77 rectangle at `0x801953C4`, so the module stops looping
+at `0x8019544C`, writes `persist[1]=0x179`, bounces `m0377i -> m0378i -> m0004i`.
+Command: `cmake --build pc_port/build -j && ./pc_port/build/pe-route-boot-day2-tests`.
+
+```
+route: frames=8000 stop=frame-limit story=0x00000018 persist1=0x0000017A token=0xA8000248
+route: 14/14 ordered milestones reached
+PASS: boot -> m0377i bounce -> m0004i route (14 milestones, frontier=m0004i mod4 pc=0x801B6CC8)
+```
+
+New frontier: `m0004i` module 4, `pc=0x801B6CC8` (frame-limit; next input-gated
+op-77 volumes at `0x801B6940`/`0x801B6A08`/`0x801B6B74`). No matching C leaf,
+`configs/`, or `src/` change. Native `ctest`: 10/10 passed. See
+`docs/evidence/boot-day2-route-harness/REPORT.md` and
+`docs/ai_context/ROUTE_COVERAGE.md`.
+
+## SESSION 2026-09-12 (cont. 24): 9 leaves (785 → 794) + a manifest-loss incident
+
+New count: **794 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `1144 spans (794 c, 348 asm, 2
+rodata)`, geometry `0x1EE000`, plan `9b93313e87d7`).
+
+`EXACT_REBUILD_GATE=PASS`: split + build produced
+`orig=452fb033… cand=452fb033… RESULT=EXACT_MATCH`, then
+`scripts/verify_us.sh` → `VERIFY_US=PASS` (7/7), `matching-C count: 794`.
+`profile_necessity`: `630/630 era leaves clean`. Deep preflight: PASS.
+Native suite: `1374 run, 1374 passed`.
+
+**Matched (all `LINK_EXACT`):**
+
+- **The five `D_8009D124`/`D_8009D128` gp-counter wrappers**
+  `func_80060528`/`8006055C`/`80060590`/`800605C4`/`800605F8` (13w each,
+  file `0x50D28.s`, era `-O2 -G8`). Identical shape, N = 6/5/4/3/2:
+  `func_800602D0(a, N); D_8009D124 += N; D_8009D128 = D_8009D128;`
+
+**New durable lever — a volatile read-modify-write materializes a
+zero-delta store.** `D_8009D128 = D_8009D128;` is dead-code-eliminated by cc1
+even at `-O1`, and a bare `extern volatile int` global folds the load/store
+into the accumulator's own schedule. Only a local
+`volatile int *p = (volatile int *)&D_8009D128; *p = *p;` reproduces retail's
+**pre-accumulator `lw $v1,0x3B8(gp)` + trailing `sw $v1,0x3B8(gp)`** pair.
+Two more sub-levers: the frozen callee `func_800602D0` must be declared with
+**both** parameters (one-param declaration puts the literal in `$a0`, not
+`$a1`, matching its `slt $s0,$s2` loop bound), and these five are **carved
+contiguously** (five separate objects, not one C body).
+
+**Parked:** `func_80071964`/`func_80071994` (`docs/evidence/func-80071964/`,
+`func-80071994/`): 12-word conditional offset getters whose retail form keeps
+two `nop`s that cc1's fill removes (8 mismatches; invariant across
+`-O2/-O1`, `-G0/-G8`, `-fno-delayed-branch`, and local/`if`-`else` variants).
+
+**INCIDENT — `git checkout` on an uncommitted manifest.** A careless
+`git checkout configs/USA/disc1_build_profiles.json` (to undo a botched edit)
+reverted the **uncommitted** build-profile manifest to `HEAD`, silently
+dropping the `era_o2_g8_fill_epilogue_delay_slot` profile and the assignments
+for `func_80062F9C` (patch 3), `func_800631DC`, `func_8005E4E4`,
+`func_8005E518`. Those leaves then fell back to `era_o2_g0` and the deep
+preflight failed on real syntax deltas (12 mismatches for the `lw $v0,0x378(gp)`
+gp-relative slot at `D_8009D0E8`). **Restored and re-verified**: the manifest
+now holds 27 profiles / 291 assignments, deep preflight PASS,
+`profile_necessity 630/630 clean`. **Never `git checkout` a manifest file that
+may hold uncommitted in-flight records** — edit surgically instead.
+
+**Also fixed:** the five new source files were not `git add`-ed, which
+`verify_us.sh` gate 3 correctly flags as a staging gap (`YAML C sources are
+not tracked`) even after a successful `EXACT_MATCH`. Staged them, ran
+`disc1_plan.py --write-status`, then `VERIFY_US=PASS`.
+
+## SESSION 2026-09-11 (cont. 23): 33 small leaves (752 → 785)
+
+Goal unchanged. New count: **785 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `1133 spans (785 c, 346 asm, 2
+rodata)`, geometry `0x1EE000`).
+
+This session carved 29 small `LINK_EXACT` leaves from former pure-`asm`
+residue on the boot → end-of-Day-2 route. Two new profile assignments were
+added: `func_80021054`, `func_80050308`, `func_800501C8`, `func_800509A8`,
+`func_8004F7D8` → `era_o2_g8` (all read a `$gp` slot); `func_8007DD74` and
+`func_800828F4` → `era_o2_g0_fill_epilogue_delay_slot` (maspsx patch 3).
+
+**Durable levers discovered:**
+
+1. **Source statement order for independent stores is load-bearing.**
+   `func_80019CEC` writes three promoted halfwords; only the order
+   `w28, w2C, w30` reproduces retail's `lh`/`sw` interleave. The natural
+   `w28, w30, w2C` order produces 4 word mismatches. This is a plain
+   permutation of independent stores with no aliasing.
+2. **Branch polarity for an `if/else` call dispatch.**
+   `func_80050308` matches only when the *nonzero* case is written first
+   (`if (D_8009CF18) f(a0+0x7C); else f(a0+0x7F);`); the `== 0`-first form
+   flips the `beqz` target and produces 3 mismatches.
+3. **`-G8` is required when a leaf reads a `$gp` slot** even if the rest of the
+   leaf uses absolute addressing. The gp base is `0x8009CD70`, so
+   `off 0x184($gp)` = `D_8009CEF4` and `off 0x1A4($gp)` = `D_8009CF14`.
+   Writing the wrong-looking symbol name silently emits the right-shaped
+   instruction with the wrong displacement (1 word mismatch) — always convert
+   `gp_offset + 0x8009CD70` to confirm the symbol.
+4. **Maspsx patch 3 (`era_o2_g0_fill_epilogue_delay_slot`)** closes two more
+   leaves (`func_8007DD74`, `func_800828F4`) whose `addiu $sp` teardown is
+   scheduled into the `jr` delay slot.
+5. **Unsigned comparison selects `sltu` over `slt`** (`func_8008E7F4`; the
+   swapped `a1 < v` operand order is also load-bearing).
+6. **Element type of a doubly-dereferenced parameter controls `lw` vs `lbu`**
+   (`func_80019450`: `unsigned int **a0` gives retail's `lw`, `unsigned char *`
+   folds to `lbu`).
+7. **A permutation of two independent `$gp` stores is load-bearing**
+   (`func_8005022C`: storing `a0` first reproduces retail; the value-first
+   order is 2-12 mismatches).
+
+**The 29 leaves:**
+
+- `func_80019CEC` (14w), `func_80017E68` (13w), `func_80021054` (11w),
+  `func_800192DC` (12w), `func_8004BC80` (13w), `func_80017DE4` (15w),
+  `func_800198C4` (16w), `func_8008F178` (14w), `func_8007DD74` (13w, patch 3),
+  `func_800828F4` (14w, patch 3)
+- the pointer-wrapper family: `func_80015AB8` (14w, word+2 halfwords),
+  `func_80018B30` (14w, 3 halfwords), `func_800193D8` (14w, 3 words)
+- the slot-handler registration family: `func_8004EC3C`, `func_8004EC78`,
+  `func_8004FD68`, `func_800501C8`, `func_800509A8` (all 14w)
+- `func_80080F64` (13w), `func_80050308` (13w), `func_80019260` (14w),
+  `func_8001A43C` (13w), `func_8001A474` (13w)
+- the sequenced-init cluster: `func_8007DFE0` (12w), `func_8007E0C0` (14w),
+  `func_8007DE40` (14w), `func_8004BCB4` (13w), `func_8004F7D8` (12w),
+  `func_800504BC` (13w)
+- `func_8008E7F4` (19w, sltu pair), `func_80019450` (13w, `int **` element),
+  `func_80083790` (14w, packed record offsets), `func_8005022C` (13w, `-O2 -G8`
+  ordered twin `$gp` stores)
+
+New function-pointer wrappers declared **argument-less** (`void (*f)(void)`)
+where retail clears no argument registers.
+
+**pc_port propagation (same session):** `gen_decomp_ports.py` now emits **270**
+decomp-derived TUs (up from 269): `func_8008C70C` was previously skipped by an
+over-broad "pointer parameter stored into guest RAM" guard that flagged
+`dst->value = arg0[1];` — an indexed *load* through the parameter, not a host
+pointer stored into guest RAM. The guard now requires the parameter expression
+to *not* be subscripted, so genuine pointer stores (`dst->source = source;`)
+stay rejected while indexed loads port. Native suite **1374/1374 PASS**; the
+generated glob keeps the CMake manifest honest (0 drifted, 0 stale TUs).
+`tools/progress/native_metrics.py` was also corrected: it counted `TEST(` cases
+only in `test_native.c` (1154) while the binary runs 1374, because ~220 cases
+live in the `test_*.h` headers that file includes. It now walks the quoted
+include closure, so the "expected run count" cross-check matches the binary
+(1330 artifact-independent + 44 Disc-1-required = 1374).
+
+### Gates (verbatim)
+
+```
+disc1_preflight: PASS (deep, 785 c / 346 asm / 2 rodata)
+disc1_plan: 1133 spans (785 c, 346 asm, 2 rodata), geometry=0x1EE000, plan=3efbc8547764
+profile-necessity: 621/621 era leaves clean; 0 hard defect(s); 0 redundant
+EXACT_REBUILD_GATE=PASS plan=3efbc8547764af7c46f412503bfeb6e13e16823bb4724947a060824707e1ee6a yaml=43f755fb04328e00ce2a80be6088ab3fac875a8f8294abcbea10db101171f75c spans=[785 c, 346 asm, 2 rodata] sha1_orig=452fb033f2eaa4b18aa20a5bca60b8125af3a37b sha1_cand=452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+VERIFY_SWEEP=PASS leaves=785 plan=3efbc8547764af7c46f412503bfeb6e13e16823bb4724947a060824707e1ee6a
+native: 1374 run / 1374 passed / 0 failed; 317 linked TUs (270 decomp-derived)
+```
+
+## SESSION 2026-09-11 (cont. 22): `func_80067CBC` matched (751 → 752) + three parks
+
+Goal unchanged. New count: **752 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `1085 spans (752 c, 331 asm, 2
+rodata)`, geometry `0x1EE000`).
+
+**New leaf `func_80067CBC`** (`docs/evidence/func-80067CBC/REPORT.md`): a
+23-word `D_800BCF88` status-word flag setter (fan-in 11), carved from the
+former `0x58374` asm span (`0x584BC`..`0x58518`; a new `[0x58518, asm]`
+resumes before `func_80067D18`). Default `-O2 -G0`, `LINK_EXACT`.
+**New durable lever — dual pinned pointer bases:** retail keeps the head base
+in `$a1` and *rematerializes a fresh base* in `$v1` for the tail block. One
+pointer local gives the right shape but a shared base register (7 mismatches);
+two distinct pointer locals pinned to the retail registers
+(`register unsigned int *p asm("$5"); register unsigned int *q asm("$3");`)
+close it to 0. Mismatch ladder: bare symbol 23 → single pointer 14 → single
+pinned `$5` 7 → **two pinned `$5`/`$3` 0**. (This is the first matched leaf the
+port generator rejects as `asm` because `ASM_RE` rejects all inline `asm()` —
+a known generator limitation to revisit.)
+
+**Three honest parks** (each with the full lever list and mismatch counts):
+- `func_8003708C` (7 words, fan-in 16) — 64-bit multiply-extraction codegen:
+  signed `mult` reproduces, but cc1 always emits `mfhi` before `mflo` (retail
+  does `mflo` first) and allocates `$2`/`$3`/`$4`/`$5`/`$6`/`$7` instead of
+  retail's `$v0`/`$v1`. `word mismatches=6`; invariant across ~15 expression
+  forms, 7 flag rungs, and register pins (which add a dead `srl`).
+- `func_80073A44` (94 words, fan-in 17) — VSync read. **Durable lever:
+  pointer-to-volatile defeats the read-loop CSE** (`extern volatile unsigned int
+  *` gives retail's two independent loads; a plain pointer CSEs them to one).
+  Residual is prologue scheduling (retail hoists two pointer loads *above*
+  `addiu $sp`) + a stack spill of the loop temp (`0x28` frame vs cc1's `0x20`).
+- `func_800374E8` (24 words, fan-in 7) — 4-slot clear, 56-byte stride. Retail
+  rematerializes `lui $at` per access in the symbol-relative indexed form; cc1
+  hoists the loop-invariant base instead. `word mismatches=20`; fails for flat
+  arrays, aggregate elements, `volatile`, per-slot pointers, and `-O1`.
+
+### Gates (verbatim)
+
+```
+disc1_preflight: PASS (deep, 752 c / 331 asm / 2 rodata)
+disc1_plan: 1085 spans (752 c, 331 asm, 2 rodata), geometry=0x1EE000, plan=83de048c6a46
+PUBLIC_VERIFY=PASS  matching-C count: 752 (from YAML)
+profile-necessity: 588/588 era leaves clean; 0 hard defect(s); 0 redundant
+VERIFY_SWEEP=PASS leaves=752 plan=83de048c6a46c9719902549f6f68b6acd0c07799d0303a4f08d27f5f86a017d7
+VERIFY_US=PASS: candidate SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b == retail; all 752 packed C spans equal retail
+ctest: 10/10 passed (native-tests 1374 assertions, route-boot-day2 12 milestones)
+```
+
+`pc_port/game/boot/func_80062D2C_port.c`'s `func_80067CBC` was realigned to the
+now-proven **three-store** sequence (the hand version had folded retail's three
+observable writes into one).
+
+## SESSION 2026-09-11 (cont. 21): eleven leaves (739 → 751; incl. `func_8005DB44` park reopened)
+
+Goal unchanged. This session carved **twelve spans from former pure-`asm`
+residue** into eleven new `LINK_EXACT` `c` leaves and one corrected span
+(`func_8005257C`), all on the boot → end-of-Day-2 route. Three new profiles
+were added. Current count: **751 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `1083 spans (751 c, 330 asm, 2
+rodata)`, geometry `0x1EE000`).
+
+The session's marquee result is the **reopened `func_8005DB44` park**
+(`docs/evidence/func-8005DB44/REPORT.md`): the old "reassociation residual"
+(cc1 folds any `+` chain whose base is an *address constant* to
+"constants-first") is defeated by making the base a **local pointer that is
+decremented in place** (`p = &D_800A8038; … p -= 4`) plus a **block-local
+`int sh = a0 << 5;`** assigned before the decrement — that yields retail's
+`addiu $v1,$v1,-0x10` on the symbol register and `sll $v0,$a0,5` in the `beq`
+delay slot. `-O1 -G0` (`era_o1_g0`, load-bearing; `-O2` flips the order back).
+The adjacent `func_8005DAFC` twin is a genuine `$v0`/`$v1` allocation residual
+and is honestly left in `asm`.
+
+### Gates (verbatim)
+
+```
+disc1_preflight: PASS (deep, 751 c / 330 asm / 2 rodata)
+disc1_plan: 1083 spans (751 c, 330 asm, 2 rodata), geometry=0x1EE000, plan=74acf19a28ff
+PUBLIC_VERIFY=PASS  matching-C count: 751 (from YAML)
+profile-necessity: 587/587 era leaves clean; 0 hard defect(s); 0 redundant
+python3 tools/build/test_disc1_plan.py → Ran 8 tests … OK
+EXACT_REBUILD_GATE=PASS plan=74acf19a28ffd98c4018b9cd3cc9eee70441ad3054eaccc27b1281b19491c096 yaml=a1a1b23b60b3583c188fde621da45856f7ec37ed5d11e89cdc72008687cc911b spans=[751 c, 330 asm, 2 rodata] sha1_orig=452fb033f2eaa4b18aa20a5bca60b8125af3a37b sha1_cand=452fb033f2eaa4b18aa20a5bca60b8125af3a37b sha1=452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+ROUTE_COVERAGE=plan=74acf19a28ffd98c4018b9cd3cc9eee70441ad3054eaccc27b1281b19491c096 funcs=349/979 c_words=6130 nonc_funcs=76 nonc_words=5414 asm_funcs=554 asm_words=66149 asm_words_unknown=0 nonmatchable=present tierA=734 tierB=248 tierB_unresolved=0
+VERIFY_SWEEP=PASS leaves=751 plan=74acf19a28ffd98c4018b9cd3cc9eee70441ad3054eaccc27b1281b19491c096 yaml=a1a1b23b60b3583c188fde621da45856f7ec37ed5d11e89cdc72008687cc911b
+```
+
+Route honesty: route reports **349/979 whole on-path functions** matched
+(`c_words=6130`) against `asm_funcs=554` / `asm_words=66149` still real
+residue, plus 76 non-C-matchable / 5414 words. Keep reporting whole-function
+share (~36%) *and* word share (~8%) — both are far from 100%.
+
+### New leaves
+
+| leaf | file span | size | era / profile |
+|---|---|---:|---|
+| `func_8005DB44` | `0x4E344` | `0x48` | `era_o1_g0` |
+| `func_80078C94` | `0x69494` | `0x24` | `era_o1_g0_no_delayed_branch` (new) |
+| `func_80038CE4` | `0x294E4` | `0x28` | default `-O2 -G0` |
+| `func_800515C0` | `0x41DC0` | `0x38` | default `-O2 -G0` |
+| `func_800528C4` | `0x430C4` | `0x2C` | `era_o2_g0_symbol_at_temp` (patch 5) |
+| `func_80042EDC` | `0x336DC` | `0x44` | `era_o2_g8_force_d800bd024_absolute` (new) |
+| `func_800524D0` | `0x42CD0` | `0x44` | default `-O2 -G0` |
+| `func_80057ED8` | `0x486D8` | `0x3C` | `era_o2_g8_symbol_at_temp` (patch 5) |
+| `func_8008594C` | `0x7614C` | `0x34` | default `-O2 -G0` |
+| `func_80019410` | `0x9C10` | `0x40` | `era_o2_g8_force_d800bcfee_absolute` (new) |
+| `func_800858B0` | `0x760B0` | `0x38` | default `-O2 -G0` |
+
+All `check_leaf.sh` verified (`LINK_EXACT` + deep span-size exact), all
+`profile_necessity.py` clean. Per-leaf reports in
+`docs/evidence/func-80078C94/` … `docs/evidence/func-800858B0/`.
+
+Every span was carved by proving the retail `jr $ra` boundary (exactly one
+terminal return in the span) and matching the compiled `.text`; none was
+derived by copying the next span's start. `func_8005257C`, whose declared
+`0x214` span contained **7 interior `jr $ra`**, was trimmed back to its true
+`0x18` with `- [0x42D94, asm]` restored — this was the `deep-interior-return`
+defect class and it had been latent since before this session.
+
+### Durable levers
+
+1. **`-fno-delayed-branch` for an unfilled return slot** (`func_80078C94`):
+   retail ends `<instr>; jr $31; nop` with the return `addu` **before** the
+   `jr`. Plain `-O1` fills the slot with the return move; the new
+   `era_o1_g0_no_delayed_branch` profile (`-O1 -G0 -fno-delayed-branch`)
+   reproduces retail exactly. Same flag class as the pre-existing
+   `func_80051E48`.
+2. **Out-of-range `.data` byte with in-range gp words** (`func_80042EDC`,
+   `func_80019410`): a leaf whose word destinations belong in small data but
+   whose byte source sits beyond ±32K of `$gp` links only with
+   `-G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=<byte>`; `-G0` loses every
+   gp-relative word store and `-G8` alone fails to link
+   (`relocation truncated to fit: R_MIPS_GPREL16`).
+3. **Separate `int u = a0 & 0xFFFF;` local for a bounded index**
+   (`func_8008594C`/`func_800858B0`): folding the mask into the condition
+   yields a signed `slti`; the `int` local gives retail's unsigned `slti`.
+4. **Pin the index/base pair when retail inverts cc1's choice**
+   (`func_800858B0`): retail keeps the index in `$v1` and the loaded table
+   base in `$v0` (7 mismatches without `register … asm("$3")`/`asm("$2")`
+   pins, 0 with them). The setter twin `func_8008594C` does **not** need pins.
+5. **An explicit inner-pointer local defeats double-load CSE**
+   (`func_800515C0`): the nested-if form must reload `*D_8009D254` into a
+   fresh local or cc1 merges the two `lui`/`lw` pairs.
+6. **`deep-interior-return` matters**: any `c` span with more than one
+   `jr $ra` is swallowing a function even if its size happens to match.
+7. **Make a symbol pointer a *local that is decremented*, not an address
+   constant copy** (`func_8005DB44`): cc1 reassociates a `+` chain whose base is
+   an address constant (`&D_800A8038 - 0x10`) back to constants-first, losing
+   retail's in-place `addiu $v1,$v1,-0x10`. `int *p = &D_800A8038; p -= 4;`
+   keeps the decrement on the symbol register; adding a block-local
+   `int sh = a0 << 5;` before the decrement puts the `sll` in the branch delay
+   slot retail wants.
+
+## SESSION 2026-09-11 (cont. 20): D_800BCD80 setter family (695 → 739)
+
+Goal unchanged. This session matched the **`D_800BCD80` state-setter family** —
+40 new `c` leaves — plus `func_80080950`/`80080998` (guarded byte-copy twins),
+`func_8005E850` (signed-byte bias forwarder) and `func_80056C14` (bound-checked
+halfword getter, patch 5): **44 new leaves, all `LINK_EXACT`, all on the
+boot → end-of-Day-2 route**. Current count: **739 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `1069 spans (739 c, 328 asm, 2
+rodata)`, geometry `0x1EE000`, plan
+`818ab96a9b4db35a54337ecc3dce2c805d526a0d9945e9d98c8b6bb857852d7a`).
+
+Setter-family per-leaf table and commands:
+`docs/evidence/D_800BCD80_SETTERS/REPORT.md`.
+
+### The setter batch (40 leaves)
+
+Shape: store a command byte into `D_800BCD80`, 0–4 arguments into
+`D_800BCD84`/`88`/`8C`/`90`, then `jal func_8008CBA8`. All era **`-O2 -G0`
+(default)**; no maspsx patch, no explicit `assignments` entry
+(`profile_necessity.py` proves the default reproduces all 40).
+Left `asm`: none — `func_80086608` (`0x9C`, guarded variant) was matched and
+registered this session (exact store order: `D_800BCD80 = 0x24`,
+`84 = a0 + 4`, `88 = a1 & 0xFFFFFF`, `8C = a2 & 0xFF`, `90 = a3 & 0x7F`).
+
+### Durable levers
+
+1. **A real `switch` beats an if/else chain** for a command-byte selector
+   (`func_8008682C`/`86728`/`867E4`). Retail emits `li $v0,1` / `beq $a0,$v0` /
+   `li $v0,2` / `beq $a0,$v0` with the **default constant in the `j` delay
+   slot**; hand-written `if`/`else` folds the chain or loses the delay slot.
+2. **`int *p = &D_800BCD80;` for a two-call setter** (`func_800864F8`): keeps
+   the base in callee-saved `$s1` (via `lui/addiu`) across the first `jal`
+   instead of re-materializing `lui $at` per store. Same form as sibling
+   `func_80086FF8`.
+3. **Argument-store order may invert from source order** (`func_80086CA4`):
+   retail masks `a2`/`a3` right after the command byte (before `sw $ra`) and
+   stores the `a0` argument to `D_800BCD90` last.
+4. **Call-poll `do`-while** (`func_80087090`): the `1` is materialized once into
+   `$s2` before the loop; the `a0` argument is re-set in the branch delay slot.
+5. **`do { } while (i < N)` with the post-increments in the body** reproduces
+   the guarded byte-copy order (`func_80080950`/`80080998`), and the null-test
+   order is `a1` then `a0` with the `a1 == 0` arm storing a NUL.
+6. **Early-return polarity** applies to the bound-checked getter
+   `func_80056C14`: writing `if (a0 >= 3) return 0; return D_800A1E6E[a0*16];`
+   gives retail's compare→branch-over-fallthrough shape; patch 5
+   (`MASPSX_SYMBOL_AT_TEMP=1`) supplies the 3-word `$at` load form.
+
+### Deep-size guard caught a real gap mid-batch
+
+The first carve declared `func_80086464` with span `0x68`
+(`0x76C64 → 0x76CCC`) but its compiled `.text` is `0x40`. The extra `0x28` was
+the real, previously unmatched `func_80086498` (`0x11`/`a0` setter).
+`disc1_preflight.py --deep` flagged it by name/size and its remedy line named
+the correct end; that function was then matched and carved. Same defect class
+as the withdrawn `func_800906B4` — the guard works.
+
+### Gates (verbatim)
+
+```
+disc1_preflight: PASS (deep, 739 c / 328 asm / 2 rodata)
+PUBLIC_VERIFY=PASS  matching-C count: 739 (from YAML)
+disc1_plan: 1069 spans (739 c, 328 asm, 2 rodata), geometry=0x1EE000
+EXACT_REBUILD_GATE=PASS plan=818ab96a9b4db35a54337ecc3dce2c805d526a0d9945e9d98c8b6bb857852d7a yaml=b93dfa2ec80947f7c2e324c24ad8707eece7ef77a36f06ea098396da65a561a2 spans=[739 c, 328 asm, 2 rodata] sha1_orig=452fb033f2eaa4b18aa20a5bca60b8125af3a37b sha1_cand=452fb033f2eaa4b18aa20a5bca60b8125af3a37b sha1=452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+ROUTE_COVERAGE=plan=818ab96a9b4db35a54337ecc3dce2c805d526a0d9945e9d98c8b6bb857852d7a funcs=345/979 c_words=6048 nonc_funcs=76 nonc_words=5414 asm_funcs=558 asm_words=66231 asm_words_unknown=0 nonmatchable=present tierA=734 tierB=248 tierB_unresolved=0
+profile-necessity: 575/575 era leaves clean; 0 hard defect(s); 0 redundant
+python3 tools/build/test_disc1_plan.py → Ran 8 tests … OK
+```
+
+### Masked-match re-audit (mandated)
+
+Structural audit of every `c` span against the retail image: **every `c` span
+ends exactly on a `jr $ra` boundary, and no `c` span contains more than one
+`jr $ra`** (a swallowed function always contributes its own `jr $ra`). Zero
+additional instances beyond the three already repaired. The full
+`disc1_preflight.py --deep` pass confirms no span exceeds its compiled `.text`.
+
+## SESSION 2026-09-11 (cont. 19): deep-size defect repair (693 → 695)
+
+Goal unchanged. This session **fixed three deep-mode span-size defects** (all in
+`c` spans that declared more bytes than their C compiles to, silently
+swallowing the next real function), rewrote one masked-false-match leaf, and
+carved two newly-visible functions as exact leaves. Current count: **695
+matching C leaves** (`python3 tools/build/disc1_plan.py --check` → `1025 spans
+(695 c, 328 asm, 2 rodata)`, geometry `0x1EE000`, plan
+`8a90f1e110e7f9390d1ccc2d82712c4ab07c0848e6359166068e164b77649c46`).
+
+### Deep preflight output (the mode that catches sizes)
+
+`python3 tools/build/disc1_preflight.py --deep` before the fixes:
+
+```
+disc1_preflight: FAIL 3 finding(s) — fix before running the expensive split/build
+disc1_preflight: FAIL [deep-size] func_80076B58: declared span 0x88 (0x67358->0x673E0) exceeds compiled .text 0x40 by 0x48; trim_elf_section_pad.py will abort with `target size 0x88 > current 0x40`
+  remedy: end the span at 0x67398 (move the following span/edge up 0x48)
+disc1_preflight: FAIL [deep-size] func_80077D30: declared span 0x94 (0x68530->0x685C4) exceeds compiled .text 0x90 by 0x4; trim_elf_section_pad.py will abort with `target size 0x94 > current 0x90`
+  remedy: end the span at 0x685C0 (move the following span/edge up 0x4)
+disc1_preflight: FAIL [deep-size] func_800906B4: declared span 0x68 (0x80EB4->0x80F1C) exceeds compiled .text 0x30 by 0x38; trim_elf_section_pad.py will abort with `target size 0x68 > current 0x30`
+  remedy: end the span at 0x80EE4 (move the following span/edge up 0x38)
+```
+
+After the fixes: `disc1_preflight: PASS (deep, 695 c / 328 asm / 2 rodata)`.
+
+### The three defects and their resolution
+
+| defect | declared | true (retail) | fix |
+|---|---:|---:|---|
+| `func_80076B58` | `0x88` | `0x40` | span → `0x40`; swallowed `func_80076B98` (`0x48`) carved as a new `LINK_EXACT` leaf at `0x67398` |
+| `func_80077D30` | `0x94` | `0x90` | span → `0x90`; 4-byte layout pad at `0x685C0` now its own `- [0x685C0, asm]` span |
+| `func_800906B4` | `0x68` | `0x30` | span → `0x30`; swallowed `func_800906E4` (`0x38`) carved as a new `LINK_EXACT` leaf at `0x80EE4` |
+
+Retail evidence: `func_80076B58` ends `jr $ra`/`addu $v0,$zero,$zero` at
+`0x80076B90`/`0x80076B94`, `func_80076B98` runs through `jr $ra` at
+`0x80076BD8`; `func_80077D30` ends at `0x80077DBC` with a lone `nop` at
+`0x80077DC0` before `func_80077DC4`; `func_800906B4` ends
+`jr $ra`/`sh` at `0x800906DC`/`0x800906E0`, `func_800906E4` runs to
+`jr $ra` at `0x80090714`.
+
+**Masked false match withdrawn:** the oversized `func_800906B4` span had been
+hiding a register-allocation mismatch (its C emitted `$a1`/`$v1` where retail
+wants `$v0`/`$v1`). Its C was rewritten to a temp-local form and now compiles
+`LINK_EXACT` at the true `0x30`. `func_80076B58` and `func_80077D30` were
+already exact at their true sizes (`LINK_EXACT` re-verified).
+
+### New leaves from the repair (693 → 695)
+
+| leaf | span | size | era / profile |
+|---|---|---:|---|
+| `func_80076B98` | `0x67398` | `0x48` | `-O2 -G0` (default) |
+| `func_800906E4` | `0x80EE4` | `0x38` | `era_o2_g0_symbol_at_temp` (patch 5) |
+
+Both `LINK_EXACT`. `func_800906E4` needs `MASPSX_SYMBOL_AT_TEMP=1` (its
+indexed `D_800B290C[(*(u16 *)(a0+0x5A)) << 6]` byte load is retail's 3-word
+`$at` form with the `%lo` kept; the 4-word fallback makes `.text` `0x40` and
+re-triggers `deep-pad`). Reports: `docs/evidence/func-80076B98/REPORT.md`,
+`docs/evidence/func-800906E4/REPORT.md`.
+
+### Durable guards added
+
+1. **`tools/analysis/check_leaf.sh <func> <vram> <size> [flags]`** — runs
+   `era_link_check.py` *and* `disc1_preflight.py --deep --only <func>`. The
+   deep `--only` mode is the authoritative size gate; the fast preflight does
+   not compile and cannot catch this class.
+2. **Run the full `disc1_preflight.py --deep` before declaring any batch done**
+   (it is now part of the documented routine).
+3. **Env-leak hazard (real, cost one 4-minute build):** exporting a maspsx knob
+   (`MASPSX_SYMBOL_AT_TEMP=1`, `MASPSX_SYMBOL_LOAD_DEST_TEMP=1`, …) in the
+   persistent shell leaks into `exact_rebuild.sh` and poisons every leaf that
+   does not want it (first `exact_rebuild.sh` run failed at `func_80076B20`
+   purely because of this). Always scope knobs to a subshell.
+
+### Gates (all on the live tree)
+
+`disc1_preflight.py --deep` → PASS (695 c / 328 asm / 2 rodata);
+`test_disc1_plan.py` → 8 tests OK; `disc1_plan.py --check` → 1025 spans;
+`verify_us.sh --public` → PUBLIC_VERIFY=PASS, matching-C 695;
+`profile_necessity.py` → 531/531 era leaves clean, 0 redundant;
+`exact_rebuild.sh` → **EXACT_REBUILD_GATE=PASS** with
+`sha1_orig=sha1_cand=452fb033f2eaa4b18aa20a5bca60b8125af3a37b`.
+
+### Honest totals after the repair
+
+Whole image: matched C **695**; non-C-matchable **184 funcs / 20252 words**
+(`handwritten-gte-wrapper` 107/19958, `jr-t2` 53/163, `cop` 22/123,
+`syscall` 2/8) + **33** alignment spans; `gte-inline` 5/192 informational.
+Route view (`route_coverage.py`): matched C **332 / 5842**, provably non-C
+76 / 5414, **real remaining asm 571 / 66437**.
+
+### Next targets
+
+`func_8008CBA8` (fan-in 12, 242w `D_800BCD80` dispatcher — dumped, large),
+`func_80062D2C` (8, 124w pool allocator), `func_8005DB44` (9 — closest
+near-miss: 2 words over, retail's `v0=a0-v1` differs from cc1's `v1=v0-a0`),
+`func_800659F8` (frame residual), `func_80071964`/`80071994`, `func_80078C94`,
+`func_80087798`, `func_80067CBC`.
+
+## SESSION 2026-09-11 (cont. 18): 4 leaves (689 → 693) + cluster sweep
+
+Goal unchanged. This session delivered **4 new `LINK_EXACT` leaves** (two of them
+contiguous in the `0x561C8` row-accessor cluster) and re-verified the whole gate
+set. Current count: **693 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `1022 spans (693 c, 327 asm,
+2 rodata)`, geometry `0x1EE000`, plan
+`f5bfe9ab8bba49880a16b62051248489fc41fc54fe42b5dc16f708ceca942bbb`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`tools/build/disc1_preflight.py` → `PASS (fast, 693 c / 327 asm / 2 rodata)`;
+`tools/analysis/profile_necessity.py` → `529/529 era leaves clean; 0 redundant`.
+
+| leaf | file span | size | era / profile |
+|---|---|---:|---|
+| `func_800659C8` | `0x561C8` | `0x30` | `-O2 -G0` (default) |
+| `func_80065A60` | `0x56260` | `0x3C` | `-O2 -G0` (default) |
+| `func_80065B70` | `0x56370` | `0xC8` | `-O2 -G0` (default) |
+| `func_8005DB8C` | `0x4E38C` | `0x20` | `-O2 -G0` (default) |
+
+All `LINK_EXACT` at the retail VMA. The `0x561C8` cluster is now three carved
+C spans (`659C8`, `65A60`, `65A9C`) around asm islands; the two new entries
+extend the row-accessor family already proven by `func_8006599C`/`80065A9C`.
+`func_8005DB8C` (fan-in 9, global word + record-base helper) is the fourth.
+Reports: `docs/evidence/func-<name>/REPORT.md`.
+
+### Durable levers from these leaves
+
+1. **`func_80065B70` is a tail-call target with no prologue.** Its only
+   reference is a `li $t2,0x70 / jr $t2` tail jump from `func_80065B44`.
+   cc1 emits retail's frameless straight-line `li`/`lui $at`/`sw|sb|sh`
+   sequence (22 stores, every address absolute via `$at`) when the C body is a
+   leaf with `return 0;` last; interleaved word/short/char declarations are
+   load-bearing because the store width picks the opcode.
+2. **Fold a scaled index into the base argument to fill the delay slot.**
+   `func_80065A60`: `a1 = (a1 << 1) + (unsigned int)q; *(unsigned char *)(a1 + 1) = a2;`
+   gives retail's `sb $a2,0x1($a1)` scheduled into the `jr` delay slot. The
+   natural `*(q + (a1 << 1) + 1)` keeps the sum in `$v0` and lands the store
+   before the epilogue (`SIZE_MISMATCH`).
+3. **A split negative-offset local keeps the base register free.**
+   `func_8005DB8C`: `q = base - 0x10` gives retail's `addiu v1,v0,-16`, and
+   declaring the shift `off = a0 << 9` *before* `q` supplies `$a0` first so
+   `$v0` stays free for the `lw`. Folding `-0x10` into the later `addu` (or
+   reusing one pointer) reloads `$v1` (`MISMATCHES=4`). The source global is a
+   **data symbol** (`&D_800A8038`), so the base is `lui`+`addiu`, not a folded
+   `lui`+`ori` constant.
+4. **`func_800659F8` (same cluster, `0x68`) is NOT carved.** It carries an
+   unexplained 8-byte frame; every C phrasing was either 8 bytes short (no
+   frame) or 8 bytes long (16-byte frame) versus the 56-byte body. Left as asm.
+
+### `cop-inline` accounting — confirmed closed
+
+The `gte-inline` bucket stays **5 spans / 192 words** (informational) and
+`handwritten-gte-wrapper` **107 / 19958** (counted non-C). The top frontier
+entries the mandate named (`func_800661A4`, `func_800661CC`, `func_8006698C`,
+`func_8003B97C`) are already classified `handwritten-gte-wrapper`, so they no
+longer inflate the liftable frontier. Honest whole-image totals: matched C
+**693**; non-C-matchable **184 funcs / 20252 words** + 31 alignment spans;
+`gte-inline` 5/192 informational. Route view: matched C **330 / 5834**,
+provably non-C 76 / 5414, **real remaining asm 565 / 66207**. Manifest contract
+unchanged for `tools/analysis/route_coverage.py` (counted classes under `spans`,
+`gte-inline` out of `spans` and in the retained `matchable_cop_inline` key);
+regenerating the manifest from the tool is byte-identical to the on-disk file.
+
+### Park list audit
+
+All 14 `PARK.md` files were re-checked: every parked function is still an asm
+span (no stale park). No new parks this session — `func_80062D2C` (the fan-in-8
+pool allocator) was attempted and remains unmatched (its list-relink store
+ordering plus a `$s0`-frame shape resisted the `-O2 -G8` phrasing tried); it is
+left as asm rather than parked, since the residual is not yet proven
+source-invariant.
+
+## SESSION 2026-09-11 (cont. 17): 15 leaves (674 → 689) + `cop-inline` retightened
+
+Goal unchanged. This session delivered **15 new `LINK_EXACT` leaves** and
+corrected the `cop-inline` split so that a lone GTE **command** op is no longer
+miscounted as liftable. Current count: **689 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `1016 spans (689 c, 325 asm,
+2 rodata)`, geometry `0x1EE000`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`tools/build/disc1_preflight.py` → `PASS (fast, 689 c / 325 asm / 2 rodata)`.
+
+| leaf | file span | size | era / profile |
+|---|---|---:|---|
+| `func_80089F08` | `0x7A708` | `0x1C` | `-O2 -G0` (default) |
+| `func_800C8C80` | `0xB9480` | `0x3C` | `-O2 -G0` (default) |
+| `func_800C8CBC` | `0xB94BC` | `0x3C` | `-O2 -G0` (default) |
+| `func_800C8CF8` | `0xB94F8` | `0x3C` | `-O2 -G0` (default) |
+| `func_800CBBF0` | `0xBC3F0` | `0x3C` | `-O2 -G0` (default) |
+| `func_800CBC2C` | `0xBC42C` | `0x3C` | `-O2 -G0` (default) |
+| `func_800CBC68` | `0xBC468` | `0x3C` | `-O2 -G0` (default) |
+| `func_800CCA40` | `0xBD240` | `0x38` | `-O2 -G0` (default) |
+| `func_800CCA78` | `0xBD278` | `0x38` | `-O2 -G0` (default) |
+| `func_800CCB6C` | `0xBD36C` | `0x3C` | `-O2 -G0` (default) |
+| `func_800C9A34` | `0xBA234` | `0x3C` | `-O2 -G0` (default) |
+| `func_800CD5B0` | `0xBDDB0` | `0x3C` | `-O2 -G0` (default) |
+| `func_8008C6D0` | `0x7CED0` | `0x3C` | `-O2 -G0` (default) |
+| `func_80016FE0` | `0x77E0` | `0x38` | `-O2 -G0` (default) |
+| `func_8001784C` | `0x804C` | `0x30` | `era_o2_g8` |
+| `func_80018718` | `0x8F18` | `0x3C` | `-O2 -G0` (default) |
+
+All `LINK_EXACT` at the retail VMA. Priority fan-in cleared this session:
+`func_80067CBC` (11) was analysed but is **not yet matched**; the eight
+countdown-timer twins were a bulk sweep of a repeated overlay pattern.
+Reports: `docs/evidence/func-<name>/REPORT.md` for each.
+
+### Durable levers from these leaves
+
+1. **A fold-in base keeps the displacement on the base register.**
+   `func_80089F08`: `a0 = (a0 << 4) + (unsigned int)D_8009B3FC;` then
+   `*(unsigned short *)(a0 + 0xC)` gives retail's `lhu v0,0xC(a0)`. Writing the
+   whole address as one expression folds the `+0xC` into the address register.
+2. **A second, independent `short` reload is load-bearing.** The whole
+   countdown-timer family (`func_800C8C80`/`CBC`/`CF8`, `CBBF0`/`CBC2C`/`CBC68`,
+   `CCA40`/`CCA78`, `CCB6C`, `C9A34`, `CD5B0`) has the shape
+   `*(unsigned short *)(a2+4) -= 8; *(unsigned short *)(a2+6) += STEP;
+   if (*(short *)(a2+4) < 0x14) { *(unsigned short *)(a2+4) = 0; a1[1] = 2; }`.
+   The `if` must re-read `a2+4` as `short`; folding the compare into the value
+   already in hand changes the register home. The byte-field variants
+   (`CCA40`/`CCA78`, `CCB6C`) step `a2+3` with `lbu` and re-read it as
+   `signed char` (`lb`).
+3. **`if/else` beats early return for the 1/0 gate writers.**
+   `func_80016FE0` (`D_8009D2E8` bit 0) and `func_80018718` (`D_800A76C4`
+   bit 2) match only with `if (flag) *out = X; else *out = Y;`; the early-return
+   spelling reverses the branch and duplicates the `li v0,1`.
+4. **`unsigned int` counter → `sltiu`.** `func_8008C6D0` needs an `unsigned int`
+   `do/while` counter to emit retail's `sltiu 0x18`; a signed `int` gives `slt`.
+5. **`-G8` for a `0x590($gp)` pointer global.** `func_8001784C` reads
+   `D_8009D300` (`extern unsigned int *`) at `0x590($gp)`; only `era_o2_g8`
+   keeps it in the small-data section (assigned in
+   `disc1_build_profiles.json`).
+
+### `cop-inline` accounting correction
+
+`nonmatchable_spans.py` previously treated an isolated COP **command** op
+(e.g. one `rtps`) inside branch/call-bearing code as `gte-inline` (liftable).
+A single `rtps` is a literal Psy-Q `gte_rtps` macro and has no C spelling, so
+the rule is now: **any** GTE command op, **or** a contiguous COP run >= 3,
+**or** no conditional branch and no call, is `handwritten-gte-wrapper`
+(non-C). Only an isolated COP2 *register-transfer* pair (`mtc2`/`mfc2`/`swc2`/
+`lwc2`) inside branch/call-bearing integer code stays `gte-inline`
+(informational).
+
+Result: `handwritten-gte-wrapper` **103 spans / 19008 words → 107 / 19958**;
+`gte-inline` **9 spans / 1142 words → 5 / 192** (the four `rtps` spans
+`func_800D2B58`, `func_800DB25C`, `func_800D1DEC`, `func_800D2104` moved into
+the counted class). The remaining 5 informational spans are `func_8003EAC8`,
+`func_800130B4`, `func_80077F7C`, `func_80078004`, `func_80078094`.
+
+Honest totals now (whole image): matched C **689**; non-C-matchable **184 funcs
+/ 20252 words** (`handwritten-gte-wrapper` 107/19958, `handwritten-jr-t2`
+53/163, `handwritten-cop` 22/123, `handwritten-syscall` 2/8) + 31 alignment
+spans; `gte-inline` 5/192 informational. Route view: `route_coverage.py` →
+matched C 328 / 5776 words, provably non-C 76 / 5414, **real remaining asm
+567 / 66265**. Manifest contract unchanged for the sibling consumer (counted
+classes under `spans`, `gte-inline` out of `spans` and in the retained
+`matchable_cop_inline` key).
+
+**YAML syntax repair:** a hard-wrapped comment continuation at the
+`func_8008F430` block (a bare ` cursor by` line) broke strict YAML parsing and
+was caught by the sibling's `tools/build/disc1_preflight.py`; it is now a single
+well-formed comment. `disc1_preflight.py` is clean.
+
+Next targets unchanged: `func_8008CBA8` (fan-in 12, 242w), `func_80062D2C`
+(8, 124w), `func_80067CBC` (11, 23w), then the small no-call sweep continues.
+
+## SESSION 2026-09-11 (cont. 16): 4 leaves (670 → 674) + the `cop-inline` split
+
+Goal unchanged. This session delivered **4 new `LINK_EXACT` leaves** and split
+the old 117-span / 20196-word `cop-inline` bucket into a counted
+`handwritten-gte-wrapper` class and a 9-span informational `gte-inline` class.
+Current count: **674 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `997 spans (674 c, 321 asm,
+2 rodata)`, geometry `0x1EE000`, plan SHA-256
+`830424c3b7e2c31ee1179e09605492426189ae8e2c14fe81cf10629390527c6f`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`;
+`tools/analysis/profile_necessity.py` → `510/510 era leaves clean`.
+
+| leaf | file span | size | era / profile | fan-in |
+|---|---|---:|---|---|
+| `func_80038910` | `0x29110` | `0x30` | `era_o2_g8` | 2 |
+| `func_8007DBC8` | `0x6E3C8` | `0x3C` | `-O2 -G0` (default) | 1 |
+| `func_80087050` | `0x77850` | `0x40` | `-O2 -G0` (default) | 1 |
+| `func_8007E594` | `0x6ED94` | `0x30` | `-O2 -G0` (default) | 1 |
+
+All `LINK_EXACT` at the retail VMA (`tools/analysis/era_link_check.py`).
+Reports: `docs/evidence/func-80038910|func-8007DBC8|func-80087050|
+func-8007E594/REPORT.md`.
+
+### `cop-inline` accounting fix (non-C taxonomy)
+
+`tools/analysis/nonmatchable_spans.py` now emits two classes where it used to
+emit one `cop-inline`:
+
+- **`handwritten-gte-wrapper` — 103 spans / 19008 words, COUNTED as non-C.**
+  A span with a contiguous run (>=3) of raw GTE ops (`ctc2`/`mtc2`/`mfc2`/
+  `cfc2`/`lwc2`/`swc2` **and** the libgte command ops `mvmva`/`rtps`/`rtpt`/
+  `nclip`/`avsz3`/`avsz4`/`sqr`/`op`/`gpf`/`gpl`/`intpl`/…), or with no
+  conditional branch and no call at all while containing a COP op. 1810 of the
+  2419 COP transfer ops in the bucket are flagged `/* handwritten instruction */`
+  by the disassembler; the GTE command ops have no C spelling at all; and **0 of
+  the 674 matched C leaves contains a single COP op** — empirical proof `cc1`
+  never synthesises one.
+- **`gte-inline` — 9 spans / 1142 words, informational only, NOT counted.**
+  A COP op appears only as an isolated pair (run < 3) inside clean
+  branch/call-bearing integer code: `func_800D2B58`, `func_800DB25C`,
+  `func_800D1DEC`, `func_800D2104`, `func_800130B4`, `func_80078094`,
+  `func_80078004`, `func_80077F7C`, `func_8003EAC8`. This is the genuine
+  next-pass frontier.
+
+`handwritten-cop` grew 17 → 22 spans as the `_max_gte_run`/`all-COP` boundary
+was tightened. Manifest contract unchanged for the sibling consumer: counted
+classes live under `spans`; `gte-inline` stays out of `spans` and is emitted in
+the retained `matchable_cop_inline` key (`class: "gte-inline"`), so
+`route_coverage.py` keeps reading it as informational without edits.
+
+Honest totals now (whole image): matched C **674**; non-C-matchable **180 funcs
+/ 19302 words** (`handwritten-gte-wrapper` 103/19008, `handwritten-jr-t2`
+53/163, `handwritten-cop` 22/123, `handwritten-syscall` 2/8) + 31 alignment
+spans; `gte-inline` 9/1142 informational. Route view:
+`route_coverage.py` → matched C 326 / 5750 words, provably non-C 76 / 5414,
+**real remaining asm 569 / 66291**.
+
+### Durable levers from these leaves
+
+1. **A narrow local type controls the destination register.** `func_8007DBC8`
+   needs `unsigned short v = D_8009B3FC[a0];` so the value homes in `$a0`
+   (`lhu a0,0(a0)` / `sllv v0,a0,v0` / `move v0,a0`); an `unsigned int` local
+   lands in `$v1` plus a redundant `move`.
+2. **`volatile` on a polled global stops load hoisting.** `func_80087050`
+   needs `extern volatile unsigned int D_8009D2E0`; without it cc1 hoists the
+   second load out of the loop.
+3. **Arm order picks the loop's address.** `func_80087050` only matches with
+   `if (a0 == 0) { while(...); return 0; } return D_8009D2E0 & 1;` — the
+   mirrored spelling puts the `a0 != 0` arm first.
+4. **A parallel pointer keeps a down-counting byte walk at ROM size.** In
+   `func_8007E594`, `q = a0 + 3` + `q[5]`/`q--` reproduces retail; indexing `a0`
+   directly makes cc1 emit `addu v0,v1,a0` and hoist the store, and an ascending
+   byte loop grows the frame past `0x30`.
+5. **`-G8` keeps gp-relative store bases.** `func_80038910` matches only on
+   `era_o2_g8`; under `-G0` cc1 splits each of the seven stores into an
+   absolute `lui $at` sequence (9 mismatches, object 0x50 vs ROM 0x30).
+
+`func_8007E4E0` was attempted and **not** matched (retail's `li v0,0xDF80`
+after the two `%hi/%lo` pairs is frontend-insensitive to source order/loop form);
+no source was left behind. Next targets unchanged: `func_8008CBA8` (fan-in 12,
+242w), `func_80062D2C` (8, 124w), then the small no-call sweep continues.
+
+## SESSION 2026-09-11 (cont. 15): 23 leaves (647 → 670) + a GTE-macro ruling
+
+Goal unchanged. This session delivered **23 new `LINK_EXACT` leaves** (all
+small no-call leaves found by a systematic sweep of `asm/disc1/`), removed two
+stale PARK files, PARKED one true frontend divergence, and settled the
+`cop-inline` frontier's nature. Current count: **670 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `991 spans (670 c, 319 asm,
+2 rodata)`, geometry `0x1EE000`, plan SHA-256
+`dd084b9176ba5c9be09780c1be4e26ad3d8789e0059ec0ad16d00789a74dd573`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`;
+`tools/analysis/profile_necessity.py` → `506/506 era leaves clean`.
+
+| leaf | file span | size | era / profile | fan-in |
+|---|---|---:|---|---|
+| `func_80073D24` | `0x64524` | `0x34` | `-O2 -G0` (default) | 4 |
+| `func_80073D58` | `0x64558` | `0x30` | `-O2 -G0` (default) | 2 |
+| `func_80073D88` | `0x64588` | `0x30` | `-O2 -G0` (default) | — |
+| `func_80073DB8` | `0x645B8` | `0x30` | `-O2 -G0` (default) | — |
+| `func_80051684` | `0x41E84` | `0x30` | `-O2 -G0` (default) | 3 |
+| `func_80067B40` | `0x58340` | `0x34` | `-O2 -G0` (default) | 2 |
+| `func_80076B58` | `0x67358` | `0x40` | `-O2 -G0` (default) | 2 |
+| `func_80076BE0` | `0x673E0` | `0x30` | `-O2 -G0` (default) | 2 |
+| `func_80087864` | `0x78064` | `0x28` | `-O2 -G0` (default) | 2 |
+| `func_8008F430` | `0x7FC30` | `0x40` | `-O2 -G0` (default) | 1 |
+| `func_8008F784` | `0x7FF84` | `0x38` | `-O2 -G0` (default) | 1 |
+| `func_80065A9C` | `0x5629C` | `0x38` | `-O2 -G0` (default) | 1 |
+| `func_80018718` | `0x8F18` | `0x3C` | `-O2 -G0` (default) | 2 |
+| `func_8009071C` | `0x80F1C` | `0x38` | `-O2 -G0` (default) | 2 |
+| `func_80036DF8` | `0x275F8` | `0x3C` | `-O2 -G0` (default) | 2 |
+| `func_8008A02C` | `0x7A82C` | `0x3C` | `-O2 -G0` (default) | 2 |
+| `func_8007A400` | `0x6AC00` | `0x34` | `era_o2_g0_symbol_at_temp` (patch 5) | 2 |
+| `func_8007A434` | `0x6AC34` | `0x34` | `era_o2_g0_symbol_at_temp` (patch 5) | 2 |
+| `func_800858E8` | `0x760E8` | `0x30` | `era_o2_g0_symbol_at_temp` (patch 5) | 2 |
+| `func_80085918` | `0x76118` | `0x34` | `era_o2_g0_symbol_load_dest_temp` (patch 4) | 2 |
+| `func_800428D4` | `0x330D4` | `0x3C` | `era_o2_g0_symbol_at_temp` (patch 5) | 2 |
+| `func_800556E8` | `0x45EE8` | `0x3C` | **new** `era_o2_g8_symbol_at_temp` (patch 5) | 2 |
+| `func_80058E08` | `0x49608` | `0x3C` | **new** `era_o2_g8_symbol_at_temp` (patch 5) | 2 |
+
+Durable levers from this session:
+
+1. **Patch 4 vs patch 5 is decided by whether the indexed symbolic load's
+   address temp is the *destination* register** — `func_80085918` has a `nor`
+   immediately consuming the loaded value, and retail keeps the dest-register
+   temp with the `%lo` displacement (patch 4, profile
+   `era_o2_g0_symbol_load_dest_temp`); `func_8007A400`/`7A434`/`858E8`/`428D4`
+   use the `$at` form (patch 5, `era_o2_g0_symbol_at_temp`). Both are
+   load-bearing: the wrong knob costs 9–10 words.
+2. **The patch-5 knob composes with `-G8`** — `func_800556E8`/`58E08` need the
+   new profile `era_o2_g8_symbol_at_temp` (`-O2 -G8` **plus**
+   `MASPSX_SYMBOL_AT_TEMP=1`). Removing the env drops 9 words. Never assign a
+   patch-5 leaf to plain `era_o2_g8`.
+3. **Early-return polarity for a bound-checked table getter** — the
+   `if (i < N) return table[i]; return fallback;` spelling emits a
+   `bnez`-into-fallthrough; retail's `if (i >= N) return fallback;` order
+   (`beqz` to the exit arm) is required (`func_8007A400`).
+4. **A signed `int` index gives `slti`; `unsigned` gives `sltiu`** — one word,
+   at the exact site (`func_800858E8`).
+5. **Two-guard signed range getters** (`func_800556E8`/`58E08`) reproduce retail's
+   double `addu $v0,$zero,$zero` zero-init only as two separate early returns
+   (`if (a0 < 0) return 0; if (a0 >= limit) return 0;`).
+6. **Loop/sentinel spellings**: `c = a1 - 1` with `while (--c != -1)`
+   reproduces retail's preheader/sentinel pair (`func_80076B58`); the
+   `do { ... } while (a2)` form with a pre-loop `d = a1 - *a0` and a parallel
+   `p = a0 + 1` pointer gives the `0x40`-stride pair incrementer
+   (`func_8008A02C`).
+7. **Named address temporaries**: a `q = p + 2` local keeps the second `sw`
+   before the `hi` load (`func_8008F430`); a named `unsigned int t` for the
+   second computed address fixes operand order (`func_8009071C`); split nested
+   `if (p)` blocks keep the double-null check (`func_80051684`); one `$2` base
+   pin plus absolute `lui $at` byte stores for the adjacent pair
+   (`func_80067B40`).
+8. **`volatile` keeps deliberate duplicate stores** — the five-word state seed
+   `D_800A76A8 = 0; D_800A76A8 = 0x1499700; …` (`func_80036DF8`) and the paired
+   `D_800B1624` base loads (`func_80065A9C`) both vanish without it.
+9. **`ctc2`-only "functions" are PSY-Q GTE macro wrappers, not C** — the
+   `cop-inline` bucket's top fan-in entries (`func_800661A4`/`661CC`,
+   `func_8006698C`, `func_8003B97C`) are literally
+   `lw`/`sll`/`ctc2 $t4,$N` sequences. No LLVM-built cc1 2.7.2 emits `ctc2`
+   from any C construct, so these are macro-expansion wrappers rather than
+   liftable C; documented here so the frontier is not miscounted. (Non-COP
+   neighbours such as `func_800669B0`/`66A00`/`674C0` remain valid targets.)
+10. **A `register long long p asm("$2")` pin cannot fix DImode half-read order
+    or a dead `sra` tail** — `func_8003708C` (fan-in 16) is PARKED
+    (`docs/evidence/func-8003708C/PARK.md`): the pin recovers the register home
+    (7 → 5 mismatched words) but cc1 still reads `mfhi` before `mflo` and keeps
+    the dead `sra $3,$3,16` after the `or`.
+
+PARK files removed this session (stale — those leaves have since matched):
+`docs/evidence/func-8006E6D4/PARK.md`, `docs/evidence/func-8007FBF0/PARK.md`
+(both leaves are `c` spans with `REPORT.md`).
+
+New PARK: `docs/evidence/func-8003708C/PARK.md` (fan-in 16).
+
+Honest three-way coverage after this session (route 971 fns; `route_coverage.py`
+now reads 670 matched C):
+
+| bucket | functions | words |
+|---|---:|---:|
+| matched C (YAML `c` spans) | 670 | 5738 |
+| non-C-matchable, on-route | 47 | 147 |
+| **real remaining asm** | **599** | **71570** |
+
+Next targets (ranked): `func_80079FB4` (fan-in 19, PARKED), `func_80073A44`
+(17, PARKED), `func_8006DE80` family (15, PARKED), `func_8008CBA8` (12, 242w —
+large `D_800BCD80` state dispatcher, no COP), `func_80067CBC` (11, PARKED,
+4-word scheduling residual), `func_8005DB44` (9, PARKED, reassociation),
+`func_80062D2C` (8, 124w — `D_800****` pool allocator). Also the many small
+no-call leaves in `asm/disc1/` that this session's scan enumerated
+(`func_8007E4E0`, `func_8007E594`, `func_80038910`, `func_8007DBC8`,
+`func_80087050`, `func_8008F430`-family neighbours, `func_800599xx`).
+
+## SESSION 2026-09-11 (cont. 14): 15 leaves (647 → 662) + stale parks cleaned
+
+Goal unchanged. This session delivered **15 new `LINK_EXACT` leaves** and
+cleaned two stale PARK files. Current count: **662 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `981 spans (662 c, 317 asm,
+2 rodata)`, geometry `0x1EE000`, plan SHA-256
+`e584072c97f93e9619769d84b4f667bcdf0ff9032c0e0ae60263db542441e41d`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`;
+`tools/analysis/profile_necessity.py` → `498/498 era leaves clean`.
+
+| leaf | file span | size | era / profile | fan-in |
+|---|---|---:|---|---|
+| `func_80073D24` | `0x64524` | `0x34` | `-O2 -G0` (default) | 4 |
+| `func_80073D58` | `0x64558` | `0x30` | `-O2 -G0` (default) | 2 |
+| `func_80073D88` | `0x64588` | `0x30` | `-O2 -G0` (default) | — |
+| `func_80073DB8` | `0x645B8` | `0x30` | `-O2 -G0` (default) | — |
+| `func_80051684` | `0x41E84` | `0x30` | `-O2 -G0` (default) | 3 |
+| `func_80067B40` | `0x58340` | `0x34` | `-O2 -G0` (default) | 2 |
+| `func_80076B58` | `0x67358` | `0x40` | `-O2 -G0` (default) | 2 |
+| `func_80076BE0` | `0x673E0` | `0x30` | `-O2 -G0` (default) | 2 |
+| `func_80087864` | `0x78064` | `0x28` | `-O2 -G0` (default) | 2 |
+| `func_8008F430` | `0x7FC30` | `0x40` | `-O2 -G0` (default) | 1 |
+| `func_8008F784` | `0x7FF84` | `0x38` | `-O2 -G0` (default) | 1 |
+| `func_8007A400` | `0x6AC00` | `0x34` | `era_o2_g0_symbol_at_temp` (patch 5) | 2 |
+| `func_8007A434` | `0x6AC34` | `0x34` | `era_o2_g0_symbol_at_temp` (patch 5) | 2 |
+| `func_800858E8` | `0x760E8` | `0x30` | `era_o2_g0_symbol_at_temp` (patch 5) | 2 |
+| `func_80085918` | `0x76118` | `0x34` | `era_o2_g0_symbol_load_dest_temp` (patch 4) | 2 |
+
+Durable levers from this session:
+
+1. **Patch 4 vs patch 5 is decided by whether the indexed symbolic load's
+   address temp is the *destination* register** — `func_80085918` has a `nor`
+   immediately consuming the loaded value, and retail keeps the dest-register
+   temp with the `%lo` displacement (patch 4, profile
+   `era_o2_g0_symbol_load_dest_temp`); `func_8007A400`/`7A434`/`858E8` use the
+   `$at` form (patch 5, `era_o2_g0_symbol_at_temp`). Both are load-bearing:
+   the wrong knob costs 9–10 words.
+2. **Early-return polarity for a bound-checked table getter** — the
+   `if (i < N) return table[i]; return fallback;` spelling emits a
+   `bnez`-into-fallthrough; retail's `if (i >= N) return fallback;` order
+   (`beqz` to the exit arm) is required (`func_8007A400`). The `i < N` form
+   leaves 9 mismatched words.
+3. **A signed `int` index gives `slti`; `unsigned` gives `sltiu`** — one word,
+   at the exact site (`func_800858E8`).
+4. **Loop-sentinel spelling**: a `do { ... } while (--c != -1);` with
+   `c = a1 - 1` reproduces retail's `addiu $a2,$a1,-1` preheader and
+   `addiu $a1,$zero,-1` sentinel (`func_80076B58`).
+5. **Named cursor locals materialize the right store order** — a `q = p + 2`
+   local keeps the second `sw` before the `hi` load (`func_8008F430`);
+   splitting the guard into two nested `if (p)` blocks keeps the double-null
+   check (`func_80051684`); one `$2` base pin plus absolute `lui $at` byte
+   stores for the adjacent pair (`func_80067B40`).
+6. **`ctc2`-only "functions" are PSY-Q GTE macro wrappers, not C** — the
+   `cop-inline` bucket's top fan-in entries (`func_800661A4`/`661CC`,
+   `func_8006698C`, `func_8003B97C`) are literally
+   `lw`/`sll`/`ctc2 $t4,$N` sequences. No LLVM-derived cc1 2.7.2 emits `ctc2`
+   from any C construct, so these are macro-expansion wrappers rather than
+   liftable C; documented here so the frontier is not miscounted. (Non-COP
+   neighbours such as `func_800669B0`/`66A00`/`674C0` remain valid targets.)
+7. **A `$2` pin cannot fix a DImode result register** — `func_8003708C` (fan-in
+   16) is a true frontend divergence: retail reads `mflo $v0` before
+   `mfhi $v1` and has **no dead `sra`** after the `or`. A
+   `register long long p asm("$2")` pin fixes the register home (recovers 2
+   words) but cc1 still emits `mfhi` first and keeps the dead
+   `sra $3,$3,16`. PARKED precisely (`docs/evidence/func-8003708C/PARK.md`).
+
+PARK files removed this session (stale — those leaves have since matched):
+`docs/evidence/func-8006E6D4/PARK.md`, `docs/evidence/func-8007FBF0/PARK.md`
+(both leaves are `c` spans with `REPORT.md`).
+
+New PARK: `docs/evidence/func-8003708C/PARK.md` (fan-in 16, DImode half-read
+order + dead-`sra` tail).
+
+Honest three-way coverage after this session (route 979 fns; `route_coverage.py`
+now reads 662 matched C):
+
+| bucket | functions | words |
+|---|---:|---:|
+| matched C (YAML `c` spans) | 662 | 5693 |
+| non-C-matchable, on-route | 47 | 147 |
+| **real remaining asm** | **602** | **71615** |
+
+Next targets (ranked): `func_80079FB4` (fan-in 19, PARKED), `func_80073A44`
+(17, PARKED), `func_8006DE80` family (15, PARKED), `func_8008CBA8` (12, 242w —
+large `D_800BCD80` state dispatcher, no COP), `func_80067CBC` (11, PARKED,
+4-word scheduling residual), `func_8005DB44` (9, PARKED, reassociation),
+`func_80062D2C` (8, 124w — `D_800****` pool allocator). Also the many small
+no-call leaves in `asm/disc1/` that this session's scan enumerated
+(`func_8007E4E0`, `func_800858E8`-family neighbours, `func_8007E594`,
+`func_80038910`, `func_800599xx`, the `0x8007Exxx` GTE-adjacent block).
+
+## SESSION 2026-09-11 (cont. 13): 11 leaves (636 → 647) + a PARK resolved
+
+Goal unchanged. This session delivered **11 new `LINK_EXACT` leaves**, one of
+them a **resolution of the `func_80026FD0` PARK** (the earlier park was wrong),
+and a **conservative refinement of the non-C-matchable taxonomy** (the new
+`cop-inline` bucket). Current count: **647 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `965 spans (647 c, 316 asm,
+2 rodata)`, geometry `0x1EE000`, plan SHA-256
+`8a2306c96ad85908e82ee4ad78a799c42a8da547441dbbcf0dcfe39d9a423026`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`;
+`tools/analysis/profile_necessity.py` → `483/483 era leaves clean`.
+
+| leaf | file | size | era / profile | fan-in |
+|---|---|---:|---|---|
+| `func_80026FD0` | `0x177D0` | `0x28` | `-O2 -G8` (`era_o2_g8`) — **was PARKED** | 4 |
+| `func_8008FFC0` | `0x807C0` | `0x24` | `-O2 -G0` (default) | 4 |
+| `func_80090054` | `0x80854` | `0x24` | `-O2 -G0` (default) | 2 |
+| `func_800900E4` | `0x808E4` | `0x24` | `-O2 -G0` (default) | 2 |
+| `func_80090178` | `0x80978` | `0x24` | `-O2 -G0` (default) | 2 |
+| `func_8007CE80` | `0x6D680` | `0x2C` | `-O2 -G0` (default) | 1 |
+| `func_8008F4E8` | `0x7FCE8` | `0x2C` | `-O2 -G0` (default) | 2 |
+| `func_8008FBFC` | `0x803FC` | `0x2C` | `-O2 -G0` (default) | 3 |
+| `func_8008FCE4` | `0x804E4` | `0x2C` | `-O2 -G0` (default) | 2 |
+| `func_8008F6B0` | `0x7FEB0` | `0x44` | `-O2 -G0` (default) | 2 |
+| `func_8008FC28` | `0x80428` | `0x50` | `-O2 -G0` (default) | 5 |
+
+Ten of the eleven are the **serial-cursor-reader family** in the
+`0x7F000`–`0x81000` stream block: `lw *(unsigned char **)a0` cursor, `+1`,
+store back, then a fetched byte transformed into a halfword field. Fan-in
+cleared this session: 11 leaves on-path, top being `func_8008FC28` (5) and
+`func_80026FD0`/`func_8008FFC0` (4 each).
+
+Evidence: `docs/evidence/func-80026FD0/REPORT.md` (replaces its PARK),
+`func-8008FFC0`, `func-80090054`, `func-800900E4`, `func-80090178`,
+`func-8007CE80`, `func-8008F4E8`, `func-8008FBFC`, `func-8008FCE4`,
+`func-8008F6B0`, `func-8008FC28`.
+
+Durable levers from this session:
+
+1. **`lb` comes from `signed char`, not `char`** — and a `signed char[16]`
+   **array** declaration forces an **absolute** base (`lui`/`lb`) while keeping
+   the sign-extending load, which is how `func_80026FD0`'s gate matches under
+   `-G8`; the two store values in that leaf have **different signedness**
+   (`unsigned char = 0x80` → `li $v0,0x80`; `signed char = -8` → `li $v0,-8`).
+   The earlier PARK was a wrong-typing artefact, not a frontend divergence.
+2. **A named loop-local `unsigned int v = *a1;`** (rather than `*a0 = *a1`)
+   preserves retail's `lw` / `addiu a1` / `addiu i` / `sw a0` order
+   (`func_8007CE80`).
+3. **A named value local between the pointer-advance and the store** keeps the
+   `lbu` late (`func_8008F4E8`); reading `*p` at the store reschedules it.
+4. **Two `(unsigned char **)` casts, not a struct**, give the `lw+addiu+sw`
+   then `lbu+sll+sh` pair (`func_8008FFC0`).
+5. **Fresh pointer locals per cursor walk** are required — one expression
+   reading `*(unsigned char **)a0` twice makes cc1 CSE the loads
+   (`func_8008FC28`).
+6. **Flag teardown masks are bit-exact**: `&= ~2` clears only bit 1
+   (`0xFFFD`); `&= ~3` (`0xFFFC`) is a one-word miss (`func_80090054`).
+
+PARKs added/updated this session:
+
+- `docs/evidence/func-80067CBC/PARK.md` — re-attacked per mandate; the residual
+  is now precisely 4 words (retail materialises the second RMW's `~0xC000` mask
+  **before** reloading the base; cc1 emits the mask after the load). Tried two
+  pointer-local forms, `volatile`, a ternary, a carried `v`, and four rungs — no
+  change. Constant-materialisation-vs-load ordering class; no new lever.
+- `func_8005DB44` — **RESOLVED this session (no longer parked)**. See
+  `docs/evidence/func-8005DB44/REPORT.md`: the reassociation residual is
+  defeated by making the base a **local pointer decremented in place**
+  (`p = &D_800A8038; … p -= 4`) plus a **block-local `int sh = a0 << 5;`**
+  assigned before the decrement; era `-O1 -G0`, `LINK_EXACT`. Its adjacent twin
+  `func_8005DAFC` is a genuine `$v0`/`$v1` allocation residual and stays `asm`.
+- `docs/evidence/func-800739C4/PARK.md` — retry log added: an early-`return`
+  per arm and a `v0`-carried compare ladder both make it *worse*
+  (`word mismatches=18` vs 12). Confirms the tail-duplication is downstream of
+  C control flow.
+
+### Taxonomy refinement (conservative)
+
+`tools/analysis/nonmatchable_spans.py` now reports a **`cop-inline`** bucket
+(**117 spans / 20196 words**) for spans that merely *contain* a COP2/GTE op but
+are otherwise ordinary integer code. These are **not** counted as
+non-C-matchable (a C front end cannot emit the raw COP2 op, but the bulk of each
+body is liftable), so the honest total is unchanged at **72 functions /
+248 words** (`handwritten-jr-t2` 53/163, `handwritten-cop` 17/77,
+`handwritten-syscall` 2/8; 31 alignment-filler spans). `cop-inline` is the
+natural next-pass frontier and is documented in
+`docs/evidence/non-c-matchable/REPORT.md`; `MANIFEST.json` regenerated.
+
+Honest three-way coverage after this session (route 979 fns):
+
+| bucket | functions | words |
+|---|---:|---:|
+| matched C (YAML `c` spans) | 647 | 5593 |
+| non-C-matchable, on-route | 47 | 147 |
+| **real remaining asm** | **616** | **71954** |
+
+Next targets (ranked, unchanged): `func_80079FB4` (fan-in 19, PARKED),
+`func_80073A44` (17, PARKED), `func_8003708C` (16 — a `long long` mult whose
+`mfhi`/`mflo` register home and dead-`sra $3` tail are frontend-determined),
+`func_8006DE80` family (15, PARKED), `func_8008CBA8` (12, 242w — a large
+`D_800BCD80` state dispatcher), `func_80062D2C` (8, 124w — a `D_800****` pool
+allocator with the `-0x8($a1)` rolling store), `func_8006698C` (7, 117w).
+
+## SESSION 2026-09-11 (cont. 12): honest non-C-matchable coverage + 5 leaves (631 → 636)
+
+Goal unchanged. This session delivered (a) the **honest remaining-asm
+classification**: provably non-C-matchable split-asm spans are now separated
+from real remaining work by `tools/analysis/nonmatchable_spans.py`, and (b)
+**5 new `LINK_EXACT` leaves**. Current count:
+**636 matching C leaves** (`python3 tools/build/disc1_plan.py --check` →
+`947 spans (636 c, 309 asm, 2 rodata)`, geometry `0x1EE000`, plan SHA-256
+`8bd0fa89e3ec4c1a...`); `python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`;
+`tools/analysis/profile_necessity.py` → `472/472 era leaves clean`.
+
+| leaf | file | size | era / profile | fan-in |
+|---|---|---:|---|---|
+| `func_80073CF4` | `0x644F4` | `0x30` | `-O2 -G0` (default) | 4 |
+| `func_8007F72C` | `0x6FF2C` | `0x4C` | `-O2 -G0` + patch 3 (`era_o2_g0_fill_epilogue_delay_slot`) | 5 |
+| `func_800866A4` | `0x76EA4` | `0x4C` | `-O2 -G0` (default) | 7 |
+| `func_8005DC4C` | `0x4E44C` | `0x50` | `-O2 -G0` (default) | 4 |
+| `func_800718D0` | `0x620D0` | `0x74` | `-O2 -G0` (default) | 4 |
+| `func_80073A44` (`0x178`) + `func_800739C4` (`0x64`) + `func_80026FD0` (`0x28`) + `func_80062F3C` (`0x60`) + `func_80085EB4` (`0x5C`) **PARKED** | | | | |
+Evidence: `docs/evidence/func-80073CF4/REPORT.md`, `func-8007F72C`,
+`func-800866A4`, `func-8005DC4C`, `func-800718D0`; parks
+`func-80073A44/PARK.md` (redundant spilled-temp poll + pre-frame global loads),
+`func-800739C4/PARK.md` (retail tail-duplicates the `jal` into both compare
+arms; era cc1 shares one), `func-80026FD0/PARK.md` (era cc1 emits `lbu` for a
+signed-char truthiness gate; retail `lb` — isolated probe included),
+`func-80062F3C/PARK.md` (gp-relative head load + loop-head scheduling),
+`func-80085EB4/PARK.md` (`sllv` amount register home + symbol-base CSE).
+
+Durable levers from this session: (1) a **`&D_800A8028 + D_800A802C` byte-base
+plus `unsigned char *` walker** reproduces retail's `la`+`addu` stream base for
+pooled records (`func_8005DC4C`); (2) **early-return polarity beats `?:`** — the
+`if (a0 >= n) return 0;` form gives retail's `sltu`/`beqz` + fallthrough tail
+where the if-else/shared-exit form adds a `j`+`move` (96 vs 80 bytes); (3) the
+walker siblings `func_800718D0` need the **live `s0` pointer** (not a bool) to
+gate the second call and the tail kept in `$s1`.
+
+### Honest non-C-matchable coverage (new tool)
+
+`tools/analysis/nonmatchable_spans.py` classifies provably non-C-matchable
+spans with positive per-span instruction evidence and reports honest counts.
+`docs/evidence/non-c-matchable/REPORT.md` is the full write-up; the
+machine-readable inventory is `MANIFEST.json`.
+
+Counts after this session (route 979 fns: 315 matched C / 664 asm):
+
+| bucket | functions | words |
+|---|---:|---:|
+| matched C (YAML `c` spans) | 636 | 5583 |
+| non-C-matchable, on-route | 47 | 147 |
+| non-C-matchable, off-path | 25 | 101 |
+| **non-C-matchable total** | **72** | **248** |
+| alignment filler (not functions) | 31 spans | 31 |
+| real remaining asm | 617 | 71964 |
+
+Classes: `handwritten-jr-t2` 53 / 163w (BIOS `addiu $t2`/`jr $t2`/
+`addiu $t1` triples in `621E4.s`, `64B54.s`, `6E538.s`, `6E6C0.s`, `75F44.s`;
+C's indirect call emits `jal $31,$at` with the argument in `$a0` — proven
+differentially), `handwritten-cop` 17 / 77w (pure COP2/GTE `lwc2`/`mtc2`/
+`mfc2`/`ctc2` primitives in `68664.s`; no C naming path), `handwritten-syscall`
+2 / 8w (`func_80072714`/`724`). `alignment-filler` (31 lone `nop` spans) is
+layout padding, not functions. Deliberately NOT reclassified:
+`func_8001F814` (already `NONMATCHING_C`) and the 24 ACCEPTED-RESIDUAL leaves
+(compiler-decision residuals, distinct taxonomy). Large real-C functions that
+merely embed a BIOS call (`func_8003BCE0`, `func_80067E1C`, `func_8007E334`)
+are not classified. Repository-wide there are 1879 `/* handwritten
+instruction */`-flagged instructions, but most sit inside otherwise-C-matchable
+bodies; only the 72 pure spans above are whole-function non-C.
+
+### Prior session (2026-09-11 cont. 11): profile-necessity gate + 4 leaves (627 → 631)
+
+Two things: a **durable loud check for the silent-profile-fallback hazard**,
+and **4 new `LINK_EXACT` leaves** (one, `func_80077DC4`, on-path fan-in 17).
+
+| leaf | file | size | era / profile | fan-in |
+|---|---|---:|---|---|
+| `func_80077CF4` | `0x684F4` | `0x3C` | `-O2 -G0` (default) | 5 |
+| `func_80077D30` | `0x68530` | `0x90` | `-O2 -G0` + patch 5 (`era_o2_g0_symbol_at_temp`) | 3 |
+| `func_80077DC4` | `0x685C4` | `0xA0` | `-O2 -G0` + patch 5 (`era_o2_g0_symbol_at_temp`) | **17** |
+| `func_80052E30` | `0x43630` | `0x80` | `-O2 -G8` + `era_o2_g8_force_descriptor_absolute` | 7 |
+
+Evidence: `docs/evidence/func-80077CF4/REPORT.md`, `func-80077D30`,
+`func-80077DC4`, `func-80052E30`.
+
+### The profile-necessity gate (new tool)
+
+`tools/analysis/profile_necessity.py` (with a small fix to
+`tools/analysis/era_link_check.py` so it honors `ERA_ASPSX_VER` and
+`MASPSX_EXPAND_DIV`, matching `disc1_build.py`). For every **era** leaf it
+compiles at its retail VMA under the default profile and under the assigned
+profile and asserts:
+
+- default exact ⇒ assignment must be absent (else **REDUNDANT**);
+- default not exact ⇒ assignment must be present (**MISSING**) and exact
+  (else **WRONG**).
+
+Non-era (modern-toolchain) leaves are reported as unverifiable (164 of them);
+`era_link_check.py` only reproduces era codegen. Results are cached in
+`build/profile_necessity_cache.json` keyed by leaf+profile+VMA+size, so reruns
+are cheap. Exit is non-zero on any hard defect; `--allow-redundant` downgrades
+REDUNDANT.
+
+Run: `python3 tools/analysis/profile_necessity.py --jobs 8` →
+`467/467 era leaves clean; 0 hard defect(s); 0 redundant` →
+`PROFILE_NECESSITY=PASS`.
+
+The tool immediately paid for itself:
+
+- **Real record defects removed.** Seven assignments were provably not
+  load-bearing and were deleted: `func_8001735C` and `func_800176B8`
+  (`era_o2_g8_force_d8009d2f0_absolute`), `func_80017410`/`func_800197D0`
+  (`era_o2_g8`), `func_8003E680`, `func_8006A5BC` (`era_o1_g0`) and
+  `func_80052BCC` (`era_o1_g0_sched2`). `-O2 -G0`, `-O1 -G0`, `-O1 -G0
+  -fschedule-insns2` all reproduce them. `-G8` vs `-G0` is a no-op for leaves
+  with no small data, which is why the `-G8` ones looked load-bearing.
+  `func_8004E94C` etc. were **re-verified per-leaf** and kept (the tool tests
+  each span, so no bulk false-revert).
+- **A real carving regression caught.** `func_8008FBD4` had been carved as
+  `0x38`, taking its span to the next `asm` edge at `0x8040C` to absorb the C
+  object's 16-byte gas pad. But retail's `0x803FC` is the distinct asm function
+  `func_8008FBFC` (body `lw/nop/addiu/sw`, then `func_8008FC0C` at
+  `0x8008FC0C`). The carve swallowed it. Span is now the true `0x28`, asm
+  resumes at `0x803FC`. (`func_8008FCBC` is the same 4-word shape but its next
+  word is part of its own `jr`-delay-slot tail, so `0x28` there needs no
+  change.) Evidence updated.
+
+`⚠` **Honesty note on recovery.** A `git checkout` mistake briefly reverted the
+manifest to HEAD and dropped the uncommitted patch-4/patch-5 profile
+*definitions*; they were restored explicitly
+(`era_o2_g0_symbol_at_temp` = `MASPSX_SYMBOL_AT_TEMP=1`,
+`era_o2_g0_symbol_load_dest_temp` = `MASPSX_SYMBOL_LOAD_DEST_TEMP=1`) and all
+seven prior-session assignments were re-added and re-verified by the tool.
+Nothing was committed (`git commit` was not requested).
+
+New levers pinned this session:
+
+- **Patch 5 is the lever for *every* indexed symbolic `lh`/`lw`-with-`$at`
+  table read**, not just the `D_800A0ED4[a0*1048]` shape. `func_80077D30` and
+  `func_80077DC4` both go 31–33 object mismatches → 11 → `LINK_EXACT` at link
+  level with `MASPSX_SYMBOL_AT_TEMP=1`.
+- **A `-G8` leaf can need *both* gp-relative and absolute globals.**
+  `func_80052E30`'s six config words are `sw 0x2D8..0x2F4($gp)` but its three
+  descriptor addresses abort the link with `small-data section too large`; the
+  fix is `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS` for just the descriptors
+  (new profile `era_o2_g8_force_descriptor_absolute`).
+- **`func_80079FB4` is PARKED**, not churned: `docs/evidence/func-80079FB4/PARK.md`.
+  It is the top remaining fan-in (19) but retail materializes the same `slt`
+  comparison **twice** before the zero-guard branch, and expands both `div`
+  sites with full ASPSX guard ladders inline; no flag rung, operand order, or
+  `MASPSX_EXPAND_DIV`/patch-4/patch-5 combination reproduced either.
+
+Route queue note: the 0xC BIOS thunks (`func_80071A54`, `func_80071A74`,
+`func_800726C4`, `func_80073C5C`, …) are `addiu $t2,0xA0` / `jr $t2` with an
+`addiu $t1,<n>` delay slot — handwritten, not C-matchable. `func_80072714`/
+`func_80072724` are raw `syscall 0` BIOS calls (also handwritten). The next
+real C targets from `tools/analysis/route_coverage.py` are `func_8006DE80`
+(15, parked twin `func_8006DCE4`) and `func_80077CF4`-style small leaves.
+
+## SESSION 2026-09-11 (cont. 10): patch-5 registration + 11 leaves (616 → 627)
+
+Goal unchanged. This session registered the previously-staged **maspsx patch 5**
+(`MASPSX_SYMBOL_AT_TEMP=1`; `era_o2_g0_symbol_at_temp`) and matched/registered
+**11 new leaves**, all `LINK_EXACT` at the retail VMA. Current count:
+**627 matching C leaves** (`python3 tools/build/disc1_plan.py --check` →
+`936 spans (627 c, 307 asm, 2 rodata)`, geometry `0x1EE000`, plan SHA-256
+`183a1946ea9e8d61e273d9b6f216bb29395fbe39ee49ab4f778c0e794da2767e`,
+confirmed by `scripts/verify_us.sh --public` `[4/4]`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`; maspsx suite OK.
+On-path fan-in cleared this session: `func_8007FBF0` 11 sites,
+`func_80064C54` 5, `func_80073C94`/`func_80073CC4` 4 each, `func_80042770` 4,
+`func_80075B84` 4, `func_8007DC84` 2, `func_8008783C`/`func_8006599C`/
+`func_80042964`/`func_8007DC5C` 1 each (others are leaves with no direct
+`jal` callers in disc1 text). No toolchain-hiding event occurred this session;
+`tools/mipsel-host/` was present throughout.
+On-path fan-in cleared this session: `func_8007FBF0` 11 sites,
+`func_80064C54` 5, `func_80073C94`/`func_80073CC4` 4 each, `func_80042770` 4,
+`func_80075B84` 4, `func_8007DC84` 2, `func_8008783C`/`func_8006599C`/
+`func_80042964`/`func_8007DC5C` 1 each (others are leaves with no direct
+`jal` callers in disc1 text). No toolchain-hiding event occurred this session;
+`tools/mipsel-host/` was present throughout.
+
+| leaf | file | size | era / knob | note |
+|---|---|---:|---|---|
+| `func_8008FED8` | `0x806D8` | `0x24` | `-O2 -G0` | stream rewind: clear bit 0 @+0x38, zero +0xE8, set 0x10 @+0xF4 |
+| `func_80090948` | `0x81148` | `0x28` | `-O2 -G0` | cursor advance + byte broadcast into +0x56/58/D0, zero +0xD2 |
+| `func_8008783C` | `0x7803C` | `0x28` | `-O2 -G0` | SPU voice pitch field insert at `0x1F801C08+(a0<<4)` |
+| `func_8008FBD4` | `0x803D4` | `0x28` | `-O2 -G0` | cursor read + sign-extend into +0xDE |
+| `func_8008FCBC` | `0x804BC` | `0x28` | `-O2 -G0` | twin of `8008FBD4` into +0xE0 |
+| `func_80036DC8` | `0x275C8` | `0x30` | `-O2 -G0` | 3 sequential init calls in one 0x18 frame |
+| `func_80073C94` | `0x64494` | `0x30` | `-O2 -G0` | `D_8009566C->f+0xC()` tail dispatch |
+| `func_80073CC4` | `0x644C4` | `0x30` | `-O2 -G0` | `D_8009566C->f+0x8()` tail dispatch |
+| `func_8006599C` | `0x5619C` | `0x2C` | `-O2 -G0` | row `lh` getter through double-loaded `D_800B1624` |
+| `func_80064C54` | `0x55454` | `0x2C` | `-O2 -G8` | `func_8005F354(func_8005DC4C(), D_8009D164)` |
+| `func_80085F44` | `0x76744` | `0x24` | `-O2 -G0` | guarded `D_8009B434` setter |
+
+Also closed out the registration of the four prior-session leaves
+(`func_80042770`/`func_80042964` under patch 5; `func_8007FBF0` and
+`func_80075B84` under patch 4 / patch 3 respectively) — the profile
+assignments were missing and are now recorded.
+
+Levers / facts pinned this session:
+
+- **Patch 5 registered + profile wired.** `era_o2_g0_symbol_at_temp`
+  (`MASPSX_SYMBOL_AT_TEMP=1`) now covers `func_80042770`/`func_80042964`
+  (`D_800A0ED4[a0*1048] & 1` / `D_800A0EDE[a0*1048]`). Retail uses the `$at`
+  temp *with* the `%lo` displacement kept on the load — distinct from both the
+  legacy path and patch 4. Patch-4 (`era_o2_g0_symbol_load_dest_temp`) now also
+  covers `func_8007FBF0` (`D_8009B574[a0]`, dest-register temp).
+- **Stale profile assignments silently fall back to the default.** `func_80075B84`,
+  `func_8007FBF0`, `func_8005DB8C` and the 5DB8C-era leaves had no assignment
+  entry, so `disc1_plan.py` used `era_o2_g0` and the *object* still matched
+  (the patch only changes the pad/epilogue). `func_80075B84` is now under
+  `era_o2_g0_fill_epilogue_delay_slot` (patch 3 is load-bearing:
+  `word mismatches=2` without it, `0` with it).
+- **Pointer-to-volatile defeats a load CSE.** `func_8006599C` needs
+  `extern unsigned char *volatile D_800B1624` so cc1 keeps retail's two
+  independent `lui`/`lw` pairs; a plain pointer global CSEs the second load
+  (`MISMATCHES=10`).
+- **Intermediate narrow type controls `lbu`+`sll`/`sra` vs `lb`.** In
+  `func_8008FBD4`/`func_8008FCBC` the fetched byte must stay an
+  `unsigned char c` cast only at the store, or cc1 folds `lbu`+`sll 24`/`sra 24`
+  into a single `lb` (`MISMATCHES=4`).
+- **`unsigned int` value avoids a dead `andi 0xFF`.** `func_80090948`'s
+  broadcast value must be `unsigned int`; `unsigned char` inserts a redundant
+  zero-extension before the `sh` stores.
+- **Argument-less fn-ptr slots again.** `func_80073C94`/`func_80073CC4` need
+  `unsigned int (*)()` (retail `jalr` delay slot is a bare `nop`).
+- **gas 8-byte pad is not a mismatch.** Nine of the ten leaves show
+  `SIZE_MISMATCH C=…+8..12` with `BYTE_EXACT (ignoring gas align pad)` at the
+  object level; all are `word mismatches=0` at the retail VMA.
+
+Parked this session (no C left in `src/`, exact residual recorded here):
+
+- `func_80089F28` (`0x28`): needs the `%lo` displacement to land on the **last**
+  `sh` with the added base in `$v0` (retail `addiu $v0,$v0,%lo`); cc1 keeps the
+  displacement on the first store's base register under every form tried
+  (`word mismatches=5`).
+- `func_80038CE4` (`0x28`): retail computes `addu $a0,$v0,$a0` (base first)
+  then `addu $v0,$v0,$v1`; cc1's canonical order is `dest = idx + base`
+  (`word mismatches=2` in the two `addu` operands).
+- `func_80083578` (`0x28`): retail uses `$v1` for the base pointer and
+  `$v0` for the loaded halfword; cc1 wants `$v0`/`$v0`
+  (`word mismatches=4`).
+- `func_8003E0A4` (`0x2C`, select-code ternary), `func_8003708C` (`0x1C`,
+  `mult` high/low split), `func_800661A4`/`800661CC` (`ctc2` COP2),
+  `func_8006A2E8` (gp-relative stores), `func_80072714`/`80072724` (handwritten
+  syscalls), `func_80087798` (`0x1F801C00` voice init) — all remain
+  unregistered; residuals are shape/schedule, not new lever classes.
+
+## SESSION 2026-09-11 (cont. 9): new maspsx patch 4 + 4 leaves (606 → 610)
+
+Goal unchanged. This session added a genuinely new maspsx patch class
+(**patch 4, `MASPSX_SYMBOL_LOAD_DEST_TEMP`**) and matched four leaves:
+`func_80052F70` (the `0x32`-clamped accumulator in `43724.s`), `func_800762A0`
+(the `0xE5` draw-mode packer in `66970.s`), and the `D_800A3348` byte-table
+pair `func_80076B44`/`func_80076B20`. Current count: **610 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `910 spans (610 c, 298 asm,
+2 rodata)`, geometry `0x1EE000`, plan SHA-256
+`32b6fe6d9681fcdcf33c44d2bf5a157073ad30d1e1478b5a99b43b53ab46aa3a`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`; maspsx suite → 173
+tests OK.
+
+| leaf | file | size | era / knob | note |
+|---|---|---:|---|---|
+| `func_80052F70` | `0x43770` | `0x5C` | `-O2 -G0` | clamped byte accumulator; fan-in 61 |
+| `func_800762A0` | `0x66AA0` | `0x1C` | `-O2 -G0` | `0xE5` draw-mode packer (operand order) |
+| `func_80076B44` | `0x67344` | `0x14` | `-O2 -G0` + **patch 4** | `D_800A3348[a0]`; dest-register temp |
+| `func_80076B20` | `0x67320` | `0x24` | `-O2 -G0` + **patch 4** | `*D_80095854 = a0` then `D_800A3348[a0>>24] = a0` |
+
+All four are reloc-normalized object matches; linked at the retail VMA they
+are `LINK_EXACT` (0 word mismatches). Evidence:
+`docs/evidence/func-80052F70/REPORT.md`, `func-800762A0`, `func-80076B44`,
+`func-80076B20`.
+
+Levers / facts pinned this session:
+
+- **New maspsx patch 4 — `symbol_load_dest_temp`**
+  (`MASPSX_SYMBOL_LOAD_DEST_TEMP=1`). For an indexed symbolic **load**
+  `op $d,SYM($b)`, emit the naive GNU-as dest-register address temp:
+  `lui $d,%hi(SYM)` / `addu $d,$d,$b` / `op $d,%lo(SYM)($d)`. For an indexed
+  symbolic **store** that immediately precedes a bare `j $31`, emit
+  `lui $at,%hi(SYM)` / `addu $at,$at,$b` / `j $31` / `op $src,%lo(SYM)($at)`
+  (store into the return delay slot). Neither pre-existing knob covers this:
+  the legacy path and `MASPSX_THREE_WORD_SYMBOL_STORE` both use `$at` *and
+  drop the `%lo` displacement* (`op $d,0x0($at)`). Patch 1's fill covers only
+  the **absolute** `sw $r,SYM` macro, not the indexed form. Survey: 69
+  dest-temp sites in disc1 text (54 `lw`, 7 `lbu`, 5 `lh`, 2 `lhu`, 1 `lb`).
+  Durable test `tools/era/maspsx/tests/test_symbol_load_dest_temp.py`
+  (6 tests); registered in `scripts/setup_era.sh` `MASPSX_TRACKED` and the
+  `.gitignore` negation list; profile `era_o2_g0_symbol_load_dest_temp`.
+  Flag-off is byte-identical (full suite 173 OK).
+- **Operand order can beat a flat OR.** `func_800762A0` only matches when the
+  return is computed as `y = (a1 & 0x7FF) << 11; x = (a0 & 0x7FF) | 0xE5000000;
+  return y | x;` — retail materializes the `a1` half first and the `a0` base
+  word last. A flat `(a1...) | (a0...) | 0xE5000000` materializes the
+  constant first (`MISMATCHES=6`).
+- **`unsigned int` for a `srl` index.** `func_80076B20` needs `a0 >> 24` to
+  emit `srl` (`0x00041602`); signed `int` gives `sra` (`0x00041603`).
+- **CC1/vendor divergence is not a link failure.** `func_80052F70` emits
+  `sw $ra,0x14($sp)` where retail has `sw $v0,0x14($sp)` for the first-call
+  spill, and `func_80076B20`'s object carries a trailing aligned pad; both
+  resolve to 0 word mismatches at the retail VMA.
+
+## SESSION 2026-09-11 (cont. 8): `654C8` display cluster continued (601 → 606)
+
+Goal unchanged. This session finished five more `654C8`-cluster leaves in
+`asm/disc1/655C0.s` using the established `D_80095744` pointer-global /
+`D_80095748` gate typing, and parked the cluster's big gate state machine
+`func_800755F0`. Current count: **606 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `903 spans (606 c, 295 asm,
+2 rodata)`, geometry `0x1EE000`, plan SHA-256
+`8f7e8b3f394b98e9027230412b23a9abaf4e30833ec9246b9c87e89ca892216f`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`.
+
+| leaf | file | size | era / knob | note |
+|---|---|---:|---|---|
+| `func_800751E4` | `0x659E4` | `0xC8` | `-O2 -G0` + patch 3 | link-walk + `D_8009580C`/`D_800957F8` window seed |
+| `func_800752AC` | `0x65AAC` | `0xAC` | `-O2 -G0` + patch 3 | `f(0x2C)` handler + same window seed |
+| `func_80075358` | `0x65B58` | `0x5C` | `-O2 -G0` + patch 3 | `void`; `f(0x3C)(0)` then `f(0x14)(a0+4, a0[3])` |
+| `func_80075424` | `0x65C24` | `0xC0` | `-O2 -G0` + patch 3 | `((int*)a0)[7] \|= 0xFFFFFF`, `f(0x8)`, 0x14 template |
+| `func_800754E4` | `0x65CE4` | `0xD8` | `-O2 -G0` + patch 3 | twin: splice `a0 & 0xFFFFFF` into `*(a1+0x1C)` |
+
+All five are reloc-normalized object matches; linked at the retail VMA they
+are `LINK_EXACT` (0 word mismatches). Evidence:
+`docs/evidence/func-800751E4/REPORT.md`, `func-800752AC`, `func-80075358`,
+`func-80075424`, `func-800754E4`. On-path fan-in: `func_80075424` (3 `jal`
+sites), `func_800752AC` (3), `func_80075358` (2).
+
+Levers / facts pinned this session:
+
+- **Element-form OR keeps the displacement on the base register.**
+  `((int *)a0)[7] |= 0xFFFFFF;` (`func_80075424`) and
+  `((int *)a1)[7] = (((int *)a1)[7] & 0xFF000000) | (a0 & 0xFFFFFF);`
+  (`func_800754E4`) give retail's `lw v0,0x1C(base)` / `sw v0,0x1C(base)`
+  and keep the `lui 0xFF` mask in `$a0`; the local-`s0`-base form splits the
+  load/store and schedules the mask into `$v1`.
+- **Loop-local named mask constants.** In `func_800751E4` the `lo`/`hi`
+  masks must be declared *inside* the walk loop (`unsigned int lo = 0xFFFFFFu,
+  hi = 0xFF000000u;`); hoisting them promotes `lo` to a callee-saved `$s2`.
+- **`func_80075358` is `void`.** Retail's tail is the plain
+  `lw ra / lw s1 / lw s0 / jr ra / addiu sp,sp,0x20`; the object reports
+  `0x60` only because gas pads `.text` to 16 bytes (one `nop` past `0x5C`),
+  and the link check trims it. `s0` stays live because the second push uses
+  `a0 + 4`.
+- **Flag base is `0x08000000`** in `func_800755F0`, not `0x80000000` — the
+  seed `lui $s0,0x800` in the `bnez` delay slot is `0x08000000>>16`.
+  `0x80000000` makes cc1 emit `lui $s0,0x8000` (wrong).
+- **`func_80075424`/`func_800754E4` gate the log with 3 args** (the `addu
+  a2,s1` after `addu a1,s0`), while `func_800751E4` logs 2.
+
+PARKED this session:
+
+- `func_800755F0` (`0x65DF0`, `0x4F8`, the cluster's big gate/state
+  machine) — `docs/evidence/func-800755F0/PARK.md`. Residual: prologue
+  scheduling (retail materializes the `D_8009574E` pointer into `$s2` before
+  the `lbu`; cc1 issues the `lbu` first) and a shared-tail clamp ladder that
+  a linear C transcription does not reconcile. 298/318 words differ; the
+  first divergence is in the prologue. Not invented; left as `asm`.
+
+## SESSION 2026-09-11 (cont. 7): boot-spine + display cluster (588 → 601)
+
+Goal unchanged. This session worked the boot-spine tail (`func_80074D28`,
+`func_80077AC4`), the `0x80074xxx`/`0x80075xxx` display cluster in `654C8.s`
+(with several patch-3 epilogue fills), and the `0x80075xxx` display-list node
+inits. Current count: **601 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `899 spans (601 c, 296 asm,
+2 rodata)`, geometry `0x1EE000`, plan SHA-256 `9f77a5bb7b77`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`.
+
+| leaf | file | size | era / knob | note |
+|---|---|---:|---|---|
+| `func_80077AC4` | `0x682C4` | `0x3C` | `-O2 -G0` | fan-in 16; masks pinned `asm("$6")`/`asm("$7")` |
+| `func_80074D28` | `0x65528` | `0x98` | `-O2 -G0` + patch 3 | boot-spine trampoline; `s0`/`s1` pinned |
+| `func_80074DC0` | `0x655C0` | `0x68` | `-O2 -G0` + patch 3 | same gate/log pair, `+0x3C` slot |
+| `func_8007506C` | `0x6586C` | `0x60` | `-O2 -G0` + patch 3 | `D_80095744` pointer-global `v0[8]` push |
+| `func_800750CC` | `0x658CC` | `0x60` | `-O2 -G0` + patch 3 | twin of 7506C, `v0[7]` |
+| `func_800753B4` | `0x65BB4` | `0x70` | `-O2 -G0` + patch 3 | gated reset + `v0[6]` push |
+| `func_80075B1C` | `0x6631C` | `0x30` | `-O2 -G0` | `D_80095744->f()` slot `+0x38`, no-arg prototype |
+| `func_80075B4C` | `0x6634C` | `0x38` | `-O2 -G0` + patch 3 | display-list node init |
+| `func_80075C04` | `0x66404` | `0x40` | `-O2 -G0` + patch 3 | display-list node init (signed `lh`) |
+| `func_80075C6C` | `0x6646C` | `0x28` | `-O2 -G0` | rectangle flag-word setter |
+| `func_80075C94` | `0x66494` | `0x54` | `-O2 -G0` + patch 3 | 5th stack arg + `a3 & 0xFFFF` |
+| `func_80075AE8` | `0x662E8` | `0x34` | `-O2 -G0` + patch 3 | `D_800957B8` 0x14 template wrapper |
+| `func_800755BC` | `0x65DBC` | `0x34` | `-O2 -G0` + patch 3 | `D_8009575C` 0x5C template wrapper |
+
+All thirteen are reloc-normalized object matches; linked at the retail VMA they
+are `LINK_EXACT` (0 word mismatches). Evidence:
+`docs/evidence/func-80077AC4/REPORT.md`, `func-80074D28`, `func-80074DC0`,
+`func-8007506C`, `func-800750CC`, `func-800753B4`, `func-80075B1C`,
+`func-80075B4C`, `func-80075C04`, `func-80075C6C`, `func-80075C94`,
+`func-80075AE8`, `func-800755BC`.
+
+Levers pinned this session:
+
+- **Data-symbol arguments beat address literals.** Writing
+  `(char *)0x80011870` (or `0x8009CD9C + 0x6A`) makes cc1 fold the constant and
+  emit a single `lui`; declaring `extern char D_80011870` and passing
+  `&D_80011870` restores retail's `lui`/`addiu` HI16/LO16 relocs. Same for the
+  `D_800957B8`/`D_8009575C` template addresses.
+- **`D_80095744` is a pointer global, not a struct symbol.** The display
+  cluster loads it once (`lui`/`lw`) and reaches both the handler
+  (`+0x8`) and the argument word from that one register. Model it as
+  `extern unsigned int *D_80095744;` plus a single `v0` base local; a struct
+  pointer makes cc1 reload the global, and a `char`-address form folds the base
+  into `lui/addiu` and picks the wrong slot offset.
+- **Fixed-register pins** (`register T x asm("$16")`) reproduce retail's
+  callee-saved allocation when C's natural order differs (`func_80074D28`
+  s0/s1, `func_80077AC4` mask constants in `$6`/`$7`).
+- **Function-pointer slots are declared with no arguments** when retail clears
+  none (`unsigned int (*f)()`): a prototype with a parameter makes cc1
+  materialize `$a0` in the `jalr` delay slot.
+- **`MASPSX_FILL_EPILOGUE_DELAY_SLOT=1` (patch 3)** carries seven of these
+  leaves; the display cluster has an unusually high density of filled
+  epilogue slots. Profile `era_o2_g0_fill_epilogue_delay_slot` now lists
+  twelve leaves.
+
+PARKed this session: `func_80075C44` (`docs/evidence/func-80075C44/PARK.md`) —
+retail keeps `(a2 != 0)` in `$v0` via `sltu` and ORs it into the branch-arm
+constant register, while cc1 folds the boolean into a select and branches on
+`a2` (one extra word). Same class as the `func_8006F9F0` rematerialization
+residual; not resolvable from C with the current rungs.
+
+## SESSION 2026-09-11 (cont. 6): small leaves (581 → 588)
+
+Goal unchanged. This session worked the small-leaf tail: two CD-cluster byte
+searches plus **five field-VM `D_800910A0` opcode handlers**, each with a
+link-exact proof at its retail VMA (`era_link_check.py`). Current count:
+**588 matching C leaves** (`python3 tools/build/disc1_plan.py --check` →
+`878 spans (588 c, 288 asm, 2 rodata)`, geometry `0x1EE000`, plan SHA-256
+`8af66b433ce5`); `python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`.
+
+| leaf | file | size | era / knob | fan-in |
+|---|---|---:|---|---|
+| `func_8006DB9C` | `0x5E39C` | `0x44` | default `-O2 -G0` | CD cluster |
+| `func_8006DBE0` | `0x5E3E0` | `0x38` | default `-O2 -G0` | CD cluster |
+| `func_80017294` | `0x7A94` | `0x28` | `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2F0` | VM handler `0x294` |
+| `func_8001731C` | `0x7B1C` | `0x40` | `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2F0` | VM handler `0x31C` |
+| `func_8001735C` | `0x7B5C` | `0x98` | `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2F0` | VM handler `0x35C` |
+| `func_80017410` | `0x7C10` | `0x34` | `-O2 -G8` | VM handler `0x410` |
+| `func_800176B8` | `0x7EB8` | `0x28` | `-O2 -G8` + `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2F0` | VM handler `0x6B8` |
+
+All seven are reloc-normalized object matches; linked at the retail VMA they
+are `LINK_EXACT` (0 word mismatches). Evidence:
+`docs/evidence/func-8006DB9C/REPORT.md`, `func-8006DBE0`, `func-80017294`,
+`func-8001731C`, `func-8001735C`, `func-80017410`, `func-800176B8`.
+
+New levers pinned this session:
+
+- **Aggregate-member indexing keeps a displacement on the load** (`func_8006DB9C`/
+  `DBE0`): writing the walk as a `signed char *p = &tag[0][0]` pointer folds the
+  `0xDC` displacement into the base; indexing the real aggregate
+  (`t->tag[i][0]`, with a `Tag *t = &D_800B0CD8` local) keeps
+  `lb $2,220($3)`/`lb $2,221($3)` and reproduces retail's `$v1`-base /
+  `$a1`-counter allocation. (Inverse of the usual "hoist the base" lever.)
+- **`-G8` + absolute base / gp-relative store split** (VM handlers): the
+  `D_8009D2F0` state object is loaded absolutely (`lui`/`lw`) while the VM cursor
+  `D_8009CE00` is a small-data word at `0x90($gp)`. Under `-G8` cc1 gp-relocates
+  *both*; the existing `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D2F0` knob (extern
+  stripped) keeps the base absolute while the cursor stays `%gp_rel`. Registered
+  as profile `era_o2_g8_force_d8009d2f0_absolute`.
+- **`buf` must be an array** (`func_80017410`): a scalar `short` only reserves
+  one stack slot (`addiu sp,sp,-0x20`); `short buf[8]` gives retail's `0x28`
+  frame with the store at `0x10` and the `sp+0x10` argument window.
+- **`tools/analysis/era_link_check.py` now defines `_gp=0x8009CD70`** and honors
+  `MASPSX_FORCE_ABSOLUTE_SYMBOLS` — without the former, every `-G8` leaf failed
+  to link (`R_MIPS_GPREL16` truncated); with it the gp-relative store resolves to
+  its retail target.
+
+PARKED: `func_8006DE80` (`docs/evidence/func-8006DE80/PARK.md`) — 21-word
+forwarding shim to `func_8006DED4`; 16-word residual is a cc1 argument-promotion/
+schedule artifact (retail reads the outgoing stack arg with `lw` + explicit
+`sll/sra`, and orders the sign-extension after the call setup). Twin
+`func_8006DCE4` (`D_800B0E64`) has the same shape. `-O1 -G0` /
+`-O1 -G0 -fschedule-insns2` do not move it.
+
+Next targets: `func_80074D28` (`0x98`, boot-spine tail, fan-in 9; 22-word residual
+not yet reduced), `func_80077AC4` (`0x3C`, fan-in 16; currently untested),
+`func_800698D4` (disc-mount wait; `accepted-residual`), and the remaining small
+VM handlers in `asm/disc1/8374.s`/`8E*.s`.
+
+## SESSION 2026-09-11 (cont. 5): boot→Day-2 coverage queue (578 → 581)
+
+Goal unchanged: boot → end of Day 2 at 1:1 retail (matching C + `pc_port/`).
+This session started working the ranked gap list in
+`docs/ai_context/BOOT_TO_DAY2_COVERAGE.md` §4 and matched **three** more leaves
+on the default `era_o2_g0` (`-O2 -G0`) profile, each with a link-exact proof at
+its retail VMA via the new `tools/analysis/era_link_check.py`. Current count:
+**581 matching C leaves** (`python3 tools/build/disc1_plan.py --check` →
+`872 spans (581 c, 289 asm, 2 rodata)`, geometry `0x1EE000`);
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK; plan SHA-256
+`8e5aa8a6a601`.
+
+| leaf | file | size | words | rank / fan-in | command |
+|---|---|---:|---:|---|---|
+| `func_8001A680` | `0xAE80` | `0x104` | 65 | Tier A∪B fan-in **27** (highest on path) | `era_leaf_match.sh src/func_8001A680.c 0x8001A680 0x104 -O2 -G0` |
+| `func_8006DED4` | `0x5E6D4` | `0x7C` | 31 | CD/boot cluster (boot spine tail) | `era_leaf_match.sh src/func_8006DED4.c 0x8006DED4 0x7C -O2 -G0` |
+| `func_8006DF50` | `0x5E750` | `0x58` | 22 | gap-list rank 12, fan-in 9 | `era_leaf_match.sh src/func_8006DF50.c 0x8006DF50 0x58 -O2 -G0` |
+
+All three are reloc-normalized object matches whose remaining diffs are only
+relocation fields; linked at the retail VMA they are `LINK_EXACT` (0 word
+mismatches). Evidence: `docs/evidence/func-8001A680/REPORT.md`,
+`docs/evidence/func-8006DED4/REPORT.md`,
+`docs/evidence/func-8006DF50/REPORT.md`.
+
+- **`func_8001A680`** is the field/script handler-surface activator: handler =
+  `D_800B0E98[body->f0C].entries[(u16)id]` (0xC0-byte class rows, so a
+  `HandlerClass` element type keeps cc1's `la`/index addressing), stores to
+  body `+0xE/+0x14/+0x18/+0x1B0`, clears flag `0x200`, caches handler byte
+  `[2]-1`, then recurses over the `D_8009D20C[0]` chain for entries whose
+  `+0x18C` matches and `f98` bit `0x200000` is set.
+- **`func_8006DED4`**/**`func_8006DF50`** are the CD-cluster packet builder and
+  its record-lookup forwarder (see reports).
+
+**New tool: `tools/analysis/era_link_check.py`.** There was no committed
+link-level checker; the tool compiles one leaf, resolves every undefined
+address-named symbol with `--defsym`, links with an explicit script
+(`.text : SUBALIGN(4)`) so the leaf lands exactly at its retail VMA (a default
+link's 16-byte section alignment shifts absolute `j`/`jal` targets by the pad),
+slices the `.text` from the leaf symbol, and compares word-for-word against the
+extracted EXE. Validated against `func_800702DC`/`func_80070064`/`func_8006ECEC`
+(all `LINK_EXACT`).
+
+New load-bearing levers pinned this session:
+
+- **`HandlerClass` aggregate element for `D_800B0E98`** (`void *entries[0xC0/4]`):
+  an explicit `HandlerClass *tbl = D_800B0E98;` local makes cc1 emit retail's
+  exact arithmetic order for `tbl[classId].entries[idx]`. Writing the nested
+  aggregate directly as `D_800B0E98[classId].entries[idx]` hoists the `la` base
+  and the index mask (8 mismatched words); a byte-based
+  `*(void **)((char *)base + classId*0xC0 + idx*4)` also mismatches. The handler
+  byte must be re-read through `body->handler`, not a local copy.
+- **`unsigned short` stack parameters change the load width**: `func_8006DED4`'s
+  args 4/5 (both on the stack) must be `unsigned short` to emit `lhu 0x48/0x4C(sp)`
+  rather than `lw`.
+
+Parked this session (no C left in `src/`):
+
+- **`func_80077AC4`** (`0x3C`, fan-in 16) — 7-word residual: retail assigns the
+  `0xFF000000` mask to `$a2` and the `0x00FFFFFF` complement to `$a3`; cc1 2.7.2
+  assigns the reverse. Every instruction matches, only the two mask temporaries
+  are swapped. Exhausted: operand order, `~`/`<<8`/compound-literal derivations,
+  `int`/`unsigned` masks, explicit temporaries, bitfield struct, and every era
+  rung (`-O1`, `-G8`, `-fschedule-insns2` all worse).
+- **`func_8006DE80`** (`0x54`, fan-in 15) — a 21-word argument-forwarding shim
+  into `func_8006DED4`. Retail's first loop-invariant (`move $v1,$a0`) hoists
+  ahead of the prologue's `sll $a3,$a3,0x10`; cc1 sinks it into the call block.
+  Every era rung and argument-signature variant leaves 13–16 mismatched words.
+  (Note: `func_8006DED4` — the **callee** — did match when written directly.)
+- **`func_80073A44`** (boot spine, fan-in 16) — a VSync-family routine
+  (`func_80073BBC` = VSync shim) with two `func_80073BBC` calls, a `0x400000`
+  GPU-status gate, and `D_80094578`→`D_8009457C` / `D_800956AC`→`D_80094580`
+  counter snapshots. Retail reloads `D_80094578` in the poll spin
+  (`D_8009457C` is a **volatile** counter, `lw` twice) and reads `D_80094574`
+  once at entry and again after the second call. Closest shape is
+  `r2`-style (69 mismatches); the 0x178 span needs more structural work.
+- **`func_8006E1C0`** (`0x110`, `+0x4/+8/+0xC/+0x10` bitfield packet builder,
+  `func_8007506C` callee) — 9-word residual around the `rec[7]==0 ? 0x100 :
+  rec[7]&0xFF` select and the delay-slot fill before the second `jal`.
+
+Next targets (coverage-map order, still asm): `func_80073A44` and
+`func_80077AC4` (both close — one schedule decision each), `func_8006DE80`,
+`func_800698D4` (disc-mount wait), `func_80017018` (the task VM, still no `c`
+span at all), then the §4.2/§4.3 handlers.
+
+## SESSION 2026-09-11 (cont. 4): CD-stream + command-record teardown (571 → 578)
+
+Goal unchanged: boot → end of Day 2 at 1:1 retail (matching C + `pc_port/`).
+This session matched seven more boot-CD leaves on the default `era_o2_g0`
+(`-O2 -G0`) profile, each with a link-exact proof at its retail VMA. Current
+count: **578 matching C leaves** (`python3 tools/build/disc1_plan.py --check`
+→ `867 spans (578 c, 287 asm, 2 rodata)`, geometry `0x1EE000`);
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`;
+`python3 tools/build/test_disc1_plan.py` → 8 tests OK; plan SHA-256
+`496c44e653238c99eb9c9057483d3b92aa2990774639d9d245c0c6f5d427fea7`.
+
+| leaf | file | size | words | command |
+|---|---|---:|---:|---|
+| `func_8006ECEC` | `0x5F4EC` | `0x358` | 214 | `era_leaf_match.sh src/func_8006ECEC.c 0x8006ECEC 0x358 -O2 -G0` |
+| `func_8006F044` | `0x5F844` | `0x1E0` | 120 | `era_leaf_match.sh src/func_8006F044.c 0x8006F044 0x1E0 -O2 -G0` |
+| `func_8006F39C` | `0x5FB9C` | `0x338` | 206 | `era_leaf_match.sh src/func_8006F39C.c 0x8006F39C 0x338 -O2 -G0` |
+| `func_8006FC18` | `0x60418` | `0x1FC` | 127 | `era_leaf_match.sh src/func_8006FC18.c 0x8006FC18 0x1FC -O2 -G0` |
+| `func_8006FE14` | `0x60614` | `0x250` | 148 | `era_leaf_match.sh src/func_8006FE14.c 0x8006FE14 0x250 -O2 -G0` |
+| `func_80070064` | `0x60864` | `0x150` | 84 | `era_leaf_match.sh src/func_80070064.c 0x80070064 0x150 -O2 -G0` |
+| `func_800702DC` | `0x60ADC` | `0x118` | 70 | `era_leaf_match.sh src/func_800702DC.c 0x800702DC 0x118 -O2 -G0` |
+
+All seven are reloc-normalized object matches whose remaining diffs are only
+`R_MIPS_HI16`/`LO16`/`26` fields; linked at the retail VMA they are
+`LINK_EXACT` (0 word mismatches). Evidence:
+`docs/evidence/func-8006{ECEC,F044,F39C,FC18,FE14,70064,702DC}/REPORT.md`.
+
+- `func_8006ECEC` is the **CD-stream orchestrator**: four `D_80093168`
+  table-driven `func_8006E6D4`+`func_800811E4` read/poll stages (the six
+  previously-thought-separate poll labels `8006ED88`/`EE5C`/`EEE8`/`EFB8`/
+  `F0F0`/`F1A0` are its basic blocks), `func_800718D0` arena walks (3 then
+  `0x106` entries), a `D_800A77FC & 0x2000` B/C split, and the
+  `func_80072714`/`726C4`/`72724` tail.
+- `func_8006F044` is the reset + two-stage stream loader.
+- `func_8006F39C` is the record allocator: overlay prelude for ids
+  `0x6C..0x72` (CD-read `D_80093162` → `D_80011618` when `D_800B0CD8` bit
+  `0x10000` clear, install the seven `D_801F1B..` descriptors at
+  `D_800E10A0[0..6]`), then clamp-id/`D_800942E0` lookup, inlined
+  `func_8006F224` free-slot search, record format and handler dispatch.
+- `func_8006FC18` invokes a record's offset-`0x14` handler and tears the
+  record down (seven-slot clear + `0x10000` bit when byte 1 was `0x72`).
+- `func_8006FE14` scans both arenas for records whose `+8` equals an int,
+  calls `func_8006FC18`, then clears; `func_80070064` is the same sweep over
+  the E4 arena filtered by byte class `{0..7} ∪ {0x55..0x72}` with
+  `a1 = D_8009D254`; `func_800702DC` is the unfiltered E4 sweep with
+  `a1 = 0`.
+
+New load-bearing levers pinned this session:
+
+- **`D_800942E0` must be `extern void **`** (pointer-to-handler-pointer-table),
+  never `void *[]` — an array declaration makes cc1 take the *address*
+  (`addiu at,at,%lo(D_800942E0)`) while retail loads the pointer first
+  (`lw $v1,%lo($v1)` then `sll`/`addu`/`lw`). 3 mismatched words per lookup.
+- **Overlay handler descriptors are data symbols, not integer constants**:
+  reference `(unsigned int)D_801F1BD8` with `extern unsigned char
+  D_801F1BD8[]` so cc1 emits `lui/addiu %hi/%lo` with HI16/LO16 relocs; the
+  split asm defines them, so the link resolves exactly.
+- **`D_800B0CD8` bit-set via a pointer local** (`unsigned int *flagsPtr =
+  &D_800B0CD8; *flagsPtr |= 0x10000;`) reproduces retail's single
+  `a0 = &D_800B0CD8` for both `lw` and `sw`; a bare `|=` gives absolute
+  `lui/lw` + `lui $at/sw`. The `flagsPtr` assignment's source position
+  (between the 6th and 7th `D_800E10A0` stores) reproduces the schedule.
+- **`D_800B0DD8` is `int`, not a pointer** for the `func_8006E6A8`/`6E6D4`
+  `base + offset` argument (`addiu $a0,$s1,%lo`), silencing the
+  pointer-from-integer warning.
+- **`func_8006F39C` uses `int slot = 0;` initialized at declaration** —
+  a separate `slot = 0;` assignment birth-orderizes `$s0` differently.
+- **`func_8006FC18`'s second arena lookup must use a distinct local (`q`)**,
+  not reuse the first pointer — retail keeps the second pointer in `$a1`
+  while the first lived in `$a0`; reuse costs 11 register mismatches.
+- **The clear-loop base identity**: `D_800E10A0 == D_800E0EF0 + 0x1B0`
+  (`0x1B0 = 0x6C*4`). `func_8006FE14`/`func_80070064`/`func_800702DC` emit
+  `lui/addiu %hi/lo(D_800E0EF0)` then `addiu $v1,$s4,0x1B0`, so they index
+  `D_800E0EF0[k]` for `k = 0x6C..0x72`, while `func_8006F39C`/`func_8006FC18`
+  emit the absolute `D_800E10A0` symbol; both `dlabel`s exist in
+  `asm/disc1/C5060.s`.
+- **The sweep loops must use `i` as both counter and call argument**
+  (`func_800702DC`, `func_80070064`); adding a separate `idx = i + 0xB` biv
+  perturbs the callee-saved allocation order (see the PARK below).
+- The `func_8006ECEC` poll reuses the `func_8006E834` `$v1`-backup/
+  `$v0`-restore register pins; the `func_8006F39C` prelude poll
+  (`func_8006E7E8`) uses the plain `-1`-then-`0` order without pins.
+
+Parked this session: `func_800701B4` (E8-arena teardown sweep, `0x128`) — a
+pure **callee-saved register ordering residual**: 9 of 74 words, all in the
+prologue. Retail schedules the `idx` initialiser (`li $s0,11`) *after* the
+loop-invariant table base and the two giv initialisers; cc1 2.7.2 schedules
+it immediately after the loop-counter init. Loop body, tail, arena lookups,
+clear loop, flag update and epilogue are byte-identical. See
+`docs/evidence/func-800701B4/PARK.md` for the full residual and the list of
+exhausted variants (comma order, `while`/`do`, declaration order, `-O1`,
+`-fschedule-insns2`, `-fno-schedule-insns`).
+
+Next targets (CD/boot cluster, file order): `func_80070064`'s siblings are
+done; the `0x601F0..0x60BF4` asm block now holds only the PARKed
+`func_8006F9F0` and `func_800701B4`. Continue at `func_800703F4` onward
+(already C) / the next asm span after `0x60C1C`, plus retry
+`func_800701B4`'s preheader ordering and `func_8006F9F0`'s delay-slot fill.
+
+## SESSION 2026-09-11 (cont. 3): command-record family (565 → 571)
+
+Goal unchanged: boot → end of Day 2 at 1:1 retail (matching C + `pc_port/`).
+This session matched six command-record / CD-helper leaves on the boot CD
+path, all on the default `era_o2_g0` (`-O2 -G0`) profile, each with a
+link-exact proof at its retail VMA. Current count: **571 matching C leaves**
+(`python3 tools/build/disc1_plan.py --check` → `861 spans (571 c, 288 asm,
+2 rodata)`, geometry `0x1EE000`); `scripts/verify_us.sh --public` →
+`PUBLIC_VERIFY=PASS`; `python3 tools/build/test_disc1_plan.py` → 8 tests OK;
+plan SHA-256
+`bf088f44cfc5efde33b59db80b1e86951eacb8d5dc126df09b1ad41e4aa8158f`.
+
+| leaf | file | size | words | command |
+|---|---|---:|---:|---|
+| `func_8006EC84` | `0x5F484` | `0x68` | 26 | `era_leaf_match.sh src/func_8006EC84.c 0x8006EC84 0x68 -O2 -G0` |
+| `func_8006F224` | `0x5FA24` | `0xA0` | 40 | `era_leaf_match.sh src/func_8006F224.c 0x8006F224 0xA0 -O2 -G0` |
+| `func_8006F2C4` | `0x5FAC4` | `0xD8` | 54 | `era_leaf_match.sh src/func_8006F2C4.c 0x8006F2C4 0xD8 -O2 -G0` |
+| `func_8006F6D4` | `0x5FED4` | `0x14C` | 83 | `era_leaf_match.sh src/func_8006F6D4.c 0x8006F6D4 0x14C -O2 -G0` |
+| `func_8006F820` | `0x60020` | `0xCC` | 51 | `era_leaf_match.sh src/func_8006F820.c 0x8006F820 0xCC -O2 -G0` |
+| `func_8006F8EC` | `0x600EC` | `0x104` | 65 | `era_leaf_match.sh src/func_8006F8EC.c 0x8006F8EC 0x104 -O2 -G0` |
+
+All six are reloc-normalized object matches whose remaining diffs are only
+`R_MIPS_HI16`/`LO16`/`26` fields; linked at the retail VMA they are
+`LINK_EXACT` (0 word mismatches). Evidence:
+`docs/evidence/func-8006EC84|F224|F2C4|F6D4|F820|F8EC/REPORT.md`.
+
+Shared facts pinned this session:
+
+- `D_800942E4` and `D_800942E8` are **pointer globals** (retail loads each
+  base with `lui`+`lw`), not arrays: `extern unsigned char *`. `D_800942E4`
+  stride `0xA0C`, ids `0x00..0x0A`; `D_800942E8` stride `0x10C`, ids
+  `0x0B..0x15`. `D_800942E0` is a pointer to a table of handler pointers
+  (`extern void **`). Handler-byte clamp is `0x55`; `>= 0xC0` is an error.
+- Arena-selection source form is load-bearing: write
+  `if ((unsigned)idx >= 0xB) <E8 arm> else <E4 arm>` (or the equivalent
+  `idx >= 0xB ? E8 : E4` ternary) so cc1 lays out `bnez` → E4 arm as retail
+  does; the mirrored `idx < 0xB ? E4 : E8` ternary inverts the block order.
+- Branch polarity for handler-pointer guards selects layout: for the
+  `handler[+8]`/`handler[+0xC]` calls the `== 0`-guard (body fallthrough)
+  form matches; see per-leaf reports for the exact shape.
+- `h` (handler byte) must be `int`, not `unsigned char` — a char local makes
+  cc1 emit an `andi …0xff` re-mask before the `sltiu`/clamp chain.
+
+Parked this session: `func_8006F9F0` (record-state dispatcher, `0x228`) — a
+`reorg`/`sched2` delay-slot-fill residual (cc1 rematerializes `li v0,4` twice
+instead of filling the first branch slot with the second `sltiu`'s `addiu`);
+all other instructions agree. See
+`docs/evidence/func-8006F9F0/PARK.md`.
+
+Next targets (CD/boot cluster, file order): `func_8006F39C` (`0x338`),
+`func_8006ECEC` (`0x358`, the CD-stream orchestrator whose poll labels
+`8006ED88`/`EE5C`/`EEE8`/`EFB8`/`F0F0`/`F1A0` are the 6 "jal 0x800811E4"
+call sites — the `func_8006ED88` etc. in the mandate are its basic blocks,
+not separate functions), `func_8006F044` (`0x1E0`), then
+`func_8006FC18`, `func_8006FE14`, `func_80070064`, `func_800701B4`,
+`func_800702DC`.
+
+## SESSION 2026-09-11 (cont.): CD issuer + CD read poll (563 → 565)
+
+Goal remains boot → end of Day 2 at 1:1 retail (matching C + `pc_port/`).
+This session closed the parked `func_8006E6D4` CD issuer and matched
+`func_800811E4` CD read poll. Public YAML gate passed.
+
+### Exact rebuild attempt (this session, evidenced)
+
+The documented flow was run end to end up to the toolchain gate:
+
+1. `scripts/split_us.sh` — **now exits 0**. It was previously aborting with
+   `comm: input is not in sorted order` under `LANG=en_US.UTF-8`: `sort`
+   honours `LC_COLLATE` while `comm` compares byte-wise, and `comm` exits 1,
+   which `set -e` turned into a spurious failure. Fixed in
+   `scripts/split_us.sh` (`LC_ALL=C comm` / `LC_ALL=C sort`). Split result:
+   `853 spans (565 c, 286 asm, 2 rodata)`, all output git-ignored.
+2. `scripts/build_us.sh` — validates `OK original EXE SHA-1
+   452fb033f2eaa4b18aa20a5bca60b8125af3a37b` and `OK YAML plan: 853 spans,
+   565 C leaves`, then stops at `=== Toolchain ===`:
+   `ERROR: mipsel-linux-gnu toolchain not found; run inside pe-mipsel-img or
+   install binutils-mipsel-linux-gnu and gcc-mipsel-linux-gnu`.
+
+Precise blocker (host): no `mipsel-linux-gnu-gcc` on `PATH` (only binutils
+exist, under git-ignored `tools/mipsel-host/`), and no `docker`/`podman`/
+`distrobox` (so `pe-mipsel-img` cannot be entered). `uid=1000` with `sudo`
+requiring interactive auth, and `apt-cache policy gcc-mipsel-linux-gnu` →
+`Candidate: (none)` (the package is not in the configured apt sources at all),
+so a local install is not possible non-interactively. 164 of the 565 leaves
+are `modern`-toolchain spans that need this GCC; the other 401 are built with
+`tools/era/gcc-2.7.2-psx` + maspsx. **Exact packed SHA-1 remains unverified
+here** — run `scripts/split_us.sh && scripts/build_us.sh &&
+scripts/verify_us.sh` inside `pe-mipsel-img`.
+
+### Path meaning (repo evidence, not guesses)
+
+- **Day 1 first-play prefix** (`docs/acceptance/PE_DAY1_ACCEPTANCE_CONTRACT.md`,
+  `docs/ai_context/DAY1_ROUTE_AUDIT.md`): cold boot → opening FMV (identity
+  still RESEARCH_REQUIRED) → curb/limo → `m0002i` Carnegie sidewalk →
+  `m0003i` lobby → `m0372i` + FMV003 → `m0004i` → `m0378i` → `m0377i` →
+  rehearsal/sewer chain `M0319I`/`M0023I`/`M0367I`/`M0026I`…`M0036I` →
+  M0000I dispatcher with persist g74=`0x80` selecting **M0351I** (Day 1 exit).
+  Day 1 boss / completion marker still RESEARCH_REQUIRED in SYS0; script
+  audit pins g74=`0x80` → M0351I as the Day 1→Day 2 selector.
+- **Day 2 entry** (`docs/ai_context/DAY2_ROUTE_AUDIT.md`): M0351I → M0042I
+  (g74=`0x88`) station / shared rooms (M0041I/M0043I…) → Central Park scripts
+  (M0191I/M0037I/M0374I and later park interiors). Day 2 terminal transition
+  is still unproven.
+
+Matching C is **565 YAML spans** (`python3 tools/build/disc1_plan.py --check`),
+not the stale ~275 CLAUDE.md figure. `pc_port/` movie/CD autonomous stream
+(DMA pointer seed + XA mode 0x50 bits) remains the native FMV frontier
+(DAY1/DAY2-157). Native ports are not matching leaves.
+
+### Matched this session (reloc-normalized object vs ROM; link-exact proof)
+
+| leaf | file | words | era / profile | command |
+|---|---|---|---:|---|---|
+| `func_8006E6D4` | `0x5EED4` | 69 | `-O2 -G0` | `era_leaf_match.sh src/func_8006E6D4.c 0x8006E6D4 0x114 -O2 -G0` |
+| `func_800811E4` | `0x719E4` | 28 | `-O2 -G0` + `MASPSX_FILL_EPILOGUE_DELAY_SLOT=1` | `era_leaf_match.sh src/func_800811E4.c 0x800811E4 0x70 -O2 -G0` |
+
+`func_8006E6D4` PARK closed: the extra `lui $v1,0x100` rematerialization
+disappears once `func_800719E4` (BIOS `B(38h)` = `exit`) is declared
+`__attribute__((noreturn))` — `0x01000000` stays live across the call and the
+`beq` delay slot reuses it. `func_800811E4` (CD read poll, 9 retail `jal`
+callers on the boot load path) needed two levers: one retained `$a0` base
+(`&D_8009B6B4.issue` + zero-code `asm` barrier) serving both adjacent
+pending/issue words, and **vendored maspsx patch 3**
+(`MASPSX_FILL_EPILOGUE_DELAY_SLOT=1`) that schedules `addiu $sp,sp,32` into
+the `jr $31` delay slot (ASPSX reorder fill, class of patch 1's store fill).
+`tools/era/maspsx/tests/` (167 tests OK) and `setup_era.sh`'s tracked-file
+list cover it. Link-level check at `0x800811E4`: `LINK_EXACT` (0x70 bytes, 0
+word mismatches after relocation resolution).
+
+Retail EXE SHA-1 after `scripts/extract_us.sh 1`:
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`. Public:
+`scripts/verify_us.sh --public` → `PUBLIC_VERIFY=PASS`, matching-C **565**.
+Plan SHA-256 `e7a9ec2c0c4fae5098d7fe73b3b8afffe9231b54fa82973626cb50a89545ecb7`.
+Evidence: `docs/evidence/func-8006E6D4/REPORT.md`,
+`docs/evidence/func-800811E4/REPORT.md`.
+
+### Next concrete step
+
+1. Exact packed SHA-1: `scripts/split_us.sh` && `scripts/build_us.sh` &&
+   `scripts/verify_us.sh` in `pe-mipsel-img` (needs docker/distrobox GCC).
+2. Continue Day 1/2 matching leaves; next CD/boot-path candidates. Also
+   `pc_port/` native FMV: seed retail CD/DMA pointer table provenance and XA
+   ReadS bit6 so movie player `121C04` completes autonomous frames.
+3. Do not claim boot→end-of-Day-2 complete: Day 1 completion marker, Day 2
+   terminal transition, and most EXE functions on that graph remain asm.
+
+No git commit this session.
 
 ## ACTIVE OBJECTIVE: decompile all Day 1 and Day 2; implement/fix Day 1
 

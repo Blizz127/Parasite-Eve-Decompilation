@@ -37,6 +37,8 @@ typedef struct { uint8_t disp[20]; } DISP_ENV;
 #define PE_GUEST_U32(a)  (*(uint32_t *)PE_Translate((a), 4))
 /* Shared input/game flags have one guest-memory authority. */
 #define D_8009D1A0 PE_GUEST_U32(0x8009D1A0u)
+#define D_8009D1C4 PE_GUEST_U32(0x8009D1C4u)
+#define D_8009D250 PE_GUEST_U32(0x8009D250u)
 #define D_8009D280 PE_GUEST_U32(0x8009D280u)
 #define PE_GUEST_S32(a)  (*(int32_t  *)PE_Translate((a), 4))
 
@@ -81,13 +83,12 @@ int PE_Globals_AdoptRetailImage(void);
 
 /* ── Host-owned scalar globals (plain data, no pointer arithmetic) ──── */
 
-extern uint32_t  D_8009D1C4;
 extern uint32_t  D_800A7918;
 extern unsigned short D_80093164[];
 
 /* Resource-bank pointer/count owners below use canonical guest RAM. */
 extern unsigned int D_8009D018;
-extern unsigned int D_8009D03C;
+#define D_8009D03C PE_GUEST_U32(0x8009D03Cu)
 #define D_8009D048 PE_GUEST_U32(0x8009D048u)
 #define D_8009D04C PE_GUEST_U32(0x8009D04Cu)
 #define D_8009D050 PE_GUEST_U32(0x8009D050u)
@@ -96,7 +97,7 @@ extern unsigned int D_8009D03C;
 #define D_8009D064 PE_GUEST_U32(0x8009D064u)
 
 /* ── SDK IMPLEMENTED ──────────────────────────────────────────────── */
-static inline void func_80073A44(int m)  { HostFB_VSync(m); }
+static inline uint32_t func_80073A44(int m)  { return HostFB_VSync(m); }
 static inline void func_80074D28(int m)  { HostFB_SetDispMask(m); }
 int func_80074DC0(int mode);
 int func_80075358(pe_addr_t packet);
@@ -122,14 +123,26 @@ static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08",
  * (game/boot/func_8003F3C4_port.c, func_80066B60_port.c,
  * func_80068E24_port.c). Prototypes live in pe_port_compat.h. */
 static inline void func_801235DC(void)   { Bootstrap_ReturnVoid("func_801235DC", "func_8001220C"); }
-static inline void func_8019234C(void)   { Bootstrap_ReturnVoid("func_8019234C", "func_8001220C"); }
+/* func_8019234C is a REAL translation of the M0000I transition outer loop
+ * (game/boot/func_8019234C_port.c); the former Bootstrap_ReturnVoid stub
+ * was removed once its callees, VSync return contract and ordering-table
+ * compaction were available. */
+extern void func_8019234C(void);
 extern int func_801909B4(void);
 extern void func_801918F8(int buffer, int wide);
 extern int func_80191FB8(int count, pe_addr_t source_list);
 extern int PE_func_80191FB8_Values(int count, const pe_addr_t *sources);
 extern int func_801924F8(int index);
+extern int func_80192934(void);
+extern void func_80191DC8(void);
 extern int func_80192CE8(int index);
 extern int func_80190660(void);
+extern void func_8018F2F4(void);
+extern pe_addr_t func_8018FBC0(int type);
+extern void func_80190064(void);
+extern void func_8018F468(void);
+extern void func_80192FE8(pe_addr_t node);
+extern void func_8019319C(pe_addr_t node);
 extern void func_8010C0D8(pe_addr_t callback); /* DecDCToutCallback */
 extern void func_8007A214(pe_addr_t record_base, uint32_t record_count);
 extern void func_8007C304(uint32_t mode, int32_t start,

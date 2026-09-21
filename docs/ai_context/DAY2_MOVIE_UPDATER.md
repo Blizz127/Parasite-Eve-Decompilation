@@ -21,12 +21,13 @@ movie_player_start_wait, movie_retry_wait). Oracle
 `pe_movie_player_oracle.py` passes 20 original graphs (4 early returns,
 16 full graphs including a failed-first search retry); native group
 DAY2_movie_player: early returns, the disabled-device search boundary with
-the full setup prefix checked, and the enabled-device path where the real
-fixture ISO search resolves, the start Setloc completes through the
-stage155 queue, the streaming callbacks install (B8AB4=813E8, DMA3
-slot=7C214), and the mode-0x1E0 ReadS reaches the device model's recorded
-CD_device_read_mode boundary (read modes with 0x50 bits are the recorded
-XA-mode frontier). BD4C's libpress-module source is seeded with the FF FF
+the full setup prefix checked, an enabled-device run whose searched fixture
+is not a Form-1 video stream (the assembler drops the record; the only stub
+is movie_retry_wait), and an enabled-device run whose searched file carries
+the retail chunk header with a frame word equal to the record's stream-start
+word, where **the physical stream delivers and the first frame is handed
+off** (D_800A3494 = the frame word, D_800B0DBA 3→4, D_800B0DBC = 1, no
+stop). BD4C's libpress-module source is seeded with the FF FF
 terminator in the fixture; the real table build is covered by
 DAY2_movie_complete_frame. The port bug found during bring-up: the player's
 prefix-table strcat must LOAD the table word (120FF4/120FFC) before use.
@@ -60,8 +61,14 @@ explicit SDK/frame/timeout-counter providers, `--check` PASS):
    and7F778 returns0. Issue Setloc through80D5C(command2, location22414,
    stack response), then81314(location22414,mode1E0). Failed issue loops back
    to readiness; success retries acquisition. The location helper's return is
-   ignored. The existing collapsed80D5C rejects non-null response arguments,
-   so this retry branch cannot yet be wired faithfully.
+   ignored. `func_80080D5C` delegates to the real `func_80080DC4` queue/poll
+   graph whenever the CD device is enabled, and the command-poll event
+   dispatch (`func_8007B010`'s B178 loop) now routes D_8009AFB8/D_8009AFB4
+   through the shared `PE_Cd_DispatchDataCallback` dispatcher instead of an
+   indirect-callback boundary, so this retry branch runs the real data-ready
+   chain when a stream is already delivering. The device-disabled run still
+   keeps the recorded `movie_retry_wait` boundary after the 2000-poll
+   exhaustion.
 5. After preparing the next frame, wait for byte228FC with counter800000hex.
    If the counter expires, set228FC=1, toggle byte228F2, and restore slice x/y
    from the selected frame rectangle at228E2/+2. This timeout branch is real
@@ -96,10 +103,11 @@ real SDK/MDEC/CD implementations against the updater:
   stops at the explicit movie_retry_wait boundary after the recorded
   2000-poll exhaustion; the 7C2A0 position write (0x11010200 from
   A3490=0x200 plus the destination's retained fourth byte) and all
-  pre-stop state are checked. The enabled-device completion of that
-  branch (real Setloc/ReadS through the stage155 queue) is NOT exercised
-  yet; driving it requires the autonomous physical stream so 121270 can
-  eventually succeed, which is the next integration frontier.
+  pre-stop state are checked. The enabled-device completion of that branch
+  (real Setloc/ReadS through the stage155 queue) is still not exercised by
+  this group; the shared data-ready dispatcher in item 4 above removed the
+  indirect-callback stop that used to block it, and `DAY2_movie_player` now
+  proves the same enabled-device chain delivers a slice for the player.
 - Abort helper 22354: decrement, 870F0 sound stop through the CD pointer
   table, MDEC callback unregister, stream teardown bank clears, then the
   device-disabled Pause stop at the recorded CD_command_wait boundary.

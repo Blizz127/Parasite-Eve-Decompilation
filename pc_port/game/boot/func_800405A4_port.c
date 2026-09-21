@@ -3,9 +3,16 @@
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 #include "game_port.h"
+#include "stub_registry.h"
 
 static int card_status_call(pe_addr_t target,uint32_t argument)
 {
+    if (target == 0x800726F4u && PE_Port_CardTestEventHostReturn()) {
+        /* TestEvent: no card event pending.  Lets title-loop 425DC return. */
+        Stub_Record("card_status_TestEvent", "HOST_ADAPTED");
+        (void)argument;
+        return 0;
+    }
     (void)Bootstrap_ReturnInt4Indirect("card status BIOS call","func_800405A4",0,
                                      target,argument,0u,0u,0u,NULL,0u);
     PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);

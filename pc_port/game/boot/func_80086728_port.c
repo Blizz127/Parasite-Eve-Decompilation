@@ -146,6 +146,7 @@ void func_800866A4(unsigned int a0, unsigned int a1)
  * command. 8CBA8 returns its allocated playback handle. */
 int32_t func_80086608(pe_addr_t sound, uint32_t key, uint32_t pan, uint32_t volume)
 {
+    PE_M34StackInvalidate();
     int32_t result=func_80085084(sound);
     if (result) return result;
     PE_StoreU32(0x800BCD80u,0x24u);

@@ -53,7 +53,7 @@ int func_8006F8EC(unsigned int index)
         return -1;
     if (fn == GA_FN_D4704)
         return func_800D4704(slot);
-    if (fn==0x800C9B68u || fn==0x800CD8C8u) return PE_EffectStackWeaponDraw(fn,slot);
+    if (fn==0x800C9B68u || fn==0x800CD8C8u || fn==0x800CE144u) return PE_EffectStackWeaponDraw(fn,slot);
     PE_EffectStackInvalidate();
     return PE_EffectCallback(fn,2,slot,0u);
 }
@@ -79,4 +79,20 @@ int func_80069594(void)
             (void)func_8006F9F0(i);
     }
     PE_EffectStackEnd();return 0;
+}
+
+/* Original 69660: small-pool draw followed by updates, before field collision. */
+int func_80069660(void)
+{
+    if(!(D_8009D1A0&0x80u))return 0;
+    func_800661A4();
+    for(unsigned i=11;i<22;i++) {
+        (void)func_8006F8EC(i);if(PE_Port_ShouldStop())break;
+    }
+    func_800661CC();
+    if((D_8009D1A0&0x104u) || PE_Port_ShouldStop())return 0;
+    for(unsigned i=11;i<22;i++) {
+        (void)func_8006F9F0(i);if(PE_Port_ShouldStop())break;
+    }
+    return 0;
 }
