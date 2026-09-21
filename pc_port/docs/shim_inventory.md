@@ -210,7 +210,11 @@ never native function pointers.
     payload width this port cannot represent (retail checks neither).
 - `func_8006ECEC`
 - `func_8006F044`
-- `func_80069B08(int)`
+- ~~`func_80069B08(int)`~~ — TRANSLATED COMPLETE (PE-69B08): 376-word boot
+  disc-change screen, two PE.IMG reads + 10-state CD-status machine,
+  `game/boot/func_80069B08_port.c`.  It blocks on `CdlStatShellOpen` and
+  the matching disc, so its Disc-2 run is the retail wrong-disc wait; the
+  `pe_cdreg` CdlStop (8) command is its only new host wiring.
 - `func_8003F3C4`
 - `func_801235DC`
 - `func_8019234C`

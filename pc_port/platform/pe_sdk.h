@@ -125,6 +125,7 @@ uint16_t func_80073E10(uint16_t new_mask); /* I_MASK exchange (PE_IRQ authority)
 int  func_80072714(void);            /* EnterCriticalSection */
 void func_80072724(void);            /* ExitCriticalSection */
 void func_800726C4(void);            /* BIOS A0(44h) FlushCache host adapter */
+int  func_800726F4(int event);       /* BIOS B0(0Bh) TestEvent host adapter */
 int  PE_Irq_LockDepth(void);         /* diagnostic: current critical depth */
 
 /* B53I-B1 bounded host equivalents of source 0's BIOS auto-ack controls.
@@ -157,6 +158,9 @@ void PE_Irq_GetSource0BiosState(PeIrqSource0BiosState *out);
  * Never returns -1 at boot (event classes used never exhaust). */
 int  PE_Event_Open(uint32_t cls, uint32_t spec, uint32_t mode, pe_addr_t handler);
 int  PE_Event_Enable(int handle);
+/* BIOS B(07h) DeliverEvent host adapter for the callback events the port
+ * delivers; executes a mode-1000h callback or marks a mode-2000h event ready. */
+int  PE_Event_Deliver(uint32_t cls, uint32_t spec);
 int  PE_Event_SpuDmaEnabled(void);
 int  PE_Event_DeliverSpuDma(void);
 int  PE_Event_ConsumeSpuDma(int handle);
@@ -180,6 +184,12 @@ void      func_800754E4(pe_addr_t ot, pe_addr_t env); /* DrawOTagEnv software */
 void func_8007D054(void);            /* SsInit wrapper (tail-call 7D074(0)) */
 void func_8007D15C(void);            /* SPU IRQ event install */
 
+/* ── SPU init/register translation (pc_port/platform/pe_spu_init.c) ─── */
+void func_8007D1D4(int arg);         /* SPU hardware init (arg 0 = full) */
+void func_8007DAE0(int reg, uint16_t value, int shifted); /* SPU reg write */
+void func_8007D454(pe_addr_t src, int count); /* SPU transfer-port write */
+void func_8007DCAC(void);            /* SPU busy-wait */
+
 /* ── streaming (pc_port/platform/pe_stream.c) ───────────────────────── */
 void func_80085644(void);            /* streaming bring-up */
 void func_80086FF8(void);            /* stream command 0xF0 */
@@ -191,6 +201,31 @@ void func_8008CB54(uint32_t mode); /* SPU reverb mode transition */
 
 /* ── libcard (pc_port/platform/pe_libcard.c) ────────────────────────── */
 void func_800409B4(void);            /* InitCARD + StartCARD */
+/* Card kernel operations that the retail BIOS veneers at asm/disc1/6E538.s
+ * forward to.  The port models a host-backed memory-card image and, when
+ * `PE_CARD=empty`, the documented empty-slot completion; the canonical
+ * declarations for translated callers live in pe_port_compat.h. */
+int  func_8007DD44(int port);        /* A0(ABh) _card_info */
+int  func_8007DD54(int port);        /* A0(ACh) _card_load */
+int  func_8007DDC4(pe_addr_t port);  /* B0(50h) _new_card */
+int  func_8007DDB4(pe_addr_t port, int sector, pe_addr_t src); /* B0(4Eh) _card_write */
+void PE_Card_OpenEvents(void);       /* open+enable the 8 card events (test hook) */
+int  PE_Card_IsPresent(void);        /* resolved presence of the host image */
+void PE_Card_SetPresent(int present);/* force present/empty (test hook) */
+void PE_Card_Reset(void);            /* re-resolve presence on next query */
+
+/* libcard file API (BIOS B0 32h open / 33h lseek / 34h read / 35h write /
+ * 36h close / 41h format / 42h firstfile / 43h nextfile), host-modelled over
+ * the present card image.  Return values follow psx-spx. */
+int  func_80072734(pe_addr_t name, int mode);         /* B0(32h) open */
+int  func_80072744(int fd, int offset, int whence);   /* B0(33h) lseek */
+int  func_80072754(int fd, pe_addr_t buf, int len);   /* B0(34h) read */
+int  func_80072764(int fd, pe_addr_t buf, int len);   /* B0(35h) write */
+int  func_80072774(int fd);                           /* B0(36h) close */
+int  func_80072784(pe_addr_t dev);                    /* B0(41h) format */
+pe_addr_t func_800727B4(pe_addr_t dirspec, pe_addr_t dirent); /* 42h firstfile */
+pe_addr_t func_80072794(pe_addr_t dirent);            /* B0(43h) nextfile */
+int  func_80071A04(pe_addr_t a, pe_addr_t b, int n);  /* A0(18h) memcmp */
 
 /* ── libcd (pc_port/platform/pe_libcd.c) ────────────────────────────── */
 int  func_8007EC14(void);            /* CdInit */
@@ -209,6 +244,14 @@ typedef struct PeC89CTelemetry {
     int ret;                     /* exit code (0 pad, 1 bound) */
 } PeC89CTelemetry;
 void PE_C89C_GetTelemetry(PeC89CTelemetry *out); /* host-only, never guest */
+/* Host-only delivery telemetry (never guest authority).  func_8007C214 is
+ * the streaming DMA-completion callback; it is a *complete-frame* publish
+ * only when D_800B89F4 is still set, which func_8007C564 does exactly once,
+ * on the last video chunk.  A non-device surrogate publish (test fixtures)
+ * leaves this false, so func_801924F8 keeps its honest decoder boundary
+ * instead of decoding an unpopulated body. */
+int  PE_Movie_LastPublishComplete(void);
+void PE_Movie_ResetPublishState(void);
 void func_8007C214(void);
 int func_8007A88C(pe_addr_t p);
 void func_8007B964(pe_addr_t p);

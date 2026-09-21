@@ -63,6 +63,12 @@ void PE_CdReg_ServiceDMA3(void);
 typedef struct {
     uint32_t enabled,commands,responses;
     uint32_t next_lba,sectors,data_remaining;
+    /* Unread sector ownership: a completed raw sector sits in the FIFO
+     * window waiting for the retail BFRD (write base+3 bit7) before the
+     * next read period may publish.  Exposed so the host stream pump can
+     * run the 7C564/BFRD catch-up for an orphan pending sector
+     * (DAY2-158z) instead of letting pe_cdreg overrun/stop or hold. */
+    uint32_t sector_pending;
     uint8_t reading;
     uint8_t mode,muted,command_log[16],response_log[16];
 } PeCdDeviceState;

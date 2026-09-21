@@ -69,12 +69,23 @@ static void test_DAY2_cd_sector_device(void)
         loc[2]=0x7Au;CdSectorCommand(2u,loc,3);
         ASSERT(CdSectorReply(response,2)==5u && response[0]==3u && response[1]==0x10u,"invalid BCD must report parameter value error");
     }
-    /* Unread data is retained; no silent sector substitution on overrun. */
+    /* Unread data is retained; no silent sector substitution and no overrun
+     * STOP.  The next publish is held while a sector waits for BFRD
+     * (DAY2-158v backpressure), and the retained first sector is still what
+     * BFRD exposes once it arrives. */
     PE_CdReg_Reset();ASSERT(PE_CdReg_EnableDevice(7u),"overrun attachment");
     uint8_t loc[]={0u,2u,0x20u};CdSectorCommand(2u,loc,3);(void)CdSectorReply(response,1);
     CdSectorCommand(6u,NULL,0);(void)CdSectorReply(response,1);
     PE_CdReg_ServiceDevice(451584u);ASSERT(CdSectorReply(response,1)==1u,"overrun first data response");
     PE_CdReg_ServiceDevice(451584u);
-    ASSERT(PE_Port_ShouldStop() && CountOrderLog("CD_device_sector_overrun")==1,"unimplemented multi-sector buffering must stop");
+    PeCdDeviceState held;PE_CdReg_GetDeviceState(&held);
+    ASSERT(!PE_Port_ShouldStop() && held.sector_pending && held.sectors==1u,
+           "held pending sector must not overrun or substitute");
+    PE_CdReg_WriteU8(PE_CDREG_BASE,0u);PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0u);
+    PE_CdReg_WriteU8(PE_CDREG_BASE+3u,0x80u);
+    ASSERT(PE_CdReg_ReadU8(PE_CDREG_BASE)&0x40u,"BFRD did not expose held FIFO");
+    PE_CdReg_GetDeviceState(&held);
+    ASSERT(!held.sector_pending && held.data_remaining==2340u,
+           "BFRD must clear the held pending sector and expose its retained bytes");
     PE_CdReg_Reset();PE_Disc_SetActive(NULL);FxFree(&fx);PASS();
 }

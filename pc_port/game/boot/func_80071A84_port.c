@@ -94,10 +94,22 @@ uint32_t PE_FormatterFrame(pe_addr_t destination,pe_addr_t format,uint32_t arg0,
                 if(flags&0x20u)PE_StoreU16(source,emitted);else PE_StoreU32(source,emitted);
                 goto next;
             }
-            if(!(flags&4u))return formatter_boundary(flags&0x10u?0x80072324u:0x80072314u,
-                source,0u,flags&0x10u?F(0x218u):0u);
-            length=PE_LoadU8(source++);
-            if(flags&0x10u) {precision=F(0x218u);if((int32_t)precision<(int32_t)length)length=precision;}
+            /* 0x80072168..0x800721C8.  "#' means the first source byte is the
+             * length; otherwise the BIOS measures the string, and with a
+             * precision it is memchr(src,0,precision) that bounds the copy.
+             * The two BIOS thunks this used to stop on are ported natively in
+             * func_80072314_port.c (A(1Bh) strlen / A(2Eh) memchr, psx-spx). */
+            if(flags&4u) {
+                length=PE_LoadU8(source++);
+                if(flags&0x10u) {precision=F(0x218u);if((int32_t)precision<(int32_t)length)length=precision;}
+            } else if(flags&0x10u) {
+                pe_addr_t end;
+                precision=F(0x218u);
+                end=func_80072324(source,0,precision);
+                length=end?(uint32_t)(end-source):precision;
+            } else {
+                length=func_80072314(source);
+            }
             goto padded;
         }
         case 0x80071D8Cu:case 0x80071DE4u:case 0x80071F04u:

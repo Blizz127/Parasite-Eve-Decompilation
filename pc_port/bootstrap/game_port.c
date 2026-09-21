@@ -15,6 +15,10 @@
 #include <stddef.h>
 #include <string.h>
 
+#ifdef PE_EXEC_COVERAGE
+#include "pe_exec_coverage.h"
+#endif
+
 int g_port_stop_requested = 0;
 int g_port_main_iterations = 0;
 
@@ -205,6 +209,13 @@ void PE_Port_RequestStop(PEPortStopReason reason)
 {
     if (!g_port_stop_requested) {
         g_port_stop_reason = reason;
+#ifdef PE_EXEC_COVERAGE
+        /* First stop only: record the call chain that hit the loud boundary
+         * so the executed-path report can attribute it to a guest function.
+         * Host-only; never touches guest state. */
+        if (reason == PE_PORT_STOP_UNRESOLVED_BOUNDARY)
+            PE_ExecCoverage_NoteUnresolvedBoundary();
+#endif
     }
     g_port_stop_requested = 1;
     g_port_stop_epoch++;

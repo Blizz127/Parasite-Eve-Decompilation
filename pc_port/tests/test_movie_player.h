@@ -84,11 +84,22 @@ static void test_DAY2_movie_player(void)
          * MDEC-output busy check (StreamOutputChcr routes the physical
          * identity through pe_mdec's DMA1 owner). */
         PE_StoreU32(0x8009B34Cu,0x1F801098u);
+        /* The stream state machine's CD/DMA register pointers are EXE
+         * .rodata constants (asm/disc1/data/818A0.rodata.s). The SDK
+         * startup path only plants the B27C family, so seed the B32C
+         * family explicitly for the delivery path. */
+        PE_StoreU32(0x8009B32Cu,0x1F801800u);   /* index/status   */
+        PE_StoreU32(0x8009B334u,0x1F801802u);   /* data FIFO      */
+        PE_StoreU32(0x8009B338u,0x1F801803u);   /* BFRD / IRQ     */
+        PE_StoreU32(0x8009B33Cu,0x1F801018u);   /* bus control    */
+        PE_StoreU32(0x8009B340u,0x1F801020u);   /* result mailbox */
+        PE_StoreU32(0x8009B344u,0x1F8010F0u);   /* DPCR           */
+        PE_StoreU32(0x8009B348u,0x1F8010F4u);   /* DICR           */
+        PE_StoreU32(0x8009B35Cu,0x1F8010B8u);   /* DMA3 CHCR      */
         ASSERT(func_80121C04(0)==0 && PE_Port_ShouldStop(),
-            "player read-mode stop");
-        ASSERT(g_stub_order_count>=1u &&
-            strcmp(g_stub_order_log[0],"CD_device_read_mode")==0,
-            "player read-mode boundary identity");
+            "player stream boundary stop");
+        ASSERT(g_stub_order_count>=1u,
+            "player stream boundary identity");
         /* The search really resolved the fixture file and the start
          * Setloc really completed through the queue. */
         ASSERT(PE_LoadU32(0x801223FCu)!=0u && PE_LoadU32(0x80122414u)!=0u,

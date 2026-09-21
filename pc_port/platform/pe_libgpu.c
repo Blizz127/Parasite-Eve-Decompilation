@@ -275,7 +275,7 @@ static uint32_t pe_clip_cmd(uint32_t cmd, int x, int y)
     return cmd | ((a1 & 0x3FFu) << 10) | (a0 & 0x3FFu);
 }
 
-static uint32_t func_80076150(uint32_t dfe, uint32_t dtd, uint32_t tpage)
+uint32_t func_80076150(uint32_t dfe, uint32_t dtd, uint32_t tpage)
 {
     uint32_t v1 = 0xE1000000u;
     uint32_t v0;
@@ -288,12 +288,12 @@ static uint32_t func_80076150(uint32_t dfe, uint32_t dtd, uint32_t tpage)
     return v1 | v0;
 }
 
-static uint32_t func_800762A0(int x, int y)
+uint32_t func_800762A0(int x, int y)
 {
     return 0xE5000000u | (((uint32_t)y & 0x7FFu) << 11) | ((uint32_t)x & 0x7FFu);
 }
 
-static uint32_t func_800762BC(pe_addr_t tw)
+uint32_t func_800762BC(pe_addr_t tw)
 {
     uint32_t x, y, w, h;
 

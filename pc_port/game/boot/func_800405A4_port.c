@@ -1,21 +1,25 @@
 /* Original card-status polling machine, 405A4..409B4 (260 words).
- * BIOS event/card calls remain explicit nonreturning port boundaries. */
+ *
+ * The BIOS event drain (B(0Bh) TestEvent, func_800726F4) is a real host
+ * adapter now (pe_libetc.c): the retail callers deliberately discard its
+ * return value and only drain the four card event handles, so this path
+ * returns instead of stopping.  The card kernel operations themselves
+ * (A0 ABh/ACh and the B0 4Eh/50h wrappers under func_8007DD74) are real
+ * host adapters too (pe_libcard.c): they model the documented empty-slot
+ * timeout and deliver the F4000001h/F0000011h completion events, so the
+ * status machine advances instead of stopping at a named boundary. */
 #include "psx_compat.h"
 #include "pe_port_compat.h"
 #include "game_port.h"
-
-static int card_status_call(pe_addr_t target,uint32_t argument)
-{
-    (void)Bootstrap_ReturnInt4Indirect("card status BIOS call","func_800405A4",0,
-                                     target,argument,0u,0u,0u,NULL,0u);
-    PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
-    return 0;
-}
+#include "pe_sdk.h"
 
 static int card_status_events(pe_addr_t handles)
 {
+    /* Retail issues four TestEvent calls and discards every result
+     * (307CC.s 80040644/54/64/74, 800406FC/70C/71C/72C, 80040780/90/FA0/FB0,
+     * 8004093C/94C/95C/96C): the drain, not the value, is the effect. */
     for(unsigned i=0;i<4;i++)
-        if(!card_status_call(0x800726F4u,PE_LoadU32(handles+i*4u)))return 0;
+        (void)func_800726F4((int)PE_LoadU32(handles+i*4u));
     return 1;
 }
 
@@ -44,14 +48,14 @@ void func_800405A4(uint32_t index)
     begin_read:
         if(!card_status_events(0x800BCDB8u))return;
         PE_StoreU32(0x800A1834u,0u);PE_StoreU32(0x800A1830u,0u);PE_StoreU32(0x800A182Cu,0u);
-        if(!card_status_call(0x8007DD74u,index<<4))return;
+        (void)func_8007DD74((int)(index<<4));
         PE_StoreU8(record+8u,2u);return;
     case 2:
         if(PE_LoadU32(0x800A182Cu)) {
             PE_StoreU32(0x800A182Cu,0u);
             if(!card_status_events(0x800BCDA8u))return;
             PE_StoreU32(0x800A1828u,0u);PE_StoreU32(0x800A1824u,0u);PE_StoreU32(0x800A1820u,0u);
-            if(!card_status_call(0x8007DD54u,index<<4))return;
+            (void)func_8007DD54((int)(index<<4));
             PE_StoreU8(record+8u,3u);return;
         }
         if(!PE_LoadU32(0x800A1830u) && !PE_LoadU32(0x800A1834u))return;
@@ -88,7 +92,7 @@ void func_800405A4(uint32_t index)
     if((int32_t)timer>0)return;
     if(!card_status_events(0x800BCDA8u))return;
     PE_StoreU32(0x800A1828u,0u);PE_StoreU32(0x800A1824u,0u);PE_StoreU32(0x800A1820u,0u);
-    if(!card_status_call(0x8007DD44u,index<<4))return;
+    (void)func_8007DD44((int)(index<<4));
     PE_StoreU8(record+8u,1u);
 }
 

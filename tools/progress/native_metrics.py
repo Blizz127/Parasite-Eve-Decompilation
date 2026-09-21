@@ -18,10 +18,70 @@ EVIDENCE = Path("docs/evidence/pe-b54kb6-30894-l9/REPORT.md")
 CMAKE = Path("pc_port/CMakeLists.txt")
 TEST_SOURCE = Path("pc_port/tests/test_native.c")
 STATUS = Path("docs/generated/NATIVE_PORT_STATUS.md")
+EXEC_COVERAGE = Path("docs/evidence/exec-coverage/coverage.json")
 
 
 class MetricsError(RuntimeError):
     """A native metric cannot be derived or cross-checked."""
+
+
+def load_exec_coverage(root: Path) -> dict[str, Any] | None:
+    """Load the measured executed-path coverage artifact, if it is present.
+
+    The artifact is produced by `tools/progress/exec_coverage.py` from a real
+    coverage-build run (`PE_EXEC_COVERAGE=ON`).  It is committed under
+    docs/evidence so the metric is reproducible offline; when it is absent the
+    metric is reported as UNMEASURED rather than guessed.
+    """
+    path = root / EXEC_COVERAGE
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise MetricsError(f"cannot read {EXEC_COVERAGE}: {exc}") from exc
+    if payload.get("schema_version") != 1:
+        raise MetricsError(f"{EXEC_COVERAGE}: schema_version must be 1")
+    runs = payload.get("runs")
+    primary = payload.get("primary")
+    if not isinstance(runs, dict) or not runs:
+        raise MetricsError(f"{EXEC_COVERAGE}: no runs recorded")
+    if primary not in runs:
+        raise MetricsError(f"{EXEC_COVERAGE}: primary run {primary!r} is not recorded")
+    for label, run in runs.items():
+        for field in (
+            "executed_guest_functions",
+            "decompiled_c",
+            "pc_port_only",
+            "unmapped_guest_functions",
+            "unresolved_boundary_guest_functions",
+        ):
+            if field not in run:
+                raise MetricsError(f"{EXEC_COVERAGE}: run {label!r} lacks {field}")
+    return payload
+
+
+def summarize_exec_coverage(payload: dict[str, Any]) -> dict[str, Any]:
+    primary = payload["primary"]
+    run = payload["runs"][primary]
+    boundary_map = payload.get("guest_boundary_map", {})
+    return {
+        "status": "MEASURED",
+        "primary_run": primary,
+        "guest_boundary_map_total": boundary_map.get("total"),
+        "guest_boundary_map_decompiled_c": boundary_map.get("decompiled_c"),
+        "guest_boundary_map_asm": boundary_map.get("asm_functions"),
+        "executed_guest_functions": run["executed_guest_functions"],
+        "decompiled_c": run["decompiled_c"],
+        "decompiled_c_share_percent": run.get("decompiled_c_share_percent"),
+        "pc_port_only": run["pc_port_only"],
+        "unmapped_guest_functions": run["unmapped_guest_functions"],
+        "unresolved_boundary_functions":
+            len(run["unresolved_boundary_guest_functions"]),
+        "unresolved_boundary_names": run["unresolved_boundary_guest_functions"],
+        "runs": sorted(payload["runs"]),
+        "source": str(EXEC_COVERAGE),
+    }
 
 
 def one(pattern: str, text: str, label: str, flags: int = 0) -> re.Match[str]:
@@ -54,11 +114,33 @@ def optional_cmake_sources(text: str, variable: str) -> list[str]:
     return cmake_sources(text, variable)
 
 
+def collect_test_source_text(root: Path, test_source: Path) -> str:
+    """Flatten test_native.c plus its quoted local headers for TEST counts.
+
+    Many cases live in `#include "test_*.h"` bodies; counting only the
+    outer .c under-counts the suite and desyncs the artifact-independent
+    gate from the real binary.
+    """
+    base = root / test_source
+    text = base.read_text(encoding="utf-8")
+    parts = [text]
+    seen = {test_source.name}
+    for match in re.finditer(r'^\s*#include\s+"([^"]+)"', text, re.MULTILINE):
+        name = match.group(1)
+        if name in seen:
+            continue
+        seen.add(name)
+        header = base.parent / name
+        if header.is_file():
+            parts.append(header.read_text(encoding="utf-8"))
+    return "\n".join(parts)
+
+
 def derive_metrics(root: Path = ROOT) -> dict[str, Any]:
     source = (root / SOURCE).read_text(encoding="utf-8")
     evidence = (root / EVIDENCE).read_text(encoding="utf-8")
     cmake = (root / CMAKE).read_text(encoding="utf-8")
-    tests = (root / TEST_SOURCE).read_text(encoding="utf-8")
+    tests = collect_test_source_text(root, TEST_SOURCE)
 
     full = one(
         r"Full retail body:\s*\*\s*(\d+) words / 0x[0-9A-Fa-f]+ bytes, "
@@ -155,6 +237,8 @@ def derive_metrics(root: Path = ROOT) -> dict[str, Any]:
     if not re.search(r"tests_run\+\+", tests):
         raise MetricsError("TEST() no longer visibly increments tests_run")
 
+    exec_coverage = load_exec_coverage(root)
+
     return {
         "schema_version": 1,
         "production_frontier": cut,
@@ -184,10 +268,19 @@ def derive_metrics(root: Path = ROOT) -> dict[str, Any]:
             "retail_disc_required_cases": retail_disc_tests,
             "private_full_required": static_tests,
         },
-        "reachable_semantic_functions": {
-            "status": "UNMEASURED",
-            "reason": "no authoritative production-run reachability counter exists",
-        },
+        "reachable_semantic_functions": (
+            summarize_exec_coverage(exec_coverage)
+            if exec_coverage is not None
+            else {
+                "status": "UNMEASURED",
+                "reason": (
+                    "no executed-path coverage artifact at "
+                    "docs/evidence/exec-coverage/coverage.json; build the port "
+                    "with -DPE_EXEC_COVERAGE=ON, run the headless route/movie, "
+                    "and regenerate it with tools/progress/exec_coverage.py"
+                ),
+            }
+        ),
         "evidence": str(EVIDENCE),
     }
 
@@ -248,6 +341,24 @@ def status_markdown(metrics: dict[str, Any]) -> str:
         if metrics["production_frontier"]
         else f"**none inside `{metrics['frontier_owner']}` (complete body)**"
     )
+    coverage = metrics["reachable_semantic_functions"]
+    if coverage["status"] == "MEASURED":
+        reach_line = (
+            f"- Executed-path (C-only) reachability, `{coverage['primary_run']}` run: "
+            f"**{coverage['executed_guest_functions']}** guest functions executed, of which "
+            f"**{coverage['decompiled_c']}** ({coverage['decompiled_c_share_percent']:.2f}%) "
+            f"are backed by a decompiled C leaf and **{coverage['pc_port_only']}** by a pc_port "
+            f"transcription only; **{coverage['unresolved_boundary_functions']}** hit an "
+            f"unresolved loud boundary. Guest-function boundary map: "
+            f"**{coverage['guest_boundary_map_total']}** functions. "
+            f"See [`docs/evidence/exec-coverage/REPORT.md`](../evidence/exec-coverage/REPORT.md)."
+        )
+    else:
+        reach_line = (
+            "- Production-reachable semantic-function count: **UNMEASURED** — no\n"
+            "  executed-path coverage artifact is present; this must not be\n"
+            "  replaced by the matching-leaf count."
+        )
     return f"""# Native port status
 
 <!-- Generated by tools/progress/native_metrics.py. Do not edit by hand. -->
@@ -267,9 +378,7 @@ def status_markdown(metrics: dict[str, Any]) -> str:
 - Public normal/sanitizer requirement: **{tests['artifact_independent_cases']} pass,
   {tests['retail_disc_required_cases']} explicitly tagged skips, 0 failures**
 - Private full requirement with Disc 1 configured: **{tests['private_full_required']} / {tests['private_full_required']}**
-- Production-reachable semantic-function count: **UNMEASURED** — no
-  authoritative runtime reachability counter exists yet; this must not be
-  replaced by the matching-leaf count.
+{reach_line}
 
 Evidence: [`{metrics['evidence']}`](../evidence/pe-b54kb6-30894-l9/REPORT.md).
 Regenerate/check with `python3 tools/progress/native_metrics.py --write-status`

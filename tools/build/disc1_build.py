@@ -233,6 +233,34 @@ def force_absolute_symbols(assembly: Path, specification: str) -> None:
     assembly.write_text(text, encoding="utf-8")
 
 
+def dispatch_rodata_pad_ok(rodata_size: int, expected_size: int, tail: bytes) -> bool:
+    """Decide whether a compiled dispatch table's `.rodata` is the pool table.
+
+    cc1 emits the switch table with `.align 3`, so a table with an ODD word
+    count carries four bytes of zero alignment padding after it: a 0x5C pool
+    table lands as a 0x60 section. The strip zeroes `sh_size`, so those bytes
+    never reach the image; refusing them merely blocks the 30 odd-word tables
+    in `asm/disc1/data/*.rodata.s`.
+
+    The tolerance is deliberately exact rather than a range. Identity is
+    already independently proven by the `.rel.rodata` relocation count
+    (`words != len(literals)` is checked separately) and ultimately by the
+    whole-image SHA-1, so accepting only "exact size" or "exactly 4 trailing
+    zero bytes, and only where alignment actually requires them" cannot hide a
+    differently shaped table.
+    """
+    if rodata_size == expected_size:
+        return True
+    # `.align 3` only adds padding when the table is not already 8-byte sized.
+    if expected_size % 8 == 0:
+        return False
+    return (
+        rodata_size == expected_size + 4
+        and len(tail) == 4
+        and tail == b"\x00\x00\x00\x00"
+    )
+
+
 def strip_dispatch_rodata(object_path: Path, symbol: str) -> None:
     if not re.fullmatch(r"jtbl_[0-9A-Fa-f]{8}", symbol):
         raise BuildError(
@@ -281,7 +309,9 @@ def strip_dispatch_rodata(object_path: Path, symbol: str) -> None:
         raise BuildError("compiled switch leaf has no .rodata")
     rodata_header = header(rodata_index)
     rodata_size = struct.unpack_from("<I", data, rodata_header + 20)[0]
-    if rodata_size != expected_size:
+    rodata_offset = struct.unpack_from("<I", data, rodata_header + 16)[0]
+    tail = bytes(data[rodata_offset + expected_size : rodata_offset + rodata_size])
+    if not dispatch_rodata_pad_ok(rodata_size, expected_size, tail):
         raise BuildError(
             f".rodata 0x{rodata_size:X} != pool table 0x{expected_size:X} "
             f"for {symbol}; refusing to strip"
@@ -407,8 +437,14 @@ def compile_era(unit: dict[str, Any], tools: Toolchain) -> None:
             sys.executable,
             str(ROOT / MASPSX),
             f"--aspsx-version={aspsx_version}",
-            "--dont-expand-li",
         ]
+        # Most retail leaves want cc1's `li` left alone (GNU as expands it to
+        # addiu). A few were compiled with the immediate materialised as
+        # `ori $r,$zero,imm` instead; those leaves opt in per-leaf with
+        # MASPSX_EXPAND_LI=1 in their build profile, exactly like
+        # MASPSX_EXPAND_DIV below. Default is unchanged.
+        if unit["environment"].get("MASPSX_EXPAND_LI") != "1":
+            maspsx_command.append("--dont-expand-li")
         if unit["environment"].get("MASPSX_EXPAND_DIV") == "1":
             maspsx_command.append("--expand-div")
         maspsx_command.append(str(assembly))

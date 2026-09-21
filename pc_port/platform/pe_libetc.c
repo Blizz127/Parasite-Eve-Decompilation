@@ -23,6 +23,7 @@
 #include "psx_compat.h"
 #include "pe_sdk.h"
 #include "pe_spu_dma.h"
+#include "pe_spu.h"
 #include "pe_gpu.h"
 #include "pe_mdec.h"
 #include "pe_irq.h"
@@ -38,6 +39,55 @@ static int g_audio_event_enabled;
 static int g_spu_event_handle;
 static int g_spu_event_enabled;
 static int g_spu_event_delivered;
+
+/* Kernel event table for the BIOS event functions the port models
+ * (B(08h) OpenEvent / B(0Ch) EnableEvent / B(0Bh) TestEvent).  Handles are
+ * the g_next_event_handle sequence; OpenEvent records the caller's mode so
+ * TestEvent can apply the documented rule that callback (1000h) events never
+ * become ready.  psx-spx BIOS Event Functions:
+ *   B(0Bh) TestEvent(event) - 0 when the event is busy/disabled, else 1 and
+ *   the event is switched back to busy; callback events never set ready. */
+#define PE_EVENT_TABLE_SIZE 64
+typedef struct {
+    int      used;
+    int      enabled;
+    int      ready;
+    uint32_t mode;
+    uint32_t cls;       /* OpenEvent class (event identity for delivery) */
+    uint32_t spec;      /* OpenEvent spec                          */
+    pe_addr_t handler;  /* OpenEvent callback address (mode 1000h) */
+} PeEventSlot;
+static PeEventSlot g_event_slots[PE_EVENT_TABLE_SIZE];
+
+/* Card event handlers (retail func_80042BD8..func_80042C64, opened by
+ * func_800409B4 with mode 1000h).  A mode-1000h delivery executes the
+ * callback; the port models synchronous delivery here, at the point the
+ * retail kernel would deliver, because the card status machine polls the
+ * callback's guest flag on its next invocation.  Each handler is a verified
+ * matching leaf under pc_port/game/decomp/. */
+extern int func_80042BD8(void);
+extern int func_80042BEC(void);
+extern int func_80042C00(void);
+extern int func_80042C14(void);
+extern int func_80042C28(void);
+extern int func_80042C3C(void);
+extern int func_80042C50(void);
+extern int func_80042C64(void);
+
+static int PE_Event_InvokeHandler(pe_addr_t handler)
+{
+    switch (handler) {
+    case 0x80042BD8u: (void)func_80042BD8(); return 1;
+    case 0x80042BECu: (void)func_80042BEC(); return 1;
+    case 0x80042C00u: (void)func_80042C00(); return 1;
+    case 0x80042C14u: (void)func_80042C14(); return 1;
+    case 0x80042C28u: (void)func_80042C28(); return 1;
+    case 0x80042C3Cu: (void)func_80042C3C(); return 1;
+    case 0x80042C50u: (void)func_80042C50(); return 1;
+    case 0x80042C64u: (void)func_80042C64(); return 1;
+    default: return 0;
+    }
+}
 
 #define GA_IRQ_RESET_BLOCK          0x800945E4u
 #define GA_IRQ_RESET_BLOCK_BYTES    0x00001068u
@@ -282,6 +332,16 @@ int PE_Irq_LockDepth(void)
 int PE_Event_Open(uint32_t cls, uint32_t spec, uint32_t mode, pe_addr_t handler)
 {
     int handle = (int)g_next_event_handle++;
+    unsigned slot = (unsigned)(handle - 0x100);
+    if (slot < PE_EVENT_TABLE_SIZE) {
+        g_event_slots[slot].used = 1;
+        g_event_slots[slot].enabled = 0;
+        g_event_slots[slot].ready = 0;
+        g_event_slots[slot].mode = mode;
+        g_event_slots[slot].cls = cls;
+        g_event_slots[slot].spec = spec;
+        g_event_slots[slot].handler = handler;
+    }
     if (cls == 0xF0000009u && spec == 0x20u && mode == 0x2000u && !handler) {
         g_spu_event_handle = handle;
         g_spu_event_enabled = 0;
@@ -297,11 +357,62 @@ int PE_Event_Open(uint32_t cls, uint32_t spec, uint32_t mode, pe_addr_t handler)
 
 int PE_Event_Enable(int handle)
 {
+    unsigned slot = (unsigned)(handle - 0x100);
+    if (slot < PE_EVENT_TABLE_SIZE && g_event_slots[slot].used)
+        g_event_slots[slot].enabled = 1;
     if (g_spu_event_handle && handle == g_spu_event_handle)
         g_spu_event_enabled = 1;
     if (g_audio_event_handle && handle == g_audio_event_handle)
         g_audio_event_enabled = 1;
     return 1;
+}
+
+/* BIOS B(0Bh) TestEvent host adapter.  See the event-table note above: the
+ * function reports readiness only for enabled, non-callback events, and a
+ * successful test consumes the ready flag exactly as the retail kernel does.
+ * Every event the retail card path opens (func_800409B4) uses mode 1000h, so
+ * this correctly reports 0 there without substituting a card result. */
+int func_800726F4(int event)
+{
+    unsigned slot;
+    if (event < 0x100)
+        return 0;
+    slot = (unsigned)(event - 0x100);
+    if (slot >= PE_EVENT_TABLE_SIZE || !g_event_slots[slot].used)
+        return 0;
+    if (!g_event_slots[slot].enabled)
+        return 0;
+    if (g_event_slots[slot].mode == 0x1000u)
+        return 0;
+    if (!g_event_slots[slot].ready)
+        return 0;
+    g_event_slots[slot].ready = 0;
+    return 1;
+}
+
+/* BIOS B(07h) DeliverEvent host adapter, scoped to the callback-mode events
+ * the port itself delivers.  Retail matches the first enabled, open event
+ * with the requested (class, spec): a mode-2000h event is marked ready, and
+ * a mode-1000h event executes its callback and stays busy.  Returns nonzero
+ * when a matching enabled event consumed the delivery. */
+int PE_Event_Deliver(uint32_t cls, uint32_t spec)
+{
+    unsigned slot;
+    for (slot = 0; slot < PE_EVENT_TABLE_SIZE; slot++) {
+        PeEventSlot *event = &g_event_slots[slot];
+        if (!event->used || !event->enabled)
+            continue;
+        if (event->cls != cls || event->spec != spec)
+            continue;
+        if (event->mode == 0x1000u)
+            return PE_Event_InvokeHandler(event->handler);
+        if (event->mode == 0x2000u) {
+            event->ready = 1;
+            return 1;
+        }
+        return 0;
+    }
+    return 0;
 }
 
 int PE_Event_SpuDmaEnabled(void)
@@ -341,6 +452,7 @@ void PE_Sdk_ResetState(void)
 {
     g_irq_lock_depth = 0;
     g_next_event_handle = 0x100;
+    memset(g_event_slots, 0, sizeof(g_event_slots));
     g_audio_event_handle = 0;
     g_audio_event_enabled = 0;
     g_spu_event_handle = 0;
@@ -367,6 +479,7 @@ void PE_Sdk_ResetState(void)
     }
 
     PE_SpuDma_Reset();
+    PE_Spu_Reset();
     PE_GPU_Init();
     PE_MDEC_Init();
     PE_CdReg_Reset();

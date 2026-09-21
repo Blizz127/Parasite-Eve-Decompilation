@@ -118,6 +118,10 @@ static void ResetTestState(void) {
     PE_3EAC8_RecordReset();         /* drop recorded provider arguments   */
     D_80011614 = D_80011614_BOOTSTRAP;
     memset(D_80093164, 0, 4u * sizeof(D_80093164[0]));
+    /* Card presence is host-modelled; default native fixtures to the empty
+     * slot the card oracles pin.  Present-model tests call PE_Card_Reset()
+     * plus PE_Card_IsPresent() with their own PE_CARD_IMAGE. */
+    PE_Card_SetPresent(0);
 }
 
 /* Controller replies required by the complete input handler. Older digital
@@ -9583,6 +9587,54 @@ static void test_BTL27_type0_9b_then_14(void) {
     ASSERT(PE_LoadU32(child + 0x19Cu) == t0s + 0x618u, "+0x19C base+0x30C*2");
     ASSERT(PE_LoadU32(task + 0x10u) == 1u, "yield after 0x14");
     ASSERT(PE_LoadU32(0x8009D28Cu) == 0u, "mode stays 0");
+    PASS();
+}
+
+/*
+ * Script opcode 0xF0 (D_800910A0[0xF0] == 0x80016FE0, matching
+ * src/func_80016FE0.c): write 0/1 through the decoded arg as a function of
+ * D_8009D2E8 bit 0.  Retail encoding observed in the m0012i field bank at
+ * 0x801A6460 (word 0x000220F0: op 0xF0, argc 1, kind 1 -> actor+0xAC).
+ * Before this leaf was wired the dispatch fell through to the unresolved
+ * boundary, so any script parked on the flag stopped the port.
+ */
+static void test_VM_opcode_F0_D8009D2E8_flag(void) {
+    pe_addr_t task   = 0x80124000u;
+    pe_addr_t actor  = 0x80125000u;
+    pe_addr_t script = 0x80126000u;
+
+    TEST("VM_opcode_F0_D8009D2E8_flag");
+    ResetTestState();
+    D_8009D1A0 = 0u;
+
+    PE_StoreU32(0x800910A0u + 0xF0u * 4u, 0x80016FE0u);
+    PE_StoreU32(0x800910A0u + 0x01u * 4u, 0x800172BCu);
+    PE_StoreU32(script + 0x00u, 0x000220F0u); /* op F0, argc 1, kind 1 */
+    PE_StoreU32(script + 0x04u, 0u);
+    PE_StoreU32(script + 0x08u, 0u);          /* arg0 imm 0 -> actor+0xAC */
+    PE_StoreU32(script + 0x0Cu, 0x00000001u); /* op 1: yields (returns 0) */
+
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(actor + 0x98u, 0u);
+    PE_StoreU32(actor + 0xACu, 0xDEADBEEFu);
+    PE_StoreU32(task + 0x00u, script);
+    PE_StoreU32(task + 0x08u, 0u);
+    PE_StoreU32(task + 0x10u, 1u);
+    PE_StoreU32(task + 0x24u, 0u);
+    PE_StoreU32(0x8009D300u, task);
+
+    PE_StoreU32(0x8009D2E8u, 1u);
+    func_80017018();
+    ASSERT(PE_LoadU32(actor + 0xACu) == 0u, "bit set -> 0");
+    ASSERT(PE_LoadU32(task) == script + 0x14u, "pc advanced past F0");
+
+    PE_StoreU32(task + 0x00u, script);
+    PE_StoreU32(task + 0x10u, 1u);
+    PE_StoreU32(0x8009D300u, task);
+    PE_StoreU32(actor + 0xACu, 0xDEADBEEFu);
+    PE_StoreU32(0x8009D2E8u, 0u);
+    func_80017018();
+    ASSERT(PE_LoadU32(actor + 0xACu) == 1u, "bit clear -> 1");
     PASS();
 }
 
@@ -35261,6 +35313,8 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_movie_stream_helpers.h"
 #include "test_movie_updater.h"
 #include "test_movie_player.h"
+#include "test_movie_autonomous.h"
+#include "test_movie_production.h"
 #include "test_cd_command_queue.h"
 #include "test_cd_lowlevel_init.h"
 #include "test_cd_startup_helpers.h"
@@ -35288,6 +35342,8 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_music_payload.h"
 #include "test_spu_mode_register.h"
 #include "test_spu_dma_event.h"
+#include "test_audio.h"
+#include "test_xa.h"
 #include "test_spu_mode.h"
 #include "test_music_consumer.h"
 #include "test_animation_sound_register.h"
@@ -35372,6 +35428,8 @@ static void test_ATK3_retail_attack_initialization(void)
 #include "test_vblank.h"
 #include "test_timer1.h"
 #include "test_blank_edges.h"
+#include "test_decomp_ports.h"
+#include "test_decomp_ptr_params.h"
 #include "test_script_timer.h"
 #include "test_input_query.h"
 #include "test_fade_wait.h"
@@ -36967,6 +37025,171 @@ static void test_SEW1_opcodes_5c_5d_93(void)
     PASS();
 }
 
+/* Opcode 0x9A (handler 0x800193D8): three pointer args dereferenced and
+ * passed to func_80065AD4.  Live M0091I module 3 args [2,5,0]. */
+static void test_SEW20_opcode_9A_slot_fill(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t container = 0x80110000u;
+    const pe_addr_t slot = container + 0x100u + 2u * 16u;
+    const pe_addr_t mem = 0x800B6A80u;
+    TEST("SEW20_opcode_9A_slot_fill");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0x9Au * 4u, 0x800193D8u);
+    PE_StoreU32(0x800B1624u, container);
+    PE_StoreU32(container + 0x10u, 0x100u);
+    PE_StoreU32(slot + 0xCu, 0x20u);
+    PE_StoreU8(slot + 4u, 0u);      /* low byte read by retail lbu */
+    PE_StoreU8(slot + 5u, 0xCDu);   /* bits 8..15 must be dropped */
+    PE_StoreU32(mem + 0u, 2u);      /* index */
+    PE_StoreU32(mem + 4u, 5u);      /* value */
+    PE_StoreU32(mem + 8u, 3u);      /* count */
+    /* 9A m4(0) m4(1) m4(2) ; 1 */
+    PE_StoreU32(pc, 0x9Au | (3u << 13) | (4u << 17) | (4u << 20) | (4u << 23));
+    PE_StoreU32(pc + 4u, 0u); PE_StoreU32(pc + 8u, 0u);
+    PE_StoreU32(pc + 12u, 1u); PE_StoreU32(pc + 16u, 2u);
+    PE_StoreU32(pc + 20u, 1u);
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "9A is translated");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 28u, "task advanced past 9A and the terminator");
+    ASSERT(PE_LoadU32(slot + 4u) == (5u << 16),
+           "9A published the value word and dropped bits 8..15");
+    ASSERT(PE_LoadU8(slot + 0u) == 6u, "9A OR-ed 6 into the slot flags");
+    ASSERT(PE_LoadU8(slot + 0x20u + 3u * 2u + 1u) == 0xFFu,
+           "9A filled the count-marked entry byte");
+    ASSERT(PE_LoadU16(slot + 0xAu) == 0u, "9A cleared the vertical word");
+    PASS();
+}
+
+/* Opcode 0x71 (handler 0x80018A9C): index*56 record walk + clamp. */
+static void test_SEW21_opcode_71_pan_clamp(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t container = 0x80110000u;
+    const pe_addr_t rec = container + 0x200u + 1u * 56u;
+    const pe_addr_t mem = 0x800B6A80u;
+    TEST("SEW21_opcode_71_pan_clamp");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0x71u * 4u, 0x80018A9Cu);
+    PE_StoreU32(0x800B1624u, container);
+    PE_StoreU32(container + 0x14u, 0x200u);
+    PE_StoreU16(rec + 8u, 10u);
+    PE_StoreU16(rec + 0xAu, 20u);
+    PE_StoreU16(rec + 0x10u, 0u);           /* X min 0 */
+    PE_StoreU16(rec + 0x12u, 5u);           /* X max 5 */
+    PE_StoreU16(rec + 0x14u, 0u);           /* Y min 0 */
+    PE_StoreU16(rec + 0x16u, 100u);         /* Y max 100 */
+    PE_StoreU32(rec, 0x00300000u);          /* page field = 3 */
+    PE_StoreU32(mem + 0u, 1u);
+    PE_StoreU16(mem + 4u, 3u);      /* x, lh low half */
+    PE_StoreU16(mem + 8u, 7u);      /* y, lh low half */
+    PE_StoreU16(mem + 12u, 0x100u); /* page, lh low half */
+    /* 71 m4(0) m4(1) m4(2) m4(3) ; 1 */
+    PE_StoreU32(pc, 0x71u | (4u << 13) | (4u << 17) | (4u << 20) | (4u << 23) | (4u << 26));
+    PE_StoreU32(pc + 4u, 0u); PE_StoreU32(pc + 8u, 0u);
+    PE_StoreU32(pc + 12u, 1u); PE_StoreU32(pc + 16u, 2u);
+    PE_StoreU32(pc + 20u, 3u); PE_StoreU32(pc + 24u, 1u);
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "71 is translated");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 32u, "task advanced past 71 and the terminator");
+    ASSERT((int16_t)PE_LoadU16(rec + 0xCu) == 5, "71 clamped X to the max");
+    ASSERT((int16_t)PE_LoadU16(rec + 0xEu) == 27, "71 clamped Y within range");
+    ASSERT(((PE_LoadU32(rec) >> 8) & 0xFFFu) == 0x103u, "71 accumulated the page field");
+    PASS();
+}
+
+/* Opcode 0xE9 (handler 0x80015C7C): now a real port.  Mirrors the retail
+ * m0351i module 1 `0x456` site exactly: argc 5, modes [0,0,0,1,1] — cmd/a/b are
+ * kind-0 immediate words and operands 3/4 are kind-1 actor words (operand 4 is
+ * not read by the handler).  func_8005D2B4 returns the PE maximum for cmd 0x456
+ * and E9 stores it through *arg3 (the `lw $v1,0xC($s0)` / `sw $v0,0($v1)`). */
+static void test_SEW23_opcode_E9_message_query(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t actor = 0x800BEA90u;
+    const pe_addr_t out_slot = actor + 0xACu;    /* operand 3, kind 1, imm 0 */
+    TEST("SEW23_opcode_E9_message_query");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0xE9u * 4u, 0x80015C7Cu);
+
+    /* Live message record; func_800515F8 reads +0xA (value) and +0x2A (max). */
+    PE_StoreU32(0x8009D254u, 0x80144000u);
+    PE_StoreU32(0x80144000u, 0x80145000u);
+    PE_StoreU16(0x80145000u + 0xAu, 42u);
+    PE_StoreU16(0x80145000u + 0x2Au, 99u);
+    PE_StoreU32(0x8009D014u, 0x800A1AA0u);       /* empty PE-deduction scan */
+
+    /* E9 argc 5, kinds [0,0,0,1,1]: all five 3-bit kinds live in word bits
+     * 17..31 (word2 only carries kinds for args 5..15), so operand 3 is
+     * kind 1 at bits 26..28 and operand 4 at bits 29..31. */
+    PE_StoreU32(pc, 0xE9u | (5u << 13) | (1u << 26) | (1u << 29));
+    PE_StoreU32(pc + 4u, 0u);
+    PE_StoreU32(pc + 8u, 0x456u);
+    PE_StoreU32(pc + 12u, 0u);
+    PE_StoreU32(pc + 16u, 0u);
+    PE_StoreU32(pc + 20u, 0u);   /* operand 3 actor word +0xAC */
+    PE_StoreU32(pc + 24u, 1u);   /* operand 4 actor word +0xB0 (unused) */
+    PE_StoreU32(pc + 28u, 1u);   /* terminating opcode 1 (argc 0) */
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "E9 is translated, not a boundary");
+    ASSERT(PE_LoadU32(out_slot) == 99u, "E9 stored the 0x456 maximum in the actor slot");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 36u, "E9 advanced past its 5-arg frame");
+    PASS();
+}
+
+/* func_8005D2B4 arms 0x453/0x454/0x457 (m0351i query leaves). ----------------- */
+static void test_SEW24_arm_453_454_457(void)
+{
+    TEST("SEW24_arm_453_454_457");
+    ResetTestState();
+    PE_StoreU16(0x800C0E06u, 0xC06Au);
+    ASSERT(func_8005D2B4(0x453, 0, 0) == 0xC06A, "arm 0x453 returns D_800C0E06");
+    func_8005D2B4(0x454, 0x0E08u, 0);
+    ASSERT(PE_LoadU16(0x800C0E08u) == 0x0E08u, "arm 0x454 publishes D_800C0E08");
+    /* arm 0x457 writes (*arg0)<<16 into the live record's +0x8. */
+    PE_StoreU32(0x8009D254u, 0x80100000u);
+    PE_StoreU32(0x80100000u, 0x80101000u);
+    func_8005D2B4(0x457, 0x1234u, 0);
+    ASSERT(PE_LoadU32(0x80101000u + 8u) == 0x12340000u, "arm 0x457 shifted into +0x8");
+    PASS();
+}
+
+/* func_8005D2B4 arm 0x45E (func_8004BCE8) end to end through the window nodes. */
+static void test_SEW25_arm_45E_close_window(void)
+{
+    TEST("SEW25_arm_45E_close_window");
+    ResetTestState();
+    func_80062F9C();
+    PE_StoreU32(0x8009D254u, 0x80100000u);
+    PE_StoreU32(0x80100000u, 0x80101000u);
+    PE_StoreU16(0x80101000u + 0xCu, 7u);
+    PE_StoreU32(0x80101000u + 0x68u, 0u);
+    PE_StoreU16(0x800C0E06u, 0x0064u);
+    PE_StoreU16(0x800C0E0Au, 3u);
+    PE_StoreU32(0x800C0E10u, 0x20u);
+    func_8005D2B4(0x45E, -1, 0);
+    ASSERT(PE_LoadU16(0x800C0E08u) == 7u, "0x45E committed the record +0xC");
+    ASSERT(PE_LoadU32(0x8009CFE8u) == 0u, "0x45E published the window base");
+    ASSERT(PE_LoadU32(0x8009CF60u) == 3u, "0x45E published the page byte");
+    ASSERT(PE_LoadU32(0x8009CF64u) == 0x64u, "0x45E published the 0x64 word");
+    ASSERT(PE_LoadU32(0x8009CF74u) == 0x20u, "negative arg clamps the 0x204 delta to base");
+    ASSERT(PE_LoadU32(0x8009CF84u) == 2u, "0x45E raised the message state to 2");
+    PASS();
+}
+
+/* Every non-m0351i arm is an explicit domain guard: loud, and retail default 0. */
+static void test_SEW26_arm_domain_guard(void)
+{
+    TEST("SEW26_arm_domain_guard");
+    ResetTestState();
+    ASSERT(func_8005D2B4(0x44Cu, 0, 0) == 0, "arm 0x44C is a loud guard, not a guess");
+    ASSERT(func_8005D2B4(0x45Du, 0, 0) == 0, "arm 0x45D is a loud guard, not a guess");
+    ASSERT(func_8005D2B4(0x460u, 0, 0) == 0, "arm 0x460 is a loud guard, not a guess");
+    ASSERT(func_8005D2B4(0x44Bu, 0, 0) == 0, "below-base cmd is a retail miss");
+    ASSERT(func_8005D2B4(0x461u, 0, 0) == 0, "above-base cmd is a retail miss");
+    PASS();
+}
+
 static void test_SEW1_unported_opcode_is_explicit_boundary(void)
 {
     const pe_addr_t pc = 0x80130000u;
@@ -36980,6 +37203,42 @@ static void test_SEW1_unported_opcode_is_explicit_boundary(void)
     ASSERT(PE_Port_ShouldStop(), "unported opcode requests a stop");
     ASSERT(PE_Port_GetStopReason() == PE_PORT_STOP_UNRESOLVED_BOUNDARY, "stop reason is unresolved-boundary");
     ASSERT(PE_LoadU32(0x8009D310u) == pc, "task retains the unported opcode PC");
+    PASS();
+}
+
+/* Opcode 0x97 (handler 0x800192DC): effect-destroy wrapper used by M0374I
+ * module 2 (`*a0 -> a0`, owner `*(0x8009D2F0)`, force 0).  Closes the last
+ * unported opcode on the M0042I -> M0374I park branch
+ * (docs/evidence/field-vm-opcode-coverage/REPORT.md). */
+static void test_SEW19_opcode_97_effect_destroy(void)
+{
+    const pe_addr_t pc = 0x80130000u;
+    const pe_addr_t actor = 0x800BEA90u;
+    const pe_addr_t slot = 0x80150000u;
+    const pe_addr_t table = 0x80160000u;
+    const pe_addr_t entry = 0x80161000u;
+    const pe_addr_t mem = 0x800B6A80u;
+    TEST("SEW19_opcode_97_effect_destroy");
+    SKIP2_SeedTask(pc);
+    PE_StoreU32(0x800910A0u + 0x97u * 4u, 0x800192DCu);
+    PE_StoreU32(0x8009D2F0u, actor);
+    PE_StoreU32(0x800942E4u, slot);           /* index < 11 -> 0xA0C stride */
+    PE_StoreU32(0x800942E0u, table);
+    PE_StoreU32(table + 3u * 4u, entry);      /* record's destroy kind = slot[1] */
+    PE_StoreU32(entry + 0x14u, 0x800C7DC4u);  /* a matching-C destroy callback */
+    PE_StoreU8(slot + 0u, 1u);                /* in use */
+    PE_StoreU8(slot + 1u, 3u);                /* kind */
+    PE_StoreU32(slot + 8u, actor);            /* owner matches */
+    PE_StoreU32(mem + 56u, 0u);               /* operand word = index 0 */
+    /* 97 m4 (value 14) ; 1 (terminate) */
+    PE_StoreU32(pc, 0x97u | (1u << 13) | (4u << 17));
+    PE_StoreU32(pc + 4u, 0u);
+    PE_StoreU32(pc + 8u, 14u);
+    PE_StoreU32(pc + 12u, 1u);
+    func_80017018();
+    ASSERT(!PE_Port_ShouldStop(), "97 is translated");
+    ASSERT(PE_LoadU32(0x8009D310u) == pc + 20u, "task advanced past 97 and the terminator");
+    ASSERT(PE_LoadU8(slot + 0u) == 0u, "97 cleared the matching effect slot");
     PASS();
 }
 
@@ -38524,6 +38783,111 @@ static void test_OTC1_clearotagr_small_table(void)
     PASS();
 }
 
+/* PE-SAVE-PAGE — func_80043DA4 command 5, 37CD0.s / 3BD84.s.
+ *
+ * The page entry installs its input handler at +0x2C and its draw callback at
+ * +0x30; every confirm case builds the sub-page whose own callback pair is
+ * pinned here.  The confirm selection is func_80063428(list) =
+ * list[+0x34]*list[+0x48] + list[+0x44], so with a one-column list spec the
+ * column field at +0x44 selects the jump-table case directly. */
+static pe_addr_t savepage_build(void)
+{
+    PE_RamInit();
+    func_80062F9C();
+    /* func_8005DAB4(0x20) list spec: columns 1 at +8, visible 4 at +12.  A
+     * zeroed columns field makes func_800647D0 trap, as retail does. */
+    PE_StoreU32(0x80092C88u+8u,1u);
+    PE_StoreU32(0x80092C88u+12u,4u);
+    func_8004AD9C(0x11223344u);
+    return func_80062A34(1u,0x20u);
+}
+
+static void test_SAVEPAGE_8004AD9C_entry(void)
+{
+    pe_addr_t window,node;
+    TEST("SAVEPAGE_8004AD9C_entry_callbacks_owner_and_rows");
+    window=savepage_build();
+    ASSERT(window!=0u,"0x20 save page window not registered");
+    ASSERT(PE_LoadU32(window+4u)==0x11223344u,"page owner not stored at +4");
+    ASSERT(PE_LoadU32(window+44u)==0x8004AE1Cu,"page input handler not at +0x2C");
+    ASSERT(PE_LoadU32(window+48u)==0u,"0x20 page must not install a +0x30 draw");
+    node=func_80062A20(window,0u);
+    ASSERT(node!=0u,"0x20 save page has no child list");
+    ASSERT(PE_LoadU32(node+48u)==0x8004FF30u,"list draw callback not at +0x30");
+    ASSERT(PE_LoadU32(node+88u)==4u,"func_800647D0(node,4) rows");
+    /* Nothing selected: selected==-1 skips the whole jump table and still
+     * reports the event handled. */
+    PE_StoreU32(node+68u,UINT32_MAX);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"confirm with no selection");
+    PASS();
+}
+
+static void test_SAVEPAGE_8004AE1C_slot_pages(void)
+{
+    pe_addr_t window,node,page,list;
+    TEST("SAVEPAGE_8004AE1C_confirm_builds_the_four_slot_pages");
+    /* case 0 -> 0x21 */
+    window=savepage_build();node=func_80062A20(window,0u);
+    PE_StoreU32(node+68u,0u);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"case 0 confirm return");
+    page=func_80062A34(1u,0x21u);
+    ASSERT(page!=0u,"case 0 did not build the 0x21 page");
+    ASSERT(PE_LoadU32(page+44u)==0x8004AFA4u,"0x21 input handler");
+    list=func_80062A20(page,0u);
+    ASSERT(list!=0u && PE_LoadU32(list+48u)==0x8004FF58u,"0x21 draw callback");
+    /* cancel destroys the page */
+    ASSERT(func_8004AFA4(page,0x40u)==1,"0x21 cancel return");
+    ASSERT(func_80062A34(1u,0x21u)==0u,"0x21 cancel did not unlink the page");
+
+    /* case 1 -> 0x23 */
+    window=savepage_build();node=func_80062A20(window,0u);
+    PE_StoreU32(node+68u,1u);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"case 1 confirm return");
+    page=func_80062A34(1u,0x23u);
+    ASSERT(page!=0u,"case 1 did not build the 0x23 page");
+    ASSERT(PE_LoadU32(page+44u)==0x8004B0A4u,"0x23 input handler");
+    list=func_80062A20(page,0u);
+    ASSERT(list!=0u && PE_LoadU32(list+48u)==0x8004FF80u,"0x23 draw callback");
+
+    /* case 2 -> 0x2E with the nested 0x31 list */
+    window=savepage_build();node=func_80062A20(window,0u);
+    PE_StoreU32(node+68u,2u);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"case 2 confirm return");
+    page=func_80062A34(1u,0x2Eu);
+    ASSERT(page!=0u,"case 2 did not build the 0x2E page");
+    ASSERT(PE_LoadU32(page+44u)==0x8004B394u,"0x2E input handler");
+    ASSERT(PE_LoadU32(page+48u)==0x8004B214u,"0x2E draw callback");
+    ASSERT(PE_LoadU32(page+76u)==0x800922D4u,"0x2E +0x4C row table");
+    ASSERT(PE_LoadU32(page+64u)==1u,"0x2E +0x40 flag");
+    list=func_80062A34(2u,0x31u);
+    ASSERT(list!=0u,"0x2E did not build the nested 0x31 list");
+    ASSERT(PE_LoadU32(list+48u)==0x8004B55Cu,"0x31 draw callback");
+    {
+        pe_addr_t list2e=func_80062A34(2u,0x2Eu);
+        ASSERT(list2e!=0u,"0x2E list node missing");
+        ASSERT(PE_LoadU32(list2e+124u)==list && PE_LoadU32(list+120u)==list2e,
+               "0x2E/0x31 sibling links");
+        ASSERT(PE_LoadU32(list2e+40u)==1u,"0x2E list +0x28 flag");
+    }
+
+    /* case 3 -> 0x38 modal page; it also republishes the alarm timer */
+    window=savepage_build();node=func_80062A20(window,0u);
+    PE_StoreU32(node+68u,3u);
+    ASSERT(func_8004AE1C(window,0x10000u)==1,"case 3 confirm return");
+    page=func_80062A34(1u,0x38u);
+    ASSERT(page!=0u,"case 3 did not build the 0x38 page");
+    ASSERT(PE_LoadU32(page+44u)==0x8004B650u,"0x38 input handler");
+    ASSERT(PE_LoadU32(page+48u)==0x8004B5DCu,"0x38 draw callback");
+    ASSERT(PE_LoadU32(0x8009CFE4u)==(uint32_t)func_8005E884(),
+           "0x38 did not republish the alarm timer");
+    /* up/down adjust the timer and cancel restores it, each handled */
+    ASSERT(func_8004B650(page,0x1000u)==1,"0x38 up return");
+    ASSERT(func_8004B650(page,0x4000u)==1,"0x38 down return");
+    ASSERT(func_8004B650(page,0x10000u)==1,"0x38 confirm return");
+    ASSERT(func_8004B650(page,0x40u)==1,"0x38 cancel return");
+    PASS();
+}
+
 /* ── main ────────────────────────────────────────────────────────────── */
 #include <stdlib.h>
 #include <string.h>
@@ -38935,6 +39299,7 @@ int main(void)
     test_BTL27_15240_type0_empty();
     test_BTL27_type0_9b_then_14();
     test_BTL27_type3_double_miss_yields();
+    test_VM_opcode_F0_D8009D2E8_flag();
     test_BTL28_12E7C_and_79FB4_zero();
     test_BTL28_type5_0c_d9_zero_pose();
     test_BTL29_1784C_task_words();
@@ -39920,6 +40285,13 @@ int main(void)
     test_SKIP2_opening_script_spawns_aya();
     test_SEW1_opcodes_5c_5d_93();
     test_SEW1_unported_opcode_is_explicit_boundary();
+    test_SEW19_opcode_97_effect_destroy();
+    test_SEW20_opcode_9A_slot_fill();
+    test_SEW21_opcode_71_pan_clamp();
+    test_SEW23_opcode_E9_message_query();
+    test_SEW24_arm_453_454_457();
+    test_SEW25_arm_45E_close_window();
+    test_SEW26_arm_domain_guard();
     test_SEW2_leaf_opcodes();
     test_SEW3_container_leaves();
     test_SEW4_heading_opcode_cb();
@@ -39975,6 +40347,12 @@ int main(void)
     test_DAY2_movie_stream_helpers();
     test_DAY2_movie_updater();
     test_DAY2_movie_player();
+    test_DAY2_movie_autonomous();
+    test_DAY2_movie_production_frame();
+    test_DAY2_92ce8_media_loop_tail();
+    test_DAY2_c89c_second_table_escape();
+    test_DAY2_91b64_record_limit_latch();
+    test_DAY2_movie_multiframe();
     test_DAY2_cd_command_queue();
     test_DAY2_cd_lowlevel_init();
     test_DAY2_cd_startup_helpers();
@@ -40003,6 +40381,14 @@ int main(void)
     test_DAY2_spu_mode_register();
     test_DAY2_spu_dma_event();
     test_DAY2_spu_mode();
+    test_DAY2_spu_adpcm_shift0();
+    test_DAY2_spu_adpcm_filter1();
+    test_DAY2_spu_adpcm16();
+    test_DAY2_spu_voice_mix();
+    test_DAY2_spu_disabled_silent();
+    test_DAY2_spu_init_keyon();
+    test_DAY2_audio_wav_sink();
+    test_XA_run_all();
     test_DAY2_music_consumer();
     test_DAY1_animation_sound_register();
     test_DAY1_m0034i_modes();
@@ -40041,6 +40427,7 @@ int main(void)
     test_DAY1_controller_sdk();
     test_DAY1_game_input();
     test_DAY1_vsync();
+    test_DAY1_host_vsync_contract();
     test_DAY1_vblank();
     test_DAY1_timer1();
     test_DAY1_blank_edges();
@@ -40054,6 +40441,9 @@ int main(void)
     test_DAY1_exit_menu_input();
     test_DAY1_card_confirmation();
     test_DAY1_card_status();
+    test_DAY1_card_present_kernel();
+    test_DAY1_card_file_api();
+    test_DAY1_card_device_prefix_name();
     test_DAY1_card_operation();
     test_DAY1_card_driver();
     test_DAY1_card_cleanup();
@@ -40106,11 +40496,18 @@ int main(void)
     test_EV1_both_tags_hit();
 
     /* Phase 6E-OTC1 — ClearOTagR synchronous OTC fill (5 tests). */
-    test_OTC1_clearotagr_fill_and_tail();
-    test_OTC1_clearotagr_null_ot_skip();
+    test_OTC1_clearotagr_fill_and_tail();    test_OTC1_clearotagr_null_ot_skip();
     test_OTC1_clearotagr_debug_print_boundary();
     test_OTC1_clearotagr_dirty_jtb_boundary();
     test_OTC1_clearotagr_small_table();
+
+    /* Decomp-derived port regression (8 tests). */
+    test_DECOMP_all();
+    test_DECOMPPTR_all();
+
+    /* PE-SAVE-PAGE — func_80043DA4 command 5 file save/load page (2 tests). */
+    test_SAVEPAGE_8004AD9C_entry();
+    test_SAVEPAGE_8004AE1C_slot_pages();
 
     /* Guard tests (4 tests) */
     test_no_emulator_process();

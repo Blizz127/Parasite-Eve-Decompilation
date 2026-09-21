@@ -25,13 +25,13 @@ def main():
   digest=hashlib.sha256(ex[a-0xF800:b-0xF800]).hexdigest();assert digest==want;print(hex(a),digest)
  cases=[];seen=set()
  for n in range(4096):
-  r,index=fixture(ex,n);regs=execute(r,0x800405A4,(index,),stop_at={0x800726F4,0x8007DD44,0x8007DD54,0x8007DD74},visited_pcs=seen)
-  stopped=int(regs[31]!=0);h=fnv(b''.join(r[a:a+size] for a,size in RANGES));cases.append((stopped,regs[4] if stopped else 0,h))
+  r,index=fixture(ex,n);sp=[];regs=execute(r,0x800405A4,(index,),stop_at=set(),visited_pcs=seen,stop_pc=sp)
+  stopped=int(regs[31]!=0);h=fnv(b''.join(r[a:a+size] for a,size in RANGES));cases.append((stopped,sp[0] if sp else 0,regs[4] if stopped else 0,h))
  assert {0x80040604,0x8004060C,0x8004075C,0x80040820,0x800408DC,0x8004D4A0,0x8004298C,0x80040928}<=seen
- out=['/* Original card status paths; stopped argument is first TestEvent handle. */','static const struct {unsigned stopped;uint32_t argument;uint64_t hash;} DAY1_card_status_cases[]={']
- out.extend(f'{{{a},0x{b:X}u,UINT64_C(0x{c:016X})}},' for a,b,c in cases);out.append('};')
+ out=['/* Original card status paths; TestEvent returns (B(0Bh), mode 1000h) and the',' * card kernel veneers model the empty slot (psx-spx timeout -> eject/err),',' * so these pin each path through the returning status machine. */','static const struct {unsigned stopped;uint32_t target;uint32_t argument;uint64_t hash;} DAY1_card_status_cases[]={']
+ out.extend(f'{{{a},0x{b:X}u,0x{c:X}u,UINT64_C(0x{d:016X})}},' for a,b,c,d in cases);out.append('};')
  header='\n'.join(out)+'\n';path=ROOT/'pc_port/tests/retail_card_status_cases.h'
  if '--write-header' in sys.argv:path.write_text(header)
  else:assert path.read_text()==header
- print('PASS4096 original card status cases; returning paths and exact first BIOS boundary')
+ print('PASS4096 original card status cases; empty-slot card kernel modeled')
 if __name__=='__main__':main()

@@ -61,8 +61,12 @@ tools/era/maspsx/maspsx/*
 !tools/era/maspsx/tests/
 tools/era/maspsx/tests/*
 !tools/era/maspsx/tests/test_fill_store_delay_slot.py
+!tools/era/maspsx/tests/test_fill_jal_delay_slot.py
 !tools/era/maspsx/tests/test_three_word_symbol_store.py
 !tools/era/maspsx/tests/test_dispatch_fold.py
+!tools/era/maspsx/tests/test_dispatch_fold_materialised.py
+!tools/era/maspsx/tests/test_passthrough_symbol_load.py
+!tools/era/maspsx/tests/test_fill_epilogue_delay_slot.py
 build-port/
 pc_port/build/
 pc_port/build-san/
@@ -70,6 +74,10 @@ pc_port/build-*/
 
 # Local disc pointer used by native battle oracles (path only; never the BIN)
 local/pe_disc1.path
+
+# Host memory-card images (never commit; PE_CARD_IMAGE default is in build/)
+*.mcr
+*.mcd
 
 # Agent scratch / local verify trees (leaves lane)
 .claude/

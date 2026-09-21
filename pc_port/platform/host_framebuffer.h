@@ -19,7 +19,23 @@ void HostFB_Present(void);
  * guest state; keeps the present counter and frame-limit budget. */
 void HostFB_PresentDispEnv(pe_addr_t env);
 void HostFB_SetDispMask(int mask);
-void HostFB_VSync(int mode);
+/* Returns the same value the original 80073A44 produces from its host-side
+ * device model: the absolute VBlank counter (800956AC) for negative modes and
+ * the entry-time 16-bit timer1 delta for every other mode.  The outer
+ * transition loop stores negative and mode-1 query results, so a void shim
+ * cannot preserve behavior.  Waiting modes also refresh the timer1 baseline
+ * the host counter is measured against. */
+uint32_t HostFB_VSync(int mode);
+/* Current timer1-lane counter (host model of 1F801110 in the VBlank lane). */
+uint32_t HostFB_VSyncTimer(void);
+/* Advance the modeled CD device clock by the quantum a guest poll-loop
+ * iteration stands for, then deliver its IRQs.  The guest's 2000-iteration
+ * stream waits (func_80121270 call batches) represent far more real CPU time
+ * than one 1024-cycle counter query, so a stream wait uses this larger
+ * quantum; otherwise the modeled 2x drive delivers only ~3 sectors inside the
+ * guest's own retry budget and the player restarts mid-frame from sector 0.
+ * Read-only on guest state beyond the device/IRQ model. */
+void HostFB_StreamTick(void);
 void HostFB_DrawSync(int mode);
 int  HostFB_WritePPM(const char *path);
 const uint8_t *HostFB_GetPixels(void);

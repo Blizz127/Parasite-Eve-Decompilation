@@ -1,3 +1,10 @@
+> **PROJECT GOAL:** a native PC port in the mould of Ship of Harkinian /
+> the Silent Hill decomp ports, ultimately re-rendered (HD-2D).
+> **Read `docs/ai_context/PORT_GOAL_AND_PLAN.md` before planning any work.**
+> The port is the deliverable; the decompilation is how you get there.
+> Recovered *assembly* is worth nothing to the port -- you cannot run PS1 MIPS
+> on x86. Report C-only executed-path coverage, not just total coverage.
+
 # Project plan
 
 Roadmap for the Parasite Eve (PS1, NTSC-U) decompilation. Each phase must be

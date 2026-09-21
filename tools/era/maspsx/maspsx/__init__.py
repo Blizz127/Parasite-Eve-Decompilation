@@ -20,6 +20,31 @@
 #      2.21/addiu_at, select the ASPSX 2.30 three-word lui/addu/op-%lo form
 #      instead of lui/addiu/addu/op-0. Compound semicolon lines retain the
 #      legacy expansion. Default OFF: opt in per leaf.
+#   3. dispatch_fold symbol retarget (ctor arg, or env MASPSX_DISPATCH_FOLD=<sym>,
+#      enabled only alongside three_word_symbol_store): substitute the shared
+#      rodata pool table `<sym>` for cc1's local switch-table labels. Covers
+#      both the compound indexed form (`lw $r,$L<n>($b)`) and the LICM-hoisted
+#      materialised form (cc1 `la $r,$L<n>`, or an explicit
+#      `lui $r,%hi($L<n>)` / `addiu $r,$r,%lo($L<n>)` pair).
+#      Default OFF: opt in per leaf; the dead local table is stripped build-side.
+#   4. fill_jal_delay_slot (ctor arg, or env MASPSX_FILL_JAL_DELAY_SLOT=1):
+#      same macro scheduling trick as (1) but for an absolute `sw/sh/sb $r,SYM`
+#      store macro immediately preceding a `jal SYM` call, rather than a bare
+#      `j $31` return. cc1 emits `<store> / jal` with the macro opaque to its
+#      delay-slot filler; ASPSX expanded the macro and moved the store half into
+#      the call delay slot:  lui $at,%hi(SYM) / jal SYM / op $r,%lo(SYM)($at).
+#      ROM evidence (Parasite Eve disc1): 18 jal delay slots carry an $at store;
+#      17 are the `%lo(SYM)($at)` macro form with the matching
+#      `lui $at,%hi(SYM)` immediately before the call.  Verified specimens:
+#      0x800740AC `sh $zero,%lo(D_800945E6)($at)` in func_80073F00 and
+#      0x80076EA0 `sw $v0,%lo(D_80095874)($at)` in func_80076C34; the remaining
+#      15 are `sw` sites in other disc1 functions.  The eighteenth is a
+#      large-offset `-0x2004($at)` variant outside this gate's shape.  Plain
+#      register-offset stores need no gate: cc1's own reorg already schedules
+#      those into jal slots (899 in disc1).
+#      Deliberately distinct from (1): that gate is `sw`-only and keys on a bare
+#      `j $31`, so it never fires here and its behaviour is unchanged.
+#      Default OFF: opt in per leaf.
 import struct
 import os
 import re
@@ -399,6 +424,43 @@ def load_immediate_double(line: str):
     return res
 
 
+def is_coff_directive(line: str):
+    # skip coff directives - gnu as does not like them
+    if not line.startswith("."):
+        return False
+    return (
+        line.startswith(".def\t")
+        or line.startswith(".begin\t")
+        or line.startswith(".bend\t")
+    )
+
+
+class PassthroughProcessor:
+    # LOCAL PATCH (compat): upstream maspsx.py imports this symbol; the
+    # vendored __init__.py predated it.  Body copied verbatim from upstream
+    # (mkst/maspsx maspsx/__init__.py) so the module import succeeds; the
+    # --passthrough path is not used by scripts/build_us.sh.
+
+    def __init__(self, lines: List[str]):
+        self.lines = [x.strip() for x in lines]
+
+    def process_lines(self) -> List[str]:
+        res = []
+
+        for line in self.lines:
+            res += self.process_line(line)
+
+        return res
+
+    def process_line(self, line: str):
+        res = []
+
+        if not is_coff_directive(line):
+            res.append(line)
+
+        return res
+
+
 class MaspsxProcessor:
     is_reorder = True
     skip_instructions = 0
@@ -421,7 +483,12 @@ class MaspsxProcessor:
         use_comm_section=False,
         use_comm_for_lcomm=False,
         fill_store_delay_slot=False,
+        fill_jal_delay_slot=False,
+        fill_indexed_store_delay_slot=False,
+        fill_register_store_delay_slot=False,
+        fill_epilogue_delay_slot=False,
         three_word_symbol_store=False,
+        passthrough_symbol_load=False,
         dispatch_fold_symbol=None,
     ):
         self.lines = [x.strip() for x in lines]
@@ -450,11 +517,60 @@ class MaspsxProcessor:
             fill_store_delay_slot
             or os.environ.get("MASPSX_FILL_STORE_DELAY_SLOT") == "1"
         )
+        # LOCAL PATCH: same macro scheduling as fill_store_delay_slot, but for
+        # an absolute `sw/sh/sb $r,SYM` store macro immediately preceding a
+        # `jal SYM` call: emit `lui $at,%hi(SYM) / jal SYM / op %lo(SYM)($at)`.
+        # Separate, default-OFF gate; the `j $31` behaviour above is untouched.
+        self.fill_jal_delay_slot = (
+            fill_jal_delay_slot
+            or os.environ.get("MASPSX_FILL_JAL_DELAY_SLOT") == "1"
+        )
+        # LOCAL PATCH: fill the return delay slot of a *bare* `j $31` with a
+        # preceding INDEXED symbolic store (`sb/sh/sw $r,SYM($base)`), emitting
+        # `lui $at,%hi / addu $at,$at,$base / j $31 / op $r,%lo($at)`.  This is
+        # distinct from fill_store_delay_slot (absolute `sw $r,SYM` macro):
+        # some ROM leaves (e.g. func_80076B20) keep the indexed store in the
+        # delay slot instead of pre-jr.  Per-leaf opt-in via env; default OFF.
+        self.fill_indexed_store_delay_slot = (
+            fill_indexed_store_delay_slot
+            or os.environ.get("MASPSX_FILL_INDEXED_STORE_DELAY_SLOT") == "1"
+        )
+        # LOCAL PATCH: fill the return delay slot of a *bare* `j $31` with a
+        # preceding plain register-offset store (`sb/sh/sw $r,off($base)` with a
+        # 16-bit offset).  cc1 leaves the store pre-jr on this shape; retail
+        # ASPSX scheduled it into the slot (ROM leaf func_80087798).  Pure
+        # reorder: emit `j $31` then the store.  Per-leaf opt-in via env;
+        # default OFF.
+        self.fill_register_store_delay_slot = (
+            fill_register_store_delay_slot
+            or os.environ.get("MASPSX_FILL_REGISTER_STORE_DELAY_SLOT") == "1"
+        )
+        # LOCAL PATCH: move the epilogue stack restore (`addu/addiu $sp,$sp,N`)
+        # into the delay slot of the immediately following bare `j $31`.  cc1
+        # 2.7.2 emits the restore BEFORE the return jump (it relies on the
+        # assembler's delay-slot scheduler); ASPSX 2.21 hoists it into the slot,
+        # giving `lw $31,.. / lw $sX,.. / j $31 / addiu $sp,$sp,N`.  maspsx
+        # otherwise appends a `nop` slot.  Pure reorder, no address synthesis.
+        # Per-leaf opt-in via env; default OFF.
+        self.fill_epilogue_delay_slot = (
+            fill_epilogue_delay_slot
+            or os.environ.get("MASPSX_FILL_EPILOGUE_DELAY_SLOT") == "1"
+        )
         # LOCAL PATCH: the env gate keeps the untracked maspsx.py driver
         # untouched and permits per-leaf selection.
         self.three_word_symbol_store = (
             three_word_symbol_store
             or os.environ.get("MASPSX_THREE_WORD_SYMBOL_STORE") == "1"
+        )
+        # LOCAL PATCH: destination-register symbol+register load form.  Some
+        # ROM leaves keep cc1's `lbu $2,SYM($4)` shape, which GNU as expands
+        # natively as `lui $2,%hi / addu $2,$2,$4 / lbu $2,%lo($2)` (temp =
+        # DESTINATION register).  The default maspsx path forces $at instead;
+        # this gate passes the line through unchanged for the leaves whose ROM
+        # uses the destination-register form.  Per-leaf opt-in via env.
+        self.passthrough_symbol_load = (
+            passthrough_symbol_load
+            or os.environ.get("MASPSX_PASSTHROUGH_SYMBOL_LOAD") == "1"
         )
         # LOCAL PATCH (switch dispatch retarget): substitute the shared
         # rodata pool table symbol for cc1-local $L<n> switch-table
@@ -671,6 +787,29 @@ class MaspsxProcessor:
             op, *rest = line.split()
             return op == "j" and rest == ["$31"]
         return False
+
+    def _next_line_jal_target(self) -> str:
+        # LOCAL PATCH helper: when the next non-blank, non-comment input line is
+        # exactly `jal <symbol>`, return the target operand; otherwise "".  Like
+        # _next_line_is_return_jump it deliberately does NOT skip `.set` or label
+        # lines: a label between the store and the call means the store is
+        # conditional / in another basic block, and a cc1 `.set noreorder` block
+        # means cc1 already scheduled the call itself.
+        i = self.line_index + 1
+        while i < len(self.lines):
+            line = self.lines[i]
+            if line == "" or line.startswith("#"):
+                i += 1
+                continue
+            op, *rest = line.split()
+            if op == "jal" and len(rest) == 1 and not rest[0].startswith("$"):
+                return rest[0]
+            return ""
+        return ""
+
+    def _is_stack_restore(self, operands: str) -> bool:
+        # LOCAL PATCH helper: `$sp,$sp,<imm>` (epilogue stack deallocation).
+        return re.match(r"^\$sp\s*,\s*\$sp\s*,\s*(0x[0-9A-Fa-f]+|-?\d+)$", operands) is not None
 
     def _uses_gp(self, line: str) -> bool:
         if self.sdata_limit == 0:
@@ -940,6 +1079,35 @@ class MaspsxProcessor:
         if line.startswith("$L"):
             return [line]
 
+        # LOCAL PATCH (switch dispatch retarget, materialised form): when a
+        # `switch` sits inside a loop, cc1's LICM hoists the loop-invariant
+        # table base out of the loop instead of keeping the compound indexed
+        # load handled below, so the `$L<digits>` label never appears as a
+        # load/store addend and the FOLD gate cannot see it. cc1 emits that
+        # hoisted base as `la $r,$L<n>`, which GNU as later expands to
+        # `lui $r,%hi($L<n>)` / `addiu $r,$r,%lo($L<n>)` — i.e. after maspsx,
+        # so the %hi/%lo form must be caught here too for callers that feed
+        # cc1's own pair. Under the SAME THREE_WORD + FOLD gates that guard
+        # the compound retarget, substitute the configured shared rodata pool
+        # table for a compiler-local label in `la $r,$L<n>` and in %hi()/%lo()
+        # operands, so the materialised dispatch resolves against the pool
+        # copy. Named symbols, offset addends, and plain `$L` uses (branch
+        # targets, the table definition itself) are never substituted; with
+        # either gate off the line is untouched.
+        if self.three_word_symbol_store and self.dispatch_fold_symbol:
+            line = re.sub(
+                r"%(hi|lo)\(\$L\d+\)",
+                lambda match: f"%{match.group(1)}({self.dispatch_fold_symbol})",
+                line,
+            )
+            line = re.sub(
+                r"(\bla\s+\$[a-z0-9]+,\s*)\$L\d+(\s*)$",
+                lambda match: (
+                    f"{match.group(1)}{self.dispatch_fold_symbol}{match.group(2)}"
+                ),
+                line,
+            )
+
         actual_r_dest = None
         is_macro = ";" in line
         if is_macro:
@@ -1013,7 +1181,15 @@ class MaspsxProcessor:
                     and re.match(r"^\$L\d+$", operand)
                 ):
                     operand = self.dispatch_fold_symbol
-                if self.addiu_at:
+                if self.passthrough_symbol_load and not is_macro:
+                    # LOCAL PATCH: destination-register form.  GNU as expands
+                    # `op $r,SYM($b)` as lui $r,%hi / addu $r,$r,$b /
+                    # op $r,%lo($r); pass the cc1 line through for the leaves
+                    # whose ROM uses that temp-register shape instead of $at.
+                    res.append(
+                        f"{line} # DEBUG: passthrough symbol load"
+                    )
+                elif self.addiu_at:
                     # LOCAL PATCH: three_word_symbol_store gate (extended from
                     # stores to loads) — when enabled and not a compound macro
                     # line, emit the ASPSX 2.30 3-word form explicitly with $at
@@ -1143,11 +1319,57 @@ class MaspsxProcessor:
                         ]
                     )
                     self.skip_instructions = 1
+                elif (
+                    self.fill_jal_delay_slot
+                    and op in store_mnemonics
+                    and self._next_line_jal_target()
+                ):
+                    # LOCAL PATCH: same macro scheduling as
+                    # FILL_STORE_DELAY_SLOT above, but the consumer is a `jal`
+                    # call rather than a bare `j $31`. ASPSX expanded the macro
+                    # and moved the store half into the call delay slot:
+                    #   lui $at,%hi(SYM) / jal SYM / op $r,%lo(SYM)($at)
+                    # Consuming the `jal` line via skip_instructions also
+                    # suppresses the nop maspsx would otherwise append for it.
+                    # Default OFF; the jr gate above is not touched.
+                    res.extend(
+                        [
+                            "# FILL_JAL_DELAY_SLOT START",
+                            ".set\tnoat",
+                            f"lui\t$at,%hi({operand})",
+                            f"jal\t{self._next_line_jal_target()}",
+                            f"{op}\t{r_dest},%lo({operand})($at)",
+                            ".set\tat",
+                            "# FILL_JAL_DELAY_SLOT END",
+                        ]
+                    )
+                    self.skip_instructions = 1
                 else:
                     res.append(line)
             elif is_addend and r_source:
                 # e.g. sw	$a0,ctlbuf($v0)
                 if (
+                    self.fill_indexed_store_delay_slot
+                    and op in store_mnemonics
+                    and self._next_line_is_return_jump()
+                ):
+                    # LOCAL PATCH: move the indexed symbolic store into the
+                    # bare `j $31` delay slot (ASPSX order:
+                    # lui $at,%hi / addu $at,$at,$b / j $31 / op %lo($at)).
+                    res.extend(
+                        [
+                            "# INDEXED_FILL_STORE_DELAY_SLOT START",
+                            ".set\tnoat",
+                            f"lui\t$at,%hi({operand})",
+                            f"addu\t$at,$at,{r_source}",
+                            "j\t$31",
+                            f"{op}\t{r_dest},%lo({operand})($at)",
+                            ".set\tat",
+                            "# INDEXED_FILL_STORE_DELAY_SLOT END",
+                        ]
+                    )
+                    self.skip_instructions = 1
+                elif (
                     self.addiu_at
                     and op != "la"
                     and (not self.three_word_symbol_store or is_macro)
@@ -1179,6 +1401,23 @@ class MaspsxProcessor:
                         "# EXPAND_AT END",
                     ]
                 )
+            elif (
+                self.fill_register_store_delay_slot
+                and r_source
+                and op in store_mnemonics
+                and self._next_line_is_return_jump()
+            ):
+                # LOCAL PATCH: move a plain register-offset store into the bare
+                # `j $31` delay slot (pure reorder; no address synthesis).
+                res.extend(
+                    [
+                        "# REGISTER_FILL_STORE_DELAY_SLOT START",
+                        "j\t$31",
+                        line,
+                        "# REGISTER_FILL_STORE_DELAY_SLOT END",
+                    ]
+                )
+                self.skip_instructions = 1
             else:
                 res.append(line)
 
@@ -1190,6 +1429,25 @@ class MaspsxProcessor:
         elif op == "move":
             # expand move $2,$16 to addu $2,$16,$zero
             res.append(expand_move(line))
+
+        elif (
+            self.fill_epilogue_delay_slot
+            and op in ("addu", "addiu")
+            and self._is_stack_restore(rest[0])
+            and self._next_line_is_return_jump()
+        ):
+            # LOCAL PATCH: ASPSX hoists the epilogue stack restore into the
+            # delay slot of the return jump; cc1 2.7.2 leaves it pre-jr and
+            # maspsx would otherwise emit a `nop` slot.  Pure reorder.
+            res.extend(
+                [
+                    "# EPILOGUE_FILL_DELAY_SLOT START",
+                    "j\t$31",
+                    line,
+                    "# EPILOGUE_FILL_DELAY_SLOT END",
+                ]
+            )
+            self.skip_instructions = 1
 
         elif op in ("addu", "subu", "sra", "srl", "srr", "sll", "or"):
             # no extra processing required

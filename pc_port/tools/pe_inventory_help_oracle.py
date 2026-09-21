@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Original inventory help selectors, filtered lists and complete menu drawing.
 
-Memory-card prompts 36..39 retain their separate native boundary and are not
-included here. All other original help selections execute without hooks.
+Groups 36..39 are the memory-card prompt help ids.  They were previously
+excluded because the native port stopped at a boundary; func_8004C608
+now implements all four exactly, so the original code is executed for them
+too and their memory fingerprints pin the port's behavior.
 """
 import hashlib
 import struct
@@ -26,7 +28,7 @@ for index in (0,1,2,0xFFFFFFFF):
         for alternate in (0,1):case(7,index=index,reuse=reuse,alternate=alternate)
 for bits in (0,1,0x80000,0xFFFFF,0xFFF00000,0xAAAAAAAA,0xFFFFFFFF):case(8,bits=bits)
 for group in range(62):
-    if group not in (36,37,38,39):case(group=group,index=1)
+    case(group=group,index=1)
 for battle in (0,1):
     for enabled in (0,0x1F,0x1EF,0x1FF):
         for index in (-1,0,4,8):case(group=0,battle=battle,enabled=enabled,index=index)

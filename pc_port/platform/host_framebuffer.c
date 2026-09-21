@@ -12,10 +12,13 @@
 #include "pe_guest_ram.h"
 #include "pe_gpu.h"
 #include "pe_spu_dma.h"
+#include "pe_spu.h"
+#include "pe_audio.h"
 #include "pe_sdk.h"
 #include "pe_cdreg.h"
 #include "pe_mdec.h"
 #include "pe_irq_delivery.h"
+#include "pe_bootstrap.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +32,27 @@ static int     fb_mask      = 0;   /* 0 = blanked, 1 = visible (SetDispMask) */
 static uint32_t fb_device_cycles = 0;
 static int     fb_vsync_count = 0;
 static int     fb_drawsync_count = 0;
+/* Host model of the original's timer1 scanline counter (guest 0x1F801110,
+ * live symbol 0x80094578) and of the entry-scanline baseline at 0x8009457C.
+ * The outer transition loop stores the mode-1 query result into 0x8019CC14,
+ * so a void shim cannot preserve behavior. See docs/ai_context/
+ * TRANSITION_OUTER_LOOP.md and VSYNC_CONTRACT.md. */
+static uint32_t fb_vsync_timer = 0;      /* 0x80094578 (1F801110 low half) */
+static uint32_t fb_vsync_baseline = 0;   /* 0x8009457C, 16-bit scanline latch */
+
+/* Audio renders exactly one vblank per presented frame.  Both present entry
+ * points (HostFB_Present and HostFB_PresentDispEnv) advance fb_presented, so
+ * chasing that counter keeps the cadence correct even when a frame uses the
+ * DispEnv path.  Host-only state; no guest RAM is touched. */
+static int fb_audio_rendered = 0;
+
+static void HostFB_ServiceAudio(void)
+{
+    while (fb_audio_rendered < fb_presented) {
+        PE_Spu_RenderVBlank();
+        fb_audio_rendered++;
+    }
+}
 
 /* ── public API ───────────────────────────────────────────────────────── */
 
@@ -40,6 +64,9 @@ void HostFB_Init(void)
     fb_vsync_count = 0;
     fb_device_cycles = 0;
     fb_drawsync_count = 0;
+    fb_vsync_timer = 0;
+    fb_vsync_baseline = 0;
+    fb_audio_rendered = 0;
 }
 
 void HostFB_ClearImage(int x, int y, int w, int h, uint8_t r, uint8_t g, uint8_t b)
@@ -68,6 +95,7 @@ void HostFB_Present(void)
     fb_presented++;
     PE_Port_FramePresented(fb_presented);
     PE_Port_InvokePresentHook();
+    HostFB_ServiceAudio();
 }
 
 void HostFB_PresentDispEnv(pe_addr_t env)
@@ -112,6 +140,7 @@ void HostFB_PresentDispEnv(pe_addr_t env)
     fb_presented++;
     PE_Port_FramePresented(fb_presented);
     PE_Port_InvokePresentHook();
+    HostFB_ServiceAudio();
 }
 
 void HostFB_SetDispMask(int mask)
@@ -124,8 +153,68 @@ static void HostFB_ServiceDeviceIrq(void)
     if(!PE_Port_ShouldStop() && !PE_LoadU16(0x800945E6u) && (PE_IRQ_ReadStatus()&PE_IRQ_GetMask()))
         (void)PE_IRQ_ServicePendingForGeneration(PE_IRQ_Generation());
 }
+
+/* DAY2-158z/CD B0CD0 catch-up.  A completed raw sector sits unread behind
+ * sector_pending until the retail data-ready IRQ -> 91DC8/1214D4 -> 7C564 ->
+ * BFRD chain consumes it; B0CD0 is only the DMA1-defer latch, and some 7C564
+ * early-outs never set it.  The plain VSync(-1) tick services that chain only
+ * while MDEC has a decode in flight, so an orphan pending sector would
+ * otherwise stall the stream.  Run this before every modeled device-time
+ * advance and service the DMA/CPU IRQ paths whenever decode, the B0CD0 latch,
+ * or a pending sector is present, so the guest's own reader retires it.  No
+ * host-side direct func_8007C564 call: driving the stream assembler outside
+ * its retail call context reads an unpopulated FIFO (CD_device_data_underflow).
+ * pe_cdreg holds the next publish while pending (no overrun, no dropped
+ * sector); a hold that never clears is bounded here into the named
+ * CD_B0CD0_pending_unresolved rather than a silent hang. */
+static int HostFB_CdServicePending(void)
+{
+    static uint32_t s_pending_ticks;
+    static int s_cd_catchup_active; /* reentrancy guard */
+    PeCdDeviceState cd;
+    int pending, b0cd0;
+
+    /* func_8007C564 -> func_8007A488 -> func_8007B290 polls with
+     * func_80073A44(-1) (HostFB_VSync), which re-enters HostFB_DeviceTime.
+     * That inner tick must let the clock advance instead of recursing. */
+    if (s_cd_catchup_active) return 1;
+    if (PE_Port_ShouldStop()) return 0;
+    s_cd_catchup_active = 1;
+
+    /* Read pending before the IRQ gate: unread ownership is sector_pending. */
+    PE_CdReg_GetDeviceState(&cd);
+    pending = cd.sector_pending != 0;
+    b0cd0 = (int16_t)PE_LoadU16(0x800B0CD0u) != 0;
+    if (PE_MDEC_HasDecode() || b0cd0 || pending) {
+        /* DMA checkpoint (not only the CPU IRQ) so 74520->91DC8/1214D4 can
+         * run the retail BFRD even when HasDecode is false. */
+        (void)PE_Port_ServiceDmaIrqCheckpoint();
+        HostFB_ServiceDeviceIrq();
+    }
+    if (PE_Port_ShouldStop()) { s_cd_catchup_active = 0; return 0; }
+
+    PE_CdReg_GetDeviceState(&cd);
+    if (cd.sector_pending) {
+        s_pending_ticks++;
+        if (s_pending_ticks >= 4096u) {
+            Bootstrap_ReturnVoid1("CD_B0CD0_pending_unresolved","CD_device",
+                                  cd.next_lba);
+            PE_Port_RequestStop(PE_PORT_STOP_UNRESOLVED_BOUNDARY);
+            s_cd_catchup_active = 0; return 0;
+        }
+    } else {
+        s_pending_ticks = 0u;
+    }
+    s_cd_catchup_active = 0;
+    return 1;
+}
+
 static void HostFB_DeviceTime(uint32_t cycles)
 {
+    /* Retire an orphan pending CD sector before advancing the device clock,
+     * so a full read period cannot elapse with the sector unread. */
+    if(!HostFB_CdServicePending()) return;
+    if(PE_Port_ShouldStop()) return;
     /* NTSC host approximation:33868800 CPU cycles/60 frames. Device
      * responses are serviced before the next generated VBlank edge. */
     PE_CdReg_ServiceDevice(cycles);HostFB_ServiceDeviceIrq();
@@ -143,7 +232,12 @@ static void HostFB_DeviceTime(uint32_t cycles)
     }
 }
 
-void HostFB_VSync(int mode)
+uint32_t HostFB_VSyncTimer(void)
+{
+    return fb_vsync_timer;
+}
+
+uint32_t HostFB_VSync(int mode)
 {
     /* A nonblocking audio upload must complete even when the game only
      * polls its completion flag. Service DMA at the normal host tick. */
@@ -175,7 +269,21 @@ void HostFB_VSync(int mode)
         }
     }
     fb_vsync_count++;
-    (void)mode;
+    /* VBlank edge. The retail return contract (80073A44) samples the free-
+     * running scanline timer at ENTRY and returns `(entry - baseline) &
+     * 0xFFFF` for every non-negative mode; waiting modes then re-latch the
+     * baseline to the post-wait value (this is what makes a following
+     * mode-1 query read the elapsed scanlines) and negative modes instead
+     * return the absolute VBlank counter (D_800956AC). */
+    if (mode < 0)
+        return (uint32_t)fb_vsync_count;
+    uint32_t entry = fb_vsync_timer;
+    uint32_t ret = (entry - fb_vsync_baseline) & 0xFFFFu;
+    fb_vsync_timer = (fb_vsync_timer + 1u) & 0xFFFFu;
+    if (mode > 1) fb_vsync_timer = (fb_vsync_timer + (uint32_t)mode) & 0xFFFFu;
+    else if (mode == 0) fb_vsync_timer = (fb_vsync_timer + 1u) & 0xFFFFu;
+    if (mode != 1) fb_vsync_baseline = fb_vsync_timer;
+    return ret;
 }
 
 void HostFB_DrawSync(int mode)
@@ -198,6 +306,19 @@ int HostFB_WritePPM(const char *path)
 const uint8_t *HostFB_GetPixels(void)
 {
     return fb;
+}
+
+/* One guest poll-loop iteration of a CD stream wait.  HostFB_VSync(-1)
+ * services MDEC/SPU/GPU and the DMA IRQ checkpoint and advances the modeled
+ * device by the 1024-cycle counter-query quantum; the extra 3072 cycles make
+ * the wait iteration span the device time the guest's own func_80121270 call
+ * stands for, so an entire multi-sector frame can assemble inside the 2000-
+ * iteration retry budget instead of restarting from sector 0. */
+void HostFB_StreamTick(void)
+{
+    HostFB_VSync(-1);
+    if (!PE_Port_ShouldStop() && PE_CdReg_DeviceEnabled())
+        HostFB_DeviceTime(3072u);
 }
 
 void HostFB_GetState(int *vsync, int *drawsync, int *presented, int *mask)

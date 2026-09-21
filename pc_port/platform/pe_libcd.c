@@ -436,6 +436,20 @@ void func_80080950(pe_addr_t dst, pe_addr_t src)
         PE_StoreU8(dst + i, PE_LoadU8(src + (pe_addr_t)i));
 }
 
+/* Host-only: was the most recent 7C214 publish a complete-frame (last-chunk)
+ * delivery?  See PE_Movie_LastPublishComplete in pe_sdk.h. */
+static int g_movie_publish_complete;
+
+int PE_Movie_LastPublishComplete(void)
+{
+    return g_movie_publish_complete;
+}
+
+void PE_Movie_ResetPublishState(void)
+{
+    g_movie_publish_complete = 0;
+}
+
 /* func_8007C214 — streaming DMA-completion callback (asm/disc1/6C93C.s,
  * 35 words).  Publishes status 2 to the active 32-byte stream record
  * (D_800C0DC8 + D_800BE9E4 * 32), copies the record's sector word to
@@ -453,6 +467,10 @@ void func_8007C214(void)
     pe_addr_t rec = PE_LoadU32(0x800C0DC8u) + idx * 32u;
     uint32_t cb;
 
+    /* D_800B89F4 is set by func_8007C564 exactly once, when the chunk it
+     * just assembled is the frame's last (index == total-1).  Capture that
+     * before the clear below: it is the complete-frame delivery signal. */
+    g_movie_publish_complete = (PE_LoadU32(0x800B89F4u) == 1u);
     PE_StoreU16(rec, 2u);
     memcpy(PE_Translate(0x800A3490u, 4u),
            PE_TranslateConst(rec + 0x1Cu, 4u), 4u);

@@ -96,7 +96,7 @@ extern unsigned int D_8009D03C;
 #define D_8009D064 PE_GUEST_U32(0x8009D064u)
 
 /* ── SDK IMPLEMENTED ──────────────────────────────────────────────── */
-static inline void func_80073A44(int m)  { HostFB_VSync(m); }
+static inline uint32_t func_80073A44(int m)  { return HostFB_VSync(m); }
 static inline void func_80074D28(int m)  { HostFB_SetDispMask(m); }
 int func_80074DC0(int mode);
 int func_80075358(pe_addr_t packet);
@@ -117,12 +117,20 @@ extern pe_addr_t func_800755F0(pe_addr_t env);
  * func_80190660 and reaches its first DrawPrim call at retail 0x80190860. */
 extern int func_8006ECEC(void);
 static inline void func_8006F044(void)   { Bootstrap_ReturnVoid("func_8006F044", "func_8001220C"); }
-static inline void func_80069B08(int d)  { Bootstrap_ReturnVoid("func_80069B08", "func_8001220C"); (void)d; }
+/* func_80069B08 is a REAL native port
+ * (game/boot/func_80069B08_port.c) — the boot disc/status screen state
+ * machine.  The former Bootstrap_ReturnVoid inline stub was removed once
+ * its two CD reads and every state-machine callee had real ports. */
+extern void func_80069B08(int d);
 /* func_8003F3C4 / func_80066B60 / func_80068E24 are REAL native ports
  * (game/boot/func_8003F3C4_port.c, func_80066B60_port.c,
  * func_80068E24_port.c). Prototypes live in pe_port_compat.h. */
 static inline void func_801235DC(void)   { Bootstrap_ReturnVoid("func_801235DC", "func_8001220C"); }
-static inline void func_8019234C(void)   { Bootstrap_ReturnVoid("func_8019234C", "func_8001220C"); }
+/* func_8019234C is a REAL translation of the M0000I transition outer loop
+ * (game/boot/func_8019234C_port.c); the former Bootstrap_ReturnVoid stub
+ * was removed once its callees, VSync return contract and ordering-table
+ * compaction were available. */
+extern void func_8019234C(void);
 extern int func_801909B4(void);
 extern void func_801918F8(int buffer, int wide);
 extern int func_80191FB8(int count, pe_addr_t source_list);

@@ -28,6 +28,16 @@
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
       }
     },
+    "era_o1_g0_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O1",
+        "-G0"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30"
+      }
+    },
     "era_o2_g0": {
       "toolchain": "era",
       "flags": [
@@ -65,6 +75,26 @@
         "MASPSX_FILL_STORE_DELAY_SLOT": "1"
       }
     },
+    "era_o2_g0_fill_indexed_store_delay_slot": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_FILL_INDEXED_STORE_DELAY_SLOT": "1"
+      }
+    },
+    "era_o2_g0_fill_epilogue_delay_slot": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_FILL_EPILOGUE_DELAY_SLOT": "1"
+      }
+    },
     "era_o2_g0_three_word": {
       "toolchain": "era",
       "flags": [
@@ -73,6 +103,16 @@
       ],
       "environment": {
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
+      }
+    },
+    "era_o2_g0_passthrough_load": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
       }
     },
     "era_o2_g8": {
@@ -102,6 +142,17 @@
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1"
       }
     },
+    "era_o2_g8_three_word_force_d8009d1a0_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_8009D1A0"
+      }
+    },
     "era_o2_g8_vm_dispatch": {
       "toolchain": "era",
       "flags": [
@@ -112,6 +163,50 @@
         "MASPSX_EXPAND_DIV": "1",
         "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
         "MASPSX_DISPATCH_FOLD": "jtbl_80010000"
+      }
+    },
+    "era_o2_g0_dispatch_80010080": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010080"
+      }
+    },
+    "era_o2_g0_dispatch_80010ac8": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010AC8"
+      }
+    },
+    "era_o2_g0_dispatch_80010b28": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010B28"
+      }
+    },
+    "era_o2_g8_dispatch_800111f8": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_800111F8"
       }
     },
     "modern_o1_g0": {
@@ -146,13 +241,80 @@
         "8",
         "-fno-tree-ter"
       ]
+    },
+    "era_o2_g8_passthrough_load": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
+      }
+    },
+    "era_o2_g8_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30"
+      }
+    },
+    "era_o2_g0_dispatch_800c2128": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_800C2128"
+      }
+    },
+    "era_o2_g0_dispatch_8011034": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80011034"
+      }
+    },
+    "era_o2_g8_expand_div": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_EXPAND_DIV": "1"
+      }
+    },
+    "era_o2_g0_expand_div_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30",
+        "MASPSX_EXPAND_DIV": "1"
+      }
     }
   },
   "assignments": {
     "era_o1_g0": [
       "func_8003E680",
       "func_8006A5BC",
-      "func_8008AB1C"
+      "func_80085174",
+      "func_80089F28",
+      "func_8008AB1C",
+      "func_8008F4E8",
+      "func_8008FC78"
     ],
     "era_o1_g0_sched2": [
       "func_80052BCC"
@@ -160,11 +322,42 @@
     "era_o1_g0_sched2_three_word": [
       "func_8006A674"
     ],
+    "era_o1_g0_aspsx_230": [
+      "func_80018E84"
+    ],
     "era_o2_g0_aspsx_230": [
-      "func_80030534"
+      "func_80030534",
+      "func_80017E68",
+      "func_80019260",
+      "func_800196E8",
+      "func_80019CEC",
+      "func_80019DB8",
+      "func_8001A374",
+      "func_8006DD38",
+      "func_8006E2D0",
+      "func_8001A3FC",
+      "func_80073D24",
+      "func_80090AAC",
+      "func_80065A9C",
+      "func_8006599C",
+      "func_800659C8",
+      "func_8006E6A8"
     ],
     "era_o2_g0_expand_div": [
       "func_8003C5D8"
+    ],
+    "era_o2_g0_fill_epilogue_delay_slot": [
+      "func_80075B4C",
+      "func_80075C04",
+      "func_8007DD74",
+      "func_800755BC",
+      "func_80075AE8",
+      "func_80075C94",
+      "func_80074DC0",
+      "func_80075358",
+      "func_8007506C",
+      "func_800750CC",
+      "func_8007BAC0"
     ],
     "era_o2_g0_fill_store_delay_slot": [
       "func_80074A14",
@@ -183,7 +376,16 @@
       "func_80081254",
       "func_80082CDC",
       "func_80084B44",
-      "func_80084FC4"
+      "func_80084FC4",
+      "func_80085F14"
+    ],
+    "era_o2_g0_fill_indexed_store_delay_slot": [
+      "func_80076B20",
+      "func_80076B98",
+      "func_8008F784",
+      "func_80090A20",
+      "func_800909C0",
+      "func_80090A64"
     ],
     "era_o2_g0_three_word": [
       "func_8002F7D8",
@@ -191,8 +393,27 @@
       "func_8002F9CC",
       "func_800363F4",
       "func_80037548",
+      "func_80042770",
+      "func_80042964",
       "func_80050020",
-      "func_8005DC28"
+      "func_80052894",
+      "func_800528C4",
+      "func_8005DC28",
+      "func_8007A400",
+      "func_8007A434",
+      "func_800858E8",
+      "func_800428D4",
+      "func_8006A2E8",
+      "func_800906E4",
+      "func_80077D30",
+      "func_800409B4",
+      "func_8006A0E8"
+    ],
+    "era_o2_g0_passthrough_load": [
+      "func_80076B44",
+      "func_8007FBF0",
+      "func_80085918",
+      "func_80056C14"
     ],
     "era_o2_g8": [
       "func_800177AC",
@@ -226,14 +447,62 @@
       "func_80064C30",
       "func_800653B8",
       "func_80042FE8",
-      "func_80070E54"
+      "func_80070E54",
+      "func_8001784C",
+      "func_80021054",
+      "func_80055FE0",
+      "func_80017294",
+      "func_80026FD0",
+      "func_8004F464",
+      "func_80064C54",
+      "func_800339A0",
+      "func_80038910",
+      "func_8005E4E4",
+      "func_8005E518",
+      "func_80044E98",
+      "func_80045110",
+      "func_800451D0",
+      "func_800453E8",
+      "func_80046334",
+      "func_80014DA0",
+      "func_800155FC",
+      "func_8004F798",
+      "func_8004F7D8",
+      "func_800501C8",
+      "func_8005022C",
+      "func_80050308",
+      "func_800509A8",
+      "func_80060528",
+      "func_8006055C",
+      "func_80060590",
+      "func_800605C4",
+      "func_800605F8",
+      "func_800500A8",
+      "func_8005010C",
+      "func_80050178",
+      "func_80057B70",
+      "func_8004905C",
+      "func_800509E0",
+      "func_8005C498",
+      "func_8004FA10",
+      "func_8005F27C",
+      "func_800527C8",
+      "func_80017588",
+      "func_80050878",
+      "func_8005E788",
+      "func_800536B8"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
     ],
     "era_o2_g8_three_word": [
       "func_8001266C",
-      "func_80029388"
+      "func_80029388",
+      "func_8001A890"
+    ],
+    "era_o2_g8_three_word_force_d8009d1a0_absolute": [
+      "func_80021D4C",
+      "func_8003E974"
     ],
     "era_o2_g8_vm_dispatch": [
       "func_80012850"
@@ -411,6 +680,52 @@
     ],
     "modern_o1_g8_no_tree_ter": [
       "func_80052F0C"
+    ],
+    "era_o2_g0_dispatch_80010b28": [
+      "func_8003010C"
+    ],
+    "era_o2_g0_dispatch_80010ac8": [
+      "func_8002FE78"
+    ],
+    "era_o2_g0_dispatch_80010080": [
+      "func_80012E7C"
+    ],
+    "era_o2_g8_dispatch_800111f8": [
+      "func_80051CC4"
+    ],
+    "era_o2_g8_passthrough_load": [
+      "func_800556E8"
+    ],
+    "era_o2_g8_aspsx_230": [
+      "func_80057ED8",
+      "func_80058E08",
+      "func_80059EC8",
+      "func_80034FC4",
+      "func_80035C84",
+      "func_80035E04",
+      "func_80035F54",
+      "func_800361F4",
+      "func_80036254",
+      "func_800438EC",
+      "func_80044174",
+      "func_800447F0",
+      "func_80059F08",
+      "func_8004BB80"
+    ],
+    "era_o2_g0_dispatch_800c2128": [
+      "func_800C3238"
+    ],
+    "era_o2_g0_dispatch_8011034": [
+      "func_8004AE1C"
+    ],
+    "era_o2_g8_expand_div": [
+      "func_8005FA3C",
+      "func_8005FB74",
+      "func_8005FDF0",
+      "func_8005FF28"
+    ],
+    "era_o2_g0_expand_div_aspsx_230": [
+      "func_80065260"
     ]
   }
 }

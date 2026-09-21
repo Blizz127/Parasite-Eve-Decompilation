@@ -43,22 +43,34 @@
   assert the pad footprint, bound-exit save image, 0x3FF pad, table
   extract, main-loop marker (`0xFE00`), and resume paths.
 
-## NOT wired live into production (honest frontier held)
+## DAY2-158c follow-up (2026-09-09)
 
-The decoder's output cursor is bounded only by the VLC stream's own
-pad/terminator codes: a valid STR video frame terminates in-bounds,
-but the streaming pump does not yet deliver a fully MDEC-ready frame at
-`s1` (that is the Stage-1b STR/MDEC pipeline). Feeding the decoder the
-current partial frame marches the output pointer past the 2 MiB guest
-RAM (`PE_StoreU16 @ 0x80200000`). So `func_801924F8`'s `got_frame` tail
-keeps its honest boundary stop at the decoder entry
-(`Bootstrap_ReturnVoid("func_8010C89C", "func_801924F8")` +
-`PE_PORT_STOP_UNRESOLVED_BOUNDARY`) instead of decoding unvalidated
-input. The strict real-disc frontier is therefore unchanged:
-`func_8010C89C` from `func_801924F8`.
+Live Disc1 on Bazzite with ungated C89C aborted at `PE_StoreU16` @
+`0x80200000` — confirming this report's MV1d trap. Production
+`func_801924F8` got_frame now **gates** C89C until Stage-1b readiness:
+immediate pad **or** last-chunk `StreamFrameReady` (latched when E0
+promotes on `D_800B89F4`). Non-ready streams take a named Stage-1b
+boundary stop. **Do not clamp a1.**
 
-The in-progress `/tmp/c89c_*` debug dump that the prior session left in
-`func_801924F8_port.c` ("REVERT BEFORE COMMIT") is removed.
+Bazzite retest of `5223ecd` (gate + still-unconditional E0 promote): CLEAN
+stop at `Stage1b_pad_terminated_frame` — MV1d fixed. DAY2-158d gates E0
+promote on `B89F4` / fixture arm. DAY2-158f latches frame-ready on
+last-chunk promote so demuxed VLC bodies (not STR magic at `s1`) can run
+C89C. STR magic `0x80010160` is sector-header-only, not the payload cursor.
+
+DAY2-158g: Bazzite on `5754473` stayed alive 2+ minutes under `1220C` with
+no Stage-1b/MV1d abort. E0 wait now uses `HostFB_PumpCdProgress` (one
+sector/poll) instead of `HostFB_VSync(-1)` (1024 cycles only).
+
+## Production wiring (DAY2-158b/c/d/f — gated)
+
+`func_801924F8` got_frame calls live C89C only when the stream is an
+immediate pad exit **or** last-chunk `StreamFrameReady` is latched.
+Non-ready frames take `Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)`
++ `PE_PORT_STOP_UNRESOLVED_BOUNDARY`. E0 promotes only on last-chunk
+`B89F4` or fixture surrogate arm; otherwise `HostFB_PumpCdProgress`
+advances one CD sector per poll. **Do not clamp a1.** Ungated decode of
+partial frames still marches past `PE_StoreU16 @ 0x80200000`.
 
 ## Verify block
 

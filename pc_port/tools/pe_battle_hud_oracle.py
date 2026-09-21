@@ -30,7 +30,7 @@ def signed(n):
     return n - 0x100000000 if n & 0x80000000 else n
 
 
-def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_control=None, initial_cop_data=None, bios_seed=1, instruction_budget=100000, strict_gte_flags=False, final_gte=None, visited_pcs=None, scratchpad=None):
+def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_control=None, initial_cop_data=None, bios_seed=1, instruction_budget=100000, strict_gte_flags=False, final_gte=None, visited_pcs=None, scratchpad=None, stop_pc=None, hook_at=None):
     r = [0] * 32
     r[28], r[29] = 0x8009CD70, 0x801FF000
     r[4:4+min(len(args),4)] = args[:4]
@@ -303,11 +303,38 @@ def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_c
     pc = entry
     for _ in range(instruction_budget):
         if pc == 0 or pc in stop_at:
+            if stop_pc is not None and pc != 0:
+                stop_pc.append(pc)
             if final_gte is not None:
                 final_gte.update(data=cop_data[:], control=cop_control[:])
             return r
+        if hook_at and pc in hook_at:
+            # Simulate a leaf call with no guest stack frame: the handler sets
+            # the return value in r[2] (and any modelled RAM) and execution
+            # resumes at the caller's return address.  Used where the native
+            # port implements the callee as a host function, so no guest stack
+            # frame exists to match.
+            nxt = hook_at[pc](ram, r)
+            pc = r[31] if nxt is None else nxt
+            continue
         if pc == 0xA0:
-            if r[9] == 0x2B:
+            if r[9] == 0x1B:
+                # BIOS A(1Bh) strlen(src) -> length.  Reached through the
+                # retail thunks func_80072314 (formatter "%s" without a
+                # precision); psx-spx BIOS String Functions.
+                start=r[4]&0x1FFFFF;n=0
+                while ram[start+n]:n+=1
+                r[2]=n
+            elif r[9] == 0x2E:
+                # BIOS A(2Eh) memchr(src,scanbyte,len) -> pointer to the first
+                # matching byte within len, else 0.  The formatter calls it as
+                # memchr(src,0,precision) via func_80072324; psx-spx BIOS
+                # Memory Fill/Copy/Compare.
+                start=r[4]&0x1FFFFF;c=r[5]&0xFF;n=r[6];p=0
+                for i in range(n):
+                    if ram[start+i]==c:p=r[4]+i;break
+                r[2]=p
+            elif r[9] == 0x2B:
                 start=r[4]&0x1FFFFF
                 ram[start:start+r[6]]=bytes((r[5]&255,))*r[6]
                 r[2]=r[4]
@@ -332,8 +359,46 @@ def execute(ram, entry, args=(), *, stop_at=(), initial_regs=None, initial_cop_c
                 assert count<=3 and b'%' not in fmt.replace(b'%d',b''), 'unsupported BIOS printf format'
                 values=tuple(v if v<0x80000000 else v-0x100000000 for v in r[5:5+count])
                 r[2]=len(fmt % values)
+            elif r[9] == 0xAB:
+                # A(ABh) _card_info(port).  Empty slot: psx-spx _card_status
+                # 11h (failed/timeout, no cartridge), surfaced to the
+                # higher-level device events as F4000001h,2000h ("card err
+                # eject"), whose callback func_80042C14 latches A1828.
+                struct.pack_into('<I', ram, 0xA1828, 1)
+                r[2] = 0
+            elif r[9] == 0xAC:
+                # A(ACh) _card_load(port).  Same empty-slot eject report.
+                struct.pack_into('<I', ram, 0xA1828, 1)
+                r[2] = 0
             else: raise AssertionError(f'unsupported BIOS service {r[9]:X} from {r[31]:08X} in test oracle')
             pc=r[31]
+            continue
+        if pc == 0xB0:
+            if r[9] == 0x0B:
+                # BIOS B(0Bh) TestEvent.  The retail card events opened by
+                # func_800409B4 use mode 1000h (callback), and callback events
+                # never set the ready flag, so the kernel returns 0 here.
+                # https://www.problemkaputt.de/psxspx-bios-event-functions.htm
+                r[2] = 0
+            elif r[9] == 0x50:
+                # B(50h) _new_card(): clears the card-change latch only; no
+                # completion event and no documented return value.
+                r[2] = 0
+            elif r[9] == 0x4E:
+                # B(4Eh) _card_write(port,sector,src).  psx-spx: returns
+                # 1=okay or 0=failed on invalid sector numbers; sectors
+                # 0..3FFh are valid and 400h is accepted by the retail BUG.
+                # The empty slot fails asynchronously (lower-level
+                # F0000011h,2000h "err"), whose callback func_80042C64
+                # latches A1834.
+                if r[5] > 0x400:
+                    r[2] = 0
+                else:
+                    struct.pack_into('<I', ram, 0xA1834, 1)
+                    r[2] = 1
+            else:
+                raise AssertionError(f'unsupported BIOS B service {r[9]:X} from {r[31]:08X} in test oracle')
+            pc = r[31]
             continue
         if visited_pcs is not None: visited_pcs.add(pc)
         jump = step(pc)

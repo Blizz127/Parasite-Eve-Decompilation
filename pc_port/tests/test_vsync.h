@@ -17,6 +17,26 @@ static uint32_t test_vsync_read(void *p,pe_addr_t a){return test_vsync_event(p,0
 static void test_vsync_write(void *p,pe_addr_t a,uint32_t v){(void)test_vsync_event(p,1,a,v,0);}
 static void test_vsync_bios(void *p,uint32_t table,uint32_t service,uint32_t a,uint32_t b)
 {(void)test_vsync_event(p,2,(table<<8)|service,a,table==0xC0u?b:0);}
+static void test_DAY1_host_vsync_contract(void)
+{
+    TEST("DAY1_host_vsync_contract");
+    ResetTestState();HostFB_Init();
+    /* Negative modes return the absolute VBlank counter (monotonic). */
+    uint32_t a=HostFB_VSync(-1),b=HostFB_VSync(-1);
+    ASSERT(b==a+1u,"negative-mode VBlank counter is not monotonic");
+    /* A waiting mode samples the scanline timer at entry and re-latches the
+     * baseline after the wait, so an immediately following query reads zero. */
+    ASSERT(HostFB_VSync(0)==0u,"mode-0 entry delta when baseline current");
+    ASSERT(HostFB_VSync(1)==0u,"mode-1 delta right after a wait");
+    /* A mode-1 query is non-consuming: it does not re-latch the baseline, so
+     * successive queries accumulate the modeled per-call scanline advance. */
+    ASSERT(HostFB_VSync(1)==1u,"mode-1 query is non-consuming");
+    ASSERT(HostFB_VSync(1)==2u,"mode-1 queries accumulate");
+    /* Counter advanced once for each of the five calls after b. */
+    ASSERT(HostFB_VSync(-1)-b==5u,"counter did not advance once per call");
+    PASS();
+}
+
 static void test_DAY1_vsync(void)
 {
     TEST("DAY1_vsync");

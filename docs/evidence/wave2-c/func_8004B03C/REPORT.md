@@ -1,0 +1,21 @@
+# func_8004B03C
+
+- VRAM: 0x8004B03C
+- file offset: 0x3B83C
+- size: 0x0x68 (104 bytes)
+- source: src/func_8004B03C.c
+- build profile: era_o2_g0 (default, -O2 -G0)
+- gate: none beyond the profile environment listed above
+
+## Evidence
+
+Fresh `bash scripts/build_us.sh` + `bash scripts/verify_us.sh` in the
+`pe-mipsel` distrobox:
+
+- retail SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+- candidate SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b
+- EXACT MATCH; VERIFY_US=PASS; matching-C count 821
+
+## Divergences fixed to match
+
+none

@@ -12,10 +12,44 @@ void func_80121A00(void);
 void func_80121004(int buffer, int wide);
 int func_80121270(pe_addr_t state);
 void func_801214D4(void);
+void func_80191DC8(void); /* title-overlay DecDCTout DMA1 callback */
 int func_80122040(void);
 void func_80122354(void);
 int func_80121C04(int id);
 void func_8006E60C(void);
+
+/* ── Card kernel BIOS veneers (host adapters in pe_libcard.c) ────────
+ * A0 ABh _card_info, A0 ACh _card_load, B0 50h _new_card, B0 4Eh
+ * _card_write, and the retail wrapper B0 50h+B0 4Eh.  The port models the
+ * documented empty slot; see pe_libcard.c. */
+int func_8007DD44(int port);
+int func_8007DD54(int port);
+int func_8007DDC4(pe_addr_t port);
+int func_8007DDB4(pe_addr_t port, int sector, pe_addr_t src);
+void func_8007DD74(int arg0);
+/* Defined in platform/pe_libgpu.c and called from generated decomp TUs
+ * (src/func_80075C04.c); non-static so the generated caller links to it. */
+uint32_t func_800762A0(int x, int y);
+/* Exported so generated decomp TUs can call the real implementations
+ * instead of falling back to a loud boundary (func_80075C94). */
+uint32_t func_80076150(uint32_t dfe, uint32_t dtd, uint32_t tpage);
+uint32_t func_800762BC(pe_addr_t tw);
+
+/* ── libcard file API, host adapters in pe_libcard.c ─────────────────
+ * BIOS B0 32h open / 33h lseek / 34h read / 35h write / 36h close /
+ * 41h format / 42h firstfile / 43h nextfile, plus the A0 18h memcmp the
+ * card-operation directory scan uses. */
+int  func_80072734(pe_addr_t name, int mode);
+int  func_80072744(int fd, int offset, int whence);
+int  func_80072754(int fd, pe_addr_t buf, int len);
+int  func_80072764(int fd, pe_addr_t buf, int len);
+int  func_80072774(int fd);
+int  func_80072784(pe_addr_t dev);
+pe_addr_t func_800727B4(pe_addr_t dirspec, pe_addr_t dirent);
+pe_addr_t func_80072794(pe_addr_t dirent);
+int  func_800727A4(pe_addr_t name);   /* BIOS B(45h) erase(filename) */
+int  func_80071A04(pe_addr_t a, pe_addr_t b, int n);
+int32_t func_8004D27C(void);
 
 /* ── Boot Rung globals (guest-address backed) ─────────────────────── */
 /* D_800B0CD8..D_800B0CEB, D_800B0DD4, D_80094488/D_8009448C are guest-RAM
@@ -180,6 +214,9 @@ extern void func_800653B8(unsigned int payload, unsigned int dest_id,
                           unsigned int extra);
 extern int  func_80065954(unsigned int index, unsigned int enabled);
 extern int  func_800659C8(unsigned int index, unsigned int value);
+/* PE-CH2 opcode-0x9A / 0x71 callees: 16-byte slot fill and 56-byte pan clamp. */
+extern int  func_80065AD4(unsigned int index, unsigned int value, unsigned int count);
+extern int  func_800671C8(pe_addr_t rec, int32_t x, int32_t y, int32_t page);
 /* SEW3 — game/boot/func_800659F8_port.c */
 extern int  func_800659F8(uint32_t index, uint32_t value);
 extern int  func_80065A60(uint32_t index, uint32_t entry, uint32_t value);
@@ -243,6 +280,10 @@ void func_80046334(void);
 void func_8004F464(void);
 void func_8005C488(void);
 void func_80042B6C(void);
+/* func_80042B50 delayed-callback targets installed by func_8004D6D4 (slot-list
+ * confirm/unable): the save/load ability handlers in game/decomp. */
+void func_800504F4(void);
+void func_8005051C(void);
 void func_800339A0(uint32_t style);
 void func_80042D40(void);
 void func_80042F44(void);
@@ -280,6 +321,72 @@ void func_8006269C(pe_addr_t node);
 void func_80062F3C(uint32_t id);
 void func_80064E90(pe_addr_t node);
 void func_800647D0(pe_addr_t node,int32_t items);
+/* PE-SAVE-PAGE: func_80043DA4 command 5 (file save/load page) and the two
+ * list-rendering callbacks its 0x21/0x23 sub-pages install.  See
+ * game/boot/func_8004AD9C_port.c and game/boot/func_8005D994_port.c. */
+void func_8004AD9C(pe_addr_t owner);
+int32_t func_8004AE1C(pe_addr_t page,uint32_t event);
+void func_8004AF3C(pe_addr_t owner);
+int32_t func_8004AFA4(pe_addr_t page,uint32_t event);
+void func_8004B03C(pe_addr_t owner);
+int32_t func_8004B0A4(pe_addr_t page,uint32_t event);
+void func_8004B13C(pe_addr_t owner);
+void func_8004B214(pe_addr_t node);
+int32_t func_8004B394(pe_addr_t page,uint32_t event);
+void func_8004B584(pe_addr_t owner);
+int32_t func_8004B650(pe_addr_t window,uint32_t event);
+/* PE-SAVE-PAGE: draw wrappers that are matched src/ leaves, generated under
+ * game/decomp. */
+void func_8004FF30(int32_t slot);
+void func_8004FF58(int32_t slot);
+void func_8004FF80(int32_t slot);
+void func_8004B534(int32_t slot);
+void func_8004B55C(int32_t slot);
+void func_8005D994(int32_t mode);
+void func_8005247C(void);
+void func_80050C50(int32_t value);
+void func_80050C70(int32_t slot);
+void func_80050CB4(int32_t slot);
+void func_800504BC(int32_t a0);
+/* Matched src/ leaf used by the 0x2E page draw callback (game/decomp). */
+int func_8005E54C(void);
+/* PE-CARD-MENU: func_80041108 state-2 continuations (see
+ * game/boot/func_8004D4C4_port.c). */
+int32_t func_8004D4C4(uint32_t idx,uint32_t items);
+void func_8004D298(uint32_t index);
+void func_8004D690(pe_addr_t node);
+/* Slot-list input/handler (func_8004D4C4's +0x2C callback) and the prompt
+ * window builder it uses; see game/boot/func_8004D4C4_port.c. */
+int32_t func_8004D6D4(pe_addr_t window,uint32_t event);
+void func_8004D978(uint32_t value);
+pe_addr_t func_800424B4(uint32_t card,int32_t item);
+void func_8004FEEC(pe_addr_t list);
+int func_8004FE58(pe_addr_t item);
+void func_800434C0(pe_addr_t item);
+pe_addr_t func_8005DD8C(int32_t index);
+/* PE-SAVEWRITE: memory-card save/load buffer formatters (nonmatching
+ * hand-translations; see game/boot/func_80040210_port.c). */
+void func_8004006C(pe_addr_t dest, pe_addr_t format);
+pe_addr_t func_80040210(int32_t idx, int32_t time);
+pe_addr_t func_8005DE08(int a0);
+int func_80043474(int a0);
+int func_8005D940(void);
+/* BIOS A(19h) strcpy trampoline (platform/func_80071A14_port.c). */
+pe_addr_t func_80071A14(pe_addr_t dst, pe_addr_t src);
+/* PE-SAVEWRITE: save/load write chain (nonmatching hand-translations). */
+void func_8003F800(void);
+void func_80040B80(pe_addr_t record);
+void func_8005C25C(void);
+int func_8005DE70(void);
+void func_80042020(int card, int slot);
+int32_t func_80042170(int card, int32_t slot);
+int func_800614A0(void);
+int func_800438E0(void);
+int func_800527B4(void);
+int func_80064A48(void);
+signed char func_8005E884(void);
+extern void func_800622B0(int a0);
+extern int func_800614AC(int a0);
 extern void func_8004B90C(void);
 extern void func_8004B70C(uint32_t a0, uint32_t a1, pe_addr_t a2);
 extern int func_8004BB80(pe_addr_t obj, uint32_t a1);
@@ -514,6 +621,18 @@ extern void func_80022D7C(pe_addr_t target);
 extern int32_t func_8006DD38(uint32_t index, uint32_t key, int32_t x, int32_t y, int32_t z);
 extern int32_t func_800518A8(pe_addr_t out);
 extern void func_80051510(void);
+/* PE-CH3 field message subsystem (field_message_port.c). */
+extern int func_800515C0(uint32_t value);
+extern int func_80051684(uint32_t value);
+extern int func_800629B0(void);
+extern int32_t func_80057E14(pe_addr_t list);
+extern int func_8005270C(void);
+extern void func_8004BF08(void);
+extern void func_8004BE4C(void);
+extern void func_8005C144(void);
+extern void func_8004BCE8(int32_t arg0);
+extern int func_8005D2B4(int32_t cmd, int32_t a, int32_t b);
+extern int func_80015C7C(pe_addr_t args);
 extern int32_t func_800574A8(void);
 extern int func_800C6CE0(pe_addr_t slot);
 extern pe_addr_t func_800C22F8(pe_addr_t slot);
@@ -700,6 +819,9 @@ extern int func_80018080(pe_addr_t args);
 extern int func_80017FF0(pe_addr_t args);
 extern int func_800192B8(pe_addr_t args);
 extern int func_800192C8(pe_addr_t args);
+extern int func_800192DC(pe_addr_t args);
+extern int func_800193D8(pe_addr_t args);
+extern int func_80018A9C(pe_addr_t args);
 extern void func_8001D340(unsigned int a0);
 extern void func_8001F9C4(void);
 extern void func_800201DC(void);
@@ -726,6 +848,9 @@ void func_8004D5CC(uint32_t index);
 /* Explicit original caller stack and incoming s0..s7/ra; stops at unresolved BIOS. */
 uint32_t PE_FormatterFrame(pe_addr_t destination, pe_addr_t format, uint32_t arg0, uint32_t arg1, pe_addr_t caller_sp, const uint32_t saved[9]);
 pe_addr_t func_80072334(pe_addr_t destination,pe_addr_t source,uint32_t count);
+/* BIOS A(1Bh) strlen / A(2Eh) memchr, the formatter "%s" measurers. */
+uint32_t func_80072314(pe_addr_t src);
+pe_addr_t func_80072324(pe_addr_t src,int32_t scanbyte,uint32_t len);
 void PE_CardCleanupFrame(pe_addr_t record, pe_addr_t caller_sp, const uint32_t incoming[32]);
 void PE_CardOperationFrame(uint32_t index, pe_addr_t caller_sp, const uint32_t incoming[32]);
 void func_80041108(uint32_t index);
@@ -745,6 +870,11 @@ void func_8004CFD4(void);
 void func_8004CE28(uint32_t first,uint32_t second);
 void func_80050580(pe_addr_t unused,uint32_t confirmed);
 uint32_t func_80042770(uint32_t index);
+/* func_800404A8 [0x800404A8,0x800405A4): inventory help idle-decay helper
+ * (asm-transcribed, no matching C leaf yet). Returns watchdog>0. */
+uint32_t func_800404A8(void);
+/* func_8003FFBC: 32-bit global getter D_800A1704 (matching decomp leaf). */
+int func_8003FFBC(void);
 uint32_t func_800428C4(void);
 void func_8004DAA4(void);
 int func_80042848(uint32_t index);
@@ -967,6 +1097,7 @@ pe_addr_t func_8005DB44(unsigned int index);
 unsigned int func_80052F70(void);
 int32_t func_8005415C(int32_t index);
 int32_t func_80054288(void);
+int32_t func_80054294(void);
 int32_t func_800556E8(int32_t index);
 int32_t func_80058E08(int32_t index);
 int32_t func_80057ED8(int32_t index);

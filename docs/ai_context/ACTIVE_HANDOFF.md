@@ -1,7 +1,2232 @@
+> **PROJECT GOAL:** a native PC port in the mould of Ship of Harkinian /
+> the Silent Hill decomp ports, ultimately re-rendered (HD-2D).
+> **Read `docs/ai_context/PORT_GOAL_AND_PLAN.md` before planning any work.**
+> The port is the deliverable; the decompilation is how you get there.
+> Recovered *assembly* is worth nothing to the port -- you cannot run PS1 MIPS
+> on x86. Report C-only executed-path coverage, not just total coverage.
+
 # ACTIVE HANDOFF
+
+## WAVE-7 SLICE A (`agent/wave7-a`, 2026-09-20): 902 -> 904, executed-path functions
+
+**Branch `agent/wave7-a`, worktree `/tmp/pe-agent-w14`.** Baseline gate re-run
+first: `scripts/split_us.sh` (host) + `build_us.sh` + `verify_us.sh`
+(pe-mipsel) reported `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (902
+registered C leaves)`, `VERIFY_US=PASS`.
+
+Landed two executed-path leaves, confirmed by a fresh complete build
+(commit `88790708`; status doc `docs/generated/DISC1_MATCHING_STATUS.md`
+regenerated in a follow-up commit):
+
+- `func_800CE688` (file 0xBEE88, size 0x104) — effect-slot callback list
+  update. Default `era_o2_g0`. **Levers:** the 8-byte dead local
+  (`int tmp[2]; (void)tmp;`) reproduces retail's reserved frame slot;
+  `char *slot = arg0 + 0xC;` must carry its initializer on the declaration
+  (a separate assignment is scheduled into the `blez` delay slot and swaps
+  the whole prologue save/init order); `register int stride asm("$21")` pins
+  retail's `$s5` home (with `$s4` for the count) — pinning **both** `$s4` and
+  `$s5` makes cc1 exit 33.
+- `func_8003E974` (file 0x2F174, size 0x154) — SPU/voice mask reset. Profile
+  **reused** `era_o2_g8_three_word_force_d8009d1a0_absolute` (`-O2 -G8` +
+  `MASPSX_THREE_WORD_SYMBOL_STORE=1` +
+  `MASPSX_FORCE_ABSOLUTE_SYMBOLS=D_8009D1A0`). Retail addresses
+  `D_8009D1A0` absolutely although it is gp+0x430, so it must be a plain
+  scalar with the force-absolute env; declaring it an incomplete array gives
+  `la`+`0($r)` instead. The five other state words stay gp-relative.
+
+Fresh build after the carves: `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (904
+registered C leaves)`, plan `1312 spans = 904 c + 406 asm + 2 rodata`,
+`VERIFY_US=PASS`. Evidence under `docs/evidence/wave7-a/`.
+
+Eight targets parked with full divergence notes (`wave7a-*` ids in
+`parked_blockers.json`; WIP sources in the git-ignored `build/wave7a-wip/`):
+`func_8004551C` (1 word — cc1's reorg duplicates the `func_80062CC4` argument
+into the `beq` delay slot *and* leaves the original in the `jal` delay slot;
+retail nops the jal slot; no existing maspsx gate removes a filled delay
+slot), `func_800C2414` (16 — arg0/counter `$s0`/`$s1` home swap, unmovable by
+declaration order and both pin attempts make cc1 exit 33), `func_8007EC14`
+(the known base-materialisation wall for the `D_800B8AB0`/`D_800A3510` clear
+blocks), `func_80021128` (38 — load-use nop placement + descriptor homes),
+`func_80046574` (50 — cross-jump merges the two `func_80062A34(2,5)` tails),
+`func_80067B74` (44 — record-base addressing + schedule), `func_800740D0`
+(51 — allocation/schedule) and `func_80059534` (46 — cross-jump merges the
+two index arms). Stop condition reached. `func_800143B0` and `func_800C9EA8`
+were not attempted.
+
+**Reusable note:** a **`signed char D_800C0E20[];`** declaration is required
+where retail emits `lb`/`bltz` on the index byte — plain `char` is unsigned
+in this cc1 and silently drops the sign test.
+## WAVE-7 SLICE B (`agent/wave7-b`, 2026-09-20): 902 -> 905, executed-path functions
+
+**Branch `agent/wave7-b`, worktree `/tmp/pe-agent-w15`.** Baseline gate re-run
+first: `scripts/split_us.sh` (host) + `build_us.sh` + `verify_us.sh` (pe-mipsel)
+reported `EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (902 registered C leaves)`, `VERIFY_US=PASS`. Fresh build
+after the carves: same EXACT SHA-1, `Matching claim: YES (905 registered C
+leaves)`, plan `1312 spans = 905 c + 405 asm + 2 rodata`, `VERIFY_US=PASS`.
+
+Landed three executed-path targets (commits `b41ec69b`, `365014dd`):
+
+- `func_8006A0E8` (file 0x5A8E8, 0x174) — D_800B0CD8 0x200 gate plus two
+  D_8009D1A0 sub-blocks writing the `92*D_8009CDDC` slot of the parallel arrays
+  D_800BCDE0/DF/C8. **New profile assignment** `era_o2_g0_three_word`
+  (`-O2 -G0` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`). **Two levers:** the gate
+  turns cc1's 4-word indexed symbol store into retail's 3-word
+  `lui at,%hi; addu at,at,idx; sb %lo(sym)(at)`; and a single local index
+  variable **reassigned before each store** (`idx = D_8009CDDC * 0x5C;`) is
+  required — writing `D_800BCDE0[D_8009CDDC*0x5C]` inline makes cc1 reserve a
+  phantom 16-byte stack frame slot (frame 0x30 vs retail 0x20), while the
+  reassigned local keeps `vars=0` and still reloads the global like retail.
+- `func_800536B8` (0x43EB8, 0x174) — era_o2_g8 two-stage record lookup.
+  D_8009D048 is `extern short *` (gp pointer scalar); D_8009D03C/D_8009D050 are
+  gp scalars; D_800BEEAC/D_8009DE64 are incomplete arrays (absolute). Home
+  pins `$17/$5/$3/$2`; the decisive ordering is `t = (void *)(int)v1;` issued
+  BEFORE the 0x100 range test so the copy fills that branch delay slot while
+  `a0 = v1 - 1` still reads `$3`.
+- `func_800CD728` (0xBDF28, 0x174) — era_o2_g0 constant initializer.
+  `register int z asm("$4"); z = 0x20;` as a **separate assignment** (an
+  initializer form is DCE'd) keeps 0x20 in `$a0`; the three `D_800F33F0/2/4 = 0`
+  stores must be issued at the TOP so the scheduler lands them in retail's
+  slots.
+
+**CRITICAL VERIFICATION FINDING:** `tools/analysis/try_leaf.py` zeroes every
+relocation-bearing word in BOTH images, so it CANNOT see the order or target of
+absolute symbol stores/loads (`lui $at,%hi` / `sb|sh|sw %lo($at)` and
+`la $r,SYM`). A `WORDS MATCH` from try_leaf on a leaf whose accesses are mostly
+absolute globals is NOT evidence. `func_800CD728` was first reported green by
+try_leaf while its linked build differed in 6 words (store order); the final
+source was fixed and confirmed by the linked build. `func_800844E4` was parked
+for exactly this: try_leaf green with the epilogue gate, but the linked build
+differs at 0x74D7C (word 0x98). **Always confirm with `build_us.sh`.**
+
+Seven targets were parked with divergence notes in `parked_blockers.json`
+(`wave7b-*` ids): `func_8005E588` (the materialised-global-base wall — retail
+`sh $v0,0x6A($s0)` vs cc1's `SYM+off` macro), `func_800C6D5C` (loop body
+re-anchored from `base+0x1B` to `base+0x19`), `func_800534E4` (cc1 merges the two
+`rec[6]` compare tests and drops retail's dead `j` arm), `func_80074A44`
+(switch-body arg-setup order / indexed load), `func_80079FB4` (div leaf, 80
+diffs), `func_8002156C` (cc1 hoists the D_8009E000/4/8 loop-invariant array
+addresses into callee-saved registers where retail rematerialises `lui at`),
+`func_80073A44` (volatile-stack spin loop matched but the arg0 decision tree
+differs by 8 words), plus `func_80062FEC` (2 diffs, one adjacent t0/a1 load
+swap) and `func_800844E4` (above). Stop condition reached.
+## WAVE-7 SLICE C (`agent/wave7-c`, 2026-09-20): 902 -> 905, executed-path functions
+
+**Branch `agent/wave7-c`, worktree `/tmp/pe-agent-w16`.** Baseline gate re-run
+first: `split_us.sh` (host) + `build_us.sh` + `verify_us.sh` (pe-mipsel)
+reported `EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (902 registered C leaves)`, `VERIFY_US=PASS`. Final fresh
+build after the carves: same EXACT SHA-1, `Matching claim: YES (905 registered
+C leaves)`, plan `1313 spans = 905 c + 406 asm + 2 rodata`, `VERIFY_US=PASS`.
+
+Landed three executed-path leaves (commits `b6d0ea0b`, `4b6f0394`):
+
+- `func_800C2B90` (0xB3390, 0x17C) — weapon-slot record lookup + callback
+  dispatch. Default `era_o2_g0`. **Levers:** `D_800F34F4`/`D_800F3330` are
+  integer bases; the three `func_800C6CE0` calls are genuinely separate
+  short-circuit calls; `func_800C2D0C` prototyped with an **`unsigned short`
+  first parameter** so the caller emits the `andi $a0,$s1,0xFFFF` that cc1
+  fills into the branch delay slots; the four incoming arguments are copied
+  into locals in **save order (slot, sizes, callbacks, code)** so cc1 emits
+  retail's `$s2,$s3,$s4,$s0` prologue (ABI-order locals leave 6 words swapped).
+- `func_80035C84` (0x26484, 0x180) — pose snapshot + view-code publish +
+  motion integrate. Profile **`era_o2_g8_aspsx_230`**. **Levers:**
+  `D_8009D254` is `int **` (retail does the extra `lw $v0,0($v0)`);
+  `D_800943C0` absolute via an incomplete array; the view-code mask must be
+  staged in a **local `v`** before the unconditional `sp10 = a->f0E` (an
+  inline `(*D_8009D254)->...` reference reorders the pointer chain); and the
+  final `+0x2C` result must be **kept in a local and returned**
+  (`r = a->f2C + a->f5C; a->f2C = r; ...; return r;`) — `return a->f2C;`
+  makes cc1 emit a fresh reload (+16 bytes).
+- `func_80066800` (0x57000, 0x18C) — 52-byte view-record apply. Default
+  `era_o2_g0`. **New reusable lever: `*volatile` on a pointer global forces
+  cc1 to reload the pointer before every store through it.** Retail reloads
+  `D_800BCFA4` before all twelve stores and loads `D_800B1624` twice at entry;
+  a plain pointer lets cc1 hoist the base and drops ~19 words (320 vs 396 B).
+  Also: cc1 2.7.2 does **not** unroll a constant 9-trip copy loop — the nine
+  halfword copies must be written out literally.
+
+**Reusable notes:** (1) `extern T *volatile G` is the general lever for a
+retail function whose asm is a repeated `lui/lw` + store pair over a pointer
+global, and for forcing two independent loads of one pointer global in one
+expression. (2) When retail returns a value it just stored through a field,
+`return X->f;` reloads — keep the computed value in a local instead. (3) cc1
+2.7.2 does not unroll short constant loops.
+
+Three targets were **parked** (`wave7c-*` ids in `parked_blockers.json`):
+`func_80062830` (63 — entry PUSH needs both D_8009D124/D128 materialised
+before either store; $s1 save in the beqz delay slot), `func_80014228` (63 —
+no-call leaf; cc1 cross-jumps the two `*d->fC = -1; return 1` sites and hoists
+the null check, changing all following branch offsets), `func_80057654` (68 —
+register homes: retail keeps the looked-up halfword in `$v1` and copies to
+`$a1`, and keeps the loop-invariant `8` in `$s3` across the
+`func_8005415C` call). Slice stopped at three parks (the remaining listed
+targets each need the same kind of allocator/scheduler iteration).
+
+## PARENT STATUS (2026-09-20): 910 matching C leaves; executed-path C-share 42.82%
+
+**Matching decomp: 768 -> 910 (+142) this session.** Fresh split + build +
+verify: **EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**,
+`Matching claim: YES (910 registered C leaves)`, `VERIFY_US=PASS`, plan
+`1319 spans = 910 c + 407 asm + 2 rodata`. Waves 7a/7b/7c landed 8 leaves
+(2+3+3), all executed-path targets.
+
+**Executed-path C-share (DERIVED): route 308/710 =
+43.38%; movie 103/229 =
+44.98%** (reclassified against the current yaml; the raw hit
+logs still correspond to the 864-leaf snapshot).
+
+**CORRECTNESS CAVEAT on try_leaf.py — read before trusting a green line.**
+try_leaf zeroes every relocation-bearing word in both images so a standalone
+leaf can be compared before linking, but that erases the ORDER and TARGET of
+every absolute symbol access (`lui %hi/%lo`, `la`). A wave-7 agent hit a false
+positive from exactly this: try_leaf printed WORDS MATCH while the LINKED build
+differed in 6 words. The tool now prints an explicit WARNING when it masks
+relocations. **`scripts/build_us.sh` remains the only authority.**
+
+**Park records restored:** three wave7-b park entries were omitted from that
+branch's `parked_blockers.json` and have been reconstructed by the parent from
+the agent's report; wave7-c's final docs commit was merged late for the same
+reason. Check that an agent's park report and its committed records agree.
+
+## PARENT STATUS (2026-09-20): 890 matching C leaves; executed-path C-share 39.72%
+
+**Matching decomp: 768 -> 890 (+122) this session.** Fresh split + build +
+verify on the merged tree: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (890
+registered C leaves)`, `VERIFY_US=PASS`, plan `1294 spans = 890 c + 402 asm + 2
+rodata`. maspsx unit tests 201 OK.
+
+**Executed-path C-share (DERIVED, see the note in
+`docs/evidence/exec-coverage/EXECUTED_PRIORITY.md`):** reclassifying the
+recorded 864-leaf hit set against the current yaml gives route **282/710 =
+39.72%** (was 37.18%) and movie **100/229 = 43.67%**. The executed guest graph
+is unchanged, so this is exact for the share, but it is derived rather than
+re-measured — the coverage binary sha256 still refers to the 864-leaf snapshot.
+
+**Third per-leaf toolchain gate: `MASPSX_FILL_JAL_DELAY_SLOT`** (default OFF,
+`agent/fill-jal`). It fills a `jal` delay slot from a preceding ABSOLUTE
+symbol-store macro (`sw/sh/sb $r,SYM`, never gp-relative, never register-offset
+— cc1 already fills those). Disc1 scan: 18 `jal` slots hold an `$at` store, 17
+in this exact shape. **Narrowness proof: enabling it globally is NOT exact** —
+`func_8006E9A0` needs its absolute store pre-`jal` (0x234 would shrink to
+0x230) — so it must stay per-leaf. Nine tests; build byte-identical with it off.
+
+**m2c drafts are now width-typed and `$gp`-resolved** (`c87f835a`): the generated
+type context types each `D_` symbol by the width retail actually loads/stores
+through it, and `saved_reg_gp->unkNNN` is rewritten to the real `D_<vram>` at
+`0x8009CD70+offset` with pointer-typed declarations where m2c dereferences it.
+An agent measured this class of change as nearly halving the diff on an 8.6 KB
+function. m2c is still only a drafting aid.
+
+## PARENT STATUS (2026-09-20): 884 matching C leaves; executed-path C-share 37.18%
+
+**Matching decomp: 768 -> 884 (+116) this session.** Fresh `scripts/split_us.sh`
++ `build_us.sh` + `verify_us.sh` on the merged tree: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (884
+registered C leaves)`, `VERIFY_US=PASS`, plan `1287 spans = 884 c + 401 asm + 2
+rodata`. Wave 5 landed 18 executed-path leaves (`wave5-a` 5, `wave5-b` 3,
+`wave5-c` 6) by working `docs/evidence/exec-coverage/EXECUTED_PRIORITY.md`
+instead of the raw size-ranked worklist.
+
+**func_8001D340 is proven un-carveable and parked.** The 8,596-byte battle tick
+has exactly one prologue, one epilogue and one `jr $ra`, so the prefix/resume
+yaml-carve technique cannot split it — it must be matched whole or stay asm.
+`docs/evidence/bigfish-1d340/REPORT.md` has a 168-block map and a compiling
+candidate that is 1032 words off (register allocation only); do not task anyone
+to carve it again.
+
+## PARENT STATUS: 870 matching C leaves; executed-path C-share 37.18%
+
+**Matching decomp: 768 -> 870 (+102) this session.** Fresh `scripts/split_us.sh`
++ `build_us.sh` + `verify_us.sh` on the merged tree: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (870
+registered C leaves)`, `VERIFY_US=PASS`, plan `1268 spans = 870 c + 396 asm + 2
+rodata`.
+
+**Executed-path coverage (the metric the project goal demands).** Re-measured at
+864 leaves with the instrumented build (coverage binary sha256 `337152bd…`):
+
+| run | executed guest fns | decompiled C | C share | pc_port-only | unresolved boundaries |
+|---|---:|---:|---:|---:|---:|
+| route `--route-pad --max-frames 80000` | 710 | 264 | **37.18%** | 446 | 0 |
+| movie `--max-frames 2000` (opening FMV) | 229 | 94 | **41.05%** | 135 | 0 |
+
+The two runs executed the same guest graph as the 810-leaf snapshot; the C-share
+rose 237 -> 264. `docs/evidence/exec-coverage/EXECUTED_PRIORITY.md` ranks the
+route's 446 pc_port-only functions by retail size (216,840 bytes) — **that list,
+not the raw worklist, is the highest-value decomp queue**, because the run
+already reaches those functions. Commands to reproduce are in
+`docs/evidence/exec-coverage/REPORT.md`.
+
+**Two new toolchain levers, both per-leaf and default-off** (full build
+re-verified EXACT after each):
+- `MASPSX_DISPATCH_FOLD` now also retargets the MATERIALISED table form
+  (`la $r,$L<n>` and `%hi/%lo($L<n>)`, commit `086f5ec7` + 12 tests). Landed
+  `func_80051CC4`; usable by any leaf whose switch base LICM hoists.
+- `MASPSX_EXPAND_LI=1` omits `--dont-expand-li` for one leaf, so retail's
+  `ori $r,$zero,imm` scalar loads can be reproduced (`8db69a00`). Retried on the
+  60C1C RNG trio and found **necessary but not sufficient** — those stay parked
+  for register-home/delay-slot reasons, and `func_80070DD0` is handwritten.
+
+**Merge tooling.** Always merge agent branches with
+`python3 tools/analysis/merge_agent_branch.py <branch> -m "<msg>"`. It applies
+the per-file resolver, regenerates the status doc, and validates yaml offset
+monotonicity + JSON validity + `disc1_plan --check` before committing. Hand
+merging is what left `parked_blockers.json` invalid twice earlier in the session.
+
+## WAVE-4 LEAF SLICE A (2026-09-20): 864 -> 868 matching C leaves
+
+**Branch `agent/wave4-a`, worktree `/tmp/pe-agent-w6`.** Baseline gate re-run
+first: `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh` reported
+`EXACT SHA-1 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`Matching claim: YES (864 registered C leaves)`, `VERIFY_US=PASS`.
+
+Landed four leaves, confirmed by a fresh complete build in `pe-mipsel`:
+
+- `func_800C6EF8` (B76F8, file 0xB76F8, 0x54) — palette copy into `D_800E2370`.
+  era -O2 -G0. Needs (a) a **cc1 phantom 8-byte frame**: retail reserves
+  `addiu $sp,$sp,-8` with no stack access, which no flag reproduces, but an
+  address-taken dead aggregate (`int tmp[2]; (void)tmp;`) makes cc1 count
+  `vars=8` and emit the frame pair with zero accesses; and (b) the loop counter
+  pinned to `$a1` (`register int i asm("$5")`) because natural colouring swaps
+  counter/source.
+- `func_800C6F4C` (B76F8, file 0xB774C, 0x54) — reverse copy. Same two levers,
+  plus the loaded word temp must be `int` (a `unsigned short` temp emits `lhu`,
+  retail is `lw`).
+- `func_80042170` (307CC, file 0x32970, 0xB8) — card-record save-load entry.
+  era -O2 -G0. The `*(s0+0x18) = D_8009EED0` store must be the **first** store
+  after `func_80042798()` so cc1 hoists `la $a0,D_8009EED0` immediately after
+  the call and keeps it live to the closing `func_80071A24`.
+- `func_800409B4` (307CC, file 0x311B4, 0x1CC) — card-subsystem boot init: eight
+  unrolled `func_800726E4` event opens, four bring-up calls, an enable loop, then
+  the `D_800A0ED4[0x418]/[0]` selector clear. Profile
+  **era_o2_g0_three_word** (the indexed clear store needs
+  `MASPSX_THREE_WORD_SYMBOL_STORE=1`); the clear loop must use its **own** index
+  variable so cc1 keeps it in `$v0` instead of reusing the callee-saved enable
+  counter.
+
+Fresh build after the carve: `EXACT SHA-1
+452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES (868 registered
+C leaves)`, plan `1265 spans = 868 c + 395 asm + 2 rodata`, `VERIFY_US=PASS`.
+Evidence under `docs/evidence/wave4-a/`.
+
+Parked (register colouring / scheduling) in `parked_blockers.json`:
+`func_800C6FA0` and `func_800C70EC` (B76F8, colour-scaling twins; control flow
+and frame exact, retail's two-base `colours`/`colours+2` addressing and prologue
+order not reproducible from any tested source shape) and `func_800404A8`
+(307CC, closest at 18 words; needs `MASPSX_THREE_WORD_SYMBOL_STORE=1` for the
+indexed byte load). Also unstarted in these units: `func_8004006C`,
+`func_80040210`, `func_80042020`, `func_80040F80`, `func_800409B4`,
+`func_8002B0E8`, `func_800295E4`, `func_8002F0B0` (all large, branch-heavy or
+formatter call sites).
+## agent/rng-ori (2026-09-20): 60C1C RNG trio retried with MASPSX_EXPAND_LI — 0 landed, 3 parked
+
+Branch `agent/rng-ori` (base `8db69a00`). Baseline re-verified EXACT before and
+after: SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES
+(866 registered C leaves)`, `VERIFY_US=PASS`. No leaf landed; the matching count
+stays **866**. No YAML/profile/build change.
+
+**Verdict: the li gate was necessary but not sufficient.** It removes only the
+scalar `li`→`ori` blocker from the wave4b park note. All three targets are held
+by independent, gate-immune residuals:
+
+- `func_80070D10` (0x61510, 0x5C) — gate + explicit `goto` rotation recover the
+  retail `lui/ori` base and the un-biased 0x40/0x3C offsets, but (a) four
+  constant-offset stores still compile to the `sw $r,SYM+off` → `lui $at; sw`
+  macro instead of `sw $r,off($t0)`, (b) the counter canonicalises to
+  `addiu $5,-1; bne $5,-1` instead of `bnez $5` + decrement-in-delay-slot, and
+  (c) register homes stay a/v-class, not retail's `t0/t3/t4/t5`.
+- `func_80070D6C` (0x6156C, 0x64) — the gate fixes only the two
+  `ori $r,$zero,0x40` cursor wrap words; the t0-t8 register-home /
+  cross-block-scheduling residual from the 2026-08-30 campaign is unchanged.
+- `func_80070DD0` (0x615D0, 0x34) — **handwritten**, parked immediately: it
+  saves `$ra` across `jal func_80070D6C` in caller-saved `$v1` with no stack
+  frame (`or $v1,$zero,$ra` / `or $ra,$zero,$v1`), which no C compiler emits.
+  spimdisasm marks the function and its `sub`/`add` as handwritten.
+
+Evidence: `docs/evidence/rng-ori/REPORT.md` plus the three closest candidate
+sources in that directory. Park records:
+`wave4c-60C1C-func_80070D10-expand-li-insufficient`,
+`wave4c-60C1C-func_80070D6C-expand-li-insufficient`,
+`wave4c-60C1C-func_80070DD0-handwritten`. Next unblocker is a codegen lever for
+base-register constant stores + ASPSX pre-decrement branz, not a flag.
+
+## PARENT STATUS (2026-09-20): 864 matching C leaves, port green, coverage MEASURED
+
+**Matching decomp: 768 -> 864 (+96) this session**, verified on the merged tree
+by a fresh `scripts/split_us.sh` + `build_us.sh` + `verify_us.sh`:
+
+- **EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**
+- `Matching claim: YES (864 registered C leaves)`
+- `VERIFY_US=PASS` — all 864 packed C spans equal retail
+- plan `1260 spans = 864 c + 394 asm + 2 rodata`
+
+**Executed-path coverage is no longer UNMEASURED.** `agent/exec-coverage` added
+`-finstrument-functions` instrumentation (`PE_EXEC_COVERAGE=ON`), a hit-set
+dump, and `tools/progress/exec_coverage.py`, which maps host hits back to the
+2393 guest boundaries and splits them into decompiled-C / pc_port-only /
+unmapped. `native_metrics.py` now reports
+`reachable_semantic_functions.status == MEASURED`. Its first snapshot (taken at
+810 leaves) measured, on the disc-1 `--route-pad` run: **710 executed guest
+functions, 237 backed by decompiled C (33.38%)**, 473 pc_port-only, 0
+unresolved loud boundaries; opening FMV: 229 executed, 91 C (39.74%). A
+`agent/cov-refresh` pass is re-measuring at 864.
+
+**Disc-1 route at 864**: `--route-pad --max-frames 80000 --disc-image "<disc1>"`
+=> `stop_reason=frame-limit`, token `A8001148`, story `0x48`, **0 invoked
+bootstrap stubs**, 80000 presents. (The port REQUIRES `--disc-image`; without it
+the run aborts with `PE_LoadU32: invalid guest address 0x0000000C` — a usage
+error, not a regression.)
+
+Landed by wave-1 agents (`pb-small` 6, `pb-120d8` 2, `pb-multiunit` 13,
+`pb-19de4` 2, `pb-dispatch` 3, `decompile-continue-10` 20), wave-2 agents
+(`wave2-a` 15, `wave2-b` 7, `wave2-c` 14) and wave-3 agents (`wave3-a` 8,
+`wave3-b` 10). Every leaf has a
+`docs/evidence/<agent>/<name>/REPORT.md`. The wave-2/3 agents' own entries sit
+directly below this one.
+
+**Port.** `pc_port` builds clean and **CTest 11/11** at 846. The decomp-port
+generator is consistent (`--check OK`). Disc-1 headless route
+(`--route-pad --max-frames 80000 --disc-image "<disc1>"`) advances through the
+known frontier at token `A8001148` / story `0x48`. **The port requires
+`--disc-image`; without it the run aborts early with
+`PE_LoadU32: invalid guest address 0x0000000C` — that is a usage error, not a
+regression.**
+
+**Merge tooling.** `tools/analysis/merge_agent_branch.py` merges an agent branch
+and resolves the recurring conflicts per file (offset-ordered `disc1.yaml`
+union, single-owner profile union, blocker union by id, handoff concatenation,
+keep-ours for duplicate `src` leaves and parent tooling), regenerates the status
+doc from the plan, and validates yaml offset monotonicity + JSON validity +
+`disc1_plan --check` before committing. Six unit tests in
+`tools/analysis/test_merge_agent_branch.py`. Use it instead of hand-merging:
+hand-merging is what left `parked_blockers.json` invalid twice this session.
+
+**Queue.** 1547 functions / 596,220 bytes remain; 761 of them still have a
+behavioural spec in `pc_port/`. See `DECOMP_COVERAGE_CEILING.md` for the honest
+denominator and the ~1335 C-matchable ceiling.
+## wave-3 leaf slice B (`agent/wave3-b`, 2026-09-20): 846 -> 856 (+10)
+
+**Fresh `scripts/split_us.sh` + `scripts/build_us.sh` + `scripts/verify_us.sh`:
+EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES
+(856 registered C leaves)`, `VERIFY_US=PASS`, plan `1247 spans = 856 c + 389
+asm + 2 rodata`.** Commits `6332f18c` (9 leaves) and `341ffdcd` (F820 + 6 park
+records) on branch `agent/wave3-b`; reports under
+`docs/evidence/wave3-b/<name>/REPORT.md`.
+
+Landed, unit 5747C: `func_80066C7C` `func_80067678` `func_800676CC`
+`func_80067730`; unit 5C6CC: `func_8006D24C`; unit 5E418: `func_8006DD38`
+`func_8006DED4` `func_8006DF50` `func_8006E2D0`; unit 5FB9C: `func_8006F820`.
+
+Reusable findings:
+
+- **`ERA_ASPSX_VER=2.30` (profile `era_o2_g0_aspsx_230`) is required for any
+  leaf whose address generation folds an index into a symbol**, e.g. the
+  `D_800930B4[(a1 >> shift) & 0x1F]` table read in `func_8006E2D0` and the
+  `D_800B0CE8 + index*4` arena load in `func_8006DD38`. With the default aspsx
+  2.21 maspsx expands `%lo(at)` into an extra `addu` (4 words); retail is the
+  3-word `lui/addu/op-%lo` form. Register `func_8006DD38` under
+  `era_o2_g0_aspsx_230` in `configs/USA/disc1_build_profiles.json`.
+- A **shared arena base computed after a call** stays in a caller-saved
+  register only if it is assigned *after* the call; declaring and initializing
+  it before the call spills it to a callee-saved register and grows the frame
+  (`func_8006DD38`: 0x38 vs 0x30). Introduce a second typed pointer
+  (`unsigned char **slot = (unsigned char **)(base + 0x124); slot[index]`) to
+  make cc1 colour the base `$v1` and the scaled index `$v0`.
+- A branch arm's **then/else order must sometimes be written with the
+  condition inverted** to match retail's fall-through. `func_8006F820` needed
+  `if (a0 >= 0xB) large else small` (retail `bnez` to the small block) and
+  `if (a1 == 0) {...} else {...}` (retail `bnez a1` to the store-int block).
+- `extern Header *volatile D_800B1624` reproduces retail's two independent
+  pointer loads in `func_80067678/CC/730`; shifted operands must be
+  `unsigned int` so cc1 emits `srl` rather than `sra`.
+
+Six leaf candidates parked with full divergence notes in
+`docs/ai_context/parked_blockers.json` (`wave3b-*` ids):
+`func_8006DCE4`/`func_8006DE80` (stack-arg `lw` vs `lh` plus double-save
+rotation), `func_80067A78` (hoisted `+0x14` offset load above the `+0x38/+0x3A`
+stores), `func_8006DDCC` (callee-saved register count / missing
+`&D_800B0E08` address home), `func_8006F8EC` (record base in `$v1` vs `$a0`),
+`func_800671C8` (clamp-bound load and `$t0`/`$t1` record-base colouring).
+## wave-3 leaf slice A (`agent/wave3-a`, 2026-09-20): 846 -> 854 (+8)
+
+**Fresh `scripts/split_us.sh` + `scripts/build_us.sh` + `scripts/verify_us.sh`:
+EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES
+(854 registered C leaves)`, `VERIFY_US=PASS`.** Commits `171fde78` (6 leaves,
+846->852), `c4f46ec5` (func_800447F0, 852->853) and the follow-up
+`func_80044174` commit on branch `agent/wave3-a`; reports under
+`docs/evidence/wave3-a/<name>/REPORT.md`.
+
+Landed: `func_80034FC4` `func_80035E04` `func_80035F54` `func_800361F4`
+`func_80036254` (unit 24240) `func_800438EC` (unit 340EC), `func_800447F0`
+and `func_80044174` (unit 340EC). All eight use the `era_o2_g8_aspsx_230`
+assignment (`-O2 -G8` + `ERA_ASPSX_VER=2.30`) in
+`configs/USA/disc1_build_profiles.json`.
+
+Reusable findings:
+
+- **Retail $gp base is 0x8009CD70**, so `0x580($gp) = D_8009D2F0`,
+  `0x180/0x188/0x18C($gp) = D_8009CEF0/F8/FC`, `0x1F8($gp) = D_8009CF68`,
+  `0x1D0($gp) = D_8009CF40`, `0x53C($gp) = D_8009D2AC`, `0x49C($gp) =
+  D_8009D20C`.
+- **`ERA_ASPSX_VER=2.30` is required** for any leaf whose memory op is a
+  `lui %hi / op %lo` pair fed by a preceding load: with the default 2.21
+  config cc1's `#nop` load-delay marker makes maspsx emit `nop` before the
+  `lui`, while retail lets the `lui` fill the delay slot. This alone was the
+  only blocker on `func_800361F4`.
+- **Absolute symbols inside a `-G8` unit** (`D_8009D300`, `D_800C0B14`,
+  `D_8009D1A0`, the `D_800C0E**` bytes) must be declared as incomplete
+  arrays; a scalar declaration lets cc1 place them in gp-relative small data
+  and the whole leaf misses.
+- A splat-contiguous data block's interior symbol (`D_800BEA94` = base+4)
+  has a real symbol at that address; declare and index it directly so cc1
+  emits the 3-word `lui/addu/sw %lo(byte-offset)` store instead of a
+  register-indirect `sw $a0,0($reg)` after strength reduction.
+- `func_800447F0`'s two-case dispatch must be a **`switch`**, not an
+  if/else-if chain: cc1 inverts the chain polarity and lays case 0 out as the
+  fall-through, while `switch` emits retail's `beqz v1 / beq v1,1` order.
+- **A `register int x asm("$N");` pin is a legitimate last-resort lever.**
+  `func_80044174` was byte-exact except that cc1 put the final `(v-1)>>8`
+  result in `$v0` after the f48 store while retail's is an in-place
+  `sra $v1,$v1,8`; pinning the temp to `$3` closed the last 3 words without
+  changing semantics.
+
+Parked (6, WIP sources kept git-ignored at `build/wave3-a-wip/`, full notes
+in `docs/ai_context/parked_blockers.json` under `pbw3a-*`): `func_80034F10`
+(matrix-clear strength reduction), `func_80043B0C` (jal hoisted into a beqz
+delay slot), `func_80043C64` (counter/p[i] register colouring),
+`func_800439D8` (prologue scheduling), `func_800327D8` (frame setup vs first
+global load), `func_800362B8` (size->stride branch layout). `func_8003335C`
+and `func_80031D6C` were not attempted (already parked by another agent).
+
+## wave-2 leaf slice A (`agent/wave2-a`, 2026-09-20): 810 -> 825 (+15)
+
+**Fresh `scripts/split_us.sh` + `scripts/build_us.sh` + `scripts/verify_us.sh`:
+EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `Matching claim: YES
+(825 registered C leaves)`, `VERIFY_US=PASS`, plan `1194 spans = 825 c + 367
+asm + 2 rodata`.** No parks. Commits `90636a20` (12 leaves) and `790b6056`
+(3 leaves) on branch `agent/wave2-a`, reports under
+`docs/evidence/wave2-a/<name>/REPORT.md`.
+
+Landed: `func_8004F798` `func_8004F7D8` `func_800501C8` `func_8005022C`
+`func_80050308` `func_800509A8` `func_80050B48` (units 3FC90/408A8/40A2C/40A80/
+40F48) and `func_80060528` `func_8006055C` `func_80060590` `func_800605C4`
+`func_800605F8` (unit 50074), then `func_800500A8` `func_8005010C`
+`func_80050178` (unit 408A8; its former asm span is now fully C).
+
+Two reusable findings:
+
+- Most of these leaves need **`-O2 -G8`** (registered under `era_o2_g8` in
+  `configs/USA/disc1_build_profiles.json`); the auto_leaf sweep only tries the
+  default `-G0`-family profiles against the m2c `saved_reg_gp` draft, so its
+  "no profile matched" here was an addressing-mode gap, not a real miss.
+- The five 50074 wrappers inline `func_8005E8A4(n, 0)`. A literal
+  `D_8009D128 += 0` is folded away by cc1 while retail keeps the redundant
+  load/store; the `int *p = &D_8009D128; *p = D_8009D128;` pointer idiom
+  (same lever as `src/func_80067B40.c`) reproduces it byte-exactly.
+## agent/wave2-b (2026-09-20): 810 -> 817 matching C leaves
+
+Landed 7 leaves across units 35698 and 38B4 on `agent/wave2-b`; not merged
+(parent verifies). Commits `f0424d01` (5 leaves, 810->815) and `df536dfb`
+(2 leaves, 815->817). Fresh `scripts/build_us.sh` prints **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (817
+registered C leaves)`, `scripts/verify_us.sh` = `VERIFY_US=PASS`, plan
+`1189 spans = 817 c + 370 asm + 2 rodata`.
+
+Landed: `func_80044E98`, `func_80045110`, `func_800451D0`, `func_800453E8`,
+`func_80046334` (unit 35698) and `func_80014DA0`, `func_800155FC` (unit 38B4),
+all `era_o2_g8` (`-O2 -G8`), reports under
+`docs/evidence/wave2-b/<name>/REPORT.md`.
+
+**Reusable lever:** a `0xNNN($gp)` reference into a splat-contiguous data
+block needs the *containing* symbol declared as a **scalar**
+(`extern int D_8009CFA0;` + `*(int *)((char *)&D_8009CFA0 + off)`), which
+emits `.extern SYM, 4` and keeps the access small-data-relative. The array
+form (`extern int D_8009CFA0[]` or a sized array) emits an absolute
+`lui`/`lw` pair instead. Conversely, a symbol that must stay absolute inside
+a `-G8` build is declared as an **incomplete array** (no `.extern SYM, N`).
+
+Parked this slice (all in `docs/ai_context/parked_blockers.json`):
+`pb-wave2-b-8004542C` / `pb-wave2-b-80045EE4` (register allocation /
+load-hoist scheduling), `pb-wave2-b-80013300` (2-word independent-load
+order), `pb-wave2-b-8003335C` / `pb-wave2-b-80031D6C` (cc1 LICM hoists the
+table bases out of the loop; retail re-materialises them per iteration).
+## Executed-path coverage counter landed (agent/exec-coverage, 2026-09-20)
+
+Built the missing production-run reachability counter. `cmake -S pc_port -B
+pc_port/build-coverage -DPE_EXEC_COVERAGE=ON` compiles `pe_field_runtime` with
+`-finstrument-functions` and a host-only `__cyg_profile_func_enter` counter
+(`pc_port/platform/pe_exec_coverage.c`); a constructor registers an `atexit`
+dump so a normal run writes `build/exec_coverage.txt` (one host entry address
+per line) and `build/exec_coverage_boundaries.txt`. Normal builds are untouched
+(no counter symbol, `game_port.c.o` byte-identical, CTest 11/11).
+
+`tools/progress/exec_coverage.py` resolves the hits with `nm` against the
+coverage binary and maps them onto the 2393 guest-function boundaries derived
+from `configs/USA/disc1.yaml` (810 `c` spans) + `asm/disc1/*.s` (1583
+`nonmatching` functions).
+
+Measured at `6e27fbdd` on the canonical route
+(`--headless --route-pad --max-frames 80000`): stop `frame-limit`, token
+`A8001148`, story `0x48`, 0 bootstrap stubs — **710 executed guest functions,
+237 (33.38%) backed by a decompiled C leaf, 473 pc_port-only, 6 dynamic
+overlays outside the static map, 0 unresolved loud boundaries**. Opening FMV
+(`--headless --max-frames 2000`): 229 executed, 91 (39.74%) C. The counter's
+boundary half was validated separately (187 events, 4 guest culprits).
+`tools/progress/native_metrics.py --json` now reports
+`reachable_semantic_functions: MEASURED` from
+`docs/evidence/exec-coverage/coverage.json`. Full write-up:
+`docs/evidence/exec-coverage/REPORT.md`. Coverage-build CTest: 11/11.
+
+Local-only prerequisites (git-ignored): `scripts/extract_us.sh 1` +
+`scripts/split_us.sh` produce `asm/disc1/`; both need the retail image.
+
+## SESSION STATUS (parent, 2026-09-20): 810 matching C leaves, port green
+
+**Matching decomp: 768 -> 810 (+42) this session.** Fresh `scripts/split_us.sh`
++ `scripts/build_us.sh` + `scripts/verify_us.sh` on the merged tree:
+**EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES
+(810 registered C leaves)`, `VERIFY_US=PASS` (all 810 packed C spans equal
+retail), plan `1177 spans = 810 c + 365 asm + 2 rodata`.
+
+Landed by six parallel worktree agents, one commit each with evidence under
+`docs/evidence/<agent>/<name>/REPORT.md`:
+
+| agent | leaves | notes |
+|---|---|---|
+| `agent/pb-small` | 6 | small leaves; 9 GTE/COP2 targets parked as SKIP |
+| `agent/pb-120d8` | 2 | `-O2 -G8` gp-relative unit; parks 3 |
+| `agent/pb-multiunit` | 9 | mid-size across 8 units |
+| `agent/pb-19de4` | 2 | ACAC; parks 4 |
+| `agent/pb-dispatch` | 3 | jump-table functions |
+| `agent/decompile-continue-10` | 20 | reconstructed 15 orphan `pc_port/game/decomp` bodies back into `src/` |
+
+**Port.** `pc_port` builds clean and **CTest 11/11** after regenerating
+`pc_port/game/decomp` for the new leaves. Two generator gaps were fixed on the
+way (see `8d4e96b6`): extern array symbols were rewritten but never bound, and
+`func_80075C94` called two helpers that were `static` in `pe_libgpu.c` (now
+exported). `agent/file-menu` added the missing script-opcode `0xF0` handler for
+`D_800910A0[0xF0] == 0x80016FE0` (+ regression test) and proved the story-`0x48`
+frontier is a pad/geometry problem, not a fidelity gap: `m0020i` must set
+`persist[24] & 0x20` via the item-`0xC8` pickup, which the scripted route never
+satisfies (`docs/evidence/pe-story-048-frontier/REPORT.md`).
+
+**Tooling added** (all drafting aids; `build_us.sh` remains the only matching
+authority): m2c pipeline (`scripts/setup_m2c.sh`, `tools/analysis/m2c_leaf.py`,
+`auto_leaf.py`), worklist joins (`port_backed_worklist.py`, `triage_m2c.py`),
+and a central build fix for odd-word dispatch tables (`7dffce11` +
+`tools/build/test_disc1_build.py`). **`try_leaf.py` must run inside
+`distrobox enter pe-mipsel`** — on the host it dies with a missing
+`mipsel-linux-gnu-as` that looks like a byte mismatch.
+
+**Next.** Coverage is now 810 of 2390 code functions (33.9%) but still only ~7%
+of code bytes; the queue is 1,612 functions / ~600 KB. Highest-yield targets are
+the 836 remaining functions that already have a behavioural spec in `pc_port/`
+(`python3 tools/analysis/port_backed_worklist.py`). The unclaimed port frontier
+is a production-run reachability counter for the C-only executed-path coverage
+the project goal requires — see DECOMP_COVERAGE_CEILING below.
 
 Single source of truth for current working state. Read this first; update after
 every meaningful change. Prefer shortening over accruing.
+
+## DECOMPILATION INFRASTRUCTURE + COVERAGE CEILING (parent, 2026-09-20)
+
+Baseline unchanged at **768 matching C leaves**, EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b` (re-verified this session in a clean
+worktree: build `EXACT MATCH`, `VERIFY_US=PASS`, all 768 packed C spans equal
+retail).
+
+**The honest denominator.** `asm/disc1` holds 1622 sized `nonmatching`
+functions (604,300 B) + 447 sizeless data symbols. With the 768 matched
+leaves, the code inventory is **2390 functions / 642,972 bytes**, so coverage
+is **32.1% of functions but only 6.0% of code bytes** — the landed leaves
+average 50 B while the remaining queue averages 373 B. The `4459` figure in
+older entries is not a function count; stop quoting it.
+
+**What can still become C.** `tools/analysis/triage_m2c.py` ran m2c over every
+remaining function: **1371 are C-draftable (463,920 B, 76.8%)**, 119 are
+handwritten assembly that no C compiler can emit through cc1+maspsx (79,948 B;
+GTE `ctc2`/`cop2` sequences and BIOS `syscall` trampolines), and 132 are
+m2c-hard (115 jump-table heavy, 17 other unmodelled opcodes). The ceiling for
+further matching C leaves is therefore ~1371, not 1622. Full write-up:
+`docs/ai_context/DECOMP_COVERAGE_CEILING.md`.
+
+**Cheapest remaining leaves.** 836 of the 1622 remaining functions (342,820 B,
+56.7% of remaining bytes) already have a behavioural spec transcribed in
+`pc_port/`; `tools/analysis/port_backed_worklist.py` produces the ranked list.
+
+**New triage tooling** (all committed, all drafting aids — `scripts/build_us.sh`
+remains the only matching authority):
+- `scripts/setup_m2c.sh` — pinned m2c (`708d2d2c`) under git-ignored `tools/era/`.
+- `tools/analysis/m2c_leaf.py` — one function → m2c candidate C.
+- `tools/analysis/auto_leaf.py` — m2c → normalise → sweep all 12 era profiles.
+- `tools/analysis/port_backed_worklist.py` — worklist ∩ `pc_port` bodies.
+- `tools/analysis/triage_m2c.py` — classify all remaining bodies.
+- `tools/analysis/auto_leaf.py` must wrap comparisons in
+  `distrobox enter pe-mipsel`; **host-side `try_leaf.py` fails with a missing
+  `mipsel-linux-gnu-as`, which is easy to misread as a byte mismatch.** Harness
+  sanity check: `try_leaf.py src/func_8006DBE0.c 0x5E3E0 0x38` → `WORDS MATCH`.
+
+**Open port frontier (unclaimed).** `tools/progress/native_metrics.py` reports
+`reachable_semantic_functions: UNMEASURED — no authoritative production-run
+reachability counter exists`, yet `PORT_GOAL_AND_PLAN.md` requires reporting
+*C-only executed-path coverage*. Fix: build the pc_port with
+`-finstrument-functions` (or emit a per-function entry hook from
+`gen_decomp_ports.py`), map hit addresses to the 2390 guest function
+boundaries, and report executed-path split of decompiled-C vs port
+transcription vs unresolved boundary.
+## PB-120D8: 768 -> 770 matching C leaves (agent/pb-120d8)
+
+Landed two retail leaves in unit `120D8`, fresh build EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `VERIFY_US=PASS` (770 C spans):
+`func_80021D4C` (0x1254C, 0x94, commit `3bda667c`) and `func_800254BC`
+(0x15CBC, 0xAC, commit `d8080685`). Evidence under `docs/evidence/pb-120d8/`.
+
+**Working flags for this unit: `-O2 -G8`** (bytes gp-relative, words absolute),
+with `MASPSX_THREE_WORD_SYMBOL_STORE=1` for indexed-symbol loads and per-leaf
+`MASPSX_FORCE_ABSOLUTE_SYMBOLS`/build-profile assignment for the absolute words
+(new profile `era_o2_g8_three_word_force_d8009d1a0_absolute`). Two reusable
+levers: (1) the **rotated-loop** shape is written as an explicit
+`goto test; body: ...; test: if (cond) goto body;` with the loop-invariant
+global in a *reloaded local* (load before the `goto`, reload after the call) —
+a natural `while` compiles top-tested and does not match; (2) **direct table
+indexing** (no cached base local) is what makes cc1 put the dependent load in
+a load-delay slot and hoist the store before the `jal`
+(`func_800254BC`).
+
+Parked (3 consecutive, list stopped): `func_80023008` (delay-slot constant
+placement: `li $a0,0x46C` early vs cc1 sinking it; 288 vs 292), `func_80021DE0`
+(post-call reloaded-gp-byte colored `$v1` instead of `$a0`; 4-word residual in
+the `0x199` arm), `func_80022210` (cc1 phantom `.frame vars=8` local inflates
+the frame to 0x28 vs retail 0x20). Details in `parked_blockers.json`. Untried
+targets remain: `func_800218D8`, `func_80026600`, `func_80028C48`,
+`func_80021AF8`, `func_80022D7C`.
+## SESSION STATUS 2026-09-20 (pb-19de4): 770 matching C leaves; ACAC port-backed slice
+
+**Branch `agent/pb-19de4`, worktree `/tmp/pe-agent-pb19de4`.** Baseline 768.
+Landed two port-backed leaves in the ACAC unit, each confirmed by a fresh
+`scripts/build_us.sh` + `scripts/verify_us.sh` in the `pe-mipsel` box:
+
+- `func_8001A890` (768 → 769), file `0xB090`/0x88, bootstrap state clear.
+  `era_o2_g8_three_word`: `-O2 -G8` + `MASPSX_THREE_WORD_SYMBOL_STORE=1`. cc1
+  already emits `sh $0,D_8009CE0C($3)`; the default ASPSX 2.21 `addiu_at`
+  expansion grows it to four words, while the gate selects retail's three-word
+  `lui $at,%hi / addu $at,$at,$idx / sh %lo($at)`.
+- `func_8001D268` (769 → 770), file `0xDA68`/0xD8, actor contact part scan.
+  `era_o2_g0`; signed `slti` needs an `(int)` cast, `i = 0` must precede the
+  short sign-extend, and `part == value` fixes the `bne` operand order.
+
+Final: `RESULT: EXACT MATCH` / `452fb033...`, `Matching claim: YES (770
+registered C leaves)`, `VERIFY_US=PASS`. Parked with byte-level notes in
+`docs/ai_context/parked_blockers.json` ("pb19de4-acac-19de4-parks"):
+`func_80020D50`, `func_800201DC`, `func_8001A918`, `func_8002F658` — all
+schedule/register-coloring divergences (`func_800201DC` and `func_8002F658`
+have the exact retail instruction multiset). `func_8001F814` not re-attempted
+(m2c failure; pb-dispatch owns it).
+## SESSION STATUS 2026-09-20 (agent/pb-dispatch): 768 -> 771 matching C leaves
+
+**Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**771**
+registered C leaves)"; `scripts/verify_us.sh` → **VERIFY_US=PASS** (all 771
+packed C spans equal retail). Branch `agent/pb-dispatch` (base `af9cf9f8`);
+cherry-picked the parent build fix `7dffce11` (odd-word dispatch-table pad).
+
+**Landed 3 jtbl-dispatch leaves** (files absolute; each has a
+`docs/evidence/pb-dispatch/<name>/REPORT.md`):
+
+| leaf | file/size | table (words) | profile |
+|---|---|---|---|
+| `func_8002FE78` | 0x20678 / 0x100 | `jtbl_80010AC8` (23, odd) | `era_o2_g0_dispatch_80010ac8` |
+| `func_8003010C` | 0x2090C / 0x114 | `jtbl_80010B28` (90) | `era_o2_g0_dispatch_80010b28` |
+| `func_80012E7C` | 0x367C / 0x238 | `jtbl_80010080` (7, odd) | `era_o2_g0_dispatch_80010080` |
+
+Levers: `MASPSX_THREE_WORD_SYMBOL_STORE=1` + `MASPSX_DISPATCH_FOLD=jtbl_<vram>`
+(3-word `lui $at/addu/lw %lo($at)` dispatch against the shared pool) with era
+`-O2 -G0`; `ret = x >> n; ret &= m;` (not the one-expression form) to keep the
+shift/mask destination in the `ret` register; explicit 2-byte struct pads; and
+declaring a source pointer as `unsigned char *` (not an array) when cc1
+otherwise emits `la $4` and maspsx renders a 3-word materialisation.
+
+**Parked 4 targets** (details + exact divergences in
+`docs/ai_context/parked_blockers.json` id `pb-dispatch-jtbl-parks`; WIPs under
+`docs/evidence/pb-dispatch/`): `func_80051CC4` (loop-nested switch → LICM
+materialises the table base; `MASPSX_DISPATCH_FOLD` does not retarget that
+form — C was otherwise byte-exact), plus `func_80053D2C`, `func_8001F814`,
+`func_800144FC` (cc1 register-home/CSE divergences, frames 0x28 vs retail
+0x20).
+## SESSION STATUS — pb-multiunit lane: 768 → 781 matching C leaves (13 landed)
+
+Branch `agent/pb-multiunit` (worktree `/tmp/pe-agent-pbe`). Mid-size
+`draftable`+`pc_port` slice. `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**781**
+registered C leaves)"; `scripts/verify_us.sh` → **VERIFY_US=PASS**. Baseline
+was re-run fresh before any edit (768, EXACT, PASS).
+
+Landed (ascending size): `func_800339A0`, `func_8006BE4C`, `func_80044E14`,
+`func_8006A25C`, `func_800C3098`, `func_800C2FF0`, `func_800C2E08`,
+`func_80066BD8`, `func_80046ABC`, `func_80057B70`, `func_80056C14`,
+`func_80068CE0`, `func_800556E8`. All have
+`docs/evidence/pb-multiunit/<name>/REPORT.md`.
+
+**Reusable levers found** (worth trying on any mid-size leaf):
+1. **Void return is a real shape.** Two leaves (`func_800C3098`,
+   `func_8006A25C`) only match as `void`: retail stores the callee's `$v0`
+   (or leaves it) and a `short`/`int` return makes cc1 add
+   `andi`/`sll`/`sra` extension.
+2. **Global read-modify-write wants a local pointer.**
+   `unsigned int *p = &GLOBAL; *p |= MASK;` forces cc1 to materialize a
+   shared base register (`$a2`/`$a0`) instead of two independent
+   `lui $at,%lo` absolute accesses (func_8006BE4C, func_8006A25C).
+3. **Table reload: use the ARRAY expression, not a live pointer.**
+   `f(TAB[idx])` keeps the address in `$s0` and the value in `$v0`; a live
+   `int *p` local sinks the load into `$s0` and shifts the epilogue
+   (func_80044E14).
+4. **Staged condition temp defeats if-conversion.**
+   `int f = -(cond); acc |= f;` emits the branchless
+   `and/xor/sltiu/negu/or` retail uses; inlined `acc |= -(cond)` becomes
+   `bne`+`li` (func_800C2E08).
+5. **`MASPSX_PASSTHROUGH_SYMBOL_LOAD=1`** folds `%lo` into an indexed
+   load (`lui $at,%hi; addu $at,$at,$v0; lh/lhu $v0,%lo($at)`). It fixes
+   func_80056C14 (-G0) and func_800556E8; the latter needed a NEW profile
+   `era_o2_g8_passthrough_load` (`-O2 -G8` + the knob) added to
+   `configs/USA/disc1_build_profiles.json`.
+6. `-O2 -G8` (not the `-G0` default) for anything touching a global within
+   the gp window; a `(short)arg` plus gp load often fixes the prologue.
+7. **m2c "no profile matched" is not a dead end** — every leaf here was
+   landed by hand from the m2c draft.
+
+**Parked** (in `docs/ai_context/parked_blockers.json`): `func_800C2D0C`
+(cc1 rematerializes the phi-init field load as `lhu` instead of
+`addu a0,v0,zero`) and `func_8006F224` (loop rotation + register
+permutation). `func_800661CC`/`func_800661A4` are **ctc2/cop2**
+handwritten asm — not C-matchable, do not retry.
+
+## SESSION STATUS 2026-09-20 (latest): 768 matching C leaves; FMV completes (2026-09-20)
+## SESSION STATUS 2026-09-20 (agent/pb-small): 774 matching C leaves (+6)
+
+**Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**774**
+registered C leaves)"; `scripts/verify_us.sh` → **VERIFY_US=PASS** (all 774
+packed C spans equal retail). Plan `1120 spans = 774 c + 344 asm + 2 rodata`,
+SHA-256 `fdbe958f…`. Commit `6456c832`.
+
+**Six landed port-backed small leaves** (commit `6456c832`, evidence under
+`docs/evidence/pb-small/`):
+- `func_80017294` 0x7A94/0x28 — `era_o2_g8`; `D_8009D2F0` kept absolute via an
+  incomplete pointer array.
+- `func_80026FD0` 0x177D0/0x28 — `era_o2_g8`; constant **types** matter (`u8`
+  dest for `+0x80`, `s8` dest for `-8`).
+- `func_8004F464` 0x3FC64/0x2C — `era_o2_g8`.
+- `func_80056C14` 0x47414/0x2C — `era_o2_g0_passthrough_load`; needs the
+  **ternary** spelling plus `MASPSX_PASSTHROUGH_SYMBOL_LOAD=1`.
+- `func_80064C54` 0x55454/0x2C — `era_o2_g8`.
+- `func_80084F8C` 0x7578C/0x2C — default `era_o2_g0`; `-O1`/`volatile`/flag
+  sweeps do **not** stop cc1 folding the tail into `xori/sltu`; only the
+  short-circuit comma form (`... || (result = 0, byte != 0xFF)`) keeps retail's
+  second `beq`.
+
+**Parked (no matching-C attempt).** Nine of the fifteen worklist targets are
+GTE/COP2 (`ctc2`/`lwc2`/`swc2`/`mfc2`/`cfc2`/`mvmva`/`rtps`): func_80079024,
+80079004, 80078E94, 80078FC4, 80078FE4, 800661CC, 800661A4, 800792D4,
+80079244. Ordinary C cannot express the COP2 side effects and no sanctioned
+intrinsic exists — see `docs/ai_context/parked_blockers.json`
+(`pb-small-gte-cop2-parks`) and `COP2_SDK_SCREEN.md`. `func_8003708C` was
+deliberately not attempted (known `mult;mflo;mfhi` order blocker).
+
+## SESSION STATUS 2026-09-20: 768 matching C leaves; FMV completes (2026-09-20)
+
+**Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**768**
+registered C leaves)"; `scripts/verify_us.sh` → **VERIFY_US=PASS** (all 768
+packed C spans equal retail). Coverage **768/4459 functions (17.22%)**; ~341
+asm units / ~604 KB remain. Generator check OK. This session went 560 → 768
+leaves.
+
+**Port.** `pc_port` build OK, full **CTest 11/11**, `pe-native-tests`
+**1404/1404**.
+- **Opening FMV now completes.** `agent/fmv-eof` proved `0xFE00` is the MDEC
+  end-of-data RLE code and that retail `func_8010C89C` end-fills DecDCTin with
+  it, so the port's `MDEC_missing_block` at the last DecDCTout was an artifact.
+  `MdecBlock` now decodes an all-zero block when exhaustion is at a block
+  boundary and still raises `MDEC_unterminated_block` mid-block. Verified live:
+  `--max-frames 4000` → `stop_reason=frame-limit`, **0 boundaries / 0 bootstrap
+  stubs**, 3512 media steps, one `dbd_abort` + one `media_clear`, 4395 XA
+  sectors decoded. Evidence `docs/evidence/fmv-eof/REPORT.md`.
+- **Disc-1 route** (`--route-pad --max-frames 80000`): frame-limit, 0 bootstrap
+  stubs, token `A8001148` (m0012i), story `0x48`; only non-stopping
+  `func_80076C34` GPU boundary reports.
+- **Disc-2 boot:** 0 stubs, frame-limit; the retail disc-change screen renders.
+
+**Integration fix (parent).** The 709→768 merges left the port uncompilable and
+`DAY1_card_status` failing: `gen_decomp_ports.collect_defined_symbols` did not
+strip C comments, so a trailing comment between a parameter list and the body
+brace (e.g. `int func_8007DDC4(pe_addr_t port) /* B0(50h) */`) hid the
+definition and callers fell back to loud boundaries. Fixed by stripping comments
+before the scan (regenerated), declaring `func_800762A0` for its generated
+caller, and making it non-static.
+
+**Open frontiers.** `func_8004AD9C` file-menu page / `m0020i` story advance past
+`0x48`; physical-address-0 RAM-read fidelity; XA polish (gaussian resampling,
+mono/8-bit live, XA volume); disc-2 stream handling; the size-ranked matching
+worklist.
+
+## PARENT MERGE VERIFICATION: 762 matching C leaves + port frontiers (2026-09-20)
+
+Merged `agent/decomp105` (`581dc2f5`), `agent/decomp103` (`72de651a`),
+`agent/decomp104` (`71038759`), `agent/dispatch69b08` (`cebc480f`),
+`agent/fmvloop` (`0c2800b3`) and `agent/m0020i` (`86c72ed1`) onto the working
+branch; post-merge decomp-port regeneration and the `func_800762A0` /
+`func_8007DD74` link fixes ride `1cdc1f8f` + `71038759`.  Fresh clean
+split/build/verify: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (762
+registered C leaves)`, `VERIFY_US=PASS` ("all 762 packed C spans equal
+retail", plan `1102 = 762 c + 338 asm + 2 rodata`, SHA-256 `04c128e1…`).
+Coverage **762/4501 (16.93%)**.  `pc_port`: build OK, CTest **11/11**,
+`pe-native-tests` **1404/1404**, `gen_decomp_ports.py --check --allow-orphans`
+**OK**.
+
+Live port outcomes re-measured on the merged tree:
+- **Disc-1 route** (`PE_CARD=build/pe_card1.mcr --headless --route-pad
+  --max-frames 80000`): `stop_reason=frame-limit`, **token `A8001148`**
+  (`m0012i`; m0020i's only room transfer now fires at f=20655), story still
+  `0x48`, **0** `[STUB:BOOTSTRAP_RET]`, **0** `BOUNDARY_REPORT`.
+- **Opening FMV** (real Disc 1, no `--skip-movie`, 90000 frames):
+  `func_80192934_enter` **2078** (all 2077 frames), `func_80192934_dbd_abort`
+  + `func_80192CE8_media_clear` fire; new frontier is the single
+  `MDEC_missing_block` bootstrap stub → `stop_reason=unresolved-boundary`.
+- **Disc-2 boot** (`--skip-movie --skip-opening-menu --max-frames 600`):
+  0 bootstrap stubs, `frame-limit`, `polygons=0` — the retail disc-change
+  screen, which `func_80069B08` now honestly draws (the old 529332-polygon
+  render was the stub skipping that screen).
+
+## SLICE-6 TOOLING LEVERS: 724 → 732 matching C leaves (2026-09-20)
+
+Branch `agent/decomp105` from `d2ae6879`, worktree `/tmp/pe-agent-decomp105`.
+Baseline reproduced exactly (724 leaves, EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`). **+8 leaves**, final fresh build
+**EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**,
+`Matching claim: YES (732 registered C leaves)`, `VERIFY_US=PASS`
+(plan `1060 = 732 c + 326 asm + 2 rodata`). 91/732 leaves now use gp.
+
+1. **Return-delay-slot stack restore — new maspsx lever.** cc1 2.7.2 emits
+   `addu/addiu $sp,$sp,N` *before* the bare `j $31` with no nop slot; ASPSX
+   hoists it into the slot. New opt-in env **`MASPSX_FILL_EPILOGUE_DELAY_SLOT=1`**
+   (`tools/era/maspsx/maspsx/__init__.py`, pure reorder, default OFF; new
+   `tests/test_fill_epilogue_delay_slot.py`; 180 maspsx tests pass). New profile
+   **`era_o2_g0_fill_epilogue_delay_slot`**. Leaves:
+   `func_80075B4C`/`75C04`/`7DD74`/`755BC`/`75AE8`. Worklist scan: **202**
+   remaining functions share this `jr $ra`/`addiu $sp` shape.
+2. **`$gp`-relative readers — premise was stale; lever already exists.** No
+   maspsx change needed: compile with **`-G8`** (cc1 emits `.extern SYM,<size>`
+   for scalar externs; maspsx passes the bare `lw/sw $r,SYM` through because its
+   driver gets no `-G`; **GNU as defaults to `-G8`** and relaxes `.extern`-sized
+   symbols to `%gp_rel`; the linker resolves against `_gp`). **Retail `$gp` base
+   is `0x8009CD70`** (crt0 `62DB0`: `lui/addiu $gp,D_8009CD70`), *not*
+   0x8009CD60 — so `0x590($gp)` = `D_8009D300`. 88/724 leaves already used gp
+   (`func_800124F8`, `func_80055FB4`, …). Keep a same-size symbol absolute with
+   an **incomplete-array** declaration (`extern int *D_8009D278[];` → no
+   `.extern` size). New leaves (all `era_o2_g8`): `func_8001784C`
+   (`0x590($gp)`), `func_80021054` (`0xCC($gp)`, `signed char`), `func_80055FE0`
+   (`0x2E8($gp)`; signed `1 << …`).
+
+Commit range `d2ae6879..<docs>`. Full recipes, evidence and negative results
+(`func_8005E4E4`/`5E518` bit-test fold / register choice):
+`docs/evidence/agent-decomp105/REPORT.md`.
+
+## agent-decomp103 (slice 6 round 2, ranks 753-1665) — 18 leaves, 724 → 742 (2026-09-20)
+
+Branch `agent/decomp103` from `d2ae6879`, worktree `/tmp/pe-agent-decomp103`.
+Baseline reproduced (724, EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `VERIFY_US=PASS`). **+18 new
+leaves**, all on the **default `era_o2_g0`** profile (no profile/YAML-profile
+change). Final fresh build on `2df1dbf2`: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (742
+registered C leaves)`, `VERIFY_US=PASS` (`1075 spans = 742 c + 331 asm + 2
+rodata`). Commit range `d2ae6879..2df1dbf2`, one leaf per commit.
+
+**Method fix that unlocked the batch:** slice `glabel … endlabel` (not
+`glabel+1 .. +size/4`) — the latter drops trailing words after an interior
+`.L` label and made six leaves look "close but wrong". Correct spans +
+faithful statement order matched call-wrapper/straight-line shapes outright.
+
+**NEW LEVER (unactioned): ASPSX fills the `jr $31` delay slot with the stack
+restore.** `func_800755BC`/`func_80075AE8` differ by exactly 2 words: retail
+`jr $ra; addiu $sp,$sp,0x18`, cc1 `addiu $sp,$sp,0x18; jr $ra; nop`. Must be
+per-leaf (matched `func_80090AAC` keeps the unfilled form). A maspsx
+`MASPSX_FILL_SPRESTORE_DELAY_SLOT=1` patch would close those two plus 102's
+`func_80075B4C`/`func_8007DD74`/`func_80075C04`; **117 slice-6 functions have
+this hard epilogue shape**. Also confirmed but not committed (18-leaf cap):
+`func_8004FC3C` (0x4043C) `WORDS MATCH` when declared `int` with an explicit
+`return 0;` (hoists `addu $v0,$zero,$zero` into the `beqz` delay slot).
+Full table + 10 parked divergences: `docs/evidence/agent-decomp103/REPORT.md`.
+
+## PARENT MERGE VERIFICATION: 724 matching C leaves (2026-09-20)
+
+Merged `agent/xapolish` (`6b8422b8`), `agent/decomp101` (`d347a0c7`),
+`agent/decomp100` (`cf54d3d5`) and `agent/decomp102` (`8cc44747`) onto the
+working branch; post-merge decomp-port regeneration `1a92d3f2` (3 TUs became
+src-backed: `func_80019260`/`func_80019CEC`/`func_8006599C`; orphan manifest
+19 entries).  Fresh parent build after a re-split: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `Matching claim: YES (724
+registered C leaves)`, `VERIFY_US=PASS` ("all 724 packed C spans equal
+retail", plan `1048 = 724 c + 322 asm + 2 rodata`).  `pc_port` CTest **11/11**,
+`pe-native-tests` **1402/1402**, `gen_decomp_ports.py --check --allow-orphans`
+**OK**.  Coverage **724/4516 (16.03%)**.
+
+## agent-decomp104 (slice 5, ranks 425-752) — 12 leaves matched (2026-09-20)
+
+Branch `agent/decomp104` from `d2ae6879`; worktree `/tmp/pe-agent-decomp104`.
+Baseline reproduced (724 c, EXACT SHA-1, `VERIFY_US=PASS`).  Final fresh build:
+**EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**,
+`Matching claim: YES (736 registered C leaves)`, `VERIFY_US=PASS`
+(plan `1063 = 736 c + 325 asm + 2 rodata`).  Commit range
+`d2ae6879..d2db5710`.
+
+New leaves: `func_8007A930`/`func_80080B44` (BCD digit-pack twins),
+`func_80019DF4`, `func_8003DBE4`, `func_800C7E50`, `func_800C7F60`,
+`func_800C815C`, `func_800C8D34`, `func_800C90A4`, `func_800C9D9C`,
+`func_800CA934`, `func_800CABC8`.
+
+**New levers (all proven this session).**
+1. **Return type/value selects register coloring.** `func_8007A930`/`80B44`
+   as `void` gave a word-for-word identical instruction sequence with *rotated*
+   coloring; declaring `unsigned char *` and `return arg1;` makes era cc1 copy
+   the output pointer into `$v0` early (retail `addu $v0,$a1,$zero`), freeing
+   `$a1` for the `0x88888889` magic → byte-exact.  Same mechanism gives
+   `func_80019DF4` (`return 1;`) and `func_800C8D34` (`return 0;`).
+2. **Aggregate-typed destination parameter is a coloring/scheduling lever**
+   (`func_800C815C`: `struct Sprite *a2` flips the `D_800E279C` reload from
+   `$v0`+extra load-delay nop to `$a0` scheduled into the `lhu` slot).
+3. **Pointer-temp placement between stores controls base lifetime**
+   (`func_800C7F60`: `op = D_800E279C;` must sit *between* the 2nd and 3rd sum
+   stores to colour the base `$a0` and fill the load-delay slot).
+4. **Call-in-`%` preservation** (`func_800C7E50`: keep `func_80071A54()` inline
+   in the `%` expression; binding it to an `int` local inserts a `$v0→$a0` copy).
+5. **Bitfield union for `srl`+`andi` same-register coloring** (found on
+   `func_8002FE78`; that leaf is parked — see below).
+6. **Jump-table leaves need `ERA_ASPSX_VER=2.30`** (3-word indexed symbol load).
+7. **Statement order selects both constant hoisting and store order**
+   (`func_800C8D34`: moving `D_800E22F0 = 0;` up next to `D_800E22F2 = 0x80;`
+   made cc1 hoist `$a1=0x80` into retail's slot *and* re-emit the two halfword
+   stores in retail's order).
+
+**Triage caveat:** `try_leaf.py` zeroes relocation words, so two different
+symbol-store instructions whose only difference is the symbol/immediate are
+treated as equal. `func_800C8D34` and `func_8002FE78` both passed try_leaf but
+failed the full build. For symbol-store-heavy leaves, verify with
+`scripts/build_us.sh` (or compare the object's reloc-symbol sequence).
+
+Slice note: every body is 0xE4-0x1A4 (57-105 words); 10/328 contain COP2.
+Parks: `func_8002FE78` (retail's switch table sits at file 0x12C8, which a C
+leaf cannot place), `func_80078CC4` (era cc1 never emits register-register
+`multu; mflo`), `func_8008B698` (base split), `func_800C6FA0` (MMIO base /
+second-pointer address form), `func_80019170` (loop rotation).  Details:
+`docs/evidence/agent-decomp104/REPORT.md`,
+`docs/ai_context/parked_blockers.json` (`slice5-medium-leaf-cc1-baseschedule-parks`).
+
+## XA-FIDELITY: gaussian resample + CD-XA volume chain (2026-09-20)
+
+Branch `agent/xapolish` from `ec097017`.  Closes the named XA gaps (a) linear
+resampling, (b) unverified mono/18900 Hz/8-bit paths, (c) unapplied XA/CD
+volume.  `pc_port/platform/pe_xa.{c,h}` now resample with the psx-spx 4-point
+gaussian (512-entry `gauss` table, `PE_Xa_GaussInterp`, exact integer phase
+accumulator), correct the 8-bit sound-group layout (data is byte `blk` of the
+32-bit word `i` at `+16`; the old code read `+8`), and apply the CD-XA output
+volume chain: ATV0..3 from `pe_cdreg` (psx-spx CDROM bank2/3, `80h`=unity),
+SPU CD input volume `1F801DB0h/DB2h`, SPU main volume `1F801D80h/82h`, gated by
+SPUCNT bit0/bit14.  Retail `func_8007BAC0` sets ATV `{80h,0,80h,0}`, CD volume
+`3FFFh`, SPUCNT `C001h`, so live XA is ~6 dB lower than the old unvolumed mix.
+
+Live opening FMV (real Disc 1, headless 20000 frames): 399 XA sectors /
+804384 frames both before and after; WAV peak 19491 -> 11620, RMS 1283 -> 756,
+non-zero 233712 -> 233689 of 588735.  Tests: `pe-native-tests` **1402/1402**
+(6 -> 14 XA vectors: gaussian taps/normalization/step, 8-bit layout,
+mono/18900/8-bit resample lengths, ATV/CD-volume gating), CTest 11/11,
+`gen_decomp_ports.py --check --allow-orphans` OK.  Fail-on-pre-change proven by
+reverting the 8-bit offset (3 failures) and the volume application
+(`XA_volume_matrix` fails).  A raw Disc 1 scan finds **only** 4-bit stereo
+37800 Hz XA (13452 sectors), so mono/18900/8-bit are synthetic-only.  Retail
+rebuild after the change: **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, 709 C leaves.  No retail audio
+golden: psx-spx + unit vectors, not byte-accurate.  Note: DuckStation's CDROM
+models the XA upsampler as a 7-phase FIR, not the gaussian — documented in the
+report.  Evidence: `docs/evidence/pe-xa-fidelity/REPORT.md`.
+
+## agent-decomp101 (slice 2, ranks 37-109) — 1 leaf matched (2026-09-20)
+
+Branch `agent/decomp101` from `58ffdd4b`.  Worktree `/tmp/pe-agent-decomp101`.
+Baseline and final both rebuild **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, `VERIFY_US=PASS`, **710**
+registered C leaves.
+
+- **Matched `func_8008D140`** (VRAM 0x8008D140, file 0x7D940, size 0x4D0):
+  32-way unrolled dirty-bit halfword copy, `-O2 -G0`.  cc1 only
+  materialises the "flag word is zero" test once (`sltiu $a2,$a1,1`) when it
+  is a named local (`unsigned int zero = (flags == 0);`); inlining
+  `flags == 0` into each `||` makes cc1 emit a per-statement `beqz $a1`.
+  Commit `4c90986c` (also carries the regenerated
+  `docs/generated/DISC1_MATCHING_STATUS.md` — `verify_us.sh` step 3 requires
+  it).
+- **Parked `func_80087AA8`** (0x782A8, 318 words): faithful transcription;
+  block-local temporaries fixed blocks 1/3/5, `register ... asm("$N")` pins
+  fixed 1/3/5 exactly, but block 2 (`f60`) and block 4 (`f74`) keep a
+  scheduling/coloring skew (see `docs/evidence/agent-decomp101/REPORT.md`).
+- **Parked `func_800334AC`** (0x23CAC, 317 words, `-O2 -G8`): nine unrolled
+  record-submit blocks; retail keeps `obj` in `$s1` and materialises
+  `$s4 = obj+0x4C`, candidate uses `$s3` and folds the pointer.  `sel` pin
+  did not take.
+
+23 of the 73 slice-2 functions contain GTE ops and no matched leaf uses GTE,
+so those were out of reach for this pass.
+
+## DECOMP100 SLICE-1 TRIAGE: 0 leaves, slice is out of C-leaf range (2026-09-20)
+
+Branch `agent/decomp100` from `ec097017` (worklist ranks 1–36, the 36 largest
+remaining functions). Baseline reproduced exactly (709 c leaves, EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`, `VERIFY_US=PASS`). **No new leaf
+was registered** — every top-36 function is 2–9× the largest C leaf this
+project has matched (976 B / 244 words, `func_80012850`). A deep attempt on
+`func_80024250` (rank 30, 507 words, jump-table switch) matched the first
+0x2F4 bytes byte-for-byte (head + cases 0–6) then hit a sched2/global-alloc
+wall in case 7 (retail materialises `a3/a1/t0/t1 = ~0x8000/~0x10000/~0x20000/
+~0x40000` contiguously; era cc1 interleaves the `li $4,~0x1000`), which no
+flag or source shape moved. 7 of the 36 (ranks 16/19/22/31/33/34/36) are
+GTE/COP2 functions and have no C path at all (era `cc1` has no GTE codegen;
+no matched leaf contains a COP2 word). Full table, per-class blockers and the
+`func_80024250` divergence are in
+`docs/evidence/agent-decomp100/REPORT.md` (+ `func_80024250.wip.c`).
+Recommendation: re-slice ranks 1–36 into medium functions for parallel agents;
+decide a GTE policy before ranking the COP2 leaves. Tooling gap: `try_leaf.py`
+cannot exercise `MASPSX_FORCE_ABSOLUTE_SYMBOLS` (emulate it or add a flag).
+
+## SLICE-6 SMALL-FUNCTION SWEEP: 709 → 723 matching C leaves (2026-09-20)
+
+Branch `agent/decomp102` from `58ffdd4b`, worktree `/tmp/pe-agent-decomp102`.
+**14 new leaves** from worklist slice 6 (ranks 753-1680), all small (0x1C-0x40).
+Final fresh build: **EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**,
+`Matching claim: YES (723 registered C leaves)`, `VERIFY_US=PASS`
+(plan `1046 spans = 723 c + 321 asm + 2 rodata`). Commit range `58ffdd4b..4986f3e8`.
+
+New profile **`era_o1_g0_aspsx_230`** (`-O1 -G0` + `ERA_ASPSX_VER=2.30`) and 13
+leaves added to the existing `era_o2_g0_aspsx_230`.
+
+**New levers:**
+1. **`ERA_ASPSX_VER=2.30` for small symbolic stores.** ASPSX < 2.30 (maspsx
+   `nop_at_expansion=True`) injects a `nop` before a symbol-store macro's `$at`
+   expansion; retail's small store macros in this region have none and place
+   `lui $at` directly after the producing load. 13/14 leaves use
+   `era_o2_g0_aspsx_230`; one (`func_80018E84`) uses `era_o1_g0_aspsx_230`.
+2. **`volatile` on a structure pointer** is a CSE/width lever: it reproduces
+   retail's *double* `D_800B1624` header load (`func_80065A9C`/`6599C`/`659C8`)
+   and keeps a full `lw` where cc1 would narrow to `lhu` for a truncating store
+   (`func_80018E84`).
+3. **Statement order selects independent-load scheduling** (`func_80019CEC`:
+   write 0x21C/0x21E/0x220 to get cc1's 0x21C/0x220/0x21E).
+
+Leaves: `func_80017E68`, `func_80018E84`, `func_80019260`, `func_800196E8`,
+`func_80019CEC`, `func_80019DB8`, `func_8001A374`, `func_8001A3FC`,
+`func_80073D24`, `func_80090AAC`, `func_80065A9C`, `func_8006599C`,
+`func_800659C8`, `func_8006E6A8`. Full table + 30 parked leaves with exact
+instruction divergences: `docs/evidence/agent-decomp102/REPORT.md`.
+
+**Note for the next slice-6 agent:** the slice still has ~910 functions; the
+remaining easy small leaves are largely (a) `$gp`-relative readers (no matched
+leaf uses `$gp` yet — gp base is `0x8009CD60`, so `0x590($gp)` = `D_8009D2F0`)
+and (b) frames whose `jr` delay slot is filled with `addiu $sp` (cc1 2.7.2
+emits the teardown *before* the jump; e.g. `func_80075B4C`/`7DD74`).
+
+## PE-69B08: boot boundary is the retail disc-change screen (2026-09-20)
+
+Branch `agent/dispatch69b08` from `58ffdd4b`.  `func_80069B08`
+(`asm/disc1/56438.s`, 0x5E0) is now transcribed in full
+(`pc_port/game/boot/func_80069B08_port.c`) and the `psx_compat.h`
+`Bootstrap_ReturnVoid` stub is gone; `pe_cdreg.c` gained the CdlStop (8)
+wiring its first command needs.  **The function is the disc-change /
+"insert the correct disc" screen**, not a load step: state 2 holds on the
+CD status byte's `CdlStatShellOpen` (`0x10`), then state 4 completes only
+when `func_800698D4`'s disc identity matches the dispatch mode.  The
+Disc-2 verification image is the mismatch case (`D_800A7918==0` → mode 1,
+Disc 2 inserted), so the run now reaches `frame-limit` with the disc-change
+screen on screen and **`polygons=0`** instead of the stub baseline's
+529332 — a faithful behaviour change, not a fake.  A documented host bound
+(`PE_Port_ShouldStop()` in the state loop, same precedent as
+`func_8001220C`'s `PE_PORT_DISC_WAIT_LIMIT`) keeps it from hanging.
+Verified: CTest 11/11, `pe-native-tests` 1394/1394,
+`gen_decomp_ports.py --check --allow-orphans` OK, Disc-1 route
+`frame-limit` with 0 bootstrap stubs.  Evidence:
+`docs/evidence/pe-69b08-dispatch/REPORT.md`.
+
+## OPENING FMV COMPLETES: two guest transcription fixes (2026-09-20)
+
+Branch `agent/fmvloop` from `ec097017`.  The real Disc 1 opening movie
+(FMV001, record limit 2077) now plays to its true end and the game leaves the
+movie state.  Two independent transcription bugs blocked it:
+
+1. `pc_port/game/boot/func_8010C89C_port.c` — the CA7C main loop's zero-first-
+   table escape reused the pre-branch `at`; retail CAD4 re-reads
+   `at = t1 & 0xFF` from the **second** table word.  Without it the bitstream
+   desynchronised on escape-using frames, emitting ~2x the declared RLE extent
+   (FMV001 frame 319: 101510 vs 51076) and overflowing the `A+0xFA00` RLE arena
+   into the record pool at `A+0x1F400`, which stalled the CD reader at ~319
+   frames (`CD_B0CD0_pending_unresolved`).
+2. `pc_port/game/boot/func_80191B64_port.c` — C44's completion latch must also
+   fire on reaching/exceeding the record limit (`!(w < rec[8])`), not only on a
+   frame-number regression.  Retail sets `D_801D0DBD` in the C84 fall-through;
+   the old transcription had no store there, so `D_800B0DBD`/`D_801D0DBD` never
+   latched at `w == 2077` and the reader ran past EOF.
+
+Live before/after: 319 → **2078** `func_80192934_enter`; stop
+`CD_B0CD0_pending_unresolved` → **`MDEC_missing_block`** (new downstream
+frontier), with `func_80192934_dbd_abort` + `func_80192CE8_media_clear` firing;
+XA 399→2600 sectors; WAV peak 19491→31766.  Verified: native 1396/1396 (2 new
+non-vacuous real-disc regressions), CTest 11/11, `gen_decomp_ports.py --check
+--allow-orphans` OK.  Only `pc_port/` changed (retail SHA untouched).  See
+`docs/evidence/pe-fmv-media-loop/REPORT.md`.
+
+## M0020I-GATE: the room's only transfer is a door 118 units east of entry (2026-09-20)
+
+Branch `agent/m0020i` from `ec097017`.  `m0020i` (token `0xA8002048`) has
+**exactly one** `op31`: module 4 (actor type 4, serial 5) at package off
+`0x1600` requests `0xA8001148` (`m0012i`) after its `op77` rectangle
+`x[655,851] z[-357,352]`.  Aya enters at `(537,-19)`, but the recorded
+`kDay1RoutePads` walked her **west** immediately, so the baseline token froze
+at `0xA8002048` through frame 80000 (`op31`/`D_8009D280` never moved) — the
+reported symptom.  Fix: two recorded frames `20600:FFDF,21000:FFFF` in
+`pc_port/tests/route_rehearsal_pads.h` walk her east through the door; the
+transfer now fires at **f=20655** and the route ends at `0xA8001148`.
+
+**Still open — story stays `0x48`:** the `local[4]==3` key gate is a separate
+body-contact path.  `local[4]` is Aya's mailbox payload (`op1F`); payload `3`
+is sent only by module 2 (the body's contact script, entry `0x801A1620`) and
+only when `persist[0x18] & 0x200` is set, which the first contact itself sets.
+The port's contact pass creates the body task **once** and never re-arms it
+(live `[CTASK]`/`[CTRET]`), so `opA7` fires 0 times and no key/global24 is
+awarded.  Resolving that needs either a proven re-contact input sequence or a
+look at `func_80036448`/`func_80012774` task re-arm.  Only `pc_port/` + docs
+changed; retail SHA untouched.  Full evidence:
+`docs/evidence/pe-m0020i-gate/REPORT.md`.
+
+## PE-SAVE-PAGE: `func_80043DA4` command 5 is native (2026-09-20)
+
+Branch `agent/4ad9c-savepage` from `160137a4`.  The field main-menu handler no
+longer stops at `Bootstrap_ReturnVoid("func_8004AD9C", ...)` for command 5.
+16 non-matching functions (`func_8004AD9C`, `func_8004AE1C`, the four slot
+pages and their handlers, `func_8005D994`, `func_8005247C`,
+`func_80050C70/50CB4`) are transcribed from 37CD0.s / 3BD84.s / 4E194.s /
+42664.s / 41470.s and registered in the `func_80063E0C` input and
+`func_800638D8` draw switches.  The five one-line list-draw wrappers
+(`func_8004FF30/58/80`, `func_8004B534/B55C`, matched `src/` leaves) are
+transcribed with the callback guest address spelled out, because the
+decomp-port generator turns a function-pointer argument into a bare
+designator.
+
+Verified: `pe-native-tests` 1394/1394 (2 new SAVEPAGE tests), CTest 11/11,
+`route-boot-day2` PASS 27/27, `gen_decomp_ports.py --check --allow-orphans`
+OK.  Only `pc_port/` changed, so the retail SHA is untouched.
+
+**Important:** instrumenting the route shows `func_80043DA4` handles exactly
+one confirm in 42000 frames and it is `command == 0`; command 5 and the whole
+new page tree are invoked **zero** times.  The m0020i "save/load menu" is the
+memory-card flow (`func_8004D6D4`/`func_8004D2DC`), not this file menu, so this
+port is a fidelity fix but **not** the `local[4]==3` gate.  Also: a fresh
+worktree fails `route-boot-day2` until the git-ignored `build/pe_card1.mcr`
+fixture is copied in (blank card -> slot list retries -> menu mode never
+clears).  See `docs/evidence/pe-save-page/REPORT.md`.
+
+**Parent verification of merge `a37d29ed` (2026-09-20):** retail rebuild after
+the merge is **EXACT SHA-1 `452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**,
+`VERIFY_US=PASS`, 709 c + 321 asm + 2 rodata, "all 709 packed C spans equal
+retail".  `pc_port` CTest **11/11**, `pe-native-tests` **1394/1394**.  Live
+`PE_CARD=build/pe_card1.mcr --headless --route-pad --max-frames 80000` reaches
+`stop_reason=frame-limit` with **0 `[STUB:BOOTSTRAP_RET]`** and 0
+`BOUNDARY_REPORT`s; story/token still `0x48`/`A8002048`.
+
+## POST-MENU CARD BOUNDARY SOLVED: full-card write abort is real retail code (2026-09-20)
+
+Branch `agent/post-menu-card` from `e4931e6b`.  The `[STUB:BOOTSTRAP_RET] card
+operation unresolved call` at ~frame 44000 was **not** a missing feature: the
+autopilot had already written seven 2-block saves (slots `A`..`G`), so the
+eighth save genuinely runs out of blocks on a 15-block card and the game runs
+`func_80040F80`, the abort/cleanup path the port still had as a boundary
+(`caller=func_80040F80 target=0x80072774`, `card0_state=9`).
+
+- `game/boot/func_80041108_port.c` — `func_80040F80`
+  (`asm/disc1/307CC.s` 0x80040F80..0x80041108) is now translated in full for
+  the card-present path: close the record handle, and for an aborted state-9
+  write rebuild the name, retry `func_80072734(name,1)` ten times, close +
+  `func_800727A4` (erase) the partial file, then the shared `func_8004D5CC`
+  teardown and record zeroing.  With no card mounted the two libcard steps keep
+  the recorded libcard boundary the card oracles pin.
+  The erase name is built with a *double* device prefix in the original
+  (`"bu%ld0:%s"` over `D_8009EE70`, which already holds `"bu00:..."`), so the
+  BIOS open fails there too and the erase is skipped — reproduced by the
+  regenerated `retail_card_operation_frame_cases.h` hashes.
+- `game/boot/func_80072314_port.c` (new) — BIOS `A(1Bh) strlen` and
+  `A(2Eh) memchr`, the retail thunks `func_80072314`/`func_80072324` that
+  `func_80071A84`'s `%s` conversion used to stop on (psx-spx).  The oracles now
+  model those two BIOS services, so `retail_formatter_frame_cases.h` (64 `%s`
+  cases) and `retail_card_operation_frame_cases.h` (80 cases) were regenerated.
+
+Verified: `pe-native-tests` 1392/1392, CTest 11/11, all touched card/formatter
+oracles PASS, and the live route now runs to `stop_reason=frame-limit` (80000
+frames) with **zero unresolved boundaries and zero bootstrap stubs**.  Story
+stays `0x48` only because the recorded Day-1 pad sequence ends there.
+Evidence: `docs/evidence/pe-post-menu-card-boundary/REPORT.md`.
+
+## CARD-WRITE WIRING: the save is written to the card (2026-09-20)
+
+Branch `agent/card-write` from `a598ddd0`.  `func_80041108`'s states 3..11 now
+drive the ported libcard file API on the present-card path instead of stopping
+at the formatter/open/read/write/close boundaries:
+
+- Added BIOS `B(0x45h)` `erase(filename)` to `pe_libcard.c` (chain release +
+  entry clear + persist).
+- Live path: format via `PE_FormatterFrame` (scratch `0x801FF600`), then the
+  retail continuation — state 4 `open(0x10200)`+close, state 6 `open(2)`, state
+  9 write 0x2000 in 0x400 chunks, close, state 3 refresh (`open(1)` → read 0x80
+  → close+copy), state 11 `open(1)`+close+format+erase, state 10 load close.
+  Shared retry/failure tail via `func_80040F80`.
+- Fixed `pe_card_name_from_guest`: the card stores the filename without the
+  `buXX:` prefix; the game matches `dirent` against `[0x80092224]+6`.
+- The no-card path keeps the original first unresolved call (formatter), so
+  `DAY1_card_operation`/`DAY1_card_driver` and all card oracles still pass.
+
+Verified: `pe-native-tests` 1385/1385, CTest 11/11, card oracles PASS.  Live
+`--route-pad` with a present `.mcr` writes entry 0 = `BASLUS-00662000`,
+state `0x51`, size `0x2000`, and reaches `stop_reason=frame-limit` with no
+unresolved-boundary stop.
+
+**Remaining (pre-existing, separate):** the slot list still draws "Unused
+File", so the menu never leaves and story stays `0x48`.  State 2 writes the
+entry at `record + dirent[0x13]*0x44 - 0x1128` (retail 0x8004135C), but the menu
+reads `func_800424B4` = `0x800A0EF0 + card*0x418 + item*0x44`; reconciling the
+host dirent layout (currently a 20-byte name at +0x00..+0x13) with the game's
+`dirent[0x13]` convention is the next step.  Evidence:
+`docs/evidence/pe-card-write-wiring/REPORT.md`.
+
+## SAVE-WRITE-CHAIN: func_80042020/42170/5C25C/40B80 ported (2026-09-20)
+
+Branch `agent/save-write` from `d7d6e35b`. The save-write handler and block
+assembly are now real hand-translations (nonmatching), so the route's
+`func_80042020` boundary is gone.
+
+- `game/boot/func_80042020_port.c` — save entry `func_80042020(card,slot)` and
+  load entry `func_80042170(card,slot)`.
+- `game/boot/func_80040B80_port.c` — builds the 0x2000-byte card block in
+  `D_8009EED0` and stores the CRC-16/CCITT (`0x1021`) as `~crc`; also
+  `func_8005DE70`.
+- `game/boot/func_8003F800_port.c` — appends the record's extra fields.
+- `game/boot/func_8005C25C_port.c` — status-word/play-time gathering.
+- `game/boot/func_80040210_port.c` — Shift-JIS fullwidth formatter
+  `func_8004006C`, play-time split `func_80040210`, `func_8005DE08`,
+  `func_80043474`, `func_8005D940`.
+- `platform/func_80071A14_port.c` — BIOS A(19h) `strcpy`.
+
+`PE_FormatterFrame` needs a caller stack; the port uses scratch
+`0x801FF600` (free 0x801FF040..0x801FFE00 band).
+
+**Generator fix:** `tools/analysis/gen_decomp_ports.py` no longer rewrites every
+bare-first-argument data symbol to its address; it keys off the callee
+prototype/boundary edge. Without this, `func_800504F4` emitted
+`func_80042020((pe_addr_t)0x8009CF44u, ...)` instead of the value. 21 generated
+TUs changed (comments, plus the scalar-arg fixes).
+
+**Guard:** `func_8004FE58` returns "row disabled" on a null slot-entry lookup
+(retail assumes non-null); the port can see null while `func_80041108` states
+3..11 are unported and the menu still draws. No stub widened.
+
+**Verified:** `pe-native-tests` 1384/1384; CTest 11/11; card oracles PASS;
+`gen_decomp_ports.py --check --allow-orphans` OK; live route before/after:
+`[STUB:BOOTSTRAP_RET] func_80042020` → `[STUB:BOOTSTRAP_RET] card operation
+unresolved call` (`func_80041108` `format_name`, target `0x80071A84`), frame
+38500 story `0x48`, exit 0. Evidence:
+`docs/evidence/pe-save-write-chain/REPORT.md`.
+
+**Next:** wire `func_80041108` states 3..11 (live `format_name`) to the libcard
+file API (`func_80072734` open / `func_80072754` read / `func_80072774` close)
+so the write completes and the route leaves the save menu.
+
+## SAVE-MENU-INPUT: func_8004D978 + func_8004D6D4 ported (2026-09-20)
+
+Branch `agent/menu-input` from `85d1e76d`.  The Day-1 autopilot's
+`[STUB:BOOTSTRAP_RET] PE_MenuInputCallback` stop for the slot-list handler
+`func_8004D6D4` (169 words, `3DCC4.s`) is cleared by translating it and its
+only unported callee `func_8004D978` (24 words) from the retail bytes into
+`pc_port/game/boot/func_8004D4C4_port.c`, and wiring
+`menu_callback` (`func_80063E0C_port.c`) plus the `func_80042B50` delayed
+callbacks `0x800504F4`/`0x8005051C` (`func_8005C498_port.c`).
+
+Live route (real Disc 1, present `.mcr`, `--headless --route-pad
+--max-frames 42000`): before, stop at `PE_MenuInputCallback` frame 38500 /
+story `0x48`; after, **frame-limit 42000** with the only remaining boundary
+being the unported save-write handler `func_80042020` (loud decomp boundary,
+does not stop).  `pe-native-tests` 1384/1384, CTest 11/11, card oracles PASS.
+Evidence: `docs/evidence/pe-save-menu-input/REPORT.md`.
+
+**Next:** port the save/load write chain `func_80042020` (0x150) /
+`func_80042170` (0xB8) and their unported callees `func_8005C25C` (0x118) /
+`func_80040B80` (0x400) against the libcard file API (plus the
+`PE_FormatterFrame` caller-stack ABI), so the slot-list confirm completes and
+the route leaves the menu past story `0x48`.
+
+## AUDIO-SPU: host sink + 24-voice SPU mixer (2026-09-20)
+
+Branch `agent/audio-spu` from `abcdc2bd`.  The port had **no audio output path
+at all**; it now has one:
+
+- `pc_port/platform/pe_audio.{h,c}` — sink abstraction: NULL, RIFF/WAVE
+  (16-bit stereo 44100 Hz, header sizes patched per block), and a compile-time
+  `PE_AUDIO_HAVE_LIVE` stub (no audio dev library is assumed).
+- `pc_port/platform/pe_spu.{h,c}` — 24-voice mixer: psx-spx SPU-ADPCM decode
+  (shift/filter prediction tables), loop flags, pitch counter, linear
+  interpolation, shift/step ADSR, fixed voice/main volumes, SPUCNT
+  enable/unmute gate.
+- `pe_spu_dma.c` routes every `PE_SpuRegister_StoreU16` through the voice model
+  (key-on/off edges) and adds a host `PE_SpuRam_StoreU8` seed.
+- `host_framebuffer.c` renders one vblank (735 samples) per presented frame;
+  `port_main.c` opens `PE_AUDIO_WAV=<path>` and flushes on exit.
+
+Verified: `pe-native-tests` **1383/1383** (+6 audio vectors), full CTest 11/11.
+
+**Honest status:** the live route's WAV is *silent* — over 38000 frames the
+guest writes SPU mode/reverb registers (`reg_writes=328`) but **keys no voice**
+(`key_ons=0`), because the score/instrument key-on path is not reached
+(`func_8008A068`/`8AE94`/`8B040` are unported; see
+`DAY2_MUSIC_START_CONSUMERS.md`).  A synthetic `PE_AUDIO_SELFTEST=1` tone proves
+the decoded→mixed→sunk path in a live run.  Gaps: gaussian interpolation
+(linear used), volume sweep, noise/pitch-mod/reverb, XA-ADPCM (CD bit4 boundary
+unchanged).  No retail audio golden exists.  `func_8007D1D4`/`func_8007DAE0`
+remain no-ops and must be re-implemented once the guest key-on path runs.
+Evidence: `docs/evidence/pe-audio-spu-host-sink/REPORT.md`.
+
+## LIBCARD-FILE-API: file API + state-2 enumeration; frontier = slot-list UI (2026-09-20)
+
+Branch `agent/libcard-file-api`, base `b28eb1a1`. The card file layer is real:
+
+- **libcard file API** (`pc_port/platform/pe_libcard.c`): B0 32h open / 33h
+  lseek / 34h read / 35h write / 36h close / 41h format / 42h firstfile / 43h
+  nextfile over the present 128 KiB image (psx-spx block/directory layout,
+  chained 8064-byte data blocks, XOR checksums), plus A0 18h `func_80071A04`
+  memcmp. Absent/empty card returns the documented `-1`/`0` — nothing faked.
+- **`func_80041108` state 2** (`pc_port/game/boot/func_80041108_port.c`):
+  translated directory enumeration, 12-byte name match, block accounting,
+  entry scan and continue/unable dispatch. New `DAY1_card_file_api` test.
+- **New frontier:** both state-2 continuations call the slot-list UI
+  (`func_8004D4C4` continue / `func_8004D298` unable), which reads PS1
+  **low memory** (address 0 / 0x150) the port does not model (a fixture faulted
+  `PE_LoadU32(0)`). They are explicit named boundaries. The live route stop is
+  now `func_8004D4C4` instead of `firstfile` (still frame 38500 / story 0x48).
+- **Oracle support:** `pe_battle_hud_oracle.py` gained an optional `hook_at`
+  PC-hook map (default off) so a host-implemented leaf can return without a
+  guest stack frame; both card-operation oracles hook `func_800727B4` to 0 and
+  moved their STOPS to `0x8004D4C4`/`0x8004D298`. Headers regenerated.
+- **Verified:** `pe-native-tests` **1378/1378**, CTest **11/11**, matching
+  rebuild **EXACT SHA-1 452fb033… (649 leaves)**. Evidence:
+  `docs/evidence/pe-libcard-file-api/REPORT.md`.
+- **Next:** model/supply the PS1 low-memory kernel/menu substrate, then the
+  menu draw callbacks (`func_800434C0`, `func_8004D6D4`).
+
+## CARD-PRESENT: host-backed memory card; route frontier moves to the save menu (2026-09-20)
+
+Branch `agent/card-present` from `5cf6b196`. `pc_port/platform/pe_libcard.c`
+now models a **present** 128 KiB memory card backed by a raw host image
+(psx-spx `Memory Card Data Format`: 16 blocks x 8 KiB; header `"MC"` + XOR;
+directory frames with A0h free state + XOR; `PE_CARD_IMAGE`, default
+git-ignored `build/pe_card1.mcr`, formatted on first use).  The three kernel
+operations deliver the documented success events (`F4000001h,0004h` ->
+A1820 for `_card_info`/`_card_load`; `F0000011h,0004h` -> A182C for
+`_card_write`), with `PE_CARD=empty` preserving the old eject/err timeout and
+its status-machine loop.
+
+Verified: `pe-native-tests` **1377/1377** (new `DAY1_card_present_kernel`
+pins format checksum, success events, frame persistence and sector
+validation; `DAY1_card_status` still pins the empty oracle); the card
+oracles PASS; `PE_CARD=empty` still runs to the 42000 frame limit.
+
+**Frontier:** with a present card the empty-slot infinite loop is gone — the
+record is accepted (`record+8=04`, `record+1=02`, `A182C=1`) and the game
+opens its **"Select Slot"** save menu.  The route then stops at
+`[STUB:BOOTSTRAP_RET] card operation unresolved call`: `func_80041108` state
+2 reaches `func_800727B4` (`firstfile`).  Progress past story `0x48` now
+needs (1) the libcard file API veneers (`func_80072734`/`54`/`64`/`74`/`84`/
+`94`/`B4`) and (2) the `func_80041108` post-call state graph in
+`docs/ai_context/CARD_OPERATION_CONTRACT.md`, which is still pre-call only.
+Evidence: `docs/evidence/pe-card-present-kernel/REPORT.md`.
+
+## DAY2-B0CD0-catchup-reland: overrun STOP -> held pending + named stop (2026-09-20)
+
+Branch `agent/b0cd0-catchup` from `05dc2b21`. Evidence:
+`docs/evidence/pe-day2-158-b0cd0-catchup-reland/REPORT.md`.
+
+Re-landed the DAY2-158v/z B0CD0 catch-up onto the current
+`HostFB_StreamTick` pipeline (no whole-file revert):
+
+- `pe_cdreg`: a still-unread sector at the next read period now **holds** the
+  next publish (DAY2-158v backpressure), no `CD_device_sector_overrun` STOP.
+  `PeCdDeviceState.sector_pending` is surfaced.
+- `HostFB_DeviceTime` first services the DMA/CPU IRQ paths whenever decode,
+  B0CD0, or `sector_pending` is present, so the guest's own
+  `91DC8`/`1214D4 -> 7C564 -> BFRD` retires the sector; a pending sector that
+  never clears is bounded into the named `CD_B0CD0_pending_unresolved`.
+- Rejected by measurement: a direct host `func_8007C564()` catch-up reads an
+  unpopulated FIFO (`CD_device_data_underflow`); clearing the FIFO on Stop
+  makes the guest spin silently in its media-loop retry. Neither is merged.
+
+Live (real Disc1, headless, no `--skip-movie`):
+`CD_device_sector_overrun` -> `CD_B0CD0_pending_unresolved`, 318 -> 319 media
+steps, exit 0 (no hang). Residual `[STUCK]` state: `reading=0`, one unread
+sector after the guest's closing Stop; the retail reader has no reason to BFRD
+it. That guest-side media-loop completion is the next frontier.
+Tests: **1376 run / 1376 passed** (`DAY2_cd_sector_device` updated to the hold
+contract).
+
+## SESSION STATUS 2026-09-20 — verified state snapshot
+
+**Matching decomp.** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (**709**
+registered C leaves)"; `scripts/verify_us.sh` also PASSes (all 709 packed C
+spans equal retail). Coverage: 709/4516 functions (15.70%). Remaining queue:
+**1680 non-matching functions / 611,412 bytes**, ranked in
+`docs/generated/ASM_FUNCTION_WORKLIST.md` (regenerate with
+`python3 tools/analysis/asm_function_worklist.py`). Note the `asm/C5060` unit's
+1.2 MB is mostly `alabel` *data*, not code — the function worklist is the real
+code queue.
+
+**Matching levers found 2026-09-20 (later batch).** (a) A **non-volatile**
+MMIO pointer lets cc1 move the final store into the `jr $ra` delay slot
+(`volatile` blocks it and adds a word) — how `func_8008783C`/`func_80087864`
+match. (b) The shift operand must be **unsigned** so cc1 emits `srl`, not
+`sra` (`func_8008780C`). (c) Explicit `hi`/`lo` temporaries force retail's
+evaluation order (`func_800762A0`). (d) Per-leaf maspsx gates (all default
+OFF): `MASPSX_THREE_WORD_SYMBOL_STORE`, `MASPSX_PASSTHROUGH_SYMBOL_LOAD`,
+`MASPSX_FILL_STORE_DELAY_SLOT`, `MASPSX_FILL_INDEXED_STORE_DELAY_SLOT`, and
+(newest) `MASPSX_FILL_REGISTER_STORE_DELAY_SLOT` — the last reorders a plain
+`sh $r,off($base)` immediately before a bare `j $31` into the return delay
+slot (pure reorder, no address synthesis). (e) The **operand type of `%`** is a
+codegen lever: retail's unsigned constant-division sequence
+(`multu $a3,0x88888889` / `mfhi` / `srl 5`) only appears with `unsigned int`
+operands; `int` inserts the signed sign-correction sequence (12 extra words).
+This is how `func_80036E7C` matched (709th leaf, 0 differing words). Evidence:
+`docs/evidence/agent-36e7c/REPORT.md`,
+`docs/evidence/agent-decompile-continue-2-20260920/REPORT.md`,
+`docs/evidence/agent-decompile-ba3/REPORT.md`; triaged non-matches with
+first-mismatch words are parked under `nonmatch/`. **Small-function pool is
+exhausted** (last runs found 0 new leaves); the remaining queue is the
+size-ranked medium/large functions. (f) Loop **source shape controls rotation/
+peeling**: `while (*s1 != 0xFFFF) { a1++; if (a1 >= 8) break; s1 += 0xC; }`
+makes cc1 rotate/peel; the inverted `for (a1 = 0; a1 < 8; a1++) { if (*s1 ==
+0xFFFF) break; s1 += 0xC; } if (a1 == 8) return;` gives retail's test-at-top
+shape (reduced `func_800D401C` from 63 to 43 differing words; not yet matched).
+Evidence: `docs/evidence/agent-d401c/REPORT.md`.
+**Build hygiene:** run `build_us.sh` INSIDE the `pe-mipsel` distrobox (a
+host-side run spawns one container per `as` call and is ~10x slower), and do a
+fully clean `build/` when the layout looks stale — a leftover object produced a
+spurious one-`jal` NON-MATCH at 0x2A24 that a clean rebuild cleared.
+
+**Environment (all local-only / git-ignored).** `build/extracted/disc1`
+(retail image, SHA-1 `452fb033…`), `asm/disc1` via `scripts/split_us.sh`,
+`tools/era/` via `scripts/setup_era.sh` (maspsx now PINNED to upstream
+`025620f1e61248ad4a775c2929ec86f754973597` + `PassthroughProcessor` compat so
+floating upstream cannot break it again), and a `pe-mipsel` distrobox (Debian
+trixie, binutils 2.44) that `build_us.sh` auto-detects. `local/pe_disc1.path`
+points at the attic Disc 1 image.
+
+**Tests.** `pe-native-tests` **1392 run / 1392 passed / 0 failed / 0 skipped**.
+`pe-route-boot-day2-tests` **27/27 ordered Day-1 milestones** to the
+`m0020i` save/load menu (42000 frames, frame-limit stop), executed path invokes
+only 4 HOST_ADAPTED stubs and **0 UNSUPPORTED**. The harness now applies the
+same recorded `kDay1RoutePads` sequence as the interactive autopilot (shared
+`PeRoutePad_ParseSequence`/`ApplySequence` in `pe_route_pad.h`), so it follows
+the live route instead of parking at `m0004i`. `pe-transition-outer-tests` 5/5.
+`pe-decomp-port-tests`: all 272 generated TUs reproduce from `src/` authority
+(all src-backed TUs regenerate byte-for-byte, 28 real orphans allowlisted; the
+new leaves keep restoring orphan authority). Full CTest 11/11.
+
+**Live port.** Real Disc 1 boots and renders. `--route-pad` autopilot (windowed)
+plays Day 1: opera house, first battle, field rooms. `--headless --route-pad`
+drives the same route at full speed (headless present hook ticks `g_frame`;
+commit `0ae2a69`) to **frame ~38000, story `0x48`** (Day-1 field `M0020I`).
+Walls cleared this session, in order: inventory-help ids 36-39
+(`func_8004C608`, oracle-proven); the BIOS `B0(0Bh)` TestEvent drain
+(`func_800405A4`, kernel event table in `pe_libetc.c`); the empty-slot
+memory-card kernel (`agent/card-kernel`: BIOS `B(07h)` DeliverEvent +
+`_card_info`/`_card_load`/`_new_card`/`_card_write` reporting the psx-spx `0x11`
+timeout); then a **present 128 KiB memory-card model** (`agent/card-present`:
+`.mcr`-backed header/directory with the psx-spx XOR layout and success events,
+`PE_CARD=empty` for the old path). With the present card the status-machine loop
+is gone and the game renders its real **"Select File to Save"** menu (slots +
+`END`, dressing-room background, `00:00:00` clock; screenshot
+`build/artifacts/select_file_to_save_menu_2026-09-20.png`, git-ignored). The
+libcard file API and `func_80041108` state-2 directory enumeration run; the menu
+callbacks `func_8004D4C4`/`4D298`/`4D690`/`424B4`/`4FEEC`/`4FE58` and
+`func_800434C0` (+`func_8005DD8C`) are ported, then the slot-list input/handler
+`func_8004D978`/`4D6D4` (`agent/menu-input`) plus the menu/delayed callbacks.
+The autopilot now **selects Slot 1 and runs the save interaction**, showing the
+retail **"Saving"** dialog and the "Do not insert or remove Memory Card from
+either slot" warning (screenshot
+`build/artifacts/save_menu_after_input_2026-09-20.png`). The save-write chain is
+now ported (`agent/save-write`: `func_80042020`/`42170` entries, `func_80040B80`
+0x2000-byte block + CRC-16/CCITT, `func_8003F800`, `func_8005C25C`,
+`func_80040210` + the Shift-JIS formatter, and the BIOS A(19h) strcpy veneer
+`func_80071A14`), so the handler runs: name formatted, block assembled, record
+armed. `agent/card-write` then wired `func_80041108` states 3..11 to the libcard
+API (open/write/close/read/erase, plus a new BIOS `B(0x45h)` erase), so the save
+is **actually written**: `build/pe_card1.mcr` holds entry 0 (state 0x51, size
+8192) and the route reaches `stop_reason=frame-limit` with **no
+unresolved-boundary stop**. `agent/menu-exit` then fixed the real dirent bug:
+`pe_card_name_from_guest` capped the guest name at 20 bytes BEFORE stripping
+the `buXX:` device prefix, so the stored name lost its variant/slot tail. Retail
+`firstfile2`'s direntry is `00h 14h` filename / `14h` attr / `18h` size / `1Ch`
+next / `20h` sector; stripping the prefix first and copying 20 bytes gives
+`name[0x12]=0x30` and `name[0x13]=0x41`, and retail state 2's
+`record + dirent[0x13]*0x44 - 0x1128` (`0x8004135C`) then lands exactly on
+`func_800424B4`'s base `0x800A0EF0 + card*0x418 + item*0x44` iff
+`dirent[0x13] == 0x41 + item`. `func_8004FE58` keeps a guarded "invalidated
+slot -> row disabled" return. With `PE_CARD=empty` the route instead runs with
+zero `[STUB:BOOTSTRAP_RET]` stops. Story is still `0x48`: `func_800425DC` is
+entered every frame but an early host `PE_Port_StopEpoch` guard returns before
+`func_80041108`, and the menu result `[0x8009D010]` stays 0 (see open work) —
+**no card success or menu exit is faked**.
+
+**Movie/FMV path.** The opening STR frame decodes in-bounds (DAY2-159b), the
+post-E08 media loop is re-landed (DAY2-159c, carve SHA-256 `77218c9c…`), and
+the DAY2-158u MDEC orphan-supersede host model is back (`pe_mdec.c`, `c977ab9`).
+Live FMV (real Disc 1, headless, no `--skip-movie`) now runs past
+`MDEC_decode_busy`, and the CD pending-sector catch-up is re-landed on
+`HostFB_StreamTick` (`HostFB_CdServicePending`, `pe_cdreg` 158v backpressure):
+the run reaches ~319 `func_80192934_enter` entries and stops at the **bounded,
+named** `CD_B0CD0_pending_unresolved` — no `CD_device_sector_overrun`, no
+silent hang. **Not a full unlock:** at the stop the guest has issued a closing
+Stop with one sector unread (`reading=0`), so the retail reader has no reason
+to BFRD it; that guest-side media-loop completion is the next frontier.
+
+**Open work / next frontiers.** (1) **`m0020i` field script.** The save flow is
+complete and the Day-1 save menu now CLOSES (merged `agent/menu-close` @
+`a951207e`): the exit was an **autopilot input bug, not a port bug** — the
+retail cancel path `func_8004D2DC` (`event & 0x40`) already works, but the
+recorded route lacked the two Circle presses a human makes (the first `0x40` is
+consumed by the slot-list window) and `RoutePadSource`'s periodic auto-Cross
+re-opened/re-confirmed the menu every period. The fix adds the Circle presses to
+`route_rehearsal_pads.h`, a second Cross-suppression window now **open ended**
+(`[38620, INT_MAX)`; `agent/menu-exit-parity` @ `2b5d2a8f` merged `3b389c50`
+made it the shared `PeRoutePad_PulseAllowed()` rule so the harness cannot drift,
+and added a guard on the field-menu mode bit), and the faithful `func_8004DCA4`
+-> `func_80054294`/`func_8005C488` leg.
+
+**Correction to the earlier ~44000 frontier:** that `card operation unresolved
+call` stop is an artifact of *bounding* the suppression window at 42000 — the
+recorded tail from 42000 carries explicit pads, so re-enabling the invented
+Cross mash re-enters the file menu. With the window left open the route no
+longer stops there: it runs to **~frame 61500**, where the frontier is the
+unported save/load-menu page `func_8004AD9C` (`func_80043DA4` command 5, see
+its `pages[]` in `pc_port/game/boot/func_800438EC_port.c`). Same room/story
+either way, so the open window is both more faithful and the longer route.
+`docs/evidence/pe-menu-close-parity/REPORT.md`.
+
+**Parent verification (2026-09-20, merged main `cd5ba828`):** a fresh-card
+`--headless --route-pad --max-frames 80000` run reaches the frame limit
+(`stop_reason=frame-limit`) with **0 `[STUB:BOOTSTRAP_RET]`** and no stopping
+boundary — the only reports are the non-stopping GPU `func_80076C34`
+`BOUNDARY_REPORT`s. Screenshot `build/artifacts/route_80000_frames_2026-09-20.png`
+shows the menu closed and Aya live in `m0020i`.
+
+**But story stays `0x48` / token `A8002048`:** `m0020i` is a *separate*
+blocker. With the menu closed the field is genuinely alive again — the script
+VM dispatches ~26 opcodes/frame and Aya's position tracks the recorded pads
+(`func_80017018_port.c` is NOT stalled) — yet **no room transition is ever
+requested**: instrumenting the token shows `m0020i` is entered at f=20439 and
+`D_8009D280` never changes again through f=52000, i.e. no `op31`
+(`func_80017BB4`) executes. The concrete gate is Aya's `local[4]`:
+`801A0AE0 OP09_alu subop 0x0B (a==b), a=Aya.local[4], b=3` / `801A0AF8 OP05
+skip-if-zero -> 801A0CC4` guards the block that ends in `801A0BA4 opA7 #=0xC8`
+(item 200) / `801A0BDC opE8 #=0xC8` (pickup dialog). **`opA7` is invoked 0
+times over 52000 frames** and Aya's `local[4]` sits at 1, so the `local[4]==3`
+gate never opens. The room's positional triggers (actors type 4/5/6) loop their
+`op77` rectangle tests; actor 5 reports a hit (`local[4]=1`) for
+f~39000..43000 after the recorded Up input but its condition chain never
+reaches a transition. So `m0020i` needs route input that puts Aya in region 3
+(or the unported field contact pass, SEW18); the M0020I key pickup is real but
+unreached, consistent with `func_8004F490`/`func_80015BAC` entering 0 times.
+**The earlier
+`PE_Port_StopEpoch` hypothesis is DISPROVEN** (every `func_800425DC` guard
+instrumented; the epoch stays 0 over a full present-card 42000-frame run).
+**`func_80042264` is NOT this unlock** (`docs/evidence/pe-crc-tail-load-path/REPORT.md`):
+its real entry is `0x80042294` (the ELF symbol names are +0x30 off), it is
+called only from state 7 (`0x80041BE0`), and state 7 is reached only from state
+5 (load, `li v0,7` at `0x80041958`). The save path (state 9 -> 3 -> 8 -> 10)
+never enters it — the port's state-7 boundary never fires on the route. Retail
+globals: state 7/9 tails set `[0x800A1A0C]`/`[0x800A19F0]`; `func_80040F80`
+reads `[0x800A1A14]` (written only by `func_80042264`). The port uses
+`0x800A1854`/`0x800A185C`, and the card oracles transcribe those addresses
+(`pe_card_operation_oracle.py:44`), so fixing the port to retail's globals
+requires regenerating the oracles first;
+**Cancel-input experiment (2026-09-20, negative but narrowing):** I injected a
+Circle/0xDFFF cancel into the recorded route sequence over frames 39000..41900
+(a temporary `PE_ROUTE_POST_MASK` probe, removed). `func_8004D6D4` then
+receives **145× event 0x40 (cancel) + 278× 0x10000 (confirm)** instead of
+confirm only, so the cancel DOES reach the slot list — but story/token stay
+`0x48`/`A8002048`. `func_800512AC` is still called only twice (cmd=10 then
+cmd=9; cmd=10 sets `[0x8009D010]=1000`, consumed before the cmd=9 entry), and
+with the cancel the run extends to ~frame 44000 before stopping at the same
+`card operation unresolved call` boundary. Triangle/Start/Select/Square sweeps
+change nothing. So the missing step is NOT simply a route exit button — it is
+in the menu teardown/result path (state 9's notice -> slot-list focus ->
+`func_800512AC(10)` consumption -> field resume);
+(2) the guest-side media-loop completion
+after the ~319-step FMV media loop;
+(3) **audio: FMV XA audio is now audible.** `agent/music-keyon` made SPU init
+real (`func_8007D1D4`/`7DAE0`/`7D454`/`7DCAC` in `pe_spu_init.c`; live
+`reg_writes=541 key_ons=24 key_offs=24`), but proved the main EXE has **no
+gameplay KON writer**, so the score path alone stays silent. `agent/xa-audio`
+then added `pe_xa.{c,h}`: 4/8-bit CD-XA ADPCM (psx-spx filter tables, the
+18x128-byte Form-2 sound-group layout, subheader/coding-info classification)
+resampled to the 44100 Hz sink; `pe_cdreg` consumes every raw sector (the drive
+decodes XA independently of BFRD) and `pe_spu` mixes the XA ring into the
+vblank buffer. **Live opening FMV (real Disc 1): 399 XA sectors / 804,384
+frames decoded, WAV peak 19491 (RMS 1283)** — audible audio where the port was
+silent. The skip-movie `--route-pad` run decodes 0 XA sectors (field music is
+not on the XA stream path), which is expected. Named gaps: linear resampling
+(not the hardware gaussian), mono/18900 Hz and 8-bit paths not live-exercised,
+XA volume/`ATV0..3` not applied, noise/pitch-mod/reverb. Evidence:
+`docs/evidence/pe-music-keyon/REPORT.md`, `docs/evidence/pe-xa-audio/REPORT.md`.
+No retail audio golden; (4) carve the ranked large functions
+from the worklist. **Disc 2 is
+code-identical:** this session
+re-extracted `SLUS_006.68` and `cmp` confirms it is byte-identical to
+`SLUS_006.62` (both SHA-1 `452fb033…`); `configs/USA/disc2.yaml` already
+records that `PE.IMG` is identical too, so the decompilation/port covers disc
+2's code and overlays. Only the FMV/XA streams and volume metadata differ, so
+disc-2 work is disc-image/stream handling, not translation. **Disc 2 boots
+verified:** `--disc-image <Disc 2>.bin --skip-movie --skip-opening-menu
+--max-frames 600` opens the drive, loads the EXE, and renders 600 frames
+(`[GPU] fills=597 polygons=529332 polygon_pixels=8532436`, one non-stopping
+`func_80069B08` decomp boundary).
+
+## CARD-EVENT: TestEvent (B0 0Bh) implemented; route past the event drain (2026-09-20)
+
+`func_800405A4` routed the four card-event `TestEvent` drains through one
+nonreturning `card_status_call()` boundary, so the Day-1 `--route-pad`
+autopilot stopped at `[STUB:BOOTSTRAP_RET] card status BIOS call` (frame
+38000 / presents 38495 / story `0x48`).
+
+Retail authority: `func_800726F4` is the B0(0Bh) `TestEvent` veneer
+(`asm/disc1/621E4.s`); `asm/disc1/307CC.s` calls it four times per drain and
+**discards every result**.  The eight card events `func_800409B4`
+(`pe_libcard.c`) opens all use mode `1000h`, and callback events never become
+ready, so the kernel returns 0 there.
+
+Implemented: a kernel event table in `pe_libetc.c` records OpenEvent
+mode/enabled/ready and `func_800726F4` applies the documented TestEvent
+semantics; `func_800405A4_port.c` now issues the real calls and ignores the
+results.  The remaining card kernel calls stay a **nonreturning** boundary,
+now named per target (`card _card_info A0(AB) kernel call`,
+`card _card_load A0(AC) kernel call`, `card _new_card/_card_write kernel
+call`).
+
+**Proof:** `pe_card_status_oracle.py` gained a B0 TestEvent hook and re-pinned
+4096 cases; `./pc_port/build/pe-native-tests` → **1376 run / 1376 passed /
+0 failed / 0 skipped**.  Route now stops at
+`[STUB:BOOTSTRAP_RET] card _card_info A0(AB) kernel call` at the same
+presents 38495 — the old `card status BIOS call` edge is gone.
+Evidence: `docs/evidence/pe-memory-card-testevent/REPORT.md`.
+
+**Next:** model the card kernel/controller or an evidence-based "no card"
+completion path for `_card_info`/`_card_load`/`_new_card`/`_card_write`
+(including the spec-`0x100` timeout events).
+
+## DAY2-159c: re-land func_80192CE8 post-E08 media loop + 91DC8 dispatch (2026-09-20)
+
+Branch `agent/92ce8-media-loop` from `980ffab`. The authenticated post-E08
+loop `[0x80192E08,0x80192F98)` (100 words, SHA-256
+`77218c9c335f6b4a24416a39d21d09876d7bc9f74778fefb26d28d501dbfd01a`) is back
+in `func_80192CE8_port.c` — transcribed from
+`docs/evidence/pe-92ce8-post-e08/`, including the 0x80192EE8 reload of
+`(int16)D_800B0DBC` on the abort path. `func_80192934`'s got-frame now
+mirrors `func_801924F8`: device-path `HostFB_StreamTick()` pump, the
+`PE_Movie_LastPublishComplete()` gate before `func_8010C89C`, ranged checks,
+no EC stores (retail 92934 has none). New discriminating test
+`DAY2_92ce8_media_loop_tail` PASSes re-landed and FAILs on the cut.
+
+Live Disc1 headless: wall moved from the `func_8010C89C` gate to
+`func_80074520_dma_indirect_call` (unbound `0x80191DC8`), then — after wiring
+the ported title DecDCTout twin in `DispatchDmaCallback` — to
+`MDEC_decode_busy` after two `func_80192934_enter` entries. Evidence:
+`docs/evidence/pe-day2-159c-media-loop/REPORT.md`. Suite **1376/1376**.
+
+Next: the `MDEC_decode_busy` host predicate (DAY2-158u supersede family), then
+the media loop's pad-held abort path. Non-claims: FMV plays through; Day 2.
+
+## HELP-FRONTIER: func_8004C608 help ids 36..39 (route wall cleared) (2026-09-20)
+
+The Day-1 `--route-pad` autopilot reached frame 38000 at story `0x48` and
+stopped on `[MENU] Unported help selection 36` +
+`[STUB:BOOTSTRAP_RET] func_8004C608`.  The port switch handled ids 0..35 and
+40..60 only.  The four missing jump-table targets (jtbl_8001104C[36..39] =
+0x8004CA38 / 0x8004CAAC / 0x8004CAAC / 0x8004CB38) are now implemented exactly
+in `pc_port/game/boot/func_8004DF74_port.c`; they are the memory-card help
+prompts.  Case 36's callee `func_800404A8` (0x800404A8, 63 words, 307CC.s) had
+no port; it is hand-transcribed in `pc_port/game/boot/func_800404A8_port.c`.
+
+**Proof (behavior):** `pc_port/tools/pe_inventory_help_oracle.py` no longer
+excludes groups 36..39, so the original emulator executes them;
+`pc_port/tests/retail_inventory_help_cases.h` regenerated to 255 cases.
+`./pc_port/build/pe-native-tests` → **1375 run, 1375 passed, 0 failed, 0
+skipped**, including group 36/37/38/39 fingerprints.  **Proof (route):** the
+help stub is gone; the route now advances ~one frame and stops at
+`[STUB:BOOTSTRAP_RET] card status BIOS call` in `func_800405A4`.  The card
+BIOS edge was already the next wall and is unfaked (a temporary diagnostic
+that bypassed only `card_status_call` ran the route clean to the 42000 frame
+limit, proving the card edge is the sole remaining blocker; not committed).
+
+**Matching leaf:** `src/func_8004C608.c` is a complete parked reconstruction
+(not in disc1.yaml).  `tools/analysis/try_leaf.py` best case `-O2 -G0`:
+first mismatch at offset 0x00F4, 210/402 words differ, candidate 1568/1608
+bytes.  Not byte-exact; exact behavior is oracle-proven instead.  Evidence:
+`docs/evidence/pe-help-frontier/REPORT.md`.
+
+**Next:** the memory-card BIOS event/card semantics (handoff:
+CARD_RECORD_CONTRACT / full 41108 operation processor) is the live Day-1 route
+frontier; carving `asm/C5060` remains the byte-100% frontier.
+
+## RECOVERY 2: byte-exact rebuild restored, maspsx pinned, EXACT SHA-1 (2026-09-20)
+
+Two upstream-drift bugs in the era toolchain were blocking all matching
+verification:
+
+1. `scripts/setup_era.sh` cloned **floating upstream maspsx**, whose `maspsx.py`
+   no longer matches the repo-tracked, locally patched
+   `maspsx/__init__.py`: it now imports `PassthroughProcessor` (upstream
+   025620f, #135) and passes a `nop_lw_lw` ctor arg (upstream e3d5916, #137)
+   the vendored file does not accept. Fixed by adding upstream's
+   `PassthroughProcessor` to the tracked file (marked LOCAL PATCH/compat) and
+   pinning the clone to upstream commit
+   `025620f1e61248ad4a775c2929ec86f754973597` with a
+   `tools/era/maspsx/.maspsx-commit` stamp, so re-runs are idempotent and
+   self-healing.
+2. This host had no mipsel toolchain and no root. Set up (all local-only,
+   git-ignored): `build/extracted/disc1` from the retail image (SHA-1
+   `452fb033…`, matches the config authority), `asm/disc1` via
+   `scripts/split_us.sh` (847 spans: 560 C, 285 asm, 2 rodata), and a
+   `pe-mipsel` distrobox (Debian trixie, binutils 2.44) that `build_us.sh`
+   auto-detects.
+
+**Verified:** `bash scripts/build_us.sh` → **EXACT SHA-1
+`452fb033f2eaa4b18aa20a5bca60b8125af3a37b`**, "Matching claim: YES (560
+registered C leaves)". Coverage: 560/4659 functions (12.02%), 1.25% of code
+bytes — the single `asm/C5060` unit is 1,218,464 bytes (67% of unmatched code),
+so carving it is the whole route to byte-100%.
+
+**Live port:** `--route-pad` autopilot renders Day 1 (opera house, first
+battle, field rooms) through story `0x48` / frame ~20000, then aborts (windowed
+only; headless to 80000 frames does not hit it) with
+`FATAL: PE_LoadU8: invalid guest address 0x00000000`. Backtrace (gdb):
+`translate_impl` ← `PE_LoadU8` ← `func_80016910_key2900_cut` ← `func_80017018`
+← `func_80035558_walk_cut` ← `func_8003F3C4` ← `func_8001220C` ← `main`.
+`func_80016910_key2900_cut`'s `pe_e00cc` does
+`PE_LoadU8(PE_LoadU32(0x800E2800))` before checking the slot pointer, so a null
+effect-list head reaches `PE_LoadU8(0)`. **Fixed** (commit 83600b4): retail
+`func_8003F074` calls `func_800E0060` at `0x8003F284` (after `func_800125E0`,
+before `func_80074DC0`/`func_80074D28`); `func_8003F074_dest_ready_cut` now
+does the same. `pe-native-tests` 1374/1374 after the change; live windowed
+route re-verification in progress.
+
+## DAY2-159b: production movie frame delivers complete; C89C in bounds (2026-09-19)
+
+**Landed.** The opening FMV now decodes for real; the live wall moved off the
+`func_8010C89C` stub to the `func_80192CE8` media-loop remainder.
+
+- **Root cause (two):** (1) the decomp-port refactor dropped
+  `PE_CdReg_EnableDevice(7u)` from `port_main`, so the production drive model
+  was inert; (2) E0 called `func_8007C214()` directly, publishing a state-2
+  record with an all-zero body without ever running the assembly chain
+  (`data-ready IRQ -> 813E8 -> 7C564 -> arm DMA3 -> 7C214`).
+- **Invariant:** `7C214` is a *complete-frame* publish iff `D_800B89F4` is
+  still set (`7C564` sets it only on the frame's last chunk). Host-only
+  `PE_Movie_LastPublishComplete()` captures it.
+- **Fix:** enable the device; E0 pumps `HostFB_StreamTick()` on the device path
+  (direct `7C214` kept for device-less fixtures); `got_frame` runs the
+  authenticated retail tail (C89C + `7C394` + EC stores) but only for a
+  complete publish, and range-checks the arena/table first.
+- **Test:** `DAY2_movie_production_frame` calls the real `func_801924F8(0)` on
+  Disc 1 `\FMV1\FMV001.STR;1`, asserts pad-exit decode in bounds and the
+  frame-1 input/output hashes; verified to FAIL when the pump is reverted.
+- **Suite:** 1375 run / 1375 passed / 0 failed / 0 skipped.
+- Evidence: `docs/evidence/pe-cd-movie-frame-delivery/REPORT.md`.
+- **Next:** the `func_80192CE8` post-`0x80192E08` media loop (frame upload /
+  multi-frame) is the live frontier. Non-claims: no rendered frame, no pixel
+  golden, runtime 128 unchanged.
+
+## RECOVERY: integrate the uncommitted decomp-port refactor (2026-09-19)
+
+The working tree carried an **unfinished 09-11/09-12 refactor** that did not
+compile. Recovered and integrated it rather than discarding the work:
+
+1. **`func_80192934_port.c`** still referenced the removed Stage-1b promote
+   latch (`PE_Port_ConsumeStreamPromote`, `PE_Port_TakeStreamFrameReady`,
+   `HostFB_PumpCdProgress`). Rewritten to the surviving stream model: the
+   poll calls `func_8007C214()` directly, and got-frame keeps the same honest
+   `func_8010C89C` boundary as `func_801924F8` (never decode a partial STR
+   frame — the MV1d 2 MiB overflow trap).
+2. **CMake** now builds `platform/pe_guest_decomp.c`, the 272 generated TUs
+   under `game/decomp/` (globbed; the set is generated), the new
+   `game/boot/{field_message,func_80065AD4,func_800671C8,func_8019234C}_port.c`,
+   and two standalone suites (`pe-transition-outer-tests`,
+   `pe-route-boot-day2-tests`).
+3. **Green baseline with the retail disc** (`local/pe_disc1.path` → the attic
+   Disc 1 image; git-ignored): `pe-native-tests` **1374 run / 1374 pass / 0
+   skipped**; `pe-transition-outer-tests` **5/5**;
+   `pe-route-boot-day2-tests` **14/14 ordered Day-1 milestones** (boot →
+   m0010i → m0002i → m0003i → m0372i → m0004i → m0378i/m0377i), frontier
+   `m0004i` mod4 `pc=0x801B6CC8`.
+
+**Open, honestly:** the generated TUs cite
+`tools/analysis/gen_decomp_ports.py` and `docs/ai_context/PC_PORT_FROM_DECOMP.md`,
+neither of which is in this checkout; and 82 of the 272 generated TUs have no
+`src/` leaf here, so their bodies are unverifiable against an in-tree
+authority. Both are tracked work, not claims.
+## PAUSE / RESUME (Matt — other PCs)
+
+**Paused 2026-09-09** at tip `fe461f6c` (or this commit) **DAY2-158z**.
+
+- Branch: `cursor/cd-sector-backpressure-6f51` → https://github.com/Blizz127/Parasite-Eve-Decompilation/pull/42
+- Movie base PR #38 still at `a899b2d` (DAY2-158u); CD backpressure work lives on PR #42 tip (includes movie base + CD fixes)
+- **Next resume:** Disc1 retest DAY2-158z — expect `CD_B0CD0_pump_retry` TRACE; past ~319 C89C or named `CD_B0CD0_retry_unresolved`. Bazzite was offline mid-retest; 158y failed silent 319 with zero `CD_B0CD0_*`.
+- **Pull recipe (other PCs):** `git fetch && git checkout cursor/cd-sector-backpressure-6f51 && git pull`
+
+## DAY2-158z: fold dig/b0cd0-catchup-miss (orphan pending) (2026-09-09)
+
+Live Disc1 on **`6cbeb1ee`** (DAY2-158y) **FAILED** — same ~319×92934 silent
+hang; **zero** `CD_B0CD0_*` TRACE (catch-up arm never entered).
+
+Root cause: catch-up required `b0cd0 && pending`, but unread ownership is
+`sector_pending`. `91DC8` retail always clears B0CD0 after `7C564` (even on
+failed BFRD); non-defer early-outs never set B0CD0. Orphan pending → pe_cdreg
+hold → silent spin. IRQ gate also ignored pending.
+
+**Fix FOLDED** — Decomp dig `dig/b0cd0-catchup-miss` @ `10f80fef`
+cherry-picked onto PR #42: IRQ/catch-up follow `sector_pending`; idle
+catch-up on `pending && !dma1_busy` (B0CD0 optional); busy stall only when
+B0CD0; clear B0CD0 only after BFRD else named unresolved. Evidence:
+`docs/evidence/pe-day2-158-b0cd0-catchup-miss/REPORT.md`.
+Test: `DAY2_cd_b0cd0_pump_orphan_pending`.
+
+Linux: **1357 run / 1311 pass / 0 fail / 46 skip** (new orphan-pending
+catch-up test).
+
+Branch `cursor/cd-sector-backpressure-6f51` → PR #42. Tip tagged **DAY2-158z**.
+
+Next boot→Day2: Matt Disc1 — expect `CD_B0CD0_pump_retry` TRACE and either
+BFRD past ~319 or named `CD_B0CD0_retry_unresolved`. Linux-first.
+
+## DAY2-158y: fold dig/b0cd0-no-bfrd (clear B0CD0 only after BFRD) (2026-09-09)
+
+Live Disc1 on tip **`331c945`** (DAY2-158x) **FAILED** — same ~319×
+`func_80192934_enter` silent hang; no `CD_B0CD0_dma1_starved` /
+`CD_B0CD0_retry_unresolved`.
+
+158x idle-DMA1 catch-up was the right direction (DMA1 already idle so
+`91DC8` never BFRD'd). Residual: catch-up gated `7C564` on A801C, then
+**always cleared B0CD0**, so a skipped/failed BFRD left `sector_pending`
+with the latch gone; pe_cdreg hold → silent hang. `retry_unresolved` checked
+`b0cd0 && pending` *after* the clear → dead.
+
+**Fix FOLDED** — Decomp dig `dig/b0cd0-no-bfrd` @ `4026de2` cherry-picked
+onto PR #42: always call `func_8007C564`; clear B0CD0 only when pending is
+gone; else STOP `CD_B0CD0_retry_unresolved`. Evidence:
+`docs/evidence/pe-day2-158-b0cd0-no-bfrd/REPORT.md`. Tests: idle catch-up
+expects named STOP when B89F4 early-outs BFRD (A801C clear).
+
+Linux: **1356 run / 1310 pass / 0 fail / 46 skip** (idle-dma1 catch-up
+test now asserts named STOP when BFRD early-outs).
+
+Branch `cursor/cd-sector-backpressure-6f51` → PR #42. Tip tagged **DAY2-158y**.
+
+Next boot→Day2: Matt Disc1 — BFRD progress past ~319, or named
+`CD_B0CD0_retry_unresolved` (then dig that early-out). Linux-first.
+
+## DAY2-158x: B0CD0 idle-DMA1 Pump catch-up (2026-09-09)
+
+**FAILED live on `331c945`** — see DAY2-158y. Idle-DMA1 catch-up direction
+was right (`DBB==0` / DMA1 idle so `91DC8` never BFRD'd), but A801C gate +
+unconditional B0CD0 clear made catch-up silent-hang. Superseded by dig fold.
+
+## DAY2-158w: B0CD0 pump stall + IRQ retry (dig fold) (2026-09-09)
+
+Live Disc1 on tip **`222bd95b`** (DAY2-158v / PR #42):
+
+```text
+no CD_device_sector_overrun (90s / 180s)
+~319× func_80192934_enter — hang, no further TRACE/STOP (timeout kill)
+```
+
+158v pe_cdreg hold cleared the STOP but left **stall without BFRD**.
+
+**Decomp dig FOLDED** — `dig/cd-sector-overrun` @ `355af810`:
+`7C564` A801C+DMA1 early-out sets `B0CD0` without BFRD after AAB4 cleared
+INT1; Pump must stall CD cadence while B0CD0 owns `sector_pending`, and must
+service IRQs when B0CD0 is set so `91DC8`/`1214D4` can retry → BFRD.
+
+**Fix on tip:**
+1. `HostFB_PumpCdProgress` / VSync: IRQ service if `HasDecode || B0CD0`.
+2. Pump: if `B0CD0 && sector_pending` → return before `DeviceTime`.
+3. Expose `sector_pending` on `GetDeviceState`. Keep pe_cdreg hold.
+4. Test `DAY2_cd_b0cd0_pump_stall`. Evidence report folded.
+
+Linux: **1355 run / 1309 pass / 0 fail / 46 skip** (new B0CD0 stall test).
+Branch `cursor/cd-sector-backpressure-6f51` → PR #42.
+
+**Live retest on `733a8dc`: FAILED** — hang unchanged (see DAY2-158x).
+
+## DAY2-158v: CD pending-sector backpressure (2026-09-09)
+
+Live Disc1 on tip **`a899b2d`** (DAY2-158u) **SUCCESS past `MDEC_decode_busy`:**
+
+```text
+C89C calls=319 ret=0 pad=319 out=101510
+many func_80192934_enter
+GPU fills=318
+STUB: CD_device_sector_overrun
+stop_reason=unresolved-boundary
+```
+
+MDEC supersede dig worked. New wall: `CD_device_sector_overrun` after ~319
+FMV frames.
+
+**Cause:** `pe_cdreg` single-sector pending + `HostFB_PumpCdProgress` can
+retire a full sector period before INT1→BFRD→DMA3 drains. STOP was host-pump
+race, not a missing Decomp leaf / multi-sector invent.
+
+**Fix (`pe_cdreg.c`):** while `g_sector_pending`, hold next publish (leave
+`g_read_cycles==0`); catch up after BFRD. No overwrite; no STOP. Evidence:
+`docs/evidence/pe-day2-158-cd-sector-overrun/REPORT.md`. Test:
+`DAY2_cd_sector_device` backpressure + catch-up.
+
+Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Branch
+`cursor/cd-sector-backpressure-6f51` → PR into #38 tip.
+
+**Next:** see DAY2-158w (live hang on 158v tip; dig fold).
+
+## DAY2-158u: supersede on live DMA0 commit (Decomp dig) (2026-09-09)
+
+Decomp dig **CLOSED** — `dig/mdec-decode-busy` @ `bf8ab79` applied on PR #38.
+
+**Live Disc1 on tip `a899b2d`: SUCCESS** — past `MDEC_decode_busy`; C89C
+`calls=319` `out=101510`, GPU fills=318; wall moved to
+`CD_device_sector_overrun` (see DAY2-158v).
+
+Prior retests on **`b82ab62`** / 158s/`42978a5` still:
+
+```text
+92934_enter ×2
+STUB: MDEC_decode_busy
+C89C final: calls=2 out=11140
+```
+
+**Why 158s/158t missed live:** `MdecBeginCommand` runs from Service’s DMA0
+arm with `dma0_active` already set (and often dma1 armed by this frame’s
+`C01C`). Those flags are the **incoming** DecDCTin/DecDCTout, not prior
+orphan drain. Idle-`FE00` cannot clear non-pad RLE after `91DC8` final.
+
+**Fix (`pe_mdec.c` busy predicate — do not clear dma1):**
+- If residue and `dma0_active && g_input_pending` → supersede orphan, commit
+  new DecDCTin (live Service DMA0 commit shape).
+- Else if `dma0_active || dma1 busy` → `MDEC_decode_busy` (BeginDecode /
+  other busy).
+- Else supersede (idle BeginDecode orphan).
+- Service clears `dma0_active` **after** BeginCommand (dig), not before.
+
+Evidence: `docs/evidence/pe-day2-158-mdec-decode-busy/REPORT.md`.
+Test: live-shaped BFA0→C01C→Service case in `DAY2_mdec_dma`.
+
+Linux: **1354 run / 1308 pass / 0 fail / 46 skip**. Tip on
+`cursor/movie-autonomous-stream-6f51` (PR #38).
+
+**Next:** see DAY2-158v.
+
+## DAY2-158s: clear `MDEC_decode_busy` orphan after 91DC8 final (2026-09-09)
+
+Live Disc1 on tip **`d827581`** (DAY2-158r):
+
+```text
+e0_promote → got_frame → c89c#1 out=7300
+92934_enter ×2
+STUB: MDEC_decode_busy
+C89C final: calls=2 out=11140
+NO post_movie_title_cut / NO media_clear
+```
+
+Sticky `D0DBD` fix worked. New wall: host `MDEC_decode_busy` on the second
+`92934` `BFA0`/`DecDCTin`.
+
+**Cause (partial):** title `91DC8` final-slice stops `DecDCTout`; C89C `FE00`
+/ orphan FIFO residue sat in `pe_mdec`. Evidence:
+`docs/evidence/pe-day2-158-mdec-decode-busy/REPORT.md`.
+
+**158s fix (insufficient live):** drain idle `FE00`; supersede when no DMA.
+**Keep** `g_decode_valid` (`HostFB_VSync` gates DMA IRQ on
+`PE_MDEC_HasDecode()`). Linux 1354/1308/0/46. **SUPERSEDED by DAY2-158t**
+(live BFA0/Service still busy with `dma0_active`).
+
+**Next:** see DAY2-158t.
+
+## DAY2-158r: clear sticky `801D0DBD` after first C89C (2026-09-09)
+
+Live after DAY2-158q (`28ed6b6` / `ee9e1f5`): C89C×2 `out=11140`,
+`92934_enter` → `92CE8_media_clear` → `func_801909B4_post_movie_title_cut`.
+
+**Decomp dig CLOSED** — `dig/909b4-early-title-cut` @ `7c71bb8` folded:
+`docs/evidence/pe-day2-158-909b4-early-title-cut/REPORT.md`
+
+- `909B4` is the **designed** post-`92CE8` wall — do **not** widen that stub.
+- Early exit: first `91B64` latches `801D0DBD=1` (`11B0=0xFFFF`); `924F8` EC
+  cleared only `800B0DBD`, so first `92934` success aborts (`DBA--` → clear →
+  `media_clear` → title-cut).
+- Player twin: `21C04` clears `223F5=0` on first-frame exit.
+
+**Fix on tip (Decomp draft applied):**
+
+1. `924F8` got_frame EC: also `PE_StoreU8(0x801D0DBDu, 0u)` (keep `B0DBD=0`).
+2. `92934`: TRACE `func_80192934_dbd_abort` on the abort arm.
+3. No admit-gate / cursor ±32 / `909B4` widen. No Day2-complete claim.
+
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**.
+Tip on `cursor/movie-autonomous-stream-6f51` (PR #38).
+
+**Next boot→Day2:** Matt Disc1 — expect C89C `calls≥3` / `out=12804` before
+the next wall (still expect eventual `post_movie_title_cut` when movie ends).
+Linux-first.
+
+## DAY2-158q: wire title DecDCTout `func_80191DC8` (2026-09-09)
+
+Live Bazzite Disc1 on tip **`50b2a58`** stopped at
+`func_80074520_dma_indirect_call` after first C89C (`out=7300`). Dig closed:
+that STOP is unbound DMA1 handler **`0x80191DC8`**, not a missing `74520`
+body (`pe-day2-158-74520-dma`, already folded).
+
+**Decomp leaf READY** — `dig/91dc8-decdctout` @ `3336743` folded:
+
+- `pc_port/game/boot/func_80191DC8_port.c` — matched structural twin of
+  `1214D4` on title BSS (`801D14xx` / `0DC0` / `918F8`)
+- VA `[0x80191DC8,0x80191FB8)` 124 words; SHA-256
+  `d4d36c74fdae7ccb189a0d98c170806fc84b1fe24c700a447bee5eafbd941086`
+- Evidence: `docs/evidence/pe-day2-158-91dc8/` (REPORT + carve bin/s/meta)
+
+**On tip (PR #38):**
+
+1. `DispatchDmaCallback`: `0x80191DC8` → `func_80191DC8()` (same return
+   shape as `1214D4`). **No** `74520` rewrite; **no** retarget to `1214D4`.
+2. Host-only `PE_MDEC_HasDecode` cut mirrors player.
+3. `Trace_Direct("func_80192934_enter")` kept from 158p.
+4. No admit-gate / cursor ±32. No Day2-complete claim.
+
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**;
+`PE_TEST_FILTER=B54KAH` → 1 pass. Tip after fold+wire on
+`cursor/movie-autonomous-stream-6f51` (PR #38).
+
+**Next boot→Day2:** Matt Disc1 retest past old `74520_dma_indirect_call`
+— expect title slice continue / final-slice / `7506C` upload and further
+multi-frame `92934` / `c89c_tel`. Linux-first. **SUPERSEDED by DAY2-158r**
+(sticky D0DBD early title-cut).
+
+## DAY2-158p: live `74520_dma_indirect` = unbound title `91DC8` (2026-09-09)
+
+Live Bazzite Disc1 on tip **`50b2a58`** (DAY2-158o):
+
+```text
+e0_promote → got_frame →
+c89c_tel calls=1 ret=0 pad=1 out=7300 w0=38000720 admit=ready
+→ [STUB:BOOTSTRAP_RET] func_80074520_dma_indirect_call
+stop_reason=unresolved-boundary
+```
+
+`post_movie_title_cut` is gone (158o `DBA++`). New frontier is **not** a
+missing `74520` body.
+
+**Decomp dig (CLOSED on inventing/expanding `74520`):**
+`dig/74520-dma-indirect` @ `546c9b9` folded →
+`docs/evidence/pe-day2-158-74520-dma/REPORT.md`
+
+- `func_80074520` = complete `trapIntrDMA` (B53I-B2, 96 words) — DICR scan +
+  `jalr` DMA table slot.
+- Slot 1 still holds title DecDCTout **`0x80191DC8`** (924F8 /
+  B54K-AH registration). Player `0x801214D4` is already dispatched; title
+  leaf is not.
+- Chain: C89C frame-1 → `92934` (DBA≥2) → `BFA0`/`C01C` → MDEC DMA1 →
+  `74520` → unbound `91DC8` → misnamed `dma_indirect_call` STOP.
+- `92934` had no entry TRACE (looked unreached).
+
+**On tip (wire-only — no invented `91DC8` guest body, no `74520` rewrite):**
+
+1. `DispatchDmaCallback`: `0x80191DC8` → named boundary `func_80191DC8`
+   (same arm shape as `1214D4`; body waits PE.IMG carve / Decomp matched C).
+2. `Trace_Direct("func_80192934_enter")` before `BFA0`.
+3. Fold dig REPORT. No admit-gate / cursor ±32. No Day2-complete claim.
+
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**.
+Tip **`cbdad5c5`** on `cursor/movie-autonomous-stream-6f51` (PR #38);
+same commits on `cursor/74520-dma-indirect-6f51` (PR #41).
+
+**Next boot→Day2:** Matt retest — expect STOP rename to **`func_80191DC8`**
+(and `func_80192934_enter` in TRACE). Prefer Decomp title-overlay leaf for
+`[0x80191DC8,0x80191FB8)` (124 words, ends at `91FB8`). Do **not** blind-alias
+`214D4`. Linux-first. **SUPERSEDED by DAY2-158q** (real leaf wired).
+
+## DAY2-158o: live C89C EOF pad dig + first-frame DBA++ for multi-frame (2026-09-09)
+
+Live Bazzite Disc1 on tip **`a03d599`** (DAY2-158n):
+
+```text
+e0_promote → got_frame →
+c89c_tel calls=1 ret=0 pad=1 bound=0
+  a0=80142900 a1=80132700 a2=80162100 out=7300
+  hdr=0002/00200280 admit=ready
+→ STUB func_801909B4_post_movie_title_cut
+```
+
+**C89C dig (CLOSED — no admit-gate patch, no cursor ±32):**
+
+Decomp Bot **`dig/c89c-pad-vs-body` @ `fbb9a9f`** folded:
+`docs/evidence/pe-day2-158-c89c-pad-vs-body/REPORT.md`
+
+- `hdr=0002/00200280`: count@+6=2 → `t2=−1`, `sym=bits>>22=0 ≠ 0x1FF` →
+  **not** immediate pad; `admit=ready` was correct.
+- `s1=0x80142900` is **VLC body** (7C564 copies sector+32; word0.lo≈`0x0720`,
+  not STR `0x0160`).
+- `out=7300` = FMV001 frame-1 RLE (`DAY2_MOVIE_COMPLETE_FRAMES`) →
+  **normal EOF pad**, not a no-op.
+- Also: `docs/evidence/pe-day2-158o-c89c-eof-pad/REPORT.md`
+
+**Why one frame then title-cut:** `91FB8` leaves `DBA=1`; prior `924F8` EC
+stores omitted `DBA++`, so `92934` early-returned 0 → media clear →
+`post_movie_title_cut`. Twin: player `80121C04` does `DBA++` after first
+C89C.
+
+**Fix on tip:**
+
+1. `924F8` got_frame EC: `DBD=0`, **`DBA++`**, `DBC=1` (player-twin;
+   PE.IMG EC-byte confirm still preferred when Decomp lands it).
+2. `92934` poll: last-chunk `7C214` / `PumpCdProgress` (E0 shape) so
+   multi-frame can assemble.
+3. `92CE8`: TRACE `func_80192CE8_media_clear` on status-0 clear.
+4. Test `DAY2_158o_live_hdr_not_immediate_pad`; last-chunk latch asserts
+   `DBA` 1→2.
+
+`post_movie_title_cut` **kept** until title/menu at `0x80191120` is
+translated — clearing the premature one-frame path is the multi-frame
+chase, not a New-Game HOST_ADAPTED skip. No Day2-complete claim.
+
+Linux (artifact-independent): **1354 run / 1308 pass / 0 fail / 46 skip**
+(`./pc_port/build/pe-native-tests`). Tip **`4bfff15`** on
+`cursor/movie-autonomous-stream-6f51` (PR #38) and
+`cursor/c89c-pad-post-movie-6f51` (PR #40).
+
+**Next boot→Day2:** Matt retest tip — expect more than one `c89c_tel` /
+
+got_frame before title cut (or a later named stop inside 92934). Prefer
+Decomp leaves for 924F8 EC bytes. Linux-first.
 
 ## ACTIVE OBJECTIVE: decompile all Day 1 and Day 2; implement/fix Day 1
 
@@ -72,6 +2297,479 @@ placed under In Development in launcher 0.9.87. Users must install the
 launcher update to see the new placement. Full Day 1/Day 2 goal remains open. Launcher working-tree
 changes existing before this task are retained in the build, including the
 0.9.86 Windows-era changes; no reset or blanket commit.
+
+## DAY2-158n: fold Decomp got_frame quiet-log evidence + live C89C dump (2026-09-09)
+
+Decomp Bot dig **CLOSED** on `dig/got-frame-c89c-skip` @ **`4f335cd`** —
+**do not patch got_frame gates** until live telemetry is reviewed.
+
+Folded evidence:
+`docs/evidence/pe-day2-158-gotframe-no-c89c/REPORT.md`
+
+Findings (Decomp): quiet log ≠ skipped C89C; on `04c8078` got_frame always
+calls live `func_8010C89C` unless STOP; decoder has no Trace — only
+`PE_C89C_GetTelemetry` (`a0`/`a1`/`a2`/`ret`).
+
+Observability already on tip (158m) + this rung:
+
+1. Per-got_frame `c89c_tel` TRACE: calls, ret, pad/bound, a0/a1/a2, RAM
+   flags, out_bytes, hdr.
+2. Shutdown dump: `c89c_tel_final` TRACE + `[C89C] …` stderr with the same
+   fields so live Disc1 always surfaces pad-exit vs live out/table after
+   the poll/got_frame spin.
+
+**No got_frame gate patch.** Prefer Decomp leaves when they land.
+CD device enable retained. No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip; capture `c89c_tel` / `[C89C]` dump;
+then dig pad-vs-body or outer re-entry from those numbers — not admit gates.
+
+## DAY2-158m: live C89C telemetry surface + Decomp quiet-log correction (2026-09-09)
+
+Decomp Bot correction on the **`04c8078`** spin — do **not** treat missing
+C89C TRACE as “decoder never ran”:
+
+- got_frame always calls `func_8010C89C` unless it STOPs
+- C89C has **no** `Trace_Direct` — only `PE_C89C_GetTelemetry`
+- Quiet “no C89C” in the log can still mean the decoder ran
+- Decomp is checking telemetry / out / table live vs instant pad-exit
+
+Fix on tip (builds on 158l post-movie cut + enter TRACE):
+
+1. Expand `PeC89CTelemetry`: `calls`, `pad_exits`, `bound_exits`,
+   `a0/a1/a2_in_ram`, `a1_end`/`out_bytes`, `hdr_count`/`hdr_bits`;
+   `PE_C89C_ResetTelemetry` from `ResetTestState`.
+2. After got_frame C89C, TRACE one `c89c_tel …` line with those fields
+   so live Disc1 shows pad vs bound, out size, and pointer validity.
+   TRACE stays in 924F8 (not inside C89C / pe_libcd — field-runtime
+   link rule).
+3. Forever poll/got_frame spin after one `e0_promote`: still explained
+   by `909B4` returning movie `0` → `6E9A0(0)` leaves `D280` → main
+   re-dispatches; `func_801909B4_post_movie_title_cut` (158l) is the
+   named boundary. Prefer Decomp `7C484`/`91B64` leaves when they land.
+
+CD device enable retained. **No `a1` clamp.** No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip; expect `c89c_tel calls=…` then
+`func_801909B4_post_movie_title_cut` (not a silent e0_poll spin).
+
+Linux: **1353** / **1307** pass / 0 fail / 46 skip. Claims: Decomp
+quiet-log correction recorded; live `c89c_tel` TRACE; spin boundary
+remains post-movie cut. Non-claims: Day2 complete; title/menu done;
+pad-vs-real decode proven on live until retest; `92934` frontier;
+retail STR golden; published runtime 128 unchanged.
+
+## DAY2-158l: live C89C TRACE + post-movie title cut (2026-09-09)
+
+Live Bazzite Disc1 on tip **`04c8078` (DAY2-158k) — NEW STATE**:
+
+- `Stage1b_pad_terminated_frame` GONE
+- Exactly 1× `func_801924F8_e0_promote`
+- Tight loop: `e0_poll` / `got_frame` / `func_8007C214_last_chunk`
+  (hundreds; process alive ~1m+)
+- ZERO C89C / Stage1b / STUB / `stop_reason` in the log
+
+Root cause (not a too-strict gate): got_frame **admits** and calls live
+`func_8010C89C` (no stub name → invisible in TRACE). Then `92CE8`
+returns 0 to `909B4`, which returned that 0 to `1220C`.
+`func_8006E9A0(0)` does **not** publish a new `D_8009D280` token, so
+main re-dispatches `909B4`→movie forever.
+
+Fix:
+
+1. TRACE `func_8010C89C_enter_ready|pad` + `done_pad|bound` in 924F8
+   got_frame so live proves decoder entry/exit.
+2. After saved-bit `92CE8` returns, named-stop
+   `func_801909B4_post_movie_title_cut` (title/menu untranslated) —
+   ends the re-dispatch spin. **924F8 got_frame remains the Stage-1b
+   wall for demux; post-movie cut is the next named STOP past first
+   frame.** Prefer Decomp `7C484`/`91B64` leaves when they land.
+
+CD device enable retained. **No `a1` clamp.** No Day2-complete claim.
+
+**Next boot→Day2:** Matt retest tip; expect C89C enter/done TRACE then
+`func_801909B4_post_movie_title_cut` (not an e0_poll spin).
+
+Linux: **1353** run / **1307** pass / 0 fail / 46 skip. Claims: live
+04c8078 spin explained; C89C TRACE; post-movie named cut. Non-claims:
+Day2 complete; title/menu done; Stage-1b demux golden; `92934` live
+frontier; retail STR golden; published runtime 128 unchanged.
+
+## DAY2-158k: early-demux gate + Decomp Stage1b diagnosis (2026-09-09)
+
+Decomp Bot diagnosis of live `Stage1b_pad_terminated_frame` on tip
+**`1fa9a48`** (pre-158j):
+
+- STOP is in **`924F8` got_frame** — **not** `92934` yet
+- `91B64` gave nonzero `s1`, but not an immediate pad and
+  `TakeStreamFrameReady` was 0
+- never latched on a B89F4 promote
+- got_frame can fire without `e0_promote` → demux publishing early
+  (`7C484` promotes a status-2 slot published during pump)
+- Decomp is digging `7C484`/`91B64` next — prefer those leaves when they
+  land; do not invent overlay bytes
+
+Fix on this tip (builds on 158j last-chunk latch in `7C214`):
+
+1. E0 admits `got_frame` only when `s1` is an immediate pad **or**
+   `PeekStreamFrameReady` (latched by `7C214` on `B89F4==1`) — else
+   named-stop `Stage1b_early_demux_publish` before got_frame/C89C.
+2. Pump-time last-chunk latch also emits TRACE `e0_promote` so live logs
+   show promote before got_frame.
+3. CD device enable retained. **No `a1` clamp.** **924F8 got_frame is
+   the live wall — do not treat 92934 as the frontier yet.**
+   (`Trace_Direct` stays out of `pe_libcd` — field-runtime-only link
+   targets do not provide it; pump-path TRACE is `e0_promote` in 924F8.)
+
+Tests: `Stage1b_early_demux_publish_named_stop`;
+`B54K_C89C_gated_until_pad` expects early-demux name.
+
+**Next boot→Day2:** Matt retest tip; expect either live C89C after
+authenticated last-chunk (`e0_promote` / `7C214_last_chunk` → got_frame)
+or a clearer `Stage1b_early_demux_publish` if demux still races without
+latch. Fold Decomp `7C484`/`91B64` leaves when authenticated.
+
+Focused Linux: Stage1b*, B54K_C89C*, CDQ1_7C214*, B54KAD/AE, MV1D_c89c*,
+DAY2_movie_player — PASS. Full suite: **1353** run / **1307** pass /
+0 fail / 46 skip.
+
+Claims: Decomp diagnosis recorded; early-demux named stop; 158j latch
+kept as authenticated delivery. Non-claims: Day2 complete; Stage-1b done
+on live until retest; `92934` live frontier; retail STR golden; published
+runtime 128 unchanged. Linux-first.
+
+## DAY2-158j: 7C214 last-chunk latches StreamFrameReady (2026-09-09)
+
+Live Bazzite Disc1 on tip **`1fa9a48` (DAY2-158i) CONFIRMED progress**:
+
+```
+[DISC] CD command device enabled (mask=7)
+[TRACE] func_801924F8_e0_poll
+[TRACE] func_801924F8_got_frame
+[STUB:BOOTSTRAP_RET] Stage1b_pad_terminated_frame (first invocation)
+[HOST] stop_reason=unresolved-boundary
+```
+
+Silent `1220C` nest is gone. CD device enable stays. No `e0_promote`
+between `e0_poll` and `got_frame`.
+
+Root cause: during `HostFB_PumpCdProgress`, `func_8007C564` can set
+`B89F4=1` and call `func_8007C214()` while `C0DB8` is set. `7C214`
+publishes status 2 and **clears** `B89F4` before E0's next poll. E0 then
+sees a ready slot via `91B64` → `got_frame` without the promote arm, so
+`StreamFrameReady` was never latched → Stage1b pad gate.
+
+Fix: latch `PE_Port_NoteStreamFrameReady` inside `func_8007C214` when
+`B89F4==1` (exact; sentinel nonzero must not admit). Covers pump-time
+publish and E0 promote. E0 no longer Notes separately. New test
+`CDQ1_7C214_last_chunk_latches_frame_ready`; last-chunk C89C fixture
+latches via `7C214`. CD device enable retained. **No `a1` clamp.**
+
+**Follow-up:** Decomp diagnosis + early-demux gate → see DAY2-158k.
+
+Focused Linux: CDQ1_7C214*, B54K_C89C*, B54KAD/AE, Stage1b_cd_device*,
+HostFB_PumpCdProgress*, MV1D_c89c*, DAY2_movie_player, B54K_92934 — all
+PASS. Status regenerated: **1352** tests / **1306** artifact-independent.
+
+**Next boot→Day2:** superseded by 158k.
+Non-claims: Day2 complete; Stage-1b done on live until retest of
+this tip; retail STR golden; published runtime 128 unchanged. Linux-first.
+
+## DAY2-158i: enable CD device on disc-image + E0 named diagnostics (2026-09-09)
+
+Live Bazzite on tip **`7a6984b`** still nested under `func_8001220C` (~1m)
+with the same sparse TRACE as `737f10e` — no named STOP. Decomp Bot rebased
+media-loop to **`b3e8ee1`** on `737f10e`; port C for `92CE8`/`92934` is
+**byte-identical** to `7a6984b` (tip remains source of truth; only evidence
+REPORT wording differed).
+
+Root cause: `HostFB_PumpCdProgress` is a no-op unless
+`PE_CdReg_DeviceEnabled()`. Production `--disc-image` never called
+`PE_CdReg_EnableDevice` (Stage147/148 keep enable explicit; only tests opted
+in). E0 therefore burned 2000 empty polls, then hung in the give-up
+`while (CdReady() != -1)` busy-wait with **no host pump** — silent nest
+under `1220C`.
+
+Fix: `port_main` enables the mounted-disc command device (mask 7) after EXE
+load. E0 else-arm named-stops `Stage1b_cd_device_disabled` when device-off
+and no fixture arm. CD-ready / give-up spins call `HostFB_PumpCdProgress`.
+Trace markers: `e0_poll` / `e0_promote` / `e0_giveup` / `got_frame`. New
+test `Stage1b_cd_device_disabled_named_stop`. B54KY Disc1 attaches device.
+
+**Live follow-up (1fa9a48):** Matt confirmed device enable + TRACE through
+`got_frame` then `Stage1b_pad_terminated_frame` — see DAY2-158j.
+
+**Next boot→Day2:** superseded by 158j (chase pad gate / 7C214 latch).
+Non-claims: Day2 complete; Stage-1b done on live until retest; retail STR
+golden; published runtime 128 unchanged. Linux-first.
+
+## DAY2-158h: fold Decomp Bot 92CE8/92934 media loop onto tip (2026-09-09)
+
+Decomp Bot branch `cursor/92ce8-92934-media-loop` tip is still **`5a4ba27`**
+(based on `5754473`, not rebased past that onto `737f10e`). Folded those
+authenticated leaves onto PR38 tip anyway: post-E08 `func_80192CE8` media
+loop + `func_80192934` (+ siblings `92C48`/`92C9C`) with Stage-1b-gated live
+C89C. Evidence: `docs/evidence/pe-92ce8-post-e08/`,
+`docs/evidence/pe-92934-media-worker/` (carve SHA-256 + `.s.txt`).
+
+Boot path after `91FB8` leaves `DBA==1`, so `92934` early-returns 0, the
+media loop clears stream pointers + `0x200`, and `92CE8` returns 0 — the
+old `func_80192CE8_80192E08_cut` is gone. B54KY Disc1 expectations updated
+for that completion. Sector-scale E0 pump (158g) retained.
+
+Matt’s live Bazzite retest of `737f10e` was already running when this fold
+landed; next named stop after E0 pump + this tip should be past `92CE8`
+(title/menu / next unresolved), not the E08 cut.
+
+**Next boot→Day2:** Matt reports STOP on tip-with-158h; chase that name.
+Non-claims: Day2 complete; Stage-1b done on live until retest of this tip;
+retail STR golden; published runtime 128 unchanged. Linux-first.
+
+## DAY2-158g: live Stage-1b observation + E0 sector-scale CD pump (2026-09-09)
+
+Matt / Bazzite Disc1 on tip **`5754473`**: process stayed alive **2+ minutes
+under `func_8001220C`** with **no** `Stage1b_pad_terminated_frame` and **no**
+MV1d abort. Prior immediate Stage-1b stop is gone in practice.
+
+Mechanical reading (this env has no Disc1 carve): after DAY2-158d/f, E0 waits
+with `HostFB_VSync(-1)` for `D_800B89F4` before promoting. That query only
+advances **1024** device cycles; one CD sector costs **225792/451584**. E0's
+2000-try window therefore cannot finish a multi-sector STR frame, so live
+stays nested under `1220C` (909B4→92CE8→924F8 E0) without reaching got_frame
+admission — matching a long-lived run without Stage-1b/MV1d names.
+
+Fix on this tip: E0 else-arm calls **`HostFB_PumpCdProgress`** (one non-XA
+sector period through the same device/IRQ path as waiting VSync). Promote
+gate unchanged (`B89F4` / fixture arm only). New test
+`HostFB_PumpCdProgress_sector_scale`. **No `a1` clamp.**
+
+Decomp Bot **92CE8 / 92934 drafts are not present** in this agent environment
+(no draft files, no Decomp Bot cloud agent, empty `rom/image/`). Cannot extend
+`func_80192CE8` past `func_80192CE8_80192E08_cut` without authenticated overlay
+bytes. Named cut after first successful 924F8 return remains that boundary.
+
+**Next boot→Day2:** Matt retest tip with sector-scale E0 pump; expect either
+live C89C / Stage-1b admit then `func_80192CE8_80192E08_cut`, or whatever
+named stop the run reports. Integrate 92CE8/92934 remainder only when Decomp
+Bot drafts or PE.IMG overlay carve are available.
+
+Claims: live 5754473 observation recorded; E0 wait pumps one sector/poll;
+VSync(-1) insufficiency evidenced by cycle math + sector-scale test.
+Non-claims: Day2 complete; Stage-1b done on live Disc1 until Matt retests
+this tip; 92CE8 media-loop remainder translated; retail STR golden; published
+runtime 128 unchanged. Linux-first.
+
+## DAY2-158f CI follow-up: retail-Disc skips + metrics include headers (2026-09-09)
+
+`native-progress` failed on tip `5754473` with 2 failed / count desync:
+`B54KY_192CE8…` and `DAY2_movie_complete_frame` used plain `TEST()` and
+FAILed without Disc1 instead of `TEST_RETAIL_DISC1` skip. Metrics only
+scanned `test_native.c`, missing `#include "test_*.h"` cases (1149 vs
+1348). Both tagged; `native_metrics.collect_test_source_text` flattens
+includes. Artifact-independent: 1348 run / 1302 pass / 0 fail / 46 skip.
+
+## DAY2-158f: last-chunk StreamFrameReady so live C89C can run (2026-09-09)
+
+Tip was already past `5223ecd` (`7a41ea1` DAY2-158d/e). This rung fixes
+the Stage-1b **admission** bug that still blocked live C89C:
+
+Demuxed bodies at `s1` are **VLC bitstreams**. STR magic `0x80010160`
+lives in the 32-byte sector header, not at the published payload cursor.
+Admitting on magic-at-body was wrong; real last-chunk frames would still
+hit `Stage1b_pad_terminated_frame`.
+
+Fix: when E0 promotes because `D_800B89F4==1` (retail last video chunk),
+latch `PE_Port_NoteStreamFrameReady`. `got_frame` runs C89C on immediate
+pad **or** that latch. Fixture `ArmStreamPromote` alone does **not** latch
+— non-pad synthetic bodies still Stage-1b-stop (MV1d gate preserved).
+**No `a1` clamp.**
+
+Also refreshed stale `docs/generated/NATIVE_PORT_STATUS.md` (CI
+`native-progress`).
+
+Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad,
+B54K_C89C_last_chunk_frame_ready, MV1D_c89c_*, DAY2_movie_player.
+
+**Next boot→Day2:** Matt retest tip past Stage-1b with live last-chunk
+delivery; then `func_80192CE8` media-loop remainder / multi-sector STR.
+
+Claims: last-chunk promote admits live C89C; wrong STR-magic-at-body
+gate removed; MV1d non-pad fixture gate kept. Non-claims: Day2 complete;
+Stage-1b done on live Disc1 until Matt retests; retail STR golden;
+published runtime 128 unchanged. Linux-first.
+
+## DAY2-158e: movie_player autonomous first frame (2026-09-09)
+
+`DAY2_movie_player` enabled-device path was red at `movie_retry_wait` /
+then FATAL `PE_LoadU32@0xC`. Two fixture bugs, both with evidence:
+
+1. `MOVPLY_SeedRecord` planted `record+6 = 0x1234` labeled "stream end
+   LBA". `func_8007C304` stores that word in `D_800B6918`; `7C564`'s
+   first-sector filter compares it to the STR header frame number
+   (`rec+8`). Planted frame is `1`, so every sector was rejected
+   (`A3520=1` but `status0=0` / `BE998=0`). Fixed: `record+6 = 1`.
+2. After accept, `121270` dim-refresh calls `ClearImage` (`74F44`), which
+   loads `D_80095744→jtb+12`. Fixture never seeded the GPU jtb → load at
+   `0xC`. Fixed: `B54KR_SeedGpuStatic()` on the enabled-device path.
+
+Focused Linux: `DAY2_movie_player` PASS (early returns, search boundary,
+CdlModeSM boundary, autonomous first-frame handoff).
+
+**Next boot→Day2:** live Disc1 full STR frames (9 chunks → `B89F4`) so
+`801924F8` C89C runs past Stage-1b; then `func_80192CE8` media-loop
+remainder. Multi-sector STR through the player chain still open.
+
+Claims: movie_player autonomous first frame green on fixture ISO.
+Non-claims: Day2 complete; Stage-1b done on live Disc1; retail STR golden;
+published runtime 128 unchanged. Linux-first.
+
+## DAY2-158d: Stage-1b E0 promote + STR-ready C89C gate (2026-09-09)
+
+### Bazzite retest of `5223ecd` (Matt) — CLEAN Stage-1b stop
+
+Live Disc1 on tip `5223ecd` (DAY2-158c gate, unconditional E0 promote)
+stops cleanly at `Stage1b_pad_terminated_frame` — MV1d `PE_StoreU16` @
+`0x80200000` is fixed by the gate. Confirmed: not a random `1220C` buffer
+bug. **Do not clamp `a1`.**
+
+### Stage-1b pump (this tip)
+
+Unconditional E0 `7C214` every poll published incomplete bodies (MV1d
+trap). Retail arms DMA3→`7C214` only when last video chunk sets
+`D_800B89F4` (`7CEAC`/`7C564`). E0 now:
+
+1. Promote when `B89F4==1` (live last-chunk), **or** when a fixture armed
+   `PE_Port_ArmStreamPromote` (`7A214` clears `B89F4` after the plant).
+2. Else `HostFB_VSync(-1)` so CD/DMA can finish the frame.
+
+`got_frame` admits C89C when the body is immediate pad **or** retail STR
+video magic `0x80010160` (complete demuxed frame; DAY2 complete-frame
+oracle). Non-ready → named Stage-1b stop. Magic admit is safe only with
+last-chunk/fixture promote — first-chunk incomplete bodies also start
+with that magic.
+
+Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad,
+B54K_C89C_str_magic_ready, MV1D_c89c_* .
+
+**Next boot→Day2:** live Disc1 must assemble full STR frames (9 video
+chunks → `B89F4`) so C89C runs for real past Stage-1b; then
+`func_80192CE8` media-loop remainder. Parallel: DAY2_movie_player
+autonomous first frame landed in DAY2-158e.
+
+Claims: Matt clean Stage1b stop on `5223ecd` recorded; E0 last-chunk /
+fixture-surrogate promote; STR-magic readiness beside pad; no a1 clamp.
+Non-claims: Day2 complete; Stage-1b done on live Disc1; retail STR golden;
+movie_player autonomous green; published runtime 128 unchanged. Linux-first.
+
+## DAY2-158c: gate C89C on pad-terminated frame (MV1d trap) (2026-09-09)
+
+### Diagnosis (Matt / Bazzite live Disc1 abort — confirmed)
+
+`PE_StoreU16` @ `0x80200000` after `func_8001220C` on tip with live
+`func_8010C89C` is the **known MV1d trap**, not a random `1220C` buffer
+bug. Guest RAM ends at `0x80200000`. Wiring C89C without Stage-1b
+STR/MDEC-ready / pad-terminated frames at `s1` lets the output cursor
+walk off the 2MiB window (`docs/evidence/pe-mv1d-c89c/REPORT.md`).
+
+### Chosen fix (no a1 clamp)
+
+Gate the production `got_frame` call in `func_801924F8`: invoke C89C only
+when the stream's first VLC symbol is an immediate pad exit (same shape
+as the synthetic CDQ2d plant / MV1D_PAD). Otherwise honest named Stage-1b
+boundary stop (`Bootstrap_ReturnVoid("Stage1b_pad_terminated_frame", …)` +
+`PE_PORT_STOP_UNRESOLVED_BOUNDARY`). Durable unlock remains Stage-1b frame
+delivery so real STR frames can pass the gate without inventing clamps.
+
+Focused Linux: B54KAD, B54KAE, B54K_C89C_gated_until_pad, MV1D_c89c_* PASS.
+Bazzite retest of `5223ecd`: CLEAN stop at `Stage1b_pad_terminated_frame`
+(MV1d fixed) — see DAY2-158d for the promote follow-up.
+
+**Next boot→Day2:** Stage-1b STR/MDEC frame delivery at `s1`, then
+`func_80192CE8` media-loop remainder. Parallel red: DAY2_movie_player
+autonomous first frame (separate from this abort).
+
+Claims: MV1d root cause recorded; C89C gated on pad-terminated frames;
+synthetic pad path still completes. Non-claims: Day2 complete; Stage-1b
+done; retail STR golden; movie_player autonomous green; published runtime
+128 unchanged. Linux-first.
+
+## DAY1/DAY2-158b: wire live func_8010C89C into 801924F8 got_frame (2026-09-09)
+
+### Live stop evidence (Matt / Bazzite, published PE-DAY2-128)
+
+Windowed Disc1 on published **PE-DAY2-128** opens, then stops at unresolved
+bootstrap stub **`func_8010C89C`** after **`func_8001220C`** (movie VLC). That
+published channel does **not** include this branch tip — runtime 128 still
+carries the intentional got_frame stub. Immediate playable-progress blocker
+for Matt is therefore: build/run a Linux binary from PR #38 tip
+(`cursor/movie-autonomous-stream-6f51`), not 128.
+
+Decomp Bot + live path confirmed the stub lived in `func_801924F8` got_frame
+(`Bootstrap_ReturnVoid("func_8010C89C", …)`), not a missing CMake leaf —
+`func_8010C89C_port.c` was already built. Production tail now matches the
+ov133 call-site order: bump `[B0DBC]`, load `a1` from
+`[0x801D1464+([146C]^1)*4]` then toggle `[146C]` (first pass → `[1468]`),
+`a2=[0x801D0DF8]`, `func_8010C89C(s1,a1,a2,0)`, `func_8007C394(s1)`, EC
+`[B0DBD]=0` / `[B0DBC]=1`. The 7C394→EC slice-wait is not expanded yet
+(EC runs immediately).
+
+Synthetic B54KAD/AE: CDQ2d plants a pad-exit VLC frame at the published
+stream body plus arena/table words so C89C terminates in-bounds.
+Assertions moved from Bootstrap order-log + unresolved stop to C89C
+telemetry + completed got_frame state (`146C==1`, `B0DBC==1`, no stop).
+Focused Linux: B54KAD, B54KAE, MV1D_c89c_* PASS. Full suite still shows
+pre-existing DAY2_movie_player autonomous-first-frame red and disc-gated
+skips where `local/pe_disc1.path` is absent.
+
+Also repaired Disc1-authority `native-progress` (pre-existing on main):
+`func_80030894` body is complete, so `configs/USA/port_priority.json` now
+carries `label: null` / empty remaining callees, and `port_priority.py`
+accepts optional `PORT_SRCS`. Progress unit tests OK.
+
+**Next boot→Day2 stop after this tip:** `func_80192CE8_80192E08_cut` (media
+loop remainder after jal 924F8). Needs overlay carve / Decomp Bot for the
+~100-word tail; no Disc1 image in this agent environment to window-verify.
+
+Claims: 924F8→C89C production call path is live on this tip; synthetic
+got_frame completes past the old C89C stub; progress tooling agrees
+30894 is complete. Non-claims: Day2 complete; retail STR golden decode;
+7C394→EC slice-wait fidelity; windowed Disc1 boot on Matt's machine until
+he runs this tip (128 still stubs); DAY2_movie_player autonomous stream
+green; published runtime 128 unchanged. Windows packaging not touched
+(Linux-first).
+
+## DAY1/DAY2-158: XA RT mode + autonomous movie stream (2026-09-09)
+
+Previous157 stopped the enabled-device player at `CD_device_read_mode` for
+mode 0x1E0 (0x50-bit guard). Provenance for the stream DMA pointer table:
+those words are EXE-image data (same class as the B27C CD register table),
+not a runtime SDK/movie writer — dump evidence in
+`retail_gameover_fade_cases.h` at 9B32C..9B35C. `B558_PlantPointers` /
+`CdDeviceSeed` now re-plant the full table after `ResetTestState`.
+
+Device change: ReadN/ReadS guard narrowed from `mode&0x50` to `mode&0x10`.
+CdlModeRT (bit6) is allowed so movie mode 0xE0/0x1E0 delivers raw sectors;
+7C564 keeps software header/channel filtering. CdlModeSM (bit4) remains
+the explicit `CD_device_read_mode` frontier (covered by the player test).
+
+Player fixes required for the physical chain: success path returns 1
+(oracle/`regs[2]==1`), and the first-frame 121270 poll calls
+`HostFB_VSync(-1)` so CD DMA/IRQ advance while the CPU spins (updater
+already had this host adaptation). Fixture plants a one-chunk STR sector
+at the searched PE.IMG LBA.
+
+Native DAY2_movie_player: early returns, disabled-device search boundary,
+CdlModeSM boundary, and enabled-device autonomous path where search/Setloc/
+ReadS run, callbacks stay installed, and first-frame handoff reaches
+B0DBA 3→4 / B0DBC=1 / bank flip without a stop. C89C uses the zeroed EB8C
+bound exit on the synthetic payload (not a retail STR decode golden).
+
+Next: multi-sector STR frames through the same chain, updater retry
+enabled-device completion, 14E30 real path, libpress wait fidelity, XA
+filter/audio (bit4), hardware pixel validation, and scope-wide
+opening→Day2 acceptance. Full user goal open; published runtime 128
+unchanged. PR #37 (host SPU synth) remains open/unmerged and is not
+required for this stream slice.
 
 ## DAY1/DAY2-157: movie player 121C04 ported (2026-09-09)
 

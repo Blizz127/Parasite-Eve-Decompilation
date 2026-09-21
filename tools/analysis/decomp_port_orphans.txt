@@ -1,0 +1,2 @@
+# pc_port/game/decomp TUs with no matching src/ leaf.
+# Machine-checked by tools/analysis/gen_decomp_ports.py and the decomp-port regression test.

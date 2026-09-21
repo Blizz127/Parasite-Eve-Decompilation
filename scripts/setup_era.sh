@@ -16,6 +16,12 @@ ERA="$ROOT/tools/era"
 GCC_URL="https://github.com/decompals/old-gcc/releases/download/0.17/gcc-2.7.2-psx.tar.gz"
 GCC_DIR="$ERA/gcc-2.7.2-psx"
 MASPSX_REPO="https://github.com/mkst/maspsx"
+# Pin the upstream commit whose maspsx.py is API-compatible with the locally
+# patched, repo-tracked maspsx/__init__.py.  Upstream moved on after this
+# (e.g. e3d5916 added the nop_lw_lw ctor arg, #137), and a floating clone then
+# fails at import/ctor time.  The tracked __init__.py is preserved across the
+# clone, so the driver and the processor must come from the same era.
+MASPSX_COMMIT="025620f1e61248ad4a775c2929ec86f754973597"
 
 mkdir -p "$ERA"
 
@@ -41,14 +47,17 @@ MASPSX_TRACKED=(
     "maspsx/__init__.py"
     "tests/test_fill_store_delay_slot.py"
     "tests/test_three_word_symbol_store.py"
+    "tests/test_fill_epilogue_delay_slot.py"
 )
 
-if [[ -f "$ERA/maspsx/maspsx.py" ]]; then
-    echo "OK  maspsx present: $ERA/maspsx"
+MASPSX_STAMP="$ERA/maspsx/.maspsx-commit"
+if [[ -f "$ERA/maspsx/maspsx.py" ]] && [[ "$(cat "$MASPSX_STAMP" 2>/dev/null)" == "$MASPSX_COMMIT" ]]; then
+    echo "OK  maspsx present at pinned commit: $ERA/maspsx"
 else
-    echo "Cloning maspsx ..."
+    echo "Cloning maspsx @ ${MASPSX_COMMIT:0:10} ..."
     tmp="$(mktemp -d)"
-    git clone -q --depth 1 "$MASPSX_REPO" "$tmp/maspsx"
+    git clone -q "$MASPSX_REPO" "$tmp/maspsx"
+    git -C "$tmp/maspsx" checkout -q "$MASPSX_COMMIT"
     mkdir -p "$ERA/maspsx"
     excludes=(--exclude='./.git')
     for f in "${MASPSX_TRACKED[@]}"; do excludes+=("--exclude=./$f"); done
@@ -64,6 +73,7 @@ else
             fi
         fi
     done
+    printf '%s\n' "$MASPSX_COMMIT" >"$MASPSX_STAMP"
     [[ -f "$ERA/maspsx/maspsx.py" ]] || { echo "ERROR: maspsx.py missing" >&2; exit 1; }
     echo "OK  cloned $ERA/maspsx"
 fi

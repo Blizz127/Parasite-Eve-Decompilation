@@ -29,7 +29,7 @@
  * Handlers ported here: 0 / 1 / 2 / 0x20 / 0xCE / 0xEA-nop /
  * 0xA / 0x1D / 0x09 / 0x05 / 0x14 / 0x40 / 0x3F / 0xED-2900 /
  * 0xE1 / 0x84 / 0x88 / 0x08 / 0x0B / 0x41 / 0x2E / 0x4E /
- * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0xC1 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22 / 0x43 / 0x52 / 0x53 / 0xA6 / 0x2A / 0x87 / 0x31 / 0x94 / 0xC7 / 0xAD / 0xAE / 0xB2 / 0x8B / 0x89 / 0x95 / 0x03 / 0xB8 / 0xC6 / 0x55 / 0xCF. 0x1C and 0x1F are the already-ported
+ * 0x2F / 0x30 / 0x5E / 0x77 / 0x9B / 0x0C / 0xD9 / 0x24 / 0x11 / 0x86 / 0x04 / 0xAA / 0x65 / 0x82 / 0x9C / 0xAB / 0x1E / 0x79 / 0xC1 / 0x85 / 0xDC / 0x1A / 0x6F / 0x5A / 0xB7 / 0x70 / 0x59 / 0x12 / 0x6A / 0x4B / 0x54 / 0x6B / 0x64 / 0x0E / 0x0D / 0x22 / 0x43 / 0x52 / 0x53 / 0xA6 / 0x2A / 0x87 / 0x31 / 0x94 / 0xC7 / 0xAD / 0xAE / 0xB2 / 0x8B / 0x89 / 0x95 / 0x03 / 0xB8 / 0xC6 / 0x55 / 0xCF / 0x97 / 0x9A / 0x71. 0x1C and 0x1F are the already-ported
  * mailbox leaves. SEW1 adds 0x5C / 0x5D (matching src/ leaves
  * 182C0 / 182E0) and 0x93 (190BC). Any other table slot is an
  * EXPLICIT boundary: the opcode PC is retained in the task and
@@ -929,6 +929,71 @@ int func_800192C8(pe_addr_t args)
 }
 
 /*
+ * opcode 0x97 — handler 0x800192DC..0x8001930C (retail 14 words).
+ *
+ *   800192E4  lw   v0,0(a0)          ; v0  = *args0
+ *   800192E8  lui  a1,0x800A
+ *   800192EC  lw   a1,-0x2D10(a1)    ; a1  = *(0x8009D2F0)   owner actor
+ *   800192F0  lw   a0,0(v0)          ; a0  = **args0          effect index
+ *   800192F4  jal  8006FC18
+ *   800192F8  addu a2,zero,zero      ; a2  = 0                delay slot
+ *   lw ra / li v0,1 / jr ra / addiu sp
+ *
+ * Live M0374I module 2 (PC 0x801C5D00): args [14]. M0374I is on the M0042I
+ * route (docs/ai_context/DAY1_DAY2_TRANSITIONS.md §6), so this closes a real
+ * Day-2 park-path opcode. func_8006FC18 is the already-ported effect-destroy
+ * leaf (game/boot/func_80020F18_port.c:28); this cut is a pure wrapper.
+ * Evidence: docs/evidence/field-vm-opcode-coverage/REPORT.md.
+ */
+int func_800192DC(pe_addr_t args)
+{
+    uint32_t index = PE_LoadU32(PE_LoadU32(args));
+    (void)func_8006FC18(index, PE_LoadU32(GA_D_8009D2F0), 0u);
+    return 1;
+}
+
+/*
+ * opcode 0x9A — handler 0x800193D8..0x80019410 (retail 14 words).
+ *
+ *   lw a0,0(a0) ; lw v1,4(a0arg) ; lw a2,8(a0arg)
+ *   a0=*a0 ; a1=*v1 ; a2=*a2 ; jal func_80065AD4 ; v0=1
+ *
+ * Live M0091I module 3 (Day-2 terminal room), two uses args [2,5,0].
+ * Evidence: docs/evidence/field-vm-opcode-coverage/REPORT.md.
+ */
+int func_800193D8(pe_addr_t args)
+{
+    uint32_t a0 = PE_LoadU32(PE_LoadU32(args));
+    uint32_t a1 = PE_LoadU32(PE_LoadU32(args + 4u));
+    uint32_t a2 = PE_LoadU32(PE_LoadU32(args + 8u));
+    (void)func_80065AD4(a0, a1, a2);
+    return 1;
+}
+
+/*
+ * opcode 0x71 — handler 0x80018A9C..0x80018B00 (retail 25 words).
+ *
+ *   container = *(D_800B1624)
+ *   rec = container + *(container+0x14) + *arg0 * 56      ; 3*8*7 = 56
+ *   a1 = (int16)*arg1 ; a2 = (int16)*arg2 ; a3 = (int16)*arg3
+ *   jal func_800671C8(rec, a1, a2, a3) ; v0=1
+ *
+ * Live M0191I module 1 (park lane, not on the M0042I route).
+ * Evidence: docs/evidence/field-vm-opcode-coverage/REPORT.md.
+ */
+int func_80018A9C(pe_addr_t args)
+{
+    pe_addr_t container = PE_LoadU32(0x800B1624u);
+    pe_addr_t rec = container + PE_LoadU32(container + 0x14u)
+                  + PE_LoadU32(PE_LoadU32(args)) * 56u;
+    int32_t x = (int16_t)PE_LoadU16(PE_LoadU32(args + 4u));
+    int32_t y = (int16_t)PE_LoadU16(PE_LoadU32(args + 8u));
+    int32_t page = (int16_t)PE_LoadU16(PE_LoadU32(args + 12u));
+    (void)func_800671C8(rec, x, y, page);
+    return 1;
+}
+
+/*
  * PE-BTL64 — opcode 0x03 camera-request 17C54.
  *
  * 14 words 0x80017C54..0x80017C8C, SHA-256
@@ -1066,6 +1131,23 @@ static int pe_attachment_command(pe_addr_t fn, pe_addr_t args)
     return 1;
 }
 
+/*
+ * PE-BTL180 / script opcode 0xF0 — func_80016FE0
+ * VRAM 0x80016FE0 / file 0x77E0 / size 0x38, matching src/func_80016FE0.c.
+ * Writes 0 or 1 through *a0 as a function of D_8009D2E8 bit 0:
+ *   if (D_8009D2E8 & 1) **a0 = 0; else **a0 = 1;  return 1.
+ * Authority: retail 0x800910A0[0xF0] == 0x80016FE0.  This slot was an
+ * explicit unresolved boundary before; scripts that poll the flag (the
+ * m0012i background tasks park on it) would have stopped the port.
+ */
+int func_80016FE0(pe_addr_t args)
+{
+    pe_addr_t dst = PE_LoadU32(args);
+
+    PE_StoreU32(dst, (PE_LoadU32(GA_D_8009D2E8) & 1u) ? 0u : 1u);
+    return 1;
+}
+
 static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
 {
     if (fn == 0x80015108u || fn == 0x80019170u || fn == 0x80019260u || fn == 0x80019F04u ||
@@ -1073,8 +1155,16 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         return pe_attachment_command(fn, args);
     if (fn == 0x800192C8u)
         return func_800192C8(args);
+    if (fn == 0x800192DCu)
+        return func_800192DC(args);
+    if (fn == 0x800193D8u)
+        return func_800193D8(args);
+    if (fn == 0x80018A9Cu)
+        return func_80018A9C(args);
     if (fn == 0x8001930Cu)
         return func_8001930C(args);
+    if (fn == 0x80015C7Cu)   /* opcode 0xE9: field message query/close */
+        return func_80015C7C(args);
     if (fn == 0x80017EFCu || fn == 0x80017F20u) {
         /* 4F/50: matching leaves pause/resume this actor's animation. */
         pe_addr_t actor=PE_LoadU32(GA_D_8009D2F0);
@@ -1128,6 +1218,8 @@ static int pe_17018_dispatch(pe_addr_t fn, pe_addr_t args)
         PE_StoreU32(0x800BCF88u, PE_LoadU32(0x800BCF88u) & ~0xC0u);
         return 1;
     }
+    if (fn == 0x80016FE0u)   /* opcode 0xF0: matching src/func_80016FE0.c */
+        return func_80016FE0(args);
     if (fn == 0x80017AC0u) { /* opcode 2D: matching leaf */
         PE_StoreU32(GA_D_8009D2E8,
             PE_LoadU32(GA_D_8009D2E8) | PE_LoadU32(PE_LoadU32(args)));

@@ -16,11 +16,20 @@ void func_80062F9C(void)
     PE_StoreU32(0x8009D15Cu,0u);PE_StoreU32(0x8009D154u,0u);
 }
 
+/* func_80067CBC — matched C leaf (src/func_80067CBC.c, VRAM 0x80067CBC, 23
+ * words, LINK_EXACT on era -O2 -G0). Retail writes D_800BCF88 three times:
+ * the OR'd value, the conditional result, and the final mask|set (reloaded
+ * from memory first). Preserve all three stores so an interleaved reader sees
+ * the same states; the previous folded expression produced the right final
+ * word but only one observable write. */
 void func_80067CBC(void)
 {
-    uint32_t flags=PE_LoadU32(0x800BCF88u);
-    flags=((flags|0x1000u)^0x2000u)&~0xC000u;
-    PE_StoreU32(0x800BCF88u,flags|0x4000u);
+    uint32_t v=PE_LoadU32(0x800BCF88u);
+    uint32_t n=v|0x1000u;
+    PE_StoreU32(0x800BCF88u,n);
+    if (n&0x2000u) PE_StoreU32(0x800BCF88u,n&~0x2000u);
+    else           PE_StoreU32(0x800BCF88u,v|0x3000u);
+    PE_StoreU32(0x800BCF88u,(PE_LoadU32(0x800BCF88u)&0xFFFF3FFFu)|0x4000u);
 }
 
 pe_addr_t func_80062A34(uint32_t kind,uint32_t id)
