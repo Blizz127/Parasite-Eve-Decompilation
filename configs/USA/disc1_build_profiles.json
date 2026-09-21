@@ -254,18 +254,172 @@
       "environment": {
         "MASPSX_FILL_EPILOGUE_DELAY_SLOT": "1"
       }
+    },
+    "era_o1_g0_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O1",
+        "-G0"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30"
+      }
+    },
+    "era_o2_g0_fill_indexed_store_delay_slot": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_FILL_INDEXED_STORE_DELAY_SLOT": "1"
+      }
+    },
+    "era_o2_g0_passthrough_load": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
+      }
+    },
+    "era_o2_g8_three_word_force_d8009d1a0_absolute": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_FORCE_ABSOLUTE_SYMBOLS": "D_8009D1A0"
+      }
+    },
+    "era_o2_g0_dispatch_80010080": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010080"
+      }
+    },
+    "era_o2_g0_dispatch_80010ac8": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010AC8"
+      }
+    },
+    "era_o2_g0_dispatch_80010b28": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80010B28"
+      }
+    },
+    "era_o2_g8_dispatch_800111f8": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_800111F8"
+      }
+    },
+    "era_o2_g8_passthrough_load": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_PASSTHROUGH_SYMBOL_LOAD": "1"
+      }
+    },
+    "era_o2_g8_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30"
+      }
+    },
+    "era_o2_g0_dispatch_800c2128": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_800C2128"
+      }
+    },
+    "era_o2_g0_dispatch_8011034": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "MASPSX_THREE_WORD_SYMBOL_STORE": "1",
+        "MASPSX_DISPATCH_FOLD": "jtbl_80011034"
+      }
+    },
+    "era_o2_g8_expand_div": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G8"
+      ],
+      "environment": {
+        "MASPSX_EXPAND_DIV": "1"
+      }
+    },
+    "era_o2_g0_expand_div_aspsx_230": {
+      "toolchain": "era",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "environment": {
+        "ERA_ASPSX_VER": "2.30",
+        "MASPSX_EXPAND_DIV": "1"
+      }
     }
   },
   "assignments": {
     "era_o1_g0": [
       "func_8005DB44",
-      "func_8008AB1C"
+      "func_8008AB1C",
+      "func_80089F28"
     ],
     "era_o1_g0_sched2_three_word": [
       "func_8006A674"
     ],
     "era_o2_g0_aspsx_230": [
-      "func_80030534"
+      "func_80030534",
+      "func_80019DB8",
+      "func_8001A3FC",
+      "func_8006DD38",
+      "func_8006E2D0",
+      "func_80090AAC"
     ],
     "era_o2_g0_expand_div": [
       "func_8003C5D8"
@@ -287,7 +441,8 @@
       "func_80081254",
       "func_80082CDC",
       "func_80084B44",
-      "func_80084FC4"
+      "func_80084FC4",
+      "func_80085F14"
     ],
     "era_o2_g0_fill_epilogue_delay_slot": [
       "func_80074D28",
@@ -309,7 +464,8 @@
       "func_8007DD74",
       "func_8007F72C",
       "func_800811E4",
-      "func_800828F4"
+      "func_800828F4",
+      "func_8007BAC0"
     ],
     "era_o2_g0_three_word": [
       "func_8002F7D8",
@@ -319,7 +475,10 @@
       "func_80037548",
       "func_80050020",
       "func_8005DC28",
-      "func_800374E8"
+      "func_800374E8",
+      "func_800409B4",
+      "func_8006A0E8",
+      "func_8006A2E8"
     ],
     "era_o2_g8": [
       "func_800124F8",
@@ -375,7 +534,26 @@
       "func_800605F8",
       "func_800631DC",
       "func_8005E4E4",
-      "func_8005E518"
+      "func_8005E518",
+      "func_80014DA0",
+      "func_800155FC",
+      "func_80017588",
+      "func_800339A0",
+      "func_80044E98",
+      "func_80045110",
+      "func_800451D0",
+      "func_800453E8",
+      "func_80046334",
+      "func_8004905C",
+      "func_8004F798",
+      "func_8004FA10",
+      "func_8005010C",
+      "func_80050178",
+      "func_80050878",
+      "func_800536B8",
+      "func_80057B70",
+      "func_8005E788",
+      "func_8005F27C"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
@@ -386,7 +564,8 @@
     ],
     "era_o2_g8_three_word": [
       "func_8001266C",
-      "func_80029388"
+      "func_80029388",
+      "func_8001A890"
     ],
     "era_o2_g8_vm_dispatch": [
       "func_80012850"
@@ -606,6 +785,53 @@
     ],
     "era_o2_g8_fill_epilogue_delay_slot": [
       "func_80062F9C"
+    ],
+    "era_o2_g0_dispatch_80010080": [
+      "func_80012E7C"
+    ],
+    "era_o2_g8_three_word_force_d8009d1a0_absolute": [
+      "func_80021D4C"
+    ],
+    "era_o2_g0_dispatch_80010ac8": [
+      "func_8002FE78"
+    ],
+    "era_o2_g0_dispatch_80010b28": [
+      "func_8003010C"
+    ],
+    "era_o2_g8_aspsx_230": [
+      "func_80034FC4",
+      "func_80035C84",
+      "func_80035E04",
+      "func_80035F54",
+      "func_800361F4",
+      "func_80036254",
+      "func_80044174",
+      "func_800447F0",
+      "func_8004BB80",
+      "func_80059EC8",
+      "func_80059F08"
+    ],
+    "era_o2_g0_dispatch_8011034": [
+      "func_8004AE1C"
+    ],
+    "era_o2_g8_dispatch_800111f8": [
+      "func_80051CC4"
+    ],
+    "era_o2_g8_expand_div": [
+      "func_8005FA3C",
+      "func_8005FB74",
+      "func_8005FDF0",
+      "func_8005FF28"
+    ],
+    "era_o2_g0_expand_div_aspsx_230": [
+      "func_80065260"
+    ],
+    "era_o2_g0_fill_indexed_store_delay_slot": [
+      "func_800909C0",
+      "func_80090A64"
+    ],
+    "era_o2_g0_dispatch_800c2128": [
+      "func_800C3238"
     ]
   }
 }
