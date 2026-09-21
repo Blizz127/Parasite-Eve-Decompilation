@@ -1,4 +1,38 @@
-## CURRENT 2026-09-21: GOAL 4H #3 — the mesh colour transfer pair (810), port checked again
+## CURRENT 2026-09-21: first branch merge landed — 810 -> 964 c spans on main
+
+The native PC port is the deliverable; matching decomp is the means. Nothing is
+committed to a scratch branch any more: **this is on `main` and pushed**
+(`8e0dc06b`). Standing rules unchanged (no MIPS interpreter, recovered asm worth
+zero to the port).
+
+1. **`cursor/cd-sector-backpressure-6f51` merged.** It was a *parallel* decomp
+   line (910 c spans of its own) against main's 810, almost disjoint, so the merge
+   is a span-level union: `964 c / 401 asm`, `funcs 521/1153`, `c_words 11156`,
+   `tierA 908`. `EXACT_REBUILD_GATE=PASS` with the retail SHA-1 unchanged;
+   `VERIFY_SWEEP=PASS leaves=964`; port suite 1405/1405.
+
+2. **Four lessons worth keeping** (full detail in
+   `docs/ai_context/BRANCH_CONSOLIDATION_PLAN.md`): a blind file harvest breaks the
+   repo's invariants because the branch's *YAML rows* are half the change;
+   "same address -> main wins" silently dropped 36 leaves, so rank
+   `rodata > c > asm`; the rebuild gate catches what preflight only warns about;
+   and a preflight WARN is a real defect, not noise.
+
+3. **Open follow-up — the dispatch-fold family.** Six branch leaves
+   (`func_80012E7C`, `func_8002FE78`, `func_8003010C`, `func_8004AE1C`,
+   `func_80051CC4`, `func_800C3238`) build under per-leaf
+   `MASPSX_DISPATCH_FOLD=jtbl_X` profiles and fail `ERROR: .rodata N != pool table
+   M for jtbl_X` regardless of whether the profile is applied. Excluded from the
+   merge; resolving the jump-table carve would take main to ~970 c spans.
+
+4. **Machine consolidation continues.** Settings/tools scouting is in
+   `docs/ai_context/AGENT_SETTINGS_CONSOLIDATION.md`; 39 remote branches classified
+   in the plan doc. `matts-macbook` is offline and `macserver` (100.72.127.15)
+   still refuses this box's key, so the Mac row remains unread.
+
+---
+
+## PRIOR 2026-09-21: GOAL 4H #3 — the mesh colour transfer pair (810), port checked again
 
 The native PC port is the deliverable; matching decomp is the means. Recovered
 assembly is worth zero to the port. No MIPS interpreter. `{SCRATCH}` = `/tmp/pe-2nd`.

@@ -78,3 +78,50 @@ this is a plan rather than a result. The safe first execution step is Tier 1
 clone `~/dev/parasite-eve` is stale on `2cd7293a` and should `git pull` before any
 of this is compared against it. `matts-macbook` (offline) and `macserver` (key
 refused) have not been read.
+
+---
+
+## RESULT 2026-09-21: Tier 3 #1 merged to main — `cursor/cd-sector-backpressure-6f51`
+
+**Status: DONE and gate-passed.** `main` fast-forwarded to `8e0dc06b`.
+
+The branch turned out to be a **parallel matching-decomp line**, not a doc delta:
+its YAML registered 910 c spans against main's 810, and the two row sets were
+almost disjoint. The merge is therefore a **span-level union**, not a file harvest.
+
+| | c spans | asm spans | funcs | c_words |
+| --- | ---: | ---: | ---: | ---: |
+| main before | 810 | 347 | 377/980 | 6,834 |
+| **main after** | **964** | **401** | **521/1153** | **11,156** |
+
+`EXACT_REBUILD_GATE=PASS` — `sha1_orig == sha1_cand == 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`VERIFY_SWEEP=PASS leaves=964`, `plan=5dcdb1d3d30d…`. Port suite unchanged at 1405/1405.
+
+### What went wrong on the way (all four attempts are in the history)
+
+1. **A blind file harvest breaks invariants.** Checking out the branch's 798
+   "unique" files made `gen_decomp_ports --verify` report stale TUs, left all 161
+   `src/*.c` unregistered in main's YAML, and wired 288 of 289 port files nowhere —
+   because the branch's *YAML rows* were the missing half. Reverted.
+2. **"Same address → main wins" silently dropped 36 leaves.** 58 rows share an
+   address with a different *kind*; in ~50 of them main says `asm` and the branch
+   says `c`. Keeping main's row discarded the branch's decompiled carve, which is
+   what made the build assemble dispatch tables the C leaves also emit.
+   Fix: rank `rodata > c > asm` at equal addresses.
+3. **The rebuild gate caught what preflight only warned about.** The first union
+   passed preflight with a WARN; the gate hard-failed on
+   `ERROR: .rodata 0x20 != pool table 0x1C for jtbl_80010080`. Excluding that one
+   leaf just moved the failure to `jtbl_80010AC8` — same class.
+4. **The dispatch-fold family is a real incompatibility**, not a profile bug.
+   `func_80012E7C`, `func_8002FE78`, `func_8003010C`, `func_8004AE1C`,
+   `func_80051CC4`, `func_800C3238` each build under a per-leaf
+   `MASPSX_DISPATCH_FOLD=jtbl_X` profile and each fails the pool-table check
+   whether or not the profile is applied. They are **excluded** from the merge and
+   remain on the branch — this is the open follow-up.
+
+### Next for this branch
+
+- Resolve the jump-table/pool-table carve for the 6 dispatch leaves (they are worth
+  ~6 more c spans, and `func_8004AE1C` is also the field-menu input tree's root in
+  the port, so it is worth having).
+- Then re-run the union including them; expect 970 c spans.
