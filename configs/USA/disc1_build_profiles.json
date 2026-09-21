@@ -801,12 +801,6 @@
       "func_80021D4C",
       "func_8003E974"
     ],
-    "era_o2_g0_dispatch_80010ac8": [
-      "func_8002FE78"
-    ],
-    "era_o2_g0_dispatch_80010b28": [
-      "func_8003010C"
-    ],
     "era_o2_g8_aspsx_230": [
       "func_80034FC4",
       "func_80035C84",
@@ -821,12 +815,6 @@
       "func_80059F08",
       "func_800438EC"
     ],
-    "era_o2_g0_dispatch_8011034": [
-      "func_8004AE1C"
-    ],
-    "era_o2_g8_dispatch_800111f8": [
-      "func_80051CC4"
-    ],
     "era_o2_g8_expand_div": [
       "func_8005FA3C",
       "func_8005FB74",
@@ -840,12 +828,6 @@
       "func_800909C0",
       "func_80090A64",
       "func_80090A20"
-    ],
-    "era_o2_g0_dispatch_800c2128": [
-      "func_800C3238"
-    ],
-    "era_o2_g0_dispatch_80010080": [
-      "func_80012E7C"
     ],
     "era_o1_g0_aspsx_230": [
       "func_80018E84"
