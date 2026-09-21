@@ -74,6 +74,8 @@ segments:
       - [0x3420, asm]
       # func_80015AB8 — three-pointer wrapper around func_800677A0 reading
       # *a0[0] / *(short*)a0[1] / *(short*)a0[2]; return 1. era -O2 -G0.
+      - [0x367C, c, func_80012E7C]
+      - [0x38B4, asm]
       - [0x55A0, c, func_80014DA0]
       - [0x5630, asm]
       - [0x5DFC, c, func_800155FC]
@@ -201,14 +203,14 @@ segments:
       # era -O2 -G0, LINK_EXACT.
       - [0x8F18, c, func_80018718]
       - [0x8F54, c, func_80018754]
-      - [0x8F74, asm]
+      - [0x8F74, c, func_80018774]
       - [0x8FC0, asm]
       - [0x9064, c, func_80018864]
       - [0x9094, c, func_80018894]
       - [0x90C4, asm]
       # Phase 5EP: global record dispatch and true return.
       - [0x9154, c, func_80018954]
-      - [0x917C, asm]
+      - [0x917C, c, func_8001897C]
       # Phase 5GC: two-reader call wrapper, era -O2 -G0.
       - [0x9248, asm]
       - [0x9300, c, func_80018B00]
@@ -221,7 +223,7 @@ segments:
       # Phase 5GE: D_8009D2F0 flag-0x20 clearer, era -O2 -G0.
       - [0x93C8, c, func_80018BC8]
       - [0x93EC, c, func_80018BEC]
-      - [0x9410, asm]
+      - [0x9410, c, func_80018C10]
       # Phase 5GG: two-reader call wrapper, era -O2 -G0.
       - [0x9458, c, func_80018C58]
       # Phase 5GH: two-reader call wrapper, era -O2 -G0.
@@ -235,7 +237,7 @@ segments:
       - [0x9550, asm]
       # Phase 5GL: one-reader call wrapper, era -O2 -G0.
       - [0x9658, c, func_80018E58]
-      - [0x9684, asm]
+      - [0x9684, c, func_80018E84]
       # Phase 5GM: unsigned-halfword reader wrapper, era -O2 -G0.
       - [0x96B4, c, func_80018EB4]
       # Phase 5GN: unsigned-halfword reader wrapper twin, era -O2 -G0.
@@ -298,7 +300,7 @@ segments:
       # int func_800438C0(int); return 1. Era -O2 -G0 (no $gp references).
       # Mid-9ADC carve: prefix 0x1A8, C 0x2C, resume 9CB0.s to 9FD0.
       - [0x9C84, c, func_80019484]
-      - [0x9CB0, asm]
+      - [0x9CB0, c, func_800194B0]
       # Probe: bit-13 setter with retail $v1 global-pointer allocation.
       - [0x9CF8, c, func_800194F8]
       - [0x9D40, asm]
@@ -313,7 +315,7 @@ segments:
       - [0x9EA0, c, func_800196A0]
       # Probe: companion state bit-14 clearer with retail $v0/$a0 allocation.
       - [0x9EC4, c, func_800196C4]
-      - [0x9EE8, asm]
+      - [0x9EE8, c, func_800196E8]
       # Probe: isolated global bit-2 setter with retail $at store address.
       - [0x9F28, c, func_80019728]
       # Probe: companion global bit-2 clearer with retail $at store address.
@@ -371,7 +373,7 @@ segments:
       - [0xA524, c, func_80019D24]
       # Probe: four-halfword forwarding wrapper.
       - [0xA544, c, func_80019D44]
-      - [0xA584, asm]
+      - [0xA584, c, func_80019D84]
       # Probe: call-and-store wrapper retaining descriptor across the call.
       - [0xA5B8, c, func_80019DB8]
       - [0xA5F4, c, func_80019DF4]
@@ -390,7 +392,7 @@ segments:
       - [0xAB2C, c, func_8001A32C]
       # Probe: companion state bit-1 clearer with retail $v0/$a0 allocation.
       - [0xAB50, c, func_8001A350]
-      - [0xAB74, asm]
+      - [0xAB74, c, func_8001A374]
       # func_8001A43C — func_8005401C() result stored through *(*a0); return 1.
       # era -O2 -G0, LINK_EXACT.
       - [0xAB90, asm]
@@ -534,7 +536,7 @@ segments:
       - [0x275F8, c, func_80036DF8]
       - [0x27634, c, func_80036E34]
       - [0x27658, c, func_80036E58]
-      - [0x2767C, asm]
+      - [0x2767C, c, func_80036E7C]
       - [0x2777C, asm]
       - [0x278A8, c, func_800370A8]
       # Phase 5FQ-370DC: packet setup/submit wrapper, era -O2 -G0.
@@ -598,7 +600,7 @@ segments:
       # File span 0x2E02C–0x2E034 exclusive. Return-1 stub (jr; addiu $v0,1).
       # Prefix size 0x2B620 (= 0x2E02C - 0x2A0C); contiguous — no ROM holes.
       - [0x2E02C, c, func_8003D82C]
-      - [0x2E034, asm]
+      - [0x2E034, c, func_8003D834]
       # Volume 103: signed-index 16-byte-record initializer; era -O2 -G0.
       - [0x2E14C, asm]
       - [0x2E3E4, c, func_8003DBE4]
@@ -639,7 +641,7 @@ segments:
       # Phase 5EF: two-call void wrapper.
       - [0x2F11C, c, func_8003E91C]
       - [0x2F144, c, func_8003E944]
-      - [0x2F174, asm]
+      - [0x2F174, c, func_8003E974]
       # func_8003F3C4 — field-tick / main-loop body (229 words, 0x394).
       # Boot-spine jal from func_8001220C. era -O2 -G8 + FORCE_ABSOLUTE for
       # in-range words retail keeps absolute; s2/s0/s1 pins; empty asm
@@ -675,7 +677,7 @@ segments:
       - [0x33110, c, func_80042910]
       # func_80042964 — same stride-1048 row byte getter (masked read); needs
       # maspsx patch 5 (MASPSX_SYMBOL_AT_TEMP=1). epoch 5.
-      - [0x33128, asm]
+      - [0x33128, c, func_80042928]
       - [0x33164, c, func_80042964]
       - [0x3318C, asm]
       - [0x33328, c, func_80042B28]
@@ -732,7 +734,7 @@ segments:
       - [0x340E0, c, func_800438E0]
       # Phase 5ES: first loop-as-volume leaf; era -O2 -G0, no $gp.
       # Mid-340EC carve: prefix 0x861C, C 0x38 (14 words), resume 3C740.s 0x10E4.
-      - [0x340EC, asm]
+      - [0x340EC, c, func_800438EC]
       # Tier-2 B: callback registration wrapper for func_80047040;
       # two independent exact-start stores, era -O2 -G0, first phrasing.
       - [0x341D8, asm]
@@ -843,7 +845,7 @@ segments:
       # beqz with constant hoisted into the delay slot, gp store; void leaf.
       # Current 3FB0C carve: prefix 0x13C, C 0x1C, resume 3FC64.s 0x3A4.
       - [0x3FC48, c, func_8004F448]
-      - [0x3FC64, asm]
+      - [0x3FC64, c, func_8004F464]
       # func_8004F7D8 — func_8005E8A4(6,6) then func_80053648(D_8009CF58)
       # (gp slot). era -O2 -G8, LINK_EXACT.
       - [0x3FC90, asm]
@@ -889,7 +891,7 @@ segments:
       - [0x40888, c, func_80050088]
       # Tier-2 callback wrapper func_80050204.  Former 0x408A8 span:
       # prefix 0x15C, C 0x28, resume 0x34 (closure 0x1B8).
-      - [0x408A8, asm]
+      - [0x408A8, c, func_800500A8]
       # func_800501C8 — store the arg to the gp slot D_8009CEF4, register
       # func_8005100C, then func_8005EB58(1) / func_8005EB64(0x68).
       # era -O2 -G8, LINK_EXACT.
@@ -929,14 +931,14 @@ segments:
       # the gp slot is D_8009CF14 (gp+0x1A4). era -O2 -G8, LINK_EXACT.
       - [0x41078, c, func_80050878]
       - [0x411A8, c, func_800509A8]
-      - [0x411E0, asm]
+      - [0x411E0, c, func_800509E0]
       - [0x412D8, asm]
       - [0x41348, c, func_80050B48]
       - [0x41394, asm]
       - [0x413E8, c, func_80050BE8]
-      - [0x41408, asm]
+      - [0x41408, c, func_80050C08]
       - [0x41450, c, func_80050C50]
-      - [0x41470, asm]
+      - [0x41470, c, func_80050C70]
       - [0x414B4, c, func_80050CB4]
       - [0x414F8, c, func_80050CF8]
       # Phase 5AF: C leaf func_80050D18 — VRAM 0x80050D18, size 0x8.
@@ -1034,10 +1036,10 @@ segments:
       # Phase 5EW: C leaf func_80052BCC — VRAM 0x80052BCC, size 0x3C (15 words).
       # Mid-42FC8 carve: prefix 0xC4, C 5288C (0x8), asm 0x338, C 52BCC
       # (0x3C), resume 43408.s 0x2A8.
-      - [0x42FC8, asm]
+      - [0x42FC8, c, func_800527C8]
       # Phase 5GW: return-zero stub, era -O2 -G0.
       - [0x4308C, c, func_8005288C]
-      - [0x43094, asm]
+      - [0x43094, c, func_80052894]
       # func_800528C4 — 60x scaled store into the 12-byte-stride table
       # D_800A76A4[a0*3]; retail's indexed symbolic store keeps the %lo
       # displacement on the list (maspsx patch 5), so this leaf carries
@@ -1088,7 +1090,7 @@ segments:
       - [0x45F24, asm]
       # Volume campaign: gp-backed bitset setter, era -O2 -G8.
       - [0x467B4, c, func_80055FB4]
-      - [0x467E0, asm]
+      - [0x467E0, c, func_80055FE0]
       # func_80056C14 — bound-checked halfword getter (a0 < 3) over
       # D_800A1E6E with stride 0x20 bytes; needs patch 5's 3-word $at form
       # that keeps the %lo displacement (profile era_o2_g0_symbol_at_temp).
@@ -1141,7 +1143,7 @@ segments:
       - [0x4C944, c, func_8005C144]
       - [0x4C974, asm]
       - [0x4CC88, c, func_8005C488]
-      - [0x4CC98, asm]
+      - [0x4CC98, c, func_8005C498]
       # Volume campaign: signed-threshold gp state selector; size 0x24,
       # era -O2 -G8.
       - [0x4CD94, asm]
@@ -1179,7 +1181,7 @@ segments:
       # return tbl + (short)tbl[1 + a0]. era -O2 -G0, LINK_EXACT.
       # Mid-4E44C carve: split asm into prefix + C 0x50 + resume 0x4E49C.
       - [0x4E44C, c, func_8005DC4C]
-      - [0x4E49C, asm]
+      - [0x4E49C, c, func_8005DC9C]
       # Global word plus record-base helper: era -O2 -G0.
       - [0x4E4EC, c, func_8005DCEC]
       - [0x4E53C, c, func_8005DD3C]
@@ -1551,7 +1553,7 @@ segments:
       # a 0 return clear the record body (+ the D_800E0EF0[0x6C..0x72] /
       # D_800B0CD8 bit 0x10000 cleanup when byte 1 == 0x72). Era -O2 -G0.
       - [0x60864, c, func_80070064]
-      - [0x609B4, asm]
+      - [0x609B4, c, func_800701B4]
       # func_800702DC — E4-arena teardown sweep (70 words, 0x118). Loop ids
       # 0..0xA calling func_8006FC18(i, 0, 1); on a 0 return clear the
       # record body (+ D_800E0EF0[0x6C..0x72] / D_800B0CD8 bit 0x10000 when
@@ -1691,7 +1693,7 @@ segments:
       # func_80075C04 — display-list node init from a point pair (signed lh).
       - [0x66404, c, func_80075C04]
       # func_80075C44 stays asm: PARK (boolean-fold residual, sltu->select).
-      - [0x66444, asm]
+      - [0x66444, c, func_80075C44]
       # func_80075C6C — rectangle flag-word setter (0xE6000000/1).
       # era -O2 -G0; BYTE_EXACT / LINK_EXACT.
       - [0x6646C, c, func_80075C6C]
@@ -1876,7 +1878,7 @@ segments:
       - [0x6B0EC, c, func_8007A8EC]
       # Phase 5EF: direct func_8007BDDC forwarding wrapper.
       - [0x6B110, c, func_8007A910]
-      - [0x6B130, asm]
+      - [0x6B130, c, func_8007A930]
       # Phase 5EF: write-only opaque 32-bit setter.
       - [0x6B234, asm]
       - [0x6C164, c, func_8007B964]
@@ -1935,7 +1937,7 @@ segments:
       # func_8007DFE0 — three-call sequenced init (func_8007E1B4,
       # func_80073C74(0), func_8007E204); return 1. era -O2 -G0.
       - [0x6E7E0, c, func_8007DFE0]
-      - [0x6E810, asm]
+      - [0x6E810, c, func_8007E010]
       # func_8007E0C0 — func_80072714(); func_8007E1F4(1, D_800A34B0);
       # func_80072724(); return 1. era -O2 -G0, LINK_EXACT.
       - [0x6E848, asm]
@@ -2046,7 +2048,7 @@ segments:
       - [0x71304, c, func_80080B04]
       # Phase 5EF: direct func_8007BDDC forwarding wrapper.
       - [0x71324, c, func_80080B24]
-      - [0x71344, asm]
+      - [0x71344, c, func_80080B44]
       # Phase 5EF: signed state/count exchange; same D_8009AFC0 evidence.
       - [0x71448, asm]
       - [0x714C8, c, func_80080CC8]
@@ -2164,7 +2166,7 @@ segments:
       # Phase 5EH: register reset then dispatch one of two argument pairs.
       - [0x758F4, c, func_800850F4]
       - [0x75934, c, func_80085134]
-      - [0x75974, asm]
+      - [0x75974, c, func_80085174]
       # Phase 5EG-setter: func_80085728 — VRAM 0x80085728, size 0x1C.
       # Dual pre-jr $at store of base / base+0x800 into D_8009D240 / D_8009D260.
       # Types proven by reader func_8008AB1C. Era -O2 -G0.
@@ -2291,7 +2293,7 @@ segments:
       - [0x77FBC, c, func_800877BC]
       - [0x77FD4, c, func_800877D4]
       - [0x77FF0, c, func_800877F0]
-      - [0x7800C, asm]
+      - [0x7800C, c, func_8008780C]
       # func_8008783C — SPU voice pitch modulator: reads voice a0's halfword
       # at 0x1F801C08 + (a0<<4), clears the 0xF0F pitch field and ORs in
       # (a1<<4), storing it back. era -O2 -G0; +8-byte gas pad, LINK_EXACT.
@@ -2424,7 +2426,7 @@ segments:
       # sign-extended byte to +0xE4 via a second cursor walk. era -O2 -G0,
       # LINK_EXACT.
       - [0x80428, c, func_8008FC28]
-      - [0x80478, asm]
+      - [0x80478, c, func_8008FC78]
       # Phase 5N: C leaf func_8008FCB4 — VRAM 0x8008FCB4, size 0x8.
       # File span 0x804B4–0x804BC exclusive. Zero halfword at arg0+0x82.
       - [0x804B4, c, func_8008FCB4]
@@ -2523,7 +2525,7 @@ segments:
       # File span 0x8120C–0x81220 exclusive. Bit-clear 0x8 at *(arg0+0x38).
       - [0x811C0, c, func_800909C0]
       - [0x8120C, c, func_80090A0C]
-      - [0x81220, asm]
+      - [0x81220, c, func_80090A20]
       - [0x81264, c, func_80090A64]
       - [0x812AC, c, func_80090AAC]
       - [0x812EC, asm]
@@ -2559,7 +2561,7 @@ segments:
       # VRAM 0x800C22F8; sustained valid MIPS follows.
       # Tier-2 probe: base-publishing indexed setter func_800C2AF0.
       # Former B2AF8 asm span: prefix 0x7F8, C 0x20, resume 0x30.
-      - [0xB2AF8, asm]
+      - [0xB2AF8, c, func_800C22F8]
       - [0xB2C14, asm]
       - [0xB32F0, c, func_800C2AF0]
       # Probe: indexed D_800E2248 address-return helpers.
@@ -2573,7 +2575,7 @@ segments:
       - [0xB3350, c, func_800C2B50]
       # Probe: D_800E2248 high-halfword predicate.
       - [0xB3368, c, func_800C2B68]
-      - [0xB3390, asm]
+      - [0xB3390, c, func_800C2B90]
       # Tier-2 probe: adjacent unsigned-halfword global setters.
       # Prefix 0x4358 (= 0xB76C0 - 0xB3368), then C spans 0x18 + 0x10.
       - [0xB350C, asm]
@@ -2629,7 +2631,7 @@ segments:
       - [0xB9480, c, func_800C8C80]
       - [0xB94BC, c, func_800C8CBC]
       - [0xB94F8, c, func_800C8CF8]
-      - [0xB9534, asm]
+      - [0xB9534, c, func_800C8D34]
       # Tier-2 W callback: exact-start table entry at 0xD11DC. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: B9480 prefix 0x1C4, C 0x2C, resume B9670.s 0x98.
@@ -2772,7 +2774,7 @@ segments:
       # Phase 5ED: mid-BDF28 hole — sb+ret0 func_800CD960.
       # Prefix 0x238 (= 0xBE160 - 0xBDF28); then CD970/CD978 C stubs
       # (0x10 total), resume BE180.s 0x384 (= 0xBE504 - 0xBE180).
-      - [0xBDF28, asm]
+      - [0xBDF28, c, func_800CD728]
       # Tier-2 W callback: exact-start table entry at 0xD1758. Six-argument
       # forward to matched func_800C2AF0, then return 0; era -O2 -G0.
       # Carve: BDF28 prefix 0x174, C 0x2C, resume BE0C8.s 0x98.

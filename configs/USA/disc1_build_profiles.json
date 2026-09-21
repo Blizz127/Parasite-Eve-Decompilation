@@ -408,7 +408,9 @@
     "era_o1_g0": [
       "func_8005DB44",
       "func_8008AB1C",
-      "func_80089F28"
+      "func_80089F28",
+      "func_80085174",
+      "func_8008FC78"
     ],
     "era_o1_g0_sched2_three_word": [
       "func_8006A674"
@@ -419,7 +421,9 @@
       "func_8001A3FC",
       "func_8006DD38",
       "func_8006E2D0",
-      "func_80090AAC"
+      "func_80090AAC",
+      "func_800196E8",
+      "func_8001A374"
     ],
     "era_o2_g0_expand_div": [
       "func_8003C5D8"
@@ -478,7 +482,8 @@
       "func_800374E8",
       "func_800409B4",
       "func_8006A0E8",
-      "func_8006A2E8"
+      "func_8006A2E8",
+      "func_80052894"
     ],
     "era_o2_g8": [
       "func_800124F8",
@@ -553,7 +558,13 @@
       "func_800536B8",
       "func_80057B70",
       "func_8005E788",
-      "func_8005F27C"
+      "func_8005F27C",
+      "func_8004F464",
+      "func_800500A8",
+      "func_800509E0",
+      "func_800527C8",
+      "func_80055FE0",
+      "func_8005C498"
     ],
     "era_o2_g8_force_d8009d2e8_absolute": [
       "func_800293F4"
@@ -787,7 +798,8 @@
       "func_80062F9C"
     ],
     "era_o2_g8_three_word_force_d8009d1a0_absolute": [
-      "func_80021D4C"
+      "func_80021D4C",
+      "func_8003E974"
     ],
     "era_o2_g0_dispatch_80010ac8": [
       "func_8002FE78"
@@ -806,7 +818,8 @@
       "func_800447F0",
       "func_8004BB80",
       "func_80059EC8",
-      "func_80059F08"
+      "func_80059F08",
+      "func_800438EC"
     ],
     "era_o2_g0_dispatch_8011034": [
       "func_8004AE1C"
@@ -825,10 +838,17 @@
     ],
     "era_o2_g0_fill_indexed_store_delay_slot": [
       "func_800909C0",
-      "func_80090A64"
+      "func_80090A64",
+      "func_80090A20"
     ],
     "era_o2_g0_dispatch_800c2128": [
       "func_800C3238"
+    ],
+    "era_o2_g0_dispatch_80010080": [
+      "func_80012E7C"
+    ],
+    "era_o1_g0_aspsx_230": [
+      "func_80018E84"
     ]
   }
 }
