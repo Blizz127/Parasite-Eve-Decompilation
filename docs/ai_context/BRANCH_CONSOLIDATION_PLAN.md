@@ -125,3 +125,69 @@ almost disjoint. The merge is therefore a **span-level union**, not a file harve
   ~6 more c spans, and `func_8004AE1C` is also the field-menu input tree's root in
   the port, so it is worth having).
 - Then re-run the union including them; expect 970 c spans.
+
+---
+
+## RESULT 2026-09-21 (later): the dispatch-fold gap is CLOSED — 969 c spans
+
+The six "jtbl pool-table" leaves were **not** a content problem. Two real defects,
+both now fixed in `tools/build/disc1_build.py`:
+
+1. **`strip_dispatch_rodata()` under-counted the table.** It sized the pool block
+   with `.word\s+(0x[0-9A-Fa-f]+)`, but an out-of-range/default entry is emitted as
+   a *symbol*, not a literal:
+   ```
+   dlabel jtbl_80010080
+       .word 0x80012EB4  ...  .word 0x80013064
+       .word .L00000000_main      <- not a 0x literal
+   ```
+   so 8 entries counted as 7 and the tool demanded 0x1C where the object had 0x20.
+   The demanded sizes in the errors were the tell: 0x1C/0x5C for tables of 8/24
+   entries.
+2. **`.align 3` padding was rejected.** cc1 emits switch tables with `.align 3`, so
+   an ODD-worded table carries four bytes of zero padding — a 0x14 pool table lands
+   as a 0x18 section. The strip zeroes `sh_size` so those bytes never reach the
+   image, but the exact-size check refused them.
+
+Fix adopted (from `cursor/cd-sector-backpressure-6f51`, which had already solved
+both — taken **without** its unrelated removal of the tree-local toolchain
+discovery, which this box needs): a `dispatch_rodata_pad_ok()` that accepts the
+exact size, or exactly four trailing **zero** bytes **and only when the table is
+odd-worded**. Identity remains proven by the `.rel.rodata` relocation count and
+the whole-image SHA-1, so the tolerance cannot hide a differently shaped table.
+Unit-checked against a nonzero tail and an 8-byte-sized shortfall (both rejected).
+
+Also adopted: a per-leaf **`MASPSX_EXPAND_LI=1`** opt-in (let maspsx expand `li` to
+`ori $r,$zero,imm` instead of `--dont-expand-li`). Default unchanged.
+
+### Then the strong pass caught a genuinely bad leaf
+
+With the strip fixed, the strong per-leaf check ran for the first time and
+immediately failed one leaf:
+
+```
+FAIL [deep-link] func_80051CC4: object does not match retail at its retail VMA
+  0x80051d2c: ROM 3c0e8001 (lui $t6,0x8001)  LNK 3c0e8005
+  0x80051d30: ROM 25ce11f8 (addiu $t6,0x11f8) LNK 25ce1e08
+```
+
+Retail loads `0x800111F8` (its dispatch table); the linked object resolves that
+reference to `0x80051E08`. The symbol does not resolve to the same value in this
+tree, so **that leaf is not a match here** and is excluded. Note the check's own
+warning: `era_link_check.py` compares `min(linked, size)` words and can print
+`LINK_EXACT` for an oversized span — which is how such a leaf can look green in
+isolation.
+
+### Final state
+
+| | c spans | asm spans | funcs | c_words | tierA |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| main at session start | 810 | 347 | 377/980 | 6,834 | 735 |
+| **main now (`424a2c3a`)** | **969** | **405** | **522/1153** | **11,298** | **908** |
+
+`EXACT_REBUILD_GATE=PASS` — `sha1_orig == sha1_cand == 452fb033f2eaa4b18aa20a5bca60b8125af3a37b`,
+`VERIFY_SWEEP=PASS leaves=969`, `plan=83ea4ce6cb0c…`. Port suite 1405/1405.
+
+Deferred, still on the branch: `func_80051CC4` (symbol resolution) and the
+`func_80012E7C` family's remaining sibling issues are now moot — five of the six
+dispatch leaves are in.

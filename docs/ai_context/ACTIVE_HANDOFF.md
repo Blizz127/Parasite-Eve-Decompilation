@@ -18,12 +18,17 @@ zero to the port).
    `rodata > c > asm`; the rebuild gate catches what preflight only warns about;
    and a preflight WARN is a real defect, not noise.
 
-3. **Open follow-up — the dispatch-fold family.** Six branch leaves
-   (`func_80012E7C`, `func_8002FE78`, `func_8003010C`, `func_8004AE1C`,
-   `func_80051CC4`, `func_800C3238`) build under per-leaf
-   `MASPSX_DISPATCH_FOLD=jtbl_X` profiles and fail `ERROR: .rodata N != pool table
-   M for jtbl_X` regardless of whether the profile is applied. Excluded from the
-   merge; resolving the jump-table carve would take main to ~970 c spans.
+3. **The dispatch-fold gap is CLOSED (same day).** Those six leaves were not a
+   content problem: `strip_dispatch_rodata()` under-counted the pool table (an
+   out-of-range entry is a *symbol*, `.word .L00000000_main`, not a 0x literal)
+   and rejected `.align 3` zero padding on odd-worded tables. Both fixed, plus a
+   per-leaf `MASPSX_EXPAND_LI` opt-in, adopted from this same branch. The strong
+   per-leaf pass then ran for the first time and caught a genuinely bad leaf,
+   `func_80051CC4` (retail loads `0x800111F8`, the object resolves `0x80051E08`),
+   which is excluded — the check warns that `era_link_check.py` can print
+   `LINK_EXACT` for an oversized span, which is how it looked green before.
+   **main is now 969 c spans / funcs 522/1153 / c_words 11298 / tierA 908**,
+   gate PASS at `plan=83ea4ce6cb0c…`.
 
 4. **Machine consolidation continues.** Settings/tools scouting is in
    `docs/ai_context/AGENT_SETTINGS_CONSOLIDATION.md`; 39 remote branches classified
