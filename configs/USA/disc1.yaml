@@ -983,8 +983,6 @@ segments:
       # Unfilled delay slot (addiu before jr) => this one C unit is compiled
       # with -fno-delayed-branch (per-file; documented Phase 4J behaviour).
       # Preceding 420A8.s is 0x5A0; resume 42658.s is 0x968.
-      - [0x424C4, c, func_80051CC4]
-      - [0x425F8, asm]
       - [0x42648, c, func_80051E48]
       - [0x42658, c, func_80051E58]
       - [0x42664, asm]
