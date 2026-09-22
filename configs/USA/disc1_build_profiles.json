@@ -831,6 +831,24 @@
     ],
     "era_o1_g0_aspsx_230": [
       "func_80018E84"
+    ],
+    "era_o2_g0_dispatch_80010080": [
+      "func_80012E7C"
+    ],
+    "era_o2_g0_dispatch_80010ac8": [
+      "func_8002FE78"
+    ],
+    "era_o2_g0_dispatch_80010b28": [
+      "func_8003010C"
+    ],
+    "era_o2_g0_dispatch_8011034": [
+      "func_8004AE1C"
+    ],
+    "era_o2_g8_dispatch_800111f8": [
+      "func_80051CC4"
+    ],
+    "era_o2_g0_dispatch_800c2128": [
+      "func_800C3238"
     ]
   }
 }

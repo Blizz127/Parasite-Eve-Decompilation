@@ -74,6 +74,8 @@ segments:
       - [0x3420, asm]
       # func_80015AB8 — three-pointer wrapper around func_800677A0 reading
       # *a0[0] / *(short*)a0[1] / *(short*)a0[2]; return 1. era -O2 -G0.
+      - [0x367C, c, func_80012E7C]
+      - [0x38B4, asm]
       - [0x55A0, c, func_80014DA0]
       - [0x5630, asm]
       - [0x5DFC, c, func_800155FC]
@@ -488,6 +490,10 @@ segments:
       # (20 words). era -O2 -G0 + maspsx --aspsx-version=2.30 (mflo/mult
       # two-instruction gap nop). Mid-20210 carve: prefix 0xB24, C 0x50,
       # resume 20D84.s 0xBC then existing 30640 C.
+      - [0x20678, c, func_8002FE78]
+      - [0x20778, asm]
+      - [0x2090C, c, func_8003010C]
+      - [0x20A20, asm]
       - [0x20D34, c, func_80030534]
       # func_80030584 — angle helper, VRAM 0x80030584, size 0x44 (17 words).
       # era -O2 -G0. Head of former 20D84.s; resume 20DC8.s 0x78.
@@ -764,6 +770,7 @@ segments:
       # for func_80050438; era -O2 -G0, exact first phrasing.
       - [0x3985C, c, func_8004905C]
       - [0x398B0, asm]
+      - [0x3B61C, c, func_8004AE1C]
       - [0x3B73C, c, func_8004AF3C]
       - [0x3B7A4, asm]
       - [0x3B83C, c, func_8004B03C]
@@ -976,6 +983,8 @@ segments:
       # Unfilled delay slot (addiu before jr) => this one C unit is compiled
       # with -fno-delayed-branch (per-file; documented Phase 4J behaviour).
       # Preceding 420A8.s is 0x5A0; resume 42658.s is 0x968.
+      - [0x424C4, c, func_80051CC4]
+      - [0x425F8, asm]
       - [0x42648, c, func_80051E48]
       - [0x42658, c, func_80051E58]
       - [0x42664, asm]
@@ -2575,6 +2584,8 @@ segments:
       - [0xB37F0, c, func_800C2FF0]
       - [0xB3898, c, func_800C3098]
       - [0xB3934, asm]
+      - [0xB3A38, c, func_800C3238]
+      - [0xB3B24, asm]
       - [0xB6D3C, c, func_800C653C]
       - [0xB6D84, asm]
       - [0xB76C0, c, func_800C6EC0]

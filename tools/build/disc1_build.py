@@ -263,10 +263,20 @@ def strip_dispatch_rodata(object_path: Path, symbol: str) -> None:
     )
     if not block:
         raise BuildError(f"pool source has no {symbol} block")
+    # Two different counts, and they are not the same number:
+    #   entries  — every `.word` in the pool block, i.e. the table's true length.
+    #              A default/out-of-range entry is emitted as a *symbol*
+    #              (`/* ... */ .word .L00000000_main`) rather than a 0x literal,
+    #              so it must be counted here or the size check undercounts and
+    #              rejects a table GCC compiled correctly.
+    #   literals — only the `0x` code-address entries.  Each of those becomes one
+    #              .rel.rodata relocation, so this is the right count to compare
+    #              against the relocation total below.
+    entries = re.findall(r"\.word\s+\S+", block.group(1))
     literals = re.findall(r"\.word\s+(0x[0-9A-Fa-f]+)", block.group(1))
-    if len(literals) < 2:
+    if len(entries) < 2:
         raise BuildError(f"{symbol} pool block has no literal words")
-    expected_size = len(literals) * 4
+    expected_size = len(entries) * 4
 
     data = bytearray(object_path.read_bytes())
     if data[:4] != b"\x7fELF":
